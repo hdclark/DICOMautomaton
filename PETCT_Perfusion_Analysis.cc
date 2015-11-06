@@ -107,48 +107,6 @@ std::unique_ptr<Contour_Data> Combine_Contour_Data(std::unique_ptr<Contour_Data>
     return std::move(A);
 }
 
-/*
-//A thin wrapper around loaded DICOM data representing a cohesive data set. All data can be shared 
-// by default (i.e., copies are shallow by default) so there can be as many 'views' of the data as 
-// needed. This class is meant to be stored in a STL container like a std::vector or std::list. If 
-// a distinct copy is needed, you should explicitly perform a deep copy of the specific items you 
-// need, or of the whole SimpleDriver instance.
-//
-struct SimpleDrover {
-    std::shared_ptr<Contour_Data> contour_data;
-    std::shared_ptr<Dose_Array>   dose_data;
-    std::shared_ptr<Image_Array>  image_data;
-
-
-    SimpleDrover(){}
-
-    SimpleDrover(const SimpleDrover &in){
-        this->contour_data = in.contour_data;
-        this->dose_data    = in.dose_data;
-        this->image_data   = in.image_data;
-    }
-
-    SimpleDrover(std::shared_ptr<Contour_Data> contours, std::shared_ptr<Dose_Array> dose, std::shared_ptr<Image_Array> imgs){
-        this->contour_data = contours;
-        this->dose_data    = dose;
-        this->image_data   = imgs;
-    }
-
-    SimpleDrover DeepCopy(void) const {
-        SimpleDrover out;
-        out.contour_data = std::make_shared<Contour_Data>();
-        *(out.contour_data) = *(this->contour_data);
-        out.dose_data = std::make_shared<Dose_Array>();
-        *(out.dose_data) = *(this->dose_data);
-        out.image_data = std::make_shared<Image_Array>();
-        *(out.image_data) = *(this->image_data);
-        return out;
-    }
-};
-
-*/
-
-
 int main(int argc, char* argv[]){
 //---------------------------------------------------------------------------------------------------------------------
 //------------------------------------------- Instances used throughout -----------------------------------------------
@@ -1495,12 +1453,9 @@ int main(int argc, char* argv[]){
         for(auto img_ptr : short_scans){
             DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( *img_ptr ) );
             short_tavgd.push_back( DICOM_data.image_data.back() );
-//            std::shared_ptr<Image_Array> img_arr_copy_short_temporally_avgd( DICOM_data.image_data.back() );
 
-//        img_arr_copy_short_temporally_avgd->imagecoll.Prune_Images_Satisfying(PurgeAboveNSeconds);
             if(!short_tavgd.back()->imagecoll.Condense_Average_Images(GroupSpatiallyOverlappingImages)) FUNCERR("Cannot temporally avg short img_arr");
         }
-//        if(!img_arr_copy_short_temporally_avgd->imagecoll.Condense_Average_Images(GroupSpatiallyOverlappingImages)) FUNCERR("Cannot temporally avg short img_arr");
 
 
         //Gaussian blur in pixel space.
@@ -1527,16 +1482,6 @@ int main(int argc, char* argv[]){
         }else{
             for(auto img_ptr : short_tavgd) short_tavgd_blurred.push_back( img_ptr );
         }
-//        std::shared_ptr<Image_Array> img_arr_short_tavgd_blurred(img_arr_copy_short_temporally_avgd);
-//       if(true){ //Blur the image.
-//            DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( *img_arr_short_tavgd_blurred ) );
-//            img_arr_short_tavgd_blurred = DICOM_data.image_data.back();
-//        
-//            if(!img_arr_short_tavgd_blurred->imagecoll.Gaussian_Pixel_Blur({ }, 1.5)){
-//                FUNCERR("Unable to blur short temporally averaged images");
-//            }
-//        }
-//
 
         //Package the short and long images together as needed for the S0 and T1 calculations.
         std::list<std::reference_wrapper<planar_image_collection<float,double>>> tavgd_blurred;
@@ -1733,7 +1678,6 @@ int main(int argc, char* argv[]){
 
         //Deep-copy the original long image array and use the temporally-averaged, pre-contrast map to work out the poor-man's Gad C in each voxel.
         std::vector<std::shared_ptr<Image_Array>> poormans_C_map_img_arrays;
-        //for(auto & img_arr : orig_img_arrays){
         {
             auto img_arr = orig_img_arrays.front();
             DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( *img_arr ) );
@@ -1745,18 +1689,6 @@ int main(int argc, char* argv[]){
                 FUNCERR("Unable to transform image array to make poor-man's C map");
             }
         }
-        //poormans_C_map_img_arrays.resize(1); // <---- Assumes only the first image is 
-
-        //DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( *img_arr_orig_long_scan ) );
-        //std::shared_ptr<Image_Array> img_arr_poormans_C_map( DICOM_data.image_data.back() );
-        //
-        //if(!img_arr_poormans_C_map->imagecoll.Transform_Images( DCEMRISigDiffC,
-        //                                                        { img_arr_copy_long_temporally_avgd->imagecoll }, 
-        //                                                        { } )){
-        //    FUNCERR("Unable to transform image array to make poor-man's C map");
-        //}
-
-
 
         //Deep-copy the poor-man's C(t) map and use the images to compute an IAUC map.
         //
@@ -1875,30 +1807,6 @@ int main(int argc, char* argv[]){
         DICOM_data.image_data.emplace_back(stim_case);
 
         //Compute the difference of the images.
-        //
-        //std::shared_ptr<Image_Array> differenceA = std::make_shared<Image_Array>(*stim_case);
-        //{
-        //  std::list<std::reference_wrapper<planar_image_collection<float,double>>> external_imgs;
-        //  external_imgs.push_back( std::ref(nostim_case->imagecoll) );
-        //
-        //  if(!differenceA->imagecoll.Transform_Images( SubtractSpatiallyOverlappingImages, std::move(external_imgs), {} )){
-        //      FUNCERR("Unable to subtract the pixel maps");
-        //  }
-        //}
-        //DICOM_data.image_data.emplace_back(differenceA);
-        //
-        //std::shared_ptr<Image_Array> differenceB = std::make_shared<Image_Array>(*nostim_case);
-        //{
-        //  std::list<std::reference_wrapper<planar_image_collection<float,double>>> external_imgs;
-        //  external_imgs.push_back( std::ref(stim_case->imagecoll) );
-        //
-        //  if(!differenceB->imagecoll.Transform_Images( SubtractSpatiallyOverlappingImages, std::move(external_imgs), {} )){
-        //      FUNCERR("Unable to subtract the pixel maps");
-        //  }
-        //}
-        //DICOM_data.image_data.emplace_back(differenceB);
-
-
         std::shared_ptr<Image_Array> difference = std::make_shared<Image_Array>(*stim_case);
         {
           std::list<std::reference_wrapper<planar_image_collection<float,double>>> external_imgs;
@@ -1909,23 +1817,7 @@ int main(int argc, char* argv[]){
           }
         }
 
-
         DICOM_data.image_data.emplace_back(difference);
-
-        //Compute moments for the ROIs.
-        //auto ComputeCentralizedMomentsFloatPacked = std::bind(ComputeCentralizedMoments,
-        //                                                      std::placeholders::_1, std::placeholders::_2, std::placeholders::_3,
-        //                                                      true); //Treat pixels as floats packed into uint32_t pixels.
-        //
-        //std::shared_ptr<Image_Array> moments = std::make_shared<Image_Array>(*difference);
-        //if(!moments->imagecoll.Process_Images( GroupSpatiallyOverlappingImages,
-        //                                        ComputeCentralizedMomentsFloatPacked,
-        //                                        cc_all )){
-        //    FUNCERR("Unable to process image array to perform centralized moment analysis");
-        //}else{
-        //    DumpCentralizedMoments(InvocationMetadata);
-        //}
-        //DICOM_data.image_data.emplace_back(moments);
     }
 
     //=================================================================================================================
@@ -2034,15 +1926,9 @@ int main(int argc, char* argv[]){
         bool OnlyShowTagsDifferentToNeighbours = true;
 
         //Accumulation-type storage.
-        //contours_with_meta pixel_contours;     //Stores contours in terms of the Row,Col,SliceLocation (pixel) coords.
-        //contour_of_points<double> pixel_contours_shtl;  //Stores contours in the DICOM coordinate system.
-        //pixel_contours_shtl.closed = true;
-
         contours_with_meta contour_coll_shtl; //Stores contours in the DICOM coordinate system.
         contour_coll_shtl.contours.emplace_back();    //Prime the shuttle with an empty contour.
         contour_coll_shtl.contours.back().closed = true;
-
-        std::list<sf::Vector2f> disp_pixel_contours;
 
         //Open a window.
         sf::RenderWindow window;
@@ -2060,19 +1946,14 @@ int main(int argc, char* argv[]){
         if(!afont.loadFromFile("/usr/share/fonts/TTF/cmr10.ttf")) FUNCERR("Unable to find font file");
 
         //Create some primitive shapes, textures, and text objects for display later.
-        //sf::CircleShape ashape(100.0f);
         sf::CircleShape smallcirc(1.0f);
-        //ashape.setFillColor(sf::Color::Green);
         smallcirc.setFillColor(sf::Color::Green);
 
         sf::Text cursortext;
         cursortext.setFont(afont);
-        //cursortext.setString("This is some trial text.\nWill the newline be handled properly?");
         cursortext.setString("");
         cursortext.setCharacterSize(15); //Size in pixels, not in points.
-        //cursortext.setColor(sf::Color::Red);
         cursortext.setColor(sf::Color::Green);
-        //cursortext.setStyle(sf::Text::Bold | sf::Text::Underlined);
 
         sf::Text BRcornertext;
         std::stringstream BRcornertextss;
@@ -2167,7 +2048,6 @@ int main(int argc, char* argv[]){
                 for(auto i = 0; i < img_cols; ++i){
                     for(auto j = 0; j < img_rows; ++j){
                         const auto value = img_it->value(j,i,0); //Gray channel, or R channel.
-//                        const auto value = img_it->value(i,j,0); //Gray channel, or R channel.
                         lowest  = std::min(lowest,value);
                         highest = std::max(highest,value);
                     }
@@ -2217,9 +2097,6 @@ int main(int argc, char* argv[]){
         const auto scale_sprite_to_fill_screen = [](const sf::RenderWindow &awindow, 
                                                     const disp_img_it_t &img_it, 
                                                     disp_img_texture_sprite_t &asprite) -> void {
-            //Reset the scale if there is one. (Is this a compound scale, or absolute scale? It isn't clear.)
-            //asprite.second.setScale(1.0f,1.0f);
- 
             //Scale the displayed pixel aspect ratio if the image pxl_dx and pxl_dy differ.
             {
                 const auto ImagePixelAspectRatio = img_it->pxl_dx / img_it->pxl_dy;
@@ -2243,7 +2120,6 @@ int main(int argc, char* argv[]){
             w_scale = std::min(h_scale,w_scale);
 
             //Actually scale the image.
-            //asprite.second.setScale(w_scale,h_scale);
             asprite.second.scale(w_scale,h_scale);
             return;
         };
@@ -2258,7 +2134,6 @@ int main(int argc, char* argv[]){
         //Run until the window is closed or the user wishes to exit.
         while(window.isOpen()){
             BRcornertextss.str(""); //Clear stringstream.
-            //BLcornertextss.str(""); //Clear stringstream.
 
             //Check if any events have accumulated since the last poll. If so, deal with them.
             sf::Event event;
@@ -2266,38 +2141,26 @@ int main(int argc, char* argv[]){
                 if(event.type == sf::Event::Closed){
                     window.close();
                 }else if(window.hasFocus() && (event.type == sf::Event::KeyPressed)){
-                    //FUNCINFO("Pressed key");
-                    //std::cout << "control:" << event.key.control << std::endl;
-                    //std::cout << "alt:" << event.key.alt << std::endl;
-                    //std::cout << "shift:" << event.key.shift << std::endl;
-                    //std::cout << "system:" << event.key.system << std::endl;
-
                     if(event.key.code == sf::Keyboard::Escape){
                         window.close();
                     }
 
                 }else if(window.hasFocus() && (event.type == sf::Event::KeyReleased)){
-                    //FUNCINFO("Released key");
 
                 }else if(window.hasFocus() && (event.type == sf::Event::TextEntered) 
                                            && (event.text.unicode < 128)){
                     //Not the same as KeyPressed + KeyReleased. Think unicode characters, or control keys.
                     const auto thechar = static_cast<char>(event.text.unicode);
-                    //FUNCINFO("ASCII character typed: '" << thechar << "'");
 
                     //Set the flag for dumping the window contents as an image after the next render.
                     if( thechar == 'd' ){
                         DumpScreenshot = true;
-
 
                     //Dump raw pixels for all spatially overlapping images from the current array.
                     // (Useful for dumping time courses.)
                     }else if( thechar == 'D' ){
 
                         //Get a list of images which spatially overlap this point. Order should be maintained.
-                        //Simple way. 
-                        //auto encompassing_images = (*img_array_ptr_it)->imagecoll.get_images_which_encompass_point(pix_pos);
-                        //More reliable way.
                         const auto pix_pos = disp_img_it->position(0,0);
                         const auto ortho = disp_img_it->row_unit.Cross( disp_img_it->col_unit ).unit();
                         const std::list<vec3<double>> points = { pix_pos, pix_pos + ortho * disp_img_it->pxl_dz * 0.25,
@@ -2307,8 +2170,6 @@ int main(int argc, char* argv[]){
                         long int count = 0;
                         for(auto & pimg : encompassing_images){
                             const auto pixel_dump_filename_out = Get_Unique_Sequential_Filename("/tmp/raw_pixel_dump_uint16_scaled_per_chan_",6,".gray");
-                            //if(Dump_Casted_Scaled_Pixels<float,double,uint16_t>(*pimg,pixel_dump_filename_out,YgorImageIOPixelScaling::TypeMinMax)){
-                            //if(pimg->Dump_u16_scale_Pixels(pixel_dump_filename_out)){
                             if(Dump_Pixels(*pimg,pixel_dump_filename_out)){
                                 FUNCINFO("Dumped pixel data for image " << count << " to file '" << pixel_dump_filename_out << "'");
                             }else{
@@ -2322,11 +2183,7 @@ int main(int argc, char* argv[]){
 
                     //Dump raw pixels from the current image to file.
                     }else if(thechar == 'i'){
-                        //const auto pixel_dump_filename_out = Get_Unique_Sequential_Filename("/tmp/raw_pixel_dump_uint16_scaled_per_chan_",6,".gray");
                         const auto pixel_dump_filename_out = Get_Unique_Sequential_Filename("/tmp/display_image_dump_",6,".fits");
-                        //const auto pixel_dump_filename_out = Get_Unique_Sequential_Filename("/tmp/raw_pixel_dump_d64_per_chan_",6,".gray");
-                        //if(Dump_Casted_Scaled_Pixels<float,double,uint16_t>(*disp_img_it,pixel_dump_filename_out,YgorImageIOPixelScaling::TypeMinMax)){
-                        //if(Dump_Pixels(*disp_img_it,pixel_dump_filename_out)){
                         if(WriteToFITS(*disp_img_it,pixel_dump_filename_out)){
                             FUNCINFO("Dumped pixel data for this image to file '" << pixel_dump_filename_out << "'");
                         }else{
@@ -2338,8 +2195,6 @@ int main(int argc, char* argv[]){
                         long int count = 0;
                         for(auto &pimg : (*img_array_ptr_it)->imagecoll.images){
                             const auto pixel_dump_filename_out = Get_Unique_Sequential_Filename("/tmp/image_dump_",6,".fits");
-                            //if(Dump_Casted_Scaled_Pixels<float,double,uint16_t>(*pimg,pixel_dump_filename_out,YgorImageIOPixelScaling::TypeMinMax)){
-                            //if(Dump_Pixels(pimg,pixel_dump_filename_out)){
                             if(WriteToFITS(pimg,pixel_dump_filename_out)){
                                 FUNCINFO("Dumped pixel data for image " << count << " to file '" << pixel_dump_filename_out << "'");
                             }else{
@@ -2347,8 +2202,6 @@ int main(int argc, char* argv[]){
                             }
                             ++count;
                         }
-                        //FUNCINFO("To convert them issue something like 'convert -size 256x256 -depth 16 "
-                        //         "-define quantum:format=unsigned -type grayscale image.gray -depth 16 ... out.jpg'");
 
                     //Given the current mouse coordinates, dump pixel intensity profiles along the current row and column.
                     //
@@ -2380,26 +2233,18 @@ int main(int argc, char* argv[]){
                         //Cycle over the images, dumping the pixel value(s) and the 'dt' metadata value, if available.
                         //Single-pixel.
                         samples_1D<double> row_profile, col_profile;
-                        //std::stringstream row_profile_title, col_profile_title;
                         std::stringstream title;
 
                         for(auto i = 0; i < disp_img_it->columns; ++i){
                             const auto val_raw = disp_img_it->value(row_as_u,i,0);
                             const auto col_num = static_cast<double>(i);
-                            //const auto val_num = (val_raw < std::numeric_limits<uint16_t>::max()) ? static_cast<double>(val_raw) : -1.0;
                             col_profile.push_back({ col_num, 0.0, val_raw, 0.0 });
                         }
                         for(auto i = 0; i < disp_img_it->rows; ++i){
                             const auto val_raw = disp_img_it->value(i,col_as_u,0);
                             const auto row_num = static_cast<double>(i);
-                            //const auto val_num = (val_raw < std::numeric_limits<uint16_t>::max()) ? static_cast<double>(val_raw) : -1.0;
                             row_profile.push_back({ row_num, 0.0, val_raw, 0.0 });
                         }
-                        //row_profile_title << "Row profile for col = " << col_as_u << ". ";
-                        //col_profile_title << "Col profile for row = " << row_as_u << ". ";
-
-                        //row_profile.Plot(row_profile_title.str());
-                        //col_profile.Plot(col_profile_title.str());
 
                         title << "Row and Column profile. (row,col) = (" << row_as_u << "," << col_as_u << ").";
                         try{
@@ -2407,21 +2252,8 @@ int main(int argc, char* argv[]){
                             YgorMathPlotting::Shuttle<samples_1D<double>> col_shtl(col_profile, "Col Profile");
                             YgorMathPlotting::Plot<double>({row_shtl, col_shtl}, title.str(), "Pixel Index (row or col)", "Pixel Intensity");
                         }catch(const std::exception &e){
-                            FUNCINFO("Failed to plot: " << e.what());
+                            FUNCWARN("Failed to plot: " << e.what());
                         }
-
-                        //Plotter2 rowplot;
-                        //rowplot.Insert_samples_1D(row_profile, "", "linespoints");
-                        //rowplot.Set_Global_Title(row_profile_title.str());
-                        //rowplot.Plot();
-                        //rowplot.Plot_as_PDF(Get_Unique_Sequential_Filename("/tmp/pixel_intensity_row_profile_for_col_"_s + Xtostring(col_as_u) + "_",6,".pdf"));
-
-                        //Plotter2 colplot;
-                        //colplot.Insert_samples_1D(col_profile, "", "linespoints");
-                        //colplot.Set_Global_Title(col_profile_title.str());
-                        //colplot.Plot();
-                        //colplot.Plot_as_PDF(Get_Unique_Sequential_Filename("/tmp/pixel_intensity_col_profile_for_row_"_s + Xtostring(row_as_u) + "_",6,".pdf"));
-
 
                     //Given the current mouse coordinates, dump a time series at the image pixel over all available images
                     // which spatially overlap.
@@ -2456,9 +2288,6 @@ int main(int argc, char* argv[]){
                         const auto pix_pos = disp_img_it->position(row_as_u,col_as_u);
 
                         //Get a list of images which spatially overlap this point. Order should be maintained.
-                        //Simple way. 
-                        //auto encompassing_images = (*img_array_ptr_it)->imagecoll.get_images_which_encompass_point(pix_pos);
-                        //More reliable way.
                         const auto ortho = disp_img_it->row_unit.Cross( disp_img_it->col_unit ).unit();
                         const std::list<vec3<double>> points = { pix_pos, pix_pos + ortho * disp_img_it->pxl_dz * 0.25,
                                                                           pix_pos - ortho * disp_img_it->pxl_dz * 0.25 };
@@ -2467,7 +2296,6 @@ int main(int argc, char* argv[]){
                         //Cycle over the images, dumping the ordinate (pixel values) vs abscissa (time) derived from metadata.
                         samples_1D<double> shtl;
                         const std::string quantity("dt"); //As it appears in the metadata. Must convert to a double!
-                        //const std::string quantity("Diffusion_bValue");
 
                         const double radius = 2.1; //Circle of certain radius (in DICOM-coord. system).
                         std::stringstream title;
@@ -2501,28 +2329,9 @@ int main(int argc, char* argv[]){
                             YgorMathPlotting::Shuttle<samples_1D<double>> ymp_shtl(shtl, "Buffer A");
                             YgorMathPlotting::Plot<double>({ymp_shtl}, title.str(), "Time (s)", "Pixel Intensity");
                         }catch(const std::exception &e){
-                            FUNCINFO("Failed to plot: " << e.what());
+                            FUNCWARN("Failed to plot: " << e.what());
                         }
-
-                        //Plotter2 toplot;
-                        //title << "Images encompass " << pix_pos << ". ";
-                        //toplot.Insert_samples_1D(shtl, "", "linespoints");
-                        //toplot.Insert_samples_1D(shtl, "");
-
-                        //toplot.Set_Global_Title(title.str());
-                        //toplot.Plot();
-                        //toplot.Plot_as_PDF(Get_Unique_Sequential_Filename("/tmp/pixel_intensity_time_course_",6,".pdf"));
-                        //const auto gnuplotfile = toplot.Dump_as_String();
-                        //if(!WriteStringToFile(gnuplotfile, Get_Unique_Sequential_Filename("/tmp/pixel_intensity_time_course_",6,".gnuplot"))){
-                        //    FUNCWARN("Unable to write gnuplot file. Use the raw data instead");
-                        //}
-                        //shtl.Plot(title.str());
-                        //shtl.Plot_as_PDF(title.str(),Get_Unique_Sequential_Filename("/tmp/pixel_intensity_time_course_",6,".pdf"));
                         shtl.Write_To_File(Get_Unique_Sequential_Filename("/tmp/pixel_intensity_time_course_",6,".txt"));
-                        //bool wasOK = false;
-                        //auto shtl2 = NPRLL::Attempt_Auto_Smooth(shtl,&wasOK);
-                        //if(wasOK) shtl2.Plot(title.str());
-
 
                     //Given the current mouse coordinates, dump the pixel value for [A]ll image sets which spatially overlap.
                     // This routine is useful for debugging problematic pixels, or trying to follow per-pixel calculations.
@@ -2654,14 +2463,9 @@ int main(int argc, char* argv[]){
                             contour_coll_shtl.contours.emplace_back();
                             contour_coll_shtl.contours.back().closed = true;
                         }
-                        disp_pixel_contours.clear();
 
                         if(load_img_texture_sprite(disp_img_it, disp_img_texture_sprite)){
                             scale_sprite_to_fill_screen(window,disp_img_it,disp_img_texture_sprite);
-
-                            //const auto img_number = std::distance((*img_array_ptr_it)->imagecoll.images.begin(), disp_img_it);
-                            //const auto img_number = std::distance(disp_img_beg, disp_img_it);
-                            //FUNCINFO("Loaded next Image_Array. Displaying image number " << img_number);
                             FUNCINFO("Loaded Image_Array " << std::distance(img_array_ptr_beg,img_array_ptr_it) << ". "
                                      "There are " << (*img_array_ptr_it)->imagecoll.images.size() << " images in this Image_Array");
                             
@@ -2695,7 +2499,6 @@ int main(int argc, char* argv[]){
                             contour_coll_shtl.contours.emplace_back();       
                             contour_coll_shtl.contours.back().closed = true;
                         }
-                        disp_pixel_contours.clear();
 
                         if(load_img_texture_sprite(disp_img_it, disp_img_texture_sprite)){
                             scale_sprite_to_fill_screen(window,disp_img_it,disp_img_texture_sprite);
@@ -2719,11 +2522,9 @@ int main(int argc, char* argv[]){
 
                     //Step to the next/previous image which spatially overlaps with the current display image.
                     }else if( (thechar == '-') || (thechar == '+') ){
-                        //Get a list of images which spatially overlap this point. Order should be maintained.
                         const auto disp_img_pos = disp_img_it->center();
-                        //Simple way. 
-                        //auto encompassing_images = (*img_array_ptr_it)->imagecoll.get_images_which_encompass_point(disp_img_pos);
-                        //More reliable way.
+
+                        //Get a list of images which spatially overlap this point. Order should be maintained.
                         const auto ortho = disp_img_it->row_unit.Cross( disp_img_it->col_unit ).unit();
                         const std::list<vec3<double>> points = { disp_img_pos, disp_img_pos + ortho * disp_img_it->pxl_dz * 0.25,
                                                                                disp_img_pos - ortho * disp_img_it->pxl_dz * 0.25 };
@@ -2757,7 +2558,6 @@ int main(int argc, char* argv[]){
                         if(load_img_texture_sprite(disp_img_it, disp_img_texture_sprite)){
                             scale_sprite_to_fill_screen(window,disp_img_it,disp_img_texture_sprite);
 
-                            //const auto img_number = std::distance((*img_array_ptr_it)->imagecoll.images.begin(), disp_img_it);
                             const auto img_number = std::distance(disp_img_beg, disp_img_it);
                             FUNCINFO("Loaded next/previous spatially-overlapping texture. Displaying image number " << img_number);
 
@@ -2798,7 +2598,6 @@ int main(int argc, char* argv[]){
                             contour_coll_shtl.contours.clear();
                             contour_coll_shtl.contours.emplace_back();
                             contour_coll_shtl.contours.back().closed = true;
-                            disp_pixel_contours.clear();
 
                             FUNCINFO("Contour collection cleared from working buffer");
                         }catch(const std::exception &){ }
@@ -2849,7 +2648,6 @@ int main(int argc, char* argv[]){
                             contour_coll_shtl.contours.clear();
                             contour_coll_shtl.contours.emplace_back();
                             contour_coll_shtl.contours.back().closed = true;
-                            disp_pixel_contours.clear();
 
                             FUNCINFO("Contour collection saved to db and cleared");
                         }catch(const std::exception &e){
@@ -2883,11 +2681,6 @@ int main(int argc, char* argv[]){
                         if(DispImgBBox.contains(ClickWorldPos)){
                             // ---- Draw on the image where we have clicked ----
                             if(VERBOSE && !QUIET) FUNCINFO("Clicked INSIDE img bbox");
-                            //sf::Vector2f DispImgWorldPos = disp_img_texture_sprite.second.getPosition();
-                            //const auto left   = DispImgBBox.left;
-                            //const auto top    = DispImgBBox.top; 
-                            //const auto width  = DispImgBBox.width;
-                            //const auto height = DispImgBBox.height;
 
                             //Assuming the image is not rotated or skewed (though possibly scaled), determine which image pixel
                             // we are hovering over.
@@ -2910,12 +2703,6 @@ int main(int argc, char* argv[]){
                                 contour_coll_shtl.contours.back().closed = true;
                                 contour_coll_shtl.contours.back().points.push_back( dicom_pos );
                                 contour_coll_shtl.contours.back().metadata["FrameofReferenceUID"] = FrameofReferenceUID.value();
-                                //const std::string as_str( contour_coll_shtl.contours.back().write_to_string() );
-                                //std::cout << "current contour: " << std::endl << as_str << std::endl;
-                                //OverwriteStringToFile(as_str, "/tmp/contour_of_points_SliceLocation_"_s + SliceLocation_str);
-
-                                //Record the point in the display contour buffer.
-                                disp_pixel_contours.push_back( ClickWorldPos ); //Needs to be in SFML world coordinates.
                             }else{
                                 FUNCWARN("Unable to find display image's FrameofReferenceUID. Cannot insert point in contour");
 
@@ -2928,8 +2715,6 @@ int main(int argc, char* argv[]){
                     }
 
                 }else if(window.hasFocus() && (event.type == sf::Event::MouseButtonReleased)){
-                    //FUNCINFO("Mouse button released");
-
 
                 }else if(window.hasFocus() && (event.type == sf::Event::MouseMoved)){
                     if(VERBOSE && !QUIET){
@@ -2937,12 +2722,7 @@ int main(int argc, char* argv[]){
                         std::cout << "Mouse position x,y = " << event.mouseMove.x 
                                                       << "," << event.mouseMove.y << std::endl;
                     }
-
                     cursortext.setPosition(event.mouseMove.x,event.mouseMove.y);
-                    //smallcirc.setPosition(event.mouseMove.x,event.mouseMove.y);
-
-                    //Get the *realtime* position, not necessarily same as the event position. 
-                    //sf::Vector2i localPosition = sf::Mouse::getPosition(window);
 
                     //Print the world coordinates to the console.
                     sf::Vector2f worldPos = window.mapPixelToCoords(sf::Vector2i(event.mouseMove.x,event.mouseMove.y));
@@ -2979,18 +2759,15 @@ int main(int argc, char* argv[]){
 
                 }else if(event.type == sf::Event::Resized){
                     if(VERBOSE && !QUIET) FUNCINFO("Window resized to WxH = " << event.size.width << "x" << event.size.height);
-                    //window.setSize(sf::Vector2u(event.size.width, event.size.height));
                     sf::View view;
 
                     //Shrink the image depending on the amount of window space available. The image might disappear off the
                     // screen if the window is too small, but nothing gets squished.
                     view.reset(sf::FloatRect(0, 0, event.size.width, event.size.height));
-                    //view.setViewport(sf::FloatRect(0.0f, 0.0f, 1.0f, 1.0f)); //Set target viewport to be LHS of window only.
                     window.setView(view);
 
                     //Scale the image with the window. Results in highly-squished display, and essentially arbitrary world
                     // coordinate system.
-                    //window.setView(window.getDefaultView());
                     scale_sprite_to_fill_screen(window,disp_img_it,disp_img_texture_sprite);
 
                 }else if(event.type == sf::Event::LostFocus){
@@ -3181,20 +2958,6 @@ int main(int argc, char* argv[]){
                 window.draw(contourtext);
             }
 
-
-            //Draw the being-drawn contours in native screen-pixel coordinates, if there are any.
-            // NOTE: Don't use this routine because it is less robust than using DICOM coordinates.
-            //if(!disp_pixel_contours.empty()){
-            //    sf::VertexArray lines;
-            //    lines.setPrimitiveType(sf::LinesStrip);
-            //    
-            //    for(const auto &vert : disp_pixel_contours){
-            //        lines.append( sf::Vertex(vert, sf::Color::Yellow) );
-            //    }
-            //    window.draw(lines);
-            //}
-
-
             //Draw any contours from the contouring buffer that lie in the plane of the current image.
             {
                 for(auto & c : contour_coll_shtl.contours){
@@ -3222,7 +2985,6 @@ int main(int argc, char* argv[]){
                     }
                 }
             }
-
 
             window.display();
 
