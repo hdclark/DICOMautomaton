@@ -89,6 +89,8 @@
 #include "YgorImages_Processing_Functor_In_Image_Plane_Bicubic_Supersample.h"
 #include "YgorImages_Processing_Functor_Cross_Second_Derivative.h"
 
+#include "YgorImages_Processing_Compute_per_ROI_Time_Courses.h"
+#include "YgorImages_Processing_Functor_Liver_Pharmacokinetic_Model.h"
 
 #include "ContourFactories.h"
 
@@ -1013,6 +1015,150 @@ int main(int argc, char* argv[]){
 
     }
 
+    if(Operations.count("CT_Liver_Perfusion_Pharmaco") != 0){
+        //Get handles for each of the original image arrays so we can easily refer to them later.
+        std::vector<std::shared_ptr<Image_Array>> orig_img_arrays;
+        for(auto & img_arr : DICOM_data.image_data) orig_img_arrays.push_back(img_arr);
+
+
+        //Force the window to something reasonable to be uniform and cover normal tissue HU range.
+        if(true) for(auto & img_arr : orig_img_arrays){
+            if(!img_arr->imagecoll.Process_Images( GroupIndividualImages,
+                                                   StandardAbdominalHUWindow,
+                                                   { } )){
+                FUNCERR("Unable to force window to cover reasonable HU range");
+            }
+        }
+
+
+        //Compute a baseline with which we can use later to compute signal enhancement.
+        std::vector<std::shared_ptr<Image_Array>> baseline_img_arrays;
+        if(false){
+            //Baseline = temporally averaged pre-contrast-injection signal.
+
+            double ContrastInjectionLeadTime = 10.0; //Seconds. 
+            if(InvocationMetadata.count("ContrastLeadTime") == 0){
+                FUNCWARN("Unable to locate 'ContrastLeadTime' invocation metadata key. Assuming the default lead time "
+                         << ContrastInjectionLeadTime << "s is appropriate");
+            }else{
+                ContrastInjectionLeadTime = std::stod( InvocationMetadata["ContrastLeadTime"] );
+                if(ContrastInjectionLeadTime < 0.0) throw std::runtime_error("Non-sensical 'ContrastLeadTime' found.");
+                FUNCINFO("Found 'ContrastLeadTime' invocation metadata key. Using value " << ContrastInjectionLeadTime << "s");
+            }
+            auto PurgeAboveNSeconds = std::bind(PurgeAboveTemporalThreshold, std::placeholders::_1, ContrastInjectionLeadTime);
+
+            for(auto & img_arr : orig_img_arrays){
+                DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( *img_arr ) );
+                baseline_img_arrays.emplace_back( DICOM_data.image_data.back() );
+    
+                baseline_img_arrays.back()->imagecoll.Prune_Images_Satisfying(PurgeAboveNSeconds);
+    
+                if(!baseline_img_arrays.back()->imagecoll.Condense_Average_Images(GroupSpatiallyOverlappingImages)){
+                    FUNCERR("Cannot temporally average data set. Is it able to be averaged?");
+                }
+            }
+    
+        }else{
+            //Baseline = minimum of signal over whole time course (minimum is usually pre-contrast, but noise
+            // can affect the result).
+
+            for(auto & img_arr : orig_img_arrays){
+                DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( *img_arr ) );
+                baseline_img_arrays.emplace_back( DICOM_data.image_data.back() );
+    
+                if(!baseline_img_arrays.back()->imagecoll.Process_Images( GroupSpatiallyOverlappingImages,
+                                                                          CondenseMinPixel,
+                                                                          { } )){
+                    FUNCERR("Unable to generate min(pixel) images over the time course");
+                }
+            }
+        }
+
+
+        //Deep-copy the original long image array and use the baseline map to work out 
+        // approximate contrast enhancement in each voxel.
+        std::vector<std::shared_ptr<Image_Array>> C_enhancement_img_arrays;
+        {
+            auto img_arr = orig_img_arrays.front();
+            DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( *img_arr ) );
+            C_enhancement_img_arrays.emplace_back( DICOM_data.image_data.back() );
+
+            if(!C_enhancement_img_arrays.back()->imagecoll.Transform_Images( CTPerfusionSigDiffC,
+                                                                             { baseline_img_arrays.front()->imagecoll },
+                                                                             { } )){
+                FUNCERR("Unable to transform image array to make poor-man's C map");
+            }
+        }
+       
+        //Eliminate the original, un-processed data to relieve some memory pressure.
+        if(true){
+            auto PurgeAboveNSeconds = std::bind(PurgeAboveTemporalThreshold, std::placeholders::_1, 20.0);
+            for(auto & img_arr : orig_img_arrays){
+                img_arr->imagecoll.Prune_Images_Satisfying(PurgeAboveNSeconds);
+            }
+        }
+ 
+        //Compute some aggregate C(t) curves from the available ROIs. We especially want the 
+        // portal vein and ascending aorta curves.
+        ComputePerROITimeCoursesUserData ud; // User Data.
+        for(auto & img_arr : C_enhancement_img_arrays){
+            if(!img_arr->imagecoll.Compute_Images( ComputePerROICourses,   //Non-modifying function, can use in-place.
+                                                   { },
+                                                   cc_all,
+                                                   &ud )){
+                FUNCERR("Unable to compute per-ROI time courses");
+            }
+        }
+
+        if(false){
+
+            // TODO: This little plotting routine is not working. Have I tweaked something I shouldn't have?
+
+            std::cout << "Produced " << ud.time_courses.size() << " time courses:" << std::endl;
+
+            std::vector<YgorMathPlotting::Shuttle<samples_1D<double>>> shuttle;
+            for(auto & tcs : ud.time_courses){
+                const auto lROIname = tcs.first;
+                const auto lVoxelCount = ud.voxel_count[lROIname];
+                const auto lTimeCourse = tcs.second.Multiply_With(1.0/static_cast<double>(lVoxelCount));
+                shuttle.emplace_back(lTimeCourse, lROIname + " - Voxel Averaged");
+                std::cout << "\t'" << lROIname << "'" << std::endl; 
+
+                lTimeCourse.Write_To_File(Get_Unique_Sequential_Filename("/tmp/roi_time_course_",4,".txt")); 
+            }
+            YgorMathPlotting::Plot<double>(shuttle, "ROI Time Courses", "Time (s)", "Pixel Intensity");
+
+            FUNCINFO("Waiting for you to press enter..");
+            double goon;
+            std::cin >> goon;
+        }
+
+        //Prune some images, to reduce the computational effort needed.
+        for(auto & img_arr : C_enhancement_img_arrays){
+            const auto centre = img_arr->imagecoll.center();
+            img_arr->imagecoll.Retain_Images_Satisfying(
+                                  [=](const planar_image<float,double> &animg)->bool{
+                                      return animg.encompasses_point(centre);
+                                  });
+        }
+
+
+        //Using the ROI time curves, compute a pharmacokinetic model and produce an image map with some model parameter(s).
+        std::vector<std::shared_ptr<Image_Array>> pharmaco_model_arr;
+        for(auto & img_arr : C_enhancement_img_arrays){
+            DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( *img_arr ) );
+            pharmaco_model_arr.emplace_back( DICOM_data.image_data.back() );
+
+            if(!pharmaco_model_arr.back()->imagecoll.Process_Images( GroupSpatiallyOverlappingImages,
+                                                                     LiverPharmacoModel,
+                                                                     cc_all,
+                                                                     &ud )){
+                FUNCERR("Unable to pharmacokinetically model liver!");
+            }
+        }
+
+    }
+
 
     if(Operations.count("CT_Liver_Perfusion") != 0){
         //Get handles for each of the original image arrays so we can easily refer to them later.
@@ -1087,6 +1233,7 @@ int main(int argc, char* argv[]){
             }
         }
 
+
         //Deep-copy the original long image array and use the temporally-averaged, pre-contrast map to work out the approximate contrast in each voxel.
         std::vector<std::shared_ptr<Image_Array>> C_enhancement_img_arrays;
         {
@@ -1100,6 +1247,7 @@ int main(int argc, char* argv[]){
                 FUNCERR("Unable to transform image array to make poor-man's C map");
             }
         }
+
 
         //Temporally average the whole series, to convert motion to blur.
         std::vector<std::shared_ptr<Image_Array>> temporal_avg_img_arrays;
@@ -1965,7 +2113,8 @@ int main(int argc, char* argv[]){
 
             if( win_valid && desc && win_c && win_fw && (win_valid.value() == desc.value()) ){
                 //Window/linear scaling transformation parameters.
-                const auto win_r = 0.5*(win_fw.value() - 1.0); //The 'radius' of the range, or half width omitting the centre point.
+                //const auto win_r = 0.5*(win_fw.value() - 1.0); //The 'radius' of the range, or half width omitting the centre point.
+                const auto win_r = 0.5*win_fw.value(); //The 'radius' of the range, or half width omitting the centre point.
     
                 //The output range we are targeting. In this case, a commodity 8 bit (2^8 = 256 intensities) display.
                 const double destmin = static_cast<double>( 0 );
@@ -1990,7 +2139,8 @@ int main(int argc, char* argv[]){
     
                             //If within the window range. Scale linearly as the pixel's position in the window.
                             }else{
-                                const double clamped = (val - (win_c.value() - win_r)) / (2.0*win_r + 1.0);
+                                //const double clamped = (val - (win_c.value() - win_r)) / (2.0*win_r + 1.0);
+                                const double clamped = (val - (win_c.value() - win_r)) / (win_fw.value());
                                 y = clamped * (destmax - destmin) + destmin;
                             }
     
@@ -2173,32 +2323,32 @@ int main(int argc, char* argv[]){
                     //Dump raw pixels from the current image to file.
                     }else if(thechar == 'i'){
                         //const auto pixel_dump_filename_out = Get_Unique_Sequential_Filename("/tmp/raw_pixel_dump_uint16_scaled_per_chan_",6,".gray");
-                        const auto pixel_dump_filename_out = Get_Unique_Sequential_Filename("/tmp/raw_pixel_dump_uint16_scaled_per_chan_",6,".gray");
+                        const auto pixel_dump_filename_out = Get_Unique_Sequential_Filename("/tmp/display_image_dump_",6,".fits");
                         //const auto pixel_dump_filename_out = Get_Unique_Sequential_Filename("/tmp/raw_pixel_dump_d64_per_chan_",6,".gray");
                         //if(Dump_Casted_Scaled_Pixels<float,double,uint16_t>(*disp_img_it,pixel_dump_filename_out,YgorImageIOPixelScaling::TypeMinMax)){
-                        if(Dump_Pixels(*disp_img_it,pixel_dump_filename_out)){
+                        //if(Dump_Pixels(*disp_img_it,pixel_dump_filename_out)){
+                        if(WriteToFITS(*disp_img_it,pixel_dump_filename_out)){
                             FUNCINFO("Dumped pixel data for this image to file '" << pixel_dump_filename_out << "'");
                         }else{
                             FUNCWARN("Unable to dump pixel data for this image to file '" << pixel_dump_filename_out << "'");
                         }
-                        FUNCINFO("To convert it issue something like 'convert -size WxH -depth T "
-                                 "-define quantum:format=unsigned -type grayscale image.gray -depth 16 ... out.jpg'");
 
                     //Dump raw pixels from all images in the current array to file.
                     }else if(thechar == 'I'){
                         long int count = 0;
                         for(auto &pimg : (*img_array_ptr_it)->imagecoll.images){
-                            const auto pixel_dump_filename_out = Get_Unique_Sequential_Filename("/tmp/raw_pixel_dump_uint16_scaled_per_chan_",6,".gray");
+                            const auto pixel_dump_filename_out = Get_Unique_Sequential_Filename("/tmp/image_dump_",6,".fits");
                             //if(Dump_Casted_Scaled_Pixels<float,double,uint16_t>(*pimg,pixel_dump_filename_out,YgorImageIOPixelScaling::TypeMinMax)){
-                            if(Dump_Pixels(pimg,pixel_dump_filename_out)){
+                            //if(Dump_Pixels(pimg,pixel_dump_filename_out)){
+                            if(WriteToFITS(pimg,pixel_dump_filename_out)){
                                 FUNCINFO("Dumped pixel data for image " << count << " to file '" << pixel_dump_filename_out << "'");
                             }else{
                                 FUNCWARN("Unable to dump pixel data for this image to file '" << pixel_dump_filename_out << "'");
                             }
                             ++count;
                         }
-                        FUNCINFO("To convert them issue something like 'convert -size 256x256 -depth 16 "
-                                 "-define quantum:format=unsigned -type grayscale image.gray -depth 16 ... out.jpg'");
+                        //FUNCINFO("To convert them issue something like 'convert -size 256x256 -depth 16 "
+                        //         "-define quantum:format=unsigned -type grayscale image.gray -depth 16 ... out.jpg'");
 
                     //Given the current mouse coordinates, dump pixel intensity profiles along the current row and column.
                     //
@@ -2252,9 +2402,13 @@ int main(int argc, char* argv[]){
                         //col_profile.Plot(col_profile_title.str());
 
                         title << "Row and Column profile. (row,col) = (" << row_as_u << "," << col_as_u << ").";
-                        YgorMathPlotting::Shuttle<samples_1D<double>> row_shtl(row_profile, "Row Profile");
-                        YgorMathPlotting::Shuttle<samples_1D<double>> col_shtl(col_profile, "Col Profile");
-                        YgorMathPlotting::Plot<double>({row_shtl, col_shtl}, title.str(), "Pixel Index (row or col)", "Pixel Intensity");
+                        try{
+                            YgorMathPlotting::Shuttle<samples_1D<double>> row_shtl(row_profile, "Row Profile");
+                            YgorMathPlotting::Shuttle<samples_1D<double>> col_shtl(col_profile, "Col Profile");
+                            YgorMathPlotting::Plot<double>({row_shtl, col_shtl}, title.str(), "Pixel Index (row or col)", "Pixel Intensity");
+                        }catch(const std::exception &e){
+                            FUNCINFO("Failed to plot: " << e.what());
+                        }
 
                         //Plotter2 rowplot;
                         //rowplot.Insert_samples_1D(row_profile, "", "linespoints");
@@ -2343,8 +2497,12 @@ int main(int argc, char* argv[]){
 
 
                         title << "Time Course. Images encompass " << pix_pos << ". ";
-                        YgorMathPlotting::Shuttle<samples_1D<double>> ymp_shtl(shtl, "Buffer A");
-                        YgorMathPlotting::Plot<double>({ymp_shtl}, title.str(), "Time (s)", "Pixel Intensity");
+                        try{
+                            YgorMathPlotting::Shuttle<samples_1D<double>> ymp_shtl(shtl, "Buffer A");
+                            YgorMathPlotting::Plot<double>({ymp_shtl}, title.str(), "Time (s)", "Pixel Intensity");
+                        }catch(const std::exception &e){
+                            FUNCINFO("Failed to plot: " << e.what());
+                        }
 
                         //Plotter2 toplot;
                         //title << "Images encompass " << pix_pos << ". ";

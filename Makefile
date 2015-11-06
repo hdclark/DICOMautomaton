@@ -26,7 +26,7 @@ CC           = `type ccache &>/dev/null && echo -n 'ccache ' ` g++ -std=c++14 -W
 COMMON_DEPS = Structs.o Dose_Meld.o Whole_Match.o
 COMMON_SRCS = 
 COMMON_LIBS = ${XTRA_LIBS} ${XTRA_MISC} ${XTRA_DEFINES} ${XTRA_FLAGS} \
-                 -limebrashim -lygor -lexplicator -ldemarcator -pthread
+                 -limebrashim -lygor -lexplicator -ldemarcator -lnlopt -pthread
 
 
 # In order to build a static wxX11 program, you have to compile the source to make

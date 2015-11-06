@@ -9,6 +9,8 @@
 #include <pqxx/pqxx>         //PostgreSQL C++ interface.
 #include <jansson.h>         //For JSON handling.
 
+#include <nlopt.h>
+
 #include "YgorMisc.h"
 #include "YgorMath.h"
 #include "YgorImages.h"
@@ -18,33 +20,103 @@
 #include "YgorString.h"      //Needed for GetFirstRegex(...)
 #include "YgorPlot.h"
 
-#include "YgorImages_Processing_Functor_per_ROI_Time_Courses.h"
+#include "YgorImages_Processing_Functor_Liver_Pharmacokinetic_Model.h"
+
+#include "YgorImages_Processing_Compute_per_ROI_Time_Courses.h"
+//struct ComputePerROITimeCoursesUserData;
+
+
+//This is the function we will minimize: the sum of the squared residuals between the ROI measured
+// concentrations and the total concentration predicted by the fitted model.
+samples_1D<double> *theAIF;    //Global, but only so we can pass a c-style function to nlopt.
+samples_1D<double> *theVIF;    //Global, but only so we can pass a c-style function to nlopt.
+samples_1D<double> *theROI;    //Global, but only so we can pass a c-style function to nlopt.
+double func_to_min(unsigned, const double *params, double *grad, void *){
+    if(grad != nullptr) FUNCERR("NLOpt asking for a gradient. We don't have it at the moment...");
+    const double k1A  = params[0];
+    const double tauA = params[1];
+    const double k2V  = params[2];
+    const double tauV = params[3];
+    const double k2   = params[4];
+
+    double sqDist = 0.0;
+    for(const auto &P : theROI->samples){
+        const double t = P[0];
+        const double Fexpdata = P[2];
+
+        //-------------------------------------------------------------------------------------------------------------------------
+        //First, the arterial contribution. This involves an integral over the AIF.
+        // Compute: \int_{tau=0}^{tau=t} k1A * AIF(tau - tauA) * exp((k2)*(tau-t)) dtau 
+        //          = k1A \int_{tau=-tauA}^{tau=(t-tauA)} AIF(tau) * exp((k2)*(tau-(t-tauA))) dtau.
+        // The integration coordinate is transformed to make it suit the integration-over-kernel-... implementation. 
+        //
+        double Integratedk1ACA = k1A*theAIF->Integrate_Over_Kernel_exp(-tauA, t-tauA, {k2,0.0}, {-(t-tauA),0.0})[0];
+    
+        //-------------------------------------------------------------------------------------------------------------------------
+        //The venous contribution is identical, but all the fitting parameters are different and AIF -> VIF.
+        //
+        double Integratedk2VCV = k2V*theVIF->Integrate_Over_Kernel_exp(-tauV, t-tauV, {k2,0.0}, {-(t-tauV),0.0})[0];
+        const double Ffitfunc = Integratedk1ACA + Integratedk2VCV;
+
+        //Standard L2-norm.
+        sqDist += std::pow(Fexpdata - Ffitfunc, 2.0);
+    }
+    return sqDist;
+}
+ 
 
 
 
+bool LiverPharmacoModel(planar_image_collection<float,double>::images_list_it_t first_img_it,
+                        std::list<planar_image_collection<float,double>::images_list_it_t> selected_img_its,
+                        std::list<std::reference_wrapper<contour_collection<double>>> ccsl,
+                        std::experimental::any user_data ){
 
 
+    //This takes aggregate time courses for (1) hepatic portal vein and (2) ascending aorta and attempts to 
+    // fit a pharmacokinetic model to each voxel within the provided gross liver ROI. This entails fitting
+    // a convolution model to the data, and a general optimization procedure is used.
+    //
+    // The input images must be grouped in the same way that the ROI time courses were computed. This will
+    // most likely mean grouping spatially-overlapping images that have identical 'image acquisition time' 
+    // (or just 'dt' for short) together.
 
-
-bool PerROITimeCourses(planar_image_collection<float,double>::images_list_it_t first_img_it,
-                       std::list<planar_image_collection<float,double>::images_list_it_t> selected_img_its,
-                       std::list<std::reference_wrapper<contour_collection<double>>> ccsl, 
-                       std::experimental::any user_data ){
-
-    //This routine computes aggregate courses for the specified ROIs; pixels within a contour are value
-    // averaged into a samples_1D. Typically these will be time courses, but can be groupings along any
-    // dimension in which you can cluster images. (For example, maybe flip angle, or kVp setting, or 
-    // series number, etc.)
-
-    //This routine requires a valid PerROITimeCoursesUserData struct packed into the user_data. Accept the throw
-    // if the input is missing or invalid.
-    PerROITimeCoursesUserData *user_data_s;
+    ComputePerROITimeCoursesUserData *user_data_s;
     try{
-        user_data_s = std::experimental::any_cast<PerROITimeCoursesUserData *>(user_data);
+        user_data_s = std::experimental::any_cast<ComputePerROITimeCoursesUserData *>(user_data);
     }catch(const std::exception &e){
         FUNCWARN("Unable to cast user_data to appropriate format. Cannot continue with computation");
         return false;
     }
+
+    if( (user_data_s->time_courses.count("Abdominal_Aorta") == 0 )
+    ||  (user_data_s->time_courses.count("Hepatic_Portal_Vein") == 0 ) ){
+        throw std::invalid_argument("Both arterial and venous input time courses are needed."
+                                    "(Are they named differently to the hard-coded names?)");
+    }
+
+    //Get convenient handles for the arterial and venous input time courses.
+    //
+    // NOTE: "Because the contrast agent does not enter the RBCs, the time series Caorta(t) and Cportal(t)
+    //       were divided by one minus the hematocrit." (From Van Beers et al. 2000.)
+    auto Carterial = user_data_s->time_courses["Abdominal_Aorta"].Multiply_With(1.0/(1.0 - 0.42));
+    auto Cvenous   = user_data_s->time_courses["Hepatic_Portal_Vein"].Multiply_With(1.0/(1.0 - 0.42));
+
+    theAIF = &Carterial;
+    theVIF = &Cvenous;
+
+    //Trim all but the liver contour. 
+    //
+    //   TODO: hoist out of this function, and provide a convenience
+    //         function called something like: Prune_Contours_Other_Than(cc_all, "Liver_Rough");
+    //         You could do regex or whatever is needed.
+
+    ccsl.remove_if([](std::reference_wrapper<contour_collection<double>> cc) -> bool {
+                       const auto ROINameOpt = cc.get().contours.front().GetMetadataValueAs<std::string>("ROIName");
+                       const auto ROIName = ROINameOpt.value();
+                       return (ROIName != "Suspected_Liver_Rough");
+                   });
+
 
     //This routine performs a number of calculations. It is experimental and excerpts you plan to rely on should be
     // made into their own analysis functors.
@@ -57,7 +129,8 @@ bool PerROITimeCourses(planar_image_collection<float,double>::images_list_it_t f
     //
     // NOTE: We only bother to grab individual contours here. You could alter this if you wanted 
     //       each contour_collection's contours to have an identifying colour.
-    if(ccsl.empty()){
+    //if(ccsl.empty()){
+    if(ccsl.size() != 1){
         FUNCWARN("Missing needed contour information. Cannot continue with computation");
         return false;
     }
@@ -85,6 +158,13 @@ bool PerROITimeCourses(planar_image_collection<float,double>::images_list_it_t f
     const auto row_unit   = first_img_it->row_unit;
     const auto col_unit   = first_img_it->col_unit;
     const auto ortho_unit = row_unit.Cross( col_unit ).unit();
+
+    size_t Minimization_Failure_Count = 0;
+
+
+    //Record the min and max actual pixel values for windowing purposes.
+    float curr_min_pixel = std::numeric_limits<float>::max();
+    float curr_max_pixel = std::numeric_limits<float>::min();
 
     //Loop over the ccsl, rois, rows, columns, channels, and finally any selected images (if applicable).
     //for(const auto &roi : rois){
@@ -185,32 +265,73 @@ bool PerROITimeCourses(planar_image_collection<float,double>::images_list_it_t f
                                         in_pixs.push_back(val);
                                     }
                                 }
-                                const auto avg_val = Stats::Mean(in_pixs);
-                                if(in_pixs.size() < min_datum) continue; //If contours are too narrow so that there is too few datum for meaningful results.
-                                const auto avg_val_sigma = std::sqrt(Stats::Unbiased_Var_Est(in_pixs))/std::sqrt(1.0*in_pixs.size());
-    
                                 auto dt = img_it->GetMetadataValueAs<double>("dt");
                                 if(!dt) FUNCERR("Image is missing time metadata. Bailing");
-                                channel_time_course.push_back(dt.value(), 0.0, avg_val, avg_val_sigma, InhibitSort);
+
+                                const auto avg_val = Stats::Mean(in_pixs);
+                                if(in_pixs.size() < min_datum) continue; //If contours are too narrow so that there is too few datum for meaningful results.
+                                //const auto avg_val_sigma = std::sqrt(Stats::Unbiased_Var_Est(in_pixs))/std::sqrt(1.0*in_pixs.size());
+                                //channel_time_course.push_back(dt.value(), 0.0, avg_val, avg_val_sigma, InhibitSort);
+                                channel_time_course.push_back(dt.value(), 0.0, avg_val, 0.0, InhibitSort);
                             }
                             channel_time_course.stable_sort();
                             if(channel_time_course.empty()) continue;
-    
-                            //Fill in some basic time course metadata.
-     
-                            // ... TODO ...  (Worthwhile at this stage?)
+   
+                            //==============================================================================
+                            //Fit the model.
+
+                            //theAIF = &Carterial;
+                            //theVIF = &Cvenous;
+                            theROI = &channel_time_course;
+
+                            const int dimen = 5;
+                            //Fitting parameters:      k1A,  tauA,  k1V,  tauV,  k2.
+                            double params[dimen] = {   1.0,   0.5,  1.0,   0.5,  1.0 };  //Arbitrarily chosen...
+
+                            // U/L bounds:             k1A,  tauA,  k1V,  tauV,  k2.
+                            double l_bnds[dimen] = {   0.0,  -5.0,  0.0,  -5.0,  0.0 };
+                            double u_bnds[dimen] = {   1.0,   5.0,  1.0,   5.0,  1.0 };
+                    
+                            nlopt_opt opt;
+                            //opt = nlopt_create(NLOPT_LN_COBYLA, dimen);
+                            opt = nlopt_create(NLOPT_LN_BOBYQA, dimen);
+                            //opt = nlopt_create(NLOPT_LN_SBPLX, dimen);
+                    
+                            //opt = nlopt_create(NLOPT_GN_DIRECT, dimen);
+                            //opt = nlopt_create(NLOPT_GN_CRS2_LM, dimen);
+                            //opt = nlopt_create(NLOPT_GN_ESCH, dimen);
+                            //opt = nlopt_create(NLOPT_GN_ISRES, dimen);
+                    
+                            nlopt_set_lower_bounds(opt, l_bnds);
+                            nlopt_set_upper_bounds(opt, u_bnds);
+                    
+                            nlopt_set_min_objective(opt, func_to_min, nullptr);
+                            nlopt_set_xtol_rel(opt, 1e-4);
+                   
+                            double func_min;
+                            if(nlopt_optimize(opt, params, &func_min) < 0){
+                                FUNCWARN("NLOpt fail");
+                                ++Minimization_Failure_Count;
+                            }
+                            nlopt_destroy(opt);
+
+                    
+                            const double k1A  = params[0];
+                            const double tauA = params[1];
+                            const double k2V  = params[2];
+                            const double tauV = params[3];
+                            const double k2   = params[4];
+
+                            const auto LiverPerfusion = (k1A + k2V);
+
+                            //==============================================================================
  
-                            // --------------- Append the time course data into the user_data struct ------------------
-                            //user_data_s->total_voxel_count[ std::ref(ccs) ] += channel_time_course.size();
-                            //user_data_s->voxel_count[ std::ref(ccs) ] += 1;
-                            user_data_s->time_courses[ ROIName.value() ] = user_data_s->time_courses[ ROIName.value() ].Sum_With(channel_time_course);
-                            user_data_s->total_voxel_count[ ROIName.value() ] += channel_time_course.size();
-                            user_data_s->voxel_count[ ROIName.value() ] += 1;
-    
-           
                             //Update the value.
-                            //working.reference(row, col, chan) = static_cast<float>(0);
-    
+                            const auto newval = static_cast<float>(LiverPerfusion);
+                            working.reference(row, col, chan) = newval;
+                            curr_min_pixel = std::min(curr_min_pixel, newval);
+                            curr_max_pixel = std::max(curr_max_pixel, newval);
+
                             // ----------------------------------------------------------------------------
     
                         }//Loop over channels.
@@ -234,7 +355,23 @@ bool PerROITimeCourses(planar_image_collection<float,double>::images_list_it_t f
 
     //Alter the first image's metadata to reflect that averaging has occurred. You might want to consider
     // a selective whitelist approach so that unique IDs are not duplicated accidentally.
-    first_img_it->metadata["Description"] = "Per-ROI Time Courses";
+    first_img_it->metadata["Description"] = "Liver Pharmacokinetic Model";
+
+
+    //Specify a reasonable default window.
+    if( (curr_min_pixel != std::numeric_limits<float>::max())
+    &&  (curr_max_pixel != std::numeric_limits<float>::min()) ){
+        const float WindowCenter = (curr_min_pixel/2.0) + (curr_max_pixel/2.0);
+        //const float WindowWidth  = 2.0 + curr_max_pixel - curr_min_pixel;
+        const float WindowWidth  = curr_max_pixel - curr_min_pixel;
+        first_img_it->metadata["WindowValidFor"] = first_img_it->metadata["Description"];
+        first_img_it->metadata["WindowCenter"]   = Xtostring(WindowCenter);
+        first_img_it->metadata["WindowWidth"]    = Xtostring(WindowWidth);
+
+        first_img_it->metadata["PixelMinMaxValidFor"] = first_img_it->metadata["Description"];
+        first_img_it->metadata["PixelMin"]            = Xtostring(curr_min_pixel);
+        first_img_it->metadata["PixelMax"]            = Xtostring(curr_max_pixel);
+    }
 
     return true;
 }
