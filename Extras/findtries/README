@@ -1,0 +1,49 @@
+Written by haley clark in 2011. Free to use and distribute (contact me for license: I have
+ not chosen one specifically yet.)
+********************************************************************************************
+*Description:                                                                              *
+*                                                                                          *
+*This short program scans an input text file for strings of letters. It keeps track of how *
+* many of each string it finds, and prints this info to an output file.                    *
+********************************************************************************************
+
+For example, a one-line file with the string "hlowrld" would print out something like:
+     --------
+     1 hlo
+     1 low
+     1 owr
+     1 rld
+     1 wrl
+     --------
+ if looking for 3-letter strings. Note it gets sorted. If looking for 4-letter strings, 
+ it would print out something like:
+     --------
+     1 hlow
+     1 lowr
+     1 owrl
+     1 wrld
+     --------
+
+For a non trivial example, the one-line file containing the string "aabbaabb" would 
+ print out something like:
+     --------
+     1 abba
+     1 baab
+     1 bbaa
+     2 aabb
+     --------
+ if looking for 4-letter strings.
+
+
+
+
+********************************************************************************************
+One can also export some other info like: 
+  -occurence count.
+  -total number of (all) occurences.
+  -gross average occurence rate (for the particular input file.)
+ These options, and the length of characters to look for, can be changed in the code.
+ Recompile with the (executable) ./compile.sh script.
+ Run like ./<name> <input filename (no spaces)> <output filename (no spaces)>
+  ie:   ./findtries  input.txt  output.txt
+
