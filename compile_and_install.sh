@@ -10,7 +10,7 @@ rsync -avz ./ "${BUILDDIR}"
 
 pushd .
 cd "${BUILDDIR}"
-makepkg --syncdeps --install
+makepkg --syncdeps --install --noconfirm
 mv "${BUILDDIR}/"*.pkg.tar.* "${BUILTPKGSDIR}/"
 popd
 

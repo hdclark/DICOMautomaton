@@ -1054,21 +1054,10 @@ int main(int argc, char* argv[]){
             }
         }
  
-        //Temporally average the C(t) map, to help assess whether it seems to conform to structures.
-        std::vector<std::shared_ptr<Image_Array>> temp_avg_C_img_arrays;
-        if(false) for(auto & img_arr : C_enhancement_img_arrays){
-            DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( *img_arr ) );
-            temp_avg_C_img_arrays.emplace_back( DICOM_data.image_data.back() );
-
-            if(!temp_avg_C_img_arrays.back()->imagecoll.Condense_Average_Images(GroupSpatiallyOverlappingImages)){
-                FUNCERR("Cannot temporally average C map data set. Is it able to be averaged?");
-            }
-        }
-
         //Compute some aggregate C(t) curves from the available ROIs. We especially want the 
         // portal vein and ascending aorta curves.
         ComputePerROITimeCoursesUserData ud; // User Data.
-        for(auto & img_arr : C_enhancement_img_arrays){
+        if(true) for(auto & img_arr : C_enhancement_img_arrays){
             if(!img_arr->imagecoll.Compute_Images( ComputePerROICourses,   //Non-modifying function, can use in-place.
                                                    { },
                                                    cc_all,
@@ -1113,7 +1102,7 @@ int main(int argc, char* argv[]){
 
         //Using the ROI time curves, compute a pharmacokinetic model and produce an image map with some model parameter(s).
         std::vector<std::shared_ptr<Image_Array>> pharmaco_model_arr;
-        for(auto & img_arr : C_enhancement_img_arrays){
+        if(true) for(auto & img_arr : C_enhancement_img_arrays){
             DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( *img_arr ) );
             pharmaco_model_arr.emplace_back( DICOM_data.image_data.back() );
 
@@ -2191,7 +2180,7 @@ int main(int argc, char* argv[]){
                                  "-define quantum:format=unsigned -type grayscale image.gray -depth 16 ... out.jpg'");
 
 
-                    //Dump raw pixels from the current image to file.
+                    //Dump the current image to file.
                     }else if(thechar == 'i'){
                         const auto pixel_dump_filename_out = Get_Unique_Sequential_Filename("/tmp/display_image_dump_",6,".fits");
                         if(WriteToFITS(*disp_img_it,pixel_dump_filename_out)){
@@ -2200,7 +2189,7 @@ int main(int argc, char* argv[]){
                             FUNCWARN("Unable to dump pixel data for this image to file '" << pixel_dump_filename_out << "'");
                         }
 
-                    //Dump raw pixels from all images in the current array to file.
+                    //Dump all images in the current array to file.
                     }else if(thechar == 'I'){
                         long int count = 0;
                         for(auto &pimg : (*img_array_ptr_it)->imagecoll.images){

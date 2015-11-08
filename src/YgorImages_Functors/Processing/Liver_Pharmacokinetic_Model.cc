@@ -43,6 +43,7 @@ double func_to_min(unsigned, const double *params, double *grad, void *){
     for(const auto &P : theROI->samples){
         const double t = P[0];
         const double Fexpdata = P[2];
+        double Ffitfunc = 0.0;
 
         //-------------------------------------------------------------------------------------------------------------------------
         //First, the arterial contribution. This involves an integral over the AIF.
@@ -50,14 +51,14 @@ double func_to_min(unsigned, const double *params, double *grad, void *){
         //          = k1A \int_{tau=-tauA}^{tau=(t-tauA)} AIF(tau) * exp((k2)*(tau-(t-tauA))) dtau.
         // The integration coordinate is transformed to make it suit the integration-over-kernel-... implementation. 
         //
-        double Integratedk1ACA = k1A*theAIF->Integrate_Over_Kernel_exp(-tauA, t-tauA, {k2,0.0}, {-(t-tauA),0.0})[0];
-    
+        double Integratedk1ACA = k1A*theAIF->Integrate_Over_Kernel_exp(0.0-tauA, t-tauA, {k2,0.0}, {-(t-tauA),0.0})[0];
+        
         //-------------------------------------------------------------------------------------------------------------------------
         //The venous contribution is identical, but all the fitting parameters are different and AIF -> VIF.
         //
-        double Integratedk2VCV = k2V*theVIF->Integrate_Over_Kernel_exp(-tauV, t-tauV, {k2,0.0}, {-(t-tauV),0.0})[0];
+        double Integratedk2VCV = k2V*theVIF->Integrate_Over_Kernel_exp(0.0-tauV, t-tauV, {k2,0.0}, {-(t-tauV),0.0})[0];
         const double Ffitfunc = Integratedk1ACA + Integratedk2VCV;
-
+ 
         //Standard L2-norm.
         sqDist += std::pow(Fexpdata - Ffitfunc, 2.0);
     }
