@@ -306,7 +306,7 @@ bool LiverPharmacoModel(planar_image_collection<float,double>::images_list_it_t 
                             nlopt_set_upper_bounds(opt, u_bnds);
                     
                             nlopt_set_min_objective(opt, func_to_min, nullptr);
-                            nlopt_set_xtol_rel(opt, 1e-4);
+                            nlopt_set_xtol_rel(opt, 1.0E-4);
                    
                             double func_min;
                             if(nlopt_optimize(opt, params, &func_min) < 0){

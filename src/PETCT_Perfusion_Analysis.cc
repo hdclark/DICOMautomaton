@@ -1054,6 +1054,17 @@ int main(int argc, char* argv[]){
             }
         }
  
+        //Temporally average the C(t) map, to help assess whether it seems to conform to structures.
+        std::vector<std::shared_ptr<Image_Array>> temp_avg_C_img_arrays;
+        if(false) for(auto & img_arr : C_enhancement_img_arrays){
+            DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( *img_arr ) );
+            temp_avg_C_img_arrays.emplace_back( DICOM_data.image_data.back() );
+
+            if(!temp_avg_C_img_arrays.back()->imagecoll.Condense_Average_Images(GroupSpatiallyOverlappingImages)){
+                FUNCERR("Cannot temporally average C map data set. Is it able to be averaged?");
+            }
+        }
+
         //Compute some aggregate C(t) curves from the available ROIs. We especially want the 
         // portal vein and ascending aorta curves.
         ComputePerROITimeCoursesUserData ud; // User Data.
@@ -1090,14 +1101,15 @@ int main(int argc, char* argv[]){
         }
 
         //Prune some images, to reduce the computational effort needed.
-        for(auto & img_arr : C_enhancement_img_arrays){
-            const auto centre = img_arr->imagecoll.center();
-            img_arr->imagecoll.Retain_Images_Satisfying(
-                                  [=](const planar_image<float,double> &animg)->bool{
-                                      return animg.encompasses_point(centre);
-                                  });
+        if(false){
+            for(auto & img_arr : C_enhancement_img_arrays){
+                const auto centre = img_arr->imagecoll.center();
+                img_arr->imagecoll.Retain_Images_Satisfying(
+                                      [=](const planar_image<float,double> &animg)->bool{
+                                          return animg.encompasses_point(centre);
+                                      });
+            }
         }
-
 
         //Using the ROI time curves, compute a pharmacokinetic model and produce an image map with some model parameter(s).
         std::vector<std::shared_ptr<Image_Array>> pharmaco_model_arr;
