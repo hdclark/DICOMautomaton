@@ -16,6 +16,7 @@
 
 bool ReasonableHUWindow(planar_image_collection<float,double>::images_list_it_t first_img_it,
                         std::list<planar_image_collection<float,double>::images_list_it_t> ,
+                        std::list<std::reference_wrapper<planar_image_collection<float,double>>>,
                         std::list<std::reference_wrapper<contour_collection<double>>>, 
                         float FullWidth, float Centre,
                         std::experimental::any ){
@@ -53,10 +54,12 @@ bool ReasonableHUWindow(planar_image_collection<float,double>::images_list_it_t 
 
 bool StandardGenericHUWindow(planar_image_collection<float,double>::images_list_it_t first_img_it,
                              std::list<planar_image_collection<float,double>::images_list_it_t> selected_img_its,
+                             std::list<std::reference_wrapper<planar_image_collection<float,double>>> ext_imgs,
                              std::list<std::reference_wrapper<contour_collection<double>>> ccsl, 
                              std::experimental::any userdata ){
     return ReasonableHUWindow( std::move(first_img_it),
                                std::move(selected_img_its),
+                               std::move(ext_imgs),
                                std::move(ccsl),
                                static_cast<float>(1000), static_cast<float>(500),
                                std::move(userdata) );
@@ -64,10 +67,12 @@ bool StandardGenericHUWindow(planar_image_collection<float,double>::images_list_
 
 bool StandardHeadAndNeckHUWindow(planar_image_collection<float,double>::images_list_it_t first_img_it,
                              std::list<planar_image_collection<float,double>::images_list_it_t> selected_img_its,
+                             std::list<std::reference_wrapper<planar_image_collection<float,double>>> ext_imgs,
                              std::list<std::reference_wrapper<contour_collection<double>>> ccsl,
                              std::experimental::any userdata ){
     return ReasonableHUWindow( std::move(first_img_it),
                                std::move(selected_img_its),
+                               std::move(ext_imgs),
                                std::move(ccsl),
                                static_cast<float>(255), static_cast<float>(25),
                                std::move(userdata) );
@@ -76,10 +81,12 @@ bool StandardHeadAndNeckHUWindow(planar_image_collection<float,double>::images_l
 
 bool StandardAbdominalHUWindow(planar_image_collection<float,double>::images_list_it_t first_img_it,
                                std::list<planar_image_collection<float,double>::images_list_it_t> selected_img_its,
+                               std::list<std::reference_wrapper<planar_image_collection<float,double>>> ext_imgs,
                                std::list<std::reference_wrapper<contour_collection<double>>> ccsl,
                                std::experimental::any userdata ){
     return ReasonableHUWindow( std::move(first_img_it),
                                std::move(selected_img_its),
+                               std::move(ext_imgs),
                                std::move(ccsl),
                                static_cast<float>(350), static_cast<float>(50),
                                std::move(userdata) );
@@ -87,10 +94,12 @@ bool StandardAbdominalHUWindow(planar_image_collection<float,double>::images_lis
 
 bool StandardThoraxHUWindow(planar_image_collection<float,double>::images_list_it_t first_img_it,
                             std::list<planar_image_collection<float,double>::images_list_it_t> selected_img_its,
+                            std::list<std::reference_wrapper<planar_image_collection<float,double>>> ext_imgs,
                             std::list<std::reference_wrapper<contour_collection<double>>> ccsl,
                             std::experimental::any userdata ){
     return ReasonableHUWindow( std::move(first_img_it),
                                std::move(selected_img_its),
+                               std::move(ext_imgs),
                                std::move(ccsl),
                                static_cast<float>(1500), static_cast<float>(-500),
                                std::move(userdata) );
@@ -98,10 +107,12 @@ bool StandardThoraxHUWindow(planar_image_collection<float,double>::images_list_i
 
 bool StandardBoneHUWindow(planar_image_collection<float,double>::images_list_it_t first_img_it,
                           std::list<planar_image_collection<float,double>::images_list_it_t> selected_img_its,
+                          std::list<std::reference_wrapper<planar_image_collection<float,double>>> ext_imgs,
                           std::list<std::reference_wrapper<contour_collection<double>>> ccsl,
                           std::experimental::any userdata ){
     return ReasonableHUWindow( std::move(first_img_it),
                                std::move(selected_img_its),
+                               std::move(ext_imgs),
                                std::move(ccsl),
                                static_cast<float>(2000), static_cast<float>(250),
                                std::move(userdata) );

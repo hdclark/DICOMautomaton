@@ -26,6 +26,8 @@ SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 SET(BUILD_SHARED_LIBS TRUE)
 SET(POSITION_INDEPENDENT_CODE TRUE)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON) # For clang-tidy et al.
+
 
 # Use the directory where CMakeLists.txt is for inclusions.
 INCLUDE_DIRECTORIES(/usr/local/lib/)

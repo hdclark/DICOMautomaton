@@ -27,6 +27,10 @@ GroupSpatiallyOverlappingImages(planar_image_collection<float,double>::images_li
                                 std::reference_wrapper<planar_image_collection<float,double>> pic);
 
 std::list<planar_image_collection<float,double>::images_list_it_t>
+GroupTemporallyOverlappingImages(planar_image_collection<float,double>::images_list_it_t first_img_it,
+                                std::reference_wrapper<planar_image_collection<float,double>> pic);
+
+std::list<planar_image_collection<float,double>::images_list_it_t>
 GroupSpatiallyTemporallyOverlappingImages(planar_image_collection<float,double>::images_list_it_t first_img_it,
                                           std::reference_wrapper<planar_image_collection<float,double>> pic);
 

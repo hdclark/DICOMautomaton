@@ -43,7 +43,7 @@ double func_to_min(unsigned, const double *params, double *grad, void *){
     for(const auto &P : theROI->samples){
         const double t = P[0];
         const double Fexpdata = P[2];
-        double Ffitfunc = 0.0;
+        //double Ffitfunc = 0.0;
 
         //-------------------------------------------------------------------------------------------------------------------------
         //First, the arterial contribution. This involves an integral over the AIF.
@@ -70,6 +70,7 @@ double func_to_min(unsigned, const double *params, double *grad, void *){
 
 bool LiverPharmacoModel(planar_image_collection<float,double>::images_list_it_t first_img_it,
                         std::list<planar_image_collection<float,double>::images_list_it_t> selected_img_its,
+                        std::list<std::reference_wrapper<planar_image_collection<float,double>>>,
                         std::list<std::reference_wrapper<contour_collection<double>>> ccsl,
                         std::experimental::any user_data ){
 
@@ -294,8 +295,8 @@ bool LiverPharmacoModel(planar_image_collection<float,double>::images_list_it_t 
                             double u_bnds[dimen] = {   1.0,   5.0,  1.0,   5.0,  1.0 };
                     
                             nlopt_opt opt;
-                            //opt = nlopt_create(NLOPT_LN_COBYLA, dimen);
-                            opt = nlopt_create(NLOPT_LN_BOBYQA, dimen);
+                            opt = nlopt_create(NLOPT_LN_COBYLA, dimen);
+                            //opt = nlopt_create(NLOPT_LN_BOBYQA, dimen);
                             //opt = nlopt_create(NLOPT_LN_SBPLX, dimen);
                     
                             //opt = nlopt_create(NLOPT_GN_DIRECT, dimen);
@@ -324,11 +325,14 @@ bool LiverPharmacoModel(planar_image_collection<float,double>::images_list_it_t 
                             const double k2   = params[4];
 
                             const auto LiverPerfusion = (k1A + k2V);
+                            const auto MeanTransitTime = 1.0 / k2;
+                            const auto ArterialFraction = 100.0 * k1A / LiverPerfusion;
+                            const auto DistributionVolume = 100.0 * LiverPerfusion * MeanTransitTime;
 
                             //==============================================================================
  
                             //Update the value.
-                            const auto newval = static_cast<float>(LiverPerfusion);
+                            const auto newval = static_cast<float>(ArterialFraction);
                             working.reference(row, col, chan) = newval;
                             curr_min_pixel = std::min(curr_min_pixel, newval);
                             curr_max_pixel = std::max(curr_max_pixel, newval);

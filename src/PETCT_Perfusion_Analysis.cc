@@ -40,7 +40,7 @@
 #include "Imebra_Shim.h"      //Wrapper for Imebra library. Black-boxed to speed up compilation.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorMath.h"         //Needed for vec3 class.
-#include "YgorMathPlotting.h" //Needed for YgorMathPlotting::*.
+#include "YgorMathPlottingGnuplot.h" //Needed for YgorMathPlottingGnuplot::*.
 #include "YgorStats.h"        //Needed for Stats:: namespace.
 #include "YgorFilesDirs.h"    //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
 #include "YgorContainers.h"   //Needed for bimap class.
@@ -61,24 +61,17 @@
 
 #include "YgorImages_Functors/Grouping/Misc_Functors.h"
 
-#include "YgorImages_Functors/Processing/DCEMRI_C_Map.h"
-#include "YgorImages_Functors/Processing/DCEMRI_Signal_Difference_C.h"
-#include "YgorImages_Functors/Processing/CT_Perfusion_Signal_Diff.h"
 #include "YgorImages_Functors/Processing/DCEMRI_AUC_Map.h"
 #include "YgorImages_Functors/Processing/DCEMRI_S0_Map.h"
 #include "YgorImages_Functors/Processing/DCEMRI_T1_Map.h"
-#include "YgorImages_Functors/Processing/DCEMRI_S0_Map_v2.h"
-#include "YgorImages_Functors/Processing/DCEMRI_T1_Map_v2.h"
 #include "YgorImages_Functors/Processing/Highlight_ROI_Voxels.h"
 #include "YgorImages_Functors/Processing/Kitchen_Sink_Analysis.h"
-#include "YgorImages_Functors/Processing/Pixel_Value_Histogram.h"
 #include "YgorImages_Functors/Processing/IVIMMRI_ADC_Map.h"
 #include "YgorImages_Functors/Processing/Time_Course_Slope_Map.h"
 #include "YgorImages_Functors/Processing/CT_Perfusion_Clip_Search.h"
 #include "YgorImages_Functors/Processing/CT_Perf_Pixel_Filter.h"
 #include "YgorImages_Functors/Processing/Min_Pixel_Value.h"
 #include "YgorImages_Functors/Processing/Max_Pixel_Value.h"
-#include "YgorImages_Functors/Processing/Subtract_Spatially_Overlapping_Images.h"
 #include "YgorImages_Functors/Processing/CT_Reasonable_HU_Window.h"
 #include "YgorImages_Functors/Processing/Slope_Difference.h"
 #include "YgorImages_Functors/Processing/Centralized_Moments.h"
@@ -88,9 +81,20 @@
 #include "YgorImages_Functors/Processing/In_Image_Plane_Bilinear_Supersample.h"
 #include "YgorImages_Functors/Processing/In_Image_Plane_Bicubic_Supersample.h"
 #include "YgorImages_Functors/Processing/Cross_Second_Derivative.h"
+#include "YgorImages_Functors/Processing/Liver_Pharmacokinetic_Model.h"
+#include "YgorImages_Functors/Processing/Orthogonal_Slices.h"
+
+#include "YgorImages_Functors/Transform/DCEMRI_C_Map.h"
+#include "YgorImages_Functors/Transform/DCEMRI_Signal_Difference_C.h"
+#include "YgorImages_Functors/Transform/CT_Perfusion_Signal_Diff.h"
+#include "YgorImages_Functors/Transform/DCEMRI_S0_Map_v2.h"
+#include "YgorImages_Functors/Transform/DCEMRI_T1_Map_v2.h"
+#include "YgorImages_Functors/Transform/Pixel_Value_Histogram.h"
+#include "YgorImages_Functors/Transform/Subtract_Spatially_Overlapping_Images.h"
 
 #include "YgorImages_Functors/Compute/Per_ROI_Time_Courses.h"
-#include "YgorImages_Functors/Processing/Liver_Pharmacokinetic_Model.h"
+//#include "YgorImages_Functors/Compute/Orthogonal_Slices.h"
+
 
 //Globals. Libimebrashim expects these to be defined.
 bool VERBOSE = false;  //Provides additional information.
@@ -680,7 +684,7 @@ int main(int argc, char* argv[]){
         for(auto & img_arr : DICOM_data.image_data){
             if(!img_arr->imagecoll.Process_Images( GroupIndividualImages,
                                                    CTPerfEnormousPixelFilter,
-                                                   { } )){
+                                                   {}, {} )){
                 FUNCERR("Unable to censor pixels with enormous values");
             }
         }
@@ -692,7 +696,7 @@ int main(int argc, char* argv[]){
         for(auto & img_arr : DICOM_data.image_data){
             if(!img_arr->imagecoll.Process_Images( GroupIndividualImages,
                                                    StandardHeadAndNeckHUWindow,
-                                                   { } )){
+                                                   {}, {})){
                 FUNCERR("Unable to force window to cover a reasonable head-and-neck HU range");
             }
         }
@@ -705,7 +709,7 @@ int main(int argc, char* argv[]){
         for(auto & img_arr : DICOM_data.image_data){
             if(!img_arr->imagecoll.Process_Images( GroupIndividualImages,
                                                    StandardAbdominalHUWindow,
-                                                   { } )){
+                                                   {}, {} )){
                 FUNCERR("Unable to force window to cover a reasonable abdominal HU range");
             }
         }
@@ -717,7 +721,7 @@ int main(int argc, char* argv[]){
         for(auto & img_arr : DICOM_data.image_data){
             if(!img_arr->imagecoll.Process_Images( GroupIndividualImages,
                                                    StandardThoraxHUWindow,
-                                                   { } )){
+                                                   {},{} )){
                 FUNCERR("Unable to force window to cover a reasonable thorax HU range");
             }
         }
@@ -730,7 +734,7 @@ int main(int argc, char* argv[]){
         for(auto & img_arr : DICOM_data.image_data){
             if(!img_arr->imagecoll.Process_Images( GroupIndividualImages,
                                                    StandardBoneHUWindow,
-                                                   { } )){
+                                                   {},{} )){
                 FUNCERR("Unable to force window to cover a reasonable bone HU range");
             }
         }
@@ -804,7 +808,7 @@ int main(int argc, char* argv[]){
 
             if(!adc_map_img_arrays.back()->imagecoll.Process_Images( GroupSpatiallyTemporallyOverlappingImages, 
                                                                      IVIMMRIADCMap, 
-                                                                     { } )){
+                                                                     {}, {} )){
                 FUNCERR("Unable to generate ADC map");
             }
         }
@@ -814,7 +818,8 @@ int main(int argc, char* argv[]){
         //Deep-copy the ADC map and compute a slope-sign map.
         std::vector<std::shared_ptr<Image_Array>> slope_sign_map_img_arrays;
         auto TimeCourseSlopeMapAllTime = std::bind(TimeCourseSlopeMap, 
-                                                   std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, 
+                                                   std::placeholders::_1, std::placeholders::_2, 
+                                                   std::placeholders::_3, std::placeholders::_4,
                                                    std::numeric_limits<double>::min(), std::numeric_limits<double>::max(),
                                                    std::experimental::any());
         for(auto & img_arr : adc_map_img_arrays){
@@ -824,7 +829,7 @@ int main(int argc, char* argv[]){
 
             if(!slope_sign_map_img_arrays.back()->imagecoll.Process_Images( GroupSpatiallyOverlappingImages,
                                                                             TimeCourseSlopeMapAllTime,
-                                                                            { } )){
+                                                                            {}, {} )){
                 FUNCERR("Unable to compute time course slope map");
             }
         }
@@ -847,24 +852,10 @@ int main(int argc, char* argv[]){
         if(true) for(auto & img_arr : orig_img_arrays){
             if(!img_arr->imagecoll.Process_Images( GroupIndividualImages,
                                                    StandardAbdominalHUWindow,
-                                                   { } )){
+                                                   {}, {} )){
                 FUNCERR("Unable to force window to cover reasonable HU range");
             }
         }
-
-        ////Attempt to filter out (apparently) non-physical pixels by setting them to zero.
-        //// This helps when the data may be scaled strangely.
-        //std::vector<std::shared_ptr<Image_Array>> enormous_pixel_censored_img_arrays;
-        //for(auto & img_arr : orig_img_arrays){
-        //    DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( *img_arr ) );
-        //    enormous_pixel_censored_img_arrays.emplace_back( DICOM_data.image_data.back() );
-        //
-        //    if(!enormous_pixel_censored_img_arrays.back()->imagecoll.Process_Images( GroupIndividualImages,
-        //                                                                             CTPerfEnormousPixelFilter,
-        //                                                                             { } )){
-        //        FUNCERR("Unable to censor pixels with enormous values");
-        //    }
-        //}
 
         //Temporally average the images.
         std::vector<std::shared_ptr<Image_Array>> temp_avgd;
@@ -881,77 +872,7 @@ int main(int argc, char* argv[]){
         if(true) for(auto & img_arr : temp_avgd){
             if(!img_arr->imagecoll.Process_Images( GroupIndividualImages,
                                                    StandardAbdominalHUWindow,
-                                                   { } )){
-                FUNCERR("Unable to force window to cover reasonable HU range");
-            }
-        }
-
-
-        //Construct perpendicular image slices that align with first row and column of the first image.
-        std::vector<std::shared_ptr<Image_Array>> intersecting_row;
-        //std::vector<std::shared_ptr<Image_Array>> intersecting_col;
-        if(true) for(auto & img_arr : temp_avgd){
-            //Generate blank image arrays for the output.
-            DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( ) );
-            intersecting_row.emplace_back( DICOM_data.image_data.back() );
-            //DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( ) );
-            //intersecting_col.emplace_back( DICOM_data.image_data.back() );
-
-            //Figure out outgoing image spatial attributes.
-            auto first_img_it = img_arr->imagecoll.images.begin();
-            const auto old_row_unit = first_img_it->row_unit;
-            const auto old_col_unit = first_img_it->col_unit;
-            const auto old_orto_unit = old_row_unit.Cross( old_col_unit );
-
-            const auto new_row_unit = old_orto_unit;
-            const auto new_col_unit = old_row_unit; //Chosen to new_row x new_col = old_col
-            const auto new_ortho_unit = old_col_unit;
-                                                                               
-            const auto L = std::abs( (img_arr->imagecoll.images.back().offset 
-                                     - img_arr->imagecoll.images.front().offset).Dot( old_orto_unit ) ); 
-                             // ^^^ ASSUMES SORTED ORDER! REPLACE WITH minmix_z() or use:
-                             //         planar_image_collection::Stable_Sort(std::function<bool(const planar_image<T,R> &lhs, const planar_image<T,R> &rhs)> lt_func);
-            const auto N = L / first_img_it->pxl_dz; // The number needed to make a continuous image with the same pixel thickness.
-
-            const auto numb_of_imgs = first_img_it->columns;
-            const auto numb_of_rows = 1*static_cast<long int>( std::ceil(N) );
-            const auto numb_of_cols = first_img_it->rows;
-            const auto numb_of_chns = first_img_it->channels;
-            const auto new_pxl_dx = first_img_it->pxl_dz / 1.0;
-            const auto new_pxl_dy = first_img_it->pxl_dx;
-            const auto new_pxl_dz = first_img_it->pxl_dy;
-
-            const auto anchor = first_img_it->anchor;
-            const auto offset = first_img_it->offset;
-
-            for(auto i = 0; i < numb_of_imgs; ++i){
-                intersecting_row.back()->imagecoll.images.emplace_back();
-                intersecting_row.back()->imagecoll.images.back().init_buffer( numb_of_rows, numb_of_cols, numb_of_chns );
-                intersecting_row.back()->imagecoll.images.back().init_spatial( new_pxl_dx, new_pxl_dy, new_pxl_dz, 
-                                                                               anchor, offset + new_ortho_unit * new_pxl_dz * i );
-                intersecting_row.back()->imagecoll.images.back().init_orientation( new_row_unit, new_col_unit );
- 
-                intersecting_row.back()->imagecoll.images.back().fill_pixels(std::numeric_limits<float>::quiet_NaN());
-              
-                const auto count = img_arr->imagecoll.Intersection_Copy( intersecting_row.back()->imagecoll.images.back() );
-                if(count == 0) FUNCWARN("Produced image with zero intersections. Bounds were not specified properly."
-                                        " This is not an error, but a wasteful extra image has been created");
-
-                intersecting_row.back()->imagecoll.images.back().metadata["Rows"] = std::to_string(numb_of_rows);
-                intersecting_row.back()->imagecoll.images.back().metadata["Columns"] = std::to_string(numb_of_cols);
-                intersecting_row.back()->imagecoll.images.back().metadata["PixelSpacing"] = std::to_string(new_pxl_dx) 
-                                                                                            + "^" + std::to_string(new_pxl_dy);
-                intersecting_row.back()->imagecoll.images.back().metadata["SliceThickness"] = std::to_string(new_pxl_dz);
-                intersecting_row.back()->imagecoll.images.back().metadata["Description"] = "Volume Intersection: Row";
-
-            }
-        }
-
-        //Force the window to something reasonable to be uniform and cover normal tissue HU range.
-        if(true) for(auto & img_arr : intersecting_row){
-            if(!img_arr->imagecoll.Process_Images( GroupIndividualImages,
-                                                   StandardAbdominalHUWindow,
-                                                   { } )){
+                                                   {}, {} )){
                 FUNCERR("Unable to force window to cover reasonable HU range");
             }
         }
@@ -964,10 +885,52 @@ int main(int argc, char* argv[]){
 
             if(!all_avgd.back()->imagecoll.Process_Images( GroupAllImages,
                                                            CondenseMaxPixel,
-                                                           { } )){
-                FUNCERR("Unable to generate min(pixel) images");
+                                                           {}, {} )){
+                FUNCERR("Unable to generate max(pixel) images");
             }
         }
+
+        //Construct perpendicular image slices that align with first row and column of the first image.
+        std::vector<std::shared_ptr<Image_Array>> intersecting_row;
+        std::vector<std::shared_ptr<Image_Array>> intersecting_col;
+
+        if(true) for(auto & img_arr : orig_img_arrays){ //temp_avgd){
+            DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( ) );
+            intersecting_row.emplace_back( DICOM_data.image_data.back() );
+
+            DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( ) );
+            intersecting_col.emplace_back( DICOM_data.image_data.back() );
+
+
+            if(!img_arr->imagecoll.Process_Images( GroupTemporallyOverlappingImages,
+                                                   OrthogonalSlices,
+                                                   { std::ref(intersecting_row.back()->imagecoll),
+                                                     std::ref(intersecting_col.back()->imagecoll) },
+                                                   {}, {} )){
+//            if(!img_arr->imagecoll.Compute_Images( GroupOrthogonalSlices,
+//                                                   { std::ref(intersecting_row.back()->imagecoll),
+//                                                     std::ref(intersecting_col.back()->imagecoll) },
+//                                                   { } )){
+                FUNCERR("Unable to generate orthogonal image slices");
+            }
+        }
+
+        //Force the window to something reasonable to be uniform and cover normal tissue HU range.
+        if(true) for(auto & img_arr : intersecting_row){
+            if(!img_arr->imagecoll.Process_Images( GroupIndividualImages,
+                                                   StandardAbdominalHUWindow,
+                                                   {}, {} )){
+                FUNCERR("Unable to force window to cover reasonable HU range");
+            }
+        }
+        if(true) for(auto & img_arr : intersecting_col){
+            if(!img_arr->imagecoll.Process_Images( GroupIndividualImages,
+                                                   StandardAbdominalHUWindow,
+                                                   {}, {} )){
+                FUNCERR("Unable to force window to cover reasonable HU range");
+            }
+        }
+
 
     }
 
@@ -981,7 +944,7 @@ int main(int argc, char* argv[]){
         if(true) for(auto & img_arr : orig_img_arrays){
             if(!img_arr->imagecoll.Process_Images( GroupIndividualImages,
                                                    StandardAbdominalHUWindow,
-                                                   { } )){
+                                                   {}, {} )){
                 FUNCERR("Unable to force window to cover reasonable HU range");
             }
         }
@@ -1024,7 +987,7 @@ int main(int argc, char* argv[]){
     
                 if(!baseline_img_arrays.back()->imagecoll.Process_Images( GroupSpatiallyOverlappingImages,
                                                                           CondenseMinPixel,
-                                                                          { } )){
+                                                                          {}, {} )){
                     FUNCERR("Unable to generate min(pixel) images over the time course");
                 }
             }
@@ -1072,7 +1035,7 @@ int main(int argc, char* argv[]){
 
             std::cout << "Produced " << ud.time_courses.size() << " time courses:" << std::endl;
 
-            std::vector<YgorMathPlotting::Shuttle<samples_1D<double>>> shuttle;
+            std::vector<YgorMathPlottingGnuplot::Shuttle<samples_1D<double>>> shuttle;
             for(auto & tcs : ud.time_courses){
                 const auto lROIname = tcs.first;
                 const auto lVoxelCount = ud.voxel_count[lROIname];
@@ -1082,7 +1045,7 @@ int main(int argc, char* argv[]){
 
                 lTimeCourse.Write_To_File(Get_Unique_Sequential_Filename("/tmp/roi_time_course_",4,".txt")); 
             }
-            YgorMathPlotting::Plot<double>(shuttle, "ROI Time Courses", "Time (s)", "Pixel Intensity");
+            YgorMathPlottingGnuplot::Plot<double>(shuttle, "ROI Time Courses", "Time (s)", "Pixel Intensity");
 
             FUNCINFO("Waiting for you to press enter..");
             double goon;
@@ -1108,7 +1071,7 @@ int main(int argc, char* argv[]){
 
             if(!pharmaco_model_arr.back()->imagecoll.Process_Images( GroupSpatiallyOverlappingImages,
                                                                      LiverPharmacoModel,
-                                                                     cc_all,
+                                                                     {}, cc_all,
                                                                      &ud )){
                 FUNCERR("Unable to pharmacokinetically model liver!");
             }
@@ -1123,24 +1086,11 @@ int main(int argc, char* argv[]){
         for(auto & img_arr : DICOM_data.image_data) orig_img_arrays.push_back(img_arr);
 
 
-        ////Force the window to something reasonable to cover normal tissue HU range. (For viewing purposes only!)
-        //std::vector<std::shared_ptr<Image_Array>> window_forced_img_arrays;
-        //if(false) for(auto & img_arr : orig_img_arrays){
-        //    DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( *img_arr ) );
-        //    window_forced_img_arrays.emplace_back( DICOM_data.image_data.back() );
-        //
-        //    if(!window_forced_img_arrays.back()->imagecoll.Process_Images( GroupIndividualImages,
-        //                                                                   StandardAbdominalHUWindow,
-        //                                                                   { } )){
-        //        FUNCERR("Unable to force window to cover reasonable HU range");
-        //    }
-        //}
-
         //Force the window to something reasonable to be uniform and cover normal tissue HU range.
         if(true) for(auto & img_arr : orig_img_arrays){
             if(!img_arr->imagecoll.Process_Images( GroupIndividualImages,
                                                    StandardAbdominalHUWindow,
-                                                   { } )){
+                                                   {}, {} )){
                 FUNCERR("Unable to force window to cover reasonable HU range");
             }
         }
@@ -1184,7 +1134,7 @@ int main(int argc, char* argv[]){
     
                 if(!baseline_img_arrays.back()->imagecoll.Process_Images( GroupSpatiallyOverlappingImages,
                                                                           CondenseMinPixel,
-                                                                          { } )){
+                                                                          {}, {} )){
                     FUNCERR("Unable to generate min(pixel) images over the time course");
                 }
             }
@@ -1244,7 +1194,7 @@ int main(int argc, char* argv[]){
             UD.Eps = -1.0; //Used?
             if(!clustered_img_arrays.back()->imagecoll.Process_Images( GroupSpatiallyOverlappingImages,
                                                                        DBSCANTimeCourses,
-                                                                       cc_all,
+                                                                       {}, cc_all,
                                                                        UD )){
                 FUNCERR("Unable to perform DBSCAN clustering");
             }
@@ -1260,7 +1210,7 @@ int main(int argc, char* argv[]){
 
                 if(!roi_highlighted_img_arrays.back()->imagecoll.Process_Images( GroupIndividualImages,
                                                                                  HighlightROIVoxels,
-                                                                                 cc_all )){
+                                                                                 {}, cc_all )){
                     FUNCERR("Unable to highlight ROIs");
                 }
             }
@@ -1280,7 +1230,7 @@ int main(int argc, char* argv[]){
             for(auto & img_arr : temp_img_arrays){
                 if(!img_arr->imagecoll.Process_Images( GroupSpatiallyOverlappingImages,
                                                        PerROITimeCourses,
-                                                       cc_all,
+                                                       {}, cc_all,
                                                        &ud )){
                     FUNCERR("Unable to generate per-ROI time courses");
                 }
@@ -1308,7 +1258,7 @@ int main(int argc, char* argv[]){
 
             if(!max_pixel_img_arrays.back()->imagecoll.Process_Images( GroupSpatiallyOverlappingImages,
                                                                        CondenseMaxPixel,
-                                                                       { } )){
+                                                                       {}, {} )){
                 FUNCERR("Unable to generate max(pixel) images over the time course");
             }
         }
@@ -1321,7 +1271,7 @@ int main(int argc, char* argv[]){
 
             if(!log_scaled_img_arrays.back()->imagecoll.Process_Images( GroupIndividualImages,
                                                                         LogScalePixels,
-                                                                        { } )){
+                                                                        {}, {} )){
                 FUNCERR("Unable to perform logarithmic pixel scaling");
             }
         }
@@ -1356,7 +1306,7 @@ int main(int argc, char* argv[]){
 
             if(!min_pixel_img_arrays.back()->imagecoll.Process_Images( GroupSpatiallyOverlappingImages,
                                                                        CondenseMinPixel,
-                                                                       { } )){
+                                                                       {}, {} )){
                 FUNCERR("Unable to generate min(pixel) images over the time course");
             }
         }
@@ -1392,7 +1342,7 @@ int main(int argc, char* argv[]){
 
             if(!clip_likelihood_map_img_arrays.back()->imagecoll.Process_Images( GroupIndividualImages,
                                                                                  CTPerfusionSearchForLiverClips,
-                                                                                 { } )){
+                                                                                 {}, {} )){
                 FUNCERR("Unable to perform search for liver clip markers");
             }
         }
@@ -1554,7 +1504,7 @@ int main(int argc, char* argv[]){
             DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( *img_arr_C_map ) ); 
             std::shared_ptr<Image_Array> img_arr_iauc_map( DICOM_data.image_data.back() );
     
-            if(!img_arr_iauc_map->imagecoll.Process_Images( GroupSpatiallyOverlappingImages, DCEMRIAUCMap, {} )){
+            if(!img_arr_iauc_map->imagecoll.Process_Images( GroupSpatiallyOverlappingImages, DCEMRIAUCMap, {}, {} )){
                 FUNCERR("Unable to process image array to make IAUC map");
             }
         }
@@ -1566,7 +1516,7 @@ int main(int argc, char* argv[]){
             std::shared_ptr<Image_Array> img_arr_kitchen_sink_map( DICOM_data.image_data.back() );
 
             if(!img_arr_kitchen_sink_map->imagecoll.Process_Images( GroupSpatiallyOverlappingImages, 
-                                                                    KitchenSinkAnalysis, 
+                                                                    KitchenSinkAnalysis, {},
                                                                     { cc_all } )){
                                                                     //{ cc_r_parotid_int, cc_l_parotid_int } )){
                                                                     //{ cc_r_parotid_int, cc_l_parotid_int, cc_r_masseter_int, cc_pharynx_int } )){
@@ -1595,7 +1545,7 @@ int main(int argc, char* argv[]){
             std::shared_ptr<Image_Array> img_arr_highlighted_rois( DICOM_data.image_data.back() );
 
             if(!img_arr_highlighted_rois->imagecoll.Process_Images( GroupIndividualImages, 
-                                                                    HighlightROIVoxels,
+                                                                    HighlightROIVoxels, {},
                                                                     { cc_all } )){
                                                                     //{ cc_r_parotid_int, cc_l_parotid_int, cc_r_masseter_int, cc_pharynx_int } )){
                 FUNCERR("Unable to highlight ROIs");
@@ -1651,8 +1601,7 @@ int main(int argc, char* argv[]){
 
                 if(!roi_highlighted_img_arrays.back()->imagecoll.Process_Images( GroupIndividualImages,
                                                                                  HighlightROIVoxels,
-                                                                                 cc_all )){
-                        //{ Custom_CCs["1.3.46.670589.11.5720.5.0.6024.2015042415010571009"]["1.3.46.670589.11.5720.5.0.6792.2015042414281765155"]["Hi_Test"] } )){
+                                                                                 {}, cc_all )){
                     FUNCERR("Unable to highlight ROIs");
                 }
             }
@@ -1702,7 +1651,7 @@ int main(int argc, char* argv[]){
 
                 if(!iauc_c_map_img_arrays.back()->imagecoll.Process_Images( GroupSpatiallyOverlappingImages,
                                                                             DCEMRIAUCMap,
-                                                                            {} )){
+                                                                            {}, {} )){
                     FUNCERR("Unable to process image array to make IAUC map");
                 }
             }
@@ -1718,7 +1667,7 @@ int main(int argc, char* argv[]){
                     
                     if(!kitchen_sink_map_img_arrays.back()->imagecoll.Process_Images( GroupSpatiallyOverlappingImages,
                                                                                       KitchenSinkAnalysis,
-                                                                                      cc_all )){
+                                                                                      {}, cc_all )){
                         FUNCERR("Unable to process image array to perform kitchen sink analysis");
                     }else{
                         DumpKitchenSinkResults(InvocationMetadata);
@@ -1780,7 +1729,8 @@ int main(int argc, char* argv[]){
 
         //Generate maps of the slope for the various time segments.
         auto TimeCourseSlopeDifferenceOverStim = std::bind(TimeCourseSlopeDifference, 
-                                                 std::placeholders::_1, std::placeholders::_2, std::placeholders::_3,
+                                                 std::placeholders::_1, std::placeholders::_2, 
+                                                 std::placeholders::_3, std::placeholders::_4,
                                                  135.0, 300.0,
                                                  300.0, std::numeric_limits<double>::max(),
                                                  std::experimental::any() );
@@ -1789,7 +1739,7 @@ int main(int argc, char* argv[]){
         std::shared_ptr<Image_Array> nostim_case = std::make_shared<Image_Array>(*unstim_C);
         if(!nostim_case->imagecoll.Process_Images( GroupSpatiallyOverlappingImages,
                                                    TimeCourseSlopeDifferenceOverStim,
-                                                   cc_all )){
+                                                   {}, cc_all )){
             FUNCERR("Unable to compute time course slope map");
         }
         unstim_C.reset(); 
@@ -1797,7 +1747,7 @@ int main(int argc, char* argv[]){
         std::shared_ptr<Image_Array> stim_case = std::make_shared<Image_Array>(*stim_C);
         if(!stim_case->imagecoll.Process_Images( GroupSpatiallyOverlappingImages,
                                                  TimeCourseSlopeDifferenceOverStim,
-                                                 cc_all )){
+                                                 {}, cc_all )){
             FUNCERR("Unable to compute time course slope map");
         }
         stim_C.reset();
@@ -1837,7 +1787,7 @@ int main(int argc, char* argv[]){
 
             if(!bilin_resampled_img_arrays.back()->imagecoll.Process_Images( GroupIndividualImages,
                                                                              InImagePlaneBilinearSupersample,
-                                                                             { } )){
+                                                                             {}, {} )){
                 FUNCERR("Unable to bilinearly supersample images");
             }
         }
@@ -1850,7 +1800,7 @@ int main(int argc, char* argv[]){
 
             if(!bicub_resampled_img_arrays.back()->imagecoll.Process_Images( GroupIndividualImages,
                                                                              InImagePlaneBicubicSupersample,
-                                                                             { } )){
+                                                                             {}, {} )){
                 FUNCERR("Unable to bicubically supersample images");
             }
         }
@@ -1864,7 +1814,7 @@ int main(int argc, char* argv[]){
 
             if(!cross_second_deriv_img_arrays.back()->imagecoll.Process_Images( GroupIndividualImages,
                                                                                 CrossSecondDerivative,
-                                                                                { } )){
+                                                                                {}, {} )){
                 FUNCERR("Unable to compute 'cross' second-order partial derivative");
             }
         }
@@ -2247,9 +2197,9 @@ int main(int argc, char* argv[]){
 
                         title << "Row and Column profile. (row,col) = (" << row_as_u << "," << col_as_u << ").";
                         try{
-                            YgorMathPlotting::Shuttle<samples_1D<double>> row_shtl(row_profile, "Row Profile");
-                            YgorMathPlotting::Shuttle<samples_1D<double>> col_shtl(col_profile, "Col Profile");
-                            YgorMathPlotting::Plot<double>({row_shtl, col_shtl}, title.str(), "Pixel Index (row or col)", "Pixel Intensity");
+                            YgorMathPlottingGnuplot::Shuttle<samples_1D<double>> row_shtl(row_profile, "Row Profile");
+                            YgorMathPlottingGnuplot::Shuttle<samples_1D<double>> col_shtl(col_profile, "Col Profile");
+                            YgorMathPlottingGnuplot::Plot<double>({row_shtl, col_shtl}, title.str(), "Pixel Index (row or col)", "Pixel Intensity");
                         }catch(const std::exception &e){
                             FUNCWARN("Failed to plot: " << e.what());
                         }
@@ -2325,8 +2275,8 @@ int main(int argc, char* argv[]){
 
                         title << "Time Course. Images encompass " << pix_pos << ". ";
                         try{
-                            YgorMathPlotting::Shuttle<samples_1D<double>> ymp_shtl(shtl, "Buffer A");
-                            YgorMathPlotting::Plot<double>({ymp_shtl}, title.str(), "Time (s)", "Pixel Intensity");
+                            YgorMathPlottingGnuplot::Shuttle<samples_1D<double>> ymp_shtl(shtl, "Buffer A");
+                            YgorMathPlottingGnuplot::Plot<double>({ymp_shtl}, title.str(), "Time (s)", "Pixel Intensity");
                         }catch(const std::exception &e){
                             FUNCWARN("Failed to plot: " << e.what());
                         }
