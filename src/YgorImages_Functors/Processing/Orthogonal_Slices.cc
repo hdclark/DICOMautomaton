@@ -90,16 +90,18 @@ bool OrthogonalSlices(planar_image_collection<float,double>::images_list_it_t fi
                         //return Adist < B_dist;
                         return (A->offset).Dot(old_orto_unit) < (B->offset).Dot(old_orto_unit);
                     });
-    const auto L = std::abs( ( (*(std::get<0>(mm)))->offset 
-                             - (*(std::get<1>(mm)))->offset ).Dot(old_orto_unit) );
+    const auto L = std::abs( ( (*(std::get<1>(mm)))->offset 
+                             - (*(std::get<0>(mm)))->offset ).Dot(old_orto_unit) );
 
     //Guess at how many images will be needed in the ortho direction. We choose the minimum
     // needed to make a continuous outgoing image if each incoming image is just touching
     // the adjacent slice (i.e., the input images span a solid, non-overlapping volume).
     const auto N = L / first_img_it->pxl_dz;
 
-    const auto anchor = first_img_it->anchor;
-    const auto offset = first_img_it->offset;
+    //const auto anchor = first_img_it->anchor;
+    //const auto offset = first_img_it->offset;
+    const auto anchor = (*(std::get<0>(mm)))->anchor;
+    const auto offset = (*(std::get<0>(mm)))->offset;
 
     const auto new_row_unit = old_orto_unit;
     const auto new_pxl_dx = first_img_it->pxl_dz;

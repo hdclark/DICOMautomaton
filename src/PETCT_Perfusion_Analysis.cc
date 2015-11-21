@@ -894,7 +894,7 @@ int main(int argc, char* argv[]){
         std::vector<std::shared_ptr<Image_Array>> intersecting_row;
         std::vector<std::shared_ptr<Image_Array>> intersecting_col;
 
-        if(true) for(auto & img_arr : orig_img_arrays){ //temp_avgd){
+        if(false) for(auto & img_arr : orig_img_arrays){ //temp_avgd){
             DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( ) );
             intersecting_row.emplace_back( DICOM_data.image_data.back() );
 
@@ -907,10 +907,6 @@ int main(int argc, char* argv[]){
                                                    { std::ref(intersecting_row.back()->imagecoll),
                                                      std::ref(intersecting_col.back()->imagecoll) },
                                                    {}, {} )){
-//            if(!img_arr->imagecoll.Compute_Images( GroupOrthogonalSlices,
-//                                                   { std::ref(intersecting_row.back()->imagecoll),
-//                                                     std::ref(intersecting_col.back()->imagecoll) },
-//                                                   { } )){
                 FUNCERR("Unable to generate orthogonal image slices");
             }
         }
@@ -1870,6 +1866,10 @@ int main(int argc, char* argv[]){
         typedef std::pair<sf::Texture,sf::Sprite> disp_img_texture_sprite_t;
         disp_img_texture_sprite_t disp_img_texture_sprite;
 
+        //Real-time modifiable sticky window and level.
+        std::experimental::optional<double> custom_width;
+        std::experimental::optional<double> custom_centre;
+
         //Flags for various things.
         bool DumpScreenshot = false; //One-shot instruction to dump a screenshot immediately after rendering.
         bool OnlyShowTagsDifferentToNeighbours = true;
@@ -1936,16 +1936,32 @@ int main(int argc, char* argv[]){
             //------------------------------------------------------------------------------------------------
             //Apply a window to the data if it seems like the WindowCenter or WindowWidth specified in the image metadata
             // are applicable. Note that it is likely that pixels will be clipped or truncated. This is intentional.
-            auto win_valid = img_it->GetMetadataValueAs<std::string>("WindowValidFor");
-            auto desc      = img_it->GetMetadataValueAs<std::string>("Description");
-            auto win_c     = img_it->GetMetadataValueAs<double>("WindowCenter");
-            auto win_fw    = img_it->GetMetadataValueAs<double>("WindowWidth"); //Full width or range. (Diameter, not radius.)
+            
+            auto img_win_valid = img_it->GetMetadataValueAs<std::string>("WindowValidFor");
+            auto img_desc      = img_it->GetMetadataValueAs<std::string>("Description");
+            auto img_win_c     = img_it->GetMetadataValueAs<double>("WindowCenter");
+            auto img_win_fw    = img_it->GetMetadataValueAs<double>("WindowWidth"); //Full width or range. (Diameter, not radius.)
 
-            if( win_valid && desc && win_c && win_fw && (win_valid.value() == desc.value()) ){
+            auto custom_win_c  = custom_centre; 
+            auto custom_win_fw = custom_width; 
+
+            const auto UseCustomWL = (custom_win_c && custom_win_fw);
+            const auto UseImgWL = (UseCustomWL) ? false 
+                                                : (  img_win_valid && img_desc && img_win_c 
+                                                  && img_win_fw && (img_win_valid.value() == img_desc.value()));
+
+            if( UseCustomWL || UseImgWL ){
                 //Window/linear scaling transformation parameters.
                 //const auto win_r = 0.5*(win_fw.value() - 1.0); //The 'radius' of the range, or half width omitting the centre point.
-                const auto win_r = 0.5*win_fw.value(); //The 'radius' of the range, or half width omitting the centre point.
-    
+
+                //The 'radius' of the range, or half width omitting the centre point.
+                const auto win_r  = (UseCustomWL) ? 0.5*custom_win_fw.value()
+                                                  : 0.5*img_win_fw.value();
+                const auto win_c  = (UseCustomWL) ? custom_win_c.value()
+                                                  : img_win_c.value();
+                const auto win_fw = (UseCustomWL) ? custom_win_fw.value()
+                                                  : img_win_fw.value();
+
                 //The output range we are targeting. In this case, a commodity 8 bit (2^8 = 256 intensities) display.
                 const double destmin = static_cast<double>( 0 );
                 const double destmax = static_cast<double>( std::numeric_limits<uint8_t>::max() );
@@ -1961,16 +1977,16 @@ int main(int argc, char* argv[]){
                             //If above or below the cutoff range, the pixel could be treated as the window min/max or simply as if
                             // it did not exist. We could set the value to fully transparent, NaN, or a specially designated 
                             // 'ignore' colour. It's ultimately up to the user.
-                            if(val <= (win_c.value() - win_r)){
+                            if(val <= (win_c - win_r)){
                                 y = destmin;
-                            }else if(val >= (win_c.value() + win_r)){
+                            }else if(val >= (win_c + win_r)){
                                 //Logical choice, but make viewing hard if window is too low...
                                 y = destmax;
     
                             //If within the window range. Scale linearly as the pixel's position in the window.
                             }else{
-                                //const double clamped = (val - (win_c.value() - win_r)) / (2.0*win_r + 1.0);
-                                const double clamped = (val - (win_c.value() - win_r)) / (win_fw.value());
+                                //const double clamped = (val - (win_c - win_r)) / (2.0*win_r + 1.0);
+                                const double clamped = (val - (win_c - win_r)) / win_fw;
                                 y = clamped * (destmax - destmin) + destmin;
                             }
     
@@ -2428,6 +2444,9 @@ int main(int argc, char* argv[]){
                             window.setTitle("DICOMautomaton IV: <no description available>");
                         }
 
+                        custom_width  = std::experimental::optional<double>();
+                        custom_centre = std::experimental::optional<double>();
+
                     //Advance to the next/previous display image in the current Image_Array.
                     }else if( (thechar == 'n') || (thechar == 'p') ){
                         if(thechar == 'n'){
@@ -2470,7 +2489,7 @@ int main(int argc, char* argv[]){
                         scale_sprite_to_fill_screen(window,disp_img_it,disp_img_texture_sprite);
 
                     //Step to the next/previous image which spatially overlaps with the current display image.
-                    }else if( (thechar == '-') || (thechar == '+') ){
+                    }else if( (thechar == '-') || (thechar == '+') || (thechar == '_') || (thechar == '=') ){
                         const auto disp_img_pos = disp_img_it->center();
 
                         //Get a list of images which spatially overlap this point. Order should be maintained.
@@ -2487,14 +2506,14 @@ int main(int argc, char* argv[]){
                         if(enc_img_it == encompassing_images.end()){
                             FUNCWARN("Unable to step over spatially overlapping images. None found");
                         }else{
-                            if(thechar == '-'){
+                            if((thechar == '-') || (thechar == '_')){
                                 if(enc_img_it == encompassing_images.begin()){
                                     disp_img_it = encompassing_images.back();
                                 }else{
                                     --enc_img_it;
                                     disp_img_it = *enc_img_it;
                                 }
-                            }else if(thechar == '+'){
+                            }else if((thechar == '+') || (thechar == '=')){
                                 ++enc_img_it;
                                 if(enc_img_it == encompassing_images.end()){
                                     disp_img_it = encompassing_images.front();
@@ -2608,11 +2627,54 @@ int main(int argc, char* argv[]){
                     }
 
                 }else if(window.hasFocus() && (event.type == sf::Event::MouseWheelMoved)){
-                    if(VERBOSE && !QUIET){
-                        FUNCINFO("Mouse wheel moved");
-                        std::cout << "wheel movement: " << event.mouseWheel.delta << std::endl;
-                        std::cout << "mouse x: " << event.mouseWheel.x << std::endl;
-                        std::cout << "mouse y: " << event.mouseWheel.y << std::endl;
+//                    if(VERBOSE && !QUIET){
+//                        FUNCINFO("Mouse wheel moved");
+//                        std::cout << "wheel movement: " << event.mouseWheel.delta << std::endl;
+//                        std::cout << "mouse x: " << event.mouseWheel.x << std::endl;
+//                        std::cout << "mouse y: " << event.mouseWheel.y << std::endl;
+//                    }
+                    const auto delta = static_cast<double>(event.mouseWheel.delta);
+                    const auto pressing_shift = sf::Keyboard::isKeyPressed(sf::Keyboard::LShift);
+                    const auto pressing_control = sf::Keyboard::isKeyPressed(sf::Keyboard::LControl);
+
+                    //Ensure there is an existing custom WL. If not, set up some reasonable default.
+                    if(pressing_shift || pressing_control){
+                        const auto ExistingCustomWL = (custom_centre && custom_width);
+                        if(!ExistingCustomWL){
+                            //Try grab the current image's WL (iff it is valid).
+                            auto img_win_valid = disp_img_it->GetMetadataValueAs<std::string>("WindowValidFor");
+                            auto img_desc      = disp_img_it->GetMetadataValueAs<std::string>("Description");
+                            auto img_win_c     = disp_img_it->GetMetadataValueAs<double>("WindowCenter");
+                            auto img_win_fw    = disp_img_it->GetMetadataValueAs<double>("WindowWidth");
+                            const auto ImgWLValid = (img_win_valid && img_desc && img_win_c 
+                                                     && img_win_fw && (img_win_valid.value() == img_desc.value()));
+                            if(ImgWLValid){
+                                custom_width.swap( img_win_fw );
+                                custom_centre.swap( img_win_c );
+                            }else{
+                                //Very simple, probably very bad guess. Should check window pixel range instead.
+                                custom_width.emplace(1000.0);
+                                custom_centre.emplace(1000.0);
+                            }
+                        }
+                    }
+
+                    //Adjust the custom window and level if a control key is being pressed.
+                    if(pressing_shift){
+                        custom_centre.value() += -delta * 0.10 * custom_width.value();
+                    }
+
+                    if(pressing_control){
+                        custom_width.value() *= std::pow(0.95, 0.0-delta);
+                    }
+
+                    //Re-draw the image.
+                    if(pressing_shift || pressing_control){
+                        if(load_img_texture_sprite(disp_img_it, disp_img_texture_sprite)){
+                            scale_sprite_to_fill_screen(window,disp_img_it,disp_img_texture_sprite);
+                        }else{
+                            FUNCERR("Unable to reload image after adjusting window/level");
+                        }
                     }
 
                 }else if(window.hasFocus() && (event.type == sf::Event::MouseButtonPressed)){
@@ -2705,6 +2767,7 @@ int main(int argc, char* argv[]){
                         cursortext.setString("");
                         BLcornertextss.str(""); //Clear stringstream.
                     }
+
 
                 }else if(event.type == sf::Event::Resized){
                     if(VERBOSE && !QUIET) FUNCINFO("Window resized to WxH = " << event.size.width << "x" << event.size.height);
@@ -2806,6 +2869,15 @@ int main(int argc, char* argv[]){
                 BRcornertext.move(offset);
             }            
             {
+                if(custom_centre && custom_width){
+                    const auto existing = BLcornertext.getString();
+                    std::stringstream ss;
+                    ss << existing.toAnsiString() << std::endl 
+                       << "Custom c/w: " << custom_centre.value()
+                       << " / " << custom_width.value();
+                    BLcornertext.setString(ss.str());
+                }
+
                 const auto item_bbox = BLcornertext.getGlobalBounds();
                 const auto item_blc  = sf::Vector2f( item_bbox.left, item_bbox.top + item_bbox.height );
 
