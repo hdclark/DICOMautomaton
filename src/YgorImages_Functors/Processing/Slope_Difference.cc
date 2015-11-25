@@ -17,6 +17,7 @@
 #include "YgorString.h"      //Needed for GetFirstRegex(...)
 #include "YgorPlot.h"
 
+#include "../ConvenienceRoutines.h"
 
 
 const auto boxr = 2; //The inclusive 'radius' of the square box to use to average nearby pixels. Controls amount of spatial averaging.
@@ -63,8 +64,7 @@ bool TimeCourseSlopeDifference(planar_image_collection<float,double>::images_lis
     working.fill_pixels(static_cast<float>(0));
 
     //Record the min and max actual pixel values for windowing purposes.
-    float curr_min_pixel = std::numeric_limits<float>::max();
-    float curr_max_pixel = std::numeric_limits<float>::min();
+    Stats::Running_MinMax<float> minmax_pixel;
 
     //Loop over the rois, rows, columns, channels, and finally any selected images (if applicable).
     const auto row_unit   = first_img_it->row_unit;
@@ -159,8 +159,7 @@ bool TimeCourseSlopeDifference(planar_image_collection<float,double>::images_lis
                             const auto newval = static_cast<float>(slope_diff);
 
                             working.reference(row, col, chan) = newval;
-                            curr_min_pixel = std::min(curr_min_pixel, newval);
-                            curr_max_pixel = std::max(curr_max_pixel, newval);
+                            minmax_pixel.Digest(newval);
                         }
 
                         // ----------------------------------------------------------------------------
@@ -174,21 +173,8 @@ bool TimeCourseSlopeDifference(planar_image_collection<float,double>::images_lis
     //Swap the original image with the working image.
     *first_img_it = working;
 
-    //Alter the first image's metadata to reflect that averaging has occurred. You might want to consider
-    // a selective whitelist approach so that unique IDs are not duplicated accidentally.
-    first_img_it->metadata["Description"] = "Time Course Slope Difference map";
-
-    //Specify a reasonable default window.
-    const float WindowCenter = (curr_min_pixel/2.0) + (curr_max_pixel/2.0);
-    const float WindowWidth  = 2.0 + curr_max_pixel - curr_min_pixel;
-    first_img_it->metadata["WindowValidFor"] = first_img_it->metadata["Description"];
-    first_img_it->metadata["WindowCenter"]   = Xtostring(WindowCenter);
-    first_img_it->metadata["WindowWidth"]    = Xtostring(WindowWidth);
-
-    first_img_it->metadata["TimeCourseSlopeDifferenceMapt1min"] = Xtostring(t1min);
-    first_img_it->metadata["TimeCourseSlopeDifferenceMapt1max"] = Xtostring(t1max);
-    first_img_it->metadata["TimeCourseSlopeDifferenceMapt2min"] = Xtostring(t2min);
-    first_img_it->metadata["TimeCourseSlopeDifferenceMapt2max"] = Xtostring(t2max);
+    UpdateImageDescription( std::ref(*first_img_it), "Time Course dSlope Map" );
+    UpdateImageWindowCentreWidth( std::ref(*first_img_it), minmax_pixel );
 
     return true;
 }

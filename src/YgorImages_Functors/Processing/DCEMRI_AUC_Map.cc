@@ -10,6 +10,7 @@
 #include "YgorImages.h"
 #include "YgorString.h"
 
+#include "../ConvenienceRoutines.h"
 
 bool DCEMRIAUCMap(planar_image_collection<float,double>::images_list_it_t first_img_it,
                   std::list<planar_image_collection<float,double>::images_list_it_t> selected_img_its,
@@ -21,8 +22,7 @@ bool DCEMRIAUCMap(planar_image_collection<float,double>::images_list_it_t first_
     const bool InhibitSort = true; //We will explicitly sort once to speed up data ingress.
 
     //Record the min and max actual pixel values for windowing purposes.
-    float curr_min_pixel = std::numeric_limits<float>::max();
-    float curr_max_pixel = std::numeric_limits<float>::min();
+    Stats::Running_MinMax<float> minmax_pixel;
 
     //Loop over the rows, columns, channels, and finally images.
     for(auto row = 0; row < first_img_it->rows; ++row){
@@ -48,23 +48,13 @@ bool DCEMRIAUCMap(planar_image_collection<float,double>::images_list_it_t first_
                 //Update the value.
                 const auto newval = static_cast<float>( integ[0] );
                 first_img_it->reference(row, col, chan) = newval;
-                curr_min_pixel = std::min(curr_min_pixel, newval);
-                curr_max_pixel = std::max(curr_max_pixel, newval);
+                minmax_pixel.Digest(newval);
             }
         }
     }
 
-
-    //Alter the first image's metadata to reflect that averaging has occurred. You might want to consider
-    // a selective whitelist approach so that unique IDs are not duplicated accidentally.
-    first_img_it->metadata["Description"] = "IAUC map";
-
-    //Specify a reasonable default window.
-    const float WindowCenter = (curr_min_pixel/2.0) + (curr_max_pixel/2.0);
-    const float WindowWidth  = 2.0 + curr_max_pixel - curr_min_pixel;
-    first_img_it->metadata["WindowValidFor"] = first_img_it->metadata["Description"];
-    first_img_it->metadata["WindowCenter"]   = Xtostring(WindowCenter);
-    first_img_it->metadata["WindowWidth"]    = Xtostring(WindowWidth);
+    UpdateImageDescription( std::ref(*first_img_it), "IAUC Map" );
+    UpdateImageWindowCentreWidth( std::ref(*first_img_it), minmax_pixel );
 
     return true;
 }

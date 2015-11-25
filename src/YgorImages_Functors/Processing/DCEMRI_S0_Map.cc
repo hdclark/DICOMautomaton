@@ -10,6 +10,7 @@
 #include "YgorImages.h"
 #include "YgorString.h"
 
+#include "../ConvenienceRoutines.h"
 
 
 bool DCEMRIS0Map(planar_image_collection<float,double>::images_list_it_t first_img_it,
@@ -43,8 +44,7 @@ bool DCEMRIS0Map(planar_image_collection<float,double>::images_list_it_t first_i
     const auto cosFAR = std::cos(R_FlipAngle.value()*M_PI/180.0);
 
     //Record the min and max actual pixel values for windowing purposes.
-    float curr_min_pixel = std::numeric_limits<float>::max();
-    float curr_max_pixel = std::numeric_limits<float>::min();
+    Stats::Running_MinMax<float> minmax_pixel;
 
     //Loop over the rows, columns, and channels.
     for(auto row = 0; row < first_img_it->rows; ++row){
@@ -134,8 +134,7 @@ bool DCEMRIS0Map(planar_image_collection<float,double>::images_list_it_t first_i
                     const auto newval = S0val_f;
                     first_img_it->reference(row, col, chan) = newval;
                     if(isininc(0.0, newval, 1000.0)){
-                        curr_min_pixel = std::min(curr_min_pixel, newval);
-                        curr_max_pixel = std::max(curr_max_pixel, newval);
+                        minmax_pixel.Digest(newval);
                     }
                 }else{
                     first_img_it->reference(row, col, chan) = std::numeric_limits<float>::quiet_NaN();
@@ -144,16 +143,8 @@ bool DCEMRIS0Map(planar_image_collection<float,double>::images_list_it_t first_i
         }
     }
 
-    //Alter the first image's metadata to reflect that averaging has occurred. You might want to consider
-    // a selective whitelist approach so that unique IDs are not duplicated accidentally.
-    first_img_it->metadata["Description"] = "S0 map";
-
-    //Specify a reasonable default window.
-    const float WindowCenter = (curr_min_pixel/2.0) + (curr_max_pixel/2.0);
-    const float WindowWidth  = 2.0 + curr_max_pixel - curr_min_pixel;
-    first_img_it->metadata["WindowValidFor"] = first_img_it->metadata["Description"];
-    first_img_it->metadata["WindowCenter"]   = Xtostring(WindowCenter);
-    first_img_it->metadata["WindowWidth"]    = Xtostring(WindowWidth);
+    UpdateImageDescription( std::ref(*first_img_it), "S0 Map" );
+    UpdateImageWindowCentreWidth( std::ref(*first_img_it), minmax_pixel );
 
     return true;
 }

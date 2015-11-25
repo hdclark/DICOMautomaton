@@ -15,6 +15,7 @@
 #include "YgorString.h"      //Needed for GetFirstRegex(...)
 #include "YgorPlot.h"
 
+#include "../ConvenienceRoutines.h"
 
 bool IVIMMRIADCMap(planar_image_collection<float,double>::images_list_it_t first_img_it,
                    std::list<planar_image_collection<float,double>::images_list_it_t> selected_img_its,
@@ -33,8 +34,7 @@ bool IVIMMRIADCMap(planar_image_collection<float,double>::images_list_it_t first
     working.fill_pixels(static_cast<float>(0));
 
     //Record the min and max actual pixel values for windowing purposes.
-    float curr_min_pixel = std::numeric_limits<float>::max();
-    float curr_max_pixel = std::numeric_limits<float>::min();
+    Stats::Running_MinMax<float> minmax_pixel;
 
     //Loop over the rois, rows, columns, channels, and finally any selected images (if applicable).
     for(auto row = 0; row < first_img_it->rows; ++row){
@@ -147,8 +147,7 @@ FUNCERR("Need to figure out if the 1E6x scaling factor is needed here. It might 
                         const auto ADC_int = static_cast<float>(ADC*1.0E6);
                         working.reference(row, col, chan) = ADC_int;
 
-                        curr_min_pixel = std::min(curr_min_pixel, ADC_int);
-                        curr_max_pixel = std::max(curr_max_pixel, ADC_int);
+                        minmax_pixel.Digest(ADC_int);
                     }
                 }
             }//Loop over channels.
@@ -158,16 +157,8 @@ FUNCERR("Need to figure out if the 1E6x scaling factor is needed here. It might 
     //Swap the original image with the working image.
     *first_img_it = working;
 
-    //Specify a reasonable default window.
-    const float WindowCenter = (curr_min_pixel/2.0) + (curr_max_pixel/2.0);
-    const float WindowWidth  = 2.0 + curr_max_pixel - curr_min_pixel;
-    first_img_it->metadata["WindowValidFor"] = "ADC map";
-    first_img_it->metadata["WindowCenter"]   = Xtostring(WindowCenter);
-    first_img_it->metadata["WindowWidth"]    = Xtostring(WindowWidth);
-
-    //Alter the first image's metadata to reflect that averaging has occurred. You might want to consider
-    // a selective whitelist approach so that unique IDs are not duplicated accidentally.
-    first_img_it->metadata["Description"] = "ADC map";
+    UpdateImageDescription( std::ref(*first_img_it), "ADC Map" );
+    UpdateImageWindowCentreWidth( std::ref(*first_img_it), minmax_pixel );
 
     return true;
 }

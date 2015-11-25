@@ -121,12 +121,14 @@ target_include_directories (imebrashim SYSTEM PUBLIC ./imebra20121219/library/im
 
 # Executable.
 FILE(GLOB ygorimaging_functors "./YgorImages_Functors/*/*cc")
+FILE(GLOB ygorimaging_helpers "./YgorImages_Functors/*cc")
 add_executable (petct_perfusion_analysis 
     PETCT_Perfusion_Analysis.cc
     $<TARGET_OBJECTS:Structs_obj>
     $<TARGET_OBJECTS:Dose_Meld_obj>
     $<TARGET_OBJECTS:Whole_Match_obj>
     ${ygorimaging_functors}
+    ${ygorimaging_helpers}
 )
 target_link_libraries (petct_perfusion_analysis 
     imebrashim

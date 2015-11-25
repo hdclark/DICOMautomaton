@@ -14,6 +14,10 @@
 #include "YgorString.h"      //Needed for GetFirstRegex(...)
 #include "YgorPlot.h"
 
+#include "../ConvenienceRoutines.h"
+
+
+
 bool ReasonableHUWindow(planar_image_collection<float,double>::images_list_it_t first_img_it,
                         std::list<planar_image_collection<float,double>::images_list_it_t> ,
                         std::list<std::reference_wrapper<planar_image_collection<float,double>>>,

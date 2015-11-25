@@ -18,9 +18,9 @@
 #include "YgorAlgorithms.h"  //Needed for For_Each_In_Parallel<..>(...)
 #include "YgorString.h"      //Needed for GetFirstRegex(...)
 #include "YgorPlot.h"
-
 #include "YgorClustering.hpp"
 
+#include "../ConvenienceRoutines.h"
 #include "DBSCAN_Time_Courses.h"
 
 
@@ -79,8 +79,7 @@ bool DBSCANTimeCourses(planar_image_collection<float,double>::images_list_it_t f
 
 
     //Record the min and max (outgoing) pixel values for windowing purposes.
-    float curr_min_pixel = std::numeric_limits<float>::max();
-    float curr_max_pixel = std::numeric_limits<float>::min();
+    Stats::Running_MinMax<float> minmax_pixel;
 
 
     //Figure out if there are any contours for which are within the spatial extent of the image. 
@@ -319,39 +318,19 @@ bool DBSCANTimeCourses(planar_image_collection<float,double>::images_list_it_t f
                 const auto newval = static_cast<float>(theClusterID.Raw);
                 working.reference(row, col, chan) = newval;
 
-                if(theClusterID.IsRegular()){
-                    curr_min_pixel = std::min(curr_min_pixel, newval);
-                    curr_max_pixel = std::max(curr_max_pixel, newval);
-                }
+                if(theClusterID.IsRegular()) minmax_pixel.Digest(newval);
 
             } //Loop over channels
         } //Loop over columnss.
     } //Loop over rows.
-
 
     //Swap the original image with the working image.
     *first_img_it = working;
 
     //Alter the first image's metadata to reflect that averaging has occurred. You might want to consider
     // a selective whitelist approach so that unique IDs are not duplicated accidentally.
-    first_img_it->metadata["Description"] = "DBSCAN Time Course Clustered";
-
-    //Specify a reasonable default window.
-    if( (curr_min_pixel != std::numeric_limits<float>::max())
-    &&  (curr_max_pixel != std::numeric_limits<float>::min()) ){
-        const float WindowCenter = (curr_min_pixel/2.0) + (curr_max_pixel/2.0);
-        const float WindowWidth  = 2 + curr_max_pixel - curr_min_pixel;
-        first_img_it->metadata["WindowValidFor"] = first_img_it->metadata["Description"];
-        first_img_it->metadata["WindowCenter"]   = Xtostring(WindowCenter);
-        first_img_it->metadata["WindowWidth"]    = Xtostring(WindowWidth);
-    }else{
-        FUNCERR("Cannot generate window+level. You need to modify this to something reasonable");
-        //const float WindowCenter = std::numeric_limits<float>::max()/2.0;
-        //const float WindowWidth  = std::numeric_limits<float>::max();
-        //first_img_it->metadata["WindowValidFor"] = first_img_it->metadata["Description"];
-        //first_img_it->metadata["WindowCenter"]   = Xtostring(WindowCenter);
-        //first_img_it->metadata["WindowWidth"]    = Xtostring(WindowWidth);
-    }
+    UpdateImageDescription( std::ref(*first_img_it), "DBSCAN Time Course Clustered" );
+    UpdateImageWindowCentreWidth( std::ref(*first_img_it), minmax_pixel );
 
     return true;
 }

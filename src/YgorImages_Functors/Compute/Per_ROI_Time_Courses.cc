@@ -18,6 +18,7 @@
 #include "YgorString.h"      //Needed for GetFirstRegex(...)
 #include "YgorPlot.h"
 
+#include "../ConvenienceRoutines.h"
 #include "../Grouping/Misc_Functors.h"
 #include "Per_ROI_Time_Courses.h"
 

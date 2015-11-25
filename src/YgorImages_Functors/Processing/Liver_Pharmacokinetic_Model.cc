@@ -20,6 +20,7 @@
 #include "YgorString.h"      //Needed for GetFirstRegex(...)
 #include "YgorPlot.h"
 
+#include "../ConvenienceRoutines.h"
 #include "Liver_Pharmacokinetic_Model.h"
 
 #include "../Compute/Per_ROI_Time_Courses.h"
@@ -35,7 +36,7 @@ double func_to_min(unsigned, const double *params, double *grad, void *){
     if(grad != nullptr) FUNCERR("NLOpt asking for a gradient. We don't have it at the moment...");
     const double k1A  = params[0];
     const double tauA = params[1];
-    const double k2V  = params[2];
+    const double k1V  = params[2];
     const double tauV = params[3];
     const double k2   = params[4];
 
@@ -56,8 +57,8 @@ double func_to_min(unsigned, const double *params, double *grad, void *){
         //-------------------------------------------------------------------------------------------------------------------------
         //The venous contribution is identical, but all the fitting parameters are different and AIF -> VIF.
         //
-        double Integratedk2VCV = k2V*theVIF->Integrate_Over_Kernel_exp(0.0-tauV, t-tauV, {k2,0.0}, {-(t-tauV),0.0})[0];
-        const double Ffitfunc = Integratedk1ACA + Integratedk2VCV;
+        double Integratedk1VCV = k1V*theVIF->Integrate_Over_Kernel_exp(0.0-tauV, t-tauV, {k2,0.0}, {-(t-tauV),0.0})[0];
+        const double Ffitfunc = Integratedk1ACA + Integratedk1VCV;
  
         //Standard L2-norm.
         sqDist += std::pow(Fexpdata - Ffitfunc, 2.0);
@@ -70,7 +71,7 @@ double func_to_min(unsigned, const double *params, double *grad, void *){
 
 bool LiverPharmacoModel(planar_image_collection<float,double>::images_list_it_t first_img_it,
                         std::list<planar_image_collection<float,double>::images_list_it_t> selected_img_its,
-                        std::list<std::reference_wrapper<planar_image_collection<float,double>>>,
+                        std::list<std::reference_wrapper<planar_image_collection<float,double>>> out_imgs,
                         std::list<std::reference_wrapper<contour_collection<double>>> ccsl,
                         std::experimental::any user_data ){
 
@@ -83,6 +84,13 @@ bool LiverPharmacoModel(planar_image_collection<float,double>::images_list_it_t 
     // most likely mean grouping spatially-overlapping images that have identical 'image acquisition time' 
     // (or just 'dt' for short) together.
 
+    //Verify the correct number of outgoing parameter map slots have been provided.
+    if(out_imgs.size() != 5){
+        throw std::invalid_argument("This routine needs exactly five outgoing planar_image_collection"
+                                    " so the resulting fitted parameter maps can be passed back.");
+    }
+
+    //Ensure we have the needed time course ROIs.
     ComputePerROITimeCoursesUserData *user_data_s;
     try{
         user_data_s = std::experimental::any_cast<ComputePerROITimeCoursesUserData *>(user_data);
@@ -95,6 +103,12 @@ bool LiverPharmacoModel(planar_image_collection<float,double>::images_list_it_t 
     ||  (user_data_s->time_courses.count("Hepatic_Portal_Vein") == 0 ) ){
         throw std::invalid_argument("Both arterial and venous input time courses are needed."
                                     "(Are they named differently to the hard-coded names?)");
+    }
+
+    //Copy the incoming image to all the parameter maps. We will overwrite pixels as necessary.
+    for(auto &out_img_refw : out_imgs){
+        out_img_refw.get().images.emplace_back( *first_img_it );
+        out_img_refw.get().images.back().fill_pixels(std::numeric_limits<double>::quiet_NaN());
     }
 
     //Get convenient handles for the arterial and venous input time courses.
@@ -149,12 +163,6 @@ bool LiverPharmacoModel(planar_image_collection<float,double>::images_list_it_t 
         }
     }
 */
-    //Make a 'working' image which we can edit. Start by duplicating the first image.
-    planar_image<float,double> working;
-    working = *first_img_it;
-
-    //Paint all pixels black.
-    working.fill_pixels(static_cast<float>(0));
 
     //Loop over the rois, rows, columns, channels, and finally any selected images (if applicable).
     const auto row_unit   = first_img_it->row_unit;
@@ -165,8 +173,11 @@ bool LiverPharmacoModel(planar_image_collection<float,double>::images_list_it_t 
 
 
     //Record the min and max actual pixel values for windowing purposes.
-    float curr_min_pixel = std::numeric_limits<float>::max();
-    float curr_max_pixel = std::numeric_limits<float>::min();
+    Stats::Running_MinMax<float> minmax_k1A;
+    Stats::Running_MinMax<float> minmax_tauA;
+    Stats::Running_MinMax<float> minmax_k1V;
+    Stats::Running_MinMax<float> minmax_tauV;
+    Stats::Running_MinMax<float> minmax_k2;
 
     //Loop over the ccsl, rois, rows, columns, channels, and finally any selected images (if applicable).
     //for(const auto &roi : rois){
@@ -234,13 +245,6 @@ bool LiverPharmacoModel(planar_image_collection<float,double>::images_list_it_t 
                                                                                    ProjectedPoint,
                                                                                    AlreadyProjected)){
                         for(auto chan = 0; chan < first_img_it->channels; ++chan){
-                            //Check if another ROI has already written to this voxel. Bail if so.
-                            {
-                                const auto curr_val = working.value(row, col, chan);
-                                if(curr_val != 0) FUNCERR("There are overlapping ROIs. This code currently cannot handle this. "
-                                                          "You will need to run the functor individually on the overlapping ROIs.");
-                            }
-    
                             //Cycle over the grouped images (temporal slices, or whatever the user has decided).
                             // Harvest the time course or any other voxel-specific numbers.
                             samples_1D<double> channel_time_course;
@@ -287,16 +291,16 @@ bool LiverPharmacoModel(planar_image_collection<float,double>::images_list_it_t 
                             theROI = &channel_time_course;
 
                             const int dimen = 5;
-                            //Fitting parameters:      k1A,  tauA,  k1V,  tauV,  k2.
-                            double params[dimen] = {   1.0,   0.5,  1.0,   0.5,  1.0 };  //Arbitrarily chosen...
+                            //Fitting parameters:      k1A,  tauA,   k1V,  tauV,  k2.
+                            double params[dimen] = {  0.05,   5.0,  0.05,   5.0,  0.2 };  //Arbitrarily chosen...
 
                             // U/L bounds:             k1A,  tauA,  k1V,  tauV,  k2.
-                            double l_bnds[dimen] = {   0.0,  -5.0,  0.0,  -5.0,  0.0 };
-                            double u_bnds[dimen] = {   1.0,   5.0,  1.0,   5.0,  1.0 };
+                            double l_bnds[dimen] = {   0.0, -20.0,  0.0, -20.0,  0.0 };
+                            //double u_bnds[dimen] = {   1.0,   5.0,  1.0,   5.0,  1.0 };
                     
                             nlopt_opt opt;
-                            opt = nlopt_create(NLOPT_LN_COBYLA, dimen);
-                            //opt = nlopt_create(NLOPT_LN_BOBYQA, dimen);
+                            //opt = nlopt_create(NLOPT_LN_COBYLA, dimen);
+                            opt = nlopt_create(NLOPT_LN_BOBYQA, dimen);
                             //opt = nlopt_create(NLOPT_LN_SBPLX, dimen);
                     
                             //opt = nlopt_create(NLOPT_GN_DIRECT, dimen);
@@ -305,7 +309,7 @@ bool LiverPharmacoModel(planar_image_collection<float,double>::images_list_it_t 
                             //opt = nlopt_create(NLOPT_GN_ISRES, dimen);
                     
                             nlopt_set_lower_bounds(opt, l_bnds);
-                            nlopt_set_upper_bounds(opt, u_bnds);
+                            //nlopt_set_upper_bounds(opt, u_bnds);
                     
                             nlopt_set_min_objective(opt, func_to_min, nullptr);
                             nlopt_set_xtol_rel(opt, 1.0E-4);
@@ -320,22 +324,36 @@ bool LiverPharmacoModel(planar_image_collection<float,double>::images_list_it_t 
                     
                             const double k1A  = params[0];
                             const double tauA = params[1];
-                            const double k2V  = params[2];
+                            const double k1V  = params[2];
                             const double tauV = params[3];
                             const double k2   = params[4];
 
-                            const auto LiverPerfusion = (k1A + k2V);
+                            const auto LiverPerfusion = (k1A + k1V);
                             const auto MeanTransitTime = 1.0 / k2;
                             const auto ArterialFraction = 100.0 * k1A / LiverPerfusion;
                             const auto DistributionVolume = 100.0 * LiverPerfusion * MeanTransitTime;
 
                             //==============================================================================
  
-                            //Update the value.
-                            const auto newval = static_cast<float>(ArterialFraction);
-                            working.reference(row, col, chan) = newval;
-                            curr_min_pixel = std::min(curr_min_pixel, newval);
-                            curr_max_pixel = std::max(curr_max_pixel, newval);
+                            //Update pixel values.
+                            const auto k1A_f  = static_cast<float>(k1A);
+                            const auto tauA_f = static_cast<float>(tauA);
+                            const auto k1V_f  = static_cast<float>(k1V);
+                            const auto tauV_f = static_cast<float>(tauV);
+                            const auto k2_f   = static_cast<float>(k2);
+
+                            minmax_k1A.Digest(k1A_f);
+                            minmax_tauA.Digest(tauA_f);
+                            minmax_k1V.Digest(k1V_f);
+                            minmax_tauV.Digest(tauV_f);
+                            minmax_k2.Digest(k2_f);
+
+                            auto out_img_refw_it = out_imgs.begin();
+                            std::next(out_img_refw_it,0)->get().images.back().reference(row, col, chan) = k1A_f;
+                            std::next(out_img_refw_it,1)->get().images.back().reference(row, col, chan) = tauA_f;
+                            std::next(out_img_refw_it,2)->get().images.back().reference(row, col, chan) = k1V_f;
+                            std::next(out_img_refw_it,3)->get().images.back().reference(row, col, chan) = tauV_f;
+                            std::next(out_img_refw_it,4)->get().images.back().reference(row, col, chan) = k2_f;
 
                             // ----------------------------------------------------------------------------
     
@@ -355,27 +373,34 @@ bool LiverPharmacoModel(planar_image_collection<float,double>::images_list_it_t 
         } //Loop over ROIs.
     } //Loop over contour_collections.
 
-    //Swap the original image with the working image.
-    *first_img_it = working;
-
     //Alter the first image's metadata to reflect that averaging has occurred. You might want to consider
     // a selective whitelist approach so that unique IDs are not duplicated accidentally.
-    first_img_it->metadata["Description"] = "Liver Pharmacokinetic Model";
 
+    {
+        auto it = out_imgs.begin();
+        auto out_img_refw = std::ref( it->get().images.back() );
+        UpdateImageDescription( out_img_refw, "Liver Pharmaco: k1A" );
+        UpdateImageWindowCentreWidth( out_img_refw, minmax_k1A );
 
-    //Specify a reasonable default window.
-    if( (curr_min_pixel != std::numeric_limits<float>::max())
-    &&  (curr_max_pixel != std::numeric_limits<float>::min()) ){
-        const float WindowCenter = (curr_min_pixel/2.0) + (curr_max_pixel/2.0);
-        //const float WindowWidth  = 2.0 + curr_max_pixel - curr_min_pixel;
-        const float WindowWidth  = curr_max_pixel - curr_min_pixel;
-        first_img_it->metadata["WindowValidFor"] = first_img_it->metadata["Description"];
-        first_img_it->metadata["WindowCenter"]   = Xtostring(WindowCenter);
-        first_img_it->metadata["WindowWidth"]    = Xtostring(WindowWidth);
+        ++it;
+        out_img_refw = std::ref( it->get().images.back() );
+        UpdateImageDescription( out_img_refw, "Liver Pharmaco: tauA" );
+        UpdateImageWindowCentreWidth( out_img_refw, minmax_tauA );
 
-        first_img_it->metadata["PixelMinMaxValidFor"] = first_img_it->metadata["Description"];
-        first_img_it->metadata["PixelMin"]            = Xtostring(curr_min_pixel);
-        first_img_it->metadata["PixelMax"]            = Xtostring(curr_max_pixel);
+        ++it;
+        out_img_refw = std::ref( it->get().images.back() );
+        UpdateImageDescription( out_img_refw, "Liver Pharmaco: k1V" );
+        UpdateImageWindowCentreWidth( out_img_refw, minmax_k1V );
+
+        ++it;
+        out_img_refw = std::ref( it->get().images.back() );
+        UpdateImageDescription( out_img_refw, "Liver Pharmaco: tauV" );
+        UpdateImageWindowCentreWidth( out_img_refw, minmax_tauV );
+
+        ++it;
+        out_img_refw = std::ref( it->get().images.back() );
+        UpdateImageDescription( out_img_refw, "Liver Pharmaco: k2" );
+        UpdateImageWindowCentreWidth( out_img_refw, minmax_k2 );
     }
 
     return true;

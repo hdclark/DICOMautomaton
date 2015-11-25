@@ -10,6 +10,8 @@
 #include "YgorImages.h"
 #include "YgorString.h"
 
+#include "../ConvenienceRoutines.h"
+
 
 bool HighlightROIVoxels(planar_image_collection<float,double>::images_list_it_t first_img_it,
                         std::list<planar_image_collection<float,double>::images_list_it_t> ,
@@ -50,6 +52,8 @@ bool HighlightROIVoxels(planar_image_collection<float,double>::images_list_it_t 
     const auto col_unit   = first_img_it->col_unit;
     const auto ortho_unit = row_unit.Cross( col_unit ).unit();
 
+    Stats::Running_MinMax<float> minmax_pixel;
+
     for(const auto &roi : rois){
 /*
         //Construct a bounding box to reduce computational demand of checking every voxel.
@@ -86,6 +90,7 @@ bool HighlightROIVoxels(planar_image_collection<float,double>::images_list_it_t 
                                                                                AlreadyProjected)){
                     for(auto chan = 0; chan < first_img_it->channels; ++chan){
                         first_img_it->reference(row, col, chan) = static_cast<float>(20);
+                        minmax_pixel.Digest(static_cast<float>(20));
                     }
 
                 //If we're in the bounding box but not the ROI, indicate so. Do not overwrite if a previous ROI
@@ -93,7 +98,10 @@ bool HighlightROIVoxels(planar_image_collection<float,double>::images_list_it_t 
                 }else{
                     for(auto chan = 0; chan < first_img_it->channels; ++chan){
                         const auto curr_val = first_img_it->value(row, col, chan);
-                        if(curr_val != 0) first_img_it->reference(row, col, chan) = static_cast<float>(10);
+                        if(curr_val != 0){ 
+                            first_img_it->reference(row, col, chan) = static_cast<float>(10);
+                            minmax_pixel.Digest(static_cast<float>(10));
+                        }
                     }
                 }
             }
@@ -102,9 +110,8 @@ bool HighlightROIVoxels(planar_image_collection<float,double>::images_list_it_t 
 
     //Alter the first image's metadata to reflect that averaging has occurred. You might want to consider
     // a selective whitelist approach so that unique IDs are not duplicated accidentally.
-    first_img_it->metadata["Description"] = "Highlighted ROIs";
-
-FUNCERR("Need to provide a window-level here");
+    UpdateImageDescription( std::ref(*first_img_it), "Highlighted ROIs" );
+    UpdateImageWindowCentreWidth( std::ref(*first_img_it), minmax_pixel );
 
     return true;
 }

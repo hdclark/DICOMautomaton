@@ -15,6 +15,8 @@
 #include "YgorString.h"      //Needed for GetFirstRegex(...)
 #include "YgorPlot.h"
 
+#include "../ConvenienceRoutines.h"
+
 bool InImagePlaneBicubicSupersample(
                     planar_image_collection<float,double>::images_list_it_t first_img_it,
                     std::list<planar_image_collection<float,double>::images_list_it_t> selected_img_its,
@@ -50,8 +52,7 @@ bool InImagePlaneBicubicSupersample(
     //working.fill_pixels(static_cast<float>(0));
 
     //Record the min and max actual pixel values for windowing purposes.
-    float curr_min_pixel = std::numeric_limits<float>::max();
-    float curr_max_pixel = std::numeric_limits<float>::min();
+    Stats::Running_MinMax<float> minmax_pixel;
 
     //Loop over the rows, columns, and channels.
     for(auto row = 0; row < working.rows; ++row){
@@ -62,8 +63,7 @@ bool InImagePlaneBicubicSupersample(
                 const auto newval = first_img_it->bicubically_interpolate_in_pixel_number_space(row_sample_pos, col_sample_pos, chan);
 
                 working.reference(row, col, chan) = newval;
-                curr_min_pixel = std::min(curr_min_pixel, newval);
-                curr_max_pixel = std::max(curr_max_pixel, newval);
+                minmax_pixel.Digest(newval);
             }//Loop over channels.
         } //Loop over cols
     } //Loop over rows
@@ -71,23 +71,11 @@ bool InImagePlaneBicubicSupersample(
     //Replace the old image data with the new image data.
     *first_img_it = working;
 
-    //Alter the first image's metadata to reflect that averaging has occurred. You might want to consider
-    // a selective whitelist approach so that unique IDs are not duplicated accidentally.
-    first_img_it->metadata["Description"] = "In-plane Bicubically Supersampled ";
-    first_img_it->metadata["Description"] += std::to_string(ScaleFactor) + "x";
+    UpdateImageDescription( std::ref(*first_img_it), "In-plane Bicubically Supersampled "_s + std::to_string(ScaleFactor) + "x" );
+    UpdateImageWindowCentreWidth( std::ref(*first_img_it), minmax_pixel );
+
     first_img_it->metadata["Rows"] = std::to_string(first_img_it->rows);
     first_img_it->metadata["Columns"] = std::to_string(first_img_it->columns);
-
-
-    //Specify a reasonable default window.
-    if( (curr_min_pixel != std::numeric_limits<float>::max())
-    &&  (curr_max_pixel != std::numeric_limits<float>::min()) ){
-        const float WindowCenter = (curr_min_pixel/2.0) + (curr_max_pixel/2.0);
-        const float WindowWidth  = 2.0 + curr_max_pixel - curr_min_pixel;
-        first_img_it->metadata["WindowValidFor"] = first_img_it->metadata["Description"];
-        first_img_it->metadata["WindowCenter"]   = Xtostring(WindowCenter);
-        first_img_it->metadata["WindowWidth"]    = Xtostring(WindowWidth);
-    }
 
     return true;
 }

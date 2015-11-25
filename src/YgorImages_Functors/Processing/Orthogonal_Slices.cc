@@ -19,6 +19,7 @@
 #include "YgorString.h"      //Needed for GetFirstRegex(...)
 #include "YgorPlot.h"
 
+#include "../ConvenienceRoutines.h"
 //#include "../Grouping/Misc_Functors.h"
 #include "Orthogonal_Slices.h"
 
@@ -139,7 +140,6 @@ bool OrthogonalSlices(planar_image_collection<float,double>::images_list_it_t fi
                                                                             + "^" + std::to_string(new_pxl_dy);
             out_imgs.front().get().images.back().metadata["SliceThickness"] = std::to_string(new_pxl_dz);
             out_imgs.front().get().images.back().metadata["Description"] = "Ortho Volume Intersection: Row";
-
         }
     }
 

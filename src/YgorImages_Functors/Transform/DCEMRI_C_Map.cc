@@ -10,6 +10,8 @@
 #include "YgorImages.h"
 #include "YgorString.h"
 
+#include "../ConvenienceRoutines.h"
+
 
 //Computes a DCE C(t) contrast enhancement map using S0 and T1 maps. Gets called once per frame, which 
 // can be very costly.
@@ -55,8 +57,7 @@ bool DCEMRICMap(planar_image_collection<float,double>::images_list_it_t  local_i
     const auto cosFA = std::cos(FlipAngle*M_PI/180.0);
 
     //Record the min and max actual pixel values for windowing purposes.
-    float curr_min_pixel = std::numeric_limits<float>::max();
-    float curr_max_pixel = std::numeric_limits<float>::min();
+    Stats::Running_MinMax<float> minmax_pixel;
 
     //Loop over the rows, columns, and channels.
     for(auto row = 0; row < local_img_it->rows; ++row){
@@ -89,8 +90,7 @@ bool DCEMRICMap(planar_image_collection<float,double>::images_list_it_t  local_i
                     const auto newval = C_f;
                     local_img_it->reference(row, col, chan) = newval;
                     if(isininc(-0.5,C_f,20.0)){
-                        curr_min_pixel = std::min(curr_min_pixel, newval);
-                        curr_max_pixel = std::max(curr_max_pixel, newval);
+                        minmax_pixel.Digest(newval);
                     }
                 }else{
                     local_img_it->reference(row, col, chan) = std::numeric_limits<float>::quiet_NaN();
@@ -111,23 +111,14 @@ FUNCERR("Need to double check that you can delete the extra 1000.0x scaling fact
                 //Update the value.
                 const auto newval = static_cast<float>(C);
                 local_img_it->reference(row, col, chan) = newval;
-                curr_min_pixel = std::min(curr_min_pixel, newval);
-                curr_max_pixel = std::max(curr_max_pixel, newval);
+                minmax_pixel.Digest(newval);
 */
             }
         }
     }
 
-    //Alter the first image's metadata to reflect that averaging has occurred. You might want to consider
-    // a selective whitelist approach so that unique IDs are not duplicated accidentally.
-    local_img_it->metadata["Description"] = "C map";
-
-    //Specify a reasonable default window.
-    const float WindowCenter = (curr_min_pixel/2.0) + (curr_max_pixel/2.0);
-    const float WindowWidth  = 2.0 + curr_max_pixel - curr_min_pixel;
-    local_img_it->metadata["WindowValidFor"] = local_img_it->metadata["Description"];
-    local_img_it->metadata["WindowCenter"]   = Xtostring(WindowCenter);
-    local_img_it->metadata["WindowWidth"]    = Xtostring(WindowWidth);
+    UpdateImageDescription( std::ref(*local_img_it), "C Map" );
+    UpdateImageWindowCentreWidth( std::ref(*local_img_it), minmax_pixel );
 
     return true;
 }

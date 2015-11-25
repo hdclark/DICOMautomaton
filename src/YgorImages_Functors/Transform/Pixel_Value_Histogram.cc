@@ -14,6 +14,7 @@
 #include "YgorString.h"      //Needed for GetFirstRegex(...)
 #include "YgorPlot.h"
 
+#include "../ConvenienceRoutines.h"
 
 static std::map<uint32_t, std::vector<double>> pixel_vals;
 
@@ -100,7 +101,7 @@ bool PixelHistogramAnalysis(planar_image_collection<float,double>::images_list_i
 
     //Alter the first image's metadata to reflect that averaging has occurred. You might want to consider
     // a selective whitelist approach so that unique IDs are not duplicated accidentally.
-    local_img_it->metadata["Description"] = "Pixel Histogram (images pass through unaltered)";
+    UpdateImageDescription( std::ref(*local_img_it), "Pixel Histogram (images pass-through)" );
 
     return true;
 }

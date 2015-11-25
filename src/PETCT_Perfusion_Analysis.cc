@@ -908,6 +908,8 @@ int main(int argc, char* argv[]){
                                                      std::ref(intersecting_col.back()->imagecoll) },
                                                    {}, {} )){
                 FUNCERR("Unable to generate orthogonal image slices");
+            }else{
+                img_arr->imagecoll.images.clear();
             }
         }
 
@@ -1007,9 +1009,8 @@ int main(int argc, char* argv[]){
        
         //Eliminate the original, un-processed data to relieve some memory pressure.
         if(true){
-            auto PurgeAboveNSeconds = std::bind(PurgeAboveTemporalThreshold, std::placeholders::_1, 20.0);
             for(auto & img_arr : orig_img_arrays){
-                img_arr->imagecoll.Prune_Images_Satisfying(PurgeAboveNSeconds);
+                img_arr->imagecoll.images.clear();
             }
         }
  
@@ -1049,7 +1050,7 @@ int main(int argc, char* argv[]){
         }
 
         //Prune some images, to reduce the computational effort needed.
-        if(false){
+        if(true){
             for(auto & img_arr : C_enhancement_img_arrays){
                 const auto centre = img_arr->imagecoll.center();
                 img_arr->imagecoll.Retain_Images_Satisfying(
@@ -1060,18 +1061,44 @@ int main(int argc, char* argv[]){
         }
 
         //Using the ROI time curves, compute a pharmacokinetic model and produce an image map with some model parameter(s).
-        std::vector<std::shared_ptr<Image_Array>> pharmaco_model_arr;
+        std::vector<std::shared_ptr<Image_Array>> pharmaco_model_dummy; //This gets destroyed ASAP after computation.
+        std::vector<std::shared_ptr<Image_Array>> pharmaco_model_kA;
+        std::vector<std::shared_ptr<Image_Array>> pharmaco_model_tauA;
+        std::vector<std::shared_ptr<Image_Array>> pharmaco_model_kV;
+        std::vector<std::shared_ptr<Image_Array>> pharmaco_model_tauV;
+        std::vector<std::shared_ptr<Image_Array>> pharmaco_model_k2;
+
         if(true) for(auto & img_arr : C_enhancement_img_arrays){
             DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( *img_arr ) );
-            pharmaco_model_arr.emplace_back( DICOM_data.image_data.back() );
+            pharmaco_model_dummy.emplace_back( DICOM_data.image_data.back() );
 
-            if(!pharmaco_model_arr.back()->imagecoll.Process_Images( GroupSpatiallyOverlappingImages,
-                                                                     LiverPharmacoModel,
-                                                                     {}, cc_all,
-                                                                     &ud )){
+            DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( ) );
+            pharmaco_model_kA.emplace_back( DICOM_data.image_data.back() );
+            DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( ) );
+            pharmaco_model_tauA.emplace_back( DICOM_data.image_data.back() );
+            DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( ) );
+            pharmaco_model_kV.emplace_back( DICOM_data.image_data.back() );
+            DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( ) );
+            pharmaco_model_tauV.emplace_back( DICOM_data.image_data.back() );
+            DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( ) );
+            pharmaco_model_k2.emplace_back( DICOM_data.image_data.back() );
+
+            if(!pharmaco_model_dummy.back()->imagecoll.Process_Images( 
+                              GroupSpatiallyOverlappingImages,
+                              LiverPharmacoModel,
+                              { std::ref(pharmaco_model_kA.back()->imagecoll),
+                                std::ref(pharmaco_model_tauA.back()->imagecoll),
+                                std::ref(pharmaco_model_kV.back()->imagecoll),
+                                std::ref(pharmaco_model_tauV.back()->imagecoll),
+                                std::ref(pharmaco_model_k2.back()->imagecoll) }, 
+                              cc_all,
+                              &ud )){
                 FUNCERR("Unable to pharmacokinetically model liver!");
+            }else{
+                pharmaco_model_dummy.back()->imagecoll.images.clear();
             }
         }
+        pharmaco_model_dummy.clear();
 
     }
 
@@ -1820,7 +1847,17 @@ int main(int argc, char* argv[]){
 
     //Launch an interactive viewing window.
     if(Operations.count("View") != 0){
+
+        //Trim any empty image sets.
+        for(auto it = DICOM_data.image_data.begin(); it != DICOM_data.image_data.end();  ){
+            if((*it)->imagecoll.images.empty()){
+                it = DICOM_data.image_data.erase(it);
+            }else{
+                ++it;
+            }
+        }
         if(DICOM_data.image_data.empty()) FUNCERR("No image data available to view. Cannot continue");
+
 
         //Produce a little sound to notify the user we've started showing something.
         sf::Music music;
@@ -2008,15 +2045,10 @@ int main(int argc, char* argv[]){
                 //       arithmetical types (i.e., handling negatives, ensuring there is no overflow or wrap-
                 //       around, ensuring there is minimal precision loss).
                 typedef decltype(img_it->value(0,0,0)) pixel_value_t;
-                auto lowest  = std::numeric_limits<pixel_value_t>::max();
-                auto highest = std::numeric_limits<pixel_value_t>::min();
-                for(auto i = 0; i < img_cols; ++i){
-                    for(auto j = 0; j < img_rows; ++j){
-                        const auto value = img_it->value(j,i,0); //Gray channel, or R channel.
-                        lowest  = std::min(lowest,value);
-                        highest = std::max(highest,value);
-                    }
-                }
+                const auto pixel_minmax_allchnls = img_it->minmax();
+                const auto lowest = std::get<0>(pixel_minmax_allchnls);
+                const auto highest = std::get<1>(pixel_minmax_allchnls);
+
                 const auto pixel_type_max = static_cast<double>(std::numeric_limits<pixel_value_t>::max());
                 const auto pixel_type_min = static_cast<double>(std::numeric_limits<pixel_value_t>::min());
                 const auto dest_type_max = static_cast<double>(std::numeric_limits<uint8_t>::max()); //Min is implicitly 0.
@@ -2400,6 +2432,9 @@ int main(int argc, char* argv[]){
                         //Save the current image position. We will attempt to find the same spot after switching arrays.
                         const auto disp_img_pos = static_cast<size_t>( std::distance(disp_img_beg, disp_img_it) );
 
+                        custom_width  = std::experimental::optional<double>();
+                        custom_centre = std::experimental::optional<double>();
+
                         if(thechar == 'N'){
                             if(img_array_ptr_it == img_array_ptr_last){ //Wrap around forwards.
                                 img_array_ptr_it = img_array_ptr_beg;
@@ -2443,9 +2478,6 @@ int main(int argc, char* argv[]){
                         }else{
                             window.setTitle("DICOMautomaton IV: <no description available>");
                         }
-
-                        custom_width  = std::experimental::optional<double>();
-                        custom_centre = std::experimental::optional<double>();
 
                     //Advance to the next/previous display image in the current Image_Array.
                     }else if( (thechar == 'n') || (thechar == 'p') ){
@@ -2652,9 +2684,11 @@ int main(int argc, char* argv[]){
                                 custom_width.swap( img_win_fw );
                                 custom_centre.swap( img_win_c );
                             }else{
-                                //Very simple, probably very bad guess. Should check window pixel range instead.
-                                custom_width.emplace(1000.0);
-                                custom_centre.emplace(1000.0);
+                                const auto pixel_minmax_allchnls = disp_img_it->minmax();
+                                const auto lowest = std::get<0>(pixel_minmax_allchnls);
+                                const auto highest = std::get<1>(pixel_minmax_allchnls);
+                                custom_width.emplace(highest-lowest); //Full width.
+                                custom_centre.emplace(0.5*(highest+lowest));
                             }
                         }
                     }

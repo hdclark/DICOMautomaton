@@ -18,6 +18,7 @@
 #include "YgorString.h"      //Needed for GetFirstRegex(...)
 #include "YgorPlot.h"
 
+#include "../ConvenienceRoutines.h"
 #include "Per_ROI_Time_Courses.h"
 
 
@@ -230,7 +231,7 @@ bool PerROITimeCourses(planar_image_collection<float,double>::images_list_it_t f
 
     //Alter the first image's metadata to reflect that averaging has occurred. You might want to consider
     // a selective whitelist approach so that unique IDs are not duplicated accidentally.
-    first_img_it->metadata["Description"] = "Per-ROI Time Courses";
+    UpdateImageDescription( std::ref(*first_img_it), "Per-ROI Time Courses" );
 
     return true;
 }

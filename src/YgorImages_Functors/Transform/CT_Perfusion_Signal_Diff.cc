@@ -10,6 +10,7 @@
 #include "YgorImages.h"
 #include "YgorString.h"
 
+#include "../ConvenienceRoutines.h"
 
 
 bool CTPerfusionSigDiffC( planar_image_collection<float,double>::images_list_it_t  local_img_it,
@@ -33,8 +34,7 @@ bool CTPerfusionSigDiffC( planar_image_collection<float,double>::images_list_it_
     planar_image_collection<float,double> &S_baseline_map = external_imgs.front().get();
 
     //Record the min and max actual pixel values for windowing purposes.
-    float curr_min_pixel = std::numeric_limits<float>::max();
-    float curr_max_pixel = std::numeric_limits<float>::min();
+    Stats::Running_MinMax<float> minmax_pixel;
 
     //Select the S0 and T1 map images which spatially overlap with this image.
     const auto img_cntr  = local_img_it->center();
@@ -63,8 +63,7 @@ bool CTPerfusionSigDiffC( planar_image_collection<float,double>::images_list_it_
                 if( std::isfinite(C_f) ){ 
                     const auto newval = C_f;
                     local_img_it->reference(row, col, chan) = newval;
-                    curr_min_pixel = std::min(curr_min_pixel, newval);
-                    curr_max_pixel = std::max(curr_max_pixel, newval);
+                    minmax_pixel.Digest(newval);
                 }else{
                     local_img_it->reference(row, col, chan) = std::numeric_limits<float>::quiet_NaN();
                 }
@@ -72,19 +71,8 @@ bool CTPerfusionSigDiffC( planar_image_collection<float,double>::images_list_it_
         }
     }
 
-    //Alter the first image's metadata to reflect that averaging has occurred. You might want to consider
-    // a selective whitelist approach so that unique IDs are not duplicated accidentally.
-    local_img_it->metadata["Description"] = "Signal Difference C(t)";
-
-    //Specify a reasonable default window.
-    if( (curr_min_pixel != std::numeric_limits<float>::max())
-    &&  (curr_max_pixel != std::numeric_limits<float>::min()) ){
-        const float WindowCenter = (curr_min_pixel/2.0) + (curr_max_pixel/2.0);
-        const float WindowWidth  = 2.0 + curr_max_pixel - curr_min_pixel;
-        local_img_it->metadata["WindowValidFor"] = local_img_it->metadata["Description"];
-        local_img_it->metadata["WindowCenter"]   = Xtostring(WindowCenter);
-        local_img_it->metadata["WindowWidth"]    = Xtostring(WindowWidth);
-    }
+    UpdateImageDescription( std::ref(*local_img_it), "dSignal C(t)" );
+    UpdateImageWindowCentreWidth( std::ref(*local_img_it), minmax_pixel );
 
     return true;
 }
