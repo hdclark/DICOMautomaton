@@ -295,20 +295,20 @@ bool LiverPharmacoModel(planar_image_collection<float,double>::images_list_it_t 
                             double params[dimen] = {  0.05,   5.0,  0.05,   5.0,  0.2 };  //Arbitrarily chosen...
 
                             // U/L bounds:             k1A,  tauA,  k1V,  tauV,  k2.
-                            double l_bnds[dimen] = {   0.0, -20.0,  0.0, -20.0,  0.0 };
+                            //double l_bnds[dimen] = {   0.0, -20.0,  0.0, -20.0,  0.0 };
                             //double u_bnds[dimen] = {   1.0,   5.0,  1.0,   5.0,  1.0 };
                     
                             nlopt_opt opt;
                             //opt = nlopt_create(NLOPT_LN_COBYLA, dimen);
-                            opt = nlopt_create(NLOPT_LN_BOBYQA, dimen);
-                            //opt = nlopt_create(NLOPT_LN_SBPLX, dimen);
+                            //opt = nlopt_create(NLOPT_LN_BOBYQA, dimen);
+                            opt = nlopt_create(NLOPT_LN_SBPLX, dimen);
                     
                             //opt = nlopt_create(NLOPT_GN_DIRECT, dimen);
                             //opt = nlopt_create(NLOPT_GN_CRS2_LM, dimen);
                             //opt = nlopt_create(NLOPT_GN_ESCH, dimen);
                             //opt = nlopt_create(NLOPT_GN_ISRES, dimen);
                     
-                            nlopt_set_lower_bounds(opt, l_bnds);
+                            //nlopt_set_lower_bounds(opt, l_bnds);
                             //nlopt_set_upper_bounds(opt, u_bnds);
                     
                             nlopt_set_min_objective(opt, func_to_min, nullptr);

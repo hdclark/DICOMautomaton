@@ -30,11 +30,6 @@ bool OrthogonalSlices(planar_image_collection<float,double>::images_list_it_t fi
                       std::list<std::reference_wrapper<contour_collection<double>>> ,
                       std::experimental::any ){
 
-//bool OrthogonalSlices(planar_image_collection<float,double> &imagecoll,
-//                      std::list<std::reference_wrapper<planar_image_collection<float,double>>> out_imgs,
-//                      std::list<std::reference_wrapper<contour_collection<double>>>,
-//                      std::experimental::any ){
-
     //This routine computes slices that are orthogonal to the current slices (using the row and col units)
     // by explicitly sampling original slice voxels that overlap the new image voxels.
     //
@@ -108,6 +103,7 @@ bool OrthogonalSlices(planar_image_collection<float,double>::images_list_it_t fi
     const auto new_pxl_dx = first_img_it->pxl_dz;
     const auto numb_of_rows = static_cast<long int>( std::ceil(N) );
     const auto numb_of_chns = first_img_it->channels;
+    const long int img_skip = 50;  //Reduces output. Keep every Nth image; 1: keep all, 2: keep every other, etc..
 
     // ---- First set: 'row' aligned orthogonal images ----
     {
@@ -121,6 +117,8 @@ bool OrthogonalSlices(planar_image_collection<float,double>::images_list_it_t fi
         const auto numb_of_cols = first_img_it->rows;
 
         for(auto i = 0; i < numb_of_imgs; ++i){
+            if((i % img_skip) != 0) continue;
+
             out_imgs.front().get().images.emplace_back();
             out_imgs.front().get().images.back().init_buffer( numb_of_rows, numb_of_cols, numb_of_chns );
             out_imgs.front().get().images.back().init_spatial( new_pxl_dx, new_pxl_dy, new_pxl_dz, 
@@ -155,6 +153,8 @@ bool OrthogonalSlices(planar_image_collection<float,double>::images_list_it_t fi
         const auto numb_of_cols = first_img_it->columns;
 
         for(auto i = 0; i < numb_of_imgs; ++i){
+            if((i % img_skip) != 0) continue;
+
             out_imgs.back().get().images.emplace_back();
             out_imgs.back().get().images.back().init_buffer( numb_of_rows, numb_of_cols, numb_of_chns );
             out_imgs.back().get().images.back().init_spatial( new_pxl_dx, new_pxl_dy, new_pxl_dz, 

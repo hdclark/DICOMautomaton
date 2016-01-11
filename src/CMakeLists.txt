@@ -240,6 +240,18 @@ target_link_libraries (automaton
     m
 )
 
+# Executable.
+add_executable (dicomautomaton_dump
+    DICOMautomaton_Dump.cc
+    $<TARGET_OBJECTS:Structs_obj>
+    $<TARGET_OBJECTS:Dose_Meld_obj>
+)
+target_link_libraries (dicomautomaton_dump
+    imebrashim
+    ygor 
+    m
+)
+
 # Installation info.
 INSTALL(TARGETS 
     petct_perfusion_analysis
@@ -248,6 +260,7 @@ INSTALL(TARGETS
     pacs_verify_filesystem_store
     overlaydosedata
     automaton
+    dicomautomaton_dump
     imebrashim
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib

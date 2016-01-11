@@ -30,6 +30,8 @@ makedepends=('cmake')
 #md5sums=('a0afa52d60cea6c0363a2a8cb39a4095'
 #         'a0afa52d60cea6c0363a2a8cb39a4095')
 
+options=(!strip staticlibs)
+
 build() {
 
   #echo "Build dir: $(pwd)"

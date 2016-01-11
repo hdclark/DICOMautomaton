@@ -894,7 +894,7 @@ int main(int argc, char* argv[]){
         std::vector<std::shared_ptr<Image_Array>> intersecting_row;
         std::vector<std::shared_ptr<Image_Array>> intersecting_col;
 
-        if(false) for(auto & img_arr : orig_img_arrays){ //temp_avgd){
+        if(true) for(auto & img_arr : orig_img_arrays){ //temp_avgd){
             DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( ) );
             intersecting_row.emplace_back( DICOM_data.image_data.back() );
 
@@ -931,6 +931,67 @@ int main(int argc, char* argv[]){
 
 
     }
+
+    if(Operations.count("CT_Liver_Perfusion_Ortho_Views") != 0){
+        //Use this mode when you are only interested in oblique/orthogonal views.
+        // The point of this operation is to keep memory low so image sets can be compared.
+
+        //Get handles for each of the original image arrays so we can easily refer to them later.
+        std::vector<std::shared_ptr<Image_Array>> orig_img_arrays;
+        for(auto & img_arr : DICOM_data.image_data) orig_img_arrays.push_back(img_arr);
+
+        //Force the window to something reasonable to be uniform and cover normal tissue HU range.
+        if(true) for(auto & img_arr : orig_img_arrays){
+            if(!img_arr->imagecoll.Process_Images( GroupIndividualImages,
+                                                   StandardAbdominalHUWindow,
+                                                   {}, {} )){
+                FUNCERR("Unable to force window to cover reasonable HU range");
+            }
+        }
+
+        //Construct perpendicular image slices that align with first row and column of the first image.
+        std::vector<std::shared_ptr<Image_Array>> intersecting_row;
+        std::vector<std::shared_ptr<Image_Array>> intersecting_col;
+
+        if(true) for(auto & img_arr : orig_img_arrays){ //temp_avgd){
+            DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( ) );
+            intersecting_row.emplace_back( DICOM_data.image_data.back() );
+
+            DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( ) );
+            intersecting_col.emplace_back( DICOM_data.image_data.back() );
+
+
+            if(!img_arr->imagecoll.Process_Images( GroupTemporallyOverlappingImages,
+                                                   OrthogonalSlices,
+                                                   { std::ref(intersecting_row.back()->imagecoll),
+                                                     std::ref(intersecting_col.back()->imagecoll) },
+                                                   {}, {} )){
+                FUNCERR("Unable to generate orthogonal image slices");
+            }else{
+                img_arr->imagecoll.images.clear();
+            }
+        }
+
+        //Force the window to something reasonable to be uniform and cover normal tissue HU range.
+        if(true) for(auto & img_arr : intersecting_row){
+            if(!img_arr->imagecoll.Process_Images( GroupIndividualImages,
+                                                   StandardAbdominalHUWindow,
+                                                   {}, {} )){
+                FUNCERR("Unable to force window to cover reasonable HU range");
+            }
+        }
+        if(true) for(auto & img_arr : intersecting_col){
+            if(!img_arr->imagecoll.Process_Images( GroupIndividualImages,
+                                                   StandardAbdominalHUWindow,
+                                                   {}, {} )){
+                FUNCERR("Unable to force window to cover reasonable HU range");
+            }
+        }
+
+
+    }
+
+
 
     if(Operations.count("CT_Liver_Perfusion_Pharmaco") != 0){
         //Get handles for each of the original image arrays so we can easily refer to them later.
@@ -1877,7 +1938,6 @@ int main(int argc, char* argv[]){
             }
         }
 
-
         //If, for some reason, several image arrays are available for viewing, we need to provide a means for stepping
         // through the arrays. 
         //
@@ -1918,7 +1978,7 @@ int main(int argc, char* argv[]){
 
         //Open a window.
         sf::RenderWindow window;
-        window.create(sf::VideoMode(2000, 2000), "DICOMautomaton Image Viewer");
+        window.create(sf::VideoMode(640, 480), "DICOMautomaton Image Viewer");
         window.setFramerateLimit(60);
 
         if(auto ImageDesc = disp_img_it->GetMetadataValueAs<std::string>("Description")){
@@ -2166,16 +2226,23 @@ int main(int argc, char* argv[]){
 
                         long int count = 0;
                         for(auto & pimg : encompassing_images){
-                            const auto pixel_dump_filename_out = Get_Unique_Sequential_Filename("/tmp/raw_pixel_dump_uint16_scaled_per_chan_",6,".gray");
-                            if(Dump_Pixels(*pimg,pixel_dump_filename_out)){
+//                            const auto pixel_dump_filename_out = Get_Unique_Sequential_Filename("/tmp/raw_pixel_dump_uint16_scaled_per_chan_",6,".gray");
+//                            if(Dump_Pixels(*pimg,pixel_dump_filename_out)){
+//                                FUNCINFO("Dumped pixel data for image " << count << " to file '" << pixel_dump_filename_out << "'");
+//                            }else{
+//                                FUNCWARN("Unable to dump pixel data for this image to file '" << pixel_dump_filename_out << "'");
+//                            }
+//                            ++count;
+                            const auto pixel_dump_filename_out = Get_Unique_Sequential_Filename("/tmp/spatially_overlapping_dump_",6,".fits");
+                            if(WriteToFITS(*pimg,pixel_dump_filename_out)){
                                 FUNCINFO("Dumped pixel data for image " << count << " to file '" << pixel_dump_filename_out << "'");
                             }else{
-                                FUNCWARN("Unable to dump pixel data for this image to file '" << pixel_dump_filename_out << "'");
+                                FUNCWARN("Unable to dump pixel data for image " << count << " to file '" << pixel_dump_filename_out << "'");
                             }
-                            ++count;
+
                         }
-                        FUNCINFO("To convert them issue something like 'convert -size 256x256 -depth 16 "
-                                 "-define quantum:format=unsigned -type grayscale image.gray -depth 16 ... out.jpg'");
+//                        FUNCINFO("To convert them issue something like 'convert -size 256x256 -depth 16 "
+//                                 "-define quantum:format=unsigned -type grayscale image.gray -depth 16 ... out.jpg'");
 
 
                     //Dump the current image to file.
