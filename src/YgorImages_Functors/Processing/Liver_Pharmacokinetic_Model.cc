@@ -292,16 +292,18 @@ bool LiverPharmacoModel(planar_image_collection<float,double>::images_list_it_t 
 
                             const int dimen = 5;
                             //Fitting parameters:      k1A,  tauA,   k1V,  tauV,  k2.
-                            double params[dimen] = {  0.05,   5.0,  0.05,   5.0,  0.2 };  //Arbitrarily chosen...
+                            // The following are arbitrarily chosen. They should be seeded from previous computations, or
+                            // at least be nominal values reported within the literature.
+                            double params[dimen] = {  0.05,  10.0,  0.05,  10.0,  0.5 };
 
                             // U/L bounds:             k1A,  tauA,  k1V,  tauV,  k2.
                             //double l_bnds[dimen] = {   0.0, -20.0,  0.0, -20.0,  0.0 };
                             //double u_bnds[dimen] = {   1.0,   5.0,  1.0,   5.0,  1.0 };
                     
                             nlopt_opt opt;
-                            //opt = nlopt_create(NLOPT_LN_COBYLA, dimen);
+                            opt = nlopt_create(NLOPT_LN_COBYLA, dimen);
                             //opt = nlopt_create(NLOPT_LN_BOBYQA, dimen);
-                            opt = nlopt_create(NLOPT_LN_SBPLX, dimen);
+                            //opt = nlopt_create(NLOPT_LN_SBPLX, dimen);
                     
                             //opt = nlopt_create(NLOPT_GN_DIRECT, dimen);
                             //opt = nlopt_create(NLOPT_GN_CRS2_LM, dimen);
@@ -312,16 +314,24 @@ bool LiverPharmacoModel(planar_image_collection<float,double>::images_list_it_t 
                             //nlopt_set_upper_bounds(opt, u_bnds);
                     
                             nlopt_set_min_objective(opt, func_to_min, nullptr);
-                            nlopt_set_xtol_rel(opt, 1.0E-4);
-                   
+                            nlopt_set_xtol_rel(opt, 1.0E-3);
+                            nlopt_set_maxtime(opt, 3.0); // In seconds.
+                            nlopt_set_maxeval(opt, 5000); // Maximum number of times to evalute cost function.
+
                             double func_min;
-                            if(nlopt_optimize(opt, params, &func_min) < 0){
-                                FUNCWARN("NLOpt fail");
+                            const auto opt_status = nlopt_optimize(opt, params, &func_min);
+                            if(opt_status < 0){
                                 ++Minimization_Failure_Count;
+                                if(opt_status == NLOPT_FAILURE){                FUNCWARN("NLOpt fail: generic failure");
+                                }else if(opt_status == NLOPT_INVALID_ARGS){     FUNCERR("NLOpt fail: invalid arguments");
+                                }else if(opt_status == NLOPT_OUT_OF_MEMORY){    FUNCWARN("NLOpt fail: out of memory");
+                                }else if(opt_status == NLOPT_ROUNDOFF_LIMITED){ FUNCWARN("NLOpt fail: roundoff limited");
+                                }else if(opt_status == NLOPT_FORCED_STOP){      FUNCWARN("NLOpt fail: forced termination");
+                                }else{ FUNCERR("NLOpt fail: unrecognized error"); }
+                                // See http://ab-initio.mit.edu/wiki/index.php/NLopt_Reference for error code info.
                             }
                             nlopt_destroy(opt);
 
-                    
                             const double k1A  = params[0];
                             const double tauA = params[1];
                             const double k1V  = params[2];

@@ -1087,27 +1087,26 @@ int main(int argc, char* argv[]){
             }
         }
 
-        if(false){
-
-            // TODO: This little plotting routine is not working. Have I tweaked something I shouldn't have?
-
-            std::cout << "Produced " << ud.time_courses.size() << " time courses:" << std::endl;
-
+        if(true){
+            //NOTE: This routine is spotty. It doesn't always work, and seems to have a hard time opening a 
+            // display window when a large data set is loaded. Files therefore get written for backup access.
+            std::cout << "Producing " << ud.time_courses.size() << " time courses:" << std::endl;
             std::vector<YgorMathPlottingGnuplot::Shuttle<samples_1D<double>>> shuttle;
             for(auto & tcs : ud.time_courses){
                 const auto lROIname = tcs.first;
                 const auto lVoxelCount = ud.voxel_count[lROIname];
                 const auto lTimeCourse = tcs.second.Multiply_With(1.0/static_cast<double>(lVoxelCount));
                 shuttle.emplace_back(lTimeCourse, lROIname + " - Voxel Averaged");
-                std::cout << "\t'" << lROIname << "'" << std::endl; 
-
-                lTimeCourse.Write_To_File(Get_Unique_Sequential_Filename("/tmp/roi_time_course_",4,".txt")); 
+                const auto lFileName = Get_Unique_Sequential_Filename("/tmp/roi_time_course_",4,".txt");
+                lTimeCourse.Write_To_File(lFileName); 
+                AppendStringToFile("# Time course for ROI '"_s + lROIname + "'.\n", lFileName);
+                std::cout << "\tTime course for ROI '" << lROIname << "' written to '" << lFileName << "'." << std::endl;
             }
-            YgorMathPlottingGnuplot::Plot<double>(shuttle, "ROI Time Courses", "Time (s)", "Pixel Intensity");
-
-            FUNCINFO("Waiting for you to press enter..");
-            double goon;
-            std::cin >> goon;
+            try{
+                YgorMathPlottingGnuplot::Plot<double>(shuttle, "ROI Time Courses", "Time (s)", "Pixel Intensity");
+            }catch(const std::exception &e){
+                FUNCWARN("Unable to plot time courses: " << e.what());
+            }
         }
 
         //Prune some images, to reduce the computational effort needed.
@@ -1447,6 +1446,28 @@ int main(int argc, char* argv[]){
 
     }
 
+    //=================================================================================================================
+    //==========================================    Contouring Aides     ==============================================
+    //=================================================================================================================
+    if(Operations.count("ContouringAides") != 0){
+
+        //Get handles for each of the original image arrays so we can easily refer to them later.
+        std::vector<std::shared_ptr<Image_Array>> orig_img_arrays;
+        for(auto & img_arr : DICOM_data.image_data) orig_img_arrays.push_back(img_arr);
+
+        //Scale the pixel intensities on a logarithmic scale. (For viewing purposes only!)
+        std::vector<std::shared_ptr<Image_Array>> log_scaled_img_arrays;
+        if(true) for(auto & img_arr : orig_img_arrays){
+            DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( *img_arr ) );
+            log_scaled_img_arrays.emplace_back( DICOM_data.image_data.back() );
+
+            if(!log_scaled_img_arrays.back()->imagecoll.Process_Images( GroupIndividualImages,
+                                                                        LogScalePixels,
+                                                                        {}, {} )){
+                FUNCERR("Unable to perform logarithmic pixel scaling");
+            }
+        }
+    }
 
     //=================================================================================================================
     //============================================= UBC3TMRI TD03 DCE =================================================
@@ -1970,6 +1991,7 @@ int main(int argc, char* argv[]){
         //Flags for various things.
         bool DumpScreenshot = false; //One-shot instruction to dump a screenshot immediately after rendering.
         bool OnlyShowTagsDifferentToNeighbours = true;
+        bool ShowExistingContours = true; //Can be disabled/toggled for, e.g., blind re-contouring.
 
         //Accumulation-type storage.
         contours_with_meta contour_coll_shtl; //Stores contours in the DICOM coordinate system.
@@ -2209,8 +2231,145 @@ int main(int argc, char* argv[]){
                     //Not the same as KeyPressed + KeyReleased. Think unicode characters, or control keys.
                     const auto thechar = static_cast<char>(event.text.unicode);
 
+                    //Show a simple help dialog with some keyboard commands.
+                    if( (thechar == 'h') || (thechar == 'H') ){
+                        // Easy way to get list of commands:
+                        // `grep -C 3 'thechar == ' src/PETCT_Perfusion_Analysis.cc | grep '//\|thechar'`
+                        Execute_Command_In_Pipe(
+                                "zenity --info --no-wrap --text=\""
+                                "DICOMautomaton Image Viewer\\n\\n"
+                                "\\t Commands: \\n"
+                                "\\t\\t h,H \\t Display this help.\\n"
+                                "\\t\\t x \\t\\t Toggle whether existing contours should be displayed.\\n"
+                                "\\t\\t m \\t\\t Invoke minetest to perform contouring for this slice.\\n"
+                                "\\t\\t d \\t\\t Dump the window contents as an image after the next render.\\n"
+                                "\\t\\t D \\t\\t Dump raw pixels for all spatially overlapping images from the current array (e.g., time courses).\\n"
+                                "\\t\\t i \\t\\t Dump the current image to file.\\n"
+                                "\\t\\t I \\t\\t Dump all images in the current array to file.\\n"
+                                "\\t\\t r,R,c,C \\t Plot pixel intensity profiles along the mouse\\'s current row and column.\\n"
+                                "\\t\\t t,T \\t\\t Plot a time course at the mouse\\'s current row and column.\\n"
+                                "\\t\\t a,A \\t\\t Plot or dump the pixel values for [a]ll image sets which spatially overlap.\\n"
+                                "\\t\\t N,P \\t\\t Advance to the next/previous image series.\\n"
+                                "\\t\\t n,p \\t\\t Advance to the next/previous image in this series.\\n"
+                                "\\t\\t -,+ \\t\\t Advance to the next/previous image that spatially overlaps this image.\\n"
+                                "\\t\\t l,L \\t\\t Reset the image scale to be pixel-for-pixel what is seen on screen.\\n"
+                                "\\t\\t u,U \\t Toggle showing metadata tags that are identical to the neighbouring image\\'s metadata tags.\\n"
+                                "\\t\\t e \\t\\t Erase latest non-empty contour. (A single contour.)\\n"
+                                "\\t\\t E \\t\\t Empty the current working ROI buffer. (The entire buffer; all contours.)\\n"
+                                "\\t\\t s,S \\t\\t Save the current contour collection.\\n"
+                                "\\n\""
+                        );
+
+                    //Toggle whether existing contours should be displayed.
+                    }else if( thechar == 'x' ){
+                        ShowExistingContours = !ShowExistingContours;
+
+                    //Invoke minetest to perform contouring for this slice.
+                    }else if( thechar == 'm' ){
+                        try{
+                            //Step 0: Create a new contour buffer if needed.
+                            if(!contour_coll_shtl.contours.back().points.empty()){
+                                contour_coll_shtl.contours.emplace_back();
+                                contour_coll_shtl.contours.back().closed = true;
+                            }
+
+                            //Step 1: Write current image as a FITS file.
+                            //        We want the current window to be present too.
+                            disp_img_texture_sprite_t asprite;
+                            if(!load_img_texture_sprite(disp_img_it, asprite)){
+                                throw std::runtime_error("Unable to load image into sprite with window settings.");
+                            }
+                            planar_image<uint8_t,double> for_mt;
+                            for_mt.init_buffer(disp_img_it->rows, disp_img_it->columns, disp_img_it->channels);
+                            for_mt.init_spatial(disp_img_it->pxl_dx, disp_img_it->pxl_dy, disp_img_it->pxl_dz,
+                                                disp_img_it->anchor, disp_img_it->offset);
+                            for_mt.init_orientation(disp_img_it->row_unit, disp_img_it->col_unit);
+                            for_mt.fill_pixels(0);
+ 
+                            sf::Image animage = asprite.first.copyToImage();
+                            for(auto i = 0; i < for_mt.columns; ++i){
+                                for(auto j = 0; j < for_mt.rows; ++j){
+                                    const uint8_t rchnl = animage.getPixel(i,j).r;
+                                    for_mt.reference(j,i,0) = rchnl;
+                                }
+                            }
+
+
+                            //Perform a pixel compression before writing to file.
+                            for(auto i = 0; i < for_mt.columns; ++i){
+                                for(auto j = 0; j < for_mt.rows; ++j){
+                                    //const auto orig = for_mt.value(j,i,0) * 1.0;
+                                    //const auto scaled = std::log(orig + 1.0) * 45.8; // Range: [0:254].
+                                    //for_mt.reference(j,i,0) = static_cast<uint8_t>(scaled);
+
+                                    const auto orig = for_mt.value(j,i,0) * 1.0;
+                                    const auto scaled = (orig/4.0) + (3.0*253.0/4.0);
+                                    for_mt.reference(j,i,0) = static_cast<uint8_t>(scaled);
+                                }
+                            }
+
+                            const std::string shtl_file("/tmp/minetest_u8_in.fits");
+                            if(!WriteToFITS(for_mt,shtl_file)){
+                                throw std::runtime_error("Unable to write shuttle FITS file.");
+                            }
+
+                            //Step 2: Prepare minetest for faster/easier contouring.
+                            //        The following skeleton includes fast, fly, and noclip, and is positioned at
+                            //        the ~centre of the image looking slightly north.
+                            const std::string rs_res = Execute_Command_In_Pipe( "rsync --delete -az "
+                                    " '/home/hal/Project - Voxel_Contouring/20160117-101219_minetest_world_T_skeleton/' "
+                                    " '/home/hal/.minetest/' ");
+
+                            //Step 3: Invoke minetest.
+                            const std::string mt_res = Execute_Command_In_Pipe("minetest 2>&1");
+
+                            //Step 4: Parse the output looking for notable events.
+                            //        See journal notes for examples of these logs. Basically look for notation like (-123,45,234).
+                            std::vector<std::string> events = SplitStringToVector(mt_res, '\n', 'd');
+                            std::vector<std::string> relevant;
+                            for(auto &event : events){
+                                const auto pos = event.find(" singleplayer digs ");
+
+                                if(std::string::npos != pos){
+                                    //FUNCINFO("Found relevant event: " << event);
+                                    const auto l_B = GetFirstRegex(event, R"***(([-0-9]{1,3},[-0-9]{1,3},[-0-9]{1,3}))***");
+                                    //FUNCINFO("Relevant part: " << l_B);
+                                    relevant.push_back(l_B); // Should be like "179,-2,210".
+                                }
+                            }
+
+                            //Step 5: iff reasonable events detected, overwrite the existing slice's working contour.
+                            for(const auto &event : relevant){
+                                std::stringstream ss(event);
+                                long int l_row, l_col, l_height;
+                                char dummy;
+                                ss >> l_row >> dummy >> l_height >> dummy >> l_col;
+                                //FUNCINFO("Parsed (row,col) = (" << l_row << "," << l_col << ")");
+
+                                if( isininc(0,l_row,disp_img_it->rows - 1)
+                                &&  isininc(0,l_col,disp_img_it->columns - 1) ){
+                                    const auto dicom_pos = disp_img_it->position(l_row, l_col);
+                                    //FUNCINFO("Corresponding DICOM position: " << dicom_pos);
+                                    auto FrameofReferenceUID = disp_img_it->GetMetadataValueAs<std::string>("FrameofReferenceUID");
+                                    if(FrameofReferenceUID){
+                                        //Record the point in the working contour buffer.
+                                        contour_coll_shtl.contours.back().closed = true;
+                                        contour_coll_shtl.contours.back().points.push_back( dicom_pos );
+                                        contour_coll_shtl.contours.back().metadata["FrameofReferenceUID"] = FrameofReferenceUID.value();
+                                    }else{
+                                        FUNCWARN("Unable to find display image's FrameofReferenceUID. Cannot insert point in contour");
+                                    }
+                                }
+                            }
+
+
+                        }catch(const std::exception &e){
+                            FUNCWARN("Unable to contour via minetest: " << e.what());
+                        }
+
+
                     //Set the flag for dumping the window contents as an image after the next render.
-                    if( thechar == 'd' ){
+                    }else if( thechar == 'd' ){
                         DumpScreenshot = true;
 
                     //Dump raw pixels for all spatially overlapping images from the current array.
@@ -2651,14 +2810,42 @@ int main(int argc, char* argv[]){
                     }else if( (thechar == 'u') || (thechar == 'U') ){
                         OnlyShowTagsDifferentToNeighbours = !OnlyShowTagsDifferentToNeighbours;
 
-                    //Erase or Empty the current working contour buffer. 
-                    }else if( (thechar == 'e') || (thechar == 'E') ){
-
+                    //Erase the present contour, or, if empty, the previous non-empty contour. (Not the whole organ.)
+                    }else if( thechar == 'e' ){
                         try{
-                            const std::string erase_roi = Detox_String(Execute_Command_In_Pipe("zenity --question --text='Erase working ROI?' 2>/dev/null && echo 1"));
+                            const std::string erase_roi = Detox_String(Execute_Command_In_Pipe(
+                                    "zenity --question --text='Erase current or previous non-empty contour?' 2>/dev/null && echo 1"));
                             if(erase_roi != "1"){
                                 FUNCINFO("Not erasing contours. Here it is for inspection purposes:" << contour_coll_shtl.write_to_string());
-                                throw std::runtime_error("Instructed not to save.");
+                                throw std::runtime_error("Instructed not to erase contour.");
+                            }
+
+                            //Trim empty contours from the shuttle.
+                            contour_coll_shtl.Purge_Contours_Below_Point_Count_Threshold(1);
+                            if(contour_coll_shtl.contours.empty()) throw std::runtime_error("Nothing to erase.");
+
+                            //Erase the last contour.
+                            const std::string c_as_str( contour_coll_shtl.contours.back().write_to_string() );                             
+                            FUNCINFO("About to erase contour. Here it is for inspection purposes: " << c_as_str);
+                            contour_coll_shtl.contours.pop_back();
+                            
+                            //Provide an empty contour for future contouring.
+                            contour_coll_shtl.contours.emplace_back();
+                            contour_coll_shtl.contours.back().closed = true;
+
+                            FUNCINFO("Latest non-empty contour erased");
+                        }catch(const std::exception &){ }
+
+
+                    //Erase or Empty the current working contour buffer. 
+                    }else if( thechar == 'E' ){
+
+                        try{
+                            const std::string erase_roi = Detox_String(Execute_Command_In_Pipe(
+                                    "zenity --question --text='Erase whole working ROI?' 2>/dev/null && echo 1"));
+                            if(erase_roi != "1"){
+                                FUNCINFO("Not erasing contours. Here it is for inspection purposes:" << contour_coll_shtl.write_to_string());
+                                throw std::runtime_error("Instructed not to clear contour buffer.");
                             }
 
                             //Clear the data in preparation for the next contour collection.
@@ -2683,7 +2870,8 @@ int main(int argc, char* argv[]){
                                 throw std::runtime_error("Instructed not to save.");
                             }
 
-                            const std::string roi_name = Detox_String(Execute_Command_In_Pipe("zenity --entry --text='What is the name of the ROI?' 2>/dev/null"));
+                            const std::string roi_name = Detox_String(Execute_Command_In_Pipe(
+                                "zenity --entry --text='What is the name of the ROI?' --entry-text='ICCR2016_' 2>/dev/null"));
                             if(roi_name.empty()) throw std::runtime_error("Cannot save with an empty ROI name. (Punctuation is removed.)");
 
                             //Trim empty contours from the shuttle.
@@ -2783,7 +2971,7 @@ int main(int argc, char* argv[]){
 
                     if(event.mouseButton.button == sf::Mouse::Left){
                         if(VERBOSE && !QUIET){
-                            std::cout << "the right button was pressed" << std::endl;
+                            std::cout << "the left button was pressed" << std::endl;
                             std::cout << "mouse x: " << event.mouseButton.x << std::endl;
                             std::cout << "mouse y: " << event.mouseButton.y << std::endl;
                         }
@@ -2892,6 +3080,8 @@ int main(int argc, char* argv[]){
                 }
             }
 
+            // -------------------------------------- Rendering ----------------------------------------
+
             //Populate the corner text with all non-empty info available.
             if(OnlyShowTagsDifferentToNeighbours 
             && ( (*img_array_ptr_it)->imagecoll.images.size() > 1) ){
@@ -2999,7 +3189,7 @@ int main(int argc, char* argv[]){
             window.draw(BLcornertext);
 
             //Draw any contours that lie in the plane of the current image. Also draw contour names if the cursor is 'within' them.
-            {
+            if(ShowExistingContours){
                 sf::Text contourtext;
                 std::stringstream contourtextss;
                 contourtext.setFont(afont);
