@@ -11,13 +11,15 @@ url="http://www.halclark.ca"
 arch=('x86_64' 'i686')
 license=('unknown')
 depends=(
+   'gcc-libs'
    'sfml'
    'jansson'
    'libpqxx'
    'postgresql'
    'freeglut'
    'nlopt' 
-   # -lygor -lexplicator -ldemarcator
+   'explicator'
+   # -lygor -ldemarcator
 )
 # optdepends=('')
 makedepends=('cmake')

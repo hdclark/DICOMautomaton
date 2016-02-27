@@ -41,6 +41,7 @@
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMathPlottingGnuplot.h" //Needed for YgorMathPlottingGnuplot::*.
+#include "YgorMathChebyshev.h" //Needed for cheby_approx class.
 #include "YgorStats.h"        //Needed for Stats:: namespace.
 #include "YgorFilesDirs.h"    //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
 #include "YgorContainers.h"   //Needed for bimap class.
@@ -81,7 +82,8 @@
 #include "YgorImages_Functors/Processing/In_Image_Plane_Bilinear_Supersample.h"
 #include "YgorImages_Functors/Processing/In_Image_Plane_Bicubic_Supersample.h"
 #include "YgorImages_Functors/Processing/Cross_Second_Derivative.h"
-#include "YgorImages_Functors/Processing/Liver_Pharmacokinetic_Model.h"
+#include "YgorImages_Functors/Processing/Liver_Pharmacokinetic_Model_5Param_Linear.h"
+#include "YgorImages_Functors/Processing/Liver_Pharmacokinetic_Model_5Param_Cheby.h"
 #include "YgorImages_Functors/Processing/Orthogonal_Slices.h"
 
 #include "YgorImages_Functors/Transform/DCEMRI_C_Map.h"
@@ -93,6 +95,7 @@
 #include "YgorImages_Functors/Transform/Subtract_Spatially_Overlapping_Images.h"
 
 #include "YgorImages_Functors/Compute/Per_ROI_Time_Courses.h"
+#include "YgorImages_Functors/Compute/Contour_Similarity.h"
 //#include "YgorImages_Functors/Compute/Orthogonal_Slices.h"
 
 
@@ -1008,21 +1011,45 @@ int main(int argc, char* argv[]){
             }
         }
 
+        //Look for relevant invocation metadata.
+        double ContrastInjectionLeadTime = 6.0; //Seconds. 
+        if(InvocationMetadata.count("ContrastInjectionLeadTime") == 0){
+            FUNCWARN("Unable to locate 'ContrastInjectionLeadTime' invocation metadata key. Assuming the default lead time "
+                     << ContrastInjectionLeadTime << "s is appropriate");
+        }else{
+            ContrastInjectionLeadTime = std::stod( InvocationMetadata["ContrastInjectionLeadTime"] );
+            if(ContrastInjectionLeadTime < 0.0) throw std::runtime_error("Non-sensical 'ContrastInjectionLeadTime' found.");
+            FUNCINFO("Found 'ContrastInjectionLeadTime' invocation metadata key. Using value " << ContrastInjectionLeadTime << "s");
+        }
+
+        double ContrastInjectionWashoutTime = 60.0; //Seconds.
+        if(InvocationMetadata.count("ContrastInjectionWashoutTime") == 0){
+            FUNCWARN("Unable to locate 'ContrastInjectionWashoutTime' invocation metadata key. Assuming the default lead time "
+                     << ContrastInjectionWashoutTime << "s is appropriate");
+        }else{
+            ContrastInjectionWashoutTime = std::stod( InvocationMetadata["ContrastInjectionWashoutTime"] );
+            if(ContrastInjectionWashoutTime < 0.0) throw std::runtime_error("Non-sensical 'ContrastInjectionWashoutTime' found.");
+            FUNCINFO("Found 'ContrastInjectionWashoutTime' invocation metadata key. Using value " << ContrastInjectionWashoutTime << "s");
+        }
+
+        //Whitelist contours.
+        cc_all.remove_if([](std::reference_wrapper<contour_collection<double>> cc) -> bool {
+                       const auto ROINameOpt = cc.get().contours.front().GetMetadataValueAs<std::string>("ROIName");
+                       const auto ROIName = ROINameOpt.value();
+                       return    (ROIName != "Abdominal_Aorta")
+                              && (ROIName != "Hepatic_Portal_Vein")
+                              && (ROIName != "Liver_Patches_For_Testing_Smaller");
+                              //&& (ROIName != "Liver_Patches_For_Testing");
+                              //&& (ROIName != "Suspected_Liver_Rough");
+        });
+
+
 
         //Compute a baseline with which we can use later to compute signal enhancement.
         std::vector<std::shared_ptr<Image_Array>> baseline_img_arrays;
-        if(false){
+        if(true){
             //Baseline = temporally averaged pre-contrast-injection signal.
 
-            double ContrastInjectionLeadTime = 10.0; //Seconds. 
-            if(InvocationMetadata.count("ContrastLeadTime") == 0){
-                FUNCWARN("Unable to locate 'ContrastLeadTime' invocation metadata key. Assuming the default lead time "
-                         << ContrastInjectionLeadTime << "s is appropriate");
-            }else{
-                ContrastInjectionLeadTime = std::stod( InvocationMetadata["ContrastLeadTime"] );
-                if(ContrastInjectionLeadTime < 0.0) throw std::runtime_error("Non-sensical 'ContrastLeadTime' found.");
-                FUNCINFO("Found 'ContrastLeadTime' invocation metadata key. Using value " << ContrastInjectionLeadTime << "s");
-            }
             auto PurgeAboveNSeconds = std::bind(PurgeAboveTemporalThreshold, std::placeholders::_1, ContrastInjectionLeadTime);
 
             for(auto & img_arr : orig_img_arrays){
@@ -1086,16 +1113,22 @@ int main(int argc, char* argv[]){
                 FUNCERR("Unable to compute per-ROI time courses");
             }
         }
+        //For perfusion purposes, we always want to scale down the ROIs per-atomos (i.e., per-voxel).
+        for(auto & tcs : ud.time_courses){
+            const auto lROIname = tcs.first;
+            const auto lVoxelCount = ud.voxel_count[lROIname];
+            tcs.second = tcs.second.Multiply_With(1.0/static_cast<double>(lVoxelCount));
+        }
 
-        if(true){
+        //Plot the ROIs we computed.
+        if(false){
             //NOTE: This routine is spotty. It doesn't always work, and seems to have a hard time opening a 
             // display window when a large data set is loaded. Files therefore get written for backup access.
             std::cout << "Producing " << ud.time_courses.size() << " time courses:" << std::endl;
             std::vector<YgorMathPlottingGnuplot::Shuttle<samples_1D<double>>> shuttle;
             for(auto & tcs : ud.time_courses){
                 const auto lROIname = tcs.first;
-                const auto lVoxelCount = ud.voxel_count[lROIname];
-                const auto lTimeCourse = tcs.second.Multiply_With(1.0/static_cast<double>(lVoxelCount));
+                const auto lTimeCourse = tcs.second;
                 shuttle.emplace_back(lTimeCourse, lROIname + " - Voxel Averaged");
                 const auto lFileName = Get_Unique_Sequential_Filename("/tmp/roi_time_course_",4,".txt");
                 lTimeCourse.Write_To_File(lFileName); 
@@ -1109,6 +1142,150 @@ int main(int argc, char* argv[]){
             }
         }
 
+
+        //Using the ROI time curves, compute a pharmacokinetic model and produce an image map 
+        // with some model parameter(s).
+        std::vector<std::shared_ptr<Image_Array>> pharmaco_model_dummy; //This gets destroyed ASAP after computation.
+        std::vector<std::shared_ptr<Image_Array>> pharmaco_model_kA;
+        std::vector<std::shared_ptr<Image_Array>> pharmaco_model_tauA;
+        std::vector<std::shared_ptr<Image_Array>> pharmaco_model_kV;
+        std::vector<std::shared_ptr<Image_Array>> pharmaco_model_tauV;
+        std::vector<std::shared_ptr<Image_Array>> pharmaco_model_k2;
+
+        //Use a linear model.
+        if(false){ 
+            for(auto & img_arr : C_enhancement_img_arrays){
+                DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( *img_arr ) );
+                pharmaco_model_dummy.emplace_back( DICOM_data.image_data.back() );
+
+                DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( ) );
+                pharmaco_model_kA.emplace_back( DICOM_data.image_data.back() );
+                DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( ) );
+                pharmaco_model_tauA.emplace_back( DICOM_data.image_data.back() );
+                DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( ) );
+                pharmaco_model_kV.emplace_back( DICOM_data.image_data.back() );
+                DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( ) );
+                pharmaco_model_tauV.emplace_back( DICOM_data.image_data.back() );
+                DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( ) );
+                pharmaco_model_k2.emplace_back( DICOM_data.image_data.back() );
+
+                if(!pharmaco_model_dummy.back()->imagecoll.Process_Images( 
+                                  GroupSpatiallyOverlappingImages,
+                                  LiverPharmacoModel5ParamLinear,
+                                  { std::ref(pharmaco_model_kA.back()->imagecoll),
+                                    std::ref(pharmaco_model_tauA.back()->imagecoll),
+                                    std::ref(pharmaco_model_kV.back()->imagecoll),
+                                    std::ref(pharmaco_model_tauV.back()->imagecoll),
+                                    std::ref(pharmaco_model_k2.back()->imagecoll) }, 
+                                  cc_all,
+                                  &ud )){
+                    FUNCERR("Unable to pharmacokinetically model liver!");
+                }else{
+                    pharmaco_model_dummy.back()->imagecoll.images.clear();
+                }
+            }
+            pharmaco_model_dummy.clear();
+
+        //Use a Chebyshev model.
+        }else{
+
+            //Pre-process the AIF and VIF time courses.
+            LiverPharmacoModel5ParamChebyUserData ud2; 
+            ud2.ContrastInjectionLeadTime = ContrastInjectionLeadTime;
+            {
+                //Correct any unaccounted-for contrast enhancement shifts. 
+                if(true) for(auto & theROI : ud.time_courses){
+                    //Subtract the minimum over the full time course.
+                    if(false){
+                        const auto Cmin = theROI.second.Get_Extreme_Datum_y().first;
+                        theROI.second = theROI.second.Sum_With(0.0-Cmin[2]);
+
+                    //Subtract the mean from the pre-injection period.
+                    }else{
+                        const auto preinject = theROI.second.Select_Those_Within_Inc(-1E99,ContrastInjectionLeadTime);
+                        const auto themean = preinject.Mean_y()[0];
+                        theROI.second = theROI.second.Sum_With(0.0-themean);
+                    }
+                }
+            
+                //Insert some virtual points before the first sample (assumed to be at t=0).
+                if(true) for(auto & theROI : ud.time_courses){
+                    theROI.second.push_back( -25.0, 0.0, 0.0, 0.0 );
+                    theROI.second.push_back(  -1.0, 0.0, 0.0, 0.0 );
+                }
+            
+                //Perform smoothing on the AIF and VIF to help reduce optimizer bounce.
+                if(false) for(auto & theROI : ud.time_courses){
+                    theROI.second = theROI.second.Resample_Equal_Spacing(200);
+                    theROI.second = theROI.second.Moving_Median_Filter_Two_Sided_Equal_Weighting(2);
+                }
+            
+                //Extrapolate beyond the data collection limit (to stop the optimizer getting snagged
+                // on any sharp drop-offs when shifting tauA and tauV).
+                if(true) for(auto & theROI : ud.time_courses){
+                    const auto washout = theROI.second.Select_Those_Within_Inc(ContrastInjectionWashoutTime,1E99);
+                    const auto leastsquares =  washout.Linear_Least_Squares_Regression();
+                    const auto tmax = theROI.second.Get_Extreme_Datum_x().second[0];
+                    const auto virtdatum_t = tmax + 25.0;
+                    const auto virtdatum_f = leastsquares.evaluate_simple(virtdatum_t);
+                    theROI.second.push_back(virtdatum_t, 0.0, virtdatum_f, 0.0 );
+                }
+
+                //Scale the contrast agent to account for the fact that contrast agent does not enter the RBCs.
+                //
+                // NOTE: "Because the contrast agent does not enter the RBCs, the time series Caorta(t) and Cportal(t)
+                //        were divided by one minus the hematocrit." (From Van Beers et al. 2000.)
+                for(auto & theROI : ud.time_courses){
+                    theROI.second = theROI.second.Multiply_With(1.0/(1.0 - 0.42));
+                }
+
+                //Approximate the VIF and VIF with a Chebyshev polynomial approximation.
+                for(auto & theROI : ud.time_courses){
+                    const auto tmin = theROI.second.Get_Extreme_Datum_x().first[0];
+                    const auto tmax = theROI.second.Get_Extreme_Datum_x().second[0];
+
+                    cheby_approx<double> ca;
+                    ca.Prepare(theROI.second, theROI.second.size()*3, tmin + 5.0, tmax - 5.0);
+                    ud2.time_courses[theROI.first] = ca;
+                    ud2.time_course_derivatives[theROI.first] = ca.Chebyshev_Derivative();
+                }
+
+            }
+
+            for(auto & img_arr : C_enhancement_img_arrays){
+                DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( *img_arr ) );
+                pharmaco_model_dummy.emplace_back( DICOM_data.image_data.back() );
+
+                DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( ) );
+                pharmaco_model_kA.emplace_back( DICOM_data.image_data.back() );
+                DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( ) );
+                pharmaco_model_tauA.emplace_back( DICOM_data.image_data.back() );
+                DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( ) );
+                pharmaco_model_kV.emplace_back( DICOM_data.image_data.back() );
+                DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( ) );
+                pharmaco_model_tauV.emplace_back( DICOM_data.image_data.back() );
+                DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( ) );
+                pharmaco_model_k2.emplace_back( DICOM_data.image_data.back() );
+
+                if(!pharmaco_model_dummy.back()->imagecoll.Process_Images( 
+                                  GroupSpatiallyOverlappingImages,
+                                  LiverPharmacoModel5ParamCheby,
+                                  { std::ref(pharmaco_model_kA.back()->imagecoll),
+                                    std::ref(pharmaco_model_tauA.back()->imagecoll),
+                                    std::ref(pharmaco_model_kV.back()->imagecoll),
+                                    std::ref(pharmaco_model_tauV.back()->imagecoll),
+                                    std::ref(pharmaco_model_k2.back()->imagecoll) }, 
+                                  cc_all,
+                                  &ud2 )){
+                    FUNCERR("Unable to pharmacokinetically model liver!");
+                }else{
+                    pharmaco_model_dummy.back()->imagecoll.images.clear();
+                }
+            }
+            pharmaco_model_dummy.clear();
+        }
+
+
         //Prune some images, to reduce the computational effort needed.
         if(true){
             for(auto & img_arr : C_enhancement_img_arrays){
@@ -1120,45 +1297,7 @@ int main(int argc, char* argv[]){
             }
         }
 
-        //Using the ROI time curves, compute a pharmacokinetic model and produce an image map with some model parameter(s).
-        std::vector<std::shared_ptr<Image_Array>> pharmaco_model_dummy; //This gets destroyed ASAP after computation.
-        std::vector<std::shared_ptr<Image_Array>> pharmaco_model_kA;
-        std::vector<std::shared_ptr<Image_Array>> pharmaco_model_tauA;
-        std::vector<std::shared_ptr<Image_Array>> pharmaco_model_kV;
-        std::vector<std::shared_ptr<Image_Array>> pharmaco_model_tauV;
-        std::vector<std::shared_ptr<Image_Array>> pharmaco_model_k2;
 
-        if(true) for(auto & img_arr : C_enhancement_img_arrays){
-            DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( *img_arr ) );
-            pharmaco_model_dummy.emplace_back( DICOM_data.image_data.back() );
-
-            DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( ) );
-            pharmaco_model_kA.emplace_back( DICOM_data.image_data.back() );
-            DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( ) );
-            pharmaco_model_tauA.emplace_back( DICOM_data.image_data.back() );
-            DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( ) );
-            pharmaco_model_kV.emplace_back( DICOM_data.image_data.back() );
-            DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( ) );
-            pharmaco_model_tauV.emplace_back( DICOM_data.image_data.back() );
-            DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( ) );
-            pharmaco_model_k2.emplace_back( DICOM_data.image_data.back() );
-
-            if(!pharmaco_model_dummy.back()->imagecoll.Process_Images( 
-                              GroupSpatiallyOverlappingImages,
-                              LiverPharmacoModel,
-                              { std::ref(pharmaco_model_kA.back()->imagecoll),
-                                std::ref(pharmaco_model_tauA.back()->imagecoll),
-                                std::ref(pharmaco_model_kV.back()->imagecoll),
-                                std::ref(pharmaco_model_tauV.back()->imagecoll),
-                                std::ref(pharmaco_model_k2.back()->imagecoll) }, 
-                              cc_all,
-                              &ud )){
-                FUNCERR("Unable to pharmacokinetically model liver!");
-            }else{
-                pharmaco_model_dummy.back()->imagecoll.images.clear();
-            }
-        }
-        pharmaco_model_dummy.clear();
 
     }
 
@@ -1186,13 +1325,13 @@ int main(int argc, char* argv[]){
             //Baseline = temporally averaged pre-contrast-injection signal.
 
             double ContrastInjectionLeadTime = 10.0; //Seconds. 
-            if(InvocationMetadata.count("ContrastLeadTime") == 0){
-                FUNCWARN("Unable to locate 'ContrastLeadTime' invocation metadata key. Assuming the default lead time "
+            if(InvocationMetadata.count("ContrastInjectionLeadTime") == 0){
+                FUNCWARN("Unable to locate 'ContrastInjectionLeadTime' invocation metadata key. Assuming the default lead time "
                          << ContrastInjectionLeadTime << "s is appropriate");
             }else{
-                ContrastInjectionLeadTime = std::stod( InvocationMetadata["ContrastLeadTime"] );
-                if(ContrastInjectionLeadTime < 0.0) throw std::runtime_error("Non-sensical 'ContrastLeadTime' found.");
-                FUNCINFO("Found 'ContrastLeadTime' invocation metadata key. Using value " << ContrastInjectionLeadTime << "s");
+                ContrastInjectionLeadTime = std::stod( InvocationMetadata["ContrastInjectionLeadTime"] );
+                if(ContrastInjectionLeadTime < 0.0) throw std::runtime_error("Non-sensical 'ContrastInjectionLeadTime' found.");
+                FUNCINFO("Found 'ContrastInjectionLeadTime' invocation metadata key. Using value " << ContrastInjectionLeadTime << "s");
             }
             auto PurgeAboveNSeconds = std::bind(PurgeAboveTemporalThreshold, std::placeholders::_1, ContrastInjectionLeadTime);
 
@@ -1470,6 +1609,87 @@ int main(int argc, char* argv[]){
     }
 
     //=================================================================================================================
+    //==========================================    Contour Similarity   ==============================================
+    //=================================================================================================================
+    if(Operations.count("ContourSimilarity") != 0){
+
+        //Get handles for each of the original image arrays so we can easily refer to them later.
+        std::vector<std::shared_ptr<Image_Array>> orig_img_arrays;
+        for(auto & img_arr : DICOM_data.image_data) orig_img_arrays.push_back(img_arr);
+
+        //We require exactly one image volume. Use only the first image.
+        if(orig_img_arrays.empty()) FUNCERR("This routine requires at least one imaging volume");
+        orig_img_arrays.resize(1);
+
+        //Package the ROIs of interest into two contour_collections to compare.
+        contour_collection<double> cc_H; //Haley.
+        contour_collection<double> cc_J; //Joel.
+        contour_collection<double> cc_E; //Existing (i.e., therapist-contoured + oncologist inspected treatment contours).
+
+        {
+            for(auto & cc : DICOM_data.contour_data->ccs){
+                for(auto & c : cc.contours){
+                    const auto name = c.metadata["ROIName"]; //c.metadata["NormalizedROIName"].
+                    const auto iccrH = GetFirstRegex(name, "(ICCR2016_Haley)");
+                    const auto iccrJ = GetFirstRegex(name, "(ICCR2016_Joel)");
+                    const auto eye  = GetFirstRegex(name, "([eE][yY][eE])");
+                    const auto orbit = GetFirstRegex(name, "([oO][rR][bB][iI][tT])");
+                    if(!iccrH.empty()){
+                        cc_H.contours.push_back(c);
+                    }else if(!iccrJ.empty()){
+                        cc_J.contours.push_back(c);
+                    }else if(!eye.empty() || !orbit.empty()){
+                        FUNCWARN("Assuming contour '" << name << "' refers to eye(s)");
+                        cc_E.contours.push_back(c);
+                    }
+                }
+            }
+
+            if(cc_E.contours.empty()){
+                FUNCWARN("Unable to find 'eyes' contour among:");
+                for(auto & cc : DICOM_data.contour_data->ccs){
+                    std::cout << cc.contours.front().metadata["ROIName"] << std::endl;
+                }
+                return 1;
+            }
+
+        }
+
+        //Compute similarity of the two contour_collections.
+        ComputeContourSimilarityUserData ud;
+        if(true){
+            for(auto & img_arr : orig_img_arrays){
+                ud.Clear();
+                if(!img_arr->imagecoll.Compute_Images( ComputeContourSimilarity, { },
+                                                       { std::ref(cc_H), std::ref(cc_E) }, &ud )){
+                    FUNCERR("Unable to compute Dice similarity");
+                }
+                std::cout << "Dice coefficient (H,E) = " << ud.Dice_Coefficient() << std::endl;
+                std::cout << "Jaccard coefficient (H,E) = " << ud.Jaccard_Coefficient() << std::endl;
+
+                ud.Clear();
+                if(!img_arr->imagecoll.Compute_Images( ComputeContourSimilarity, { },
+                                                       { std::ref(cc_J), std::ref(cc_E) }, &ud )){
+                    FUNCERR("Unable to compute Dice similarity");
+                }
+                std::cout << "Dice coefficient (J,E) = " << ud.Dice_Coefficient() << std::endl;
+                std::cout << "Jaccard coefficient (J,E) = " << ud.Jaccard_Coefficient() << std::endl;
+
+                ud.Clear();
+                if(!img_arr->imagecoll.Compute_Images( ComputeContourSimilarity, { },
+                                                       { std::ref(cc_H), std::ref(cc_J) }, &ud )){
+                    FUNCERR("Unable to compute Dice similarity");
+                }
+                std::cout << "Dice coefficient (H,J) = " << ud.Dice_Coefficient() << std::endl;
+                std::cout << "Jaccard coefficient (H,J) = " << ud.Jaccard_Coefficient() << std::endl;
+            }
+        } 
+
+        return 1;
+    }
+
+
+    //=================================================================================================================
     //============================================= UBC3TMRI TD03 DCE =================================================
     //=================================================================================================================
     if(Operations.count("UBC3TMRI_DCE_Experimental") != 0){
@@ -1488,13 +1708,13 @@ int main(int argc, char* argv[]){
         std::shared_ptr<Image_Array> img_arr_copy_long_temporally_avgd( DICOM_data.image_data.back() );
 
         double ContrastInjectionLeadTime = 35.0; //Seconds. 
-        if(InvocationMetadata.count("ContrastLeadTime") == 0){
-            FUNCWARN("Unable to locate 'ContrastLeadTime' invocation metadata key. Assuming the default lead time "
+        if(InvocationMetadata.count("ContrastInjectionLeadTime") == 0){
+            FUNCWARN("Unable to locate 'ContrastInjectionLeadTime' invocation metadata key. Assuming the default lead time "
                      << ContrastInjectionLeadTime << "s is appropriate");
         }else{
-            ContrastInjectionLeadTime = std::stod( InvocationMetadata["ContrastLeadTime"] );
-            if(ContrastInjectionLeadTime < 0.0) throw std::runtime_error("Non-sensical 'ContrastLeadTime' found.");
-            FUNCINFO("Found 'ContrastLeadTime' invocation metadata key. Using value " << ContrastInjectionLeadTime << "s");
+            ContrastInjectionLeadTime = std::stod( InvocationMetadata["ContrastInjectionLeadTime"] );
+            if(ContrastInjectionLeadTime < 0.0) throw std::runtime_error("Non-sensical 'ContrastInjectionLeadTime' found.");
+            FUNCINFO("Found 'ContrastInjectionLeadTime' invocation metadata key. Using value " << ContrastInjectionLeadTime << "s");
         }
         auto PurgeAboveNSeconds = std::bind(PurgeAboveTemporalThreshold, std::placeholders::_1, ContrastInjectionLeadTime);
 
@@ -1674,13 +1894,13 @@ int main(int argc, char* argv[]){
 
         //Figure out how much time elapsed before contrast injection began.
         double ContrastInjectionLeadTime = 35.0; //Seconds. 
-        if(InvocationMetadata.count("ContrastLeadTime") == 0){
-            FUNCWARN("Unable to locate 'ContrastLeadTime' invocation metadata key. Assuming the default lead time " 
+        if(InvocationMetadata.count("ContrastInjectionLeadTime") == 0){
+            FUNCWARN("Unable to locate 'ContrastInjectionLeadTime' invocation metadata key. Assuming the default lead time " 
                      << ContrastInjectionLeadTime << "s is appropriate");
         }else{
-            ContrastInjectionLeadTime = std::stod( InvocationMetadata["ContrastLeadTime"] );
-            if(ContrastInjectionLeadTime < 0.0) throw std::runtime_error("Non-sensical 'ContrastLeadTime' found.");
-            FUNCINFO("Found 'ContrastLeadTime' invocation metadata key. Using value " << ContrastInjectionLeadTime << "s"); 
+            ContrastInjectionLeadTime = std::stod( InvocationMetadata["ContrastInjectionLeadTime"] );
+            if(ContrastInjectionLeadTime < 0.0) throw std::runtime_error("Non-sensical 'ContrastInjectionLeadTime' found.");
+            FUNCINFO("Found 'ContrastInjectionLeadTime' invocation metadata key. Using value " << ContrastInjectionLeadTime << "s"); 
         }
 
         //Deep-copy, trim the post-contrast injection signal, and temporally-average the image arrays.
@@ -2294,7 +2514,6 @@ int main(int argc, char* argv[]){
                                 }
                             }
 
-
                             //Perform a pixel compression before writing to file.
                             for(auto i = 0; i < for_mt.columns; ++i){
                                 for(auto j = 0; j < for_mt.rows; ++j){
@@ -2303,7 +2522,11 @@ int main(int argc, char* argv[]){
                                     //for_mt.reference(j,i,0) = static_cast<uint8_t>(scaled);
 
                                     const auto orig = for_mt.value(j,i,0) * 1.0;
-                                    const auto scaled = (orig/4.0) + (3.0*253.0/4.0);
+                                    //const auto scaled = (1.0*orig/8.0) + (7.0*253.0/8.0); // Use only top 1/8 of voxels.
+                                    const auto scaled = (1.0*orig/4.0) + (3.0*253.0/4.0); // Use only top 1/4 of voxels.
+                                    //const auto scaled = (2.0*orig/5.0) + (3.0*253.0/5.0); // Use only top 2/5 of voxels.
+                                    //const auto scaled = (2.0*orig/4.0) + (2.0*253.0/4.0); // Use only top 2/4 of voxels.
+                                    //const auto scaled = (3.0*orig/4.0) + (1.0*253.0/4.0); // Use only top 3/4 of voxels.
                                     for_mt.reference(j,i,0) = static_cast<uint8_t>(scaled);
                                 }
                             }
@@ -2317,8 +2540,9 @@ int main(int argc, char* argv[]){
                             //        The following skeleton includes fast, fly, and noclip, and is positioned at
                             //        the ~centre of the image looking slightly north.
                             const std::string rs_res = Execute_Command_In_Pipe( "rsync --delete -az "
-                                    " '/home/hal/Project - Voxel_Contouring/20160117-101219_minetest_world_T_skeleton/' "
+                                    " '/home/hal/Project - Voxel_Contouring/20160118-195048_minetest_world_T_skeleton/' "
                                     " '/home/hal/.minetest/' ");
+                                    //" '/home/hal/Project - Voxel_Contouring/20160117-101219_minetest_world_T_skeleton/' "
 
                             //Step 3: Invoke minetest.
                             const std::string mt_res = Execute_Command_In_Pipe("minetest 2>&1");
