@@ -400,6 +400,7 @@ int main(int argc, char* argv[]){
  
                     //If we want to add any additional image metadata, or replace the default Imebra_Shim.cc populated metadata
                     // with, say, the non-null PostgreSQL metadata, it should be done here.
+                    loaded_imgs_storage.back().back()->imagecoll.images.back().metadata["StoreFullPathName"] = StoreFullPathName;
                     if(!r1[i]["dt"].is_null()){
                         //DICOM_data.image_data.back()->imagecoll.images.back().metadata["dt"] = r1[i]["dt"].c_str();
                         //loaded_imgs_storage.back()->imagecoll.images.back().metadata["dt"] = r1[i]["dt"].c_str();
@@ -676,7 +677,32 @@ int main(int argc, char* argv[]){
 
     //Process or transform images to produce hybrid images, parameter maps (DCE-MRI analysis; S0 and T1 maps, C(t) images),
     // and other things like histograms or time courses.
-        
+       
+    //=================================================================================================================
+    //========================================== One-off Utility Routines =============================================
+    //=================================================================================================================
+    if(Operations.count("PartitionFilesByTime") != 0){
+        //This operation prints PACS filenames along with the associated time. It is more focused than the metadata 
+        // dumpers above. This data can be used for many things, such as image viewers which are not DICOM-aware or
+        // deformable registration on time series data.
+        std::multimap<std::string,std::string> partitions;
+        for(auto &img_arr : DICOM_data.image_data){
+            for(auto &img : img_arr->imagecoll.images){
+                if(!img.MetadataKeyPresent("dt")){
+                    FUNCWARN("Time key is not present for file '" << img.metadata["StoreFullPathName"] << "'. Omitting it");
+                    continue;
+                }
+                partitions.insert( std::make_pair( img.metadata["dt"],
+                                                   img.metadata["StoreFullPathName"] ) );
+            }
+        } 
+        for(const auto &apair : partitions){
+            std::cout << apair.first << " " << apair.second << std::endl;
+        } 
+        return 0;
+    }
+
+       
 
     //=================================================================================================================
     //========================================== Pre-Analysis Processing ==============================================
