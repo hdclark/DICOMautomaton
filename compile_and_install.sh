@@ -6,7 +6,7 @@ BUILTPKGSDIR="/home/hal/Builds/"
 
 mkdir -p "${BUILDDIR}"
 #rsync -avz --delete ./ "${BUILDDIR}"  # Removes CMake cache files, forcing a fresh rebuild.
-rsync -avz ./ "${BUILDDIR}"
+rsync -avz --cvs-exclude ./ "${BUILDDIR}"
 
 pushd .
 cd "${BUILDDIR}"
