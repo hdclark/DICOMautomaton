@@ -81,6 +81,7 @@
 #include "YgorImages_Functors/Processing/DBSCAN_Time_Courses.h"
 #include "YgorImages_Functors/Processing/In_Image_Plane_Bilinear_Supersample.h"
 #include "YgorImages_Functors/Processing/In_Image_Plane_Bicubic_Supersample.h"
+#include "YgorImages_Functors/Processing/In_Image_Plane_Pixel_Decimate.h"
 #include "YgorImages_Functors/Processing/Cross_Second_Derivative.h"
 #include "YgorImages_Functors/Processing/Liver_Pharmacokinetic_Model_5Param_Linear.h"
 #include "YgorImages_Functors/Processing/Liver_Pharmacokinetic_Model_5Param_Cheby.h"
@@ -707,6 +708,18 @@ int main(int argc, char* argv[]){
     //=================================================================================================================
     //========================================== Pre-Analysis Processing ==============================================
     //=================================================================================================================
+    if(Operations.count("DecimatePixels") != 0){
+        //This operation spaitally aggregates blocks of pixels, thereby decimating them and making the images consume
+        // far less memory. The precise size reduction and spatial aggregate can be set in the source. 
+        for(auto & img_arr : DICOM_data.image_data){
+            if(!img_arr->imagecoll.Process_Images( GroupIndividualImages,
+                                                   InImagePlanePixelDecimate,
+                                                   {}, {} )){
+                FUNCERR("Unable to decimate pixels");
+            }
+        }
+    }
+
     if(Operations.count("PreFilterEnormousCTValues") != 0){
         //This operation runs the data through a per-pixel filter, censoring pixels which are too high to legitimately
         // show up in a clinical CT. Censored pixels are set to zero. Data is modified and no copy is made!
