@@ -32,7 +32,10 @@
 samples_1D<double> *theAIF;    //Global, but only so we can pass a c-style function to nlopt.
 samples_1D<double> *theVIF;    //Global, but only so we can pass a c-style function to nlopt.
 samples_1D<double> *theROI;    //Global, but only so we can pass a c-style function to nlopt.
-double func_to_min(unsigned, const double *params, double *grad, void *){
+
+static
+double 
+func_to_min(unsigned, const double *params, double *grad, void *){
     if(grad != nullptr) FUNCERR("NLOpt asking for a gradient. We don't have it at the moment...");
     const double k1A  = params[0];
     const double tauA = params[1];

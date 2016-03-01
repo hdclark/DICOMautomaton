@@ -4,6 +4,7 @@
 #include <limits>
 #include <map>
 #include <cmath>
+#include <memory>
 #include <experimental/any>
 
 #include <pqxx/pqxx>         //PostgreSQL C++ interface.
@@ -27,165 +28,7 @@
 #include "../ConvenienceRoutines.h"
 #include "Liver_Pharmacokinetic_Model_5Param_Cheby.h"
 
-
-//This is the function we will minimize: the sum of the squared residuals between the ROI measured
-// concentrations and the total concentration predicted by the fitted model.
-static cheby_approx<double> *cAIF; //Global, but only so we can pass a c-style function to nlopt.
-static cheby_approx<double> *cVIF;
-
-static cheby_approx<double> *dcAIF; //Derivative.
-static cheby_approx<double> *dcVIF; //Derivative.
-
-static samples_1D<double> *theROI;  
-
-
-
-static
-inline
-double 
-chebyshev_model(const double t, const double *params, double *grad){
-    // Chebyshev polynomial approximation method. 
-    // 
-    // This function computes the predicted contrast enhancement of a kinetic
-    // liver perfusion model at the ROI sample t_i's. Gradients are able to be
-    // computed using this method, so we split the computation up into several
-    // parts to aide in gradient construction.
-
-    const double k1A  = params[0];
-    const double tauA = params[1];
-    const double k1V  = params[2];
-    const double tauV = params[3];
-    const double k2   = params[4];
-
-    const size_t exp_approx_N = 10; // 5 is probably OK. 10 should suffice. 20 could be overkill. Depends on params, though.
-
-    double int_AIF_exp      = std::numeric_limits<double>::quiet_NaN();
-    double int_VIF_exp      = std::numeric_limits<double>::quiet_NaN();
-    double int_AIF_exp_tau  = std::numeric_limits<double>::quiet_NaN();
-    double int_VIF_exp_tau  = std::numeric_limits<double>::quiet_NaN();
-    double int_dAIF_exp     = std::numeric_limits<double>::quiet_NaN();
-    double int_dVIF_exp     = std::numeric_limits<double>::quiet_NaN();
-
-
-    //AIF integral(s).
-    {
-        const double A = k2;
-        const double B = k2 * (tauA - t);
-        const double C = 1.0;
-        const double taumin = -tauA;
-        const double taumax = t - tauA;
-        double expmin, expmax;
-        std::tie(expmin,expmax) = cAIF->Get_Domain();
-    
-        cheby_approx<double> exp_kern = Chebyshev_Basis_Approx_Exp_Analytic1(exp_approx_N,expmin,expmax, A,B,C);
-        cheby_approx<double> integrand;
-        cheby_approx<double> integral;
-
-        //Evaluate the model.
-        integrand = exp_kern * (*cAIF);
-        integral = integrand.Chebyshev_Integral();
-        int_AIF_exp = (integral.Sample(taumax) - integral.Sample(taumin));
-
-        if(grad != nullptr){
-            //Evaluate $\partial_{k2}$ part of gradient.
-            integrand = integrand * Chebyshev_Basis_Exact_Linear(expmin,expmax,1.0,tauA-t);
-            integral = integrand.Chebyshev_Integral();
-            int_AIF_exp_tau = (integral.Sample(taumax) - integral.Sample(taumin));
-
-            //Evaluate $\partial_{tauA}$ part of gradient.
-            integrand = exp_kern * (*dcAIF);
-            integral = integrand.Chebyshev_Integral();
-            int_dAIF_exp = (integral.Sample(taumax) - integral.Sample(taumin));
-        }
-    }
-     
-    //VIF integral(s).
-    {
-        const double A = k2;
-        const double B = k2 * (tauV - t);
-        const double C = 1.0;
-        const double taumin = -tauV;
-        const double taumax = t - tauV;
-        double expmin, expmax;
-        std::tie(expmin,expmax) = cVIF->Get_Domain();
- 
-        cheby_approx<double> exp_kern = Chebyshev_Basis_Approx_Exp_Analytic1(exp_approx_N,expmin,expmax, A,B,C);
-        cheby_approx<double> integrand;
-        cheby_approx<double> integral;
-
-        //Evaluate the model.
-        integrand = exp_kern * (*cVIF);
-        integral = integrand.Chebyshev_Integral();
-        int_VIF_exp = (integral.Sample(taumax) - integral.Sample(taumin));
-
-        if(grad != nullptr){
-            //Evaluate $\partial_{k2}$ part of gradient.
-            integrand = integrand * Chebyshev_Basis_Exact_Linear(expmin,expmax,1.0,tauV-t);
-            integral = integrand.Chebyshev_Integral();
-            int_VIF_exp_tau = (integral.Sample(taumax) - integral.Sample(taumin));
-
-            //Evaluate $\partial_{tauV}$ part of gradient.
-            integrand = exp_kern * (*dcVIF);
-            integral = integrand.Chebyshev_Integral();
-            int_dVIF_exp = (integral.Sample(taumax) - integral.Sample(taumin));
-        }
-    }
-
-    //Evaluate the model's integral. This is the model's predicted contrast enhancement.
-    const double I = (k1A * int_AIF_exp) + (k1V * int_VIF_exp);
-
-    //Work out gradient information, if desired.
-    if(grad != nullptr){
-        grad[0] = ( int_AIF_exp );  // $\partial_{k1A}$
-        grad[1] = ( -k1A * int_dAIF_exp ); // $\partial_{tauA}$
-        grad[2] = ( int_VIF_exp ); // $\partial_{k1V}$
-        grad[3] = ( -k1V * int_dVIF_exp ); // $\partial_{tauV}$
-        grad[4] = ( (k1A * int_AIF_exp_tau) + (k1V * int_VIF_exp_tau)  ); // $\partial_{k2}$
-    }
-
-    return I;
-}
-
-
-static
-double 
-func_to_min(unsigned, const double *params, double *grad, void *){
-    //This function computes the square-distance between the ROI time course and a kinetic liver
-    // perfusion model at the ROI sample t_i's. If gradients are requested, they are also computed.
-
-    double sqDist = 0.0;
-    if(grad != nullptr){
-        grad[0] = 0.0;
-        grad[1] = 0.0;
-        grad[2] = 0.0;
-        grad[3] = 0.0;
-        grad[4] = 0.0;
-    }
-    double dgrad[5];
-
-    for(const auto &P : theROI->samples){
-        const double t = P[0];
-        const double R = P[2];
-
-        const double I = chebyshev_model(t, params, ((grad == nullptr) ? nullptr : dgrad) );
-
-        sqDist += std::pow(R - I, 2.0); //Standard L2-norm.
- 
-        if(grad != nullptr){
-            const double chain = -2.0*(R-I);
-            grad[0] += chain * dgrad[0];
-            grad[1] += chain * dgrad[1];
-            grad[2] += chain * dgrad[2];
-            grad[3] += chain * dgrad[3];
-            grad[4] += chain * dgrad[4];
-        }
-    }
-
-    return sqDist;
-}
- 
-
-
+#include "../../Pharmacokinetic_Modeling.h"
 
 
 bool
@@ -234,19 +77,11 @@ LiverPharmacoModel5ParamCheby(planar_image_collection<float,double>::images_list
     auto ContrastInjectionLeadTime = user_data_s->ContrastInjectionLeadTime;
 
     //Get convenient handles for the arterial and venous input time courses.
-    auto Carterial  = user_data_s->time_courses["Abdominal_Aorta"];
-    auto dCarterial = user_data_s->time_course_derivatives["Abdominal_Aorta"];
+    auto Carterial  = std::make_shared<cheby_approx<double>>( user_data_s->time_courses["Abdominal_Aorta"] );
+    auto dCarterial = std::make_shared<cheby_approx<double>>( user_data_s->time_course_derivatives["Abdominal_Aorta"] );
 
-    auto Cvenous    = user_data_s->time_courses["Hepatic_Portal_Vein"];
-    auto dCvenous   = user_data_s->time_course_derivatives["Hepatic_Portal_Vein"];
-
-    cAIF = &Carterial;
-    cVIF = &Cvenous;
-
-    dcAIF = &dCarterial;
-    dcVIF = &dCvenous;
-
-
+    auto Cvenous  = std::make_shared<cheby_approx<double>>( user_data_s->time_courses["Hepatic_Portal_Vein"] );
+    auto dCvenous = std::make_shared<cheby_approx<double>>( user_data_s->time_course_derivatives["Hepatic_Portal_Vein"] );
 
 
     //Trim all but the liver contour. 
@@ -462,8 +297,8 @@ LiverPharmacoModel5ParamCheby(planar_image_collection<float,double>::images_list
 
                             //Cycle over the grouped images (temporal slices, or whatever the user has decided).
                             // Harvest the time course or any other voxel-specific numbers.
-                            samples_1D<double> channel_time_course;
-                            channel_time_course.uncertainties_known_to_be_independent_and_random = true;
+                            auto channel_time_course = std::make_shared<samples_1D<double>>();
+                            channel_time_course->uncertainties_known_to_be_independent_and_random = true;
                             for(auto & img_it : selected_img_its){
                                 //Collect the datum of voxels and nearby voxels for an average.
                                 std::list<double> in_pixs;
@@ -493,24 +328,24 @@ LiverPharmacoModel5ParamCheby(planar_image_collection<float,double>::images_list
                                 if(in_pixs.size() < min_datum) continue; //If contours are too narrow so that there is too few datum for meaningful results.
                                 //const auto avg_val_sigma = std::sqrt(Stats::Unbiased_Var_Est(in_pixs))/std::sqrt(1.0*in_pixs.size());
                                 //channel_time_course.push_back(dt.value(), 0.0, avg_val, avg_val_sigma, InhibitSort);
-                                channel_time_course.push_back(dt.value(), 0.0, avg_val, 0.0, InhibitSort);
+                                channel_time_course->push_back(dt.value(), 0.0, avg_val, 0.0, InhibitSort);
                             }
-                            channel_time_course.stable_sort();
-                            if(channel_time_course.empty()) continue;
+                            channel_time_course->stable_sort();
+                            if(channel_time_course->empty()) continue;
   
                             //Correct any unaccounted-for contrast enhancement shifts. 
                             // (If we don't do this, the optimizer goes crazy!)
                             if(true){
                                 //Subtract the minimum over the full time course.
                                 if(false){
-                                    const auto Cmin = channel_time_course.Get_Extreme_Datum_y().first;
-                                    channel_time_course = channel_time_course.Sum_With(0.0-Cmin[2]);
+                                    const auto Cmin = channel_time_course->Get_Extreme_Datum_y().first;
+                                    *channel_time_course = channel_time_course->Sum_With(0.0-Cmin[2]);
 
                                 //Subtract the mean from the pre-injection period.
                                 }else{
-                                    const auto preinject = channel_time_course.Select_Those_Within_Inc(-1E99,ContrastInjectionLeadTime);
+                                    const auto preinject = channel_time_course->Select_Those_Within_Inc(-1E99,ContrastInjectionLeadTime);
                                     const auto themean = preinject.Mean_y()[0];
-                                    channel_time_course = channel_time_course.Sum_With(0.0-themean);
+                                    *channel_time_course = channel_time_course->Sum_With(0.0-themean);
                                 }
                             }
 
@@ -518,90 +353,26 @@ LiverPharmacoModel5ParamCheby(planar_image_collection<float,double>::images_list
                             //==============================================================================
                             //Fit the model.
 
-                            theROI = &channel_time_course;
+                            // This routine fits a pharmacokinetic model to the observed liver perfusion data using a 
+                            // Chebyshev polynomial approximation scheme.
+                            Pharmacokinetic_Parameters_5Param_Chebyshev model_state;
 
-                            const int dimen = 5;
-                            //Fitting parameters:      k1A,  tauA,   k1V,  tauV,  k2.
-                            // The following are arbitrarily chosen. They should be seeded from previous computations, or
-                            // at least be nominal values reported within the literature.
-                            double params[dimen] = {  0.0057,  2.87,  0.0052,  -14.4,  0.033 };
+                            model_state.cAIF  = Carterial;
+                            model_state.dcAIF = dCarterial;
+                            model_state.cVIF  = Cvenous;;
+                            model_state.dcVIF = dCvenous;
+                            model_state.cROI = channel_time_course;
 
-                            // U/L bounds:             k1A,  tauA,  k1V,  tauV,  k2.
-                            //double l_bnds[dimen] = {   0.0, -20.0,  0.0, -20.0,  0.0 };
-                            //double u_bnds[dimen] = {   1.0,  20.0,  1.0,  20.0,  1.0 };
-                    
-                            //Initial step sizes:      k1A,  tauA,  k1V,  tauV,  k2.
-                            double initstpsz[dimen] = { 0.004, 1.0, 0.003, 1.0, 0.010 };
+                            Pharmacokinetic_Parameters_5Param_Chebyshev after_state = Pharmacokinetic_Model_3Param_Chebyshev(model_state);
+                            //Pharmacokinetic_Parameters_5Param_Chebyshev after_state = Pharmacokinetic_Model_5Param_Chebyshev(model_state);
 
-                            nlopt_opt opt; //See `man nlopt` to get list of available algorithms.
-                            //opt = nlopt_create(NLOPT_LN_COBYLA, dimen);   //Local, no-derivative schemes.
-                            //opt = nlopt_create(NLOPT_LN_BOBYQA, dimen);
-                            //opt = nlopt_create(NLOPT_LN_SBPLX, dimen);
+                            if(!after_state.FittingSuccess) ++Minimization_Failure_Count;
 
-                            opt = nlopt_create(NLOPT_LD_MMA, dimen);   //Local, derivative schemes.
-                            //opt = nlopt_create(NLOPT_LD_SLSQP, dimen);
-                            //opt = nlopt_create(NLOPT_LD_LBFGS, dimen);
-                            //opt = nlopt_create(NLOPT_LD_VAR2, dimen);
-                            //opt = nlopt_create(NLOPT_LD_TNEWTON_PRECOND_RESTART, dimen);
-                            //opt = nlopt_create(NLOPT_LD_TNEWTON_PRECOND, dimen);
-                            //opt = nlopt_create(NLOPT_LD_TNEWTON, dimen);
-
-                            //opt = nlopt_create(NLOPT_GN_DIRECT, dimen); //Global, no-derivative schemes.
-                            //opt = nlopt_create(NLOPT_GN_CRS2_LM, dimen);
-                            //opt = nlopt_create(NLOPT_GN_ESCH, dimen);
-                            //opt = nlopt_create(NLOPT_GN_ISRES, dimen);
-                                            
-                            //nlopt_set_lower_bounds(opt, l_bnds);
-                            //nlopt_set_upper_bounds(opt, u_bnds);
-                    
-                            if(NLOPT_SUCCESS != nlopt_set_initial_step(opt, initstpsz)){
-                                FUNCERR("NLOpt unable to set initial step sizes");
-                            }
-                            if(NLOPT_SUCCESS != nlopt_set_min_objective(opt, func_to_min, nullptr)){
-                                FUNCERR("NLOpt unable to set objective function for minimization");
-                            }
-                            if(NLOPT_SUCCESS != nlopt_set_xtol_rel(opt, 1.0E-4)){
-                                FUNCERR("NLOpt unable to set xtol stopping condition");
-                            }
-                            if(NLOPT_SUCCESS != nlopt_set_maxtime(opt, 30.0)){ // In seconds.
-                                FUNCERR("NLOpt unable to set maxtime stopping condition");
-                            }
-                            if(NLOPT_SUCCESS != nlopt_set_maxeval(opt, 5'000'000)){ // Maximum # of objective func evaluations.
-                                FUNCERR("NLOpt unable to set maxeval stopping condition");
-                            }
-                            if(NLOPT_SUCCESS != nlopt_set_vector_storage(opt, 200)){ // Amount of memory to use (MB).
-                                FUNCERR("NLOpt unable to tell NLOpt to use more scratch space");
-                            }
-
-                            double func_min;
-                            const auto opt_status = nlopt_optimize(opt, params, &func_min);
-                            if(opt_status < 0){
-                                ++Minimization_Failure_Count;
-                                if(opt_status == NLOPT_FAILURE){                FUNCWARN("NLOpt fail: generic failure");
-                                }else if(opt_status == NLOPT_INVALID_ARGS){     FUNCERR("NLOpt fail: invalid arguments");
-                                }else if(opt_status == NLOPT_OUT_OF_MEMORY){    FUNCWARN("NLOpt fail: out of memory");
-                                }else if(opt_status == NLOPT_ROUNDOFF_LIMITED){ FUNCWARN("NLOpt fail: roundoff limited");
-                                }else if(opt_status == NLOPT_FORCED_STOP){      FUNCWARN("NLOpt fail: forced termination");
-                                }else{ FUNCERR("NLOpt fail: unrecognized error code"); }
-                                // See http://ab-initio.mit.edu/wiki/index.php/NLopt_Reference for error code info.
-                            }else if(true){
-                                if(opt_status == NLOPT_SUCCESS){                FUNCINFO("NLOpt: success");
-                                }else if(opt_status == NLOPT_STOPVAL_REACHED){  FUNCINFO("NLOpt: stopval reached");
-                                }else if(opt_status == NLOPT_FTOL_REACHED){     FUNCINFO("NLOpt: ftol reached");
-                                }else if(opt_status == NLOPT_XTOL_REACHED){     FUNCINFO("NLOpt: xtol reached");
-                                }else if(opt_status == NLOPT_MAXEVAL_REACHED){  FUNCINFO("NLOpt: maxeval count reached");
-                                }else if(opt_status == NLOPT_MAXTIME_REACHED){  FUNCINFO("NLOpt: maxtime reached");
-                                }else{ FUNCERR("NLOpt fail: unrecognized success code"); }
-                            }
-
-                            nlopt_destroy(opt);
-                            // ----------------------------------------------------------------------------
-
-                            const double k1A  = params[0];
-                            const double tauA = params[1];
-                            const double k1V  = params[2];
-                            const double tauV = params[3];
-                            const double k2   = params[4];
+                            const double k1A  = after_state.k1A;
+                            const double tauA = after_state.tauA;
+                            const double k1V  = after_state.k1V;
+                            const double tauV = after_state.tauV;
+                            const double k2   = after_state.k2;
                             if(true) FUNCINFO("k1A,tauA,k1V,tauV,k2 = " << k1A << ", " << tauA << ", " << k1V << ", " << tauV << ", " << k2);
 
                             const auto LiverPerfusion = (k1A + k1V);

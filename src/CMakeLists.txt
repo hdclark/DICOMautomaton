@@ -116,7 +116,18 @@ add_library (imebrashim
     imebra20121219/library/base/src/streamWriter.cpp
     imebra20121219/library/base/src/huffmanTable.cpp 
 )
-target_include_directories (imebrashim SYSTEM PUBLIC ./imebra20121219/library/imebra/include/ )
+target_include_directories(imebrashim SYSTEM PUBLIC 
+    ./imebra20121219/library/imebra/include/ 
+)
+
+
+# Pharmacokinetic modeling library (built separately for easier reuse).
+add_library (pharmacokinetic_modeling
+    Pharmacokinetic_Modeling.cc
+)
+target_include_directories(pharmacokinetic_modeling SYSTEM PUBLIC 
+    ./
+)
 
 
 # Executable.
@@ -132,6 +143,7 @@ add_executable (petct_perfusion_analysis
 )
 target_link_libraries (petct_perfusion_analysis 
     imebrashim
+    pharmacokinetic_modeling
     ygor 
     explicator 
     demarcator 
@@ -151,7 +163,6 @@ add_executable (pacs_ingress
     PACS_Ingress.cc
     $<TARGET_OBJECTS:Structs_obj>
     $<TARGET_OBJECTS:Dose_Meld_obj>
-#    $<TARGET_OBJECTS:Whole_Match_obj>
 )
 target_link_libraries (pacs_ingress
     imebrashim
@@ -168,7 +179,6 @@ add_executable (pacs_refresh
     PACS_Refresh.cc
     $<TARGET_OBJECTS:Structs_obj>
     $<TARGET_OBJECTS:Dose_Meld_obj>
-#    $<TARGET_OBJECTS:Whole_Match_obj>
 )
 target_link_libraries (pacs_refresh
     imebrashim
@@ -185,7 +195,6 @@ add_executable (pacs_verify_filesystem_store
     PACS_Verify_Filesystem_Store.cc
     $<TARGET_OBJECTS:Structs_obj>
     $<TARGET_OBJECTS:Dose_Meld_obj>
-#    $<TARGET_OBJECTS:Whole_Match_obj>
 )
 target_link_libraries (pacs_verify_filesystem_store
     imebrashim
@@ -227,7 +236,6 @@ add_executable (automaton
     Automaton.cc
     $<TARGET_OBJECTS:Structs_obj>
     $<TARGET_OBJECTS:Dose_Meld_obj>
-#    $<TARGET_OBJECTS:Whole_Match_obj>
 )
 target_link_libraries (automaton
     imebrashim
@@ -253,7 +261,7 @@ target_link_libraries (dicomautomaton_dump
 )
 
 # Installation info.
-INSTALL(TARGETS 
+install(TARGETS 
     petct_perfusion_analysis
     pacs_ingress
     pacs_refresh
@@ -262,10 +270,11 @@ INSTALL(TARGETS
     automaton
     dicomautomaton_dump
     imebrashim
+    pharmacokinetic_modeling
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib
 )
 
-INCLUDE(CPack)
+include(CPack)
 
