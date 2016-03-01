@@ -34,6 +34,12 @@ bool InImagePlaneBilinearSupersample(
     const auto ScaleFactor = 5; //Should be a positive integer.
     const auto ScaleFactorR = static_cast<double>(ScaleFactor);
 
+    vec3<double> newOffset = first_img_it->offset;
+    newOffset -= first_img_it->row_unit * first_img_it->pxl_dx * 0.5;
+    newOffset -= first_img_it->col_unit * first_img_it->pxl_dy * 0.5;
+    newOffset += first_img_it->row_unit * first_img_it->pxl_dx * 0.5 / ScaleFactorR;
+    newOffset += first_img_it->col_unit * first_img_it->pxl_dy * 0.5 / ScaleFactorR;
+
     //Make a destination image that has twice the linear dimensions as the input image.
     planar_image<float,double> working;
     working.init_buffer( first_img_it->rows * ScaleFactor, 
@@ -43,7 +49,7 @@ bool InImagePlaneBilinearSupersample(
                           first_img_it->pxl_dy / ScaleFactorR,
                           first_img_it->pxl_dz,
                           first_img_it->anchor,
-                          first_img_it->offset );
+                          newOffset );
     working.init_orientation( first_img_it->row_unit,
                               first_img_it->col_unit );
     working.metadata = first_img_it->metadata;
