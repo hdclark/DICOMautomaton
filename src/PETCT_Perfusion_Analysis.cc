@@ -709,7 +709,7 @@ int main(int argc, char* argv[]){
     //========================================== Pre-Analysis Processing ==============================================
     //=================================================================================================================
     if(Operations.count("DecimatePixels") != 0){
-        //This operation spaitally aggregates blocks of pixels, thereby decimating them and making the images consume
+        //This operation spatially aggregates blocks of pixels, thereby decimating them and making the images consume
         // far less memory. The precise size reduction and spatial aggregate can be set in the source. 
         for(auto & img_arr : DICOM_data.image_data){
             if(!img_arr->imagecoll.Process_Images( GroupIndividualImages,
@@ -1072,7 +1072,8 @@ int main(int argc, char* argv[]){
         }
 
         //Whitelist contours.
-        cc_all.remove_if([](std::reference_wrapper<contour_collection<double>> cc) -> bool {
+        auto cc_AIF_VIF = cc_all;
+        cc_AIF_VIF.remove_if([](std::reference_wrapper<contour_collection<double>> cc) -> bool {
                        const auto ROINameOpt = cc.get().contours.front().GetMetadataValueAs<std::string>("ROIName");
                        const auto ROIName = ROINameOpt.value();
                        return    (ROIName != "Abdominal_Aorta")
@@ -1134,9 +1135,12 @@ int main(int argc, char* argv[]){
             }
         }
        
-        //Eliminate the original, un-processed data to relieve some memory pressure.
+        //Eliminate some images to relieve some memory pressure.
         if(true){
             for(auto & img_arr : orig_img_arrays){
+                img_arr->imagecoll.images.clear();
+            }
+            for(auto & img_arr : baseline_img_arrays){
                 img_arr->imagecoll.images.clear();
             }
         }
@@ -1147,7 +1151,7 @@ int main(int argc, char* argv[]){
         if(true) for(auto & img_arr : C_enhancement_img_arrays){
             if(!img_arr->imagecoll.Compute_Images( ComputePerROICourses,   //Non-modifying function, can use in-place.
                                                    { },
-                                                   cc_all,
+                                                   cc_AIF_VIF,
                                                    &ud )){
                 FUNCERR("Unable to compute per-ROI time courses");
             }
@@ -1158,6 +1162,18 @@ int main(int argc, char* argv[]){
             const auto lVoxelCount = ud.voxel_count[lROIname];
             tcs.second = tcs.second.Multiply_With(1.0/static_cast<double>(lVoxelCount));
         }
+
+        //Decimate the number of pixels for modeling purposes.
+        //for(auto & img_arr : DICOM_data.image_data){
+        for(auto & img_arr : C_enhancement_img_arrays){
+            if(!img_arr->imagecoll.Process_Images( GroupIndividualImages,
+                                                   InImagePlanePixelDecimate,
+                                                   {}, {} )){
+                FUNCERR("Unable to decimate pixels");
+            }
+        }
+
+
 
         //Plot the ROIs we computed.
         if(false){
@@ -1326,7 +1342,7 @@ int main(int argc, char* argv[]){
 
 
         //Prune some images, to reduce the computational effort needed.
-        if(true){
+        if(false){
             for(auto & img_arr : C_enhancement_img_arrays){
                 const auto centre = img_arr->imagecoll.center();
                 img_arr->imagecoll.Retain_Images_Satisfying(
