@@ -5,6 +5,7 @@
 #include <map>
 #include <cmath>
 #include <memory>
+#include <chrono>
 #include <experimental/any>
 
 #include <pqxx/pqxx>         //PostgreSQL C++ interface.
@@ -18,12 +19,13 @@
 #include "YgorMath.h"
 #include "YgorMathChebyshev.h"
 #include "YgorMathChebyshevFunctions.h"
+#include "YgorMathPlottingGnuplot.h" //Needed for YgorMathPlottingGnuplot::*.
 #include "YgorImages.h"
 #include "YgorStats.h"       //Needed for Stats:: namespace.
 #include "YgorFilesDirs.h"   //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
 #include "YgorAlgorithms.h"  //Needed for For_Each_In_Parallel<..>(...)
 #include "YgorString.h"      //Needed for GetFirstRegex(...)
-#include "YgorPlot.h"
+
 
 #include "../ConvenienceRoutines.h"
 #include "Liver_Pharmacokinetic_Model_5Param_Cheby.h"
@@ -93,9 +95,10 @@ LiverPharmacoModel5ParamCheby(planar_image_collection<float,double>::images_list
     ccsl.remove_if([](std::reference_wrapper<contour_collection<double>> cc) -> bool {
                        const auto ROINameOpt = cc.get().contours.front().GetMetadataValueAs<std::string>("ROIName");
                        const auto ROIName = ROINameOpt.value();
-                       //return (ROIName != "Suspected_Liver_Rough");
+                       //return (ROIName != "Liver_Patches_For_Testing_Smaller");
                        //return (ROIName != "Liver_Patches_For_Testing");
-                       return (ROIName != "Liver_Patches_For_Testing_Smaller");
+                       return (ROIName != "Suspected_Liver_Rough");
+                       //return (ROIName != "Rough_Body");
                    });
 
 
@@ -380,6 +383,34 @@ LiverPharmacoModel5ParamCheby(planar_image_collection<float,double>::images_list
                             const auto ArterialFraction = 100.0 * k1A / LiverPerfusion;
                             const auto DistributionVolume = 100.0 * LiverPerfusion * MeanTransitTime;
 
+                            //==============================================================================
+                            // Plot the fitted model with the ROI time course.
+
+                            std::vector<YgorMathPlottingGnuplot::Shuttle<samples_1D<double>>> shuttle1;
+                            {
+                                shuttle1.emplace_back(*(after_state.cROI), "ROI time course");
+                                samples_1D<double> fitted_model;
+                                Pharmacokinetic_Parameters_5Param_Chebyshev_Results eval_res;
+                                for(const auto &P : after_state.cROI->samples){
+                                    const double t = P[0];
+                                    chebyshev_5param_model(after_state,t,eval_res);
+                                    fitted_model.push_back(t, 0.0, eval_res.I, 0.0);
+                                }
+                                shuttle1.emplace_back(fitted_model, "Fitted model");
+                            }
+                        
+                            //Plot the data.
+                            for(auto dumb = 0; dumb < 20; ++dumb){
+                                try{
+                                    YgorMathPlottingGnuplot::Plot<double>(shuttle1, "Time Courses", "Time (s)", "Pixel Intensity");
+                                    break;
+                                }catch(const std::exception &e){
+                                    FUNCWARN("Unable to plot time courses: '" << e.what() << "'. Trying again...");
+                                }
+                            }
+                            std::this_thread::sleep_for( std::chrono::seconds(10) );
+                            FUNCERR("OK!");
+                            
                             //==============================================================================
  
                             //Update pixel values.
