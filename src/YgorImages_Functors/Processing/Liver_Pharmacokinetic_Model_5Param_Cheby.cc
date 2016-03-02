@@ -305,7 +305,7 @@ LiverPharmacoModel5ParamCheby(planar_image_collection<float,double>::images_list
                             for(auto & img_it : selected_img_its){
                                 //Collect the datum of voxels and nearby voxels for an average.
                                 std::list<double> in_pixs;
-                                const auto boxr = 3;
+                                const auto boxr = 0;
                                 const auto min_datum = 1;
     
                                 for(auto lrow = (row-boxr); lrow <= (row+boxr); ++lrow){
@@ -371,12 +371,14 @@ LiverPharmacoModel5ParamCheby(planar_image_collection<float,double>::images_list
 
                             if(!after_state.FittingSuccess) ++Minimization_Failure_Count;
 
+                            const double RSS  = after_state.RSS;
                             const double k1A  = after_state.k1A;
                             const double tauA = after_state.tauA;
                             const double k1V  = after_state.k1V;
                             const double tauV = after_state.tauV;
                             const double k2   = after_state.k2;
-                            if(true) FUNCINFO("k1A,tauA,k1V,tauV,k2 = " << k1A << ", " << tauA << ", " << k1V << ", " << tauV << ", " << k2);
+                            if(true) FUNCINFO("k1A,tauA,k1V,tauV,k2,RSS = " << k1A << ", " << tauA << ", " 
+                                              << k1V << ", " << tauV << ", " << k2 << ", " << RSS);
 
                             const auto LiverPerfusion = (k1A + k1V);
                             const auto MeanTransitTime = 1.0 / k2;

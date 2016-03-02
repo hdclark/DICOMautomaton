@@ -126,7 +126,7 @@ chebyshev_5param_model( const Pharmacokinetic_Parameters_5Param_Chebyshev &state
 }
 
 
-
+//---------------------------------------------------------------------------------------------
 static
 double 
 chebyshev_5param_func_to_min(unsigned, const double *params, double *grad, void *voided_state){
@@ -269,6 +269,8 @@ Pharmacokinetic_Model_5Param_Chebyshev(Pharmacokinetic_Parameters_5Param_Chebysh
     nlopt_destroy(opt);
     // ----------------------------------------------------------------------------
 
+    state.RSS  = func_min;
+
     state.k1A  = params[0];
     state.tauA = params[1];
     state.k1V  = params[2];
@@ -319,7 +321,6 @@ chebyshev_3param_func_to_min(unsigned, const double *params, double *grad, void 
         }
     }
 
-//std::cout << "Exiting the 'chebyshev_3param_func_to_min' now. sqDist = " << sqDist << std::endl;    
     if(!std::isfinite(sqDist)) sqDist = std::numeric_limits<double>::max();
     return sqDist;
 }
@@ -347,7 +348,11 @@ Pharmacokinetic_Model_3Param_Chebyshev(Pharmacokinetic_Parameters_5Param_Chebysh
     double u_bnds[dimen] = {   1.0,  1.0,  1.0 };
                     
     //Initial step sizes:      k1A,  k1V,  k2.
-    double initstpsz[dimen] = { 0.0040, 0.0030, 0.0050 };
+    double initstpsz[dimen] = { 0.0040, 0.0040, 0.0050 };
+
+    //Absolute parameter change thresholds:   k1A,  k1V,  k2.
+    //double xtol_abs_thresholds[dimen] = { 0.0001, 0.0001, 0.0001 };
+    double xtol_abs_thresholds[dimen] = { 0.00005, 0.00005, 0.00005 };
 
     nlopt_opt opt; //See `man nlopt` to get list of available algorithms.
     //opt = nlopt_create(NLOPT_LN_COBYLA, dimen);   //Local, no-derivative schemes.
@@ -376,8 +381,11 @@ Pharmacokinetic_Model_3Param_Chebyshev(Pharmacokinetic_Parameters_5Param_Chebysh
     if(NLOPT_SUCCESS != nlopt_set_min_objective(opt, chebyshev_3param_func_to_min, reinterpret_cast<void*>(&state))){
         FUNCERR("NLOpt unable to set objective function for minimization");
     }
-    if(NLOPT_SUCCESS != nlopt_set_xtol_rel(opt, 1.0E-4)){
-        FUNCERR("NLOpt unable to set xtol stopping condition");
+    //if(NLOPT_SUCCESS != nlopt_set_xtol_rel(opt, 1.0E-4)){
+    //    FUNCERR("NLOpt unable to set xtol_rel stopping condition");
+    //}
+    if(NLOPT_SUCCESS != nlopt_set_xtol_abs(opt, xtol_abs_thresholds)){
+        FUNCERR("NLOpt unable to set xtol_abs stopping condition");
     }
     if(NLOPT_SUCCESS != nlopt_set_maxtime(opt, 30.0)){ // In seconds.
         FUNCERR("NLOpt unable to set maxtime stopping condition");
@@ -417,6 +425,8 @@ Pharmacokinetic_Model_3Param_Chebyshev(Pharmacokinetic_Parameters_5Param_Chebysh
 
     nlopt_destroy(opt);
     // ----------------------------------------------------------------------------
+
+    state.RSS  = func_min;
 
     state.k1A  = params[0];
     state.tauA = 0.0;

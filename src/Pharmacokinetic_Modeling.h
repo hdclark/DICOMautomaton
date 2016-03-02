@@ -48,6 +48,9 @@ struct Pharmacokinetic_Parameters_5Param_Chebyshev {
     bool FittingPerformed = false;
     bool FittingSuccess = false;
 
+    // Fitting quantities.
+    double RSS  = std::numeric_limits<double>::quiet_NaN(); // Residual sum of squares.
+
     // 5-parameter liver CT perfusion parameters.
     double k1A  = std::numeric_limits<double>::quiet_NaN();
     double tauA = std::numeric_limits<double>::quiet_NaN();

@@ -1209,7 +1209,7 @@ int main(int argc, char* argv[]){
 
 
         //Prune images, to reduce the computational effort needed.
-        if(true){
+        if(false){
             for(auto & img_arr : C_enhancement_img_arrays){
                 const auto centre = img_arr->imagecoll.center();
                 img_arr->imagecoll.Retain_Images_Satisfying(
