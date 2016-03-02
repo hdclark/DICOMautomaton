@@ -279,7 +279,7 @@ Pharmacokinetic_Model_5Param_Chebyshev(Pharmacokinetic_Parameters_5Param_Chebysh
 }
 
 
-
+//---------------------------------------------------------------------------------------------
 static
 double 
 chebyshev_3param_func_to_min(unsigned, const double *params, double *grad, void *voided_state){
@@ -298,9 +298,9 @@ chebyshev_3param_func_to_min(unsigned, const double *params, double *grad, void 
     //Pack the current parameters into the state struct. This is done to unify the nlopt and user calling styles.
     state->k1A  = params[0];
     state->tauA = 0.0;
-    state->k1V  = params[2];
+    state->k1V  = params[1];
     state->tauV = 0.0;
-    state->k2   = params[4];
+    state->k2   = params[2];
 
     Pharmacokinetic_Parameters_5Param_Chebyshev_Results model_res;
     for(const auto &P : state->cROI->samples){
@@ -319,7 +319,7 @@ chebyshev_3param_func_to_min(unsigned, const double *params, double *grad, void 
         }
     }
 
-std::cout << "Exiting the 'chebyshev_3param_func_to_min' now. sqDist = " << sqDist << std::endl;    
+//std::cout << "Exiting the 'chebyshev_3param_func_to_min' now. sqDist = " << sqDist << std::endl;    
     if(!std::isfinite(sqDist)) sqDist = std::numeric_limits<double>::max();
     return sqDist;
 }
@@ -338,23 +338,23 @@ Pharmacokinetic_Model_3Param_Chebyshev(Pharmacokinetic_Parameters_5Param_Chebysh
     double params[dimen];
 
     //If there were finite parameters provided, use them as the initial guesses.
-    params[0] = std::isfinite(state.k1A)  ? state.k1A  : 0.0057;
-    params[1] = std::isfinite(state.k1V)  ? state.k1V  : 0.0052;
-    params[2] = std::isfinite(state.k2)   ? state.k2   : 0.033;
+    params[0] = std::isfinite(state.k1A)  ? state.k1A  : 0.0098;
+    params[1] = std::isfinite(state.k1V)  ? state.k1V  : 0.0010;
+    params[2] = std::isfinite(state.k2)   ? state.k2   : 0.0518;
 
     // U/L bounds:               k1A,  k1V,  k2.
-    //double l_bnds[dimen] = {   0.0,  0.0,  0.0 };
-    //double u_bnds[dimen] = {   1.0,  1.0,  1.0 };
+    double l_bnds[dimen] = {   0.0,  0.0,  0.0 };
+    double u_bnds[dimen] = {   1.0,  1.0,  1.0 };
                     
     //Initial step sizes:      k1A,  k1V,  k2.
-    double initstpsz[dimen] = { 0.004, 0.003, 0.010 };
+    double initstpsz[dimen] = { 0.0040, 0.0030, 0.0050 };
 
     nlopt_opt opt; //See `man nlopt` to get list of available algorithms.
-    opt = nlopt_create(NLOPT_LN_COBYLA, dimen);   //Local, no-derivative schemes.
+    //opt = nlopt_create(NLOPT_LN_COBYLA, dimen);   //Local, no-derivative schemes.
     //opt = nlopt_create(NLOPT_LN_BOBYQA, dimen);
     //opt = nlopt_create(NLOPT_LN_SBPLX, dimen);
 
-    //opt = nlopt_create(NLOPT_LD_MMA, dimen);   //Local, derivative schemes.
+    opt = nlopt_create(NLOPT_LD_MMA, dimen);   //Local, derivative schemes.
     //opt = nlopt_create(NLOPT_LD_SLSQP, dimen);
     //opt = nlopt_create(NLOPT_LD_LBFGS, dimen);
     //opt = nlopt_create(NLOPT_LD_VAR2, dimen);
@@ -367,8 +367,8 @@ Pharmacokinetic_Model_3Param_Chebyshev(Pharmacokinetic_Parameters_5Param_Chebysh
     //opt = nlopt_create(NLOPT_GN_ESCH, dimen);
     //opt = nlopt_create(NLOPT_GN_ISRES, dimen);
                     
-    //nlopt_set_lower_bounds(opt, l_bnds);
-    //nlopt_set_upper_bounds(opt, u_bnds);
+    nlopt_set_lower_bounds(opt, l_bnds);
+    nlopt_set_upper_bounds(opt, u_bnds);
                     
     if(NLOPT_SUCCESS != nlopt_set_initial_step(opt, initstpsz)){
         FUNCERR("NLOpt unable to set initial step sizes");
@@ -379,17 +379,15 @@ Pharmacokinetic_Model_3Param_Chebyshev(Pharmacokinetic_Parameters_5Param_Chebysh
     if(NLOPT_SUCCESS != nlopt_set_xtol_rel(opt, 1.0E-4)){
         FUNCERR("NLOpt unable to set xtol stopping condition");
     }
-    if(NLOPT_SUCCESS != nlopt_set_maxtime(opt, 60.0)){ // In seconds.
+    if(NLOPT_SUCCESS != nlopt_set_maxtime(opt, 30.0)){ // In seconds.
         FUNCERR("NLOpt unable to set maxtime stopping condition");
     }
-    if(NLOPT_SUCCESS != nlopt_set_maxeval(opt, 5'000)){ // Maximum # of objective func evaluations.
+    if(NLOPT_SUCCESS != nlopt_set_maxeval(opt, 5'000'000)){ // Maximum # of objective func evaluations.
         FUNCERR("NLOpt unable to set maxeval stopping condition");
     }
     if(NLOPT_SUCCESS != nlopt_set_vector_storage(opt, 200)){ // Amount of memory to use (MB).
         FUNCERR("NLOpt unable to tell NLOpt to use more scratch space");
     }
-
-FUNCINFO("About to begin optimization");
 
     double func_min;
     const auto opt_status = nlopt_optimize(opt, params, &func_min);

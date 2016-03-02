@@ -1207,6 +1207,20 @@ int main(int argc, char* argv[]){
         std::vector<std::shared_ptr<Image_Array>> pharmaco_model_tauV;
         std::vector<std::shared_ptr<Image_Array>> pharmaco_model_k2;
 
+
+        //Prune images, to reduce the computational effort needed.
+        if(true){
+            for(auto & img_arr : C_enhancement_img_arrays){
+                const auto centre = img_arr->imagecoll.center();
+                img_arr->imagecoll.Retain_Images_Satisfying(
+                                      [=](const planar_image<float,double> &animg)->bool{
+                                          return animg.encompasses_point(centre);
+                                      });
+            }
+        }
+
+
+
         //Use a linear model.
         if(false){ 
             for(auto & img_arr : C_enhancement_img_arrays){
@@ -1338,18 +1352,6 @@ int main(int argc, char* argv[]){
                 }
             }
             pharmaco_model_dummy.clear();
-        }
-
-
-        //Prune some images, to reduce the computational effort needed.
-        if(false){
-            for(auto & img_arr : C_enhancement_img_arrays){
-                const auto centre = img_arr->imagecoll.center();
-                img_arr->imagecoll.Retain_Images_Satisfying(
-                                      [=](const planar_image<float,double> &animg)->bool{
-                                          return animg.encompasses_point(centre);
-                                      });
-            }
         }
 
 

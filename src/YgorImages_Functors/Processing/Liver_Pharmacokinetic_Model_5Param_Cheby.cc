@@ -97,8 +97,8 @@ LiverPharmacoModel5ParamCheby(planar_image_collection<float,double>::images_list
                        const auto ROIName = ROINameOpt.value();
                        //return (ROIName != "Liver_Patches_For_Testing_Smaller");
                        //return (ROIName != "Liver_Patches_For_Testing");
-                       return (ROIName != "Suspected_Liver_Rough");
-                       //return (ROIName != "Rough_Body");
+                       //return (ROIName != "Suspected_Liver_Rough");
+                       return (ROIName != "Rough_Body");
                    });
 
 
@@ -385,31 +385,32 @@ LiverPharmacoModel5ParamCheby(planar_image_collection<float,double>::images_list
 
                             //==============================================================================
                             // Plot the fitted model with the ROI time course.
-
-                            std::vector<YgorMathPlottingGnuplot::Shuttle<samples_1D<double>>> shuttle1;
-                            {
-                                shuttle1.emplace_back(*(after_state.cROI), "ROI time course");
-                                samples_1D<double> fitted_model;
-                                Pharmacokinetic_Parameters_5Param_Chebyshev_Results eval_res;
-                                for(const auto &P : after_state.cROI->samples){
-                                    const double t = P[0];
-                                    chebyshev_5param_model(after_state,t,eval_res);
-                                    fitted_model.push_back(t, 0.0, eval_res.I, 0.0);
+                            if(false){
+                                std::vector<YgorMathPlottingGnuplot::Shuttle<samples_1D<double>>> shuttle1;
+                                {
+                                    shuttle1.emplace_back(*(after_state.cROI), "ROI time course");
+                                    samples_1D<double> fitted_model;
+                                    Pharmacokinetic_Parameters_5Param_Chebyshev_Results eval_res;
+                                    for(const auto &P : after_state.cROI->samples){
+                                        const double t = P[0];
+                                        chebyshev_5param_model(after_state,t,eval_res);
+                                        fitted_model.push_back(t, 0.0, eval_res.I, 0.0);
+                                    }
+                                    shuttle1.emplace_back(fitted_model, "Fitted model");
                                 }
-                                shuttle1.emplace_back(fitted_model, "Fitted model");
-                            }
-                        
-                            //Plot the data.
-                            for(auto dumb = 0; dumb < 20; ++dumb){
-                                try{
-                                    YgorMathPlottingGnuplot::Plot<double>(shuttle1, "Time Courses", "Time (s)", "Pixel Intensity");
-                                    break;
-                                }catch(const std::exception &e){
-                                    FUNCWARN("Unable to plot time courses: '" << e.what() << "'. Trying again...");
+                            
+                                //Plot the data.
+                                for(auto dumb = 0; dumb < 20; ++dumb){
+                                    try{
+                                        YgorMathPlottingGnuplot::Plot<double>(shuttle1, "Time Courses", "Time (s)", "Pixel Intensity");
+                                        break;
+                                    }catch(const std::exception &e){
+                                        FUNCWARN("Unable to plot time courses: '" << e.what() << "'. Trying again...");
+                                    }
                                 }
+                                std::this_thread::sleep_for( std::chrono::seconds(10) );
+                                FUNCERR("OK!");
                             }
-                            std::this_thread::sleep_for( std::chrono::seconds(10) );
-                            FUNCERR("OK!");
                             
                             //==============================================================================
  
