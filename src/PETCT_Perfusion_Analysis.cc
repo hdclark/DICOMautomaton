@@ -71,6 +71,7 @@
 #include "YgorImages_Functors/Processing/Time_Course_Slope_Map.h"
 #include "YgorImages_Functors/Processing/CT_Perfusion_Clip_Search.h"
 #include "YgorImages_Functors/Processing/CT_Perf_Pixel_Filter.h"
+#include "YgorImages_Functors/Processing/CT_Convert_NaNs_to_Air.h"
 #include "YgorImages_Functors/Processing/Min_Pixel_Value.h"
 #include "YgorImages_Functors/Processing/Max_Pixel_Value.h"
 #include "YgorImages_Functors/Processing/CT_Reasonable_HU_Window.h"
