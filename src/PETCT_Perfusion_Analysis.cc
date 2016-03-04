@@ -713,7 +713,7 @@ int main(int argc, char* argv[]){
         //This operation spatially aggregates blocks of pixels, thereby decimating them and making the images consume
         // far less memory. The precise size reduction and spatial aggregate can be set in the source. 
         for(auto & img_arr : DICOM_data.image_data){
-            if(!img_arr->imagecoll.Process_Images( GroupIndividualImages,
+            if(!img_arr->imagecoll.Process_Images_Parallel( GroupIndividualImages,
                                                    InImagePlanePixelDecimate,
                                                    {}, {} )){
                 FUNCERR("Unable to decimate pixels");
@@ -723,10 +723,21 @@ int main(int argc, char* argv[]){
 
     if(Operations.count("PreFilterEnormousCTValues") != 0){
         //This operation runs the data through a per-pixel filter, censoring pixels which are too high to legitimately
-        // show up in a clinical CT. Censored pixels are set to zero. Data is modified and no copy is made!
+        // show up in a clinical CT. Censored pixels are set to NaN. Data is modified and no copy is made!
         for(auto & img_arr : DICOM_data.image_data){
-            if(!img_arr->imagecoll.Process_Images( GroupIndividualImages,
+            if(!img_arr->imagecoll.Process_Images_Parallel( GroupIndividualImages,
                                                    CTPerfEnormousPixelFilter,
+                                                   {}, {} )){
+                FUNCERR("Unable to censor pixels with enormous values");
+            }
+        }
+    }
+
+    if(Operations.count("ConvertNaNsToAir") != 0){
+        //This operation runs the data through a per-pixel filter, converting NaN's to air in Hounsfield units (-1024).
+        for(auto & img_arr : DICOM_data.image_data){
+            if(!img_arr->imagecoll.Process_Images_Parallel( GroupIndividualImages,
+                                                   CTNaNsToAir,
                                                    {}, {} )){
                 FUNCERR("Unable to censor pixels with enormous values");
             }
@@ -737,7 +748,7 @@ int main(int argc, char* argv[]){
         //This operation runs the images in an image array through a uniform window-and-leveler instead of per-slice
         // window-and-level or no window-and-level at all. Data is modified and no copy is made!
         for(auto & img_arr : DICOM_data.image_data){
-            if(!img_arr->imagecoll.Process_Images( GroupIndividualImages,
+            if(!img_arr->imagecoll.Process_Images_Parallel( GroupIndividualImages,
                                                    StandardHeadAndNeckHUWindow,
                                                    {}, {})){
                 FUNCERR("Unable to force window to cover a reasonable head-and-neck HU range");
@@ -750,7 +761,7 @@ int main(int argc, char* argv[]){
         //This operation runs the images in an image array through a uniform window-and-leveler instead of per-slice
         // window-and-level or no window-and-level at all. Data is modified and no copy is made!
         for(auto & img_arr : DICOM_data.image_data){
-            if(!img_arr->imagecoll.Process_Images( GroupIndividualImages,
+            if(!img_arr->imagecoll.Process_Images_Parallel( GroupIndividualImages,
                                                    StandardAbdominalHUWindow,
                                                    {}, {} )){
                 FUNCERR("Unable to force window to cover a reasonable abdominal HU range");
@@ -762,7 +773,7 @@ int main(int argc, char* argv[]){
         //This operation runs the images in an image array through a uniform window-and-leveler instead of per-slice
         // window-and-level or no window-and-level at all. Data is modified and no copy is made!
         for(auto & img_arr : DICOM_data.image_data){
-            if(!img_arr->imagecoll.Process_Images( GroupIndividualImages,
+            if(!img_arr->imagecoll.Process_Images_Parallel( GroupIndividualImages,
                                                    StandardThoraxHUWindow,
                                                    {},{} )){
                 FUNCERR("Unable to force window to cover a reasonable thorax HU range");
@@ -775,7 +786,7 @@ int main(int argc, char* argv[]){
         //This operation runs the images in an image array through a uniform window-and-leveler instead of per-slice
         // window-and-level or no window-and-level at all. Data is modified and no copy is made!
         for(auto & img_arr : DICOM_data.image_data){
-            if(!img_arr->imagecoll.Process_Images( GroupIndividualImages,
+            if(!img_arr->imagecoll.Process_Images_Parallel( GroupIndividualImages,
                                                    StandardBoneHUWindow,
                                                    {},{} )){
                 FUNCERR("Unable to force window to cover a reasonable bone HU range");
@@ -893,7 +904,7 @@ int main(int argc, char* argv[]){
 
         //Force the window to something reasonable to be uniform and cover normal tissue HU range.
         if(true) for(auto & img_arr : orig_img_arrays){
-            if(!img_arr->imagecoll.Process_Images( GroupIndividualImages,
+            if(!img_arr->imagecoll.Process_Images_Parallel( GroupIndividualImages,
                                                    StandardAbdominalHUWindow,
                                                    {}, {} )){
                 FUNCERR("Unable to force window to cover reasonable HU range");
@@ -913,7 +924,7 @@ int main(int argc, char* argv[]){
 
         //Force the window to something reasonable to be uniform and cover normal tissue HU range.
         if(true) for(auto & img_arr : temp_avgd){
-            if(!img_arr->imagecoll.Process_Images( GroupIndividualImages,
+            if(!img_arr->imagecoll.Process_Images_Parallel( GroupIndividualImages,
                                                    StandardAbdominalHUWindow,
                                                    {}, {} )){
                 FUNCERR("Unable to force window to cover reasonable HU range");
@@ -926,7 +937,7 @@ int main(int argc, char* argv[]){
             DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( *img_arr ) );
             all_avgd.emplace_back( DICOM_data.image_data.back() );
 
-            if(!all_avgd.back()->imagecoll.Process_Images( GroupAllImages,
+            if(!all_avgd.back()->imagecoll.Process_Images_Parallel( GroupAllImages,
                                                            CondenseMaxPixel,
                                                            {}, {} )){
                 FUNCERR("Unable to generate max(pixel) images");
@@ -958,14 +969,14 @@ int main(int argc, char* argv[]){
 
         //Force the window to something reasonable to be uniform and cover normal tissue HU range.
         if(true) for(auto & img_arr : intersecting_row){
-            if(!img_arr->imagecoll.Process_Images( GroupIndividualImages,
+            if(!img_arr->imagecoll.Process_Images_Parallel( GroupIndividualImages,
                                                    StandardAbdominalHUWindow,
                                                    {}, {} )){
                 FUNCERR("Unable to force window to cover reasonable HU range");
             }
         }
         if(true) for(auto & img_arr : intersecting_col){
-            if(!img_arr->imagecoll.Process_Images( GroupIndividualImages,
+            if(!img_arr->imagecoll.Process_Images_Parallel( GroupIndividualImages,
                                                    StandardAbdominalHUWindow,
                                                    {}, {} )){
                 FUNCERR("Unable to force window to cover reasonable HU range");
@@ -1017,14 +1028,14 @@ int main(int argc, char* argv[]){
 
         //Force the window to something reasonable to be uniform and cover normal tissue HU range.
         if(true) for(auto & img_arr : intersecting_row){
-            if(!img_arr->imagecoll.Process_Images( GroupIndividualImages,
+            if(!img_arr->imagecoll.Process_Images_Parallel( GroupIndividualImages,
                                                    StandardAbdominalHUWindow,
                                                    {}, {} )){
                 FUNCERR("Unable to force window to cover reasonable HU range");
             }
         }
         if(true) for(auto & img_arr : intersecting_col){
-            if(!img_arr->imagecoll.Process_Images( GroupIndividualImages,
+            if(!img_arr->imagecoll.Process_Images_Parallel( GroupIndividualImages,
                                                    StandardAbdominalHUWindow,
                                                    {}, {} )){
                 FUNCERR("Unable to force window to cover reasonable HU range");
@@ -1044,7 +1055,7 @@ int main(int argc, char* argv[]){
 
         //Force the window to something reasonable to be uniform and cover normal tissue HU range.
         if(true) for(auto & img_arr : orig_img_arrays){
-            if(!img_arr->imagecoll.Process_Images( GroupIndividualImages,
+            if(!img_arr->imagecoll.Process_Images_Parallel( GroupIndividualImages,
                                                    StandardAbdominalHUWindow,
                                                    {}, {} )){
                 FUNCERR("Unable to force window to cover reasonable HU range");
@@ -1112,7 +1123,7 @@ int main(int argc, char* argv[]){
                 DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( *img_arr ) );
                 baseline_img_arrays.emplace_back( DICOM_data.image_data.back() );
     
-                if(!baseline_img_arrays.back()->imagecoll.Process_Images( GroupSpatiallyOverlappingImages,
+                if(!baseline_img_arrays.back()->imagecoll.Process_Images_Parallel( GroupSpatiallyOverlappingImages,
                                                                           CondenseMinPixel,
                                                                           {}, {} )){
                     FUNCERR("Unable to generate min(pixel) images over the time course");
@@ -1167,7 +1178,7 @@ int main(int argc, char* argv[]){
         //Decimate the number of pixels for modeling purposes.
         //for(auto & img_arr : DICOM_data.image_data){
         for(auto & img_arr : C_enhancement_img_arrays){
-            if(!img_arr->imagecoll.Process_Images( GroupIndividualImages,
+            if(!img_arr->imagecoll.Process_Images_Parallel( GroupIndividualImages,
                                                    InImagePlanePixelDecimate,
                                                    {}, {} )){
                 FUNCERR("Unable to decimate pixels");
@@ -1239,7 +1250,7 @@ int main(int argc, char* argv[]){
                 DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( ) );
                 pharmaco_model_k2.emplace_back( DICOM_data.image_data.back() );
 
-                if(!pharmaco_model_dummy.back()->imagecoll.Process_Images( 
+                if(!pharmaco_model_dummy.back()->imagecoll.Process_Images_Parallel( 
                                   GroupSpatiallyOverlappingImages,
                                   LiverPharmacoModel5ParamLinear,
                                   { std::ref(pharmaco_model_kA.back()->imagecoll),
@@ -1337,7 +1348,7 @@ int main(int argc, char* argv[]){
                 DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( ) );
                 pharmaco_model_k2.emplace_back( DICOM_data.image_data.back() );
 
-                if(!pharmaco_model_dummy.back()->imagecoll.Process_Images( 
+                if(!pharmaco_model_dummy.back()->imagecoll.Process_Images_Parallel( 
                                   GroupSpatiallyOverlappingImages,
                                   LiverPharmacoModel5ParamCheby,
                                   { std::ref(pharmaco_model_kA.back()->imagecoll),
@@ -1356,7 +1367,13 @@ int main(int argc, char* argv[]){
         }
 
 
-
+        //Ensure the images are properly spatially ordered.
+        if(true){
+            for(auto & img_array : DICOM_data.image_data){
+                //img_array->imagecoll.Stable_Sort_on_Metadata_Keys_Value_Numeric<long int>("InstanceNumber");
+                img_array->imagecoll.Stable_Sort_on_Metadata_Keys_Value_Numeric<double>("SliceLocation");
+            }
+        }
     }
 
 
@@ -1368,7 +1385,7 @@ int main(int argc, char* argv[]){
 
         //Force the window to something reasonable to be uniform and cover normal tissue HU range.
         if(true) for(auto & img_arr : orig_img_arrays){
-            if(!img_arr->imagecoll.Process_Images( GroupIndividualImages,
+            if(!img_arr->imagecoll.Process_Images_Parallel( GroupIndividualImages,
                                                    StandardAbdominalHUWindow,
                                                    {}, {} )){
                 FUNCERR("Unable to force window to cover reasonable HU range");
@@ -1412,7 +1429,7 @@ int main(int argc, char* argv[]){
                 DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( *img_arr ) );
                 baseline_img_arrays.emplace_back( DICOM_data.image_data.back() );
     
-                if(!baseline_img_arrays.back()->imagecoll.Process_Images( GroupSpatiallyOverlappingImages,
+                if(!baseline_img_arrays.back()->imagecoll.Process_Images_Parallel( GroupSpatiallyOverlappingImages,
                                                                           CondenseMinPixel,
                                                                           {}, {} )){
                     FUNCERR("Unable to generate min(pixel) images over the time course");
@@ -1488,7 +1505,7 @@ int main(int argc, char* argv[]){
                 DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( *img_arr ) );
                 roi_highlighted_img_arrays.emplace_back( DICOM_data.image_data.back() );
 
-                if(!roi_highlighted_img_arrays.back()->imagecoll.Process_Images( GroupIndividualImages,
+                if(!roi_highlighted_img_arrays.back()->imagecoll.Process_Images_Parallel( GroupIndividualImages,
                                                                                  HighlightROIVoxels,
                                                                                  {}, cc_all )){
                     FUNCERR("Unable to highlight ROIs");
@@ -1536,7 +1553,7 @@ int main(int argc, char* argv[]){
             DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( *img_arr ) );
             max_pixel_img_arrays.emplace_back( DICOM_data.image_data.back() );
 
-            if(!max_pixel_img_arrays.back()->imagecoll.Process_Images( GroupSpatiallyOverlappingImages,
+            if(!max_pixel_img_arrays.back()->imagecoll.Process_Images_Parallel( GroupSpatiallyOverlappingImages,
                                                                        CondenseMaxPixel,
                                                                        {}, {} )){
                 FUNCERR("Unable to generate max(pixel) images over the time course");
@@ -1549,7 +1566,7 @@ int main(int argc, char* argv[]){
             DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( *img_arr ) );
             log_scaled_img_arrays.emplace_back( DICOM_data.image_data.back() );
 
-            if(!log_scaled_img_arrays.back()->imagecoll.Process_Images( GroupIndividualImages,
+            if(!log_scaled_img_arrays.back()->imagecoll.Process_Images_Parallel( GroupIndividualImages,
                                                                         LogScalePixels,
                                                                         {}, {} )){
                 FUNCERR("Unable to perform logarithmic pixel scaling");
@@ -1584,7 +1601,7 @@ int main(int argc, char* argv[]){
             DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( *img_arr ) );
             min_pixel_img_arrays.emplace_back( DICOM_data.image_data.back() );
 
-            if(!min_pixel_img_arrays.back()->imagecoll.Process_Images( GroupSpatiallyOverlappingImages,
+            if(!min_pixel_img_arrays.back()->imagecoll.Process_Images_Parallel( GroupSpatiallyOverlappingImages,
                                                                        CondenseMinPixel,
                                                                        {}, {} )){
                 FUNCERR("Unable to generate min(pixel) images over the time course");
@@ -1620,7 +1637,7 @@ int main(int argc, char* argv[]){
             DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( *img_arr ) );
             clip_likelihood_map_img_arrays.emplace_back( DICOM_data.image_data.back() );
 
-            if(!clip_likelihood_map_img_arrays.back()->imagecoll.Process_Images( GroupIndividualImages,
+            if(!clip_likelihood_map_img_arrays.back()->imagecoll.Process_Images_Parallel( GroupIndividualImages,
                                                                                  CTPerfusionSearchForLiverClips,
                                                                                  {}, {} )){
                 FUNCERR("Unable to perform search for liver clip markers");
@@ -1658,7 +1675,7 @@ int main(int argc, char* argv[]){
             DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( *img_arr ) );
             log_scaled_img_arrays.emplace_back( DICOM_data.image_data.back() );
 
-            if(!log_scaled_img_arrays.back()->imagecoll.Process_Images( GroupIndividualImages,
+            if(!log_scaled_img_arrays.back()->imagecoll.Process_Images_Parallel( GroupIndividualImages,
                                                                         LogScalePixels,
                                                                         {}, {} )){
                 FUNCERR("Unable to perform logarithmic pixel scaling");
@@ -2168,7 +2185,7 @@ int main(int argc, char* argv[]){
             DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( *img_arr ) );
             bilin_resampled_img_arrays.emplace_back( DICOM_data.image_data.back() );
 
-            if(!bilin_resampled_img_arrays.back()->imagecoll.Process_Images( GroupIndividualImages,
+            if(!bilin_resampled_img_arrays.back()->imagecoll.Process_Images_Parallel( GroupIndividualImages,
                                                                              InImagePlaneBilinearSupersample,
                                                                              {}, {} )){
                 FUNCERR("Unable to bilinearly supersample images");
@@ -2181,7 +2198,7 @@ int main(int argc, char* argv[]){
             DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( *img_arr ) );
             bicub_resampled_img_arrays.emplace_back( DICOM_data.image_data.back() );
 
-            if(!bicub_resampled_img_arrays.back()->imagecoll.Process_Images( GroupIndividualImages,
+            if(!bicub_resampled_img_arrays.back()->imagecoll.Process_Images_Parallel( GroupIndividualImages,
                                                                              InImagePlaneBicubicSupersample,
                                                                              {}, {} )){
                 FUNCERR("Unable to bicubically supersample images");
@@ -2195,7 +2212,7 @@ int main(int argc, char* argv[]){
             DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( *img_arr ) );
             cross_second_deriv_img_arrays.emplace_back( DICOM_data.image_data.back() );
 
-            if(!cross_second_deriv_img_arrays.back()->imagecoll.Process_Images( GroupIndividualImages,
+            if(!cross_second_deriv_img_arrays.back()->imagecoll.Process_Images_Parallel( GroupIndividualImages,
                                                                                 CrossSecondDerivative,
                                                                                 {}, {} )){
                 FUNCERR("Unable to compute 'cross' second-order partial derivative");

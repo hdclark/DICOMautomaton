@@ -7,6 +7,7 @@
 #include <memory>
 #include <chrono>
 #include <experimental/any>
+#include <mutex>
 
 #include <pqxx/pqxx>         //PostgreSQL C++ interface.
 #include <jansson.h>         //For JSON handling.
@@ -32,6 +33,7 @@
 
 #include "../../Pharmacokinetic_Modeling.h"
 
+std::mutex out_img_mutex;
 
 bool
 LiverPharmacoModel5ParamCheby(planar_image_collection<float,double>::images_list_it_t first_img_it,
@@ -71,9 +73,32 @@ LiverPharmacoModel5ParamCheby(planar_image_collection<float,double>::images_list
     }
 
     //Copy the incoming image to all the parameter maps. We will overwrite pixels as necessary.
-    for(auto &out_img_refw : out_imgs){
-        out_img_refw.get().images.emplace_back( *first_img_it );
-        out_img_refw.get().images.back().fill_pixels(std::numeric_limits<double>::quiet_NaN());
+    std::reference_wrapper<planar_image<float,double>> out_img_k1A  = std::ref( *first_img_it ); //Temporary refs.
+    std::reference_wrapper<planar_image<float,double>> out_img_tauA = std::ref( *first_img_it );
+    std::reference_wrapper<planar_image<float,double>> out_img_k1V  = std::ref( *first_img_it );
+    std::reference_wrapper<planar_image<float,double>> out_img_tauV = std::ref( *first_img_it );
+    std::reference_wrapper<planar_image<float,double>> out_img_k2   = std::ref( *first_img_it );
+
+    {
+        std::lock_guard<std::mutex> guard(out_img_mutex);
+
+        std::next(out_imgs.begin(),0)->get().images.emplace_back( *first_img_it );
+        std::next(out_imgs.begin(),1)->get().images.emplace_back( *first_img_it );
+        std::next(out_imgs.begin(),2)->get().images.emplace_back( *first_img_it );
+        std::next(out_imgs.begin(),3)->get().images.emplace_back( *first_img_it );
+        std::next(out_imgs.begin(),4)->get().images.emplace_back( *first_img_it );
+
+        out_img_k1A  = std::ref( std::next(out_imgs.begin(),0)->get().images.back() );
+        out_img_tauA = std::ref( std::next(out_imgs.begin(),1)->get().images.back() );
+        out_img_k1V  = std::ref( std::next(out_imgs.begin(),2)->get().images.back() );
+        out_img_tauV = std::ref( std::next(out_imgs.begin(),3)->get().images.back() );
+        out_img_k2   = std::ref( std::next(out_imgs.begin(),4)->get().images.back() );
+
+        out_img_k1A.get().fill_pixels(std::numeric_limits<double>::quiet_NaN());
+        out_img_tauA.get().fill_pixels(std::numeric_limits<double>::quiet_NaN());
+        out_img_k1V.get().fill_pixels(std::numeric_limits<double>::quiet_NaN());
+        out_img_tauV.get().fill_pixels(std::numeric_limits<double>::quiet_NaN());
+        out_img_k2.get().fill_pixels(std::numeric_limits<double>::quiet_NaN());
     }
 
     auto ContrastInjectionLeadTime = user_data_s->ContrastInjectionLeadTime;
@@ -429,13 +454,13 @@ LiverPharmacoModel5ParamCheby(planar_image_collection<float,double>::images_list
                             minmax_tauV.Digest(tauV_f);
                             minmax_k2.Digest(k2_f);
 
-                            auto out_img_refw_it = out_imgs.begin();
-                            std::next(out_img_refw_it,0)->get().images.back().reference(row, col, chan) = k1A_f;
-                            std::next(out_img_refw_it,1)->get().images.back().reference(row, col, chan) = tauA_f;
-                            std::next(out_img_refw_it,2)->get().images.back().reference(row, col, chan) = k1V_f;
-                            std::next(out_img_refw_it,3)->get().images.back().reference(row, col, chan) = tauV_f;
-                            std::next(out_img_refw_it,4)->get().images.back().reference(row, col, chan) = k2_f;
-
+                            {
+                                out_img_k1A.get().reference(row, col, chan)  = k1A_f;
+                                out_img_tauA.get().reference(row, col, chan) = tauA_f;
+                                out_img_k1V.get().reference(row, col, chan)  = k1V_f;
+                                out_img_tauV.get().reference(row, col, chan) = tauV_f;
+                                out_img_k2.get().reference(row, col, chan)   = k2_f;
+                            }
                             // ----------------------------------------------------------------------------
     
                         }//Loop over channels.
@@ -459,32 +484,21 @@ LiverPharmacoModel5ParamCheby(planar_image_collection<float,double>::images_list
     //Alter the first image's metadata to reflect that averaging has occurred. You might want to consider
     // a selective whitelist approach so that unique IDs are not duplicated accidentally.
 
-    {
-        auto it = out_imgs.begin();
-        auto out_img_refw = std::ref( it->get().images.back() );
-        UpdateImageDescription( out_img_refw, "Liver Pharmaco: k1A" );
-        UpdateImageWindowCentreWidth( out_img_refw, minmax_k1A );
+    UpdateImageDescription( out_img_k1A, "Liver Pharmaco: k1A" );
+    UpdateImageWindowCentreWidth( out_img_k1A, minmax_k1A );
 
-        ++it;
-        out_img_refw = std::ref( it->get().images.back() );
-        UpdateImageDescription( out_img_refw, "Liver Pharmaco: tauA" );
-        UpdateImageWindowCentreWidth( out_img_refw, minmax_tauA );
+    UpdateImageDescription( out_img_tauA, "Liver Pharmaco: tauA" );
+    UpdateImageWindowCentreWidth( out_img_tauA, minmax_tauA );
 
-        ++it;
-        out_img_refw = std::ref( it->get().images.back() );
-        UpdateImageDescription( out_img_refw, "Liver Pharmaco: k1V" );
-        UpdateImageWindowCentreWidth( out_img_refw, minmax_k1V );
+    UpdateImageDescription( out_img_k1V, "Liver Pharmaco: k1V" );
+    UpdateImageWindowCentreWidth( out_img_k1V, minmax_k1V );
 
-        ++it;
-        out_img_refw = std::ref( it->get().images.back() );
-        UpdateImageDescription( out_img_refw, "Liver Pharmaco: tauV" );
-        UpdateImageWindowCentreWidth( out_img_refw, minmax_tauV );
+    UpdateImageDescription( out_img_tauV, "Liver Pharmaco: tauV" );
+    UpdateImageWindowCentreWidth( out_img_tauV, minmax_tauV );
 
-        ++it;
-        out_img_refw = std::ref( it->get().images.back() );
-        UpdateImageDescription( out_img_refw, "Liver Pharmaco: k2" );
-        UpdateImageWindowCentreWidth( out_img_refw, minmax_k2 );
-    }
+    UpdateImageDescription( out_img_k2, "Liver Pharmaco: k2" );
+    UpdateImageWindowCentreWidth( out_img_k2, minmax_k2 );
+    
 
     return true;
 }
