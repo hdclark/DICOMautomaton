@@ -46,8 +46,8 @@ bool InImagePlanePixelDecimate(
     //   • 256 (256x256 etc..)
     //   • 512 (512x512 etc.. Will result in a single pixel!)
     //
-    const auto ScaleFactorR = 8;
-    const auto ScaleFactorC = 8;
+    const auto ScaleFactorR = 32;
+    const auto ScaleFactorC = 32;
 
     const auto NumberOfRowsRequired = first_img_it->rows / ScaleFactorR;
     const auto NumberOfColsRequired = first_img_it->columns / ScaleFactorC;

@@ -1372,6 +1372,7 @@ int main(int argc, char* argv[]){
             for(auto & img_array : DICOM_data.image_data){
                 //img_array->imagecoll.Stable_Sort_on_Metadata_Keys_Value_Numeric<long int>("InstanceNumber");
                 img_array->imagecoll.Stable_Sort_on_Metadata_Keys_Value_Numeric<double>("SliceLocation");
+                img_array->imagecoll.Stable_Sort_on_Metadata_Keys_Value_Numeric<double>("dt");
             }
         }
     }
