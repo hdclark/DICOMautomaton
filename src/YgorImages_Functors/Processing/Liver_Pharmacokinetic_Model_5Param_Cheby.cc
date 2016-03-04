@@ -391,8 +391,8 @@ LiverPharmacoModel5ParamCheby(planar_image_collection<float,double>::images_list
                             model_state.dcVIF = dCvenous;
                             model_state.cROI = channel_time_course;
 
-                            Pharmacokinetic_Parameters_5Param_Chebyshev after_state = Pharmacokinetic_Model_3Param_Chebyshev(model_state);
-                            //Pharmacokinetic_Parameters_5Param_Chebyshev after_state = Pharmacokinetic_Model_5Param_Chebyshev(model_state);
+                            //Pharmacokinetic_Parameters_5Param_Chebyshev after_state = Pharmacokinetic_Model_3Param_Chebyshev(model_state);
+                            Pharmacokinetic_Parameters_5Param_Chebyshev after_state = Pharmacokinetic_Model_5Param_Chebyshev(model_state);
 
                             if(!after_state.FittingSuccess) ++Minimization_Failure_Count;
 

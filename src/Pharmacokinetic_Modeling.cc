@@ -187,18 +187,22 @@ Pharmacokinetic_Model_5Param_Chebyshev(Pharmacokinetic_Parameters_5Param_Chebysh
     double params[dimen];
 
     //If there were finite parameters provided, use them as the initial guesses.
-    params[0] = std::isfinite(state.k1A)  ? state.k1A  : 0.0057;
-    params[1] = std::isfinite(state.tauA) ? state.tauA : 2.87;
-    params[2] = std::isfinite(state.k1V)  ? state.k1V  : 0.0052;
-    params[3] = std::isfinite(state.tauV) ? state.tauV : -14.4;
-    params[4] = std::isfinite(state.k2)   ? state.k2   : 0.033;
+    params[0] = std::isfinite(state.k1A)  ? state.k1A  : 0.0030;
+    params[1] = std::isfinite(state.tauA) ? state.tauA : 0.0000;
+    params[2] = std::isfinite(state.k1V)  ? state.k1V  : 0.0030;
+    params[3] = std::isfinite(state.tauV) ? state.tauV : 0.0000;
+    params[4] = std::isfinite(state.k2)   ? state.k2   : 0.0518;
 
     // U/L bounds:             k1A,  tauA,  k1V,  tauV,  k2.
-    //double l_bnds[dimen] = {   0.0, -20.0,  0.0, -20.0,  0.0 };
-    //double u_bnds[dimen] = {   1.0,  20.0,  1.0,  20.0,  1.0 };
+    double l_bnds[dimen] = {   0.0, -20.0,  0.0, -20.0,  0.0 };
+    double u_bnds[dimen] = {   1.0,  20.0,  1.0,  20.0,  1.0 };
                     
-    //Initial step sizes:      k1A,  tauA,  k1V,  tauV,  k2.
-    double initstpsz[dimen] = { 0.004, 1.0, 0.003, 1.0, 0.010 };
+    //Initial step sizes:          k1A,   tauA,    k1V,   tauV,    k2.
+    double initstpsz[dimen] = { 0.0040, 3.2000, 0.0040, 3.2000, 0.0050 };
+
+    //Absolute parameter change thresholds:   k1A,    tauA,     k1V,    tauV,     k2.
+    double xtol_abs_thresholds[dimen] = { 0.00005, 0.00010, 0.00005, 0.00010, 0.00005 };
+
 
     nlopt_opt opt; //See `man nlopt` to get list of available algorithms.
     //opt = nlopt_create(NLOPT_LN_COBYLA, dimen);   //Local, no-derivative schemes.
@@ -218,8 +222,8 @@ Pharmacokinetic_Model_5Param_Chebyshev(Pharmacokinetic_Parameters_5Param_Chebysh
     //opt = nlopt_create(NLOPT_GN_ESCH, dimen);
     //opt = nlopt_create(NLOPT_GN_ISRES, dimen);
                     
-    //nlopt_set_lower_bounds(opt, l_bnds);
-    //nlopt_set_upper_bounds(opt, u_bnds);
+    nlopt_set_lower_bounds(opt, l_bnds);
+    nlopt_set_upper_bounds(opt, u_bnds);
                     
     if(NLOPT_SUCCESS != nlopt_set_initial_step(opt, initstpsz)){
         FUNCERR("NLOpt unable to set initial step sizes");
@@ -227,8 +231,11 @@ Pharmacokinetic_Model_5Param_Chebyshev(Pharmacokinetic_Parameters_5Param_Chebysh
     if(NLOPT_SUCCESS != nlopt_set_min_objective(opt, chebyshev_5param_func_to_min, reinterpret_cast<void*>(&state))){
         FUNCERR("NLOpt unable to set objective function for minimization");
     }
-    if(NLOPT_SUCCESS != nlopt_set_xtol_rel(opt, 1.0E-3)){
-        FUNCERR("NLOpt unable to set xtol stopping condition");
+    //if(NLOPT_SUCCESS != nlopt_set_xtol_rel(opt, 1.0E-3)){
+    //    FUNCERR("NLOpt unable to set xtol stopping condition");
+    //}
+    if(NLOPT_SUCCESS != nlopt_set_xtol_abs(opt, xtol_abs_thresholds)){
+        FUNCERR("NLOpt unable to set xtol_abs stopping condition");
     }
     if(NLOPT_SUCCESS != nlopt_set_maxtime(opt, 30.0)){ // In seconds.
         FUNCERR("NLOpt unable to set maxtime stopping condition");
@@ -333,14 +340,14 @@ Pharmacokinetic_Model_3Param_Chebyshev(Pharmacokinetic_Parameters_5Param_Chebysh
 
     const int dimen = 3;
 
-    //Fitting parameters:      k1A,  tauA,   k1V,  tauV,  k2.
+    //Fitting parameters:      k1A,  k1V,  k2.
     // The following are arbitrarily chosen. They should be seeded from previous computations, or
     // at least be nominal values reported within the literature.
     double params[dimen];
 
     //If there were finite parameters provided, use them as the initial guesses.
-    params[0] = std::isfinite(state.k1A)  ? state.k1A  : 0.0098;
-    params[1] = std::isfinite(state.k1V)  ? state.k1V  : 0.0010;
+    params[0] = std::isfinite(state.k1A)  ? state.k1A  : 0.0030;
+    params[1] = std::isfinite(state.k1V)  ? state.k1V  : 0.0030;
     params[2] = std::isfinite(state.k2)   ? state.k2   : 0.0518;
 
     // U/L bounds:               k1A,  k1V,  k2.
