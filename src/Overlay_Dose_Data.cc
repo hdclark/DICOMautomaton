@@ -110,8 +110,6 @@ Drover DICOM_data;
 std::unique_ptr<Contour_Data> Subsegmented_New__Style_Contour_Data;
 std::unique_ptr<Contour_Data> Bounding_Box_Contour_Data;
 
-std::vector<vec3<double>> reconstructed_vertices; //Used for surface reconstruction.
-
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void ReSizeGLScene(int Width, int Height){
@@ -220,39 +218,54 @@ void DrawGLScene(){
         glEnd();
     }
 
+    //------------------------------------------ Image Data ----------------------------------------------
+    if(DICOM_data.Has_Image_Data() && (which_frame >= 0)){
+        //Cycle over image data.
+        //
 
-/*
-    //------------------------------------------ Image Data ---------------------------------------------
-    if(DICOM_data.Has_Image_Data()){
-        for(size_t i=0; i<DICOM_data.CT_data->rows; ++i)  for(size_t j=0; j<DICOM_data.CT_data->columns; ++j){
-            glBegin(GL_QUADS);
-            float R = 0.0, G = 0.0, B = 0.0;
-    
-            //R = DICOM_data.CT_data->clamped_channel(0);
-            G = CT_Tweak_Bright * DICOM_data.CT_data->clamped_channel(1, i, j, which_frame);
-            //B = DICOM_data.CT_data->clamped_channel(2);
-    
-            if(G > 1.0) G = 1.0;
-    
-            glColor4f(R,G,B, 0.75);
-    
-            float central_x = DICOM_data.CT_data->x(i, j, which_frame);
-            float central_y = DICOM_data.CT_data->y(i, j, which_frame);
-            float central_z = DICOM_data.CT_data->z(i, j, which_frame);
-    
-            central_x += CT_Tweak_Horiz;
-            central_y += CT_Tweak_Vert;
-                
-            glVertex3f( (central_y - 0.5*DICOM_data.CT_data->pixel_dy), (central_x + 0.5*DICOM_data.CT_data->pixel_dx), central_z );
-            glVertex3f( (central_y - 0.5*DICOM_data.CT_data->pixel_dy), (central_x - 0.5*DICOM_data.CT_data->pixel_dx), central_z );
-            glVertex3f( (central_y + 0.5*DICOM_data.CT_data->pixel_dy), (central_x - 0.5*DICOM_data.CT_data->pixel_dx), central_z );
-            glVertex3f( (central_y + 0.5*DICOM_data.CT_data->pixel_dy), (central_x + 0.5*DICOM_data.CT_data->pixel_dx), central_z );
-    
-            glEnd();
+        glBegin(GL_QUADS);
+
+        long int frame_number = 0;
+        for(auto l_it = DICOM_data.image_data.begin(); l_it != DICOM_data.image_data.end(); ++l_it){
+            for(auto pi_it = (*l_it)->imagecoll.images.begin(); pi_it != (*l_it)->imagecoll.images.end(); ++pi_it){
+                ++frame_number;
+                if((frame_number - 1) != which_frame){
+                    continue;
+                }
+
+                //Used to, for example, rescale the images to fill the screen.
+                if(dose_image_displayed == nullptr) dose_image_displayed = &(*pi_it);
+       
+                //Cycle over pixels.
+                float R = 0.0, G = 0.0, B = 0.0;
+                for(long int r = 0; r < pi_it->rows; ++r) for(long int c = 0; c < pi_it->columns; ++c){
+                    const auto val = pi_it->value(r,c,0); //Red channel only.
+
+                    //Clamp/scale the dose to something reasonable. We can scale it while viewing.
+                    // Lack of windowing is a serious omission!
+                    G = CT_Tweak_Bright * 0.5 * (static_cast<double>(val) + 1000.0)/1000.0;
+                    if(G > 1.0) G = 1.0;
+                    if(G < 0.0) G = 0.0;
+                    B = G;
+                    R = G;
+        
+                    vec3<double> pos = pi_it->position(r,c);
+                    pos.x += CT_Tweak_Horiz;
+                    pos.y += CT_Tweak_Vert;
+
+                    //Only draw if you need to. Do not draw completely black things.
+                    if((R != 0.0) && (G != 0.0) && (B != 0.0)){
+                        glColor4f(R,G,B, 0.7);
+                        glVertex3f( (pos.x - 0.5*pi_it->pxl_dx), (pos.y + 0.5*pi_it->pxl_dy), pos.z );
+                        glVertex3f( (pos.x - 0.5*pi_it->pxl_dx), (pos.y - 0.5*pi_it->pxl_dy), pos.z );
+                        glVertex3f( (pos.x + 0.5*pi_it->pxl_dx), (pos.y - 0.5*pi_it->pxl_dy), pos.z );
+                        glVertex3f( (pos.x + 0.5*pi_it->pxl_dx), (pos.y + 0.5*pi_it->pxl_dy), pos.z );
+                    }
+                }
+            }
         }
+        glEnd();
     }
-*/
-    
 
     //----------------------------------------- Contour Data --------------------------------------------
     if(DICOM_data.Has_Contour_Data()){
@@ -368,112 +381,6 @@ void DrawGLScene(){
             }
         }
     }
-
-/*
-    //Attempt to construct 3D surfaces from the points of the contour. Only done for the currently selected organ.
-    if(DICOM_data.Has_Contour_Data()){
-
-        //Switch to segmented data if the user wants (and it exists).
-        decltype(DICOM_data.contour_data.get()) Which_contour_data;
-        if(Show_Segmented_Contours && (Subsegmented_New__Style_Contour_Data != nullptr)){
-            Which_contour_data = Subsegmented_New__Style_Contour_Data.get();
-        }else{
-            Which_contour_data = DICOM_data.contour_data.get();
-        }
-
-        for(auto cc_it = Which_contour_data->ccs.begin(); cc_it != Which_contour_data->ccs.end(); ++cc_it){
-            for(auto c_it = cc_it->contours.begin(); c_it != cc_it->contours.end(); ++c_it){
-                //Check if contour is within the inner and outer orthos! If it is outside, don't draw it.
-
-                // ...
-
-                //If we have dose, check if this contour is within the thickness of the image. If not, omit it.
-                if(dose_image_displayed != nullptr){
-                    const auto avg_point = c_it->First_N_Point_Avg(3); //Centroid(); //Average_Point();
-                    if(!dose_image_displayed->sandwiches_point_within_top_bottom_planes(avg_point)) continue;
-                }
-
-                //Check if there are a sufficient number of points in the contour (sometimes due to incomplete 
-                // erasing there are very small bits of contours lying around).
-                if(c_it->points.size() < 3) continue;
-                glBegin(GL_LINE_STRIP); //GL_LINE_LOOP is occasionally buggy. We simply link the ends ourselves.
-
-                //If the contour is of special interest, print it in a different colour.
-                glColor4f(0.0f, 0.0f, 1.0f, 0.2f);
-                if(cc_it->ROI_number == chosen_contour) glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
-
-                if(c_it->closed){
-                    auto p_it = --(c_it->points.end());
-                    float central_x = static_cast<float>(p_it->x) + Contour_Tweak_Horiz;
-                    float central_y = static_cast<float>(p_it->y) + Contour_Tweak_Vert;
-                    float central_z = static_cast<float>(p_it->z);
-                    glVertex3f(central_x,central_y,central_z);
-
-                    if((Intercept_Contour_Data == true) && (cc_it->ROI_number == chosen_contour)){
-                        ShuttleOut << central_x << " " << central_y << " " << central_z << " ";  //Do not terminate.
-                    }
-                }
-
-                for(auto p_it = c_it->points.begin(); p_it != c_it->points.end(); ++p_it){
-                    float central_x = static_cast<float>(p_it->x) + Contour_Tweak_Horiz;
-                    float central_y = static_cast<float>(p_it->y) + Contour_Tweak_Vert;
-                    float central_z = static_cast<float>(p_it->z);
-                    glVertex3f(central_x,central_y,central_z);
-
-                    if((Intercept_Contour_Data == true) && (cc_it->ROI_number == chosen_contour)){
-                        ShuttleOut << central_x << " " << central_y << " " << central_z << std::endl; //Terminate line.
-                        if(std::next(p_it) != c_it->points.end()){
-                            ShuttleOut << central_x << " " << central_y << " " << central_z << " ";
-                        }
-                    }
-                }
-                glEnd();
-            }
-        }
-    }
-*/
-
-
-    if(!reconstructed_vertices.empty()){
-        glBegin(GL_TRIANGLES);
-        glColor4f(1.0,1.0,0.0,0.7);
-        for(auto v3_it = reconstructed_vertices.begin(); v3_it != reconstructed_vertices.end(); ++v3_it){
-            glVertex3f(v3_it->x, v3_it->y, v3_it->z);
-            ++v3_it;
-            glVertex3f(v3_it->x, v3_it->y, v3_it->z);
-            ++v3_it;
-            glVertex3f(v3_it->x, v3_it->y, v3_it->z);
-            ++v3_it;
-            glNormal3f(v3_it->x, v3_it->y, v3_it->z);
-        }
-        glEnd();
-    }
-
-    //Bounding boxes on the contours.
-    if( (Bounding_Box_Contour_Data != nullptr) && (Show_Bounding_Box == true) ){
-/*
-        for(auto c_iter = Bounding_Box_Contour_Data->contours.begin(); c_iter != Bounding_Box_Contour_Data->contours.end(); ++c_iter){ //"Contour iterator"
-            glBegin(GL_LINE_LOOP); //glBegin(GL_LINE_STRIP);
-
-            //If the contour is of special interest, print it in a different colour.
-            if((*c_iter).ROI_number == chosen_contour){
-                glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
-            }else{
-                glColor4f(0.0f, 0.0f, 1.0f, 0.2f);
-            }
-
-            for(auto p_iter = (*c_iter).points.begin(); p_iter != (*c_iter).points.end(); ++p_iter){ //"Point iterator"
-                float central_x = static_cast<float>( (*p_iter).x ) + Contour_Tweak_Horiz;
-                float central_y = static_cast<float>( (*p_iter).y ) + Contour_Tweak_Vert;
-                float central_z = static_cast<float>( (*p_iter).z );
-                glVertex3f( central_x,  central_y,  central_z );
-            }
-            glEnd();
-        }
-
-*/
-    }
-
 
     if(Dump_Frame_As_Image){
         Dump_Frame_As_Image = false;
@@ -689,22 +596,6 @@ void keyPressed(unsigned char key, int /* x */, int /* y */){
         printed_subseg_string = false;
         FUNCINFO("Highlighted subsegmentation is (arb. family number) " << chosen_subseg << ". Readable subseg string will be dumped if it exists.");
 
-/*
-    //CONTOUR TWEAKING.
-    }else if(key == 'V'){   //Adjust upward.
-        Contour_Tweak_Vert += 1.0;
-        FUNCINFO("Tweak vertical parameter is " << Contour_Tweak_Vert );
-    }else if(key == 'F'){   //Adjust downward.
-        Contour_Tweak_Vert -= 1.0;
-        FUNCINFO("Tweak vertical parameter is " << Contour_Tweak_Vert );
-    }else if(key == 'B'){   //Adjust leftward.
-        Contour_Tweak_Horiz += 1.0;
-        FUNCINFO("Tweak horizontal parameter is " << Contour_Tweak_Horiz );
-    }else if(key == 'C'){   //Adjust rightward.
-        Contour_Tweak_Horiz -= 1.0;
-        FUNCINFO("Tweak horizontal parameter is " << Contour_Tweak_Horiz );
-  */ 
-
     //CT TWEAKING.
     }else if(key == 'V'){   //Adjust upward.
         CT_Tweak_Vert += 1.0;
@@ -837,76 +728,6 @@ void keyPressed(unsigned char key, int /* x */, int /* y */){
         ShuttleOut << "# NOTE: These objects can be selectively loaded by grepping the info at the end of the lines!" << std::endl;
         ShuttleOut << " DX=0.0 ; DY=0.0 ; DZ=0.0 ; " << std::endl;
 
-
-    }else if(key == 'I'){
-        //Performs a bad quality surface reconstruction and dumps data as a series of reconstructed_vertices denoting triangles of a mesh.
-        decltype(DICOM_data.contour_data.get()) Which_contour_data;
-        if(Show_Segmented_Contours && (Subsegmented_New__Style_Contour_Data != nullptr)){
-            Which_contour_data = Subsegmented_New__Style_Contour_Data.get();
-        }else{
-            Which_contour_data = DICOM_data.contour_data.get();
-        }
-        for(auto cc_it = Which_contour_data->ccs.begin(); cc_it != Which_contour_data->ccs.end(); ++cc_it){
-            //Cycle through all the contour slices to determine if the ROI number is contained within.
-            // Dump all occurences.
-            for(auto c_it = cc_it->contours.begin(); c_it != cc_it->contours.end(); ++c_it){
-                if(cc_it->ROI_number == chosen_contour){
-
-                    reconstructed_vertices = cc_it->Generate_Reconstructed_Surface(1.0);
-
-                    //-------------------------------------------------------------------------------
-                    //ASCII STL (stereolithography) file format.
-                    //-------------------------------------------------------------------------------
-                    //Ensure that no coordinates are negative.
-                    vec3<double> offset(0.0,0.0,0.0);
-                    for(auto v3_it = reconstructed_vertices.begin(); v3_it != reconstructed_vertices.end(); ++v3_it){
-                        const auto V1   = *v3_it;     ++v3_it;
-                        const auto V2   = *v3_it;     ++v3_it;
-                        const auto V3   = *v3_it;     ++v3_it;
-                        //const auto Norm = *v3_it;
-                        if((offset.x + V1.x) < 0.0) offset.x = -V1.x;
-                        if((offset.y + V1.y) < 0.0) offset.y = -V1.y;
-                        if((offset.z + V1.z) < 0.0) offset.z = -V1.z;
-                        if((offset.x + V2.x) < 0.0) offset.x = -V2.x;
-                        if((offset.y + V2.y) < 0.0) offset.y = -V2.y;
-                        if((offset.z + V2.z) < 0.0) offset.z = -V2.z;
-                        if((offset.x + V3.x) < 0.0) offset.x = -V3.x;
-                        if((offset.y + V3.y) < 0.0) offset.y = -V3.y;
-                        if((offset.z + V3.z) < 0.0) offset.z = -V3.z;
-                    }
-
-                    FilenameOut = Get_Unique_Filename(FilenameOut, 10, ".stl");
-                    std::stringstream Shuttle;
-                    Shuttle << "solid 3D Vertices generated by OverlayDoseData for contour '" << Contour_classifications[chosen_contour]  << "'" << std::endl;
-                    for(auto v3_it = reconstructed_vertices.begin(); v3_it != reconstructed_vertices.end(); ++v3_it){
-                        const auto V1   = *v3_it + offset;     ++v3_it;
-                        const auto V2   = *v3_it + offset;     ++v3_it;
-                        const auto V3   = *v3_it + offset;     ++v3_it;
-                        const auto Norm = *v3_it; 
-                        Shuttle << "facet normal " << Norm.x << " " << Norm.y << " " << Norm.z << std::endl;
-                        Shuttle << "outer loop" << std::endl;
-                        Shuttle << "vertex " << V1.x << " " << V1.y << " " << V1.z << std::endl;
-                        Shuttle << "vertex " << V2.x << " " << V2.y << " " << V2.z << std::endl;
-                        Shuttle << "vertex " << V3.x << " " << V3.y << " " << V3.z << std::endl;
-                        Shuttle << "endloop" << std::endl;
-                        Shuttle << "endfacet" << std::endl;
-                    }
-                    Shuttle << "endsolid 3D Vertices generated by OverlayDoseData for contour '" << Contour_classifications[chosen_contour]  << "'" << std::endl;
-
-                    if(!WriteStringToFile(Shuttle.str(), FilenameOut)){
-                        FUNCWARN("Unable to write 3D vertex data to file. Continuing");
-                    }else{
-                        FUNCINFO("Wrote vertex data to '" << FilenameOut << "'");
-                    }
-                    //-----------------------------------------------------------------------------
-
-                    FilenameOut = Get_Unique_Filename(std::string("/tmp/DICOMautomaton_overlaydosedata_out_-_"), 10);
-
-                    break; //Avoid re-dumping this structure.
-                }
-            }
-        }
-    
     }else if(key == 'J'){
         //Signal that the (bitmap) frame should be copied and written as a raw file.
         Dump_Frame_As_Image = true;
@@ -920,116 +741,6 @@ void keyPressed(unsigned char key, int /* x */, int /* y */){
 
 
 void processMouse(int /* button */, int /* state */, int /* x */, int /* y */){
-
-
-/*
-    if(button == GLUT_LEFT_BUTTON){
-        if(state == GLUT_DOWN){
-
-            //This will output dose file coordinates (in actual units.)
-            if((x != -1) && (y != -1)){
-
-                FUNCWARN("The following information ONLY considers a single dose file. If there are more, this data will certainly be incorrect!");
-                const std::shared_ptr<Pixel_Data> dose_pixel_ptr = *(DICOM_data.dose_data.begin());
-
-                float scale_x = (static_cast<float>(x)/( static_cast<float>(Screen_Pixel_Width) ));
-                float scale_y = (static_cast<float>(y)/( static_cast<float>(Screen_Pixel_Height) ));
-
-  
-                // FIXME - This is not correct! It *might* work _only_ for unscaled results!
-                unsigned int i = static_cast<unsigned int>( scale_y * static_cast<float>(dose_pixel_ptr->rows));
-                unsigned int j = static_cast<unsigned int>( scale_x * static_cast<float>(dose_pixel_ptr->columns));
-
-                float central_x = dose_pixel_ptr->x(i, j, which_frame);
-                float central_y = dose_pixel_ptr->y(i, j, which_frame);
-                float central_z = dose_pixel_ptr->z(i, j, which_frame);
-
-                central_x += Dose_Tweak_Horiz;
-                central_y += Dose_Tweak_Vert;
-                FUNCINFO("Current mouse actual coordinates (dose): " << central_x << " " << central_y << " " << central_z );
-                FUNCINFO("  and the data storage coordinates are:  " << i << " (the row)  " << j << " (the column)  " << which_frame );
-
-                //Get a dose profile along at the x (row) we clicked on, on the slice we are on, along the y (columns.)
-                if(glutGetModifiers() & GLUT_ACTIVE_CTRL){
-                    std::fstream FO;
-                    FO.open(FilenameOut.c_str(), std::ifstream::out);
-                    if( FO.fail() ){
-                        FUNCWARN("Unable to open output file \"" << FilenameOut << "\". Aborting output attempt. ");
-                        return;
-                    }
-
-                    FO << "# Dose profile: " << std::endl;
-                    for(unsigned int dumb=0; dumb < dose_pixel_ptr->filenames.size(); ++dumb){
-                        FO << "#    Filename:" <<  dose_pixel_ptr->filenames[dumb] << ", " << std::endl;
-                    }
-                    FO << "# row = " << i << "   columns = {0,1,2,...," << dose_pixel_ptr->columns << "}   slice#   dose (clamped to 1.0)." << std::endl;
-                    
-                    for(unsigned int rw = 0; rw < dose_pixel_ptr->rows; ++rw){
-                        FO << rw << " " << j << " " << which_frame << " " << dose_pixel_ptr->clamped_channel(0, rw, j, which_frame) << std::endl;
-                    }
-
-                    FO.close();
-                    FUNCINFO("Wrote depth-dose profile to \"" << FilenameOut.c_str() << "\". ");
-
-                //Get a dose profile along the other axis.
-                }else if( glutGetModifiers() & GLUT_ACTIVE_SHIFT){
-                    std::fstream FO;
-                    FO.open(FilenameOut.c_str(), std::ifstream::out);
-                    if( FO.fail() ){
-                        FUNCWARN("Unable to open output file \"" << FilenameOut << "\". Aborting output attempt. ");
-                        return;
-                    }
-
-                    FO << "# Dose profile: " << std::endl;
-                    for(unsigned int dumb=0; dumb < dose_pixel_ptr->filenames.size(); ++dumb){
-                        FO << "#    Filename:" <<  dose_pixel_ptr->filenames[dumb] << ", " << std::endl;
-                    }
-                    FO << "# row = " << i << "   columns = {0,1,2,...," << dose_pixel_ptr->columns << "}   slice#   dose (clamped to 1.0)." << std::endl;
-
-                    for(unsigned int col = 0; col < dose_pixel_ptr->columns; ++col){
-                        FO << i << " " << col << " " << which_frame << " " << dose_pixel_ptr->clamped_channel(0, i, col, which_frame) << std::endl;
-
-                    }
-
-                    FO.close();
-                    FUNCINFO("Wrote depth-dose profile to \"" << FilenameOut.c_str() << "\". ");
-
-                }
-
-            }
-        }
-    }
-
-
-    if(button == GLUT_RIGHT_BUTTON){
-        if(state == GLUT_DOWN){
-            //This will output the screen coordinates (in pixels.)
-            FUNCINFO("Current mouse screen coordinates: " << x << "  " << y << " and slice number " << which_frame); 
-        }
-    }
-
-    if(button == GLUT_WHEEL_UP){
-        if(glutGetModifiers() & GLUT_ACTIVE_CTRL){  
-            
-        }else{
-            //Zoom in (also can use 'z' and 'Z'.)
-            ZOOM *= 1.0/1.07;
-            FUNCINFO("Zoom is now: " << ZOOM );
-            InitGL(Screen_Pixel_Width, Screen_Pixel_Height);
-        }
-    }
-
-    if(button == GLUT_WHEEL_DOWN){
-        if(glutGetModifiers() & GLUT_ACTIVE_CTRL){
-
-        }else{
-            //Zoom out (also can use 'z' and 'Z'.)
-            ZOOM *= 1.07;
-            FUNCINFO("Zoom is now: " << ZOOM );
-            InitGL(Screen_Pixel_Width, Screen_Pixel_Height);
-        }
-    }
-*/
     return;
 }
 
@@ -1152,7 +863,7 @@ int main(int argc, char* argv[]){
 //---------------------------------------------------------------------------------------------------------------------
     //For each input file, we grab the modality and sort into filename vectors.
     std::vector<std::string> Filenames_In_Struct;  //RTSTRUCT modality. (RS structure file - contour (1D) data.)
-    std::vector<std::string> Filenames_In_CT;      //Image modalities.  (CT/MR/US data file. 2D pixel data.)
+    std::list<std::string> Filenames_In_CT;        //Image modalities.  (CT/MR/US data file. 2D pixel data.)
     std::list<std::string> Filenames_In_Dose;      //RTDOSE modality.   (RD dose files. 3D pixel data.)
 
     for(auto it=Filenames_In.begin(); it!=Filenames_In.end(); ++it){
@@ -1187,6 +898,7 @@ int main(int argc, char* argv[]){
     //Load the pixel and contour data. This may take a long time, because all data is loaded into memory asap.
     if(!Filenames_In_Struct.empty()) Contour_classifications  = get_ROI_tags_and_numbers(Filenames_In_Struct[0]);
     if(!Filenames_In_Struct.empty()) DICOM_data.contour_data  = get_Contour_Data(Filenames_In_Struct[0]);
+    if(!Filenames_In_CT.empty())     DICOM_data.image_data    = Load_Image_Arrays(Filenames_In_CT);
     if(!Filenames_In_Dose.empty())   DICOM_data.dose_data     = Load_Dose_Arrays(Filenames_In_Dose);
 
 //---------------------------------------------------------------------------------------------------------------------
