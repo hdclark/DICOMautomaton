@@ -296,13 +296,11 @@ int main(int argc, char* argv[]){
     }
     if(FilenameLex.empty()){ 
         std::list<std::string> trial = { 
-                "/home/hal/Dropbox/Project - Explicator/Sample_Lexicons/20150925_SGF_and_SGFQ_tags.lexicon",
-                "/home/hal/Dropbox/Project - Explicator/Sample_Lexicons/Frozen/20150925/20150925_SGF_and_SGFQ_tags.lexicon",
-                "Lexicons/20150925_SGF_and_SGFQ_tags.lexicon",
-                "../Lexicons/20150925_SGF_and_SGFQ_tags.lexicon",
                 "20150925_SGF_and_SGFQ_tags.lexicon",
-                "/home/hal/Dropbox/Project - DICOMautomaton/Lexicons/20150925_SGF_and_SGFQ_tags.lexicon",
-                "/home/hal/20150925_SGF_and_SGFQ_tags.lexicon" };
+                "Lexicons/20150925_SGF_and_SGFQ_tags.lexicon",
+                "/usr/share/explicator/lexicons/20150925_20150925_SGF_and_SGFQ_tags.lexicon",
+                "/usr/share/explicator/lexicons/20130319_SGF_filter_data_deciphered5.lexicon",
+                "/usr/share/explicator/lexicons/20121030_SGF_filter_data_deciphered4.lexicon" };
         for(auto it = trial.begin(); it != trial.end(); ++it) if(Does_File_Exist_And_Can_Be_Read(*it)){
             FilenameLex = *it;
             FUNCINFO("No lexicon was provided. Using file '" << FilenameLex << "' as lexicon");
