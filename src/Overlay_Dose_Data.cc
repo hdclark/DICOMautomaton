@@ -146,8 +146,10 @@ void DrawGLScene(){
 
     //Rotate about the object. Translate into it's center, rotate the camera, and
     // translate back. This gives the illusion of the object spinning.
-    if(DICOM_data.Has_Dose_Data()){
-        const auto center = DICOM_data.dose_data.front()->imagecoll.center();
+    if(DICOM_data.Has_Dose_Data() || DICOM_data.Has_Image_Data()){
+        vec3<double> center;
+        if(DICOM_data.Has_Dose_Data()) center = DICOM_data.dose_data.front()->imagecoll.center();
+        if(DICOM_data.Has_Image_Data()) center = DICOM_data.image_data.front()->imagecoll.center();
 
         glTranslatef(center.x,center.y,center.z);
         glRotatef(Lateral_Rot,1.0,0.0,0.0);
