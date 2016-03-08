@@ -100,12 +100,6 @@
 #include "YgorImages_Functors/Compute/Contour_Similarity.h"
 //#include "YgorImages_Functors/Compute/Orthogonal_Slices.h"
 
-
-//Globals. Libimebrashim expects these to be defined.
-bool VERBOSE = false;  //Provides additional information.
-bool QUIET   = false;  //Suppresses ALL information. Not recommended!
-
-
 std::unique_ptr<Contour_Data> Combine_Contour_Data(std::unique_ptr<Contour_Data> A,
                                                    std::unique_ptr<Contour_Data> B){
     //This routine simply combines A and B's contour collections. No internal checking is performed.
@@ -332,7 +326,7 @@ int main(int argc, char* argv[]){
     
             //Otherwise, only dump some basic info if verbosity settings permit.
             }else{
-                if(VERBOSE && !QUIET) FUNCINFO("Query1 stage: number of records found = " << r1.size());
+                FUNCINFO("Query1 stage: number of records found = " << r1.size());
             }
     
             //-------------------------------------------------------------------------------------------------------------
@@ -545,7 +539,7 @@ int main(int argc, char* argv[]){
 
         DICOM_data.image_data.emplace_back(std::move(collated_imgs));
     }
-    if(VERBOSE && !QUIET) FUNCINFO("Number of image set groups loaded = " << DICOM_data.image_data.size());
+    FUNCINFO("Number of image set groups loaded = " << DICOM_data.image_data.size());
 
     for(auto & loaded_dose_set : loaded_dose_storage){
         if(loaded_dose_set.empty()) continue;
@@ -3212,12 +3206,6 @@ int main(int argc, char* argv[]){
                     }
 
                 }else if(window.hasFocus() && (event.type == sf::Event::MouseWheelMoved)){
-//                    if(VERBOSE && !QUIET){
-//                        FUNCINFO("Mouse wheel moved");
-//                        std::cout << "wheel movement: " << event.mouseWheel.delta << std::endl;
-//                        std::cout << "mouse x: " << event.mouseWheel.x << std::endl;
-//                        std::cout << "mouse y: " << event.mouseWheel.y << std::endl;
-//                    }
                     const auto delta = static_cast<double>(event.mouseWheel.delta);
                     const auto pressing_shift = sf::Keyboard::isKeyPressed(sf::Keyboard::LShift);
                     const auto pressing_control = sf::Keyboard::isKeyPressed(sf::Keyboard::LControl);
@@ -3265,21 +3253,12 @@ int main(int argc, char* argv[]){
                     }
 
                 }else if(window.hasFocus() && (event.type == sf::Event::MouseButtonPressed)){
-                    if(VERBOSE && !QUIET) FUNCINFO("Mouse button pressed");
 
                     if(event.mouseButton.button == sf::Mouse::Left){
-                        if(VERBOSE && !QUIET){
-                            std::cout << "the left button was pressed" << std::endl;
-                            std::cout << "mouse x: " << event.mouseButton.x << std::endl;
-                            std::cout << "mouse y: " << event.mouseButton.y << std::endl;
-                        }
-
                         sf::Vector2f ClickWorldPos = window.mapPixelToCoords(sf::Vector2i(event.mouseButton.x,event.mouseButton.y));
                         sf::FloatRect DispImgBBox = disp_img_texture_sprite.second.getGlobalBounds();
                         if(DispImgBBox.contains(ClickWorldPos)){
                             // ---- Draw on the image where we have clicked ----
-                            if(VERBOSE && !QUIET) FUNCINFO("Clicked INSIDE img bbox");
-
                             //Assuming the image is not rotated or skewed (though possibly scaled), determine which image pixel
                             // we are hovering over.
                             const auto clamped_col_as_f = fabs(ClickWorldPos.x - DispImgBBox.left)/(DispImgBBox.width);
@@ -3289,7 +3268,7 @@ int main(int argc, char* argv[]){
                             const auto col_as_u = static_cast<uint32_t>(clamped_col_as_f * static_cast<float>(img_w_h.x));
                             const auto row_as_u = static_cast<uint32_t>(clamped_row_as_f * static_cast<float>(img_w_h.y));
 
-                            if(VERBOSE && !QUIET) FUNCINFO("Suspected updated row, col = " << row_as_u << ", " << col_as_u);                           
+                            FUNCINFO("Suspected updated row, col = " << row_as_u << ", " << col_as_u);                           
                             sf::Uint8 newpixvals[4] = {255, 0, 0, 255};
                             disp_img_texture_sprite.first.update(newpixvals,1,1,col_as_u,row_as_u);
                             disp_img_texture_sprite.second.setTexture(disp_img_texture_sprite.first);
@@ -3305,9 +3284,6 @@ int main(int argc, char* argv[]){
                                 FUNCWARN("Unable to find display image's FrameofReferenceUID. Cannot insert point in contour");
 
                             }
-               
-                        }else{
-                            if(VERBOSE && !QUIET) FUNCINFO("Clicked OUTSIDE img bbox");
                         }
 
                     }
@@ -3315,20 +3291,10 @@ int main(int argc, char* argv[]){
                 }else if(window.hasFocus() && (event.type == sf::Event::MouseButtonReleased)){
 
                 }else if(window.hasFocus() && (event.type == sf::Event::MouseMoved)){
-                    if(VERBOSE && !QUIET){
-                        FUNCINFO("Mouse button moved");
-                        std::cout << "Mouse position x,y = " << event.mouseMove.x 
-                                                      << "," << event.mouseMove.y << std::endl;
-                    }
                     cursortext.setPosition(event.mouseMove.x,event.mouseMove.y);
 
                     //Print the world coordinates to the console.
                     sf::Vector2f worldPos = window.mapPixelToCoords(sf::Vector2i(event.mouseMove.x,event.mouseMove.y));
-
-                    if(VERBOSE && !QUIET){
-                        std::cout << "World Coords x,y = " << worldPos.x
-                                                    << "," << worldPos.y << std::endl;
-                    }
 
                     //Display info at the cursor about which image pixel we are on, pixel intensity.
                     sf::Vector2f ClickWorldPos = window.mapPixelToCoords(sf::Vector2i(event.mouseMove.x,event.mouseMove.y));
@@ -3343,7 +3309,7 @@ int main(int argc, char* argv[]){
                         const auto col_as_u = static_cast<long int>(clamped_col_as_f * static_cast<float>(img_w_h.x));
                         const auto row_as_u = static_cast<long int>(clamped_row_as_f * static_cast<float>(img_w_h.y));
 
-                        if(VERBOSE && !QUIET) FUNCINFO("Suspected updated row, col = " << row_as_u << ", " << col_as_u);
+                        FUNCINFO("Suspected updated row, col = " << row_as_u << ", " << col_as_u);
                         const auto pix_val = disp_img_it->value(row_as_u,col_as_u,0);
                         std::stringstream ss;
                         ss << "(r,c)=(" << row_as_u << "," << col_as_u << ") -- " << pix_val;
@@ -3357,7 +3323,6 @@ int main(int argc, char* argv[]){
 
 
                 }else if(event.type == sf::Event::Resized){
-                    if(VERBOSE && !QUIET) FUNCINFO("Window resized to WxH = " << event.size.width << "x" << event.size.height);
                     sf::View view;
 
                     //Shrink the image depending on the amount of window space available. The image might disappear off the

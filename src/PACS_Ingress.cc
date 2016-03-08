@@ -18,30 +18,16 @@
 #include <list>
 #include <tuple>
 
-
-/*
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
-#pragma GCC diagnostic ignored "-Wunused-but-set-parameter"
-#include "imebra.h"
-#pragma GCC diagnostic pop
-*/
-
 #include "Structs.h"
 #include "Imebra_Shim.h"     //Wrapper for Imebra library. Black-boxed to speed up compilation.
 
 #include <pqxx/pqxx> //PostgreSQL C++ interface.
-
-
 
 #include "YgorMisc.h"           //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorString.h"         //Needed for stringtoX(), X_to_string().
 #include "YgorTime.h"           //Needed for class time_mark.
 #include "YgorArguments.h"
 #include "YgorFilesDirs.h"
-
-bool VERBOSE = false;
-bool QUIET   = false;
 
 int main(int argc, char **argv){
     //std::string db_params("dbname=pacs user=hal host=localhost port=63443");

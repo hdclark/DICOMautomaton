@@ -42,11 +42,6 @@
 
 #include "YgorDICOMTools.h"  //Needed for Is_File_A_DICOM_File(...);
 
-//Globals. Libimebrashim expects these to be defined.
-bool VERBOSE = true;  //Provides additional information.
-bool QUIET   = false;  //Suppresses ALL information. Not recommended!
-
-
 int main(int argc, char* argv[]){
 //---------------------------------------------------------------------------------------------------------------------
 //------------------------------------------- Instances used throughout -----------------------------------------------
