@@ -1,3 +1,5 @@
+//Orthogonal_Slices.h.
+#pragma once
 
 
 #include <list>

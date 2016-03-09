@@ -1,3 +1,5 @@
+//Logarithmic_Pixel_Scale.h.
+#pragma once
 
 
 #include <list>

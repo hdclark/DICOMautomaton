@@ -1,3 +1,5 @@
+//In_Image_Plane_Bicubic_Supersample.h.
+#pragma once
 
 
 #include <list>

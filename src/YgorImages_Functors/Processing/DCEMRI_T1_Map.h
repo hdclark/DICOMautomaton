@@ -1,3 +1,5 @@
+//DCEMRI_T1_Map.h.
+#pragma once
 
 
 #include <list>

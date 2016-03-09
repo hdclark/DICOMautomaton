@@ -1,3 +1,5 @@
+//Pixel_Value_Histogram.h.
+#pragma once
 
 
 #include <list>

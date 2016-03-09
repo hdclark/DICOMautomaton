@@ -1,3 +1,5 @@
+//In_Image_Plane_Pixel_Decimate.h.
+#pragma once
 
 
 #include <list>

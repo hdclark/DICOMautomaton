@@ -1,3 +1,5 @@
+//Kitchen_Sink_Analysis.h.
+#pragma once
 
 
 #include <list>

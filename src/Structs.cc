@@ -147,7 +147,8 @@ Contour_Data::Contour_Data(const Contour_Data &in) : ccs(in.ccs) { }
 
 //Member functions.
 void Contour_Data::operator=(const Contour_Data &rhs){
-    this->ccs = rhs.ccs;
+    if(this != &rhs) this->ccs = rhs.ccs;
+    return;
 }
 
 //This routine produces a very simple, default plot of the entirety of the data. 
@@ -1166,10 +1167,14 @@ Drover::Drover( const Drover &in ) : contour_data(in.contour_data), dose_data(in
 
 //Member functions.
 void Drover::operator=(const Drover &rhs){
-    this->Has_Been_Melded = false;
-    this->contour_data    = rhs.contour_data;
-    this->dose_data       = rhs.dose_data;
-    this->image_data      = rhs.image_data;
+    if(this != &rhs){
+        //this->Has_Been_Melded = false;
+        this->Has_Been_Melded = rhs.Has_Been_Melded;
+        this->contour_data    = rhs.contour_data;
+        this->dose_data       = rhs.dose_data;
+        this->image_data      = rhs.image_data;
+    }
+    return;
 }
 
 /*

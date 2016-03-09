@@ -1,3 +1,5 @@
+//ConvenienceRoutines.h.
+
 #pragma once
 
 #include <string>

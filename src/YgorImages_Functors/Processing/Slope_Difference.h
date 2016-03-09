@@ -1,3 +1,5 @@
+//Slope_Difference.h.
+#pragma once
 
 
 #include <list>

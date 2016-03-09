@@ -1,3 +1,5 @@
+//Contour_Similarity.h.
+#pragma once
 
 
 #include <list>

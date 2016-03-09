@@ -1,3 +1,5 @@
+//IVIMMRI_ADC_Map.h.
+#pragma once
 
 
 #include <list>

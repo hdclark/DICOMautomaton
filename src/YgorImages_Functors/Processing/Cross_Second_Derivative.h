@@ -1,3 +1,5 @@
+//Cross_Second_Derivative.h.
+#pragma once
 
 
 #include <list>

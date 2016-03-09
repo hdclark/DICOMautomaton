@@ -1,3 +1,5 @@
+//Max_Pixel_Value.h.
+#pragma once
 
 
 #include <list>

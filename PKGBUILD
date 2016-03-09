@@ -80,7 +80,7 @@ package() {
 #  cd "${srcdir}"
 
   # Let CMake handle installation details.
-  make DESTDIR="${pkgdir}" install
+  make -j 4 DESTDIR="${pkgdir}" install
 }
 
 # vim:set ts=2 sw=2 et:

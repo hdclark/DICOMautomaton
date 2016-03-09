@@ -1,3 +1,5 @@
+//CT_Perf_Pixel_Filter.h.
+#pragma once
 
 
 #include <list>

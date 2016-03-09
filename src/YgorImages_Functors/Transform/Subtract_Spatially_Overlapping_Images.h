@@ -1,3 +1,5 @@
+//Subtract_Spatially_Overlapping_Images.h.
+#pragma once
 
 
 #include <list>

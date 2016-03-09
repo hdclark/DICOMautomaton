@@ -1,16 +1,16 @@
 cmake_minimum_required (VERSION 3.1.0 FATAL_ERROR)
 project (DICOMautomaton)
 
-set (DICOMautomaton_VERSION_MAJOR 2)
+set (DICOMautomaton_VERSION_MAJOR 3)
 set (DICOMautomaton_VERSION_MINOR 0)
 set (DICOMautomaton_VERSION_PATCH 0)
 
-# Default build is 'debug'.
+# Set the release type. 
+set(CMAKE_BUILD_TYPE Release) # Comment this line to use fallback default.
 if(NOT CMAKE_BUILD_TYPE)
-    SET(CMAKE_BUILD_TYPE Debug CACHE STRING "default to debug" FORCE)
+    # Default to debug builds.
+    set(CMAKE_BUILD_TYPE Debug CACHE STRING "default to debug" FORCE)
 endif()
-
-#set(BINDIR "${CMAKE_INSTALL_PREFIX}/bin")
 
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
@@ -18,7 +18,6 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fdiagnostics-color=always -fno-var-tracking-assignments")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated -Wall -Wextra")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
-
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSTREAM_H") # -DUSE_ICU_STRINGS
 
 
@@ -30,18 +29,79 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON) # For clang-tidy et al.
 
 
 # Use the directory where CMakeLists.txt is for inclusions.
-INCLUDE_DIRECTORIES(/usr/local/lib/)
-INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR})
+set(CMAKE_INCLUDE_CURRENT_DIR ON)
+set(CMAKE_INCLUDE_CURRENT_DIR_IN_INTERFACE ON)
+
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+
+
+# Use the directory where CMakeLists.txt is for inclusions.
+#INCLUDE_DIRECTORIES(/usr/local/lib/)
+#INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR})
+
+
+add_subdirectory(Analyses)
+
+
 
 # Generate object files for sources shared by many targets.
-add_library ( Structs_obj      OBJECT Structs.cc      )
-set_target_properties(Structs_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
+add_library(Structs_obj OBJECT
+     Structs.cc     
+)
+set_target_properties(Structs_obj PROPERTIES
+     POSITION_INDEPENDENT_CODE TRUE
+)
 
-add_library ( Dose_Meld_obj    OBJECT Dose_Meld.cc    )
-set_target_properties(Dose_Meld_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
+add_library(Dose_Meld_obj OBJECT 
+     Dose_Meld.cc    
+)
+set_target_properties(Dose_Meld_obj PROPERTIES
+     POSITION_INDEPENDENT_CODE TRUE
+)
 
-add_library ( Whole_Match_obj  OBJECT Whole_Match.cc  )
-set_target_properties(Whole_Match_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
+add_library(Whole_Match_obj OBJECT
+     Whole_Match.cc  
+)
+set_target_properties(Whole_Match_obj PROPERTIES
+     POSITION_INDEPENDENT_CODE TRUE
+)
+
+add_library(PACS_Loader_obj OBJECT
+     PACS_Loader.cc  
+)
+set_target_properties(PACS_Loader_obj PROPERTIES
+     POSITION_INDEPENDENT_CODE TRUE
+)
+
+add_library(Analysis_Dispatcher_obj OBJECT
+     Analysis_Dispatcher.cc
+)
+set_target_properties(Analysis_Dispatcher_obj PROPERTIES
+    POSITION_INDEPENDENT_CODE TRUE
+)
+
+
+FILE(GLOB ygorimaging_functors "./YgorImages_Functors/*/*cc")
+add_library(YgorImaging_Functor_objs OBJECT
+    ${ygorimaging_functors}
+)
+set_target_properties(YgorImaging_Functor_objs PROPERTIES
+    POSITION_INDEPENDENT_CODE TRUE
+)
+
+FILE(GLOB ygorimaging_helpers  "./YgorImages_Functors/*cc")
+add_library(YgorImaging_Helper_objs OBJECT
+    ${ygorimaging_helpers}
+)
+set_target_properties(YgorImaging_Helper_objs PROPERTIES
+    POSITION_INDEPENDENT_CODE TRUE
+)
+
+
+
+
 
 
 # Imebra library (built separately to maximally compartmentalize the long build process).
@@ -131,17 +191,21 @@ target_include_directories(pharmacokinetic_modeling SYSTEM PUBLIC
 
 
 # Executable.
-FILE(GLOB ygorimaging_functors "./YgorImages_Functors/*/*cc")
-FILE(GLOB ygorimaging_helpers "./YgorImages_Functors/*cc")
-add_executable (petct_perfusion_analysis 
-    PETCT_Perfusion_Analysis.cc
+add_executable (dicomautomaton_dispatcher
+    DICOMautomaton_Dispatcher.cc
+
     $<TARGET_OBJECTS:Structs_obj>
     $<TARGET_OBJECTS:Dose_Meld_obj>
     $<TARGET_OBJECTS:Whole_Match_obj>
-    ${ygorimaging_functors}
-    ${ygorimaging_helpers}
+    $<TARGET_OBJECTS:PACS_Loader_obj>
+    $<TARGET_OBJECTS:Analysis_Dispatcher_obj>
+
+    $<TARGET_OBJECTS:YgorImaging_Functor_objs>
+    $<TARGET_OBJECTS:YgorImaging_Helper_objs>
+
+    $<TARGET_OBJECTS:Analyses_objs>
 )
-target_link_libraries (petct_perfusion_analysis 
+target_link_libraries (dicomautomaton_dispatcher
     imebrashim
     pharmacokinetic_modeling
     ygor 
@@ -155,8 +219,11 @@ target_link_libraries (petct_perfusion_analysis
     jansson 
     pqxx 
     pq
+    boost_filesystem 
+    boost_system 
     m
 )
+
 
 # Executable.
 add_executable (pacs_ingress
@@ -181,22 +248,6 @@ add_executable (pacs_refresh
     $<TARGET_OBJECTS:Dose_Meld_obj>
 )
 target_link_libraries (pacs_refresh
-    imebrashim
-    ygor 
-    explicator 
-    demarcator 
-    pqxx 
-    pq
-    m
-)
-
-# Executable.
-add_executable (pacs_verify_filesystem_store
-    PACS_Verify_Filesystem_Store.cc
-    $<TARGET_OBJECTS:Structs_obj>
-    $<TARGET_OBJECTS:Dose_Meld_obj>
-)
-target_link_libraries (pacs_verify_filesystem_store
     imebrashim
     ygor 
     explicator 
@@ -262,10 +313,9 @@ target_link_libraries (dicomautomaton_dump
 
 # Installation info.
 install(TARGETS 
-    petct_perfusion_analysis
+    dicomautomaton_dispatcher
     pacs_ingress
     pacs_refresh
-    pacs_verify_filesystem_store
     overlaydosedata
     automaton
     dicomautomaton_dump

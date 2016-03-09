@@ -1,3 +1,5 @@
+//Time_Course_Slope_Map.h.
+#pragma once
 
 
 #include <list>

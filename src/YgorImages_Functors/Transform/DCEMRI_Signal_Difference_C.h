@@ -1,3 +1,5 @@
+//DCEMRI_Signal_Difference_C.h.
+#pragma once
 
 
 #include <list>

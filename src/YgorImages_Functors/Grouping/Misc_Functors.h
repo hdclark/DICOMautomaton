@@ -1,3 +1,5 @@
+//Misc_Functors.h.
+#pragma once
 
 
 #include <list>

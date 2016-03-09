@@ -1,3 +1,5 @@
+//In_Image_Plane_Bilinear_Supersample.h.
+#pragma once
 
 
 #include <list>
