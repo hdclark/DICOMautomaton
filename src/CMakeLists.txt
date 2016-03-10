@@ -36,47 +36,73 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-
-# Use the directory where CMakeLists.txt is for inclusions.
-#INCLUDE_DIRECTORIES(/usr/local/lib/)
-#INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR})
-
+#############################################################
 
 add_subdirectory(Analyses)
 
 
+find_package(Protobuf REQUIRED)
+include_directories(${PROTOBUF_INCLUDE_DIRS})
+PROTOBUF_GENERATE_CPP(
+    PROTO_GENERATED_SOURCES  # <--- holds generated source files.
+    PROTO_GENERATED_HEADERS  # <--- holds generated header files.
+    Serialization.proto
+)
+add_library(Protobuf_Generated_objs OBJECT
+    ${PROTO_GENERATED_SOURCES}
+    ${PROTO_GENERATED_HEADERS}
+)
+set_target_properties(Protobuf_Generated_objs PROPERTIES
+    POSITION_INDEPENDENT_CODE TRUE
+)
+
 
 # Generate object files for sources shared by many targets.
 add_library(Structs_obj OBJECT
-     Structs.cc     
+    Structs.cc     
 )
 set_target_properties(Structs_obj PROPERTIES
-     POSITION_INDEPENDENT_CODE TRUE
+    POSITION_INDEPENDENT_CODE TRUE
 )
 
 add_library(Dose_Meld_obj OBJECT 
-     Dose_Meld.cc    
+    Dose_Meld.cc    
 )
 set_target_properties(Dose_Meld_obj PROPERTIES
-     POSITION_INDEPENDENT_CODE TRUE
+    POSITION_INDEPENDENT_CODE TRUE
 )
 
 add_library(Whole_Match_obj OBJECT
-     Whole_Match.cc  
+    Whole_Match.cc  
 )
 set_target_properties(Whole_Match_obj PROPERTIES
-     POSITION_INDEPENDENT_CODE TRUE
+    POSITION_INDEPENDENT_CODE TRUE
 )
 
 add_library(PACS_Loader_obj OBJECT
-     PACS_Loader.cc  
+    PACS_Loader.cc  
 )
 set_target_properties(PACS_Loader_obj PROPERTIES
-     POSITION_INDEPENDENT_CODE TRUE
+    POSITION_INDEPENDENT_CODE TRUE
+)
+
+add_library(DICOM_File_Loader_obj OBJECT
+    DICOM_File_Loader.cc  
+)
+set_target_properties(DICOM_File_Loader_obj PROPERTIES
+    POSITION_INDEPENDENT_CODE TRUE
+)
+
+add_library(Protobuf_File_Loader_obj OBJECT
+    Protobuf_File_Loader.cc  
+    ${PROTO_GENERATED_HEADERS}
+)
+set_target_properties(Protobuf_File_Loader_obj PROPERTIES
+    POSITION_INDEPENDENT_CODE TRUE
 )
 
 add_library(Analysis_Dispatcher_obj OBJECT
-     Analysis_Dispatcher.cc
+    Analysis_Dispatcher.cc
 )
 set_target_properties(Analysis_Dispatcher_obj PROPERTIES
     POSITION_INDEPENDENT_CODE TRUE
@@ -198,12 +224,16 @@ add_executable (dicomautomaton_dispatcher
     $<TARGET_OBJECTS:Dose_Meld_obj>
     $<TARGET_OBJECTS:Whole_Match_obj>
     $<TARGET_OBJECTS:PACS_Loader_obj>
+    $<TARGET_OBJECTS:Protobuf_File_Loader_obj>
+    $<TARGET_OBJECTS:DICOM_File_Loader_obj>
     $<TARGET_OBJECTS:Analysis_Dispatcher_obj>
 
     $<TARGET_OBJECTS:YgorImaging_Functor_objs>
     $<TARGET_OBJECTS:YgorImaging_Helper_objs>
 
     $<TARGET_OBJECTS:Analyses_objs>
+
+    $<TARGET_OBJECTS:Protobuf_Generated_objs>
 )
 target_link_libraries (dicomautomaton_dispatcher
     imebrashim
@@ -221,6 +251,7 @@ target_link_libraries (dicomautomaton_dispatcher
     pq
     boost_filesystem 
     boost_system 
+    ${PROTOBUF_LIBRARIES}
     m
 )
 

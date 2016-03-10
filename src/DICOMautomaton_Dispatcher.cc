@@ -63,6 +63,8 @@
 #include "YgorDICOMTools.h"   //Needed for Is_File_A_DICOM_File(...);
 
 #include "PACS_Loader.h"
+#include "Protobuf_File_Loader.h"
+#include "DICOM_File_Loader.h"
 
 #include "Analysis_Dispatcher.h"
 
@@ -112,7 +114,8 @@ int main(int argc, char* argv[]){
     std::string db_connection_params("dbname=pacs user=hal host=localhost port=5432");
 
     //----------------------------------------------- Data: File Loading ---------------------------------------------
-    // The following objects are only relevant for the stand-alone file loader.
+    // The following objects are only relevant for the various file loaders. They will be passed through the loaders
+    // (e.g., DICOM file, Protobuf file, etc.) until successfully loaded.
 
     //List of filenames or directories to parse and load.
     std::list<std::string> StandaloneFilesDirs;  // Used to defer filesystem checking.
@@ -294,10 +297,26 @@ int main(int argc, char* argv[]){
     //Standalone file loading.
     if(!StandaloneFilesDirsReachable.empty()){
 
-// TODO.
+        //DICOM files.
+        if(!Load_From_DICOM_Files( DICOM_data, InvocationMetadata, FilenameLex,
+                                   StandaloneFilesDirsReachable )){
+            FUNCINFO("Unable to load any DICOM files. Continuing..");
+        }
 
+        //Protobuf files.
+        if(!Load_From_Protobuf_Files( DICOM_data, InvocationMetadata, FilenameLex,
+                                      StandaloneFilesDirsReachable )){
+            FUNCINFO("Unable to load any Protobuf files. Continuing..");
+        }
+
+        //Other loaders ...
+
+
+        //If anything remains, the file could not be loaded.
+        if(!StandaloneFilesDirsReachable.empty()){
+            FUNCERR("Unable to load file " << StandaloneFilesDirsReachable.front() << ". Refusing to continue");
+        }
     }
-
 
     //============================================= Dispatch to Analyses =============================================
 
