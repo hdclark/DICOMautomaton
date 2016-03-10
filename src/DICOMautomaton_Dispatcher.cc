@@ -66,7 +66,7 @@
 #include "Protobuf_File_Loader.h"
 #include "DICOM_File_Loader.h"
 
-#include "Analysis_Dispatcher.h"
+#include "Operation_Dispatcher.h"
 
 
 
@@ -320,8 +320,8 @@ int main(int argc, char* argv[]){
 
     //============================================= Dispatch to Analyses =============================================
 
-    if(!Analysis_Dispatcher( DICOM_data, InvocationMetadata, FilenameLex,
-                             Operations )){
+    if(!Operation_Dispatcher( DICOM_data, InvocationMetadata, FilenameLex,
+                              Operations )){
         FUNCERR("Analysis failed. Cannot continue");
     }
 

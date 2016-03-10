@@ -1,6 +1,7 @@
-//Analysis_Dispatcher.cc - A part of DICOMautomaton 2015, 2016. Written by hal clark.
+//Operation_Dispatcher.cc - A part of DICOMautomaton 2015, 2016. Written by hal clark.
 //
-// This routine routes loaded data to/through specified analysis routine(s).
+// This routine routes loaded data to/through specified operations.
+// Operations can be anything, e.g., analyses, serialization, and visualization.
 //
 
 #include <string>    
@@ -13,38 +14,38 @@
 
 #include "Structs.h"
 
-#include "Analyses/CT_Liver_Perfusion.h"
-#include "Analyses/CT_Liver_Perfusion_First_Run.h"
-#include "Analyses/CT_Liver_Perfusion_Ortho_Views.h"
-#include "Analyses/CT_Liver_Perfusion_Pharmaco.h"
-#include "Analyses/ContourSimilarity.h"
-#include "Analyses/ContouringAides.h"
-#include "Analyses/ConvertNaNsToAir.h"
-#include "Analyses/DecimatePixels.h"
-#include "Analyses/DumpAllOrderedImageMetadataToFile.h"
-#include "Analyses/DumpAnEncompassedPoint.h"
-#include "Analyses/DumpFilesPartitionedByTime.h"
-#include "Analyses/DumpImageMetadataOccurrencesToFile.h"
-#include "Analyses/DumpPixelValuesOverTimeForAnEncompassedPoint.h"
-#include "Analyses/DumpROIData.h"
-#include "Analyses/GiveWholeImageArrayABoneWindowLevel.h"
-#include "Analyses/GiveWholeImageArrayAHeadAndNeckWindowLevel.h"
-#include "Analyses/GiveWholeImageArrayAThoraxWindowLevel.h"
-#include "Analyses/GiveWholeImageArrayAnAbdominalWindowLevel.h"
-#include "Analyses/ImageRoutineTests.h"
-#include "Analyses/PreFilterEnormousCTValues.h"
-#include "Analyses/SFML_Viewer.h"
-#include "Analyses/UBC3TMRI_DCE.h"
-#include "Analyses/UBC3TMRI_DCE_Differences.h"
-#include "Analyses/UBC3TMRI_DCE_Experimental.h"
-#include "Analyses/UBC3TMRI_IVIM_ADC.h"
+#include "Operations/CT_Liver_Perfusion.h"
+#include "Operations/CT_Liver_Perfusion_First_Run.h"
+#include "Operations/CT_Liver_Perfusion_Ortho_Views.h"
+#include "Operations/CT_Liver_Perfusion_Pharmaco.h"
+#include "Operations/ContourSimilarity.h"
+#include "Operations/ContouringAides.h"
+#include "Operations/ConvertNaNsToAir.h"
+#include "Operations/DecimatePixels.h"
+#include "Operations/DumpAllOrderedImageMetadataToFile.h"
+#include "Operations/DumpAnEncompassedPoint.h"
+#include "Operations/DumpFilesPartitionedByTime.h"
+#include "Operations/DumpImageMetadataOccurrencesToFile.h"
+#include "Operations/DumpPixelValuesOverTimeForAnEncompassedPoint.h"
+#include "Operations/DumpROIData.h"
+#include "Operations/GiveWholeImageArrayABoneWindowLevel.h"
+#include "Operations/GiveWholeImageArrayAHeadAndNeckWindowLevel.h"
+#include "Operations/GiveWholeImageArrayAThoraxWindowLevel.h"
+#include "Operations/GiveWholeImageArrayAnAbdominalWindowLevel.h"
+#include "Operations/ImageRoutineTests.h"
+#include "Operations/PreFilterEnormousCTValues.h"
+#include "Operations/SFML_Viewer.h"
+#include "Operations/UBC3TMRI_DCE.h"
+#include "Operations/UBC3TMRI_DCE_Differences.h"
+#include "Operations/UBC3TMRI_DCE_Experimental.h"
+#include "Operations/UBC3TMRI_IVIM_ADC.h"
 
-#include "Analysis_Dispatcher.h"
+#include "Operation_Dispatcher.h"
 
-bool Analysis_Dispatcher( Drover &DICOM_data,
-                          std::map<std::string,std::string> &InvocationMetadata,
-                          std::string &FilenameLex,
-                          std::list<std::string> &Operations ){
+bool Operation_Dispatcher( Drover &DICOM_data,
+                           std::map<std::string,std::string> &InvocationMetadata,
+                           std::string &FilenameLex,
+                           std::list<std::string> &Operations ){
 
     //Generate a listing containing the operation names and the corresponding function.
     typedef std::function<Drover(Drover, std::map<std::string,std::string>, std::string)> op_func_t;

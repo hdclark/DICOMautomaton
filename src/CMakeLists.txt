@@ -38,7 +38,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 #############################################################
 
-add_subdirectory(Analyses)
+add_subdirectory(Operations)
 
 
 find_package(Protobuf REQUIRED)
@@ -101,10 +101,10 @@ set_target_properties(Protobuf_File_Loader_obj PROPERTIES
     POSITION_INDEPENDENT_CODE TRUE
 )
 
-add_library(Analysis_Dispatcher_obj OBJECT
-    Analysis_Dispatcher.cc
+add_library(Operation_Dispatcher_obj OBJECT
+    Operation_Dispatcher.cc
 )
-set_target_properties(Analysis_Dispatcher_obj PROPERTIES
+set_target_properties(Operation_Dispatcher_obj PROPERTIES
     POSITION_INDEPENDENT_CODE TRUE
 )
 
@@ -226,12 +226,12 @@ add_executable (dicomautomaton_dispatcher
     $<TARGET_OBJECTS:PACS_Loader_obj>
     $<TARGET_OBJECTS:Protobuf_File_Loader_obj>
     $<TARGET_OBJECTS:DICOM_File_Loader_obj>
-    $<TARGET_OBJECTS:Analysis_Dispatcher_obj>
+    $<TARGET_OBJECTS:Operation_Dispatcher_obj>
 
     $<TARGET_OBJECTS:YgorImaging_Functor_objs>
     $<TARGET_OBJECTS:YgorImaging_Helper_objs>
 
-    $<TARGET_OBJECTS:Analyses_objs>
+    $<TARGET_OBJECTS:Operations_objs>
 
     $<TARGET_OBJECTS:Protobuf_Generated_objs>
 )

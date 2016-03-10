@@ -1,6 +1,6 @@
 
 
-add_library(Analyses_objs OBJECT 
+add_library(Operations_objs OBJECT 
     CT_Liver_Perfusion.cc
     CT_Liver_Perfusion_First_Run.cc
     CT_Liver_Perfusion_Ortho_Views.cc
@@ -27,10 +27,10 @@ add_library(Analyses_objs OBJECT
     UBC3TMRI_DCE_Experimental.cc
     UBC3TMRI_IVIM_ADC.cc
 )
-set_target_properties(Analyses_objs
+set_target_properties(Operations_objs
     PROPERTIES POSITION_INDEPENDENT_CODE TRUE
 )
-#target_include_directories(Analyses_obj
+#target_include_directories(Operations_obj
 #    PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}
 #)
 
