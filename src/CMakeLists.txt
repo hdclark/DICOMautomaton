@@ -65,6 +65,14 @@ set_target_properties(Structs_obj PROPERTIES
     POSITION_INDEPENDENT_CODE TRUE
 )
 
+add_library(Structs_IO_Protobufs_obj OBJECT
+    Structs_IO_Protobufs.cc     
+    ${PROTO_GENERATED_HEADERS}
+)
+set_target_properties(Structs_IO_Protobufs_obj PROPERTIES
+    POSITION_INDEPENDENT_CODE TRUE
+)
+
 add_library(Dose_Meld_obj OBJECT 
     Dose_Meld.cc    
 )
@@ -221,6 +229,9 @@ add_executable (dicomautomaton_dispatcher
     DICOMautomaton_Dispatcher.cc
 
     $<TARGET_OBJECTS:Structs_obj>
+    $<TARGET_OBJECTS:Structs_IO_Protobufs_obj>
+    $<TARGET_OBJECTS:Protobuf_Generated_objs>
+
     $<TARGET_OBJECTS:Dose_Meld_obj>
     $<TARGET_OBJECTS:Whole_Match_obj>
     $<TARGET_OBJECTS:PACS_Loader_obj>
@@ -232,8 +243,6 @@ add_executable (dicomautomaton_dispatcher
     $<TARGET_OBJECTS:YgorImaging_Helper_objs>
 
     $<TARGET_OBJECTS:Operations_objs>
-
-    $<TARGET_OBJECTS:Protobuf_Generated_objs>
 )
 target_link_libraries (dicomautomaton_dispatcher
     imebrashim

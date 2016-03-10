@@ -227,6 +227,10 @@ int main(int argc, char* argv[]){
         }
     }
 
+    //Convert directories to filenames.
+// TODO.
+
+
     //Remove non-existent filenames and directories.
     {
         boost::filesystem::path PathShuttle;
@@ -277,8 +281,8 @@ int main(int argc, char* argv[]){
 
     //If DB or standalone loading, we require at least one action.
     }else if(Operations.empty()){
-        FUNCWARN("No operations specified: defaulting to operation 'View'");
-        Operations.push_back("View");
+        FUNCWARN("No operations specified: defaulting to operation 'SFML_Viewer'");
+        Operations.push_back("SFML_Viewer");
     }
 
 
