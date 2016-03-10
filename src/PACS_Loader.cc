@@ -49,7 +49,6 @@
 #include "YgorImagesPlotting.h"
 
 #include "Explicator.h"       //Needed for Explicator class.
-#include "Demarcator.h"       //Needed for Demarcator class.
 
 //#include "Distinguisher.h"    //Needed for Distinguisher class.            //Needed?
 

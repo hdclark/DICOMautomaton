@@ -36,7 +36,6 @@
 #include "YgorArguments.h"   //Needed for ArgumentHandler class.
 #include "YgorString.h"      //Needed for GetFirstRegex(...)
 #include "Explicator.h"      //Needed for Explicator class.
-#include "Demarcator.h"      //Needed for Demarcator class.
 
 //#include "Distinguisher.h"   //Needed for Distinguisher class.            //Needed?
 

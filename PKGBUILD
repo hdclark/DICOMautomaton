@@ -18,6 +18,8 @@ depends=(
    'postgresql'
    'freeglut'
    'nlopt' 
+   'boost-libs'
+   'protobuf3'
    'explicator'
    # -lygor -ldemarcator
 )

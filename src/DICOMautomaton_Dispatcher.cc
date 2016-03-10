@@ -58,7 +58,6 @@
 #include "YgorImagesPlotting.h"
 
 #include "Explicator.h"       //Needed for Explicator class.
-#include "Demarcator.h"       //Needed for Demarcator class.
 
 #include "YgorDICOMTools.h"   //Needed for Is_File_A_DICOM_File(...);
 
