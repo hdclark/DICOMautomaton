@@ -2,8 +2,7 @@
 //
 // This file defines routines for using Struct.h classes with Boost.Serialization.
 //
-// This file is optional. If you choose to use it, ensure you link with :
-//    -lboost_serialization -lboost_iostreams
+// This file is optional. If you choose to use it, ensure you link with libboost_serialization.
 //
 // The objects in this file have been 'wrapped' into a boost.serialization name-value pair so that they can be
 // serialized to archives requiring entities to be named (i.e., XML) in addition to the 'easier' formats (i.e.,

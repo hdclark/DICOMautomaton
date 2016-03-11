@@ -49,6 +49,13 @@ set_target_properties(Structs_obj PROPERTIES
     POSITION_INDEPENDENT_CODE TRUE
 )
 
+add_library(Common_Boost_Serialization_obj OBJECT
+    Common_Boost_Serialization.cc     
+)
+set_target_properties(Common_Boost_Serialization_obj PROPERTIES
+    POSITION_INDEPENDENT_CODE TRUE
+)
+
 add_library(Dose_Meld_obj OBJECT 
     Dose_Meld.cc    
 )
@@ -206,6 +213,7 @@ add_executable (dicomautomaton_dispatcher
 
     $<TARGET_OBJECTS:Structs_obj>
     $<TARGET_OBJECTS:Dose_Meld_obj>
+    $<TARGET_OBJECTS:Common_Boost_Serialization_obj>
     $<TARGET_OBJECTS:Whole_Match_obj>
 
     $<TARGET_OBJECTS:PACS_Loader_obj>
@@ -221,9 +229,9 @@ add_executable (dicomautomaton_dispatcher
 target_link_libraries (dicomautomaton_dispatcher
     imebrashim
     pharmacokinetic_modeling
-    ygor 
     explicator 
     demarcator 
+    ygor 
     nlopt 
     sfml-graphics 
     sfml-audio 
@@ -236,9 +244,32 @@ target_link_libraries (dicomautomaton_dispatcher
     boost_serialization
     boost_iostreams
     boost_system 
+    z
     m
 )
 
+# Executable.
+add_executable(dicomautomaton_bsarchive_convert
+    Boost_Serialization_Archive_Converter.cc
+
+    $<TARGET_OBJECTS:Structs_obj>
+    $<TARGET_OBJECTS:Dose_Meld_obj>
+    $<TARGET_OBJECTS:Common_Boost_Serialization_obj>
+    $<TARGET_OBJECTS:Whole_Match_obj>
+
+    $<TARGET_OBJECTS:Boost_Serialization_File_Loader_obj>
+)
+target_link_libraries (dicomautomaton_bsarchive_convert
+    explicator 
+    demarcator 
+    ygor 
+    boost_filesystem 
+    boost_serialization
+    boost_iostreams
+    boost_system 
+    z
+    m
+)
 
 # Executable.
 add_executable (pacs_ingress
@@ -248,9 +279,9 @@ add_executable (pacs_ingress
 )
 target_link_libraries (pacs_ingress
     imebrashim
-    ygor 
     explicator 
     demarcator 
+    ygor 
     pqxx 
     pq
     m
@@ -264,9 +295,9 @@ add_executable (pacs_refresh
 )
 target_link_libraries (pacs_refresh
     imebrashim
-    ygor 
     explicator 
     demarcator 
+    ygor 
     pqxx 
     pq
     m
@@ -281,9 +312,9 @@ add_executable (overlaydosedata
 )
 target_link_libraries (overlaydosedata
     imebrashim
-    ygor 
     explicator 
     demarcator 
+    ygor 
     pqxx 
     pq
     X11
@@ -305,10 +336,10 @@ add_executable (automaton
 )
 target_link_libraries (automaton
     imebrashim
-    ygor 
     explicator 
     demarcator 
     csvtools
+    ygor 
     pqxx 
     pq
     m
@@ -329,6 +360,7 @@ target_link_libraries (dicomautomaton_dump
 # Installation info.
 install(TARGETS 
     dicomautomaton_dispatcher
+    dicomautomaton_bsarchive_convert
     pacs_ingress
     pacs_refresh
     overlaydosedata

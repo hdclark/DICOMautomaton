@@ -23,17 +23,8 @@
 #include <algorithm>
 #include <experimental/optional>
 
-
-#include <boost/serialization/nvp.hpp>
-
-//For plain-text archives.
-//#include <boost/archive/text_iarchive.hpp>
-//#include <boost/archive/text_oarchive.hpp>
-
-//For XML archives.
-#include <boost/archive/xml_iarchive.hpp>
-#include <boost/archive/xml_oarchive.hpp>
-
+#include <boost/filesystem.hpp>
+#include <boost/filesystem/fstream.hpp>
 
 #include <pqxx/pqxx>          //PostgreSQL C++ interface.
 
@@ -59,6 +50,7 @@
 
 #include "../Structs.h"
 #include "../StructsIOBoostSerialization.h"
+#include "../Common_Boost_Serialization.h"
 
 #include "../YgorImages_Functors/Grouping/Misc_Functors.h"
 
@@ -405,20 +397,9 @@ Drover SFML_Viewer(Drover DICOM_data, std::map<std::string,std::string> /*Invoca
                 //Not the same as KeyPressed + KeyReleased. Think unicode characters, or control keys.
                 const auto thechar = static_cast<char>(event.text.unicode);
 
-                //Show a simple help dialog with some keyboard commands.
                 if( false ){
 
-                }else if( thechar == 'b' ){
-                    const std::string out_fname("/tmp/boost_serialized_drover.xml");
-                    try{
-                        std::ofstream ofs(out_fname, std::ios::trunc);
-                        boost::archive::xml_oarchive ar(ofs);
-                        ar & boost::serialization::make_nvp("dicom_data", DICOM_data);
-                        FUNCINFO("Dumped serialization to file '" << out_fname << "'");
-                    }catch(const std::exception &e){
-                        FUNCWARN("Unable dump serialization to file '" << out_fname << "'");
-                    }
-
+                //Show a simple help dialog with some keyboard commands.
                 }else if( (thechar == 'h') || (thechar == 'H') ){
                     // Easy way to get list of commands:
                     // `grep -C 3 'thechar == ' src/PETCT_Perfusion_Analysis.cc | grep '//\|thechar'`
@@ -447,6 +428,17 @@ Drover SFML_Viewer(Drover DICOM_data, std::map<std::string,std::string> /*Invoca
                             "\\t\\t b \\t\\t Serialize Drover instance (all data) to file.\\n"
                             "\\n\""
                     );
+
+                //Dump a serialization of the current (*entire*) Drover class.
+                }else if( thechar == 'b' ){
+                    const boost::filesystem::path out_fname("/tmp/boost_serialized_drover.bin.gz");
+                    const bool res = Common_Boost_Serialize_Drover(DICOM_data, out_fname);
+                    if(res){
+                        FUNCINFO("Dumped serialization to file " << out_fname.string());
+                    }else{
+                        FUNCWARN("Unable dump serialization to file " << out_fname.string());
+                    }
+
 
                 //Toggle whether existing contours should be displayed.
                 }else if( thechar == 'x' ){

@@ -1,6 +1,6 @@
 //DICOMautomaton_Dispatcher.cc - A part of DICOMautomaton 2016. Written by hal clark.
 //
-// This routine provides a standard entry-point into some DICOMautomaton analysis routines.
+// This program provides a standard entry-point into some DICOMautomaton analysis routines.
 //
 
 #include <iostream>
