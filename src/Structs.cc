@@ -1,6 +1,8 @@
 //Structs.cc.
 
 #include <cmath>
+#include <string>
+#include <vector>
 #include <map>
 #include <unordered_map>
 #include <cstdint>   //For int64_t.
@@ -28,7 +30,7 @@
 // principle be bijective -- one should be able to take the description and go 
 // backward to the segmentation history. But I haven't needed this functionality
 // yet.
-std::string Segmentations_to_Words(const std::basic_string<uint32_t> &in){
+std::string Segmentations_to_Words(const std::vector<uint32_t> &in){
     std::string out;
 
     for(auto it = in.begin(); it != in.end(); ++it){
@@ -178,82 +180,6 @@ std::unique_ptr<Contour_Data> Contour_Data::Duplicate(void) const {
     return std::move(output);
 }
 
-/*
-//This routine splits units composed of groupings of ROI numbers. I'm not sure if it is useful, except for partitioning
-// into halves...
-std::unique_ptr<Contour_Data>  Contour_Data::Split_Per_Volume_Along_Given_Plane_Unit_Normal(const vec3<double> &N) const { 
-    //NOTE: This function is written in such a way that it assumes the data for any given ROI number is spread out over many
-    // geographical locations (and in separate contour_collections). This is required, because, for example, if this routine
-    // needs to sub-segment a sub-segment, it cannot treat the various pieces as a single volume.
-    //
-    //NOTE: A plane itself is not passed in because the point of plane intersection is taken as the average point.
-    std::unique_ptr<Contour_Data> output (new Contour_Data);
-
-    //Create a list of the distinct contour numbers.
-    std::set<long int> contour_numbs;
-    for(auto cc_it = this->ccs.begin(); cc_it != this->ccs.end(); ++cc_it){
-        for(auto c_it = cc_it->contours.begin(); c_it != cc_it->contours.end(); ++c_it){
-            if(c_it->points.size() < 3){
-                FUNCWARN("Attempting to sub-segment contours which are either non-existent or composed of less than three 3D points in total. Ignoring");
-                return std::move(output);
-            }
-        }
-        contour_numbs.insert(cc_it->ROI_number);
-    }
-                                                                                         //NOTE: for 3d segmentation, disregard the height
-    //Now step through each ROI number (in the map.)
-    for(auto roi_numb_it = contour_numbs.begin(); roi_numb_it != contour_numbs.end(); ++roi_numb_it){
-        const long int the_roi_number(*roi_numb_it);
-
-        //Construct the plane we are going to split on.
-        vec3<double> r(0.0,0.0,0.0);
-        long int numb_of_ccs(0);
-        for(auto cc_it = this->ccs.begin(); cc_it != this->ccs.end(); ++cc_it){
-            if(cc_it->ROI_number != the_roi_number) continue;
-            for(auto c_it = cc_it->contours.begin(); c_it != cc_it->contours.end(); ++c_it){
-                ++numb_of_ccs;
-                r += c_it->Average_Point();
-            }
-        }
-        r /= static_cast<double>(numb_of_ccs);
-        const plane<double> theplane(N,r);
-
-        //Send each contour collection individually off to the exploder routine.
-        for(auto cc_it = this->ccs.begin(); cc_it != this->ccs.end(); ++cc_it){
-            if(cc_it->ROI_number != the_roi_number) continue;
-
-            //These are the newly-split, but meta-data-less contour collections.
-            const auto ncclist = cc_it->Split_Along_Plane(theplane);
-            std::list<contours_with_meta> cwmlist;
-    
-            for(auto ncc_it = ncclist.begin(); ncc_it != ncclist.end(); ++ncc_it){
-                contours_with_meta shtl(*ncc_it);
-
-                //Metadata inherited directly from the mother.
-                shtl.ROI_number           = cc_it->ROI_number;
-                shtl.Minimum_Separation   = cc_it->Minimum_Separation;
-                shtl.Raw_ROI_name         = cc_it->Raw_ROI_name;
-                shtl.Segmentation_History = cc_it->Segmentation_History;
-
-                //Now we add a generic history element.
-                uint32_t segmentation = (Segmentations::other_orientation | Segmentations::volume);
-                const auto rc = ncc_it->Average_Point();
-                if(theplane.Is_Point_Above_Plane(rc)){
-                    segmentation |= Segmentations::positive;
-                }else{
-                    segmentation |= Segmentations::negative;
-                }
-                shtl.Segmentation_History += segmentation;
-
-                cwmlist.push_back(std::move(shtl));
-            }
-            output->ccs.insert(output->ccs.end(), cwmlist.begin(), cwmlist.end());
-        }
-    }
-    return std::move(output);
-}
-*/
-
 //This function will split contour_collection units. It does not care about ROI number, ROI name, or height.
 std::unique_ptr<Contour_Data>  Contour_Data::Split_Per_Volume_Along_Given_Plane_Unit_Normal(const vec3<double> &N) const {           //---- TODO: is this the correct plane, considering the patient DICOM orientation? (Check all files as test) 
     std::unique_ptr<Contour_Data> output (new Contour_Data);
@@ -269,13 +195,13 @@ std::unique_ptr<Contour_Data>  Contour_Data::Split_Per_Volume_Along_Given_Plane_
         above.Minimum_Separation    = cc_it->Minimum_Separation;
         above.Raw_ROI_name          = cc_it->Raw_ROI_name;
         above.Segmentation_History  = cc_it->Segmentation_History;
-        above.Segmentation_History += segmentation | Segmentations::positive; 
+        above.Segmentation_History.push_back(segmentation | Segmentations::positive); 
 
         below.ROI_number            = cc_it->ROI_number;
         below.Minimum_Separation    = cc_it->Minimum_Separation;
         below.Raw_ROI_name          = cc_it->Raw_ROI_name;
         below.Segmentation_History  = cc_it->Segmentation_History;
-        below.Segmentation_History += segmentation | Segmentations::negative;
+        below.Segmentation_History.push_back(segmentation | Segmentations::negative);
 
         //Generate the plane by cycling over all the contours in each contour_collection (ie. volume).
         const vec3<double> r = cc_it->Centroid();
@@ -429,7 +355,7 @@ std::unique_ptr<Contour_Data>  Contour_Data::Split_Per_Height_Along_Given_Plane_
                     }else{
                         segmentation |= Segmentations::negative;
                     }
-                    shtl.Segmentation_History += segmentation;
+                    shtl.Segmentation_History.push_back(segmentation);
     
                     cwmlist.push_back(std::move(shtl));
                 }
@@ -469,7 +395,7 @@ std::unique_ptr<Contour_Data>  Contour_Data::Split_Per_Height_Along_Given_Plane_
                     }else{
                         segmentation |= Segmentations::negative;
                     }
-                    temp3.Segmentation_History += segmentation;
+                    temp3.Segmentation_History.push_back(segmentation);
      
                     temp2.push_back( temp3 );
                 }
@@ -530,13 +456,13 @@ std::unique_ptr<Contour_Data>  Contour_Data::Split_Per_Contour_Along_Given_Plane
         above.Minimum_Separation    = cc_it->Minimum_Separation;
         above.Raw_ROI_name          = cc_it->Raw_ROI_name;
         above.Segmentation_History  = cc_it->Segmentation_History;
-        above.Segmentation_History += segmentation | Segmentations::positive; 
+        above.Segmentation_History.push_back(segmentation | Segmentations::positive); 
 
         below.ROI_number            = cc_it->ROI_number;
         below.Minimum_Separation    = cc_it->Minimum_Separation;
         below.Raw_ROI_name          = cc_it->Raw_ROI_name;
         below.Segmentation_History  = cc_it->Segmentation_History;
-        below.Segmentation_History += segmentation | Segmentations::negative;
+        below.Segmentation_History.push_back(segmentation | Segmentations::negative);
 
         for(auto c_it = cc_it->contours.begin(); c_it != cc_it->contours.end(); ++c_it){
             const vec3<double> r = c_it->Centroid(); //Average_Point();
@@ -611,13 +537,13 @@ std::unique_ptr<Contour_Data>  Contour_Data::Raycast_Split_Per_Contour_Against_G
         above.Minimum_Separation    = cc_it->Minimum_Separation;
         above.Raw_ROI_name          = cc_it->Raw_ROI_name;
         above.Segmentation_History  = cc_it->Segmentation_History;
-        above.Segmentation_History += segmentation | Segmentations::positive;
+        above.Segmentation_History.push_back(segmentation | Segmentations::positive);
 
         below.ROI_number            = cc_it->ROI_number;
         below.Minimum_Separation    = cc_it->Minimum_Separation;
         below.Raw_ROI_name          = cc_it->Raw_ROI_name;
         below.Segmentation_History  = cc_it->Segmentation_History;
-        below.Segmentation_History += segmentation | Segmentations::negative;
+        below.Segmentation_History.push_back(segmentation | Segmentations::negative);
 
         for(auto c_it = cc_it->contours.begin(); c_it != cc_it->contours.end(); ++c_it){
             const auto r = c_it->Centroid(); //Average_Point();
@@ -688,13 +614,13 @@ std::unique_ptr<Contour_Data> Contour_Data::Split_Core_and_Peel(double frac_dist
         core.Minimum_Separation    = cc_it->Minimum_Separation;
         core.Raw_ROI_name          = cc_it->Raw_ROI_name;
         core.Segmentation_History  = cc_it->Segmentation_History;
-        core.Segmentation_History += segmentation | Segmentations::inner;
+        core.Segmentation_History.push_back(segmentation | Segmentations::inner);
 
         peel.ROI_number            = cc_it->ROI_number;
         peel.Minimum_Separation    = cc_it->Minimum_Separation;
         peel.Raw_ROI_name          = cc_it->Raw_ROI_name;
         peel.Segmentation_History  = cc_it->Segmentation_History;
-        peel.Segmentation_History += segmentation | Segmentations::outer;
+        peel.Segmentation_History.push_back(segmentation | Segmentations::outer);
 
 //        const auto r = cc_it->Centroid();
         auto split = cc_it->Split_Into_Core_Peel_Spherical(frac_dist);  

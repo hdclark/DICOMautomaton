@@ -60,7 +60,7 @@ namespace Segmentations {
     //Note: std::numeric_limits<uint32_t>::max() == 4294967295.
 };
 
-std::string Segmentations_to_Words(const std::basic_string<uint32_t> &in);
+std::string Segmentations_to_Words(const std::vector<uint32_t> &in);
 
 
 
@@ -81,7 +81,7 @@ class contours_with_meta : public contour_collection<double> {
 
         //Used to keep track of the various ways the data in this contour has been segmented. (Might tell us it is 
         // the medial, posterior portion of the original contour.)
-        std::basic_string<uint32_t> Segmentation_History;
+        std::vector<uint32_t> Segmentation_History;
 
         //Constructors.
         contours_with_meta();
@@ -334,7 +334,7 @@ drover_bnded_dose_pos_dose_map_t                 drover_bnded_dose_pos_dose_map_
 drover_bnded_dose_stat_moments_map_t             drover_bnded_dose_stat_moments_map_factory(void);
 
 class Drover {
-    private:
+    public:
         bool Has_Been_Melded;   //This is a safety switch: we are *unable* to compute specific routines (DVH, etc..) unless we have called the 'Meld' function.
                                 // A meld will become invalidated if certain data is modified, though you can be sneaky and directly access the buffers.
 

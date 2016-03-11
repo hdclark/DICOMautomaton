@@ -23,6 +23,18 @@
 #include <algorithm>
 #include <experimental/optional>
 
+
+#include <boost/serialization/nvp.hpp>
+
+//For plain-text archives.
+//#include <boost/archive/text_iarchive.hpp>
+//#include <boost/archive/text_oarchive.hpp>
+
+//For XML archives.
+#include <boost/archive/xml_iarchive.hpp>
+#include <boost/archive/xml_oarchive.hpp>
+
+
 #include <pqxx/pqxx>          //PostgreSQL C++ interface.
 
 #include <SFML/Graphics.hpp>
@@ -46,6 +58,7 @@
 #include "Explicator.h"       //Needed for Explicator class.
 
 #include "../Structs.h"
+#include "../StructsIOBoostSerialization.h"
 
 #include "../YgorImages_Functors/Grouping/Misc_Functors.h"
 
@@ -393,7 +406,20 @@ Drover SFML_Viewer(Drover DICOM_data, std::map<std::string,std::string> /*Invoca
                 const auto thechar = static_cast<char>(event.text.unicode);
 
                 //Show a simple help dialog with some keyboard commands.
-                if( (thechar == 'h') || (thechar == 'H') ){
+                if( false ){
+
+                }else if( thechar == 'b' ){
+                    const std::string out_fname("/tmp/boost_serialized_drover.xml");
+                    try{
+                        std::ofstream ofs(out_fname, std::ios::trunc);
+                        boost::archive::xml_oarchive ar(ofs);
+                        ar & boost::serialization::make_nvp("dicom_data", DICOM_data);
+                        FUNCINFO("Dumped serialization to file '" << out_fname << "'");
+                    }catch(const std::exception &e){
+                        FUNCWARN("Unable dump serialization to file '" << out_fname << "'");
+                    }
+
+                }else if( (thechar == 'h') || (thechar == 'H') ){
                     // Easy way to get list of commands:
                     // `grep -C 3 'thechar == ' src/PETCT_Perfusion_Analysis.cc | grep '//\|thechar'`
                     Execute_Command_In_Pipe(
@@ -418,6 +444,7 @@ Drover SFML_Viewer(Drover DICOM_data, std::map<std::string,std::string> /*Invoca
                             "\\t\\t e \\t\\t Erase latest non-empty contour. (A single contour.)\\n"
                             "\\t\\t E \\t\\t Empty the current working ROI buffer. (The entire buffer; all contours.)\\n"
                             "\\t\\t s,S \\t\\t Save the current contour collection.\\n"
+                            "\\t\\t b \\t\\t Serialize Drover instance (all data) to file.\\n"
                             "\\n\""
                     );
 

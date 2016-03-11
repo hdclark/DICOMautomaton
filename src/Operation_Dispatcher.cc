@@ -14,6 +14,7 @@
 
 #include "Structs.h"
 
+#include "Operations/BoostSerializeDrover.h"
 #include "Operations/CT_Liver_Perfusion.h"
 #include "Operations/CT_Liver_Perfusion_First_Run.h"
 #include "Operations/CT_Liver_Perfusion_Ortho_Views.h"
@@ -51,6 +52,7 @@ bool Operation_Dispatcher( Drover &DICOM_data,
     typedef std::function<Drover(Drover, std::map<std::string,std::string>, std::string)> op_func_t;
     std::map<std::string, op_func_t> op_name_mapping;
 
+    op_name_mapping["BoostSerializeDrover"] = Boost_Serialize_Drover;
     op_name_mapping["CT_Liver_Perfusion"] = CT_Liver_Perfusion;
     op_name_mapping["CT_Liver_Perfusion_First_Run"] = CT_Liver_Perfusion_First_Run;
     op_name_mapping["CT_Liver_Perfusion_Ortho_Views"] = CT_Liver_Perfusion_Ortho_Views ;

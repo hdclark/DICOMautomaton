@@ -41,35 +41,11 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 add_subdirectory(Operations)
 
 
-find_package(Protobuf REQUIRED)
-include_directories(${PROTOBUF_INCLUDE_DIRS})
-PROTOBUF_GENERATE_CPP(
-    PROTO_GENERATED_SOURCES  # <--- holds generated source files.
-    PROTO_GENERATED_HEADERS  # <--- holds generated header files.
-    Serialization.proto
-)
-add_library(Protobuf_Generated_objs OBJECT
-    ${PROTO_GENERATED_SOURCES}
-    ${PROTO_GENERATED_HEADERS}
-)
-set_target_properties(Protobuf_Generated_objs PROPERTIES
-    POSITION_INDEPENDENT_CODE TRUE
-)
-
-
 # Generate object files for sources shared by many targets.
 add_library(Structs_obj OBJECT
     Structs.cc     
 )
 set_target_properties(Structs_obj PROPERTIES
-    POSITION_INDEPENDENT_CODE TRUE
-)
-
-add_library(Structs_IO_Protobufs_obj OBJECT
-    Structs_IO_Protobufs.cc     
-    ${PROTO_GENERATED_HEADERS}
-)
-set_target_properties(Structs_IO_Protobufs_obj PROPERTIES
     POSITION_INDEPENDENT_CODE TRUE
 )
 
@@ -101,11 +77,11 @@ set_target_properties(DICOM_File_Loader_obj PROPERTIES
     POSITION_INDEPENDENT_CODE TRUE
 )
 
-add_library(Protobuf_File_Loader_obj OBJECT
-    Protobuf_File_Loader.cc  
-    ${PROTO_GENERATED_HEADERS}
+add_library(Boost_Serialization_File_Loader_obj OBJECT
+    Boost_Serialization_File_Loader.cc  
+    StructsIOBoostSerialization.h
 )
-set_target_properties(Protobuf_File_Loader_obj PROPERTIES
+set_target_properties(Boost_Serialization_File_Loader_obj PROPERTIES
     POSITION_INDEPENDENT_CODE TRUE
 )
 
@@ -229,13 +205,11 @@ add_executable (dicomautomaton_dispatcher
     DICOMautomaton_Dispatcher.cc
 
     $<TARGET_OBJECTS:Structs_obj>
-    $<TARGET_OBJECTS:Structs_IO_Protobufs_obj>
-    $<TARGET_OBJECTS:Protobuf_Generated_objs>
-
     $<TARGET_OBJECTS:Dose_Meld_obj>
     $<TARGET_OBJECTS:Whole_Match_obj>
+
     $<TARGET_OBJECTS:PACS_Loader_obj>
-    $<TARGET_OBJECTS:Protobuf_File_Loader_obj>
+    $<TARGET_OBJECTS:Boost_Serialization_File_Loader_obj>
     $<TARGET_OBJECTS:DICOM_File_Loader_obj>
     $<TARGET_OBJECTS:Operation_Dispatcher_obj>
 
@@ -259,8 +233,9 @@ target_link_libraries (dicomautomaton_dispatcher
     pqxx 
     pq
     boost_filesystem 
+    boost_serialization
+    boost_iostreams
     boost_system 
-    ${PROTOBUF_LIBRARIES}
     m
 )
 

@@ -62,7 +62,7 @@
 #include "YgorDICOMTools.h"   //Needed for Is_File_A_DICOM_File(...);
 
 #include "PACS_Loader.h"
-#include "Protobuf_File_Loader.h"
+#include "Boost_Serialization_File_Loader.h"
 #include "DICOM_File_Loader.h"
 
 #include "Operation_Dispatcher.h"
@@ -114,7 +114,7 @@ int main(int argc, char* argv[]){
 
     //----------------------------------------------- Data: File Loading ---------------------------------------------
     // The following objects are only relevant for the various file loaders. They will be passed through the loaders
-    // (e.g., DICOM file, Protobuf file, etc.) until successfully loaded.
+    // (e.g., DICOM file, Boost.Serialization archive, Protobuf file, etc.) until successfully loaded.
 
     //List of filenames or directories to parse and load.
     std::list<std::string> StandaloneFilesDirs;  // Used to defer filesystem checking.
@@ -303,13 +303,13 @@ int main(int argc, char* argv[]){
         //DICOM files.
         if(!Load_From_DICOM_Files( DICOM_data, InvocationMetadata, FilenameLex,
                                    StandaloneFilesDirsReachable )){
-            FUNCINFO("Unable to load any DICOM files. Continuing..");
+            FUNCERR("Failed to load DICOM file");
         }
 
-        //Protobuf files.
-        if(!Load_From_Protobuf_Files( DICOM_data, InvocationMetadata, FilenameLex,
-                                      StandaloneFilesDirsReachable )){
-            FUNCINFO("Unable to load any Protobuf files. Continuing..");
+        //Boost.Serialization archives.
+        if(!Load_From_Boost_Serialization_Files( DICOM_data, InvocationMetadata, FilenameLex,
+                                                 StandaloneFilesDirsReachable )){
+            FUNCERR("Failed to load Boost.Serialization archive");
         }
 
         //Other loaders ...
