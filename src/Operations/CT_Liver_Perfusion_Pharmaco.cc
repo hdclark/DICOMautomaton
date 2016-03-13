@@ -87,8 +87,45 @@
 #include "CT_Liver_Perfusion_Pharmaco.h"
 
 
-Drover CT_Liver_Perfusion_Pharmaco(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string,std::string> InvocationMetadata, std::string /*FilenameLex*/){
 
+std::list<OperationArgDoc> OpArgDocCT_Liver_Perfusion_Pharmaco(void){
+    std::list<OperationArgDoc> out;
+
+    out.emplace_back();
+    out.back().name = "PreDecimateOutSizeR";
+    out.back().desc = "The number of pixels along the row unit vector to group into an outgoing pixel."
+                      " This optional step can reduce computation effort by downsampling (decimating)"
+                      " images before computing fitted parameter maps (but *after* computing AIF and"
+                      " VIF time courses)."
+                      " Must be a multiplicative factor of the incoming image's row count."
+                      " No decimation occurs if either this or 'PreDecimateOutSizeC' is zero or negative.";
+    out.back().default_val = "8";
+    out.back().expected = true;
+    out.back().examples = { "2", "4", "8", "16", "32", "64", "128", "256", "512" };
+
+    out.emplace_back();
+    out.back().name = "PreDecimateOutSizeC";
+    out.back().desc = "The number of pixels along the column unit vector to group into an outgoing pixel."
+                      " This optional step can reduce computation effort by downsampling (decimating)"
+                      " images before computing fitted parameter maps (but *after* computing AIF and"
+                      " VIF time courses)."
+                      " Must be a multiplicative factor of the incoming image's column count."
+                      " No decimation occurs if either this or 'PreDecimateOutSizeR' is zero or negative.";
+    out.back().default_val = "8";
+    out.back().expected = true;
+    out.back().examples = { "2", "4", "8", "16", "32", "64", "128", "256", "512" };
+
+    return out;
+}
+
+
+
+Drover CT_Liver_Perfusion_Pharmaco(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string> InvocationMetadata, std::string /*FilenameLex*/){
+
+    //---------------------------------------------- User Parameters --------------------------------------------------
+    const long int PreDecimateR = std::stol( OptArgs.getValueStr("PreDecimateOutSizeR").value() );
+    const long int PreDecimateC = std::stol( OptArgs.getValueStr("PreDecimateOutSizeC").value() );
+    //-----------------------------------------------------------------------------------------------------------------
 
     //Stuff references to all contours into a list. Remember that you can still address specific contours through
     // the original holding containers (which are not modified here).
@@ -226,12 +263,21 @@ Drover CT_Liver_Perfusion_Pharmaco(Drover DICOM_data, OperationArgPkg /*OptArgs*
     }
 
     //Decimate the number of pixels for modeling purposes.
-    //for(auto & img_arr : DICOM_data.image_data){
-    for(auto & img_arr : C_enhancement_img_arrays){
-        if(!img_arr->imagecoll.Process_Images_Parallel( GroupIndividualImages,
-                                               InImagePlanePixelDecimate,
-                                               {}, {} )){
-            FUNCERR("Unable to decimate pixels");
+    if((PreDecimateR > 0) && (PreDecimateC > 0)){
+        auto DecimateRC = std::bind(InImagePlanePixelDecimate, 
+                                    std::placeholders::_1, std::placeholders::_2, 
+                                    std::placeholders::_3, std::placeholders::_4,
+                                    PreDecimateR, PreDecimateC,
+                                    std::experimental::any());
+
+
+        //for(auto & img_arr : DICOM_data.image_data){
+        for(auto & img_arr : C_enhancement_img_arrays){
+            if(!img_arr->imagecoll.Process_Images_Parallel( GroupIndividualImages,
+                                                   DecimateRC,
+                                                   {}, {} )){
+                FUNCERR("Unable to decimate pixels");
+            }
         }
     }
 

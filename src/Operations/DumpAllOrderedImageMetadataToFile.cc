@@ -87,6 +87,10 @@
 #include "DumpAllOrderedImageMetadataToFile.h"
 
 
+std::list<OperationArgDoc> OpArgDocDumpAllOrderedImageMetadataToFile(void){
+    return std::list<OperationArgDoc>();
+}
+
 Drover DumpAllOrderedImageMetadataToFile(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string,std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){
 
     //Dump exactly what order the data will be in for the following analysis.

@@ -87,6 +87,10 @@
 #include "CT_Liver_Perfusion_First_Run.h"
 
 
+std::list<OperationArgDoc> OpArgDocCT_Liver_Perfusion_First_Run(void){
+    return std::list<OperationArgDoc>();
+}
+
 Drover CT_Liver_Perfusion_First_Run(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string,std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){
 
     //Use this mode when looking at the data for the first time. It avoids computing much,

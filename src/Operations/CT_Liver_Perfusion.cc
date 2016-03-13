@@ -86,6 +86,10 @@
 
 #include "CT_Liver_Perfusion.h"
 
+std::list<OperationArgDoc> OpArgDocCT_Liver_Perfusion(void){
+    return std::list<OperationArgDoc>();
+}
+
 Drover CT_Liver_Perfusion(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string,std::string> InvocationMetadata, std::string /*FilenameLex*/){
 
     //Stuff references to all contours into a list. Remember that you can still address specific contours through

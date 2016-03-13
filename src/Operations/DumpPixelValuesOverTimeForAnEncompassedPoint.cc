@@ -87,6 +87,10 @@
 #include "DumpPixelValuesOverTimeForAnEncompassedPoint.h"
 
 
+std::list<OperationArgDoc> OpArgDocDumpPixelValuesOverTimeForAnEncompassedPoint(void){
+    return std::list<OperationArgDoc>();
+}
+
 Drover DumpPixelValuesOverTimeForAnEncompassedPoint(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string,std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){
 
     //Output the pixel values over time for a generic point.

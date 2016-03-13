@@ -87,6 +87,10 @@
 #include "UBC3TMRI_DCE_Differences.h"
 
 
+std::list<OperationArgDoc> OpArgDocUBC3TMRI_DCE_Differences(void){
+    return std::list<OperationArgDoc>();
+}
+
 Drover UBC3TMRI_DCE_Differences(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string,std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){
 
     //This routine generates difference maps using both long DCE scans. Thus it takes up a LOT of memory! Try avoid 

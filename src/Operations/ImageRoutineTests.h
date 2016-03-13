@@ -89,6 +89,8 @@
 
 
 
+std::list<OperationArgDoc> OpArgDocImageRoutineTests(void);
+
 Drover ImageRoutineTests(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                          std::map<std::string, std::string> /*InvocationMetadata*/,
                          std::string /*FilenameLex*/);

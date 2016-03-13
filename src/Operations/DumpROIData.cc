@@ -87,6 +87,10 @@
 #include "DumpROIData.h"
 
 
+std::list<OperationArgDoc> OpArgDocDumpROIData(void){
+    return std::list<OperationArgDoc>();
+}
+
 Drover DumpROIData(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string,std::string> /*InvocationMetadata*/, std::string FilenameLex){
 
     //Simply dump ROI contour information to stdout.

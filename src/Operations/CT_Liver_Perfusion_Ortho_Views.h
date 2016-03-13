@@ -89,6 +89,8 @@
 
 
 
+std::list<OperationArgDoc> OpArgDocCT_Liver_Perfusion_Ortho_Views(void);
+
 Drover CT_Liver_Perfusion_Ortho_Views(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                                       std::map<std::string, std::string> /*InvocationMetadata*/,
                                       std::string /*FilenameLex*/);

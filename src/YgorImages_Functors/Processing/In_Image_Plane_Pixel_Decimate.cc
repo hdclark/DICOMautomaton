@@ -17,11 +17,14 @@
 
 #include "../ConvenienceRoutines.h"
 
+#include "In_Image_Plane_Pixel_Decimate.h"
+
 bool InImagePlanePixelDecimate(
                     planar_image_collection<float,double>::images_list_it_t first_img_it,
                     std::list<planar_image_collection<float,double>::images_list_it_t> selected_img_its,
                     std::list<std::reference_wrapper<planar_image_collection<float,double>>>,
                     std::list<std::reference_wrapper<contour_collection<double>>>, 
+                    long int ScaleFactorR, long int ScaleFactorC,
                     std::experimental::any ){
 
     //This routine reduces the number of pixels in an image by computing some sort of aggregate of a
@@ -46,18 +49,14 @@ bool InImagePlanePixelDecimate(
     //   • 256 (256x256 etc..)
     //   • 512 (512x512 etc.. Will result in a single pixel!)
     //
-    const auto ScaleFactorR = 32;
-    const auto ScaleFactorC = 32;
 
     const auto NumberOfRowsRequired = first_img_it->rows / ScaleFactorR;
     const auto NumberOfColsRequired = first_img_it->columns / ScaleFactorC;
 
     if((NumberOfRowsRequired * ScaleFactorR) != first_img_it->rows){
-        throw std::logic_error("ScaleFactorR must be a clean divisor of the image size."
-                               " Are the number of incoming image rows a power of 2?");
+        throw std::logic_error("ScaleFactorR must be a clean divisor of the image size.");
     }else if((NumberOfColsRequired * ScaleFactorC) != first_img_it->columns){
-        throw std::logic_error("ScaleFactorC must be a clean divisor of the image size."
-                               " Are the number of incoming image columns a power of 2?");
+        throw std::logic_error("ScaleFactorC must be a clean divisor of the image size.");
     } 
 
     vec3<double> newOffset = first_img_it->offset;

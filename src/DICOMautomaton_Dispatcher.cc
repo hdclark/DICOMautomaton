@@ -125,16 +125,6 @@ int main(int argc, char* argv[]){
 
     for(auto i = 0; i < argc; ++i) InvocationMetadata["Invocation"] += std::string(argv[i]) + " ";
 
-
-    //Generate a list of all known operations for the usage/help screen.
-    std::string known_ops_str;
-    {
-        auto known_ops = Known_Operations();
-        for(auto &anop : known_ops){
-            known_ops_str += "'" + anop.first + "' ";
-        }
-    }
-
     class ArgumentHandler arger;
     const std::string progname(argv[0]);
     arger.examples = { { "--help", 
@@ -161,7 +151,35 @@ int main(int argc, char* argv[]){
       return; 
     };
 
-    arger.push_back( ygor_arg_handlr_t(0, 'l', "lexicon", true, "<best guess>",
+    arger.push_back( ygor_arg_handlr_t(0, 'u', "detailed-usage", false, "",
+      "Print detailed information about operation arguments and quit.",
+      [&](const std::string &) -> void {
+
+        auto known_ops = Known_Operations();
+        for(auto &anop : known_ops){
+            std::cout << "Operation: '" << anop.first << "'" << std::endl;
+            auto optdocs = anop.second.first();
+            if(optdocs.empty()){
+                std::cout << "\tNo registered options." << std::endl;
+            }else{
+                for(auto &a : optdocs){
+                    std::cout << "\t'" << a.name << "'" << std::endl;
+                    std::cout << "\t\t" << a.desc << std::endl;
+                    std::cout << "\t\t Default: " << a.default_val << std::endl;
+                    std::cout << "\t\t Examples: " << std::endl;
+                    for(auto &e : a.examples){
+                        std::cout << "\t\t\t" << e << std::endl;
+                    }
+                }
+            }
+            std::cout << std::endl;
+        }
+        std::exit(0);
+        return;
+      })
+    );
+ 
+    arger.push_back( ygor_arg_handlr_t(1, 'l', "lexicon", true, "<best guess>",
       "Lexicon file for normalizing ROI contour names.",
       [&](const std::string &optarg) -> void {
         FilenameLex = optarg;
@@ -169,7 +187,7 @@ int main(int argc, char* argv[]){
       })
     );
  
-    arger.push_back( ygor_arg_handlr_t(1, 'd', "database-parameters", true, db_connection_params,
+    arger.push_back( ygor_arg_handlr_t(2, 'd', "database-parameters", true, db_connection_params,
       "PostgreSQL database connection settings to use for PACS database.",
       [&](const std::string &optarg) -> void {
         db_connection_params = optarg;
@@ -177,7 +195,7 @@ int main(int argc, char* argv[]){
       })
     );
 
-    arger.push_back( ygor_arg_handlr_t(1, 'f', "filter-query-file", true, "/tmp/query.sql",
+    arger.push_back( ygor_arg_handlr_t(2, 'f', "filter-query-file", true, "/tmp/query.sql",
       "Query file(s) to use for filtering which DICOM files should be used for analysis."
       " Files are loaded sequentially and should ultimately return full metadata records.",
       [&](const std::string &optarg) -> void {
@@ -186,7 +204,7 @@ int main(int argc, char* argv[]){
       })
     );
 
-    arger.push_back( ygor_arg_handlr_t(1, 'n', "next-group", false, "", 
+    arger.push_back( ygor_arg_handlr_t(2, 'n', "next-group", false, "", 
       "Signifies the beginning of a new (separate from the last) group of filter scripts.",
       [&](const std::string &) -> void {
         GroupedFilterQueryFiles.emplace_back();
@@ -216,7 +234,7 @@ int main(int argc, char* argv[]){
 
     arger.push_back( ygor_arg_handlr_t(5, 'o', "operation", true, "View",
       "An operation to perform on the fully loaded data. Some operations can be chained, some"
-      " may necessarily terminate computation. Known operations: " + known_ops_str,
+      " may necessarily terminate computation. See '-u' for detailed operation information.",
       [&](const std::string &optarg) -> void {
         try{
           Operations.emplace_back(optarg);

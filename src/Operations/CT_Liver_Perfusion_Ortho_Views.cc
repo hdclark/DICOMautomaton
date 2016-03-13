@@ -87,6 +87,10 @@
 #include "CT_Liver_Perfusion_Ortho_Views.h"
 
 
+std::list<OperationArgDoc> OpArgDocCT_Liver_Perfusion_Ortho_Views (void){
+    return std::list<OperationArgDoc>();
+}
+
 Drover CT_Liver_Perfusion_Ortho_Views (Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string,std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){
 
     //Use this mode when you are only interested in oblique/orthogonal views.

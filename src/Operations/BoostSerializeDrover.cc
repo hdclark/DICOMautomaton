@@ -13,11 +13,28 @@
 
 #include "../Common_Boost_Serialization.h"
 
+
+std::list<OperationArgDoc> OpArgDocBoost_Serialize_Drover(void){
+    std::list<OperationArgDoc> out;
+
+    out.emplace_back();
+    out.back().name = "Filename";
+    out.back().desc = "The filename (or full path name) to which the serialized data should be written";
+    out.back().default_val = "/tmp/boost_serialized_drover.bin.gz";
+    out.back().expected = true;
+    out.back().examples = { "/tmp/out.bin.gz", 
+                            "./out.bin.gz",
+                            "out.bin.gz" };
+
+    return out;
+}
+
 Drover
 Boost_Serialize_Drover(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string, std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){
 
-    auto fname_opt = OptArgs.getValueStr("filename");    
-    const auto fname = fname_opt.value_or("/tmp/boost_serialized_drover.bin.gz");
+    //---------------------------------------------- User Parameters --------------------------------------------------
+    auto fname = OptArgs.getValueStr("filename").value();    
+    //-----------------------------------------------------------------------------------------------------------------
 
     const boost::filesystem::path apath(fname);
 

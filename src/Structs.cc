@@ -2099,7 +2099,7 @@ OperationArgPkg::containsExactly(std::initializer_list<std::string> l) const {
 }
 
 
- //Attempts to cast the value if present. Optional is disengaged if key is missing or cast fails.
+//Returns value corresponding to key. Optional is disengaged if key is missing or cast fails.
 std::experimental::optional<std::string> 
 OperationArgPkg::getValueStr(std::string key) const {
     const auto cit = this->opts.find(key);
@@ -2110,4 +2110,16 @@ OperationArgPkg::getValueStr(std::string key) const {
     }
     return std::experimental::make_optional(cit->second);
 }
+
+
+//Will not overwrite.
+bool
+OperationArgPkg::insert(std::string key, std::string val){
+    if(0 != this->opts.count(key)){
+        return false;
+    }
+    this->opts[key] = val;
+    return true;
+}
+
 

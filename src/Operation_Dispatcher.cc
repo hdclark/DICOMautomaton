@@ -9,6 +9,7 @@
 #include <map>
 #include <list>
 #include <functional>
+#include <utility>
 
 #include <boost/algorithm/string.hpp> //For boost:iequals().
 
@@ -45,37 +46,37 @@
 
 
 
-std::map<std::string, op_func_t> Known_Operations(void){
-    std::map<std::string, op_func_t> op_name_mapping;
+std::map<std::string, op_packet_t> Known_Operations(void){
+    std::map<std::string, op_packet_t> out;
 
-    op_name_mapping["BoostSerializeDrover"] = Boost_Serialize_Drover;
-    op_name_mapping["CT_Liver_Perfusion"] = CT_Liver_Perfusion;
-    op_name_mapping["CT_Liver_Perfusion_First_Run"] = CT_Liver_Perfusion_First_Run;
-    op_name_mapping["CT_Liver_Perfusion_Ortho_Views"] = CT_Liver_Perfusion_Ortho_Views ;
-    op_name_mapping["CT_Liver_Perfusion_Pharmaco"] = CT_Liver_Perfusion_Pharmaco;
-    op_name_mapping["ContourSimilarity"] = ContourSimilarity;
-    op_name_mapping["ContouringAides"] = ContouringAides;
-    op_name_mapping["ConvertNaNsToAir"] = ConvertNaNsToAir;
-    op_name_mapping["DecimatePixels"] = DecimatePixels;
-    op_name_mapping["DumpAllOrderedImageMetadataToFile"] = DumpAllOrderedImageMetadataToFile;
-    op_name_mapping["DumpAnEncompassedPoint"] = DumpAnEncompassedPoint;
-    op_name_mapping["DumpFilesPartitionedByTime"] = DumpFilesPartitionedByTime;
-    op_name_mapping["DumpImageMetadataOccurrencesToFile"] = DumpImageMetadataOccurrencesToFile;
-    op_name_mapping["DumpPixelValuesOverTimeForAnEncompassedPoint"] = DumpPixelValuesOverTimeForAnEncompassedPoint;
-    op_name_mapping["DumpROIData"] = DumpROIData;
-    op_name_mapping["GiveWholeImageArrayABoneWindowLevel"] = GiveWholeImageArrayABoneWindowLevel;
-    op_name_mapping["GiveWholeImageArrayAHeadAndNeckWindowLevel"] = GiveWholeImageArrayAHeadAndNeckWindowLevel;
-    op_name_mapping["GiveWholeImageArrayAThoraxWindowLevel"] = GiveWholeImageArrayAThoraxWindowLevel;
-    op_name_mapping["GiveWholeImageArrayAnAbdominalWindowLevel"] = GiveWholeImageArrayAnAbdominalWindowLevel;
-    op_name_mapping["ImageRoutineTests"] = ImageRoutineTests;
-    op_name_mapping["PreFilterEnormousCTValues"] = PreFilterEnormousCTValues;
-    op_name_mapping["SFML_Viewer"] = SFML_Viewer;
-    op_name_mapping["UBC3TMRI_DCE"] = UBC3TMRI_DCE;
-    op_name_mapping["UBC3TMRI_DCE_Differences"] = UBC3TMRI_DCE_Differences;
-    op_name_mapping["UBC3TMRI_DCE_Experimental"] = UBC3TMRI_DCE_Experimental;
-    op_name_mapping["UBC3TMRI_IVIM_ADC"] = UBC3TMRI_IVIM_ADC;
+    out["BoostSerializeDrover"] = std::make_pair(OpArgDocBoost_Serialize_Drover, Boost_Serialize_Drover);
+    out["CT_Liver_Perfusion"] = std::make_pair(OpArgDocCT_Liver_Perfusion, CT_Liver_Perfusion);
+    out["CT_Liver_Perfusion_First_Run"] = std::make_pair(OpArgDocCT_Liver_Perfusion_First_Run, CT_Liver_Perfusion_First_Run);
+    out["CT_Liver_Perfusion_Ortho_Views"] = std::make_pair(OpArgDocCT_Liver_Perfusion_Ortho_Views , CT_Liver_Perfusion_Ortho_Views );
+    out["CT_Liver_Perfusion_Pharmaco"] = std::make_pair(OpArgDocCT_Liver_Perfusion_Pharmaco, CT_Liver_Perfusion_Pharmaco);
+    out["ContourSimilarity"] = std::make_pair(OpArgDocContourSimilarity, ContourSimilarity);
+    out["ContouringAides"] = std::make_pair(OpArgDocContouringAides, ContouringAides);
+    out["ConvertNaNsToAir"] = std::make_pair(OpArgDocConvertNaNsToAir, ConvertNaNsToAir);
+    out["DecimatePixels"] = std::make_pair(OpArgDocDecimatePixels, DecimatePixels);
+    out["DumpAllOrderedImageMetadataToFile"] = std::make_pair(OpArgDocDumpAllOrderedImageMetadataToFile, DumpAllOrderedImageMetadataToFile);
+    out["DumpAnEncompassedPoint"] = std::make_pair(OpArgDocDumpAnEncompassedPoint, DumpAnEncompassedPoint);
+    out["DumpFilesPartitionedByTime"] = std::make_pair(OpArgDocDumpFilesPartitionedByTime, DumpFilesPartitionedByTime);
+    out["DumpImageMetadataOccurrencesToFile"] = std::make_pair(OpArgDocDumpImageMetadataOccurrencesToFile, DumpImageMetadataOccurrencesToFile);
+    out["DumpPixelValuesOverTimeForAnEncompassedPoint"] = std::make_pair(OpArgDocDumpPixelValuesOverTimeForAnEncompassedPoint, DumpPixelValuesOverTimeForAnEncompassedPoint);
+    out["DumpROIData"] = std::make_pair(OpArgDocDumpROIData, DumpROIData);
+    out["GiveWholeImageArrayABoneWindowLevel"] = std::make_pair(OpArgDocGiveWholeImageArrayABoneWindowLevel, GiveWholeImageArrayABoneWindowLevel);
+    out["GiveWholeImageArrayAHeadAndNeckWindowLevel"] = std::make_pair(OpArgDocGiveWholeImageArrayAHeadAndNeckWindowLevel, GiveWholeImageArrayAHeadAndNeckWindowLevel);
+    out["GiveWholeImageArrayAThoraxWindowLevel"] = std::make_pair(OpArgDocGiveWholeImageArrayAThoraxWindowLevel, GiveWholeImageArrayAThoraxWindowLevel);
+    out["GiveWholeImageArrayAnAbdominalWindowLevel"] = std::make_pair(OpArgDocGiveWholeImageArrayAnAbdominalWindowLevel, GiveWholeImageArrayAnAbdominalWindowLevel);
+    out["ImageRoutineTests"] = std::make_pair(OpArgDocImageRoutineTests, ImageRoutineTests);
+    out["PreFilterEnormousCTValues"] = std::make_pair(OpArgDocPreFilterEnormousCTValues, PreFilterEnormousCTValues);
+    out["SFML_Viewer"] = std::make_pair(OpArgDocSFML_Viewer, SFML_Viewer);
+    out["UBC3TMRI_DCE"] = std::make_pair(OpArgDocUBC3TMRI_DCE, UBC3TMRI_DCE);
+    out["UBC3TMRI_DCE_Differences"] = std::make_pair(OpArgDocUBC3TMRI_DCE_Differences, UBC3TMRI_DCE_Differences);
+    out["UBC3TMRI_DCE_Experimental"] = std::make_pair(OpArgDocUBC3TMRI_DCE_Experimental, UBC3TMRI_DCE_Experimental);
+    out["UBC3TMRI_IVIM_ADC"] = std::make_pair(OpArgDocUBC3TMRI_IVIM_ADC, UBC3TMRI_IVIM_ADC);
 
-    return op_name_mapping;
+    return out;
 }
 
 
@@ -91,15 +92,23 @@ bool Operation_Dispatcher( Drover &DICOM_data,
 
     try{
         for(const auto &OptArgs : Operations){
+            auto optargs = OptArgs;
             bool WasFound = false;
             for(const auto &op_func : op_name_mapping){
-                if(boost::iequals(op_func.first,OptArgs.getName())){
+                if(boost::iequals(op_func.first,optargs.getName())){
                     WasFound = true;
+
+                    //Attempt to insert all expected, documented parameters with the default value.
+                    auto OpArgDocs = op_func.second.first();
+                    for(const auto &r : OpArgDocs){
+                        if(r.expected) optargs.insert( r.name, r.default_val );
+                    }
+
                     FUNCINFO("Performing operation '" << op_func.first << "' now..");
-                    DICOM_data = op_func.second(DICOM_data, OptArgs, InvocationMetadata, FilenameLex);
+                    DICOM_data = op_func.second.second(DICOM_data, optargs, InvocationMetadata, FilenameLex);
                 }
             }
-            if(!WasFound) throw std::invalid_argument("No operation matched '" + OptArgs.getName() + "'");
+            if(!WasFound) throw std::invalid_argument("No operation matched '" + optargs.getName() + "'");
         }
     }catch(const std::exception &e){
         FUNCWARN("Analysis failed: '" << e.what() << "'. Aborting remaining analyses");

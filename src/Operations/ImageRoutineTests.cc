@@ -87,6 +87,10 @@
 #include "ImageRoutineTests.h"
 
 
+std::list<OperationArgDoc> OpArgDocImageRoutineTests(void){
+    return std::list<OperationArgDoc>();
+}
+
 Drover ImageRoutineTests(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string,std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){
 
     //Get handles for each of the original image arrays so we can easily refer to them later.

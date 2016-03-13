@@ -87,6 +87,10 @@
 #include "DumpImageMetadataOccurrencesToFile.h"
 
 
+std::list<OperationArgDoc> OpArgDocDumpImageMetadataOccurrencesToFile(void){
+    return std::list<OperationArgDoc>();
+}
+
 Drover DumpImageMetadataOccurrencesToFile(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string,std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){
 
     //Dump all the metadata elements, but group like-items together and also print the occurence number.

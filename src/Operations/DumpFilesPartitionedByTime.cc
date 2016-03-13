@@ -87,6 +87,10 @@
 #include "DumpFilesPartitionedByTime.h"
 
 
+std::list<OperationArgDoc> OpArgDocDumpFilesPartitionedByTime(void){
+    return std::list<OperationArgDoc>();
+}
+
 Drover DumpFilesPartitionedByTime(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string,std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){
        
     //This operation prints PACS filenames along with the associated time. It is more focused than the metadata 

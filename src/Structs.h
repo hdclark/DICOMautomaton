@@ -422,6 +422,18 @@ class OperationArgPkg {
         bool containsExactly(std::initializer_list<std::string> l) const;
 
         std::experimental::optional<std::string> getValueStr(std::string key) const;
- 
+
+        bool insert(std::string key, std::string val); //Will not overwrite.
+
+};
+
+
+// Class for documenting commandline argument operation options.
+struct OperationArgDoc {
+    std::string name;
+    std::string desc;
+    std::string default_val;
+    bool expected;
+    std::list<std::string> examples;
 };
 

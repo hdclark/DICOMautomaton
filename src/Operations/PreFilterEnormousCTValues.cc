@@ -87,6 +87,10 @@
 #include "PreFilterEnormousCTValues.h"
 
 
+std::list<OperationArgDoc> OpArgDocPreFilterEnormousCTValues(void){
+    return std::list<OperationArgDoc>();
+}
+
 Drover PreFilterEnormousCTValues(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string,std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){
 
     //This operation runs the data through a per-pixel filter, censoring pixels which are too high to legitimately

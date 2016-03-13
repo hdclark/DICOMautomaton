@@ -89,6 +89,8 @@
 
 
 
+std::list<OperationArgDoc> OpArgDocDumpAnEncompassedPoint(void);
+
 Drover DumpAnEncompassedPoint(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                               std::map<std::string, std::string> /*InvocationMetadata*/,
                               std::string /*FilenameLex*/);

@@ -87,6 +87,10 @@
 #include "UBC3TMRI_DCE.h"
 
 
+std::list<OperationArgDoc> OpArgDocUBC3TMRI_DCE(void){
+    return std::list<OperationArgDoc>();
+}
+
 Drover UBC3TMRI_DCE(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string,std::string> InvocationMetadata, std::string /*FilenameLex*/){
 
     //============================================= UBC3TMRI Vol01 DCE ================================================

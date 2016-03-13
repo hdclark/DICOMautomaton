@@ -87,6 +87,10 @@
 #include "GiveWholeImageArrayAThoraxWindowLevel.h"
 
 
+std::list<OperationArgDoc> OpArgDocGiveWholeImageArrayAThoraxWindowLevel(void){
+    return std::list<OperationArgDoc>();
+}
+
 Drover GiveWholeImageArrayAThoraxWindowLevel(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string,std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){
 
     //This operation runs the images in an image array through a uniform window-and-leveler instead of per-slice

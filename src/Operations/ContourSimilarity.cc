@@ -87,6 +87,10 @@
 #include "ContourSimilarity.h"
 
 
+std::list<OperationArgDoc> OpArgDocContourSimilarity(void){
+    return std::list<OperationArgDoc>();
+}
+
 Drover ContourSimilarity(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string,std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){
 
     //Get handles for each of the original image arrays so we can easily refer to them later.

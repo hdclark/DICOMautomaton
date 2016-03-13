@@ -87,7 +87,7 @@
 #include "../YgorImages_Functors/Compute/Contour_Similarity.h"
 
 
-
+std::list<OperationArgDoc> OpArgDocDumpROIData(void);
 
 Drover
 DumpROIData(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string, std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/);

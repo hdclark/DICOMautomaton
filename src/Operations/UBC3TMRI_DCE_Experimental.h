@@ -89,6 +89,8 @@
 
 
 
+std::list<OperationArgDoc> OpArgDocUBC3TMRI_DCE_Experimental(void);
+
 Drover UBC3TMRI_DCE_Experimental(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                                  std::map<std::string, std::string> /*InvocationMetadata*/,
                                  std::string /*FilenameLex*/);
