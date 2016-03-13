@@ -87,7 +87,7 @@
 #include "PreFilterEnormousCTValues.h"
 
 
-Drover PreFilterEnormousCTValues(Drover DICOM_data, std::map<std::string,std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){
+Drover PreFilterEnormousCTValues(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string,std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){
 
     //This operation runs the data through a per-pixel filter, censoring pixels which are too high to legitimately
     // show up in a clinical CT. Censored pixels are set to NaN. Data is modified and no copy is made!

@@ -90,4 +90,4 @@
 
 
 Drover
-SFML_Viewer(Drover DICOM_data, std::map<std::string, std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/);
+SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string, std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/);

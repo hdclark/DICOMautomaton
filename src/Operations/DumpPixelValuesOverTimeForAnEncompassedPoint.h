@@ -89,6 +89,6 @@
 
 
 
-Drover DumpPixelValuesOverTimeForAnEncompassedPoint(Drover DICOM_data,
+Drover DumpPixelValuesOverTimeForAnEncompassedPoint(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                                                     std::map<std::string, std::string> /*InvocationMetadata*/,
                                                     std::string /*FilenameLex*/);

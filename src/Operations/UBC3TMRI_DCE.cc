@@ -87,7 +87,7 @@
 #include "UBC3TMRI_DCE.h"
 
 
-Drover UBC3TMRI_DCE(Drover DICOM_data, std::map<std::string,std::string> InvocationMetadata, std::string /*FilenameLex*/){
+Drover UBC3TMRI_DCE(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string,std::string> InvocationMetadata, std::string /*FilenameLex*/){
 
     //============================================= UBC3TMRI Vol01 DCE ================================================
     //Stuff references to all contours into a list. Remember that you can still address specific contours through

@@ -87,7 +87,7 @@
 #include "DecimatePixels.h"
 
 
-Drover DecimatePixels(Drover DICOM_data, std::map<std::string,std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){
+Drover DecimatePixels(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string,std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){
 
     //This operation spatially aggregates blocks of pixels, thereby decimating them and making the images consume
     // far less memory. The precise size reduction and spatial aggregate can be set in the source. 

@@ -87,7 +87,7 @@
 #include "DumpPixelValuesOverTimeForAnEncompassedPoint.h"
 
 
-Drover DumpPixelValuesOverTimeForAnEncompassedPoint(Drover DICOM_data, std::map<std::string,std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){
+Drover DumpPixelValuesOverTimeForAnEncompassedPoint(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string,std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){
 
     //Output the pixel values over time for a generic point.
     const auto apoint = DICOM_data.image_data.front()->imagecoll.images.front().center();

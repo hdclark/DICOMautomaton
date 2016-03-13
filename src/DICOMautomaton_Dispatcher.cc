@@ -94,7 +94,7 @@ int main(int argc, char* argv[]){
     std::map<std::string,std::string> InvocationMetadata;
 
     //Operations to perform on the data.
-    std::list<std::string> Operations;
+    std::list<OperationArgPkg> Operations;
 
     //------------------------------------------------- Data: Database -----------------------------------------------
     // The following objects are only relevant for the PACS database loader.
@@ -124,6 +124,16 @@ int main(int argc, char* argv[]){
     //================================================ Argument Parsing ==============================================
 
     for(auto i = 0; i < argc; ++i) InvocationMetadata["Invocation"] += std::string(argv[i]) + " ";
+
+
+    //Generate a list of all known operations for the usage/help screen.
+    std::string known_ops_str;
+    {
+        auto known_ops = Known_Operations();
+        for(auto &anop : known_ops){
+            known_ops_str += "'" + anop.first + "' ";
+        }
+    }
 
     class ArgumentHandler arger;
     const std::string progname(argv[0]);
@@ -206,15 +216,18 @@ int main(int argc, char* argv[]){
 
     arger.push_back( ygor_arg_handlr_t(5, 'o', "operation", true, "View",
       "An operation to perform on the fully loaded data. Some operations can be chained, some"
-      " may necessarily terminate computation. See source for available operations.",
+      " may necessarily terminate computation. Known operations: " + known_ops_str,
       [&](const std::string &optarg) -> void {
-        Operations.push_back(optarg);
+        try{
+          Operations.emplace_back(optarg);
+        }catch(const std::exception &e){
+          FUNCERR("Unable to parse operation: " << e.what());
+        }
         return;
       })
     );
 
     arger.Launch(argc, argv);
-
 
     //============================================== Input Verification ==============================================
 
@@ -282,7 +295,7 @@ int main(int argc, char* argv[]){
     //If DB or standalone loading, we require at least one action.
     }else if(Operations.empty()){
         FUNCWARN("No operations specified: defaulting to operation 'SFML_Viewer'");
-        Operations.push_back("SFML_Viewer");
+        Operations.emplace_back("SFML_Viewer");
     }
 
 

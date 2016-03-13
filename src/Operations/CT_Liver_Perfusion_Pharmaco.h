@@ -89,6 +89,6 @@
 
 
 
-Drover CT_Liver_Perfusion_Pharmaco(Drover DICOM_data,
+Drover CT_Liver_Perfusion_Pharmaco(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                                    std::map<std::string, std::string> /*InvocationMetadata*/,
                                    std::string /*FilenameLex*/);

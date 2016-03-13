@@ -11,6 +11,12 @@
 #include <tuple>
 #include <array>
 #include <functional>
+#include <initializer_list>
+
+#include <experimental/optional>
+
+#include <boost/algorithm/string.hpp>
+#include <boost/algorithm/string/trim_all.hpp>
 
 #include "YgorMisc.h"
 #include "YgorStats.h"
@@ -1978,4 +1984,130 @@ void Drover::Plot_Image_Outlines(void) const {
     return;
 }
 
+
+//---------------------------------------------------------------------------------------------------------------------------
+//------------------------------------------------------ OperationArgPkg ----------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------------
+
+OperationArgPkg::OperationArgPkg(std::string unparsed) : opts(icase_str_lt_lambda) {
+    //Parse the string. Throws if an error is detected.
+    //
+    // Examples of acceptable input:
+    //   1. "OperationName:keyA=valueA:keyB=valueB"
+    //   2. "op_name"
+    //   3. "op_name:"
+    //   4. "op_name:somelongkey=somelongvalue"
+    //   5. "op name:some long key=some long value"
+    //   6. "op_name:keyA=:keyB=something"
+    //   7. "op_name:keyA=:keyB=something"
+    //   8. "  op  name:"
+    // etc..
+    //
+    // Unacceptable:
+    //   1. ":op_name"
+    //   1. ":keyA=valA"
+    //   2. "opname:key_with_no_value:"
+    //   3. "opname:key_with_no_value"
+    // etc..
+    //
+    // Spaces are aggressively trimmed. No spaces will be retained at the front or back of keys or values.
+    // All sequential are trimmed to a single space.
+
+    unparsed = boost::algorithm::trim_all_copy(unparsed);
+    if(unparsed.empty()) throw std::invalid_argument("No operation name specified.");
+
+    if(!boost::algorithm::contains(unparsed, ":")){
+        this->name = unparsed;
+        return;
+    }
+
+    std::list<std::string> split_on_colons;
+    boost::algorithm::split(split_on_colons, unparsed, boost::algorithm::is_any_of(":"), boost::algorithm::token_compress_on);
+    for(auto &b : split_on_colons) b = boost::algorithm::trim_all_copy(b);
+    if(split_on_colons.empty()) throw std::invalid_argument("No operation name specified.");
+
+    this->name = boost::algorithm::trim_all_copy(split_on_colons.front());
+    split_on_colons.pop_front();
+
+    for(auto &a : split_on_colons){
+        //Must contain an '=' to be considered valid.
+        a = boost::algorithm::trim_all_copy(a);
+        if(a.empty()) continue;
+        if(!boost::algorithm::contains(a, "=")) throw std::invalid_argument("Argument provided with key but no value");
+
+        std::list<std::string> split_on_equals;
+        boost::algorithm::split(split_on_equals, a, boost::algorithm::is_any_of("="), boost::algorithm::token_compress_off);
+        for(auto &b : split_on_equals) b = boost::algorithm::trim_all_copy(b);
+
+        if(split_on_equals.size() != 2) throw std::invalid_argument("Missing argument key or value");
+        if(0 != this->opts.count(split_on_equals.front())){
+            throw std::invalid_argument("Provided argument would overwrite existing argument");
+        }
+        if(split_on_equals.front().empty()){
+            throw std::invalid_argument("Unwilling to create empty argument key");
+        }
+
+        this->opts[split_on_equals.front()] = split_on_equals.back();
+        
+    }
+    return;
+}
+
+OperationArgPkg &
+OperationArgPkg::operator=(const OperationArgPkg &rhs){
+    if(this == &rhs) return *this;
+    this->name = rhs.name;
+    this->opts = rhs.opts;
+    return *this;
+}
+
+std::string
+OperationArgPkg::getName(void) const {
+    return this->name;
+}
+
+
+bool 
+OperationArgPkg::containsExactly(std::initializer_list<std::string> l) const {
+   //We compare the number of elements, scan elements of setA to see if they're in setB, and then vice-versa.
+   //
+   // Note: Case sensitivity in this functions' argument can cause issues. Don't send in, e.g., 'foo' and 'FOO' 
+   //       and expect this routine to work!
+   //
+   if(l.size() != this->opts.size()) return false;
+   for(const auto &i : l){
+       bool wasPresent = false;
+       for(const auto &kv : this->opts){
+           if(boost::algorithm::iequals(kv.first,i)){
+               wasPresent = true;
+               break;
+           }
+       }
+       if(!wasPresent) return false;
+   }
+   for(const auto &kv : this->opts){
+       bool wasPresent = false;
+       for(const auto &i : l){
+           if(boost::algorithm::iequals(kv.first,i)){
+               wasPresent = true;
+               break;
+           }
+       }
+       if(!wasPresent) return false;
+   }
+   return true;
+}
+
+
+ //Attempts to cast the value if present. Optional is disengaged if key is missing or cast fails.
+std::experimental::optional<std::string> 
+OperationArgPkg::getValueStr(std::string key) const {
+    const auto cit = this->opts.find(key);
+    auto def = std::experimental::optional<std::string>();
+
+    if(cit == this->opts.end()){
+        return std::experimental::optional<std::string>();
+    }
+    return std::experimental::make_optional(cit->second);
+}
 

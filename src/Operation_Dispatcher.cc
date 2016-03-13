@@ -43,13 +43,9 @@
 
 #include "Operation_Dispatcher.h"
 
-bool Operation_Dispatcher( Drover &DICOM_data,
-                           std::map<std::string,std::string> &InvocationMetadata,
-                           std::string &FilenameLex,
-                           std::list<std::string> &Operations ){
 
-    //Generate a listing containing the operation names and the corresponding function.
-    typedef std::function<Drover(Drover, std::map<std::string,std::string>, std::string)> op_func_t;
+
+std::map<std::string, op_func_t> Known_Operations(void){
     std::map<std::string, op_func_t> op_name_mapping;
 
     op_name_mapping["BoostSerializeDrover"] = Boost_Serialize_Drover;
@@ -79,18 +75,31 @@ bool Operation_Dispatcher( Drover &DICOM_data,
     op_name_mapping["UBC3TMRI_DCE_Experimental"] = UBC3TMRI_DCE_Experimental;
     op_name_mapping["UBC3TMRI_IVIM_ADC"] = UBC3TMRI_IVIM_ADC;
 
+    return op_name_mapping;
+}
+
+
+
+
+
+bool Operation_Dispatcher( Drover &DICOM_data,
+                           std::map<std::string,std::string> &InvocationMetadata,
+                           std::string &FilenameLex,
+                           std::list<OperationArgPkg> &Operations ){
+
+    auto op_name_mapping = Known_Operations();
 
     try{
-        for(const auto &op_req : Operations){
+        for(const auto &OptArgs : Operations){
             bool WasFound = false;
             for(const auto &op_func : op_name_mapping){
-                if(boost::iequals(op_func.first,op_req)){
+                if(boost::iequals(op_func.first,OptArgs.getName())){
                     WasFound = true;
                     FUNCINFO("Performing operation '" << op_func.first << "' now..");
-                    DICOM_data = op_func.second(DICOM_data, InvocationMetadata, FilenameLex);
+                    DICOM_data = op_func.second(DICOM_data, OptArgs, InvocationMetadata, FilenameLex);
                 }
             }
-            if(!WasFound) throw std::invalid_argument("No operation matched '" + op_req + "'");
+            if(!WasFound) throw std::invalid_argument("No operation matched '" + OptArgs.getName() + "'");
         }
     }catch(const std::exception &e){
         FUNCWARN("Analysis failed: '" << e.what() << "'. Aborting remaining analyses");

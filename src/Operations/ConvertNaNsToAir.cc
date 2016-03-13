@@ -87,7 +87,7 @@
 #include "ConvertNaNsToAir.h"
 
 
-Drover ConvertNaNsToAir(Drover DICOM_data, std::map<std::string,std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){
+Drover ConvertNaNsToAir(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string,std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){
 
     //This operation runs the data through a per-pixel filter, converting NaN's to air in Hounsfield units (-1024).
     for(auto & img_arr : DICOM_data.image_data){

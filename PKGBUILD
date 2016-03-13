@@ -19,7 +19,7 @@ depends=(
    'freeglut'
    'nlopt' 
    'boost-libs'
-   'protobuf3'
+   'zlib'
    'explicator'
    # -lygor -ldemarcator
 )

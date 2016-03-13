@@ -90,4 +90,4 @@
 
 
 Drover
-UBC3TMRI_DCE(Drover DICOM_data, std::map<std::string, std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/);
+UBC3TMRI_DCE(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string, std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/);

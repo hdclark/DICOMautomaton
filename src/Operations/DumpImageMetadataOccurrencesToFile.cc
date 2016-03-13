@@ -87,7 +87,7 @@
 #include "DumpImageMetadataOccurrencesToFile.h"
 
 
-Drover DumpImageMetadataOccurrencesToFile(Drover DICOM_data, std::map<std::string,std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){
+Drover DumpImageMetadataOccurrencesToFile(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string,std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){
 
     //Dump all the metadata elements, but group like-items together and also print the occurence number.
     const auto Dump_Image_Metadata_Occurrences_To_File =

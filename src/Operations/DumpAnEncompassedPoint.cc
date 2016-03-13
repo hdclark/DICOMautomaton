@@ -87,7 +87,7 @@
 #include "DumpAnEncompassedPoint.h"
 
 
-Drover DumpAnEncompassedPoint(Drover DICOM_data, std::map<std::string,std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){
+Drover DumpAnEncompassedPoint(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string,std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){
     //Grab an arbitrary point from one of the images. Find all other images which encompass the point.
     const auto apoint = DICOM_data.image_data.front()->imagecoll.images.front().center();
     auto encompassing_images = DICOM_data.image_data.front()->imagecoll.get_images_which_encompass_point(apoint);

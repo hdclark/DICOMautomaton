@@ -87,7 +87,7 @@
 #include "GiveWholeImageArrayAHeadAndNeckWindowLevel.h"
 
 
-Drover GiveWholeImageArrayAHeadAndNeckWindowLevel(Drover DICOM_data, std::map<std::string,std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){
+Drover GiveWholeImageArrayAHeadAndNeckWindowLevel(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string,std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){
 
     //This operation runs the images in an image array through a uniform window-and-leveler instead of per-slice
     // window-and-level or no window-and-level at all. Data is modified and no copy is made!

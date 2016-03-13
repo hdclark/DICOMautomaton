@@ -87,7 +87,7 @@
 #include "DumpFilesPartitionedByTime.h"
 
 
-Drover DumpFilesPartitionedByTime(Drover DICOM_data, std::map<std::string,std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){
+Drover DumpFilesPartitionedByTime(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string,std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){
        
     //This operation prints PACS filenames along with the associated time. It is more focused than the metadata 
     // dumpers above. This data can be used for many things, such as image viewers which are not DICOM-aware or

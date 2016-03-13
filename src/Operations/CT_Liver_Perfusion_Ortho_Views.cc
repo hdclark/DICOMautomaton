@@ -87,7 +87,7 @@
 #include "CT_Liver_Perfusion_Ortho_Views.h"
 
 
-Drover CT_Liver_Perfusion_Ortho_Views (Drover DICOM_data, std::map<std::string,std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){
+Drover CT_Liver_Perfusion_Ortho_Views (Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string,std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){
 
     //Use this mode when you are only interested in oblique/orthogonal views.
     // The point of this operation is to keep memory low so image sets can be compared.

@@ -87,7 +87,7 @@
 #include "DumpROIData.h"
 
 
-Drover DumpROIData(Drover DICOM_data, std::map<std::string,std::string> /*InvocationMetadata*/, std::string FilenameLex){
+Drover DumpROIData(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string,std::string> /*InvocationMetadata*/, std::string FilenameLex){
 
     //Simply dump ROI contour information to stdout.
     typedef std::tuple<std::string,std::string,std::string> key_t; //PatientID, ROIName, NormalizedROIName.

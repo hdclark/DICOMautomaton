@@ -1,6 +1,6 @@
 //Structs.h.
-#ifndef DICOMAUTOMATON_STRUCTS_H
-#define DICOMAUTOMATON_STRUCTS_H
+
+#pragma once
 
 #include <vector>
 #include <string>
@@ -12,6 +12,10 @@
 #include <array>
 #include <unordered_map>
 #include <functional>
+#include <algorithm>
+#include <initializer_list>
+
+#include <experimental/optional>
 
 #include "YgorMath.h"
 #include "YgorImages.h"
@@ -387,4 +391,37 @@ class Drover {
 };
 
 
-#endif
+
+typedef std::function<bool (const std::string &, const std::string)>  icase_str_lt_func_t;
+typedef std::map<std::string, std::string, icase_str_lt_func_t> icase_map_t;
+constexpr auto icase_str_lt_lambda = [](const std::string &A, const std::string &B) -> bool {
+    return std::lexicographical_compare(std::begin(A), std::end(A), std::begin(B), std::end(B));
+};
+
+
+// Class for dealing with commandline argument operation options.
+//
+// Argument case is retained, but case insensitivity is used when pushing back new arguments.
+// So you get out what you put it, but the class won't accept both 'foo' and 'FOO'.
+//
+class OperationArgPkg {
+
+    private:
+        std::string name; // The operation name.
+        icase_map_t opts; // Arguments to pass to the operation.
+
+    public:
+        OperationArgPkg(std::string unparsed); // e.g., "SomeOperation:keyA=valueA:keyB=valueB"
+
+        OperationArgPkg & operator=(const OperationArgPkg &rhs);
+
+        //Accessor.
+        std::string getName(void) const;
+
+        //Checks if the provided keys (and only the provided keys) are present.
+        bool containsExactly(std::initializer_list<std::string> l) const;
+
+        std::experimental::optional<std::string> getValueStr(std::string key) const;
+ 
+};
+

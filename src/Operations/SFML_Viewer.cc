@@ -94,7 +94,7 @@
 #include "SFML_Viewer.h"
 
 
-Drover SFML_Viewer(Drover DICOM_data, std::map<std::string,std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){
+Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string,std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){
 
     //Trim any empty image sets.
     for(auto it = DICOM_data.image_data.begin(); it != DICOM_data.image_data.end();  ){

@@ -89,6 +89,6 @@
 
 
 
-Drover DumpFilesPartitionedByTime(Drover DICOM_data,
+Drover DumpFilesPartitionedByTime(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                                   std::map<std::string, std::string> /*InvocationMetadata*/,
                                   std::string /*FilenameLex*/);
