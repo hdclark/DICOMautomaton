@@ -34,7 +34,7 @@ int main(int argc, char* argv[]){
 
 
     //Default output conversion type.
-    std::string ConvertTo("gzip-text");
+    std::string ConvertTo("gzip-txt");
 
     //We cannot assume this is any specific object. It could be a Drover, a Dose_Array, a Contour_Data, etc..
     boost::filesystem::path FilenameIn;
@@ -48,11 +48,11 @@ int main(int argc, char* argv[]){
     std::map<std::string, drover_serial_func_t> drover_serial_func_name_mapping;
 
     drover_serial_func_name_mapping["gzip-binary"] = Common_Boost_Serialize_Drover_to_Gzip_Binary;
-    drover_serial_func_name_mapping["gzip-text"] = Common_Boost_Serialize_Drover_to_Gzip_Simple_Text;
+    drover_serial_func_name_mapping["gzip-txt"] = Common_Boost_Serialize_Drover_to_Gzip_Simple_Text;
     drover_serial_func_name_mapping["gzip-xml"] = Common_Boost_Serialize_Drover_to_Gzip_XML;
 
     drover_serial_func_name_mapping["binary"] = Common_Boost_Serialize_Drover_to_Binary;
-    drover_serial_func_name_mapping["text"] = Common_Boost_Serialize_Drover_to_Simple_Text;
+    drover_serial_func_name_mapping["txt"] = Common_Boost_Serialize_Drover_to_Simple_Text;
     drover_serial_func_name_mapping["xml"] = Common_Boost_Serialize_Drover_to_XML;
 
     Drover DICOM_data;
@@ -108,7 +108,7 @@ int main(int argc, char* argv[]){
     );
 
     arger.push_back( ygor_arg_handlr_t(2, 't', "output-type", true, ConvertTo,
-      "The format to convert to. Supported: gzip-binary, gzip-text, gzip-xml, binary, text, xml.",
+      "The format to convert to. Supported: gzip-binary, gzip-txt, gzip-xml, binary, txt, xml.",
       [&](const std::string &optarg) -> void {
         ConvertTo = optarg;
         return;

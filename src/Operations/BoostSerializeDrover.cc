@@ -33,7 +33,7 @@ Drover
 Boost_Serialize_Drover(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string, std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
-    auto fname = OptArgs.getValueStr("filename").value();    
+    auto fname = OptArgs.getValueStr("Filename").value();    
     //-----------------------------------------------------------------------------------------------------------------
 
     const boost::filesystem::path apath(fname);
