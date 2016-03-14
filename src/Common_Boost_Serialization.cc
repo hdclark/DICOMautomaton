@@ -3,6 +3,7 @@
 #include <iostream>
 #include <fstream>
 #include <string>    
+#include <locale>
 
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
@@ -14,6 +15,8 @@
 #include <boost/iostreams/filter/gzip.hpp>
 
 #include <boost/serialization/nvp.hpp>
+
+#include <boost/math/special_functions/nonfinite_num_facets.hpp>
 
 //For plain-text archives.
 #include <boost/archive/text_iarchive.hpp>
@@ -70,6 +73,11 @@ Common_Boost_Deserialize_Drover(Drover &out,
     // This routine will try opening the file multiple times until the correct combination (if any) 
     // is found. The most anticipated combinations are therefore first.
     //
+    // NOTE: By default, Boost.Serialize cannot deserialize NaN or +-Inf in text or xml. If you try, you get
+    //       an unspecific invalid_input_stream exception with description: 'input stream error'. A 
+    //       workaround is implemented here that uses Boost.Math locale facets to coax native reading and
+    //       writing of NaN and +-Inf. 
+    //
 
     {
         //Filter out non-reachable files.
@@ -84,63 +92,82 @@ Common_Boost_Deserialize_Drover(Drover &out,
     //Binary, gzip compression.
     try{
         std::ifstream ifs(Filename.string(), std::ios::in | std::ios::binary);
+
         boost::iostreams::filtering_istream ifsb;
         ifsb.push(boost::iostreams::gzip_decompressor());
         ifsb.push(ifs);
-        boost::archive::binary_iarchive ar(ifsb);
 
-        ar & boost::serialization::make_nvp("dicom_data", out);
-        return true;
-    }catch(const std::exception &){ }
-
-    //Simple text, gzip compression.
-    try{
-        std::ifstream ifs(Filename.string(), std::ios::in | std::ios::binary);
-        boost::iostreams::filtering_istream ifsb;
-        ifsb.push(boost::iostreams::gzip_decompressor());
-        ifsb.push(ifs);
-        boost::archive::text_iarchive ar(ifsb);
-
-        ar & boost::serialization::make_nvp("dicom_data", out);
-        return true;
-    }catch(const std::exception &){ }
-
-    //XML, gzip compression.
-    try{
-        std::ifstream ifs(Filename.string(), std::ios::in | std::ios::binary);
-        boost::iostreams::filtering_istream ifsb;
-        ifsb.push(boost::iostreams::gzip_decompressor());
-        ifsb.push(ifs);
-        boost::archive::xml_iarchive ar(ifsb);
-
-        ar & boost::serialization::make_nvp("dicom_data", out);
+        {
+            boost::archive::binary_iarchive ar(ifsb);
+            ar & boost::serialization::make_nvp("dicom_data", out);
+        }
         return true;
     }catch(const std::exception &){ }
 
     //Binary, no compression.
     try{
         std::ifstream ifs(Filename.string(), std::ios::in | std::ios::binary);
-        boost::archive::binary_iarchive ar(ifs);
 
-        ar & boost::serialization::make_nvp("dicom_data", out);
+        {
+            boost::archive::binary_iarchive ar(ifs);
+            ar & boost::serialization::make_nvp("dicom_data", out);
+        }
+        return true;
+    }catch(const std::exception &){ }
+
+    //Simple text, gzip compression.
+    try{
+        std::ifstream ifs(Filename.string(), std::ios::in | std::ios::binary);
+
+        boost::iostreams::filtering_istream ifsb;
+        ifsb.imbue(std::locale(std::locale().classic(), new boost::math::nonfinite_num_get<char>));
+        ifsb.push(boost::iostreams::gzip_decompressor());
+        ifsb.push(ifs);
+
+        {
+            boost::archive::text_iarchive ar(ifsb, boost::archive::no_codecvt);
+            ar & boost::serialization::make_nvp("dicom_data", out);
+        }
+        return true;
+    }catch(const std::exception &){ }
+
+    //XML, gzip compression.
+    try{
+        std::ifstream ifs(Filename.string(), std::ios::in | std::ios::binary);
+
+        boost::iostreams::filtering_istream ifsb;
+        ifsb.imbue(std::locale(std::locale().classic(), new boost::math::nonfinite_num_get<char>));
+        ifsb.push(boost::iostreams::gzip_decompressor());
+        ifsb.push(ifs);
+ 
+        {
+            boost::archive::xml_iarchive ar(ifsb, boost::archive::no_codecvt);
+            ar & boost::serialization::make_nvp("dicom_data", out);
+        }
         return true;
     }catch(const std::exception &){ }
 
     //Simple text, no compression.
     try{
         std::ifstream ifs(Filename.string(), std::ios::in);
-        boost::archive::text_iarchive ar(ifs);
+        ifs.imbue(std::locale(std::locale().classic(), new boost::math::nonfinite_num_get<char>));
 
-        ar & boost::serialization::make_nvp("dicom_data", out);
+        {
+            boost::archive::text_iarchive ar(ifs, boost::archive::no_codecvt);
+            ar & boost::serialization::make_nvp("dicom_data", out);
+        }
         return true;
     }catch(const std::exception &){ }
 
     //XML, no compression.
     try{
         std::ifstream ifs(Filename.string(), std::ios::in);
-        boost::archive::xml_iarchive ar(ifs);
+        ifs.imbue(std::locale(std::locale().classic(), new boost::math::nonfinite_num_get<char>));
 
-        ar & boost::serialization::make_nvp("dicom_data", out);
+        {
+            boost::archive::xml_iarchive ar(ifs, boost::archive::no_codecvt);
+            ar & boost::serialization::make_nvp("dicom_data", out);
+        }
         return true;
     }catch(const std::exception &){ }
 
@@ -157,14 +184,16 @@ Common_Boost_Serialize_Drover_to_Gzip_Binary(const Drover &in,
 
     try{
         std::ofstream ofs(Filename.string(), std::ios::trunc | std::ios::binary);
-        //boost::iostreams::filtering_ostream ofsb;
+
         boost::iostreams::filtering_streambuf<boost::iostreams::output> ofsb;
         boost::iostreams::gzip_params gzparams(boost::iostreams::gzip::best_speed);
         ofsb.push(boost::iostreams::gzip_compressor(gzparams));
         ofsb.push(ofs);
-        boost::archive::binary_oarchive ar(ofsb);
 
-        ar & boost::serialization::make_nvp("dicom_data", in);
+        {
+            boost::archive::binary_oarchive ar(ofsb);
+            ar & boost::serialization::make_nvp("dicom_data", in);
+        }
     }catch(const std::exception &e){
         return false;
     }
@@ -179,13 +208,17 @@ Common_Boost_Serialize_Drover_to_Gzip_Simple_Text(const Drover &in,
 
     try{
         std::ofstream ofs(Filename.string(), std::ios::trunc | std::ios::binary);
+
         boost::iostreams::filtering_ostream ofsb;
         boost::iostreams::gzip_params gzparams(boost::iostreams::gzip::best_speed);
+        ofsb.imbue(std::locale(std::locale().classic(), new boost::math::nonfinite_num_put<char>));
         ofsb.push(boost::iostreams::gzip_compressor(gzparams));
         ofsb.push(ofs);
-        boost::archive::text_oarchive ar(ofsb);
 
-        ar & boost::serialization::make_nvp("dicom_data", in);
+        {
+            boost::archive::text_oarchive ar(ofsb, boost::archive::no_codecvt);
+            ar & boost::serialization::make_nvp("dicom_data", in);
+        }
     }catch(const std::exception &e){
         return false;
     }
@@ -200,13 +233,17 @@ Common_Boost_Serialize_Drover_to_Gzip_XML(const Drover &in,
 
     try{
         std::ofstream ofs(Filename.string(), std::ios::trunc | std::ios::binary);
+
         boost::iostreams::filtering_ostream ofsb;
         boost::iostreams::gzip_params gzparams(boost::iostreams::gzip::best_speed);
+        ofsb.imbue(std::locale(std::locale().classic(), new boost::math::nonfinite_num_put<char>));
         ofsb.push(boost::iostreams::gzip_compressor(gzparams));
         ofsb.push(ofs);
-        boost::archive::xml_oarchive ar(ofsb);
 
-        ar & boost::serialization::make_nvp("dicom_data", in);
+        {
+            boost::archive::xml_oarchive ar(ofsb, boost::archive::no_codecvt);
+            ar & boost::serialization::make_nvp("dicom_data", in);
+        }
     }catch(const std::exception &e){
         return false;
     }
@@ -221,9 +258,11 @@ Common_Boost_Serialize_Drover_to_Binary(const Drover &in,
 
     try{
         std::ofstream ofs(Filename.string(), std::ios::trunc | std::ios::binary);
-        boost::archive::binary_oarchive ar(ofs);
 
-        ar & boost::serialization::make_nvp("dicom_data", in);
+        {
+            boost::archive::binary_oarchive ar(ofs);
+            ar & boost::serialization::make_nvp("dicom_data", in);
+        }
     }catch(const std::exception &e){
         return false;
     }
@@ -238,9 +277,12 @@ Common_Boost_Serialize_Drover_to_Simple_Text(const Drover &in,
 
     try{
         std::ofstream ofs(Filename.string(), std::ios::trunc);
-        boost::archive::text_oarchive ar(ofs);
+        ofs.imbue(std::locale(std::locale().classic(), new boost::math::nonfinite_num_put<char>));
 
-        ar & boost::serialization::make_nvp("dicom_data", in);
+        {
+            boost::archive::text_oarchive ar(ofs, boost::archive::no_codecvt);
+            ar & boost::serialization::make_nvp("dicom_data", in);
+        }
     }catch(const std::exception &e){
         return false;
     }
@@ -255,9 +297,12 @@ Common_Boost_Serialize_Drover_to_XML(const Drover &in,
 
     try{
         std::ofstream ofs(Filename.string(), std::ios::trunc);
-        boost::archive::xml_oarchive ar(ofs);
+        ofs.imbue(std::locale(std::locale().classic(), new boost::math::nonfinite_num_put<char>));
 
-        ar & boost::serialization::make_nvp("dicom_data", in);
+        {
+            boost::archive::xml_oarchive ar(ofs, boost::archive::no_codecvt);
+            ar & boost::serialization::make_nvp("dicom_data", in);
+        }
     }catch(const std::exception &e){
         return false;
     }
