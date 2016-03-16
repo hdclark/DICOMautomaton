@@ -16,6 +16,7 @@
 #include "Structs.h"
 
 #include "Operations/BoostSerializeDrover.h"
+#include "Operations/CopyLastImage.h"
 #include "Operations/CT_Liver_Perfusion.h"
 #include "Operations/CT_Liver_Perfusion_First_Run.h"
 #include "Operations/CT_Liver_Perfusion_Ortho_Views.h"
@@ -35,6 +36,8 @@
 #include "Operations/GiveWholeImageArrayAThoraxWindowLevel.h"
 #include "Operations/GiveWholeImageArrayAnAbdominalWindowLevel.h"
 #include "Operations/ImageRoutineTests.h"
+#include "Operations/MaxMinPixels.h"
+#include "Operations/PlotPerROITimeCourses.h"
 #include "Operations/PreFilterEnormousCTValues.h"
 #include "Operations/SFML_Viewer.h"
 #include "Operations/UBC3TMRI_DCE.h"
@@ -50,6 +53,7 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     std::map<std::string, op_packet_t> out;
 
     out["BoostSerializeDrover"] = std::make_pair(OpArgDocBoost_Serialize_Drover, Boost_Serialize_Drover);
+    out["CopyLastImage"] = std::make_pair(OpArgDocCopyLastImage, CopyLastImage);
     out["CT_Liver_Perfusion"] = std::make_pair(OpArgDocCT_Liver_Perfusion, CT_Liver_Perfusion);
     out["CT_Liver_Perfusion_First_Run"] = std::make_pair(OpArgDocCT_Liver_Perfusion_First_Run, CT_Liver_Perfusion_First_Run);
     out["CT_Liver_Perfusion_Ortho_Views"] = std::make_pair(OpArgDocCT_Liver_Perfusion_Ortho_Views , CT_Liver_Perfusion_Ortho_Views );
@@ -69,6 +73,8 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["GiveWholeImageArrayAThoraxWindowLevel"] = std::make_pair(OpArgDocGiveWholeImageArrayAThoraxWindowLevel, GiveWholeImageArrayAThoraxWindowLevel);
     out["GiveWholeImageArrayAnAbdominalWindowLevel"] = std::make_pair(OpArgDocGiveWholeImageArrayAnAbdominalWindowLevel, GiveWholeImageArrayAnAbdominalWindowLevel);
     out["ImageRoutineTests"] = std::make_pair(OpArgDocImageRoutineTests, ImageRoutineTests);
+    out["MaxMinPixels"] = std::make_pair(OpArgDocMaxMinPixels, MaxMinPixels);
+    out["PlotPerROITimeCourses"] = std::make_pair(OpArgDocPlotPerROITimeCourses, PlotPerROITimeCourses);
     out["PreFilterEnormousCTValues"] = std::make_pair(OpArgDocPreFilterEnormousCTValues, PreFilterEnormousCTValues);
     out["SFML_Viewer"] = std::make_pair(OpArgDocSFML_Viewer, SFML_Viewer);
     out["UBC3TMRI_DCE"] = std::make_pair(OpArgDocUBC3TMRI_DCE, UBC3TMRI_DCE);

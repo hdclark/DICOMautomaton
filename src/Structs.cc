@@ -1925,6 +1925,76 @@ bool Drover::Has_Image_Data(void) const {
     return true;
 }
 
+
+void Drover::Concatenate(std::shared_ptr<Contour_Data> in){
+    //If there are no existing contours, incoming contours are shared instead of copied.
+    // Otherwise, incoming contours are copied and concatenated into *this' contour_data.
+    if(in == nullptr) return;
+    if(this->contour_data == nullptr){
+        this->contour_data = in;
+        return;
+    }
+
+    auto dup = in->Duplicate();
+    this->contour_data->ccs.splice( this->contour_data->ccs.end(),
+                                    std::move(dup->ccs) );
+    return;
+}
+
+void Drover::Concatenate(std::list<std::shared_ptr<Dose_Array>> in){
+    this->dose_data.splice( this->dose_data.end(), in );
+    return;
+}
+
+void Drover::Concatenate(std::list<std::shared_ptr<Image_Array>> in){
+    this->image_data.splice( this->image_data.end(), in );
+    return;
+}
+
+void Drover::Concatenate(Drover in){
+    this->Concatenate(in.contour_data);
+    this->Concatenate(in.dose_data);
+    this->Concatenate(in.image_data);
+    return;
+}
+
+void Drover::Consume(std::shared_ptr<Contour_Data> in){
+    //Consumes incoming contours, moving them from the input (which might be shared) and concatenates
+    // them into *this' contour_data. (Ignore the shared_ptr -- contours are consumed!)
+    //
+    // NOTE: Only use this routine if you:
+    //         (1) are OK with yanking the shared contour data from other owners, or
+    //         (2) you need to avoid copying/duplicating the contours.
+    //       Typically, you would only need to use this routine when iteratively building a large
+    //       contour collection from a variety of sources.
+    //
+    if(in == nullptr) return;
+    if(this->contour_data == nullptr){
+        this->contour_data = std::make_shared<Contour_Data>();
+    }
+    this->contour_data->ccs.splice( this->contour_data->ccs.end(),
+                                    std::move(in->ccs) );
+    in->ccs.clear();
+    return;
+}
+
+void Drover::Consume(std::list<std::shared_ptr<Dose_Array>> in){
+    this->Concatenate(in);
+    return;
+}
+
+void Drover::Consume(std::list<std::shared_ptr<Image_Array>> in){
+    this->Concatenate(in);
+    return;
+}
+
+void Drover::Consume(Drover in){
+    this->Concatenate(in);
+    return;
+}
+
+
+
 void Drover::Plot_Dose_And_Contours(void) const {
     //The aim of this program is to plot contours and dose in the same display. It is probably best
     // for debugging. Use the overlaydosedata program to display data using OpenGL.

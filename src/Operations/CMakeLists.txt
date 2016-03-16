@@ -2,6 +2,7 @@
 
 add_library(Operations_objs OBJECT 
     BoostSerializeDrover.cc
+    CopyLastImage.cc
     CT_Liver_Perfusion.cc
     CT_Liver_Perfusion_First_Run.cc
     CT_Liver_Perfusion_Ortho_Views.cc
@@ -21,6 +22,8 @@ add_library(Operations_objs OBJECT
     GiveWholeImageArrayAThoraxWindowLevel.cc
     GiveWholeImageArrayAnAbdominalWindowLevel.cc
     ImageRoutineTests.cc
+    MaxMinPixels.cc
+    PlotPerROITimeCourses.cc
     PreFilterEnormousCTValues.cc
     SFML_Viewer.cc
     UBC3TMRI_DCE.cc

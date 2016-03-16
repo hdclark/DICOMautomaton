@@ -385,6 +385,16 @@ class Drover {
         bool Has_Contour_Data(void) const;
         bool Has_Dose_Data(void) const;
         bool Has_Image_Data(void) const;
+
+        void Concatenate(std::shared_ptr<Contour_Data> in);
+        void Concatenate(std::list<std::shared_ptr<Dose_Array>> in);
+        void Concatenate(std::list<std::shared_ptr<Image_Array>> in);
+        void Concatenate(Drover in);
+
+        void Consume(std::shared_ptr<Contour_Data> in);
+        void Consume(std::list<std::shared_ptr<Dose_Array>> in);
+        void Consume(std::list<std::shared_ptr<Image_Array>> in);
+        void Consume(Drover in);
     
         void Plot_Dose_And_Contours(void) const;
         void Plot_Image_Outlines(void) const;

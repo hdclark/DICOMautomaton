@@ -41,12 +41,7 @@ bool Load_From_Boost_Serialization_Files( Drover &DICOM_data,
         if(res){
 
             //Concatenate loaded data to the existing data.
-
-            //  ... TODO ...
-
-
-//FOR TESTING ONLY - Replace the existing data - FOR TESTING ONLY. TODO
-DICOM_data = A;
+            DICOM_data.Consume(A);
 
             //Consume the input -- do not add it to the 'unsuccessful pile.'
             continue;
