@@ -165,24 +165,40 @@ Drover DumpROISurfaceMeshes(Drover DICOM_data, OperationArgPkg OptArgs, std::map
     // TODO: will this handle unconnected organs, e.g., left+right parotids, in the correct way?
     //
     for(auto & anROI : ROIs){
-//        std::cout << std::get<1>(anROI.first) << std::endl;
         const auto PatientID = std::get<0>(anROI.first);
         const auto ROIName   = std::get<1>(anROI.first);
 
         const auto OutFile = OutDir + "/ROI_Surface_Mesh_" + PatientID + "_" + ROIName + ".off";
 
-
         std::list<Point> points;
         for(auto & c : anROI.second){
-            for(auto & p : c.get().points){
-                points.push_back( Point(p.x, p.y, p.z) );
+            //const auto subdiv_c = c.get().Subdivide_Midway().Subdivide_Midway();
+            const auto subdiv_c = c.get();
+
+
+            //Assuming the contour is planar, determine the normal.
+            const auto centroid = subdiv_c.Centroid();
+            const auto pA = *(subdiv_c.points.begin());
+            const auto pB = *(++subdiv_c.points.begin());
+            const auto N = (pB-centroid).Cross(pA-centroid).unit();
+
+            //Assume or determine some thickness for the contour. (Should be distance to nearest-neighbour or linear
+            // voxel size of some sort).
+            const double thickness = 3.0;
+
+            //Lay down some points over the volume defined by the extruded contour 'disc'.
+            for(double thick = -thickness * 0.5 ; thick <= thickness * 0.5; thick += thickness * 0.25 ){
+                for(const auto &p : subdiv_c.points){
+                    auto pp = p + N * thick;
+                    points.push_back( Point(pp.x, pp.y, pp.z) );
+                }
             }
         }
 
         std::cout << "done: " << points.size() << " points." << std::endl;
         // Construct the reconstruction with parameters for
         // the neighborhood squared radius estimation.
-        Reconstruction reconstruct( 10, 100 );
+        Reconstruction reconstruct( 20, 1000 );
 
         // Add the points.
         reconstruct.insert( points.begin(), points.end() );
@@ -197,7 +213,7 @@ Drover DumpROISurfaceMeshes(Drover DICOM_data, OperationArgPkg OptArgs, std::map
         reconstruct.reconstruct_surface();
 
         // Write the reconstruction.
-        //dump_reconstruction(reconstruct, OutFile);
+        dump_reconstruction(reconstruct, OutFile);
 
         // Advancing the scale-space further and visually compare the reconstruction result
         reconstruct.increase_scale( 2 );
@@ -207,7 +223,7 @@ Drover DumpROISurfaceMeshes(Drover DICOM_data, OperationArgPkg OptArgs, std::map
 
         reconstruct.reconstruct_surface();
         // Write the reconstruction.
-        dump_reconstruction(reconstruct, OutFile);
+        //dump_reconstruction(reconstruct, OutFile);
 
         FUNCINFO("Wrote surface mesh file '" << OutFile << "'");
 
