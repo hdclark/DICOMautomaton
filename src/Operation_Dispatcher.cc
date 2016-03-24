@@ -31,6 +31,7 @@
 #include "Operations/DumpImageMetadataOccurrencesToFile.h"
 #include "Operations/DumpPixelValuesOverTimeForAnEncompassedPoint.h"
 #include "Operations/DumpROIData.h"
+#include "Operations/DumpROISurfaceMeshes.h"
 #include "Operations/GiveWholeImageArrayABoneWindowLevel.h"
 #include "Operations/GiveWholeImageArrayAHeadAndNeckWindowLevel.h"
 #include "Operations/GiveWholeImageArrayAThoraxWindowLevel.h"
@@ -68,6 +69,7 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["DumpImageMetadataOccurrencesToFile"] = std::make_pair(OpArgDocDumpImageMetadataOccurrencesToFile, DumpImageMetadataOccurrencesToFile);
     out["DumpPixelValuesOverTimeForAnEncompassedPoint"] = std::make_pair(OpArgDocDumpPixelValuesOverTimeForAnEncompassedPoint, DumpPixelValuesOverTimeForAnEncompassedPoint);
     out["DumpROIData"] = std::make_pair(OpArgDocDumpROIData, DumpROIData);
+    out["DumpROISurfaceMeshes"] = std::make_pair(OpArgDocDumpROISurfaceMeshes, DumpROISurfaceMeshes);
     out["GiveWholeImageArrayABoneWindowLevel"] = std::make_pair(OpArgDocGiveWholeImageArrayABoneWindowLevel, GiveWholeImageArrayABoneWindowLevel);
     out["GiveWholeImageArrayAHeadAndNeckWindowLevel"] = std::make_pair(OpArgDocGiveWholeImageArrayAHeadAndNeckWindowLevel, GiveWholeImageArrayAHeadAndNeckWindowLevel);
     out["GiveWholeImageArrayAThoraxWindowLevel"] = std::make_pair(OpArgDocGiveWholeImageArrayAThoraxWindowLevel, GiveWholeImageArrayAThoraxWindowLevel);

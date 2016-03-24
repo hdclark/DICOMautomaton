@@ -12,21 +12,11 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Debug CACHE STRING "default to debug" FORCE)
 endif()
 
-
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fdiagnostics-color=always -fno-var-tracking-assignments")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated -Wall -Wextra")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSTREAM_H") # -DUSE_ICU_STRINGS
-
-
 SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 SET(BUILD_SHARED_LIBS TRUE)
 SET(POSITION_INDEPENDENT_CODE TRUE)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON) # For clang-tidy et al.
-
 
 # Use the directory where CMakeLists.txt is for inclusions.
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
@@ -38,8 +28,35 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 #############################################################
 
-add_subdirectory(Operations)
+# Methods for finding Eigen.
+# 
+# CMake find script:
+#find_package(Eigen3 3.1.0)
+#include(${EIGEN3_USE_FILE})
+#
+# pkg-config method:
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(EIGEN3 REQUIRED eigen3)
+include_directories( ${EIGEN3_INCLUDE_DIRS} )
+#
+# Fallback if the above methods fail:
+#include_directories("/usr/include/eigen3/")
 
+# Find CGAL.
+find_package(CGAL REQUIRED COMPONENTS Core)
+include(${CGAL_USE_FILE})
+add_definitions(-DCGAL_EIGEN3_ENABLED=1) # Explicitly instruct CGAL to use Eigen.
+
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fdiagnostics-color=always -fno-var-tracking-assignments")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated -Wall -Wextra")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSTREAM_H") # -DUSE_ICU_STRINGS
+
+
+add_subdirectory(Operations)
 
 # Generate object files for sources shared by many targets.
 add_library(Structs_obj OBJECT
@@ -232,6 +249,7 @@ target_link_libraries (dicomautomaton_dispatcher
     explicator 
     demarcator 
     ygor 
+    CGAL
     nlopt 
     sfml-graphics 
     sfml-audio 
@@ -245,6 +263,8 @@ target_link_libraries (dicomautomaton_dispatcher
     boost_iostreams
     boost_system 
     z
+    mpfr
+    gmp
     m
 )
 
