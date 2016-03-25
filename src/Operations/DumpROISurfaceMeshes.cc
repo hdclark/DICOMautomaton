@@ -26,10 +26,30 @@
 #include <SFML/Graphics.hpp>
 #include <SFML/Audio.hpp>
 
-//#include <CGAL/Simple_cartesian.h>
+//#include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
+//#include <CGAL/Scale_space_surface_reconstruction_3.h>
+//#include <CGAL/IO/read_off_points.h>
+
+#include <CGAL/trace.h>
 #include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
-#include <CGAL/Scale_space_surface_reconstruction_3.h>
-#include <CGAL/IO/read_off_points.h>
+#include <CGAL/Polyhedron_3.h>
+#include <CGAL/IO/Polyhedron_iostream.h>
+#include <CGAL/Surface_mesh_default_triangulation_3.h>
+#include <CGAL/make_surface_mesh.h>
+#include <CGAL/Implicit_surface_3.h>
+#include <CGAL/IO/output_surface_facets_to_polyhedron.h>
+#include <CGAL/Poisson_reconstruction_function.h>
+#include <CGAL/Point_with_normal_3.h>
+#include <CGAL/property_map.h>
+#include <CGAL/IO/read_xyz_points.h>
+#include <CGAL/compute_average_spacing.h>
+#include <CGAL/edge_aware_upsample_point_set.h>
+
+#include <CGAL/pca_estimate_normals.h>
+#include <CGAL/jet_estimate_normals.h>
+#include <CGAL/mst_orient_normals.h>
+
+#include <CGAL/IO/write_xyz_points.h>
 
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorMath.h"         //Needed for vec3 class.
@@ -94,15 +114,22 @@
 
 //CGAL quantities.
 
-//typedef CGAL::Simple_cartesian<double> Kernel;
 typedef CGAL::Exact_predicates_inexact_constructions_kernel Kernel;
-
-typedef CGAL::Scale_space_surface_reconstruction_3<Kernel> Reconstruction;
-
-//typedef Reconstruction::Point Point;
+typedef Kernel::FT FT;
 typedef Kernel::Point_3 Point;
+typedef Kernel::Vector_3 Vector;
+//typedef CGAL::Point_with_normal_3<Kernel> Point_with_normal;
+typedef std::pair<Point, Vector> Point_with_normal;
+typedef std::list<Point_with_normal> PointList;
+typedef Kernel::Sphere_3 Sphere;
+typedef CGAL::Polyhedron_3<Kernel> Polyhedron;
+typedef CGAL::Poisson_reconstruction_function<Kernel> Poisson_reconstruction_function;
+typedef CGAL::Surface_mesh_default_triangulation_3 STr;
+typedef CGAL::Surface_mesh_complex_2_in_triangulation_3<STr> C2t3;
+typedef CGAL::Implicit_surface_3<Kernel, Poisson_reconstruction_function> Surface_3;
 
 
+/*
 
 // function for writing the reconstruction output in the off format
 static void dump_reconstruction(const Reconstruction &reconstruct, std::string name){
@@ -117,7 +144,7 @@ static void dump_reconstruction(const Reconstruction &reconstruct, std::string n
 
   return;
 }
-
+*/
 
 
 
@@ -131,6 +158,21 @@ std::list<OperationArgDoc> OpArgDocDumpROISurfaceMeshes(void){
     out.back().default_val = "/tmp/";
     out.back().expected = true;
     out.back().examples = { "./", "../somedir/", "/path/to/some/destination" };
+
+
+    out.emplace_back();
+    out.back().name = "ROILabelRegex";
+    out.back().desc = "A regex matching ROI labels/names to consider. The default will match"
+                      " all available ROIs. Be aware that input spaces are trimmed to a single space."
+                      " If your ROI name has more than two sequential spaces, use regex to avoid them."
+                      " All ROIs have to match the single regex, so use the 'or' token if needed."
+                      " Regex is case insensitive and uses grep syntax.";
+    out.back().default_val = ".*";
+    out.back().expected = true;
+    out.back().examples = { ".*", ".*body.*", "body", "Gross_Liver", 
+                            R"***(.*parotid.*|.*sub.*mand.*)***", 
+                            R"***(left_parotid|right_parotid|eyes)***" };
+
 
     return out;
 }
@@ -193,9 +235,11 @@ Drover DumpROISurfaceMeshes(Drover DICOM_data, OperationArgPkg OptArgs, std::map
         const auto PatientID = std::get<0>(anROI.first);
         const auto ROIName   = std::get<1>(anROI.first);
 
+        FUNCINFO("Generating surface for structure '" << ROIName << "'");
+
         const auto OutFile = OutDir + "/ROI_Surface_Mesh_" + PatientID + "_" + ROIName + ".off";
 
-        std::list<Point> points;
+        std::list<Point_with_normal> points;
         for(auto & c : anROI.second){
             //const auto subdiv_c = c.get().Subdivide_Midway().Subdivide_Midway();
             const auto subdiv_c = c.get();
@@ -212,45 +256,158 @@ Drover DumpROISurfaceMeshes(Drover DICOM_data, OperationArgPkg OptArgs, std::map
             const double thickness = 3.0;
 
             //Lay down some points over the volume defined by the extruded contour 'disc'.
-            for(double thick = -thickness * 0.5 ; thick <= thickness * 0.5; thick += thickness * 0.25 ){
+            //for(double thick = -thickness * 0.5 ; thick <= thickness * 0.5; thick += thickness * 0.25 ){
+            for(double thick = 0.0 ; thick <= 0.0; thick += 1.0 ){
                 for(const auto &p : subdiv_c.points){
                     auto pp = p + N * thick;
-                    points.push_back( Point(pp.x, pp.y, pp.z) );
+                    points.emplace_back( std::make_pair( Point(pp.x, pp.y, pp.z), CGAL::NULL_VECTOR ) );
                 }
             }
         }
 
-        std::cout << "done: " << points.size() << " points." << std::endl;
-        // Construct the reconstruction with parameters for
-        // the neighborhood squared radius estimation.
-        Reconstruction reconstruct( 20, 1000 );
 
-        // Add the points.
-        reconstruct.insert( points.begin(), points.end() );
+        // Estimates normals direction.
+        // Note: pca_estimate_normals() requires an iterator over points
+        // as well as property maps to access each point's position and normal.
+        const int nb_neighbors = 6*5; // K-nearest neighbors = 3 rings
 
-        // Advance the scale-space several steps.
-        // This automatically estimates the scale-space.
-        reconstruct.increase_scale( 2 );
+        if(use_pca_normal_estimation){
+            CGAL::pca_estimate_normals(points.begin(), points.end(),
+                                       CGAL::First_of_pair_property_map<Point_with_normal>(),
+                                       CGAL::Second_of_pair_property_map<Point_with_normal>(),
+                                       nb_neighbors);
+                                       //CGAL::Identity_property_map<Point_with_normal>(),
+                                       //CGAL::make_normal_of_point_with_normal_pmap(PointList::value_type()),
 
-        // Reconstruct the surface from the current scale-space.
-        std::cout << "Neighborhood squared radius is " << reconstruct.neighborhood_squared_radius() << std::endl;
+        }else if(use_jet_normal_estimation){
+            CGAL::jet_estimate_normals(points.begin(), points.end(),
+                                       CGAL::First_of_pair_property_map<Point_with_normal>(),
+                                       CGAL::Second_of_pair_property_map<Point_with_normal>(),
+                                       nb_neighbors);
+                                       //CGAL::Identity_property_map<Point_with_normal>(),
+                                       //CGAL::make_normal_of_point_with_normal_pmap(PointList::value_type()),
+        }else{
+            throw std::runtime_error("No normal estimation method specified");
+        }
 
-        reconstruct.reconstruct_surface();
+        // Orients normals.
+        // Note: mst_orient_normals() requires an iterator over points
+        // as well as property maps to access each point's position and normal.
+        std::list<Point_with_normal>::iterator unoriented_points_begin =
+            CGAL::mst_orient_normals(points.begin(), points.end(),
+                                     CGAL::First_of_pair_property_map<Point_with_normal>(),
+                                     CGAL::Second_of_pair_property_map<Point_with_normal>(),
+                                     nb_neighbors);
+                                     //CGAL::Identity_property_map<Point_with_normal>(),
+                                     //CGAL::make_normal_of_point_with_normal_pmap(PointList::value_type()),
 
-        // Write the reconstruction.
-        dump_reconstruction(reconstruct, OutFile);
+        // Optional: delete points with an unoriented normal
+        // if you plan to call a reconstruction algorithm that expects oriented normals.
+        points.erase(unoriented_points_begin, points.end());
+ 
+        // Saves point set for comparison.
+        {
+            std::ofstream out(OutFile + ".1.xyz");  
+            if (!out || !CGAL::write_xyz_points_and_normals(out, points.begin(), points.end(), 
+                                 CGAL::First_of_pair_property_map<Point_with_normal>(),
+                                 CGAL::Second_of_pair_property_map<Point_with_normal>())){
+                throw std::runtime_error("Unable to write point set file");
+            } 
+        }
+  
 
-        // Advancing the scale-space further and visually compare the reconstruction result
-        reconstruct.increase_scale( 2 );
+FUNCINFO("MADE IT PAST PCA");
 
-        // Reconstruct the surface from the current scale-space.
-        std::cout << "Neighborhood squared radius is " << reconstruct.neighborhood_squared_radius() << std::endl;
+        //Algorithm parameters
+        const double sharpness_angle = 25;   // control sharpness of the result.
+        const double edge_sensitivity = 0;    // higher values will sample more points near the edges          
+        const double neighbor_radius = 0.0;  // initial size of neighborhood.
+        const unsigned int number_of_output_points = points.size() * 2;
+        //Run algorithm 
+        CGAL::edge_aware_upsample_point_set(
+                 points.begin(), 
+                 points.end(), 
+                 std::back_inserter(points),
+                 CGAL::First_of_pair_property_map<Point_with_normal>(),
+                 CGAL::Second_of_pair_property_map<Point_with_normal>(),
+                 //CGAL::Identity_property_map<Point_with_normal>(),
+                 //CGAL::make_normal_of_point_with_normal_pmap(PointList::value_type()),
+                 sharpness_angle, 
+                 edge_sensitivity,
+                 neighbor_radius,
+                 number_of_output_points);
+  
+        // Saves point set for comparison.
+        {
+            std::ofstream out(OutFile + ".2.xyz");  
+            if (!out || !CGAL::write_xyz_points_and_normals(out, points.begin(), points.end(), 
+                                 CGAL::First_of_pair_property_map<Point_with_normal>(),
+                                 CGAL::Second_of_pair_property_map<Point_with_normal>())){
+                throw std::runtime_error("Unable to write point set file");
+            } 
+        }
+  
 
-        reconstruct.reconstruct_surface();
-        // Write the reconstruction.
+        // Poisson options
+        FT sm_angle = 5.0; // Min triangle angle in degrees.
+        FT sm_radius = 50; // Max triangle size w.r.t. point set average spacing.
+        FT sm_distance = 0.375; // Surface Approximation error w.r.t. point set average spacing.
+        // Reads the point set file in points[].
+        // Note: read_xyz_points_and_normals() requires an iterator over points
+        // + property maps to access each point's position and normal.
+        // The position property map can be omitted here as we use iterators over Point_3 elements.
+
+        // Creates implicit function from the read points using the default solver.
+        // Note: this method requires an iterator over points
+        // + property maps to access each point's position and normal.
+        // The position property map can be omitted here as we use iterators over Point_3 elements.
+        Poisson_reconstruction_function function(points.begin(), points.end(),
+                                                 CGAL::First_of_pair_property_map<Point_with_normal>(),
+                                                 CGAL::Second_of_pair_property_map<Point_with_normal>() );
+                                                 //CGAL::make_normal_of_point_with_normal_pmap(PointList::value_type()) );
+                                                 
+        // Computes the Poisson indicator function f()
+        // at each vertex of the triangulation.
+        if ( ! function.compute_implicit_function() ) throw std::runtime_error("Could not compute implicit surface function"); 
+FUNCINFO("MADE IT PAST POISSON RECONSTRUCTION");
+
+        // Computes average spacing
+        FT average_spacing = CGAL::compute_average_spacing(points.begin(), points.end(),
+                                                           CGAL::First_of_pair_property_map<Point_with_normal>(),
+                                                           6); // 6 knn = 1 ring.
+
+        // Gets one point inside the implicit surface and computes implicit function bounding sphere radius.
+        Point inner_point = function.get_inner_point();
+        Sphere bsphere = function.bounding_sphere();
+        FT radius = std::sqrt(bsphere.squared_radius());
+        // Defines the implicit surface: requires defining a conservative bounding sphere centered at inner point.
+        FT sm_sphere_radius = 5.0 * radius;
+        FT sm_dichotomy_error = sm_distance*average_spacing/1000.0; // Dichotomy error must be << sm_distance
+        Surface_3 surface(function,
+                          Sphere(inner_point,sm_sphere_radius*sm_sphere_radius),
+                          sm_dichotomy_error/sm_sphere_radius);
+        // Defines surface mesh generation criteria
+        CGAL::Surface_mesh_default_criteria_3<STr> criteria(sm_angle,  // Min triangle angle (degrees)
+                                                            sm_radius*average_spacing,  // Max triangle size
+                                                            sm_distance*average_spacing); // Approximation error
+        // Generates surface mesh with manifold option
+        STr tr; // 3D Delaunay triangulation for surface mesh generation
+        C2t3 c2t3(tr); // 2D complex in 3D Delaunay triangulation
+        CGAL::make_surface_mesh(c2t3,                                 // reconstructed mesh
+                                surface,                              // implicit surface
+                                criteria,                             // meshing criteria
+                                CGAL::Manifold_with_boundary_tag());  // require manifold mesh
+        if(tr.number_of_vertices() == 0) throw std::runtime_error("No vertices in generated mesh");
+
+        // saves reconstructed surface mesh
+        std::ofstream out(OutFile);
+        Polyhedron output_mesh;
+        CGAL::output_surface_facets_to_polyhedron(c2t3, output_mesh);
+        out << output_mesh;
+
+
         //dump_reconstruction(reconstruct, OutFile);
 
-        FUNCINFO("Wrote surface mesh file '" << OutFile << "'");
 
     }
 
