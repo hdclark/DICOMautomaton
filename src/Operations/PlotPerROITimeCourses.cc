@@ -98,22 +98,24 @@ std::list<OperationArgDoc> OpArgDocPlotPerROITimeCourses(void){
                       " all available ROIs. Be aware that input spaces are trimmed to a single space."
                       " If your ROI name has more than two sequential spaces, use regex to avoid them."
                       " All ROIs have to match the single regex, so use the 'or' token if needed."
-                      " Regex is case insensitive and uses grep syntax.";
+                      " Regex is case insensitive and uses extended POSIX syntax.";
     out.back().default_val = ".*";
     out.back().expected = true;
-    out.back().examples = { ".*", ".*body.*", "body", "Gross_Liver", R"***(left_parotid\|right_parotid\|eyes)***" };
+    out.back().examples = { ".*", ".*body.*", "body", "Gross_Liver",
+                            R"***(.*left.*parotid.*|.*right.*parotid.*|.*eyes.*)***",
+                            R"***(left_parotid|right_parotid)***" };
 
     return out;
 }
 
 
 
-Drover PlotPerROITimeCourses(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string> InvocationMetadata, std::string /*FilenameLex*/){
+Drover PlotPerROITimeCourses(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto ROILabelRegex = OptArgs.getValueStr("ROILabelRegex").value();
     //-----------------------------------------------------------------------------------------------------------------
-    const auto theregex = std::regex(ROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::grep);
+    const auto theregex = std::regex(ROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
 
     auto img_arr = DICOM_data.image_data.back();
 
@@ -128,7 +130,7 @@ Drover PlotPerROITimeCourses(Drover DICOM_data, OperationArgPkg OptArgs, std::ma
 
     //Whitelist contours using the provided regex.
     auto cc_ROIs = cc_all;
-    cc_ROIs.remove_if([=,theregex](std::reference_wrapper<contour_collection<double>> cc) -> bool {
+    cc_ROIs.remove_if([=](std::reference_wrapper<contour_collection<double>> cc) -> bool {
                    const auto ROINameOpt = cc.get().contours.front().GetMetadataValueAs<std::string>("ROIName");
                    const auto ROIName = ROINameOpt.value();
                    return !(std::regex_match(ROIName,theregex));

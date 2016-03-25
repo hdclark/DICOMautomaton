@@ -143,7 +143,30 @@ Drover DumpROISurfaceMeshes(Drover DICOM_data, OperationArgPkg OptArgs, std::map
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto OutDir = OptArgs.getValueStr("OutDir").value();
+    const auto ROILabelRegex = OptArgs.getValueStr("ROILabelRegex").value();
     //-----------------------------------------------------------------------------------------------------------------
+    //const auto theregex = std::regex(ROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::grep);
+    const auto theregex = std::regex(ROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+
+    bool use_pca_normal_estimation = true;
+    bool use_jet_normal_estimation = false;
+
+
+    //Stuff references to all contours into a list. Remember that you can still address specific contours through
+    // the original holding containers (which are not modified here).
+    std::list<std::reference_wrapper<contour_collection<double>>> cc_all;
+    for(auto & cc : DICOM_data.contour_data->ccs){
+        auto base_ptr = reinterpret_cast<contour_collection<double> *>(&cc);
+        cc_all.push_back( std::ref(*base_ptr) );
+    }
+
+    //Whitelist contours using the provided regex.
+    auto cc_ROIs = cc_all;
+    cc_ROIs.remove_if([=](std::reference_wrapper<contour_collection<double>> cc) -> bool {
+                   const auto ROINameOpt = cc.get().contours.front().GetMetadataValueAs<std::string>("ROIName");
+                   const auto ROIName = ROINameOpt.value();
+                   return !(std::regex_match(ROIName,theregex));
+    });
 
 
     //Gather all contours for each volume of interest.
@@ -152,8 +175,10 @@ Drover DumpROISurfaceMeshes(Drover DICOM_data, OperationArgPkg OptArgs, std::map
 
     std::map<key_t,val_t> ROIs;
     if(DICOM_data.contour_data != nullptr){
-        for(auto & cc : DICOM_data.contour_data->ccs){
-            for(auto & c : cc.contours){
+        //for(auto & cc : DICOM_data.contour_data->ccs){
+        //    for(auto & c : cc.contours){
+        for(auto & cc_refw : cc_ROIs){
+            for(auto & c : cc_refw.get().contours){
                 key_t key = std::tie(c.metadata["PatientID"], c.metadata["ROIName"], c.metadata["NormalizedROIName"]);
                 ROIs[key].push_back( std::ref(c) );
             }
