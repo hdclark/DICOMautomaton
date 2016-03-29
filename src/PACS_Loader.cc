@@ -335,10 +335,14 @@ bool Load_From_PACS_DB( Drover &DICOM_data,
     for(auto &loaded_dose_set : loaded_dose_storage){
         if(loaded_dose_set.empty()) continue;
 
-        //Stuff the dose data into the Drover's Dose_Array.
+        //There are two options here, depending on what the user wishes to do: treat dose as a regular image, or as
+        // special dose images. The more 'modern' way is to treat everything uniformly as images, but the old dose
+        // computation methods require the distinction to be made. 
+
+        // Option A: stuff the dose data into the Drover's Dose_Array.
         //DICOM_data.dose_data.emplace_back( std::move(loaded_dose_set.back()) );
 
-        //Stuff the dose data into the Drover's Image_Array so it can be more easily used with image processing routines.
+        // Option B: stuff the dose data into the Drover's Image_Array so it can be more easily used with image processing routines.
         DICOM_data.image_data.emplace_back();
         DICOM_data.image_data.back() = std::make_shared<Image_Array>(*(loaded_dose_set.back()));
     }

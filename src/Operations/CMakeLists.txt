@@ -17,6 +17,7 @@ add_library(Operations_objs OBJECT
     DumpImageMetadataOccurrencesToFile.cc
     DumpPixelValuesOverTimeForAnEncompassedPoint.cc
     DumpROIData.cc
+    DumpROIDoseInfo.cc
     DumpROISurfaceMeshes.cc
     GiveWholeImageArrayABoneWindowLevel.cc
     GiveWholeImageArrayAHeadAndNeckWindowLevel.cc
