@@ -23,13 +23,6 @@
 #include <algorithm>
 #include <experimental/optional>
 
-#include <SFML/Graphics.hpp>
-#include <SFML/Audio.hpp>
-
-//#include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
-//#include <CGAL/Scale_space_surface_reconstruction_3.h>
-//#include <CGAL/IO/read_off_points.h>
-
 #include <CGAL/trace.h>
 #include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
 #include <CGAL/Polyhedron_3.h>
@@ -50,6 +43,9 @@
 #include <CGAL/mst_orient_normals.h>
 
 #include <CGAL/IO/write_xyz_points.h>
+
+#include <CGAL/Subdivision_method_3.h>
+#include <CGAL/centroid.h>
 
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorMath.h"         //Needed for vec3 class.
@@ -118,6 +114,7 @@ typedef CGAL::Exact_predicates_inexact_constructions_kernel Kernel;
 typedef Kernel::FT FT;
 typedef Kernel::Point_3 Point;
 typedef Kernel::Vector_3 Vector;
+typedef Kernel::Triangle_3 Triangle;
 //typedef CGAL::Point_with_normal_3<Kernel> Point_with_normal;
 typedef std::pair<Point, Vector> Point_with_normal;
 typedef std::list<Point_with_normal> PointList;
@@ -307,7 +304,7 @@ Drover DumpROISurfaceMeshes(Drover DICOM_data, OperationArgPkg OptArgs, std::map
  
         // Saves point set for comparison.
         {
-            std::ofstream out(OutFile + ".1.xyz");  
+            std::ofstream out(OutFile + ".raw_contour_points.xyz");  
             if (!out || !CGAL::write_xyz_points_and_normals(out, points.begin(), points.end(), 
                                  CGAL::First_of_pair_property_map<Point_with_normal>(),
                                  CGAL::Second_of_pair_property_map<Point_with_normal>())){
@@ -315,9 +312,6 @@ Drover DumpROISurfaceMeshes(Drover DICOM_data, OperationArgPkg OptArgs, std::map
             } 
         }
   
-
-FUNCINFO("MADE IT PAST PCA");
-
         //Algorithm parameters
         const double sharpness_angle = 25;   // control sharpness of the result.
         const double edge_sensitivity = 0;    // higher values will sample more points near the edges          
@@ -339,7 +333,7 @@ FUNCINFO("MADE IT PAST PCA");
   
         // Saves point set for comparison.
         {
-            std::ofstream out(OutFile + ".2.xyz");  
+            std::ofstream out(OutFile + ".after_upsampling.xyz");  
             if (!out || !CGAL::write_xyz_points_and_normals(out, points.begin(), points.end(), 
                                  CGAL::First_of_pair_property_map<Point_with_normal>(),
                                  CGAL::Second_of_pair_property_map<Point_with_normal>())){
@@ -353,9 +347,6 @@ FUNCINFO("MADE IT PAST PCA");
         FT sm_radius = 50; // Max triangle size w.r.t. point set average spacing.
         FT sm_distance = 0.375; // Surface Approximation error w.r.t. point set average spacing.
         // Reads the point set file in points[].
-        // Note: read_xyz_points_and_normals() requires an iterator over points
-        // + property maps to access each point's position and normal.
-        // The position property map can be omitted here as we use iterators over Point_3 elements.
 
         // Creates implicit function from the read points using the default solver.
         // Note: this method requires an iterator over points
@@ -366,10 +357,10 @@ FUNCINFO("MADE IT PAST PCA");
                                                  CGAL::Second_of_pair_property_map<Point_with_normal>() );
                                                  //CGAL::make_normal_of_point_with_normal_pmap(PointList::value_type()) );
                                                  
-        // Computes the Poisson indicator function f()
-        // at each vertex of the triangulation.
-        if ( ! function.compute_implicit_function() ) throw std::runtime_error("Could not compute implicit surface function"); 
-FUNCINFO("MADE IT PAST POISSON RECONSTRUCTION");
+        // Computes the Poisson indicator function at each vertex of the triangulation.
+        if( !function.compute_implicit_function() ){
+            throw std::runtime_error("Could not compute implicit surface function"); 
+        }
 
         // Computes average spacing
         FT average_spacing = CGAL::compute_average_spacing(points.begin(), points.end(),
@@ -390,6 +381,7 @@ FUNCINFO("MADE IT PAST POISSON RECONSTRUCTION");
         CGAL::Surface_mesh_default_criteria_3<STr> criteria(sm_angle,  // Min triangle angle (degrees)
                                                             sm_radius*average_spacing,  // Max triangle size
                                                             sm_distance*average_spacing); // Approximation error
+
         // Generates surface mesh with manifold option
         STr tr; // 3D Delaunay triangulation for surface mesh generation
         C2t3 c2t3(tr); // 2D complex in 3D Delaunay triangulation
@@ -399,15 +391,63 @@ FUNCINFO("MADE IT PAST POISSON RECONSTRUCTION");
                                 CGAL::Manifold_with_boundary_tag());  // require manifold mesh
         if(tr.number_of_vertices() == 0) throw std::runtime_error("No vertices in generated mesh");
 
-        // saves reconstructed surface mesh
-        std::ofstream out(OutFile);
+        // Generate a Polyhedron mesh from the surface facets. Should work because manifold requested.
         Polyhedron output_mesh;
         CGAL::output_surface_facets_to_polyhedron(c2t3, output_mesh);
+
+        // Subdivide the surface.
+        const int subdiv_iters = 2;
+        //Subdivision_method_3::CatmullClark_subdivision(output_mesh,subdiv_iters);
+        CGAL::Subdivision_method_3::Loop_subdivision(output_mesh,subdiv_iters);
+
+
+        // Compute the barycentre for faces of the polyhedron.
+        std::vector<Triangle> triangles;
+        triangles.reserve( output_mesh.size_of_facets() );
+
+        for(auto facet_it = output_mesh.facets_begin(); facet_it != output_mesh.facets_end(); ++facet_it){
+            if(!facet_it->is_triangle()){
+                throw std::runtime_error("Encountered a non-triangle facet");
+                //We can probably handle this by checking if the facet is a quad via ->is_quad() or using a
+                // Halfedge_facet_circulator. Of course then we will probably have to compute the centroid ourselves via
+                // the CGAL weighted 3D point centroid calculator by weighting the barycentre of each facet with the
+                // facet's area.
+                //
+                //However, currently I think we can assume we only have triangles.
+            }
+ 
+            auto halfedge_handle = facet_it->halfedge();
+            auto p1 = halfedge_handle->vertex()->point();
+            auto p2 = halfedge_handle->next()->vertex()->point();
+            auto p3 = halfedge_handle->next()->next()->vertex()->point();
+            triangles.push_back(Triangle(p1,p2,p3)); 
+        }
+        auto centroid = CGAL::centroid(triangles.begin(), triangles.end(), CGAL::Dimension_tag<2>());
+
+        {
+            std::vector<Point> centroid_v;
+            centroid_v.push_back(centroid);
+
+            std::ofstream out(OutFile + ".centroid.xyz");  
+            if (!out || !CGAL::write_xyz_points(out, centroid_v.begin(), centroid_v.end() )){
+                throw std::runtime_error("Unable to write surface centroid");
+            } 
+        }
+  
+
+        // Apply an Affine transformation to the vertices of a polyhedron.
+        //std::transform( output_mesh.points_begin(), output_mesh.points_end(), output_mesh.points_begin(), A);
+
+
+        // Generate a Nef-Polyhedron.
+        // Nef_polyhedron_3 (Polyhedron &P).
+        // http://doc.cgal.org/latest/Nef_3/classCGAL_1_1Nef__polyhedron__3.html#a4f7d5c63440b89153cb971e022e0ef76
+
+
+        // Save reconstructed surface mesh
+        std::ofstream out(OutFile);
         out << output_mesh;
-
-
         //dump_reconstruction(reconstruct, OutFile);
-
 
     }
 
