@@ -8,7 +8,7 @@ pkgrel=1
 
 pkgdesc="Various tools for medical physics applications."
 url="http://www.halclark.ca"
-arch=('x86_64' 'i686')
+arch=('x86_64' 'i686' 'armv7h')
 license=('unknown')
 depends=(
    'gcc-libs'
