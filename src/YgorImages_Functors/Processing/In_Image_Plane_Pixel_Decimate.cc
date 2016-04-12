@@ -54,9 +54,11 @@ bool InImagePlanePixelDecimate(
     const auto NumberOfColsRequired = first_img_it->columns / ScaleFactorC;
 
     if((NumberOfRowsRequired * ScaleFactorR) != first_img_it->rows){
-        throw std::logic_error("ScaleFactorR must be a clean divisor of the image size.");
+        throw std::logic_error("ScaleFactorR must be a clean divisor of the image size. Rows = " +
+                                std::to_string(first_img_it->rows));
     }else if((NumberOfColsRequired * ScaleFactorC) != first_img_it->columns){
-        throw std::logic_error("ScaleFactorC must be a clean divisor of the image size.");
+        throw std::logic_error("ScaleFactorC must be a clean divisor of the image size. Columns = " +
+                                std::to_string(first_img_it->columns));
     } 
 
     vec3<double> newOffset = first_img_it->offset;
