@@ -12,6 +12,8 @@ arch=('x86_64' 'i686' 'armv7h')
 license=('unknown')
 depends=(
    'gcc-libs'
+   'ttf-computer-modern-fonts'
+   'zenity'
    'sfml'
    'jansson'
    'libpqxx'
@@ -23,8 +25,12 @@ depends=(
    'explicator'
    # -lygor -ldemarcator
 )
-# optdepends=('')
-makedepends=('cmake')
+optdepends=(
+   'zenity'
+)
+makedepends=(
+   'cmake'
+)
 # conflicts=()
 # replaces=()
 # backup=()
@@ -57,7 +63,7 @@ build() {
 #  cd "${srcdir}"
 
   cmake "${srcdir}" -DCMAKE_INSTALL_PREFIX=/usr
-  make
+  make -j 4
 }
 
 package() {
