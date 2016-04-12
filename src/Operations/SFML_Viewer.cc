@@ -184,8 +184,10 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
     if(!afont.loadFromFile("/usr/share/fonts/TTF/cmr10.ttf")) FUNCERR("Unable to find font file");
 
     //Create some primitive shapes, textures, and text objects for display later.
-    sf::CircleShape smallcirc(1.0f);
-    smallcirc.setFillColor(sf::Color::Green);
+    sf::CircleShape smallcirc(10.0f);
+    smallcirc.setFillColor(sf::Color::Transparent);
+    smallcirc.setOutlineColor(sf::Color::Green);
+    smallcirc.setOutlineThickness(1.0f);
 
     sf::Text cursortext;
     cursortext.setFont(afont);
@@ -1165,7 +1167,7 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
                         const auto col_as_u = static_cast<uint32_t>(clamped_col_as_f * static_cast<float>(img_w_h.x));
                         const auto row_as_u = static_cast<uint32_t>(clamped_row_as_f * static_cast<float>(img_w_h.y));
 
-                        FUNCINFO("Suspected updated row, col = " << row_as_u << ", " << col_as_u);                           
+                        //FUNCINFO("Suspected updated row, col = " << row_as_u << ", " << col_as_u);                           
                         sf::Uint8 newpixvals[4] = {255, 0, 0, 255};
                         disp_img_texture_sprite.first.update(newpixvals,1,1,col_as_u,row_as_u);
                         disp_img_texture_sprite.second.setTexture(disp_img_texture_sprite.first);
@@ -1189,6 +1191,8 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
 
             }else if(window.hasFocus() && (event.type == sf::Event::MouseMoved)){
                 cursortext.setPosition(event.mouseMove.x,event.mouseMove.y);
+                smallcirc.setPosition(event.mouseMove.x - smallcirc.getRadius(),
+                                      event.mouseMove.y - smallcirc.getRadius());
 
                 //Print the world coordinates to the console.
                 sf::Vector2f worldPos = window.mapPixelToCoords(sf::Vector2i(event.mouseMove.x,event.mouseMove.y));
@@ -1206,7 +1210,7 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
                     const auto col_as_u = static_cast<long int>(clamped_col_as_f * static_cast<float>(img_w_h.x));
                     const auto row_as_u = static_cast<long int>(clamped_row_as_f * static_cast<float>(img_w_h.y));
 
-                    FUNCINFO("Suspected updated row, col = " << row_as_u << ", " << col_as_u);
+                    //FUNCINFO("Suspected updated row, col = " << row_as_u << ", " << col_as_u);
                     const auto pix_val = disp_img_it->value(row_as_u,col_as_u,0);
                     std::stringstream ss;
                     ss << "(r,c)=(" << row_as_u << "," << col_as_u << ") -- " << pix_val;
@@ -1297,7 +1301,6 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
         //Begin drawing the window contents.
         window.clear(sf::Color::Black);
         //window.draw(ashape);
-        window.draw(smallcirc);
 
         window.draw(disp_img_texture_sprite.second);
 
@@ -1345,6 +1348,7 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
         }
 
         window.draw(BRcornertext);
+        window.draw(smallcirc);
         window.draw(cursortext);
         window.draw(BLcornertext);
 
@@ -1367,36 +1371,55 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
                         for(auto & p : c.points){
                             //We have three distinct coordinate systems: DICOM, pixel coordinates and screen pixel coordinates,
                             // and SFML 'world' coordinates. We need to map from the DICOM coordinates to screen pixel coords.
-                            const auto img_index = disp_img_it->index(p,0); //Channel = 0.
-                            const auto img_rcc = disp_img_it->row_column_channel_from_index(img_index);
-                            const auto img_row = std::get<0>(img_rcc);
-                            const auto img_col = std::get<1>(img_rcc);
-                            const auto clamped_col_as_f = (static_cast<float>(img_col) + 0.5f)/static_cast<float>(disp_img_it->columns);
-                            const auto clamped_row_as_f = (static_cast<float>(img_row) + 0.5f)/static_cast<float>(disp_img_it->rows);
 
+                            //Get a DICOM-coordinate bounding box for the image.
+                            const auto img_dicom_width = disp_img_it->pxl_dx * disp_img_it->rows;
+                            const auto img_dicom_height = disp_img_it->pxl_dy * disp_img_it->columns; 
+                            const auto img_top_left = disp_img_it->anchor + disp_img_it->offset
+                                                    - disp_img_it->row_unit * disp_img_it->pxl_dx * 0.5f
+                                                    - disp_img_it->col_unit * disp_img_it->pxl_dy * 0.5f;
+                            const auto img_top_right = img_top_left + disp_img_it->row_unit * img_dicom_width;
+                            const auto img_bottom_left = img_top_left + disp_img_it->col_unit * img_dicom_height;
+                            
+                            //Clamp the point to the bounding box, using the top left as zero.
+                            const auto dR = p - img_top_left;
+                            const auto clamped_row = dR.Dot( disp_img_it->row_unit ) / img_dicom_height;
+                            const auto clamped_col = dR.Dot( disp_img_it->col_unit ) / img_dicom_width;
+
+                            //Convert to SFML coordinates using the SFML bounding box for the display image.
                             sf::FloatRect DispImgBBox = disp_img_texture_sprite.second.getGlobalBounds(); //Uses top left corner as (0,0).
-                            const auto world_x = DispImgBBox.left + DispImgBBox.width  * clamped_col_as_f;
-                            const auto world_y = DispImgBBox.top  + DispImgBBox.height * clamped_row_as_f;
+                            const auto world_x = DispImgBBox.left + DispImgBBox.width  * clamped_col;
+                            const auto world_y = DispImgBBox.top  + DispImgBBox.height * clamped_row;
 
                             lines.append( sf::Vertex( sf::Vector2f(world_x, world_y), sf::Color::Blue ) );
                         }
+                        if(lines.getVertexCount() != 0) lines.append( lines[0] );
                         window.draw(lines);
 
                         //Check if the mouse is within the contour. If so, display the name.
-                        const sf::Vector2i mouse_coords = sf::Mouse::getPosition();
+                        const sf::Vector2i mouse_coords = sf::Mouse::getPosition(window);
                         //--------------------
                         sf::Vector2f mouse_world_pos = window.mapPixelToCoords(mouse_coords);
                         sf::FloatRect DispImgBBox = disp_img_texture_sprite.second.getGlobalBounds();
                         if(DispImgBBox.contains(mouse_world_pos)){
                             //Assuming the image is not rotated or skewed (though possibly scaled), determine which image pixel
                             // we are hovering over.
-                            const auto clamped_col_as_f = fabs(mouse_world_pos.x - DispImgBBox.left)/(DispImgBBox.width);
-                            const auto clamped_row_as_f = fabs(DispImgBBox.top - mouse_world_pos.y )/(DispImgBBox.height);
 
-                            const auto img_w_h = disp_img_texture_sprite.first.getSize();
-                            const auto col_as_u = static_cast<uint32_t>(clamped_col_as_f * static_cast<float>(img_w_h.x));
-                            const auto row_as_u = static_cast<uint32_t>(clamped_row_as_f * static_cast<float>(img_w_h.y));
-                            const auto dicom_pos = disp_img_it->position(row_as_u, col_as_u);
+                            //Get a DICOM-coordinate bounding box for the image.
+                            const auto img_dicom_width = disp_img_it->pxl_dx * disp_img_it->rows;
+                            const auto img_dicom_height = disp_img_it->pxl_dy * disp_img_it->columns; 
+                            const auto img_top_left = disp_img_it->anchor + disp_img_it->offset
+                                                    - disp_img_it->row_unit * disp_img_it->pxl_dx * 0.5f
+                                                    - disp_img_it->col_unit * disp_img_it->pxl_dy * 0.5f;
+                            const auto img_top_right = img_top_left + disp_img_it->row_unit * img_dicom_width;
+                            const auto img_bottom_left = img_top_left + disp_img_it->col_unit * img_dicom_height;
+
+                            const auto clamped_col_as_f = fabs(mouse_world_pos.x - DispImgBBox.left)/(DispImgBBox.width);
+                            const auto clamped_row_as_f = fabs(DispImgBBox.top - mouse_world_pos.y)/(DispImgBBox.height);
+
+                            const auto dicom_pos = img_top_left 
+                                                 + disp_img_it->row_unit * img_dicom_width  * clamped_row_as_f
+                                                 + disp_img_it->col_unit * img_dicom_height * clamped_col_as_f;
 
                             const auto img_plane = disp_img_it->image_plane();
                             if(c.Is_Point_In_Polygon_Projected_Orthogonally(img_plane,dicom_pos)){
@@ -1440,19 +1463,29 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
                     for(auto & p : c.points){
                         //We have three distinct coordinate systems: DICOM, pixel coordinates and screen pixel coordinates,
                         // and SFML 'world' coordinates. We need to map from the DICOM coordinates to screen pixel coords.
-                        const auto img_index = disp_img_it->index(p,0); //Channel = 0.
-                        const auto img_rcc = disp_img_it->row_column_channel_from_index(img_index);
-                        const auto img_row = std::get<0>(img_rcc);
-                        const auto img_col = std::get<1>(img_rcc);
-                        const auto clamped_col_as_f = (static_cast<float>(img_col) + 0.5f)/static_cast<float>(disp_img_it->columns);
-                        const auto clamped_row_as_f = (static_cast<float>(img_row) + 0.5f)/static_cast<float>(disp_img_it->rows);
 
+                        //Get a DICOM-coordinate bounding box for the image.
+                        const auto img_dicom_width = disp_img_it->pxl_dx * disp_img_it->rows;
+                        const auto img_dicom_height = disp_img_it->pxl_dy * disp_img_it->columns; 
+                        const auto img_top_left = disp_img_it->anchor + disp_img_it->offset
+                                                - disp_img_it->row_unit * disp_img_it->pxl_dx * 0.5f
+                                                - disp_img_it->col_unit * disp_img_it->pxl_dy * 0.5f;
+                        const auto img_top_right = img_top_left + disp_img_it->row_unit * img_dicom_width;
+                        const auto img_bottom_left = img_top_left + disp_img_it->col_unit * img_dicom_height;
+                        
+                        //Clamp the point to the bounding box, using the top left as zero.
+                        const auto dR = p - img_top_left;
+                        const auto clamped_row = dR.Dot( disp_img_it->row_unit ) / img_dicom_height;
+                        const auto clamped_col = dR.Dot( disp_img_it->col_unit ) / img_dicom_width;
+
+                        //Convert to SFML coordinates using the SFML bounding box for the display image.
                         sf::FloatRect DispImgBBox = disp_img_texture_sprite.second.getGlobalBounds(); //Uses top left corner as (0,0).
-                        const auto world_x = DispImgBBox.left + DispImgBBox.width  * clamped_col_as_f;
-                        const auto world_y = DispImgBBox.top  + DispImgBBox.height * clamped_row_as_f;
+                        const auto world_x = DispImgBBox.left + DispImgBBox.width  * clamped_col;
+                        const auto world_y = DispImgBBox.top  + DispImgBBox.height * clamped_row;
 
-                        lines.append( sf::Vertex( sf::Vector2f(world_x, world_y), sf::Color::Magenta ) );
+                        lines.append( sf::Vertex( sf::Vector2f(world_x, world_y), sf::Color::Blue ) );
                     }
+                    if(lines.getVertexCount() != 0) lines.append( lines[0] );
                     window.draw(lines);
                 }
             }
