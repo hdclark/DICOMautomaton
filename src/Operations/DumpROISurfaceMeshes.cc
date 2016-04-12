@@ -47,6 +47,15 @@
 #include <CGAL/Subdivision_method_3.h>
 #include <CGAL/centroid.h>
 
+//#include <CGAL/Nef_polyhedron_3.h>
+//#include <CGAL/IO/Nef_polyhedron_iostream_3.h>
+
+#include <CGAL/Min_sphere_of_spheres_d.h>
+
+#include <CGAL/boost/graph/graph_traits_Polyhedron_3.h>
+#include <CGAL/mesh_segmentation.h>
+
+
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMathPlottingGnuplot.h" //Needed for YgorMathPlottingGnuplot::*.
@@ -124,6 +133,12 @@ typedef CGAL::Poisson_reconstruction_function<Kernel> Poisson_reconstruction_fun
 typedef CGAL::Surface_mesh_default_triangulation_3 STr;
 typedef CGAL::Surface_mesh_complex_2_in_triangulation_3<STr> C2t3;
 typedef CGAL::Implicit_surface_3<Kernel, Poisson_reconstruction_function> Surface_3;
+
+//typedef CGAL::Nef_polyhedron_3<Kernel> Nef_polyhedron;
+
+typedef CGAL::Min_sphere_of_spheres_d_traits_3<Kernel,FT> MinSphereTraits;
+typedef MinSphereTraits::Sphere BoundingSphere;
+typedef CGAL::Min_sphere_of_spheres_d<MinSphereTraits> MinSphere;
 
 
 /*
@@ -425,14 +440,13 @@ Drover DumpROISurfaceMeshes(Drover DICOM_data, OperationArgPkg OptArgs, std::map
         auto centroid = CGAL::centroid(triangles.begin(), triangles.end(), CGAL::Dimension_tag<2>());
 
         {
-            std::vector<Point> centroid_v;
-            centroid_v.push_back(centroid);
-
+            std::vector<Point> centroid_v = { centroid };
             std::ofstream out(OutFile + ".centroid.xyz");  
             if (!out || !CGAL::write_xyz_points(out, centroid_v.begin(), centroid_v.end() )){
                 throw std::runtime_error("Unable to write surface centroid");
             } 
         }
+        std::cout << "Surface centroid = " << centroid << std::endl;
   
 
         // Apply an Affine transformation to the vertices of a polyhedron.
@@ -440,10 +454,129 @@ Drover DumpROISurfaceMeshes(Drover DICOM_data, OperationArgPkg OptArgs, std::map
 
 
         // Generate a Nef-Polyhedron.
-        // Nef_polyhedron_3 (Polyhedron &P).
+        //Nef_polyhedron nef(output_mesh);
+        //if(!nef.is_valid()) throw std::runtime_error("Invalid Nef-Polyhedron was created");
         // http://doc.cgal.org/latest/Nef_3/classCGAL_1_1Nef__polyhedron__3.html#a4f7d5c63440b89153cb971e022e0ef76
 
+        // Generate a bounding hypersphere.
+        std::vector<BoundingSphere> point_spheres;
+        for(auto vert_it = output_mesh.vertices_begin(); vert_it != output_mesh.vertices_end(); ++vert_it){
+            auto p = vert_it->point();
+            point_spheres.push_back( BoundingSphere(p, static_cast<FT>(0)) );
+        }
 
+        MinSphere min_sphere(point_spheres.begin(),point_spheres.end());
+        if(min_sphere.is_empty()) throw std::runtime_error("Unable to create valid bounding hypersphere");
+
+        if(std::distance(min_sphere.center_cartesian_begin(),min_sphere.center_cartesian_end()) != 3){
+            throw std::runtime_error("Unable to compute bounding hypersphere centre");
+        }
+        Point hs_centre( *std::next(min_sphere.center_cartesian_begin(), 0),
+                         *std::next(min_sphere.center_cartesian_begin(), 1),
+                         *std::next(min_sphere.center_cartesian_begin(), 2) );
+        //auto hs_radius = min_sphere.radius();
+
+        {
+            std::vector<Point> centre_v = { hs_centre };
+            std::ofstream out(OutFile + ".centre.xyz");  
+            if (!out || !CGAL::write_xyz_points(out, centre_v.begin(), centre_v.end() )){
+                throw std::runtime_error("Unable to write bounding hypersphere centre");
+            } 
+        }
+        std::cout << "Bounding hypersphere centre = " << hs_centre << std::endl;
+
+        // ----- Segment the mesh -----
+
+        // Compute the shape diameter function, which is a per-facet scalar that characterizes local "volume of the
+        // subtended 3D bounded object." I believe ray casting is used to probe depth to mesh boundaries from each
+        // facet.
+        typedef std::map<Polyhedron::Facet_const_handle, double> Facet_double_map;
+        Facet_double_map internal_map;
+        boost::associative_property_map<Facet_double_map> sdf_property_map(internal_map);
+
+        //Use the default number of rays and cone angle for SDF estimation.
+        std::pair<double, double> min_max_sdf = CGAL::sdf_values(output_mesh, sdf_property_map);
+
+        // It is possible to compute the raw SDF values and post-process them using the following lines:
+        // const std::size_t number_of_rays = 25;  // cast 25 rays per facet
+        // const double cone_angle = 2.0 / 3.0 * CGAL_PI; // set cone opening-angle
+        // CGAL::sdf_values(mesh, sdf_property_map, cone_angle, number_of_rays, false);
+        // std::pair<double, double> min_max_sdf =  CGAL::sdf_values_postprocessing(mesh, sdf_property_map);
+
+        std::cout << "SDF: min = " << min_max_sdf.first << " , max = " << min_max_sdf.second << std::endl;
+
+        // Print SDF values
+        //for(Polyhedron::Facet_const_iterator facet_it = mesh.facets_begin();
+        //    facet_it != mesh.facets_end(); ++facet_it) {
+        //    std::cout << sdf_property_map[facet_it] << " ";
+        //}
+      
+    
+        // Create a property-map for segment IDs.
+        typedef std::map<Polyhedron::Facet_const_handle, std::size_t> Facet_int_map;
+        Facet_int_map internal_segment_map;
+        boost::associative_property_map<Facet_int_map> segment_property_map(internal_segment_map);
+
+        // segment the mesh using default parameters for number of levels, and smoothing lambda
+        // Any other scalar values can be used instead of using SDF values computed using the CGAL function
+        //std::size_t number_of_segments = CGAL::segmentation_from_sdf_values(output_mesh, sdf_property_map, segment_property_map);
+
+        const std::size_t number_of_clusters = 4; // use 4 clusters in soft clustering
+        const double smoothing_lambda = 0.3;  // importance of surface features, suggested to be in-between [0,1]
+        const bool output_cluster_ids = true; //Output cluster IDs, not segment IDs.
+        std::size_t number_of_segments = CGAL::segmentation_from_sdf_values( output_mesh, sdf_property_map,
+                                              segment_property_map, number_of_clusters, 
+                                              smoothing_lambda, output_cluster_ids);
+        std::cout << "Number of segments: " << number_of_segments << std::endl;
+
+        // print segment-ids
+        //for(auto facet_it = output_mesh.facets_begin(); facet_it != output_mesh.facets_end(); ++facet_it){
+        //    // ids are between [0, number_of_segments -1]
+        //    std::cout << segment_property_map[facet_it] << " ";
+        //}
+        //std::cout << std::endl;
+
+
+        // Compute the barycentre for each cluster.
+        for(size_t clusterid = 0; clusterid < number_of_segments; ++clusterid){
+            std::vector<Triangle> triangles;
+            triangles.reserve( output_mesh.size_of_facets() );
+
+            for(auto facet_it = output_mesh.facets_begin(); facet_it != output_mesh.facets_end(); ++facet_it){
+                if(!facet_it->is_triangle()){
+                    throw std::runtime_error("Encountered a non-triangle facet");
+                    //We can probably handle this by checking if the facet is a quad via ->is_quad() or using a
+                    // Halfedge_facet_circulator. Of course then we will probably have to compute the centroid ourselves via
+                    // the CGAL weighted 3D point centroid calculator by weighting the barycentre of each facet with the
+                    // facet's area.
+                    //
+                    //However, currently I think we can assume we only have triangles.
+                }
+     
+                if(sdf_property_map[facet_it] == clusterid){
+                    auto halfedge_handle = facet_it->halfedge();
+                    auto p1 = halfedge_handle->vertex()->point();
+                    auto p2 = halfedge_handle->next()->vertex()->point();
+                    auto p3 = halfedge_handle->next()->next()->vertex()->point();
+                    triangles.push_back(Triangle(p1,p2,p3)); 
+                }
+            }
+
+            if(triangles.empty()) continue;
+                
+            auto centroid = CGAL::centroid(triangles.begin(), triangles.end(), CGAL::Dimension_tag<2>());
+
+            {
+                std::vector<Point> centroid_v = { centroid };
+                std::ofstream out(OutFile + ".cluster_centroid." + std::to_string(clusterid) + ".xyz");  
+                if (!out || !CGAL::write_xyz_points(out, centroid_v.begin(), centroid_v.end() )){
+                    throw std::runtime_error("Unable to write cluster centroid");
+                } 
+            }
+            std::cout << "Cluster centroid " << clusterid << " = " << centroid << std::endl;
+        }
+
+ 
         // Save reconstructed surface mesh
         std::ofstream out(OutFile);
         out << output_mesh;
