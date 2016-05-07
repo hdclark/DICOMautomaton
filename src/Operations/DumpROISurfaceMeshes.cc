@@ -284,7 +284,7 @@ Drover DumpROISurfaceMeshes(Drover DICOM_data, OperationArgPkg OptArgs, std::map
         const int nb_neighbors = 6*5; // K-nearest neighbors = 3 rings
 
         if(use_pca_normal_estimation){
-            CGAL::pca_estimate_normals(points.begin(), points.end(),
+            CGAL::pca_estimate_normals<CGAL::Sequential_tag>(points.begin(), points.end(),
                                        CGAL::First_of_pair_property_map<Point_with_normal>(),
                                        CGAL::Second_of_pair_property_map<Point_with_normal>(),
                                        nb_neighbors);
@@ -292,7 +292,7 @@ Drover DumpROISurfaceMeshes(Drover DICOM_data, OperationArgPkg OptArgs, std::map
                                        //CGAL::make_normal_of_point_with_normal_pmap(PointList::value_type()),
 
         }else if(use_jet_normal_estimation){
-            CGAL::jet_estimate_normals(points.begin(), points.end(),
+            CGAL::jet_estimate_normals<CGAL::Sequential_tag>(points.begin(), points.end(),
                                        CGAL::First_of_pair_property_map<Point_with_normal>(),
                                        CGAL::Second_of_pair_property_map<Point_with_normal>(),
                                        nb_neighbors);
@@ -333,7 +333,7 @@ Drover DumpROISurfaceMeshes(Drover DICOM_data, OperationArgPkg OptArgs, std::map
         const double neighbor_radius = 0.0;  // initial size of neighborhood.
         const unsigned int number_of_output_points = points.size() * 2;
         //Run algorithm 
-        CGAL::edge_aware_upsample_point_set(
+        CGAL::edge_aware_upsample_point_set<CGAL::Sequential_tag>(
                  points.begin(), 
                  points.end(), 
                  std::back_inserter(points),
@@ -378,7 +378,7 @@ Drover DumpROISurfaceMeshes(Drover DICOM_data, OperationArgPkg OptArgs, std::map
         }
 
         // Computes average spacing
-        FT average_spacing = CGAL::compute_average_spacing(points.begin(), points.end(),
+        FT average_spacing = CGAL::compute_average_spacing<CGAL::Sequential_tag>(points.begin(), points.end(),
                                                            CGAL::First_of_pair_property_map<Point_with_normal>(),
                                                            6); // 6 knn = 1 ring.
 

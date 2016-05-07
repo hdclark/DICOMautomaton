@@ -22,6 +22,7 @@ depends=(
    'nlopt' 
    'boost-libs'
    'zlib'
+   'cgal>=4.8'
    'explicator'
    # -lygor -ldemarcator
 )

@@ -1,0 +1,19 @@
+# Compiled Object files
+*.lo
+*.o
+
+# Compiled Dynamic libraries
+*.so
+
+
+# Compiled Static libraries
+*.la
+*.a
+
+# Executables
+automaton
+overlaydosedata
+pacs_ingress
+pacs_refresh
+pacs_verify_filesystem_store
+petct_perfusion_analysis*
