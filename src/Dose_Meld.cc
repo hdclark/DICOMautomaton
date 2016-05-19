@@ -159,7 +159,7 @@ std::unique_ptr<Dose_Array> Meld_Unequal_Geom_Dose_Data(std::shared_ptr<Dose_Arr
                 || ((i1_it->rows > i2_it->rows) && (i1_it->columns < i2_it->columns)) //One is larger than the other.
                 || ((i1_it->rows < i2_it->rows) && (i1_it->columns > i2_it->columns))  ){
             FUNCWARN("Unable to meld - one data set (A) is not self-consistent");
-            return false;
+            return nullptr;
         }
     }
 
@@ -169,7 +169,7 @@ std::unique_ptr<Dose_Array> Meld_Unequal_Geom_Dose_Data(std::shared_ptr<Dose_Arr
                 || ((i1_it->rows > i2_it->rows) && (i1_it->columns < i2_it->columns)) //One is larger than the other.
                 || ((i1_it->rows < i2_it->rows) && (i1_it->columns > i2_it->columns))  ){
             FUNCWARN("Unable to meld - one data set (B) is not self-consistent");
-            return false;
+            return nullptr;
         }
     }
 
