@@ -37,6 +37,8 @@ int main(int argc, char **argv){
     std::string Project;    //Human-readable project of data origin. MSc, PhD, Special_Project_...
     std::string Comments;   //Human-readable general comments.
     std::string GDCMDump;   //Text of executing `gdcmdump` if available.
+    bool dryrun = false;    //Do not actually insert the file into the db, just test for errors.
+
 
     //---------------------------------------------------------------------------------------------------------
     //------------------------------------------ Argument Handling --------------------------------------------
@@ -48,8 +50,8 @@ int main(int argc, char **argv){
                         " into the PACs system database. The file itself will be copied into "
                         " the database and various bits of data will be deciphered.          ";
 
-    arger.examples = { { "" ,
-                         "Insert the file '/tmp/a' into the database." } 
+    arger.examples = { { " -f '/tmp/a.dcm' -g '/tmp/a.gdcmdump'" ,
+                         "Insert the file '/tmp/a.dcm' into the database." } 
     };
     //----
 
@@ -87,6 +89,12 @@ int main(int argc, char **argv){
                                      [&](const std::string &optarg) -> void {
         if(!Does_File_Exist_And_Can_Be_Read(optarg)) FUNCERR("Cannot read file '" << optarg << "'");
         GDCMDump = LoadFileToString(optarg);
+        return;
+    }));
+    arger.push_back( std::make_tuple(3, 'n', "dry-run", false, "",
+                                     "Do not perform ingress or file insertion. Just test DB ingress for errors.",
+                                     [&](const std::string &optarg) -> void {
+        dryrun = true;
         return;
     }));
 
@@ -137,27 +145,29 @@ int main(int argc, char **argv){
     const auto NewGDCMDumpFileName = Detox_String(SOPInstanceUID) + ".gdcmdump";
     const auto StoreGDCMDumpFileName = NewFullDir + NewGDCMDumpFileName;
 
-    //Ensure the destination location can be created and the file copied.
-    if(!Does_Dir_Exist_And_Can_Be_Read(NewFullDir) && !Create_Dir_and_Necessary_Parents(NewFullDir)){
-        FUNCERR("Unable to create directory '" << NewFullDir << "'. Cannot continue");
+    if(!dryrun){
+        //Ensure the destination location can be created and the file copied.
+        if(!Does_Dir_Exist_And_Can_Be_Read(NewFullDir) && !Create_Dir_and_Necessary_Parents(NewFullDir)){
+            FUNCERR("Unable to create directory '" << NewFullDir << "'. Cannot continue");
+        }
+
+        //if(!TouchFile(StoreFullPathName)){
+        //    FUNCERR("Unable to touch file '" << StoreFullPathName << "'. Cannot continue");
+        //}
+
+        //Copy the file.
+        if(!CopyFile(DICOMFile, StoreFullPathName)){
+            FUNCERR("Unable to copy file '" << DICOMFile << "' to filesystem store destination '" << StoreFullPathName << "'");
+        }
+
+        //Write the GDCMDump file into the store.
+        if(!WriteStringToFile(GDCMDump, StoreGDCMDumpFileName)){
+            FUNCERR("Unable to write GDCMDump file '" << StoreGDCMDumpFileName << "' into the filesystem store");
+        }
+
+        //Set the permissions ...
+        // ... TODO ...
     }
-
-    //if(!TouchFile(StoreFullPathName)){
-    //    FUNCERR("Unable to touch file '" << StoreFullPathName << "'. Cannot continue");
-    //}
-
-    //Copy the file.
-    if(!CopyFile(DICOMFile, StoreFullPathName)){
-        FUNCERR("Unable to copy file '" << DICOMFile << "' to filesystem store destination '" << StoreFullPathName << "'");
-    }
-
-    //Write the GDCMDump file into the store.
-    if(!WriteStringToFile(GDCMDump, StoreGDCMDumpFileName)){
-        FUNCERR("Unable to write GDCMDump file '" << StoreGDCMDumpFileName << "' into the filesystem store");
-    }
-
-    //Set the permissions ...
-    // ... TODO ...
 
     //---------------------------------------------------------------------------------------------------------
     //----------------------------------------- Database Registration -----------------------------------------
@@ -225,7 +235,13 @@ int main(int argc, char **argv){
         }else{
             FUNCINFO("Success! PACS id=" << pacsid << " and StoreFullPathName='" << StoreFullPathName << "'");
         }
-        txn.commit(); 
+
+        if(dryrun){
+            FUNCINFO("Dry run successful. No errors encountered");
+            return 0;
+        }else{
+            txn.commit(); 
+        }
 
     }catch(const std::exception &e){
         FUNCERR("Unable to push to database:\n" << e.what() << "\n" << "Cannot continue");
