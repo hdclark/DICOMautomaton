@@ -189,6 +189,7 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
     smallcirc.setOutlineColor(sf::Color::Green);
     smallcirc.setOutlineThickness(1.0f);
 
+    bool drawcursortext = false; //Usually gets in the way. Sort of a debug feature...
     sf::Text cursortext;
     cursortext.setFont(afont);
     cursortext.setString("");
@@ -1349,7 +1350,7 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
 
         window.draw(BRcornertext);
         window.draw(smallcirc);
-        window.draw(cursortext);
+        if(drawcursortext) window.draw(cursortext);
         window.draw(BLcornertext);
 
         //Draw any contours that lie in the plane of the current image. Also draw contour names if the cursor is 'within' them.
