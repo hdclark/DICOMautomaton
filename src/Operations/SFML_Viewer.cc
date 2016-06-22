@@ -506,10 +506,9 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
                         //Step 2: Prepare minetest for faster/easier contouring.
                         //        The following skeleton includes fast, fly, and noclip, and is positioned at
                         //        the ~centre of the image looking slightly north.
-                        const std::string rs_res = Execute_Command_In_Pipe( "rsync --delete -az "
-                                " '/home/hal/Project - Voxel_Contouring/20160118-195048_minetest_world_T_skeleton/' "
+                        const std::string rs_res = Execute_Command_In_Pipe( "rsync -L --delete -az "
+                                " '/home/hal/Research/2016_ICCR_Voxel_Contouring/20160118-195048_minetest_world_T_skeleton/' "
                                 " '/home/hal/.minetest/' ");
-                                //" '/home/hal/Project - Voxel_Contouring/20160117-101219_minetest_world_T_skeleton/' "
 
                         //Step 3: Invoke minetest.
                         const std::string mt_res = Execute_Command_In_Pipe("minetest 2>&1");
