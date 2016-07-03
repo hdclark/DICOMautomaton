@@ -101,7 +101,7 @@ std::list<OperationArgDoc> OpArgDocCT_Liver_Perfusion_Pharmaco(void){
                       " No decimation occurs if either this or 'PreDecimateOutSizeC' is zero or negative.";
     out.back().default_val = "8";
     out.back().expected = true;
-    out.back().examples = { "2", "4", "8", "16", "32", "64", "128", "256", "512" };
+    out.back().examples = { "0", "2", "4", "8", "16", "32", "64", "128", "256", "512" };
 
     out.emplace_back();
     out.back().name = "PreDecimateOutSizeC";
@@ -113,7 +113,7 @@ std::list<OperationArgDoc> OpArgDocCT_Liver_Perfusion_Pharmaco(void){
                       " No decimation occurs if either this or 'PreDecimateOutSizeR' is zero or negative.";
     out.back().default_val = "8";
     out.back().expected = true;
-    out.back().examples = { "2", "4", "8", "16", "32", "64", "128", "256", "512" };
+    out.back().examples = { "0", "2", "4", "8", "16", "32", "64", "128", "256", "512" };
 
     return out;
 }
