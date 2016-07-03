@@ -27,6 +27,7 @@ add_library(Operations_objs OBJECT
     MaxMinPixels.cc
     PlotPerROITimeCourses.cc
     PreFilterEnormousCTValues.cc
+    SelectSlicesIntersectingROI.cc
     SFML_Viewer.cc
     UBC3TMRI_DCE.cc
     UBC3TMRI_DCE_Differences.cc
