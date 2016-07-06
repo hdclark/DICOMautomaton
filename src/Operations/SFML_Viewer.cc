@@ -1353,7 +1353,7 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
         window.draw(BLcornertext);
 
         //Draw any contours that lie in the plane of the current image. Also draw contour names if the cursor is 'within' them.
-        if(ShowExistingContours){
+        if(ShowExistingContours && (DICOM_data.contour_data != nullptr)){
             sf::Text contourtext;
             std::stringstream contourtextss;
             contourtext.setFont(afont);
