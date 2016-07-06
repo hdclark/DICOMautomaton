@@ -176,10 +176,7 @@ Drover CT_Liver_Perfusion_Pharmaco(Drover DICOM_data, OperationArgPkg OptArgs, s
                    const auto ROINameOpt = cc.get().contours.front().GetMetadataValueAs<std::string>("ROIName");
                    const auto ROIName = ROINameOpt.value();
                    return    (ROIName != "Abdominal_Aorta")
-                          && (ROIName != "Hepatic_Portal_Vein")
-                          && (ROIName != "Liver_Patches_For_Testing_Smaller");
-                          //&& (ROIName != "Liver_Patches_For_Testing");
-                          //&& (ROIName != "Suspected_Liver_Rough");
+                          && (ROIName != "Hepatic_Portal_Vein");
     });
 
 
