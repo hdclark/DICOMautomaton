@@ -416,12 +416,12 @@ LiverPharmacoModel5ParamCheby(planar_image_collection<float,double>::images_list
 
                             //==============================================================================
                             // Plot the fitted model with the ROI time course.
-                            if(true && (row == 10) && (col == 10)){
+                            if(true && (row == 8) && (col == 4)){
                                 auto pid = fork();
                                 if(pid == 0){ //Child process.
                                     std::vector<YgorMathPlottingGnuplot::Shuttle<samples_1D<double>>> shuttle1;
                                     {
-                                        const std::string title = "ROI time course: row =" + std::to_string(row)
+                                        const std::string title = "ROI time course: row = " + std::to_string(row)
                                                                 + ", col = " + std::to_string(col);
                                         shuttle1.emplace_back(*(after_state.cROI), title);
                                         samples_1D<double> fitted_model;

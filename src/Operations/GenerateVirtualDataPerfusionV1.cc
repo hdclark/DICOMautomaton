@@ -106,8 +106,8 @@ Drover GenerateVirtualDataPerfusionV1(Drover DICOM_data, OperationArgPkg OptArgs
 
     // The test images are divided into sections. Some sections are for testing purposes, and others provide fake data
     // for the perfusion models (i.e., AIF and VIF).
-    long int Rows = 50;
-    long int Columns = 50;
+    long int Rows = 20;
+    long int Columns = 20;
     long int Channels = 1;
 
     const double SliceThickness = 1.0;
@@ -206,37 +206,37 @@ Drover GenerateVirtualDataPerfusionV1(Drover DICOM_data, OperationArgPkg OptArgs
                     float OutgoingPixelValue = std::numeric_limits<float>::quiet_NaN();
 
                     //Strip 1: linear-changing spatially, constant temporally.
-                    if(isininc(0,row,9)){
+                    if(isininc(0,row,3)){
                         OutgoingPixelValue = static_cast<float>(col);
 
                     //Strip 2: constant spatially, linear-changing temporally.
-                    }else if(isininc(10,row,19)){
+                    }else if(isininc(4,row,7)){
                         OutgoingPixelValue = static_cast<float>(t);
 
                     //Strip 3: constant spatially, square-changing temporally.
-                    }else if(isininc(20,row,29)){
+                    }else if(isininc(8,row,11)){
                         OutgoingPixelValue = static_cast<float>(t*t / 250.0);
 
                     //Strip 4: constant spatially, Gaussian temporally.
-                    }else if(isininc(30,row,39)){
+                    }else if(isininc(12,row,15)){
                         const double sigma  = 20.0; //seconds.
                         const double centre = 50.0; //seconds.
                         const auto exparg = -1.0 * std::pow(t-centre, 2.0) / std::pow(sigma, 2.0);
                         OutgoingPixelValue = static_cast<float>( std::exp(exparg) );
 
                     //Strip 5: AIF and VIF; constant spatially, Gaussian temporally.
-                    }else if(isininc(40,row,49)){
+                    }else if(isininc(16,row,19)){
                         //The AIF.
-                        if(col < 25){
-                            const double sigma  = 15.0; //seconds.
-                            const double centre = 30.0; //seconds.
+                        if(col < 10){
+                            const double sigma  = 10.0; //seconds.
+                            const double centre = 25.0; //seconds.
                             const auto exparg = -1.0 * std::pow(t-centre, 2.0) / std::pow(sigma, 2.0);
                             OutgoingPixelValue = static_cast<float>( std::exp(exparg) );
 
                         //The VIF.
                         }else{
-                            const double sigma  = 50.0; //seconds.
-                            const double centre = 70.0; //seconds.
+                            const double sigma  = 10.0; //seconds.
+                            const double centre = 45.0; //seconds.
                             const auto exparg = -1.0 * std::pow(t-centre, 2.0) / std::pow(sigma, 2.0);
                             OutgoingPixelValue = static_cast<float>( std::exp(exparg) );
                         }
@@ -287,10 +287,10 @@ Drover GenerateVirtualDataPerfusionV1(Drover DICOM_data, OperationArgPkg OptArgs
             {
                 contour_of_points<double> shtl;
                 shtl.closed = true;
-                shtl.points.push_back(animg.get().position(/*row=*/40, /*column=*/ 0 ));
-                shtl.points.push_back(animg.get().position(/*row=*/49, /*column=*/ 0 ));
-                shtl.points.push_back(animg.get().position(/*row=*/49, /*column=*/24 ));
-                shtl.points.push_back(animg.get().position(/*row=*/40, /*column=*/24 ));
+                shtl.points.push_back(animg.get().position(/*row=*/16, /*column=*/0 ));
+                shtl.points.push_back(animg.get().position(/*row=*/19, /*column=*/0 ));
+                shtl.points.push_back(animg.get().position(/*row=*/19, /*column=*/9 ));
+                shtl.points.push_back(animg.get().position(/*row=*/16, /*column=*/9 ));
                 shtl.Reorient_Counter_Clockwise();
                 shtl.metadata = animgcoll.get().get_common_metadata({});
                 shtl.metadata["ROINumber"] = std::to_string(ROINumber);
@@ -314,10 +314,10 @@ Drover GenerateVirtualDataPerfusionV1(Drover DICOM_data, OperationArgPkg OptArgs
             {
                 contour_of_points<double> shtl;
                 shtl.closed = true;
-                shtl.points.push_back(animg.get().position(/*row=*/40, /*column=*/25 ));
-                shtl.points.push_back(animg.get().position(/*row=*/49, /*column=*/25 ));
-                shtl.points.push_back(animg.get().position(/*row=*/49, /*column=*/49 ));
-                shtl.points.push_back(animg.get().position(/*row=*/40, /*column=*/49 ));
+                shtl.points.push_back(animg.get().position(/*row=*/16, /*column=*/10 ));
+                shtl.points.push_back(animg.get().position(/*row=*/19, /*column=*/10 ));
+                shtl.points.push_back(animg.get().position(/*row=*/19, /*column=*/19 ));
+                shtl.points.push_back(animg.get().position(/*row=*/16, /*column=*/19 ));
                 shtl.Reorient_Counter_Clockwise();
                 shtl.metadata = animgcoll.get().get_common_metadata({});
                 shtl.metadata["ROINumber"] = std::to_string(ROINumber);
@@ -342,9 +342,9 @@ Drover GenerateVirtualDataPerfusionV1(Drover DICOM_data, OperationArgPkg OptArgs
                 contour_of_points<double> shtl;
                 shtl.closed = true;
                 shtl.points.push_back(animg.get().position(/*row=*/ 0, /*column=*/ 0 ));
-                shtl.points.push_back(animg.get().position(/*row=*/49, /*column=*/ 0 ));
-                shtl.points.push_back(animg.get().position(/*row=*/49, /*column=*/49 ));
-                shtl.points.push_back(animg.get().position(/*row=*/ 0, /*column=*/49 ));
+                shtl.points.push_back(animg.get().position(/*row=*/19, /*column=*/ 0 ));
+                shtl.points.push_back(animg.get().position(/*row=*/19, /*column=*/19 ));
+                shtl.points.push_back(animg.get().position(/*row=*/ 0, /*column=*/19 ));
                 shtl.Reorient_Counter_Clockwise();
                 shtl.metadata = animgcoll.get().get_common_metadata({});
                 shtl.metadata["ROINumber"] = std::to_string(ROINumber);
