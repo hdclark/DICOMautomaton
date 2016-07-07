@@ -180,6 +180,7 @@ Pharmacokinetic_Model_5Param_Chebyshev(Pharmacokinetic_Parameters_5Param_Chebysh
     state.FittingSuccess = false;
 
     const int dimen = 5;
+    double func_min;
 
     //Fitting parameters:      k1A,  tauA,   k1V,  tauV,  k2.
     // The following are arbitrarily chosen. They should be seeded from previous computations, or
@@ -195,7 +196,7 @@ Pharmacokinetic_Model_5Param_Chebyshev(Pharmacokinetic_Parameters_5Param_Chebysh
 
     // U/L bounds:             k1A,  tauA,  k1V,  tauV,  k2.
     double l_bnds[dimen] = {   0.0, -20.0,  0.0, -20.0,  0.0 };
-    double u_bnds[dimen] = {   1.0,  20.0,  1.0,  20.0,  1.0 };
+    double u_bnds[dimen] = {  10.0,  20.0, 10.0,  20.0, 10.0 };
                     
     //Initial step sizes:          k1A,   tauA,    k1V,   tauV,    k2.
     double initstpsz[dimen] = { 0.0040, 3.2000, 0.0040, 3.2000, 0.0050 };
@@ -204,80 +205,158 @@ Pharmacokinetic_Model_5Param_Chebyshev(Pharmacokinetic_Parameters_5Param_Chebysh
     double xtol_abs_thresholds[dimen] = { 0.00005, 0.00010, 0.00005, 0.00010, 0.00005 };
 
 
-    nlopt_opt opt; //See `man nlopt` to get list of available algorithms.
-    //opt = nlopt_create(NLOPT_LN_COBYLA, dimen);   //Local, no-derivative schemes.
-    //opt = nlopt_create(NLOPT_LN_BOBYQA, dimen);
-    //opt = nlopt_create(NLOPT_LN_SBPLX, dimen);
+    //First-pass fit.
+    {
+        nlopt_opt opt; //See `man nlopt` to get list of available algorithms.
+        //opt = nlopt_create(NLOPT_LN_COBYLA, dimen);   //Local, no-derivative schemes.
+        //opt = nlopt_create(NLOPT_LN_BOBYQA, dimen);
+        //opt = nlopt_create(NLOPT_LN_SBPLX, dimen);
 
-    opt = nlopt_create(NLOPT_LD_MMA, dimen);   //Local, derivative schemes.
-    //opt = nlopt_create(NLOPT_LD_SLSQP, dimen);
-    //opt = nlopt_create(NLOPT_LD_LBFGS, dimen);
-    //opt = nlopt_create(NLOPT_LD_VAR2, dimen);
-    //opt = nlopt_create(NLOPT_LD_TNEWTON_PRECOND_RESTART, dimen);
-    //opt = nlopt_create(NLOPT_LD_TNEWTON_PRECOND, dimen);
-    //opt = nlopt_create(NLOPT_LD_TNEWTON, dimen);
+        opt = nlopt_create(NLOPT_LD_MMA, dimen);   //Local, derivative schemes.
+        //opt = nlopt_create(NLOPT_LD_SLSQP, dimen);
+        //opt = nlopt_create(NLOPT_LD_LBFGS, dimen);
+        //opt = nlopt_create(NLOPT_LD_VAR2, dimen);
+        //opt = nlopt_create(NLOPT_LD_TNEWTON_PRECOND_RESTART, dimen);
+        //opt = nlopt_create(NLOPT_LD_TNEWTON_PRECOND, dimen);
+        //opt = nlopt_create(NLOPT_LD_TNEWTON, dimen);
 
-    //opt = nlopt_create(NLOPT_GN_DIRECT, dimen); //Global, no-derivative schemes.
-    //opt = nlopt_create(NLOPT_GN_CRS2_LM, dimen);
-    //opt = nlopt_create(NLOPT_GN_ESCH, dimen);
-    //opt = nlopt_create(NLOPT_GN_ISRES, dimen);
-                    
-    nlopt_set_lower_bounds(opt, l_bnds);
-    nlopt_set_upper_bounds(opt, u_bnds);
-                    
-    if(NLOPT_SUCCESS != nlopt_set_initial_step(opt, initstpsz)){
-        FUNCERR("NLOpt unable to set initial step sizes");
-    }
-    if(NLOPT_SUCCESS != nlopt_set_min_objective(opt, chebyshev_5param_func_to_min, reinterpret_cast<void*>(&state))){
-        FUNCERR("NLOpt unable to set objective function for minimization");
-    }
-    //if(NLOPT_SUCCESS != nlopt_set_xtol_rel(opt, 1.0E-3)){
-    //    FUNCERR("NLOpt unable to set xtol stopping condition");
-    //}
-    if(NLOPT_SUCCESS != nlopt_set_xtol_abs(opt, xtol_abs_thresholds)){
-        FUNCERR("NLOpt unable to set xtol_abs stopping condition");
-    }
-    if(NLOPT_SUCCESS != nlopt_set_ftol_rel(opt, 1.0E-7)){
-        FUNCERR("NLOpt unable to set ftol_rel stopping condition");
-    }
-    if(NLOPT_SUCCESS != nlopt_set_maxtime(opt, 30.0)){ // In seconds.
-        FUNCERR("NLOpt unable to set maxtime stopping condition");
-    }
-    if(NLOPT_SUCCESS != nlopt_set_maxeval(opt, 5'000'000)){ // Maximum # of objective func evaluations.
-        FUNCERR("NLOpt unable to set maxeval stopping condition");
-    }
-    if(NLOPT_SUCCESS != nlopt_set_vector_storage(opt, 400)){ // Amount of memory to use (MB).
-        FUNCERR("NLOpt unable to tell NLOpt to use more scratch space");
-    }
-
-    double func_min;
-    const auto opt_status = nlopt_optimize(opt, params, &func_min);
-    state.FittingPerformed = true;
-
-    if(opt_status < 0){
-        state.FittingSuccess = false;
-        if(opt_status == NLOPT_FAILURE){                FUNCWARN("NLOpt fail: generic failure");
-        }else if(opt_status == NLOPT_INVALID_ARGS){     FUNCERR("NLOpt fail: invalid arguments");
-        }else if(opt_status == NLOPT_OUT_OF_MEMORY){    FUNCWARN("NLOpt fail: out of memory");
-        }else if(opt_status == NLOPT_ROUNDOFF_LIMITED){ FUNCWARN("NLOpt fail: roundoff limited");
-        }else if(opt_status == NLOPT_FORCED_STOP){      FUNCWARN("NLOpt fail: forced termination");
-        }else{ FUNCERR("NLOpt fail: unrecognized error code"); }
-        // See http://ab-initio.mit.edu/wiki/index.php/NLopt_Reference for error code info.
-    }else{
-        state.FittingSuccess = true;
-        if(true){
-            if(opt_status == NLOPT_SUCCESS){                FUNCINFO("NLOpt: success");
-            }else if(opt_status == NLOPT_STOPVAL_REACHED){  FUNCINFO("NLOpt: stopval reached");
-            }else if(opt_status == NLOPT_FTOL_REACHED){     FUNCINFO("NLOpt: ftol reached");
-            }else if(opt_status == NLOPT_XTOL_REACHED){     FUNCINFO("NLOpt: xtol reached");
-            }else if(opt_status == NLOPT_MAXEVAL_REACHED){  FUNCINFO("NLOpt: maxeval count reached");
-            }else if(opt_status == NLOPT_MAXTIME_REACHED){  FUNCINFO("NLOpt: maxtime reached");
-            }else{ FUNCERR("NLOpt fail: unrecognized success code"); }
+        //opt = nlopt_create(NLOPT_GN_DIRECT, dimen); //Global, no-derivative schemes.
+        //opt = nlopt_create(NLOPT_GN_CRS2_LM, dimen);
+        //opt = nlopt_create(NLOPT_GN_ESCH, dimen);
+        //opt = nlopt_create(NLOPT_GN_ISRES, dimen);
+                        
+        //nlopt_set_lower_bounds(opt, l_bnds);
+        //nlopt_set_upper_bounds(opt, u_bnds);
+                        
+        if(NLOPT_SUCCESS != nlopt_set_initial_step(opt, initstpsz)){
+            FUNCERR("NLOpt unable to set initial step sizes");
         }
+        if(NLOPT_SUCCESS != nlopt_set_min_objective(opt, chebyshev_5param_func_to_min, reinterpret_cast<void*>(&state))){
+            FUNCERR("NLOpt unable to set objective function for minimization");
+        }
+        //if(NLOPT_SUCCESS != nlopt_set_xtol_rel(opt, 1.0E-3)){
+        //    FUNCERR("NLOpt unable to set xtol stopping condition");
+        //}
+        if(NLOPT_SUCCESS != nlopt_set_xtol_abs(opt, xtol_abs_thresholds)){
+            FUNCERR("NLOpt unable to set xtol_abs stopping condition");
+        }
+        if(NLOPT_SUCCESS != nlopt_set_ftol_rel(opt, 1.0E-7)){
+            FUNCERR("NLOpt unable to set ftol_rel stopping condition");
+        }
+        if(NLOPT_SUCCESS != nlopt_set_maxtime(opt, 30.0)){ // In seconds.
+            FUNCERR("NLOpt unable to set maxtime stopping condition");
+        }
+        if(NLOPT_SUCCESS != nlopt_set_maxeval(opt, 5'000'000)){ // Maximum # of objective func evaluations.
+            FUNCERR("NLOpt unable to set maxeval stopping condition");
+        }
+        if(NLOPT_SUCCESS != nlopt_set_vector_storage(opt, 400)){ // Amount of memory to use (MB).
+            FUNCERR("NLOpt unable to tell NLOpt to use more scratch space");
+        }
+
+        const auto opt_status = nlopt_optimize(opt, params, &func_min);
+
+        if(opt_status < 0){
+            state.FittingSuccess = false;
+            if(opt_status == NLOPT_FAILURE){                FUNCWARN("NLOpt fail: generic failure");
+            }else if(opt_status == NLOPT_INVALID_ARGS){     FUNCERR("NLOpt fail: invalid arguments");
+            }else if(opt_status == NLOPT_OUT_OF_MEMORY){    FUNCWARN("NLOpt fail: out of memory");
+            }else if(opt_status == NLOPT_ROUNDOFF_LIMITED){ FUNCWARN("NLOpt fail: roundoff limited");
+            }else if(opt_status == NLOPT_FORCED_STOP){      FUNCWARN("NLOpt fail: forced termination");
+            }else{ FUNCERR("NLOpt fail: unrecognized error code"); }
+            // See http://ab-initio.mit.edu/wiki/index.php/NLopt_Reference for error code info.
+        }else{
+            state.FittingSuccess = true;
+            if(true){
+                if(opt_status == NLOPT_SUCCESS){                FUNCINFO("NLOpt: success");
+                }else if(opt_status == NLOPT_STOPVAL_REACHED){  FUNCINFO("NLOpt: stopval reached");
+                }else if(opt_status == NLOPT_FTOL_REACHED){     FUNCINFO("NLOpt: ftol reached");
+                }else if(opt_status == NLOPT_XTOL_REACHED){     FUNCINFO("NLOpt: xtol reached");
+                }else if(opt_status == NLOPT_MAXEVAL_REACHED){  FUNCINFO("NLOpt: maxeval count reached");
+                }else if(opt_status == NLOPT_MAXTIME_REACHED){  FUNCINFO("NLOpt: maxtime reached");
+                }else{ FUNCERR("NLOpt fail: unrecognized success code"); }
+            }
+        }
+
+        nlopt_destroy(opt);
     }
 
-    nlopt_destroy(opt);
+    //Second-pass fit. Only bother if the first pass was reasonable.
+    if(state.FittingSuccess){
+        nlopt_opt opt; //See `man nlopt` to get list of available algorithms.
+        //opt = nlopt_create(NLOPT_LN_COBYLA, dimen);   //Local, no-derivative schemes.
+        //opt = nlopt_create(NLOPT_LN_BOBYQA, dimen);
+        //opt = nlopt_create(NLOPT_LN_SBPLX, dimen);
+
+        //opt = nlopt_create(NLOPT_LD_MMA, dimen);   //Local, derivative schemes.
+        //opt = nlopt_create(NLOPT_LD_SLSQP, dimen);
+        //opt = nlopt_create(NLOPT_LD_LBFGS, dimen);
+        //opt = nlopt_create(NLOPT_LD_VAR2, dimen);
+        //opt = nlopt_create(NLOPT_LD_TNEWTON_PRECOND_RESTART, dimen);
+        //opt = nlopt_create(NLOPT_LD_TNEWTON_PRECOND, dimen);
+        opt = nlopt_create(NLOPT_LD_TNEWTON, dimen);
+
+        //opt = nlopt_create(NLOPT_GN_DIRECT, dimen); //Global, no-derivative schemes.
+        //opt = nlopt_create(NLOPT_GN_CRS2_LM, dimen);
+        //opt = nlopt_create(NLOPT_GN_ESCH, dimen);
+        //opt = nlopt_create(NLOPT_GN_ISRES, dimen);
+                        
+        //nlopt_set_lower_bounds(opt, l_bnds);
+        //nlopt_set_upper_bounds(opt, u_bnds);
+                        
+        if(NLOPT_SUCCESS != nlopt_set_initial_step(opt, initstpsz)){
+            FUNCERR("NLOpt unable to set initial step sizes");
+        }
+        if(NLOPT_SUCCESS != nlopt_set_min_objective(opt, chebyshev_5param_func_to_min, reinterpret_cast<void*>(&state))){
+            FUNCERR("NLOpt unable to set objective function for minimization");
+        }
+        //if(NLOPT_SUCCESS != nlopt_set_xtol_rel(opt, 1.0E-3)){
+        //    FUNCERR("NLOpt unable to set xtol stopping condition");
+        //}
+        //if(NLOPT_SUCCESS != nlopt_set_xtol_abs(opt, xtol_abs_thresholds)){
+        //    FUNCERR("NLOpt unable to set xtol_abs stopping condition");
+        //}
+        if(NLOPT_SUCCESS != nlopt_set_ftol_rel(opt, 1.0E-7)){
+            FUNCERR("NLOpt unable to set ftol_rel stopping condition");
+        }
+        if(NLOPT_SUCCESS != nlopt_set_maxtime(opt, 30.0)){ // In seconds.
+            FUNCERR("NLOpt unable to set maxtime stopping condition");
+        }
+        if(NLOPT_SUCCESS != nlopt_set_maxeval(opt, 5'000'000)){ // Maximum # of objective func evaluations.
+            FUNCERR("NLOpt unable to set maxeval stopping condition");
+        }
+        if(NLOPT_SUCCESS != nlopt_set_vector_storage(opt, 400)){ // Amount of memory to use (MB).
+            FUNCERR("NLOpt unable to tell NLOpt to use more scratch space");
+        }
+
+        const auto opt_status = nlopt_optimize(opt, params, &func_min);
+
+        if(opt_status < 0){
+            state.FittingSuccess = false;
+            if(opt_status == NLOPT_FAILURE){                FUNCWARN("NLOpt fail: generic failure");
+            }else if(opt_status == NLOPT_INVALID_ARGS){     FUNCERR("NLOpt fail: invalid arguments");
+            }else if(opt_status == NLOPT_OUT_OF_MEMORY){    FUNCWARN("NLOpt fail: out of memory");
+            }else if(opt_status == NLOPT_ROUNDOFF_LIMITED){ FUNCWARN("NLOpt fail: roundoff limited");
+            }else if(opt_status == NLOPT_FORCED_STOP){      FUNCWARN("NLOpt fail: forced termination");
+            }else{ FUNCERR("NLOpt fail: unrecognized error code"); }
+            // See http://ab-initio.mit.edu/wiki/index.php/NLopt_Reference for error code info.
+        }else{
+            state.FittingSuccess = true;
+            if(true){
+                if(opt_status == NLOPT_SUCCESS){                FUNCINFO("NLOpt: success");
+                }else if(opt_status == NLOPT_STOPVAL_REACHED){  FUNCINFO("NLOpt: stopval reached");
+                }else if(opt_status == NLOPT_FTOL_REACHED){     FUNCINFO("NLOpt: ftol reached");
+                }else if(opt_status == NLOPT_XTOL_REACHED){     FUNCINFO("NLOpt: xtol reached");
+                }else if(opt_status == NLOPT_MAXEVAL_REACHED){  FUNCINFO("NLOpt: maxeval count reached");
+                }else if(opt_status == NLOPT_MAXTIME_REACHED){  FUNCINFO("NLOpt: maxtime reached");
+                }else{ FUNCERR("NLOpt fail: unrecognized success code"); }
+            }
+        }
+
+        nlopt_destroy(opt);
+    }
     // ----------------------------------------------------------------------------
+
+    state.FittingPerformed = true;
 
     state.RSS  = func_min;
 
@@ -342,6 +421,7 @@ Pharmacokinetic_Model_3Param_Chebyshev(Pharmacokinetic_Parameters_5Param_Chebysh
     state.FittingSuccess = false;
 
     const int dimen = 3;
+    double func_min;
 
     //Fitting parameters:      k1A,  k1V,  k2.
     // The following are arbitrarily chosen. They should be seeded from previous computations, or
@@ -354,90 +434,169 @@ Pharmacokinetic_Model_3Param_Chebyshev(Pharmacokinetic_Parameters_5Param_Chebysh
     params[2] = std::isfinite(state.k2)   ? state.k2   : 0.0518;
 
     // U/L bounds:               k1A,  k1V,  k2.
-    double l_bnds[dimen] = {   0.0,  0.0,  0.0 };
-    double u_bnds[dimen] = {   1.0,  1.0,  1.0 };
+    //double l_bnds[dimen] = {   0.0,  0.0,  0.0 };
+    //double u_bnds[dimen] = {  10.0, 10.0, 10.0 };
                     
     //Initial step sizes:      k1A,  k1V,  k2.
     double initstpsz[dimen] = { 0.0040, 0.0040, 0.0050 };
 
     //Absolute parameter change thresholds:   k1A,  k1V,  k2.
-    //double xtol_abs_thresholds[dimen] = { 0.0001, 0.0001, 0.0001 };
     double xtol_abs_thresholds[dimen] = { 0.00005, 0.00005, 0.00005 };
 
-    nlopt_opt opt; //See `man nlopt` to get list of available algorithms.
-    //opt = nlopt_create(NLOPT_LN_COBYLA, dimen);   //Local, no-derivative schemes.
-    //opt = nlopt_create(NLOPT_LN_BOBYQA, dimen);
-    //opt = nlopt_create(NLOPT_LN_SBPLX, dimen);
+    //First-pass fit.
+    {
+        nlopt_opt opt; //See `man nlopt` to get list of available algorithms.
+        //opt = nlopt_create(NLOPT_LN_COBYLA, dimen);   //Local, no-derivative schemes.
+        //opt = nlopt_create(NLOPT_LN_BOBYQA, dimen);
+        //opt = nlopt_create(NLOPT_LN_SBPLX, dimen);
 
-    opt = nlopt_create(NLOPT_LD_MMA, dimen);   //Local, derivative schemes.
-    //opt = nlopt_create(NLOPT_LD_SLSQP, dimen);
-    //opt = nlopt_create(NLOPT_LD_LBFGS, dimen);
-    //opt = nlopt_create(NLOPT_LD_VAR2, dimen);
-    //opt = nlopt_create(NLOPT_LD_TNEWTON_PRECOND_RESTART, dimen);
-    //opt = nlopt_create(NLOPT_LD_TNEWTON_PRECOND, dimen);
-    //opt = nlopt_create(NLOPT_LD_TNEWTON, dimen);
+        opt = nlopt_create(NLOPT_LD_MMA, dimen);   //Local, derivative schemes.
+        //opt = nlopt_create(NLOPT_LD_SLSQP, dimen);
+        //opt = nlopt_create(NLOPT_LD_LBFGS, dimen);
+        //opt = nlopt_create(NLOPT_LD_VAR2, dimen);
+        //opt = nlopt_create(NLOPT_LD_TNEWTON_PRECOND_RESTART, dimen);
+        //opt = nlopt_create(NLOPT_LD_TNEWTON_PRECOND, dimen);
+        //opt = nlopt_create(NLOPT_LD_TNEWTON, dimen);
 
-    //opt = nlopt_create(NLOPT_GN_DIRECT, dimen); //Global, no-derivative schemes.
-    //opt = nlopt_create(NLOPT_GN_CRS2_LM, dimen);
-    //opt = nlopt_create(NLOPT_GN_ESCH, dimen);
-    //opt = nlopt_create(NLOPT_GN_ISRES, dimen);
-                    
-    nlopt_set_lower_bounds(opt, l_bnds);
-    nlopt_set_upper_bounds(opt, u_bnds);
-                    
-    if(NLOPT_SUCCESS != nlopt_set_initial_step(opt, initstpsz)){
-        FUNCERR("NLOpt unable to set initial step sizes");
-    }
-    if(NLOPT_SUCCESS != nlopt_set_min_objective(opt, chebyshev_3param_func_to_min, reinterpret_cast<void*>(&state))){
-        FUNCERR("NLOpt unable to set objective function for minimization");
-    }
-    //if(NLOPT_SUCCESS != nlopt_set_xtol_rel(opt, 1.0E-4)){
-    //    FUNCERR("NLOpt unable to set xtol_rel stopping condition");
-    //}
-    if(NLOPT_SUCCESS != nlopt_set_xtol_abs(opt, xtol_abs_thresholds)){
-        FUNCERR("NLOpt unable to set xtol_abs stopping condition");
-    }
-    if(NLOPT_SUCCESS != nlopt_set_ftol_rel(opt, 1.0E-7)){
-        FUNCERR("NLOpt unable to set ftol_rel stopping condition");
-    }
-    if(NLOPT_SUCCESS != nlopt_set_maxtime(opt, 30.0)){ // In seconds.
-        FUNCERR("NLOpt unable to set maxtime stopping condition");
-    }
-    if(NLOPT_SUCCESS != nlopt_set_maxeval(opt, 5'000'000)){ // Maximum # of objective func evaluations.
-        FUNCERR("NLOpt unable to set maxeval stopping condition");
-    }
-    if(NLOPT_SUCCESS != nlopt_set_vector_storage(opt, 400)){ // Amount of memory to use (MB).
-        FUNCERR("NLOpt unable to tell NLOpt to use more scratch space");
-    }
-
-    double func_min;
-    const auto opt_status = nlopt_optimize(opt, params, &func_min);
-    state.FittingPerformed = true;
-
-    if(opt_status < 0){
-        state.FittingSuccess = false;
-        if(opt_status == NLOPT_FAILURE){                FUNCWARN("NLOpt fail: generic failure");
-        }else if(opt_status == NLOPT_INVALID_ARGS){     FUNCERR("NLOpt fail: invalid arguments");
-        }else if(opt_status == NLOPT_OUT_OF_MEMORY){    FUNCWARN("NLOpt fail: out of memory");
-        }else if(opt_status == NLOPT_ROUNDOFF_LIMITED){ FUNCWARN("NLOpt fail: roundoff limited");
-        }else if(opt_status == NLOPT_FORCED_STOP){      FUNCWARN("NLOpt fail: forced termination");
-        }else{ FUNCERR("NLOpt fail: unrecognized error code"); }
-        // See http://ab-initio.mit.edu/wiki/index.php/NLopt_Reference for error code info.
-    }else{
-        state.FittingSuccess = true;
-        if(true){
-            if(opt_status == NLOPT_SUCCESS){                FUNCINFO("NLOpt: success");
-            }else if(opt_status == NLOPT_STOPVAL_REACHED){  FUNCINFO("NLOpt: stopval reached");
-            }else if(opt_status == NLOPT_FTOL_REACHED){     FUNCINFO("NLOpt: ftol reached");
-            }else if(opt_status == NLOPT_XTOL_REACHED){     FUNCINFO("NLOpt: xtol reached");
-            }else if(opt_status == NLOPT_MAXEVAL_REACHED){  FUNCINFO("NLOpt: maxeval count reached");
-            }else if(opt_status == NLOPT_MAXTIME_REACHED){  FUNCINFO("NLOpt: maxtime reached");
-            }else{ FUNCERR("NLOpt fail: unrecognized success code"); }
+        //opt = nlopt_create(NLOPT_GN_DIRECT, dimen); //Global, no-derivative schemes.
+        //opt = nlopt_create(NLOPT_GN_CRS2_LM, dimen);
+        //opt = nlopt_create(NLOPT_GN_ESCH, dimen);
+        //opt = nlopt_create(NLOPT_GN_ISRES, dimen);
+                        
+        //nlopt_set_lower_bounds(opt, l_bnds);
+        //nlopt_set_upper_bounds(opt, u_bnds);
+                        
+        if(NLOPT_SUCCESS != nlopt_set_initial_step(opt, initstpsz)){
+            FUNCERR("NLOpt unable to set initial step sizes");
         }
+        if(NLOPT_SUCCESS != nlopt_set_min_objective(opt, chebyshev_3param_func_to_min, reinterpret_cast<void*>(&state))){
+            FUNCERR("NLOpt unable to set objective function for minimization");
+        }
+        //if(NLOPT_SUCCESS != nlopt_set_xtol_rel(opt, 1.0E-4)){
+        //    FUNCERR("NLOpt unable to set xtol_rel stopping condition");
+        //}
+        if(NLOPT_SUCCESS != nlopt_set_xtol_abs(opt, xtol_abs_thresholds)){
+            FUNCERR("NLOpt unable to set xtol_abs stopping condition");
+        }
+        if(NLOPT_SUCCESS != nlopt_set_ftol_rel(opt, 1.0E-7)){
+            FUNCERR("NLOpt unable to set ftol_rel stopping condition");
+        }
+        if(NLOPT_SUCCESS != nlopt_set_maxtime(opt, 30.0)){ // In seconds.
+            FUNCERR("NLOpt unable to set maxtime stopping condition");
+        }
+        if(NLOPT_SUCCESS != nlopt_set_maxeval(opt, 5'000'000)){ // Maximum # of objective func evaluations.
+            FUNCERR("NLOpt unable to set maxeval stopping condition");
+        }
+        if(NLOPT_SUCCESS != nlopt_set_vector_storage(opt, 400)){ // Amount of memory to use (MB).
+            FUNCERR("NLOpt unable to tell NLOpt to use more scratch space");
+        }
+
+        double func_min;
+        const auto opt_status = nlopt_optimize(opt, params, &func_min);
+
+        if(opt_status < 0){
+            state.FittingSuccess = false;
+            if(opt_status == NLOPT_FAILURE){                FUNCWARN("NLOpt fail: generic failure");
+            }else if(opt_status == NLOPT_INVALID_ARGS){     FUNCERR("NLOpt fail: invalid arguments");
+            }else if(opt_status == NLOPT_OUT_OF_MEMORY){    FUNCWARN("NLOpt fail: out of memory");
+            }else if(opt_status == NLOPT_ROUNDOFF_LIMITED){ FUNCWARN("NLOpt fail: roundoff limited");
+            }else if(opt_status == NLOPT_FORCED_STOP){      FUNCWARN("NLOpt fail: forced termination");
+            }else{ FUNCERR("NLOpt fail: unrecognized error code"); }
+            // See http://ab-initio.mit.edu/wiki/index.php/NLopt_Reference for error code info.
+        }else{
+            state.FittingSuccess = true;
+            if(true){
+                if(opt_status == NLOPT_SUCCESS){                FUNCINFO("NLOpt: success");
+                }else if(opt_status == NLOPT_STOPVAL_REACHED){  FUNCINFO("NLOpt: stopval reached");
+                }else if(opt_status == NLOPT_FTOL_REACHED){     FUNCINFO("NLOpt: ftol reached");
+                }else if(opt_status == NLOPT_XTOL_REACHED){     FUNCINFO("NLOpt: xtol reached");
+                }else if(opt_status == NLOPT_MAXEVAL_REACHED){  FUNCINFO("NLOpt: maxeval count reached");
+                }else if(opt_status == NLOPT_MAXTIME_REACHED){  FUNCINFO("NLOpt: maxtime reached");
+                }else{ FUNCERR("NLOpt fail: unrecognized success code"); }
+            }
+        }
+
+        nlopt_destroy(opt);
     }
 
-    nlopt_destroy(opt);
+    //Second-pass fit. Only bother if the first pass was reasonable.
+    if(state.FittingSuccess){
+        nlopt_opt opt; //See `man nlopt` to get list of available algorithms.
+        //opt = nlopt_create(NLOPT_LN_COBYLA, dimen);   //Local, no-derivative schemes.
+        //opt = nlopt_create(NLOPT_LN_BOBYQA, dimen);
+        //opt = nlopt_create(NLOPT_LN_SBPLX, dimen);
+
+        //opt = nlopt_create(NLOPT_LD_MMA, dimen);   //Local, derivative schemes.
+        //opt = nlopt_create(NLOPT_LD_SLSQP, dimen);
+        //opt = nlopt_create(NLOPT_LD_LBFGS, dimen);
+        //opt = nlopt_create(NLOPT_LD_VAR2, dimen);
+        //opt = nlopt_create(NLOPT_LD_TNEWTON_PRECOND_RESTART, dimen);
+        //opt = nlopt_create(NLOPT_LD_TNEWTON_PRECOND, dimen);
+        opt = nlopt_create(NLOPT_LD_TNEWTON, dimen);
+
+        //opt = nlopt_create(NLOPT_GN_DIRECT, dimen); //Global, no-derivative schemes.
+        //opt = nlopt_create(NLOPT_GN_CRS2_LM, dimen);
+        //opt = nlopt_create(NLOPT_GN_ESCH, dimen);
+        //opt = nlopt_create(NLOPT_GN_ISRES, dimen);
+                        
+        //nlopt_set_lower_bounds(opt, l_bnds);
+        //nlopt_set_upper_bounds(opt, u_bnds);
+                        
+        if(NLOPT_SUCCESS != nlopt_set_initial_step(opt, initstpsz)){
+            FUNCERR("NLOpt unable to set initial step sizes");
+        }
+        if(NLOPT_SUCCESS != nlopt_set_min_objective(opt, chebyshev_3param_func_to_min, reinterpret_cast<void*>(&state))){
+            FUNCERR("NLOpt unable to set objective function for minimization");
+        }
+        //if(NLOPT_SUCCESS != nlopt_set_xtol_rel(opt, 1.0E-4)){
+        //    FUNCERR("NLOpt unable to set xtol_rel stopping condition");
+        //}
+        //if(NLOPT_SUCCESS != nlopt_set_xtol_abs(opt, xtol_abs_thresholds)){
+        //    FUNCERR("NLOpt unable to set xtol_abs stopping condition");
+        //}
+        if(NLOPT_SUCCESS != nlopt_set_ftol_rel(opt, 1.0E-7)){
+            FUNCERR("NLOpt unable to set ftol_rel stopping condition");
+        }
+        if(NLOPT_SUCCESS != nlopt_set_maxtime(opt, 30.0)){ // In seconds.
+            FUNCERR("NLOpt unable to set maxtime stopping condition");
+        }
+        if(NLOPT_SUCCESS != nlopt_set_maxeval(opt, 5'000'000)){ // Maximum # of objective func evaluations.
+            FUNCERR("NLOpt unable to set maxeval stopping condition");
+        }
+        if(NLOPT_SUCCESS != nlopt_set_vector_storage(opt, 400)){ // Amount of memory to use (MB).
+            FUNCERR("NLOpt unable to tell NLOpt to use more scratch space");
+        }
+
+        double func_min;
+        const auto opt_status = nlopt_optimize(opt, params, &func_min);
+
+        if(opt_status < 0){
+            state.FittingSuccess = false;
+            if(opt_status == NLOPT_FAILURE){                FUNCWARN("NLOpt fail: generic failure");
+            }else if(opt_status == NLOPT_INVALID_ARGS){     FUNCERR("NLOpt fail: invalid arguments");
+            }else if(opt_status == NLOPT_OUT_OF_MEMORY){    FUNCWARN("NLOpt fail: out of memory");
+            }else if(opt_status == NLOPT_ROUNDOFF_LIMITED){ FUNCWARN("NLOpt fail: roundoff limited");
+            }else if(opt_status == NLOPT_FORCED_STOP){      FUNCWARN("NLOpt fail: forced termination");
+            }else{ FUNCERR("NLOpt fail: unrecognized error code"); }
+            // See http://ab-initio.mit.edu/wiki/index.php/NLopt_Reference for error code info.
+        }else{
+            state.FittingSuccess = true;
+            if(true){
+                if(opt_status == NLOPT_SUCCESS){                FUNCINFO("NLOpt: success");
+                }else if(opt_status == NLOPT_STOPVAL_REACHED){  FUNCINFO("NLOpt: stopval reached");
+                }else if(opt_status == NLOPT_FTOL_REACHED){     FUNCINFO("NLOpt: ftol reached");
+                }else if(opt_status == NLOPT_XTOL_REACHED){     FUNCINFO("NLOpt: xtol reached");
+                }else if(opt_status == NLOPT_MAXEVAL_REACHED){  FUNCINFO("NLOpt: maxeval count reached");
+                }else if(opt_status == NLOPT_MAXTIME_REACHED){  FUNCINFO("NLOpt: maxtime reached");
+                }else{ FUNCERR("NLOpt fail: unrecognized success code"); }
+            }
+        }
+
+        nlopt_destroy(opt);
+    }
     // ----------------------------------------------------------------------------
+
+    state.FittingPerformed = true;
 
     state.RSS  = func_min;
 
