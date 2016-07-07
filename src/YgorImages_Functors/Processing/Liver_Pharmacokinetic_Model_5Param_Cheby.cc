@@ -39,7 +39,7 @@ bool
 LiverPharmacoModel5ParamCheby(planar_image_collection<float,double>::images_list_it_t first_img_it,
                         std::list<planar_image_collection<float,double>::images_list_it_t> selected_img_its,
                         std::list<std::reference_wrapper<planar_image_collection<float,double>>> out_imgs,
-                        std::list<std::reference_wrapper<contour_collection<double>>> ccsl,
+                        std::list<std::reference_wrapper<contour_collection<double>>> cc_all,
                         std::experimental::any user_data ){
 
 
@@ -115,17 +115,20 @@ LiverPharmacoModel5ParamCheby(planar_image_collection<float,double>::images_list
     //
     //   TODO: hoist out of this function, and provide a convenience
     //         function called something like: Prune_Contours_Other_Than(cc_all, "Liver_Rough");
-    //         You could do regex or whatever is needed.
+    //const auto ROILabelRegex = OptArgs.getValueStr("ROILabelRegex").value();
+    //const auto ROILabelRegex = "Liver_Patches_For_Testing_Smaller";
+    //const auto ROILabelRegex = "Liver_Patches_For_Testing";
+    //const auto ROILabelRegex = "Suspected_Liver_Rough";
+    //const auto ROILabelRegex = "Rough_Body";
+    const auto ROILabelRegex = ".*body.*";
+    const auto theregex = std::regex(ROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
 
-    ccsl.remove_if([](std::reference_wrapper<contour_collection<double>> cc) -> bool {
-                       const auto ROINameOpt = cc.get().contours.front().GetMetadataValueAs<std::string>("ROIName");
-                       const auto ROIName = ROINameOpt.value();
-                       //return (ROIName != "Liver_Patches_For_Testing_Smaller");
-                       //return (ROIName != "Liver_Patches_For_Testing");
-                       //return (ROIName != "Suspected_Liver_Rough");
-                       return (ROIName != "Rough_Body");
-                   });
-
+    auto cc_ROIs = cc_all;
+    cc_ROIs.remove_if([=](std::reference_wrapper<contour_collection<double>> cc) -> bool {
+                   const auto ROINameOpt = cc.get().contours.front().GetMetadataValueAs<std::string>("ROIName");
+                   const auto ROIName = ROINameOpt.value();
+                   return !(std::regex_match(ROIName,theregex));
+    });
 
     //This routine performs a number of calculations. It is experimental and excerpts you plan to rely on should be
     // made into their own analysis functors.
@@ -138,8 +141,8 @@ LiverPharmacoModel5ParamCheby(planar_image_collection<float,double>::images_list
     //
     // NOTE: We only bother to grab individual contours here. You could alter this if you wanted 
     //       each contour_collection's contours to have an identifying colour.
-    //if(ccsl.empty()){
-    if(ccsl.size() != 1){
+    //if(cc_ROIs.empty()){
+    if(cc_ROIs.size() != 1){
         FUNCWARN("Missing needed contour information. Cannot continue with computation");
         return false;
     }
@@ -147,8 +150,8 @@ LiverPharmacoModel5ParamCheby(planar_image_collection<float,double>::images_list
 /*
     //typedef std::list<contour_of_points<double>>::iterator contour_iter;
     //std::list<contour_iter> rois;
-    decltype(ccsl) rois;
-    for(auto &ccs : ccsl){
+    decltype(cc_ROIs) rois;
+    for(auto &ccs : cc_ROIs){
         for(auto it =  ccs.get().contours.begin(); it != ccs.get().contours.end(); ++it){
             if(it->points.empty()) continue;
             //if(first_img_it->encompasses_contour_of_points(*it)) rois.push_back(it);
@@ -177,7 +180,7 @@ LiverPharmacoModel5ParamCheby(planar_image_collection<float,double>::images_list
     //
     // NOTE: We expect optimization to take far longer than cycling through the contours and images.
     double Expected_Operation_Count = 0.0;
-    for(auto &ccs : ccsl){
+    for(auto &ccs : cc_ROIs){
         for(auto roi_it = ccs.get().contours.begin(); roi_it != ccs.get().contours.end(); ++roi_it){
             if(roi_it->points.empty()) continue;
             if(! first_img_it->encompasses_contour_of_points(*roi_it)) continue;
@@ -240,11 +243,11 @@ LiverPharmacoModel5ParamCheby(planar_image_collection<float,double>::images_list
 
 
 
-    //Loop over the ccsl, rois, rows, columns, channels, and finally any selected images (if applicable).
+    //Loop over the cc_ROIs, rois, rows, columns, channels, and finally any selected images (if applicable).
     //for(const auto &roi : rois){
     boost::posix_time::ptime start_t = boost::posix_time::microsec_clock::local_time();
     double Actual_Operation_Count = 0.0;
-    for(auto &ccs : ccsl){
+    for(auto &ccs : cc_ROIs){
         for(auto roi_it = ccs.get().contours.begin(); roi_it != ccs.get().contours.end(); ++roi_it){
             if(roi_it->points.empty()) continue;
             //if(first_img_it->encompasses_contour_of_points(*it)) rois.push_back(it);

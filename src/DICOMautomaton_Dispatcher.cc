@@ -96,6 +96,9 @@ int main(int argc, char* argv[]){
     //Operations to perform on the data.
     std::list<OperationArgPkg> Operations;
 
+    //A explicit declaration that the user will generate data in an operation.
+    bool GeneratingVirtualData = false;
+
     //------------------------------------------------- Data: Database -----------------------------------------------
     // The following objects are only relevant for the PACS database loader.
 
@@ -179,7 +182,7 @@ int main(int argc, char* argv[]){
       })
     );
  
-    arger.push_back( ygor_arg_handlr_t(1, 'l', "lexicon", true, "<best guess>",
+    arger.push_back( ygor_arg_handlr_t(100, 'l', "lexicon", true, "<best guess>",
       "Lexicon file for normalizing ROI contour names.",
       [&](const std::string &optarg) -> void {
         FilenameLex = optarg;
@@ -187,7 +190,7 @@ int main(int argc, char* argv[]){
       })
     );
  
-    arger.push_back( ygor_arg_handlr_t(2, 'd', "database-parameters", true, db_connection_params,
+    arger.push_back( ygor_arg_handlr_t(210, 'd', "database-parameters", true, db_connection_params,
       "PostgreSQL database connection settings to use for PACS database.",
       [&](const std::string &optarg) -> void {
         db_connection_params = optarg;
@@ -195,7 +198,7 @@ int main(int argc, char* argv[]){
       })
     );
 
-    arger.push_back( ygor_arg_handlr_t(2, 'f', "filter-query-file", true, "/tmp/query.sql",
+    arger.push_back( ygor_arg_handlr_t(211, 'f', "filter-query-file", true, "/tmp/query.sql",
       "Query file(s) to use for filtering which DICOM files should be used for analysis."
       " Files are loaded sequentially and should ultimately return full metadata records.",
       [&](const std::string &optarg) -> void {
@@ -204,7 +207,7 @@ int main(int argc, char* argv[]){
       })
     );
 
-    arger.push_back( ygor_arg_handlr_t(2, 'n', "next-group", false, "", 
+    arger.push_back( ygor_arg_handlr_t(212, 'n', "next-group", false, "", 
       "Signifies the beginning of a new (separate from the last) group of filter scripts.",
       [&](const std::string &) -> void {
         GroupedFilterQueryFiles.emplace_back();
@@ -212,7 +215,7 @@ int main(int argc, char* argv[]){
       })
     );
 
-    arger.push_back( ygor_arg_handlr_t(3, 's', "standalone", true, "/path/to/dir/or/file",
+    arger.push_back( ygor_arg_handlr_t(220, 's', "standalone", true, "/path/to/dir/or/file",
       "Specify stand-alone files or directories to load. (This is the default for argument-less"
       " options.)",
       [&](const std::string &optarg) -> void {
@@ -221,7 +224,16 @@ int main(int argc, char* argv[]){
       })
     );
 
-    arger.push_back( ygor_arg_handlr_t(4, 'm', "metadata", true, "'Volunteer=01'",
+    arger.push_back( ygor_arg_handlr_t(230, 'v', "virtual-data", false, "",
+      "Inform the loaders that virtual data will be generated. Use with care, because this"
+      " option causes checks to be skipped that could break assumptions in some operations.",
+      [&](const std::string &) -> void {
+        GeneratingVirtualData = true;
+        return;
+      })
+    );
+
+    arger.push_back( ygor_arg_handlr_t(300, 'm', "metadata", true, "'Volunteer=01'",
       "Metadata key-value pairs which are tacked onto results destined for a database. "
       "If there is an conflicting key-value pair, the values are concatenated.",
       [&](const std::string &optarg) -> void {
@@ -232,7 +244,7 @@ int main(int argc, char* argv[]){
       })
     );
 
-    arger.push_back( ygor_arg_handlr_t(5, 'o', "operation", true, "View",
+    arger.push_back( ygor_arg_handlr_t(400, 'o', "operation", true, "View",
       "An operation to perform on the fully loaded data. Some operations can be chained, some"
       " may necessarily terminate computation. See '-u' for detailed operation information.",
       [&](const std::string &optarg) -> void {
@@ -303,7 +315,8 @@ int main(int argc, char* argv[]){
 
     //We require at least one SQL file for PACS db loading, one file/directory name for standalone file loading..
     if( GroupedFilterQueryFiles.empty()    
-    &&  StandaloneFilesDirsReachable.empty() ){
+    &&  StandaloneFilesDirsReachable.empty()
+    &&  !GeneratingVirtualData ){
 
         FUNCERR("No query files provided. Cannot proceed");
 
