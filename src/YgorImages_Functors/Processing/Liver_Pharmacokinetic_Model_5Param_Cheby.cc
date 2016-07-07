@@ -8,7 +8,8 @@
 #include <chrono>
 #include <experimental/any>
 #include <mutex>
-
+#include <unistd.h>          //fork().
+#include <stdlib.h>          //quick_exit(), EXIT_SUCCESS.
 #include <pqxx/pqxx>         //PostgreSQL C++ interface.
 #include <jansson.h>         //For JSON handling.
 
@@ -415,31 +416,36 @@ LiverPharmacoModel5ParamCheby(planar_image_collection<float,double>::images_list
 
                             //==============================================================================
                             // Plot the fitted model with the ROI time course.
-                            if(false){
-                                std::vector<YgorMathPlottingGnuplot::Shuttle<samples_1D<double>>> shuttle1;
-                                {
-                                    shuttle1.emplace_back(*(after_state.cROI), "ROI time course");
-                                    samples_1D<double> fitted_model;
-                                    Pharmacokinetic_Parameters_5Param_Chebyshev_Results eval_res;
-                                    for(const auto &P : after_state.cROI->samples){
-                                        const double t = P[0];
-                                        chebyshev_5param_model(after_state,t,eval_res);
-                                        fitted_model.push_back(t, 0.0, eval_res.I, 0.0);
+                            if(true && (row == 10) && (col == 10)){
+                                auto pid = fork();
+                                if(pid == 0){ //Child process.
+                                    std::vector<YgorMathPlottingGnuplot::Shuttle<samples_1D<double>>> shuttle1;
+                                    {
+                                        const std::string title = "ROI time course: row =" + std::to_string(row)
+                                                                + ", col = " + std::to_string(col);
+                                        shuttle1.emplace_back(*(after_state.cROI), title);
+                                        samples_1D<double> fitted_model;
+                                        Pharmacokinetic_Parameters_5Param_Chebyshev_Results eval_res;
+                                        for(const auto &P : after_state.cROI->samples){
+                                            const double t = P[0];
+                                            chebyshev_5param_model(after_state,t,eval_res);
+                                            fitted_model.push_back(t, 0.0, eval_res.I, 0.0);
+                                        }
+                                        shuttle1.emplace_back(fitted_model, "Fitted model");
                                     }
-                                    shuttle1.emplace_back(fitted_model, "Fitted model");
-                                }
-                            
-                                //Plot the data.
-                                for(auto dumb = 0; dumb < 20; ++dumb){
-                                    try{
-                                        YgorMathPlottingGnuplot::Plot<double>(shuttle1, "Time Courses", "Time (s)", "Pixel Intensity");
-                                        break;
-                                    }catch(const std::exception &e){
-                                        FUNCWARN("Unable to plot time courses: '" << e.what() << "'. Trying again...");
+                                
+                                    //Plot the data.
+                                    for(auto dumb = 0; dumb < 20; ++dumb){
+                                        try{
+                                            YgorMathPlottingGnuplot::Plot<double>(shuttle1, "Time Courses", "Time (s)", "Pixel Intensity");
+                                            break;
+                                        }catch(const std::exception &e){
+                                            FUNCWARN("Unable to plot time courses: '" << e.what() << "'. Trying again...");
+                                        }
                                     }
+                                    quick_exit(EXIT_SUCCESS);
                                 }
-                                std::this_thread::sleep_for( std::chrono::seconds(10) );
-                                FUNCERR("OK!");
+
                             }
                             
                             //==============================================================================
