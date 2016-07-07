@@ -237,13 +237,16 @@ Pharmacokinetic_Model_5Param_Chebyshev(Pharmacokinetic_Parameters_5Param_Chebysh
     if(NLOPT_SUCCESS != nlopt_set_xtol_abs(opt, xtol_abs_thresholds)){
         FUNCERR("NLOpt unable to set xtol_abs stopping condition");
     }
+    if(NLOPT_SUCCESS != nlopt_set_ftol_rel(opt, 1.0E-7)){
+        FUNCERR("NLOpt unable to set ftol_rel stopping condition");
+    }
     if(NLOPT_SUCCESS != nlopt_set_maxtime(opt, 30.0)){ // In seconds.
         FUNCERR("NLOpt unable to set maxtime stopping condition");
     }
     if(NLOPT_SUCCESS != nlopt_set_maxeval(opt, 5'000'000)){ // Maximum # of objective func evaluations.
         FUNCERR("NLOpt unable to set maxeval stopping condition");
     }
-    if(NLOPT_SUCCESS != nlopt_set_vector_storage(opt, 200)){ // Amount of memory to use (MB).
+    if(NLOPT_SUCCESS != nlopt_set_vector_storage(opt, 400)){ // Amount of memory to use (MB).
         FUNCERR("NLOpt unable to tell NLOpt to use more scratch space");
     }
 
@@ -394,13 +397,16 @@ Pharmacokinetic_Model_3Param_Chebyshev(Pharmacokinetic_Parameters_5Param_Chebysh
     if(NLOPT_SUCCESS != nlopt_set_xtol_abs(opt, xtol_abs_thresholds)){
         FUNCERR("NLOpt unable to set xtol_abs stopping condition");
     }
+    if(NLOPT_SUCCESS != nlopt_set_ftol_rel(opt, 1.0E-7)){
+        FUNCERR("NLOpt unable to set ftol_rel stopping condition");
+    }
     if(NLOPT_SUCCESS != nlopt_set_maxtime(opt, 30.0)){ // In seconds.
         FUNCERR("NLOpt unable to set maxtime stopping condition");
     }
     if(NLOPT_SUCCESS != nlopt_set_maxeval(opt, 5'000'000)){ // Maximum # of objective func evaluations.
         FUNCERR("NLOpt unable to set maxeval stopping condition");
     }
-    if(NLOPT_SUCCESS != nlopt_set_vector_storage(opt, 200)){ // Amount of memory to use (MB).
+    if(NLOPT_SUCCESS != nlopt_set_vector_storage(opt, 400)){ // Amount of memory to use (MB).
         FUNCERR("NLOpt unable to tell NLOpt to use more scratch space");
     }
 
