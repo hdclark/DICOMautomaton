@@ -1,4 +1,4 @@
-//Pharmacokinetic_Modeling.h.
+//Pharmacokinetic_Modeling_via_Least_Squares.h.
 
 #pragma once
 
@@ -32,7 +32,7 @@
 //      value using std::move(). If function parameters were directly used, some state would be
 //      lost when the future returned.
 //
-struct Pharmacokinetic_Parameters_5Param_Chebyshev {
+struct Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares {
  
     // Experimental observations.
     std::shared_ptr<cheby_approx<double>> cAIF;
@@ -62,7 +62,7 @@ struct Pharmacokinetic_Parameters_5Param_Chebyshev {
 
 //This struct is only needed if you want to evaluate the gradients of the model at
 // some specific time.
-struct Pharmacokinetic_Parameters_5Param_Chebyshev_Results {
+struct Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares_Results {
 
     // Evaluated model value.
     double I = std::numeric_limits<double>::quiet_NaN();
@@ -80,9 +80,9 @@ struct Pharmacokinetic_Parameters_5Param_Chebyshev_Results {
 
 // This routine can be used to evaluate a model (using the parameters in 'state') at given time.
 void
-chebyshev_5param_model( const Pharmacokinetic_Parameters_5Param_Chebyshev &state,
+chebyshev_5param_model_least_squares( const Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares &state,
                         const double t,
-                        Pharmacokinetic_Parameters_5Param_Chebyshev_Results &res);
+                        Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares_Results &res);
  
 
 // This routine fits a pharmacokinetic model to the observed liver perfusion data using a 
@@ -90,8 +90,8 @@ chebyshev_5param_model( const Pharmacokinetic_Parameters_5Param_Chebyshev &state
 //
 // This routine fits all 5 model free parameters (k1A, tauA, k1V, tauV, k2) numerically.
 //
-struct Pharmacokinetic_Parameters_5Param_Chebyshev
-Pharmacokinetic_Model_5Param_Chebyshev(Pharmacokinetic_Parameters_5Param_Chebyshev state);
+struct Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares
+Pharmacokinetic_Model_5Param_Chebyshev_Least_Squares(Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares state);
 
 
 // This routine fits a pharmacokinetic model to the observed liver perfusion data using a 
@@ -100,7 +100,7 @@ Pharmacokinetic_Model_5Param_Chebyshev(Pharmacokinetic_Parameters_5Param_Chebysh
 // This routine fits only 3 model free parameters (k1A, k1V, k2) numerically. The neglected
 // parameters (tauA, tauV) are kept at 0.0.
 //
-struct Pharmacokinetic_Parameters_5Param_Chebyshev
-Pharmacokinetic_Model_3Param_Chebyshev(Pharmacokinetic_Parameters_5Param_Chebyshev state);
+struct Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares
+Pharmacokinetic_Model_3Param_Chebyshev_Least_Squares(Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares state);
 
 

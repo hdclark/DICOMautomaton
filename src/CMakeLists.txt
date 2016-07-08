@@ -215,11 +215,18 @@ target_include_directories(imebrashim SYSTEM PUBLIC
 )
 
 
-# Pharmacokinetic modeling library (built separately for easier reuse).
-add_library (pharmacokinetic_modeling
-    Pharmacokinetic_Modeling.cc
+# Pharmacokinetic modeling libraries (built separately for easier reuse).
+add_library (pharmacokinetic_modeling_via_optimization
+    Pharmacokinetic_Modeling_via_Optimization.cc
 )
-target_include_directories(pharmacokinetic_modeling SYSTEM PUBLIC 
+target_include_directories(pharmacokinetic_modeling_via_optimization SYSTEM PUBLIC 
+    ./
+)
+
+add_library (pharmacokinetic_modeling_via_least_squares
+    Pharmacokinetic_Modeling_via_Least_Squares.cc
+)
+target_include_directories(pharmacokinetic_modeling_via_least_squares SYSTEM PUBLIC 
     ./
 )
 
@@ -245,12 +252,15 @@ add_executable (dicomautomaton_dispatcher
 )
 target_link_libraries (dicomautomaton_dispatcher
     imebrashim
-    pharmacokinetic_modeling
+    pharmacokinetic_modeling_via_optimization
+    pharmacokinetic_modeling_via_least_squares
     explicator 
     demarcator 
     ygor 
     CGAL
     nlopt 
+    gsl
+    gslcblas
     sfml-graphics 
     sfml-audio 
     sfml-window 
@@ -387,7 +397,8 @@ install(TARGETS
     automaton
     dicomautomaton_dump
     imebrashim
-    pharmacokinetic_modeling
+    pharmacokinetic_modeling_via_optimization
+    pharmacokinetic_modeling_via_least_squares
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib

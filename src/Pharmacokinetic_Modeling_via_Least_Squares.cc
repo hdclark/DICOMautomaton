@@ -1,11 +1,13 @@
-//Pharmacokinetic_Modeling.cc.
-// This file holds isolated drivers for fitting pharmacokinetic models.
+//Pharmacokinetic_Modeling_via_Least_Squares.cc.
+// This file holds isolated drivers for fitting pharmacokinetic models. It uses a non-linear least-squares optimizer.
+// Other norms are not supported.
 
 #include <list>
 #include <functional>
 #include <limits>
 #include <cmath>
 
+#include <gsl/gsl_multimin.h>
 #include <nlopt.h>
 
 #include <boost/date_time/posix_time/posix_time.hpp>
@@ -16,12 +18,12 @@
 #include "YgorMathChebyshevFunctions.h"
 #include "YgorStats.h"       //Needed for Stats:: namespace.
 
-#include "Pharmacokinetic_Modeling.h"
+#include "Pharmacokinetic_Modeling_via_Least_Squares.h"
 
 void
-chebyshev_5param_model( const Pharmacokinetic_Parameters_5Param_Chebyshev &state,
+chebyshev_5param_model_least_squares( const Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares &state,
                         const double t,
-                        Pharmacokinetic_Parameters_5Param_Chebyshev_Results &res){
+                        Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares_Results &res){
                 
     // Chebyshev polynomial approximation method. 
     // 
@@ -131,7 +133,7 @@ static
 double 
 chebyshev_5param_func_to_min(unsigned, const double *params, double *grad, void *voided_state){
 
-    auto state = reinterpret_cast<Pharmacokinetic_Parameters_5Param_Chebyshev*>(voided_state);
+    auto state = reinterpret_cast<Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares*>(voided_state);
 
     //This function computes the square-distance between the ROI time course and a kinetic liver
     // perfusion model at the ROI sample t_i's. If gradients are requested, they are also computed.
@@ -151,12 +153,12 @@ chebyshev_5param_func_to_min(unsigned, const double *params, double *grad, void 
     state->tauV = params[3];
     state->k2   = params[4];
 
-    Pharmacokinetic_Parameters_5Param_Chebyshev_Results model_res;
+    Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares_Results model_res;
     for(const auto &P : state->cROI->samples){
         const double t = P[0];
         const double R = P[2];
 
-        chebyshev_5param_model(*state, t, model_res);
+        chebyshev_5param_model_least_squares(*state, t, model_res);
         const double I = model_res.I;
         
         sqDist += std::pow(R - I, 2.0); //Standard L2-norm.
@@ -173,8 +175,8 @@ chebyshev_5param_func_to_min(unsigned, const double *params, double *grad, void 
     return sqDist;
 }
 
-struct Pharmacokinetic_Parameters_5Param_Chebyshev
-Pharmacokinetic_Model_5Param_Chebyshev(Pharmacokinetic_Parameters_5Param_Chebyshev state){
+struct Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares
+Pharmacokinetic_Model_5Param_Chebyshev_Least_Squares(Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares state){
 
     state.FittingPerformed = false;
     state.FittingSuccess = false;
@@ -375,7 +377,7 @@ static
 double 
 chebyshev_3param_func_to_min(unsigned, const double *params, double *grad, void *voided_state){
 
-    auto state = reinterpret_cast<Pharmacokinetic_Parameters_5Param_Chebyshev*>(voided_state);
+    auto state = reinterpret_cast<Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares*>(voided_state);
 
     //This function computes the square-distance between the ROI time course and a kinetic liver
     // perfusion model at the ROI sample t_i's. If gradients are requested, they are also computed.
@@ -393,12 +395,12 @@ chebyshev_3param_func_to_min(unsigned, const double *params, double *grad, void 
     state->tauV = 0.0;
     state->k2   = params[2];
 
-    Pharmacokinetic_Parameters_5Param_Chebyshev_Results model_res;
+    Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares_Results model_res;
     for(const auto &P : state->cROI->samples){
         const double t = P[0];
         const double R = P[2];
 
-        chebyshev_5param_model(*state, t, model_res);
+        chebyshev_5param_model_least_squares(*state, t, model_res);
         const double I = model_res.I;
         
         sqDist += std::pow(R - I, 2.0); //Standard L2-norm.
@@ -414,8 +416,8 @@ chebyshev_3param_func_to_min(unsigned, const double *params, double *grad, void 
     return sqDist;
 }
 
-struct Pharmacokinetic_Parameters_5Param_Chebyshev
-Pharmacokinetic_Model_3Param_Chebyshev(Pharmacokinetic_Parameters_5Param_Chebyshev state){
+struct Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares
+Pharmacokinetic_Model_3Param_Chebyshev_Least_Squares(Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares state){
 
     state.FittingPerformed = false;
     state.FittingSuccess = false;

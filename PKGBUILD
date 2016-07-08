@@ -20,6 +20,7 @@ depends=(
    'postgresql'
    'freeglut'
    'nlopt' 
+   'gsl'
    'boost-libs'
    'zlib'
    'cgal>=4.8'

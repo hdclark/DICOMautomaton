@@ -32,7 +32,8 @@
 #include "../ConvenienceRoutines.h"
 #include "Liver_Pharmacokinetic_Model_5Param_Cheby.h"
 
-#include "../../Pharmacokinetic_Modeling.h"
+#include "../../Pharmacokinetic_Modeling_via_Optimization.h"
+#include "../../Pharmacokinetic_Modeling_via_Least_Squares.h"
 
 std::mutex out_img_mutex;
 
@@ -387,7 +388,8 @@ LiverPharmacoModel5ParamCheby(planar_image_collection<float,double>::images_list
 
                             // This routine fits a pharmacokinetic model to the observed liver perfusion data using a 
                             // Chebyshev polynomial approximation scheme.
-                            Pharmacokinetic_Parameters_5Param_Chebyshev model_state;
+                            Pharmacokinetic_Parameters_5Param_Chebyshev_Optimization model_state;
+                            //Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares model_state;
 
                             model_state.cAIF  = Carterial;
                             model_state.dcAIF = dCarterial;
@@ -395,8 +397,10 @@ LiverPharmacoModel5ParamCheby(planar_image_collection<float,double>::images_list
                             model_state.dcVIF = dCvenous;
                             model_state.cROI = channel_time_course;
 
-                            //Pharmacokinetic_Parameters_5Param_Chebyshev after_state = Pharmacokinetic_Model_3Param_Chebyshev(model_state);
-                            Pharmacokinetic_Parameters_5Param_Chebyshev after_state = Pharmacokinetic_Model_5Param_Chebyshev(model_state);
+                            //Pharmacokinetic_Parameters_5Param_Chebyshev_Optimization after_state = Pharmacokinetic_Model_3Param_Chebyshev_Optimization(model_state);
+                            Pharmacokinetic_Parameters_5Param_Chebyshev_Optimization after_state = Pharmacokinetic_Model_5Param_Chebyshev_Optimization(model_state);
+                            //Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares after_state = Pharmacokinetic_Model_3Param_Chebyshev_Least_Squares(model_state);
+                            //Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares after_state = Pharmacokinetic_Model_5Param_Chebyshev_Least_Squares(model_state);
 
                             if(!after_state.FittingSuccess) ++Minimization_Failure_Count;
 
@@ -416,7 +420,7 @@ LiverPharmacoModel5ParamCheby(planar_image_collection<float,double>::images_list
 
                             //==============================================================================
                             // Plot the fitted model with the ROI time course.
-                            if(true && (row == 8) && (col == 4)){
+                            if(true && (row == 12) && (col == 4)){
                                 auto pid = fork();
                                 if(pid == 0){ //Child process.
                                     std::vector<YgorMathPlottingGnuplot::Shuttle<samples_1D<double>>> shuttle1;
@@ -425,10 +429,12 @@ LiverPharmacoModel5ParamCheby(planar_image_collection<float,double>::images_list
                                                                 + ", col = " + std::to_string(col);
                                         shuttle1.emplace_back(*(after_state.cROI), title);
                                         samples_1D<double> fitted_model;
-                                        Pharmacokinetic_Parameters_5Param_Chebyshev_Results eval_res;
+                                        Pharmacokinetic_Parameters_5Param_Chebyshev_Optimization_Results eval_res;
+                                        //Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares_Results eval_res;
                                         for(const auto &P : after_state.cROI->samples){
                                             const double t = P[0];
-                                            chebyshev_5param_model(after_state,t,eval_res);
+                                            chebyshev_5param_model_optimization(after_state,t,eval_res);
+                                            //chebyshev_5param_model_least_squares(after_state,t,eval_res);
                                             fitted_model.push_back(t, 0.0, eval_res.I, 0.0);
                                         }
                                         shuttle1.emplace_back(fitted_model, "Fitted model");
