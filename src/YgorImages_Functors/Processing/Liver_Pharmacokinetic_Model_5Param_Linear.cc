@@ -319,7 +319,7 @@ LiverPharmacoModel5ParamLinear(planar_image_collection<float,double>::images_lis
                     
                             nlopt_set_min_objective(opt, func_to_min, nullptr);
                             //nlopt_set_xtol_rel(opt, 1.0E-3);
-                            nlopt_set_xtol_abs(opt, 1.0E-7);
+                            nlopt_set_ftol_rel(opt, 1.0E-7);
                             nlopt_set_maxtime(opt, 30.0); // In seconds.
                             nlopt_set_maxeval(opt, 5'000'000); // Maximum number of times to evalute cost function.
 
