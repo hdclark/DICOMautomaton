@@ -167,12 +167,15 @@ int main(int argc, char* argv[]){
             }else{
                 for(auto &a : optdocs){
                     std::cout << "\t'" << a.name << "'" << std::endl;
-                    std::cout << "\t\t" << a.desc << std::endl;
-                    std::cout << "\t\t Default: " << a.default_val << std::endl;
-                    std::cout << "\t\t Examples: " << std::endl;
-                    for(auto &e : a.examples){
-                        std::cout << "\t\t\t" << e << std::endl;
+                    for(const auto &aline : Reflow_Line_to_Fit_Width_Left_Just(a.desc,70)){
+                        std::cout << "\t\t" << aline << std::endl;
                     }
+                    std::cout << "\t    Default: \"" << a.default_val << "\"" << std::endl;
+                    std::cout << "\t    Examples: " << std::endl;
+                    for(auto &e : a.examples){
+                        std::cout << "\t\t\t\"" << e << "\"" << std::endl;
+                    }
+                    std::cout << std::endl;
                 }
             }
             std::cout << std::endl;
