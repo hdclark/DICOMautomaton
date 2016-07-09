@@ -42,7 +42,8 @@ chebyshev_5param_model_least_squares( const Pharmacokinetic_Parameters_5Param_Ch
     const double tauV = state.tauV;
     const double k2   = state.k2;
 
-    const size_t exp_approx_N = 10; // 5 is probably OK. 10 should suffice. 20 could be overkill. Depends on params, though.
+    const size_t exp_approx_N = 10; // 3 usually works (roughly). 5 is probably OK. 10 should suffice. 
+                                    // 20 could be overkill. Depends on params, though.
 
     double int_AIF_exp      = std::numeric_limits<double>::quiet_NaN();
     double int_VIF_exp      = std::numeric_limits<double>::quiet_NaN();
@@ -201,7 +202,6 @@ chebyshev_5param_func_to_min_df( const gsl_vector *params,  //Parameters being f
     //double I;
     for(const auto &P : state->cROI->samples){
         const double t = P[0];
-        //const double R = P[2];
  
         gsl_matrix_set(J, i, 0, std::numeric_limits<double>::infinity());
         gsl_matrix_set(J, i, 1, std::numeric_limits<double>::infinity());
@@ -218,15 +218,7 @@ chebyshev_5param_func_to_min_df( const gsl_vector *params,  //Parameters being f
             gsl_matrix_set(J, i, 3, model_res.d_I_d_tauV);
             gsl_matrix_set(J, i, 4, model_res.d_I_d_k2);
 
-        }catch(std::exception &){
-            //What should I put here instead to signal gsl that the point sucks? NaN?
-            // Or maybe just let it see that the point sucks?
-//            gsl_matrix_set(J, i, 0, std::numeric_limits<double>::max());
-//            gsl_matrix_set(J, i, 1, std::numeric_limits<double>::max());
-//            gsl_matrix_set(J, i, 2, std::numeric_limits<double>::max());
-//            gsl_matrix_set(J, i, 3, std::numeric_limits<double>::max());
-//            gsl_matrix_set(J, i, 4, std::numeric_limits<double>::max());
-        }
+        }catch(std::exception &){ }
         ++i;
     }
 
@@ -371,61 +363,37 @@ Pharmacokinetic_Model_5Param_Chebyshev_Least_Squares(Pharmacokinetic_Parameters_
         int info = -1;
         int status = gsl_multifit_fdfsolver_driver(solver, max_iters, paramtol_rel, gtol_rel, ftol_rel, &info);
 
-        fprintf(stderr, "    Summary from method '%s', ", gsl_multifit_fdfsolver_name(solver));
-        fprintf(stderr, "Number of iterations: %zu, ", gsl_multifit_fdfsolver_niter(solver));
-        fprintf(stderr, "Function evaluations: %zu, ", multifit_f.nevalf);
-        fprintf(stderr, "Jacobian evaluations: %zu, ", multifit_f.nevaldf);
-        if(status == GSL_EMAXITER){
-            fprintf(stderr, "Reason for stopping: max_iters performed\n");
-        }else if(status != GSL_SUCCESS){
-            fprintf(stderr, "Reason for stopping: (generic failure)\n");
-        }else if(info == GSL_ETOLX){
-            fprintf(stderr, "Reason for stopping: small step size\n");
-        }else if(info == GSL_ETOLG){
-            fprintf(stderr, "Reason for stopping: small gradient\n");
-        }else if(info == GSL_ETOLF){
-            fprintf(stderr, "Reason for stopping: small ||f||\n");
-        }else{
-            fprintf(stderr, "Reason for stopping: (unknown!) %s    info = %d\n", gsl_strerror(status), info);
+        if(status == GSL_SUCCESS){
+            //Compute the final residual norm.
+            gsl_vector *res_f = gsl_multifit_fdfsolver_residual(solver);
+            const double chi = gsl_blas_dnrm2(res_f);
+            const double chisq = chi * chi;
+
+            //Compute parameter uncertainties.
+            //
+            // NOTE: Uncertainties computed this way compare with those from Gnuplot on similar (analytical) data.
+            //       I have confidence it is implemented correctly. Disabled because I'm not yet sure if I want
+            //       uncertainties for any specific purpose.
+            //
+            //const double dof = static_cast<double>(datum - dimen);
+            //const double red_chisq = chisq/dof;
+            //const double c = std::sqrt(red_chisq);
+            //gsl_multifit_fdfsolver_jac(solver, J);
+            //gsl_multifit_covar(J, 0.0, covar);
+            //fprintf(stderr, "    (k1A +/- %.5f), ", c*std::sqrt(gsl_matrix_get(covar,0,0)) );
+            //fprintf(stderr, "(tauA +/- %.5f), ", c*std::sqrt(gsl_matrix_get(covar,1,1)) );
+            //fprintf(stderr, "(k1V +/- %.5f), ", c*std::sqrt(gsl_matrix_get(covar,2,2)) );
+            //fprintf(stderr, "(tauV +/- %.5f), ", c*std::sqrt(gsl_matrix_get(covar,3,3)) );
+            //fprintf(stderr, "(k2 +/- %.5f).\n", c*std::sqrt(gsl_matrix_get(covar,4,4)) );
+
+            state.FittingSuccess = true;
+            state.RSS  = chisq;
+            state.k1A  = gsl_vector_get(solver->x,0);
+            state.tauA = gsl_vector_get(solver->x,1);
+            state.k1V  = gsl_vector_get(solver->x,2);
+            state.tauV = gsl_vector_get(solver->x,3);
+            state.k2   = gsl_vector_get(solver->x,4);
         }
-
-         
-        gsl_multifit_fdfsolver_jac(solver, J);
-        gsl_multifit_covar(J, 0.0, covar);
-
-        //Compute the final residual norm.
-        gsl_vector *res_f = gsl_multifit_fdfsolver_residual(solver);
-        const double chi = gsl_blas_dnrm2(res_f);
-        const double chisq = chi * chi;
-
-        double dof = datum - dimen;
-        double red_chisq = chisq/dof;
-        double c = std::sqrt(red_chisq);
-
-        fprintf(stderr, "    Chi-Sq = %g\n",  chisq);
-
-        fprintf(stderr, "    k1A  = %.5f, ", gsl_vector_get(solver->x,0));
-        fprintf(stderr, "tauA = %.5f, ", gsl_vector_get(solver->x,1));
-        fprintf(stderr, "k1V  = %.5f, ", gsl_vector_get(solver->x,2));
-        fprintf(stderr, "tauV = %.5f, ", gsl_vector_get(solver->x,3));
-        fprintf(stderr, "k2   = %.5f.\n", gsl_vector_get(solver->x,4));
-
-        fprintf(stderr, "    (k1A +/- %.5f), ", c*std::sqrt(gsl_matrix_get(covar,0,0)) );
-        fprintf(stderr, "(tauA +/- %.5f), ", c*std::sqrt(gsl_matrix_get(covar,1,1)) );
-        fprintf(stderr, "(k1V +/- %.5f), ", c*std::sqrt(gsl_matrix_get(covar,2,2)) );
-        fprintf(stderr, "(tauV +/- %.5f), ", c*std::sqrt(gsl_matrix_get(covar,3,3)) );
-        fprintf(stderr, "(k2 +/- %.5f).\n", c*std::sqrt(gsl_matrix_get(covar,4,4)) );
-        
-
-        fprintf(stderr, "status = %s\n", gsl_strerror(status));
-
-        state.FittingSuccess = true;
-        state.RSS  = chisq;
-        state.k1A  = gsl_vector_get(solver->x,0);
-        state.tauA = gsl_vector_get(solver->x,1);
-        state.k1V  = gsl_vector_get(solver->x,2);
-        state.tauV = gsl_vector_get(solver->x,3);
-        state.k2   = gsl_vector_get(solver->x,4);
         
         gsl_multifit_fdfsolver_free(solver);
     }
