@@ -7,7 +7,12 @@
 #include <limits>
 #include <cmath>
 
-#include <gsl/gsl_multimin.h>
+#include <gsl/gsl_math.h>
+#include <gsl/gsl_errno.h>
+#include <gsl/gsl_vector.h>
+#include <gsl/gsl_blas.h>
+#include <gsl/gsl_multifit_nlin.h>
+
 #include <nlopt.h>
 
 #include <boost/date_time/posix_time/posix_time.hpp>
@@ -129,244 +134,304 @@ chebyshev_5param_model_least_squares( const Pharmacokinetic_Parameters_5Param_Ch
 
 
 //---------------------------------------------------------------------------------------------
+
 static
-double 
-chebyshev_5param_func_to_min(unsigned, const double *params, double *grad, void *voided_state){
+int
+chebyshev_5param_func_to_min_f( const gsl_vector *params,  //Parameters being fitted.
+                                void *voided_state,        //Other information (e.g., constant function parameters).
+                                gsl_vector *f){            //Vector containtin function evaluats at {t_i}.
+
+    //This function essentially computes the square-distance between the ROI time course and a kinetic liver perfusion
+    // model at the ROI sample t_i's. However, instead of reporting the summed square-distance, the difference of
+    // function values and observations at each t_i are reported (and summed internally within the optimizer).
 
     auto state = reinterpret_cast<Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares*>(voided_state);
 
-    //This function computes the square-distance between the ROI time course and a kinetic liver
-    // perfusion model at the ROI sample t_i's. If gradients are requested, they are also computed.
-    double sqDist = 0.0;
-    if(grad != nullptr){
-        grad[0] = 0.0;
-        grad[1] = 0.0;
-        grad[2] = 0.0;
-        grad[3] = 0.0;
-        grad[4] = 0.0;
-    }
-
-    //Pack the current parameters into the state struct. This is done to unify the nlopt and user calling styles.
-    state->k1A  = params[0];
-    state->tauA = params[1]; 
-    state->k1V  = params[2];
-    state->tauV = params[3];
-    state->k2   = params[4];
+    //Pack the current parameters into the state struct.
+    state->k1A  = gsl_vector_get(params, 0);
+    state->tauA = gsl_vector_get(params, 1); 
+    state->k1V  = gsl_vector_get(params, 2);
+    state->tauV = gsl_vector_get(params, 3);
+    state->k2   = gsl_vector_get(params, 4);
 
     Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares_Results model_res;
+
+    size_t i = 0;
+    double I;
     for(const auto &P : state->cROI->samples){
         const double t = P[0];
         const double R = P[2];
+ 
+        I = std::numeric_limits<double>::quiet_NaN();
+        try{
+            chebyshev_5param_model_least_squares(*state, t, model_res);
+            I = model_res.I;
+        }catch(std::exception &){ }
+        I = std::isfinite(I) ? I : std::numeric_limits<double>::infinity();
 
-        chebyshev_5param_model_least_squares(*state, t, model_res);
-        const double I = model_res.I;
-        
-        sqDist += std::pow(R - I, 2.0); //Standard L2-norm.
-        if(grad != nullptr){
-            const double chain = -2.0*(R-I);
-            grad[0] += chain * model_res.d_I_d_k1A;
-            grad[1] += chain * model_res.d_I_d_tauA;
-            grad[2] += chain * model_res.d_I_d_k1V;
-            grad[3] += chain * model_res.d_I_d_tauV;
-            grad[4] += chain * model_res.d_I_d_k2;
-        }
+        gsl_vector_set(f, i, I - R);
+        ++i;
     }
-    if(!std::isfinite(sqDist)) sqDist = std::numeric_limits<double>::max();
-    return sqDist;
+
+    return GSL_SUCCESS;
 }
+
+static
+int
+chebyshev_5param_func_to_min_df( const gsl_vector *params,  //Parameters being fitted.
+                                 void *voided_state,        //Other information (e.g., constant function parameters).
+                                 gsl_matrix * J){           //Jacobian matrix.
+
+    //This function prepares Jacobian matrix elements for gsl. The Jacobian is defined as:
+    //  J(i,j) = \frac{\partial I(t_i;param_0, param_1, param_2, ...)}{\partial param_j}
+    // where param_0 = k1A, param_1 = tauA, ..., param_4 = k2.
+
+    auto state = reinterpret_cast<Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares*>(voided_state);
+
+    //Pack the current parameters into the state struct.
+    state->k1A  = gsl_vector_get(params, 0);
+    state->tauA = gsl_vector_get(params, 1); 
+    state->k1V  = gsl_vector_get(params, 2);
+    state->tauV = gsl_vector_get(params, 3);
+    state->k2   = gsl_vector_get(params, 4);
+
+    Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares_Results model_res;
+
+    size_t i = 0;
+    //double I;
+    for(const auto &P : state->cROI->samples){
+        const double t = P[0];
+        //const double R = P[2];
+ 
+        gsl_matrix_set(J, i, 0, std::numeric_limits<double>::infinity());
+        gsl_matrix_set(J, i, 1, std::numeric_limits<double>::infinity());
+        gsl_matrix_set(J, i, 2, std::numeric_limits<double>::infinity());
+        gsl_matrix_set(J, i, 3, std::numeric_limits<double>::infinity());
+        gsl_matrix_set(J, i, 4, std::numeric_limits<double>::infinity());
+
+        try{
+            chebyshev_5param_model_least_squares(*state, t, model_res);
+
+            gsl_matrix_set(J, i, 0, model_res.d_I_d_k1A);
+            gsl_matrix_set(J, i, 1, model_res.d_I_d_tauA);
+            gsl_matrix_set(J, i, 2, model_res.d_I_d_k1V);
+            gsl_matrix_set(J, i, 3, model_res.d_I_d_tauV);
+            gsl_matrix_set(J, i, 4, model_res.d_I_d_k2);
+
+        }catch(std::exception &){
+            //What should I put here instead to signal gsl that the point sucks? NaN?
+            // Or maybe just let it see that the point sucks?
+//            gsl_matrix_set(J, i, 0, std::numeric_limits<double>::max());
+//            gsl_matrix_set(J, i, 1, std::numeric_limits<double>::max());
+//            gsl_matrix_set(J, i, 2, std::numeric_limits<double>::max());
+//            gsl_matrix_set(J, i, 3, std::numeric_limits<double>::max());
+//            gsl_matrix_set(J, i, 4, std::numeric_limits<double>::max());
+        }
+        ++i;
+    }
+
+    return GSL_SUCCESS;
+}
+
 
 struct Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares
 Pharmacokinetic_Model_5Param_Chebyshev_Least_Squares(Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares state){
+    //GSL-based fitter. This function performs a few passes to improve the likelihood of finding a solution.
+    //
+    // Note: Weights are not currently assigned, though they are supported by the available methods in gsl. Instead, 
+    //       the GSL manual states: 
+    //
+    //       "This estimates the statistical error on the best-fit parameters from the scatter of the underlying data."
+    //
+    //       Weights could be derived more intelligently (adaptively) from the datum. It would be tricky to do
+    //       correctly.
 
-    state.FittingPerformed = false;
+    state.FittingPerformed = true;
     state.FittingSuccess = false;
 
-    const int dimen = 5;
-    double func_min;
+    bool skip_second_pass = false; //Gets set if a very good fit is found on the first pass.
 
-    //Fitting parameters:      k1A,  tauA,   k1V,  tauV,  k2.
-    // The following are arbitrarily chosen. They should be seeded from previous computations, or
-    // at least be nominal values reported within the literature.
-    double params[dimen];
+    const size_t dimen = 5; //The number of fitting parameters.
+    const size_t datum = state.cROI->samples.size(); //The number of samples or datum.
 
-    //If there were finite parameters provided, use them as the initial guesses.
-    params[0] = std::isfinite(state.k1A)  ? state.k1A  : 0.0030;
-    params[1] = std::isfinite(state.tauA) ? state.tauA : 0.0000;
-    params[2] = std::isfinite(state.k1V)  ? state.k1V  : 0.0030;
-    params[3] = std::isfinite(state.tauV) ? state.tauV : 0.0000;
-    params[4] = std::isfinite(state.k2)   ? state.k2   : 0.0518;
+    double params[dimen]; //A shuttle into gsl for the parameters.
 
-    // U/L bounds:             k1A,  tauA,  k1V,  tauV,  k2.
-    double l_bnds[dimen] = {   0.0, -20.0,  0.0, -20.0,  0.0 };
-    double u_bnds[dimen] = {  10.0,  20.0, 10.0,  20.0, 10.0 };
-                    
-    //Initial step sizes:          k1A,   tauA,    k1V,   tauV,    k2.
-    double initstpsz[dimen] = { 0.0040, 3.2000, 0.0040, 3.2000, 0.0050 };
-
-    //Absolute parameter change thresholds:   k1A,    tauA,     k1V,    tauV,     k2.
-    double xtol_abs_thresholds[dimen] = { 0.00005, 0.00010, 0.00005, 0.00010, 0.00005 };
-
+    gsl_matrix *J = gsl_matrix_alloc(datum, dimen);
+    gsl_matrix *covar = gsl_matrix_alloc(dimen, dimen);
 
     //First-pass fit.
     {
-        nlopt_opt opt; //See `man nlopt` to get list of available algorithms.
-        //opt = nlopt_create(NLOPT_LN_COBYLA, dimen);   //Local, no-derivative schemes.
-        //opt = nlopt_create(NLOPT_LN_BOBYQA, dimen);
-        //opt = nlopt_create(NLOPT_LN_SBPLX, dimen);
+        const size_t max_iters = 500;
 
-        opt = nlopt_create(NLOPT_LD_MMA, dimen);   //Local, derivative schemes.
-        //opt = nlopt_create(NLOPT_LD_SLSQP, dimen);
-        //opt = nlopt_create(NLOPT_LD_LBFGS, dimen);
-        //opt = nlopt_create(NLOPT_LD_VAR2, dimen);
-        //opt = nlopt_create(NLOPT_LD_TNEWTON_PRECOND_RESTART, dimen);
-        //opt = nlopt_create(NLOPT_LD_TNEWTON_PRECOND, dimen);
-        //opt = nlopt_create(NLOPT_LD_TNEWTON, dimen);
+        //If there were finite parameters provided, use them as the initial guesses.
+        params[0] = std::isfinite(state.k1A)  ? state.k1A  : 0.0500;
+        params[1] = std::isfinite(state.tauA) ? state.tauA : 1.0000;
+        params[2] = std::isfinite(state.k1V)  ? state.k1V  : 0.0500;
+        params[3] = std::isfinite(state.tauV) ? state.tauV : 1.0000;
+        params[4] = std::isfinite(state.k2)   ? state.k2   : 0.0350;
+        gsl_vector_view params_v = gsl_vector_view_array(params, dimen);
 
-        //opt = nlopt_create(NLOPT_GN_DIRECT, dimen); //Global, no-derivative schemes.
-        //opt = nlopt_create(NLOPT_GN_CRS2_LM, dimen);
-        //opt = nlopt_create(NLOPT_GN_ESCH, dimen);
-        //opt = nlopt_create(NLOPT_GN_ISRES, dimen);
-                        
-        //nlopt_set_lower_bounds(opt, l_bnds);
-        //nlopt_set_upper_bounds(opt, u_bnds);
-                        
-        if(NLOPT_SUCCESS != nlopt_set_initial_step(opt, initstpsz)){
-            FUNCERR("NLOpt unable to set initial step sizes");
-        }
-        if(NLOPT_SUCCESS != nlopt_set_min_objective(opt, chebyshev_5param_func_to_min, reinterpret_cast<void*>(&state))){
-            FUNCERR("NLOpt unable to set objective function for minimization");
-        }
-        //if(NLOPT_SUCCESS != nlopt_set_xtol_rel(opt, 1.0E-3)){
-        //    FUNCERR("NLOpt unable to set xtol stopping condition");
-        //}
-        if(NLOPT_SUCCESS != nlopt_set_xtol_abs(opt, xtol_abs_thresholds)){
-            FUNCERR("NLOpt unable to set xtol_abs stopping condition");
-        }
-        if(NLOPT_SUCCESS != nlopt_set_ftol_rel(opt, 1.0E-7)){
-            FUNCERR("NLOpt unable to set ftol_rel stopping condition");
-        }
-        if(NLOPT_SUCCESS != nlopt_set_maxtime(opt, 30.0)){ // In seconds.
-            FUNCERR("NLOpt unable to set maxtime stopping condition");
-        }
-        if(NLOPT_SUCCESS != nlopt_set_maxeval(opt, 5'000'000)){ // Maximum # of objective func evaluations.
-            FUNCERR("NLOpt unable to set maxeval stopping condition");
-        }
-        if(NLOPT_SUCCESS != nlopt_set_vector_storage(opt, 400)){ // Amount of memory to use (MB).
-            FUNCERR("NLOpt unable to tell NLOpt to use more scratch space");
-        }
+        const double paramtol_rel = 1.0E-3;
+        //const double paramtol_rel = -10.0*std::numeric_limits<double>::epsilon();
+        //const double paramtol_rel = std::pow(GSL_DBL_EPSILON, 0.5);
+        //const double paramtol_rel = std::numeric_limits<double>::denorm_min();
 
-        const auto opt_status = nlopt_optimize(opt, params, &func_min);
+        const double gtol_rel = 1.0E-3;
+        //const double gtol_rel = 10.0*std::numeric_limits<double>::epsilon();
+        //const double gtol_rel = std::pow(GSL_DBL_EPSILON, 0.5);
+        //const double gtol_rel = std::numeric_limits<double>::denorm_min();
 
-        if(opt_status < 0){
-            state.FittingSuccess = false;
-            if(opt_status == NLOPT_FAILURE){                FUNCWARN("NLOpt fail: generic failure");
-            }else if(opt_status == NLOPT_INVALID_ARGS){     FUNCERR("NLOpt fail: invalid arguments");
-            }else if(opt_status == NLOPT_OUT_OF_MEMORY){    FUNCWARN("NLOpt fail: out of memory");
-            }else if(opt_status == NLOPT_ROUNDOFF_LIMITED){ FUNCWARN("NLOpt fail: roundoff limited");
-            }else if(opt_status == NLOPT_FORCED_STOP){      FUNCWARN("NLOpt fail: forced termination");
-            }else{ FUNCERR("NLOpt fail: unrecognized error code"); }
-            // See http://ab-initio.mit.edu/wiki/index.php/NLopt_Reference for error code info.
-        }else{
+        const double ftol_rel = 1.0E-3; //CURRENTLY IGNORED BY SOME ROUTINES!
+        //const double ftol_rel = std::numeric_limits<double>::denorm_min(); //CURRENTLY IGNORED BY SOME ROUTINES!
+
+        gsl_multifit_function_fdf multifit_f;
+        multifit_f.f = &chebyshev_5param_func_to_min_f;
+        //multifit_f.df = nullptr; //If nullptr, use a finite-difference Jacobian derived from multifit_f.f.
+        multifit_f.df = &chebyshev_5param_func_to_min_df;
+        multifit_f.n = datum;
+        multifit_f.p = dimen;
+        multifit_f.params = reinterpret_cast<void*>(&state);
+
+        //const gsl_multifit_fdfsolver_type *solver_type = gsl_multifit_fdfsolver_lmsder;
+        const gsl_multifit_fdfsolver_type *solver_type = gsl_multifit_fdfsolver_lmder;
+        //const gsl_multifit_fdfsolver_type *solver_type = gsl_multifit_fdfsolver_lmniel;
+
+        gsl_multifit_fdfsolver *solver = gsl_multifit_fdfsolver_alloc(solver_type, datum, dimen);
+        gsl_multifit_fdfsolver_set(solver, &multifit_f, &params_v.vector);
+
+        //Perform the optimization.
+        int info = -1;
+        int status = gsl_multifit_fdfsolver_driver(solver, max_iters, paramtol_rel, gtol_rel, ftol_rel, &info);
+
+        gsl_vector *res_f = gsl_multifit_fdfsolver_residual(solver);
+        const double chi = gsl_blas_dnrm2(res_f);
+        const double chisq = chi * chi;
+        const double dof = static_cast<double>(datum - dimen);
+        const double red_chisq = chisq/dof;
+
+        state.RSS  = chisq;
+        state.k1A  = gsl_vector_get(solver->x,0);
+        state.tauA = gsl_vector_get(solver->x,1);
+        state.k1V  = gsl_vector_get(solver->x,2);
+        state.tauV = gsl_vector_get(solver->x,3);
+        state.k2   = gsl_vector_get(solver->x,4);
+        
+        gsl_multifit_fdfsolver_free(solver);
+
+        //If the fit was extremely good already, do not bother with another pass.
+        // We assume a certain scale here, so it won't work in generality!
+        if(red_chisq < 1E-10){
+            skip_second_pass = true;
             state.FittingSuccess = true;
-            if(true){
-                if(opt_status == NLOPT_SUCCESS){                FUNCINFO("NLOpt: success");
-                }else if(opt_status == NLOPT_STOPVAL_REACHED){  FUNCINFO("NLOpt: stopval reached");
-                }else if(opt_status == NLOPT_FTOL_REACHED){     FUNCINFO("NLOpt: ftol reached");
-                }else if(opt_status == NLOPT_XTOL_REACHED){     FUNCINFO("NLOpt: xtol reached");
-                }else if(opt_status == NLOPT_MAXEVAL_REACHED){  FUNCINFO("NLOpt: maxeval count reached");
-                }else if(opt_status == NLOPT_MAXTIME_REACHED){  FUNCINFO("NLOpt: maxtime reached");
-                }else{ FUNCERR("NLOpt fail: unrecognized success code"); }
-            }
         }
-
-        nlopt_destroy(opt);
     }
 
-    //Second-pass fit. Only bother if the first pass was reasonable.
-    if(state.FittingSuccess){
-        nlopt_opt opt; //See `man nlopt` to get list of available algorithms.
-        //opt = nlopt_create(NLOPT_LN_COBYLA, dimen);   //Local, no-derivative schemes.
-        //opt = nlopt_create(NLOPT_LN_BOBYQA, dimen);
-        //opt = nlopt_create(NLOPT_LN_SBPLX, dimen);
 
-        //opt = nlopt_create(NLOPT_LD_MMA, dimen);   //Local, derivative schemes.
-        //opt = nlopt_create(NLOPT_LD_SLSQP, dimen);
-        //opt = nlopt_create(NLOPT_LD_LBFGS, dimen);
-        //opt = nlopt_create(NLOPT_LD_VAR2, dimen);
-        //opt = nlopt_create(NLOPT_LD_TNEWTON_PRECOND_RESTART, dimen);
-        //opt = nlopt_create(NLOPT_LD_TNEWTON_PRECOND, dimen);
-        opt = nlopt_create(NLOPT_LD_TNEWTON, dimen);
+    //Second-pass fit.
+    if(!skip_second_pass){
+        const size_t max_iters = 50'000;
 
-        //opt = nlopt_create(NLOPT_GN_DIRECT, dimen); //Global, no-derivative schemes.
-        //opt = nlopt_create(NLOPT_GN_CRS2_LM, dimen);
-        //opt = nlopt_create(NLOPT_GN_ESCH, dimen);
-        //opt = nlopt_create(NLOPT_GN_ISRES, dimen);
-                        
-        //nlopt_set_lower_bounds(opt, l_bnds);
-        //nlopt_set_upper_bounds(opt, u_bnds);
-                        
-        if(NLOPT_SUCCESS != nlopt_set_initial_step(opt, initstpsz)){
-            FUNCERR("NLOpt unable to set initial step sizes");
-        }
-        if(NLOPT_SUCCESS != nlopt_set_min_objective(opt, chebyshev_5param_func_to_min, reinterpret_cast<void*>(&state))){
-            FUNCERR("NLOpt unable to set objective function for minimization");
-        }
-        //if(NLOPT_SUCCESS != nlopt_set_xtol_rel(opt, 1.0E-3)){
-        //    FUNCERR("NLOpt unable to set xtol stopping condition");
-        //}
-        //if(NLOPT_SUCCESS != nlopt_set_xtol_abs(opt, xtol_abs_thresholds)){
-        //    FUNCERR("NLOpt unable to set xtol_abs stopping condition");
-        //}
-        if(NLOPT_SUCCESS != nlopt_set_ftol_rel(opt, 1.0E-7)){
-            FUNCERR("NLOpt unable to set ftol_rel stopping condition");
-        }
-        if(NLOPT_SUCCESS != nlopt_set_maxtime(opt, 30.0)){ // In seconds.
-            FUNCERR("NLOpt unable to set maxtime stopping condition");
-        }
-        if(NLOPT_SUCCESS != nlopt_set_maxeval(opt, 5'000'000)){ // Maximum # of objective func evaluations.
-            FUNCERR("NLOpt unable to set maxeval stopping condition");
-        }
-        if(NLOPT_SUCCESS != nlopt_set_vector_storage(opt, 400)){ // Amount of memory to use (MB).
-            FUNCERR("NLOpt unable to tell NLOpt to use more scratch space");
-        }
+        //If there were finite parameters provided, use them as the initial guesses.
+        params[0] = std::isfinite(state.k1A)  ? state.k1A  : 0.0500;
+        params[1] = std::isfinite(state.tauA) ? state.tauA : 1.0000;
+        params[2] = std::isfinite(state.k1V)  ? state.k1V  : 0.0500;
+        params[3] = std::isfinite(state.tauV) ? state.tauV : 1.0000;
+        params[4] = std::isfinite(state.k2)   ? state.k2   : 0.0350;
+        gsl_vector_view params_v = gsl_vector_view_array(params, dimen);
 
-        const auto opt_status = nlopt_optimize(opt, params, &func_min);
+        const double paramtol_rel = 1.0E-3;
+        //const double paramtol_rel = -10.0*std::numeric_limits<double>::epsilon();
+        //const double paramtol_rel = std::pow(GSL_DBL_EPSILON, 0.5);
+        //const double paramtol_rel = std::numeric_limits<double>::denorm_min();
 
-        if(opt_status < 0){
-            state.FittingSuccess = false;
-            if(opt_status == NLOPT_FAILURE){                FUNCWARN("NLOpt fail: generic failure");
-            }else if(opt_status == NLOPT_INVALID_ARGS){     FUNCERR("NLOpt fail: invalid arguments");
-            }else if(opt_status == NLOPT_OUT_OF_MEMORY){    FUNCWARN("NLOpt fail: out of memory");
-            }else if(opt_status == NLOPT_ROUNDOFF_LIMITED){ FUNCWARN("NLOpt fail: roundoff limited");
-            }else if(opt_status == NLOPT_FORCED_STOP){      FUNCWARN("NLOpt fail: forced termination");
-            }else{ FUNCERR("NLOpt fail: unrecognized error code"); }
-            // See http://ab-initio.mit.edu/wiki/index.php/NLopt_Reference for error code info.
+        const double gtol_rel = 1.0E-3;
+        //const double gtol_rel = 10.0*std::numeric_limits<double>::epsilon();
+        //const double gtol_rel = std::pow(GSL_DBL_EPSILON, 0.5);
+        //const double gtol_rel = std::numeric_limits<double>::denorm_min();
+
+        const double ftol_rel = 1.0E-3; //CURRENTLY IGNORED BY SOME ROUTINES!
+        //const double ftol_rel = std::numeric_limits<double>::denorm_min(); //CURRENTLY IGNORED BY SOME ROUTINES!
+
+        gsl_multifit_function_fdf multifit_f;
+        multifit_f.f = &chebyshev_5param_func_to_min_f;
+        //multifit_f.df = nullptr; //If nullptr, use a finite-difference Jacobian derived from multifit_f.f.
+        multifit_f.df = &chebyshev_5param_func_to_min_df;
+        multifit_f.n = datum;
+        multifit_f.p = dimen;
+        multifit_f.params = reinterpret_cast<void*>(&state);
+
+        const gsl_multifit_fdfsolver_type *solver_type = gsl_multifit_fdfsolver_lmsder;
+        //const gsl_multifit_fdfsolver_type *solver_type = gsl_multifit_fdfsolver_lmder;
+        //const gsl_multifit_fdfsolver_type *solver_type = gsl_multifit_fdfsolver_lmniel;
+
+        gsl_multifit_fdfsolver *solver = gsl_multifit_fdfsolver_alloc(solver_type, datum, dimen);
+        gsl_multifit_fdfsolver_set(solver, &multifit_f, &params_v.vector);
+
+        //Perform the optimization.
+        int info = -1;
+        int status = gsl_multifit_fdfsolver_driver(solver, max_iters, paramtol_rel, gtol_rel, ftol_rel, &info);
+
+        fprintf(stderr, "    Summary from method '%s', ", gsl_multifit_fdfsolver_name(solver));
+        fprintf(stderr, "Number of iterations: %zu, ", gsl_multifit_fdfsolver_niter(solver));
+        fprintf(stderr, "Function evaluations: %zu, ", multifit_f.nevalf);
+        fprintf(stderr, "Jacobian evaluations: %zu, ", multifit_f.nevaldf);
+        if(status == GSL_EMAXITER){
+            fprintf(stderr, "Reason for stopping: max_iters performed\n");
+        }else if(status != GSL_SUCCESS){
+            fprintf(stderr, "Reason for stopping: (generic failure)\n");
+        }else if(info == GSL_ETOLX){
+            fprintf(stderr, "Reason for stopping: small step size\n");
+        }else if(info == GSL_ETOLG){
+            fprintf(stderr, "Reason for stopping: small gradient\n");
+        }else if(info == GSL_ETOLF){
+            fprintf(stderr, "Reason for stopping: small ||f||\n");
         }else{
-            state.FittingSuccess = true;
-            if(true){
-                if(opt_status == NLOPT_SUCCESS){                FUNCINFO("NLOpt: success");
-                }else if(opt_status == NLOPT_STOPVAL_REACHED){  FUNCINFO("NLOpt: stopval reached");
-                }else if(opt_status == NLOPT_FTOL_REACHED){     FUNCINFO("NLOpt: ftol reached");
-                }else if(opt_status == NLOPT_XTOL_REACHED){     FUNCINFO("NLOpt: xtol reached");
-                }else if(opt_status == NLOPT_MAXEVAL_REACHED){  FUNCINFO("NLOpt: maxeval count reached");
-                }else if(opt_status == NLOPT_MAXTIME_REACHED){  FUNCINFO("NLOpt: maxtime reached");
-                }else{ FUNCERR("NLOpt fail: unrecognized success code"); }
-            }
+            fprintf(stderr, "Reason for stopping: (unknown!) %s    info = %d\n", gsl_strerror(status), info);
         }
 
-        nlopt_destroy(opt);
+         
+        gsl_multifit_fdfsolver_jac(solver, J);
+        gsl_multifit_covar(J, 0.0, covar);
+
+        //Compute the final residual norm.
+        gsl_vector *res_f = gsl_multifit_fdfsolver_residual(solver);
+        const double chi = gsl_blas_dnrm2(res_f);
+        const double chisq = chi * chi;
+
+        double dof = datum - dimen;
+        double red_chisq = chisq/dof;
+        double c = std::sqrt(red_chisq);
+
+        fprintf(stderr, "    Chi-Sq = %g\n",  chisq);
+
+        fprintf(stderr, "    k1A  = %.5f, ", gsl_vector_get(solver->x,0));
+        fprintf(stderr, "tauA = %.5f, ", gsl_vector_get(solver->x,1));
+        fprintf(stderr, "k1V  = %.5f, ", gsl_vector_get(solver->x,2));
+        fprintf(stderr, "tauV = %.5f, ", gsl_vector_get(solver->x,3));
+        fprintf(stderr, "k2   = %.5f.\n", gsl_vector_get(solver->x,4));
+
+        fprintf(stderr, "    (k1A +/- %.5f), ", c*std::sqrt(gsl_matrix_get(covar,0,0)) );
+        fprintf(stderr, "(tauA +/- %.5f), ", c*std::sqrt(gsl_matrix_get(covar,1,1)) );
+        fprintf(stderr, "(k1V +/- %.5f), ", c*std::sqrt(gsl_matrix_get(covar,2,2)) );
+        fprintf(stderr, "(tauV +/- %.5f), ", c*std::sqrt(gsl_matrix_get(covar,3,3)) );
+        fprintf(stderr, "(k2 +/- %.5f).\n", c*std::sqrt(gsl_matrix_get(covar,4,4)) );
+        
+
+        fprintf(stderr, "status = %s\n", gsl_strerror(status));
+
+        state.FittingSuccess = true;
+        state.RSS  = chisq;
+        state.k1A  = gsl_vector_get(solver->x,0);
+        state.tauA = gsl_vector_get(solver->x,1);
+        state.k1V  = gsl_vector_get(solver->x,2);
+        state.tauV = gsl_vector_get(solver->x,3);
+        state.k2   = gsl_vector_get(solver->x,4);
+        
+        gsl_multifit_fdfsolver_free(solver);
     }
-    // ----------------------------------------------------------------------------
 
-    state.FittingPerformed = true;
-
-    state.RSS  = func_min;
-
-    state.k1A  = params[0];
-    state.tauA = params[1];
-    state.k1V  = params[2];
-    state.tauV = params[3];
-    state.k2   = params[4];
+    gsl_matrix_free(covar);
+    gsl_matrix_free(J);
 
     return std::move(state);
 }
@@ -377,6 +442,10 @@ static
 double 
 chebyshev_3param_func_to_min(unsigned, const double *params, double *grad, void *voided_state){
 
+    FUNCERR("Not yet implemented");
+    return 0.0;
+
+/*
     auto state = reinterpret_cast<Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares*>(voided_state);
 
     //This function computes the square-distance between the ROI time course and a kinetic liver
@@ -414,10 +483,16 @@ chebyshev_3param_func_to_min(unsigned, const double *params, double *grad, void 
 
     if(!std::isfinite(sqDist)) sqDist = std::numeric_limits<double>::max();
     return sqDist;
+*/
 }
 
 struct Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares
 Pharmacokinetic_Model_3Param_Chebyshev_Least_Squares(Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares state){
+
+    FUNCERR("Not yet implemented");
+    return std::move(state);
+
+/*
 
     state.FittingPerformed = false;
     state.FittingSuccess = false;
@@ -609,5 +684,7 @@ Pharmacokinetic_Model_3Param_Chebyshev_Least_Squares(Pharmacokinetic_Parameters_
     state.k2   = params[2];
 
     return std::move(state);
+*/
+
 }
 
