@@ -421,7 +421,7 @@ class OperationArgPkg {
         icase_map_t opts; // Arguments to pass to the operation.
 
     public:
-        OperationArgPkg(std::string unparsed); // e.g., "SomeOperation:keyA=valueA:keyB=valueB"
+        OperationArgPkg(std::string unparsed, std::string sepr = ":", std::string eqls = "="); // e.g., "SomeOperation:keyA=valueA:keyB=valueB"
 
         OperationArgPkg & operator=(const OperationArgPkg &rhs);
 

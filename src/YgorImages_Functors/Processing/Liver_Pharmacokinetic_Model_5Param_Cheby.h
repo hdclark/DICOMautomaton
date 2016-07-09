@@ -5,7 +5,10 @@
 #include <functional>
 #include <limits>
 #include <map>
+#include <set>
 #include <cmath>
+#include <tuple>
+#include <regex>
 
 #include <experimental/any>
 
@@ -15,11 +18,20 @@
 #include "YgorImages.h"
 
 
+struct LiverPharmacoModel5ParamChebyUserDataPixelSelectionCriteria {
+    std::map<std::string,std::regex> metadata_criteria;
+    long int row;
+    long int column;
+
+};
+
 struct LiverPharmacoModel5ParamChebyUserData {
 
     double ContrastInjectionLeadTime;
     std::map<std::string, cheby_approx<double>> time_courses;
     std::map<std::string, cheby_approx<double>> time_course_derivatives;
+
+    std::list<LiverPharmacoModel5ParamChebyUserDataPixelSelectionCriteria> pixels_to_plot;
 
 };
 

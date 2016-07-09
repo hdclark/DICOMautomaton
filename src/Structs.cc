@@ -2059,8 +2059,10 @@ void Drover::Plot_Image_Outlines(void) const {
 //------------------------------------------------------ OperationArgPkg ----------------------------------------------------
 //---------------------------------------------------------------------------------------------------------------------------
 
-OperationArgPkg::OperationArgPkg(std::string unparsed) : opts(icase_str_lt_lambda) {
+OperationArgPkg::OperationArgPkg(std::string unparsed, std::string sepr, std::string eqls) : opts(icase_str_lt_lambda) {
     //Parse the string. Throws if an error is detected.
+    //
+    // Note: for the following examples 'sepr' is ":" and 'eqls' is "=".
     //
     // Examples of acceptable input:
     //   1. "OperationName:keyA=valueA:keyB=valueB"
@@ -2086,13 +2088,13 @@ OperationArgPkg::OperationArgPkg(std::string unparsed) : opts(icase_str_lt_lambd
     unparsed = boost::algorithm::trim_all_copy(unparsed);
     if(unparsed.empty()) throw std::invalid_argument("No operation name specified.");
 
-    if(!boost::algorithm::contains(unparsed, ":")){
+    if(!boost::algorithm::contains(unparsed, sepr)){
         this->name = unparsed;
         return;
     }
 
     std::list<std::string> split_on_colons;
-    boost::algorithm::split(split_on_colons, unparsed, boost::algorithm::is_any_of(":"), boost::algorithm::token_compress_on);
+    boost::algorithm::split(split_on_colons, unparsed, boost::algorithm::is_any_of(sepr), boost::algorithm::token_compress_on);
     for(auto &b : split_on_colons) b = boost::algorithm::trim_all_copy(b);
     if(split_on_colons.empty()) throw std::invalid_argument("No operation name specified.");
 
@@ -2103,10 +2105,10 @@ OperationArgPkg::OperationArgPkg(std::string unparsed) : opts(icase_str_lt_lambd
         //Must contain an '=' to be considered valid.
         a = boost::algorithm::trim_all_copy(a);
         if(a.empty()) continue;
-        if(!boost::algorithm::contains(a, "=")) throw std::invalid_argument("Argument provided with key but no value");
+        if(!boost::algorithm::contains(a, eqls)) throw std::invalid_argument("Argument provided with key but no value");
 
         std::list<std::string> split_on_equals;
-        boost::algorithm::split(split_on_equals, a, boost::algorithm::is_any_of("="), boost::algorithm::token_compress_off);
+        boost::algorithm::split(split_on_equals, a, boost::algorithm::is_any_of(eqls), boost::algorithm::token_compress_off);
         for(auto &b : split_on_equals) b = boost::algorithm::trim_all_copy(b);
 
         if(split_on_equals.size() != 2) throw std::invalid_argument("Missing argument key or value");

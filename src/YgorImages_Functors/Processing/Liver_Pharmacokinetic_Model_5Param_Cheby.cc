@@ -3,11 +3,15 @@
 #include <functional>
 #include <limits>
 #include <map>
+#include <set>
 #include <cmath>
 #include <memory>
 #include <chrono>
 #include <experimental/any>
 #include <mutex>
+#include <tuple>
+#include <regex>
+
 #include <unistd.h>          //fork().
 #include <stdlib.h>          //quick_exit(), EXIT_SUCCESS.
 #include <pqxx/pqxx>         //PostgreSQL C++ interface.
@@ -44,7 +48,6 @@ LiverPharmacoModel5ParamCheby(planar_image_collection<float,double>::images_list
                         std::list<std::reference_wrapper<contour_collection<double>>> cc_all,
                         std::experimental::any user_data ){
 
-
     //This takes aggregate time courses for (1) hepatic portal vein and (2) ascending aorta and attempts to 
     // fit a pharmacokinetic model to each voxel within the provided gross liver ROI. This entails fitting
     // a convolution model to the data, and a general optimization procedure is used.
@@ -73,6 +76,23 @@ LiverPharmacoModel5ParamCheby(planar_image_collection<float,double>::images_list
         throw std::invalid_argument("Both arterial and venous input time courses are needed."
                                     "(Are they named differently to the hard-coded names?)");
     }
+
+    //Figure out which pixels, if any, need to be plotted after modeling.
+    std::set<std::pair<long int, long int>> PixelsToPlot;
+    {
+        auto inimg_metadata = first_img_it->metadata;
+        for(const auto &critstruct : user_data_s->pixels_to_plot){
+            bool should_add = true;
+            for(const auto &crit : critstruct.metadata_criteria){
+                if((inimg_metadata.count(crit.first) != 1) || !(std::regex_match(inimg_metadata[crit.first], crit.second))){
+                    should_add = false;
+                    break;
+                }
+            }
+            if(should_add) PixelsToPlot.insert({ critstruct.row, critstruct.column });
+        }
+    }
+
 
     //Copy the incoming image to all the parameter maps. We will overwrite pixels as necessary.
     std::reference_wrapper<planar_image<float,double>> out_img_k1A  = std::ref( *first_img_it ); //Temporary refs.
@@ -420,7 +440,7 @@ LiverPharmacoModel5ParamCheby(planar_image_collection<float,double>::images_list
 
                             //==============================================================================
                             // Plot the fitted model with the ROI time course.
-                            if(true && (row == 12) && (col == 4)){
+                            if(PixelsToPlot.count( {row, col}) != 0){ 
                                 auto pid = fork();
                                 if(pid == 0){ //Child process.
                                     std::vector<YgorMathPlottingGnuplot::Shuttle<samples_1D<double>>> shuttle1;

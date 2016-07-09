@@ -92,6 +92,19 @@ std::list<OperationArgDoc> OpArgDocCT_Liver_Perfusion_Pharmaco(void){
     std::list<OperationArgDoc> out;
 
     out.emplace_back();
+    out.back().name = "PlotPixelModel";
+    out.back().desc = "Show a plot of the fitted model for a specified pixel. You can supply arbitrary"
+                      " metadata, but must also supply Row and Column numbers. Note that numerical "
+                      " comparisons are performed lexically, so you have to be exact. Also note the"
+                      " sub-separation token is a semi-colon, not a colon.";
+    out.back().default_val = "";
+    out.back().expected = false;
+    out.back().examples = { "Row@12;Column@4;Description@.*k1A.*",
+                            "Row@256;Column@500;SliceLocation@23;SliceThickness@0.5",
+                            "Row@256;Column@500;Some@thing#Row@256;Column@501;Another@thing",
+                            "Row@0;Column@5#Row@4;Column@5#Row@8;Column@5#Row@12;Column@5"};
+
+    out.emplace_back();
     out.back().name = "PreDecimateOutSizeR";
     out.back().desc = "The number of pixels along the row unit vector to group into an outgoing pixel."
                       " This optional step can reduce computation effort by downsampling (decimating)"
@@ -123,9 +136,35 @@ std::list<OperationArgDoc> OpArgDocCT_Liver_Perfusion_Pharmaco(void){
 Drover CT_Liver_Perfusion_Pharmaco(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string> InvocationMetadata, std::string /*FilenameLex*/){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
+    const auto PlotPixelModel = OptArgs.getValueStr("PlotPixelModel").value();
     const long int PreDecimateR = std::stol( OptArgs.getValueStr("PreDecimateOutSizeR").value() );
     const long int PreDecimateC = std::stol( OptArgs.getValueStr("PreDecimateOutSizeC").value() );
     //-----------------------------------------------------------------------------------------------------------------
+
+    //Tokenize the plotting criteria.
+    std::list<LiverPharmacoModel5ParamChebyUserDataPixelSelectionCriteria> pixels_to_plot;
+    const auto RowRegex = std::regex("row", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto ColRegex = std::regex("column", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    for(auto a : SplitStringToVector(PlotPixelModel, '#', 'd')){
+        pixels_to_plot.emplace_back();
+        pixels_to_plot.back().row = -1;
+        pixels_to_plot.back().column = -1;
+        for(auto b : SplitStringToVector(a, ';', 'd')){
+            auto c = SplitStringToVector(b, '@', 'd');
+            if(c.size() != 2) throw std::runtime_error("Cannot parse subexpression: "_s + b);
+
+            if(std::regex_match(c.front(),RowRegex)){
+                pixels_to_plot.back().row = std::stol(c.back());
+            }else if(std::regex_match(c.front(),ColRegex)){
+                pixels_to_plot.back().column = std::stol(c.back());
+            }else{
+                pixels_to_plot.back().metadata_criteria.insert( { c.front(), 
+                    std::regex(c.back(), std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended) } );
+            }
+        }
+    }
+
+
 
     //Stuff references to all contours into a list. Remember that you can still address specific contours through
     // the original holding containers (which are not modified here).
@@ -365,6 +404,7 @@ Drover CT_Liver_Perfusion_Pharmaco(Drover DICOM_data, OperationArgPkg OptArgs, s
 
         //Pre-process the AIF and VIF time courses.
         LiverPharmacoModel5ParamChebyUserData ud2; 
+        ud2.pixels_to_plot = pixels_to_plot;
         ud2.ContrastInjectionLeadTime = ContrastInjectionLeadTime;
         {
             //Correct any unaccounted-for contrast enhancement shifts. 
