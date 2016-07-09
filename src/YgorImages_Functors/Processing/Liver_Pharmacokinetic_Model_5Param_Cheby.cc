@@ -71,8 +71,8 @@ LiverPharmacoModel5ParamCheby(planar_image_collection<float,double>::images_list
         return false;
     }
 
-    if( (user_data_s->time_courses.count("Abdominal_Aorta") == 0 )
-    ||  (user_data_s->time_courses.count("Hepatic_Portal_Vein") == 0 ) ){
+    if( (user_data_s->time_courses.count("AIF") == 0 )
+    ||  (user_data_s->time_courses.count("VIF") == 0 ) ){
         throw std::invalid_argument("Both arterial and venous input time courses are needed."
                                     "(Are they named differently to the hard-coded names?)");
     }
@@ -126,30 +126,20 @@ LiverPharmacoModel5ParamCheby(planar_image_collection<float,double>::images_list
     auto ContrastInjectionLeadTime = user_data_s->ContrastInjectionLeadTime;
 
     //Get convenient handles for the arterial and venous input time courses.
-    auto Carterial  = std::make_shared<cheby_approx<double>>( user_data_s->time_courses["Abdominal_Aorta"] );
-    auto dCarterial = std::make_shared<cheby_approx<double>>( user_data_s->time_course_derivatives["Abdominal_Aorta"] );
+    auto Carterial  = std::make_shared<cheby_approx<double>>( user_data_s->time_courses["AIF"] );
+    auto dCarterial = std::make_shared<cheby_approx<double>>( user_data_s->time_course_derivatives["AIF"] );
 
-    auto Cvenous  = std::make_shared<cheby_approx<double>>( user_data_s->time_courses["Hepatic_Portal_Vein"] );
-    auto dCvenous = std::make_shared<cheby_approx<double>>( user_data_s->time_course_derivatives["Hepatic_Portal_Vein"] );
+    auto Cvenous  = std::make_shared<cheby_approx<double>>( user_data_s->time_courses["VIF"] );
+    auto dCvenous = std::make_shared<cheby_approx<double>>( user_data_s->time_course_derivatives["VIF"] );
 
 
-    //Trim all but the liver contour. 
-    //
-    //   TODO: hoist out of this function, and provide a convenience
-    //         function called something like: Prune_Contours_Other_Than(cc_all, "Liver_Rough");
-    //const auto ROILabelRegex = OptArgs.getValueStr("ROILabelRegex").value();
-    //const auto ROILabelRegex = "Liver_Patches_For_Testing_Smaller";
-    //const auto ROILabelRegex = "Liver_Patches_For_Testing";
-    //const auto ROILabelRegex = "Suspected_Liver_Rough";
-    //const auto ROILabelRegex = "Rough_Body";
-    const auto ROILabelRegex = ".*body.*";
-    const auto theregex = std::regex(ROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-
+    //Trim all but the ROIs we are interested in.
     auto cc_ROIs = cc_all;
     cc_ROIs.remove_if([=](std::reference_wrapper<contour_collection<double>> cc) -> bool {
                    const auto ROINameOpt = cc.get().contours.front().GetMetadataValueAs<std::string>("ROIName");
+                   if(!ROINameOpt) return true; //Remove those without a name.
                    const auto ROIName = ROINameOpt.value();
-                   return !(std::regex_match(ROIName,theregex));
+                   return !(std::regex_match(ROIName,user_data_s->TargetROIs));
     });
 
     //This routine performs a number of calculations. It is experimental and excerpts you plan to rely on should be
@@ -459,6 +449,10 @@ LiverPharmacoModel5ParamCheby(planar_image_collection<float,double>::images_list
                                         }
                                         shuttle1.emplace_back(fitted_model, "Fitted model");
                                     }
+
+                                    //Save the data somewhere accessible...
+
+                                    // TODO: send to a plot server or some failsafe.
                                 
                                     //Plot the data.
                                     for(auto dumb = 0; dumb < 20; ++dumb){

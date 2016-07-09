@@ -33,6 +33,7 @@ struct LiverPharmacoModel5ParamChebyUserData {
 
     std::list<LiverPharmacoModel5ParamChebyUserDataPixelSelectionCriteria> pixels_to_plot;
 
+    std::regex TargetROIs;
 };
 
 bool 

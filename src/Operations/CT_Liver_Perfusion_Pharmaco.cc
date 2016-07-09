@@ -92,6 +92,16 @@ std::list<OperationArgDoc> OpArgDocCT_Liver_Perfusion_Pharmaco(void){
     std::list<OperationArgDoc> out;
 
     out.emplace_back();
+    out.back().name = "AIFROINameRegex";
+    out.back().desc = "Regex for the name of the ROI to use as the AIF. It should generally be a"
+                      " major artery near the trunk or near the tissue of interest.";
+    out.back().default_val = "Abdominal_Aorta";
+    out.back().expected = true;
+    out.back().examples = { "Abdominal_Aorta",
+                            ".*Aorta.*",
+                            "Major_Artery" };
+
+    out.emplace_back();
     out.back().name = "PlotPixelModel";
     out.back().desc = "Show a plot of the fitted model for a specified pixel. You can supply arbitrary"
                       " metadata, but must also supply Row and Column numbers. Note that numerical "
@@ -128,6 +138,29 @@ std::list<OperationArgDoc> OpArgDocCT_Liver_Perfusion_Pharmaco(void){
     out.back().expected = true;
     out.back().examples = { "0", "2", "4", "8", "16", "32", "64", "128", "256", "512" };
 
+    out.emplace_back();
+    out.back().name = "TargetROINameRegex";
+    out.back().desc = "Regex for the name of the ROI to perform modeling within. The largest contour is"
+                      " usually what you want, but you can also be more focused.";
+    out.back().default_val = ".*Body.*";
+    out.back().expected = true;
+    out.back().examples = { "Liver_Patches_For_Testing_Smaller",
+                            "Liver_Patches_For_Testing",
+                            "Suspected_Liver_Rough",
+                            "Rough_Body",
+                            ".*body.*",
+                            ".*something.*\\|.*another.*thing.*" };
+                            
+    out.emplace_back();
+    out.back().name = "VIFROINameRegex";
+    out.back().desc = "Regex for the name of the ROI to use as the VIF. It should generally be a"
+                      " major vein near the trunk or near the tissue of interest.";
+    out.back().default_val = "Hepatic_Portal_Vein";
+    out.back().expected = true;
+    out.back().examples = { "Hepatic_Portal_Vein",
+                            ".*Portal.*Vein.*",
+                            "Major_Vein" };
+
     return out;
 }
 
@@ -136,10 +169,17 @@ std::list<OperationArgDoc> OpArgDocCT_Liver_Perfusion_Pharmaco(void){
 Drover CT_Liver_Perfusion_Pharmaco(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string> InvocationMetadata, std::string /*FilenameLex*/){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
+    const auto AIFROIName = OptArgs.getValueStr("AIFROINameRegex").value();
     const auto PlotPixelModel = OptArgs.getValueStr("PlotPixelModel").value();
     const long int PreDecimateR = std::stol( OptArgs.getValueStr("PreDecimateOutSizeR").value() );
     const long int PreDecimateC = std::stol( OptArgs.getValueStr("PreDecimateOutSizeC").value() );
+    const auto TargetROIName = OptArgs.getValueStr("TargetROINameRegex").value();
+    const auto VIFROIName = OptArgs.getValueStr("VIFROINameRegex").value();
     //-----------------------------------------------------------------------------------------------------------------
+    const auto AIFROINameRegex = std::regex(AIFROIName, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto VIFROINameRegex = std::regex(VIFROIName, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto TargetROINameRegex = std::regex(TargetROIName, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+
 
     //Tokenize the plotting criteria.
     std::list<LiverPharmacoModel5ParamChebyUserDataPixelSelectionCriteria> pixels_to_plot;
@@ -209,15 +249,22 @@ Drover CT_Liver_Perfusion_Pharmaco(Drover DICOM_data, OperationArgPkg OptArgs, s
         FUNCINFO("Found 'ContrastInjectionWashoutTime' invocation metadata key. Using value " << ContrastInjectionWashoutTime << "s");
     }
 
-    //Whitelist contours.
+    //Whitelist contours. Also rename the remaining into either "AIF" or "VIF".
     auto cc_AIF_VIF = cc_all;
-    cc_AIF_VIF.remove_if([](std::reference_wrapper<contour_collection<double>> cc) -> bool {
+    cc_AIF_VIF.remove_if([=](std::reference_wrapper<contour_collection<double>> cc) -> bool {
                    const auto ROINameOpt = cc.get().contours.front().GetMetadataValueAs<std::string>("ROIName");
+                   if(!ROINameOpt) return true; //Remove those without names.
                    const auto ROIName = ROINameOpt.value();
-                   return    (ROIName != "Abdominal_Aorta")
-                          && (ROIName != "Hepatic_Portal_Vein");
-    });
+                   const auto MatchesAIF = std::regex_match(ROIName,AIFROINameRegex);
+                   const auto MatchesVIF = std::regex_match(ROIName,VIFROINameRegex);
+                   if(!MatchesAIF && !MatchesVIF) return true;
 
+                   //Keep them, but rename them all.
+                   for(auto &acontour : cc.get().contours){
+                       acontour.metadata["ROIName"] = MatchesAIF ? "AIF" : "VIF";
+                   }
+                   return false;
+    });
 
 
     //Compute a baseline with which we can use later to compute signal enhancement.
@@ -405,6 +452,7 @@ Drover CT_Liver_Perfusion_Pharmaco(Drover DICOM_data, OperationArgPkg OptArgs, s
         //Pre-process the AIF and VIF time courses.
         LiverPharmacoModel5ParamChebyUserData ud2; 
         ud2.pixels_to_plot = pixels_to_plot;
+        ud2.TargetROIs = TargetROINameRegex;
         ud2.ContrastInjectionLeadTime = ContrastInjectionLeadTime;
         {
             //Correct any unaccounted-for contrast enhancement shifts. 

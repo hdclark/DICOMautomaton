@@ -102,8 +102,8 @@ bool LiverPharmacoModel(planar_image_collection<float,double>::images_list_it_t 
         return false;
     }
 
-    if( (user_data_s->time_courses.count("Abdominal_Aorta") == 0 )
-    ||  (user_data_s->time_courses.count("Hepatic_Portal_Vein") == 0 ) ){
+    if( (user_data_s->time_courses.count("AIF") == 0 )
+    ||  (user_data_s->time_courses.count("VIF") == 0 ) ){
         throw std::invalid_argument("Both arterial and venous input time courses are needed."
                                     "(Are they named differently to the hard-coded names?)");
     }
@@ -118,8 +118,8 @@ bool LiverPharmacoModel(planar_image_collection<float,double>::images_list_it_t 
     //
     // NOTE: "Because the contrast agent does not enter the RBCs, the time series Caorta(t) and Cportal(t)
     //       were divided by one minus the hematocrit." (From Van Beers et al. 2000.)
-    auto Carterial = user_data_s->time_courses["Abdominal_Aorta"].Multiply_With(1.0/(1.0 - 0.42));
-    auto Cvenous   = user_data_s->time_courses["Hepatic_Portal_Vein"].Multiply_With(1.0/(1.0 - 0.42));
+    auto Carterial = user_data_s->time_courses["AIF"].Multiply_With(1.0/(1.0 - 0.42));
+    auto Cvenous   = user_data_s->time_courses["VIF"].Multiply_With(1.0/(1.0 - 0.42));
 
     theAIF = &Carterial;
     theVIF = &Cvenous;
