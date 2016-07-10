@@ -407,7 +407,13 @@ LiverPharmacoModel5ParamCheby(planar_image_collection<float,double>::images_list
                             // This routine fits a pharmacokinetic model to the observed liver perfusion data using a 
                             // Chebyshev polynomial approximation scheme.
 
+                            model_state.FittingPerformed = false;
                             model_state.cROI = channel_time_course;
+                            model_state.k1A  = std::numeric_limits<double>::quiet_NaN();
+                            model_state.tauA = std::numeric_limits<double>::quiet_NaN();
+                            model_state.k1V  = std::numeric_limits<double>::quiet_NaN();
+                            model_state.tauV = std::numeric_limits<double>::quiet_NaN();
+                            model_state.k2   = std::numeric_limits<double>::quiet_NaN();
 
                             //Pharmacokinetic_Parameters_5Param_Chebyshev_Optimization after_state = Pharmacokinetic_Model_3Param_Chebyshev_Optimization(model_state);
                             //Pharmacokinetic_Parameters_5Param_Chebyshev_Optimization after_state = Pharmacokinetic_Model_5Param_Chebyshev_Optimization(model_state);
@@ -496,8 +502,16 @@ LiverPharmacoModel5ParamCheby(planar_image_collection<float,double>::images_list
     FUNCWARN("Minimization failure count: " << Minimization_Failure_Count);
 
 
-    //Serialize the state so we have enough info to apply the model later.
-    model_state.cROI.reset(); //Depends on the voxel; needs to be supplied by user for model evaluation.
+    //Serialize the state so we have enough info to apply the model later. But remove the per-voxel information (which
+    // we can get through the parameter maps).
+    model_state.cROI.reset();
+    model_state.k1A  = std::numeric_limits<double>::quiet_NaN();
+    model_state.tauA = std::numeric_limits<double>::quiet_NaN();
+    model_state.k1V  = std::numeric_limits<double>::quiet_NaN();
+    model_state.tauV = std::numeric_limits<double>::quiet_NaN();
+    model_state.k2   = std::numeric_limits<double>::quiet_NaN();
+    model_state.RSS  = std::numeric_limits<double>::quiet_NaN();
+
     const std::string ModelState = Serialize_Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares_State(model_state);
 
     //Alter the first image's metadata to reflect that averaging has occurred. You might want to consider

@@ -51,7 +51,9 @@
 
 #include "../Structs.h"
 #include "../StructsIOBoostSerialization.h"
+
 #include "../Common_Boost_Serialization.h"
+#include "../Common_Plotting.h"
 
 #include "../YgorImages_Functors/Grouping/Misc_Functors.h"
 
@@ -795,7 +797,36 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
                     //Pharmacokinetic_Parameters_5Param_Chebyshev_Optimization model_params;
                     Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares model_params;
 
-                    //Get a list of images which spatially overlap this point. Order should be maintained.
+                    //First pass: look for serialized model_params. Deserialize.
+                    //
+                    // Note: we have to do this first, before loading voxel-specific data (e.g., k1A) because the
+                    // model_state is stripped of individual-voxel-specific data. Deserialization will overwrite 
+                    // individual-voxel-specific data with NaNs.
+                    //
+                    bool got_model_params = false;
+                    for(auto l_img_array_ptr_it = img_array_ptr_beg; l_img_array_ptr_it != img_array_ptr_end; ++l_img_array_ptr_it){
+                        auto encompassing_images = (*l_img_array_ptr_it)->imagecoll.get_images_which_encompass_all_points(points);
+
+                        for(const auto &enc_img_it : encompassing_images){
+                            if(auto m_str = enc_img_it->GetMetadataValueAs<std::string>("ModelState")){
+FUNCINFO("Had ModelState");                            
+std::cerr << std::endl;
+std::cerr << Quote_Static_for_Bash(m_str.value()) << std::endl;
+std::cerr << std::endl;
+                                if(!got_model_params 
+                                &&
+                                Deserialize_Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares_State(m_str.value(),model_params)){
+                                    got_model_params = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    if(!got_model_params){
+                        throw std::runtime_error("Unable to find model parameters. Unable to reconstruct model");
+                    }
+
+                    //Second pass: locate individual-voxel-specific data needed to evaluate the model.
                     std::map<std::string, samples_1D<double>> time_courses;
                     for(auto l_img_array_ptr_it = img_array_ptr_beg; l_img_array_ptr_it != img_array_ptr_end; ++l_img_array_ptr_it){
                         auto encompassing_images = (*l_img_array_ptr_it)->imagecoll.get_images_which_encompass_all_points(points);
@@ -847,21 +878,38 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
                     }
 
 
-                    // Now plot .... but where do I get the AIF and VIF from ?! I probably have to store them somehow...
+                    //Now plot the time courses, evaluate the model, and plot the model.
+                    {
+                        const long int samples = 200;
+                        double tmin = std::numeric_limits<double>::infinity();
+                        double tmax = -tmin;
+                        for(const auto &p : time_courses){
+                            const auto extrema = p.second.Get_Extreme_Datum_x();
+                            tmin = std::min(tmin, extrema.first[0] - 5.0);
+                            tmax = std::max(tmax, extrema.second[0] + 5.0);
+                        }
+                        if( !std::isfinite(tmin) || !std::isfinite(tmax) ){
+                            tmin = -5.0;
+                            tmax = 200.0;
+                        }
+                        const double dt = (tmax - tmin) / static_cast<double>(samples);
 
-                    // TODO
+                        samples_1D<double> fitted_model;
+                        //Pharmacokinetic_Parameters_5Param_Chebyshev_Optimization_Results eval_res;
+                        Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares_Results eval_res;
+                        for(long int i = 0; i < samples; ++i){
+                            const double t = tmin + dt * i;
 
-/*
-                    title << "Time Course. Images encompass " << pix_pos << ". ";
-                    try{
-                        YgorMathPlottingGnuplot::Shuttle<samples_1D<double>> ymp_shtl(shtl, "Buffer A");
-                        YgorMathPlottingGnuplot::Plot<double>({ymp_shtl}, title.str(), "Time (s)", "Pixel Intensity");
-                    }catch(const std::exception &e){
-                        FUNCWARN("Failed to plot: " << e.what());
+                            //chebyshev_5param_model_optimization(model_params,t,eval_res);
+                            chebyshev_5param_model_least_squares(model_params,t,eval_res);
+                            fitted_model.push_back(t, 0.0, eval_res.I, 0.0);
+                        }
+                        time_courses["Fitted model"] = fitted_model;
                     }
-                    shtl.Write_To_File(Get_Unique_Sequential_Filename("/tmp/pixel_intensity_time_course_",6,".txt"));
-*/
 
+                    const std::string Title = "Time course: row = " + std::to_string(row_as_u) + ", col = " + std::to_string(col_as_u);
+                    PlotTimeCourses(Title, time_courses, {});
+                             
 
                 //Given the current mouse coordinates, dump the pixel value for [A]ll image sets which spatially overlap.
                 // This routine is useful for debugging problematic pixels, or trying to follow per-pixel calculations.

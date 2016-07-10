@@ -322,6 +322,15 @@ Serialize_Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares_State(const 
     //Will throw if serialization fails.
 
     std::stringstream ss;
+    ss.imbue(std::locale(std::locale().classic(), new boost::math::nonfinite_num_put<char>));
+
+    {
+        boost::archive::text_oarchive ar(ss, boost::archive::no_codecvt);
+        ar & boost::serialization::make_nvp("model_state", state);
+    }
+
+/*
+    std::stringstream ss;
 
     boost::iostreams::filtering_ostream ofsb;
     boost::iostreams::gzip_params gzparams(boost::iostreams::gzip::best_speed);
@@ -333,6 +342,7 @@ Serialize_Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares_State(const 
         boost::archive::text_oarchive ar(ofsb, boost::archive::no_codecvt);
         ar & boost::serialization::make_nvp("model_state", state);
     }
+*/
 
     return ss.str();
 }
@@ -342,6 +352,19 @@ bool
 Deserialize_Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares_State(const std::string &s,
                                                                             Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares &state){
 
+    //Simple text, no compression.
+    try{
+        std::stringstream ss(s);
+        ss.imbue(std::locale(std::locale().classic(), new boost::math::nonfinite_num_get<char>));
+
+        {
+            boost::archive::text_iarchive ar(ss, boost::archive::no_codecvt);
+            ar & boost::serialization::make_nvp("model_state", state);
+        }
+        return true;
+    }catch(const std::exception &){ }
+
+/*
     //Simple text, gzip compression.
     try{
         std::stringstream ss(s);
@@ -358,6 +381,8 @@ Deserialize_Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares_State(cons
         return true;
 
     }catch(const std::exception &){ }
+*/
+
     return false;
 }                                                                            
 
