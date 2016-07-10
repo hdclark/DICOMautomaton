@@ -17,6 +17,8 @@
 #include <limits>
 #include <cmath>
 
+#include <unistd.h>           //fork().
+#include <stdlib.h>           //quick_exit(), EXIT_SUCCESS.
 #include <getopt.h>           //Needed for 'getopts' argument parsing.
 #include <cstdlib>            //Needed for exit() calls.
 #include <utility>            //Needed for std::pair.
@@ -86,6 +88,100 @@
 
 #include "CT_Liver_Perfusion_Pharmaco.h"
 
+
+static
+void 
+PlotSamples1DTimeCourses(std::string title,
+                         const std::map<std::string, samples_1D<double>> &time_courses,
+                         std::string xlabel = "Time (s)",
+                         std::string ylabel = "Pixel Intensity"){
+    // NOTE: This routine is spotty. It doesn't always work, and seems to have a hard time opening a display window when a
+    //       large data set is loaded. Files therefore get written for backup access.
+
+    auto pid = fork();
+    if(pid == 0){ //Child process.
+
+        //Package the data into a shuttle and write the to file.
+        std::vector<YgorMathPlottingGnuplot::Shuttle<samples_1D<double>>> shuttle;
+        for(auto & tcs : time_courses){
+            const auto lROIname = tcs.first;
+            const auto lTimeCourse = tcs.second;
+            shuttle.emplace_back(lTimeCourse, lROIname);
+            const auto lFileName = Get_Unique_Sequential_Filename("/tmp/samples1D_time_course_",6,".txt");
+            lTimeCourse.Write_To_File(lFileName);
+            AppendStringToFile("# Time course for ROI '"_s + lROIname + "'.\n", lFileName);
+            FUNCINFO("Time course for ROI '" << lROIname << "' written to '" << lFileName << "'");
+        }
+
+        //Plot the data.
+        long int max_attempts = 20;
+        for(long int attempt = 1; attempt <= max_attempts; ++attempt){
+            try{
+                YgorMathPlottingGnuplot::Plot<double>(shuttle, title, xlabel, ylabel);
+                break;
+            }catch(const std::exception &e){
+                FUNCWARN("Unable to plot time courses: '" << e.what() 
+                         << "'. Attempt " << attempt << " of " << max_attempts << " ...");
+            }
+        }
+
+        quick_exit(EXIT_SUCCESS);
+    }
+    return;
+}
+
+
+static
+void 
+PlotChebyApproxTimeCourses(std::string title,
+                         const std::map<std::string, cheby_approx<double>> &time_courses,
+                         std::string xlabel = "Time (s)",
+                         std::string ylabel = "Pixel Intensity",
+                         long int samples = 150){
+    // NOTE: This routine is spotty. It doesn't always work, and seems to have a hard time opening a display window when a
+    //       large data set is loaded. Files therefore get written for backup access.
+
+    auto pid = fork();
+    if(pid == 0){ //Child process.
+
+        //Package the data into a shuttle and write to file.
+        std::vector<YgorMathPlottingGnuplot::Shuttle<samples_1D<double>>> shuttle;
+        for(auto & tcs : time_courses){
+            const auto lROIname = tcs.first;
+            const auto lTimeCourse = tcs.second;
+            const auto domain = lTimeCourse.Get_Domain();
+            const double dx = (domain.second - domain.first)/static_cast<double>(samples);
+
+            samples_1D<double> lTimeCourseSamples1D;
+            const bool inhibitsort = true;
+            for(long int i = 0; i < samples; ++i){
+                double t = domain.first + dx * static_cast<double>(i);
+                lTimeCourseSamples1D.push_back(t, 0.0, lTimeCourse.Sample(t), 0.0, inhibitsort);
+            }
+
+            shuttle.emplace_back(lTimeCourseSamples1D, lROIname);
+            const auto lFileName = Get_Unique_Sequential_Filename("/tmp/cheby_approx_time_course_",6,".txt");
+            lTimeCourseSamples1D.Write_To_File(lFileName);
+            AppendStringToFile("# Time course for ROI '"_s + lROIname + "'.\n", lFileName);
+            FUNCINFO("Time course for ROI '" << lROIname << "' written to '" << lFileName << "'");
+        }
+
+        //Plot the data.
+        long int max_attempts = 20;
+        for(long int attempt = 1; attempt <= max_attempts; ++attempt){
+            try{
+                YgorMathPlottingGnuplot::Plot<double>(shuttle, title, xlabel, ylabel);
+                break;
+            }catch(const std::exception &e){
+                FUNCWARN("Unable to plot time courses: '" << e.what() 
+                         << "'. Attempt " << attempt << " of " << max_attempts << " ...");
+            }
+        }
+
+        quick_exit(EXIT_SUCCESS);
+    }
+    return;
+}
 
 
 std::list<OperationArgDoc> OpArgDocCT_Liver_Perfusion_Pharmaco(void){
@@ -364,30 +460,10 @@ Drover CT_Liver_Perfusion_Pharmaco(Drover DICOM_data, OperationArgPkg OptArgs, s
         }
     }
 
-
-
     //Plot the ROIs we computed.
-    if(false){
-        //NOTE: This routine is spotty. It doesn't always work, and seems to have a hard time opening a 
-        // display window when a large data set is loaded. Files therefore get written for backup access.
-        std::cout << "Producing " << ud.time_courses.size() << " time courses:" << std::endl;
-        std::vector<YgorMathPlottingGnuplot::Shuttle<samples_1D<double>>> shuttle;
-        for(auto & tcs : ud.time_courses){
-            const auto lROIname = tcs.first;
-            const auto lTimeCourse = tcs.second;
-            shuttle.emplace_back(lTimeCourse, lROIname + " - Voxel Averaged");
-            const auto lFileName = Get_Unique_Sequential_Filename("/tmp/roi_time_course_",4,".txt");
-            lTimeCourse.Write_To_File(lFileName); 
-            AppendStringToFile("# Time course for ROI '"_s + lROIname + "'.\n", lFileName);
-            std::cout << "\tTime course for ROI '" << lROIname << "' written to '" << lFileName << "'." << std::endl;
-        }
-        try{
-            YgorMathPlottingGnuplot::Plot<double>(shuttle, "ROI Time Courses", "Time (s)", "Pixel Intensity");
-        }catch(const std::exception &e){
-            FUNCWARN("Unable to plot time courses: " << e.what());
-        }
+    if(true){
+        PlotSamples1DTimeCourses("Raw AIF and VIF", ud.time_courses);
     }
-
 
     //Using the ROI time curves, compute a pharmacokinetic model and produce an image map 
     // with some model parameter(s).
@@ -409,7 +485,6 @@ Drover CT_Liver_Perfusion_Pharmaco(Drover DICOM_data, OperationArgPkg OptArgs, s
                                   });
         }
     }
-
 
 
     //Use a linear model.
@@ -512,6 +587,7 @@ Drover CT_Liver_Perfusion_Pharmaco(Drover DICOM_data, OperationArgPkg OptArgs, s
                 ud2.time_course_derivatives[theROI.first] = ca.Chebyshev_Derivative();
             }
 
+            PlotChebyApproxTimeCourses("Processed AIF and VIF", ud2.time_courses);
         }
 
         for(auto & img_arr : C_enhancement_img_arrays){
