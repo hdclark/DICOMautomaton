@@ -108,7 +108,7 @@ std::list<OperationArgDoc> OpArgDocCT_Liver_Perfusion_Pharmaco(void){
     out.back().name = "PlotAIFVIF";
     out.back().desc = "Control whether the AIF and VIF should be shown prior to modeling.";
     out.back().default_val = "false";
-    out.back().expected = false;
+    out.back().expected = true;
     out.back().examples = { "true",
                             "false" };
 
@@ -120,7 +120,7 @@ std::list<OperationArgDoc> OpArgDocCT_Liver_Perfusion_Pharmaco(void){
                       " comparisons are performed lexically, so you have to be exact. Also note the"
                       " sub-separation token is a semi-colon, not a colon.";
     out.back().default_val = "";
-    out.back().expected = false;
+    out.back().expected = true;
     out.back().examples = { "Row@12;Column@4;Description@.*k1A.*",
                             "Row@256;Column@500;SliceLocation@23;SliceThickness@0.5",
                             "Row@256;Column@500;Some@thing#Row@256;Column@501;Another@thing",
