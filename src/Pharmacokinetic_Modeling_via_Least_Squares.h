@@ -6,7 +6,6 @@
 #include <memory>
 
 //#include "YgorMisc.h"
-#include <YgorMath.h>
 #include "YgorMath.h"
 #include "YgorMathChebyshev.h"
 //#include "YgorMathChebyshevFunctions.h"

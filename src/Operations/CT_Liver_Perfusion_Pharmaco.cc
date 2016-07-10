@@ -479,7 +479,7 @@ Drover CT_Liver_Perfusion_Pharmaco(Drover DICOM_data, OperationArgPkg OptArgs, s
             }
         
             //Perform smoothing on the AIF and VIF to help reduce optimizer bounce.
-            if(true) for(auto & theROI : ud.time_courses){
+            if(false) for(auto & theROI : ud.time_courses){
                 theROI.second = theROI.second.Resample_Equal_Spacing(200);
                 theROI.second = theROI.second.Moving_Median_Filter_Two_Sided_Equal_Weighting(2);
             }

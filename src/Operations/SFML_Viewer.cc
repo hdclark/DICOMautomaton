@@ -16,6 +16,7 @@
 #include <mutex>
 #include <limits>
 #include <cmath>
+#include <regex>
 
 #include <getopt.h>           //Needed for 'getopts' argument parsing.
 #include <cstdlib>            //Needed for exit() calls.
@@ -90,6 +91,9 @@
 
 #include "../YgorImages_Functors/Compute/Per_ROI_Time_Courses.h"
 #include "../YgorImages_Functors/Compute/Contour_Similarity.h"
+
+#include "../Pharmacokinetic_Modeling_via_Optimization.h"
+#include "../Pharmacokinetic_Modeling_via_Least_Squares.h"
 
 #include "SFML_Viewer.h"
 
@@ -424,6 +428,7 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
                             "\\t\\t r,R,c,C \\t Plot pixel intensity profiles along the mouse\\'s current row and column.\\n"
                             "\\t\\t t,T \\t\\t Plot a time course at the mouse\\'s current row and column.\\n"
                             "\\t\\t a,A \\t\\t Plot or dump the pixel values for [a]ll image sets which spatially overlap.\\n"
+                            "\\t\\t M   \\t\\t Try plot a pharmacokinetic [M]odel using image map parameters and ROI time courses.\\n"
                             "\\t\\t N,P \\t\\t Advance to the next/previous image series.\\n"
                             "\\t\\t n,p \\t\\t Advance to the next/previous image in this series.\\n"
                             "\\t\\t -,+ \\t\\t Advance to the next/previous image that spatially overlaps this image.\\n"
@@ -745,6 +750,118 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
                         FUNCWARN("Failed to plot: " << e.what());
                     }
                     shtl.Write_To_File(Get_Unique_Sequential_Filename("/tmp/pixel_intensity_time_course_",6,".txt"));
+
+
+                //Given the current mouse coordinates, try to show a perfusion model using model parameters from
+                // other images. Also show a time course of the raw data for comparison with the model fit.
+                //
+                }else if( (thechar == 'M') ){
+                    //Get the *realtime* current mouse coordinates.
+                    const sf::Vector2i curr_m_pos = sf::Mouse::getPosition(window);
+
+                    //Convert to SFML/OpenGL "World" coordinates. 
+                    sf::Vector2f curr_m_pos_w = window.mapPixelToCoords(curr_m_pos);
+
+                    //Check if the mouse is within the image bounding box. We can only proceed if it is.
+                    sf::FloatRect disp_img_bbox = disp_img_texture_sprite.second.getGlobalBounds();
+                    if(!disp_img_bbox.contains(curr_m_pos_w)){
+                        FUNCWARN("The mouse is not currently hovering over the image. Cannot dump time course");
+                        break;
+                    }
+
+                    //Assuming the image is not rotated or skewed (though possibly scaled), determine which image pixel
+                    // we are hovering over.
+                    const auto clamped_col_as_f = fabs(curr_m_pos_w.x - disp_img_bbox.left)/disp_img_bbox.width;
+                    const auto clamped_row_as_f = fabs(disp_img_bbox.top - curr_m_pos_w.y )/disp_img_bbox.height;
+
+                    const auto img_w_h = disp_img_texture_sprite.first.getSize();
+                    const auto col_as_u = static_cast<uint32_t>(clamped_col_as_f * static_cast<float>(img_w_h.x));
+                    const auto row_as_u = static_cast<uint32_t>(clamped_row_as_f * static_cast<float>(img_w_h.y));
+
+                    //Get the YgorImage (DICOM) pixel coordinates.
+                    const auto pix_pos = disp_img_it->position(row_as_u,col_as_u);
+                    const auto ortho = disp_img_it->row_unit.Cross( disp_img_it->col_unit ).unit();
+                    const std::list<vec3<double>> points = { pix_pos, pix_pos + ortho * disp_img_it->pxl_dz * 0.25,
+                                                                      pix_pos - ortho * disp_img_it->pxl_dz * 0.25 };
+
+                    //Metadata quantities of interest.
+                    std::regex  k1A_regex(".*k1A.*",  std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+                    std::regex tauA_regex(".*tauA.*", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+                    std::regex  k1V_regex(".*k1V.*",  std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+                    std::regex tauV_regex(".*tauV.*", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+                    std::regex   k2_regex(".*k2.*",   std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+
+                    //Struct for holding the modeling parameters we find.
+                    //Pharmacokinetic_Parameters_5Param_Chebyshev_Optimization model_params;
+                    Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares model_params;
+
+                    //Get a list of images which spatially overlap this point. Order should be maintained.
+                    std::map<std::string, samples_1D<double>> time_courses;
+                    for(auto l_img_array_ptr_it = img_array_ptr_beg; l_img_array_ptr_it != img_array_ptr_end; ++l_img_array_ptr_it){
+                        auto encompassing_images = (*l_img_array_ptr_it)->imagecoll.get_images_which_encompass_all_points(points);
+
+                        for(const auto &enc_img_it : encompassing_images){
+                            //Find the pixel of interest.
+                            for(auto l_chnl = 0; l_chnl < enc_img_it->channels; ++l_chnl){
+                                double pix_val;
+                                try{
+                                    const auto indx = enc_img_it->index(pix_pos, l_chnl);
+                                    if(indx < 0) continue;
+                                
+                                    auto rcc = enc_img_it->row_column_channel_from_index(indx);
+                                    const long int l_row = std::get<0>(rcc);
+                                    const long int l_col = std::get<1>(rcc);
+                                    if(l_chnl != std::get<2>(rcc)) continue;
+
+                                    pix_val = enc_img_it->value(l_row, l_col, l_chnl);
+
+                                }catch(const std::exception &){
+                                    continue;
+                                }
+
+                                //Now have pixel value. Figure out what to do with it.
+                                if(auto desc = enc_img_it->GetMetadataValueAs<std::string>("Description")){
+
+                                    if(false){
+                                    }else if(std::regex_match(desc.value(), k1A_regex)){
+                                        model_params.k1A = pix_val;
+                                    }else if(std::regex_match(desc.value(), tauA_regex)){
+                                        model_params.tauA = pix_val;
+                                    }else if(std::regex_match(desc.value(), k1V_regex)){
+                                        model_params.k1V = pix_val;
+                                    }else if(std::regex_match(desc.value(), tauV_regex)){
+                                        model_params.tauV = pix_val;
+                                    }else if(std::regex_match(desc.value(), k2_regex)){
+                                        model_params.k2 = pix_val;
+
+                                    //Otherwise, if there is a timestamp then assume it is a time course we should show.
+                                    }else{
+                                        if(auto dt = enc_img_it->GetMetadataValueAs<double>("dt")){
+                                            time_courses[desc.value()].push_back(dt.value(), 0.0, pix_val, 0.0);
+                                        }
+                                    }
+                                }
+                                
+                            }
+                        }
+                    }
+
+
+                    // Now plot .... but where do I get the AIF and VIF from ?! I probably have to store them somehow...
+
+                    // TODO
+
+/*
+                    title << "Time Course. Images encompass " << pix_pos << ". ";
+                    try{
+                        YgorMathPlottingGnuplot::Shuttle<samples_1D<double>> ymp_shtl(shtl, "Buffer A");
+                        YgorMathPlottingGnuplot::Plot<double>({ymp_shtl}, title.str(), "Time (s)", "Pixel Intensity");
+                    }catch(const std::exception &e){
+                        FUNCWARN("Failed to plot: " << e.what());
+                    }
+                    shtl.Write_To_File(Get_Unique_Sequential_Filename("/tmp/pixel_intensity_time_course_",6,".txt"));
+*/
+
 
                 //Given the current mouse coordinates, dump the pixel value for [A]ll image sets which spatially overlap.
                 // This routine is useful for debugging problematic pixels, or trying to follow per-pixel calculations.
