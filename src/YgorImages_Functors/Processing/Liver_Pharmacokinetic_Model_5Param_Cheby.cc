@@ -12,8 +12,6 @@
 #include <tuple>
 #include <regex>
 
-#include <unistd.h>          //fork().
-#include <stdlib.h>          //quick_exit(), EXIT_SUCCESS.
 #include <pqxx/pqxx>         //PostgreSQL C++ interface.
 #include <jansson.h>         //For JSON handling.
 
@@ -32,6 +30,7 @@
 #include "YgorAlgorithms.h"  //Needed for For_Each_In_Parallel<..>(...)
 #include "YgorString.h"      //Needed for GetFirstRegex(...)
 
+#include "../../Common_Plotting.h"
 
 #include "../ConvenienceRoutines.h"
 #include "Liver_Pharmacokinetic_Model_5Param_Cheby.h"
@@ -431,41 +430,24 @@ LiverPharmacoModel5ParamCheby(planar_image_collection<float,double>::images_list
                             //==============================================================================
                             // Plot the fitted model with the ROI time course.
                             if(PixelsToPlot.count( {row, col}) != 0){ 
-                                auto pid = fork();
-                                if(pid == 0){ //Child process.
-                                    std::vector<YgorMathPlottingGnuplot::Shuttle<samples_1D<double>>> shuttle1;
-                                    {
-                                        const std::string title = "ROI time course: row = " + std::to_string(row)
-                                                                + ", col = " + std::to_string(col);
-                                        shuttle1.emplace_back(*(after_state.cROI), title);
-                                        samples_1D<double> fitted_model;
-                                        //Pharmacokinetic_Parameters_5Param_Chebyshev_Optimization_Results eval_res;
-                                        Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares_Results eval_res;
-                                        for(const auto &P : after_state.cROI->samples){
-                                            const double t = P[0];
-                                            //chebyshev_5param_model_optimization(after_state,t,eval_res);
-                                            chebyshev_5param_model_least_squares(after_state,t,eval_res);
-                                            fitted_model.push_back(t, 0.0, eval_res.I, 0.0);
-                                        }
-                                        shuttle1.emplace_back(fitted_model, "Fitted model");
-                                    }
-
-                                    //Save the data somewhere accessible...
-
-                                    // TODO: send to a plot server or some failsafe.
-                                
-                                    //Plot the data.
-                                    for(auto dumb = 0; dumb < 20; ++dumb){
-                                        try{
-                                            YgorMathPlottingGnuplot::Plot<double>(shuttle1, "Time Courses", "Time (s)", "Pixel Intensity");
-                                            break;
-                                        }catch(const std::exception &e){
-                                            FUNCWARN("Unable to plot time courses: '" << e.what() << "'. Trying again...");
-                                        }
-                                    }
-                                    quick_exit(EXIT_SUCCESS);
+                                std::map<std::string, samples_1D<double>> time_courses;
+                                std::string title;
+                                //Add the ROI.
+                                title = "ROI time course: row = " + std::to_string(row) + ", col = " + std::to_string(col);
+                                time_courses[title] = *(after_state.cROI);
+                                samples_1D<double> fitted_model;
+                                //Pharmacokinetic_Parameters_5Param_Chebyshev_Optimization_Results eval_res;
+                                Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares_Results eval_res;
+                                for(const auto &P : after_state.cROI->samples){
+                                    const double t = P[0];
+                                    //chebyshev_5param_model_optimization(after_state,t,eval_res);
+                                    chebyshev_5param_model_least_squares(after_state,t,eval_res);
+                                    fitted_model.push_back(t, 0.0, eval_res.I, 0.0);
                                 }
+                                title = "Fitted model";
+                                time_courses[title] = fitted_model;
 
+                                PlotTimeCourses("Raw ROI and Fitted Model", time_courses, {});
                             }
                             
                             //==============================================================================

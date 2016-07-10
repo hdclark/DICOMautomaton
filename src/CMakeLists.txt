@@ -66,6 +66,13 @@ set_target_properties(Structs_obj PROPERTIES
     POSITION_INDEPENDENT_CODE TRUE
 )
 
+add_library(Common_Plotting_obj OBJECT
+    Common_Plotting.cc     
+)
+set_target_properties(Common_Plotting_obj PROPERTIES
+    POSITION_INDEPENDENT_CODE TRUE
+)
+
 add_library(Common_Boost_Serialization_obj OBJECT
     Common_Boost_Serialization.cc     
 )
@@ -238,6 +245,7 @@ add_executable (dicomautomaton_dispatcher
     $<TARGET_OBJECTS:Structs_obj>
     $<TARGET_OBJECTS:Dose_Meld_obj>
     $<TARGET_OBJECTS:Common_Boost_Serialization_obj>
+    $<TARGET_OBJECTS:Common_Plotting_obj>
     $<TARGET_OBJECTS:Whole_Match_obj>
 
     $<TARGET_OBJECTS:PACS_Loader_obj>
