@@ -30,6 +30,7 @@
 #include "YgorAlgorithms.h"  //Needed for For_Each_In_Parallel<..>(...)
 #include "YgorString.h"      //Needed for GetFirstRegex(...)
 
+#include "../../Common_Boost_Serialization.h"
 #include "../../Common_Plotting.h"
 
 #include "../ConvenienceRoutines.h"
@@ -130,6 +131,14 @@ LiverPharmacoModel5ParamCheby(planar_image_collection<float,double>::images_list
 
     auto Cvenous  = std::make_shared<cheby_approx<double>>( user_data_s->time_courses["VIF"] );
     auto dCvenous = std::make_shared<cheby_approx<double>>( user_data_s->time_course_derivatives["VIF"] );
+
+    //Pharmacokinetic_Parameters_5Param_Chebyshev_Optimization model_state;
+    Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares model_state;
+
+    model_state.cAIF  = Carterial;
+    model_state.dcAIF = dCarterial;
+    model_state.cVIF  = Cvenous;;
+    model_state.dcVIF = dCvenous;
 
 
     //Trim all but the ROIs we are interested in.
@@ -397,13 +406,7 @@ LiverPharmacoModel5ParamCheby(planar_image_collection<float,double>::images_list
 
                             // This routine fits a pharmacokinetic model to the observed liver perfusion data using a 
                             // Chebyshev polynomial approximation scheme.
-                            //Pharmacokinetic_Parameters_5Param_Chebyshev_Optimization model_state;
-                            Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares model_state;
 
-                            model_state.cAIF  = Carterial;
-                            model_state.dcAIF = dCarterial;
-                            model_state.cVIF  = Cvenous;;
-                            model_state.dcVIF = dCvenous;
                             model_state.cROI = channel_time_course;
 
                             //Pharmacokinetic_Parameters_5Param_Chebyshev_Optimization after_state = Pharmacokinetic_Model_3Param_Chebyshev_Optimization(model_state);
@@ -492,23 +495,33 @@ LiverPharmacoModel5ParamCheby(planar_image_collection<float,double>::images_list
 
     FUNCWARN("Minimization failure count: " << Minimization_Failure_Count);
 
+
+    //Serialize the state so we have enough info to apply the model later.
+    model_state.cROI.reset(); //Depends on the voxel; needs to be supplied by user for model evaluation.
+    const std::string ModelState = Serialize_Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares_State(model_state);
+
     //Alter the first image's metadata to reflect that averaging has occurred. You might want to consider
     // a selective whitelist approach so that unique IDs are not duplicated accidentally.
 
     UpdateImageDescription( out_img_k1A, "Liver Pharmaco: k1A" );
     UpdateImageWindowCentreWidth( out_img_k1A, minmax_k1A );
+    out_img_k1A.get().metadata["ModelState"] = ModelState;
 
     UpdateImageDescription( out_img_tauA, "Liver Pharmaco: tauA" );
     UpdateImageWindowCentreWidth( out_img_tauA, minmax_tauA );
+    out_img_tauA.get().metadata["ModelState"] = ModelState;
 
     UpdateImageDescription( out_img_k1V, "Liver Pharmaco: k1V" );
     UpdateImageWindowCentreWidth( out_img_k1V, minmax_k1V );
+    out_img_k1V.get().metadata["ModelState"] = ModelState;
 
     UpdateImageDescription( out_img_tauV, "Liver Pharmaco: tauV" );
     UpdateImageWindowCentreWidth( out_img_tauV, minmax_tauV );
+    out_img_tauV.get().metadata["ModelState"] = ModelState;
 
     UpdateImageDescription( out_img_k2, "Liver Pharmaco: k2" );
     UpdateImageWindowCentreWidth( out_img_k2, minmax_k2 );
+    out_img_k2.get().metadata["ModelState"] = ModelState;
     
 
     return true;

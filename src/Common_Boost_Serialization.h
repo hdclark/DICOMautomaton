@@ -7,6 +7,8 @@
 
 #include "Structs.h"
 
+#include "Pharmacokinetic_Modeling_via_Least_Squares.h"
+
 
 bool
 Common_Boost_Serialize_Drover(const Drover &in, boost::filesystem::path Filename);
@@ -21,22 +23,26 @@ Common_Boost_Deserialize_Drover(Drover &out, boost::filesystem::path Filename);
 
 bool
 Common_Boost_Serialize_Drover_to_Gzip_Binary(const Drover &in, boost::filesystem::path Filename);
-
 bool
 Common_Boost_Serialize_Drover_to_Gzip_Simple_Text(const Drover &in, boost::filesystem::path Filename);
-
 bool
 Common_Boost_Serialize_Drover_to_Gzip_XML(const Drover &in, boost::filesystem::path Filename);
 
-
-
 bool
 Common_Boost_Serialize_Drover_to_Binary(const Drover &in, boost::filesystem::path Filename);
-
 bool
 Common_Boost_Serialize_Drover_to_Simple_Text(const Drover &in, boost::filesystem::path Filename);
-
 bool
 Common_Boost_Serialize_Drover_to_XML(const Drover &in, boost::filesystem::path Filename);
+
+
+
+// --- Pharmacokinetic model state ---
+std::string 
+Serialize_Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares_State(const Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares &state);
+
+bool 
+Deserialize_Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares_State(const std::string &s, Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares &state);
+
 
 

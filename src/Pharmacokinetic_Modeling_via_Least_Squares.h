@@ -10,6 +10,19 @@
 #include "YgorMathChebyshev.h"
 //#include "YgorMathChebyshevFunctions.h"
 
+#include "YgorMathIOBoostSerialization.h"
+#include "YgorMathChebyshevIOBoostSerialization.h"
+
+#include <boost/serialization/nvp.hpp>
+
+//#include <boost/serialization/string.hpp>
+//#include <boost/serialization/array.hpp>
+//#include <boost/serialization/list.hpp>
+//#include <boost/serialization/vector.hpp>
+//#include <boost/serialization/map.hpp>
+#include <boost/serialization/shared_ptr.hpp>
+
+
 
 // Shuttle struct for passing around the state needed to perform a pharmacokinetic modeling fit.
 // The design of passing around a struct of pointers and parameters was settled on because this
@@ -30,6 +43,9 @@
 //   5. It is made to operate with std::future's return method of passing out a task's return 
 //      value using std::move(). If function parameters were directly used, some state would be
 //      lost when the future returned.
+//
+//   6. It is easily serialized and a copy can be kept with the parameter maps, ensuring you have
+//      all necessary information to reconstruct the model afterward.
 //
 struct Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares {
  
@@ -58,6 +74,37 @@ struct Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares {
     double k2   = std::numeric_limits<double>::quiet_NaN();
 
 };
+
+
+namespace boost {
+namespace serialization {
+
+//Struct: Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares.
+template<typename Archive>
+void serialize(Archive &a, Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares &p, const unsigned int /*version*/){
+    a & boost::serialization::make_nvp("cAIF",  p.cAIF)
+      & boost::serialization::make_nvp("dcAIF", p.dcAIF)
+      & boost::serialization::make_nvp("cVIF",  p.cVIF)
+      & boost::serialization::make_nvp("dcVIF", p.dcVIF)
+      & boost::serialization::make_nvp("cROI",  p.cROI)
+
+      & boost::serialization::make_nvp("FittingPerformed", p.FittingPerformed)
+      & boost::serialization::make_nvp("FittingSuccess",   p.FittingSuccess)
+
+      & boost::serialization::make_nvp("RSS",   p.RSS)
+      & boost::serialization::make_nvp("k1A",   p.k1A)
+      & boost::serialization::make_nvp("tauA",  p.tauA)
+      & boost::serialization::make_nvp("k1V",   p.k1V)
+      & boost::serialization::make_nvp("tauV",  p.tauV)
+      & boost::serialization::make_nvp("k2",    p.k2);
+    return;
+}
+
+}
+}
+
+
+
 
 //This struct is only needed if you want to evaluate the gradients of the model at
 // some specific time.

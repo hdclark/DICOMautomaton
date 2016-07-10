@@ -14,6 +14,7 @@
 #include <boost/iostreams/filter/zlib.hpp>
 #include <boost/iostreams/filter/gzip.hpp>
 
+#include <boost/serialization/split_member.hpp>
 #include <boost/serialization/nvp.hpp>
 
 #include <boost/math/special_functions/nonfinite_num_facets.hpp>
@@ -32,6 +33,9 @@
 
 #include "Structs.h"
 #include "StructsIOBoostSerialization.h"
+
+//#include "YgorMathChebyshevIOBoostSerialization.h"
+#include "Pharmacokinetic_Modeling_via_Least_Squares.h"
 
 #include "Common_Boost_Serialization.h"
 
@@ -309,5 +313,53 @@ Common_Boost_Serialize_Drover_to_XML(const Drover &in,
 
     return true;
 }
+
+
+//=====================================================================================================================
+
+std::string 
+Serialize_Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares_State(const Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares &state){
+    //Will throw if serialization fails.
+
+    std::stringstream ss;
+
+    boost::iostreams::filtering_ostream ofsb;
+    boost::iostreams::gzip_params gzparams(boost::iostreams::gzip::best_speed);
+    ofsb.imbue(std::locale(std::locale().classic(), new boost::math::nonfinite_num_put<char>));
+    ofsb.push(boost::iostreams::gzip_compressor(gzparams));
+    ofsb.push(ss);
+
+    {
+        boost::archive::text_oarchive ar(ofsb, boost::archive::no_codecvt);
+        ar & boost::serialization::make_nvp("model_state", state);
+    }
+
+    return ss.str();
+}
+
+
+bool
+Deserialize_Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares_State(const std::string &s,
+                                                                            Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares &state){
+
+    //Simple text, gzip compression.
+    try{
+        std::stringstream ss(s);
+
+        boost::iostreams::filtering_istream ifsb;
+        ifsb.imbue(std::locale(std::locale().classic(), new boost::math::nonfinite_num_get<char>));
+        ifsb.push(boost::iostreams::gzip_decompressor());
+        ifsb.push(ss);
+
+        {
+            boost::archive::text_iarchive ar(ifsb, boost::archive::no_codecvt);
+            ar & boost::serialization::make_nvp("model_state", state);
+        }
+        return true;
+
+    }catch(const std::exception &){ }
+    return false;
+}                                                                            
+
 
 
