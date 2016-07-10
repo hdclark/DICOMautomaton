@@ -20,8 +20,8 @@
 
 struct LiverPharmacoModel5ParamChebyUserDataPixelSelectionCriteria {
     std::map<std::string,std::regex> metadata_criteria;
-    long int row;
-    long int column;
+    long int row = -1;
+    long int column = -1;
 
 };
 

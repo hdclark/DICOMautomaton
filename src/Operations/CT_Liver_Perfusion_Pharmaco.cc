@@ -105,8 +105,17 @@ std::list<OperationArgDoc> OpArgDocCT_Liver_Perfusion_Pharmaco(void){
                             "Major_Artery" };
 
     out.emplace_back();
+    out.back().name = "PlotAIFVIF";
+    out.back().desc = "Control whether the AIF and VIF should be shown prior to modeling.";
+    out.back().default_val = "false";
+    out.back().expected = false;
+    out.back().examples = { "true",
+                            "false" };
+
+    out.emplace_back();
     out.back().name = "PlotPixelModel";
-    out.back().desc = "Show a plot of the fitted model for a specified pixel. You can supply arbitrary"
+    out.back().desc = "Show a plot of the fitted model for a specified pixel. Plotting happens "
+                      " immediately after the pixel is processed. You can supply arbitrary"
                       " metadata, but must also supply Row and Column numbers. Note that numerical "
                       " comparisons are performed lexically, so you have to be exact. Also note the"
                       " sub-separation token is a semi-colon, not a colon.";
@@ -173,6 +182,7 @@ Drover CT_Liver_Perfusion_Pharmaco(Drover DICOM_data, OperationArgPkg OptArgs, s
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto AIFROIName = OptArgs.getValueStr("AIFROINameRegex").value();
+    const auto PlotAIFVIF = OptArgs.getValueStr("PlotAIFVIF").value();
     const auto PlotPixelModel = OptArgs.getValueStr("PlotPixelModel").value();
     const long int PreDecimateR = std::stol( OptArgs.getValueStr("PreDecimateOutSizeR").value() );
     const long int PreDecimateC = std::stol( OptArgs.getValueStr("PreDecimateOutSizeC").value() );
@@ -182,6 +192,9 @@ Drover CT_Liver_Perfusion_Pharmaco(Drover DICOM_data, OperationArgPkg OptArgs, s
     const auto AIFROINameRegex = std::regex(AIFROIName, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
     const auto VIFROINameRegex = std::regex(VIFROIName, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
     const auto TargetROINameRegex = std::regex(TargetROIName, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto PlotAIFVIFRegex = std::regex("tr?u?e?", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+
+    const auto ShouldPlotAIFVIF = std::regex_match(PlotAIFVIF, PlotAIFVIFRegex);
 
 
     //Tokenize the plotting criteria.
@@ -348,6 +361,15 @@ Drover CT_Liver_Perfusion_Pharmaco(Drover DICOM_data, OperationArgPkg OptArgs, s
         tcs.second = tcs.second.Multiply_With(1.0/static_cast<double>(lVoxelCount));
     }
 
+    //Scale the contrast agent to account for the fact that contrast agent does not enter the RBCs.
+    //
+    // NOTE: "Because the contrast agent does not enter the RBCs, the time series Caorta(t) and Cportal(t)
+    //        were divided by one minus the hematocrit." (From Van Beers et al. 2000.)
+    for(auto & theROI : ud.time_courses){
+        theROI.second = theROI.second.Multiply_With(1.0/(1.0 - 0.42));
+    }
+
+
     //Decimate the number of pixels for modeling purposes.
     if((PreDecimateR > 0) && (PreDecimateC > 0)){
         auto DecimateRC = std::bind(InImagePlanePixelDecimate, 
@@ -365,11 +387,6 @@ Drover CT_Liver_Perfusion_Pharmaco(Drover DICOM_data, OperationArgPkg OptArgs, s
                 FUNCERR("Unable to decimate pixels");
             }
         }
-    }
-
-    //Plot the ROIs we computed.
-    if(true){
-        PlotTimeCourses("Raw AIF and VIF", ud.time_courses, {});
     }
 
     //Using the ROI time curves, compute a pharmacokinetic model and produce an image map 
@@ -430,9 +447,12 @@ Drover CT_Liver_Perfusion_Pharmaco(Drover DICOM_data, OperationArgPkg OptArgs, s
 
     //Use a Chebyshev model.
     }else{
+        decltype(ud.time_courses) orig_time_courses;
+        for(const auto & tc : ud.time_courses) orig_time_courses["Original " + tc.first] = tc.second;
 
         //Pre-process the AIF and VIF time courses.
         LiverPharmacoModel5ParamChebyUserData ud2; 
+
         ud2.pixels_to_plot = pixels_to_plot;
         ud2.TargetROIs = TargetROINameRegex;
         ud2.ContrastInjectionLeadTime = ContrastInjectionLeadTime;
@@ -459,7 +479,7 @@ Drover CT_Liver_Perfusion_Pharmaco(Drover DICOM_data, OperationArgPkg OptArgs, s
             }
         
             //Perform smoothing on the AIF and VIF to help reduce optimizer bounce.
-            if(false) for(auto & theROI : ud.time_courses){
+            if(true) for(auto & theROI : ud.time_courses){
                 theROI.second = theROI.second.Resample_Equal_Spacing(200);
                 theROI.second = theROI.second.Moving_Median_Filter_Two_Sided_Equal_Weighting(2);
             }
@@ -475,14 +495,6 @@ Drover CT_Liver_Perfusion_Pharmaco(Drover DICOM_data, OperationArgPkg OptArgs, s
                 theROI.second.push_back(virtdatum_t, 0.0, virtdatum_f, 0.0 );
             }
 
-            //Scale the contrast agent to account for the fact that contrast agent does not enter the RBCs.
-            //
-            // NOTE: "Because the contrast agent does not enter the RBCs, the time series Caorta(t) and Cportal(t)
-            //        were divided by one minus the hematocrit." (From Van Beers et al. 2000.)
-            for(auto & theROI : ud.time_courses){
-                theROI.second = theROI.second.Multiply_With(1.0/(1.0 - 0.42));
-            }
-
             //Approximate the VIF and VIF with a Chebyshev polynomial approximation.
             for(auto & theROI : ud.time_courses){
                 const auto tmin = theROI.second.Get_Extreme_Datum_x().first[0];
@@ -494,7 +506,9 @@ Drover CT_Liver_Perfusion_Pharmaco(Drover DICOM_data, OperationArgPkg OptArgs, s
                 ud2.time_course_derivatives[theROI.first] = ca.Chebyshev_Derivative();
             }
 
-            PlotTimeCourses("Processed AIF and VIF", {}, ud2.time_courses);
+            if(ShouldPlotAIFVIF){
+                PlotTimeCourses("Processed AIF and VIF", orig_time_courses, ud2.time_courses);
+            }
         }
 
         for(auto & img_arr : C_enhancement_img_arrays){
