@@ -793,122 +793,121 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
                     std::regex tauV_regex(".*tauV.*", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
                     std::regex   k2_regex(".*k2.*",   std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
 
-                    //Struct for holding the modeling parameters we find.
-                    //Pharmacokinetic_Parameters_5Param_Chebyshev_Optimization model_params;
-                    Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares model_params;
+                    try{
+                        //Struct for holding the modeling parameters we find.
+                        //Pharmacokinetic_Parameters_5Param_Chebyshev_Optimization model_params;
+                        Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares model_params;
 
-                    //First pass: look for serialized model_params. Deserialize.
-                    //
-                    // Note: we have to do this first, before loading voxel-specific data (e.g., k1A) because the
-                    // model_state is stripped of individual-voxel-specific data. Deserialization will overwrite 
-                    // individual-voxel-specific data with NaNs.
-                    //
-                    bool got_model_params = false;
-                    for(auto l_img_array_ptr_it = img_array_ptr_beg; l_img_array_ptr_it != img_array_ptr_end; ++l_img_array_ptr_it){
-                        auto encompassing_images = (*l_img_array_ptr_it)->imagecoll.get_images_which_encompass_all_points(points);
+                        //First pass: look for serialized model_params. Deserialize.
+                        //
+                        // Note: we have to do this first, before loading voxel-specific data (e.g., k1A) because the
+                        // model_state is stripped of individual-voxel-specific data. Deserialization will overwrite 
+                        // individual-voxel-specific data with NaNs.
+                        //
+                        bool got_model_params = false;
+                        for(auto l_img_array_ptr_it = img_array_ptr_beg; l_img_array_ptr_it != img_array_ptr_end; ++l_img_array_ptr_it){
+                            auto encompassing_images = (*l_img_array_ptr_it)->imagecoll.get_images_which_encompass_all_points(points);
 
-                        for(const auto &enc_img_it : encompassing_images){
-                            if(auto m_str = enc_img_it->GetMetadataValueAs<std::string>("ModelState")){
-FUNCINFO("Had ModelState");                            
-std::cerr << std::endl;
-std::cerr << Quote_Static_for_Bash(m_str.value()) << std::endl;
-std::cerr << std::endl;
-                                if(!got_model_params 
-                                &&
-                                Deserialize_Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares_State(m_str.value(),model_params)){
-                                    got_model_params = true;
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                    if(!got_model_params){
-                        throw std::runtime_error("Unable to find model parameters. Unable to reconstruct model");
-                    }
-
-                    //Second pass: locate individual-voxel-specific data needed to evaluate the model.
-                    std::map<std::string, samples_1D<double>> time_courses;
-                    for(auto l_img_array_ptr_it = img_array_ptr_beg; l_img_array_ptr_it != img_array_ptr_end; ++l_img_array_ptr_it){
-                        auto encompassing_images = (*l_img_array_ptr_it)->imagecoll.get_images_which_encompass_all_points(points);
-
-                        for(const auto &enc_img_it : encompassing_images){
-                            //Find the pixel of interest.
-                            for(auto l_chnl = 0; l_chnl < enc_img_it->channels; ++l_chnl){
-                                double pix_val;
-                                try{
-                                    const auto indx = enc_img_it->index(pix_pos, l_chnl);
-                                    if(indx < 0) continue;
-                                
-                                    auto rcc = enc_img_it->row_column_channel_from_index(indx);
-                                    const long int l_row = std::get<0>(rcc);
-                                    const long int l_col = std::get<1>(rcc);
-                                    if(l_chnl != std::get<2>(rcc)) continue;
-
-                                    pix_val = enc_img_it->value(l_row, l_col, l_chnl);
-
-                                }catch(const std::exception &){
-                                    continue;
-                                }
-
-                                //Now have pixel value. Figure out what to do with it.
-                                if(auto desc = enc_img_it->GetMetadataValueAs<std::string>("Description")){
-
-                                    if(false){
-                                    }else if(std::regex_match(desc.value(), k1A_regex)){
-                                        model_params.k1A = pix_val;
-                                    }else if(std::regex_match(desc.value(), tauA_regex)){
-                                        model_params.tauA = pix_val;
-                                    }else if(std::regex_match(desc.value(), k1V_regex)){
-                                        model_params.k1V = pix_val;
-                                    }else if(std::regex_match(desc.value(), tauV_regex)){
-                                        model_params.tauV = pix_val;
-                                    }else if(std::regex_match(desc.value(), k2_regex)){
-                                        model_params.k2 = pix_val;
-
-                                    //Otherwise, if there is a timestamp then assume it is a time course we should show.
-                                    }else{
-                                        if(auto dt = enc_img_it->GetMetadataValueAs<double>("dt")){
-                                            time_courses[desc.value()].push_back(dt.value(), 0.0, pix_val, 0.0);
-                                        }
+                            for(const auto &enc_img_it : encompassing_images){
+                                if(auto m_str = enc_img_it->GetMetadataValueAs<std::string>("ModelState")){
+                                    if(!got_model_params 
+                                    &&
+                                    Deserialize_Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares_State(m_str.value(),model_params)){
+                                        got_model_params = true;
+                                        break;
                                     }
                                 }
-                                
                             }
                         }
+                        if(!got_model_params){
+                            throw std::runtime_error("Unable to find model parameters. Unable to reconstruct model");
+                        }
+
+                        //Second pass: locate individual-voxel-specific data needed to evaluate the model.
+                        std::map<std::string, samples_1D<double>> time_courses;
+                        for(auto l_img_array_ptr_it = img_array_ptr_beg; l_img_array_ptr_it != img_array_ptr_end; ++l_img_array_ptr_it){
+                            auto encompassing_images = (*l_img_array_ptr_it)->imagecoll.get_images_which_encompass_all_points(points);
+
+                            for(const auto &enc_img_it : encompassing_images){
+                                //Find the pixel of interest.
+                                for(auto l_chnl = 0; l_chnl < enc_img_it->channels; ++l_chnl){
+                                    double pix_val;
+                                    try{
+                                        const auto indx = enc_img_it->index(pix_pos, l_chnl);
+                                        if(indx < 0) continue;
+                                    
+                                        auto rcc = enc_img_it->row_column_channel_from_index(indx);
+                                        const long int l_row = std::get<0>(rcc);
+                                        const long int l_col = std::get<1>(rcc);
+                                        if(l_chnl != std::get<2>(rcc)) continue;
+
+                                        pix_val = enc_img_it->value(l_row, l_col, l_chnl);
+
+                                    }catch(const std::exception &){
+                                        continue;
+                                    }
+
+                                    //Now have pixel value. Figure out what to do with it.
+                                    if(auto desc = enc_img_it->GetMetadataValueAs<std::string>("Description")){
+
+                                        if(false){
+                                        }else if(std::regex_match(desc.value(), k1A_regex)){
+                                            model_params.k1A = pix_val;
+                                        }else if(std::regex_match(desc.value(), tauA_regex)){
+                                            model_params.tauA = pix_val;
+                                        }else if(std::regex_match(desc.value(), k1V_regex)){
+                                            model_params.k1V = pix_val;
+                                        }else if(std::regex_match(desc.value(), tauV_regex)){
+                                            model_params.tauV = pix_val;
+                                        }else if(std::regex_match(desc.value(), k2_regex)){
+                                            model_params.k2 = pix_val;
+
+                                        //Otherwise, if there is a timestamp then assume it is a time course we should show.
+                                        }else{
+                                            if(auto dt = enc_img_it->GetMetadataValueAs<double>("dt")){
+                                                time_courses[desc.value()].push_back(dt.value(), 0.0, pix_val, 0.0);
+                                            }
+                                        }
+                                    }
+                                    
+                                }
+                            }
+                        }
+
+                        //Now plot the time courses, evaluate the model, and plot the model.
+                        {
+                            const long int samples = 200;
+                            double tmin = std::numeric_limits<double>::infinity();
+                            double tmax = -tmin;
+                            for(const auto &p : time_courses){
+                                const auto extrema = p.second.Get_Extreme_Datum_x();
+                                tmin = std::min(tmin, extrema.first[0] - 5.0);
+                                tmax = std::max(tmax, extrema.second[0] + 5.0);
+                            }
+                            if( !std::isfinite(tmin) || !std::isfinite(tmax) ){
+                                tmin = -5.0;
+                                tmax = 200.0;
+                            }
+                            const double dt = (tmax - tmin) / static_cast<double>(samples);
+
+                            samples_1D<double> fitted_model;
+                            //Pharmacokinetic_Parameters_5Param_Chebyshev_Optimization_Results eval_res;
+                            Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares_Results eval_res;
+                            for(long int i = 0; i < samples; ++i){
+                                const double t = tmin + dt * i;
+
+                                //chebyshev_5param_model_optimization(model_params,t,eval_res);
+                                chebyshev_5param_model_least_squares(model_params,t,eval_res);
+                                fitted_model.push_back(t, 0.0, eval_res.I, 0.0);
+                            }
+                            time_courses["Fitted model"] = fitted_model;
+                        }
+
+                        const std::string Title = "Time course: row = " + std::to_string(row_as_u) + ", col = " + std::to_string(col_as_u);
+                        PlotTimeCourses(Title, time_courses, {});
+                    }catch(const std::exception &e){
+                        FUNCWARN("Unable to reconstruct model: " << e.what());
                     }
-
-
-                    //Now plot the time courses, evaluate the model, and plot the model.
-                    {
-                        const long int samples = 200;
-                        double tmin = std::numeric_limits<double>::infinity();
-                        double tmax = -tmin;
-                        for(const auto &p : time_courses){
-                            const auto extrema = p.second.Get_Extreme_Datum_x();
-                            tmin = std::min(tmin, extrema.first[0] - 5.0);
-                            tmax = std::max(tmax, extrema.second[0] + 5.0);
-                        }
-                        if( !std::isfinite(tmin) || !std::isfinite(tmax) ){
-                            tmin = -5.0;
-                            tmax = 200.0;
-                        }
-                        const double dt = (tmax - tmin) / static_cast<double>(samples);
-
-                        samples_1D<double> fitted_model;
-                        //Pharmacokinetic_Parameters_5Param_Chebyshev_Optimization_Results eval_res;
-                        Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares_Results eval_res;
-                        for(long int i = 0; i < samples; ++i){
-                            const double t = tmin + dt * i;
-
-                            //chebyshev_5param_model_optimization(model_params,t,eval_res);
-                            chebyshev_5param_model_least_squares(model_params,t,eval_res);
-                            fitted_model.push_back(t, 0.0, eval_res.I, 0.0);
-                        }
-                        time_courses["Fitted model"] = fitted_model;
-                    }
-
-                    const std::string Title = "Time course: row = " + std::to_string(row_as_u) + ", col = " + std::to_string(col_as_u);
-                    PlotTimeCourses(Title, time_courses, {});
                              
 
                 //Given the current mouse coordinates, dump the pixel value for [A]ll image sets which spatially overlap.
