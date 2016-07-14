@@ -163,7 +163,111 @@ std::list<OperationArgDoc> OpArgDocCT_Liver_Perfusion_Pharmaco(void){
                             "Rough_Body",
                             ".*body.*",
                             ".*something.*\\|.*another.*thing.*" };
-                            
+
+    out.emplace_back();
+    out.back().name = "UseBasisSplineInterpolation";
+    out.back().desc = "Control whether the AIF and VIF should use basis spline interpolation in"
+                      " conjunction with the Chebyshev polynomial method. If this option is not"
+                      " set, linear interpolation is used instead. Linear interpolation may"
+                      " result in a less-smooth AIF and VIF (and therefore possibly slower "
+                      " optimizer convergence), but is safer if you cannot verify"
+                      " the AIF and VIF plots are reasonable. This option currently produces an effect"
+                      " only if the Chebyshev polynomial method is being used.";
+    out.back().default_val = "false";
+    out.back().expected = true;
+    out.back().examples = { "true",
+                            "false" };
+
+    out.emplace_back();
+    out.back().name = "BasisSplineCoefficients";
+    out.back().desc = "Control the number of basis spline coefficients to use, if applicable."
+                      " (This setting does nothing when basis splines are not being used.)"
+                      " Valid options for this setting depend on the amount of data and b-spline order."
+                      " This number controls the number of coefficients that are fitted (via least-squares)."
+                      " You must verify that overfitting is not happening. If in doubt, use fewer coefficients."
+                      " There are two ways to specify the number: relative and absolute."
+                      " Relative means relative to the number of datum."
+                      " For example, if the AIF and VIF have ~40 datum then generally '*0.5' is safe."
+                      " ('*0.5' means there are half the number of coefficients as datum.)"
+                      " Inspect for overfitting and poor fit."
+                      " Because this routine happens once and is fast, do not tweak to optimize for speed;"
+                      " the aim of this method is to produce a smooth and accurate AIF and VIF."
+                      " Because an integer number of coefficients are needed, so rounding is used."
+                      " You can also specify the absolute number of coefficients to use like '20'."
+                      " It often makes more sense to use relative specification."
+                      " Be aware that not all inputs can be honoured due to limits on b-spline knots and breaks,"
+                      " and may cause unpredictable behaviour or internal failure.";
+    out.back().default_val = "*0.5";
+    out.back().expected = true;
+    out.back().examples = { "*0.8",
+                            "*0.5",
+                            "*0.3",
+                            "20.0",
+                            "10.0"};
+
+    out.emplace_back();
+    out.back().name = "BasisSplineOrder";
+    out.back().desc = "Control the polynomial order of basis spline interpolation to use, if applicable."
+                      " (This setting does nothing when basis splines are not being used.)"
+                      " This parameter controls the order of polynomial used for b-spline interpolation,"
+                      " and therefore has ramifications for the computability and numerical stability of"
+                      " AIF and VIF derivatives. Stick with '4' or '5' if you're unsure.";
+    out.back().default_val = "4";
+    out.back().expected = true;
+    out.back().examples = { "1",
+                            "2",
+                            "3",
+                            "4",
+                            "5",
+                            "6",
+                            "7",
+                            "8",
+                            "9",
+                            "10"};
+
+    out.emplace_back();
+    out.back().name = "UseChebyshevPolyMethod";
+    out.back().desc = "Control whether the AIF and VIF should be approximated by Chebyshev polynomials."
+                      " If this option is not set, a inear interpolation approach is used instead.";
+    out.back().default_val = "true";
+    out.back().expected = true;
+    out.back().examples = { "true",
+                            "false" };
+
+
+    out.emplace_back();
+    out.back().name = "ChebyshevPolyCoefficients";
+    out.back().desc = "Control the number of Chebyshev polynomial coefficients to use, if applicable."
+                      " (This setting does nothing when the Chebyshev polynomial method is not being used.)"
+                      " This number controls the number of coefficients that are computed."
+                      " There are two ways to specify the number: relative and absolute."
+                      " Relative means relative to the number of datum."
+                      " For example, if the AIF and VIF have ~40 datum then generally '*2' is safe."
+                      " ('*2' means there are 2x the number of coefficients as datum; usually overkill.)"
+                      " A good middle-ground is '*1' which is faster but should produce similar results."
+                      " For speed '/2' is even faster, but can produce bad results in some cases."
+                      " Because an integer number of coefficients are needed, rounding is used."
+                      " You can also specify the absolute number of coefficients to use like '20'."
+                      " It often makes more sense to use relative specification."
+                      " Be aware that not all inputs can be honoured (i.e., too large, too small, or negative),"
+                      " and may cause unpredictable behaviour or internal failure.";
+    out.back().default_val = "*2.0";
+    out.back().expected = true;
+    out.back().examples = { "*10.0",
+                            "*5.0",
+                            "*2.0",
+                            "*1.23",
+                            "*1.0",
+                            "/1.0",
+                            "/2.0",
+                            "/3.0",
+                            "/5.0",
+                            "100.0",
+                            "50.0",
+                            "20",
+                            "10.01"};
+
+
     out.emplace_back();
     out.back().name = "VIFROINameRegex";
     out.back().desc = "Regex for the name of the ROI to use as the VIF. It should generally be a"
@@ -188,14 +292,60 @@ Drover CT_Liver_Perfusion_Pharmaco(Drover DICOM_data, OperationArgPkg OptArgs, s
     const long int PreDecimateR = std::stol( OptArgs.getValueStr("PreDecimateOutSizeR").value() );
     const long int PreDecimateC = std::stol( OptArgs.getValueStr("PreDecimateOutSizeC").value() );
     const auto TargetROIName = OptArgs.getValueStr("TargetROINameRegex").value();
+    const auto UseBasisSplineInterpolationStr = OptArgs.getValueStr("UseBasisSplineInterpolation").value();
+    const auto BasisSplineCoefficientsStr = OptArgs.getValueStr("BasisSplineCoefficients").value();
+    const auto BasisSplineOrder = std::stol( OptArgs.getValueStr("BasisSplineOrder").value() );
+
+    const auto UseChebyshevPolyMethodStr = OptArgs.getValueStr("UseChebyshevPolyMethod").value();
+    const auto ChebyshevPolyCoefficientsStr = OptArgs.getValueStr("ChebyshevPolyCoefficients").value();
+
     const auto VIFROIName = OptArgs.getValueStr("VIFROINameRegex").value();
     //-----------------------------------------------------------------------------------------------------------------
     const auto AIFROINameRegex = std::regex(AIFROIName, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
     const auto VIFROINameRegex = std::regex(VIFROIName, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
     const auto TargetROINameRegex = std::regex(TargetROIName, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto PlotAIFVIFRegex = std::regex("tr?u?e?", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto TrueRegex = std::regex("^tr?u?e?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto IsPositiveInteger = std::regex("^[0-9]*$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto IsPositiveFloat = std::regex("^[0-9.]*$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto IsRelativePosFloat = std::regex("^[*][0-9.]*$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
 
-    const auto ShouldPlotAIFVIF = std::regex_match(PlotAIFVIF, PlotAIFVIFRegex);
+
+    //Figure out how many coefficients to use.
+    double BasisSplineCoefficients;
+    bool BasisSplineCoefficientsRelative;
+    if(std::regex_match(BasisSplineCoefficientsStr, IsPositiveFloat)){
+        BasisSplineCoefficients = std::stod( BasisSplineCoefficientsStr );
+        BasisSplineCoefficientsRelative = false;
+    }else if(std::regex_match(BasisSplineCoefficientsStr, IsRelativePosFloat)){
+        BasisSplineCoefficients = std::stod( BasisSplineCoefficientsStr.substr(1,std::string::npos) );
+        BasisSplineCoefficientsRelative = true;
+    }else{
+        throw std::invalid_argument("Unable to handle '" + BasisSplineCoefficientsStr + "'");
+    }
+    if(BasisSplineCoefficients <= 0){
+        throw std::invalid_argument("Option invalid: '" + BasisSplineCoefficientsStr + "'");
+    }
+
+    double ChebyshevPolyCoefficients;
+    bool ChebyshevPolyCoefficientsRelative;
+    if(std::regex_match(ChebyshevPolyCoefficientsStr, IsPositiveFloat)){
+        ChebyshevPolyCoefficients = std::stod( ChebyshevPolyCoefficientsStr );
+        ChebyshevPolyCoefficientsRelative = false;
+    }else if(std::regex_match(ChebyshevPolyCoefficientsStr, IsRelativePosFloat)){
+        ChebyshevPolyCoefficients = std::stod( ChebyshevPolyCoefficientsStr.substr(1,std::string::npos) );
+        ChebyshevPolyCoefficientsRelative = true;
+    }else{
+        throw std::invalid_argument("Unable to handle '" + ChebyshevPolyCoefficientsStr + "'");
+    }
+    if(ChebyshevPolyCoefficients <= 0){
+        throw std::invalid_argument("Option invalid: '" + ChebyshevPolyCoefficientsStr + "'");
+    }
+
+
+    //Boolean options.
+    const auto ShouldPlotAIFVIF = std::regex_match(PlotAIFVIF, TrueRegex);
+    const auto UseBasisSplineInterpolation = std::regex_match(UseBasisSplineInterpolationStr, TrueRegex);
+    const auto UseChebyshevPolyMethod = std::regex_match(UseChebyshevPolyMethodStr, TrueRegex);
 
 
     //Tokenize the plotting criteria.
@@ -221,7 +371,7 @@ Drover CT_Liver_Perfusion_Pharmaco(Drover DICOM_data, OperationArgPkg OptArgs, s
         }
     }
 
-
+    // ---------------------------------------------
 
     //Stuff references to all contours into a list. Remember that you can still address specific contours through
     // the original holding containers (which are not modified here).
@@ -411,43 +561,8 @@ Drover CT_Liver_Perfusion_Pharmaco(Drover DICOM_data, OperationArgPkg OptArgs, s
         }
     }
 
-
-    //Use a linear model.
-    if(false){ 
-        for(auto & img_arr : C_enhancement_img_arrays){
-            DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( *img_arr ) );
-            pharmaco_model_dummy.emplace_back( DICOM_data.image_data.back() );
-
-            DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( ) );
-            pharmaco_model_kA.emplace_back( DICOM_data.image_data.back() );
-            DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( ) );
-            pharmaco_model_tauA.emplace_back( DICOM_data.image_data.back() );
-            DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( ) );
-            pharmaco_model_kV.emplace_back( DICOM_data.image_data.back() );
-            DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( ) );
-            pharmaco_model_tauV.emplace_back( DICOM_data.image_data.back() );
-            DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( ) );
-            pharmaco_model_k2.emplace_back( DICOM_data.image_data.back() );
-
-            if(!pharmaco_model_dummy.back()->imagecoll.Process_Images_Parallel( 
-                              GroupSpatiallyOverlappingImages,
-                              LiverPharmacoModel5ParamLinear,
-                              { std::ref(pharmaco_model_kA.back()->imagecoll),
-                                std::ref(pharmaco_model_tauA.back()->imagecoll),
-                                std::ref(pharmaco_model_kV.back()->imagecoll),
-                                std::ref(pharmaco_model_tauV.back()->imagecoll),
-                                std::ref(pharmaco_model_k2.back()->imagecoll) }, 
-                              cc_all,
-                              &ud )){
-                FUNCERR("Unable to pharmacokinetically model liver!");
-            }else{
-                pharmaco_model_dummy.back()->imagecoll.images.clear();
-            }
-        }
-        pharmaco_model_dummy.clear();
-
     //Use a Chebyshev model.
-    }else{
+    if(UseChebyshevPolyMethod){
         decltype(ud.time_courses) orig_time_courses;
         for(const auto & tc : ud.time_courses) orig_time_courses["Original " + tc.first] = tc.second;
 
@@ -477,15 +592,10 @@ Drover CT_Liver_Perfusion_Pharmaco(Drover DICOM_data, OperationArgPkg OptArgs, s
             //
             // Note: If B-splines are used you need to have good coverage. If linear interpolation is used you only
             //       need two (one the the far left and one near t=0).
+            const std::vector<double> ExtrapolationDts = { 5.0, 9.0, 12.5, 17.0, 21.3, 25.0 };
             if(true) for(auto & theROI : ud.time_courses){
-                theROI.second.push_back( -25.0, 0.0, 0.0, 0.0 );
-                theROI.second.push_back( -20.0, 0.0, 0.0, 0.0 );
-                theROI.second.push_back( -17.0, 0.0, 0.0, 0.0 );
-                theROI.second.push_back( -13.0, 0.0, 0.0, 0.0 );
-                theROI.second.push_back(  -9.0, 0.0, 0.0, 0.0 );
-                theROI.second.push_back(  -5.0, 0.0, 0.0, 0.0 );
-                theROI.second.push_back(  -2.0, 0.0, 0.0, 0.0 );
-                theROI.second.push_back(  -1.0, 0.0, 0.0, 0.0 );
+                const auto tmin = theROI.second.Get_Extreme_Datum_x().first[0];
+                for(auto &dt : ExtrapolationDts) theROI.second.push_back( tmin - dt, 0.0, 0.0, 0.0 );
             }
         
             //Perform smoothing on the AIF and VIF to help reduce optimizer bounce.
@@ -500,9 +610,11 @@ Drover CT_Liver_Perfusion_Pharmaco(Drover DICOM_data, OperationArgPkg OptArgs, s
                 const auto washout = theROI.second.Select_Those_Within_Inc(ContrastInjectionWashoutTime,1E99);
                 const auto leastsquares =  washout.Linear_Least_Squares_Regression();
                 const auto tmax = theROI.second.Get_Extreme_Datum_x().second[0];
-                const auto virtdatum_t = tmax + 25.0;
-                const auto virtdatum_f = leastsquares.evaluate_simple(virtdatum_t);
-                theROI.second.push_back(virtdatum_t, 0.0, virtdatum_f, 0.0 );
+                for(auto &dt : ExtrapolationDts){
+                    const auto virtdatum_t = tmax + dt;
+                    const auto virtdatum_f = leastsquares.evaluate_simple(virtdatum_t);
+                    theROI.second.push_back(virtdatum_t, 0.0, virtdatum_f, 0.0 );
+                }
             }
 
             //Perform smoothing on the AIF and VIF using NPLLR.
@@ -514,45 +626,46 @@ Drover CT_Liver_Perfusion_Pharmaco(Drover DICOM_data, OperationArgPkg OptArgs, s
             }
 
             //Approximate the VIF and VIF with a Chebyshev polynomial approximation.
-            if(true){
-                //Use basis spline interpolation.
-                for(auto & theROI : ud.time_courses){
-                    const auto num_bs_coeffs = theROI.second.size() / 2; // Number of B-spline coefficients (to fit).
-                    const auto num_ca_coeffs = theROI.second.size() * 2; // Number of Chebyshev poly coeffs (to compute).
+            for(auto & theROI : ud.time_courses){
+                const auto ROIN = theROI.second.size();
+                size_t num_ca_coeffs;
+                if(ChebyshevPolyCoefficientsRelative){
+                    num_ca_coeffs = static_cast<size_t>( std::round( ROIN * ChebyshevPolyCoefficients ) );
+                }else{
+                    num_ca_coeffs = static_cast<size_t>( std::round( ChebyshevPolyCoefficients ) );
+                }
 
+                size_t num_bs_coeffs;
+                if(BasisSplineCoefficientsRelative){
+                    num_bs_coeffs = static_cast<size_t>( std::round( ROIN * BasisSplineCoefficients ) );
+                }else{
+                    num_bs_coeffs = static_cast<size_t>( std::round( BasisSplineCoefficients ) );
+                }
 
+                const auto tmin = theROI.second.Get_Extreme_Datum_x().first[0];
+                const auto tmax = theROI.second.Get_Extreme_Datum_x().second[0];
+                const auto pinf = std::numeric_limits<double>::infinity(); //use automatic (maximal) endpoint determination.
+
+                cheby_approx<double> ca;
+
+                //Use basis spline interpolation when constructing the Chebyshev approximation.
+                if(UseBasisSplineInterpolation){
                     theROI.second = theROI.second.Strip_Uncertainties_in_y();
-
-                    const auto tmin = theROI.second.Get_Extreme_Datum_x().first[0];
-                    const auto tmax = theROI.second.Get_Extreme_Datum_x().second[0];
-                    const auto pinf = std::numeric_limits<double>::infinity(); //use automatic (maximal) endpoint determination.
-
-                    //basis_spline bs(theROI.second, pinf, pinf, 4, num_bs_coeffs, basis_spline_breakpoints::equal_spacing);
-                    basis_spline bs(theROI.second, pinf, pinf, 4, num_bs_coeffs, basis_spline_breakpoints::adaptive_datum_density);
+                    //basis_spline bs(theROI.second, pinf, pinf, BasisSplineOrder, num_bs_coeffs, basis_spline_breakpoints::equal_spacing);
+                    basis_spline bs(theROI.second, pinf, pinf, BasisSplineOrder, num_bs_coeffs, basis_spline_breakpoints::adaptive_datum_density);
                     auto interp = [&bs](double t) -> double {
                             const auto interpolated_f = bs.Sample(t)[2];
                             return interpolated_f;
                     };
-                    cheby_approx<double> ca;
                     ca.Prepare(interp, num_ca_coeffs, tmin + 5.0, tmax - 5.0);
 
-                    ud2.time_courses[theROI.first] = ca;
-                    ud2.time_course_derivatives[theROI.first] = ca.Chebyshev_Derivative();
-                }
-            }else{
-                //Use (default) linear interpolation.
-                for(auto & theROI : ud.time_courses){
-                    const auto num_ca_coeffs = theROI.second.size() * 2; // Number of Chebyshev poly coeffs (to compute).
-
-                    const auto tmin = theROI.second.Get_Extreme_Datum_x().first[0];
-                    const auto tmax = theROI.second.Get_Extreme_Datum_x().second[0];
-
-                    cheby_approx<double> ca;
+                //Use (default) linear interpolation when constructing the Chebyshev approximation.
+                }else{
                     ca.Prepare(theROI.second, num_ca_coeffs, tmin + 5.0, tmax - 5.0);
-
-                    ud2.time_courses[theROI.first] = ca;
-                    ud2.time_course_derivatives[theROI.first] = ca.Chebyshev_Derivative();
                 }
+
+                ud2.time_courses[theROI.first] = ca;
+                ud2.time_course_derivatives[theROI.first] = ca.Chebyshev_Derivative();
             }
 
             if(ShouldPlotAIFVIF){
@@ -591,8 +704,41 @@ Drover CT_Liver_Perfusion_Pharmaco(Drover DICOM_data, OperationArgPkg OptArgs, s
             }
         }
         pharmaco_model_dummy.clear();
-    }
 
+    //Use a linear model.
+    }else{
+        for(auto & img_arr : C_enhancement_img_arrays){
+            DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( *img_arr ) );
+            pharmaco_model_dummy.emplace_back( DICOM_data.image_data.back() );
+
+            DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( ) );
+            pharmaco_model_kA.emplace_back( DICOM_data.image_data.back() );
+            DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( ) );
+            pharmaco_model_tauA.emplace_back( DICOM_data.image_data.back() );
+            DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( ) );
+            pharmaco_model_kV.emplace_back( DICOM_data.image_data.back() );
+            DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( ) );
+            pharmaco_model_tauV.emplace_back( DICOM_data.image_data.back() );
+            DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( ) );
+            pharmaco_model_k2.emplace_back( DICOM_data.image_data.back() );
+
+            if(!pharmaco_model_dummy.back()->imagecoll.Process_Images_Parallel( 
+                              GroupSpatiallyOverlappingImages,
+                              LiverPharmacoModel5ParamLinear,
+                              { std::ref(pharmaco_model_kA.back()->imagecoll),
+                                std::ref(pharmaco_model_tauA.back()->imagecoll),
+                                std::ref(pharmaco_model_kV.back()->imagecoll),
+                                std::ref(pharmaco_model_tauV.back()->imagecoll),
+                                std::ref(pharmaco_model_k2.back()->imagecoll) }, 
+                              cc_all,
+                              &ud )){
+                FUNCERR("Unable to pharmacokinetically model liver!");
+            }else{
+                pharmaco_model_dummy.back()->imagecoll.images.clear();
+            }
+        }
+        pharmaco_model_dummy.clear();
+    }
 
     //Ensure the images are properly spatially ordered.
     if(true){
