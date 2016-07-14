@@ -32,6 +32,7 @@
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMathPlottingGnuplot.h" //Needed for YgorMathPlottingGnuplot::*.
 #include "YgorMathChebyshev.h" //Needed for cheby_approx class.
+#include "YgorMathBSpline.h"   //Needed for basis_spline class.
 #include "YgorStats.h"        //Needed for Stats:: namespace.
 #include "YgorFilesDirs.h"    //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
 #include "YgorContainers.h"   //Needed for bimap class.
@@ -473,8 +474,17 @@ Drover CT_Liver_Perfusion_Pharmaco(Drover DICOM_data, OperationArgPkg OptArgs, s
             }
         
             //Insert some virtual points before the first sample (assumed to be at t=0).
+            //
+            // Note: If B-splines are used you need to have good coverage. If linear interpolation is used you only
+            //       need two (one the the far left and one near t=0).
             if(true) for(auto & theROI : ud.time_courses){
                 theROI.second.push_back( -25.0, 0.0, 0.0, 0.0 );
+                theROI.second.push_back( -20.0, 0.0, 0.0, 0.0 );
+                theROI.second.push_back( -17.0, 0.0, 0.0, 0.0 );
+                theROI.second.push_back( -13.0, 0.0, 0.0, 0.0 );
+                theROI.second.push_back(  -9.0, 0.0, 0.0, 0.0 );
+                theROI.second.push_back(  -5.0, 0.0, 0.0, 0.0 );
+                theROI.second.push_back(  -2.0, 0.0, 0.0, 0.0 );
                 theROI.second.push_back(  -1.0, 0.0, 0.0, 0.0 );
             }
         
@@ -483,7 +493,7 @@ Drover CT_Liver_Perfusion_Pharmaco(Drover DICOM_data, OperationArgPkg OptArgs, s
                 theROI.second = theROI.second.Resample_Equal_Spacing(200);
                 theROI.second = theROI.second.Moving_Median_Filter_Two_Sided_Equal_Weighting(2);
             }
-        
+       
             //Extrapolate beyond the data collection limit (to stop the optimizer getting snagged
             // on any sharp drop-offs when shifting tauA and tauV).
             if(true) for(auto & theROI : ud.time_courses){
@@ -495,15 +505,54 @@ Drover CT_Liver_Perfusion_Pharmaco(Drover DICOM_data, OperationArgPkg OptArgs, s
                 theROI.second.push_back(virtdatum_t, 0.0, virtdatum_f, 0.0 );
             }
 
-            //Approximate the VIF and VIF with a Chebyshev polynomial approximation.
-            for(auto & theROI : ud.time_courses){
-                const auto tmin = theROI.second.Get_Extreme_Datum_x().first[0];
-                const auto tmax = theROI.second.Get_Extreme_Datum_x().second[0];
+            //Perform smoothing on the AIF and VIF using NPLLR.
+            if(false) for(auto & theROI : ud.time_courses){
+                bool lOK;
+                orig_time_courses["NPLLR: " + theROI.first] = NPRLL::Attempt_Auto_Smooth(theROI.second, &lOK);
+                theROI.second = NPRLL::Attempt_Auto_Smooth(theROI.second, &lOK);
+                if(!lOK) throw std::runtime_error("Unable to smooth AIF or VIF.");
+            }
 
-                cheby_approx<double> ca;
-                ca.Prepare(theROI.second, theROI.second.size()*3, tmin + 5.0, tmax - 5.0);
-                ud2.time_courses[theROI.first] = ca;
-                ud2.time_course_derivatives[theROI.first] = ca.Chebyshev_Derivative();
+            //Approximate the VIF and VIF with a Chebyshev polynomial approximation.
+            if(true){
+                //Use basis spline interpolation.
+                for(auto & theROI : ud.time_courses){
+                    const auto num_bs_coeffs = theROI.second.size() / 2; // Number of B-spline coefficients (to fit).
+                    const auto num_ca_coeffs = theROI.second.size() * 2; // Number of Chebyshev poly coeffs (to compute).
+
+
+                    theROI.second = theROI.second.Strip_Uncertainties_in_y();
+
+                    const auto tmin = theROI.second.Get_Extreme_Datum_x().first[0];
+                    const auto tmax = theROI.second.Get_Extreme_Datum_x().second[0];
+                    const auto pinf = std::numeric_limits<double>::infinity(); //use automatic (maximal) endpoint determination.
+
+                    //basis_spline bs(theROI.second, pinf, pinf, 4, num_bs_coeffs, basis_spline_breakpoints::equal_spacing);
+                    basis_spline bs(theROI.second, pinf, pinf, 4, num_bs_coeffs, basis_spline_breakpoints::adaptive_datum_density);
+                    auto interp = [&bs](double t) -> double {
+                            const auto interpolated_f = bs.Sample(t)[2];
+                            return interpolated_f;
+                    };
+                    cheby_approx<double> ca;
+                    ca.Prepare(interp, num_ca_coeffs, tmin + 5.0, tmax - 5.0);
+
+                    ud2.time_courses[theROI.first] = ca;
+                    ud2.time_course_derivatives[theROI.first] = ca.Chebyshev_Derivative();
+                }
+            }else{
+                //Use (default) linear interpolation.
+                for(auto & theROI : ud.time_courses){
+                    const auto num_ca_coeffs = theROI.second.size() * 2; // Number of Chebyshev poly coeffs (to compute).
+
+                    const auto tmin = theROI.second.Get_Extreme_Datum_x().first[0];
+                    const auto tmax = theROI.second.Get_Extreme_Datum_x().second[0];
+
+                    cheby_approx<double> ca;
+                    ca.Prepare(theROI.second, num_ca_coeffs, tmin + 5.0, tmax - 5.0);
+
+                    ud2.time_courses[theROI.first] = ca;
+                    ud2.time_course_derivatives[theROI.first] = ca.Chebyshev_Derivative();
+                }
             }
 
             if(ShouldPlotAIFVIF){
