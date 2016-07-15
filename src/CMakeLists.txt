@@ -223,17 +223,17 @@ target_include_directories(imebrashim SYSTEM PUBLIC
 
 
 # Pharmacokinetic modeling libraries (built separately for easier reuse).
-add_library (pharmacokinetic_modeling_via_optimization
-    Pharmacokinetic_Modeling_via_Optimization.cc
+add_library (kineticmodel_1c2i_5param_chebyshev_freeformoptimization
+    KineticModel_1Compartment2Input_5Param_Chebyshev_FreeformOptimization.cc
 )
-target_include_directories(pharmacokinetic_modeling_via_optimization SYSTEM PUBLIC 
+target_include_directories(kineticmodel_1c2i_5param_chebyshev_freeformoptimization SYSTEM PUBLIC 
     ./
 )
 
-add_library (pharmacokinetic_modeling_via_least_squares
-    Pharmacokinetic_Modeling_via_Least_Squares.cc
+add_library (kineticmodel_1c2i_5param_chebyshev_levenbergmarquardt
+    KineticModel_1Compartment2Input_5Param_Chebyshev_LevenbergMarquardt.cc
 )
-target_include_directories(pharmacokinetic_modeling_via_least_squares SYSTEM PUBLIC 
+target_include_directories(kineticmodel_1c2i_5param_chebyshev_levenbergmarquardt SYSTEM PUBLIC 
     ./
 )
 
@@ -260,8 +260,8 @@ add_executable (dicomautomaton_dispatcher
 )
 target_link_libraries (dicomautomaton_dispatcher
     imebrashim
-    pharmacokinetic_modeling_via_optimization
-    pharmacokinetic_modeling_via_least_squares
+    kineticmodel_1c2i_5param_chebyshev_freeformoptimization
+    kineticmodel_1c2i_5param_chebyshev_levenbergmarquardt
     explicator 
     demarcator 
     ygor 
@@ -405,8 +405,8 @@ install(TARGETS
     automaton
     dicomautomaton_dump
     imebrashim
-    pharmacokinetic_modeling_via_optimization
-    pharmacokinetic_modeling_via_least_squares
+    kineticmodel_1c2i_5param_chebyshev_freeformoptimization
+    kineticmodel_1c2i_5param_chebyshev_levenbergmarquardt
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib

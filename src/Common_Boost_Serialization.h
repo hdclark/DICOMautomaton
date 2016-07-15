@@ -7,7 +7,7 @@
 
 #include "Structs.h"
 
-#include "Pharmacokinetic_Modeling_via_Least_Squares.h"
+#include "KineticModel_1Compartment2Input_5Param_Chebyshev_Structs.h"
 
 
 bool
@@ -39,10 +39,10 @@ Common_Boost_Serialize_Drover_to_XML(const Drover &in, boost::filesystem::path F
 
 // --- Pharmacokinetic model state ---
 std::string 
-Serialize_Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares_State(const Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares &state);
+Serialize(const KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters &state);
 
 bool 
-Deserialize_Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares_State(const std::string &s, Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares &state);
+Deserialize(const std::string &s, KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters &state);
 
 
 

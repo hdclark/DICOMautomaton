@@ -69,6 +69,7 @@
 #include "../YgorImages_Functors/Processing/In_Image_Plane_Bicubic_Supersample.h"
 #include "../YgorImages_Functors/Processing/In_Image_Plane_Pixel_Decimate.h"
 #include "../YgorImages_Functors/Processing/Cross_Second_Derivative.h"
+#include "../YgorImages_Functors/Processing/Liver_Pharmacokinetic_Model_5Param_Structs.h"
 #include "../YgorImages_Functors/Processing/Liver_Pharmacokinetic_Model_5Param_Linear.h"
 #include "../YgorImages_Functors/Processing/Liver_Pharmacokinetic_Model_5Param_Cheby.h"
 #include "../YgorImages_Functors/Processing/Orthogonal_Slices.h"

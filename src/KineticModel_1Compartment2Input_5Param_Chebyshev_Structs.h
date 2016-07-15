@@ -1,15 +1,19 @@
-//Pharmacokinetic_Modeling_via_Optimization.h.
+//KineticModel_1Compartment2Input_5Param_Chebyshev_Structs.h.
 
 #pragma once
 
 #include <limits>
 #include <memory>
 
-//#include "YgorMisc.h"
-#include <YgorMath.h>
 #include "YgorMath.h"
 #include "YgorMathChebyshev.h"
-//#include "YgorMathChebyshevFunctions.h"
+
+#include "YgorMathIOBoostSerialization.h"
+#include "YgorMathChebyshevIOBoostSerialization.h"
+
+#include <boost/serialization/nvp.hpp>
+#include <boost/serialization/shared_ptr.hpp>
+
 
 
 // Shuttle struct for passing around the state needed to perform a pharmacokinetic modeling fit.
@@ -32,7 +36,10 @@
 //      value using std::move(). If function parameters were directly used, some state would be
 //      lost when the future returned.
 //
-struct Pharmacokinetic_Parameters_5Param_Chebyshev_Optimization {
+//   6. It is easily serialized and a copy can be kept with the parameter maps, ensuring you have
+//      all necessary information to reconstruct the model afterward.
+//
+struct KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters {
  
     // Experimental observations.
     std::shared_ptr<cheby_approx<double>> cAIF;
@@ -41,14 +48,13 @@ struct Pharmacokinetic_Parameters_5Param_Chebyshev_Optimization {
     std::shared_ptr<cheby_approx<double>> cVIF;
     std::shared_ptr<cheby_approx<double>> dcVIF;
 
-    std::shared_ptr<samples_1D<double>> cROI;
-
+    std::shared_ptr<samples_1D<double>>   cROI;
 
     // Indicators for various things.
     bool FittingPerformed = false;
-    bool FittingSuccess = false;
+    bool FittingSuccess   = false;
 
-    // Fitting quantities.
+    // Fitting quantities (IFF available).
     double RSS  = std::numeric_limits<double>::quiet_NaN(); // Residual sum of squares.
 
     // 5-parameter liver CT perfusion parameters.
@@ -60,15 +66,48 @@ struct Pharmacokinetic_Parameters_5Param_Chebyshev_Optimization {
 
 };
 
-//This struct is only needed if you want to evaluate the gradients of the model at
-// some specific time.
-struct Pharmacokinetic_Parameters_5Param_Chebyshev_Optimization_Results {
+
+namespace boost {
+namespace serialization {
+
+template<typename Archive>
+void serialize(Archive &a, 
+               KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters &p, 
+               const unsigned int /*version*/ ){
+    a & boost::serialization::make_nvp("cAIF",  p.cAIF)
+      & boost::serialization::make_nvp("dcAIF", p.dcAIF)
+
+      & boost::serialization::make_nvp("cVIF",  p.cVIF)
+      & boost::serialization::make_nvp("dcVIF", p.dcVIF)
+
+      & boost::serialization::make_nvp("cROI",  p.cROI)
+
+      & boost::serialization::make_nvp("FittingPerformed", p.FittingPerformed)
+      & boost::serialization::make_nvp("FittingSuccess",   p.FittingSuccess)
+
+      & boost::serialization::make_nvp("RSS",   p.RSS)
+
+      & boost::serialization::make_nvp("k1A",   p.k1A)
+      & boost::serialization::make_nvp("tauA",  p.tauA)
+      & boost::serialization::make_nvp("k1V",   p.k1V)
+      & boost::serialization::make_nvp("tauV",  p.tauV)
+      & boost::serialization::make_nvp("k2",    p.k2);
+    return;
+}
+
+}
+}
+
+
+//This struct is returned when evaluating the model. Jacobian matrix elements are also returned to give some indication
+// of the objective function topology at the given time with the optimized parameter values.
+struct KineticModel_1Compartment2Input_5Param_Chebyshev_Results {
 
     // Evaluated model value.
     double I = std::numeric_limits<double>::quiet_NaN();
 
-    // Model gradients along the parameter axes. (Note: model gradients, 
-    // *not* objective function gradients.)
+    // Model gradients along the parameter axes. (Note: model parameter gradients = Jacobian matrix elements, *not*
+    // objective function gradients.)
     double d_I_d_k1A  = std::numeric_limits<double>::quiet_NaN();
     double d_I_d_tauA = std::numeric_limits<double>::quiet_NaN();
     double d_I_d_k1V  = std::numeric_limits<double>::quiet_NaN();
@@ -76,31 +115,5 @@ struct Pharmacokinetic_Parameters_5Param_Chebyshev_Optimization_Results {
     double d_I_d_k2   = std::numeric_limits<double>::quiet_NaN();
 
 }; 
-
-
-// This routine can be used to evaluate a model (using the parameters in 'state') at given time.
-void
-chebyshev_5param_model_optimization( const Pharmacokinetic_Parameters_5Param_Chebyshev_Optimization &state,
-                        const double t,
-                        Pharmacokinetic_Parameters_5Param_Chebyshev_Optimization_Results &res);
- 
-
-// This routine fits a pharmacokinetic model to the observed liver perfusion data using a 
-// Chebyshev polynomial approximation scheme.
-//
-// This routine fits all 5 model free parameters (k1A, tauA, k1V, tauV, k2) numerically.
-//
-struct Pharmacokinetic_Parameters_5Param_Chebyshev_Optimization
-Pharmacokinetic_Model_5Param_Chebyshev_Optimization(Pharmacokinetic_Parameters_5Param_Chebyshev_Optimization state);
-
-
-// This routine fits a pharmacokinetic model to the observed liver perfusion data using a 
-// Chebyshev polynomial approximation scheme.
-//
-// This routine fits only 3 model free parameters (k1A, k1V, k2) numerically. The neglected
-// parameters (tauA, tauV) are kept at 0.0.
-//
-struct Pharmacokinetic_Parameters_5Param_Chebyshev_Optimization
-Pharmacokinetic_Model_3Param_Chebyshev_Optimization(Pharmacokinetic_Parameters_5Param_Chebyshev_Optimization state);
 
 

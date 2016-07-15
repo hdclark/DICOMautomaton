@@ -79,6 +79,7 @@
 #include "../YgorImages_Functors/Processing/In_Image_Plane_Bicubic_Supersample.h"
 #include "../YgorImages_Functors/Processing/In_Image_Plane_Pixel_Decimate.h"
 #include "../YgorImages_Functors/Processing/Cross_Second_Derivative.h"
+#include "../YgorImages_Functors/Processing/Liver_Pharmacokinetic_Model_5Param_Structs.h"
 #include "../YgorImages_Functors/Processing/Liver_Pharmacokinetic_Model_5Param_Linear.h"
 #include "../YgorImages_Functors/Processing/Liver_Pharmacokinetic_Model_5Param_Cheby.h"
 #include "../YgorImages_Functors/Processing/Orthogonal_Slices.h"
@@ -94,8 +95,9 @@
 #include "../YgorImages_Functors/Compute/Per_ROI_Time_Courses.h"
 #include "../YgorImages_Functors/Compute/Contour_Similarity.h"
 
-#include "../Pharmacokinetic_Modeling_via_Optimization.h"
-#include "../Pharmacokinetic_Modeling_via_Least_Squares.h"
+#include "../KineticModel_1Compartment2Input_5Param_Chebyshev_Structs.h"
+#include "../KineticModel_1Compartment2Input_5Param_Chebyshev_FreeformOptimization.h"
+#include "../KineticModel_1Compartment2Input_5Param_Chebyshev_LevenbergMarquardt.h"
 
 #include "SFML_Viewer.h"
 
@@ -795,8 +797,8 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
 
                     try{
                         //Struct for holding the modeling parameters we find.
-                        //Pharmacokinetic_Parameters_5Param_Chebyshev_Optimization model_params;
-                        Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares model_params;
+                        //KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters model_params;
+                        KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters model_params;
 
                         //First pass: look for serialized model_params. Deserialize.
                         //
@@ -812,7 +814,7 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
                                 if(auto m_str = enc_img_it->GetMetadataValueAs<std::string>("ModelState")){
                                     if(!got_model_params 
                                     &&
-                                    Deserialize_Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares_State(m_str.value(),model_params)){
+                                    Deserialize(m_str.value(),model_params)){
                                         got_model_params = true;
                                         break;
                                     }
@@ -891,13 +893,13 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
                             const double dt = (tmax - tmin) / static_cast<double>(samples);
 
                             samples_1D<double> fitted_model;
-                            //Pharmacokinetic_Parameters_5Param_Chebyshev_Optimization_Results eval_res;
-                            Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares_Results eval_res;
+                            //KineticModel_1Compartment2Input_5Param_Chebyshev_Results eval_res;
+                            KineticModel_1Compartment2Input_5Param_Chebyshev_Results eval_res;
                             for(long int i = 0; i < samples; ++i){
                                 const double t = tmin + dt * i;
 
-                                //chebyshev_5param_model_optimization(model_params,t,eval_res);
-                                chebyshev_5param_model_least_squares(model_params,t,eval_res);
+                                //Evaluate_Model(model_params,t,eval_res);
+                                Evaluate_Model(model_params,t,eval_res);
                                 fitted_model.push_back(t, 0.0, eval_res.I, 0.0);
                             }
                             time_courses["Fitted model"] = fitted_model;

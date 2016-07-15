@@ -74,6 +74,7 @@
 #include "../YgorImages_Functors/Processing/In_Image_Plane_Bicubic_Supersample.h"
 #include "../YgorImages_Functors/Processing/In_Image_Plane_Pixel_Decimate.h"
 #include "../YgorImages_Functors/Processing/Cross_Second_Derivative.h"
+#include "../YgorImages_Functors/Processing/Liver_Pharmacokinetic_Model_5Param_Structs.h"
 #include "../YgorImages_Functors/Processing/Liver_Pharmacokinetic_Model_5Param_Linear.h"
 #include "../YgorImages_Functors/Processing/Liver_Pharmacokinetic_Model_5Param_Cheby.h"
 #include "../YgorImages_Functors/Processing/Orthogonal_Slices.h"
@@ -349,7 +350,7 @@ Drover CT_Liver_Perfusion_Pharmaco(Drover DICOM_data, OperationArgPkg OptArgs, s
 
 
     //Tokenize the plotting criteria.
-    std::list<LiverPharmacoModel5ParamChebyUserDataPixelSelectionCriteria> pixels_to_plot;
+    std::list<KineticModel_PixelSelectionCriteria> pixels_to_plot;
     const auto RowRegex = std::regex("row", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
     const auto ColRegex = std::regex("column", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
     for(auto a : SplitStringToVector(PlotPixelModel, '#', 'd')){
@@ -567,11 +568,11 @@ Drover CT_Liver_Perfusion_Pharmaco(Drover DICOM_data, OperationArgPkg OptArgs, s
         for(const auto & tc : ud.time_courses) orig_time_courses["Original " + tc.first] = tc.second;
 
         //Pre-process the AIF and VIF time courses.
-        LiverPharmacoModel5ParamChebyUserData ud2; 
+        KineticModel_Liver_1C2I_5Param_ChebyUserData ud_cheby; 
 
-        ud2.pixels_to_plot = pixels_to_plot;
-        ud2.TargetROIs = TargetROINameRegex;
-        ud2.ContrastInjectionLeadTime = ContrastInjectionLeadTime;
+        ud_cheby.pixels_to_plot = pixels_to_plot;
+        ud_cheby.TargetROIs = TargetROINameRegex;
+        ud_cheby.ContrastInjectionLeadTime = ContrastInjectionLeadTime;
         {
             //Correct any unaccounted-for contrast enhancement shifts. 
             if(true) for(auto & theROI : ud.time_courses){
@@ -664,12 +665,12 @@ Drover CT_Liver_Perfusion_Pharmaco(Drover DICOM_data, OperationArgPkg OptArgs, s
                     ca.Prepare(theROI.second, num_ca_coeffs, tmin + 5.0, tmax - 5.0);
                 }
 
-                ud2.time_courses[theROI.first] = ca;
-                ud2.time_course_derivatives[theROI.first] = ca.Chebyshev_Derivative();
+                ud_cheby.time_courses[theROI.first] = ca;
+                ud_cheby.time_course_derivatives[theROI.first] = ca.Chebyshev_Derivative();
             }
 
             if(ShouldPlotAIFVIF){
-                PlotTimeCourses("Processed AIF and VIF", orig_time_courses, ud2.time_courses);
+                PlotTimeCourses("Processed AIF and VIF", orig_time_courses, ud_cheby.time_courses);
             }
         }
 
@@ -690,14 +691,14 @@ Drover CT_Liver_Perfusion_Pharmaco(Drover DICOM_data, OperationArgPkg OptArgs, s
 
             if(!pharmaco_model_dummy.back()->imagecoll.Process_Images_Parallel( 
                               GroupSpatiallyOverlappingImages,
-                              LiverPharmacoModel5ParamCheby,
+                              KineticModel_Liver_1C2I_5Param_Cheby,
                               { std::ref(pharmaco_model_kA.back()->imagecoll),
                                 std::ref(pharmaco_model_tauA.back()->imagecoll),
                                 std::ref(pharmaco_model_kV.back()->imagecoll),
                                 std::ref(pharmaco_model_tauV.back()->imagecoll),
                                 std::ref(pharmaco_model_k2.back()->imagecoll) }, 
                               cc_all,
-                              &ud2 )){
+                              &ud_cheby )){
                 FUNCERR("Unable to pharmacokinetically model liver!");
             }else{
                 pharmaco_model_dummy.back()->imagecoll.images.clear();
@@ -724,7 +725,7 @@ Drover CT_Liver_Perfusion_Pharmaco(Drover DICOM_data, OperationArgPkg OptArgs, s
 
             if(!pharmaco_model_dummy.back()->imagecoll.Process_Images_Parallel( 
                               GroupSpatiallyOverlappingImages,
-                              LiverPharmacoModel5ParamLinear,
+                              KineticModel_Liver_1C2I_5Param_Linear,
                               { std::ref(pharmaco_model_kA.back()->imagecoll),
                                 std::ref(pharmaco_model_tauA.back()->imagecoll),
                                 std::ref(pharmaco_model_kV.back()->imagecoll),

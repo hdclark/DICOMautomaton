@@ -21,6 +21,8 @@
 #include "YgorPlot.h"
 
 #include "../ConvenienceRoutines.h"
+
+#include "Liver_Pharmacokinetic_Model_5Param_Structs.h"
 #include "Liver_Pharmacokinetic_Model_5Param_Linear.h"
 
 #include "../Compute/Per_ROI_Time_Courses.h"
@@ -73,7 +75,7 @@ func_to_min(unsigned, const double *params, double *grad, void *){
 
 
 bool 
-LiverPharmacoModel5ParamLinear(planar_image_collection<float,double>::images_list_it_t first_img_it,
+KineticModel_Liver_1C2I_5Param_Linear(planar_image_collection<float,double>::images_list_it_t first_img_it,
                          std::list<planar_image_collection<float,double>::images_list_it_t> selected_img_its,
                          std::list<std::reference_wrapper<planar_image_collection<float,double>>> out_imgs,
                          std::list<std::reference_wrapper<contour_collection<double>>> ccsl,

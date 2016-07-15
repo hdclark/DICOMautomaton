@@ -35,7 +35,7 @@
 #include "StructsIOBoostSerialization.h"
 
 //#include "YgorMathChebyshevIOBoostSerialization.h"
-#include "Pharmacokinetic_Modeling_via_Least_Squares.h"
+#include "KineticModel_1Compartment2Input_5Param_Chebyshev_Structs.h"
 
 #include "Common_Boost_Serialization.h"
 
@@ -318,7 +318,7 @@ Common_Boost_Serialize_Drover_to_XML(const Drover &in,
 //=====================================================================================================================
 
 std::string 
-Serialize_Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares_State(const Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares &state){
+Serialize(const KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters &state){
     //Will throw if serialization fails.
 
     std::stringstream ss;
@@ -349,8 +349,8 @@ Serialize_Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares_State(const 
 
 
 bool
-Deserialize_Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares_State(const std::string &s,
-                                                                            Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares &state){
+Deserialize(const std::string &s,
+                                                                            KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters &state){
 
     //Simple text, no compression.
     try{

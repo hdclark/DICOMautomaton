@@ -34,15 +34,18 @@
 #include "../../Common_Plotting.h"
 
 #include "../ConvenienceRoutines.h"
+
+#include "Liver_Pharmacokinetic_Model_5Param_Structs.h"
 #include "Liver_Pharmacokinetic_Model_5Param_Cheby.h"
 
-#include "../../Pharmacokinetic_Modeling_via_Optimization.h"
-#include "../../Pharmacokinetic_Modeling_via_Least_Squares.h"
+#include "../../KineticModel_1Compartment2Input_5Param_Chebyshev_Structs.h"
+#include "../../KineticModel_1Compartment2Input_5Param_Chebyshev_FreeformOptimization.h"
+#include "../../KineticModel_1Compartment2Input_5Param_Chebyshev_LevenbergMarquardt.h"
 
 std::mutex out_img_mutex;
 
 bool
-LiverPharmacoModel5ParamCheby(planar_image_collection<float,double>::images_list_it_t first_img_it,
+KineticModel_Liver_1C2I_5Param_Cheby(planar_image_collection<float,double>::images_list_it_t first_img_it,
                         std::list<planar_image_collection<float,double>::images_list_it_t> selected_img_its,
                         std::list<std::reference_wrapper<planar_image_collection<float,double>>> out_imgs,
                         std::list<std::reference_wrapper<contour_collection<double>>> cc_all,
@@ -63,9 +66,9 @@ LiverPharmacoModel5ParamCheby(planar_image_collection<float,double>::images_list
     }
 
     //Ensure we have the needed time course ROIs.
-    LiverPharmacoModel5ParamChebyUserData *user_data_s;
+    KineticModel_Liver_1C2I_5Param_ChebyUserData *user_data_s;
     try{
-        user_data_s = std::experimental::any_cast<LiverPharmacoModel5ParamChebyUserData *>(user_data);
+        user_data_s = std::experimental::any_cast<KineticModel_Liver_1C2I_5Param_ChebyUserData *>(user_data);
     }catch(const std::exception &e){
         FUNCWARN("Unable to cast user_data to appropriate format. Cannot continue with computation");
         return false;
@@ -132,8 +135,8 @@ LiverPharmacoModel5ParamCheby(planar_image_collection<float,double>::images_list
     auto Cvenous  = std::make_shared<cheby_approx<double>>( user_data_s->time_courses["VIF"] );
     auto dCvenous = std::make_shared<cheby_approx<double>>( user_data_s->time_course_derivatives["VIF"] );
 
-    //Pharmacokinetic_Parameters_5Param_Chebyshev_Optimization model_state;
-    Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares model_state;
+    //KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters model_state;
+    KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters model_state;
 
     model_state.cAIF  = Carterial;
     model_state.dcAIF = dCarterial;
@@ -415,10 +418,10 @@ LiverPharmacoModel5ParamCheby(planar_image_collection<float,double>::images_list
                             model_state.tauV = std::numeric_limits<double>::quiet_NaN();
                             model_state.k2   = std::numeric_limits<double>::quiet_NaN();
 
-                            //Pharmacokinetic_Parameters_5Param_Chebyshev_Optimization after_state = Pharmacokinetic_Model_3Param_Chebyshev_Optimization(model_state);
-                            //Pharmacokinetic_Parameters_5Param_Chebyshev_Optimization after_state = Pharmacokinetic_Model_5Param_Chebyshev_Optimization(model_state);
-                            //Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares after_state = Pharmacokinetic_Model_3Param_Chebyshev_Least_Squares(model_state);
-                            Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares after_state = Pharmacokinetic_Model_5Param_Chebyshev_Least_Squares(model_state);
+                            //KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters after_state = Optimize_3Param(model_state);
+                            //KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters after_state = Optimize_5Param(model_state);
+                            //KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters after_state = Optimize_3Param(model_state);
+                            KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters after_state = Optimize_5Param(model_state);
 
                             if(!after_state.FittingSuccess) ++Minimization_Failure_Count;
 
@@ -445,12 +448,12 @@ LiverPharmacoModel5ParamCheby(planar_image_collection<float,double>::images_list
                                 title = "ROI time course: row = " + std::to_string(row) + ", col = " + std::to_string(col);
                                 time_courses[title] = *(after_state.cROI);
                                 samples_1D<double> fitted_model;
-                                //Pharmacokinetic_Parameters_5Param_Chebyshev_Optimization_Results eval_res;
-                                Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares_Results eval_res;
+                                //KineticModel_1Compartment2Input_5Param_Chebyshev_Results eval_res;
+                                KineticModel_1Compartment2Input_5Param_Chebyshev_Results eval_res;
                                 for(const auto &P : after_state.cROI->samples){
                                     const double t = P[0];
-                                    //chebyshev_5param_model_optimization(after_state,t,eval_res);
-                                    chebyshev_5param_model_least_squares(after_state,t,eval_res);
+                                    //Evaluate_Model(after_state,t,eval_res);
+                                    Evaluate_Model(after_state,t,eval_res);
                                     fitted_model.push_back(t, 0.0, eval_res.I, 0.0);
                                 }
                                 title = "Fitted model";
@@ -512,7 +515,7 @@ LiverPharmacoModel5ParamCheby(planar_image_collection<float,double>::images_list
     model_state.k2   = std::numeric_limits<double>::quiet_NaN();
     model_state.RSS  = std::numeric_limits<double>::quiet_NaN();
 
-    const std::string ModelState = Serialize_Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares_State(model_state);
+    const std::string ModelState = Serialize(model_state);
 
     //Alter the first image's metadata to reflect that averaging has occurred. You might want to consider
     // a selective whitelist approach so that unique IDs are not duplicated accidentally.

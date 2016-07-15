@@ -1,6 +1,6 @@
-//Pharmacokinetic_Modeling_via_Least_Squares.cc.
-// This file holds isolated drivers for fitting pharmacokinetic models. It uses a non-linear least-squares optimizer.
-// Other norms are not supported.
+//KineticModel_1Compartment2Input_5Param_Chebyshev_LevenbergMarquardt.cc.
+// This file holds an isolated driver for fitting a pharmacokinetic model. It uses an algorithm, the
+// Levenberg-Marquardt, that is specific to least-squares and therefore cannot be used for norms other than L2.
 
 #include <list>
 #include <functional>
@@ -13,8 +13,6 @@
 #include <gsl/gsl_blas.h>
 #include <gsl/gsl_multifit_nlin.h>
 
-#include <nlopt.h>
-
 #include <boost/date_time/posix_time/posix_time.hpp>
 
 #include "YgorMisc.h"
@@ -23,12 +21,13 @@
 #include "YgorMathChebyshevFunctions.h"
 #include "YgorStats.h"       //Needed for Stats:: namespace.
 
-#include "Pharmacokinetic_Modeling_via_Least_Squares.h"
+#include "KineticModel_1Compartment2Input_5Param_Chebyshev_Structs.h"
+#include "KineticModel_1Compartment2Input_5Param_Chebyshev_LevenbergMarquardt.h"
 
 void
-chebyshev_5param_model_least_squares( const Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares &state,
+Evaluate_Model( const KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters &state,
                         const double t,
-                        Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares_Results &res){
+                        KineticModel_1Compartment2Input_5Param_Chebyshev_Results &res){
                 
     // Chebyshev polynomial approximation method. 
     // 
@@ -138,7 +137,7 @@ chebyshev_5param_model_least_squares( const Pharmacokinetic_Parameters_5Param_Ch
 
 static
 int
-chebyshev_5param_func_to_min_f( const gsl_vector *params,  //Parameters being fitted.
+MinimizationFunction_f_5Param( const gsl_vector *params,  //Parameters being fitted.
                                 void *voided_state,        //Other information (e.g., constant function parameters).
                                 gsl_vector *f){            //Vector containtin function evaluats at {t_i}.
 
@@ -146,7 +145,7 @@ chebyshev_5param_func_to_min_f( const gsl_vector *params,  //Parameters being fi
     // model at the ROI sample t_i's. However, instead of reporting the summed square-distance, the difference of
     // function values and observations at each t_i are reported (and summed internally within the optimizer).
 
-    auto state = reinterpret_cast<Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares*>(voided_state);
+    auto state = reinterpret_cast<KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters*>(voided_state);
 
     //Pack the current parameters into the state struct.
     state->k1A  = gsl_vector_get(params, 0);
@@ -155,7 +154,7 @@ chebyshev_5param_func_to_min_f( const gsl_vector *params,  //Parameters being fi
     state->tauV = gsl_vector_get(params, 3);
     state->k2   = gsl_vector_get(params, 4);
 
-    Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares_Results model_res;
+    KineticModel_1Compartment2Input_5Param_Chebyshev_Results model_res;
 
     size_t i = 0;
     double I;
@@ -165,7 +164,7 @@ chebyshev_5param_func_to_min_f( const gsl_vector *params,  //Parameters being fi
  
         I = std::numeric_limits<double>::quiet_NaN();
         try{
-            chebyshev_5param_model_least_squares(*state, t, model_res);
+            Evaluate_Model(*state, t, model_res);
             I = model_res.I;
         }catch(std::exception &){ }
         I = std::isfinite(I) ? I : std::numeric_limits<double>::infinity();
@@ -179,7 +178,7 @@ chebyshev_5param_func_to_min_f( const gsl_vector *params,  //Parameters being fi
 
 static
 int
-chebyshev_5param_func_to_min_df( const gsl_vector *params,  //Parameters being fitted.
+MinimizationFunction_df_5Param( const gsl_vector *params,  //Parameters being fitted.
                                  void *voided_state,        //Other information (e.g., constant function parameters).
                                  gsl_matrix * J){           //Jacobian matrix.
 
@@ -187,7 +186,7 @@ chebyshev_5param_func_to_min_df( const gsl_vector *params,  //Parameters being f
     //  J(i,j) = \frac{\partial I(t_i;param_0, param_1, param_2, ...)}{\partial param_j}
     // where param_0 = k1A, param_1 = tauA, ..., param_4 = k2.
 
-    auto state = reinterpret_cast<Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares*>(voided_state);
+    auto state = reinterpret_cast<KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters*>(voided_state);
 
     //Pack the current parameters into the state struct.
     state->k1A  = gsl_vector_get(params, 0);
@@ -196,7 +195,7 @@ chebyshev_5param_func_to_min_df( const gsl_vector *params,  //Parameters being f
     state->tauV = gsl_vector_get(params, 3);
     state->k2   = gsl_vector_get(params, 4);
 
-    Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares_Results model_res;
+    KineticModel_1Compartment2Input_5Param_Chebyshev_Results model_res;
 
     size_t i = 0;
     //double I;
@@ -210,7 +209,7 @@ chebyshev_5param_func_to_min_df( const gsl_vector *params,  //Parameters being f
         gsl_matrix_set(J, i, 4, std::numeric_limits<double>::infinity());
 
         try{
-            chebyshev_5param_model_least_squares(*state, t, model_res);
+            Evaluate_Model(*state, t, model_res);
 
             gsl_matrix_set(J, i, 0, model_res.d_I_d_k1A);
             gsl_matrix_set(J, i, 1, model_res.d_I_d_tauA);
@@ -226,8 +225,8 @@ chebyshev_5param_func_to_min_df( const gsl_vector *params,  //Parameters being f
 }
 
 
-struct Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares
-Pharmacokinetic_Model_5Param_Chebyshev_Least_Squares(Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares state){
+struct KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters
+Optimize_5Param(KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters state){
     //GSL-based fitter. This function performs a few passes to improve the likelihood of finding a solution.
     //
     // Note: Weights are not currently assigned, though they are supported by the available methods in gsl. Instead, 
@@ -277,9 +276,9 @@ Pharmacokinetic_Model_5Param_Chebyshev_Least_Squares(Pharmacokinetic_Parameters_
         //const double ftol_rel = std::numeric_limits<double>::denorm_min(); //CURRENTLY IGNORED BY SOME ROUTINES!
 
         gsl_multifit_function_fdf multifit_f;
-        multifit_f.f = &chebyshev_5param_func_to_min_f;
+        multifit_f.f = &MinimizationFunction_f_5Param;
         //multifit_f.df = nullptr; //If nullptr, use a finite-difference Jacobian derived from multifit_f.f.
-        multifit_f.df = &chebyshev_5param_func_to_min_df;
+        multifit_f.df = &MinimizationFunction_df_5Param;
         multifit_f.n = datum;
         multifit_f.p = dimen;
         multifit_f.params = reinterpret_cast<void*>(&state);
@@ -345,9 +344,9 @@ Pharmacokinetic_Model_5Param_Chebyshev_Least_Squares(Pharmacokinetic_Parameters_
         //const double ftol_rel = std::numeric_limits<double>::denorm_min(); //CURRENTLY IGNORED BY SOME ROUTINES!
 
         gsl_multifit_function_fdf multifit_f;
-        multifit_f.f = &chebyshev_5param_func_to_min_f;
+        multifit_f.f = &MinimizationFunction_f_5Param;
         //multifit_f.df = nullptr; //If nullptr, use a finite-difference Jacobian derived from multifit_f.f.
-        multifit_f.df = &chebyshev_5param_func_to_min_df;
+        multifit_f.df = &MinimizationFunction_df_5Param;
         multifit_f.n = datum;
         multifit_f.p = dimen;
         multifit_f.params = reinterpret_cast<void*>(&state);
@@ -406,6 +405,22 @@ Pharmacokinetic_Model_5Param_Chebyshev_Least_Squares(Pharmacokinetic_Parameters_
 
 
 //---------------------------------------------------------------------------------------------
+
+/*
+static
+int
+MinimizationFunction_f_3Param( const gsl_vector *params,  //Parameters being fitted.
+                                void *voided_state,        //Other information (e.g., constant function parameters).
+                                gsl_vector *f){            //Vector containtin function evaluats at {t_i}.
+
+static
+int
+MinimizationFunction_df_3Param( const gsl_vector *params,  //Parameters being fitted.
+                                 void *voided_state,        //Other information (e.g., constant function parameters).
+                                 gsl_matrix * J){           //Jacobian matrix.
+
+*/
+
 static
 double 
 chebyshev_3param_func_to_min(unsigned, const double *params, double *grad, void *voided_state){
@@ -414,7 +429,7 @@ chebyshev_3param_func_to_min(unsigned, const double *params, double *grad, void 
     return 0.0;
 
 /*
-    auto state = reinterpret_cast<Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares*>(voided_state);
+    auto state = reinterpret_cast<KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters*>(voided_state);
 
     //This function computes the square-distance between the ROI time course and a kinetic liver
     // perfusion model at the ROI sample t_i's. If gradients are requested, they are also computed.
@@ -432,12 +447,12 @@ chebyshev_3param_func_to_min(unsigned, const double *params, double *grad, void 
     state->tauV = 0.0;
     state->k2   = params[2];
 
-    Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares_Results model_res;
+    KineticModel_1Compartment2Input_5Param_Chebyshev_Results model_res;
     for(const auto &P : state->cROI->samples){
         const double t = P[0];
         const double R = P[2];
 
-        chebyshev_5param_model_least_squares(*state, t, model_res);
+        Evaluate_Model(*state, t, model_res);
         const double I = model_res.I;
         
         sqDist += std::pow(R - I, 2.0); //Standard L2-norm.
@@ -454,8 +469,8 @@ chebyshev_3param_func_to_min(unsigned, const double *params, double *grad, void 
 */
 }
 
-struct Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares
-Pharmacokinetic_Model_3Param_Chebyshev_Least_Squares(Pharmacokinetic_Parameters_5Param_Chebyshev_Least_Squares state){
+struct KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters
+Optimize_3Param(KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters state){
 
     FUNCERR("Not yet implemented");
     return std::move(state);

@@ -1,6 +1,7 @@
-//Pharmacokinetic_Modeling_via_Optimization.cc.
-// This file holds isolated drivers for fitting pharmacokinetic models. It uses a generic non-linear optimizer. It can
-// do least-squares, but less efficiently than a dedicated approach. It can also do other norms.
+//KineticModel_1Compartment2Input_5Param_Chebyshev_FreeformOptimization.cc.
+// This file holds an isolated driver for fitting a pharmacokinetic model. It uses generic optimzation so norms other
+// than L2 can be used. Note that if using the L2 norm it seems most useful to use the Levenberg-Marquardt algorithm
+// instead.
 
 #include <list>
 #include <functional>
@@ -17,12 +18,12 @@
 #include "YgorMathChebyshevFunctions.h"
 #include "YgorStats.h"       //Needed for Stats:: namespace.
 
-#include "Pharmacokinetic_Modeling_via_Optimization.h"
+#include "KineticModel_1Compartment2Input_5Param_Chebyshev_FreeformOptimization.h"
 
 void
-chebyshev_5param_model_optimization( const Pharmacokinetic_Parameters_5Param_Chebyshev_Optimization &state,
+Evaluate_Model( const KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters &state,
                         const double t,
-                        Pharmacokinetic_Parameters_5Param_Chebyshev_Optimization_Results &res){
+                        KineticModel_1Compartment2Input_5Param_Chebyshev_Results &res){
                 
     // Chebyshev polynomial approximation method. 
     // 
@@ -130,9 +131,9 @@ chebyshev_5param_model_optimization( const Pharmacokinetic_Parameters_5Param_Che
 //---------------------------------------------------------------------------------------------
 static
 double 
-chebyshev_5param_func_to_min(unsigned, const double *params, double *grad, void *voided_state){
+MinimizationFunction_5Param(unsigned, const double *params, double *grad, void *voided_state){
 
-    auto state = reinterpret_cast<Pharmacokinetic_Parameters_5Param_Chebyshev_Optimization*>(voided_state);
+    auto state = reinterpret_cast<KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters*>(voided_state);
 
     //This function computes the square-distance between the ROI time course and a kinetic liver
     // perfusion model at the ROI sample t_i's. If gradients are requested, they are also computed.
@@ -152,12 +153,12 @@ chebyshev_5param_func_to_min(unsigned, const double *params, double *grad, void 
     state->tauV = params[3];
     state->k2   = params[4];
 
-    Pharmacokinetic_Parameters_5Param_Chebyshev_Optimization_Results model_res;
+    KineticModel_1Compartment2Input_5Param_Chebyshev_Results model_res;
     for(const auto &P : state->cROI->samples){
         const double t = P[0];
         const double R = P[2];
 
-        chebyshev_5param_model_optimization(*state, t, model_res);
+        Evaluate_Model(*state, t, model_res);
         const double I = model_res.I;
         
         sqDist += std::pow(R - I, 2.0); //Standard L2-norm.
@@ -174,8 +175,8 @@ chebyshev_5param_func_to_min(unsigned, const double *params, double *grad, void 
     return sqDist;
 }
 
-struct Pharmacokinetic_Parameters_5Param_Chebyshev_Optimization
-Pharmacokinetic_Model_5Param_Chebyshev_Optimization(Pharmacokinetic_Parameters_5Param_Chebyshev_Optimization state){
+struct KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters
+Optimize_5Param(KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters state){
 
     state.FittingPerformed = false;
     state.FittingSuccess = false;
@@ -232,7 +233,7 @@ Pharmacokinetic_Model_5Param_Chebyshev_Optimization(Pharmacokinetic_Parameters_5
         if(NLOPT_SUCCESS != nlopt_set_initial_step(opt, initstpsz)){
             FUNCERR("NLOpt unable to set initial step sizes");
         }
-        if(NLOPT_SUCCESS != nlopt_set_min_objective(opt, chebyshev_5param_func_to_min, reinterpret_cast<void*>(&state))){
+        if(NLOPT_SUCCESS != nlopt_set_min_objective(opt, MinimizationFunction_5Param, reinterpret_cast<void*>(&state))){
             FUNCERR("NLOpt unable to set objective function for minimization");
         }
         //if(NLOPT_SUCCESS != nlopt_set_xtol_rel(opt, 1.0E-3)){
@@ -307,7 +308,7 @@ Pharmacokinetic_Model_5Param_Chebyshev_Optimization(Pharmacokinetic_Parameters_5
         if(NLOPT_SUCCESS != nlopt_set_initial_step(opt, initstpsz)){
             FUNCERR("NLOpt unable to set initial step sizes");
         }
-        if(NLOPT_SUCCESS != nlopt_set_min_objective(opt, chebyshev_5param_func_to_min, reinterpret_cast<void*>(&state))){
+        if(NLOPT_SUCCESS != nlopt_set_min_objective(opt, MinimizationFunction_5Param, reinterpret_cast<void*>(&state))){
             FUNCERR("NLOpt unable to set objective function for minimization");
         }
         //if(NLOPT_SUCCESS != nlopt_set_xtol_rel(opt, 1.0E-3)){
@@ -374,9 +375,9 @@ Pharmacokinetic_Model_5Param_Chebyshev_Optimization(Pharmacokinetic_Parameters_5
 //---------------------------------------------------------------------------------------------
 static
 double 
-chebyshev_3param_func_to_min(unsigned, const double *params, double *grad, void *voided_state){
+MinimizationFunction_3Param(unsigned, const double *params, double *grad, void *voided_state){
 
-    auto state = reinterpret_cast<Pharmacokinetic_Parameters_5Param_Chebyshev_Optimization*>(voided_state);
+    auto state = reinterpret_cast<KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters*>(voided_state);
 
     //This function computes the square-distance between the ROI time course and a kinetic liver
     // perfusion model at the ROI sample t_i's. If gradients are requested, they are also computed.
@@ -394,12 +395,12 @@ chebyshev_3param_func_to_min(unsigned, const double *params, double *grad, void 
     state->tauV = 0.0;
     state->k2   = params[2];
 
-    Pharmacokinetic_Parameters_5Param_Chebyshev_Optimization_Results model_res;
+    KineticModel_1Compartment2Input_5Param_Chebyshev_Results model_res;
     for(const auto &P : state->cROI->samples){
         const double t = P[0];
         const double R = P[2];
 
-        chebyshev_5param_model_optimization(*state, t, model_res);
+        Evaluate_Model(*state, t, model_res);
         const double I = model_res.I;
         
         sqDist += std::pow(R - I, 2.0); //Standard L2-norm.
@@ -415,8 +416,8 @@ chebyshev_3param_func_to_min(unsigned, const double *params, double *grad, void 
     return sqDist;
 }
 
-struct Pharmacokinetic_Parameters_5Param_Chebyshev_Optimization
-Pharmacokinetic_Model_3Param_Chebyshev_Optimization(Pharmacokinetic_Parameters_5Param_Chebyshev_Optimization state){
+struct KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters
+Optimize_3Param(KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters state){
 
     state.FittingPerformed = false;
     state.FittingSuccess = false;
@@ -470,7 +471,7 @@ Pharmacokinetic_Model_3Param_Chebyshev_Optimization(Pharmacokinetic_Parameters_5
         if(NLOPT_SUCCESS != nlopt_set_initial_step(opt, initstpsz)){
             FUNCERR("NLOpt unable to set initial step sizes");
         }
-        if(NLOPT_SUCCESS != nlopt_set_min_objective(opt, chebyshev_3param_func_to_min, reinterpret_cast<void*>(&state))){
+        if(NLOPT_SUCCESS != nlopt_set_min_objective(opt, MinimizationFunction_3Param, reinterpret_cast<void*>(&state))){
             FUNCERR("NLOpt unable to set objective function for minimization");
         }
         //if(NLOPT_SUCCESS != nlopt_set_xtol_rel(opt, 1.0E-4)){
@@ -546,7 +547,7 @@ Pharmacokinetic_Model_3Param_Chebyshev_Optimization(Pharmacokinetic_Parameters_5
         if(NLOPT_SUCCESS != nlopt_set_initial_step(opt, initstpsz)){
             FUNCERR("NLOpt unable to set initial step sizes");
         }
-        if(NLOPT_SUCCESS != nlopt_set_min_objective(opt, chebyshev_3param_func_to_min, reinterpret_cast<void*>(&state))){
+        if(NLOPT_SUCCESS != nlopt_set_min_objective(opt, MinimizationFunction_3Param, reinterpret_cast<void*>(&state))){
             FUNCERR("NLOpt unable to set objective function for minimization");
         }
         //if(NLOPT_SUCCESS != nlopt_set_xtol_rel(opt, 1.0E-4)){
