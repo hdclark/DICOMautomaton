@@ -708,6 +708,81 @@ Drover CT_Liver_Perfusion_Pharmaco(Drover DICOM_data, OperationArgPkg OptArgs, s
 
     //Use a linear model.
     }else{
+        decltype(ud.time_courses) toplot_time_courses;
+        for(const auto & tc : ud.time_courses) toplot_time_courses["Original " + tc.first] = tc.second;
+
+        //Pre-process the AIF and VIF time courses.
+        KineticModel_Liver_1C2I_5Param_LinearUserData ud_linear; 
+
+        ud_linear.pixels_to_plot = pixels_to_plot;
+        ud_linear.TargetROIs = TargetROINameRegex;
+        ud_linear.ContrastInjectionLeadTime = ContrastInjectionLeadTime;
+        {
+            //Correct any unaccounted-for contrast enhancement shifts. 
+            if(true) for(auto & theROI : ud.time_courses){
+                //Subtract the minimum over the full time course.
+                if(false){
+                    const auto Cmin = theROI.second.Get_Extreme_Datum_y().first;
+                    theROI.second = theROI.second.Sum_With(0.0-Cmin[2]);
+
+                //Subtract the mean from the pre-injection period.
+                }else{
+                    const auto preinject = theROI.second.Select_Those_Within_Inc(-1E99,ContrastInjectionLeadTime);
+                    const auto themean = preinject.Mean_y()[0];
+                    theROI.second = theROI.second.Sum_With(0.0-themean);
+                }
+            }
+        
+            //Insert some virtual points before the first sample (assumed to be at t=0).
+            //
+            // Note: If B-splines are used you need to have good coverage. If linear interpolation is used you only
+            //       need two (one the the far left and one near t=0).
+            const std::vector<double> ExtrapolationDts = { 5.0, 9.0, 12.5, 17.0, 21.3, 25.0 };
+            if(true) for(auto & theROI : ud.time_courses){
+                const auto tmin = theROI.second.Get_Extreme_Datum_x().first[0];
+                for(auto &dt : ExtrapolationDts) theROI.second.push_back( tmin - dt, 0.0, 0.0, 0.0 );
+            }
+        
+            //Perform smoothing on the AIF and VIF to help reduce optimizer bounce.
+            if(false) for(auto & theROI : ud.time_courses){
+                theROI.second = theROI.second.Resample_Equal_Spacing(200);
+                theROI.second = theROI.second.Moving_Median_Filter_Two_Sided_Equal_Weighting(2);
+            }
+       
+            //Extrapolate beyond the data collection limit (to stop the optimizer getting snagged
+            // on any sharp drop-offs when shifting tauA and tauV).
+            if(true) for(auto & theROI : ud.time_courses){
+                const auto washout = theROI.second.Select_Those_Within_Inc(ContrastInjectionWashoutTime,1E99);
+                const auto leastsquares =  washout.Linear_Least_Squares_Regression();
+                const auto tmax = theROI.second.Get_Extreme_Datum_x().second[0];
+                for(auto &dt : ExtrapolationDts){
+                    const auto virtdatum_t = tmax + dt;
+                    const auto virtdatum_f = leastsquares.evaluate_simple(virtdatum_t);
+                    theROI.second.push_back(virtdatum_t, 0.0, virtdatum_f, 0.0 );
+                }
+            }
+
+            //Perform smoothing on the AIF and VIF using NPLLR.
+            if(false) for(auto & theROI : ud.time_courses){
+                bool lOK;
+                toplot_time_courses["NPLLR: " + theROI.first] = NPRLL::Attempt_Auto_Smooth(theROI.second, &lOK);
+                theROI.second = NPRLL::Attempt_Auto_Smooth(theROI.second, &lOK);
+                if(!lOK) throw std::runtime_error("Unable to smooth AIF or VIF.");
+            }
+
+            //Pack the AIF and VIF into the user_data parameter pack.
+            for(auto & theROI : ud.time_courses){
+                ud_linear.time_courses[theROI.first] = theROI.second;
+
+                //Also place them into a plotting buffer.
+                toplot_time_courses[theROI.first] = theROI.second;
+            }
+
+            if(ShouldPlotAIFVIF){
+                PlotTimeCourses("Processed AIF and VIF", toplot_time_courses, {});
+            }
+        }
+
         for(auto & img_arr : C_enhancement_img_arrays){
             DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( *img_arr ) );
             pharmaco_model_dummy.emplace_back( DICOM_data.image_data.back() );
@@ -732,7 +807,7 @@ Drover CT_Liver_Perfusion_Pharmaco(Drover DICOM_data, OperationArgPkg OptArgs, s
                                 std::ref(pharmaco_model_tauV.back()->imagecoll),
                                 std::ref(pharmaco_model_k2.back()->imagecoll) }, 
                               cc_all,
-                              &ud )){
+                              &ud_linear )){
                 FUNCERR("Unable to pharmacokinetically model liver!");
             }else{
                 pharmaco_model_dummy.back()->imagecoll.images.clear();

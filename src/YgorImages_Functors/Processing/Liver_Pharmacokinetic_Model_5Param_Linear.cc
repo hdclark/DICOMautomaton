@@ -1,90 +1,54 @@
+//Liver_Pharmacokinetic_Model_5Param_Linear.cc.
 
 #include <list>
 #include <functional>
 #include <limits>
 #include <map>
+#include <set>
 #include <cmath>
+#include <memory>
+#include <chrono>
 #include <experimental/any>
+#include <mutex>
+#include <tuple>
+#include <regex>
 
-#include <pqxx/pqxx>         //PostgreSQL C++ interface.
-#include <jansson.h>         //For JSON handling.
-
-#include <nlopt.h>
+#include <boost/date_time/posix_time/posix_time.hpp>
 
 #include "YgorMisc.h"
 #include "YgorMath.h"
+#include "YgorMathChebyshev.h"
+#include "YgorMathChebyshevFunctions.h"
+#include "YgorMathPlottingGnuplot.h" //Needed for YgorMathPlottingGnuplot::*.
 #include "YgorImages.h"
 #include "YgorStats.h"       //Needed for Stats:: namespace.
 #include "YgorFilesDirs.h"   //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
 #include "YgorAlgorithms.h"  //Needed for For_Each_In_Parallel<..>(...)
 #include "YgorString.h"      //Needed for GetFirstRegex(...)
-#include "YgorPlot.h"
+
+#include "../../Common_Boost_Serialization.h"
+#include "../../Common_Plotting.h"
 
 #include "../ConvenienceRoutines.h"
 
 #include "Liver_Pharmacokinetic_Model_5Param_Structs.h"
 #include "Liver_Pharmacokinetic_Model_5Param_Linear.h"
 
-#include "../Compute/Per_ROI_Time_Courses.h"
-//struct ComputePerROITimeCoursesUserData;
+#include "../../KineticModel_1Compartment2Input_5Param_LinearInterp_Structs.h"
+#include "../../KineticModel_1Compartment2Input_5Param_LinearInterp_LevenbergMarquardt.h"
 
-
-//This is the function we will minimize: the sum of the squared residuals between the ROI measured
-// concentrations and the total concentration predicted by the fitted model.
-static samples_1D<double> *theAIF;    //Global, but only so we can pass a c-style function to nlopt.
-static samples_1D<double> *theVIF;    //Global, but only so we can pass a c-style function to nlopt.
-static samples_1D<double> *theROI;    //Global, but only so we can pass a c-style function to nlopt.
-
-static
-double 
-func_to_min(unsigned, const double *params, double *grad, void *){
-    if(grad != nullptr) FUNCERR("NLOpt asking for a gradient. We don't have it at the moment...");
-    const double k1A  = params[0];
-    const double tauA = params[1];
-    const double k1V  = params[2];
-    const double tauV = params[3];
-    const double k2   = params[4];
-
-    double sqDist = 0.0;
-    for(const auto &P : theROI->samples){
-        const double t = P[0];
-        const double Fexpdata = P[2];
-        //double Ffitfunc = 0.0;
-
-        //-------------------------------------------------------------------------------------------------------------------------
-        //First, the arterial contribution. This involves an integral over the AIF.
-        // Compute: \int_{tau=0}^{tau=t} k1A * AIF(tau - tauA) * exp((k2)*(tau-t)) dtau 
-        //          = k1A \int_{tau=-tauA}^{tau=(t-tauA)} AIF(tau) * exp((k2)*(tau-(t-tauA))) dtau.
-        // The integration coordinate is transformed to make it suit the integration-over-kernel-... implementation. 
-        //
-        double Integratedk1ACA = k1A*theAIF->Integrate_Over_Kernel_exp(0.0-tauA, t-tauA, {k2,0.0}, {-(t-tauA),0.0})[0];
-        
-        //-------------------------------------------------------------------------------------------------------------------------
-        //The venous contribution is identical, but all the fitting parameters are different and AIF -> VIF.
-        //
-        double Integratedk1VCV = k1V*theVIF->Integrate_Over_Kernel_exp(0.0-tauV, t-tauV, {k2,0.0}, {-(t-tauV),0.0})[0];
-        const double Ffitfunc = Integratedk1ACA + Integratedk1VCV;
- 
-        //Standard L2-norm.
-        sqDist += std::pow(Fexpdata - Ffitfunc, 2.0);
-    }
-    return sqDist;
-}
- 
-
-
+static std::mutex out_img_mutex;
 
 bool 
 KineticModel_Liver_1C2I_5Param_Linear(planar_image_collection<float,double>::images_list_it_t first_img_it,
-                         std::list<planar_image_collection<float,double>::images_list_it_t> selected_img_its,
-                         std::list<std::reference_wrapper<planar_image_collection<float,double>>> out_imgs,
-                         std::list<std::reference_wrapper<contour_collection<double>>> ccsl,
-                         std::experimental::any user_data ){
+                        std::list<planar_image_collection<float,double>::images_list_it_t> selected_img_its,
+                        std::list<std::reference_wrapper<planar_image_collection<float,double>>> out_imgs,
+                        std::list<std::reference_wrapper<contour_collection<double>>> cc_all,
+                        std::experimental::any user_data ){
 
-
-    //This takes aggregate time courses for (1) hepatic portal vein and (2) ascending aorta and attempts to 
-    // fit a pharmacokinetic model to each voxel within the provided gross liver ROI. This entails fitting
-    // a convolution model to the data, and a general optimization procedure is used.
+    //This takes aggregate time courses for (1) venous ("VIF") and (2) arterial ("AIF") contrast enhancement
+    // time courses and attempts to fit a (pharmaco)kinetic model to each voxel within the provided (liver) 
+    // ROI. This entails fitting a model to the data, and requires optimization to solve (e.g., least-squares).
     //
     // The input images must be grouped in the same way that the ROI time courses were computed. This will
     // most likely mean grouping spatially-overlapping images that have identical 'image acquisition time' 
@@ -97,9 +61,9 @@ KineticModel_Liver_1C2I_5Param_Linear(planar_image_collection<float,double>::ima
     }
 
     //Ensure we have the needed time course ROIs.
-    ComputePerROITimeCoursesUserData *user_data_s;
+    KineticModel_Liver_1C2I_5Param_LinearUserData *user_data_s;
     try{
-        user_data_s = std::experimental::any_cast<ComputePerROITimeCoursesUserData *>(user_data);
+        user_data_s = std::experimental::any_cast<KineticModel_Liver_1C2I_5Param_LinearUserData *>(user_data);
     }catch(const std::exception &e){
         FUNCWARN("Unable to cast user_data to appropriate format. Cannot continue with computation");
         return false;
@@ -111,34 +75,72 @@ KineticModel_Liver_1C2I_5Param_Linear(planar_image_collection<float,double>::ima
                                     "(Are they named differently to the hard-coded names?)");
     }
 
-    //Copy the incoming image to all the parameter maps. We will overwrite pixels as necessary.
-    for(auto &out_img_refw : out_imgs){
-        out_img_refw.get().images.emplace_back( *first_img_it );
-        out_img_refw.get().images.back().fill_pixels(std::numeric_limits<double>::quiet_NaN());
+    //Figure out which pixels, if any, need to be plotted after modeling.
+    std::set<std::pair<long int, long int>> PixelsToPlot;
+    {
+        auto inimg_metadata = first_img_it->metadata;
+        for(const auto &critstruct : user_data_s->pixels_to_plot){
+            bool should_add = true;
+            for(const auto &crit : critstruct.metadata_criteria){
+                if((inimg_metadata.count(crit.first) != 1) || !(std::regex_match(inimg_metadata[crit.first], crit.second))){
+                    should_add = false;
+                    break;
+                }
+            }
+            if(should_add) PixelsToPlot.insert({ critstruct.row, critstruct.column });
+        }
     }
 
+
+    //Copy the incoming image to all the parameter maps. We will overwrite pixels as necessary.
+    std::reference_wrapper<planar_image<float,double>> out_img_k1A  = std::ref( *first_img_it ); //Temporary refs.
+    std::reference_wrapper<planar_image<float,double>> out_img_tauA = std::ref( *first_img_it );
+    std::reference_wrapper<planar_image<float,double>> out_img_k1V  = std::ref( *first_img_it );
+    std::reference_wrapper<planar_image<float,double>> out_img_tauV = std::ref( *first_img_it );
+    std::reference_wrapper<planar_image<float,double>> out_img_k2   = std::ref( *first_img_it );
+
+    {
+        std::lock_guard<std::mutex> guard(out_img_mutex);
+
+        std::next(out_imgs.begin(),0)->get().images.emplace_back( *first_img_it );
+        std::next(out_imgs.begin(),1)->get().images.emplace_back( *first_img_it );
+        std::next(out_imgs.begin(),2)->get().images.emplace_back( *first_img_it );
+        std::next(out_imgs.begin(),3)->get().images.emplace_back( *first_img_it );
+        std::next(out_imgs.begin(),4)->get().images.emplace_back( *first_img_it );
+
+        out_img_k1A  = std::ref( std::next(out_imgs.begin(),0)->get().images.back() );
+        out_img_tauA = std::ref( std::next(out_imgs.begin(),1)->get().images.back() );
+        out_img_k1V  = std::ref( std::next(out_imgs.begin(),2)->get().images.back() );
+        out_img_tauV = std::ref( std::next(out_imgs.begin(),3)->get().images.back() );
+        out_img_k2   = std::ref( std::next(out_imgs.begin(),4)->get().images.back() );
+
+        out_img_k1A.get().fill_pixels(std::numeric_limits<double>::quiet_NaN());
+        out_img_tauA.get().fill_pixels(std::numeric_limits<double>::quiet_NaN());
+        out_img_k1V.get().fill_pixels(std::numeric_limits<double>::quiet_NaN());
+        out_img_tauV.get().fill_pixels(std::numeric_limits<double>::quiet_NaN());
+        out_img_k2.get().fill_pixels(std::numeric_limits<double>::quiet_NaN());
+    }
+
+    auto ContrastInjectionLeadTime = user_data_s->ContrastInjectionLeadTime;
+
     //Get convenient handles for the arterial and venous input time courses.
-    //
-    // NOTE: "Because the contrast agent does not enter the RBCs, the time series Caorta(t) and Cportal(t)
-    //       were divided by one minus the hematocrit." (From Van Beers et al. 2000.)
-    auto Carterial = user_data_s->time_courses["AIF"].Multiply_With(1.0/(1.0 - 0.42));
-    auto Cvenous   = user_data_s->time_courses["VIF"].Multiply_With(1.0/(1.0 - 0.42));
+    auto Carterial  = std::make_shared<samples_1D<double>>( user_data_s->time_courses["AIF"] );
 
-    theAIF = &Carterial;
-    theVIF = &Cvenous;
+    auto Cvenous    = std::make_shared<samples_1D<double>>( user_data_s->time_courses["VIF"] );
 
-    //Trim all but the liver contour. 
-    //
-    //   TODO: hoist out of this function, and provide a convenience
-    //         function called something like: Prune_Contours_Other_Than(cc_all, "Liver_Rough");
-    //         You could do regex or whatever is needed.
+    KineticModel_1Compartment2Input_5Param_LinearInterp_Parameters model_state;
+    model_state.cAIF  = Carterial;
+    model_state.cVIF  = Cvenous;;
 
-    ccsl.remove_if([](std::reference_wrapper<contour_collection<double>> cc) -> bool {
-                       const auto ROINameOpt = cc.get().contours.front().GetMetadataValueAs<std::string>("ROIName");
-                       const auto ROIName = ROINameOpt.value();
-                       return (ROIName != "Suspected_Liver_Rough");
-                   });
 
+    //Trim all but the ROIs we are interested in.
+    auto cc_ROIs = cc_all;
+    cc_ROIs.remove_if([=](std::reference_wrapper<contour_collection<double>> cc) -> bool {
+                   const auto ROINameOpt = cc.get().contours.front().GetMetadataValueAs<std::string>("ROIName");
+                   if(!ROINameOpt) return true; //Remove those without a name.
+                   const auto ROIName = ROINameOpt.value();
+                   return !(std::regex_match(ROIName,user_data_s->TargetROIs));
+    });
 
     //This routine performs a number of calculations. It is experimental and excerpts you plan to rely on should be
     // made into their own analysis functors.
@@ -151,24 +153,12 @@ KineticModel_Liver_1C2I_5Param_Linear(planar_image_collection<float,double>::ima
     //
     // NOTE: We only bother to grab individual contours here. You could alter this if you wanted 
     //       each contour_collection's contours to have an identifying colour.
-    //if(ccsl.empty()){
-    if(ccsl.size() != 1){
+    //if(cc_ROIs.empty()){
+    if(cc_ROIs.size() != 1){
         FUNCWARN("Missing needed contour information. Cannot continue with computation");
         return false;
     }
 
-/*
-    //typedef std::list<contour_of_points<double>>::iterator contour_iter;
-    //std::list<contour_iter> rois;
-    decltype(ccsl) rois;
-    for(auto &ccs : ccsl){
-        for(auto it =  ccs.get().contours.begin(); it != ccs.get().contours.end(); ++it){
-            if(it->points.empty()) continue;
-            //if(first_img_it->encompasses_contour_of_points(*it)) rois.push_back(it);
-            if(first_img_it->encompasses_contour_of_points(*it)) rois.push_back(
-        }
-    }
-*/
 
     //Loop over the rois, rows, columns, channels, and finally any selected images (if applicable).
     const auto row_unit   = first_img_it->row_unit;
@@ -185,14 +175,14 @@ KineticModel_Liver_1C2I_5Param_Linear(planar_image_collection<float,double>::ima
     Stats::Running_MinMax<float> minmax_tauV;
     Stats::Running_MinMax<float> minmax_k2;
 
-    //Loop over the ccsl, rois, rows, columns, channels, and finally any selected images (if applicable).
-    //for(const auto &roi : rois){
-    for(auto &ccs : ccsl){
+
+    //Perform a loop with no payload to determine how many optimizations will be needed.
+    //
+    // NOTE: We expect optimization to take far longer than cycling through the contours and images.
+    double Expected_Operation_Count = 0.0;
+    for(auto &ccs : cc_ROIs){
         for(auto roi_it = ccs.get().contours.begin(); roi_it != ccs.get().contours.end(); ++roi_it){
             if(roi_it->points.empty()) continue;
-            //if(first_img_it->encompasses_contour_of_points(*it)) rois.push_back(it);
-
-            //auto roi = *it;
             if(! first_img_it->encompasses_contour_of_points(*roi_it)) continue;
 
             const auto ROIName =  roi_it->GetMetadataValueAs<std::string>("ROIName");
@@ -201,24 +191,6 @@ KineticModel_Liver_1C2I_5Param_Linear(planar_image_collection<float,double>::ima
                 return false;
             }
             
-    /*
-            //Try figure out the contour's name.
-            const auto StudyInstanceUID = roi_it->GetMetadataValueAs<std::string>("StudyInstanceUID");
-            const auto ROIName =  roi_it->GetMetadataValueAs<std::string>("ROIName");
-            const auto FrameofReferenceUID = roi_it->GetMetadataValueAs<std::string>("FrameofReferenceUID");
-            if(!StudyInstanceUID || !ROIName || !FrameofReferenceUID){
-                FUNCWARN("Missing necessary tags for reporting analysis results. Cannot continue");
-                return false;
-            }
-            const analysis_key_t BaseAnalysisKey = { {"StudyInstanceUID", StudyInstanceUID.value()},
-                                                     {"ROIName", ROIName.value()},
-                                                     {"FrameofReferenceUID", FrameofReferenceUID.value()},
-                                                     {"SpatialBoxr", Xtostring(boxr)},
-                                                     {"MinimumDatum", Xtostring(min_datum)} };
-            //const auto ROIName = ReplaceAllInstances(roi_it->metadata["ROIName"], "[_]", " ");
-            //const auto ROIName = roi_it->metadata["ROIName"];
-    */
-    
     /*
             //Construct a bounding box to reduce computational demand of checking every voxel.
             auto BBox = roi_it->Bounding_Box_Along(row_unit, 1.0);
@@ -251,10 +223,95 @@ KineticModel_Liver_1C2I_5Param_Linear(planar_image_collection<float,double>::ima
                                                                                    ProjectedPoint,
                                                                                    AlreadyProjected)){
                         for(auto chan = 0; chan < first_img_it->channels; ++chan){
+   
+                            Expected_Operation_Count += 1.0;
+                        }//Loop over channels.
+    
+                    //If we're in the bounding box but not the ROI, do something.
+                    }else{
+                        //for(auto chan = 0; chan < first_img_it->channels; ++chan){
+                        //    const auto curr_val = working.value(row, col, chan);
+                        //    if(curr_val != 0) FUNCERR("There are overlapping ROI bboxes. This code currently cannot handle this. "
+                        //                              "You will need to run the functor individually on the overlapping ROIs.");
+                        //    working.reference(row, col, chan) = static_cast<float>(10);
+                        //}
+                    } // If is in ROI or ROI bbox.
+                } //Loop over cols
+            } //Loop over rows
+        } //Loop over ROIs.
+    } //Loop over contour_collections.
+
+
+
+    //Loop over the cc_ROIs, rois, rows, columns, channels, and finally any selected images (if applicable).
+    //for(const auto &roi : rois){
+    boost::posix_time::ptime start_t = boost::posix_time::microsec_clock::local_time();
+    double Actual_Operation_Count = 0.0;
+    for(auto &ccs : cc_ROIs){
+        for(auto roi_it = ccs.get().contours.begin(); roi_it != ccs.get().contours.end(); ++roi_it){
+            if(roi_it->points.empty()) continue;
+            //if(first_img_it->encompasses_contour_of_points(*it)) rois.push_back(it);
+
+            //auto roi = *it;
+            if(! first_img_it->encompasses_contour_of_points(*roi_it)) continue;
+
+            const auto ROIName =  roi_it->GetMetadataValueAs<std::string>("ROIName");
+            if(!ROIName){
+                FUNCWARN("Missing necessary tags for reporting analysis results. Cannot continue");
+                return false;
+            }
+ 
+    /*
+            //Construct a bounding box to reduce computational demand of checking every voxel.
+            auto BBox = roi_it->Bounding_Box_Along(row_unit, 1.0);
+            auto BBoxBestFitPlane = BBox.Least_Squares_Best_Fit_Plane(vec3<double>(0.0,0.0,1.0));
+            auto BBoxProjectedContour = BBox.Project_Onto_Plane_Orthogonally(BBoxBestFitPlane);
+            const bool BBoxAlreadyProjected = true;
+    */
+    
+            //Prepare a contour for fast is-point-within-the-polygon checking.
+            auto BestFitPlane = roi_it->Least_Squares_Best_Fit_Plane(ortho_unit);
+            auto ProjectedContour = roi_it->Project_Onto_Plane_Orthogonally(BestFitPlane);
+            const bool AlreadyProjected = true;
+    
+            for(auto row = 0; row < first_img_it->rows; ++row){
+                for(auto col = 0; col < first_img_it->columns; ++col){
+                    //Figure out the spatial location of the present voxel.
+                    const auto point = first_img_it->position(row,col);
+    
+    /*
+                    //Check if within the bounding box. It will generally be cheaper than the full contour (4 points vs. ? points).
+                    auto BBoxProjectedPoint = BBoxBestFitPlane.Project_Onto_Plane_Orthogonally(point);
+                    if(!BBoxProjectedContour.Is_Point_In_Polygon_Projected_Orthogonally(BBoxBestFitPlane,
+                                                                                        BBoxProjectedPoint,
+                                                                                        BBoxAlreadyProjected)) continue;
+    */
+    
+                    //Perform a more detailed check to see if we are in the ROI.
+                    auto ProjectedPoint = BestFitPlane.Project_Onto_Plane_Orthogonally(point);
+                    if(ProjectedContour.Is_Point_In_Polygon_Projected_Orthogonally(BestFitPlane,
+                                                                                   ProjectedPoint,
+                                                                                   AlreadyProjected)){
+                        for(auto chan = 0; chan < first_img_it->channels; ++chan){
+
+                            //Provide a prediction time.
+                            if(Actual_Operation_Count > 0.5){
+                                boost::posix_time::ptime current_t = boost::posix_time::microsec_clock::local_time();
+                                auto elapsed_dt = (current_t - start_t).total_milliseconds();
+                                auto expected_dt_f = static_cast<double>(elapsed_dt) * (Expected_Operation_Count/Actual_Operation_Count);
+                                auto expected_dt = static_cast<long int>(expected_dt_f);
+                                boost::posix_time::ptime predicted_dt( start_t + boost::posix_time::milliseconds(expected_dt) );
+                                FUNCINFO("Progress: " 
+                                    << Actual_Operation_Count << "/" << Expected_Operation_Count << " = " 
+                                    << static_cast<double>(static_cast<size_t>(1000.0*Actual_Operation_Count/Expected_Operation_Count))/10.0 
+                                    << "%. Expected finish time: " << predicted_dt);
+                            }
+                            Actual_Operation_Count += 1.0;
+
                             //Cycle over the grouped images (temporal slices, or whatever the user has decided).
                             // Harvest the time course or any other voxel-specific numbers.
-                            samples_1D<double> channel_time_course;
-                            channel_time_course.uncertainties_known_to_be_independent_and_random = true;
+                            auto channel_time_course = std::make_shared<samples_1D<double>>();
+                            channel_time_course->uncertainties_known_to_be_independent_and_random = true;
                             for(auto & img_it : selected_img_its){
                                 //Collect the datum of voxels and nearby voxels for an average.
                                 std::list<double> in_pixs;
@@ -284,72 +341,82 @@ KineticModel_Liver_1C2I_5Param_Linear(planar_image_collection<float,double>::ima
                                 if(in_pixs.size() < min_datum) continue; //If contours are too narrow so that there is too few datum for meaningful results.
                                 //const auto avg_val_sigma = std::sqrt(Stats::Unbiased_Var_Est(in_pixs))/std::sqrt(1.0*in_pixs.size());
                                 //channel_time_course.push_back(dt.value(), 0.0, avg_val, avg_val_sigma, InhibitSort);
-                                channel_time_course.push_back(dt.value(), 0.0, avg_val, 0.0, InhibitSort);
+                                channel_time_course->push_back(dt.value(), 0.0, avg_val, 0.0, InhibitSort);
                             }
-                            channel_time_course.stable_sort();
-                            if(channel_time_course.empty()) continue;
-   
+                            channel_time_course->stable_sort();
+                            if(channel_time_course->empty()) continue;
+  
+                            //Correct any unaccounted-for contrast enhancement shifts. 
+                            // (If we don't do this, the optimizer goes crazy because the model has to be zero at t=0.)
+                            if(true){
+                                //Subtract the minimum over the full time course.
+                                if(false){
+                                    const auto Cmin = channel_time_course->Get_Extreme_Datum_y().first;
+                                    *channel_time_course = channel_time_course->Sum_With(0.0-Cmin[2]);
+
+                                //Subtract the mean from the pre-injection period.
+                                }else{
+                                    const auto preinject = channel_time_course->Select_Those_Within_Inc(-1E99,ContrastInjectionLeadTime);
+                                    const auto themean = preinject.Mean_y()[0];
+                                    *channel_time_course = channel_time_course->Sum_With(0.0-themean);
+                                }
+                            }
+
+
                             //==============================================================================
                             //Fit the model.
 
-                            //theAIF = &Carterial;
-                            //theVIF = &Cvenous;
-                            theROI = &channel_time_course;
+                            // This routine fits a pharmacokinetic model to the observed liver perfusion data using a 
+                            // direct linear interpolation approach.
 
-                            const int dimen = 5;
-                            //Fitting parameters:      k1A,  tauA,   k1V,  tauV,  k2.
-                            // The following are arbitrarily chosen. They should be seeded from previous computations, or
-                            // at least be nominal values reported within the literature.
-                            double params[dimen] = {  0.05,  10.0,  0.05,  10.0,  0.5 };
+                            model_state.FittingPerformed = false;
+                            model_state.cROI = channel_time_course;
+                            model_state.k1A  = std::numeric_limits<double>::quiet_NaN();
+                            model_state.tauA = std::numeric_limits<double>::quiet_NaN();
+                            model_state.k1V  = std::numeric_limits<double>::quiet_NaN();
+                            model_state.tauV = std::numeric_limits<double>::quiet_NaN();
+                            model_state.k2   = std::numeric_limits<double>::quiet_NaN();
 
-                            // U/L bounds:             k1A,  tauA,  k1V,  tauV,  k2.
-                            //double l_bnds[dimen] = {   0.0, -20.0,  0.0, -20.0,  0.0 };
-                            //double u_bnds[dimen] = {   1.0,   5.0,  1.0,   5.0,  1.0 };
-                    
-                            nlopt_opt opt;
-                            opt = nlopt_create(NLOPT_LN_COBYLA, dimen);
-                            //opt = nlopt_create(NLOPT_LN_BOBYQA, dimen);
-                            //opt = nlopt_create(NLOPT_LN_SBPLX, dimen);
-                    
-                            //opt = nlopt_create(NLOPT_GN_DIRECT, dimen);
-                            //opt = nlopt_create(NLOPT_GN_CRS2_LM, dimen);
-                            //opt = nlopt_create(NLOPT_GN_ESCH, dimen);
-                            //opt = nlopt_create(NLOPT_GN_ISRES, dimen);
-                    
-                            //nlopt_set_lower_bounds(opt, l_bnds);
-                            //nlopt_set_upper_bounds(opt, u_bnds);
-                    
-                            nlopt_set_min_objective(opt, func_to_min, nullptr);
-                            //nlopt_set_xtol_rel(opt, 1.0E-3);
-                            nlopt_set_ftol_rel(opt, 1.0E-7);
-                            nlopt_set_maxtime(opt, 30.0); // In seconds.
-                            nlopt_set_maxeval(opt, 5'000'000); // Maximum number of times to evalute cost function.
+                            //KineticModel_1Compartment2Input_5Param_LinearInterp_Parameters after_state = Optimize_LevenbergMarquardt_3Param(model_state);
+                            KineticModel_1Compartment2Input_5Param_LinearInterp_Parameters after_state = Optimize_LevenbergMarquardt_5Param(model_state);
 
-                            double func_min;
-                            const auto opt_status = nlopt_optimize(opt, params, &func_min);
-                            if(opt_status < 0){
-                                ++Minimization_Failure_Count;
-                                if(opt_status == NLOPT_FAILURE){                FUNCWARN("NLOpt fail: generic failure");
-                                }else if(opt_status == NLOPT_INVALID_ARGS){     FUNCERR("NLOpt fail: invalid arguments");
-                                }else if(opt_status == NLOPT_OUT_OF_MEMORY){    FUNCWARN("NLOpt fail: out of memory");
-                                }else if(opt_status == NLOPT_ROUNDOFF_LIMITED){ FUNCWARN("NLOpt fail: roundoff limited");
-                                }else if(opt_status == NLOPT_FORCED_STOP){      FUNCWARN("NLOpt fail: forced termination");
-                                }else{ FUNCERR("NLOpt fail: unrecognized error"); }
-                                // See http://ab-initio.mit.edu/wiki/index.php/NLopt_Reference for error code info.
-                            }
-                            nlopt_destroy(opt);
+                            if(!after_state.FittingSuccess) ++Minimization_Failure_Count;
 
-                            const double k1A  = params[0];
-                            const double tauA = params[1];
-                            const double k1V  = params[2];
-                            const double tauV = params[3];
-                            const double k2   = params[4];
+                            const double RSS  = after_state.RSS;
+                            const double k1A  = after_state.k1A;
+                            const double tauA = after_state.tauA;
+                            const double k1V  = after_state.k1V;
+                            const double tauV = after_state.tauV;
+                            const double k2   = after_state.k2;
+                            if(true) FUNCINFO("k1A,tauA,k1V,tauV,k2,RSS = " << k1A << ", " << tauA << ", " 
+                                              << k1V << ", " << tauV << ", " << k2 << ", " << RSS);
 
                             const auto LiverPerfusion = (k1A + k1V);
                             const auto MeanTransitTime = 1.0 / k2;
                             const auto ArterialFraction = 100.0 * k1A / LiverPerfusion;
                             const auto DistributionVolume = 100.0 * LiverPerfusion * MeanTransitTime;
 
+                            //==============================================================================
+                            // Plot the fitted model with the ROI time course.
+                            if(PixelsToPlot.count( {row, col}) != 0){ 
+                                std::map<std::string, samples_1D<double>> time_courses;
+                                std::string title;
+                                //Add the ROI.
+                                title = "Linear Interpolation: ROI time course: row = " + std::to_string(row) + ", col = " + std::to_string(col);
+                                time_courses[title] = *(after_state.cROI);
+                                samples_1D<double> fitted_model;
+                                KineticModel_1Compartment2Input_5Param_LinearInterp_Results eval_res;
+                                for(const auto &P : after_state.cROI->samples){
+                                    const double t = P[0];
+                                    Evaluate_Model(after_state,t,eval_res);
+                                    fitted_model.push_back(t, 0.0, eval_res.I, 0.0);
+                                }
+                                title = "Fitted model";
+                                time_courses[title] = fitted_model;
+
+                                PlotTimeCourses("Raw ROI and Fitted Model", time_courses, {});
+                            }
+                            
                             //==============================================================================
  
                             //Update pixel values.
@@ -365,13 +432,13 @@ KineticModel_Liver_1C2I_5Param_Linear(planar_image_collection<float,double>::ima
                             minmax_tauV.Digest(tauV_f);
                             minmax_k2.Digest(k2_f);
 
-                            auto out_img_refw_it = out_imgs.begin();
-                            std::next(out_img_refw_it,0)->get().images.back().reference(row, col, chan) = k1A_f;
-                            std::next(out_img_refw_it,1)->get().images.back().reference(row, col, chan) = tauA_f;
-                            std::next(out_img_refw_it,2)->get().images.back().reference(row, col, chan) = k1V_f;
-                            std::next(out_img_refw_it,3)->get().images.back().reference(row, col, chan) = tauV_f;
-                            std::next(out_img_refw_it,4)->get().images.back().reference(row, col, chan) = k2_f;
-
+                            {
+                                out_img_k1A.get().reference(row, col, chan)  = k1A_f;
+                                out_img_tauA.get().reference(row, col, chan) = tauA_f;
+                                out_img_k1V.get().reference(row, col, chan)  = k1V_f;
+                                out_img_tauV.get().reference(row, col, chan) = tauV_f;
+                                out_img_k2.get().reference(row, col, chan)   = k2_f;
+                            }
                             // ----------------------------------------------------------------------------
     
                         }//Loop over channels.
@@ -390,35 +457,44 @@ KineticModel_Liver_1C2I_5Param_Linear(planar_image_collection<float,double>::ima
         } //Loop over ROIs.
     } //Loop over contour_collections.
 
+    FUNCWARN("Minimization failure count: " << Minimization_Failure_Count);
+
+
+    //Serialize the state so we have enough info to apply the model later. But remove the per-voxel information (which
+    // we can get through the parameter maps).
+    model_state.cROI.reset();
+    model_state.k1A  = std::numeric_limits<double>::quiet_NaN();
+    model_state.tauA = std::numeric_limits<double>::quiet_NaN();
+    model_state.k1V  = std::numeric_limits<double>::quiet_NaN();
+    model_state.tauV = std::numeric_limits<double>::quiet_NaN();
+    model_state.k2   = std::numeric_limits<double>::quiet_NaN();
+    model_state.RSS  = std::numeric_limits<double>::quiet_NaN();
+
+    const std::string ModelState = Serialize(model_state);
+
     //Alter the first image's metadata to reflect that averaging has occurred. You might want to consider
     // a selective whitelist approach so that unique IDs are not duplicated accidentally.
 
-    {
-        auto it = out_imgs.begin();
-        auto out_img_refw = std::ref( it->get().images.back() );
-        UpdateImageDescription( out_img_refw, "Liver Pharmaco: k1A" );
-        UpdateImageWindowCentreWidth( out_img_refw, minmax_k1A );
+    UpdateImageDescription( out_img_k1A, "Liver Model: Linear: k1A" );
+    UpdateImageWindowCentreWidth( out_img_k1A, minmax_k1A );
+    out_img_k1A.get().metadata["ModelState"] = ModelState;
 
-        ++it;
-        out_img_refw = std::ref( it->get().images.back() );
-        UpdateImageDescription( out_img_refw, "Liver Pharmaco: tauA" );
-        UpdateImageWindowCentreWidth( out_img_refw, minmax_tauA );
+    UpdateImageDescription( out_img_tauA, "Liver Model: Linear: tauA" );
+    UpdateImageWindowCentreWidth( out_img_tauA, minmax_tauA );
+    out_img_tauA.get().metadata["ModelState"] = ModelState;
 
-        ++it;
-        out_img_refw = std::ref( it->get().images.back() );
-        UpdateImageDescription( out_img_refw, "Liver Pharmaco: k1V" );
-        UpdateImageWindowCentreWidth( out_img_refw, minmax_k1V );
+    UpdateImageDescription( out_img_k1V, "Liver Model: Linear: k1V" );
+    UpdateImageWindowCentreWidth( out_img_k1V, minmax_k1V );
+    out_img_k1V.get().metadata["ModelState"] = ModelState;
 
-        ++it;
-        out_img_refw = std::ref( it->get().images.back() );
-        UpdateImageDescription( out_img_refw, "Liver Pharmaco: tauV" );
-        UpdateImageWindowCentreWidth( out_img_refw, minmax_tauV );
+    UpdateImageDescription( out_img_tauV, "Liver Model: Linear: tauV" );
+    UpdateImageWindowCentreWidth( out_img_tauV, minmax_tauV );
+    out_img_tauV.get().metadata["ModelState"] = ModelState;
 
-        ++it;
-        out_img_refw = std::ref( it->get().images.back() );
-        UpdateImageDescription( out_img_refw, "Liver Pharmaco: k2" );
-        UpdateImageWindowCentreWidth( out_img_refw, minmax_k2 );
-    }
+    UpdateImageDescription( out_img_k2, "Liver Model: Linear: k2" );
+    UpdateImageWindowCentreWidth( out_img_k2, minmax_k2 );
+    out_img_k2.get().metadata["ModelState"] = ModelState;
+    
 
     return true;
 }

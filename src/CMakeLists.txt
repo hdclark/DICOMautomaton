@@ -223,6 +223,14 @@ target_include_directories(imebrashim SYSTEM PUBLIC
 
 
 # Pharmacokinetic modeling libraries (built separately for easier reuse).
+
+add_library (kineticmodel_1c2i_5param_linearinterp_levenbergmarquardt
+    KineticModel_1Compartment2Input_5Param_LinearInterp_LevenbergMarquardt.cc
+)
+target_include_directories(kineticmodel_1c2i_5param_linearinterp_levenbergmarquardt SYSTEM PUBLIC 
+    ./
+)
+
 add_library (kineticmodel_1c2i_5param_chebyshev_freeformoptimization
     KineticModel_1Compartment2Input_5Param_Chebyshev_FreeformOptimization.cc
 )
@@ -260,6 +268,7 @@ add_executable (dicomautomaton_dispatcher
 )
 target_link_libraries (dicomautomaton_dispatcher
     imebrashim
+    kineticmodel_1c2i_5param_linearinterp_levenbergmarquardt
     kineticmodel_1c2i_5param_chebyshev_freeformoptimization
     kineticmodel_1c2i_5param_chebyshev_levenbergmarquardt
     explicator 
@@ -405,6 +414,7 @@ install(TARGETS
     automaton
     dicomautomaton_dump
     imebrashim
+    kineticmodel_1c2i_5param_linearinterp_levenbergmarquardt
     kineticmodel_1c2i_5param_chebyshev_freeformoptimization
     kineticmodel_1c2i_5param_chebyshev_levenbergmarquardt
   RUNTIME DESTINATION bin

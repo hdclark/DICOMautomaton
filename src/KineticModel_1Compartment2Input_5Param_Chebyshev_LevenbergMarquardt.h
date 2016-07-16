@@ -9,7 +9,6 @@
 #include "YgorMathChebyshev.h"
 
 #include "KineticModel_1Compartment2Input_5Param_Chebyshev_Structs.h"
-#include "KineticModel_1Compartment2Input_5Param_Chebyshev_Structs.h"
 
 
 // This routine can be used to evaluate a model (using the parameters in 'state') at given time.
@@ -25,7 +24,7 @@ Evaluate_Model( const KineticModel_1Compartment2Input_5Param_Chebyshev_Parameter
 // This routine fits all 5 model free parameters (k1A, tauA, k1V, tauV, k2) numerically.
 //
 struct KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters
-Optimize_5Param(KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters state);
+Optimize_LevenbergMarquardt_5Param(KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters state);
 
 
 // This routine fits a pharmacokinetic model to the observed liver perfusion data using a 
@@ -35,6 +34,6 @@ Optimize_5Param(KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters stat
 // parameters (tauA, tauV) are kept at 0.0.
 //
 struct KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters
-Optimize_3Param(KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters state);
+Optimize_LevenbergMarquardt_3Param(KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters state);
 
 

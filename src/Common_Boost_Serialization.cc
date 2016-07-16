@@ -318,7 +318,7 @@ Common_Boost_Serialize_Drover_to_XML(const Drover &in,
 //=====================================================================================================================
 
 std::string 
-Serialize(const KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters &state){
+Serialize(const KineticModel_1Compartment2Input_5Param_LinearInterp_Parameters &state){
     //Will throw if serialization fails.
 
     std::stringstream ss;
@@ -329,28 +329,13 @@ Serialize(const KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters &sta
         ar & boost::serialization::make_nvp("model_state", state);
     }
 
-/*
-    std::stringstream ss;
-
-    boost::iostreams::filtering_ostream ofsb;
-    boost::iostreams::gzip_params gzparams(boost::iostreams::gzip::best_speed);
-    ofsb.imbue(std::locale(std::locale().classic(), new boost::math::nonfinite_num_put<char>));
-    ofsb.push(boost::iostreams::gzip_compressor(gzparams));
-    ofsb.push(ss);
-
-    {
-        boost::archive::text_oarchive ar(ofsb, boost::archive::no_codecvt);
-        ar & boost::serialization::make_nvp("model_state", state);
-    }
-*/
-
     return ss.str();
 }
 
 
 bool
 Deserialize(const std::string &s,
-                                                                            KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters &state){
+            KineticModel_1Compartment2Input_5Param_LinearInterp_Parameters &state){
 
     //Simple text, no compression.
     try{
@@ -364,27 +349,42 @@ Deserialize(const std::string &s,
         return true;
     }catch(const std::exception &){ }
 
-/*
-    //Simple text, gzip compression.
-    try{
-        std::stringstream ss(s);
-
-        boost::iostreams::filtering_istream ifsb;
-        ifsb.imbue(std::locale(std::locale().classic(), new boost::math::nonfinite_num_get<char>));
-        ifsb.push(boost::iostreams::gzip_decompressor());
-        ifsb.push(ss);
-
-        {
-            boost::archive::text_iarchive ar(ifsb, boost::archive::no_codecvt);
-            ar & boost::serialization::make_nvp("model_state", state);
-        }
-        return true;
-
-    }catch(const std::exception &){ }
-*/
-
     return false;
 }                                                                            
 
 
+std::string 
+Serialize(const KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters &state){
+    //Will throw if serialization fails.
+
+    std::stringstream ss;
+    ss.imbue(std::locale(std::locale().classic(), new boost::math::nonfinite_num_put<char>));
+
+    {
+        boost::archive::text_oarchive ar(ss, boost::archive::no_codecvt);
+        ar & boost::serialization::make_nvp("model_state", state);
+    }
+
+    return ss.str();
+}
+
+
+bool
+Deserialize(const std::string &s,
+            KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters &state){
+
+    //Simple text, no compression.
+    try{
+        std::stringstream ss(s);
+        ss.imbue(std::locale(std::locale().classic(), new boost::math::nonfinite_num_get<char>));
+
+        {
+            boost::archive::text_iarchive ar(ss, boost::archive::no_codecvt);
+            ar & boost::serialization::make_nvp("model_state", state);
+        }
+        return true;
+    }catch(const std::exception &){ }
+
+    return false;
+}                                                                            
 

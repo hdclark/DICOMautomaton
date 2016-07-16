@@ -1,3 +1,4 @@
+//Liver_Pharmacokinetic_Model_5Param_Cheby.cc.
 
 #include <list>
 #include <functional>
@@ -11,11 +12,6 @@
 #include <mutex>
 #include <tuple>
 #include <regex>
-
-#include <pqxx/pqxx>         //PostgreSQL C++ interface.
-#include <jansson.h>         //For JSON handling.
-
-#include <nlopt.h>
 
 #include <boost/date_time/posix_time/posix_time.hpp>
 
@@ -42,7 +38,7 @@
 #include "../../KineticModel_1Compartment2Input_5Param_Chebyshev_FreeformOptimization.h"
 #include "../../KineticModel_1Compartment2Input_5Param_Chebyshev_LevenbergMarquardt.h"
 
-std::mutex out_img_mutex;
+static std::mutex out_img_mutex;
 
 bool
 KineticModel_Liver_1C2I_5Param_Cheby(planar_image_collection<float,double>::images_list_it_t first_img_it,
@@ -51,9 +47,9 @@ KineticModel_Liver_1C2I_5Param_Cheby(planar_image_collection<float,double>::imag
                         std::list<std::reference_wrapper<contour_collection<double>>> cc_all,
                         std::experimental::any user_data ){
 
-    //This takes aggregate time courses for (1) hepatic portal vein and (2) ascending aorta and attempts to 
-    // fit a pharmacokinetic model to each voxel within the provided gross liver ROI. This entails fitting
-    // a convolution model to the data, and a general optimization procedure is used.
+    //This takes aggregate time courses for (1) venous ("VIF") and (2) arterial ("AIF") contrast enhancement
+    // time courses and attempts to fit a (pharmaco)kinetic model to each voxel within the provided (liver) 
+    // ROI. This entails fitting a model to the data, and requires optimization to solve (e.g., least-squares).
     //
     // The input images must be grouped in the same way that the ROI time courses were computed. This will
     // most likely mean grouping spatially-overlapping images that have identical 'image acquisition time' 
@@ -132,12 +128,10 @@ KineticModel_Liver_1C2I_5Param_Cheby(planar_image_collection<float,double>::imag
     auto Carterial  = std::make_shared<cheby_approx<double>>( user_data_s->time_courses["AIF"] );
     auto dCarterial = std::make_shared<cheby_approx<double>>( user_data_s->time_course_derivatives["AIF"] );
 
-    auto Cvenous  = std::make_shared<cheby_approx<double>>( user_data_s->time_courses["VIF"] );
-    auto dCvenous = std::make_shared<cheby_approx<double>>( user_data_s->time_course_derivatives["VIF"] );
+    auto Cvenous    = std::make_shared<cheby_approx<double>>( user_data_s->time_courses["VIF"] );
+    auto dCvenous   = std::make_shared<cheby_approx<double>>( user_data_s->time_course_derivatives["VIF"] );
 
-    //KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters model_state;
     KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters model_state;
-
     model_state.cAIF  = Carterial;
     model_state.dcAIF = dCarterial;
     model_state.cVIF  = Cvenous;;
@@ -170,18 +164,6 @@ KineticModel_Liver_1C2I_5Param_Cheby(planar_image_collection<float,double>::imag
         return false;
     }
 
-/*
-    //typedef std::list<contour_of_points<double>>::iterator contour_iter;
-    //std::list<contour_iter> rois;
-    decltype(cc_ROIs) rois;
-    for(auto &ccs : cc_ROIs){
-        for(auto it =  ccs.get().contours.begin(); it != ccs.get().contours.end(); ++it){
-            if(it->points.empty()) continue;
-            //if(first_img_it->encompasses_contour_of_points(*it)) rois.push_back(it);
-            if(first_img_it->encompasses_contour_of_points(*it)) rois.push_back(
-        }
-    }
-*/
 
     //Loop over the rois, rows, columns, channels, and finally any selected images (if applicable).
     const auto row_unit   = first_img_it->row_unit;
@@ -283,25 +265,7 @@ KineticModel_Liver_1C2I_5Param_Cheby(planar_image_collection<float,double>::imag
                 FUNCWARN("Missing necessary tags for reporting analysis results. Cannot continue");
                 return false;
             }
-            
-    /*
-            //Try figure out the contour's name.
-            const auto StudyInstanceUID = roi_it->GetMetadataValueAs<std::string>("StudyInstanceUID");
-            const auto ROIName =  roi_it->GetMetadataValueAs<std::string>("ROIName");
-            const auto FrameofReferenceUID = roi_it->GetMetadataValueAs<std::string>("FrameofReferenceUID");
-            if(!StudyInstanceUID || !ROIName || !FrameofReferenceUID){
-                FUNCWARN("Missing necessary tags for reporting analysis results. Cannot continue");
-                return false;
-            }
-            const analysis_key_t BaseAnalysisKey = { {"StudyInstanceUID", StudyInstanceUID.value()},
-                                                     {"ROIName", ROIName.value()},
-                                                     {"FrameofReferenceUID", FrameofReferenceUID.value()},
-                                                     {"SpatialBoxr", Xtostring(boxr)},
-                                                     {"MinimumDatum", Xtostring(min_datum)} };
-            //const auto ROIName = ReplaceAllInstances(roi_it->metadata["ROIName"], "[_]", " ");
-            //const auto ROIName = roi_it->metadata["ROIName"];
-    */
-    
+ 
     /*
             //Construct a bounding box to reduce computational demand of checking every voxel.
             auto BBox = roi_it->Bounding_Box_Along(row_unit, 1.0);
@@ -388,7 +352,7 @@ KineticModel_Liver_1C2I_5Param_Cheby(planar_image_collection<float,double>::imag
                             if(channel_time_course->empty()) continue;
   
                             //Correct any unaccounted-for contrast enhancement shifts. 
-                            // (If we don't do this, the optimizer goes crazy!)
+                            // (If we don't do this, the optimizer goes crazy because the model has to be zero at t=0.)
                             if(true){
                                 //Subtract the minimum over the full time course.
                                 if(false){
@@ -418,10 +382,10 @@ KineticModel_Liver_1C2I_5Param_Cheby(planar_image_collection<float,double>::imag
                             model_state.tauV = std::numeric_limits<double>::quiet_NaN();
                             model_state.k2   = std::numeric_limits<double>::quiet_NaN();
 
-                            //KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters after_state = Optimize_3Param(model_state);
-                            //KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters after_state = Optimize_5Param(model_state);
-                            //KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters after_state = Optimize_3Param(model_state);
-                            KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters after_state = Optimize_5Param(model_state);
+                            //KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters after_state = Optimize_FreeformOptimization_3Param(model_state);
+                            //KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters after_state = Optimize_FreeformOptimization_5Param(model_state);
+                            //KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters after_state = Optimize_LevenbergMarquardt_3Param(model_state);
+                            KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters after_state = Optimize_LevenbergMarquardt_5Param(model_state);
 
                             if(!after_state.FittingSuccess) ++Minimization_Failure_Count;
 
@@ -445,14 +409,12 @@ KineticModel_Liver_1C2I_5Param_Cheby(planar_image_collection<float,double>::imag
                                 std::map<std::string, samples_1D<double>> time_courses;
                                 std::string title;
                                 //Add the ROI.
-                                title = "ROI time course: row = " + std::to_string(row) + ", col = " + std::to_string(col);
+                                title = "Chebyshev Approximation: ROI time course: row = " + std::to_string(row) + ", col = " + std::to_string(col);
                                 time_courses[title] = *(after_state.cROI);
                                 samples_1D<double> fitted_model;
-                                //KineticModel_1Compartment2Input_5Param_Chebyshev_Results eval_res;
                                 KineticModel_1Compartment2Input_5Param_Chebyshev_Results eval_res;
                                 for(const auto &P : after_state.cROI->samples){
                                     const double t = P[0];
-                                    //Evaluate_Model(after_state,t,eval_res);
                                     Evaluate_Model(after_state,t,eval_res);
                                     fitted_model.push_back(t, 0.0, eval_res.I, 0.0);
                                 }
@@ -520,23 +482,23 @@ KineticModel_Liver_1C2I_5Param_Cheby(planar_image_collection<float,double>::imag
     //Alter the first image's metadata to reflect that averaging has occurred. You might want to consider
     // a selective whitelist approach so that unique IDs are not duplicated accidentally.
 
-    UpdateImageDescription( out_img_k1A, "Liver Pharmaco: k1A" );
+    UpdateImageDescription( out_img_k1A, "Liver Model: Cheby: k1A" );
     UpdateImageWindowCentreWidth( out_img_k1A, minmax_k1A );
     out_img_k1A.get().metadata["ModelState"] = ModelState;
 
-    UpdateImageDescription( out_img_tauA, "Liver Pharmaco: tauA" );
+    UpdateImageDescription( out_img_tauA, "Liver Model: Cheby: tauA" );
     UpdateImageWindowCentreWidth( out_img_tauA, minmax_tauA );
     out_img_tauA.get().metadata["ModelState"] = ModelState;
 
-    UpdateImageDescription( out_img_k1V, "Liver Pharmaco: k1V" );
+    UpdateImageDescription( out_img_k1V, "Liver Model: Cheby: k1V" );
     UpdateImageWindowCentreWidth( out_img_k1V, minmax_k1V );
     out_img_k1V.get().metadata["ModelState"] = ModelState;
 
-    UpdateImageDescription( out_img_tauV, "Liver Pharmaco: tauV" );
+    UpdateImageDescription( out_img_tauV, "Liver Model: Cheby: tauV" );
     UpdateImageWindowCentreWidth( out_img_tauV, minmax_tauV );
     out_img_tauV.get().metadata["ModelState"] = ModelState;
 
-    UpdateImageDescription( out_img_k2, "Liver Pharmaco: k2" );
+    UpdateImageDescription( out_img_k2, "Liver Model: Cheby: k2" );
     UpdateImageWindowCentreWidth( out_img_k2, minmax_k2 );
     out_img_k2.get().metadata["ModelState"] = ModelState;
     

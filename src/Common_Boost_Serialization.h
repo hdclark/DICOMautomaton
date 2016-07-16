@@ -7,9 +7,11 @@
 
 #include "Structs.h"
 
+#include "KineticModel_1Compartment2Input_5Param_LinearInterp_Structs.h"
 #include "KineticModel_1Compartment2Input_5Param_Chebyshev_Structs.h"
 
 
+// --- Default Serialization routines.
 bool
 Common_Boost_Serialize_Drover(const Drover &in, boost::filesystem::path Filename);
 
@@ -38,6 +40,16 @@ Common_Boost_Serialize_Drover_to_XML(const Drover &in, boost::filesystem::path F
 
 
 // --- Pharmacokinetic model state ---
+
+// Single-compartment, dual-input, 5-parameter model with direct linear interpolation approach.
+std::string 
+Serialize(const KineticModel_1Compartment2Input_5Param_LinearInterp_Parameters &state);
+
+bool 
+Deserialize(const std::string &s, KineticModel_1Compartment2Input_5Param_LinearInterp_Parameters &state);
+
+
+// Single-compartment, dual-input, 5-parameter model with Chebyshev polynomial approach.
 std::string 
 Serialize(const KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters &state);
 

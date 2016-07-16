@@ -99,6 +99,9 @@
 #include "../KineticModel_1Compartment2Input_5Param_Chebyshev_FreeformOptimization.h"
 #include "../KineticModel_1Compartment2Input_5Param_Chebyshev_LevenbergMarquardt.h"
 
+#include "../KineticModel_1Compartment2Input_5Param_LinearInterp_Structs.h"
+#include "../KineticModel_1Compartment2Input_5Param_LinearInterp_LevenbergMarquardt.h"
+
 #include "SFML_Viewer.h"
 
 
@@ -795,11 +798,17 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
                     std::regex tauV_regex(".*tauV.*", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
                     std::regex   k2_regex(".*k2.*",   std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
 
-                    try{
-                        //Struct for holding the modeling parameters we find.
-                        //KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters model_params;
-                        KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters model_params;
+                    enum {
+                        Have_No_Model,
+                        Have_1Compartment2Input_5Param_LinearInterp_Model,
+                        Have_1Compartment2Input_5Param_Chebyshev_Model
+                    } HaveModel;
+                    HaveModel = Have_No_Model;
 
+                    KineticModel_1Compartment2Input_5Param_LinearInterp_Parameters model_params_linear;
+                    KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters model_params_cheby;
+
+                    try{
                         //First pass: look for serialized model_params. Deserialize.
                         //
                         // Note: we have to do this first, before loading voxel-specific data (e.g., k1A) because the
@@ -812,17 +821,21 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
 
                             for(const auto &enc_img_it : encompassing_images){
                                 if(auto m_str = enc_img_it->GetMetadataValueAs<std::string>("ModelState")){
-                                    if(!got_model_params 
-                                    &&
-                                    Deserialize(m_str.value(),model_params)){
-                                        got_model_params = true;
+                                    if(HaveModel == Have_No_Model){
+                                        if(Deserialize(m_str.value(),model_params_linear)){
+                                            HaveModel = Have_1Compartment2Input_5Param_LinearInterp_Model;
+                                        }else if(Deserialize(m_str.value(),model_params_cheby)){
+                                            HaveModel = Have_1Compartment2Input_5Param_Chebyshev_Model;
+                                        }else{
+                                            throw std::runtime_error("Unable to deserialize model parameters.");
+                                        }
                                         break;
                                     }
                                 }
                             }
                         }
-                        if(!got_model_params){
-                            throw std::runtime_error("Unable to find model parameters. Unable to reconstruct model");
+                        if(HaveModel == Have_No_Model){
+                            throw std::logic_error("We should have a valid model here, but do not.");
                         }
 
                         //Second pass: locate individual-voxel-specific data needed to evaluate the model.
@@ -854,15 +867,20 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
 
                                         if(false){
                                         }else if(std::regex_match(desc.value(), k1A_regex)){
-                                            model_params.k1A = pix_val;
+                                            model_params_linear.k1A = pix_val;
+                                            model_params_cheby.k1A  = pix_val;
                                         }else if(std::regex_match(desc.value(), tauA_regex)){
-                                            model_params.tauA = pix_val;
+                                            model_params_linear.tauA = pix_val;
+                                            model_params_cheby.tauA  = pix_val;
                                         }else if(std::regex_match(desc.value(), k1V_regex)){
-                                            model_params.k1V = pix_val;
+                                            model_params_linear.k1V = pix_val;
+                                            model_params_cheby.k1V  = pix_val;
                                         }else if(std::regex_match(desc.value(), tauV_regex)){
-                                            model_params.tauV = pix_val;
+                                            model_params_linear.tauV = pix_val;
+                                            model_params_cheby.tauV  = pix_val;
                                         }else if(std::regex_match(desc.value(), k2_regex)){
-                                            model_params.k2 = pix_val;
+                                            model_params_linear.k2 = pix_val;
+                                            model_params_cheby.k2  = pix_val;
 
                                         //Otherwise, if there is a timestamp then assume it is a time course we should show.
                                         }else{
@@ -893,16 +911,26 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
                             const double dt = (tmax - tmin) / static_cast<double>(samples);
 
                             samples_1D<double> fitted_model;
-                            //KineticModel_1Compartment2Input_5Param_Chebyshev_Results eval_res;
-                            KineticModel_1Compartment2Input_5Param_Chebyshev_Results eval_res;
                             for(long int i = 0; i < samples; ++i){
                                 const double t = tmin + dt * i;
-
-                                //Evaluate_Model(model_params,t,eval_res);
-                                Evaluate_Model(model_params,t,eval_res);
-                                fitted_model.push_back(t, 0.0, eval_res.I, 0.0);
+                                if(HaveModel == Have_1Compartment2Input_5Param_LinearInterp_Model){
+                                    KineticModel_1Compartment2Input_5Param_LinearInterp_Results eval_res;
+                                    Evaluate_Model(model_params_linear,t,eval_res);
+                                    fitted_model.push_back(t, 0.0, eval_res.I, 0.0);
+                                }else if(HaveModel == Have_1Compartment2Input_5Param_Chebyshev_Model){
+                                    KineticModel_1Compartment2Input_5Param_Chebyshev_Results eval_res;
+                                    Evaluate_Model(model_params_cheby,t,eval_res);
+                                    fitted_model.push_back(t, 0.0, eval_res.I, 0.0);
+                                }
                             }
-                            time_courses["Fitted model"] = fitted_model;
+
+                            std::string model_title = "Fitted model"_s;
+                            if(HaveModel == Have_1Compartment2Input_5Param_LinearInterp_Model){
+                                model_title += "(1C2I, 5Param, LinearInterp)";
+                            }else if(HaveModel == Have_1Compartment2Input_5Param_Chebyshev_Model){
+                                model_title += "(1C2I, 5Param, Chebyshev)";
+                            }
+                            time_courses[model_title] = fitted_model;
                         }
 
                         const std::string Title = "Time course: row = " + std::to_string(row_as_u) + ", col = " + std::to_string(col_as_u);

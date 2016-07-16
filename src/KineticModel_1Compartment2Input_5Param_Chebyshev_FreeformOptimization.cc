@@ -176,7 +176,7 @@ MinimizationFunction_5Param(unsigned, const double *params, double *grad, void *
 }
 
 struct KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters
-Optimize_5Param(KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters state){
+Optimize_FreeformOptimization_5Param(KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters state){
 
     state.FittingPerformed = false;
     state.FittingSuccess = false;
@@ -417,7 +417,7 @@ MinimizationFunction_3Param(unsigned, const double *params, double *grad, void *
 }
 
 struct KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters
-Optimize_3Param(KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters state){
+Optimize_FreeformOptimization_3Param(KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters state){
 
     state.FittingPerformed = false;
     state.FittingSuccess = false;

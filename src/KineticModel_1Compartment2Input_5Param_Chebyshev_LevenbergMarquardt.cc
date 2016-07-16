@@ -226,7 +226,7 @@ MinimizationFunction_df_5Param( const gsl_vector *params,  //Parameters being fi
 
 
 struct KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters
-Optimize_5Param(KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters state){
+Optimize_LevenbergMarquardt_5Param(KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters state){
     //GSL-based fitter. This function performs a few passes to improve the likelihood of finding a solution.
     //
     // Note: Weights are not currently assigned, though they are supported by the available methods in gsl. Instead, 
@@ -470,7 +470,7 @@ chebyshev_3param_func_to_min(unsigned, const double *params, double *grad, void 
 }
 
 struct KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters
-Optimize_3Param(KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters state){
+Optimize_LevenbergMarquardt_3Param(KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters state){
 
     FUNCERR("Not yet implemented");
     return std::move(state);
