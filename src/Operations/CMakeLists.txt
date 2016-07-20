@@ -15,6 +15,7 @@ add_library(Operations_objs OBJECT
     DumpAnEncompassedPoint.cc
     DumpFilesPartitionedByTime.cc
     DumpImageMetadataOccurrencesToFile.cc
+    DumpPerROIParams_KineticModel_1Compartment2Input_5Param.cc
     DumpPixelValuesOverTimeForAnEncompassedPoint.cc
     DumpROIData.cc
     DumpROIDoseInfo.cc
