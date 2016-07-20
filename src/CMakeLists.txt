@@ -225,6 +225,7 @@ target_include_directories(imebrashim SYSTEM PUBLIC
 # Pharmacokinetic modeling libraries (built separately for easier reuse).
 
 add_library (kineticmodel_1c2i_5param_linearinterp_levenbergmarquardt
+    KineticModel_1Compartment2Input_5Param_LinearInterp_Common.cc
     KineticModel_1Compartment2Input_5Param_LinearInterp_LevenbergMarquardt.cc
 )
 target_include_directories(kineticmodel_1c2i_5param_linearinterp_levenbergmarquardt SYSTEM PUBLIC 
@@ -232,6 +233,7 @@ target_include_directories(kineticmodel_1c2i_5param_linearinterp_levenbergmarqua
 )
 
 add_library (kineticmodel_1c2i_5param_chebyshev_freeformoptimization
+    KineticModel_1Compartment2Input_5Param_Chebyshev_Common.cc
     KineticModel_1Compartment2Input_5Param_Chebyshev_FreeformOptimization.cc
 )
 target_include_directories(kineticmodel_1c2i_5param_chebyshev_freeformoptimization SYSTEM PUBLIC 
@@ -239,6 +241,7 @@ target_include_directories(kineticmodel_1c2i_5param_chebyshev_freeformoptimizati
 )
 
 add_library (kineticmodel_1c2i_5param_chebyshev_levenbergmarquardt
+    KineticModel_1Compartment2Input_5Param_Chebyshev_Common.cc
     KineticModel_1Compartment2Input_5Param_Chebyshev_LevenbergMarquardt.cc
 )
 target_include_directories(kineticmodel_1c2i_5param_chebyshev_levenbergmarquardt SYSTEM PUBLIC 

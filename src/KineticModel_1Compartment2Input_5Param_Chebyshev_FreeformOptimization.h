@@ -8,7 +8,7 @@
 #include "YgorMath.h"
 #include "YgorMathChebyshev.h"
 
-#include "KineticModel_1Compartment2Input_5Param_Chebyshev_Structs.h"
+#include "KineticModel_1Compartment2Input_5Param_Chebyshev_Common.h"
 
 
 // This routine can be used to evaluate a model (using the parameters in 'state') at given time.

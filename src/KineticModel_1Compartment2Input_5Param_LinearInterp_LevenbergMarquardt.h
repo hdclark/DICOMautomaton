@@ -7,7 +7,7 @@
 
 #include "YgorMath.h"
 
-#include "KineticModel_1Compartment2Input_5Param_LinearInterp_Structs.h"
+#include "KineticModel_1Compartment2Input_5Param_LinearInterp_Common.h"
 
 
 // This routine can be used to evaluate a model (using the parameters in 'state') at given time.

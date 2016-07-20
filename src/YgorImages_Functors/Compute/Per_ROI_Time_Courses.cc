@@ -27,7 +27,7 @@
 
 
 bool ComputePerROICourses(planar_image_collection<float,double> &imagecoll,
-                          std::list<std::reference_wrapper<planar_image_collection<float,double>>> external_imgs,
+                          std::list<std::reference_wrapper<planar_image_collection<float,double>>>,
                           std::list<std::reference_wrapper<contour_collection<double>>> ccsl,
                           std::experimental::any user_data ){
 

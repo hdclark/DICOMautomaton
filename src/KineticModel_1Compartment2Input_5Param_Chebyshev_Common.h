@@ -1,4 +1,4 @@
-//KineticModel_1Compartment2Input_5Param_Chebyshev_Structs.h.
+//KineticModel_1Compartment2Input_5Param_Chebyshev_Common.h.
 
 #pragma once
 
@@ -117,3 +117,9 @@ struct KineticModel_1Compartment2Input_5Param_Chebyshev_Results {
 }; 
 
 
+//Means for evaluating the model at a given time with the supplied parameters.
+void
+Evaluate_Model( const KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters &state,
+                const double t,
+                KineticModel_1Compartment2Input_5Param_Chebyshev_Results &res);
+ 

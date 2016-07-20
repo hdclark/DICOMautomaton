@@ -7,8 +7,8 @@
 
 #include "Structs.h"
 
-#include "KineticModel_1Compartment2Input_5Param_LinearInterp_Structs.h"
-#include "KineticModel_1Compartment2Input_5Param_Chebyshev_Structs.h"
+#include "KineticModel_1Compartment2Input_5Param_LinearInterp_Common.h"
+#include "KineticModel_1Compartment2Input_5Param_Chebyshev_Common.h"
 
 
 // --- Default Serialization routines.

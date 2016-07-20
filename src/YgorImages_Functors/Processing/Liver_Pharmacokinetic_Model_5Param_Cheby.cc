@@ -34,7 +34,7 @@
 #include "Liver_Pharmacokinetic_Model_5Param_Structs.h"
 #include "Liver_Pharmacokinetic_Model_5Param_Cheby.h"
 
-#include "../../KineticModel_1Compartment2Input_5Param_Chebyshev_Structs.h"
+#include "../../KineticModel_1Compartment2Input_5Param_Chebyshev_Common.h"
 #include "../../KineticModel_1Compartment2Input_5Param_Chebyshev_FreeformOptimization.h"
 #include "../../KineticModel_1Compartment2Input_5Param_Chebyshev_LevenbergMarquardt.h"
 

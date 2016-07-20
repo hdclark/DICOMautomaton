@@ -35,7 +35,7 @@
 #include "StructsIOBoostSerialization.h"
 
 //#include "YgorMathChebyshevIOBoostSerialization.h"
-#include "KineticModel_1Compartment2Input_5Param_Chebyshev_Structs.h"
+#include "KineticModel_1Compartment2Input_5Param_Chebyshev_Common.h"
 
 #include "Common_Boost_Serialization.h"
 

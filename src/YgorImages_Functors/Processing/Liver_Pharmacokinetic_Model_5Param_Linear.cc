@@ -34,7 +34,7 @@
 #include "Liver_Pharmacokinetic_Model_5Param_Structs.h"
 #include "Liver_Pharmacokinetic_Model_5Param_Linear.h"
 
-#include "../../KineticModel_1Compartment2Input_5Param_LinearInterp_Structs.h"
+#include "../../KineticModel_1Compartment2Input_5Param_LinearInterp_Common.h"
 #include "../../KineticModel_1Compartment2Input_5Param_LinearInterp_LevenbergMarquardt.h"
 
 static std::mutex out_img_mutex;

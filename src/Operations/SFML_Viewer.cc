@@ -95,11 +95,11 @@
 #include "../YgorImages_Functors/Compute/Per_ROI_Time_Courses.h"
 #include "../YgorImages_Functors/Compute/Contour_Similarity.h"
 
-#include "../KineticModel_1Compartment2Input_5Param_Chebyshev_Structs.h"
+#include "../KineticModel_1Compartment2Input_5Param_Chebyshev_Common.h"
 #include "../KineticModel_1Compartment2Input_5Param_Chebyshev_FreeformOptimization.h"
 #include "../KineticModel_1Compartment2Input_5Param_Chebyshev_LevenbergMarquardt.h"
 
-#include "../KineticModel_1Compartment2Input_5Param_LinearInterp_Structs.h"
+#include "../KineticModel_1Compartment2Input_5Param_LinearInterp_Common.h"
 #include "../KineticModel_1Compartment2Input_5Param_LinearInterp_LevenbergMarquardt.h"
 
 #include "SFML_Viewer.h"
@@ -815,7 +815,6 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
                         // model_state is stripped of individual-voxel-specific data. Deserialization will overwrite 
                         // individual-voxel-specific data with NaNs.
                         //
-                        bool got_model_params = false;
                         for(auto l_img_array_ptr_it = img_array_ptr_beg; l_img_array_ptr_it != img_array_ptr_end; ++l_img_array_ptr_it){
                             auto encompassing_images = (*l_img_array_ptr_it)->imagecoll.get_images_which_encompass_all_points(points);
 
