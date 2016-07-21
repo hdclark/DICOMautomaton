@@ -226,6 +226,21 @@ DumpPerROIParams_KineticModel_1Compartment2Input_5Param(Drover DICOM_data,
       ||  (imgcoll_k2 == nullptr) 
       ||  (imgcoll_ROI == nullptr) ) throw std::runtime_error("Required image sets not located");
 
+    //Assume that once we find the serialized model state (AIF and VIF) that we can assume the rest of the images will
+    // have the same state. This SHOULD be the case for all sane situations, but there might be special cases where the
+    // assumption fails.
+    //
+    // If we do make the assumption, it saves having to continually deserialize over and over. This will save a LOT of
+    // time.
+    enum {
+        Have_No_Model,
+        Have_1Compartment2Input_5Param_LinearInterp_Model,
+        Have_1Compartment2Input_5Param_Chebyshev_Model
+    } HaveModel;
+    HaveModel = Have_No_Model;
+
+    KineticModel_1Compartment2Input_5Param_LinearInterp_Parameters model_params_linear;
+    KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters model_params_cheby;
 
     //Now we iterate over one image set (whichever is arbitrary, but it helps if there is no temporal axis).
     // The procedure is a bit convoluted: we need to 'bootstrap' some knowledge about the voxel topology, so we choose
@@ -298,6 +313,35 @@ DumpPerROIParams_KineticModel_1Compartment2Input_5Param(Drover DICOM_data,
         const auto col_unit   = img.col_unit;
         const auto ortho_unit = row_unit.Cross( col_unit ).unit();
     
+        //Look for serialized model_params. Deserialize them. We basically are finding AIF and VIF only here.
+        //
+        // Note: we have to do this first, before loading voxel-specific data (e.g., k1A) because the
+        // model_state is stripped of individual-voxel-specific data. Deserialization will overwrite 
+        // individual-voxel-specific data with NaNs.
+        //
+        if(HaveModel == Have_No_Model){
+            for(auto & selected_imgs : { selected_k1A_imgs,  selected_tauA_imgs, 
+                                         selected_k1V_imgs,  selected_tauV_imgs, 
+                                         selected_k2_imgs,   selected_ROI_imgs } )
+            for(auto & img_it : selected_imgs){
+                if(auto m_str = img_it->GetMetadataValueAs<std::string>("ModelState")){
+                    if(HaveModel == Have_No_Model){
+                        if(Deserialize(m_str.value(),model_params_cheby)){
+                            HaveModel = Have_1Compartment2Input_5Param_Chebyshev_Model;
+                        }else if(Deserialize(m_str.value(),model_params_linear)){
+                            HaveModel = Have_1Compartment2Input_5Param_LinearInterp_Model;
+                        }else{
+                            throw std::runtime_error("Unable to deserialize model parameters. Is the record damaged?");
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+        if(HaveModel == Have_No_Model){
+            throw std::logic_error("We should have a valid model here, but do not.");
+        }
+                        
         //Loop over the ccsl, rois, rows, columns, channels, and finally any selected images (if applicable).
         //for(const auto &roi : rois){
         for(auto &ccs : cc_ROIs){
@@ -342,45 +386,23 @@ DumpPerROIParams_KineticModel_1Compartment2Input_5Param(Drover DICOM_data,
                                                                                        ProjectedPoint,
                                                                                        AlreadyProjected)){
                             for(auto chan = 0; chan < img.channels; ++chan){
-                                enum {
-                                    Have_No_Model,
-                                    Have_1Compartment2Input_5Param_LinearInterp_Model,
-                                    Have_1Compartment2Input_5Param_Chebyshev_Model
-                                } HaveModel;
-                                HaveModel = Have_No_Model;
 
-                                KineticModel_1Compartment2Input_5Param_LinearInterp_Parameters model_params_linear;
-                                KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters model_params_cheby;
+                                model_params_cheby.k1A  = std::numeric_limits<double>::quiet_NaN();
+                                model_params_cheby.tauA = std::numeric_limits<double>::quiet_NaN();
+                                model_params_cheby.k1V  = std::numeric_limits<double>::quiet_NaN();
+                                model_params_cheby.tauV = std::numeric_limits<double>::quiet_NaN();
+                                model_params_cheby.k2   = std::numeric_limits<double>::quiet_NaN();
+                                model_params_cheby.RSS  = std::numeric_limits<double>::quiet_NaN();
 
+                                model_params_linear.k1A  = std::numeric_limits<double>::quiet_NaN();
+                                model_params_linear.tauA = std::numeric_limits<double>::quiet_NaN();
+                                model_params_linear.k1V  = std::numeric_limits<double>::quiet_NaN();
+                                model_params_linear.tauV = std::numeric_limits<double>::quiet_NaN();
+                                model_params_linear.k2   = std::numeric_limits<double>::quiet_NaN();
+                                model_params_linear.RSS  = std::numeric_limits<double>::quiet_NaN();
 
-                                //First pass: look for serialized model_params. Deserialize.
-                                //
-                                // Note: we have to do this first, before loading voxel-specific data (e.g., k1A) because the
-                                // model_state is stripped of individual-voxel-specific data. Deserialization will overwrite 
-                                // individual-voxel-specific data with NaNs.
-                                //
-                                for(auto & selected_imgs : { selected_k1A_imgs,  selected_tauA_imgs, 
-                                                             selected_k1V_imgs,  selected_tauV_imgs, 
-                                                             selected_k2_imgs,   selected_ROI_imgs } )
-                                for(auto & img_it : selected_imgs){
-                                    if(auto m_str = img_it->GetMetadataValueAs<std::string>("ModelState")){
-                                        if(HaveModel == Have_No_Model){
-                                            if(Deserialize(m_str.value(),model_params_cheby)){
-                                                HaveModel = Have_1Compartment2Input_5Param_Chebyshev_Model;
-                                            }else if(Deserialize(m_str.value(),model_params_linear)){
-                                                HaveModel = Have_1Compartment2Input_5Param_LinearInterp_Model;
-                                            }else{
-                                                throw std::runtime_error("Unable to deserialize model parameters.");
-                                            }
-                                            break;
-                                        }
-                                    }
-                                }
-                                if(HaveModel == Have_No_Model){
-                                    throw std::logic_error("We should have a valid model here, but do not.");
-                                }
-                        
-                                //Second pass: locate individual-voxel-specific data needed to evaluate the model.
+                                //Scan through the various image_collection images to locate 
+                                // individual-voxel-specific data needed to evaluate the model.
                                 samples_1D<double> ROI_time_course;
                                 for(auto & selected_imgs : { selected_k1A_imgs,  selected_tauA_imgs, 
                                                              selected_k1V_imgs,  selected_tauV_imgs, 
