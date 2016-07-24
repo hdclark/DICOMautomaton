@@ -25,7 +25,8 @@
 
 static
 void
-ComputeIntegralSummations(KineticModel_1Compartment2Input_Reduced3Param_Chebyshev_Parameters *state){
+ComputeIntegralSummations(KineticModel_1Compartment2Input_Reduced3Param_Chebyshev_Parameters *state,
+                          bool ComputeGradientToo){
     //This routine uses that {tauA, tauV, and k2} specified in the state struct to compute six integral summation
     // quantities. They are also used to compute $F$ (= the RSS) and optimal estimates for k1A and k1V, and the state is
     // updated with these quantities.
@@ -36,6 +37,7 @@ ComputeIntegralSummations(KineticModel_1Compartment2Input_Reduced3Param_Chebyshe
 
     const auto N = state->cROI->samples.size();
 
+    // For evaluating the objective function $F$.
     std::vector<double> S_IA_IV;
     std::vector<double> S_IA_R;
     std::vector<double> S_IV_R;
@@ -50,14 +52,47 @@ ComputeIntegralSummations(KineticModel_1Compartment2Input_Reduced3Param_Chebyshe
     S_IV_IV.reserve(N);
     S_R_R.reserve(N);
 
-/*
-    state->S_IA_IV = 0.0;
-    state->S_IA_R  = 0.0;
-    state->S_IV_R  = 0.0;
-    state->S_IA_IA = 0.0;
-    state->S_IV_IV = 0.0;
-    state->S_R_R   = 0.0;
-*/
+    // For evaluating the gradient of $F$.
+    std::vector<double> S_R_dtauA_IA;
+    //std::vector<double> S_R_dtauA_IV;  // = 0
+    std::vector<double> S_IA_dtauA_IA;
+    //std::vector<double> S_IV_dtauA_IV; // = 0
+    //std::vector<double> S_IA_dtauA_IV; // = 0
+    std::vector<double> S_IV_dtauA_IA;
+
+    //std::vector<double> S_R_dtauV_IA; // = 0
+    std::vector<double> S_R_dtauV_IV;
+    //std::vector<double> S_IA_dtauV_IA; // = 0
+    std::vector<double> S_IV_dtauV_IV;
+    std::vector<double> S_IA_dtauV_IV;
+    //std::vector<double> S_IV_dtauV_IA; // = 0
+
+    std::vector<double> S_R_dk2_IA;
+    std::vector<double> S_R_dk2_IV;
+    std::vector<double> S_IA_dk2_IA;
+    std::vector<double> S_IV_dk2_IV;
+    std::vector<double> S_IA_dk2_IV;
+    std::vector<double> S_IV_dk2_IA;
+
+    if(ComputeGradientToo){
+        S_R_dtauA_IA.reserve(N);
+        S_IA_dtauA_IA.reserve(N);
+        S_IV_dtauA_IA.reserve(N);
+
+        S_R_dtauV_IV.reserve(N);
+        S_IV_dtauV_IV.reserve(N);
+        S_IA_dtauV_IV.reserve(N);
+
+        S_R_dk2_IA.reserve(N);
+        S_R_dk2_IV.reserve(N);
+        S_IA_dk2_IA.reserve(N);
+        S_IV_dk2_IV.reserve(N);
+        S_IA_dk2_IV.reserve(N);
+        S_IV_dk2_IA.reserve(N);
+    }
+
+    const double AIF_at_neg_tauA = state->cAIF->Sample(-tauA);
+    const double VIF_at_neg_tauV = state->cVIF->Sample(-tauV);
 
     const size_t exp_approx_N = 10; // 3 usually works (roughly). 5 is probably OK. 10 should suffice. 
                                     // 20 could be overkill. Depends on params, though.
@@ -69,8 +104,10 @@ ComputeIntegralSummations(KineticModel_1Compartment2Input_Reduced3Param_Chebyshe
     for(const auto &R : state->cROI->samples){
         const double ti = R[0];
         const double Ri = R[2];
-        double IA;
-        double IV;
+
+        double IA       = std::numeric_limits<double>::quiet_NaN();
+        double dtauA_IA = std::numeric_limits<double>::quiet_NaN(); //Partial derivative w.r.t. tauA.
+        double dk2_IA   = std::numeric_limits<double>::quiet_NaN(); //Partial derivative w.r.t. k2.
 
         //AIF integral.
         {   
@@ -85,7 +122,21 @@ ComputeIntegralSummations(KineticModel_1Compartment2Input_Reduced3Param_Chebyshe
             const cheby_approx<double> integral = integrand.Chebyshev_Integral();
 
             IA = (integral.Sample(taumax) - integral.Sample(taumin));
+
+            if(ComputeGradientToo){
+                dtauA_IA = AIF_at_neg_tauA * std::exp(k2 * ti) - state->cAIF->Sample(ti - tauA);
+
+                const cheby_approx<double> t_integrand = integrand * Chebyshev_Basis_Exact_Linear(exp_A_min,exp_A_max,1.0,0.0);
+                const cheby_approx<double> t_integral = t_integrand.Chebyshev_Integral();
+
+                dk2_IA = -ti*IA + (t_integral.Sample(taumax) - t_integral.Sample(taumin));
+            }
         }
+
+        double IV       = std::numeric_limits<double>::quiet_NaN();
+        double dtauV_IV = std::numeric_limits<double>::quiet_NaN(); //Partial derivative w.r.t. tauV.
+        double dk2_IV   = std::numeric_limits<double>::quiet_NaN(); //Partial derivative w.r.t. k2.
+
 
         //VIF integral.
         {   
@@ -100,16 +151,18 @@ ComputeIntegralSummations(KineticModel_1Compartment2Input_Reduced3Param_Chebyshe
             const cheby_approx<double> integral = integrand.Chebyshev_Integral();
 
             IV = (integral.Sample(taumax) - integral.Sample(taumin));
+
+            if(ComputeGradientToo){
+                dtauV_IV = VIF_at_neg_tauV * std::exp(k2 * ti) - state->cVIF->Sample(ti - tauV);
+
+                const cheby_approx<double> t_integrand = integrand * Chebyshev_Basis_Exact_Linear(exp_V_min,exp_V_max,1.0,0.0);
+                const cheby_approx<double> t_integral = t_integrand.Chebyshev_Integral();
+
+                dk2_IV = -ti*IV + (t_integral.Sample(taumax) - t_integral.Sample(taumin));
+            }
         }
 
         //Add to the summations.
-        //state->S_IA_IV += IA*IV;
-        //state->S_IA_R  += IA*Ri;
-        //state->S_IV_R  += IV*Ri;
-        //state->S_IA_IA += IA*IA;
-        //state->S_IV_IV += IV*IV;
-        //state->S_R_R   += Ri*Ri;
-
         S_IA_IV.push_back( IA*IV );
         S_IA_R.push_back(  IA*Ri );
         S_IV_R.push_back(  IV*Ri );
@@ -117,6 +170,22 @@ ComputeIntegralSummations(KineticModel_1Compartment2Input_Reduced3Param_Chebyshe
         S_IV_IV.push_back( IV*IV );
         S_R_R.push_back(   Ri*Ri );
 
+        if(ComputeGradientToo){
+            S_R_dtauA_IA.push_back(  Ri * dtauA_IA );
+            S_IA_dtauA_IA.push_back( IA * dtauA_IA );
+            S_IV_dtauA_IA.push_back( IV * dtauA_IA );
+
+            S_R_dtauV_IV.push_back(  Ri * dtauV_IV );
+            S_IV_dtauV_IV.push_back( IV * dtauV_IV );
+            S_IA_dtauV_IV.push_back( IA * dtauV_IV );
+
+            S_R_dk2_IA.push_back(  Ri * dk2_IA );
+            S_R_dk2_IV.push_back(  Ri * dk2_IV );
+            S_IA_dk2_IA.push_back( IA * dk2_IA );
+            S_IV_dk2_IV.push_back( IV * dk2_IV );
+            S_IA_dk2_IV.push_back( IA * dk2_IV );
+            S_IV_dk2_IA.push_back( IV * dk2_IA );
+        }
     }        
 
     state->S_IA_IV = Stats::Sum(std::move(S_IA_IV));
@@ -134,17 +203,7 @@ ComputeIntegralSummations(KineticModel_1Compartment2Input_Reduced3Param_Chebyshe
                                                             -(state->S_IV_R)*(state->S_IA_IA) }));
     state->k1A = k1A_num / common_den;
     state->k1V = k1V_num / common_den;
-//    const double common_den = ( (state->S_IA_IV)*(state->S_IA_IV) - (state->S_IA_IA)*(state->S_IV_IV) );
-//    state->k1A = ( (state->S_IA_IV)*(state->S_IV_R) - (state->S_IA_R)*(state->S_IV_IV) ) / common_den;
-//    state->k1V = ( (state->S_IA_IV)*(state->S_IA_R) - (state->S_IV_R)*(state->S_IA_IA) ) / common_den;
 
-/*
-    const double F =  (state->S_R_R) 
-                    + (state->k1A)*(state->k1A)*(state->S_IA_IA)
-                    + (state->k1V)*(state->k1V)*(state->S_IV_IV)
-                    + 2.0 * ( (state->k1A)*(state->k1V)*(state->S_IA_IV) )
-                    - 2.0 * ( (state->k1A)*(state->S_IA_R) + (state->k1V)*(state->S_IV_R) );
-*/
     const double F = Stats::Sum(std::vector<double>({ 
                                   (state->S_R_R),
                                   (state->k1A)*(state->k1A)*(state->S_IA_IA),
@@ -152,10 +211,50 @@ ComputeIntegralSummations(KineticModel_1Compartment2Input_Reduced3Param_Chebyshe
                                   2.0*(state->k1A)*(state->k1V)*(state->S_IA_IV),
                                   -2.0*(state->k1A)*(state->S_IA_R),
                                   -2.0*(state->k1V)*(state->S_IV_R) }));
+    if(ComputeGradientToo){
+
+        state->S_R_dtauA_IA  = Stats::Sum(S_R_dtauA_IA);
+        state->S_IA_dtauA_IA = Stats::Sum(S_IA_dtauA_IA);
+        state->S_IV_dtauA_IA = Stats::Sum(S_IV_dtauA_IA);
+
+        state->S_R_dtauV_IV  = Stats::Sum(S_R_dtauV_IV);
+        state->S_IV_dtauV_IV = Stats::Sum(S_IV_dtauV_IV);
+        state->S_IA_dtauV_IV = Stats::Sum(S_IA_dtauV_IV);
+
+        state->S_R_dk2_IA    = Stats::Sum(S_R_dk2_IA);
+        state->S_R_dk2_IV    = Stats::Sum(S_R_dk2_IV);
+        state->S_IA_dk2_IA   = Stats::Sum(S_IA_dk2_IA);
+        state->S_IV_dk2_IV   = Stats::Sum(S_IV_dk2_IV);
+        state->S_IA_dk2_IV   = Stats::Sum(S_IA_dk2_IV);
+        state->S_IV_dk2_IA   = Stats::Sum(S_IV_dk2_IA);
+
+
+        state->dF_dtauA = 2.0 * Stats::Sum( std::vector<double>({
+                                  -(state->k1A)*(state->S_R_dtauA_IA),
+                                  (state->k1A)*(state->k1A)*(state->S_IA_dtauA_IA),
+                                  (state->k1V)*(state->k1A)*(state->S_IV_dtauA_IA) }) );
+
+        state->dF_dtauV = 2.0 * Stats::Sum( std::vector<double>({
+                                  -(state->k1V)*(state->S_R_dtauV_IV),
+                                  (state->k1V)*(state->k1V)*(state->S_IV_dtauV_IV),
+                                  (state->k1A)*(state->k1V)*(state->S_IA_dtauV_IV) }) );
+
+        state->dF_dk2   = 2.0 * Stats::Sum( std::vector<double>({
+                                  -(state->k1A)*(state->S_R_dk2_IA),
+                                  -(state->k1V)*(state->S_R_dk2_IV),
+                                  (state->k1A)*(state->k1A)*(state->S_IA_dk2_IA),
+                                  (state->k1V)*(state->k1V)*(state->S_IV_dk2_IV),
+                                  (state->k1A)*(state->k1V)*(state->S_IA_dk2_IV),
+                                  (state->k1V)*(state->k1A)*(state->S_IV_dk2_IA) }) );
+
+
+    }
 
     state->RSS = F;
 
 //FUNCINFO("Evaluating at {tauA, tauV, k2} = {" << tauA << ", " << tauV << ", " << k2 << "} gives {k1A, k1V} = {" << state->k1A << ", " << state->k1V << "} and F = " << F);
+
+FUNCINFO("{dF_dtauA, dF_dtauV, dF_dk2} = " << state->dF_dtauA << ", " << state->dF_dtauV << ", " << state->dF_dk2);
 
     return;
 }
@@ -172,21 +271,18 @@ MinimizationFunction_Reduced3Param(unsigned, const double *params, double *grad,
     //This function computes the residual-sum-of-squares between the ROI time course and a kinetic liver
     // perfusion model at the ROI sample t_i's. If gradients are requested, they are also computed.
 
-    if(grad != nullptr){
-        grad[0] = 0.0;
-        grad[1] = 0.0;
-        grad[2] = 0.0;
-    }
-
     //Pack the current parameters into the state struct. This is done to unify the nlopt and user calling styles.
     state->tauA = params[0];
     state->tauV = params[1]; 
     state->k2   = params[2];
 
-    ComputeIntegralSummations(state);
+    const bool ComputeGradientToo = (grad != nullptr);
+    ComputeIntegralSummations(state, ComputeGradientToo);
 
     if(grad != nullptr){
-        // ... ComputeGradientIntegralSummations(state);
+        grad[0] = state->dF_dtauA;
+        grad[1] = state->dF_dtauV;
+        grad[2] = state->dF_dk2;
     }
 
     return state->RSS; 
@@ -212,14 +308,19 @@ Optimize_FreeformOptimization_Reduced3Param(KineticModel_1Compartment2Input_Redu
     params[2] = std::isfinite(state.k2)   ? state.k2   : 0.0518;
 
     // U/L bounds:            tauA,  tauV,  k2.
-    double l_bnds[dimen] = {  -20.0, -20.0,  0.0 };
-    double u_bnds[dimen] = {   20.0,  20.0, 10.0 };
+    double l_bnds[dimen] = {  -20.0, -20.0, 0.0 };
+    double u_bnds[dimen] = {   20.0,  20.0, 1.0 };
+    // NOTE: If tmax ~= 150, and you permit exp(k2*tmax) to be <= 10^66, then k2 <= 1.
+    //       So k2 = 1 seems like a reasonable limit to help prevent overflow. 
                     
     //Initial step sizes:       tauA,   tauV,   k2.
     double initstpsz[dimen] = { 3.2000, 3.2000, 0.0050 };
 
     //Absolute param. change thresholds:  tauA,  tauV,  k2.
-    double xtol_abs_thresholds[dimen] = { 1E-4, 1E-4, 1E-4 };
+    //double xtol_abs_thresholds[dimen] = { 1E-20, 1E-20, 1E-10 };
+    double xtol_abs_thresholds[dimen] = { std::numeric_limits<double>::denorm_min(),
+                                          std::numeric_limits<double>::denorm_min(),
+                                          std::numeric_limits<double>::denorm_min() };
 
 
     //First-pass fit.
@@ -227,9 +328,9 @@ Optimize_FreeformOptimization_Reduced3Param(KineticModel_1Compartment2Input_Redu
         nlopt_opt opt; //See `man nlopt` to get list of available algorithms.
         //opt = nlopt_create(NLOPT_LN_COBYLA, dimen);   //Local, no-derivative schemes.
         //opt = nlopt_create(NLOPT_LN_BOBYQA, dimen);
-        opt = nlopt_create(NLOPT_LN_SBPLX, dimen);
+        //opt = nlopt_create(NLOPT_LN_SBPLX, dimen);
 
-//        opt = nlopt_create(NLOPT_LD_MMA, dimen);   //Local, derivative schemes.
+        opt = nlopt_create(NLOPT_LD_MMA, dimen);   //Local, derivative schemes.
         //opt = nlopt_create(NLOPT_LD_SLSQP, dimen);
         //opt = nlopt_create(NLOPT_LD_LBFGS, dimen);
         //opt = nlopt_create(NLOPT_LD_VAR2, dimen);
@@ -257,10 +358,11 @@ Optimize_FreeformOptimization_Reduced3Param(KineticModel_1Compartment2Input_Redu
 //        if(NLOPT_SUCCESS != nlopt_set_xtol_abs(opt, xtol_abs_thresholds)){
 //            FUNCERR("NLOpt unable to set xtol_abs stopping condition");
 //        }
-        if(NLOPT_SUCCESS != nlopt_set_ftol_rel(opt, 1.0E-4)){
-            FUNCERR("NLOpt unable to set ftol_rel stopping condition");
-        }
-        if(NLOPT_SUCCESS != nlopt_set_maxtime(opt, 30.0)){ // In seconds.
+//        if(NLOPT_SUCCESS != nlopt_set_ftol_rel(opt, 1.0E-99)){
+//            FUNCERR("NLOpt unable to set ftol_rel stopping condition");
+//        }
+//        if(NLOPT_SUCCESS != nlopt_set_maxtime(opt, 30.0)){ // In seconds.
+        if(NLOPT_SUCCESS != nlopt_set_maxtime(opt, 3.0)){ // In seconds.
             FUNCERR("NLOpt unable to set maxtime stopping condition");
         }
         if(NLOPT_SUCCESS != nlopt_set_maxeval(opt, 5'000'000)){ // Maximum # of objective func evaluations.
@@ -301,7 +403,7 @@ Optimize_FreeformOptimization_Reduced3Param(KineticModel_1Compartment2Input_Redu
 //    if(state.FittingSuccess){
     if(false){
         nlopt_opt opt; //See `man nlopt` to get list of available algorithms.
-        opt = nlopt_create(NLOPT_LN_COBYLA, dimen);   //Local, no-derivative schemes.
+        //opt = nlopt_create(NLOPT_LN_COBYLA, dimen);   //Local, no-derivative schemes.
         //opt = nlopt_create(NLOPT_LN_BOBYQA, dimen);
         //opt = nlopt_create(NLOPT_LN_SBPLX, dimen);
 
@@ -311,7 +413,7 @@ Optimize_FreeformOptimization_Reduced3Param(KineticModel_1Compartment2Input_Redu
         //opt = nlopt_create(NLOPT_LD_VAR2, dimen);
         //opt = nlopt_create(NLOPT_LD_TNEWTON_PRECOND_RESTART, dimen);
         //opt = nlopt_create(NLOPT_LD_TNEWTON_PRECOND, dimen);
-//        opt = nlopt_create(NLOPT_LD_TNEWTON, dimen);
+        opt = nlopt_create(NLOPT_LD_TNEWTON, dimen);
 
         //opt = nlopt_create(NLOPT_GN_DIRECT, dimen); //Global, no-derivative schemes.
         //opt = nlopt_create(NLOPT_GN_CRS2_LM, dimen);

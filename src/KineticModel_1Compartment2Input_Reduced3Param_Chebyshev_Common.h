@@ -64,6 +64,11 @@ struct KineticModel_1Compartment2Input_Reduced3Param_Chebyshev_Parameters {
     double tauV = std::numeric_limits<double>::quiet_NaN();
     double k2   = std::numeric_limits<double>::quiet_NaN();
 
+    // Gradients of $F$ along the free parameter directions.
+    double dF_dtauA = std::numeric_limits<double>::quiet_NaN();
+    double dF_dtauV = std::numeric_limits<double>::quiet_NaN();
+    double dF_dk2   = std::numeric_limits<double>::quiet_NaN();
+
     // Intermediate quantities that are useful for computing $F$, k1A, and k1V.
     double S_IA_IV  = std::numeric_limits<double>::quiet_NaN();
     double S_IA_R   = std::numeric_limits<double>::quiet_NaN();
@@ -72,6 +77,22 @@ struct KineticModel_1Compartment2Input_Reduced3Param_Chebyshev_Parameters {
     double S_IV_IV  = std::numeric_limits<double>::quiet_NaN();
     double S_R_R    = std::numeric_limits<double>::quiet_NaN();
 
+    // Intermediate quantities that are used to compute the gradient of $F$.
+    // (Note: the missing terms are always zero!)
+    double S_R_dtauA_IA  = std::numeric_limits<double>::quiet_NaN();
+    double S_IA_dtauA_IA = std::numeric_limits<double>::quiet_NaN();
+    double S_IV_dtauA_IA = std::numeric_limits<double>::quiet_NaN();
+
+    double S_R_dtauV_IV  = std::numeric_limits<double>::quiet_NaN();
+    double S_IV_dtauV_IV = std::numeric_limits<double>::quiet_NaN();
+    double S_IA_dtauV_IV = std::numeric_limits<double>::quiet_NaN();
+
+    double S_R_dk2_IA    = std::numeric_limits<double>::quiet_NaN();
+    double S_R_dk2_IV    = std::numeric_limits<double>::quiet_NaN();
+    double S_IA_dk2_IA   = std::numeric_limits<double>::quiet_NaN();
+    double S_IV_dk2_IV   = std::numeric_limits<double>::quiet_NaN();
+    double S_IA_dk2_IV   = std::numeric_limits<double>::quiet_NaN();
+    double S_IV_dk2_IA   = std::numeric_limits<double>::quiet_NaN();
 
 };
 
@@ -102,12 +123,32 @@ void serialize(Archive &a,
       & boost::serialization::make_nvp("tauV",  p.tauV)
       & boost::serialization::make_nvp("k2",    p.k2)
 
+      & boost::serialization::make_nvp("dF_dtauA", p.dF_dtauA)
+      & boost::serialization::make_nvp("dF_dtauV", p.dF_dtauV)
+      & boost::serialization::make_nvp("dF_dk2",   p.dF_dk2)
+
       & boost::serialization::make_nvp("S_IA_IV", p.S_IA_IV)
       & boost::serialization::make_nvp("S_IA_R",  p.S_IA_R)
       & boost::serialization::make_nvp("S_IV_R",  p.S_IV_R)
       & boost::serialization::make_nvp("S_IA_IA", p.S_IA_IA)
       & boost::serialization::make_nvp("S_IV_IV", p.S_IV_IV)
-      & boost::serialization::make_nvp("S_R_R",   p.S_R_R);
+      & boost::serialization::make_nvp("S_R_R",   p.S_R_R)
+
+      & boost::serialization::make_nvp("S_R_dtauA_IA",   p.S_R_dtauA_IA)
+      & boost::serialization::make_nvp("S_IA_dtauA_IA",  p.S_IA_dtauA_IA)
+      & boost::serialization::make_nvp("S_IV_dtauA_IA",  p.S_IV_dtauA_IA)
+
+      & boost::serialization::make_nvp("S_R_dtauV_IV",   p.S_R_dtauV_IV)
+      & boost::serialization::make_nvp("S_IV_dtauV_IV",  p.S_IV_dtauV_IV)
+      & boost::serialization::make_nvp("S_IA_dtauV_IV",  p.S_IA_dtauV_IV)
+
+      & boost::serialization::make_nvp("S_R_dk2_IA",  p.S_R_dk2_IA)
+      & boost::serialization::make_nvp("S_R_dk2_IV",  p.S_R_dk2_IV)
+      & boost::serialization::make_nvp("S_IA_dk2_IA", p.S_IA_dk2_IA)
+      & boost::serialization::make_nvp("S_IV_dk2_IV", p.S_IV_dk2_IV)
+      & boost::serialization::make_nvp("S_IA_dk2_IV", p.S_IA_dk2_IV)
+      & boost::serialization::make_nvp("S_IV_dk2_IA", p.S_IV_dk2_IA);
+
     return;
 }
 
