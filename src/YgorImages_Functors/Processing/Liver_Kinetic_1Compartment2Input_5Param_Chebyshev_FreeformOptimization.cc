@@ -1,4 +1,4 @@
-//Liver_Pharmacokinetic_Model_5Param_Linear.cc.
+//Liver_Kinetic_1Compartment2Input_5Param_Chebyshev_FreeformOptimization.cc.
 
 #include <list>
 #include <functional>
@@ -31,16 +31,17 @@
 
 #include "../ConvenienceRoutines.h"
 
-#include "Liver_Pharmacokinetic_Model_5Param_Structs.h"
-#include "Liver_Pharmacokinetic_Model_5Param_Linear.h"
+#include "Liver_Kinetic_Common.h"
+#include "Liver_Kinetic_1Compartment2Input_5Param_Chebyshev_Common.h"
+#include "Liver_Kinetic_1Compartment2Input_5Param_Chebyshev_FreeformOptimization.h"
 
-#include "../../KineticModel_1Compartment2Input_5Param_LinearInterp_Common.h"
-#include "../../KineticModel_1Compartment2Input_5Param_LinearInterp_LevenbergMarquardt.h"
+#include "../../KineticModel_1Compartment2Input_5Param_Chebyshev_Common.h"
+#include "../../KineticModel_1Compartment2Input_5Param_Chebyshev_FreeformOptimization.h"
 
 static std::mutex out_img_mutex;
 
-bool 
-KineticModel_Liver_1C2I_5Param_Linear(planar_image_collection<float,double>::images_list_it_t first_img_it,
+bool
+KineticModel_Liver_1C2I_5Param_Chebyshev_FreeformOptimization(planar_image_collection<float,double>::images_list_it_t first_img_it,
                         std::list<planar_image_collection<float,double>::images_list_it_t> selected_img_its,
                         std::list<std::reference_wrapper<planar_image_collection<float,double>>> out_imgs,
                         std::list<std::reference_wrapper<contour_collection<double>>> cc_all,
@@ -61,9 +62,9 @@ KineticModel_Liver_1C2I_5Param_Linear(planar_image_collection<float,double>::ima
     }
 
     //Ensure we have the needed time course ROIs.
-    KineticModel_Liver_1C2I_5Param_LinearUserData *user_data_s;
+    KineticModel_Liver_1C2I_5Param_Chebyshev_UserData *user_data_s;
     try{
-        user_data_s = std::experimental::any_cast<KineticModel_Liver_1C2I_5Param_LinearUserData *>(user_data);
+        user_data_s = std::experimental::any_cast<KineticModel_Liver_1C2I_5Param_Chebyshev_UserData *>(user_data);
     }catch(const std::exception &e){
         FUNCWARN("Unable to cast user_data to appropriate format. Cannot continue with computation");
         return false;
@@ -124,13 +125,17 @@ KineticModel_Liver_1C2I_5Param_Linear(planar_image_collection<float,double>::ima
     auto ContrastInjectionLeadTime = user_data_s->ContrastInjectionLeadTime;
 
     //Get convenient handles for the arterial and venous input time courses.
-    auto Carterial  = std::make_shared<samples_1D<double>>( user_data_s->time_courses["AIF"] );
+    auto Carterial  = std::make_shared<cheby_approx<double>>( user_data_s->time_courses["AIF"] );
+    auto dCarterial = std::make_shared<cheby_approx<double>>( user_data_s->time_course_derivatives["AIF"] );
 
-    auto Cvenous    = std::make_shared<samples_1D<double>>( user_data_s->time_courses["VIF"] );
+    auto Cvenous    = std::make_shared<cheby_approx<double>>( user_data_s->time_courses["VIF"] );
+    auto dCvenous   = std::make_shared<cheby_approx<double>>( user_data_s->time_course_derivatives["VIF"] );
 
-    KineticModel_1Compartment2Input_5Param_LinearInterp_Parameters model_state;
+    KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters model_state;
     model_state.cAIF  = Carterial;
+    model_state.dcAIF = dCarterial;
     model_state.cVIF  = Cvenous;;
+    model_state.dcVIF = dCvenous;
 
 
     //Trim all but the ROIs we are interested in.
@@ -367,7 +372,7 @@ KineticModel_Liver_1C2I_5Param_Linear(planar_image_collection<float,double>::ima
                             //Fit the model.
 
                             // This routine fits a pharmacokinetic model to the observed liver perfusion data using a 
-                            // direct linear interpolation approach.
+                            // Chebyshev polynomial approximation scheme.
 
                             model_state.FittingPerformed = false;
                             model_state.cROI = channel_time_course;
@@ -377,8 +382,8 @@ KineticModel_Liver_1C2I_5Param_Linear(planar_image_collection<float,double>::ima
                             model_state.tauV = std::numeric_limits<double>::quiet_NaN();
                             model_state.k2   = std::numeric_limits<double>::quiet_NaN();
 
-                            //KineticModel_1Compartment2Input_5Param_LinearInterp_Parameters after_state = Optimize_LevenbergMarquardt_3Param(model_state);
-                            KineticModel_1Compartment2Input_5Param_LinearInterp_Parameters after_state = Optimize_LevenbergMarquardt_5Param(model_state);
+                            //KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters after_state = Optimize_FreeformOptimization_3Param(model_state);
+                            KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters after_state = Optimize_FreeformOptimization_5Param(model_state);
 
                             if(!after_state.FittingSuccess) ++Minimization_Failure_Count;
 
@@ -402,10 +407,10 @@ KineticModel_Liver_1C2I_5Param_Linear(planar_image_collection<float,double>::ima
                                 std::map<std::string, samples_1D<double>> time_courses;
                                 std::string title;
                                 //Add the ROI.
-                                title = "Linear Interpolation: ROI time course: row = " + std::to_string(row) + ", col = " + std::to_string(col);
+                                title = "Chebyshev Approximation: ROI time course: row = " + std::to_string(row) + ", col = " + std::to_string(col);
                                 time_courses[title] = *(after_state.cROI);
                                 samples_1D<double> fitted_model;
-                                KineticModel_1Compartment2Input_5Param_LinearInterp_Results eval_res;
+                                KineticModel_1Compartment2Input_5Param_Chebyshev_Results eval_res;
                                 for(const auto &P : after_state.cROI->samples){
                                     const double t = P[0];
                                     Evaluate_Model(after_state,t,eval_res);
@@ -475,23 +480,23 @@ KineticModel_Liver_1C2I_5Param_Linear(planar_image_collection<float,double>::ima
     //Alter the first image's metadata to reflect that averaging has occurred. You might want to consider
     // a selective whitelist approach so that unique IDs are not duplicated accidentally.
 
-    UpdateImageDescription( out_img_k1A, "Liver Model: Linear: k1A" );
+    UpdateImageDescription( out_img_k1A, "Liver: 1C2I: 5Param: Cheby: FreeformOptimization: k1A" );
     UpdateImageWindowCentreWidth( out_img_k1A, minmax_k1A );
     out_img_k1A.get().metadata["ModelState"] = ModelState;
 
-    UpdateImageDescription( out_img_tauA, "Liver Model: Linear: tauA" );
+    UpdateImageDescription( out_img_tauA, "Liver: 1C2I: 5Param: Cheby: FreeformOptimization: tauA" );
     UpdateImageWindowCentreWidth( out_img_tauA, minmax_tauA );
     out_img_tauA.get().metadata["ModelState"] = ModelState;
 
-    UpdateImageDescription( out_img_k1V, "Liver Model: Linear: k1V" );
+    UpdateImageDescription( out_img_k1V, "Liver: 1C2I: 5Param: Cheby: FreeformOptimization: k1V" );
     UpdateImageWindowCentreWidth( out_img_k1V, minmax_k1V );
     out_img_k1V.get().metadata["ModelState"] = ModelState;
 
-    UpdateImageDescription( out_img_tauV, "Liver Model: Linear: tauV" );
+    UpdateImageDescription( out_img_tauV, "Liver: 1C2I: 5Param: Cheby: FreeformOptimization: tauV" );
     UpdateImageWindowCentreWidth( out_img_tauV, minmax_tauV );
     out_img_tauV.get().metadata["ModelState"] = ModelState;
 
-    UpdateImageDescription( out_img_k2, "Liver Model: Linear: k2" );
+    UpdateImageDescription( out_img_k2, "Liver: 1C2I: 5Param: Cheby: FreeformOptimization: k2" );
     UpdateImageWindowCentreWidth( out_img_k2, minmax_k2 );
     out_img_k2.get().metadata["ModelState"] = ModelState;
     

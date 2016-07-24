@@ -10,13 +10,6 @@
 #include "KineticModel_1Compartment2Input_5Param_LinearInterp_Common.h"
 
 
-// This routine can be used to evaluate a model (using the parameters in 'state') at given time.
-void
-Evaluate_Model( const KineticModel_1Compartment2Input_5Param_LinearInterp_Parameters &state,
-                const double t,
-                KineticModel_1Compartment2Input_5Param_LinearInterp_Results &res);
- 
-
 // This routine fits a pharmacokinetic model to the observed liver perfusion data using a 
 // direct linear interpolation approach.
 //

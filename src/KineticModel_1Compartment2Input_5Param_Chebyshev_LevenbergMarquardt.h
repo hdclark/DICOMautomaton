@@ -11,13 +11,6 @@
 #include "KineticModel_1Compartment2Input_5Param_Chebyshev_Common.h"
 
 
-// This routine can be used to evaluate a model (using the parameters in 'state') at given time.
-void
-Evaluate_Model( const KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters &state,
-                const double t,
-                KineticModel_1Compartment2Input_5Param_Chebyshev_Results &res);
- 
-
 // This routine fits a pharmacokinetic model to the observed liver perfusion data using a 
 // Chebyshev polynomial approximation scheme.
 //

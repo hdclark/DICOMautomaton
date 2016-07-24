@@ -36,6 +36,8 @@
 
 //#include "YgorMathChebyshevIOBoostSerialization.h"
 #include "KineticModel_1Compartment2Input_5Param_Chebyshev_Common.h"
+#include "KineticModel_1Compartment2Input_5Param_LinearInterp_Common.h"
+#include "KineticModel_1Compartment2Input_Reduced3Param_Chebyshev_Common.h"
 
 #include "Common_Boost_Serialization.h"
 
@@ -372,6 +374,42 @@ Serialize(const KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters &sta
 bool
 Deserialize(const std::string &s,
             KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters &state){
+
+    //Simple text, no compression.
+    try{
+        std::stringstream ss(s);
+        ss.imbue(std::locale(std::locale().classic(), new boost::math::nonfinite_num_get<char>));
+
+        {
+            boost::archive::text_iarchive ar(ss, boost::archive::no_codecvt);
+            ar & boost::serialization::make_nvp("model_state", state);
+        }
+        return true;
+    }catch(const std::exception &){ }
+
+    return false;
+}                                                                            
+
+
+std::string 
+Serialize(const KineticModel_1Compartment2Input_Reduced3Param_Chebyshev_Parameters &state){
+    //Will throw if serialization fails.
+
+    std::stringstream ss;
+    ss.imbue(std::locale(std::locale().classic(), new boost::math::nonfinite_num_put<char>));
+
+    {
+        boost::archive::text_oarchive ar(ss, boost::archive::no_codecvt);
+        ar & boost::serialization::make_nvp("model_state", state);
+    }
+
+    return ss.str();
+}
+
+
+bool
+Deserialize(const std::string &s,
+            KineticModel_1Compartment2Input_Reduced3Param_Chebyshev_Parameters &state){
 
     //Simple text, no compression.
     try{

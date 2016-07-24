@@ -1,4 +1,4 @@
-// CT_Liver_Perfusion_Pharmaco.h.
+// CT_Liver_Perfusion_Pharmaco_1Compartment2Input_Reduced3Param.h.
 
 #pragma once
 
@@ -71,9 +71,6 @@
 #include "../YgorImages_Functors/Processing/In_Image_Plane_Bicubic_Supersample.h"
 #include "../YgorImages_Functors/Processing/In_Image_Plane_Pixel_Decimate.h"
 #include "../YgorImages_Functors/Processing/Cross_Second_Derivative.h"
-#include "../YgorImages_Functors/Processing/Liver_Pharmacokinetic_Model_5Param_Linear.h"
-#include "../YgorImages_Functors/Processing/Liver_Pharmacokinetic_Model_5Param_Structs.h"
-#include "../YgorImages_Functors/Processing/Liver_Pharmacokinetic_Model_5Param_Cheby.h"
 #include "../YgorImages_Functors/Processing/Orthogonal_Slices.h"
 
 #include "../YgorImages_Functors/Transform/DCEMRI_C_Map.h"
@@ -90,8 +87,8 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocCT_Liver_Perfusion_Pharmaco(void);
+std::list<OperationArgDoc> OpArgDocCT_Liver_Perfusion_Pharmaco_1C2I_Reduced3Param(void);
 
-Drover CT_Liver_Perfusion_Pharmaco(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
+Drover CT_Liver_Perfusion_Pharmaco_1C2I_Reduced3Param(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                                    std::map<std::string, std::string> /*InvocationMetadata*/,
                                    std::string /*FilenameLex*/);

@@ -1,4 +1,4 @@
-//Liver_Pharmacokinetic_Model_5Param_Linear.h.
+//Liver_Kinetic_1Compartment2Input_5Param_LinearInterp_LevenbergMarquardt.h.
 #pragma once
 
 #include <list>
@@ -17,7 +17,7 @@
 
 
 bool 
-KineticModel_Liver_1C2I_5Param_Linear(planar_image_collection<float,double>::images_list_it_t first_img_it,
+KineticModel_Liver_1C2I_5Param_LinearInterp(planar_image_collection<float,double>::images_list_it_t first_img_it,
                          std::list<planar_image_collection<float,double>::images_list_it_t> selected_img_its,
                          std::list<std::reference_wrapper<planar_image_collection<float,double>>> outgoing_maps,
                          std::list<std::reference_wrapper<contour_collection<double>>> ccsl, 

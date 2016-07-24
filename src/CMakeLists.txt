@@ -248,6 +248,14 @@ target_include_directories(kineticmodel_1c2i_5param_chebyshev_levenbergmarquardt
     ./
 )
 
+add_library (kineticmodel_1c2i_reduced3param_chebyshev_freeformoptimization
+    KineticModel_1Compartment2Input_Reduced3Param_Chebyshev_Common.cc
+    KineticModel_1Compartment2Input_Reduced3Param_Chebyshev_FreeformOptimization.cc
+)
+target_include_directories(kineticmodel_1c2i_reduced3param_chebyshev_freeformoptimization SYSTEM PUBLIC 
+    ./
+)
+
 
 # Executable.
 add_executable (dicomautomaton_dispatcher
@@ -274,6 +282,7 @@ target_link_libraries (dicomautomaton_dispatcher
     kineticmodel_1c2i_5param_linearinterp_levenbergmarquardt
     kineticmodel_1c2i_5param_chebyshev_freeformoptimization
     kineticmodel_1c2i_5param_chebyshev_levenbergmarquardt
+    kineticmodel_1c2i_reduced3param_chebyshev_freeformoptimization
     explicator 
     demarcator 
     ygor 
@@ -420,6 +429,7 @@ install(TARGETS
     kineticmodel_1c2i_5param_linearinterp_levenbergmarquardt
     kineticmodel_1c2i_5param_chebyshev_freeformoptimization
     kineticmodel_1c2i_5param_chebyshev_levenbergmarquardt
+    kineticmodel_1c2i_reduced3param_chebyshev_freeformoptimization
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib

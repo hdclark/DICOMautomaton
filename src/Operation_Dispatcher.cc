@@ -20,7 +20,8 @@
 #include "Operations/CT_Liver_Perfusion.h"
 #include "Operations/CT_Liver_Perfusion_First_Run.h"
 #include "Operations/CT_Liver_Perfusion_Ortho_Views.h"
-#include "Operations/CT_Liver_Perfusion_Pharmaco.h"
+#include "Operations/CT_Liver_Perfusion_Pharmaco_1Compartment2Input_5Param.h"
+#include "Operations/CT_Liver_Perfusion_Pharmaco_1Compartment2Input_Reduced3Param.h"
 #include "Operations/ContourSimilarity.h"
 #include "Operations/ContouringAides.h"
 #include "Operations/ConvertNaNsToAir.h"
@@ -62,7 +63,10 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["CT_Liver_Perfusion"] = std::make_pair(OpArgDocCT_Liver_Perfusion, CT_Liver_Perfusion);
     out["CT_Liver_Perfusion_First_Run"] = std::make_pair(OpArgDocCT_Liver_Perfusion_First_Run, CT_Liver_Perfusion_First_Run);
     out["CT_Liver_Perfusion_Ortho_Views"] = std::make_pair(OpArgDocCT_Liver_Perfusion_Ortho_Views , CT_Liver_Perfusion_Ortho_Views );
-    out["CT_Liver_Perfusion_Pharmaco"] = std::make_pair(OpArgDocCT_Liver_Perfusion_Pharmaco, CT_Liver_Perfusion_Pharmaco);
+    out["CT_Liver_Perfusion_Pharmaco_1C2I_5Param"] = std::make_pair(OpArgDocCT_Liver_Perfusion_Pharmaco_1C2I_5Param, 
+                                                                    CT_Liver_Perfusion_Pharmaco_1C2I_5Param);
+    out["CT_Liver_Perfusion_Pharmaco_1C2I_Reduced3Param"] = std::make_pair(OpArgDocCT_Liver_Perfusion_Pharmaco_1C2I_Reduced3Param, 
+                                                                           CT_Liver_Perfusion_Pharmaco_1C2I_Reduced3Param);
     out["ContourSimilarity"] = std::make_pair(OpArgDocContourSimilarity, ContourSimilarity);
     out["ContouringAides"] = std::make_pair(OpArgDocContouringAides, ContouringAides);
     out["ConvertNaNsToAir"] = std::make_pair(OpArgDocConvertNaNsToAir, ConvertNaNsToAir);

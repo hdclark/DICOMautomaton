@@ -1,4 +1,4 @@
-//CT_Liver_Perfusion_Pharmaco.cc - A part of DICOMautomaton 2015, 2016. Written by hal clark.
+//CT_Liver_Perfusion_Pharmaco_1C2I_5Param.cc - A part of DICOMautomaton 2015, 2016. Written by hal clark.
 
 #include <iostream>
 #include <sstream>
@@ -74,9 +74,12 @@
 #include "../YgorImages_Functors/Processing/In_Image_Plane_Bicubic_Supersample.h"
 #include "../YgorImages_Functors/Processing/In_Image_Plane_Pixel_Decimate.h"
 #include "../YgorImages_Functors/Processing/Cross_Second_Derivative.h"
-#include "../YgorImages_Functors/Processing/Liver_Pharmacokinetic_Model_5Param_Structs.h"
-#include "../YgorImages_Functors/Processing/Liver_Pharmacokinetic_Model_5Param_Linear.h"
-#include "../YgorImages_Functors/Processing/Liver_Pharmacokinetic_Model_5Param_Cheby.h"
+#include "../YgorImages_Functors/Processing/Liver_Kinetic_Common.h"
+#include "../YgorImages_Functors/Processing/Liver_Kinetic_1Compartment2Input_5Param_Chebyshev_Common.h"
+#include "../YgorImages_Functors/Processing/Liver_Kinetic_1Compartment2Input_5Param_Chebyshev_FreeformOptimization.h"
+#include "../YgorImages_Functors/Processing/Liver_Kinetic_1Compartment2Input_5Param_Chebyshev_LevenbergMarquardt.h"
+#include "../YgorImages_Functors/Processing/Liver_Kinetic_1Compartment2Input_5Param_LinearInterp_Common.h"
+#include "../YgorImages_Functors/Processing/Liver_Kinetic_1Compartment2Input_5Param_LinearInterp_LevenbergMarquardt.h"
 #include "../YgorImages_Functors/Processing/Orthogonal_Slices.h"
 
 #include "../YgorImages_Functors/Transform/DCEMRI_C_Map.h"
@@ -90,10 +93,10 @@
 #include "../YgorImages_Functors/Compute/Per_ROI_Time_Courses.h"
 #include "../YgorImages_Functors/Compute/Contour_Similarity.h"
 
-#include "CT_Liver_Perfusion_Pharmaco.h"
+#include "CT_Liver_Perfusion_Pharmaco_1Compartment2Input_5Param.h"
 
 
-std::list<OperationArgDoc> OpArgDocCT_Liver_Perfusion_Pharmaco(void){
+std::list<OperationArgDoc> OpArgDocCT_Liver_Perfusion_Pharmaco_1C2I_5Param(void){
     std::list<OperationArgDoc> out;
 
     out.emplace_back();
@@ -284,7 +287,7 @@ std::list<OperationArgDoc> OpArgDocCT_Liver_Perfusion_Pharmaco(void){
 
 
 
-Drover CT_Liver_Perfusion_Pharmaco(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string> InvocationMetadata, std::string /*FilenameLex*/){
+Drover CT_Liver_Perfusion_Pharmaco_1C2I_5Param(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string> InvocationMetadata, std::string /*FilenameLex*/){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto AIFROIName = OptArgs.getValueStr("AIFROINameRegex").value();
@@ -568,7 +571,7 @@ Drover CT_Liver_Perfusion_Pharmaco(Drover DICOM_data, OperationArgPkg OptArgs, s
         for(const auto & tc : ud.time_courses) orig_time_courses["Original " + tc.first] = tc.second;
 
         //Pre-process the AIF and VIF time courses.
-        KineticModel_Liver_1C2I_5Param_ChebyUserData ud_cheby; 
+        KineticModel_Liver_1C2I_5Param_Chebyshev_UserData ud_cheby; 
 
         ud_cheby.pixels_to_plot = pixels_to_plot;
         ud_cheby.TargetROIs = TargetROINameRegex;
@@ -691,7 +694,7 @@ Drover CT_Liver_Perfusion_Pharmaco(Drover DICOM_data, OperationArgPkg OptArgs, s
 
             if(!pharmaco_model_dummy.back()->imagecoll.Process_Images_Parallel( 
                               GroupSpatiallyOverlappingImages,
-                              KineticModel_Liver_1C2I_5Param_Cheby,
+                              KineticModel_Liver_1C2I_5Param_Chebyshev_LevenbergMarquardt,
                               { std::ref(pharmaco_model_kA.back()->imagecoll),
                                 std::ref(pharmaco_model_tauA.back()->imagecoll),
                                 std::ref(pharmaco_model_kV.back()->imagecoll),
@@ -712,7 +715,7 @@ Drover CT_Liver_Perfusion_Pharmaco(Drover DICOM_data, OperationArgPkg OptArgs, s
         for(const auto & tc : ud.time_courses) toplot_time_courses["Original " + tc.first] = tc.second;
 
         //Pre-process the AIF and VIF time courses.
-        KineticModel_Liver_1C2I_5Param_LinearUserData ud_linear; 
+        KineticModel_Liver_1C2I_5Param_LinearInterp_UserData ud_linear; 
 
         ud_linear.pixels_to_plot = pixels_to_plot;
         ud_linear.TargetROIs = TargetROINameRegex;
@@ -800,7 +803,7 @@ Drover CT_Liver_Perfusion_Pharmaco(Drover DICOM_data, OperationArgPkg OptArgs, s
 
             if(!pharmaco_model_dummy.back()->imagecoll.Process_Images_Parallel( 
                               GroupSpatiallyOverlappingImages,
-                              KineticModel_Liver_1C2I_5Param_Linear,
+                              KineticModel_Liver_1C2I_5Param_LinearInterp,
                               { std::ref(pharmaco_model_kA.back()->imagecoll),
                                 std::ref(pharmaco_model_tauA.back()->imagecoll),
                                 std::ref(pharmaco_model_kV.back()->imagecoll),

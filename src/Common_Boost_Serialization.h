@@ -9,6 +9,7 @@
 
 #include "KineticModel_1Compartment2Input_5Param_LinearInterp_Common.h"
 #include "KineticModel_1Compartment2Input_5Param_Chebyshev_Common.h"
+#include "KineticModel_1Compartment2Input_Reduced3Param_Chebyshev_Common.h"
 
 
 // --- Default Serialization routines.
@@ -55,6 +56,14 @@ Serialize(const KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters &sta
 
 bool 
 Deserialize(const std::string &s, KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters &state);
+
+
+// Single-compartment, dual-input, reduced-3-parameter model with Chebyshev polynomial approach.
+std::string 
+Serialize(const KineticModel_1Compartment2Input_Reduced3Param_Chebyshev_Parameters &state);
+
+bool 
+Deserialize(const std::string &s, KineticModel_1Compartment2Input_Reduced3Param_Chebyshev_Parameters &state);
 
 
 
