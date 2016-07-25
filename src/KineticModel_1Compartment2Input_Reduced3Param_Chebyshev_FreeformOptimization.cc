@@ -42,58 +42,28 @@ ComputeIntegralSummations(KineticModel_1Compartment2Input_Reduced3Param_Chebyshe
     const auto N = state->cROI->samples.size();
 
     // For evaluating the objective function $F$.
-    std::vector<double> S_IA_IV;
-    std::vector<double> S_IA_R;
-    std::vector<double> S_IV_R;
-    std::vector<double> S_IA_IA;
-    std::vector<double> S_IV_IV;
-    std::vector<double> S_R_R;
-
-    S_IA_IV.reserve(N);
-    S_IA_R.reserve(N);
-    S_IV_R.reserve(N);
-    S_IA_IA.reserve(N);
-    S_IV_IV.reserve(N);
-    S_R_R.reserve(N);
+    state->S_IA_IV = 0.0;
+    state->S_IA_R  = 0.0;
+    state->S_IV_R  = 0.0;
+    state->S_IA_IA = 0.0;
+    state->S_IV_IV = 0.0;
+    state->S_R_R   = 0.0;
 
     // For evaluating the gradient of $F$.
-    std::vector<double> S_R_dtauA_IA;
-    //std::vector<double> S_R_dtauA_IV;  // = 0
-    std::vector<double> S_IA_dtauA_IA;
-    //std::vector<double> S_IV_dtauA_IV; // = 0
-    //std::vector<double> S_IA_dtauA_IV; // = 0
-    std::vector<double> S_IV_dtauA_IA;
+    state->S_R_dtauA_IA  = 0.0;
+    state->S_IA_dtauA_IA = 0.0;
+    state->S_IV_dtauA_IA = 0.0;
 
-    //std::vector<double> S_R_dtauV_IA; // = 0
-    std::vector<double> S_R_dtauV_IV;
-    //std::vector<double> S_IA_dtauV_IA; // = 0
-    std::vector<double> S_IV_dtauV_IV;
-    std::vector<double> S_IA_dtauV_IV;
-    //std::vector<double> S_IV_dtauV_IA; // = 0
+    state->S_R_dtauV_IV  = 0.0;
+    state->S_IV_dtauV_IV = 0.0;
+    state->S_IA_dtauV_IV = 0.0;
 
-    std::vector<double> S_R_dk2_IA;
-    std::vector<double> S_R_dk2_IV;
-    std::vector<double> S_IA_dk2_IA;
-    std::vector<double> S_IV_dk2_IV;
-    std::vector<double> S_IA_dk2_IV;
-    std::vector<double> S_IV_dk2_IA;
-
-    if(ComputeGradientToo){
-        S_R_dtauA_IA.reserve(N);
-        S_IA_dtauA_IA.reserve(N);
-        S_IV_dtauA_IA.reserve(N);
-
-        S_R_dtauV_IV.reserve(N);
-        S_IV_dtauV_IV.reserve(N);
-        S_IA_dtauV_IV.reserve(N);
-
-        S_R_dk2_IA.reserve(N);
-        S_R_dk2_IV.reserve(N);
-        S_IA_dk2_IA.reserve(N);
-        S_IV_dk2_IV.reserve(N);
-        S_IA_dk2_IV.reserve(N);
-        S_IV_dk2_IA.reserve(N);
-    }
+    state->S_R_dk2_IA    = 0.0;
+    state->S_R_dk2_IV    = 0.0;
+    state->S_IA_dk2_IA   = 0.0;
+    state->S_IV_dk2_IV   = 0.0;
+    state->S_IA_dk2_IV   = 0.0;
+    state->S_IV_dk2_IA   = 0.0;
 
     const double AIF_at_neg_tauA = state->cAIF->Sample(-tauA);
     const double VIF_at_neg_tauV = state->cVIF->Sample(-tauV);
@@ -167,37 +137,30 @@ ComputeIntegralSummations(KineticModel_1Compartment2Input_Reduced3Param_Chebyshe
         }
 
         //Add to the summations.
-        S_IA_IV.push_back( IA*IV );
-        S_IA_R.push_back(  IA*Ri );
-        S_IV_R.push_back(  IV*Ri );
-        S_IA_IA.push_back( IA*IA );
-        S_IV_IV.push_back( IV*IV );
-        S_R_R.push_back(   Ri*Ri );
+        state->S_IA_IV +=  IA*IV;
+        state->S_IA_R +=   IA*Ri;
+        state->S_IV_R +=   IV*Ri;
+        state->S_IA_IA +=  IA*IA;
+        state->S_IV_IV +=  IV*IV;
+        state->S_R_R +=    Ri*Ri;
 
         if(ComputeGradientToo){
-            S_R_dtauA_IA.push_back(  Ri * dtauA_IA );
-            S_IA_dtauA_IA.push_back( IA * dtauA_IA );
-            S_IV_dtauA_IA.push_back( IV * dtauA_IA );
+            state->S_R_dtauA_IA +=   Ri * dtauA_IA;
+            state->S_IA_dtauA_IA +=  IA * dtauA_IA;
+            state->S_IV_dtauA_IA +=  IV * dtauA_IA;
 
-            S_R_dtauV_IV.push_back(  Ri * dtauV_IV );
-            S_IV_dtauV_IV.push_back( IV * dtauV_IV );
-            S_IA_dtauV_IV.push_back( IA * dtauV_IV );
+            state->S_R_dtauV_IV +=   Ri * dtauV_IV;
+            state->S_IV_dtauV_IV +=  IV * dtauV_IV;
+            state->S_IA_dtauV_IV +=  IA * dtauV_IV;
 
-            S_R_dk2_IA.push_back(  Ri * dk2_IA );
-            S_R_dk2_IV.push_back(  Ri * dk2_IV );
-            S_IA_dk2_IA.push_back( IA * dk2_IA );
-            S_IV_dk2_IV.push_back( IV * dk2_IV );
-            S_IA_dk2_IV.push_back( IA * dk2_IV );
-            S_IV_dk2_IA.push_back( IV * dk2_IA );
+            state->S_R_dk2_IA +=   Ri * dk2_IA;
+            state->S_R_dk2_IV +=   Ri * dk2_IV;
+            state->S_IA_dk2_IA +=  IA * dk2_IA;
+            state->S_IV_dk2_IV +=  IV * dk2_IV;
+            state->S_IA_dk2_IV +=  IA * dk2_IV;
+            state->S_IV_dk2_IA +=  IV * dk2_IA;
         }
     }        
-
-    state->S_IA_IV = Stats::Sum(std::move(S_IA_IV));
-    state->S_IA_R  = Stats::Sum(std::move(S_IA_R));
-    state->S_IV_R  = Stats::Sum(std::move(S_IV_R));
-    state->S_IA_IA = Stats::Sum(std::move(S_IA_IA));
-    state->S_IV_IV = Stats::Sum(std::move(S_IV_IV));
-    state->S_R_R   = Stats::Sum(std::move(S_R_R));
 
     const double common_den = Stats::Sum(std::vector<double>({ (state->S_IA_IV)*(state->S_IA_IV), 
                                                                -(state->S_IA_IA)*(state->S_IV_IV) }));
@@ -216,22 +179,6 @@ ComputeIntegralSummations(KineticModel_1Compartment2Input_Reduced3Param_Chebyshe
                                   -2.0*(state->k1A)*(state->S_IA_R),
                                   -2.0*(state->k1V)*(state->S_IV_R) }));
     if(ComputeGradientToo){
-
-        state->S_R_dtauA_IA  = Stats::Sum(S_R_dtauA_IA);
-        state->S_IA_dtauA_IA = Stats::Sum(S_IA_dtauA_IA);
-        state->S_IV_dtauA_IA = Stats::Sum(S_IV_dtauA_IA);
-
-        state->S_R_dtauV_IV  = Stats::Sum(S_R_dtauV_IV);
-        state->S_IV_dtauV_IV = Stats::Sum(S_IV_dtauV_IV);
-        state->S_IA_dtauV_IV = Stats::Sum(S_IA_dtauV_IV);
-
-        state->S_R_dk2_IA    = Stats::Sum(S_R_dk2_IA);
-        state->S_R_dk2_IV    = Stats::Sum(S_R_dk2_IV);
-        state->S_IA_dk2_IA   = Stats::Sum(S_IA_dk2_IA);
-        state->S_IV_dk2_IV   = Stats::Sum(S_IV_dk2_IV);
-        state->S_IA_dk2_IV   = Stats::Sum(S_IA_dk2_IV);
-        state->S_IV_dk2_IA   = Stats::Sum(S_IV_dk2_IA);
-
 
         state->dF_dtauA = 2.0 * Stats::Sum( std::vector<double>({
                                   -(state->k1A)*(state->S_R_dtauA_IA),
@@ -337,6 +284,8 @@ Optimize_FreeformOptimization_Reduced3Param(KineticModel_1Compartment2Input_Redu
 
     const int dimen = 3;
 
+    int status;
+
     //Fitting parameters: tauA, tauV, k2.
     // The following are arbitrarily chosen. They should be seeded from previous computations, or
     // at least be nominal values reported within the literature.
@@ -350,7 +299,6 @@ Optimize_FreeformOptimization_Reduced3Param(KineticModel_1Compartment2Input_Redu
         gsl_vector_set(model_params, 0, std::isfinite(state.tauA) ? state.tauA : 0.0000);
         gsl_vector_set(model_params, 1, std::isfinite(state.tauV) ? state.tauV : 0.0000);
         gsl_vector_set(model_params, 2, std::isfinite(state.k2)   ? state.k2   : 0.0518);
-
 
         const gsl_multimin_fdfminimizer_type *minimizer_t;
         gsl_multimin_fdfminimizer *minimizer;
@@ -370,18 +318,17 @@ Optimize_FreeformOptimization_Reduced3Param(KineticModel_1Compartment2Input_Redu
         minimizer = gsl_multimin_fdfminimizer_alloc(minimizer_t, dimen);
 
         const double alg_knob_step_size = 0.1; //Meaning depends on the algorithm being used.
-        const double dFtol = 1.0E-3; //When F changes < this on successive iters, then exit.
-        const double ddFtol = 1.0E-3; //When dF (the gradient) changes < this on successive iters, then exit.
+        const double dFtol = 1.0E-4; //When F changes < this on successive iters, then exit.
+        const double ddFtol = 1.0E-4; //When dF (the gradient) changes < this on successive iters, then exit.
         gsl_multimin_fdfminimizer_set(minimizer, &func_wrapper, model_params, alg_knob_step_size, dFtol);
 
-        int status;
         size_t iter = 0;
         do{
             iter++;
             status = gsl_multimin_fdfminimizer_iterate(minimizer);
             if(status != 0) break;
             status = gsl_multimin_test_gradient(minimizer->gradient, ddFtol);
-        }while( (status == GSL_CONTINUE) && (iter < 400));
+        }while( (status == GSL_CONTINUE) && (iter < 500));
 
         state.tauA = gsl_vector_get(minimizer->x, 0);
         state.tauV = gsl_vector_get(minimizer->x, 1);
@@ -391,7 +338,7 @@ Optimize_FreeformOptimization_Reduced3Param(KineticModel_1Compartment2Input_Redu
     }
 
     //Second-pass fit.
-    {
+    if(false){
         gsl_vector_set(model_params, 0, std::isfinite(state.tauA) ? state.tauA : 0.0000);
         gsl_vector_set(model_params, 1, std::isfinite(state.tauV) ? state.tauV : 0.0000);
         gsl_vector_set(model_params, 2, std::isfinite(state.k2)   ? state.k2   : 0.0518);
@@ -418,7 +365,6 @@ Optimize_FreeformOptimization_Reduced3Param(KineticModel_1Compartment2Input_Redu
         const double ddFtol = 1.0E-1; //When dF (the gradient) changes < this on successive iters, then exit.
         gsl_multimin_fdfminimizer_set(minimizer, &func_wrapper, model_params, alg_knob_step_size, dFtol);
 
-        int status;
         size_t iter = 0;
         do{
             iter++;
@@ -427,23 +373,23 @@ Optimize_FreeformOptimization_Reduced3Param(KineticModel_1Compartment2Input_Redu
             status = gsl_multimin_test_gradient(minimizer->gradient, ddFtol);
         }while( (status == GSL_CONTINUE) && (iter < 1000));
 
-        state.FittingPerformed = true;
-        state.FittingSuccess = (status == GSL_SUCCESS);
-
         state.tauA = gsl_vector_get(minimizer->x, 0);
         state.tauV = gsl_vector_get(minimizer->x, 1);
         state.k2   = gsl_vector_get(minimizer->x, 2);
-
-        //Compute k1A, k1V, and RSS(==F) with the best tauA, tauV, and k2.
-        {
-            const bool ComputeGradientToo = false;
-            ComputeIntegralSummations(&state, ComputeGradientToo);
-        }
 
         gsl_multimin_fdfminimizer_free(minimizer);
     }
 
     gsl_vector_free(model_params);
+
+    //Compute k1A, k1V, and RSS(==F) with the best tauA, tauV, and k2.
+    {
+        const bool ComputeGradientToo = false;
+        ComputeIntegralSummations(&state, ComputeGradientToo);
+    }
+
+    state.FittingPerformed = true;
+    state.FittingSuccess = (status == GSL_SUCCESS);
 
     return std::move(state);
 }
