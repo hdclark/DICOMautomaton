@@ -16,7 +16,7 @@ SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 SET(BUILD_SHARED_LIBS TRUE)
 SET(POSITION_INDEPENDENT_CODE TRUE)
 
-#SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ffast-math -frounding-math -fno-finite-math-only -pg")
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ffast-math -frounding-math -fno-finite-math-only")
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON) # For clang-tidy et al.
 
