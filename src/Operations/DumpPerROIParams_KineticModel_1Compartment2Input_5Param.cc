@@ -240,7 +240,7 @@ DumpPerROIParams_KineticModel_1Compartment2Input_5Param(Drover DICOM_data,
     enum {
         Have_No_Model,
         Have_1Compartment2Input_5Param_LinearInterp_Model,
-        Have_1Compartment2Input_5Param_Chebyshev_Model
+        Have_1Compartment2Input_5Param_Chebyshev_Model,
         Have_1Compartment2Input_Reduced3Param_Chebyshev_Model
     } HaveModel;
     HaveModel = Have_No_Model;
@@ -333,10 +333,10 @@ DumpPerROIParams_KineticModel_1Compartment2Input_5Param(Drover DICOM_data,
             for(auto & img_it : selected_imgs){
                 if(auto m_str = img_it->GetMetadataValueAs<std::string>("ModelState")){
                     if(HaveModel == Have_No_Model){
-                        if(Deserialize(m_str.value(),model_5params_cheby)){
+                        if(Deserialize(m_str.value(),model_3params_cheby)){
+                            HaveModel = Have_1Compartment2Input_Reduced3Param_Chebyshev_Model;
+                        }else if(Deserialize(m_str.value(),model_5params_cheby)){
                             HaveModel = Have_1Compartment2Input_5Param_Chebyshev_Model;
-                        }else if(Deserialize(m_str.value(),model_3params_linear)){
-                            HaveModel = Have_1Compartment2Input_Reduced3Param_LinearInterp_Model;
                         }else if(Deserialize(m_str.value(),model_5params_linear)){
                             HaveModel = Have_1Compartment2Input_5Param_LinearInterp_Model;
                         }else{
@@ -473,7 +473,7 @@ DumpPerROIParams_KineticModel_1Compartment2Input_5Param(Drover DICOM_data,
                                             Evaluate_Model(model_5params_cheby,t,eval_res);
                                             RSS += std::pow(eval_res.I - f, 2.0);
                                         }else if(HaveModel == Have_1Compartment2Input_Reduced3Param_Chebyshev_Model){
-                                            KineticModel_1Compartment2Input_5Param_Chebyshev_Results eval_res;
+                                            KineticModel_1Compartment2Input_Reduced3Param_Chebyshev_Results eval_res;
                                             Evaluate_Model(model_3params_cheby,t,eval_res);
                                             RSS += std::pow(eval_res.I - f, 2.0);
                                         }
