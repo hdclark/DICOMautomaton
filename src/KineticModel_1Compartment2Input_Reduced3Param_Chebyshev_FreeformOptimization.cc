@@ -35,11 +35,32 @@ ComputeIntegralSummations(KineticModel_1Compartment2Input_Reduced3Param_Chebyshe
     // quantities. They are also used to compute $F$ (= the RSS) and optimal estimates for k1A and k1V, and the state is
     // updated with these quantities.
 
+    const auto IndicateFailure = [&](void) -> void {
+            //This closure attempts to signal that the current parameters are no good.
+            state->RSS = std::numeric_limits<double>::infinity();
+            state->k1A = std::numeric_limits<double>::quiet_NaN();
+            state->k1V = std::numeric_limits<double>::quiet_NaN();
+            if(ComputeGradientToo){
+                state->dF_dtauA = 0.0;
+                state->dF_dtauV = 0.0;
+                state->dF_dk2   = 0.0;
+            }
+            return;
+    };
+
     const double tauA = state->tauA;
     const double tauV = state->tauV;
     const double k2   = state->k2;
 
-    const auto N = state->cROI->samples.size();
+    if( !std::isfinite(tauA) || !std::isfinite(tauV) || !std::isfinite(k2) ){
+        IndicateFailure();
+        return;
+    }
+   
+    //if( !isininc(-20.0, tauA, 20.0) || !isininc(-20.0, tauV, 20.0) || !isininc(0.0, k2, 1.0) ){
+    //    IndicateFailure();
+    //    return;
+    //}
 
     // For evaluating the objective function $F$.
     state->S_IA_IV = 0.0;
@@ -84,7 +105,7 @@ ComputeIntegralSummations(KineticModel_1Compartment2Input_Reduced3Param_Chebyshe
         double dk2_IA   = std::numeric_limits<double>::quiet_NaN(); //Partial derivative w.r.t. k2.
 
         //AIF integral.
-        {   
+        try{   
             const double A = k2;
             const double B = k2 * (tauA - ti);
             const double C = 1.0; 
@@ -105,6 +126,9 @@ ComputeIntegralSummations(KineticModel_1Compartment2Input_Reduced3Param_Chebyshe
 
                 dk2_IA = -ti*IA + (t_integral.Sample(taumax) - t_integral.Sample(taumin));
             }
+        }catch(const std::exception &e){
+            IndicateFailure();
+            return;
         }
 
         double IV       = std::numeric_limits<double>::quiet_NaN();
@@ -113,7 +137,7 @@ ComputeIntegralSummations(KineticModel_1Compartment2Input_Reduced3Param_Chebyshe
 
 
         //VIF integral.
-        {   
+        try{   
             const double A = k2;
             const double B = k2 * (tauV - ti);
             const double C = 1.0; 
@@ -134,6 +158,9 @@ ComputeIntegralSummations(KineticModel_1Compartment2Input_Reduced3Param_Chebyshe
 
                 dk2_IV = -ti*IV + (t_integral.Sample(taumax) - t_integral.Sample(taumin));
             }
+        }catch(const std::exception &e){
+            IndicateFailure();
+            return;
         }
 
         //Add to the summations.
@@ -170,6 +197,11 @@ ComputeIntegralSummations(KineticModel_1Compartment2Input_Reduced3Param_Chebyshe
                                                             -(state->S_IV_R)*(state->S_IA_IA) }));
     state->k1A = k1A_num / common_den;
     state->k1V = k1V_num / common_den;
+
+    if(!std::isfinite(state->k1A) || !std::isfinite(state->k1V)){
+        IndicateFailure();
+        return;
+    }
 
     const double F = Stats::Sum(std::vector<double>({ 
                                   (state->S_R_R),
