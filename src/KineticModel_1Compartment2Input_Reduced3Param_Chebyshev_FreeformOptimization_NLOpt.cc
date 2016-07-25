@@ -9,11 +9,7 @@
 #include <limits>
 #include <cmath>
 
-#include <gsl/gsl_math.h>
-#include <gsl/gsl_errno.h>
-#include <gsl/gsl_vector.h>
-#include <gsl/gsl_blas.h>
-#include <gsl/gsl_multimin.h>
+#include <nlopt.h>
 
 #include <boost/date_time/posix_time/posix_time.hpp>
 
@@ -258,76 +254,39 @@ ComputeIntegralSummations(KineticModel_1Compartment2Input_Reduced3Param_Chebyshe
 
 //FUNCINFO("Evaluating at {tauA, tauV, k2} = {" << tauA << ", " << tauV << ", " << k2 << "} gives {k1A, k1V} = {" << state->k1A << ", " << state->k1V << "} and F = " << F);
 
-//FUNCINFO("{dF_dtauA, dF_dtauV, dF_dk2} = " << state->dF_dtauA << ", " << state->dF_dtauV << ", " << state->dF_dk2);
+FUNCINFO("{dF_dtauA, dF_dtauV, dF_dk2} = " << state->dF_dtauA << ", " << state->dF_dtauV << ", " << state->dF_dk2);
 
     return;
 }
 
 
 
+
 static
-double
-F_only_Reduced3Param(const gsl_vector *model_params, void *voided_state){
-    //This function computes the residual-sum-of-squares between the ROI time course and a kinetic liver
-    // perfusion model at the ROI sample t_i's. The gradient is NOT computed.
+double 
+MinimizationFunction_Reduced3Param(unsigned, const double *params, double *grad, void *voided_state){
 
     auto state = reinterpret_cast<KineticModel_1Compartment2Input_Reduced3Param_Chebyshev_Parameters*>(voided_state);
 
-    state->tauA = gsl_vector_get(model_params, 0);
-    state->tauV = gsl_vector_get(model_params, 1);
-    state->k2   = gsl_vector_get(model_params, 2);
-  
-    const bool ComputeGradientToo = false;
-    ComputeIntegralSummations(state, ComputeGradientToo);
-
-    return state->RSS;
-}
-
-static
-void 
-dF_only_Reduced3Param(const gsl_vector *model_params, void *voided_state, gsl_vector *dF){
     //This function computes the residual-sum-of-squares between the ROI time course and a kinetic liver
-    // perfusion model at the ROI sample t_i's. The gradient is also computed (it requires F to be computed).
+    // perfusion model at the ROI sample t_i's. If gradients are requested, they are also computed.
 
-    auto state = reinterpret_cast<KineticModel_1Compartment2Input_Reduced3Param_Chebyshev_Parameters*>(voided_state);
+    //Pack the current parameters into the state struct. This is done to unify the nlopt and user calling styles.
+    state->tauA = params[0];
+    state->tauV = params[1]; 
+    state->k2   = params[2];
 
-    state->tauA = gsl_vector_get(model_params, 0);
-    state->tauV = gsl_vector_get(model_params, 1);
-    state->k2   = gsl_vector_get(model_params, 2);
-  
-    const bool ComputeGradientToo = true;
+    const bool ComputeGradientToo = (grad != nullptr);
     ComputeIntegralSummations(state, ComputeGradientToo);
 
-    gsl_vector_set(dF, 0, state->dF_dtauA);
-    gsl_vector_set(dF, 1, state->dF_dtauV);
-    gsl_vector_set(dF, 2, state->dF_dk2);
+    if(grad != nullptr){
+        grad[0] = state->dF_dtauA;
+        grad[1] = state->dF_dtauV;
+        grad[2] = state->dF_dk2;
+    }
 
-    return;
+    return state->RSS; 
 }
-
-static
-void 
-F_and_dF_Reduced3Param(const gsl_vector *model_params, void *voided_state, double *F, gsl_vector *dF){
-    //This function computes the residual-sum-of-squares between the ROI time course and a kinetic liver
-    // perfusion model at the ROI sample t_i's. The gradient is also computed.
-
-    auto state = reinterpret_cast<KineticModel_1Compartment2Input_Reduced3Param_Chebyshev_Parameters*>(voided_state);
-
-    state->tauA = gsl_vector_get(model_params, 0);
-    state->tauV = gsl_vector_get(model_params, 1);
-    state->k2   = gsl_vector_get(model_params, 2);
-  
-    const bool ComputeGradientToo = true;
-    ComputeIntegralSummations(state, ComputeGradientToo);
-
-    *F = state->RSS;
-    gsl_vector_set(dF, 0, state->dF_dtauA);
-    gsl_vector_set(dF, 1, state->dF_dtauV);
-    gsl_vector_set(dF, 2, state->dF_dk2);
-
-    return;
-}
-
 
 struct KineticModel_1Compartment2Input_Reduced3Param_Chebyshev_Parameters
 Optimize_FreeformOptimization_Reduced3Param(KineticModel_1Compartment2Input_Reduced3Param_Chebyshev_Parameters state){
@@ -336,114 +295,198 @@ Optimize_FreeformOptimization_Reduced3Param(KineticModel_1Compartment2Input_Redu
     state.FittingSuccess = false;
 
     const int dimen = 3;
+    double func_min;
 
     //Fitting parameters: tauA, tauV, k2.
     // The following are arbitrarily chosen. They should be seeded from previous computations, or
     // at least be nominal values reported within the literature.
-    gsl_vector *model_params = gsl_vector_alloc(dimen);
+    double params[dimen];
+
+    //If there were finite parameters provided, use them as the initial guesses.
+    params[0] = std::isfinite(state.tauA) ? state.tauA : 0.0000;
+    params[1] = std::isfinite(state.tauV) ? state.tauV : 0.0000;
+    params[2] = std::isfinite(state.k2)   ? state.k2   : 0.0518;
+
+    // U/L bounds:            tauA,  tauV,  k2.
+    double l_bnds[dimen] = {  -20.0, -20.0, 0.0 };
+    double u_bnds[dimen] = {   20.0,  20.0, 1.0 };
+    // NOTE: If tmax ~= 150, and you permit exp(k2*tmax) to be <= 10^66, then k2 <= 1.
+    //       So k2 = 1 seems like a reasonable limit to help prevent overflow. 
+                    
+    //Initial step sizes:       tauA,   tauV,   k2.
+    double initstpsz[dimen] = { 3.2000, 3.2000, 0.0050 };
+
+    //Absolute param. change thresholds:  tauA,  tauV,  k2.
+    //double xtol_abs_thresholds[dimen] = { 1E-20, 1E-20, 1E-10 };
+    double xtol_abs_thresholds[dimen] = { std::numeric_limits<double>::denorm_min(),
+                                          std::numeric_limits<double>::denorm_min(),
+                                          std::numeric_limits<double>::denorm_min() };
 
 
     //First-pass fit.
     {
+        nlopt_opt opt; //See `man nlopt` to get list of available algorithms.
+        //opt = nlopt_create(NLOPT_LN_COBYLA, dimen);   //Local, no-derivative schemes.
+        //opt = nlopt_create(NLOPT_LN_BOBYQA, dimen);
+        //opt = nlopt_create(NLOPT_LN_SBPLX, dimen);
 
-        //If there were finite parameters provided, use them as the initial guesses.
-        gsl_vector_set(model_params, 0, std::isfinite(state.tauA) ? state.tauA : 0.0000);
-        gsl_vector_set(model_params, 1, std::isfinite(state.tauV) ? state.tauV : 0.0000);
-        gsl_vector_set(model_params, 2, std::isfinite(state.k2)   ? state.k2   : 0.0518);
+        opt = nlopt_create(NLOPT_LD_MMA, dimen);   //Local, derivative schemes.
+        //opt = nlopt_create(NLOPT_LD_SLSQP, dimen);
+        //opt = nlopt_create(NLOPT_LD_LBFGS, dimen);
+        //opt = nlopt_create(NLOPT_LD_VAR2, dimen);
+        //opt = nlopt_create(NLOPT_LD_TNEWTON_PRECOND_RESTART, dimen);
+        //opt = nlopt_create(NLOPT_LD_TNEWTON_PRECOND, dimen);
+        //opt = nlopt_create(NLOPT_LD_TNEWTON, dimen);
 
-
-        const gsl_multimin_fdfminimizer_type *minimizer_t;
-        gsl_multimin_fdfminimizer *minimizer;
-
-        gsl_multimin_function_fdf func_wrapper;
-
-        func_wrapper.n = dimen;
-
-        func_wrapper.f = F_only_Reduced3Param;
-        func_wrapper.df = dF_only_Reduced3Param;
-        func_wrapper.fdf = F_and_dF_Reduced3Param;
-
-        func_wrapper.params = reinterpret_cast<void*>(&state); // User parameters.
-
-        //minimizer_t = gsl_multimin_fdfminimizer_conjugate_fr;
-        minimizer_t = gsl_multimin_fdfminimizer_vector_bfgs2;
-        minimizer = gsl_multimin_fdfminimizer_alloc(minimizer_t, dimen);
-
-        const double alg_knob_step_size = 0.1; //Meaning depends on the algorithm being used.
-        const double dFtol = 1.0E-3; //When F changes < this on successive iters, then exit.
-        const double ddFtol = 1.0E-3; //When dF (the gradient) changes < this on successive iters, then exit.
-        gsl_multimin_fdfminimizer_set(minimizer, &func_wrapper, model_params, alg_knob_step_size, dFtol);
-
-        int status;
-        size_t iter = 0;
-        do{
-            iter++;
-            status = gsl_multimin_fdfminimizer_iterate(minimizer);
-            if(status != 0) break;
-            status = gsl_multimin_test_gradient(minimizer->gradient, ddFtol);
-        }while( (status == GSL_CONTINUE) && (iter < 400));
-
-        state.tauA = gsl_vector_get(minimizer->x, 0);
-        state.tauV = gsl_vector_get(minimizer->x, 1);
-        state.k2   = gsl_vector_get(minimizer->x, 2);
-
-        gsl_multimin_fdfminimizer_free(minimizer);
-    }
-
-    //Second-pass fit.
-    {
-        gsl_vector_set(model_params, 0, std::isfinite(state.tauA) ? state.tauA : 0.0000);
-        gsl_vector_set(model_params, 1, std::isfinite(state.tauV) ? state.tauV : 0.0000);
-        gsl_vector_set(model_params, 2, std::isfinite(state.k2)   ? state.k2   : 0.0518);
-
-        const gsl_multimin_fdfminimizer_type *minimizer_t;
-        gsl_multimin_fdfminimizer *minimizer;
-
-        gsl_multimin_function_fdf func_wrapper;
-
-        func_wrapper.n = dimen;
-
-        func_wrapper.f = F_only_Reduced3Param;
-        func_wrapper.df = dF_only_Reduced3Param;
-        func_wrapper.fdf = F_and_dF_Reduced3Param;
-
-        func_wrapper.params = reinterpret_cast<void*>(&state); // User parameters.
-
-        minimizer_t = gsl_multimin_fdfminimizer_conjugate_fr;
-        //minimizer_t = gsl_multimin_fdfminimizer_vector_bfgs2;
-        minimizer = gsl_multimin_fdfminimizer_alloc(minimizer_t, dimen);
-
-        const double alg_knob_step_size = 0.1; //Meaning depends on the algorithm being used.
-        const double dFtol = 1.0E-1; //When F changes < this on successive iters, then exit.
-        const double ddFtol = 1.0E-1; //When dF (the gradient) changes < this on successive iters, then exit.
-        gsl_multimin_fdfminimizer_set(minimizer, &func_wrapper, model_params, alg_knob_step_size, dFtol);
-
-        int status;
-        size_t iter = 0;
-        do{
-            iter++;
-            status = gsl_multimin_fdfminimizer_iterate(minimizer);
-            if(status != 0) break;
-            status = gsl_multimin_test_gradient(minimizer->gradient, ddFtol);
-        }while( (status == GSL_CONTINUE) && (iter < 1000));
-
-        state.FittingPerformed = true;
-        state.FittingSuccess = (status == GSL_SUCCESS);
-
-        state.tauA = gsl_vector_get(minimizer->x, 0);
-        state.tauV = gsl_vector_get(minimizer->x, 1);
-        state.k2   = gsl_vector_get(minimizer->x, 2);
-
-        //Compute k1A, k1V, and RSS(==F) with the best tauA, tauV, and k2.
-        {
-            const bool ComputeGradientToo = false;
-            ComputeIntegralSummations(&state, ComputeGradientToo);
+        //opt = nlopt_create(NLOPT_GN_DIRECT, dimen); //Global, no-derivative schemes.
+        //opt = nlopt_create(NLOPT_GN_CRS2_LM, dimen);
+        //opt = nlopt_create(NLOPT_GN_ESCH, dimen);
+        //opt = nlopt_create(NLOPT_GN_ISRES, dimen);
+                        
+        nlopt_set_lower_bounds(opt, l_bnds);
+        nlopt_set_upper_bounds(opt, u_bnds);
+                        
+        if(NLOPT_SUCCESS != nlopt_set_initial_step(opt, initstpsz)){
+            FUNCERR("NLOpt unable to set initial step sizes");
+        }
+        if(NLOPT_SUCCESS != nlopt_set_min_objective(opt, MinimizationFunction_Reduced3Param, reinterpret_cast<void*>(&state))){
+            FUNCERR("NLOpt unable to set objective function for minimization");
+        }
+        //if(NLOPT_SUCCESS != nlopt_set_xtol_rel(opt, 1.0E-3)){
+        //    FUNCERR("NLOpt unable to set xtol stopping condition");
+        //}
+//        if(NLOPT_SUCCESS != nlopt_set_xtol_abs(opt, xtol_abs_thresholds)){
+//            FUNCERR("NLOpt unable to set xtol_abs stopping condition");
+//        }
+//        if(NLOPT_SUCCESS != nlopt_set_ftol_rel(opt, 1.0E-99)){
+//            FUNCERR("NLOpt unable to set ftol_rel stopping condition");
+//        }
+//        if(NLOPT_SUCCESS != nlopt_set_maxtime(opt, 30.0)){ // In seconds.
+        if(NLOPT_SUCCESS != nlopt_set_maxtime(opt, 3.0)){ // In seconds.
+            FUNCERR("NLOpt unable to set maxtime stopping condition");
+        }
+        if(NLOPT_SUCCESS != nlopt_set_maxeval(opt, 5'000'000)){ // Maximum # of objective func evaluations.
+            FUNCERR("NLOpt unable to set maxeval stopping condition");
+        }
+        if(NLOPT_SUCCESS != nlopt_set_vector_storage(opt, 400)){ // Amount of memory to use (MB).
+            FUNCERR("NLOpt unable to tell NLOpt to use more scratch space");
         }
 
-        gsl_multimin_fdfminimizer_free(minimizer);
+        const auto opt_status = nlopt_optimize(opt, params, &func_min);
+
+        if(opt_status < 0){
+            state.FittingSuccess = false;
+            if(opt_status == NLOPT_FAILURE){                FUNCWARN("NLOpt fail: generic failure");
+            }else if(opt_status == NLOPT_INVALID_ARGS){     FUNCERR("NLOpt fail: invalid arguments");
+            }else if(opt_status == NLOPT_OUT_OF_MEMORY){    FUNCWARN("NLOpt fail: out of memory");
+            }else if(opt_status == NLOPT_ROUNDOFF_LIMITED){ FUNCWARN("NLOpt fail: roundoff limited");
+            }else if(opt_status == NLOPT_FORCED_STOP){      FUNCWARN("NLOpt fail: forced termination");
+            }else{ FUNCERR("NLOpt fail: unrecognized error code"); }
+            // See http://ab-initio.mit.edu/wiki/index.php/NLopt_Reference for error code info.
+        }else{
+            state.FittingSuccess = true;
+            if(true){
+                if(opt_status == NLOPT_SUCCESS){                FUNCINFO("NLOpt: success");
+                }else if(opt_status == NLOPT_STOPVAL_REACHED){  FUNCINFO("NLOpt: stopval reached");
+                }else if(opt_status == NLOPT_FTOL_REACHED){     FUNCINFO("NLOpt: ftol reached");
+                }else if(opt_status == NLOPT_XTOL_REACHED){     FUNCINFO("NLOpt: xtol reached");
+                }else if(opt_status == NLOPT_MAXEVAL_REACHED){  FUNCINFO("NLOpt: maxeval count reached");
+                }else if(opt_status == NLOPT_MAXTIME_REACHED){  FUNCINFO("NLOpt: maxtime reached");
+                }else{ FUNCERR("NLOpt fail: unrecognized success code"); }
+            }
+        }
+
+        nlopt_destroy(opt);
     }
 
-    gsl_vector_free(model_params);
+    //Second-pass fit. Only bother if the first pass was reasonable.
+//    if(state.FittingSuccess){
+    if(false){
+        nlopt_opt opt; //See `man nlopt` to get list of available algorithms.
+        //opt = nlopt_create(NLOPT_LN_COBYLA, dimen);   //Local, no-derivative schemes.
+        //opt = nlopt_create(NLOPT_LN_BOBYQA, dimen);
+        //opt = nlopt_create(NLOPT_LN_SBPLX, dimen);
+
+        //opt = nlopt_create(NLOPT_LD_MMA, dimen);   //Local, derivative schemes.
+        //opt = nlopt_create(NLOPT_LD_SLSQP, dimen);
+        //opt = nlopt_create(NLOPT_LD_LBFGS, dimen);
+        //opt = nlopt_create(NLOPT_LD_VAR2, dimen);
+        //opt = nlopt_create(NLOPT_LD_TNEWTON_PRECOND_RESTART, dimen);
+        //opt = nlopt_create(NLOPT_LD_TNEWTON_PRECOND, dimen);
+        opt = nlopt_create(NLOPT_LD_TNEWTON, dimen);
+
+        //opt = nlopt_create(NLOPT_GN_DIRECT, dimen); //Global, no-derivative schemes.
+        //opt = nlopt_create(NLOPT_GN_CRS2_LM, dimen);
+        //opt = nlopt_create(NLOPT_GN_ESCH, dimen);
+        //opt = nlopt_create(NLOPT_GN_ISRES, dimen);
+                        
+        nlopt_set_lower_bounds(opt, l_bnds);
+        nlopt_set_upper_bounds(opt, u_bnds);
+                        
+        if(NLOPT_SUCCESS != nlopt_set_initial_step(opt, initstpsz)){
+            FUNCERR("NLOpt unable to set initial step sizes");
+        }
+        if(NLOPT_SUCCESS != nlopt_set_min_objective(opt, MinimizationFunction_Reduced3Param, reinterpret_cast<void*>(&state))){
+            FUNCERR("NLOpt unable to set objective function for minimization");
+        }
+        //if(NLOPT_SUCCESS != nlopt_set_xtol_rel(opt, 1.0E-3)){
+        //    FUNCERR("NLOpt unable to set xtol stopping condition");
+        //}
+        //if(NLOPT_SUCCESS != nlopt_set_xtol_abs(opt, xtol_abs_thresholds)){
+        //    FUNCERR("NLOpt unable to set xtol_abs stopping condition");
+        //}
+        if(NLOPT_SUCCESS != nlopt_set_ftol_rel(opt, 1.0E-5)){
+            FUNCERR("NLOpt unable to set ftol_rel stopping condition");
+        }
+        if(NLOPT_SUCCESS != nlopt_set_maxtime(opt, 30.0)){ // In seconds.
+            FUNCERR("NLOpt unable to set maxtime stopping condition");
+        }
+        if(NLOPT_SUCCESS != nlopt_set_maxeval(opt, 5'000'000)){ // Maximum # of objective func evaluations.
+            FUNCERR("NLOpt unable to set maxeval stopping condition");
+        }
+        if(NLOPT_SUCCESS != nlopt_set_vector_storage(opt, 400)){ // Amount of memory to use (MB).
+            FUNCERR("NLOpt unable to tell NLOpt to use more scratch space");
+        }
+
+        const auto opt_status = nlopt_optimize(opt, params, &func_min);
+
+        if(opt_status < 0){
+            state.FittingSuccess = false;
+            if(opt_status == NLOPT_FAILURE){                FUNCWARN("NLOpt fail: generic failure");
+            }else if(opt_status == NLOPT_INVALID_ARGS){     FUNCERR("NLOpt fail: invalid arguments");
+            }else if(opt_status == NLOPT_OUT_OF_MEMORY){    FUNCWARN("NLOpt fail: out of memory");
+            }else if(opt_status == NLOPT_ROUNDOFF_LIMITED){ FUNCWARN("NLOpt fail: roundoff limited");
+            }else if(opt_status == NLOPT_FORCED_STOP){      FUNCWARN("NLOpt fail: forced termination");
+            }else{ FUNCERR("NLOpt fail: unrecognized error code"); }
+            // See http://ab-initio.mit.edu/wiki/index.php/NLopt_Reference for error code info.
+        }else{
+            state.FittingSuccess = true;
+            if(true){
+                if(opt_status == NLOPT_SUCCESS){                FUNCINFO("NLOpt: success");
+                }else if(opt_status == NLOPT_STOPVAL_REACHED){  FUNCINFO("NLOpt: stopval reached");
+                }else if(opt_status == NLOPT_FTOL_REACHED){     FUNCINFO("NLOpt: ftol reached");
+                }else if(opt_status == NLOPT_XTOL_REACHED){     FUNCINFO("NLOpt: xtol reached");
+                }else if(opt_status == NLOPT_MAXEVAL_REACHED){  FUNCINFO("NLOpt: maxeval count reached");
+                }else if(opt_status == NLOPT_MAXTIME_REACHED){  FUNCINFO("NLOpt: maxtime reached");
+                }else{ FUNCERR("NLOpt fail: unrecognized success code"); }
+            }
+        }
+
+        nlopt_destroy(opt);
+    }
+    // ----------------------------------------------------------------------------
+
+    state.FittingPerformed = true;
+
+    state.RSS  = func_min;
+
+    state.tauA = params[0];
+    state.tauV = params[1];
+    state.k2   = params[2];
+
+// ... compute k1A and k1V here ...
+//    state.k1A  = params[0];
+//    state.k1V  = params[2];
 
     return std::move(state);
 }
