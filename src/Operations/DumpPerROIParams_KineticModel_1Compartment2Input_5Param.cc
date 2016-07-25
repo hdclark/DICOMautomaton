@@ -241,11 +241,13 @@ DumpPerROIParams_KineticModel_1Compartment2Input_5Param(Drover DICOM_data,
         Have_No_Model,
         Have_1Compartment2Input_5Param_LinearInterp_Model,
         Have_1Compartment2Input_5Param_Chebyshev_Model
+        Have_1Compartment2Input_Reduced3Param_Chebyshev_Model
     } HaveModel;
     HaveModel = Have_No_Model;
 
-    KineticModel_1Compartment2Input_5Param_LinearInterp_Parameters model_params_linear;
-    KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters model_params_cheby;
+    KineticModel_1Compartment2Input_5Param_LinearInterp_Parameters model_5params_linear;
+    KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters model_5params_cheby;
+    KineticModel_1Compartment2Input_Reduced3Param_Chebyshev_Parameters model_3params_cheby;
 
     //Now we iterate over one image set (whichever is arbitrary, but it helps if there is no temporal axis).
     // The procedure is a bit convoluted: we need to 'bootstrap' some knowledge about the voxel topology, so we choose
@@ -331,9 +333,11 @@ DumpPerROIParams_KineticModel_1Compartment2Input_5Param(Drover DICOM_data,
             for(auto & img_it : selected_imgs){
                 if(auto m_str = img_it->GetMetadataValueAs<std::string>("ModelState")){
                     if(HaveModel == Have_No_Model){
-                        if(Deserialize(m_str.value(),model_params_cheby)){
+                        if(Deserialize(m_str.value(),model_5params_cheby)){
                             HaveModel = Have_1Compartment2Input_5Param_Chebyshev_Model;
-                        }else if(Deserialize(m_str.value(),model_params_linear)){
+                        }else if(Deserialize(m_str.value(),model_3params_linear)){
+                            HaveModel = Have_1Compartment2Input_Reduced3Param_LinearInterp_Model;
+                        }else if(Deserialize(m_str.value(),model_5params_linear)){
                             HaveModel = Have_1Compartment2Input_5Param_LinearInterp_Model;
                         }else{
                             throw std::runtime_error("Unable to deserialize model parameters. Is the record damaged?");
@@ -392,19 +396,26 @@ DumpPerROIParams_KineticModel_1Compartment2Input_5Param(Drover DICOM_data,
                                                                                        AlreadyProjected)){
                             for(auto chan = 0; chan < img.channels; ++chan){
 
-                                model_params_cheby.k1A  = std::numeric_limits<double>::quiet_NaN();
-                                model_params_cheby.tauA = std::numeric_limits<double>::quiet_NaN();
-                                model_params_cheby.k1V  = std::numeric_limits<double>::quiet_NaN();
-                                model_params_cheby.tauV = std::numeric_limits<double>::quiet_NaN();
-                                model_params_cheby.k2   = std::numeric_limits<double>::quiet_NaN();
-                                model_params_cheby.RSS  = std::numeric_limits<double>::quiet_NaN();
+                                model_5params_linear.k1A  = std::numeric_limits<double>::quiet_NaN();
+                                model_5params_linear.tauA = std::numeric_limits<double>::quiet_NaN();
+                                model_5params_linear.k1V  = std::numeric_limits<double>::quiet_NaN();
+                                model_5params_linear.tauV = std::numeric_limits<double>::quiet_NaN();
+                                model_5params_linear.k2   = std::numeric_limits<double>::quiet_NaN();
+                                model_5params_linear.RSS  = std::numeric_limits<double>::quiet_NaN();
 
-                                model_params_linear.k1A  = std::numeric_limits<double>::quiet_NaN();
-                                model_params_linear.tauA = std::numeric_limits<double>::quiet_NaN();
-                                model_params_linear.k1V  = std::numeric_limits<double>::quiet_NaN();
-                                model_params_linear.tauV = std::numeric_limits<double>::quiet_NaN();
-                                model_params_linear.k2   = std::numeric_limits<double>::quiet_NaN();
-                                model_params_linear.RSS  = std::numeric_limits<double>::quiet_NaN();
+                                model_5params_cheby.k1A  = std::numeric_limits<double>::quiet_NaN();
+                                model_5params_cheby.tauA = std::numeric_limits<double>::quiet_NaN();
+                                model_5params_cheby.k1V  = std::numeric_limits<double>::quiet_NaN();
+                                model_5params_cheby.tauV = std::numeric_limits<double>::quiet_NaN();
+                                model_5params_cheby.k2   = std::numeric_limits<double>::quiet_NaN();
+                                model_5params_cheby.RSS  = std::numeric_limits<double>::quiet_NaN();
+
+                                model_3params_cheby.k1A  = std::numeric_limits<double>::quiet_NaN();
+                                model_3params_cheby.tauA = std::numeric_limits<double>::quiet_NaN();
+                                model_3params_cheby.k1V  = std::numeric_limits<double>::quiet_NaN();
+                                model_3params_cheby.tauV = std::numeric_limits<double>::quiet_NaN();
+                                model_3params_cheby.k2   = std::numeric_limits<double>::quiet_NaN();
+                                model_3params_cheby.RSS  = std::numeric_limits<double>::quiet_NaN();
 
                                 //Scan through the various image_collection images to locate 
                                 // individual-voxel-specific data needed to evaluate the model.
@@ -420,20 +431,25 @@ DumpPerROIParams_KineticModel_1Compartment2Input_5Param(Drover DICOM_data,
 
                                         if(false){
                                         }else if(std::regex_match(desc.value(), k1A_regex)){
-                                            model_params_linear.k1A = pxl_val;
-                                            model_params_cheby.k1A  = pxl_val;
+                                            model_5params_linear.k1A = pxl_val;
+                                            model_5params_cheby.k1A  = pxl_val;
+                                            model_3params_cheby.k1A  = pxl_val;
                                         }else if(std::regex_match(desc.value(), tauA_regex)){
-                                            model_params_linear.tauA = pxl_val;
-                                            model_params_cheby.tauA  = pxl_val;
+                                            model_5params_linear.tauA = pxl_val;
+                                            model_5params_cheby.tauA  = pxl_val;
+                                            model_3params_cheby.tauA  = pxl_val;
                                         }else if(std::regex_match(desc.value(), k1V_regex)){
-                                            model_params_linear.k1V = pxl_val;
-                                            model_params_cheby.k1V  = pxl_val;
+                                            model_5params_linear.k1V = pxl_val;
+                                            model_5params_cheby.k1V  = pxl_val;
+                                            model_3params_cheby.k1V  = pxl_val;
                                         }else if(std::regex_match(desc.value(), tauV_regex)){
-                                            model_params_linear.tauV = pxl_val;
-                                            model_params_cheby.tauV  = pxl_val;
+                                            model_5params_linear.tauV = pxl_val;
+                                            model_5params_cheby.tauV  = pxl_val;
+                                            model_3params_cheby.tauV  = pxl_val;
                                         }else if(std::regex_match(desc.value(), k2_regex)){
-                                            model_params_linear.k2 = pxl_val;
-                                            model_params_cheby.k2  = pxl_val;
+                                            model_5params_linear.k2 = pxl_val;
+                                            model_5params_cheby.k2  = pxl_val;
+                                            model_3params_cheby.k2  = pxl_val;
                     
                                         }else if(auto dt = img_it->GetMetadataValueAs<double>("dt")){
                                             ROI_time_course.push_back(dt.value(), 0.0, pxl_val, 0.0);
@@ -450,11 +466,15 @@ DumpPerROIParams_KineticModel_1Compartment2Input_5Param(Drover DICOM_data,
                                         const double f = ROIsample[2];
                                         if(HaveModel == Have_1Compartment2Input_5Param_LinearInterp_Model){
                                             KineticModel_1Compartment2Input_5Param_LinearInterp_Results eval_res;
-                                            Evaluate_Model(model_params_linear,t,eval_res);
+                                            Evaluate_Model(model_5params_linear,t,eval_res);
                                             RSS += std::pow(eval_res.I - f, 2.0);
                                         }else if(HaveModel == Have_1Compartment2Input_5Param_Chebyshev_Model){
                                             KineticModel_1Compartment2Input_5Param_Chebyshev_Results eval_res;
-                                            Evaluate_Model(model_params_cheby,t,eval_res);
+                                            Evaluate_Model(model_5params_cheby,t,eval_res);
+                                            RSS += std::pow(eval_res.I - f, 2.0);
+                                        }else if(HaveModel == Have_1Compartment2Input_Reduced3Param_Chebyshev_Model){
+                                            KineticModel_1Compartment2Input_5Param_Chebyshev_Results eval_res;
+                                            Evaluate_Model(model_3params_cheby,t,eval_res);
                                             RSS += std::pow(eval_res.I - f, 2.0);
                                         }
                                     }
@@ -468,19 +488,27 @@ DumpPerROIParams_KineticModel_1Compartment2Input_5Param(Drover DICOM_data,
 
                                 params[RName].emplace_back();
                                 if(HaveModel == Have_1Compartment2Input_5Param_LinearInterp_Model){
-                                    params[RName].back().k1A  = model_params_linear.k1A;
-                                    params[RName].back().tauA = model_params_linear.tauA;
-                                    params[RName].back().k1V  = model_params_linear.k1V;
-                                    params[RName].back().tauV = model_params_linear.tauV;
-                                    params[RName].back().k2   = model_params_linear.k2;
+                                    params[RName].back().k1A  = model_5params_linear.k1A;
+                                    params[RName].back().tauA = model_5params_linear.tauA;
+                                    params[RName].back().k1V  = model_5params_linear.k1V;
+                                    params[RName].back().tauV = model_5params_linear.tauV;
+                                    params[RName].back().k2   = model_5params_linear.k2;
                                     params[RName].back().RSS  = RSS;
 
                                 }else if(HaveModel == Have_1Compartment2Input_5Param_Chebyshev_Model){
-                                    params[RName].back().k1A  = model_params_cheby.k1A;
-                                    params[RName].back().tauA = model_params_cheby.tauA;
-                                    params[RName].back().k1V  = model_params_cheby.k1V;
-                                    params[RName].back().tauV = model_params_cheby.tauV;
-                                    params[RName].back().k2   = model_params_cheby.k2;
+                                    params[RName].back().k1A  = model_5params_cheby.k1A;
+                                    params[RName].back().tauA = model_5params_cheby.tauA;
+                                    params[RName].back().k1V  = model_5params_cheby.k1V;
+                                    params[RName].back().tauV = model_5params_cheby.tauV;
+                                    params[RName].back().k2   = model_5params_cheby.k2;
+                                    params[RName].back().RSS  = RSS;
+
+                                }else if(HaveModel == Have_1Compartment2Input_Reduced3Param_Chebyshev_Model){
+                                    params[RName].back().k1A  = model_3params_cheby.k1A;
+                                    params[RName].back().tauA = model_3params_cheby.tauA;
+                                    params[RName].back().k1V  = model_3params_cheby.k1V;
+                                    params[RName].back().tauV = model_3params_cheby.tauV;
+                                    params[RName].back().k2   = model_3params_cheby.k2;
                                     params[RName].back().RSS  = RSS;
                                 }
                                 // ----------------------------------------------------------------------------
