@@ -13,7 +13,7 @@
 
 #include <boost/serialization/nvp.hpp>
 #include <boost/serialization/shared_ptr.hpp>
-
+#include <boost/serialization/version.hpp>
 
 
 // Shuttle struct for passing around the state needed to perform a pharmacokinetic modeling fit.
@@ -64,8 +64,21 @@ struct KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters {
     double tauV = std::numeric_limits<double>::quiet_NaN();
     double k2   = std::numeric_limits<double>::quiet_NaN();
 
+    // Computation adjustments.
+    
+    // Exponential coefficient truncation point.
+    //   3 usually works (roughly). 5 is probably OK. 10 should suffice. 
+    //   20 could be overkill. Depends on params, though.
+    size_t ExpApproxTrunc = 10;                                            
+
+    // Only retain MultiplicationCoeffTrunc*max(N,M) coefficients for faster (approximate) Chebyshev multiplication.
+    //   If +inf, then use regular (full) multiplication.
+    double MultiplicationCoeffTrunc = std::numeric_limits<double>::infinity();
+
 };
 
+
+BOOST_CLASS_VERSION(KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters, 1)
 
 namespace boost {
 namespace serialization {
@@ -73,7 +86,7 @@ namespace serialization {
 template<typename Archive>
 void serialize(Archive &a, 
                KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters &p, 
-               const unsigned int /*version*/ ){
+               const unsigned int version ){
     a & boost::serialization::make_nvp("cAIF",  p.cAIF)
       & boost::serialization::make_nvp("dcAIF", p.dcAIF)
 
@@ -92,6 +105,12 @@ void serialize(Archive &a,
       & boost::serialization::make_nvp("k1V",   p.k1V)
       & boost::serialization::make_nvp("tauV",  p.tauV)
       & boost::serialization::make_nvp("k2",    p.k2);
+
+    if(version >= 1){
+        a & boost::serialization::make_nvp("ExpApproxTrunc", p.ExpApproxTrunc)
+          & boost::serialization::make_nvp("MultiplicationCoeffTrunc", p.MultiplicationCoeffTrunc);
+    }
+
     return;
 }
 

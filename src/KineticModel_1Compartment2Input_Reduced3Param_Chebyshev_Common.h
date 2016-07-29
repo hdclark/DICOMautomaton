@@ -13,7 +13,7 @@
 
 #include <boost/serialization/nvp.hpp>
 #include <boost/serialization/shared_ptr.hpp>
-
+#include <boost/serialization/version.hpp>
 
 
 // Shuttle struct for passing around the state needed to perform a pharmacokinetic modeling fit.
@@ -94,8 +94,20 @@ struct KineticModel_1Compartment2Input_Reduced3Param_Chebyshev_Parameters {
     double S_IA_dk2_IV   = std::numeric_limits<double>::quiet_NaN();
     double S_IV_dk2_IA   = std::numeric_limits<double>::quiet_NaN();
 
+    // Computation adjustments.
+    
+    // Exponential coefficient truncation point.
+    //   3 usually works (roughly). 5 is probably OK. 10 should suffice. 
+    //   20 could be overkill. Depends on params, though.
+    size_t ExpApproxTrunc = 10;                                            
+
+    // Only retain MultiplicationCoeffTrunc*max(N,M) coefficients for faster (approximate) Chebyshev multiplication.
+    //   If +inf, then use regular (full) multiplication.
+    double MultiplicationCoeffTrunc = std::numeric_limits<double>::infinity();
+
 };
 
+BOOST_CLASS_VERSION(KineticModel_1Compartment2Input_Reduced3Param_Chebyshev_Parameters, 1)
 
 namespace boost {
 namespace serialization {
@@ -103,7 +115,7 @@ namespace serialization {
 template<typename Archive>
 void serialize(Archive &a, 
                KineticModel_1Compartment2Input_Reduced3Param_Chebyshev_Parameters &p, 
-               const unsigned int /*version*/ ){
+               const unsigned int version ){
     a & boost::serialization::make_nvp("cAIF",  p.cAIF)
       & boost::serialization::make_nvp("dcAIF", p.dcAIF)
 
@@ -148,6 +160,11 @@ void serialize(Archive &a,
       & boost::serialization::make_nvp("S_IV_dk2_IV", p.S_IV_dk2_IV)
       & boost::serialization::make_nvp("S_IA_dk2_IV", p.S_IA_dk2_IV)
       & boost::serialization::make_nvp("S_IV_dk2_IA", p.S_IV_dk2_IA);
+
+    if(version >= 1){
+        a & boost::serialization::make_nvp("ExpApproxTrunc", p.ExpApproxTrunc)
+          & boost::serialization::make_nvp("MultiplicationCoeffTrunc", p.MultiplicationCoeffTrunc);
+    }
 
     return;
 }

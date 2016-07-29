@@ -20,6 +20,9 @@ struct KineticModel_Liver_1C2I_Reduced3Param_Chebyshev_UserData {
     std::list<KineticModel_PixelSelectionCriteria> pixels_to_plot;
 
     std::regex TargetROIs;
+
+    size_t ExpApproxTrunc;
+    double MultiplicationCoeffTrunc;
 };
 
 

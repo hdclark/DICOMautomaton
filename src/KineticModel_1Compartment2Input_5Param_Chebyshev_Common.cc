@@ -15,8 +15,8 @@
 
 void
 Evaluate_Model( const KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters &state,
-                        const double t,
-                        KineticModel_1Compartment2Input_5Param_Chebyshev_Results &res){
+                const double t,
+                KineticModel_1Compartment2Input_5Param_Chebyshev_Results &res){
                 
     // Chebyshev polynomial approximation method. 
     // 
@@ -30,10 +30,8 @@ Evaluate_Model( const KineticModel_1Compartment2Input_5Param_Chebyshev_Parameter
     const double tauV = state.tauV;
     const double k2   = state.k2;
 
-    const size_t exp_approx_N = 10; // 3 usually works (roughly). 5 is probably OK. 10 should suffice. 
-                                    // 20 could be overkill. Depends on params, though.
-
-    const double mult_trunc = 0.8; //Only retain 0.5*max(N,M) coefficients for faster approx. Chebyshev multiplication.
+    const size_t exp_approx_N = state.ExpApproxTrunc;
+    const double mult_trunc = state.MultiplicationCoeffTrunc;
 
     double int_AIF_exp      = std::numeric_limits<double>::quiet_NaN();
     double int_VIF_exp      = std::numeric_limits<double>::quiet_NaN();
@@ -57,7 +55,6 @@ Evaluate_Model( const KineticModel_1Compartment2Input_5Param_Chebyshev_Parameter
         cheby_approx<double> integral;
 
         //Evaluate the model.
-//        integrand = exp_kern * (*(state.cAIF));
         integrand = exp_kern.Fast_Approx_Multiply(*(state.cAIF),mult_trunc);
         integral = integrand.Chebyshev_Integral();
         int_AIF_exp = (integral.Sample(taumax) - integral.Sample(taumin));
@@ -65,13 +62,11 @@ Evaluate_Model( const KineticModel_1Compartment2Input_5Param_Chebyshev_Parameter
         //Compute things for gradients.
         {
             //Evaluate $\partial_{k2}$ part of gradient.
-//            integrand = integrand * Chebyshev_Basis_Exact_Linear(expmin,expmax,1.0,tauA-t);
             integrand = integrand.Fast_Approx_Multiply(Chebyshev_Basis_Exact_Linear(expmin,expmax,1.0,tauA-t),mult_trunc);
             integral = integrand.Chebyshev_Integral();
             int_AIF_exp_tau = (integral.Sample(taumax) - integral.Sample(taumin));
 
             //Evaluate $\partial_{tauA}$ part of gradient.
-//            integrand = exp_kern * (*(state.dcAIF));
             integrand = exp_kern.Fast_Approx_Multiply(*(state.dcAIF),mult_trunc);
             integral = integrand.Chebyshev_Integral();
             int_dAIF_exp = (integral.Sample(taumax) - integral.Sample(taumin));
@@ -93,7 +88,6 @@ Evaluate_Model( const KineticModel_1Compartment2Input_5Param_Chebyshev_Parameter
         cheby_approx<double> integral;
 
         //Evaluate the model.
-//        integrand = exp_kern * (*state.cVIF);
         integrand = exp_kern.Fast_Approx_Multiply(*state.cVIF,mult_trunc);
         integral = integrand.Chebyshev_Integral();
         int_VIF_exp = (integral.Sample(taumax) - integral.Sample(taumin));
@@ -101,13 +95,11 @@ Evaluate_Model( const KineticModel_1Compartment2Input_5Param_Chebyshev_Parameter
         //Compute things for gradients.
         {
             //Evaluate $\partial_{k2}$ part of gradient.
-//            integrand = integrand * Chebyshev_Basis_Exact_Linear(expmin,expmax,1.0,tauV-t);
             integrand = integrand.Fast_Approx_Multiply(Chebyshev_Basis_Exact_Linear(expmin,expmax,1.0,tauV-t),mult_trunc);
             integral = integrand.Chebyshev_Integral();
             int_VIF_exp_tau = (integral.Sample(taumax) - integral.Sample(taumin));
 
             //Evaluate $\partial_{tauV}$ part of gradient.
-//            integrand = exp_kern * ((*state.dcVIF));
             integrand = exp_kern.Fast_Approx_Multiply((*state.dcVIF),mult_trunc);
             integral = integrand.Chebyshev_Integral();
             int_dVIF_exp = (integral.Sample(taumax) - integral.Sample(taumin));

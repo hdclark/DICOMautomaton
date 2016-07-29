@@ -137,6 +137,8 @@ KineticModel_Liver_1C2I_Reduced3Param_Chebyshev_FreeformOptimization(planar_imag
     model_state.cVIF  = Cvenous;;
     model_state.dcVIF = dCvenous;
 
+    model_state.ExpApproxTrunc = user_data_s->ExpApproxTrunc;
+    model_state.MultiplicationCoeffTrunc = user_data_s->MultiplicationCoeffTrunc;
 
     //Trim all but the ROIs we are interested in.
     auto cc_ROIs = cc_all;

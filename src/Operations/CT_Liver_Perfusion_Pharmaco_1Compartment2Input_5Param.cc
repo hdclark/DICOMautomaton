@@ -109,6 +109,41 @@ std::list<OperationArgDoc> OpArgDocCT_Liver_Perfusion_Pharmaco_1C2I_5Param(void)
                             ".*Aorta.*",
                             "Major_Artery" };
 
+
+    out.emplace_back();
+    out.back().name = "ExponentialKernelCoeffTruncation";
+    out.back().desc = "Control the number of Chebyshev coefficients used to approximate the exponential"
+                      " kernel. Usually ~10 will suffice. ~20 is probably overkill, and ~5 is probably"
+                      " too few. It is probably better to err on the side of caution and enlarge this"
+                      " number if you're worried about loss of precision -- this will slow the computation"
+                      " somewhat. (You might be able to offset by retaining fewer coefficients in"
+                      " Chebyshev multiplication; see 'FastChebyshevMultiplication' parameter.)";
+    out.back().default_val = "10";
+    out.back().expected = true;
+    out.back().examples = { "20",
+                            "15",
+                            "10",
+                            "5"};
+
+    out.emplace_back();
+    out.back().name = "FastChebyshevMultiplication";
+    out.back().desc = "Control coefficient truncation/pruning to speed up Chebyshev polynomial multiplication."
+                      " (This setting does nothing if the Chebyshev method is not being used.)"
+                      " The choice of this number depends on how much precision you are willing to forgo."
+                      " It also strongly depends on the number of datum in the AIF, VIF, and the number"
+                      " of coefficients used to approximate the exponential kernel (usually ~10 suffices)."
+                      " Numbers are specified relative to max(N,M), where N and M are the number of"
+                      " coefficients in the two Chebyshev expansions taking part in the multiplication."
+                      " If too many coefficients are requested (i.e., more than (N+M-2)) then the full"
+                      " non-approximate multiplication is carried out.";
+    out.back().default_val = "*10000000.0";
+    out.back().expected = true;
+    out.back().examples = { "*2.0",
+                            "*1.5",
+                            "*1.0",
+                            "*0.5",
+                            "*0.3"};
+
     out.emplace_back();
     out.back().name = "PlotAIFVIF";
     out.back().desc = "Control whether the AIF and VIF should be shown prior to modeling.";
@@ -291,6 +326,8 @@ Drover CT_Liver_Perfusion_Pharmaco_1C2I_5Param(Drover DICOM_data, OperationArgPk
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto AIFROIName = OptArgs.getValueStr("AIFROINameRegex").value();
+    const long int ExponentialKernelCoeffTruncation = std::stol( OptArgs.getValueStr("ExponentialKernelCoeffTruncation").value() );
+    const auto FastChebyshevMultiplicationStr = OptArgs.getValueStr("FastChebyshevMultiplication").value();
     const auto PlotAIFVIF = OptArgs.getValueStr("PlotAIFVIF").value();
     const auto PlotPixelModel = OptArgs.getValueStr("PlotPixelModel").value();
     const long int PreDecimateR = std::stol( OptArgs.getValueStr("PreDecimateOutSizeR").value() );
@@ -344,6 +381,14 @@ Drover CT_Liver_Perfusion_Pharmaco_1C2I_5Param(Drover DICOM_data, OperationArgPk
     if(ChebyshevPolyCoefficients <= 0){
         throw std::invalid_argument("Option invalid: '" + ChebyshevPolyCoefficientsStr + "'");
     }
+
+    double FastChebyshevMultiplication;
+    if(std::regex_match(FastChebyshevMultiplicationStr, IsRelativePosFloat)){
+        FastChebyshevMultiplication = std::stod( FastChebyshevMultiplicationStr.substr(1,std::string::npos) );
+    }else{
+        throw std::invalid_argument("Unable to handle '" + FastChebyshevMultiplicationStr + "'");
+    }
+
 
 
     //Boolean options.
@@ -576,6 +621,8 @@ Drover CT_Liver_Perfusion_Pharmaco_1C2I_5Param(Drover DICOM_data, OperationArgPk
         ud_cheby.pixels_to_plot = pixels_to_plot;
         ud_cheby.TargetROIs = TargetROINameRegex;
         ud_cheby.ContrastInjectionLeadTime = ContrastInjectionLeadTime;
+        ud_cheby.ExpApproxTrunc = ExponentialKernelCoeffTruncation;
+        ud_cheby.MultiplicationCoeffTrunc = FastChebyshevMultiplication;
         {
             //Correct any unaccounted-for contrast enhancement shifts. 
             if(true) for(auto & theROI : ud.time_courses){
