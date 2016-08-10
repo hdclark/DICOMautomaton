@@ -493,22 +493,41 @@ Drover DumpROISurfaceMeshes(Drover DICOM_data, OperationArgPkg OptArgs, std::map
         boost::associative_property_map<Facet_double_map> sdf_property_map(internal_map);
 
         //Use the default number of rays and cone angle for SDF estimation.
-        std::pair<double, double> min_max_sdf = CGAL::sdf_values(output_mesh, sdf_property_map);
+        //std::pair<double, double> min_max_sdf = CGAL::sdf_values(output_mesh, sdf_property_map);
 
         // It is possible to compute the raw SDF values and post-process them using the following lines:
-        // const std::size_t number_of_rays = 25;  // cast 25 rays per facet
-        // const double cone_angle = 2.0 / 3.0 * CGAL_PI; // set cone opening-angle
-        // CGAL::sdf_values(mesh, sdf_property_map, cone_angle, number_of_rays, false);
-        // std::pair<double, double> min_max_sdf =  CGAL::sdf_values_postprocessing(mesh, sdf_property_map);
+        const bool sdf_values_postprocess = false;
+        const std::size_t number_of_rays = 25;  // cast 25 rays per facet
+        const double cone_angle = 2.0 / 3.0 * CGAL_PI; // set cone opening-angle
+        std::pair<double, double> min_max_sdf;
+        min_max_sdf = CGAL::sdf_values(output_mesh, sdf_property_map, cone_angle, number_of_rays, sdf_values_postprocess);
 
-        std::cout << "SDF: min = " << min_max_sdf.first << " , max = " << min_max_sdf.second << std::endl;
+        std::cout << "SDF distribution prior to normalization: min = " << min_max_sdf.first << " , max = " << min_max_sdf.second << std::endl;
 
         // Print SDF values
-        //for(Polyhedron::Facet_const_iterator facet_it = mesh.facets_begin();
-        //    facet_it != mesh.facets_end(); ++facet_it) {
+        //for(Polyhedron::Facet_const_iterator facet_it = output_mesh.facets_begin(); facet_it != output_mesh.facets_end(); ++facet_it){
         //    std::cout << sdf_property_map[facet_it] << " ";
         //}
       
+        // Count the number of facets for which an SDF could not be assigned.
+        std::size_t not_assigned = 0;
+        std::size_t numb_facets = 0;
+        for(Polyhedron::Facet_const_iterator facet_it = output_mesh.facets_begin(); facet_it != output_mesh.facets_end(); ++facet_it){
+            ++numb_facets;
+            if(sdf_property_map[facet_it] < 0.0) ++not_assigned;
+        }
+        if(not_assigned != 0){
+            FUNCWARN(not_assigned << " out of " << numb_facets << " could not be assigned an SDF value");
+        }
+
+
+        // Replace the SDF values with some type of curvature.
+
+
+        // Normalize the SDF values to [0:1].
+        min_max_sdf = CGAL::sdf_values_postprocessing(output_mesh, sdf_property_map);
+        std::cout << "Altered SDF distribution prior to normalization: min = " << min_max_sdf.first << " , max = " << min_max_sdf.second << std::endl;
+
     
         // Create a property-map for segment IDs.
         typedef std::map<Polyhedron::Facet_const_handle, std::size_t> Facet_int_map;
@@ -520,14 +539,29 @@ Drover DumpROISurfaceMeshes(Drover DICOM_data, OperationArgPkg OptArgs, std::map
         //std::size_t number_of_segments = CGAL::segmentation_from_sdf_values(output_mesh, sdf_property_map, segment_property_map);
 
         const std::size_t number_of_clusters = 4; // use 4 clusters in soft clustering
-        const double smoothing_lambda = 0.3;  // importance of surface features, suggested to be in-between [0,1]
+        const double smoothing_lambda = 0.05; // Importance of surface features, suggested to be in-between [0,1]. 
+                                              // Setting to 0 provides the result of soft clustering.
         const bool output_cluster_ids = true; //Output cluster IDs, not segment IDs.
+                                              // Remember: clusters are sets of segments. The facets that make up
+                                              // segments are connected, but segments within a cluster need not be
+                                              // connected.
         std::size_t number_of_segments = CGAL::segmentation_from_sdf_values( output_mesh, sdf_property_map,
                                               segment_property_map, number_of_clusters, 
                                               smoothing_lambda, output_cluster_ids);
-        std::cout << "Number of segments: " << number_of_segments << std::endl;
+        std::cout << "Number of segments/clusters: " << number_of_segments << std::endl;
 
-        // print segment-ids
+        // Generate the set of segment- / cluster-ids.
+        std::set<std::size_t> unique_segment_ids;
+        for(auto facet_it = output_mesh.facets_begin(); facet_it != output_mesh.facets_end(); ++facet_it){
+            unique_segment_ids.insert(segment_property_map[facet_it]);
+        }
+        std::cout << "Segment-/Cluster-IDs: ";
+        for(const auto sid : unique_segment_ids){
+            std::cout << sid << ", ";
+        }
+        std::cout << std::endl;
+
+        // Print segment-ids
         //for(auto facet_it = output_mesh.facets_begin(); facet_it != output_mesh.facets_end(); ++facet_it){
         //    // ids are between [0, number_of_segments -1]
         //    std::cout << segment_property_map[facet_it] << " ";
@@ -551,7 +585,8 @@ Drover DumpROISurfaceMeshes(Drover DICOM_data, OperationArgPkg OptArgs, std::map
                     //However, currently I think we can assume we only have triangles.
                 }
      
-                if(sdf_property_map[facet_it] == clusterid){
+                //if(sdf_property_map[facet_it] == clusterid){
+                if(segment_property_map[facet_it] == clusterid){
                     auto halfedge_handle = facet_it->halfedge();
                     auto p1 = halfedge_handle->vertex()->point();
                     auto p2 = halfedge_handle->next()->vertex()->point();
