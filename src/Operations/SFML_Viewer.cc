@@ -445,7 +445,8 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
                             "\\t\\t n,p \\t\\t Advance to the next/previous image in this series.\\n"
                             "\\t\\t -,+ \\t\\t Advance to the next/previous image that spatially overlaps this image.\\n"
                             "\\t\\t l,L \\t\\t Reset the image scale to be pixel-for-pixel what is seen on screen.\\n"
-                            "\\t\\t u,U \\t Toggle showing metadata tags that are identical to the neighbouring image\\'s metadata tags.\\n"
+                            "\\t\\t u   \\t Toggle showing metadata tags that are identical to the neighbouring image\\'s metadata tags.\\n"
+                            "\\t\\t U   \\t Dump and show the current image\\'s metadata.\\n"
                             "\\t\\t e \\t\\t Erase latest non-empty contour. (A single contour.)\\n"
                             "\\t\\t E \\t\\t Empty the current working ROI buffer. (The entire buffer; all contours.)\\n"
                             "\\t\\t s,S \\t\\t Save the current contour collection.\\n"
@@ -1210,8 +1211,34 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
                     disp_img_texture_sprite.second.setScale(1.0f,1.0f);
 
                 //Toggle showing metadata tags that are identical to the neighbouring image's metadata tags.
-                }else if( (thechar == 'u') || (thechar == 'U') ){
+                }else if( thechar == 'u' ){
                     OnlyShowTagsDifferentToNeighbours = !OnlyShowTagsDifferentToNeighbours;
+
+                //dump to file and show a pop-up window with the full metadata of the present image.
+                }else if( thechar == 'U' ){
+                    const auto FOname = Get_Unique_Sequential_Filename("/tmp/image_metadata_dump_", 6, ".txt");
+                    try{
+                        //Dump the metadata to a file.
+                        {
+                            std::fstream FO(FOname, std::fstream::out);
+                            if(!FO) throw std::runtime_error("Unable to write metadata to file.");
+                            for(const auto &apair : disp_img_it->metadata){
+                                FO << apair.first << " : " << apair.second << std::endl;
+                            }
+                        }
+
+                        //Notify that the file has been created.
+                        FUNCINFO("Dumped metadata to file '" << FOname << "'");
+
+                        //Try launch a pop-up window with the metadata from the file displayed.
+                        std::stringstream ss;
+                        ss << "zenity --text-info --no-wrap --filename='" << FOname << "' 2>/dev/null";
+                        Execute_Command_In_Pipe(ss.str());
+
+                    }catch(const std::exception &e){ 
+                        FUNCWARN("Metadata dump failed: " << e.what());
+                    }
+
 
                 //Erase the present contour, or, if empty, the previous non-empty contour. (Not the whole organ.)
                 }else if( thechar == 'e' ){
@@ -1596,8 +1623,10 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
                             
                             //Clamp the point to the bounding box, using the top left as zero.
                             const auto dR = p - img_top_left;
-                            const auto clamped_row = dR.Dot( disp_img_it->row_unit ) / img_dicom_height;
-                            const auto clamped_col = dR.Dot( disp_img_it->col_unit ) / img_dicom_width;
+//                            const auto clamped_row = dR.Dot( disp_img_it->row_unit ) / img_dicom_height;
+//                            const auto clamped_col = dR.Dot( disp_img_it->col_unit ) / img_dicom_width;
+                            const auto clamped_col = dR.Dot( disp_img_it->col_unit ) / img_dicom_height;
+                            const auto clamped_row = dR.Dot( disp_img_it->row_unit ) / img_dicom_width;
 
                             //Convert to SFML coordinates using the SFML bounding box for the display image.
                             sf::FloatRect DispImgBBox = disp_img_texture_sprite.second.getGlobalBounds(); //Uses top left corner as (0,0).
@@ -1688,8 +1717,10 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
                         
                         //Clamp the point to the bounding box, using the top left as zero.
                         const auto dR = p - img_top_left;
-                        const auto clamped_row = dR.Dot( disp_img_it->row_unit ) / img_dicom_height;
-                        const auto clamped_col = dR.Dot( disp_img_it->col_unit ) / img_dicom_width;
+//                        const auto clamped_row = dR.Dot( disp_img_it->row_unit ) / img_dicom_height;
+//                        const auto clamped_col = dR.Dot( disp_img_it->col_unit ) / img_dicom_width;
+                        const auto clamped_col = dR.Dot( disp_img_it->col_unit ) / img_dicom_height;
+                        const auto clamped_row = dR.Dot( disp_img_it->row_unit ) / img_dicom_width;
 
                         //Convert to SFML coordinates using the SFML bounding box for the display image.
                         sf::FloatRect DispImgBBox = disp_img_texture_sprite.second.getGlobalBounds(); //Uses top left corner as (0,0).
