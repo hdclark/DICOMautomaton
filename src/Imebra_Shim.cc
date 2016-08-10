@@ -784,6 +784,7 @@ std::unique_ptr<Image_Array> Load_Image_Array(const std::string &FilenameIn){
         //for(imbxUint32 scanX = 0; scanX < sizeX; ++scanX){ //Rows.
         //    for(imbxUint32 scanY = 0; scanY < sizeY; ++scanY){ //Columns.
         //        for(imbxUint32 scanChannel = 0; scanChannel < channelsNumber; ++scanChannel){ //Channels.
+        const bool pixelsAreSigned = (myHandler->isSigned());
         for(long int row = 0; row < image_rows; ++row){
             for(long int col = 0; col < image_cols; ++col){
                 for(long int chnl = 0; chnl < img_chnls; ++chnl){
@@ -808,27 +809,35 @@ std::unique_ptr<Image_Array> Load_Image_Array(const std::string &FilenameIn){
                     //Approach C: the generally safe and sane approach of using floating-point types. We may,
                     // in extreme cases, lose some precision, but for clinical CTs floats will be sufficient to 
                     // represent the full HU range.
-                    float OutgoingPixelValue = std::numeric_limits<float>::quiet_NaN();
-                    if(pixel_representation == static_cast<unsigned long int>(0)){ //Unsigned pixel representation.
-                        const imbxUint32 UnsignedChannelValue = myHandler->getUnsignedLong(data_index);
-                        //const auto Rescaled = (RescaleSlopeInterceptPresent) 
-                        //                      ? RescaleIntercept + RescaleSlope * static_cast<double>(UnsignedChannelValue) 
-                        //                      : static_cast<double>(UnsignedChannelValue);
-                        //OutgoingPixelValue = static_cast<float>(Rescaled);
-                        OutgoingPixelValue = static_cast<float>(UnsignedChannelValue);
-                    }else if(pixel_representation == static_cast<unsigned long int>(1)){ //Two's complement pixel representation.
-                        //Technically this is not just 'signed' but specifically two's complement representation. 
-                        // I think the best way is to verify by directly testing the implementation (e.g., compare 
-                        // -1 (negative one) with ~0 (bitwise complemented zero) to verify two's complement. Before 
-                        // doing so, check if C++11/14/+ has any way to static_assert this, such as in feature-test 
-                        // macros, numerical limits, or by the implementation exposing a macro of some sort.
-                        const imbxInt32 SignedChannelValue = myHandler->getSignedLong(data_index);
-                        //const auto Rescaled = (RescaleSlopeInterceptPresent) 
-                        //                      ? RescaleIntercept + RescaleSlope * static_cast<double>(SignedChannelValue)  
-                        //                      : static_cast<double>(SignedChannelValue);
-                        //OutgoingPixelValue = static_cast<float>(Rescaled);
-                        OutgoingPixelValue = static_cast<float>(SignedChannelValue);
-                    }
+                    //float OutgoingPixelValue = std::numeric_limits<float>::quiet_NaN();
+                    ////if(pixel_representation == static_cast<unsigned long int>(0)){ //Unsigned pixel representation.
+                    //if(!pixelsAreSigned){ //Unsigned pixel representation.
+                    //    const imbxUint32 UnsignedChannelValue = myHandler->getUnsignedLong(data_index);
+                    //    //const auto Rescaled = (RescaleSlopeInterceptPresent) 
+                    //    //                      ? RescaleIntercept + RescaleSlope * static_cast<double>(UnsignedChannelValue) 
+                    //    //                      : static_cast<double>(UnsignedChannelValue);
+                    //    //OutgoingPixelValue = static_cast<float>(Rescaled);
+                    //    OutgoingPixelValue = static_cast<float>(UnsignedChannelValue);
+                    ////}else if(pixel_representation == static_cast<unsigned long int>(1)){ //Two's complement pixel representation.
+                    //}else{ //Two's complement pixel representation.
+                    //    //Technically this is not just 'signed' but specifically two's complement representation. 
+                    //    // I think the best way is to verify by directly testing the implementation (e.g., compare 
+                    //    // -1 (negative one) with ~0 (bitwise complemented zero) to verify two's complement. Before 
+                    //    // doing so, check if C++11/14/+ has any way to static_assert this, such as in feature-test 
+                    //    // macros, numerical limits, or by the implementation exposing a macro of some sort.
+                    //    const imbxInt32 SignedChannelValue = myHandler->getSignedLong(data_index);
+                    //    //const auto Rescaled = (RescaleSlopeInterceptPresent) 
+                    //    //                      ? RescaleIntercept + RescaleSlope * static_cast<double>(SignedChannelValue)  
+                    //    //                      : static_cast<double>(SignedChannelValue);
+                    //    //OutgoingPixelValue = static_cast<float>(Rescaled);
+                    //    OutgoingPixelValue = static_cast<float>(SignedChannelValue);
+                    //}
+                    //
+                    //Approach D: let Imebra work out the conversersion by asking for a double. Hope it can be narrowed
+                    // if necessary!
+                    const auto DoubleChannelValue = myHandler->getDouble(data_index);
+                    const float OutgoingPixelValue = static_cast<float>(DoubleChannelValue);
+
                     out->imagecoll.images.back().reference(row,col,chnl) = OutgoingPixelValue;
                     ++data_index;
                 } //Loop over channels.
@@ -1032,6 +1041,7 @@ std::unique_ptr<Dose_Array>  Load_Dose_Array(const std::string &FilenameIn){
         //for(imbxUint32 scanX = 0; scanX < sizeX; ++scanX){ //Rows.
         //    for(imbxUint32 scanY = 0; scanY < sizeY; ++scanY){ //Columns.
         //        for(imbxUint32 scanChannel = 0; scanChannel < channelsNumber; ++scanChannel){ //Channels.
+        const bool pixelsAreSigned = (myHandler->isSigned());
         for(long int row = 0; row < image_rows; ++row){
             for(long int col = 0; col < image_cols; ++col){
                 for(long int chnl = 0; chnl < img_chnls; ++chnl){
@@ -1040,20 +1050,30 @@ std::unique_ptr<Dose_Array>  Load_Dose_Array(const std::string &FilenameIn){
                     //      point pixel type, I decided it made the most sense (reducing complexity, conversion to-from plain 
                     //      images) to just have the pixels directly express dose. Therefore, the grid_scale member is now set 
                     //      to 1.0 ALWAYS for compatibility. It could be removed entirely (and the Dose_Array class) safely.
-                    if(pixel_representation == static_cast<unsigned long int>(0)){ //Unsigned pixel representation.
-                        const imbxUint32 UnsignedChannelValue = myHandler->getUnsignedLong(data_index);
-                        out->imagecoll.images.back().reference(row,col,chnl) = static_cast<float>(UnsignedChannelValue) 
-                                                                               * static_cast<float>(grid_scale);
-                    }else if(pixel_representation == static_cast<unsigned long int>(1)){ //Signed pixel representation.
-                        //Technically this is not just 'signed' but specifically two's complement representation. 
-                        // I think the best way is to verify by directly testing the implementation (e.g., compare 
-                        // -1 (negative one) with ~0 (bitwise complemented zero) to verify two's complement. Before 
-                        // doing so, check if C++11/14/+ has any way to static_assert this, such as in feature-test 
-                        // macros, numerical limits, or by the implementation exposing a macro of some sort.
-                        const imbxInt32 SignedChannelValue = myHandler->getSignedLong(data_index);
-                        out->imagecoll.images.back().reference(row,col,chnl) = static_cast<float>(SignedChannelValue)
-                                                                               * static_cast<float>(grid_scale);
-                    }
+                    ////if(pixel_representation == static_cast<unsigned long int>(0)){ //Unsigned pixel representation.
+                    //if(!pixelsAreSigned){ //Unsigned pixel representation.
+                    //    const imbxUint32 UnsignedChannelValue = myHandler->getUnsignedLong(data_index);
+                    //    out->imagecoll.images.back().reference(row,col,chnl) = static_cast<float>(UnsignedChannelValue) 
+                    //                                                           * static_cast<float>(grid_scale);
+                    ////}else if(pixel_representation == static_cast<unsigned long int>(1)){ //Signed pixel representation.
+                    //}else{ //Signed pixel representation.
+                    //    //Technically this is not just 'signed' but specifically two's complement representation. 
+                    //    // I think the best way is to verify by directly testing the implementation (e.g., compare 
+                    //    // -1 (negative one) with ~0 (bitwise complemented zero) to verify two's complement. Before 
+                    //    // doing so, check if C++11/14/+ has any way to static_assert this, such as in feature-test 
+                    //    // macros, numerical limits, or by the implementation exposing a macro of some sort.
+                    //    const imbxInt32 SignedChannelValue = myHandler->getSignedLong(data_index);
+                    //    out->imagecoll.images.back().reference(row,col,chnl) = static_cast<float>(SignedChannelValue)
+                    //                                                           * static_cast<float>(grid_scale);
+                    //}
+                    //
+                    //Approach D: let Imebra work out the conversersion by asking for a double. Hope it can be narrowed
+                    // if necessary!
+                    const auto DoubleChannelValue = myHandler->getDouble(data_index);
+                    const float OutgoingPixelValue = static_cast<float>(DoubleChannelValue) 
+                                                     * static_cast<float>(grid_scale);
+                    out->imagecoll.images.back().reference(row,col,chnl) = OutgoingPixelValue;
+
                     ++data_index;
                 } //Loop over channels.
             } //Loop over columns.
