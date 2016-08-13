@@ -216,9 +216,10 @@ Drover BuildLexiconInteractively(Drover DICOM_data, OperationArgPkg OptArgs, std
         }
 
         std::stringstream ss;
-        ss << R"***(dialog --clear --menu "Which data set label corresponds to lexicon item ')***"
-           << CleanLabel << R"***(' ?")***"
-           << " 50 80 40"; // dialog options: (height, width, inner height).
+        ss << "dialog --clear --menu \"Which data set label corresponds to lexicon item '"
+           << CleanLabel << "' ?"
+           << " \\n (Note: PatientID = '" << PatientID << "')\""
+           << " 50 100 40"; // dialog options: (height, width, inner height).
         ss << " 0 'None of the following'";
         {
             int i = 1;
@@ -231,7 +232,7 @@ Drover BuildLexiconInteractively(Drover DICOM_data, OperationArgPkg OptArgs, std
         const auto ResponseStr = Execute_Command_In_Pipe(ss.str());
         const long int Response = std::stol(ResponseStr);
 
-        if((Response <= 0) || (Response >= static_cast<long int>(cc_labels.size()))) continue;
+        if((Response <= 0) || (Response > static_cast<long int>(candidates.size()))) continue;
 
         dLexicon.emplace_back( std::make_pair( CleanLabel, candidates[Response-1] ) );
         cc_labels.erase( candidates[Response-1] );

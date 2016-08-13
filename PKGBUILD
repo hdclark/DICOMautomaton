@@ -29,6 +29,7 @@ depends=(
 )
 optdepends=(
    'zenity'
+   'dialog'
 )
 makedepends=(
    'cmake'
