@@ -172,15 +172,17 @@ Drover BuildLexiconInteractively(Drover DICOM_data, OperationArgPkg OptArgs, std
             const auto best_mapping = X(*cc_label_it);
             const auto best_score = X.Get_Last_Best_Score();
             if( (best_score >= 1.0) && (best_mapping == CleanLabel) ){
+                FUNCWARN("Dropping '" << *cc_label_it << "' because it maps to '" << CleanLabel << "'");
                 cc_label_it = cc_labels.erase(cc_label_it);
                 PerfectMatchFound[CleanLabel] = true;
-            }else if( (best_score >= 1.0) && (best_mapping == JunkLabel) ){
+            }else if( (best_score >= 1.0) && !JunkLabel.empty() && (best_mapping == JunkLabel) ){
                 //Special case: purge this entry because it is already junk (and would most likely be labeled as junk if
                 // it does not get claimed ... and it probably won't because it is already mapped to the junk label).
                 //
                 // NOTE: This branch can cause unexpected behaviour if you are using the junk label for something other
                 //       than the intended use. This branch also reduces a LOT of clutter if the lexicon is mostly
                 //       complete. Be careful! 
+                FUNCWARN("Dropping '" << *cc_label_it << "' because it maps to '" << JunkLabel << "'");
                 cc_label_it = cc_labels.erase(cc_label_it);
             }else{
                 ++cc_label_it;
