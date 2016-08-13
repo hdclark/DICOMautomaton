@@ -16,6 +16,7 @@
 #include "Structs.h"
 
 #include "Operations/BoostSerializeDrover.h"
+#include "Operations/BuildLexiconInteractively.h"
 #include "Operations/CopyLastImage.h"
 #include "Operations/CT_Liver_Perfusion.h"
 #include "Operations/CT_Liver_Perfusion_First_Run.h"
@@ -59,6 +60,7 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     std::map<std::string, op_packet_t> out;
 
     out["BoostSerializeDrover"] = std::make_pair(OpArgDocBoost_Serialize_Drover, Boost_Serialize_Drover);
+    out["BuildLexiconInteractively"] = std::make_pair(OpArgDocBuildLexiconInteractively, BuildLexiconInteractively);
     out["CopyLastImage"] = std::make_pair(OpArgDocCopyLastImage, CopyLastImage);
     out["CT_Liver_Perfusion"] = std::make_pair(OpArgDocCT_Liver_Perfusion, CT_Liver_Perfusion);
     out["CT_Liver_Perfusion_First_Run"] = std::make_pair(OpArgDocCT_Liver_Perfusion_First_Run, CT_Liver_Perfusion_First_Run);
