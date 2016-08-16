@@ -347,16 +347,16 @@ int main(int argc, char* argv[]){
     //Standalone file loading.
     if(!StandaloneFilesDirsReachable.empty()){
 
-        //DICOM files.
-        if(!Load_From_DICOM_Files( DICOM_data, InvocationMetadata, FilenameLex,
-                                   StandaloneFilesDirsReachable )){
-            FUNCERR("Failed to load DICOM file");
-        }
-
         //Boost.Serialization archives.
         if(!Load_From_Boost_Serialization_Files( DICOM_data, InvocationMetadata, FilenameLex,
                                                  StandaloneFilesDirsReachable )){
             FUNCERR("Failed to load Boost.Serialization archive");
+        }
+
+        //DICOM files.
+        if(!Load_From_DICOM_Files( DICOM_data, InvocationMetadata, FilenameLex,
+                                   StandaloneFilesDirsReachable )){
+            FUNCERR("Failed to load DICOM file");
         }
 
         //Other loaders ...
