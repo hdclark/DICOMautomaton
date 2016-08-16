@@ -48,6 +48,7 @@ std::string get_tag_as_string(const std::string &filename, size_t U, size_t L){
 
     ptr<puntoexe::streamReader> reader(new puntoexe::streamReader(readStream));
     ptr<imebra::dataSet> TopDataSet = imebra::codecs::codecFactory::getCodecFactory()->load(reader);
+    if(TopDataSet == nullptr) return std::string("");
     return TopDataSet->getString(U, 0, L, 0);
 }
 
