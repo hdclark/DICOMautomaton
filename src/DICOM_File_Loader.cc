@@ -215,12 +215,12 @@ bool Load_From_DICOM_Files( Drover &DICOM_data,
         // computation methods require the distinction to be made. 
 
         // Option A: stuff the dose data into the Drover's Dose_Array.
-        //DICOM_data.dose_data.emplace_back( std::move(loaded_dose_set.back()) );
+        DICOM_data.dose_data.emplace_back( std::move(loaded_dose_set.back()) );
 
         // Option B: stuff the dose data into the Drover's Image_Array so it can be more easily used with image
         // processing routines.
-        DICOM_data.image_data.emplace_back();
-        DICOM_data.image_data.back() = std::make_shared<Image_Array>(*(loaded_dose_set.back()));
+        //DICOM_data.image_data.emplace_back();
+        //DICOM_data.image_data.back() = std::make_shared<Image_Array>(*(loaded_dose_set.back()));
     }
 
 

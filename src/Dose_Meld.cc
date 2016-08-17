@@ -47,6 +47,8 @@ std::list<std::shared_ptr<Dose_Array>>  Meld_Dose_Data(const std::list<std::shar
     //
     std::list<std::shared_ptr<Dose_Array>> out(dalist);
 
+    if(out.size() == 0) return std::move(out);
+    if(out.size() == 1) return std::move(out);
 
     auto d2_it = out.begin(); //Note: d*_it are ~ std::list<std::shared_ptr<Dose_Array>>::iterator
     auto d1_it = --(out.end());

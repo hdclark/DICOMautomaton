@@ -45,6 +45,7 @@
 #include "Explicator.h"       //Needed for Explicator class.
 
 #include "../Structs.h"
+#include "../Dose_Meld.h"
 
 #include "../YgorImages_Functors/Grouping/Misc_Functors.h"
 
@@ -82,6 +83,7 @@
 
 #include "../YgorImages_Functors/Compute/Per_ROI_Time_Courses.h"
 #include "../YgorImages_Functors/Compute/Contour_Similarity.h"
+#include "../YgorImages_Functors/Compute/AccumulatePixelDistributions.h"
 
 #include "Subsegment_ComputeDose_VanLuijk.h"
 
@@ -89,6 +91,19 @@
 
 std::list<OperationArgDoc> OpArgDocSubsegment_ComputeDose_VanLuijk(void){
     std::list<OperationArgDoc> out;
+
+    out.emplace_back();
+    out.back().name = "NormalizedROILabelRegex";
+    out.back().desc = "A regex matching ROI labels/names to consider. The default will match"
+                      " all available ROIs. Be aware that input spaces are trimmed to a single space."
+                      " If your ROI name has more than two sequential spaces, use regex to avoid them."
+                      " All ROIs have to match the single regex, so use the 'or' token if needed."
+                      " Regex is case insensitive and uses extended POSIX syntax.";
+    out.back().default_val = ".*";
+    out.back().expected = true;
+    out.back().examples = { ".*", ".*Body.*", "Body", "Gross_Liver",
+                            R"***(.*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*)***",
+                            R"***(Left Parotid|Right Parotid)***" };
 
     out.emplace_back();
     out.back().name = "ROILabelRegex";
@@ -112,10 +127,29 @@ Drover Subsegment_ComputeDose_VanLuijk(Drover DICOM_data, OperationArgPkg OptArg
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto ROILabelRegex = OptArgs.getValueStr("ROILabelRegex").value();
+    const auto NormalizedROILabelRegex = OptArgs.getValueStr("NormalizedROILabelRegex").value();
     //-----------------------------------------------------------------------------------------------------------------
     const auto theregex = std::regex(ROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto thenormalizedregex = std::regex(NormalizedROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
 
-//    auto img_arr_ptr = DICOM_data.image_data.back();
+    //Merge the dose arrays if necessary.
+    if(DICOM_data.dose_data.empty()){
+        throw std::invalid_argument("This routine requires at least one dose image array. Cannot continue");
+    }
+    DICOM_data.dose_data = Meld_Dose_Data(DICOM_data.dose_data);
+    if(DICOM_data.dose_data.size() != 1){
+        throw std::invalid_argument("Unable to meld doses into a single dose array. Cannot continue.");
+    }
+
+    //auto img_arr_ptr = DICOM_data.image_data.front();
+    auto img_arr_ptr = DICOM_data.dose_data.front();
+
+    if(img_arr_ptr == nullptr){
+        throw std::runtime_error("Encountered a nullptr when expecting a valid Image_Array or Dose_Array ptr.");
+    }else if(img_arr_ptr->imagecoll.images.empty()){
+        throw std::runtime_error("Encountered a Image_Array or Dose_Array with valid images -- no images found.");
+    }
+
 
     //Stuff references to all contours into a list. Remember that you can still address specific contours through
     // the original holding containers (which are not modified here).
@@ -132,6 +166,15 @@ Drover Subsegment_ComputeDose_VanLuijk(Drover DICOM_data, OperationArgPkg OptArg
                    const auto ROIName = ROINameOpt.value();
                    return !(std::regex_match(ROIName,theregex));
     });
+    cc_ROIs.remove_if([=](std::reference_wrapper<contour_collection<double>> cc) -> bool {
+                   const auto ROINameOpt = cc.get().contours.front().GetMetadataValueAs<std::string>("NormalizedROIName");
+                   const auto ROIName = ROINameOpt.value();
+                   return !(std::regex_match(ROIName,thenormalizedregex));
+    });
+
+    if(cc_ROIs.empty()){
+        throw std::invalid_argument("No contours selected. Cannot continue.");
+    }
 
     //Get the plane in which the contours are defined on.
     //
@@ -141,73 +184,77 @@ Drover Subsegment_ComputeDose_VanLuijk(Drover DICOM_data, OperationArgPkg OptArg
     cc_ROIs.front().get().contours.front().Reorient_Counter_Clockwise();
     const auto planar_normal = cc_ROIs.front().get().contours.front().Estimate_Planar_Normal();
 
-    //Perform the sub-segmentation bisection.
-    {
-        const double desired_total_area_fraction_above_plane = 0.25; //Here 'above' means in the positive normal direction.
-        const double acceptable_deviation = 0.01; //Deviation from desired_total_area_fraction_above_plane.
-        const size_t max_iters = 20; //If the tolerance cannot be reached after this many iters, report the current plane as-is.
+    //Perform the sub-segmentation bisection, building up lists of the split contours for each ROI.
+    const double desired_total_area_fraction_above_plane = 0.25; //Here 'above' means in the positive normal direction.
+    const double acceptable_deviation = 0.01; //Deviation from desired_total_area_fraction_above_plane.
+    const size_t max_iters = 20; //If the tolerance cannot be reached after this many iters, report the current plane as-is.
 
+    std::list<contour_collection<double>> cc_above;
+    std::list<contour_collection<double>> cc_below;
+    for(const auto &cc_opt : cc_ROIs){
         plane<double> final_plane;
         size_t iters_taken = 0;
         double final_area_frac = std::numeric_limits<double>::quiet_NaN();
 
-
-        const auto splits = cc_ROIs.front().get().Total_Area_Bisection_Along_Plane(planar_normal,
-                                                                desired_total_area_fraction_above_plane,
-                                                                acceptable_deviation,
-                                                                max_iters,
-                                                                &final_plane,
-                                                                &iters_taken,
-                                                                &final_area_frac);
+        auto splits = cc_opt.get().Total_Area_Bisection_Along_Plane(planar_normal,
+                                                            desired_total_area_fraction_above_plane,
+                                                            acceptable_deviation,
+                                                            max_iters,
+                                                            &final_plane,
+                                                            &iters_taken,
+                                                            &final_area_frac);
         FUNCINFO("Using bisection, the fraction of planar area above the final plane was " << final_area_frac);
         FUNCINFO(iters_taken << " iterations were taken");
-
-
-        for(auto it = splits.begin(); it != splits.end(); ++it){
-            it->Plot();
-        }
-    }
-    
-/*
-
-    //Compute some aggregate C(t) curves from the available ROIs.
-    ComputePerROITimeCoursesUserData ud; // User Data.
-    if(!img_arr_ptr->imagecoll.Compute_Images( ComputePerROICourses,   //Non-modifying function, can use in-place.
-                                           { },
-                                           cc_ROIs,
-                                           &ud )){
-        FUNCERR("Unable to compute per-ROI time courses");
-    }
-    //For perfusion purposes, Scale down the ROIs per-atomos (i.e., per-voxel).
-    for(auto & tcs : ud.time_courses){
-        const auto lROIname = tcs.first;
-        const auto lVoxelCount = ud.voxel_count[lROIname];
-        tcs.second = tcs.second.Multiply_With(1.0/static_cast<double>(lVoxelCount));
+        if(false) for(auto it = splits.begin(); it != splits.end(); ++it){ it->Plot(); }
+        cc_below.push_back( splits.front() );
+        cc_above.push_back( splits.back() );
     }
 
+    //Generate lists of reference wrappers to the split contours.
+    std::list<std::reference_wrapper<contour_collection<double>>> cc_above_refs;
+    std::list<std::reference_wrapper<contour_collection<double>>> cc_below_refs;
+    for(auto &cc : cc_above) cc_above_refs.push_back( std::ref(cc) );
+    for(auto &cc : cc_below) cc_below_refs.push_back( std::ref(cc) );
 
-    //Plot the ROIs we computed.
-    if(true){
-        //NOTE: This routine is spotty. It doesn't always work, and seems to have a hard time opening a 
-        // display window when a large data set is loaded. Files therefore get written for backup access.
-        std::cout << "Producing " << ud.time_courses.size() << " time courses:" << std::endl;
-        std::vector<YgorMathPlottingGnuplot::Shuttle<samples_1D<double>>> shuttle;
-        for(auto & tcs : ud.time_courses){
-            const auto lROIname = tcs.first;
-            const auto lTimeCourse = tcs.second;
-            shuttle.emplace_back(lTimeCourse, lROIname + " - Voxel Averaged");
-            const auto lFileName = Get_Unique_Sequential_Filename("/tmp/roi_time_course_",4,".txt");
-            lTimeCourse.Write_To_File(lFileName); 
-            AppendStringToFile("# Time course for ROI '"_s + lROIname + "'.\n", lFileName);
-            std::cout << "\tTime course for ROI '" << lROIname << "' written to '" << lFileName << "'." << std::endl;
-        }
-        try{
-            YgorMathPlottingGnuplot::Plot<double>(shuttle, "ROI Time Courses", "Time (s)", "Pixel Intensity");
-        }catch(const std::exception &e){
-            FUNCWARN("Unable to plot time courses: " << e.what());
-        }
+    //Accumulate the voxel intensity distributions for each group.
+    AccumulatePixelDistributionsUserData ud_above;
+    if(!img_arr_ptr->imagecoll.Compute_Images( AccumulatePixelDistributions, { },
+                                           cc_above_refs, &ud_above )){
+        throw std::runtime_error("Unable to accumulate pixel distributions (1).");
     }
-*/
 
+    AccumulatePixelDistributionsUserData ud_below;
+    if(!img_arr_ptr->imagecoll.Compute_Images( AccumulatePixelDistributions, { },
+                                           cc_below_refs, &ud_below )){
+        throw std::runtime_error("Unable to accumulate pixel distributions (2).");
+    }
+
+    //Report the findings.
+    std::cout << "=== Above the bisected plane ===" << std::endl;
+    for(const auto &av : ud_above.accumulated_voxels){
+        const auto lROIname = av.first;
+        const auto MeanDose = Stats::Mean( av.second );
+        const auto MedianDose = Stats::Median( av.second );
+
+        std::cout << "ROIname  = " << lROIname << std::endl;
+        std::cout << "\t" << "Mean Dose   = " << MeanDose << std::endl;
+        std::cout << "\t" << "Median Dose = " << MedianDose << std::endl;
+        std::cout << "\t" << "Voxel Count = " << av.second.size() << std::endl;
+    }
+    std::cout << std::endl;
+
+    std::cout << "=== Below the bisected plane ===" << std::endl;
+    for(const auto &av : ud_below.accumulated_voxels){
+        const auto lROIname = av.first;
+        const auto MeanDose = Stats::Mean( av.second );
+        const auto MedianDose = Stats::Median( av.second );
+
+        std::cout << "ROIname  = " << lROIname << std::endl;
+        std::cout << "\t" << "Mean Dose   = " << MeanDose << std::endl;
+        std::cout << "\t" << "Median Dose = " << MedianDose << std::endl;
+        std::cout << "\t" << "Voxel Count = " << av.second.size() << std::endl;
+    }
+    std::cout << std::endl;
+ 
     return std::move(DICOM_data);
 }
