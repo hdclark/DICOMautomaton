@@ -104,6 +104,17 @@ Drover DumpROIData(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
         }
     }
 
+    std::cout << "==== Raw labels, contour counts, and normalized ROIName ====" << std::endl;
+    for(auto & NameCount : NameCounts){
+        std::cout << "PatientID='" << std::get<0>(NameCount.first) << "'\t"
+                  << "ROIName='" << std::get<1>(NameCount.first) << "'\t"
+                  << "NormalizedROIName='" << std::get<2>(NameCount.first) << "'\t"
+                  << "Contours='" << NameCount.second << "'"
+                  << std::endl;
+    }
+    std::cout << std::endl;
+
+    std::cout << "==== Explictor best-guesses ====" << std::endl;
     Explicator X(FilenameLex);
     for(auto & NameCount : NameCounts){
         //Simply dump the suspected mapping.
