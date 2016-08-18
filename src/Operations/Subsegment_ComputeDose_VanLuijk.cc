@@ -270,7 +270,7 @@ Drover Subsegment_ComputeDose_VanLuijk(Drover DICOM_data, OperationArgPkg OptArg
         //Find the upper plane.
         plane<double> upper_plane;
         cc_opt.get().Total_Area_Bisection_Along_Plane(planar_normal,
-                                                      SelectionLower,
+                                                      SelectionUpper,
                                                       acceptable_deviation,
                                                       max_iters,
                                                       &upper_plane,
@@ -285,6 +285,9 @@ Drover Subsegment_ComputeDose_VanLuijk(Drover DICOM_data, OperationArgPkg OptArg
 
         if(false) for(auto it = split2.begin(); it != split2.end(); ++it){ it->Plot(); }
         cc_selection.push_back( split2.front() );
+    }
+    if(cc_selection.empty()){
+        FUNCWARN("Selection contains no contours. Try adjusting your criteria.");
     }
 
     //Generate lists of reference wrappers to the split contours.
