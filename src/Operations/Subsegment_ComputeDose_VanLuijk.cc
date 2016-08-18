@@ -187,7 +187,8 @@ Drover Subsegment_ComputeDose_VanLuijk(Drover DICOM_data, OperationArgPkg OptArg
     const double SelectionUpper = 1.0 - SelectionOffsetFromBottom - SelectionThickness;
 
     if(!isininc(0.0,SelectionLower,1.0) || !isininc(0.0,SelectionUpper,1.0)){
-        throw std::invalid_argument("Selection is not valid. The selection exceeds [0,1].");
+        FUNCWARN("Selection is not valid. The selection exceeds [0,1]. Lower and Upper are "
+                 << SelectionLower << " and " << SelectionUpper << " respectively");
     }
 
     Explicator X(FilenameLex);
