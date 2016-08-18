@@ -139,6 +139,24 @@ std::list<OperationArgDoc> OpArgDocSubsegment_ComputeDose_VanLuijk(void){
                             R"***(.*left.*parotid.*|.*right.*parotid.*|.*eyes.*)***",
                             R"***(left_parotid|right_parotid)***" };
 
+    out.emplace_back();
+    out.back().name = "Selection";
+    out.back().desc = "The thickness and offset defining the single, continuous extent of the sub-segmentation in"
+                      " terms of the fractional area remaining above a plane. The planes define the portion extracted"
+                      " and are determined such that sub-segmentation will give the desired fractional planar areas."
+                      " The numbers specify the thickness and offset from the bottom of the ROI volume to the bottom"
+                      " of the extent. The 'upper' direction is take from the contour plane orientation and assumed to"
+                      " be positive if pointing toward the positive-z direction. Only a single selection can be made"
+                      " per operation invocation."
+                      " If you want the middle 50\% of an ROI, specify '0.50;0.25'."
+                      " If you want the upper 50\% then specify '0.50;0.50'."
+                      " If you want the lower 50\% then specify '0.50;0.0'."
+                      " If you want the upper 30\% then specify '0.30;0.70'."
+                      " If you want the lower 30\% then specify '0.30;0.70'.";
+    out.back().default_val = "1.0;0.0";
+    out.back().expected = true;
+    out.back().examples = { "0.50;0.50", "0.50;0.0", "0.30;0.70", "0.30;0.70" };
+    
     return out;
 }
 
@@ -151,9 +169,26 @@ Drover Subsegment_ComputeDose_VanLuijk(Drover DICOM_data, OperationArgPkg OptArg
     auto DistributionDataFileName = OptArgs.getValueStr("DistributionDataFileName").value();
     const auto ROILabelRegex = OptArgs.getValueStr("ROILabelRegex").value();
     const auto NormalizedROILabelRegex = OptArgs.getValueStr("NormalizedROILabelRegex").value();
+    const auto SelectionStr = OptArgs.getValueStr("Selection").value();
     //-----------------------------------------------------------------------------------------------------------------
     const auto theregex = std::regex(ROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
     const auto thenormalizedregex = std::regex(NormalizedROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+
+    const auto SelectionTokens = SplitStringToVector(SelectionStr, ';', 'd');
+    if(SelectionTokens.size() != 2){
+        throw std::invalid_argument("The spatial extent selection must consist of exactly two numbers. Cannot continue.");
+    }
+    const double SelectionThickness = std::stod(SelectionTokens.front());
+    const double SelectionOffsetFromBottom = std::stod(SelectionTokens.back());
+
+    //The bisection routine requires for input the fractional area above the plane. We convert from (thickness,offset)
+    // units to the fractional area above the plane for both upper and lower extents.
+    const double SelectionLower = 1.0 - SelectionOffsetFromBottom;
+    const double SelectionUpper = 1.0 - SelectionOffsetFromBottom - SelectionThickness;
+
+    if(!isininc(0.0,SelectionLower,1.0) || !isininc(0.0,SelectionUpper,1.0)){
+        throw std::invalid_argument("Selection is not valid. The selection exceeds [0,1].");
+    }
 
     Explicator X(FilenameLex);
 
@@ -211,122 +246,99 @@ Drover Subsegment_ComputeDose_VanLuijk(Drover DICOM_data, OperationArgPkg OptArg
 
     const auto patient_ID = cc_ROIs.front().get().contours.front().GetMetadataValueAs<std::string>("PatientID").value();
 
-    //Perform the sub-segmentation bisection, building up lists of the split contours for each ROI.
-    const double desired_total_area_fraction_above_plane = 0.5; //Here 'above' means in the positive normal direction.
+    //Perform the sub-segmentation bisection, finding the two planes that flank the user's selection.
     const double acceptable_deviation = 0.01; //Deviation from desired_total_area_fraction_above_plane.
     const size_t max_iters = 50; //If the tolerance cannot be reached after this many iters, report the current plane as-is.
 
-    std::list<contour_collection<double>> cc_above;
-    std::list<contour_collection<double>> cc_below;
+    std::list<contour_collection<double>> cc_selection;
     for(const auto &cc_opt : cc_ROIs){
-        plane<double> final_plane;
         size_t iters_taken = 0;
-        double final_area_frac = std::numeric_limits<double>::quiet_NaN();
+        double final_area_frac = 0.0;
 
-        auto splits = cc_opt.get().Total_Area_Bisection_Along_Plane(planar_normal,
-                                                            desired_total_area_fraction_above_plane,
-                                                            acceptable_deviation,
-                                                            max_iters,
-                                                            &final_plane,
-                                                            &iters_taken,
-                                                            &final_area_frac);
-        FUNCINFO("Using bisection, the fraction of planar area above the final plane was " << final_area_frac);
-        FUNCINFO(iters_taken << " iterations were taken");
-        if(false) for(auto it = splits.begin(); it != splits.end(); ++it){ it->Plot(); }
-        cc_below.push_back( splits.front() );
-        cc_above.push_back( splits.back() );
+        //Find the lower plane.
+        plane<double> lower_plane;
+        cc_opt.get().Total_Area_Bisection_Along_Plane(planar_normal,
+                                                      SelectionLower,
+                                                      acceptable_deviation,
+                                                      max_iters,
+                                                      &lower_plane,
+                                                      &iters_taken,
+                                                      &final_area_frac);
+        FUNCINFO("Lower planar extent: using bisection, the fraction of planar area"
+                 " above the final lower plane was " << final_area_frac << ". Iterations taken: " << iters_taken);
+
+        //Find the upper plane.
+        plane<double> upper_plane;
+        cc_opt.get().Total_Area_Bisection_Along_Plane(planar_normal,
+                                                      SelectionLower,
+                                                      acceptable_deviation,
+                                                      max_iters,
+                                                      &upper_plane,
+                                                      &iters_taken,
+                                                      &final_area_frac);
+        FUNCINFO("Upper planar extent: using bisection, the fraction of planar area"
+                 " above the final upper plane was " << final_area_frac << ". Iterations taken: " << iters_taken);
+
+        //Now perform the sub-segmentation, disregarding the contours outside the selection planes.
+        auto split1 = cc_opt.get().Split_Along_Plane(lower_plane);
+        auto split2 = split1.back().Split_Along_Plane(upper_plane);
+
+        if(false) for(auto it = split2.begin(); it != split2.end(); ++it){ it->Plot(); }
+        cc_selection.push_back( split2.front() );
     }
 
     //Generate lists of reference wrappers to the split contours.
-    std::list<std::reference_wrapper<contour_collection<double>>> cc_above_refs;
-    std::list<std::reference_wrapper<contour_collection<double>>> cc_below_refs;
-    for(auto &cc : cc_above) cc_above_refs.push_back( std::ref(cc) );
-    for(auto &cc : cc_below) cc_below_refs.push_back( std::ref(cc) );
+    std::list<std::reference_wrapper<contour_collection<double>>> cc_selection_refs;
+    for(auto &cc : cc_selection) cc_selection_refs.push_back( std::ref(cc) );
 
-    //Accumulate the voxel intensity distributions for each group.
-    AccumulatePixelDistributionsUserData ud_above;
+    //Accumulate the voxel intensity distributions.
+    AccumulatePixelDistributionsUserData ud;
     if(!img_arr_ptr->imagecoll.Compute_Images( AccumulatePixelDistributions, { },
-                                           cc_above_refs, &ud_above )){
-        throw std::runtime_error("Unable to accumulate pixel distributions (1).");
-    }
-
-    AccumulatePixelDistributionsUserData ud_below;
-    if(!img_arr_ptr->imagecoll.Compute_Images( AccumulatePixelDistributions, { },
-                                           cc_below_refs, &ud_below )){
-        throw std::runtime_error("Unable to accumulate pixel distributions (2).");
+                                           cc_selection_refs, &ud )){
+        throw std::runtime_error("Unable to accumulate pixel distributions.");
     }
 
     //Report the findings.
     if(DerivativeDataFileName.empty()){
         DerivativeDataFileName = Get_Unique_Sequential_Filename("/tmp/dicomautomaton_subsegment_vanluijk_derivatives_", 6, ".csv");
     }
-    if(DistributionDataFileName.empty()){
-        DistributionDataFileName = Get_Unique_Sequential_Filename("/tmp/dicomautomaton_subsegment_vanluijk_distributions_", 6, ".data");
-    }
-
     std::fstream FO_deriv(DerivativeDataFileName, std::fstream::out | std::fstream::app);
     if(!FO_deriv){
         throw std::runtime_error("Unable to open file for reporting derivative data. Cannot continue.");
     }
-
-
-    for(const auto &av : ud_above.accumulated_voxels){
+    for(const auto &av : ud.accumulated_voxels){
         const auto lROIname = av.first;
         const auto MeanDose = Stats::Mean( av.second );
         const auto MedianDose = Stats::Median( av.second );
 
         FO_deriv  << "PatientID='" << patient_ID << "',"
-                  << "SubsegmentDesc='above',"
-                  << "ROIname='" << lROIname << "',"
                   << "NormalizedROIname='" << X(lROIname) << "',"
+                  << "ROIname='" << lROIname << "',"
                   << "MeanDose=" << MeanDose << ","
                   << "MedianDose=" << MedianDose << ","
                   << "VoxelCount=" << av.second.size() << std::endl;
     }
-
-    for(const auto &av : ud_below.accumulated_voxels){
-        const auto lROIname = av.first;
-        const auto MeanDose = Stats::Mean( av.second );
-        const auto MedianDose = Stats::Median( av.second );
-
-        FO_deriv  << "PatientID='" << patient_ID << "',"
-                  << "SubsegmentDesc='below',"
-                  << "ROIname='" << lROIname << "',"
-                  << "NormalizedROIname='" << X(lROIname) << "',"
-                  << "MeanDose=" << MeanDose << ","
-                  << "MedianDose=" << MedianDose << ","
-                  << "VoxelCount=" << av.second.size() << std::endl;
-    }
+    FO_deriv.close();
  
 
+    if(DistributionDataFileName.empty()){
+        DistributionDataFileName = Get_Unique_Sequential_Filename("/tmp/dicomautomaton_subsegment_vanluijk_distributions_", 6, ".data");
+    }
     std::fstream FO_dist(DistributionDataFileName, std::fstream::out | std::fstream::app);
     if(!FO_dist){
         throw std::runtime_error("Unable to open file for reporting distribution data. Cannot continue.");
     }
 
-    for(const auto &av : ud_above.accumulated_voxels){
+    for(const auto &av : ud.accumulated_voxels){
         const auto lROIname = av.first;
-
         FO_dist << "PatientID='" << patient_ID << "' "
-                << "SubsegmentDesc='above' "
-                << "ROIname='" << lROIname << "' "
-                << "NormalizedROIname='" << X(lROIname) << "'," << std::endl;
-
+                << "NormalizedROIname='" << X(lROIname) << "' "
+                << "ROIname='" << lROIname << "' " << std::endl;
         for(const auto &d : av.second) FO_dist << d << " ";
         FO_dist << std::endl;
     }
+    FO_dist.close();
 
-    for(const auto &av : ud_below.accumulated_voxels){
-        const auto lROIname = av.first;
-
-        FO_dist << "PatientID='" << patient_ID << "' "
-                << "SubsegmentDesc='below' "
-                << "ROIname='" << lROIname << "' "
-                << "NormalizedROIname='" << X(lROIname) << "'," << std::endl;
-
-        for(const auto &d : av.second) FO_dist << d << " ";
-        FO_dist << std::endl;
-    }
 
     return std::move(DICOM_data);
 }
