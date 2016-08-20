@@ -25,6 +25,7 @@
 #include "Operations/CT_Liver_Perfusion_Pharmaco_1Compartment2Input_Reduced3Param.h"
 #include "Operations/ContourSimilarity.h"
 #include "Operations/ContouringAides.h"
+#include "Operations/ConvertDoseToImage.h"
 #include "Operations/ConvertNaNsToAir.h"
 #include "Operations/DecimatePixels.h"
 #include "Operations/DumpAllOrderedImageMetadataToFile.h"
@@ -72,6 +73,7 @@ std::map<std::string, op_packet_t> Known_Operations(void){
                                                                            CT_Liver_Perfusion_Pharmaco_1C2I_Reduced3Param);
     out["ContourSimilarity"] = std::make_pair(OpArgDocContourSimilarity, ContourSimilarity);
     out["ContouringAides"] = std::make_pair(OpArgDocContouringAides, ContouringAides);
+    out["ConvertDoseToImage"] = std::make_pair(OpArgDocConvertDoseToImage, ConvertDoseToImage);
     out["ConvertNaNsToAir"] = std::make_pair(OpArgDocConvertNaNsToAir, ConvertNaNsToAir);
     out["DecimatePixels"] = std::make_pair(OpArgDocDecimatePixels, DecimatePixels);
     out["DumpAllOrderedImageMetadataToFile"] = std::make_pair(OpArgDocDumpAllOrderedImageMetadataToFile, DumpAllOrderedImageMetadataToFile);

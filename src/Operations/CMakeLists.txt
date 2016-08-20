@@ -3,6 +3,7 @@
 add_library(Operations_objs OBJECT 
     BoostSerializeDrover.cc
     BuildLexiconInteractively.cc
+    ConvertDoseToImage.cc
     CopyLastImage.cc
     CT_Liver_Perfusion.cc
     CT_Liver_Perfusion_First_Run.cc
