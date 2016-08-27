@@ -46,6 +46,7 @@
 #include "Operations/MaxMinPixels.h"
 #include "Operations/PlotPerROITimeCourses.h"
 #include "Operations/PreFilterEnormousCTValues.h"
+#include "Operations/RayCastDoseAccumulate.h"
 #include "Operations/SelectSlicesIntersectingROI.h"
 #include "Operations/SFML_Viewer.h"
 #include "Operations/Subsegment_ComputeDose_VanLuijk.h"
@@ -95,6 +96,7 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["GiveWholeImageArrayAnAbdominalWindowLevel"] = std::make_pair(OpArgDocGiveWholeImageArrayAnAbdominalWindowLevel, GiveWholeImageArrayAnAbdominalWindowLevel);
     out["ImageRoutineTests"] = std::make_pair(OpArgDocImageRoutineTests, ImageRoutineTests);
     out["MaxMinPixels"] = std::make_pair(OpArgDocMaxMinPixels, MaxMinPixels);
+    out["RayCastDoseAccumulate"] = std::make_pair(OpArgDocRayCastDoseAccumulate, RayCastDoseAccumulate);
     out["PlotPerROITimeCourses"] = std::make_pair(OpArgDocPlotPerROITimeCourses, PlotPerROITimeCourses);
     out["PreFilterEnormousCTValues"] = std::make_pair(OpArgDocPreFilterEnormousCTValues, PreFilterEnormousCTValues);
     out["SelectSlicesIntersectingROI"] = std::make_pair(OpArgDocSelectSlicesIntersectingROI, SelectSlicesIntersectingROI);

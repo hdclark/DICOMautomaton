@@ -32,6 +32,7 @@ add_library(Operations_objs OBJECT
     MaxMinPixels.cc
     PlotPerROITimeCourses.cc
     PreFilterEnormousCTValues.cc
+    RayCastDoseAccumulate.cc
     SelectSlicesIntersectingROI.cc
     SFML_Viewer.cc
     Subsegment_ComputeDose_VanLuijk.cc
