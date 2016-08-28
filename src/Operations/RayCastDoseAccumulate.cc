@@ -153,6 +153,23 @@ std::list<OperationArgDoc> OpArgDocRayCastDoseAccumulate(void){
     out.back().default_val = "0.1";
     out.back().expected = true;
     out.back().examples = { "0.1", "0.05", "0.01", "0.005" };
+   
+
+    out.emplace_back();
+    out.back().name = "Rows";
+    out.back().desc = "The number of rows in the resulting images.";
+    out.back().default_val = "256";
+    out.back().expected = true;
+    out.back().examples = { "10", "50", "128", "1024" };
+    
+    
+    out.emplace_back();
+    out.back().name = "Columns";
+    out.back().desc = "The number of columns in the resulting images.";
+    out.back().default_val = "256";
+    out.back().expected = true;
+    out.back().examples = { "10", "50", "128", "1024" };
+    
     
     return out;
 }
@@ -162,18 +179,22 @@ std::list<OperationArgDoc> OpArgDocRayCastDoseAccumulate(void){
 Drover RayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string> /*InvocationMetadata*/, std::string FilenameLex){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
-    auto DoseLengthMapFileName = OptArgs.getValueStr("DoseLengthMapFileName");
-    auto LengthMapFileName = OptArgs.getValueStr("LengthMapFileName");
+    auto DoseLengthMapFileName = OptArgs.getValueStr("DoseLengthMapFileName").value();
+    auto LengthMapFileName = OptArgs.getValueStr("LengthMapFileName").value();
     const auto ROILabelRegex = OptArgs.getValueStr("ROILabelRegex").value();
     const auto NormalizedROILabelRegex = OptArgs.getValueStr("NormalizedROILabelRegex").value();
     const auto CylinderRadiusStr = OptArgs.getValueStr("CylinderRadius").value();
     const auto RaydLStr = OptArgs.getValueStr("RaydL").value();
+    const auto RowsStr = OptArgs.getValueStr("Rows").value();
+    const auto ColumnsStr = OptArgs.getValueStr("Columns").value();
     //-----------------------------------------------------------------------------------------------------------------
     const auto theregex = std::regex(ROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
     const auto thenormalizedregex = std::regex(NormalizedROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
 
     const auto CylinderRadius = std::stod(CylinderRadiusStr);
     const auto RaydL = std::stod(RaydLStr);
+    const auto Rows = std::stol(RowsStr);
+    const auto Columns = std::stol(ColumnsStr);
 
     Explicator X(FilenameLex);
 
@@ -248,8 +269,8 @@ Drover RayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptArgs, std::ma
     //
     const double catch_frac = 0.95; // Catch 95% of randomly distributed rays incident perpendicularly.
     const double minRaydL = 2.0 * CylinderRadius * std::sqrt(1.0 - catch_frac);
-    if(RaydL < minRaydL){
-        throw std::runtime_error("Ray dL is too small. Are you sure this is OK? (edit me if so).");
+    if(RaydL > minRaydL){
+        throw std::runtime_error("Ray dL is too small. MinRaydL=" + std::to_string(minRaydL) + ". Are you sure this is OK? (edit me if so).");
     } 
 
 
@@ -306,20 +327,20 @@ Drover RayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptArgs, std::ma
 
     for(const auto &cc_opt : cc_ROIs){
         for(const auto &cop : cc_opt.get().contours){
-            if(cop.empty()){
+            if(cop.points.empty()){
                 continue;
-            }else if(cop.size() == 1){
+            }else if(cop.points.size() == 1){
                 spheres.emplace_back( cop.points.back() );
-            }else if(cop.size() == 2){
+            }else if(cop.points.size() == 2){
                 spheres.emplace_back( cop.points.front() );
                 spheres.emplace_back( cop.points.back() );
                 if(cop.closed) cylinders.emplace_back(cop.points.front(), cop.points.back());
             }else{
                 for(const auto &v : cop.points) spheres.emplace_back(v);
 
-                auto itA = com.points.begin();
+                auto itA = cop.points.begin();
                 auto itB = std::next(itA);
-                for( ; itB != com.points.end(); ++itA, ++itB){
+                for( ; itB != cop.points.end(); ++itA, ++itB){
                      cylinders.emplace_back(*itB, *itA); //Orientation doesn't matter.
                 }
                 if(cop.closed) cylinders.emplace_back(cop.points.front(), cop.points.back());
@@ -334,7 +355,8 @@ Drover RayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptArgs, std::ma
     //Find an appropriate unit vector which will define the orientation of a plane parallel to the detector and source grids.
     // Rays will travel perpendicular to this plane, and it therefore controls.
     const auto GridNormal = vec3<double>(0.0, 0.0, 1.0).unit();
-    const plane<double> GridPlane(GridNormal, vec3<double>(0.0, 0.0, 0.0));
+    const vec3<double> zero(0.0, 0.0, 0.0);
+    const plane<double> GridPlane(GridNormal, zero);
 
     //Find two more directions (unit vectors) with which to align the bounding box.
     // Note: because we want to be able to compare images from different scans, we use a deterministic 
@@ -352,170 +374,167 @@ Drover RayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptArgs, std::ma
     GridY = GridY.unit();
 
 
-    //Find an appropriate bounding box encompassing the ROI surface + a margin.
+    //Find an appropriate bounding box encompassing the ROI surface.
     double grid_x_min = std::numeric_limits<double>::quiet_NaN();
     double grid_x_max = std::numeric_limits<double>::quiet_NaN();
     double grid_y_min = std::numeric_limits<double>::quiet_NaN();
     double grid_y_max = std::numeric_limits<double>::quiet_NaN();
     double grid_z_min = std::numeric_limits<double>::quiet_NaN();
     double grid_z_max = std::numeric_limits<double>::quiet_NaN();
-    double grid_margin = 2.0*CylinderRadius;
 
     //Make three planes defined by GridNormal, GridX, and GridY.
     // (The planes intersect the origin so it is easier to compute offsets later.)
-
-    // ... 
+    const plane<double> GridXZeroPlane(GridX, zero);
+    const plane<double> GridYZeroPlane(GridY, zero);
+    const plane<double> GridZZeroPlane(GridNormal, zero);
 
     for(const auto &asphere : spheres){
-
         //Compute the distance to each plane.
-
+        const auto distX = GridXZeroPlane.Get_Signed_Distance_To_Point(asphere);
+        const auto distY = GridYZeroPlane.Get_Signed_Distance_To_Point(asphere);
+        const auto distZ = GridZZeroPlane.Get_Signed_Distance_To_Point(asphere);
 
         //Score the minimum and maximum distances.
-
-
+        if(false){
+        }else if(!std::isfinite(grid_x_min) || (distX < grid_x_min)){  grid_x_min = distX;
+        }else if(!std::isfinite(grid_x_max) || (distX > grid_x_max)){  grid_x_max = distX;
+        }else if(!std::isfinite(grid_y_min) || (distY < grid_y_min)){  grid_y_min = distY;
+        }else if(!std::isfinite(grid_y_max) || (distY > grid_y_max)){  grid_y_max = distY;
+        }else if(!std::isfinite(grid_z_min) || (distZ < grid_z_min)){  grid_z_min = distZ;
+        }else if(!std::isfinite(grid_z_max) || (distZ > grid_z_max)){  grid_z_max = distZ;
+        }
     }
+    for(const auto &acylinder : cylinders){
+        //const std::vector<vec3<double>> vlist = { acylinder.Get_R0(), acylinder.Get_R1() };
+        //for(const auto &v : vlist){
+        for(const auto &v : { acylinder.Get_R0(), acylinder.Get_R1() } ){
+            const auto distX = GridXZeroPlane.Get_Signed_Distance_To_Point(v);
+            const auto distY = GridYZeroPlane.Get_Signed_Distance_To_Point(v);
+            const auto distZ = GridZZeroPlane.Get_Signed_Distance_To_Point(v);
+
+            if(false){
+            }else if(!std::isfinite(grid_x_min) || (distX < grid_x_min)){  grid_x_min = distX;
+            }else if(!std::isfinite(grid_x_min) || (distX > grid_x_max)){  grid_x_max = distX;
+            }else if(!std::isfinite(grid_y_min) || (distY < grid_y_min)){  grid_y_min = distY;
+            }else if(!std::isfinite(grid_y_min) || (distY > grid_y_max)){  grid_y_max = distY;
+            }else if(!std::isfinite(grid_z_min) || (distZ < grid_z_min)){  grid_z_min = distZ;
+            }else if(!std::isfinite(grid_z_min) || (distZ > grid_z_max)){  grid_z_max = distZ;
+            }
+        }
+    }
+
+    //Leave a margin.
+    const double grid_margin = 2.0*CylinderRadius;
+    grid_x_min -= grid_margin;
+    grid_x_max += grid_margin;
+    grid_y_min -= grid_margin;
+    grid_y_max += grid_margin;
+    grid_z_min -= 2.0*grid_margin;
+    grid_z_max += 2.0*grid_margin;
     
     //Using the minimum and maximum distances along z, place planes at the top and bottom + a margin.
+    const plane<double> GridZTopPlane( GridNormal, zero + GridNormal * grid_z_max );
+    const plane<double> GridZBotPlane( GridNormal, zero + GridNormal * grid_z_min );
+    
+    //const vec3<double> far_corner_zero  = zero + (GridX * grid_x_max) + (GridY * grid_y_max);
+    const vec3<double> near_corner_zero = zero + (GridX * grid_x_min) + (GridY * grid_y_min);
 
-    // ...
+    const double xwidth = grid_x_max - grid_x_min;
+    const double ywidth = grid_y_max - grid_y_min;
 
-    //Using the minimum and maximum distances along x and y, define the boundaries of the image.
-    // (The images lie on the upper and lower Z planes).
+    //Project the corner on the zero plane onto the top and bottom Z-planes.
+    const auto GridZTopNearCorner = GridZTopPlane.Project_Onto_Plane_Orthogonally(near_corner_zero);
+    const auto GridZBotNearCorner = GridZBotPlane.Project_Onto_Plane_Orthogonally(near_corner_zero);
 
-    // ...
 
+    //Create images that live on each Z-plane.
+    const auto voxel_dx = xwidth / Columns;
+    const auto voxel_dy = ywidth / Rows;
+    const auto voxel_dz = grid_margin; // Doesn't really matter much. Not used for anything.
+
+    const auto SourceImgOffset = GridZTopNearCorner + (GridX * voxel_dx * 0.5) + (GridY * voxel_dy * 0.5);
+    const auto DetectImgOffset = GridZBotNearCorner + (GridX * voxel_dx * 0.5) + (GridY * voxel_dy * 0.5);
+
+    planar_image<float, double> SourceImg;
+    SourceImg.init_buffer(Rows, Columns, 1);
+    SourceImg.init_spatial(voxel_dx, voxel_dy, voxel_dz, zero, SourceImgOffset);
+    SourceImg.init_orientation(GridX, GridY);
+    SourceImg.fill_pixels(0.0);
+
+    planar_image<float, double> DetectImg;
+    DetectImg.init_buffer(Rows, Columns, 1);
+    DetectImg.init_spatial(voxel_dx, voxel_dy, voxel_dz, zero, DetectImgOffset);
+    DetectImg.init_orientation(GridX, GridY);
+    DetectImg.fill_pixels(0.0);
 
     //Now ready to ray cast. Loop over integer pixel coordinates. Start and finish are image pixels.
     // The top image can be the length image.
+    const auto sq_radius = std::pow(CylinderRadius, 2.0);
+    for(long int row = 0; row < Rows; ++row){
+        FUNCINFO("Working on row " << (row+1) << " of " << Rows 
+                  << " --> " << static_cast<int>(1000.0*(row+1)/Rows)/10.0 << "\% done");
+        for(long int col = 0; col < Columns; ++col){
+            double accumulated_length = 0.0;      //Length of ray travel within the 'surface'.
+            double accumulated_doselength = 0.0;
 
-    // ... for(long int pc = 0; pc < image.max_coord){
-    // ...     ray = ...
-    // ...     while(dist(ray, lower_plane) > 0){
-    // ...         ray.pos += GridNormal;
-    // ...         accumulated_dose = 0;
-    // ...         accumulated_length = 0; // surface length.
-    // ...         if(within_spheres || within_cylinders) dose += image.pixel_at_position();
-    // ...     }
-    // ... }
+            vec3<double> ray_pos = SourceImg.position(row, col);
+            const vec3<double> terminus = DetectImg.position(row, col);
+            const vec3<double> ray_dir = (terminus - ray_pos).unit();
 
+            //Go until we get within certain distance or overshoot and the ray wants to backtrack.
+            while(    (ray_dir.Dot( (terminus - ray_pos).unit() ) > 0.8 ) // Ray orientation is still downward-facing.
+                   && (ray_pos.distance(terminus) > std::max(RaydL, grid_margin)) ){ // Still far away from detector.
 
-    // Save the images to file.
+                ray_pos += ray_dir * RaydL;
+                const auto midpoint = ray_pos - (ray_dir * RaydL * 0.5);
 
-    // ... 
+                //Search to see if ray is in an object.
+                bool skip = false; //Was already found to be in a surface and was counted.
+                for(const auto &asphere : spheres){
+                    if(ray_pos.sq_dist(asphere) < sq_radius){
+                        accumulated_length += RaydL;
 
+                        //Find the dose at the half-way point.
+                        auto encompass_imgs = img_arr_ptr->imagecoll.get_images_which_encompass_point( midpoint );
+                        for(const auto &enc_img : encompass_imgs){
+                            const auto pix_val = enc_img->value(midpoint, 0);
+                            accumulated_doselength += RaydL * pix_val;
+                        }
+                        skip = true;
+                        break;
+                    }
+                }
 
-// -------------------------------------------------------
+                if(!skip){
+                    for(const auto &acylinder : cylinders){
+                        if(acylinder.Within_Cylindrical_Volume(ray_pos, CylinderRadius)){
+                            accumulated_length += RaydL;
 
- 
+                            //Find the dose at the half-way point.
+                            auto encompass_imgs = img_arr_ptr->imagecoll.get_images_which_encompass_point( midpoint );
+                            for(const auto &enc_img : encompass_imgs){
+                                const auto pix_val = enc_img->value(midpoint, 0);
+                                accumulated_doselength += RaydL * pix_val;
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
 
-
-    //Get the plane in which the contours are defined on.
-    //
-    // This is done by taking the cross product of the first few points of the first the first contour with three or
-    // more points. We assume that all contours are defined by the same plane. What we are after is the normal that
-    // defines the plane. We use this contour-only approach to avoid having to load CT image data.
-    cc_ROIs.front().get().contours.front().Reorient_Counter_Clockwise();
-    const auto planar_normal = cc_ROIs.front().get().contours.front().Estimate_Planar_Normal();
-
-    const auto patient_ID = cc_ROIs.front().get().contours.front().GetMetadataValueAs<std::string>("PatientID").value();
-
-    //Perform the sub-segmentation bisection, finding the two planes that flank the user's selection.
-    const double acceptable_deviation = 0.01; //Deviation from desired_total_area_fraction_above_plane.
-    const size_t max_iters = 50; //If the tolerance cannot be reached after this many iters, report the current plane as-is.
-
-    std::list<contour_collection<double>> cc_selection;
-    for(const auto &cc_opt : cc_ROIs){
-        size_t iters_taken = 0;
-        double final_area_frac = 0.0;
-
-        //Find the lower plane.
-        plane<double> lower_plane;
-        cc_opt.get().Total_Area_Bisection_Along_Plane(planar_normal,
-                                                      SelectionLower,
-                                                      acceptable_deviation,
-                                                      max_iters,
-                                                      &lower_plane,
-                                                      &iters_taken,
-                                                      &final_area_frac);
-        FUNCINFO("Lower planar extent: using bisection, the fraction of planar area"
-                 " above the final lower plane was " << final_area_frac << ". Iterations taken: " << iters_taken);
-
-        //Find the upper plane.
-        plane<double> upper_plane;
-        cc_opt.get().Total_Area_Bisection_Along_Plane(planar_normal,
-                                                      SelectionUpper,
-                                                      acceptable_deviation,
-                                                      max_iters,
-                                                      &upper_plane,
-                                                      &iters_taken,
-                                                      &final_area_frac);
-        FUNCINFO("Upper planar extent: using bisection, the fraction of planar area"
-                 " above the final upper plane was " << final_area_frac << ". Iterations taken: " << iters_taken);
-
-        //Now perform the sub-segmentation, disregarding the contours outside the selection planes.
-        auto split1 = cc_opt.get().Split_Along_Plane(lower_plane);
-        auto split2 = split1.back().Split_Along_Plane(upper_plane);
-
-        if(false) for(auto it = split2.begin(); it != split2.end(); ++it){ it->Plot(); }
-        cc_selection.push_back( split2.front() );
-    }
-    if(cc_selection.empty()){
-        FUNCWARN("Selection contains no contours. Try adjusting your criteria.");
+            //Deposit the dose in the images.
+            SourceImg.reference(row, col, 0) = static_cast<float>(accumulated_length);
+            DetectImg.reference(row, col, 0) = static_cast<float>(accumulated_doselength);
+        }
     }
 
-    //Generate lists of reference wrappers to the split contours.
-    std::list<std::reference_wrapper<contour_collection<double>>> cc_selection_refs;
-    for(auto &cc : cc_selection) cc_selection_refs.push_back( std::ref(cc) );
-
-    //Accumulate the voxel intensity distributions.
-    AccumulatePixelDistributionsUserData ud;
-    if(!img_arr_ptr->imagecoll.Compute_Images( AccumulatePixelDistributions, { },
-                                           cc_selection_refs, &ud )){
-        throw std::runtime_error("Unable to accumulate pixel distributions.");
+    // Save image maps to file.
+    if(!WriteToFITS(SourceImg, LengthMapFileName)){
+        throw std::runtime_error("Unable to write FITS file for length map.");
     }
-
-    //Report the findings.
-    if(DerivativeDataFileName.empty()){
-        DerivativeDataFileName = Get_Unique_Sequential_Filename("/tmp/dicomautomaton_subsegment_vanluijk_derivatives_", 6, ".csv");
+    if(!WriteToFITS(DetectImg, DoseLengthMapFileName)){
+        throw std::runtime_error("Unable to write FITS file for dose-length map.");
     }
-    std::fstream FO_deriv(DerivativeDataFileName, std::fstream::out | std::fstream::app);
-    if(!FO_deriv){
-        throw std::runtime_error("Unable to open file for reporting derivative data. Cannot continue.");
-    }
-    for(const auto &av : ud.accumulated_voxels){
-        const auto lROIname = av.first;
-        const auto MeanDose = Stats::Mean( av.second );
-        const auto MedianDose = Stats::Median( av.second );
-
-        FO_deriv  << "PatientID='" << patient_ID << "',"
-                  << "NormalizedROIname='" << X(lROIname) << "',"
-                  << "ROIname='" << lROIname << "',"
-                  << "MeanDose=" << MeanDose << ","
-                  << "MedianDose=" << MedianDose << ","
-                  << "VoxelCount=" << av.second.size() << std::endl;
-    }
-    FO_deriv.close();
- 
-
-    if(DistributionDataFileName.empty()){
-        DistributionDataFileName = Get_Unique_Sequential_Filename("/tmp/dicomautomaton_subsegment_vanluijk_distributions_", 6, ".data");
-    }
-    std::fstream FO_dist(DistributionDataFileName, std::fstream::out | std::fstream::app);
-    if(!FO_dist){
-        throw std::runtime_error("Unable to open file for reporting distribution data. Cannot continue.");
-    }
-
-    for(const auto &av : ud.accumulated_voxels){
-        const auto lROIname = av.first;
-        FO_dist << "PatientID='" << patient_ID << "' "
-                << "NormalizedROIname='" << X(lROIname) << "' "
-                << "ROIname='" << lROIname << "' " << std::endl;
-        for(const auto &d : av.second) FO_dist << d << " ";
-        FO_dist << std::endl;
-    }
-    FO_dist.close();
-
 
     return std::move(DICOM_data);
 }
