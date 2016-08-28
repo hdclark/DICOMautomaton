@@ -23,6 +23,7 @@ add_library(Operations_objs OBJECT
     DumpROIData.cc
     DumpROIDoseInfo.cc
     DumpROISurfaceMeshes.cc
+    GenerateSurfaceMask.cc
     GenerateVirtualDataPerfusionV1.cc
     GiveWholeImageArrayABoneWindowLevel.cc
     GiveWholeImageArrayAHeadAndNeckWindowLevel.cc
