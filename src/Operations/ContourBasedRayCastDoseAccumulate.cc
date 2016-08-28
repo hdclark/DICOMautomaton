@@ -1,4 +1,4 @@
-//RayCastDoseAccumulate.cc - A part of DICOMautomaton 2015, 2016. Written by hal clark.
+//ContourBasedRayCastDoseAccumulate.cc - A part of DICOMautomaton 2015, 2016. Written by hal clark.
 
 #include <iostream>
 #include <sstream>
@@ -85,11 +85,11 @@
 #include "../YgorImages_Functors/Compute/Contour_Similarity.h"
 #include "../YgorImages_Functors/Compute/AccumulatePixelDistributions.h"
 
-#include "RayCastDoseAccumulate.h"
+#include "ContourBasedRayCastDoseAccumulate.h"
 
 
 
-std::list<OperationArgDoc> OpArgDocRayCastDoseAccumulate(void){
+std::list<OperationArgDoc> OpArgDocContourBasedRayCastDoseAccumulate(void){
     std::list<OperationArgDoc> out;
 
     out.emplace_back();
@@ -176,7 +176,7 @@ std::list<OperationArgDoc> OpArgDocRayCastDoseAccumulate(void){
 
 
 
-Drover RayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string> /*InvocationMetadata*/, std::string FilenameLex){
+Drover ContourBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string> /*InvocationMetadata*/, std::string FilenameLex){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     auto DoseLengthMapFileName = OptArgs.getValueStr("DoseLengthMapFileName").value();

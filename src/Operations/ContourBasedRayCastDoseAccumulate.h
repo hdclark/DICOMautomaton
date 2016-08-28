@@ -1,4 +1,4 @@
-// RayCastDoseAccumulate.h.
+// ContourBasedRayCastDoseAccumulate.h.
 
 #pragma once
 
@@ -87,8 +87,8 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocRayCastDoseAccumulate(void);
+std::list<OperationArgDoc> OpArgDocContourBasedRayCastDoseAccumulate(void);
 
-Drover RayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
+Drover ContourBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                              std::map<std::string, std::string> /*InvocationMetadata*/,
                              std::string /*FilenameLex*/);
