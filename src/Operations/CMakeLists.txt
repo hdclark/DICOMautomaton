@@ -29,6 +29,7 @@ add_library(Operations_objs OBJECT
     GiveWholeImageArrayAHeadAndNeckWindowLevel.cc
     GiveWholeImageArrayAThoraxWindowLevel.cc
     GiveWholeImageArrayAnAbdominalWindowLevel.cc
+    GridBasedRayCastDoseAccumulate.cc
     ImageRoutineTests.cc
     MaxMinPixels.cc
     PlotPerROITimeCourses.cc
