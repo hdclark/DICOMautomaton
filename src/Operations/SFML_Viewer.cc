@@ -1454,6 +1454,7 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
                     const auto pix_val = disp_img_it->value(row_as_u,col_as_u,0);
                     std::stringstream ss;
                     ss << "(r,c)=(" << row_as_u << "," << col_as_u << ") -- " << pix_val;
+                    ss << "    (DICOM Position)=" << disp_img_it->position(row_as_u,col_as_u);
                     cursortext.setString(ss.str());
                     BLcornertextss.str(""); //Clear stringstream.
                     BLcornertextss << ss.str();

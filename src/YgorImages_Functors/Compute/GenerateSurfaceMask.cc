@@ -122,6 +122,7 @@ bool ComputeGenerateSurfaceMask(planar_image_collection<float,double> &imagecoll
             }
             return true;
         });
+
         if(cc_select.empty()){
             img.fill_pixels( 0, user_data_s->background_val );
             continue;
@@ -196,12 +197,12 @@ bool ComputeGenerateSurfaceMask(planar_image_collection<float,double> &imagecoll
                         return false; //No point (!is_in_an_roi) was found.
                 };
 
-                if(check_inclusion(img, 1)){
+
+                if(false){
+                }else if(check_inclusion(img, 1)){
                     img.reference(row, col, 0) = user_data_s->surface_val;
-                }
 
                 //Apply the check to the nearest neighbouring image slices.
-                if(false){
                 }else if( !above.empty() && check_inclusion(*(above.front()), 0) ){
                     img.reference(row, col, 0) = user_data_s->surface_val;
                 }else if( !below.empty() && check_inclusion(*(below.front()), 0) ){

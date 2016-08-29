@@ -84,6 +84,7 @@
 #include "../YgorImages_Functors/Compute/Per_ROI_Time_Courses.h"
 #include "../YgorImages_Functors/Compute/Contour_Similarity.h"
 #include "../YgorImages_Functors/Compute/AccumulatePixelDistributions.h"
+#include "../YgorImages_Functors/Compute/GenerateSurfaceMask.h"
 
 #include "GridBasedRayCastDoseAccumulate.h"
 
@@ -138,7 +139,7 @@ std::list<OperationArgDoc> OpArgDocGridBasedRayCastDoseAccumulate(void){
 
     out.emplace_back();
     out.back().name = "SmallestFeature";
-    out.back().desc = "A length giving an estimate of the smallest feature you want to resolve.";
+    out.back().desc = "A length giving an estimate of the smallest feature you want to resolve."
                       " Quantity is in the DICOM coordinate system.";
     out.back().default_val = "0.5";
     out.back().expected = true;
@@ -173,10 +174,11 @@ std::list<OperationArgDoc> OpArgDocGridBasedRayCastDoseAccumulate(void){
     
     out.emplace_back();
     out.back().name = "NumberOfImages";
-    out.back().desc = "The number of images used for grid-based surface detection.";
-    out.back().default_val = "20";
+    out.back().desc = "The number of images used for grid-based surface detection. Leave negative for computation"
+                      " of a reasonable value; set to something specific to force an override.";
+    out.back().default_val = "-1";
     out.back().expected = true;
-    out.back().examples = { "10", "50", "100" };
+    out.back().examples = { "-1", "10", "50", "100" };
     
     
     return out;
@@ -195,7 +197,7 @@ Drover GridBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptArgs
     const auto RaydL = std::stod(OptArgs.getValueStr("RaydL").value());
     const auto Rows = std::stol(OptArgs.getValueStr("Rows").value());
     const auto Columns = std::stol(OptArgs.getValueStr("Columns").value());
-    const auto NumberOfImages = std::stol(OptArgs.getValueStr("NumberOfImages").value());
+    auto NumberOfImages = std::stol(OptArgs.getValueStr("NumberOfImages").value());
 
     //-----------------------------------------------------------------------------------------------------------------
     const auto theregex = std::regex(ROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
@@ -324,15 +326,24 @@ Drover GridBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptArgs
         throw std::invalid_argument("No contours selected. Cannot continue.");
     }
 
+    // ============================================== Generate a grid  ==============================================
 
-    //Find an appropriate unit vector which will define the orientation of a plane parallel to the detector and source grids.
-    // Rays will travel parallel to this vector.
-    const auto GridZ = vec3<double>(0.0, 0.0, 1.0).unit();
+    //Record the unique contour planes (compared by some small threshold) in a sorted list.
+    // These are used to derive information useful for optimal gridding.
+    const auto est_cont_normal = cc_ROIs.front().get().contours.front().Estimate_Planar_Normal();
+    const auto ucp = Unique_Contour_Planes(cc_ROIs, est_cont_normal, /*distance_eps=*/ 0.005);
 
-    //Find two more directions (unit vectors) with which to align the bounding box.
-    // Note: because we want to be able to compare images from different scans, we use a deterministic 
-    // technique for generating two orthogonal directions involving the cardinal directions and Gram-Schmidt
-    // orthogonalization.
+    //Compute the number of images to make into the grid: number of unique contour planes + 2.
+    // The extra two will contain some surface voxels.
+    if(NumberOfImages <= 0) NumberOfImages = (ucp.size() + 2);
+    FUNCINFO("Number of images: " << NumberOfImages);
+
+    //Find grid alignment vectors.
+    //
+    // Note: Because we want to be able to compare images from different scans, we use a deterministic technique for
+    //       generating two orthogonal directions involving the cardinal directions and Gram-Schmidt
+    //       orthogonalization.
+    const auto GridZ = est_cont_normal.unit();
     vec3<double> GridX = GridZ.rotate_around_z(M_PI * 0.5); // Try Z. Will often be idempotent.
     if(GridX.Dot(GridZ) > 0.25){
         GridX = GridZ.rotate_around_y(M_PI * 0.5);  //Should always work since GridZ is parallel to Z.
@@ -344,34 +355,37 @@ Drover GridBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptArgs
     GridX = GridX.unit();
     GridY = GridY.unit();
 
-
-// - If NumberOfImages is 0, make one for each unique contour plane (compared by some small threshold).
-//   - If NumberOfImages is negative (e.g., -X), do the same as 0 but make X additional images.
-// - If margins
-
-    //Record the unique contour planes (compared by some small threshold) in a sorted list.
-
-    // ...
-
-    //Compute the number of images to make into the grid: number of unique contour planes + 2.
-
-    // ...
-
     //Figure out what z-margin is needed so the extra two images do not interfere with the grid lining up with the
-    //contours. (Want exactly one contour plane per image.)
+    // contours. (Want exactly one contour plane per image.) So the margin should be large enough so the empty
+    // images have no contours inside them, but small enough so that it doesn't affect the location of contours in the
+    // other image slices. The ideal is if each image slice has the same thickness so contours are all separated by some
+    // constant separation -- in this case we make the margin exactly as big as if two images were also included.
+    double z_margin = 0.0;
+    if(ucp.size() > 1){
+        //Compute the total distance between the (centre of the) top and (centre of the) bottom planes.
+        // (Note: the images associated with these contours will usually extend further. This is dealt with below.)
+        const auto total_sep =  std::abs(ucp.front().Get_Signed_Distance_To_Point(ucp.back().R_0));
+        const auto sep_per_plane = total_sep / static_cast<double>(ucp.size()-1);
 
-    // ...
+        //Add TOTAL zmargin of 1*sep_per_plane each for 2 extra images, and 0.5*sep_per_plane for each of the images
+        // which will stick out beyond the contour planes. (The margin is added at the top and the bottom.)
+        z_margin = sep_per_plane * 1.5;
+    }else{
+        FUNCWARN("Only a single contour plane was detected. Guessing its thickness.."); 
+        z_margin = 5.0;
+    }
 
-    //Figure out what a reasonable x-margin and y-margin are. (You can use average distance from centroid to vertex as a
-    // guide.)
-
-    // ...
+    //Figure out what a reasonable x-margin and y-margin are. 
+    //
+    // NOTE: Could also use (median? maximum?) distance from centroid to vertex.
+    double x_margin = z_margin;
+    double y_margin = z_margin;
 
     //Generate a grid volume bounding the ROI(s).
     auto grid_image_collection = Contiguously_Grid_Volume<float,double>(
              cc_ROIs, 
-             SmallestFeature, SmallestFeature, 10.0*SmallestFeature, //Margins of the bounding volume.
-             Rows, Columns, /*number_of_columns=*/ 1, NumberOfImages,
+             x_margin, y_margin, z_margin,
+             Rows, Columns, /*number_of_channels=*/ 1, NumberOfImages,
              GridX, GridY, GridZ,
              /*pixel_fill=*/ std::numeric_limits<double>::quiet_NaN(),
              /*only_top_and_bottom=*/ false);
@@ -379,22 +393,65 @@ Drover GridBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptArgs
     DICOM_data.image_data.back()->imagecoll.images.swap(grid_image_collection.images);
     auto grid_arr_ptr = DICOM_data.image_data.back();
 
-return std::move(DICOM_data);
 
     //Compute the surface mask using the new grid.
-
-    // ...
-
     const float surface_mask_val = 2.0;
 
+    //Perform the computation.
+    {
+        GenerateSurfaceMaskUserData ud;
+        ud.background_val = 0.0;
+        ud.surface_val    = surface_mask_val;
+        ud.interior_val   = 1.0; //So the user can easily visualize afterward.
+        if(!grid_arr_ptr->imagecoll.Compute_Images( ComputeGenerateSurfaceMask, { },
+                                                    cc_ROIs, &ud )){
+            throw std::runtime_error("Unable to generate a surface mask.");
+        }
+    }
+
+    // ============================================== Modify the mask ==============================================
+
     //Trim geometry above some user-specified plane.
-    // ... ideal? necessary? cumbersome? ...
+    // ... ideal? necessary? cumbersome? ... TODO.
 
 
-    //Copy the top and bottom images to use as "source" and "detector" images.
-    planar_image<float, double> DetectImg = grid_arr_ptr->imagecoll.images.front();
-    planar_image<float, double> SourceImg = grid_arr_ptr->imagecoll.images.back();
+    // ============================================== Source, Detector creation  ==============================================
+    //Create source and detector images. 
+    //
+    // NOTE: They do not need to be aligned with the geometry, contours, or grid. But leave a big margin so you
+    //       can ensure you're getting all the surface available.
 
+    const auto SDGridZ = vec3<double>(0.0, 1.0, 1.0).unit();
+    vec3<double> SDGridX = SDGridZ.rotate_around_z(M_PI * 0.5); // Try Z. Will often be idempotent.
+    if(SDGridX.Dot(SDGridZ) > 0.25){
+        SDGridX = SDGridZ.rotate_around_y(M_PI * 0.5);  //Should always work since SDGridZ is parallel to Z.
+    }
+    vec3<double> SDGridY = SDGridZ.Cross(SDGridX);
+    if(!SDGridZ.GramSchmidt_orthogonalize(SDGridX, SDGridY)){
+        throw std::runtime_error("Unable to find grid orientation vectors.");
+    }
+    SDGridX = SDGridX.unit();
+    SDGridY = SDGridY.unit();
+
+    //Hope that using a margin twice the grid margin will capture all jutting surface.
+    double sdgrid_x_margin = 2.0*x_margin;
+    double sdgrid_y_margin = 2.0*y_margin;
+    double sdgrid_z_margin = 2.0*z_margin;
+
+    //Generate a grid volume bounding the ROI(s). We ask for many images in order to compress the pxl_dz taken by each.
+    // Only two are actually allocated.
+    auto sd_image_collection = Contiguously_Grid_Volume<float,double>(
+             cc_ROIs, 
+             sdgrid_x_margin, sdgrid_y_margin, sdgrid_z_margin,
+             Rows, Columns, /*number_of_channels=*/ 1, 100*NumberOfImages, 
+             SDGridX, SDGridY, SDGridZ,
+             /*pixel_fill=*/ std::numeric_limits<double>::quiet_NaN(),
+             /*only_top_and_bottom=*/ true);
+
+    planar_image<float, double> *DetectImg = &(sd_image_collection.images.front());
+    planar_image<float, double> *SourceImg = &(sd_image_collection.images.back());
+
+    // ============================================== Ray-cast ==============================================
 
     //Now ready to ray cast. Loop over integer pixel coordinates. Start and finish are image pixels.
     // The top image can be the length image.
@@ -405,8 +462,8 @@ return std::move(DICOM_data);
             double accumulated_length = 0.0;      //Length of ray travel within the 'surface'.
             double accumulated_doselength = 0.0;
 
-            vec3<double> ray_pos = SourceImg.position(row, col);
-            const vec3<double> terminus = DetectImg.position(row, col);
+            vec3<double> ray_pos = SourceImg->position(row, col);
+            const vec3<double> terminus = DetectImg->position(row, col);
             const vec3<double> ray_dir = (terminus - ray_pos).unit();
 
             //Go until we get within certain distance or overshoot and the ray wants to backtrack.
@@ -434,16 +491,16 @@ return std::move(DICOM_data);
             }
 
             //Deposit the dose in the images.
-            SourceImg.reference(row, col, 0) = static_cast<float>(accumulated_length);
-            DetectImg.reference(row, col, 0) = static_cast<float>(accumulated_doselength);
+            SourceImg->reference(row, col, 0) = static_cast<float>(accumulated_length);
+            DetectImg->reference(row, col, 0) = static_cast<float>(accumulated_doselength);
         }
     }
 
     // Save image maps to file.
-    if(!WriteToFITS(SourceImg, LengthMapFileName)){
+    if(!WriteToFITS(*SourceImg, LengthMapFileName)){
         throw std::runtime_error("Unable to write FITS file for length map.");
     }
-    if(!WriteToFITS(DetectImg, DoseLengthMapFileName)){
+    if(!WriteToFITS(*DetectImg, DoseLengthMapFileName)){
         throw std::runtime_error("Unable to write FITS file for dose-length map.");
     }
 
