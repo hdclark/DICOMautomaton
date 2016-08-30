@@ -455,10 +455,18 @@ Drover GridBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptArgs
 
     //Now ready to ray cast. Loop over integer pixel coordinates. Start and finish are image pixels.
     // The top image can be the length image.
+    std::vector<long int> col_nums(Columns);
+    std::iota(col_nums.begin(), col_nums.end(), 0); // Fill with the sequence [0,Columns-1].
+
     for(long int row = 0; row < Rows; ++row){
         FUNCINFO("Working on row " << (row+1) << " of " << Rows 
                   << " --> " << static_cast<int>(1000.0*(row+1)/Rows)/10.0 << "\% done");
-        for(long int col = 0; col < Columns; ++col){
+
+        //for(long int col = 0; col < Columns; ++col){
+        //std::for_each(std::execution::par, std::begin(col_nums), std::end(col_nums), [&](long int col) -> void {  // C++17...
+        For_Each_In_Parallel(std::begin(col_nums), std::end(col_nums), [&](decltype(std::begin(col_nums)) col_it) -> void {
+            const auto col = *col_it;
+
             double accumulated_length = 0.0;      //Length of ray travel within the 'surface'.
             double accumulated_doselength = 0.0;
 
@@ -493,7 +501,8 @@ Drover GridBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptArgs
             //Deposit the dose in the images.
             SourceImg->reference(row, col, 0) = static_cast<float>(accumulated_length);
             DetectImg->reference(row, col, 0) = static_cast<float>(accumulated_doselength);
-        }
+        //}
+        });
     }
 
     // Save image maps to file.
