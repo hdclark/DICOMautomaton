@@ -129,7 +129,13 @@ bool ComputeGenerateSurfaceMask(planar_image_collection<float,double> &imagecoll
         }
 
         //Loop over the pixels of the image.
-        for(auto row = 0; row < img.rows; ++row){
+        std::vector<long int> row_nums(img.rows);
+        std::iota(row_nums.begin(), row_nums.end(), 0); // Fill with the sequence [0,img.rows-1].
+
+        //for(auto row = 0; row < img.rows; ++row){
+        //std::for_each(std::execution::par, std::begin(row_nums), std::end(row_nums), [&](long int row) -> void {  //C++17...
+        For_Each_In_Parallel(std::begin(row_nums), std::end(row_nums), [&](decltype(std::begin(row_nums)) row_it) -> void {
+            const auto row = *row_it;
             for(auto col = 0; col < img.columns; ++col){
                 const auto point = img.position(row,col);
 
@@ -209,7 +215,8 @@ bool ComputeGenerateSurfaceMask(planar_image_collection<float,double> &imagecoll
                     img.reference(row, col, 0) = user_data_s->surface_val;
                 }
             }
-        }
+        //}
+        });
     }
 
     return true;
