@@ -45,6 +45,7 @@
 #include "Explicator.h"       //Needed for Explicator class.
 
 #include "../Structs.h"
+#include "../Thread_Pool.h"
 #include "../Dose_Meld.h"
 
 #include "../YgorImages_Functors/Grouping/Misc_Functors.h"
@@ -455,55 +456,58 @@ Drover GridBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptArgs
 
     //Now ready to ray cast. Loop over integer pixel coordinates. Start and finish are image pixels.
     // The top image can be the length image.
-    std::vector<long int> col_nums(Columns);
-    std::iota(col_nums.begin(), col_nums.end(), 0); // Fill with the sequence [0,Columns-1].
+    {
+        asio_thread_pool tp;
+        std::mutex printer; // Who gets to print to the console and iterate the counter.
+        long int completed = 0;
 
-    for(long int row = 0; row < Rows; ++row){
-        FUNCINFO("Working on row " << (row+1) << " of " << Rows 
-                  << " --> " << static_cast<int>(1000.0*(row+1)/Rows)/10.0 << "\% done");
+        for(long int row = 0; row < Rows; ++row){
+            tp.submit_task([&,row](void) -> void {
+                for(long int col = 0; col < Columns; ++col){
+                    double accumulated_length = 0.0;      //Length of ray travel within the 'surface'.
+                    double accumulated_doselength = 0.0;
+                    vec3<double> ray_pos = SourceImg->position(row, col);
+                    const vec3<double> terminus = DetectImg->position(row, col);
+                    const vec3<double> ray_dir = (terminus - ray_pos).unit();
 
-        //for(long int col = 0; col < Columns; ++col){
-        //std::for_each(std::execution::par, std::begin(col_nums), std::end(col_nums), [&](long int col) -> void {  // C++17...
-        For_Each_In_Parallel(std::begin(col_nums), std::end(col_nums), [&](decltype(std::begin(col_nums)) col_it) -> void {
-            const auto col = *col_it;
+                    //Go until we get within certain distance or overshoot and the ray wants to backtrack.
+                    while(    (ray_dir.Dot( (terminus - ray_pos).unit() ) > 0.8 ) // Ray orientation is still downward-facing.
+                           && (ray_pos.distance(terminus) > std::max(RaydL, SmallestFeature)) ){ // Still far away from detector.
 
-            double accumulated_length = 0.0;      //Length of ray travel within the 'surface'.
-            double accumulated_doselength = 0.0;
+                        ray_pos += ray_dir * RaydL;
+                        const auto midpoint = ray_pos - (ray_dir * RaydL * 0.5);
 
-            vec3<double> ray_pos = SourceImg->position(row, col);
-            const vec3<double> terminus = DetectImg->position(row, col);
-            const vec3<double> ray_dir = (terminus - ray_pos).unit();
+                        //Check if it was in the surface at the midpoint.
+                        auto rel_img = grid_arr_ptr->imagecoll.get_images_which_encompass_point(midpoint);
+                        if(rel_img.empty()) continue;
+                        const auto mask_val = rel_img.front()->value(midpoint, 0);
+                        const auto is_in_surface = (mask_val == surface_mask_val);
+                        if(is_in_surface){
+                            accumulated_length += RaydL;
 
-            //Go until we get within certain distance or overshoot and the ray wants to backtrack.
-            while(    (ray_dir.Dot( (terminus - ray_pos).unit() ) > 0.8 ) // Ray orientation is still downward-facing.
-                   && (ray_pos.distance(terminus) > std::max(RaydL, SmallestFeature)) ){ // Still far away from detector.
-
-                ray_pos += ray_dir * RaydL;
-                const auto midpoint = ray_pos - (ray_dir * RaydL * 0.5);
-
-                //Check if it was in the surface at the midpoint.
-                auto rel_img = grid_arr_ptr->imagecoll.get_images_which_encompass_point(midpoint);
-                if(rel_img.empty()) continue;
-                const auto mask_val = rel_img.front()->value(midpoint, 0);
-                const auto is_in_surface = (mask_val == surface_mask_val);
-                if(is_in_surface){
-                    accumulated_length += RaydL;
-
-                    //Find the dose at the half-way point.
-                    auto encompass_imgs = dose_arr_ptr->imagecoll.get_images_which_encompass_point( midpoint );
-                    for(const auto &enc_img : encompass_imgs){
-                        const auto pix_val = enc_img->value(midpoint, 0);
-                        accumulated_doselength += RaydL * pix_val;
+                            //Find the dose at the half-way point.
+                            auto encompass_imgs = dose_arr_ptr->imagecoll.get_images_which_encompass_point( midpoint );
+                            for(const auto &enc_img : encompass_imgs){
+                                const auto pix_val = enc_img->value(midpoint, 0);
+                                accumulated_doselength += RaydL * pix_val;
+                            }
+                        }
                     }
-                }
-            }
 
-            //Deposit the dose in the images.
-            SourceImg->reference(row, col, 0) = static_cast<float>(accumulated_length);
-            DetectImg->reference(row, col, 0) = static_cast<float>(accumulated_doselength);
-        //}
-        });
-    }
+                    //Deposit the dose in the images.
+                    SourceImg->reference(row, col, 0) = static_cast<float>(accumulated_length);
+                    DetectImg->reference(row, col, 0) = static_cast<float>(accumulated_doselength);
+                }
+
+                {
+                    std::lock_guard<std::mutex> lock(printer);
+                    ++completed;
+                    FUNCINFO("Completed " << completed << " of " << Rows 
+                          << " --> " << static_cast<int>(1000.0*(completed)/Rows)/10.0 << "\% done");
+                }
+            });
+        }
+    } // Complete tasks and terminate thread pool.
 
     // Save image maps to file.
     if(!WriteToFITS(*SourceImg, LengthMapFileName)){

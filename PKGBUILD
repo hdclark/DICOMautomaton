@@ -33,6 +33,7 @@ optdepends=(
 )
 makedepends=(
    'cmake'
+   'asio'
 )
 # conflicts=()
 # replaces=()
