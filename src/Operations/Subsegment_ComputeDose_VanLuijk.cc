@@ -127,6 +127,29 @@ std::list<OperationArgDoc> OpArgDocSubsegment_ComputeDose_VanLuijk(void){
                             R"***(Left Parotid|Right Parotid)***" };
 
     out.emplace_back();
+    out.back().name = "ReplaceAllWithSubsegment";
+    out.back().desc = "Keep the sub-segment and remove any existing contours from the original ROIs."
+                      " This is most useful for further processing, such as nested sub-segmentation."
+                      " Note that sub-segment contours currently have identical metadata to their"
+                      " parent contours.";
+    out.back().default_val = "false";
+    out.back().expected = true;
+    out.back().examples = { "true", "false" };
+
+
+    out.emplace_back();
+    out.back().name = "RetainSubsegment";
+    out.back().desc = "Keep the sub-segment as part of the original ROIs. The contours are appended to"
+                      " the original ROIs. This is most useful for inspection of sub-segments. Note"
+                      " that sub-segment contours currently have identical metadata to their"
+                      " parent contours.";
+    out.back().default_val = "false";
+    out.back().expected = true;
+    out.back().examples = { "true", "false" };
+
+
+
+    out.emplace_back();
     out.back().name = "ROILabelRegex";
     out.back().desc = "A regex matching ROI labels/names to consider. The default will match"
                       " all available ROIs. Be aware that input spaces are trimmed to a single space."
@@ -140,14 +163,38 @@ std::list<OperationArgDoc> OpArgDocSubsegment_ComputeDose_VanLuijk(void){
                             R"***(left_parotid|right_parotid)***" };
 
     out.emplace_back();
-    out.back().name = "Selection";
+    out.back().name = "XSelection";
+    out.back().desc = "(See ZSelection description.) The \"X\" direction is defined in terms of movement"
+                      " on an image when the row number increases. This is generally VERTICAL and DOWNWARD."
+                      " This sub-segmentation is performed after ZSelection but before YSelection";
+    out.back().default_val = "1.0;0.0";
+    out.back().expected = true;
+    out.back().examples = { "0.50;0.50", "0.50;0.0", "0.30;0.70", "0.30;0.70" };
+
+    out.emplace_back();
+    out.back().name = "YSelection";
+    out.back().desc = "(See ZSelection description.) The \"Y\" direction is defined in terms of movement"
+                      " on an image when the column number increases. This is generally HORIZONTAL and RIGHTWARD."
+                      " This sub-segmentation is performed after ZSelection and XSelection";
+    out.back().default_val = "1.0;0.0";
+    out.back().expected = true;
+    out.back().examples = { "0.50;0.50", "0.50;0.0", "0.30;0.70", "0.30;0.70" };
+    
+    out.emplace_back();
+    out.back().name = "ZSelection";
     out.back().desc = "The thickness and offset defining the single, continuous extent of the sub-segmentation in"
                       " terms of the fractional area remaining above a plane. The planes define the portion extracted"
                       " and are determined such that sub-segmentation will give the desired fractional planar areas."
                       " The numbers specify the thickness and offset from the bottom of the ROI volume to the bottom"
                       " of the extent. The 'upper' direction is take from the contour plane orientation and assumed to"
                       " be positive if pointing toward the positive-z direction. Only a single selection can be made"
-                      " per operation invocation."
+                      " per operation invocation. Sub-segmentation can be performed in transverse (\"Z\"), row_unit"
+                      " (\"X\"), and column_unit (\"Y\") directions (in that order). Each round of sub-segmentation"
+                      " uses the most recent selection/sub-segments, so only the first sub-segmentation has access to"
+                      " the original contours. However, note that it is possible to perform nested sub-segmentation"
+                      " (including passing along the original contours) by opting to"
+                      " replace the original ROI contours with this sub-segmentation and invoking this operation"
+                      " again with the desired sub-segmentation."
                       " If you want the middle 50\% of an ROI, specify '0.50;0.25'."
                       " If you want the upper 50\% then specify '0.50;0.50'."
                       " If you want the lower 50\% then specify '0.50;0.0'."
@@ -167,28 +214,53 @@ Drover Subsegment_ComputeDose_VanLuijk(Drover DICOM_data, OperationArgPkg OptArg
     //---------------------------------------------- User Parameters --------------------------------------------------
     auto DerivativeDataFileName = OptArgs.getValueStr("DerivativeDataFileName").value();
     auto DistributionDataFileName = OptArgs.getValueStr("DistributionDataFileName").value();
+    const auto ReplaceAllWithSubsegmentStr = OptArgs.getValueStr("ReplaceAllWithSubsegment").value();
+    const auto RetainSubsegmentStr = OptArgs.getValueStr("RetainSubsegment").value();
     const auto ROILabelRegex = OptArgs.getValueStr("ROILabelRegex").value();
     const auto NormalizedROILabelRegex = OptArgs.getValueStr("NormalizedROILabelRegex").value();
-    const auto SelectionStr = OptArgs.getValueStr("Selection").value();
+    const auto XSelectionStr = OptArgs.getValueStr("XSelection").value();
+    const auto YSelectionStr = OptArgs.getValueStr("YSelection").value();
+    const auto ZSelectionStr = OptArgs.getValueStr("ZSelection").value();
+
     //-----------------------------------------------------------------------------------------------------------------
     const auto theregex = std::regex(ROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto TrueRegex = std::regex("^tr?u?e?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
     const auto thenormalizedregex = std::regex(NormalizedROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
 
-    const auto SelectionTokens = SplitStringToVector(SelectionStr, ';', 'd');
-    if(SelectionTokens.size() != 2){
-        throw std::invalid_argument("The spatial extent selection must consist of exactly two numbers. Cannot continue.");
+    const auto ReplaceAllWithSubsegment = std::regex_match(ReplaceAllWithSubsegmentStr, TrueRegex);
+    const auto RetainSubsegment = std::regex_match(RetainSubsegmentStr, TrueRegex);
+
+    const auto XSelectionTokens = SplitStringToVector(XSelectionStr, ';', 'd');
+    const auto YSelectionTokens = SplitStringToVector(YSelectionStr, ';', 'd');
+    const auto ZSelectionTokens = SplitStringToVector(ZSelectionStr, ';', 'd');
+    if( (XSelectionTokens.size() != 2) || (YSelectionTokens.size() != 2) || (ZSelectionTokens.size() != 2) ){
+        throw std::invalid_argument("The spatial extent selections must consist of exactly two numbers. Cannot continue.");
     }
-    const double SelectionThickness = std::stod(SelectionTokens.front());
-    const double SelectionOffsetFromBottom = std::stod(SelectionTokens.back());
+    const double XSelectionThickness = std::stod(XSelectionTokens.front());
+    const double XSelectionOffsetFromBottom = std::stod(XSelectionTokens.back());
+    const double YSelectionThickness = std::stod(YSelectionTokens.front());
+    const double YSelectionOffsetFromBottom = std::stod(YSelectionTokens.back());
+    const double ZSelectionThickness = std::stod(ZSelectionTokens.front());
+    const double ZSelectionOffsetFromBottom = std::stod(ZSelectionTokens.back());
 
     //The bisection routine requires for input the fractional area above the plane. We convert from (thickness,offset)
     // units to the fractional area above the plane for both upper and lower extents.
-    const double SelectionLower = 1.0 - SelectionOffsetFromBottom;
-    const double SelectionUpper = 1.0 - SelectionOffsetFromBottom - SelectionThickness;
+    const double XSelectionLower = 1.0 - XSelectionOffsetFromBottom;
+    const double XSelectionUpper = 1.0 - XSelectionOffsetFromBottom - XSelectionThickness;
+    const double YSelectionLower = 1.0 - YSelectionOffsetFromBottom;
+    const double YSelectionUpper = 1.0 - YSelectionOffsetFromBottom - YSelectionThickness;
+    const double ZSelectionLower = 1.0 - ZSelectionOffsetFromBottom;
+    const double ZSelectionUpper = 1.0 - ZSelectionOffsetFromBottom - ZSelectionThickness;
 
-    if(!isininc(0.0,SelectionLower,1.0) || !isininc(0.0,SelectionUpper,1.0)){
-        FUNCWARN("Selection is not valid. The selection exceeds [0,1]. Lower and Upper are "
-                 << SelectionLower << " and " << SelectionUpper << " respectively");
+    if(!isininc(0.0,XSelectionLower,1.0) || !isininc(0.0,XSelectionUpper,1.0)){
+        FUNCWARN("XSelection is not valid. The selection exceeds [0,1]. Lower and Upper are "
+                 << XSelectionLower << " and " << XSelectionUpper << " respectively");
+    }else if(!isininc(0.0,YSelectionLower,1.0) || !isininc(0.0,YSelectionUpper,1.0)){
+        FUNCWARN("YSelection is not valid. The selection exceeds [0,1]. Lower and Upper are "
+                 << YSelectionLower << " and " << YSelectionUpper << " respectively");
+    }else if(!isininc(0.0,ZSelectionLower,1.0) || !isininc(0.0,ZSelectionUpper,1.0)){
+        FUNCWARN("ZSelection is not valid. The selection exceeds [0,1]. Lower and Upper are "
+                 << ZSelectionLower << " and " << ZSelectionUpper << " respectively");
     }
 
     Explicator X(FilenameLex);
@@ -237,68 +309,106 @@ Drover Subsegment_ComputeDose_VanLuijk(Drover DICOM_data, OperationArgPkg OptArg
         throw std::invalid_argument("No contours selected. Cannot continue.");
     }
 
-    //Get the plane in which the contours are defined on.
-    //
-    // This is done by taking the cross product of the first few points of the first the first contour with three or
-    // more points. We assume that all contours are defined by the same plane. What we are after is the normal that
-    // defines the plane. We use this contour-only approach to avoid having to load CT image data.
-    cc_ROIs.front().get().contours.front().Reorient_Counter_Clockwise();
-    const auto planar_normal = cc_ROIs.front().get().contours.front().Estimate_Planar_Normal();
-
     const auto patient_ID = cc_ROIs.front().get().contours.front().GetMetadataValueAs<std::string>("PatientID").value();
 
-    //Perform the sub-segmentation bisection, finding the two planes that flank the user's selection.
-    const double acceptable_deviation = 0.01; //Deviation from desired_total_area_fraction_above_plane.
-    const size_t max_iters = 50; //If the tolerance cannot be reached after this many iters, report the current plane as-is.
+    //Get the plane in which the contours are defined on. Since we require a dose array for this routine, and the dose
+    // slices and contours must align to make sense, we can pull orientation normals from the slices. Alternatively we
+    // can pull an 
+    //
+    // Note: the planar orientation will point to the next image, not the 'upward' direction. We cannot guarantee the
+    // subject will be properly oriented, so the safest thing to do is ensure all patients share the same orientation
+    // and then somehow verify (e.g., by inspection) that the sub-segments you think you're selecting are actually being
+    // selected. Another idea would be using spatial relationships between known anatomical structures, or using the
+    // expected shape to compare ROI slices to figure out orientation. 
+    const auto z_normal = img_arr_ptr->imagecoll.images.front().image_plane().N_0 * -1.0;
+    const auto x_normal = img_arr_ptr->imagecoll.images.front().row_unit;
+    const auto y_normal = img_arr_ptr->imagecoll.images.front().col_unit;
 
-    std::list<contour_collection<double>> cc_selection;
-    for(const auto &cc_opt : cc_ROIs){
-        size_t iters_taken = 0;
-        double final_area_frac = 0.0;
 
-        //Find the lower plane.
-        plane<double> lower_plane;
-        cc_opt.get().Total_Area_Bisection_Along_Plane(planar_normal,
-                                                      SelectionLower,
-                                                      acceptable_deviation,
-                                                      max_iters,
-                                                      &lower_plane,
-                                                      &iters_taken,
-                                                      &final_area_frac);
-        FUNCINFO("Lower planar extent: using bisection, the fraction of planar area"
-                 " above the final lower plane was " << final_area_frac << ". Iterations taken: " << iters_taken);
+    // ----------------------------------------- transverse sub-segmentation --------------------------------------
 
-        //Find the upper plane.
-        plane<double> upper_plane;
-        cc_opt.get().Total_Area_Bisection_Along_Plane(planar_normal,
-                                                      SelectionUpper,
-                                                      acceptable_deviation,
-                                                      max_iters,
-                                                      &upper_plane,
-                                                      &iters_taken,
-                                                      &final_area_frac);
-        FUNCINFO("Upper planar extent: using bisection, the fraction of planar area"
-                 " above the final upper plane was " << final_area_frac << ". Iterations taken: " << iters_taken);
+    const auto bisect_ROIs = [](const std::list<std::reference_wrapper<contour_collection<double>>> &ROIs,
+                                const vec3<double> &planar_normal,
+                                double SelectionLower,
+                                double SelectionUpper) ->
+                                    std::list<contour_collection<double>> {
 
-        //Now perform the sub-segmentation, disregarding the contours outside the selection planes.
-        auto split1 = cc_opt.get().Split_Along_Plane(lower_plane);
-        auto split2 = split1.back().Split_Along_Plane(upper_plane);
 
-        if(false) for(auto it = split2.begin(); it != split2.end(); ++it){ it->Plot(); }
-        cc_selection.push_back( split2.front() );
-    }
-    if(cc_selection.empty()){
-        FUNCWARN("Selection contains no contours. Try adjusting your criteria.");
-    }
+        // Bisection parameters. It usually converges quickly but can get stuck, so cap the max_iters fairly low.
+        const double acceptable_deviation = 0.01; //Deviation from desired_total_area_fraction_above_plane.
+        const size_t max_iters = 50; //If the tolerance cannot be reached after this many iters, report the current plane as-is.
 
-    //Generate lists of reference wrappers to the split contours.
-    std::list<std::reference_wrapper<contour_collection<double>>> cc_selection_refs;
-    for(auto &cc : cc_selection) cc_selection_refs.push_back( std::ref(cc) );
+        std::list<contour_collection<double>> cc_selection;
+        for(const auto &cc_ref : ROIs){
+            if(cc_ref.get().contours.empty()) continue;
+            size_t iters_taken = 0;
+            double final_area_frac = 0.0;
+
+            //Find the lower plane.
+            plane<double> lower_plane;
+            cc_ref.get().Total_Area_Bisection_Along_Plane(planar_normal,
+                                                          SelectionLower,
+                                                          acceptable_deviation,
+                                                          max_iters,
+                                                          &lower_plane,
+                                                          &iters_taken,
+                                                          &final_area_frac);
+            FUNCINFO("Lower planar extent: using bisection, the fraction of planar area"
+                     " above the final lower plane was " << final_area_frac << ". Iterations taken: " << iters_taken);
+
+            //Find the upper plane.
+            plane<double> upper_plane;
+            cc_ref.get().Total_Area_Bisection_Along_Plane(planar_normal,
+                                                          SelectionUpper,
+                                                          acceptable_deviation,
+                                                          max_iters,
+                                                          &upper_plane,
+                                                          &iters_taken,
+                                                          &final_area_frac);
+            FUNCINFO("Upper planar extent: using bisection, the fraction of planar area"
+                     " above the final upper plane was " << final_area_frac << ". Iterations taken: " << iters_taken);
+
+            //Now perform the sub-segmentation, disregarding the contours outside the selection planes.
+            auto split1 = cc_ref.get().Split_Along_Plane(lower_plane);
+            if(split1.size() != 2){
+                throw std::logic_error("Expected exactly two groups, above and below plane.");
+            }
+            auto split2 = split1.back().Split_Along_Plane(upper_plane);
+            if(split2.size() != 2){
+                throw std::logic_error("Expected exactly two groups, above and below plane.");
+            }
+
+            if(false) for(auto it = split2.begin(); it != split2.end(); ++it){ it->Plot(); }
+            if(!split2.front().contours.empty()) cc_selection.push_back( split2.front() );
+        }
+        if(cc_selection.empty()){
+            FUNCWARN("Selection contains no contours. Try adjusting your criteria.");
+        }
+
+        return cc_selection;
+    };
+
+    //Perform the sub-segmentation.
+    auto selected_ROIs_refs = cc_ROIs;
+    auto selected_ROIs2 = bisect_ROIs(selected_ROIs_refs, z_normal, ZSelectionLower, ZSelectionUpper);
+    std::list<std::reference_wrapper<contour_collection<double>>> selected_ROIs2_refs;
+    for(auto &cc : selected_ROIs2) selected_ROIs2_refs.push_back( std::ref(cc) );
+
+    auto selected_ROIs3 = bisect_ROIs(selected_ROIs2_refs, x_normal, XSelectionLower, XSelectionUpper);
+    std::list<std::reference_wrapper<contour_collection<double>>> selected_ROIs3_refs;
+    for(auto &cc : selected_ROIs3) selected_ROIs3_refs.push_back( std::ref(cc) );
+
+    auto selected_ROIs4 = bisect_ROIs(selected_ROIs3_refs, y_normal, YSelectionLower, YSelectionUpper);
+    std::list<std::reference_wrapper<contour_collection<double>>> selected_ROIs4_refs;
+    for(auto &cc : selected_ROIs4) selected_ROIs4_refs.push_back( std::ref(cc) );
+
+    auto final_selected_ROI_refs = selected_ROIs4_refs;
+
 
     //Accumulate the voxel intensity distributions.
     AccumulatePixelDistributionsUserData ud;
     if(!img_arr_ptr->imagecoll.Compute_Images( AccumulatePixelDistributions, { },
-                                           cc_selection_refs, &ud )){
+                                           final_selected_ROI_refs, &ud )){
         throw std::runtime_error("Unable to accumulate pixel distributions.");
     }
 
@@ -343,6 +453,13 @@ Drover Subsegment_ComputeDose_VanLuijk(Drover DICOM_data, OperationArgPkg OptArg
     }
     FO_dist.close();
 
+    //Keep the sub-segment if the user wants it.
+    if(RetainSubsegment){
+        for(auto &cc : final_selected_ROI_refs) DICOM_data.contour_data->ccs.emplace_back( cc.get() );
+    }else if(ReplaceAllWithSubsegment){
+        DICOM_data.contour_data->ccs.clear();
+        for(auto &cc : final_selected_ROI_refs) DICOM_data.contour_data->ccs.emplace_back( cc.get() );
+    }
 
     return std::move(DICOM_data);
 }
