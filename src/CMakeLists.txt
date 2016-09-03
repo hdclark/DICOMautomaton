@@ -302,6 +302,7 @@ target_link_libraries (dicomautomaton_dispatcher
     boost_filesystem 
     boost_serialization
     boost_iostreams
+    boost_thread
     boost_system 
     z
     mpfr

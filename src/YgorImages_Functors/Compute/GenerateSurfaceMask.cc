@@ -21,6 +21,7 @@
 
 #include "../ConvenienceRoutines.h"
 #include "../Grouping/Misc_Functors.h"
+#include "../../Thread_Pool.h"
 
 #include "GenerateSurfaceMask.h"
 
@@ -129,95 +130,94 @@ bool ComputeGenerateSurfaceMask(planar_image_collection<float,double> &imagecoll
         }
 
         //Loop over the pixels of the image.
-        std::vector<long int> row_nums(img.rows);
-        std::iota(row_nums.begin(), row_nums.end(), 0); // Fill with the sequence [0,img.rows-1].
+        {
+            asio_thread_pool tp;
 
-        //for(auto row = 0; row < img.rows; ++row){
-        //std::for_each(std::execution::par, std::begin(row_nums), std::end(row_nums), [&](long int row) -> void {  //C++17...
-        For_Each_In_Parallel(std::begin(row_nums), std::end(row_nums), [&](decltype(std::begin(row_nums)) row_it) -> void {
-            const auto row = *row_it;
-            for(auto col = 0; col < img.columns; ++col){
-                const auto point = img.position(row,col);
+            for(auto row = 0; row < img.rows; ++row){
+                tp.submit_task([&,row](void) -> void {
+                    for(auto col = 0; col < img.columns; ++col){
+                        const auto point = img.position(row,col);
 
-                //Check if there are any ROI's this voxel is inside. 
-                bool is_in_an_roi = false;
-                for(auto &ccs : cc_select){
-                    for(auto roi_it = ccs.get().contours.begin(); roi_it != ccs.get().contours.end(); ++roi_it){
-                        if(roi_it->points.empty()) continue;
-                        if(! img.encompasses_contour_of_points(*roi_it)) continue;
+                        //Check if there are any ROI's this voxel is inside. 
+                        bool is_in_an_roi = false;
+                        for(auto &ccs : cc_select){
+                            for(auto roi_it = ccs.get().contours.begin(); roi_it != ccs.get().contours.end(); ++roi_it){
+                                if(roi_it->points.empty()) continue;
+                                if(! img.encompasses_contour_of_points(*roi_it)) continue;
 
-                        //Prepare a contour for fast is-point-within-the-polygon checking.
-                        auto BestFitPlane = roi_it->Least_Squares_Best_Fit_Plane(ortho_unit);
-                        auto ProjectedContour = roi_it->Project_Onto_Plane_Orthogonally(BestFitPlane);
-                        const bool AlreadyProjected = true;
-        
-                        auto ProjectedPoint = BestFitPlane.Project_Onto_Plane_Orthogonally(point);
-                        is_in_an_roi = ProjectedContour.Is_Point_In_Polygon_Projected_Orthogonally(BestFitPlane,
-                                                                                                   ProjectedPoint,
-                                                                                                   AlreadyProjected);
-                        if(is_in_an_roi) break;
-                    }
-                    if(is_in_an_roi) break;
-                }
-                img.reference(row, col, 0) =  (is_in_an_roi) ? (user_data_s->interior_val)
-                                                             : (user_data_s->background_val);
+                                //Prepare a contour for fast is-point-within-the-polygon checking.
+                                auto BestFitPlane = roi_it->Least_Squares_Best_Fit_Plane(ortho_unit);
+                                auto ProjectedContour = roi_it->Project_Onto_Plane_Orthogonally(BestFitPlane);
+                                const bool AlreadyProjected = true;
+                
+                                auto ProjectedPoint = BestFitPlane.Project_Onto_Plane_Orthogonally(point);
+                                is_in_an_roi = ProjectedContour.Is_Point_In_Polygon_Projected_Orthogonally(BestFitPlane,
+                                                                                                           ProjectedPoint,
+                                                                                                           AlreadyProjected);
+                                if(is_in_an_roi) break;
+                            }
+                            if(is_in_an_roi) break;
+                        }
+                        img.reference(row, col, 0) =  (is_in_an_roi) ? (user_data_s->interior_val)
+                                                                     : (user_data_s->background_val);
 
-                //Create a lambda routine that takes an image and checks in-plane if any neighbours are (!is_in_an_roi).
-                auto check_inclusion = [&](const planar_image<float,double> &limg,
-                                           long int boxr ) -> bool {
+                        //Create a lambda routine that takes an image and checks in-plane if any neighbours are (!is_in_an_roi).
+                        auto check_inclusion = [&](const planar_image<float,double> &limg,
+                                                   long int boxr ) -> bool {
 
-                        //Project the original image's position onto the plane of this image, so we know where the central
-                        // neighbour point is.
-                        const auto limg_plane = limg.image_plane();
-                        const auto lpoint = limg_plane.Project_Onto_Plane_Orthogonally(point);
-                        const long int lindx = limg.index(lpoint, 0);
-                        const auto rcc = limg.row_column_channel_from_index(lindx);
-                        const auto lrow = std::get<0>(rcc);
-                        const auto lcol = std::get<1>(rcc);
+                                //Project the original image's position onto the plane of this image, so we know where the central
+                                // neighbour point is.
+                                const auto limg_plane = limg.image_plane();
+                                const auto lpoint = limg_plane.Project_Onto_Plane_Orthogonally(point);
+                                const long int lindx = limg.index(lpoint, 0);
+                                const auto rcc = limg.row_column_channel_from_index(lindx);
+                                const auto lrow = std::get<0>(rcc);
+                                const auto lcol = std::get<1>(rcc);
 
-                        for(auto brow = (lrow-boxr); brow <= (lrow+boxr); ++brow){
-                            for(auto bcol = (lcol-boxr); bcol <= (lcol+boxr); ++bcol){
-                                //Check if the coordinates are legal and in the ROI.
-                                if( !isininc(0,brow,limg.rows-1) || !isininc(0,bcol,limg.columns-1) ) continue;
-                                const auto bpoint = limg.position(brow, bcol);
+                                for(auto brow = (lrow-boxr); brow <= (lrow+boxr); ++brow){
+                                    for(auto bcol = (lcol-boxr); bcol <= (lcol+boxr); ++bcol){
+                                        //Check if the coordinates are legal and in the ROI.
+                                        if( !isininc(0,brow,limg.rows-1) || !isininc(0,bcol,limg.columns-1) ) continue;
+                                        const auto bpoint = limg.position(brow, bcol);
 
-                                for(auto &ccs : cc_select){
-                                    for(auto roi_it = ccs.get().contours.begin(); roi_it != ccs.get().contours.end(); ++roi_it){
-                                        if(roi_it->points.empty()) continue;
-                                        if(! limg.encompasses_contour_of_points(*roi_it)) continue;
+                                        for(auto &ccs : cc_select){
+                                            for(auto roi_it = ccs.get().contours.begin(); roi_it != ccs.get().contours.end(); ++roi_it){
+                                                if(roi_it->points.empty()) continue;
+                                                if(! limg.encompasses_contour_of_points(*roi_it)) continue;
 
-                                        //Prepare a contour for fast is-point-within-the-polygon checking.
-                                        auto BestFitPlane = roi_it->Least_Squares_Best_Fit_Plane(ortho_unit);
-                                        auto ProjectedContour = roi_it->Project_Onto_Plane_Orthogonally(BestFitPlane);
-                                        const bool AlreadyProjected = true;
-                        
-                                        auto ProjectedPoint = BestFitPlane.Project_Onto_Plane_Orthogonally(bpoint);
-                                        const auto bis_in_an_roi = ProjectedContour.Is_Point_In_Polygon_Projected_Orthogonally(BestFitPlane,
-                                                                                                                               ProjectedPoint,
-                                                                                                                               AlreadyProjected);
-                                        if(bis_in_an_roi != is_in_an_roi) return true;
+                                                //Prepare a contour for fast is-point-within-the-polygon checking.
+                                                auto BestFitPlane = roi_it->Least_Squares_Best_Fit_Plane(ortho_unit);
+                                                auto ProjectedContour = roi_it->Project_Onto_Plane_Orthogonally(BestFitPlane);
+                                                const bool AlreadyProjected = true;
+                                
+                                                auto ProjectedPoint = BestFitPlane.Project_Onto_Plane_Orthogonally(bpoint);
+                                                const auto bis_in_an_roi = ProjectedContour.Is_Point_In_Polygon_Projected_Orthogonally(BestFitPlane,
+                                                                                                                                       ProjectedPoint,
+                                                                                                                                       AlreadyProjected);
+                                                if(bis_in_an_roi != is_in_an_roi) return true;
+                                            }
+                                        }
                                     }
                                 }
-                            }
+                                return false; //No point (!is_in_an_roi) was found.
+                        };
+
+
+                        if(false){
+                        }else if(check_inclusion(img, 1)){
+                            img.reference(row, col, 0) = user_data_s->surface_val;
+
+                        //Apply the check to the nearest neighbouring image slices.
+                        }else if( !above.empty() && check_inclusion(*(above.front()), 0) ){
+                            img.reference(row, col, 0) = user_data_s->surface_val;
+                        }else if( !below.empty() && check_inclusion(*(below.front()), 0) ){
+                            img.reference(row, col, 0) = user_data_s->surface_val;
                         }
-                        return false; //No point (!is_in_an_roi) was found.
-                };
-
-
-                if(false){
-                }else if(check_inclusion(img, 1)){
-                    img.reference(row, col, 0) = user_data_s->surface_val;
-
-                //Apply the check to the nearest neighbouring image slices.
-                }else if( !above.empty() && check_inclusion(*(above.front()), 0) ){
-                    img.reference(row, col, 0) = user_data_s->surface_val;
-                }else if( !below.empty() && check_inclusion(*(below.front()), 0) ){
-                    img.reference(row, col, 0) = user_data_s->surface_val;
-                }
+                    }
+                });
             }
-        //}
-        });
-    }
+        }
+    } //Finish tasks and terminate thread pool.
 
     return true;
 }

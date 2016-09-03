@@ -68,8 +68,6 @@
 #include "Operation_Dispatcher.h"
 
 
-
-
 int main(int argc, char* argv[]){
     //This is the main entry-point into various routines. All major options are set here, via command line arguments.
     // Depending on the arguments received, data is loaded through a variety of loaders and sent on to an analysis
