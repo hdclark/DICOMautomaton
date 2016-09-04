@@ -74,9 +74,13 @@ bool Load_From_DICOM_Files( Drover &DICOM_data,
                             std::string &FilenameLex,
                             std::list<boost::filesystem::path> &Filenames ){
 
-    //This routine will attempt to load DICOM files on an individual file basis.
-    // Files that are not successfully loaded are not consumed so that they can be passed
-    // on to the next loading stage as needed.
+    //This routine will attempt to load DICOM files on an individual file basis. Files that are not successfully loaded
+    // are not consumed so that they can be passed on to the next loading stage as needed. 
+    //
+    // Note: This routine returns false only iff a file is suspected of being suited for this loader, but could not be
+    //       loaded (e.g., the file seems appropriate, but a parsing failure was encountered).
+    //
+    if(Filenames.empty()) return true;
 
     typedef decltype(DICOM_data.image_data) loaded_imgs_storage_t;
     std::list<loaded_imgs_storage_t> loaded_imgs_storage;
@@ -171,6 +175,11 @@ bool Load_From_DICOM_Files( Drover &DICOM_data,
         }
     }
             
+    //If nothing was loaded, do not post-process.
+    const size_t N2 = Filenames.size();
+    if(N == N2) return true;
+
+
     // ----------------------------------------------- Post-processing -----------------------------------------------
 
     //Attempt contour name normalization using the selected lexicon.

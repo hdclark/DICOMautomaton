@@ -32,6 +32,14 @@ bool Load_From_Boost_Serialization_Files( Drover &DICOM_data,
                                           std::string & /* FilenameLex */,
                                           std::list<boost::filesystem::path> &Filenames ){
 
+    //This routine will attempt to load boost.serialized files. Files that are not successfully loaded are not consumed
+    // so that they can be passed on to the next loading stage as needed. 
+    //
+    // Note: This routine returns false only iff a file is suspected of being suited for this loader, but could not be
+    //       loaded (e.g., the file seems appropriate, but a parsing failure was encountered).
+    //
+    if(Filenames.empty()) return true;
+
     std::list<boost::filesystem::path> Filenames_Copy(Filenames);
     Filenames.clear();
     for(const auto &fn : Filenames_Copy){
