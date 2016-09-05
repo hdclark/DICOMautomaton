@@ -353,8 +353,11 @@ Drover Subsegment_ComputeDose_VanLuijk(Drover DICOM_data, OperationArgPkg OptArg
                                                           &lower_plane,
                                                           &iters_taken,
                                                           &final_area_frac);
-            FUNCINFO("Lower planar extent: using bisection, the fraction of planar area"
-                     " above the final lower plane was " << final_area_frac << ". Iterations taken: " << iters_taken);
+            FUNCINFO("Bisection: planar area fraction"
+                     << " above LOWER plane with normal: " << planar_normal
+                     << " was " << final_area_frac << "."
+                     << " Requested: " << SelectionLower << "."
+                     << " Iters: " << iters_taken);
 
             //Find the upper plane.
             plane<double> upper_plane;
@@ -365,8 +368,11 @@ Drover Subsegment_ComputeDose_VanLuijk(Drover DICOM_data, OperationArgPkg OptArg
                                                           &upper_plane,
                                                           &iters_taken,
                                                           &final_area_frac);
-            FUNCINFO("Upper planar extent: using bisection, the fraction of planar area"
-                     " above the final upper plane was " << final_area_frac << ". Iterations taken: " << iters_taken);
+            FUNCINFO("Bisection: planar area fraction"
+                     << " above UPPER plane with normal: " << planar_normal
+                     << " was " << final_area_frac << "."
+                     << " Requested: " << SelectionUpper << "."
+                     << " Iters: " << iters_taken);
 
             //Now perform the sub-segmentation, disregarding the contours outside the selection planes.
             auto split1 = cc_ref.get().Split_Along_Plane(lower_plane);
@@ -454,12 +460,19 @@ Drover Subsegment_ComputeDose_VanLuijk(Drover DICOM_data, OperationArgPkg OptArg
     FO_dist.close();
 
     //Keep the sub-segment if the user wants it.
-    if(RetainSubsegment){
-        for(auto &cc : final_selected_ROI_refs) DICOM_data.contour_data->ccs.emplace_back( cc.get() );
-    }else if(ReplaceAllWithSubsegment){
-        DICOM_data.contour_data->ccs.clear();
-        for(auto &cc : final_selected_ROI_refs) DICOM_data.contour_data->ccs.emplace_back( cc.get() );
+    static long int pass_number = 1;
+
+    if(RetainSubsegment || ReplaceAllWithSubsegment){
+        if(ReplaceAllWithSubsegment) DICOM_data.contour_data->ccs.clear();
+
+        const std::string subsegment_name = "sub-segment_" + std::to_string(pass_number);
+        for(auto &cc : final_selected_ROI_refs){
+            cc.get().Insert_Metadata("ROIName", subsegment_name);
+            cc.get().Insert_Metadata("NormalizedROIName", subsegment_name);
+            DICOM_data.contour_data->ccs.emplace_back( cc.get() );
+        }
     }
 
+    ++pass_number;
     return std::move(DICOM_data);
 }
