@@ -140,12 +140,14 @@ std::list<OperationArgDoc> OpArgDocSubsegment_ComputeDose_VanLuijk(void){
     out.emplace_back();
     out.back().name = "RetainSubsegment";
     out.back().desc = "Keep the sub-segment as part of the original ROIs. The contours are appended to"
-                      " the original ROIs. This is most useful for inspection of sub-segments. Note"
+                      " the original ROIs, but the contour ROIName and NormalizedROIName are set to the"
+                      " argument provided. (If no argument is provided, sub-segments are not retained.)"
+                      " This is most useful for inspection of sub-segments. Note"
                       " that sub-segment contours currently have identical metadata to their"
-                      " parent contours.";
-    out.back().default_val = "false";
+                      " parent contours, except they are renamed accordingly.";
+    out.back().default_val = "";
     out.back().expected = true;
-    out.back().examples = { "true", "false" };
+    out.back().examples = { "subsegment_01", "subsegment_02", "selected_subsegment" };
 
 
 
@@ -215,7 +217,7 @@ Drover Subsegment_ComputeDose_VanLuijk(Drover DICOM_data, OperationArgPkg OptArg
     auto DerivativeDataFileName = OptArgs.getValueStr("DerivativeDataFileName").value();
     auto DistributionDataFileName = OptArgs.getValueStr("DistributionDataFileName").value();
     const auto ReplaceAllWithSubsegmentStr = OptArgs.getValueStr("ReplaceAllWithSubsegment").value();
-    const auto RetainSubsegmentStr = OptArgs.getValueStr("RetainSubsegment").value();
+    const auto RetainSubsegment = OptArgs.getValueStr("RetainSubsegment").value();
     const auto ROILabelRegex = OptArgs.getValueStr("ROILabelRegex").value();
     const auto NormalizedROILabelRegex = OptArgs.getValueStr("NormalizedROILabelRegex").value();
     const auto XSelectionStr = OptArgs.getValueStr("XSelection").value();
@@ -228,7 +230,6 @@ Drover Subsegment_ComputeDose_VanLuijk(Drover DICOM_data, OperationArgPkg OptArg
     const auto thenormalizedregex = std::regex(NormalizedROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
 
     const auto ReplaceAllWithSubsegment = std::regex_match(ReplaceAllWithSubsegmentStr, TrueRegex);
-    const auto RetainSubsegment = std::regex_match(RetainSubsegmentStr, TrueRegex);
 
     const auto XSelectionTokens = SplitStringToVector(XSelectionStr, ';', 'd');
     const auto YSelectionTokens = SplitStringToVector(YSelectionStr, ';', 'd');
@@ -480,21 +481,19 @@ Drover Subsegment_ComputeDose_VanLuijk(Drover DICOM_data, OperationArgPkg OptArg
     FO_dist.close();
 
     //Keep the sub-segment if the user wants it.
-    static long int pass_number = 1;
-
-    if(RetainSubsegment || ReplaceAllWithSubsegment){
-        if(ReplaceAllWithSubsegment) DICOM_data.contour_data->ccs.clear();
-
-        const std::string subsegment_name = "sub-segment_" + std::to_string(pass_number);
+    if( !RetainSubsegment.empty() ){
         for(auto &cc : final_selected_ROI_refs){
-            if(RetainSubsegment){
-                cc.get().Insert_Metadata("ROIName", subsegment_name);
-                cc.get().Insert_Metadata("NormalizedROIName", subsegment_name);
-            }
+            cc.get().Insert_Metadata("ROIName", RetainSubsegment);
+            cc.get().Insert_Metadata("NormalizedROIName", RetainSubsegment);
+            DICOM_data.contour_data->ccs.emplace_back( cc.get() );
+        }
+    }
+    if(ReplaceAllWithSubsegment){
+        DICOM_data.contour_data->ccs.clear();
+        for(auto &cc : final_selected_ROI_refs){
             DICOM_data.contour_data->ccs.emplace_back( cc.get() );
         }
     }
 
-    ++pass_number;
     return std::move(DICOM_data);
 }
