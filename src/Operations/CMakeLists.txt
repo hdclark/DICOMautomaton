@@ -38,6 +38,7 @@ add_library(Operations_objs OBJECT
     SelectSlicesIntersectingROI.cc
     SFML_Viewer.cc
     Subsegment_ComputeDose_VanLuijk.cc
+    SupersampleImageGrid.cc
     UBC3TMRI_DCE.cc
     UBC3TMRI_DCE_Differences.cc
     UBC3TMRI_DCE_Experimental.cc

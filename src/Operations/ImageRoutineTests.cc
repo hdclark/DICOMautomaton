@@ -97,6 +97,7 @@ Drover ImageRoutineTests(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::ma
 
 
     //Deep-copy, resample the original images using bilinear interpolation, for image viewing, contours, etc..
+    InImagePlaneBilinearSupersampleUserData bilin_ud;
     std::vector<std::shared_ptr<Image_Array>> bilin_resampled_img_arrays;
     for(auto & img_arr : orig_img_arrays){
         DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( *img_arr ) );
@@ -104,12 +105,13 @@ Drover ImageRoutineTests(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::ma
 
         if(!bilin_resampled_img_arrays.back()->imagecoll.Process_Images_Parallel( GroupIndividualImages,
                                                                          InImagePlaneBilinearSupersample,
-                                                                         {}, {} )){
+                                                                         {}, {}, &bilin_ud )){
             FUNCERR("Unable to bilinearly supersample images");
         }
     }
 
     //Deep-copy, resample the original images using bicubic interpolation, for image viewing, contours, etc..
+    InImagePlaneBicubicSupersampleUserData bicub_ud;
     std::vector<std::shared_ptr<Image_Array>> bicub_resampled_img_arrays;
     if(false) for(auto & img_arr : orig_img_arrays){
         DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( *img_arr ) );
@@ -117,7 +119,7 @@ Drover ImageRoutineTests(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::ma
 
         if(!bicub_resampled_img_arrays.back()->imagecoll.Process_Images_Parallel( GroupIndividualImages,
                                                                          InImagePlaneBicubicSupersample,
-                                                                         {}, {} )){
+                                                                         {}, {}, &bicub_ud )){
             FUNCERR("Unable to bicubically supersample images");
         }
     }

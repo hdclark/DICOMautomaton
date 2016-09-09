@@ -96,6 +96,20 @@ std::list<OperationArgDoc> OpArgDocSelectSlicesIntersectingROI(void){
     // This operation is typically used to reduce long computations by trimming the field of view of extraneous image
     // slices.
 
+
+    out.emplace_back();
+    out.back().name = "NormalizedROILabelRegex";
+    out.back().desc = "A regex matching ROI labels/names to consider. The default will match"
+                      " all available ROIs. Be aware that input spaces are trimmed to a single space."
+                      " If your ROI name has more than two sequential spaces, use regex to avoid them."
+                      " All ROIs have to match the single regex, so use the 'or' token if needed."
+                      " Regex is case insensitive and uses extended POSIX syntax.";
+    out.back().default_val = ".*";
+    out.back().expected = true;
+    out.back().examples = { ".*", ".*Body.*", "Body", "Gross_Liver",
+                            R"***(.*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*)***",
+                            R"***(Left Parotid|Right Parotid)***" };
+
     out.emplace_back();
     out.back().name = "ROILabelRegex";
     out.back().desc = "A regex matching ROI labels/names to consider. The default will match"
@@ -118,11 +132,10 @@ Drover SelectSlicesIntersectingROI(Drover DICOM_data, OperationArgPkg OptArgs, s
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto ROILabelRegex = OptArgs.getValueStr("ROILabelRegex").value();
+    const auto NormalizedROILabelRegex = OptArgs.getValueStr("NormalizedROILabelRegex").value();
     //-----------------------------------------------------------------------------------------------------------------
     const auto theregex = std::regex(ROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-
-    auto img_arr = DICOM_data.image_data.back();
-
+    const auto thenormalizedregex = std::regex(NormalizedROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
 
     //Stuff references to all contours into a list. Remember that you can still address specific contours through
     // the original holding containers (which are not modified here).
@@ -139,20 +152,31 @@ Drover SelectSlicesIntersectingROI(Drover DICOM_data, OperationArgPkg OptArgs, s
                    const auto ROIName = ROINameOpt.value();
                    return !(std::regex_match(ROIName,theregex));
     });
+    cc_ROIs.remove_if([=](std::reference_wrapper<contour_collection<double>> cc) -> bool {
+                   const auto ROINameOpt = cc.get().contours.front().GetMetadataValueAs<std::string>("NormalizedROIName");
+                   const auto ROIName = ROINameOpt.value();
+                   return !(std::regex_match(ROIName,thenormalizedregex));
+    });
 
-    //Generate a list of the per-contour centroids for selected contours.
-    img_arr->imagecoll.Retain_Images_Satisfying(
-        //std::function<bool(const planar_image<T,R> &animg)>
-        [&cc_ROIs](const planar_image<float, double> &animg) -> bool {
-            //Retain the image IFF it intersects one of the contours.
-            for(const auto &cc_ref : cc_ROIs){
-                for(const auto &acontour : cc_ref.get().contours){
-                    if(animg.encompasses_contour_of_points(acontour)) return true;
+
+    //Generate a closure that discards images not encompassing any ROI contours.
+    const auto retain_encompassing_imgs = [&cc_ROIs](const planar_image<float, double> &animg) -> bool {
+                //Retain the image IFF it intersects one of the contours.
+                for(const auto &cc_ref : cc_ROIs){
+                    for(const auto &acontour : cc_ref.get().contours){
+                        if(animg.encompasses_contour_of_points(acontour)) return true;
+                    }
                 }
-            }
-            return false;
-        }
-    );
+                return false;
+    };
+
+    //Cycle over all images and dose arrays, trimming spurious images.
+    for(auto &img_arr : DICOM_data.image_data){
+        img_arr->imagecoll.Retain_Images_Satisfying( retain_encompassing_imgs );
+    }
+    for(auto &dimg_arr : DICOM_data.dose_data){
+        dimg_arr->imagecoll.Retain_Images_Satisfying( retain_encompassing_imgs );
+    }
 
     return std::move(DICOM_data);
 }
