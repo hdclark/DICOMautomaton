@@ -27,6 +27,7 @@
 #include "Operations/ContouringAides.h"
 #include "Operations/ConvertDoseToImage.h"
 #include "Operations/ConvertNaNsToAir.h"
+#include "Operations/CropImageDoseToROIs.h"
 #include "Operations/DecimatePixels.h"
 #include "Operations/DumpAllOrderedImageMetadataToFile.h"
 #include "Operations/DumpAnEncompassedPoint.h"
@@ -79,6 +80,7 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["ContouringAides"] = std::make_pair(OpArgDocContouringAides, ContouringAides);
     out["ConvertDoseToImage"] = std::make_pair(OpArgDocConvertDoseToImage, ConvertDoseToImage);
     out["ConvertNaNsToAir"] = std::make_pair(OpArgDocConvertNaNsToAir, ConvertNaNsToAir);
+    out["CropImageDoseToROIs"] = std::make_pair(OpArgDocCropImageDoseToROIs, CropImageDoseToROIs);
     out["DecimatePixels"] = std::make_pair(OpArgDocDecimatePixels, DecimatePixels);
     out["DumpAllOrderedImageMetadataToFile"] = std::make_pair(OpArgDocDumpAllOrderedImageMetadataToFile, DumpAllOrderedImageMetadataToFile);
     out["DumpAnEncompassedPoint"] = std::make_pair(OpArgDocDumpAnEncompassedPoint, DumpAnEncompassedPoint);

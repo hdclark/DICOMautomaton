@@ -5,6 +5,7 @@ add_library(Operations_objs OBJECT
     BuildLexiconInteractively.cc
     ConvertDoseToImage.cc
     CopyLastImage.cc
+    CropImageDoseToROIs.cc
     CT_Liver_Perfusion.cc
     CT_Liver_Perfusion_First_Run.cc
     CT_Liver_Perfusion_Ortho_Views.cc
