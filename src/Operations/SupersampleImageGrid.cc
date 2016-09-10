@@ -111,14 +111,14 @@ std::list<OperationArgDoc> OpArgDocSupersampleImageGrid(void){
 
     out.emplace_back();
     out.back().name = "DoseImageSelection";
-    out.back().desc = "Either 'none', 'last', or 'all'.";
+    out.back().desc = "Dose images to operate on. Either 'none', 'last', or 'all'.";
     out.back().default_val = "none";
     out.back().expected = true;
     out.back().examples = { "none", "last", "all" };
     
     out.emplace_back();
     out.back().name = "ImageSelection";
-    out.back().desc = "Either 'none', 'last', or 'all'.";
+    out.back().desc = "Images to operate on. Either 'none', 'last', or 'all'.";
     out.back().default_val = "last";
     out.back().expected = true;
     out.back().examples = { "none", "last", "all" };
@@ -176,11 +176,10 @@ Drover SupersampleImageGrid(Drover DICOM_data, OperationArgPkg OptArgs, std::map
         //Image data.
         auto iap_it = DICOM_data.image_data.begin();
         if(false){
-        }else if(std::regex_match(DoseImageSelectionStr, regex_none)){ iap_it = DICOM_data.image_data.end();
-        }else if(std::regex_match(DoseImageSelectionStr, regex_last)){
+        }else if(std::regex_match(ImageSelectionStr, regex_none)){ iap_it = DICOM_data.image_data.end();
+        }else if(std::regex_match(ImageSelectionStr, regex_last)){
             if(!DICOM_data.image_data.empty()) iap_it = std::prev(DICOM_data.image_data.end());
         }
-
         while(iap_it != DICOM_data.image_data.end()){
             InImagePlaneBilinearSupersampleUserData bilin_ud;
             bilin_ud.RowScaleFactor = RowScaleFactor; 
@@ -200,7 +199,6 @@ Drover SupersampleImageGrid(Drover DICOM_data, OperationArgPkg OptArgs, std::map
         }else if(std::regex_match(DoseImageSelectionStr, regex_last)){
             if(!DICOM_data.dose_data.empty()) dap_it = std::prev(DICOM_data.dose_data.end());
         }
-
         while(dap_it != DICOM_data.dose_data.end()){
             InImagePlaneBilinearSupersampleUserData bilin_ud;
             bilin_ud.RowScaleFactor = RowScaleFactor; 
@@ -217,11 +215,10 @@ Drover SupersampleImageGrid(Drover DICOM_data, OperationArgPkg OptArgs, std::map
         //Image data.
         auto iap_it = DICOM_data.image_data.begin();
         if(false){
-        }else if(std::regex_match(DoseImageSelectionStr, regex_none)){ iap_it = DICOM_data.image_data.end();
-        }else if(std::regex_match(DoseImageSelectionStr, regex_last)){
+        }else if(std::regex_match(ImageSelectionStr, regex_none)){ iap_it = DICOM_data.image_data.end();
+        }else if(std::regex_match(ImageSelectionStr, regex_last)){
             if(!DICOM_data.image_data.empty()) iap_it = std::prev(DICOM_data.image_data.end());
         }
-
         while(iap_it != DICOM_data.image_data.end()){
             InImagePlaneBicubicSupersampleUserData bicub_ud;
             bicub_ud.RowScaleFactor = RowScaleFactor; 
@@ -241,7 +238,6 @@ Drover SupersampleImageGrid(Drover DICOM_data, OperationArgPkg OptArgs, std::map
         }else if(std::regex_match(DoseImageSelectionStr, regex_last)){
             if(!DICOM_data.dose_data.empty()) dap_it = std::prev(DICOM_data.dose_data.end());
         }
-
         while(dap_it != DICOM_data.dose_data.end()){
             InImagePlaneBicubicSupersampleUserData bicub_ud;
             bicub_ud.RowScaleFactor = RowScaleFactor; 
