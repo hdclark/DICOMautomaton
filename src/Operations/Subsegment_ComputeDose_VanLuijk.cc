@@ -321,9 +321,26 @@ Drover Subsegment_ComputeDose_VanLuijk(Drover DICOM_data, OperationArgPkg OptArg
     // and then somehow verify (e.g., by inspection) that the sub-segments you think you're selecting are actually being
     // selected. Another idea would be using spatial relationships between known anatomical structures, or using the
     // expected shape to compare ROI slices to figure out orientation. 
-    const auto z_normal = img_arr_ptr->imagecoll.images.front().image_plane().N_0 * -1.0;
-    const auto x_normal = img_arr_ptr->imagecoll.images.front().row_unit;
-    const auto y_normal = img_arr_ptr->imagecoll.images.front().col_unit;
+    //const auto z_normal = img_arr_ptr->imagecoll.images.front().image_plane().N_0 * -1.0;
+    //const auto x_normal = img_arr_ptr->imagecoll.images.front().row_unit;
+    //const auto y_normal = img_arr_ptr->imagecoll.images.front().col_unit;
+
+    // Image-axes aligned normals.
+    const auto row_normal = img_arr_ptr->imagecoll.images.front().row_unit;
+    const auto col_normal = img_arr_ptr->imagecoll.images.front().col_unit;
+    const auto ort_normal = img_arr_ptr->imagecoll.images.front().image_plane().N_0 * -1.0;
+
+    // Use the image-axes aligned normals directly. Sub-segmentation might get snagged on voxel rows or columns.
+    //const auto x_normal = row_normal;
+    //const auto y_normal = col_normal;
+    //const auto z_normal = ort_normal;
+
+    // Try to offset the axes slightly so they don't align perfectly with the voxel grid. (Align along the row and
+    // column directions, or align along the diagonals, which can be just as bad.)
+    auto x_normal = (row_normal + col_normal * 0.5).unit();
+    auto y_normal = (col_normal - row_normal * 0.5).unit();
+    auto z_normal = (ort_normal + row_normal * 0.15 + col_normal * 0.15).unit();
+    z_normal.GramSchmidt_orthogonalize(x_normal, y_normal);
 
 
     //This routine returns a pair of planes that approximately encompass the desired interior volume. The ROIs are not
@@ -338,7 +355,7 @@ Drover Subsegment_ComputeDose_VanLuijk(Drover DICOM_data, OperationArgPkg OptArg
 
         // Bisection parameters. It usually converges quickly but can get stuck, so cap the max_iters fairly low.
         const double acceptable_deviation = 0.001; //Deviation from desired_total_area_fraction_above_plane.
-        const size_t max_iters = 50; //If the tolerance cannot be reached after this many iters, report the current plane as-is.
+        const size_t max_iters = 20; //If the tolerance cannot be reached after this many iters, report the current plane as-is.
 
         if(ROIs.contours.empty()) throw std::logic_error("Unable to split empty contour collection.");
         size_t iters_taken = 0;
@@ -409,23 +426,36 @@ Drover Subsegment_ComputeDose_VanLuijk(Drover DICOM_data, OperationArgPkg OptArg
 
         // ---------------------------------- Independent sub-segmentation --------------------------------------
         //Generate all planes using the original contour_collection.
-        const auto x_planes_pair = bisect_ROIs(cc_ref.get(), x_normal, XSelectionLower, XSelectionUpper);
-        const auto y_planes_pair = bisect_ROIs(cc_ref.get(), y_normal, YSelectionLower, YSelectionUpper);
-        const auto z_planes_pair = bisect_ROIs(cc_ref.get(), z_normal, ZSelectionLower, ZSelectionUpper);
+        if(false){
+            const auto x_planes_pair = bisect_ROIs(cc_ref.get(), x_normal, XSelectionLower, XSelectionUpper);
+            const auto y_planes_pair = bisect_ROIs(cc_ref.get(), y_normal, YSelectionLower, YSelectionUpper);
+            const auto z_planes_pair = bisect_ROIs(cc_ref.get(), z_normal, ZSelectionLower, ZSelectionUpper);
 
-        //Perform the sub-segmentation.
-        contour_collection<double> running(cc_ref.get());
-        running = subsegment_interior(running, x_planes_pair);
-        running = subsegment_interior(running, y_planes_pair);
-        running = subsegment_interior(running, z_planes_pair);
-        cc_selection.emplace_back(running);
+            //Perform the sub-segmentation.
+            contour_collection<double> running(cc_ref.get());
+            running = subsegment_interior(running, x_planes_pair);
+            running = subsegment_interior(running, y_planes_pair);
+            running = subsegment_interior(running, z_planes_pair);
+            cc_selection.emplace_back(running);
+        }
 
         // ----------------------------------- Iterative sub-segmentation ---------------------------------------
-        // It is possible for the bisection routine to depend on previously sub-segmented contour_collections.
-        // This is accomplished by mixing bisection and sub-segmentation routines.
-        
-        // ...
+        // Instead of relying on whole-organ sub-segmentation, attempt to fairly partition the *remaining* volume 
+        // at each cleave.
+        if(true){
+            contour_collection<double> running(cc_ref.get());
 
+            const auto z_planes_pair = bisect_ROIs(running, z_normal, ZSelectionLower, ZSelectionUpper);
+            running = subsegment_interior(running, z_planes_pair);
+
+            const auto x_planes_pair = bisect_ROIs(running, x_normal, XSelectionLower, XSelectionUpper);
+            running = subsegment_interior(running, x_planes_pair);
+
+            const auto y_planes_pair = bisect_ROIs(running, y_normal, YSelectionLower, YSelectionUpper);
+            running = subsegment_interior(running, y_planes_pair);
+
+            cc_selection.emplace_back(running);
+        }
     }
 
     //Generate references.
