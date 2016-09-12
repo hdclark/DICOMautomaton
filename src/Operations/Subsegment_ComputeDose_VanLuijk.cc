@@ -27,6 +27,9 @@
 #include <SFML/Graphics.hpp>
 #include <SFML/Audio.hpp>
 
+#include <boost/interprocess/sync/named_mutex.hpp>
+#include <boost/interprocess/sync/scoped_lock.hpp>
+
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMathPlottingGnuplot.h" //Needed for YgorMathPlottingGnuplot::*.
@@ -339,9 +342,8 @@ Drover Subsegment_ComputeDose_VanLuijk(Drover DICOM_data, OperationArgPkg OptArg
     // column directions, or align along the diagonals, which can be just as bad.)
     auto x_normal = (row_normal + col_normal * 0.5).unit();
     auto y_normal = (col_normal - row_normal * 0.5).unit();
-    auto z_normal = (ort_normal + row_normal * 0.15 + col_normal * 0.15).unit();
+    auto z_normal = (ort_normal - col_normal * 0.5).unit();
     z_normal.GramSchmidt_orthogonalize(x_normal, y_normal);
-
 
     //This routine returns a pair of planes that approximately encompass the desired interior volume. The ROIs are not
     // altered. The lower plane is the first element of the pair. This routine can be applied to any contour_collection
@@ -470,45 +472,57 @@ Drover Subsegment_ComputeDose_VanLuijk(Drover DICOM_data, OperationArgPkg OptArg
     }
 
     //Report the findings.
-    if(DerivativeDataFileName.empty()){
-        DerivativeDataFileName = Get_Unique_Sequential_Filename("/tmp/dicomautomaton_subsegment_vanluijk_derivatives_", 6, ".csv");
-    }
-    std::fstream FO_deriv(DerivativeDataFileName, std::fstream::out | std::fstream::app);
-    if(!FO_deriv){
-        throw std::runtime_error("Unable to open file for reporting derivative data. Cannot continue.");
-    }
-    for(const auto &av : ud.accumulated_voxels){
-        const auto lROIname = av.first;
-        const auto MeanDose = Stats::Mean( av.second );
-        const auto MedianDose = Stats::Median( av.second );
+    try{
+        //Try open a named mutex. Probably created in /dev/shm/ if you need to clear it manually...
+        boost::interprocess::named_mutex mutex(boost::interprocess::open_or_create,
+                                               "dicomautomaton_operation_van_luijk_subsegmentation_mutex");
+        boost::interprocess::scoped_lock<boost::interprocess::named_mutex> lock(mutex);
 
-        FO_deriv  << "PatientID='" << patient_ID << "',"
-                  << "NormalizedROIname='" << X(lROIname) << "',"
-                  << "ROIname='" << lROIname << "',"
-                  << "MeanDose=" << MeanDose << ","
-                  << "MedianDose=" << MedianDose << ","
-                  << "VoxelCount=" << av.second.size() << std::endl;
-    }
-    FO_deriv.close();
- 
+        if(DerivativeDataFileName.empty()){
+            DerivativeDataFileName = Get_Unique_Sequential_Filename("/tmp/dicomautomaton_subsegment_vanluijk_derivatives_", 6, ".csv");
+        }
+        std::fstream FO_deriv(DerivativeDataFileName, std::fstream::out | std::fstream::app);
+        if(!FO_deriv){
+            throw std::runtime_error("Unable to open file for reporting derivative data. Cannot continue.");
+        }
+        for(const auto &av : ud.accumulated_voxels){
+            const auto lROIname = av.first;
+            const auto MeanDose = Stats::Mean( av.second );
+            const auto MedianDose = Stats::Median( av.second );
 
-    if(DistributionDataFileName.empty()){
-        DistributionDataFileName = Get_Unique_Sequential_Filename("/tmp/dicomautomaton_subsegment_vanluijk_distributions_", 6, ".data");
-    }
-    std::fstream FO_dist(DistributionDataFileName, std::fstream::out | std::fstream::app);
-    if(!FO_dist){
-        throw std::runtime_error("Unable to open file for reporting distribution data. Cannot continue.");
-    }
+            FO_deriv  << "PatientID='" << patient_ID << "',"
+                      << "NormalizedROIname='" << X(lROIname) << "',"
+                      << "ROIname='" << lROIname << "',"
+                      << "MeanDose=" << MeanDose << ","
+                      << "MedianDose=" << MedianDose << ","
+                      << "VoxelCount=" << av.second.size() << std::endl;
+        }
+        FO_deriv.flush();
+        FO_deriv.close();
+     
 
-    for(const auto &av : ud.accumulated_voxels){
-        const auto lROIname = av.first;
-        FO_dist << "PatientID='" << patient_ID << "' "
-                << "NormalizedROIname='" << X(lROIname) << "' "
-                << "ROIname='" << lROIname << "' " << std::endl;
-        for(const auto &d : av.second) FO_dist << d << " ";
-        FO_dist << std::endl;
+        if(DistributionDataFileName.empty()){
+            DistributionDataFileName = Get_Unique_Sequential_Filename("/tmp/dicomautomaton_subsegment_vanluijk_distributions_", 6, ".data");
+        }
+        std::fstream FO_dist(DistributionDataFileName, std::fstream::out | std::fstream::app);
+        if(!FO_dist){
+            throw std::runtime_error("Unable to open file for reporting distribution data. Cannot continue.");
+        }
+
+        for(const auto &av : ud.accumulated_voxels){
+            const auto lROIname = av.first;
+            FO_dist << "PatientID='" << patient_ID << "' "
+                    << "NormalizedROIname='" << X(lROIname) << "' "
+                    << "ROIname='" << lROIname << "' " << std::endl;
+            for(const auto &d : av.second) FO_dist << d << " ";
+            FO_dist << std::endl;
+        }
+        FO_dist.flush();
+        FO_dist.close();
+
+    }catch(const std::exception &e){
+        FUNCERR("Unable to write to log files: '" << e.what() << "'");
     }
-    FO_dist.close();
 
     //Keep the sub-segment if the user wants it.
     if( !RetainSubsegment.empty() ){
