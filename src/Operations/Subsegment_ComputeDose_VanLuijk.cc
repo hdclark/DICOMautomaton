@@ -334,16 +334,16 @@ Drover Subsegment_ComputeDose_VanLuijk(Drover DICOM_data, OperationArgPkg OptArg
     const auto ort_normal = img_arr_ptr->imagecoll.images.front().image_plane().N_0 * -1.0;
 
     // Use the image-axes aligned normals directly. Sub-segmentation might get snagged on voxel rows or columns.
-    //const auto x_normal = row_normal;
-    //const auto y_normal = col_normal;
-    //const auto z_normal = ort_normal;
+    const auto x_normal = row_normal;
+    const auto y_normal = col_normal;
+    const auto z_normal = ort_normal;
 
     // Try to offset the axes slightly so they don't align perfectly with the voxel grid. (Align along the row and
     // column directions, or align along the diagonals, which can be just as bad.)
-    auto x_normal = (row_normal + col_normal * 0.5).unit();
-    auto y_normal = (col_normal - row_normal * 0.5).unit();
-    auto z_normal = (ort_normal - col_normal * 0.5).unit();
-    z_normal.GramSchmidt_orthogonalize(x_normal, y_normal);
+//    auto x_normal = (row_normal + col_normal * 0.5).unit();
+//    auto y_normal = (col_normal - row_normal * 0.5).unit();
+//    auto z_normal = (ort_normal - col_normal * 0.5).unit();
+//    z_normal.GramSchmidt_orthogonalize(x_normal, y_normal);
 
     //This routine returns a pair of planes that approximately encompass the desired interior volume. The ROIs are not
     // altered. The lower plane is the first element of the pair. This routine can be applied to any contour_collection
@@ -427,8 +427,8 @@ Drover Subsegment_ComputeDose_VanLuijk(Drover DICOM_data, OperationArgPkg OptArg
         if(cc_ref.get().contours.empty()) continue;
 
         // ---------------------------------- Independent sub-segmentation --------------------------------------
-        //Generate all planes using the original contour_collection.
-        if(false){
+        //Generate all planes using the original contour_collection before sub-segmenting.
+        if(true){
             const auto x_planes_pair = bisect_ROIs(cc_ref.get(), x_normal, XSelectionLower, XSelectionUpper);
             const auto y_planes_pair = bisect_ROIs(cc_ref.get(), y_normal, YSelectionLower, YSelectionUpper);
             const auto z_planes_pair = bisect_ROIs(cc_ref.get(), z_normal, ZSelectionLower, ZSelectionUpper);
@@ -443,8 +443,8 @@ Drover Subsegment_ComputeDose_VanLuijk(Drover DICOM_data, OperationArgPkg OptArg
 
         // ----------------------------------- Iterative sub-segmentation ---------------------------------------
         // Instead of relying on whole-organ sub-segmentation, attempt to fairly partition the *remaining* volume 
-        // at each cleave.
-        if(true){
+        // at each pair of cleaves.
+        if(false){
             contour_collection<double> running(cc_ref.get());
 
             const auto z_planes_pair = bisect_ROIs(running, z_normal, ZSelectionLower, ZSelectionUpper);

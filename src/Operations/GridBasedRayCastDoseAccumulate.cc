@@ -113,6 +113,15 @@ std::list<OperationArgDoc> OpArgDocGridBasedRayCastDoseAccumulate(void){
 
 
     out.emplace_back();
+    out.back().name = "NormalizedReferenceROILabelRegex";
+    out.back().desc = "A regex matching reference ROI labels/names to consider. The default will match"
+                      " all available ROIs, which is non-sensical. The reference ROI is used to orient"
+                      " the cleaving plane to trim the grid surface mask.";
+    out.back().default_val = ".*";
+    out.back().expected = true;
+    out.back().examples = { ".*", ".*Prostate.*", "Left Kidney", "Gross Liver" };
+
+    out.emplace_back();
     out.back().name = "NormalizedROILabelRegex";
     out.back().desc = "A regex matching ROI labels/names to consider. The default will match"
                       " all available ROIs. Be aware that input spaces are trimmed to a single space."
@@ -124,6 +133,17 @@ std::list<OperationArgDoc> OpArgDocGridBasedRayCastDoseAccumulate(void){
     out.back().examples = { ".*", ".*Body.*", "Body", "Gross_Liver",
                             R"***(.*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*)***",
                             R"***(Left Parotid|Right Parotid)***" };
+
+    out.emplace_back();
+    out.back().name = "ReferenceROILabelRegex";
+    out.back().desc = "A regex matching reference ROI labels/names to consider. The default will match"
+                      " all available ROIs, which is non-sensical. The reference ROI is used to orient"
+                      " the cleaving plane to trim the grid surface mask.";
+    out.back().default_val = ".*";
+    out.back().expected = true;
+    out.back().examples = { ".*", ".*[pP]rostate.*", "body", "Gross_Liver",
+                            R"***(.*left.*parotid.*|.*right.*parotid.*|.*eyes.*)***",
+                            R"***(left_parotid|right_parotid)***" };
 
     out.emplace_back();
     out.back().name = "ROILabelRegex";
@@ -158,17 +178,33 @@ std::list<OperationArgDoc> OpArgDocGridBasedRayCastDoseAccumulate(void){
    
 
     out.emplace_back();
-    out.back().name = "Rows";
-    out.back().desc = "The number of rows in the resulting images.";
-    out.back().default_val = "256";
+    out.back().name = "GridRows";
+    out.back().desc = "The number of rows in the surface mask grid images.";
+    out.back().default_val = "512";
     out.back().expected = true;
     out.back().examples = { "10", "50", "128", "1024" };
     
     
     out.emplace_back();
-    out.back().name = "Columns";
-    out.back().desc = "The number of columns in the resulting images.";
-    out.back().default_val = "256";
+    out.back().name = "GridColumns";
+    out.back().desc = "The number of columns in the surface mask grid images.";
+    out.back().default_val = "512";
+    out.back().expected = true;
+    out.back().examples = { "10", "50", "128", "1024" };
+
+    out.emplace_back();
+    out.back().name = "SourceDetectorRows";
+    out.back().desc = "The number of rows in the resulting images."
+                      " Setting too fine relative to the surface mask grid or dose grid is futile.";
+    out.back().default_val = "1024";
+    out.back().expected = true;
+    out.back().examples = { "10", "50", "128", "1024" };
+    
+    out.emplace_back();
+    out.back().name = "SourceDetectorColumns";
+    out.back().desc = "The number of columns in the resulting images."
+                      " Setting too fine relative to the surface mask grid or dose grid is futile.";
+    out.back().default_val = "1024";
     out.back().expected = true;
     out.back().examples = { "10", "50", "128", "1024" };
 
@@ -194,95 +230,23 @@ Drover GridBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptArgs
     auto LengthMapFileName = OptArgs.getValueStr("LengthMapFileName").value();
     const auto ROILabelRegex = OptArgs.getValueStr("ROILabelRegex").value();
     const auto NormalizedROILabelRegex = OptArgs.getValueStr("NormalizedROILabelRegex").value();
+    const auto ReferenceROILabelRegex = OptArgs.getValueStr("ReferenceROILabelRegex").value();
+    const auto NormalizedReferenceROILabelRegex = OptArgs.getValueStr("NormalizedReferenceROILabelRegex").value();
     const auto SmallestFeature = std::stod(OptArgs.getValueStr("SmallestFeature").value());
     const auto RaydL = std::stod(OptArgs.getValueStr("RaydL").value());
-    const auto Rows = std::stol(OptArgs.getValueStr("Rows").value());
-    const auto Columns = std::stol(OptArgs.getValueStr("Columns").value());
+    const auto GridRows = std::stol(OptArgs.getValueStr("GridRows").value());
+    const auto GridColumns = std::stol(OptArgs.getValueStr("GridColumns").value());
+    const auto SourceDetectorRows = std::stol(OptArgs.getValueStr("SourceDetectorRows").value());
+    const auto SourceDetectorColumns = std::stol(OptArgs.getValueStr("SourceDetectorColumns").value());
     auto NumberOfImages = std::stol(OptArgs.getValueStr("NumberOfImages").value());
 
     //-----------------------------------------------------------------------------------------------------------------
-    const auto theregex = std::regex(ROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto thenormalizedregex = std::regex(NormalizedROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto roiregex = std::regex(ROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto roinormalizedregex = std::regex(NormalizedROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto refregex = std::regex(ReferenceROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto refnormalizedregex = std::regex(NormalizedReferenceROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
 
     Explicator X(FilenameLex);
-
-
-/*
-    //Ensure the Ray dL is sufficiently small. We enforce that ray cannot step over the cylinder in a single iteration
-    // for 95% of the width of the cylinder. So if the rays are oncoming and directed at the cylinder perpendicularly,
-    // but randomly distributed over the width of the cylinder, then rays will only be able to step over the cylinder
-    // without the code 'noticing' 5 times out of every 100 rays. See figure.
-    //
-    //                  !                       !  
-    //                 \!/                     \!/  
-    //       -          x                       !                  
-    //       |          ! o  o                  x   o  o          -
-    //    dL |         o!       o               !o        o       |
-    //       |        o !        o              o          o      |   cylinder
-    //       -        o x        o              o          o      | diameter/width
-    //                 o!       o               xo        o       |
-    //                  ! o  o                  !   o  o          -  
-    //                  !                       !
-    //                  x                       !
-    //                  !                       x
-    //                 \!/                     \!/
-    //                  !                       !
-    //
-    //              Intersecting Ray       Non-intersecting Ray
-    //
-    // Note: Glancing rays will be *systematically* lost, but not all glancing rays will be lost. Only some. The amount
-    //       lost will depend on the distance from the centre. The probability of a specific ray being lost depends on
-    //       the phase relative to the centre.
-    //
-    // Note: In practice, fewer rays will be lost than predicted if they travel obliquely (not perpendicular) to the
-    //       cylinders. The choice of a reasonable (or optimal) ray dL will somewhat depend on the estimated average
-    //       obliquity. If there is a lot of obliquity (say, many cylinders are at 45 degrees) then the ray dL can be
-    //       relaxed at the same RELATIVE error rate will be achieved. If cylinders are randomly oriented, then the same
-    //       is true -- but if you want to control the ABSOLUTE error rate then you are forced to keep ray dL small
-    //       enough to handle the perpendicular case. For this reason, we assume the work-case scenario (rays and
-    //       cylinders are perpendicular) and hope to get a better-than expected error rate. (But it should not be worse
-    //       than we predict!)
-    //       
-    // Note: Here is how the relationship behaves:
-    //       gnuplot> plot 2.0*sqrt(1.0 - x) with impulse ls -1
-    //                                                                                                    
-    //                                         minRaydL / cyl_radius                                      
-    //  0.9 +-+---------------+-----------------+-----------------+-----------------+---------------+-+   
-    //      +||+++++          +                 +                 +                 +                 +   
-    //      ||||||||++++++                          (minRaydL/cyl_radius) = 2.0*sqrt(1.0 - x) +-----+ |   
-    //  0.8 +-+|||||||||||++++                                                                      +-+   
-    //      ||||||||||||||||||++++++                                                                  |   
-    //      ||||||||||||||||||||||||++++                                                              |   
-    //  0.7 +-+|||||||||||||||||||||||||+++++                                                       +-+   
-    //      |||||||||||||||||||||||||||||||||+++                                                      |   
-    //  0.6 +-+|||||||||||||||||||||||||||||||||+++++                                               +-+   
-    //      |||||||||||||||||||||||||||||||||||||||||++++                                             |   
-    //      |||||||||||||||||||||||||||||||||||||||||||||+++                                          |   
-    //  0.5 +-+|||||||||||||||||||||||||||||||||||||||||||||+++                                     +-+   
-    //      |||||||||||||||||||||||||||||||||||||||||||||||||||++++                                   |   
-    //      |||||||||||||||||||||||||||||||||||||||||||||||||||||||++                                 |   
-    //  0.4 +-+||||||||||||||||||||||||||||||||||||||||||||||||||||||+++                            +-+   
-    //      ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||++                            |   
-    //      ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||++                          |   
-    //  0.3 +-+|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||++                      +-+   
-    //      ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||+                       |   
-    //  0.2 +-+||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||++                   +-+   
-    //      |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||+                    |   
-    //      ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||+                   |   
-    //  0.1 +-+||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||+                +-+   
-    //      ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||                  |   
-    //      +|||||||||||||||||+|||||||||||||||||+|||||||||||||||||+|||||||||||||||||+                 +   
-    //    0 +-+---------------+-----------------+-----------------+-----------------+---------------+-+   
-    //     0.8               0.85              0.9               0.95               1                1.05 
-    //                                    Fraction of rays caught/noticed
-    //
-    //
-    const double catch_frac = 0.95; // Catch 95% of randomly distributed rays incident perpendicularly.
-    const double minRaydL = 2.0 * CylinderRadius * std::sqrt(1.0 - catch_frac);
-    if(RaydL > minRaydL){
-        throw std::runtime_error("Ray dL is too small. MinRaydL=" + std::to_string(minRaydL) + ". Are you sure this is OK? (edit me if so).");
-    } 
-*/
 
     //Merge the dose arrays if necessary.
     if(DICOM_data.dose_data.empty()){
@@ -315,16 +279,30 @@ Drover GridBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptArgs
     cc_ROIs.remove_if([=](std::reference_wrapper<contour_collection<double>> cc) -> bool {
                    const auto ROINameOpt = cc.get().contours.front().GetMetadataValueAs<std::string>("ROIName");
                    const auto ROIName = ROINameOpt.value();
-                   return !(std::regex_match(ROIName,theregex));
+                   return !(std::regex_match(ROIName,roiregex));
     });
     cc_ROIs.remove_if([=](std::reference_wrapper<contour_collection<double>> cc) -> bool {
                    const auto ROINameOpt = cc.get().contours.front().GetMetadataValueAs<std::string>("NormalizedROIName");
                    const auto ROIName = ROINameOpt.value();
-                   return !(std::regex_match(ROIName,thenormalizedregex));
+                   return !(std::regex_match(ROIName,roinormalizedregex));
+    });
+
+    auto cc_Refs = cc_all;
+    cc_Refs.remove_if([=](std::reference_wrapper<contour_collection<double>> cc) -> bool {
+                   const auto ROINameOpt = cc.get().contours.front().GetMetadataValueAs<std::string>("ROIName");
+                   const auto ROIName = ROINameOpt.value();
+                   return !(std::regex_match(ROIName,refregex));
+    });
+    cc_Refs.remove_if([=](std::reference_wrapper<contour_collection<double>> cc) -> bool {
+                   const auto ROINameOpt = cc.get().contours.front().GetMetadataValueAs<std::string>("NormalizedROIName");
+                   const auto ROIName = ROINameOpt.value();
+                   return !(std::regex_match(ROIName,refnormalizedregex));
     });
 
     if(cc_ROIs.empty()){
-        throw std::invalid_argument("No contours selected. Cannot continue.");
+        throw std::invalid_argument("No ROI contours selected. Cannot continue.");
+    }else if(cc_Refs.empty()){
+        throw std::invalid_argument("No ReferenceROI contours selected. Cannot continue.");
     }
 
     // ============================================== Generate a grid  ==============================================
@@ -386,7 +364,7 @@ Drover GridBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptArgs
     auto grid_image_collection = Contiguously_Grid_Volume<float,double>(
              cc_ROIs, 
              x_margin, y_margin, z_margin,
-             Rows, Columns, /*number_of_channels=*/ 1, NumberOfImages,
+             GridRows, GridColumns, /*number_of_channels=*/ 1, NumberOfImages,
              GridX, GridY, GridZ,
              /*pixel_fill=*/ std::numeric_limits<double>::quiet_NaN(),
              /*only_top_and_bottom=*/ false);
@@ -396,14 +374,16 @@ Drover GridBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptArgs
 
 
     //Compute the surface mask using the new grid.
-    const float surface_mask_val = 2.0;
+    const float air_mask_val      = 0.0;
+    const float surface_mask_val  = 2.0;
+    const float interior_mask_val = 1.0;
 
     //Perform the computation.
     {
         GenerateSurfaceMaskUserData ud;
-        ud.background_val = 0.0;
+        ud.background_val = air_mask_val;
         ud.surface_val    = surface_mask_val;
-        ud.interior_val   = 1.0; //So the user can easily visualize afterward.
+        ud.interior_val   = interior_mask_val; //So the user can easily visualize afterward.
         if(!grid_arr_ptr->imagecoll.Compute_Images( ComputeGenerateSurfaceMask, { },
                                                     cc_ROIs, &ud )){
             throw std::runtime_error("Unable to generate a surface mask.");
@@ -412,8 +392,30 @@ Drover GridBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptArgs
 
     // ============================================== Modify the mask ==============================================
 
-    //Trim geometry above some user-specified plane.
-    // ... ideal? necessary? cumbersome? ... TODO.
+    //Compute centroids for the ROI and Reference ROI volumes.
+    vec3<double> ROI_centroid;
+    vec3<double> Ref_centroid;
+    {
+        contour_collection<double> cc_ROIs_All;
+        for(const auto &cc_ref : cc_ROIs){
+            for(const auto &c : cc_ref.get().contours) cc_ROIs_All.contours.push_back(c);
+        }
+
+        contour_collection<double> cc_Refs_All;
+        for(const auto &cc_ref : cc_Refs){ // Different references. One in the c++ sense, another in the 'reference textbook' sense.
+            for(const auto &c : cc_ref.get().contours) cc_Refs_All.contours.push_back(c);
+        }
+
+        ROI_centroid = cc_ROIs_All.Centroid();
+        Ref_centroid = cc_Refs_All.Centroid();
+    }
+
+    //Create a plane at the Bladder's centroid aligned with the ROI (bladder) that faces away from the referenceROI
+    // (prostate).
+    const plane<double> ROICleaving( (ROI_centroid - Ref_centroid).unit(), ROI_centroid );
+
+    //'Cleave' the surface mask with the plane; set all voxels away from the referenceROI (prostate) to the 'air' mask value.
+    grid_arr_ptr->imagecoll.Set_Voxels_Above_Plane(ROICleaving, air_mask_val, {});
 
 
     // ============================================== Source, Detector creation  ==============================================
@@ -422,13 +424,14 @@ Drover GridBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptArgs
     // NOTE: They do not need to be aligned with the geometry, contours, or grid. But leave a big margin so you
     //       can ensure you're getting all the surface available.
 
-    const auto SDGridZ = vec3<double>(0.0, 1.0, 1.0).unit();
-    vec3<double> SDGridX = SDGridZ.rotate_around_z(M_PI * 0.5); // Try Z. Will often be idempotent.
-    if(SDGridX.Dot(SDGridZ) > 0.25){
-        SDGridX = SDGridZ.rotate_around_y(M_PI * 0.5);  //Should always work since SDGridZ is parallel to Z.
+    //const auto SDGridZ = vec3<double>(0.0, 1.0, 1.0).unit();
+    const auto SDGridZ = ROICleaving.N_0.unit();
+    vec3<double> SDGridY = vec3<double>(1.0, 0.0, 0.0);
+    if(SDGridY.Dot(SDGridZ) > 0.25){
+        SDGridY = SDGridZ.rotate_around_x(M_PI * 0.5);
     }
-    vec3<double> SDGridY = SDGridZ.Cross(SDGridX);
-    if(!SDGridZ.GramSchmidt_orthogonalize(SDGridX, SDGridY)){
+    vec3<double> SDGridX = SDGridZ.Cross(SDGridY);
+    if(!SDGridZ.GramSchmidt_orthogonalize(SDGridY, SDGridX)){
         throw std::runtime_error("Unable to find grid orientation vectors.");
     }
     SDGridX = SDGridX.unit();
@@ -444,7 +447,7 @@ Drover GridBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptArgs
     auto sd_image_collection = Contiguously_Grid_Volume<float,double>(
              cc_ROIs, 
              sdgrid_x_margin, sdgrid_y_margin, sdgrid_z_margin,
-             Rows, Columns, /*number_of_channels=*/ 1, 100*NumberOfImages, 
+             SourceDetectorRows, SourceDetectorColumns, /*number_of_channels=*/ 1, 100*NumberOfImages, 
              SDGridX, SDGridY, SDGridZ,
              /*pixel_fill=*/ std::numeric_limits<double>::quiet_NaN(),
              /*only_top_and_bottom=*/ true);
@@ -461,14 +464,18 @@ Drover GridBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptArgs
         std::mutex printer; // Who gets to print to the console and iterate the counter.
         long int completed = 0;
 
-        for(long int row = 0; row < Rows; ++row){
+        const double cleaved_gap_dist = std::abs(ROICleaving.Get_Signed_Distance_To_Point(ROI_centroid));
+
+        for(long int row = 0; row < SourceDetectorRows; ++row){
             tp.submit_task([&,row](void) -> void {
-                for(long int col = 0; col < Columns; ++col){
+                for(long int col = 0; col < SourceDetectorColumns; ++col){
                     double accumulated_length = 0.0;      //Length of ray travel within the 'surface'.
                     double accumulated_doselength = 0.0;
                     vec3<double> ray_pos = SourceImg->position(row, col);
                     const vec3<double> terminus = DetectImg->position(row, col);
                     const vec3<double> ray_dir = (terminus - ray_pos).unit();
+
+                    ray_pos += ray_dir * cleaved_gap_dist; // Skip the gap which has been cleaved out.
 
                     //Go until we get within certain distance or overshoot and the ray wants to backtrack.
                     while(    (ray_dir.Dot( (terminus - ray_pos).unit() ) > 0.8 ) // Ray orientation is still downward-facing.
@@ -502,8 +509,8 @@ Drover GridBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptArgs
                 {
                     std::lock_guard<std::mutex> lock(printer);
                     ++completed;
-                    FUNCINFO("Completed " << completed << " of " << Rows 
-                          << " --> " << static_cast<int>(1000.0*(completed)/Rows)/10.0 << "\% done");
+                    FUNCINFO("Completed " << completed << " of " << SourceDetectorRows 
+                          << " --> " << static_cast<int>(1000.0*(completed)/SourceDetectorRows)/10.0 << "\% done");
                 }
             });
         }
@@ -516,6 +523,10 @@ Drover GridBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptArgs
     if(!WriteToFITS(*DetectImg, DoseLengthMapFileName)){
         throw std::runtime_error("Unable to write FITS file for dose-length map.");
     }
+
+    // Insert the image maps as images for later processing and/or viewing, if desired.
+    DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>() );
+    DICOM_data.image_data.back()->imagecoll = sd_image_collection;
 
     return std::move(DICOM_data);
 }
