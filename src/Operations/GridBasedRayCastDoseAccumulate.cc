@@ -579,7 +579,7 @@ Drover GridBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptArgs
     if(!WriteToFITS(*DetectImg, DoseLengthMapFileName)){
         throw std::runtime_error("Unable to write FITS file for dose-length map.");
     }
-    if(!WriteToFITS(*DetectImg, DoseMapFileName)){
+    if(!WriteToFITS(*DoseImg, DoseMapFileName)){
         throw std::runtime_error("Unable to write FITS file for dose map.");
     }
 
