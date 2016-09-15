@@ -64,6 +64,7 @@
 #include "PACS_Loader.h"
 #include "Boost_Serialization_File_Loader.h"
 #include "DICOM_File_Loader.h"
+#include "FITS_File_Loader.h"
 
 #include "Operation_Dispatcher.h"
 
@@ -355,6 +356,13 @@ int main(int argc, char* argv[]){
         if(!Load_From_DICOM_Files( DICOM_data, InvocationMetadata, FilenameLex,
                                    StandaloneFilesDirsReachable )){
             FUNCERR("Failed to load DICOM file");
+        }
+
+
+        //FITS files.
+        if(!Load_From_FITS_Files( DICOM_data, InvocationMetadata, FilenameLex,
+                                   StandaloneFilesDirsReachable )){
+            FUNCERR("Failed to load FITS file");
         }
 
         //Other loaders ...

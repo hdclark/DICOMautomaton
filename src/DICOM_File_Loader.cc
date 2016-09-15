@@ -102,7 +102,12 @@ bool Load_From_DICOM_Files( Drover &DICOM_data,
         ++i;
 
         const auto Filename = bfit->string();
-        const auto Modality = get_modality(Filename);
+        std::string Modality;
+        try{
+            Modality = get_modality(Filename);
+        }catch(const std::exception &){
+            Modality = "";
+        };
 
         if(boost::iequals(Modality,"RTSTRUCT")){
             const auto preloadcount = loaded_contour_data_storage->ccs.size();
