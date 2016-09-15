@@ -95,6 +95,17 @@ std::list<OperationArgDoc> OpArgDocGridBasedRayCastDoseAccumulate(void){
     std::list<OperationArgDoc> out;
 
     out.emplace_back();
+    out.back().name = "DoseMapFileName";
+    out.back().desc = "A filename (or full path) for the dose image map."
+                      " Note that this file is approximate, and may not be accurate."
+                      " There is more information available when you use the length and dose*length maps instead."
+                      " However, this file is useful for viewing and eyeballing tuning settings."
+                      " The format is TBD. Leave empty to dump to generate a unique temporary file.";  // TODO: specify format.
+    out.back().default_val = "";
+    out.back().expected = true;
+    out.back().examples = { "", "/tmp/somefile", "localfile.img", "derivative_data.img" };
+
+    out.emplace_back();
     out.back().name = "DoseLengthMapFileName";
     out.back().desc = "A filename (or full path) for the (dose)*(length traveled through the ROI peel) image map."
                       " The format is TBD. Leave empty to dump to generate a unique temporary file.";  // TODO: specify format.
@@ -226,6 +237,7 @@ std::list<OperationArgDoc> OpArgDocGridBasedRayCastDoseAccumulate(void){
 Drover GridBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string> /*InvocationMetadata*/, std::string FilenameLex){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
+    auto DoseMapFileName = OptArgs.getValueStr("DoseMapFileName").value();
     auto DoseLengthMapFileName = OptArgs.getValueStr("DoseLengthMapFileName").value();
     auto LengthMapFileName = OptArgs.getValueStr("LengthMapFileName").value();
     const auto ROILabelRegex = OptArgs.getValueStr("ROILabelRegex").value();
@@ -374,14 +386,14 @@ Drover GridBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptArgs
 
 
     //Compute the surface mask using the new grid.
-    const float air_mask_val      = 0.0;
-    const float surface_mask_val  = 2.0;
-    const float interior_mask_val = 1.0;
+    const float void_mask_val     = 0.0;
+    const float surface_mask_val  = 1.0;
+    const float interior_mask_val = 0.0;
 
     //Perform the computation.
     {
         GenerateSurfaceMaskUserData ud;
-        ud.background_val = air_mask_val;
+        ud.background_val = void_mask_val;
         ud.surface_val    = surface_mask_val;
         ud.interior_val   = interior_mask_val; //So the user can easily visualize afterward.
         if(!grid_arr_ptr->imagecoll.Compute_Images( ComputeGenerateSurfaceMask, { },
@@ -391,6 +403,37 @@ Drover GridBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptArgs
     }
 
     // ============================================== Modify the mask ==============================================
+
+    // Gaussian blur to help smooth the sharp edges.
+    grid_arr_ptr->imagecoll.Gaussian_Pixel_Blur( {}, 2.0 ); // Sigma in terms of pixel count.
+
+    // Supersample the surface mask.
+    {
+        InImagePlaneBicubicSupersampleUserData bicub_ud;
+        bicub_ud.RowScaleFactor    = 3;
+        bicub_ud.ColumnScaleFactor = 3;
+
+        if(!grid_arr_ptr->imagecoll.Process_Images_Parallel( GroupIndividualImages,
+                                                             InImagePlaneBicubicSupersample,
+                                                             {}, {}, &bicub_ud )){
+            FUNCERR("Unable to bicubically supersample surface mask");
+        }
+    }
+
+    // Threshold the surface mask.
+    grid_arr_ptr->imagecoll.apply_to_pixels([=](long int, long int, long int, float &val) -> void {
+            if(!isininc(void_mask_val, val, surface_mask_val)){
+                val = void_mask_val;
+                return;
+            }
+
+            if( (val - void_mask_val) > 0.25*(surface_mask_val - void_mask_val) ){
+                val = surface_mask_val;
+            }else{
+                val = void_mask_val;
+            }
+            return;
+    });
 
     //Compute centroids for the ROI and Reference ROI volumes.
     vec3<double> ROI_centroid;
@@ -414,8 +457,8 @@ Drover GridBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptArgs
     // (prostate).
     const plane<double> ROICleaving( (ROI_centroid - Ref_centroid).unit(), ROI_centroid );
 
-    //'Cleave' the surface mask with the plane; set all voxels away from the referenceROI (prostate) to the 'air' mask value.
-    grid_arr_ptr->imagecoll.Set_Voxels_Above_Plane(ROICleaving, air_mask_val, {});
+    //'Cleave' the surface mask with the plane; set all voxels away from the referenceROI (prostate) to the 'void' mask value.
+    grid_arr_ptr->imagecoll.set_voxels_above_plane(ROICleaving, void_mask_val, {});
 
 
     // ============================================== Source, Detector creation  ==============================================
@@ -453,7 +496,15 @@ Drover GridBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptArgs
              /*only_top_and_bottom=*/ true);
 
     planar_image<float, double> *DetectImg = &(sd_image_collection.images.front());
+    DetectImg->metadata["Description"] = "Dose*Length Map";
     planar_image<float, double> *SourceImg = &(sd_image_collection.images.back());
+    SourceImg->metadata["Description"] = "Length Map (distance ray travelled through surface)";
+
+    //Make an extra image to quickly show dose for viewing purposes.
+    sd_image_collection.images.emplace_back();
+    sd_image_collection.images.back() = *SourceImg;
+    planar_image<float, double> *DoseImg = &(sd_image_collection.images.back());
+    DoseImg->metadata["Description"] = "Dose Map (Approximate! For Viewing Only)";
 
     // ============================================== Ray-cast ==============================================
 
@@ -504,6 +555,11 @@ Drover GridBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptArgs
                     //Deposit the dose in the images.
                     SourceImg->reference(row, col, 0) = static_cast<float>(accumulated_length);
                     DetectImg->reference(row, col, 0) = static_cast<float>(accumulated_doselength);
+                    DoseImg->reference(row, col, 0) = 0.0f;
+                    if(accumulated_length != 0.0){
+                        DoseImg->reference(row, col, 0) = static_cast<float>(accumulated_doselength)
+                                                          / static_cast<float>(accumulated_length);
+                    }
                 }
 
                 {
@@ -522,6 +578,9 @@ Drover GridBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptArgs
     }
     if(!WriteToFITS(*DetectImg, DoseLengthMapFileName)){
         throw std::runtime_error("Unable to write FITS file for dose-length map.");
+    }
+    if(!WriteToFITS(*DetectImg, DoseMapFileName)){
+        throw std::runtime_error("Unable to write FITS file for dose map.");
     }
 
     // Insert the image maps as images for later processing and/or viewing, if desired.
