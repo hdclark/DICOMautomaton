@@ -274,7 +274,6 @@ add_executable (dicomautomaton_dispatcher
     $<TARGET_OBJECTS:Dose_Meld_obj>
     $<TARGET_OBJECTS:Common_Boost_Serialization_obj>
     $<TARGET_OBJECTS:Common_Plotting_obj>
-    $<TARGET_OBJECTS:Whole_Match_obj>
 
     $<TARGET_OBJECTS:PACS_Loader_obj>
     $<TARGET_OBJECTS:Boost_Serialization_File_Loader_obj>
@@ -294,7 +293,6 @@ target_link_libraries (dicomautomaton_dispatcher
     kineticmodel_1c2i_5param_chebyshev_levenbergmarquardt
     kineticmodel_1c2i_reduced3param_chebyshev_freeformoptimization
     explicator 
-    demarcator 
     ygor 
     CGAL
     nlopt 
@@ -325,13 +323,11 @@ add_executable(dicomautomaton_bsarchive_convert
     $<TARGET_OBJECTS:Structs_obj>
     $<TARGET_OBJECTS:Dose_Meld_obj>
     $<TARGET_OBJECTS:Common_Boost_Serialization_obj>
-    $<TARGET_OBJECTS:Whole_Match_obj>
 
     $<TARGET_OBJECTS:Boost_Serialization_File_Loader_obj>
 )
 target_link_libraries (dicomautomaton_bsarchive_convert
     explicator 
-    demarcator 
     ygor 
     boost_filesystem 
     boost_serialization
@@ -350,7 +346,6 @@ add_executable (pacs_ingress
 target_link_libraries (pacs_ingress
     imebrashim
     explicator 
-    demarcator 
     ygor 
     pqxx 
     pq
@@ -366,7 +361,6 @@ add_executable (pacs_refresh
 target_link_libraries (pacs_refresh
     imebrashim
     explicator 
-    demarcator 
     ygor 
     pqxx 
     pq
@@ -378,12 +372,10 @@ add_executable (overlaydosedata
     Overlay_Dose_Data.cc
     $<TARGET_OBJECTS:Structs_obj>
     $<TARGET_OBJECTS:Dose_Meld_obj>
-    $<TARGET_OBJECTS:Whole_Match_obj>
 )
 target_link_libraries (overlaydosedata
     imebrashim
     explicator 
-    demarcator 
     ygor 
     pqxx 
     pq
@@ -403,6 +395,7 @@ add_executable (automaton
     Automaton.cc
     $<TARGET_OBJECTS:Structs_obj>
     $<TARGET_OBJECTS:Dose_Meld_obj>
+    $<TARGET_OBJECTS:Whole_Match_obj>
 )
 target_link_libraries (automaton
     imebrashim

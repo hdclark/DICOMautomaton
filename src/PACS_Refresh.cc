@@ -37,8 +37,6 @@
 #include "YgorString.h"      //Needed for GetFirstRegex(...)
 #include "Explicator.h"      //Needed for Explicator class.
 
-//#include "Distinguisher.h"   //Needed for Distinguisher class.            //Needed?
-
 #include "YgorDICOMTools.h"  //Needed for Is_File_A_DICOM_File(...);
 
 int main(int argc, char* argv[]){

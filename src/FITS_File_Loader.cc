@@ -54,8 +54,6 @@
 
 #include "Explicator.h"       //Needed for Explicator class.
 
-//#include "Distinguisher.h"    //Needed for Distinguisher class.            //Needed?
-
 
 bool Load_From_FITS_Files( Drover &DICOM_data,
                            std::map<std::string,std::string> & /* InvocationMetadata */,
