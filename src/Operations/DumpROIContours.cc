@@ -256,7 +256,10 @@ Drover DumpROIContours(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std:
     //       and may require triangles or quads at most.
     {
         std::ofstream FO(DumpFileName, std::fstream::out);
-        FO << "mtllib " << MTLFileName << std::endl;
+
+        //Reference the MTL file, but use relative paths to make moving files around easier without having to modify them.
+        //FO << "mtllib " << MTLFileName << std::endl;
+        FO << "mtllib " << SplitStringToVector(MTLFileName, '/', 'd').back() << std::endl;
         FO << std::endl;
  
         long int gvc = 0; // Global vertex count. Used to track vert number because they have whole-file scope.
@@ -275,24 +278,23 @@ Drover DumpROIContours(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std:
                 FO << "# Metadata: ROIName = " << c.metadata["ROIName"] << std::endl;
                 FO << "# Metadata: NormalizedROIName = " << c.metadata["NormalizedROIName"] << std::endl;
 
-                //Print the vertices and centroid.
+                //Choose a face colour.
+                //
+                // Note: Simply add more colours above if you need more colours here.
+                // Note: The obj format does not support per-vertex colours.
+                // Note: The usmtl statement should be before the vertices because some loaders (e.g., Meshlab)
+                //       apply the material to vertices instead of faces.
+                //
+                FO << "usemtl " << mats[ family % mats.size() ] << std::endl;
+
+                //Print the vertices.
                 const auto defaultprecision = FO.precision();
                 FO << std::setprecision(std::numeric_limits<long double>::digits10 + 1); 
                 for(const auto &p : c.points){
                     FO << "v " << p.x << " " << p.y << " " << p.z << std::endl;
                 }
-                const auto ctd = c.Centroid();
-                FO << "v " << ctd.x << " " << ctd.y << " " << ctd.z << std::endl;
                 FO << std::endl;
                 FO << std::setprecision(defaultprecision);
-
-                //Choose a face colour.
-                //
-                // Note: Simply add more colours above if you need more colours here.
-                //
-                // Note: The obj format does not support per-vertex colours.
-                //
-                FO << "usemtl " << mats[ family % mats.size() ] << std::endl;
 
                 //Print the face linkages. 
                 //
@@ -304,7 +306,7 @@ Drover DumpROIContours(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std:
                 //if(c.closed) FO << " " << (gvc+1);
                 FO << std::endl; 
                 FO << std::endl; 
-                gvc += (N+1);
+                gvc += N;
             }
             ++family;
         }
