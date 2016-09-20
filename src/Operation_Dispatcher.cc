@@ -35,6 +35,7 @@
 #include "Operations/DumpImageMetadataOccurrencesToFile.h"
 #include "Operations/DumpPerROIParams_KineticModel_1Compartment2Input_5Param.h"
 #include "Operations/DumpPixelValuesOverTimeForAnEncompassedPoint.h"
+#include "Operations/DumpROIContours.h"
 #include "Operations/DumpROIData.h"
 #include "Operations/DumpROIDoseInfo.h"
 #include "Operations/DumpROISurfaceMeshes.h"
@@ -91,6 +92,7 @@ std::map<std::string, op_packet_t> Known_Operations(void){
                                                                   DumpPerROIParams_KineticModel_1Compartment2Input_5Param);
     out["DumpPixelValuesOverTimeForAnEncompassedPoint"] = std::make_pair(OpArgDocDumpPixelValuesOverTimeForAnEncompassedPoint,
                                                                          DumpPixelValuesOverTimeForAnEncompassedPoint);
+    out["DumpROIContours"] = std::make_pair(OpArgDocDumpROIContours, DumpROIContours);
     out["DumpROIData"] = std::make_pair(OpArgDocDumpROIData, DumpROIData);
     out["DumpROIDoseInfo"] = std::make_pair(OpArgDocDumpROIDoseInfo, DumpROIDoseInfo);
     out["DumpROISurfaceMeshes"] = std::make_pair(OpArgDocDumpROISurfaceMeshes, DumpROISurfaceMeshes);

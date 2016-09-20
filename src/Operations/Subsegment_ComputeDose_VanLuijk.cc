@@ -168,6 +168,16 @@ std::list<OperationArgDoc> OpArgDocSubsegment_ComputeDose_VanLuijk(void){
                             R"***(left_parotid|right_parotid)***" };
 
     out.emplace_back();
+    out.back().name = "SubsegMethod";
+    out.back().desc = "The method to use for sub-segmentation. Nested sub-segmentation should almost"
+                      " always be preferred unless you know what you're doing. It should be faster too."
+                      " The compound method was used in the van Luijk paper, but it is known to have"
+                      " serious problems.";
+    out.back().default_val = "nested";
+    out.back().expected = true;
+    out.back().examples = { "nested", "compound" };
+
+    out.emplace_back();
     out.back().name = "XSelection";
     out.back().desc = "(See ZSelection description.) The \"X\" direction is defined in terms of movement"
                       " on an image when the row number increases. This is generally VERTICAL and DOWNWARD."
@@ -223,6 +233,7 @@ Drover Subsegment_ComputeDose_VanLuijk(Drover DICOM_data, OperationArgPkg OptArg
     const auto RetainSubsegment = OptArgs.getValueStr("RetainSubsegment").value();
     const auto ROILabelRegex = OptArgs.getValueStr("ROILabelRegex").value();
     const auto NormalizedROILabelRegex = OptArgs.getValueStr("NormalizedROILabelRegex").value();
+    const auto SubsegMethodReq = OptArgs.getValueStr("SubsegMethod").value();
     const auto XSelectionStr = OptArgs.getValueStr("XSelection").value();
     const auto YSelectionStr = OptArgs.getValueStr("YSelection").value();
     const auto ZSelectionStr = OptArgs.getValueStr("ZSelection").value();
@@ -231,6 +242,8 @@ Drover Subsegment_ComputeDose_VanLuijk(Drover DICOM_data, OperationArgPkg OptArg
     const auto theregex = std::regex(ROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
     const auto TrueRegex = std::regex("^tr?u?e?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
     const auto thenormalizedregex = std::regex(NormalizedROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto SubsegMethodCompound = std::regex("Compound", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto SubsegMethodNested = std::regex("Nested", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
 
     const auto ReplaceAllWithSubsegment = std::regex_match(ReplaceAllWithSubsegmentStr, TrueRegex);
 
@@ -426,9 +439,12 @@ Drover Subsegment_ComputeDose_VanLuijk(Drover DICOM_data, OperationArgPkg OptArg
     for(const auto &cc_ref : cc_ROIs){
         if(cc_ref.get().contours.empty()) continue;
 
-        // ---------------------------------- Independent sub-segmentation --------------------------------------
+        // ---------------------------------- Compound sub-segmentation --------------------------------------
         //Generate all planes using the original contour_collection before sub-segmenting.
-        if(true){
+        //
+        // NOTE: This method results in sub-segments of different volumes depending on the location within the ROI.
+        //       Do not use this method unless you know what you're doing.
+        if( std::regex_match(SubsegMethodReq,SubsegMethodCompound) ){
             const auto x_planes_pair = bisect_ROIs(cc_ref.get(), x_normal, XSelectionLower, XSelectionUpper);
             const auto y_planes_pair = bisect_ROIs(cc_ref.get(), y_normal, YSelectionLower, YSelectionUpper);
             const auto z_planes_pair = bisect_ROIs(cc_ref.get(), z_normal, ZSelectionLower, ZSelectionUpper);
@@ -439,12 +455,15 @@ Drover Subsegment_ComputeDose_VanLuijk(Drover DICOM_data, OperationArgPkg OptArg
             running = subsegment_interior(running, y_planes_pair);
             running = subsegment_interior(running, z_planes_pair);
             cc_selection.emplace_back(running);
-        }
 
-        // ----------------------------------- Iterative sub-segmentation ---------------------------------------
+        // ----------------------------------- Nested sub-segmentation ---------------------------------------
         // Instead of relying on whole-organ sub-segmentation, attempt to fairly partition the *remaining* volume 
         // at each pair of cleaves.
-        if(false){
+        //
+        // NOTE: This method will generate sub-segments with equal volumes (as best possible given the number of slices
+        //       if the plane orientations are aligned with the contour planes) and should be preferred over compound
+        //       sub-segmentation in almost all cases. It should be faster too.
+        }else if( std::regex_match(SubsegMethodReq,SubsegMethodNested) ){
             contour_collection<double> running(cc_ref.get());
 
             const auto z_planes_pair = bisect_ROIs(running, z_normal, ZSelectionLower, ZSelectionUpper);
@@ -457,6 +476,9 @@ Drover Subsegment_ComputeDose_VanLuijk(Drover DICOM_data, OperationArgPkg OptArg
             running = subsegment_interior(running, y_planes_pair);
 
             cc_selection.emplace_back(running);
+
+        }else{
+            throw std::invalid_argument("Subsegmentation method not understood. Cannot continue.");
         }
     }
 

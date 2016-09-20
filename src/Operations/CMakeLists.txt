@@ -21,6 +21,7 @@ add_library(Operations_objs OBJECT
     DumpImageMetadataOccurrencesToFile.cc
     DumpPerROIParams_KineticModel_1Compartment2Input_5Param.cc
     DumpPixelValuesOverTimeForAnEncompassedPoint.cc
+    DumpROIContours.cc
     DumpROIData.cc
     DumpROIDoseInfo.cc
     DumpROISurfaceMeshes.cc
