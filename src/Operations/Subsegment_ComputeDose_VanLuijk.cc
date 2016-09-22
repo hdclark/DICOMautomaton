@@ -110,7 +110,7 @@ std::list<OperationArgDoc> OpArgDocSubsegment_ComputeDose_VanLuijk(void){
                       " The format is one line of description followed by one line for the distribution;"
                       " pixel intensities are listed with a single space between elements; the descriptions contain"
                       " the patient ID, ROIName, and subsegment description (guaranteed) and possibly various other"
-                      " data afterward. Leave empty to dump to generate a unique temporary file.";
+                      " data afterward. Leave empty to NOT dump anything.";
     out.back().default_val = "";
     out.back().expected = true;
     out.back().examples = { "", "/tmp/somefile", "localfile.csv", "distributions.data" };
@@ -523,24 +523,23 @@ Drover Subsegment_ComputeDose_VanLuijk(Drover DICOM_data, OperationArgPkg OptArg
         FO_deriv.close();
      
 
-        if(DistributionDataFileName.empty()){
-            DistributionDataFileName = Get_Unique_Sequential_Filename("/tmp/dicomautomaton_subsegment_vanluijk_distributions_", 6, ".data");
-        }
-        std::fstream FO_dist(DistributionDataFileName, std::fstream::out | std::fstream::app);
-        if(!FO_dist){
-            throw std::runtime_error("Unable to open file for reporting distribution data. Cannot continue.");
-        }
+        if(!DistributionDataFileName.empty()){
+            std::fstream FO_dist(DistributionDataFileName, std::fstream::out | std::fstream::app);
+            if(!FO_dist){
+                throw std::runtime_error("Unable to open file for reporting distribution data. Cannot continue.");
+            }
 
-        for(const auto &av : ud.accumulated_voxels){
-            const auto lROIname = av.first;
-            FO_dist << "PatientID='" << patient_ID << "' "
-                    << "NormalizedROIname='" << X(lROIname) << "' "
-                    << "ROIname='" << lROIname << "' " << std::endl;
-            for(const auto &d : av.second) FO_dist << d << " ";
-            FO_dist << std::endl;
+            for(const auto &av : ud.accumulated_voxels){
+                const auto lROIname = av.first;
+                FO_dist << "PatientID='" << patient_ID << "' "
+                        << "NormalizedROIname='" << X(lROIname) << "' "
+                        << "ROIname='" << lROIname << "' " << std::endl;
+                for(const auto &d : av.second) FO_dist << d << " ";
+                FO_dist << std::endl;
+            }
+            FO_dist.flush();
+            FO_dist.close();
         }
-        FO_dist.flush();
-        FO_dist.close();
 
     }catch(const std::exception &e){
         FUNCERR("Unable to write to log files: '" << e.what() << "'");
