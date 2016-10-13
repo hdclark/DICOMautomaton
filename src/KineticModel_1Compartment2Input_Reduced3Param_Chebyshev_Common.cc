@@ -23,6 +23,14 @@ Evaluate_Model( const KineticModel_1Compartment2Input_Reduced3Param_Chebyshev_Pa
     // This function computes the predicted contrast enhancement of a kinetic
     // liver perfusion model at the ROI sample t_i's. Gradients are able to be
     // computed using this method, so they are also computed.
+    //
+    // NOTE: Ensure you treat the Chebyshev polynomial axes with caution. Do not multiply a polynomial
+    //       defined along the 't' axis with another defined along an integrating variable axis, such as
+    //       'tau' -- you have to integrate the axis out before you combine them if you want to later
+    //       integrate or differentiate using the 't' axis. So if you wanted to differentiate the
+    //       exponential below, you should first separate the 'tau' and 't' components into separate 
+    //       polynomials, differentiate the relevant axis, and then combine them afterward.
+    //
 
     const double k1A  = state.k1A;
     const double tauA = state.tauA;
