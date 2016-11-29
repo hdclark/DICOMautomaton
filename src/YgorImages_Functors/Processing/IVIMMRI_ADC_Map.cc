@@ -76,33 +76,59 @@ bool IVIMMRIADCMap(planar_image_collection<float,double>::images_list_it_t first
                     double ADC = 0.0; //Will be around [0.88E-3 s/(mm*mm)] according to a paper I saw...
 
                     //----------------------------------------------- Linear Regression ----------------------------------------------
-                    //This approach requires us to linearize the problem. This skews the uncertainties but lets us use an exact, fast,
-                    // generic least-squares approach.
+                    //This approach requires us to linearize the problem. This skews the uncertainties but lets us use
+                    // an exact, fast, generic least-squares approach.
                     //
-                    // To linearize, we assume voxel intensities satisfy 
-                    //     S(i,j,k;b) = S(i,j,k;0) * exp(-b*ADC). 
-                    // Taking a ln() of both sides, we end up with
-                    //     ln(S) = ln(S_0) - b*ADC. 
+                    // To linearize, we assume voxel intensities satisfy:  S(i,j,k;b) = S(i,j,k;0) * exp(-b*ADC). 
+                    // Taking a ln() of both sides, we end up with: ln(S) = ln(S_0) - b*ADC. 
                     // Thus using linear regression using {b,S} data, the slope will be [-ADC].
+                    //
+                    // The 'catch' is that the variances are transformed too, and the fitted model can be severely
+                    // impacted. It is possible to transform the variances and use a weighted least-squares approach,
+                    // but this approach can often lead to numerical difficulties due to the domain of the log. Both
+                    // approaches can be tested by selecting an approach below.
                     //
                     samples_1D<double> linearized(channel_bval_course);
                     linearized.uncertainties_known_to_be_independent_and_random = channel_bval_course.uncertainties_known_to_be_independent_and_random;
-                    bool CanBeLinearized = true;
-                    for(auto &datum : linearized.samples){
-                        const auto S    = datum[2];
-                        const auto dS   = datum[3];
-                        const auto lnS  = std::log(S);
-                        const auto dlnS = std::abs(dS/S); //Regardless of normality assumption regarding uncertainties.
-                        if(!std::isfinite(lnS) || !std::isfinite(dlnS)){
-                            CanBeLinearized = false;
-                            break;
+
+                    bool Use_Weighted_LS = false; //Attempt to transform the uncertainties and use proper weighted least-squares. Often generates errors.
+                    if(Use_Weighted_LS){
+                        bool CanBeLinearized = true;
+                        for(auto &datum : linearized.samples){
+                            const auto S    = datum[2];
+                            const auto dS   = datum[3];
+                            const auto lnS  = std::log(S);
+                            const auto dlnS = std::abs(dS/S); //Regardless of normality assumption regarding uncertainties.
+                            if(!std::isfinite(lnS) || !std::isfinite(dlnS)){
+                                CanBeLinearized = false;
+                                break;
+                            }
+                            datum[2] = lnS;
+                            datum[3] = dlnS;
                         }
-                        datum[2] = lnS;
-                        datum[3] = dlnS;
-                    }
-                    if(CanBeLinearized){
-                        auto res = linearized.Weighted_Linear_Least_Squares_Regression(&wasOK);
-                        if(wasOK) ADC = -res.slope;
+                        if(CanBeLinearized){
+                            auto res = linearized.Weighted_Linear_Least_Squares_Regression(&wasOK);
+                            if(wasOK) ADC = -res.slope;
+                        }
+
+                    }else{ //Otherwise, use unweighted least-squares.
+                        bool CanBeLinearized = true;
+                        for(auto &datum : linearized.samples){
+                            const auto S    = datum[2];
+                            const auto lnS  = std::log(S);
+                            if(!std::isfinite(lnS)){
+                                CanBeLinearized = false;
+                                break;
+                            }
+                            datum[1] = 0.0;
+                            datum[2] = lnS;
+                            datum[3] = 0.0;
+                        }
+                        if(CanBeLinearized){
+                            const bool Skip_Extras = true;
+                            auto res = linearized.Linear_Least_Squares_Regression(&wasOK, Skip_Extras);
+                            if(wasOK) ADC = -res.slope;
+                        }
                     }
                     
                     //--------------------------------------------- Non-Linear Regression --------------------------------------------
@@ -136,18 +162,21 @@ bool IVIMMRIADCMap(planar_image_collection<float,double>::images_list_it_t first
                         working.reference(row, col, chan) = std::numeric_limits<float>::quiet_NaN();
                         continue;
                     }else if(ADC < 0.0){
-                        //FUNCWARN("Least-squares resulted in a negative ADC. Continuing with voxel set to zero");
-FUNCERR("Need to figure out what to put here. Zero? NaN?");
-                        working.reference(row, col, chan) = std::numeric_limits<float>::quiet_NaN();
+//                        //FUNCWARN("Least-squares resulted in a negative ADC. Continuing with voxel set to zero");
+//FUNCERR("Need to figure out what to put here. Zero? NaN?");
+//                        working.reference(row, col, chan) = std::numeric_limits<float>::quiet_NaN();
+                        //Proceed with negative ADC. It is clearly not a valid result and should somehow be dealt with
+                        // in later analyses.
+                        working.reference(row, col, chan) = ADC;
                         continue;
                     }else{
-                        //Because the ADC is a small number in these units, scale it (effectively altering the units).
-                        // We want at least three significant figures, and the ADC should be ~0.9E-3.
-FUNCERR("Need to figure out if the 1E6x scaling factor is needed here. It might be for precision arguments");
-                        const auto ADC_int = static_cast<float>(ADC*1.0E6);
-                        working.reference(row, col, chan) = ADC_int;
+//                        //Because the ADC is a small number in these units, scale it (effectively altering the units).
+//                        // We want at least three significant figures, and the ADC should be ~0.9E-3.
+//FUNCERR("Need to figure out if the 1E6x scaling factor is needed here. It might be for precision arguments");
+//                        const auto ADC_int = static_cast<float>(ADC*1.0E6);
+                        working.reference(row, col, chan) = ADC;
 
-                        minmax_pixel.Digest(ADC_int);
+                        minmax_pixel.Digest(ADC);
                     }
                 }
             }//Loop over channels.
@@ -157,7 +186,7 @@ FUNCERR("Need to figure out if the 1E6x scaling factor is needed here. It might 
     //Swap the original image with the working image.
     *first_img_it = working;
 
-    UpdateImageDescription( std::ref(*first_img_it), "ADC Map" );
+    UpdateImageDescription( std::ref(*first_img_it), "ADC" );
     UpdateImageWindowCentreWidth( std::ref(*first_img_it), minmax_pixel );
 
     return true;

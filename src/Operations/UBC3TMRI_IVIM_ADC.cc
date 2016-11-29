@@ -105,36 +105,34 @@ Drover UBC3TMRI_IVIM_ADC(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::ma
     for(auto & img_arr : orig_img_arrays){
         DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( *img_arr ) );
         adc_map_img_arrays.emplace_back( DICOM_data.image_data.back() );
-        //std::shared_ptr<Image_Array> img_arr_series_501_ADC_map( DICOM_data.image_data.back() );
 
         if(!adc_map_img_arrays.back()->imagecoll.Process_Images( GroupSpatiallyTemporallyOverlappingImages, 
                                                                  IVIMMRIADCMap, 
                                                                  {}, {} )){
-            FUNCERR("Unable to generate ADC map");
+            throw std::runtime_error("Unable to generate ADC map");
         }
     }
-
 
 
     //Deep-copy the ADC map and compute a slope-sign map.
-    std::vector<std::shared_ptr<Image_Array>> slope_sign_map_img_arrays;
-    auto TimeCourseSlopeMapAllTime = std::bind(TimeCourseSlopeMap, 
-                                               std::placeholders::_1, std::placeholders::_2, 
-                                               std::placeholders::_3, std::placeholders::_4,
-                                               std::numeric_limits<double>::min(), std::numeric_limits<double>::max(),
-                                               std::experimental::any());
-    for(auto & img_arr : adc_map_img_arrays){
-        DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( *img_arr ) );
-        slope_sign_map_img_arrays.emplace_back( DICOM_data.image_data.back() );
-        //std::shared_ptr<Image_Array> img_arr_time_course_slope_map( DICOM_data.image_data.back() );
+    if(false){
+        std::vector<std::shared_ptr<Image_Array>> slope_sign_map_img_arrays;
+        auto TimeCourseSlopeMapAllTime = std::bind(TimeCourseSlopeMap, 
+                                                   std::placeholders::_1, std::placeholders::_2, 
+                                                   std::placeholders::_3, std::placeholders::_4,
+                                                   std::numeric_limits<double>::min(), std::numeric_limits<double>::max(),
+                                                   std::experimental::any());
+        for(auto & img_arr : adc_map_img_arrays){
+            DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( *img_arr ) );
+            slope_sign_map_img_arrays.emplace_back( DICOM_data.image_data.back() );
 
-        if(!slope_sign_map_img_arrays.back()->imagecoll.Process_Images( GroupSpatiallyOverlappingImages,
-                                                                        TimeCourseSlopeMapAllTime,
-                                                                        {}, {} )){
-            FUNCERR("Unable to compute time course slope map");
+            if(!slope_sign_map_img_arrays.back()->imagecoll.Process_Images( GroupSpatiallyOverlappingImages,
+                                                                            TimeCourseSlopeMapAllTime,
+                                                                            {}, {} )){
+                throw std::runtime_error("Unable to compute time course slope map");
+            }
         }
     }
-
 
     return std::move(DICOM_data);
 }
