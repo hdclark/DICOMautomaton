@@ -28,6 +28,8 @@
 #include "Operations/ConvertDoseToImage.h"
 #include "Operations/ConvertNaNsToAir.h"
 #include "Operations/CropImageDoseToROIs.h"
+#include "Operations/DCEMRI_IAUC.h"
+#include "Operations/DCEMRI_Nonparametric_CE.h"
 #include "Operations/DecimatePixels.h"
 #include "Operations/DumpAllOrderedImageMetadataToFile.h"
 #include "Operations/DumpAnEncompassedPoint.h"
@@ -47,12 +49,14 @@
 #include "Operations/GiveWholeImageArrayAnAbdominalWindowLevel.h"
 #include "Operations/GridBasedRayCastDoseAccumulate.h"
 #include "Operations/ImageRoutineTests.h"
+#include "Operations/LogScale.h"
 #include "Operations/MaxMinPixels.h"
 #include "Operations/PlotPerROITimeCourses.h"
 #include "Operations/PreFilterEnormousCTValues.h"
 #include "Operations/ContourBasedRayCastDoseAccumulate.h"
 #include "Operations/SelectSlicesIntersectingROI.h"
 #include "Operations/SFML_Viewer.h"
+#include "Operations/SpatialBlur.h"
 #include "Operations/Subsegment_ComputeDose_VanLuijk.h"
 #include "Operations/SupersampleImageGrid.h"
 #include "Operations/UBC3TMRI_DCE.h"
@@ -82,6 +86,8 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["ConvertDoseToImage"] = std::make_pair(OpArgDocConvertDoseToImage, ConvertDoseToImage);
     out["ConvertNaNsToAir"] = std::make_pair(OpArgDocConvertNaNsToAir, ConvertNaNsToAir);
     out["CropImageDoseToROIs"] = std::make_pair(OpArgDocCropImageDoseToROIs, CropImageDoseToROIs);
+    out["DCEMRI_IAUC"] = std::make_pair(OpArgDocDCEMRI_IAUC, DCEMRI_IAUC);
+    out["DCEMRI_Nonparametric_CE"] = std::make_pair(OpArgDocDCEMRI_Nonparametric_CE, DCEMRI_Nonparametric_CE);
     out["DecimatePixels"] = std::make_pair(OpArgDocDecimatePixels, DecimatePixels);
     out["DumpAllOrderedImageMetadataToFile"] = std::make_pair(OpArgDocDumpAllOrderedImageMetadataToFile, DumpAllOrderedImageMetadataToFile);
     out["DumpAnEncompassedPoint"] = std::make_pair(OpArgDocDumpAnEncompassedPoint, DumpAnEncompassedPoint);
@@ -104,12 +110,14 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["GiveWholeImageArrayAnAbdominalWindowLevel"] = std::make_pair(OpArgDocGiveWholeImageArrayAnAbdominalWindowLevel, GiveWholeImageArrayAnAbdominalWindowLevel);
     out["GridBasedRayCastDoseAccumulate"] = std::make_pair(OpArgDocGridBasedRayCastDoseAccumulate, GridBasedRayCastDoseAccumulate);
     out["ImageRoutineTests"] = std::make_pair(OpArgDocImageRoutineTests, ImageRoutineTests);
+    out["LogScale"] = std::make_pair(OpArgDocLogScale, LogScale);
     out["MaxMinPixels"] = std::make_pair(OpArgDocMaxMinPixels, MaxMinPixels);
     out["ContourBasedRayCastDoseAccumulate"] = std::make_pair(OpArgDocContourBasedRayCastDoseAccumulate, ContourBasedRayCastDoseAccumulate);
     out["PlotPerROITimeCourses"] = std::make_pair(OpArgDocPlotPerROITimeCourses, PlotPerROITimeCourses);
     out["PreFilterEnormousCTValues"] = std::make_pair(OpArgDocPreFilterEnormousCTValues, PreFilterEnormousCTValues);
     out["SelectSlicesIntersectingROI"] = std::make_pair(OpArgDocSelectSlicesIntersectingROI, SelectSlicesIntersectingROI);
     out["SFML_Viewer"] = std::make_pair(OpArgDocSFML_Viewer, SFML_Viewer);
+    out["SpatialBlur"] = std::make_pair(OpArgDocSpatialBlur, SpatialBlur);
     out["Subsegment_ComputeDose_VanLuijk"] = std::make_pair(OpArgDocSubsegment_ComputeDose_VanLuijk, Subsegment_ComputeDose_VanLuijk);
     out["SupersampleImageGrid"] = std::make_pair(OpArgDocSupersampleImageGrid, SupersampleImageGrid);
     out["UBC3TMRI_DCE"] = std::make_pair(OpArgDocUBC3TMRI_DCE, UBC3TMRI_DCE);

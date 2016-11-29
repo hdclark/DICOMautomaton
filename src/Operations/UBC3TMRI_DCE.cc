@@ -135,7 +135,7 @@ Drover UBC3TMRI_DCE(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std
     }
 
     //Deep-copy images at a single temporal point and highlight the ROIs. 
-    if(!cc_all.empty()){
+    if(false && !cc_all.empty()){
         std::vector<std::shared_ptr<Image_Array>> roi_highlighted_img_arrays;
         for(auto & img_arr : temporal_avg_img_arrays){
             DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( *img_arr ) );
@@ -151,7 +151,7 @@ Drover UBC3TMRI_DCE(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std
 
     //Deep-copy temporally-averaged images and blur them.
     std::vector<std::shared_ptr<Image_Array>> tavgd_blurred;
-    if(true){
+    if(false){
         for(auto img_ptr : temporal_avg_img_arrays){
             DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( *img_ptr ) );
             tavgd_blurred.push_back( DICOM_data.image_data.back() );

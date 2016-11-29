@@ -13,7 +13,6 @@
 #include "../ConvenienceRoutines.h"
 
 
-
 bool DCEMRISigDiffC( planar_image_collection<float,double>::images_list_it_t  local_img_it,
                      std::list<std::reference_wrapper<planar_image_collection<float,double>>> external_imgs,
                      std::list<std::reference_wrapper<contour_collection<double>>>, 
@@ -21,8 +20,8 @@ bool DCEMRISigDiffC( planar_image_collection<float,double>::images_list_it_t  lo
 
     //This image-processing functor takes the long running DCE-MRI temporal series, and the temporally-averaged, pre-contrast
     // long running DCE-MRI signal from the same series, and produces a "poor-man's contrast" map like:
-    //      pixel values ~ (S(t) - S_preC_avgd)/S_preC_avgd.
-    // The values are scaled up so they are not clipped during conversion to integer (packing into integer image pixels).
+    //      pixel values ~ (S(t) - baseline)/baseline
+    // where "baseline" images are pre-contrast measurement images which have been temporally averaged.
     //
     // NOTE: This routine ignores T1 changes due to presence of gadolinium and is therefore not suitable for many things.
     //       It is fairly robust, though, and might be OK for qualitative purposes. If in doubt, ALWAYS prefer the proper
@@ -38,7 +37,7 @@ bool DCEMRISigDiffC( planar_image_collection<float,double>::images_list_it_t  lo
     //Record the min and max actual pixel values for windowing purposes.
     Stats::Running_MinMax<float> minmax_pixel;
 
-    //Select the S0 and T1 map images which spatially overlap with this image.
+    //Select the baseline images which spatially overlap with this image.
     const auto img_cntr  = local_img_it->center();
     const auto img_ortho = local_img_it->row_unit.Cross( local_img_it->col_unit ).unit();
     const std::list<vec3<double>> points = { img_cntr, img_cntr + img_ortho * local_img_it->pxl_dz * 0.25,
@@ -69,7 +68,7 @@ bool DCEMRISigDiffC( planar_image_collection<float,double>::images_list_it_t  lo
                 if( std::isfinite(C_f) ){ 
                     const auto newval = C_f;
                     local_img_it->reference(row, col, chan) = newval;
-                    if(isininc(0.0,C_f,3.0)){
+                    if(isininc(-0.5,C_f,5.0)){
                         minmax_pixel.Digest(newval);
                     }
                 }else{

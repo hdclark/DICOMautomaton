@@ -14,6 +14,8 @@ add_library(Operations_objs OBJECT
     ContourSimilarity.cc
     ContouringAides.cc
     ConvertNaNsToAir.cc
+    DCEMRI_Nonparametric_CE.cc
+    DCEMRI_IAUC.cc
     DecimatePixels.cc
     DumpAllOrderedImageMetadataToFile.cc
     DumpAnEncompassedPoint.cc
@@ -33,12 +35,14 @@ add_library(Operations_objs OBJECT
     GiveWholeImageArrayAnAbdominalWindowLevel.cc
     GridBasedRayCastDoseAccumulate.cc
     ImageRoutineTests.cc
+    LogScale.cc
     MaxMinPixels.cc
     PlotPerROITimeCourses.cc
     PreFilterEnormousCTValues.cc
     ContourBasedRayCastDoseAccumulate.cc
     SelectSlicesIntersectingROI.cc
     SFML_Viewer.cc
+    SpatialBlur.cc
     Subsegment_ComputeDose_VanLuijk.cc
     SupersampleImageGrid.cc
     UBC3TMRI_DCE.cc
