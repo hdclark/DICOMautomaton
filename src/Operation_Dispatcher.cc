@@ -41,6 +41,7 @@
 #include "Operations/DumpROIData.h"
 #include "Operations/DumpROIDoseInfo.h"
 #include "Operations/DumpROISurfaceMeshes.h"
+#include "Operations/DumpVoxelDoseInfo.h"
 #include "Operations/GenerateSurfaceMask.h"
 #include "Operations/GenerateVirtualDataPerfusionV1.h"
 #include "Operations/GiveWholeImageArrayABoneWindowLevel.h"
@@ -102,6 +103,7 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["DumpROIData"] = std::make_pair(OpArgDocDumpROIData, DumpROIData);
     out["DumpROIDoseInfo"] = std::make_pair(OpArgDocDumpROIDoseInfo, DumpROIDoseInfo);
     out["DumpROISurfaceMeshes"] = std::make_pair(OpArgDocDumpROISurfaceMeshes, DumpROISurfaceMeshes);
+    out["DumpVoxelDoseInfo"] = std::make_pair(OpArgDocDumpVoxelDoseInfo, DumpVoxelDoseInfo);
     out["GenerateSurfaceMask"] = std::make_pair(OpArgDocGenerateSurfaceMask, GenerateSurfaceMask);
     out["GenerateVirtualDataPerfusionV1"] = std::make_pair(OpArgDocGenerateVirtualDataPerfusionV1, GenerateVirtualDataPerfusionV1);
     out["GiveWholeImageArrayABoneWindowLevel"] = std::make_pair(OpArgDocGiveWholeImageArrayABoneWindowLevel, GiveWholeImageArrayABoneWindowLevel);

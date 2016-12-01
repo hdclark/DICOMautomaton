@@ -88,7 +88,7 @@ std::unique_ptr<Dose_Array> Meld_Equal_Geom_Dose_Data(std::shared_ptr<Dose_Array
     //A quicker way is to simply double the larger of the grid_scalings. This will ensure we do
     // not overflow - but it (probably unnecessarily) kills our dose precision!
     const double largest_grid_scale = (A->grid_scale > B->grid_scale) ? A->grid_scale : B->grid_scale;
-    const double new_grid_scale = 2.0*largest_grid_scale;  
+    const double new_grid_scale = (A->grid_scale == B->grid_scale) ? A->grid_scale : 2.0*largest_grid_scale;  
 
     out->grid_scale = new_grid_scale;
     out->filename   = "Equal-geom dose meld of: "_s + A->filename + " and "_s + B->filename;
@@ -187,7 +187,7 @@ std::unique_ptr<Dose_Array> Meld_Unequal_Geom_Dose_Data(std::shared_ptr<Dose_Arr
     *out = *larger; //Make a deep copy of the data.
 
     const double largest_grid_scale = (A->grid_scale > B->grid_scale) ? A->grid_scale : B->grid_scale;
-    const double new_grid_scale = 2.0*largest_grid_scale;
+    const double new_grid_scale = (A->grid_scale == B->grid_scale) ? A->grid_scale : 2.0*largest_grid_scale;  
 
     out->grid_scale = new_grid_scale;
     out->filename   = "Unequal-geom dose meld of: "_s + A->filename + " and "_s + B->filename;
