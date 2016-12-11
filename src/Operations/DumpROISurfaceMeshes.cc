@@ -202,6 +202,7 @@ Drover DumpROISurfaceMeshes(Drover DICOM_data, OperationArgPkg OptArgs, std::map
 
     bool use_pca_normal_estimation = true;
     bool use_jet_normal_estimation = false;
+    bool SurfaceMeshesOnly = true; //Abandoned the rest of the code for a segmentation approach, but it should still work.
 
 
     //Stuff references to all contours into a list. Remember that you can still address specific contours through
@@ -413,6 +414,15 @@ Drover DumpROISurfaceMeshes(Drover DICOM_data, OperationArgPkg OptArgs, std::map
         //Subdivision_method_3::CatmullClark_subdivision(output_mesh,subdiv_iters);
         CGAL::Subdivision_method_3::Loop_subdivision(output_mesh,subdiv_iters);
 
+        // Save reconstructed surface mesh
+        std::ofstream out(OutFile);
+        out << output_mesh;
+        //dump_reconstruction(reconstruct, OutFile);
+
+
+        // Continue processing only if requested.
+        if(SurfaceMeshesOnly) continue;
+
 
         // Compute the barycentre for faces of the polyhedron.
         std::vector<Triangle> triangles;
@@ -608,12 +618,6 @@ Drover DumpROISurfaceMeshes(Drover DICOM_data, OperationArgPkg OptArgs, std::map
             }
             std::cout << "Cluster centroid " << clusterid << " = " << centroid << std::endl;
         }
-
- 
-        // Save reconstructed surface mesh
-        std::ofstream out(OutFile);
-        out << output_mesh;
-        //dump_reconstruction(reconstruct, OutFile);
 
     }
 
