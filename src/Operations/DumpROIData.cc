@@ -94,38 +94,93 @@ Drover DumpROIData(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
     //Simply dump ROI contour information to stdout.
     typedef std::tuple<std::string,std::string,std::string> key_t; //PatientID, ROIName, NormalizedROIName.
 
-    std::map<key_t,int> NameCounts;
+    //Individual contour information.
+    std::map<key_t,int> ContourCounts;
+    std::map<key_t,double> MinimumSeparation; // Almost always the 'thickness' of contours.
+    std::map<key_t,double> SlabVolume;
+    std::map<key_t,double> TotalPerimeter; // Total perimeter of all contours.
+
+    std::map<key_t,double> RowLinearDimension; // Extreme linear width ("caliper width") position row and col unit directions.
+    std::map<key_t,double> ColLinearDimension;
+
+    const vec3<double> row_unit(1.0,0.0,0.0); //Assumption!
+    const vec3<double> col_unit(0.0,1.0,0.0); //Assumption!
+    const auto ortho_unit = row_unit.Cross(col_unit).unit();
+
+    const bool PlanarContourAssumption = true;
     if(DICOM_data.contour_data != nullptr){
         for(auto & cc : DICOM_data.contour_data->ccs){
             for(auto & c : cc.contours){
                 key_t key = std::tie(c.metadata["PatientID"], c.metadata["ROIName"], c.metadata["NormalizedROIName"]);
-                NameCounts[key] += 1;
+                const auto min_sep = c.GetMetadataValueAs<double>("MinimumSeparation").value();
+                ContourCounts[key] += 1;
+                MinimumSeparation[key] = min_sep;
+                SlabVolume[key] += std::abs( c.Get_Signed_Area(PlanarContourAssumption) * min_sep );
+                TotalPerimeter[key] += std::abs( c.Perimeter() );
+
+                //Find the axes-aligned extrema. 
+                {
+                    //Verify the row and unit direction assumptions are at least reasonable.
+                    const auto est_normal = c.Estimate_Planar_Normal();
+                    if( std::abs(est_normal.Dot(ortho_unit)) < 0.95 ){
+                        RowLinearDimension[key] = std::numeric_limits<double>::quiet_NaN();
+                        ColLinearDimension[key] = std::numeric_limits<double>::quiet_NaN();
+
+                    }else{
+                        //Find the min and max projection along each unit.
+                        std::vector<double> row_proj;
+                        std::vector<double> col_proj;
+                        for(const auto &p : c.points){
+                            row_proj.push_back( row_unit.Dot(p) );
+                            col_proj.push_back( col_unit.Dot(p) );
+                        }
+                        decltype(row_proj)::iterator row_min_it;
+                        decltype(row_proj)::iterator row_max_it;
+                        decltype(col_proj)::iterator col_min_it;
+                        decltype(col_proj)::iterator col_max_it;
+                        std::tie(row_min_it, row_max_it) = std::minmax_element(std::begin(row_proj), std::end(row_proj));
+                        std::tie(col_min_it, col_max_it) = std::minmax_element(std::begin(col_proj), std::end(col_proj));
+
+                        RowLinearDimension[key] = std::abs(*row_max_it - *row_min_it);
+                        ColLinearDimension[key] = std::abs(*col_max_it - *col_min_it);
+                    }
+                }
+
             }
         }
     }
 
-    std::cout << "==== Raw labels, contour counts, and normalized ROIName ====" << std::endl;
-    for(auto & NameCount : NameCounts){
-        std::cout << "PatientID='" << std::get<0>(NameCount.first) << "'\t"
-                  << "ROIName='" << std::get<1>(NameCount.first) << "'\t"
-                  << "NormalizedROIName='" << std::get<2>(NameCount.first) << "'\t"
-                  << "Contours='" << NameCount.second << "'"
+    std::cout << "==== Raw labels, normalized ROIName, contour counts, and slab volume ====" << std::endl;
+    for(auto & ContourCount : ContourCounts){
+        const auto thekey = ContourCount.first;
+        std::cout << "DumpROIData:\t"
+                  << "PatientID='" << std::get<0>(thekey) << "'\t"
+                  << "ROIName='" << std::get<1>(thekey) << "'\t"
+                  << "NormalizedROIName='" << std::get<2>(thekey) << "'\t"
+                  << "ContourCount=" << ContourCount.second << "\t"
+                  << "MinimumSeparation=" << MinimumSeparation[thekey] << "\t"
+                  << "SlabVolume=" << SlabVolume[thekey] << "\t"
+                  << "TotalPerimeter=" << TotalPerimeter[thekey] << "\t"
+                  << "RowLinearDimension=" << RowLinearDimension[thekey] << "\t"
+                  << "ColLinearDimension=" << ColLinearDimension[thekey] << "\t"
                   << std::endl;
     }
     std::cout << std::endl;
 
+
+
     std::cout << "==== Explictor best-guesses ====" << std::endl;
     Explicator X(FilenameLex);
-    for(auto & NameCount : NameCounts){
+    for(auto & ContourCount : ContourCounts){
         //Simply dump the suspected mapping.
-        //std::cout << "PatientID='" << std::get<0>(NameCount.first) << "'\t"
-        //          << "ROIName='" << std::get<1>(NameCount.first) << "'\t"
-        //          << "NormalizedROIName='" << std::get<2>(NameCount.first) << "'\t"
-        //          << "Contours='" << NameCount.second << "'"
+        //std::cout << "PatientID='" << std::get<0>(ContourCount.first) << "'\t"
+        //          << "ROIName='" << std::get<1>(ContourCount.first) << "'\t"
+        //          << "NormalizedROIName='" << std::get<2>(ContourCount.first) << "'\t"
+        //          << "Contours='" << ContourCount.second << "'"
         //          << std::endl;
 
         //Print out the best few guesses for each raw contour name.
-        const auto ROIName = std::get<1>(NameCount.first);
+        const auto ROIName = std::get<1>(ContourCount.first);
         X(ROIName);
         std::unique_ptr<std::map<std::string,float>> res(std::move(X.Get_Last_Results()));
         std::vector<std::pair<std::string,float>> ordered_res(res->begin(), res->end());
