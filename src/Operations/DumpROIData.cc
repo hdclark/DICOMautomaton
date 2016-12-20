@@ -175,7 +175,7 @@ Drover DumpROIData(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
                         if(ColLinearMax.count(key) == 0){  
                             ColLinearMax[key] = *col_max_it;
                         }else{
-                            if(*col_max_it < ColLinearMax[key]) ColLinearMax[key] = *col_max_it;
+                            if(*col_max_it > ColLinearMax[key]) ColLinearMax[key] = *col_max_it;
                         }
 
                         if(OrthoLinearMin.count(key) == 0){  
@@ -186,7 +186,7 @@ Drover DumpROIData(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
                         if(OrthoLinearMax.count(key) == 0){  
                             OrthoLinearMax[key] = *ortho_max_it;
                         }else{
-                            if(*ortho_max_it < OrthoLinearMax[key]) OrthoLinearMax[key] = *ortho_max_it;
+                            if(*ortho_max_it > OrthoLinearMax[key]) OrthoLinearMax[key] = *ortho_max_it;
                         }
 
                     }
