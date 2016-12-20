@@ -100,8 +100,12 @@ Drover DumpROIData(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
     std::map<key_t,double> SlabVolume;
     std::map<key_t,double> TotalPerimeter; // Total perimeter of all contours.
 
-    std::map<key_t,double> RowLinearDimension; // Extreme linear width ("caliper width") position row and col unit directions.
-    std::map<key_t,double> ColLinearDimension;
+    std::map<key_t,double> RowLinearMin; // Extreme linear width ("caliper width").
+    std::map<key_t,double> RowLinearMax;
+    std::map<key_t,double> ColLinearMin;
+    std::map<key_t,double> ColLinearMax;
+    std::map<key_t,double> OrthoLinearMin; // To the center; does not include contour thickness. (Added later.)
+    std::map<key_t,double> OrthoLinearMax;
 
     const vec3<double> row_unit(1.0,0.0,0.0); //Assumption!
     const vec3<double> col_unit(0.0,1.0,0.0); //Assumption!
@@ -120,29 +124,71 @@ Drover DumpROIData(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
 
                 //Find the axes-aligned extrema. 
                 {
+
                     //Verify the row and unit direction assumptions are at least reasonable.
                     const auto est_normal = c.Estimate_Planar_Normal();
                     if( std::abs(est_normal.Dot(ortho_unit)) < 0.95 ){
-                        RowLinearDimension[key] = std::numeric_limits<double>::quiet_NaN();
-                        ColLinearDimension[key] = std::numeric_limits<double>::quiet_NaN();
+                        RowLinearMin[key] = std::numeric_limits<double>::quiet_NaN();
+                        RowLinearMax[key] = std::numeric_limits<double>::quiet_NaN();
+                        ColLinearMin[key] = std::numeric_limits<double>::quiet_NaN();
+                        ColLinearMax[key] = std::numeric_limits<double>::quiet_NaN();
+                        OrthoLinearMin[key] = std::numeric_limits<double>::quiet_NaN();
+                        OrthoLinearMax[key] = std::numeric_limits<double>::quiet_NaN();
 
                     }else{
                         //Find the min and max projection along each unit.
                         std::vector<double> row_proj;
                         std::vector<double> col_proj;
+                        std::vector<double> ortho_proj;
                         for(const auto &p : c.points){
                             row_proj.push_back( row_unit.Dot(p) );
                             col_proj.push_back( col_unit.Dot(p) );
+                            ortho_proj.push_back( ortho_unit.Dot(p) );
                         }
                         decltype(row_proj)::iterator row_min_it;
                         decltype(row_proj)::iterator row_max_it;
                         decltype(col_proj)::iterator col_min_it;
                         decltype(col_proj)::iterator col_max_it;
+                        decltype(col_proj)::iterator ortho_min_it;
+                        decltype(col_proj)::iterator ortho_max_it;
                         std::tie(row_min_it, row_max_it) = std::minmax_element(std::begin(row_proj), std::end(row_proj));
                         std::tie(col_min_it, col_max_it) = std::minmax_element(std::begin(col_proj), std::end(col_proj));
+                        std::tie(ortho_min_it, ortho_max_it) = std::minmax_element(std::begin(ortho_proj), std::end(ortho_proj));
 
-                        RowLinearDimension[key] = std::abs(*row_max_it - *row_min_it);
-                        ColLinearDimension[key] = std::abs(*col_max_it - *col_min_it);
+                        //Only update if the caliper width is larger. (The default will be zero.)
+                        if(RowLinearMin.count(key) == 0){  
+                            RowLinearMin[key] = *row_min_it;
+                        }else{
+                            if(*row_min_it < RowLinearMin[key]) RowLinearMin[key] = *row_min_it;
+                        }
+                        if(RowLinearMax.count(key) == 0){  
+                            RowLinearMax[key] = *row_max_it;
+                        }else{
+                            if(*row_max_it > RowLinearMax[key]) RowLinearMax[key] = *row_max_it;
+                        }
+
+                        if(ColLinearMin.count(key) == 0){  
+                            ColLinearMin[key] = *col_min_it;
+                        }else{
+                            if(*col_min_it < ColLinearMin[key]) ColLinearMin[key] = *col_min_it;
+                        }
+                        if(ColLinearMax.count(key) == 0){  
+                            ColLinearMax[key] = *col_max_it;
+                        }else{
+                            if(*col_max_it < ColLinearMax[key]) ColLinearMax[key] = *col_max_it;
+                        }
+
+                        if(OrthoLinearMin.count(key) == 0){  
+                            OrthoLinearMin[key] = *ortho_min_it;
+                        }else{
+                            if(*ortho_min_it < OrthoLinearMin[key]) OrthoLinearMin[key] = *ortho_min_it;
+                        }
+                        if(OrthoLinearMax.count(key) == 0){  
+                            OrthoLinearMax[key] = *ortho_max_it;
+                        }else{
+                            if(*ortho_max_it < OrthoLinearMax[key]) OrthoLinearMax[key] = *ortho_max_it;
+                        }
+
                     }
                 }
 
@@ -161,8 +207,9 @@ Drover DumpROIData(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
                   << "MinimumSeparation=" << MinimumSeparation[thekey] << "\t"
                   << "SlabVolume=" << SlabVolume[thekey] << "\t"
                   << "TotalPerimeter=" << TotalPerimeter[thekey] << "\t"
-                  << "RowLinearDimension=" << RowLinearDimension[thekey] << "\t"
-                  << "ColLinearDimension=" << ColLinearDimension[thekey] << "\t"
+                  << "RowLinearDimension=" << (RowLinearMax[thekey] - RowLinearMin[thekey]) << "\t"
+                  << "ColLinearDimension=" << (ColLinearMax[thekey] - ColLinearMin[thekey]) << "\t"
+                  << "OrthoLinearDimension=" << (OrthoLinearMax[thekey] - OrthoLinearMin[thekey] + MinimumSeparation[thekey]) << "\t"
                   << std::endl;
     }
     std::cout << std::endl;
