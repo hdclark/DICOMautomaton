@@ -189,6 +189,9 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
     window.create(sf::VideoMode(640, 480), "DICOMautomaton Image Viewer");
     window.setFramerateLimit(60);
 
+    //Create a secondary plotting window. Gets opened on command.
+    sf::RenderWindow plotwindow;
+
     if(auto ImageDesc = disp_img_it->GetMetadataValueAs<std::string>("Description")){
         window.setTitle("DICOMautomaton IV: '"_s + ImageDesc.value() + "'");
     }else{
@@ -438,7 +441,8 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
                             "\\t\\t i \\t\\t Dump the current image to file.\\n"
                             "\\t\\t I \\t\\t Dump all images in the current array to file.\\n"
                             "\\t\\t r,R,c,C \\t Plot pixel intensity profiles along the mouse\\'s current row and column.\\n"
-                            "\\t\\t t,T \\t\\t Plot a time course at the mouse\\'s current row and column.\\n"
+                            "\\t\\t t \\t\\t Plot a time course at the mouse\\'s current row and column.\\n"
+                            "\\t\\t T \\t\\t Open a realtime plotting window.\\n"
                             "\\t\\t a,A \\t\\t Plot or dump the pixel values for [a]ll image sets which spatially overlap.\\n"
                             "\\t\\t M   \\t\\t Try plot a pharmacokinetic [M]odel using image map parameters and ROI time courses.\\n"
                             "\\t\\t N,P \\t\\t Advance to the next/previous image series.\\n"
@@ -686,12 +690,17 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
                         FUNCWARN("Failed to plot: " << e.what());
                     }
 
+                //Launch/open a realtime plotting window.
+                }else if( thechar == 'T' ){
+                    plotwindow.create(sf::VideoMode(640, 480), "DICOMautomaton Time Courses");
+                    plotwindow.setFramerateLimit(30);
+
                 //Given the current mouse coordinates, dump a time series at the image pixel over all available images
                 // which spatially overlap.
                 //
                 // So this routine dumps a time course at the mouse pixel.
                 //
-                }else if( (thechar == 't') || (thechar == 'T') ){
+                }else if( thechar == 't' ){
                     //Get the *realtime* current mouse coordinates.
                     const sf::Vector2i curr_m_pos = sf::Mouse::getPosition(window);
 
@@ -1476,6 +1485,7 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
                 // coordinate system.
                 scale_sprite_to_fill_screen(window,disp_img_it,disp_img_texture_sprite);
 
+            }else if(window.hasFocus() && (event.type == sf::Event::MouseMoved)){
             }else if(event.type == sf::Event::LostFocus){
             }else if(event.type == sf::Event::GainedFocus){
             }else if(event.type == sf::Event::MouseEntered){
@@ -1483,7 +1493,37 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
             }else{
                 FUNCINFO("Ignored event!");
             }
+
         }
+
+        // ------------------------------ Plotting Window Events ----------------------------------------
+
+        if(plotwindow.isOpen()){
+            sf::Event event;
+            while(plotwindow.pollEvent(event)){
+                if(event.type == sf::Event::Closed){
+                    plotwindow.close();
+                }else if(plotwindow.hasFocus() && (event.type == sf::Event::KeyPressed)){
+                    if(event.key.code == sf::Keyboard::Escape){
+                        plotwindow.close();
+                    }else{
+                        FUNCINFO("Plotting plotwindow: keypress not yet bound to any action");
+                    }
+
+                }else if(event.type == sf::Event::Resized){
+                    sf::View view;
+                    view.reset(sf::FloatRect(0, 0, event.size.width, event.size.height));
+                    plotwindow.setView(view);
+                }else if(event.type == sf::Event::LostFocus){
+                }else if(event.type == sf::Event::GainedFocus){
+                }else if(event.type == sf::Event::MouseEntered){
+                }else if(event.type == sf::Event::MouseLeft){
+                }else{
+                    FUNCINFO("Ignored event!");
+                }
+            }
+        }
+
 
         // -------------------------------------- Rendering ----------------------------------------
 
@@ -1736,6 +1776,7 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
             }
         }
 
+
         window.display();
 
         if(DumpScreenshot){
@@ -1745,6 +1786,146 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
                 FUNCWARN("Unable to dump screenshot to file '" << fname_sshot << "'");
             }
         }
+
+        // -------------------------------- Plotting Window Rendering ----------------------------------------
+
+        do{
+            if(!plotwindow.isOpen()) break;
+            if(!window.hasFocus()) break;
+        
+            plotwindow.clear(sf::Color::Black);
+
+            // ---- Get time course data for the current pixel, if available ----
+
+            //Get the *realtime* current mouse coordinates.
+            const sf::Vector2i curr_m_pos = sf::Mouse::getPosition(window);
+
+            //Convert to SFML/OpenGL "World" coordinates. 
+            sf::Vector2f curr_m_pos_w = window.mapPixelToCoords(curr_m_pos);
+
+            //Check if the mouse is within the image bounding box. We can only proceed if it is.
+            sf::FloatRect disp_img_bbox = disp_img_texture_sprite.second.getGlobalBounds();
+            if(!disp_img_bbox.contains(curr_m_pos_w)){
+                //FUNCWARN("Mouse not over the image. Cannot dump time course");
+                break;
+            }
+
+            //Assuming the image is not rotated or skewed (though possibly scaled), determine which image pixel
+            // we are hovering over.
+            const auto clamped_col_as_f = fabs(curr_m_pos_w.x - disp_img_bbox.left)/disp_img_bbox.width;
+            const auto clamped_row_as_f = fabs(disp_img_bbox.top - curr_m_pos_w.y )/disp_img_bbox.height;
+
+            const auto img_w_h = disp_img_texture_sprite.first.getSize();
+            const auto col_as_u = static_cast<uint32_t>(clamped_col_as_f * static_cast<float>(img_w_h.x));
+            const auto row_as_u = static_cast<uint32_t>(clamped_row_as_f * static_cast<float>(img_w_h.y));
+            //FUNCINFO("Dumping time course for row,col = " << row_as_u << "," << col_as_u);
+
+            //Get the YgorImage (DICOM) pixel coordinates.
+            const auto pix_pos = disp_img_it->position(row_as_u,col_as_u);
+
+            //Get a list of images which spatially overlap this point. Order should be maintained.
+            const auto ortho = disp_img_it->row_unit.Cross( disp_img_it->col_unit ).unit();
+            const std::list<vec3<double>> points = { pix_pos, pix_pos + ortho * disp_img_it->pxl_dz * 0.25,
+                                                              pix_pos - ortho * disp_img_it->pxl_dz * 0.25 };
+            auto encompassing_images = (*img_array_ptr_it)->imagecoll.get_images_which_encompass_all_points(points);
+
+            //Cycle over the images, dumping the ordinate (pixel values) vs abscissa (time) derived from metadata.
+            samples_1D<double> shtl;
+            const std::string quantity("dt"); //As it appears in the metadata. Must convert to a double!
+            const bool sort_on_append = false;
+
+            for(const auto &enc_img_it : encompassing_images){
+                if(auto abscissa = enc_img_it->GetMetadataValueAs<double>(quantity)){
+                    try{
+                        const auto pix_val = enc_img_it->value(pix_pos,0);
+                        shtl.push_back( abscissa.value(), 0.0, 
+                                        static_cast<double>(pix_val), 0.0, sort_on_append );
+                    }catch(const std::exception &){ }
+                }
+            }
+            shtl.stable_sort();
+
+            if(shtl.size() < 2) break;
+
+            // Draw a plot.
+
+            {
+                //Get data extrema.
+                const auto D_Hminmax = shtl.Get_Extreme_Datum_x();
+                const auto D_Vminmax = shtl.Get_Extreme_Datum_y();
+
+                const auto D_MinH = D_Hminmax.first[0];
+                const auto D_MaxH = D_Hminmax.second[0];
+                const auto D_MinV = D_Vminmax.first[2];
+                const auto D_MaxV = D_Vminmax.second[2];
+
+                const auto D_H = std::abs(D_MaxH - D_MinH);
+                const auto D_V = std::abs(D_MaxV - D_MinV);
+
+                if(  ( D_H < std::numeric_limits<float>::min() )
+                  || ( D_V < std::numeric_limits<float>::min() ) ) break; //Too small to plot...
+
+                //Get SFML window extrema. Remember Top-left screen corner is origin, so +y is DOWNWARD.
+                const auto V = plotwindow.getView();
+                const auto V_S = V.getSize();
+                const auto V_P = V.getCenter();
+
+                const auto V_MinH = V_P.x - 0.5 * V_S.x;
+                const auto V_MaxH = V_MinH + V_S.x;
+                const auto V_MinV = V_P.y - 0.5 * V_S.y;
+                const auto V_MaxV = V_MinV + V_S.y;
+
+                const auto V_H = std::abs(V_MaxH - V_MinH);
+                const auto V_V = std::abs(V_MaxV - V_MinV);
+
+                //Create a lambda function that maps from the data space to the SFML space.
+                const auto D_to_V_map_H = [=](double x) -> float {
+                    return static_cast<float>( (x - D_MinH) * V_H / D_H - V_MinH );
+                };
+                const auto D_to_V_map_V = [=](double y) -> float {
+                    return static_cast<float>( (D_MaxV - y) * V_V / D_V - V_MinV );
+                };
+
+                //Plot axes lines.
+                {
+                    std::vector<sf::Vertex> H_axes;
+                    std::vector<sf::Vertex> V_axes;
+
+                    H_axes.emplace_back( sf::Vector2f( D_to_V_map_H(0.0), D_to_V_map_V(D_MinV) ), sf::Color::Blue );
+                    H_axes.emplace_back( sf::Vector2f( D_to_V_map_H(0.0), D_to_V_map_V(D_MaxV) ), sf::Color::Blue );
+
+                    V_axes.emplace_back( sf::Vector2f( D_to_V_map_H(D_MinH), D_to_V_map_V(0.0) ), sf::Color::Blue );
+                    V_axes.emplace_back( sf::Vector2f( D_to_V_map_H(D_MaxH), D_to_V_map_V(0.0) ), sf::Color::Blue );
+
+                    plotwindow.draw(H_axes.data(), H_axes.size(), sf::PrimitiveType::LineStrip);
+                    plotwindow.draw(V_axes.data(), V_axes.size(), sf::PrimitiveType::LineStrip);
+                }
+
+                //Plot the data.
+                {
+                    std::vector<sf::Vertex> verts;
+                    for(const auto & d : shtl.samples){
+                        verts.emplace_back( sf::Vector2f( D_to_V_map_H(d[0]), D_to_V_map_V(d[2]) ), sf::Color::Yellow );
+                    }
+                    plotwindow.draw(verts.data(), verts.size(), sf::PrimitiveType::LineStrip);
+                    
+                    for(const auto & d : shtl.samples){
+                        sf::CircleShape acirc;
+                        const float r = 2.0f;
+                        acirc.setRadius(r);
+                        acirc.setFillColor(sf::Color(255,69,0,255)); // Orange.
+                        acirc.setOutlineColor(sf::Color::Yellow);
+                        acirc.setOutlineThickness(1.0f);
+                        acirc.setPosition( sf::Vector2f( D_to_V_map_H(d[0]), D_to_V_map_V(d[2]) ) );
+                        plotwindow.draw(acirc);
+                    }
+                }
+
+            }
+
+            plotwindow.display();
+
+        }while(false);
 
     }
 
