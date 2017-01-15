@@ -38,7 +38,7 @@ int main(int argc, char **argv){
     std::string Comments;   //Human-readable general comments.
     std::string GDCMDump;   //Text of executing `gdcmdump` if available.
     bool dryrun = false;    //Do not actually insert the file into the db, just test for errors.
-
+    bool verbose = false;   //Print extra information. Normally successful info is suppresed.
 
     //---------------------------------------------------------------------------------------------------------
     //------------------------------------------ Argument Handling --------------------------------------------
@@ -50,7 +50,7 @@ int main(int argc, char **argv){
                         " into the PACs system database. The file itself will be copied into "
                         " the database and various bits of data will be deciphered.          ";
 
-    arger.examples = { { " -f '/tmp/a.dcm' -g '/tmp/a.gdcmdump'" ,
+    arger.examples = { { " -f '/tmp/a.dcm' -g '/tmp/a.gdcmdump' -p 'XYZ Study 2017' -c 'Bulk insert for XYZ.'" ,
                          "Insert the file '/tmp/a.dcm' into the database." } 
     };
     //----
@@ -59,7 +59,10 @@ int main(int argc, char **argv){
         FUNCERR("Unrecognized option with argument: '" << optarg << "'");
     };
     arger.optionless_callback = [&](const std::string &optarg) -> void {
-        if(!DICOMFile.empty()) FUNCERR("This program can only handle a single file at a time");
+        if(!DICOMFile.empty()){
+            FUNCERR("This program can only handle a single file at a time."
+                    " Earlier file: '" << DICOMFile << "'. This file: '" << optarg << "'");
+        }
         DICOMFile = optarg;
         return;
     };
@@ -95,6 +98,12 @@ int main(int argc, char **argv){
                                      "Do not perform ingress or file insertion. Just test DB ingress for errors.",
                                      [&](const std::string &optarg) -> void {
         dryrun = true;
+        return;
+    }));
+    arger.push_back( std::make_tuple(3, 'v', "verbose", false, "",
+                                     "Print extra information.",
+                                     [&](const std::string &optarg) -> void {
+        verbose = true;
         return;
     }));
 
@@ -145,30 +154,6 @@ int main(int argc, char **argv){
     const auto NewGDCMDumpFileName = Detox_String(SOPInstanceUID) + ".gdcmdump";
     const auto StoreGDCMDumpFileName = NewFullDir + NewGDCMDumpFileName;
 
-    if(!dryrun){
-        //Ensure the destination location can be created and the file copied.
-        if(!Does_Dir_Exist_And_Can_Be_Read(NewFullDir) && !Create_Dir_and_Necessary_Parents(NewFullDir)){
-            FUNCERR("Unable to create directory '" << NewFullDir << "'. Cannot continue");
-        }
-
-        //if(!TouchFile(StoreFullPathName)){
-        //    FUNCERR("Unable to touch file '" << StoreFullPathName << "'. Cannot continue");
-        //}
-
-        //Copy the file.
-        if(!CopyFile(DICOMFile, StoreFullPathName)){
-            FUNCERR("Unable to copy file '" << DICOMFile << "' to filesystem store destination '" << StoreFullPathName << "'");
-        }
-
-        //Write the GDCMDump file into the store.
-        if(!WriteStringToFile(GDCMDump, StoreGDCMDumpFileName)){
-            FUNCERR("Unable to write GDCMDump file '" << StoreGDCMDumpFileName << "' into the filesystem store");
-        }
-
-        //Set the permissions ...
-        // ... TODO ...
-    }
-
     //---------------------------------------------------------------------------------------------------------
     //----------------------------------------- Database Registration -----------------------------------------
     //---------------------------------------------------------------------------------------------------------
@@ -181,6 +166,51 @@ int main(int argc, char **argv){
         pqxx::connection c(db_params);
         pqxx::work txn(c);
         std::stringstream tb1, tb2;
+        pqxx::result r;
+
+        //----------------------------- Determine if a record already exists ----------------------------------
+        //This is not a conclusive test, but will stop many unneccesary file insertion into the store.
+
+        tb1.str(""); //Clear stringstream.
+        tb2.str(""); //Clear stringstream.
+        tb1 << "SELECT PatientID FROM metadata WHERE ( ";
+
+        tb1 << "       ( PatientID         = " << txn.quote(mmap["PatientID"])         << " ) ";
+        tb1 << "   AND ( StudyInstanceUID  = " << txn.quote(mmap["StudyInstanceUID"])  << " ) ";
+        tb1 << "   AND ( SeriesInstanceUID = " << txn.quote(mmap["SeriesInstanceUID"]) << " ) ";
+        tb1 << "   AND ( SOPInstanceUID    = " << txn.quote(mmap["SOPInstanceUID"])    << " ) ";
+        tb1 << " ) ;";
+
+        r = txn.exec(tb1.str());
+        if(!r.empty()){
+            FUNCWARN("Conflicting file already present. Treating as a duplicate and NOT ingressing");
+            return 0;
+        }
+
+        //-------------------------------------- Import the files ---------------------------------------------
+        if(!dryrun){
+            //Ensure the destination location can be created and the file copied.
+            if(!Does_Dir_Exist_And_Can_Be_Read(NewFullDir) && !Create_Dir_and_Necessary_Parents(NewFullDir)){
+                FUNCERR("Unable to create directory '" << NewFullDir << "'. Cannot continue");
+            }
+
+            //if(!TouchFile(StoreFullPathName)){
+            //    FUNCERR("Unable to touch file '" << StoreFullPathName << "'. Cannot continue");
+            //}
+
+            //Copy the file.
+            if(!CopyFile(DICOMFile, StoreFullPathName)){
+                FUNCERR("Unable to copy file '" << DICOMFile << "' to filesystem store destination '" << StoreFullPathName << "'");
+            }
+
+            //Write the GDCMDump file into the store.
+            if(!WriteStringToFile(GDCMDump, StoreGDCMDumpFileName)){
+                FUNCERR("Unable to write GDCMDump file '" << StoreGDCMDumpFileName << "' into the filesystem store");
+            }
+
+            //Set the permissions ...
+            // ... TODO ...
+        }
 
         //------------------------------------- Claim a new pacsid --------------------------------------------
         //Don't worry about iterating the nidus unnecessarily. There is plenty of room to skip ids, and we can
@@ -191,7 +221,7 @@ int main(int argc, char **argv){
         tb1 << "    (pacsid) VALUES (nextval('pacsid_nidus_seq')) ";
         tb1 << "RETURNING pacsid;                                 ";
 
-        pqxx::result r = txn.exec(tb1.str());
+        r = txn.exec(tb1.str());
         if(r.affected_rows() != 1) FUNCERR("Unable to create new pacsid. Cannot continue");
         const auto pacsid = r[0]["pacsid"].as<long int>(); 
 
@@ -231,13 +261,13 @@ int main(int argc, char **argv){
             //Remove directory ... IFF nothing else is in it... TODO FIXME.
             // ...
 
-            FUNCERR("Number of affected rows was " << r.affected_rows() << " != 1");
+            FUNCERR("DB insertion affected " << r.affected_rows() << " rows. Since != 1 the insertion was aborted");
         }else{
-            FUNCINFO("Success! PACS id=" << pacsid << " and StoreFullPathName='" << StoreFullPathName << "'");
+            if(verbose) FUNCINFO("Success! PACS id=" << pacsid << " and StoreFullPathName='" << StoreFullPathName << "'");
         }
 
         if(dryrun){
-            FUNCINFO("Dry run successful. No errors encountered");
+            if(verbose) FUNCINFO("Dry run successful. No errors encountered");
             return 0;
         }else{
             txn.commit(); 
