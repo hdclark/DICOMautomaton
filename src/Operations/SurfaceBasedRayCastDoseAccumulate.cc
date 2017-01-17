@@ -623,12 +623,9 @@ Drover SurfaceBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptA
                                                          static_cast<double>(p->z()));
 
                                     //Find the dose at the intersection point.
-                                    auto encompass_imgs = dose_arr_ptr->imagecoll.get_images_which_encompass_point( P );
-                                    for(const auto &enc_img : encompass_imgs){
-                                        const auto pix_val = enc_img->value(P, 0);
-                                        accumulated_totaldose += pix_val;
-                                    }
+                                    const auto interp_val = dose_arr_ptr->imagecoll.trilinearly_interpolate(P,0);
 
+                                    accumulated_totaldose += interp_val;
                                     accumulated_counts += 1.0;
                                     break; //Terminate the loop after the first intersection.
                                 }
