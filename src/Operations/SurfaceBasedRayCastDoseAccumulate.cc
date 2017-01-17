@@ -120,18 +120,6 @@
 std::list<OperationArgDoc> OpArgDocSurfaceBasedRayCastDoseAccumulate(void){
     std::list<OperationArgDoc> out;
 
-/*
-    out.emplace_back();
-    out.back().name = "DoseMapFileName";
-    out.back().desc = "A filename (or full path) for the dose image map."
-                      " Note that this file is approximate, and may not be accurate."
-                      " There is more information available when you use the length and dose*length maps instead."
-                      " However, this file is useful for viewing and eyeballing tuning settings."
-                      " The format is TBD. Leave empty to dump to generate a unique temporary file.";  // TODO: specify format.
-    out.back().default_val = "";
-    out.back().expected = true;
-    out.back().examples = { "", "/tmp/somefile", "localfile.img", "derivative_data.img" };
-*/
 
     out.emplace_back();
     out.back().name = "TotalDoseMapFileName";
@@ -219,6 +207,18 @@ std::list<OperationArgDoc> OpArgDocSurfaceBasedRayCastDoseAccumulate(void){
 
 
 Drover SurfaceBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string> /*InvocationMetadata*/, std::string FilenameLex){
+    // This routine uses rays to estimate point-dose on the surface of an ROI. The ROI is approximated by surface mesh
+    // and rays are passed through. Dose is interpolated at the intersection points and intersecting lines (i.e., where
+    // the ray 'glances' the surface) are discarded. The surface reconstruction can be tweaked, but appear to reasonably
+    // approximate the ROI contours; both can be output to compare visually.
+    //
+    // Though it is not required by the implementation, only the ray-surface intersection nearest to the detector is
+    // considered. All other intersections (i.e., on the far side of the surface mesh) are ignored.
+    //
+    // This routine is fairly fast compared to the slow grid-based counterpart previously implemented. The speedup comes
+    // from use of an AABB-tree to accelerate intersection queries and avoid having to 'walk' rays step-by-step through
+    // over/through the geometry. 
+    //
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     auto TotalDoseMapFileName = OptArgs.getValueStr("TotalDoseMapFileName").value();
@@ -451,71 +451,18 @@ Drover SurfaceBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptA
     }
     if(!polyhedron.is_pure_triangle()) throw std::runtime_error("Mesh is not purely triangular.");
 
-    // ============================================== Trim Facets ==================================================
-    // We need to trim facets that are irrelevant. These facets are defined by their proximity to the prostate.
-
-    // ...
-
     // =============================== Construct an AABB Tree for Spatial Lookups ==================================
 
     //typedef CGAL::Exact_predicates_inexact_constructions_kernel Kernel;
     typedef Kernel::Point_3 Point;
-    typedef Kernel::Plane_3 Plane;
-    typedef Kernel::Vector_3 Vector;
     typedef Kernel::Segment_3 Segment;
-    typedef Kernel::Ray_3 Ray;
     typedef CGAL::AABB_face_graph_triangle_primitive<Polyhedron> Triangle_Primitive;
     typedef CGAL::AABB_traits<Kernel, Triangle_Primitive> Traits;
     typedef CGAL::AABB_tree<Traits> AABB_Tree;
     typedef boost::optional< AABB_Tree::Intersection_and_primitive_id<Segment>::Type > Segment_intersection;
-    typedef boost::optional< AABB_Tree::Intersection_and_primitive_id<Plane>::Type > Plane_intersection;
-    typedef AABB_Tree::Primitive_id Primitive_id;
-
 
     //Construct the tree.
     AABB_Tree tree(faces(polyhedron).first, faces(polyhedron).second, polyhedron);
-    // The tree is now ready to query.
-
-
-
-
-
-
-
-    // constructs segment query
-    Point a(-1000.0, -10000.0, -10000.0);
-    Point b(bounding_sphere_center.x, bounding_sphere_center.y, bounding_sphere_center.z);
-    Segment segment_query(a,b);
-
-    // tests intersections with segment query
-    if(tree.do_intersect(segment_query)){
-        std::cout << "intersection(s)" << std::endl;
-    }else{
-        std::cout << "no intersection" << std::endl;
-    }
-
-    // computes # of intersections with segment query
-    std::cout << tree.number_of_intersected_primitives(segment_query) << " intersection(s)" << std::endl;
-
-    // computes first encountered intersection with segment query
-    // (generally a point)
-    Segment_intersection intersection = tree.any_intersection(segment_query);
-    if(intersection){
-        // gets intersection object
-      const Point* p = boost::get<Point>(&(intersection->first));
-      if(p){
-        std::cout << "intersection object is a point " << *p << std::endl;
-      }
-    }
-
-    // computes all intersections with segment query (as pairs object - primitive_id)
-    std::list<Segment_intersection> intersections;
-    tree.all_intersections(segment_query, std::back_inserter(intersections));
-
-
-    // computes all intersected primitives with segment query as primitive ids
-    std::list<Primitive_id> primitives;
-    tree.all_intersected_primitives(segment_query, std::back_inserter(primitives));
 
 
 
@@ -611,6 +558,8 @@ Drover SurfaceBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptA
     planar_image<float, double> *SourceImg = &(sd_image_collection.images.back());
     SourceImg->metadata["Description"] = "Intersection Count Map (number of ray-surface intersectons)";
 
+    const auto detector_plane = DetectImg->image_plane();
+
 
     // ============================================== Ray-cast ==============================================
 
@@ -621,22 +570,16 @@ Drover SurfaceBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptA
         std::mutex printer; // Who gets to print to the console and iterate the counter.
         long int completed = 0;
 
-        //Perform a virtual cleave on the surface by advancing ("boosting") all intersecting rays to the cleaving plane.
-        const double cleaved_gap_dist = std::abs(ROICleaving.Get_Signed_Distance_To_Point(ROI_centroid));
-
         for(long int row = 0; row < SourceDetectorRows; ++row){
             tp.submit_task([&,row](void) -> void {
                 for(long int col = 0; col < SourceDetectorColumns; ++col){
 
-                    //Construct a line segment between the source (or offset source where a virtual cleave was performed) and detector. 
+                    //Construct a line segment between the source and detector. 
                     double accumulated_counts = 0.0;      //The number of ray-surface intersections.
                     double accumulated_totaldose = 0.0;   //The total accumulated dose from all intersections.
+                    const vec3<double> ray_start = SourceImg->position(row, col); // The naive starting position, without boosting.
                     const vec3<double> ray_end = DetectImg->position(row, col);
-                    const vec3<double> ray_naive = SourceImg->position(row, col); // The naive starting position, without boosting.
-                    const vec3<double> ray_dir = (ray_end - ray_naive).unit();
-                    const vec3<double> ray_start = ray_naive + ray_dir * cleaved_gap_dist;
 
-                    //Compute the point intersections. "Glancing" intersections are ignored.
                     Segment line_segment( Point(ray_start.x, ray_start.y, ray_start.z),
                                           Point(ray_end.x,   ray_end.y,   ray_end.z)   );
 
@@ -647,7 +590,29 @@ Drover SurfaceBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptA
                         std::list<Segment_intersection> intersections;
                         tree.all_intersections(line_segment, std::back_inserter(intersections));
 
-                        //Cycle through the intersections.
+                        //Sort by distance from the detector so the first intersection is closest to the detector.
+                        intersections.sort([&](const Segment_intersection &A, const Segment_intersection &B) -> bool {
+                            const Point *pA = boost::get<Point>(&(A->first));
+                            const Point *pB = boost::get<Point>(&(B->first));
+                            if( (pA) && (pB) ){ // Both valid points.
+                                const vec3<double> PA(static_cast<double>(pA->x()),
+                                                      static_cast<double>(pA->y()),
+                                                      static_cast<double>(pA->z()));
+                                const vec3<double> PB(static_cast<double>(pB->x()),
+                                                      static_cast<double>(pB->y()),
+                                                      static_cast<double>(pB->z()));
+                                return std::abs( detector_plane.Get_Signed_Distance_To_Point(PA) ) 
+                                          < std::abs( detector_plane.Get_Signed_Distance_To_Point(PB) );
+                            }else if((pA) && !(pB)){
+                                return true;
+                            }else if(!(pA) && (pB)){
+                                return false;
+                            }
+                            return false; //Both non-points.
+
+                        });
+
+                        //Cycle through the intersections stopping after the point nearest the detector is located.
                         for(const auto & intersection : intersections){
                             if(intersection){
                                 const Point* p = boost::get<Point>(&(intersection->first));
@@ -657,21 +622,15 @@ Drover SurfaceBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptA
                                                          static_cast<double>(p->y()),
                                                          static_cast<double>(p->z()));
 
-                                    if(!ROICleaving.Is_Point_Above_Plane(P)){
-                                        //Find the dose at the intersection point.
-                                        auto encompass_imgs = dose_arr_ptr->imagecoll.get_images_which_encompass_point( P );
-                                        for(const auto &enc_img : encompass_imgs){
-                                            const auto pix_val = enc_img->value(P, 0);
-                                            accumulated_totaldose += pix_val;
-                                        }
-                                        accumulated_counts += 1.0;
-                                    
-//                {
-//                    std::lock_guard<std::mutex> lock(printer);
-//                    FUNCINFO("Intersection point: R,C = " << row << ", " << col << " ; P = " << P << " ; Count = " <<
-//                    accumulated_counts << " ; Dose = " << accumulated_totaldose);
-//                }
+                                    //Find the dose at the intersection point.
+                                    auto encompass_imgs = dose_arr_ptr->imagecoll.get_images_which_encompass_point( P );
+                                    for(const auto &enc_img : encompass_imgs){
+                                        const auto pix_val = enc_img->value(P, 0);
+                                        accumulated_totaldose += pix_val;
                                     }
+
+                                    accumulated_counts += 1.0;
+                                    break; //Terminate the loop after the first intersection.
                                 }
                             }
                         }
