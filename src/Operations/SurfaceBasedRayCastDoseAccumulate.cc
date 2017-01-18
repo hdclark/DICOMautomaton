@@ -124,19 +124,46 @@ std::list<OperationArgDoc> OpArgDocSurfaceBasedRayCastDoseAccumulate(void){
     out.emplace_back();
     out.back().name = "TotalDoseMapFileName";
     out.back().desc = "A filename (or full path) for the total dose image map (at all ray-surface intersection points)."
-                      " The format is TBD. Leave empty to dump to generate a unique temporary file.";  // TODO: specify format.
+                      " The dose for each ray is summed over all ray-surface point intersections."
+                      " The format is FITS. This file is always generated."
+                      " Leave the argument empty to generate a unique filename.";
     out.back().default_val = "";
     out.back().expected = true;
-    out.back().examples = { "", "/tmp/somefile", "localfile.img", "derivative_data.img" };
+    out.back().examples = { "", "total_dose_map.fits", "/tmp/out.fits" };
 
 
     out.emplace_back();
     out.back().name = "IntersectionCountMapFileName";
-    out.back().desc = "A filename (or full path) for the (length traveled through the ROI peel) image map."
-                      " The format is TBD. Leave empty to dump to generate a unique temporary file.";  // TODO: specify format.
+    out.back().desc = "A filename (or full path) for the (number of ray-surface intersections) image map."
+                      " Each pixel in this map (and the total dose map) represents a single ray;"
+                      " the number of times the ray intersects the surface can be useful for various purposes,"
+                      " but most often it will simply be a sanity check for the cross-sectional shape or that "
+                      " a specific number of intersections were recorded in regions with geometrical folds."
+                      " Pixels will all be within [0,MaxRaySurfaceIntersections]."
+                      " The format is FITS. Leave empty to dump to generate a unique filename.";
     out.back().default_val = "";
     out.back().expected = true;
-    out.back().examples = { "", "/tmp/somefile", "localfile.img", "derivative_data.img" };
+    out.back().examples = { "", "intersection_count_map.fits", "/tmp/out.fits" };
+
+
+    out.emplace_back();
+    out.back().name = "ROISurfaceMeshFileName";
+    out.back().desc = "A filename (or full path) for the (pre-subdivided) surface mesh that is contructed from the ROI contours."
+                      " The format is OFF. This file is mostly useful for inspection of the surface or comparison with contours."
+                      " Leaving empty will result in no file being written.";
+    out.back().default_val = "";
+    out.back().expected = true;
+    out.back().examples = { "", "/tmp/roi_surface_mesh.off", "roi_surface_mesh.off" };
+
+
+    out.emplace_back();
+    out.back().name = "SubdividedROISurfaceMeshFileName";
+    out.back().desc = "A filename (or full path) for the Loop-subdivided surface mesh that is contructed from the ROI contours."
+                      " The format is OFF. This file is mostly useful for inspection of the surface or comparison with contours."
+                      " Leaving empty will result in no file being written.";
+    out.back().default_val = "";
+    out.back().expected = true;
+    out.back().examples = { "", "/tmp/subdivided_roi_surface_mesh.off", "subdivided_roi_surface_mesh.off" };
 
 
     out.emplace_back();
@@ -147,6 +174,7 @@ std::list<OperationArgDoc> OpArgDocSurfaceBasedRayCastDoseAccumulate(void){
     out.back().default_val = ".*";
     out.back().expected = true;
     out.back().examples = { ".*", ".*Prostate.*", "Left Kidney", "Gross Liver" };
+
 
     out.emplace_back();
     out.back().name = "NormalizedROILabelRegex";
@@ -172,6 +200,7 @@ std::list<OperationArgDoc> OpArgDocSurfaceBasedRayCastDoseAccumulate(void){
                             R"***(.*left.*parotid.*|.*right.*parotid.*|.*eyes.*)***",
                             R"***(left_parotid|right_parotid)***" };
 
+
     out.emplace_back();
     out.back().name = "ROILabelRegex";
     out.back().desc = "A regex matching ROI labels/names to consider. The default will match"
@@ -185,32 +214,105 @@ std::list<OperationArgDoc> OpArgDocSurfaceBasedRayCastDoseAccumulate(void){
                             R"***(.*left.*parotid.*|.*right.*parotid.*|.*eyes.*)***",
                             R"***(left_parotid|right_parotid)***" };
 
+
     out.emplace_back();
     out.back().name = "SourceDetectorRows";
-    out.back().desc = "The number of rows in the resulting images."
+    out.back().desc = "The number of rows in the resulting images, which also defines how many rays are used."
+                      " (Each pixel in the source image represents a single ray.)"
                       " Setting too fine relative to the surface mask grid or dose grid is futile.";
     out.back().default_val = "1024";
     out.back().expected = true;
-    out.back().examples = { "10", "50", "128", "1024" };
+    out.back().examples = { "100", "128", "1024", "4096" };
     
+
     out.emplace_back();
     out.back().name = "SourceDetectorColumns";
     out.back().desc = "The number of columns in the resulting images."
+                      " (Each pixel in the source image represents a single ray.)"
                       " Setting too fine relative to the surface mask grid or dose grid is futile.";
     out.back().default_val = "1024";
     out.back().expected = true;
-    out.back().examples = { "10", "50", "128", "1024" };
+    out.back().examples = { "100", "128", "1024", "4096" };
     
+
+    out.emplace_back();
+    out.back().name = "MeshingAngularBound";
+    out.back().desc = "The minimum internal angle each triangle facet must have in the surface mesh (in degrees)."
+                      " The computation may become unstable if an angle larger than 30 degree is specified."
+                      " Note that for intersection purposes triangles with small angles isn't a big deal."
+                      " Consult the CGAL '3D Surface Mesh Generation' package documentation for additional info.";
+    out.back().default_val = "1.0";
+    out.back().expected = true;
+    out.back().examples = { "1.0", "10.0", "25.0", "30.0" };
+    
+
+    out.emplace_back();
+    out.back().name = "MeshingFacetSphereRadiusBound";
+    out.back().desc = "The maximum radius of facet-bounding spheres, which are centred on each facet (one per facet)"
+                      " and grown as large as possible without enclosing any facet vertices."
+                      " In a nutshell, this controls the maximum individual facet size."
+                      " Units are in DICOM space. Setting too low will cause triangulation to be slow and many facets;"
+                      " it is recommended instead to rely on subdivision to create a smooth surface approximation."
+                      " Consult the CGAL '3D Surface Mesh Generation' package documentation for additional info.";
+    out.back().default_val = "5.0";
+    out.back().expected = true;
+    out.back().examples = { "1.0", "2.0", "5.0" };
+   
+
+    out.emplace_back();
+    out.back().name = "MeshingCentreCentreBound";
+    out.back().desc = "The maximum facet centre-centre distance between facet circumcentres and facet-bounding spheres,"
+                      " which are centred on each facet (one per facet) and grown as large as possible without enclosing"
+                      " any facet vertices. In a nutshell, this controls the trade-off between minimizing deviation from"
+                      " the (implicit) ROI contour-derived surface and having smooth connectivity between facets."
+                      " Units are in DICOM space. Setting too low will cause triangulation to be slow and many facets;"
+                      " it is recommended instead to rely on subdivision to create a smooth surface approximation."
+                      " Consult the CGAL '3D Surface Mesh Generation' package documentation for additional info.";
+    out.back().default_val = "5.0";
+    out.back().expected = true;
+    out.back().examples = { "1.0", "2.0", "5.0", "10.0" };
+   
+
+    out.emplace_back();
+    out.back().name = "MeshingSubdivisionIterations";
+    out.back().desc = "The number of iterations of Loop's subdivision to apply to the surface mesh."
+                      " The aim of subdivision in this context is to have a smooth surface to work with, but too many"
+                      " applications will create too many facets. More facets will not lead to more precise results"
+                      " beyond a certain (modest) amount of smoothing. If the geometry is relatively spherical already,"
+                      " and meshing bounds produce reasonably smooth (but 'blocky') surface meshes, then 2-3"
+                      " iterations should suffice. More than 3-4 iterations will almost always be inappropriate.";
+    out.back().default_val = "2";
+    out.back().expected = true;
+    out.back().examples = { "0", "1", "2", "3" };
+
+
+    out.emplace_back();
+    out.back().name = "MaxRaySurfaceIntersections";
+    out.back().desc = "The maximum number of ray-surface intersections to accumulate before retiring each ray."
+                      " Note that intersections are sorted spatially by their distance to the detector, and those"
+                      " closest to the detector are considered first."
+                      " If the ROI surface is opaque, setting this value to 1 will emulate visibility."
+                      " Setting to 2 will permit rays continue through the ROI and pass through the other side;"
+                      " dose will be the accumulation of dose at each ray-surface intersection."
+                      " This value should most often be 1 or some very high number (e.g., 1000) to make the surface"
+                      " either completely opaque or completely transparent. (A transparent surface may help to"
+                      " visualize geometrical 'folds' or other surface details of interest.)";
+    out.back().default_val = "1";
+    out.back().expected = true;
+    out.back().examples = { "1", "4", "1000"};
+
+
     return out;
 }
 
 
 
 Drover SurfaceBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string> /*InvocationMetadata*/, std::string FilenameLex){
-    // This routine uses rays to estimate point-dose on the surface of an ROI. The ROI is approximated by surface mesh
-    // and rays are passed through. Dose is interpolated at the intersection points and intersecting lines (i.e., where
-    // the ray 'glances' the surface) are discarded. The surface reconstruction can be tweaked, but appear to reasonably
-    // approximate the ROI contours; both can be output to compare visually.
+    //
+    // This routine uses rays (actually: line segments) to estimate point-dose on the surface of an ROI. The ROI is 
+    // approximated by surface mesh and rays are passed through. Dose is interpolated at the intersection points and
+    // intersecting lines (i.e., where the ray 'glances' the surface) are discarded. The surface reconstruction can be
+    // tweaked, but appear to reasonably approximate the ROI contours; both can be output to compare visually.
     //
     // Though it is not required by the implementation, only the ray-surface intersection nearest to the detector is
     // considered. All other intersections (i.e., on the far side of the surface mesh) are ignored.
@@ -223,12 +325,24 @@ Drover SurfaceBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptA
     //---------------------------------------------- User Parameters --------------------------------------------------
     auto TotalDoseMapFileName = OptArgs.getValueStr("TotalDoseMapFileName").value();
     auto IntersectionCountMapFileName = OptArgs.getValueStr("IntersectionCountMapFileName").value();
+
+    auto ROISurfaceMeshFileName = OptArgs.getValueStr("ROISurfaceMeshFileName").value();
+    auto SubdividedROISurfaceMeshFileName = OptArgs.getValueStr("SubdividedROISurfaceMeshFileName").value();
+
     const auto ROILabelRegex = OptArgs.getValueStr("ROILabelRegex").value();
     const auto NormalizedROILabelRegex = OptArgs.getValueStr("NormalizedROILabelRegex").value();
     const auto ReferenceROILabelRegex = OptArgs.getValueStr("ReferenceROILabelRegex").value();
     const auto NormalizedReferenceROILabelRegex = OptArgs.getValueStr("NormalizedReferenceROILabelRegex").value();
+
     const auto SourceDetectorRows = std::stol(OptArgs.getValueStr("SourceDetectorRows").value());
     const auto SourceDetectorColumns = std::stol(OptArgs.getValueStr("SourceDetectorColumns").value());
+
+    const auto MeshingAngularBound = std::stod(OptArgs.getValueStr("MeshingAngularBound").value());
+    const auto MeshingFacetSphereRadiusBound = std::stod(OptArgs.getValueStr("MeshingFacetSphereRadiusBound").value());
+    const auto MeshingCentreCentreBound = std::stod(OptArgs.getValueStr("MeshingCentreCentreBound").value());
+
+    const auto MeshingSubdivisionIterations = std::stol(OptArgs.getValueStr("MeshingSubdivisionIterations").value());
+    const auto MaxRaySurfaceIntersections = std::stol(OptArgs.getValueStr("MaxRaySurfaceIntersections").value());
 
     //-----------------------------------------------------------------------------------------------------------------
     const auto roiregex = std::regex(ROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
@@ -363,16 +477,12 @@ Drover SurfaceBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptA
         }
     }
    
-    // default triangulation for Surface_mesher
     typedef CGAL::Surface_mesh_default_triangulation_3 Tr;
-
-    // c2t3
     typedef CGAL::Complex_2_in_triangulation_3<Tr> C2t3;
     typedef Tr::Geom_traits GT;
     typedef GT::Sphere_3 Sphere_3;
     typedef GT::Point_3 Point_3;
     typedef GT::FT FT;
-
 
     auto surface_oracle = [&](Point_3 p) -> FT {
         //This routine is an 'oracle' that reports if a given point is inside or outside the surface to be triangulated.
@@ -418,15 +528,15 @@ Drover SurfaceBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptA
     Surface_3 surface(surface_oracle, cgal_bounding_sphere);
 
     // defining meshing criteria
-    CGAL::Surface_mesh_default_criteria_3<Tr> criteria(1.0,  // angular bound
-                                                       5.0,   // radius bound
-                                                       5.0);  // distance bound
+    CGAL::Surface_mesh_default_criteria_3<Tr> criteria(MeshingAngularBound,
+                                                       MeshingFacetSphereRadiusBound,
+                                                       MeshingCentreCentreBound);
     // meshing surface
     CGAL::make_surface_mesh(c2t3, surface, criteria, CGAL::Manifold_tag());
     FUNCINFO("The triangulated surface has " << tr.number_of_vertices() << " vertices");
 
-    {
-        std::ofstream out("/tmp/thesurface.off");
+    if(!ROISurfaceMeshFileName.empty()){
+        std::ofstream out(ROISurfaceMeshFileName);
         CGAL::output_surface_facets_to_off(out,c2t3);
     }
 
@@ -441,12 +551,12 @@ Drover SurfaceBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptA
     }
 
     //Perform surface subdivision.
-    CGAL::Subdivision_method_3::Loop_subdivision(polyhedron,2);
+    CGAL::Subdivision_method_3::Loop_subdivision(polyhedron,MeshingSubdivisionIterations);
     FUNCINFO("The subdivided triangulated surface has " << polyhedron.size_of_vertices() << " vertices"
              " and " << polyhedron.size_of_facets() << " faces");
 
-    {
-        std::ofstream out("/tmp/thesubdividedsurface.off");
+    if(!SubdividedROISurfaceMeshFileName.empty()){
+        std::ofstream out(SubdividedROISurfaceMeshFileName);
         out << polyhedron;
     }
     if(!polyhedron.is_pure_triangle()) throw std::runtime_error("Mesh is not purely triangular.");
@@ -463,10 +573,6 @@ Drover SurfaceBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptA
 
     //Construct the tree.
     AABB_Tree tree(faces(polyhedron).first, faces(polyhedron).second, polyhedron);
-
-
-
-
 
 
     //Figure out what z-margin is needed so the extra two images do not interfere with the grid lining up with the
@@ -575,7 +681,7 @@ Drover SurfaceBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptA
                 for(long int col = 0; col < SourceDetectorColumns; ++col){
 
                     //Construct a line segment between the source and detector. 
-                    double accumulated_counts = 0.0;      //The number of ray-surface intersections.
+                    long int accumulated_counts = 0;      //The number of ray-surface intersections.
                     double accumulated_totaldose = 0.0;   //The total accumulated dose from all intersections.
                     const vec3<double> ray_start = SourceImg->position(row, col); // The naive starting position, without boosting.
                     const vec3<double> ray_end = DetectImg->position(row, col);
@@ -626,8 +732,10 @@ Drover SurfaceBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptA
                                     const auto interp_val = dose_arr_ptr->imagecoll.trilinearly_interpolate(P,0);
 
                                     accumulated_totaldose += interp_val;
-                                    accumulated_counts += 1.0;
-                                    break; //Terminate the loop after the first intersection.
+                                    ++accumulated_counts;
+
+                                    //Terminate the loop after desired number of intersections.
+                                    if(accumulated_counts >= MaxRaySurfaceIntersections) break;
                                 }
                             }
                         }
