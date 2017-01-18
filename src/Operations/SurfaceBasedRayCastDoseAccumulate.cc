@@ -240,6 +240,7 @@ std::list<OperationArgDoc> OpArgDocSurfaceBasedRayCastDoseAccumulate(void){
     out.back().desc = "The minimum internal angle each triangle facet must have in the surface mesh (in degrees)."
                       " The computation may become unstable if an angle larger than 30 degree is specified."
                       " Note that for intersection purposes triangles with small angles isn't a big deal."
+                      " Rather, having a large minimal angle can constrain the surface in strange ways."
                       " Consult the CGAL '3D Surface Mesh Generation' package documentation for additional info.";
     out.back().default_val = "1.0";
     out.back().expected = true;
@@ -463,6 +464,20 @@ Drover SurfaceBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptA
         bounding_sphere_center.y = *(center_coord_it++);
         bounding_sphere_center.z = *(center_coord_it);
         bounding_sphere_radius = ms.radius();
+
+        //Ensure the sphere's centre is somewhere in the ROI by translating to some point within a contour and growing the sphere.
+        vec3<double> nearest_incontour_p = cc_ROIs.front().get().contours.front().First_N_Point_Avg(3);
+        for(const auto & cc_ref : cc_ROIs){
+            const auto cc = cc_ref.get();
+            for(const auto & c : cc.contours){ 
+                const auto incontour_p = c.Get_Point_Within_Contour();
+                if(incontour_p.sq_dist(bounding_sphere_center) < nearest_incontour_p.sq_dist(bounding_sphere_center)){
+                    nearest_incontour_p = incontour_p;
+                }
+            }
+        }
+        bounding_sphere_radius += nearest_incontour_p.distance(bounding_sphere_center); //A superset enclosing sphere.
+        bounding_sphere_center = nearest_incontour_p;
     }
     FUNCINFO("Finished computing bounding sphere for selected ROIs; centre, radius = " << bounding_sphere_center << ", " << bounding_sphere_radius);
 
