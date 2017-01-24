@@ -100,27 +100,27 @@ std::list<OperationArgDoc> OpArgDocGridBasedRayCastDoseAccumulate(void){
                       " Note that this file is approximate, and may not be accurate."
                       " There is more information available when you use the length and dose*length maps instead."
                       " However, this file is useful for viewing and eyeballing tuning settings."
-                      " The format is TBD. Leave empty to dump to generate a unique temporary file.";  // TODO: specify format.
+                      " The format is FITS. Leave empty to dump to generate a unique temporary file.";
     out.back().default_val = "";
     out.back().expected = true;
-    out.back().examples = { "", "/tmp/somefile", "localfile.img", "derivative_data.img" };
+    out.back().examples = { "", "/tmp/dose.fits", "localfile.fits", "derivative_data.fits" };
 
     out.emplace_back();
     out.back().name = "DoseLengthMapFileName";
     out.back().desc = "A filename (or full path) for the (dose)*(length traveled through the ROI peel) image map."
-                      " The format is TBD. Leave empty to dump to generate a unique temporary file.";  // TODO: specify format.
+                      " The format is FITS. Leave empty to dump to generate a unique temporary file.";
     out.back().default_val = "";
     out.back().expected = true;
-    out.back().examples = { "", "/tmp/somefile", "localfile.img", "derivative_data.img" };
+    out.back().examples = { "", "/tmp/doselength.fits", "localfile.fits", "derivative_data.fits" };
 
 
     out.emplace_back();
     out.back().name = "LengthMapFileName";
     out.back().desc = "A filename (or full path) for the (length traveled through the ROI peel) image map."
-                      " The format is TBD. Leave empty to dump to generate a unique temporary file.";  // TODO: specify format.
+                      " The format is FITS. Leave empty to dump to generate a unique temporary file.";
     out.back().default_val = "";
     out.back().expected = true;
-    out.back().examples = { "", "/tmp/somefile", "localfile.img", "derivative_data.img" };
+    out.back().examples = { "", "/tmp/surfacelength.fits", "localfile.fits", "derivative_data.fits" };
 
 
     out.emplace_back();
@@ -573,6 +573,17 @@ Drover GridBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptArgs
     } // Complete tasks and terminate thread pool.
 
     // Save image maps to file.
+    if(LengthMapFileName.empty()){
+        LengthMapFileName = Get_Unique_Sequential_Filename("/tmp/dicomautomaton_gridraycast_surfacelength_", 6, ".fits");
+    }
+    if(DoseLengthMapFileName.empty()){
+        DoseLengthMapFileName = Get_Unique_Sequential_Filename("/tmp/dicomautomaton_gridraycast_dosesurfacelength_", 6, ".fits");
+    }
+    if(DoseMapFileName.empty()){
+        DoseMapFileName = Get_Unique_Sequential_Filename("/tmp/dicomautomaton_gridraycast_surfacedose_", 6, ".fits");
+    }
+
+
     if(!WriteToFITS(*SourceImg, LengthMapFileName)){
         throw std::runtime_error("Unable to write FITS file for length map.");
     }

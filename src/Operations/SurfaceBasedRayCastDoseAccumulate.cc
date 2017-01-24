@@ -55,6 +55,7 @@
 
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorMath.h"         //Needed for vec3 class.
+#include "YgorMathIOOFF.h"    //Needed for WritePointsToOFF(...)
 #include "YgorMathPlottingGnuplot.h" //Needed for YgorMathPlottingGnuplot::*.
 #include "YgorMathChebyshev.h" //Needed for cheby_approx class.
 #include "YgorStats.h"        //Needed for Stats:: namespace.
@@ -145,6 +146,28 @@ std::list<OperationArgDoc> OpArgDocSurfaceBasedRayCastDoseAccumulate(void){
     out.back().expected = true;
     out.back().examples = { "", "intersection_count_map.fits", "/tmp/out.fits" };
 
+    out.emplace_back();
+    out.back().name = "DepthMapFileName";
+    out.back().desc = "A filename (or full path) for the distance (depth) of each ray-surface intersection point from"
+                      " the detector. Has DICOM coordinate system units. This image is potentially multi-channel with"
+                      " [MaxRaySurfaceIntersections] channels (when MaxRaySurfaceIntersections = 1 there is 1 channel)."
+                      " The format is FITS. Leaving empty will result in no file being written.";
+    out.back().default_val = "";
+    out.back().expected = true;
+    out.back().examples = { "", "depth_map.fits", "/tmp/out.fits" };
+
+
+    out.emplace_back();
+    out.back().name = "RadialDistMapFileName";
+    out.back().desc = "A filename (or full path) for the distance of each ray-surface intersection point from the"
+                      " line joining reference and target ROI centre-of-masses. This helps quantify position in 3D."
+                      " Has DICOM coordinate system units. This image is potentially multi-channel with"
+                      " [MaxRaySurfaceIntersections] channels (when MaxRaySurfaceIntersections = 1 there is 1 channel)."
+                      " The format is FITS. Leaving empty will result in no file being written.";
+    out.back().default_val = "";
+    out.back().expected = true;
+    out.back().examples = { "", "radial_dist_map.fits", "/tmp/out.fits" };
+
 
     out.emplace_back();
     out.back().name = "ROISurfaceMeshFileName";
@@ -164,6 +187,17 @@ std::list<OperationArgDoc> OpArgDocSurfaceBasedRayCastDoseAccumulate(void){
     out.back().default_val = "";
     out.back().expected = true;
     out.back().examples = { "", "/tmp/subdivided_roi_surface_mesh.off", "subdivided_roi_surface_mesh.off" };
+
+
+    out.emplace_back();
+    out.back().name = "ROICOMCOMLineFileName";
+    out.back().desc = "A filename (or full path) for the line segment that connected the centre-of-mass (COM) of"
+                      " reference and target ROI. The format is OFF."
+                      " This file is mostly useful for inspection of the surface or comparison with contours."
+                      " Leaving empty will result in no file being written.";
+    out.back().default_val = "";
+    out.back().expected = true;
+    out.back().examples = { "", "/tmp/roi_com_com_line.off", "roi_com_com_line.off" };
 
 
     out.emplace_back();
@@ -326,9 +360,12 @@ Drover SurfaceBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptA
     //---------------------------------------------- User Parameters --------------------------------------------------
     auto TotalDoseMapFileName = OptArgs.getValueStr("TotalDoseMapFileName").value();
     auto IntersectionCountMapFileName = OptArgs.getValueStr("IntersectionCountMapFileName").value();
+    auto DepthMapFileName = OptArgs.getValueStr("DepthMapFileName").value();
+    auto RadialDistMapFileName = OptArgs.getValueStr("RadialDistMapFileName").value();
 
     auto ROISurfaceMeshFileName = OptArgs.getValueStr("ROISurfaceMeshFileName").value();
     auto SubdividedROISurfaceMeshFileName = OptArgs.getValueStr("SubdividedROISurfaceMeshFileName").value();
+    auto ROICOMCOMLineFileName = OptArgs.getValueStr("ROICOMCOMLineFileName").value();
 
     const auto ROILabelRegex = OptArgs.getValueStr("ROILabelRegex").value();
     const auto NormalizedROILabelRegex = OptArgs.getValueStr("NormalizedROILabelRegex").value();
@@ -638,6 +675,14 @@ Drover SurfaceBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptA
     //Create a plane at the Bladder's centroid aligned with the ROI (bladder) that faces away from the referenceROI
     // (prostate).
     const plane<double> ROICleaving( (ROI_centroid - Ref_centroid).unit(), ROI_centroid );
+    const line<double> COM_COM_line(Ref_centroid, ROI_centroid); 
+
+    if(!ROICOMCOMLineFileName.empty()){
+        const line_segment<double> ls(Ref_centroid, ROI_centroid);
+        if(!WriteLineSegmentToOFF(ls, ROICOMCOMLineFileName, "Reference ROI and target ROI COM-COM line segment.")){
+            throw std::runtime_error("Unable to write COM-COM line segment to file. (Is there an existing file?)");
+        }
+    }
 
     // ============================================== Source, Detector creation  ==============================================
     //Create source and detector images. 
@@ -666,18 +711,31 @@ Drover SurfaceBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptA
     //Generate a grid volume bounding the ROI(s). We ask for many images in order to compress the pxl_dz taken by each.
     // Only two are actually allocated.
     const auto NumberOfImages = (ucp.size() + 2);
-    auto sd_image_collection = Contiguously_Grid_Volume<float,double>(
+    auto sd_image_collection = Symmetrically_Contiguously_Grid_Volume<float,double>(
              cc_ROIs, 
              sdgrid_x_margin, sdgrid_y_margin, sdgrid_z_margin,
              SourceDetectorRows, SourceDetectorColumns, /*number_of_channels=*/ 1, 100*NumberOfImages, 
-             SDGridX, SDGridY, SDGridZ,
+             COM_COM_line, SDGridX, SDGridY,
              /*pixel_fill=*/ std::numeric_limits<double>::quiet_NaN(),
              /*only_top_and_bottom=*/ true);
 
-    planar_image<float, double> *DetectImg = &(sd_image_collection.images.front());
-    DetectImg->metadata["Description"] = "Total Dose Map";
-    planar_image<float, double> *SourceImg = &(sd_image_collection.images.back());
-    SourceImg->metadata["Description"] = "Intersection Count Map (number of ray-surface intersectons)";
+    //Generate two additional image maps for ray-surface intersection coordinates. These images are potentially multi-channel.
+    // Reinitialize them ASAP.
+    sd_image_collection.images.emplace_back( sd_image_collection.images.front() );
+    sd_image_collection.images.back().init_buffer(SourceDetectorRows, SourceDetectorColumns, MaxRaySurfaceIntersections);
+    sd_image_collection.images.emplace_back( sd_image_collection.images.front() );
+    sd_image_collection.images.back().init_buffer(SourceDetectorRows, SourceDetectorColumns, MaxRaySurfaceIntersections);
+
+    //Get handles for each image.
+    planar_image<float, double> *DetectImg     = &(*std::next(sd_image_collection.images.begin(),0));
+    planar_image<float, double> *SourceImg     = &(*std::next(sd_image_collection.images.begin(),1));
+    planar_image<float, double> *DepthImg      = &(*std::next(sd_image_collection.images.begin(),2));
+    planar_image<float, double> *RadialDistImg = &(*std::next(sd_image_collection.images.begin(),3));
+
+    DetectImg->metadata["Description"]     = "Total Dose Map";
+    SourceImg->metadata["Description"]     = "Intersection Count Map (number of Ray-Surface Intersectons)";
+    DepthImg->metadata["Description"]      = "Ray-surface Depth Intersection Map";
+    RadialDistImg->metadata["Description"] = "Radial Distance from COM-COM line to Ray-Surface Intersection";
 
     const auto detector_plane = DetectImg->image_plane();
 
@@ -743,6 +801,14 @@ Drover SurfaceBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptA
                                                          static_cast<double>(p->y()),
                                                          static_cast<double>(p->z()));
 
+                                    //Compute the distance to the detector.
+                                    const auto P_src_dist = std::abs( detector_plane.Get_Signed_Distance_To_Point(P) );
+                                    DepthImg->reference(row, col, accumulated_counts) = static_cast<float>( P_src_dist );
+
+                                    //Compute the distance to the COM-COM line (between target ROI and reference ROI).
+                                    const auto P_rad_dist = COM_COM_line.Distance_To_Point(P);
+                                    RadialDistImg->reference(row, col, accumulated_counts) = static_cast<float>( P_rad_dist );
+
                                     //Find the dose at the intersection point.
                                     const auto interp_val = dose_arr_ptr->imagecoll.trilinearly_interpolate(P,0);
 
@@ -771,12 +837,27 @@ Drover SurfaceBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptA
         }
     } // Complete tasks and terminate thread pool.
 
+
     // Save image maps to file.
+    if(TotalDoseMapFileName.empty()){
+        TotalDoseMapFileName = Get_Unique_Sequential_Filename("/tmp/dicomautomaton_surfaceraycast_totaldose_", 6, ".fits");
+    }
+    if(IntersectionCountMapFileName.empty()){
+        IntersectionCountMapFileName = Get_Unique_Sequential_Filename("/tmp/dicomautomaton_surfaceraycast_intersection_count_", 6, ".fits");
+    }
+
+
     if(!WriteToFITS(*SourceImg, IntersectionCountMapFileName)){
         throw std::runtime_error("Unable to write FITS file for intersection count map.");
     }
     if(!WriteToFITS(*DetectImg, TotalDoseMapFileName)){
         throw std::runtime_error("Unable to write FITS file for total dose map.");
+    }
+    if(!DepthMapFileName.empty() && !WriteToFITS(*DepthImg, DepthMapFileName)){
+        throw std::runtime_error("Unable to write FITS file for depth map.");
+    }
+    if(!RadialDistMapFileName.empty() && !WriteToFITS(*RadialDistImg, RadialDistMapFileName)){
+        throw std::runtime_error("Unable to write FITS file for radial distance map.");
     }
 
     // Insert the image maps as images for later processing and/or viewing, if desired.
