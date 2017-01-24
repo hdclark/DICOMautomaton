@@ -89,13 +89,6 @@ set_target_properties(Dose_Meld_obj PROPERTIES
     POSITION_INDEPENDENT_CODE TRUE
 )
 
-add_library(Whole_Match_obj OBJECT
-    Whole_Match.cc  
-)
-set_target_properties(Whole_Match_obj PROPERTIES
-    POSITION_INDEPENDENT_CODE TRUE
-)
-
 add_library(PACS_Loader_obj OBJECT
     PACS_Loader.cc  
 )
@@ -410,12 +403,10 @@ add_executable (automaton
     Automaton.cc
     $<TARGET_OBJECTS:Structs_obj>
     $<TARGET_OBJECTS:Dose_Meld_obj>
-    $<TARGET_OBJECTS:Whole_Match_obj>
 )
 target_link_libraries (automaton
     imebrashim
     explicator 
-    demarcator 
     csvtools
     ygor 
     pqxx 
