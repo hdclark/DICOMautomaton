@@ -353,6 +353,21 @@ target_link_libraries (pacs_ingress
 )
 
 # Executable.
+add_executable (pacs_duplicate_cleaner
+    PACS_Duplicate_Cleaner.cc
+    $<TARGET_OBJECTS:Structs_obj>
+    $<TARGET_OBJECTS:Dose_Meld_obj>
+)
+target_link_libraries (pacs_duplicate_cleaner
+    imebrashim
+    explicator 
+    ygor 
+    pqxx 
+    pq
+    m
+)
+
+# Executable.
 add_executable (pacs_refresh
     PACS_Refresh.cc
     $<TARGET_OBJECTS:Structs_obj>
@@ -425,6 +440,7 @@ install(TARGETS
     dicomautomaton_dispatcher
     dicomautomaton_bsarchive_convert
     pacs_ingress
+    pacs_duplicate_cleaner
     pacs_refresh
     overlaydosedata
     automaton
