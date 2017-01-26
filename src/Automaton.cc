@@ -43,7 +43,6 @@
 #include "Explicator.h"      //Needed for Explicator class.
 
 #include "YgorDICOMTools.h"  //Needed for Is_File_A_DICOM_File(...);
-#include "CSVTools.h"        //Needed for all *CSV* functions.
 
 
 //Forward declarations.
@@ -399,38 +398,6 @@ if(false){
         //Exit normally.
         return 0;
 }
-
-    //Perform text-based organ identification. This is used for testing/verifying libexplicator.
-if(false){
-        //Load a CSV file into memory. We will use it to store info about matches.
-        AppendStringToFile("", "/tmp/automaton_explicator_test_matches.csv"); //Ensure it exists on the first run.
-        auto csvfile = Read_and_Parse_CSV_File("/tmp/automaton_explicator_test_matches.csv");
-        Explicator X(FilenameLex);
-
-        for(auto bm_it = Contour_classifications.begin(); bm_it != Contour_classifications.end(); ++bm_it){
-            const std::string rawname(bm_it->first);
-            const std::string bestmatch = X(rawname);
-            const auto results = X.Get_Last_Results(); //std::unique_ptr<std::map<std::string, float> > Get_Last_Results(void);
-            bimap<float, std::string> sorted;
-            sorted = *results;
-            sorted.order_on_first();
-
-            const std::string bestscore  = Xtostring<float>(X.Get_Last_Best_Score());
-            const std::string bestmodule = Xtostring<long int>(X.Get_Last_Best_Module());
-
-            std::vector<std::string> shuttle( { rawname, bestmatch, "|", "Top score was " + bestscore, "|", "Top module was " + bestmodule } );
-            for(auto m_it = sorted.rbegin(); m_it != sorted.rend(); ++m_it){
-                shuttle.push_back(m_it->second + ":" + Xtostring<float>(m_it->first));
-            }
-            csvfile.push_back( shuttle );
-        }
-
-        Write_CSV("/tmp/automaton_explicator_test_matches.csv", csvfile);
-
-        //Exit normally.
-        return 0;
-}
-
 
     //Attempt to locate the desired query(ies) in the file. NOTE: This is NOT the best way to translate all tags!
 if(false){
@@ -868,66 +835,6 @@ if(false){
                 std::cout << std::setw(25) << name << std::setw(15) << p << std::setw(15) << q << std::setw(15) << r << std::setw(15) << themoment << "    " << seghist << std::endl;
             }
         }
-
-        //Write the data to file.
-        const std::string Filename_CSV("/tmp/sgf_skeleton.csv"); //Ensure file exists, even if empty.
-        const auto patientID = get_patient_ID(Filenames_In_Struct.front()); //"SGF[0-9]{1,3}"
-        auto thecsv = Square_CSV(Read_and_Parse_CSV_File(Filename_CSV));
-        CSVTools_Get_First_Col_With_Text_Or_Make_New(&thecsv, "Anonymized ID"); //Ensure there is a header row at the top.
-
-        const auto row = CSVTools_Get_First_Row_With_Text_Or_Make_New(&thecsv, patientID);
-        std::map<std::string,size_t> ssnc; //Sub-segment number counter.
-        for(auto um_it = mmmmdoses.begin(); um_it != mmmmdoses.end(); ++um_it){
-            const auto name      = um_it->first->Raw_ROI_name; //Raw, dirty name ("l_par").
-            const auto ssn       = Xtostring<size_t>(ssnc[name]); //Sub-segment number (for the given structure).
-
-            const auto cleanname = X(name);                    //Clean, sanitized name ("Left Parotid").
-            const auto seghist   = Segmentations_to_Words( um_it->first->Segmentation_History );
-            const auto desc      = name + " = "_s + seghist;
-
-            const auto col_min    = CSVTools_Get_First_Col_With_Text_Or_Make_New(&thecsv, cleanname + " min "_s    + ssn);
-            const auto col_mean   = CSVTools_Get_First_Col_With_Text_Or_Make_New(&thecsv, cleanname + " mean "_s   + ssn);
-            const auto col_median = CSVTools_Get_First_Col_With_Text_Or_Make_New(&thecsv, cleanname + " median "_s + ssn);
-            const auto col_max    = CSVTools_Get_First_Col_With_Text_Or_Make_New(&thecsv, cleanname + " max "_s    + ssn);
-            const auto col_desc   = CSVTools_Get_First_Col_With_Text_Or_Make_New(&thecsv, cleanname + " desc "_s   + ssn);
-
-            const auto mmmm    = um_it->second;
-            const auto min     = std::get<0>(mmmm);
-            const auto mean    = std::get<1>(mmmm);
-            const auto median  = std::get<2>(mmmm);
-            const auto max     = std::get<3>(mmmm);
-
-            thecsv[row][col_min]    = Xtostring(min);
-            thecsv[row][col_mean]   = Xtostring(mean);
-            thecsv[row][col_median] = Xtostring(median);
-            thecsv[row][col_max]    = Xtostring(max);
-            thecsv[row][col_desc]   = desc;
-
-            ++(ssnc[name]);
-        }
-
-        //Same thing for the moments.
-        ssnc.clear();
-        for(auto m_it = moments.begin(); m_it != moments.end(); ++m_it){
-            const auto name      = m_it->first->Raw_ROI_name;
-            const auto ssn       = Xtostring<size_t>(ssnc[name]);
-            const auto cleanname = X(name);
-
-            for(auto mm_it = m_it->second.begin(); mm_it != m_it->second.end(); ++mm_it){
-                const auto p = mm_it->first[0], q = mm_it->first[1], r = mm_it->first[2];
-                if((p+q+r) > 3) continue;
-                const auto pqr = Xtostring(p)+Xtostring(q)+Xtostring(r); //Three-digit moment 'key'
-                const auto moment = mm_it->second;
-
-                const auto col = CSVTools_Get_First_Col_With_Text_Or_Make_New(&thecsv, cleanname + " mu_"_s + pqr + " "_s + ssn);
-                thecsv[row][col] = Xtostring(moment);
-            }
-
-            ++(ssnc[name]);
-        }
-
-        Write_CSV(Filename_CSV,thecsv);
-        Write_CSV_As_Fancy_HTML(Filename_CSV+".html", thecsv);
 
         //Exit normally.
         return 0;

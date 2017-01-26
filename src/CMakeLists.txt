@@ -407,7 +407,6 @@ add_executable (automaton
 target_link_libraries (automaton
     imebrashim
     explicator 
-    csvtools
     ygor 
     pqxx 
     pq
