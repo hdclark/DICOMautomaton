@@ -1,6 +1,7 @@
 
 
 add_library(Operations_objs OBJECT 
+    Average.cc
     BoostSerializeDrover.cc
     BuildLexiconInteractively.cc
     ConvertDoseToImage.cc
@@ -27,6 +28,7 @@ add_library(Operations_objs OBJECT
     DumpROIData.cc
     DumpROIDoseInfo.cc
     DumpROISurfaceMeshes.cc
+    DumpROISNR.cc
     DumpVoxelDoseInfo.cc
     GenerateSurfaceMask.cc
     GenerateVirtualDataPerfusionV1.cc

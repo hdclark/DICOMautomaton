@@ -15,6 +15,7 @@
 
 #include "Structs.h"
 
+#include "Operations/Average.h"
 #include "Operations/BoostSerializeDrover.h"
 #include "Operations/BuildLexiconInteractively.h"
 #include "Operations/CopyLastImage.h"
@@ -41,6 +42,7 @@
 #include "Operations/DumpROIData.h"
 #include "Operations/DumpROIDoseInfo.h"
 #include "Operations/DumpROISurfaceMeshes.h"
+#include "Operations/DumpROISNR.h"
 #include "Operations/DumpVoxelDoseInfo.h"
 #include "Operations/GenerateSurfaceMask.h"
 #include "Operations/GenerateVirtualDataPerfusionV1.h"
@@ -73,6 +75,7 @@
 std::map<std::string, op_packet_t> Known_Operations(void){
     std::map<std::string, op_packet_t> out;
 
+    out["Average"] = std::make_pair(OpArgDocAverage, Average);
     out["BoostSerializeDrover"] = std::make_pair(OpArgDocBoost_Serialize_Drover, Boost_Serialize_Drover);
     out["BuildLexiconInteractively"] = std::make_pair(OpArgDocBuildLexiconInteractively, BuildLexiconInteractively);
     out["CopyLastImage"] = std::make_pair(OpArgDocCopyLastImage, CopyLastImage);
@@ -104,6 +107,7 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["DumpROIData"] = std::make_pair(OpArgDocDumpROIData, DumpROIData);
     out["DumpROIDoseInfo"] = std::make_pair(OpArgDocDumpROIDoseInfo, DumpROIDoseInfo);
     out["DumpROISurfaceMeshes"] = std::make_pair(OpArgDocDumpROISurfaceMeshes, DumpROISurfaceMeshes);
+    out["DumpROISNR"] = std::make_pair(OpArgDocDumpROISNR, DumpROISNR);
     out["DumpVoxelDoseInfo"] = std::make_pair(OpArgDocDumpVoxelDoseInfo, DumpVoxelDoseInfo);
     out["GenerateSurfaceMask"] = std::make_pair(OpArgDocGenerateSurfaceMask, GenerateSurfaceMask);
     out["GenerateVirtualDataPerfusionV1"] = std::make_pair(OpArgDocGenerateVirtualDataPerfusionV1, GenerateVirtualDataPerfusionV1);
