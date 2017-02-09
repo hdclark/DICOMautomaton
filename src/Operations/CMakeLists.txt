@@ -14,6 +14,7 @@ add_library(Operations_objs OBJECT
     CT_Liver_Perfusion_Pharmaco_1Compartment2Input_Reduced3Param.cc
     ContourSimilarity.cc
     ContouringAides.cc
+    ContourViaThreshold.cc
     ConvertNaNsToAir.cc
     DCEMRI_Nonparametric_CE.cc
     DCEMRI_IAUC.cc
@@ -32,6 +33,7 @@ add_library(Operations_objs OBJECT
     DumpVoxelDoseInfo.cc
     GenerateSurfaceMask.cc
     GenerateVirtualDataPerfusionV1.cc
+    GenerateVirtualDataContourViaThresholdTestV1.cc
     GiveWholeImageArrayABoneWindowLevel.cc
     GiveWholeImageArrayAHeadAndNeckWindowLevel.cc
     GiveWholeImageArrayAThoraxWindowLevel.cc
