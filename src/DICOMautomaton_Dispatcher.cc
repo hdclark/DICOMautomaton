@@ -246,7 +246,7 @@ int main(int argc, char* argv[]){
       })
     );
 
-    arger.push_back( ygor_arg_handlr_t(400, 'o', "operation", true, "View",
+    arger.push_back( ygor_arg_handlr_t(400, 'o', "operation", true, "SFML_Viewer",
       "An operation to perform on the fully loaded data. Some operations can be chained, some"
       " may necessarily terminate computation. See '-u' for detailed operation information.",
       [&](const std::string &optarg) -> void {
@@ -255,6 +255,13 @@ int main(int argc, char* argv[]){
         }catch(const std::exception &e){
           FUNCERR("Unable to parse operation: " << e.what());
         }
+        return;
+      })
+    );
+
+    arger.push_back( ygor_arg_handlr_t(400, 'x', "disregard", true, "SFML_Viewer",
+      "Ignore the associated argument; essentially a 'no-op.' This option simplifies tweaking scripts.",
+      [&](const std::string &) -> void {
         return;
       })
     );
