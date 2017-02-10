@@ -597,13 +597,6 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
 
                     long int count = 0;
                     for(auto & pimg : encompassing_images){
-//                            const auto pixel_dump_filename_out = Get_Unique_Sequential_Filename("/tmp/raw_pixel_dump_uint16_scaled_per_chan_",6,".gray");
-//                            if(Dump_Pixels(*pimg,pixel_dump_filename_out)){
-//                                FUNCINFO("Dumped pixel data for image " << count << " to file '" << pixel_dump_filename_out << "'");
-//                            }else{
-//                                FUNCWARN("Unable to dump pixel data for this image to file '" << pixel_dump_filename_out << "'");
-//                            }
-//                            ++count;
                         const auto pixel_dump_filename_out = Get_Unique_Sequential_Filename("/tmp/spatially_overlapping_dump_",6,".fits");
                         if(WriteToFITS(*pimg,pixel_dump_filename_out)){
                             FUNCINFO("Dumped pixel data for image " << count << " to file '" << pixel_dump_filename_out << "'");
@@ -612,9 +605,6 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
                         }
 
                     }
-//                        FUNCINFO("To convert them issue something like 'convert -size 256x256 -depth 16 "
-//                                 "-define quantum:format=unsigned -type grayscale image.gray -depth 16 ... out.jpg'");
-
 
                 //Dump the current image to file.
                 }else if(thechar == 'i'){
@@ -1649,6 +1639,12 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
                         sf::VertexArray lines;
                         lines.setPrimitiveType(sf::LinesStrip);
 
+                        //Change colour depending on the orientation.
+                        const auto arb_pos_unit = disp_img_it->row_unit.Cross(disp_img_it->col_unit).unit();
+                        const auto c_orient = c.Estimate_Planar_Normal();
+                        const auto c_orient_pos = (c_orient.Dot(arb_pos_unit) > 0);
+                        const auto c_color = ( c_orient_pos ? sf::Color::Red : sf::Color::Blue );
+
                         for(auto & p : c.points){
                             //We have three distinct coordinate systems: DICOM, pixel coordinates and screen pixel coordinates,
                             // and SFML 'world' coordinates. We need to map from the DICOM coordinates to screen pixel coords.
@@ -1664,8 +1660,6 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
                             
                             //Clamp the point to the bounding box, using the top left as zero.
                             const auto dR = p - img_top_left;
-//                            const auto clamped_row = dR.Dot( disp_img_it->row_unit ) / img_dicom_height;
-//                            const auto clamped_col = dR.Dot( disp_img_it->col_unit ) / img_dicom_width;
                             const auto clamped_col = dR.Dot( disp_img_it->col_unit ) / img_dicom_height;
                             const auto clamped_row = dR.Dot( disp_img_it->row_unit ) / img_dicom_width;
 
@@ -1674,7 +1668,7 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
                             const auto world_x = DispImgBBox.left + DispImgBBox.width  * clamped_col;
                             const auto world_y = DispImgBBox.top  + DispImgBBox.height * clamped_row;
 
-                            lines.append( sf::Vertex( sf::Vector2f(world_x, world_y), sf::Color::Blue ) );
+                            lines.append( sf::Vertex( sf::Vector2f(world_x, world_y), c_color ) );
                         }
                         if(lines.getVertexCount() != 0) lines.append( lines[0] );
                         window.draw(lines);
@@ -1758,8 +1752,6 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
                         
                         //Clamp the point to the bounding box, using the top left as zero.
                         const auto dR = p - img_top_left;
-//                        const auto clamped_row = dR.Dot( disp_img_it->row_unit ) / img_dicom_height;
-//                        const auto clamped_col = dR.Dot( disp_img_it->col_unit ) / img_dicom_width;
                         const auto clamped_col = dR.Dot( disp_img_it->col_unit ) / img_dicom_height;
                         const auto clamped_row = dR.Dot( disp_img_it->row_unit ) / img_dicom_width;
 
