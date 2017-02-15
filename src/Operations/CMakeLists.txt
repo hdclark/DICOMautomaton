@@ -44,6 +44,7 @@ add_library(Operations_objs OBJECT
     MaxMinPixels.cc
     PlotPerROITimeCourses.cc
     PreFilterEnormousCTValues.cc
+    PruneEmptyImageDoseArrays.cc
     ContourBasedRayCastDoseAccumulate.cc
     SelectSlicesIntersectingROI.cc
     SFML_Viewer.cc

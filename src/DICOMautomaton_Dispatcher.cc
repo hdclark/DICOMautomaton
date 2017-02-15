@@ -349,36 +349,35 @@ int main(int argc, char* argv[]){
         }
     }
 
-
     //Standalone file loading.
+
+    //Standalone file loading: Boost.Serialization archives.
+    if(!StandaloneFilesDirsReachable.empty()
+    && !Load_From_Boost_Serialization_Files( DICOM_data, InvocationMetadata, FilenameLex,
+                                             StandaloneFilesDirsReachable )){
+        FUNCERR("Failed to load Boost.Serialization archive");
+    }
+
+    //Standalone file loading: DICOM files.
+    if(!StandaloneFilesDirsReachable.empty()
+    && !Load_From_DICOM_Files( DICOM_data, InvocationMetadata, FilenameLex,
+                               StandaloneFilesDirsReachable )){
+        FUNCERR("Failed to load DICOM file");
+    }
+
+    //Standalone file loading: FITS files.
+    if(!StandaloneFilesDirsReachable.empty()
+    && !Load_From_FITS_Files( DICOM_data, InvocationMetadata, FilenameLex,
+                               StandaloneFilesDirsReachable )){
+        FUNCERR("Failed to load FITS file");
+    }
+
+    //Other loaders ...
+
+
+    //If any standalone files remain, they cannot be loaded.
     if(!StandaloneFilesDirsReachable.empty()){
-
-        //Boost.Serialization archives.
-        if(!Load_From_Boost_Serialization_Files( DICOM_data, InvocationMetadata, FilenameLex,
-                                                 StandaloneFilesDirsReachable )){
-            FUNCERR("Failed to load Boost.Serialization archive");
-        }
-
-        //DICOM files.
-        if(!Load_From_DICOM_Files( DICOM_data, InvocationMetadata, FilenameLex,
-                                   StandaloneFilesDirsReachable )){
-            FUNCERR("Failed to load DICOM file");
-        }
-
-
-        //FITS files.
-        if(!Load_From_FITS_Files( DICOM_data, InvocationMetadata, FilenameLex,
-                                   StandaloneFilesDirsReachable )){
-            FUNCERR("Failed to load FITS file");
-        }
-
-        //Other loaders ...
-
-
-        //If anything remains, the file could not be loaded.
-        if(!StandaloneFilesDirsReachable.empty()){
-            FUNCERR("Unable to load file " << StandaloneFilesDirsReachable.front() << ". Refusing to continue");
-        }
+        FUNCERR("Unable to load file " << StandaloneFilesDirsReachable.front() << ". Refusing to continue");
     }
 
     //============================================= Dispatch to Analyses =============================================
