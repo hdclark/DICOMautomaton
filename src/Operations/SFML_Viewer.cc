@@ -229,6 +229,10 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
     BLcornertext.setCharacterSize(15); //Size in pixels, not in points.
     BLcornertext.setColor(sf::Color::Blue);
 
+    const sf::Color NaN_Color(60,0,0); //Dark red. Should not be very distracting.
+    const sf::Color Pos_Contour_Color(sf::Color::Blue);
+    const sf::Color Neg_Contour_Color(sf::Color::Red);
+    const sf::Color Editing_Contour_Color(255,121,0); //"Vivid Orange."
     
 
     const auto load_img_texture_sprite = [&](const disp_img_it_t &img_it, disp_img_texture_sprite_t &out) -> bool {
@@ -281,7 +285,7 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
                 for(auto j = 0; j < img_rows; ++j){
                     const auto val = static_cast<double>( img_it->value(j,i,0) ); //The first (R or gray) channel.
                     if(!std::isfinite(val)){
-                        animage.setPixel(i,j,sf::Color(255,0,0));
+                        animage.setPixel(i,j,NaN_Color);
                     }else{
                         double y = destmin; //The new value of the pixel.
     
@@ -334,7 +338,7 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
                 for(auto j = 0; j < img_rows; ++j){ 
                     const auto val = img_it->value(j,i,0);
                     if(!std::isfinite(val)){
-                        animage.setPixel(i,j,sf::Color(255,0,0));
+                        animage.setPixel(i,j,NaN_Color);
                     }else{
                         const double clamped_value = (static_cast<double>(val) - pixel_type_min)/(pixel_type_max - pixel_type_min);
                         const auto rescaled_value = (clamped_value - clamped_low)/(clamped_high - clamped_low);
@@ -1643,7 +1647,7 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
                         const auto arb_pos_unit = disp_img_it->row_unit.Cross(disp_img_it->col_unit).unit();
                         const auto c_orient = c.Estimate_Planar_Normal();
                         const auto c_orient_pos = (c_orient.Dot(arb_pos_unit) > 0);
-                        const auto c_color = ( c_orient_pos ? sf::Color::Red : sf::Color::Blue );
+                        const auto c_color = ( c_orient_pos ? Neg_Contour_Color : Pos_Contour_Color );
 
                         for(auto & p : c.points){
                             //We have three distinct coordinate systems: DICOM, pixel coordinates and screen pixel coordinates,
@@ -1760,7 +1764,7 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
                         const auto world_x = DispImgBBox.left + DispImgBBox.width  * clamped_col;
                         const auto world_y = DispImgBBox.top  + DispImgBBox.height * clamped_row;
 
-                        lines.append( sf::Vertex( sf::Vector2f(world_x, world_y), sf::Color::Blue ) );
+                        lines.append( sf::Vertex( sf::Vector2f(world_x, world_y), Editing_Contour_Color ) );
                     }
                     if(lines.getVertexCount() != 0) lines.append( lines[0] );
                     window.draw(lines);
