@@ -54,6 +54,7 @@
 
 #include "../Common_Boost_Serialization.h"
 #include "../Common_Plotting.h"
+#include "../Colour_Maps.h"
 
 #include "../YgorImages_Functors/Grouping/Misc_Functors.h"
 
@@ -233,7 +234,31 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
     const sf::Color Pos_Contour_Color(sf::Color::Blue);
     const sf::Color Neg_Contour_Color(sf::Color::Red);
     const sf::Color Editing_Contour_Color(255,121,0); //"Vivid Orange."
-    
+
+    //Load available colour maps.
+    std::vector< std::pair<std::string, std::function<class ClampedColourRGB(double)>>> colour_maps = {
+        std::make_pair("LinearRamp", ColourMap_Linear),
+
+        std::make_pair("Viridis", ColourMap_Viridis),
+        std::make_pair("Magma", ColourMap_Magma),
+        std::make_pair("Plasma", ColourMap_Plasma),
+        std::make_pair("Inferno", ColourMap_Inferno),
+
+        std::make_pair("Jet", ColourMap_Jet),
+
+        std::make_pair("MorelandBlueRed", ColourMap_MorelandBlueRed),
+
+        std::make_pair("MorelandBlackBody", ColourMap_MorelandBlackBody),
+        std::make_pair("MorelandExtendedBlackBody", ColourMap_MorelandExtendedBlackBody),
+        std::make_pair("KRC", ColourMap_KRC),
+        std::make_pair("ExtendedKRC", ColourMap_ExtendedKRC),
+
+        std::make_pair("KovesiLinKRYW_5-100_c64", ColourMap_KovesiLinKRYW_5_100_c64),
+        std::make_pair("KovesiLinKRYW_0-100_c71", ColourMap_KovesiLinKRYW_0_100_c71),
+
+        std::make_pair("LANLOliveGreentoBlue", ColourMap_LANL_OliveGreen_to_Blue)
+    };
+    size_t colour_map = 0;
 
     const auto load_img_texture_sprite = [&](const disp_img_it_t &img_it, disp_img_texture_sprite_t &out) -> bool {
         //This routine returns a pair of (texture,sprite) because the texture must be kept around
@@ -287,26 +312,28 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
                     if(!std::isfinite(val)){
                         animage.setPixel(i,j,NaN_Color);
                     }else{
-                        double y = destmin; //The new value of the pixel.
-    
-                        //If above or below the cutoff range, the pixel could be treated as the window min/max or simply as if
-                        // it did not exist. We could set the value to fully transparent, NaN, or a specially designated 
-                        // 'ignore' colour. It's ultimately up to the user.
+                        double x; // range = [0,1].
                         if(val <= (win_c - win_r)){
-                            y = destmin;
+                            x = 0.0;
                         }else if(val >= (win_c + win_r)){
-                            //Logical choice, but make viewing hard if window is too low...
-                            y = destmax;
-    
-                        //If within the window range. Scale linearly as the pixel's position in the window.
+                            x = 1.0;
                         }else{
-                            //const double clamped = (val - (win_c - win_r)) / (2.0*win_r + 1.0);
-                            const double clamped = (val - (win_c - win_r)) / win_fw;
-                            y = clamped * (destmax - destmin) + destmin;
+                            x = (val - (win_c - win_r)) / win_fw;
                         }
+
+                        const auto res = colour_maps[colour_map].second(x);
+                        const double x_R = res.R;
+                        const double x_G = res.G;
+                        const double x_B = res.B;
+
+                        const double out_R = x_R * (destmax - destmin) + destmin;
+                        const double out_B = x_B * (destmax - destmin) + destmin;
+                        const double out_G = x_G * (destmax - destmin) + destmin;
     
-                        const auto scaled_value = static_cast<uint8_t>( std::floor(y) );
-                        animage.setPixel(i,j,sf::Color(scaled_value,scaled_value,scaled_value));
+                        const auto scaled_R = static_cast<uint8_t>( std::floor(out_R) );
+                        const auto scaled_G = static_cast<uint8_t>( std::floor(out_G) );
+                        const auto scaled_B = static_cast<uint8_t>( std::floor(out_B) );
+                        animage.setPixel(i,j,sf::Color(scaled_R,scaled_G,scaled_B));
                     }
                 }
             }
@@ -342,8 +369,16 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
                     }else{
                         const double clamped_value = (static_cast<double>(val) - pixel_type_min)/(pixel_type_max - pixel_type_min);
                         const auto rescaled_value = (clamped_value - clamped_low)/(clamped_high - clamped_low);
-                        const auto scaled_value = static_cast<uint8_t>(rescaled_value * dest_type_max);
-                        animage.setPixel(i,j,sf::Color(scaled_value,scaled_value,scaled_value));
+
+                        const auto res = colour_maps[colour_map].second(rescaled_value);
+                        const double x_R = res.R;
+                        const double x_G = res.G;
+                        const double x_B = res.B;
+                        
+                        const auto scaled_R = static_cast<uint8_t>(x_R * dest_type_max);
+                        const auto scaled_G = static_cast<uint8_t>(x_G * dest_type_max);
+                        const auto scaled_B = static_cast<uint8_t>(x_B * dest_type_max);
+                        animage.setPixel(i,j,sf::Color(scaled_R,scaled_G,scaled_B));
                     }
                 }
             }
@@ -448,13 +483,14 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
                             "\\t\\t t \\t\\t Plot a time course at the mouse\\'s current row and column.\\n"
                             "\\t\\t T \\t\\t Open a realtime plotting window.\\n"
                             "\\t\\t a,A \\t\\t Plot or dump the pixel values for [a]ll image sets which spatially overlap.\\n"
-                            "\\t\\t M   \\t\\t Try plot a pharmacokinetic [M]odel using image map parameters and ROI time courses.\\n"
+                            "\\t\\t M \\t\\t Try plot a pharmacokinetic [M]odel using image map parameters and ROI time courses.\\n"
                             "\\t\\t N,P \\t\\t Advance to the next/previous image series.\\n"
                             "\\t\\t n,p \\t\\t Advance to the next/previous image in this series.\\n"
                             "\\t\\t -,+ \\t\\t Advance to the next/previous image that spatially overlaps this image.\\n"
+                            "\\t\\t (,) \\t\\t Cycle through the available colour maps/transformations.\\n"
                             "\\t\\t l,L \\t\\t Reset the image scale to be pixel-for-pixel what is seen on screen.\\n"
-                            "\\t\\t u   \\t Toggle showing metadata tags that are identical to the neighbouring image\\'s metadata tags.\\n"
-                            "\\t\\t U   \\t Dump and show the current image\\'s metadata.\\n"
+                            "\\t\\t u \\t\\t Toggle showing metadata tags that are identical to the neighbouring image\\'s metadata tags.\\n"
+                            "\\t\\t U \\t\\t Dump and show the current image\\'s metadata.\\n"
                             "\\t\\t e \\t\\t Erase latest non-empty contour. (A single contour.)\\n"
                             "\\t\\t E \\t\\t Empty the current working ROI buffer. (The entire buffer; all contours.)\\n"
                             "\\t\\t s,S \\t\\t Save the current contour collection.\\n"
@@ -472,6 +508,29 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
                         FUNCWARN("Unable dump serialization to file " << out_fname.string());
                     }
 
+
+                //Cycle through the available colour maps/transformations.
+                }else if( thechar == ')' ){
+                    colour_map = (colour_map + 1) % colour_maps.size();
+
+                    if(load_img_texture_sprite(disp_img_it, disp_img_texture_sprite)){
+                        scale_sprite_to_fill_screen(window,disp_img_it,disp_img_texture_sprite);
+                        const auto img_number = std::distance(disp_img_beg, disp_img_it);
+                        FUNCINFO("Reloaded texture using '" << colour_maps[colour_map].first << "' colour map");
+                    }else{
+                        FUNCERR("Unable to reload texture using selected colour map");
+                    }
+
+                }else if( thechar == '(' ){
+                    colour_map = (colour_map + colour_maps.size() - 1) % colour_maps.size();
+
+                    if(load_img_texture_sprite(disp_img_it, disp_img_texture_sprite)){
+                        scale_sprite_to_fill_screen(window,disp_img_it,disp_img_texture_sprite);
+                        const auto img_number = std::distance(disp_img_beg, disp_img_it);
+                        FUNCINFO("Reloaded texture using '" << colour_maps[colour_map].first << "' colour map");
+                    }else{
+                        FUNCERR("Unable to reload texture using selected colour map");
+                    }
 
                 //Toggle whether existing contours should be displayed.
                 }else if( thechar == 'x' ){
@@ -1598,6 +1657,13 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
             BRcornertext.move(offset);
         }            
         {
+            {
+                const auto existing = BLcornertext.getString();
+                std::stringstream ss;
+                ss << existing.toAnsiString() << std::endl 
+                   << "Colour map: " << colour_maps[colour_map].first;
+                BLcornertext.setString(ss.str());
+            }
             if(custom_centre && custom_width){
                 const auto existing = BLcornertext.getString();
                 std::stringstream ss;
