@@ -33,3 +33,5 @@ ClampedColourRGB ColourMap_KovesiLinKRYW_0_100_c71(double y);
 
 ClampedColourRGB ColourMap_LANL_OliveGreen_to_Blue(double y);
 
+ClampedColourRGB ColourMap_YgorIncandescent(double y);
+

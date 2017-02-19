@@ -16063,6 +16063,40 @@ ClampedColourRGB ColourMap_LANL_OliveGreen_to_Blue(double y){
              b.Interpolate_Linearly(y)[2] };
 }
 
+ClampedColourRGB ColourMap_YgorIncandescent(double y){
+    // This is a custom colour map that highlights the highs much more than the lows.
+    // It is a variation on the GIMP's "incandescent" gradient.
+
+    const static samples_1D<double> r( { 
+        { 0.000, 0.0,   0.0/255.0, 0.0 },
+        { 0.437, 0.0, 186.0/255.0, 0.0 },
+        { 0.853, 0.0, 255.0/255.0, 0.0 },
+        { 0.956, 0.0, 248.0/255.0, 0.0 },
+        { 1.000, 0.0, 249.0/255.0, 0.0 }
+    } );
+
+    const static samples_1D<double> g( { 
+        { 0.000, 0.0,   0.0/255.0, 0.0 },
+        { 0.437, 0.0,   0.0/255.0, 0.0 },
+        { 0.853, 0.0, 139.0/255.0, 0.0 },
+        { 0.956, 0.0, 239.0/255.0, 0.0 },
+        { 1.000, 0.0, 247.0/255.0, 0.0 }
+    } );
+
+    const static samples_1D<double> b( { 
+        { 0.000, 0.0,   0.0/255.0, 0.0 },
+        { 0.437, 0.0,   0.0/255.0, 0.0 },
+        { 0.853, 0.0,  50.0/255.0, 0.0 },
+        { 0.956, 0.0,  19.0/255.0, 0.0 },
+        { 1.000, 0.0, 212.0/255.0, 0.0 }
+    } );
+
+    return { r.Interpolate_Linearly(y)[2],
+             g.Interpolate_Linearly(y)[2],
+             b.Interpolate_Linearly(y)[2] };
+}
+
+
 /*
 ClampedColourRGB ColourMap_(double y){
     const static samples_1D<double> r( { 
