@@ -173,7 +173,7 @@ Drover ContourWholeImages(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
             {
                 //Check if there is already a suitable contour. If so, do not re-process.
                 std::lock_guard<std::mutex> lock(saver_printer);
-                if(animg.encompasses_any_part_of_contour_in_collection( DICOM_data.contour_data->ccs.back().contours )){
+                if(animg.encompasses_any_part_of_contour_in_collection( DICOM_data.contour_data->ccs.back() )){
                     continue;
                 }
             }
