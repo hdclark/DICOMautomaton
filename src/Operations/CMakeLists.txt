@@ -15,6 +15,7 @@ add_library(Operations_objs OBJECT
     ContourSimilarity.cc
     ContouringAides.cc
     ContourViaThreshold.cc
+    ContourWholeImages.cc
     ConvertNaNsToAir.cc
     DCEMRI_Nonparametric_CE.cc
     DCEMRI_IAUC.cc
