@@ -94,9 +94,8 @@ std::list<OperationArgDoc> OpArgDocContourWholeImages(void){
     // This routine avoids having to manually contour anything.
     // The output is 'ephemeral' and is not commited to any database.
     //
-    // NOTE: This routine expects images to be non-overlapping. In other words, if images overlap then the contours
-    //       generated may also overlap. This is probably not what you want (but there is nothing intrinsically wrong
-    //       with presenting this routine with multiple images if you intentionally want overlapping contours). 
+    // NOTE: This routine will attempt to avoid repeat contours. Generated contours are tested for intersection with an
+    //       image before the image is processed. 
     //
     // NOTE: Existing contours are ignored and unaltered.
     //
@@ -170,6 +169,15 @@ Drover ContourWholeImages(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
             if( (animg.rows < 1) || (animg.columns < 1) ){
                 throw std::runtime_error("Image is empty -- cannot contour whole image.");
             }
+
+            {
+                //Check if there is already a suitable contour. If so, do not re-process.
+                std::lock_guard<std::mutex> lock(saver_printer);
+                if(animg.encompasses_any_part_of_contour_in_collection( DICOM_data.contour_data->ccs.back().contours )){
+                    continue;
+                }
+            }
+
             tp.submit_task([&](void) -> void {
                 const auto R = animg.rows;
                 const auto C = animg.columns;
@@ -179,7 +187,6 @@ Drover ContourWholeImages(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
                 const auto corner_B = animg.position(R-1,0)   + animg.row_unit*animg.pxl_dx*0.45 - animg.col_unit*animg.pxl_dy*0.45;
                 const auto corner_C = animg.position(R-1,C-1) + animg.row_unit*animg.pxl_dx*0.45 + animg.col_unit*animg.pxl_dy*0.45;
                 const auto corner_D = animg.position(0,C-1)   - animg.row_unit*animg.pxl_dx*0.45 + animg.col_unit*animg.pxl_dy*0.45;
-
                 
                 //Walk all available half-edges forming contour perimeters.
                 std::list<contour_of_points<double>> cop;
