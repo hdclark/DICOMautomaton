@@ -170,14 +170,6 @@ Drover ContourWholeImages(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
                 throw std::runtime_error("Image is empty -- cannot contour whole image.");
             }
 
-            {
-                //Check if there is already a suitable contour. If so, do not re-process.
-                std::lock_guard<std::mutex> lock(saver_printer);
-                if(animg.encompasses_any_part_of_contour_in_collection( DICOM_data.contour_data->ccs.back() )){
-                    continue;
-                }
-            }
-
             tp.submit_task([&](void) -> void {
                 const auto R = animg.rows;
                 const auto C = animg.columns;
@@ -208,7 +200,11 @@ Drover ContourWholeImages(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
                 //Save the contours and print some information to screen.
                 {
                     std::lock_guard<std::mutex> lock(saver_printer);
-                    DICOM_data.contour_data->ccs.back().contours.splice( DICOM_data.contour_data->ccs.back().contours.end(), cop);
+
+                    //Check if there is already a suitable contour. If so, do not bother saving the duplicate.
+                    if(! animg.encompasses_any_part_of_contour_in_collection( DICOM_data.contour_data->ccs.back() )){
+                        DICOM_data.contour_data->ccs.back().contours.splice( DICOM_data.contour_data->ccs.back().contours.end(), cop);
+                    }    
 
                     ++completed;
                     FUNCINFO("Completed " << completed << " of " << img_count
