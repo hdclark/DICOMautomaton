@@ -100,6 +100,7 @@
 
 #include "../YgorImages_Functors/Compute/Per_ROI_Time_Courses.h"
 #include "../YgorImages_Functors/Compute/Contour_Similarity.h"
+#include "../YgorImages_Functors/Compute/AccumulatePixelDistributions.h"
 
 #include "../KineticModel_1Compartment2Input_5Param_Chebyshev_Common.h"
 #include "../KineticModel_1Compartment2Input_5Param_Chebyshev_FreeformOptimization.h"
@@ -496,6 +497,7 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
                             "\\t\\t e \\t\\t Erase latest non-empty contour. (A single contour.)\\n"
                             "\\t\\t E \\t\\t Empty the current working ROI buffer. (The entire buffer; all contours.)\\n"
                             "\\t\\t s,S \\t\\t Save the current contour collection.\\n"
+                            "\\t\\t # \\t\\t Compute stats for the working, unsaved contour collection.\\n"
                             "\\t\\t b \\t\\t Serialize Drover instance (all data) to file.\\n"
                             "\\n\""
                     );
@@ -1402,6 +1404,47 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
                         FUNCINFO("Contour collection saved to db and cleared");
                     }catch(const std::exception &e){
                         FUNCWARN("Unable to push contour collection to db: '" << e.what() << "'");
+                    }
+
+                //Compute some stats for the working, unsaved contour collection.
+                }else if( thechar == '#' ){
+
+                    try{
+                        //Trim empty contours from the shuttle.
+                        auto cccopy = contour_coll_shtl;
+                        cccopy.Purge_Contours_Below_Point_Count_Threshold(3);
+                        if(cccopy.contours.empty()) throw std::runtime_error("Given empty contour collection. Contours need >3 points each.");
+
+                        //Create a dummy shuttle with the working contours.
+                        std::list<std::reference_wrapper<contour_collection<double>>> cc_ROI;
+                        auto base_ptr = reinterpret_cast<contour_collection<double> *>(&contour_coll_shtl);
+                        base_ptr->Insert_Metadata("ROIName", "working_ROI");
+                        cc_ROI.push_back( std::ref(*base_ptr) );
+
+                        //Accumulate the voxel intensity distributions.
+                        AccumulatePixelDistributionsUserData ud;
+                        if(!(*img_array_ptr_it)->imagecoll.Compute_Images( AccumulatePixelDistributions, { },
+                                                                   cc_ROI, &ud )){
+                            throw std::runtime_error("Unable to accumulate pixel distributions.");
+                        }
+
+                        std::stringstream ss;
+                        for(const auto &av : ud.accumulated_voxels){
+                            const auto lROIname = av.first;
+                            const auto PixelMean = Stats::Mean( av.second );
+                            const auto PixelMedian = Stats::Median( av.second );
+                            const auto PixelStdDev = std::sqrt(Stats::Unbiased_Var_Est( av.second ));
+                
+                            ss << "PixelMedian=" << PixelMedian << ", "
+                               << "PixelMean=" << PixelMean << ", "
+                               << "PixelStdDev=" << PixelStdDev << ", "
+                               << "SNR=" << PixelMean/PixelStdDev << ", "
+                               << "VoxelCount=" << av.second.size() << std::endl;
+                        }
+                        FUNCINFO("Working contour collection stats:\n\t" << ss.str());
+
+                    }catch(const std::exception &e){
+                        FUNCWARN("Unable to compute working contour collection stats: '" << e.what() << "'");
                     }
 
                 }else{
