@@ -113,6 +113,21 @@ std::list<OperationArgDoc> OpArgDocBuildLexiconInteractively(void){
                             "NA_Organ" };
 
     out.emplace_back();
+    out.back().name = "OmitROILabelRegex";
+    out.back().desc = "A regex matching ROI labels/names to prune. Only matching ROIs will be pruned."
+                      " The default will match no ROIs. "
+                      " Be aware that input spaces are trimmed to a single space."
+                      " If your ROI name has more than two sequential spaces, use regex to avoid them."
+                      " All ROIs have to match the single regex, so use the 'or' token if needed."
+                      " Regex is case insensitive and uses extended POSIX syntax. "
+                      " (Note: an exclusive approach is taken rather than an inclusive approach because "
+                      " regex negations are not easily supported in the POSIX syntax.)";
+    out.back().default_val = "";
+    out.back().expected = false;
+    out.back().examples = { R"***(.*left.*|.*right.*|.*eyes.*)***",
+                            R"***(.*PTV.*|.*CTV.*|.*GTV.*)***" };
+
+    out.emplace_back();
     out.back().name = "LexiconSeedFile";
     out.back().desc = "A file containing a 'seed' lexicon to use and add to. This is the lexicon that"
                       " is being built. It will be modified.";
@@ -129,9 +144,10 @@ Drover BuildLexiconInteractively(Drover DICOM_data, OperationArgPkg OptArgs, std
     // 
 
     //---------------------------------------------- User Parameters --------------------------------------------------
-    const auto CleanLabelsStr      = OptArgs.getValueStr("CleanLabels").value();
-    const auto JunkLabel           = OptArgs.getValueStr("JunkLabel").value();
-    const auto LexiconSeedFileName = OptArgs.getValueStr("LexiconSeedFile").value();
+    const auto CleanLabelsStr       = OptArgs.getValueStr("CleanLabels").value();
+    const auto JunkLabel            = OptArgs.getValueStr("JunkLabel").value();
+    const auto LexiconSeedFileName  = OptArgs.getValueStr("LexiconSeedFile").value();
+    const auto OmitROILabelRegexOpt = OptArgs.getValueStr("OmitROILabelRegex");
 
     //-----------------------------------------------------------------------------------------------------------------
 
@@ -143,6 +159,13 @@ Drover BuildLexiconInteractively(Drover DICOM_data, OperationArgPkg OptArgs, std
         throw std::invalid_argument("No lexicon 'clean' labels provided.");
     }
 
+
+    // Generate exclusion regex. If no exclusions provided, generate an invalid placeholder to fail ASAP.
+    const std::string OmitROILabelRegexStr = ( OmitROILabelRegexOpt ? OmitROILabelRegexOpt.value() : "" );
+    const auto excluderegex = std::regex(OmitROILabelRegexStr, std::regex::icase | std::regex::nosubs 
+                                                                                 | std::regex::optimize 
+                                                                                 | std::regex::extended);
+
     Explicator X(LexiconSeedFileName);
 
     //Gather the data set's contour labels.
@@ -153,7 +176,12 @@ Drover BuildLexiconInteractively(Drover DICOM_data, OperationArgPkg OptArgs, std
     for(const auto &cc : DICOM_data.contour_data->ccs){
         for(const auto &c : cc.contours){
             auto label = c.GetMetadataValueAs<std::string>("ROIName");
-            if(label) cc_labels.insert(label.value());
+            if(label){
+                if(!OmitROILabelRegexOpt //No exclusion criteria supplied.
+                || !(std::regex_match(label.value(),excluderegex)) ){ 
+                    cc_labels.insert(label.value());
+                }
+            }
 
             auto patientID = c.GetMetadataValueAs<std::string>("PatientID");
             if(patientID) PatientID = patientID.value(); 
