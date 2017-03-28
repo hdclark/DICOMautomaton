@@ -202,7 +202,10 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
 
     //Attempt to load fonts. We should try a few different files, and include a back-up somewhere accessible...
     sf::Font afont;
-    if(!afont.loadFromFile("/usr/share/fonts/TTF/cmr10.ttf")) FUNCERR("Unable to find font file");
+    if( !afont.loadFromFile("/usr/share/fonts/TTF/cmr10.ttf")
+    &&  !afont.loadFromFile("/usr/share/fonts/truetype/freefont/FreeMono.ttf") ){
+        FUNCERR("Unable to find a suitable font file");
+    }
 
     //Create some primitive shapes, textures, and text objects for display later.
     sf::CircleShape smallcirc(10.0f);
