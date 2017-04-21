@@ -337,6 +337,14 @@ std::list<OperationArgDoc> OpArgDocSurfaceBasedRayCastDoseAccumulate(void){
     out.back().examples = { "1", "4", "1000"};
 
 
+    out.emplace_back();
+    out.back().name = "OnlyGenerateSurface";
+    out.back().desc = "Stop processing after writing the surface and subdivided surface meshes."
+                      " This option is primarily used for debugging and visualization.";
+    out.back().default_val = "false";
+    out.back().expected = true;
+    out.back().examples = { "true", "false" };
+
     return out;
 }
 
@@ -382,13 +390,20 @@ Drover SurfaceBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptA
     const auto MeshingSubdivisionIterations = std::stol(OptArgs.getValueStr("MeshingSubdivisionIterations").value());
     const auto MaxRaySurfaceIntersections = std::stol(OptArgs.getValueStr("MaxRaySurfaceIntersections").value());
 
+    const auto OnlyGenerateSurfaceStr = OptArgs.getValueStr("OnlyGenerateSurface").value();
+
     //-----------------------------------------------------------------------------------------------------------------
     const auto roiregex = std::regex(ROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
     const auto roinormalizedregex = std::regex(NormalizedROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
     const auto refregex = std::regex(ReferenceROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
     const auto refnormalizedregex = std::regex(NormalizedReferenceROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto TrueRegex = std::regex("^tr?u?e?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
 
     Explicator X(FilenameLex);
+
+
+    //Boolean options.
+    const auto OnlyGenerateSurface = std::regex_match(OnlyGenerateSurfaceStr, TrueRegex);
 
     //Merge the dose arrays if necessary.
     if(DICOM_data.dose_data.empty()){
@@ -577,7 +592,8 @@ Drover SurfaceBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptA
     C2t3 c2t3(tr);    // 2D-complex in 3D-Delaunay triangulation
 
     // defining the surface
-    Surface_3 surface(surface_oracle, cgal_bounding_sphere);
+    const auto surface_error_bound = static_cast<FT>(1.0e-5); //Relative to bounding volume.
+    Surface_3 surface(surface_oracle, cgal_bounding_sphere, surface_error_bound);
 
     // defining meshing criteria
     CGAL::Surface_mesh_default_criteria_3<Tr> criteria(MeshingAngularBound,
@@ -612,6 +628,8 @@ Drover SurfaceBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptA
         out << polyhedron;
     }
     if(!polyhedron.is_pure_triangle()) throw std::runtime_error("Mesh is not purely triangular.");
+
+    if(OnlyGenerateSurface) return std::move(DICOM_data);
 
     // =============================== Construct an AABB Tree for Spatial Lookups ==================================
 
