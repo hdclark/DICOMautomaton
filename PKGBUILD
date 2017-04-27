@@ -26,6 +26,7 @@ depends=(
    'cgal>=4.8'
    'explicator'
    'ygor'
+   'ygorclustering'
 )
 optdepends=(
    'zenity'

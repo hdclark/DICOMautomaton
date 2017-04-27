@@ -50,15 +50,16 @@ Dependencies
   naming conventions) and in the CMakeLists.txt file (Debian package naming
   conventions).
 
-    Notably, DICOMautomaton depends on the author's "Ygor" and "Explicator"
-  projects. See 
-      [https://gitlab.com/hdeanclark/Explicator] 
-      or
-      [https://github.com/hdclark/Explicator] 
-  and
+    Notably, DICOMautomaton depends on the author's "Ygor", "Explicator", 
+  and "YgorClustering" projects. See
       [https://gitlab.com/hdeanclark/Ygor]
-      or
-      [https://github.com/hdclark/Ygor]
+      or [https://github.com/hdclark/Ygor]
+  and
+      [https://gitlab.com/hdeanclark/Explicator] 
+      or [https://github.com/hdclark/Explicator] 
+  and
+      [https://gitlab.com/hdeanclark/YgorClustering]
+      or [https://github.com/hdclark/YgorClustering]
 
   
 Installation
