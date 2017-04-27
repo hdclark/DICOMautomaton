@@ -46,7 +46,7 @@ License and Copying
 Installation
 ============
 
- This project uses CMake to build. Use the usual commands to compile:
+  This project uses CMake to build. Use the usual commands to compile:
    $ cd /path/to/source/directory
    $ mkdir build && cd build/
     THEN
@@ -64,5 +64,15 @@ Installation
        $ rsync -a --exclude build ../ ./
        $ makepkg --syncdeps --noconfirm # Optionally also [--install].
 
+
+
+Project Home
+============
+
+    This project's homepage can be found at [http://www.halclark.ca/]. The
+  source code is available at either
+          [https://gitlab.com/hdeanclark/DICOMautomaton/] 
+  or
+          [https://github.com/hdclark/DICOMautomaton/].
 
 
