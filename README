@@ -57,7 +57,7 @@ Dependencies
   and
       [https://gitlab.com/hdeanclark/Explicator] 
       or [https://github.com/hdclark/Explicator] 
-  and
+  and (only for compilation)
       [https://gitlab.com/hdeanclark/YgorClustering]
       or [https://github.com/hdclark/YgorClustering]
 
@@ -82,7 +82,6 @@ Installation
      # If building for Arch Linux.
        $ rsync -a --exclude build ../ ./
        $ makepkg --syncdeps --noconfirm # Optionally also [--install].
-
 
 
 Project Home

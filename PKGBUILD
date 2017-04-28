@@ -26,7 +26,6 @@ depends=(
    'cgal>=4.8'
    'explicator'
    'ygor'
-   'ygorclustering'
 )
 optdepends=(
    'zenity'
@@ -35,6 +34,7 @@ optdepends=(
 makedepends=(
    'cmake'
    'asio'
+   'ygorclustering'
 )
 # conflicts=()
 # replaces=()
