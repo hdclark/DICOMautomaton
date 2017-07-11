@@ -13,6 +13,7 @@ license=('unknown')
 depends=(
    'gcc-libs'
    'ttf-computer-modern-fonts'
+   'ttf-freefont'
    'zenity'
    'sfml'
    'jansson'

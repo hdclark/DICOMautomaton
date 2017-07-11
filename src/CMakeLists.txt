@@ -477,7 +477,9 @@ SET(CPACK_DEBIAN_PACKAGE_DEPENDS
     freeglut3,
     libcgal-dev,
     libnlopt-dev,
-    libasio-dev")
+    libasio-dev,
+    fonts-freefont-ttf,
+    fonts-cmu")
 
 # Recommended or optional packages, e.g., "liboptional-dev (>= 1.2.3-1), libmaybe-dev (>= 1:1.3.2-10)"
 SET(CPACK_DEBIAN_PACKAGE_RECOMMENDS 
