@@ -76,7 +76,7 @@ Installation
      # If building for Debian.
        $ cmake ../ -DCMAKE_INSTALL_PREFIX=/usr
        $ make && make package
-       $ sudo dpkg -i sudo dpkg -i *.deb
+       $ sudo dpkg -i *.deb
        $ sudo apt-get -f install   # Or [--fix-missing] in lieu of [-f].
     OR
      # If building for Arch Linux.
