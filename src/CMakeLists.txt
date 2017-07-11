@@ -484,7 +484,8 @@ SET(CPACK_DEBIAN_PACKAGE_DEPENDS
 # Recommended or optional packages, e.g., "liboptional-dev (>= 1.2.3-1), libmaybe-dev (>= 1:1.3.2-10)"
 SET(CPACK_DEBIAN_PACKAGE_RECOMMENDS 
    "zenity, 
-    eigen,
+    libeigen3-dev,
+    gnuplot,
     ygorclustering")
 SET(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "amd64") # i386, amd64, armel, armhf, ...
 SET(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Various tools for medical physics applications.")

@@ -31,6 +31,7 @@ depends=(
 optdepends=(
    'zenity'
    'dialog'
+   'gnuplot'
 )
 makedepends=(
    'cmake'
