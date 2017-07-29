@@ -54,6 +54,7 @@
 #include "Operations/GiveWholeImageArrayAThoraxWindowLevel.h"
 #include "Operations/GiveWholeImageArrayAnAbdominalWindowLevel.h"
 #include "Operations/GridBasedRayCastDoseAccumulate.h"
+#include "Operations/HighlightROIs.h"
 #include "Operations/ImageRoutineTests.h"
 #include "Operations/LogScale.h"
 #include "Operations/MaxMinPixels.h"
@@ -123,6 +124,7 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["GiveWholeImageArrayAThoraxWindowLevel"] = std::make_pair(OpArgDocGiveWholeImageArrayAThoraxWindowLevel, GiveWholeImageArrayAThoraxWindowLevel);
     out["GiveWholeImageArrayAnAbdominalWindowLevel"] = std::make_pair(OpArgDocGiveWholeImageArrayAnAbdominalWindowLevel, GiveWholeImageArrayAnAbdominalWindowLevel);
     out["GridBasedRayCastDoseAccumulate"] = std::make_pair(OpArgDocGridBasedRayCastDoseAccumulate, GridBasedRayCastDoseAccumulate);
+    out["HighlightROIs"] = std::make_pair(OpArgDocHighlightROIs, HighlightROIs);
     out["ImageRoutineTests"] = std::make_pair(OpArgDocImageRoutineTests, ImageRoutineTests);
     out["LogScale"] = std::make_pair(OpArgDocLogScale, LogScale);
     out["MaxMinPixels"] = std::make_pair(OpArgDocMaxMinPixels, MaxMinPixels);

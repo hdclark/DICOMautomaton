@@ -275,9 +275,11 @@ Drover UBC3TMRI_DCE_Experimental(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
         DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( *img_arr_copy_long_temporally_avgd ) );
         std::shared_ptr<Image_Array> img_arr_highlighted_rois( DICOM_data.image_data.back() );
 
+        HighlightROIVoxelsUserData ud;
         if(!img_arr_highlighted_rois->imagecoll.Process_Images( GroupIndividualImages, 
                                                                 HighlightROIVoxels, {},
-                                                                { cc_all } )){
+                                                                { cc_all },
+                                                                &ud )){
                                                                 //{ cc_r_parotid_int, cc_l_parotid_int, cc_r_masseter_int, cc_pharynx_int } )){
             FUNCERR("Unable to highlight ROIs");
         }

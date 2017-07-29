@@ -224,10 +224,12 @@ Drover CT_Liver_Perfusion(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::m
         for(auto & img_arr : temporal_avg_img_arrays){
             DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( *img_arr ) );
             roi_highlighted_img_arrays.emplace_back( DICOM_data.image_data.back() );
-
+ 
+            HighlightROIVoxelsUserData ud;
             if(!roi_highlighted_img_arrays.back()->imagecoll.Process_Images_Parallel( GroupIndividualImages,
                                                                              HighlightROIVoxels,
-                                                                             {}, cc_all )){
+                                                                             {}, cc_all,
+                                                                             &ud )){
                 FUNCERR("Unable to highlight ROIs");
             }
         }

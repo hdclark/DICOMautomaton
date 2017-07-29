@@ -141,9 +141,11 @@ Drover UBC3TMRI_DCE(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std
             DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( *img_arr ) );
             roi_highlighted_img_arrays.emplace_back( DICOM_data.image_data.back() );
 
+            HighlightROIVoxelsUserData ud;
             if(!roi_highlighted_img_arrays.back()->imagecoll.Process_Images( GroupIndividualImages,
                                                                              HighlightROIVoxels,
-                                                                             {}, cc_all )){
+                                                                             {}, cc_all,
+                                                                             &ud )){
                 FUNCERR("Unable to highlight ROIs");
             }
         }
