@@ -20,6 +20,7 @@
 #include <list>
 #include <tuple>
 #include <map>
+#include <random>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
@@ -102,200 +103,251 @@ std::map<std::string,std::string> get_metadata_top_level_tags(const std::string 
     //       to check if the tag is present before asking for a string. Then, of course, we need to check later if
     //       the item is present. If using a map, I think the default empty string will suffice to communicate this
     //       info.
-     
-    //DICOM logical hierarchy fields.
-    out.emplace("PatientID"                    , Canonicalize_String2(tds->getString(0x0010, 0, 0x0020, 0), ctrim));
-    out.emplace("StudyInstanceUID"             , Canonicalize_String2(tds->getString(0x0020, 0, 0x000D, 0), ctrim));
-    out.emplace("SeriesInstanceUID"            , Canonicalize_String2(tds->getString(0x0020, 0, 0x000E, 0), ctrim));
-    out.emplace("SOPInstanceUID"               , Canonicalize_String2(tds->getString(0x0008, 0, 0x0018, 0), ctrim));
+    
+    auto insert_as_string_if_nonempty = [&out,&ctrim,&tds](uint16_t group, uint16_t tag,
+                                                                 std::string name ) -> void {
 
-    //DICOM data collection, additional or fallback linkage metadata.
-    out.emplace("InstanceNumber"               , Canonicalize_String2(tds->getString(0x0020, 0, 0x0013, 0), ctrim));
-    out.emplace("InstanceCreationDate"         , Canonicalize_String2(tds->getString(0x0008, 0, 0x0012, 0), ctrim));
-    out.emplace("InstanceCreationTime"         , Canonicalize_String2(tds->getString(0x0008, 0, 0x0013, 0), ctrim));
+//FUNCINFO("Another run, this time for '" << name << "'");
+        const uint32_t first_order = 0; // Always zero for modern DICOM files.
+        const uint32_t first_element = 0; // Usually zero, but several tags can store multiple elements.
 
-    out.emplace("StudyDate"                    , Canonicalize_String2(tds->getString(0x0008, 0, 0x0020, 0), ctrim));
-    out.emplace("StudyTime"                    , Canonicalize_String2(tds->getString(0x0008, 0, 0x0030, 0), ctrim));
-    out.emplace("StudyID"                      , Canonicalize_String2(tds->getString(0x0020, 0, 0x0010, 0), ctrim));
-    out.emplace("StudyDescription"             , Canonicalize_String2(tds->getString(0x0008, 0, 0x1030, 0), ctrim));
+        //Check if the tag has already been found.
+        if(out.count(name) != 0) return;
 
-    out.emplace("SeriesDate"                   , Canonicalize_String2(tds->getString(0x0008, 0, 0x0021, 0), ctrim));
-    out.emplace("SeriesTime"                   , Canonicalize_String2(tds->getString(0x0008, 0, 0x0031, 0), ctrim));
-    out.emplace("SeriesNumber"                 , Canonicalize_String2(tds->getString(0x0020, 0, 0x0011, 0), ctrim));
-    out.emplace("SeriesDescription"            , Canonicalize_String2(tds->getString(0x0008, 0, 0x103e, 0), ctrim));
+        //Check if the tag is present in the file.
+        const bool create_if_not_found = false;
+        const auto ptr = tds->getTag(group, first_order, tag, create_if_not_found);
+        if(ptr == nullptr) return;
 
-    out.emplace("AcquisitionDate"              , Canonicalize_String2(tds->getString(0x0008, 0, 0x0022, 0), ctrim));
-    out.emplace("AcquisitionTime"              , Canonicalize_String2(tds->getString(0x0008, 0, 0x0032, 0), ctrim));
-    out.emplace("AcquisitionNumber"            , Canonicalize_String2(tds->getString(0x0020, 0, 0x0012, 0), ctrim));
+        //Add the first element.
+        const auto str = tds->getString(group, first_order, tag, first_element);
+        const auto trimmed = Canonicalize_String2(str, ctrim);
+        if(!trimmed.empty()) out.emplace(name, trimmed);
 
-    out.emplace("ContentDate"                  , Canonicalize_String2(tds->getString(0x0008, 0, 0x0023, 0), ctrim));
-    out.emplace("ContentTime"                  , Canonicalize_String2(tds->getString(0x0008, 0, 0x0033, 0), ctrim));
+        //Check if there are additional elements.
+        for(uint32_t i = 1 ;  ; ++i){
+            try{
+                const auto str = tds->getString(group, first_order, tag, first_element + i);
+                const auto trimmed = Canonicalize_String2(str, ctrim);
+                if(!trimmed.empty()){
+                    out[name] += R"***(\)***"_s + trimmed;
+                }else{
+                    return;
+                }
+            }catch(const std::exception &){
+                return;
+            }
+        }
+        return;
+    };
 
-    out.emplace("BodyPartExamined"             , Canonicalize_String2(tds->getString(0x0018, 0, 0x0015, 0), ctrim));
-    out.emplace("ScanningSequence"             , Canonicalize_String2(tds->getString(0x0018, 0, 0x0020, 0), ctrim));
-    out.emplace("SequenceVariant"              , Canonicalize_String2(tds->getString(0x0018, 0, 0x0021, 0), ctrim));
-    out.emplace("ScanOptions"                  , Canonicalize_String2(tds->getString(0x0018, 0, 0x0022, 0), ctrim));
-    out.emplace("MRAcquisitionType"            , Canonicalize_String2(tds->getString(0x0018, 0, 0x0023, 0), ctrim));
+    //SOP Common Module.
+    insert_as_string_if_nonempty(0x0008, 0x0016, "SOPClassUID");
+    insert_as_string_if_nonempty(0x0008, 0x0018, "SOPInstanceUID");
+    insert_as_string_if_nonempty(0x0008, 0x0005, "SpecificCharacterSet");
+    insert_as_string_if_nonempty(0x0008, 0x0012, "InstanceCreationDate");
+    insert_as_string_if_nonempty(0x0008, 0x0013, "InstanceCreationTime");
+    insert_as_string_if_nonempty(0x0008, 0x0014, "InstanceCreatorUID");
+    insert_as_string_if_nonempty(0x0008, 0x0114, "CodingSchemeExternalUID");
+    insert_as_string_if_nonempty(0x0020, 0x0013, "InstanceNumber");
 
+    //Patient Module.
+    insert_as_string_if_nonempty(0x0010, 0x0010, "PatientsName");
+    insert_as_string_if_nonempty(0x0010, 0x0020, "PatientID");
+    insert_as_string_if_nonempty(0x0010, 0x0030, "PatientsBirthDate");
+    insert_as_string_if_nonempty(0x0010, 0x0040, "PatientsGender");
 
-
-    //DICOM image, dose map specifications and metadata.
-    out.emplace("SliceThickness"               , Canonicalize_String2(tds->getString(0x0018, 0, 0x0050, 0), ctrim));
-    out.emplace("SliceNumber"                  , Canonicalize_String2(tds->getString(0x2001, 0, 0x100a, 0), ctrim));
-    out.emplace("SliceLocation"                , Canonicalize_String2(tds->getString(0x0020, 0, 0x1041, 0), ctrim));
-
-    out.emplace("ImageIndex"                   , Canonicalize_String2(tds->getString(0x0054, 0, 0x1330, 0), ctrim));
-
-    out.emplace("SpacingBetweenSlices"         , Canonicalize_String2(tds->getString(0x0018, 0, 0x0088, 0), ctrim));
-
-    out.emplace("ImagePositionPatient"         , Canonicalize_String2(tds->getString(0x0020, 0, 0x0032, 0), ctrim) + "\\"_s +
-                                                 Canonicalize_String2(tds->getString(0x0020, 0, 0x0032, 1), ctrim) + "\\"_s +
-                                                 Canonicalize_String2(tds->getString(0x0020, 0, 0x0032, 2), ctrim) + "\\"_s );
-    //out.emplace("ImagePositionPatient"         , Canonicalize_String2(tds->getString(0x0020, 0, 0x0032, 0), ctrim));
-
-    out.emplace("ImageOrientationPatient"      , Canonicalize_String2(tds->getString(0x0020, 0, 0x0037, 0), ctrim) + "\\"_s +
-                                                 Canonicalize_String2(tds->getString(0x0020, 0, 0x0037, 1), ctrim) + "\\"_s +
-                                                 Canonicalize_String2(tds->getString(0x0020, 0, 0x0037, 2), ctrim) + "\\"_s +
-                                                 Canonicalize_String2(tds->getString(0x0020, 0, 0x0037, 3), ctrim) + "\\"_s +
-                                                 Canonicalize_String2(tds->getString(0x0020, 0, 0x0037, 4), ctrim) + "\\"_s +
-                                                 Canonicalize_String2(tds->getString(0x0020, 0, 0x0037, 5), ctrim) );
-    //out.emplace("ImageOrientationPatient"      , Canonicalize_String2(tds->getString(0x0020, 0, 0x0037, 0), ctrim));
-
-    out.emplace("FrameofReferenceUID"          , Canonicalize_String2(tds->getString(0x0020, 0, 0x0052, 0), ctrim));
-    out.emplace("PositionReferenceIndicator"   , Canonicalize_String2(tds->getString(0x0020, 0, 0x1040, 0), ctrim));
-    out.emplace("SamplesPerPixel"              , Canonicalize_String2(tds->getString(0x0028, 0, 0x0002, 0), ctrim));
-    out.emplace("PhotometricInterpretation"    , Canonicalize_String2(tds->getString(0x0028, 0, 0x0004, 0), ctrim));
-
-    out.emplace("NumberofFrames"               , Canonicalize_String2(tds->getString(0x0028, 0, 0x0008, 0), ctrim));
-    out.emplace("FrameIncrementPointer"        , Canonicalize_String2(tds->getString(0x0028, 0, 0x0009, 0), ctrim)); 
-    out.emplace("Rows"                         , Canonicalize_String2(tds->getString(0x0028, 0, 0x0010, 0), ctrim));
-    out.emplace("Columns"                      , Canonicalize_String2(tds->getString(0x0028, 0, 0x0011, 0), ctrim));
-
-    out.emplace("PixelSpacing"                 , Canonicalize_String2(tds->getString(0x0028, 0, 0x0030, 0), ctrim) + "\\"_s +
-                                                 Canonicalize_String2(tds->getString(0x0028, 0, 0x0030, 1), ctrim) );
-    //out.emplace("PixelSpacing"                 , Canonicalize_String2(tds->getString(0x0028, 0, 0x0030, 0), ctrim));
-
-    out.emplace("BitsAllocated"                , Canonicalize_String2(tds->getString(0x0028, 0, 0x0100, 0), ctrim));
-    out.emplace("BitsStored"                   , Canonicalize_String2(tds->getString(0x0028, 0, 0x0101, 0), ctrim));
-    out.emplace("HighBit"                      , Canonicalize_String2(tds->getString(0x0028, 0, 0x0102, 0), ctrim));
-    out.emplace("PixelRepresentation"          , Canonicalize_String2(tds->getString(0x0028, 0, 0x0103, 0), ctrim));
-
-    out.emplace("DoseUnits"                    , Canonicalize_String2(tds->getString(0x3004, 0, 0x0002, 0), ctrim));
-    out.emplace("DoseType"                     , Canonicalize_String2(tds->getString(0x3004, 0, 0x0004, 0), ctrim));
-    out.emplace("DoseSummationType"            , Canonicalize_String2(tds->getString(0x3004, 0, 0x000a, 0), ctrim));
-    out.emplace("DoseGridScaling"              , Canonicalize_String2(tds->getString(0x3004, 0, 0x000e, 0), ctrim));
-
-    std::string GridFrameOffsetVectorTEMP;
-    {
-      long int frame=0;
-      while(true){
-          try{
-              const auto anumber = Canonicalize_String2(tds->getString(0x3004, 0, 0x000c, frame), ctrim);
-              if(frame != 0) GridFrameOffsetVectorTEMP += "\\";
-              GridFrameOffsetVectorTEMP += anumber;
-              ++frame;
-              if(anumber.empty()) break;
-          }catch(const std::exception &e){
-              break;
-          }
-      }
-    }
-    out.emplace("GridFrameOffsetVector"        , GridFrameOffsetVectorTEMP);;
-    //out.emplace("GridFrameOffsetVector"        , Canonicalize_String2(tds->getString(0x3004, 0, 0x000c, 0), ctrim));
+    //General Study Module.
+    insert_as_string_if_nonempty(0x0020, 0x000D, "StudyInstanceUID");
+    insert_as_string_if_nonempty(0x0008, 0x0020, "StudyDate");
+    insert_as_string_if_nonempty(0x0008, 0x0030, "StudyTime");
+    insert_as_string_if_nonempty(0x0008, 0x0090, "ReferringPhysiciansName");
+    insert_as_string_if_nonempty(0x0020, 0x0010, "StudyID");
+    insert_as_string_if_nonempty(0x0008, 0x0050, "AccessionNumber");
+    insert_as_string_if_nonempty(0x0008, 0x1030, "StudyDescription");
 
 
-    out.emplace("TemporalPositionIdentifier"   , Canonicalize_String2(tds->getString(0x0020, 0, 0x0100, 0), ctrim));
-    out.emplace("NumberofTemporalPositions"    , Canonicalize_String2(tds->getString(0x0020, 0, 0x0105, 0), ctrim));
+    //General Series Module.
+    insert_as_string_if_nonempty(0x0008, 0x0060, "Modality");
+    insert_as_string_if_nonempty(0x0020, 0x000E, "SeriesInstanceUID");
+    insert_as_string_if_nonempty(0x0020, 0x0011, "SeriesNumber");
+    insert_as_string_if_nonempty(0x0008, 0x0021, "SeriesDate");
+    insert_as_string_if_nonempty(0x0008, 0x0031, "SeriesTime");
+    insert_as_string_if_nonempty(0x0008, 0x103E, "SeriesDescription");
+    insert_as_string_if_nonempty(0x0018, 0x0015, "BodyPartExamined");
+    insert_as_string_if_nonempty(0x0018, 0x5100, "PatientPosition");
+    insert_as_string_if_nonempty(0x0040, 0x1001, "RequestedProcedureID");
+    insert_as_string_if_nonempty(0x0040, 0x0009, "ScheduledProcedureStepID");
+    insert_as_string_if_nonempty(0x0008, 0x1070, "OperatorsName");
 
-    out.emplace("TemporalResolution"           , Canonicalize_String2(tds->getString(0x0020, 0, 0x0110, 0), ctrim));
+    //Patient Study Module.
+    insert_as_string_if_nonempty(0x0010, 0x1030, "PatientsMass");
 
-    out.emplace("TemporalPositionIndex"        , Canonicalize_String2(tds->getString(0x0020, 0, 0x9128, 0), ctrim));
+    //Frame of Reference Module.
+    insert_as_string_if_nonempty(0x0020, 0x0052, "FrameofReferenceUID");
+    insert_as_string_if_nonempty(0x0020, 0x1040, "PositionReferenceIndicator");
 
-    out.emplace("FrameReferenceTime"           , Canonicalize_String2(tds->getString(0x0054, 0, 0x1300, 0), ctrim));
+    //General Equipment Module.
+    insert_as_string_if_nonempty(0x0008, 0x0070, "Manufacturer");
+    insert_as_string_if_nonempty(0x0008, 0x0080, "InstitutionName");
+    insert_as_string_if_nonempty(0x0008, 0x1010, "StationName");
+    insert_as_string_if_nonempty(0x0008, 0x1040, "InstitutionalDepartmentName");
+    insert_as_string_if_nonempty(0x0008, 0x1090, "ManufacturersModelName");
+    insert_as_string_if_nonempty(0x0018, 0x1020, "SoftwareVersions");
 
-    out.emplace("FrameTime"                    , Canonicalize_String2(tds->getString(0x0018, 0, 0x1063, 0), ctrim));
+    //General Image Module.
+    insert_as_string_if_nonempty(0x0020, 0x0013, "InstanceNumber");
+    insert_as_string_if_nonempty(0x0020, 0x0020, "PatientOrientation");
+    insert_as_string_if_nonempty(0x0008, 0x0023, "ContentDate");
+    insert_as_string_if_nonempty(0x0008, 0x0033, "ContentTime");
+    insert_as_string_if_nonempty(0x0008, 0x0008, "ImageType");
+    insert_as_string_if_nonempty(0x0020, 0x0012, "AcquisitionNumber");
+    insert_as_string_if_nonempty(0x0008, 0x0022, "AcquisitionDate");
+    insert_as_string_if_nonempty(0x0008, 0x0032, "AcquisitionTime");
+    insert_as_string_if_nonempty(0x0008, 0x2111, "DerivationDescription");
+    //insert_as_string_if_nonempty(0x0008, 0x9215, "DerivationCodeSequence");
+    insert_as_string_if_nonempty(0x0020, 0x1002, "ImagesInAcquisition");
+    insert_as_string_if_nonempty(0x0020, 0x4000, "ImageComments");
+    insert_as_string_if_nonempty(0x0028, 0x0300, "QualityControlImage");
 
-    out.emplace("TriggerTime"                  , Canonicalize_String2(tds->getString(0x0018, 0, 0x1060, 0), ctrim));
-    out.emplace("TriggerTimeOffset"            , Canonicalize_String2(tds->getString(0x0018, 0, 0x1069, 0), ctrim));
+    //Image Plane Module.
+    insert_as_string_if_nonempty(0x0028, 0x0030, "PixelSpacing");
+    insert_as_string_if_nonempty(0x0020, 0x0037, "ImageOrientationPatient");
+    insert_as_string_if_nonempty(0x0020, 0x0032, "ImagePositionPatient");
+    insert_as_string_if_nonempty(0x0018, 0x0050, "SliceThickness");
+    insert_as_string_if_nonempty(0x0020, 0x1041, "SliceLocation");
 
-    out.emplace("PerformedProcedureStepStartDate", Canonicalize_String2(tds->getString(0x0040, 0, 0x0244, 0), ctrim));
-    out.emplace("PerformedProcedureStepStartTime", Canonicalize_String2(tds->getString(0x0040, 0, 0x0245, 0), ctrim));
-    out.emplace("PerformedProcedureStepEndDate",   Canonicalize_String2(tds->getString(0x0040, 0, 0x0250, 0), ctrim));
-    out.emplace("PerformedProcedureStepEndTime",   Canonicalize_String2(tds->getString(0x0040, 0, 0x0251, 0), ctrim));
+    //Image Pixel Module.
+    insert_as_string_if_nonempty(0x0028, 0x0002, "SamplesPerPixel");
+    insert_as_string_if_nonempty(0x0028, 0x0004, "PhotometricInterpretation");
+    insert_as_string_if_nonempty(0x0028, 0x0010, "Rows");
+    insert_as_string_if_nonempty(0x0028, 0x0011, "Columns");
+    insert_as_string_if_nonempty(0x0028, 0x0100, "BitsAllocated");
+    insert_as_string_if_nonempty(0x0028, 0x0101, "BitsStored");
+    insert_as_string_if_nonempty(0x0028, 0x0102, "HighBit");
+    insert_as_string_if_nonempty(0x0028, 0x0103, "PixelRepresentation");
+    //insert_as_string_if_nonempty(0x7FE0, 0x0010, "PixelData");
+    insert_as_string_if_nonempty(0x0028, 0x0006, "PlanarConfiguration");
+    insert_as_string_if_nonempty(0x0028, 0x0034, "PixelAspectRatio");
 
-    out.emplace("Exposure"                     , Canonicalize_String2(tds->getString(0x0018, 0, 0x1152, 0), ctrim));
-    out.emplace("ExposureTime"                 , Canonicalize_String2(tds->getString(0x0018, 0, 0x1150, 0), ctrim));
-    out.emplace("ExposureInMicroAmpereSeconds" , Canonicalize_String2(tds->getString(0x0018, 0, 0x1153, 0), ctrim));
-    out.emplace("XRayTubeCurrent"              , Canonicalize_String2(tds->getString(0x0018, 0, 0x1151, 0), ctrim));
+    //Multi-Frame Module.
+    insert_as_string_if_nonempty(0x0028, 0x0008, "NumberOfFrames");
+    insert_as_string_if_nonempty(0x0028, 0x0009, "FrameIncrementPointer");
+
+    //Modality LUT Module.
+    //insert_as_string_if_nonempty(0x0028, 0x3000, "ModalityLUTSequence");
+    insert_as_string_if_nonempty(0x0028, 0x3002, "LUTDescriptor");
+    insert_as_string_if_nonempty(0x0028, 0x3004, "ModalityLUTType");
+    insert_as_string_if_nonempty(0x0028, 0x3006, "LUTData");
+    insert_as_string_if_nonempty(0x0028, 0x1052, "RescaleIntercept");
+    insert_as_string_if_nonempty(0x0028, 0x1053, "RescaleSlope");
+    insert_as_string_if_nonempty(0x0028, 0x1054, "RescaleType");
+
+    //RT Dose Module.
+    insert_as_string_if_nonempty(0x0028, 0x0002, "SamplesPerPixel");
+    insert_as_string_if_nonempty(0x0028, 0x0004, "PhotometricInterpretation");
+    insert_as_string_if_nonempty(0x0028, 0x0100, "BitsAllocated");
+    insert_as_string_if_nonempty(0x0028, 0x0101, "BitsStored");
+    insert_as_string_if_nonempty(0x0028, 0x0102, "HighBit");
+    insert_as_string_if_nonempty(0x0028, 0x0103, "PixelRepresentation");
+    insert_as_string_if_nonempty(0x3004, 0x0002, "DoseUnits");
+    insert_as_string_if_nonempty(0x3004, 0x0004, "DoseType");
+    insert_as_string_if_nonempty(0x3004, 0x000a, "DoseSummationType");
+    insert_as_string_if_nonempty(0x3004, 0x000e, "DoseGridScaling");
+
+    //insert_as_string_if_nonempty(0x300C, 0x0002, "ReferencedRTPlanSequence");
+    //insert_as_string_if_nonempty(0x0008, 0x1150, "ReferencedSOPClassUID");
+    //insert_as_string_if_nonempty(0x0008, 0x1155, "ReferencedSOPInstanceUID");
+    //insert_as_string_if_nonempty(0x300C, 0x0020, "ReferencedFractionGroupSequence");
+    //insert_as_string_if_nonempty(0x300C, 0x0022, "ReferencedFractionGroupNumber");
+    //insert_as_string_if_nonempty(0x300C, 0x0004, "ReferencedBeamSequence");
+    //insert_as_string_if_nonempty(0x300C, 0x0006, "ReferencedBeamNumber");
+    
+
+    //Unclassified others...
+    insert_as_string_if_nonempty(0x0018, 0x0020, "ScanningSequence");
+    insert_as_string_if_nonempty(0x0018, 0x0021, "SequenceVariant");
+    insert_as_string_if_nonempty(0x0018, 0x0022, "ScanOptions");
+    insert_as_string_if_nonempty(0x0018, 0x0023, "MRAcquisitionType");
+
+    insert_as_string_if_nonempty(0x0018, 0x0050, "SliceThickness");
+    insert_as_string_if_nonempty(0x2001, 0x100a, "SliceNumber");
+    insert_as_string_if_nonempty(0x0020, 0x1041, "SliceLocation");
+    insert_as_string_if_nonempty(0x0054, 0x1330, "ImageIndex");
+    insert_as_string_if_nonempty(0x0018, 0x0088, "SpacingBetweenSlices");
+
+    insert_as_string_if_nonempty(0x0028, 0x0008, "NumberofFrames");
+    insert_as_string_if_nonempty(0x0028, 0x0009, "FrameIncrementPointer"); 
+    insert_as_string_if_nonempty(0x0028, 0x0010, "Rows");
+    insert_as_string_if_nonempty(0x0028, 0x0011, "Columns");
+    insert_as_string_if_nonempty(0x3004, 0x000C, "GridFrameOffsetVector");
+
+    insert_as_string_if_nonempty(0x0020, 0x0100, "TemporalPositionIdentifier");
+    insert_as_string_if_nonempty(0x0020, 0x0105, "NumberofTemporalPositions");
+
+    insert_as_string_if_nonempty(0x0020, 0x0110, "TemporalResolution");
+    insert_as_string_if_nonempty(0x0020, 0x9128, "TemporalPositionIndex");
+    insert_as_string_if_nonempty(0x0054, 0x1300, "FrameReferenceTime");
+    insert_as_string_if_nonempty(0x0018, 0x1063, "FrameTime");
+    insert_as_string_if_nonempty(0x0018, 0x1060, "TriggerTime");
+    insert_as_string_if_nonempty(0x0018, 0x1069, "TriggerTimeOffset");
+
+    insert_as_string_if_nonempty(0x0040, 0x0244, "PerformedProcedureStepStartDate");
+    insert_as_string_if_nonempty(0x0040, 0x0245, "PerformedProcedureStepStartTime");
+    insert_as_string_if_nonempty(0x0040, 0x0250, "PerformedProcedureStepEndDate");
+    insert_as_string_if_nonempty(0x0040, 0x0251, "PerformedProcedureStepEndTime");
+
+    insert_as_string_if_nonempty(0x0018, 0x1152, "Exposure");
+    insert_as_string_if_nonempty(0x0018, 0x1150, "ExposureTime");
+    insert_as_string_if_nonempty(0x0018, 0x1153, "ExposureInMicroAmpereSeconds");
+    insert_as_string_if_nonempty(0x0018, 0x1151, "XRayTubeCurrent");
 
 
-    out.emplace("RepetitionTime"               , Canonicalize_String2(tds->getString(0x0018, 0, 0x0080, 0), ctrim));
-    out.emplace("EchoTime"                     , Canonicalize_String2(tds->getString(0x0018, 0, 0x0081, 0), ctrim));
-    out.emplace("NumberofAverages"             , Canonicalize_String2(tds->getString(0x0018, 0, 0x0083, 0), ctrim));
-    out.emplace("ImagingFrequency"             , Canonicalize_String2(tds->getString(0x0018, 0, 0x0084, 0), ctrim));
-    out.emplace("ImagedNucleus"                , Canonicalize_String2(tds->getString(0x0018, 0, 0x0085, 0), ctrim));
-    out.emplace("EchoNumbers"                  , Canonicalize_String2(tds->getString(0x0018, 0, 0x0086, 0), ctrim));
-    out.emplace("MagneticFieldStrength"        , Canonicalize_String2(tds->getString(0x0018, 0, 0x0087, 0), ctrim));
-    out.emplace("NumberofPhaseEncodingSteps"   , Canonicalize_String2(tds->getString(0x0018, 0, 0x0089, 0), ctrim));
-    out.emplace("EchoTrainLength"              , Canonicalize_String2(tds->getString(0x0018, 0, 0x0091, 0), ctrim));
-    out.emplace("PercentSampling"              , Canonicalize_String2(tds->getString(0x0018, 0, 0x0093, 0), ctrim));
-    out.emplace("PercentPhaseFieldofView"      , Canonicalize_String2(tds->getString(0x0018, 0, 0x0094, 0), ctrim));
-    out.emplace("PixelBandwidth"               , Canonicalize_String2(tds->getString(0x0018, 0, 0x0095, 0), ctrim));
-    out.emplace("DeviceSerialNumber"           , Canonicalize_String2(tds->getString(0x0018, 0, 0x1000, 0), ctrim));
+    insert_as_string_if_nonempty(0x0018, 0x0080, "RepetitionTime");
+    insert_as_string_if_nonempty(0x0018, 0x0081, "EchoTime");
+    insert_as_string_if_nonempty(0x0018, 0x0083, "NumberofAverages");
+    insert_as_string_if_nonempty(0x0018, 0x0084, "ImagingFrequency");
+    insert_as_string_if_nonempty(0x0018, 0x0085, "ImagedNucleus");
+    insert_as_string_if_nonempty(0x0018, 0x0086, "EchoNumbers");
+    insert_as_string_if_nonempty(0x0018, 0x0087, "MagneticFieldStrength");
+    insert_as_string_if_nonempty(0x0018, 0x0089, "NumberofPhaseEncodingSteps");
+    insert_as_string_if_nonempty(0x0018, 0x0091, "EchoTrainLength");
+    insert_as_string_if_nonempty(0x0018, 0x0093, "PercentSampling");
+    insert_as_string_if_nonempty(0x0018, 0x0094, "PercentPhaseFieldofView");
+    insert_as_string_if_nonempty(0x0018, 0x0095, "PixelBandwidth");
+    insert_as_string_if_nonempty(0x0018, 0x1000, "DeviceSerialNumber");
 
-    out.emplace("ProtocolName"                 , Canonicalize_String2(tds->getString(0x0018, 0, 0x1030, 0), ctrim));
+    insert_as_string_if_nonempty(0x0018, 0x1030, "ProtocolName");
 
-    out.emplace("ReceiveCoilName"              , Canonicalize_String2(tds->getString(0x0018, 0, 0x1250, 0), ctrim));
-    out.emplace("TransmitCoilName"             , Canonicalize_String2(tds->getString(0x0018, 0, 0x1251, 0), ctrim));
-    out.emplace("InplanePhaseEncodingDirection", Canonicalize_String2(tds->getString(0x0018, 0, 0x1312, 0), ctrim));
-    out.emplace("FlipAngle"                    , Canonicalize_String2(tds->getString(0x0018, 0, 0x1314, 0), ctrim));
-    out.emplace("SAR"                          , Canonicalize_String2(tds->getString(0x0018, 0, 0x1316, 0), ctrim));
-    out.emplace("dB_dt"                        , Canonicalize_String2(tds->getString(0x0018, 0, 0x1318, 0), ctrim));
-    out.emplace("PatientPosition"              , Canonicalize_String2(tds->getString(0x0018, 0, 0x5100, 0), ctrim));
-    out.emplace("AcquisitionDuration"          , Canonicalize_String2(tds->getString(0x0018, 0, 0x9073, 0), ctrim));
-    out.emplace("Diffusion_bValue"             , Canonicalize_String2(tds->getString(0x0018, 0, 0x9087, 0), ctrim));
-    out.emplace("DiffusionGradientOrientation" , Canonicalize_String2(tds->getString(0x0018, 0, 0x9089, 0), ctrim) + "\\"_s +
-                                                 Canonicalize_String2(tds->getString(0x0018, 0, 0x9089, 1), ctrim) + "\\"_s +
-                                                 Canonicalize_String2(tds->getString(0x0018, 0, 0x9089, 2), ctrim) );
+    insert_as_string_if_nonempty(0x0018, 0x1250, "ReceiveCoilName");
+    insert_as_string_if_nonempty(0x0018, 0x1251, "TransmitCoilName");
+    insert_as_string_if_nonempty(0x0018, 0x1312, "InplanePhaseEncodingDirection");
+    insert_as_string_if_nonempty(0x0018, 0x1314, "FlipAngle");
+    insert_as_string_if_nonempty(0x0018, 0x1316, "SAR");
+    insert_as_string_if_nonempty(0x0018, 0x1318, "dB_dt");
+    insert_as_string_if_nonempty(0x0018, 0x5100, "PatientPosition");
+    insert_as_string_if_nonempty(0x0018, 0x9073, "AcquisitionDuration");
+    insert_as_string_if_nonempty(0x0018, 0x9087, "Diffusion_bValue");
+    insert_as_string_if_nonempty(0x0018, 0x9089, "DiffusionGradientOrientation");
 
-    out.emplace("DiffusionDirection"           , Canonicalize_String2(tds->getString(0x2001, 0, 0x1004, 0), ctrim));
+    insert_as_string_if_nonempty(0x2001, 0x1004, "DiffusionDirection");
 
-    out.emplace("WindowCenter"                 , Canonicalize_String2(tds->getString(0x0028, 0, 0x1050, 0), ctrim));
-    out.emplace("WindowWidth"                  , Canonicalize_String2(tds->getString(0x0028, 0, 0x1051, 0), ctrim));
-    out.emplace("RescaleIntercept"             , Canonicalize_String2(tds->getString(0x0028, 0, 0x1052, 0), ctrim));
-    out.emplace("RescaleSlope"                 , Canonicalize_String2(tds->getString(0x0028, 0, 0x1053, 0), ctrim));
-    out.emplace("RescaleType"                  , Canonicalize_String2(tds->getString(0x0028, 0, 0x1054, 0), ctrim));
+    insert_as_string_if_nonempty(0x0028, 0x1050, "WindowCenter");
+    insert_as_string_if_nonempty(0x0028, 0x1051, "WindowWidth");
+    insert_as_string_if_nonempty(0x0028, 0x1052, "RescaleIntercept");
+    insert_as_string_if_nonempty(0x0028, 0x1053, "RescaleSlope");
+    insert_as_string_if_nonempty(0x0028, 0x1054, "RescaleType");
 
-    //DICOM radiotherapy plan metadata.
-    out.emplace("RTPlanLabel"                  , Canonicalize_String2(tds->getString(0x300a, 0, 0x0002, 0), ctrim));
-    out.emplace("RTPlanName"                   , Canonicalize_String2(tds->getString(0x300a, 0, 0x0003, 0), ctrim));
-    out.emplace("RTPlanDescription"            , Canonicalize_String2(tds->getString(0x300a, 0, 0x0004, 0), ctrim));
-    out.emplace("RTPlanDate"                   , Canonicalize_String2(tds->getString(0x300a, 0, 0x0006, 0), ctrim));
-    out.emplace("RTPlanTime"                   , Canonicalize_String2(tds->getString(0x300a, 0, 0x0007, 0), ctrim));
-    out.emplace("RTPlanGeometry"               , Canonicalize_String2(tds->getString(0x300a, 0, 0x000c, 0), ctrim));
+    insert_as_string_if_nonempty(0x300a, 0x0002, "RTPlanLabel");
+    insert_as_string_if_nonempty(0x300a, 0x0003, "RTPlanName");
+    insert_as_string_if_nonempty(0x300a, 0x0004, "RTPlanDescription");
+    insert_as_string_if_nonempty(0x300a, 0x0006, "RTPlanDate");
+    insert_as_string_if_nonempty(0x300a, 0x0007, "RTPlanTime");
+    insert_as_string_if_nonempty(0x300a, 0x000c, "RTPlanGeometry");
 
-    //DICOM patient, physician, operator metadata.
-    out.emplace("PatientsName"                 , Canonicalize_String2(tds->getString(0x0010, 0, 0x0010, 0), ctrim));
-    out.emplace("PatientsBirthDate"            , Canonicalize_String2(tds->getString(0x0010, 0, 0x0030, 0), ctrim));
-    out.emplace("PatientsGender"               , Canonicalize_String2(tds->getString(0x0010, 0, 0x0040, 0), ctrim));
-    out.emplace("PatientsWeight"               , Canonicalize_String2(tds->getString(0x0010, 0, 0x1030, 0), ctrim));
+    insert_as_string_if_nonempty(0x0008, 0x1070, "OperatorsName");
+    insert_as_string_if_nonempty(0x0008, 0x0090, "ReferringPhysicianName");
 
-    out.emplace("OperatorsName"                , Canonicalize_String2(tds->getString(0x0008, 0, 0x1070, 0), ctrim));
-
-    out.emplace("ReferringPhysicianName"       , Canonicalize_String2(tds->getString(0x0008, 0, 0x0090, 0), ctrim));
-
-    //DICOM categorical fields.
-    out.emplace("SOPClassUID"                  , Canonicalize_String2(tds->getString(0x0008, 0, 0x0016, 0), ctrim));
-    out.emplace("Modality"                     , Canonicalize_String2(tds->getString(0x0008, 0, 0x0060, 0), ctrim));
-
-    //DICOM machine/device, institution fields.
-    out.emplace("Manufacturer"                 , Canonicalize_String2(tds->getString(0x0008, 0, 0x0070, 0), ctrim));
-    out.emplace("StationName"                  , Canonicalize_String2(tds->getString(0x0008, 0, 0x1010, 0), ctrim));
-    out.emplace("ManufacturersModelName"       , Canonicalize_String2(tds->getString(0x0008, 0, 0x1090, 0), ctrim));
-    out.emplace("SoftwareVersions"             , Canonicalize_String2(tds->getString(0x0018, 0, 0x1020, 0), ctrim));
-
-    out.emplace("InstitutionName"              , Canonicalize_String2(tds->getString(0x0008, 0, 0x0080, 0), ctrim));
-    out.emplace("InstitutionalDepartmentName"  , Canonicalize_String2(tds->getString(0x0008, 0, 0x1040, 0), ctrim));
 
     return std::move(out);
 }
@@ -887,10 +939,8 @@ std::unique_ptr<Image_Array> Collate_Image_Arrays(std::list<std::shared_ptr<Imag
 }
 
 
-
 //--------------------- Dose -----------------------
-//This routine reads a single DICOM dose file and outputs an array pointing to a Dose_Array (ie. ~a list
-// of image
+//This routine reads a single DICOM dose file.
 std::unique_ptr<Dose_Array>  Load_Dose_Array(const std::string &FilenameIn){
     auto metadata = get_metadata_top_level_tags(FilenameIn);
 
@@ -1096,5 +1146,461 @@ std::list<std::shared_ptr<Dose_Array>>  Load_Dose_Arrays(const std::list<std::st
         out.push_back(std::move(Load_Dose_Array(*it)));
     }
     return std::move(out);
+}
+
+static std::string Generate_Random_UID(long int len){
+    std::string out;
+    static const std::string alphanum(R"***(.0123456789)***");
+    std::default_random_engine gen;
+
+    try{
+        std::random_device rd;  //Constructor can fail if many threads create instances (maybe limited fd's?).
+        gen.seed(rd()); //Seed with a true random number.
+    }catch(const std::exception &){
+        const auto timeseed = std::chrono::high_resolution_clock::now().time_since_epoch().count();
+        gen.seed(timeseed); //Seed with time. 
+    }
+
+    std::uniform_int_distribution<int> dist(0,alphanum.length()-1);
+    char last = '\0';
+    while(out.size() != len){
+        const auto achar = alphanum[dist(gen)];
+        if((achar == '.') && (achar == last)) continue;
+        out += achar;
+        last = achar;
+    }
+    return out;
+}
+
+
+//This routine writes contiguous images to a single DICOM dose file.
+void Write_Dose_Array(std::shared_ptr<Image_Array> IA, const std::string &FilenameOut){
+    if(IA->imagecoll.images.empty()){
+        throw std::runtime_error("No images provided for export. Cannot continue.");
+    }
+
+    using namespace puntoexe;
+
+    ptr<imebra::dataSet> tds(new imebra::dataSet);
+
+    auto tds_insert = [&tds](uint16_t group, uint16_t tag, std::string val) -> void {
+        const uint16_t order = 0;
+        uint32_t element = 0;
+
+        //Search for '\' characters. If present, split the string up and register each token separately.
+        auto tokens = SplitStringToVector(val, '\\', 'd');
+        for(auto &val : tokens){
+            //if(val.empty()) continue; //Sometimes empty strings are necessary...
+
+            //Attempt to convert to the default DICOM data type.
+            const auto d_t = tds->getDefaultDataType(group, tag);
+
+            //Types not requiring conversion from a string.
+            if( ( d_t == "AE") || ( d_t == "AS") || ( d_t == "AT") ||
+                ( d_t == "CS") || ( d_t == "DA") || ( d_t == "DS") ||
+                ( d_t == "DT") || ( d_t == "IS") || ( d_t == "LO") ||
+                ( d_t == "LT") || ( d_t == "OB") || ( d_t == "OW") ||
+                ( d_t == "PN") || ( d_t == "SH") || ( d_t == "ST") ||
+                ( d_t == "TM") || ( d_t == "UI") || ( d_t == "UT")   ){
+                    tds->setString(group, order, tag, element++, val, d_t);
+
+            //Numeric types.
+            }else if(
+                ( d_t == "FL") ||   //Floating-point.
+                ( d_t == "FD") ||   //Floating-point double.
+                ( d_t == "OF") ||   //"Other" floating-point.
+                ( d_t == "OD")   ){ //"Other" floating-point double.
+                    tds->setString(group, order, tag, element++, val, "DS"); //Try keep it as a string.
+            }else if(
+                ( d_t == "SL") ||   //Signed long int (32bit).
+                ( d_t == "SS") ||   //Signed short integer (16bit).
+                ( d_t == "UL") ||   //Unsigned long int (32bit).
+                ( d_t == "US")   ){ //Unsigned short integer (16bit).
+                    tds->setString(group, order, tag, element++, val, "IS"); //Try keep it as a string.
+
+            //Types we cannot process because they are special (e.g., sequences) or don't currently support.
+            }else if( d_t == "SQ"){ //Sequence.
+                throw std::runtime_error("Unable to write VR type SQ (sequence) with this routine.");
+            }else if( d_t == "UN"){ //Unknown.
+                throw std::runtime_error("Unable to write VR type UN (unknown) with this routine.");
+            }else{
+                throw std::runtime_error("Unknown VR type. Cannot write to tag.");
+            }
+        }
+        return;
+    };
+
+    auto fne = [](std::vector<std::string> l) -> std::string {
+        //fne == "First non-empty".
+        for(auto &s : l) if(!s.empty()) return s;
+        throw std::runtime_error("All inputs were empty -- unable to provide a nonempty string.");
+        return std::string();
+    };
+    auto foe = [](std::vector<std::string> l) -> std::string {
+        //foe == "First non-empty Or Rmpty".
+        for(auto &s : l) if(!s.empty()) return s;
+        return std::string(); 
+    };
+
+/*
+    //Specify the list of acceptable character sets.
+    {
+        imebra::tCharsetsList suitableCharsets;
+        suitableCharsets.push_back("ISO_IR 100"); // "Latin alphabet 1"
+        //suitableCharsets.push_back("ISO_IR 192"); // utf-8
+        tds->setCharsetsList(&suitableCharsets);
+    }
+*/
+
+    //Gather some basic info.
+    const auto num_of_imgs = IA->imagecoll.images.size();
+    const auto row_count = IA->imagecoll.images.front().rows;
+    const auto col_count = IA->imagecoll.images.front().columns;
+    //const double dose_scaling = ... ; //Compute range and solve [ X*(uint32_t_max-1) = DoseMax ] for X.
+    //                                  //Should be ~3.1683168e-5 or so.
+    const double dose_scaling = 3.0e-5;
+
+
+    //Top-level stuff: metadata shared by all images.
+    {
+        auto cm = IA->imagecoll.get_common_metadata({});
+
+        //SOP Common Module.
+        tds_insert(0x0008, 0x0016, "1.2.840.10008.5.1.4.1.1.481.2"); // "SOPClassUID"
+        tds_insert(0x0008, 0x0018, Generate_Random_UID(64)); // "SOPInstanceUID"
+        tds_insert(0x0008, 0x0005, fne({ cm["SpecificCharacterSet"], "ISO_IR 100" }));
+        tds_insert(0x0008, 0x0012, fne({ cm["InstanceCreationDate"], "20170730" }));
+        tds_insert(0x0008, 0x0013, fne({ cm["InstanceCreationTime"], "111111" }));
+        tds_insert(0x0008, 0x0014, foe({ cm["InstanceCreatorUID"] }));
+        tds_insert(0x0008, 0x0114, foe({ cm["CodingSchemeExternalUID"] }));
+        tds_insert(0x0020, 0x0013, foe({ cm["InstanceNumber"] }));
+
+        //Patient Module.
+        tds_insert(0x0010, 0x0010, fne({ cm["PatientsName"], "HC_Test^HC_Test" }));
+        tds_insert(0x0010, 0x0020, fne({ cm["PatientID"], "HC_Test_"_s + Generate_Random_String_of_Length(10) }));
+        tds_insert(0x0010, 0x0030, fne({ cm["PatientsBirthDate"], "20170730" }));
+        tds_insert(0x0010, 0x0040, fne({ cm["PatientsGender"], "O" }));
+
+        //General Study Module.
+        tds_insert(0x0020, 0x000D, fne({ cm["StudyInstanceUID"], Generate_Random_UID(64) }));
+        tds_insert(0x0008, 0x0020, fne({ cm["StudyDate"], "20170730" }));
+        tds_insert(0x0008, 0x0030, fne({ cm["StudyTime"], "111111" }));
+        tds_insert(0x0008, 0x0090, fne({ cm["ReferringPhysiciansName"], "UNSPECIFIED^UNSPECIFIED" }));
+        tds_insert(0x0020, 0x0010, fne({ cm["StudyID"], "HCTest_"_s + Generate_Random_String_of_Length(10) }));
+        tds_insert(0x0008, 0x0050, foe({ cm["AccessionNumber"] }));
+        tds_insert(0x0008, 0x1030, foe({ cm["StudyDescription"] }));
+
+
+        //General Series Module.
+        tds_insert(0x0008, 0x0060, "RTDOSE");
+        tds_insert(0x0020, 0x000E, fne({ cm["SeriesInstanceUID"], Generate_Random_UID(64) }));
+        tds_insert(0x0020, 0x0011, fne({ cm["SeriesNumber"], "1000" }));
+        tds_insert(0x0008, 0x0021, foe({ cm["SeriesDate"] }));
+        tds_insert(0x0008, 0x0031, foe({ cm["SeriesTime"] }));
+        tds_insert(0x0008, 0x103E, fne({ cm["SeriesDescription"], "UNSPECIFIED" }));
+        tds_insert(0x0018, 0x0015, foe({ cm["BodyPartExamined"] }));
+        tds_insert(0x0018, 0x5100, foe({ cm["PatientPosition"] }));
+        tds_insert(0x0040, 0x1001, fne({ cm["RequestedProcedureID"], "UNSPECIFIED" }));
+        tds_insert(0x0040, 0x0009, fne({ cm["ScheduledProcedureStepID"], "UNSPECIFIED" }));
+        tds_insert(0x0008, 0x1070, fne({ cm["OperatorsName"], "UNSPECIFIED" }));
+
+        //Patient Study Module.
+        tds_insert(0x0010, 0x1030, foe({ cm["PatientsMass"] }));
+
+        //Frame of Reference Module.
+        tds_insert(0x0020, 0x0052, fne({ cm["FrameofReferenceUID"], Generate_Random_UID(64) }));
+        tds_insert(0x0020, 0x1040, fne({ cm["PositionReferenceIndicator"], "BB" }));
+
+        //General Equipment Module.
+        tds_insert(0x0008, 0x0070, fne({ cm["Manufacturer"], "UNSPECIFIED" }));
+        tds_insert(0x0008, 0x0080, fne({ cm["InstitutionName"], "UNSPECIFIED" }));
+        tds_insert(0x0008, 0x1010, fne({ cm["StationName"], "UNSPECIFIED" }));
+        tds_insert(0x0008, 0x1040, fne({ cm["InstitutionalDepartmentName"], "UNSPECIFIED" }));
+        tds_insert(0x0008, 0x1090, fne({ cm["ManufacturersModelName"], "UNSPECIFIED" }));
+        tds_insert(0x0018, 0x1020, fne({ cm["SoftwareVersions"], "UNSPECIFIED" }));
+
+        //General Image Module.
+        tds_insert(0x0020, 0x0013, foe({ cm["InstanceNumber"] }));
+        tds_insert(0x0020, 0x0020, fne({ cm["PatientOrientation"], "UNSPECIFIED" }));
+        tds_insert(0x0008, 0x0023, foe({ cm["ContentDate"] }));
+        tds_insert(0x0008, 0x0033, foe({ cm["ContentTime"] }));
+        tds_insert(0x0008, 0x0008, fne({ cm["ImageType"], "UNSPECIFIED" }));
+        tds_insert(0x0020, 0x0012, foe({ cm["AcquisitionNumber"] }));
+        tds_insert(0x0008, 0x0022, foe({ cm["AcquisitionDate"] }));
+        tds_insert(0x0008, 0x0032, foe({ cm["AcquisitionTime"] }));
+        tds_insert(0x0008, 0x2111, foe({ cm["DerivationDescription"] }));
+        //insert_as_string_if_nonempty(0x0008, 0x9215, "DerivationCodeSequence"], "" }));
+        tds_insert(0x0020, 0x1002, foe({ cm["ImagesInAcquisition"] }));
+        tds_insert(0x0020, 0x4000, "Generated by DICOMautomaton" );
+        tds_insert(0x0028, 0x0300, foe({ cm["QualityControlImage"] }));
+
+        //Image Plane Module.
+        tds_insert(0x0028, 0x0030, fne({ cm["PixelSpacing"], R"***(2.5\2.5)***" }));
+        tds_insert(0x0020, 0x0037, fne({ cm["ImageOrientationPatient"], R"***(1\0\0\0\1\0)***" }));
+        tds_insert(0x0020, 0x0032, fne({ cm["ImagePositionPatient"], R"***(0\0\0)***" }));
+        tds_insert(0x0018, 0x0050, foe({ cm["SliceThickness"] }));
+        tds_insert(0x0020, 0x1041, foe({ cm["SliceLocation"] }));
+
+        //Image Pixel Module.
+        tds_insert(0x0028, 0x0002, fne({ cm["SamplesPerPixel"], "1" }));
+        tds_insert(0x0028, 0x0004, fne({ cm["PhotometricInterpretation"], "MONOCHROME2" }));
+        tds_insert(0x0028, 0x0010, fne({ std::to_string(row_count) })); // "Rows"
+        tds_insert(0x0028, 0x0011, fne({ std::to_string(col_count) })); // "Columns"
+        tds_insert(0x0028, 0x0100, fne({ cm["BitsAllocated"], "32" }));
+        tds_insert(0x0028, 0x0101, fne({ cm["BitsStored"], "32" }));
+        tds_insert(0x0028, 0x0102, fne({ cm["HighBit"], "31" }));
+        tds_insert(0x0028, 0x0103, fne({ cm["PixelRepresentation"], "0" }));
+        tds_insert(0x0028, 0x0006, foe({ cm["PlanarConfiguration"] }));
+        tds_insert(0x0028, 0x0034, foe({ cm["PixelAspectRatio"] }));
+
+        //Multi-Frame Module.
+        tds_insert(0x0028, 0x0008, fne({ std::to_string(num_of_imgs) }));
+        tds_insert(0x0028, 0x0009, fne({ cm["FrameIncrementPointer"], "" })); //Currently not able to specify this.
+
+        //Modality LUT Module.
+        //insert_as_string_if_nonempty(0x0028, 0x3000, "ModalityLUTSequence"], "" }));
+        tds_insert(0x0028, 0x3002, foe({ cm["LUTDescriptor"] }));
+        tds_insert(0x0028, 0x3004, foe({ cm["ModalityLUTType"] }));
+        tds_insert(0x0028, 0x3006, foe({ cm["LUTData"] }));
+        tds_insert(0x0028, 0x1052, foe({ cm["RescaleIntercept"] }));
+        tds_insert(0x0028, 0x1053, foe({ cm["RescaleSlope"] }));
+        tds_insert(0x0028, 0x1054, foe({ cm["RescaleType"] }));
+
+        //RT Dose Module.
+        //tds_insert(0x0028, 0x0002, fne({ cm["SamplesPerPixel"], "1" }));
+        //tds_insert(0x0028, 0x0004, fne({ cm["PhotometricInterpretation"], "MONOCHROME2" }));
+        //tds_insert(0x0028, 0x0100, fne({ cm["BitsAllocated"], "32" }));
+        //tds_insert(0x0028, 0x0101, fne({ cm["BitsStored"], "32" }));
+        //tds_insert(0x0028, 0x0102, fne({ cm["HighBit"], "31" }));
+        //tds_insert(0x0028, 0x0103, fne({ cm["PixelRepresentation"], "0" }));
+        tds_insert(0x3004, 0x0002, fne({ cm["DoseUnits"], "GY" }));
+        tds_insert(0x3004, 0x0004, fne({ cm["DoseType"], "PHYSICAL" }));
+        tds_insert(0x3004, 0x000a, fne({ cm["DoseSummationType"], "PLAN" }));
+        tds_insert(0x3004, 0x000e, fne({ std::to_string(dose_scaling) })); //"DoseGridScaling"
+
+        //tds_insert(0x300C, 0x0002, fne({ cm["ReferencedRTPlanSequence"], "" }));
+        //tds_insert(0x0008, 0x1150, fne({ cm["ReferencedSOPClassUID"], "" }));
+        //tds_insert(0x0008, 0x1155, fne({ cm["ReferencedSOPInstanceUID"], "" }));
+        //tds_insert(0x300C, 0x0020, fne({ cm["ReferencedFractionGroupSequence"], "" }));
+        //tds_insert(0x300C, 0x0022, fne({ cm["ReferencedFractionGroupNumber"], "" }));
+        //tds_insert(0x300C, 0x0004, fne({ cm["ReferencedBeamSequence"], "" }));
+        //tds_insert(0x300C, 0x0006, fne({ cm["ReferencedBeamNumber"], "" }));
+
+    }
+
+/*
+
+    for(const auto &p_img : IA->imagecoll.images){
+        //Write top-level metadata. Overwrite if necessary.
+        tds->setDouble(0x0020, 0, 0x0032, 0, 0.0);
+
+        //Write the image data.
+
+    }
+
+
+//    const std::string transferSyntax("1.2.840.10008.1.2.1"); // "Explicit VR little endian."
+    imbxUint32 ImageCounter = 0;
+
+
+
+
+
+    //These are CT-ish only (not for dose files,) but they should just return a zero nicely when we query and
+    // they are not there. If this were not the case, we would simply need to check the modality before querying.
+    //const auto slice_thickness  = static_cast<double>(TopDataSet->getDouble(0x0018, 0, 0x0050, 0));
+    //const auto slice_height     = static_cast<double>(TopDataSet->getDouble(0x0020, 0, 0x1041, 0));
+
+    //These should exist in all files. They appear to be the same for CT and DS files of the same set. Not sure
+    // if this is *always* the case.
+    const auto image_pos_x = static_cast<double>(TopDataSet->getDouble(0x0020, 0, 0x0032, 0));
+    const auto image_pos_y = static_cast<double>(TopDataSet->getDouble(0x0020, 0, 0x0032, 1));
+    const auto image_pos_z = static_cast<double>(TopDataSet->getDouble(0x0020, 0, 0x0032, 2));
+    const vec3<double> image_pos(image_pos_x,image_pos_y,image_pos_z); //Only for first image!
+
+    const auto image_orien_c_x = static_cast<double>(TopDataSet->getDouble(0x0020, 0, 0x0037, 0)); 
+    const auto image_orien_c_y = static_cast<double>(TopDataSet->getDouble(0x0020, 0, 0x0037, 1));
+    const auto image_orien_c_z = static_cast<double>(TopDataSet->getDouble(0x0020, 0, 0x0037, 2));
+    const vec3<double> image_orien_c = vec3<double>(image_orien_c_x,image_orien_c_y,image_orien_c_z).unit();
+
+    const auto image_orien_r_x = static_cast<double>(TopDataSet->getDouble(0x0020, 0, 0x0037, 3));
+    const auto image_orien_r_y = static_cast<double>(TopDataSet->getDouble(0x0020, 0, 0x0037, 4));
+    const auto image_orien_r_z = static_cast<double>(TopDataSet->getDouble(0x0020, 0, 0x0037, 5));
+    const vec3<double> image_orien_r = vec3<double>(image_orien_r_x,image_orien_r_y,image_orien_r_z).unit();
+
+    const vec3<double> image_stack_unit = (image_orien_c.Cross(image_orien_r)).unit(); //Unit vector denoting direction to stack images.
+    const vec3<double> image_anchor  = vec3<double>(0.0,0.0,0.0);
+
+    //Determine how many frames there are in the pixel data. A CT scan may just be a 2d jpeg or something, 
+    // but dose pixel data is 3d data composed of 'frames' of stacked 2d data.
+    const auto frame_count = static_cast<unsigned long int>(TopDataSet->getUnsignedLong(0x0028, 0, 0x0008, 0));
+    if(frame_count == 0) FUNCERR("No frames were found in file '" << FilenameIn << "'. Is it a valid dose file?");
+
+    //This is a redirection to another tag. I've never seen it be anything but (0x3004,0x000c).
+    const auto frame_inc_pntrU  = static_cast<long int>(TopDataSet->getUnsignedLong(0x0028, 0, 0x0009, 0));
+    const auto frame_inc_pntrL  = static_cast<long int>(TopDataSet->getUnsignedLong(0x0028, 0, 0x0009, 1));
+    if((frame_inc_pntrU != static_cast<long int>(0x3004)) || (frame_inc_pntrL != static_cast<long int>(0x000c)) ){
+        FUNCWARN(" frame increment pointer U,L = " << frame_inc_pntrU << "," << frame_inc_pntrL);
+        FUNCERR("Dose file contains a frame increment pointer which we have not encountered before. Please ensure we can handle it properly");
+    }
+
+    std::list<double> gfov;
+    for(unsigned long int i=0; i<frame_count; ++i){
+        const auto val = static_cast<double>(TopDataSet->getDouble(0x3004, 0, 0x000c, i));
+        gfov.push_back(val);
+    }
+
+    const double image_thickness = (gfov.size() > 1) ? ( *(++gfov.begin()) - *(gfov.begin()) ) : 1.0; //*NOT* the image separation!
+
+    const auto image_rows  = static_cast<long int>(TopDataSet->getUnsignedLong(0x0028, 0, 0x0010, 0));
+    const auto image_cols  = static_cast<long int>(TopDataSet->getUnsignedLong(0x0028, 0, 0x0011, 0));
+    //const auto image_pxldx = static_cast<double>(TopDataSet->getDouble(0x0028, 0, 0x0030, 0)); //Spacing between adjacent rows.
+    //const auto image_pxldy = static_cast<double>(TopDataSet->getDouble(0x0028, 0, 0x0030, 1)); //Spacing between adjacent columns.
+    const auto image_pxldy = static_cast<double>(TopDataSet->getDouble(0x0028, 0, 0x0030, 0)); //Spacing between adjacent rows.
+    const auto image_pxldx = static_cast<double>(TopDataSet->getDouble(0x0028, 0, 0x0030, 1)); //Spacing between adjacent columns.
+    const auto image_bits  = static_cast<unsigned long int>(TopDataSet->getUnsignedLong(0x0028, 0, 0x0101, 0));
+    const auto grid_scale  = static_cast<double>(TopDataSet->getDouble(0x3004, 0, 0x000e, 0));
+
+    const auto pixel_representation = static_cast<unsigned long int>(TopDataSet->getUnsignedLong(0x0028, 0, 0x0103, 0));
+
+    //Grab the image data for each individual frame.
+    auto gfov_it = gfov.begin();
+    for(unsigned long int curr_frame = 0; (curr_frame < frame_count) && (gfov_it != gfov.end()); ++curr_frame, ++gfov_it){
+        out->imagecoll.images.emplace_back();
+
+        //--------------------------------------------------------------------------------------------------
+        //Retrieve the pixel data from file. This is an excessively long exercise!
+        ptr<puntoexe::imebra::image> firstImage = TopDataSet->getImage(curr_frame); 	
+        if(firstImage == nullptr) FUNCERR("This file does not have accessible pixel data. Double check the file");
+    
+        //Process image using modalityVOILUT transform to convert its pixel values into meaningful values.
+        ptr<imebra::transforms::transform> modVOILUT(new imebra::transforms::modalityVOILUT(TopDataSet));
+        imbxUint32 width, height;
+        firstImage->getSize(&width, &height);
+        ptr<imebra::image> convertedImage(modVOILUT->allocateOutputImage(firstImage, width, height));
+        modVOILUT->runTransform(firstImage, 0, 0, width, height, convertedImage, 0, 0);
+    
+        //Convert the 'convertedImage' into an image suitable for the viewing on screen. The VOILUT transform 
+        // applies the contrast suggested by the dataSet to the image. Apply the first one we find.
+        //
+        // I'm not sure how this affects dose values, if at all, so I've disabled it for now.
+        //ptr<imebra::transforms::VOILUT> myVoiLut(new imebra::transforms::VOILUT(TopDataSet));
+        //imbxUint32 lutId = myVoiLut->getVOILUTId(0);
+        //myVoiLut->setVOILUT(lutId);
+        //ptr<imebra::image> presImage(myVoiLut->allocateOutputImage(convertedImage, width, height));
+        ptr<imebra::image> presImage = convertedImage;
+        //myVoiLut->runTransform(convertedImage, 0, 0, width, height, presImage, 0, 0);
+ 
+        //Get the image in terms of 'RGB'/'MONOCHROME1'/'MONOCHROME2'/'YBR_FULL'/etc.. channels.
+        //
+        // This allows up to transform the data into a desired format before allocating any space.
+        puntoexe::imebra::transforms::colorTransforms::colorTransformsFactory*  pFactory = 
+             puntoexe::imebra::transforms::colorTransforms::colorTransformsFactory::getColorTransformsFactory();
+        ptr<puntoexe::imebra::transforms::transform> myColorTransform = 
+             pFactory->getTransform(presImage->getColorSpace(), L"MONOCHROME2");//L"RGB");
+        if(myColorTransform != 0){ //If we get a '0', we do not need to transform the image.
+            ptr<puntoexe::imebra::image> rgbImage(myColorTransform->allocateOutputImage(presImage,width,height));
+            myColorTransform->runTransform(presImage, 0, 0, width, height, rgbImage, 0, 0);
+            presImage = rgbImage;
+        }
+    
+        //Get a 'dataHandler' to access the image data waiting in 'presImage.' Get some image metadata.
+        imbxUint32 rowSize, channelPixelSize, channelsNumber, sizeX, sizeY;
+        ptr<puntoexe::imebra::handlers::dataHandlerNumericBase> myHandler = 
+            presImage->getDataHandler(false, &rowSize, &channelPixelSize, &channelsNumber);
+        presImage->getSize(&sizeX, &sizeY);
+        //----------------------------------------------------------------------------------------------------
+
+        if((static_cast<long int>(sizeX) != image_cols) || (static_cast<long int>(sizeY) != image_rows)){
+            FUNCWARN("sizeX = " << sizeX << ", sizeY = " << sizeY << " and image_cols = " << image_cols << ", image_rows = " << image_rows);
+            FUNCERR("The number of rows and columns in the image data differ when comparing sizeX/Y and img_rows/cols. Please verify");
+            //If this issue arises, I have likely confused definition of X and Y. The DICOM standard specifically calls (0028,0010) 
+            // a 'row'. Perhaps I've got many things backward...
+        }
+
+        out->imagecoll.images.back().metadata = metadata;
+        out->imagecoll.images.back().init_orientation(image_orien_r,image_orien_c);
+
+        const auto img_chnls = static_cast<long int>(channelsNumber);
+        out->imagecoll.images.back().init_buffer(image_rows, image_cols, img_chnls);
+
+        const auto img_pxldz = image_thickness;
+        const auto gvof_offset = static_cast<double>(*gfov_it);  //Offset along \hat{z} from 
+        const auto img_offset = image_pos + image_stack_unit * gvof_offset;
+        out->imagecoll.images.back().init_spatial(image_pxldx,image_pxldy,img_pxldz, image_anchor, img_offset);
+
+        out->imagecoll.images.back().metadata["GridFrameOffset"] = std::to_string(gvof_offset);
+        out->imagecoll.images.back().metadata["Frame"] = std::to_string(curr_frame);
+        out->imagecoll.images.back().metadata["ImagePositionPatient"] = img_offset.to_string();
+
+
+        const auto img_bits  = static_cast<unsigned int>(channelPixelSize*8); //16 bit, 32 bit, 8 bit, etc..
+        if(img_bits != image_bits){
+            FUNCERR("The number of bits in each channel varies between the DICOM header and the transformed image data");
+            //Not sure what to do if this happens. Perhaps just go with the imebra result?
+        }
+
+        //Write the data to our allocated memory.
+        imbxUint32 data_index = 0;
+        //for(imbxUint32 scanX = 0; scanX < sizeX; ++scanX){ //Rows.
+        //    for(imbxUint32 scanY = 0; scanY < sizeY; ++scanY){ //Columns.
+        //        for(imbxUint32 scanChannel = 0; scanChannel < channelsNumber; ++scanChannel){ //Channels.
+        const bool pixelsAreSigned = (myHandler->isSigned());
+        for(long int row = 0; row < image_rows; ++row){
+            for(long int col = 0; col < image_cols; ++col){
+                for(long int chnl = 0; chnl < img_chnls; ++chnl){
+                    //NOTE: In earlier code, I kept pixel values as the raw DICOM-packed integers and used a separate Dose_Array
+                    //      member called 'grid_scale' to perform the scaling when I needed dose. When I switched to a floating-
+                    //      point pixel type, I decided it made the most sense (reducing complexity, conversion to-from plain 
+                    //      images) to just have the pixels directly express dose. Therefore, the grid_scale member is now set 
+                    //      to 1.0 ALWAYS for compatibility. It could be removed entirely (and the Dose_Array class) safely.
+                    ////if(pixel_representation == static_cast<unsigned long int>(0)){ //Unsigned pixel representation.
+                    //if(!pixelsAreSigned){ //Unsigned pixel representation.
+                    //    const imbxUint32 UnsignedChannelValue = myHandler->getUnsignedLong(data_index);
+                    //    out->imagecoll.images.back().reference(row,col,chnl) = static_cast<float>(UnsignedChannelValue) 
+                    //                                                           * static_cast<float>(grid_scale);
+                    ////}else if(pixel_representation == static_cast<unsigned long int>(1)){ //Signed pixel representation.
+                    //}else{ //Signed pixel representation.
+                    //    //Technically this is not just 'signed' but specifically two's complement representation. 
+                    //    // I think the best way is to verify by directly testing the implementation (e.g., compare 
+                    //    // -1 (negative one) with ~0 (bitwise complemented zero) to verify two's complement. Before 
+                    //    // doing so, check if C++11/14/+ has any way to static_assert this, such as in feature-test 
+                    //    // macros, numerical limits, or by the implementation exposing a macro of some sort.
+                    //    const imbxInt32 SignedChannelValue = myHandler->getSignedLong(data_index);
+                    //    out->imagecoll.images.back().reference(row,col,chnl) = static_cast<float>(SignedChannelValue)
+                    //                                                           * static_cast<float>(grid_scale);
+                    //}
+                    //
+                    //Approach D: let Imebra work out the conversersion by asking for a double. Hope it can be narrowed
+                    // if necessary!
+                    const auto DoubleChannelValue = myHandler->getDouble(data_index);
+                    const float OutgoingPixelValue = static_cast<float>(DoubleChannelValue) 
+                                                     * static_cast<float>(grid_scale);
+                    out->imagecoll.images.back().reference(row,col,chnl) = OutgoingPixelValue;
+
+                    ++data_index;
+                } //Loop over channels.
+            } //Loop over columns.
+        } //Loop over rows.
+    } //Loop over frames.
+
+    //Finally, pass the collection-specific items out.
+
+    out->bits       = image_bits;
+    out->grid_scale = 1.0; //grid_scale; <-- NOTE: pixels now hold dose directly and do not require scaling!
+    out->filename   = FilenameIn;
+    return std::move(out);
+*/    
+
+    // Attempt to write the file.
+    {  
+        ptr<puntoexe::stream> outputStream(new puntoexe::stream);
+        outputStream->openFile(FilenameOut, std::ios::out);
+        ptr<streamWriter> writer(new streamWriter(outputStream));
+        ptr<imebra::codecs::dicomCodec> writeCodec(new imebra::codecs::dicomCodec);
+        writeCodec->write(writer, tds);
+    }
+
+    return;
 }
 

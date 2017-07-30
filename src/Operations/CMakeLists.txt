@@ -32,6 +32,7 @@ add_library(Operations_objs OBJECT
     DumpROISurfaceMeshes.cc
     DumpROISNR.cc
     DumpVoxelDoseInfo.cc
+    DICOMExportImagesAsDose.cc
     GenerateSurfaceMask.cc
     GenerateVirtualDataPerfusionV1.cc
     GenerateVirtualDataContourViaThresholdTestV1.cc

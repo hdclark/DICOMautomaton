@@ -32,8 +32,6 @@
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
 
-#include <pqxx/pqxx>          //PostgreSQL C++ interface.
-
 #include "Structs.h"
 #include "Imebra_Shim.h"      //Wrapper for Imebra library. Black-boxed to speed up compilation.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.

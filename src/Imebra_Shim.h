@@ -58,5 +58,7 @@ std::unique_ptr<Dose_Array> Load_Dose_Array(const std::string &filename);
 //These pointers will actually be unique. This just aims to convert from unique_ptr to shared_ptr for you.
 std::list<std::shared_ptr<Dose_Array>>  Load_Dose_Arrays(const std::list<std::string> &filenames);
 
+//Writes an Image_Array as if it were a dose matrix.
+void Write_Dose_Array(std::shared_ptr<Image_Array> IA, const std::string &FilenameOut);
 
 #endif
