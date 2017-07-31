@@ -105,9 +105,7 @@ std::map<std::string,std::string> get_metadata_top_level_tags(const std::string 
     //       info.
     
     auto insert_as_string_if_nonempty = [&out,&ctrim,&tds](uint16_t group, uint16_t tag,
-                                                                 std::string name ) -> void {
-
-//FUNCINFO("Another run, this time for '" << name << "'");
+                                                           std::string name ) -> void {
         const uint32_t first_order = 0; // Always zero for modern DICOM files.
         const uint32_t first_element = 0; // Usually zero, but several tags can store multiple elements.
 
@@ -131,6 +129,46 @@ std::map<std::string,std::string> get_metadata_top_level_tags(const std::string 
                 const auto trimmed = Canonicalize_String2(str, ctrim);
                 if(!trimmed.empty()){
                     out[name] += R"***(\)***"_s + trimmed;
+                }else{
+                    return;
+                }
+            }catch(const std::exception &){
+                return;
+            }
+        }
+        return;
+    };
+
+    auto insert_seq_tag_as_string_if_nonempty = [&out,&ctrim,&tds](uint16_t seq_group, uint16_t seq_tag, std::string seq_name,
+                                                                   uint16_t tag_group, uint16_t tag_tag, std::string tag_name) -> void {
+        const uint32_t first_order = 0; // Always zero for modern DICOM files.
+        const uint32_t first_element = 0; // Usually zero, but several tags can store multiple elements.
+        const auto full_name = seq_name + R"***(/)***"_s + tag_name;
+
+        //Check if the tag has already been found.
+        if(out.count(full_name) != 0) return;
+
+        //Check if the sequence can be found.
+        const auto seq_ptr = tds->getSequenceItem(seq_group, first_order, seq_tag, first_element);
+        if(seq_ptr == nullptr) return;
+
+        //Check if the tag is present in the sequence.
+        const bool create_if_not_found = false;
+        const auto tag_ptr = seq_ptr->getTag(tag_group, first_order, tag_tag, create_if_not_found);
+        if(tag_ptr == nullptr) return;
+
+        //Add the first element.
+        const auto str = seq_ptr->getString(tag_group, first_order, tag_tag, first_element);
+        const auto trimmed = Canonicalize_String2(str, ctrim);
+        if(!trimmed.empty()) out.emplace(full_name, trimmed);
+
+        //Check if there are additional elements.
+        for(uint32_t i = 1 ;  ; ++i){
+            try{
+                const auto str = seq_ptr->getString(tag_group, first_order, tag_tag, first_element + i);
+                const auto trimmed = Canonicalize_String2(str, ctrim);
+                if(!trimmed.empty()){
+                    out[full_name] += R"***(\)***"_s + trimmed;
                 }else{
                     return;
                 }
@@ -226,7 +264,7 @@ std::map<std::string,std::string> get_metadata_top_level_tags(const std::string 
     insert_as_string_if_nonempty(0x0028, 0x0101, "BitsStored");
     insert_as_string_if_nonempty(0x0028, 0x0102, "HighBit");
     insert_as_string_if_nonempty(0x0028, 0x0103, "PixelRepresentation");
-    //insert_as_string_if_nonempty(0x7FE0, 0x0010, "PixelData");
+    //insert_as_string_if_nonempty(0x7FE0, 0x0010, "PixelData"); //Raw pixel bytes.
     insert_as_string_if_nonempty(0x0028, 0x0006, "PlanarConfiguration");
     insert_as_string_if_nonempty(0x0028, 0x0034, "PixelAspectRatio");
 
@@ -255,6 +293,15 @@ std::map<std::string,std::string> get_metadata_top_level_tags(const std::string 
     insert_as_string_if_nonempty(0x3004, 0x000a, "DoseSummationType");
     insert_as_string_if_nonempty(0x3004, 0x000e, "DoseGridScaling");
 
+    insert_seq_tag_as_string_if_nonempty( 0x300C, 0x0002, "ReferencedRTPlanSequence",
+                                          0x0008, 0x1150, "ReferencedSOPClassUID");
+    insert_seq_tag_as_string_if_nonempty( 0x300C, 0x0002, "ReferencedRTPlanSequence",
+                                          0x0008, 0x1155, "ReferencedSOPInstanceUID");
+    insert_seq_tag_as_string_if_nonempty( 0x300C, 0x0020, "ReferencedFractionGroupSequence",
+                                          0x300C, 0x0022, "ReferencedFractionGroupNumber");
+    insert_seq_tag_as_string_if_nonempty( 0x300C, 0x0004, "ReferencedBeamSequence",
+                                          0x300C, 0x0006, "ReferencedBeamNumber");
+
     //insert_as_string_if_nonempty(0x300C, 0x0002, "ReferencedRTPlanSequence");
     //insert_as_string_if_nonempty(0x0008, 0x1150, "ReferencedSOPClassUID");
     //insert_as_string_if_nonempty(0x0008, 0x1155, "ReferencedSOPInstanceUID");
@@ -270,23 +317,19 @@ std::map<std::string,std::string> get_metadata_top_level_tags(const std::string 
     insert_as_string_if_nonempty(0x0018, 0x0022, "ScanOptions");
     insert_as_string_if_nonempty(0x0018, 0x0023, "MRAcquisitionType");
 
-    insert_as_string_if_nonempty(0x0018, 0x0050, "SliceThickness");
     insert_as_string_if_nonempty(0x2001, 0x100a, "SliceNumber");
-    insert_as_string_if_nonempty(0x0020, 0x1041, "SliceLocation");
     insert_as_string_if_nonempty(0x0054, 0x1330, "ImageIndex");
     insert_as_string_if_nonempty(0x0018, 0x0088, "SpacingBetweenSlices");
 
-    insert_as_string_if_nonempty(0x0028, 0x0008, "NumberofFrames");
-    insert_as_string_if_nonempty(0x0028, 0x0009, "FrameIncrementPointer"); 
     insert_as_string_if_nonempty(0x0028, 0x0010, "Rows");
     insert_as_string_if_nonempty(0x0028, 0x0011, "Columns");
     insert_as_string_if_nonempty(0x3004, 0x000C, "GridFrameOffsetVector");
 
     insert_as_string_if_nonempty(0x0020, 0x0100, "TemporalPositionIdentifier");
+    insert_as_string_if_nonempty(0x0020, 0x9128, "TemporalPositionIndex");
     insert_as_string_if_nonempty(0x0020, 0x0105, "NumberofTemporalPositions");
 
     insert_as_string_if_nonempty(0x0020, 0x0110, "TemporalResolution");
-    insert_as_string_if_nonempty(0x0020, 0x9128, "TemporalPositionIndex");
     insert_as_string_if_nonempty(0x0054, 0x1300, "FrameReferenceTime");
     insert_as_string_if_nonempty(0x0018, 0x1063, "FrameTime");
     insert_as_string_if_nonempty(0x0018, 0x1060, "TriggerTime");
@@ -325,7 +368,6 @@ std::map<std::string,std::string> get_metadata_top_level_tags(const std::string 
     insert_as_string_if_nonempty(0x0018, 0x1314, "FlipAngle");
     insert_as_string_if_nonempty(0x0018, 0x1316, "SAR");
     insert_as_string_if_nonempty(0x0018, 0x1318, "dB_dt");
-    insert_as_string_if_nonempty(0x0018, 0x5100, "PatientPosition");
     insert_as_string_if_nonempty(0x0018, 0x9073, "AcquisitionDuration");
     insert_as_string_if_nonempty(0x0018, 0x9087, "Diffusion_bValue");
     insert_as_string_if_nonempty(0x0018, 0x9089, "DiffusionGradientOrientation");
@@ -334,9 +376,6 @@ std::map<std::string,std::string> get_metadata_top_level_tags(const std::string 
 
     insert_as_string_if_nonempty(0x0028, 0x1050, "WindowCenter");
     insert_as_string_if_nonempty(0x0028, 0x1051, "WindowWidth");
-    insert_as_string_if_nonempty(0x0028, 0x1052, "RescaleIntercept");
-    insert_as_string_if_nonempty(0x0028, 0x1053, "RescaleSlope");
-    insert_as_string_if_nonempty(0x0028, 0x1054, "RescaleType");
 
     insert_as_string_if_nonempty(0x300a, 0x0002, "RTPlanLabel");
     insert_as_string_if_nonempty(0x300a, 0x0003, "RTPlanName");
@@ -345,7 +384,6 @@ std::map<std::string,std::string> get_metadata_top_level_tags(const std::string 
     insert_as_string_if_nonempty(0x300a, 0x0007, "RTPlanTime");
     insert_as_string_if_nonempty(0x300a, 0x000c, "RTPlanGeometry");
 
-    insert_as_string_if_nonempty(0x0008, 0x1070, "OperatorsName");
     insert_as_string_if_nonempty(0x0008, 0x0090, "ReferringPhysicianName");
 
 
@@ -1183,7 +1221,52 @@ void Write_Dose_Array(std::shared_ptr<Image_Array> IA, const std::string &Filena
 
     ptr<imebra::dataSet> tds(new imebra::dataSet);
 
-    auto tds_insert = [&tds](uint16_t group, uint16_t tag, std::string val) -> void {
+
+    //Gather some basic info. Note that the following dimensions must be identical for all images for a multi-frame
+    // RTDOSE file.
+    const auto num_of_imgs = IA->imagecoll.images.size();
+    const auto row_count = IA->imagecoll.images.front().rows;
+    const auto col_count = IA->imagecoll.images.front().columns;
+    //const double dose_scaling = ... ; //Compute range and solve [ X*(uint32_t_max-1) = DoseMax ] for X.
+    //                                  //Should be ~3.1683168e-5 or so.
+    const double dose_scaling = 3.0e-5;
+
+    const auto pxl_dx = IA->imagecoll.images.front().pxl_dx;
+    const auto pxl_dy = IA->imagecoll.images.front().pxl_dy;
+    const auto PixelSpacing = std::to_string(pxl_dy) + R"***(\)***"_s + std::to_string(pxl_dx);
+
+    const auto row_unit = IA->imagecoll.images.front().row_unit;
+    const auto col_unit = IA->imagecoll.images.front().col_unit;
+    const auto ImageOrientationPatient = std::to_string(col_unit.x) + R"***(\)***"_s
+                                       + std::to_string(col_unit.y) + R"***(\)***"_s
+                                       + std::to_string(col_unit.z) + R"***(\)***"_s
+                                       + std::to_string(row_unit.x) + R"***(\)***"_s
+                                       + std::to_string(row_unit.y) + R"***(\)***"_s
+                                       + std::to_string(row_unit.z);
+
+    //The position of each image vary, but we handle this with a grid frame offset vector later.
+    // I'm not sure if the image position specified here has to be extreme or not.
+    const auto image_pos = IA->imagecoll.images.front().offset - IA->imagecoll.images.front().anchor;
+    const auto ImagePositionPatient = std::to_string(image_pos.x) + R"***(\)***"_s
+                                    + std::to_string(image_pos.y) + R"***(\)***"_s
+                                    + std::to_string(image_pos.z);
+
+    //Assume images abut (i.e., are contiguous) and perfectly parallel.
+    const auto pxl_dz = IA->imagecoll.images.front().pxl_dz;
+    const auto SliceThickness = std::to_string(pxl_dz);
+    std::string GridFrameOffsetVector;
+    for(size_t i = 0; i < num_of_imgs; ++i){
+        const double z = pxl_dz*i;
+        if(GridFrameOffsetVector.empty()){
+            GridFrameOffsetVector += std::to_string(z);
+        }else{
+            GridFrameOffsetVector += R"***(\)***"_s + std::to_string(z);
+        }
+    }
+
+
+
+    auto ds_insert = [](ptr<imebra::dataSet> &ds, uint16_t group, uint16_t tag, std::string val) -> void {
         const uint16_t order = 0;
         uint32_t element = 0;
 
@@ -1193,7 +1276,7 @@ void Write_Dose_Array(std::shared_ptr<Image_Array> IA, const std::string &Filena
             //if(val.empty()) continue; //Sometimes empty strings are necessary...
 
             //Attempt to convert to the default DICOM data type.
-            const auto d_t = tds->getDefaultDataType(group, tag);
+            const auto d_t = ds->getDefaultDataType(group, tag);
 
             //Types not requiring conversion from a string.
             if( ( d_t == "AE") || ( d_t == "AS") || ( d_t == "AT") ||
@@ -1202,7 +1285,7 @@ void Write_Dose_Array(std::shared_ptr<Image_Array> IA, const std::string &Filena
                 ( d_t == "LT") || ( d_t == "OB") || ( d_t == "OW") ||
                 ( d_t == "PN") || ( d_t == "SH") || ( d_t == "ST") ||
                 ( d_t == "TM") || ( d_t == "UI") || ( d_t == "UT")   ){
-                    tds->setString(group, order, tag, element++, val, d_t);
+                    ds->setString(group, order, tag, element++, val, d_t);
 
             //Numeric types.
             }else if(
@@ -1210,13 +1293,13 @@ void Write_Dose_Array(std::shared_ptr<Image_Array> IA, const std::string &Filena
                 ( d_t == "FD") ||   //Floating-point double.
                 ( d_t == "OF") ||   //"Other" floating-point.
                 ( d_t == "OD")   ){ //"Other" floating-point double.
-                    tds->setString(group, order, tag, element++, val, "DS"); //Try keep it as a string.
+                    ds->setString(group, order, tag, element++, val, "DS"); //Try keep it as a string.
             }else if(
                 ( d_t == "SL") ||   //Signed long int (32bit).
                 ( d_t == "SS") ||   //Signed short integer (16bit).
                 ( d_t == "UL") ||   //Unsigned long int (32bit).
                 ( d_t == "US")   ){ //Unsigned short integer (16bit).
-                    tds->setString(group, order, tag, element++, val, "IS"); //Try keep it as a string.
+                    ds->setString(group, order, tag, element++, val, "IS"); //Try keep it as a string.
 
             //Types we cannot process because they are special (e.g., sequences) or don't currently support.
             }else if( d_t == "SQ"){ //Sequence.
@@ -1227,6 +1310,22 @@ void Write_Dose_Array(std::shared_ptr<Image_Array> IA, const std::string &Filena
                 throw std::runtime_error("Unknown VR type. Cannot write to tag.");
             }
         }
+        return;
+    };
+
+    auto ds_seq_insert = [&ds_insert](ptr<imebra::dataSet> &ds, uint16_t seq_group, uint16_t seq_tag, 
+                                                      uint16_t tag_group, uint16_t tag_tag, std::string tag_val) -> void {
+        const uint32_t first_order = 0; // Always zero for modern DICOM files.
+        const uint32_t first_element = 0; // Usually zero, but several tags can store multiple elements.
+
+        //Get a reference to an existing sequence item, or create one if needed.
+        const bool create_if_not_found = true;
+        auto tag_ptr = ds->getTag(seq_group, first_order, seq_tag, create_if_not_found);
+        if(tag_ptr == nullptr) return;
+
+        ptr<imebra::dataSet> lds(new imebra::dataSet);
+        ds_insert(lds, tag_group, tag_tag, tag_val);
+        tag_ptr->appendDataSet( lds );
         return;
     };
 
@@ -1252,152 +1351,240 @@ void Write_Dose_Array(std::shared_ptr<Image_Array> IA, const std::string &Filena
     }
 */
 
-    //Gather some basic info.
-    const auto num_of_imgs = IA->imagecoll.images.size();
-    const auto row_count = IA->imagecoll.images.front().rows;
-    const auto col_count = IA->imagecoll.images.front().columns;
-    //const double dose_scaling = ... ; //Compute range and solve [ X*(uint32_t_max-1) = DoseMax ] for X.
-    //                                  //Should be ~3.1683168e-5 or so.
-    const double dose_scaling = 3.0e-5;
-
 
     //Top-level stuff: metadata shared by all images.
     {
         auto cm = IA->imagecoll.get_common_metadata({});
 
+        //DICOM Header Metadata.
+/*        
+        ds_insert(tds, 0x0002, 0x0000, "150"); //"FileMetaInformationGroupLength".
+        ds_insert(tds, 0x0002, 0x0001, R"***(1)***"); //"FileMetaInformationVersion".
+        ds_insert(tds, 0x0002, 0x0002, "1.2.840.10008.5.1.4.1.1.481.2"); //"MediaStorageSOPClassUID".
+        ds_insert(tds, 0x0002, 0x0003, "1.2.840.99.481.2.736553.67478.01.4.1"); //"MediaStorageSOPInstanceUID".
+        ds_insert(tds, 0x0002, 0x0010, "1.2.840.10008.1.2"); //"TransferSyntaxUID".
+        ds_insert(tds, 0x0002, 0x0012, "1.2.246.352.70.2.1.7"); //"ImplementationClassUID".
+*/
+
         //SOP Common Module.
-        tds_insert(0x0008, 0x0016, "1.2.840.10008.5.1.4.1.1.481.2"); // "SOPClassUID"
-        tds_insert(0x0008, 0x0018, Generate_Random_UID(64)); // "SOPInstanceUID"
-        tds_insert(0x0008, 0x0005, fne({ cm["SpecificCharacterSet"], "ISO_IR 100" }));
-        tds_insert(0x0008, 0x0012, fne({ cm["InstanceCreationDate"], "20170730" }));
-        tds_insert(0x0008, 0x0013, fne({ cm["InstanceCreationTime"], "111111" }));
-        tds_insert(0x0008, 0x0014, foe({ cm["InstanceCreatorUID"] }));
-        tds_insert(0x0008, 0x0114, foe({ cm["CodingSchemeExternalUID"] }));
-        tds_insert(0x0020, 0x0013, foe({ cm["InstanceNumber"] }));
+        ds_insert(tds, 0x0008, 0x0016, "1.2.840.10008.5.1.4.1.1.481.2"); // "SOPClassUID"
+        ds_insert(tds, 0x0008, 0x0018, Generate_Random_UID(64)); // "SOPInstanceUID"
+        ds_insert(tds, 0x0008, 0x0005, fne({ cm["SpecificCharacterSet"], "ISO_IR 100" }));
+        ds_insert(tds, 0x0008, 0x0012, fne({ cm["InstanceCreationDate"], "20170730" }));
+        ds_insert(tds, 0x0008, 0x0013, "11:11:11" ); //fne({ cm["InstanceCreationTime"], "111111" }));
+        ds_insert(tds, 0x0008, 0x0014, foe({ cm["InstanceCreatorUID"] }));
+        ds_insert(tds, 0x0008, 0x0114, foe({ cm["CodingSchemeExternalUID"] }));
+        ds_insert(tds, 0x0020, 0x0013, foe({ cm["InstanceNumber"] }));
 
         //Patient Module.
-        tds_insert(0x0010, 0x0010, fne({ cm["PatientsName"], "HC_Test^HC_Test" }));
-        tds_insert(0x0010, 0x0020, fne({ cm["PatientID"], "HC_Test_"_s + Generate_Random_String_of_Length(10) }));
-        tds_insert(0x0010, 0x0030, fne({ cm["PatientsBirthDate"], "20170730" }));
-        tds_insert(0x0010, 0x0040, fne({ cm["PatientsGender"], "O" }));
+        ds_insert(tds, 0x0010, 0x0010, fne({ cm["PatientsName"], "HC_Test^HC_Test" }));
+        ds_insert(tds, 0x0010, 0x0020, fne({ cm["PatientID"], "HC_Test_"_s + Generate_Random_String_of_Length(10) }));
+        ds_insert(tds, 0x0010, 0x0030, fne({ cm["PatientsBirthDate"], "20170730" }));
+        ds_insert(tds, 0x0010, 0x0040, fne({ cm["PatientsGender"], "O" }));
 
         //General Study Module.
-        tds_insert(0x0020, 0x000D, fne({ cm["StudyInstanceUID"], Generate_Random_UID(64) }));
-        tds_insert(0x0008, 0x0020, fne({ cm["StudyDate"], "20170730" }));
-        tds_insert(0x0008, 0x0030, fne({ cm["StudyTime"], "111111" }));
-        tds_insert(0x0008, 0x0090, fne({ cm["ReferringPhysiciansName"], "UNSPECIFIED^UNSPECIFIED" }));
-        tds_insert(0x0020, 0x0010, fne({ cm["StudyID"], "HCTest_"_s + Generate_Random_String_of_Length(10) }));
-        tds_insert(0x0008, 0x0050, foe({ cm["AccessionNumber"] }));
-        tds_insert(0x0008, 0x1030, foe({ cm["StudyDescription"] }));
+        ds_insert(tds, 0x0020, 0x000D, fne({ cm["StudyInstanceUID"], Generate_Random_UID(64) }));
+        ds_insert(tds, 0x0008, 0x0020, fne({ cm["StudyDate"], "20170730" }));
+        ds_insert(tds, 0x0008, 0x0030, "11:11:11" ); //fne({ cm["StudyTime"], "111111" }));
+        ds_insert(tds, 0x0008, 0x0090, fne({ cm["ReferringPhysiciansName"], "UNSPECIFIED^UNSPECIFIED" }));
+        ds_insert(tds, 0x0020, 0x0010, fne({ cm["StudyID"], "HCTest_"_s + Generate_Random_String_of_Length(10) }));
+        ds_insert(tds, 0x0008, 0x0050, foe({ cm["AccessionNumber"] }));
+        ds_insert(tds, 0x0008, 0x1030, foe({ cm["StudyDescription"] }));
 
 
         //General Series Module.
-        tds_insert(0x0008, 0x0060, "RTDOSE");
-        tds_insert(0x0020, 0x000E, fne({ cm["SeriesInstanceUID"], Generate_Random_UID(64) }));
-        tds_insert(0x0020, 0x0011, fne({ cm["SeriesNumber"], "1000" }));
-        tds_insert(0x0008, 0x0021, foe({ cm["SeriesDate"] }));
-        tds_insert(0x0008, 0x0031, foe({ cm["SeriesTime"] }));
-        tds_insert(0x0008, 0x103E, fne({ cm["SeriesDescription"], "UNSPECIFIED" }));
-        tds_insert(0x0018, 0x0015, foe({ cm["BodyPartExamined"] }));
-        tds_insert(0x0018, 0x5100, foe({ cm["PatientPosition"] }));
-        tds_insert(0x0040, 0x1001, fne({ cm["RequestedProcedureID"], "UNSPECIFIED" }));
-        tds_insert(0x0040, 0x0009, fne({ cm["ScheduledProcedureStepID"], "UNSPECIFIED" }));
-        tds_insert(0x0008, 0x1070, fne({ cm["OperatorsName"], "UNSPECIFIED" }));
+        ds_insert(tds, 0x0008, 0x0060, "RTDOSE");
+        ds_insert(tds, 0x0020, 0x000E, fne({ cm["SeriesInstanceUID"], Generate_Random_UID(64) }));
+        ds_insert(tds, 0x0020, 0x0011, fne({ cm["SeriesNumber"], "1000" }));
+        ds_insert(tds, 0x0008, 0x0021, foe({ cm["SeriesDate"] }));
+        ds_insert(tds, 0x0008, 0x0031, foe({ cm["SeriesTime"] }));
+        ds_insert(tds, 0x0008, 0x103E, fne({ cm["SeriesDescription"], "UNSPECIFIED" }));
+        ds_insert(tds, 0x0018, 0x0015, foe({ cm["BodyPartExamined"] }));
+        ds_insert(tds, 0x0018, 0x5100, foe({ cm["PatientPosition"] }));
+        ds_insert(tds, 0x0040, 0x1001, fne({ cm["RequestedProcedureID"], "UNSPECIFIED" }));
+        ds_insert(tds, 0x0040, 0x0009, fne({ cm["ScheduledProcedureStepID"], "UNSPECIFIED" }));
+        ds_insert(tds, 0x0008, 0x1070, fne({ cm["OperatorsName"], "UNSPECIFIED" }));
 
         //Patient Study Module.
-        tds_insert(0x0010, 0x1030, foe({ cm["PatientsMass"] }));
+        ds_insert(tds, 0x0010, 0x1030, foe({ cm["PatientsMass"] }));
 
         //Frame of Reference Module.
-        tds_insert(0x0020, 0x0052, fne({ cm["FrameofReferenceUID"], Generate_Random_UID(64) }));
-        tds_insert(0x0020, 0x1040, fne({ cm["PositionReferenceIndicator"], "BB" }));
+        ds_insert(tds, 0x0020, 0x0052, fne({ cm["FrameofReferenceUID"], Generate_Random_UID(64) }));
+        ds_insert(tds, 0x0020, 0x1040, fne({ cm["PositionReferenceIndicator"], "BB" }));
 
         //General Equipment Module.
-        tds_insert(0x0008, 0x0070, fne({ cm["Manufacturer"], "UNSPECIFIED" }));
-        tds_insert(0x0008, 0x0080, fne({ cm["InstitutionName"], "UNSPECIFIED" }));
-        tds_insert(0x0008, 0x1010, fne({ cm["StationName"], "UNSPECIFIED" }));
-        tds_insert(0x0008, 0x1040, fne({ cm["InstitutionalDepartmentName"], "UNSPECIFIED" }));
-        tds_insert(0x0008, 0x1090, fne({ cm["ManufacturersModelName"], "UNSPECIFIED" }));
-        tds_insert(0x0018, 0x1020, fne({ cm["SoftwareVersions"], "UNSPECIFIED" }));
+        ds_insert(tds, 0x0008, 0x0070, fne({ cm["Manufacturer"], "UNSPECIFIED" }));
+        ds_insert(tds, 0x0008, 0x0080, fne({ cm["InstitutionName"], "UNSPECIFIED" }));
+        ds_insert(tds, 0x0008, 0x1010, fne({ cm["StationName"], "UNSPECIFIED" }));
+        ds_insert(tds, 0x0008, 0x1040, fne({ cm["InstitutionalDepartmentName"], "UNSPECIFIED" }));
+        ds_insert(tds, 0x0008, 0x1090, fne({ cm["ManufacturersModelName"], "UNSPECIFIED" }));
+        ds_insert(tds, 0x0018, 0x1020, fne({ cm["SoftwareVersions"], "UNSPECIFIED" }));
 
         //General Image Module.
-        tds_insert(0x0020, 0x0013, foe({ cm["InstanceNumber"] }));
-        tds_insert(0x0020, 0x0020, fne({ cm["PatientOrientation"], "UNSPECIFIED" }));
-        tds_insert(0x0008, 0x0023, foe({ cm["ContentDate"] }));
-        tds_insert(0x0008, 0x0033, foe({ cm["ContentTime"] }));
-        tds_insert(0x0008, 0x0008, fne({ cm["ImageType"], "UNSPECIFIED" }));
-        tds_insert(0x0020, 0x0012, foe({ cm["AcquisitionNumber"] }));
-        tds_insert(0x0008, 0x0022, foe({ cm["AcquisitionDate"] }));
-        tds_insert(0x0008, 0x0032, foe({ cm["AcquisitionTime"] }));
-        tds_insert(0x0008, 0x2111, foe({ cm["DerivationDescription"] }));
+        ds_insert(tds, 0x0020, 0x0013, foe({ cm["InstanceNumber"] }));
+        ds_insert(tds, 0x0020, 0x0020, fne({ cm["PatientOrientation"], "UNSPECIFIED" }));
+        ds_insert(tds, 0x0008, 0x0023, foe({ cm["ContentDate"] }));
+        ds_insert(tds, 0x0008, 0x0033, foe({ cm["ContentTime"] }));
+        ds_insert(tds, 0x0008, 0x0008, fne({ cm["ImageType"], "UNSPECIFIED" }));
+        ds_insert(tds, 0x0020, 0x0012, foe({ cm["AcquisitionNumber"] }));
+        ds_insert(tds, 0x0008, 0x0022, foe({ cm["AcquisitionDate"] }));
+        ds_insert(tds, 0x0008, 0x0032, foe({ cm["AcquisitionTime"] }));
+        ds_insert(tds, 0x0008, 0x2111, foe({ cm["DerivationDescription"] }));
         //insert_as_string_if_nonempty(0x0008, 0x9215, "DerivationCodeSequence"], "" }));
-        tds_insert(0x0020, 0x1002, foe({ cm["ImagesInAcquisition"] }));
-        tds_insert(0x0020, 0x4000, "Generated by DICOMautomaton" );
-        tds_insert(0x0028, 0x0300, foe({ cm["QualityControlImage"] }));
+        ds_insert(tds, 0x0020, 0x1002, foe({ cm["ImagesInAcquisition"] }));
+        ds_insert(tds, 0x0020, 0x4000, "Generated by DICOMautomaton" );
+        ds_insert(tds, 0x0028, 0x0300, foe({ cm["QualityControlImage"] }));
 
         //Image Plane Module.
-        tds_insert(0x0028, 0x0030, fne({ cm["PixelSpacing"], R"***(2.5\2.5)***" }));
-        tds_insert(0x0020, 0x0037, fne({ cm["ImageOrientationPatient"], R"***(1\0\0\0\1\0)***" }));
-        tds_insert(0x0020, 0x0032, fne({ cm["ImagePositionPatient"], R"***(0\0\0)***" }));
-        tds_insert(0x0018, 0x0050, foe({ cm["SliceThickness"] }));
-        tds_insert(0x0020, 0x1041, foe({ cm["SliceLocation"] }));
+        ds_insert(tds, 0x0028, 0x0030, PixelSpacing );
+        ds_insert(tds, 0x0020, 0x0037, ImageOrientationPatient );
+        ds_insert(tds, 0x0020, 0x0032, ImagePositionPatient );
+        ds_insert(tds, 0x0018, 0x0050, SliceThickness );
+        ds_insert(tds, 0x0020, 0x1041, "" ); // foe({ cm["SliceLocation"] }));
 
         //Image Pixel Module.
-        tds_insert(0x0028, 0x0002, fne({ cm["SamplesPerPixel"], "1" }));
-        tds_insert(0x0028, 0x0004, fne({ cm["PhotometricInterpretation"], "MONOCHROME2" }));
-        tds_insert(0x0028, 0x0010, fne({ std::to_string(row_count) })); // "Rows"
-        tds_insert(0x0028, 0x0011, fne({ std::to_string(col_count) })); // "Columns"
-        tds_insert(0x0028, 0x0100, fne({ cm["BitsAllocated"], "32" }));
-        tds_insert(0x0028, 0x0101, fne({ cm["BitsStored"], "32" }));
-        tds_insert(0x0028, 0x0102, fne({ cm["HighBit"], "31" }));
-        tds_insert(0x0028, 0x0103, fne({ cm["PixelRepresentation"], "0" }));
-        tds_insert(0x0028, 0x0006, foe({ cm["PlanarConfiguration"] }));
-        tds_insert(0x0028, 0x0034, foe({ cm["PixelAspectRatio"] }));
+        ds_insert(tds, 0x0028, 0x0002, fne({ cm["SamplesPerPixel"], "1" }));
+        ds_insert(tds, 0x0028, 0x0004, fne({ cm["PhotometricInterpretation"], "MONOCHROME2" }));
+        ds_insert(tds, 0x0028, 0x0010, fne({ std::to_string(row_count) })); // "Rows"
+        ds_insert(tds, 0x0028, 0x0011, fne({ std::to_string(col_count) })); // "Columns"
+        ds_insert(tds, 0x0028, 0x0100, "32" ); //fne({ cm["BitsAllocated"], "32" }));
+        ds_insert(tds, 0x0028, 0x0101, "32" ); //fne({ cm["BitsStored"], "32" }));
+        ds_insert(tds, 0x0028, 0x0102, "31" ); //fne({ cm["HighBit"], "31" }));
+        ds_insert(tds, 0x0028, 0x0103, "0" ); // Unsigned.   fne({ cm["PixelRepresentation"], "0" }));
+        ds_insert(tds, 0x0028, 0x0006, foe({ cm["PlanarConfiguration"] }));
+        ds_insert(tds, 0x0028, 0x0034, foe({ cm["PixelAspectRatio"] }));
 
         //Multi-Frame Module.
-        tds_insert(0x0028, 0x0008, fne({ std::to_string(num_of_imgs) }));
-        tds_insert(0x0028, 0x0009, fne({ cm["FrameIncrementPointer"], "" })); //Currently not able to specify this.
+        ds_insert(tds, 0x0028, 0x0008, fne({ std::to_string(num_of_imgs) })); // "NumberOfFrames".
+        ds_insert(tds, 0x0028, 0x0009, fne({ cm["FrameIncrementPointer"], "(3004,000c)" })); //May not work to specify like this!
+        ds_insert(tds, 0x3004, 0x000c, GridFrameOffsetVector );
 
         //Modality LUT Module.
         //insert_as_string_if_nonempty(0x0028, 0x3000, "ModalityLUTSequence"], "" }));
-        tds_insert(0x0028, 0x3002, foe({ cm["LUTDescriptor"] }));
-        tds_insert(0x0028, 0x3004, foe({ cm["ModalityLUTType"] }));
-        tds_insert(0x0028, 0x3006, foe({ cm["LUTData"] }));
-        tds_insert(0x0028, 0x1052, foe({ cm["RescaleIntercept"] }));
-        tds_insert(0x0028, 0x1053, foe({ cm["RescaleSlope"] }));
-        tds_insert(0x0028, 0x1054, foe({ cm["RescaleType"] }));
+        ds_insert(tds, 0x0028, 0x3002, foe({ cm["LUTDescriptor"] }));
+        ds_insert(tds, 0x0028, 0x3004, foe({ cm["ModalityLUTType"] }));
+        ds_insert(tds, 0x0028, 0x3006, foe({ cm["LUTData"] }));
+        ds_insert(tds, 0x0028, 0x1052, foe({ cm["RescaleIntercept"] }));
+        ds_insert(tds, 0x0028, 0x1053, foe({ cm["RescaleSlope"] }));
+        ds_insert(tds, 0x0028, 0x1054, foe({ cm["RescaleType"] }));
 
         //RT Dose Module.
-        //tds_insert(0x0028, 0x0002, fne({ cm["SamplesPerPixel"], "1" }));
-        //tds_insert(0x0028, 0x0004, fne({ cm["PhotometricInterpretation"], "MONOCHROME2" }));
-        //tds_insert(0x0028, 0x0100, fne({ cm["BitsAllocated"], "32" }));
-        //tds_insert(0x0028, 0x0101, fne({ cm["BitsStored"], "32" }));
-        //tds_insert(0x0028, 0x0102, fne({ cm["HighBit"], "31" }));
-        //tds_insert(0x0028, 0x0103, fne({ cm["PixelRepresentation"], "0" }));
-        tds_insert(0x3004, 0x0002, fne({ cm["DoseUnits"], "GY" }));
-        tds_insert(0x3004, 0x0004, fne({ cm["DoseType"], "PHYSICAL" }));
-        tds_insert(0x3004, 0x000a, fne({ cm["DoseSummationType"], "PLAN" }));
-        tds_insert(0x3004, 0x000e, fne({ std::to_string(dose_scaling) })); //"DoseGridScaling"
+        //ds_insert(tds, 0x0028, 0x0002, fne({ cm["SamplesPerPixel"], "1" }));
+        //ds_insert(tds, 0x0028, 0x0004, fne({ cm["PhotometricInterpretation"], "MONOCHROME2" }));
+        //ds_insert(tds, 0x0028, 0x0100, fne({ cm["BitsAllocated"], "32" }));
+        //ds_insert(tds, 0x0028, 0x0101, fne({ cm["BitsStored"], "32" }));
+        //ds_insert(tds, 0x0028, 0x0102, fne({ cm["HighBit"], "31" }));
+        //ds_insert(tds, 0x0028, 0x0103, fne({ cm["PixelRepresentation"], "0" }));
+        ds_insert(tds, 0x3004, 0x0002, fne({ cm["DoseUnits"], "GY" }));
+        ds_insert(tds, 0x3004, 0x0004, fne({ cm["DoseType"], "PHYSICAL" }));
+        ds_insert(tds, 0x3004, 0x000a, fne({ cm["DoseSummationType"], "PLAN" }));
+        ds_insert(tds, 0x3004, 0x000e, std::to_string(dose_scaling) ); //"DoseGridScaling"
 
-        //tds_insert(0x300C, 0x0002, fne({ cm["ReferencedRTPlanSequence"], "" }));
-        //tds_insert(0x0008, 0x1150, fne({ cm["ReferencedSOPClassUID"], "" }));
-        //tds_insert(0x0008, 0x1155, fne({ cm["ReferencedSOPInstanceUID"], "" }));
-        //tds_insert(0x300C, 0x0020, fne({ cm["ReferencedFractionGroupSequence"], "" }));
-        //tds_insert(0x300C, 0x0022, fne({ cm["ReferencedFractionGroupNumber"], "" }));
-        //tds_insert(0x300C, 0x0004, fne({ cm["ReferencedBeamSequence"], "" }));
-        //tds_insert(0x300C, 0x0006, fne({ cm["ReferencedBeamNumber"], "" }));
+        ds_seq_insert(tds, 0x300C, 0x0002, // "ReferencedRTPlanSequence" 
+                           0x0008, 0x1150, // "ReferencedSOPClassUID"
+                           fne({ cm[R"***(ReferencedRTPlanSequence/ReferencedSOPClassUID)***"],
+                                 Generate_Random_UID(64) }) );
+        ds_seq_insert(tds, 0x300C, 0x0002, // "ReferencedRTPlanSequence"
+                           0x0008, 0x1155, // "ReferencedSOPInstanceUID"
+                           fne({ cm[R"***(ReferencedRTPlanSequence/ReferencedSOPInstanceUID)***"],
+                                 Generate_Random_UID(64) }) );
+  
+        ds_seq_insert(tds, 0x300C, 0x0020, // "ReferencedFractionGroupSequence"
+                           0x300C, 0x0022, // "ReferencedFractionGroupNumber"
+                           foe({ cm[R"***(ReferencedFractionGroupSequence/ReferencedFractionGroupNumber)***"] }) );
+
+        ds_seq_insert(tds, 0x300C, 0x0004, // "ReferencedBeamSequence"
+                           0x300C, 0x0006, // "ReferencedBeamNumber"
+                           foe({ cm[R"***(ReferencedBeamSequence/ReferencedBeamNumber)***"] }) );
+    }
+
+    //Insert the raw pixel data.
+
+//    auto s_ptr = tds->getStreamWriter(0x7FE0, 0, 0x0010, 0, "OW");
+//    auto dh_ptr = tds->getDataHandlerRaw(0x7FE0, 0, 0x0010, 0, true, "OW");
+//    auto mem_ptr = dh_ptr->getMemory();
+
+    std::vector<uint32_t> shtl;
+    shtl.reserve(num_of_imgs * col_count * row_count);
+    for(const auto &p_img : IA->imagecoll.images){
+
+        //Convert each pixel to the required format, scaling by the dose factor as needed.
+        const long int channel = 0; // Ignore other channels for now. TODO.
+        for(long int c = 0; c < col_count; c++){
+            for(long int r = 0; r < row_count; r++){
+                const auto val = p_img.value(r, c, channel);
+                const auto scaled = std::round( std::abs(val/dose_scaling) );
+                auto as_uint = static_cast<uint32_t>(scaled);
+                shtl.push_back(as_uint);
+//                s_ptr->write(reinterpret_cast<const uint8_t *>(&as_uint), 4);
+//    s_ptr->flushDataBuffer();
+            }
+        }
+//Write in one go ... as floats though.        
+//        s_ptr->write(reinterpret_cast<const uint8_t *>(p_img.data.data()), 
+//                     4*static_cast<uint32_t>(p_img.data.size()));
+    }
+//    s_ptr->write(reinterpret_cast<const uint8_t *>(shtl.data()), 
+//                 4*static_cast<uint32_t>(shtl.size()));
+//    s_ptr->flushDataBuffer();
+
+
+//    mem_ptr->resize(4*static_cast<uint32_t>(shtl.size()));
+//    mem_ptr->assign(reinterpret_cast<const uint8_t *>(shtl.data()),
+//                    4*static_cast<uint32_t>(shtl.size()));
+
+    {
+        auto tag_ptr = tds->getTag(0x7FE0, 0, 0x0010, true);
+        FUNCINFO("Re-reading the tag.  Type is " << tag_ptr->getDataType() << ",  #_of_buffers = " <<
+             tag_ptr->getBuffersCount() << ",   buffer_0 has size = " << tag_ptr->getBufferSize(0));
+
+        auto rdh_ptr = tag_ptr->getDataHandlerRaw(0, true, "OW");
+        rdh_ptr->copyFromMemory(reinterpret_cast<const uint8_t *>(shtl.data()),
+                                4*static_cast<uint32_t>(shtl.size()));
+
 
     }
+
+
+
+
 
 /*
 
+    //Insert the raw pixel data.
+    std::list<ptr<puntoexe::imebra::image>> out_img_ptrs;
+    uint32_t frame_number = 0;
     for(const auto &p_img : IA->imagecoll.images){
-        //Write top-level metadata. Overwrite if necessary.
-        tds->setDouble(0x0020, 0, 0x0032, 0, 0.0);
+FUNCINFO("Working on frame number = " << frame_number);
 
-        //Write the image data.
+        const auto bitdepth = imebra::image::bitDepth::depthU32;
+        const auto colorspace = L"MONOCHROME2"; 
+        const auto highbit = static_cast<uint8_t>(31);
+        out_img_ptrs.emplace_back(new puntoexe::imebra::image);
+        //ptr<puntoexe::imebra::image> out_img_ptr(new puntoexe::imebra::image);
+        out_img_ptrs.back()->create(col_count, row_count, bitdepth, colorspace, highbit);
 
+//{        
+//        auto dh_ptr = out_img_ptr->create(col_count, row_count, bitdepth, colorspace, highbit);
+//
+//        auto img_mem_ptr = dh_ptr->getMemory();
+//        if(img_mem_ptr == nullptr) throw std::runtime_error("No memory allocated.");
+//FUNCINFO("    Image memory is allocated with " << img_mem_ptr->size() << " bytes");
+//FUNCINFO("    Remember: uint32 * rows * cols = " << (4*row_count*col_count) << " bytes");
+//        // ... fill in the pixel values using dh_ptr access? ...
+//
+//}
+
+        const auto transfersyntax = L"1.2.840.10008.1.2"; // "Implicit VR Endian" -- the default transfer syntax).
+        const auto quality = imebra::codecs::codec::quality::high;
+        tds->setImage(frame_number, out_img_ptrs.back(), transfersyntax, quality);
+        ++frame_number;
     }
+*/
 
+
+
+/*
 
 //    const std::string transferSyntax("1.2.840.10008.1.2.1"); // "Explicit VR little endian."
     imbxUint32 ImageCounter = 0;
