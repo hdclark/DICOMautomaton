@@ -1200,10 +1200,12 @@ static std::string Generate_Random_UID(long int len){
     }
 
     std::uniform_int_distribution<int> dist(0,alphanum.length()-1);
-    char last = '\0';
+    out = "1.2.840.66.1.";
+    char last = '.';
     while(out.size() != len){
         const auto achar = alphanum[dist(gen)];
         if((achar == '.') && (achar == last)) continue;
+        if((achar == '.') && ((out.size()+1) == len)) continue;
         out += achar;
         last = achar;
     }
@@ -1266,12 +1268,32 @@ void Write_Dose_Array(std::shared_ptr<Image_Array> IA, const std::string &Filena
 
 
 
-    auto ds_insert = [](ptr<imebra::dataSet> &ds, uint16_t group, uint16_t tag, std::string val) -> void {
+    auto ds_OB_insert = [](ptr<imebra::dataSet> &ds, uint16_t group, uint16_t tag, std::string i_val) -> void {
+        const uint16_t order = 0;
+        uint32_t element = 0;
+        
+        //For OB type, we simply copy the string's buffer as-is. 
+        const auto d_t = ds->getDefaultDataType(group, tag);
+
+        if( d_t == "OB" ){
+            auto tag_ptr = ds->getTag(group, order, tag, true);
+            //const auto next_buff = tag_ptr->getBuffersCount() - 1;
+            //auto rdh_ptr = tag_ptr->getDataHandlerRaw( next_buff, true, d_t );
+            auto rdh_ptr = tag_ptr->getDataHandlerRaw( 0, true, d_t );
+            rdh_ptr->copyFromMemory(reinterpret_cast<const uint8_t *>(i_val.data()),
+                                    static_cast<uint32_t>(i_val.size()));
+        }else{
+            throw std::runtime_error("A non-OB VR type was passed to the OB VR type writer.");
+        }
+        return;
+    };
+
+    auto ds_insert = [&ds_OB_insert](ptr<imebra::dataSet> &ds, uint16_t group, uint16_t tag, std::string i_val) -> void {
         const uint16_t order = 0;
         uint32_t element = 0;
 
         //Search for '\' characters. If present, split the string up and register each token separately.
-        auto tokens = SplitStringToVector(val, '\\', 'd');
+        auto tokens = SplitStringToVector(i_val, '\\', 'd');
         for(auto &val : tokens){
             //if(val.empty()) continue; //Sometimes empty strings are necessary...
 
@@ -1280,12 +1302,40 @@ void Write_Dose_Array(std::shared_ptr<Image_Array> IA, const std::string &Filena
 
             //Types not requiring conversion from a string.
             if( ( d_t == "AE") || ( d_t == "AS") || ( d_t == "AT") ||
-                ( d_t == "CS") || ( d_t == "DA") || ( d_t == "DS") ||
-                ( d_t == "DT") || ( d_t == "IS") || ( d_t == "LO") ||
-                ( d_t == "LT") || ( d_t == "OB") || ( d_t == "OW") ||
+                ( d_t == "CS") || ( d_t == "DS") ||
+                ( d_t == "DT") || ( d_t == "LO") ||
+                ( d_t == "LT") || ( d_t == "OW") ||
                 ( d_t == "PN") || ( d_t == "SH") || ( d_t == "ST") ||
-                ( d_t == "TM") || ( d_t == "UI") || ( d_t == "UT")   ){
+                ( d_t == "UT")   ){
                     ds->setString(group, order, tag, element++, val, d_t);
+ 
+            //UIDs.
+            }else if( d_t == "UI" ){   //UIDs.
+                //ds->setString(group, order, tag, element++, val, d_t);
+                auto tag_ptr = ds->getTag(group, order, tag, true);
+                auto rdh_ptr = tag_ptr->getDataHandlerRaw( 0, true, d_t );
+                rdh_ptr->copyFromMemory(reinterpret_cast<const uint8_t *>(val.data()),
+                                        static_cast<uint32_t>(val.size()));
+
+            //Time.
+            }else if( ( d_t == "TM" ) ||   //Time.
+                      ( d_t == "DA" )   ){ //Date.
+                //Strip away colons. Also strip away everything after the leading non-numeric char.
+                std::string digits_only(val);
+                digits_only = PurgeCharsFromString(digits_only,":-");
+                auto avec = SplitStringToVector(digits_only,'.','d');
+                avec.resize(1);
+                digits_only = Lineate_Vector(avec, "");
+
+                //The 'easy' way resulted in non-printable garbage fouling the times. Have to write raw ASCII chars manually...
+                auto tag_ptr = ds->getTag(group, order, tag, true);
+                auto rdh_ptr = tag_ptr->getDataHandlerRaw( 0, true, d_t );
+                rdh_ptr->copyFromMemory(reinterpret_cast<const uint8_t *>(digits_only.data()),
+                                        static_cast<uint32_t>(digits_only.size()));
+
+            //Binary types.
+            }else if( d_t == "OB" ){
+                return ds_OB_insert(ds, group, tag, i_val);
 
             //Numeric types.
             }else if(
@@ -1294,12 +1344,18 @@ void Write_Dose_Array(std::shared_ptr<Image_Array> IA, const std::string &Filena
                 ( d_t == "OF") ||   //"Other" floating-point.
                 ( d_t == "OD")   ){ //"Other" floating-point double.
                     ds->setString(group, order, tag, element++, val, "DS"); //Try keep it as a string.
-            }else if(
-                ( d_t == "SL") ||   //Signed long int (32bit).
-                ( d_t == "SS") ||   //Signed short integer (16bit).
-                ( d_t == "UL") ||   //Unsigned long int (32bit).
-                ( d_t == "US")   ){ //Unsigned short integer (16bit).
-                    ds->setString(group, order, tag, element++, val, "IS"); //Try keep it as a string.
+            }else if( ( d_t == "SL" ) ||   //Signed long int (32bit).
+                      ( d_t == "SS" )   ){ //Signed short int (16bit).
+                const auto conv = static_cast<int32_t>(std::stol(val));
+                ds->setSignedLong(group, order, tag, element++, conv, d_t);
+
+            }else if( ( d_t == "UL" ) ||   //Unsigned long int (32bit).
+                      ( d_t == "US" )   ){ //Unsigned short int (16bit).
+                const auto conv = static_cast<uint32_t>(std::stoul(val));
+                ds->setUnsignedLong(group, order, tag, element++, conv, d_t);
+
+            }else if( d_t == "IS" ){ //Integer string.
+                    ds->setString(group, order, tag, element++, val, "IS");
 
             //Types we cannot process because they are special (e.g., sequences) or don't currently support.
             }else if( d_t == "SQ"){ //Sequence.
@@ -1323,9 +1379,16 @@ void Write_Dose_Array(std::shared_ptr<Image_Array> IA, const std::string &Filena
         auto tag_ptr = ds->getTag(seq_group, first_order, seq_tag, create_if_not_found);
         if(tag_ptr == nullptr) return;
 
-        ptr<imebra::dataSet> lds(new imebra::dataSet);
+        //Works, but possibly unsatisfactory.
+        //ptr<imebra::dataSet> lds(new imebra::dataSet);
+        //ds_insert(lds, tag_group, tag_tag, tag_val);
+        //tag_ptr->appendDataSet( lds );
+
+        auto lds = tag_ptr->getDataSet(0);
+        if( lds == nullptr ) lds = ptr<imebra::dataSet>(new imebra::dataSet);
         ds_insert(lds, tag_group, tag_tag, tag_val);
-        tag_ptr->appendDataSet( lds );
+        tag_ptr->setDataSet( 0, lds );
+
         return;
     };
 
@@ -1341,37 +1404,35 @@ void Write_Dose_Array(std::shared_ptr<Image_Array> IA, const std::string &Filena
         return std::string(); 
     };
 
-/*
+
     //Specify the list of acceptable character sets.
     {
-        imebra::tCharsetsList suitableCharsets;
-        suitableCharsets.push_back("ISO_IR 100"); // "Latin alphabet 1"
-        //suitableCharsets.push_back("ISO_IR 192"); // utf-8
+        imebra::charsetsList::tCharsetsList suitableCharsets;
+        suitableCharsets.push_back(L"ISO_IR 100"); // "Latin alphabet 1"
+        //suitableCharsets.push_back(L"ISO_IR 192"); // utf-8
         tds->setCharsetsList(&suitableCharsets);
     }
-*/
-
 
     //Top-level stuff: metadata shared by all images.
     {
         auto cm = IA->imagecoll.get_common_metadata({});
 
         //DICOM Header Metadata.
-/*        
-        ds_insert(tds, 0x0002, 0x0000, "150"); //"FileMetaInformationGroupLength".
-        ds_insert(tds, 0x0002, 0x0001, R"***(1)***"); //"FileMetaInformationVersion".
-        ds_insert(tds, 0x0002, 0x0002, "1.2.840.10008.5.1.4.1.1.481.2"); //"MediaStorageSOPClassUID".
+        ds_OB_insert(tds, 0x0002, 0x0001,  std::string(1,static_cast<char>(0))
+                                         + std::string(1,static_cast<char>(1)) ); //"FileMetaInformationVersion".
+        //ds_insert(tds, 0x0002, 0x0001, R"***(2/0/0/0/0/1)***"); //shtl); //"FileMetaInformationVersion".
+        ds_insert(tds, 0x0002, 0x0002, "1.2.840.10008.5.1.4.1.1.481.2"); //"MediaStorageSOPClassUID" (Radiation Therapy Dose Storage)
         ds_insert(tds, 0x0002, 0x0003, "1.2.840.99.481.2.736553.67478.01.4.1"); //"MediaStorageSOPInstanceUID".
-        ds_insert(tds, 0x0002, 0x0010, "1.2.840.10008.1.2"); //"TransferSyntaxUID".
+        ds_insert(tds, 0x0002, 0x0010, "1.2.840.10008.1.2.1"); //"TransferSyntaxUID".
         ds_insert(tds, 0x0002, 0x0012, "1.2.246.352.70.2.1.7"); //"ImplementationClassUID".
-*/
+
 
         //SOP Common Module.
         ds_insert(tds, 0x0008, 0x0016, "1.2.840.10008.5.1.4.1.1.481.2"); // "SOPClassUID"
-        ds_insert(tds, 0x0008, 0x0018, Generate_Random_UID(64)); // "SOPInstanceUID"
-        ds_insert(tds, 0x0008, 0x0005, fne({ cm["SpecificCharacterSet"], "ISO_IR 100" }));
+        ds_insert(tds, 0x0008, 0x0018, Generate_Random_UID(31)); // "SOPInstanceUID"
+//        ds_insert(tds, 0x0008, 0x0005, "ISO_IR 100"); //fne({ cm["SpecificCharacterSet"], "ISO_IR 100" })); // Set above!
         ds_insert(tds, 0x0008, 0x0012, fne({ cm["InstanceCreationDate"], "20170730" }));
-        ds_insert(tds, 0x0008, 0x0013, "11:11:11" ); //fne({ cm["InstanceCreationTime"], "111111" }));
+        ds_insert(tds, 0x0008, 0x0013, fne({ cm["InstanceCreationTime"], "000000" }));
         ds_insert(tds, 0x0008, 0x0014, foe({ cm["InstanceCreatorUID"] }));
         ds_insert(tds, 0x0008, 0x0114, foe({ cm["CodingSchemeExternalUID"] }));
         ds_insert(tds, 0x0020, 0x0013, foe({ cm["InstanceNumber"] }));
@@ -1381,20 +1442,21 @@ void Write_Dose_Array(std::shared_ptr<Image_Array> IA, const std::string &Filena
         ds_insert(tds, 0x0010, 0x0020, fne({ cm["PatientID"], "HC_Test_"_s + Generate_Random_String_of_Length(10) }));
         ds_insert(tds, 0x0010, 0x0030, fne({ cm["PatientsBirthDate"], "20170730" }));
         ds_insert(tds, 0x0010, 0x0040, fne({ cm["PatientsGender"], "O" }));
+        ds_insert(tds, 0x0010, 0x0032, fne({ cm["PatientsBirthTime"], "000000" }));
 
         //General Study Module.
-        ds_insert(tds, 0x0020, 0x000D, fne({ cm["StudyInstanceUID"], Generate_Random_UID(64) }));
+        ds_insert(tds, 0x0020, 0x000D, fne({ cm["StudyInstanceUID"], Generate_Random_UID(31) }));
         ds_insert(tds, 0x0008, 0x0020, fne({ cm["StudyDate"], "20170730" }));
-        ds_insert(tds, 0x0008, 0x0030, "11:11:11" ); //fne({ cm["StudyTime"], "111111" }));
+        ds_insert(tds, 0x0008, 0x0030, fne({ cm["StudyTime"], "000000" }));
         ds_insert(tds, 0x0008, 0x0090, fne({ cm["ReferringPhysiciansName"], "UNSPECIFIED^UNSPECIFIED" }));
         ds_insert(tds, 0x0020, 0x0010, fne({ cm["StudyID"], "HCTest_"_s + Generate_Random_String_of_Length(10) }));
-        ds_insert(tds, 0x0008, 0x0050, foe({ cm["AccessionNumber"] }));
+        ds_insert(tds, 0x0008, 0x0050, fne({ cm["AccessionNumber"], Generate_Random_String_of_Length(10) }));
         ds_insert(tds, 0x0008, 0x1030, foe({ cm["StudyDescription"] }));
 
 
         //General Series Module.
         ds_insert(tds, 0x0008, 0x0060, "RTDOSE");
-        ds_insert(tds, 0x0020, 0x000E, fne({ cm["SeriesInstanceUID"], Generate_Random_UID(64) }));
+        ds_insert(tds, 0x0020, 0x000E, fne({ cm["SeriesInstanceUID"], Generate_Random_UID(31) }));
         ds_insert(tds, 0x0020, 0x0011, fne({ cm["SeriesNumber"], "1000" }));
         ds_insert(tds, 0x0008, 0x0021, foe({ cm["SeriesDate"] }));
         ds_insert(tds, 0x0008, 0x0031, foe({ cm["SeriesTime"] }));
@@ -1409,7 +1471,7 @@ void Write_Dose_Array(std::shared_ptr<Image_Array> IA, const std::string &Filena
         ds_insert(tds, 0x0010, 0x1030, foe({ cm["PatientsMass"] }));
 
         //Frame of Reference Module.
-        ds_insert(tds, 0x0020, 0x0052, fne({ cm["FrameofReferenceUID"], Generate_Random_UID(64) }));
+        ds_insert(tds, 0x0020, 0x0052, fne({ cm["FrameofReferenceUID"], Generate_Random_UID(32) }));
         ds_insert(tds, 0x0020, 0x1040, fne({ cm["PositionReferenceIndicator"], "BB" }));
 
         //General Equipment Module.
@@ -1483,19 +1545,23 @@ void Write_Dose_Array(std::shared_ptr<Image_Array> IA, const std::string &Filena
         ds_seq_insert(tds, 0x300C, 0x0002, // "ReferencedRTPlanSequence" 
                            0x0008, 0x1150, // "ReferencedSOPClassUID"
                            fne({ cm[R"***(ReferencedRTPlanSequence/ReferencedSOPClassUID)***"],
-                                 Generate_Random_UID(64) }) );
+                                 Generate_Random_UID(32) }) );
         ds_seq_insert(tds, 0x300C, 0x0002, // "ReferencedRTPlanSequence"
                            0x0008, 0x1155, // "ReferencedSOPInstanceUID"
                            fne({ cm[R"***(ReferencedRTPlanSequence/ReferencedSOPInstanceUID)***"],
-                                 Generate_Random_UID(64) }) );
+                                 Generate_Random_UID(32) }) );
   
-        ds_seq_insert(tds, 0x300C, 0x0020, // "ReferencedFractionGroupSequence"
-                           0x300C, 0x0022, // "ReferencedFractionGroupNumber"
-                           foe({ cm[R"***(ReferencedFractionGroupSequence/ReferencedFractionGroupNumber)***"] }) );
+        if(0 != cm.count(R"***(ReferencedFractionGroupSequence/ReferencedFractionGroupNumber)***")){
+            ds_seq_insert(tds, 0x300C, 0x0020, // "ReferencedFractionGroupSequence"
+                               0x300C, 0x0022, // "ReferencedFractionGroupNumber"
+                               foe({ cm[R"***(ReferencedFractionGroupSequence/ReferencedFractionGroupNumber)***"] }) );
+        }
 
-        ds_seq_insert(tds, 0x300C, 0x0004, // "ReferencedBeamSequence"
-                           0x300C, 0x0006, // "ReferencedBeamNumber"
-                           foe({ cm[R"***(ReferencedBeamSequence/ReferencedBeamNumber)***"] }) );
+        if(0 != cm.count(R"***(ReferencedBeamSequence/ReferencedBeamNumber)***")){
+            ds_seq_insert(tds, 0x300C, 0x0004, // "ReferencedBeamSequence"
+                               0x300C, 0x0006, // "ReferencedBeamNumber"
+                               foe({ cm[R"***(ReferencedBeamSequence/ReferencedBeamNumber)***"] }) );
+        }
     }
 
     //Insert the raw pixel data.
@@ -1510,11 +1576,12 @@ void Write_Dose_Array(std::shared_ptr<Image_Array> IA, const std::string &Filena
 
         //Convert each pixel to the required format, scaling by the dose factor as needed.
         const long int channel = 0; // Ignore other channels for now. TODO.
-        for(long int c = 0; c < col_count; c++){
-            for(long int r = 0; r < row_count; r++){
+        for(long int r = 0; r < row_count; r++){
+            for(long int c = 0; c < col_count; c++){
                 const auto val = p_img.value(r, c, channel);
                 const auto scaled = std::round( std::abs(val/dose_scaling) );
                 auto as_uint = static_cast<uint32_t>(scaled);
+//as_uint = static_cast<uint32_t>(r + c*row_count);
                 shtl.push_back(as_uint);
 //                s_ptr->write(reinterpret_cast<const uint8_t *>(&as_uint), 4);
 //    s_ptr->flushDataBuffer();
@@ -1541,8 +1608,6 @@ void Write_Dose_Array(std::shared_ptr<Image_Array> IA, const std::string &Filena
         auto rdh_ptr = tag_ptr->getDataHandlerRaw(0, true, "OW");
         rdh_ptr->copyFromMemory(reinterpret_cast<const uint8_t *>(shtl.data()),
                                 4*static_cast<uint32_t>(shtl.size()));
-
-
     }
 
 
@@ -1589,194 +1654,6 @@ FUNCINFO("Working on frame number = " << frame_number);
 //    const std::string transferSyntax("1.2.840.10008.1.2.1"); // "Explicit VR little endian."
     imbxUint32 ImageCounter = 0;
 
-
-
-
-
-    //These are CT-ish only (not for dose files,) but they should just return a zero nicely when we query and
-    // they are not there. If this were not the case, we would simply need to check the modality before querying.
-    //const auto slice_thickness  = static_cast<double>(TopDataSet->getDouble(0x0018, 0, 0x0050, 0));
-    //const auto slice_height     = static_cast<double>(TopDataSet->getDouble(0x0020, 0, 0x1041, 0));
-
-    //These should exist in all files. They appear to be the same for CT and DS files of the same set. Not sure
-    // if this is *always* the case.
-    const auto image_pos_x = static_cast<double>(TopDataSet->getDouble(0x0020, 0, 0x0032, 0));
-    const auto image_pos_y = static_cast<double>(TopDataSet->getDouble(0x0020, 0, 0x0032, 1));
-    const auto image_pos_z = static_cast<double>(TopDataSet->getDouble(0x0020, 0, 0x0032, 2));
-    const vec3<double> image_pos(image_pos_x,image_pos_y,image_pos_z); //Only for first image!
-
-    const auto image_orien_c_x = static_cast<double>(TopDataSet->getDouble(0x0020, 0, 0x0037, 0)); 
-    const auto image_orien_c_y = static_cast<double>(TopDataSet->getDouble(0x0020, 0, 0x0037, 1));
-    const auto image_orien_c_z = static_cast<double>(TopDataSet->getDouble(0x0020, 0, 0x0037, 2));
-    const vec3<double> image_orien_c = vec3<double>(image_orien_c_x,image_orien_c_y,image_orien_c_z).unit();
-
-    const auto image_orien_r_x = static_cast<double>(TopDataSet->getDouble(0x0020, 0, 0x0037, 3));
-    const auto image_orien_r_y = static_cast<double>(TopDataSet->getDouble(0x0020, 0, 0x0037, 4));
-    const auto image_orien_r_z = static_cast<double>(TopDataSet->getDouble(0x0020, 0, 0x0037, 5));
-    const vec3<double> image_orien_r = vec3<double>(image_orien_r_x,image_orien_r_y,image_orien_r_z).unit();
-
-    const vec3<double> image_stack_unit = (image_orien_c.Cross(image_orien_r)).unit(); //Unit vector denoting direction to stack images.
-    const vec3<double> image_anchor  = vec3<double>(0.0,0.0,0.0);
-
-    //Determine how many frames there are in the pixel data. A CT scan may just be a 2d jpeg or something, 
-    // but dose pixel data is 3d data composed of 'frames' of stacked 2d data.
-    const auto frame_count = static_cast<unsigned long int>(TopDataSet->getUnsignedLong(0x0028, 0, 0x0008, 0));
-    if(frame_count == 0) FUNCERR("No frames were found in file '" << FilenameIn << "'. Is it a valid dose file?");
-
-    //This is a redirection to another tag. I've never seen it be anything but (0x3004,0x000c).
-    const auto frame_inc_pntrU  = static_cast<long int>(TopDataSet->getUnsignedLong(0x0028, 0, 0x0009, 0));
-    const auto frame_inc_pntrL  = static_cast<long int>(TopDataSet->getUnsignedLong(0x0028, 0, 0x0009, 1));
-    if((frame_inc_pntrU != static_cast<long int>(0x3004)) || (frame_inc_pntrL != static_cast<long int>(0x000c)) ){
-        FUNCWARN(" frame increment pointer U,L = " << frame_inc_pntrU << "," << frame_inc_pntrL);
-        FUNCERR("Dose file contains a frame increment pointer which we have not encountered before. Please ensure we can handle it properly");
-    }
-
-    std::list<double> gfov;
-    for(unsigned long int i=0; i<frame_count; ++i){
-        const auto val = static_cast<double>(TopDataSet->getDouble(0x3004, 0, 0x000c, i));
-        gfov.push_back(val);
-    }
-
-    const double image_thickness = (gfov.size() > 1) ? ( *(++gfov.begin()) - *(gfov.begin()) ) : 1.0; //*NOT* the image separation!
-
-    const auto image_rows  = static_cast<long int>(TopDataSet->getUnsignedLong(0x0028, 0, 0x0010, 0));
-    const auto image_cols  = static_cast<long int>(TopDataSet->getUnsignedLong(0x0028, 0, 0x0011, 0));
-    //const auto image_pxldx = static_cast<double>(TopDataSet->getDouble(0x0028, 0, 0x0030, 0)); //Spacing between adjacent rows.
-    //const auto image_pxldy = static_cast<double>(TopDataSet->getDouble(0x0028, 0, 0x0030, 1)); //Spacing between adjacent columns.
-    const auto image_pxldy = static_cast<double>(TopDataSet->getDouble(0x0028, 0, 0x0030, 0)); //Spacing between adjacent rows.
-    const auto image_pxldx = static_cast<double>(TopDataSet->getDouble(0x0028, 0, 0x0030, 1)); //Spacing between adjacent columns.
-    const auto image_bits  = static_cast<unsigned long int>(TopDataSet->getUnsignedLong(0x0028, 0, 0x0101, 0));
-    const auto grid_scale  = static_cast<double>(TopDataSet->getDouble(0x3004, 0, 0x000e, 0));
-
-    const auto pixel_representation = static_cast<unsigned long int>(TopDataSet->getUnsignedLong(0x0028, 0, 0x0103, 0));
-
-    //Grab the image data for each individual frame.
-    auto gfov_it = gfov.begin();
-    for(unsigned long int curr_frame = 0; (curr_frame < frame_count) && (gfov_it != gfov.end()); ++curr_frame, ++gfov_it){
-        out->imagecoll.images.emplace_back();
-
-        //--------------------------------------------------------------------------------------------------
-        //Retrieve the pixel data from file. This is an excessively long exercise!
-        ptr<puntoexe::imebra::image> firstImage = TopDataSet->getImage(curr_frame); 	
-        if(firstImage == nullptr) FUNCERR("This file does not have accessible pixel data. Double check the file");
-    
-        //Process image using modalityVOILUT transform to convert its pixel values into meaningful values.
-        ptr<imebra::transforms::transform> modVOILUT(new imebra::transforms::modalityVOILUT(TopDataSet));
-        imbxUint32 width, height;
-        firstImage->getSize(&width, &height);
-        ptr<imebra::image> convertedImage(modVOILUT->allocateOutputImage(firstImage, width, height));
-        modVOILUT->runTransform(firstImage, 0, 0, width, height, convertedImage, 0, 0);
-    
-        //Convert the 'convertedImage' into an image suitable for the viewing on screen. The VOILUT transform 
-        // applies the contrast suggested by the dataSet to the image. Apply the first one we find.
-        //
-        // I'm not sure how this affects dose values, if at all, so I've disabled it for now.
-        //ptr<imebra::transforms::VOILUT> myVoiLut(new imebra::transforms::VOILUT(TopDataSet));
-        //imbxUint32 lutId = myVoiLut->getVOILUTId(0);
-        //myVoiLut->setVOILUT(lutId);
-        //ptr<imebra::image> presImage(myVoiLut->allocateOutputImage(convertedImage, width, height));
-        ptr<imebra::image> presImage = convertedImage;
-        //myVoiLut->runTransform(convertedImage, 0, 0, width, height, presImage, 0, 0);
- 
-        //Get the image in terms of 'RGB'/'MONOCHROME1'/'MONOCHROME2'/'YBR_FULL'/etc.. channels.
-        //
-        // This allows up to transform the data into a desired format before allocating any space.
-        puntoexe::imebra::transforms::colorTransforms::colorTransformsFactory*  pFactory = 
-             puntoexe::imebra::transforms::colorTransforms::colorTransformsFactory::getColorTransformsFactory();
-        ptr<puntoexe::imebra::transforms::transform> myColorTransform = 
-             pFactory->getTransform(presImage->getColorSpace(), L"MONOCHROME2");//L"RGB");
-        if(myColorTransform != 0){ //If we get a '0', we do not need to transform the image.
-            ptr<puntoexe::imebra::image> rgbImage(myColorTransform->allocateOutputImage(presImage,width,height));
-            myColorTransform->runTransform(presImage, 0, 0, width, height, rgbImage, 0, 0);
-            presImage = rgbImage;
-        }
-    
-        //Get a 'dataHandler' to access the image data waiting in 'presImage.' Get some image metadata.
-        imbxUint32 rowSize, channelPixelSize, channelsNumber, sizeX, sizeY;
-        ptr<puntoexe::imebra::handlers::dataHandlerNumericBase> myHandler = 
-            presImage->getDataHandler(false, &rowSize, &channelPixelSize, &channelsNumber);
-        presImage->getSize(&sizeX, &sizeY);
-        //----------------------------------------------------------------------------------------------------
-
-        if((static_cast<long int>(sizeX) != image_cols) || (static_cast<long int>(sizeY) != image_rows)){
-            FUNCWARN("sizeX = " << sizeX << ", sizeY = " << sizeY << " and image_cols = " << image_cols << ", image_rows = " << image_rows);
-            FUNCERR("The number of rows and columns in the image data differ when comparing sizeX/Y and img_rows/cols. Please verify");
-            //If this issue arises, I have likely confused definition of X and Y. The DICOM standard specifically calls (0028,0010) 
-            // a 'row'. Perhaps I've got many things backward...
-        }
-
-        out->imagecoll.images.back().metadata = metadata;
-        out->imagecoll.images.back().init_orientation(image_orien_r,image_orien_c);
-
-        const auto img_chnls = static_cast<long int>(channelsNumber);
-        out->imagecoll.images.back().init_buffer(image_rows, image_cols, img_chnls);
-
-        const auto img_pxldz = image_thickness;
-        const auto gvof_offset = static_cast<double>(*gfov_it);  //Offset along \hat{z} from 
-        const auto img_offset = image_pos + image_stack_unit * gvof_offset;
-        out->imagecoll.images.back().init_spatial(image_pxldx,image_pxldy,img_pxldz, image_anchor, img_offset);
-
-        out->imagecoll.images.back().metadata["GridFrameOffset"] = std::to_string(gvof_offset);
-        out->imagecoll.images.back().metadata["Frame"] = std::to_string(curr_frame);
-        out->imagecoll.images.back().metadata["ImagePositionPatient"] = img_offset.to_string();
-
-
-        const auto img_bits  = static_cast<unsigned int>(channelPixelSize*8); //16 bit, 32 bit, 8 bit, etc..
-        if(img_bits != image_bits){
-            FUNCERR("The number of bits in each channel varies between the DICOM header and the transformed image data");
-            //Not sure what to do if this happens. Perhaps just go with the imebra result?
-        }
-
-        //Write the data to our allocated memory.
-        imbxUint32 data_index = 0;
-        //for(imbxUint32 scanX = 0; scanX < sizeX; ++scanX){ //Rows.
-        //    for(imbxUint32 scanY = 0; scanY < sizeY; ++scanY){ //Columns.
-        //        for(imbxUint32 scanChannel = 0; scanChannel < channelsNumber; ++scanChannel){ //Channels.
-        const bool pixelsAreSigned = (myHandler->isSigned());
-        for(long int row = 0; row < image_rows; ++row){
-            for(long int col = 0; col < image_cols; ++col){
-                for(long int chnl = 0; chnl < img_chnls; ++chnl){
-                    //NOTE: In earlier code, I kept pixel values as the raw DICOM-packed integers and used a separate Dose_Array
-                    //      member called 'grid_scale' to perform the scaling when I needed dose. When I switched to a floating-
-                    //      point pixel type, I decided it made the most sense (reducing complexity, conversion to-from plain 
-                    //      images) to just have the pixels directly express dose. Therefore, the grid_scale member is now set 
-                    //      to 1.0 ALWAYS for compatibility. It could be removed entirely (and the Dose_Array class) safely.
-                    ////if(pixel_representation == static_cast<unsigned long int>(0)){ //Unsigned pixel representation.
-                    //if(!pixelsAreSigned){ //Unsigned pixel representation.
-                    //    const imbxUint32 UnsignedChannelValue = myHandler->getUnsignedLong(data_index);
-                    //    out->imagecoll.images.back().reference(row,col,chnl) = static_cast<float>(UnsignedChannelValue) 
-                    //                                                           * static_cast<float>(grid_scale);
-                    ////}else if(pixel_representation == static_cast<unsigned long int>(1)){ //Signed pixel representation.
-                    //}else{ //Signed pixel representation.
-                    //    //Technically this is not just 'signed' but specifically two's complement representation. 
-                    //    // I think the best way is to verify by directly testing the implementation (e.g., compare 
-                    //    // -1 (negative one) with ~0 (bitwise complemented zero) to verify two's complement. Before 
-                    //    // doing so, check if C++11/14/+ has any way to static_assert this, such as in feature-test 
-                    //    // macros, numerical limits, or by the implementation exposing a macro of some sort.
-                    //    const imbxInt32 SignedChannelValue = myHandler->getSignedLong(data_index);
-                    //    out->imagecoll.images.back().reference(row,col,chnl) = static_cast<float>(SignedChannelValue)
-                    //                                                           * static_cast<float>(grid_scale);
-                    //}
-                    //
-                    //Approach D: let Imebra work out the conversersion by asking for a double. Hope it can be narrowed
-                    // if necessary!
-                    const auto DoubleChannelValue = myHandler->getDouble(data_index);
-                    const float OutgoingPixelValue = static_cast<float>(DoubleChannelValue) 
-                                                     * static_cast<float>(grid_scale);
-                    out->imagecoll.images.back().reference(row,col,chnl) = OutgoingPixelValue;
-
-                    ++data_index;
-                } //Loop over channels.
-            } //Loop over columns.
-        } //Loop over rows.
-    } //Loop over frames.
-
-    //Finally, pass the collection-specific items out.
-
-    out->bits       = image_bits;
-    out->grid_scale = 1.0; //grid_scale; <-- NOTE: pixels now hold dose directly and do not require scaling!
-    out->filename   = FilenameIn;
-    return std::move(out);
 */    
 
     // Attempt to write the file.
