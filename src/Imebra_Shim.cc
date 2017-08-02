@@ -1214,24 +1214,54 @@ static std::string Generate_Random_UID(long int len){
 
 
 //This routine writes contiguous images to a single DICOM dose file.
+//
+// NOTE: Images are assumed to be contiguous and non-overlapping. They are also assumed to share image characteristics,
+//       such as number of rows, number of columns, voxel dimensions/extent, orientation, and geometric origin.
+// 
+// NOTE: Currently only the first channel is considered. Additional channels were not needed at the time of writing.
+//       It would probably be best to export one channel per file if multiple channels were needed. Though it is
+//       possible to have up to 3 samples per voxel, IIRC, it may complicate encoding significantly. (Not sure.)
+// 
+// NOTE: This routine will reorder images 
+//
+// NOTE: Images containin NaN's will probably be rejected by most programs! Filter them out beforehand.
+//
+// NOTE: Exported files were tested successfully with Varian Eclipse v11. A valid DICOM file is needed to link
+//       existing UIDs. Images created from scratch and lacking, e.g., a valid FrameOfReferenceUID, have not been
+//       tested.
+//
+// NOTE: Some round-off should be expected. It is necessary because the TransferSyntax appears to require integer voxel
+//       intensities which are scaled by a floating-point number to get the final dose. There are facilities for
+//       exchanging floating-point-valued images in DICOM, but portability would be suspect.
+//
 void Write_Dose_Array(std::shared_ptr<Image_Array> IA, const std::string &FilenameOut){
     if(IA->imagecoll.images.empty()){
         throw std::runtime_error("No images provided for export. Cannot continue.");
     }
 
     using namespace puntoexe;
-
     ptr<imebra::dataSet> tds(new imebra::dataSet);
-
 
     //Gather some basic info. Note that the following dimensions must be identical for all images for a multi-frame
     // RTDOSE file.
     const auto num_of_imgs = IA->imagecoll.images.size();
     const auto row_count = IA->imagecoll.images.front().rows;
     const auto col_count = IA->imagecoll.images.front().columns;
-    //const double dose_scaling = ... ; //Compute range and solve [ X*(uint32_t_max-1) = DoseMax ] for X.
-    //                                  //Should be ~3.1683168e-5 or so.
-    const double dose_scaling = 3.0e-5;
+
+    auto max_dose = -std::numeric_limits<float>::infinity();
+    for(const auto &p_img : IA->imagecoll.images){
+        const long int channel = 0; // Ignore other channels for now. TODO.
+        for(long int r = 0; r < row_count; r++){
+            for(long int c = 0; c < col_count; c++){
+                const auto val = p_img.value(r, c, channel);
+                if(!std::isfinite(val)) throw std::domain_error("Found non-finite dose. Refusing to export.");
+                if(val < 0.0f ) throw std::domain_error("Found a voxel with negative dose. Refusing to continue.");
+                if(max_dose < val) max_dose = val;
+            }
+        }
+    }
+    if( max_dose < 0.0f ) throw std::invalid_argument("No voxels were found to export. Cannot continue.");
+    const double dose_scaling = max_dose / static_cast<double>(std::numeric_limits<uint32_t>::max());
 
     const auto pxl_dx = IA->imagecoll.images.front().pxl_dx;
     const auto pxl_dy = IA->imagecoll.images.front().pxl_dy;
@@ -1239,6 +1269,7 @@ void Write_Dose_Array(std::shared_ptr<Image_Array> IA, const std::string &Filena
 
     const auto row_unit = IA->imagecoll.images.front().row_unit;
     const auto col_unit = IA->imagecoll.images.front().col_unit;
+    const auto ortho_unit = col_unit.Cross(row_unit);
     const auto ImageOrientationPatient = std::to_string(col_unit.x) + R"***(\)***"_s
                                        + std::to_string(col_unit.y) + R"***(\)***"_s
                                        + std::to_string(col_unit.z) + R"***(\)***"_s
@@ -1246,8 +1277,16 @@ void Write_Dose_Array(std::shared_ptr<Image_Array> IA, const std::string &Filena
                                        + std::to_string(row_unit.y) + R"***(\)***"_s
                                        + std::to_string(row_unit.z);
 
-    //The position of each image vary, but we handle this with a grid frame offset vector later.
-    // I'm not sure if the image position specified here has to be extreme or not.
+    //Re-order images so they are in spatial order with the 'bottom' defined in terms of row and column units.
+    IA->imagecoll.Stable_Sort([&ortho_unit](const planar_image<float,double> &lhs, const planar_image<float,double> &rhs) -> bool {
+        //Project each image onto the line defined by the ortho unit running through the origin. Sort by distance along
+        //this line (i.e., the magnitude of the projection).
+        if( (lhs.rows < 1) || (lhs.columns < 1) || (rhs.rows < 1) || (rhs.columns < 1) ){
+            throw std::invalid_argument("Found an image containing no voxels. Refusing to continue."); //Just trim it?
+        }
+        return ( lhs.position(0,0).Dot(ortho_unit) < rhs.position(0,0).Dot(ortho_unit) );
+    });
+
     const auto image_pos = IA->imagecoll.images.front().offset - IA->imagecoll.images.front().anchor;
     const auto ImagePositionPatient = std::to_string(image_pos.x) + R"***(\)***"_s
                                     + std::to_string(image_pos.y) + R"***(\)***"_s
@@ -1295,23 +1334,20 @@ void Write_Dose_Array(std::shared_ptr<Image_Array> IA, const std::string &Filena
         //Search for '\' characters. If present, split the string up and register each token separately.
         auto tokens = SplitStringToVector(i_val, '\\', 'd');
         for(auto &val : tokens){
-            //if(val.empty()) continue; //Sometimes empty strings are necessary...
-
             //Attempt to convert to the default DICOM data type.
             const auto d_t = ds->getDefaultDataType(group, tag);
 
             //Types not requiring conversion from a string.
             if( ( d_t == "AE") || ( d_t == "AS") || ( d_t == "AT") ||
-                ( d_t == "CS") || ( d_t == "DS") ||
-                ( d_t == "DT") || ( d_t == "LO") ||
-                ( d_t == "LT") || ( d_t == "OW") ||
+                ( d_t == "CS") || ( d_t == "DS") || ( d_t == "DT") ||
+                ( d_t == "LO") || ( d_t == "LT") || ( d_t == "OW") ||
                 ( d_t == "PN") || ( d_t == "SH") || ( d_t == "ST") ||
                 ( d_t == "UT")   ){
                     ds->setString(group, order, tag, element++, val, d_t);
  
             //UIDs.
             }else if( d_t == "UI" ){   //UIDs.
-                //ds->setString(group, order, tag, element++, val, d_t);
+                //UIDs were being altered in funny ways sometimes. Write raw bytes instead.
                 auto tag_ptr = ds->getTag(group, order, tag, true);
                 auto rdh_ptr = tag_ptr->getDataHandlerRaw( 0, true, d_t );
                 rdh_ptr->copyFromMemory(reinterpret_cast<const uint8_t *>(val.data()),
@@ -1379,16 +1415,11 @@ void Write_Dose_Array(std::shared_ptr<Image_Array> IA, const std::string &Filena
         auto tag_ptr = ds->getTag(seq_group, first_order, seq_tag, create_if_not_found);
         if(tag_ptr == nullptr) return;
 
-        //Works, but possibly unsatisfactory.
-        //ptr<imebra::dataSet> lds(new imebra::dataSet);
-        //ds_insert(lds, tag_group, tag_tag, tag_val);
-        //tag_ptr->appendDataSet( lds );
-
+        //Prefer to append to an existing dataSet rather than creating an additional one.
         auto lds = tag_ptr->getDataSet(0);
         if( lds == nullptr ) lds = ptr<imebra::dataSet>(new imebra::dataSet);
         ds_insert(lds, tag_group, tag_tag, tag_val);
         tag_ptr->setDataSet( 0, lds );
-
         return;
     };
 
@@ -1433,7 +1464,7 @@ void Write_Dose_Array(std::shared_ptr<Image_Array> IA, const std::string &Filena
         //SOP Common Module.
         ds_insert(tds, 0x0008, 0x0016, "1.2.840.10008.5.1.4.1.1.481.2"); // "SOPClassUID"
         ds_insert(tds, 0x0008, 0x0018, SOPInstanceUID); // "SOPInstanceUID"
-//        ds_insert(tds, 0x0008, 0x0005, "ISO_IR 100"); //fne({ cm["SpecificCharacterSet"], "ISO_IR 100" })); // Set above!
+        //ds_insert(tds, 0x0008, 0x0005, "ISO_IR 100"); //fne({ cm["SpecificCharacterSet"], "ISO_IR 100" })); // Set above!
         ds_insert(tds, 0x0008, 0x0012, fne({ cm["InstanceCreationDate"], "20170730" }));
         ds_insert(tds, 0x0008, 0x0013, fne({ cm["InstanceCreationTime"], "000000" }));
         ds_insert(tds, 0x0008, 0x0014, foe({ cm["InstanceCreatorUID"] }));
@@ -1487,10 +1518,10 @@ void Write_Dose_Array(std::shared_ptr<Image_Array> IA, const std::string &Filena
 
         //General Image Module.
         ds_insert(tds, 0x0020, 0x0013, foe({ cm["InstanceNumber"] }));
-        ds_insert(tds, 0x0020, 0x0020, fne({ cm["PatientOrientation"], "UNSPECIFIED" }));
+        //ds_insert(tds, 0x0020, 0x0020, fne({ cm["PatientOrientation"], "UNSPECIFIED" }));
         ds_insert(tds, 0x0008, 0x0023, foe({ cm["ContentDate"] }));
         ds_insert(tds, 0x0008, 0x0033, foe({ cm["ContentTime"] }));
-        ds_insert(tds, 0x0008, 0x0008, fne({ cm["ImageType"], "UNSPECIFIED" }));
+        //ds_insert(tds, 0x0008, 0x0008, fne({ cm["ImageType"], "UNSPECIFIED" }));
         ds_insert(tds, 0x0020, 0x0012, foe({ cm["AcquisitionNumber"] }));
         ds_insert(tds, 0x0008, 0x0022, foe({ cm["AcquisitionDate"] }));
         ds_insert(tds, 0x0008, 0x0032, foe({ cm["AcquisitionTime"] }));
@@ -1548,7 +1579,7 @@ void Write_Dose_Array(std::shared_ptr<Image_Array> IA, const std::string &Filena
         ds_seq_insert(tds, 0x300C, 0x0002, // "ReferencedRTPlanSequence" 
                            0x0008, 0x1150, // "ReferencedSOPClassUID"
                            fne({ cm[R"***(ReferencedRTPlanSequence/ReferencedSOPClassUID)***"],
-                                 Generate_Random_UID(32) }) );
+                                 "1.2.840.10008.5.1.4.1.1.481.5" }) ); // "RTPlanStorage". Prefer existing UID.
         ds_seq_insert(tds, 0x300C, 0x0002, // "ReferencedRTPlanSequence"
                            0x0008, 0x1155, // "ReferencedSOPInstanceUID"
                            fne({ cm[R"***(ReferencedRTPlanSequence/ReferencedSOPInstanceUID)***"],
@@ -1568,11 +1599,6 @@ void Write_Dose_Array(std::shared_ptr<Image_Array> IA, const std::string &Filena
     }
 
     //Insert the raw pixel data.
-
-//    auto s_ptr = tds->getStreamWriter(0x7FE0, 0, 0x0010, 0, "OW");
-//    auto dh_ptr = tds->getDataHandlerRaw(0x7FE0, 0, 0x0010, 0, true, "OW");
-//    auto mem_ptr = dh_ptr->getMemory();
-
     std::vector<uint32_t> shtl;
     shtl.reserve(num_of_imgs * col_count * row_count);
     for(const auto &p_img : IA->imagecoll.images){
@@ -1584,25 +1610,10 @@ void Write_Dose_Array(std::shared_ptr<Image_Array> IA, const std::string &Filena
                 const auto val = p_img.value(r, c, channel);
                 const auto scaled = std::round( std::abs(val/dose_scaling) );
                 auto as_uint = static_cast<uint32_t>(scaled);
-//as_uint = static_cast<uint32_t>(r + c*row_count);
                 shtl.push_back(as_uint);
-//                s_ptr->write(reinterpret_cast<const uint8_t *>(&as_uint), 4);
-//    s_ptr->flushDataBuffer();
             }
         }
-//Write in one go ... as floats though.        
-//        s_ptr->write(reinterpret_cast<const uint8_t *>(p_img.data.data()), 
-//                     4*static_cast<uint32_t>(p_img.data.size()));
     }
-//    s_ptr->write(reinterpret_cast<const uint8_t *>(shtl.data()), 
-//                 4*static_cast<uint32_t>(shtl.size()));
-//    s_ptr->flushDataBuffer();
-
-
-//    mem_ptr->resize(4*static_cast<uint32_t>(shtl.size()));
-//    mem_ptr->assign(reinterpret_cast<const uint8_t *>(shtl.data()),
-//                    4*static_cast<uint32_t>(shtl.size()));
-
     {
         auto tag_ptr = tds->getTag(0x7FE0, 0, 0x0010, true);
         FUNCINFO("Re-reading the tag.  Type is " << tag_ptr->getDataType() << ",  #_of_buffers = " <<
@@ -1613,53 +1624,7 @@ void Write_Dose_Array(std::shared_ptr<Image_Array> IA, const std::string &Filena
                                 4*static_cast<uint32_t>(shtl.size()));
     }
 
-
-
-
-
-/*
-
-    //Insert the raw pixel data.
-    std::list<ptr<puntoexe::imebra::image>> out_img_ptrs;
-    uint32_t frame_number = 0;
-    for(const auto &p_img : IA->imagecoll.images){
-FUNCINFO("Working on frame number = " << frame_number);
-
-        const auto bitdepth = imebra::image::bitDepth::depthU32;
-        const auto colorspace = L"MONOCHROME2"; 
-        const auto highbit = static_cast<uint8_t>(31);
-        out_img_ptrs.emplace_back(new puntoexe::imebra::image);
-        //ptr<puntoexe::imebra::image> out_img_ptr(new puntoexe::imebra::image);
-        out_img_ptrs.back()->create(col_count, row_count, bitdepth, colorspace, highbit);
-
-//{        
-//        auto dh_ptr = out_img_ptr->create(col_count, row_count, bitdepth, colorspace, highbit);
-//
-//        auto img_mem_ptr = dh_ptr->getMemory();
-//        if(img_mem_ptr == nullptr) throw std::runtime_error("No memory allocated.");
-//FUNCINFO("    Image memory is allocated with " << img_mem_ptr->size() << " bytes");
-//FUNCINFO("    Remember: uint32 * rows * cols = " << (4*row_count*col_count) << " bytes");
-//        // ... fill in the pixel values using dh_ptr access? ...
-//
-//}
-
-        const auto transfersyntax = L"1.2.840.10008.1.2"; // "Implicit VR Endian" -- the default transfer syntax).
-        const auto quality = imebra::codecs::codec::quality::high;
-        tds->setImage(frame_number, out_img_ptrs.back(), transfersyntax, quality);
-        ++frame_number;
-    }
-*/
-
-
-
-/*
-
-//    const std::string transferSyntax("1.2.840.10008.1.2.1"); // "Explicit VR little endian."
-    imbxUint32 ImageCounter = 0;
-
-*/    
-
-    // Attempt to write the file.
+    // Write the file.
     {  
         ptr<puntoexe::stream> outputStream(new puntoexe::stream);
         outputStream->openFile(FilenameOut, std::ios::out);
