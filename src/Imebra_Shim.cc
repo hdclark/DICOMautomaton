@@ -550,50 +550,9 @@ std::unique_ptr<Image_Array> Load_Image_Array(const std::string &FilenameIn){
     ptr<puntoexe::streamReader> reader(new puntoexe::streamReader(readStream));
     ptr<imebra::dataSet> TopDataSet = imebra::codecs::codecFactory::getCodecFactory()->load(reader);
 
-    // --------------------------------------- Sort key ordering ---------------------------------------------
-    //Using the InstanceNumber as the default sort key will (should?) guarantee that the key is unique,
-    // but will not necessarily sort in the specific order you want! Think about MR where the various
-    // slices can be collected in interleaved ways, or if the order is localized for easy cache access
-    // in the DICOM writer.
-    const auto instance_number  = static_cast<int64_t>(TopDataSet->getUnsignedLong(0x0020, 0, 0x0013, 0)); // "InstanceNumber"
-
-    //This number is not necessarily unique to a series. For 4D images, the slice number can be shared by
-    // slices with the same geometrical specifications, but differing temporal specifications.
-    const auto slice_number     = static_cast<int64_t>(TopDataSet->getUnsignedLong(0x2001, 0, 0x100a, 0)); // "SliceNumber"
-
-    //ImageIndex: An index identifying the position of this image within a PET Series.
-    const auto image_index      = static_cast<int64_t>(TopDataSet->getUnsignedLong(0x0054, 0, 0x1330, 0)); // "ImageIndex"
-
-    int64_t sort_key_A = 0; 
-    int64_t sort_key_B = 0; 
-
-    if(slice_number > 0){
-        sort_key_A = slice_number;
-    }else if(image_index > 0){
-        sort_key_A = image_index;
-    }
-    sort_key_B = instance_number;
-
     // -------------------------------------- Temporal ordering ---------------------------------------------
     const auto content_date = TopDataSet->getString(0x0008, 0, 0x0023, 0); //e.g., "20150228" as a string.
     const auto content_time = TopDataSet->getString(0x0008, 0, 0x0033, 0); //e.g., "142301" as a string.
-
-    const auto temporal_pos_indc = static_cast<int64_t>(TopDataSet->getUnsignedLong(0x0020, 0, 0x0100, 0)); // "TemporalPositionIdentifier"
-    const auto temporal_max_numb = static_cast<int64_t>(TopDataSet->getUnsignedLong(0x0020, 0, 0x0105, 0)); // "NumberOfTemporalPositions"
-
-    //Appears rather similar in concept to the "TemporalPositionIdentifier".
-    const auto temporal_pos_indx = static_cast<int64_t>(TopDataSet->getUnsignedLong(0x0020, 0, 0x9128, 0)); // "TemporalPositionIndex"
-
-    //Time when PET image pixel values 'occurred', in milliseconds since the SeriesReferenceTime.
-    const auto frame_ref_time = static_cast<int64_t>(TopDataSet->getUnsignedLong(0x0054, 0, 0x1300, 0)); // "FrameReferenceTime"
-
-    //Nominal time taken per frame.
-    const auto frame_nom_time = static_cast<int64_t>(TopDataSet->getUnsignedLong(0x0018, 0, 0x1063, 0)); // "FrameTime" 
-
-    //This number appears to be used for PET-CT scans where to denote consecutive scans. It is similar to
-    // the 'TemporalPositionIdentifier' but does not have an accompanying 'NumberOfTemporalPositions' for 
-    // scaling.
-    const auto acquisition_number = static_cast<int64_t>(TopDataSet->getUnsignedLong(0x0020, 0, 0x0012, 0)); // "AcquisitionNumber"
 
     //These appear to refer to the moment the DICOM data was assembled or transmission began. Not terribly
     // useful for anything like a keyframe.
@@ -607,30 +566,9 @@ std::unique_ptr<Image_Array> Load_Image_Array(const std::string &FilenameIn){
     //(0040,0250) DA [20150225]                                         # 8,1 Performed Procedure Step End Date
     //(0040,0251) TM [125151]                                           # 6,1 Performed Procedure Step End Time
 
-    double start_time = 0.0;
-    double end_time = 0.0;
-    if(frame_ref_time > 0){
-        start_time = static_cast<double>(frame_ref_time);
-        end_time   = start_time + static_cast<double>(frame_nom_time);
-    }else if((temporal_max_numb > 0) && (temporal_pos_indc >= 0)){
-        start_time = static_cast<double>(temporal_pos_indc)/static_cast<double>(temporal_max_numb);
-        end_time   = (static_cast<double>(temporal_pos_indc)+0.5)/static_cast<double>(temporal_max_numb);
-
-    }else if(temporal_pos_indx > 0){
-        start_time = static_cast<double>(temporal_pos_indx);
-        end_time   = start_time + static_cast<double>(frame_nom_time);
-        //end_time   = static_cast<double>(temporal_pos_indx) + 0.5;
-
-    }else if(acquisition_number > 0){
-        start_time = static_cast<double>(acquisition_number);
-        end_time   = start_time + static_cast<double>(frame_nom_time);
-        //end_time   = static_cast<double>(acquisition_number) + 0.5;
-    }
     //Try playing with dates and times if the above is not sufficient.
 
     // ---------------------------------------- Image Metadata ----------------------------------------------
-    const auto slice_thickness  = static_cast<double>(TopDataSet->getDouble(0x0018, 0, 0x0050, 0));
-    const auto slice_height     = static_cast<double>(TopDataSet->getDouble(0x0020, 0, 0x1041, 0));
 
     //These should exist in all files. They appear to be the same for CT and DS files of the same set. Not sure
     // if this is *always* the case.
@@ -658,8 +596,6 @@ std::unique_ptr<Image_Array> Load_Image_Array(const std::string &FilenameIn){
 
     const auto image_rows  = static_cast<long int>(TopDataSet->getUnsignedLong(0x0028, 0, 0x0010, 0));
     const auto image_cols  = static_cast<long int>(TopDataSet->getUnsignedLong(0x0028, 0, 0x0011, 0));
-    //const auto image_pxldx = static_cast<double>(TopDataSet->getDouble(0x0028, 0, 0x0030, 0)); //Spacing between adjacent rows.
-    //const auto image_pxldy = static_cast<double>(TopDataSet->getDouble(0x0028, 0, 0x0030, 1)); //Spacing between adjacent columns.
     const auto image_pxldy = static_cast<double>(TopDataSet->getDouble(0x0028, 0, 0x0030, 0)); //Spacing between adjacent rows.
     const auto image_pxldx = static_cast<double>(TopDataSet->getDouble(0x0028, 0, 0x0030, 1)); //Spacing between adjacent columns.
 
@@ -672,14 +608,6 @@ std::unique_ptr<Image_Array> Load_Image_Array(const std::string &FilenameIn){
     }
 
     // -------------------------------------- Pixel Interpretation ------------------------------------------
-    const auto pixel_representation = static_cast<unsigned long int>(TopDataSet->getUnsignedLong(0x0028, 0, 0x0103, 0));
-
-    //Sometimes Imebra returns something other the BitsStored or BitsAllocated. I cast values anyways, so it isn't
-    // much of a concern and I've decided to just roll with it for now.
-    //const auto image_bits  = static_cast<unsigned long int>(TopDataSet->getUnsignedLong(0x0028, 0, 0x0101, 0)); //BitsStored.
-    //const auto image_bits  = static_cast<unsigned long int>(TopDataSet->getUnsignedLong(0x0028, 0, 0x0100, 0)); //BitsAllocated.
-    //const auto image_chnls = static_cast<unsigned long int>(TopDataSet->getUnsignedLong(0x0028, 0, 0x0002, 0)); //3 for RGB, 1 for monochrome.
-
     if( (TopDataSet->getTag(0x0040,0,0x9212) != nullptr)
     ||  (TopDataSet->getTag(0x0040,0,0x9216) != nullptr)
     ||  (TopDataSet->getTag(0x0040,0,0x9096) != nullptr)
@@ -700,19 +628,6 @@ std::unique_ptr<Image_Array> Load_Image_Array(const std::string &FilenameIn){
         //       You could potentially just get Imebra to do it for you. See the LUT code elsewhere
         //       in this routine.
     }
-
-    double RescaleSlope = 1.0;
-    double RescaleIntercept = 0.0;
-    const bool RescaleSlopeInterceptPresent = (  (TopDataSet->getTag(0x0028,0,0x1052) != nullptr)
-                                              && (TopDataSet->getTag(0x0028,0,0x1053) != nullptr) );
-    if(RescaleSlopeInterceptPresent){
-        RescaleIntercept = static_cast<double>(TopDataSet->getDouble(0x0028,0,0x1052,0));
-        RescaleSlope     = static_cast<double>(TopDataSet->getDouble(0x0028,0,0x1053,0));
-
-        // NOTE: There are also private Philips tags with the same info. Not sure if there is any point
-        //       trying to fall back on them, though.
-    }
-
 
     // --------------------------------------- Image Pixel Data ---------------------------------------------
     {    
@@ -861,71 +776,14 @@ std::unique_ptr<Image_Array> Load_Image_Array(const std::string &FilenameIn){
                     "You can increase this if needed, or try to scale down to 32 bits");
         }
         out->bits = img_bits;
-        //if(img_bits != image_bits){
-        //    FUNCERR("The number of bits in each channel varies between the DICOM header ("
-        //            << image_bits << ") and the transformed image data (" << img_bits << ")");
-        //    //If this ever comes up, you need to decide whether you actually want Imebra resampling the data. See the
-        //    // above code block which transforms to MONOCHROME2. Most likely, you should go with the Imebra result b/c
-        //    // it is most likely what you want. Ultimately you will convert to an unsigned int anyways.
-        //}
 
         //Write the data to our allocated memory. We do it pixel-by-pixel because the 'PixelRepresentation' could mean
         // the pixel locality is laid out in various ways (two ways?). This approach abstracts the issue away.
         imbxUint32 data_index = 0;
-        //for(imbxUint32 scanX = 0; scanX < sizeX; ++scanX){ //Rows.
-        //    for(imbxUint32 scanY = 0; scanY < sizeY; ++scanY){ //Columns.
-        //        for(imbxUint32 scanChannel = 0; scanChannel < channelsNumber; ++scanChannel){ //Channels.
-        const bool pixelsAreSigned = (myHandler->isSigned());
         for(long int row = 0; row < image_rows; ++row){
             for(long int col = 0; col < image_cols; ++col){
                 for(long int chnl = 0; chnl < img_chnls; ++chnl){
-
-                    //The are a number of ways we can pack this data into the destination buffer. 
-                    // Using uint32_t, int32_t, or float make the most sense. Be aware that CT images will
-                    // generally have negative pixel values, because CT Hounsfield units range from
-                    // -1000 HU (air) to +4000 HU (metals). Water is 0 HU so we will generally encounter 
-                    // negatives!
-                    //
-                    //Approach A: the more 'usual' (unsigned) integer-valued pixel value image.
-                    //const imbxUint32 UnsignedChannelValue = myHandler->getUnsignedLong(data_index);
-                    //out->imagecoll.images.back().reference(row,col,chnl) = static_cast<uint32_t>(UnsignedChannelValue);
-                    //++data_index;
-                    //
-                    //Approach B: the more 'usual' (signed) integer-valued pixel value image.
-                    //const imbxInt32 UnsignedChannelValue = myHandler->getSignedLong(data_index);
-                    //if(SignedChannelValue < 0) FUNCERR("Encountered a negative pixel value at row,col,chnl = " << row << "," << col << "," << chnl);
-                    //out->imagecoll.images.back().reference(row,col,chnl) = static_cast<uint32_t>(SignedChannelValue);
-                    //++data_index;
-                    //
-                    //Approach C: the generally safe and sane approach of using floating-point types. We may,
-                    // in extreme cases, lose some precision, but for clinical CTs floats will be sufficient to 
-                    // represent the full HU range.
-                    //float OutgoingPixelValue = std::numeric_limits<float>::quiet_NaN();
-                    ////if(pixel_representation == static_cast<unsigned long int>(0)){ //Unsigned pixel representation.
-                    //if(!pixelsAreSigned){ //Unsigned pixel representation.
-                    //    const imbxUint32 UnsignedChannelValue = myHandler->getUnsignedLong(data_index);
-                    //    //const auto Rescaled = (RescaleSlopeInterceptPresent) 
-                    //    //                      ? RescaleIntercept + RescaleSlope * static_cast<double>(UnsignedChannelValue) 
-                    //    //                      : static_cast<double>(UnsignedChannelValue);
-                    //    //OutgoingPixelValue = static_cast<float>(Rescaled);
-                    //    OutgoingPixelValue = static_cast<float>(UnsignedChannelValue);
-                    ////}else if(pixel_representation == static_cast<unsigned long int>(1)){ //Two's complement pixel representation.
-                    //}else{ //Two's complement pixel representation.
-                    //    //Technically this is not just 'signed' but specifically two's complement representation. 
-                    //    // I think the best way is to verify by directly testing the implementation (e.g., compare 
-                    //    // -1 (negative one) with ~0 (bitwise complemented zero) to verify two's complement. Before 
-                    //    // doing so, check if C++11/14/+ has any way to static_assert this, such as in feature-test 
-                    //    // macros, numerical limits, or by the implementation exposing a macro of some sort.
-                    //    const imbxInt32 SignedChannelValue = myHandler->getSignedLong(data_index);
-                    //    //const auto Rescaled = (RescaleSlopeInterceptPresent) 
-                    //    //                      ? RescaleIntercept + RescaleSlope * static_cast<double>(SignedChannelValue)  
-                    //    //                      : static_cast<double>(SignedChannelValue);
-                    //    //OutgoingPixelValue = static_cast<float>(Rescaled);
-                    //    OutgoingPixelValue = static_cast<float>(SignedChannelValue);
-                    //}
-                    //
-                    //Approach D: let Imebra work out the conversersion by asking for a double. Hope it can be narrowed
-                    // if necessary!
+                    //Let Imebra work out the conversion by asking for a double. Hope it can be narrowed if necessary!
                     const auto DoubleChannelValue = myHandler->getDouble(data_index);
                     const float OutgoingPixelValue = static_cast<float>(DoubleChannelValue);
 
@@ -991,11 +849,6 @@ std::unique_ptr<Dose_Array>  Load_Dose_Array(const std::string &FilenameIn){
     ptr<puntoexe::streamReader> reader(new puntoexe::streamReader(readStream));
     ptr<imebra::dataSet> TopDataSet = imebra::codecs::codecFactory::getCodecFactory()->load(reader);
 
-    //These are CT-ish only (not for dose files,) but they should just return a zero nicely when we query and
-    // they are not there. If this were not the case, we would simply need to check the modality before querying.
-    //const auto slice_thickness  = static_cast<double>(TopDataSet->getDouble(0x0018, 0, 0x0050, 0));
-    //const auto slice_height     = static_cast<double>(TopDataSet->getDouble(0x0020, 0, 0x1041, 0));
-
     //These should exist in all files. They appear to be the same for CT and DS files of the same set. Not sure
     // if this is *always* the case.
     const auto image_pos_x = static_cast<double>(TopDataSet->getDouble(0x0020, 0, 0x0032, 0));
@@ -1039,14 +892,10 @@ std::unique_ptr<Dose_Array>  Load_Dose_Array(const std::string &FilenameIn){
 
     const auto image_rows  = static_cast<long int>(TopDataSet->getUnsignedLong(0x0028, 0, 0x0010, 0));
     const auto image_cols  = static_cast<long int>(TopDataSet->getUnsignedLong(0x0028, 0, 0x0011, 0));
-    //const auto image_pxldx = static_cast<double>(TopDataSet->getDouble(0x0028, 0, 0x0030, 0)); //Spacing between adjacent rows.
-    //const auto image_pxldy = static_cast<double>(TopDataSet->getDouble(0x0028, 0, 0x0030, 1)); //Spacing between adjacent columns.
     const auto image_pxldy = static_cast<double>(TopDataSet->getDouble(0x0028, 0, 0x0030, 0)); //Spacing between adjacent rows.
     const auto image_pxldx = static_cast<double>(TopDataSet->getDouble(0x0028, 0, 0x0030, 1)); //Spacing between adjacent columns.
     const auto image_bits  = static_cast<unsigned long int>(TopDataSet->getUnsignedLong(0x0028, 0, 0x0101, 0));
     const auto grid_scale  = static_cast<double>(TopDataSet->getDouble(0x3004, 0, 0x000e, 0));
-
-    const auto pixel_representation = static_cast<unsigned long int>(TopDataSet->getUnsignedLong(0x0028, 0, 0x0103, 0));
 
     //Grab the image data for each individual frame.
     auto gfov_it = gfov.begin();
@@ -1127,37 +976,9 @@ std::unique_ptr<Dose_Array>  Load_Dose_Array(const std::string &FilenameIn){
 
         //Write the data to our allocated memory.
         imbxUint32 data_index = 0;
-        //for(imbxUint32 scanX = 0; scanX < sizeX; ++scanX){ //Rows.
-        //    for(imbxUint32 scanY = 0; scanY < sizeY; ++scanY){ //Columns.
-        //        for(imbxUint32 scanChannel = 0; scanChannel < channelsNumber; ++scanChannel){ //Channels.
-        const bool pixelsAreSigned = (myHandler->isSigned());
         for(long int row = 0; row < image_rows; ++row){
             for(long int col = 0; col < image_cols; ++col){
                 for(long int chnl = 0; chnl < img_chnls; ++chnl){
-                    //NOTE: In earlier code, I kept pixel values as the raw DICOM-packed integers and used a separate Dose_Array
-                    //      member called 'grid_scale' to perform the scaling when I needed dose. When I switched to a floating-
-                    //      point pixel type, I decided it made the most sense (reducing complexity, conversion to-from plain 
-                    //      images) to just have the pixels directly express dose. Therefore, the grid_scale member is now set 
-                    //      to 1.0 ALWAYS for compatibility. It could be removed entirely (and the Dose_Array class) safely.
-                    ////if(pixel_representation == static_cast<unsigned long int>(0)){ //Unsigned pixel representation.
-                    //if(!pixelsAreSigned){ //Unsigned pixel representation.
-                    //    const imbxUint32 UnsignedChannelValue = myHandler->getUnsignedLong(data_index);
-                    //    out->imagecoll.images.back().reference(row,col,chnl) = static_cast<float>(UnsignedChannelValue) 
-                    //                                                           * static_cast<float>(grid_scale);
-                    ////}else if(pixel_representation == static_cast<unsigned long int>(1)){ //Signed pixel representation.
-                    //}else{ //Signed pixel representation.
-                    //    //Technically this is not just 'signed' but specifically two's complement representation. 
-                    //    // I think the best way is to verify by directly testing the implementation (e.g., compare 
-                    //    // -1 (negative one) with ~0 (bitwise complemented zero) to verify two's complement. Before 
-                    //    // doing so, check if C++11/14/+ has any way to static_assert this, such as in feature-test 
-                    //    // macros, numerical limits, or by the implementation exposing a macro of some sort.
-                    //    const imbxInt32 SignedChannelValue = myHandler->getSignedLong(data_index);
-                    //    out->imagecoll.images.back().reference(row,col,chnl) = static_cast<float>(SignedChannelValue)
-                    //                                                           * static_cast<float>(grid_scale);
-                    //}
-                    //
-                    //Approach D: let Imebra work out the conversersion by asking for a double. Hope it can be narrowed
-                    // if necessary!
                     const auto DoubleChannelValue = myHandler->getDouble(data_index);
                     const float OutgoingPixelValue = static_cast<float>(DoubleChannelValue) 
                                                      * static_cast<float>(grid_scale);
@@ -1202,10 +1023,10 @@ static std::string Generate_Random_UID(long int len){
     std::uniform_int_distribution<int> dist(0,alphanum.length()-1);
     out = "1.2.840.66.1.";
     char last = '.';
-    while(out.size() != len){
+    while(static_cast<long int>(out.size()) != len){
         const auto achar = alphanum[dist(gen)];
         if((achar == '.') && (achar == last)) continue;
-        if((achar == '.') && ((out.size()+1) == len)) continue;
+        if((achar == '.') && (static_cast<long int>(out.size()+1) == len)) continue;
         out += achar;
         last = achar;
     }
@@ -1305,11 +1126,8 @@ void Write_Dose_Array(std::shared_ptr<Image_Array> IA, const std::string &Filena
         }
     }
 
-
-
     auto ds_OB_insert = [](ptr<imebra::dataSet> &ds, uint16_t group, uint16_t tag, std::string i_val) -> void {
         const uint16_t order = 0;
-        uint32_t element = 0;
         
         //For OB type, we simply copy the string's buffer as-is. 
         const auto d_t = ds->getDefaultDataType(group, tag);
@@ -1408,7 +1226,6 @@ void Write_Dose_Array(std::shared_ptr<Image_Array> IA, const std::string &Filena
     auto ds_seq_insert = [&ds_insert](ptr<imebra::dataSet> &ds, uint16_t seq_group, uint16_t seq_tag, 
                                                       uint16_t tag_group, uint16_t tag_tag, std::string tag_val) -> void {
         const uint32_t first_order = 0; // Always zero for modern DICOM files.
-        const uint32_t first_element = 0; // Usually zero, but several tags can store multiple elements.
 
         //Get a reference to an existing sequence item, or create one if needed.
         const bool create_if_not_found = true;
@@ -1429,12 +1246,12 @@ void Write_Dose_Array(std::shared_ptr<Image_Array> IA, const std::string &Filena
         throw std::runtime_error("All inputs were empty -- unable to provide a nonempty string.");
         return std::string();
     };
+
     auto foe = [](std::vector<std::string> l) -> std::string {
         //foe == "First non-empty Or Rmpty".
         for(auto &s : l) if(!s.empty()) return s;
         return std::string(); 
     };
-
 
     //Specify the list of acceptable character sets.
     {
