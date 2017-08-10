@@ -12,11 +12,11 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Debug CACHE STRING "default to debug" FORCE)
 endif()
 
-SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
-SET(BUILD_SHARED_LIBS TRUE)
-SET(POSITION_INDEPENDENT_CODE TRUE)
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+set(BUILD_SHARED_LIBS TRUE)
+set(POSITION_INDEPENDENT_CODE TRUE)
 
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ffast-math -frounding-math -fno-finite-math-only")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ffast-math -frounding-math -fno-finite-math-only")
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON) # For clang-tidy et al.
 
@@ -50,7 +50,7 @@ include(${CGAL_USE_FILE})
 add_definitions(-DCGAL_EIGEN3_ENABLED=1) # Explicitly instruct CGAL to use Eigen.
 
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fdiagnostics-color=always -fno-var-tracking-assignments")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated -Wall -Wextra")
@@ -458,11 +458,11 @@ install(TARGETS
 set(CPACK_GENERATOR "DEB")
 #SET(CPACK_PACKAGE_NAME "dicomautomaton")
 
-STRING(TIMESTAMP INVOCATION_TIMESTAMP "%Y%m%d.%H%M%S") # For a time-based version number.
-SET(CPACK_PACKAGE_VERSION "${INVOCATION_TIMESTAMP}")
+string(TIMESTAMP INVOCATION_TIMESTAMP "%Y%m%d.%H%M%S") # For a time-based version number.
+set(CPACK_PACKAGE_VERSION "${INVOCATION_TIMESTAMP}")
 
 # Dependencies, e.g., "libc6 (>= 2.3.1-6), libgcc1 (>= 1:3.4.2-12)"
-SET(CPACK_DEBIAN_PACKAGE_DEPENDS 
+set(CPACK_DEBIAN_PACKAGE_DEPENDS 
    "ygor,
     explicator,
     libboost-dev,
@@ -482,16 +482,16 @@ SET(CPACK_DEBIAN_PACKAGE_DEPENDS
     fonts-cmu")
 
 # Recommended or optional packages, e.g., "liboptional-dev (>= 1.2.3-1), libmaybe-dev (>= 1:1.3.2-10)"
-SET(CPACK_DEBIAN_PACKAGE_RECOMMENDS 
+set(CPACK_DEBIAN_PACKAGE_RECOMMENDS 
    "zenity, 
     libeigen3-dev,
     gnuplot,
     ygorclustering")
-SET(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "amd64") # i386, amd64, armel, armhf, ...
-SET(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Various tools for medical physics applications.")
-SET(CPACK_PACKAGE_CONTACT "hdeanclark@gmail.com")
-SET(CPACK_PACKAGE_MAINTAINER "Haley Clark <hdeanclark@gmail.com>")
-SET(CPACK_DEBIAN_PACKAGE_SECTION "Science")
+set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "amd64") # i386, amd64, armel, armhf, ...
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Various tools for medical physics applications.")
+set(CPACK_PACKAGE_CONTACT "hdeanclark@gmail.com")
+set(CPACK_PACKAGE_MAINTAINER "Haley Clark <hdeanclark@gmail.com>")
+set(CPACK_DEBIAN_PACKAGE_SECTION "Science")
 
 include(CPack)
 
