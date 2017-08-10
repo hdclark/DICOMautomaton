@@ -76,12 +76,18 @@ Installation
      # If building for Debian.
        $ cmake ../ -DCMAKE_INSTALL_PREFIX=/usr
        $ make && make package
-       $ sudo dpkg -i *.deb
-       $ sudo apt-get -f install   # Or [--fix-missing] in lieu of [-f].
+       $ sudo apt install ./*.deb
     OR
      # If building for Arch Linux.
        $ rsync -a --exclude build ../ ./
        $ makepkg --syncdeps --noconfirm # Optionally also [--install].
+
+
+Known Issues
+============
+
+  - The SFML_Viewer operation hangs on some systems after viewing a plot with
+    Gnuplot. This stems from a known issue in Ygor. 
 
 
 Project Home
