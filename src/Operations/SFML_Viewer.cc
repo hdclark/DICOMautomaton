@@ -456,9 +456,11 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
         while(window.pollEvent(event)){
             if(event.type == sf::Event::Closed){
                 window.close();
+                break;
             }else if(window.hasFocus() && (event.type == sf::Event::KeyPressed)){
                 if(event.key.code == sf::Keyboard::Escape){
                     window.close();
+                    break;
                 }
 
             }else if(window.hasFocus() && (event.type == sf::Event::KeyReleased)){
@@ -1604,9 +1606,11 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
             while(plotwindow.pollEvent(event)){
                 if(event.type == sf::Event::Closed){
                     plotwindow.close();
+                    break;
                 }else if(plotwindow.hasFocus() && (event.type == sf::Event::KeyPressed)){
                     if(event.key.code == sf::Keyboard::Escape){
                         plotwindow.close();
+                        break;
                     }else{
                         FUNCINFO("Plotting plotwindow: keypress not yet bound to any action");
                     }
