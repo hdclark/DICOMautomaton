@@ -97,12 +97,17 @@ std::map<std::string,std::string> get_metadata_top_level_tags(const std::string 
     //
     // TODO: Properly handle missing strings. In many cases, Imebra will feel obligated to return a NON-EMPTY string
     //       if a tag is missing. For example, the date '0000-00-00' is returned instead of an empty string for date
-    //       fields. Instead of handling boneheaded practices like this, use the Imebra member function
+    //       fields. Instead of handling these issues specifically, use the Imebra member function
     //           ptr< data > puntoexe::imebra::dataSet::getTag(imbxUint16 groupId, imbxUint16 order,
     //                                                         imbxUint16 tagId, bool bCreate = false)
     //       to check if the tag is present before asking for a string. Then, of course, we need to check later if
     //       the item is present. If using a map, I think the default empty string will suffice to communicate this
     //       info.
+    //
+    // TODO: It would be better to handle some VR's directly rather than converting to string and back. For example
+    //       doubles. There is currently a lot of unnecessary loss of precision, and I doubt NaN's and Inf's are handled
+    //       correctly, since they are locale-dependent in several ways.
+    //
     
     auto insert_as_string_if_nonempty = [&out,&ctrim,&tds](uint16_t group, uint16_t tag,
                                                            std::string name ) -> void {
