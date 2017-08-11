@@ -15,7 +15,22 @@
 #include "YgorMath.h"
 #include "YgorImages.h"
 
+
+typedef enum { // Controls how voxels are computed to be 'within' a contour.
+    // Consider only the central-most point of the voxel. (This is typically how voxels are handled.)
+    centre,
+
+    // Consider the corners of the 2D pixels corresponding to the intersection of a plane with the voxel.
+    // The plane intersects the central-most point of the voxel and is orthogonal to the row and column unit vector.
+    planar_corners_inclusive, // Consider 'within' if any corners are interior to the contour.
+    planar_corners_exclusive  // Consider 'within' if all corners are interior to the contour.
+
+} HighlightInclusionMethod;
+
 struct HighlightROIVoxelsUserData {
+
+    // Algorithmic changes.
+    HighlightInclusionMethod inclusivity = HighlightInclusionMethod::centre;
 
     // Actions.
     bool overwrite_interior = true; // Whether to alter voxels within the specific ROI(s).

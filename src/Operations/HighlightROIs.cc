@@ -111,6 +111,19 @@ std::list<OperationArgDoc> OpArgDocHighlightROIs(void){
     out.back().examples = { "none", "last", "all" };
 
     out.emplace_back();
+    out.back().name = "Inclusivity";
+    out.back().desc = "Controls how voxels are deemed to be 'within' the interior of the selected ROI(s)."
+                      " The default 'center' considers only the central-most point of each voxel."
+                      " There are two corner options that correspond to a 2D projection of the voxel onto the image plane."
+                      " The first, 'planar_corner_inclusive', considers a voxel interior if ANY corner is interior."
+                      " The second, 'planar_corner_exclusive', considers a voxel interior if ALL (four) corners are interior.";
+    out.back().default_val = "center";
+    out.back().expected = true;
+    out.back().examples = { "center", "centre", 
+                            "planar_corner_inclusive", "planar_inc",
+                            "planar_corner_exclusive", "planar_exc" };
+
+    out.emplace_back();
     out.back().name = "ExteriorVal";
     out.back().desc = "The value to give to voxels outside the specified ROI(s). Note that this value"
                       " will be ignored if exterior overwrites are disabled.";
@@ -180,6 +193,7 @@ Drover HighlightROIs(Drover DICOM_data,
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto Channel = std::stol( OptArgs.getValueStr("Channel").value() );
     const auto ImageSelectionStr = OptArgs.getValueStr("ImageSelection").value();
+    const auto InclusivityStr = OptArgs.getValueStr("Inclusivity").value();
 
     const auto ExteriorVal    = std::stod(OptArgs.getValueStr("ExteriorVal").value());
     const auto InteriorVal    = std::stod(OptArgs.getValueStr("InteriorVal").value());
@@ -197,6 +211,10 @@ Drover HighlightROIs(Drover DICOM_data,
     const auto regex_last = std::regex("la?s?t?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
     const auto regex_all  = std::regex("al?l?$",   std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
     const auto TrueRegex = std::regex("^tr?u?e?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+
+    const auto regex_centre = std::regex("^cent.*", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto regex_pci = std::regex("^planar_?c?o?r?n?e?r?s?_?inc?l?u?s?i?v?e?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto regex_pce = std::regex("^planar_?c?o?r?n?e?r?s?_?exc?l?u?s?i?v?e?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
 
     const auto ShouldOverwriteExterior = std::regex_match(ExteriorOverwriteStr, TrueRegex);
     const auto ShouldOverwriteInterior = std::regex_match(InteriorOverwriteStr, TrueRegex);
@@ -248,6 +266,17 @@ Drover HighlightROIs(Drover DICOM_data,
         ud.outgoing_interior_val = InteriorVal;
         ud.outgoing_exterior_val = ExteriorVal;
         ud.channel = Channel;
+   
+        if(false){
+        }else if( std::regex_match(InclusivityStr, regex_centre) ){
+            ud.inclusivity = HighlightInclusionMethod::centre;
+        }else if( std::regex_match(InclusivityStr, regex_pci) ){
+            ud.inclusivity = HighlightInclusionMethod::planar_corners_inclusive;
+        }else if( std::regex_match(InclusivityStr, regex_pce) ){
+            ud.inclusivity = HighlightInclusionMethod::planar_corners_exclusive;
+        }else{
+            throw std::invalid_argument("Inclusivity argument '"_s + InclusivityStr + "' is not valid");
+        }
 
         if(!(*iap_it)->imagecoll.Process_Images_Parallel( GroupIndividualImages,
                                                           HighlightROIVoxels,

@@ -60,6 +60,8 @@ bool HighlightROIVoxels(planar_image_collection<float,double>::images_list_it_t 
     const auto row_unit   = first_img_it->row_unit;
     const auto col_unit   = first_img_it->col_unit;
     const auto ortho_unit = row_unit.Cross( col_unit ).unit();
+    const auto pxl_dx     = first_img_it->pxl_dx; 
+    const auto pxl_dy     = first_img_it->pxl_dy; 
 
     //Generate a mask of the interior points.
     planar_image<uint8_t,double> mask;
@@ -71,15 +73,36 @@ bool HighlightROIVoxels(planar_image_collection<float,double>::images_list_it_t 
         auto ProjectedContour = roi->Project_Onto_Plane_Orthogonally(BestFitPlane);
         const bool AlreadyProjected = true;
 
+        //Tests if a given point is interior to the ROI.
+        const auto is_interior = [BestFitPlane,ProjectedContour,AlreadyProjected](vec3<double> point) -> bool {
+            auto ProjectedPoint = BestFitPlane.Project_Onto_Plane_Orthogonally(point);
+            return ProjectedContour.Is_Point_In_Polygon_Projected_Orthogonally(BestFitPlane,
+                                                                               ProjectedPoint,
+                                                                               AlreadyProjected);
+        };
+
         for(auto row = 0; row < first_img_it->rows; ++row){
             for(auto col = 0; col < first_img_it->columns; ++col){
-                //Check if the point is interior to the ROI.
-                const auto point = first_img_it->position(row,col);
-                auto ProjectedPoint = BestFitPlane.Project_Onto_Plane_Orthogonally(point);
-                if(ProjectedContour.Is_Point_In_Polygon_Projected_Orthogonally(BestFitPlane,
-                                                                               ProjectedPoint,
-                                                                               AlreadyProjected)){
-                    mask.reference(row, col, 0) = static_cast<uint8_t>(1);
+
+                const auto centre = first_img_it->position(row,col);
+                if(user_data_s->inclusivity == HighlightInclusionMethod::centre){
+                    if(is_interior(centre)){
+                        mask.reference(row, col, 0) = static_cast<uint8_t>(1);
+                    }
+
+                }else if(   (user_data_s->inclusivity == HighlightInclusionMethod::planar_corners_inclusive)
+                         || (user_data_s->inclusivity == HighlightInclusionMethod::planar_corners_exclusive) ){
+                    const auto cornerA = centre + (row_unit * 0.5 * pxl_dx) + (col_unit * 0.5 * pxl_dy);
+                    const auto cornerB = centre + (row_unit * 0.5 * pxl_dx) - (col_unit * 0.5 * pxl_dy);
+                    const auto cornerC = centre - (row_unit * 0.5 * pxl_dx) - (col_unit * 0.5 * pxl_dy);
+                    const auto cornerD = centre - (row_unit * 0.5 * pxl_dx) + (col_unit * 0.5 * pxl_dy);
+                    if(   (  (user_data_s->inclusivity == HighlightInclusionMethod::planar_corners_inclusive)
+                          && (is_interior(cornerA) || is_interior(cornerB) || is_interior(cornerC) || is_interior(cornerD)) )
+                       || (  (user_data_s->inclusivity == HighlightInclusionMethod::planar_corners_exclusive)
+                          && (is_interior(cornerA) && is_interior(cornerB) && is_interior(cornerC) && is_interior(cornerD)) ) ){
+                        mask.reference(row, col, 0) = static_cast<uint8_t>(1);
+                    }
+
                 }
             }
         }
