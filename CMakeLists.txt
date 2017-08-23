@@ -52,7 +52,6 @@ set(CPACK_DEBIAN_PACKAGE_DEPENDS
     libboost-dev,
     libboost-filesystem-dev,
     libboost-iostreams-dev,
-    libcgal-dev,
     zlibc,
     libsfml-dev,
     libjansson-dev,
@@ -63,7 +62,7 @@ set(CPACK_DEBIAN_PACKAGE_DEPENDS
     libnlopt-dev,
     libasio-dev,
     libwt-dev,
-    libwthttp-dev
+    libwthttp-dev,
     fonts-freefont-ttf,
     fonts-cmu")
 
