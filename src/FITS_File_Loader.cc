@@ -81,10 +81,31 @@ bool Load_From_FITS_Files( Drover &DICOM_data,
 
         try{
             auto animg = ReadFromFITS<float,double>(Filename);
+
+            //Set some default parameters if none were included in the file metadata.
+            if(!std::isfinite(animg.pxl_dx) || (animg.pxl_dx <= 0.0)) animg.pxl_dx = 1.0;
+            if(!std::isfinite(animg.pxl_dy) || (animg.pxl_dy <= 0.0)) animg.pxl_dy = 1.0;
+            if(!std::isfinite(animg.pxl_dz) || (animg.pxl_dz <= 0.0)) animg.pxl_dz = 1.0;
+            if(!std::isfinite(animg.row_unit.length())){
+                animg.row_unit = vec3<double>(1.0, 0.0, 0.0);
+            }
+            if(!std::isfinite(animg.col_unit.length())){
+                animg.col_unit = vec3<double>(0.0, 1.0, 0.0);
+            }
+            if(!std::isfinite(animg.anchor.length())){
+                animg.anchor = vec3<double>(0.0, 0.0, 0.0);
+            }
+            if(!std::isfinite(animg.offset.length())){
+                animg.offset = vec3<double>(0.0, 0.0, 0.0);
+            }
+
+
             DICOM_data.image_data.back()->imagecoll.images.emplace_back( animg );
             bfit = Filenames.erase( bfit ); 
             continue;
-        }catch(const std::exception &){};
+        }catch(const std::exception &e){
+            FUNCINFO("Unable to load as FITS file: '" << e.what() << "'");
+        };
 
         //Skip the file. It might be destined for some other loader.
         ++bfit;
