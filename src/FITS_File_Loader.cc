@@ -83,22 +83,31 @@ bool Load_From_FITS_Files( Drover &DICOM_data,
             auto animg = ReadFromFITS<float,double>(Filename);
 
             //Set some default parameters if none were included in the file metadata.
-            if(!std::isfinite(animg.pxl_dx) || (animg.pxl_dx <= 0.0)) animg.pxl_dx = 1.0;
-            if(!std::isfinite(animg.pxl_dy) || (animg.pxl_dy <= 0.0)) animg.pxl_dy = 1.0;
-            if(!std::isfinite(animg.pxl_dz) || (animg.pxl_dz <= 0.0)) animg.pxl_dz = 1.0;
-            if(!std::isfinite(animg.row_unit.length())){
-                animg.row_unit = vec3<double>(1.0, 0.0, 0.0);
+            if(!std::isfinite(animg.pxl_dx) 
+            || !std::isfinite(animg.pxl_dy)
+            || !std::isfinite(animg.pxl_dz)
+            || (animg.pxl_dx <= 0.0)
+            || (animg.pxl_dy <= 0.0) 
+            || (animg.pxl_dz <= 0.0) 
+            || !std::isfinite(animg.anchor.length())
+            || !std::isfinite(animg.offset.length()) ){
+                animg.init_spatial( 1.0, 1.0, 1.0, vec3<double>(0.0, 0.0, 0.0), vec3<double>(0.0, 0.0, 0.0));
             }
-            if(!std::isfinite(animg.col_unit.length())){
-                animg.col_unit = vec3<double>(0.0, 1.0, 0.0);
+            if(!std::isfinite(animg.row_unit.length())
+            || !std::isfinite(animg.col_unit.length())
+            || (animg.row_unit.length() < 1E-5) 
+            || (animg.col_unit.length() < 1E-5)  ){
+                animg.init_orientation( vec3<double>(0.0, 1.0, 0.0), vec3<double>(1.0, 0.0, 0.0) );
             }
-            if(!std::isfinite(animg.anchor.length())){
-                animg.anchor = vec3<double>(0.0, 0.0, 0.0);
-            }
-            if(!std::isfinite(animg.offset.length())){
-                animg.offset = vec3<double>(0.0, 0.0, 0.0);
+            if(!std::isfinite(animg.rows)
+            || !std::isfinite(animg.columns)
+            || !std::isfinite(animg.channels) ){
+                throw std::runtime_error("FITS file missing key image parameters. Cannot continue.");
             }
 
+            FUNCINFO("Loaded FITS file with dimensions " 
+                     << animg.rows << " x " << animg.columns
+                     << " and " << animg.channels << " channels");
 
             DICOM_data.image_data.back()->imagecoll.images.emplace_back( animg );
             bfit = Filenames.erase( bfit ); 
