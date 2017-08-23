@@ -11,7 +11,7 @@ rsync -avz --cvs-exclude --delete ./ "${BUILDDIR}"  # Removes CMake cache files,
 pushd .
 cd "${BUILDDIR}"
 mkdir -p build && cd build/
-cmake ../src/ -DCMAKE_INSTALL_PREFIX=/usr
+cmake ../ -DCMAKE_INSTALL_PREFIX=/usr
 make -j 4 && make package
 mv *.deb "${BUILTPKGSDIR}/"
 popd

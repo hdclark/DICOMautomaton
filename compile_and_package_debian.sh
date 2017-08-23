@@ -9,7 +9,7 @@ mkdir -p "${BUILDDIR}"
 rsync -avz --cvs-exclude ./ "${BUILDDIR}"
 
 pushd .
-cd "${BUILDDIR}/src"
+cd "${BUILDDIR}"
 cmake . -DCMAKE_INSTALL_PREFIX=/usr
 make -j 4 && make package
 mv *.deb "${BUILTPKGSDIR}/"

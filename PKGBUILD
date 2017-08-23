@@ -25,6 +25,7 @@ depends=(
    'boost-libs'
    'zlib'
    'cgal>=4.8'
+   'wt'
    'explicator'
    'ygor'
 )
@@ -47,10 +48,11 @@ makedepends=(
 # md5sums=(''
 #          '')
 
+#options=(!strip staticlibs)
 options=(strip staticlibs)
 
 build() {
-  cmake "${srcdir}" -DCMAKE_INSTALL_PREFIX=/usr
+  cmake ../ -DCMAKE_INSTALL_PREFIX=/usr
   make -j 4
 }
 
