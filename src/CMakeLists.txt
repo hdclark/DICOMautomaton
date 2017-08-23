@@ -282,6 +282,59 @@ target_link_libraries (dicomautomaton_dispatcher
 )
 
 # Executable.
+add_executable(dicomautomaton_webserver
+    DICOMautomaton_WebServer.cc
+
+    $<TARGET_OBJECTS:Structs_obj>
+    $<TARGET_OBJECTS:Dose_Meld_obj>
+    $<TARGET_OBJECTS:Colour_Maps_obj>
+    $<TARGET_OBJECTS:Common_Boost_Serialization_obj>
+    $<TARGET_OBJECTS:Common_Plotting_obj>
+
+    $<TARGET_OBJECTS:PACS_Loader_obj>
+    $<TARGET_OBJECTS:Boost_Serialization_File_Loader_obj>
+    $<TARGET_OBJECTS:DICOM_File_Loader_obj>
+    $<TARGET_OBJECTS:FITS_File_Loader_obj>
+    $<TARGET_OBJECTS:Operation_Dispatcher_obj>
+
+    $<TARGET_OBJECTS:YgorImaging_Functor_objs>
+    $<TARGET_OBJECTS:YgorImaging_Helper_objs>
+
+    $<TARGET_OBJECTS:Operations_objs>
+)
+target_link_libraries(dicomautomaton_webserver
+    imebrashim
+    kineticmodel_1c2i_5param_linearinterp_levenbergmarquardt
+    kineticmodel_1c2i_5param_chebyshev_freeformoptimization
+    kineticmodel_1c2i_5param_chebyshev_levenbergmarquardt
+    kineticmodel_1c2i_reduced3param_chebyshev_freeformoptimization
+    explicator 
+    ygor 
+    CGAL
+    nlopt 
+    gsl
+    gslcblas
+    sfml-graphics 
+    sfml-audio 
+    sfml-window 
+    sfml-system
+    jansson 
+    pqxx 
+    pq
+    wt
+    wthttp
+    boost_filesystem 
+    boost_serialization
+    boost_iostreams
+    boost_thread
+    boost_system 
+    z
+    mpfr
+    gmp
+    m
+)
+
+# Executable.
 add_executable(dicomautomaton_bsarchive_convert
     Boost_Serialization_Archive_Converter.cc
 
@@ -291,7 +344,7 @@ add_executable(dicomautomaton_bsarchive_convert
 
     $<TARGET_OBJECTS:Boost_Serialization_File_Loader_obj>
 )
-target_link_libraries (dicomautomaton_bsarchive_convert
+target_link_libraries(dicomautomaton_bsarchive_convert
     explicator 
     ygor 
     boost_filesystem 
@@ -303,12 +356,12 @@ target_link_libraries (dicomautomaton_bsarchive_convert
 )
 
 # Executable.
-add_executable (pacs_ingress
+add_executable(pacs_ingress
     PACS_Ingress.cc
     $<TARGET_OBJECTS:Structs_obj>
     $<TARGET_OBJECTS:Dose_Meld_obj>
 )
-target_link_libraries (pacs_ingress
+target_link_libraries(pacs_ingress
     imebrashim
     explicator 
     ygor 
@@ -318,12 +371,12 @@ target_link_libraries (pacs_ingress
 )
 
 # Executable.
-add_executable (pacs_duplicate_cleaner
+add_executable(pacs_duplicate_cleaner
     PACS_Duplicate_Cleaner.cc
     $<TARGET_OBJECTS:Structs_obj>
     $<TARGET_OBJECTS:Dose_Meld_obj>
 )
-target_link_libraries (pacs_duplicate_cleaner
+target_link_libraries(pacs_duplicate_cleaner
     imebrashim
     explicator 
     ygor 
@@ -333,12 +386,12 @@ target_link_libraries (pacs_duplicate_cleaner
 )
 
 # Executable.
-add_executable (pacs_refresh
+add_executable(pacs_refresh
     PACS_Refresh.cc
     $<TARGET_OBJECTS:Structs_obj>
     $<TARGET_OBJECTS:Dose_Meld_obj>
 )
-target_link_libraries (pacs_refresh
+target_link_libraries(pacs_refresh
     imebrashim
     explicator 
     ygor 
@@ -348,12 +401,12 @@ target_link_libraries (pacs_refresh
 )
 
 # Executable.    
-add_executable (overlaydosedata
+add_executable(overlaydosedata
     Overlay_Dose_Data.cc
     $<TARGET_OBJECTS:Structs_obj>
     $<TARGET_OBJECTS:Dose_Meld_obj>
 )
-target_link_libraries (overlaydosedata
+target_link_libraries(overlaydosedata
     imebrashim
     explicator 
     ygor 
@@ -371,12 +424,12 @@ target_include_directories (overlaydosedata SYSTEM PUBLIC /usr/X11R6/lib/ )
 
 
 # Executable.
-add_executable (automaton
+add_executable(automaton
     Automaton.cc
     $<TARGET_OBJECTS:Structs_obj>
     $<TARGET_OBJECTS:Dose_Meld_obj>
 )
-target_link_libraries (automaton
+target_link_libraries(automaton
     imebrashim
     explicator 
     ygor 
@@ -386,12 +439,12 @@ target_link_libraries (automaton
 )
 
 # Executable.
-add_executable (dicomautomaton_dump
+add_executable(dicomautomaton_dump
     DICOMautomaton_Dump.cc
     $<TARGET_OBJECTS:Structs_obj>
     $<TARGET_OBJECTS:Dose_Meld_obj>
 )
-target_link_libraries (dicomautomaton_dump
+target_link_libraries(dicomautomaton_dump
     imebrashim
     ygor 
     m
@@ -400,6 +453,7 @@ target_link_libraries (dicomautomaton_dump
 # Installation info.
 install(TARGETS 
     dicomautomaton_dispatcher
+    dicomautomaton_webserver
     dicomautomaton_bsarchive_convert
     pacs_ingress
     pacs_duplicate_cleaner
