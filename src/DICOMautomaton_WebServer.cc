@@ -49,6 +49,8 @@
 #include <Wt/WFileResource>
 #include <Wt/WAnimation>
 #include <Wt/WFlags>
+#include <Wt/WTable>
+#include <Wt/WTableCell>
 
 #include "Structs.h"
 #include "Imebra_Shim.h"      //Wrapper for Imebra library. Black-boxed to speed up compilation.
@@ -108,19 +110,10 @@ class BaseWebServerApplication : public Wt::WApplication {
 
     void filesUploaded(void); //Post-upload event.
 
-    void createROISelector(void);
-    void createOperationSelector(void);
-
-
-    // RTSTRUCT selection.
-    Wt::WGroupBox *rtstructSelectionGroupBox = nullptr;
-
-    Wt::WText *fgSelectionInstructionText = nullptr;
-    Wt::WText *fgSelectionFeedbackText = nullptr;
-    Wt::WSelectionBox *fgSelector = nullptr;
-
-    // Highlight operation parameter selection.
-    Wt::WGroupBox *highlightParameterSelectionGroupBox = nullptr;
+    void createROISelectorGB(void);
+    void createOperationSelectorGB(void);
+    void createOperationParamSelectorGB(void);
+    void createComputeGB(void);
 
 
     // Output widgets. 
@@ -202,27 +195,10 @@ BaseWebServerApplication::BaseWebServerApplication(const Wt::WEnvironment &env) 
     std::list<OperationArgPkg> Operations;
     Operations.emplace_back("SFML_Viewer");
 
-
     if(!Operation_Dispatcher( DICOM_data, InvocationMetadata, FilenameLex,
                               Operations )){
         FUNCERR("Analysis failed. Cannot continue");
     }
-
-
-////////////////////////////   
-//    // -----------------------------------------------------------------------------------
-//    // On-the-fly widgets.
-//    // -----------------------------------------------------------------------------------
-//    GBs.emplace_back( new Wt::WGroupBox(root()) );
-//    GBs.back()->setTitle("Operations");
-//
-//    GBs.back()->addWidget( new Wt::WPushButton("Dummy button") );
-//    GBs.back()->children().back()->setObjectName("blah");
-//
-//    auto w = reinterpret_cast<Wt::WPushButton *>( root()->find("blah") );
-//    if(w == nullptr) throw std::logic_error("Cannot find widget in DOM tree. Cannot continue.");
-//    //w->link("Howdy");
-////////////////////////////   
 
 */
 
@@ -338,22 +314,6 @@ BaseWebServerApplication::BaseWebServerApplication(const Wt::WEnvironment &env) 
 
     this->outputGroupBox->hide();
 
-
-    // -----------------------------------------------------------------------------------
-    // Styling config.
-    // -----------------------------------------------------------------------------------
-
-
-    // RTSTRUCT Selection.
-    this->rtstructSelectionGroupBox->addStyleClass("DataEntryGroupBlock");
-    this->fgSelectionInstructionText->addStyleClass("InstructionText");
-    this->fgSelectionFeedbackText->addStyleClass("FeedbackText");
-
-    // Highlight parameter selection.
-    this->highlightParameterSelectionGroupBox->addStyleClass("DataEntryGroupBlock");
-
-    // Output widgets.
-    this->outputGroupBox->addStyleClass("DataEntryGroupBlock");
 */
 
 }
@@ -366,14 +326,17 @@ void BaseWebServerApplication::filesUploaded(void){
     // It must corral, validate, load them into the DICOM_data member, and initiate the next interactive widget(s).
     //
 
-    // Assume ownership of the files so they do not disappear when the connection terminates.
     auto fileup = reinterpret_cast<Wt::WFileUpload *>( root()->find("file_upload_gb_file_picker") );
     if(fileup == nullptr) throw std::logic_error("Cannot find file uploader widget in DOM tree. Cannot continue.");
 
     std::list<boost::filesystem::path> UploadedFilesDirsReachable;
     const auto files_vec = fileup->uploadedFiles(); //const std::vector< Http::UploadedFile > &
     for(const auto &afile : files_vec){
-        afile.stealSpoolFile();
+        // Assume ownership of the files so they do not disappear when the connection terminates.
+        //
+        // NOTE: You'll have to garbage-collect files that you steal. Perhaps by moving them to some infinite storage
+        //       location or consuming when loaded into memory?
+        //afile.stealSpoolFile();
         UploadedFilesDirsReachable.emplace_back(afile.spoolFileName());
     }
     fileup->setProgressBar(new Wt::WProgressBar());
@@ -458,14 +421,12 @@ void BaseWebServerApplication::filesUploaded(void){
 
 
     //Create the next widgets for the user to interact with.
-    this->createOperationSelector();
-    this->createROISelector();
-
+    this->createOperationSelectorGB();
     return;
 }
 
 
-void BaseWebServerApplication::createOperationSelector(void){
+void BaseWebServerApplication::createOperationSelectorGB(void){
     //This routine creates a selector box populated with the available operations.
 
     root()->addWidget(new Wt::WBreak());
@@ -474,12 +435,13 @@ void BaseWebServerApplication::createOperationSelector(void){
     gb->setObjectName("op_select_gb");
     gb->addStyleClass("DataEntryGroupBlock");
 
-    auto instruct = new Wt::WText("Please select the Operation of interest.", gb);
+    auto instruct = new Wt::WText("Please select the operation of interest.", gb);
     instruct->addStyleClass("InstructionText");
 
     (void*) new Wt::WBreak(gb);
 
     auto selector = new Wt::WSelectionBox(gb);
+    selector->setObjectName("op_select_gb_selector");
     //selector->setSelectionMode(Wt::ExtendedSelection);
     selector->setVerticalSize(15);
     selector->disable();
@@ -492,16 +454,37 @@ void BaseWebServerApplication::createOperationSelector(void){
 
     auto known_ops = Known_Operations();
     for(auto &anop : known_ops){
-        selector->addItem(anop.first);
+        const auto n = anop.first;
+        if( ( n == "HighlightROIs" )
+        ||  ( n == "DICOMExportImagesAsDose" )
+        ||  ( n == "ConvertDoseToImage" ) ){    //Whitelist ... for now.
+            selector->addItem(anop.first);
+        }
     }
     selector->enable();
+
+    (void*) new Wt::WBreak(gb);
+
+    auto gobutton = new Wt::WPushButton("Proceed", gb);
+
+    // -------
+
+    gobutton->clicked().connect(std::bind([=](){
+        //const std::set<int> selected = selector->selectedIndexes();
+        //if(selected.empty()) return; // Warn about selecting something?
+        if(selector->currentText().empty()) return; // Warn about selecting something?
+
+        gobutton->disable();
+        this->createROISelectorGB();
+        return;
+    }));
 
     this->processEvents();
     return;
 }
 
 
-void BaseWebServerApplication::createROISelector(void){
+void BaseWebServerApplication::createROISelectorGB(void){
     //This routine creates a selector box populated with the ROI labels found in the loaded ROIs.
 
     root()->addWidget(new Wt::WBreak());
@@ -526,25 +509,120 @@ void BaseWebServerApplication::createROISelector(void){
     feedback->setObjectName("roi_select_gb_feedback");
     feedback->addStyleClass("FeedbackText");
 
-    this->processEvents();
-
     //Determine which ROIs are available.
-
-    // ...
-
-                //Populate the selection box with entries.
-                //
-                // $>  dicomautomaton_dispatcher -o DumpROIData RS.1.2.246.352.71.4.811746149197.1310958.20170809164818.dcm | grep '^DumpROIData' | sed -e "s/.*\tROIName='\([^']*\)'.*/\1/g"
-                //
-                // 
-
-
-    selector->addItem("A");
-    selector->addItem("B");
-    selector->addItem("C");
+    std::set<std::string> ROI_labels;
+    if(this->DICOM_data.contour_data != nullptr){
+        for(auto &cc : this->DICOM_data.contour_data->ccs){
+            for(auto &c : cc.contours){
+                ROI_labels.insert( c.metadata["ROIName"] );
+            }
+        }
+    }
+    for(const auto &l : ROI_labels){
+        selector->addItem(l);
+    }
     selector->enable();
 
+    (void*) new Wt::WBreak(gb);
+
+    auto gobutton = new Wt::WPushButton("Proceed", gb);
+    gobutton->clicked().connect(std::bind([=](){
+        //Possible to proceed without selecting any ROI.
+        //const std::set<int> selected = selector->selectedIndexes();
+        //if(selected.empty()) return; // Warn about selecting something?
+
+        gobutton->disable();
+        this->createOperationParamSelectorGB();
+        return;
+    }));
+
     this->processEvents();
+    return;
+}
+
+void BaseWebServerApplication::createOperationParamSelectorGB(void){
+    //This routine creates a manipulation table populated with tweakable parameters from the specified operation.
+
+    root()->addWidget(new Wt::WBreak());
+
+    auto gb = new Wt::WGroupBox("Operation Parameter Specification", root());
+    gb->setObjectName("op_paramspec_gb");
+    gb->addStyleClass("DataEntryGroupBlock");
+
+    auto instruct = new Wt::WText("Please specify operation parameters.", gb);
+    instruct->addStyleClass("InstructionText");
+
+    (void*) new Wt::WBreak(gb);
+
+    auto table = new Wt::WTable(gb);
+    table->setObjectName("op_paramspec_gb_table");
+    table->setHeaderCount(1);
+    table->setWidth(Wt::WLength("100%"));
+    table->disable();
+
+    (void*) new Wt::WBreak(gb);
+
+    auto feedback = new Wt::WText(gb);
+    feedback->setObjectName("op_paramspec_gb_feedback");
+    feedback->addStyleClass("FeedbackText");
+
+    (void*) new Wt::WBreak(gb);
+
+    auto gobutton = new Wt::WPushButton("Proceed", gb);
+
+    // -------
+
+    table->elementAt(0,0)->addWidget(new Wt::WText("#"));
+    table->elementAt(0,1)->addWidget(new Wt::WText("Parameter"));
+    table->elementAt(0,2)->addWidget(new Wt::WText("Examples"));
+    table->elementAt(0,3)->addWidget(new Wt::WText("Input"));
+
+    //Get the selected operation's name.
+    auto selector = reinterpret_cast<Wt::WSelectionBox *>( root()->find("op_select_gb_selector") );
+    if(selector == nullptr) throw std::logic_error("Cannot find operation selector widget in DOM tree. Cannot continue.");
+    const std::string selected_op = selector->currentText().toUTF8(); 
+
+    auto known_ops = Known_Operations();
+    int table_row = 1;
+    for(auto &anop : known_ops){
+        if(anop.first != selected_op) continue; 
+
+        auto optdocs = anop.second.first();
+        if(optdocs.empty()){
+            feedback->setText("<p>No registered options.</p>");
+            break;
+        }
+
+        for(auto &a : optdocs){
+            std::stringstream ss;
+            for(auto &e : a.examples){
+                ss << "<p>" << e << "</p> "; 
+            }
+
+            int col = 0;
+            (void *) new Wt::WText(std::to_string(table_row),   table->elementAt(table_row,col++));
+            (void *) new Wt::WText(a.name,                      table->elementAt(table_row,col++));
+            (void *) new Wt::WText(ss.str(),                    table->elementAt(table_row,col++));
+            (void *) new Wt::WLineEdit(a.default_val,           table->elementAt(table_row,col++));
+            ++table_row;
+        }
+    }
+    table->enable();
+
+    // -------
+
+    gobutton->clicked().connect(std::bind([=](){
+        gobutton->disable();
+        this->createComputeGB();
+        return;
+    }));
+
+    this->processEvents();
+    return;
+}
+
+void BaseWebServerApplication::createComputeGB(void){
+
     return;
 }
 
