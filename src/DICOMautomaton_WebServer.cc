@@ -47,6 +47,8 @@
 #include <Wt/WGroupBox>
 #include <Wt/WSelectionBox>
 #include <Wt/WFileResource>
+#include <Wt/WAnimation>
+#include <Wt/WFlags>
 
 #include "Structs.h"
 #include "Imebra_Shim.h"      //Wrapper for Imebra library. Black-boxed to speed up compilation.
@@ -104,25 +106,11 @@ class BaseWebServerApplication : public Wt::WApplication {
 
     // --------------------- Web widget members ---------------------
 
-    Wt::WText *titleText = nullptr;
+    void filesUploaded(void); //Post-upload event.
 
+    void createROISelector(void);
+    void createOperationSelector(void);
 
-    std::list<Wt::WGroupBox *> GroupBoxes;
-
-
-    // File upload widgets.
-    Wt::WGroupBox *fileUploadGroupBox = nullptr;
-
-    Wt::WText *fileUploadInstructionText = nullptr;
-    Wt::WText *fileUploadFeedbackText = nullptr;
-    Wt::WFileUpload *fileUploader = nullptr;
-    Wt::WPushButton *fileUploadButton = nullptr;
-
-    void fileTooLarge(int64_t);
-    void fileChanged(void);
-    void filesUploaded(void);
-
-    void fileUploadButtonClicked(void);
 
     // RTSTRUCT selection.
     Wt::WGroupBox *rtstructSelectionGroupBox = nullptr;
@@ -182,7 +170,7 @@ BaseWebServerApplication::BaseWebServerApplication(const Wt::WEnvironment &env) 
             continue;
         }
     }
-FUNCINFO("Temp directory is  '" << this->InstancePrivateDirectory << "'");
+    //FUNCINFO("Temp directory is  '" << this->InstancePrivateDirectory << "'");
 
 
     //Record all metadata provided by the user.
@@ -219,70 +207,111 @@ FUNCINFO("Temp directory is  '" << this->InstancePrivateDirectory << "'");
                               Operations )){
         FUNCERR("Analysis failed. Cannot continue");
     }
+
+
+////////////////////////////   
+//    // -----------------------------------------------------------------------------------
+//    // On-the-fly widgets.
+//    // -----------------------------------------------------------------------------------
+//    GBs.emplace_back( new Wt::WGroupBox(root()) );
+//    GBs.back()->setTitle("Operations");
+//
+//    GBs.back()->addWidget( new Wt::WPushButton("Dummy button") );
+//    GBs.back()->children().back()->setObjectName("blah");
+//
+//    auto w = reinterpret_cast<Wt::WPushButton *>( root()->find("blah") );
+//    if(w == nullptr) throw std::logic_error("Cannot find widget in DOM tree. Cannot continue.");
+//    //w->link("Howdy");
+////////////////////////////   
+
 */
-
-
-
 
     //============================================= Populate Web Widgets =============================================
 
-    // Document title.
+    // -----------------------------------------------------------------------------------
+    // Static widgets.
+    // -----------------------------------------------------------------------------------
+    this->useStyleSheet("webserver_styles/Forms.css");
     setTitle("DICOMautomaton Web Services");
-
-    // Create and register HTML elements.
-    this->titleText = new Wt::WText(root());
-    this->titleText->setText("DICOMautomaton Web Services");
-
-
-    // -----------------------------------------------------------------------------------
-    // File upload widgets 
-    // -----------------------------------------------------------------------------------
-    this->fileUploadGroupBox = new Wt::WGroupBox(root());
-    this->fileUploadGroupBox->setTitle("File Upload");
-
-    this->fileUploadInstructionText = new Wt::WText(this->fileUploadGroupBox);
-    this->fileUploadInstructionText->setText("Please select the RTSTRUCT and RTDOSE files to upload. ");
-    this->fileUploadGroupBox->addWidget(new Wt::WBreak());
-    this->fileUploader = new Wt::WFileUpload(this->fileUploadGroupBox);
-    this->fileUploadGroupBox->addWidget(new Wt::WBreak());
-    this->fileUploadButton = new Wt::WPushButton("Upload", this->fileUploadGroupBox);
-    this->fileUploadGroupBox->addWidget(new Wt::WBreak());
-    this->fileUploadFeedbackText = new Wt::WText(this->fileUploadGroupBox);
-
-    // File uploader config.
-    this->fileUploader->setFileTextSize(50); // Set the width of the widget to 50 characters
-    this->fileUploader->setProgressBar(new Wt::WProgressBar());
-    //this->fileUploader->setMargin(10, Wt::Right);
-    this->fileUploader->setMultiple(true);
-
-
-    // File upload callback registrations.
-    this->fileUploadButton->clicked().connect(this, &BaseWebServerApplication::fileUploadButtonClicked);
-    this->fileUploader->fileTooLarge().connect(this, &BaseWebServerApplication::fileTooLarge);
-    this->fileUploader->changed().connect(this, &BaseWebServerApplication::fileChanged); //Upload eagerly without waiting for button press. Maybe undesirable.
-    this->fileUploader->uploaded().connect(this, &BaseWebServerApplication::filesUploaded);
+    {
+        auto title = new Wt::WText("DICOMautomaton Web Services", root());
+        title->addStyleClass("Title");
+    }
 
 
     // -----------------------------------------------------------------------------------
-    // RTSTRUCT selection 
+    // File upload widgets.
     // -----------------------------------------------------------------------------------
-    root()->addWidget(new Wt::WBreak());
-    this->rtstructSelectionGroupBox = new Wt::WGroupBox(root());
-    this->rtstructSelectionGroupBox->setTitle("ROI Selection");
+    {
+        auto gb = new Wt::WGroupBox("File Upload", root());
+        gb->setObjectName("file_upload_gb");
+        gb->addStyleClass("DataEntryGroupBlock");
 
-    this->fgSelectionInstructionText = new Wt::WText(this->rtstructSelectionGroupBox);
-    this->fgSelectionInstructionText->setText("Please select the ROI(s) you want to isolate. ");
-    this->rtstructSelectionGroupBox->addWidget(new Wt::WBreak());
-    this->fgSelector = new Wt::WSelectionBox(this->rtstructSelectionGroupBox);
-    this->rtstructSelectionGroupBox->addWidget(new Wt::WBreak());
-    this->fgSelectionFeedbackText = new Wt::WText(this->rtstructSelectionGroupBox);
+        auto instruct = new Wt::WText("Please select the RTSTRUCT and RTDOSE files to upload.", gb);
+        instruct->addStyleClass("InstructionText");
 
-    // RTSTRUCT selector config.
-    this->fgSelector->setSelectionMode(Wt::ExtendedSelection);
-    this->fgSelector->setVerticalSize(15);
-    this->fgSelector->disable();
+        (void*) new Wt::WBreak(gb);
 
-    this->rtstructSelectionGroupBox->hide();
+        auto fileup = new Wt::WFileUpload(gb);
+        fileup->setObjectName("file_upload_gb_file_picker");
+        fileup->setFileTextSize(50);
+        fileup->setProgressBar(new Wt::WProgressBar());
+        fileup->setMultiple(true);
+
+        (void*) new Wt::WBreak(gb);
+
+        auto upbutton = new Wt::WPushButton("Upload", gb);
+
+        (void*) new Wt::WBreak(gb);
+
+        auto feedback = new Wt::WText(gb);
+        feedback->setObjectName("file_upload_gb_feedback");
+        feedback->addStyleClass("FeedbackText");
+
+        // -------
+
+        upbutton->clicked().connect(std::bind([=](){
+            if(fileup->canUpload()){
+                fileup->upload();
+                feedback->setText("<p>File is now uploading.</p>");
+            }else{
+                feedback->setText("<p>File uploading is not supported by your browser. Cannot continue.</p>");
+            }
+            upbutton->disable();
+            return;
+        }));
+
+        // -------
+
+        fileup->fileTooLarge().connect(std::bind([=](int64_t approx_size) -> void {
+            std::stringstream ss;
+            ss << "<p>One of the selected files is larger than the maximum permissible size. " 
+               << "(File size: ~" 
+               << approx_size / (1000*1024)  //Strangely B --> kB converted differently to kB --> MB. 
+               << " MB.)</p>";
+            feedback->setText(ss.str());
+            return;
+        }, std::placeholders::_1 ));
+
+        //Upload eagerly without waiting for button press. Maybe undesirable.
+        //fileup->changed().connect(this, std::bind([=](void){
+        //    if(fileup->canUpload()){
+        //        fileup->upload();
+        //        feedback->setText("File is now uploading.");
+        //    }else{
+        //        feedback->setText("File uploading is not supported by your browser. Cannot continue.");
+        //    }
+        //    upbutton->disable();
+        //    return;
+        //}));
+
+        fileup->uploaded().connect(this, &BaseWebServerApplication::filesUploaded);
+ 
+    }
+
+
+
+/*
 
 
     // -----------------------------------------------------------------------------------
@@ -309,34 +338,11 @@ FUNCINFO("Temp directory is  '" << this->InstancePrivateDirectory << "'");
 
     this->outputGroupBox->hide();
 
-    // -----------------------------------------------------------------------------------
-    // On-the-fly widgets.
-    // -----------------------------------------------------------------------------------
-    GroupBoxes.emplace_back( new Wt::WGroupBox(root()) );
-    GroupBoxes.back()->setTitle("Operations");
-
-    GroupBoxes.back()->addWidget( new Wt::WPushButton("Dummy button") );
-    GroupBoxes.back()->children().back().setObjectName("blah");
-
-    auto w = reinterpret_cast<Wt::WPushButton>( GroupBoxes.find("blah") );
-    if(w == nullptr) throw std::logic_error("Cannot find widget in DOM tree. Cannot continue.");
-    w->link("Howdy");
-    
 
     // -----------------------------------------------------------------------------------
     // Styling config.
     // -----------------------------------------------------------------------------------
 
-    this->useStyleSheet("Forms.css");
-    this->titleText->addStyleClass("Title");
-
-    // File upload widgets.
-    this->fileUploadGroupBox->addStyleClass("DataEntryGroupBlock");
-    this->fileUploadInstructionText->addStyleClass("InstructionText");
-
-    this->fileUploadFeedbackText->addStyleClass("FeedbackText");
-    //this->fileUploader->addStyleClass("centered-example");
-    //this->fileUploadButton->addStyleClass("centered-example");
 
     // RTSTRUCT Selection.
     this->rtstructSelectionGroupBox->addStyleClass("DataEntryGroupBlock");
@@ -348,132 +354,197 @@ FUNCINFO("Temp directory is  '" << this->InstancePrivateDirectory << "'");
 
     // Output widgets.
     this->outputGroupBox->addStyleClass("DataEntryGroupBlock");
+*/
 
 }
 
-void BaseWebServerApplication::fileTooLarge(int64_t approx_size){
-    std::stringstream ss;
-    ss << "One of the selected files is larger than the maximum permissible size. " 
-       << "(File size: ~" 
-       << approx_size / (1000*1024)  //Strangely B --> kB converted differently to kB --> MB. 
-       << " MB.) ";
-    this->fileUploadFeedbackText->setText(ss.str());
-    return;
-}
 
-void BaseWebServerApplication::fileChanged(void){
-    if(this->fileUploader->canUpload()){
-        this->fileUploader->upload();
-        this->fileUploadFeedbackText->setText("File upload has changed.");
-    }else{
-        this->fileUploadFeedbackText->setText("File uploading is not supported by your browser. Cannot continue!");
-    }
-    this->fileUploadButton->disable();
-    return;
-}
 
 void BaseWebServerApplication::filesUploaded(void){
-    //This routine gets called when all files have been successfully uploaded.
-    std::stringstream ss;
+    // This routine gets called after all files have been uploaded.
+    //
+    // It must corral, validate, load them into the DICOM_data member, and initiate the next interactive widget(s).
+    //
 
+    // Assume ownership of the files so they do not disappear when the connection terminates.
+    auto fileup = reinterpret_cast<Wt::WFileUpload *>( root()->find("file_upload_gb_file_picker") );
+    if(fileup == nullptr) throw std::logic_error("Cannot find file uploader widget in DOM tree. Cannot continue.");
 
-    //List of filenames or directories to parse and load.
     std::list<boost::filesystem::path> UploadedFilesDirsReachable;
-
-    const auto files_vec = this->fileUploader->uploadedFiles(); //const std::vector< Http::UploadedFile > &
-    ss << "<p>" << files_vec.size() << " file(s) have been uploaded. </p>";
-
-    //Assume ownership of the files so they do not disappear when the connection terminates.
+    const auto files_vec = fileup->uploadedFiles(); //const std::vector< Http::UploadedFile > &
     for(const auto &afile : files_vec){
         afile.stealSpoolFile();
         UploadedFilesDirsReachable.emplace_back(afile.spoolFileName());
     }
+    fileup->setProgressBar(new Wt::WProgressBar());
+    fileup->disable();
 
-    // Debugging information.
+
+    // Feedback for the client.
+    auto feedback = reinterpret_cast<Wt::WText *>( root()->find("file_upload_gb_feedback") );
+    if(feedback == nullptr) throw std::logic_error("Cannot find file upload feedback text widget in DOM tree. Cannot continue.");
+
+    std::stringstream ss;
+    ss << "<p>" << files_vec.size() << " file(s) have been uploaded. </p>";
     {
         int i = 0;
         for(const auto &afile : files_vec){
             ss << "<p> File " << ++i << ": '" << afile.clientFileName() << "'. </p>";
         }
     }
-
-    this->fileUploadFeedbackText->setText(ss.str());
-    this->fileUploadFeedbackText->setToolTip(ss.str());
-    this->fileUploader->setProgressBar(new Wt::WProgressBar());
-    this->fileUploader->disable();  // ?
+    feedback->setText(ss.str());
+    feedback->setToolTip(ss.str());
+    this->processEvents();
 
 
     // ======================= Load the files ========================
+    {
+        root()->addWidget(new Wt::WBreak());
 
-    //Uploaded file loading: Boost.Serialization archives.
-    if(!UploadedFilesDirsReachable.empty()
-    && !Load_From_Boost_Serialization_Files( this->DICOM_data,
-                                             this->InvocationMetadata,
-                                             this->FilenameLex,
-                                             UploadedFilesDirsReachable )){
-        FUNCERR("Failed to load Boost.Serialization archive");
+        auto gb = new Wt::WGroupBox("File Loading", root());
+        gb->setObjectName("file_loading_gb");
+        gb->addStyleClass("DataEntryGroupBlock");
+
+        auto feedback = new Wt::WText(gb);
+        feedback->setObjectName("file_loading_gb_feedback");
+        feedback->addStyleClass("FeedbackText");
+        feedback->setText("<p>Loading files now...</p>");
+        this->processEvents();
+
+        //Uploaded file loading: Boost.Serialization archives.
+        if(!UploadedFilesDirsReachable.empty()
+        && !Load_From_Boost_Serialization_Files( this->DICOM_data,
+                                                 this->InvocationMetadata,
+                                                 this->FilenameLex,
+                                                 UploadedFilesDirsReachable )){
+            feedback->setText("<p>Failed to load client-provided Boost.Serialization archive. Instance terminated.</p>");
+            return;
+        }
+
+        //Uploaded file loading: DICOM files.
+        if(!UploadedFilesDirsReachable.empty()
+        && !Load_From_DICOM_Files( this->DICOM_data,
+                                   this->InvocationMetadata,
+                                   this->FilenameLex,
+                                   UploadedFilesDirsReachable )){
+            feedback->setText("<p>Failed to load client-provided DICOM file. Instance terminated.</p>");
+            return;
+        }
+
+        //Uploaded file loading: FITS files.
+        if(!UploadedFilesDirsReachable.empty()
+        && !Load_From_FITS_Files( this->DICOM_data, 
+                                  this->InvocationMetadata, 
+                                  this->FilenameLex,
+                                  UploadedFilesDirsReachable )){
+            feedback->setText("<p>Failed to load client-provided FITS file. Instance terminated.</p>");
+            return;
+        }
+
+        //Other loaders.
+        // ...
+
+
+        //If any standalone files remain, they cannot be loaded.
+        if(!UploadedFilesDirsReachable.empty()){
+            std::stringstream es;
+            feedback->setText("<p>Failed to load client-provided file. Instance terminated.</p>");
+            return;
+        }
+
+        feedback->setText("<p>Loaded all files successfully. </p>");
+        this->processEvents();
     }
 
-    //Uploaded file loading: DICOM files.
-    if(!UploadedFilesDirsReachable.empty()
-    && !Load_From_DICOM_Files( this->DICOM_data,
-                               this->InvocationMetadata,
-                               this->FilenameLex,
-                               UploadedFilesDirsReachable )){
-        FUNCERR("Failed to load DICOM file");
-    }
 
-    //Uploaded file loading: FITS files.
-    if(!UploadedFilesDirsReachable.empty()
-    && !Load_From_FITS_Files( this->DICOM_data, 
-                              this->InvocationMetadata, 
-                              this->FilenameLex,
-                              UploadedFilesDirsReachable )){
-        FUNCERR("Failed to load FITS file");
-    }
-
-    //Other loaders ...
-
-
-    //If any standalone files remain, they cannot be loaded.
-    if(!UploadedFilesDirsReachable.empty()){
-        FUNCERR("Unable to load file " << UploadedFilesDirsReachable.front() << ". Refusing to continue");
-    }
-
-
-    // =================== Populate operations selector =================
-
-
-
-
-
-
-
-
-
-
-    //Populate the selection box with entries.
-    //
-    // $>  dicomautomaton_dispatcher -o DumpROIData RS.1.2.246.352.71.4.811746149197.1310958.20170809164818.dcm | grep '^DumpROIData' | sed -e "s/.*\tROIName='\([^']*\)'.*/\1/g"
-    //
-    // 
-
-    this->fgSelector->addItem("A");
-    this->fgSelector->addItem("B");
-    this->fgSelector->addItem("C");
-    this->fgSelector->enable();
+    //Create the next widgets for the user to interact with.
+    this->createOperationSelector();
+    this->createROISelector();
 
     return;
 }
 
-void BaseWebServerApplication::fileUploadButtonClicked(void){
-    if(this->fileUploader->canUpload()){
-        this->fileUploader->upload();
-        this->fileUploadFeedbackText->setText("File is now uploading.");
-    }else{
-        this->fileUploadFeedbackText->setText("File uploading is not supported by your browser. Cannot continue!");
+
+void BaseWebServerApplication::createOperationSelector(void){
+    //This routine creates a selector box populated with the available operations.
+
+    root()->addWidget(new Wt::WBreak());
+
+    auto gb = new Wt::WGroupBox("Operation Selection", root());
+    gb->setObjectName("op_select_gb");
+    gb->addStyleClass("DataEntryGroupBlock");
+
+    auto instruct = new Wt::WText("Please select the Operation of interest.", gb);
+    instruct->addStyleClass("InstructionText");
+
+    (void*) new Wt::WBreak(gb);
+
+    auto selector = new Wt::WSelectionBox(gb);
+    //selector->setSelectionMode(Wt::ExtendedSelection);
+    selector->setVerticalSize(15);
+    selector->disable();
+
+    (void*) new Wt::WBreak(gb);
+
+    auto feedback = new Wt::WText(gb);
+    feedback->setObjectName("op_select_gb_feedback");
+    feedback->addStyleClass("FeedbackText");
+
+    auto known_ops = Known_Operations();
+    for(auto &anop : known_ops){
+        selector->addItem(anop.first);
     }
-    this->fileUploadButton->disable();
+    selector->enable();
+
+    this->processEvents();
+    return;
+}
+
+
+void BaseWebServerApplication::createROISelector(void){
+    //This routine creates a selector box populated with the ROI labels found in the loaded ROIs.
+
+    root()->addWidget(new Wt::WBreak());
+
+    auto gb = new Wt::WGroupBox("ROI Selection", root());
+    gb->setObjectName("roi_select_gb");
+    gb->addStyleClass("DataEntryGroupBlock");
+
+    auto instruct = new Wt::WText("Please select the ROI(s) of interest, if applicable.", gb);
+    instruct->addStyleClass("InstructionText");
+
+    (void*) new Wt::WBreak(gb);
+
+    auto selector = new Wt::WSelectionBox(gb);
+    selector->setSelectionMode(Wt::ExtendedSelection);
+    selector->setVerticalSize(15);
+    selector->disable();
+
+    (void*) new Wt::WBreak(gb);
+
+    auto feedback = new Wt::WText(gb);
+    feedback->setObjectName("roi_select_gb_feedback");
+    feedback->addStyleClass("FeedbackText");
+
+    this->processEvents();
+
+    //Determine which ROIs are available.
+
+    // ...
+
+                //Populate the selection box with entries.
+                //
+                // $>  dicomautomaton_dispatcher -o DumpROIData RS.1.2.246.352.71.4.811746149197.1310958.20170809164818.dcm | grep '^DumpROIData' | sed -e "s/.*\tROIName='\([^']*\)'.*/\1/g"
+                //
+                // 
+
+
+    selector->addItem("A");
+    selector->addItem("B");
+    selector->addItem("C");
+    selector->enable();
+
+    this->processEvents();
     return;
 }
 
