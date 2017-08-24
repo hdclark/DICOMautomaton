@@ -44,6 +44,7 @@ set(CPACK_GENERATOR "DEB")
 
 string(TIMESTAMP INVOCATION_TIMESTAMP "%Y%m%d.%H%M%S") # For a time-based version number.
 set(CPACK_PACKAGE_VERSION "${INVOCATION_TIMESTAMP}")
+set(CPACK_STRIP_FILES TRUE)
 
 # Dependencies, e.g., "libc6 (>= 2.3.1-6), libgcc1 (>= 1:3.4.2-12)"
 set(CPACK_DEBIAN_PACKAGE_DEPENDS 
