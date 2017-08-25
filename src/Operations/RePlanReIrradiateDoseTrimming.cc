@@ -13,30 +13,48 @@
 
 #include "../Imebra_Shim.h"
 
+#include "ConvertDoseToImage.h"
+#include "HighlightROIs.h"
+#include "DICOMExportImagesAsDose.h"
+
 
 std::list<OperationArgDoc> OpArgDocRePlanReIrradiateDoseTrimming(void){
     std::list<OperationArgDoc> out;
 
+    auto c1 = OpArgDocConvertDoseToImage();
+    auto c2 = OpArgDocHighlightROIs();
+    auto c3 = OpArgDocDICOMExportImagesAsDose();
 
-    // Composite args here via splicing.
+    out.splice( out.end(), c1 );
+    out.splice( out.end(), c2 );
+    out.splice( out.end(), c3 );
+
+
+    // Adjust the defaults to suit this particular workflow.
+    for(auto &oparg : out){
+        if(false){
+        }else if(oparg.name == "Inclusivity"){
+            oparg.default_val = "planar_inc";
+        }else if(oparg.name == "InteriorOverwrite"){
+            oparg.default_val = "false";
+        }
+    }
 
     return out;
 }
 
+
 Drover
 RePlanReIrradiateDoseTrimming(Drover DICOM_data, 
                               OperationArgPkg OptArgs,
-                              std::map<std::string, std::string> /*InvocationMetadata*/,
-                              std::string /*FilenameLex*/){
+                              std::map<std::string, std::string> InvocationMetadata,
+                              std::string FilenameLex){
 
-    // Composite operation here via serializing individual ops.
+    DICOM_data = ConvertDoseToImage(std::move(DICOM_data), OptArgs, InvocationMetadata, FilenameLex);
 
-    // Convert to images.
+    DICOM_data = HighlightROIs(std::move(DICOM_data), OptArgs, InvocationMetadata, FilenameLex);
 
-    // Highlight.
-
-    // Export to DICOM.
-
+    DICOM_data = DICOMExportImagesAsDose(std::move(DICOM_data), OptArgs, InvocationMetadata, FilenameLex);
 
     return std::move(DICOM_data);
 }

@@ -7,6 +7,12 @@ body {
     margin-right: auto;
 }
 
+button {
+    display: block;
+    margin-right: 5%;
+    margin-left: auto;
+}
+
 .Title {
     display: block;
     font-size: 1.75em;

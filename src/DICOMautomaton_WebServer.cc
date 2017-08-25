@@ -114,6 +114,41 @@ class fileBackedStreamResource : public Wt::WStreamResource {
 };
 */
 
+static
+std::string CreateUniqueDirectoryTimestamped(std::string prefix, std::string postfix){
+    std::string out;
+
+    // Create a private working directory somewhere.
+    long int i = 0;
+    while(out.empty()){
+        if(i++ > 5000) throw std::runtime_error("Unable to create unique directory. Do you have adequate permissions?");
+
+        const auto t_now = std::chrono::system_clock::now();
+        auto t_now_coarse = std::chrono::system_clock::to_time_t( t_now );
+
+        char t_now_str[100];
+        if(!std::strftime(t_now_str, sizeof(t_now_str), "%Y%m%d-%H%M%S", std::localtime(&t_now_coarse))){
+            throw std::runtime_error("Unable to get current time.");
+        }
+
+        auto since_epoch = t_now.time_since_epoch();
+        auto nanos = std::chrono::duration_cast<std::chrono::nanoseconds>(since_epoch).count();
+
+        std::stringstream ss;
+        ss << prefix;
+        ss << std::string(t_now_str);
+        ss << "-";
+        ss << std::setfill('0') << std::setw(9) << nanos;
+        ss << postfix;
+        out = ss.str();
+
+        if(Does_Dir_Exist_And_Can_Be_Read(out)
+        || !Create_Dir_and_Necessary_Parents(out) ){
+            out.clear();
+        }
+    }
+    return out;
+}
 
 // This class is instanced for each client. It holds all state for a single session.
 class BaseWebServerApplication : public Wt::WApplication {
@@ -135,35 +170,20 @@ class BaseWebServerApplication : public Wt::WApplication {
     std::map<std::string,std::string> InvocationMetadata;
 
     //A explicit declaration that the user will generate data in an operation.
-    bool GeneratingVirtualData = false;
+    //bool GeneratingVirtualData = false;
 
     //A working space specific to this instance. Not truly private: can be read by others.
     std::string InstancePrivateDirectory;
     
 
-    // --------------------- Web widget members ---------------------
+    // --------------------- Web widget shared functors ---------------------
 
-
+    //void createInvocationMetadataGB(void);
     void createFileUploadGB(void);
     void filesUploaded(void); //Post file upload event.
-//    void createROISelectorGB(void);
     void createOperationSelectorGB(void);
     void createOperationParamSelectorGB(void);
     void createComputeGB(void);
-    void performOperation(void); //Enacts the selected operation.
-
-/*
-    // Output widgets. 
-    Wt::WGroupBox *outputGroupBox = nullptr;
-
-    Wt::WText *outputInstructionText = nullptr;
-    Wt::WText *outputFeedbackText = nullptr;
-    Wt::WPushButton *computeButton = nullptr;
-    Wt::WFileResource *outputFile = nullptr;
-    Wt::WAnchor *outputAnchor = nullptr;
-
-    void computeButtonClicked(void);
-*/    
 
 };
 
@@ -171,41 +191,9 @@ class BaseWebServerApplication : public Wt::WApplication {
 BaseWebServerApplication::BaseWebServerApplication(const Wt::WEnvironment &env) : Wt::WApplication(env){
 
     // Create a private working directory somewhere.
-    while(this->InstancePrivateDirectory.empty()){
-        const auto t_now = std::chrono::system_clock::now();
-        auto t_now_coarse = std::chrono::system_clock::to_time_t( t_now );
-
-        char t_now_str[100];
-        if(!std::strftime(t_now_str, sizeof(t_now_str), "%Y%m%d-%H%M%S", std::localtime(&t_now_coarse))){
-            throw std::runtime_error("Unable to get current time. Cannot continue.");
-        }
-
-        auto since_epoch = t_now.time_since_epoch();
-        auto nanos = std::chrono::duration_cast<std::chrono::nanoseconds>(since_epoch).count();
-
-        std::stringstream ss;
-        ss << "/home/hal/temp_dirs/";
-        ss << std::string(t_now_str);
-        ss << "-";
-        ss << std::setfill('0') << std::setw(9) << nanos;
-        ss << "_dose_modification_project/";
-        this->InstancePrivateDirectory = ss.str();
-
-        if(Does_Dir_Exist_And_Can_Be_Read(this->InstancePrivateDirectory)){
-            this->InstancePrivateDirectory.clear();
-            continue;
-        }
-        
-        if(!Create_Dir_and_Necessary_Parents(this->InstancePrivateDirectory)){
-            this->InstancePrivateDirectory.clear();
-            continue;
-        }
-    }
-    //FUNCINFO("Temp directory is  '" << this->InstancePrivateDirectory << "'");
-
-
-    //Record all metadata provided by the user.
-//for(auto i = 0; i < argc; ++i) InvocationMetadata["Invocation"] += std::string(argv[i]) + " ";
+    this->InstancePrivateDirectory = CreateUniqueDirectoryTimestamped("/home/hal/DICOMautomaton_Webserver_Artifacts/", // timestamp goes here
+                                                                      "_dose_modification_project/");
+    FUNCINFO("The unique directory for this session is '" << this->InstancePrivateDirectory << "'");
 
     //Try find a lexicon file if none were provided.
     {
@@ -222,14 +210,11 @@ BaseWebServerApplication::BaseWebServerApplication(const Wt::WEnvironment &env) 
                 break;
             }
         }
-        if(this->FilenameLex.empty()) FUNCERR("Lexicon file not found. Please provide one or see program help for more info");
+        if(this->FilenameLex.empty()) throw std::runtime_error("Lexicon file not found. Please provide one or see program help for more info");
     }
 
-
-    //============================================================================================ =================================================
-
     // -----------------------------------------------------------------------------------
-    // Static widgets.
+    // Static widgets and whole-page styling.
     // -----------------------------------------------------------------------------------
     this->useStyleSheet("webserver_styles/Forms.css");
     setTitle("DICOMautomaton Web Services");
@@ -240,6 +225,22 @@ BaseWebServerApplication::BaseWebServerApplication(const Wt::WEnvironment &env) 
 
     this->createFileUploadGB();
 }
+
+
+//void BaseWebServerApplication::createInvocationMetadataGB(void){
+//
+//    //Create a groupbox widget that allows invocation metadata be entered. 
+//    //  This is extra info not contained in the DICOM files. Also useful for non-DICOM files.
+//    //  Maybe it should be optional? Not really needed at the moment. Eventually though.
+//    
+//
+//    // NOTE: If you are implementing this, begin by copying the Operation Parameter Specification table.
+//    //       Also insert it into the dialog widget sequence (probably immediately after loading completes).
+//
+//    for( each row in the table ){
+//        InvocationMetadata[ parameter name ] += user-supplied value;
+//    }
+//}
 
 void BaseWebServerApplication::createFileUploadGB(void){
     // This routine creates a file upload box.
@@ -262,7 +263,7 @@ void BaseWebServerApplication::createFileUploadGB(void){
     pb->setWidth(Wt::WLength("100%"));
     fileup->setProgressBar(pb);
 
-    (void*) new Wt::WBreak(gb);
+//    (void*) new Wt::WBreak(gb);
 
     auto upbutton = new Wt::WPushButton("Upload", gb);
 
@@ -277,9 +278,9 @@ void BaseWebServerApplication::createFileUploadGB(void){
     upbutton->clicked().connect(std::bind([=](){
         if(fileup->canUpload()){
             fileup->upload();
-            feedback->setText("<p>File is now uploading.</p>");
+            feedback->setText("<p>Upload in progress...</p>");
         }else{
-            feedback->setText("<p>File uploading is not supported by your browser. Cannot continue.</p>");
+            feedback->setText("<p>File uploads are not supported by your browser. Cannot continue.</p>");
         }
         upbutton->disable();
         return;
@@ -333,8 +334,19 @@ void BaseWebServerApplication::filesUploaded(void){
         //       location or consuming when loaded into memory?
         //afile.stealSpoolFile();
         UploadedFilesDirsReachable.emplace_back(afile.spoolFileName());
+
+        //Copy the file to the working directory. (Useful for debugging.)
+        if(!CopyFile(afile.spoolFileName(), 
+                     this->InstancePrivateDirectory + afile.clientFileName())
+        && !CopyFile(afile.spoolFileName(), 
+                     this->InstancePrivateDirectory + afile.spoolFileName()) ){
+            FUNCWARN("Unable to copy uploaded file '" << afile.clientFileName() << "'"
+                     << " aka '" << afile.spoolFileName() << "' to archive directory. Continuing");
+        }
     }
-    fileup->setProgressBar(new Wt::WProgressBar());
+    auto pb = new Wt::WProgressBar();
+    pb->setWidth(Wt::WLength("100%"));
+    fileup->setProgressBar(pb);
     fileup->disable();
 
 
@@ -415,6 +427,7 @@ void BaseWebServerApplication::filesUploaded(void){
     }
 
     //Create the next widgets for the user to interact with.
+    //this->createInvocationMetadataGB();
     this->createOperationSelectorGB();
     return;
 }
@@ -451,7 +464,8 @@ void BaseWebServerApplication::createOperationSelectorGB(void){
         const auto n = anop.first;
         if( ( n == "HighlightROIs" )
         ||  ( n == "DICOMExportImagesAsDose" )
-        ||  ( n == "ConvertDoseToImage" ) ){    //Whitelist ... for now.
+        ||  ( n == "ConvertDoseToImage" ) 
+        ||  ( n == "RePlanReIrradiateDoseTrimming" ) ){    //Whitelist ... for now.
             selector->addItem(anop.first);
         }
     }
@@ -563,7 +577,7 @@ void BaseWebServerApplication::createOperationParamSelectorGB(void){
     feedback->setObjectName("op_paramspec_gb_feedback");
     feedback->addStyleClass("FeedbackText");
 
-    (void*) new Wt::WBreak(gb);
+//    (void*) new Wt::WBreak(gb);
 
     auto gobutton = new Wt::WPushButton("Proceed", gb);
 
@@ -595,7 +609,7 @@ void BaseWebServerApplication::createOperationParamSelectorGB(void){
 
         auto optdocs = anop.second.first();
         if(optdocs.empty()){
-            feedback->setText("<p>No registered options.</p>");
+            feedback->setText("<p>No adjustable options.</p>");
             break;
         }
 
@@ -614,8 +628,7 @@ void BaseWebServerApplication::createOperationParamSelectorGB(void){
             if(false){ // Parameters to expose.
             }else if(a.name == "ROILabelRegex"){
                 // Instead of a freeform lineedit widget, provide a spinner.
-                (void *) new Wt::WText("",                          table->elementAt(table_row,col++)); // Examples.
-                //(void *) new Wt::WLineEdit(a.default_val,           table->elementAt(table_row,col++)); // Value to use.
+                (void *) new Wt::WText("Please select ROI(s):",     table->elementAt(table_row,col++)); // Examples.
                 auto selector = new Wt::WSelectionBox(table->elementAt(table_row,col++));
                 selector->setSelectionMode(Wt::ExtendedSelection);
                 selector->setVerticalSize(15);
@@ -634,7 +647,8 @@ void BaseWebServerApplication::createOperationParamSelectorGB(void){
                  //
                  //(void *) new Wt::WFileResource("/dev/null", table->elementAt(table_row,col++));
                  //table->elementAt(table_row,col++)->addWidget( reinterpret_cast<Wt::WWidget *>(new Wt::WFileResource()) );
-                 (void *) new Wt::WProgressBar(table->elementAt(table_row,col++)); //Dummy encoding for generated files.
+                 auto pb = new Wt::WProgressBar(table->elementAt(table_row,col++)); //Dummy encoding for generated files.
+                 pb->hide();
 
     //$> dicomautomaton_dispatcher -u | grep -i filename
     //	'Filename'
@@ -696,6 +710,7 @@ void BaseWebServerApplication::createOperationParamSelectorGB(void){
 
     gobutton->clicked().connect(std::bind([=](){
         selector->disable();
+        table->disable();
         gobutton->disable();
         this->createComputeGB();
         return;
@@ -754,13 +769,15 @@ void BaseWebServerApplication::createComputeGB(void){
                 std::string shtl;
                 for(const auto &c : raw_val){
                     switch(c){ // The following are special in extended regex: . [ \ ( ) * + ? { | ^ $
+                        case '+':
                         case '.':
-                        case '[':
-                        case '\\':
                         case '(':
                         case ')':
+                            shtl += "["_s + c + "]"_s;
+                            break;
+                        case '[':
+                        case '\\':
                         case '*':
-                        case '+':
                         case '?':
                         case '{':
                         case '|':
@@ -778,12 +795,13 @@ void BaseWebServerApplication::createComputeGB(void){
             }
 
         }else if(dynamic_cast<Wt::WProgressBar *>(w)){ //Dummy encoding for generated files.
-            const std::string personal_fname = "/tmp/working.dcm"; // <--------- TODO. Time-based.
+            //Create a working file.
+            const std::string personal_fname = Get_Unique_Filename(this->InstancePrivateDirectory + "generated_file_", 6);
 
             auto fr = new Wt::WFileResource(gb);
             fr->setMimeType("application/octet-stream");
             fr->setFileName(personal_fname);
-            fr->suggestFileName(param_name);
+            fr->suggestFileName("output.dcm");
             
             param_val += personal_fname;
             OutputFiles[param_name] = fr;
@@ -816,33 +834,67 @@ void BaseWebServerApplication::createComputeGB(void){
 
     // Corral the output.
     for(auto &apair : OutputFiles){
-
         const auto param_name = apair.first;
         auto *fr = apair.second;
 
+        const auto fname = fr->fileName();
         gb->addWidget(new Wt::WBreak());
 
-
-//Wt::WFileResource *csvFile = new Wt::WFileResource("text/csv", "/opt/files/afile.csv");
-//csvFile->suggestFileName("data.csv");
-//Wt::WAnchor *anchor = new Wt::WAnchor(csvFile, "CSV data");
-        (void *) new Wt::WAnchor(fr, "Output file: "_s + param_name, gb);
-//        const auto theurl = filersrc->generateUrl();    
-//        (void *) new Wt::WAnchor(Wt::WLink(Wt::WLink::InternalPath, theurl), param_name, gb);
+        //Wt will serve an empty file if the backing file does not exist. This approach is more explicit.
+        if(Does_File_Exist_And_Can_Be_Read(fname)){
+            (void *) new Wt::WAnchor(fr, "Output file: "_s + param_name, gb);
+        }else{
+            (void *) new Wt::WText("<p>Output file: "_s + fname + " not available.</p>", gb);
+        }
     }
     this->processEvents();
 
-/*    
+    // ---
 
-    this->outputFile = new Wt::WFileResource(this->outputGroupBox);   // NOTE: Use Wt::WStreamResource() instead. More versatile.
-    this->outputFile->setFileName("/opt/files/output_file.dcm");
-    this->outputFile->suggestFileName("RD_modified.dcm");
+//    (void*) new Wt::WBreak(gb);
 
-    this->outputGroupBox->addWidget(new Wt::WBreak());
-    this->outputAnchor = new Wt::WAnchor(this->outputFile, 
-                                         "DICOM data",
-                                         this->outputGroupBox);
-*/
+    auto gobutton = new Wt::WPushButton("Perform another operation", gb);
+
+    gobutton->clicked().connect(std::bind([=](){
+        gobutton->disable();
+
+        //Rename all the named entities so that earlier widgets won't interfere with new ones.
+        // We don't care about old widgets interfering with each other though.
+        //
+        // Note: I was unable to walk the DOM/widget tree without segmentation faults.
+        //       Explicitly locating each named widget sucks, but it works. Fix if possible.
+        //
+        std::list<std::string> named = { "file_upload_gb", 
+                                         "file_upload_gb_file_picker",
+                                         "file_upload_gb_feedback",
+
+                                         "file_loading_gb",
+                                         "file_loading_gb_feedback",
+
+                                         "op_select_gb",
+                                         "op_select_gb_selector",
+                                         "op_select_gb_feedback",
+
+                                         "roi_select_gb",
+                                         "roi_select_gb_feedback",
+
+                                         "op_paramspec_gb",
+                                         "op_paramspec_gb_table",
+                                         "op_paramspec_gb_feedback",
+
+                                         "compute_gb",
+                                         "compute_gb_feedback" };
+
+        for(auto &n : named){
+            auto w = root()->find(n);
+            if(w == nullptr) continue;
+            w->setObjectName( w->objectName() + "_OLD" );
+        }
+
+        this->processEvents();
+        this->createOperationSelectorGB();
+        return;
+    }));
 
     return;
 }
