@@ -1061,7 +1061,8 @@ static std::string Generate_Random_UID(long int len){
 //       exchanging floating-point-valued images in DICOM, but portability would be suspect.
 //
 void Write_Dose_Array(std::shared_ptr<Image_Array> IA, const std::string &FilenameOut){
-    if(IA->imagecoll.images.empty()){
+    if( (IA == nullptr) 
+    ||  IA->imagecoll.images.empty()){
         throw std::runtime_error("No images provided for export. Cannot continue.");
     }
 

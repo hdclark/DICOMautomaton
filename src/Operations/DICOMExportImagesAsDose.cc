@@ -39,10 +39,12 @@ DICOMExportImagesAsDose(Drover DICOM_data,
     auto fname = OptArgs.getValueStr("Filename").value();    
     //-----------------------------------------------------------------------------------------------------------------
 
-    try{
-        Write_Dose_Array(DICOM_data.image_data.back(), fname);
-    }catch(const std::exception &e){
-        FUNCWARN("Unable to export Image_Array as DICOM RTDOSE file: '" << e.what() << "'");
+    if(!DICOM_data.image_data.empty()){
+        try{
+            Write_Dose_Array(DICOM_data.image_data.back(), fname);
+        }catch(const std::exception &e){
+            FUNCWARN("Unable to export Image_Array as DICOM RTDOSE file: '" << e.what() << "'");
+        }
     }
 
     return std::move(DICOM_data);

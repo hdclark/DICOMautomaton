@@ -12,6 +12,7 @@ add_library(Operations_objs OBJECT
     CT_Liver_Perfusion_Ortho_Views.cc
     CT_Liver_Perfusion_Pharmaco_1Compartment2Input_5Param.cc
     CT_Liver_Perfusion_Pharmaco_1Compartment2Input_Reduced3Param.cc
+    ContourBasedRayCastDoseAccumulate.cc
     ContourSimilarity.cc
     ContouringAides.cc
     ContourViaThreshold.cc
@@ -48,7 +49,7 @@ add_library(Operations_objs OBJECT
     PlotPerROITimeCourses.cc
     PreFilterEnormousCTValues.cc
     PruneEmptyImageDoseArrays.cc
-    ContourBasedRayCastDoseAccumulate.cc
+    RePlanReIrradiateDoseTrimming.cc
     SelectSlicesIntersectingROI.cc
     SFML_Viewer.cc
     SpatialBlur.cc

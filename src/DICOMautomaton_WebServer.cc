@@ -79,6 +79,41 @@
 
 #include "Operation_Dispatcher.h"
 
+/*
+class fileBackedStreamResource : public Wt::WStreamResource {
+  public:
+    fileBackedStreamResource(std::string fileName, 
+                             std::string suggestedFileName,
+                             Wt::WObject *parent = 0) : Wt::WStreamResource(parent),
+                                                        fileName_(fileName) {
+        this->setMimeType("application/octet-stream");
+        this->suggestFileName(suggestedFileName);
+    }
+
+    ~fileBackedStreamResource(){
+        this->beingDeleted();
+    }
+
+    std::string getFileName(void){
+        return this->fileName_;
+    }
+
+    void handleRequest(const Wt::Http::Request &request,
+                       Wt::Http::Response &response){
+        std::ifstream r(fileName_.c_str(), std::ios::in | std::ios::binary);
+        if(r.ok()){
+            this->handleRequestPiecewise(request, response, r);
+        }else{
+            throw std::runtime_error("File not accessible. Computation failed.");
+        }
+        return;
+    }
+
+  private:
+    std::string fileName_;
+};
+*/
+
 
 // This class is instanced for each client. It holds all state for a single session.
 class BaseWebServerApplication : public Wt::WApplication {
@@ -108,14 +143,16 @@ class BaseWebServerApplication : public Wt::WApplication {
 
     // --------------------- Web widget members ---------------------
 
-    void filesUploaded(void); //Post-upload event.
 
-    void createROISelectorGB(void);
+    void createFileUploadGB(void);
+    void filesUploaded(void); //Post file upload event.
+//    void createROISelectorGB(void);
     void createOperationSelectorGB(void);
     void createOperationParamSelectorGB(void);
     void createComputeGB(void);
+    void performOperation(void); //Enacts the selected operation.
 
-
+/*
     // Output widgets. 
     Wt::WGroupBox *outputGroupBox = nullptr;
 
@@ -126,6 +163,7 @@ class BaseWebServerApplication : public Wt::WApplication {
     Wt::WAnchor *outputAnchor = nullptr;
 
     void computeButtonClicked(void);
+*/    
 
 };
 
@@ -190,20 +228,6 @@ BaseWebServerApplication::BaseWebServerApplication(const Wt::WEnvironment &env) 
 
     //============================================================================================ =================================================
 
-/*
-    //Operations to perform on the data.
-    std::list<OperationArgPkg> Operations;
-    Operations.emplace_back("SFML_Viewer");
-
-    if(!Operation_Dispatcher( DICOM_data, InvocationMetadata, FilenameLex,
-                              Operations )){
-        FUNCERR("Analysis failed. Cannot continue");
-    }
-
-*/
-
-    //============================================= Populate Web Widgets =============================================
-
     // -----------------------------------------------------------------------------------
     // Static widgets.
     // -----------------------------------------------------------------------------------
@@ -214,110 +238,81 @@ BaseWebServerApplication::BaseWebServerApplication(const Wt::WEnvironment &env) 
         title->addStyleClass("Title");
     }
 
-
-    // -----------------------------------------------------------------------------------
-    // File upload widgets.
-    // -----------------------------------------------------------------------------------
-    {
-        auto gb = new Wt::WGroupBox("File Upload", root());
-        gb->setObjectName("file_upload_gb");
-        gb->addStyleClass("DataEntryGroupBlock");
-
-        auto instruct = new Wt::WText("Please select the RTSTRUCT and RTDOSE files to upload.", gb);
-        instruct->addStyleClass("InstructionText");
-
-        (void*) new Wt::WBreak(gb);
-
-        auto fileup = new Wt::WFileUpload(gb);
-        fileup->setObjectName("file_upload_gb_file_picker");
-        fileup->setFileTextSize(50);
-        fileup->setProgressBar(new Wt::WProgressBar());
-        fileup->setMultiple(true);
-
-        (void*) new Wt::WBreak(gb);
-
-        auto upbutton = new Wt::WPushButton("Upload", gb);
-
-        (void*) new Wt::WBreak(gb);
-
-        auto feedback = new Wt::WText(gb);
-        feedback->setObjectName("file_upload_gb_feedback");
-        feedback->addStyleClass("FeedbackText");
-
-        // -------
-
-        upbutton->clicked().connect(std::bind([=](){
-            if(fileup->canUpload()){
-                fileup->upload();
-                feedback->setText("<p>File is now uploading.</p>");
-            }else{
-                feedback->setText("<p>File uploading is not supported by your browser. Cannot continue.</p>");
-            }
-            upbutton->disable();
-            return;
-        }));
-
-        // -------
-
-        fileup->fileTooLarge().connect(std::bind([=](int64_t approx_size) -> void {
-            std::stringstream ss;
-            ss << "<p>One of the selected files is larger than the maximum permissible size. " 
-               << "(File size: ~" 
-               << approx_size / (1000*1024)  //Strangely B --> kB converted differently to kB --> MB. 
-               << " MB.)</p>";
-            feedback->setText(ss.str());
-            return;
-        }, std::placeholders::_1 ));
-
-        //Upload eagerly without waiting for button press. Maybe undesirable.
-        //fileup->changed().connect(this, std::bind([=](void){
-        //    if(fileup->canUpload()){
-        //        fileup->upload();
-        //        feedback->setText("File is now uploading.");
-        //    }else{
-        //        feedback->setText("File uploading is not supported by your browser. Cannot continue.");
-        //    }
-        //    upbutton->disable();
-        //    return;
-        //}));
-
-        fileup->uploaded().connect(this, &BaseWebServerApplication::filesUploaded);
- 
-    }
-
-
-
-/*
-
-
-    // -----------------------------------------------------------------------------------
-    // Highlight parameter selection.
-    // -----------------------------------------------------------------------------------
-    root()->addWidget(new Wt::WBreak());
-    this->highlightParameterSelectionGroupBox = new Wt::WGroupBox(root());
-    this->highlightParameterSelectionGroupBox->setTitle("Highlight Operation Parameter Selection");
-
-    this->highlightParameterSelectionGroupBox->hide();
-
-    // -----------------------------------------------------------------------------------
-    // Output widgets.
-    // -----------------------------------------------------------------------------------
-    root()->addWidget(new Wt::WBreak());
-    this->outputGroupBox = new Wt::WGroupBox(root());
-    this->outputGroupBox->setTitle("Output");
-
-    this->computeButton = new Wt::WPushButton("Generate Output", this->outputGroupBox);
-    this->outputGroupBox->addWidget(new Wt::WBreak());
-
-
-    this->computeButton->clicked().connect(this, &BaseWebServerApplication::computeButtonClicked);
-
-    this->outputGroupBox->hide();
-
-*/
-
+    this->createFileUploadGB();
 }
 
+void BaseWebServerApplication::createFileUploadGB(void){
+    // This routine creates a file upload box.
+
+    auto gb = new Wt::WGroupBox("File Upload", root());
+    gb->setObjectName("file_upload_gb");
+    gb->addStyleClass("DataEntryGroupBlock");
+
+    auto instruct = new Wt::WText("Please select the RTSTRUCT and RTDOSE files to upload.", gb);
+    instruct->addStyleClass("InstructionText");
+
+    (void*) new Wt::WBreak(gb);
+
+    auto fileup = new Wt::WFileUpload(gb);
+    fileup->setObjectName("file_upload_gb_file_picker");
+    fileup->setFileTextSize(50);
+    fileup->setMultiple(true);
+
+    auto pb = new Wt::WProgressBar();
+    pb->setWidth(Wt::WLength("100%"));
+    fileup->setProgressBar(pb);
+
+    (void*) new Wt::WBreak(gb);
+
+    auto upbutton = new Wt::WPushButton("Upload", gb);
+
+    (void*) new Wt::WBreak(gb);
+
+    auto feedback = new Wt::WText(gb);
+    feedback->setObjectName("file_upload_gb_feedback");
+    feedback->addStyleClass("FeedbackText");
+
+    // -------
+
+    upbutton->clicked().connect(std::bind([=](){
+        if(fileup->canUpload()){
+            fileup->upload();
+            feedback->setText("<p>File is now uploading.</p>");
+        }else{
+            feedback->setText("<p>File uploading is not supported by your browser. Cannot continue.</p>");
+        }
+        upbutton->disable();
+        return;
+    }));
+
+    // -------
+
+    fileup->fileTooLarge().connect(std::bind([=](int64_t approx_size) -> void {
+        std::stringstream ss;
+        ss << "<p>One of the selected files is larger than the maximum permissible size. " 
+           << "(File size: ~" 
+           << approx_size / (1000*1024)  //Strangely B --> kB converted differently to kB --> MB. 
+           << " MB.)</p>";
+        feedback->setText(ss.str());
+        return;
+    }, std::placeholders::_1 ));
+
+    //Upload eagerly without waiting for button press. Maybe undesirable.
+    //fileup->changed().connect(this, std::bind([=](void){
+    //    if(fileup->canUpload()){
+    //        fileup->upload();
+    //        feedback->setText("File is now uploading.");
+    //    }else{
+    //        feedback->setText("File uploading is not supported by your browser. Cannot continue.");
+    //    }
+    //    upbutton->disable();
+    //    return;
+    //}));
+
+    fileup->uploaded().connect(this, &BaseWebServerApplication::filesUploaded);
+
+    return;
+}
 
 
 void BaseWebServerApplication::filesUploaded(void){
@@ -419,7 +414,6 @@ void BaseWebServerApplication::filesUploaded(void){
         this->processEvents();
     }
 
-
     //Create the next widgets for the user to interact with.
     this->createOperationSelectorGB();
     return;
@@ -475,7 +469,8 @@ void BaseWebServerApplication::createOperationSelectorGB(void){
         if(selector->currentText().empty()) return; // Warn about selecting something?
 
         gobutton->disable();
-        this->createROISelectorGB();
+        //this->createROISelectorGB();
+        this->createOperationParamSelectorGB();
         return;
     }));
 
@@ -483,7 +478,7 @@ void BaseWebServerApplication::createOperationSelectorGB(void){
     return;
 }
 
-
+/*
 void BaseWebServerApplication::createROISelectorGB(void){
     //This routine creates a selector box populated with the ROI labels found in the loaded ROIs.
 
@@ -531,6 +526,7 @@ void BaseWebServerApplication::createROISelectorGB(void){
         //const std::set<int> selected = selector->selectedIndexes();
         //if(selected.empty()) return; // Warn about selecting something?
 
+        selector->disable();
         gobutton->disable();
         this->createOperationParamSelectorGB();
         return;
@@ -539,6 +535,7 @@ void BaseWebServerApplication::createROISelectorGB(void){
     this->processEvents();
     return;
 }
+*/
 
 void BaseWebServerApplication::createOperationParamSelectorGB(void){
     //This routine creates a manipulation table populated with tweakable parameters from the specified operation.
@@ -575,8 +572,17 @@ void BaseWebServerApplication::createOperationParamSelectorGB(void){
     table->elementAt(0,0)->addWidget(new Wt::WText("#"));
     table->elementAt(0,1)->addWidget(new Wt::WText("Parameter"));
     table->elementAt(0,2)->addWidget(new Wt::WText("Examples"));
-    table->elementAt(0,3)->addWidget(new Wt::WText("Input"));
+    table->elementAt(0,3)->addWidget(new Wt::WText("Setting"));
 
+    //Determine which ROIs are available, in case they will be needed.
+    std::set<std::string> ROI_labels;
+    if(this->DICOM_data.contour_data != nullptr){
+        for(auto &cc : this->DICOM_data.contour_data->ccs){
+            for(auto &c : cc.contours){
+                ROI_labels.insert( c.metadata["ROIName"] );
+            }
+        }
+    }
     //Get the selected operation's name.
     auto selector = reinterpret_cast<Wt::WSelectionBox *>( root()->find("op_select_gb_selector") );
     if(selector == nullptr) throw std::logic_error("Cannot find operation selector widget in DOM tree. Cannot continue.");
@@ -595,15 +601,92 @@ void BaseWebServerApplication::createOperationParamSelectorGB(void){
 
         for(auto &a : optdocs){
             std::stringstream ss;
-            for(auto &e : a.examples){
-                ss << "<p>" << e << "</p> "; 
-            }
+            for(auto &e : a.examples) ss << "<p>" << e << "</p> "; 
 
+            if(false){ // Do not expose these options.
+            }else if( (a.name == "NormalizedROILabelRegex") ){
+                continue;
+            }
+            
             int col = 0;
-            (void *) new Wt::WText(std::to_string(table_row),   table->elementAt(table_row,col++));
-            (void *) new Wt::WText(a.name,                      table->elementAt(table_row,col++));
-            (void *) new Wt::WText(ss.str(),                    table->elementAt(table_row,col++));
-            (void *) new Wt::WLineEdit(a.default_val,           table->elementAt(table_row,col++));
+            (void *) new Wt::WText(std::to_string(table_row),   table->elementAt(table_row,col++)); // Row number (cosmetic only).
+            (void *) new Wt::WText(a.name,                      table->elementAt(table_row,col++)); // Param name.
+            if(false){ // Parameters to expose.
+            }else if(a.name == "ROILabelRegex"){
+                // Instead of a freeform lineedit widget, provide a spinner.
+                (void *) new Wt::WText("",                          table->elementAt(table_row,col++)); // Examples.
+                //(void *) new Wt::WLineEdit(a.default_val,           table->elementAt(table_row,col++)); // Value to use.
+                auto selector = new Wt::WSelectionBox(table->elementAt(table_row,col++));
+                selector->setSelectionMode(Wt::ExtendedSelection);
+                selector->setVerticalSize(15);
+                selector->disable();
+                for(const auto &l : ROI_labels) selector->addItem(l);
+                selector->enable();
+
+            }else if( (a.name == "Filename" )
+                  ||  (a.name == "FileName" ) ){
+                 //Notify that we have to prepare a Wt::WResource for the output.
+                 (void *) new Wt::WText("(auto-generated)",  table->elementAt(table_row,col++)); // Examples.
+
+                 // OK ... Wt appears to be silently discarding WFileResource's added to the table. 
+                 // Maybe because it's a non-renderable widget? Who knows. Extremely annoying to debug.
+                 // What 'vessel' widget should I stick here instead?   --( Went with a static progress bar ).
+                 //
+                 //(void *) new Wt::WFileResource("/dev/null", table->elementAt(table_row,col++));
+                 //table->elementAt(table_row,col++)->addWidget( reinterpret_cast<Wt::WWidget *>(new Wt::WFileResource()) );
+                 (void *) new Wt::WProgressBar(table->elementAt(table_row,col++)); //Dummy encoding for generated files.
+
+    //$> dicomautomaton_dispatcher -u | grep -i filename
+    //	'Filename'
+    //		The filename (or full path name) to which the serialized data should
+    //	'DoseLengthMapFileName'
+    //		A filename (or full path) for the (dose)*(length traveled through the
+    //	'LengthMapFileName'
+    //		A filename (or full path) for the (length traveled through the ROI
+    //	'Filename'
+    //		The filename (or full path name) to which the DICOM file should be
+    //	'Filename'
+    //		A file into which the results should be dumped. If the filename is
+    //	'DumpFileName'
+    //		A filename (or full path) in which to (over)write with contour data.
+    //	'MTLFileName'
+    //		A filename (or full path) in which to (over)write a Wavefront material
+    //	'SNRFileName'
+    //		A filename (or full path) in which to append SNR data generated by
+    //	'DoseMapFileName'
+    //		A filename (or full path) for the dose image map. Note that this file
+    //	'DoseLengthMapFileName'
+    //		A filename (or full path) for the (dose)*(length traveled through the
+    //	'LengthMapFileName'
+    //		A filename (or full path) for the (length traveled through the ROI
+    //	'AreaDataFileName'
+    //		A filename (or full path) in which to append sub-segment areaa data
+    //	'DerivativeDataFileName'
+    //		A filename (or full path) in which to append derivative data generated
+    //	'DistributionDataFileName'
+    //		A filename (or full path) in which to append raw distribution data
+    //	'TotalDoseMapFileName'
+    //		A filename (or full path) for the total dose image map (at all
+    //		filename.
+    //	'IntersectionCountMapFileName'
+    //		A filename (or full path) for the (number of ray-surface
+    //		dump to generate a unique filename.
+    //	'DepthMapFileName'
+    //		A filename (or full path) for the distance (depth) of each ray-surface
+    //	'RadialDistMapFileName'
+    //		A filename (or full path) for the distance of each ray-surface
+    //	'ROISurfaceMeshFileName'
+    //		A filename (or full path) for the (pre-subdivided) surface mesh that
+    //	'SubdividedROISurfaceMeshFileName'
+    //		A filename (or full path) for the Loop-subdivided surface mesh that is
+    //	'ROICOMCOMLineFileName'
+    //		A filename (or full path) for the line segment that connected the
+    //
+            }else{ //Parameters to expose as-is.
+                (void *) new Wt::WText(ss.str(),                    table->elementAt(table_row,col++)); // Examples.
+                (void *) new Wt::WLineEdit(a.default_val,           table->elementAt(table_row,col++)); // Value to use.
+
+            }
             ++table_row;
         }
     }
@@ -612,6 +695,7 @@ void BaseWebServerApplication::createOperationParamSelectorGB(void){
     // -------
 
     gobutton->clicked().connect(std::bind([=](){
+        selector->disable();
         gobutton->disable();
         this->createComputeGB();
         return;
@@ -622,30 +706,135 @@ void BaseWebServerApplication::createOperationParamSelectorGB(void){
 }
 
 void BaseWebServerApplication::createComputeGB(void){
+    // This routine creates a panel to both launch an operation and pass the output to the client.
+    //
+    // The actual computation is performed elsewhere -- this routine merely creates the widgets.
+    root()->addWidget(new Wt::WBreak());
 
-    return;
-}
+    auto gb = new Wt::WGroupBox("Computation", root());
+    gb->setObjectName("compute_gb");
+    gb->addStyleClass("DataEntryGroupBlock");
 
-void BaseWebServerApplication::computeButtonClicked(void){
-    
-    // Clear earlier results, if any exist.
-    this->outputGroupBox->clear();
-//    if(this->outputAnchor != nullptr){
-//        this->outputAnchor->disable();
-//    }
-
-    // Gather the selected inputs. (Form data and uploaded files.)
-
-
-    // Perform the computation.
+    auto feedback = new Wt::WText(gb);
+    feedback->setObjectName("compute_gb_feedback");
+    feedback->addStyleClass("FeedbackText");
+    feedback->setText("<p>Computing now...</p>");
+    this->processEvents();
 
 
-    // Move the outputs to a client-accessible location.
+    // Gather the operation and parameters specified.
+    auto selector = reinterpret_cast<Wt::WSelectionBox *>( root()->find("op_select_gb_selector") );
+    if(selector == nullptr) throw std::logic_error("Cannot find operation selector widget in DOM tree. Cannot continue.");
+    const std::string selected_op = selector->currentText().toUTF8(); 
+    OperationArgPkg op_args(selected_op);
+
+    auto table = reinterpret_cast<Wt::WTable *>( root()->find("op_paramspec_gb_table") );
+    if(table == nullptr) throw std::logic_error("Cannot find operation parameter table widget in DOM tree. Cannot continue.");
+
+    std::map<std::string,Wt::WFileResource *> OutputFiles;
+    const auto rows = table->rowCount(); 
+    const auto cols = table->columnCount(); 
+    if(cols != 4) throw std::logic_error("Table column count changed. Please propagate changes.");
+    for(int row = 1; row < rows; ++row){
+        const auto param_name = reinterpret_cast<Wt::WText *>(table->elementAt(row,1)->children().back())->text().toUTF8();
+
+        std::string param_val;
+        auto w = table->elementAt(row,3)->children().back();
+        if(w == nullptr) throw std::logic_error("Table element's child widget not found. Cannot continue.");
+
+        if(false){
+        }else if(auto *lineedit = dynamic_cast<Wt::WLineEdit *>(w)){
+            param_val = lineedit->text().toUTF8();
+        }else if(auto *selector = dynamic_cast<Wt::WSelectionBox *>(w)){
+            //Must convert from selected ROI labels to regex.
+            std::set<int> selected = selector->selectedIndexes();
+            for(const auto &n : selected){
+                const auto raw_val = selector->itemText(n).toUTF8();
+
+                std::string shtl;
+                for(const auto &c : raw_val){
+                    switch(c){ // The following are special in extended regex: . [ \ ( ) * + ? { | ^ $
+                        case '.':
+                        case '[':
+                        case '\\':
+                        case '(':
+                        case ')':
+                        case '*':
+                        case '+':
+                        case '?':
+                        case '{':
+                        case '|':
+                        case '^':
+                        case '$':
+                            shtl += R"***(\)***" + c;
+                            break;
+                        default:
+                            shtl += c;
+                            break;
+                    }
+                }
+                param_val += (param_val.empty()) ? shtl 
+                                                 : ("|"_s + shtl);
+            }
+
+        }else if(dynamic_cast<Wt::WProgressBar *>(w)){ //Dummy encoding for generated files.
+            const std::string personal_fname = "/tmp/working.dcm"; // <--------- TODO. Time-based.
+
+            auto fr = new Wt::WFileResource(gb);
+            fr->setMimeType("application/octet-stream");
+            fr->setFileName(personal_fname);
+            fr->suggestFileName(param_name);
+            
+            param_val += personal_fname;
+            OutputFiles[param_name] = fr;
+
+        }else{
+            throw std::logic_error("Table element's child widget type cannot be identified. Please propagate changes.");
+        }
+        op_args.insert(param_name, param_val);
+    }
+
+    // ---
+
+    //Perform the operation.
+    std::list<OperationArgPkg> PackedOperation = { op_args };
+    try{
+        if(!Operation_Dispatcher( this->DICOM_data, 
+                                  this->InvocationMetadata, 
+                                  this->FilenameLex,
+                                  PackedOperation )){
+            throw std::runtime_error("Return value non-zero (non-descript error condition)");
+        }
+    }catch(const std::exception &e){
+        feedback->setText("<p>Operation failed: "_s + e.what() + ".</p>");
+        return;
+    }
+    feedback->setText("<p>Operation successful. </p>");
+    this->processEvents();
+
+    // ---
+
+    // Corral the output.
+    for(auto &apair : OutputFiles){
+
+        const auto param_name = apair.first;
+        auto *fr = apair.second;
+
+        gb->addWidget(new Wt::WBreak());
 
 
-    // Notify the client that the files can be downloaded.
+//Wt::WFileResource *csvFile = new Wt::WFileResource("text/csv", "/opt/files/afile.csv");
+//csvFile->suggestFileName("data.csv");
+//Wt::WAnchor *anchor = new Wt::WAnchor(csvFile, "CSV data");
+        (void *) new Wt::WAnchor(fr, "Output file: "_s + param_name, gb);
+//        const auto theurl = filersrc->generateUrl();    
+//        (void *) new Wt::WAnchor(Wt::WLink(Wt::WLink::InternalPath, theurl), param_name, gb);
+    }
+    this->processEvents();
+
+/*    
+
     this->outputFile = new Wt::WFileResource(this->outputGroupBox);   // NOTE: Use Wt::WStreamResource() instead. More versatile.
-    this->outputFile->setMimeType("application/octet-stream");
     this->outputFile->setFileName("/opt/files/output_file.dcm");
     this->outputFile->suggestFileName("RD_modified.dcm");
 
@@ -653,11 +842,10 @@ void BaseWebServerApplication::computeButtonClicked(void){
     this->outputAnchor = new Wt::WAnchor(this->outputFile, 
                                          "DICOM data",
                                          this->outputGroupBox);
+*/
 
     return;
 }
-
-
 
 Wt::WApplication *createApplication(const Wt::WEnvironment &env){
     return new BaseWebServerApplication(env);

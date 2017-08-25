@@ -24,6 +24,7 @@
 #include "Operations/CT_Liver_Perfusion_Ortho_Views.h"
 #include "Operations/CT_Liver_Perfusion_Pharmaco_1Compartment2Input_5Param.h"
 #include "Operations/CT_Liver_Perfusion_Pharmaco_1Compartment2Input_Reduced3Param.h"
+#include "Operations/ContourBasedRayCastDoseAccumulate.h"
 #include "Operations/ContourSimilarity.h"
 #include "Operations/ContouringAides.h"
 #include "Operations/ContourViaThreshold.h"
@@ -62,7 +63,7 @@
 #include "Operations/PlotPerROITimeCourses.h"
 #include "Operations/PreFilterEnormousCTValues.h"
 #include "Operations/PruneEmptyImageDoseArrays.h"
-#include "Operations/ContourBasedRayCastDoseAccumulate.h"
+#include "Operations/RePlanReIrradiateDoseTrimming.h"
 #include "Operations/SelectSlicesIntersectingROI.h"
 #include "Operations/SFML_Viewer.h"
 #include "Operations/SpatialBlur.h"
@@ -92,6 +93,7 @@ std::map<std::string, op_packet_t> Known_Operations(void){
                                                                     CT_Liver_Perfusion_Pharmaco_1C2I_5Param);
     out["CT_Liver_Perfusion_Pharmaco_1C2I_Reduced3Param"] = std::make_pair(OpArgDocCT_Liver_Perfusion_Pharmaco_1C2I_Reduced3Param, 
                                                                            CT_Liver_Perfusion_Pharmaco_1C2I_Reduced3Param);
+    out["ContourBasedRayCastDoseAccumulate"] = std::make_pair(OpArgDocContourBasedRayCastDoseAccumulate, ContourBasedRayCastDoseAccumulate);
     out["ContourSimilarity"] = std::make_pair(OpArgDocContourSimilarity, ContourSimilarity);
     out["ContouringAides"] = std::make_pair(OpArgDocContouringAides, ContouringAides);
     out["ContourViaThreshold"] = std::make_pair(OpArgDocContourViaThreshold, ContourViaThreshold);
@@ -130,10 +132,10 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["ImageRoutineTests"] = std::make_pair(OpArgDocImageRoutineTests, ImageRoutineTests);
     out["LogScale"] = std::make_pair(OpArgDocLogScale, LogScale);
     out["MaxMinPixels"] = std::make_pair(OpArgDocMaxMinPixels, MaxMinPixels);
-    out["ContourBasedRayCastDoseAccumulate"] = std::make_pair(OpArgDocContourBasedRayCastDoseAccumulate, ContourBasedRayCastDoseAccumulate);
     out["PlotPerROITimeCourses"] = std::make_pair(OpArgDocPlotPerROITimeCourses, PlotPerROITimeCourses);
     out["PreFilterEnormousCTValues"] = std::make_pair(OpArgDocPreFilterEnormousCTValues, PreFilterEnormousCTValues);
     out["PruneEmptyImageDoseArrays"] = std::make_pair(OpArgDocPruneEmptyImageDoseArrays, PruneEmptyImageDoseArrays);
+    out["RePlanReIrradiateDoseTrimming"] = std::make_pair(OpArgDocRePlanReIrradiateDoseTrimming, RePlanReIrradiateDoseTrimming);
     out["SelectSlicesIntersectingROI"] = std::make_pair(OpArgDocSelectSlicesIntersectingROI, SelectSlicesIntersectingROI);
     out["SFML_Viewer"] = std::make_pair(OpArgDocSFML_Viewer, SFML_Viewer);
     out["SpatialBlur"] = std::make_pair(OpArgDocSpatialBlur, SpatialBlur);
