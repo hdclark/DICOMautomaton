@@ -145,11 +145,44 @@ std::list<OperationArgDoc> OpArgDocEvaluateTCPModels(void){
     out.emplace_back();
     out.back().name = "AlphaBetaRatio";
     out.back().desc = "The ratio alpha/beta (in Gray) to use when converting to a biologically-equivalent"
-                      " dose distribution. A ratio of 10 is typical for tumours.";
+                      " dose distribution. Default to 10 Gy for early-responding normal tissues and"
+                      " tumors, and 3 Gy for late-responding normal tissues.";
     out.back().default_val = "10";
     out.back().expected = true;
-    out.back().examples = { "1", "6", "10", "12" };
+    out.back().examples = { "1", "3", "10", "20" };
 
+    
+    out.emplace_back();
+    out.back().name = "Gamma50";
+    out.back().desc = "The unitless 'normalized dose-response gradient' or normalized slope of the logistic"
+                      " dose-response model at the half-maximum point (e.g., D_50). Informally,"
+                      " this parameter controls the steepness of the dose-response curve. (For more"
+                      " specific information, consult a standard reference such as 'Basic Clinical Radiobiology'"
+                      " 4th Edition by Joiner et al., sections 5.3-5.5.) This parameter is empirically"
+                      " fit and not universal. Late endpoints for normal tissues have gamma_50 around 2-6"
+                      " whereas gamma_50 nominally varies around 1.5-2.5 for local control of squamous"
+                      " cell carcinomas of the head and neck.";
+    out.back().default_val = "2.3";
+    out.back().expected = true;
+    out.back().examples = { "1.5", "2", "2.5", "6" };
+
+    
+    out.emplace_back();
+    out.back().name = "Dose50";
+    out.back().desc = "The dose (in Gray) needed to achieve 50\% probability of local tumour control according to"
+                      " an empirical logistic dose-response model (e.g., D_50). Informally, this"
+                      " parameter 'shifts' the model along the dose axis. (For more"
+                      " specific information, consult a standard reference such as 'Basic Clinical Radiobiology'"
+                      " 4th Edition by Joiner et al., sections 5.1-5.3.) This parameter is empirically"
+                      " fit and not universal. In 'Quantifying the position and steepness of radiation "
+                      " dose-response curves' by Bentzen and Tucker in 1994, D_50 of around 60-65 Gy are reported"
+                      " for local control of head and neck cancers (pyriform sinus carcinoma and neck nodes with"
+                      " max diameter <= 3cm). OTOH, Okunieff et al. (doi:10.1016/0360-3016(94)00475-Z) computed"
+                      " Dose50 for tumours in human subjects. They found median D_50 of 51.9 Gy for gross disease"
+                      " and a median D_50 of 37.9 Gy for microscopic disease. Martel et al. report 84.5 Gy in lung.";
+    out.back().default_val = "65";
+    out.back().expected = true;
+    out.back().examples = { "37.9", "52", "60", "65", "84.5" };
 
     return out;
 }
@@ -176,6 +209,8 @@ Drover EvaluateTCPModels(Drover DICOM_data, OperationArgPkg OptArgs, std::map<st
 
     const auto DosePerFraction = std::stod( OptArgs.getValueStr("DosePerFraction").value() );
     const auto AlphaBetaRatio = std::stod( OptArgs.getValueStr("AlphaBetaRatio").value() );
+    const auto Gamma50 = std::stod( OptArgs.getValueStr("Gamma50").value() );
+    const auto Dose50 = std::stod( OptArgs.getValueStr("Dose50").value() );
 
     //-----------------------------------------------------------------------------------------------------------------
     const auto theregex = std::regex(ROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
@@ -244,10 +279,6 @@ Drover EvaluateTCPModels(Drover DICOM_data, OperationArgPkg OptArgs, std::map<st
         //const long double gamma = 1.5; // (unitless). The normalized slope of the dose-response sigmoid at D_50
         //                               //             giving progression-free survival at 30mo post-RT.
 
-        const long double D_50 = 43.5; // (Gy). The dose needed to achieve 50% TCP.
-        const long double gamma = 1.0; // (unitless). The normalized slope of the dose-response sigmoid at D_50
-                                       //             giving progression-free survival at 30mo post-RT.
-
         for(const auto &av : ud.accumulated_voxels){
             const auto lROIname = av.first;
 
@@ -260,8 +291,8 @@ Drover EvaluateTCPModels(Drover DICOM_data, OperationArgPkg OptArgs, std::map<st
                 const long double BED = D_voxel;
 
                 // Martel model.
-                const long double numer = std::pow(BED, gamma*4);
-                const long double denom = std::pow(D_50, gamma*4) + numer;
+                const long double numer = std::pow(BED, Gamma50*4);
+                const long double denom = std::pow(Dose50, Gamma50*4) + numer;
                 const long double TCP_voxel = numer/denom; // This is a sigmoid curve.
                 TCP_Martel *= std::pow(TCP_voxel, V_frac);
 
