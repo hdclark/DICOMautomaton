@@ -143,6 +143,16 @@ std::list<OperationArgDoc> OpArgDocEvaluateTCPModels(void){
 
 
     out.emplace_back();
+    out.back().name = "NumberOfFractions";
+    out.back().desc = "The number of fractions delivered.";
+                      " If needed, the dose distribution is converted to be biologically-equivalent to"
+                      " a 2 Gy/fraction dose distribution.";
+    out.back().default_val = "35";
+    out.back().expected = true;
+    out.back().examples = { "15", "25", "30", "35" };
+
+
+    out.emplace_back();
     out.back().name = "AlphaBetaRatio";
     out.back().desc = "The ratio alpha/beta (in Gray) to use when converting to a biologically-equivalent"
                       " dose distribution. Default to 10 Gy for early-responding normal tissues and"
@@ -177,12 +187,82 @@ std::list<OperationArgDoc> OpArgDocEvaluateTCPModels(void){
                       " fit and not universal. In 'Quantifying the position and steepness of radiation "
                       " dose-response curves' by Bentzen and Tucker in 1994, D_50 of around 60-65 Gy are reported"
                       " for local control of head and neck cancers (pyriform sinus carcinoma and neck nodes with"
-                      " max diameter <= 3cm). OTOH, Okunieff et al. (doi:10.1016/0360-3016(94)00475-Z) computed"
-                      " Dose50 for tumours in human subjects. They found median D_50 of 51.9 Gy for gross disease"
-                      " and a median D_50 of 37.9 Gy for microscopic disease. Martel et al. report 84.5 Gy in lung.";
+                      " max diameter <= 3cm). Martel et al. report 84.5 Gy in lung.";
     out.back().default_val = "65";
     out.back().expected = true;
     out.back().examples = { "37.9", "52", "60", "65", "84.5" };
+
+
+    out.emplace_back();
+    out.back().name = "EUD_Gamma50";
+    out.back().desc = "The unitless 'normalized dose-response gradient' or normalized slope of the gEUD TCP model."
+                      " It is defined only for the generalized Equivalent Uniform Dose (gEUD) model."
+                      " This is sometimes referred to as the change in TCP for a unit change in dose straddled at"
+                      " the TCD_50 dose. It is a counterpart to the Martel model's 'Gamma_50' parameter, but is"
+                      " not quite the same."
+                      " Okunieff et al. (doi:10.1016/0360-3016(94)00475-Z) computed Gamma50 for tumours in human"
+                      " subjects across multiple institutions; they found a median of 0.8 for gross disease and"
+                      " a median of 1.5 for microscopic disease. The inter-quartile range was [0.7:1.8] and"
+                      " [0.7:2.2] respectively. (Refer to table 3 for site-specific values.) Additionally, "
+                      " Gay et al. (doi:10.1016/j.ejmp.2007.07.001) claim that a value of 4.0 for late effects"
+                      " a value of 2.0 for tumors in 'are reasonable initial estimates in [our] experience.' Their"
+                      " table 2 lists (NTCP) estimates based on the work of Emami (doi:10.1016/0360-3016(91)90171-Y).";
+    out.back().default_val = "0.8";
+    out.back().expected = true;
+    out.back().examples = { "0.8", "1.5" };
+
+
+    out.emplace_back();
+    out.back().name = "EUD_TCD50";
+    out.back().desc = "The uniform dose (in Gray) needed to deliver to the tumour to achieve 50\% probability of local"
+                      " control. It is defined only for the generalized Equivalent Uniform Dose (gEUD) model."
+                      " It is a counterpart to the Martel model's 'Dose_50' parameter, but is not quite the same "
+                      " (n.b., TCD_50 is a uniform dose whereas D_50 is more like a per voxel TCP-weighted mean.)"
+                      " Okunieff et al. (doi:10.1016/0360-3016(94)00475-Z) computed TCD50 for tumours in human"
+                      " subjects across multiple institutions; they found a median of 51.9 Gy for gross disease and"
+                      " a median of 37.9 Gy for microscopic disease. The inter-quartile range was "
+                      " [38.4:62.8] and [27.0:49.1] respectively. (Refer to table 3 for site-specific values.)"
+                      " Gay et al. (doi:10.1016/j.ejmp.2007.07.001) table 2 lists (NTCP) estimates based on the"
+                      " work of Emami (doi:10.1016/0360-3016(91)90171-Y) ranging from 18-68 Gy.";
+    out.back().default_val = "51.9";
+    out.back().expected = true;
+    out.back().examples = { "51.9", "37.9" };
+
+
+    out.emplace_back();
+    out.back().name = "EUD_Alpha";
+    out.back().desc = "The weighting factor \\alpha that controls the relative weighting of volume and dose"
+                      " in the generalized Equivalent Uniform Dose (gEUD) model."
+                      " When \\alpha=1, the gEUD is equivalent to the mean; when \\alpha=0, the gEUD is equivalent to"
+                      " the geometric mean."
+                      " Wu et al. (doi:10.1016/S0360-3016(01)02585-8) claim that for normal tissues, \\alpha can be"
+                      " related to the Lyman-Kutcher-Burman (LKB) model volume parameter 'n' via \\alpha=1/n."
+                      " Søvik et al. (doi:10.1016/j.ejmp.2007.09.001) found that gEUD is not strongly impacted by"
+                      " errors in \\alpha. "
+                      " Niemierko et al. ('A generalized concept of equivalent uniform dose. Med Phys 26:1100, 1999)"
+                      " generated maximum likelihood estimates for 'several tumors and normal structures' which"
+                      " ranged from –13.1 for local control of chordoma tumors to +17.7 for perforation of "
+                      " esophagus." 
+                      " Gay et al. (doi:10.1016/j.ejmp.2007.07.001) table 2 lists estimates based on the"
+                      " work of Emami (doi:10.1016/0360-3016(91)90171-Y) for normal tissues ranging from 1-31."
+                      " Brenner et al. (doi:10.1016/0360-3016(93)90189-3) recommend -7.2 for breast cancer, "
+                      " -10 for melanoma, and -13 for squamous cell carcinomas. A 2017 presentation by Ontida "
+                      " Apinorasethkul claims the tumour range spans [-40:-1] and the organs at risk range "
+                      " spans [1:40]. AAPM TG report 166 also provides a listing of recommended values,"
+                      " suggesting -10 for PTV and GTV, +1 for parotid, 20 for spinal cord, and 8-16 for"
+                      " rectum, bladder, brainstem, chiasm, eye, and optic nerve. Burman (1991) and QUANTEC"
+                      " (2010) also provide estimates.";
+    out.back().default_val = "-13.0";
+    out.back().expected = true;
+    out.back().examples = { "-40", "-13.0", "-10", "-7.2", "0.3", "1", "3", "4", "20", "40" };
+
+Fenwick_C
+Fenwick_M
+10.1016/j.clon.2008.12.011
+
+... where V is the GTV (primary tumour plus involved nodes), F is the integrated normal distribution, NTD50 the NTD at which 50%
+of tumours of volume Vref are controlled, m determines the dose-response curve steepness, c the extent to which higher doses
+are required to control larger tumours, and NTD is calculated from the isocentre doseusing an a/ß ratio of 10 Gy for NSCLC.
 
     return out;
 }
@@ -192,7 +272,8 @@ std::list<OperationArgDoc> OpArgDocEvaluateTCPModels(void){
 Drover EvaluateTCPModels(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string> /*InvocationMetadata*/, std::string FilenameLex){
 
     // This operation evaluates a variety of TCP models for each ROI. Currently the following are implemented:
-    //   - The "Martel model"
+    //   - The "Martel" model.
+    //   - Equivalent Uniform Dose (EUD) TCP.
     //   - ...TODO...
     //
     // Note: this routine uses image_arrays so convert dose_arrays beforehand.
@@ -209,8 +290,14 @@ Drover EvaluateTCPModels(Drover DICOM_data, OperationArgPkg OptArgs, std::map<st
 
     const auto DosePerFraction = std::stod( OptArgs.getValueStr("DosePerFraction").value() );
     const auto AlphaBetaRatio = std::stod( OptArgs.getValueStr("AlphaBetaRatio").value() );
+    const auto NumberOfFractions = std::stod( OptArgs.getValueStr("NumberOfFractions").value() );
+
     const auto Gamma50 = std::stod( OptArgs.getValueStr("Gamma50").value() );
     const auto Dose50 = std::stod( OptArgs.getValueStr("Dose50").value() );
+
+    const auto EUD_Gamma50 = std::stod( OptArgs.getValueStr("EUD_Gamma50").value() );
+    const auto EUD_TCD50 = std::stod( OptArgs.getValueStr("EUD_TCD50").value() );
+    const auto EUD_Alpha = std::stod( OptArgs.getValueStr("EUD_Alpha").value() );
 
     //-----------------------------------------------------------------------------------------------------------------
     const auto theregex = std::regex(ROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
@@ -282,24 +369,63 @@ Drover EvaluateTCPModels(Drover DICOM_data, OperationArgPkg OptArgs, std::map<st
         for(const auto &av : ud.accumulated_voxels){
             const auto lROIname = av.first;
 
-            const long double V_frac = static_cast<long double>(1) / av.second.size(); // Fractional volume of a single voxel compared to whole ROI.
+            const auto N = av.second.size();
+            const long double V_frac = static_cast<long double>(1) / N; // Fractional volume of a single voxel compared to whole ROI.
 
             double TCP_Martel = static_cast<long double>(1);
+            double TCP_Fenwick = static_cast<long double>(1);
+
+            std::vector<long double> gEUD_elements;
+            gEUD_elements.reserve(N);
             for(const auto &D_voxel : av.second){
-                //Convert dose to BED or EQD2.
-                // ... TODO ...
-                const long double BED = D_voxel;
+                //Convert dose to BED or ED2 (aka "EQD2" -- the effective dose in 2 Gy fractions).
+                const long double ED2 = NumberOfFractions * DosePerFraction 
+                                      * (AlphaBetaRatio + DosePerFraction) / (AlphaBetaRatio + static_cast<long double>(2));
+                const long double BED = ED2*(static_cast<long double>(1) + static_cast<long double>(2)/AlphaBetaRatio); 
 
                 // Martel model.
-                const long double numer = std::pow(BED, Gamma50*4);
-                const long double denom = std::pow(Dose50, Gamma50*4) + numer;
-                const long double TCP_voxel = numer/denom; // This is a sigmoid curve.
-                TCP_Martel *= std::pow(TCP_voxel, V_frac);
+                {
+                    const long double numer = std::pow(ED2, Gamma50*4);
+                    const long double denom = std::pow(Dose50, Gamma50*4) + numer;
+                    const long double TCP_voxel = numer/denom; // This is a sigmoid curve.
+                    TCP_Martel *= std::pow(TCP_voxel, V_frac);
+                }
+                
+                // gEUD model.
+                {
+                    gEUD_elements.push_back(V_frac * std::pow(ED2, EUD_Alpha));
+                }
+
+                // Fenwick model.
+                {
+                    const long double numer = (ED2 - Dose50 - Fenwick_C * std::log(V_tumour/148'410.0)); // 148.41 cm^3 in mm^3.
+                    const long double denom = Fenwick_M * ED2;
+                    const long double TCP_voxel = std::erf(numer/denom); // This is a sigmoid curve.
+                    TCP_Fenwick *= std::pow(TCP_voxel, V_frac);
+
+... where V is the GTV (primary tumour plus involved nodes), F is the integrated normal distribution, NTD50 the NTD at which 50%
+of tumours of volume Vref are controlled, m determines the dose-response curve steepness, c the extent to which higher doses
+are required to control larger tumours, and NTD is calculated from the isocentre doseusing an a/ß ratio of 10 Gy for NSCLC.
+
+                }
 
                 // ... other models ...
                 // ...
+
             }
+
+            //Post-processing.
             MartelModel[lROIname] = TCP_Martel;
+
+            {
+                const long double gEUD = std::pow( Stats::Sum(gEUD_elements), static_cast<long double>(1) / EUD_Alpha );
+
+                const long double numer = std::pow(gEUD, EUD_Gamma50*4);
+                const long double denom = numer + std::pow(EUD_TCD50, EUD_Gamma50*4);
+                double TCP_gEUD = numer/denom; // This is a sigmoid curve.
+
+                gEUDModel[lROIname] = TCP_gEUD; 
+            }
         }
     }
 
@@ -317,9 +443,22 @@ Drover EvaluateTCPModels(Drover DICOM_data, OperationArgPkg OptArgs, std::map<st
         if(TCPFileName.empty()){
             TCPFileName = Get_Unique_Sequential_Filename("/tmp/dicomautomaton_evaluatetcp_", 6, ".csv");
         }
+        const auto FirstWrite = !Does_File_Exist_And_Can_Be_Read(TCPFileName);
         std::fstream FO_tcp(TCPFileName, std::fstream::out | std::fstream::app);
         if(!FO_tcp){
             throw std::runtime_error("Unable to open file for reporting derivative data. Cannot continue.");
+        }
+        if(FirstWrite){ // Write a CSV header.
+            FO_tcp << "PatientID,"
+                   << "ROIname,"
+                   << "NormalizedROIname,"
+                   << "TCPMartelModel,"
+                   << "TCPgEUDModel,"
+                   << "DoseMean,"
+                   << "DoseMedian,"
+                   << "DoseStdDev,"
+                   << "VoxelCount"
+                   << std::endl;
         }
         for(const auto &av : ud.accumulated_voxels){
             const auto lROIname = av.first;
@@ -327,15 +466,17 @@ Drover EvaluateTCPModels(Drover DICOM_data, OperationArgPkg OptArgs, std::map<st
             const auto DoseMedian = Stats::Median( av.second );
             const auto DoseStdDev = std::sqrt(Stats::Unbiased_Var_Est( av.second ));
             const auto TCPMartel = MartelModel[lROIname];
+            const auto TCPgEUD = gEUDModel[lROIname];
 
-            FO_tcp  << "PatientID='" << patient_ID << "',"
-                    //<< "NormalizedROIname='" << X(lROIname) << "',"
-                    << "ROIname='" << lROIname << "',"
-                    << "TCPMartelModel=" << TCPMartel*100.0 << ","
-                    << "DoseMean=" << DoseMean << ","
-                    << "DoseMedian=" << DoseMedian << ","
-                    << "DoseStdDev=" << DoseStdDev << ","
-                    << "VoxelCount=" << av.second.size() << std::endl;
+            FO_tcp  << patient_ID        << ","
+                    << X(lROIname)       << ","
+                    << lROIname          << ","
+                    << TCPMartel*100.0   << ","
+                    << TCPgEUD*100.0     << ","
+                    << DoseMean          << ","
+                    << DoseMedian        << ","
+                    << DoseStdDev        << ","
+                    << av.second.size()  << std::endl;
         }
         FO_tcp.flush();
         FO_tcp.close();
