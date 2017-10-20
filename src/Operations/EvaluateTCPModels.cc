@@ -256,6 +256,21 @@ std::list<OperationArgDoc> OpArgDocEvaluateTCPModels(void){
     out.back().expected = true;
     out.back().examples = { "-40", "-13.0", "-10", "-7.2", "0.3", "1", "3", "4", "20", "40" };
 
+/*
+    out.emplace_back();
+    out.back().name = "Fenwick_C";
+    out.back().desc = "...";
+    out.back().default_val = "0.0";
+    out.back().expected = true;
+    out.back().examples = { "0.0", "0.0" };
+
+    out.emplace_back();
+    out.back().name = "Fenwick_M";
+    out.back().desc = "...";
+    out.back().default_val = "0.0";
+    out.back().expected = true;
+    out.back().examples = { "0.0", "0.0" };
+
 Fenwick_C
 Fenwick_M
 10.1016/j.clon.2008.12.011
@@ -263,7 +278,7 @@ Fenwick_M
 ... where V is the GTV (primary tumour plus involved nodes), F is the integrated normal distribution, NTD50 the NTD at which 50%
 of tumours of volume Vref are controlled, m determines the dose-response curve steepness, c the extent to which higher doses
 are required to control larger tumours, and NTD is calculated from the isocentre doseusing an a/ß ratio of 10 Gy for NSCLC.
-
+*/
     return out;
 }
 
@@ -298,6 +313,11 @@ Drover EvaluateTCPModels(Drover DICOM_data, OperationArgPkg OptArgs, std::map<st
     const auto EUD_Gamma50 = std::stod( OptArgs.getValueStr("EUD_Gamma50").value() );
     const auto EUD_TCD50 = std::stod( OptArgs.getValueStr("EUD_TCD50").value() );
     const auto EUD_Alpha = std::stod( OptArgs.getValueStr("EUD_Alpha").value() );
+
+/*
+    const auto Fenwick_C = std::stod( OptArgs.getValueStr("Fenwick_C").value() );
+    const auto Fenwick_M = std::stod( OptArgs.getValueStr("Fenwick_M").value() );
+*/
 
     //-----------------------------------------------------------------------------------------------------------------
     const auto theregex = std::regex(ROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
@@ -360,6 +380,7 @@ Drover EvaluateTCPModels(Drover DICOM_data, OperationArgPkg OptArgs, std::map<st
 
     //Evalute the models.
     std::map<std::string, double> MartelModel;
+    std::map<std::string, double> gEUDModel;
     {
         // NOTE: the following are (supposedly) valid for lung!
         //const long double D_50 = 84.5; // (Gy). The dose needed to achieve 50% TCP.
@@ -373,7 +394,9 @@ Drover EvaluateTCPModels(Drover DICOM_data, OperationArgPkg OptArgs, std::map<st
             const long double V_frac = static_cast<long double>(1) / N; // Fractional volume of a single voxel compared to whole ROI.
 
             double TCP_Martel = static_cast<long double>(1);
+/*
             double TCP_Fenwick = static_cast<long double>(1);
+*/
 
             std::vector<long double> gEUD_elements;
             gEUD_elements.reserve(N);
@@ -396,8 +419,10 @@ Drover EvaluateTCPModels(Drover DICOM_data, OperationArgPkg OptArgs, std::map<st
                     gEUD_elements.push_back(V_frac * std::pow(ED2, EUD_Alpha));
                 }
 
+/*
                 // Fenwick model.
                 {
+const long double V_tumour = 1000.0;                
                     const long double numer = (ED2 - Dose50 - Fenwick_C * std::log(V_tumour/148'410.0)); // 148.41 cm^3 in mm^3.
                     const long double denom = Fenwick_M * ED2;
                     const long double TCP_voxel = std::erf(numer/denom); // This is a sigmoid curve.
@@ -405,9 +430,10 @@ Drover EvaluateTCPModels(Drover DICOM_data, OperationArgPkg OptArgs, std::map<st
 
 ... where V is the GTV (primary tumour plus involved nodes), F is the integrated normal distribution, NTD50 the NTD at which 50%
 of tumours of volume Vref are controlled, m determines the dose-response curve steepness, c the extent to which higher doses
-are required to control larger tumours, and NTD is calculated from the isocentre doseusing an a/ß ratio of 10 Gy for NSCLC.
+are required to control larger tumours, and NTD is calculated from the isocentre dose using an a/ß ratio of 10 Gy for NSCLC.
 
                 }
+*/
 
                 // ... other models ...
                 // ...
