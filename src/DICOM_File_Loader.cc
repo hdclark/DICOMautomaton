@@ -105,7 +105,17 @@ bool Load_From_DICOM_Files( Drover &DICOM_data,
             Modality = "";
         };
 
-        if(boost::iequals(Modality,"RTSTRUCT")){
+        if(false){
+        }else if(boost::iequals(Modality,"RTPLAN")){
+            FUNCWARN("RTPLAN file encountered. "
+                     "DICOMautomaton currently is not equipped to process RTPLAN files. "
+                     "Disregarding it. "
+                     "Note that some of the tags *could* be loaded as common metadata (e.g., fractionation info), "
+                     "but this is not currently implemented.");
+
+            bfit = Filenames.erase( bfit ); 
+
+        }else if(boost::iequals(Modality,"RTSTRUCT")){
             const auto preloadcount = loaded_contour_data_storage->ccs.size();
             try{
                 auto combined = Concatenate_Contour_Data( std::move(loaded_contour_data_storage->Duplicate()),
@@ -215,7 +225,7 @@ bool Load_From_DICOM_Files( Drover &DICOM_data,
 
         DICOM_data.image_data.emplace_back(std::move(collated_imgs));
     }
-    FUNCINFO("Number of image set groups loaded = " << DICOM_data.image_data.size());
+    FUNCINFO("Number of image set groups currently loaded = " << DICOM_data.image_data.size());
 
     for(auto &loaded_dose_set : loaded_dose_storage){
         if(loaded_dose_set.empty()) continue;
