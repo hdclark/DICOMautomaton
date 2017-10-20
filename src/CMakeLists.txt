@@ -32,6 +32,13 @@ set_target_properties(Structs_obj PROPERTIES
     POSITION_INDEPENDENT_CODE TRUE
 )
 
+add_library(BED_Conversion_obj OBJECT
+    BED_Conversion.cc
+)
+set_target_properties(BED_Conversion_obj PROPERTIES
+    POSITION_INDEPENDENT_CODE TRUE
+)
+
 add_library(Colour_Maps_obj OBJECT
     Colour_Maps.cc     
 )
@@ -236,6 +243,7 @@ add_executable (dicomautomaton_dispatcher
 
     $<TARGET_OBJECTS:Structs_obj>
     $<TARGET_OBJECTS:Dose_Meld_obj>
+    $<TARGET_OBJECTS:BED_Conversion_obj>
     $<TARGET_OBJECTS:Colour_Maps_obj>
     $<TARGET_OBJECTS:Common_Boost_Serialization_obj>
     $<TARGET_OBJECTS:Common_Plotting_obj>
@@ -287,6 +295,7 @@ add_executable(dicomautomaton_webserver
 
     $<TARGET_OBJECTS:Structs_obj>
     $<TARGET_OBJECTS:Dose_Meld_obj>
+    $<TARGET_OBJECTS:BED_Conversion_obj>
     $<TARGET_OBJECTS:Colour_Maps_obj>
     $<TARGET_OBJECTS:Common_Boost_Serialization_obj>
     $<TARGET_OBJECTS:Common_Plotting_obj>
