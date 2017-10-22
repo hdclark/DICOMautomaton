@@ -134,7 +134,7 @@ std::list<OperationArgDoc> OpArgDocEvaluateTCPModels(void){
 
     out.emplace_back();
     out.back().name = "DosePerFraction";
-    out.back().desc = "The dose delivered per fraction (in Gray).";
+    out.back().desc = "The dose delivered per fraction (in Gray)."
                       " If needed, the dose distribution is converted to be biologically-equivalent to"
                       " a 2 Gy/fraction dose distribution.";
     out.back().default_val = "2";
@@ -144,7 +144,7 @@ std::list<OperationArgDoc> OpArgDocEvaluateTCPModels(void){
 
     out.emplace_back();
     out.back().name = "NumberOfFractions";
-    out.back().desc = "The number of fractions delivered.";
+    out.back().desc = "The number of fractions delivered."
                       " If needed, the dose distribution is converted to be biologically-equivalent to"
                       " a 2 Gy/fraction dose distribution.";
     out.back().default_val = "35";
