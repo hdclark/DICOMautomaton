@@ -1,4 +1,11 @@
 
+
+# ----------------------------------------------------------------------------------
+# Find Threading library.
+# ----------------------------------------------------------------------------------
+# via CMake find script:
+find_package(Threads REQUIRED)
+
 # ----------------------------------------------------------------------------------
 # Find Eigen.
 # ----------------------------------------------------------------------------------
@@ -287,6 +294,7 @@ target_link_libraries (dicomautomaton_dispatcher
     mpfr
     gmp
     m
+    Threads::Threads
 )
 
 # Executable.
@@ -341,6 +349,7 @@ target_link_libraries(dicomautomaton_webserver
     mpfr
     gmp
     m
+    Threads::Threads
 )
 
 # Executable.
@@ -362,6 +371,7 @@ target_link_libraries(dicomautomaton_bsarchive_convert
     boost_system 
     z
     m
+    Threads::Threads
 )
 
 # Executable.
@@ -377,6 +387,7 @@ target_link_libraries(pacs_ingress
     pqxx 
     pq
     m
+    Threads::Threads
 )
 
 # Executable.
@@ -392,6 +403,7 @@ target_link_libraries(pacs_duplicate_cleaner
     pqxx 
     pq
     m
+    Threads::Threads
 )
 
 # Executable.
@@ -407,6 +419,7 @@ target_link_libraries(pacs_refresh
     pqxx 
     pq
     m
+    Threads::Threads
 )
 
 # Executable.    
@@ -428,6 +441,7 @@ target_link_libraries(overlaydosedata
     GL
     GLU
     m
+    Threads::Threads
 )
 target_include_directories (overlaydosedata SYSTEM PUBLIC /usr/X11R6/lib/ )
 
@@ -445,6 +459,7 @@ target_link_libraries(automaton
     pqxx 
     pq
     m
+    Threads::Threads
 )
 
 # Executable.
