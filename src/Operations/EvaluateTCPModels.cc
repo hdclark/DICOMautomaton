@@ -398,7 +398,7 @@ Drover EvaluateTCPModels(Drover DICOM_data, OperationArgPkg OptArgs, std::map<st
             double TCP_Fenwick = static_cast<long double>(1);
 */
 
-            std::vector<long double> gEUD_elements;
+            std::vector<double> gEUD_elements;
             gEUD_elements.reserve(N);
             for(const auto &D_voxel : av.second){
                 //Convert dose to BED or ED2 (aka "EQD2" -- the effective dose in 2 Gy fractions).
