@@ -465,6 +465,8 @@ void BaseWebServerApplication::createOperationSelectorGB(void){
         if( ( n == "HighlightROIs" )
         ||  ( n == "DICOMExportImagesAsDose" )
         ||  ( n == "ConvertDoseToImage" ) 
+        ||  ( n == "DecayDoseOverTimeJones2014" ) 
+        ||  ( n == "DecayDoseOverTimeHalve" ) 
         ||  ( n == "RePlanReIrradiateDoseTrimming" ) ){    //Whitelist ... for now.
             selector->addItem(anop.first);
         }

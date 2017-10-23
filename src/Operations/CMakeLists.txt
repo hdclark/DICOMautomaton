@@ -20,6 +20,8 @@ add_library(Operations_objs OBJECT
     ConvertNaNsToAir.cc
     DCEMRI_Nonparametric_CE.cc
     DCEMRI_IAUC.cc
+    DecayDoseOverTimeJones2014.cc
+    DecayDoseOverTimeHalve.cc
     DecimatePixels.cc
     DumpAllOrderedImageMetadataToFile.cc
     DumpAnEncompassedPoint.cc
