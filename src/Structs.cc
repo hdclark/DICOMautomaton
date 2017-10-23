@@ -1006,6 +1006,14 @@ Dose_Array::Dose_Array(){
     this->grid_scale = -1.0;
 }
 
+Dose_Array::Dose_Array(const Image_Array &rhs){
+    //Performs a deep copy.
+    this->imagecoll  = rhs.imagecoll;
+    this->bits       = rhs.bits;
+    this->grid_scale = 1.0;
+    this->filename   = rhs.filename;
+}
+
 Dose_Array & Dose_Array::operator=(const Dose_Array &rhs){
     if(this == &rhs) return *this;
     this->imagecoll  = rhs.imagecoll; //Performs a deep copy (unless copying self).
@@ -1014,6 +1022,7 @@ Dose_Array & Dose_Array::operator=(const Dose_Array &rhs){
     this->filename   = rhs.filename;
     return *this;
 }
+
 
 
 //---------------------------------------------------------------------------------------------------------------------------

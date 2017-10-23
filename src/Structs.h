@@ -22,6 +22,10 @@
 #include "YgorPlot.h"
 #include "YgorFilesDirs.h"
 
+
+class Image_Array;
+class Dose_Array;
+
 //This is a wrapper around the YgorMath.h class "contour_of_points." It holds an instance of a contour_of_points, but also provides some meta information
 // which helps identify the origin, quality, and purpose of the data.
 //
@@ -209,6 +213,7 @@ class Dose_Array { //: public Base_Array {
         //Constructor/Destructors.
         Dose_Array();
         Dose_Array(const Dose_Array &rhs); //Performs a deep copy (unless copying self).
+        Dose_Array(const Image_Array &rhs); //Performs a deep copy.
 //        ~Dose_Array(){}
 
         //Member functions.

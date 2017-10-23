@@ -4,6 +4,7 @@ add_library(Operations_objs OBJECT
     Average.cc
     BoostSerializeDrover.cc
     BuildLexiconInteractively.cc
+    ConvertImageToDose.cc
     ConvertDoseToImage.cc
     CopyLastImage.cc
     CropImageDoseToROIs.cc
