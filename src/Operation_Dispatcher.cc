@@ -18,13 +18,13 @@
 #include "Operations/Average.h"
 #include "Operations/BoostSerializeDrover.h"
 #include "Operations/BuildLexiconInteractively.h"
-#include "Operations/CopyLastImage.h"
 #include "Operations/CT_Liver_Perfusion.h"
 #include "Operations/CT_Liver_Perfusion_First_Run.h"
 #include "Operations/CT_Liver_Perfusion_Ortho_Views.h"
 #include "Operations/CT_Liver_Perfusion_Pharmaco_1Compartment2Input_5Param.h"
 #include "Operations/CT_Liver_Perfusion_Pharmaco_1Compartment2Input_Reduced3Param.h"
 #include "Operations/ContourBasedRayCastDoseAccumulate.h"
+#include "Operations/ContourBooleanOperations.h"
 #include "Operations/ContourSimilarity.h"
 #include "Operations/ContouringAides.h"
 #include "Operations/ContourViaThreshold.h"
@@ -32,6 +32,7 @@
 #include "Operations/ConvertImageToDose.h"
 #include "Operations/ConvertDoseToImage.h"
 #include "Operations/ConvertNaNsToAir.h"
+#include "Operations/CopyLastImage.h"
 #include "Operations/CropImageDoseToROIs.h"
 #include "Operations/DCEMRI_IAUC.h"
 #include "Operations/DCEMRI_Nonparametric_CE.h"
@@ -89,7 +90,6 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["Average"] = std::make_pair(OpArgDocAverage, Average);
     out["BoostSerializeDrover"] = std::make_pair(OpArgDocBoost_Serialize_Drover, Boost_Serialize_Drover);
     out["BuildLexiconInteractively"] = std::make_pair(OpArgDocBuildLexiconInteractively, BuildLexiconInteractively);
-    out["CopyLastImage"] = std::make_pair(OpArgDocCopyLastImage, CopyLastImage);
     out["CT_Liver_Perfusion"] = std::make_pair(OpArgDocCT_Liver_Perfusion, CT_Liver_Perfusion);
     out["CT_Liver_Perfusion_First_Run"] = std::make_pair(OpArgDocCT_Liver_Perfusion_First_Run, CT_Liver_Perfusion_First_Run);
     out["CT_Liver_Perfusion_Ortho_Views"] = std::make_pair(OpArgDocCT_Liver_Perfusion_Ortho_Views , CT_Liver_Perfusion_Ortho_Views );
@@ -97,6 +97,7 @@ std::map<std::string, op_packet_t> Known_Operations(void){
                                                                     CT_Liver_Perfusion_Pharmaco_1C2I_5Param);
     out["CT_Liver_Perfusion_Pharmaco_1C2I_Reduced3Param"] = std::make_pair(OpArgDocCT_Liver_Perfusion_Pharmaco_1C2I_Reduced3Param, 
                                                                            CT_Liver_Perfusion_Pharmaco_1C2I_Reduced3Param);
+    out["ContourBooleanOperations"] = std::make_pair(OpArgDocContourBooleanOperations, ContourBooleanOperations);
     out["ContourBasedRayCastDoseAccumulate"] = std::make_pair(OpArgDocContourBasedRayCastDoseAccumulate, ContourBasedRayCastDoseAccumulate);
     out["ContourSimilarity"] = std::make_pair(OpArgDocContourSimilarity, ContourSimilarity);
     out["ContouringAides"] = std::make_pair(OpArgDocContouringAides, ContouringAides);
@@ -105,6 +106,7 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["ConvertImageToDose"] = std::make_pair(OpArgDocConvertImageToDose, ConvertImageToDose);
     out["ConvertDoseToImage"] = std::make_pair(OpArgDocConvertDoseToImage, ConvertDoseToImage);
     out["ConvertNaNsToAir"] = std::make_pair(OpArgDocConvertNaNsToAir, ConvertNaNsToAir);
+    out["CopyLastImage"] = std::make_pair(OpArgDocCopyLastImage, CopyLastImage);
     out["CropImageDoseToROIs"] = std::make_pair(OpArgDocCropImageDoseToROIs, CropImageDoseToROIs);
     out["DCEMRI_IAUC"] = std::make_pair(OpArgDocDCEMRI_IAUC, DCEMRI_IAUC);
     out["DCEMRI_Nonparametric_CE"] = std::make_pair(OpArgDocDCEMRI_Nonparametric_CE, DCEMRI_Nonparametric_CE);

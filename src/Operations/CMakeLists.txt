@@ -14,6 +14,7 @@ add_library(Operations_objs OBJECT
     CT_Liver_Perfusion_Pharmaco_1Compartment2Input_5Param.cc
     CT_Liver_Perfusion_Pharmaco_1Compartment2Input_Reduced3Param.cc
     ContourBasedRayCastDoseAccumulate.cc
+    ContourBooleanOperations.cc
     ContourSimilarity.cc
     ContouringAides.cc
     ContourViaThreshold.cc
