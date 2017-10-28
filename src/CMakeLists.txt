@@ -67,6 +67,13 @@ set_target_properties(Common_Boost_Serialization_obj PROPERTIES
     POSITION_INDEPENDENT_CODE TRUE
 )
 
+add_library(Contour_Boolean_Operations_obj OBJECT
+    Contour_Boolean_Operations.cc     
+)
+set_target_properties(Contour_Boolean_Operations_obj PROPERTIES
+    POSITION_INDEPENDENT_CODE TRUE
+)
+
 add_library(Dose_Meld_obj OBJECT 
     Dose_Meld.cc    
 )
@@ -254,6 +261,7 @@ add_executable (dicomautomaton_dispatcher
     $<TARGET_OBJECTS:Colour_Maps_obj>
     $<TARGET_OBJECTS:Common_Boost_Serialization_obj>
     $<TARGET_OBJECTS:Common_Plotting_obj>
+    $<TARGET_OBJECTS:Contour_Boolean_Operations_obj>
 
     $<TARGET_OBJECTS:PACS_Loader_obj>
     $<TARGET_OBJECTS:Boost_Serialization_File_Loader_obj>
@@ -307,6 +315,7 @@ add_executable(dicomautomaton_webserver
     $<TARGET_OBJECTS:Colour_Maps_obj>
     $<TARGET_OBJECTS:Common_Boost_Serialization_obj>
     $<TARGET_OBJECTS:Common_Plotting_obj>
+    $<TARGET_OBJECTS:Contour_Boolean_Operations_obj>
 
     $<TARGET_OBJECTS:PACS_Loader_obj>
     $<TARGET_OBJECTS:Boost_Serialization_File_Loader_obj>

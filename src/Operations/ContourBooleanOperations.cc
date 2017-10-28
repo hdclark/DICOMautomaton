@@ -24,36 +24,6 @@
 #include <algorithm>
 #include <experimental/optional>
 
-#include <SFML/Graphics.hpp>
-#include <SFML/Audio.hpp>
-
-#include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
-
-
-//#include <CGAL/Cartesian.h>
-//#include <CGAL/Min_sphere_of_spheres_d.h>
-//
-//#include <CGAL/Surface_mesh_default_triangulation_3.h>
-//#include <CGAL/Surface_mesh_default_criteria_3.h>
-//#include <CGAL/Complex_2_in_triangulation_3.h>
-//#include <CGAL/make_surface_mesh.h>
-//#include <CGAL/Implicit_surface_3.h>
-//
-//#include <CGAL/IO/Complex_2_in_triangulation_3_file_writer.h>
-//#include <CGAL/IO/output_surface_facets_to_polyhedron.h>
-//
-//#include <CGAL/Polyhedron_3.h>
-//#include <CGAL/IO/Polyhedron_iostream.h>
-//
-//#include <CGAL/Subdivision_method_3.h>
-//
-//#include <CGAL/AABB_tree.h>
-//#include <CGAL/AABB_traits.h>
-//#include <CGAL/boost/graph/graph_traits_Polyhedron_3.h>
-//#include <CGAL/AABB_face_graph_triangle_primitive.h>
-//#include <boost/optional.hpp>
-
-
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMathIOOFF.h"    //Needed for WritePointsToOFF(...)
@@ -75,6 +45,7 @@
 #include "../Structs.h"
 #include "../Thread_Pool.h"
 #include "../Dose_Meld.h"
+#include "../Contour_Boolean_Operations.h"
 
 #include "../YgorImages_Functors/Grouping/Misc_Functors.h"
 
@@ -174,7 +145,7 @@ std::list<OperationArgDoc> OpArgDocContourBooleanOperations(void){
     out.emplace_back();
     out.back().name = "Operation";
     out.back().desc = "The Boolean operation (e.g., the function 'f') to perform on the sets of"
-                      " contour polygons 'A' and 'B'."
+                      " contour polygons 'A' and 'B'. 'Symmetric difference' is also known as 'XOR'.";
     out.back().default_val = "join";
     out.back().expected = true;
     out.back().examples = { "intersection", "join", "difference", "symmetric_difference" };
@@ -184,7 +155,7 @@ std::list<OperationArgDoc> OpArgDocContourBooleanOperations(void){
     out.back().desc = "The label to attach to the ROI contour product of f(A,B).";
     out.back().default_val = "Boolean_result";
     out.back().expected = true;
-    out.back().examples = { "A+B", "A-B", "AuB", "AnB", "combined", "body_without_spinal_cord" };
+    out.back().examples = { "A+B", "A-B", "AuB", "AnB", "AxB", "A^B", "union", "xor", "combined", "body_without_spinal_cord" };
 
     return out;
 }
@@ -210,14 +181,12 @@ Drover ContourBooleanOperations(Drover DICOM_data, OperationArgPkg OptArgs, std:
     //
 
     //---------------------------------------------- User Parameters --------------------------------------------------
-
     const auto ROILabelRegexA = OptArgs.getValueStr("ROILabelRegexA").value();
     const auto ROILabelRegexB = OptArgs.getValueStr("ROILabelRegexB").value();
     const auto NormalizedROILabelRegexA = OptArgs.getValueStr("NormalizedROILabelRegexA").value();
     const auto NormalizedROILabelRegexB = OptArgs.getValueStr("NormalizedROILabelRegexB").value();
 
-
-    const auto Operation = OptArgs.getValueStr("Operation").value();
+    const auto Operation_str = OptArgs.getValueStr("Operation").value();
     const auto OutputROILabel = OptArgs.getValueStr("OutputROILabel").value();
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -235,6 +204,21 @@ Drover ContourBooleanOperations(Drover DICOM_data, OperationArgPkg OptArgs, std:
                             std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
     const auto SymmDiffRegex = std::regex("^sy?m?m?e?t?r?i?c?_?d?i?f?f?e?r?e?n?c?e?$", 
                             std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+
+    //Figure out which operation is desired.
+    ContourBooleanMethod op = ContourBooleanMethod::join;
+    if(false){
+    }else if(std::regex_match(Operation_str,JoinRegex)){
+        op = ContourBooleanMethod::join;
+    }else if(std::regex_match(Operation_str,IntersectionRegex)){
+        op = ContourBooleanMethod::intersection;
+    }else if(std::regex_match(Operation_str,DifferenceRegex)){
+        op = ContourBooleanMethod::difference;
+    }else if(std::regex_match(Operation_str,SymmDiffRegex)){
+        op = ContourBooleanMethod::symmetric_difference;
+    }else{
+        throw std::logic_error("Unanticipated Boolean operation request.");
+    }
 
     Explicator X(FilenameLex);
 
@@ -264,12 +248,12 @@ Drover ContourBooleanOperations(Drover DICOM_data, OperationArgPkg OptArgs, std:
     cc_B.remove_if([=](std::reference_wrapper<contour_collection<double>> cc) -> bool {
                    const auto ROINameOpt = cc.get().contours.front().GetMetadataValueAs<std::string>("ROIName");
                    const auto ROIName = ROINameOpt.value();
-                   return !(std::regex_match(ROIName,refregexB));
+                   return !(std::regex_match(ROIName,roiregexB));
     });
     cc_B.remove_if([=](std::reference_wrapper<contour_collection<double>> cc) -> bool {
                    const auto ROINameOpt = cc.get().contours.front().GetMetadataValueAs<std::string>("NormalizedROIName");
                    const auto ROIName = ROINameOpt.value();
-                   return !(std::regex_match(ROIName,refnormalizedregexB));
+                   return !(std::regex_match(ROIName,roinormalizedregexB));
     });
 
     //This will not necessarily be an error... I should let CGAL handle it.
@@ -278,66 +262,88 @@ Drover ContourBooleanOperations(Drover DICOM_data, OperationArgPkg OptArgs, std:
 //    }else if(cc_B.empty()){
 //        throw std::invalid_argument("No ReferenceROI contours selected. Cannot continue.");
 //    }
+ 
 
+    //Make a copy of all contours for assessing some information later.
+    std::list<std::reference_wrapper<contour_collection<double>>> cc_A_B;
+    cc_A_B.insert(cc_A_B.end(), cc_A.begin(), cc_A.end());
+    cc_A_B.insert(cc_A_B.end(), cc_B.begin(), cc_B.end());
 
     // Identify the unique planes represented in sets A and B.
+    const auto est_cont_normal = cc_A_B.front().get().contours.front().Estimate_Planar_Normal();
+    const auto ucp = Unique_Contour_Planes(cc_A_B, est_cont_normal, /*distance_eps=*/ 0.005);
 
+    const double fallback_spacing = 0.005; // in DICOM units (usually mm).
+    const auto cont_sep_range = std::abs(ucp.front().Get_Signed_Distance_To_Point( ucp.back().R_0 ));
+    const double est_cont_spacing = (ucp.size() <= 1) ? fallback_spacing : cont_sep_range / static_cast<double>(ucp.size() - 1);
+    const double est_cont_thickness = 0.5005 * est_cont_spacing; // Made slightly thicker to avoid gaps.
 
-    // For each plane ...
+    //For identifying duplicate vertices later.
+    const auto verts_equal_F = [](const vec3<double> &vA, const vec3<double> &vB) -> bool {
+        return ( vA.sq_dist(vB) < std::pow(0.01,2.0) );
+    };
 
-        // Store the plane for later projection.
+    // For each plane, pack the shuttles with (only) the relevant contours.
+    contour_collection<double> cc_new;
+    for(const auto &aplane : ucp){
+        std::list<std::reference_wrapper<contour_of_points<double>>> A;
+        std::list<std::reference_wrapper<contour_of_points<double>>> B;
 
-        // Identify an orthonormal set that spans the 2D plane. Store them for later projection.
+        for(auto &cc : cc_A){
+            for(auto &cop : cc.get().contours){
+                //Ignore contours that are not 'on' the specified plane.
+                // We give planes a thickness to help determine coincidence.
+                cop.Remove_Sequential_Duplicate_Points(verts_equal_F);
+                cop.Remove_Needles(verts_equal_F);
+                if(cop.points.empty()) continue;
+                const auto dist_to_plane = std::abs(aplane.Get_Signed_Distance_To_Point(cop.points.front()));
+                if(dist_to_plane > est_cont_thickness) continue;
 
-        // Extract the common metadata from all contours in both A and B sets. Store it for later.
-        
-
-        // Convert the A set of contours into CGAL style by projecting onto the plane and expressing in terms of the
-        // orthonormal set. Remember that [0,inf] contours may be selected. Purge the original contours.
-
-        // Convert the B set of contours into CGAL style by projecting onto the plane and expressing in terms of the
-        // orthonormal set. Remember that [0,inf] contours may be selected. Purge the original contours.
-
-
-        // Perform the selected Boolean operation.
-
-
-        // If necessary, remove polygon holes by 'seaming' the contours.
-
-
-        // Convert each contour back to the DICOMautomaton coordinate system using the orthonormal basis.
-        // Attach the metadata. Insert it into the Contour_Data.
-
-    // Done.
-
-
-
-
-
-
-//// Stuff salvaged from another operation which may not be useful ////
-
-    {
-        typedef double FT;
-        typedef CGAL::Cartesian<FT> K;
-        typedef CGAL::Tag_true UseSqrts;
-        typedef CGAL::Min_sphere_of_spheres_d_traits_3<K,FT,UseSqrts> Traits;
-        typedef CGAL::Min_sphere_of_spheres_d<Traits> Min_sphere;
-        typedef K::Point_3 Point;
-        typedef Traits::Sphere Sphere;
-
-        std::vector<Sphere> spheres;
-        for(const auto & cc_ref : cc_ROIs){
-            const auto cc = cc_ref.get();
-            for(const auto & c : cc.contours){    
-                for(const auto & p : c.points){
-                    Point cgal_p( p.x, p.y, p.z );
-                    spheres.emplace_back(cgal_p,extra_space);
-                }
+                //Pack the contour into the shuttle.
+                A.emplace_back(std::ref(cop));
             }
         }
+        for(auto &cc : cc_B){
+            for(auto &cop : cc.get().contours){
+                cop.Remove_Sequential_Duplicate_Points(verts_equal_F);
+                cop.Remove_Needles(verts_equal_F);
+                if(cop.points.empty()) continue;
+                const auto dist_to_plane = std::abs(aplane.Get_Signed_Distance_To_Point(cop.points.front()));
+                if(dist_to_plane > est_cont_thickness) continue;
+
+                B.emplace_back(std::ref(cop));
+            }
+        }
+
+        //Perform the operation.
+        //FUNCINFO("About to perform boolean operation. A and B have " << A.size() << " and " << B.size() << " elements, respectively");
+        auto cc = ContourBoolean(op, aplane, A, B);
+
+        //Insert any contours created into a holding contour_collection.
+        cc_new.contours.splice(cc_new.contours.end(), std::move(cc.contours));
     }
 
+    //Attach the requested metadata.
+    cc_new.Insert_Metadata("ROIName", OutputROILabel);
+    cc_new.Insert_Metadata("NormalizedROIName", X(OutputROILabel));
+    cc_new.Insert_Metadata("ROINumber", "999");
+    cc_new.Insert_Metadata("MinimumSeparation", std::to_string(est_cont_spacing));
+
+    // Insert it into the Contour_Data.
+    FUNCINFO("Boolean operation created " << cc_new.contours.size() << " contours");
+    if(cc_new.contours.empty()){
+        FUNCWARN("ROI was not added because it is empty");
+    }else{
+        DICOM_data.contour_data->ccs.emplace_back(cc_new);
+        DICOM_data.contour_data->ccs.back().ROI_number = 999;
+        DICOM_data.contour_data->ccs.back().Minimum_Separation = est_cont_spacing;
+        DICOM_data.contour_data->ccs.back().Raw_ROI_name = OutputROILabel;
+    }
+
+
+/*
+
+//// Stuff salvaged from another operation which may not be useful ////
 
     //Pre-compute least-squares planes and contour projections onto those planes (in case of non-planar contours).
     // This substantially speeds up the computation.
@@ -357,12 +363,6 @@ Drover ContourBooleanOperations(Drover DICOM_data, OperationArgPkg OptArgs, std:
         }
     }
    
-    typedef CGAL::Surface_mesh_default_triangulation_3 Tr;
-    typedef CGAL::Complex_2_in_triangulation_3<Tr> C2t3;
-    typedef Tr::Geom_traits GT;
-    typedef GT::Sphere_3 Sphere_3;
-    typedef GT::Point_3 Point_3;
-    typedef GT::FT FT;
 
 
     //Figure out what z-margin is needed so the extra two images do not interfere with the grid lining up with the
@@ -403,7 +403,7 @@ Drover ContourBooleanOperations(Drover DICOM_data, OperationArgPkg OptArgs, std:
     //        });
     //    }
     //} // Complete tasks and terminate thread pool.
-
+*/
 
     return std::move(DICOM_data);
 }

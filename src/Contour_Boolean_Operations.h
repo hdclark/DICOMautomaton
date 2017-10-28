@@ -48,7 +48,7 @@ typedef enum {
 contour_collection<double>
 ContourBoolean(ContourBooleanMethod op,
                plane<double> p,
-               std::reference_wrapper<contour_collection<double>> A,
-               std::reference_wrapper<contour_collection<double>> B);
+               std::list<std::reference_wrapper<contour_of_points<double>>> A,
+               std::list<std::reference_wrapper<contour_of_points<double>>> B);
 
 
