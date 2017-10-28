@@ -9,7 +9,8 @@
 #include <cmath>
 #include <experimental/any>
 
-#include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
+//#include <CGAL/Exact_predicates_exact_constructions_kernel.h>
+#include <CGAL/Cartesian.h>
 #include <CGAL/Polygon_2.h>
 #include <CGAL/Polygon_with_holes_2.h>
 #include <CGAL/Polygon_set_2.h>
@@ -103,11 +104,11 @@ ContourBoolean(ContourBooleanMethod op,
     auto common_metadata = contour_collection<double>().get_common_metadata( { }, { std::ref(all) } );
 
 
-    typedef CGAL::Exact_predicates_inexact_constructions_kernel Kernel;
-    typedef Kernel::Point_2                                     Point_2;
-    typedef CGAL::Polygon_2<Kernel>                             Polygon_2;
-    typedef CGAL::Polygon_with_holes_2<Kernel>                  Polygon_with_holes_2;
-    typedef CGAL::Polygon_set_2<Kernel>                         Polygon_set_2;
+    typedef CGAL::Simple_cartesian<double>     Kernel;
+    typedef Kernel::Point_2                    Point_2;
+    typedef CGAL::Polygon_2<Kernel>            Polygon_2;
+    typedef CGAL::Polygon_with_holes_2<Kernel> Polygon_with_holes_2;
+    typedef CGAL::Polygon_set_2<Kernel>        Polygon_set_2;
 
     // Convert the A set of contours into CGAL style by projecting onto the plane and expressing in the new basis.
     Polygon_set_2 A_set;
@@ -125,7 +126,6 @@ ContourBoolean(ContourBooleanMethod op,
         //Insert in the CGAL polygon set.
         Polygon_2 A_cgal;
         for(auto &v : projected.points){
-FUNCINFO("Set A: " << v.x << "  " << v.y);            
             A_cgal.push_back(Point_2(v.x,v.y));
         }
         A_set.join(A_cgal);
@@ -147,7 +147,6 @@ FUNCINFO("Set A: " << v.x << "  " << v.y);
         //Insert in the CGAL polygon set.
         Polygon_2 B_cgal;
         for(auto &v : projected.points){
-FUNCINFO("Set B: " << v.x << "  " << v.y);            
             B_cgal.push_back(Point_2(v.x,v.y));
         }
         B_set.join(B_cgal);
@@ -173,8 +172,6 @@ FUNCINFO("Set B: " << v.x << "  " << v.y);
         throw std::logic_error("Requested Boolean operation is not supported.");
     }
 
-FUNCINFO("Operation was OK");
-
     // Convert each contour back to the DICOMautomaton coordinate system using the orthonormal basis.
     contour_collection<double> out;
 
@@ -182,57 +179,14 @@ FUNCINFO("Operation was OK");
         std::list<Polygon_with_holes_2> pwhl;
         C_set.polygons_with_holes(std::back_inserter(pwhl));
 
-FUNCINFO("pwhl back_inserter was OK");
         for(auto &pwh : pwhl){
             //If necessary, remove polygon holes by 'seaming' the contours.
             // Otherwise there are no holes to seam.
-FUNCINFO("The number of holes is " << std::distance(pwh.holes_begin(), pwh.holes_end()) );
-
+            //
+            // Note: The following connect_holes routine fails with CGAL 4.10-1 (Arch Linux)
+            //       when using CGAL::Exact_predicates_inexact_constructions_kernel. Beware if you switch kernels.
             std::list<Point_2> p2l;
             connect_holes(pwh,std::back_inserter(p2l));
-
-            // Note: Failing to use connect_holes with CGAL 4.10-1 (Arch Linux).
-            //       "CGAL ERROR: assertion violation!
-            //        File: /usr/include/CGAL/Arrangement_2/Arrangement_on_surface_2_impl.h
-            //        Line: 1629
-            //        Explanation: The two subcurves must have a common endpoint."
-
-
-            // Have to write my own hole connector. I was certain I wrote one long ago ... not sure where.
-
-            // The gist of it:
-            // 1. Write all vertices from each loop into individual lists you can easily refer back to at any time.
-            //
-            // 2. Find the closest vertices NOT from the same loop. Check all pairs of loops. Yes, this will be
-            //    expensive. It is necessary to avoid self-intersection. Remember that distance is a symmetric 
-            //    function, so only test one way! Something like:
-            //
-            //    ref to some best v1 = front() of hole contour
-            //    ref to some best v2 = front() of hole contour
-            //    lowest_dist = 1E99
-            //    for( ref of vertex v1 in outer contour )
-            //        for( ref of vertex v2 in hole contour )
-            //            dist = distance(val of v1, val of v2)
-            //            if(dist < lowest_dist){
-            //                ref to best v1 = ref v1
-            //                ref to best v2 = ref v2
-            //            }
-            //        }
-            //    }
-            //
-            // 3. Take the lowest-distance pair of loops and merge them together at the min-sep vertices.
-            //    (Duplicate v2 in-place. Cycle until the dupe is in the front of the list.
-            //     Duplicate v1 in-place. Splice in the v2 list between the v1 dupes. Then explicitly delete the v2 list.)
-            //
-            // 4. If there is more than one loop remaining, go back to step 2.
-            //    Otherwise, you have a complete loop.
-            //
-            // Before doing this ... check your earlier splitting code. There must be something in there about dealing
-            // with negative-orientation contours.
-            //
-
-
-FUNCINFO("connect_holes was OK");
 
             if(p2l.empty()) continue;
             out.contours.emplace_back();

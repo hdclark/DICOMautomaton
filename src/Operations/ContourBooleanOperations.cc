@@ -256,14 +256,6 @@ Drover ContourBooleanOperations(Drover DICOM_data, OperationArgPkg OptArgs, std:
                    return !(std::regex_match(ROIName,roinormalizedregexB));
     });
 
-    //This will not necessarily be an error... I should let CGAL handle it.
-//    if(cc_A.empty()){
-//        throw std::invalid_argument("No ROI contours selected. Cannot continue.");
-//    }else if(cc_B.empty()){
-//        throw std::invalid_argument("No ReferenceROI contours selected. Cannot continue.");
-//    }
- 
-
     //Make a copy of all contours for assessing some information later.
     std::list<std::reference_wrapper<contour_collection<double>>> cc_A_B;
     cc_A_B.insert(cc_A_B.end(), cc_A.begin(), cc_A.end());
@@ -339,71 +331,6 @@ Drover ContourBooleanOperations(Drover DICOM_data, OperationArgPkg OptArgs, std:
         DICOM_data.contour_data->ccs.back().Minimum_Separation = est_cont_spacing;
         DICOM_data.contour_data->ccs.back().Raw_ROI_name = OutputROILabel;
     }
-
-
-/*
-
-//// Stuff salvaged from another operation which may not be useful ////
-
-    //Pre-compute least-squares planes and contour projections onto those planes (in case of non-planar contours).
-    // This substantially speeds up the computation.
-    std::vector< std::pair< plane<double>, contour_of_points<double> > > projected_contours;
-    for(const auto & cc_ref : cc_A){
-        const auto cc = cc_ref.get();
-        for(const auto & c : cc.contours){    
-            const auto c_plane = c.Least_Squares_Best_Fit_Plane(est_cont_normal);
-            projected_contours.emplace_back( std::make_pair(c_plane, c.Project_Onto_Plane_Orthogonally(c_plane)) );
-        }
-    }
-    for(const auto & cc_ref : cc_B){
-        const auto cc = cc_ref.get();
-        for(const auto & c : cc.contours){    
-            const auto c_plane = c.Least_Squares_Best_Fit_Plane(est_cont_normal);
-            projected_contours.emplace_back( std::make_pair(c_plane, c.Project_Onto_Plane_Orthogonally(c_plane)) );
-        }
-    }
-   
-
-
-    //Figure out what z-margin is needed so the extra two images do not interfere with the grid lining up with the
-    // contours. (Want exactly one contour plane per image.) So the margin should be large enough so the empty
-    // images have no contours inside them, but small enough so that it doesn't affect the location of contours in the
-    // other image slices. The ideal is if each image slice has the same thickness so contours are all separated by some
-    // constant separation -- in this case we make the margin exactly as big as if two images were also included.
-    double z_margin = 0.0;
-    if(ucp.size() > 1){
-        //Compute the total distance between the (centre of the) top and (centre of the) bottom planes.
-        // (Note: the images associated with these contours will usually extend further. This is dealt with below.)
-        const auto total_sep =  std::abs(ucp.front().Get_Signed_Distance_To_Point(ucp.back().R_0));
-        const auto sep_per_plane = total_sep / static_cast<double>(ucp.size()-1);
-
-        //Add TOTAL zmargin of 1*sep_per_plane each for 2 extra images, and 0.5*sep_per_plane for each of the images
-        // which will stick out beyond the contour planes. (The margin is added at the top and the bottom.)
-        z_margin = sep_per_plane * 1.5;
-    }else{
-        FUNCWARN("Only a single contour plane was detected. Guessing its thickness.."); 
-        z_margin = 5.0;
-    }
-
-    //{
-    //    asio_thread_pool tp;
-    //    std::mutex printer; // Who gets to print to the console and iterate the counter.
-    //    long int completed = 0;
-    //
-    //    for(long int row = 0; row < SourceDetectorRows; ++row){
-    //        tp.submit_task([&,row](void) -> void {
-    //            for(long int col = 0; col < SourceDetectorColumns; ++col){
-    //
-    //            {
-    //                std::lock_guard<std::mutex> lock(printer);
-    //                ++completed;
-    //                FUNCINFO("Completed " << completed << " of " << SourceDetectorRows 
-    //                      << " --> " << static_cast<int>(1000.0*(completed)/SourceDetectorRows)/10.0 << "\% done");
-    //            }
-    //        });
-    //    }
-    //} // Complete tasks and terminate thread pool.
-*/
 
     return std::move(DICOM_data);
 }
