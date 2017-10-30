@@ -95,6 +95,13 @@ set_target_properties(DICOM_File_Loader_obj PROPERTIES
     POSITION_INDEPENDENT_CODE TRUE
 )
 
+add_library(Contour_Collection_Estimates_obj OBJECT
+    Contour_Collection_Estimates.cc
+)
+set_target_properties(Contour_Collection_Estimates_obj PROPERTIES
+    POSITION_INDEPENDENT_CODE TRUE
+)
+
 add_library(FITS_File_Loader_obj OBJECT
     FITS_File_Loader.cc  
 )
@@ -262,6 +269,7 @@ add_executable (dicomautomaton_dispatcher
     $<TARGET_OBJECTS:Common_Boost_Serialization_obj>
     $<TARGET_OBJECTS:Common_Plotting_obj>
     $<TARGET_OBJECTS:Contour_Boolean_Operations_obj>
+    $<TARGET_OBJECTS:Contour_Collection_Estimates_obj>
 
     $<TARGET_OBJECTS:PACS_Loader_obj>
     $<TARGET_OBJECTS:Boost_Serialization_File_Loader_obj>
@@ -316,6 +324,7 @@ add_executable(dicomautomaton_webserver
     $<TARGET_OBJECTS:Common_Boost_Serialization_obj>
     $<TARGET_OBJECTS:Common_Plotting_obj>
     $<TARGET_OBJECTS:Contour_Boolean_Operations_obj>
+    $<TARGET_OBJECTS:Contour_Collection_Estimates_obj>
 
     $<TARGET_OBJECTS:PACS_Loader_obj>
     $<TARGET_OBJECTS:Boost_Serialization_File_Loader_obj>

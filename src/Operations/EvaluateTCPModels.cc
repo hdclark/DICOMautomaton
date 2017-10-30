@@ -48,6 +48,7 @@
 #include "Explicator.h"       //Needed for Explicator class.
 
 #include "../Structs.h"
+#include "../Contour_Collection_Estimates.h"
 
 #include "../YgorImages_Functors/Grouping/Misc_Functors.h"
 
@@ -256,29 +257,41 @@ std::list<OperationArgDoc> OpArgDocEvaluateTCPModels(void){
     out.back().expected = true;
     out.back().examples = { "-40", "-13.0", "-10", "-7.2", "0.3", "1", "3", "4", "20", "40" };
 
-/*
     out.emplace_back();
     out.back().name = "Fenwick_C";
-    out.back().desc = "...";
-    out.back().default_val = "0.0";
+    out.back().desc = "This parameter describes the degree that superlinear doses are required to control"
+                      " large tumours. In other words, as tumour volume grows, a disproportionate amount of"
+                      " additional dose is required to maintain the same level of control."
+                      " The Fenwick model is semi-empirical, so this number must be fitted or used from"
+                      " values reported in the literature. Fenwick et al. 2008"
+                      " (doi:10.1016/j.clon.2008.12.011) provide values: 9.58 for local progression free survival"
+                      " at 30 months for NSCLC tumours and 5.00 for head-and-neck tumours.";
+    out.back().default_val = "9.58";
     out.back().expected = true;
-    out.back().examples = { "0.0", "0.0" };
+    out.back().examples = { "9.58", "5.00" };
 
     out.emplace_back();
     out.back().name = "Fenwick_M";
-    out.back().desc = "...";
-    out.back().default_val = "0.0";
+    out.back().desc = "This parameter describes the dose-response steepness in the Fenwick model."
+                      " Fenwick et al. 2008 (doi:10.1016/j.clon.2008.12.011) provide values:"
+                      " 0.392 for local progression free survival at 30 months for NSCLC tumours and"
+                      " 0.280 for head-and-neck tumours.";
+    out.back().default_val = "0.392";
     out.back().expected = true;
-    out.back().examples = { "0.0", "0.0" };
+    out.back().examples = { "0.392", "0.280" };
 
-Fenwick_C
-Fenwick_M
-10.1016/j.clon.2008.12.011
+    out.emplace_back();
+    out.back().name = "Fenwick_Vref";
+    out.back().desc = "This parameter is the volume (in DICOM units; usually mm^3) of a reference tumour"
+                      " (i.e., GTV; primary tumour and"
+                      " involved nodes) which the D_{50} are estimated using. In other words, this is a"
+                      " 'nominal' tumour volume. Fenwick et al. 2008"
+                      " (doi:10.1016/j.clon.2008.12.011) recommend 148'410 mm^3 (i.e., a sphere of"
+                      " diameter 6.6 cm). However, an appropriate value depends on the nature of the tumour.";
+    out.back().default_val = "148410.0";
+    out.back().expected = true;
+    out.back().examples = { "148410.0" };
 
-... where V is the GTV (primary tumour plus involved nodes), F is the integrated normal distribution, NTD50 the NTD at which 50%
-of tumours of volume Vref are controlled, m determines the dose-response curve steepness, c the extent to which higher doses
-are required to control larger tumours, and NTD is calculated from the isocentre doseusing an a/ß ratio of 10 Gy for NSCLC.
-*/
     return out;
 }
 
@@ -286,17 +299,24 @@ are required to control larger tumours, and NTD is calculated from the isocentre
 
 Drover EvaluateTCPModels(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string> /*InvocationMetadata*/, std::string FilenameLex){
 
-    // This operation evaluates a variety of TCP models for each ROI. Currently the following are implemented:
+    // This operation evaluates a variety of TCP models for each provided ROI. The selected ROI should be the GTV
+    // (according to the Fenwick model). Currently the following are implemented:
     //   - The "Martel" model.
     //   - Equivalent Uniform Dose (EUD) TCP.
+    //   - The "Fenwick" model for solid tumours.
     //   - ...TODO...
     //
-    // Note: this routine uses image_arrays so convert dose_arrays beforehand.
+    // Note: This routine uses image_arrays so convert dose_arrays beforehand.
     //
-    // Note: this routine will combine spatially-overlapping images by summing voxel intensities. So if you have a time
+    // Note: This routine will combine spatially-overlapping images by summing voxel intensities. So if you have a time
     //       course it may be more sensible to aggregate images in some way (e.g., spatial averaging) prior to calling
     //       this routine.
     //
+    // Note: The Fenwick and Martel models share the value of D_{50}. There may be a slight difference in some cases.
+    //       Huang et al. 2015 (doi:10.1038/srep18010) used both models and used 84.5 Gy for the Martel model while
+    //       using 84.6 Gy for the Fenwick model. (The paper also reported using a Fenwick 'm' of 0.329 whereas the
+    //       original report by Fenwick reported 0.392, so I don't think this should be taken as strong evidence of the
+    //       equality of D_{50}. However, the difference seems relatively insignificant.)
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     auto TCPFileName = OptArgs.getValueStr("TCPFileName").value();
@@ -314,10 +334,10 @@ Drover EvaluateTCPModels(Drover DICOM_data, OperationArgPkg OptArgs, std::map<st
     const auto EUD_TCD50 = std::stod( OptArgs.getValueStr("EUD_TCD50").value() );
     const auto EUD_Alpha = std::stod( OptArgs.getValueStr("EUD_Alpha").value() );
 
-/*
+    const auto Fenwick_D50 = Dose50; // Shared with Martel model. There may be a slight difference though.
     const auto Fenwick_C = std::stod( OptArgs.getValueStr("Fenwick_C").value() );
     const auto Fenwick_M = std::stod( OptArgs.getValueStr("Fenwick_M").value() );
-*/
+    const auto Fenwick_Vref = std::stod( OptArgs.getValueStr("Fenwick_Vref").value() );
 
     //-----------------------------------------------------------------------------------------------------------------
     const auto theregex = std::regex(ROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
@@ -362,6 +382,13 @@ Drover EvaluateTCPModels(Drover DICOM_data, OperationArgPkg OptArgs, std::map<st
         throw std::invalid_argument("No contours selected. Cannot continue.");
     }
 
+    //Compute ROI volume for the Fenwick model.
+    const double contour_sep = Estimate_Contour_Separation_Multi(cc_ROIs);
+    double ROI_V = 0.0;
+    for(auto &cc_ref : cc_ROIs){
+        ROI_V += cc_ref.get().Slab_Volume(contour_sep, /*IgnoreContourOrientation=*/ true);
+    }
+
     std::string patient_ID;
     if( auto o = cc_ROIs.front().get().contours.front().GetMetadataValueAs<std::string>("PatientID") ){
         patient_ID = o.value();
@@ -381,12 +408,8 @@ Drover EvaluateTCPModels(Drover DICOM_data, OperationArgPkg OptArgs, std::map<st
     //Evalute the models.
     std::map<std::string, double> MartelModel;
     std::map<std::string, double> gEUDModel;
+    std::map<std::string, double> FenwickModel;
     {
-        // NOTE: the following are (supposedly) valid for lung!
-        //const long double D_50 = 84.5; // (Gy). The dose needed to achieve 50% TCP.
-        //const long double gamma = 1.5; // (unitless). The normalized slope of the dose-response sigmoid at D_50
-        //                               //             giving progression-free survival at 30mo post-RT.
-
         for(const auto &av : ud.accumulated_voxels){
             const auto lROIname = av.first;
 
@@ -394,9 +417,7 @@ Drover EvaluateTCPModels(Drover DICOM_data, OperationArgPkg OptArgs, std::map<st
             const long double V_frac = static_cast<long double>(1) / N; // Fractional volume of a single voxel compared to whole ROI.
 
             double TCP_Martel = static_cast<long double>(1);
-/*
             double TCP_Fenwick = static_cast<long double>(1);
-*/
 
             std::vector<double> gEUD_elements;
             gEUD_elements.reserve(N);
@@ -419,21 +440,13 @@ Drover EvaluateTCPModels(Drover DICOM_data, OperationArgPkg OptArgs, std::map<st
                     gEUD_elements.push_back(V_frac * std::pow(ED2, EUD_Alpha));
                 }
 
-/*
                 // Fenwick model.
                 {
-const long double V_tumour = 1000.0;                
-                    const long double numer = (ED2 - Dose50 - Fenwick_C * std::log(V_tumour/148'410.0)); // 148.41 cm^3 in mm^3.
+                    const long double numer = (ED2 - Fenwick_D50 - Fenwick_C * std::log(ROI_V/Fenwick_Vref));
                     const long double denom = Fenwick_M * ED2;
                     const long double TCP_voxel = std::erf(numer/denom); // This is a sigmoid curve.
                     TCP_Fenwick *= std::pow(TCP_voxel, V_frac);
-
-... where V is the GTV (primary tumour plus involved nodes), F is the integrated normal distribution, NTD50 the NTD at which 50%
-of tumours of volume Vref are controlled, m determines the dose-response curve steepness, c the extent to which higher doses
-are required to control larger tumours, and NTD is calculated from the isocentre dose using an a/ß ratio of 10 Gy for NSCLC.
-
                 }
-*/
 
                 // ... other models ...
                 // ...
@@ -442,6 +455,7 @@ are required to control larger tumours, and NTD is calculated from the isocentre
 
             //Post-processing.
             MartelModel[lROIname] = TCP_Martel;
+            FenwickModel[lROIname] = TCP_Fenwick;
 
             {
                 const long double gEUD = std::pow( Stats::Sum(gEUD_elements), static_cast<long double>(1) / EUD_Alpha );
@@ -480,6 +494,7 @@ are required to control larger tumours, and NTD is calculated from the isocentre
                    << "NormalizedROIname,"
                    << "TCPMartelModel,"
                    << "TCPgEUDModel,"
+                   << "TCPFenwickModel,"
                    << "DoseMean,"
                    << "DoseMedian,"
                    << "DoseStdDev,"
@@ -493,12 +508,14 @@ are required to control larger tumours, and NTD is calculated from the isocentre
             const auto DoseStdDev = std::sqrt(Stats::Unbiased_Var_Est( av.second ));
             const auto TCPMartel = MartelModel[lROIname];
             const auto TCPgEUD = gEUDModel[lROIname];
+            const auto TCPFenwick = FenwickModel[lROIname];
 
             FO_tcp  << patient_ID        << ","
                     << X(lROIname)       << ","
                     << lROIname          << ","
                     << TCPMartel*100.0   << ","
                     << TCPgEUD*100.0     << ","
+                    << TCPFenwick*100.0  << ","
                     << DoseMean          << ","
                     << DoseMedian        << ","
                     << DoseStdDev        << ","
