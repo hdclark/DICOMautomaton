@@ -467,6 +467,8 @@ void BaseWebServerApplication::createOperationSelectorGB(void){
         ||  ( n == "ConvertDoseToImage" ) 
         ||  ( n == "DecayDoseOverTimeJones2014" ) 
         ||  ( n == "DecayDoseOverTimeHalve" ) 
+        ||  ( n == "EvaluateNTCPModels" ) 
+        ||  ( n == "EvaluateTCPModels" ) 
         ||  ( n == "RePlanReIrradiateDoseTrimming" ) ){    //Whitelist ... for now.
             selector->addItem(anop.first);
         }
@@ -639,7 +641,9 @@ void BaseWebServerApplication::createOperationParamSelectorGB(void){
                 selector->enable();
 
             }else if( (a.name == "Filename" )
-                  ||  (a.name == "FileName" ) ){
+                  ||  (a.name == "FileName" ) 
+                  ||  (a.name == "TCPFileName" ) 
+                  ||  (a.name == "NTCPFileName" ) ){
                  //Notify that we have to prepare a Wt::WResource for the output.
                  (void *) new Wt::WText("(auto-generated)",  table->elementAt(table_row,col++)); // Examples.
 

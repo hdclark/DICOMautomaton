@@ -52,6 +52,7 @@
 #include "Operations/DumpROISNR.h"
 #include "Operations/DumpVoxelDoseInfo.h"
 #include "Operations/DICOMExportImagesAsDose.h"
+#include "Operations/EvaluateNTCPModels.h"
 #include "Operations/EvaluateTCPModels.h"
 #include "Operations/GenerateSurfaceMask.h"
 #include "Operations/GenerateVirtualDataPerfusionV1.h"
@@ -129,6 +130,7 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["DumpROISurfaceMeshes"] = std::make_pair(OpArgDocDumpROISurfaceMeshes, DumpROISurfaceMeshes);
     out["DumpROISNR"] = std::make_pair(OpArgDocDumpROISNR, DumpROISNR);
     out["DumpVoxelDoseInfo"] = std::make_pair(OpArgDocDumpVoxelDoseInfo, DumpVoxelDoseInfo);
+    out["EvaluateNTCPModels"] = std::make_pair(OpArgDocEvaluateNTCPModels, EvaluateNTCPModels);
     out["EvaluateTCPModels"] = std::make_pair(OpArgDocEvaluateTCPModels, EvaluateTCPModels);
     out["GenerateSurfaceMask"] = std::make_pair(OpArgDocGenerateSurfaceMask, GenerateSurfaceMask);
     out["GenerateVirtualDataPerfusionV1"] = std::make_pair(OpArgDocGenerateVirtualDataPerfusionV1, GenerateVirtualDataPerfusionV1);

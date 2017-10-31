@@ -38,6 +38,7 @@ add_library(Operations_objs OBJECT
     DumpROISNR.cc
     DumpVoxelDoseInfo.cc
     DICOMExportImagesAsDose.cc
+    EvaluateNTCPModels.cc
     EvaluateTCPModels.cc
     GenerateSurfaceMask.cc
     GenerateVirtualDataPerfusionV1.cc
