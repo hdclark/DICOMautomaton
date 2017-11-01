@@ -153,6 +153,7 @@ bool Load_From_DICOM_Files( Drover &DICOM_data,
                 || boost::iequals(Modality,"OT")
                 || boost::iequals(Modality,"US")
                 || boost::iequals(Modality,"MR")
+                || boost::iequals(Modality,"RTIMAGE")
                 || boost::iequals(Modality,"PT") ){
 
             try{

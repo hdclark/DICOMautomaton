@@ -21,6 +21,7 @@
 #include <tuple>
 #include <map>
 #include <random>
+#include <experimental/optional>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
@@ -315,6 +316,35 @@ std::map<std::string,std::string> get_metadata_top_level_tags(const std::string 
     //insert_as_string_if_nonempty(0x300C, 0x0004, "ReferencedBeamSequence");
     //insert_as_string_if_nonempty(0x300C, 0x0006, "ReferencedBeamNumber");
     
+    //RT Image Module.
+    insert_as_string_if_nonempty(0x3002, 0x0002, "RTImageLabel");
+    insert_as_string_if_nonempty(0x3002, 0x0004, "RTImageDescription");
+    insert_as_string_if_nonempty(0x3002, 0x000a, "ReportedValuesOrigin");
+    insert_as_string_if_nonempty(0x3002, 0x000c, "RTImagePlane");
+    insert_as_string_if_nonempty(0x3002, 0x000d, "XRayImageReceptorTranslation");
+    insert_as_string_if_nonempty(0x3002, 0x000e, "XRayImageReceptorAngle");
+    insert_as_string_if_nonempty(0x3002, 0x0010, "RTImageOrientation");
+    insert_as_string_if_nonempty(0x3002, 0x0011, "ImagePlanePixelSpacing");
+    insert_as_string_if_nonempty(0x3002, 0x0012, "RTImagePosition");
+    insert_as_string_if_nonempty(0x3002, 0x0020, "RadiationMachineName");
+    insert_as_string_if_nonempty(0x3002, 0x0022, "RadiationMachineSAD");
+    insert_as_string_if_nonempty(0x3002, 0x0026, "RTImageSID");
+    insert_as_string_if_nonempty(0x3002, 0x0029, "FractionNumber");
+
+    insert_as_string_if_nonempty(0x300a, 0x00b3, "PrimaryDosimeterUnit");
+    insert_as_string_if_nonempty(0x300a, 0x011e, "GantryAngle");
+    insert_as_string_if_nonempty(0x300a, 0x0120, "BeamLimitingDeviceAngle");
+    insert_as_string_if_nonempty(0x300a, 0x0122, "PatientSupportAngle");
+    insert_as_string_if_nonempty(0x300a, 0x0128, "TableTopVerticalPosition");
+    insert_as_string_if_nonempty(0x300a, 0x0129, "TableTopLongitudinalPosition");
+    insert_as_string_if_nonempty(0x300a, 0x012a, "TableTopLateralPosition");
+    insert_as_string_if_nonempty(0x300a, 0x012c, "IsocenterPosition");
+
+    insert_as_string_if_nonempty(0x300c, 0x0006, "ReferencedBeamNumber");
+    insert_as_string_if_nonempty(0x300c, 0x0008, "StartCumulativeMetersetWeight");
+    insert_as_string_if_nonempty(0x300c, 0x0009, "EndCumulativeMetersetWeight");
+    insert_as_string_if_nonempty(0x300c, 0x0022, "ReferencedFractionGroupNumber");
+
 
     //Unclassified others...
     insert_as_string_if_nonempty(0x0018, 0x0020, "ScanningSequence");
@@ -555,9 +585,74 @@ std::unique_ptr<Image_Array> Load_Image_Array(const std::string &FilenameIn){
     ptr<puntoexe::streamReader> reader(new puntoexe::streamReader(readStream));
     ptr<imebra::dataSet> TopDataSet = imebra::codecs::codecFactory::getCodecFactory()->load(reader);
 
+    //Helper routines that do not create tags when they are missing.
+    //
+    // Note: Issuing the following:
+    //    const auto image_pos_x = static_cast<double>(TopDataSet->getDouble(0x0020, 0, 0x0032, 0)); 
+    //       will result in a new tag with a default value being created if it did not previously exist!
+    auto retrieve_as_string = [&TopDataSet](uint16_t group, 
+                                            uint16_t tag, 
+                                            uint32_t element = 0) 
+                                            -> std::experimental::optional<std::string> {
+        const uint32_t first_order = 0; // Always zero for modern DICOM files.
+
+        //Check if the tag is present in the file. If not, bail.
+        const bool create_if_not_found = false;
+        const auto ptr = TopDataSet->getTag(group, first_order, tag, create_if_not_found);
+        if(ptr == nullptr) return std::experimental::optional<std::string>();
+
+        //Retrieve the element.
+        const auto str = TopDataSet->getString(group, first_order, tag, element);
+        return str;
+    };
+    auto retrieve_as_long_int = [&TopDataSet,&retrieve_as_string](uint16_t group, 
+                                              uint16_t tag, 
+                                              uint32_t element = 0) 
+                                              -> std::experimental::optional<double> {
+        auto o = retrieve_as_string(group,tag,element);
+        if(!o) return std::experimental::nullopt;
+        return std::stol(o.value());
+    };                                            
+    auto retrieve_as_double = [&TopDataSet,&retrieve_as_string](uint16_t group, 
+                                            uint16_t tag, 
+                                            uint32_t element = 0) 
+                                            -> std::experimental::optional<double> {
+        auto o = retrieve_as_string(group,tag,element);
+        if(!o) return std::experimental::nullopt;
+        return std::stod(o.value());
+    };                                            
+    auto retrieve_coalesce_as_string = [&TopDataSet,&retrieve_as_string](std::list<std::array<uint32_t,3>> qs) 
+                                                    -> std::experimental::optional<std::string> {
+        for(const auto &q : qs){
+            const auto group = static_cast<uint16_t>(q[0]);
+            const auto tag = static_cast<uint16_t>(q[1]);
+            const auto element = q[2];
+            auto o = retrieve_as_string(group,tag,element);
+            if(o) return o;
+        }
+
+        //None were available.
+        return std::experimental::nullopt;
+    };
+    auto retrieve_coalesce_as_long_int = [&TopDataSet,&retrieve_coalesce_as_string](std::list<std::array<uint32_t,3>> qs)
+                                                       -> std::experimental::optional<double> {
+        auto o = retrieve_coalesce_as_string(qs);
+        if(!o) return std::experimental::nullopt;
+        return std::stol(o.value());
+    };                                            
+    auto retrieve_coalesce_as_double = [&TopDataSet,&retrieve_coalesce_as_string](std::list<std::array<uint32_t,3>> qs)
+                                                     -> std::experimental::optional<double> {
+        auto o = retrieve_coalesce_as_string(qs);
+        if(!o) return std::experimental::nullopt;
+        return std::stod(o.value());
+    };                                            
+
+    // ------------------------------------------- General --------------------------------------------------
+    const auto modality = retrieve_as_string(0x0008, 0x0060).value();
+
     // -------------------------------------- Temporal ordering ---------------------------------------------
-    const auto content_date = TopDataSet->getString(0x0008, 0, 0x0023, 0); //e.g., "20150228" as a string.
-    const auto content_time = TopDataSet->getString(0x0008, 0, 0x0033, 0); //e.g., "142301" as a string.
+    const auto content_date = retrieve_as_string(0x0008, 0x0023).value(); //e.g., "20150228" as a string.
+    const auto content_time = retrieve_as_string(0x0008, 0x0033).value(); //e.g., "142301" as a string.
 
     //These appear to refer to the moment the DICOM data was assembled or transmission began. Not terribly
     // useful for anything like a keyframe.
@@ -577,40 +672,60 @@ std::unique_ptr<Image_Array> Load_Image_Array(const std::string &FilenameIn){
 
     //These should exist in all files. They appear to be the same for CT and DS files of the same set. Not sure
     // if this is *always* the case.
-    const auto image_pos_x = static_cast<double>(TopDataSet->getDouble(0x0020, 0, 0x0032, 0)); //"ImagePositionPatient".
-    const auto image_pos_y = static_cast<double>(TopDataSet->getDouble(0x0020, 0, 0x0032, 1));
-    const auto image_pos_z = static_cast<double>(TopDataSet->getDouble(0x0020, 0, 0x0032, 2));
+    const auto image_pos_x = retrieve_coalesce_as_double({ {0x0020, 0x0032, 0}, //"ImagePositionPatient".
+                                                           {0x3002, 0x0012, 0}  //"RTImagePosition".
+                                                         }).value_or(0.0);
+    const auto image_pos_y = retrieve_coalesce_as_double({ {0x0020, 0x0032, 1}, //"ImagePositionPatient".
+                                                           {0x3002, 0x0012, 1}  //"RTImagePosition".
+                                                         }).value_or(0.0);
+    const auto image_pos_z = retrieve_coalesce_as_double({ {0x0020, 0x0032, 2}  //"ImagePositionPatient".
+                                                         }).value_or(0.0);
     const vec3<double> image_pos(image_pos_x,image_pos_y,image_pos_z); //Only for first image!
 
-    const auto image_orien_c_x = static_cast<double>(TopDataSet->getDouble(0x0020, 0, 0x0037, 0)); 
-    const auto image_orien_c_y = static_cast<double>(TopDataSet->getDouble(0x0020, 0, 0x0037, 1));
-    const auto image_orien_c_z = static_cast<double>(TopDataSet->getDouble(0x0020, 0, 0x0037, 2));
+
+    const auto image_orien_c_x = retrieve_coalesce_as_double({ {0x0020, 0x0037, 0}, //"ImagePositionPatient".
+                                                               {0x3002, 0x0010, 0}  //"RTImageOrientation".
+                                                             }).value_or(1.0);
+    const auto image_orien_c_y = retrieve_coalesce_as_double({ {0x0020, 0x0037, 1}, //"ImagePositionPatient".
+                                                               {0x3002, 0x0010, 1}  //"RTImageOrientation".
+                                                             }).value_or(0.0);
+    const auto image_orien_c_z = retrieve_coalesce_as_double({ {0x0020, 0x0037, 2}, //"ImagePositionPatient".
+                                                               {0x3002, 0x0010, 2}  //"RTImageOrientation".
+                                                             }).value_or(0.0);
     const vec3<double> image_orien_c = vec3<double>(image_orien_c_x,image_orien_c_y,image_orien_c_z).unit();
 
-    const auto image_orien_r_x = static_cast<double>(TopDataSet->getDouble(0x0020, 0, 0x0037, 3));
-    const auto image_orien_r_y = static_cast<double>(TopDataSet->getDouble(0x0020, 0, 0x0037, 4));
-    const auto image_orien_r_z = static_cast<double>(TopDataSet->getDouble(0x0020, 0, 0x0037, 5));
+
+    const auto image_orien_r_x = retrieve_coalesce_as_double({ {0x0020, 0x0037, 3}, //"ImageOrientationPatient".
+                                                               {0x3002, 0x0010, 3}  //"RTImageOrientation".
+                                                             }).value_or(0.0);
+    const auto image_orien_r_y = retrieve_coalesce_as_double({ {0x0020, 0x0037, 4}, //"ImageOrientationPatient".
+                                                               {0x3002, 0x0010, 4}  //"RTImageOrientation".
+                                                             }).value_or(1.0);
+    const auto image_orien_r_z = retrieve_coalesce_as_double({ {0x0020, 0x0037, 5}, //"ImageOrientationPatient".
+                                                               {0x3002, 0x0010, 5}  //"RTImageOrientation".
+                                                             }).value_or(0.0);
     const vec3<double> image_orien_r = vec3<double>(image_orien_r_x,image_orien_r_y,image_orien_r_z).unit();
 
-    const vec3<double> image_anchor  = vec3<double>(0.0,0.0,0.0);
+    const vec3<double> image_anchor  = vec3<double>(0.0,0.0,0.0); //Could us RTIMAGE IsocenterPosition (300a,012c) ?
 
     //Determine how many frames there are in the pixel data. A CT scan may just be a 2d jpeg or something, 
     // but dose pixel data is 3d data composed of 'frames' of stacked 2d data.
-    const auto frame_count = static_cast<unsigned long int>(TopDataSet->getUnsignedLong(0x0028, 0, 0x0008, 0));
+    const auto frame_count = retrieve_coalesce_as_long_int({ {0x0028, 0x0008, 0} }).value_or(0.0);
     if(frame_count != 0) FUNCERR("This routine only supports 2D images. Adapt the dose array loading code. Cannot continue");
 
-    const auto image_rows  = static_cast<long int>(TopDataSet->getUnsignedLong(0x0028, 0, 0x0010, 0));
-    const auto image_cols  = static_cast<long int>(TopDataSet->getUnsignedLong(0x0028, 0, 0x0011, 0));
-    const auto image_pxldy = static_cast<double>(TopDataSet->getDouble(0x0028, 0, 0x0030, 0)); //Spacing between adjacent rows.
-    const auto image_pxldx = static_cast<double>(TopDataSet->getDouble(0x0028, 0, 0x0030, 1)); //Spacing between adjacent columns.
+    const auto image_rows  = retrieve_coalesce_as_long_int({ {0x0028, 0x0010, 0} }).value();
+    const auto image_cols  = retrieve_coalesce_as_long_int({ {0x0028, 0x0011, 0} }).value();
+
+    const auto image_pxldy = retrieve_coalesce_as_double({ {0x0028, 0x0030, 0}, //"PixelSpacing" -- spacing between adjacent rows.
+                                                           {0x3002, 0x0011, 0}  //"ImagePlanePixelSpacing".
+                                                         }).value();
+    const auto image_pxldx = retrieve_coalesce_as_double({ {0x0028, 0x0030, 1}, //"PixelSpacing" -- spacing between adjacent columns.
+                                                           {0x3002, 0x0011, 1}  //"ImagePlanePixelSpacing".
+                                                         }).value();
 
     //For 2D images, there is often no thickness given. For CT we might have to compare to other files to figure this out.
     // For MR images, the thickness should be specified.
-    double image_thickness = static_cast<double>(TopDataSet->getDouble(0x0018, 0, 0x0050, 0)); //"SliceThickness"
-    if(image_thickness <= 0.0){
-        image_thickness = 0.0;
-        FUNCWARN("Image thickness not specified in DICOM file. Proceeding with zero thickness");
-    }
+    const auto image_thickness = retrieve_coalesce_as_double({ {0x0018, 0x0050, 0} }).value_or(0.0); //"SliceThickness"
 
     // -------------------------------------- Pixel Interpretation ------------------------------------------
     if( (TopDataSet->getTag(0x0040,0,0x9212) != nullptr)
@@ -640,12 +755,16 @@ std::unique_ptr<Image_Array> Load_Image_Array(const std::string &FilenameIn){
 
         //--------------------------------------------------------------------------------------------------
         //Retrieve the pixel data from file. This is an excessively long exercise!
-        ptr<puntoexe::imebra::image> firstImage = TopDataSet->getImage(0);
-        if(firstImage == nullptr) FUNCERR("This file does not have accessible pixel data. Double check the file");
+        ptr<puntoexe::imebra::image> firstImage;
+        try{
+            firstImage = TopDataSet->getImage(0);
+        }catch(const std::exception &e){
+            FUNCERR("This file does not have accessible pixel data. The DICOM image loader should not be called for this file");
+        }
     
         //Process image using modalityVOILUT transform to convert its pixel values into meaningful values.
         // From what I can tell, this conversion is necessary to transform the raw data from a possibly
-        // manufacturer-specific, propietary format into something physically meaningful for us. 
+        // manufacturer-specific, proprietary format into something physically meaningful for us. 
         //
         // I have not experimented with disabling this conversion. Leaving it intact causes the datum from
         // a Philips "Interra" machine's PAR/REC format to coincide with the exported DICOM data.
@@ -655,13 +774,6 @@ std::unique_ptr<Image_Array> Load_Image_Array(const std::string &FilenameIn){
         ptr<imebra::image> convertedImage(modVOILUT->allocateOutputImage(firstImage, width, height));
         modVOILUT->runTransform(firstImage, 0, 0, width, height, convertedImage, 0, 0);
 
-
-        //Print a description of the VOI/LUT if available.
-        if(!modVOILUT->isEmpty()){
-            //FUNCINFO("Applied a Modality VOI/LUT");
-        }else{
-            FUNCINFO("Found no Modality VOI/LUT");
-        }
     
         //Convert the 'convertedImage' into an image suitable for the viewing on screen. The VOILUT transform 
         // applies the contrast suggested by the dataSet to the image. Apply the first one we find. Relevant
@@ -743,7 +855,7 @@ std::unique_ptr<Image_Array> Load_Image_Array(const std::string &FilenameIn){
             puntoexe::imebra::transforms::colorTransforms::colorTransformsFactory::getColorTransformsFactory();
         ptr<puntoexe::imebra::transforms::transform> myColorTransform = 
             pFactory->getTransform(presImage->getColorSpace(), L"MONOCHROME2");//L"RGB");
-        if(myColorTransform != 0){ //If we get a '0', we do not need to transform the image.
+        if(myColorTransform != nullptr){ //If we get a nullptr, we do not need to transform the image.
             ptr<puntoexe::imebra::image> rgbImage(myColorTransform->allocateOutputImage(presImage,width,height));
             myColorTransform->runTransform(presImage, 0, 0, width, height, rgbImage, 0, 0);
             presImage = rgbImage;
@@ -751,8 +863,13 @@ std::unique_ptr<Image_Array> Load_Image_Array(const std::string &FilenameIn){
     
         //Get a 'dataHandler' to access the image data waiting in 'presImage.' Get some image metadata.
         imbxUint32 rowSize, channelPixelSize, channelsNumber, sizeX, sizeY;
+        //Select the image to use.
+        // firstImage     -- Displays RTIMAGE, and CT(MR?) but neither CT nor RTIMAGE values are in HU.
+        // convertedImage -- Works for CT (MR?) but not RTIMAGE.
+        // presImage      -- Works for CT and MR, but not RTIMAGE.
+        ptr<puntoexe::imebra::image> switchImage = ( modality == "RTIMAGE" ) ? firstImage : presImage;
         ptr<puntoexe::imebra::handlers::dataHandlerNumericBase> myHandler = 
-            presImage->getDataHandler(false, &rowSize, &channelPixelSize, &channelsNumber);
+            switchImage->getDataHandler(false, &rowSize, &channelPixelSize, &channelsNumber);
         presImage->getSize(&sizeX, &sizeY);
         //----------------------------------------------------------------------------------------------------
 
