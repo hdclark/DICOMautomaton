@@ -1165,7 +1165,7 @@ static std::string Generate_Random_UID(long int len){
 //       It would probably be best to export one channel per file if multiple channels were needed. Though it is
 //       possible to have up to 3 samples per voxel, IIRC, it may complicate encoding significantly. (Not sure.)
 // 
-// NOTE: This routine will reorder images 
+// NOTE: This routine will reorder images.
 //
 // NOTE: Images containin NaN's will probably be rejected by most programs! Filter them out beforehand.
 //
@@ -1177,7 +1177,7 @@ static std::string Generate_Random_UID(long int len){
 //       intensities which are scaled by a floating-point number to get the final dose. There are facilities for
 //       exchanging floating-point-valued images in DICOM, but portability would be suspect.
 //
-void Write_Dose_Array(std::shared_ptr<Image_Array> IA, const std::string &FilenameOut){
+void Write_Dose_Array(std::shared_ptr<Image_Array> IA, const std::string &FilenameOut, bool ExtraParanoid){
     if( (IA == nullptr) 
     ||  IA->imagecoll.images.empty()){
         throw std::runtime_error("No images provided for export. Cannot continue.");
@@ -1389,6 +1389,74 @@ void Write_Dose_Array(std::shared_ptr<Image_Array> IA, const std::string &Filena
     {
         auto cm = IA->imagecoll.get_common_metadata({});
 
+        //Replace any metadata that might be used to underhandedly link patients, if requested.
+        if(ExtraParanoid){
+            //SOP Common Module.
+            cm["InstanceCreationDate"] = "";
+            cm["InstanceCreationTime"] = "";
+            cm["InstanceCreatorUID"]   = Generate_Random_UID(60);
+
+            //Patient Module.
+            cm["PatientsName"]      = "";
+            cm["PatientID"]         = "";
+            cm["PatientsBirthDate"] = "";
+            cm["PatientsGender"]    = "";
+            cm["PatientsBirthTime"] = "";
+
+            //General Study Module.
+            cm["StudyInstanceUID"] = "";
+            cm["StudyDate"] = "";
+            cm["StudyTime"] = "";
+            cm["ReferringPhysiciansName"] = "";
+            cm["StudyID"] = "";
+            cm["AccessionNumber"] = "";
+            cm["StudyDescription"] = "";
+
+            //General Series Module.
+            cm["SeriesInstanceUID"] = "";
+            cm["SeriesNumber"] = "";
+            cm["SeriesDate"] = "";
+            cm["SeriesTime"] = "";
+            cm["SeriesDescription"] = "";
+            cm["RequestedProcedureID"] = "";
+            cm["ScheduledProcedureStepID"] = "";
+            cm["OperatorsName"] = "";
+
+            //Patient Study Module.
+            cm["PatientsMass"] = "";
+
+            //Frame of Reference Module.
+            cm["FrameofReferenceUID"] = "";
+            cm["PositionReferenceIndicator"] = "";
+
+            //General Equipment Module.
+            cm["Manufacturer"] = "";
+            cm["InstitutionName"] = "";
+            cm["StationName"] = "";
+            cm["InstitutionalDepartmentName"] = "";
+            cm["ManufacturersModelName"] = "";
+            cm["SoftwareVersions"] = "";
+
+            //General Image Module.
+            cm["ContentDate"] = "";
+            cm["ContentTime"] = "";
+            cm["AcquisitionNumber"] = "";
+            cm["AcquisitionDate"] = "";
+            cm["AcquisitionTime"] = "";
+            cm["DerivationDescription"] = "";
+            cm["ImagesInAcquisition"] = "";
+
+            //RT Dose Module.
+            cm[R"***(ReferencedRTPlanSequence/ReferencedSOPInstanceUID)***"] = "";
+            if(0 != cm.count(R"***(ReferencedFractionGroupSequence/ReferencedFractionGroupNumber)***")){
+                cm[R"***(ReferencedFractionGroupSequence/ReferencedFractionGroupNumber)***"] = "";
+            }
+            if(0 != cm.count(R"***(ReferencedBeamSequence/ReferencedBeamNumber)***")){
+                cm[R"***(ReferencedBeamSequence/ReferencedBeamNumber)***"] = "";
+            }
+        }
+
+
         //Generate some UIDs that need to be duplicated.
         const auto SOPInstanceUID = Generate_Random_UID(60);
 
@@ -1406,33 +1474,33 @@ void Write_Dose_Array(std::shared_ptr<Image_Array> IA, const std::string &Filena
         ds_insert(tds, 0x0008, 0x0016, "1.2.840.10008.5.1.4.1.1.481.2"); // "SOPClassUID"
         ds_insert(tds, 0x0008, 0x0018, SOPInstanceUID); // "SOPInstanceUID"
         //ds_insert(tds, 0x0008, 0x0005, "ISO_IR 100"); //fne({ cm["SpecificCharacterSet"], "ISO_IR 100" })); // Set above!
-        ds_insert(tds, 0x0008, 0x0012, fne({ cm["InstanceCreationDate"], "20170730" }));
-        ds_insert(tds, 0x0008, 0x0013, fne({ cm["InstanceCreationTime"], "000000" }));
+        ds_insert(tds, 0x0008, 0x0012, fne({ cm["InstanceCreationDate"], "20170102" }));
+        ds_insert(tds, 0x0008, 0x0013, fne({ cm["InstanceCreationTime"], "130101" }));
         ds_insert(tds, 0x0008, 0x0014, foe({ cm["InstanceCreatorUID"] }));
         ds_insert(tds, 0x0008, 0x0114, foe({ cm["CodingSchemeExternalUID"] }));
         ds_insert(tds, 0x0020, 0x0013, foe({ cm["InstanceNumber"] }));
 
         //Patient Module.
-        ds_insert(tds, 0x0010, 0x0010, fne({ cm["PatientsName"], "HC_Test^HC_Test" }));
-        ds_insert(tds, 0x0010, 0x0020, fne({ cm["PatientID"], "HC_Test_"_s + Generate_Random_String_of_Length(10) }));
-        ds_insert(tds, 0x0010, 0x0030, fne({ cm["PatientsBirthDate"], "20170730" }));
+        ds_insert(tds, 0x0010, 0x0010, fne({ cm["PatientsName"], "DICOMautomaton^DICOMautomaton" }));
+        ds_insert(tds, 0x0010, 0x0020, fne({ cm["PatientID"], "DCMA_"_s + Generate_Random_String_of_Length(10) }));
+        ds_insert(tds, 0x0010, 0x0030, fne({ cm["PatientsBirthDate"], "20170101" }));
         ds_insert(tds, 0x0010, 0x0040, fne({ cm["PatientsGender"], "O" }));
-        ds_insert(tds, 0x0010, 0x0032, fne({ cm["PatientsBirthTime"], "000000" }));
+        ds_insert(tds, 0x0010, 0x0032, fne({ cm["PatientsBirthTime"], "130101" }));
 
         //General Study Module.
         ds_insert(tds, 0x0020, 0x000D, fne({ cm["StudyInstanceUID"], Generate_Random_UID(31) }));
-        ds_insert(tds, 0x0008, 0x0020, fne({ cm["StudyDate"], "20170730" }));
-        ds_insert(tds, 0x0008, 0x0030, fne({ cm["StudyTime"], "000000" }));
+        ds_insert(tds, 0x0008, 0x0020, fne({ cm["StudyDate"], "20170102" }));
+        ds_insert(tds, 0x0008, 0x0030, fne({ cm["StudyTime"], "130101" }));
         ds_insert(tds, 0x0008, 0x0090, fne({ cm["ReferringPhysiciansName"], "UNSPECIFIED^UNSPECIFIED" }));
         ds_insert(tds, 0x0020, 0x0010, fne({ cm["StudyID"], "HCTest_"_s + Generate_Random_String_of_Length(10) }));
-        ds_insert(tds, 0x0008, 0x0050, fne({ cm["AccessionNumber"], Generate_Random_String_of_Length(10) }));
-        ds_insert(tds, 0x0008, 0x1030, foe({ cm["StudyDescription"] }));
+        ds_insert(tds, 0x0008, 0x0050, fne({ cm["AccessionNumber"], Generate_Random_String_of_Length(14) }));
+        ds_insert(tds, 0x0008, 0x1030, fne({ cm["StudyDescription"], "UNSPECIFIED" }));
 
 
         //General Series Module.
         ds_insert(tds, 0x0008, 0x0060, "RTDOSE");
         ds_insert(tds, 0x0020, 0x000E, fne({ cm["SeriesInstanceUID"], Generate_Random_UID(31) }));
-        ds_insert(tds, 0x0020, 0x0011, fne({ cm["SeriesNumber"], "1000" }));
+        ds_insert(tds, 0x0020, 0x0011, fne({ cm["SeriesNumber"], "7121254961" }));
         ds_insert(tds, 0x0008, 0x0021, foe({ cm["SeriesDate"] }));
         ds_insert(tds, 0x0008, 0x0031, foe({ cm["SeriesTime"] }));
         ds_insert(tds, 0x0008, 0x103E, fne({ cm["SeriesDescription"], "UNSPECIFIED" }));

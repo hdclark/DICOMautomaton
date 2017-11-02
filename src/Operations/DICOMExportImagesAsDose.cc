@@ -3,6 +3,7 @@
 #include <string>    
 #include <map>
 #include <experimental/optional>
+#include <regex>
 
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
@@ -26,6 +27,15 @@ std::list<OperationArgDoc> OpArgDocDICOMExportImagesAsDose(void){
                             "./RD.dcm",
                             "RD.dcm" };
 
+    out.emplace_back();
+    out.back().name = "ExtraParanoid";
+    out.back().desc = "Normally only top-level UIDs are replaced."
+                      " Enabling this mode causes all UIDs, descriptions, and"
+                      " labels to be replaced. (Note: this is not a full anonymization.)";
+    out.back().default_val = "false";
+    out.back().expected = true;
+    out.back().examples = { "true", "false" };
+
     return out;
 }
 
@@ -36,12 +46,18 @@ DICOMExportImagesAsDose(Drover DICOM_data,
                         std::string /*FilenameLex*/){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
-    auto fname = OptArgs.getValueStr("Filename").value();    
+    const auto FilenameOut = OptArgs.getValueStr("Filename").value();    
+    const auto ExtraParanoidStr = OptArgs.getValueStr("ExtraParanoid").value();
+
+    //-----------------------------------------------------------------------------------------------------------------
+    const auto TrueRegex = std::regex("^tr?u?e?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto ExtraParanoid = std::regex_match(ExtraParanoidStr, TrueRegex);
+
     //-----------------------------------------------------------------------------------------------------------------
 
     if(!DICOM_data.image_data.empty()){
         try{
-            Write_Dose_Array(DICOM_data.image_data.back(), fname);
+            Write_Dose_Array(DICOM_data.image_data.back(), FilenameOut, ExtraParanoid);
         }catch(const std::exception &e){
             FUNCWARN("Unable to export Image_Array as DICOM RTDOSE file: '" << e.what() << "'");
         }
