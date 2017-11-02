@@ -145,18 +145,9 @@ std::list<OperationArgDoc> OpArgDocDecayDoseOverTimeJones2014(void){
 
 
     out.emplace_back();
-    out.back().name = "Course2NumberOfFractions";
-    out.back().desc = "The number of fractions you want to deliver for the second (i.e., forthcoming) course."
-                      " If several apply, you can provide a single effective fractionation scheme's 'n'.";
-    out.back().default_val = "35";
-    out.back().expected = true;
-    out.back().examples = { "15", "25", "30.001", "35.3" };
-
-
-    out.emplace_back();
-    out.back().name = "ToleranceDosePerFraction";
-    out.back().desc = "The dose delivered per fraction ('d', in Gray) for a hypothetical 'lifetime dose tolerance' course."
-                      " This dose per fraction corresponds to a hypothetical radiation course that nominally"
+    out.back().name = "ToleranceTotalDose";
+    out.back().desc = "The dose delivered (in Gray) for a hypothetical 'lifetime dose tolerance' course."
+                      " This dose corresponds to a hypothetical radiation course that nominally"
                       " corresponds to the toxicity of interest. For CNS tissues, it will probably be myelopathy"
                       " or necrosis at some population-level onset risk (e.g., 5% risk of myelopathy)."
                       " The value provided will be converted to a BED_{a/b} so you can safely provide a 'nominal' value."
@@ -164,10 +155,10 @@ std::list<OperationArgDoc> OpArgDocDecayDoseOverTimeJones2014(void){
                       " (Many dose limits reported in the literature use whole-ROI D_mean or D_max, and so may be"
                       " not be directly applicable to per-voxel risk estimation!) Note that the QUANTEC 2010 reports"
                       " almost all assume 2 Gy/fraction."
-                      " If several 'd' apply, you can provide a single effective fractionation scheme's 'd'.";
-    out.back().default_val = "2";
+                      " If several fractionation schemes were used, you should provide a cumulative BED-derived dose here.";
+    out.back().default_val = "52";
     out.back().expected = true;
-    out.back().examples = { "1", "2", "2.33333", "10" };
+    out.back().examples = { "15", "20", "25", "50", "83.2" };
 
 
     out.emplace_back();
@@ -181,14 +172,14 @@ std::list<OperationArgDoc> OpArgDocDecayDoseOverTimeJones2014(void){
 
 
     out.emplace_back();
-    out.back().name = "TemporalGapOverride";
-    out.back().desc = "The number of months between radiotherapy courses. Note that this is normally estimated by"
+    out.back().name = "TimeGap";
+    out.back().desc = "The number of years between radiotherapy courses. Note that this is normally estimated by"
                       " (1) extracting study/series dates from the provided dose files and (2) using the current"
-                      " date as the second course date. Use this parameter to override the autodetection gap."
+                      " date as the second course date. Use this parameter to override the autodetected gap time."
                       " Note: if the provided value is negative, autodetection will be used.";
     out.back().default_val = "-1";
     out.back().expected = true;
-    out.back().examples = { "0", "12", "38" };
+    out.back().examples = { "0.91", "2.6", "5" };
 
 
     out.emplace_back();
@@ -244,12 +235,10 @@ Drover DecayDoseOverTimeJones2014(Drover DICOM_data, OperationArgPkg OptArgs, st
     //ud.Course1DosePerFraction = std::stod( OptArgs.getValueStr("Course1DosePerFraction").value() );
     ud.Course1NumberOfFractions = std::stod( OptArgs.getValueStr("Course1NumberOfFractions").value() );
 
-    ud.Course2NumberOfFractions = std::stod( OptArgs.getValueStr("Course2NumberOfFractions").value() );
-
-    ud.ToleranceDosePerFraction = std::stod( OptArgs.getValueStr("ToleranceDosePerFraction").value() );
+    ud.ToleranceTotalDose = std::stod( OptArgs.getValueStr("ToleranceTotalDose").value() );
     ud.ToleranceNumberOfFractions = std::stod( OptArgs.getValueStr("ToleranceNumberOfFractions").value() );
 
-    const auto TemporalGapOverride_str = OptArgs.getValueStr("TemporalGapOverride").value();
+    const auto TemporalGapOverride_str = OptArgs.getValueStr("TimeGap").value();
 
     ud.AlphaBetaRatio = std::stod( OptArgs.getValueStr("AlphaBetaRatio").value() );
 
@@ -306,7 +295,7 @@ Drover DecayDoseOverTimeJones2014(Drover DICOM_data, OperationArgPkg OptArgs, st
 
     ud.TemporalGapMonths = 0.0;
     if(std::regex_match(TemporalGapOverride_str,IsPositiveFloat)){
-        ud.TemporalGapMonths = std::stod(TemporalGapOverride_str);
+        ud.TemporalGapMonths = std::stod(TemporalGapOverride_str) / 12.0;
         FUNCINFO("Overriding temporal gap with user-provided value of: " << ud.TemporalGapMonths);
     }else{
         auto study_dates = img_arr_ptr->imagecoll.get_all_values_for_key("StudyDate");
@@ -317,7 +306,7 @@ Drover DecayDoseOverTimeJones2014(Drover DICOM_data, OperationArgPkg OptArgs, st
             if(t2.Read_from_string(massaged)){
                 time_mark tnow;
                 const auto dt = static_cast<double>(t2.Diff_in_Days(tnow));
-                ud.TemporalGapMonths = dt / 30.4;
+                ud.TemporalGapMonths = dt / 30.4375;
                 FUNCINFO("Based on provided data and current date, assuming temporal gap is: " << ud.TemporalGapMonths);
                 break;
             }

@@ -41,16 +41,13 @@ struct DecayDoseOverTimeUserData {
     double Course1DosePerFraction = 2.0;     // Note `course 1' refers to a historical treatment
     double Course1NumberOfFractions = 35.0;  // that corresponds to the user-provided dose data.
 
-    double Course2NumberOfFractions = 30.0;  // Note `course 2' refers to a hypothetical future
-                                             // treatment for which the PTV has dictated the 
-                                             // fractionation scheme.
-
-    double ToleranceDosePerFraction = 1.25;   // Note this refers to a hypothetical lifetime dose
+    double ToleranceTotalDose = 50.0;         // Note this refers to a hypothetical lifetime dose
     double ToleranceNumberOfFractions = 35.0; // limit (used to generate a lifetime 'tolerance' 
                                               // BED). 
 
     double TemporalGapMonths = 12.0; // Note Jones and Grant recommend clamping to [0y:3y].
                                      // This should be enforced in the calling code.
+                                     // Also note that 1y = 12mo exactly, so 1mo = 30.4375d. 
 
     double AlphaBetaRatio = 2.0; // Note Jones and Grant recommend 2 Gy rather than 3 Gy 
                                  // to be more conservative.

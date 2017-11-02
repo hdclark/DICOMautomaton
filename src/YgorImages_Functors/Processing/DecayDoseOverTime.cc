@@ -49,8 +49,8 @@ bool DecayDoseOverTime(planar_image_collection<float,double>::images_list_it_t f
     }
 
     //Work out some model parameters.
-    const auto BED_abr_tol = BEDabr_from_n_d_abr(user_data_s->ToleranceNumberOfFractions, 
-                                                 user_data_s->ToleranceDosePerFraction,
+    const auto BED_abr_tol = BEDabr_from_n_D_abr(user_data_s->ToleranceNumberOfFractions, 
+                                                 user_data_s->ToleranceTotalDose,
                                                  user_data_s->AlphaBetaRatio);
 
     //This is the 'recovery exponent' described in Jones and Grant 2014 (figure 4). Caption states:
@@ -150,7 +150,7 @@ bool DecayDoseOverTime(planar_image_collection<float,double>::images_list_it_t f
                                         const double time_scale_factor = std::pow((1.0 - BED_ratio),r_exp);
                                         const auto BED_abr_c1_eff = BED_abr_tol * (1.0 - time_scale_factor);
 
-                                        const auto D_c1_eff = D_from_n_BEDabr(user_data_s->Course2NumberOfFractions,
+                                        const auto D_c1_eff = D_from_n_BEDabr(user_data_s->Course1NumberOfFractions,
                                                                               BED_abr_c1_eff);
                                         newval = D_c1_eff;
                                     }else{
