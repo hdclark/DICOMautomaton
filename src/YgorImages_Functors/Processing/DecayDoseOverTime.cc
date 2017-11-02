@@ -153,6 +153,18 @@ bool DecayDoseOverTime(planar_image_collection<float,double>::images_list_it_t f
                                         const auto D_c1_eff = D_from_n_BEDabr(user_data_s->Course1NumberOfFractions,
                                                                               BED_abr_c1_eff);
                                         newval = D_c1_eff;
+
+                                        //Debugging/validation:
+                                        //if( ((row == 0) && (col == 19)) || ( (row == 9) && (col == 9)) ){
+                                        //    FUNCINFO("BED_abr_tol    = " << BED_abr_tol.val);
+                                        //    FUNCINFO("r              = " << r);
+                                        //    FUNCINFO("r_exp          = " << r_exp);
+                                        //    FUNCINFO("Dincoming      = " << pixel_val);
+                                        //    FUNCINFO("BED_abr_c1     = " << BED_abr_c1.val);
+                                        //    FUNCINFO("BED_ratio      = " << BED_ratio);
+                                        //    FUNCINFO("BED_C1_eff     = " << BED_abr_c1_eff.val);
+                                        //    FUNCINFO("Doutgoing      = " << D_c1_eff);
+                                        //}
                                     }else{
                                         //The model does not apply to doses beyond the tolerance dose, so the safest
                                         // approach is to leave the dose in such voxels as-is.

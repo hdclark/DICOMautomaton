@@ -125,16 +125,6 @@ std::list<OperationArgDoc> OpArgDocDecayDoseOverTimeJones2014(void){
                             R"***(.*left.*parotid.*|.*right.*parotid.*|.*eyes.*)***",
                             R"***(left_parotid|right_parotid)***" };
 
-
-    //out.emplace_back();
-    //out.back().name = "Course1DosePerFraction";
-    //out.back().desc = "The dose delivered per fraction (in Gray) for the first (i.e., previous) course."
-    //                  " If several apply, you can provide a single effective fractionation scheme's 'd'.";
-    //out.back().default_val = "2";
-    //out.back().expected = true;
-    //out.back().examples = { "1", "2", "2.33333", "10" };
-
-
     out.emplace_back();
     out.back().name = "Course1NumberOfFractions";
     out.back().desc = "The number of fractions delivered for the first (i.e., previous) course."
@@ -280,11 +270,13 @@ Drover DecayDoseOverTimeJones2014(Drover DICOM_data, OperationArgPkg OptArgs, st
     auto cc_ROIs = cc_all;
     cc_ROIs.remove_if([=](std::reference_wrapper<contour_collection<double>> cc) -> bool {
                    const auto ROINameOpt = cc.get().contours.front().GetMetadataValueAs<std::string>("ROIName");
+                   //if(!ROINameOpt) return true; // Note cannot do this because it can fail if the tag is merely missing.
                    const auto ROIName = ROINameOpt.value();
                    return !(std::regex_match(ROIName,theregex));
     });
     cc_ROIs.remove_if([=](std::reference_wrapper<contour_collection<double>> cc) -> bool {
                    const auto ROINameOpt = cc.get().contours.front().GetMetadataValueAs<std::string>("NormalizedROIName");
+                   //if(!ROINameOpt) return true; // Note cannot do this because it can fail if the tag is merely missing.
                    const auto ROIName = ROINameOpt.value();
                    return !(std::regex_match(ROIName,thenormalizedregex));
     });
@@ -295,8 +287,8 @@ Drover DecayDoseOverTimeJones2014(Drover DICOM_data, OperationArgPkg OptArgs, st
 
     ud.TemporalGapMonths = 0.0;
     if(std::regex_match(TemporalGapOverride_str,IsPositiveFloat)){
-        ud.TemporalGapMonths = std::stod(TemporalGapOverride_str) / 12.0;
-        FUNCINFO("Overriding temporal gap with user-provided value of: " << ud.TemporalGapMonths);
+        ud.TemporalGapMonths = std::stod(TemporalGapOverride_str) * 12.0;
+        FUNCINFO("Overriding temporal gap with user-provided value of: " << ud.TemporalGapMonths << " months");
     }else{
         auto study_dates = img_arr_ptr->imagecoll.get_all_values_for_key("StudyDate");
         for(const auto &adate : study_dates){

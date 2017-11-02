@@ -41,8 +41,9 @@ add_library(Operations_objs OBJECT
     EvaluateNTCPModels.cc
     EvaluateTCPModels.cc
     GenerateSurfaceMask.cc
-    GenerateVirtualDataPerfusionV1.cc
     GenerateVirtualDataContourViaThresholdTestV1.cc
+    GenerateVirtualDataDoseStairsV1.cc
+    GenerateVirtualDataPerfusionV1.cc
     GiveWholeImageArrayABoneWindowLevel.cc
     GiveWholeImageArrayAHeadAndNeckWindowLevel.cc
     GiveWholeImageArrayAThoraxWindowLevel.cc

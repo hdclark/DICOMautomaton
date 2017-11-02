@@ -55,8 +55,9 @@
 #include "Operations/EvaluateNTCPModels.h"
 #include "Operations/EvaluateTCPModels.h"
 #include "Operations/GenerateSurfaceMask.h"
-#include "Operations/GenerateVirtualDataPerfusionV1.h"
 #include "Operations/GenerateVirtualDataContourViaThresholdTestV1.h"
+#include "Operations/GenerateVirtualDataDoseStairsV1.h"
+#include "Operations/GenerateVirtualDataPerfusionV1.h"
 #include "Operations/GiveWholeImageArrayABoneWindowLevel.h"
 #include "Operations/GiveWholeImageArrayAHeadAndNeckWindowLevel.h"
 #include "Operations/GiveWholeImageArrayAThoraxWindowLevel.h"
@@ -133,8 +134,9 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["EvaluateNTCPModels"] = std::make_pair(OpArgDocEvaluateNTCPModels, EvaluateNTCPModels);
     out["EvaluateTCPModels"] = std::make_pair(OpArgDocEvaluateTCPModels, EvaluateTCPModels);
     out["GenerateSurfaceMask"] = std::make_pair(OpArgDocGenerateSurfaceMask, GenerateSurfaceMask);
-    out["GenerateVirtualDataPerfusionV1"] = std::make_pair(OpArgDocGenerateVirtualDataPerfusionV1, GenerateVirtualDataPerfusionV1);
     out["GenerateVirtualDataContourViaThresholdTestV1"] = std::make_pair(OpArgDocGenerateVirtualDataContourViaThresholdTestV1, GenerateVirtualDataContourViaThresholdTestV1);
+    out["GenerateVirtualDataDoseStairsV1"] = std::make_pair(OpArgDocGenerateVirtualDataDoseStairsV1, GenerateVirtualDataDoseStairsV1);
+    out["GenerateVirtualDataPerfusionV1"] = std::make_pair(OpArgDocGenerateVirtualDataPerfusionV1, GenerateVirtualDataPerfusionV1);
     out["GiveWholeImageArrayABoneWindowLevel"] = std::make_pair(OpArgDocGiveWholeImageArrayABoneWindowLevel, GiveWholeImageArrayABoneWindowLevel);
     out["GiveWholeImageArrayAHeadAndNeckWindowLevel"] = std::make_pair(OpArgDocGiveWholeImageArrayAHeadAndNeckWindowLevel, GiveWholeImageArrayAHeadAndNeckWindowLevel);
     out["GiveWholeImageArrayAThoraxWindowLevel"] = std::make_pair(OpArgDocGiveWholeImageArrayAThoraxWindowLevel, GiveWholeImageArrayAThoraxWindowLevel);
