@@ -312,6 +312,9 @@ void BaseWebServerApplication::createFileUploadGB(void){
 
     fileup->uploaded().connect(this, &BaseWebServerApplication::filesUploaded);
 
+    upbutton->setCanReceiveFocus(true);
+    upbutton->setFocus(true);
+    this->processEvents();
     return;
 }
 
@@ -482,9 +485,6 @@ void BaseWebServerApplication::createOperationSelectorGB(void){
 
     auto gobutton = new Wt::WPushButton("Proceed", gb);
 
-    gb->setCanReceiveFocus(true);
-    gb->setFocus(true);
-
     // -------
 
     gobutton->clicked().connect(std::bind([=](){
@@ -498,6 +498,8 @@ void BaseWebServerApplication::createOperationSelectorGB(void){
         return;
     }));
 
+    gobutton->setCanReceiveFocus(true);
+    gobutton->setFocus(true);
     this->processEvents();
     return;
 }
@@ -718,9 +720,6 @@ void BaseWebServerApplication::createOperationParamSelectorGB(void){
     }
     table->enable();
 
-    gb->setCanReceiveFocus(true);
-    gb->setFocus(true);
-
     // -------
 
     gobutton->clicked().connect(std::bind([=](){
@@ -731,6 +730,8 @@ void BaseWebServerApplication::createOperationParamSelectorGB(void){
         return;
     }));
 
+    gb->setCanReceiveFocus(true);
+    gb->setFocus(true);
     this->processEvents();
     return;
 }
@@ -846,6 +847,9 @@ void BaseWebServerApplication::createComputeGB(void){
         return;
     }
     feedback->setText("<p>Operation successful. </p>");
+
+    gb->setCanReceiveFocus(true);
+    gb->setFocus(true);
     this->processEvents();
 
     // ---
@@ -917,6 +921,8 @@ void BaseWebServerApplication::createComputeGB(void){
         return;
     }));
 
+    gobutton->setCanReceiveFocus(true);
+    gobutton->setFocus(true);
     this->processEvents();
     return;
 }
