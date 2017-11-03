@@ -1177,7 +1177,7 @@ static std::string Generate_Random_UID(long int len){
 //       intensities which are scaled by a floating-point number to get the final dose. There are facilities for
 //       exchanging floating-point-valued images in DICOM, but portability would be suspect.
 //
-void Write_Dose_Array(std::shared_ptr<Image_Array> IA, const std::string &FilenameOut, bool ExtraParanoid){
+void Write_Dose_Array(std::shared_ptr<Image_Array> IA, const std::string &FilenameOut, ParanoiaLevel Paranoia){
     if( (IA == nullptr) 
     ||  IA->imagecoll.images.empty()){
         throw std::runtime_error("No images provided for export. Cannot continue.");
@@ -1390,15 +1390,15 @@ void Write_Dose_Array(std::shared_ptr<Image_Array> IA, const std::string &Filena
         auto cm = IA->imagecoll.get_common_metadata({});
 
         //Replace any metadata that might be used to underhandedly link patients, if requested.
-        if(ExtraParanoid){
+        if((Paranoia == ParanoiaLevel::Medium) || (Paranoia == ParanoiaLevel::High)){
             //SOP Common Module.
             cm["InstanceCreationDate"] = "";
             cm["InstanceCreationTime"] = "";
             cm["InstanceCreatorUID"]   = Generate_Random_UID(60);
 
             //Patient Module.
-            cm["PatientsName"]      = "";
-            cm["PatientID"]         = "";
+//            cm["PatientsName"]      = "";
+//            cm["PatientID"]         = "";
             cm["PatientsBirthDate"] = "";
             cm["PatientsGender"]    = "";
             cm["PatientsBirthTime"] = "";
@@ -1426,7 +1426,7 @@ void Write_Dose_Array(std::shared_ptr<Image_Array> IA, const std::string &Filena
             cm["PatientsMass"] = "";
 
             //Frame of Reference Module.
-            cm["FrameofReferenceUID"] = "";
+//            cm["FrameofReferenceUID"] = "";
             cm["PositionReferenceIndicator"] = "";
 
             //General Equipment Module.
@@ -1454,6 +1454,14 @@ void Write_Dose_Array(std::shared_ptr<Image_Array> IA, const std::string &Filena
             if(0 != cm.count(R"***(ReferencedBeamSequence/ReferencedBeamNumber)***")){
                 cm[R"***(ReferencedBeamSequence/ReferencedBeamNumber)***"] = "";
             }
+        }
+        if(Paranoia == ParanoiaLevel::High){
+            //Patient Module.
+            cm["PatientsName"]      = "";
+            cm["PatientID"]         = "";
+
+            //Frame of Reference Module.
+            cm["FrameofReferenceUID"] = "";
         }
 
 

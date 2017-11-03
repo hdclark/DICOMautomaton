@@ -59,8 +59,14 @@ std::unique_ptr<Dose_Array> Load_Dose_Array(const std::string &filename);
 std::list<std::shared_ptr<Dose_Array>>  Load_Dose_Arrays(const std::list<std::string> &filenames);
 
 //Writes an Image_Array as if it were a dose matrix.
+enum ParanoiaLevel {
+    Low,      // Reuse many of the metadata tags.
+    Medium,   // Forgo most of the metadata tags, but retain high-level linkage (e.g., PatientID).
+    High      // Forgo all non-critical metadata tags. Note this should not be used for anonymization.
+};
+
 void Write_Dose_Array(std::shared_ptr<Image_Array> IA, 
                       const std::string &FilenameOut, 
-                      bool ExtraParanoid = true);
+                      ParanoiaLevel Paranoia = ParanoiaLevel::Low);
 
 #endif

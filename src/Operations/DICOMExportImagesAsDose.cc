@@ -28,13 +28,19 @@ std::list<OperationArgDoc> OpArgDocDICOMExportImagesAsDose(void){
                             "RD.dcm" };
 
     out.emplace_back();
-    out.back().name = "ExtraParanoid";
-    out.back().desc = "Normally only top-level UIDs are replaced."
-                      " Enabling this mode causes all UIDs, descriptions, and"
-                      " labels to be replaced. (Note: this is not a full anonymization.)";
-    out.back().default_val = "false";
+    out.back().name = "ParanoiaLevel";
+    out.back().desc = "At low paranoia setting, only top-level UIDs are replaced."
+                      " At medium paranoia setting, many UIDs, descriptions, and"
+                      " labels are replaced, but the PatientID and FrameOfReferenceUID are retained."
+                      " The high paranoia setting is the same as the medium setting, but the "
+                      " PatientID and FrameOfReferenceUID are also replaced."
+                      " (Note: this is not a full anonymization.)"
+                      " Use the low setting if you want to retain linkage to the originating data set."
+                      " Use the medium setting if you don't. Use the high setting if your TPS goes"
+                      " overboard linking data sets by PatientID and/or FrameOfReferenceUID.";
+    out.back().default_val = "medium";
     out.back().expected = true;
-    out.back().examples = { "true", "false" };
+    out.back().examples = { "low", "medium", "high" };
 
     return out;
 }
@@ -47,17 +53,31 @@ DICOMExportImagesAsDose(Drover DICOM_data,
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto FilenameOut = OptArgs.getValueStr("Filename").value();    
-    const auto ExtraParanoidStr = OptArgs.getValueStr("ExtraParanoid").value();
+    const auto ParanoiaStr = OptArgs.getValueStr("ParanoiaLevel").value();
 
     //-----------------------------------------------------------------------------------------------------------------
-    const auto TrueRegex = std::regex("^tr?u?e?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto ExtraParanoid = std::regex_match(ExtraParanoidStr, TrueRegex);
+    const auto LowRegex  = std::regex("^lo?w?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto MedRegex  = std::regex("^me?d?i?u?m?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto HighRegex = std::regex("^hi?g?h?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+
+    ParanoiaLevel p;
+    if(false){
+    }else if(std::regex_match(ParanoiaStr,LowRegex)){
+        p = ParanoiaLevel::Low;
+    }else if(std::regex_match(ParanoiaStr,MedRegex)){
+        p = ParanoiaLevel::Medium;
+    }else if(std::regex_match(ParanoiaStr,HighRegex)){
+        p = ParanoiaLevel::High;
+    }else{
+        throw std::runtime_error("Specified paranoia level is not valid. Cannot continue.");
+    }
+
 
     //-----------------------------------------------------------------------------------------------------------------
 
     if(!DICOM_data.image_data.empty()){
         try{
-            Write_Dose_Array(DICOM_data.image_data.back(), FilenameOut, ExtraParanoid);
+            Write_Dose_Array(DICOM_data.image_data.back(), FilenameOut, p);
         }catch(const std::exception &e){
             FUNCWARN("Unable to export Image_Array as DICOM RTDOSE file: '" << e.what() << "'");
         }
