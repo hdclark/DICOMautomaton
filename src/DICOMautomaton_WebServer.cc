@@ -374,11 +374,14 @@ void BaseWebServerApplication::filesUploaded(void){
         auto gb = new Wt::WGroupBox("File Loading", root());
         gb->setObjectName("file_loading_gb");
         gb->addStyleClass("DataEntryGroupBlock");
-
+ 
         auto feedback = new Wt::WText(gb);
         feedback->setObjectName("file_loading_gb_feedback");
         feedback->addStyleClass("FeedbackText");
         feedback->setText("<p>Loading files now...</p>");
+
+        gb->setCanReceiveFocus(true);
+        gb->setFocus(true);
         this->processEvents();
 
         //Uploaded file loading: Boost.Serialization archives.
@@ -478,6 +481,9 @@ void BaseWebServerApplication::createOperationSelectorGB(void){
     (void*) new Wt::WBreak(gb);
 
     auto gobutton = new Wt::WPushButton("Proceed", gb);
+
+    gb->setCanReceiveFocus(true);
+    gb->setFocus(true);
 
     // -------
 
@@ -712,6 +718,9 @@ void BaseWebServerApplication::createOperationParamSelectorGB(void){
     }
     table->enable();
 
+    gb->setCanReceiveFocus(true);
+    gb->setFocus(true);
+
     // -------
 
     gobutton->clicked().connect(std::bind([=](){
@@ -740,6 +749,9 @@ void BaseWebServerApplication::createComputeGB(void){
     feedback->setObjectName("compute_gb_feedback");
     feedback->addStyleClass("FeedbackText");
     feedback->setText("<p>Computing now...</p>");
+
+    gb->setCanReceiveFocus(true);
+    gb->setFocus(true);
     this->processEvents();
 
 
@@ -861,6 +873,9 @@ void BaseWebServerApplication::createComputeGB(void){
 
     auto gobutton = new Wt::WPushButton("Perform another operation", gb);
 
+    gb->setCanReceiveFocus(true);
+    gb->setFocus(true);
+
     gobutton->clicked().connect(std::bind([=](){
         gobutton->disable();
 
@@ -902,6 +917,7 @@ void BaseWebServerApplication::createComputeGB(void){
         return;
     }));
 
+    this->processEvents();
     return;
 }
 
