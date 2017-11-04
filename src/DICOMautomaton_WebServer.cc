@@ -39,6 +39,7 @@
 #include <Wt/WApplication>
 #include <Wt/WBreak>
 #include <Wt/WContainerWidget>
+#include <Wt/WCheckBox>
 #include <Wt/WLineEdit>
 #include <Wt/WPushButton>
 #include <Wt/WText>
@@ -177,6 +178,8 @@ class BaseWebServerApplication : public Wt::WApplication {
     
 
     //Regex for operation parameters.
+    std::regex trueregex    = std::regex("^tr?u?e?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    std::regex falseregex   = std::regex("^fa?l?s?e?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
     std::regex fnameregex   = std::regex(".*filename.*", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
     std::regex roiregex     = std::regex(".*roi.*label.*regex.*", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
     std::regex normroiregex = std::regex(".*normalized.*roi.*label.*regex.*", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
@@ -577,8 +580,10 @@ void BaseWebServerApplication::createOperationParamSelectorGB(void){
     gb->setObjectName("op_paramspec_gb");
     gb->addStyleClass("DataEntryGroupBlock");
 
-    auto instruct = new Wt::WText("Please specify operation parameters.", gb);
+    auto instruct = new Wt::WText("Please specify operation parameters. Hover over for descriptions.", gb);
     instruct->addStyleClass("InstructionText");
+
+//    auto addbutton = new Wt::WPushButton("Add another pass", gb);
 
     (void*) new Wt::WBreak(gb);
 
@@ -603,8 +608,7 @@ void BaseWebServerApplication::createOperationParamSelectorGB(void){
     //table->elementAt(0,0)->addWidget(new Wt::WText("#"));
     table->elementAt(0,0)->addWidget(new Wt::WText(""));
     table->elementAt(0,1)->addWidget(new Wt::WText("Parameter"));
-    table->elementAt(0,2)->addWidget(new Wt::WText("Examples"));
-    table->elementAt(0,3)->addWidget(new Wt::WText("Setting"));
+    table->elementAt(0,2)->addWidget(new Wt::WText("Setting"));
 
     //Determine which ROIs are available, in case they will be needed.
     std::set<std::string> ROI_labels;
@@ -632,33 +636,35 @@ void BaseWebServerApplication::createOperationParamSelectorGB(void){
         }
 
         for(auto &a : optdocs){
-            std::stringstream ss;
-            for(auto &e : a.examples) ss << "<p>" << e << "</p> "; 
-
-            if(false){ // Do not expose these options.
-            }else if(std::regex_match(a.name,normroiregex)){
+            //Since this is an interactive session, do not expose normalized selections.
+            // (This might be useful in some cases though ... change if necessary.)
+            if(std::regex_match(a.name,normroiregex)){
                 continue;
             }
             
             int col = 0;
             //(void *) new Wt::WText(std::to_string(table_row),   table->elementAt(table_row,col++)); // Row number (cosmetic only).
             (void *) new Wt::WText("",     table->elementAt(table_row,col++)); // Row number (cosmetic only).
-            (void *) new Wt::WText(a.name, table->elementAt(table_row,col++)); // Param name.
+            auto pn = new Wt::WText(a.name, table->elementAt(table_row,col++)); // Param name.
+
+            //ROI selection parameters.
             if(false){ // Parameters to expose.
             }else if(std::regex_match(a.name,roiregex)){
                 // Instead of a freeform lineedit widget, provide a spinner.
-                (void *) new Wt::WText("Please select ROI(s):",     table->elementAt(table_row,col++)); // Examples.
                 auto selector = new Wt::WSelectionBox(table->elementAt(table_row,col++));
                 selector->setSelectionMode(Wt::ExtendedSelection);
-                selector->setVerticalSize(15);
+                selector->setVerticalSize(std::min(15,static_cast<int>(ROI_labels.size())));
                 selector->disable();
                 for(const auto &l : ROI_labels) selector->addItem(l);
-                selector->enable();
+                if(!ROI_labels.empty()) selector->enable();
 
+            //Filename parameters are not exposed to the user, but we encode them with a non-visible element.
             }else if(std::regex_match(a.name,fnameregex)){
-                 //Notify that we have to prepare a Wt::WResource for the output.
-                 (void *) new Wt::WText("(auto-generated)",  table->elementAt(table_row,col++)); // Examples.
+                 //Hide the parameter name from the user.
+                 pn->hide();
 
+                 //Notify that we have to prepare a Wt::WResource for the output.
+                 // ...
                  // OK ... Wt appears to be silently discarding WFileResource's added to the table. 
                  // Maybe because it's a non-renderable widget? Who knows. Extremely annoying to debug.
                  // What 'vessel' widget should I stick here instead?   --( Went with a static progress bar ).
@@ -668,11 +674,39 @@ void BaseWebServerApplication::createOperationParamSelectorGB(void){
                  auto pb = new Wt::WProgressBar(table->elementAt(table_row,col++)); //Dummy encoding for generated files.
                  pb->hide();
 
-            }else{ //Parameters to expose as-is.
-                (void *) new Wt::WText(ss.str(),                    table->elementAt(table_row,col++)); // Examples.
-                (void *) new Wt::WLineEdit(a.default_val,           table->elementAt(table_row,col++)); // Value to use.
+            //Boolean parameters.
+            }else if( (a.examples.size() == 2)
+                  && ( ( 
+                         std::regex_match(a.examples.front(),trueregex)
+                         && std::regex_match(a.examples.back(),falseregex) 
+                       ) || (
+                         std::regex_match(a.examples.front(),falseregex)
+                         && std::regex_match(a.examples.back(),trueregex)
+                       ) ) ){
+                auto cb = new Wt::WCheckBox("", table->elementAt(table_row,col++));
+                cb->setChecked( std::regex_match(a.default_val,trueregex) );
+
+            //All other parameters get exposed as free-form text entry boxes.
+            }else{
+                (void *) new Wt::WLineEdit(a.default_val, table->elementAt(table_row,col++)); // Value to use.
 
             }
+
+            //Make a tool-tip containing descriptions and examples.
+            std::stringstream tooltip_ss;
+            tooltip_ss << "<p>" << a.desc << "</p>";
+            tooltip_ss << "<p>Examples: <br /><ul>";
+            for(auto &e : a.examples) tooltip_ss << "<li>" << e << "</li> "; 
+            tooltip_ss << "</ul></p>";
+
+            table->elementAt(table_row,0)->setToolTip(Wt::WString::fromUTF8(tooltip_ss.str()), Wt::XHTMLText);
+            table->elementAt(table_row,1)->setToolTip(Wt::WString::fromUTF8(tooltip_ss.str()), Wt::XHTMLText);
+            table->elementAt(table_row,2)->setToolTip(Wt::WString::fromUTF8(tooltip_ss.str()), Wt::XHTMLText);
+
+            table->addStyleClass("table");
+            table->toggleStyleClass("table-hover", true);
+            table->toggleStyleClass("table-condensed", true);
+
             ++table_row;
         }
     }
@@ -726,12 +760,12 @@ void BaseWebServerApplication::createComputeGB(void){
     std::map<std::string,Wt::WFileResource *> OutputFiles;
     const auto rows = table->rowCount(); 
     const auto cols = table->columnCount(); 
-    if(cols != 4) throw std::logic_error("Table column count changed. Please propagate changes.");
+    if(cols != 3) throw std::logic_error("Table column count changed. Please propagate changes.");
     for(int row = 1; row < rows; ++row){
         const auto param_name = reinterpret_cast<Wt::WText *>(table->elementAt(row,1)->children().back())->text().toUTF8();
 
         std::string param_val;
-        auto w = table->elementAt(row,3)->children().back();
+        auto w = table->elementAt(row,2)->children().back();
         if(w == nullptr) throw std::logic_error("Table element's child widget not found. Cannot continue.");
 
         if(false){
@@ -782,6 +816,13 @@ void BaseWebServerApplication::createComputeGB(void){
             
             param_val += personal_fname;
             OutputFiles[param_name] = fr;
+
+        }else if(auto *cb = dynamic_cast<Wt::WCheckBox *>(w)){ //Checkbox for Boolean parameters.
+            if(cb->isChecked()){
+                param_val = "true";
+            }else{
+                param_val = "false";
+            }
 
         }else{
             throw std::logic_error("Table element's child widget type cannot be identified. Please propagate changes.");
