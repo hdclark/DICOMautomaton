@@ -787,7 +787,6 @@ void BaseWebServerApplication::createComputeGB(void){
     auto selector = reinterpret_cast<Wt::WSelectionBox *>( root()->find("op_select_gb_selector") );
     if(selector == nullptr) throw std::logic_error("Cannot find operation selector widget in DOM tree. Cannot continue.");
     const std::string selected_op = selector->currentText().toUTF8(); 
-    OperationArgPkg op_args(selected_op);
 
     auto table = reinterpret_cast<Wt::WTable *>( root()->find("op_paramspec_gb_table") );
     if(table == nullptr) throw std::logic_error("Cannot find operation parameter table widget in DOM tree. Cannot continue.");
@@ -797,6 +796,7 @@ void BaseWebServerApplication::createComputeGB(void){
     const auto rows = table->rowCount(); 
     const auto cols = table->columnCount(); 
     for(auto col = 1; col < cols; ++col){
+        OperationArgPkg op_args(selected_op);
         for(int row = 1; row < rows; ++row){
             const auto param_name = reinterpret_cast<Wt::WText *>(table->elementAt(row,0)->children().back())->text().toUTF8();
 
@@ -867,11 +867,7 @@ void BaseWebServerApplication::createComputeGB(void){
                 }
 
             }else if(auto *cb = dynamic_cast<Wt::WCheckBox *>(w)){ //Checkbox for Boolean parameters.
-                if(cb->isChecked()){
-                    param_val = "true";
-                }else{
-                    param_val = "false";
-                }
+                param_val = (cb->isChecked()) ? "true" : "false";
 
             }else{
                 throw std::logic_error("Table element's child widget type cannot be identified. Please propagate changes.");
