@@ -191,6 +191,7 @@ class BaseWebServerApplication : public Wt::WApplication {
     void filesUploaded(void); //Post file upload event.
     void createOperationSelectorGB(void);
     void createOperationParamSelectorGB(void);
+    void appendOperationParamsColumn(void);
     void createComputeGB(void);
 
 };
@@ -500,6 +501,7 @@ void BaseWebServerApplication::createOperationSelectorGB(void){
         //if(selected.empty()) return; // Warn about selecting something?
         if(selector->currentText().empty()) return; // Warn about selecting something?
 
+        selector->disable();
         gobutton->disable();
         //this->createROISelectorGB();
         this->createOperationParamSelectorGB();
@@ -571,6 +573,134 @@ void BaseWebServerApplication::createROISelectorGB(void){
 }
 */
 
+void BaseWebServerApplication::appendOperationParamsColumn(void){
+    //This routine appends a parameter input column to the operation parameter selection table. 
+    // The selected operation will be run once for each additional column.
+    // 
+    // Note: since this operation is always called at least once, it also performs idempotent
+    // post-row/column addition tweaks such as adding tool-tips and hiding irrelevant rows.
+
+    //Get the selected operation's name.
+    auto selector = reinterpret_cast<Wt::WSelectionBox *>( root()->find("op_select_gb_selector") );
+    if(selector == nullptr) throw std::logic_error("Cannot find operation selector widget in DOM tree. Cannot continue.");
+    const std::string selected_op = selector->currentText().toUTF8(); 
+
+    //Get a reference to the table.
+    auto table = reinterpret_cast<Wt::WTable *>( root()->find("op_paramspec_gb_table") );
+    if(table == nullptr) throw std::logic_error("Cannot find operation parameter table widget in DOM tree. Cannot continue.");
+
+    //Determine which ROIs are available, in case they will be needed.
+    std::set<std::string> ROI_labels;
+    if(this->DICOM_data.contour_data != nullptr){
+        for(auto &cc : this->DICOM_data.contour_data->ccs){
+            for(auto &c : cc.contours){
+                ROI_labels.insert( c.metadata["ROIName"] );
+            }
+        }
+    }
+
+    //Get a list of the known DICOMautomaton operations.
+    auto known_ops = Known_Operations();
+
+    //Get the feedback element.
+    auto feedback = reinterpret_cast<Wt::WText *>( root()->find("op_paramspec_gb_feedback") );
+    if(feedback == nullptr) throw std::logic_error("Cannot find operation feedback widget in DOM tree. Cannot continue.");
+
+
+    //Begin altering the table.
+    const auto first_run = (table->columnCount() == 0);
+    if(first_run){
+        (void *) new Wt::WText("Parameter", table->elementAt(0,0));
+    }
+    //const auto rows = table->rowCount(); 
+    const auto cols = table->columnCount(); 
+    table->elementAt(0,cols)->addWidget(new Wt::WText("Setting"));
+
+    int table_row = 1;
+    for(auto &anop : known_ops){
+        if(anop.first != selected_op) continue; 
+
+        auto optdocs = anop.second.first();
+        if(optdocs.empty()){
+            feedback->setText("<p>No adjustable options.</p>");
+            break;
+        }
+
+        for(auto &a : optdocs){
+            //Since this is an interactive session, do not expose normalized selections.
+            // (This might be useful in some cases though ... change if necessary.)
+            if(std::regex_match(a.name,normroiregex)){
+                continue;
+            }
+
+            auto pn = table->elementAt(table_row,0); // Param name.
+            if(first_run){
+                (void *) new Wt::WText(a.name, pn);
+            }
+
+            //ROI selection parameters.
+            if(false){
+            }else if(std::regex_match(a.name,roiregex)){
+                // Instead of a freeform lineedit widget, provide a spinner.
+                auto spinner = new Wt::WSelectionBox(table->elementAt(table_row,cols));
+                spinner->setSelectionMode(Wt::ExtendedSelection);
+                spinner->setVerticalSize(std::min(15,static_cast<int>(ROI_labels.size())));
+                spinner->disable();
+                for(const auto &l : ROI_labels) spinner->addItem(l);
+                if(!ROI_labels.empty()) spinner->enable();
+
+            //Filename parameters are not exposed to the user, but we encode them with a non-visible element.
+            }else if(std::regex_match(a.name,fnameregex)){
+                 //Hide the parameter name from the user.
+                 pn->hide();
+
+                 //Notify that we have to prepare a Wt::WResource for the output.
+                 // ...
+                 // OK ... Wt appears to be silently discarding WFileResource's added to the table. 
+                 // Maybe because it's a non-renderable widget? Who knows. Extremely annoying to debug.
+                 // What 'vessel' widget should I stick here instead?   --( Went with a static progress bar ).
+                 //
+                 //(void *) new Wt::WFileResource("/dev/null", table->elementAt(table_row,cols));
+                 //table->elementAt(table_row,cols)->addWidget( reinterpret_cast<Wt::WWidget *>(new Wt::WFileResource()) );
+                 auto pb = new Wt::WProgressBar(table->elementAt(table_row,cols)); //Dummy encoding for generated files.
+                 pb->hide();
+
+            //Boolean parameters.
+            }else if( (a.examples.size() == 2)
+                  && ( ( 
+                         std::regex_match(a.examples.front(),trueregex)
+                         && std::regex_match(a.examples.back(),falseregex) 
+                       ) || (
+                         std::regex_match(a.examples.front(),falseregex)
+                         && std::regex_match(a.examples.back(),trueregex)
+                       ) ) ){
+                auto cb = new Wt::WCheckBox("", table->elementAt(table_row,cols));
+                cb->setChecked( std::regex_match(a.default_val,trueregex) );
+
+            //All other parameters get exposed as free-form text entry boxes.
+            }else{
+                (void *) new Wt::WLineEdit(a.default_val, table->elementAt(table_row,cols)); // Value to use.
+
+            }
+
+            //Make a tool-tip containing descriptions and examples. Attach it to all columns we may have altered.
+            std::stringstream tooltip_ss;
+            tooltip_ss << "<p>" << a.desc << "</p>";
+            tooltip_ss << "<p>Examples: <br /><ul>";
+            for(auto &e : a.examples) tooltip_ss << "<li>" << e << "</li> "; 
+            tooltip_ss << "</ul></p>";
+
+            table->elementAt(table_row, 0  )->setToolTip(Wt::WString::fromUTF8(tooltip_ss.str()), Wt::XHTMLText);
+            table->elementAt(table_row,cols)->setToolTip(Wt::WString::fromUTF8(tooltip_ss.str()), Wt::XHTMLText);
+
+            ++table_row;
+        }
+    }
+    this->processEvents();
+    return;
+}
+
+
 void BaseWebServerApplication::createOperationParamSelectorGB(void){
     //This routine creates a manipulation table populated with tweakable parameters from the specified operation.
 
@@ -583,7 +713,7 @@ void BaseWebServerApplication::createOperationParamSelectorGB(void){
     auto instruct = new Wt::WText("Please specify operation parameters. Hover over for descriptions.", gb);
     instruct->addStyleClass("InstructionText");
 
-//    auto addbutton = new Wt::WPushButton("Add another pass", gb);
+    auto addbutton = new Wt::WPushButton("Add another pass", gb);
 
     (void*) new Wt::WBreak(gb);
 
@@ -605,117 +735,22 @@ void BaseWebServerApplication::createOperationParamSelectorGB(void){
 
     // -------
 
-    //table->elementAt(0,0)->addWidget(new Wt::WText("#"));
-    table->elementAt(0,0)->addWidget(new Wt::WText(""));
-    table->elementAt(0,1)->addWidget(new Wt::WText("Parameter"));
-    table->elementAt(0,2)->addWidget(new Wt::WText("Setting"));
-
-    //Determine which ROIs are available, in case they will be needed.
-    std::set<std::string> ROI_labels;
-    if(this->DICOM_data.contour_data != nullptr){
-        for(auto &cc : this->DICOM_data.contour_data->ccs){
-            for(auto &c : cc.contours){
-                ROI_labels.insert( c.metadata["ROIName"] );
-            }
-        }
-    }
-    //Get the selected operation's name.
-    auto selector = reinterpret_cast<Wt::WSelectionBox *>( root()->find("op_select_gb_selector") );
-    if(selector == nullptr) throw std::logic_error("Cannot find operation selector widget in DOM tree. Cannot continue.");
-    const std::string selected_op = selector->currentText().toUTF8(); 
-
-    auto known_ops = Known_Operations();
-    int table_row = 1;
-    for(auto &anop : known_ops){
-        if(anop.first != selected_op) continue; 
-
-        auto optdocs = anop.second.first();
-        if(optdocs.empty()){
-            feedback->setText("<p>No adjustable options.</p>");
-            break;
-        }
-
-        for(auto &a : optdocs){
-            //Since this is an interactive session, do not expose normalized selections.
-            // (This might be useful in some cases though ... change if necessary.)
-            if(std::regex_match(a.name,normroiregex)){
-                continue;
-            }
-            
-            int col = 0;
-            //(void *) new Wt::WText(std::to_string(table_row),   table->elementAt(table_row,col++)); // Row number (cosmetic only).
-            (void *) new Wt::WText("",     table->elementAt(table_row,col++)); // Row number (cosmetic only).
-            auto pn = new Wt::WText(a.name, table->elementAt(table_row,col++)); // Param name.
-
-            //ROI selection parameters.
-            if(false){ // Parameters to expose.
-            }else if(std::regex_match(a.name,roiregex)){
-                // Instead of a freeform lineedit widget, provide a spinner.
-                auto selector = new Wt::WSelectionBox(table->elementAt(table_row,col++));
-                selector->setSelectionMode(Wt::ExtendedSelection);
-                selector->setVerticalSize(std::min(15,static_cast<int>(ROI_labels.size())));
-                selector->disable();
-                for(const auto &l : ROI_labels) selector->addItem(l);
-                if(!ROI_labels.empty()) selector->enable();
-
-            //Filename parameters are not exposed to the user, but we encode them with a non-visible element.
-            }else if(std::regex_match(a.name,fnameregex)){
-                 //Hide the parameter name from the user.
-                 pn->hide();
-
-                 //Notify that we have to prepare a Wt::WResource for the output.
-                 // ...
-                 // OK ... Wt appears to be silently discarding WFileResource's added to the table. 
-                 // Maybe because it's a non-renderable widget? Who knows. Extremely annoying to debug.
-                 // What 'vessel' widget should I stick here instead?   --( Went with a static progress bar ).
-                 //
-                 //(void *) new Wt::WFileResource("/dev/null", table->elementAt(table_row,col++));
-                 //table->elementAt(table_row,col++)->addWidget( reinterpret_cast<Wt::WWidget *>(new Wt::WFileResource()) );
-                 auto pb = new Wt::WProgressBar(table->elementAt(table_row,col++)); //Dummy encoding for generated files.
-                 pb->hide();
-
-            //Boolean parameters.
-            }else if( (a.examples.size() == 2)
-                  && ( ( 
-                         std::regex_match(a.examples.front(),trueregex)
-                         && std::regex_match(a.examples.back(),falseregex) 
-                       ) || (
-                         std::regex_match(a.examples.front(),falseregex)
-                         && std::regex_match(a.examples.back(),trueregex)
-                       ) ) ){
-                auto cb = new Wt::WCheckBox("", table->elementAt(table_row,col++));
-                cb->setChecked( std::regex_match(a.default_val,trueregex) );
-
-            //All other parameters get exposed as free-form text entry boxes.
-            }else{
-                (void *) new Wt::WLineEdit(a.default_val, table->elementAt(table_row,col++)); // Value to use.
-
-            }
-
-            //Make a tool-tip containing descriptions and examples.
-            std::stringstream tooltip_ss;
-            tooltip_ss << "<p>" << a.desc << "</p>";
-            tooltip_ss << "<p>Examples: <br /><ul>";
-            for(auto &e : a.examples) tooltip_ss << "<li>" << e << "</li> "; 
-            tooltip_ss << "</ul></p>";
-
-            table->elementAt(table_row,0)->setToolTip(Wt::WString::fromUTF8(tooltip_ss.str()), Wt::XHTMLText);
-            table->elementAt(table_row,1)->setToolTip(Wt::WString::fromUTF8(tooltip_ss.str()), Wt::XHTMLText);
-            table->elementAt(table_row,2)->setToolTip(Wt::WString::fromUTF8(tooltip_ss.str()), Wt::XHTMLText);
-
-            table->addStyleClass("table");
-            table->toggleStyleClass("table-hover", true);
-            table->toggleStyleClass("table-condensed", true);
-
-            ++table_row;
-        }
-    }
+    this->appendOperationParamsColumn();
     table->enable();
 
     // -------
 
+    addbutton->clicked().connect(std::bind([=](){
+        this->appendOperationParamsColumn();
+        return;
+    }));
+
     gobutton->clicked().connect(std::bind([=](){
-        selector->disable();
+//    auto selector = reinterpret_cast<Wt::WSelectionBox *>( root()->find("op_select_gb_selector") );
+//    if(selector == nullptr) throw std::logic_error("Cannot find operation selector widget in DOM tree. Cannot continue.");
+    
+//        selector->disable();
+        addbutton->disable();
         table->disable();
         gobutton->disable();
         this->createComputeGB();
@@ -758,92 +793,107 @@ void BaseWebServerApplication::createComputeGB(void){
     if(table == nullptr) throw std::logic_error("Cannot find operation parameter table widget in DOM tree. Cannot continue.");
 
     std::map<std::string,Wt::WFileResource *> OutputFiles;
+    std::map<std::string,std::string> OutputFilenames;
     const auto rows = table->rowCount(); 
     const auto cols = table->columnCount(); 
-    if(cols != 3) throw std::logic_error("Table column count changed. Please propagate changes.");
-    for(int row = 1; row < rows; ++row){
-        const auto param_name = reinterpret_cast<Wt::WText *>(table->elementAt(row,1)->children().back())->text().toUTF8();
+    for(auto col = 1; col < cols; ++col){
+        for(int row = 1; row < rows; ++row){
+            const auto param_name = reinterpret_cast<Wt::WText *>(table->elementAt(row,0)->children().back())->text().toUTF8();
 
-        std::string param_val;
-        auto w = table->elementAt(row,2)->children().back();
-        if(w == nullptr) throw std::logic_error("Table element's child widget not found. Cannot continue.");
+            std::string param_val;
+            auto w = table->elementAt(row,col)->children().back();
+            if(w == nullptr) throw std::logic_error("Table element's child widget not found. Cannot continue.");
 
-        if(false){
-        }else if(auto *lineedit = dynamic_cast<Wt::WLineEdit *>(w)){
-            param_val = lineedit->text().toUTF8();
-        }else if(auto *selector = dynamic_cast<Wt::WSelectionBox *>(w)){
-            //Must convert from selected ROI labels to regex.
-            std::set<int> selected = selector->selectedIndexes();
-            for(const auto &n : selected){
-                const auto raw_val = selector->itemText(n).toUTF8();
+            if(false){
+            }else if(auto *lineedit = dynamic_cast<Wt::WLineEdit *>(w)){
+                param_val = lineedit->text().toUTF8();
+            }else if(auto *selector = dynamic_cast<Wt::WSelectionBox *>(w)){
+                //Must convert from selected ROI labels to regex.
+                std::set<int> selected = selector->selectedIndexes();
+                for(const auto &n : selected){
+                    const auto raw_val = selector->itemText(n).toUTF8();
 
-                std::string shtl;
-                for(const auto &c : raw_val){
-                    switch(c){ // The following are special in extended regex: . [ \ ( ) * + ? { | ^ $
-                        case '+':
-                        case '.':
-                        case '(':
-                        case ')':
-                            shtl += "["_s + c + "]"_s;
-                            break;
-                        case '[':
-                        case '\\':
-                        case '*':
-                        case '?':
-                        case '{':
-                        case '|':
-                        case '^':
-                        case '$':
-                            shtl += R"***(\)***" + c;
-                            break;
-                        default:
-                            shtl += c;
-                            break;
+                    std::string shtl;
+                    for(const auto &c : raw_val){
+                        switch(c){ // The following are special in extended regex: . [ \ ( ) * + ? { | ^ $
+                            case '+':
+                            case '.':
+                            case '(':
+                            case ')':
+                                shtl += "["_s + c + "]"_s;
+                                break;
+                            case '[':
+                            case '\\':
+                            case '*':
+                            case '?':
+                            case '{':
+                            case '|':
+                            case '^':
+                            case '$':
+                                shtl += R"***(\)***" + c;
+                                break;
+                            default:
+                                shtl += c;
+                                break;
+                        }
                     }
+                    param_val += (param_val.empty()) ? shtl 
+                                                     : ("|"_s + shtl);
                 }
-                param_val += (param_val.empty()) ? shtl 
-                                                 : ("|"_s + shtl);
-            }
 
-        }else if(dynamic_cast<Wt::WProgressBar *>(w)){ //Dummy encoding for generated files.
-            //Create a working file.
-            const std::string personal_fname = Get_Unique_Filename(this->InstancePrivateDirectory + "generated_file_", 6);
+            }else if(dynamic_cast<Wt::WProgressBar *>(w)){ //Dummy encoding for generated files.
+                //Create a working file.
+                //
+                // Note: for multi-run operations, the same output file MUST be used. This is so that the operation
+                //       can string the data together into a meaningful way. Otherwise the user will get several 
+                //       files back and there is little point in performing a multi-run operation.
+                std::string personal_fname;
+                if(OutputFilenames.count(param_name) == 0){
+                    personal_fname = Get_Unique_Filename(this->InstancePrivateDirectory + "generated_file_", 6);
+                    OutputFilenames[param_name] = personal_fname;
+                }else{
+                    personal_fname = OutputFilenames[param_name];
+                }
+                param_val += personal_fname;
 
-            auto fr = new Wt::WFileResource(gb);
-            fr->setMimeType("application/octet-stream");
-            fr->setFileName(personal_fname);
-            fr->suggestFileName("output.dcm");
-            
-            param_val += personal_fname;
-            OutputFiles[param_name] = fr;
+                //Only create a file resource for the final pass.
+                if((col+1) == cols){
+                    auto fr = new Wt::WFileResource(gb);
+                    fr->setMimeType("application/octet-stream");
+                    fr->setFileName(personal_fname);
+                    fr->suggestFileName("output.dcm");
+                    
+                    OutputFiles[param_name] = fr;
+                }
 
-        }else if(auto *cb = dynamic_cast<Wt::WCheckBox *>(w)){ //Checkbox for Boolean parameters.
-            if(cb->isChecked()){
-                param_val = "true";
+            }else if(auto *cb = dynamic_cast<Wt::WCheckBox *>(w)){ //Checkbox for Boolean parameters.
+                if(cb->isChecked()){
+                    param_val = "true";
+                }else{
+                    param_val = "false";
+                }
+
             }else{
-                param_val = "false";
+                throw std::logic_error("Table element's child widget type cannot be identified. Please propagate changes.");
             }
-
-        }else{
-            throw std::logic_error("Table element's child widget type cannot be identified. Please propagate changes.");
+            op_args.insert(param_name, param_val);
         }
-        op_args.insert(param_name, param_val);
-    }
 
-    // ---
+        // ---
 
-    //Perform the operation.
-    std::list<OperationArgPkg> PackedOperation = { op_args };
-    try{
-        if(!Operation_Dispatcher( this->DICOM_data, 
-                                  this->InvocationMetadata, 
-                                  this->FilenameLex,
-                                  PackedOperation )){
-            throw std::runtime_error("Return value non-zero (non-descript error condition)");
+        //Perform the operation.
+        std::list<OperationArgPkg> PackedOperation = { op_args };
+        try{
+            if(!Operation_Dispatcher( this->DICOM_data, 
+                                      this->InvocationMetadata, 
+                                      this->FilenameLex,
+                                      PackedOperation )){
+                throw std::runtime_error("Return value non-zero (non-descript error condition)");
+            }
+        }catch(const std::exception &e){
+            feedback->setText("<p>Operation failed: "_s + e.what() + ".</p>");
+            return;
         }
-    }catch(const std::exception &e){
-        feedback->setText("<p>Operation failed: "_s + e.what() + ".</p>");
-        return;
     }
     feedback->setText("<p>Operation successful. </p>");
 
