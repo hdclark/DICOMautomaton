@@ -309,7 +309,7 @@ Drover ContourBooleanOperations(Drover DICOM_data, OperationArgPkg OptArgs, std:
 
         //Perform the operation.
         //FUNCINFO("About to perform boolean operation. A and B have " << A.size() << " and " << B.size() << " elements, respectively");
-        auto cc = ContourBoolean(op, aplane, A, B);
+        auto cc = ContourBoolean(aplane, A, B, op);
 
         //Insert any contours created into a holding contour_collection.
         cc_new.contours.splice(cc_new.contours.end(), std::move(cc.contours));

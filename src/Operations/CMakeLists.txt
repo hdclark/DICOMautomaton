@@ -57,6 +57,7 @@ add_library(Operations_objs OBJECT
     PreFilterEnormousCTValues.cc
     PruneEmptyImageDoseArrays.cc
     RePlanReIrradiateDoseTrimming.cc
+    SeamContours.cc
     SelectSlicesIntersectingROI.cc
     SFML_Viewer.cc
     SpatialBlur.cc

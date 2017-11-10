@@ -71,6 +71,7 @@
 #include "Operations/PreFilterEnormousCTValues.h"
 #include "Operations/PruneEmptyImageDoseArrays.h"
 #include "Operations/RePlanReIrradiateDoseTrimming.h"
+#include "Operations/SeamContours.h"
 #include "Operations/SelectSlicesIntersectingROI.h"
 #include "Operations/SFML_Viewer.h"
 #include "Operations/SpatialBlur.h"
@@ -150,6 +151,7 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["PreFilterEnormousCTValues"] = std::make_pair(OpArgDocPreFilterEnormousCTValues, PreFilterEnormousCTValues);
     out["PruneEmptyImageDoseArrays"] = std::make_pair(OpArgDocPruneEmptyImageDoseArrays, PruneEmptyImageDoseArrays);
     out["RePlanReIrradiateDoseTrimming"] = std::make_pair(OpArgDocRePlanReIrradiateDoseTrimming, RePlanReIrradiateDoseTrimming);
+    out["SeamContours"] = std::make_pair(OpArgDocSeamContours, SeamContours);
     out["SelectSlicesIntersectingROI"] = std::make_pair(OpArgDocSelectSlicesIntersectingROI, SelectSlicesIntersectingROI);
     out["SFML_Viewer"] = std::make_pair(OpArgDocSFML_Viewer, SFML_Viewer);
     out["SpatialBlur"] = std::make_pair(OpArgDocSpatialBlur, SpatialBlur);

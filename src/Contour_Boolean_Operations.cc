@@ -22,15 +22,6 @@
 #include "Contour_Boolean_Operations.h"
 
 
-//typedef enum { 
-//    join,                 // A ∪ B (or A + B; aka, the "union").
-//    intersection,         // A ∩ B (aka, the "overlap").
-//    difference,           // A - B (aka, all of A except the part shared by B).
-//    symmetric_difference  // A x B = (A-B) ∪ (B-A) (aka, all of A except the part shared by B, and also
-//                          //                        all of B except the part shared by A.)
-//} ContourBooleanMethod;
-
-
 // Because ROI contours are 2D planar contours embedded in R^3, an explicit projection plane must be provided. Contours
 // are projected on the plane, an orthonormal basis is created, the projected contours are expressed in the basis, and
 // the Boolean operations are performed. Note that the outgoing contours remain projected onto the provided plane.
@@ -53,10 +44,11 @@
 //       even when holes are converted to seams.
 //
 contour_collection<double>
-ContourBoolean(ContourBooleanMethod op,
-               plane<double> p,
+ContourBoolean(plane<double> p,
                std::list<std::reference_wrapper<contour_of_points<double>>> A,
-               std::list<std::reference_wrapper<contour_of_points<double>>> B){
+               std::list<std::reference_wrapper<contour_of_points<double>>> B,
+               ContourBooleanMethod op,
+               ContourBooleanMethod construction_op){
 
     // Identify an orthonormal set that spans the 2D plane. Store them for later projection.
     const auto U_z = p.N_0.unit();
@@ -110,8 +102,11 @@ ContourBoolean(ContourBooleanMethod op,
     typedef CGAL::Polygon_with_holes_2<Kernel> Polygon_with_holes_2;
     typedef CGAL::Polygon_set_2<Kernel>        Polygon_set_2;
 
+    bool first_contour;
+
     // Convert the A set of contours into CGAL style by projecting onto the plane and expressing in the new basis.
     Polygon_set_2 A_set;
+    first_contour = true;
     for(auto &c_ref : A){
         //Express in the planar basis (with z'=0 everywhere).
         contour_of_points<double> projected;
@@ -128,11 +123,26 @@ ContourBoolean(ContourBooleanMethod op,
         for(auto &v : projected.points){
             A_cgal.push_back(Point_2(v.x,v.y));
         }
-        A_set.join(A_cgal);
+        if(false){
+        }else if(first_contour){
+            first_contour = false;
+            A_set.join(A_cgal);
+        }else if(construction_op == ContourBooleanMethod::join){
+            A_set.join(A_cgal);
+        }else if(construction_op == ContourBooleanMethod::intersection){
+            A_set.intersection(A_cgal);
+        }else if(construction_op == ContourBooleanMethod::difference){
+            A_set.difference(A_cgal);
+        }else if(construction_op == ContourBooleanMethod::symmetric_difference){
+            A_set.symmetric_difference(A_cgal);
+        }else{
+            throw std::logic_error("Requested Boolean operation is not supported.");
+        }
     }
 
     // Convert the B set of contours into CGAL style by projecting onto the plane and expressing in the new basis.
     Polygon_set_2 B_set;
+    first_contour = true;
     for(auto &c_ref : B){
         //Express in the planar basis (with z'=0 everywhere).
         contour_of_points<double> projected;
@@ -149,17 +159,30 @@ ContourBoolean(ContourBooleanMethod op,
         for(auto &v : projected.points){
             B_cgal.push_back(Point_2(v.x,v.y));
         }
-        B_set.join(B_cgal);
+        if(false){
+        }else if(first_contour){
+            first_contour = false;
+            B_set.join(B_cgal);
+        }else if(construction_op == ContourBooleanMethod::join){
+            B_set.join(B_cgal);
+        }else if(construction_op == ContourBooleanMethod::intersection){
+            B_set.intersection(B_cgal);
+        }else if(construction_op == ContourBooleanMethod::difference){
+            B_set.difference(B_cgal);
+        }else if(construction_op == ContourBooleanMethod::symmetric_difference){
+            B_set.symmetric_difference(B_cgal);
+        }else{
+            throw std::logic_error("Requested Boolean operation is not supported.");
+        }
     }
 
 
     // Perform the selected Boolean operation.
-    //
-    // Note: For some reason the sets must be specified in reverse order (so A-B requires B.difference(A)).
-    //       It only matters for the difference operation. All others are symmetric.
     Polygon_set_2 C_set;
     C_set.join(A_set);
     if(false){
+    }else if(op == ContourBooleanMethod::noop){
+        //Intentionally do nothing here.
     }else if(op == ContourBooleanMethod::join){
         C_set.join(B_set);
     }else if(op == ContourBooleanMethod::intersection){
@@ -174,7 +197,6 @@ ContourBoolean(ContourBooleanMethod op,
 
     // Convert each contour back to the DICOMautomaton coordinate system using the orthonormal basis.
     contour_collection<double> out;
-
     if(C_set.number_of_polygons_with_holes() != 0){
         std::list<Polygon_with_holes_2> pwhl;
         C_set.polygons_with_holes(std::back_inserter(pwhl));

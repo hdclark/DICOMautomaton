@@ -16,6 +16,7 @@
 
 
 typedef enum { 
+    noop,                 // Perform no operation.
     join,                 // A ∪ B (or A + B; aka, the "union").
     intersection,         // A ∩ B (aka, the "overlap").
     difference,           // A - B (aka, all of A except the part shared by B).
@@ -45,10 +46,16 @@ typedef enum {
 // Note: The number of contours this routine can potentially return are [0,inf] depending on the operation and inputs --
 //       even when holes are converted to seams.
 //
+// Note: This routine performs an operation on sets of contours which are built from the provided contours. How these
+//       sets are constructed can be controlled too. (By default you'll probably want to join, but through this setting
+//       you can switch from a contour_collection primitive to a single contour primitive, which is especially useful
+//       for XOR/symmetric_difference of the individual contours.)
+//
 contour_collection<double>
-ContourBoolean(ContourBooleanMethod op,
-               plane<double> p,
+ContourBoolean(plane<double> p,
                std::list<std::reference_wrapper<contour_of_points<double>>> A,
-               std::list<std::reference_wrapper<contour_of_points<double>>> B);
+               std::list<std::reference_wrapper<contour_of_points<double>>> B,
+               ContourBooleanMethod op,
+               ContourBooleanMethod construction_op = ContourBooleanMethod::join);
 
 
