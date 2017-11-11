@@ -485,6 +485,7 @@ void BaseWebServerApplication::createOperationSelectorGB(void){
         ||  ( n == "EvaluateNTCPModels" ) 
         ||  ( n == "EvaluateTCPModels" ) 
         ||  ( n == "SeamContours" )
+        ||  ( n == "GrowContours" )
         ||  ( n == "RePlanReIrradiateDoseTrimming" ) ){    //Whitelist ... for now.
             selector->addItem(anop.first);
         }
