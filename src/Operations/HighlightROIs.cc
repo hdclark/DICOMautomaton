@@ -111,6 +111,19 @@ std::list<OperationArgDoc> OpArgDocHighlightROIs(void){
     out.back().examples = { "none", "last", "all" };
 
     out.emplace_back();
+    out.back().name = "ContourOverlap";
+    out.back().desc = "Controls overlapping contours are treated."
+                      " The default 'ignore' treats overlapping contours as a single contour, regardless of"
+                      " contour orientation. The option 'honour_opposite_orientations' makes overlapping contours"
+                      " with opposite orientation cancel. Otherwise, orientation is ignored. The latter is useful"
+                      " for Boolean structures where contour orientation is significant for interior contours (holes)."
+                      " The option 'overlapping_contours_cancel' ignores orientation and cancels all contour overlap.";
+    out.back().default_val = "ignore";
+    out.back().expected = true;
+    out.back().examples = { "ignore", "honour_opposite_orientations", 
+                            "overlapping_contours_cancel", "honour_opps", "overlap_cancel" }; 
+
+    out.emplace_back();
     out.back().name = "Inclusivity";
     out.back().desc = "Controls how voxels are deemed to be 'within' the interior of the selected ROI(s)."
                       " The default 'center' considers only the central-most point of each voxel."
@@ -194,6 +207,7 @@ Drover HighlightROIs(Drover DICOM_data,
     const auto Channel = std::stol( OptArgs.getValueStr("Channel").value() );
     const auto ImageSelectionStr = OptArgs.getValueStr("ImageSelection").value();
     const auto InclusivityStr = OptArgs.getValueStr("Inclusivity").value();
+    const auto ContourOverlapStr = OptArgs.getValueStr("ContourOverlap").value();
 
     const auto ExteriorVal    = std::stod(OptArgs.getValueStr("ExteriorVal").value());
     const auto InteriorVal    = std::stod(OptArgs.getValueStr("InteriorVal").value());
@@ -215,6 +229,12 @@ Drover HighlightROIs(Drover DICOM_data,
     const auto regex_centre = std::regex("^cent.*", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
     const auto regex_pci = std::regex("^planar_?c?o?r?n?e?r?s?_?inc?l?u?s?i?v?e?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
     const auto regex_pce = std::regex("^planar_?c?o?r?n?e?r?s?_?exc?l?u?s?i?v?e?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+
+    const auto regex_ignore = std::regex("^ig?n?o?r?e?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto regex_honopps = std::regex("^ho?n?o?u?r?_?o?p?p?o?s?i?t?e?_?o?r?i?e?n?t?a?t?i?o?n?s?$", 
+                                          std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto regex_cancel = std::regex("^ov?e?r?l?a?p?p?i?n?g?_?c?o?n?t?o?u?r?s?_?c?a?n?c?e?l?s?$",
+                                          std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
 
     const auto ShouldOverwriteExterior = std::regex_match(ExteriorOverwriteStr, TrueRegex);
     const auto ShouldOverwriteInterior = std::regex_match(InteriorOverwriteStr, TrueRegex);
@@ -266,7 +286,17 @@ Drover HighlightROIs(Drover DICOM_data,
         ud.outgoing_interior_val = InteriorVal;
         ud.outgoing_exterior_val = ExteriorVal;
         ud.channel = Channel;
-   
+
+        if(false){
+        }else if( std::regex_match(ContourOverlapStr, regex_ignore) ){
+            ud.overlap = ContourOverlapMethod::ignore;
+        }else if( std::regex_match(ContourOverlapStr, regex_honopps) ){
+            ud.overlap = ContourOverlapMethod::opposite_orientations_cancel;
+        }else if( std::regex_match(ContourOverlapStr, regex_cancel) ){
+            ud.overlap = ContourOverlapMethod::overlapping_contours_cancel;
+        }else{
+            throw std::invalid_argument("ContourOverlap argument '"_s + ContourOverlapStr + "' is not valid");
+        }
         if(false){
         }else if( std::regex_match(InclusivityStr, regex_centre) ){
             ud.inclusivity = HighlightInclusionMethod::centre;

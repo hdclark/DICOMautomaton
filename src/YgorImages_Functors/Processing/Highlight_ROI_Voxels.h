@@ -27,10 +27,24 @@ typedef enum { // Controls how voxels are computed to be 'within' a contour.
 
 } HighlightInclusionMethod;
 
+typedef enum { // Controls how contours that overlap are treated.
+    // Treat overlapping contours as if they have no effect on one another or jointly-bounded voxels.
+    ignore,
+
+    // Overlapping contours with opposite orientation cancel. Note that orientation for non-overlapping contours is
+    // still ignored.
+    opposite_orientations_cancel,
+
+    // Ignore orientation and consider all regions of contour overlap to cancel one another.
+    overlapping_contours_cancel
+
+} ContourOverlapMethod;
+
 struct HighlightROIVoxelsUserData {
 
     // Algorithmic changes.
     HighlightInclusionMethod inclusivity = HighlightInclusionMethod::centre;
+    ContourOverlapMethod overlap = ContourOverlapMethod::ignore;
 
     // Actions.
     bool overwrite_interior = true; // Whether to alter voxels within the specific ROI(s).
