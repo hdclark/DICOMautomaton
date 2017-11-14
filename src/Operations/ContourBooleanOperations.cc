@@ -235,24 +235,24 @@ Drover ContourBooleanOperations(Drover DICOM_data, OperationArgPkg OptArgs, std:
     auto cc_A = cc_all;
     cc_A.remove_if([=](std::reference_wrapper<contour_collection<double>> cc) -> bool {
                    const auto ROINameOpt = cc.get().contours.front().GetMetadataValueAs<std::string>("ROIName");
-                   const auto ROIName = ROINameOpt.value();
+                   const auto ROIName = ROINameOpt.value_or("");
                    return !(std::regex_match(ROIName,roiregexA));
     });
     cc_A.remove_if([=](std::reference_wrapper<contour_collection<double>> cc) -> bool {
                    const auto ROINameOpt = cc.get().contours.front().GetMetadataValueAs<std::string>("NormalizedROIName");
-                   const auto ROIName = ROINameOpt.value();
+                   const auto ROIName = ROINameOpt.value_or("");
                    return !(std::regex_match(ROIName,roinormalizedregexA));
     });
 
     auto cc_B = cc_all;
     cc_B.remove_if([=](std::reference_wrapper<contour_collection<double>> cc) -> bool {
                    const auto ROINameOpt = cc.get().contours.front().GetMetadataValueAs<std::string>("ROIName");
-                   const auto ROIName = ROINameOpt.value();
+                   const auto ROIName = ROINameOpt.value_or("");
                    return !(std::regex_match(ROIName,roiregexB));
     });
     cc_B.remove_if([=](std::reference_wrapper<contour_collection<double>> cc) -> bool {
                    const auto ROINameOpt = cc.get().contours.front().GetMetadataValueAs<std::string>("NormalizedROIName");
-                   const auto ROIName = ROINameOpt.value();
+                   const auto ROIName = ROINameOpt.value_or("");
                    return !(std::regex_match(ROIName,roinormalizedregexB));
     });
 
