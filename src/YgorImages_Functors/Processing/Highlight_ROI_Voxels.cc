@@ -58,7 +58,7 @@ bool HighlightROIVoxels(planar_image_collection<float,double>::images_list_it_t 
     }else if(user_data_s->overlap == ContourOverlapMethod::opposite_orientations_cancel){
         ebv_opts.contouroverlap  = Mutate_Voxels_Opts::ContourOverlap::HonourOppositeOrientations;
     }else if(user_data_s->overlap == ContourOverlapMethod::overlapping_contours_cancel){
-        ebv_opts.contouroverlap  = Mutate_Voxels_Opts::ContourOverlap::AssumeOppositeOrientations;
+        ebv_opts.contouroverlap  = Mutate_Voxels_Opts::ContourOverlap::ImplicitOrientations;
     }else{
         throw std::invalid_argument("Invalid ContourOverlap option provided.");
     }
