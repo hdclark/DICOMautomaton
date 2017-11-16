@@ -107,6 +107,13 @@ std::list<OperationArgDoc> OpArgDocEvaluateDoseVolumeStats(void){
 
 
     out.emplace_back();
+    out.back().name = "PTVPrescriptionDose";
+    out.back().desc = "The dose prescribed to the PTV of interest (in Gy).";
+    out.back().default_val = "70";
+    out.back().expected = true;
+    out.back().examples = { "50", "66", "70", "82.5" };
+
+    out.emplace_back();
     out.back().name = "PTVNormalizedROILabelRegex";
     out.back().desc = "A regex matching PTV ROI labels/names to consider. The default will match"
                       " all available ROIs. Be aware that input spaces are trimmed to a single space."
@@ -126,7 +133,33 @@ std::list<OperationArgDoc> OpArgDocEvaluateDoseVolumeStats(void){
                       " If your ROI name has more than two sequential spaces, use regex to avoid them."
                       " All ROIs have to match the single regex, so use the 'or' token if needed."
                       " Regex is case insensitive and uses extended POSIX syntax.";
+    out.back().default_val = ".*PTV.*";
+    out.back().expected = true;
+    out.back().examples = { ".*", ".*body.*", "body", "Gross_Liver",
+                            R"***(.*left.*parotid.*|.*right.*parotid.*|.*eyes.*)***",
+                            R"***(left_parotid|right_parotid)***" };
+
+    out.emplace_back();
+    out.back().name = "BodyNormalizedROILabelRegex";
+    out.back().desc = "A regex matching body ROI labels/names to consider. The default will match"
+                      " all available ROIs. Be aware that input spaces are trimmed to a single space."
+                      " If your ROI name has more than two sequential spaces, use regex to avoid them."
+                      " All ROIs have to match the single regex, so use the 'or' token if needed."
+                      " Regex is case insensitive and uses extended POSIX syntax.";
     out.back().default_val = ".*";
+    out.back().expected = true;
+    out.back().examples = { ".*", ".*Body.*", "Body", "Gross_Liver",
+                            R"***(.*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*)***",
+                            R"***(Left Parotid|Right Parotid)***" };
+
+    out.emplace_back();
+    out.back().name = "BodyROILabelRegex";
+    out.back().desc = "A regex matching PTV ROI labels/names to consider. The default will match"
+                      " all available ROIs. Be aware that input spaces are trimmed to a single space."
+                      " If your ROI name has more than two sequential spaces, use regex to avoid them."
+                      " All ROIs have to match the single regex, so use the 'or' token if needed."
+                      " Regex is case insensitive and uses extended POSIX syntax.";
+    out.back().default_val = ".*body.*";
     out.back().expected = true;
     out.back().examples = { ".*", ".*body.*", "body", "Gross_Liver",
                             R"***(.*left.*parotid.*|.*right.*parotid.*|.*eyes.*)***",
@@ -141,28 +174,38 @@ Drover EvaluateDoseVolumeStats(Drover DICOM_data, OperationArgPkg OptArgs, std::
 
     // This operation evaluates a variety of Dose-Volume statistics. It is geared toward PTV ROIs.
     // Currently the following are implemented:
-    //   - Dose Homogeneity Index: H = (D_{2%} - D_{98%})/D_{median} | over one or more PTVs.
-    //   - ...TODO...
+    //   - Dose Homogeneity Index: H = (D_{2%} - D_{98%})/D_{median} | over one or more PTVs, where
+    //       D_{2%} is the maximum dose that covers 2% of the volume of the PTV, and
+    //       D_{98%} is the minimum dose that covers 98% of the volume of the PTV. 
+    //   - Conformity Number: C = V_{T,pres}^{2} / ( V_{T} * V_{pres} ) where
+    //       V_{T,pres} is the PTV volume receiving at least 95% of the PTV prescription dose,
+    //       V_{T} is the volume of the PTV, and
+    //       V_{pres} is volume of all (tissue) voxels receiving at least 95% of the PTV prescription dose.
     //
     // Note: This routine uses image_arrays so convert dose_arrays beforehand.
     //
-    // Note: This routine will combine spatially-overlapping images by summing voxel intensities. So if you have a time
-    //       course it may be more sensible to aggregate images in some way (e.g., spatial averaging) prior to calling
-    //       this routine.
+    // Note: This routine will combine spatially-overlapping images by summing voxel intensities. It will not
+    //       combine separate image_arrays though. If needed, you'll have to perform a meld on them beforehand.
     //
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     auto OutFilename = OptArgs.getValueStr("OutFileName").value();
-    const auto ROILabelRegex = OptArgs.getValueStr("PTVROILabelRegex").value();
-    const auto NormalizedROILabelRegex = OptArgs.getValueStr("PTVNormalizedROILabelRegex").value();
+    const auto PTVROILabelRegex = OptArgs.getValueStr("PTVROILabelRegex").value();
+    const auto PTVNormalizedROILabelRegex = OptArgs.getValueStr("PTVNormalizedROILabelRegex").value();
+
+    const auto BodyROILabelRegex = OptArgs.getValueStr("BodyROILabelRegex").value();
+    const auto BodyNormalizedROILabelRegex = OptArgs.getValueStr("BodyNormalizedROILabelRegex").value();
+
+    const auto PTVPrescriptionDose = std::stod( OptArgs.getValueStr("PTVPrescriptionDose").value());
 
     //-----------------------------------------------------------------------------------------------------------------
-    const auto theregex = std::regex(ROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto thenormalizedregex = std::regex(NormalizedROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto theregex_PTV = std::regex(PTVROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto thenormalizedregex_PTV = std::regex(PTVNormalizedROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+
+    const auto theregex_Body = std::regex(BodyROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto thenormalizedregex_Body = std::regex(BodyNormalizedROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
 
     Explicator X(FilenameLex);
-
-
 
 
     //Merge the image arrays if necessary.
@@ -186,56 +229,103 @@ Drover EvaluateDoseVolumeStats(Drover DICOM_data, OperationArgPkg OptArgs, std::
     }
 
     //Whitelist contours using the provided regex.
-    auto cc_ROIs = cc_all;
-    cc_ROIs.remove_if([=](std::reference_wrapper<contour_collection<double>> cc) -> bool {
+    auto cc_PTV_ROIs = cc_all;
+    cc_PTV_ROIs.remove_if([=](std::reference_wrapper<contour_collection<double>> cc) -> bool {
                    const auto ROINameOpt = cc.get().contours.front().GetMetadataValueAs<std::string>("ROIName");
                    const auto ROIName = ROINameOpt.value_or("");
-                   return !(std::regex_match(ROIName,theregex));
+                   return !(std::regex_match(ROIName,theregex_PTV));
     });
-    cc_ROIs.remove_if([=](std::reference_wrapper<contour_collection<double>> cc) -> bool {
+    cc_PTV_ROIs.remove_if([=](std::reference_wrapper<contour_collection<double>> cc) -> bool {
                    const auto ROINameOpt = cc.get().contours.front().GetMetadataValueAs<std::string>("NormalizedROIName");
                    const auto ROIName = ROINameOpt.value_or("");
-                   return !(std::regex_match(ROIName,thenormalizedregex));
+                   return !(std::regex_match(ROIName,thenormalizedregex_PTV));
     });
 
-    if(cc_ROIs.empty()){
-        throw std::invalid_argument("No contours selected. Cannot continue.");
+    if(cc_PTV_ROIs.empty()){
+        throw std::invalid_argument("No PTV contours selected. Cannot continue.");
+    }
+
+    auto cc_Body_ROIs = cc_all;
+    cc_Body_ROIs.remove_if([=](std::reference_wrapper<contour_collection<double>> cc) -> bool {
+                   const auto ROINameOpt = cc.get().contours.front().GetMetadataValueAs<std::string>("ROIName");
+                   const auto ROIName = ROINameOpt.value_or("");
+                   return !(std::regex_match(ROIName,theregex_Body));
+    });
+    cc_Body_ROIs.remove_if([=](std::reference_wrapper<contour_collection<double>> cc) -> bool {
+                   const auto ROINameOpt = cc.get().contours.front().GetMetadataValueAs<std::string>("NormalizedROIName");
+                   const auto ROIName = ROINameOpt.value_or("");
+                   return !(std::regex_match(ROIName,thenormalizedregex_Body));
+    });
+
+    if(cc_Body_ROIs.empty()){
+        throw std::invalid_argument("No Body contours selected. Cannot continue.");
     }
 
     std::string patient_ID;
-    if( auto o = cc_ROIs.front().get().contours.front().GetMetadataValueAs<std::string>("PatientID") ){
+    if( auto o = cc_PTV_ROIs.front().get().contours.front().GetMetadataValueAs<std::string>("PatientID") ){
         patient_ID = o.value();
-    }else if( auto o = cc_ROIs.front().get().contours.front().GetMetadataValueAs<std::string>("StudyInstanceUID") ){
+    }else if( auto o = cc_PTV_ROIs.front().get().contours.front().GetMetadataValueAs<std::string>("StudyInstanceUID") ){
         patient_ID = o.value();
     }else{
         patient_ID = "unknown_person";
     }
 
     //Accumulate the voxel intensity distributions.
-    AccumulatePixelDistributionsUserData ud;
+    AccumulatePixelDistributionsUserData ud_PTV;
     if(!img_arr_ptr->imagecoll.Compute_Images( AccumulatePixelDistributions, { },
-                                               cc_ROIs, &ud )){
-        throw std::runtime_error("Unable to accumulate pixel distributions.");
+                                               cc_PTV_ROIs, &ud_PTV )){
+        throw std::runtime_error("Unable to accumulate PTV pixel distributions.");
+    }
+    AccumulatePixelDistributionsUserData ud_Body;
+    if(!img_arr_ptr->imagecoll.Compute_Images( AccumulatePixelDistributions, { },
+                                               cc_Body_ROIs, &ud_Body )){
+        throw std::runtime_error("Unable to accumulate Body pixel distributions.");
     }
 
+
+    const auto Dpres95 = 0.95 * PTVPrescriptionDose;
+    long int N_Body_over_Dpres95 = 0; //We assume all body ROIs are part of a single object.
+
     //Evalute the models.
-    std::map<std::string, double> HI; // Heterogeneity index.
     {
-        for(const auto &av : ud.accumulated_voxels){
+        for(auto &av : ud_Body.accumulated_voxels){
+            for(const auto &D_voxel : av.second){
+                if(D_voxel > Dpres95) ++N_Body_over_Dpres95;
+            }
+            av.second.clear(); // Reduce memory pressure.
+        }
+    }
+
+    std::map<std::string, double> HI; // Heterogeneity index.
+    std::map<std::string, double> CN; // Conformity number.
+
+    std::map<std::string, long int> N_PTV_over_Dpres95; //We assume all PTV ROIs are distinct.
+    {
+        for(const auto &av : ud_PTV.accumulated_voxels){
             const auto lROIname = av.first;
 
-            const auto N = av.second.size();
-            const long double V_frac = static_cast<long double>(1) / N; // Fractional volume of a single voxel compared to whole ROI.
-
-            const auto D_02 = Stats::Percentile(av.second, 0.02);
+            const auto D_02 = Stats::Percentile(av.second, 0.98); // D_02 == 98% dose percentile.
             const auto D_50 = Stats::Percentile(av.second, 0.50);
-            const auto D_98 = Stats::Percentile(av.second, 0.98);
+            const auto D_98 = Stats::Percentile(av.second, 0.02); // D_98 == 2% dose percentile.
 
             HI[lROIname] = (D_02 - D_98)/D_50;
 
-//            for(const auto &D_voxel : av.second){
-//            }
+            long int N_over_Dpres95 = 0;
+            for(const auto &D_voxel : av.second){
+                if(D_voxel > Dpres95) ++N_over_Dpres95;
+            }
+            N_PTV_over_Dpres95[lROIname] += N_over_Dpres95;
+        }
+        for(const auto &av : ud_PTV.accumulated_voxels){
+            const auto lROIname = av.first;
+            const auto N = av.second.size();
+            //const long double V_frac = static_cast<long double>(1) / N; // Fractional volume of a single voxel compared to whole ROI.
 
+            const auto N_T = static_cast<double>(N);
+            const auto N_T_pres = static_cast<double>(N_PTV_over_Dpres95[lROIname]);
+            const auto N_pres = static_cast<double>(N_Body_over_Dpres95);
+
+            CN[lROIname] = (N_T_pres * N_T_pres) / (N_T * N_pres);
         }
     }
 
@@ -263,23 +353,26 @@ Drover EvaluateDoseVolumeStats(Drover DICOM_data, OperationArgPkg OptArgs, std::
                    << "ROIname,"
                    << "NormalizedROIname,"
                    << "HeterogeneityIndex,"
+                   << "ConformityNumber,"
                    << "DoseMean,"
                    << "DoseMedian,"
                    << "DoseStdDev,"
                    << "VoxelCount"
                    << std::endl;
         }
-        for(const auto &av : ud.accumulated_voxels){
+        for(const auto &av : ud_PTV.accumulated_voxels){
             const auto lROIname = av.first;
             const auto DoseMean = Stats::Mean( av.second );
             const auto DoseMedian = Stats::Median( av.second );
             const auto DoseStdDev = std::sqrt(Stats::Unbiased_Var_Est( av.second ));
             const auto HeterogeneityIndex = HI[lROIname];
+            const auto ConformityNumber = CN[lROIname];
 
             FO_tcp  << patient_ID         << ","
                     << X(lROIname)        << ","
                     << lROIname           << ","
                     << HeterogeneityIndex << ","
+                    << ConformityNumber   << ","
                     << DoseMean           << ","
                     << DoseMedian         << ","
                     << DoseStdDev         << ","
