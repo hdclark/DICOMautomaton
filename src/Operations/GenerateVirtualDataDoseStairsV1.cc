@@ -216,50 +216,34 @@ Drover GenerateVirtualDataDoseStairsV1(Drover DICOM_data, OperationArgPkg OptArg
 
 
     //Create contours.
+    long int ROINumberNidus = 1;
     {
+        const std::string ROIName = "Body";
+        const long int ROINumber = ROINumberNidus++;
+
         std::unique_ptr<Contour_Data> output(new Contour_Data());
 
-        //Get an image to base contours on. (This just make it slightly easier to specify contours.)
-        auto animgcoll = std::ref(DICOM_data.image_data.back()->imagecoll);
-        auto animg = std::ref(DICOM_data.image_data.back()->imagecoll.images.front());
-
-        long int ROINumberNidus = 1;
-
-        //Body.
-        {
-            const std::string ROIName = "Body";
-            const auto ROINumber = ROINumberNidus++;
-
-            contour_collection<double> cc;
-            {
-                const auto dRow = animg.get().row_unit * animg.get().pxl_dx * 0.25;
-                const auto dCol = animg.get().col_unit * animg.get().pxl_dy * 0.25;
-
-                contour_of_points<double> shtl;
-                shtl.closed = true;
-                shtl.points.push_back(animg.get().position(/*row=*/ 0, /*column=*/ 0 ) - dRow - dCol);
-                shtl.points.push_back(animg.get().position(/*row=*/19, /*column=*/ 0 ) + dRow - dCol);
-                shtl.points.push_back(animg.get().position(/*row=*/19, /*column=*/19 ) + dRow + dCol);
-                shtl.points.push_back(animg.get().position(/*row=*/ 0, /*column=*/19 ) - dRow + dCol);
-                //const auto img_corners = animg.get().corners2D();
-                //for(auto it = img_corners.begin(); it != img_corners.end(); ++it){
-                //FUNCINFO("Corner: " << *it);
-                //    shtl.points.push_back(*it);
-                //}
-                shtl.Reorient_Counter_Clockwise();
-                shtl.metadata = animgcoll.get().get_common_metadata({});
-                shtl.metadata["ROINumber"] = std::to_string(ROINumber);
-                shtl.metadata["ROIName"] = ROIName;
-                shtl.metadata["NormalizedROIName"] = X(ROIName);
-                shtl.metadata["MinimumSeparation"] = animg.get().metadata["ImageThickness"];
-                cc.contours.push_back(std::move(shtl));
-            }
-            output->ccs.push_back( contours_with_meta() );
-            output->ccs.back() = cc;
-            output->ccs.back().Raw_ROI_name = ROIName; 
-            output->ccs.back().ROI_number = ROINumber;
+        std::list<std::reference_wrapper<planar_image<float,double>>> imgs;
+        for(auto &animg : DICOM_data.image_data.back()->imagecoll.images){
+            imgs.emplace_back( std::ref(animg) );
         }
 
+        Encircle_Images_with_Contours_Opts opts;
+        opts.inclusivity = Encircle_Images_with_Contours_Opts::Inclusivity::Centre;
+        
+        std::map<std::string,std::string> metadata;
+        metadata = DICOM_data.image_data.back()->imagecoll.get_common_metadata({});
+        metadata["ROINumber"] = std::to_string(ROINumber);
+        metadata["ROIName"] = ROIName;
+        metadata["NormalizedROIName"] = X(ROIName);
+        metadata["MinimumSeparation"] = metadata["SliceThickness"];
+
+        auto cc = Encircle_Images_with_Contours(imgs, opts, metadata);
+
+        output->ccs.push_back( contours_with_meta() );
+        output->ccs.back() = cc;
+        output->ccs.back().Raw_ROI_name = ROIName; 
+        output->ccs.back().ROI_number = ROINumber;
 
         DICOM_data.contour_data = std::move(output);
     }
