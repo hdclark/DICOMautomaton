@@ -76,16 +76,18 @@ bool DecayDoseOverTime(planar_image_collection<float,double>::images_list_it_t f
     ebv_opts.adjacency      = Mutate_Voxels_Opts::Adjacency::SingleVoxel;
     ebv_opts.maskmod        = Mutate_Voxels_Opts::MaskMod::Noop;
 
-    auto f_bounded = [=](long int /*row*/, long int /*col*/, long int /*channel*/, float existing_voxel_val) -> float {
-        float newval = existing_voxel_val;
+    auto f_bounded = [=](long int /*row*/, long int /*col*/, long int /*channel*/, float &voxel_val) {
         if(false){
         }else if(user_data_s->model == DecayDoseOverTimeMethod::Halve){
-            newval = existing_voxel_val * 0.5;
+            voxel_val *= 0.5;
 
         }else if(user_data_s->model == DecayDoseOverTimeMethod::Jones_and_Grant_2014){
             const auto BED_abr_c1 = BEDabr_from_n_D_abr(user_data_s->Course1NumberOfFractions, 
-                                                        existing_voxel_val,
+                                                        voxel_val,
                                                         user_data_s->AlphaBetaRatio);
+
+            //The model does not apply to doses beyond the tolerance dose, so the most conservative
+            // approach is to leave the dose in such voxels as-is.
             double BED_ratio = (BED_abr_c1/BED_abr_tol);
             if( (0 < BED_ratio) && (BED_ratio < 1) ){
                 const double time_scale_factor = std::pow((1.0 - BED_ratio),r_exp);
@@ -93,34 +95,30 @@ bool DecayDoseOverTime(planar_image_collection<float,double>::images_list_it_t f
 
                 const auto D_c1_eff = D_from_n_BEDabr(user_data_s->Course1NumberOfFractions,
                                                       BED_abr_c1_eff);
-                newval = D_c1_eff;
+                voxel_val = D_c1_eff;
 
                 //Debugging/validation:
                 //if( ((row == 0) && (col == 19)) || ( (row == 9) && (col == 9)) ){
                 //    FUNCINFO("BED_abr_tol    = " << BED_abr_tol.val);
                 //    FUNCINFO("r              = " << r);
                 //    FUNCINFO("r_exp          = " << r_exp);
-                //    FUNCINFO("Dincoming      = " << existing_voxel_val);
+                //    FUNCINFO("Dincoming      = " << voxel_val);
                 //    FUNCINFO("BED_abr_c1     = " << BED_abr_c1.val);
                 //    FUNCINFO("BED_ratio      = " << BED_ratio);
                 //    FUNCINFO("BED_C1_eff     = " << BED_abr_c1_eff.val);
                 //    FUNCINFO("Doutgoing      = " << D_c1_eff);
                 //}
-            }else{
-                //The model does not apply to doses beyond the tolerance dose, so the safest
-                // approach is to leave the dose in such voxels as-is.
-                newval = existing_voxel_val;
             }
 
         }else{
             throw std::logic_error("Provided an invalid model. Cannot continue.");
         }
-        return newval;
+        return;
     };
 
-    std::function<float (long int, long int, long int, float)> f_unbounded;
+    std::function<float (long int, long int, long int, float &)> f_unbounded;
 
-    auto f_observer = [&](long int /*row*/, long int /*col*/, long int /*channel*/, float voxel_val) {
+    auto f_observer = [&](long int /*row*/, long int /*col*/, long int /*channel*/, float &voxel_val) {
         minmax_pixel.Digest(voxel_val); 
         return;
     };

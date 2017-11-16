@@ -73,19 +73,17 @@ bool HighlightROIVoxels(planar_image_collection<float,double>::images_list_it_t 
         throw std::invalid_argument("Invalid Inclusivity option provided.");
     }
 
-    auto f_bounded = [&](long int /*row*/, long int /*col*/, long int /*channel*/, float existing_voxel_val) -> float {
-        float newval = existing_voxel_val;
-        if(user_data_s->overwrite_interior) newval = user_data_s->outgoing_interior_val;
-        return newval;
+    auto f_bounded = [&](long int /*row*/, long int /*col*/, long int /*channel*/, float &voxel_val) {
+        if(user_data_s->overwrite_interior) voxel_val = user_data_s->outgoing_interior_val;
+        return;
     };
 
-    auto f_unbounded = [&](long int /*row*/, long int /*col*/, long int /*channel*/, float existing_voxel_val) -> float {
-        float newval = existing_voxel_val;
-        if(user_data_s->overwrite_exterior) newval = user_data_s->outgoing_exterior_val;
-        return newval;
+    auto f_unbounded = [&](long int /*row*/, long int /*col*/, long int /*channel*/, float &voxel_val) {
+        if(user_data_s->overwrite_exterior) voxel_val = user_data_s->outgoing_exterior_val;
+        return;
     };
 
-    auto f_observer = [&](long int /*row*/, long int /*col*/, long int /*channel*/, float voxel_val) {
+    auto f_observer = [&](long int /*row*/, long int /*col*/, long int /*channel*/, float &voxel_val) {
         minmax_pixel.Digest(voxel_val); 
         return;
     };
