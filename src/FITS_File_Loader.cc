@@ -79,6 +79,7 @@ bool Load_From_FITS_Files( Drover &DICOM_data,
         ++i;
         const auto Filename = bfit->string();
 
+        //First, try planar_images that have been exported in the expected format.
         try{
             auto animg = ReadFromFITS<float,double>(Filename);
 
@@ -113,7 +114,48 @@ bool Load_From_FITS_Files( Drover &DICOM_data,
             bfit = Filenames.erase( bfit ); 
             continue;
         }catch(const std::exception &e){
-            FUNCINFO("Unable to load as FITS file: '" << e.what() << "'");
+            FUNCINFO("Unable to load as FITS file with float,double types: '" << e.what() << "'");
+        };
+
+        //Then try the most likely format as exported by other programs.
+        try{
+            auto animg = ReadFromFITS<uint8_t,double>(Filename);
+
+            //Set some default parameters if none were included in the file metadata.
+            if(!std::isfinite(animg.pxl_dx) 
+            || !std::isfinite(animg.pxl_dy)
+            || !std::isfinite(animg.pxl_dz)
+            || (animg.pxl_dx <= 0.0)
+            || (animg.pxl_dy <= 0.0) 
+            || (animg.pxl_dz <= 0.0) 
+            || !std::isfinite(animg.anchor.length())
+            || !std::isfinite(animg.offset.length()) ){
+                animg.init_spatial( 1.0, 1.0, 1.0, vec3<double>(0.0, 0.0, 0.0), vec3<double>(0.0, 0.0, 0.0));
+            }
+            if(!std::isfinite(animg.row_unit.length())
+            || !std::isfinite(animg.col_unit.length())
+            || (animg.row_unit.length() < 1E-5) 
+            || (animg.col_unit.length() < 1E-5)  ){
+                animg.init_orientation( vec3<double>(0.0, 1.0, 0.0), vec3<double>(1.0, 0.0, 0.0) );
+            }
+            if(!std::isfinite(animg.rows)
+            || !std::isfinite(animg.columns)
+            || !std::isfinite(animg.channels) ){
+                throw std::runtime_error("FITS file missing key image parameters. Cannot continue.");
+            }
+
+            planar_image<float,double> animg2;
+            animg2.cast_from(animg);
+
+            FUNCINFO("Loaded FITS file with dimensions " 
+                     << animg2.rows << " x " << animg2.columns
+                     << " and " << animg2.channels << " channels");
+
+            DICOM_data.image_data.back()->imagecoll.images.emplace_back( animg2 );
+            bfit = Filenames.erase( bfit ); 
+            continue;
+        }catch(const std::exception &e){
+            FUNCINFO("Unable to load as FITS file with uint8_t,double types: '" << e.what() << "'");
         };
 
         //Skip the file. It might be destined for some other loader.
