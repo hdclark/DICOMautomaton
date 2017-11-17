@@ -66,8 +66,6 @@ bool DecayDoseOverTime(planar_image_collection<float,double>::images_list_it_t f
     const double r_exp = 1.0 / (1.0 + r);
 
     //Record the min and max (outgoing) pixel values for windowing purposes.
-    Stats::Running_MinMax<float> minmax_pixel;
-
     Mutate_Voxels_Opts ebv_opts;
     ebv_opts.editstyle      = Mutate_Voxels_Opts::EditStyle::InPlace;
     ebv_opts.inclusivity    = Mutate_Voxels_Opts::Inclusivity::Centre;
@@ -116,13 +114,6 @@ bool DecayDoseOverTime(planar_image_collection<float,double>::images_list_it_t f
         return;
     };
 
-    std::function<float (long int, long int, long int, float &)> f_unbounded;
-
-    auto f_observer = [&](long int /*row*/, long int /*col*/, long int /*channel*/, float &voxel_val) {
-        minmax_pixel.Digest(voxel_val); 
-        return;
-    };
-
     std::list<std::reference_wrapper<planar_image<float,double>>> selected_imgs;
     for(auto &img_it : selected_img_its) selected_imgs.push_back( std::ref(*img_it) );
 
@@ -130,14 +121,12 @@ bool DecayDoseOverTime(planar_image_collection<float,double>::images_list_it_t f
                                  selected_imgs, 
                                  ccsl, 
                                  ebv_opts, 
-                                 f_bounded,
-                                 f_unbounded,
-                                 f_observer );
+                                 f_bounded );
 
     //Alter the first image's metadata to reflect that averaging has occurred. You might want to consider
     // a selective whitelist approach so that unique IDs are not duplicated accidentally.
     UpdateImageDescription( std::ref(*first_img_it), "DoseDecayedOverTime" );
-    UpdateImageWindowCentreWidth( std::ref(*first_img_it), minmax_pixel );
+    UpdateImageWindowCentreWidth( std::ref(*first_img_it) );
 
     return true;
 }

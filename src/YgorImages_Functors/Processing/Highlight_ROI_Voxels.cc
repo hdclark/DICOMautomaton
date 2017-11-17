@@ -45,8 +45,6 @@ bool HighlightROIVoxels(planar_image_collection<float,double>::images_list_it_t 
     }
 
     //Modify the first image as per the mask and specified behaviour.
-    Stats::Running_MinMax<float> minmax_pixel;
-
     Mutate_Voxels_Opts ebv_opts;
     ebv_opts.editstyle      = Mutate_Voxels_Opts::EditStyle::InPlace;
     ebv_opts.aggregate      = Mutate_Voxels_Opts::Aggregate::First;
@@ -73,20 +71,20 @@ bool HighlightROIVoxels(planar_image_collection<float,double>::images_list_it_t 
         throw std::invalid_argument("Invalid Inclusivity option provided.");
     }
 
-    auto f_bounded = [&](long int /*row*/, long int /*col*/, long int /*channel*/, float &voxel_val) {
-        if(user_data_s->overwrite_interior) voxel_val = user_data_s->outgoing_interior_val;
-        return;
-    };
 
-    auto f_unbounded = [&](long int /*row*/, long int /*col*/, long int /*channel*/, float &voxel_val) {
-        if(user_data_s->overwrite_exterior) voxel_val = user_data_s->outgoing_exterior_val;
-        return;
-    };
+    auto f_bounded = std::function<void(long int, long int, long int, float &)>();
+    if(user_data_s->overwrite_interior){
+        f_bounded = [&](long int /*row*/, long int /*col*/, long int /*channel*/, float &voxel_val) {
+                voxel_val = user_data_s->outgoing_interior_val;
+        };
+    }
 
-    auto f_observer = [&](long int /*row*/, long int /*col*/, long int /*channel*/, float &voxel_val) {
-        minmax_pixel.Digest(voxel_val); 
-        return;
-    };
+    auto f_unbounded = std::function<void(long int, long int, long int, float &)>();
+    if(user_data_s->overwrite_exterior){
+        f_unbounded = [&](long int /*row*/, long int /*col*/, long int /*channel*/, float &voxel_val) {
+            voxel_val = user_data_s->outgoing_exterior_val;
+        };
+    }
 
     std::list<std::reference_wrapper<planar_image<float,double>>> selected_imgs;
     for(auto &img_it : selected_img_its) selected_imgs.push_back( std::ref(*img_it) );
@@ -96,14 +94,13 @@ bool HighlightROIVoxels(planar_image_collection<float,double>::images_list_it_t 
                                  ccsl, 
                                  ebv_opts, 
                                  f_bounded,
-                                 f_unbounded,
-                                 f_observer );
+                                 f_unbounded );
 
 
     //Alter the first image's metadata to reflect that averaging has occurred. You might want to consider
     // a selective whitelist approach so that unique IDs are not duplicated accidentally.
     UpdateImageDescription( std::ref(*first_img_it), "Highlighted ROIs" );
-    UpdateImageWindowCentreWidth( std::ref(*first_img_it), minmax_pixel );
+    UpdateImageWindowCentreWidth( std::ref(*first_img_it) );
 
     return true;
 }

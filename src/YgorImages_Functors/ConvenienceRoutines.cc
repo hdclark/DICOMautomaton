@@ -24,10 +24,8 @@ void UpdateImageDescription(
 }
 
 
-void UpdateImageWindowCentreWidth(
-        std::reference_wrapper<planar_image<float,double>> img_refw,
-        const Stats::Running_MinMax<float> &RMM ){
-
+void UpdateImageWindowCentreWidth(std::reference_wrapper<planar_image<float,double>> img_refw,
+                                  const Stats::Running_MinMax<float> &RMM){
     try{
         const auto Min = RMM.Current_Min();
         const auto Max = RMM.Current_Max();
@@ -50,8 +48,21 @@ void UpdateImageWindowCentreWidth(
     return;
 }
 
-void UpdateImageWindowCentreWidth(
-        planar_image_collection<float,double>::images_list_it_t img_it,
-        const Stats::Running_MinMax<float> &RMM ){
+void UpdateImageWindowCentreWidth(planar_image_collection<float,double>::images_list_it_t img_it,
+                                  const Stats::Running_MinMax<float> &RMM){
     return UpdateImageWindowCentreWidth( std::ref(*img_it), RMM );
+}
+
+void UpdateImageWindowCentreWidth(std::reference_wrapper<planar_image<float,double>> img_refw){
+    Stats::Running_MinMax<float> RMM;
+    const auto MM = img_refw.get().minmax();
+    RMM.Digest(MM.first);
+    RMM.Digest(MM.second);
+
+    UpdateImageWindowCentreWidth(img_refw, RMM);
+    return;
+}
+
+void UpdateImageWindowCentreWidth(planar_image_collection<float,double>::images_list_it_t img_it){
+    return UpdateImageWindowCentreWidth( std::ref(*img_it) );
 }
