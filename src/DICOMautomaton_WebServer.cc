@@ -795,12 +795,20 @@ void BaseWebServerApplication::createComputeGB(void){
 
     std::map<std::string,Wt::WFileResource *> OutputFiles;
     std::map<std::string,std::string> OutputFilenames;
+    std::map<std::string,std::string> OutputMimetype;
     const auto rows = table->rowCount(); 
     const auto cols = table->columnCount(); 
     for(auto col = 1; col < cols; ++col){
-        OperationArgPkg op_args(selected_op);
+        auto op_doc_l = (Known_Operations()[selected_op].first)(); // Documentation parameter list.
+        OperationArgPkg op_args(selected_op); // The list of parameters passed to the operation.
         for(int row = 1; row < rows; ++row){
             const auto param_name = reinterpret_cast<Wt::WText *>(table->elementAt(row,0)->children().back())->text().toUTF8();
+
+            //Find documentation for the current parameter.
+            OperationArgDoc op_doc;
+            for(auto &o : op_doc_l){
+                if(o.name == param_name) op_doc = o;
+            }
 
             std::string param_val;
             auto w = table->elementAt(row,col)->children().back();
@@ -844,6 +852,8 @@ void BaseWebServerApplication::createComputeGB(void){
                 }
 
             }else if(dynamic_cast<Wt::WProgressBar *>(w)){ //Dummy encoding for generated files.
+                OutputMimetype[param_name] = op_doc.mimetype;
+
                 //Create a working file.
                 //
                 // Note: for multi-run operations, the same output file MUST be used. This is so that the operation
@@ -861,9 +871,25 @@ void BaseWebServerApplication::createComputeGB(void){
                 //Only create a file resource for the final pass.
                 if((col+1) == cols){
                     auto fr = new Wt::WFileResource(gb);
-                    fr->setMimeType("application/octet-stream");
                     fr->setFileName(personal_fname);
-                    fr->suggestFileName("output.dcm");
+                    fr->setMimeType(op_doc.mimetype);
+
+                    if(false){
+                    }else if(op_doc.mimetype == "application/dicom"){
+                        fr->suggestFileName("output.dcm");
+                    }else if(op_doc.mimetype == "text/plain"){
+                        fr->suggestFileName("output.txt");
+                    }else if(op_doc.mimetype == "text/csv"){
+                        fr->suggestFileName("output.csv");
+                    }else if(op_doc.mimetype == "application/obj"){
+                        fr->suggestFileName("output.obj");
+                    }else if(op_doc.mimetype == "application/mtl"){
+                        fr->suggestFileName("output.mtl");
+                    }else if(op_doc.mimetype == "image/fits"){
+                        fr->suggestFileName("output.fits");
+                    }else{
+                        fr->suggestFileName("output");
+                    }
                     
                     OutputFiles[param_name] = fr;
                 }
@@ -910,11 +936,38 @@ void BaseWebServerApplication::createComputeGB(void){
         gb->addWidget(new Wt::WBreak());
 
         //Wt will serve an empty file if the backing file does not exist. This approach is more explicit.
-        if(Does_File_Exist_And_Can_Be_Read(fname)){
-            (void *) new Wt::WAnchor(fr, "Output file: "_s + param_name, gb);
-        }else{
+        if(! Does_File_Exist_And_Can_Be_Read(fname)){
             (void *) new Wt::WText("<p>Output file: "_s + fname + " not available.</p>", gb);
+            break;
         }
+
+        // If the file is tabular, create a table to display the info.
+        if(OutputMimetype[param_name] == "text/csv"){
+            auto table = new Wt::WTable(gb);
+            table->setHeaderCount(1);
+            table->setWidth(Wt::WLength("100%"));
+            table->disable();
+
+            //Populate the file.
+            auto lines = LoadFileToList(fname);
+            size_t row = 0;
+            for(auto &l : lines){
+                auto tokens = SplitStringToVector(l, ",", 'd');
+                size_t col = 0;
+                for(auto &t : tokens){
+                    (void *) new Wt::WText(" "_s + t + " "_s, table->elementAt(row,col));
+                    //(void *) new Wt::WLineEdit(t, table->elementAt(row,col));
+                    ++col;
+                }
+                ++row;
+            }
+
+            gb->addWidget(new Wt::WBreak());
+            table->enable();
+        }
+
+        (void *) new Wt::WAnchor(fr, "Download file"_s, gb);
+
     }
     this->processEvents();
 

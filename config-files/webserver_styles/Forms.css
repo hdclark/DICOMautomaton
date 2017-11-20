@@ -53,4 +53,21 @@ button {
 }
 
 
+tr:hover {
+    background-color: rgba(210,105,100,0.15);
+}
+
+tbody td:nth-of-type(even),
+thead th:nth-of-type(even) {
+    background: rgba(100,200,255,0.15);
+}
+
+tbody td:nth-of-type(odd),
+thead th:nth-of-type(odd) {
+    background: rgba(255,255,100,0.25);
+}
+
+th, td {
+    padding: 5px;
+}
 
