@@ -104,6 +104,7 @@ std::list<OperationArgDoc> OpArgDocEvaluateNTCPModels(void){
     out.back().default_val = "";
     out.back().expected = true;
     out.back().examples = { "", "/tmp/somefile", "localfile.csv", "derivative_data.csv" };
+    out.back().mimetype = "text/csv";
 
 
     out.emplace_back();

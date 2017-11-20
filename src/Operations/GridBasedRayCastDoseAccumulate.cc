@@ -104,6 +104,7 @@ std::list<OperationArgDoc> OpArgDocGridBasedRayCastDoseAccumulate(void){
     out.back().default_val = "";
     out.back().expected = true;
     out.back().examples = { "", "/tmp/dose.fits", "localfile.fits", "derivative_data.fits" };
+    out.back().mimetype = "image/fits";
 
     out.emplace_back();
     out.back().name = "DoseLengthMapFileName";
@@ -112,6 +113,7 @@ std::list<OperationArgDoc> OpArgDocGridBasedRayCastDoseAccumulate(void){
     out.back().default_val = "";
     out.back().expected = true;
     out.back().examples = { "", "/tmp/doselength.fits", "localfile.fits", "derivative_data.fits" };
+    out.back().mimetype = "image/fits";
 
 
     out.emplace_back();
@@ -121,6 +123,7 @@ std::list<OperationArgDoc> OpArgDocGridBasedRayCastDoseAccumulate(void){
     out.back().default_val = "";
     out.back().expected = true;
     out.back().examples = { "", "/tmp/surfacelength.fits", "localfile.fits", "derivative_data.fits" };
+    out.back().mimetype = "image/fits";
 
 
     out.emplace_back();

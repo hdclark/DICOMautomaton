@@ -26,6 +26,7 @@ std::list<OperationArgDoc> OpArgDocDICOMExportImagesAsDose(void){
     out.back().examples = { "/tmp/RD.dcm", 
                             "./RD.dcm",
                             "RD.dcm" };
+    out.back().mimetype = "application/dicom";
 
     out.emplace_back();
     out.back().name = "ParanoiaLevel";

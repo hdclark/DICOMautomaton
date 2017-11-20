@@ -131,6 +131,7 @@ std::list<OperationArgDoc> OpArgDocSurfaceBasedRayCastDoseAccumulate(void){
     out.back().default_val = "";
     out.back().expected = true;
     out.back().examples = { "", "total_dose_map.fits", "/tmp/out.fits" };
+    out.back().mimetype = "image/fits";
 
 
     out.emplace_back();
@@ -145,6 +146,8 @@ std::list<OperationArgDoc> OpArgDocSurfaceBasedRayCastDoseAccumulate(void){
     out.back().default_val = "";
     out.back().expected = true;
     out.back().examples = { "", "intersection_count_map.fits", "/tmp/out.fits" };
+    out.back().mimetype = "image/fits";
+
 
     out.emplace_back();
     out.back().name = "DepthMapFileName";
@@ -155,6 +158,7 @@ std::list<OperationArgDoc> OpArgDocSurfaceBasedRayCastDoseAccumulate(void){
     out.back().default_val = "";
     out.back().expected = true;
     out.back().examples = { "", "depth_map.fits", "/tmp/out.fits" };
+    out.back().mimetype = "image/fits";
 
 
     out.emplace_back();
@@ -167,6 +171,7 @@ std::list<OperationArgDoc> OpArgDocSurfaceBasedRayCastDoseAccumulate(void){
     out.back().default_val = "";
     out.back().expected = true;
     out.back().examples = { "", "radial_dist_map.fits", "/tmp/out.fits" };
+    out.back().mimetype = "image/fits";
 
 
     out.emplace_back();
@@ -177,6 +182,7 @@ std::list<OperationArgDoc> OpArgDocSurfaceBasedRayCastDoseAccumulate(void){
     out.back().default_val = "";
     out.back().expected = true;
     out.back().examples = { "", "/tmp/roi_surface_mesh.off", "roi_surface_mesh.off" };
+    out.back().mimetype = "application/off";
 
 
     out.emplace_back();
@@ -187,6 +193,7 @@ std::list<OperationArgDoc> OpArgDocSurfaceBasedRayCastDoseAccumulate(void){
     out.back().default_val = "";
     out.back().expected = true;
     out.back().examples = { "", "/tmp/subdivided_roi_surface_mesh.off", "subdivided_roi_surface_mesh.off" };
+    out.back().mimetype = "application/off";
 
 
     out.emplace_back();

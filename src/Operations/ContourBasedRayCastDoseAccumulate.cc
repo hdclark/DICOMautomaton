@@ -95,19 +95,21 @@ std::list<OperationArgDoc> OpArgDocContourBasedRayCastDoseAccumulate(void){
     out.emplace_back();
     out.back().name = "DoseLengthMapFileName";
     out.back().desc = "A filename (or full path) for the (dose)*(length traveled through the ROI peel) image map."
-                      " The format is TBD. Leave empty to dump to generate a unique temporary file.";  // TODO: specify format.
+                      " The format is TBD. Leave empty to dump to generate a unique temporary file.";
     out.back().default_val = "";
     out.back().expected = true;
     out.back().examples = { "", "/tmp/somefile", "localfile.img", "derivative_data.img" };
+    out.back().mimetype = "image/fits";
 
 
     out.emplace_back();
     out.back().name = "LengthMapFileName";
     out.back().desc = "A filename (or full path) for the (length traveled through the ROI peel) image map."
-                      " The format is TBD. Leave empty to dump to generate a unique temporary file.";  // TODO: specify format.
+                      " The format is TBD. Leave empty to dump to generate a unique temporary file.";
     out.back().default_val = "";
     out.back().expected = true;
     out.back().examples = { "", "/tmp/somefile", "localfile.img", "derivative_data.img" };
+    out.back().mimetype = "image/fits";
 
 
     out.emplace_back();

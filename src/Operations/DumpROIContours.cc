@@ -105,6 +105,7 @@ std::list<OperationArgDoc> OpArgDocDumpROIContours(void){
     out.back().default_val = "";
     out.back().expected = true;
     out.back().examples = { "", "/tmp/somefile.obj", "localfile.obj", "derivative_data.obj" };
+    out.back().mimetype = "application/obj";
 
     out.emplace_back();
     out.back().name = "MTLFileName";
@@ -114,6 +115,7 @@ std::list<OperationArgDoc> OpArgDocDumpROIContours(void){
     out.back().default_val = "";
     out.back().expected = true;
     out.back().examples = { "", "/tmp/materials.mtl", "localfile.mtl", "somefile.mtl" };
+    out.back().mimetype = "application/mtl";
 
     out.emplace_back();
     out.back().name = "NormalizedROILabelRegex";

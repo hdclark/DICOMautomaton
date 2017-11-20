@@ -125,6 +125,7 @@ std::list<OperationArgDoc> OpArgDocDumpPerROIParams_KineticModel_1Compartment2In
     out.back().default_val = "";
     out.back().expected = true;
     out.back().examples = { "/tmp/results.txt", "/dev/null", "~/output.txt" };
+    out.back().mimetype = "text/plain";
 
     out.emplace_back();
     out.back().name = "Separator";

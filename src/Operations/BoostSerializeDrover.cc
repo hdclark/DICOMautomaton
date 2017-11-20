@@ -25,6 +25,7 @@ std::list<OperationArgDoc> OpArgDocBoost_Serialize_Drover(void){
     out.back().examples = { "/tmp/out.bin.gz", 
                             "./out.bin.gz",
                             "out.bin.gz" };
+    out.back().mimetype = "application/octet-stream";
 
     return out;
 }

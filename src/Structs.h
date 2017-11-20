@@ -443,6 +443,8 @@ class OperationArgPkg {
 };
 
 
+
+
 // Class for documenting commandline argument operation options.
 struct OperationArgDoc {
     std::string name;
@@ -450,5 +452,7 @@ struct OperationArgDoc {
     std::string default_val;
     bool expected;
     std::list<std::string> examples;
+
+    std::string mimetype; // If applicable.
 };
 

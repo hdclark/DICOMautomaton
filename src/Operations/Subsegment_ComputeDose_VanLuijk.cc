@@ -105,6 +105,7 @@ std::list<OperationArgDoc> OpArgDocSubsegment_ComputeDose_VanLuijk(void){
     out.back().default_val = "";
     out.back().expected = true;
     out.back().examples = { "", "/tmp/somefile", "localfile.csv", "area_data.csv" };
+    out.back().mimetype = "text/csv";
 
 
     out.emplace_back();
@@ -114,6 +115,7 @@ std::list<OperationArgDoc> OpArgDocSubsegment_ComputeDose_VanLuijk(void){
     out.back().default_val = "";
     out.back().expected = true;
     out.back().examples = { "", "/tmp/somefile", "localfile.csv", "derivative_data.csv" };
+    out.back().mimetype = "text/csv";
 
 
     out.emplace_back();
@@ -126,6 +128,7 @@ std::list<OperationArgDoc> OpArgDocSubsegment_ComputeDose_VanLuijk(void){
     out.back().default_val = "";
     out.back().expected = true;
     out.back().examples = { "", "/tmp/somefile", "localfile.csv", "distributions.data" };
+    out.back().mimetype = "text/csv";
 
 
     out.emplace_back();
