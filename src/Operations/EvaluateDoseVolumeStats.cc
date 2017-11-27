@@ -386,9 +386,9 @@ Drover EvaluateDoseVolumeStats(Drover DICOM_data, OperationArgPkg OptArgs, std::
             const auto ConformityNumber = CN[lROIname];
 
             FO_tcp  << UserComment.value_or("") << ","
-                    << patient_ID        << ","
-                    << X(lROIname)        << ","
+                    << patient_ID         << ","
                     << lROIname           << ","
+                    << X(lROIname)        << ","
                     << HeterogeneityIndex << ","
                     << ConformityNumber   << ","
                     << DoseMin            << ","

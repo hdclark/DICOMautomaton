@@ -527,8 +527,8 @@ Drover EvaluateTCPModels(Drover DICOM_data, OperationArgPkg OptArgs, std::map<st
 
             FO_tcp  << UserComment.value_or("") << ","
                     << patient_ID        << ","
-                    << X(lROIname)       << ","
                     << lROIname          << ","
+                    << X(lROIname)       << ","
                     << TCPMartel*100.0   << ","
                     << TCPgEUD*100.0     << ","
                     << TCPFenwick*100.0  << ","

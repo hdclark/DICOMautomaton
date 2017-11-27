@@ -487,8 +487,8 @@ Drover EvaluateNTCPModels(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
 
             FO_tcp  << UserComment.value_or("") << ","
                     << patient_ID        << ","
-                    << X(lROIname)       << ","
                     << lROIname          << ","
+                    << X(lROIname)       << ","
                     << NTCPLKB*100.0     << ","
 //                    << NTCPmEUD*100.0    << ","
                     << NTCPFenwick*100.0 << ","
