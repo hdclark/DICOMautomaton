@@ -248,6 +248,17 @@ std::list<OperationArgDoc> OpArgDocEvaluateNTCPModels(void){
     out.back().expected = true;
     out.back().examples = { "1", "3", "4", "20", "31" };
 
+
+    out.emplace_back();
+    out.back().name = "UserComment";
+    out.back().desc = "A string that will be inserted into the output file which will simplify merging output"
+                      " with differing parameters, from different sources, or using sub-selections of the data."
+                      " If left empty, the column will be omitted from the output.";
+    out.back().default_val = "";
+    out.back().expected = true;
+    out.back().examples = { "", "Using XYZ", "Patient treatment plan C" };
+
+
     return out;
 }
 
@@ -283,6 +294,8 @@ Drover EvaluateNTCPModels(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
     //const auto DosePerFraction = std::stod( OptArgs.getValueStr("DosePerFraction").value() );
     const auto AlphaBetaRatio = std::stod( OptArgs.getValueStr("AlphaBetaRatio").value() );
     const auto NumberOfFractions = std::stod( OptArgs.getValueStr("NumberOfFractions").value() );
+
+    const auto UserComment = OptArgs.getValueStr("UserComment");
 
 /*
     const auto Gamma50 = std::stod( OptArgs.getValueStr("Gamma50").value() );
@@ -374,7 +387,12 @@ Drover EvaluateNTCPModels(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
 
                 // LKB model.
                 {
-                    LKB_gEUD_elements.push_back(V_frac * std::pow(ED2_voxel, LKB_Alpha));
+                    const auto scaled = std::pow(ED2_voxel, LKB_Alpha); //Problematic for (non-physical) 0.0.
+                    if(std::isfinite(scaled)){
+                        LKB_gEUD_elements.push_back(V_frac * std::pow(ED2_voxel, LKB_Alpha));
+                    }else{
+                        LKB_gEUD_elements.push_back(0.0); //No real need to include this except acknowledging what we are doing.
+                    }
                 }
                 
                 // mEUD model.
@@ -442,35 +460,43 @@ Drover EvaluateNTCPModels(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
             throw std::runtime_error("Unable to open file for reporting derivative data. Cannot continue.");
         }
         if(FirstWrite){ // Write a CSV header.
-            FO_tcp << "PatientID,"
+            FO_tcp << "UserComment,"
+                   << "PatientID,"
                    << "ROIname,"
                    << "NormalizedROIname,"
                    << "NTCPLKBModel,"
 //                   << "NTCPmEUDModel,"
                    << "NTCPFenwickModel,"
+                   << "DoseMin,"
                    << "DoseMean,"
                    << "DoseMedian,"
+                   << "DoseMax,"
                    << "DoseStdDev,"
                    << "VoxelCount"
                    << std::endl;
         }
         for(const auto &av : ud.accumulated_voxels){
             const auto lROIname = av.first;
+            const auto DoseMin = Stats::Min( av.second );
             const auto DoseMean = Stats::Mean( av.second );
             const auto DoseMedian = Stats::Median( av.second );
+            const auto DoseMax = Stats::Max( av.second );
             const auto DoseStdDev = std::sqrt(Stats::Unbiased_Var_Est( av.second ));
             const auto NTCPLKB = LKBModel[lROIname];
 //            const auto NTCPmEUD = mEUDModel[lROIname];
             const auto NTCPFenwick = FenwickModel[lROIname];
 
-            FO_tcp  << patient_ID        << ","
+            FO_tcp  << UserComment.value_or("") << ","
+                    << patient_ID        << ","
                     << X(lROIname)       << ","
                     << lROIname          << ","
                     << NTCPLKB*100.0   << ","
 //                    << NTCPmEUD*100.0     << ","
                     << NTCPFenwick*100.0  << ","
+                    << DoseMin           << ","
                     << DoseMean          << ","
                     << DoseMedian        << ","
+                    << DoseMax           << ","
                     << DoseStdDev        << ","
                     << av.second.size()  << std::endl;
         }
