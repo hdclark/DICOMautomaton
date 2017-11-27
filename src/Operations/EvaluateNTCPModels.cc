@@ -258,7 +258,6 @@ std::list<OperationArgDoc> OpArgDocEvaluateNTCPModels(void){
     out.back().expected = true;
     out.back().examples = { "", "Using XYZ", "Patient treatment plan C" };
 
-
     return out;
 }
 

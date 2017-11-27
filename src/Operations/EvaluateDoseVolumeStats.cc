@@ -166,6 +166,15 @@ std::list<OperationArgDoc> OpArgDocEvaluateDoseVolumeStats(void){
                             R"***(.*left.*parotid.*|.*right.*parotid.*|.*eyes.*)***",
                             R"***(left_parotid|right_parotid)***" };
 
+    out.emplace_back();
+    out.back().name = "UserComment";
+    out.back().desc = "A string that will be inserted into the output file which will simplify merging output"
+                      " with differing parameters, from different sources, or using sub-selections of the data."
+                      " If left empty, the column will be omitted from the output.";
+    out.back().default_val = "";
+    out.back().expected = true;
+    out.back().examples = { "", "Using XYZ", "Patient treatment plan C" };
+
     return out;
 }
 
@@ -198,6 +207,8 @@ Drover EvaluateDoseVolumeStats(Drover DICOM_data, OperationArgPkg OptArgs, std::
     const auto BodyNormalizedROILabelRegex = OptArgs.getValueStr("BodyNormalizedROILabelRegex").value();
 
     const auto PTVPrescriptionDose = std::stod( OptArgs.getValueStr("PTVPrescriptionDose").value());
+
+    const auto UserComment = OptArgs.getValueStr("UserComment");
 
     //-----------------------------------------------------------------------------------------------------------------
     const auto theregex_PTV = std::regex(PTVROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
@@ -350,7 +361,8 @@ Drover EvaluateDoseVolumeStats(Drover DICOM_data, OperationArgPkg OptArgs, std::
             throw std::runtime_error("Unable to open file for reporting derivative data. Cannot continue.");
         }
         if(FirstWrite){ // Write a CSV header.
-            FO_tcp << "PatientID,"
+            FO_tcp << "UserComment,"
+                   << "PatientID,"
                    << "ROIname,"
                    << "NormalizedROIname,"
                    << "HeterogeneityIndex,"
@@ -369,7 +381,8 @@ Drover EvaluateDoseVolumeStats(Drover DICOM_data, OperationArgPkg OptArgs, std::
             const auto HeterogeneityIndex = HI[lROIname];
             const auto ConformityNumber = CN[lROIname];
 
-            FO_tcp  << patient_ID         << ","
+            FO_tcp  << UserComment.value_or("") << ","
+                    << patient_ID        << ","
                     << X(lROIname)        << ","
                     << lROIname           << ","
                     << HeterogeneityIndex << ","

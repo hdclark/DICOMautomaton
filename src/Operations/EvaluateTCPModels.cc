@@ -294,6 +294,15 @@ std::list<OperationArgDoc> OpArgDocEvaluateTCPModels(void){
     out.back().expected = true;
     out.back().examples = { "148410.0" };
 
+    out.emplace_back();
+    out.back().name = "UserComment";
+    out.back().desc = "A string that will be inserted into the output file which will simplify merging output"
+                      " with differing parameters, from different sources, or using sub-selections of the data."
+                      " If left empty, the column will be omitted from the output.";
+    out.back().default_val = "";
+    out.back().expected = true;
+    out.back().examples = { "", "Using XYZ", "Patient treatment plan C" };
+
     return out;
 }
 
@@ -328,6 +337,8 @@ Drover EvaluateTCPModels(Drover DICOM_data, OperationArgPkg OptArgs, std::map<st
     //const auto DosePerFraction = std::stod( OptArgs.getValueStr("DosePerFraction").value() );
     const auto AlphaBetaRatio = std::stod( OptArgs.getValueStr("AlphaBetaRatio").value() );
     const auto NumberOfFractions = std::stod( OptArgs.getValueStr("NumberOfFractions").value() );
+
+    const auto UserComment = OptArgs.getValueStr("UserComment");
 
     const auto Gamma50 = std::stod( OptArgs.getValueStr("Gamma50").value() );
     const auto Dose50 = std::stod( OptArgs.getValueStr("Dose50").value() );
@@ -492,7 +503,8 @@ Drover EvaluateTCPModels(Drover DICOM_data, OperationArgPkg OptArgs, std::map<st
             throw std::runtime_error("Unable to open file for reporting derivative data. Cannot continue.");
         }
         if(FirstWrite){ // Write a CSV header.
-            FO_tcp << "PatientID,"
+            FO_tcp << "UserComment,"
+                   << "PatientID,"
                    << "ROIname,"
                    << "NormalizedROIname,"
                    << "TCPMartelModel,"
@@ -513,7 +525,8 @@ Drover EvaluateTCPModels(Drover DICOM_data, OperationArgPkg OptArgs, std::map<st
             const auto TCPgEUD = gEUDModel[lROIname];
             const auto TCPFenwick = FenwickModel[lROIname];
 
-            FO_tcp  << patient_ID        << ","
+            FO_tcp  << UserComment.value_or("") << ","
+                    << patient_ID        << ","
                     << X(lROIname)       << ","
                     << lROIname          << ","
                     << TCPMartel*100.0   << ","
