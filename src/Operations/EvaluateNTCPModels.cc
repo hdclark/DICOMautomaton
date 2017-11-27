@@ -489,15 +489,16 @@ Drover EvaluateNTCPModels(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
                     << patient_ID        << ","
                     << X(lROIname)       << ","
                     << lROIname          << ","
-                    << NTCPLKB*100.0   << ","
-//                    << NTCPmEUD*100.0     << ","
-                    << NTCPFenwick*100.0  << ","
+                    << NTCPLKB*100.0     << ","
+//                    << NTCPmEUD*100.0    << ","
+                    << NTCPFenwick*100.0 << ","
                     << DoseMin           << ","
                     << DoseMean          << ","
                     << DoseMedian        << ","
                     << DoseMax           << ","
                     << DoseStdDev        << ","
-                    << av.second.size()  << std::endl;
+                    << av.second.size()
+                    << std::endl;
         }
         FO_tcp.flush();
         FO_tcp.close();

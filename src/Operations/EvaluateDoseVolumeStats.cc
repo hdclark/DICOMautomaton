@@ -367,16 +367,20 @@ Drover EvaluateDoseVolumeStats(Drover DICOM_data, OperationArgPkg OptArgs, std::
                    << "NormalizedROIname,"
                    << "HeterogeneityIndex,"
                    << "ConformityNumber,"
+                   << "DoseMin,"
                    << "DoseMean,"
                    << "DoseMedian,"
+                   << "DoseMax,"
                    << "DoseStdDev,"
                    << "VoxelCount"
                    << std::endl;
         }
         for(const auto &av : ud_PTV.accumulated_voxels){
             const auto lROIname = av.first;
+            const auto DoseMin = Stats::Min( av.second );
             const auto DoseMean = Stats::Mean( av.second );
             const auto DoseMedian = Stats::Median( av.second );
+            const auto DoseMax = Stats::Max( av.second );
             const auto DoseStdDev = std::sqrt(Stats::Unbiased_Var_Est( av.second ));
             const auto HeterogeneityIndex = HI[lROIname];
             const auto ConformityNumber = CN[lROIname];
@@ -387,8 +391,10 @@ Drover EvaluateDoseVolumeStats(Drover DICOM_data, OperationArgPkg OptArgs, std::
                     << lROIname           << ","
                     << HeterogeneityIndex << ","
                     << ConformityNumber   << ","
+                    << DoseMin            << ","
                     << DoseMean           << ","
                     << DoseMedian         << ","
+                    << DoseMax            << ","
                     << DoseStdDev         << ","
                     << av.second.size()
                     << std::endl;
