@@ -22,6 +22,7 @@ add_library(Operations_objs OBJECT
     ConvertNaNsToAir.cc
     DCEMRI_Nonparametric_CE.cc
     DCEMRI_IAUC.cc
+    DroverDebug.cc
     DecayDoseOverTimeJones2014.cc
     DecayDoseOverTimeHalve.cc
     DecimatePixels.cc
@@ -55,6 +56,7 @@ add_library(Operations_objs OBJECT
     ImageRoutineTests.cc
     LogScale.cc
     MaxMinPixels.cc
+    MeldDose.cc
     PlotPerROITimeCourses.cc
     PreFilterEnormousCTValues.cc
     PruneEmptyImageDoseArrays.cc

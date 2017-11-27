@@ -34,6 +34,7 @@
 #include "Operations/ConvertNaNsToAir.h"
 #include "Operations/CopyLastImage.h"
 #include "Operations/CropImageDoseToROIs.h"
+#include "Operations/DroverDebug.h"
 #include "Operations/DCEMRI_IAUC.h"
 #include "Operations/DCEMRI_Nonparametric_CE.h"
 #include "Operations/DecayDoseOverTimeHalve.h"
@@ -68,6 +69,7 @@
 #include "Operations/HighlightROIs.h"
 #include "Operations/ImageRoutineTests.h"
 #include "Operations/LogScale.h"
+#include "Operations/MeldDose.h"
 #include "Operations/MaxMinPixels.h"
 #include "Operations/PlotPerROITimeCourses.h"
 #include "Operations/PreFilterEnormousCTValues.h"
@@ -114,6 +116,7 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["CopyLastImage"] = std::make_pair(OpArgDocCopyLastImage, CopyLastImage);
     out["CropImageDoseToROIs"] = std::make_pair(OpArgDocCropImageDoseToROIs, CropImageDoseToROIs);
     out["DCEMRI_IAUC"] = std::make_pair(OpArgDocDCEMRI_IAUC, DCEMRI_IAUC);
+    out["DroverDebug"] = std::make_pair(OpArgDocDroverDebug, DroverDebug);
     out["DCEMRI_Nonparametric_CE"] = std::make_pair(OpArgDocDCEMRI_Nonparametric_CE, DCEMRI_Nonparametric_CE);
     out["DecayDoseOverTimeHalve"] = std::make_pair(OpArgDocDecayDoseOverTimeHalve, DecayDoseOverTimeHalve);
     out["DecayDoseOverTimeJones2014"] = std::make_pair(OpArgDocDecayDoseOverTimeJones2014, DecayDoseOverTimeJones2014);
@@ -150,6 +153,7 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["HighlightROIs"] = std::make_pair(OpArgDocHighlightROIs, HighlightROIs);
     out["ImageRoutineTests"] = std::make_pair(OpArgDocImageRoutineTests, ImageRoutineTests);
     out["LogScale"] = std::make_pair(OpArgDocLogScale, LogScale);
+    out["MeldDose"] = std::make_pair(OpArgDocMeldDose, MeldDose);
     out["MaxMinPixels"] = std::make_pair(OpArgDocMaxMinPixels, MaxMinPixels);
     out["PlotPerROITimeCourses"] = std::make_pair(OpArgDocPlotPerROITimeCourses, PlotPerROITimeCourses);
     out["PreFilterEnormousCTValues"] = std::make_pair(OpArgDocPreFilterEnormousCTValues, PreFilterEnormousCTValues);

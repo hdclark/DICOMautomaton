@@ -94,7 +94,8 @@ bool Load_From_DICOM_Files( Drover &DICOM_data,
 
     auto bfit = Filenames.begin();
     while(bfit != Filenames.end()){
-        FUNCINFO("Parsing file #" << i+1 << "/" << N << " = " << 100*(i+1)/N << "%");
+        FUNCINFO("Parsing file #" << i+1 << "/" << N << " = " << 100*(i+1)/N << "% \t"
+              << *bfit);
         ++i;
 
         const auto Filename = bfit->string();
@@ -142,12 +143,13 @@ bool Load_From_DICOM_Files( Drover &DICOM_data,
         }else if(boost::iequals(Modality,"RTDOSE")){
             try{
                 loaded_dose_storage.back().push_back( std::move(Load_Dose_Array(Filename)) );
-                bfit = Filenames.erase( bfit ); 
             }catch(const std::exception &e){
                 FUNCWARN("Difficulty encountered during dose array loading: '" << e.what() << "'. Ignoring file and continuing");
                 //loaded_dose_storage.back().pop_back();
                 continue;
             }
+
+            bfit = Filenames.erase( bfit ); 
 
         }else if(  boost::iequals(Modality,"CT")
                 || boost::iequals(Modality,"OT")
@@ -236,12 +238,16 @@ bool Load_From_DICOM_Files( Drover &DICOM_data,
         // computation methods require the distinction to be made. 
 
         // Option A: stuff the dose data into the Drover's Dose_Array.
-        DICOM_data.dose_data.emplace_back( std::move(loaded_dose_set.back()) );
+        for(auto &lds : loaded_dose_set){
+            DICOM_data.dose_data.emplace_back( std::move(lds) );
+        }
 
         // Option B: stuff the dose data into the Drover's Image_Array so it can be more easily used with image
         // processing routines.
-        //DICOM_data.image_data.emplace_back();
-        //DICOM_data.image_data.back() = std::make_shared<Image_Array>(*(loaded_dose_set.back()));
+        //for(auto &lds : loaded_dose_set){
+        //    DICOM_data.image_data.emplace_back();
+        //    DICOM_data.image_data.back() = std::make_shared<Image_Array>(*lds);
+        //}
     }
 
 

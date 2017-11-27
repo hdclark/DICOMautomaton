@@ -180,7 +180,7 @@ std::unique_ptr<Dose_Array> Meld_Unequal_Geom_Dose_Data(std::shared_ptr<Dose_Arr
 
     //Get the larger of the two images.
     decltype(A) larger = B;
-    if( A->imagecoll.images.front().encloses_2D_planar_image(B->imagecoll.images.front()) ){
+    if( A->imagecoll.volume() >= B->imagecoll.volume() ){
         larger = A;
     }
 
@@ -207,18 +207,26 @@ std::unique_ptr<Dose_Array> Meld_Unequal_Geom_Dose_Data(std::shared_ptr<Dose_Arr
             for(long int c = 0; c < columns; ++c){
                 for(long int l = 0; l < channels; ++l){
                     //Clear the value in the channel.
-                    i0_it->reference(r,c,l) = static_cast<decltype(i0_it->value(r,c,l))>(0);
+                    const auto zero = static_cast<decltype(i0_it->value(r,c,l))>(0);
+                    i0_it->reference(r,c,l) = zero;
 
                     //Get the (floating-point) dose from each image. If out of bounds, we will 
                     // get a safe zero. 
-                    const auto pos    = i0_it->position(r,c);
-                    const auto doseA  = static_cast<double>(i1_it->value(pos,l))*A->grid_scale;
-                    const auto doseB  = static_cast<double>(i2_it->value(pos,l))*B->grid_scale;
+                    const auto pos = i0_it->position(r,c);
+                    auto dose_sum = zero;
 
-                    const auto dose_int = static_cast<decltype(i0_it->value(r,c,l))>( (doseA + doseB)/new_grid_scale );
+                    const auto indexA = i1_it->index(pos,l);
+                    if(indexA != -1){
+                        dose_sum += i1_it->value(indexA) / new_grid_scale;
+                    }
+
+                    const auto indexB = i2_it->index(pos,l);
+                    if(indexB != -1){
+                        dose_sum += i2_it->value(indexB) / new_grid_scale;
+                    }
 
                     //Set the new value.
-                    i0_it->reference(r,c,l) = dose_int;
+                    i0_it->reference(r,c,l) = dose_sum;
                 }
             }
         }
