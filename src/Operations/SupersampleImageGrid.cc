@@ -157,8 +157,8 @@ Drover SupersampleImageGrid(Drover DICOM_data, OperationArgPkg OptArgs, std::map
     const auto regex_last = std::regex("la?s?t?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
     const auto regex_all  = std::regex("al?l?$",   std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
 
-    const auto inplane_bilin = std::regex("inplane-bicubic", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto inplane_bicub = std::regex("inplane-bicubic", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto inplane_bilin = std::regex("inp?l?a?n?e?-?b?i?line?a?r?", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto inplane_bicub = std::regex("inp?l?a?n?e?-?b?i?cubi?c?", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
 
     if( !std::regex_match(DoseImageSelectionStr, regex_none)
     &&  !std::regex_match(DoseImageSelectionStr, regex_last)
