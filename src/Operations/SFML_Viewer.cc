@@ -1,4 +1,4 @@
-//SFML_Viewer.cc - A part of DICOMautomaton 2015, 2016. Written by hal clark.
+//SFML_Viewer.cc - A part of DICOMautomaton 2015 - 2017. Written by hal clark.
 
 #include <iostream>
 #include <sstream>
@@ -1218,6 +1218,98 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
                         window.setTitle("DICOMautomaton IV: <no description available>");
                     }
 
+                    //Scale the image to fill the available space.
+                    scale_sprite_to_fill_screen(window,disp_img_it,disp_img_texture_sprite);
+
+                //Sample pixels from an external image into the current frame.
+                }else if( thechar == 'f' ){
+
+                    //std::string fname;
+                    //std::cout << std::endl;
+                    //std::cout << "Please enter the filename you wish to sample from: " << std::endl;
+                    //std::cin >> fname;
+                    const auto raw_fname = Execute_Command_In_Pipe(
+                                "zenity --title='Select a file to sample from (FITS format).' --file-selection --separator='\\n' 2>/dev/null");
+                    const std::string fname = SplitStringToVector(raw_fname + '\n', '\n', 'd').front();
+
+                    planar_image<float,double> casted_img; // External image with casted pixel values.
+                    bool loaded = false;
+
+                    //disp_img_it
+                    if(!loaded){
+                        try{
+                            auto animg = ReadFromFITS<uint8_t,double>(fname);
+                            casted_img.cast_from(animg);
+                            loaded = true;
+                        }catch(const std::exception &e){ };
+                    }
+                    if(!loaded){
+                        try{
+                            auto animg = ReadFromFITS<float,double>(fname);
+                            casted_img = animg;
+                            loaded = true;
+                        }catch(const std::exception &e){ };
+                    }
+                    if(loaded){
+                        //Sample the image by ignoring aspect ratio and scaling dimensions to fit.
+                        const auto r_scale = static_cast<double>(casted_img.rows)    / static_cast<double>(disp_img_it->rows);
+                        const auto c_scale = static_cast<double>(casted_img.columns) / static_cast<double>(disp_img_it->columns);
+                        for(long int ch = 0; ch < disp_img_it->channels; ++ch){
+                            for(long int r = 0; r < disp_img_it->rows; ++r){
+                                for(long int c = 0; c < disp_img_it->columns; ++c){
+                                    const auto clamped_r = static_cast<double>(r) * r_scale;
+                                    const auto clamped_c = static_cast<double>(c) * c_scale;
+                                    const long int clamped_ch = (ch >= casted_img.channels) ? 0 : ch;
+
+                                    disp_img_it->reference(r,c,ch) = 
+                                        casted_img.bilinearly_interpolate_in_pixel_number_space(clamped_r, clamped_c, clamped_ch);
+                                        //casted_img.bicubically_interpolate_in_pixel_number_space(clamped_r, clamped_c, clamped_ch);
+                                }
+                            }
+                        }
+
+                        if(load_img_texture_sprite(disp_img_it, disp_img_texture_sprite)){
+                            scale_sprite_to_fill_screen(window,disp_img_it,disp_img_texture_sprite);
+
+                            const auto img_number = std::distance(disp_img_beg, disp_img_it);
+                            FUNCINFO("Loaded next texture in unaltered Image_Array order. Displaying image number " << img_number);
+                            
+                        }else{
+                            FUNCERR("Unable to load image --> texture --> sprite");
+                        }
+     
+                        //Scale the image to fill the available space.
+                        scale_sprite_to_fill_screen(window,disp_img_it,disp_img_texture_sprite);
+                    }else{
+                        FUNCINFO("Cannot load file '" << fname << "'");
+                    }
+
+                //Flood the current image with a uniform pixel intensity.
+                }else if( thechar == 'F' ){
+
+                    float intensity;
+                    std::cout << std::endl;
+                    std::cout << "Please enter the intensity to flood with: " << std::endl;
+                    std::cin >> intensity;
+
+                    for(long int ch = 0; ch < disp_img_it->channels; ++ch){
+                        for(long int r = 0; r < disp_img_it->rows; ++r){
+                            for(long int c = 0; c < disp_img_it->columns; ++c){
+                                disp_img_it->reference(r,c,ch) = intensity;
+                            }
+                        }
+                    }
+
+                    if(load_img_texture_sprite(disp_img_it, disp_img_texture_sprite)){
+                        scale_sprite_to_fill_screen(window,disp_img_it,disp_img_texture_sprite);
+
+                        const auto img_number = std::distance(disp_img_beg, disp_img_it);
+                        FUNCINFO("Loaded next texture in unaltered Image_Array order. Displaying image number " << img_number);
+                        
+                    }else{
+                        FUNCERR("Unable to load image --> texture --> sprite");
+                    }
+ 
                     //Scale the image to fill the available space.
                     scale_sprite_to_fill_screen(window,disp_img_it,disp_img_texture_sprite);
 
