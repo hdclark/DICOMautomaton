@@ -1224,33 +1224,39 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
                 //Sample pixels from an external image into the current frame.
                 }else if( thechar == 'f' ){
 
-                    //std::string fname;
-                    //std::cout << std::endl;
-                    //std::cout << "Please enter the filename you wish to sample from: " << std::endl;
-                    //std::cin >> fname;
-                    const auto raw_fname = Execute_Command_In_Pipe(
-                                "zenity --title='Select a file to sample from (FITS format).' --file-selection --separator='\\n' 2>/dev/null");
-                    const std::string fname = SplitStringToVector(raw_fname + '\n', '\n', 'd').front();
+                    do{ // Does not loop, just lets us break out.
+                        //std::string fname;
+                        //std::cout << std::endl;
+                        //std::cout << "Please enter the filename you wish to sample from: " << std::endl;
+                        //std::cin >> fname;
+                        const auto raw_fname = Execute_Command_In_Pipe(
+                                    "zenity --title='Select a file to sample from (FITS format).' --file-selection --separator='\n' 2>/dev/null");
+                        const auto fname_vec = SplitStringToVector(raw_fname + "\n\n", '\n', 'd');
+                        if(fname_vec.empty()) break;
+                        const std::string fname = fname_vec.front();
 
-                    planar_image<float,double> casted_img; // External image with casted pixel values.
-                    bool loaded = false;
+                        planar_image<float,double> casted_img; // External image with casted pixel values.
+                        bool loaded = false;
 
-                    //disp_img_it
-                    if(!loaded){
-                        try{
-                            auto animg = ReadFromFITS<uint8_t,double>(fname);
-                            casted_img.cast_from(animg);
-                            loaded = true;
-                        }catch(const std::exception &e){ };
-                    }
-                    if(!loaded){
-                        try{
-                            auto animg = ReadFromFITS<float,double>(fname);
-                            casted_img = animg;
-                            loaded = true;
-                        }catch(const std::exception &e){ };
-                    }
-                    if(loaded){
+                        if(!loaded){
+                            try{
+                                auto animg = ReadFromFITS<uint8_t,double>(fname);
+                                casted_img.cast_from(animg);
+                                loaded = true;
+                            }catch(const std::exception &e){ };
+                        }
+                        if(!loaded){
+                            try{
+                                auto animg = ReadFromFITS<float,double>(fname);
+                                casted_img = animg;
+                                loaded = true;
+                            }catch(const std::exception &e){ };
+                        }
+                        if(!loaded){
+                            FUNCINFO("Cannot load file '" << fname << "'");
+                            break;
+                        }
+
                         //Sample the image by ignoring aspect ratio and scaling dimensions to fit.
                         const auto r_scale = static_cast<double>(casted_img.rows)    / static_cast<double>(disp_img_it->rows);
                         const auto c_scale = static_cast<double>(casted_img.columns) / static_cast<double>(disp_img_it->columns);
@@ -1280,9 +1286,8 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
      
                         //Scale the image to fill the available space.
                         scale_sprite_to_fill_screen(window,disp_img_it,disp_img_texture_sprite);
-                    }else{
-                        FUNCINFO("Cannot load file '" << fname << "'");
-                    }
+
+                    }while(false);
 
                 //Flood the current image with a uniform pixel intensity.
                 }else if( thechar == 'F' ){
