@@ -46,6 +46,9 @@ std::list<std::shared_ptr<Dose_Array>>  Meld_Dose_Data(const std::list<std::shar
     // it is not done here (if they overlap with zero volume then it is again easy, but it doesn't fit this routine terribly well).
     //
     std::list<std::shared_ptr<Dose_Array>> out(dalist);
+    out.remove_if([](auto dap){
+        return (dap == nullptr);
+    });
 
     if(out.size() == 0) return std::move(out);
     if(out.size() == 1) return std::move(out);
@@ -55,21 +58,23 @@ std::list<std::shared_ptr<Dose_Array>>  Meld_Dose_Data(const std::list<std::shar
     while((d1_it != out.end()) && (d2_it != out.end()) && (d1_it != d2_it)){
         //If the geometry is the same, we can easily meld the data. Do so and erase the superfluous data.
         if((*d1_it)->imagecoll.Spatially_eq((*d2_it)->imagecoll)){
+            FUNCINFO("Dose images are spatially equal. Performing the equivalent-geometry meld routine");
+
             //Put the melded data into the first position.
             *d1_it = std::move(Meld_Equal_Geom_Dose_Data(*d1_it, *d2_it));
             d2_it = out.erase(d2_it);
-            FUNCINFO("Successfully melded equal-geometry data");
             continue;
 
         //If the geometry is not the same, we have to further investigate whether we can handle it or not. 
         }else{
+            FUNCINFO("Dose images are not spatially equal. Performing the nonequivalent-geometry meld routine");
+
             *d1_it = Meld_Unequal_Geom_Dose_Data(*d1_it, *d2_it);
             if(*d1_it != nullptr){
                 d2_it = out.erase(d2_it);
-                FUNCINFO("Successfully melded unequal-geometry data");
                 continue;
             }else{
-                FUNCERR("Unable to meld unequal-geometry data");
+                FUNCERR("Unable to meld nonequivalent-geometry images");
             }
         }
     }
@@ -80,7 +85,7 @@ std::list<std::shared_ptr<Dose_Array>>  Meld_Dose_Data(const std::list<std::shar
 std::unique_ptr<Dose_Array> Meld_Equal_Geom_Dose_Data(std::shared_ptr<Dose_Array> A, std::shared_ptr<Dose_Array> B){
     std::unique_ptr<Dose_Array> out(new Dose_Array());
     *out = *A; //Performs a deep copy.
-    
+
     //First we need to determine an appropriate grid scaling. A good approach would be to maximize
     // precision loss by making grid_scaling as small as possible. Because there is a chance of 
     // of overflow, we should check the max integer doses.
