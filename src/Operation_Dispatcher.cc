@@ -32,6 +32,7 @@
 #include "Operations/ConvertImageToDose.h"
 #include "Operations/ConvertDoseToImage.h"
 #include "Operations/ConvertNaNsToAir.h"
+#include "Operations/ConvertNaNsToZeros.h"
 #include "Operations/CopyLastImage.h"
 #include "Operations/CropImageDoseToROIs.h"
 #include "Operations/DroverDebug.h"
@@ -53,6 +54,7 @@
 #include "Operations/DumpROISNR.h"
 #include "Operations/DumpVoxelDoseInfo.h"
 #include "Operations/DICOMExportImagesAsDose.h"
+#include "Operations/EQD2Convert.h"
 #include "Operations/EvaluateDoseVolumeStats.h"
 #include "Operations/EvaluateNTCPModels.h"
 #include "Operations/EvaluateTCPModels.h"
@@ -113,8 +115,10 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["ConvertImageToDose"] = std::make_pair(OpArgDocConvertImageToDose, ConvertImageToDose);
     out["ConvertDoseToImage"] = std::make_pair(OpArgDocConvertDoseToImage, ConvertDoseToImage);
     out["ConvertNaNsToAir"] = std::make_pair(OpArgDocConvertNaNsToAir, ConvertNaNsToAir);
+    out["ConvertNaNsToZeros"] = std::make_pair(OpArgDocConvertNaNsToZeros, ConvertNaNsToZeros);
     out["CopyLastImage"] = std::make_pair(OpArgDocCopyLastImage, CopyLastImage);
     out["CropImageDoseToROIs"] = std::make_pair(OpArgDocCropImageDoseToROIs, CropImageDoseToROIs);
+    out["EQD2Convert"] = std::make_pair(OpArgDocEQD2Convert, EQD2Convert);
     out["DCEMRI_IAUC"] = std::make_pair(OpArgDocDCEMRI_IAUC, DCEMRI_IAUC);
     out["DroverDebug"] = std::make_pair(OpArgDocDroverDebug, DroverDebug);
     out["DCEMRI_Nonparametric_CE"] = std::make_pair(OpArgDocDCEMRI_Nonparametric_CE, DCEMRI_Nonparametric_CE);

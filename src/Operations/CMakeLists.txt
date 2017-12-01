@@ -20,6 +20,7 @@ add_library(Operations_objs OBJECT
     ContourViaThreshold.cc
     ContourWholeImages.cc
     ConvertNaNsToAir.cc
+    ConvertNaNsToZeros.cc
     DCEMRI_Nonparametric_CE.cc
     DCEMRI_IAUC.cc
     DroverDebug.cc
@@ -39,6 +40,7 @@ add_library(Operations_objs OBJECT
     DumpROISNR.cc
     DumpVoxelDoseInfo.cc
     DICOMExportImagesAsDose.cc
+    EQD2Convert.cc
     EvaluateDoseVolumeStats.cc
     EvaluateNTCPModels.cc
     EvaluateTCPModels.cc
