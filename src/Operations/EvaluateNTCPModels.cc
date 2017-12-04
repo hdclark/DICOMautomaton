@@ -134,23 +134,6 @@ std::list<OperationArgDoc> OpArgDocEvaluateNTCPModels(void){
                             R"***(.*left.*parotid.*|.*right.*parotid.*|.*eyes.*)***",
                             R"***(left_parotid|right_parotid)***" };
 
-    out.emplace_back();
-    out.back().name = "NumberOfFractions";
-    out.back().desc = "The number of fractions delivered."
-                      " If needed, the dose distribution is converted to be biologically-equivalent to"
-                      " a 2 Gy/fraction dose distribution.";
-    out.back().default_val = "35";
-    out.back().expected = true;
-    out.back().examples = { "15", "25", "30", "35" };
-
-    out.emplace_back();
-    out.back().name = "AlphaBetaRatio";
-    out.back().desc = "The ratio alpha/beta (in Gray) to use when converting to a biologically-equivalent"
-                      " dose distribution. Default to 10 Gy for early-responding normal tissues and"
-                      " tumors, and 3 Gy for late-responding normal tissues.";
-    out.back().default_val = "3";
-    out.back().expected = true;
-    out.back().examples = { "1", "3", "10", "20" };
 
 /*    
     out.emplace_back();
@@ -272,6 +255,10 @@ Drover EvaluateNTCPModels(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
     //   - Forthcoming: modified Equivalent Uniform Dose (mEUD) NTCP model.
     //   - ...TODO...
     //
+    // Note: Generally these models require dose in 2Gy/fractions equivalents ("EQD2"). You must pre-convert the data
+    //       if the RT plan is not already 2Gy/fraction. There is no easy way to ensure this conversion has taken place
+    //       or was unnecessary.
+    //
     // Note: This routine uses image_arrays so convert dose_arrays beforehand.
     //
     // Note: This routine will combine spatially-overlapping images by summing voxel intensities. So if you have a time
@@ -289,10 +276,6 @@ Drover EvaluateNTCPModels(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
     const auto LKB_M = std::stod( OptArgs.getValueStr("LKB_M").value() );
     const auto LKB_TD50 = std::stod( OptArgs.getValueStr("LKB_TD50").value() );
     const auto LKB_Alpha = std::stod( OptArgs.getValueStr("LKB_Alpha").value() );
-
-    //const auto DosePerFraction = std::stod( OptArgs.getValueStr("DosePerFraction").value() );
-    const auto AlphaBetaRatio = std::stod( OptArgs.getValueStr("AlphaBetaRatio").value() );
-    const auto NumberOfFractions = std::stod( OptArgs.getValueStr("NumberOfFractions").value() );
 
     const auto UserComment = OptArgs.getValueStr("UserComment");
 
@@ -380,26 +363,26 @@ Drover EvaluateNTCPModels(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
             LKB_gEUD_elements.reserve(N);
 //            mEUD_elements.reserve(N);
             for(const auto &D_voxel : av.second){
-                //Convert dose to BED or ED2 (aka "EQD2" -- the effective dose in 2 Gy fractions).
-                const BEDabr BED_voxel = BEDabr_from_n_D_abr(NumberOfFractions, D_voxel, AlphaBetaRatio);
-                const double ED2_voxel = D_from_d_BEDabr(2.0, BED_voxel);
-
                 // LKB model.
+                //
+                // Note: Assumes voxel doses are EQD2. Pre-convert if the RT plan is not already in 2Gy/fraction!
                 {
-                    const auto scaled = std::pow(ED2_voxel, LKB_Alpha); //Problematic for (non-physical) 0.0.
+                    const auto scaled = std::pow(D_voxel, LKB_Alpha); //Problematic for (non-physical) 0.0.
                     if(std::isfinite(scaled)){
-                        LKB_gEUD_elements.push_back(V_frac * std::pow(ED2_voxel, LKB_Alpha));
+                        LKB_gEUD_elements.push_back(V_frac * std::pow(D_voxel, LKB_Alpha));
                     }else{
                         LKB_gEUD_elements.push_back(0.0); //No real need to include this except acknowledging what we are doing.
                     }
                 }
                 
                 // mEUD model.
+                //
+                // Note: Assumes voxel doses are EQD2. Pre-convert if the RT plan is not already in 2Gy/fraction!
                 {
 //NOTE: this model only uses the 100c with the highest dose. So sort and filter the voxels before computing mEUD!
 // Also, the model presented by Huang et al. is underspecified in their paper. Check the original for more comprehensive
 // explanation.
-//                    gEUD_elements.push_back(V_frac * std::pow(ED2_voxel, gEUD_Alpha));
+//                    gEUD_elements.push_back(V_frac * std::pow(D_voxel, gEUD_Alpha));
                 }
 
                 // ... other models ...

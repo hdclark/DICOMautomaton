@@ -17,7 +17,9 @@
 
 struct EQD2ConversionUserData {
 
-    double NumberOfFractions = -1.0; // (Negative means unspecified.)
+    //Dose prescription and fractionation details. Remember that d=2 only for the prescription dose!
+    double NumberOfFractions = -1.0;
+    double PrescriptionDose = -1.0;
 
     double AlphaBetaRatioNormal = 3.0; // alpha/beta for non-tumourous tissues.
     double AlphaBetaRatioTumour = 10.0; // alpha/beta for tumourous tissues.

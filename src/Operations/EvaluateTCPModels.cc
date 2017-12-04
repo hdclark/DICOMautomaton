@@ -134,36 +134,6 @@ std::list<OperationArgDoc> OpArgDocEvaluateTCPModels(void){
                             R"***(.*left.*parotid.*|.*right.*parotid.*|.*eyes.*)***",
                             R"***(left_parotid|right_parotid)***" };
 
-
-    //out.emplace_back();
-    //out.back().name = "DosePerFraction";
-    //out.back().desc = "The dose delivered per fraction (in Gray)."
-    //                  " If needed, the dose distribution is converted to be biologically-equivalent to"
-    //                  " a 2 Gy/fraction dose distribution.";
-    //out.back().default_val = "2";
-    //out.back().expected = true;
-    //out.back().examples = { "1", "2", "2.33333", "10" };
-
-
-    out.emplace_back();
-    out.back().name = "NumberOfFractions";
-    out.back().desc = "The number of fractions delivered."
-                      " If needed, the dose distribution is converted to be biologically-equivalent to"
-                      " a 2 Gy/fraction dose distribution.";
-    out.back().default_val = "35";
-    out.back().expected = true;
-    out.back().examples = { "15", "25", "30", "35" };
-
-
-    out.emplace_back();
-    out.back().name = "AlphaBetaRatio";
-    out.back().desc = "The ratio alpha/beta (in Gray) to use when converting to a biologically-equivalent"
-                      " dose distribution. Default to 10 Gy for early-responding normal tissues and"
-                      " tumors, and 3 Gy for late-responding normal tissues.";
-    out.back().default_val = "10";
-    out.back().expected = true;
-    out.back().examples = { "1", "3", "10", "20" };
-
     
     out.emplace_back();
     out.back().name = "Gamma50";
@@ -317,6 +287,10 @@ Drover EvaluateTCPModels(Drover DICOM_data, OperationArgPkg OptArgs, std::map<st
     //   - The "Fenwick" model for solid tumours.
     //   - ...TODO...
     //
+    // Note: Generally these models require dose in 2Gy/fractions equivalents ("EQD2"). You must pre-convert the data
+    //       if the RT plan is not already 2Gy/fraction. There is no easy way to ensure this conversion has taken place
+    //       or was unnecessary.
+    //
     // Note: This routine uses image_arrays so convert dose_arrays beforehand.
     //
     // Note: This routine will combine spatially-overlapping images by summing voxel intensities. So if you have a time
@@ -333,10 +307,6 @@ Drover EvaluateTCPModels(Drover DICOM_data, OperationArgPkg OptArgs, std::map<st
     auto TCPFileName = OptArgs.getValueStr("TCPFileName").value();
     const auto ROILabelRegex = OptArgs.getValueStr("ROILabelRegex").value();
     const auto NormalizedROILabelRegex = OptArgs.getValueStr("NormalizedROILabelRegex").value();
-
-    //const auto DosePerFraction = std::stod( OptArgs.getValueStr("DosePerFraction").value() );
-    const auto AlphaBetaRatio = std::stod( OptArgs.getValueStr("AlphaBetaRatio").value() );
-    const auto NumberOfFractions = std::stod( OptArgs.getValueStr("NumberOfFractions").value() );
 
     const auto UserComment = OptArgs.getValueStr("UserComment");
 
@@ -435,13 +405,9 @@ Drover EvaluateTCPModels(Drover DICOM_data, OperationArgPkg OptArgs, std::map<st
             std::vector<double> gEUD_elements;
             gEUD_elements.reserve(N);
             for(const auto &D_voxel : av.second){
-                //Convert dose to BED or ED2 (aka "EQD2" -- the effective dose in 2 Gy fractions).
-                const BEDabr BED_voxel = BEDabr_from_n_D_abr(NumberOfFractions, D_voxel, AlphaBetaRatio);
-                const double ED2_voxel = D_from_d_BEDabr(2.0, BED_voxel);
-
                 // Martel model.
                 {
-                    const long double numer = std::pow(ED2_voxel, Gamma50*4);
+                    const long double numer = std::pow(D_voxel, Gamma50*4);
                     const long double denom = std::pow(Dose50, Gamma50*4) + numer;
                     const long double TCP_voxel = numer/denom; // This is a sigmoid curve.
                     TCP_Martel *= std::pow(TCP_voxel, V_frac);
@@ -449,13 +415,13 @@ Drover EvaluateTCPModels(Drover DICOM_data, OperationArgPkg OptArgs, std::map<st
                 
                 // gEUD model.
                 {
-                    gEUD_elements.push_back(V_frac * std::pow(ED2_voxel, EUD_Alpha));
+                    gEUD_elements.push_back(V_frac * std::pow(D_voxel, EUD_Alpha));
                 }
 
                 // Fenwick model.
                 {
-                    const long double numer = (ED2_voxel - Fenwick_D50 - Fenwick_C * std::log(ROI_V/Fenwick_Vref));
-                    const long double denom = Fenwick_M * ED2_voxel * std::sqrt(2.0);
+                    const long double numer = (D_voxel - Fenwick_D50 - Fenwick_C * std::log(ROI_V/Fenwick_Vref));
+                    const long double denom = Fenwick_M * D_voxel * std::sqrt(2.0);
                     //Note: the 'normal distribution function Phi(z)' referred to in Fenwick's paper is
                     // (1/sqrt(2pi))*integral(exp(-x*x/2)dx, -inf, z) == 0.5*(1+erf(z/sqrt(2))).
                     const long double TCP_voxel = 0.5*(1.0 + std::erf(numer/denom)); // This is a sigmoid curve.

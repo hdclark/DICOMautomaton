@@ -138,11 +138,22 @@ std::list<OperationArgDoc> OpArgDocEQD2Convert(void){
     out.emplace_back();
     out.back().name = "NumberOfFractions";
     out.back().desc = "The number of fractions in which a plan was (or will be) delivered."
-                      " Decimal fractions are supported to accommodate previous BED conversions."
-                      " Negative values are ignored.";
-    out.back().default_val = "-1";
+                      " Decimal fractions are supported to accommodate previous BED conversions.";
+    out.back().default_val = "35";
     out.back().expected = true;
-    out.back().examples = { "-1", "10", "20.5", "35", "40.123" };
+    out.back().examples = { "10", "20.5", "35", "40.123" };
+
+
+    out.emplace_back();
+    out.back().name = "PrescriptionDose";
+    out.back().desc = "The prescription dose that was (or will be) delivered to the PTV."
+                      " Note that this is a theoretical dose since the PTV or CTV will only nominally"
+                      " receive this dose. Also note that the specified dose need not exist somewhere"
+                      " in the image. It can be purely theoretical to accommodate previous BED"
+                      " conversions.";
+    out.back().default_val = "70";
+    out.back().expected = true;
+    out.back().examples = { "15", "22.5", "45.0", "66", "70.001" };
 
 
     out.emplace_back();
@@ -186,6 +197,7 @@ Drover EQD2Convert(Drover DICOM_data,
     ud.AlphaBetaRatioTumour = std::stod(OptArgs.getValueStr("AlphaBetaRatioTumour").value());
 
     ud.NumberOfFractions = std::stod(OptArgs.getValueStr("NumberOfFractions").value());
+    ud.PrescriptionDose = std::stod(OptArgs.getValueStr("PrescriptionDose").value());
 
     const auto NormalizedROILabelRegex = OptArgs.getValueStr("NormalizedROILabelRegex").value();
     const auto ROILabelRegex = OptArgs.getValueStr("ROILabelRegex").value();
@@ -212,7 +224,9 @@ Drover EQD2Convert(Drover DICOM_data,
         throw std::invalid_argument("Image selection is not valid. Cannot continue.");
     }
 
-    //if( (ud.DosePerFraction <= 0.0) && (ud.NumberOfFractions <= 0.0) ){
+    if( ud.PrescriptionDose <= 0.0 ){
+        throw std::invalid_argument("PrescriptionDose must be specified (>0.0)");
+    }
     if( ud.NumberOfFractions <= 0.0 ){
         throw std::invalid_argument("NumberOfFractions must be specified (>0.0)");
     }
@@ -254,7 +268,7 @@ Drover EQD2Convert(Drover DICOM_data,
         if(!(*iap_it)->imagecoll.Process_Images_Parallel( GroupIndividualImages,
                                                           EQD2Conversion,
                                                           {}, cc_ROIs, &ud )){
-            throw std::runtime_error("Unable to highlight voxels with the specified ROI(s).");
+            throw std::runtime_error("Unable to convert image_array voxels to EQD2 using the specified ROI(s).");
         }
         ++iap_it;
     }
@@ -270,7 +284,7 @@ Drover EQD2Convert(Drover DICOM_data,
         if(!(*dap_it)->imagecoll.Process_Images_Parallel( GroupIndividualImages,
                                                           EQD2Conversion,
                                                           {}, cc_ROIs, &ud )){
-            throw std::runtime_error("Unable to highlight voxels with the specified ROI(s).");
+            throw std::runtime_error("Unable to convert dose_array voxels to EQD2 using the specified ROI(s).");
         }
         ++dap_it;
     }
