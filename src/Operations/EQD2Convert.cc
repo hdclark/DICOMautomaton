@@ -118,8 +118,12 @@ std::list<OperationArgDoc> OpArgDocEQD2Convert(void){
     out.emplace_back();
     out.back().name = "AlphaBetaRatioNormal";
     out.back().desc = "The value to use for alpha/beta in normal (non-cancerous) tissues."
-                      " Generally a value of 3.0 is used. Note that the selected ROIs"
-                      " denote which tissues are diseased. The remaining tissues are "
+                      " Generally a value of 3.0 Gy is used. Tissues that are sensitive to fractionation"
+                      " may warrant smaller ratios, such as 1.5-3 Gy for cervical central nervous tissues"
+                      " and 2.3-4.9 for lumbar central nervous tissues (consult table 8.1, page 107 in: "
+                      " Joiner et al., 'Fractionation: the linear-quadratic approach', 4th Ed., 2009,"
+                      " in the book 'Basic Clinical Radiobiology', ISBN: 0340929669)."
+                      " Note that the selected ROIs denote which tissues are diseased. The remaining tissues are "
                       " considered to be normal.";
     out.back().default_val = "3.0";
     out.back().expected = true;
