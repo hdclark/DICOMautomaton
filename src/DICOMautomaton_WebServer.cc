@@ -36,22 +36,22 @@
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
 
-#include <Wt/WApplication>
-#include <Wt/WBreak>
-#include <Wt/WContainerWidget>
-#include <Wt/WCheckBox>
-#include <Wt/WLineEdit>
-#include <Wt/WPushButton>
-#include <Wt/WText>
-#include <Wt/WFileUpload>
-#include <Wt/WProgressBar>
-#include <Wt/WGroupBox>
-#include <Wt/WSelectionBox>
-#include <Wt/WFileResource>
-#include <Wt/WAnimation>
-#include <Wt/WFlags>
-#include <Wt/WTable>
-#include <Wt/WTableCell>
+#include <Wt/WApplication.h>
+#include <Wt/WBreak.h>
+#include <Wt/WContainerWidget.h>
+#include <Wt/WCheckBox.h>
+#include <Wt/WLineEdit.h>
+#include <Wt/WPushButton.h>
+#include <Wt/WText.h>
+#include <Wt/WFileUpload.h>
+#include <Wt/WProgressBar.h>
+#include <Wt/WGroupBox.h>
+#include <Wt/WSelectionBox.h>
+#include <Wt/WFileResource.h>
+#include <Wt/WAnimation.h>
+#include <Wt/WFlags.h>
+#include <Wt/WTable.h>
+#include <Wt/WTableCell.h>
 
 #include "Structs.h"
 #include "Imebra_Shim.h"      //Wrapper for Imebra library. Black-boxed to speed up compilation.
@@ -228,7 +228,7 @@ BaseWebServerApplication::BaseWebServerApplication(const Wt::WEnvironment &env) 
     this->useStyleSheet("webserver_styles/Forms.css");
     setTitle("DICOMautomaton Web Services");
     {
-        auto title = new Wt::WText("DICOMautomaton Web Services", root());
+        auto title = root()->addWidget(std::make_unique<Wt::WText>("DICOMautomaton Web Services"));
         title->addStyleClass("Title");
     }
 
@@ -254,31 +254,30 @@ BaseWebServerApplication::BaseWebServerApplication(const Wt::WEnvironment &env) 
 void BaseWebServerApplication::createFileUploadGB(void){
     // This routine creates a file upload box.
 
-    auto gb = new Wt::WGroupBox("File Upload", root());
+    auto gb = root()->addWidget(std::make_unique<Wt::WGroupBox>("File Upload"));
     gb->setObjectName("file_upload_gb");
     gb->addStyleClass("DataEntryGroupBlock");
 
-    auto instruct = new Wt::WText("Please select the RTSTRUCT and RTDOSE files to upload.", gb);
+    auto instruct = gb->addWidget(std::make_unique<Wt::WText>("Please select the RTSTRUCT and RTDOSE files to upload."));
     instruct->addStyleClass("InstructionText");
 
-    (void*) new Wt::WBreak(gb);
+    (void*) gb->addWidget(std::make_unique<Wt::WBreak>());
 
-    auto fileup = new Wt::WFileUpload(gb);
+    auto fileup = gb->addWidget(std::make_unique<Wt::WFileUpload>());
     fileup->setObjectName("file_upload_gb_file_picker");
     fileup->setFileTextSize(50);
     fileup->setMultiple(true);
 
-    auto pb = new Wt::WProgressBar();
+    auto pb = gb->addWidget(std::make_unique<Wt::WProgressBar>());
     pb->setWidth(Wt::WLength("100%"));
+    pb->hide();
     fileup->setProgressBar(pb);
 
-//    (void*) new Wt::WBreak(gb);
+    auto upbutton = gb->addWidget(std::make_unique<Wt::WPushButton>("Upload"));
 
-    auto upbutton = new Wt::WPushButton("Upload", gb);
+    (void*) gb->addWidget(std::make_unique<Wt::WBreak>());
 
-    (void*) new Wt::WBreak(gb);
-
-    auto feedback = new Wt::WText(gb);
+    auto feedback = gb->addWidget(std::make_unique<Wt::WText>());
     feedback->setObjectName("file_upload_gb_feedback");
     feedback->addStyleClass("FeedbackText");
 
@@ -286,6 +285,7 @@ void BaseWebServerApplication::createFileUploadGB(void){
 
     upbutton->clicked().connect(std::bind([=](){
         if(fileup->canUpload()){
+            pb->show();
             fileup->upload();
             feedback->setText("<p>Upload in progress...</p>");
         }else{
@@ -356,9 +356,6 @@ void BaseWebServerApplication::filesUploaded(void){
                      << " aka '" << afile.spoolFileName() << "' to archive directory. Continuing");
         }
     }
-    auto pb = new Wt::WProgressBar();
-    pb->setWidth(Wt::WLength("100%"));
-    fileup->setProgressBar(pb);
     fileup->disable();
 
 
@@ -381,13 +378,13 @@ void BaseWebServerApplication::filesUploaded(void){
 
     // ======================= Load the files ========================
     {
-        root()->addWidget(new Wt::WBreak());
+        (void*) root()->addWidget(std::make_unique<Wt::WBreak>());
 
-        auto gb = new Wt::WGroupBox("File Loading", root());
+        auto gb = root()->addWidget(std::make_unique<Wt::WGroupBox>("File Loading"));
         gb->setObjectName("file_loading_gb");
         gb->addStyleClass("DataEntryGroupBlock");
  
-        auto feedback = new Wt::WText(gb);
+        auto feedback = gb->addWidget(std::make_unique<Wt::WText>());
         feedback->setObjectName("file_loading_gb_feedback");
         feedback->addStyleClass("FeedbackText");
         feedback->setText("<p>Loading files now...</p>");
@@ -451,26 +448,26 @@ void BaseWebServerApplication::filesUploaded(void){
 void BaseWebServerApplication::createOperationSelectorGB(void){
     //This routine creates a selector box populated with the available operations.
 
-    root()->addWidget(new Wt::WBreak());
+    (void*) root()->addWidget(std::make_unique<Wt::WBreak>());
 
-    auto gb = new Wt::WGroupBox("Operation Selection", root());
+    auto gb = root()->addWidget(std::make_unique<Wt::WGroupBox>("Operation Selection"));
     gb->setObjectName("op_select_gb");
     gb->addStyleClass("DataEntryGroupBlock");
 
-    auto instruct = new Wt::WText("Please select the operation of interest.", gb);
+    auto instruct = gb->addWidget(std::make_unique<Wt::WText>("Please select the operation of interest."));
     instruct->addStyleClass("InstructionText");
 
-    (void*) new Wt::WBreak(gb);
+    (void*) gb->addWidget(std::make_unique<Wt::WBreak>());
 
-    auto selector = new Wt::WSelectionBox(gb);
+    auto selector = gb->addWidget(std::make_unique<Wt::WSelectionBox>());
     selector->setObjectName("op_select_gb_selector");
     //selector->setSelectionMode(Wt::ExtendedSelection);
     selector->setVerticalSize(15);
     selector->disable();
 
-    (void*) new Wt::WBreak(gb);
+    (void*) gb->addWidget(std::make_unique<Wt::WBreak>());
 
-    auto feedback = new Wt::WText(gb);
+    auto feedback = gb->addWidget(std::make_unique<Wt::WText>());
     feedback->setObjectName("op_select_gb_feedback");
     feedback->addStyleClass("FeedbackText");
 
@@ -492,9 +489,9 @@ void BaseWebServerApplication::createOperationSelectorGB(void){
     }
     selector->enable();
 
-    (void*) new Wt::WBreak(gb);
+    (void*) gb->addWidget(std::make_unique<Wt::WBreak>());
 
-    auto gobutton = new Wt::WPushButton("Proceed", gb);
+    auto gobutton = gb->addWidget(std::make_unique<Wt::WPushButton>("Proceed"));
 
     // -------
 
@@ -520,25 +517,25 @@ void BaseWebServerApplication::createOperationSelectorGB(void){
 void BaseWebServerApplication::createROISelectorGB(void){
     //This routine creates a selector box populated with the ROI labels found in the loaded ROIs.
 
-    root()->addWidget(new Wt::WBreak());
+    (void*) root()->addWidget(std::make_unique<Wt::WBreak>());
 
-    auto gb = new Wt::WGroupBox("ROI Selection", root());
+    auto gb = root()->addWidget(std::make_unique<Wt::WGroupBox>("ROI Selection"));
     gb->setObjectName("roi_select_gb");
     gb->addStyleClass("DataEntryGroupBlock");
 
-    auto instruct = new Wt::WText("Please select the ROI(s) of interest, if applicable.", gb);
+    auto instruct = gb->addWidget(std::make_unique<Wt::WText>("Please select the ROI(s) of interest, if applicable."));
     instruct->addStyleClass("InstructionText");
 
-    (void*) new Wt::WBreak(gb);
+    (void*) gb->addWidget(std::make_unique<Wt::WBreak>());
 
-    auto selector = new Wt::WSelectionBox(gb);
+    auto selector = gb->addWidget(std::make_unique<Wt::WSelectionBox>());
     selector->setSelectionMode(Wt::ExtendedSelection);
     selector->setVerticalSize(15);
     selector->disable();
 
-    (void*) new Wt::WBreak(gb);
+    (void*) gb->addWidget(std::make_unique<Wt::WBreak>());
 
-    auto feedback = new Wt::WText(gb);
+    auto feedback = gb->addWidget(std::make_unique<Wt::WText>());
     feedback->setObjectName("roi_select_gb_feedback");
     feedback->addStyleClass("FeedbackText");
 
@@ -556,9 +553,9 @@ void BaseWebServerApplication::createROISelectorGB(void){
     }
     selector->enable();
 
-    (void*) new Wt::WBreak(gb);
+    (void*) gb->addWidget(std::make_unique<Wt::WBreak>());
 
-    auto gobutton = new Wt::WPushButton("Proceed", gb);
+    auto gobutton = gb->addWidget(std::make_unique<Wt::WPushButton>("Proceed"));
     gobutton->clicked().connect(std::bind([=](){
         //Possible to proceed without selecting any ROI.
         //const std::set<int> selected = selector->selectedIndexes();
@@ -612,11 +609,11 @@ void BaseWebServerApplication::appendOperationParamsColumn(void){
     //Begin altering the table.
     const auto first_run = (table->columnCount() == 0);
     if(first_run){
-        (void *) new Wt::WText("Parameter", table->elementAt(0,0));
+        (void *) table->elementAt(0,0)->addWidget(std::make_unique<Wt::WText>("Parameter"));
     }
     //const auto rows = table->rowCount(); 
     const auto cols = table->columnCount(); 
-    table->elementAt(0,cols)->addWidget(new Wt::WText("Setting"));
+    table->elementAt(0,cols)->addWidget(std::make_unique<Wt::WText>("Setting"));
 
     int table_row = 1;
     for(auto &anop : known_ops){
@@ -637,15 +634,15 @@ void BaseWebServerApplication::appendOperationParamsColumn(void){
 
             auto pn = table->elementAt(table_row,0); // Param name.
             if(first_run){
-                (void *) new Wt::WText(a.name, pn);
+                (void *) pn->addWidget(std::make_unique<Wt::WText>(a.name));
             }
 
             //ROI selection parameters.
             if(false){
             }else if(std::regex_match(a.name,roiregex)){
                 // Instead of a freeform lineedit widget, provide a spinner.
-                auto spinner = new Wt::WSelectionBox(table->elementAt(table_row,cols));
-                spinner->setSelectionMode(Wt::ExtendedSelection);
+                auto spinner = table->elementAt(table_row,cols)->addWidget(std::make_unique<Wt::WSelectionBox>());
+                spinner->setSelectionMode(Wt::SelectionMode::Extended);
                 spinner->setVerticalSize(std::min(15,static_cast<int>(ROI_labels.size())));
                 spinner->disable();
                 for(const auto &l : ROI_labels) spinner->addItem(l);
@@ -662,9 +659,9 @@ void BaseWebServerApplication::appendOperationParamsColumn(void){
                  // Maybe because it's a non-renderable widget? Who knows. Extremely annoying to debug.
                  // What 'vessel' widget should I stick here instead?   --( Went with a static progress bar ).
                  //
-                 //(void *) new Wt::WFileResource("/dev/null", table->elementAt(table_row,cols));
+                 //(void *) table->elementAt(table_row,cols)->addWidget(std::make_unique<Wt::WFileResource>("/dev/null"));
                  //table->elementAt(table_row,cols)->addWidget( reinterpret_cast<Wt::WWidget *>(new Wt::WFileResource()) );
-                 auto pb = new Wt::WProgressBar(table->elementAt(table_row,cols)); //Dummy encoding for generated files.
+                 auto pb = table->elementAt(table_row,cols)->addWidget(std::make_unique<Wt::WProgressBar>()); //Dummy encoding for generated files.
                  pb->hide();
 
             //Boolean parameters.
@@ -676,12 +673,12 @@ void BaseWebServerApplication::appendOperationParamsColumn(void){
                          std::regex_match(a.examples.front(),falseregex)
                          && std::regex_match(a.examples.back(),trueregex)
                        ) ) ){
-                auto cb = new Wt::WCheckBox("", table->elementAt(table_row,cols));
+                auto cb = table->elementAt(table_row,cols)->addWidget(std::make_unique<Wt::WCheckBox>(""));
                 cb->setChecked( std::regex_match(a.default_val,trueregex) );
 
             //All other parameters get exposed as free-form text entry boxes.
             }else{
-                (void *) new Wt::WLineEdit(a.default_val, table->elementAt(table_row,cols)); // Value to use.
+                (void *) table->elementAt(table_row,cols)->addWidget(std::make_unique<Wt::WLineEdit>(a.default_val)); // Value to use.
 
             }
 
@@ -692,8 +689,8 @@ void BaseWebServerApplication::appendOperationParamsColumn(void){
             for(auto &e : a.examples) tooltip_ss << "<li>" << e << "</li> "; 
             tooltip_ss << "</ul></p>";
 
-            table->elementAt(table_row, 0  )->setToolTip(Wt::WString::fromUTF8(tooltip_ss.str()), Wt::XHTMLText);
-            table->elementAt(table_row,cols)->setToolTip(Wt::WString::fromUTF8(tooltip_ss.str()), Wt::XHTMLText);
+            table->elementAt(table_row, 0  )->setToolTip(Wt::WString::fromUTF8(tooltip_ss.str()), Wt::TextFormat::XHTML);
+            table->elementAt(table_row,cols)->setToolTip(Wt::WString::fromUTF8(tooltip_ss.str()), Wt::TextFormat::XHTML);
 
             ++table_row;
         }
@@ -706,34 +703,34 @@ void BaseWebServerApplication::appendOperationParamsColumn(void){
 void BaseWebServerApplication::createOperationParamSelectorGB(void){
     //This routine creates a manipulation table populated with tweakable parameters from the specified operation.
 
-    root()->addWidget(new Wt::WBreak());
+    (void*) root()->addWidget(std::make_unique<Wt::WBreak>());
 
-    auto gb = new Wt::WGroupBox("Operation Parameter Specification", root());
+    auto gb = root()->addWidget(std::make_unique<Wt::WGroupBox>("Operation Parameter Specification"));
     gb->setObjectName("op_paramspec_gb");
     gb->addStyleClass("DataEntryGroupBlock");
 
-    auto instruct = new Wt::WText("Please specify operation parameters. Hover over for descriptions.", gb);
+    auto instruct = gb->addWidget(std::make_unique<Wt::WText>("Please specify operation parameters. Hover over for descriptions."));
     instruct->addStyleClass("InstructionText");
 
-    auto addbutton = new Wt::WPushButton("Add another pass", gb);
+    auto addbutton = gb->addWidget(std::make_unique<Wt::WPushButton>("Add another pass"));
 
-    (void*) new Wt::WBreak(gb);
+    (void*) gb->addWidget(std::make_unique<Wt::WBreak>());
 
-    auto table = new Wt::WTable(gb);
+    auto table = gb->addWidget(std::make_unique<Wt::WTable>());
     table->setObjectName("op_paramspec_gb_table");
     table->setHeaderCount(1);
     table->setWidth(Wt::WLength("100%"));
     table->disable();
 
-    (void*) new Wt::WBreak(gb);
+    (void*) gb->addWidget(std::make_unique<Wt::WBreak>());
 
-    auto feedback = new Wt::WText(gb);
+    auto feedback = gb->addWidget(std::make_unique<Wt::WText>());
     feedback->setObjectName("op_paramspec_gb_feedback");
     feedback->addStyleClass("FeedbackText");
 
-//    (void*) new Wt::WBreak(gb);
+//    (void*) gb->addWidget(std::make_unique<Wt::WBreak>());
 
-    auto gobutton = new Wt::WPushButton("Proceed", gb);
+    auto gobutton = gb->addWidget(std::make_unique<Wt::WPushButton>("Proceed"));
 
     // -------
 
@@ -769,13 +766,13 @@ void BaseWebServerApplication::createComputeGB(void){
     // This routine creates a panel to both launch an operation and pass the output to the client.
     //
     // The actual computation is performed elsewhere -- this routine merely creates the widgets.
-    root()->addWidget(new Wt::WBreak());
+    (void*) root()->addWidget(std::make_unique<Wt::WBreak>());
 
-    auto gb = new Wt::WGroupBox("Computation", root());
+    auto gb = root()->addWidget(std::make_unique<Wt::WGroupBox>("Computation"));
     gb->setObjectName("compute_gb");
     gb->addStyleClass("DataEntryGroupBlock");
 
-    auto feedback = new Wt::WText(gb);
+    auto feedback = gb->addWidget(std::make_unique<Wt::WText>());
     feedback->setObjectName("compute_gb_feedback");
     feedback->addStyleClass("FeedbackText");
     feedback->setText("<p>Computing now...</p>");
@@ -793,7 +790,7 @@ void BaseWebServerApplication::createComputeGB(void){
     auto table = reinterpret_cast<Wt::WTable *>( root()->find("op_paramspec_gb_table") );
     if(table == nullptr) throw std::logic_error("Cannot find operation parameter table widget in DOM tree. Cannot continue.");
 
-    std::map<std::string,Wt::WFileResource *> OutputFiles;
+    std::map<std::string,std::shared_ptr<Wt::WFileResource>> OutputFiles;
     std::map<std::string,std::string> OutputFilenames;
     std::map<std::string,std::string> OutputMimetype;
     const auto rows = table->rowCount(); 
@@ -870,7 +867,7 @@ void BaseWebServerApplication::createComputeGB(void){
 
                 //Only create a file resource for the final pass.
                 if((col+1) == cols){
-                    auto fr = new Wt::WFileResource(gb);
+                    auto fr = std::make_shared<Wt::WFileResource>(); 
                     fr->setFileName(personal_fname);
                     fr->setMimeType(op_doc.mimetype);
 
@@ -930,20 +927,20 @@ void BaseWebServerApplication::createComputeGB(void){
     // Corral the output.
     for(auto &apair : OutputFiles){
         const auto param_name = apair.first;
-        auto *fr = apair.second;
+        auto fr = apair.second;
 
         const auto fname = fr->fileName();
-        gb->addWidget(new Wt::WBreak());
+        (void*) gb->addWidget(std::make_unique<Wt::WBreak>());
 
         //Wt will serve an empty file if the backing file does not exist. This approach is more explicit.
         if(! Does_File_Exist_And_Can_Be_Read(fname)){
-            (void *) new Wt::WText("<p>Output file: "_s + fname + " not available.</p>", gb);
+            (void *) gb->addWidget(std::make_unique<Wt::WText>("<p>Output file: "_s + fname + " not available.</p>"));
             break;
         }
 
         // If the file is tabular, create a table to display the info.
         if(OutputMimetype[param_name] == "text/csv"){
-            auto table = new Wt::WTable(gb);
+            auto table = gb->addWidget(std::make_unique<Wt::WTable>());
             table->setHeaderCount(1);
             table->setWidth(Wt::WLength("100%"));
             table->disable();
@@ -955,27 +952,29 @@ void BaseWebServerApplication::createComputeGB(void){
                 auto tokens = SplitStringToVector(l, ",", 'd');
                 size_t col = 0;
                 for(auto &t : tokens){
-                    (void *) new Wt::WText(" "_s + t + " "_s, table->elementAt(row,col));
-                    //(void *) new Wt::WLineEdit(t, table->elementAt(row,col));
+                    (void *) table->elementAt(row,col)->addWidget(std::make_unique<Wt::WText>(" "_s + t + " "_s));
+                    //(void *) table->elementAt(row,col)->addWidget(std::make_unique<Wt::WLineEdit>(t));
                     ++col;
                 }
                 ++row;
             }
 
-            gb->addWidget(new Wt::WBreak());
+            (void*) gb->addWidget(std::make_unique<Wt::WBreak>());
             table->enable();
         }
 
-        (void *) new Wt::WAnchor(fr, "Download file"_s, gb);
+        Wt::WLink fr_link = Wt::WLink(fr);
+        fr_link.setTarget(Wt::LinkTarget::Self);
+        (void *) gb->addWidget(std::make_unique<Wt::WAnchor>(fr_link, "Download file"_s));
 
     }
     this->processEvents();
 
     // ---
 
-//    (void*) new Wt::WBreak(gb);
+//    (void*) gb->addWidget(std::make_unique<Wt::WBreak>());
 
-    auto gobutton = new Wt::WPushButton("Perform another operation", gb);
+    auto gobutton = gb->addWidget(std::make_unique<Wt::WPushButton>("Perform another operation"));
 
     gb->setCanReceiveFocus(true);
     gb->setFocus(true);
@@ -1027,8 +1026,8 @@ void BaseWebServerApplication::createComputeGB(void){
     return;
 }
 
-Wt::WApplication *createApplication(const Wt::WEnvironment &env){
-    return new BaseWebServerApplication(env);
+std::unique_ptr<Wt::WApplication> createApplication(const Wt::WEnvironment &env){
+    return std::make_unique<BaseWebServerApplication>(env);
 }
 int main(int argc, char **argv){
     return Wt::WRun(argc, argv, &createApplication);
