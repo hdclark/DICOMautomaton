@@ -44,7 +44,7 @@
 
 #include <CGAL/IO/write_xyz_points.h>
 
-#include <CGAL/Subdivision_method_3.h>
+#include <CGAL/subdivision_method_3.h>
 #include <CGAL/centroid.h>
 
 //#include <CGAL/Nef_polyhedron_3.h>

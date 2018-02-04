@@ -44,7 +44,7 @@
 #include <CGAL/Polyhedron_3.h>
 #include <CGAL/IO/Polyhedron_iostream.h>
 
-#include <CGAL/Subdivision_method_3.h>
+#include <CGAL/subdivision_method_3.h>
 
 #include <CGAL/AABB_tree.h>
 #include <CGAL/AABB_traits.h>
