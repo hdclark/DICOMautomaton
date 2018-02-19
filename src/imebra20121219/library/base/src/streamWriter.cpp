@@ -40,7 +40,7 @@ Imebra is available at http://imebra.com
 */
 
 #include "../include/streamWriter.h"
-#include <string.h>
+#include <cstring>
 
 namespace puntoexe
 {

@@ -54,7 +54,7 @@ namespace imebra
 drawBitmap::drawBitmap(ptr<image> sourceImage, ptr<transforms::transformsChain> transformsChain):
 	m_image(sourceImage), m_transformsChain(new transforms::transformsChain)
 {
-	if(transformsChain != 0 && !transformsChain->isEmpty())
+	if(transformsChain != nullptr && !transformsChain->isEmpty())
 	{
 		m_transformsChain->addTransform(transformsChain);
 	}
@@ -72,7 +72,7 @@ drawBitmap::drawBitmap(ptr<image> sourceImage, ptr<transforms::transformsChain> 
 	}
 	transforms::colorTransforms::colorTransformsFactory* pColorTransformsFactory(transforms::colorTransforms::colorTransformsFactory::getColorTransformsFactory());
 	ptr<transforms::colorTransforms::colorTransform> rgbColorTransform(pColorTransformsFactory->getTransform(initialColorSpace, L"RGB"));
-	if(rgbColorTransform != 0)
+	if(rgbColorTransform != nullptr)
 	{
 		m_transformsChain->addTransform(rgbColorTransform);
 	}

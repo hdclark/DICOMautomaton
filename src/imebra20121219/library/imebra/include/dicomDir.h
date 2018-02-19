@@ -426,13 +426,13 @@ protected:
 	// Destructor.
 	//
 	///////////////////////////////////////////////////////////
-	virtual ~dicomDir();
+	~dicomDir() override;
 
 	ptr<dataSet> m_pDataSet;
 
 	ptr<directoryRecord> m_pFirstRootRecord;
 
-	typedef std::list<ptr<directoryRecord> > tRecordsList;
+	using tRecordsList = std::list<ptr<directoryRecord> >;
 	tRecordsList m_recordsList;
 };
 

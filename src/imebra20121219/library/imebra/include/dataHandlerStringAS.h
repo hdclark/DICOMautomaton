@@ -128,7 +128,7 @@ public:
 	///          years
 	///
 	///////////////////////////////////////////////////////////
-	virtual imbxInt32 getSignedLong(const imbxUint32 index) const;
+	imbxInt32 getSignedLong(const imbxUint32 index) const override;
 
 	/// \brief Retrieve the age from the handled buffer.
 	///
@@ -140,7 +140,7 @@ public:
 	///          years
 	///
 	///////////////////////////////////////////////////////////
-	virtual imbxUint32 getUnsignedLong(const imbxUint32 index) const;
+	imbxUint32 getUnsignedLong(const imbxUint32 index) const override;
 
 	/// \brief Retrieve the age from the handled buffer.
 	///
@@ -155,7 +155,7 @@ public:
 	///          years
 	///
 	///////////////////////////////////////////////////////////
-	virtual double getDouble(const imbxUint32 index) const;
+	double getDouble(const imbxUint32 index) const override;
 
 	/// \brief Write the specified age into the handled buffer.
 	///
@@ -164,7 +164,7 @@ public:
 	/// @param value the age to be written, in years
 	///
 	///////////////////////////////////////////////////////////
-	virtual void setSignedLong(const imbxUint32 index, const imbxInt32 value);
+	void setSignedLong(const imbxUint32 index, const imbxInt32 value) override;
 
 	/// \brief Write the specified age into the handled buffer.
 	///
@@ -173,7 +173,7 @@ public:
 	/// @param value the age to be written, in years
 	///
 	///////////////////////////////////////////////////////////
-	virtual void setUnsignedLong(const imbxUint32 index, const imbxUint32 value);
+	void setUnsignedLong(const imbxUint32 index, const imbxUint32 value) override;
 
 	/// \brief Write the specified age into the handled buffer.
 	///
@@ -186,17 +186,17 @@ public:
 	/// @param value the age to be written, in years
 	///
 	///////////////////////////////////////////////////////////
-	virtual void setDouble(const imbxUint32 index, const double value);
+	void setDouble(const imbxUint32 index, const double value) override;
 
 
-	virtual imbxUint8 getPaddingByte() const;
+	imbxUint8 getPaddingByte() const override;
 
-	virtual imbxUint32 getUnitSize() const;
+	imbxUint32 getUnitSize() const override;
 
 protected:
 	// Return the maximum string's length
 	///////////////////////////////////////////////////////////
-	virtual imbxUint32 maxSize() const;
+	imbxUint32 maxSize() const override;
 };
 
 } // namespace handlers

@@ -117,26 +117,26 @@
 
 //CGAL quantities.
 
-typedef CGAL::Exact_predicates_inexact_constructions_kernel Kernel;
-typedef Kernel::FT FT;
-typedef Kernel::Point_3 Point;
-typedef Kernel::Vector_3 Vector;
-typedef Kernel::Triangle_3 Triangle;
+using Kernel = CGAL::Exact_predicates_inexact_constructions_kernel;
+using FT = Kernel::FT;
+using Point = Kernel::Point_3;
+using Vector = Kernel::Vector_3;
+using Triangle = Kernel::Triangle_3;
 //typedef CGAL::Point_with_normal_3<Kernel> Point_with_normal;
 typedef std::pair<Point, Vector> Point_with_normal;
-typedef std::list<Point_with_normal> PointList;
-typedef Kernel::Sphere_3 Sphere;
-typedef CGAL::Polyhedron_3<Kernel> Polyhedron;
-typedef CGAL::Poisson_reconstruction_function<Kernel> Poisson_reconstruction_function;
-typedef CGAL::Surface_mesh_default_triangulation_3 STr;
-typedef CGAL::Surface_mesh_complex_2_in_triangulation_3<STr> C2t3;
+using PointList = std::list<Point_with_normal>;
+using Sphere = Kernel::Sphere_3;
+using Polyhedron = CGAL::Polyhedron_3<Kernel>;
+using Poisson_reconstruction_function = CGAL::Poisson_reconstruction_function<Kernel>;
+using STr = CGAL::Surface_mesh_default_triangulation_3;
+using C2t3 = CGAL::Surface_mesh_complex_2_in_triangulation_3<STr>;
 typedef CGAL::Implicit_surface_3<Kernel, Poisson_reconstruction_function> Surface_3;
 
 //typedef CGAL::Nef_polyhedron_3<Kernel> Nef_polyhedron;
 
 typedef CGAL::Min_sphere_of_spheres_d_traits_3<Kernel,FT> MinSphereTraits;
-typedef MinSphereTraits::Sphere BoundingSphere;
-typedef CGAL::Min_sphere_of_spheres_d<MinSphereTraits> MinSphere;
+using BoundingSphere = MinSphereTraits::Sphere;
+using MinSphere = CGAL::Min_sphere_of_spheres_d<MinSphereTraits>;
 
 
 /*
@@ -224,7 +224,7 @@ Drover DumpROISurfaceMeshes(Drover DICOM_data, OperationArgPkg OptArgs, std::map
 
     //Gather all contours for each volume of interest.
     typedef std::tuple<std::string,std::string,std::string> key_t; //PatientID, ROIName, NormalizedROIName.
-    typedef std::list<std::reference_wrapper< contour_of_points<double>>> val_t; 
+    using val_t = std::list<std::reference_wrapper<contour_of_points<double> > >; 
 
     std::map<key_t,val_t> ROIs;
     if(DICOM_data.contour_data != nullptr){
@@ -443,7 +443,7 @@ Drover DumpROISurfaceMeshes(Drover DICOM_data, OperationArgPkg OptArgs, std::map
             auto p1 = halfedge_handle->vertex()->point();
             auto p2 = halfedge_handle->next()->vertex()->point();
             auto p3 = halfedge_handle->next()->next()->vertex()->point();
-            triangles.push_back(Triangle(p1,p2,p3)); 
+            triangles.emplace_back(p1,p2,p3); 
         }
         auto centroid = CGAL::centroid(triangles.begin(), triangles.end(), CGAL::Dimension_tag<2>());
 
@@ -470,7 +470,7 @@ Drover DumpROISurfaceMeshes(Drover DICOM_data, OperationArgPkg OptArgs, std::map
         std::vector<BoundingSphere> point_spheres;
         for(auto vert_it = output_mesh.vertices_begin(); vert_it != output_mesh.vertices_end(); ++vert_it){
             auto p = vert_it->point();
-            point_spheres.push_back( BoundingSphere(p, static_cast<FT>(0)) );
+            point_spheres.emplace_back(p, static_cast<FT>(0) );
         }
 
         MinSphere min_sphere(point_spheres.begin(),point_spheres.end());
@@ -601,7 +601,7 @@ Drover DumpROISurfaceMeshes(Drover DICOM_data, OperationArgPkg OptArgs, std::map
                     auto p1 = halfedge_handle->vertex()->point();
                     auto p2 = halfedge_handle->next()->vertex()->point();
                     auto p3 = halfedge_handle->next()->next()->vertex()->point();
-                    triangles.push_back(Triangle(p1,p2,p3)); 
+                    triangles.emplace_back(p1,p2,p3); 
                 }
             }
 

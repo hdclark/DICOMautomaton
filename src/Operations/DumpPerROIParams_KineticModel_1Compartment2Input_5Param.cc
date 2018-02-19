@@ -355,11 +355,11 @@ DumpPerROIParams_KineticModel_1Compartment2Input_5Param(Drover DICOM_data,
         //Loop over the ccsl, rois, rows, columns, channels, and finally any selected images (if applicable).
         //for(const auto &roi : rois){
         for(auto &ccs : cc_ROIs){
-            for(auto roi_it = ccs.get().contours.begin(); roi_it != ccs.get().contours.end(); ++roi_it){
-                if(roi_it->points.empty()) continue;
-                if(! img.encompasses_contour_of_points(*roi_it)) continue;
+            for(auto & contour : ccs.get().contours){
+                if(contour.points.empty()) continue;
+                if(! img.encompasses_contour_of_points(contour)) continue;
     
-                const auto ROIName =  roi_it->GetMetadataValueAs<std::string>("ROIName");
+                const auto ROIName =  contour.GetMetadataValueAs<std::string>("ROIName");
                 if(!ROIName){
                     throw std::runtime_error("Missing necessary tags for reporting analysis results. Cannot continue");
                 }
@@ -373,8 +373,8 @@ DumpPerROIParams_KineticModel_1Compartment2Input_5Param(Drover DICOM_data,
         */
         
                 //Prepare a contour for fast is-point-within-the-polygon checking.
-                auto BestFitPlane = roi_it->Least_Squares_Best_Fit_Plane(ortho_unit);
-                auto ProjectedContour = roi_it->Project_Onto_Plane_Orthogonally(BestFitPlane);
+                auto BestFitPlane = contour.Least_Squares_Best_Fit_Plane(ortho_unit);
+                auto ProjectedContour = contour.Project_Onto_Plane_Orthogonally(BestFitPlane);
                 const bool AlreadyProjected = true;
         
                 for(auto row = 0; row < img.rows; ++row){

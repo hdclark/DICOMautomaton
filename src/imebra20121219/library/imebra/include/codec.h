@@ -378,7 +378,7 @@ public:
 		m_samplingFactorY(1),
 		m_sizeX(0),
 		m_sizeY(0),
-		m_pBuffer(0),
+		m_pBuffer(nullptr),
 		m_bufferSize(0){}
 
 	// Allocate the channel

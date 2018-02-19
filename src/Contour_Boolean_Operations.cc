@@ -96,11 +96,11 @@ ContourBoolean(plane<double> p,
     auto common_metadata = contour_collection<double>().get_common_metadata( { }, { std::ref(all) } );
 
 
-    typedef CGAL::Simple_cartesian<double>     Kernel;
-    typedef Kernel::Point_2                    Point_2;
-    typedef CGAL::Polygon_2<Kernel>            Polygon_2;
-    typedef CGAL::Polygon_with_holes_2<Kernel> Polygon_with_holes_2;
-    typedef CGAL::Polygon_set_2<Kernel>        Polygon_set_2;
+    using Kernel = CGAL::Simple_cartesian<double>;
+    using Point_2 = Kernel::Point_2;
+    using Polygon_2 = CGAL::Polygon_2<Kernel>;
+    using Polygon_with_holes_2 = CGAL::Polygon_with_holes_2<Kernel>;
+    using Polygon_set_2 = CGAL::Polygon_set_2<Kernel>;
 
     bool first_contour;
 

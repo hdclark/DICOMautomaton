@@ -68,9 +68,9 @@ std::set<long int> Queries_to_ROI_Numbers(const std::set<std::string> &QueryStri
 
     //The query strings are assumed to EXACTLY exist in a file. They might come from a previous mapping, or maybe we have exact information on the naming
     // of some contours *somehow.*
-    for(auto s_it = QueryString.begin(); s_it != QueryString.end(); ++s_it){
-        if( Contour_classifications.find( *s_it ) != Contour_classifications.end() ){
-            out.insert( Contour_classifications[*s_it] );
+    for(const auto & s_it : QueryString){
+        if( Contour_classifications.find( s_it ) != Contour_classifications.end() ){
+            out.insert( Contour_classifications[s_it] );
         }
     } 
 
@@ -78,11 +78,11 @@ std::set<long int> Queries_to_ROI_Numbers(const std::set<std::string> &QueryStri
     // lexicon of the explicator we are passed.
     if(SanitizedQueryString.size() != 0){
         if( X != nullptr ){
-            for(auto s_it = SanitizedQueryString.begin(); s_it != SanitizedQueryString.end(); ++s_it){
+            for(const auto & s_it : SanitizedQueryString){
                 //Cycle through each tag in the contour data until we find (the first) match. We assume it is correct and move to the next.
-                for(auto c_it=Contour_classifications.begin(); c_it != Contour_classifications.end(); ++c_it){
-                    if( (*X)(c_it->first) == *s_it ){
-                        out.insert(c_it->second);
+                for(const auto & Contour_classification : Contour_classifications){
+                    if( (*X)(Contour_classification.first) == s_it ){
+                        out.insert(Contour_classification.second);
                         break;
                     }
                 }
@@ -101,9 +101,9 @@ std::set<std::string> Queries_to_Available_Sanitized_Queries( const std::set<std
 
     //The query strings are assumed to EXACTLY exist in a file. They might come from a previous mapping, or maybe we have exact information on the naming
     // of some contours *somehow.*
-    for(auto s_it = QueryString.begin(); s_it != QueryString.end(); ++s_it){
-        if( Contour_classifications.find( *s_it ) != Contour_classifications.end() ){
-            out.insert( (*X)(*s_it) );
+    for(const auto & s_it : QueryString){
+        if( Contour_classifications.find( s_it ) != Contour_classifications.end() ){
+            out.insert( (*X)(s_it) );
         }
     }
 
@@ -111,11 +111,11 @@ std::set<std::string> Queries_to_Available_Sanitized_Queries( const std::set<std
     // lexicon of the explicator we are passed.
     if(SanitizedQueryString.size() != 0){
         if( X != nullptr ){
-            for(auto s_it = SanitizedQueryString.begin(); s_it != SanitizedQueryString.end(); ++s_it){
+            for(const auto & s_it : SanitizedQueryString){
                 //Cycle through each tag in the contour data until we find (the first) match. We assume it is correct and move to the next.
-                for(auto c_it=Contour_classifications.begin(); c_it != Contour_classifications.end(); ++c_it){
-                    if( (*X)(c_it->first) == *s_it ){
-                        out.insert((*X)(c_it->first));
+                for(const auto & Contour_classification : Contour_classifications){
+                    if( (*X)(Contour_classification.first) == s_it ){
+                        out.insert((*X)(Contour_classification.first));
                         break;
                     }
                 }
@@ -152,19 +152,19 @@ int main(int argc, char* argv[]){
     const char* const short_options    = "hVvi:o:l:s:q:Q"; //This is the list of short, single-letter options.
                                                            //The : denotes a value passed in with the option.
     //This is the list of long options. Columns:  Name, BOOL: takes_value?, NULL, Map to short options.
-    const struct option long_options[] = { { "help",            0, NULL, 'h' },
-                                           { "version",         0, NULL, 'V' },
-                                           { "verbose",         0, NULL, 'v' },
-                                           { "in",              1, NULL, 'i' },
-                                           { "out",             1, NULL, 'o' },
-                                           { "lexicon",         1, NULL, 'l' },
-                                           { "sanitized-query", 1, NULL, 's' },
-                                           { "query",           1, NULL, 'q' },
-                                           { "quiet",           0, NULL, 'Q' },
-                                           { NULL,              0, NULL,  0  }  };
+    const struct option long_options[] = { { "help",            0, nullptr, 'h' },
+                                           { "version",         0, nullptr, 'V' },
+                                           { "verbose",         0, nullptr, 'v' },
+                                           { "in",              1, nullptr, 'i' },
+                                           { "out",             1, nullptr, 'o' },
+                                           { "lexicon",         1, nullptr, 'l' },
+                                           { "sanitized-query", 1, nullptr, 's' },
+                                           { "query",           1, nullptr, 'q' },
+                                           { "quiet",           0, nullptr, 'Q' },
+                                           { nullptr,              0, nullptr,  0  }  };
 
     do{
-        next_options = getopt_long(argc, argv, short_options, long_options, NULL);
+        next_options = getopt_long(argc, argv, short_options, long_options, nullptr);
         switch(next_options){
             case 'h': 
                 std::cout << std::endl;
@@ -225,12 +225,12 @@ int main(int argc, char* argv[]){
             case 'i':
                 //If we have a filename, simply put it in the collection.
                 if(Does_File_Exist_And_Can_Be_Read(optarg)){
-                    Filenames_In.push_back(optarg);
+                    Filenames_In.emplace_back(optarg);
                 }else{
                     //If we have a directory, grab all the filenames and place them in the collection.
                     //We will assume it is a directory now and will sort out the cruft afterward.
                     auto names = Get_List_of_File_and_Dir_Names_in_Dir(optarg);
-                    for(auto i=names.begin(); i!=names.end(); i++) Filenames_In.push_back((std::string(optarg) + "/") + *i);
+                    for(auto & name : names) Filenames_In.push_back((std::string(optarg) + "/") + name);
                 }
                 break;
             case 'l':
@@ -256,12 +256,12 @@ int main(int argc, char* argv[]){
 
         //If we have a filename, simply put it in the collection.
         if(Does_File_Exist_And_Can_Be_Read(argv[optind])){
-            Filenames_In.push_back(argv[optind]);
+            Filenames_In.emplace_back(argv[optind]);
         }else{
             //If we have a directory, grab all the filenames and place them in the collection.
             //We will assume it is a directory now and will sort out the cruft afterward.
             auto names = Get_List_of_File_and_Dir_Names_in_Dir(argv[optind]);
-            for(auto i=names.begin(); i!=names.end(); i++) Filenames_In.push_back((std::string(argv[optind]) + "/") + *i);
+            for(auto & name : names) Filenames_In.push_back((std::string(argv[optind]) + "/") + name);
         }
     }
 
@@ -295,15 +295,15 @@ int main(int argc, char* argv[]){
                 "/usr/share/explicator/lexicons/20150925_20150925_SGF_and_SGFQ_tags.lexicon",
                 "/usr/share/explicator/lexicons/20130319_SGF_filter_data_deciphered5.lexicon",
                 "/usr/share/explicator/lexicons/20121030_SGF_filter_data_deciphered4.lexicon" };
-        for(auto it = trial.begin(); it != trial.end(); ++it) if(Does_File_Exist_And_Can_Be_Read(*it)){
-            FilenameLex = *it;
+        for(auto & it : trial) if(Does_File_Exist_And_Can_Be_Read(it)){
+            FilenameLex = it;
             FUNCINFO("No lexicon was provided. Using file '" << FilenameLex << "' as lexicon");
             break;
         }
         if(FilenameLex.empty()) FUNCERR("Lexicon not located. Please provide one or see " << argv[0] << " -h' for more info");
     }
-    for(auto it = Filenames_In.begin(); it != Filenames_In.end(); ++it){
-        if(!Does_File_Exist_And_Can_Be_Read(*it)) FUNCERR("Input file '" << *it << "' does not exist");
+    for(auto & it : Filenames_In){
+        if(!Does_File_Exist_And_Can_Be_Read(it)) FUNCERR("Input file '" << it << "' does not exist");
     }
     if(!Does_File_Exist_And_Can_Be_Read(FilenameLex)) FUNCERR("Lexicon file '" << FilenameLex << "' does not exist");
     if(Does_File_Exist_And_Can_Be_Read(FilenameOut)) FUNCERR("Output file '" << FilenameOut << "' already exists");
@@ -318,22 +318,22 @@ int main(int argc, char* argv[]){
     std::list<std::string> Filenames_In_CT;      //Image modalities.  (CT/MR/US data file. 2D pixel data.)
     std::list<std::string> Filenames_In_Dose;    //RTDOSE   modality. (RD dose files. 3D pixel data.)
 
-    for(auto it = Filenames_In.begin(); it != Filenames_In.end(); ++it){
+    for(auto & it : Filenames_In){
         //First we check if the file is a valid DICOM format. If it is not, we simply ignore it.
         // Imebra should produce an exception if it cannot read the file, but bools are easier to deal with.
-        if(!Is_File_A_DICOM_File(*it)){
-            FUNCWARN("File '" << *it << "' does not appear to be a valid DICOM file. Ignoring it");
+        if(!Is_File_A_DICOM_File(it)){
+            FUNCWARN("File '" << it << "' does not appear to be a valid DICOM file. Ignoring it");
             continue;
         }
-        const auto mod = get_modality(*it);
-        if(mod == "RTSTRUCT"){     Filenames_In_Struct.push_back(*it); //Contours.
-        }else if(mod == "RTDOSE"){ Filenames_In_Dose.push_back(*it);   //Dose data.
-        }else if(mod == "CT"){     Filenames_In_CT.push_back(*it);     //CT.
-        }else if(mod == "OT"){     Filenames_In_CT.push_back(*it);     //"Other."
-        }else if(mod == "US"){     Filenames_In_CT.push_back(*it);     //Ultrasound.
-        }else if(mod == "MR"){     Filenames_In_CT.push_back(*it);     //MRI.
-        }else if(mod == "PT"){     Filenames_In_CT.push_back(*it);     //PET.
-        }else if(!QUIET){  FUNCWARN("Unrecognized modality '" << mod << "' in file '" << *it << "'. Ignoring it");
+        const auto mod = get_modality(it);
+        if(mod == "RTSTRUCT"){     Filenames_In_Struct.push_back(it); //Contours.
+        }else if(mod == "RTDOSE"){ Filenames_In_Dose.push_back(it);   //Dose data.
+        }else if(mod == "CT"){     Filenames_In_CT.push_back(it);     //CT.
+        }else if(mod == "OT"){     Filenames_In_CT.push_back(it);     //"Other."
+        }else if(mod == "US"){     Filenames_In_CT.push_back(it);     //Ultrasound.
+        }else if(mod == "MR"){     Filenames_In_CT.push_back(it);     //MRI.
+        }else if(mod == "PT"){     Filenames_In_CT.push_back(it);     //PET.
+        }else if(!QUIET){  FUNCWARN("Unrecognized modality '" << mod << "' in file '" << it << "'. Ignoring it");
         }
     }
 
@@ -377,10 +377,10 @@ if(false){
         Explicator X(FilenameLex);
 
         //Cycle through the contour_collections, stringify the data, and append it to file.
-        for(auto cc_it = DICOM_data.contour_data->ccs.begin(); cc_it != DICOM_data.contour_data->ccs.end(); ++cc_it){
-            const std::string rawname(cc_it->Raw_ROI_name);
+        for(auto & cc : DICOM_data.contour_data->ccs){
+            const std::string rawname(cc.Raw_ROI_name);
             const std::string clean(X(rawname));
-            const std::string rawcc(cc_it->write_to_string());
+            const std::string rawcc(cc.write_to_string());
 
             {
             std::stringstream out;
@@ -408,8 +408,8 @@ if(false){
         if(roi_numbers.empty()) FUNCERR("Unable to find matches within the file");
 
         //Output the matches.
-        for(auto n_it = roi_numbers.begin(); n_it != roi_numbers.end(); ++n_it){
-            std::cout << "Found match: '" << Contour_classifications[*n_it] << "'" << std::endl;
+        for(long roi_number : roi_numbers){
+            std::cout << "Found match: '" << Contour_classifications[roi_number] << "'" << std::endl;
         }
 
         //Exit normally.
@@ -589,9 +589,9 @@ if(false){
         //If given a _clean_ string query, then we need to locate a dirty string (from the file) which translates to it.
         {
           Explicator X(FilenameLex);
-          for(auto it=Contour_classifications.begin(); it != Contour_classifications.end(); ++it){
-              if( X(it->first) == "Left Parotid" ){
-                  roi_number = it->second;
+          for(const auto & Contour_classification : Contour_classifications){
+              if( X(Contour_classification.first) == "Left Parotid" ){
+                  roi_number = Contour_classification.second;
                   break;
               }
           }
@@ -613,8 +613,8 @@ if(false){
   
         std::fstream FO(FilenameOut.c_str(), std::ifstream::out);
         FO << "# DVH for structure \"" << Contour_classifications[roi_number] << "\"" << std::endl;
-        for(auto it = thedvh.begin(); it != thedvh.end(); ++it){
-            FO << it->first << " " << it->second << std::endl;
+        for(auto & it : thedvh){
+            FO << it.first << " " << it.second << std::endl;
         }
         FO.close();
     }
@@ -673,7 +673,7 @@ if(false){
                 const auto FilenameOutDVH = Get_Unique_Sequential_Filename(FilenameOut + "_contour_");
                 std::fstream FO(FilenameOutDVH.c_str(), std::ifstream::out);
                 FO << "# DVH for contours_with_meta #" << cc_selector << " , contour #" << c_selector << std::endl;
-                for(auto it = thedvh.begin(); it != thedvh.end(); ++it) FO << it->first << " " << it->second << std::endl;
+                for(auto & it : thedvh) FO << it.first << " " << it.second << std::endl;
                 FO.close();
                 FUNCINFO("Wrote DVH to '" << FilenameOutDVH << "'");
 
@@ -702,7 +702,7 @@ if(false){
             const auto FilenameOutDVH = Get_Unique_Sequential_Filename(FilenameOut + "_ccollection_");
             std::fstream FO(FilenameOutDVH.c_str(), std::ifstream::out);
             FO << "# DVH for contours_with_meta #" << cc_selector << std::endl;
-            for(auto it = thedvh.begin(); it != thedvh.end(); ++it) FO << it->first << " " << it->second << std::endl;
+            for(auto & it : thedvh) FO << it.first << " " << it.second << std::endl;
             FO.close();
             FUNCINFO("Wrote DVH to '" << FilenameOutDVH << "'");
 
@@ -722,9 +722,9 @@ if(false){
         specific_data.Meld(VERBOSE && !QUIET);
         auto mmmmdoses = specific_data.Bounded_Dose_Min_Mean_Median_Max();
         const auto p_anon_id = get_patient_ID(Filenames_In_Struct.front());
-        for(auto um_it = mmmmdoses.begin(); um_it != mmmmdoses.end(); ++um_it){
-            const auto name    = um_it->first->Raw_ROI_name;
-            const auto mmmm    = um_it->second;
+        for(auto & mmmmdose : mmmmdoses){
+            const auto name    = mmmmdose.first->Raw_ROI_name;
+            const auto mmmm    = mmmmdose.second;
             //const auto min     = std::get<0>(mmmm);
             const auto mean    = std::get<1>(mmmm);
             //const auto median  = std::get<2>(mmmm);
@@ -811,10 +811,10 @@ if(false){
         //Output the data to screen.
         std::cout << std::setw(25) << "Structure" << std::setw(15) << "min dose" << std::setw(15) << "mean dose" << std::setw(15) << "median dose" << std::setw(15) << "max dose" << "    " << "segmentation" << std::endl;
         std::cout << std::setw(25) << "---------" << std::setw(15) << "--------" << std::setw(15) << "---------" << std::setw(15) << "-----------" << std::setw(15) << "--------" << "    " << "------------" << std::endl;
-        for(auto um_it = mmmmdoses.begin(); um_it != mmmmdoses.end(); ++um_it){
-            const auto name    = um_it->first->Raw_ROI_name;
-            const auto seghist = Segmentations_to_Words( um_it->first->Segmentation_History );
-            const auto mmmm    = um_it->second;
+        for(auto & mmmmdose : mmmmdoses){
+            const auto name    = mmmmdose.first->Raw_ROI_name;
+            const auto seghist = Segmentations_to_Words( mmmmdose.first->Segmentation_History );
+            const auto mmmm    = mmmmdose.second;
             const auto min     = std::get<0>(mmmm);
             const auto mean    = std::get<1>(mmmm);
             const auto median  = std::get<2>(mmmm);
@@ -824,14 +824,14 @@ if(false){
         std::cout << std::endl;
         std::cout << std::setw(25) << "Structure" << std::setw(15) << "p" << std::setw(15) << "q" << std::setw(15) << "r" << std::setw(15) << "moment" << "    " << "segmentation" << std::endl;
         std::cout << std::setw(25) << "---------" << std::setw(15) << "-" << std::setw(15) << "-" << std::setw(15) << "-" << std::setw(15) << "------" << "    " << "------------" << std::endl;
-        for(auto m_it = moments.begin(); m_it != moments.end(); ++m_it){
-            const auto name    = m_it->first->Raw_ROI_name;
-            const auto seghist = Segmentations_to_Words( m_it->first->Segmentation_History );
-            const auto moms    = m_it->second;
-            for(auto mm_it = moms.begin(); mm_it != moms.end(); ++mm_it){
-                const auto p = mm_it->first[0], q = mm_it->first[1], r = mm_it->first[2];
+        for(auto & moment : moments){
+            const auto name    = moment.first->Raw_ROI_name;
+            const auto seghist = Segmentations_to_Words( moment.first->Segmentation_History );
+            const auto moms    = moment.second;
+            for(const auto & mom : moms){
+                const auto p = mom.first[0], q = mom.first[1], r = mom.first[2];
                 if((p+q+r) > 3) continue;
-                const auto themoment = mm_it->second;
+                const auto themoment = mom.second;
                 std::cout << std::setw(25) << name << std::setw(15) << p << std::setw(15) << q << std::setw(15) << r << std::setw(15) << themoment << "    " << seghist << std::endl;
             }
         }
@@ -924,16 +924,16 @@ if(false){
             std::stringstream query;
 
             std::map<std::string,size_t> ssnc; //Sub-segment number counter.
-            for(auto um_it = mmmmdoses.begin(); um_it != mmmmdoses.end(); ++um_it){
-                const auto name      = um_it->first->Raw_ROI_name; //Raw, dirty name ("l_par").
+            for(auto & mmmmdose : mmmmdoses){
+                const auto name      = mmmmdose.first->Raw_ROI_name; //Raw, dirty name ("l_par").
                 const auto ssn       = Xtostring<size_t>(ssnc[name]); //Sub-segment number (for the given structure).
                 ++(ssnc[name]);
 
                 const auto cleanname = X(name);                    //Clean, sanitized name ("Left Parotid").
-                const auto seghist   = Segmentations_to_Words( um_it->first->Segmentation_History );
+                const auto seghist   = Segmentations_to_Words( mmmmdose.first->Segmentation_History );
                 const auto desc      = name + " = "_s + seghist;
 
-                const auto mmmm    = um_it->second;
+                const auto mmmm    = mmmmdose.second;
                 const auto min     = std::get<0>(mmmm);
                 const auto mean    = std::get<1>(mmmm);
                 const auto median  = std::get<2>(mmmm);

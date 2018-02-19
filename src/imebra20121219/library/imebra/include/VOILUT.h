@@ -202,7 +202,7 @@ public:
 		// LUT found
 		//
 		///////////////////////////////////////////////////////////
-		if(m_pLUT != 0 && m_pLUT->getSize() != 0)
+		if(m_pLUT != nullptr && m_pLUT->getSize() != 0)
 		{
 			lut* pLUT = m_pLUT.get();
 			inputHandlerNumValues = ((imbxUint32)1) << pLUT->getBits();
@@ -278,9 +278,9 @@ public:
 		}
 	}
 
-	virtual bool isEmpty();
+	bool isEmpty() override;
 
-	virtual ptr<image> allocateOutputImage(ptr<image> pInputImage, imbxUint32 width, imbxUint32 height);
+	ptr<image> allocateOutputImage(ptr<image> pInputImage, imbxUint32 width, imbxUint32 height) override;
 
 protected:
 	ptr<dataSet> m_pDataSet;

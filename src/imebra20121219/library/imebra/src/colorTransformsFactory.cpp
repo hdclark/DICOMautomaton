@@ -143,10 +143,10 @@ std::wstring colorTransformsFactory::normalizeColorSpace(std::wstring colorSpace
 
 	// Colorspace transformed to uppercase
 	///////////////////////////////////////////////////////////
-	for(int adjustColorSpace = 0; adjustColorSpace<(int)normalizedColorSpace.length(); ++adjustColorSpace)
+	for(wchar_t & adjustColorSpace : normalizedColorSpace)
 	{
-		if(normalizedColorSpace[adjustColorSpace] >= L'a' && normalizedColorSpace[adjustColorSpace] <= L'z')
-			normalizedColorSpace[adjustColorSpace] -= L'a'-L'A';
+		if(adjustColorSpace >= L'a' && adjustColorSpace <= L'z')
+			adjustColorSpace -= L'a'-L'A';
 	}
 
 	return normalizedColorSpace;
@@ -342,15 +342,15 @@ ptr<colorTransform> colorTransformsFactory::getTransform(std::wstring startColor
 
 	if(normalizedStartColorSpace == normalizedEndColorSpace)
 	{
-		return ptr<colorTransform>(0);
+		return ptr<colorTransform>(nullptr);
 	}
 
-	for(tTransformsList::iterator scanSingleTransform = m_transformsList.begin(); scanSingleTransform != m_transformsList.end(); ++scanSingleTransform)
+	for(auto & scanSingleTransform : m_transformsList)
 	{
-		if( (*scanSingleTransform)->getInitialColorSpace() == normalizedStartColorSpace && 
-			(*scanSingleTransform)->getFinalColorSpace() == normalizedEndColorSpace)
+		if( scanSingleTransform->getInitialColorSpace() == normalizedStartColorSpace && 
+			scanSingleTransform->getFinalColorSpace() == normalizedEndColorSpace)
 		{
-			ptr<colorTransform> newTransform = (*scanSingleTransform)->createColorTransform();
+			ptr<colorTransform> newTransform = scanSingleTransform->createColorTransform();
 			return newTransform;
 		}
 	}
@@ -362,16 +362,16 @@ ptr<colorTransform> colorTransformsFactory::getTransform(std::wstring startColor
 			continue;
 		}
 
-		for(tTransformsList::iterator secondTransform = m_transformsList.begin(); secondTransform != m_transformsList.end(); ++secondTransform)
+		for(auto & secondTransform : m_transformsList)
 		{
-			if( (*secondTransform)->getFinalColorSpace() != normalizedEndColorSpace ||
-				(*secondTransform)->getInitialColorSpace() != (*scanMultipleTransforms)->getFinalColorSpace())
+			if( secondTransform->getFinalColorSpace() != normalizedEndColorSpace ||
+				secondTransform->getInitialColorSpace() != (*scanMultipleTransforms)->getFinalColorSpace())
 			{
 				continue;
 			}
 
 			ptr<colorTransform> newTransform0 = (*scanMultipleTransforms)->createColorTransform();
-			ptr<colorTransform> newTransform1 = (*secondTransform)->createColorTransform();
+			ptr<colorTransform> newTransform1 = secondTransform->createColorTransform();
 
 			ptr<transformsChain> chain(new transformsChain);
 			chain->addTransform(newTransform0);

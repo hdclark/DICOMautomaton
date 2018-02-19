@@ -71,14 +71,14 @@ namespace handlers
 class dataHandlerStringSH : public dataHandlerStringUnicode
 {
 public:
-	virtual imbxUint8 getPaddingByte() const;
+	imbxUint8 getPaddingByte() const override;
 
-	virtual imbxUint32 getUnitSize() const;
+	imbxUint32 getUnitSize() const override;
 
 protected:
 	// Return the maximum string's length
 	///////////////////////////////////////////////////////////
-	virtual imbxUint32 maxSize() const;
+	imbxUint32 maxSize() const override;
 
 };
 

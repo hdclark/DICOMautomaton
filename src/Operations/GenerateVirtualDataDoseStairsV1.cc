@@ -96,7 +96,7 @@ Drover GenerateVirtualDataDoseStairsV1(Drover DICOM_data, OperationArgPkg OptArg
     //This operation generates a dosimetric stairway. It can be used for testing how dosimetric data is transformed.
     Explicator X(FilenameLex);
 
-    typedef decltype(DICOM_data.image_data) loaded_imgs_storage_t;
+    using loaded_imgs_storage_t = decltype(DICOM_data.image_data);
     std::list<loaded_imgs_storage_t> loaded_imgs_storage;
     //std::shared_ptr<Contour_Data> loaded_contour_data_storage = std::make_shared<Contour_Data>();
 
@@ -240,7 +240,7 @@ Drover GenerateVirtualDataDoseStairsV1(Drover DICOM_data, OperationArgPkg OptArg
 
         auto cc = Encircle_Images_with_Contours(imgs, opts, metadata);
 
-        output->ccs.push_back( contours_with_meta() );
+        output->ccs.emplace_back( );
         output->ccs.back() = cc;
         output->ccs.back().Raw_ROI_name = ROIName; 
         output->ccs.back().ROI_number = ROINumber;

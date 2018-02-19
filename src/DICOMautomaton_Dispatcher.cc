@@ -294,7 +294,7 @@ int main(int argc, char* argv[]){
             }catch(const boost::filesystem::filesystem_error &){ }
 
             if(wasOK){
-                StandaloneFilesDirsReachable.push_back(auri);
+                StandaloneFilesDirsReachable.emplace_back(auri);
             }else{
                 FUNCWARN("Unable to resolve file or directory '" << auri << "'. Ignoring it");
             }

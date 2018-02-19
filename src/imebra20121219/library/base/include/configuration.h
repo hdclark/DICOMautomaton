@@ -46,22 +46,22 @@ Imebra is available at http://imebra.com
 
 
 /// This type represents a 1 byte unsigned integer.
-typedef unsigned char  imbxUint8;
+using imbxUint8 = unsigned char;
 
 /// This type represents a 2 bytes unsigned integer.
-typedef unsigned short imbxUint16;
+using imbxUint16 = unsigned short;
 
 /// This type represents a 4 bytes unsigned integer.
-typedef unsigned int  imbxUint32;
+using imbxUint32 = unsigned int;
 
 /// This type represents an 1 byte signed integer.
-typedef signed char    imbxInt8;
+using imbxInt8 = signed char;
 
 /// This type represents a 2 bytes signed integer.
-typedef signed short   imbxInt16;
+using imbxInt16 = short;
 
 /// This type represents a 4 bytes signed integer.
-typedef signed int    imbxInt32;
+using imbxInt32 = int;
 
 
 #if !defined(PUNTOEXE_WINDOWS) && !defined(PUNTOEXE_POSIX)

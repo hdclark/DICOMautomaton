@@ -47,7 +47,7 @@ This file is not included automatically by imebra.h
 #include "../../base/include/memory.h"
 #include "transformsChain.h"
 #include <memory>
-#include <string.h>
+#include <cstring>
 
 namespace puntoexe
 {
@@ -197,7 +197,7 @@ namespace puntoexe
 				///////////////////////////////////////////////////////////
 				if(visibleTopLeftX == visibleBottomRightX || visibleTopLeftY == visibleBottomRightY)
 				{
-					if(reuseMemory != 0)
+					if(reuseMemory != nullptr)
 					{
 						reuseMemory->resize(0);
 					}
@@ -226,7 +226,7 @@ namespace puntoexe
 				// Allocate the memory for the final bitmap
 				///////////////////////////////////////////////////////////
 				imbxUint32 memorySize(rowSizeBytes * (visibleBottomRightY - visibleTopLeftY));
-				if(reuseMemory == 0)
+				if(reuseMemory == nullptr)
 				{
 					reuseMemory = memoryPool::getMemoryPool()->getMemory(memorySize);
 				}
@@ -334,8 +334,8 @@ namespace puntoexe
 						imbxInt32* pAveragePointer = averagePixels.get();
 						imbxUint32* pNextSourceXIndex = sourcePixelIndex.get();
 
-						imbxUint8* pImagePointer(0);
-						imbxUint8* imageMemory(0);
+						imbxUint8* pImagePointer(nullptr);
+						imbxUint8* imageMemory(nullptr);
 
 						ptr<handlers::dataHandlerNumericBase> imageHandler;
 						if(m_transformsChain->isEmpty())

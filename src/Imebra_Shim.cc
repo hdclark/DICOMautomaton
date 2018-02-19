@@ -465,7 +465,7 @@ bimap<std::string,long int> get_ROI_tags_and_numbers(const std::string &Filename
         }
 
         ++i;
-    }while(SecondDataSet != NULL);
+    }while(SecondDataSet != nullptr);
     return the_pairs;
 }
 
@@ -512,7 +512,7 @@ std::unique_ptr<Contour_Data> get_Contour_Data(const std::string &filename){
                     const double x = the_data_handler->getDouble(N + 0);
                     const double y = the_data_handler->getDouble(N + 1);
                     const double z = the_data_handler->getDouble(N + 2);
-                    shtl.points.push_back(vec3<double>(x,y,z));
+                    shtl.points.emplace_back(x,y,z);
                 }
                 shtl.Reorient_Counter_Clockwise();
                 shtl.metadata = FileMetadata;
@@ -529,22 +529,22 @@ std::unique_ptr<Contour_Data> get_Contour_Data(const std::string &filename){
 
 
     //Now sort the contours into contour_with_metas. We sort based on ROI number.
-    for(auto m_it = mapcache.begin(); m_it != mapcache.end(); ++m_it){
-        output->ccs.push_back( contours_with_meta() ); //std::move(m_it->second) ) );
-        output->ccs.back() = m_it->second; 
+    for(auto & m_it : mapcache){
+        output->ccs.emplace_back( ); //std::move(m_it->second) ) );
+        output->ccs.back() = m_it.second; 
 
-        output->ccs.back().Raw_ROI_name       = std::get<0>(m_it->first);
-        output->ccs.back().ROI_number         = std::get<1>(m_it->first);
+        output->ccs.back().Raw_ROI_name       = std::get<0>(m_it.first);
+        output->ccs.back().ROI_number         = std::get<1>(m_it.first);
         output->ccs.back().Minimum_Separation = -1.0; //min_spacing;
         //output->ccs.back().Segmentation_History = ...empty...;
     }
 
     //Find the minimum separation between contours (which isn't zero).
     double min_spacing = 1E30;
-    for(auto cc_it = output->ccs.begin(); cc_it != output->ccs.end(); ++cc_it){ 
-        if(cc_it->contours.size() < 2) continue;
+    for(auto & cc : output->ccs){ 
+        if(cc.contours.size() < 2) continue;
 
-        for(auto c1_it = cc_it->contours.begin(); c1_it != --(cc_it->contours.end()); ++c1_it){
+        for(auto c1_it = cc.contours.begin(); c1_it != --(cc.contours.end()); ++c1_it){
             auto c2_it = c1_it;
             ++c2_it;
 
@@ -556,9 +556,9 @@ std::unique_ptr<Contour_Data> get_Contour_Data(const std::string &filename){
         }
     }
     //FUNCINFO("The minimum spacing found was " << min_spacing);
-    for(auto cc_it = output->ccs.begin(); cc_it != output->ccs.end(); ++cc_it){
-        cc_it->Minimum_Separation = min_spacing;
-        for(auto & cc : cc_it->contours) cc.metadata["MinimumSeparation"] = std::to_string(min_spacing);
+    for(auto & cc_it : output->ccs){
+        cc_it.Minimum_Separation = min_spacing;
+        for(auto & cc : cc_it.contours) cc.metadata["MinimumSeparation"] = std::to_string(min_spacing);
 //        output->ccs.back().metadata["MinimumSeparation"] = std::to_string(min_spacing);
     }
 
@@ -921,8 +921,8 @@ std::unique_ptr<Image_Array> Load_Image_Array(const std::string &FilenameIn){
 //These 'shared' pointers will actually be unique. This routine just converts from unique to shared for you.
 std::list<std::shared_ptr<Image_Array>>  Load_Image_Arrays(const std::list<std::string> &filenames){
     std::list<std::shared_ptr<Image_Array>> out;
-    for(auto it = filenames.begin(); it != filenames.end(); ++it){
-        out.push_back(std::move(Load_Image_Array(*it)));
+    for(const auto & filename : filenames){
+        out.push_back(std::move(Load_Image_Array(filename)));
     }
     return std::move(out);
 }
@@ -1054,7 +1054,7 @@ std::unique_ptr<Dose_Array>  Load_Dose_Array(const std::string &FilenameIn){
              puntoexe::imebra::transforms::colorTransforms::colorTransformsFactory::getColorTransformsFactory();
         ptr<puntoexe::imebra::transforms::transform> myColorTransform = 
              pFactory->getTransform(presImage->getColorSpace(), L"MONOCHROME2");//L"RGB");
-        if(myColorTransform != 0){ //If we get a '0', we do not need to transform the image.
+        if(myColorTransform != nullptr){ //If we get a '0', we do not need to transform the image.
             ptr<puntoexe::imebra::image> rgbImage(myColorTransform->allocateOutputImage(presImage,width,height));
             myColorTransform->runTransform(presImage, 0, 0, width, height, rgbImage, 0, 0);
             presImage = rgbImage;
@@ -1123,8 +1123,8 @@ std::unique_ptr<Dose_Array>  Load_Dose_Array(const std::string &FilenameIn){
 //These 'shared' pointers will actually be unique. This routine just converts from unique to shared for you.
 std::list<std::shared_ptr<Dose_Array>>  Load_Dose_Arrays(const std::list<std::string> &filenames){
     std::list<std::shared_ptr<Dose_Array>> out;
-    for(auto it = filenames.begin(); it != filenames.end(); ++it){
-        out.push_back(std::move(Load_Dose_Array(*it)));
+    for(const auto & filename : filenames){
+        out.push_back(std::move(Load_Dose_Array(filename)));
     }
     return std::move(out);
 }
@@ -1380,7 +1380,7 @@ void Write_Dose_Array(std::shared_ptr<Image_Array> IA, const std::string &Filena
     //Specify the list of acceptable character sets.
     {
         imebra::charsetsList::tCharsetsList suitableCharsets;
-        suitableCharsets.push_back(L"ISO_IR 100"); // "Latin alphabet 1"
+        suitableCharsets.emplace_back(L"ISO_IR 100"); // "Latin alphabet 1"
         //suitableCharsets.push_back(L"ISO_IR 192"); // utf-8
         tds->setCharsetsList(&suitableCharsets);
     }

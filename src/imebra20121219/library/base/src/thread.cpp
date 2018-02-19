@@ -50,7 +50,7 @@ Imebra is available at http://imebra.com
 
 #ifdef PUNTOEXE_POSIX
 #include <sched.h>
-#include <errno.h>
+#include <cerrno>
 #endif
 
 namespace puntoexe
@@ -134,7 +134,7 @@ bool thread::preDelete()
 
 	// Join the thread, then invalidate the handle
 	///////////////////////////////////////////////////////////
-	pthread_join(m_threadHandle, 0);
+	pthread_join(m_threadHandle, nullptr);
 
 	lockCriticalSection lockThreadHandle(&m_lockThreadHandle);
 	m_bThreadHandleValid = false;
@@ -199,7 +199,7 @@ void* thread::privateThreadFunction(void* pParameter)
 		exceptionsManager::getMessage();
 	}
 
-	return 0;
+	return nullptr;
 
 }
 
@@ -319,7 +319,7 @@ thread::tThreadId thread::getThreadId()
 #else
 	pthread_key_t* pKey = getSharedKey();
 	void* id = pthread_getspecific(*pKey);
-	if(id == 0)
+	if(id == nullptr)
 	{
 		id = getNextId();
 		pthread_setspecific(*pKey, id);
@@ -364,11 +364,11 @@ pthread_key_t* thread::getSharedKey()
 
 void* thread::getNextId()
 {
-	static char* m_nextId(0);
+	static char* m_nextId(nullptr);
 	static criticalSection m_criticalSection;
 
 	lockCriticalSection lockHere(&m_criticalSection);
-	if(++m_nextId == 0)
+	if(++m_nextId == nullptr)
 	{
 		m_nextId = (char*)100; // Overflow. Assume that the first created threads live longer
 	}

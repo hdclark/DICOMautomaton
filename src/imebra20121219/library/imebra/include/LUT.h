@@ -88,7 +88,7 @@ public:
 		m_bits(0),
 		m_bChecked(false),
 		m_bValid(false),
-		m_pMappedValues(0){}
+		m_pMappedValues(nullptr){}
 
 
 	/// \brief Initializes the lut with the values stored in
@@ -220,7 +220,7 @@ public:
 protected:
 	// Destructor
 	///////////////////////////////////////////////////////////
-	virtual ~lut();
+	~lut() override;
 
 	imbxUint32 m_size;
 	imbxInt32 m_firstMapped;

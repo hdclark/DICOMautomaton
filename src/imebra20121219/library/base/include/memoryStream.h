@@ -88,8 +88,8 @@ public:
 	// Virtual stream's functions
 	//
 	///////////////////////////////////////////////////////////
-	virtual void write(imbxUint32 startPosition, const imbxUint8* pBuffer, imbxUint32 bufferLength);
-	virtual imbxUint32 read(imbxUint32 startPosition, imbxUint8* pBuffer, imbxUint32 bufferLength);
+	void write(imbxUint32 startPosition, const imbxUint8* pBuffer, imbxUint32 bufferLength) override;
+	imbxUint32 read(imbxUint32 startPosition, imbxUint8* pBuffer, imbxUint32 bufferLength) override;
 
 protected:
 	ptr<memory> m_memory;

@@ -235,7 +235,7 @@ ptr<handlers::dataHandler> waveform::getIntegerData(imbxUint32 channel, imbxInt3
 	imbxUint32 originalPaddingValue(0);
 	bool bPaddingValueExists(false);
 	ptr<handlers::dataHandler> paddingTagHandler(m_pDataSet->getDataHandler(0x5400, 0, 0x100A, 0, false));
-	if(paddingTagHandler != 0)
+	if(paddingTagHandler != nullptr)
 	{
 		originalPaddingValue = paddingTagHandler->getUnsignedLong(0);
 		bPaddingValueExists = true;
@@ -244,7 +244,7 @@ ptr<handlers::dataHandler> waveform::getIntegerData(imbxUint32 channel, imbxInt3
 	
 	// Allocate a buffer for the destination data
 	///////////////////////////////////////////////////////////
-	ptr<buffer> waveformBuffer(new buffer(0, "SL"));
+	ptr<buffer> waveformBuffer(new buffer(nullptr, "SL"));
 	ptr<handlers::dataHandler> destinationHandler(waveformBuffer->getDataHandler(true, numSamples));
 
 	// Copy the data to the destination for unsigned values

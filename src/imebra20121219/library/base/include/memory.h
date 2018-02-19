@@ -60,7 +60,7 @@ namespace puntoexe
 ///
 /// @{
 
-typedef std::basic_string<imbxUint8> stringUint8;
+using stringUint8 = std::basic_string<imbxUint8>;
 
 ///////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////
@@ -177,7 +177,7 @@ public:
 	///  this feature.
 	///
 	///////////////////////////////////////////////////////////
-	virtual bool preDelete();
+	bool preDelete() override;
 
 protected:
 	std::unique_ptr<stringUint8> m_pMemoryBuffer;

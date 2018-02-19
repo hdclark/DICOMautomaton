@@ -66,7 +66,7 @@ namespace puntoexe
 #ifdef PUNTOEXE_WINDOWS
 	typedef CRITICAL_SECTION tCriticalSection;
 #else
-	typedef pthread_mutex_t tCriticalSection;
+	using tCriticalSection = pthread_mutex_t;
 #endif
 
 
@@ -195,7 +195,7 @@ private:
 ///  unlockMultipleCriticalSections().
 ///
 ///////////////////////////////////////////////////////////
-typedef std::list<criticalSection*> tCriticalSectionsList;
+using tCriticalSectionsList = std::list<criticalSection *>;
 
 /// \internal
 /// \brief Lock a collection of critical sections.

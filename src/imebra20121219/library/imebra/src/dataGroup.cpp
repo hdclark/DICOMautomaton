@@ -82,7 +82,7 @@ ptr<data> dataGroup::getTag(imbxUint16 tagId, bool bCreate /* =false */)
 	PUNTOEXE_FUNCTION_START(L"dataGroup::getTag");
 
 	ptr<data> pData=getData(tagId, 0);
-	if(pData == 0 && bCreate)
+	if(pData == nullptr && bCreate)
 	{
 		ptr<data> tempData(new data(this));
 		pData = tempData;
@@ -112,9 +112,9 @@ ptr<handlers::dataHandler> dataGroup::getDataHandler(imbxUint16 tagId, imbxUint3
 
 	ptr<data> tag=getTag(tagId, bWrite);
 
-	if(tag == 0)
+	if(tag == nullptr)
 	{
-		return ptr<handlers::dataHandler>(0);
+		return ptr<handlers::dataHandler>(nullptr);
 	}
 
 	return tag->getDataHandler(bufferId, bWrite, defaultType);
@@ -142,7 +142,7 @@ ptr<streamReader> dataGroup::getStreamReader(imbxUint16 tagId, imbxUint32 buffer
 
 	ptr<data> tag=getTag(tagId, false);
 
-	if(tag != 0)
+	if(tag != nullptr)
 	{
 		returnStream = tag->getStreamReader(bufferId);
 	}
@@ -172,7 +172,7 @@ ptr<streamWriter> dataGroup::getStreamWriter(imbxUint16 tagId, imbxUint32 buffer
 
 	ptr<data> tag=getTag(tagId, true);
 
-	if(tag != 0)
+	if(tag != nullptr)
 	{
 		returnStream = tag->getStreamWriter(bufferId, dataType);
 	}
@@ -200,7 +200,7 @@ ptr<handlers::dataHandlerRaw> dataGroup::getDataHandlerRaw(imbxUint16 tagId, imb
 
 	ptr<data> tag=getTag(tagId, bWrite);
 
-	if(tag == 0)
+	if(tag == nullptr)
 	{
 		ptr<handlers::dataHandlerRaw> emptyDataHandler;
 		return emptyDataHandler;
@@ -227,7 +227,7 @@ std::string dataGroup::getDataType(imbxUint16 tagId)
 
 	std::string bufferType;
 	ptr<data> tag = getTag(tagId, false);
-	if(tag != 0)
+	if(tag != nullptr)
 	{
 		bufferType = tag->getDataType();
 	}

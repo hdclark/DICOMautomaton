@@ -165,8 +165,8 @@ Drover UBC3TMRI_DCE_Experimental(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
 
     //Package the short and long images together as needed for the S0 and T1 calculations.
     std::list<std::reference_wrapper<planar_image_collection<float,double>>> tavgd_blurred;
-    tavgd_blurred.push_back(img_arr_long_tavgd_blurred->imagecoll);
-    for(auto img_ptr : short_tavgd_blurred) tavgd_blurred.push_back(img_ptr->imagecoll);
+    tavgd_blurred.emplace_back(img_arr_long_tavgd_blurred->imagecoll);
+    for(auto img_ptr : short_tavgd_blurred) tavgd_blurred.emplace_back(img_ptr->imagecoll);
 
     //Deep-copy and process the (possibly blurred) collated image array, generating a T1 map in-situ.
     DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( *img_arr_long_tavgd_blurred ) );

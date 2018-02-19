@@ -111,7 +111,7 @@ public:
 
 	// The data handler is disconnected
 	///////////////////////////////////////////////////////////
-	virtual bool preDelete();
+	bool preDelete() override;
 
 	/// \brief In a writing handler copies back the modified
 	///         data to the buffer.

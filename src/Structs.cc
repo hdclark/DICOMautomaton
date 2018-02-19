@@ -39,35 +39,35 @@
 std::string Segmentations_to_Words(const std::vector<uint32_t> &in){
     std::string out;
 
-    for(auto it = in.begin(); it != in.end(); ++it){
-         if(*it == 0){
+    for(unsigned int it : in){
+         if(it == 0){
              out += "Original";
              continue;
          }
 
          //Splitting type.
-         if(BITMASK_BITS_ARE_SET(*it,         Segmentations::volume)){
+         if(BITMASK_BITS_ARE_SET(it,         Segmentations::volume)){
              out += " -> Split per-volume";
-         }else if(BITMASK_BITS_ARE_SET(*it,   Segmentations::height)){
+         }else if(BITMASK_BITS_ARE_SET(it,   Segmentations::height)){
              out += " -> Split per-height";
-         }else if(BITMASK_BITS_ARE_SET(*it,   Segmentations::core_peel)){
+         }else if(BITMASK_BITS_ARE_SET(it,   Segmentations::core_peel)){
              out += " -> Core and Peeled";
-         }else if(BITMASK_BITS_ARE_SET(*it,   Segmentations::ray_cast)){
+         }else if(BITMASK_BITS_ARE_SET(it,   Segmentations::ray_cast)){
              out += " -> Ray Cast";
-         }else if(BITMASK_BITS_ARE_SET(*it,   Segmentations::contour)){    //Is this the appropriate spot for this?
+         }else if(BITMASK_BITS_ARE_SET(it,   Segmentations::contour)){    //Is this the appropriate spot for this?
              out += " -> Split per-contour";
-         }else if(BITMASK_BITS_ARE_SET(*it,   Segmentations::other_split)){
+         }else if(BITMASK_BITS_ARE_SET(it,   Segmentations::other_split)){
              out += " -> Custom split";
          }else{
              out += " -> (split type n/a)";
          }
 
          //Splitting planes/directions.
-         if(BITMASK_BITS_ARE_SET(*it,         Segmentations::coronal)){
+         if(BITMASK_BITS_ARE_SET(it,         Segmentations::coronal)){
              out += " | cor";
-         }else if(BITMASK_BITS_ARE_SET(*it,   Segmentations::transverse)){
+         }else if(BITMASK_BITS_ARE_SET(it,   Segmentations::transverse)){
              out += " | tnv";
-         }else if(BITMASK_BITS_ARE_SET(*it,   Segmentations::sagittal)){
+         }else if(BITMASK_BITS_ARE_SET(it,   Segmentations::sagittal)){
              out += " | sag";
 
 //         }else if(BITMASK_BITS_ARE_SET(*it,   Segmentations::medial)){
@@ -79,34 +79,34 @@ std::string Segmentations_to_Words(const std::vector<uint32_t> &in){
          }
 
          //Splitting orientations.
-         if(BITMASK_BITS_ARE_SET(*it,         Segmentations::left)){
+         if(BITMASK_BITS_ARE_SET(it,         Segmentations::left)){
              out += " : left";
-         }else if(BITMASK_BITS_ARE_SET(*it,   Segmentations::right)){
+         }else if(BITMASK_BITS_ARE_SET(it,   Segmentations::right)){
              out += " : rght";
 
-         }else if(BITMASK_BITS_ARE_SET(*it,   Segmentations::front)){
+         }else if(BITMASK_BITS_ARE_SET(it,   Segmentations::front)){
              out += " : frnt";
-         }else if(BITMASK_BITS_ARE_SET(*it,   Segmentations::back)){
+         }else if(BITMASK_BITS_ARE_SET(it,   Segmentations::back)){
              out += " : back";
 
-         }else if(BITMASK_BITS_ARE_SET(*it,   Segmentations::top)){
+         }else if(BITMASK_BITS_ARE_SET(it,   Segmentations::top)){
              out += " : top";
-         }else if(BITMASK_BITS_ARE_SET(*it,   Segmentations::bottom)){
+         }else if(BITMASK_BITS_ARE_SET(it,   Segmentations::bottom)){
              out += " : btm";
 
-         }else if(BITMASK_BITS_ARE_SET(*it,   Segmentations::outer)){
+         }else if(BITMASK_BITS_ARE_SET(it,   Segmentations::outer)){
              out += " : outer";
-         }else if(BITMASK_BITS_ARE_SET(*it,   Segmentations::inner)){
+         }else if(BITMASK_BITS_ARE_SET(it,   Segmentations::inner)){
              out += " : inner";
 
-         }else if(BITMASK_BITS_ARE_SET(*it,   Segmentations::medial)){
+         }else if(BITMASK_BITS_ARE_SET(it,   Segmentations::medial)){
              out += " : med";
-         }else if(BITMASK_BITS_ARE_SET(*it,   Segmentations::lateral)){
+         }else if(BITMASK_BITS_ARE_SET(it,   Segmentations::lateral)){
              out += " : lat";
 
-         }else if(BITMASK_BITS_ARE_SET(*it,   Segmentations::negative)){
+         }else if(BITMASK_BITS_ARE_SET(it,   Segmentations::negative)){
              out += " : neg";
-         }else if(BITMASK_BITS_ARE_SET(*it,   Segmentations::positive)){
+         }else if(BITMASK_BITS_ARE_SET(it,   Segmentations::positive)){
              out += " : pos";
          }else{
              out += " : (part n/a)";
@@ -163,12 +163,12 @@ void Contour_Data::operator=(const Contour_Data &rhs){
 // If individual contour plots are required, use the contour_of_points::Plot() method instead.
 void Contour_Data::Plot(void) const {
     Plotter a_plot;
-    for(auto cc_it=this->ccs.begin(); cc_it != this->ccs.end(); ++cc_it){
-        a_plot.ss << "# Default, simple plot for Contour with name '" << cc_it->Raw_ROI_name << "'" << std::endl;
-        for(auto c_it=cc_it->contours.begin(); c_it != cc_it->contours.end(); ++c_it){
-            for(auto p_it=c_it->points.begin(); p_it != c_it->points.end(); ++p_it){
-                a_plot.ss << p_it->x << " ";
-                a_plot.ss << p_it->y << " ";
+    for(const auto & cc : this->ccs){
+        a_plot.ss << "# Default, simple plot for Contour with name '" << cc.Raw_ROI_name << "'" << std::endl;
+        for(auto c_it=cc.contours.begin(); c_it != cc.contours.end(); ++c_it){
+            for(const auto & point : c_it->points){
+                a_plot.ss << point.x << " ";
+                a_plot.ss << point.y << " ";
                 //a_plot.ss << (*p_it).z << " ";
                 a_plot.ss << std::endl;
             }
@@ -191,37 +191,37 @@ std::unique_ptr<Contour_Data>  Contour_Data::Split_Per_Volume_Along_Given_Plane_
     std::unique_ptr<Contour_Data> output (new Contour_Data);
     const uint32_t segmentation = ( Segmentations::other_orientation | Segmentations::volume );
 
-    for(auto cc_it = this->ccs.begin(); cc_it != this->ccs.end(); ++cc_it){
+    for(const auto & cc : this->ccs){
         //In order to keep similar contours within the same contour_collection, we fill these buffers
         // with above/below data from a single contour_collection. We commit each buffer as a separate
         // contour_collection in the output. 
         contours_with_meta above, below;
 
-        above.ROI_number            = cc_it->ROI_number;
-        above.Minimum_Separation    = cc_it->Minimum_Separation;
-        above.Raw_ROI_name          = cc_it->Raw_ROI_name;
-        above.Segmentation_History  = cc_it->Segmentation_History;
+        above.ROI_number            = cc.ROI_number;
+        above.Minimum_Separation    = cc.Minimum_Separation;
+        above.Raw_ROI_name          = cc.Raw_ROI_name;
+        above.Segmentation_History  = cc.Segmentation_History;
         above.Segmentation_History.push_back(segmentation | Segmentations::positive); 
 
-        below.ROI_number            = cc_it->ROI_number;
-        below.Minimum_Separation    = cc_it->Minimum_Separation;
-        below.Raw_ROI_name          = cc_it->Raw_ROI_name;
-        below.Segmentation_History  = cc_it->Segmentation_History;
+        below.ROI_number            = cc.ROI_number;
+        below.Minimum_Separation    = cc.Minimum_Separation;
+        below.Raw_ROI_name          = cc.Raw_ROI_name;
+        below.Segmentation_History  = cc.Segmentation_History;
         below.Segmentation_History.push_back(segmentation | Segmentations::negative);
 
         //Generate the plane by cycling over all the contours in each contour_collection (ie. volume).
-        const vec3<double> r = cc_it->Centroid();
+        const vec3<double> r = cc.Centroid();
         const plane<double> theplane(N,r);
 
         //Split each contour and push it into the proper buffer.
-        for(auto c_it = cc_it->contours.begin(); c_it != cc_it->contours.end(); ++c_it){
+        for(auto c_it = cc.contours.begin(); c_it != cc.contours.end(); ++c_it){
             std::list<contour_of_points<double>> nclist = c_it->Split_Along_Plane(theplane);
-            for(auto nc_it = nclist.begin(); nc_it != nclist.end(); ++nc_it){
-                const auto rough_center = nc_it->First_N_Point_Avg(3); //Average_Point(); //Just need a point above or below.
+            for(auto & nc_it : nclist){
+                const auto rough_center = nc_it.First_N_Point_Avg(3); //Average_Point(); //Just need a point above or below.
                 if(theplane.Is_Point_Above_Plane(rough_center)){
-                    above.contours.push_back(*nc_it);
+                    above.contours.push_back(nc_it);
                 }else{
-                    below.contours.push_back(*nc_it);
+                    below.contours.push_back(nc_it);
                 }
             }
         }
@@ -235,8 +235,8 @@ std::unique_ptr<Contour_Data>  Contour_Data::Split_Per_Volume_Along_Coronal_Plan
     auto out(this->Split_Per_Volume_Along_Given_Plane_Unit_Normal(vec3<double>(0.0,1.0,0.0))); //Coronal plane.       ---- TODO: is this the correct plane, considering the patient DICOM orientation? (Check all files as test)
 
     //Update the segmentation history of the new contour. We augment the generic one with additional information.
-    for(auto cc_it = out->ccs.begin(); cc_it != out->ccs.end(); ++cc_it){
-        auto last_hist = --(cc_it->Segmentation_History.end());
+    for(auto & cc : out->ccs){
+        auto last_hist = --(cc.Segmentation_History.end());
         *last_hist |= Segmentations::coronal;
         if((*last_hist & Segmentations::negative) == Segmentations::negative){
             *last_hist |= Segmentations::front;   //Front (forward-facing direction) of the patient.
@@ -251,8 +251,8 @@ std::unique_ptr<Contour_Data>  Contour_Data::Split_Per_Volume_Along_Sagittal_Pla
     auto out(this->Split_Per_Volume_Along_Given_Plane_Unit_Normal(vec3<double>(1.0,0.0,0.0))); //Sagittal plane.        ---- TODO: is this the correct plane, considering the patient DICOM orientation? (Check all files as test)
 
     //Update the segmentation history of the new contour. We augment the generic one with additional information.
-    for(auto cc_it = out->ccs.begin(); cc_it != out->ccs.end(); ++cc_it){
-        auto last_hist = --(cc_it->Segmentation_History.end());
+    for(auto & cc : out->ccs){
+        auto last_hist = --(cc.Segmentation_History.end());
         *last_hist |= Segmentations::sagittal;
         if((*last_hist & Segmentations::negative) == Segmentations::negative){
             *last_hist |= Segmentations::left;     //Leftward direction for the patient.
@@ -267,8 +267,8 @@ std::unique_ptr<Contour_Data>  Contour_Data::Split_Per_Volume_Along_Transverse_P
     auto out(this->Split_Per_Volume_Along_Given_Plane_Unit_Normal(vec3<double>(0.0,0.0,1.0))); //Transverse plane.       ---- TODO: is this the correct plane, considering the patient DICOM orientation? (Check all files as test)
 
     //Update the segmentation history of the new contour. We augment the generic one with additional information.
-    for(auto cc_it = out->ccs.begin(); cc_it != out->ccs.end(); ++cc_it){
-        auto last_hist = --(cc_it->Segmentation_History.end());
+    for(auto & cc : out->ccs){
+        auto last_hist = --(cc.Segmentation_History.end());
         *last_hist |= Segmentations::transverse;
         if((*last_hist & Segmentations::negative) == Segmentations::negative){
             *last_hist |= Segmentations::bottom;  //Downward direction for the patient.
@@ -452,36 +452,36 @@ std::unique_ptr<Contour_Data>  Contour_Data::Split_Per_Contour_Along_Given_Plane
     std::unique_ptr<Contour_Data> output (new Contour_Data);
     const uint32_t segmentation = ( Segmentations::other_orientation | Segmentations::contour );
 
-    for(auto cc_it = this->ccs.begin(); cc_it != this->ccs.end(); ++cc_it){
+    for(const auto & cc : this->ccs){
         //In order to keep similar contours within the same contour_collection, we fill these buffers
         // with above/below data from a single contour_collection. We commit each buffer as a separate
         // contour_collection in the output. 
         contours_with_meta above, below;
 
-        above.ROI_number            = cc_it->ROI_number;
-        above.Minimum_Separation    = cc_it->Minimum_Separation;
-        above.Raw_ROI_name          = cc_it->Raw_ROI_name;
-        above.Segmentation_History  = cc_it->Segmentation_History;
+        above.ROI_number            = cc.ROI_number;
+        above.Minimum_Separation    = cc.Minimum_Separation;
+        above.Raw_ROI_name          = cc.Raw_ROI_name;
+        above.Segmentation_History  = cc.Segmentation_History;
         above.Segmentation_History.push_back(segmentation | Segmentations::positive); 
 
-        below.ROI_number            = cc_it->ROI_number;
-        below.Minimum_Separation    = cc_it->Minimum_Separation;
-        below.Raw_ROI_name          = cc_it->Raw_ROI_name;
-        below.Segmentation_History  = cc_it->Segmentation_History;
+        below.ROI_number            = cc.ROI_number;
+        below.Minimum_Separation    = cc.Minimum_Separation;
+        below.Raw_ROI_name          = cc.Raw_ROI_name;
+        below.Segmentation_History  = cc.Segmentation_History;
         below.Segmentation_History.push_back(segmentation | Segmentations::negative);
 
-        for(auto c_it = cc_it->contours.begin(); c_it != cc_it->contours.end(); ++c_it){
+        for(auto c_it = cc.contours.begin(); c_it != cc.contours.end(); ++c_it){
             const vec3<double> r = c_it->Centroid(); //Average_Point();
             const plane<double> theplane(N,r);
 
             //Split each contour and push it into the proper buffer.
             std::list<contour_of_points<double>> nclist = c_it->Split_Along_Plane(theplane);
-            for(auto nc_it = nclist.begin(); nc_it != nclist.end(); ++nc_it){
-                const auto rough_center = nc_it->First_N_Point_Avg(3); //Average_Point(); //Just need a point above or below.
+            for(auto & nc_it : nclist){
+                const auto rough_center = nc_it.First_N_Point_Avg(3); //Average_Point(); //Just need a point above or below.
                 if(theplane.Is_Point_Above_Plane(rough_center)){
-                    above.contours.push_back(*nc_it);
+                    above.contours.push_back(nc_it);
                 }else{
-                    below.contours.push_back(*nc_it);
+                    below.contours.push_back(nc_it);
                 }
             }
         }
@@ -495,8 +495,8 @@ std::unique_ptr<Contour_Data>  Contour_Data::Split_Per_Contour_Along_Coronal_Pla
     auto out(this->Split_Per_Contour_Along_Given_Plane_Unit_Normal(vec3<double>(0.0,1.0,0.0))); //Coronal plane.
 
     //Update the segmentation history of the new contour. We augment the generic one with additional information.
-    for(auto cc_it = out->ccs.begin(); cc_it != out->ccs.end(); ++cc_it){
-        auto last_hist = --(cc_it->Segmentation_History.end());
+    for(auto & cc : out->ccs){
+        auto last_hist = --(cc.Segmentation_History.end());
         *last_hist |= Segmentations::coronal;
         if(((*last_hist) & Segmentations::negative) == Segmentations::negative){
             *last_hist |= Segmentations::front;   //Front (forward-facing direction) of the patient.
@@ -511,8 +511,8 @@ std::unique_ptr<Contour_Data>  Contour_Data::Split_Per_Contour_Along_Sagittal_Pl
     auto out(this->Split_Per_Contour_Along_Given_Plane_Unit_Normal(vec3<double>(1.0,0.0,0.0))); //Sagittal plane.
 
     //Update the segmentation history of the new contour. We augment the generic one with additional information.
-    for(auto cc_it = out->ccs.begin(); cc_it != out->ccs.end(); ++cc_it){
-        auto last_hist = --(cc_it->Segmentation_History.end());
+    for(auto & cc : out->ccs){
+        auto last_hist = --(cc.Segmentation_History.end());
         *last_hist |= Segmentations::sagittal;
         if(((*last_hist) & Segmentations::negative) == Segmentations::negative){
             *last_hist |= Segmentations::left;     //Leftward direction for the patient.
@@ -533,35 +533,35 @@ std::unique_ptr<Contour_Data>  Contour_Data::Raycast_Split_Per_Contour_Against_G
     std::unique_ptr<Contour_Data> output (new Contour_Data);
     const uint32_t segmentation = ( Segmentations::other_orientation | Segmentations::contour | Segmentations::ray_cast );
 
-    for(auto cc_it = this->ccs.begin(); cc_it != this->ccs.end(); ++cc_it){
+    for(const auto & cc : this->ccs){
         //In order to keep similar contours within the same contour_collection, we fill these buffers
         // with above/below data from a single contour_collection. We commit each buffer as a separate
         // contour_collection in the output. 
         contours_with_meta above, below;
 
-        above.ROI_number            = cc_it->ROI_number;
-        above.Minimum_Separation    = cc_it->Minimum_Separation;
-        above.Raw_ROI_name          = cc_it->Raw_ROI_name;
-        above.Segmentation_History  = cc_it->Segmentation_History;
+        above.ROI_number            = cc.ROI_number;
+        above.Minimum_Separation    = cc.Minimum_Separation;
+        above.Raw_ROI_name          = cc.Raw_ROI_name;
+        above.Segmentation_History  = cc.Segmentation_History;
         above.Segmentation_History.push_back(segmentation | Segmentations::positive);
 
-        below.ROI_number            = cc_it->ROI_number;
-        below.Minimum_Separation    = cc_it->Minimum_Separation;
-        below.Raw_ROI_name          = cc_it->Raw_ROI_name;
-        below.Segmentation_History  = cc_it->Segmentation_History;
+        below.ROI_number            = cc.ROI_number;
+        below.Minimum_Separation    = cc.Minimum_Separation;
+        below.Raw_ROI_name          = cc.Raw_ROI_name;
+        below.Segmentation_History  = cc.Segmentation_History;
         below.Segmentation_History.push_back(segmentation | Segmentations::negative);
 
-        for(auto c_it = cc_it->contours.begin(); c_it != cc_it->contours.end(); ++c_it){
+        for(auto c_it = cc.contours.begin(); c_it != cc.contours.end(); ++c_it){
             const auto r = c_it->Centroid(); //Average_Point();
             const plane<double> theplane(U.unit(),r);
             //Split each contour and push it into the proper buffer.
             std::list<contour_of_points<double>> nclist = c_it->Split_Against_Ray(U.unit());
-            for(auto nc_it = nclist.begin(); nc_it != nclist.end(); ++nc_it){
-                const auto rough_center = nc_it->First_N_Point_Avg(3); //Average_Point(); //Just need a point above or below.
+            for(auto & nc_it : nclist){
+                const auto rough_center = nc_it.First_N_Point_Avg(3); //Average_Point(); //Just need a point above or below.
                 if(theplane.Is_Point_Above_Plane(rough_center)){
-                    above.contours.push_back(*nc_it);
+                    above.contours.push_back(nc_it);
                 }else{
-                    below.contours.push_back(*nc_it);
+                    below.contours.push_back(nc_it);
                 }
             }
         }
@@ -575,8 +575,8 @@ std::unique_ptr<Contour_Data>  Contour_Data::Raycast_Split_Per_Contour_Into_ANT_
     auto out(this->Raycast_Split_Per_Contour_Against_Given_Direction(vec3<double>(1.0,0.0,0.0)));
 
     //Update the segmentation history of the new contour. We augment the generic one with additional information.
-    for(auto cc_it = out->ccs.begin(); cc_it != out->ccs.end(); ++cc_it){
-        auto last_hist = --(cc_it->Segmentation_History.end());
+    for(auto & cc : out->ccs){
+        auto last_hist = --(cc.Segmentation_History.end());
         *last_hist |= Segmentations::ant_post;
         if(((*last_hist) & Segmentations::negative) == Segmentations::negative){
             *last_hist |= Segmentations::back;   //Back (from patient perspective) of the patient.
@@ -592,8 +592,8 @@ std::unique_ptr<Contour_Data>  Contour_Data::Raycast_Split_Per_Contour_Into_Late
     auto out(this->Raycast_Split_Per_Contour_Against_Given_Direction(vec3<double>(0.0,1.0,0.0)));
 
     //Update the segmentation history of the new contour. We augment the generic one with additional information.
-    for(auto cc_it = out->ccs.begin(); cc_it != out->ccs.end(); ++cc_it){
-        auto last_hist = --(cc_it->Segmentation_History.end());
+    for(auto & cc : out->ccs){
+        auto last_hist = --(cc.Segmentation_History.end());
         *last_hist |= Segmentations::lateral;
         if(((*last_hist) & Segmentations::negative) == Segmentations::negative){
             *last_hist |= Segmentations::left;   //Left side (from patient perspective) of the patient.
@@ -610,32 +610,32 @@ std::unique_ptr<Contour_Data> Contour_Data::Split_Core_and_Peel(double frac_dist
     std::unique_ptr<Contour_Data> output (new Contour_Data);
     const uint32_t segmentation = ( Segmentations::other_orientation | Segmentations::contour | Segmentations::core_peel );
 
-    for(auto cc_it = this->ccs.begin(); cc_it != this->ccs.end(); ++cc_it){
+    for(const auto & cc : this->ccs){
         //In order to keep similar contours within the same contour_collection, we fill these buffers
         // with above/below data from a single contour_collection. We commit each buffer as a separate
         // contour_collection in the output. 
         contours_with_meta core, peel;
 
-        core.ROI_number            = cc_it->ROI_number;
-        core.Minimum_Separation    = cc_it->Minimum_Separation;
-        core.Raw_ROI_name          = cc_it->Raw_ROI_name;
-        core.Segmentation_History  = cc_it->Segmentation_History;
+        core.ROI_number            = cc.ROI_number;
+        core.Minimum_Separation    = cc.Minimum_Separation;
+        core.Raw_ROI_name          = cc.Raw_ROI_name;
+        core.Segmentation_History  = cc.Segmentation_History;
         core.Segmentation_History.push_back(segmentation | Segmentations::inner);
 
-        peel.ROI_number            = cc_it->ROI_number;
-        peel.Minimum_Separation    = cc_it->Minimum_Separation;
-        peel.Raw_ROI_name          = cc_it->Raw_ROI_name;
-        peel.Segmentation_History  = cc_it->Segmentation_History;
+        peel.ROI_number            = cc.ROI_number;
+        peel.Minimum_Separation    = cc.Minimum_Separation;
+        peel.Raw_ROI_name          = cc.Raw_ROI_name;
+        peel.Segmentation_History  = cc.Segmentation_History;
         peel.Segmentation_History.push_back(segmentation | Segmentations::outer);
 
 //        const auto r = cc_it->Centroid();
-        auto split = cc_it->Split_Into_Core_Peel_Spherical(frac_dist);  
+        auto split = cc.Split_Into_Core_Peel_Spherical(frac_dist);  
 
-        for(auto s_c_it = split.back().contours.begin(); s_c_it != split.back().contours.end(); ++s_c_it){
-            if(s_c_it->points.size() >= 3) peel.contours.push_back(*s_c_it);
+        for(auto & contour : split.back().contours){
+            if(contour.points.size() >= 3) peel.contours.push_back(contour);
         }
-        for(auto s_c_it = split.front().contours.begin(); s_c_it != split.front().contours.end(); ++s_c_it){
-            if(s_c_it->points.size() >= 3) core.contours.push_back(*s_c_it);
+        for(auto & contour : split.front().contours){
+            if(contour.points.size() >= 3) core.contours.push_back(contour);
         }
 
 /*
@@ -698,8 +698,8 @@ std::unique_ptr<Contour_Data> Contour_Data::Reorder_LR_to_ML(void) const {
     // at least.
     vec3<double> sag_N(1.0,0.0,0.0); //Sagittal plane.
     vec3<double> avg_P(0.0,0.0,0.0);
-    for(auto cc_it = this->ccs.begin(); cc_it != this->ccs.end(); ++cc_it){
-        avg_P += cc_it->Centroid();    
+    for(const auto & cc : this->ccs){
+        avg_P += cc.Centroid();    
     }
     avg_P /= static_cast<double>(this->ccs.size());
     const plane<double> Plane(sag_N,avg_P);
@@ -819,8 +819,8 @@ std::unique_ptr<Contour_Data> Contour_Data::Reorder_LR_to_ML(void) const {
         newlist.sort(ascender); //Note std::list.sort() is a stable_sort!
    
         //Now insert them into the output.
-        for(auto it = newlist.begin(); it != newlist.end(); ++it){
-            output->ccs.push_back( *it );
+        for(auto & it : newlist){
+            output->ccs.push_back( it );
         }
 
         //Now insert them, advancing the iter.
@@ -875,10 +875,10 @@ std::unique_ptr<Contour_Data> Contour_Data::Get_Single_Contour_Number(long int N
 std::unique_ptr<Contour_Data> Contour_Data::Get_Contours_With_Numbers(const std::set<long int> &in) const {
     std::unique_ptr<Contour_Data> output (new Contour_Data);
 
-    for(auto n_it = in.begin(); n_it != in.end(); ++n_it){
+    for(long n_it : in){
         //Cycle over the contours, checking each against the input.
-        for(auto cc_it = this->ccs.begin(); cc_it != this->ccs.end(); ++cc_it){
-            if(cc_it->ROI_number == *n_it) output->ccs.push_back( *cc_it );
+        for(const auto & cc : this->ccs){
+            if(cc.ROI_number == n_it) output->ccs.push_back( cc );
         }
     }
 
@@ -894,11 +894,11 @@ std::unique_ptr<Contour_Data> Contour_Data::Get_Contours_With_Number(long int in
 std::unique_ptr<Contour_Data> Contour_Data::Get_Contours_With_Last_Segmentation(const uint32_t &in) const {
     std::unique_ptr<Contour_Data> output (new Contour_Data);
 
-    for(auto cc_it = this->ccs.begin(); cc_it != this->ccs.end(); ++cc_it){
-        if(cc_it->Segmentation_History.empty()) continue;
+    for(const auto & cc : this->ccs){
+        if(cc.Segmentation_History.empty()) continue;
 
-        auto last_hist = --(cc_it->Segmentation_History.end());
-        if((*last_hist & in) == in) output->ccs.push_back( *cc_it );
+        auto last_hist = --(cc.Segmentation_History.end());
+        if((*last_hist & in) == in) output->ccs.push_back( cc );
     }
 
     if(output->ccs.empty()) FUNCWARN("No data was pushed into the contour - maybe there is no structure with the desired contour number(s)?");
@@ -909,22 +909,22 @@ std::unique_ptr<Contour_Data> Contour_Data::Get_Contours_With_Last_Segmentation(
 std::unique_ptr<Contour_Data> Contour_Data::Get_Contours_With_Segmentation(const std::set<uint32_t> &in) const {
     std::unique_ptr<Contour_Data> output (new Contour_Data);
 
-    for(auto cc_it = this->ccs.begin(); cc_it != this->ccs.end(); ++cc_it){
+    for(const auto & cc : this->ccs){
         size_t counter = 0;
 
         //Cycle over the contours' segmentation history.
-        for(auto sh_it = cc_it->Segmentation_History.begin(); sh_it != cc_it->Segmentation_History.end(); ++sh_it){
+        for(auto sh_it = cc.Segmentation_History.begin(); sh_it != cc.Segmentation_History.end(); ++sh_it){
             //Cycle over the criteria.
-            for(auto cr_it = in.begin(); cr_it != in.end(); ++cr_it){
+            for(unsigned int cr_it : in){
                 //Check if the criteria and the segmentation history match. If so, increment the counter.
-                if( ((*cr_it) & (*sh_it)) == (*cr_it) ){
+                if( (cr_it & (*sh_it)) == cr_it ){
                     ++counter;
                 }
             }
         }
 
         //Check if all criteria have been satisfied. If so, push back.
-        if(counter == in.size()) output->ccs.push_back( *cc_it );
+        if(counter == in.size()) output->ccs.push_back( cc );
     }
 
     if(output->ccs.empty()) FUNCWARN("No data was pushed into the contour - maybe there is no structure with the desired contour number(s)?");
@@ -1432,7 +1432,7 @@ FUNCWARN("This routine will most likely NOT compute valid min/max from multiple 
     //
     //NOTE: Should I get rid of the idea of cycling through multiple dose data? The only way we get here is if the data
     // cannot be melded... This is probably not a worthwhile feature to keep in this code.
-    for(auto dd_it = dose_data_to_use.begin(); dd_it != dose_data_to_use.end(); ++dd_it){
+    for(auto & dd_it : dose_data_to_use){
 //    for(auto dd_it = this->dose_data.begin(); dd_it != this->dose_data.end(); ++dd_it){
         //Note: dd_it is something like std::list<std::shared_ptr<Dose_Array>>::iterator.
 
@@ -1442,7 +1442,7 @@ FUNCWARN("This routine will most likely NOT compute valid min/max from multiple 
         }
 
         //We now loop through all dose frames (slices) and accumulate dose within the contour bounds.
-        for(auto i_it = (*dd_it)->imagecoll.images.begin(); i_it != (*dd_it)->imagecoll.images.end(); ++i_it){
+        for(auto i_it = dd_it->imagecoll.images.begin(); i_it != dd_it->imagecoll.images.end(); ++i_it){
             //Note: i_it is something like std::list<planar_image<T,R>>::iterator.
     
             for(auto cc_it = this->contour_data->ccs.begin(); cc_it != this->contour_data->ccs.end(); ++cc_it){
@@ -1483,11 +1483,11 @@ FUNCWARN("This routine will most likely NOT compute valid min/max from multiple 
                     const float alrgnum(1E30);
                     float min_x = alrgnum, max_x = -alrgnum;
                     float min_y = alrgnum, max_y = -alrgnum;
-                    for(auto i = BB.points.begin(); i != BB.points.end(); ++i){
-                        if(i->x < min_x) min_x = i->x;
-                        if(i->x > max_x) max_x = i->x;
-                        if(i->y < min_y) min_y = i->y;
-                        if(i->y > max_y) max_y = i->y;
+                    for(const auto & point : BB.points){
+                        if(point.x < min_x) min_x = point.x;
+                        if(point.x > max_x) max_x = point.x;
+                        if(point.y < min_y) min_y = point.y;
+                        if(point.y > max_y) max_y = point.y;
                     }
                     if((min_x == alrgnum) || (min_y == alrgnum) || (max_x == -alrgnum) || (max_y == -alrgnum)){
                         FUNCERR("Unable to find a reasonable bounding box around this contour");
@@ -1522,7 +1522,7 @@ FUNCWARN("This routine will most likely NOT compute valid min/max from multiple 
                             //NOTE: Remember: this is some integer representing dose. If we want a clamped [0:1] 
                             // value, we would use the clamped_channel(...) member instead!
                             const auto pointval = static_cast<int64_t>(i_it->value(i,j,0)); //Greyscale or R channel. We assume the channels satisfy: R = G = B.
-                            const auto pointdose = (*dd_it)->grid_scale * static_cast<double>(pointval); 
+                            const auto pointdose = dd_it->grid_scale * static_cast<double>(pointval); 
 
                             if(mean_doses != nullptr){
                                 accumulated_dose[cc_it].first  += pointval;
@@ -1567,13 +1567,13 @@ FUNCWARN("This routine will most likely NOT compute valid min/max from multiple 
 
         //Determine the mean dose if required.
         if(mean_doses != nullptr){
-            for(auto it = accumulated_dose.begin(); it != accumulated_dose.end(); it++){
+            for(auto & it : accumulated_dose){
                 //If there were no voxels within the contour then we have nothing to do.
-                if(it->second.second == 0) continue;
+                if(it.second.second == 0) continue;
 
-                const auto cc_iter = it->first;
-                const auto ttldose = static_cast<double>(it->second.first)*(*dd_it)->grid_scale;
-                const auto numvxls = static_cast<double>(it->second.second);
+                const auto cc_iter = it.first;
+                const auto ttldose = static_cast<double>(it.second.first)*dd_it->grid_scale;
+                const auto numvxls = static_cast<double>(it.second.second);
 
                 if(ttldose < 0.0) FUNCERR("Total dose was negative (" << ttldose << "). This is not possible");
                 if(numvxls < 0.0) FUNCERR("Total number of voxels was negative (" << numvxls << "). This is not possible");
@@ -1586,14 +1586,14 @@ FUNCWARN("This routine will most likely NOT compute valid min/max from multiple 
 
     //Verification.
     if(min_max_doses != nullptr){
-         for(auto it = min_max_doses->begin(); it != min_max_doses->end(); ++it){
-             const auto min = it->second.first, max = it->second.second;
+         for(auto & min_max_dose : *min_max_doses){
+             const auto min = min_max_dose.second.first, max = min_max_dose.second.second;
              if(min > max){
                  //If there was no dose present, this is not an error.
-                 const auto cc_iter = it->first;
+                 const auto cc_iter = min_max_dose.first;
                  if((mean_doses != nullptr) && (mean_doses->find(cc_iter) != mean_doses->end()) && ((*mean_doses)[cc_iter] == 0.0)){
-                     it->second.first  = 0.0;
-                     it->second.second = 0.0;
+                     min_max_dose.second.first  = 0.0;
+                     min_max_dose.second.second = 0.0;
 
                  //Otherwise, we don't know if this is an error or not. Issue a warning but do not 
                  // adjust the values.
@@ -1645,10 +1645,10 @@ drover_bnded_dose_min_mean_max_dose_map_t Drover::Bounded_Dose_Min_Mean_Max(void
         FUNCERR("Number of means did not match number of min/maxs. Must have encountered a computational error");
     }
 
-    for(auto it = means.begin(); it != means.end(); ++it){
-        const auto theiter = it->first;
+    for(auto & it : means){
+        const auto theiter = it.first;
         const auto min    = minmaxs[theiter].first;
-        const auto mean   = it->second;
+        const auto mean   = it.second;
         const auto max    = minmaxs[theiter].second;
         outgoing[theiter] = std::make_tuple(min, mean, max); 
     }
@@ -1668,10 +1668,10 @@ drover_bnded_dose_min_mean_median_max_dose_map_t Drover::Bounded_Dose_Min_Mean_M
         FUNCERR("Number of means did not match number of min/maxs. Must have encountered a computational error");
     }
 
-    for(auto it = means.begin(); it != means.end(); ++it){
-        const auto theiter = it->first;
+    for(auto & it : means){
+        const auto theiter = it.first;
         const auto min    = minmaxs[theiter].first;
-        const auto mean   = it->second;
+        const auto mean   = it.second;
         const auto median = Stats::Median(bulks[theiter]);
         const auto max    = minmaxs[theiter].second;
         outgoing[theiter] = std::make_tuple(min, mean, median, max);
@@ -1690,20 +1690,20 @@ drover_bnded_dose_stat_moments_map_t Drover::Bounded_Dose_Normalized_Cent_Moment
  
     //We normalize moments with respect to the p,q,r=0,0,0 moment for the given cc.
     // We also REMOVE those for which normalization is not useful or defined.
-    for(auto m_it = outgoing.begin(); m_it != outgoing.end(); ++m_it){
+    for(auto & m_it : outgoing){
         //auto cc_it = m_it->first;
         //second is also a map --->  std::map<std::array<int,3>,double>.
-        const auto m000 = m_it->second[{0,0,0}];
+        const auto m000 = m_it.second[{0,0,0}];
         if(m000 == 0.0) FUNCERR("Cannot normalize - m000 is zero. Unable to continue");
 
-        auto mm_it = m_it->second.begin();
-        while(mm_it != m_it->second.end()){
+        auto mm_it = m_it.second.begin();
+        while(mm_it != m_it.second.end()){
             const auto p = mm_it->first[0], q = mm_it->first[1], r = mm_it->first[2];
             if((p+q+r) > 1){
                 mm_it->second /= pow(m000, 1.0 + static_cast<double>(p+q+r)/3.0);
                 ++mm_it;
             }else{
-                mm_it = m_it->second.erase(mm_it);
+                mm_it = m_it.second.erase(mm_it);
             }
         }
     }
@@ -1724,26 +1724,26 @@ Drover Drover::Segment_Contours_Heuristically(std::function<bool(bnded_dose_pos_
 
     //Now clear the existing contours in the copy, leaving empty collections
     // and valid iterators to them.
-    for(auto cc_it = out.contour_data->ccs.begin(); cc_it != out.contour_data->ccs.end(); ++cc_it){
-        cc_it->Segmentation_History.push_back(Segmentations::misc_marker);
-        cc_it->contours.clear();
+    for(auto & cc : out.contour_data->ccs){
+        cc.Segmentation_History.push_back(Segmentations::misc_marker);
+        cc.contours.clear();
     }
 
 
-    for(auto m_it = pos_dose.begin(); m_it != pos_dose.end(); ++m_it){
-        auto cc_it   = m_it->first;  //std::list<contours_with_meta>::iterator == bnded_dose_map_key_t.
-        auto thelist = m_it->second; //std::list<std::tuple<..,..,..,...>> 
+    for(auto & m_it : pos_dose){
+        auto cc_it   = m_it.first;  //std::list<contours_with_meta>::iterator == bnded_dose_map_key_t.
+        auto thelist = m_it.second; //std::list<std::tuple<..,..,..,...>> 
 
         //Cycle through the points (ie. centre of voxels) sorting them into heights.
         std::map<double, std::list<bnded_dose_pos_dose_tup_t>> levels;            //<--- use a std::set so we can auto-sort on indices?
         vec3<double> r_dx, r_dy;
-        for(auto l_it = thelist.begin(); l_it != thelist.end(); ++l_it){
-            const auto pos = std::get<0>(*l_it);
-            r_dx = std::get<1>(*l_it);
-            r_dy = std::get<2>(*l_it);
+        for(auto & l_it : thelist){
+            const auto pos = std::get<0>(l_it);
+            r_dx = std::get<1>(l_it);
+            r_dy = std::get<2>(l_it);
             const auto unit_z = r_dx.Cross(r_dy).unit();
             const auto z = pos.Dot(unit_z);
-            levels[z].push_back(std::move(*l_it));
+            levels[z].push_back(std::move(l_it));
         }
         thelist.clear();
 
@@ -1763,10 +1763,10 @@ Drover Drover::Segment_Contours_Heuristically(std::function<bool(bnded_dose_pos_
         // other points are on this level.
         for(auto lm_it = levels.begin(); lm_it != levels.end();    ){ 
             contour_collection<double> stage;
-            for(auto l_it = lm_it->second.begin(); l_it != lm_it->second.end(); ++l_it){
-                const auto pos  = std::get<0>(*l_it);
-                r_dx = std::get<1>(*l_it);
-                r_dy = std::get<2>(*l_it);
+            for(auto & l_it : lm_it->second){
+                const auto pos  = std::get<0>(l_it);
+                r_dx = std::get<1>(l_it);
+                r_dy = std::get<2>(l_it);
 
                 contour_of_points<double> shtl;
                 shtl.closed = true;
@@ -1779,9 +1779,9 @@ Drover Drover::Segment_Contours_Heuristically(std::function<bool(bnded_dose_pos_
             lm_it = levels.erase(lm_it);
 
             stage.Merge_Adjoining_Contours(points_are_equal);
-            for(auto c_it = stage.contours.begin(); c_it != stage.contours.end(); ++c_it){
-                c_it->Remove_Extraneous_Points(points_are_equal);
-                cc_it->contours.push_back( std::move(*c_it) );
+            for(auto & contour : stage.contours){
+                contour.Remove_Extraneous_Points(points_are_equal);
+                cc_it->contours.push_back( std::move(contour) );
             }
         }
     }
@@ -1821,8 +1821,8 @@ std::map<double,double>  Drover::Get_DVH(void) const {
     double test_dose = 0.0;
     do{
         cumulative = 0.0;
-        for(auto i = pixel_doses.begin(); i != pixel_doses.end(); ++i){
-            if(*i > test_dose) cumulative += 1.0;
+        for(double & pixel_dose : pixel_doses){
+            if(pixel_dose > test_dose) cumulative += 1.0;
         }
 
         const auto dose = test_dose;
@@ -1919,8 +1919,8 @@ bool Drover::Has_Contour_Data(void) const {
 bool Drover::Has_Dose_Data(void) const {
     //Does not verify the image data itself, it merely looks to see if we have any valid Dose_Arrays attached.
     if(this->dose_data.size() == 0) return false;
-    for(auto dd_it=this->dose_data.begin(); dd_it != this->dose_data.end(); ++dd_it){
-        if((*dd_it) == nullptr ) return false;
+    for(const auto & dd_it : this->dose_data){
+        if(dd_it == nullptr ) return false;
     }
     return true;
 }
@@ -1928,8 +1928,8 @@ bool Drover::Has_Dose_Data(void) const {
 bool Drover::Has_Image_Data(void) const {
     //Does not verify the image data itself, it merely looks to see if we have any valid Image_Arrays attached.
     if(this->image_data.size() == 0) return false;
-    for(auto id_it=this->image_data.begin(); id_it != this->image_data.end(); ++id_it){
-        if((*id_it) == nullptr ) return false; 
+    for(const auto & id_it : this->image_data){
+        if(id_it == nullptr ) return false; 
     }
     return true;
 }
@@ -2012,8 +2012,8 @@ void Drover::Plot_Dose_And_Contours(void) const {
     vec3<double> r;
 
     if(this->Has_Dose_Data()){
-        for(auto l_it = this->dose_data.begin(); l_it != this->dose_data.end(); ++l_it){  //std::list<std::shared_ptr<Dose_Array>>.
-            for(auto pi_it = (*l_it)->imagecoll.images.begin(); pi_it != (*l_it)->imagecoll.images.end(); ++pi_it){ //std::list<planar_image<T,R>> images.
+        for(const auto & l_it : this->dose_data){  //std::list<std::shared_ptr<Dose_Array>>.
+            for(auto pi_it = l_it->imagecoll.images.begin(); pi_it != l_it->imagecoll.images.end(); ++pi_it){ //std::list<planar_image<T,R>> images.
                 //Plot the corners in a closed contour to show the outline.
                 r = pi_it->position(             0,                0);    a_plot.Insert(r.x,r.y,r.z);
                 r = pi_it->position( pi_it->rows-1,                0);    a_plot.Insert(r.x,r.y,r.z);
@@ -2029,8 +2029,8 @@ void Drover::Plot_Dose_And_Contours(void) const {
     if(this->Has_Contour_Data()){
         for(auto cc_it = this->contour_data->ccs.begin(); cc_it != this->contour_data->ccs.end(); ++cc_it){ 
             for(auto c_it = cc_it->contours.begin(); c_it != cc_it->contours.end(); ++cc_it){
-                for(auto p_it = c_it->points.begin(); p_it != c_it->points.end(); ++p_it){
-                    a_plot.Insert(p_it->x, p_it->y, p_it->z);
+                for(auto & point : c_it->points){
+                    a_plot.Insert(point.x, point.y, point.z);
                 }
                 a_plot.Next_Line_Same_Style();
             }

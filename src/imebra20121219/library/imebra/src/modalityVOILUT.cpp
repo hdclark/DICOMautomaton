@@ -76,12 +76,12 @@ modalityVOILUT::modalityVOILUT(ptr<dataSet> pDataSet):
 	}
 
 	ptr<handlers::dataHandler> rescaleHandler(m_pDataSet->getDataHandler(0x0028, 0, 0x1053, 0x0, false));
-	if(rescaleHandler != 0)
+	if(rescaleHandler != nullptr)
 	{
 		m_rescaleSlope = rescaleHandler->getDouble(0);
 		m_bEmpty = false;
 	}
-	if(m_voiLut != 0 && m_voiLut->getSize() != 0)
+	if(m_voiLut != nullptr && m_voiLut->getSize() != 0)
 	{
 		m_bEmpty = false;
 	}
@@ -105,7 +105,7 @@ ptr<image> modalityVOILUT::allocateOutputImage(ptr<image> pInputImage, imbxUint3
 
 	// LUT
 	///////////////////////////////////////////////////////////
-	if(m_voiLut != 0 && m_voiLut->getSize() != 0 && m_voiLut->checkValidDataRange())
+	if(m_voiLut != nullptr && m_voiLut->getSize() != 0 && m_voiLut->checkValidDataRange())
 	{
 		imbxUint8 bits(m_voiLut->getBits());
 

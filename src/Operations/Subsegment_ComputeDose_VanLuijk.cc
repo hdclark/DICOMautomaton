@@ -468,7 +468,7 @@ Drover Subsegment_ComputeDose_VanLuijk(Drover DICOM_data, OperationArgPkg OptArg
             throw std::logic_error("Expected exactly two groups, above and below plane.");
         }
 
-        if(false) for(auto it = split2.begin(); it != split2.end(); ++it){ it->Plot(); }
+        if(false) for(auto & it : split2){ it.Plot(); }
 
         const contour_collection<double> cc_selection( split2.front() );
         if( cc_selection.contours.empty() ){

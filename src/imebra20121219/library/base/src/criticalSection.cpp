@@ -50,7 +50,7 @@ Imebra is available at http://imebra.com
 
 #ifdef PUNTOEXE_POSIX
 #include <sched.h>
-#include <errno.h>
+#include <cerrno>
 #endif
 
 namespace puntoexe
@@ -88,9 +88,9 @@ tCriticalSectionsList* lockMultipleCriticalSections(tCriticalSectionsList* pList
 	///////////////////////////////////////////////////////////
 	typedef std::map<criticalSection*, bool> tCriticalSectionsMap;
 	tCriticalSectionsMap CSmap;
-	for(tCriticalSectionsList::iterator copyCS = pList->begin(); copyCS != pList->end(); ++copyCS)
+	for(auto & copyCS : *pList)
 	{
-		CSmap[*copyCS] = true;
+		CSmap[copyCS] = true;
 	}
 
 	// Build a list that lists all the locked critical sections
@@ -114,11 +114,11 @@ tCriticalSectionsList* lockMultipleCriticalSections(tCriticalSectionsList* pList
 	{
 		pLockedList->clear();
 		bOK = true;
-		for(tCriticalSectionsMap::iterator lockCS = CSmap.begin(); lockCS != CSmap.end(); ++lockCS)
+		for(auto & lockCS : CSmap)
 		{
-			if(lockCS->first->tryLock())
+			if(lockCS.first->tryLock())
 			{
-				pLockedList->push_back(lockCS->first);
+				pLockedList->push_back(lockCS.first);
 				continue;
 			}
 

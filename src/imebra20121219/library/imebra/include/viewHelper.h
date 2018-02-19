@@ -532,7 +532,7 @@ public:
         {
             // Check if the image is visible in the specified area
             ///////////////////////////////////////////////////////////
-            if(m_originalImage == 0 ||
+            if(m_originalImage == nullptr ||
                     left >= m_rightPosition ||
                     top >= m_bottomPosition ||
                     right <= m_leftPosition ||
@@ -571,7 +571,7 @@ public:
 					m_cachedVisibleTop != (bitmapTop - m_topPosition) ||
 					m_cachedVisibleRight != (bitmapRight - m_leftPosition) ||
 					m_cachedVisibleBottom != (bitmapBottom - m_topPosition) ||
-					m_bitmapMemory == 0)
+					m_bitmapMemory == nullptr)
 				{
 					m_cachedWidth = m_rightPosition - m_leftPosition;
 					m_cachedHeight = m_bottomPosition - m_topPosition;
@@ -822,7 +822,7 @@ public:
 
 
 private:
-	typedef std::list<cursorLine> tCursorLinesList;
+	using tCursorLinesList = std::list<cursorLine>;
 
 	imbxInt32 m_bitmapAlign;
 

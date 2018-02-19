@@ -57,7 +57,7 @@ The class hides the platform specific implementations and supplies a common
 
 #if defined(PUNTOEXE_USEICONV)
 #include <iconv.h>
-#include <errno.h>
+#include <cerrno>
 #else
 #include "windows.h"
 #endif

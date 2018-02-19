@@ -70,36 +70,36 @@ class dataHandlerStringDS : public dataHandlerString
 public:
 	// Overwritten to use getDouble()
 	///////////////////////////////////////////////////////////
-	virtual imbxInt32 getSignedLong(const imbxUint32 index) const;
+	imbxInt32 getSignedLong(const imbxUint32 index) const override;
 
 	// Overwritten to use getDouble()
 	///////////////////////////////////////////////////////////
-	virtual imbxUint32 getUnsignedLong(const imbxUint32 index) const;
+	imbxUint32 getUnsignedLong(const imbxUint32 index) const override;
 
 	// Overwritten to use setDouble()
 	///////////////////////////////////////////////////////////
-	virtual void setSignedLong(const imbxUint32 index, const imbxInt32 value);
+	void setSignedLong(const imbxUint32 index, const imbxInt32 value) override;
 
 	// Overwritten to use setDouble()
 	///////////////////////////////////////////////////////////
-	virtual void setUnsignedLong(const imbxUint32 index, const imbxUint32 value);
+	void setUnsignedLong(const imbxUint32 index, const imbxUint32 value) override;
 
 	// Overwritten to use the exponential form if needed
 	///////////////////////////////////////////////////////////
-	virtual void setDouble(const imbxUint32 index, const double value);
+	void setDouble(const imbxUint32 index, const double value) override;
 
 	// Get the padding byte
 	///////////////////////////////////////////////////////////
-	virtual imbxUint8 getPaddingByte() const;
+	imbxUint8 getPaddingByte() const override;
 
 	// Get the element size
 	///////////////////////////////////////////////////////////
-	virtual imbxUint32 getUnitSize() const;
+	imbxUint32 getUnitSize() const override;
 
 protected:
 	// Return the maximum string's length
 	///////////////////////////////////////////////////////////
-	virtual imbxUint32 maxSize() const;
+	imbxUint32 maxSize() const override;
 
 };
 

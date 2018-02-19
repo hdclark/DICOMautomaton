@@ -253,7 +253,7 @@ void view::setZoomFactor(double zoomFactor, imbxInt32 centerPointX /* =-1 */, im
 
 	// If the image hasn't been set, then don't do anything
 	///////////////////////////////////////////////////////////
-	if(m_originalImage == 0)
+	if(m_originalImage == nullptr)
 	{
 		return;
 	}
@@ -284,7 +284,7 @@ void view::setZoomFactor(double zoomFactor, imbxInt32 centerPointX /* =-1 */, im
 ///////////////////////////////////////////////////////////
 void view::setZoomRect(imbxInt32 left, imbxInt32 top, imbxInt32 right, imbxInt32 bottom)
 {
-	if(m_originalImage == 0)
+	if(m_originalImage == nullptr)
 	{
 		return;
 	}
@@ -366,7 +366,7 @@ void view::zoomInOut(bool bZoomIn, imbxInt32 centerPointX /* =-1 */, imbxInt32 c
 ///////////////////////////////////////////////////////////
 bool view::isAutoZoom()
 {
-	if(m_originalImage == 0 || m_leftPosition == m_rightPosition || m_topPosition == m_bottomPosition)
+	if(m_originalImage == nullptr || m_leftPosition == m_rightPosition || m_topPosition == m_bottomPosition)
 	{
 		return false;
 	}
@@ -389,7 +389,7 @@ void view::getCenterPoint(imbxInt32* pCenterPointX, imbxInt32* pCenterPointY)
 	*pCenterPointX = 0;
 	*pCenterPointY = 0;
 
-	if(m_originalImage == 0)
+	if(m_originalImage == nullptr)
 	{
 		return;
 	}
@@ -430,7 +430,7 @@ void view::getCenterPoint(imbxInt32* pCenterPointX, imbxInt32* pCenterPointY)
 ///////////////////////////////////////////////////////////
 void view::setCenterPoint(imbxInt32 centerPointX, imbxInt32 centerPointY)
 {
-	if(m_originalImage == 0)
+	if(m_originalImage == nullptr)
 	{
 		return;
 	}
@@ -535,9 +535,9 @@ void view::endCursorDef(imbxInt32 cursorHotSpotX, imbxInt32 cursorHotSpotY)
 	// Copy the temporary lines into cursor's lines
 	///////////////////////////////////////////////////////////
 	m_cursorLines.clear();
-	for(tCursorLinesList::iterator copyLines = m_tempCursorLines.begin(); copyLines != m_tempCursorLines.end(); ++copyLines)
+	for(auto & m_tempCursorLine : m_tempCursorLines)
 	{
-		m_cursorLines.push_back(*copyLines);
+		m_cursorLines.push_back(m_tempCursorLine);
 	}
 	m_tempCursorLines.clear();
 
@@ -545,7 +545,7 @@ void view::endCursorDef(imbxInt32 cursorHotSpotX, imbxInt32 cursorHotSpotY)
 	// Do we have to scroll the window because the hotspot is
 	//  outside the visible area?
 	///////////////////////////////////////////////////////////
-	if(!isMouseCaptured() || m_originalImage == 0)
+	if(!isMouseCaptured() || m_originalImage == nullptr)
 	{
 		invalidate();
 		return;
@@ -610,9 +610,9 @@ void view::endCursorDef()
 	// Copy the temporary lines into cursor's lines
 	///////////////////////////////////////////////////////////
 	m_cursorLines.clear();
-	for(tCursorLinesList::iterator copyLines = m_tempCursorLines.begin(); copyLines != m_tempCursorLines.end(); ++copyLines)
+	for(auto & m_tempCursorLine : m_tempCursorLines)
 	{
-		m_cursorLines.push_back(*copyLines);
+		m_cursorLines.push_back(m_tempCursorLine);
 	}
 	m_tempCursorLines.clear();
 
@@ -642,7 +642,7 @@ void view::defCursorLine(imbxInt32 startPointX, imbxInt32 startPointY, imbxInt32
 ///////////////////////////////////////////////////////////
 imbxInt32 view::windowPosToImageX(imbxInt32 windowPosX)
 {
-	if(m_originalImage == 0)
+	if(m_originalImage == nullptr)
 	{
 		return 0;
 	}
@@ -670,7 +670,7 @@ imbxInt32 view::windowPosToImageX(imbxInt32 windowPosX)
 ///////////////////////////////////////////////////////////
 imbxInt32 view::windowPosToImageY(imbxInt32 windowPosY)
 {
-	if(m_originalImage == 0)
+	if(m_originalImage == nullptr)
 	{
 		return 0;
 	}
@@ -698,7 +698,7 @@ imbxInt32 view::windowPosToImageY(imbxInt32 windowPosY)
 ///////////////////////////////////////////////////////////
 double view::imagePosToMillimitersX(imbxInt32 imagePosX)
 {
-	if(m_originalImage == 0)
+	if(m_originalImage == nullptr)
 	{
 		return 0;
 	}
@@ -725,7 +725,7 @@ double view::imagePosToMillimitersX(imbxInt32 imagePosX)
 ///////////////////////////////////////////////////////////
 double view::imagePosToMillimitersY(imbxInt32 imagePosY)
 {
-	if(m_originalImage == 0)
+	if(m_originalImage == nullptr)
 	{
 		return 0;
 	}
@@ -753,7 +753,7 @@ double view::imagePosToMillimitersY(imbxInt32 imagePosY)
 ///////////////////////////////////////////////////////////
 imbxInt32 view::millimitersToImagePosX(double millimitersX)
 {
-	if(m_originalImage == 0)
+	if(m_originalImage == nullptr)
 	{
 		return 0;
 	}
@@ -780,7 +780,7 @@ imbxInt32 view::millimitersToImagePosX(double millimitersX)
 ///////////////////////////////////////////////////////////
 imbxInt32 view::millimitersToImagePosY(double millimitersY)
 {
-	if(m_originalImage == 0)
+	if(m_originalImage == nullptr)
 	{
 		return 0;
 	}
@@ -816,7 +816,7 @@ imbxInt32 view::millimitersToImagePosY(double millimitersY)
 ///////////////////////////////////////////////////////////
 void view::drawCursor(void* pDeviceContext)
 {
-	if(m_originalImage == 0)
+	if(m_originalImage == nullptr)
 	{
 		return;
 	}
@@ -824,17 +824,17 @@ void view::drawCursor(void* pDeviceContext)
 	imbxUint32 imageSizeX, imageSizeY;
 	m_originalImage->getSize(&imageSizeX, &imageSizeY);
 
-	for(tCursorLinesList::iterator scanLines = m_cursorLines.begin(); scanLines != m_cursorLines.end(); ++scanLines)
+	for(auto & m_cursorLine : m_cursorLines)
 	{
-		imbxInt32 x0 = scanLines->m_x0 * (m_rightPosition - m_leftPosition) / imageSizeX + m_leftPosition;
-		imbxInt32 y0 = scanLines->m_y0 * (m_bottomPosition - m_topPosition) / imageSizeY + m_topPosition;
-		imbxInt32 x1 = scanLines->m_x1 * (m_rightPosition - m_leftPosition) / imageSizeX + m_leftPosition;
-		imbxInt32 y1 = scanLines->m_y1 * (m_bottomPosition - m_topPosition) / imageSizeY + m_topPosition;
+		imbxInt32 x0 = m_cursorLine.m_x0 * (m_rightPosition - m_leftPosition) / imageSizeX + m_leftPosition;
+		imbxInt32 y0 = m_cursorLine.m_y0 * (m_bottomPosition - m_topPosition) / imageSizeY + m_topPosition;
+		imbxInt32 x1 = m_cursorLine.m_x1 * (m_rightPosition - m_leftPosition) / imageSizeX + m_leftPosition;
+		imbxInt32 y1 = m_cursorLine.m_y1 * (m_bottomPosition - m_topPosition) / imageSizeY + m_topPosition;
 
 		drawCursorLine(pDeviceContext,
 			x0, y0, x1, y1,
-			scanLines->m_red, scanLines->m_green, scanLines->m_blue,
-			scanLines->m_style, scanLines->m_width);
+			m_cursorLine.m_red, m_cursorLine.m_green, m_cursorLine.m_blue,
+			m_cursorLine.m_style, m_cursorLine.m_width);
 	}
 }
 
@@ -883,7 +883,7 @@ void view::updateImageRect(imbxInt32 centerPointX, imbxInt32 centerPointY)
 	imbxUint32 newScrollSizeX=scrollSizeX;
 	imbxUint32 newScrollSizeY=scrollSizeY;
 
-	if(m_originalImage != 0)
+	if(m_originalImage != nullptr)
 	{
 		imbxUint32 imageSizeX(0), imageSizeY(0);
 		m_originalImage->getSize(&imageSizeX, &imageSizeY);
@@ -983,9 +983,9 @@ ptr<image> view::getImage()
 void view::setImage(ptr<image> pImage, ptr<transforms::transformsChain> pChain)
 {
 	m_bUpdateImage = true;
-	if(pImage == 0)
+	if(pImage == nullptr)
 	{
-		m_originalImage = 0;
+		m_originalImage = nullptr;
 		setScrollSize(1, 1, true);
 		m_drawBitmap.release();
 		return;
@@ -997,7 +997,7 @@ void view::setImage(ptr<image> pImage, ptr<transforms::transformsChain> pChain)
 	double oldSizeMmX = 0;
 	double oldSizeMmY = 0;
 
-	if(m_originalImage != 0)
+	if(m_originalImage != nullptr)
 	{
 		m_originalImage->getSize(&oldSizeX, &oldSizeY);
 		m_originalImage->getSizeMm(&oldSizeMmX, &oldSizeMmY);

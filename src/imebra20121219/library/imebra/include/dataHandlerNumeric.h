@@ -179,7 +179,7 @@ public:
 
 	// Set the buffer's size, in data elements
 	///////////////////////////////////////////////////////////
-	virtual void setSize(const imbxUint32 elementsNumber)
+	void setSize(const imbxUint32 elementsNumber) override
 	{
 		PUNTOEXE_FUNCTION_START(L"dataHandlerNumeric::setSize");
 
@@ -192,7 +192,7 @@ public:
 
 	// Parse the tag's buffer and extract its content
 	///////////////////////////////////////////////////////////
-	virtual void parseBuffer(const ptr<memory>& memoryBuffer)
+	void parseBuffer(const ptr<memory>& memoryBuffer) override
 	{
 		PUNTOEXE_FUNCTION_START(L"dataHandlerNumeric::parseBuffer");
 
@@ -205,7 +205,7 @@ public:
 
 	// Rebuild the tag's buffer
 	///////////////////////////////////////////////////////////
-	virtual void buildBuffer(const ptr<memory>& memoryBuffer)
+	void buildBuffer(const ptr<memory>& memoryBuffer) override
 	{
 		PUNTOEXE_FUNCTION_START(L"dataHandlerNumeric::buildBuffer");
 
@@ -267,7 +267,7 @@ public:
 	///////////////////////////////////////////////////////////
 	virtual bool isSigned() const = 0;
 
-	virtual bool pointerIsValid(const imbxUint32 index) const
+	bool pointerIsValid(const imbxUint32 index) const override
 	{
 		return index < getSize();
 	}
@@ -324,12 +324,12 @@ public:
 	// Returns the size of an element managed by the
 	//  handler.
 	///////////////////////////////////////////////////////////
-	virtual imbxUint32 getUnitSize() const
+	imbxUint32 getUnitSize() const override
 	{
 		return sizeof(dataHandlerType);
 	}
 
-	virtual bool isSigned() const
+	bool isSigned() const override
 	{
 		dataHandlerType firstValue((dataHandlerType) -1);
 		dataHandlerType secondValue((dataHandlerType) 0);
@@ -338,28 +338,28 @@ public:
 
 	// Retrieve the data element as a signed long
 	///////////////////////////////////////////////////////////
-	virtual imbxInt32 getSignedLong(const imbxUint32 index) const
+	imbxInt32 getSignedLong(const imbxUint32 index) const override
 	{
 		return (imbxInt32) (((dataHandlerType*)m_pMemoryString)[index]);
 	}
 
 	// Retrieve the data element an unsigned long
 	///////////////////////////////////////////////////////////
-	virtual imbxUint32 getUnsignedLong(const imbxUint32 index) const
+	imbxUint32 getUnsignedLong(const imbxUint32 index) const override
 	{
 		return (imbxUint32) (((dataHandlerType*)m_pMemoryString)[index]);
 	}
 
 	// Retrieve the data element as a double
 	///////////////////////////////////////////////////////////
-	virtual double getDouble(const imbxUint32 index) const
+	double getDouble(const imbxUint32 index) const override
 	{
 		return (double) (((dataHandlerType*)m_pMemoryString)[index]);
 	}
 
 	// Retrieve the data element as a string
 	///////////////////////////////////////////////////////////
-	virtual std::string getString(const imbxUint32 index) const
+	std::string getString(const imbxUint32 index) const override
 	{
 		PUNTOEXE_FUNCTION_START(L"dataHandlerNumeric::getString");
 
@@ -372,7 +372,7 @@ public:
 
 	// Retrieve the data element as a unicode string
 	///////////////////////////////////////////////////////////
-	virtual std::wstring getUnicodeString(const imbxUint32 index) const
+	std::wstring getUnicodeString(const imbxUint32 index) const override
 	{
 		PUNTOEXE_FUNCTION_START(L"dataHandlerNumeric::getUnicodeString");
 
@@ -385,7 +385,7 @@ public:
 
 	// Retrieve the buffer's size in elements
 	///////////////////////////////////////////////////////////
-	virtual imbxUint32 getSize() const
+	imbxUint32 getSize() const override
 	{
 		PUNTOEXE_FUNCTION_START(L"dataHandlerNumeric::getSize");
 
@@ -396,28 +396,28 @@ public:
 
 	// Set the data element as a signed long
 	///////////////////////////////////////////////////////////
-	virtual void setSignedLong(const imbxUint32 index, const imbxInt32 value)
+	void setSignedLong(const imbxUint32 index, const imbxInt32 value) override
 	{
 		((dataHandlerType*)m_pMemoryString)[index] = (dataHandlerType)value;
 	}
 
 	// Set the data element as an unsigned long
 	///////////////////////////////////////////////////////////
-	virtual void setUnsignedLong(const imbxUint32 index, const imbxUint32 value)
+	void setUnsignedLong(const imbxUint32 index, const imbxUint32 value) override
 	{
 		((dataHandlerType*)m_pMemoryString)[index] = (dataHandlerType)value;
 	}
 
 	// Set the data element as a double
 	///////////////////////////////////////////////////////////
-	virtual void setDouble(const imbxUint32 index, const double value)
+	void setDouble(const imbxUint32 index, const double value) override
 	{
 		((dataHandlerType*)m_pMemoryString)[index] = (dataHandlerType)value;
 	}
 
 	// Set the data element as a string
 	///////////////////////////////////////////////////////////
-	virtual void setString(const imbxUint32 index, const std::string& value)
+	void setString(const imbxUint32 index, const std::string& value) override
 	{
 		PUNTOEXE_FUNCTION_START(L"dataHandlerNumeric::setString");
 
@@ -431,7 +431,7 @@ public:
 
 	// Set the data element as an unicode string
 	///////////////////////////////////////////////////////////
-	virtual void setUnicodeString(const imbxUint32 index, const std::wstring& value)
+	void setUnicodeString(const imbxUint32 index, const std::wstring& value) override
 	{
 		PUNTOEXE_FUNCTION_START(L"dataHandlerNumeric::setUnicodeString");
 
@@ -468,7 +468,7 @@ public:
 
 	// Copy the data from another handler
 	///////////////////////////////////////////////////////////
-	virtual void copyFrom(ptr<dataHandlerNumericBase> pSource)
+	void copyFrom(ptr<dataHandlerNumericBase> pSource) override
 	{
 		PUNTOEXE_FUNCTION_START(L"dataHandlerNumeric::copyFrom");
 
@@ -478,35 +478,35 @@ public:
 
 	}
 
-	virtual void copyFrom(imbxUint8* pMemory, size_t memorySize)
+	void copyFrom(imbxUint8* pMemory, size_t memorySize) override
 	{
 		copyFromMemory(pMemory, memorySize);
 	}
-	virtual void copyFrom(imbxInt8* pMemory, size_t memorySize)
+	void copyFrom(imbxInt8* pMemory, size_t memorySize) override
 	{
 		copyFromMemory(pMemory, memorySize);
 	}
-	virtual void copyFrom(imbxUint16* pMemory, size_t memorySize)
+	void copyFrom(imbxUint16* pMemory, size_t memorySize) override
 	{
 		copyFromMemory(pMemory, memorySize);
 	}
-	virtual void copyFrom(imbxInt16* pMemory, size_t memorySize)
+	void copyFrom(imbxInt16* pMemory, size_t memorySize) override
 	{
 		copyFromMemory(pMemory, memorySize);
 	}
-	virtual void copyFrom(imbxUint32* pMemory, size_t memorySize)
+	void copyFrom(imbxUint32* pMemory, size_t memorySize) override
 	{
 		copyFromMemory(pMemory, memorySize);
 	}
-	virtual void copyFrom(imbxInt32* pMemory, size_t memorySize)
+	void copyFrom(imbxInt32* pMemory, size_t memorySize) override
 	{
 		copyFromMemory(pMemory, memorySize);
 	}
-	virtual void copyFrom(float* pMemory, size_t memorySize)
+	void copyFrom(float* pMemory, size_t memorySize) override
 	{
 		copyFromMemory(pMemory, memorySize);
 	}
-	virtual void copyFrom(double* pMemory, size_t memorySize)
+	void copyFrom(double* pMemory, size_t memorySize) override
 	{
 		copyFromMemory(pMemory, memorySize);
 	}
@@ -526,35 +526,35 @@ public:
 		}
 	}
 
-	virtual void copyTo(imbxUint8* pMemory, size_t memorySize)
+	void copyTo(imbxUint8* pMemory, size_t memorySize) override
 	{
 		copyToMemory(pMemory, memorySize);
 	}
-	virtual void copyTo(imbxInt8* pMemory, size_t memorySize)
+	void copyTo(imbxInt8* pMemory, size_t memorySize) override
 	{
 		copyToMemory(pMemory, memorySize);
 	}
-	virtual void copyTo(imbxUint16* pMemory, size_t memorySize)
+	void copyTo(imbxUint16* pMemory, size_t memorySize) override
 	{
 		copyToMemory(pMemory, memorySize);
 	}
-	virtual void copyTo(imbxInt16* pMemory, size_t memorySize)
+	void copyTo(imbxInt16* pMemory, size_t memorySize) override
 	{
 		copyToMemory(pMemory, memorySize);
 	}
-	virtual void copyTo(imbxUint32* pMemory, size_t memorySize)
+	void copyTo(imbxUint32* pMemory, size_t memorySize) override
 	{
 		copyToMemory(pMemory, memorySize);
 	}
-	virtual void copyTo(imbxInt32* pMemory, size_t memorySize)
+	void copyTo(imbxInt32* pMemory, size_t memorySize) override
 	{
 		copyToMemory(pMemory, memorySize);
 	}
-	virtual void copyTo(float* pMemory, size_t memorySize)
+	void copyTo(float* pMemory, size_t memorySize) override
 	{
 		copyToMemory(pMemory, memorySize);
 	}
-	virtual void copyTo(double* pMemory, size_t memorySize)
+	void copyTo(double* pMemory, size_t memorySize) override
 	{
 		copyToMemory(pMemory, memorySize);
 	}
@@ -685,7 +685,7 @@ public:
 	///                      destination buffer
 	///
 	///////////////////////////////////////////////////////////
-	virtual void copyFromInt32Interleaved(const imbxInt32* pSource,
+	void copyFromInt32Interleaved(const imbxInt32* pSource,
 										  imbxUint32 sourceReplicateX,
 										  imbxUint32 sourceReplicateY,
 										  imbxUint32 destStartCol,
@@ -695,7 +695,7 @@ public:
 										  imbxUint32 destStartChannel,
 										  imbxUint32 destWidth,
 										  imbxUint32 destHeight,
-										  imbxUint32 destNumChannels)
+										  imbxUint32 destNumChannels) override
 	{
 		if(destStartCol >= destWidth || destStartRow >= destHeight)
 		{
@@ -783,7 +783,7 @@ public:
 	///                      source buffer
 	///
 	///////////////////////////////////////////////////////////
-	virtual void copyToInt32Interleaved(imbxInt32* pDest,
+	void copyToInt32Interleaved(imbxInt32* pDest,
 										imbxUint32 destSubSampleX,
 										imbxUint32 destSubSampleY,
 										imbxUint32 sourceStartCol,
@@ -793,7 +793,7 @@ public:
 										imbxUint32 sourceStartChannel,
 										imbxUint32 sourceWidth,
 										imbxUint32 sourceHeight,
-										imbxUint32 sourceNumChannels) const
+										imbxUint32 sourceNumChannels) const override
 	{
 		if(sourceStartCol >= sourceWidth || sourceStartRow >= sourceHeight)
 		{

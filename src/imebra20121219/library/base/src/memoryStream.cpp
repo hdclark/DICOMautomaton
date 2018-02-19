@@ -41,7 +41,7 @@ Imebra is available at http://imebra.com
 
 #include "../include/exception.h"
 #include "../include/memoryStream.h"
-#include <string.h>
+#include <cstring>
 
 namespace puntoexe
 {

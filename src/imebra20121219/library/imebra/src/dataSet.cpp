@@ -57,7 +57,7 @@ Imebra is available at http://imebra.com
 #include "../include/transformHighBit.h"
 #include "../include/transaction.h"
 #include <iostream>
-#include <string.h>
+#include <cstring>
 
 
 namespace puntoexe
@@ -98,7 +98,7 @@ ptr<data> dataSet::getTag(imbxUint16 groupId, imbxUint16 order, imbxUint16 tagId
 	ptr<data> pData;
 
 	ptr<dataGroup>	group=getGroup(groupId, order, bCreate);
-	if(group != 0)
+	if(group != nullptr)
 	{
 		pData=group->getTag(tagId, bCreate);
 	}
@@ -126,7 +126,7 @@ ptr<dataGroup> dataSet::getGroup(imbxUint16 groupId, imbxUint16 order, bool bCre
 
 	ptr<dataGroup> pData=getData(groupId, order);
 
-	if(pData == 0 && bCreate)
+	if(pData == nullptr && bCreate)
 	{
 		pData = new dataGroup(this);
 		setGroup(groupId, order, pData);
@@ -184,13 +184,13 @@ ptr<image> dataSet::getImage(imbxUint32 frameNumber)
 
 	// Return if the codec has not been found
 	///////////////////////////////////////////////////////////
-	if(pCodec == 0)
+	if(pCodec == nullptr)
 	{
 		PUNTOEXE_THROW(dataSetExceptionUnknownTransferSyntax, "None of the codecs support the specified transfer syntax");
 	}
 
 	ptr<imebra::data> imageTag = getTag(0x7fe0, 0x0, 0x0010, false);
-	if(imageTag == 0)
+	if(imageTag == nullptr)
 	{
 		PUNTOEXE_THROW(dataSetImageDoesntExist, "The requested image doesn't exist");
 	}
@@ -235,7 +235,7 @@ ptr<image> dataSet::getImage(imbxUint32 frameNumber)
 			if(firstBufferId == endBufferId - 1)
 			{
 				imageStream = imageTag->getStreamReader(firstBufferId);
-				if(imageStream == 0)
+				if(imageStream == nullptr)
 				{
 					PUNTOEXE_THROW(dataSetImageDoesntExist, "The requested image doesn't exist");
 				}
@@ -263,7 +263,7 @@ ptr<image> dataSet::getImage(imbxUint32 frameNumber)
 	// Then try to read the image from the next group with
 	//  id=0x7fe
 	///////////////////////////////////////////////////////////
-	if(imageStream == 0)
+	if(imageStream == nullptr)
 	{
 		imageStream = getStreamReader(0x7fe0, (imbxUint16)frameNumber, 0x0010, 0x0);
 		bDontNeedImagesPositions = true;
@@ -273,10 +273,10 @@ ptr<image> dataSet::getImage(imbxUint32 frameNumber)
 	//  include the image offsets and stores all the images
 	//  in one buffer
 	///////////////////////////////////////////////////////////
-	if(imageStream == 0)
+	if(imageStream == nullptr)
 	{
 		imageStream = imageTag->getStreamReader(0x0);
-		if(imageStream == 0)
+		if(imageStream == nullptr)
 		{
 			PUNTOEXE_THROW(dataSetImageDoesntExist, "The requested image doesn't exist");
 		}
@@ -330,7 +330,7 @@ ptr<image> dataSet::getImage(imbxUint32 frameNumber)
 	// If the image has been returned correctly, then set
 	//  the image's size
 	///////////////////////////////////////////////////////////
-	if(pImage != 0)
+	if(pImage != nullptr)
 	{
 		imbxUint32 sizeX, sizeY;
 		pImage->getSize(&sizeX, &sizeY);
@@ -398,7 +398,7 @@ void dataSet::setImage(imbxUint32 frameNumber, ptr<image> pImage, std::wstring t
 	// Select the right codec
 	///////////////////////////////////////////////////////////
 	ptr<codecs::codec> saveCodec(codecs::codecFactory::getCodec(transferSyntax));
-	if(saveCodec == 0L)
+	if(saveCodec == nullptr)
 	{
 		PUNTOEXE_THROW(dataSetExceptionUnknownTransferSyntax, "None of the codec support the requested transfer syntax");
 	}
@@ -406,7 +406,7 @@ void dataSet::setImage(imbxUint32 frameNumber, ptr<image> pImage, std::wstring t
 	// Do we have to save the basic offset table?
 	///////////////////////////////////////////////////////////
 	bool bEncapsulated = saveCodec->encapsulated(transferSyntax) ||
-		                 (getDataHandlerRaw(groupId, 0x0, tagId, 0x1, false) != 0);
+		                 (getDataHandlerRaw(groupId, 0x0, tagId, 0x1, false) != nullptr);
 
 	// Check if we are dealing with an old Dicom format...
 	///////////////////////////////////////////////////////////
@@ -473,7 +473,7 @@ void dataSet::setImage(imbxUint32 frameNumber, ptr<image> pImage, std::wstring t
 		///////////////////////////////////////////////////////////
 		ptr<handlers::dataHandlerRaw> imageHandler0 = getDataHandlerRaw(groupId, 0x0, tagId, 0x0, false);
 		ptr<handlers::dataHandlerRaw> imageHandler1 = getDataHandlerRaw(groupId, 0x0, tagId, 0x1, false);
-		if(imageHandler0 != 0L && imageHandler0->getSize() != 0 && imageHandler1 == 0L)
+		if(imageHandler0 != nullptr && imageHandler0->getSize() != 0 && imageHandler1 == nullptr)
 		{
 			// The first image must be moved forward, in order to
 			//  make some room for the offset table
@@ -481,7 +481,7 @@ void dataSet::setImage(imbxUint32 frameNumber, ptr<image> pImage, std::wstring t
 			dataHandlerType = imageHandler0->getDataType();
 			ptr<handlers::dataHandlerRaw> moveFirstImage = getDataHandlerRaw(groupId, 0x0, tagId, 0x1, true, dataHandlerType);
 
-			if(moveFirstImage == 0L)
+			if(moveFirstImage == nullptr)
 			{
 				PUNTOEXE_THROW(dataSetExceptionOldFormat, "Cannot move the first image");
 			}
@@ -492,7 +492,7 @@ void dataSet::setImage(imbxUint32 frameNumber, ptr<image> pImage, std::wstring t
 
 		// An image in the first buffer already exists.
 		///////////////////////////////////////////////////////////
-		if(imageHandler1 != 0)
+		if(imageHandler1 != nullptr)
 		{
 			dataHandlerType = imageHandler1->getDataType();
 		}
@@ -566,7 +566,7 @@ void dataSet::setImage(imbxUint32 frameNumber, ptr<image> pImage, std::wstring t
 		if(colorSpace == L"PALETTECOLOR")
 		{
 			ptr<palette> imagePalette(pImage->getPalette());
-			if(imagePalette != 0)
+			if(imagePalette != nullptr)
 			{
 				imagePalette->getRed()->fillHandlers(getDataHandler(0x0028, 0x0, 0x1101, 0, true), getDataHandler(0x0028, 0x0, 0x1201, 0, true));
 				imagePalette->getGreen()->fillHandlers(getDataHandler(0x0028, 0x0, 0x1102, 0, true), getDataHandler(0x0028, 0x0, 0x1202, 0, true));
@@ -621,7 +621,7 @@ imbxUint32 dataSet::getFrameOffset(imbxUint32 frameNumber)
 	// Retrieve the buffer containing the offsets
 	///////////////////////////////////////////////////////////
 	ptr<handlers::dataHandlerRaw> framesPointer = getDataHandlerRaw(0x7fe0, 0x0, 0x0010, 0, false);
-	if(framesPointer == 0)
+	if(framesPointer == nullptr)
 	{
 		return 0xffffffff;
 	}
@@ -668,7 +668,7 @@ imbxUint32 dataSet::getFrameBufferId(imbxUint32 offset, imbxUint32* pLengthToBuf
 	*pLengthToBuffer = 0;
 
 	ptr<data> imageTag = getTag(0x7fe0, 0, 0x0010, false);
-	if(imageTag == 0)
+	if(imageTag == nullptr)
 	{
 		return 0;
 	}
@@ -750,7 +750,7 @@ imbxUint32 dataSet::getFrameBufferIds(imbxUint32 frameNumber, imbxUint32* pFirst
 	*pEndBuffer = getFrameBufferId(endOffset, &endLength);
 
 	ptr<data> imageTag = getTag(0x7fe0, 0, 0x0010, false);
-	if(imageTag == 0)
+	if(imageTag == nullptr)
 	{
 		return 0;
 	}
@@ -780,7 +780,7 @@ imbxUint32 dataSet::getFirstAvailFrameBufferId()
 	PUNTOEXE_FUNCTION_START(L"dataSet::getFirstAvailFrameBufferId");
 
 	ptr<data> imageTag = getTag(0x7fe0, 0, 0x0010, false);
-	if(imageTag == 0)
+	if(imageTag == nullptr)
 	{
 		return 1;
 	}
@@ -896,7 +896,7 @@ ptr<dataSet> dataSet::getSequenceItem(imbxUint16 groupId, imbxUint16 order, imbx
 
 	ptr<data> tag=getTag(groupId, order, tagId, false);
 	ptr<dataSet> pDataSet;
-	if(tag != 0)
+	if(tag != nullptr)
 	{
 		pDataSet = tag->getDataSet(itemId);
 	}
@@ -925,7 +925,7 @@ ptr<lut> dataSet::getLut(imbxUint16 groupId, imbxUint16 tagId, imbxUint32 lutId)
 	ptr<lut> pLUT;
 	ptr<dataSet> embeddedLUT=getSequenceItem(groupId, 0, tagId, lutId);
 	std::string tagType = getDataType(groupId, 0, tagId);
-	if(embeddedLUT != 0)
+	if(embeddedLUT != nullptr)
 	{
 		ptr<lut> tempLut(new lut);
 		pLUT = tempLut;
@@ -959,9 +959,9 @@ ptr<waveform> dataSet::getWaveform(imbxUint32 waveformId)
 	lockObject lockAccess(this);
 
 	ptr<dataSet> embeddedWaveform(getSequenceItem(0x5400, 0, 0x0100, waveformId));
-	if(embeddedWaveform == 0)
+	if(embeddedWaveform == nullptr)
 	{
-		return 0;
+		return nullptr;
 	}
 
 	return new waveform(embeddedWaveform);
@@ -984,7 +984,7 @@ imbxInt32 dataSet::getSignedLong(imbxUint16 groupId, imbxUint16 order, imbxUint1
 	PUNTOEXE_FUNCTION_START(L"dataSet::getSignedLong");
 
 	ptr<handlers::dataHandler> dataHandler=getDataHandler(groupId, order, tagId, 0, false);
-	if(dataHandler == 0)
+	if(dataHandler == nullptr)
 	{
 		return 0;
 	}
@@ -1009,7 +1009,7 @@ void dataSet::setSignedLong(imbxUint16 groupId, imbxUint16 order, imbxUint16 tag
 	PUNTOEXE_FUNCTION_START(L"dataSet::setSignedLong");
 
 	ptr<handlers::dataHandler> dataHandler=getDataHandler(groupId, order, tagId, 0, true, defaultType);
-	if(dataHandler != 0)
+	if(dataHandler != nullptr)
 	{
 		if(dataHandler->getSize() <= elementNumber)
 		{
@@ -1036,7 +1036,7 @@ imbxUint32 dataSet::getUnsignedLong(imbxUint16 groupId, imbxUint16 order, imbxUi
 	PUNTOEXE_FUNCTION_START(L"dataSet::getUnignedLong");
 
 	ptr<handlers::dataHandler> dataHandler=getDataHandler(groupId, order, tagId, 0, false);
-	if(dataHandler == 0)
+	if(dataHandler == nullptr)
 	{
 		return 0;
 	}
@@ -1061,7 +1061,7 @@ void dataSet::setUnsignedLong(imbxUint16 groupId, imbxUint16 order, imbxUint16 t
 	PUNTOEXE_FUNCTION_START(L"dataSet::setUnsignedLong");
 
 	ptr<handlers::dataHandler> dataHandler=getDataHandler(groupId, order, tagId, 0, true, defaultType);
-	if(dataHandler != 0)
+	if(dataHandler != nullptr)
 	{
 		if(dataHandler->getSize() <= elementNumber)
 		{
@@ -1088,7 +1088,7 @@ double dataSet::getDouble(imbxUint16 groupId, imbxUint16 order, imbxUint16 tagId
 	PUNTOEXE_FUNCTION_START(L"dataSet::getDouble");
 
 	ptr<handlers::dataHandler> dataHandler=getDataHandler(groupId, order, tagId, 0, false);
-	if(dataHandler == 0)
+	if(dataHandler == nullptr)
 	{
 		return 0.0;
 	}
@@ -1113,7 +1113,7 @@ void dataSet::setDouble(imbxUint16 groupId, imbxUint16 order, imbxUint16 tagId, 
 	PUNTOEXE_FUNCTION_START(L"dataSet::setDouble");
 
 	ptr<handlers::dataHandler> dataHandler=getDataHandler(groupId, order, tagId, 0, true, defaultType);
-	if(dataHandler != 0)
+	if(dataHandler != nullptr)
 	{
 		if(dataHandler->getSize() <= elementNumber)
 		{
@@ -1141,7 +1141,7 @@ std::string dataSet::getString(imbxUint16 groupId, imbxUint16 order, imbxUint16 
 
 	ptr<handlers::dataHandler> dataHandler=getDataHandler(groupId, order, tagId, 0L, false);
 	std::string returnValue;
-	if(dataHandler != 0)
+	if(dataHandler != nullptr)
 	{
 		if(dataHandler->pointerIsValid(elementNumber))
 		{
@@ -1170,7 +1170,7 @@ std::wstring dataSet::getUnicodeString(imbxUint16 groupId, imbxUint16 order, imb
 
 	ptr<handlers::dataHandler> dataHandler=getDataHandler(groupId, order, tagId, 0L, false);
 	std::wstring returnValue;
-	if(dataHandler != 0)
+	if(dataHandler != nullptr)
 	{
 		if(dataHandler->pointerIsValid(elementNumber))
 		{
@@ -1198,7 +1198,7 @@ void dataSet::setString(imbxUint16 groupId, imbxUint16 order, imbxUint16 tagId, 
 	PUNTOEXE_FUNCTION_START(L"dataSet::setString");
 
 	ptr<handlers::dataHandler> dataHandler=getDataHandler(groupId, order, tagId, 0L, true, defaultType);
-	if(dataHandler != 0)
+	if(dataHandler != nullptr)
 	{
 		if(dataHandler->getSize() <= elementNumber)
 		{
@@ -1225,7 +1225,7 @@ void dataSet::setUnicodeString(imbxUint16 groupId, imbxUint16 order, imbxUint16 
 	PUNTOEXE_FUNCTION_START(L"dataSet::setUnicodeString");
 
 	ptr<handlers::dataHandler> dataHandler=getDataHandler(groupId, order, tagId, 0L, true, defaultType);
-	if(dataHandler != 0)
+	if(dataHandler != nullptr)
 	{
 		if(dataHandler->getSize() <= elementNumber)
 		{
@@ -1257,7 +1257,7 @@ ptr<handlers::dataHandler> dataSet::getDataHandler(imbxUint16 groupId, imbxUint1
 
 	ptr<handlers::dataHandler> pDataHandler;
 
-	if(group == 0)
+	if(group == nullptr)
 	{
 		return pDataHandler;
 	}
@@ -1294,7 +1294,7 @@ ptr<streamReader> dataSet::getStreamReader(imbxUint16 groupId, imbxUint16 order,
 
 	ptr<streamReader> returnStream;
 
-	if(group != 0)
+	if(group != nullptr)
 	{
 		returnStream = group->getStreamReader(tagId, bufferId);
 	}
@@ -1324,7 +1324,7 @@ ptr<streamWriter> dataSet::getStreamWriter(imbxUint16 groupId, imbxUint16 order,
 
 	ptr<streamWriter> returnStream;
 
-	if(group != 0)
+	if(group != nullptr)
 	{
 		returnStream = group->getStreamWriter(tagId, bufferId, dataType);
 	}
@@ -1351,7 +1351,7 @@ ptr<handlers::dataHandlerRaw> dataSet::getDataHandlerRaw(imbxUint16 groupId, imb
 
 	ptr<dataGroup>	group=getGroup(groupId, order, bWrite);
 
-	if(group == 0)
+	if(group == nullptr)
 	{
 		ptr<handlers::dataHandlerRaw> emptyDataHandler;
 		return emptyDataHandler;
@@ -1403,7 +1403,7 @@ std::string dataSet::getDataType(imbxUint16 groupId, imbxUint16 order, imbxUint1
 	std::string bufferType;
 
 	ptr<data> tag = getTag(groupId, order, tagId, false);
-	if(tag != 0)
+	if(tag != nullptr)
 	{
 		bufferType = tag->getDataType();
 	}
@@ -1419,9 +1419,9 @@ void dataSet::updateCharsetTag()
 	ptr<handlers::dataHandler> charsetHandler(getDataHandler(0x0008, 0, 0x0005, 0, true));
 	charsetHandler->setSize((imbxUint32)(charsets.size()));
 	imbxUint32 pointer(0);
-	for(charsetsList::tCharsetsList::iterator scanCharsets = charsets.begin(); scanCharsets != charsets.end(); ++scanCharsets)
+	for(auto & charset : charsets)
 	{
-		charsetHandler->setUnicodeString(pointer++, *scanCharsets);
+		charsetHandler->setUnicodeString(pointer++, charset);
 	}
 }
 
@@ -1439,7 +1439,7 @@ void dataSet::updateTagsCharset()
 {
 	charsetsList::tCharsetsList charsets;
 	ptr<handlers::dataHandler> charsetHandler(getDataHandler(0x0008, 0, 0x0005, 0, false));
-	if(charsetHandler != 0)
+	if(charsetHandler != nullptr)
 	{
 		for(imbxUint32 pointer(0); charsetHandler->pointerIsValid(pointer); ++pointer)
 		{

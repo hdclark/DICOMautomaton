@@ -78,9 +78,9 @@ namespace colorTransforms
 class RGBToMONOCHROME2: public colorTransform
 {
 public:
-	virtual std::wstring getInitialColorSpace();
-	virtual std::wstring getFinalColorSpace();
-	virtual ptr<colorTransform> createColorTransform();
+	std::wstring getInitialColorSpace() override;
+	std::wstring getFinalColorSpace() override;
+	ptr<colorTransform> createColorTransform() override;
 
         DEFINE_RUN_TEMPLATE_TRANSFORM;
 

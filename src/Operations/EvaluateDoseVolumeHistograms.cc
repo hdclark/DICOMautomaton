@@ -259,8 +259,8 @@ Drover EvaluateDoseVolumeHistograms(Drover DICOM_data, OperationArgPkg OptArgs, 
                 for(size_t i = 0;  ; ++i){
                     const double test_dose = D_min + (dD * i);
                     double cumulative = 0.0;
-                    for(auto i = av.second.begin(); i != av.second.end(); ++i){
-                        if(*i >= test_dose) cumulative += 1.0;
+                    for(double i : av.second){
+                        if(i >= test_dose) cumulative += 1.0;
                     }
 
                     const auto dose = test_dose; // No scaling.

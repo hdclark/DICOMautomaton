@@ -268,9 +268,9 @@ class Image_Array { //: public Base_Array {
 //Helper functions - unordered_map with iterator or pointer key types. Sorting/hashing is performed using the address of the object 
 // being pointed to. This is extremely convenient, but quite unsafe. Do not use if you do not understand how to avoid segfaults!
 //typedef std::list<contours_with_meta>::const_iterator  bnded_dose_map_key_t; //Required be an iterator or pointer.
-typedef std::list<contours_with_meta>::iterator  bnded_dose_map_key_t; //Required be an iterator or pointer.
+using bnded_dose_map_key_t = std::list<contours_with_meta>::iterator; //Required be an iterator or pointer.
 
-typedef std::function<bool (const bnded_dose_map_key_t &, const bnded_dose_map_key_t &)>  bnded_dose_map_cmp_func_t;
+using bnded_dose_map_cmp_func_t = std::function<bool (const bnded_dose_map_key_t &, const bnded_dose_map_key_t &)>;
 
 /*
 typedef std::function<size_t (const bnded_dose_map_key_t &)>  bnded_dose_map_cmp_func_t;
@@ -407,7 +407,7 @@ class Drover {
 
 
 
-typedef std::function<bool (const std::string &, const std::string)>  icase_str_lt_func_t;
+using icase_str_lt_func_t = std::function<bool (const std::string &, const std::string)>;
 typedef std::map<std::string, std::string, icase_str_lt_func_t> icase_map_t;
 constexpr auto icase_str_lt_lambda = [](const std::string &A, const std::string &B) -> bool {
     return std::lexicographical_compare(std::begin(A), std::end(A), std::begin(B), std::end(B));

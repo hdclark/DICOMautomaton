@@ -154,7 +154,7 @@ public:
 	/// Set the internal pointer to null.
 	///
 	///////////////////////////////////////////////////////////
-	ptr(): basePtr(0){}
+	ptr(): basePtr(nullptr){}
 
 	/// \brief Initializes the ptr object with a reference to
 	///         a baseObject.
@@ -529,7 +529,7 @@ public:
 	///         objects to be locked (see puntoexe::ptr).
 	///
 	///////////////////////////////////////////////////////////
-	typedef std::list<ptr<baseObject> > tObjectsList;
+	using tObjectsList = std::list<ptr<baseObject> >;
 
 	/// \brief Construct the locker and lock all the objects
 	///         listed in the pObjectsList.

@@ -77,9 +77,9 @@ namespace colorTransforms
 class MONOCHROME1ToMONOCHROME2: public colorTransform
 {
 public:
-	virtual std::wstring getInitialColorSpace();
-	virtual std::wstring getFinalColorSpace();
-	virtual ptr<colorTransform> createColorTransform();
+	std::wstring getInitialColorSpace() override;
+	std::wstring getFinalColorSpace() override;
+	ptr<colorTransform> createColorTransform() override;
 
         DEFINE_RUN_TEMPLATE_TRANSFORM;
 
@@ -147,9 +147,9 @@ public:
 class MONOCHROME2ToMONOCHROME1: public MONOCHROME1ToMONOCHROME2
 {
 public:
-	virtual std::wstring getInitialColorSpace();
-	virtual std::wstring getFinalColorSpace();
-	virtual ptr<colorTransform> createColorTransform();
+	std::wstring getInitialColorSpace() override;
+	std::wstring getFinalColorSpace() override;
+	ptr<colorTransform> createColorTransform() override;
 };
 
 /// @}

@@ -41,8 +41,8 @@ Imebra is available at http://imebra.com
 
 #include "../../base/include/exception.h"
 #include "../include/dataHandlerDateTimeBase.h"
-#include <time.h>
-#include <stdlib.h>
+#include <ctime>
+#include <cstdlib>
 #include <sstream>
 #include <iomanip>
 

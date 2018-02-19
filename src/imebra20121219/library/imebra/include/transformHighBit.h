@@ -87,7 +87,7 @@ public:
 class transformHighBit: public transformHandlers
 {
 public:
-        virtual ptr<image> allocateOutputImage(ptr<image> pInputImage, imbxUint32 width, imbxUint32 height);
+        ptr<image> allocateOutputImage(ptr<image> pInputImage, imbxUint32 width, imbxUint32 height) override;
 
         DEFINE_RUN_TEMPLATE_TRANSFORM;
 

@@ -124,7 +124,7 @@ public:
 	///////////////////////////////////////////////////////////
 	virtual ptr<colorTransform> createColorTransform()=0;
 
-        virtual ptr<image> allocateOutputImage(ptr<image> pInputImage, imbxUint32 width, imbxUint32 height);
+        ptr<image> allocateOutputImage(ptr<image> pInputImage, imbxUint32 width, imbxUint32 height) override;
 
 protected:
 	// Performs the color transform

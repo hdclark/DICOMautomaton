@@ -91,7 +91,7 @@ public:
 	///                      the string
 	/// 
 	///////////////////////////////////////////////////////////
-	virtual void setCharsetsList(charsetsList::tCharsetsList* pCharsetsList);
+	void setCharsetsList(charsetsList::tCharsetsList* pCharsetsList) override;
 	
 	/// \internal
 	/// \brief Retrieve the charset used in the encoded string
@@ -100,16 +100,16 @@ public:
 	///                      dicom charsets used in the string
 	///
 	///////////////////////////////////////////////////////////
-	virtual void getCharsetsList(charsetsList::tCharsetsList* pCharsetsList) const;
+	void getCharsetsList(charsetsList::tCharsetsList* pCharsetsList) const override;
 
 protected:
 	// Convert a string to unicode, using the dicom charsets
 	///////////////////////////////////////////////////////////
-	virtual std::wstring convertToUnicode(const std::string& value) const;
+	std::wstring convertToUnicode(const std::string& value) const override;
 
 	// Convert a string from unicode, using the dicom charsets
 	///////////////////////////////////////////////////////////
-	virtual std::string convertFromUnicode(const std::wstring& value, charsetsList::tCharsetsList* pCharsetsList) const;
+	std::string convertFromUnicode(const std::wstring& value, charsetsList::tCharsetsList* pCharsetsList) const override;
 
 	charsetConversion m_charsetConversion;
 	charsetConversion m_localeCharsetConversion;

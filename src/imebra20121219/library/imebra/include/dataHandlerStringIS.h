@@ -70,24 +70,24 @@ class dataHandlerStringIS : public dataHandlerString
 public:
 	// Overwritten to use getSignedLong()
 	///////////////////////////////////////////////////////////
-	virtual double getDouble(const imbxUint32 index) const;
+	double getDouble(const imbxUint32 index) const override;
 
 	// Overwritten to use setSignedLong()
 	///////////////////////////////////////////////////////////
-	virtual void setDouble(const imbxUint32 index, const double value);
+	void setDouble(const imbxUint32 index, const double value) override;
 
 	// Get the padding byte
 	///////////////////////////////////////////////////////////
-	virtual imbxUint8 getPaddingByte() const;
+	imbxUint8 getPaddingByte() const override;
 
 	// Get the element size
 	///////////////////////////////////////////////////////////
-	virtual imbxUint32 getUnitSize() const;
+	imbxUint32 getUnitSize() const override;
 
 protected:
 	// Return the maximum string's length
 	///////////////////////////////////////////////////////////
-	virtual imbxUint32 maxSize() const;
+	imbxUint32 maxSize() const override;
 };
 
 } // namespace handlers

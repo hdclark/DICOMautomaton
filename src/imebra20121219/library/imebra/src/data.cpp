@@ -272,7 +272,7 @@ ptr<handlers::dataHandler> data::getDataHandler(imbxUint32 bufferId, bool bWrite
 
 	// If the buffer doesn't exist, then create a new one
 	///////////////////////////////////////////////////////////
-	if(pTempBuffer == 0 && bWrite)
+	if(pTempBuffer == nullptr && bWrite)
 	{
 		pTempBuffer = new buffer(this, defaultType);
 		pTempBuffer->setCharsetsList(&m_charsetsList);
@@ -281,7 +281,7 @@ ptr<handlers::dataHandler> data::getDataHandler(imbxUint32 bufferId, bool bWrite
 
 	// Retrieve the data handler
 	///////////////////////////////////////////////////////////
-	if(pTempBuffer == 0)
+	if(pTempBuffer == nullptr)
 	{
 		ptr<handlers::dataHandler> emptyDataHandler;
 		return emptyDataHandler;
@@ -329,7 +329,7 @@ ptr<handlers::dataHandlerRaw> data::getDataHandlerRaw(imbxUint32 bufferId, bool 
 
 	// If the buffer doesn't exist, then create a new one
 	///////////////////////////////////////////////////////////
-	if( pTempBuffer == 0 && bWrite )
+	if( pTempBuffer == nullptr && bWrite )
 	{
 		pTempBuffer = new buffer(this, defaultType);
 		pTempBuffer->setCharsetsList(&m_charsetsList);
@@ -338,7 +338,7 @@ ptr<handlers::dataHandlerRaw> data::getDataHandlerRaw(imbxUint32 bufferId, bool 
 
 	// Retrieve the data handler
 	///////////////////////////////////////////////////////////
-	if( pTempBuffer == 0 )
+	if( pTempBuffer == nullptr )
 	{
 		ptr<handlers::dataHandlerRaw> emptyDataHandler;
 		return emptyDataHandler;
@@ -419,7 +419,7 @@ ptr<streamWriter> data::getStreamWriter(imbxUint32 bufferId, std::string dataTyp
 
 	// If the buffer doesn't exist, then create a new one
 	///////////////////////////////////////////////////////////
-	if(pTempBuffer == 0)
+	if(pTempBuffer == nullptr)
 	{
 		pTempBuffer = new buffer(this, dataType);
 		m_buffers[bufferId]=pTempBuffer;
@@ -427,7 +427,7 @@ ptr<streamWriter> data::getStreamWriter(imbxUint32 bufferId, std::string dataTyp
 
 	// Retrieve the data handler
 	///////////////////////////////////////////////////////////
-	if(pTempBuffer == 0)
+	if(pTempBuffer == nullptr)
 	{
 		ptr<streamWriter> emptyStream;
 		return emptyStream;
@@ -460,7 +460,7 @@ ptr<dataSet> data::getDataSet(imbxUint32 dataSetId)
 	///////////////////////////////////////////////////////////
 	if(m_embeddedDataSets.size() <= dataSetId)
 	{
-		return 0;
+		return nullptr;
 	}
 
 	return m_embeddedDataSets[dataSetId];
@@ -538,14 +538,14 @@ void data::setCharsetsList(charsetsList::tCharsetsList* pCharsetsList)
 	m_charsetsList.clear();
 	charsetsList::updateCharsets(pCharsetsList, &m_charsetsList);
 
-	for(tEmbeddedDatasetsMap::iterator scanEmbeddedDataSets = m_embeddedDataSets.begin(); scanEmbeddedDataSets != m_embeddedDataSets.end(); ++scanEmbeddedDataSets)
+	for(auto & m_embeddedDataSet : m_embeddedDataSets)
 	{
-		(*scanEmbeddedDataSets)->setCharsetsList(pCharsetsList);
+		m_embeddedDataSet->setCharsetsList(pCharsetsList);
 	}
 
-	for(tBuffersMap::iterator scanBuffers = m_buffers.begin(); scanBuffers != m_buffers.end(); ++scanBuffers)
+	for(auto & m_buffer : m_buffers)
 	{
-		scanBuffers->second->setCharsetsList(pCharsetsList);
+		m_buffer.second->setCharsetsList(pCharsetsList);
 	}
 
 	PUNTOEXE_FUNCTION_END();
@@ -570,17 +570,17 @@ void data::getCharsetsList(charsetsList::tCharsetsList* pCharsetsList)
 	
 	m_charsetsList.clear();
 
-	for(tEmbeddedDatasetsMap::iterator scanEmbeddedDataSets = m_embeddedDataSets.begin(); scanEmbeddedDataSets != m_embeddedDataSets.end(); ++scanEmbeddedDataSets)
+	for(auto & m_embeddedDataSet : m_embeddedDataSets)
 	{
 		charsetsList::tCharsetsList charsets;
-		(*scanEmbeddedDataSets)->getCharsetsList(&charsets);
+		m_embeddedDataSet->getCharsetsList(&charsets);
 		charsetsList::updateCharsets(&charsets, &m_charsetsList);
 	}
 
-	for(tBuffersMap::iterator scanBuffers = m_buffers.begin(); scanBuffers != m_buffers.end(); ++scanBuffers)
+	for(auto & m_buffer : m_buffers)
 	{
 		charsetsList::tCharsetsList charsets;
-		scanBuffers->second->getCharsetsList(&charsets);
+		m_buffer.second->getCharsetsList(&charsets);
 		charsetsList::updateCharsets(&charsets, &m_charsetsList);
 	}
 

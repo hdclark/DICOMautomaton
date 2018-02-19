@@ -44,7 +44,7 @@ int main(int argc, char* argv[]){
 
 
     //Drover conversion routines.
-    typedef std::function<bool (const Drover &, boost::filesystem::path)> drover_serial_func_t;
+    using drover_serial_func_t = std::function<bool (const Drover &, boost::filesystem::path)>;
     std::map<std::string, drover_serial_func_t> drover_serial_func_name_mapping;
 
     drover_serial_func_name_mapping["gzip-binary"] = Common_Boost_Serialize_Drover_to_Gzip_Binary;

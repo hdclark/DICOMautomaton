@@ -39,6 +39,8 @@ Imebra is available at http://imebra.com
 
 */
 
+#include <utility>
+
 #include "../include/exception.h"
 #include "../include/charsetConversion.h"
 
@@ -61,11 +63,9 @@ std::wstring exceptionsManager::getMessage()
 	exceptionsManager::getExceptionInfo(&infoList);
 
 	std::wstring message;
-	for(tExceptionInfoList::iterator scanInfo = infoList.begin(); 
-		scanInfo != infoList.end(); 
-		++scanInfo)
+	for(auto & scanInfo : infoList)
 	{
-		message += scanInfo->getMessage();
+		message += scanInfo.getMessage();
 		message += L"\n\n";
 	}
 
@@ -86,11 +86,9 @@ void exceptionsManager::getExceptionInfo(tExceptionInfoList* pList)
 	{
 		return;
 	}
-	for(tExceptionInfoList::iterator scanInformation = findInformation->second.begin(); 
-		scanInformation != findInformation->second.end(); 
-		++scanInformation)
+	for(auto & scanInformation : findInformation->second)
 	{
-		pList->push_back(*scanInformation);
+		pList->push_back(scanInformation);
 	}
 	pManager->m_information.erase(findInformation);
 }
@@ -135,12 +133,12 @@ ptr<exceptionsManager> exceptionsManager::getExceptionsManager()
 ///////////////////////////////////////////////////////////
 // Construct the exceptionInfo object
 ///////////////////////////////////////////////////////////
-exceptionInfo::exceptionInfo(const std::wstring& functionName, const std::string& fileName, const long lineNumber, const std::string& exceptionType, const std::string& exceptionMessage):
-	m_functionName(functionName), 
-	m_fileName(fileName),
+exceptionInfo::exceptionInfo(std::wstring  functionName, std::string  fileName, const long lineNumber, std::string  exceptionType, std::string  exceptionMessage):
+	m_functionName(std::move(functionName)), 
+	m_fileName(std::move(fileName)),
 	m_lineNumber(lineNumber),
-	m_exceptionType(exceptionType),
-	m_exceptionMessage(exceptionMessage)
+	m_exceptionType(std::move(exceptionType)),
+	m_exceptionMessage(std::move(exceptionMessage))
 {}
 
 ///////////////////////////////////////////////////////////

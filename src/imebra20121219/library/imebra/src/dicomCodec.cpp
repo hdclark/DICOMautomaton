@@ -41,7 +41,7 @@ Imebra is available at http://imebra.com
 
 #include <list>
 #include <vector>
-#include <string.h>
+#include <cstring>
 #include "../../base/include/exception.h"
 #include "../../base/include/streamReader.h"
 #include "../../base/include/streamWriter.h"
@@ -273,7 +273,7 @@ void dicomCodec::writeTag(ptr<streamWriter> pDestStream, ptr<data> pData, imbxUi
 	std::string dataType = pData->getDataType();
 	if(!(dicomDictionary::getDicomDictionary()->isDataTypeValid(dataType)))
 	{
-		if(pData->getDataSet(0) != 0)
+		if(pData->getDataSet(0) != nullptr)
 		{
 			dataType = "SQ";
 		}
@@ -323,7 +323,7 @@ void dicomCodec::writeTag(ptr<streamWriter> pDestStream, ptr<data> pData, imbxUi
 	for(imbxUint32 scanBuffers = 0; ; ++scanBuffers)
 	{
 		ptr<handlers::dataHandlerRaw> pDataHandlerRaw = pData->getDataHandlerRaw(scanBuffers, false, "");
-		if(pDataHandlerRaw != 0)
+		if(pDataHandlerRaw != nullptr)
 		{
 			imbxUint32 wordSize = dicomDictionary::getDicomDictionary()->getWordSize(dataType);
 			imbxUint32 bufferSize = pDataHandlerRaw->getSize();
@@ -362,7 +362,7 @@ void dicomCodec::writeTag(ptr<streamWriter> pDestStream, ptr<data> pData, imbxUi
 		// Write a nested dataset
 		///////////////////////////////////////////////////////////
 		ptr<dataSet> pDataSet = pData->getDataSet(scanBuffers);
-		if(pDataSet == 0)
+		if(pDataSet == nullptr)
 		{
 			break;
 		}
@@ -418,7 +418,7 @@ imbxUint32 dicomCodec::getTagLength(ptr<data> pData, bool bExplicitDataType, imb
 	for(imbxUint32 scanBuffers = 0; ; ++scanBuffers, ++numberOfElements)
 	{
 		ptr<dataSet> pDataSet = pData->getDataSet(scanBuffers);
-		if(pDataSet != 0)
+		if(pDataSet != nullptr)
 		{
 			totalLength += getDataSetLength(pDataSet, bExplicitDataType);
 			totalLength += 8; // item tag and item length
@@ -650,13 +650,13 @@ void dicomCodec::parseStream(ptr<streamReader> pStream,
 	imbxUint32 tempReadSubItemLength = 0; // used when the last parameter is not defined
 	char       tagType[3];
 	bool       bStopped = false;
-	bool       bFirstTag = (pReadSubItemLength == 0);
+	bool       bFirstTag = (pReadSubItemLength == nullptr);
 	bool       bCheckTransferSyntax = bFirstTag;
 	short      wordSize;
 
 	tagType[2] = 0;
 
-	if(pReadSubItemLength == 0)
+	if(pReadSubItemLength == nullptr)
 	{
 		pReadSubItemLength = &tempReadSubItemLength;
 	}
@@ -1070,7 +1070,7 @@ ptr<image> dicomCodec::getImage(ptr<dataSet> pData, ptr<streamReader> pStream, s
 	ptr<handlers::dataHandlerNumericBase> handler = pImage->create(imageSizeX, imageSizeY, depth, colorSpace, highBit);
 	imbxUint32 tempChannelsNumber = pImage->getChannelsNumber();
 
-	if(handler == 0 || tempChannelsNumber != channelsNumber)
+	if(handler == nullptr || tempChannelsNumber != channelsNumber)
 	{
 		PUNTOEXE_THROW(codecExceptionCorruptedFile, "Cannot allocate the image's buffer");
 	}
@@ -1138,10 +1138,10 @@ ptr<image> dicomCodec::getImage(ptr<dataSet> pData, ptr<streamReader> pStream, s
 		imbxInt32 checkSign = (imbxInt32)0x1<<highBit;
 		imbxInt32 orMask = ((imbxInt32)-1)<<highBit;
 
-		for(size_t adjChannels = 0; adjChannels < m_channels.size(); ++adjChannels)
+		for(auto & m_channel : m_channels)
 		{
-			imbxInt32* pAdjBuffer = m_channels[adjChannels]->m_pBuffer;
-			imbxUint32 adjSize = m_channels[adjChannels]->m_bufferSize;
+			imbxInt32* pAdjBuffer = m_channel->m_pBuffer;
+			imbxUint32 adjSize = m_channel->m_bufferSize;
 			while(adjSize != 0)
 			{
 				if(*pAdjBuffer & checkSign)
@@ -2307,7 +2307,7 @@ imbxUint32 dicomCodec::readTag(
 			// Calculate the small buffer's size and allocate it
 			///////////////////////////////////////////////////////////
 			imbxUint32 thisBufferSize( (remainingBytes > smallBuffersSize) ? smallBuffersSize : remainingBytes);
-			buffers.push_back(std::vector<imbxUint8>());
+			buffers.emplace_back();
 			buffers.back().resize(thisBufferSize);
 
 			// Fill the buffer

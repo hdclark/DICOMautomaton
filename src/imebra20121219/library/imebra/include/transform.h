@@ -319,11 +319,11 @@ public:
 	///                        left corner of the output area
 	///
 	///////////////////////////////////////////////////////////
-	virtual void runTransform(
+	void runTransform(
 			const ptr<image>& inputImage,
 			imbxUint32 inputTopLeftX, imbxUint32 inputTopLeftY, imbxUint32 inputWidth, imbxUint32 inputHeight,
 			const ptr<image>& outputImage,
-			imbxUint32 outputTopLeftX, imbxUint32 outputTopLeftY);
+			imbxUint32 outputTopLeftX, imbxUint32 outputTopLeftY) override;
 
 	/// \internal
 	virtual void runTransformHandlers(

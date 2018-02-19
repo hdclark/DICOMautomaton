@@ -233,7 +233,7 @@ protected:
 	///         stream and destroys the streamWriter.
 	///
 	///////////////////////////////////////////////////////////
-	virtual ~streamWriter();
+	~streamWriter() override;
 
 private:
 	imbxUint8 m_outBitsBuffer;

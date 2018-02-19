@@ -17,7 +17,7 @@ class asio_thread_pool {
 
     asio::io_service _io_service;
     boost::thread_group _thread_pool;
-    typedef std::unique_ptr<asio::io_service::work> work_t;
+    using work_t = std::unique_ptr<asio::io_service::work>;
     work_t _work;
 
   public:

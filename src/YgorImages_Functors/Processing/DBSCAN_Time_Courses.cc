@@ -68,10 +68,10 @@ bool DBSCANTimeCourses(planar_image_collection<float,double>::images_list_it_t f
     //Prepare suitable YgorClustering classes and a Boost.Geometry R*-tree.
     //Find a timestamp for each file. Attach the data to a ClusteringDatum_t and insert into a tree.
     constexpr size_t MaxElementsInANode = 6; // 16, 32, 128, 256, ... ?
-    typedef boost::geometry::index::rstar<MaxElementsInANode> RTreeParameter_t;
+    using RTreeParameter_t = boost::geometry::index::rstar<MaxElementsInANode>;
     constexpr size_t ClusteringSpatialDimensionCount = 100; // Can this be made dynamic? (Can Eps and MinPts choices cope?)
     typedef std::pair<size_t,size_t> ClusteringDatumUserData; //For storing row and column numbers.
-    typedef uint32_t ClusterIDRaw_t;
+    using ClusterIDRaw_t = uint32_t;
     typedef ClusteringDatum<ClusteringSpatialDimensionCount, double, 0, double, ClusterIDRaw_t, ClusteringDatumUserData> CDat_t;
     //typedef boost::geometry::model::box<CDat_t> Box_t;
     typedef boost::geometry::index::rtree<CDat_t,RTreeParameter_t> RTree_t;
@@ -126,14 +126,14 @@ bool DBSCANTimeCourses(planar_image_collection<float,double>::images_list_it_t f
     //Loop over the ccsl, rois, rows, columns, channels, and finally any selected images (if applicable).
     //for(const auto &roi : rois){
     for(auto &ccs : ccsl){
-        for(auto roi_it = ccs.get().contours.begin(); roi_it != ccs.get().contours.end(); ++roi_it){
-            if(roi_it->points.empty()) continue;
+        for(auto & contour : ccs.get().contours){
+            if(contour.points.empty()) continue;
             //if(first_img_it->encompasses_contour_of_points(*it)) rois.push_back(it);
 
             //auto roi = *it;
-            if(! first_img_it->encompasses_contour_of_points(*roi_it)) continue;
+            if(! first_img_it->encompasses_contour_of_points(contour)) continue;
 
-            const auto ROIName =  roi_it->GetMetadataValueAs<std::string>("ROIName");
+            const auto ROIName =  contour.GetMetadataValueAs<std::string>("ROIName");
             if(!ROIName){
                 FUNCWARN("Missing necessary tags for reporting analysis results. Cannot continue");
                 return false;
@@ -166,8 +166,8 @@ bool DBSCANTimeCourses(planar_image_collection<float,double>::images_list_it_t f
     */
     
             //Prepare a contour for fast is-point-within-the-polygon checking.
-            auto BestFitPlane = roi_it->Least_Squares_Best_Fit_Plane(ortho_unit);
-            auto ProjectedContour = roi_it->Project_Onto_Plane_Orthogonally(BestFitPlane);
+            auto BestFitPlane = contour.Least_Squares_Best_Fit_Plane(ortho_unit);
+            auto ProjectedContour = contour.Project_Onto_Plane_Orthogonally(BestFitPlane);
             const bool AlreadyProjected = true;
     
             for(auto row = 0; row < first_img_it->rows; ++row){

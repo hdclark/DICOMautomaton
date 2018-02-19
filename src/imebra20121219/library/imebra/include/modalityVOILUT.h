@@ -127,7 +127,7 @@ public:
 		// Modality LUT found
 		//
 		///////////////////////////////////////////////////////////
-		if(m_voiLut != 0 && m_voiLut->getSize() != 0 && m_voiLut->checkValidDataRange())
+		if(m_voiLut != nullptr && m_voiLut->getSize() != 0 && m_voiLut->checkValidDataRange())
 		{
 			for(; inputHeight != 0; --inputHeight)
 			{
@@ -160,9 +160,9 @@ public:
 		PUNTOEXE_FUNCTION_END();
 	}
 
-	virtual bool isEmpty();
+	bool isEmpty() override;
 
-	virtual ptr<image> allocateOutputImage(ptr<image> pInputImage, imbxUint32 width, imbxUint32 height);
+	ptr<image> allocateOutputImage(ptr<image> pInputImage, imbxUint32 width, imbxUint32 height) override;
 
 private:
     ptr<dataSet> m_pDataSet;

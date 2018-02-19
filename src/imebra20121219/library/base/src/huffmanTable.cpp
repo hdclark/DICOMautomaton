@@ -45,7 +45,7 @@ Imebra is available at http://imebra.com
 #include "../include/streamWriter.h"
 
 #include <list>
-#include <string.h>
+#include <cstring>
 
 namespace puntoexe
 {
@@ -227,9 +227,9 @@ void huffmanTable::calcHuffmanCodesLength(const imbxUint32 maxCodeLength)
 	}
 
 	long insertPosition = 0;
-	for(tLengthOrderedMap::iterator scanLengths = lengthOrderedValues.begin(); scanLengths != lengthOrderedValues.end(); ++scanLengths)
+	for(auto & lengthOrderedValue : lengthOrderedValues)
 	{
-		m_orderedValues[insertPosition++] = scanLengths->first.m_value;
+		m_orderedValues[insertPosition++] = lengthOrderedValue.first.m_value;
 	}
 
 	// Reduce the size of the codes' lengths

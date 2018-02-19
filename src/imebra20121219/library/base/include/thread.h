@@ -105,7 +105,7 @@ public:
 	/// @return always true
 	///
 	///////////////////////////////////////////////////////////
-	virtual bool preDelete();
+	bool preDelete() override;
 
 	/// \brief This function is executed in another thread when
 	///         start() is called.
@@ -156,7 +156,7 @@ public:
 #ifdef PUNTOEXE_WINDOWS
 	typedef DWORD tThreadId;
 #else
-	typedef void* tThreadId;
+	using tThreadId = void *;
 #endif
 
 	/// \brief Return a number that identifies the active 
@@ -233,7 +233,7 @@ private:
 		pthread_key_t m_key;
 		sharedKey()
 		{
-			pthread_key_create(&m_key, 0);
+			pthread_key_create(&m_key, nullptr);
 		}
 	};
 

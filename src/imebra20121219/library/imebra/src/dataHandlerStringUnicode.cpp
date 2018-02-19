@@ -103,7 +103,7 @@ static dicomCharsetInformation m_dicomCharsets[]={
 	dicomCharsetInformation(L"ISO_IR 192", "", "ISO-IR 192"),
 	dicomCharsetInformation(L"GB18030",    "",    "GB18030"),
 
-	dicomCharsetInformation(0,"","")
+	dicomCharsetInformation(nullptr,"","")
 };
 
 
@@ -148,7 +148,7 @@ std::wstring dataHandlerStringUnicode::convertToUnicode(const std::string& value
 		size_t escapePosition = value.length();
 		std::string escapeString;
 		std::string isoTable;
-		for(int scanCharsets = 0; m_dicomCharsets[scanCharsets].m_dicomName != 0; ++scanCharsets)
+		for(int scanCharsets = 0; m_dicomCharsets[scanCharsets].m_dicomName != nullptr; ++scanCharsets)
 		{
 			std::string findEscapeString(m_dicomCharsets[scanCharsets].m_escapeSequence);
 			if(findEscapeString == "")
@@ -210,7 +210,7 @@ std::string dataHandlerStringUnicode::convertFromUnicode(const std::wstring& val
 	if(pCharsetsList->size() == 1)
 	{
 		dicomCharsetInformation* pCharset = getCharsetInfo(pCharsetsList->front());
-		if(pCharset != 0 && pCharset->m_escapeSequence.empty())
+		if(pCharset != nullptr && pCharset->m_escapeSequence.empty())
 		{
 			return m_charsetConversion.fromUnicode(value);
 		}
@@ -289,7 +289,7 @@ std::string dataHandlerStringUnicode::convertFromUnicode(const std::wstring& val
 		///////////////////////////////////////////////////////////
 		std::string activeIso = localCharsetConversion.getIsoCharset();
 		bool bSequenceFound = false;
-		for(int scanCharsets = 0; m_dicomCharsets[scanCharsets].m_dicomName != 0; ++scanCharsets)
+		for(int scanCharsets = 0; m_dicomCharsets[scanCharsets].m_dicomName != nullptr; ++scanCharsets)
 		{
 			if(m_dicomCharsets[scanCharsets].m_escapeSequence.empty())
 			{
@@ -356,14 +356,14 @@ dicomCharsetInformation* dataHandlerStringUnicode::getCharsetInfo(const std::wst
 {
 	PUNTOEXE_FUNCTION_START(L"dataHandlerStringUnicode::getCharsetInfo");
 
-	for(int scanCharsets = 0; m_dicomCharsets[scanCharsets].m_dicomName != 0; ++scanCharsets)
+	for(int scanCharsets = 0; m_dicomCharsets[scanCharsets].m_dicomName != nullptr; ++scanCharsets)
 	{
 		if(m_dicomCharsets[scanCharsets].m_dicomName == dicomName)
 		{
 			return &(m_dicomCharsets[scanCharsets]);
 		}
 	}
-	return 0;
+	return nullptr;
 
 	PUNTOEXE_FUNCTION_END();
 }
@@ -392,13 +392,13 @@ void dataHandlerStringUnicode::setCharsetsList(charsetsList::tCharsetsList* pCha
 	///////////////////////////////////////////////////////////
 	if(m_charsetsList.empty())
 	{
-		m_charsetsList.push_back(m_dicomCharsets[0].m_dicomName);
+		m_charsetsList.emplace_back(m_dicomCharsets[0].m_dicomName);
 	}
 
 	// Check for the dicom charset's name
 	///////////////////////////////////////////////////////////
 	dicomCharsetInformation* pCharset = getCharsetInfo(m_charsetsList.front());
-	if(pCharset == 0 || pCharset->m_isoRegistration.empty())
+	if(pCharset == nullptr || pCharset->m_isoRegistration.empty())
 	{
 		PUNTOEXE_THROW(dataHandlerStringUnicodeExceptionUnknownCharset, "Unknown charset");
 	}

@@ -42,7 +42,7 @@ Imebra is available at http://imebra.com
 #include "../../base/include/exception.h"
 #include "../include/LUT.h"
 #include "../include/dataHandlerNumeric.h"
-#include <string.h>
+#include <cstring>
 
 namespace puntoexe
 {
@@ -94,7 +94,7 @@ void lut::setLut(ptr<handlers::dataHandler> pDescriptor, ptr<handlers::dataHandl
 	imbxInt32 lutFirstMapped=pDescriptor->getSignedLong(1);
 	imbxUint32 lutBits=pDescriptor->getUnsignedLong(2);
 
-	if(pData == 0 || (imbxUint32)lutSize != pData->getSize())
+	if(pData == nullptr || (imbxUint32)lutSize != pData->getSize())
 	{
 		PUNTOEXE_THROW(lutExceptionCorrupted, "The LUT is corrupted");
 	}
@@ -127,7 +127,7 @@ void lut::create(imbxUint32 size, imbxInt32 firstMapped, imbxUint8 bits, std::ws
 	if(m_pMappedValues)
 	{
 		delete m_pMappedValues;
-		m_pMappedValues= 0;
+		m_pMappedValues= nullptr;
 	}
 	m_mappedValuesRev.clear();
 

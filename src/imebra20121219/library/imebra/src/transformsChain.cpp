@@ -74,7 +74,7 @@ void transformsChain::addTransform(ptr<transform> pTransform)
 {
 	PUNTOEXE_FUNCTION_START(L"transformsChain::addTransform");
 
-        if(pTransform != 0 && !pTransform->isEmpty())
+        if(pTransform != nullptr && !pTransform->isEmpty())
         {
             // Store the transform in the chain.
             ///////////////////////////////////////////////////////////

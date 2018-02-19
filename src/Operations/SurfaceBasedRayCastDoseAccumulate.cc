@@ -496,13 +496,13 @@ Drover SurfaceBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptA
     double bounding_sphere_radius; 
     const double extra_space = 1.0; //Extra space around each point, in DICOM coords.
     {
-        typedef double FT;
-        typedef CGAL::Cartesian<FT> K;
-        typedef CGAL::Tag_true UseSqrts;
+        using FT = double;
+        using K = CGAL::Cartesian<FT>;
+        using UseSqrts = CGAL::Tag_true;
         typedef CGAL::Min_sphere_of_spheres_d_traits_3<K,FT,UseSqrts> Traits;
-        typedef CGAL::Min_sphere_of_spheres_d<Traits> Min_sphere;
-        typedef K::Point_3 Point;
-        typedef Traits::Sphere Sphere;
+        using Min_sphere = CGAL::Min_sphere_of_spheres_d<Traits>;
+        using Point = K::Point_3;
+        using Sphere = Traits::Sphere;
 
         std::vector<Sphere> spheres;
         for(const auto & cc_ref : cc_ROIs){
@@ -551,12 +551,12 @@ Drover SurfaceBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptA
         }
     }
    
-    typedef CGAL::Surface_mesh_default_triangulation_3 Tr;
-    typedef CGAL::Complex_2_in_triangulation_3<Tr> C2t3;
-    typedef Tr::Geom_traits GT;
-    typedef GT::Sphere_3 Sphere_3;
-    typedef GT::Point_3 Point_3;
-    typedef GT::FT FT;
+    using Tr = CGAL::Surface_mesh_default_triangulation_3;
+    using C2t3 = CGAL::Complex_2_in_triangulation_3<Tr>;
+    using GT = Tr::Geom_traits;
+    using Sphere_3 = GT::Sphere_3;
+    using Point_3 = GT::Point_3;
+    using FT = GT::FT;
 
     auto surface_oracle = [&](Point_3 p) -> FT {
         //This routine is an 'oracle' that reports if a given point is inside or outside the surface to be triangulated.
@@ -616,8 +616,8 @@ Drover SurfaceBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptA
     }
 
     //Convert to a polyhedron.
-    typedef CGAL::Exact_predicates_inexact_constructions_kernel Kernel;
-    typedef CGAL::Polyhedron_3<Kernel> Polyhedron;
+    using Kernel = CGAL::Exact_predicates_inexact_constructions_kernel;
+    using Polyhedron = CGAL::Polyhedron_3<Kernel>;
     //typedef Polyhedron::Halfedge_handle Halfedge_handle;
     Polyhedron polyhedron;
 
@@ -641,12 +641,12 @@ Drover SurfaceBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptA
     // =============================== Construct an AABB Tree for Spatial Lookups ==================================
 
     //typedef CGAL::Exact_predicates_inexact_constructions_kernel Kernel;
-    typedef Kernel::Point_3 Point;
-    typedef Kernel::Segment_3 Segment;
-    typedef CGAL::AABB_face_graph_triangle_primitive<Polyhedron> Triangle_Primitive;
+    using Point = Kernel::Point_3;
+    using Segment = Kernel::Segment_3;
+    using Triangle_Primitive = CGAL::AABB_face_graph_triangle_primitive<Polyhedron>;
     typedef CGAL::AABB_traits<Kernel, Triangle_Primitive> Traits;
-    typedef CGAL::AABB_tree<Traits> AABB_Tree;
-    typedef boost::optional< AABB_Tree::Intersection_and_primitive_id<Segment>::Type > Segment_intersection;
+    using AABB_Tree = CGAL::AABB_tree<Traits>;
+    using Segment_intersection = boost::optional<AABB_Tree::Intersection_and_primitive_id<Segment>::Type>;
 
     //Construct the tree.
     AABB_Tree tree(faces(polyhedron).first, faces(polyhedron).second, polyhedron);

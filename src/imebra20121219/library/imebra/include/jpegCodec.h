@@ -110,11 +110,11 @@ public:
 
 	// Retrieve the image from a dataset
 	///////////////////////////////////////////////////////////
-	virtual ptr<image> getImage(ptr<dataSet> sourceDataSet, ptr<streamReader> pStream, std::string dataType);
+	ptr<image> getImage(ptr<dataSet> sourceDataSet, ptr<streamReader> pStream, std::string dataType) override;
 
 	// Insert a jpeg compressed image into a dataset
 	///////////////////////////////////////////////////////////
-	virtual void setImage(
+	void setImage(
 		ptr<streamWriter> pDestStream,
 		ptr<image> pImage,
 		std::wstring transferSyntax,
@@ -124,43 +124,43 @@ public:
 		bool bSubSampledX,
 		bool bSubSampledY,
 		bool bInterleaved,
-		bool b2Complement);
+		bool b2Complement) override;
 
 	// Return true if the codec can handle the transfer
 	///////////////////////////////////////////////////////////
-	virtual bool canHandleTransferSyntax(std::wstring transferSyntax);
+	bool canHandleTransferSyntax(std::wstring transferSyntax) override;
 
 	// Returns true if the transfer syntax has to be
 	//  encapsulated
 	//
 	///////////////////////////////////////////////////////////
-	virtual bool encapsulated(std::wstring transferSyntax);
+	bool encapsulated(std::wstring transferSyntax) override;
 
 	// Return the highest bit that the transfer syntax can
 	//  handle
 	///////////////////////////////////////////////////////////
-	virtual imbxUint32 getMaxHighBit(std::string transferSyntax);
+	imbxUint32 getMaxHighBit(std::string transferSyntax) override;
 
 	// Return the suggested allocated bits
 	///////////////////////////////////////////////////////////
-	virtual imbxUint32 suggestAllocatedBits(std::wstring transferSyntax, imbxUint32 highBit);
+	imbxUint32 suggestAllocatedBits(std::wstring transferSyntax, imbxUint32 highBit) override;
 
 	// Create another jpeg codec
 	///////////////////////////////////////////////////////////
-	virtual ptr<codec> createCodec();
+	ptr<codec> createCodec() override;
 
 protected:
 	// Destructor
 	///////////////////////////////////////////////////////////
-	virtual ~jpegCodec();
+	~jpegCodec() override;
 
 	// Read a jpeg stream and build a Dicom dataset
 	///////////////////////////////////////////////////////////
-	virtual void readStream(ptr<streamReader> pSourceStream, ptr<dataSet> pDataSet, imbxUint32 maxSizeBufferLoad = 0xffffffff);
+	void readStream(ptr<streamReader> pSourceStream, ptr<dataSet> pDataSet, imbxUint32 maxSizeBufferLoad = 0xffffffff) override;
 
 	// Write a Dicom dataset as a Jpeg stream
 	///////////////////////////////////////////////////////////
-	virtual void writeStream(ptr<streamWriter> pSourceStream, ptr<dataSet> pDataSet);
+	void writeStream(ptr<streamWriter> pSourceStream, ptr<dataSet> pDataSet) override;
 
 	///////////////////////////////////////////////////////////
 	//
@@ -188,7 +188,7 @@ public:
 
 	// The allocated channels
 	///////////////////////////////////////////////////////////
-	typedef ptr<jpeg::jpegChannel> ptrChannel;
+	using ptrChannel = ptr<jpeg::jpegChannel>;
 	typedef std::map<imbxUint8, ptrChannel> tChannelsMap;
 	tChannelsMap m_channelsMap;
 
@@ -333,7 +333,7 @@ protected:
 
 	// Map of the available Jpeg tags
 	///////////////////////////////////////////////////////////
-	typedef ptr<jpeg::tag> ptrTag;
+	using ptrTag = ptr<jpeg::tag>;
 	typedef std::map<imbxUint8, ptrTag> tTagsMap;
 	tTagsMap m_tagsMap;
 
@@ -404,8 +404,8 @@ public:
 		m_unprocessedAmplitudesPredictor(0),
 		m_huffmanTableDC(0),
 		m_huffmanTableAC(0),
-		m_pActiveHuffmanTableDC(0),
-		m_pActiveHuffmanTableAC(0),
+		m_pActiveHuffmanTableDC(nullptr),
+		m_pActiveHuffmanTableAC(nullptr),
 		m_valuesMask(0){}
 
 	// Quantization table's id
@@ -485,7 +485,7 @@ public:
 class tag : public baseObject
 {
 public:
-	typedef ptr<jpeg::jpegChannel> ptrChannel;
+	using ptrChannel = ptr<jpeg::jpegChannel>;
 
 public:
 	// Write the tag's content.
@@ -525,11 +525,11 @@ class tagUnknown: public tag
 public:
 	// Write the tag's content.
 	///////////////////////////////////////////////////////////
-	virtual void writeTag(streamWriter* pStream, jpegCodec* pCodec);
+	void writeTag(streamWriter* pStream, jpegCodec* pCodec) override;
 
 	// Read the tag's content.
 	///////////////////////////////////////////////////////////
-	virtual void readTag(streamReader* pStream, jpegCodec* pCodec, imbxUint8 tagEntry);
+	void readTag(streamReader* pStream, jpegCodec* pCodec, imbxUint8 tagEntry) override;
 
 };
 
@@ -550,11 +550,11 @@ class tagSOF: public tag
 public:
 	// Write the tag's content.
 	///////////////////////////////////////////////////////////
-	virtual void writeTag(streamWriter* pStream, jpegCodec* pCodec);
+	void writeTag(streamWriter* pStream, jpegCodec* pCodec) override;
 
 	// Read the tag's content.
 	///////////////////////////////////////////////////////////
-	virtual void readTag(streamReader* pStream, jpegCodec* pCodec, imbxUint8 tagEntry);
+	void readTag(streamReader* pStream, jpegCodec* pCodec, imbxUint8 tagEntry) override;
 
 };
 
@@ -573,11 +573,11 @@ class tagDHT: public tag
 public:
 	// Write the tag's content.
 	///////////////////////////////////////////////////////////
-	virtual void writeTag(streamWriter* pStream, jpegCodec* pCodec);
+	void writeTag(streamWriter* pStream, jpegCodec* pCodec) override;
 
 	// Read the tag's content.
 	///////////////////////////////////////////////////////////
-	virtual void readTag(streamReader* pStream, jpegCodec* pCodec, imbxUint8 tagEntry);
+	void readTag(streamReader* pStream, jpegCodec* pCodec, imbxUint8 tagEntry) override;
 
 };
 
@@ -596,11 +596,11 @@ class tagSOS: public tag
 public:
 	// Write the tag's content.
 	///////////////////////////////////////////////////////////
-	virtual void writeTag(streamWriter* pStream, jpegCodec* pCodec);
+	void writeTag(streamWriter* pStream, jpegCodec* pCodec) override;
 
 	// Read the tag's content.
 	///////////////////////////////////////////////////////////
-	virtual void readTag(streamReader* pStream, jpegCodec* pCodec, imbxUint8 tagEntry);
+	void readTag(streamReader* pStream, jpegCodec* pCodec, imbxUint8 tagEntry) override;
 
 };
 
@@ -619,11 +619,11 @@ class tagDQT: public tag
 public:
 	// Write the tag's content.
 	///////////////////////////////////////////////////////////
-	virtual void writeTag(streamWriter* pStream, jpegCodec* pCodec);
+	void writeTag(streamWriter* pStream, jpegCodec* pCodec) override;
 
 	// Read the tag's content.
 	///////////////////////////////////////////////////////////
-	virtual void readTag(streamReader* pStream, jpegCodec* pCodec, imbxUint8 tagEntry);
+	void readTag(streamReader* pStream, jpegCodec* pCodec, imbxUint8 tagEntry) override;
 
 };
 
@@ -642,11 +642,11 @@ class tagDRI: public tag
 public:
 	// Write the tag's content.
 	///////////////////////////////////////////////////////////
-	virtual void writeTag(streamWriter* pStream, jpegCodec* pCodec);
+	void writeTag(streamWriter* pStream, jpegCodec* pCodec) override;
 
 	// Read the tag's content.
 	///////////////////////////////////////////////////////////
-	virtual void readTag(streamReader* pStream, jpegCodec* pCodec, imbxUint8 tagEntry);
+	void readTag(streamReader* pStream, jpegCodec* pCodec, imbxUint8 tagEntry) override;
 
 };
 
@@ -665,11 +665,11 @@ class tagRST: public tag
 public:
 	// Write the tag's content.
 	///////////////////////////////////////////////////////////
-	virtual void writeTag(streamWriter* pStream, jpegCodec* pCodec);
+	void writeTag(streamWriter* pStream, jpegCodec* pCodec) override;
 
 	// Read the tag's content.
 	///////////////////////////////////////////////////////////
-	virtual void readTag(streamReader* pStream, jpegCodec* pCodec, imbxUint8 tagEntry);
+	void readTag(streamReader* pStream, jpegCodec* pCodec, imbxUint8 tagEntry) override;
 
 };
 
@@ -688,11 +688,11 @@ class tagEOI: public tag
 public:
 	// Write the tag's content.
 	///////////////////////////////////////////////////////////
-	virtual void writeTag(streamWriter* pStream, jpegCodec* pCodec);
+	void writeTag(streamWriter* pStream, jpegCodec* pCodec) override;
 
 	// Read the tag's content.
 	///////////////////////////////////////////////////////////
-	virtual void readTag(streamReader* pStream, jpegCodec* pCodec, imbxUint8 tagEntry);
+	void readTag(streamReader* pStream, jpegCodec* pCodec, imbxUint8 tagEntry) override;
 
 };
 

@@ -37,7 +37,7 @@ bool PixelHistogramAnalysis(planar_image_collection<float,double>::images_list_i
     // NOTE: We only bother to grab individual contours here. You could alter this if you wanted 
     //       each contour_collection's contours to have an identifying colour.
     if(ccsl.empty()) FUNCERR("Missing contour info needed for voxel colouring. Cannot continue");
-    typedef std::list<contour_of_points<double>>::iterator contour_iter;
+    using contour_iter = std::list<contour_of_points<double> >::iterator;
     std::list<contour_iter> rois;
 //std::list<contour_of_points<double>> rois;
     for(auto &ccs : ccsl){

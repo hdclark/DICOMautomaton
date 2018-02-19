@@ -46,7 +46,7 @@ bool TimeCourseSlopeDifference(planar_image_collection<float,double>::images_lis
     // NOTE: We only bother to grab individual contours here. You could alter this if you wanted 
     //       each contour_collection's contours to have an identifying colour.
     if(ccsl.empty()) FUNCERR("Missing contour info needed for voxel colouring. Cannot continue");
-    typedef std::list<contour_of_points<double>>::iterator contour_iter;
+    using contour_iter = std::list<contour_of_points<double> >::iterator;
     std::list<contour_iter> rois;
     for(auto &ccs : ccsl){
         for(auto it =  ccs.get().contours.begin(); it != ccs.get().contours.end(); ++it){

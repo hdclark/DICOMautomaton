@@ -45,7 +45,7 @@ Imebra is available at http://imebra.com
 #include "baseStream.h"
 
 #include <ios>
-#include <stdio.h>
+#include <cstdio>
 
 ///////////////////////////////////////////////////////////
 //
@@ -74,12 +74,12 @@ class stream : public baseStream
 protected:
 	// Destructor
 	///////////////////////////////////////////////////////////
-	virtual ~stream();
+	~stream() override;
 
 public:
 	// Constructor
 	///////////////////////////////////////////////////////////
-	stream(): m_openFile(0){}
+	stream(): m_openFile(nullptr){}
 
 	/// \brief Open a file.
 	///
@@ -119,8 +119,8 @@ public:
 	// Virtual stream's functions
 	//
 	///////////////////////////////////////////////////////////
-	virtual void write(imbxUint32 startPosition, const imbxUint8* pBuffer, imbxUint32 bufferLength);
-	virtual imbxUint32 read(imbxUint32 startPosition, imbxUint8* pBuffer, imbxUint32 bufferLength);
+	void write(imbxUint32 startPosition, const imbxUint8* pBuffer, imbxUint32 bufferLength) override;
+	imbxUint32 read(imbxUint32 startPosition, imbxUint8* pBuffer, imbxUint32 bufferLength) override;
 
 protected:
 	FILE* m_openFile;

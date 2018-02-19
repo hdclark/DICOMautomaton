@@ -105,24 +105,24 @@ transaction::~transaction()
 			// Lock all the buffers involved in the commit
 			///////////////////////////////////////////////////////////
 			lockMultipleObjects::tObjectsList objectsList;
-			for(tHandlersList::iterator findBuffers = m_transactionHandlers.begin(); findBuffers != m_transactionHandlers.end(); ++findBuffers)
+			for(auto & m_transactionHandler : m_transactionHandlers)
 			{
-				objectsList.push_back(findBuffers->second->m_buffer);
+				objectsList.push_back(m_transactionHandler.second->m_buffer);
 			}
 			lockMultipleObjects lockAccess(&objectsList);
 
 			// Copy the data back to the buffers
 			///////////////////////////////////////////////////////////
-			for(tHandlersList::iterator scanHandlers = m_transactionHandlers.begin(); scanHandlers != m_transactionHandlers.end(); ++scanHandlers)
+			for(auto & m_transactionHandler : m_transactionHandlers)
 			{
-				scanHandlers->second->copyBack();
+				m_transactionHandler.second->copyBack();
 			}
 
 			// Commit the changes
 			///////////////////////////////////////////////////////////
-			for(tHandlersList::iterator scanCommits = m_transactionHandlers.begin(); scanCommits != m_transactionHandlers.end(); ++scanCommits)
+			for(auto & m_transactionHandler : m_transactionHandlers)
 			{
-				scanCommits->second->commit();
+				m_transactionHandler.second->commit();
 			}
 
 			// Remove all the data handlers
@@ -183,9 +183,9 @@ void transaction::abort()
 {
 	PUNTOEXE_FUNCTION_START(L"transaction::abort");
 
-	for(tHandlersList::iterator scanHandlers = m_transactionHandlers.begin(); scanHandlers != m_transactionHandlers.end(); ++scanHandlers)
+	for(auto & m_transactionHandler : m_transactionHandlers)
 	{
-		scanHandlers->second->abort();
+		m_transactionHandler.second->abort();
 	}
 	m_transactionHandlers.clear();
 
@@ -204,14 +204,14 @@ void transaction::abort()
 ///////////////////////////////////////////////////////////
 void transaction::copyHandlersTo(transaction* pDestination)
 {
-	for(tHandlersList::iterator scanHandlers = m_transactionHandlers.begin(); scanHandlers != m_transactionHandlers.end(); ++scanHandlers)
+	for(auto & m_transactionHandler : m_transactionHandlers)
 	{
-            tHandlersList::iterator findPreviousHandler(pDestination->m_transactionHandlers.find(scanHandlers->second->m_buffer.get()));
+            tHandlersList::iterator findPreviousHandler(pDestination->m_transactionHandlers.find(m_transactionHandler.second->m_buffer.get()));
             if(findPreviousHandler != pDestination->m_transactionHandlers.end())
             {
                 findPreviousHandler->second->abort();
             }
-            pDestination->m_transactionHandlers[scanHandlers->second->m_buffer.get()] = scanHandlers->second;
+            pDestination->m_transactionHandlers[m_transactionHandler.second->m_buffer.get()] = m_transactionHandler.second;
 	}
 }
 

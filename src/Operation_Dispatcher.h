@@ -10,8 +10,8 @@
 
 #include "Structs.h"
 
-typedef std::function< Drover (Drover, OperationArgPkg, std::map<std::string,std::string>, std::string)> op_func_t;
-typedef std::function< std::list<OperationArgDoc> (void)> op_doc_func_t;
+using op_func_t = std::function<Drover (Drover, OperationArgPkg, std::map<std::string, std::string>, std::string)>;
+using op_doc_func_t = std::function<std::list<OperationArgDoc> ()>;
 typedef std::pair<op_doc_func_t,op_func_t> op_packet_t;
 
 std::map<std::string, op_packet_t> Known_Operations(void);

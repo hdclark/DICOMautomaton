@@ -93,11 +93,11 @@ public:
 	///////////////////////////////////////////////////////////
 	void addTransform(ptr<transform> pTransform);
 
-	virtual void runTransform(
+	void runTransform(
             const ptr<image>& inputImage,
             imbxUint32 inputTopLeftX, imbxUint32 inputTopLeftY, imbxUint32 inputWidth, imbxUint32 inputHeight,
             const ptr<image>& outputImage,
-            imbxUint32 outputTopLeftX, imbxUint32 outputTopLeftY);
+            imbxUint32 outputTopLeftX, imbxUint32 outputTopLeftY) override;
 
 	/// \brief Returns true if the transform doesn't do
 	///         anything.
@@ -107,9 +107,9 @@ public:
 	///          empty transformsChain object).
 	///
 	///////////////////////////////////////////////////////////
-	virtual bool isEmpty();
+	bool isEmpty() override;
 
-	virtual ptr<image> allocateOutputImage(ptr<image> pInputImage, imbxUint32 width, imbxUint32 height);
+	ptr<image> allocateOutputImage(ptr<image> pInputImage, imbxUint32 width, imbxUint32 height) override;
 
 protected:
 	imbxUint32 m_inputWidth;
@@ -121,10 +121,10 @@ protected:
 	image::bitDepth m_outputDepth;
 	imbxUint32 m_outputHighBit;
 
-	typedef std::list<ptr<transform> > tTransformsList;
+	using tTransformsList = std::list<ptr<transform> >;
 	tTransformsList m_transformsList;
 
-	typedef std::list<ptr<image> > tTemporaryImagesList;
+	using tTemporaryImagesList = std::list<ptr<image> >;
 	tTemporaryImagesList m_temporaryImages;
 
 };

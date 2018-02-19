@@ -97,7 +97,7 @@ Drover GenerateVirtualDataPerfusionV1(Drover DICOM_data, OperationArgPkg OptArgs
     // this code. Another operation performs the actual validation. You might be able to manually verify if the perfusion
     // model admits a simple solution.
 
-    typedef decltype(DICOM_data.image_data) loaded_imgs_storage_t;
+    using loaded_imgs_storage_t = decltype(DICOM_data.image_data);
     std::list<loaded_imgs_storage_t> loaded_imgs_storage;
     std::shared_ptr<Contour_Data> loaded_contour_data_storage = std::make_shared<Contour_Data>();
 
@@ -296,7 +296,7 @@ Drover GenerateVirtualDataPerfusionV1(Drover DICOM_data, OperationArgPkg OptArgs
                 shtl.metadata["MinimumSeparation"] = animg.get().metadata["ImageThickness"];
                 cc.contours.push_back(std::move(shtl));
             }
-            output->ccs.push_back( contours_with_meta() );
+            output->ccs.emplace_back( );
             output->ccs.back() = cc;
             output->ccs.back().Raw_ROI_name = ROIName; 
             output->ccs.back().ROI_number = ROINumber;
@@ -323,7 +323,7 @@ Drover GenerateVirtualDataPerfusionV1(Drover DICOM_data, OperationArgPkg OptArgs
                 shtl.metadata["MinimumSeparation"] = animg.get().metadata["ImageThickness"];
                 cc.contours.push_back(std::move(shtl));
             }
-            output->ccs.push_back( contours_with_meta() );
+            output->ccs.emplace_back( );
             output->ccs.back() = cc;
             output->ccs.back().Raw_ROI_name = ROIName; 
             output->ccs.back().ROI_number = ROINumber;
@@ -350,7 +350,7 @@ Drover GenerateVirtualDataPerfusionV1(Drover DICOM_data, OperationArgPkg OptArgs
                 shtl.metadata["MinimumSeparation"] = animg.get().metadata["ImageThickness"];
                 cc.contours.push_back(std::move(shtl));
             }
-            output->ccs.push_back( contours_with_meta() );
+            output->ccs.emplace_back( );
             output->ccs.back() = cc;
             output->ccs.back().Raw_ROI_name = ROIName; 
             output->ccs.back().ROI_number = ROINumber;

@@ -74,15 +74,15 @@ namespace handlers
 class dataHandlerDateTimeBase : public dataHandlerString {
 
 public:
-	virtual imbxInt32 getSignedLong(const imbxUint32 index) const;
-	virtual imbxUint32 getUnsignedLong(const imbxUint32 index) const;
-	virtual double getDouble(const imbxUint32 index) const;
-	virtual void setSignedLong(const imbxUint32 index, const imbxInt32 value);
-	virtual void setUnsignedLong(const imbxUint32 index, const imbxUint32 value);
-	virtual void setDouble(const imbxUint32 index, const double value);
+	imbxInt32 getSignedLong(const imbxUint32 index) const override;
+	imbxUint32 getUnsignedLong(const imbxUint32 index) const override;
+	double getDouble(const imbxUint32 index) const override;
+	void setSignedLong(const imbxUint32 index, const imbxInt32 value) override;
+	void setUnsignedLong(const imbxUint32 index, const imbxUint32 value) override;
+	void setDouble(const imbxUint32 index, const double value) override;
 
 protected:
-	virtual wchar_t getSeparator() const;
+	wchar_t getSeparator() const override;
 
 	void parseDate(
 		std::wstring dateString,

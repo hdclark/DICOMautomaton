@@ -78,9 +78,9 @@ bool Load_From_DICOM_Files( Drover &DICOM_data,
     //
     if(Filenames.empty()) return true;
 
-    typedef decltype(DICOM_data.image_data) loaded_imgs_storage_t;
+    using loaded_imgs_storage_t = decltype(DICOM_data.image_data);
     std::list<loaded_imgs_storage_t> loaded_imgs_storage;
-    typedef decltype(DICOM_data.dose_data) loaded_dose_storage_t;
+    using loaded_dose_storage_t = decltype(DICOM_data.dose_data);
     std::list<loaded_dose_storage_t> loaded_dose_storage;
     std::shared_ptr<Contour_Data> loaded_contour_data_storage = std::make_shared<Contour_Data>();
 

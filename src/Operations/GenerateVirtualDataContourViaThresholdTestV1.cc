@@ -95,7 +95,7 @@ Drover GenerateVirtualDataContourViaThresholdTestV1(Drover DICOM_data, Operation
 
     //This operation generates data suitable for testing the ContourViaThreshold operation.
 
-    typedef decltype(DICOM_data.image_data) loaded_imgs_storage_t;
+    using loaded_imgs_storage_t = decltype(DICOM_data.image_data);
     std::list<loaded_imgs_storage_t> loaded_imgs_storage;
     std::shared_ptr<Contour_Data> loaded_contour_data_storage = std::make_shared<Contour_Data>();
 

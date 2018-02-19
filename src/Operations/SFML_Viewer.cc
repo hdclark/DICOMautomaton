@@ -152,7 +152,7 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
     //
     // NOTE: The reasoning for having several image arrays is not clear cut. If the timestamps are known exactly, it
     //       might make sense to split in this way. In general, it is up to the user to make this call. 
-    typedef decltype(DICOM_data.image_data.begin()) img_data_ptr_it_t;
+    using img_data_ptr_it_t = decltype(DICOM_data.image_data.begin());
     img_data_ptr_it_t img_array_ptr_beg  = DICOM_data.image_data.begin();
     img_data_ptr_it_t img_array_ptr_end  = DICOM_data.image_data.end();
     img_data_ptr_it_t img_array_ptr_last = std::prev(DICOM_data.image_data.end());
@@ -160,7 +160,7 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
 
     //At the moment, we keep a single 'display' image active at a time. To help walk through the neighbouring images
     // (and the rest of the images, for that matter) we keep a container iterator to the image.
-    typedef decltype(DICOM_data.image_data.front()->imagecoll.images.begin()) disp_img_it_t;
+    using disp_img_it_t = decltype(DICOM_data.image_data.front()->imagecoll.images.begin());
     disp_img_it_t disp_img_beg  = (*img_array_ptr_it)->imagecoll.images.begin();
     //disp_img_it_t disp_img_end  = (*img_array_ptr_it)->imagecoll.images.end();  // Not used atm.
     disp_img_it_t disp_img_last = std::prev((*img_array_ptr_it)->imagecoll.images.end());
@@ -355,7 +355,7 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
             // NOTE: This routine could definitely use a re-working, especially to make it safe for all
             //       arithmetical types (i.e., handling negatives, ensuring there is no overflow or wrap-
             //       around, ensuring there is minimal precision loss).
-            typedef decltype(img_it->value(0,0,0)) pixel_value_t;
+            using pixel_value_t = decltype(img_it->value(0, 0, 0));
             const auto pixel_minmax_allchnls = img_it->minmax();
             const auto lowest = std::get<0>(pixel_minmax_allchnls);
             const auto highest = std::get<1>(pixel_minmax_allchnls);

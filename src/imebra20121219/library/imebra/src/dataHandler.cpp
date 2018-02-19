@@ -95,7 +95,7 @@ void dataHandler::copyBack()
 {
 	PUNTOEXE_FUNCTION_START(L"dataHandler::copyBack");
 
-	if(m_buffer == 0)
+	if(m_buffer == nullptr)
 	{
 		return;
 	}
@@ -108,7 +108,7 @@ void dataHandler::commit()
 {
 	PUNTOEXE_FUNCTION_START(L"dataHandler::copyBack");
 
-	if(m_buffer == 0)
+	if(m_buffer == nullptr)
 	{
 		return;
 	}

@@ -179,7 +179,7 @@ ptr<handlers::dataHandler> buffer::getDataHandler(bool bWrite, bool bRaw, imbxUi
 	// If the object must be loaded from the original stream,
 	//  then load it...
 	///////////////////////////////////////////////////////////
-	if(m_originalStream != 0 && (localMemory == 0 || localMemory->empty()) )
+	if(m_originalStream != nullptr && (localMemory == nullptr || localMemory->empty()) )
 	{
 		localMemory = ptr<memory>(memoryPool::getMemoryPool()->getMemory(m_originalBufferLength));
 		if(m_originalBufferLength != 0)
@@ -396,14 +396,14 @@ ptr<handlers::dataHandler> buffer::getDataHandler(bool bWrite, bool bRaw, imbxUi
 	// If an error occurred during the data handler creation,
 	//  then throw an exception
 	///////////////////////////////////////////////////////////
-	if(handler == 0)
+	if(handler == nullptr)
 	{
 		PUNTOEXE_THROW(bufferExceptionUnknownType, "Unknown data type requested");
 	}
 
 	//  Connect the handler to this buffer
 	///////////////////////////////////////////////////////////
-	if(localMemory == 0)
+	if(localMemory == nullptr)
 	{
 		localMemory = ptr<memory>(new memory);
 	}
@@ -483,7 +483,7 @@ ptr<streamReader> buffer::getStreamReader()
 	// If the object must be loaded from the original stream,
 	//  then return the original stream
 	///////////////////////////////////////////////////////////
-	if(m_originalStream != 0 && (m_memory == 0 || m_memory->empty()) )
+	if(m_originalStream != nullptr && (m_memory == nullptr || m_memory->empty()) )
 	{
 		ptr<streamReader> reader(new streamReader(m_originalStream, m_originalBufferPosition, m_originalBufferLength));
 		return reader;
@@ -494,7 +494,7 @@ ptr<streamReader> buffer::getStreamReader()
 	///////////////////////////////////////////////////////////
 	ptr<streamReader> reader;
 	ptr<handlers::dataHandlerRaw> tempHandlerRaw = getDataHandlerRaw(false);
-	if(tempHandlerRaw != 0)
+	if(tempHandlerRaw != nullptr)
 	{
 		ptr<baseStream> localStream(new bufferStream(tempHandlerRaw));
 		reader = ptr<streamReader>(new streamReader(localStream));
@@ -527,7 +527,7 @@ ptr<streamWriter> buffer::getStreamWriter()
 	///////////////////////////////////////////////////////////
 	ptr<streamWriter> writer;
 	ptr<handlers::dataHandlerRaw> tempHandlerRaw = getDataHandlerRaw(true);
-	if(tempHandlerRaw != 0)
+	if(tempHandlerRaw != nullptr)
 	{
 		ptr<baseStream> localStream(new bufferStream(tempHandlerRaw));
 		writer = ptr<streamWriter>(new streamWriter(localStream, tempHandlerRaw->getSize()));
@@ -579,14 +579,14 @@ imbxUint32 buffer::getBufferSizeBytes()
 
 	// The buffer has not been loaded yet
 	///////////////////////////////////////////////////////////
-	if(m_originalStream != 0 && (m_memory == 0 || m_memory->empty()) )
+	if(m_originalStream != nullptr && (m_memory == nullptr || m_memory->empty()) )
 	{
 		return m_originalBufferLength;
 	}
 
 	// The buffer has no memory
 	///////////////////////////////////////////////////////////
-	if(m_memory == 0)
+	if(m_memory == nullptr)
 	{
 		return 0;
 	}

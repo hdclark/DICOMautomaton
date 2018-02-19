@@ -90,11 +90,11 @@ class dicomCodec : public codec
 public:
 	// Get an image from a dicom structure
 	///////////////////////////////////////////////////////////
-	virtual ptr<image> getImage(ptr<dataSet> pData, ptr<streamReader> pSourceStream, std::string dataType);
+	ptr<image> getImage(ptr<dataSet> pData, ptr<streamReader> pSourceStream, std::string dataType) override;
 
 	// Write an image into a dicom structure
 	///////////////////////////////////////////////////////////
-	virtual void setImage(
+	void setImage(
 		ptr<streamWriter> pDestStream,
 		ptr<image> pImage,
 		std::wstring transferSyntax,
@@ -104,11 +104,11 @@ public:
 		bool bSubSampledX,
 		bool bSubSampledY,
 		bool bInterleaved,
-		bool b2Complement);
+		bool b2Complement) override;
 
 	// Create another dicom codec
 	///////////////////////////////////////////////////////////
-	virtual ptr<codec> createCodec();
+	ptr<codec> createCodec() override;
 
 	/// \brief Parse the dicom stream and fill the data set
 	///        with the read tags.
@@ -163,7 +163,7 @@ public:
 		streamController::tByteOrdering endianType,
 		imbxUint32 maxSizeBufferLoad = 0xffffffff,
 		imbxUint32 subItemLength = 0xffffffff,
-		imbxUint32* pReadSubItemLength = 0,
+		imbxUint32* pReadSubItemLength = nullptr,
 		imbxUint32 depth = 0);
 
 	/// \brief Write the dataSet to the specified stream
@@ -183,30 +183,30 @@ public:
 	// Returns true if the codec can handle the transfer
 	//  syntax
 	///////////////////////////////////////////////////////////
-	virtual bool canHandleTransferSyntax(std::wstring transferSyntax);
+	bool canHandleTransferSyntax(std::wstring transferSyntax) override;
 
 	// Returns true if the transfer syntax has to be
 	//  encapsulated
 	//
 	///////////////////////////////////////////////////////////
-	virtual bool encapsulated(std::wstring transferSyntax);
+	bool encapsulated(std::wstring transferSyntax) override;
 
 	// Returns the maximum supported high bit
 	///////////////////////////////////////////////////////////
-	virtual imbxUint32 getMaxHighBit(std::string transferSyntax);
+	imbxUint32 getMaxHighBit(std::string transferSyntax) override;
 
 	// Returns the suggested allocated bits
 	///////////////////////////////////////////////////////////
-	virtual imbxUint32 suggestAllocatedBits(std::wstring transferSyntax, imbxUint32 highBit);
+	imbxUint32 suggestAllocatedBits(std::wstring transferSyntax, imbxUint32 highBit) override;
 
 protected:
 	// Write a dicom stream
 	///////////////////////////////////////////////////////////
-	virtual void writeStream(ptr<streamWriter> pStream, ptr<dataSet> pDataSet);
+	void writeStream(ptr<streamWriter> pStream, ptr<dataSet> pDataSet) override;
 
 	// Load a dicom stream
 	///////////////////////////////////////////////////////////
-	virtual void readStream(ptr<streamReader> pStream, ptr<dataSet> pDataSet, imbxUint32 maxSizeBufferLoad = 0xffffffff);
+	void readStream(ptr<streamReader> pStream, ptr<dataSet> pDataSet, imbxUint32 maxSizeBufferLoad = 0xffffffff) override;
 
 protected:
 	// Read a single tag
@@ -333,7 +333,7 @@ protected:
 
 	void allocChannels(imbxUint32 channelsNumber, imbxUint32 sizeX, imbxUint32 sizeY, bool bSubSampledX, bool bSubSampledY);
 
-	typedef ptr<channel> ptrChannel;
+	using ptrChannel = ptr<channel>;
 	std::vector<ptrChannel> m_channels;
 };
 

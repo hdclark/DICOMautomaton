@@ -73,63 +73,63 @@ class dataHandlerString : public dataHandler
 public:
 	// Returns true if the pointer is valid
 	///////////////////////////////////////////////////////////
-	virtual bool pointerIsValid(const imbxUint32 index) const;
+	bool pointerIsValid(const imbxUint32 index) const override;
 
 	// Get the data element as a signed long
 	///////////////////////////////////////////////////////////
-	virtual imbxInt32 getSignedLong(const imbxUint32 index) const;
+	imbxInt32 getSignedLong(const imbxUint32 index) const override;
 
 	// Get the data element as an unsigned long
 	///////////////////////////////////////////////////////////
-	virtual imbxUint32 getUnsignedLong(const imbxUint32 index) const;
+	imbxUint32 getUnsignedLong(const imbxUint32 index) const override;
 	
 	// Get the data element as a double
 	///////////////////////////////////////////////////////////
-	virtual double getDouble(const imbxUint32 index) const;
+	double getDouble(const imbxUint32 index) const override;
 
 	// Get the data element as a string
 	///////////////////////////////////////////////////////////
-	virtual std::string getString(const imbxUint32 index) const;
+	std::string getString(const imbxUint32 index) const override;
 
 	// Get the data element as an unicode string
 	///////////////////////////////////////////////////////////
-	virtual std::wstring getUnicodeString(const imbxUint32 index) const;
+	std::wstring getUnicodeString(const imbxUint32 index) const override;
 
 	// Retrieve the data element as a string
 	///////////////////////////////////////////////////////////
-	virtual imbxUint32 getSize() const;
+	imbxUint32 getSize() const override;
 	
 	// Set the data element as a signed long
 	///////////////////////////////////////////////////////////
-	virtual void setSignedLong(const imbxUint32 index, const imbxInt32 value);
+	void setSignedLong(const imbxUint32 index, const imbxInt32 value) override;
 	
 	// Set the data element as an unsigned long
 	///////////////////////////////////////////////////////////
-	virtual void setUnsignedLong(const imbxUint32 index, const imbxUint32 value);
+	void setUnsignedLong(const imbxUint32 index, const imbxUint32 value) override;
 	
 	// Set the data element as a double
 	///////////////////////////////////////////////////////////
-	virtual void setDouble(const imbxUint32 index, const double value);
+	void setDouble(const imbxUint32 index, const double value) override;
 	
 	// Set the data element as a string
 	///////////////////////////////////////////////////////////
-	virtual void setString(const imbxUint32 index, const std::string& value);
+	void setString(const imbxUint32 index, const std::string& value) override;
 
 	// Set the data element as an unicode string
 	///////////////////////////////////////////////////////////
-	virtual void setUnicodeString(const imbxUint32 index, const std::wstring& value);
+	void setUnicodeString(const imbxUint32 index, const std::wstring& value) override;
 	
 	// Set the buffer's size, in data elements
 	///////////////////////////////////////////////////////////
-	virtual void setSize(const imbxUint32 elementsNumber);
+	void setSize(const imbxUint32 elementsNumber) override;
 
 	// Parse the buffer
 	///////////////////////////////////////////////////////////
-	virtual void parseBuffer(const ptr<memory>& memoryBuffer);
+	void parseBuffer(const ptr<memory>& memoryBuffer) override;
 
 	// Build the buffer
 	///////////////////////////////////////////////////////////
-	virtual void buildBuffer(const ptr<memory>& memoryBuffer);
+	void buildBuffer(const ptr<memory>& memoryBuffer) override;
 
 protected:
 	// Convert a string to unicode, without using the dicom 

@@ -39,6 +39,8 @@ Imebra is available at http://imebra.com
 
 */
 
+#include <memory>
+
 #include "../include/memory.h"
 
 namespace puntoexe
@@ -99,9 +101,9 @@ void memory::transfer(const ptr<memory>& transferFrom)
 ///////////////////////////////////////////////////////////
 void memory::copyFrom(const ptr<memory>& sourceMemory)
 {
-	if(m_pMemoryBuffer.get() == 0)
+	if(m_pMemoryBuffer.get() == nullptr)
 	{
-		m_pMemoryBuffer.reset(new stringUint8);
+		m_pMemoryBuffer = std::make_unique<stringUint8>();
 	}
 	m_pMemoryBuffer->assign(sourceMemory->data(), sourceMemory->size());
 }
@@ -118,7 +120,7 @@ void memory::copyFrom(const ptr<memory>& sourceMemory)
 ///////////////////////////////////////////////////////////
 void memory::clear()
 {
-	if(m_pMemoryBuffer.get() != 0)
+	if(m_pMemoryBuffer.get() != nullptr)
 	{
 		m_pMemoryBuffer->clear();
 	}
@@ -136,9 +138,9 @@ void memory::clear()
 ///////////////////////////////////////////////////////////
 void memory::resize(imbxUint32 newSize)
 {
-	if(m_pMemoryBuffer.get() == 0)
+	if(m_pMemoryBuffer.get() == nullptr)
 	{
-		m_pMemoryBuffer.reset(new stringUint8);
+		m_pMemoryBuffer = std::make_unique<stringUint8>();
 	}
 	m_pMemoryBuffer->resize(newSize, 0);
 }
@@ -155,9 +157,9 @@ void memory::resize(imbxUint32 newSize)
 ///////////////////////////////////////////////////////////
 void memory::reserve(imbxUint32 reserveSize)
 {
-	if(m_pMemoryBuffer.get() == 0)
+	if(m_pMemoryBuffer.get() == nullptr)
 	{
-		m_pMemoryBuffer.reset(new stringUint8);
+		m_pMemoryBuffer = std::make_unique<stringUint8>();
 	}
 	m_pMemoryBuffer->reserve(reserveSize);
 }
@@ -174,7 +176,7 @@ void memory::reserve(imbxUint32 reserveSize)
 ///////////////////////////////////////////////////////////
 imbxUint32 memory::size()
 {
-	if(m_pMemoryBuffer.get() == 0)
+	if(m_pMemoryBuffer.get() == nullptr)
 	{
 		return 0;
 	}
@@ -193,9 +195,9 @@ imbxUint32 memory::size()
 ///////////////////////////////////////////////////////////
 imbxUint8* memory::data()
 {
-	if(m_pMemoryBuffer.get() == 0 || m_pMemoryBuffer->empty())
+	if(m_pMemoryBuffer.get() == nullptr || m_pMemoryBuffer->empty())
 	{
-		return 0;
+		return nullptr;
 	}
 	return &( ( (*m_pMemoryBuffer.get()))[0]);
 }
@@ -212,7 +214,7 @@ imbxUint8* memory::data()
 ///////////////////////////////////////////////////////////
 bool memory::empty()
 {
-	return m_pMemoryBuffer.get() == 0 || m_pMemoryBuffer->empty();
+	return m_pMemoryBuffer.get() == nullptr || m_pMemoryBuffer->empty();
 }
 
 
@@ -227,9 +229,9 @@ bool memory::empty()
 ///////////////////////////////////////////////////////////
 void memory::assign(const imbxUint8* pSource, const imbxUint32 sourceLength)
 {
-	if(m_pMemoryBuffer.get() == 0)
+	if(m_pMemoryBuffer.get() == nullptr)
 	{
-		m_pMemoryBuffer.reset(new stringUint8);
+		m_pMemoryBuffer = std::make_unique<stringUint8>();
 	}
 	m_pMemoryBuffer->assign(pSource, sourceLength);
 }

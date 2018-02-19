@@ -88,7 +88,7 @@ protected:
 	///////////////////////////////////////////////////////////
 	static transactionsManager* getTransactionsManager();
 
-	typedef std::list<transaction*> tTransactionsStack;
+	using tTransactionsStack = std::list<transaction *>;
 	typedef std::map<thread::tThreadId, tTransactionsStack> tTransactionsMap;
 
 	tTransactionsMap m_transactions;
@@ -188,7 +188,7 @@ protected:
 
 	void addHandler(ptr<handlers::dataHandler> newHandler);
 
-	typedef ptr<handlers::dataHandler> tDataHandlerPtr;
+	using tDataHandlerPtr = ptr<handlers::dataHandler>;
 	typedef std::map<buffer*, tDataHandlerPtr> tHandlersList;
 	tHandlersList m_transactionHandlers;
 

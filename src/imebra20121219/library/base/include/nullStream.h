@@ -78,8 +78,8 @@ public:
 	// Virtual stream's functions
 	//
 	///////////////////////////////////////////////////////////
-	virtual void write(imbxUint32, const imbxUint8*, imbxUint32){}
-	virtual imbxUint32 read(imbxUint32 , imbxUint8* , imbxUint32 ){return 0;}
+	void write(imbxUint32, const imbxUint8*, imbxUint32) override{}
+	imbxUint32 read(imbxUint32 , imbxUint8* , imbxUint32 ) override{return 0;}
 };
 
 ///@}

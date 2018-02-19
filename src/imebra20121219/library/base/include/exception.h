@@ -97,7 +97,7 @@ public:
 	///                       exception being rethrown
 	///
 	///////////////////////////////////////////////////////////
-	exceptionInfo(const std::wstring& functionName, const std::string& fileName, const long lineNumber, const std::string& exceptionType, const std::string& exceptionMessage);
+	exceptionInfo(std::wstring  functionName, std::string  fileName, const long lineNumber, std::string  exceptionType, std::string  exceptionMessage);
 
 	exceptionInfo();
 	
@@ -180,7 +180,7 @@ public:
 	/// \brief Defines a list of exceptionInfo objects.
 	///
 	///////////////////////////////////////////////////////////
-	typedef std::list<exceptionInfo> tExceptionInfoList;
+	using tExceptionInfoList = std::list<exceptionInfo>;
 
 	/// \brief Fill the list with all the collected
 	///         exceptionInfo objects for the current thread.

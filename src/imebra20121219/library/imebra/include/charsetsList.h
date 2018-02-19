@@ -71,7 +71,7 @@ namespace charsetsList
 /// It is used to set or retrieve a list of charsets
 ///
 ///////////////////////////////////////////////////////////
-typedef std::list<std::wstring> tCharsetsList;
+using tCharsetsList = std::list<std::wstring>;
 
 void updateCharsets(const tCharsetsList* pCharsetsList, tCharsetsList* pDestinationCharsetsList);
 void copyCharsets(const tCharsetsList* pSourceCharsetsList, tCharsetsList* pDestinationCharsetsList);

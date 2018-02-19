@@ -192,7 +192,7 @@ ptr<directoryRecord> directoryRecord::getReferencedRecord()
 ///////////////////////////////////////////////////////////
 void directoryRecord::setNextRecord(ptr<directoryRecord> pNextRecord)
 {
-	if(pNextRecord != 0)
+	if(pNextRecord != nullptr)
 	{
 		pNextRecord->checkCircularReference(this);
 	}
@@ -211,7 +211,7 @@ void directoryRecord::setNextRecord(ptr<directoryRecord> pNextRecord)
 ///////////////////////////////////////////////////////////
 void directoryRecord::setFirstChildRecord(ptr<directoryRecord> pFirstChildRecord)
 {
-	if(pFirstChildRecord != 0)
+	if(pFirstChildRecord != nullptr)
 	{
 		pFirstChildRecord->checkCircularReference(this);
 	}
@@ -230,7 +230,7 @@ void directoryRecord::setFirstChildRecord(ptr<directoryRecord> pFirstChildRecord
 ///////////////////////////////////////////////////////////
 void directoryRecord::setReferencedRecord(ptr<directoryRecord> pReferencedRecord)
 {
-	if(pReferencedRecord != 0)
+	if(pReferencedRecord != nullptr)
 	{
 		pReferencedRecord->checkCircularReference(this);
 	}
@@ -364,7 +364,7 @@ void directoryRecord::updateOffsets()
 {
 	// Update offset for the next record
 	///////////////////////////////////////////////////////////
-	if(m_pNextRecord == 0)
+	if(m_pNextRecord == nullptr)
 	{
 		getRecordDataSet()->setUnsignedLong(0x0004, 0, 0x1400, 0, 0);
 	}
@@ -376,7 +376,7 @@ void directoryRecord::updateOffsets()
 
 	// Update offset for the first child record
 	///////////////////////////////////////////////////////////
-	if(m_pFirstChildRecord == 0)
+	if(m_pFirstChildRecord == nullptr)
 	{
 		getRecordDataSet()->setUnsignedLong(0x0004, 0, 0x1420, 0, 0);
 	}
@@ -388,7 +388,7 @@ void directoryRecord::updateOffsets()
 
 	// Update offset for the referenced record
 	///////////////////////////////////////////////////////////
-	if(m_pReferencedRecord == 0)
+	if(m_pReferencedRecord == nullptr)
 	{
 		getRecordDataSet()->setUnsignedLong(0x0004, 0, 0x1504, 0, 0);
 	}
@@ -417,17 +417,17 @@ void directoryRecord::checkCircularReference(directoryRecord* pStartRecord)
 		throw dicomDirCircularReferenceException("Circular reference detected");
 	}
 
-	if(m_pNextRecord != 0)
+	if(m_pNextRecord != nullptr)
 	{
 		m_pNextRecord->checkCircularReference(pStartRecord);
 	}
 
-	if(m_pFirstChildRecord != 0)
+	if(m_pFirstChildRecord != nullptr)
 	{
 		m_pFirstChildRecord->checkCircularReference(pStartRecord);
 	}
 
-	if(m_pReferencedRecord != 0)
+	if(m_pReferencedRecord != nullptr)
 	{
 		m_pReferencedRecord->checkCircularReference(pStartRecord);
 	}
@@ -462,7 +462,7 @@ void directoryRecord::checkCircularReference(directoryRecord* pStartRecord)
 dicomDir::dicomDir(ptr<dataSet> pDataSet):
 	m_pDataSet(pDataSet)
 {
-	if(m_pDataSet == 0)
+	if(m_pDataSet == nullptr)
 	{
 		m_pDataSet =new dataSet;
 	}
@@ -478,7 +478,7 @@ dicomDir::dicomDir(ptr<dataSet> pDataSet):
 	for(imbxUint32 scanItems(0); ; ++scanItems)
 	{
 		ptr<dataSet> pDataSet(m_pDataSet->getSequenceItem(0x0004, 0, 0x1220, scanItems));
-		if(pDataSet == 0)
+		if(pDataSet == nullptr)
 		{
 			break;
 		}
@@ -621,7 +621,7 @@ ptr<dataSet> dicomDir::buildDataSet()
 
 	// Allocate offset fields
 	///////////////////////////////////////////////////////////
-	if(m_pFirstRootRecord != 0)
+	if(m_pFirstRootRecord != nullptr)
 	{
 		m_pFirstRootRecord->updateOffsets();
 	}
@@ -637,7 +637,7 @@ ptr<dataSet> dicomDir::buildDataSet()
 
 	// Scan all the records and update the pointers
 	///////////////////////////////////////////////////////////
-	if(m_pFirstRootRecord != 0)
+	if(m_pFirstRootRecord != nullptr)
 	{
 		m_pFirstRootRecord->updateOffsets();
 		m_pDataSet->setUnsignedLong(0x0004, 0, 0x1200, 0, m_pFirstRootRecord->getRecordDataSet()->getItemOffset());

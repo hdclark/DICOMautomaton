@@ -151,7 +151,7 @@ ptr<handlers::dataHandlerNumericBase> image::create(
 	// If a valid buffer with the same data type is already
 	//  allocated then use it.
 	///////////////////////////////////////////////////////////
-	if(m_buffer == 0 || !(m_buffer->isReferencedOnce()) )
+	if(m_buffer == nullptr || !(m_buffer->isReferencedOnce()) )
 	{
 		ptr<buffer> tempBuffer(new buffer(this, bufferDataType));
 		m_buffer = tempBuffer;
@@ -160,7 +160,7 @@ ptr<handlers::dataHandlerNumericBase> image::create(
 	m_sizeX = m_sizeY = 0;
 	
 	ptr<handlers::dataHandler> imageHandler(m_buffer->getDataHandler(true, sizeX * sizeY * (imbxUint32)m_channelsNumber) );
-	if(imageHandler != 0)
+	if(imageHandler != nullptr)
 	{
 		m_rowLength = m_channelsNumber*sizeX;
 		
@@ -229,9 +229,9 @@ ptr<handlers::dataHandlerNumericBase> image::getDataHandler(const bool bWrite, i
 
 	lockObject lockAccess(this);
 
-	if(m_buffer == 0)
+	if(m_buffer == nullptr)
 	{
-		return ptr<handlers::dataHandlerNumericBase>(0);
+		return ptr<handlers::dataHandlerNumericBase>(nullptr);
 	}
 
 	*pRowSize=m_rowLength;

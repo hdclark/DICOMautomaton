@@ -81,7 +81,7 @@ void codecFactory::registerCodec(ptr<codec> pCodec)
 {
 	PUNTOEXE_FUNCTION_START(L"codecFactory::registerCodec");
 
-	if(pCodec == 0)
+	if(pCodec == nullptr)
 	{
 		return;
 	}
@@ -111,11 +111,11 @@ ptr<codec> codecFactory::getCodec(std::wstring transferSyntax)
 	ptr<codecFactory> pFactory(getCodecFactory());
 	lockObject lockAccess(pFactory.get());
 
-	for(std::list<ptr<codec> >::iterator scanCodecs=pFactory->m_codecsList.begin(); scanCodecs!=pFactory->m_codecsList.end(); ++scanCodecs)
+	for(auto & scanCodecs : pFactory->m_codecsList)
 	{
-		if((*scanCodecs)->canHandleTransferSyntax(transferSyntax))
+		if(scanCodecs->canHandleTransferSyntax(transferSyntax))
 		{
-			return (*scanCodecs)->createCodec();
+			return scanCodecs->createCodec();
 		}
 	}
 
@@ -163,15 +163,15 @@ ptr<dataSet> codecFactory::load(ptr<streamReader> pStream, imbxUint32 maxSizeBuf
 	ptr<codecFactory> pFactory(getCodecFactory());
 	{
 		lockObject lockAccess(pFactory.get());
-		for(std::list<ptr<codec> >::iterator scanCodecs=pFactory->m_codecsList.begin(); scanCodecs!=pFactory->m_codecsList.end(); ++scanCodecs)
+		for(auto & scanCodecs : pFactory->m_codecsList)
 		{
-			ptr<codec> copyCodec((*scanCodecs)->createCodec());
+			ptr<codec> copyCodec(scanCodecs->createCodec());
 			localCodecsList.push_back(copyCodec);
 		}
 	}
 
 	ptr<dataSet> pDataSet;
-	for(std::list<ptr<codec> >::iterator scanCodecs=localCodecsList.begin(); scanCodecs != localCodecsList.end() && pDataSet == 0; ++scanCodecs)
+	for(std::list<ptr<codec> >::iterator scanCodecs=localCodecsList.begin(); scanCodecs != localCodecsList.end() && pDataSet == nullptr; ++scanCodecs)
 	{
 		try
 		{
@@ -184,7 +184,7 @@ ptr<dataSet> codecFactory::load(ptr<streamReader> pStream, imbxUint32 maxSizeBuf
 		}
 	}
 
-	if(pDataSet == 0)
+	if(pDataSet == nullptr)
 	{
 		PUNTOEXE_THROW(codecExceptionWrongFormat, "none of the codecs recognized the file format");
 	}

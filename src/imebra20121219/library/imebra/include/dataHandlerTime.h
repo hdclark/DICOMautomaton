@@ -71,9 +71,9 @@ class dataHandlerTime : public dataHandlerDateTimeBase
 {
 
 public:
-	virtual imbxUint32 getUnitSize() const;
+	imbxUint32 getUnitSize() const override;
 
-	virtual void getDate(
+	void getDate(
                 const imbxUint32 index,
 		imbxInt32* pYear, 
 		imbxInt32* pMonth, 
@@ -83,9 +83,9 @@ public:
 		imbxInt32* pSeconds,
 		imbxInt32* pNanoseconds,
 		imbxInt32* pOffsetHours,
-		imbxInt32* pOffsetMinutes) const;
+		imbxInt32* pOffsetMinutes) const override;
 
-	virtual void setDate(
+	void setDate(
                 const imbxUint32 index,
 		imbxInt32 year, 
 		imbxInt32 month, 
@@ -95,7 +95,7 @@ public:
 		imbxInt32 seconds,
 		imbxInt32 nanoseconds,
 		imbxInt32 offsetHours,
-		imbxInt32 offsetMinutes);
+		imbxInt32 offsetMinutes) override;
 
 	/// \brief Return a string representing the time stored in 
 	///         the buffer.
@@ -113,7 +113,7 @@ public:
 	///          buffer
 	///
 	///////////////////////////////////////////////////////////
-	virtual std::wstring getUnicodeString(const imbxUint32 index) const;
+	std::wstring getUnicodeString(const imbxUint32 index) const override;
 
 	/// \brief Set the date from a string.
 	///
@@ -129,12 +129,12 @@ public:
 	/// @param value the string representing the time to be set
 	///
 	///////////////////////////////////////////////////////////
-	virtual void setUnicodeString(const imbxUint32 index, const std::wstring& value);
+	void setUnicodeString(const imbxUint32 index, const std::wstring& value) override;
 
-	void parseBuffer(const ptr<memory>& memoryBuffer);
+	void parseBuffer(const ptr<memory>& memoryBuffer) override;
 
 protected:
-	virtual imbxUint32 maxSize() const;
+	imbxUint32 maxSize() const override;
 };
 
 } // namespace handlers

@@ -141,13 +141,13 @@ bool ComputeGenerateSurfaceMask(planar_image_collection<float,double> &imagecoll
                         //Check if there are any ROI's this voxel is inside. 
                         bool is_in_an_roi = false;
                         for(auto &ccs : cc_select){
-                            for(auto roi_it = ccs.get().contours.begin(); roi_it != ccs.get().contours.end(); ++roi_it){
-                                if(roi_it->points.empty()) continue;
-                                if(! img.encompasses_contour_of_points(*roi_it)) continue;
+                            for(auto & contour : ccs.get().contours){
+                                if(contour.points.empty()) continue;
+                                if(! img.encompasses_contour_of_points(contour)) continue;
 
                                 //Prepare a contour for fast is-point-within-the-polygon checking.
-                                auto BestFitPlane = roi_it->Least_Squares_Best_Fit_Plane(ortho_unit);
-                                auto ProjectedContour = roi_it->Project_Onto_Plane_Orthogonally(BestFitPlane);
+                                auto BestFitPlane = contour.Least_Squares_Best_Fit_Plane(ortho_unit);
+                                auto ProjectedContour = contour.Project_Onto_Plane_Orthogonally(BestFitPlane);
                                 const bool AlreadyProjected = true;
                 
                                 auto ProjectedPoint = BestFitPlane.Project_Onto_Plane_Orthogonally(point);
@@ -181,13 +181,13 @@ bool ComputeGenerateSurfaceMask(planar_image_collection<float,double> &imagecoll
                                         const auto bpoint = limg.position(brow, bcol);
 
                                         for(auto &ccs : cc_select){
-                                            for(auto roi_it = ccs.get().contours.begin(); roi_it != ccs.get().contours.end(); ++roi_it){
-                                                if(roi_it->points.empty()) continue;
-                                                if(! limg.encompasses_contour_of_points(*roi_it)) continue;
+                                            for(auto & contour : ccs.get().contours){
+                                                if(contour.points.empty()) continue;
+                                                if(! limg.encompasses_contour_of_points(contour)) continue;
 
                                                 //Prepare a contour for fast is-point-within-the-polygon checking.
-                                                auto BestFitPlane = roi_it->Least_Squares_Best_Fit_Plane(ortho_unit);
-                                                auto ProjectedContour = roi_it->Project_Onto_Plane_Orthogonally(BestFitPlane);
+                                                auto BestFitPlane = contour.Least_Squares_Best_Fit_Plane(ortho_unit);
+                                                auto ProjectedContour = contour.Project_Onto_Plane_Orthogonally(BestFitPlane);
                                                 const bool AlreadyProjected = true;
                                 
                                                 auto ProjectedPoint = BestFitPlane.Project_Onto_Plane_Orthogonally(bpoint);

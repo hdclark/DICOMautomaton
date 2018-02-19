@@ -364,8 +364,8 @@ protected:
 
 	// Pointers to the embedded datasets
 	///////////////////////////////////////////////////////////
-	typedef ptr<dataSet> ptrDataSet;
-	typedef std::vector<ptrDataSet> tEmbeddedDatasetsMap;
+	using ptrDataSet = ptr<dataSet>;
+	using tEmbeddedDatasetsMap = std::vector<ptrDataSet>;
 	tEmbeddedDatasetsMap m_embeddedDataSets;
 
 	charsetsList::tCharsetsList m_charsetsList;

@@ -18,7 +18,7 @@
 #include <cmath>
 
 #include <unistd.h>           //fork().
-#include <stdlib.h>           //quick_exit(), EXIT_SUCCESS.
+#include <cstdlib>           //quick_exit(), EXIT_SUCCESS.
 #include <getopt.h>           //Needed for 'getopts' argument parsing.
 #include <cstdlib>            //Needed for exit() calls.
 #include <utility>            //Needed for std::pair.

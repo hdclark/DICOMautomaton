@@ -235,8 +235,8 @@ Drover DumpROIData(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
                   [](const std::pair<std::string,float> &L, const std::pair<std::string,float> &R) -> bool {
                       return L.second > R.second;
                   });
-        if(ordered_res.size() != 1) for(size_t i = 0; i < ordered_res.size(); ++i){
-            std::cout << ordered_res[i].first << " : " << ROIName; // << std::endl;
+        if(ordered_res.size() != 1) for(auto & ordered_re : ordered_res){
+            std::cout << ordered_re.first << " : " << ROIName; // << std::endl;
             //std::cout << " QQQ " << ordered_res[i].second << std::endl;
             std::cout << std::endl;
             //if(i > 1) break;

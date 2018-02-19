@@ -75,7 +75,7 @@ imbxUint32 VOILUT::getVOILUTId(imbxUint32 VOILUTNumber)
 
 	// If the dataset has not been set, then return NULL
 	///////////////////////////////////////////////////////////
-	if(m_pDataSet == 0)
+	if(m_pDataSet == nullptr)
 	{
 		return 0;
 	}
@@ -105,7 +105,7 @@ imbxUint32 VOILUT::getVOILUTId(imbxUint32 VOILUTNumber)
 		///////////////////////////////////////////////////////////
 		VOILUTNumber-=scanWindow;
 		ptr<dataSet> voiLut = m_pDataSet->getSequenceItem(0x0028, 0, 0x3010, VOILUTNumber);
-		if(voiLut != 0)
+		if(voiLut != nullptr)
 		{
 			// Set the VOILUTId
 			///////////////////////////////////////////////////////////
@@ -147,7 +147,7 @@ std::wstring VOILUT::getVOILUTDescription(imbxUint32 VOILUTId)
 
 	// If the dataset has not been, then return NULL
 	///////////////////////////////////////////////////////////
-	if(m_pDataSet == 0)
+	if(m_pDataSet == nullptr)
 	{
 		return VOILUTDescription;
 	}
@@ -166,7 +166,7 @@ std::wstring VOILUT::getVOILUTDescription(imbxUint32 VOILUTId)
 	if((VOILUTId & 0x00100000))
 	{
 		ptr<lut> voiLut = m_pDataSet->getLut(0x0028, 0x3010, VOILUTNumber);
-		if(voiLut != 0)
+		if(voiLut != nullptr)
 		{
 			VOILUTDescription=voiLut->getDescription();
 		}
@@ -195,7 +195,7 @@ void VOILUT::setVOILUT(imbxUint32 VOILUTId)
 
 	// If the dataset has not been set, then return NULL
 	///////////////////////////////////////////////////////////
-	if(m_pDataSet == 0)
+	if(m_pDataSet == nullptr)
 	{
 		return;
 	}
@@ -287,7 +287,7 @@ void VOILUT::getCenterWidth(imbxInt32* pCenter, imbxInt32* pWidth)
 ///////////////////////////////////////////////////////////
 bool VOILUT::isEmpty()
 {
-	return m_windowWidth <= 1 && (m_pLUT == 0 || m_pLUT->getSize() == 0);
+	return m_windowWidth <= 1 && (m_pLUT == nullptr || m_pLUT->getSize() == 0);
 }
 
 ptr<image> VOILUT::allocateOutputImage(ptr<image> pInputImage, imbxUint32 width, imbxUint32 height)
@@ -301,7 +301,7 @@ ptr<image> VOILUT::allocateOutputImage(ptr<image> pInputImage, imbxUint32 width,
 
 	ptr<image> outputImage(new image);
 	image::bitDepth depth = pInputImage->getDepth();
-	if(m_pLUT != 0 && m_pLUT->getSize() != 0)
+	if(m_pLUT != nullptr && m_pLUT->getSize() != 0)
 	{
 		imbxUint8 bits = m_pLUT->getBits();
 

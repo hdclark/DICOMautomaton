@@ -72,7 +72,7 @@ static charsetInformation m_charsetTable[]={
 	{"ISO-IR 192", "UTF-8", 65001, true},
 	{"GB18030",    "GB18030", 54936, true},
 
-        {0,0,0, false}
+        {nullptr,nullptr,0, false}
 };
 
 
@@ -113,7 +113,7 @@ int charsetConversion::findTable(const std::string& tableName) const
 {
 	PUNTOEXE_FUNCTION_START(L"charsetConversion::findTable");
 
-	for(int scanTables = 0; m_charsetTable[scanTables].m_iconvName != 0; ++scanTables)
+	for(int scanTables = 0; m_charsetTable[scanTables].m_iconvName != nullptr; ++scanTables)
 	{
 		if(tableName == m_charsetTable[scanTables].m_iconvName ||
 			tableName == m_charsetTable[scanTables].m_isoRegistration)
@@ -317,7 +317,7 @@ std::string charsetConversion::myIconv(iconv_t context, char* inputString, size_
 
 	// Reset the state
 	///////////////////////////////////////////////////////////
-	iconv(context, 0, 0, 0, 0);
+	iconv(context, nullptr, nullptr, nullptr, nullptr);
 
 	// Buffer for the conversion
 	///////////////////////////////////////////////////////////

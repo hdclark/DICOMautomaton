@@ -67,7 +67,7 @@ namespace puntoexe
 //
 ///////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////
-basePtr::basePtr() : object(0)
+basePtr::basePtr() : object(nullptr)
 {
 }
 
@@ -113,10 +113,10 @@ basePtr::~basePtr()
 ///////////////////////////////////////////////////////////
 void basePtr::release()
 {
-	if(object != 0)
+	if(object != nullptr)
 	{
 		object->release();
-		object = 0;
+		object = nullptr;
 	}
 }
 
@@ -132,7 +132,7 @@ void basePtr::release()
 ///////////////////////////////////////////////////////////
 void basePtr::addRef()
 {
-	if(object != 0)
+	if(object != nullptr)
 	{
 		object->addRef();
 	}
@@ -182,7 +182,7 @@ baseObject::baseObject(): m_lockCounter(0), m_bValid(true), m_pCriticalSection(n
 baseObject::baseObject(const ptr<baseObject>& externalLock): 
 	m_lockCounter(0), m_bValid(true)
 {
-    if(externalLock == 0)
+    if(externalLock == nullptr)
     {
         m_pCriticalSection = new CObjectCriticalSection;
     }
@@ -237,7 +237,7 @@ baseObject::~baseObject()
 ///////////////////////////////////////////////////////////
 void baseObject::addRef()
 {
-	if(this == 0)
+	if(this == nullptr)
 	{
 		return;
 	}
@@ -262,7 +262,7 @@ void baseObject::release()
 	// Calling release on a non-existing object.
 	// Simply return
 	///////////////////////////////////////////////////////////
-	if(this == 0)
+	if(this == nullptr)
 	{
 		return;
 	}
@@ -313,7 +313,7 @@ bool baseObject::preDelete()
 ///////////////////////////////////////////////////////////
 void baseObject::lock()
 {
-	if(this == 0)
+	if(this == nullptr)
 	{
 		return;
 	}
@@ -332,7 +332,7 @@ void baseObject::lock()
 ///////////////////////////////////////////////////////////
 void baseObject::unlock()
 {
-	if(this == 0)
+	if(this == nullptr)
 	{
 		return;
 	}
@@ -367,7 +367,7 @@ void baseObject::unlock()
 lockObject::lockObject(baseObject* pObject)
 {
 	m_pObject = pObject;
-	if(m_pObject != 0)
+	if(m_pObject != nullptr)
 	{
 		m_pObject->lock();
 	}
@@ -400,10 +400,10 @@ lockObject::~lockObject()
 ///////////////////////////////////////////////////////////
 void lockObject::unlock()
 {
-	if( m_pObject != 0)
+	if( m_pObject != nullptr)
 	{
 		m_pObject->unlock();
-		m_pObject = 0;
+		m_pObject = nullptr;
 	}
 }
 
@@ -435,13 +435,13 @@ void lockObject::unlock()
 lockMultipleObjects::lockMultipleObjects(tObjectsList* pObjectsList)
 {
 	tCriticalSectionsList csList;
-	for(tObjectsList::iterator scanObjects = pObjectsList->begin(); scanObjects != pObjectsList->end(); ++scanObjects)
+	for(auto & scanObjects : *pObjectsList)
 	{
-		if((*scanObjects) == 0)
+		if(scanObjects == nullptr)
 		{
 			continue;
 		}
-		csList.push_back(&( (*scanObjects)->m_pCriticalSection->m_criticalSection) );
+		csList.push_back(&( scanObjects->m_pCriticalSection->m_criticalSection) );
 	}
 	m_pLockedCS.reset(puntoexe::lockMultipleCriticalSections(&csList));
 }
@@ -473,7 +473,7 @@ lockMultipleObjects::~lockMultipleObjects()
 ///////////////////////////////////////////////////////////
 void lockMultipleObjects::unlock()
 {
-	if(m_pLockedCS.get() == 0)
+	if(m_pLockedCS.get() == nullptr)
 	{
 		return;
 	}

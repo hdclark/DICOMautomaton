@@ -91,12 +91,12 @@ void updateCharsets(const tCharsetsList* pCharsetsList, tCharsetsList* pDestinat
 	// Copy the charsets in the local list (if they are not
 	//  already there)
 	///////////////////////////////////////////////////////////
-	for(tCharsetsList::const_iterator scanCharsets = pCharsetsList->begin(); scanCharsets != pCharsetsList->end(); ++scanCharsets)
+	for(const auto & scanCharsets : *pCharsetsList)
 	{
 		bool bExist = false;
-		for(tCharsetsList::iterator scanExistingCharsets = pDestinationCharsetsList->begin(); scanExistingCharsets != pDestinationCharsetsList->end(); ++scanExistingCharsets)
+		for(auto & scanExistingCharsets : *pDestinationCharsetsList)
 		{
-			if(*scanCharsets == *scanExistingCharsets)
+			if(scanCharsets == scanExistingCharsets)
 			{
 				bExist = true;
 				break;
@@ -104,7 +104,7 @@ void updateCharsets(const tCharsetsList* pCharsetsList, tCharsetsList* pDestinat
 		}
 		if(!bExist)
 		{
-			pDestinationCharsetsList->push_back(*scanCharsets);
+			pDestinationCharsetsList->push_back(scanCharsets);
 		}
 	}
 
@@ -127,9 +127,9 @@ void copyCharsets(const tCharsetsList* pSourceCharsetsList, tCharsetsList* pDest
 {
 	PUNTOEXE_FUNCTION_START(L"charsetsList::copyCharsets");
 
-	for(tCharsetsList::const_iterator scanCharsets = pSourceCharsetsList->begin(); scanCharsets != pSourceCharsetsList->end(); ++scanCharsets)
+	for(const auto & scanCharsets : *pSourceCharsetsList)
 	{
-		pDestinationCharsetsList->push_back(*scanCharsets);
+		pDestinationCharsetsList->push_back(scanCharsets);
 	}
 
 	PUNTOEXE_FUNCTION_END();

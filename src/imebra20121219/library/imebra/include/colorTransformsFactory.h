@@ -291,7 +291,7 @@ public:
 	//@}
 
 protected:
-	typedef std::list<ptr<colorTransform> > tTransformsList;
+	using tTransformsList = std::list<ptr<colorTransform> >;
 	tTransformsList m_transformsList;
 
 public:
