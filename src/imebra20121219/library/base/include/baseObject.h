@@ -559,7 +559,7 @@ protected:
 	/// \brief A list of locked critical sections
 	///
 	///////////////////////////////////////////////////////////
-	std::auto_ptr<tCriticalSectionsList> m_pLockedCS;
+	std::unique_ptr<tCriticalSectionsList> m_pLockedCS;
 };
 
 ///@}

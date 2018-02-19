@@ -348,7 +348,7 @@ void dicomCodec::writeTag(ptr<streamWriter> pDestStream, ptr<data> pData, imbxUi
 			///////////////////////////////////////////////////////////
 			if(wordSize > 1)
 			{
-				std::auto_ptr<imbxUint8> pTempBuffer(new imbxUint8[bufferSize]);
+				std::unique_ptr<imbxUint8> pTempBuffer(new imbxUint8[bufferSize]);
 				::memcpy(pTempBuffer.get(), pDataHandlerRaw->getMemoryBuffer(), pDataHandlerRaw->getSize());
 				streamController::adjustEndian(pTempBuffer.get(), wordSize, endianType, bufferSize / wordSize);
 				pDestStream->write(pTempBuffer.get(), bufferSize);
@@ -1273,7 +1273,7 @@ void dicomCodec::readUncompressedInterleaved(
 
 	imbxUint8  bitPointer=0x0;
 
-	std::auto_ptr<imbxInt32*> autoPtrChannelsMemory(new imbxInt32*[m_channels.size()]);
+	std::unique_ptr<imbxInt32*> autoPtrChannelsMemory(new imbxInt32*[m_channels.size()]);
 	imbxInt32** channelsMemory = autoPtrChannelsMemory.get();
 	for(size_t copyChannelsPntr = 0; copyChannelsPntr < m_channels.size(); ++copyChannelsPntr)
 	{
@@ -1304,7 +1304,7 @@ void dicomCodec::readUncompressedInterleaved(
         {
             numValuesPerBlock += 2;
         }
-        std::auto_ptr<imbxInt32> readBlockValuesAutoPtr(new imbxInt32[numValuesPerBlock]);
+        std::unique_ptr<imbxInt32> readBlockValuesAutoPtr(new imbxInt32[numValuesPerBlock]);
 
         // Read the subsampled channels.
 	// Find the number of blocks to read
@@ -1374,7 +1374,7 @@ void dicomCodec::writeUncompressedInterleaved(
 
 	imbxUint8  bitPointer=0x0;
 
-	std::auto_ptr<imbxInt32*> autoPtrChannelsMemory(new imbxInt32*[m_channels.size()]);
+	std::unique_ptr<imbxInt32*> autoPtrChannelsMemory(new imbxInt32*[m_channels.size()]);
 	imbxInt32** channelsMemory = autoPtrChannelsMemory.get();
 	for(size_t copyChannelsPntr = 0; copyChannelsPntr < m_channels.size(); ++copyChannelsPntr)
 	{
@@ -1556,7 +1556,7 @@ void dicomCodec::writeRLECompressed(
 
 		for(imbxUint32 scanChannels = 0; scanChannels < channelsNumber; ++scanChannels)
 		{
-			std::auto_ptr<imbxUint8> rowBytes(new imbxUint8[imageSizeX]);
+			std::unique_ptr<imbxUint8> rowBytes(new imbxUint8[imageSizeX]);
 			imbxUint8* pRowBytes = rowBytes.get();
 
 			for(imbxInt32 rightShift = ((allocatedBits + 7) & 0xfffffff8) -8; rightShift >= 0; rightShift -= 8)

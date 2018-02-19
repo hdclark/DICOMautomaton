@@ -180,7 +180,7 @@ public:
 	virtual bool preDelete();
 
 protected:
-	std::auto_ptr<stringUint8> m_pMemoryBuffer;
+	std::unique_ptr<stringUint8> m_pMemoryBuffer;
 };
 
 

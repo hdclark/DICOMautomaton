@@ -261,8 +261,8 @@ namespace puntoexe
 				//  in the source image mapped to the final bitmap
 				///////////////////////////////////////////////////////////
 				imbxUint32 destBitmapWidth(visibleBottomRightX - visibleTopLeftX);
-				std::auto_ptr<imbxInt32> averagePixels(new imbxInt32[destBitmapWidth * 4]);
-				std::auto_ptr<imbxUint32> sourcePixelIndex(new imbxUint32[destBitmapWidth + 1]);
+				std::unique_ptr<imbxInt32> averagePixels(new imbxInt32[destBitmapWidth * 4]);
+				std::unique_ptr<imbxUint32> sourcePixelIndex(new imbxUint32[destBitmapWidth + 1]);
 				for(imbxInt32 scanPixelsX = visibleTopLeftX; scanPixelsX != visibleBottomRightX + 1; ++scanPixelsX)
 				{
 					sourcePixelIndex.get()[scanPixelsX - visibleTopLeftX] = scanPixelsX * (imageSizeX << leftShiftX) / totalWidthPixels;

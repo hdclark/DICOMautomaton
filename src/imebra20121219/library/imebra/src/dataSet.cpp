@@ -643,7 +643,7 @@ imbxUint32 dataSet::getFrameOffset(imbxUint32 frameNumber)
 	//  0 (the first position)
 	///////////////////////////////////////////////////////////
 	imbxUint8* pOffsets = framesPointer->getMemoryBuffer();
-	std::auto_ptr<imbxUint32> pAdjustedOffsets((imbxUint32*)new imbxUint8[framesPointer->getSize()]);
+	std::unique_ptr<imbxUint32> pAdjustedOffsets((imbxUint32*)new imbxUint8[framesPointer->getSize()]);
 	::memcpy(pAdjustedOffsets.get(), pOffsets, framesPointer->getSize());
 	streamController::adjustEndian((imbxUint8*)(pAdjustedOffsets.get()), 4, streamController::lowByteEndian, offsetsCount);
 	if(frameNumber < offsetsCount)

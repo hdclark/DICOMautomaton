@@ -95,7 +95,7 @@ tCriticalSectionsList* lockMultipleCriticalSections(tCriticalSectionsList* pList
 
 	// Build a list that lists all the locked critical sections
 	///////////////////////////////////////////////////////////
-	std::auto_ptr<tCriticalSectionsList> pLockedList(new tCriticalSectionsList);
+	std::unique_ptr<tCriticalSectionsList> pLockedList(new tCriticalSectionsList);
 
 	// Use the normal lockCriticalSection if the list contains
 	//  only one critical section
