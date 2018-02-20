@@ -116,7 +116,7 @@ Drover DumpROIData(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
         for(auto & cc : DICOM_data.contour_data->ccs){
             for(auto & c : cc.contours){
                 key_t key = std::tie(c.metadata["PatientID"], c.metadata["ROIName"], c.metadata["NormalizedROIName"]);
-                const auto min_sep = c.GetMetadataValueAs<double>("MinimumSeparation").value();
+                const auto min_sep = c.GetMetadataValueAs<double>("MinimumSeparation").value_or(1.0);
                 ContourCounts[key] += 1;
                 MinimumSeparation[key] = min_sep;
                 SlabVolume[key] += std::abs( c.Get_Signed_Area(PlanarContourAssumption) * min_sep );

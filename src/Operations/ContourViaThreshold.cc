@@ -164,6 +164,8 @@ std::list<OperationArgDoc> OpArgDocContourViaThreshold(void){
 
 Drover ContourViaThreshold(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string> /*InvocationMetadata*/, std::string FilenameLex){
 
+    Explicator X(FilenameLex);
+
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto ROILabel = OptArgs.getValueStr("ROILabel").value();
     const auto LowerStr = OptArgs.getValueStr("Lower").value();
@@ -203,9 +205,10 @@ Drover ContourViaThreshold(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
     }
     DICOM_data.contour_data->ccs.emplace_back();
 
+    const double MinimumSeparation = 1.0; // TODO: is there a routine to do this? (YES: Unique_Contour_Planes()...)
     DICOM_data.contour_data->ccs.back().Raw_ROI_name = ROILabel;
     DICOM_data.contour_data->ccs.back().ROI_number = 10000; // TODO: find highest existing and ++ it.
-    DICOM_data.contour_data->ccs.back().Minimum_Separation = 1.0; // TODO: is there a routine to do this? (YES: Unique_Contour_Planes()...)
+    DICOM_data.contour_data->ccs.back().Minimum_Separation = MinimumSeparation;
 
     //Iterate over each requested image_array. Each image is processed independently, so a thread pool is used.
     auto iap_it = DICOM_data.image_data.begin();
@@ -317,8 +320,10 @@ Drover ContourViaThreshold(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
                         cop.emplace_back();
                         cop.back().closed = true;
                         cop.back().metadata["ROIName"] = ROILabel;
+                        cop.back().metadata["NormalizedROIName"] = X(ROILabel);
                         cop.back().metadata["Description"] = "Contoured via threshold ("_s + std::to_string(Lower)
                                                              + " <= pixel_val <= " + std::to_string(Upper) + ")";
+                        cop.back().metadata["MinimumSeparation"] = MinimumSeparation;
                         for(const auto &key : { "StudyInstanceUID", "FrameofReferenceUID" }){
                             if(animg.metadata.count(key) != 0) cop.back().metadata[key] = animg.metadata.at(key);
                         }
@@ -351,5 +356,6 @@ Drover ContourViaThreshold(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
         }
     }
 
+    DICOM_data.contour_data->ccs.back().Raw_ROI_name = ROILabel;
     return std::move(DICOM_data);
 }
