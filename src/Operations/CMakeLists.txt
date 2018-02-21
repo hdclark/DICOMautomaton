@@ -60,6 +60,7 @@ add_library(Operations_objs OBJECT
     LogScale.cc
     MaxMinPixels.cc
     MeldDose.cc
+    ModifyImageMetadata.cc
     PlotPerROITimeCourses.cc
     PreFilterEnormousCTValues.cc
     PruneEmptyImageDoseArrays.cc
