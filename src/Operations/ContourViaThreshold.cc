@@ -308,7 +308,7 @@ Drover ContourViaThreshold(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
 
                 
                 //Walk all available half-edges forming contour perimeters.
-                std::list<contour_of_points<double>> cop;
+                std::list<contour_of_points<double>> copl;
                 {
                     auto he_it = half_edges.begin();
                     while(he_it != half_edges.end()){
@@ -317,15 +317,15 @@ Drover ContourViaThreshold(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
                             continue;
                         }
 
-                        cop.emplace_back();
-                        cop.back().closed = true;
-                        cop.back().metadata["ROIName"] = ROILabel;
-                        cop.back().metadata["NormalizedROIName"] = X(ROILabel);
-                        cop.back().metadata["Description"] = "Contoured via threshold ("_s + std::to_string(Lower)
+                        copl.emplace_back();
+                        copl.back().closed = true;
+                        copl.back().metadata["ROIName"] = ROILabel;
+                        copl.back().metadata["NormalizedROIName"] = X(ROILabel);
+                        copl.back().metadata["Description"] = "Contoured via threshold ("_s + std::to_string(Lower)
                                                              + " <= pixel_val <= " + std::to_string(Upper) + ")";
-                        cop.back().metadata["MinimumSeparation"] = MinimumSeparation;
+                        copl.back().metadata["MinimumSeparation"] = MinimumSeparation;
                         for(const auto &key : { "StudyInstanceUID", "FrameofReferenceUID" }){
-                            if(animg.metadata.count(key) != 0) cop.back().metadata[key] = animg.metadata.at(key);
+                            if(animg.metadata.count(key) != 0) copl.back().metadata[key] = animg.metadata.at(key);
                         }
 
                         const auto A = he_it->first; //The starting node.
@@ -336,17 +336,31 @@ Drover ContourViaThreshold(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
                                                                  //       This is how you can will get consistent orientation handling!
 
                             B = *B_it;
-                            cop.back().points.emplace_back(verts[B]); //Add the vertex to the current contour.
+                            copl.back().points.emplace_back(verts[B]); //Add the vertex to the current contour.
                             B_he_it->second.erase(B_it); //Retire the node.
                         }while(B != A);
                     }
+                }
+
+                // Try to simplify the contours as much as possible.
+                //
+                // The following will straddle each vertex, interpolate the adjacent vertices, and compare the
+                // interpolated vertex to the actual (straddled) vertex. If they differ by a small amount, the straddled
+                // vertex is pruned. 1% should be more than enough to account for numerical fluctuations.
+                const auto tolerance_sq_dist = 0.01*(animg.pxl_dx*animg.pxl_dx + animg.pxl_dy*animg.pxl_dy + animg.pxl_dz*animg.pxl_dz);
+                const auto verts_are_equal = [=](const vec3<double> &A, const vec3<double> &B) -> bool {
+                    return A.sq_dist(B) < tolerance_sq_dist;
+                };
+                for(auto &cop : copl){
+                    cop.Remove_Sequential_Duplicate_Points(verts_are_equal);
+                    cop.Remove_Extraneous_Points(verts_are_equal);
                 }
 
 
                 //Save the contours and print some information to screen.
                 {
                     std::lock_guard<std::mutex> lock(saver_printer);
-                    DICOM_data.contour_data->ccs.back().contours.splice( DICOM_data.contour_data->ccs.back().contours.end(), cop);
+                    DICOM_data.contour_data->ccs.back().contours.splice(DICOM_data.contour_data->ccs.back().contours.end(), copl);
 
                     ++completed;
                     FUNCINFO("Completed " << completed << " of " << img_count
