@@ -1,33 +1,5 @@
 
 
-# ----------------------------------------------------------------------------------
-# Find Threading library.
-# ----------------------------------------------------------------------------------
-# via CMake find script:
-find_package(Threads REQUIRED)
-
-# ----------------------------------------------------------------------------------
-# Find Eigen.
-# ----------------------------------------------------------------------------------
-# via CMake find script:
-#find_package(Eigen3 3.1.0)
-#include(${EIGEN3_USE_FILE})
-#
-# via pkg-config method:
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(EIGEN3 REQUIRED eigen3)
-include_directories( ${EIGEN3_INCLUDE_DIRS} )
-#
-# Fallback if the above methods fail:
-#include_directories("/usr/include/eigen3/")
-
-# ----------------------------------------------------------------------------------
-# Find CGAL.
-# ----------------------------------------------------------------------------------
-find_package(CGAL REQUIRED COMPONENTS Core)
-include(${CGAL_USE_FILE})
-add_definitions(-DCGAL_EIGEN3_ENABLED=1) # Explicitly instruct CGAL to use Eigen.
-# ----------------------------------------------------------------------------------
 
 add_subdirectory(Operations)
 

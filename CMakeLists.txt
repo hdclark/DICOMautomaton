@@ -1,9 +1,37 @@
 
-cmake_minimum_required (VERSION 3.1.0 FATAL_ERROR)
-project (DICOMautomaton)
-set (DICOMautomaton_VERSION_MAJOR 3)
-set (DICOMautomaton_VERSION_MINOR 0)
-set (DICOMautomaton_VERSION_PATCH 0)
+cmake_minimum_required(VERSION 3.1.0 FATAL_ERROR)
+project(DICOMautomaton LANGUAGES CXX)
+set(DICOMautomaton_VERSION_MAJOR 3)
+set(DICOMautomaton_VERSION_MINOR 0)
+set(DICOMautomaton_VERSION_PATCH 0)
+
+
+####################################################################################
+#                                  Dependencies 
+####################################################################################
+# Note: See CPACK list below too.
+
+find_package(Threads REQUIRED)
+
+#find_package(Eigen3 3.1.0)
+#include(${EIGEN3_USE_FILE})
+#
+# or via pkg-config method:
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(EIGEN3 REQUIRED eigen3)
+include_directories( ${EIGEN3_INCLUDE_DIRS} )
+#
+# Fallback if the above methods fail:
+#include_directories("/usr/include/eigen3/")
+
+find_package(CGAL REQUIRED COMPONENTS Core)
+include(${CGAL_USE_FILE})
+add_definitions(-DCGAL_EIGEN3_ENABLED=1) # Explicitly instruct CGAL to use Eigen.
+
+
+####################################################################################
+#                                  Configuration
+####################################################################################
 
 # Set the release type. 
 set(CMAKE_BUILD_TYPE Release) # Comment this line to use fallback default.
@@ -12,22 +40,25 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Debug CACHE STRING "default to debug" FORCE)
 endif()
 
-set(CMAKE_CXX_STANDARD 14)
-set(CMAKE_CXX_EXTENSIONS OFF) # Disable GNU extensions (e.g., std=gnu++14).
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2")
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fdiagnostics-color=always -fno-var-tracking-assignments")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated -Wall -Wextra")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSTREAM_H") # -DUSE_ICU_STRINGS
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ffast-math -frounding-math -fno-finite-math-only")
-
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 set(BUILD_SHARED_LIBS TRUE)
 set(POSITION_INDEPENDENT_CODE TRUE)
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON) # For clang-tidy et al.
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_EXTENSIONS OFF) # Disable GNU extensions (e.g., std=gnu++14).
+add_definitions(-DUSTREAM_H) # -DUSE_ICU_STRINGS
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2")
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ffast-math -frounding-math -fno-finite-math-only")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fdiagnostics-color=always -fno-var-tracking-assignments")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated -Wall -Wextra")
+elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ffast-math -frounding-math -fno-finite-math-only")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated -Wall -Wextra")
+endif()
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON) # For clang-tidy et al.
 
 # Use the directory where CMakeLists.txt is for inclusions.
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
@@ -37,9 +68,18 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
+
+####################################################################################
+#                                 Subdirectories 
+####################################################################################
+
 add_subdirectory(src)
 add_subdirectory(config-files)
 
+
+####################################################################################
+#                                    Packaging    
+####################################################################################
 
 set(CPACK_GENERATOR "DEB")
 #set(CPACK_PACKAGE_NAME "dicomautomaton")
