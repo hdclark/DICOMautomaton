@@ -27,6 +27,7 @@ add_library(Operations_objs OBJECT
     DecayDoseOverTimeJones2014.cc
     DecayDoseOverTimeHalve.cc
     DecimatePixels.cc
+    DetectEdges.cc
     DumpAllOrderedImageMetadataToFile.cc
     DumpAnEncompassedPoint.cc
     DumpFilesPartitionedByTime.cc
