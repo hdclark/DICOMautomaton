@@ -93,10 +93,10 @@ std::list<OperationArgDoc> OpArgDocDetectEdges(void){
 
     out.emplace_back();
     out.back().name = "ImageSelection";
-    out.back().desc = "Images to operate on. Either 'none', 'last', or 'all'.";
+    out.back().desc = "Images to operate on. Either 'none', 'last', 'first', or 'all'.";
     out.back().default_val = "last";
     out.back().expected = true;
-    out.back().examples = { "none", "last", "all" };
+    out.back().examples = { "none", "last", "first", "all" };
     
     out.emplace_back();
     out.back().name = "Order";
@@ -142,9 +142,10 @@ Drover DetectEdges(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::str
     const auto MethodStr = OptArgs.getValueStr("Method").value();
 
     //-----------------------------------------------------------------------------------------------------------------
-    const auto regex_none = std::regex("no?n?e?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto regex_last = std::regex("la?s?t?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto regex_all  = std::regex("al?l?$",   std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto regex_none  = std::regex("^no?n?e?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto regex_first = std::regex("^fi?r?s?t?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto regex_last  = std::regex("^la?s?t?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto regex_all   = std::regex("^al?l?$",   std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
 
     const auto regex_1st = std::regex("^fi?r?s?t?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
     const auto regex_2nd = std::regex("^se?c?o?n?d?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
@@ -162,6 +163,7 @@ Drover DetectEdges(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::str
     const auto regex_crs  = std::regex("^cro?s?s?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
 
     if( !std::regex_match(ImageSelectionStr, regex_none)
+    &&  !std::regex_match(ImageSelectionStr, regex_first)
     &&  !std::regex_match(ImageSelectionStr, regex_last)
     &&  !std::regex_match(ImageSelectionStr, regex_all) ){
         throw std::invalid_argument("Image selection is not valid. Cannot continue.");
@@ -223,6 +225,7 @@ Drover DetectEdges(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::str
             throw std::runtime_error("Unable to compute 'cross' second-order partial derivative.");
         }
         ++iap_it;
+        if(std::regex_match(ImageSelectionStr, regex_first)) break;
     }
 
     return std::move(DICOM_data);
