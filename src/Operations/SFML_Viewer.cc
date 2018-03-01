@@ -30,7 +30,6 @@
 #include <pqxx/pqxx>          //PostgreSQL C++ interface.
 
 #include <SFML/Graphics.hpp>
-#include <SFML/Audio.hpp>
 
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorMath.h"         //Needed for vec3 class.
@@ -128,25 +127,6 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
     }
     if(DICOM_data.image_data.empty()) FUNCERR("No image data available to view. Cannot continue");
 
-
-    //Produce a little sound to notify the user we've started showing something.
-    sf::Music music;
-    {
-        const std::vector<std::string> soundpaths = { "Sounds/Ready.ogg",
-           "/home/hal/Dropbox/Project - DICOMautomaton/Sounds/Ready.ogg",
-           "/tmp/Ready.ogg", "Ready.ogg" };
-        bool worked = false;
-        for(const auto &soundpath : soundpaths){
-            if(!music.openFromFile(soundpath)) continue;
-            worked = true;
-            music.play();
-            break;
-        }
-        if(!worked){
-            FUNCWARN("Unable to play notification sound. Continuing anyways");
-        }
-    }
-
     //If, for some reason, several image arrays are available for viewing, we need to provide a means for stepping
     // through the arrays. 
     //
@@ -241,8 +221,6 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
 
     //Load available colour maps.
     std::vector< std::pair<std::string, std::function<class ClampedColourRGB(double)>>> colour_maps = {
-        std::make_pair("LinearRamp", ColourMap_Linear),
-
         std::make_pair("Viridis", ColourMap_Viridis),
         std::make_pair("Magma", ColourMap_Magma),
         std::make_pair("Plasma", ColourMap_Plasma),
@@ -262,7 +240,9 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
 
         std::make_pair("LANLOliveGreentoBlue", ColourMap_LANL_OliveGreen_to_Blue),
 
-        std::make_pair("YgorIncandescent", ColourMap_YgorIncandescent)
+        std::make_pair("YgorIncandescent", ColourMap_YgorIncandescent),
+
+        std::make_pair("LinearRamp", ColourMap_Linear)
     };
     size_t colour_map = 0;
 

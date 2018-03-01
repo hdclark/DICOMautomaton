@@ -267,7 +267,6 @@ target_link_libraries (dicomautomaton_dispatcher
     gsl
     gslcblas
     sfml-graphics 
-    sfml-audio 
     sfml-window 
     sfml-system
     jansson 
@@ -322,7 +321,6 @@ target_link_libraries(dicomautomaton_webserver
     gsl
     gslcblas
     sfml-graphics 
-    sfml-audio 
     sfml-window 
     sfml-system
     jansson 
