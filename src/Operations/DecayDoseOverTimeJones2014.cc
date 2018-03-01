@@ -58,7 +58,7 @@
 #include "../YgorImages_Functors/Processing/CT_Perfusion_Clip_Search.h"
 #include "../YgorImages_Functors/Processing/CT_Reasonable_HU_Window.h"
 #include "../YgorImages_Functors/Processing/Centralized_Moments.h"
-#include "../YgorImages_Functors/Processing/Cross_Second_Derivative.h"
+#include "../YgorImages_Functors/Processing/ImagePartialDerivative.h"
 #include "../YgorImages_Functors/Processing/DBSCAN_Time_Courses.h"
 #include "../YgorImages_Functors/Processing/DCEMRI_AUC_Map.h"
 #include "../YgorImages_Functors/Processing/DCEMRI_S0_Map.h"

@@ -68,7 +68,7 @@
 #include "../YgorImages_Functors/Processing/In_Image_Plane_Bilinear_Supersample.h"
 #include "../YgorImages_Functors/Processing/In_Image_Plane_Bicubic_Supersample.h"
 #include "../YgorImages_Functors/Processing/In_Image_Plane_Pixel_Decimate.h"
-#include "../YgorImages_Functors/Processing/Cross_Second_Derivative.h"
+#include "../YgorImages_Functors/Processing/ImagePartialDerivative.h"
 #include "../YgorImages_Functors/Processing/Orthogonal_Slices.h"
 
 #include "../YgorImages_Functors/Transform/DCEMRI_C_Map.h"
@@ -98,6 +98,7 @@ Drover ImageRoutineTests(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::ma
 
     //Deep-copy, resample the original images using bilinear interpolation, for image viewing, contours, etc..
     InImagePlaneBilinearSupersampleUserData bilin_ud;
+
     std::vector<std::shared_ptr<Image_Array>> bilin_resampled_img_arrays;
     for(auto & img_arr : orig_img_arrays){
         DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( *img_arr ) );
@@ -112,6 +113,7 @@ Drover ImageRoutineTests(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::ma
 
     //Deep-copy, resample the original images using bicubic interpolation, for image viewing, contours, etc..
     InImagePlaneBicubicSupersampleUserData bicub_ud;
+
     std::vector<std::shared_ptr<Image_Array>> bicub_resampled_img_arrays;
     if(false) for(auto & img_arr : orig_img_arrays){
         DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( *img_arr ) );
@@ -126,14 +128,18 @@ Drover ImageRoutineTests(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::ma
 
 
     //Deep-copy, convert the original images to their 'cross' second-order partial derivative (for edge-finding).
+    ImagePartialDerivativeUserData csd_ud;
+    csd_ud.order = PartialDerivativeOrder::second;
+    csd_ud.method = PartialDerivativeMethod::cross;
+
     std::vector<std::shared_ptr<Image_Array>> cross_second_deriv_img_arrays;
     for(auto & img_arr : orig_img_arrays){
         DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( *img_arr ) );
         cross_second_deriv_img_arrays.emplace_back( DICOM_data.image_data.back() );
 
         if(!cross_second_deriv_img_arrays.back()->imagecoll.Process_Images_Parallel( GroupIndividualImages,
-                                                                            CrossSecondDerivative,
-                                                                            {}, {} )){
+                                                                            ImagePartialDerivative,
+                                                                            {}, {}, &csd_ud )){
             FUNCERR("Unable to compute 'cross' second-order partial derivative");
         }
     }

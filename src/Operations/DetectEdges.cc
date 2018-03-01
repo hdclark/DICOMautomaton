@@ -68,7 +68,7 @@
 #include "../YgorImages_Functors/Processing/In_Image_Plane_Bilinear_Supersample.h"
 #include "../YgorImages_Functors/Processing/In_Image_Plane_Bicubic_Supersample.h"
 #include "../YgorImages_Functors/Processing/In_Image_Plane_Pixel_Decimate.h"
-#include "../YgorImages_Functors/Processing/Cross_Second_Derivative.h"
+#include "../YgorImages_Functors/Processing/ImagePartialDerivative.h"
 #include "../YgorImages_Functors/Processing/Orthogonal_Slices.h"
 
 #include "../YgorImages_Functors/Transform/DCEMRI_C_Map.h"
@@ -127,9 +127,13 @@ Drover DetectEdges(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::str
         if(!DICOM_data.image_data.empty()) iap_it = std::prev(DICOM_data.image_data.end());
     }
     while(iap_it != DICOM_data.image_data.end()){
+        ImagePartialDerivativeUserData ud;
+        ud.order = PartialDerivativeOrder::first;
+        ud.method = PartialDerivativeMethod::row_aligned;
+
         if(!(*iap_it)->imagecoll.Process_Images_Parallel( GroupIndividualImages,
-                                                          CrossSecondDerivative,
-                                                          {}, {} )){
+                                                          ImagePartialDerivative,
+                                                          {}, {}, &ud )){
             throw std::runtime_error("Unable to compute 'cross' second-order partial derivative.");
         }
         ++iap_it;
