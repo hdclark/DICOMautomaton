@@ -100,19 +100,36 @@ std::list<OperationArgDoc> OpArgDocDetectEdges(void){
     
     out.emplace_back();
     out.back().name = "Order";
-    out.back().desc = "Controls partial derivative order. First-order is the first derivative, and second-order is the"
-                      " second derivative.";
-    out.back().default_val = "second";
+    out.back().desc = "Controls the finite-difference partial derivative order or estimator used. All estimators are"
+                      " centred and use mirror boundary conditions. First-order estimators include the basic"
+                      " nearest-neighbour first derivative, and Roberts' cross, Prewitt, Sobel, Scharr estimators."
+                      " The only second-order estimator is the basic nearest-neighbour second derivative.";
+    out.back().default_val = "Scharr";
     out.back().expected = true;
-    out.back().examples = { "first", "second" };
+    out.back().examples = { "first",
+                            "Roberts-cross",
+                            "Prewitt",
+                            "Sobel",
+                            "Scharr",
+                            "second" };
 
     out.emplace_back();
     out.back().name = "Method";
     out.back().desc = "Controls partial derivative method. First-order derivatives can be row- or column-aligned,"
-                      " and second-order derivatives can be row-aligned, column-aligned, or 'cross'.";
-    out.back().default_val = "cross";
+                      " Roberts' cross can be (+row,+col)-aligned or (-row,+col)-aligned."
+                      " Second-order derivatives can be row-aligned, column-aligned, or 'cross' --meaning the"
+                      " compound partial derivative."
+                      " All methods support magnitude (addition of orthogonal components in quadrature) and"
+                      " orientation (in radians; [0,2pi) ).";
+    out.back().default_val = "magnitude";
     out.back().expected = true;
-    out.back().examples = { "row-aligned", "column-aligned", "cross" };
+    out.back().examples = { "row-aligned",
+                            "column-aligned",
+                            "prow-pcol-aligned",
+                            "nrow-pcol-aligned",
+                            "magnitude",
+                            "orientation",
+                            "cross" };
 
     return out;
 }
@@ -131,10 +148,18 @@ Drover DetectEdges(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::str
 
     const auto regex_1st = std::regex("^fi?r?s?t?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
     const auto regex_2nd = std::regex("^se?c?o?n?d?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto regex_rcr = std::regex("^ro?b?e?r?t?s?-?c?r?o?s?s?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto regex_pre = std::regex("^pr?e?w?i?t?t?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto regex_sob = std::regex("^so?b?e?l?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto regex_sch = std::regex("^sc?h?a?r?r?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
 
-    const auto regex_row = std::regex("^ro?w?-?a?l?i?g?n?e?d?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto regex_col = std::regex("^col?u?m?n?-?a?l?i?g?n?e?d?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto regex_crs = std::regex("^cro?s?s?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto regex_row  = std::regex("^ro?w?-?a?l?i?g?n?e?d?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto regex_col  = std::regex("^col?u?m?n?-?a?l?i?g?n?e?d?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto regex_prpc = std::regex("^pr?o?w?-?p?c?o?l?-?a?l?i?g?n?e?d?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto regex_nrpc = std::regex("^nr?o?w?_?p?c?o?l?u?m?n?-?a?l?i?g?n?e?d?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto regex_mag  = std::regex("^ma?g?n?i?t?u?d?e?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto regex_orn  = std::regex("^or?i?e?n?t?a?t?i?o?n?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto regex_crs  = std::regex("^cro?s?s?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
 
     if( !std::regex_match(ImageSelectionStr, regex_none)
     &&  !std::regex_match(ImageSelectionStr, regex_last)
@@ -162,6 +187,14 @@ Drover DetectEdges(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::str
             ud.order = PartialDerivativeOrder::first;
         }else if( std::regex_match(OrderStr, regex_2nd) ){
             ud.order = PartialDerivativeOrder::second;
+        }else if( std::regex_match(OrderStr, regex_rcr) ){
+            ud.order = PartialDerivativeOrder::Roberts_cross;
+        }else if( std::regex_match(OrderStr, regex_pre) ){
+            ud.order = PartialDerivativeOrder::Prewitt;
+        }else if( std::regex_match(OrderStr, regex_sob) ){
+            ud.order = PartialDerivativeOrder::Sobel;
+        }else if( std::regex_match(OrderStr, regex_sch) ){
+            ud.order = PartialDerivativeOrder::Scharr;
         }else{
             throw std::invalid_argument("Order argument '"_s + OrderStr + "' is not valid");
         }
@@ -170,6 +203,14 @@ Drover DetectEdges(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::str
             ud.method = PartialDerivativeMethod::row_aligned;
         }else if( std::regex_match(MethodStr, regex_col) ){
             ud.method = PartialDerivativeMethod::column_aligned;
+        }else if( std::regex_match(MethodStr, regex_prpc) ){
+            ud.method = PartialDerivativeMethod::prow_pcol_aligned;
+        }else if( std::regex_match(MethodStr, regex_nrpc) ){
+            ud.method = PartialDerivativeMethod::nrow_pcol_aligned;
+        }else if( std::regex_match(MethodStr, regex_mag) ){
+            ud.method = PartialDerivativeMethod::magnitude;
+        }else if( std::regex_match(MethodStr, regex_orn) ){
+            ud.method = PartialDerivativeMethod::orientation;
         }else if( std::regex_match(MethodStr, regex_crs) ){
             ud.method = PartialDerivativeMethod::cross;
         }else{

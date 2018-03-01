@@ -68,12 +68,109 @@ bool ImagePartialDerivative(
                     }else if(user_data_s->method == PartialDerivativeMethod::column_aligned){
                         newval = first_img_it->column_aligned_derivative_centered_finite_difference(row, col, chan);
 
-                    }else if(user_data_s->method == PartialDerivativeMethod::cross){
-                        throw std::invalid_argument("Cross method is not applicable to first-order derivatives.");
+                    }else if(user_data_s->method == PartialDerivativeMethod::magnitude){
+                        const auto ra = first_img_it->row_aligned_derivative_centered_finite_difference(row, col, chan);
+                        const auto ca = first_img_it->column_aligned_derivative_centered_finite_difference(row, col, chan);
+                        newval = std::hypot(ra,ca);
+
+                    }else if(user_data_s->method == PartialDerivativeMethod::orientation){
+                        const auto ra = first_img_it->row_aligned_derivative_centered_finite_difference(row, col, chan);
+                        const auto ca = first_img_it->column_aligned_derivative_centered_finite_difference(row, col, chan);
+                        newval = std::atan2(ra,ca) + M_PI;
 
                     }else{
-                        throw std::invalid_argument("Unrecognized user-provided derivative method.");
+                        throw std::invalid_argument("Selected method not applicable to selected order or estimator.");
                     }
+
+                }else if(user_data_s->order == PartialDerivativeOrder::Roberts_cross){
+                    if(false){
+                    }else if(user_data_s->method == PartialDerivativeMethod::prow_pcol_aligned){
+                        newval = first_img_it->prow_pcol_aligned_Roberts_cross(row, col, chan);
+
+                    }else if(user_data_s->method == PartialDerivativeMethod::nrow_pcol_aligned){
+                        newval = first_img_it->nrow_pcol_aligned_Roberts_cross(row, col, chan);
+
+                    }else if(user_data_s->method == PartialDerivativeMethod::magnitude){
+                        const auto ra = first_img_it->prow_pcol_aligned_Roberts_cross(row, col, chan);
+                        const auto ca = first_img_it->nrow_pcol_aligned_Roberts_cross(row, col, chan);
+                        newval = std::hypot(ra,ca);
+
+                    }else if(user_data_s->method == PartialDerivativeMethod::orientation){
+                        const auto prpca = first_img_it->prow_pcol_aligned_Roberts_cross(row, col, chan);
+                        const auto ncpca = first_img_it->nrow_pcol_aligned_Roberts_cross(row, col, chan);
+                        newval = std::atan2(ncpca,prpca) - M_PI/8.0 + M_PI; // For consistency with others.
+                        newval = std::fmod(newval + 2.0*M_PI, 2.0*M_PI); 
+
+                    }else{
+                        throw std::invalid_argument("Selected method not applicable to selected order or estimator.");
+                    }
+
+                }else if(user_data_s->order == PartialDerivativeOrder::Prewitt){
+                    if(false){
+                    }else if(user_data_s->method == PartialDerivativeMethod::row_aligned){
+                        newval = first_img_it->row_aligned_Prewitt_derivative(row, col, chan);
+
+                    }else if(user_data_s->method == PartialDerivativeMethod::column_aligned){
+                        newval = first_img_it->column_aligned_Prewitt_derivative(row, col, chan);
+
+                    }else if(user_data_s->method == PartialDerivativeMethod::magnitude){
+                        const auto ra = first_img_it->row_aligned_Prewitt_derivative(row, col, chan);
+                        const auto ca = first_img_it->column_aligned_Prewitt_derivative(row, col, chan);
+                        newval = std::hypot(ra,ca);
+
+                    }else if(user_data_s->method == PartialDerivativeMethod::orientation){
+                        const auto ra = first_img_it->row_aligned_Prewitt_derivative(row, col, chan);
+                        const auto ca = first_img_it->column_aligned_Prewitt_derivative(row, col, chan);
+                        newval = std::atan2(ra,ca) + M_PI;
+
+                    }else{
+                        throw std::invalid_argument("Selected method not applicable to selected order or estimator.");
+                    }
+
+                }else if(user_data_s->order == PartialDerivativeOrder::Sobel){
+                    if(false){
+                    }else if(user_data_s->method == PartialDerivativeMethod::row_aligned){
+                        newval = first_img_it->row_aligned_Sobel_derivative(row, col, chan);
+
+                    }else if(user_data_s->method == PartialDerivativeMethod::column_aligned){
+                        newval = first_img_it->column_aligned_Sobel_derivative(row, col, chan);
+
+                    }else if(user_data_s->method == PartialDerivativeMethod::magnitude){
+                        const auto ra = first_img_it->row_aligned_Sobel_derivative(row, col, chan);
+                        const auto ca = first_img_it->column_aligned_Sobel_derivative(row, col, chan);
+                        newval = std::hypot(ra,ca);
+
+                    }else if(user_data_s->method == PartialDerivativeMethod::orientation){
+                        const auto ra = first_img_it->row_aligned_Sobel_derivative(row, col, chan);
+                        const auto ca = first_img_it->column_aligned_Sobel_derivative(row, col, chan);
+                        newval = std::atan2(ra,ca) + M_PI;
+
+                    }else{
+                        throw std::invalid_argument("Selected method not applicable to selected order or estimator.");
+                    }
+
+                }else if(user_data_s->order == PartialDerivativeOrder::Scharr){
+                    if(false){
+                    }else if(user_data_s->method == PartialDerivativeMethod::row_aligned){
+                        newval = first_img_it->row_aligned_Scharr_derivative(row, col, chan);
+
+                    }else if(user_data_s->method == PartialDerivativeMethod::column_aligned){
+                        newval = first_img_it->column_aligned_Scharr_derivative(row, col, chan);
+
+                    }else if(user_data_s->method == PartialDerivativeMethod::magnitude){
+                        const auto ra = first_img_it->row_aligned_Scharr_derivative(row, col, chan);
+                        const auto ca = first_img_it->column_aligned_Scharr_derivative(row, col, chan);
+                        newval = std::hypot(ra,ca);
+
+                    }else if(user_data_s->method == PartialDerivativeMethod::orientation){
+                        const auto ra = first_img_it->row_aligned_Scharr_derivative(row, col, chan);
+                        const auto ca = first_img_it->column_aligned_Scharr_derivative(row, col, chan);
+                        newval = std::atan2(ra,ca) + M_PI;
+
+                    }else{
+                        throw std::invalid_argument("Selected method not applicable to selected order or estimator.");
+                    }
+
                 }else if(user_data_s->order == PartialDerivativeOrder::second){
                     if(false){
                     }else if(user_data_s->method == PartialDerivativeMethod::row_aligned){
@@ -85,8 +182,18 @@ bool ImagePartialDerivative(
                     }else if(user_data_s->method == PartialDerivativeMethod::cross){
                         newval = first_img_it->cross_second_derivative_centered_finite_difference(row, col, chan);
 
+                    }else if(user_data_s->method == PartialDerivativeMethod::magnitude){
+                        const auto ra = first_img_it->row_aligned_second_derivative_centered_finite_difference(row, col, chan);
+                        const auto ca = first_img_it->column_aligned_second_derivative_centered_finite_difference(row, col, chan);
+                        newval = std::hypot(ra,ca);
+
+                    }else if(user_data_s->method == PartialDerivativeMethod::orientation){
+                        const auto ra = first_img_it->row_aligned_second_derivative_centered_finite_difference(row, col, chan);
+                        const auto ca = first_img_it->column_aligned_second_derivative_centered_finite_difference(row, col, chan);
+                        newval = std::atan2(ra,ca) + M_PI;
+
                     }else{
-                        throw std::invalid_argument("Unrecognized user-provided derivative method.");
+                        throw std::invalid_argument("Selected method not applicable to selected order or estimator.");
                     }
                 }else{
                     throw std::invalid_argument("Unrecognized user-provided derivative order.");
@@ -105,10 +212,22 @@ bool ImagePartialDerivative(
     std::string img_desc;
     if(false){
     }else if(user_data_s->order == PartialDerivativeOrder::first){
-        img_desc += "First-order,";
+        img_desc += "First-order partial deriv.,";
+
+    }else if(user_data_s->order == PartialDerivativeOrder::Roberts_cross){
+        img_desc += "Roberts' cross estimator,";
+
+    }else if(user_data_s->order == PartialDerivativeOrder::Prewitt){
+        img_desc += "Prewitt estimator,";
+
+    }else if(user_data_s->order == PartialDerivativeOrder::Sobel){
+        img_desc += "Sobel estimator,";
+
+    }else if(user_data_s->order == PartialDerivativeOrder::Scharr){
+        img_desc += "Scharr estimator,";
 
     }else if(user_data_s->order == PartialDerivativeOrder::second){
-        img_desc += "Second-order,";
+        img_desc += "Second-order partial deriv.,";
 
     }else{
         throw std::invalid_argument("Unrecognized user-provided derivative order.");
@@ -121,13 +240,25 @@ bool ImagePartialDerivative(
     }else if(user_data_s->method == PartialDerivativeMethod::column_aligned){
         img_desc += " column-aligned";
 
+    }else if(user_data_s->method == PartialDerivativeMethod::prow_pcol_aligned){
+        img_desc += " +row,+column-aligned";
+
+    }else if(user_data_s->method == PartialDerivativeMethod::nrow_pcol_aligned){
+        img_desc += " -row,+column-aligned";
+
     }else if(user_data_s->method == PartialDerivativeMethod::cross){
         img_desc += " cross";
+
+    }else if(user_data_s->method == PartialDerivativeMethod::magnitude){
+        img_desc += " magnitude";
+
+    }else if(user_data_s->method == PartialDerivativeMethod::orientation){
+        img_desc += " orientation";
 
     }else{
         throw std::invalid_argument("Unrecognized user-provided derivative method.");
     }
-    img_desc += " pixel coord. partial derivative";
+    img_desc += " (in pixel coord.s)";
 
     UpdateImageDescription( std::ref(*first_img_it), img_desc );
     UpdateImageWindowCentreWidth( std::ref(*first_img_it), minmax_pixel );
