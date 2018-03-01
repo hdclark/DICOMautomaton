@@ -68,6 +68,9 @@ bool ImagePartialDerivative(
                     }else if(user_data_s->method == PartialDerivativeMethod::column_aligned){
                         newval = first_img_it->column_aligned_derivative_centered_finite_difference(row, col, chan);
 
+                    }else if(user_data_s->method == PartialDerivativeMethod::cross){
+                        throw std::invalid_argument("Cross method is not applicable to first-order derivatives.");
+
                     }else{
                         throw std::invalid_argument("Unrecognized user-provided derivative method.");
                     }

@@ -98,6 +98,22 @@ std::list<OperationArgDoc> OpArgDocDetectEdges(void){
     out.back().expected = true;
     out.back().examples = { "none", "last", "all" };
     
+    out.emplace_back();
+    out.back().name = "Order";
+    out.back().desc = "Controls partial derivative order. First-order is the first derivative, and second-order is the"
+                      " second derivative.";
+    out.back().default_val = "second";
+    out.back().expected = true;
+    out.back().examples = { "first", "second" };
+
+    out.emplace_back();
+    out.back().name = "Method";
+    out.back().desc = "Controls partial derivative method. First-order derivatives can be row- or column-aligned,"
+                      " and second-order derivatives can be row-aligned, column-aligned, or 'cross'.";
+    out.back().default_val = "cross";
+    out.back().expected = true;
+    out.back().examples = { "row-aligned", "column-aligned", "cross" };
+
     return out;
 }
 
@@ -105,10 +121,20 @@ Drover DetectEdges(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::str
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto ImageSelectionStr = OptArgs.getValueStr("ImageSelection").value();
+    const auto OrderStr = OptArgs.getValueStr("Order").value();
+    const auto MethodStr = OptArgs.getValueStr("Method").value();
+
     //-----------------------------------------------------------------------------------------------------------------
     const auto regex_none = std::regex("no?n?e?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
     const auto regex_last = std::regex("la?s?t?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
     const auto regex_all  = std::regex("al?l?$",   std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+
+    const auto regex_1st = std::regex("^fi?r?s?t?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto regex_2nd = std::regex("^se?c?o?n?d?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+
+    const auto regex_row = std::regex("^ro?w?-?a?l?i?g?n?e?d?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto regex_col = std::regex("^col?u?m?n?-?a?l?i?g?n?e?d?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto regex_crs = std::regex("^cro?s?s?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
 
     if( !std::regex_match(ImageSelectionStr, regex_none)
     &&  !std::regex_match(ImageSelectionStr, regex_last)
@@ -130,6 +156,25 @@ Drover DetectEdges(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::str
         ImagePartialDerivativeUserData ud;
         ud.order = PartialDerivativeOrder::first;
         ud.method = PartialDerivativeMethod::row_aligned;
+
+        if(false){
+        }else if( std::regex_match(OrderStr, regex_1st) ){
+            ud.order = PartialDerivativeOrder::first;
+        }else if( std::regex_match(OrderStr, regex_2nd) ){
+            ud.order = PartialDerivativeOrder::second;
+        }else{
+            throw std::invalid_argument("Order argument '"_s + OrderStr + "' is not valid");
+        }
+        if(false){
+        }else if( std::regex_match(MethodStr, regex_row) ){
+            ud.method = PartialDerivativeMethod::row_aligned;
+        }else if( std::regex_match(MethodStr, regex_col) ){
+            ud.method = PartialDerivativeMethod::column_aligned;
+        }else if( std::regex_match(MethodStr, regex_crs) ){
+            ud.method = PartialDerivativeMethod::cross;
+        }else{
+            throw std::invalid_argument("Method argument '"_s + MethodStr + "' is not valid");
+        }
 
         if(!(*iap_it)->imagecoll.Process_Images_Parallel( GroupIndividualImages,
                                                           ImagePartialDerivative,
