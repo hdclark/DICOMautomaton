@@ -88,8 +88,8 @@
 std::list<OperationArgDoc> OpArgDocDetectEdges(void){
     std::list<OperationArgDoc> out;
 
-    // This operation crops image and/or dose array slices to the specified ROI(s), with an additional margin.
-    //
+    // This operation attempts to extract 'edges' or sharp cusps within images. Note thatthis routine only computes
+    // partial derivatives; log-scaling, blurring, and any other pre- or post-processing should be done elsewhere.
 
     out.emplace_back();
     out.back().name = "ImageSelection";
@@ -172,7 +172,6 @@ Drover DetectEdges(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::str
 
     // --- Cycle over all images, performing the detection ---
 
-    //Image data.
     auto iap_it = DICOM_data.image_data.begin();
     if(false){
     }else if(std::regex_match(ImageSelectionStr, regex_none)){ iap_it = DICOM_data.image_data.end();
