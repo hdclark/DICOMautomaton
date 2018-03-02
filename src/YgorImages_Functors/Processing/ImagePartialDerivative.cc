@@ -98,7 +98,7 @@ bool ImagePartialDerivative(
                     }else if(user_data_s->method == PartialDerivativeMethod::orientation){
                         const auto prpca = first_img_it->prow_pcol_aligned_Roberts_cross(row, col, chan);
                         const auto nrpca = first_img_it->nrow_pcol_aligned_Roberts_cross(row, col, chan);
-                        newval = std::atan2(nrpca,prpca) + M_PI/8.0 + M_PI; // For consistency with others.
+                        newval = std::atan2(prpca,nrpca) + M_PI/8.0 + M_PI/2.0; // For consistency with others.
                         newval = std::fmod(newval + 2.0*M_PI, 2.0*M_PI); 
 
                     }else{
@@ -121,7 +121,7 @@ bool ImagePartialDerivative(
                     }else if(user_data_s->method == PartialDerivativeMethod::orientation){
                         const auto ra = first_img_it->row_aligned_Prewitt_derivative(row, col, chan);
                         const auto ca = first_img_it->column_aligned_Prewitt_derivative(row, col, chan);
-                        newval = std::atan2(ra,ca) + M_PI;
+                        newval = std::atan2(ca,ra) + M_PI;
 
                     }else{
                         throw std::invalid_argument("Selected method not applicable to selected order or estimator.");
@@ -143,7 +143,7 @@ bool ImagePartialDerivative(
                     }else if(user_data_s->method == PartialDerivativeMethod::orientation){
                         const auto ra = first_img_it->row_aligned_Sobel_derivative(row, col, chan);
                         const auto ca = first_img_it->column_aligned_Sobel_derivative(row, col, chan);
-                        newval = std::atan2(ra,ca) + M_PI;
+                        newval = std::atan2(ca,ra) + M_PI;
 
                     }else{
                         throw std::invalid_argument("Selected method not applicable to selected order or estimator.");
@@ -165,7 +165,7 @@ bool ImagePartialDerivative(
                     }else if(user_data_s->method == PartialDerivativeMethod::orientation){
                         const auto ra = first_img_it->row_aligned_Scharr_derivative(row, col, chan);
                         const auto ca = first_img_it->column_aligned_Scharr_derivative(row, col, chan);
-                        newval = std::atan2(ra,ca) + M_PI;
+                        newval = std::atan2(ca,ra) + M_PI;
 
                     }else{
                         throw std::invalid_argument("Selected method not applicable to selected order or estimator.");
