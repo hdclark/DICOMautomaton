@@ -173,7 +173,13 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
 
     //Create a secondary plotting window. Gets opened on command.
     sf::RenderWindow plotwindow;
-
+    typedef enum {
+        None,
+        TimeCourse,
+        RowProfile,
+        ColumnProfile,
+    } SecondaryPlot;
+    auto plotwindowtype = SecondaryPlot::None;
     if(auto ImageDesc = disp_img_it->GetMetadataValueAs<std::string>("Description")){
         window.setTitle("DICOMautomaton IV: '"_s + ImageDesc.value() + "'");
     }else{
@@ -467,7 +473,8 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
                             "\\t\\t D \\t\\t Dump raw pixels for all spatially overlapping images from the current array (e.g., time courses).\\n"
                             "\\t\\t i \\t\\t Dump the current image to file.\\n"
                             "\\t\\t I \\t\\t Dump all images in the current array to file.\\n"
-                            "\\t\\t r,R,c,C \\t Plot pixel intensity profiles along the mouse\\'s current row and column.\\n"
+                            "\\t\\t r,c \\t\\t Plot pixel intensity profiles along the mouse\\'s current row and column with Gnuplot.\\n"
+                            "\\t\\t R,C \\t\\t Plot realtime pixel intensity profiles along the mouse\\'s current row and column.\\n"
                             "\\t\\t t \\t\\t Plot a time course at the mouse\\'s current row and column.\\n"
                             "\\t\\t T \\t\\t Open a realtime plotting window.\\n"
                             "\\t\\t a,A \\t\\t Plot or dump the pixel values for [a]ll image sets which spatially overlap.\\n"
@@ -682,9 +689,8 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
 
                 //Given the current mouse coordinates, dump pixel intensity profiles along the current row and column.
                 //
-                }else if( (thechar == 'r') || (thechar == 'R') 
-                      ||  (thechar == 'c') || (thechar == 'C') ){
-                    //Get the *realtime* current mouse coordinates.
+                }else if( (thechar == 'r') || (thechar == 'c') ){
+                    //Get the current mouse coordinates.
                     const sf::Vector2i curr_m_pos = sf::Mouse::getPosition(window);
 
                     //Convert to SFML/OpenGL "World" coordinates. 
@@ -707,27 +713,32 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
                     const auto row_as_u = static_cast<long int>(clamped_row_as_f * static_cast<float>(img_w_h.y));
                     FUNCINFO("Dumping row and column profiles for row,col = " << row_as_u << "," << col_as_u);
 
-                    //Cycle over the images, dumping the pixel value(s) and the 'dt' metadata value, if available.
-                    //Single-pixel.
                     samples_1D<double> row_profile, col_profile;
                     std::stringstream title;
 
                     for(auto i = 0; i < disp_img_it->columns; ++i){
                         const auto val_raw = disp_img_it->value(row_as_u,i,0);
                         const auto col_num = static_cast<double>(i);
-                        col_profile.push_back({ col_num, 0.0, val_raw, 0.0 });
+                        row_profile.push_back({ col_num, 0.0, val_raw, 0.0 });
                     }
                     for(auto i = 0; i < disp_img_it->rows; ++i){
                         const auto val_raw = disp_img_it->value(i,col_as_u,0);
                         const auto row_num = static_cast<double>(i);
-                        row_profile.push_back({ row_num, 0.0, val_raw, 0.0 });
+                        col_profile.push_back({ row_num, 0.0, val_raw, 0.0 });
                     }
 
-                    title << "Row and Column profile. (row,col) = (" << row_as_u << "," << col_as_u << ").";
                     try{
-                        YgorMathPlottingGnuplot::Shuttle<samples_1D<double>> row_shtl(row_profile, "Row Profile");
-                        YgorMathPlottingGnuplot::Shuttle<samples_1D<double>> col_shtl(col_profile, "Col Profile");
-                        YgorMathPlottingGnuplot::Plot<double>({row_shtl, col_shtl}, title.str(), "Pixel Index (row or col)", "Pixel Intensity");
+                        if(thechar == 'r'){
+                            title << "Profile for row " << row_as_u << ")";
+
+                            YgorMathPlottingGnuplot::Shuttle<samples_1D<double>> row_shtl(row_profile, "Row Profile");
+                            YgorMathPlottingGnuplot::Plot<double>({row_shtl}, title.str(), "Pixel Index (row #)", "Pixel Intensity");
+                        }else{
+                            title << "Profile for column " << col_as_u << ")";
+
+                            YgorMathPlottingGnuplot::Shuttle<samples_1D<double>> col_shtl(col_profile, "Col Profile");
+                            YgorMathPlottingGnuplot::Plot<double>({col_shtl}, title.str(), "Pixel Index (column #)", "Pixel Intensity");
+                        }
                     }catch(const std::exception &e){
                         FUNCWARN("Failed to plot: " << e.what());
                     }
@@ -736,6 +747,19 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
                 }else if( thechar == 'T' ){
                     plotwindow.create(sf::VideoMode(640, 480), "DICOMautomaton Time Courses");
                     plotwindow.setFramerateLimit(30);
+                    plotwindowtype = SecondaryPlot::TimeCourse;
+
+                //Launch/open a realtime plotting window.
+                }else if( thechar == 'R' ){
+                    plotwindow.create(sf::VideoMode(640, 480), "DICOMautomaton Row Profile Inspector");
+                    plotwindow.setFramerateLimit(30);
+                    plotwindowtype = SecondaryPlot::RowProfile;
+
+                //Launch/open a realtime plotting window.
+                }else if( thechar == 'C' ){
+                    plotwindow.create(sf::VideoMode(640, 480), "DICOMautomaton Column Profile Inspector");
+                    plotwindow.setFramerateLimit(30);
+                    plotwindowtype = SecondaryPlot::ColumnProfile;
 
                 //Given the current mouse coordinates, dump a time series at the image pixel over all available images
                 // which spatially overlap.
@@ -1679,14 +1703,28 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
         // ------------------------------ Plotting Window Events ----------------------------------------
 
         if(plotwindow.isOpen()){
+            const auto close_plotwindow = [&](void) -> void {
+                plotwindow.close();
+                plotwindowtype = SecondaryPlot::None;
+            };
+
             sf::Event event;
             while(plotwindow.pollEvent(event)){
                 if(event.type == sf::Event::Closed){
-                    plotwindow.close();
+                    close_plotwindow();
                     break;
+                }else if(window.hasFocus() && (event.type == sf::Event::TextEntered) 
+                                           && (event.text.unicode < 128)){
+                    const auto thechar = static_cast<char>(event.text.unicode);
+                    if(thechar == 'q'){
+                        close_plotwindow();
+                        break;
+                    }else{
+                        FUNCINFO("Plotting plotwindow: keypress not yet bound to any action");
+                    }
                 }else if(plotwindow.hasFocus() && (event.type == sf::Event::KeyPressed)){
                     if(event.key.code == sf::Keyboard::Escape){
-                        plotwindow.close();
+                        close_plotwindow();
                         break;
                     }else{
                         FUNCINFO("Plotting plotwindow: keypress not yet bound to any action");
@@ -2022,24 +2060,42 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
 
             //Cycle over the images, dumping the ordinate (pixel values) vs abscissa (time) derived from metadata.
             samples_1D<double> shtl;
-            const std::string quantity("dt"); //As it appears in the metadata. Must convert to a double!
             const bool sort_on_append = false;
+            
+            if(false){
+            }else if(plotwindowtype == SecondaryPlot::TimeCourse){
+                const std::string quantity("dt"); //As it appears in the metadata. Must convert to a double!
 
-            for(const auto &enc_img_it : encompassing_images){
-                if(auto abscissa = enc_img_it->GetMetadataValueAs<double>(quantity)){
-                    try{
-                        const auto pix_val = enc_img_it->value(pix_pos,0);
-                        shtl.push_back( abscissa.value(), 0.0, 
-                                        static_cast<double>(pix_val), 0.0, sort_on_append );
-                    }catch(const std::exception &){ }
+                for(const auto &enc_img_it : encompassing_images){
+                    if(auto abscissa = enc_img_it->GetMetadataValueAs<double>(quantity)){
+                        try{
+                            const auto pix_val = enc_img_it->value(pix_pos,0);
+                            shtl.push_back( abscissa.value(), 0.0, 
+                                            static_cast<double>(pix_val), 0.0, sort_on_append );
+                        }catch(const std::exception &){ }
+                    }
                 }
+
+            }else if(plotwindowtype == SecondaryPlot::ColumnProfile){
+                for(auto i = 0; i < disp_img_it->rows; ++i){
+                    const auto val_raw = disp_img_it->value(i,col_as_u,0);
+                    const auto row_num = static_cast<double>(i);
+                    shtl.push_back({ row_num, 0.0, val_raw, 0.0 });
+                }
+
+            }else if(plotwindowtype == SecondaryPlot::RowProfile){
+                for(auto i = 0; i < disp_img_it->columns; ++i){
+                    const auto val_raw = disp_img_it->value(row_as_u,i,0);
+                    const auto col_num = static_cast<double>(i);
+                    shtl.push_back({ col_num, 0.0, val_raw, 0.0 });
+                }
+
             }
             shtl.stable_sort();
 
             if(shtl.size() < 2) break;
 
-            // Draw a plot.
-
+            // Draw the plot.
             {
                 //Get data extrema.
                 const auto D_Hminmax = shtl.Get_Extreme_Datum_x();
@@ -2094,22 +2150,43 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
 
                 //Plot the data.
                 {
-                    std::vector<sf::Vertex> verts;
-                    for(const auto & d : shtl.samples){
-                        verts.emplace_back( sf::Vector2f( D_to_V_map_H(d[0]), D_to_V_map_V(d[2]) ), sf::Color::Yellow );
+                    //Plot lines connecting the vertices.
+                    {
+                        std::vector<sf::Vertex> verts;
+                        for(const auto & d : shtl.samples){
+                            verts.emplace_back( sf::Vector2f( D_to_V_map_H(d[0]), D_to_V_map_V(d[2]) ), sf::Color::Red );
+                        }
+                        plotwindow.draw(verts.data(), verts.size(), sf::PrimitiveType::LineStrip);
                     }
-                    plotwindow.draw(verts.data(), verts.size(), sf::PrimitiveType::LineStrip);
                     
+                    /*
+                    //Plot circles at the vertices. This can be slow for even 1024 pixels.
+                    const float r = 2.0f;
+                    const size_t pc = 10; // Number of triangles to use to approximate each circle.
+                    std::vector<sf::CircleShape> circs;
                     for(const auto & d : shtl.samples){
-                        sf::CircleShape acirc;
-                        const float r = 2.0f;
-                        acirc.setRadius(r);
-                        acirc.setFillColor(sf::Color(255,69,0,255)); // Orange.
-                        acirc.setOutlineColor(sf::Color::Yellow);
-                        acirc.setOutlineThickness(1.0f);
-                        acirc.setPosition( sf::Vector2f( D_to_V_map_H(d[0]), D_to_V_map_V(d[2]) ) );
-                        plotwindow.draw(acirc);
+                        circs.emplace_back();
+                        circs.back().setPointCount(pc);
+                        circs.back().setRadius(r);
+                        circs.back().setFillColor(sf::Color(255,69,0,255)); // Orange.
+                        circs.back().setOutlineColor(sf::Color::Yellow);
+                        circs.back().setOutlineThickness(1.0f);
+                        circs.back().setPosition( sf::Vector2f( D_to_V_map_H(d[0]), D_to_V_map_V(d[2]) ) );
+                        //const auto circ_bb = circs.back().getGlobalBounds();
+                        //circs.back().move( sf::Vector2f( -0.5f * circ_bb.width, -0.5f * circ_bb.height ) ); // Translate centre of circle to point of interest.
                     }
+                    for(auto &acirc : circs) plotwindow.draw(acirc);
+                    */
+
+                    //Plot vertices as a single vertex.
+                    {
+                        std::vector<sf::Vertex> verts;
+                        for(const auto & d : shtl.samples){
+                            verts.emplace_back( sf::Vector2f( D_to_V_map_H(d[0]), D_to_V_map_V(d[2]) ), sf::Color::Yellow );
+                        }
+                        plotwindow.draw(verts.data(), verts.size(), sf::PrimitiveType::Points);
+                    }
+
                 }
 
             }
