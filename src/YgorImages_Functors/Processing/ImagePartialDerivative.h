@@ -20,10 +20,15 @@ typedef enum { // Controls which image derivatives are computed.
     // Centered first-order finite-difference derivatives.
     first, //Simple cartesian-aligned.
 
-    Roberts_cross,
-    Prewitt,
-    Sobel,   
-    Scharr,  //Approximately rotationally-symmetric.
+    Roberts_cross_3x3,
+
+    Prewitt_3x3,
+
+    Sobel_3x3,
+    Sobel_5x5,
+
+    Scharr_3x3,  //Approximately rotationally-symmetric.
+    Scharr_5x5,  //Approximately rotationally-symmetric.
 
     // Centered second-order finite-difference derivatives.
     second
@@ -46,8 +51,8 @@ typedef enum { // Controls how image derivatives are computed and combined.
 
 struct ImagePartialDerivativeUserData {
 
-    // The default is second-order 'cross' to be more symmetric.
-    PartialDerivativeOrder order = PartialDerivativeOrder::Scharr;
+    // The default should be symmetric.
+    PartialDerivativeOrder order = PartialDerivativeOrder::Scharr_3x3;
     PartialDerivativeMethod method = PartialDerivativeMethod::magnitude;
 
 };

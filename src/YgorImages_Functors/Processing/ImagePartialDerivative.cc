@@ -82,22 +82,22 @@ bool ImagePartialDerivative(
                         throw std::invalid_argument("Selected method not applicable to selected order or estimator.");
                     }
 
-                }else if(user_data_s->order == PartialDerivativeOrder::Roberts_cross){
+                }else if(user_data_s->order == PartialDerivativeOrder::Roberts_cross_3x3){
                     if(false){
                     }else if(user_data_s->method == PartialDerivativeMethod::prow_pcol_aligned){
-                        newval = first_img_it->prow_pcol_aligned_Roberts_cross(row, col, chan);
+                        newval = first_img_it->prow_pcol_aligned_Roberts_cross_3x3(row, col, chan);
 
                     }else if(user_data_s->method == PartialDerivativeMethod::nrow_pcol_aligned){
-                        newval = first_img_it->nrow_pcol_aligned_Roberts_cross(row, col, chan);
+                        newval = first_img_it->nrow_pcol_aligned_Roberts_cross_3x3(row, col, chan);
 
                     }else if(user_data_s->method == PartialDerivativeMethod::magnitude){
-                        const auto ra = first_img_it->prow_pcol_aligned_Roberts_cross(row, col, chan);
-                        const auto ca = first_img_it->nrow_pcol_aligned_Roberts_cross(row, col, chan);
+                        const auto ra = first_img_it->prow_pcol_aligned_Roberts_cross_3x3(row, col, chan);
+                        const auto ca = first_img_it->nrow_pcol_aligned_Roberts_cross_3x3(row, col, chan);
                         newval = std::hypot(ra,ca);
 
                     }else if(user_data_s->method == PartialDerivativeMethod::orientation){
-                        const auto prpca = first_img_it->prow_pcol_aligned_Roberts_cross(row, col, chan);
-                        const auto nrpca = first_img_it->nrow_pcol_aligned_Roberts_cross(row, col, chan);
+                        const auto prpca = first_img_it->prow_pcol_aligned_Roberts_cross_3x3(row, col, chan);
+                        const auto nrpca = first_img_it->nrow_pcol_aligned_Roberts_cross_3x3(row, col, chan);
                         newval = std::atan2(prpca,nrpca) + M_PI/8.0 + M_PI/2.0; // For consistency with others.
                         newval = std::fmod(newval + 2.0*M_PI, 2.0*M_PI); 
 
@@ -105,66 +105,110 @@ bool ImagePartialDerivative(
                         throw std::invalid_argument("Selected method not applicable to selected order or estimator.");
                     }
 
-                }else if(user_data_s->order == PartialDerivativeOrder::Prewitt){
+                }else if(user_data_s->order == PartialDerivativeOrder::Prewitt_3x3){
                     if(false){
                     }else if(user_data_s->method == PartialDerivativeMethod::row_aligned){
-                        newval = first_img_it->row_aligned_Prewitt_derivative(row, col, chan);
+                        newval = first_img_it->row_aligned_Prewitt_derivative_3x3(row, col, chan);
 
                     }else if(user_data_s->method == PartialDerivativeMethod::column_aligned){
-                        newval = first_img_it->column_aligned_Prewitt_derivative(row, col, chan);
+                        newval = first_img_it->column_aligned_Prewitt_derivative_3x3(row, col, chan);
 
                     }else if(user_data_s->method == PartialDerivativeMethod::magnitude){
-                        const auto ra = first_img_it->row_aligned_Prewitt_derivative(row, col, chan);
-                        const auto ca = first_img_it->column_aligned_Prewitt_derivative(row, col, chan);
+                        const auto ra = first_img_it->row_aligned_Prewitt_derivative_3x3(row, col, chan);
+                        const auto ca = first_img_it->column_aligned_Prewitt_derivative_3x3(row, col, chan);
                         newval = std::hypot(ra,ca);
 
                     }else if(user_data_s->method == PartialDerivativeMethod::orientation){
-                        const auto ra = first_img_it->row_aligned_Prewitt_derivative(row, col, chan);
-                        const auto ca = first_img_it->column_aligned_Prewitt_derivative(row, col, chan);
+                        const auto ra = first_img_it->row_aligned_Prewitt_derivative_3x3(row, col, chan);
+                        const auto ca = first_img_it->column_aligned_Prewitt_derivative_3x3(row, col, chan);
                         newval = std::atan2(ca,ra) + M_PI;
 
                     }else{
                         throw std::invalid_argument("Selected method not applicable to selected order or estimator.");
                     }
 
-                }else if(user_data_s->order == PartialDerivativeOrder::Sobel){
+                }else if(user_data_s->order == PartialDerivativeOrder::Sobel_3x3){
                     if(false){
                     }else if(user_data_s->method == PartialDerivativeMethod::row_aligned){
-                        newval = first_img_it->row_aligned_Sobel_derivative(row, col, chan);
+                        newval = first_img_it->row_aligned_Sobel_derivative_3x3(row, col, chan);
 
                     }else if(user_data_s->method == PartialDerivativeMethod::column_aligned){
-                        newval = first_img_it->column_aligned_Sobel_derivative(row, col, chan);
+                        newval = first_img_it->column_aligned_Sobel_derivative_3x3(row, col, chan);
 
                     }else if(user_data_s->method == PartialDerivativeMethod::magnitude){
-                        const auto ra = first_img_it->row_aligned_Sobel_derivative(row, col, chan);
-                        const auto ca = first_img_it->column_aligned_Sobel_derivative(row, col, chan);
+                        const auto ra = first_img_it->row_aligned_Sobel_derivative_3x3(row, col, chan);
+                        const auto ca = first_img_it->column_aligned_Sobel_derivative_3x3(row, col, chan);
                         newval = std::hypot(ra,ca);
 
                     }else if(user_data_s->method == PartialDerivativeMethod::orientation){
-                        const auto ra = first_img_it->row_aligned_Sobel_derivative(row, col, chan);
-                        const auto ca = first_img_it->column_aligned_Sobel_derivative(row, col, chan);
+                        const auto ra = first_img_it->row_aligned_Sobel_derivative_3x3(row, col, chan);
+                        const auto ca = first_img_it->column_aligned_Sobel_derivative_3x3(row, col, chan);
                         newval = std::atan2(ca,ra) + M_PI;
 
                     }else{
                         throw std::invalid_argument("Selected method not applicable to selected order or estimator.");
                     }
 
-                }else if(user_data_s->order == PartialDerivativeOrder::Scharr){
+                }else if(user_data_s->order == PartialDerivativeOrder::Sobel_5x5){
                     if(false){
                     }else if(user_data_s->method == PartialDerivativeMethod::row_aligned){
-                        newval = first_img_it->row_aligned_Scharr_derivative(row, col, chan);
+                        newval = first_img_it->row_aligned_Sobel_derivative_5x5(row, col, chan);
 
                     }else if(user_data_s->method == PartialDerivativeMethod::column_aligned){
-                        newval = first_img_it->column_aligned_Scharr_derivative(row, col, chan);
+                        newval = first_img_it->column_aligned_Sobel_derivative_5x5(row, col, chan);
 
                     }else if(user_data_s->method == PartialDerivativeMethod::magnitude){
-                        const auto ra = first_img_it->row_aligned_Scharr_derivative(row, col, chan);
-                        const auto ca = first_img_it->column_aligned_Scharr_derivative(row, col, chan);
+                        const auto ra = first_img_it->row_aligned_Sobel_derivative_5x5(row, col, chan);
+                        const auto ca = first_img_it->column_aligned_Sobel_derivative_5x5(row, col, chan);
                         newval = std::hypot(ra,ca);
 
                     }else if(user_data_s->method == PartialDerivativeMethod::orientation){
-                        const auto ra = first_img_it->row_aligned_Scharr_derivative(row, col, chan);
-                        const auto ca = first_img_it->column_aligned_Scharr_derivative(row, col, chan);
+                        const auto ra = first_img_it->row_aligned_Sobel_derivative_5x5(row, col, chan);
+                        const auto ca = first_img_it->column_aligned_Sobel_derivative_5x5(row, col, chan);
+                        newval = std::atan2(ca,ra) + M_PI;
+
+                    }else{
+                        throw std::invalid_argument("Selected method not applicable to selected order or estimator.");
+                    }
+
+                }else if(user_data_s->order == PartialDerivativeOrder::Scharr_3x3){
+                    if(false){
+                    }else if(user_data_s->method == PartialDerivativeMethod::row_aligned){
+                        newval = first_img_it->row_aligned_Scharr_derivative_3x3(row, col, chan);
+
+                    }else if(user_data_s->method == PartialDerivativeMethod::column_aligned){
+                        newval = first_img_it->column_aligned_Scharr_derivative_3x3(row, col, chan);
+
+                    }else if(user_data_s->method == PartialDerivativeMethod::magnitude){
+                        const auto ra = first_img_it->row_aligned_Scharr_derivative_3x3(row, col, chan);
+                        const auto ca = first_img_it->column_aligned_Scharr_derivative_3x3(row, col, chan);
+                        newval = std::hypot(ra,ca);
+
+                    }else if(user_data_s->method == PartialDerivativeMethod::orientation){
+                        const auto ra = first_img_it->row_aligned_Scharr_derivative_3x3(row, col, chan);
+                        const auto ca = first_img_it->column_aligned_Scharr_derivative_3x3(row, col, chan);
+                        newval = std::atan2(ca,ra) + M_PI;
+
+                    }else{
+                        throw std::invalid_argument("Selected method not applicable to selected order or estimator.");
+                    }
+
+                }else if(user_data_s->order == PartialDerivativeOrder::Scharr_5x5){
+                    if(false){
+                    }else if(user_data_s->method == PartialDerivativeMethod::row_aligned){
+                        newval = first_img_it->row_aligned_Scharr_derivative_5x5(row, col, chan);
+
+                    }else if(user_data_s->method == PartialDerivativeMethod::column_aligned){
+                        newval = first_img_it->column_aligned_Scharr_derivative_5x5(row, col, chan);
+
+                    }else if(user_data_s->method == PartialDerivativeMethod::magnitude){
+                        const auto ra = first_img_it->row_aligned_Scharr_derivative_5x5(row, col, chan);
+                        const auto ca = first_img_it->column_aligned_Scharr_derivative_5x5(row, col, chan);
+                        newval = std::hypot(ra,ca);
+
+                    }else if(user_data_s->method == PartialDerivativeMethod::orientation){
+                        const auto ra = first_img_it->row_aligned_Scharr_derivative_5x5(row, col, chan);
+                        const auto ca = first_img_it->column_aligned_Scharr_derivative_5x5(row, col, chan);
                         newval = std::atan2(ca,ra) + M_PI;
 
                     }else{
@@ -214,17 +258,23 @@ bool ImagePartialDerivative(
     }else if(user_data_s->order == PartialDerivativeOrder::first){
         img_desc += "First-order partial deriv.,";
 
-    }else if(user_data_s->order == PartialDerivativeOrder::Roberts_cross){
-        img_desc += "Roberts' cross estimator,";
+    }else if(user_data_s->order == PartialDerivativeOrder::Roberts_cross_3x3){
+        img_desc += "Roberts' 3x3 cross estimator,";
 
-    }else if(user_data_s->order == PartialDerivativeOrder::Prewitt){
-        img_desc += "Prewitt estimator,";
+    }else if(user_data_s->order == PartialDerivativeOrder::Prewitt_3x3){
+        img_desc += "Prewitt 3x3 estimator,";
 
-    }else if(user_data_s->order == PartialDerivativeOrder::Sobel){
-        img_desc += "Sobel estimator,";
+    }else if(user_data_s->order == PartialDerivativeOrder::Sobel_3x3){
+        img_desc += "Sobel 3x3 estimator,";
 
-    }else if(user_data_s->order == PartialDerivativeOrder::Scharr){
-        img_desc += "Scharr estimator,";
+    }else if(user_data_s->order == PartialDerivativeOrder::Sobel_5x5){
+        img_desc += "Sobel 5x5 estimator,";
+
+    }else if(user_data_s->order == PartialDerivativeOrder::Scharr_3x3){
+        img_desc += "Scharr 3x3 estimator,";
+
+    }else if(user_data_s->order == PartialDerivativeOrder::Scharr_5x5){
+        img_desc += "Scharr 5x5 estimator,";
 
     }else if(user_data_s->order == PartialDerivativeOrder::second){
         img_desc += "Second-order partial deriv.,";

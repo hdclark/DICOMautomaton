@@ -103,14 +103,18 @@ std::list<OperationArgDoc> OpArgDocDetectEdges(void){
     out.back().desc = "Controls the finite-difference partial derivative order or estimator used. All estimators are"
                       " centred and use mirror boundary conditions. First-order estimators include the basic"
                       " nearest-neighbour first derivative, and Roberts' cross, Prewitt, Sobel, Scharr estimators."
+                      " 'XxY' denotes the size of the convolution kernel (i.e., the number of adjacent pixels"
+                      " considered)."
                       " The only second-order estimator is the basic nearest-neighbour second derivative.";
     out.back().default_val = "Scharr";
     out.back().expected = true;
     out.back().examples = { "first",
-                            "Roberts-cross",
-                            "Prewitt",
-                            "Sobel",
-                            "Scharr",
+                            "Roberts-cross-3x3",
+                            "Prewitt-3x3",
+                            "Sobel-3x3",
+                            "Sobel-5x5",
+                            "Scharr-3x3",
+                            "Scharr-5x5",
                             "second" };
 
     out.emplace_back();
@@ -149,10 +153,12 @@ Drover DetectEdges(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::str
 
     const auto regex_1st = std::regex("^fi?r?s?t?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
     const auto regex_2nd = std::regex("^se?c?o?n?d?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto regex_rcr = std::regex("^ro?b?e?r?t?s?-?c?r?o?s?s?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto regex_pre = std::regex("^pr?e?w?i?t?t?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto regex_sob = std::regex("^so?b?e?l?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto regex_sch = std::regex("^sc?h?a?r?r?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto regex_rcr3x3 = std::regex("^ro?b?e?r?t?s?-?c?r?o?s?s?-?3x?3?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto regex_pre3x3 = std::regex("^pr?e?w?i?t?t?-?3x?3?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto regex_sob3x3 = std::regex("^so?b?e?l?-?3x?3?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto regex_sch3x3 = std::regex("^sc?h?a?r?r?-?3x?3?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto regex_sob5x5 = std::regex("^so?b?e?l?-?5x?5?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto regex_sch5x5 = std::regex("^sc?h?a?r?r?-?5x?5?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
 
     const auto regex_row  = std::regex("^ro?w?-?a?l?i?g?n?e?d?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
     const auto regex_col  = std::regex("^col?u?m?n?-?a?l?i?g?n?e?d?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
@@ -186,16 +192,20 @@ Drover DetectEdges(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::str
         if(false){
         }else if( std::regex_match(OrderStr, regex_1st) ){
             ud.order = PartialDerivativeOrder::first;
+        }else if( std::regex_match(OrderStr, regex_rcr3x3) ){
+            ud.order = PartialDerivativeOrder::Roberts_cross_3x3;
+        }else if( std::regex_match(OrderStr, regex_pre3x3) ){
+            ud.order = PartialDerivativeOrder::Prewitt_3x3;
+        }else if( std::regex_match(OrderStr, regex_sob3x3) ){
+            ud.order = PartialDerivativeOrder::Sobel_3x3;
+        }else if( std::regex_match(OrderStr, regex_sch3x3) ){
+            ud.order = PartialDerivativeOrder::Scharr_3x3;
+        }else if( std::regex_match(OrderStr, regex_sob5x5) ){
+            ud.order = PartialDerivativeOrder::Sobel_5x5;
+        }else if( std::regex_match(OrderStr, regex_sch5x5) ){
+            ud.order = PartialDerivativeOrder::Scharr_5x5;
         }else if( std::regex_match(OrderStr, regex_2nd) ){
             ud.order = PartialDerivativeOrder::second;
-        }else if( std::regex_match(OrderStr, regex_rcr) ){
-            ud.order = PartialDerivativeOrder::Roberts_cross;
-        }else if( std::regex_match(OrderStr, regex_pre) ){
-            ud.order = PartialDerivativeOrder::Prewitt;
-        }else if( std::regex_match(OrderStr, regex_sob) ){
-            ud.order = PartialDerivativeOrder::Sobel;
-        }else if( std::regex_match(OrderStr, regex_sch) ){
-            ud.order = PartialDerivativeOrder::Scharr;
         }else{
             throw std::invalid_argument("Order argument '"_s + OrderStr + "' is not valid");
         }
