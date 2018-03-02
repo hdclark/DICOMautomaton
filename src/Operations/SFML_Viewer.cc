@@ -719,21 +719,23 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
                     for(auto i = 0; i < disp_img_it->columns; ++i){
                         const auto val_raw = disp_img_it->value(row_as_u,i,0);
                         const auto col_num = static_cast<double>(i);
-                        row_profile.push_back({ col_num, 0.0, val_raw, 0.0 });
+                        if(std::isfinite(val_raw)) row_profile.push_back({ col_num, 0.0, val_raw, 0.0 });
                     }
                     for(auto i = 0; i < disp_img_it->rows; ++i){
                         const auto val_raw = disp_img_it->value(i,col_as_u,0);
                         const auto row_num = static_cast<double>(i);
-                        col_profile.push_back({ row_num, 0.0, val_raw, 0.0 });
+                        if(std::isfinite(val_raw)) col_profile.push_back({ row_num, 0.0, val_raw, 0.0 });
                     }
 
                     try{
                         if(thechar == 'r'){
+                            if(row_profile.size() < 2) throw std::runtime_error("Insufficient data for plot");
                             title << "Profile for row " << row_as_u << ")";
 
                             YgorMathPlottingGnuplot::Shuttle<samples_1D<double>> row_shtl(row_profile, "Row Profile");
                             YgorMathPlottingGnuplot::Plot<double>({row_shtl}, title.str(), "Pixel Index (row #)", "Pixel Intensity");
                         }else{
+                            if(col_profile.size() < 2) throw std::runtime_error("Insufficient data for plot");
                             title << "Profile for column " << col_as_u << ")";
 
                             YgorMathPlottingGnuplot::Shuttle<samples_1D<double>> col_shtl(col_profile, "Col Profile");
@@ -2080,14 +2082,14 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
                 for(auto i = 0; i < disp_img_it->rows; ++i){
                     const auto val_raw = disp_img_it->value(i,col_as_u,0);
                     const auto row_num = static_cast<double>(i);
-                    shtl.push_back({ row_num, 0.0, val_raw, 0.0 });
+                    if(std::isfinite(val_raw)) shtl.push_back({ row_num, 0.0, val_raw, 0.0 });
                 }
 
             }else if(plotwindowtype == SecondaryPlot::RowProfile){
                 for(auto i = 0; i < disp_img_it->columns; ++i){
                     const auto val_raw = disp_img_it->value(row_as_u,i,0);
                     const auto col_num = static_cast<double>(i);
-                    shtl.push_back({ col_num, 0.0, val_raw, 0.0 });
+                    if(std::isfinite(val_raw)) shtl.push_back({ col_num, 0.0, val_raw, 0.0 });
                 }
 
             }
@@ -2146,6 +2148,23 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
 
                     plotwindow.draw(H_axes.data(), H_axes.size(), sf::PrimitiveType::LineStrip);
                     plotwindow.draw(V_axes.data(), V_axes.size(), sf::PrimitiveType::LineStrip);
+                }
+
+                //Plot where the mouse is (row or column).
+                {
+                    if(plotwindowtype == SecondaryPlot::RowProfile){
+                        std::vector<sf::Vertex> mouse_line;
+                        mouse_line.emplace_back( sf::Vector2f( D_to_V_map_H(D_MinH + clamped_col_as_f * D_H), D_to_V_map_V(D_MinV) ), sf::Color::Blue );
+                        mouse_line.emplace_back( sf::Vector2f( D_to_V_map_H(D_MinH + clamped_col_as_f * D_H), D_to_V_map_V(D_MaxV) ), sf::Color::Blue );
+                        plotwindow.draw(mouse_line.data(), mouse_line.size(), sf::PrimitiveType::LineStrip);
+                    }
+
+                    if(plotwindowtype == SecondaryPlot::ColumnProfile){
+                        std::vector<sf::Vertex> mouse_line;
+                        mouse_line.emplace_back( sf::Vector2f( D_to_V_map_H(D_MinH + clamped_row_as_f * D_H), D_to_V_map_V(D_MinV) ), sf::Color::Blue );
+                        mouse_line.emplace_back( sf::Vector2f( D_to_V_map_H(D_MinH + clamped_row_as_f * D_H), D_to_V_map_V(D_MaxV) ), sf::Color::Blue );
+                        plotwindow.draw(mouse_line.data(), mouse_line.size(), sf::PrimitiveType::LineStrip);
+                    }
                 }
 
                 //Plot the data.
