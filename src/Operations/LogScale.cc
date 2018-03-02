@@ -86,30 +86,57 @@
 
 
 std::list<OperationArgDoc> OpArgDocLogScale(void){
-    return std::list<OperationArgDoc>();
-}
-
-Drover LogScale(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string,std::string> InvocationMetadata, std::string /*FilenameLex*/){
+    std::list<OperationArgDoc> out;
 
     //This operation log-scales pixels for all available image arrays. This functionality is often desired for viewing
     // purposes, to make the pixel level changes appear more linear. Be weary of using for anything quantitative!
     //
 
-    //Verify there is data to work on.
-    if( DICOM_data.image_data.empty() ){
-        throw std::invalid_argument("No data to work on. Unable to log-scale pixels.");
+    out.emplace_back();
+    out.back().name = "ImageSelection";
+    out.back().desc = "Images to operate on. Either 'none', 'last', 'first', or 'all'.";
+    out.back().default_val = "last";
+    out.back().expected = true;
+    out.back().examples = { "none", "last", "first", "all" };
+    
+    return out;
+}
+
+Drover LogScale(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string> InvocationMetadata, std::string /*FilenameLex*/){
+
+    //---------------------------------------------- User Parameters --------------------------------------------------
+    const auto ImageSelectionStr = OptArgs.getValueStr("ImageSelection").value();
+
+    //-----------------------------------------------------------------------------------------------------------------
+    const auto regex_none  = std::regex("^no?n?e?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto regex_first = std::regex("^fi?r?s?t?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto regex_last  = std::regex("^la?s?t?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto regex_all   = std::regex("^al?l?$",   std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+
+    if( !std::regex_match(ImageSelectionStr, regex_none)
+    &&  !std::regex_match(ImageSelectionStr, regex_first)
+    &&  !std::regex_match(ImageSelectionStr, regex_last)
+    &&  !std::regex_match(ImageSelectionStr, regex_all) ){
+        throw std::invalid_argument("Image selection is not valid. Cannot continue.");
     }
 
-    //Get handles for each of the original image arrays so we can easily refer to them later.
-    std::vector<std::shared_ptr<Image_Array>> orig_img_arrays;
-    for(auto & img_arr : DICOM_data.image_data) orig_img_arrays.push_back(img_arr);
 
-    //Perform the scaling.
-    for(auto & img_arr : orig_img_arrays){
-        if(!img_arr->imagecoll.Process_Images( GroupIndividualImages, 
-                                               LogScalePixels, {}, {} )){
-            throw std::runtime_error("Unable to log-scale images.");
+    // --- Cycle over all images, performing the detection ---
+
+    auto iap_it = DICOM_data.image_data.begin();
+    if(false){
+    }else if(std::regex_match(ImageSelectionStr, regex_none)){ iap_it = DICOM_data.image_data.end();
+    }else if(std::regex_match(ImageSelectionStr, regex_last)){
+        if(!DICOM_data.image_data.empty()) iap_it = std::prev(DICOM_data.image_data.end());
+    }
+    while(iap_it != DICOM_data.image_data.end()){
+        if(!(*iap_it)->imagecoll.Process_Images_Parallel( GroupIndividualImages,
+                                                          LogScalePixels,
+                                                          {}, {} )){
+            throw std::runtime_error("Unable to log-scale image.");
         }
+        ++iap_it;
+        if(std::regex_match(ImageSelectionStr, regex_first)) break;
     }
 
     return std::move(DICOM_data);
