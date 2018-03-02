@@ -70,6 +70,7 @@ add_library(Operations_objs OBJECT
     SelectSlicesIntersectingROI.cc
     SFML_Viewer.cc
     SpatialBlur.cc
+    SpatialSharpen.cc
     Subsegment_ComputeDose_VanLuijk.cc
     SupersampleImageGrid.cc
     SurfaceBasedRayCastDoseAccumulate.cc

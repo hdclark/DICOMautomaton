@@ -1,0 +1,41 @@
+//In_Image_Plane_Sharpen.h.
+#pragma once
+
+
+#include <list>
+#include <functional>
+#include <limits>
+#include <map>
+#include <cmath>
+
+#include <experimental/any>
+
+#include "YgorMisc.h"
+#include "YgorMath.h"
+#include "YgorImages.h"
+
+
+typedef enum { // Controls which estimator is used to approximate the sharpen operator.
+
+    //Fixed-size estimators.
+    sharpen_3x3,
+    unsharp_mask_5x5
+
+    //Non-fixed (adaptive) estimators.
+    // ... currently none ...
+
+} SharpenEstimator;
+
+struct InPlaneImageSharpenUserData {
+
+    SharpenEstimator estimator = SharpenEstimator::unsharp_mask_5x5;
+
+};
+
+
+bool InPlaneImageSharpen(planar_image_collection<float,double>::images_list_it_t first_img_it,
+                      std::list<planar_image_collection<float,double>::images_list_it_t> ,
+                      std::list<std::reference_wrapper<planar_image_collection<float,double>>>,
+                      std::list<std::reference_wrapper<contour_collection<double>>>, 
+                      std::experimental::any );
+
