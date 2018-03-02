@@ -106,7 +106,7 @@ std::list<OperationArgDoc> OpArgDocDetectEdges(void){
                       " 'XxY' denotes the size of the convolution kernel (i.e., the number of adjacent pixels"
                       " considered)."
                       " The only second-order estimator is the basic nearest-neighbour second derivative.";
-    out.back().default_val = "Scharr";
+    out.back().default_val = "Scharr-3x3";
     out.back().expected = true;
     out.back().examples = { "first",
                             "Roberts-cross-3x3",

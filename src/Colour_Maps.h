@@ -28,8 +28,10 @@ ClampedColourRGB ColourMap_MorelandExtendedBlackBody(double y);
 ClampedColourRGB ColourMap_KRC(double y);
 ClampedColourRGB ColourMap_ExtendedKRC(double y);
 
-ClampedColourRGB ColourMap_KovesiLinKRYW_5_100_c64(double y);
-ClampedColourRGB ColourMap_KovesiLinKRYW_0_100_c71(double y);
+ClampedColourRGB ColourMap_Kovesi_LinKRYW_5_100_c64(double y);
+ClampedColourRGB ColourMap_Kovesi_LinKRYW_0_100_c71(double y);
+
+ClampedColourRGB ColourMap_Kovesi_Cyclic_mygbm_30_95_c78(double y);
 
 ClampedColourRGB ColourMap_LANL_OliveGreen_to_Blue(double y);
 

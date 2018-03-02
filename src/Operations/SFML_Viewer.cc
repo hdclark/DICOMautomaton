@@ -241,8 +241,10 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
         std::make_pair("KRC", ColourMap_KRC),
         std::make_pair("ExtendedKRC", ColourMap_ExtendedKRC),
 
-        std::make_pair("KovesiLinKRYW_5-100_c64", ColourMap_KovesiLinKRYW_5_100_c64),
-        std::make_pair("KovesiLinKRYW_0-100_c71", ColourMap_KovesiLinKRYW_0_100_c71),
+        std::make_pair("Kovesi_LinKRYW_5-100_c64", ColourMap_Kovesi_LinKRYW_5_100_c64),
+        std::make_pair("Kovesi_LinKRYW_0-100_c71", ColourMap_Kovesi_LinKRYW_0_100_c71),
+
+        std::make_pair("Kovesi_Cyclic_cet-c2", ColourMap_Kovesi_Cyclic_mygbm_30_95_c78),
 
         std::make_pair("LANLOliveGreentoBlue", ColourMap_LANL_OliveGreen_to_Blue),
 
