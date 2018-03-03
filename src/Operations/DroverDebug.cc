@@ -135,8 +135,62 @@ Drover DroverDebug(Drover DICOM_data,
                      " has " <<
                      iap->imagecoll.images.size() <<
                      " image slices");
+            size_t i_num = 0;
+            for(auto &img : iap->imagecoll.images){
+                FUNCINFO("    Image " <<
+                         i_num++ <<
+                         " has pxl_dx, pxl_dy, pxl_dz = " <<
+                         img.pxl_dx << ", " <<
+                         img.pxl_dy << ", " <<
+                         img.pxl_dz);
+                FUNCINFO("    Image " <<
+                         (i_num-1) <<
+                         " has anchor, offset = " <<
+                         img.anchor << ", " <<
+                         img.offset);
+                FUNCINFO("    Image " <<
+                         (i_num-1) <<
+                         " has row_unit, col_unit = " <<
+                         img.row_unit << ", " <<
+                         img.col_unit);
+            }
         }
     }
+
+    //Contour data.
+    do{
+        if(DICOM_data.contour_data == nullptr){
+            FUNCINFO("There are 0 Contour_Data loaded");
+            break;
+        }
+
+        FUNCINFO("There are " <<
+                 DICOM_data.contour_data->ccs.size() <<
+                 " Contour_Data loaded");
+
+        size_t c_dat = 0;
+        for(auto & cc : DICOM_data.contour_data->ccs){
+            FUNCINFO("  Contour_Data " <<
+                     c_dat++ <<
+                     " has " <<
+                     cc.contours.size() <<
+                     " contours");
+            size_t c_num = 0;
+            for(auto & c : cc.contours){
+                FUNCINFO("    contour " <<
+                         c_num++ <<
+                         " has " <<
+                         c.points.size() <<
+                         " vertices");
+                if(!c.points.empty()){
+                    FUNCINFO("      contour " <<
+                         (c_num-1) <<
+                         " has average point " <<
+                         c.Average_Point());
+                }
+            }
+        }
+    }while(false);
 
     return std::move(DICOM_data);
 }
