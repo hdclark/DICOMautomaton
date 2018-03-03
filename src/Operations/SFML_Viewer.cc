@@ -1876,7 +1876,9 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
             for(auto & cc : DICOM_data.contour_data->ccs){
                 //auto base_ptr = reinterpret_cast<contour_collection<double> *>(&cc);
                 for(auto & c : cc.contours){
-                    if(disp_img_it->encompasses_any_of_contour_of_points(c)){
+                    if(!c.points.empty() 
+                    && ( disp_img_it->encompasses_any_of_contour_of_points(c) 
+                         || (disp_img_it->pxl_dz <= std::numeric_limits<double>::min()) ) ){ //Permit contours on purely 2D images.
                         sf::VertexArray lines;
                         lines.setPrimitiveType(sf::LinesStrip);
 
@@ -1974,7 +1976,9 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
         //Draw any contours from the contouring buffer that lie in the plane of the current image.
         {
             for(auto & c : contour_coll_shtl.contours){
-                if(!c.points.empty() && disp_img_it->encompasses_any_of_contour_of_points(c)){
+                if(!c.points.empty() 
+                && ( disp_img_it->encompasses_any_of_contour_of_points(c) 
+                     || (disp_img_it->pxl_dz <= std::numeric_limits<double>::min()) ) ){ //Permit contours on purely 2D images.
                     sf::VertexArray lines;
                     lines.setPrimitiveType(sf::LinesStrip);
 
