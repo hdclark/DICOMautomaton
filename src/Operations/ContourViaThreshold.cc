@@ -183,7 +183,7 @@ Drover ContourViaThreshold(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
     const auto Upper = std::stod( UpperStr );
     const auto Channel = std::stol( ChannelStr );
 
-    const auto regex_is_percent = std::regex("[%]$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto regex_is_percent = std::regex(".*[%].*", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
     const auto Lower_is_Percent = std::regex_match(LowerStr, regex_is_percent);
     const auto Upper_is_Percent = std::regex_match(UpperStr, regex_is_percent);
 
@@ -193,6 +193,8 @@ Drover ContourViaThreshold(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
     const auto TrueRegex = std::regex("^tr?u?e?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
 
     const auto ShouldSimplifyMergeAdjacent = std::regex_match(SimplifyMergeAdjacent, TrueRegex);
+
+    const auto NormalizedROILabel = X(ROILabel);
 
     if( !std::regex_match(ImageSelectionStr, regex_none)
     &&  !std::regex_match(ImageSelectionStr, regex_last)
@@ -262,17 +264,18 @@ Drover ContourViaThreshold(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
                 std::map<long int, std::set<long int>> half_edges;
 
                 //Determine pixel min and max values if they will be needed.
-                Stats::Running_MinMax<float> minmax_pixel;
+                Stats::Running_MinMax<float> rmm;
                 if(Lower_is_Percent || Upper_is_Percent){
                     for(auto r = 0; r < R; ++r){
                         for(auto c = 0; c < C; ++c){
-                            minmax_pixel.Digest(animg.value(r, c, Channel));
+                            rmm.Digest(animg.value(r, c, Channel));
                         }
                     }
                 }
-                const auto cl = ( Lower_is_Percent ? minmax_pixel.Current_Min() * Lower / 100.0
+
+                const auto cl = ( Lower_is_Percent ? (rmm.Current_Min() + (rmm.Current_Max() - rmm.Current_Min()) * Lower / 100.0)
                                                    : Lower );
-                const auto cu = ( Upper_is_Percent ? minmax_pixel.Current_Max() * Upper / 100.0
+                const auto cu = ( Upper_is_Percent ? (rmm.Current_Min() + (rmm.Current_Max() - rmm.Current_Min()) * Upper / 100.0)
                                                    : Upper );
 
                 //Construct a pixel 'oracle' closure using the user-specified threshold criteria. This function identifies whether
@@ -332,7 +335,7 @@ Drover ContourViaThreshold(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
                 
                 //Walk all available half-edges forming contour perimeters.
                 std::list<contour_of_points<double>> copl;
-                {
+                if(!half_edges.empty()){
                     auto he_it = half_edges.begin();
                     while(he_it != half_edges.end()){
                         if(he_it->second.empty()){
@@ -343,7 +346,7 @@ Drover ContourViaThreshold(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
                         copl.emplace_back();
                         copl.back().closed = true;
                         copl.back().metadata["ROIName"] = ROILabel;
-                        copl.back().metadata["NormalizedROIName"] = X(ROILabel);
+                        copl.back().metadata["NormalizedROIName"] = NormalizedROILabel;
                         copl.back().metadata["Description"] = "Contoured via threshold ("_s + std::to_string(Lower)
                                                              + " <= pixel_val <= " + std::to_string(Upper) + ")";
                         copl.back().metadata["MinimumSeparation"] = MinimumSeparation;
