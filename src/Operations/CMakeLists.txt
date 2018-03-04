@@ -18,6 +18,7 @@ add_library(Operations_objs OBJECT
     ContourSimilarity.cc
     ContouringAides.cc
     ContourViaThreshold.cc
+    ContourVote.cc
     ContourWholeImages.cc
     ConvertNaNsToAir.cc
     ConvertNaNsToZeros.cc

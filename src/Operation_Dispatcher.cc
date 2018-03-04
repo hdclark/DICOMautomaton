@@ -28,6 +28,7 @@
 #include "Operations/ContourSimilarity.h"
 #include "Operations/ContouringAides.h"
 #include "Operations/ContourViaThreshold.h"
+#include "Operations/ContourVote.h"
 #include "Operations/ContourWholeImages.h"
 #include "Operations/ConvertImageToDose.h"
 #include "Operations/ConvertDoseToImage.h"
@@ -115,6 +116,7 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["ContourSimilarity"] = std::make_pair(OpArgDocContourSimilarity, ContourSimilarity);
     out["ContouringAides"] = std::make_pair(OpArgDocContouringAides, ContouringAides);
     out["ContourViaThreshold"] = std::make_pair(OpArgDocContourViaThreshold, ContourViaThreshold);
+    out["ContourVote"] = std::make_pair(OpArgDocContourVote, ContourVote);
     out["ContourWholeImages"] = std::make_pair(OpArgDocContourWholeImages, ContourWholeImages);
     out["ConvertImageToDose"] = std::make_pair(OpArgDocConvertImageToDose, ConvertImageToDose);
     out["ConvertDoseToImage"] = std::make_pair(OpArgDocConvertDoseToImage, ConvertDoseToImage);

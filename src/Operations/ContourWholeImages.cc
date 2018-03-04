@@ -141,6 +141,7 @@ Drover ContourWholeImages(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
     }
 
     Explicator X(FilenameLex);
+    const auto NormalizedROILabel = X(ROILabel);
     const long int ROINumber = 10001; // TODO: find highest existing and ++ it.
 
     //Construct a destination for the ROI contours.
@@ -178,7 +179,7 @@ Drover ContourWholeImages(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
         metadata = DICOM_data.image_data.back()->imagecoll.get_common_metadata({});
         metadata["ROINumber"] = std::to_string(ROINumber);
         metadata["ROIName"] = ROILabel;
-        metadata["NormalizedROIName"] = X(ROILabel);
+        metadata["NormalizedROIName"] = NormalizedROILabel;
         metadata["MinimumSeparation"] = metadata["SliceThickness"];
         metadata["Description"] = "Whole-Image Contour";
 

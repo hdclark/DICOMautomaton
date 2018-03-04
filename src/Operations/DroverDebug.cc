@@ -160,17 +160,17 @@ Drover DroverDebug(Drover DICOM_data,
     //Contour data.
     do{
         if(DICOM_data.contour_data == nullptr){
-            FUNCINFO("There are 0 Contour_Data loaded");
+            FUNCINFO("There are 0 contour_collections loaded");
             break;
         }
 
         FUNCINFO("There are " <<
                  DICOM_data.contour_data->ccs.size() <<
-                 " Contour_Data loaded");
+                 " contour_collections loaded");
 
         size_t c_dat = 0;
         for(auto & cc : DICOM_data.contour_data->ccs){
-            FUNCINFO("  Contour_Data " <<
+            FUNCINFO("  contour_collection " <<
                      c_dat++ <<
                      " has " <<
                      cc.contours.size() <<
