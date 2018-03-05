@@ -1,6 +1,7 @@
 
 
 add_library(Operations_objs OBJECT 
+    AccumulateRowsColumns.cc
     Average.cc
     BoostSerializeDrover.cc
     BuildLexiconInteractively.cc
@@ -28,7 +29,6 @@ add_library(Operations_objs OBJECT
     DecayDoseOverTimeJones2014.cc
     DecayDoseOverTimeHalve.cc
     DecimatePixels.cc
-    DetectEdges.cc
     DumpAllOrderedImageMetadataToFile.cc
     DumpAnEncompassedPoint.cc
     DumpFilesPartitionedByTime.cc
@@ -72,6 +72,7 @@ add_library(Operations_objs OBJECT
     SFML_Viewer.cc
     SpatialBlur.cc
     SpatialSharpen.cc
+    SpatialDerivative.cc
     Subsegment_ComputeDose_VanLuijk.cc
     SupersampleImageGrid.cc
     SurfaceBasedRayCastDoseAccumulate.cc

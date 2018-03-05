@@ -60,7 +60,7 @@ bool ImagePartialDerivative(
                 auto newval = std::numeric_limits<float>::quiet_NaN();
 
                 if(false){
-                }else if(user_data_s->order == PartialDerivativeOrder::first){
+                }else if(user_data_s->order == PartialDerivativeEstimator::first){
                     if(false){
                     }else if(user_data_s->method == PartialDerivativeMethod::row_aligned){
                         newval = first_img_it->row_aligned_derivative_centered_finite_difference(row, col, chan);
@@ -82,7 +82,7 @@ bool ImagePartialDerivative(
                         throw std::invalid_argument("Selected method not applicable to selected order or estimator.");
                     }
 
-                }else if(user_data_s->order == PartialDerivativeOrder::Roberts_cross_3x3){
+                }else if(user_data_s->order == PartialDerivativeEstimator::Roberts_cross_3x3){
                     if(false){
                     }else if(user_data_s->method == PartialDerivativeMethod::prow_pcol_aligned){
                         newval = first_img_it->prow_pcol_aligned_Roberts_cross_3x3(row, col, chan);
@@ -105,7 +105,7 @@ bool ImagePartialDerivative(
                         throw std::invalid_argument("Selected method not applicable to selected order or estimator.");
                     }
 
-                }else if(user_data_s->order == PartialDerivativeOrder::Prewitt_3x3){
+                }else if(user_data_s->order == PartialDerivativeEstimator::Prewitt_3x3){
                     if(false){
                     }else if(user_data_s->method == PartialDerivativeMethod::row_aligned){
                         newval = first_img_it->row_aligned_Prewitt_derivative_3x3(row, col, chan);
@@ -127,7 +127,7 @@ bool ImagePartialDerivative(
                         throw std::invalid_argument("Selected method not applicable to selected order or estimator.");
                     }
 
-                }else if(user_data_s->order == PartialDerivativeOrder::Sobel_3x3){
+                }else if(user_data_s->order == PartialDerivativeEstimator::Sobel_3x3){
                     if(false){
                     }else if(user_data_s->method == PartialDerivativeMethod::row_aligned){
                         newval = first_img_it->row_aligned_Sobel_derivative_3x3(row, col, chan);
@@ -149,7 +149,7 @@ bool ImagePartialDerivative(
                         throw std::invalid_argument("Selected method not applicable to selected order or estimator.");
                     }
 
-                }else if(user_data_s->order == PartialDerivativeOrder::Sobel_5x5){
+                }else if(user_data_s->order == PartialDerivativeEstimator::Sobel_5x5){
                     if(false){
                     }else if(user_data_s->method == PartialDerivativeMethod::row_aligned){
                         newval = first_img_it->row_aligned_Sobel_derivative_5x5(row, col, chan);
@@ -171,7 +171,7 @@ bool ImagePartialDerivative(
                         throw std::invalid_argument("Selected method not applicable to selected order or estimator.");
                     }
 
-                }else if(user_data_s->order == PartialDerivativeOrder::Scharr_3x3){
+                }else if(user_data_s->order == PartialDerivativeEstimator::Scharr_3x3){
                     if(false){
                     }else if(user_data_s->method == PartialDerivativeMethod::row_aligned){
                         newval = first_img_it->row_aligned_Scharr_derivative_3x3(row, col, chan);
@@ -193,7 +193,7 @@ bool ImagePartialDerivative(
                         throw std::invalid_argument("Selected method not applicable to selected order or estimator.");
                     }
 
-                }else if(user_data_s->order == PartialDerivativeOrder::Scharr_5x5){
+                }else if(user_data_s->order == PartialDerivativeEstimator::Scharr_5x5){
                     if(false){
                     }else if(user_data_s->method == PartialDerivativeMethod::row_aligned){
                         newval = first_img_it->row_aligned_Scharr_derivative_5x5(row, col, chan);
@@ -215,7 +215,7 @@ bool ImagePartialDerivative(
                         throw std::invalid_argument("Selected method not applicable to selected order or estimator.");
                     }
 
-                }else if(user_data_s->order == PartialDerivativeOrder::second){
+                }else if(user_data_s->order == PartialDerivativeEstimator::second){
                     if(false){
                     }else if(user_data_s->method == PartialDerivativeMethod::row_aligned){
                         newval = first_img_it->row_aligned_second_derivative_centered_finite_difference(row, col, chan);
@@ -255,28 +255,28 @@ bool ImagePartialDerivative(
     //Update the image metadata. 
     std::string img_desc;
     if(false){
-    }else if(user_data_s->order == PartialDerivativeOrder::first){
+    }else if(user_data_s->order == PartialDerivativeEstimator::first){
         img_desc += "First-order partial deriv.,";
 
-    }else if(user_data_s->order == PartialDerivativeOrder::Roberts_cross_3x3){
+    }else if(user_data_s->order == PartialDerivativeEstimator::Roberts_cross_3x3){
         img_desc += "Roberts' 3x3 cross estimator,";
 
-    }else if(user_data_s->order == PartialDerivativeOrder::Prewitt_3x3){
+    }else if(user_data_s->order == PartialDerivativeEstimator::Prewitt_3x3){
         img_desc += "Prewitt 3x3 estimator,";
 
-    }else if(user_data_s->order == PartialDerivativeOrder::Sobel_3x3){
+    }else if(user_data_s->order == PartialDerivativeEstimator::Sobel_3x3){
         img_desc += "Sobel 3x3 estimator,";
 
-    }else if(user_data_s->order == PartialDerivativeOrder::Sobel_5x5){
+    }else if(user_data_s->order == PartialDerivativeEstimator::Sobel_5x5){
         img_desc += "Sobel 5x5 estimator,";
 
-    }else if(user_data_s->order == PartialDerivativeOrder::Scharr_3x3){
+    }else if(user_data_s->order == PartialDerivativeEstimator::Scharr_3x3){
         img_desc += "Scharr 3x3 estimator,";
 
-    }else if(user_data_s->order == PartialDerivativeOrder::Scharr_5x5){
+    }else if(user_data_s->order == PartialDerivativeEstimator::Scharr_5x5){
         img_desc += "Scharr 5x5 estimator,";
 
-    }else if(user_data_s->order == PartialDerivativeOrder::second){
+    }else if(user_data_s->order == PartialDerivativeEstimator::second){
         img_desc += "Second-order partial deriv.,";
 
     }else{

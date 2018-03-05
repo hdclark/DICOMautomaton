@@ -15,6 +15,7 @@
 
 #include "Structs.h"
 
+#include "Operations/AccumulateRowsColumns.h"
 #include "Operations/Average.h"
 #include "Operations/BoostSerializeDrover.h"
 #include "Operations/BuildLexiconInteractively.h"
@@ -42,7 +43,6 @@
 #include "Operations/DecayDoseOverTimeHalve.h"
 #include "Operations/DecayDoseOverTimeJones2014.h"
 #include "Operations/DecimatePixels.h"
-#include "Operations/DetectEdges.h"
 #include "Operations/DumpAllOrderedImageMetadataToFile.h"
 #include "Operations/DumpAnEncompassedPoint.h"
 #include "Operations/DumpFilesPartitionedByTime.h"
@@ -86,6 +86,7 @@
 #include "Operations/SFML_Viewer.h"
 #include "Operations/SpatialBlur.h"
 #include "Operations/SpatialSharpen.h"
+#include "Operations/SpatialDerivative.h"
 #include "Operations/Subsegment_ComputeDose_VanLuijk.h"
 #include "Operations/SupersampleImageGrid.h"
 #include "Operations/SurfaceBasedRayCastDoseAccumulate.h"
@@ -101,6 +102,7 @@
 std::map<std::string, op_packet_t> Known_Operations(void){
     std::map<std::string, op_packet_t> out;
 
+    out["AccumulateRowsColumns"] = std::make_pair(OpArgDocAccumulateRowsColumns, AccumulateRowsColumns);
     out["Average"] = std::make_pair(OpArgDocAverage, Average);
     out["BoostSerializeDrover"] = std::make_pair(OpArgDocBoost_Serialize_Drover, Boost_Serialize_Drover);
     out["BuildLexiconInteractively"] = std::make_pair(OpArgDocBuildLexiconInteractively, BuildLexiconInteractively);
@@ -131,7 +133,6 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["DecayDoseOverTimeHalve"] = std::make_pair(OpArgDocDecayDoseOverTimeHalve, DecayDoseOverTimeHalve);
     out["DecayDoseOverTimeJones2014"] = std::make_pair(OpArgDocDecayDoseOverTimeJones2014, DecayDoseOverTimeJones2014);
     out["DecimatePixels"] = std::make_pair(OpArgDocDecimatePixels, DecimatePixels);
-    out["DetectEdges"] = std::make_pair(OpArgDocDetectEdges, DetectEdges);
     out["DICOMExportImagesAsDose"] = std::make_pair(OpArgDocDICOMExportImagesAsDose, DICOMExportImagesAsDose);
     out["DumpAllOrderedImageMetadataToFile"] = std::make_pair(OpArgDocDumpAllOrderedImageMetadataToFile, DumpAllOrderedImageMetadataToFile);
     out["DumpAnEncompassedPoint"] = std::make_pair(OpArgDocDumpAnEncompassedPoint, DumpAnEncompassedPoint);
@@ -176,6 +177,7 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["SelectSlicesIntersectingROI"] = std::make_pair(OpArgDocSelectSlicesIntersectingROI, SelectSlicesIntersectingROI);
     out["SFML_Viewer"] = std::make_pair(OpArgDocSFML_Viewer, SFML_Viewer);
     out["SpatialBlur"] = std::make_pair(OpArgDocSpatialBlur, SpatialBlur);
+    out["SpatialDerivative"] = std::make_pair(OpArgDocSpatialDerivative, SpatialDerivative);
     out["SpatialSharpen"] = std::make_pair(OpArgDocSpatialSharpen, SpatialSharpen);
     out["Subsegment_ComputeDose_VanLuijk"] = std::make_pair(OpArgDocSubsegment_ComputeDose_VanLuijk, Subsegment_ComputeDose_VanLuijk);
     out["SupersampleImageGrid"] = std::make_pair(OpArgDocSupersampleImageGrid, SupersampleImageGrid);

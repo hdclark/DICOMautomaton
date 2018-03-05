@@ -33,7 +33,7 @@ typedef enum { // Controls which image derivatives are computed.
     // Centered second-order finite-difference derivatives.
     second
 
-} PartialDerivativeOrder;
+} PartialDerivativeEstimator;
 
 typedef enum { // Controls how image derivatives are computed and combined.
     row_aligned,    //Where applicable.
@@ -52,7 +52,7 @@ typedef enum { // Controls how image derivatives are computed and combined.
 struct ImagePartialDerivativeUserData {
 
     // The default should be symmetric.
-    PartialDerivativeOrder order = PartialDerivativeOrder::Scharr_3x3;
+    PartialDerivativeEstimator order = PartialDerivativeEstimator::Scharr_3x3;
     PartialDerivativeMethod method = PartialDerivativeMethod::magnitude;
 
 };

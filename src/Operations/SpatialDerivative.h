@@ -1,4 +1,4 @@
-// DetectEdges.h.
+// SpatialDerivative.h.
 
 #pragma once
 
@@ -87,8 +87,8 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocDetectEdges(void);
+std::list<OperationArgDoc> OpArgDocSpatialDerivative(void);
 
-Drover DetectEdges(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
+Drover SpatialDerivative(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                          std::map<std::string, std::string> /*InvocationMetadata*/,
                          std::string /*FilenameLex*/);

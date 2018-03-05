@@ -1,4 +1,4 @@
-//DetectEdges.cc - A part of DICOMautomaton 2015, 2016. Written by hal clark.
+//SpatialDerivative.cc - A part of DICOMautomaton 2018. Written by hal clark.
 
 #include <iostream>
 #include <sstream>
@@ -46,6 +46,7 @@
 #include "../Structs.h"
 
 #include "../YgorImages_Functors/Grouping/Misc_Functors.h"
+#include "../YgorImages_Functors/ConvenienceRoutines.h"
 
 #include "../YgorImages_Functors/Processing/DCEMRI_AUC_Map.h"
 #include "../YgorImages_Functors/Processing/DCEMRI_S0_Map.h"
@@ -82,14 +83,13 @@
 #include "../YgorImages_Functors/Compute/Per_ROI_Time_Courses.h"
 #include "../YgorImages_Functors/Compute/Contour_Similarity.h"
 
-#include "DetectEdges.h"
+#include "SpatialDerivative.h"
 
 
-std::list<OperationArgDoc> OpArgDocDetectEdges(void){
+std::list<OperationArgDoc> OpArgDocSpatialDerivative(void){
     std::list<OperationArgDoc> out;
 
-    // This operation attempts to extract 'edges' or sharp cusps within images. Note thatthis routine only computes
-    // partial derivatives; log-scaling, blurring, and any other pre- or post-processing should be done elsewhere.
+    // This operation estimates various partial derivatives (of pixel values) within an image.
 
     out.emplace_back();
     out.back().name = "ImageSelection";
@@ -99,7 +99,7 @@ std::list<OperationArgDoc> OpArgDocDetectEdges(void){
     out.back().examples = { "none", "last", "first", "all" };
     
     out.emplace_back();
-    out.back().name = "Order";
+    out.back().name = "Estimator";
     out.back().desc = "Controls the finite-difference partial derivative order or estimator used. All estimators are"
                       " centred and use mirror boundary conditions. First-order estimators include the basic"
                       " nearest-neighbour first derivative, and Roberts' cross, Prewitt, Sobel, Scharr estimators."
@@ -138,11 +138,11 @@ std::list<OperationArgDoc> OpArgDocDetectEdges(void){
     return out;
 }
 
-Drover DetectEdges(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){
+Drover SpatialDerivative(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto ImageSelectionStr = OptArgs.getValueStr("ImageSelection").value();
-    const auto OrderStr = OptArgs.getValueStr("Order").value();
+    const auto EstimatorStr = OptArgs.getValueStr("Estimator").value();
     const auto MethodStr = OptArgs.getValueStr("Method").value();
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -175,9 +175,6 @@ Drover DetectEdges(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::str
         throw std::invalid_argument("Image selection is not valid. Cannot continue.");
     }
 
-
-    // --- Cycle over all images, performing the detection ---
-
     auto iap_it = DICOM_data.image_data.begin();
     if(false){
     }else if(std::regex_match(ImageSelectionStr, regex_none)){ iap_it = DICOM_data.image_data.end();
@@ -185,29 +182,31 @@ Drover DetectEdges(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::str
         if(!DICOM_data.image_data.empty()) iap_it = std::prev(DICOM_data.image_data.end());
     }
     while(iap_it != DICOM_data.image_data.end()){
+
+        // Compute image derivatives.
         ImagePartialDerivativeUserData ud;
-        ud.order = PartialDerivativeOrder::first;
+        ud.order = PartialDerivativeEstimator::first;
         ud.method = PartialDerivativeMethod::row_aligned;
 
         if(false){
-        }else if( std::regex_match(OrderStr, regex_1st) ){
-            ud.order = PartialDerivativeOrder::first;
-        }else if( std::regex_match(OrderStr, regex_rcr3x3) ){
-            ud.order = PartialDerivativeOrder::Roberts_cross_3x3;
-        }else if( std::regex_match(OrderStr, regex_pre3x3) ){
-            ud.order = PartialDerivativeOrder::Prewitt_3x3;
-        }else if( std::regex_match(OrderStr, regex_sob3x3) ){
-            ud.order = PartialDerivativeOrder::Sobel_3x3;
-        }else if( std::regex_match(OrderStr, regex_sch3x3) ){
-            ud.order = PartialDerivativeOrder::Scharr_3x3;
-        }else if( std::regex_match(OrderStr, regex_sob5x5) ){
-            ud.order = PartialDerivativeOrder::Sobel_5x5;
-        }else if( std::regex_match(OrderStr, regex_sch5x5) ){
-            ud.order = PartialDerivativeOrder::Scharr_5x5;
-        }else if( std::regex_match(OrderStr, regex_2nd) ){
-            ud.order = PartialDerivativeOrder::second;
+        }else if( std::regex_match(EstimatorStr, regex_1st) ){
+            ud.order = PartialDerivativeEstimator::first;
+        }else if( std::regex_match(EstimatorStr, regex_rcr3x3) ){
+            ud.order = PartialDerivativeEstimator::Roberts_cross_3x3;
+        }else if( std::regex_match(EstimatorStr, regex_pre3x3) ){
+            ud.order = PartialDerivativeEstimator::Prewitt_3x3;
+        }else if( std::regex_match(EstimatorStr, regex_sob3x3) ){
+            ud.order = PartialDerivativeEstimator::Sobel_3x3;
+        }else if( std::regex_match(EstimatorStr, regex_sch3x3) ){
+            ud.order = PartialDerivativeEstimator::Scharr_3x3;
+        }else if( std::regex_match(EstimatorStr, regex_sob5x5) ){
+            ud.order = PartialDerivativeEstimator::Sobel_5x5;
+        }else if( std::regex_match(EstimatorStr, regex_sch5x5) ){
+            ud.order = PartialDerivativeEstimator::Scharr_5x5;
+        }else if( std::regex_match(EstimatorStr, regex_2nd) ){
+            ud.order = PartialDerivativeEstimator::second;
         }else{
-            throw std::invalid_argument("Order argument '"_s + OrderStr + "' is not valid");
+            throw std::invalid_argument("Estimator argument '"_s + EstimatorStr + "' is not valid");
         }
         if(false){
         }else if( std::regex_match(MethodStr, regex_row) ){
@@ -231,8 +230,10 @@ Drover DetectEdges(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::str
         if(!(*iap_it)->imagecoll.Process_Images_Parallel( GroupIndividualImages,
                                                           ImagePartialDerivative,
                                                           {}, {}, &ud )){
-            throw std::runtime_error("Unable to compute 'cross' second-order partial derivative.");
+            throw std::runtime_error("Unable to compute in-plane partial derivative.");
         }
+
+        // Loop control.
         ++iap_it;
         if(std::regex_match(ImageSelectionStr, regex_first)) break;
     }

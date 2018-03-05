@@ -129,7 +129,7 @@ Drover ImageRoutineTests(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::ma
 
     //Deep-copy, convert the original images to their 'cross' second-order partial derivative (for edge-finding).
     ImagePartialDerivativeUserData csd_ud;
-    csd_ud.order = PartialDerivativeOrder::second;
+    csd_ud.order = PartialDerivativeEstimator::second;
     csd_ud.method = PartialDerivativeMethod::cross;
 
     std::vector<std::shared_ptr<Image_Array>> cross_second_deriv_img_arrays;
