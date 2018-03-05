@@ -2118,7 +2118,12 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
                 const auto D_V = std::abs(D_MaxV - D_MinV);
 
                 if(  ( D_H < std::numeric_limits<float>::min() )
-                  || ( D_V < std::numeric_limits<float>::min() ) ) break; //Too small to plot...
+                  || ( D_V < std::numeric_limits<float>::min() ) ){
+                    //Too small to plot...
+                    plotwindow.clear(sf::Color::Black);
+                    break;
+                }
+
 
                 //Get SFML window extrema. Remember Top-left screen corner is origin, so +y is DOWNWARD.
                 const auto V = plotwindow.getView();
