@@ -1,4 +1,4 @@
-//Operation_Dispatcher.cc - A part of DICOMautomaton 2015, 2016. Written by hal clark.
+//Operation_Dispatcher.cc - A part of DICOMautomaton 2015, 2016, 2017, 2018. Written by hal clark.
 //
 // This routine routes loaded data to/through specified operations.
 // Operations can be anything, e.g., analyses, serialization, and visualization.
@@ -16,6 +16,7 @@
 #include "Structs.h"
 
 #include "Operations/AccumulateRowsColumns.h"
+#include "Operations/AnalyzePicketFence.h"
 #include "Operations/Average.h"
 #include "Operations/BoostSerializeDrover.h"
 #include "Operations/BuildLexiconInteractively.h"
@@ -104,6 +105,7 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     std::map<std::string, op_packet_t> out;
 
     out["AccumulateRowsColumns"] = std::make_pair(OpArgDocAccumulateRowsColumns, AccumulateRowsColumns);
+    out["AnalyzePicketFence"] = std::make_pair(OpArgDocAnalyzePicketFence, AnalyzePicketFence);
     out["Average"] = std::make_pair(OpArgDocAverage, Average);
     out["BoostSerializeDrover"] = std::make_pair(OpArgDocBoost_Serialize_Drover, Boost_Serialize_Drover);
     out["BuildLexiconInteractively"] = std::make_pair(OpArgDocBuildLexiconInteractively, BuildLexiconInteractively);
