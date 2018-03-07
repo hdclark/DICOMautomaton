@@ -66,6 +66,7 @@ add_library(Operations_objs OBJECT
     PlotPerROITimeCourses.cc
     PreFilterEnormousCTValues.cc
     PruneEmptyImageDoseArrays.cc
+    PurgeContours.cc
     RePlanReIrradiateDoseTrimming.cc
     SeamContours.cc
     SelectSlicesIntersectingROI.cc

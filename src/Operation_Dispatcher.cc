@@ -80,6 +80,7 @@
 #include "Operations/PlotPerROITimeCourses.h"
 #include "Operations/PreFilterEnormousCTValues.h"
 #include "Operations/PruneEmptyImageDoseArrays.h"
+#include "Operations/PurgeContours.h"
 #include "Operations/RePlanReIrradiateDoseTrimming.h"
 #include "Operations/SeamContours.h"
 #include "Operations/SelectSlicesIntersectingROI.h"
@@ -172,6 +173,7 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["PlotPerROITimeCourses"] = std::make_pair(OpArgDocPlotPerROITimeCourses, PlotPerROITimeCourses);
     out["PreFilterEnormousCTValues"] = std::make_pair(OpArgDocPreFilterEnormousCTValues, PreFilterEnormousCTValues);
     out["PruneEmptyImageDoseArrays"] = std::make_pair(OpArgDocPruneEmptyImageDoseArrays, PruneEmptyImageDoseArrays);
+    out["PurgeContours"] = std::make_pair(OpArgDocPurgeContours, PurgeContours);
     out["RePlanReIrradiateDoseTrimming"] = std::make_pair(OpArgDocRePlanReIrradiateDoseTrimming, RePlanReIrradiateDoseTrimming);
     out["SeamContours"] = std::make_pair(OpArgDocSeamContours, SeamContours);
     out["SelectSlicesIntersectingROI"] = std::make_pair(OpArgDocSelectSlicesIntersectingROI, SelectSlicesIntersectingROI);
