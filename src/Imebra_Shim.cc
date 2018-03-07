@@ -185,6 +185,70 @@ std::map<std::string,std::string> get_metadata_top_level_tags(const std::string 
         return;
     };
 
+    using tag_path = std::tuple<uint16_t, uint16_t, std::string>; // seq_group,seq_tag,seq_name or tag_group,tag_tag,tag_name.
+    auto insert_seq_vec_tag_as_string_if_nonempty = [&out,&ctrim,&tds](std::vector<tag_path> apath) -> void {
+        // This routine can access tags with deeply-nested sequences in their path.
+
+        if(apath.size() < 2) throw std::logic_error("This routine needs at least one sequence group+tag.");
+
+        const uint32_t first_order = 0; // Always zero for modern DICOM files.
+        const uint32_t first_element = 0; // Usually zero, but several tags can store multiple elements.
+
+        //Extract the full path name of the tag.
+        std::string full_name;
+        for(const auto &atag : apath){
+            if(!full_name.empty()) full_name += R"***(/)***"_s;
+            full_name += std::get<std::string>(atag);
+        }
+
+        //Check if the tag has already been found.
+        if(out.count(full_name) != 0) return;
+
+        const uint16_t tag_group = std::get<0>( apath.back() );
+        const uint16_t tag_tag   = std::get<1>( apath.back() );
+        const std::string tag_name  = std::get<2>( apath.back() );
+        apath.pop_back(); // Remove the tag.
+
+        //Iterate through the sequences.
+        auto seq_ptr = tds;
+        for(auto &seq_tuple : apath){
+            const uint16_t seq_group = std::get<0>( seq_tuple );
+            const uint16_t seq_tag   = std::get<1>( seq_tuple );
+            //const std::string seq_name = std::get<2>( seq_tuple );
+
+            //Check if the sequence can be found.
+            auto new_seq_ptr = seq_ptr->getSequenceItem(seq_group, first_order, seq_tag, first_element);
+            if(new_seq_ptr == nullptr) return;
+            seq_ptr = new_seq_ptr;
+        }
+
+        //Check if the tag is present in the sequence.
+        const bool create_if_not_found = false;
+        const auto tag_ptr = seq_ptr->getTag(tag_group, first_order, tag_tag, create_if_not_found);
+        if(tag_ptr == nullptr) return;
+
+        //Add the first element.
+        const auto str = seq_ptr->getString(tag_group, first_order, tag_tag, first_element);
+        const auto trimmed = Canonicalize_String2(str, ctrim);
+        if(!trimmed.empty()) out.emplace(full_name, trimmed);
+
+        //Check if there are additional elements.
+        for(uint32_t i = 1 ;  ; ++i){
+            try{
+                const auto str = seq_ptr->getString(tag_group, first_order, tag_tag, first_element + i);
+                const auto trimmed = Canonicalize_String2(str, ctrim);
+                if(!trimmed.empty()){
+                    out[full_name] += R"***(\)***"_s + trimmed;
+                }else{
+                    return;
+                }
+            }catch(const std::exception &){
+                return;
+            }
+        }
+        return;
+    };
+
     //SOP Common Module.
     insert_as_string_if_nonempty(0x0008, 0x0016, "SOPClassUID");
     insert_as_string_if_nonempty(0x0008, 0x0018, "SOPInstanceUID");
@@ -345,6 +409,15 @@ std::map<std::string,std::string> get_metadata_top_level_tags(const std::string 
     insert_as_string_if_nonempty(0x300c, 0x0009, "EndCumulativeMetersetWeight");
     insert_as_string_if_nonempty(0x300c, 0x0022, "ReferencedFractionGroupNumber");
 
+    insert_seq_tag_as_string_if_nonempty( 0x3002, 0x0030, "ExposureSequence",
+                                          0x0018, 0x0060, "KVP");
+    insert_seq_tag_as_string_if_nonempty( 0x3002, 0x0030, "ExposureSequence",
+                                          0x0018, 0x1150, "ExposureTime");
+    insert_seq_tag_as_string_if_nonempty( 0x3002, 0x0030, "ExposureSequence",
+                                          0x3002, 0x0032, "MetersetExposure");
+    insert_seq_vec_tag_as_string_if_nonempty( { { 0x3002, 0x0030, "ExposureSequence" },
+                                                { 0x300A, 0x00B6, "BeamLimitingDeviceSequence" },
+                                                { 0x300A, 0x011C, "LeafJawPositions" } } );
 
     //Unclassified others...
     insert_as_string_if_nonempty(0x0018, 0x0020, "ScanningSequence");
