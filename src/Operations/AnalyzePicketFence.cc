@@ -200,68 +200,97 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
         //                                                  {}, {}, &ud )){
         //    throw std::runtime_error("Unable to compute in-plane partial derivative.");
         //}
+        if((*iap_it)->imagecoll.images.empty()) throw std::invalid_argument("Unable to find an image to analyze.");
 
+        planar_image<float, double> *animg = &( (*iap_it)->imagecoll.images.front() );
+       
 
         // Using the contours that surround the leaf junctions, extract a 'long' and 'short' direction along the
-        // junctions. This will orient the image and give us some orientation independence.
+        // junctions. This will orient the image and give us some orientation independence. We use principle component
+        // analysis for this.
+        //
+        // Note: We can estimate these directions for each contour, but the analysis will be more consistent if all
+        //       contours are considered simultaneously. The trade-off is that results may depend on the aspect ratio of
+        //       the image. A zoomed-in picket fence may result in incorrect PCA estimation when using all contours
+        //       simultaneously.
+        //
 
-
-        auto acop = cop_ROIs.front();
-        Eigen::MatrixXd verts( acop.get().points.size(), 3 );
+        size_t N_verts = 0;
+        for(auto &acop : cop_ROIs) N_verts += acop.get().points.size();
+        Eigen::MatrixXd verts( N_verts, 3 );
         {
             size_t i = 0;
-            for(auto &p : acop.get().points){
-                verts(i,0) = p.x;
-                verts(i,1) = p.y;
-                verts(i,2) = p.z;
-                ++i;
+            for(auto &acop : cop_ROIs){
+                for(auto &p : acop.get().points){
+                    verts(i,0) = p.x;
+                    verts(i,1) = p.y;
+                    verts(i,2) = p.z;
+                    ++i;
+                }
             }
         }
-
 
         Eigen::MatrixXd centred = verts.rowwise() - verts.colwise().mean();
         Eigen::MatrixXd cov = centred.adjoint() * centred;
+        Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> eig(cov); // Solves the eigenproblem.
 
-        Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> eig(cov);
+        Eigen::VectorXd long_dir = eig.eigenvectors().col(2); // Principle component eigenvector (long axis).
+        Eigen::VectorXd short_dir = eig.eigenvectors().col(1); // (short axis).
+        //Eigen::VectorXd ortho_dir = eig.eigenvectors().col(1); // (orthogonal out-of-plane direction).
 
-        Eigen::VectorXd short_dir = eig.eigenvectors().col(0); // first eigenvector (short axis).
-        Eigen::VectorXd long_dir = eig.eigenvectors().col(1); // last eigenvector (long axis).
+        const auto long_unit  = (vec3<double>( long_dir(0),  long_dir(1),  long_dir(2)  )).unit();
+        const auto short_unit = (vec3<double>( short_dir(0), short_dir(1), short_dir(2) )).unit();
 
-        FUNCINFO("The long direction is " << long_dir);
-        FUNCINFO("The short direction is " << short_dir);
+        FUNCINFO("Junction-aligned direction is " << long_unit );
+        FUNCINFO("Junction-orthogonal direction is " << short_unit );
 
-        //eig.eigenvalues(); // sorted in increasing order.
-        //eig.eigenvalues()[0]; // first eigenvalue.
-        //eig.eigenvectors();
-        //eig.eigenvectors().rightCols(2); //The best 2D basis.
+        //Produce a pixel value profile-projection by ray-casting along the junction-orthogonal direction.
+        const bool inhibit_sort = true;
+        samples_1D<double> junction_ortho_projections;
 
-
-/*
-        Eigen::Matrix4d A;
-        A <<  1.0,  0.0,  0.0,  0.0,
-              0.0,  0.0,  1.0,  0.0,
-             -3.0,  3.0, -2.0, -1.0,
-              2.0, -2.0,  1.0,  1.0;
-
-        auto AT = A.transpose();
-
-        Eigen::Matrix4d F;
-        F <<     y_r_min_c_min,     y_r_max_c_min,   -dydr_r_min_c_min,   -dydr_r_max_c_min,
-                 y_r_min_c_max,     y_r_max_c_max,   -dydr_r_min_c_max,   -dydr_r_max_c_max,
-             -dydc_r_min_c_min, -dydc_r_max_c_min, d2ydrdc_r_min_c_min, d2ydrdc_r_max_c_min,
-             -dydc_r_min_c_max, -dydc_r_max_c_max, d2ydrdc_r_min_c_max, d2ydrdc_r_max_c_max;
-
-        auto C = A * F * AT; // Coefficients.
-
-        double res = 0.0;
-        for(int i = 0; i < 4; ++i){
-            for(int j = 0; j < 4; ++j){
-                res += C(i,j)*std::pow(dcol,i)*std::pow(drow,j);
+        //Use all pixels for profile generation.
+        //
+        // Note: these profiles are noisy. It might be better to only sample the region between junctions, which could
+        //       also be cheaper than scanning every pixel.   TODO.
+        const auto corner_pos = animg->position(0, 0);
+        for(long int row = 0; row < animg->rows; ++row){
+            for(long int col = 0; col < animg->columns; ++col){
+                const auto val = animg->value(row, col, 0);
+                const auto rel_pos = (animg->position(row, col) - corner_pos);
+                const auto long_line_L = rel_pos.Dot(long_unit);
+                junction_ortho_projections.push_back( { long_line_L, 0.0, val, 0.0 }, inhibit_sort );
             }
         }
-*/
-        
+        junction_ortho_projections.stable_sort();
 
+        //const long int N_bins = static_cast<long int>( std::max(animg->rows, animg->columns) * 1.414 );
+        const long int N_bins = static_cast<long int>( std::max(animg->rows, animg->columns));
+        auto junction_ortho_profile = junction_ortho_projections.Aggregate_Equal_Sized_Bins_Weighted_Mean(N_bins);
+        //junction_ortho_profile = junction_ortho_profile.Moving_Average_Two_Sided_Hendersons_23_point();
+        //junction_ortho_profile = junction_ortho_profile.Moving_Median_Filter_Two_Sided_Equal_Weighting(2);
+        //junction_ortho_profile = junction_ortho_profile.Moving_Average_Two_Sided_Gaussian_Weighting(0.25);
+        auto junction_ortho_profile2 = junction_ortho_profile.Moving_Average_Two_Sided_Spencers_15_point();
+        auto peaks = junction_ortho_profile2.Peaks();
+ 
+
+        //Now find all (local) peaks via the derivative of the crossing points.
+        //
+        // Note: We find peaks (gaps between leaves) instead of troughs (middle of leaves) because the background (i.e.,
+        //       dose behind the jaws) confounds trough isolation for leaves on the boundaries. Peaks are also sharper
+        //       (i.e., more confined spatially owing to the smaller gap they arise from), whereas troughs can undulate
+        //       considerably more.
+        auto junction_ortho_profile_deriv = junction_ortho_profile2.Derivative_Centered_Finite_Differences();
+        auto junction_ortho_profile_2deriv = junction_ortho_profile_deriv.Derivative_Centered_Finite_Differences();
+
+
+        YgorMathPlottingGnuplot::Shuttle<samples_1D<double>> plot_shtl_1(junction_ortho_profile, "Without smoothing");
+        YgorMathPlottingGnuplot::Shuttle<samples_1D<double>> plot_shtl_2(junction_ortho_profile2, "With smoothing");
+        //YgorMathPlottingGnuplot::Shuttle<samples_1D<double>> plot_shtl_3(junction_ortho_profile_deriv, "Derivative");
+        //YgorMathPlottingGnuplot::Shuttle<samples_1D<double>> plot_shtl_4(junction_ortho_profile_2deriv, "SecondDerivative");
+        YgorMathPlottingGnuplot::Shuttle<samples_1D<double>> plot_shtl_5(peaks, "Peaks");
+        YgorMathPlottingGnuplot::Plot<double>({plot_shtl_1, plot_shtl_2, /*plot_shtl_3, plot_shtl_4,*/ plot_shtl_5}, "Junction-orthogonal profile", "DICOM position", "Average Pixel Intensity");
+
+        
 
         // Loop control.
         ++iap_it;
