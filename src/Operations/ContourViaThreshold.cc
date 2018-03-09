@@ -114,21 +114,27 @@ std::list<OperationArgDoc> OpArgDocContourViaThreshold(void){
     out.emplace_back();
     out.back().name = "Lower";
     out.back().desc = "The lower bound (inclusive). Pixels with values < this number are excluded from the ROI."
-                      " If the number is a percentage, the bound will be scaled between the min and max"
-                      " pixel values.";
+                      " If the number is followed by a '%', the bound will be scaled between the min and max"
+                      " pixel values [0-100%]. If the number is followed by 'tile', the bound will be replaced"
+                      " with the corresponding percentile [0-100tile]."
+                      " Note that upper and lower bounds can be specified separately (e.g., lower bound is a"
+                      " percentage, but upper bound is a percentile).";
     out.back().default_val = "-inf";
     out.back().expected = true;
-    out.back().examples = { "0.0", "-1E-99", "1.23", "0.2%",  };
+    out.back().examples = { "0.0", "-1E-99", "1.23", "0.2%", "23tile", "23.123 tile" };
 
 
     out.emplace_back();
     out.back().name = "Upper";
     out.back().desc = "The upper bound (inclusive). Pixels with values > this number are excluded from the ROI."
-                      " If the number is a percentage, the bound will be scaled between the min and max"
-                      " pixel values.";
+                      " If the number is followed by a '%', the bound will be scaled between the min and max"
+                      " pixel values [0-100%]. If the number is followed by 'tile', the bound will be replaced"
+                      " with the corresponding percentile [0-100tile]."
+                      " Note that upper and lower bounds can be specified separately (e.g., lower bound is a"
+                      " percentage, but upper bound is a percentile).";
     out.back().default_val = "inf";
     out.back().expected = true;
-    out.back().examples = { "1.0", "1E-99", "2.34", "98.12%" };
+    out.back().examples = { "1.0", "1E-99", "2.34", "98.12%", "94tile", "94.123 tile" };
 
 
     out.emplace_back();
@@ -186,6 +192,10 @@ Drover ContourViaThreshold(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
     const auto regex_is_percent = std::regex(".*[%].*", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
     const auto Lower_is_Percent = std::regex_match(LowerStr, regex_is_percent);
     const auto Upper_is_Percent = std::regex_match(UpperStr, regex_is_percent);
+
+    const auto regex_is_tile = std::regex(".*p?e?r?c?e?n?tile.*", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto Lower_is_Ptile = std::regex_match(LowerStr, regex_is_tile);
+    const auto Upper_is_Ptile = std::regex_match(UpperStr, regex_is_tile);
 
     const auto regex_none = std::regex("no?n?e?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
     const auto regex_last = std::regex("la?s?t?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
@@ -263,20 +273,34 @@ Drover ContourViaThreshold(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
                 //Construct a container for storing half-edges.
                 std::map<long int, std::set<long int>> half_edges;
 
-                //Determine pixel min and max values if they will be needed.
-                Stats::Running_MinMax<float> rmm;
-                if(Lower_is_Percent || Upper_is_Percent){
-                    for(auto r = 0; r < R; ++r){
-                        for(auto c = 0; c < C; ++c){
-                            rmm.Digest(animg.value(r, c, Channel));
-                        }
+                //Determine the bounds in terms of pixel-value thresholds.
+                auto cl = Lower; // Will be replaced if percentages/percentiles requested.
+                auto cu = Upper; // Will be replaced if percentages/percentiles requested.
+          
+                {
+                    //Percentage-based.
+                    if(Lower_is_Percent || Upper_is_Percent){
+                        Stats::Running_MinMax<float> rmm;
+                        animg.apply_to_pixels([&rmm,Channel](long int, long int, long int chnl, float val) -> void {
+                             if(Channel == chnl) rmm.Digest(val);
+                             return;
+                        });
+                        if(Lower_is_Percent) cl = (rmm.Current_Min() + (rmm.Current_Max() - rmm.Current_Min()) * Lower / 100.0);
+                        if(Upper_is_Percent) cu = (rmm.Current_Min() + (rmm.Current_Max() - rmm.Current_Min()) * Upper / 100.0);
+                    }
+
+                    //Percentile-based.
+                    if(Lower_is_Ptile || Upper_is_Ptile){
+                        std::vector<float> pixel_vals;
+                        pixel_vals.reserve(animg.rows * animg.columns * animg.channels);
+                        animg.apply_to_pixels([&pixel_vals,Channel](long int, long int, long int chnl, float val) -> void {
+                             if(Channel == chnl) pixel_vals.push_back(val);
+                             return;
+                        });
+                        if(Lower_is_Ptile) cl = Stats::Percentile(pixel_vals, Lower / 100.0);
+                        if(Upper_is_Ptile) cu = Stats::Percentile(pixel_vals, Upper / 100.0);
                     }
                 }
-
-                const auto cl = ( Lower_is_Percent ? (rmm.Current_Min() + (rmm.Current_Max() - rmm.Current_Min()) * Lower / 100.0)
-                                                   : Lower );
-                const auto cu = ( Upper_is_Percent ? (rmm.Current_Min() + (rmm.Current_Max() - rmm.Current_Min()) * Upper / 100.0)
-                                                   : Upper );
 
                 //Construct a pixel 'oracle' closure using the user-specified threshold criteria. This function identifies whether
                 //the pixel is within (true) or outside of (false) the final ROI.
