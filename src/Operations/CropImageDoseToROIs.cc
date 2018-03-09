@@ -177,18 +177,22 @@ Drover CropImageDoseToROIs(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
     // the original holding containers (which are not modified here).
     std::list<std::reference_wrapper<contour_collection<double>>> cc_all;
     for(auto & cc : DICOM_data.contour_data->ccs){
+        if(cc.contours.empty()) continue;
         auto base_ptr = reinterpret_cast<contour_collection<double> *>(&cc);
+        if(base_ptr == nullptr) continue;
         cc_all.push_back( std::ref(*base_ptr) );
     }
 
     //Whitelist contours using the provided regex.
     auto cc_ROIs = cc_all;
     cc_ROIs.remove_if([=](std::reference_wrapper<contour_collection<double>> cc) -> bool {
+                   if(cc.get().contours.empty()) return true;
                    const auto ROINameOpt = cc.get().contours.front().GetMetadataValueAs<std::string>("ROIName");
                    const auto ROIName = ROINameOpt.value();
                    return !(std::regex_match(ROIName,theregex));
     });
     cc_ROIs.remove_if([=](std::reference_wrapper<contour_collection<double>> cc) -> bool {
+                   if(cc.get().contours.empty()) return true;
                    const auto ROINameOpt = cc.get().contours.front().GetMetadataValueAs<std::string>("NormalizedROIName");
                    const auto ROIName = ROINameOpt.value();
                    return !(std::regex_match(ROIName,thenormalizedregex));
