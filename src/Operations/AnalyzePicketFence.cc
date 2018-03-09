@@ -283,24 +283,33 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
         std::vector<double> junction_separations;
         for(size_t i = 1; i < junction_centroids.size(); ++i){
             const auto dR = (junction_centroids[i] - junction_centroids[i-1]);
-            junction_separations.push_back( dR.Dot(short_unit) );
+            junction_separations.push_back( std::abs( dR.Dot(short_unit) ) );
         }
-        const auto avg_junction_sep = Stats::Min(junction_separations);
+        //std::sort(junction_separations.begin(), junction_separations.end());
+        const auto min_junction_sep = Stats::Min(junction_separations);
+        std::cout << "Minimum junction separation: " << min_junction_sep << std::endl;
 
         auto near_a_junction = [=](const vec3<double> &p) -> bool {
             //Determines if a given point is sufficiently far from the nearest junction.
             for(const auto &jc : junction_centroids){
                 line<double> l(jc, jc + long_unit);
                 const auto d = l.Distance_To_Point(p);
-                if(d < 0.45 * avg_junction_sep) return true;
+                if(d < 0.25 * min_junction_sep) return true;
             }
             return false;
+        };
+        auto between_junctions = [=](const vec3<double> &p) -> bool {
+            //Determines if a given point is between at least two junctions.
+            const auto d = (p - vec3<double>( 0.0, 0.0, 0.0 )).Dot(short_unit);
+            return (  (junction_cax_separations.front() < d)
+                   && (d < junction_cax_separations.back()) );
         };
 
         for(long int row = 0; row < animg->rows; ++row){
             for(long int col = 0; col < animg->columns; ++col){
                 const auto pos = animg->position(row, col);
-                if(near_a_junction(pos)) continue;
+                //if(near_a_junction(pos) || !between_junctions(pos)) continue;
+                if(!between_junctions(pos)) continue;
 
                 const auto val = animg->value(row, col, 0);
                 const auto rel_pos = (pos - corner_pos);
@@ -332,7 +341,7 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
         //Merge peaks that are separated by a small distance.
         //
         // Note: We are generous here because the leaf thickness is bounded to >2mm or so.
-
+        peaks.Average_Coincident_Data(2.0);
 
         //Filter out spurious peaks that are not 'sharp' enough.
         //
@@ -340,8 +349,20 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
         // Fit a line to the right-adjacent N datum.
         // Threshold on the smallest angle that separates them.
 
+        if(peaks.size() < 5) std::runtime_error("Leaf-leakage peaks not correctly detected. Please verify input.");
 
-
+        std::vector<double> peak_separations;
+        for(size_t i = 1; i < peaks.samples.size(); ++i){
+            const auto d = (peaks.samples[i][0] - peaks.samples[i-1][0]);
+            peak_separations.push_back( std::abs( d ) );
+        }
+        //std::sort(peak_separations.begin(), peak_separations.end());
+        const auto avg_peak_sep = Stats::Mean(peak_separations);
+        std::cout << "Average peak separation: " << avg_peak_sep << std::endl;
+        std::cout << "Median peak separation: " << Stats::Median(peak_separations) << std::endl;
+        std::cout << "Peak separations: ";
+        for(auto &d : peak_separations) std::cout << d << "  ";
+        std::cout << std::endl;
 
  
 
