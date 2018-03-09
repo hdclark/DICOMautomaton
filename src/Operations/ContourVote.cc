@@ -216,7 +216,9 @@ Drover ContourVote(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::str
                    const auto ROIName = ROINameOpt.value_or("");
                    return !(std::regex_match(ROIName,roinormalizedregex));
     });
-
+    if(cop_ROIs.empty()){
+        FUNCWARN("No contours participated, so no contours won");
+    }
         
     if(false){
     }else if(!std::isnan( Area )){
@@ -247,9 +249,7 @@ Drover ContourVote(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::str
     cc_new.Insert_Metadata("NormalizedROIName", X(WinnerROILabel));
     cc_new.Insert_Metadata("ROINumber", "999");
 
-    if(cc_new.contours.empty()){
-        FUNCWARN("No contours participated, so not contours won");
-    }else{
+    if(!cc_new.contours.empty()){
         DICOM_data.contour_data->ccs.emplace_back(cc_new);
         DICOM_data.contour_data->ccs.back().ROI_number = 999;
         DICOM_data.contour_data->ccs.back().Minimum_Separation = 1.0;
