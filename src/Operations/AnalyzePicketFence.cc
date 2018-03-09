@@ -186,6 +186,8 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
     });
     const auto NumberOfJunctions = static_cast<long int>(cop_ROIs.size());
 
+    if(NumberOfJunctions < 2) throw std::domain_error("At least 2 junctions are needed for this analysis.");
+
 
     auto iap_it = DICOM_data.image_data.begin();
     if(false){
@@ -247,12 +249,13 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
         //Produce a pixel value profile-projection by ray-casting along the junction-orthogonal direction.
         const bool inhibit_sort = true;
         samples_1D<double> junction_ortho_projections;
+        const auto corner_pos = animg->position(0, 0);
 
+/*
         //Use all pixels for profile generation.
         //
         // Note: these profiles are noisy. It might be better to only sample the region between junctions, which could
         //       also be cheaper than scanning every pixel.   TODO.
-        const auto corner_pos = animg->position(0, 0);
         for(long int row = 0; row < animg->rows; ++row){
             for(long int col = 0; col < animg->columns; ++col){
                 const auto val = animg->value(row, col, 0);
@@ -261,16 +264,85 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
                 junction_ortho_projections.push_back( { long_line_L, 0.0, val, 0.0 }, inhibit_sort );
             }
         }
-        junction_ortho_projections.stable_sort();
+*/        
 
-        //const long int N_bins = static_cast<long int>( std::max(animg->rows, animg->columns) * 1.414 );
+        //Use pixels in-between junctions for profile generation.
+        std::vector<vec3<double>> junction_centroids;
+        for(auto &acop : cop_ROIs) junction_centroids.emplace_back( acop.get().Centroid() );
+
+        std::vector<double> junction_cax_separations;
+        for(size_t i = 0; i < junction_centroids.size(); ++i){
+            const auto dR = (junction_centroids[i] - vec3<double>( 0.0, 0.0, 0.0 ));
+            junction_cax_separations.push_back( dR.Dot(short_unit) );
+        }
+        std::sort(junction_cax_separations.begin(), junction_cax_separations.end());
+        std::cout << "Junction-CAX separations: ";
+        for(auto &d : junction_cax_separations) std::cout << d << "  ";
+        std::cout << std::endl;
+
+        std::vector<double> junction_separations;
+        for(size_t i = 1; i < junction_centroids.size(); ++i){
+            const auto dR = (junction_centroids[i] - junction_centroids[i-1]);
+            junction_separations.push_back( dR.Dot(short_unit) );
+        }
+        const auto avg_junction_sep = Stats::Min(junction_separations);
+
+        auto near_a_junction = [=](const vec3<double> &p) -> bool {
+            //Determines if a given point is sufficiently far from the nearest junction.
+            for(const auto &jc : junction_centroids){
+                line<double> l(jc, jc + long_unit);
+                const auto d = l.Distance_To_Point(p);
+                if(d < 0.45 * avg_junction_sep) return true;
+            }
+            return false;
+        };
+
+        for(long int row = 0; row < animg->rows; ++row){
+            for(long int col = 0; col < animg->columns; ++col){
+                const auto pos = animg->position(row, col);
+                if(near_a_junction(pos)) continue;
+
+                const auto val = animg->value(row, col, 0);
+                const auto rel_pos = (pos - corner_pos);
+                const auto long_line_L = rel_pos.Dot(long_unit);
+                junction_ortho_projections.push_back( { long_line_L, 0.0, val, 0.0 }, inhibit_sort );
+            }
+        }
+        
+
+
+
+
+
+
+        junction_ortho_projections.stable_sort();
         const long int N_bins = static_cast<long int>( std::max(animg->rows, animg->columns));
         auto junction_ortho_profile = junction_ortho_projections.Aggregate_Equal_Sized_Bins_Weighted_Mean(N_bins);
-        //junction_ortho_profile = junction_ortho_profile.Moving_Average_Two_Sided_Hendersons_23_point();
-        //junction_ortho_profile = junction_ortho_profile.Moving_Median_Filter_Two_Sided_Equal_Weighting(2);
-        //junction_ortho_profile = junction_ortho_profile.Moving_Average_Two_Sided_Gaussian_Weighting(0.25);
+
+        //auto junction_ortho_profile2 = junction_ortho_profile.Moving_Average_Two_Sided_Hendersons_23_point();
+        //auto junction_ortho_profile2 = junction_ortho_profile.Moving_Median_Filter_Two_Sided_Equal_Weighting(2);
+        //auto junction_ortho_profile2 = junction_ortho_profile.Moving_Average_Two_Sided_Gaussian_Weighting(4);
         auto junction_ortho_profile2 = junction_ortho_profile.Moving_Average_Two_Sided_Spencers_15_point();
+        //bool l_OK;
+        //auto junction_ortho_profile2 = NPRLL::Attempt_Auto_Smooth(junction_ortho_profile, &l_OK);
+        //if(!l_OK) throw std::runtime_error("Unable to perform NPRLL to smooth junction-orthogonal profile.");
+
         auto peaks = junction_ortho_profile2.Peaks();
+
+        //Merge peaks that are separated by a small distance.
+        //
+        // Note: We are generous here because the leaf thickness is bounded to >2mm or so.
+
+
+        //Filter out spurious peaks that are not 'sharp' enough.
+        //
+        // Fit a line to the left-adjacent N datum.
+        // Fit a line to the right-adjacent N datum.
+        // Threshold on the smallest angle that separates them.
+
+
+
+
  
 
         //Now find all (local) peaks via the derivative of the crossing points.
