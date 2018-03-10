@@ -38,6 +38,7 @@
 #include "Operations/ConvertNaNsToZeros.h"
 #include "Operations/CopyLastImage.h"
 #include "Operations/CropImageDoseToROIs.h"
+#include "Operations/CropImageDose.h"
 #include "Operations/DroverDebug.h"
 #include "Operations/DCEMRI_IAUC.h"
 #include "Operations/DCEMRI_Nonparametric_CE.h"
@@ -129,6 +130,7 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["ConvertNaNsToZeros"] = std::make_pair(OpArgDocConvertNaNsToZeros, ConvertNaNsToZeros);
     out["CopyLastImage"] = std::make_pair(OpArgDocCopyLastImage, CopyLastImage);
     out["CropImageDoseToROIs"] = std::make_pair(OpArgDocCropImageDoseToROIs, CropImageDoseToROIs);
+    out["CropImageDose"] = std::make_pair(OpArgDocCropImageDose, CropImageDose);
     out["EQD2Convert"] = std::make_pair(OpArgDocEQD2Convert, EQD2Convert);
     out["DCEMRI_IAUC"] = std::make_pair(OpArgDocDCEMRI_IAUC, DCEMRI_IAUC);
     out["DroverDebug"] = std::make_pair(OpArgDocDroverDebug, DroverDebug);
