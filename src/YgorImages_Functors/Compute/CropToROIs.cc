@@ -96,14 +96,12 @@ bool ComputeCropToROIs(planar_image_collection<float,double> &imagecoll,
                 const auto distZ = GridZZeroPlane.Get_Signed_Distance_To_Point(v);
                 
                 //Score the minimum and maximum distances.
-                if(false){
-                }else if(!std::isfinite(grid_x_min) || (distX < grid_x_min)){  grid_x_min = distX;
-                }else if(!std::isfinite(grid_x_max) || (distX > grid_x_max)){  grid_x_max = distX;
-                }else if(!std::isfinite(grid_y_min) || (distY < grid_y_min)){  grid_y_min = distY;
-                }else if(!std::isfinite(grid_y_max) || (distY > grid_y_max)){  grid_y_max = distY;
-                }else if(!std::isfinite(grid_z_min) || (distZ < grid_z_min)){  grid_z_min = distZ;                                                      
-                }else if(!std::isfinite(grid_z_max) || (distZ > grid_z_max)){  grid_z_max = distZ;                                                      
-                }
+                if(!std::isfinite(grid_x_min) || (distX < grid_x_min)) grid_x_min = distX;
+                if(!std::isfinite(grid_x_max) || (distX > grid_x_max)) grid_x_max = distX;
+                if(!std::isfinite(grid_y_min) || (distY < grid_y_min)) grid_y_min = distY;
+                if(!std::isfinite(grid_y_max) || (distY > grid_y_max)) grid_y_max = distY;
+                if(!std::isfinite(grid_z_min) || (distZ < grid_z_min)) grid_z_min = distZ;
+                if(!std::isfinite(grid_z_max) || (distZ > grid_z_max)) grid_z_max = distZ;
             }
         }
     }
