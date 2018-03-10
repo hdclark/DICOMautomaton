@@ -1,4 +1,4 @@
-//CropImageDose.cc - A part of DICOMautomaton 2018. Written by hal clark.
+//CropImages.cc - A part of DICOMautomaton 2018. Written by hal clark.
 
 #include <iostream>
 #include <sstream>
@@ -84,14 +84,14 @@
 #include "../YgorImages_Functors/Compute/Contour_Similarity.h"
 #include "../YgorImages_Functors/Compute/CropToROIs.h"
 
-#include "CropImageDose.h"
+#include "CropImages.h"
 
 
 
-std::list<OperationArgDoc> OpArgDocCropImageDose(void){
+std::list<OperationArgDoc> OpArgDocCropImages(void){
     std::list<OperationArgDoc> out;
 
-    // This operation crops image and/or dose array slices, with an additional margin.
+    // This operation crops image slices.
     //
 
     out.emplace_back();
@@ -102,6 +102,7 @@ std::list<OperationArgDoc> OpArgDocCropImageDose(void){
     out.back().default_val = "0px";
     out.back().expected = true;
     out.back().examples = { "0px", "10px", "100px", "15%", "15.75%", "123.45" };
+
 
     out.emplace_back();
     out.back().name = "RowsH";
@@ -122,6 +123,7 @@ std::list<OperationArgDoc> OpArgDocCropImageDose(void){
     out.back().expected = true;
     out.back().examples = { "0px", "10px", "100px", "15%", "15.75%", "123.45" };
 
+
     out.emplace_back();
     out.back().name = "ColumnsH";
     out.back().desc = "The number of columns to remove, starting with the last column. Can be absolute (px), percentage (%), or"
@@ -141,100 +143,151 @@ std::list<OperationArgDoc> OpArgDocCropImageDose(void){
 
 
     out.emplace_back();
-    out.back().name = "DoseImageSelection";
-    out.back().desc = "Dose images to operate on. Either 'none', 'last', or 'all'.";
-    out.back().default_val = "none";
-    out.back().expected = true;
-    out.back().examples = { "none", "last", "all" };
-
-    out.emplace_back();
     out.back().name = "ImageSelection";
-    out.back().desc = "Images to operate on. Either 'none', 'last', or 'all'.";
-    out.back().default_val = "last";
+    out.back().desc = "Images to operate on. Either 'none', 'last', 'first', or 'all'.";
+    out.back().default_val = "all";
     out.back().expected = true;
-    out.back().examples = { "none", "last", "all" };
+    out.back().examples = { "none", "last", "first", "all" };
     
     return out;
 }
 
 
 
-Drover CropImageDose(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){
+Drover CropImages(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
-    const auto RowsL = std::stod( OptArgs.getValueStr("RowsL").value() );
-    const auto RowsH = std::stod( OptArgs.getValueStr("RowsL").value() );
-    const auto ColumnsL = std::stod( OptArgs.getValueStr("ColumnsL").value() );
-    const auto ColumnsH = std::stod( OptArgs.getValueStr("ColumnsH").value() );
+    const auto RowsL_str = OptArgs.getValueStr("RowsL").value();
+    const auto RowsH_str = OptArgs.getValueStr("RowsH").value();
+    const auto ColsL_str = OptArgs.getValueStr("ColumnsL").value();
+    const auto ColsH_str = OptArgs.getValueStr("ColumnsH").value();
 
     const auto DICOMMargin = std::stod(OptArgs.getValueStr("DICOMMargin").value());
-    const auto DoseImageSelectionStr = OptArgs.getValueStr("DoseImageSelection").value();
     const auto ImageSelectionStr = OptArgs.getValueStr("ImageSelection").value();
 
     //-----------------------------------------------------------------------------------------------------------------
-    const auto regex_none = std::regex("no?n?e?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto regex_last = std::regex("la?s?t?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto regex_all  = std::regex("al?l?$",   std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto regex_none  = std::regex("^no?n?e?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto regex_first = std::regex("^fi?r?s?t?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto regex_last  = std::regex("^la?s?t?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto regex_all   = std::regex("^al?l?$",   std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
 
-    if( !std::regex_match(DoseImageSelectionStr, regex_none)
-    &&  !std::regex_match(DoseImageSelectionStr, regex_last)
-    &&  !std::regex_match(DoseImageSelectionStr, regex_all) ){
-        throw std::invalid_argument("Dose Image selection is not valid. Cannot continue.");
-    }
+    const auto regex_is_pixel = std::regex("px$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto regex_is_percent = std::regex("[%]$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+
     if( !std::regex_match(ImageSelectionStr, regex_none)
+    &&  !std::regex_match(ImageSelectionStr, regex_first)
     &&  !std::regex_match(ImageSelectionStr, regex_last)
     &&  !std::regex_match(ImageSelectionStr, regex_all) ){
         throw std::invalid_argument("Image selection is not valid. Cannot continue.");
     }
 
+    const auto RowsL = std::stod( RowsL_str );
+    const auto RowsH = std::stod( RowsH_str );
+    const auto ColsL = std::stod( ColsL_str );
+    const auto ColsH = std::stod( ColsH_str );
+
+    const auto RowsL_is_pixel = std::regex_match(RowsL_str, regex_is_pixel);
+    const auto RowsH_is_pixel = std::regex_match(RowsH_str, regex_is_pixel);
+    const auto ColsL_is_pixel = std::regex_match(ColsL_str, regex_is_pixel);
+    const auto ColsH_is_pixel = std::regex_match(ColsH_str, regex_is_pixel);
+
+    const auto RowsL_is_percent = std::regex_match(RowsL_str, regex_is_percent);
+    const auto RowsH_is_percent = std::regex_match(RowsH_str, regex_is_percent);
+    const auto ColsL_is_percent = std::regex_match(ColsL_str, regex_is_percent);
+    const auto ColsH_is_percent = std::regex_match(ColsH_str, regex_is_percent);
+
+
     // Create a contour collection for the relevant images.
+    contour_collection<double> cc;  // These are used only for purposes of cropping.
+    {
+        auto iap_it = DICOM_data.image_data.begin();
+        if(false){
+        }else if(std::regex_match(ImageSelectionStr, regex_none)){ iap_it = DICOM_data.image_data.end();
+        }else if(std::regex_match(ImageSelectionStr, regex_last)){
+            if(!DICOM_data.image_data.empty()) iap_it = std::prev(DICOM_data.image_data.end());
+        }
+        while(iap_it != DICOM_data.image_data.end()){
+            for(auto &animg : (*iap_it)->imagecoll.images){
+
+                const auto rows = animg.rows;
+                const auto cols = animg.columns;
+
+                if( (rows <= 0) || (cols <= 0) ){
+                    throw std::invalid_argument("Passed an image with no spatial extent. Cannot continue.");
+                }
+
+                auto dRow = animg.row_unit;
+                auto dCol = animg.col_unit;
+
+                vec3<double> dRowL;
+                vec3<double> dRowH;
+                vec3<double> dColL;
+                vec3<double> dColH;
+
+                if(false){
+                }else if(RowsL_is_pixel  ){  dRowL = dRow * animg.pxl_dx * RowsL;
+                }else if(RowsL_is_percent){  dRowL = dRow * animg.pxl_dx * (rows-1) * RowsL / 100.0;
+                }else{                       dRowL = dRow * RowsL;
+                }
+
+                if(false){
+                }else if(ColsL_is_pixel  ){  dColL = dCol * animg.pxl_dy * ColsL; 
+                }else if(ColsL_is_percent){  dColL = dCol * animg.pxl_dy * (cols-1) * ColsL / 100.0;
+                }else{                       dColL = dCol * ColsL; 
+                }
+
+                if(false){
+                }else if(RowsH_is_pixel  ){  dRowH = dRow * -animg.pxl_dx * RowsH;
+                }else if(RowsH_is_percent){  dRowH = dRow * -animg.pxl_dx * (rows-1) * RowsH / 100.0;
+                }else{                       dRowH = dRow * -RowsH;
+                }
+
+                if(false){
+                }else if(ColsH_is_pixel  ){  dColH = dCol * -animg.pxl_dy * ColsH;
+                }else if(ColsH_is_percent){  dColH = dCol * -animg.pxl_dy * (cols-1) * ColsH / 100.0;
+                }else{                       dColH = dCol * -ColsH;
+                }
+
+                Encircle_Images_with_Contours_Opts opts;
+                opts.inclusivity = Encircle_Images_with_Contours_Opts::Inclusivity::Centre;
+                opts.contouroverlap = Encircle_Images_with_Contours_Opts::ContourOverlap::Disallow;
+
+                std::list<std::reference_wrapper<planar_image<float,double>>> imgs;
+                imgs.emplace_back( std::ref(animg) );
+
+                auto metadata = animg.metadata;
+                auto cc_new = Encircle_Images_with_Contours(imgs, opts, metadata, dRowL, dRowH, dColL, dColH);
+
+                cc.contours.splice( cc.contours.end(), cc_new.contours );
+            }
+            ++iap_it;
+            if(std::regex_match(ImageSelectionStr, regex_first)) break;
+        }
+    }
     std::list<std::reference_wrapper<contour_collection<double>>> cc_ROIs;
-
-    // ....
-
-FUNCERR("Not yet implemented");
-
+    cc_ROIs.emplace_back( std::ref(cc) );
 
     // Perform the crop.
-
-    //Image data.
-    auto iap_it = DICOM_data.image_data.begin();
-    if(false){
-    }else if(std::regex_match(ImageSelectionStr, regex_none)){ iap_it = DICOM_data.image_data.end();
-    }else if(std::regex_match(ImageSelectionStr, regex_last)){
-        if(!DICOM_data.image_data.empty()) iap_it = std::prev(DICOM_data.image_data.end());
-    }
-    while(iap_it != DICOM_data.image_data.end()){
-        CropToROIsUserData ud;
-        ud.row_margin = DICOMMargin;
-        ud.col_margin = DICOMMargin;
-        ud.ort_margin = DICOMMargin;
-
-        if(!(*iap_it)->imagecoll.Compute_Images( ComputeCropToROIs, { },
-                                                 cc_ROIs, &ud )){
-            throw std::runtime_error("Unable to perform crop.");
+    {
+        auto iap_it = DICOM_data.image_data.begin();
+        if(false){
+        }else if(std::regex_match(ImageSelectionStr, regex_none)){ iap_it = DICOM_data.image_data.end();
+        }else if(std::regex_match(ImageSelectionStr, regex_last)){
+            if(!DICOM_data.image_data.empty()) iap_it = std::prev(DICOM_data.image_data.end());
         }
-        ++iap_it;
-    }
+        while(iap_it != DICOM_data.image_data.end()){
+            CropToROIsUserData ud;
+            ud.row_margin = DICOMMargin;
+            ud.col_margin = DICOMMargin;
+            ud.ort_margin = DICOMMargin;
 
-    //Dose data.
-    auto dap_it = DICOM_data.dose_data.begin();
-    if(false){
-    }else if(std::regex_match(DoseImageSelectionStr, regex_none)){ dap_it = DICOM_data.dose_data.end();
-    }else if(std::regex_match(DoseImageSelectionStr, regex_last)){
-        if(!DICOM_data.dose_data.empty()) dap_it = std::prev(DICOM_data.dose_data.end());
-    }
-    while(dap_it != DICOM_data.dose_data.end()){
-        CropToROIsUserData ud;
-        ud.row_margin = DICOMMargin;
-        ud.col_margin = DICOMMargin;
-        ud.ort_margin = DICOMMargin;
-
-        if(!(*dap_it)->imagecoll.Compute_Images( ComputeCropToROIs, { },
-                                                 cc_ROIs, &ud )){
-            throw std::runtime_error("Unable to perform crop.");
+            if(!(*iap_it)->imagecoll.Compute_Images( ComputeCropToROIs, { },
+                                                     cc_ROIs, &ud )){
+                throw std::runtime_error("Unable to perform crop.");
+            }
+            ++iap_it;
+            if(std::regex_match(ImageSelectionStr, regex_first)) break;
         }
-        ++dap_it;
     }
 
     return std::move(DICOM_data);

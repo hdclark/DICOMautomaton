@@ -1,4 +1,4 @@
-// CropImageDose.h.
+// CropImages.h.
 
 #pragma once
 
@@ -87,8 +87,8 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocCropImageDose(void);
+std::list<OperationArgDoc> OpArgDocCropImages(void);
 
-Drover CropImageDose(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
+Drover CropImages(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                                    std::map<std::string, std::string> /*InvocationMetadata*/,
                                    std::string /*FilenameLex*/);
