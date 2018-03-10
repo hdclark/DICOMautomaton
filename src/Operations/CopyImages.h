@@ -1,4 +1,4 @@
-// CopyLastImage.h.
+// CopyImages.h.
 
 #pragma once
 
@@ -87,8 +87,8 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocCopyLastImage(void);
+std::list<OperationArgDoc> OpArgDocCopyImages(void);
 
-Drover CopyLastImage(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
+Drover CopyImages(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                      std::map<std::string, std::string> /*InvocationMetadata*/,
                      std::string /*FilenameLex*/);

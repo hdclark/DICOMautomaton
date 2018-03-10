@@ -8,7 +8,7 @@ add_library(Operations_objs OBJECT
     BuildLexiconInteractively.cc
     ConvertImageToDose.cc
     ConvertDoseToImage.cc
-    CopyLastImage.cc
+    CopyImages.cc
     CropImageDoseToROIs.cc
     CropImages.cc
     CT_Liver_Perfusion.cc

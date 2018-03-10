@@ -36,7 +36,7 @@
 #include "Operations/ConvertDoseToImage.h"
 #include "Operations/ConvertNaNsToAir.h"
 #include "Operations/ConvertNaNsToZeros.h"
-#include "Operations/CopyLastImage.h"
+#include "Operations/CopyImages.h"
 #include "Operations/CropImageDoseToROIs.h"
 #include "Operations/CropImages.h"
 #include "Operations/DroverDebug.h"
@@ -128,7 +128,7 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["ConvertDoseToImage"] = std::make_pair(OpArgDocConvertDoseToImage, ConvertDoseToImage);
     out["ConvertNaNsToAir"] = std::make_pair(OpArgDocConvertNaNsToAir, ConvertNaNsToAir);
     out["ConvertNaNsToZeros"] = std::make_pair(OpArgDocConvertNaNsToZeros, ConvertNaNsToZeros);
-    out["CopyLastImage"] = std::make_pair(OpArgDocCopyLastImage, CopyLastImage);
+    out["CopyImages"] = std::make_pair(OpArgDocCopyImages, CopyImages);
     out["CropImageDoseToROIs"] = std::make_pair(OpArgDocCropImageDoseToROIs, CropImageDoseToROIs);
     out["CropImages"] = std::make_pair(OpArgDocCropImages, CropImages);
     out["EQD2Convert"] = std::make_pair(OpArgDocEQD2Convert, EQD2Convert);
