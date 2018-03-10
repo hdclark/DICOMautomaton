@@ -336,6 +336,10 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
         //auto junction_ortho_profile2 = NPRLL::Attempt_Auto_Smooth(junction_ortho_profile, &l_OK);
         //if(!l_OK) throw std::runtime_error("Unable to perform NPRLL to smooth junction-orthogonal profile.");
 
+        //Perform a high-pass filter to remove some beam profile and imager bias dependence.
+        junction_ortho_profile2 = junction_ortho_profile2.Subtract(
+                                        junction_ortho_profile2.Moving_Average_Two_Sided_Gaussian_Weighting(15) );
+
         auto peaks = junction_ortho_profile2.Peaks();
 
         //Merge peaks that are separated by a small distance.
