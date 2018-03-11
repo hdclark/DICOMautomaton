@@ -3,6 +3,7 @@
 add_library(Operations_objs OBJECT 
     AccumulateRowsColumns.cc
     AnalyzePicketFence.cc
+    AutoCropImages.cc
     Average.cc
     BoostSerializeDrover.cc
     BuildLexiconInteractively.cc

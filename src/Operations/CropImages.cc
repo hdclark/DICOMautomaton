@@ -95,6 +95,14 @@ std::list<OperationArgDoc> OpArgDocCropImages(void){
     //
 
     out.emplace_back();
+    out.back().name = "ImageSelection";
+    out.back().desc = "Images to operate on. Either 'none', 'last', 'first', or 'all'.";
+    out.back().default_val = "all";
+    out.back().expected = true;
+    out.back().examples = { "none", "last", "first", "all" };
+    
+
+    out.emplace_back();
     out.back().name = "RowsL";
     out.back().desc = "The number of rows to remove, starting with the first row. Can be absolute (px), percentage (%), or"
                       " distance in terms of the DICOM coordinate system. Note the DICOM coordinate system can be flipped, so"
@@ -141,14 +149,6 @@ std::list<OperationArgDoc> OpArgDocCropImages(void){
     out.back().expected = true;
     out.back().examples = { "0.1", "2.0", "-0.5", "20.0" };
 
-
-    out.emplace_back();
-    out.back().name = "ImageSelection";
-    out.back().desc = "Images to operate on. Either 'none', 'last', 'first', or 'all'.";
-    out.back().default_val = "all";
-    out.back().expected = true;
-    out.back().examples = { "none", "last", "first", "all" };
-    
     return out;
 }
 
@@ -196,7 +196,6 @@ Drover CropImages(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::stri
     const auto ColsL_is_percent = std::regex_match(ColsL_str, regex_is_percent);
     const auto ColsH_is_percent = std::regex_match(ColsH_str, regex_is_percent);
 
-
     // Create a contour collection for the relevant images.
     contour_collection<double> cc;  // These are used only for purposes of cropping.
     {
@@ -216,8 +215,11 @@ Drover CropImages(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::stri
                     throw std::invalid_argument("Passed an image with no spatial extent. Cannot continue.");
                 }
 
-                auto dRow = animg.row_unit;
-                auto dCol = animg.col_unit;
+                const auto Urow = animg.row_unit;
+                const auto Drow = animg.pxl_dx;
+                const auto Ucol = animg.col_unit;
+                const auto Dcol = animg.pxl_dy;
+
 
                 vec3<double> dRowL;
                 vec3<double> dRowH;
@@ -225,27 +227,27 @@ Drover CropImages(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::stri
                 vec3<double> dColH;
 
                 if(false){
-                }else if(RowsL_is_pixel  ){  dRowL = dRow * animg.pxl_dx * RowsL;
-                }else if(RowsL_is_percent){  dRowL = dRow * animg.pxl_dx * (rows-1) * RowsL / 100.0;
-                }else{                       dRowL = dRow * RowsL;
+                }else if(RowsL_is_pixel  ){  dRowL = Urow * Drow * RowsL;
+                }else if(RowsL_is_percent){  dRowL = Urow * Drow * (rows-1) * RowsL / 100.0;
+                }else{                       dRowL = Urow * RowsL;
                 }
 
                 if(false){
-                }else if(ColsL_is_pixel  ){  dColL = dCol * animg.pxl_dy * ColsL; 
-                }else if(ColsL_is_percent){  dColL = dCol * animg.pxl_dy * (cols-1) * ColsL / 100.0;
-                }else{                       dColL = dCol * ColsL; 
+                }else if(ColsL_is_pixel  ){  dColL = Ucol * Dcol * ColsL; 
+                }else if(ColsL_is_percent){  dColL = Ucol * Dcol * (cols-1) * ColsL / 100.0;
+                }else{                       dColL = Ucol * ColsL; 
                 }
 
                 if(false){
-                }else if(RowsH_is_pixel  ){  dRowH = dRow * -animg.pxl_dx * RowsH;
-                }else if(RowsH_is_percent){  dRowH = dRow * -animg.pxl_dx * (rows-1) * RowsH / 100.0;
-                }else{                       dRowH = dRow * -RowsH;
+                }else if(RowsH_is_pixel  ){  dRowH = Urow * -Drow * RowsH;
+                }else if(RowsH_is_percent){  dRowH = Urow * -Drow * (rows-1) * RowsH / 100.0;
+                }else{                       dRowH = Urow * -RowsH;
                 }
 
                 if(false){
-                }else if(ColsH_is_pixel  ){  dColH = dCol * -animg.pxl_dy * ColsH;
-                }else if(ColsH_is_percent){  dColH = dCol * -animg.pxl_dy * (cols-1) * ColsH / 100.0;
-                }else{                       dColH = dCol * -ColsH;
+                }else if(ColsH_is_pixel  ){  dColH = Ucol * -Dcol * ColsH;
+                }else if(ColsH_is_percent){  dColH = Ucol * -Dcol * (cols-1) * ColsH / 100.0;
+                }else{                       dColH = Ucol * -ColsH;
                 }
 
                 Encircle_Images_with_Contours_Opts opts;

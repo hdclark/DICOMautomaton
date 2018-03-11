@@ -17,6 +17,7 @@
 
 #include "Operations/AccumulateRowsColumns.h"
 #include "Operations/AnalyzePicketFence.h"
+#include "Operations/AutoCropImages.h"
 #include "Operations/Average.h"
 #include "Operations/BoostSerializeDrover.h"
 #include "Operations/BuildLexiconInteractively.h"
@@ -107,6 +108,7 @@ std::map<std::string, op_packet_t> Known_Operations(void){
 
     out["AccumulateRowsColumns"] = std::make_pair(OpArgDocAccumulateRowsColumns, AccumulateRowsColumns);
     out["AnalyzePicketFence"] = std::make_pair(OpArgDocAnalyzePicketFence, AnalyzePicketFence);
+    out["AutoCropImages"] = std::make_pair(OpArgDocAutoCropImages, AutoCropImages);
     out["Average"] = std::make_pair(OpArgDocAverage, Average);
     out["BoostSerializeDrover"] = std::make_pair(OpArgDocBoost_Serialize_Drover, Boost_Serialize_Drover);
     out["BuildLexiconInteractively"] = std::make_pair(OpArgDocBuildLexiconInteractively, BuildLexiconInteractively);
