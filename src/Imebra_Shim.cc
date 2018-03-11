@@ -13,6 +13,7 @@
 
 #include <iostream>
 #include <vector>
+#include <deque>
 #include <string>
 #include <utility>        //Needed for std::pair.
 #include <memory>         //Needed for std::unique_ptr.
@@ -185,70 +186,109 @@ std::map<std::string,std::string> get_metadata_top_level_tags(const std::string 
         return;
     };
 
-    using tag_path = std::tuple<uint16_t, uint16_t, std::string>; // seq_group,seq_tag,seq_name or tag_group,tag_tag,tag_name.
-    auto insert_seq_vec_tag_as_string_if_nonempty = [&out,&ctrim,&tds](std::vector<tag_path> apath) -> void {
-        // This routine can access tags with deeply-nested sequences in their path.
+    // seq_group,seq_tag,seq_name or tag_group,tag_tag,tag_name.
+    struct path_node {
+        uint16_t group   = 0; // The first number in common DICOM tag parlance.
+        uint16_t tag     = 0; // The second number in common DICOM tag parlance.
 
-        if(apath.size() < 2) throw std::logic_error("This routine needs at least one sequence group+tag.");
+        std::string name = "";
 
-        const uint32_t first_order = 0; // Always zero for modern DICOM files.
-        const uint32_t first_element = 0; // Usually zero, but several tags can store multiple elements.
+        uint32_t order   = 0; // Rarely used in modern DICOM. Almost always going to be zero.
+        uint32_t element = 0; // Used to enumerate items in lists.
+
+    };
+
+    std::function< void (std::deque<path_node>,
+                         puntoexe::ptr<puntoexe::imebra::dataSet>,
+                         std::string) > insert_seq_vec_tag_as_string_if_nonempty_proto;
+
+    insert_seq_vec_tag_as_string_if_nonempty_proto = [&out,&ctrim,&tds,&insert_seq_vec_tag_as_string_if_nonempty_proto](
+            std::deque<path_node> apath, //Remaining path elements (relative to base_node).
+            puntoexe::ptr<puntoexe::imebra::dataSet> base_node = nullptr, // The current spot in the DICOM path hierarchy.
+            std::string base_fullpath = "" // The current full path name for the base node.
+         ) -> void {
+
+        if(base_node == nullptr) base_node = tds; // Default to DICOM file top level.
+
+        // This routine can access tags with deeply-nested sequences in their path, including paths with multiple items.
+
+        if(apath.empty()) throw std::logic_error("Reached DICOM path terminus node.");
+
+        // Extract info about the current node.
+        const auto this_node = apath.front();
+        apath.pop_front();
 
         //Extract the full path name of the tag.
-        std::string full_name;
-        for(const auto &atag : apath){
-            if(!full_name.empty()) full_name += R"***(/)***"_s;
-            full_name += std::get<std::string>(atag);
-        }
+        if(!base_fullpath.empty()) base_fullpath += R"***(/)***"_s;
+        base_fullpath += this_node.name;
 
-        //Check if the tag has already been found.
-        if(out.count(full_name) != 0) return;
+        //If this is a sequence, jump to the sequence node as the new base and recurse.
+        if(!apath.empty()){
 
-        const uint16_t tag_group = std::get<0>( apath.back() );
-        const uint16_t tag_tag   = std::get<1>( apath.back() );
-        const std::string tag_name  = std::get<2>( apath.back() );
-        apath.pop_back(); // Remove the tag.
+            //Check if there is a second element.
+            auto next_seq_ptr = base_node->getSequenceItem(this_node.group, this_node.order,
+                                                           this_node.tag,   this_node.element + 1);
+            if(next_seq_ptr != nullptr){
 
-        //Iterate through the sequences.
-        auto seq_ptr = tds;
-        for(auto &seq_tuple : apath){
-            const uint16_t seq_group = std::get<0>( seq_tuple );
-            const uint16_t seq_tag   = std::get<1>( seq_tuple );
-            //const std::string seq_name = std::get<2>( seq_tuple );
+                //Cycle through all elements, suffixing with the element number.
+                for(uint32_t i = 0; i < 10000 ; ++i){
+                    const auto this_fullpath = base_fullpath + "#" + std::to_string(i);
+                    auto seq_ptr = base_node->getSequenceItem(this_node.group, this_node.order,
+                                                              this_node.tag,   this_node.element + i);
+                    if(seq_ptr != nullptr){
+                        insert_seq_vec_tag_as_string_if_nonempty_proto(apath, seq_ptr, this_fullpath);
+                    }else{
+                        break;
+                    }
+                }
+            }else{
+                //This sequence does not appear to be part of a list. So just jump to it.
+                auto seq_ptr = base_node->getSequenceItem(this_node.group, this_node.order,
+                                                          this_node.tag,   this_node.element);
+                insert_seq_vec_tag_as_string_if_nonempty_proto(apath, seq_ptr, base_fullpath);
+            }
 
-            //Check if the sequence can be found.
-            auto new_seq_ptr = seq_ptr->getSequenceItem(seq_group, first_order, seq_tag, first_element);
-            if(new_seq_ptr == nullptr) return;
-            seq_ptr = new_seq_ptr;
-        }
+        //Otherwise, this is a leaf node.
+        }else{
+            //Check if the tag has already been found.
+            if(out.count(base_fullpath) != 0) return;
+            
+            //Check if the tag is present in the sequence.
+            const bool create_if_not_found = false;
+            const auto tag_ptr = base_node->getTag(this_node.group, this_node.order,
+                                                   this_node.tag,
+                                                   create_if_not_found);
+            if(tag_ptr == nullptr) return;
 
-        //Check if the tag is present in the sequence.
-        const bool create_if_not_found = false;
-        const auto tag_ptr = seq_ptr->getTag(tag_group, first_order, tag_tag, create_if_not_found);
-        if(tag_ptr == nullptr) return;
+            //Add the first element.
+            const auto str = base_node->getString(this_node.group, this_node.order,
+                                                  this_node.tag,   this_node.element);
+            const auto trimmed = Canonicalize_String2(str, ctrim);
+            if(!trimmed.empty()) out.emplace(base_fullpath, trimmed);
 
-        //Add the first element.
-        const auto str = seq_ptr->getString(tag_group, first_order, tag_tag, first_element);
-        const auto trimmed = Canonicalize_String2(str, ctrim);
-        if(!trimmed.empty()) out.emplace(full_name, trimmed);
-
-        //Check if there are additional elements.
-        for(uint32_t i = 1 ;  ; ++i){
-            try{
-                const auto str = seq_ptr->getString(tag_group, first_order, tag_tag, first_element + i);
-                const auto trimmed = Canonicalize_String2(str, ctrim);
-                if(!trimmed.empty()){
-                    out[full_name] += R"***(\)***"_s + trimmed;
-                }else{
+            //Check if there are additional elements.
+            for(uint32_t i = 1 ; i < 10000 ; ++i){
+                try{
+                    const auto str = base_node->getString(this_node.group, this_node.order,
+                                                          this_node.tag,   this_node.element + i);
+                    const auto trimmed = Canonicalize_String2(str, ctrim);
+                    if(!trimmed.empty()){
+                        out[base_fullpath] += R"***(\)***"_s + trimmed;
+                    }else{
+                        return;
+                    }
+                }catch(const std::exception &){
                     return;
                 }
-            }catch(const std::exception &){
-                return;
             }
         }
         return;
     };
 
+    auto insert_seq_vec_tag_as_string_if_nonempty = std::bind(insert_seq_vec_tag_as_string_if_nonempty_proto,
+                                                              std::placeholders::_1,
+                                                              tds, "");
+    
     //SOP Common Module.
     insert_as_string_if_nonempty(0x0008, 0x0016, "SOPClassUID");
     insert_as_string_if_nonempty(0x0008, 0x0018, "SOPInstanceUID");
@@ -415,9 +455,18 @@ std::map<std::string,std::string> get_metadata_top_level_tags(const std::string 
                                           0x0018, 0x1150, "ExposureTime");
     insert_seq_tag_as_string_if_nonempty( 0x3002, 0x0030, "ExposureSequence",
                                           0x3002, 0x0032, "MetersetExposure");
-    insert_seq_vec_tag_as_string_if_nonempty( { { 0x3002, 0x0030, "ExposureSequence" },
+    insert_seq_vec_tag_as_string_if_nonempty( std::deque<path_node>(
+                                              { { 0x3002, 0x0030, "ExposureSequence" },
                                                 { 0x300A, 0x00B6, "BeamLimitingDeviceSequence" },
-                                                { 0x300A, 0x011C, "LeafJawPositions" } } );
+                                                { 0x300A, 0x00B8, "RTBeamLimitingDeviceType" } }) );
+    insert_seq_vec_tag_as_string_if_nonempty( std::deque<path_node>(
+                                              { { 0x3002, 0x0030, "ExposureSequence" },
+                                                { 0x300A, 0x00B6, "BeamLimitingDeviceSequence" },
+                                                { 0x300A, 0x00BC, "NumberOfLeafJawPairs" } }) );
+    insert_seq_vec_tag_as_string_if_nonempty( std::deque<path_node>(
+                                              { { 0x3002, 0x0030, "ExposureSequence" },
+                                                { 0x300A, 0x00B6, "BeamLimitingDeviceSequence" },
+                                                { 0x300A, 0x011C, "LeafJawPositions" } }) );
 
     //Unclassified others...
     insert_as_string_if_nonempty(0x0018, 0x0020, "ScanningSequence");
