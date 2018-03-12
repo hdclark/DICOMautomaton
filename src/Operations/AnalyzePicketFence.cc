@@ -189,6 +189,58 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
     if(NumberOfJunctions < 2) throw std::domain_error("At least 2 junctions are needed for this analysis.");
 
 
+    //Add a contour to the current set, for diagnostic/inspection/debugging/prototype purposes.
+    auto Inject_Thin_Line_Contour = [&]( const planar_image<float,double> &animg,
+                                         line<double> aline, // The line to plot.
+                                         contour_collection<double> &dest, // Where to put the contours.
+                                         std::map<std::string, std::string> metadata ) -> void {
+
+        // Enclose the image with a sphere (i.e., a convenient geometrical shape for computing intersections).
+        const auto img_C = animg.center();
+        const auto img_r = 0.5 * std::hypot( animg.pxl_dx * animg.rows, animg.pxl_dy * animg.columns );
+        sphere<double> S(img_C, img_r);
+
+        // Find the intersection points of the sphere and line (if any).
+        const auto Is = S.Line_Intersections(aline);
+        if(Is.size() != 2) throw std::domain_error("Cannot approximate line with contour: line and image not coincident.");
+        const auto I0 = Is.front();
+        const auto I1 = Is.back();
+
+        // Ensure they're within the image bounds. (If both are, assume the whole line is; if neither forgo the line?).
+//        if( !animg.sandwiches_point_within_top_bottom_planes(I0)
+//        ||  !animg.sandwiches_point_within_top_bottom_planes(I1) ){
+//            throw std::domain_error("Cannot approximate line with contour: line-image intersections out-of-plane.");
+//        }
+
+        // Project the intersection points onto the (central) plane of the image.
+        const auto img_plane = animg.image_plane();
+        const auto IO0 = img_plane.Project_Onto_Plane_Orthogonally(I0);
+        const auto IO1 = img_plane.Project_Onto_Plane_Orthogonally(I1);
+
+        // Find the in-plane direction orthogonal to the line direction.
+        const auto img_ortho = animg.row_unit.Cross(animg.col_unit).unit();
+        const auto perp = img_ortho.Cross( aline.U_0 ).unit();
+
+        // Split the intersection points by a small amount, to give the line a small width.
+        const auto perp_p = perp * 0.1 * std::min(animg.pxl_dx, animg.pxl_dy);
+        const auto IO0p = IO0 + perp_p;
+        const auto IO0m = IO0 - perp_p;
+        const auto IO1p = IO1 + perp_p;
+        const auto IO1m = IO1 - perp_p;
+
+        // Add the vertices and metadata to a new contour.
+        dest.contours.emplace_back();
+        dest.contours.back().closed = true;
+        dest.contours.back().points.emplace_back( IO0p );
+        dest.contours.back().points.emplace_back( IO0m );
+        dest.contours.back().points.emplace_back( IO1p );
+        dest.contours.back().points.emplace_back( IO1m );
+        dest.contours.back().metadata = metadata;
+
+        return;
+    };
+
+
     auto iap_it = DICOM_data.image_data.begin();
     if(false){
     }else if(std::regex_match(ImageSelectionStr, regex_none)){ iap_it = DICOM_data.image_data.end();
@@ -197,15 +249,10 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
     }
     while(iap_it != DICOM_data.image_data.end()){
 
-        //if(!(*iap_it)->imagecoll.Process_Images_Parallel( GroupIndividualImages,
-        //                                                  ImagePartialDerivative,
-        //                                                  {}, {}, &ud )){
-        //    throw std::runtime_error("Unable to compute in-plane partial derivative.");
-        //}
         if((*iap_it)->imagecoll.images.empty()) throw std::invalid_argument("Unable to find an image to analyze.");
 
         planar_image<float, double> *animg = &( (*iap_it)->imagecoll.images.front() );
-       
+
 
         // Using the contours that surround the leaf junctions, extract a 'long' and 'short' direction along the
         // junctions. This will orient the image and give us some orientation independence. We use principle component
@@ -223,10 +270,12 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
         {
             size_t i = 0;
             for(auto &acop : cop_ROIs){
+                const auto cent = acop.get().Centroid(); // We're interested in ROI shape, not ROI arrangement.
                 for(auto &p : acop.get().points){
-                    verts(i,0) = p.x;
-                    verts(i,1) = p.y;
-                    verts(i,2) = p.z;
+                    const auto c = (p - cent);
+                    verts(i,0) = c.x;
+                    verts(i,1) = c.y;
+                    verts(i,2) = c.z;
                     ++i;
                 }
             }
@@ -251,7 +300,7 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
         samples_1D<double> junction_ortho_projections;
         const auto corner_pos = animg->position(0, 0);
 
-/*
+/* */
         //Use all pixels for profile generation.
         //
         // Note: these profiles are noisy. It might be better to only sample the region between junctions, which could
@@ -264,11 +313,21 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
                 junction_ortho_projections.push_back( { long_line_L, 0.0, val, 0.0 }, inhibit_sort );
             }
         }
-*/        
+/* */        
 
         //Use pixels in-between junctions for profile generation.
         std::vector<vec3<double>> junction_centroids;
         for(auto &acop : cop_ROIs) junction_centroids.emplace_back( acop.get().Centroid() );
+
+        //Add thin contours for inspecting the junction lines.
+        DICOM_data.contour_data->ccs.emplace_back();
+        //DICOM_data.contour_data->ccs.back().contours.emplace_back();
+        for(const auto &cent : junction_centroids){
+            Inject_Thin_Line_Contour(*animg,
+                                     line<double>(cent, cent + long_unit),
+                                     DICOM_data.contour_data->ccs.back(),
+                                     animg->metadata);
+        }
 
         std::vector<double> junction_cax_separations;
         for(size_t i = 0; i < junction_centroids.size(); ++i){
@@ -288,6 +347,9 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
         //std::sort(junction_separations.begin(), junction_separations.end());
         const auto min_junction_sep = Stats::Min(junction_separations);
         std::cout << "Minimum junction separation: " << min_junction_sep << std::endl;
+
+/*
+        //Used only for profile generation using pixels in-between junctions only.
 
         auto near_a_junction = [=](const vec3<double> &p) -> bool {
             //Determines if a given point is sufficiently far from the nearest junction.
@@ -317,7 +379,7 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
                 junction_ortho_projections.push_back( { long_line_L, 0.0, val, 0.0 }, inhibit_sort );
             }
         }
-        
+*/        
 
 
 
