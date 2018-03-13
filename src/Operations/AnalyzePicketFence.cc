@@ -402,6 +402,12 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
         junction_ortho_profile2 = junction_ortho_profile2.Subtract(
                                         junction_ortho_profile2.Moving_Average_Two_Sided_Gaussian_Weighting(15) );
 
+        //Now find all (local) peaks via the derivative of the crossing points.
+        //
+        // Note: We find peaks (gaps between leaves) instead of troughs (middle of leaves) because the background (i.e.,
+        //       dose behind the jaws) confounds trough isolation for leaves on the boundaries. Peaks are also sharper
+        //       (i.e., more confined spatially owing to the smaller gap they arise from), whereas troughs can undulate
+        //       considerably more.
         auto peaks = junction_ortho_profile2.Peaks();
 
         //Merge peaks that are separated by a small distance.
@@ -416,6 +422,22 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
         // Threshold on the smallest angle that separates them.
 
         if(peaks.size() < 5) std::runtime_error("Leaf-leakage peaks not correctly detected. Please verify input.");
+
+
+        //Add thin contours for inspecting the location of the peaks.
+        DICOM_data.contour_data->ccs.emplace_back();
+        for(const auto &peak4 : peaks.samples){
+            const auto cent = junction_centroids.front();
+            const auto d = peak4[0]; // Projection of relative position onto the long-axis unit vector.
+
+            const auto offset = (cent - corner_pos).Dot(long_unit);
+            const auto R_peak = cent + long_unit * (d - offset); // Actual position of peak (on this junction).
+
+            Inject_Thin_Line_Contour(*animg,
+                                     line<double>(R_peak, R_peak + short_unit),
+                                     DICOM_data.contour_data->ccs.back(),
+                                     animg->metadata);
+        }
 
         std::vector<double> peak_separations;
         for(size_t i = 1; i < peaks.samples.size(); ++i){
@@ -432,25 +454,12 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
 
  
 
-        //Now find all (local) peaks via the derivative of the crossing points.
-        //
-        // Note: We find peaks (gaps between leaves) instead of troughs (middle of leaves) because the background (i.e.,
-        //       dose behind the jaws) confounds trough isolation for leaves on the boundaries. Peaks are also sharper
-        //       (i.e., more confined spatially owing to the smaller gap they arise from), whereas troughs can undulate
-        //       considerably more.
-        auto junction_ortho_profile_deriv = junction_ortho_profile2.Derivative_Centered_Finite_Differences();
-        auto junction_ortho_profile_2deriv = junction_ortho_profile_deriv.Derivative_Centered_Finite_Differences();
-
-
-        YgorMathPlottingGnuplot::Shuttle<samples_1D<double>> plot_shtl_1(junction_ortho_profile, "Without smoothing");
-        YgorMathPlottingGnuplot::Shuttle<samples_1D<double>> plot_shtl_2(junction_ortho_profile2, "With smoothing");
-        //YgorMathPlottingGnuplot::Shuttle<samples_1D<double>> plot_shtl_3(junction_ortho_profile_deriv, "Derivative");
-        //YgorMathPlottingGnuplot::Shuttle<samples_1D<double>> plot_shtl_4(junction_ortho_profile_2deriv, "SecondDerivative");
+        //YgorMathPlottingGnuplot::Shuttle<samples_1D<double>> plot_shtl_1(junction_ortho_profile, "Without smoothing");
+        YgorMathPlottingGnuplot::Shuttle<samples_1D<double>> plot_shtl_2(junction_ortho_profile2, "Smoothed and filtered");
         YgorMathPlottingGnuplot::Shuttle<samples_1D<double>> plot_shtl_5(peaks, "Peaks");
-        YgorMathPlottingGnuplot::Plot<double>({plot_shtl_1, plot_shtl_2, /*plot_shtl_3, plot_shtl_4,*/ plot_shtl_5}, "Junction-orthogonal profile", "DICOM position", "Average Pixel Intensity");
+        YgorMathPlottingGnuplot::Plot<double>({plot_shtl_2, plot_shtl_5}, "Junction-orthogonal profile", "DICOM position", "Average Pixel Intensity");
 
         
-
         // Loop control.
         ++iap_it;
         if(std::regex_match(ImageSelectionStr, regex_first)) break;
