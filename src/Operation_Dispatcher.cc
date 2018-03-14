@@ -16,6 +16,7 @@
 #include "Structs.h"
 
 #include "Operations/AccumulateRowsColumns.h"
+#include "Operations/AnalyzeLightRadFieldCoincidence.h"
 #include "Operations/AnalyzePicketFence.h"
 #include "Operations/AutoCropImages.h"
 #include "Operations/Average.h"
@@ -107,6 +108,7 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     std::map<std::string, op_packet_t> out;
 
     out["AccumulateRowsColumns"] = std::make_pair(OpArgDocAccumulateRowsColumns, AccumulateRowsColumns);
+    out["AnalyzeLightRadFieldCoincidence"] = std::make_pair(OpArgDocAnalyzeLightRadFieldCoincidence, AnalyzeLightRadFieldCoincidence);
     out["AnalyzePicketFence"] = std::make_pair(OpArgDocAnalyzePicketFence, AnalyzePicketFence);
     out["AutoCropImages"] = std::make_pair(OpArgDocAutoCropImages, AutoCropImages);
     out["Average"] = std::make_pair(OpArgDocAverage, Average);
