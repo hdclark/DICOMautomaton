@@ -254,7 +254,6 @@ Drover AnalyzeLightRadFieldCoincidence(Drover DICOM_data, OperationArgPkg OptArg
         std::vector< std::vector<samples_1D<double>> > col_fe_candidates(AFEs.size());
 
         {
-
             row_cm << "Row compatibility matrix:" << std::endl;
             col_cm << "Column compatibility matrix:" << std::endl;
 
@@ -388,6 +387,17 @@ Drover AnalyzeLightRadFieldCoincidence(Drover DICOM_data, OperationArgPkg OptArg
                     }
                     row_cm << std::endl;
                     col_cm << std::endl;
+                }
+            }
+        }
+
+        //Identify the largest image. It is used later to overlay contours of peak locations.
+        planar_image<float,double> *largest_img = nullptr;
+        {
+            for(auto & animg : (*iap_it)->imagecoll.images){
+                if( (largest_img == nullptr)
+                ||  (largest_img->rows < animg.rows) ){
+                    largest_img = &animg;
                 }
             }
         }
@@ -530,28 +540,26 @@ Drover AnalyzeLightRadFieldCoincidence(Drover DICOM_data, OperationArgPkg OptArg
                     const auto cfe1 = Find_Peak_Nearest(col_fe_candidates[i][0], afe);
                     const auto cfe2 = Find_Peak_Nearest(col_fe_candidates[i][1], afe);
 
-                    auto *animg = &((*iap_it)->imagecoll.images.back());
-//                        const auto pos = animg.position(row,0).Dot(animg.row_unit); //Relative to DICOM origin.
-//                        row_profile.push_back({ pos, 0.0, row_sum[row], 0.0 });
-                    const auto ru = animg->row_unit;
-                    const auto cu = animg->col_unit;
-                    
-                    Inject_Thin_Line_Contour(*animg,
-                                             line<double>(ru*rfe1, ru*rfe1 + cu),
-                                             DICOM_data.contour_data->ccs.back(),
-                                             animg->metadata);
-                    Inject_Thin_Line_Contour(*animg,
-                                             line<double>(ru*rfe2, ru*rfe2 + cu),
-                                             DICOM_data.contour_data->ccs.back(),
-                                             animg->metadata);
-                    Inject_Thin_Line_Contour(*animg,
-                                             line<double>(cu*cfe1, cu*cfe1 + ru),
-                                             DICOM_data.contour_data->ccs.back(),
-                                             animg->metadata);
-                    Inject_Thin_Line_Contour(*animg,
-                                             line<double>(cu*cfe2, cu*cfe2 + ru),
-                                             DICOM_data.contour_data->ccs.back(),
-                                             animg->metadata);
+                    if(largest_img != nullptr){
+                        const auto ru = largest_img->row_unit;
+                        const auto cu = largest_img->col_unit;
+                        Inject_Thin_Line_Contour(*largest_img,
+                                                 line<double>(ru*rfe1, ru*rfe1 + cu),
+                                                 DICOM_data.contour_data->ccs.back(),
+                                                 largest_img->metadata);
+                        Inject_Thin_Line_Contour(*largest_img,
+                                                 line<double>(ru*rfe2, ru*rfe2 + cu),
+                                                 DICOM_data.contour_data->ccs.back(),
+                                                 largest_img->metadata);
+                        Inject_Thin_Line_Contour(*largest_img,
+                                                 line<double>(cu*cfe1, cu*cfe1 + ru),
+                                                 DICOM_data.contour_data->ccs.back(),
+                                                 largest_img->metadata);
+                        Inject_Thin_Line_Contour(*largest_img,
+                                                 line<double>(cu*cfe2, cu*cfe2 + ru),
+                                                 DICOM_data.contour_data->ccs.back(),
+                                                 largest_img->metadata);
+                    }
 
                     FO << std::setprecision(3) << afe
                        << "," << "row"
