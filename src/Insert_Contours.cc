@@ -29,11 +29,12 @@ void Inject_Thin_Line_Contour( const planar_image<float,double> &animg,
     const auto I1 = Is.back();
 
     // Ensure they're within the image bounds. (If both are, assume the whole line is; if neither forgo the line?).
-// Note: won't work for RTIMAGES with zero volume... TODO    
-//    if( !animg.sandwiches_point_within_top_bottom_planes(I0)
-//    ||  !animg.sandwiches_point_within_top_bottom_planes(I1) ){
-//        throw std::domain_error("Cannot approximate line with contour: line-image intersections out-of-plane.");
-//    }
+    // Note: Contours on purely 2D images are permitted.
+    if( (animg.pxl_dz > std::numeric_limits<double>::min())
+    &&  (   !animg.sandwiches_point_within_top_bottom_planes(I0)
+         || !animg.sandwiches_point_within_top_bottom_planes(I1) ) ){
+        throw std::domain_error("Cannot approximate line with contour: line-image intersections out-of-plane.");
+    }
 
     // Project the intersection points onto the (central) plane of the image.
     const auto img_plane = animg.image_plane();
@@ -45,7 +46,7 @@ void Inject_Thin_Line_Contour( const planar_image<float,double> &animg,
     const auto perp = img_ortho.Cross( aline.U_0 ).unit();
 
     // Split the intersection points by a small amount, to give the line a small width.
-    const auto perp_p = perp * 0.1 * std::min(animg.pxl_dx, animg.pxl_dy);
+    const auto perp_p = perp * (1E-4) * std::min(animg.pxl_dx, animg.pxl_dy);
     const auto IO0p = IO0 + perp_p;
     const auto IO0m = IO0 - perp_p;
     const auto IO1p = IO1 + perp_p;
