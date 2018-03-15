@@ -29,6 +29,7 @@
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMathPlottingGnuplot.h" //Needed for YgorMathPlottingGnuplot::*.
+#include "YgorMathBSpline.h" //Needed for basis_spline class.
 #include "YgorMathChebyshev.h" //Needed for cheby_approx class.
 #include "YgorStats.h"        //Needed for Stats:: namespace.
 #include "YgorFilesDirs.h"    //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
@@ -455,20 +456,40 @@ Drover AnalyzeLightRadFieldCoincidence(Drover DICOM_data, OperationArgPkg OptArg
         //Analyze the field edge coincidences.
         {
             auto Find_Peak_Nearest = [](samples_1D<double> &s, double target_x) -> double {
-                double thepeak = std::numeric_limits<double>::quiet_NaN();
+                double peak_x = std::numeric_limits<double>::quiet_NaN();
 
                 //Peak-based. No functions are fit here -- the field edge peak locations are directly used.
-                const auto peaks = s.Peaks();
-                auto min_dist = std::numeric_limits<double>::infinity();
-                for(const auto &samp : peaks.samples){
-                    const auto x = samp[0];
-                    const auto dist = std::abs(target_x - x);
-                    if(dist < min_dist){
-                        min_dist = dist;
-                        thepeak = x;
+                if(true){
+                    const auto peaks = s.Peaks();
+                    auto min_dist = std::numeric_limits<double>::infinity();
+                    for(const auto &samp : peaks.samples){
+                        const auto x = samp[0];
+                        const auto dist = std::abs(target_x - x);
+                        if(dist < min_dist){
+                            min_dist = dist;
+                            peak_x = x;
+                        }
                     }
                 }
-                return thepeak;
+
+                // Estimate the (highest) peak location by scanning through a basis spline approximation.
+                if(false){
+                    basis_spline bs(s);
+                    const auto dx = 0.001;
+                    const auto min_x = s.Get_Extreme_Datum_x().first[0] + dx;
+                    const auto max_x = s.Get_Extreme_Datum_x().second[0] - dx;
+
+                    auto max_f = -(std::numeric_limits<double>::infinity());
+                    for(auto x = min_x ; x < max_x; x += dx){
+                        const auto f = bs.Sample(x)[2];
+                        if(f > max_f){
+                            max_f = f;
+                            peak_x = x;
+                        }
+                    }
+                }
+
+                return peak_x;
             };
 
 
