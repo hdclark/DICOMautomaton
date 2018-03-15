@@ -3,8 +3,10 @@
 #include <vector>
 #include <array>
 #include <initializer_list>
+#include <experimental/optional>
 
 #include "YgorMath.h"
+#include "YgorString.h"
 
 #include "Colour_Maps.h"
 
@@ -16884,6 +16886,8 @@ ClampedColourRGB ColourMap_YgorIncandescent(double y){
 
 
 /*
+//Note: prototype for above functions:
+
 ClampedColourRGB ColourMap_(double y){
     const static samples_1D<double> r( { 
     } );
@@ -16899,4 +16903,24 @@ ClampedColourRGB ColourMap_(double y){
              b.Interpolate_Linearly(y)[2] };
 }
 */
+
+
+//This function takes a named colour and map it to a colour specified in terms of R,G,B all within [0,1].
+std::experimental::optional<ClampedColourRGB> Colour_from_name(std::string n){
+    const auto cn = Canonicalize_String2(n, CANONICALIZE::TO_LOWER | CANONICALIZE::TRIM_ALL | CANONICALIZE::TO_AZ);
+
+    if(false){
+    }else if(cn == "blue"){
+        return std::experimental::optional<ClampedColourRGB>({ 0.0, 0.0, 1.0 });
+    }else if(cn == "green"){
+        return std::experimental::optional<ClampedColourRGB>({ 0.0, 1.0, 0.0 });
+    }else if(cn == "red"){
+        return std::experimental::optional<ClampedColourRGB>({ 1.0, 0.0, 0.0 });
+    }
+
+    return {};
+}
+
+
+
 

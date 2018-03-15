@@ -115,6 +115,16 @@ std::list<OperationArgDoc> OpArgDocAnalyzeLightRadFieldCoincidence(void){
 
 
     out.emplace_back();
+    out.back().name = "ToleranceLevel";
+    out.back().desc = "Controls detected edge visualization for easy identification of edges out of tolerance."
+                      " Note: this value refers to edge-to-edge separation, not edge-to-nominal distances."
+                      " This value is in DICOM units.";
+    out.back().default_val = "1.0";
+    out.back().expected = true;
+    out.back().examples = { "0.5", "1.0", "2.0", "inf" };
+
+
+    out.emplace_back();
     out.back().name = "EdgeLengths";
     out.back().desc = "Comma-separated list of (symmetric) edge lengths fields should be analyzed at."
                       " For example, if 50x50, 100x100, 150x150, and 200x200 (all in mm) fields are to be analyzed,"
@@ -184,6 +194,7 @@ Drover AnalyzeLightRadFieldCoincidence(Drover DICOM_data, OperationArgPkg OptArg
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto ImageSelectionStr = OptArgs.getValueStr("ImageSelection").value();
 
+    const auto ToleranceLevel = std::stod( OptArgs.getValueStr("ToleranceLevel").value() );
     const auto EdgeLengthsStr = OptArgs.getValueStr("EdgeLengths").value();
     const auto SearchDistance = std::stod( OptArgs.getValueStr("SearchDistance").value() );
     const auto PeakSimilarityThreshold = std::stod( OptArgs.getValueStr("PeakSimilarityThreshold").value() );
@@ -541,24 +552,39 @@ Drover AnalyzeLightRadFieldCoincidence(Drover DICOM_data, OperationArgPkg OptArg
                     const auto cfe2 = Find_Peak_Nearest(col_fe_candidates[i][1], afe);
 
                     if(largest_img != nullptr){
+                        auto m = largest_img->metadata;
                         const auto ru = largest_img->row_unit;
                         const auto cu = largest_img->col_unit;
+
+                        const auto drfe = std::abs(rfe1-rfe2);
+                        const auto dcfe = std::abs(cfe1-cfe2);
+
+                        if(drfe < ToleranceLevel){
+                            m["OutlineColour"] = "blue";
+                        }else{
+                            m["OutlineColour"] = "red";
+                        }
                         Inject_Thin_Line_Contour(*largest_img,
                                                  line<double>(ru*rfe1, ru*rfe1 + cu),
                                                  DICOM_data.contour_data->ccs.back(),
-                                                 largest_img->metadata);
+                                                 m);
                         Inject_Thin_Line_Contour(*largest_img,
                                                  line<double>(ru*rfe2, ru*rfe2 + cu),
                                                  DICOM_data.contour_data->ccs.back(),
-                                                 largest_img->metadata);
+                                                 m);
+                        if(dcfe < ToleranceLevel){
+                            m["OutlineColour"] = "blue";
+                        }else{
+                            m["OutlineColour"] = "red";
+                        }
                         Inject_Thin_Line_Contour(*largest_img,
                                                  line<double>(cu*cfe1, cu*cfe1 + ru),
                                                  DICOM_data.contour_data->ccs.back(),
-                                                 largest_img->metadata);
+                                                 m);
                         Inject_Thin_Line_Contour(*largest_img,
                                                  line<double>(cu*cfe2, cu*cfe2 + ru),
                                                  DICOM_data.contour_data->ccs.back(),
-                                                 largest_img->metadata);
+                                                 m);
                     }
 
                     FO << std::setprecision(3) << afe

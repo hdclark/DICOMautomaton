@@ -1886,7 +1886,16 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
                         const auto arb_pos_unit = disp_img_it->row_unit.Cross(disp_img_it->col_unit).unit();
                         const auto c_orient = c.Estimate_Planar_Normal();
                         const auto c_orient_pos = (c_orient.Dot(arb_pos_unit) > 0);
-                        const auto c_color = ( c_orient_pos ? Neg_Contour_Color : Pos_Contour_Color );
+                        auto c_color = ( c_orient_pos ? Neg_Contour_Color : Pos_Contour_Color );
+
+                        //Override the colour if metadata requests it and we know the colour.
+                        if(auto m_color = c.GetMetadataValueAs<std::string>("OutlineColour")){
+                            if(auto rgb_c = Colour_from_name(m_color.value())){
+                                c_color = sf::Color( static_cast<uint8_t>(rgb_c.value().R * 255.0),
+                                                     static_cast<uint8_t>(rgb_c.value().G * 255.0),
+                                                     static_cast<uint8_t>(rgb_c.value().B * 255.0) );
+                            }
+                        }
 
                         for(auto & p : c.points){
                             //We have three distinct coordinate systems: DICOM, pixel coordinates and screen pixel coordinates,

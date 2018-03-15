@@ -2,6 +2,8 @@
 
 #pragma once
 
+#include <experimental/optional>
+
 
 struct ClampedColourRGB {
     double R; // within [0,1].
@@ -36,4 +38,8 @@ ClampedColourRGB ColourMap_Kovesi_Cyclic_mygbm_30_95_c78(double y);
 ClampedColourRGB ColourMap_LANL_OliveGreen_to_Blue(double y);
 
 ClampedColourRGB ColourMap_YgorIncandescent(double y);
+
+
+//This function takes a named colour and map it to a colour specified in terms of R,G,B all within [0,1].
+std::experimental::optional<ClampedColourRGB> Colour_from_name(std::string n);
 
