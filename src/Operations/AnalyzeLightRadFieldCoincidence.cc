@@ -45,6 +45,7 @@
 #include "Explicator.h"       //Needed for Explicator class.
 
 #include "../Structs.h"
+#include "../Insert_Contours.h"
 
 #include "../YgorImages_Functors/Grouping/Misc_Functors.h"
 #include "../YgorImages_Functors/ConvenienceRoutines.h"
@@ -459,7 +460,7 @@ Drover AnalyzeLightRadFieldCoincidence(Drover DICOM_data, OperationArgPkg OptArg
                 double peak_x = std::numeric_limits<double>::quiet_NaN();
 
                 //Peak-based. No functions are fit here -- the field edge peak locations are directly used.
-                if(true){
+                if(false){
                     const auto peaks = s.Peaks();
                     auto min_dist = std::numeric_limits<double>::infinity();
                     for(const auto &samp : peaks.samples){
@@ -473,7 +474,7 @@ Drover AnalyzeLightRadFieldCoincidence(Drover DICOM_data, OperationArgPkg OptArg
                 }
 
                 // Estimate the (highest) peak location by scanning through a basis spline approximation.
-                if(false){
+                if(true){
                     basis_spline bs(s);
                     const auto dx = 0.001;
                     const auto min_x = s.Get_Extreme_Datum_x().first[0] + dx;
@@ -503,6 +504,8 @@ Drover AnalyzeLightRadFieldCoincidence(Drover DICOM_data, OperationArgPkg OptArg
                                                        "dicomautomaton_operation_analyzelightradcoincidence_mutex");
                 boost::interprocess::scoped_lock<boost::interprocess::named_mutex> lock(mutex);
 
+                DICOM_data.contour_data->ccs.emplace_back();
+
                 if(OutputFileName.empty()){
                     OutputFileName = Get_Unique_Sequential_Filename("/tmp/dicomautomaton_analyzelightradcoincidence_", 6, ".csv");
                 }
@@ -526,6 +529,29 @@ Drover AnalyzeLightRadFieldCoincidence(Drover DICOM_data, OperationArgPkg OptArg
                     const auto rfe2 = Find_Peak_Nearest(row_fe_candidates[i][1], afe);
                     const auto cfe1 = Find_Peak_Nearest(col_fe_candidates[i][0], afe);
                     const auto cfe2 = Find_Peak_Nearest(col_fe_candidates[i][1], afe);
+
+                    auto *animg = &((*iap_it)->imagecoll.images.back());
+//                        const auto pos = animg.position(row,0).Dot(animg.row_unit); //Relative to DICOM origin.
+//                        row_profile.push_back({ pos, 0.0, row_sum[row], 0.0 });
+                    const auto ru = animg->row_unit;
+                    const auto cu = animg->col_unit;
+                    
+                    Inject_Thin_Line_Contour(*animg,
+                                             line<double>(ru*rfe1, ru*rfe1 + cu),
+                                             DICOM_data.contour_data->ccs.back(),
+                                             animg->metadata);
+                    Inject_Thin_Line_Contour(*animg,
+                                             line<double>(ru*rfe2, ru*rfe2 + cu),
+                                             DICOM_data.contour_data->ccs.back(),
+                                             animg->metadata);
+                    Inject_Thin_Line_Contour(*animg,
+                                             line<double>(cu*cfe1, cu*cfe1 + ru),
+                                             DICOM_data.contour_data->ccs.back(),
+                                             animg->metadata);
+                    Inject_Thin_Line_Contour(*animg,
+                                             line<double>(cu*cfe2, cu*cfe2 + ru),
+                                             DICOM_data.contour_data->ccs.back(),
+                                             animg->metadata);
 
                     FO << std::setprecision(3) << afe
                        << "," << "row"
