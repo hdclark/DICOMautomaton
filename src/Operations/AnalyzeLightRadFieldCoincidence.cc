@@ -186,6 +186,13 @@ std::list<OperationArgDoc> OpArgDocAnalyzeLightRadFieldCoincidence(void){
     out.back().mimetype = "text/csv";
 
 
+    out.emplace_back();
+    out.back().name = "InteractivePlots";
+    out.back().desc = "Whether to interactively show plots showing detected edges.";
+    out.back().default_val = "false";
+    out.back().expected = true;
+    out.back().examples = { "true", "false" };
+
     return out;
 }
 
@@ -201,6 +208,7 @@ Drover AnalyzeLightRadFieldCoincidence(Drover DICOM_data, OperationArgPkg OptArg
 
     const auto UserComment = OptArgs.getValueStr("UserComment");
     auto OutputFileName = OptArgs.getValueStr("OutputFileName").value();
+    const auto InteractivePlotsStr = OptArgs.getValueStr("InteractivePlots").value();
 
     //-----------------------------------------------------------------------------------------------------------------
     const auto regex_none  = std::regex("^no?n?e?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
@@ -208,12 +216,16 @@ Drover AnalyzeLightRadFieldCoincidence(Drover DICOM_data, OperationArgPkg OptArg
     const auto regex_last  = std::regex("^la?s?t?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
     const auto regex_all   = std::regex("^al?l?$",   std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
 
+    const auto regex_true = std::regex("^tr?u?e?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+
     if( !std::regex_match(ImageSelectionStr, regex_none)
     &&  !std::regex_match(ImageSelectionStr, regex_first)
     &&  !std::regex_match(ImageSelectionStr, regex_last)
     &&  !std::regex_match(ImageSelectionStr, regex_all) ){
         throw std::invalid_argument("Image selection is not valid. Cannot continue.");
     }
+
+    const auto InteractivePlots = std::regex_match(InteractivePlotsStr, regex_true);
 
     //Convert the edge lengths into anticipated offsets from DICOM (0,0,0), which is assumed to be at the centre of the image:
     //                                       
@@ -612,8 +624,8 @@ Drover AnalyzeLightRadFieldCoincidence(Drover DICOM_data, OperationArgPkg OptArg
         }
 
 
-        // Display the row and column sum profiles for visual estimation of edge coincidence.
-        {
+        // Display the detected edges for visual inspection.
+        if(InteractivePlots){
             try{
                 YgorMathPlottingGnuplot::Plot<double>(row_sums, "Field Edges (Along Rows)", "DICOM position", "Pixel intensity");
                 YgorMathPlottingGnuplot::Plot<double>(col_sums, "Field Edges (Along Columns)", "DICOM position", "Pixel intensity");
