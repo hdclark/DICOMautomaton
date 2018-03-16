@@ -134,6 +134,16 @@ std::list<OperationArgDoc> OpArgDocAnalyzePicketFence(void){
     out.back().expected = true;
     out.back().examples = { "60" };
 
+
+    out.emplace_back();
+    out.back().name = "MinimumJunctionSeparation";
+    out.back().desc = "The minimum distance between junctions in DICOM units. This number is used to"
+                      " de-duplicate automatically detected junctions. Analysis results should not be"
+                      " sensitive to the specific value.";
+    out.back().default_val = "10.0";
+    out.back().expected = true;
+    out.back().examples = { "5.0", "10.0", "15.0", "25.0" };
+
     return out;
 }
 
@@ -146,6 +156,7 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
     const auto NormalizedROILabelRegex = OptArgs.getValueStr("NormalizedROILabelRegex").value();
 
     const auto NumberOfLeaves = std::stol( OptArgs.getValueStr("NumberOfLeaves").value() );
+    const auto MinimumJunctionSeparation = std::stol( OptArgs.getValueStr("MinimumJunctionSeparation").value() );
 
     //-----------------------------------------------------------------------------------------------------------------
     const auto roiregex = std::regex(ROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
@@ -201,7 +212,6 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
         if((*iap_it)->imagecoll.images.empty()) throw std::invalid_argument("Unable to find an image to analyze.");
 
         planar_image<float, double> *animg = &( (*iap_it)->imagecoll.images.front() );
-
 
         // Using the contours that surround the leaf junctions, extract a 'long' and 'short' direction along the
         // junctions. This will orient the image and give us some orientation independence. We use principle component
@@ -268,6 +278,22 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
         std::vector<vec3<double>> junction_centroids;
         for(auto &acop : cop_ROIs) junction_centroids.emplace_back( acop.get().Centroid() );
 
+        //Remove duplicate junctions, which appear when the junction is piecemeal contoured (and is likely to happen).
+        {
+            std::sort(junction_centroids.begin(), junction_centroids.end(), [&](const vec3<double> &A, const vec3<double> &B) -> bool {
+                const auto A_pos = A.Dot(short_unit);
+                const auto B_pos = B.Dot(short_unit);
+                return (A_pos < B_pos);
+            });
+            auto last = std::unique(junction_centroids.begin(), 
+                                    junction_centroids.end(),
+                                    [&](const vec3<double> &A, const vec3<double> &B) -> bool {
+                                        const auto d = std::abs( (A - B).Dot(short_unit) );
+                                        return (d < 0.5*MinimumJunctionSeparation);
+                                    });
+            junction_centroids.erase(last, junction_centroids.end());
+        }
+
         //Add thin contours for inspecting the junction lines.
         DICOM_data.contour_data->ccs.emplace_back();
         for(const auto &cent : junction_centroids){
@@ -331,9 +357,7 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
 
 
 
-
-
-
+        //Prepare the data to identify peaks in the junction-orthogonal direction to locate leaf pairs.
         junction_ortho_projections.stable_sort();
         const long int N_bins = static_cast<long int>( std::max(animg->rows, animg->columns));
         auto junction_ortho_profile = junction_ortho_projections.Aggregate_Equal_Sized_Bins_Weighted_Mean(N_bins);
@@ -372,8 +396,8 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
         if(peaks.size() < 5) std::runtime_error("Leaf-leakage peaks not correctly detected. Please verify input.");
 
 
-        //Add thin contours for inspecting the location of the peaks.
-        DICOM_data.contour_data->ccs.emplace_back();
+        //Create lines for each detected leaf pair.
+        std::vector<line<double>> leaf_lines;
         for(const auto &peak4 : peaks.samples){
             const auto cent = junction_centroids.front();
             const auto d = peak4[0]; // Projection of relative position onto the long-axis unit vector.
@@ -381,8 +405,14 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
             const auto offset = (cent - corner_pos).Dot(long_unit);
             const auto R_peak = cent + long_unit * (d - offset); // Actual position of peak (on this junction).
 
+            leaf_lines.emplace_back( R_peak, R_peak + short_unit );
+        }
+
+        //Add thin contours for visually inspecting the location of the peaks.
+        DICOM_data.contour_data->ccs.emplace_back();
+        for(const auto &leaf_line : leaf_lines){
             Inject_Thin_Line_Contour(*animg,
-                                     line<double>(R_peak, R_peak + short_unit),
+                                     leaf_line,
                                      DICOM_data.contour_data->ccs.back(),
                                      animg->metadata);
         }
