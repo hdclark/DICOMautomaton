@@ -1578,8 +1578,11 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
                         const auto ImgWLValid = (img_win_valid && img_desc && img_win_c 
                                                  && img_win_fw && (img_win_valid.value() == img_desc.value()));
                         if(ImgWLValid){
-                            custom_width.swap( img_win_fw );
-                            custom_centre.swap( img_win_c );
+                            // Clang complains pre-c++17 about using swap here...
+                            //custom_width.swap( img_win_fw );
+                            //custom_centre.swap( img_win_c );
+                            custom_width = img_win_fw;
+                            custom_centre = img_win_c;
                         }else{
                             const auto pixel_minmax_allchnls = disp_img_it->minmax();
                             const auto lowest = std::get<0>(pixel_minmax_allchnls);
