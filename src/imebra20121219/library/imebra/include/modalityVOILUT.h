@@ -115,7 +115,7 @@ public:
 		PUNTOEXE_FUNCTION_START(L"modalityVOILUT::templateTransform");
 		if(!colorTransforms::colorTransformsFactory::isMonochrome(inputHandlerColorSpace) || !colorTransforms::colorTransformsFactory::isMonochrome(outputHandlerColorSpace))
 		{
-			PUNTOEXE_THROW(modalityVOILUTException, "modalityVOILUT can process only monochromatic images");
+			PUNTOEXE_THROW(std::runtime_error, "modalityVOILUT can process only monochromatic images");
 		}
 		inputType* pInputMemory(inputHandlerData);
 		outputType* pOutputMemory(outputHandlerData);

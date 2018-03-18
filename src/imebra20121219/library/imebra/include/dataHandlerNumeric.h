@@ -51,8 +51,7 @@ Imebra is available at http://imebra.com
 #define HANDLER_CALL_TEMPLATE_FUNCTION(functionName, handlerPointer)\
 {\
 	puntoexe::imebra::handlers::dataHandlerNumericBase* pHandler(handlerPointer.get()); \
-	if(typeid(*pHandler) == typeid(puntoexe::imebra::handlers::dataHandlerNumeric<imbxUint8>) || \
-	typeid(*pHandler)== typeid(puntoexe::imebra::handlers::dataHandlerRaw))\
+	if(typeid(*pHandler) == typeid(puntoexe::imebra::handlers::dataHandlerNumeric<imbxUint8>)) \
 {\
 	functionName<imbxUint8> ((imbxUint8*)handlerPointer->getMemoryBuffer(), handlerPointer->getSize());\
 	}\
@@ -93,8 +92,7 @@ Imebra is available at http://imebra.com
 #define HANDLER_CALL_TEMPLATE_FUNCTION_WITH_PARAMS(functionName, handlerPointer, ...)\
 {\
 	puntoexe::imebra::handlers::dataHandlerNumericBase* pHandler(handlerPointer.get()); \
-	if(typeid(*pHandler) == typeid(puntoexe::imebra::handlers::dataHandlerNumeric<imbxUint8>) || \
-	typeid(*pHandler) == typeid(puntoexe::imebra::handlers::dataHandlerRaw))\
+	if(typeid(*pHandler) == typeid(puntoexe::imebra::handlers::dataHandlerNumeric<imbxUint8>)) \
 {\
 	functionName<imbxUint8> ((imbxUint8*)handlerPointer->getMemoryBuffer(), handlerPointer->getSize(), __VA_ARGS__);\
 	}\
