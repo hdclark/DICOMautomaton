@@ -56,7 +56,7 @@ GroupTemporallyOverlappingImages(planar_image_collection<float,double>::images_l
         const auto R_time = R_time_opt.value();
         return (RELATIVE_DIFF(L_time,R_time) < 1E-3);
     });
-    return std::move(overlapping_imgs);
+    return overlapping_imgs;
 }
 
 std::list<planar_image_collection<float,double>::images_list_it_t>
@@ -83,7 +83,7 @@ GroupSpatiallyTemporallyOverlappingImages(planar_image_collection<float,double>:
         if(RELATIVE_DIFF(L_time.value(), R_time.value()) < 1E-3) out.push_back(an_img_it);
     }
 
-    return std::move(out);
+    return out;
 }
 
 std::list<planar_image_collection<float,double>::images_list_it_t>

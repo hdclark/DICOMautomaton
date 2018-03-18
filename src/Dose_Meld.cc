@@ -50,8 +50,8 @@ std::list<std::shared_ptr<Dose_Array>>  Meld_Dose_Data(const std::list<std::shar
         return (dap == nullptr);
     });
 
-    if(out.size() == 0) return std::move(out);
-    if(out.size() == 1) return std::move(out);
+    if(out.size() == 0) return out;
+    if(out.size() == 1) return out;
 
     auto d2_it = out.begin(); //Note: d*_it are ~ std::list<std::shared_ptr<Dose_Array>>::iterator
     auto d1_it = --(out.end());
@@ -79,7 +79,7 @@ std::list<std::shared_ptr<Dose_Array>>  Meld_Dose_Data(const std::list<std::shar
         }
     }
   
-    return std::move(out);
+    return out;
 }
 
 std::unique_ptr<Dose_Array> Meld_Equal_Geom_Dose_Data(std::shared_ptr<Dose_Array> A, std::shared_ptr<Dose_Array> B){
@@ -124,7 +124,7 @@ std::unique_ptr<Dose_Array> Meld_Equal_Geom_Dose_Data(std::shared_ptr<Dose_Array
             }
         }
     }
-    return std::move(out);
+    return out;
 }
 
 /*
@@ -237,6 +237,6 @@ std::unique_ptr<Dose_Array> Meld_Unequal_Geom_Dose_Data(std::shared_ptr<Dose_Arr
         }
     }
 
-    return std::move(out);
+    return out;
 }
 

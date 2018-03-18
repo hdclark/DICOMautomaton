@@ -80,7 +80,7 @@ std::map<std::string,std::string> get_metadata_top_level_tags(const std::string 
     readStream->openFile(filename.c_str(), std::ios::in);
     if(readStream == nullptr){
         FUNCWARN("Could not parse file '" << filename << "'. Is it valid DICOM? Cannot continue");
-        return std::move(out);
+        return out;
     }
 
     puntoexe::ptr<puntoexe::streamReader> reader(new puntoexe::streamReader(readStream));
@@ -544,7 +544,7 @@ std::map<std::string,std::string> get_metadata_top_level_tags(const std::string 
     insert_as_string_if_nonempty(0x0008, 0x0090, "ReferringPhysicianName");
 
 
-    return std::move(out);
+    return out;
 }
 
 
@@ -684,7 +684,7 @@ std::unique_ptr<Contour_Data> get_Contour_Data(const std::string &filename){
 //        output->ccs.back().metadata["MinimumSeparation"] = std::to_string(min_spacing);
     }
 
-    return std::move(output);
+    return output;
 }
 
 
@@ -1037,7 +1037,7 @@ std::unique_ptr<Image_Array> Load_Image_Array(const std::string &FilenameIn){
             } //Loop over columns.
         } //Loop over rows.
     }
-    return std::move(out);
+    return out;
 }
 
 //These 'shared' pointers will actually be unique. This routine just converts from unique to shared for you.
@@ -1046,7 +1046,7 @@ std::list<std::shared_ptr<Image_Array>>  Load_Image_Arrays(const std::list<std::
     for(const auto & filename : filenames){
         out.push_back(std::move(Load_Image_Array(filename)));
     }
-    return std::move(out);
+    return out;
 }
 
 //Since many images must be loaded individually from a file, we will often have to collate them together.
@@ -1060,7 +1060,7 @@ std::list<std::shared_ptr<Image_Array>>  Load_Image_Arrays(const std::list<std::
 //
 std::unique_ptr<Image_Array> Collate_Image_Arrays(std::list<std::shared_ptr<Image_Array>> &in){
     std::unique_ptr<Image_Array> out(new Image_Array);
-    if(in.empty()) return std::move(out);
+    if(in.empty()) return out;
 
     //Start from the end and work toward the beginning so we can easily pop the end. Keep all images in
     // the original list to ease collating to the first element.
@@ -1075,7 +1075,7 @@ std::unique_ptr<Image_Array> Collate_Image_Arrays(std::list<std::shared_ptr<Imag
         }
         pic_it = in.erase(pic_it);
     }
-    return std::move(out);
+    return out;
 }
 
 
@@ -1239,7 +1239,7 @@ std::unique_ptr<Dose_Array>  Load_Dose_Array(const std::string &FilenameIn){
     out->bits       = image_bits;
     out->grid_scale = 1.0; //grid_scale; <-- NOTE: pixels now hold dose directly and do not require scaling!
     out->filename   = FilenameIn;
-    return std::move(out);
+    return out;
 }
 
 //These 'shared' pointers will actually be unique. This routine just converts from unique to shared for you.
@@ -1248,7 +1248,7 @@ std::list<std::shared_ptr<Dose_Array>>  Load_Dose_Arrays(const std::list<std::st
     for(const auto & filename : filenames){
         out.push_back(std::move(Load_Dose_Array(filename)));
     }
-    return std::move(out);
+    return out;
 }
 
 static std::string Generate_Random_UID(long int len){

@@ -112,7 +112,7 @@ std::string Segmentations_to_Words(const std::vector<uint32_t> &in){
              out += " : (part n/a)";
          }
     }
-    return std::move(out);
+    return out;
 }
 
 
@@ -183,7 +183,7 @@ void Contour_Data::Plot(void) const {
 std::unique_ptr<Contour_Data> Contour_Data::Duplicate(void) const {
     std::unique_ptr<Contour_Data> output (new Contour_Data);
     *output = *this;
-    return std::move(output);
+    return output;
 }
 
 //This function will split contour_collection units. It does not care about ROI number, ROI name, or height.
@@ -228,7 +228,7 @@ std::unique_ptr<Contour_Data>  Contour_Data::Split_Per_Volume_Along_Given_Plane_
         output->ccs.push_back(std::move(above));
         output->ccs.push_back(std::move(below));
     }
-    return std::move(output);
+    return output;
 }
 
 std::unique_ptr<Contour_Data>  Contour_Data::Split_Per_Volume_Along_Coronal_Plane(void) const {
@@ -244,7 +244,7 @@ std::unique_ptr<Contour_Data>  Contour_Data::Split_Per_Volume_Along_Coronal_Plan
             *last_hist |= Segmentations::back;    //Back of the patient.
         }
     }
-    return std::move( out );
+    return  out ;
 }
 
 std::unique_ptr<Contour_Data>  Contour_Data::Split_Per_Volume_Along_Sagittal_Plane(void) const {
@@ -260,7 +260,7 @@ std::unique_ptr<Contour_Data>  Contour_Data::Split_Per_Volume_Along_Sagittal_Pla
             *last_hist |= Segmentations::right;    //Rightward direction for the patient.
         }
     }
-    return std::move( out );
+    return  out ;
 }
 
 std::unique_ptr<Contour_Data>  Contour_Data::Split_Per_Volume_Along_Transverse_Plane(void) const {
@@ -276,7 +276,7 @@ std::unique_ptr<Contour_Data>  Contour_Data::Split_Per_Volume_Along_Transverse_P
             *last_hist |= Segmentations::top;     //Upward direction for the patient.
         }
     }
-    return std::move( out );
+    return  out ;
 }
 
 /*
@@ -488,7 +488,7 @@ std::unique_ptr<Contour_Data>  Contour_Data::Split_Per_Contour_Along_Given_Plane
         output->ccs.push_back(std::move(above));
         output->ccs.push_back(std::move(below));
     }
-    return std::move(output);
+    return output;
 }
 
 std::unique_ptr<Contour_Data>  Contour_Data::Split_Per_Contour_Along_Coronal_Plane(void) const {
@@ -504,7 +504,7 @@ std::unique_ptr<Contour_Data>  Contour_Data::Split_Per_Contour_Along_Coronal_Pla
             *last_hist |= Segmentations::back;    //Back of the patient.
         }
     }
-    return std::move( out );
+    return  out ;
 }
 
 std::unique_ptr<Contour_Data>  Contour_Data::Split_Per_Contour_Along_Sagittal_Plane(void) const {
@@ -520,7 +520,7 @@ std::unique_ptr<Contour_Data>  Contour_Data::Split_Per_Contour_Along_Sagittal_Pl
             *last_hist |= Segmentations::right;    //Rightward direction for the patient.
         }
     }
-    return std::move( out );
+    return  out ;
 }
 
 
@@ -568,7 +568,7 @@ std::unique_ptr<Contour_Data>  Contour_Data::Raycast_Split_Per_Contour_Against_G
         output->ccs.push_back(std::move(above));
         output->ccs.push_back(std::move(below));
     }
-    return std::move(output);
+    return output;
 }
 
 std::unique_ptr<Contour_Data>  Contour_Data::Raycast_Split_Per_Contour_Into_ANT_POST(void) const {
@@ -584,7 +584,7 @@ std::unique_ptr<Contour_Data>  Contour_Data::Raycast_Split_Per_Contour_Into_ANT_
             *last_hist |= Segmentations::front;  //Front of the patient.
         }
     }
-    return std::move( out );
+    return  out ;
 }
 
 
@@ -601,7 +601,7 @@ std::unique_ptr<Contour_Data>  Contour_Data::Raycast_Split_Per_Contour_Into_Late
             *last_hist |= Segmentations::right;  //Right side of the patient.
         }
     }
-    return std::move( out );
+    return  out ;
 }
 
 
@@ -657,7 +657,7 @@ std::unique_ptr<Contour_Data> Contour_Data::Split_Core_and_Peel(double frac_dist
         if(!(core.contours.empty())) output->ccs.push_back(std::move(core));
         if(!(peel.contours.empty())) output->ccs.push_back(std::move(peel));
     }
-    return std::move(output);
+    return output;
 }
 
 //--------------------------
@@ -689,7 +689,7 @@ std::unique_ptr<Contour_Data> Contour_Data::Split_Core_and_Peel(double frac_dist
 //NOTE: This routine will put the LATERAL subsegment first in memory.
 std::unique_ptr<Contour_Data> Contour_Data::Reorder_LR_to_ML(void) const {
     std::unique_ptr<Contour_Data> output (new Contour_Data);
-    if(this->ccs.empty()) return std::move(output);
+    if(this->ccs.empty()) return output;
 
     //To simplify the tediousness a bit, we will assume a sagittal plane.
     // We will also choose the plane center to be the average of a contour centroids.
@@ -827,7 +827,7 @@ std::unique_ptr<Contour_Data> Contour_Data::Reorder_LR_to_ML(void) const {
 //        while(cc_it != cc3_it) output->ccs.push_back( *cc_it );
     }
 
-    return std::move(output);
+    return output;
 }
 
 
@@ -844,7 +844,7 @@ std::unique_ptr<Contour_Data> Contour_Data::Get_Contours_Number(long int N) cons
 
     auto cc_it = std::next(this->ccs.begin(), N);
     output->ccs.push_back( *cc_it );
-    return std::move(output);
+    return output;
 }
 
 
@@ -867,7 +867,7 @@ std::unique_ptr<Contour_Data> Contour_Data::Get_Single_Contour_Number(long int N
             ++c_it;
         }
     }
-    return std::move(output);
+    return output;
 }
 
 
@@ -883,7 +883,7 @@ std::unique_ptr<Contour_Data> Contour_Data::Get_Contours_With_Numbers(const std:
     }
 
     if(output->ccs.empty()) FUNCWARN("No data was pushed into the contour - maybe there is no structure with the desired contour number(s)?");
-    return std::move(output);
+    return output;
 }
 
 std::unique_ptr<Contour_Data> Contour_Data::Get_Contours_With_Number(long int in) const {
@@ -902,7 +902,7 @@ std::unique_ptr<Contour_Data> Contour_Data::Get_Contours_With_Last_Segmentation(
     }
 
     if(output->ccs.empty()) FUNCWARN("No data was pushed into the contour - maybe there is no structure with the desired contour number(s)?");
-    return std::move(output);
+    return output;
 }
 
 
@@ -928,7 +928,7 @@ std::unique_ptr<Contour_Data> Contour_Data::Get_Contours_With_Segmentation(const
     }
 
     if(output->ccs.empty()) FUNCWARN("No data was pushed into the contour - maybe there is no structure with the desired contour number(s)?");
-    return std::move(output);
+    return output;
 }
 
 
@@ -1061,39 +1061,39 @@ Image_Array & Image_Array::operator=(const Image_Array &rhs){
 //Helper functions.
 drover_bnded_dose_mean_dose_map_t drover_bnded_dose_mean_dose_map_factory(void){
     drover_bnded_dose_mean_dose_map_t out(/*25,*/ bnded_dose_map_cmp_lambda);
-    return std::move(out);
+    return out;
 }
 drover_bnded_dose_centroid_map_t drover_bnded_dose_centroid_map_factory(void){
     drover_bnded_dose_centroid_map_t out(/*25,*/ bnded_dose_map_cmp_lambda);
-    return std::move(out);
+    return out;
 }
 drover_bnded_dose_bulk_doses_map_t drover_bnded_dose_bulk_doses_map_factory(void){
     drover_bnded_dose_bulk_doses_map_t out(/*25,*/ bnded_dose_map_cmp_lambda);
-    return std::move(out);
+    return out;
 }
 drover_bnded_dose_accm_dose_map_t drover_bnded_dose_accm_dose_map_factory(void){
     drover_bnded_dose_accm_dose_map_t out(/*25, */bnded_dose_map_cmp_lambda);
-    return std::move(out);
+    return out;
 }
 drover_bnded_dose_min_max_dose_map_t drover_bnded_dose_min_max_dose_map_factory(void){
     drover_bnded_dose_min_max_dose_map_t out(/*25, */bnded_dose_map_cmp_lambda);
-    return std::move(out);
+    return out;
 }
 drover_bnded_dose_min_mean_max_dose_map_t drover_bnded_dose_min_mean_max_dose_map_factory(void){
     drover_bnded_dose_min_mean_max_dose_map_t out(/*25, */bnded_dose_map_cmp_lambda);
-    return std::move(out);
+    return out;
 }
 drover_bnded_dose_min_mean_median_max_dose_map_t drover_bnded_dose_min_mean_median_max_dose_map_factory(void){
     drover_bnded_dose_min_mean_median_max_dose_map_t out(/*25, */bnded_dose_map_cmp_lambda);
-    return std::move(out);
+    return out;
 }
 drover_bnded_dose_pos_dose_map_t drover_bnded_dose_pos_dose_map_factory(void){
     drover_bnded_dose_pos_dose_map_t out(/*25, */bnded_dose_map_cmp_lambda);
-    return std::move(out);
+    return out;
 }
 drover_bnded_dose_stat_moments_map_t drover_bnded_dose_stat_moments_map_factory(void){
     drover_bnded_dose_stat_moments_map_t out(/*25, */bnded_dose_map_cmp_lambda);
-    return std::move(out);
+    return out;
 }
 
 
@@ -1621,7 +1621,7 @@ drover_bnded_dose_mean_dose_map_t Drover::Bounded_Dose_Means(void) const {
     //
     auto outgoing = drover_bnded_dose_mean_dose_map_factory();
     this->Bounded_Dose_General(nullptr,nullptr,&outgoing,nullptr,nullptr,nullptr,nullptr);
-    return std::move(outgoing);
+    return outgoing;
 }
 
 drover_bnded_dose_min_max_dose_map_t Drover::Bounded_Dose_Min_Max(void) const {
@@ -1630,7 +1630,7 @@ drover_bnded_dose_min_max_dose_map_t Drover::Bounded_Dose_Min_Max(void) const {
     //NOTE: The map returns a pair. The first is min, the second is max.
     auto outgoing = drover_bnded_dose_min_max_dose_map_factory();
     this->Bounded_Dose_General(nullptr,nullptr,nullptr,&outgoing,nullptr,nullptr,nullptr);
-    return std::move(outgoing);
+    return outgoing;
 }
 
 drover_bnded_dose_min_mean_max_dose_map_t Drover::Bounded_Dose_Min_Mean_Max(void) const {
@@ -1652,7 +1652,7 @@ drover_bnded_dose_min_mean_max_dose_map_t Drover::Bounded_Dose_Min_Mean_Max(void
         const auto max    = minmaxs[theiter].second;
         outgoing[theiter] = std::make_tuple(min, mean, max); 
     }
-    return std::move(outgoing);
+    return outgoing;
 }
 
 drover_bnded_dose_min_mean_median_max_dose_map_t Drover::Bounded_Dose_Min_Mean_Median_Max(void) const {
@@ -1676,13 +1676,13 @@ drover_bnded_dose_min_mean_median_max_dose_map_t Drover::Bounded_Dose_Min_Mean_M
         const auto max    = minmaxs[theiter].second;
         outgoing[theiter] = std::make_tuple(min, mean, median, max);
     }
-    return std::move(outgoing);
+    return outgoing;
 }
 
 drover_bnded_dose_stat_moments_map_t Drover::Bounded_Dose_Centralized_Moments(void) const {
     auto outgoing = drover_bnded_dose_stat_moments_map_factory();
     this->Bounded_Dose_General(nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,&outgoing);
-    return std::move(outgoing);
+    return outgoing;
 }
 
 drover_bnded_dose_stat_moments_map_t Drover::Bounded_Dose_Normalized_Cent_Moments(void) const {
@@ -1708,7 +1708,7 @@ drover_bnded_dose_stat_moments_map_t Drover::Bounded_Dose_Normalized_Cent_Moment
         }
     }
 
-    return std::move(outgoing);
+    return outgoing;
 }
 
 
@@ -1786,7 +1786,7 @@ Drover Drover::Segment_Contours_Heuristically(std::function<bool(bnded_dose_pos_
         }
     }
 
-    return std::move(out);
+    return out;
 }
 
 std::pair<double,double> Drover::Bounded_Dose_Limits(void) const {
@@ -1814,7 +1814,7 @@ std::map<double,double>  Drover::Get_DVH(void) const {
         // -dose and contours not aligning properly. Maybe due to incorrect offsets/rotations/coordinate system?
         // -dose/contours not being present. Maybe accidentally?
         output[0.0] = 0.0; //Nothing over 0Gy is delivered to any voxel (0% of volume).
-        return std::move(output);
+        return output;
     }
 
     double cumulative;
@@ -1830,7 +1830,7 @@ std::map<double,double>  Drover::Get_DVH(void) const {
         output[dose] = frac;
         test_dose += 0.5;
     }while(cumulative != 0.0);
-    return std::move(output);
+    return output;
 }
 
 Drover Drover::Duplicate(std::shared_ptr<Contour_Data> in) const {
