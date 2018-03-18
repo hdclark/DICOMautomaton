@@ -101,5 +101,5 @@ Drover GiveWholeImageArrayAThoraxWindowLevel(Drover DICOM_data, OperationArgPkg 
         }
     }
 
-    return std::move(DICOM_data);
+    return DICOM_data;
 }

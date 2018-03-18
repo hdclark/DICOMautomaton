@@ -293,5 +293,5 @@ Drover EQD2Convert(Drover DICOM_data,
         ++dap_it;
     }
 
-    return std::move(DICOM_data);
+    return DICOM_data;
 }

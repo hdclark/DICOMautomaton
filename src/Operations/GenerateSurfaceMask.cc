@@ -205,5 +205,5 @@ Drover GenerateSurfaceMask(Drover DICOM_data,
         throw std::runtime_error("Unable to generate a surface mask.");
     }
 
-    return std::move(DICOM_data);
+    return DICOM_data;
 }

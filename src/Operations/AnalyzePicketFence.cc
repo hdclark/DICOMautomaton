@@ -443,5 +443,5 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
         if(std::regex_match(ImageSelectionStr, regex_first)) break;
     }
 
-    return std::move(DICOM_data);
+    return DICOM_data;
 }

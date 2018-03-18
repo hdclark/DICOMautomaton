@@ -248,5 +248,5 @@ Drover GenerateVirtualDataDoseStairsV1(Drover DICOM_data, OperationArgPkg OptArg
         DICOM_data.contour_data = std::move(output);
     }
 
-    return std::move(DICOM_data);
+    return DICOM_data;
 }

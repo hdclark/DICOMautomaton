@@ -254,5 +254,5 @@ Drover SupersampleImageGrid(Drover DICOM_data, OperationArgPkg OptArgs, std::map
         throw std::invalid_argument("Invalid sampling method specified. Cannot continue");
     }
 
-    return std::move(DICOM_data);
+    return DICOM_data;
 }

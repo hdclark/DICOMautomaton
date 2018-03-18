@@ -423,6 +423,6 @@ Optimize_FreeformOptimization_Reduced3Param(KineticModel_1Compartment2Input_Redu
     state.FittingPerformed = true;
     state.FittingSuccess = (status == GSL_SUCCESS);
 
-    return std::move(state);
+    return state;
 }
 

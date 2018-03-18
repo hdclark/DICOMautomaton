@@ -1044,7 +1044,7 @@ std::unique_ptr<Image_Array> Load_Image_Array(const std::string &FilenameIn){
 std::list<std::shared_ptr<Image_Array>>  Load_Image_Arrays(const std::list<std::string> &filenames){
     std::list<std::shared_ptr<Image_Array>> out;
     for(const auto & filename : filenames){
-        out.push_back(std::move(Load_Image_Array(filename)));
+        out.push_back(Load_Image_Array(filename));
     }
     return out;
 }
@@ -1246,7 +1246,7 @@ std::unique_ptr<Dose_Array>  Load_Dose_Array(const std::string &FilenameIn){
 std::list<std::shared_ptr<Dose_Array>>  Load_Dose_Arrays(const std::list<std::string> &filenames){
     std::list<std::shared_ptr<Dose_Array>> out;
     for(const auto & filename : filenames){
-        out.push_back(std::move(Load_Dose_Array(filename)));
+        out.push_back(Load_Dose_Array(filename));
     }
     return out;
 }

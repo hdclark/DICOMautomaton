@@ -109,5 +109,5 @@ Drover DumpFilesPartitionedByTime(Drover DICOM_data, OperationArgPkg /*OptArgs*/
         std::cout << apair.first << " " << apair.second << std::endl;
     } 
 
-    return std::move(DICOM_data);
+    return DICOM_data;
 }

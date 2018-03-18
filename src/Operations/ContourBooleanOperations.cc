@@ -332,5 +332,5 @@ Drover ContourBooleanOperations(Drover DICOM_data, OperationArgPkg OptArgs, std:
         DICOM_data.contour_data->ccs.back().Raw_ROI_name = OutputROILabel;
     }
 
-    return std::move(DICOM_data);
+    return DICOM_data;
 }

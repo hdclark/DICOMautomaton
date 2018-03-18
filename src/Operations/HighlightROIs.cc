@@ -316,5 +316,5 @@ Drover HighlightROIs(Drover DICOM_data,
         ++iap_it;
     }
 
-    return std::move(DICOM_data);
+    return DICOM_data;
 }

@@ -46,5 +46,5 @@ Boost_Serialize_Drover(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std:
         throw std::runtime_error("Unable dump serialization to file " + apath.string());
     }
 
-    return std::move(DICOM_data);
+    return DICOM_data;
 }

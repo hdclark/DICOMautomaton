@@ -230,5 +230,5 @@ Drover PurgeContours(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::s
 
     //Note: should I remove empty ccs here? It can cause issues either way ... TODO.
 
-    return std::move(DICOM_data);
+    return DICOM_data;
 }

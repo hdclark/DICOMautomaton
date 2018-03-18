@@ -61,7 +61,7 @@ std::list<std::shared_ptr<Dose_Array>>  Meld_Dose_Data(const std::list<std::shar
             FUNCINFO("Dose images are spatially equal. Performing the equivalent-geometry meld routine");
 
             //Put the melded data into the first position.
-            *d1_it = std::move(Meld_Equal_Geom_Dose_Data(*d1_it, *d2_it));
+            *d1_it = Meld_Equal_Geom_Dose_Data(*d1_it, *d2_it);
             d2_it = out.erase(d2_it);
             continue;
 

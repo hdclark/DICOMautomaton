@@ -140,7 +140,7 @@ Drover GrowContours(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
     // The direction is chosen to be the direction opposite of the in-plane normal produced by averaging the line
     // segments connecting the contours.
 
-    if(DICOM_data.contour_data == nullptr) return std::move(DICOM_data);
+    if(DICOM_data.contour_data == nullptr) return DICOM_data;
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto ROILabelRegex = OptArgs.getValueStr("ROILabelRegex").value();
@@ -215,5 +215,5 @@ Drover GrowContours(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
         }
     }
 
-    return std::move(DICOM_data);
+    return DICOM_data;
 }

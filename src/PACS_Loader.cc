@@ -60,7 +60,7 @@ Concatenate_Contour_Data(std::unique_ptr<Contour_Data> A,
     //This routine concatenates A and B's contour collections. No internal checking is performed.
     // No copying is performed, but A and B are consumed. A is returned as if it were a new pointer.
     A->ccs.splice( A->ccs.end(), std::move(B->ccs) );
-    return std::move(A);
+    return A;
 }
 
 
@@ -137,8 +137,8 @@ bool Load_From_PACS_DB( Drover &DICOM_data,
                 if(boost::iequals(Modality,"RTSTRUCT")){
                     const auto preloadcount = loaded_contour_data_storage->ccs.size();
                     try{
-                        auto combined = Concatenate_Contour_Data( std::move(loaded_contour_data_storage->Duplicate()),
-                                                                  std::move(get_Contour_Data(StoreFullPathName)) );
+                        auto combined = Concatenate_Contour_Data( loaded_contour_data_storage->Duplicate(),
+                                                                  get_Contour_Data(StoreFullPathName));
                         loaded_contour_data_storage = std::move(combined);
                     }catch(const std::exception &e){
                         FUNCWARN("Difficulty encountered during contour data loading: '" << e.what() <<
@@ -159,7 +159,7 @@ bool Load_From_PACS_DB( Drover &DICOM_data,
 
                 }else if(boost::iequals(Modality,"RTDOSE")){
                     try{
-                        loaded_dose_storage.back().push_back( std::move(Load_Dose_Array(StoreFullPathName)) );
+                        loaded_dose_storage.back().push_back( Load_Dose_Array(StoreFullPathName));
                     }catch(const std::exception &e){
                         FUNCWARN("Difficulty encountered during dose array loading: '" << e.what() <<
                                  "'. Ignoring file and continuing");
@@ -169,7 +169,7 @@ bool Load_From_PACS_DB( Drover &DICOM_data,
 
                 }else{ //Image loading. 'CT' and 'MR' should work. Not sure about others.
                     try{
-                        loaded_imgs_storage.back().push_back( std::move(Load_Image_Array(StoreFullPathName)) );
+                        loaded_imgs_storage.back().push_back( Load_Image_Array(StoreFullPathName));
                     }catch(const std::exception &e){
                         FUNCWARN("Difficulty encountered during image array loading: '" << e.what() <<
                                  "'. Ignoring file and continuing");
@@ -310,8 +310,8 @@ bool Load_From_PACS_DB( Drover &DICOM_data,
     //Concatenate contour data into the Drover instance.
     {
         if(DICOM_data.contour_data == nullptr) DICOM_data.contour_data = std::make_shared<Contour_Data>();
-        auto combined = Concatenate_Contour_Data( std::move(DICOM_data.contour_data->Duplicate()),
-                                                  std::move(loaded_contour_data_storage->Duplicate()) );
+        auto combined = Concatenate_Contour_Data( DICOM_data.contour_data->Duplicate(),
+                                                  loaded_contour_data_storage->Duplicate());
         DICOM_data.contour_data = std::move(combined);
     }
 

@@ -222,5 +222,5 @@ Drover AccumulateRowsColumns(Drover DICOM_data, OperationArgPkg OptArgs, std::ma
         if(std::regex_match(ImageSelectionStr, regex_first)) break;
     }
 
-    return std::move(DICOM_data);
+    return DICOM_data;
 }

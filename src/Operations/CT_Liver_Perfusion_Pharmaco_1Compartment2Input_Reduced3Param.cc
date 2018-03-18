@@ -748,5 +748,5 @@ Drover CT_Liver_Perfusion_Pharmaco_1C2I_Reduced3Param(Drover DICOM_data, Operati
         }
     }
     
-    return std::move(DICOM_data);
+    return DICOM_data;
 }

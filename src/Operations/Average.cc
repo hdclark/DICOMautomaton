@@ -227,5 +227,5 @@ Drover Average(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,
         throw std::invalid_argument("Invalid averaging method specified. Cannot continue");
     }
 
-    return std::move(DICOM_data);
+    return DICOM_data;
 }

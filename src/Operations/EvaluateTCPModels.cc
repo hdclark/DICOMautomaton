@@ -510,5 +510,5 @@ Drover EvaluateTCPModels(Drover DICOM_data, OperationArgPkg OptArgs, std::map<st
         FUNCERR("Unable to write to output TCP file: '" << e.what() << "'");
     }
 
-    return std::move(DICOM_data);
+    return DICOM_data;
 }

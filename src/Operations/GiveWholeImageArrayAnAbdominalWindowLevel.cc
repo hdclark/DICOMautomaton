@@ -101,5 +101,5 @@ Drover GiveWholeImageArrayAnAbdominalWindowLevel(Drover DICOM_data, OperationArg
         }
     }
 
-    return std::move(DICOM_data);
+    return DICOM_data;
 }

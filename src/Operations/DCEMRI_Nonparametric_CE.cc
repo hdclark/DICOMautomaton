@@ -195,5 +195,5 @@ Drover DCEMRI_Nonparametric_CE(Drover DICOM_data, OperationArgPkg /*OptArgs*/, s
         DICOM_data.image_data.erase(std::remove(ddid_beg, ddid_end, img_arr), ddid_end);
     }
 
-    return std::move(DICOM_data);
+    return DICOM_data;
 }

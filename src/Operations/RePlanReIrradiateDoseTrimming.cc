@@ -56,5 +56,5 @@ RePlanReIrradiateDoseTrimming(Drover DICOM_data,
 
     DICOM_data = DICOMExportImagesAsDose(std::move(DICOM_data), OptArgs, InvocationMetadata, FilenameLex);
 
-    return std::move(DICOM_data);
+    return DICOM_data;
 }

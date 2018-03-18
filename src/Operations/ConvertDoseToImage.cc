@@ -99,5 +99,5 @@ Drover ConvertDoseToImage(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::m
     }
     DICOM_data.dose_data.clear();
 
-    return std::move(DICOM_data);
+    return DICOM_data;
 }

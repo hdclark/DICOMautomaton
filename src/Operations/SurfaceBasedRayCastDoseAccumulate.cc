@@ -636,7 +636,7 @@ Drover SurfaceBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptA
     }
     if(!polyhedron.is_pure_triangle()) throw std::runtime_error("Mesh is not purely triangular.");
 
-    if(OnlyGenerateSurface) return std::move(DICOM_data);
+    if(OnlyGenerateSurface) return DICOM_data;
 
     // =============================== Construct an AABB Tree for Spatial Lookups ==================================
 
@@ -889,5 +889,5 @@ Drover SurfaceBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptA
     DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>() );
     DICOM_data.image_data.back()->imagecoll = sd_image_collection;
 
-    return std::move(DICOM_data);
+    return DICOM_data;
 }

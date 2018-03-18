@@ -256,5 +256,5 @@ Drover ContourVote(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::str
         DICOM_data.contour_data->ccs.back().Raw_ROI_name = WinnerROILabel;
     }
 
-    return std::move(DICOM_data);
+    return DICOM_data;
 }

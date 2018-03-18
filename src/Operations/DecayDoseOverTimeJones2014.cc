@@ -316,5 +316,5 @@ Drover DecayDoseOverTimeJones2014(Drover DICOM_data, OperationArgPkg OptArgs, st
         throw std::runtime_error("Unable to decay dose (Jones and Grant 2014 model).");
     }
 
-    return std::move(DICOM_data);
+    return DICOM_data;
 }

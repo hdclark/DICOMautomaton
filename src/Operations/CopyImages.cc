@@ -140,5 +140,5 @@ Drover CopyImages(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::stri
         DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( *img_arr ) );
     }
 
-    return std::move(DICOM_data);
+    return DICOM_data;
 }

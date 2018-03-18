@@ -192,5 +192,5 @@ Drover DroverDebug(Drover DICOM_data,
         }
     }while(false);
 
-    return std::move(DICOM_data);
+    return DICOM_data;
 }

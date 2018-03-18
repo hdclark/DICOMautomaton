@@ -139,5 +139,5 @@ Drover LogScale(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string
         if(std::regex_match(ImageSelectionStr, regex_first)) break;
     }
 
-    return std::move(DICOM_data);
+    return DICOM_data;
 }

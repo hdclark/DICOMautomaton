@@ -84,5 +84,5 @@ DICOMExportImagesAsDose(Drover DICOM_data,
         }
     }
 
-    return std::move(DICOM_data);
+    return DICOM_data;
 }

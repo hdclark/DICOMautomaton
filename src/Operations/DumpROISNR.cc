@@ -251,5 +251,5 @@ Drover DumpROISNR(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::stri
         FUNCERR("Unable to write to log files: '" << e.what() << "'");
     }
 
-    return std::move(DICOM_data);
+    return DICOM_data;
 }

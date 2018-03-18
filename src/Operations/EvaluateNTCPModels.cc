@@ -490,5 +490,5 @@ Drover EvaluateNTCPModels(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
         FUNCERR("Unable to write to output NTCP file: '" << e.what() << "'");
     }
 
-    return std::move(DICOM_data);
+    return DICOM_data;
 }

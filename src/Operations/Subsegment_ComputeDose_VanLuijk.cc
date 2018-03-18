@@ -627,5 +627,5 @@ Drover Subsegment_ComputeDose_VanLuijk(Drover DICOM_data, OperationArgPkg OptArg
         }
     }
 
-    return std::move(DICOM_data);
+    return DICOM_data;
 }

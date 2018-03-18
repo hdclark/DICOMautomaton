@@ -406,5 +406,5 @@ Drover EvaluateDoseVolumeStats(Drover DICOM_data, OperationArgPkg OptArgs, std::
         FUNCERR("Unable to write to output dose-volume stats file: '" << e.what() << "'");
     }
 
-    return std::move(DICOM_data);
+    return DICOM_data;
 }

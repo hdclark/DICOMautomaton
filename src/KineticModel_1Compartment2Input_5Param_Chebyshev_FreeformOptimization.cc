@@ -261,7 +261,7 @@ Optimize_FreeformOptimization_5Param(KineticModel_1Compartment2Input_5Param_Cheb
     state.tauV = params[3];
     state.k2   = params[4];
 
-    return std::move(state);
+    return state;
 }
 
 
@@ -501,6 +501,6 @@ Optimize_FreeformOptimization_3Param(KineticModel_1Compartment2Input_5Param_Cheb
     state.tauV = 0.0;
     state.k2   = params[2];
 
-    return std::move(state);
+    return state;
 }
 

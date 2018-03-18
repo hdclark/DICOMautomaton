@@ -601,5 +601,5 @@ Drover GridBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptArgs
     DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>() );
     DICOM_data.image_data.back()->imagecoll = sd_image_collection;
 
-    return std::move(DICOM_data);
+    return DICOM_data;
 }

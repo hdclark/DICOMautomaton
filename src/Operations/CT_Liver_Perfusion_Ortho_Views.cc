@@ -147,5 +147,5 @@ Drover CT_Liver_Perfusion_Ortho_Views (Drover DICOM_data, OperationArgPkg /*OptA
     }
 
 
-    return std::move(DICOM_data);
+    return DICOM_data;
 }

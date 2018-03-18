@@ -101,5 +101,5 @@ Drover GiveWholeImageArrayAHeadAndNeckWindowLevel(Drover DICOM_data, OperationAr
         }
     }
 
-    return std::move(DICOM_data);
+    return DICOM_data;
 }

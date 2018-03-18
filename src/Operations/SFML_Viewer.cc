@@ -2236,5 +2236,5 @@ Drover SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
 
     }
 
-    return std::move(DICOM_data);
+    return DICOM_data;
 }

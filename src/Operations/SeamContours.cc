@@ -123,7 +123,7 @@ Drover SeamContours(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std
     // Note: This routine will NOT combine disconnected contours with a seam. Disconnected contours will remain
     // disconnected.
     //
-    if(DICOM_data.contour_data == nullptr) return std::move(DICOM_data);
+    if(DICOM_data.contour_data == nullptr) return DICOM_data;
 
     //For identifying duplicate vertices later.
     const auto verts_equal_F = [](const vec3<double> &vA, const vec3<double> &vB) -> bool {
@@ -208,5 +208,5 @@ Drover SeamContours(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std
     }
 
     DICOM_data.contour_data = std::move(cd);
-    return std::move(DICOM_data);
+    return DICOM_data;
 }

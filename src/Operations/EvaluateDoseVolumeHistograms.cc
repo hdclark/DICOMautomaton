@@ -313,5 +313,5 @@ Drover EvaluateDoseVolumeHistograms(Drover DICOM_data, OperationArgPkg OptArgs, 
         FUNCERR("Unable to write to output dose-volume histogram file: '" << e.what() << "'");
     }
 
-    return std::move(DICOM_data);
+    return DICOM_data;
 }

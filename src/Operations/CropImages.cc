@@ -292,5 +292,5 @@ Drover CropImages(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::stri
         }
     }
 
-    return std::move(DICOM_data);
+    return DICOM_data;
 }

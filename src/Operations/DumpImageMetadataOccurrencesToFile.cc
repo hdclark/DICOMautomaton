@@ -134,5 +134,5 @@ Drover DumpImageMetadataOccurrencesToFile(Drover DICOM_data, OperationArgPkg /*O
         ++i;
     }
 
-    return std::move(DICOM_data);
+    return DICOM_data;
 }

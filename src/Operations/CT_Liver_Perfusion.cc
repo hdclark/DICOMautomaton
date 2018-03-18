@@ -381,5 +381,5 @@ Drover CT_Liver_Perfusion(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::m
  
 
 
-    return std::move(DICOM_data);
+    return DICOM_data;
 }

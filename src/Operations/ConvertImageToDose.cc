@@ -99,5 +99,5 @@ Drover ConvertImageToDose(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::m
     }
     DICOM_data.image_data.clear();
 
-    return std::move(DICOM_data);
+    return DICOM_data;
 }

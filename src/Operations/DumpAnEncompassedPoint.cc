@@ -96,5 +96,5 @@ Drover DumpAnEncompassedPoint(Drover DICOM_data, OperationArgPkg /*OptArgs*/, st
 
     FUNCINFO("Found " << encompassing_images.size() << " images which encompass the point " << apoint);
 
-    return std::move(DICOM_data);
+    return DICOM_data;
 }

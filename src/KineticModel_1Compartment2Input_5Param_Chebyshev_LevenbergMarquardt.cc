@@ -290,7 +290,7 @@ Optimize_LevenbergMarquardt_5Param(KineticModel_1Compartment2Input_5Param_Chebys
     gsl_matrix_free(covar);
     gsl_matrix_free(J);
 
-    return std::move(state);
+    return state;
 }
 
 
@@ -363,7 +363,7 @@ struct KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters
 Optimize_LevenbergMarquardt_3Param(KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters state){
 
     FUNCERR("Not yet implemented");
-    return std::move(state);
+    return state;
 
 /*
 

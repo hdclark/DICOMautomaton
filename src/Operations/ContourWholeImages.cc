@@ -190,5 +190,5 @@ Drover ContourWholeImages(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
              cc.contours);
     }
 
-    return std::move(DICOM_data);
+    return DICOM_data;
 }

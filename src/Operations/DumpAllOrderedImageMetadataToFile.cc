@@ -117,5 +117,5 @@ Drover DumpAllOrderedImageMetadataToFile(Drover DICOM_data, OperationArgPkg /*Op
 
     Dump_All_Ordered_Image_Metadata_To_File(DICOM_data.image_data.front()->imagecoll.images, "/tmp/ordered_image_metadata.tsv");
 
-    return std::move(DICOM_data);
+    return DICOM_data;
 }

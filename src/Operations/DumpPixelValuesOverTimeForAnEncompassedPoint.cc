@@ -109,5 +109,5 @@ Drover DumpPixelValuesOverTimeForAnEncompassedPoint(Drover DICOM_data, Operation
         std::cout << (img_it->rows * img_it->columns * img_it->pxl_dx * img_it->pxl_dy * img_it->pxl_dz) << std::endl;
     }
 
-    return std::move(DICOM_data);
+    return DICOM_data;
 }

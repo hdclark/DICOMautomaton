@@ -244,7 +244,7 @@ std::unique_ptr<Contour_Data>  Contour_Data::Split_Per_Volume_Along_Coronal_Plan
             *last_hist |= Segmentations::back;    //Back of the patient.
         }
     }
-    return  out ;
+    return out ;
 }
 
 std::unique_ptr<Contour_Data>  Contour_Data::Split_Per_Volume_Along_Sagittal_Plane(void) const {
@@ -260,7 +260,7 @@ std::unique_ptr<Contour_Data>  Contour_Data::Split_Per_Volume_Along_Sagittal_Pla
             *last_hist |= Segmentations::right;    //Rightward direction for the patient.
         }
     }
-    return  out ;
+    return out ;
 }
 
 std::unique_ptr<Contour_Data>  Contour_Data::Split_Per_Volume_Along_Transverse_Plane(void) const {
@@ -276,7 +276,7 @@ std::unique_ptr<Contour_Data>  Contour_Data::Split_Per_Volume_Along_Transverse_P
             *last_hist |= Segmentations::top;     //Upward direction for the patient.
         }
     }
-    return  out ;
+    return out ;
 }
 
 /*
@@ -504,7 +504,7 @@ std::unique_ptr<Contour_Data>  Contour_Data::Split_Per_Contour_Along_Coronal_Pla
             *last_hist |= Segmentations::back;    //Back of the patient.
         }
     }
-    return  out ;
+    return out ;
 }
 
 std::unique_ptr<Contour_Data>  Contour_Data::Split_Per_Contour_Along_Sagittal_Plane(void) const {
@@ -520,7 +520,7 @@ std::unique_ptr<Contour_Data>  Contour_Data::Split_Per_Contour_Along_Sagittal_Pl
             *last_hist |= Segmentations::right;    //Rightward direction for the patient.
         }
     }
-    return  out ;
+    return out ;
 }
 
 
@@ -584,7 +584,7 @@ std::unique_ptr<Contour_Data>  Contour_Data::Raycast_Split_Per_Contour_Into_ANT_
             *last_hist |= Segmentations::front;  //Front of the patient.
         }
     }
-    return  out ;
+    return out ;
 }
 
 
@@ -601,7 +601,7 @@ std::unique_ptr<Contour_Data>  Contour_Data::Raycast_Split_Per_Contour_Into_Late
             *last_hist |= Segmentations::right;  //Right side of the patient.
         }
     }
-    return  out ;
+    return out ;
 }
 
 
@@ -888,7 +888,7 @@ std::unique_ptr<Contour_Data> Contour_Data::Get_Contours_With_Numbers(const std:
 
 std::unique_ptr<Contour_Data> Contour_Data::Get_Contours_With_Number(long int in) const {
     //Simply construct a set with one element and pass it to the multiple-number routine.
-    return std::move(this->Get_Contours_With_Numbers({ in }));
+    return this->Get_Contours_With_Numbers({ in });
 }
 
 std::unique_ptr<Contour_Data> Contour_Data::Get_Contours_With_Last_Segmentation(const uint32_t &in) const {
@@ -980,13 +980,13 @@ unsigned int Pixel_Data::channel(unsigned int channel, unsigned int i, unsigned 
 }
 
 float Pixel_Data::x(unsigned int i, unsigned int j, unsigned int k){
-    return  image_pos_x + static_cast<float>(i)*pixel_dx;
+    return image_pos_x + static_cast<float>(i)*pixel_dx;
 }
 float Pixel_Data::y(unsigned int i, unsigned int j, unsigned int k){
-    return  image_pos_y + static_cast<float>(j)*pixel_dy;
+    return image_pos_y + static_cast<float>(j)*pixel_dy;
 }
 float Pixel_Data::z(unsigned int i, unsigned int j, unsigned int k){
-    return  -slice_height + static_cast<float>(k)*pixel_dz;   //Using image_pos_z seems to be troublesome..
+    return -slice_height + static_cast<float>(k)*pixel_dz;   //Using image_pos_z seems to be troublesome..
 }
 
 float Pixel_Data::ortho_inner(unsigned int k){   //For OpenGL, negate this function. For filtering layers, do not negate. See Overlay_Pixel_Data.cc.

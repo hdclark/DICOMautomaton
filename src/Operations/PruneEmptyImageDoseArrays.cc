@@ -118,5 +118,5 @@ Drover PruneEmptyImageDoseArrays(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
 
     FUNCINFO("Post-prune: " << DICOM_data.image_data.size() << " image_arrays remain");
 
-    return std::move(DICOM_data);
+    return DICOM_data;
 }

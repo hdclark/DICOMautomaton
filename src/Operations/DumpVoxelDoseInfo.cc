@@ -137,5 +137,5 @@ Drover DumpVoxelDoseInfo(Drover DICOM_data, OperationArgPkg OptArgs, std::map<st
     std::cout << "Min dose: " << themin << " Gy" << std::endl;
     std::cout << "Max dose: " << themax << " Gy" << std::endl;
 
-    return std::move(DICOM_data);
+    return DICOM_data;
 }

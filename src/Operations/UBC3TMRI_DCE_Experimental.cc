@@ -285,5 +285,5 @@ Drover UBC3TMRI_DCE_Experimental(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
         }
     }
 
-    return std::move(DICOM_data);
+    return DICOM_data;
 }

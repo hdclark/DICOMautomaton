@@ -251,5 +251,5 @@ Drover GenerateVirtualDataContourViaThresholdTestV1(Drover DICOM_data, Operation
         DICOM_data.image_data.emplace_back(std::move(collated_imgs));
     }
 
-    return std::move(DICOM_data);
+    return DICOM_data;
 }

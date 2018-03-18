@@ -179,7 +179,7 @@ int main(int argc, char **argv){
         tb1 << "   AND ( StudyInstanceUID  = " << txn.quote(mmap["StudyInstanceUID"])  << " ) ";
         tb1 << "   AND ( SeriesInstanceUID = " << txn.quote(mmap["SeriesInstanceUID"]) << " ) ";
         tb1 << "   AND ( SOPInstanceUID    = " << txn.quote(mmap["SOPInstanceUID"])    << " ) ";
-        tb1 << " ) ;";
+        tb1 << " );";
 
         r = txn.exec(tb1.str());
         if(!r.empty()){

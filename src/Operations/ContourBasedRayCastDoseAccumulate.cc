@@ -538,5 +538,5 @@ Drover ContourBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptA
         throw std::runtime_error("Unable to write FITS file for dose-length map.");
     }
 
-    return std::move(DICOM_data);
+    return DICOM_data;
 }

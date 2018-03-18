@@ -229,7 +229,7 @@ Drover DumpROIData(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
         //Print out the best few guesses for each raw contour name.
         const auto ROIName = std::get<1>(ContourCount.first);
         X(ROIName);
-        std::unique_ptr<std::map<std::string,float>> res(std::move(X.Get_Last_Results()));
+        std::unique_ptr<std::map<std::string,float>> res(X.Get_Last_Results());
         std::vector<std::pair<std::string,float>> ordered_res(res->begin(), res->end());
         std::sort(ordered_res.begin(), ordered_res.end(), 
                   [](const std::pair<std::string,float> &L, const std::pair<std::string,float> &R) -> bool {
@@ -244,5 +244,5 @@ Drover DumpROIData(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
     }
     std::cout << std::endl;
     
-    return std::move(DICOM_data);
+    return DICOM_data;
 }

@@ -554,5 +554,5 @@ DumpPerROIParams_KineticModel_1Compartment2Input_5Param(Drover DICOM_data,
         }
     }
 
-    return std::move(DICOM_data);
+    return DICOM_data;
 }

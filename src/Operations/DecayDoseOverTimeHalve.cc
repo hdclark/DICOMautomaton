@@ -203,5 +203,5 @@ Drover DecayDoseOverTimeHalve(Drover DICOM_data, OperationArgPkg OptArgs, std::m
         throw std::runtime_error("Unable to decay dose (via halving).");
     }
 
-    return std::move(DICOM_data);
+    return DICOM_data;
 }
