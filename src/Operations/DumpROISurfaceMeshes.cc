@@ -187,7 +187,7 @@ std::list<OperationArgDoc> OpArgDocDumpROISurfaceMeshes(void){
     return out;
 }
 
-Drover DumpROISurfaceMeshes(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string> /*InvocationMetadata*/, std::string FilenameLex){
+Drover DumpROISurfaceMeshes(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string>, std::string ){
 
     //This operation generates surface meshes from contour volumes. Output is written to file(s) for viewing with an
     // external viewer (e.g., meshlab).

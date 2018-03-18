@@ -91,7 +91,7 @@ std::list<OperationArgDoc> OpArgDocGenerateVirtualDataContourViaThresholdTestV1(
     return std::list<OperationArgDoc>();
 }
 
-Drover GenerateVirtualDataContourViaThresholdTestV1(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){
+Drover GenerateVirtualDataContourViaThresholdTestV1(Drover DICOM_data, OperationArgPkg , std::map<std::string,std::string>, std::string){
 
     //This operation generates data suitable for testing the ContourViaThreshold operation.
 

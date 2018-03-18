@@ -98,7 +98,7 @@ std::list<OperationArgDoc> OpArgDocSeamContours(void){
 
 
 
-Drover SeamContours(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string,std::string> /*InvocationMetadata*/, std::string FilenameLex){
+Drover SeamContours(Drover DICOM_data, OperationArgPkg, std::map<std::string,std::string>, std::string ){
     // This routine converts contours that represent 'outer' and 'inner' via contour orientation into contours that are
     // uniformly outer but have a zero-area seam connecting the inner and outer portions.
     //

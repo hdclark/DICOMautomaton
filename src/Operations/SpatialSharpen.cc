@@ -110,7 +110,7 @@ std::list<OperationArgDoc> OpArgDocSpatialSharpen(void){
     return out;
 }
 
-Drover SpatialSharpen(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string> InvocationMetadata, std::string /*FilenameLex*/){
+Drover SpatialSharpen(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string> , std::string){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto ImageSelectionStr = OptArgs.getValueStr("ImageSelection").value();

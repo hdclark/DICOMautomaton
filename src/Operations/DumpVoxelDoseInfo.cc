@@ -89,7 +89,7 @@ std::list<OperationArgDoc> OpArgDocDumpVoxelDoseInfo(void){
     return out;
 }
 
-Drover DumpVoxelDoseInfo(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string> /*InvocationMetadata*/, std::string FilenameLex){
+Drover DumpVoxelDoseInfo(Drover DICOM_data, OperationArgPkg , std::map<std::string,std::string>, std::string ){
 
     //This operation locates the minimum and maximum dose voxel values. It is useful for estimating prescription doses.
     // 

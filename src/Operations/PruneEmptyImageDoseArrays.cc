@@ -89,7 +89,7 @@ std::list<OperationArgDoc> OpArgDocPruneEmptyImageDoseArrays(void){
     return std::list<OperationArgDoc>();
 }
 
-Drover PruneEmptyImageDoseArrays(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string,std::string> InvocationMetadata, std::string /*FilenameLex*/){
+Drover PruneEmptyImageDoseArrays(Drover DICOM_data, OperationArgPkg, std::map<std::string,std::string> , std::string){
 
     FUNCINFO("Pre-prune: there are " << DICOM_data.image_data.size() << " image_arrays");
 /*

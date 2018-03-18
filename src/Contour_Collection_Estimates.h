@@ -9,7 +9,5 @@
 #include "YgorMath.h"
 
 
-double Estimate_Contour_Separation_Multi(
-           std::list<std::reference_wrapper<contour_collection<double>>> ccl, 
-           double eps = 1E-3);
+double Estimate_Contour_Separation_Multi( std::list<std::reference_wrapper<contour_collection<double>>> ccl );
 

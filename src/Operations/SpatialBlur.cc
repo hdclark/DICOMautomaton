@@ -131,7 +131,7 @@ std::list<OperationArgDoc> OpArgDocSpatialBlur(void){
     return out;
 }
 
-Drover SpatialBlur(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string> InvocationMetadata, std::string /*FilenameLex*/){
+Drover SpatialBlur(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string> , std::string){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto ImageSelectionStr = OptArgs.getValueStr("ImageSelection").value();

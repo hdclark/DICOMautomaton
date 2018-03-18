@@ -91,7 +91,7 @@ std::list<OperationArgDoc> OpArgDocGenerateVirtualDataPerfusionV1(void){
     return std::list<OperationArgDoc>();
 }
 
-Drover GenerateVirtualDataPerfusionV1(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){
+Drover GenerateVirtualDataPerfusionV1(Drover DICOM_data, OperationArgPkg , std::map<std::string,std::string>, std::string){
 
     //This operation generates data suitable for testing perfusion modeling operations. There are no specific checks in
     // this code. Another operation performs the actual validation. You might be able to manually verify if the perfusion

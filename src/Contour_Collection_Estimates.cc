@@ -11,8 +11,7 @@
 
 
 double Estimate_Contour_Separation_Multi(
-           std::list<std::reference_wrapper<contour_collection<double>>> ccl,
-           double eps){
+           std::list<std::reference_wrapper<contour_collection<double>>> ccl ){
 
     //Zero contours have no meaningful separation.
     if(ccl.empty()) return std::numeric_limits<double>::quiet_NaN();

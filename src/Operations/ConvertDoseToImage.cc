@@ -89,7 +89,7 @@ std::list<OperationArgDoc> OpArgDocConvertDoseToImage(void){
     return std::list<OperationArgDoc>();
 }
 
-Drover ConvertDoseToImage(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string,std::string> /*InvocationMetadata*/, std::string FilenameLex){
+Drover ConvertDoseToImage(Drover DICOM_data, OperationArgPkg, std::map<std::string,std::string>, std::string ){
 
     //This operation converts all loaded Dose_Arrays to Image_Arrays. Neither image contents nor metadata should change,
     // but the intent to treat as an image or dose matrix will of course change. A deep copy may be performed.

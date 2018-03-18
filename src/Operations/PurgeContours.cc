@@ -161,7 +161,7 @@ std::list<OperationArgDoc> OpArgDocPurgeContours(void){
 
 
 
-Drover PurgeContours(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string> /*InvocationMetadata*/, std::string FilenameLex){
+Drover PurgeContours(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string>, std::string ){
     // This routine purges contours if they satisfy various criteria.
     //
     // Note: This operation considers individual contours only at the moment. It could be extended to operate on whole

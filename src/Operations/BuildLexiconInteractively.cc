@@ -138,7 +138,7 @@ std::list<OperationArgDoc> OpArgDocBuildLexiconInteractively(void){
     return out;
 }
 
-Drover BuildLexiconInteractively(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string> /*InvocationMetadata*/, std::string FilenameLex){
+Drover BuildLexiconInteractively(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string>, std::string){
 
     //This operation interactively builds a lexicon using the currently loaded contour labels.
     // 

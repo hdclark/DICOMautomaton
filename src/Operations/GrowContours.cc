@@ -134,7 +134,7 @@ std::list<OperationArgDoc> OpArgDocGrowContours(void){
 
 
 
-Drover GrowContours(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string> /*InvocationMetadata*/, std::string FilenameLex){
+Drover GrowContours(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string>, std::string ){
     // This routine will grow (or shrink) 2D contours in their plane by the specified amount. 
     // Growth is accomplish by translating vertices away from the interior by the specified amount.
     // The direction is chosen to be the direction opposite of the in-plane normal produced by averaging the line

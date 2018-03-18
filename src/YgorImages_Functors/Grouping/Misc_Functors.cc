@@ -95,7 +95,7 @@ GroupIndividualImages(planar_image_collection<float,double>::images_list_it_t fi
 
 
 std::list<planar_image_collection<float,double>::images_list_it_t>
-GroupAllImages(planar_image_collection<float,double>::images_list_it_t first_img_it,
+GroupAllImages(planar_image_collection<float,double>::images_list_it_t,
                std::reference_wrapper<planar_image_collection<float,double>> pic){
     return pic.get().get_all_images();
 }

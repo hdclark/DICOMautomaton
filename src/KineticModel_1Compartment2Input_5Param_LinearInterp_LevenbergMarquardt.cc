@@ -255,7 +255,7 @@ MinimizationFunction_f_3Param( const gsl_vector *params,  //Parameters being fit
 
 static
 double 
-chebyshev_3param_func_to_min(unsigned, const double *params, double *grad, void *voided_state){
+chebyshev_3param_func_to_min(unsigned, const double *, double *, void *){
 
     FUNCERR("Not yet implemented");
     return 0.0;

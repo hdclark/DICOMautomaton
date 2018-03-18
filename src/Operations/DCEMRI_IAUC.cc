@@ -89,7 +89,7 @@ std::list<OperationArgDoc> OpArgDocDCEMRI_IAUC(void){
     return std::list<OperationArgDoc>();
 }
 
-Drover DCEMRI_IAUC(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string,std::string> InvocationMetadata, std::string /*FilenameLex*/){
+Drover DCEMRI_IAUC(Drover DICOM_data, OperationArgPkg, std::map<std::string,std::string> , std::string){
 
     //This operation will compute the Integrated Area Under the Curve (IAUC) for any images present.
     // It can be fairly slow, especially if the image volume is huge, so it is best to crop images if possible.

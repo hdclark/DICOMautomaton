@@ -91,7 +91,7 @@ std::list<OperationArgDoc> OpArgDocGenerateVirtualDataDoseStairsV1(void){
     return std::list<OperationArgDoc>();
 }
 
-Drover GenerateVirtualDataDoseStairsV1(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string> /*InvocationMetadata*/, std::string FilenameLex){
+Drover GenerateVirtualDataDoseStairsV1(Drover DICOM_data, OperationArgPkg , std::map<std::string,std::string>, std::string FilenameLex){
 
     //This operation generates a dosimetric stairway. It can be used for testing how dosimetric data is transformed.
     Explicator X(FilenameLex);

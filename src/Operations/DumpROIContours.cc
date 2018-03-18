@@ -148,7 +148,7 @@ std::list<OperationArgDoc> OpArgDocDumpROIContours(void){
 
 
 
-Drover DumpROIContours(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string> /*InvocationMetadata*/, std::string FilenameLex){
+Drover DumpROIContours(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string>, std::string ){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     auto DumpFileName = OptArgs.getValueStr("DumpFileName").value();
