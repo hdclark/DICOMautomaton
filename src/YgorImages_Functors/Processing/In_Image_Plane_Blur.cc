@@ -1,23 +1,18 @@
 
-#include <list>
+#include <exception>
 #include <functional>
 #include <limits>
-#include <map>
-#include <cmath>
-#include <algorithm>
+#include <list>
+#include <stdexcept>
 #include <string>
 
-#include "YgorMisc.h"
-#include "YgorMath.h"
-#include "YgorImages.h"
-#include "YgorStats.h"       //Needed for Stats:: namespace.
-#include "YgorAlgorithms.h"  //Needed for For_Each_In_Parallel<..>(...)
-#include "YgorString.h"      //Needed for GetFirstRegex(...)
-#include "YgorPlot.h"
-
 #include "../ConvenienceRoutines.h"
-
 #include "In_Image_Plane_Blur.h"
+#include "YgorImages.h"
+#include "YgorMisc.h"
+#include "YgorStats.h"       //Needed for Stats:: namespace.
+
+template <class T> class contour_collection;
 
 bool InPlaneImageBlur(
                     planar_image_collection<float,double>::images_list_it_t first_img_it,

@@ -1,17 +1,18 @@
 
-#include <list>
+#include <YgorStats.h>
+#include <cmath>
+#include <experimental/any>
+#include <experimental/optional>
 #include <functional>
 #include <limits>
-#include <map>
-#include <cmath>
-
-#include "YgorMisc.h"
-#include "YgorMath.h"
-#include "YgorImages.h"
-#include "YgorString.h"
-#include "YgorAlgorithms.h"
+#include <list>
+#include <ostream>
 
 #include "../ConvenienceRoutines.h"
+#include "YgorImages.h"
+#include "YgorMisc.h"
+
+template <class T> class contour_collection;
 
 
 bool DCEMRIT1Map(planar_image_collection<float,double>::images_list_it_t first_img_it,

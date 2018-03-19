@@ -1,14 +1,11 @@
 //Colour_Maps.cc - A part of DICOMautomaton 2017. Written by hal clark.
 
-#include <vector>
 #include <array>
-#include <initializer_list>
 #include <experimental/optional>
 
+#include "Colour_Maps.h"
 #include "YgorMath.h"
 #include "YgorString.h"
-
-#include "Colour_Maps.h"
 
 
 ClampedColourRGB ColourMap_Linear(double y){

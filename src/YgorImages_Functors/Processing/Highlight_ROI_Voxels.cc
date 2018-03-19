@@ -1,18 +1,15 @@
 
-#include <list>
+#include <exception>
 #include <functional>
-#include <limits>
-#include <map>
-#include <cmath>
-
-#include "YgorMisc.h"
-#include "YgorMath.h"
-#include "YgorImages.h"
-#include "YgorString.h"
+#include <list>
+#include <stdexcept>
 
 #include "../ConvenienceRoutines.h"
-
 #include "Highlight_ROI_Voxels.h"
+#include "YgorImages.h"
+#include "YgorMisc.h"
+
+template <class T> class contour_collection;
 
 bool HighlightROIVoxels(planar_image_collection<float,double>::images_list_it_t first_img_it,
                         std::list<planar_image_collection<float,double>::images_list_it_t> selected_img_its,

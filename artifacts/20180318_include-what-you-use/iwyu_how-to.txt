@@ -1,0 +1,135 @@
+#!/bin/bash
+
+# This contains notes about how to run include-what-you-use on DICOMautomaton. It required a fair amount of
+# intervention and tweaking.
+
+exit
+
+# packer -S include-what-you-use
+
+# Note: build must be successful to proceed!
+mkdir build && cd build
+CC="clang" CXX="clang++" CXX_FLAGS='-w' cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_INSTALL_PREFIX=/usr ../
+cp compile_commands.json ../
+cd ../
+
+vim compile_commands.json  # Remove -f options (clang complains), and make Wall --> Wno-all, Werror --> Wno-error, etc.
+                           # You can accomplish this using the '-w' option.
+
+# Regenerate the mapping files for your up-to-date compiler, if desired:
+( cd /usr/include/c++/7.3.0 && grep '^ *# *include' {ext/,tr1/,}* | perl -nle 'm/^([^:]+).*<([^>]+)>/ && print qq@    { include: ["<$2>", private, "<$1>", public ] },@' | grep -e bits/ -e tr1_impl/ | sort -u) > /tmp/new_stl.imp
+# Note that you'll have to refer to the comments in /usr/share/include-what-you-use/*imp for this...
+
+# Note: the following '--' separates iwyu_tool.py args from include-what-you-use args. 
+CC="clang" CXX="clang++" iwyu_tool.py -p . -- \
+  --mapping_file=/usr/share/include-what-you-use/iwyu.gcc.imp \
+  --mapping_file=/usr/share/include-what-you-use/boost-all.imp \
+  --mapping_file=/usr/share/include-what-you-use/libcxx.imp \
+  --mapping_file=/tmp/new_stl.imp \
+  --mapping_file=/tmp/custom.imp \
+  --max_line_length=120 \
+  --transitive_includes_only  >/tmp/out.iwyu
+
+vim /tmp/out.iwyu   # Look for weird stuff, system headers, and remove compiler warnings.
+
+# I used the output to create a new file '/tmp/custom.imp' for GCC 'bits' files:
+        cat /tmp/out.iwyu | grep bits | sed -e 's@> .*//@> //@g' | sort -u
+        #include <bits/exception.h> // for exception
+        #include <bits/refwrap.h> // for reference_wrapper
+        #include <bits/std_abs.h> // for abs
+        #include <bits/std_function.h> // for function
+        #include <bits/stdint-intn.h> // for int64_t
+        #include <bits/stdint-uintn.h> // for uint16_t, uint32_t, uint64_t, uint8_t
+        #include <bits/stdint-uintn.h> // for uint32_t, uint16_t
+        #include <bits/stdint-uintn.h> // for uint32_t, uint64_t, uint8_t
+        #include <bits/stdint-uintn.h> // for uint64_t
+        #include <bits/stdint-uintn.h> // for uint64_t, uint8_t
+        #include <bits/stdint-uintn.h> // for uint8_t, uint64_t
+        #include <bits/types/struct_timeval.h> // for timeval
+        #include <bits/types/struct_tm.h> // for tm
+        #include <bits/types/time_t.h> // for time_t
+# and also manually noted:       
+        #include <ext/alloc_traits.h> // for __alloc_traits<>::value_type
+
+#Manually edits resulted in (/tmp/custom.imp):
+
+[
+  { include: ["<bits/exception.h>", private, "<exception>", public ] },
+  { include: ["<bits/refwrap.h>", private, "<functional>", public ] },
+  { include: ["<bits/std_abs.h>", private, "<cmath>", public ] },
+  { include: ["<bits/std_function.h>", private, "<functional>", public ] },
+  { include: ["<bits/stdint-intn.h>", private, "<cstdint>", public ] },
+  { include: ["<bits/stdint-uintn.h>", private, "<cstdint>", public ] },
+  { include: ["<bits/types/struct_timeval.h>", private, "<sys/time.h>", public ] },
+  { include: ["<bits/types/struct_tm.h>", private, "<ctime>", public ] },
+  { include: ["<bits/types/time_t.h>", private, "<ctime>", public ] },
+  { include: ["<bits/shared_ptr.h>", private, "<memory>", public ] },
+  { include: ["<bits/unique_ptr.h>", private, "<memory>", public ] },
+  { include: ["<ext/alloc_traits.h>", private, "<memory>", public ] },
+  { include: ["<bits/getopt_core.h>", private, "<unistd.h>", public ] },
+  { include: ["<bits/getopt_core.h>", private, "<getopt.h>", public ] },
+  { include: ["<bits/allocator.h>", private, "<memory>", public ] },
+
+  { include: ["<pqxx/connection.hxx>", private, "<pqxx/pqxx>", public ] },
+  { include: ["<pqxx/result.hxx>", private, "<pqxx/pqxx>", public ] },
+  { include: ["<pqxx/row.hxx>", private, "<pqxx/pqxx>", public ] },
+  { include: ["<pqxx/transaction.hxx>", private, "<pqxx/pqxx>", public ] },
+
+  { include: ["<boost/date_time/gregorian/greg_date.hpp>", private, "<boost/date_time/posix_time/posix_time.hpp>", public ] },
+  { include: ["<boost/date_time/posix_time/posix_time_duration.hpp>", private, "<boost/date_time/posix_time/posix_time.hpp>", public ] },
+  { include: ["<boost/date_time/posix_time/posix_time_io.hpp>", private, "<boost/date_time/posix_time/posix_time.hpp>", public ] },
+  { include: ["<boost/date_time/posix_time/posix_time_types.hpp>", private, "<boost/date_time/posix_time/posix_time.hpp>", public ] },
+  { include: ["<boost/date_time/posix_time/ptime.hpp>", private, "<boost/date_time/posix_time/posix_time.hpp>", public ] },
+  { include: ["<boost/date_time/time.hpp>", private, "<boost/date_time/posix_time/posix_time.hpp>", public ] },
+  { include: ["<boost/date_time/time_system_counted.hpp>", private, "<boost/date_time/posix_time/posix_time.hpp>", public ] },
+
+  { include: ["<asio/impl/io_service.hpp>", private, "<asio.hpp>", public ] },
+
+  { include: ["<Core>", private, "<eigen3/Eigen/Dense>", public ] },
+  { include: ["<Eigen/src/Core/GeneralProduct.h>", private, "<eigen3/Eigen/Dense>", public ] },
+  { include: ["<Eigen/src/Eigenvalues/SelfAdjointEigenSolver.h>", private, "<eigen3/Eigen/Dense>", public ] },
+  { include: ["<src/Core/DenseBase.h>", private, "<eigen3/Eigen/Dense>", public ] },
+  { include: ["<src/Core/MatrixBase.h>", private, "<eigen3/Eigen/Dense>", public ] },
+
+  { include: ["<SFML/Config.hpp>", private, "<SFML/Graphics.hpp>", public ] },
+  { include: ["<SFML/Graphics/CircleShape.hpp>", private, "<SFML/Graphics.hpp>", public ] },
+  { include: ["<SFML/Graphics/Color.hpp>", private, "<SFML/Graphics.hpp>", public ] },
+  { include: ["<SFML/Graphics/Font.hpp>", private, "<SFML/Graphics.hpp>", public ] },
+  { include: ["<SFML/Graphics/Image.hpp>", private, "<SFML/Graphics.hpp>", public ] },
+  { include: ["<SFML/Graphics/PrimitiveType.hpp>", private, "<SFML/Graphics.hpp>", public ] },
+  { include: ["<SFML/Graphics/Rect.hpp>", private, "<SFML/Graphics.hpp>", public ] },
+  { include: ["<SFML/Graphics/Rect.inl>", private, "<SFML/Graphics.hpp>", public ] },
+  { include: ["<SFML/Graphics/RenderWindow.hpp>", private, "<SFML/Graphics.hpp>", public ] },
+  { include: ["<SFML/Graphics/Sprite.hpp>", private, "<SFML/Graphics.hpp>", public ] },
+  { include: ["<SFML/Graphics/Text.hpp>", private, "<SFML/Graphics.hpp>", public ] },
+  { include: ["<SFML/Graphics/Texture.hpp>", private, "<SFML/Graphics.hpp>", public ] },
+  { include: ["<SFML/Graphics/Vertex.hpp>", private, "<SFML/Graphics.hpp>", public ] },
+  { include: ["<SFML/Graphics/VertexArray.hpp>", private, "<SFML/Graphics.hpp>", public ] },
+  { include: ["<SFML/Graphics/View.hpp>", private, "<SFML/Graphics.hpp>", public ] },
+  { include: ["<SFML/System/String.hpp>", private, "<SFML/Graphics.hpp>", public ] },
+  { include: ["<SFML/System/Vector2.hpp>", private, "<SFML/Graphics.hpp>", public ] },
+  { include: ["<SFML/System/Vector2.inl>", private, "<SFML/Graphics.hpp>", public ] },
+  { include: ["<SFML/Window/Event.hpp>", private, "<SFML/Graphics.hpp>", public ] },
+  { include: ["<SFML/Window/Keyboard.hpp>", private, "<SFML/Graphics.hpp>", public ] },
+  { include: ["<SFML/Window/Mouse.hpp>", private, "<SFML/Graphics.hpp>", public ] },
+  { include: ["<SFML/Window/VideoMode.hpp>", private, "<SFML/Graphics.hpp>", public ] },
+
+]
+
+#Note the following failed for various reasons:
+  { include: ["<stdlib.h>", private, "<cstdlib>", public ] },
+  { include: ["<stddef.h>", private, "<cstddef>", public ] },
+  { include: ["<string.h>", private, "<cstring>", public ] },
+
+  { include: ["<boost/iterator/iterator_traits.hpp>", private, "<boost/date_time/posix_time/posix_time.hpp>", public ] },
+
+  { include: ["<boost/algorithm/string/predicate.hpp>", private, "<boost/algorithm/string.hpp>", public ] },
+  { include: ["<boost/algorithm/string/classification.hpp>", private, "<boost/algorithm/string.hpp>", public ] },
+  { include: ["<boost/algorithm/string/constants.hpp>", private, "<boost/algorithm/string.hpp>", public ] },
+  { include: ["<boost/algorithm/string/split.hpp>", private, "<boost/algorithm/string.hpp>", public ] },
+
+
+# Now perform the transformation.
+python2 /usr/bin/fix_includes.py </tmp/out.iwyu
+./clean_compile_and_install.sh  # Verify the build works on as many systems as you can!
+

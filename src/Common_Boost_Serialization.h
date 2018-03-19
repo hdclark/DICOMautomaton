@@ -1,15 +1,18 @@
 //Common_Boost_Serialization.h - A part of DICOMautomaton 2016. Written by hal clark.
 
-#include <string>    
-
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
+#include <string>    
 
+#include "KineticModel_1Compartment2Input_5Param_Chebyshev_Common.h"
+#include "KineticModel_1Compartment2Input_5Param_LinearInterp_Common.h"
+#include "KineticModel_1Compartment2Input_Reduced3Param_Chebyshev_Common.h"
 #include "Structs.h"
 
-#include "KineticModel_1Compartment2Input_5Param_LinearInterp_Common.h"
-#include "KineticModel_1Compartment2Input_5Param_Chebyshev_Common.h"
-#include "KineticModel_1Compartment2Input_Reduced3Param_Chebyshev_Common.h"
+class Drover;
+struct KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters;
+struct KineticModel_1Compartment2Input_5Param_LinearInterp_Parameters;
+struct KineticModel_1Compartment2Input_Reduced3Param_Chebyshev_Parameters;
 
 
 // --- Default Serialization routines.

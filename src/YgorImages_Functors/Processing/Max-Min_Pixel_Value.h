@@ -3,17 +3,18 @@
 #pragma once
 
 
-#include <list>
+#include <cmath>
+#include <experimental/any>
 #include <functional>
 #include <limits>
+#include <list>
 #include <map>
-#include <cmath>
 
-#include <experimental/any>
-
-#include "YgorMisc.h"
-#include "YgorMath.h"
 #include "YgorImages.h"
+#include "YgorMath.h"
+#include "YgorMisc.h"
+
+template <class T> class contour_collection;
 
 
 bool CondenseMaxMinPixel(planar_image_collection<float,double>::images_list_it_t first_img_it,

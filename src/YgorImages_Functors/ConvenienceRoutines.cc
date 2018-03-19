@@ -1,13 +1,15 @@
 //ConvenienceRoutines.cc.
 
+#include <exception>
+#include <list>
 #include <map>
 #include <string>
-
-#include "YgorStats.h"       //Needed for Stats:: namespace.
-#include "YgorImages.h" 
-#include "YgorString.h"
+#include <utility>
 
 #include "ConvenienceRoutines.h"
+#include "YgorImages.h" 
+#include "YgorStats.h"       //Needed for Stats:: namespace.
+#include "YgorString.h"
 
 
 void UpdateImageDescription(

@@ -1,24 +1,17 @@
 //Max-Min_Pixel_Value.cc.
 
-#include <list>
-#include <functional>
-#include <limits>
-#include <map>
-#include <cmath>
 #include <algorithm>
+#include <functional>
+#include <list>
 #include <utility>
-
-#include "YgorMisc.h"
-#include "YgorMath.h"
-#include "YgorImages.h"
-#include "YgorStats.h"       //Needed for Stats:: namespace.
-#include "YgorAlgorithms.h"  //Needed for For_Each_In_Parallel<..>(...)
-#include "YgorString.h"      //Needed for GetFirstRegex(...)
-#include "YgorPlot.h"
+#include <vector>
 
 #include "../ConvenienceRoutines.h"
-
 #include "Max-Min_Pixel_Value.h"
+#include "YgorImages.h"
+#include "YgorStats.h"       //Needed for Stats:: namespace.
+
+template <class T> class contour_collection;
 
 bool CondenseMaxMinPixel(planar_image_collection<float,double>::images_list_it_t first_img_it,
                          std::list<planar_image_collection<float,double>::images_list_it_t> selected_img_its,

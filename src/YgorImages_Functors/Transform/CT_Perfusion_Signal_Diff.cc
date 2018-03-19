@@ -1,16 +1,16 @@
 
-#include <list>
+#include <YgorStats.h>
+#include <cmath>
+#include <experimental/any>
 #include <functional>
 #include <limits>
-#include <map>
-#include <cmath>
-
-#include "YgorMisc.h"
-#include "YgorMath.h"
-#include "YgorImages.h"
-#include "YgorString.h"
+#include <list>
+#include <memory>
 
 #include "../ConvenienceRoutines.h"
+#include "YgorImages.h"
+#include "YgorMath.h"
+#include "YgorMisc.h"
 
 
 bool CTPerfusionSigDiffC( planar_image_collection<float,double>::images_list_it_t  local_img_it,

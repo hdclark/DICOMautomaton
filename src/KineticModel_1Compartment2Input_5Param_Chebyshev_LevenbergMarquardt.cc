@@ -2,27 +2,23 @@
 // This file holds an isolated driver for fitting a pharmacokinetic model. It uses an algorithm, the
 // Levenberg-Marquardt, that is specific to least-squares and therefore cannot be used for norms other than L2.
 
-#include <list>
-#include <functional>
-#include <limits>
-#include <cmath>
-
-#include <gsl/gsl_math.h>
-#include <gsl/gsl_errno.h>
-#include <gsl/gsl_vector.h>
 #include <gsl/gsl_blas.h>
+#include <gsl/gsl_errno.h>
+#include <gsl/gsl_matrix_double.h>
 #include <gsl/gsl_multifit_nlin.h>
-
-#include <boost/date_time/posix_time/posix_time.hpp>
-
-#include "YgorMisc.h"
-#include "YgorMath.h"
-#include "YgorMathChebyshev.h"
-#include "YgorMathChebyshevFunctions.h"
-#include "YgorStats.h"       //Needed for Stats:: namespace.
+#include <gsl/gsl_vector_double.h>
+#include <stddef.h>
+#include <array>
+#include <cmath>
+#include <exception>
+#include <limits>
+#include <memory>
+#include <vector>
 
 #include "KineticModel_1Compartment2Input_5Param_Chebyshev_Common.h"
 #include "KineticModel_1Compartment2Input_5Param_Chebyshev_LevenbergMarquardt.h"
+#include "YgorMath.h"
+#include "YgorMisc.h"
 
 
 static

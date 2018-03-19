@@ -1,16 +1,12 @@
 
-#include <list>
+#include <YgorStats.h>
+#include <experimental/any>
 #include <functional>
-#include <limits>
-#include <map>
-#include <cmath>
-
-#include "YgorMisc.h"
-#include "YgorMath.h"
-#include "YgorImages.h"
-#include "YgorString.h"
+#include <list>
 
 #include "../ConvenienceRoutines.h"
+#include "YgorImages.h"
+#include "YgorMath.h"
 
 
 //Subtracts the provided external images that spatially overlap on a voxel-by-voxel basis.

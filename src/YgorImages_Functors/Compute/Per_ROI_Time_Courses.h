@@ -2,17 +2,20 @@
 #pragma once
 
 
-#include <list>
+#include <cmath>
+#include <cstdint>
+#include <experimental/any>
 #include <functional>
 #include <limits>
+#include <list>
 #include <map>
-#include <cmath>
+#include <string>
 
-#include <experimental/any>
-
-#include "YgorMisc.h"
-#include "YgorMath.h"
 #include "YgorImages.h"
+#include "YgorMath.h"
+#include "YgorMisc.h"
+
+template <class T, class R> class planar_image_collection;
 
 
 //User data struct for harvesting data afterward. Note that, because the driver routine calls the supplied functional

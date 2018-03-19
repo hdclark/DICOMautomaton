@@ -4,27 +4,24 @@
 // objective function gradient -- i.e., the Jacobian of the objective function $F$ -- cancel out, but wouldn't if a
 // Jacobian of the *model*  -- $I$ -- was used.)
 
-#include <list>
-#include <functional>
-#include <limits>
-#include <cmath>
-
-#include <gsl/gsl_math.h>
 #include <gsl/gsl_errno.h>
-#include <gsl/gsl_vector.h>
-#include <gsl/gsl_blas.h>
 #include <gsl/gsl_multimin.h>
+#include <gsl/gsl_vector_double.h>
+#include <stddef.h>
+#include <array>
+#include <cmath>
+#include <exception>
+#include <limits>
+#include <memory>
+#include <tuple>
+#include <vector>
 
-#include <boost/date_time/posix_time/posix_time.hpp>
-
-#include "YgorMisc.h"
+#include "KineticModel_1Compartment2Input_Reduced3Param_Chebyshev_Common.h"
+#include "KineticModel_1Compartment2Input_Reduced3Param_Chebyshev_FreeformOptimization.h"
 #include "YgorMath.h"
 #include "YgorMathChebyshev.h"
 #include "YgorMathChebyshevFunctions.h"
 #include "YgorStats.h"       //Needed for Stats:: namespace.
-
-#include "KineticModel_1Compartment2Input_Reduced3Param_Chebyshev_Common.h"
-#include "KineticModel_1Compartment2Input_Reduced3Param_Chebyshev_FreeformOptimization.h"
 
 
 static

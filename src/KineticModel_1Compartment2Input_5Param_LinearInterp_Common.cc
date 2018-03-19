@@ -1,16 +1,9 @@
 //KineticModel_1Compartment2Input_5Param_LinearInterp_Common.cc.
 
-#include <list>
-#include <functional>
-#include <limits>
-#include <cmath>
-
-#include "YgorMisc.h"
-#include "YgorMath.h"
-#include "YgorStats.h"       //Needed for Stats:: namespace.
+#include <array>
 
 #include "KineticModel_1Compartment2Input_5Param_LinearInterp_Common.h"
-#include "KineticModel_1Compartment2Input_5Param_LinearInterp_LevenbergMarquardt.h"
+#include "YgorMath.h"
 
 void
 Evaluate_Model( const KineticModel_1Compartment2Input_5Param_LinearInterp_Parameters &state,

@@ -1,17 +1,17 @@
 //BoostSerializeDrover.cc - A part of DICOMautomaton 2016. Written by hal clark.
 
-#include <string>    
-#include <map>
-#include <experimental/optional>
-
 #include <boost/filesystem.hpp>
-#include <boost/filesystem/fstream.hpp>
-
-#include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
-
-#include "../Structs.h"
+#include <experimental/optional>
+#include <list>
+#include <map>
+#include <memory>
+#include <ostream>
+#include <stdexcept>
+#include <string>    
 
 #include "../Common_Boost_Serialization.h"
+#include "../Structs.h"
+#include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 
 
 std::list<OperationArgDoc> OpArgDocBoost_Serialize_Drover(void){

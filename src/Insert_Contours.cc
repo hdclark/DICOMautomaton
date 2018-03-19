@@ -1,14 +1,16 @@
 //Insert_Contours.cc - A part of DICOMautomaton 2017. Written by hal clark.
 
-#include <initializer_list>
+#include <algorithm>
+#include <cmath>
 #include <limits>
 #include <list>
-
-#include "YgorMisc.h"
-#include "YgorMath.h"
-#include "YgorImages.h"
+#include <memory>
+#include <stdexcept>
+#include <vector>
 
 #include "Insert_Contours.h"
+#include "YgorImages.h"
+#include "YgorMath.h"
 
 
 //Injects contours that mimic the provided line.

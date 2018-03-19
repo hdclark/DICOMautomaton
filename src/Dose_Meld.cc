@@ -15,25 +15,19 @@
 // For now, I didn't want to have to wait for compiles to complete by placing them in those
 // files!
 
-//#include <cmath>
-//#include <map>
-//#include <unordered_map>
-#include <iostream>
 #include <list>
 #include <memory>
+#include <string>
 //#include <cstdint>   //For int64_t.
 //#include <utility>   //For std::pair.
 //#include <algorithm> //std::min_element/max_element.
 //#include <tuple>
 
-#include "YgorMisc.h"
-#include "YgorMath.h"
-#include "YgorString.h"
-#include "YgorImages.h"
-#include "YgorPlot.h"
-
-#include "Structs.h"
 #include "Dose_Meld.h"
+#include "Structs.h"
+#include "YgorImages.h"
+#include "YgorMisc.h"
+#include "YgorString.h"
 
 //This routine will attempt to meld all data into a single unit. It may not be possible, so multiple data *may* be returned. 
 std::list<std::shared_ptr<Dose_Array>>  Meld_Dose_Data(const std::list<std::shared_ptr<Dose_Array>> &dalist){

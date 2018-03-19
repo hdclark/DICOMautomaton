@@ -3,6 +3,7 @@
 #pragma once
 
 #include <experimental/optional>
+#include <string>
 
 
 struct ClampedColourRGB {

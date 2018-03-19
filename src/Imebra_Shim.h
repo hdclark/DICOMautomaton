@@ -3,14 +3,19 @@
 #ifndef _IMEBRA_SHIM_H_DICOMAUTOMATON
 #define _IMEBRA_SHIM_H_DICOMAUTOMATON
 
-#include <vector>
-#include <string>
-#include <memory>
+#include <stddef.h>
 #include <list>
 #include <map>
+#include <memory>
+#include <string>
+#include <vector>
 
 #include "Structs.h"
 #include "YgorContainers.h"  //Needed for bimap class.
+
+class Contour_Data;
+class Dose_Array;
+class Image_Array;
 
 //------------------ General ----------------------
 //One-offs.

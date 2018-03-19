@@ -1,23 +1,23 @@
 
-#include <list>
+#include <jansson.h>         //For JSON handling.
+#include <cmath>
+#include <exception>
+#include <experimental/any>
+#include <experimental/optional>
 #include <functional>
 #include <limits>
+#include <list>
 #include <map>
-#include <cmath>
-
+#include <ostream>
 #include <pqxx/pqxx>         //PostgreSQL C++ interface.
-#include <jansson.h>         //For JSON handling.
+#include <string>
+#include <utility>
 
-#include "YgorMisc.h"
-#include "YgorMath.h"
 #include "YgorImages.h"
+#include "YgorMath.h"
+#include "YgorMisc.h"
 #include "YgorStats.h"       //Needed for Stats:: namespace.
-#include "YgorFilesDirs.h"   //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
-#include "YgorAlgorithms.h"  //Needed for For_Each_In_Parallel<..>(...)
 #include "YgorString.h"      //Needed for GetFirstRegex(...)
-#include "YgorPlot.h"
-
-#include "../ConvenienceRoutines.h"
 
 
 const auto boxr = 2; //The inclusive 'radius' of the square box to use to average nearby pixels. Controls amount of spatial averaging.

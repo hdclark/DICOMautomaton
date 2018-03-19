@@ -2,10 +2,15 @@
 
 #pragma once
 
+#include <functional>
 #include <string>
 
-#include "YgorStats.h"       //Needed for Stats:: namespace.
 #include "YgorImages.h"
+#include "YgorStats.h"       //Needed for Stats:: namespace.
+
+namespace Stats {
+template <class C> class Running_MinMax;
+}  // namespace Stats
 
 
 void UpdateImageDescription(

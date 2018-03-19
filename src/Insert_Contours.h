@@ -4,9 +4,15 @@
 
 #include <limits>
 #include <list>
+#include <map>
+#include <string>
 
-#include "YgorMisc.h"
 #include "YgorMath.h"
+#include "YgorMisc.h"
+
+template <class T, class R> class planar_image;
+template <class T> class contour_collection;
+template <class T> class line;
 
 
 //Injects contours that mimic the provided line.

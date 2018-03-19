@@ -1,35 +1,32 @@
 //Structs.cc.
 
-#include <cmath>
-#include <string>
-#include <vector>
-#include <map>
-#include <unordered_map>
-#include <cstdint>   //For int64_t.
-#include <utility>   //For std::pair.
+#include <boost/algorithm/string/classification.hpp>
+#include <boost/algorithm/string/constants.hpp>
+#include <boost/algorithm/string/predicate.hpp>
+#include <boost/algorithm/string/split.hpp>
+#include <boost/algorithm/string/trim_all.hpp>
 #include <algorithm> //std::min_element/max_element, std::stable_sort.
-#include <tuple>
 #include <array>
+#include <cmath>
+#include <cstdint>   //For int64_t.
+#include <experimental/optional>
 #include <functional>
 #include <initializer_list>
-
-#include <experimental/optional>
-
-#include <boost/algorithm/string.hpp>
-#include <boost/algorithm/string/trim_all.hpp>
-
-#include "YgorMisc.h"
-#include "YgorStats.h"
-#include "YgorString.h"
-#include "YgorMath.h"
-#include "YgorImages.h"
-#include "YgorPlot.h"
-#include "YgorDICOMTools.h" //For Is_File_A_DICOM_File(...);
-
-#include "Structs.h"
-#include "Imebra_Shim.h"
+#include <map>
+#include <ostream>
+#include <stdexcept>
+#include <string>
+#include <tuple>
+#include <utility>   //For std::pair.
+#include <vector>
 
 #include "Dose_Meld.h"
+#include "Structs.h"
+#include "YgorImages.h"
+#include "YgorMath.h"
+#include "YgorMisc.h"
+#include "YgorPlot.h"
+#include "YgorStats.h"
 
 //This is a mapping from the segmentation history to a human-readable description.
 // Try avoid using commas or tabs to make dumping as csv easier. This should in

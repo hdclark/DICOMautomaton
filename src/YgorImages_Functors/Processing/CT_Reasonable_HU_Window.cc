@@ -1,20 +1,14 @@
 
-#include <list>
-#include <functional>
-#include <limits>
-#include <map>
-#include <cmath>
 #include <algorithm>
+#include <experimental/any>
+#include <functional>
+#include <list>
+#include <map>
+#include <string>
 
-#include "YgorMisc.h"
-#include "YgorMath.h"
 #include "YgorImages.h"
-#include "YgorStats.h"       //Needed for Stats:: namespace.
-#include "YgorAlgorithms.h"  //Needed for For_Each_In_Parallel<..>(...)
-#include "YgorString.h"      //Needed for GetFirstRegex(...)
-#include "YgorPlot.h"
 
-#include "../ConvenienceRoutines.h"
+template <class T> class contour_collection;
 
 
 

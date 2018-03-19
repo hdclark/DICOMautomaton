@@ -1,9 +1,7 @@
 //BED_Conversion.cc - A part of DICOMautomaton 2017. Written by hal clark.
 
-#include <initializer_list>
-#include <limits>
-
-#include "YgorMath.h"
+#include <cmath>
+#include <stdexcept>
 
 #include "BED_Conversion.h"
 

@@ -11,26 +11,19 @@
 // Note: The file is NOT ingressed if it is not yet in the PACS DB.
 //
 
+#include <exception>
+#include <functional>
 #include <iostream>
-#include <vector>
-#include <string>
-#include <sstream>
-#include <utility>              //Needed for std::pair.
-#include <memory>               //Needed for std::unique_ptr.
-#include <algorithm>            //Needed for std::sort.
 #include <list>
+#include <map>
+#include <pqxx/pqxx>            //PostgreSQL C++ interface.
+#include <string>
 #include <tuple>
 
-#include "Structs.h"
 #include "Imebra_Shim.h"        //Wrapper for Imebra library. Black-boxed to speed up compilation.
-
-#include <pqxx/pqxx>            //PostgreSQL C++ interface.
-
-#include "YgorMisc.h"           //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
-#include "YgorString.h"         //Needed for stringtoX(), X_to_string().
-#include "YgorTime.h"           //Needed for class time_mark.
 #include "YgorArguments.h"
 #include "YgorFilesDirs.h"
+#include "YgorMisc.h"           //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 
 int main(int argc, char **argv){
     //std::string db_params("dbname=pacs user=hal host=localhost port=63443");

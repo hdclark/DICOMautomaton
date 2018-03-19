@@ -1,42 +1,39 @@
 //Liver_Kinetic_1Compartment2Input_5Param_LinearInterp_LevenbergMarquardt.cc.
 
-#include <list>
-#include <functional>
-#include <limits>
-#include <map>
-#include <set>
-#include <cmath>
-#include <memory>
-#include <chrono>
-#include <experimental/any>
-#include <mutex>
-#include <tuple>
-#include <regex>
-
 #include <boost/date_time/posix_time/posix_time.hpp>
-
-#include "YgorMisc.h"
-#include "YgorMath.h"
-#include "YgorMathChebyshev.h"
-#include "YgorMathChebyshevFunctions.h"
-#include "YgorMathPlottingGnuplot.h" //Needed for YgorMathPlottingGnuplot::*.
-#include "YgorImages.h"
-#include "YgorStats.h"       //Needed for Stats:: namespace.
-#include "YgorFilesDirs.h"   //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
-#include "YgorAlgorithms.h"  //Needed for For_Each_In_Parallel<..>(...)
-#include "YgorString.h"      //Needed for GetFirstRegex(...)
+#include <boost/iterator/iterator_traits.hpp>
+#include <stddef.h>
+#include <array>
+#include <exception>
+#include <experimental/any>
+#include <experimental/optional>
+#include <functional>
+#include <iterator>
+#include <limits>
+#include <list>
+#include <map>
+#include <memory>
+#include <mutex>
+#include <ostream>
+#include <regex>
+#include <set>
+#include <stdexcept>
+#include <string>
+#include <utility>
 
 #include "../../Common_Boost_Serialization.h"
 #include "../../Common_Plotting.h"
-
-#include "../ConvenienceRoutines.h"
-
-#include "Liver_Kinetic_Common.h"
-#include "Liver_Kinetic_1Compartment2Input_5Param_LinearInterp_Common.h"
-#include "Liver_Kinetic_1Compartment2Input_5Param_LinearInterp_LevenbergMarquardt.h"
-
 #include "../../KineticModel_1Compartment2Input_5Param_LinearInterp_Common.h"
 #include "../../KineticModel_1Compartment2Input_5Param_LinearInterp_LevenbergMarquardt.h"
+#include "../ConvenienceRoutines.h"
+#include "Liver_Kinetic_1Compartment2Input_5Param_LinearInterp_Common.h"
+#include "Liver_Kinetic_1Compartment2Input_5Param_LinearInterp_LevenbergMarquardt.h"
+#include "Liver_Kinetic_Common.h"
+#include "YgorImages.h"
+#include "YgorMath.h"
+#include "YgorMathChebyshev.h"
+#include "YgorMisc.h"
+#include "YgorStats.h"       //Needed for Stats:: namespace.
 
 static std::mutex out_img_mutex;
 

@@ -2,17 +2,18 @@
 #pragma once
 
 
-#include <list>
+#include <cmath>
+#include <experimental/any>
 #include <functional>
 #include <limits>
+#include <list>
 #include <map>
-#include <cmath>
 
-#include <experimental/any>
-
-#include "YgorMisc.h"
-#include "YgorMath.h"
 #include "YgorImages.h"
+#include "YgorMath.h"
+#include "YgorMisc.h"
+
+template <class T> class contour_collection;
 
 typedef enum { // Controls how dose is decayed (i.e., selects the model).
     Halve,                 // Ad-hoc model applicable for all tissues (but defensible for none).

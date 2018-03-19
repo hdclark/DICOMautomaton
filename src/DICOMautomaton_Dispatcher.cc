@@ -3,70 +3,30 @@
 // This program provides a standard entry-point into some DICOMautomaton analysis routines.
 //
 
+#include <exception>
+#include <functional>
 #include <iostream>
-#include <sstream>
-#include <fstream>
-#include <iomanip>
+#include <list>
+#include <map>
+#include <memory>
 #include <string>    
 #include <vector>
-#include <set> 
-#include <map>
-#include <unordered_map>
-#include <list>
-#include <functional>
-#include <thread>
-#include <array>
-#include <mutex>
-//#include <future>             //Needed for std::async(...)
-#include <limits>
-#include <cmath>
 //#include <cfenv>              //Needed for std::feclearexcept(FE_ALL_EXCEPT).
 
-#include <getopt.h>           //Needed for 'getopts' argument parsing.
+#include <boost/filesystem.hpp>
 #include <cstdlib>            //Needed for exit() calls.
 #include <utility>            //Needed for std::pair.
-#include <algorithm>
-#include <experimental/optional>
-#include <experimental/filesystem>
 
-#include <boost/algorithm/string.hpp> //For boost:iequals().
-
-#include <boost/filesystem.hpp>
-#include <boost/filesystem/fstream.hpp>
-
-
-#include <pqxx/pqxx>          //PostgreSQL C++ interface.
-
-#include <SFML/Graphics.hpp>
-#include <SFML/Audio.hpp>
-
-#include "Structs.h"
-#include "Imebra_Shim.h"      //Wrapper for Imebra library. Black-boxed to speed up compilation.
-#include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
-#include "YgorMath.h"         //Needed for vec3 class.
-#include "YgorMathPlottingGnuplot.h" //Needed for YgorMathPlottingGnuplot::*.
-#include "YgorMathChebyshev.h" //Needed for cheby_approx class.
-#include "YgorStats.h"        //Needed for Stats:: namespace.
-#include "YgorFilesDirs.h"    //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
-#include "YgorContainers.h"   //Needed for bimap class.
-#include "YgorPerformance.h"  //Needed for YgorPerformance_dt_from_last().
-#include "YgorAlgorithms.h"   //Needed for For_Each_In_Parallel<..>(...)
-#include "YgorArguments.h"    //Needed for ArgumentHandler class.
-#include "YgorString.h"       //Needed for GetFirstRegex(...)
-#include "YgorImages.h"
-#include "YgorImagesIO.h"
-#include "YgorImagesPlotting.h"
-
-#include "Explicator.h"       //Needed for Explicator class.
-
-#include "YgorDICOMTools.h"   //Needed for Is_File_A_DICOM_File(...);
-
-#include "PACS_Loader.h"
 #include "Boost_Serialization_File_Loader.h"
 #include "DICOM_File_Loader.h"
 #include "FITS_File_Loader.h"
-
 #include "Operation_Dispatcher.h"
+#include "PACS_Loader.h"
+#include "Structs.h"
+#include "YgorArguments.h"    //Needed for ArgumentHandler class.
+#include "YgorFilesDirs.h"    //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
+#include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorString.h"       //Needed for GetFirstRegex(...)
 
 
 int main(int argc, char* argv[]){

@@ -1,18 +1,21 @@
 
-#include <list>
+#include <stddef.h>
+#include <cmath>
+#include <experimental/any>
+#include <experimental/optional>
 #include <functional>
 #include <limits>
-#include <map>
-#include <cmath>
-
-#include "YgorMisc.h"
-#include "YgorMath.h"
-#include "YgorStats.h"
-#include "YgorAlgorithms.h"
-#include "YgorImages.h"
-#include "YgorString.h"
+#include <list>
+#include <ostream>
+#include <tuple>
+#include <vector>
 
 #include "../ConvenienceRoutines.h"
+#include "YgorAlgorithms.h"
+#include "YgorImages.h"
+#include "YgorMath.h"
+#include "YgorMisc.h"
+#include "YgorStats.h"
 
 
 //Computes a T1 map from spoiled-gradient echo images where TR >> T1 (where the steady-state 

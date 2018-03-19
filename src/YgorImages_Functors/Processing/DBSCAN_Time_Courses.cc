@@ -1,27 +1,33 @@
 
-#include <list>
-#include <functional>
-#include <limits>
-#include <map>
+#include <YgorClusterID.hpp>
+#include <YgorClusteringDBSCAN.hpp>
+#include <YgorClusteringDatum.hpp>
+#include <YgorClusteringHelpers.hpp>
+#include <boost/geometry/index/parameters.hpp>
+#include <boost/geometry/index/rtree.hpp>
+#include <array>
 #include <cmath>
-#include <random>
+#include <cstdint>
 #include <experimental/any>
-
-#include <pqxx/pqxx>         //PostgreSQL C++ interface.
-#include <jansson.h>         //For JSON handling.
-
-#include "YgorMisc.h"
-#include "YgorMath.h"
-#include "YgorImages.h"
-#include "YgorStats.h"       //Needed for Stats:: namespace.
-#include "YgorFilesDirs.h"   //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
-#include "YgorAlgorithms.h"  //Needed for For_Each_In_Parallel<..>(...)
-#include "YgorString.h"      //Needed for GetFirstRegex(...)
-#include "YgorPlot.h"
-#include "YgorClustering.hpp"
+#include <experimental/optional>
+#include <functional>
+#include <iostream>
+#include <list>
+#include <map>
+#include <memory>
+#include <random>
+#include <set>
+#include <string>
+#include <utility>
+#include <vector>
 
 #include "../ConvenienceRoutines.h"
 #include "DBSCAN_Time_Courses.h"
+#include "YgorFilesDirs.h"   //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
+#include "YgorImages.h"
+#include "YgorMath.h"
+#include "YgorMisc.h"
+#include "YgorStats.h"       //Needed for Stats:: namespace.
 
 
 bool DBSCANTimeCourses(planar_image_collection<float,double>::images_list_it_t first_img_it,

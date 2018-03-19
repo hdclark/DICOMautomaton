@@ -2,29 +2,32 @@
 
 #pragma once
 
-#include <vector>
-#include <string>
-#include <memory>
-#include <list>
-#include <set>
-#include <map>
-#include <tuple>
-#include <array>
-#include <unordered_map>
-#include <functional>
+#include <YgorMisc.h>
+#include <stddef.h>
 #include <algorithm>
-#include <initializer_list>
-
+#include <array>
+#include <cstdint>
 #include <experimental/optional>
+#include <functional>
+#include <initializer_list>
+#include <iterator>
+#include <list>
+#include <map>
+#include <memory>
+#include <set>
+#include <string>
+#include <tuple>
+#include <unordered_map>
+#include <utility>
+#include <vector>
 
-#include "YgorMath.h"
-#include "YgorImages.h"
-#include "YgorPlot.h"
 #include "YgorFilesDirs.h"
+#include "YgorImages.h"
+#include "YgorMath.h"
+#include "YgorPlot.h"
 
-
-class Image_Array;
 class Dose_Array;
+class Image_Array;
 
 //This is a wrapper around the YgorMath.h class "contour_of_points." It holds an instance of a contour_of_points, but also provides some meta information
 // which helps identify the origin, quality, and purpose of the data.

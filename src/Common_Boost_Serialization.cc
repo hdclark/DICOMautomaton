@@ -1,45 +1,41 @@
 //Common_Boost_Serialization.cc - A part of DICOMautomaton 2016. Written by hal clark.
 
-#include <iostream>
-#include <fstream>
-#include <string>    
-#include <locale>
-
-#include <boost/filesystem.hpp>
-#include <boost/filesystem/fstream.hpp>
-
-#include <boost/iostreams/filtering_stream.hpp>
-#include <boost/iostreams/filtering_streambuf.hpp>
-#include <boost/iostreams/copy.hpp>
-#include <boost/iostreams/filter/zlib.hpp>
-#include <boost/iostreams/filter/gzip.hpp>
-
-#include <boost/serialization/split_member.hpp>
-#include <boost/serialization/nvp.hpp>
-
-#include <boost/math/special_functions/nonfinite_num_facets.hpp>
-
-//For plain-text archives.
-#include <boost/archive/text_iarchive.hpp>
-#include <boost/archive/text_oarchive.hpp>
-
-//For XML archives.
-#include <boost/archive/xml_iarchive.hpp>
-#include <boost/archive/xml_oarchive.hpp>
-
+#include <boost/archive/basic_archive.hpp>
 //For binary archives.
 #include <boost/archive/binary_iarchive.hpp>
 #include <boost/archive/binary_oarchive.hpp>
+#include <boost/archive/polymorphic_iarchive.hpp>
+#include <boost/archive/polymorphic_oarchive.hpp>
+//For plain-text archives.
+#include <boost/archive/text_iarchive.hpp>
+#include <boost/archive/text_oarchive.hpp>
+//For XML archives.
+#include <boost/archive/xml_iarchive.hpp>
+#include <boost/archive/xml_oarchive.hpp>
+#include <boost/filesystem.hpp>
+#include <boost/iostreams/filter/gzip.hpp>
+#include <boost/iostreams/filter/zlib.hpp>
+#include <boost/iostreams/filtering_stream.hpp>
+#include <boost/iostreams/filtering_streambuf.hpp>
+#include <boost/math/special_functions/nonfinite_num_facets.hpp>
+#include <boost/serialization/nvp.hpp>
+#include <exception>
+#include <fstream>
+#include <string>    
 
-#include "Structs.h"
-#include "StructsIOBoostSerialization.h"
-
+#include "Common_Boost_Serialization.h"
 //#include "YgorMathChebyshevIOBoostSerialization.h"
 #include "KineticModel_1Compartment2Input_5Param_Chebyshev_Common.h"
 #include "KineticModel_1Compartment2Input_5Param_LinearInterp_Common.h"
 #include "KineticModel_1Compartment2Input_Reduced3Param_Chebyshev_Common.h"
+#include "Structs.h"
+#include "StructsIOBoostSerialization.h"
 
-#include "Common_Boost_Serialization.h"
+namespace boost {
+namespace iostreams {
+struct output;
+}  // namespace iostreams
+}  // namespace boost
 
 
 bool

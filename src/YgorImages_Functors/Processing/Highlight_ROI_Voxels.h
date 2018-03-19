@@ -2,18 +2,19 @@
 #pragma once
 
 
-#include <list>
-#include <set>
+#include <cmath>
+#include <experimental/any>
 #include <functional>
 #include <limits>
+#include <list>
 #include <map>
-#include <cmath>
+#include <set>
 
-#include <experimental/any>
-
-#include "YgorMisc.h"
-#include "YgorMath.h"
 #include "YgorImages.h"
+#include "YgorMath.h"
+#include "YgorMisc.h"
+
+template <class T> class contour_collection;
 
 
 typedef enum { // Controls how voxels are computed to be 'within' a contour.

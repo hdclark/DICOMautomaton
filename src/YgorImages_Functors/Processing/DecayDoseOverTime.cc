@@ -1,23 +1,17 @@
 
-#include <list>
-#include <functional>
-#include <limits>
-#include <map>
 #include <cmath>
-#include <algorithm>
+#include <exception>
+#include <functional>
+#include <list>
+#include <stdexcept>
 
-#include "YgorMisc.h"
-#include "YgorMath.h"
-#include "YgorImages.h"
-#include "YgorStats.h"       //Needed for Stats:: namespace.
-#include "YgorAlgorithms.h"  //Needed for For_Each_In_Parallel<..>(...)
-#include "YgorString.h"      //Needed for GetFirstRegex(...)
-#include "YgorPlot.h"
-
-#include "../ConvenienceRoutines.h"
 #include "../../BED_Conversion.h"
-
+#include "../ConvenienceRoutines.h"
 #include "DecayDoseOverTime.h"
+#include "YgorImages.h"
+#include "YgorMisc.h"
+
+template <class T> class contour_collection;
 
 bool DecayDoseOverTime(planar_image_collection<float,double>::images_list_it_t first_img_it,
                        std::list<planar_image_collection<float,double>::images_list_it_t> selected_img_its,

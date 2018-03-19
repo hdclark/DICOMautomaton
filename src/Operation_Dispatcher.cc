@@ -4,17 +4,20 @@
 // Operations can be anything, e.g., analyses, serialization, and visualization.
 //
 
-#include <string>    
-#include <set> 
-#include <map>
-#include <list>
+#include <YgorMisc.h>
+#include <boost/algorithm/string/predicate.hpp>
+#include <exception>
 #include <functional>
+#include <list>
+#include <map>
+#include <ostream>
+#include <stdexcept>
+#include <string>    
+#include <type_traits>
 #include <utility>
 
-#include <boost/algorithm/string.hpp> //For boost:iequals().
-
+#include "Operation_Dispatcher.h"
 #include "Structs.h"
-
 #include "Operations/AccumulateRowsColumns.h"
 #include "Operations/AnalyzeLightRadFieldCoincidence.h"
 #include "Operations/AnalyzePicketFence.h"
@@ -30,23 +33,24 @@
 #include "Operations/ContourBasedRayCastDoseAccumulate.h"
 #include "Operations/ContourBooleanOperations.h"
 #include "Operations/ContourSimilarity.h"
-#include "Operations/ContouringAides.h"
 #include "Operations/ContourViaThreshold.h"
 #include "Operations/ContourVote.h"
 #include "Operations/ContourWholeImages.h"
-#include "Operations/ConvertImageToDose.h"
+#include "Operations/ContouringAides.h"
 #include "Operations/ConvertDoseToImage.h"
+#include "Operations/ConvertImageToDose.h"
 #include "Operations/ConvertNaNsToAir.h"
 #include "Operations/ConvertNaNsToZeros.h"
 #include "Operations/CopyImages.h"
 #include "Operations/CropImageDoseToROIs.h"
 #include "Operations/CropImages.h"
-#include "Operations/DroverDebug.h"
 #include "Operations/DCEMRI_IAUC.h"
 #include "Operations/DCEMRI_Nonparametric_CE.h"
+#include "Operations/DICOMExportImagesAsDose.h"
 #include "Operations/DecayDoseOverTimeHalve.h"
 #include "Operations/DecayDoseOverTimeJones2014.h"
 #include "Operations/DecimatePixels.h"
+#include "Operations/DroverDebug.h"
 #include "Operations/DumpAllOrderedImageMetadataToFile.h"
 #include "Operations/DumpAnEncompassedPoint.h"
 #include "Operations/DumpFilesPartitionedByTime.h"
@@ -56,10 +60,9 @@
 #include "Operations/DumpROIContours.h"
 #include "Operations/DumpROIData.h"
 #include "Operations/DumpROIDoseInfo.h"
-#include "Operations/DumpROISurfaceMeshes.h"
 #include "Operations/DumpROISNR.h"
+#include "Operations/DumpROISurfaceMeshes.h"
 #include "Operations/DumpVoxelDoseInfo.h"
-#include "Operations/DICOMExportImagesAsDose.h"
 #include "Operations/EQD2Convert.h"
 #include "Operations/EvaluateDoseVolumeHistograms.h"
 #include "Operations/EvaluateDoseVolumeStats.h"
@@ -78,20 +81,20 @@
 #include "Operations/HighlightROIs.h"
 #include "Operations/ImageRoutineTests.h"
 #include "Operations/LogScale.h"
+#include "Operations/MaxMinPixels.h"
 #include "Operations/MeldDose.h"
 #include "Operations/ModifyImageMetadata.h"
-#include "Operations/MaxMinPixels.h"
 #include "Operations/PlotPerROITimeCourses.h"
 #include "Operations/PreFilterEnormousCTValues.h"
 #include "Operations/PruneEmptyImageDoseArrays.h"
 #include "Operations/PurgeContours.h"
 #include "Operations/RePlanReIrradiateDoseTrimming.h"
+#include "Operations/SFML_Viewer.h"
 #include "Operations/SeamContours.h"
 #include "Operations/SelectSlicesIntersectingROI.h"
-#include "Operations/SFML_Viewer.h"
 #include "Operations/SpatialBlur.h"
-#include "Operations/SpatialSharpen.h"
 #include "Operations/SpatialDerivative.h"
+#include "Operations/SpatialSharpen.h"
 #include "Operations/Subsegment_ComputeDose_VanLuijk.h"
 #include "Operations/SupersampleImageGrid.h"
 #include "Operations/SurfaceBasedRayCastDoseAccumulate.h"
@@ -99,8 +102,6 @@
 #include "Operations/UBC3TMRI_DCE_Differences.h"
 #include "Operations/UBC3TMRI_DCE_Experimental.h"
 #include "Operations/UBC3TMRI_IVIM_ADC.h"
-
-#include "Operation_Dispatcher.h"
 
 
 

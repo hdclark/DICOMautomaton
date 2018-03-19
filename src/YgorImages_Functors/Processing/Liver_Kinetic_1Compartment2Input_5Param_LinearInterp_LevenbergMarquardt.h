@@ -1,19 +1,20 @@
 //Liver_Kinetic_1Compartment2Input_5Param_LinearInterp_LevenbergMarquardt.h.
 #pragma once
 
-#include <list>
+#include <cmath>
+#include <experimental/any>
 #include <functional>
 #include <limits>
+#include <list>
 #include <map>
-#include <cmath>
-#include <tuple>
 #include <regex>
+#include <tuple>
 
-#include <experimental/any>
-
-#include "YgorMisc.h"
-#include "YgorMath.h"
 #include "YgorImages.h"
+#include "YgorMath.h"
+#include "YgorMisc.h"
+
+template <class T> class contour_collection;
 
 
 bool 

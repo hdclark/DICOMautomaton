@@ -1,22 +1,14 @@
 
-#include <list>
 #include <functional>
-#include <limits>
-#include <map>
-#include <cmath>
-#include <algorithm>
-
-#include "YgorMisc.h"
-#include "YgorMath.h"
-#include "YgorImages.h"
-#include "YgorStats.h"       //Needed for Stats:: namespace.
-#include "YgorAlgorithms.h"  //Needed for For_Each_In_Parallel<..>(...)
-#include "YgorString.h"      //Needed for GetFirstRegex(...)
-#include "YgorPlot.h"
+#include <list>
+#include <vector>
 
 #include "../ConvenienceRoutines.h"
-
 #include "Average_Pixel_Value.h"
+#include "YgorImages.h"
+#include "YgorStats.h"       //Needed for Stats:: namespace.
+
+template <class T> class contour_collection;
 
 
 bool CondenseAveragePixel(planar_image_collection<float,double>::images_list_it_t first_img_it,

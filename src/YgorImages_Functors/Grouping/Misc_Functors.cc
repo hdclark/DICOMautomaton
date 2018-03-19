@@ -1,14 +1,11 @@
 
-#include <list>
+#include <experimental/optional>
 #include <functional>
-#include <limits>
-#include <map>
-#include <cmath>
+#include <list>
 
-#include "YgorMisc.h"
-#include "YgorMath.h"
 #include "YgorImages.h"
-#include "YgorString.h"
+#include "YgorMath.h"
+#include "YgorMisc.h"
 
 //--------------------------------------------------------------------------------------------------------------
 //------------------------------------------- Image Purging Functors -------------------------------------------

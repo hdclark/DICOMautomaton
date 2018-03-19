@@ -1,23 +1,17 @@
 
-#include <list>
+#include <exception>
 #include <functional>
-#include <limits>
+#include <list>
 #include <map>
-#include <cmath>
-#include <algorithm>
 #include <string>
 
-#include "YgorMisc.h"
-#include "YgorMath.h"
-#include "YgorImages.h"
-#include "YgorStats.h"       //Needed for Stats:: namespace.
-#include "YgorAlgorithms.h"  //Needed for For_Each_In_Parallel<..>(...)
-#include "YgorString.h"      //Needed for GetFirstRegex(...)
-#include "YgorPlot.h"
-
 #include "../ConvenienceRoutines.h"
-
 #include "In_Image_Plane_Bicubic_Supersample.h"
+#include "YgorImages.h"
+#include "YgorMath.h"
+#include "YgorMisc.h"
+#include "YgorStats.h"       //Needed for Stats:: namespace.
+#include "YgorString.h"      //Needed for GetFirstRegex(...)
 
 bool InImagePlaneBicubicSupersample(
                     planar_image_collection<float,double>::images_list_it_t first_img_it,

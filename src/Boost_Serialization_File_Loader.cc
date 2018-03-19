@@ -3,28 +3,13 @@
 // This program loads data from files which have been serialized in Protobuf format.
 //
 
-#include <iostream>
-#include <fstream>
-#include <string>    
-#include <map>
-#include <list>
-
-#include <cstdlib>            //Needed for exit() calls.
-#include <utility>            //Needed for std::pair.
-#include <algorithm>
-#include <experimental/optional>
-
-#include <boost/algorithm/string.hpp> //For boost:iequals().
-
 #include <boost/filesystem.hpp>
-#include <boost/filesystem/fstream.hpp>
+#include <list>
+#include <map>
+#include <string>    
 
-#include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
-#include "YgorImages.h"
-#include "YgorImagesIOBoostSerialization.h"
-
-#include "Structs.h"
 #include "Common_Boost_Serialization.h"
+#include "Structs.h"
 
 
 bool Load_From_Boost_Serialization_Files( Drover &DICOM_data,

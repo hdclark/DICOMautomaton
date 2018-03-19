@@ -1,19 +1,18 @@
 
-#include <list>
-#include <functional>
-#include <limits>
-#include <map>
+#include <algorithm>
 #include <cmath>
-
-#include "YgorMisc.h"
-#include "YgorMath.h"
-#include "YgorImages.h"
-#include "YgorStats.h"       //Needed for Stats:: namespace.
-#include "YgorAlgorithms.h"  //Needed for For_Each_In_Parallel<..>(...)
-#include "YgorString.h"      //Needed for GetFirstRegex(...)
-#include "YgorPlot.h"
+#include <experimental/any>
+#include <experimental/optional>
+#include <functional>
+#include <list>
+#include <map>
 
 #include "../ConvenienceRoutines.h"
+#include "YgorImages.h"
+#include "YgorMath.h"
+#include "YgorMisc.h"
+#include "YgorStats.h"       //Needed for Stats:: namespace.
+#include "YgorString.h"      //Needed for GetFirstRegex(...)
 
 
 bool TimeCourseSlopeMap(planar_image_collection<float,double>::images_list_it_t first_img_it,

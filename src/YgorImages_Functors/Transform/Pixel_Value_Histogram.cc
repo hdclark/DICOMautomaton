@@ -1,20 +1,20 @@
 
-#include <list>
+#include <cstdint>
+#include <experimental/any>
 #include <functional>
-#include <limits>
+#include <list>
 #include <map>
-#include <cmath>
-
-#include "YgorMisc.h"
-#include "YgorMath.h"
-#include "YgorImages.h"
-#include "YgorStats.h"       //Needed for Stats:: namespace.
-#include "YgorFilesDirs.h"   //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
-#include "YgorAlgorithms.h"  //Needed for For_Each_In_Parallel<..>(...)
-#include "YgorString.h"      //Needed for GetFirstRegex(...)
-#include "YgorPlot.h"
+#include <string>
+#include <utility>
+#include <vector>
 
 #include "../ConvenienceRoutines.h"
+#include "YgorFilesDirs.h"   //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
+#include "YgorImages.h"
+#include "YgorMath.h"
+#include "YgorMisc.h"
+#include "YgorPlot.h"
+#include "YgorString.h"      //Needed for GetFirstRegex(...)
 
 static std::map<uint32_t, std::vector<double>> pixel_vals;
 

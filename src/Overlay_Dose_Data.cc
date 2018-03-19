@@ -6,37 +6,33 @@
 //
 // Written by hal clark.
 
-#include <iostream>
-#include <sstream>
-#include <fstream>
-#include <string>    
-#include <vector>
-#include <getopt.h>         //Needed for 'getopts' argument parsing.
-#include <cstdlib>          //Needed for exit() calls.
-#include <cstdint>          //Needed for intmax_t
-#include <utility>          //Needed for std::pair.
-#include <cmath>
-#include <functional>
-
-#include <GL/freeglut.h>    // Header File For The GLUT Library.
+#include <GL/freeglut_std.h>
 #include <GL/gl.h>          // Header File For The OpenGL32 Library.
-#include <GL/glu.h>         // Header File For The GLu32 Library.
+#include <YgorFilesDirs.h>
+#include <YgorImages.h>
+#include <getopt.h>         //Needed for 'getopts' argument parsing.
 #include <unistd.h>         // Needed to sleep.
-#include <cstdlib>
-#include <cstdio>
-#include <climits>
+#include <algorithm>
+#include <cmath>
+#include <cstdint>          //Needed for intmax_t
+#include <cstdlib>          //Needed for exit() calls.
+#include <iostream>
+#include <iterator>
+#include <list>
+#include <map>
+#include <memory>
 #include <random>
+#include <string>    
+#include <tuple>
+#include <type_traits>
+#include <vector>
 
-
-#include "YgorMisc.h"        //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
-#include "YgorMath.h"        //Needed for vec3 class.
-#include "YgorString.h"
-#include "YgorContainers.h"  //Needed for bimap class.
-
-#include "Explicator.h"    //Needed for Explicator class.
-
-#include "Structs.h"
 #include "Imebra_Shim.h"   //Wrapper for Imebra library.
+#include "Structs.h"
+#include "YgorContainers.h"  //Needed for bimap class.
+#include "YgorMath.h"        //Needed for vec3 class.
+#include "YgorMisc.h"        //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorString.h"
 
 //GLUT does NOT have compatability with scroll wheels. This is here to cope with it.
 #ifndef GLUT_WHEEL_UP

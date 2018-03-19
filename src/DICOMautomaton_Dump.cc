@@ -1,6 +1,8 @@
 //DICOMautomaton_Dump.cc -- A simple DICOM tag value extractor.
 // This little program prints a tag's value formatted as a string.
 
+#include <YgorMisc.h>
+#include <exception>
 #include <iostream>
 #include <string>
 

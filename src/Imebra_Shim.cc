@@ -11,32 +11,41 @@
 //NOTE: that we do not properly handle unicode. Everything is stuffed into a std::string.
 //
 
-#include <iostream>
-#include <vector>
-#include <deque>
-#include <string>
-#include <utility>        //Needed for std::pair.
-#include <memory>         //Needed for std::unique_ptr.
+#include <YgorImages.h>
 #include <algorithm>      //Needed for std::sort.
-#include <list>
-#include <tuple>
-#include <map>
-#include <random>
+#include <array>
+#include <chrono>
+#include <cmath>
+#include <cstdint>
+#include <deque>
+#include <exception>
 #include <experimental/optional>
+#include <functional>
+#include <iostream>
+#include <limits>
+#include <list>
+#include <map>
+#include <memory>         //Needed for std::unique_ptr.
+#include <random>
+#include <stdexcept>
+#include <string>
+#include <tuple>
+#include <utility>        //Needed for std::pair.
+#include <vector>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
 #pragma GCC diagnostic ignored "-Wunused-but-set-parameter"
 #include "imebra.h"
+
 #pragma GCC diagnostic pop
 
-#include "YgorMisc.h"       //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
-#include "YgorMath.h"       //Needed for 'vec3' class.
-#include "YgorString.h"     //Needed for Canonicalize_String2().
-#include "YgorContainers.h" //Needed for 'bimap' class.
-
-#include "Structs.h"
 #include "Imebra_Shim.h"
+#include "Structs.h"
+#include "YgorContainers.h" //Needed for 'bimap' class.
+#include "YgorMath.h"       //Needed for 'vec3' class.
+#include "YgorMisc.h"       //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorString.h"     //Needed for Canonicalize_String2().
 
 //------------------ General ----------------------
 //This is used to grab the contents of a single DICOM tag. It can be used for whatever. Some routines

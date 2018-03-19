@@ -1,16 +1,17 @@
 
-#include <list>
+#include <YgorStats.h>
+#include <array>
+#include <cmath>
+#include <experimental/any>
+#include <experimental/optional>
 #include <functional>
 #include <limits>
-#include <map>
-#include <cmath>
-
-#include "YgorMisc.h"
-#include "YgorMath.h"
-#include "YgorImages.h"
-#include "YgorString.h"
+#include <list>
+#include <stdexcept>
 
 #include "../ConvenienceRoutines.h"
+#include "YgorImages.h"
+#include "YgorMath.h"
 
 bool DCEMRIAUCMap(planar_image_collection<float,double>::images_list_it_t first_img_it,
                   std::list<planar_image_collection<float,double>::images_list_it_t> selected_img_its,

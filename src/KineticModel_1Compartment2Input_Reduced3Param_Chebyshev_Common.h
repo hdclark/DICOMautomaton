@@ -2,18 +2,20 @@
 
 #pragma once
 
+#include <boost/serialization/nvp.hpp>
+#include <boost/serialization/shared_ptr.hpp>
+#include <boost/serialization/version.hpp>
+#include <stddef.h>
 #include <limits>
 #include <memory>
 
 #include "YgorMath.h"
 #include "YgorMathChebyshev.h"
-
-#include "YgorMathIOBoostSerialization.h"
 #include "YgorMathChebyshevIOBoostSerialization.h"
+#include "YgorMathIOBoostSerialization.h"
 
-#include <boost/serialization/nvp.hpp>
-#include <boost/serialization/shared_ptr.hpp>
-#include <boost/serialization/version.hpp>
+template <class T> class cheby_approx;
+template <class T> class samples_1D;
 
 
 // Shuttle struct for passing around the state needed to perform a pharmacokinetic modeling fit.

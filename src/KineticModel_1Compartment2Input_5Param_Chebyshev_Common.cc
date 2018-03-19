@@ -1,17 +1,11 @@
 //KineticModel_1Compartment2Input_5Param_Chebyshev_Common.cc.
 
-#include <list>
-#include <functional>
 #include <limits>
-#include <cmath>
-
-#include "YgorMisc.h"
-#include "YgorMath.h"
-#include "YgorMathChebyshev.h"
-#include "YgorMathChebyshevFunctions.h"
-#include "YgorStats.h"       //Needed for Stats:: namespace.
+#include <tuple>
 
 #include "KineticModel_1Compartment2Input_5Param_Chebyshev_Common.h"
+#include "YgorMathChebyshev.h"
+#include "YgorMathChebyshevFunctions.h"
 
 void
 Evaluate_Model( const KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters &state,

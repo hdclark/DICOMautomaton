@@ -1,13 +1,14 @@
 //Contour_Collection_Estimates.cc - A part of DICOMautomaton 2017. Written by hal clark.
 
-#include <initializer_list>
+#include <cmath>
+#include <exception>
 #include <limits>
 #include <list>
-
-#include "YgorMisc.h"
-#include "YgorMath.h"
+#include <map>
+#include <string>
 
 #include "Contour_Collection_Estimates.h"
+#include "YgorMath.h"
 
 
 double Estimate_Contour_Separation_Multi(

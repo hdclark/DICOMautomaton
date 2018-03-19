@@ -1,18 +1,18 @@
 //DICOMExportImagesAsDose.cc - A part of DICOMautomaton 2017. Written by hal clark.
 
-#include <string>    
-#include <map>
+#include <exception>
 #include <experimental/optional>
+#include <list>
+#include <map>
+#include <memory>
+#include <ostream>
 #include <regex>
-
-#include <boost/filesystem.hpp>
-#include <boost/filesystem/fstream.hpp>
-
-#include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
-
-#include "../Structs.h"
+#include <stdexcept>
+#include <string>    
 
 #include "../Imebra_Shim.h"
+#include "../Structs.h"
+#include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 
 
 std::list<OperationArgDoc> OpArgDocDICOMExportImagesAsDose(void){

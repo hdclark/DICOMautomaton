@@ -8,6 +8,8 @@
 
 #include "Structs.h"
 
+class Dose_Array;
+
 std::list<std::shared_ptr<Dose_Array>>  Meld_Dose_Data(const std::list<std::shared_ptr<Dose_Array>> &dalist);
 
 //Resamples dose data to ensure no overflow occurs. Is a lossy operation.

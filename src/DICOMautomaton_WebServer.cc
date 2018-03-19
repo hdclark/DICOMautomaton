@@ -3,82 +3,63 @@
 // This program provides a standard entry-point into some DICOMautomaton analysis routines.
 //
 
-#include <iostream>
-#include <sstream>
-#include <fstream>
-#include <iomanip>
-#include <string>    
-#include <vector>
-#include <set> 
-#include <map>
-#include <unordered_map>
-#include <list>
-#include <functional>
-#include <thread>
-#include <array>
-#include <mutex>
-//#include <future>             //Needed for std::async(...)
-#include <limits>
-#include <cmath>
-//#include <cfenv>              //Needed for std::feclearexcept(FE_ALL_EXCEPT).
-#include <chrono>
-
-#include <getopt.h>           //Needed for 'getopts' argument parsing.
-#include <cstdlib>            //Needed for exit() calls.
-#include <cstdio>
-#include <utility>            //Needed for std::pair.
-#include <algorithm>
-#include <experimental/optional>
-#include <experimental/filesystem>
-
-#include <boost/algorithm/string.hpp> //For boost:iequals().
-
-#include <boost/filesystem.hpp>
-#include <boost/filesystem/fstream.hpp>
-
+#include <Wt/Http/Request.h>
+#include <Wt/WAnchor.h>
 #include <Wt/WApplication.h>
 #include <Wt/WBreak.h>
-#include <Wt/WContainerWidget.h>
 #include <Wt/WCheckBox.h>
-#include <Wt/WLineEdit.h>
-#include <Wt/WPushButton.h>
-#include <Wt/WText.h>
-#include <Wt/WFileUpload.h>
-#include <Wt/WProgressBar.h>
-#include <Wt/WGroupBox.h>
-#include <Wt/WSelectionBox.h>
+#include <Wt/WContainerWidget.h>
 #include <Wt/WFileResource.h>
-#include <Wt/WAnimation.h>
-#include <Wt/WFlags.h>
+#include <Wt/WFileUpload.h>
+#include <Wt/WGlobal.h>
+#include <Wt/WGroupBox.h>
+#include <Wt/WJavaScript.h>
+#include <Wt/WLength.h>
+#include <Wt/WLineEdit.h>
+#include <Wt/WLink.h>
+#include <Wt/WProgressBar.h>
+#include <Wt/WPushButton.h>
+#include <Wt/WSelectionBox.h>
+#include <Wt/WSignal.h>
+#include <Wt/WString.h>
 #include <Wt/WTable.h>
 #include <Wt/WTableCell.h>
-
-#include "Structs.h"
-#include "Imebra_Shim.h"      //Wrapper for Imebra library. Black-boxed to speed up compilation.
-#include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
-#include "YgorMath.h"         //Needed for vec3 class.
-#include "YgorMathPlottingGnuplot.h" //Needed for YgorMathPlottingGnuplot::*.
-#include "YgorMathChebyshev.h" //Needed for cheby_approx class.
-#include "YgorStats.h"        //Needed for Stats:: namespace.
-#include "YgorFilesDirs.h"    //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
-#include "YgorContainers.h"   //Needed for bimap class.
-#include "YgorPerformance.h"  //Needed for YgorPerformance_dt_from_last().
-#include "YgorAlgorithms.h"   //Needed for For_Each_In_Parallel<..>(...)
-#include "YgorArguments.h"    //Needed for ArgumentHandler class.
-#include "YgorString.h"       //Needed for GetFirstRegex(...)
-#include "YgorImages.h"
-#include "YgorImagesIO.h"
-#include "YgorImagesPlotting.h"
-
-#include "Explicator.h"       //Needed for Explicator class.
-
-#include "YgorDICOMTools.h"   //Needed for Is_File_A_DICOM_File(...);
+#include <Wt/WText.h>
+#include <Wt/WWidget.h>
+#include <boost/filesystem.hpp>
+#include <algorithm>
+//#include <cfenv>              //Needed for std::feclearexcept(FE_ALL_EXCEPT).
+#include <chrono>
+#include <cstdint>
+#include <ctime>
+#include <exception>
+#include <fstream>
+#include <functional>
+#include <iomanip>
+#include <list>
+#include <map>
+#include <memory>
+#include <regex>
+#include <set> 
+#include <stdexcept>
+#include <string>    
+#include <type_traits>
+#include <utility>            //Needed for std::pair.
+#include <vector>
 
 #include "Boost_Serialization_File_Loader.h"
 #include "DICOM_File_Loader.h"
 #include "FITS_File_Loader.h"
-
 #include "Operation_Dispatcher.h"
+#include "Structs.h"
+#include "YgorFilesDirs.h"    //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
+#include "YgorMath.h"         //Needed for vec3 class.
+#include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorString.h"       //Needed for GetFirstRegex(...)
+
+namespace Wt {
+class WEnvironment;
+}  // namespace Wt
 
 /*
 class fileBackedStreamResource : public Wt::WStreamResource {

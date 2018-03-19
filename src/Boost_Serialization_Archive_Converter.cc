@@ -3,22 +3,19 @@
 // This program can be used to convert Boost.Serialization archives between a variety of formats.
 //
 
-#include <iostream>
-#include <fstream>
-#include <string>    
-#include <map>
-
-#include <getopt.h>           //Needed for 'getopts' argument parsing.
-
-#include <boost/algorithm/string.hpp> //For boost:iequals().
-
+#include <boost/algorithm/string/predicate.hpp>
 #include <boost/filesystem.hpp>
-#include <boost/filesystem/fstream.hpp>
-
+#include <fstream>
+#include <functional>
+#include <list>
+#include <map>
+#include <stdexcept>
+#include <string>    
+#include <utility>
 
 #include "Structs.h"
-#include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorArguments.h"    //Needed for ArgumentHandler class.
+#include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 //#include "YgorMath.h"         //Needed for vec3 class.
 //#include "YgorImagesIO.h"
 

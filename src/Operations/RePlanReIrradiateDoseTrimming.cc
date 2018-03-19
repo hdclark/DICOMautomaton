@@ -1,21 +1,14 @@
 //RePlanReIrradiateDoseTrimming.cc - A part of DICOMautomaton 2017. Written by hal clark.
 
-#include <string>    
+#include <algorithm>
+#include <list>
 #include <map>
-#include <experimental/optional>
-
-#include <boost/filesystem.hpp>
-#include <boost/filesystem/fstream.hpp>
-
-#include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include <string>    
 
 #include "../Structs.h"
-
-#include "../Imebra_Shim.h"
-
 #include "ConvertDoseToImage.h"
-#include "HighlightROIs.h"
 #include "DICOMExportImagesAsDose.h"
+#include "HighlightROIs.h"
 
 
 std::list<OperationArgDoc> OpArgDocRePlanReIrradiateDoseTrimming(void){

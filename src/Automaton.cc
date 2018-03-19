@@ -8,41 +8,33 @@
 // happen *after* tweaking has slowed a bit.
 //
 
-#include <iostream>
-#include <sstream>
-#include <fstream>
-#include <iomanip>
-#include <string>    
-#include <vector>
-#include <set> 
-#include <map>
-#include <list>
-#include <functional>
-#include <thread>
-#include <array>
-#include <mutex>
-#include <future>            //Needed for std::async(...)
-
 #include <getopt.h>          //Needed for 'getopts' argument parsing.
+#include <algorithm>
+#include <array>
 #include <cstdlib>           //Needed for exit() calls.
-#include <utility>           //Needed for std::pair.
-
+#include <exception>
+#include <iomanip>
+#include <iostream>
+#include <list>
+#include <map>
+#include <memory>
 #include <pqxx/pqxx>         //PostgreSQL C++ interface.
+#include <set> 
+#include <string>    
+#include <tuple>
+#include <utility>           //Needed for std::pair.
+#include <vector>
 
-#include "Structs.h"
-#include "Imebra_Shim.h"     //Wrapper for Imebra library. Black-boxed to speed up compilation.
-#include "YgorMisc.h"        //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
-#include "YgorMath.h"        //Needed for vec3 class.
-#include "YgorFilesDirs.h"   //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
-#include "YgorContainers.h"  //Needed for bimap class.
-#include "YgorPerformance.h" //Needed for YgorPerformance_dt_from_last().
-#include "YgorAlgorithms.h"  //Needed for For_Each_In_Parallel<..>(...)
-#include "YgorString.h"      //Needed for GetFirstRegex(...)
-#include "YgorImages.h"
-#include "YgorImagesPlotting.h"
 #include "Explicator.h"      //Needed for Explicator class.
-
+#include "Imebra_Shim.h"     //Wrapper for Imebra library. Black-boxed to speed up compilation.
+#include "Structs.h"
+#include "YgorContainers.h"  //Needed for bimap class.
 #include "YgorDICOMTools.h"  //Needed for Is_File_A_DICOM_File(...);
+#include "YgorFilesDirs.h"   //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
+#include "YgorImagesPlotting.h"
+#include "YgorMath.h"        //Needed for vec3 class.
+#include "YgorMisc.h"        //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorString.h"      //Needed for GetFirstRegex(...)
 
 
 //Forward declarations.

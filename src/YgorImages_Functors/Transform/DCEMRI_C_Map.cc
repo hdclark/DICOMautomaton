@@ -1,16 +1,17 @@
 
-#include <list>
+#include <YgorStats.h>
+#include <cmath>
+#include <experimental/any>
+#include <experimental/optional>
 #include <functional>
 #include <limits>
-#include <map>
-#include <cmath>
-
-#include "YgorMisc.h"
-#include "YgorMath.h"
-#include "YgorImages.h"
-#include "YgorString.h"
+#include <list>
+#include <memory>
 
 #include "../ConvenienceRoutines.h"
+#include "YgorImages.h"
+#include "YgorMath.h"
+#include "YgorMisc.h"
 
 
 //Computes a DCE C(t) contrast enhancement map using S0 and T1 maps. Gets called once per frame, which 

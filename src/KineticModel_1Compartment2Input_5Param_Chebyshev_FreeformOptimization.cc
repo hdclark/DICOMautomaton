@@ -3,23 +3,16 @@
 // than L2 can be used. Note that if using the L2 norm it seems most useful to use the Levenberg-Marquardt algorithm
 // instead.
 
-#include <list>
-#include <functional>
-#include <limits>
-#include <cmath>
-
 #include <nlopt.h>
-
-#include <boost/date_time/posix_time/posix_time.hpp>
-
-#include "YgorMisc.h"
-#include "YgorMath.h"
-#include "YgorMathChebyshev.h"
-#include "YgorMathChebyshevFunctions.h"
-#include "YgorStats.h"       //Needed for Stats:: namespace.
+#include <array>
+#include <cmath>
+#include <limits>
+#include <memory>
 
 #include "KineticModel_1Compartment2Input_5Param_Chebyshev_Common.h"
 #include "KineticModel_1Compartment2Input_5Param_Chebyshev_FreeformOptimization.h"
+#include "YgorMath.h"
+#include "YgorMisc.h"
 
 
 static
