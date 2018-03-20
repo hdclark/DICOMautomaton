@@ -350,13 +350,66 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
             leaf_lines.emplace_back( R_peak, R_peak + short_unit );
         }
 
+        //Create lines for leaf pairs computed from knowledge about each machine's MLC geometry.
+        {
+            auto BeamLimitingDeviceAngle = animg->GetMetadataValueAs<std::string>("BeamLimitingDeviceAngle");
+            auto StationName = animg->GetMetadataValueAs<std::string>("StationName");
+
+            //if(!BeamLimitingDeviceAngle){
+            //    throw std::domain_error("Unable to perform RTIMAGE auto-crop: lacking geometry data.");
+            //}
+
+            const auto regex_FVAREA2TB = std::regex(".*FVAREA2TB.*", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+            const auto regex_FVAREA4TB = std::regex(".*FVAREA4TB.*", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+
+            std::vector<double> mlc_offsets; // Closest point along leaf-pair line from CAX.
+
+            // High-definition MLCs.
+            if(false){
+            }else if( std::regex_match(StationName.value(), regex_FVAREA2TB)
+                  ||  std::regex_match(StationName.value(), regex_FVAREA4TB) ){
+                mlc_offsets.emplace_back(0.0);
+                for(long int x = 5; x <= 100; x += 5){
+                    mlc_offsets.emplace_back(x);
+                    mlc_offsets.emplace_back(-x);
+                }
+                for(long int x = 110; x <= 200; x += 10){
+                    mlc_offsets.emplace_back(x);
+                    mlc_offsets.emplace_back(-x);
+                }
+
+            //"Standard" MLCs.
+            }else{
+                FUNCWARN("Assuming 'standard' definition MLC");
+                mlc_offsets.emplace_back(0.0);
+                for(long int x = 10; x <= 200; x += 10){
+                    mlc_offsets.emplace_back(x);
+                    mlc_offsets.emplace_back(-x);
+                }
+            }
+
+            // Extract the long and short units from this angle...  TODO
+            auto rot_ang = std::stod( BeamLimitingDeviceAngle.value() ) * M_PI/180.0; // in radians.
+
+            leaf_lines.clear();
+            for(const auto &offset : mlc_offsets){
+                const auto origin = vec3<double>(0.0, 0.0, 0.0);
+                const auto pos = origin + (long_unit * offset);
+
+                leaf_lines.emplace_back( pos, pos + short_unit );
+            }
+        }
+
+
         //Add thin contours for visually inspecting the location of the peaks.
         DICOM_data.contour_data->ccs.emplace_back();
         for(const auto &leaf_line : leaf_lines){
-            Inject_Thin_Line_Contour(*animg,
-                                     leaf_line,
-                                     DICOM_data.contour_data->ccs.back(),
-                                     animg->metadata);
+            try{ // Will throw if grossly out-of-bounds, but it's a pain to pre-filter -- ignore exceptions for now... TODO
+                Inject_Thin_Line_Contour(*animg,
+                                         leaf_line,
+                                         DICOM_data.contour_data->ccs.back(),
+                                         animg->metadata);
+            }catch(const std::exception &){};
         }
 
         std::vector<double> peak_separations;
