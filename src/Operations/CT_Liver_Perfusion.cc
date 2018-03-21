@@ -18,7 +18,7 @@
 #include "../YgorImages_Functors/Processing/CT_Perfusion_Clip_Search.h"
 #include "../YgorImages_Functors/Processing/CT_Reasonable_HU_Window.h"
 #include "../YgorImages_Functors/Processing/DBSCAN_Time_Courses.h"
-#include "../YgorImages_Functors/Processing/Highlight_ROI_Voxels.h"
+#include "../YgorImages_Functors/Processing/Partitioned_Image_Voxel_Visitor_Mutator.h"
 #include "../YgorImages_Functors/Processing/Logarithmic_Pixel_Scale.h"
 #include "../YgorImages_Functors/Processing/Max_Pixel_Value.h"
 #include "../YgorImages_Functors/Processing/Min_Pixel_Value.h"
@@ -173,9 +173,15 @@ Drover CT_Liver_Perfusion(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::m
             DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( *img_arr ) );
             roi_highlighted_img_arrays.emplace_back( DICOM_data.image_data.back() );
  
-            HighlightROIVoxelsUserData ud;
+            PartitionedImageVoxelVisitorMutatorUserData ud;
+            ud.f_bounded = [&](long int /*row*/, long int /*col*/, long int /*channel*/, float &voxel_val) {
+                    voxel_val = 2.0;
+            };
+            ud.f_unbounded = [&](long int /*row*/, long int /*col*/, long int /*channel*/, float &voxel_val) {
+                    voxel_val = 1.0;
+            };
             if(!roi_highlighted_img_arrays.back()->imagecoll.Process_Images_Parallel( GroupIndividualImages,
-                                                                             HighlightROIVoxels,
+                                                                             PartitionedImageVoxelVisitorMutator,
                                                                              {}, cc_all,
                                                                              &ud )){
                 FUNCERR("Unable to highlight ROIs");

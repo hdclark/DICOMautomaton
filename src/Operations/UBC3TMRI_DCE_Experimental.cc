@@ -14,7 +14,7 @@
 #include "../Structs.h"
 #include "../YgorImages_Functors/Grouping/Misc_Functors.h"
 #include "../YgorImages_Functors/Processing/DCEMRI_AUC_Map.h"
-#include "../YgorImages_Functors/Processing/Highlight_ROI_Voxels.h"
+#include "../YgorImages_Functors/Processing/Partitioned_Image_Voxel_Visitor_Mutator.h"
 #include "../YgorImages_Functors/Processing/Kitchen_Sink_Analysis.h"
 #include "../YgorImages_Functors/Transform/DCEMRI_C_Map.h"
 #include "../YgorImages_Functors/Transform/DCEMRI_S0_Map_v2.h"
@@ -218,9 +218,15 @@ Drover UBC3TMRI_DCE_Experimental(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
         DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( *img_arr_copy_long_temporally_avgd ) );
         std::shared_ptr<Image_Array> img_arr_highlighted_rois( DICOM_data.image_data.back() );
 
-        HighlightROIVoxelsUserData ud;
+        PartitionedImageVoxelVisitorMutatorUserData ud;
+            ud.f_bounded = [&](long int /*row*/, long int /*col*/, long int /*channel*/, float &voxel_val) {
+                    voxel_val = 2.0;
+            };
+            ud.f_unbounded = [&](long int /*row*/, long int /*col*/, long int /*channel*/, float &voxel_val) {
+                    voxel_val = 1.0;
+            };
         if(!img_arr_highlighted_rois->imagecoll.Process_Images( GroupIndividualImages, 
-                                                                HighlightROIVoxels, {},
+                                                                PartitionedImageVoxelVisitorMutator, {},
                                                                 { cc_all },
                                                                 &ud )){
                                                                 //{ cc_r_parotid_int, cc_l_parotid_int, cc_r_masseter_int, cc_pharynx_int } )){

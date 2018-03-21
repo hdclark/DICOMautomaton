@@ -13,7 +13,7 @@
 
 #include "../Structs.h"
 #include "../YgorImages_Functors/Grouping/Misc_Functors.h"
-#include "../YgorImages_Functors/Processing/Highlight_ROI_Voxels.h"
+#include "../YgorImages_Functors/Processing/Partitioned_Image_Voxel_Visitor_Mutator.h"
 #include "HighlightROIs.h"
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
@@ -211,36 +211,59 @@ Drover HighlightROIs(Drover DICOM_data,
         if(!DICOM_data.image_data.empty()) iap_it = std::prev(DICOM_data.image_data.end());
     }
     while(iap_it != DICOM_data.image_data.end()){
-        HighlightROIVoxelsUserData ud;
-        ud.overwrite_interior = ShouldOverwriteInterior;
-        ud.overwrite_exterior = ShouldOverwriteExterior;
-        ud.outgoing_interior_val = InteriorVal;
-        ud.outgoing_exterior_val = ExteriorVal;
-        ud.channel = Channel;
+        PartitionedImageVoxelVisitorMutatorUserData ud;
+
+        ud.mutation_opts.editstyle = Mutate_Voxels_Opts::EditStyle::InPlace;
+        ud.mutation_opts.aggregate = Mutate_Voxels_Opts::Aggregate::First;
+        ud.mutation_opts.adjacency = Mutate_Voxels_Opts::Adjacency::SingleVoxel;
+        ud.mutation_opts.maskmod   = Mutate_Voxels_Opts::MaskMod::Noop;
+        ud.description = "Highlighted ROIs";
 
         if(false){
         }else if( std::regex_match(ContourOverlapStr, regex_ignore) ){
-            ud.overlap = ContourOverlapMethod::ignore;
+            ud.mutation_opts.contouroverlap = Mutate_Voxels_Opts::ContourOverlap::Ignore;
         }else if( std::regex_match(ContourOverlapStr, regex_honopps) ){
-            ud.overlap = ContourOverlapMethod::opposite_orientations_cancel;
+            ud.mutation_opts.contouroverlap = Mutate_Voxels_Opts::ContourOverlap::HonourOppositeOrientations;
         }else if( std::regex_match(ContourOverlapStr, regex_cancel) ){
-            ud.overlap = ContourOverlapMethod::overlapping_contours_cancel;
+            ud.mutation_opts.contouroverlap = Mutate_Voxels_Opts::ContourOverlap::ImplicitOrientations;
         }else{
             throw std::invalid_argument("ContourOverlap argument '"_s + ContourOverlapStr + "' is not valid");
         }
         if(false){
         }else if( std::regex_match(InclusivityStr, regex_centre) ){
-            ud.inclusivity = HighlightInclusionMethod::centre;
+            ud.mutation_opts.inclusivity = Mutate_Voxels_Opts::Inclusivity::Centre;
         }else if( std::regex_match(InclusivityStr, regex_pci) ){
-            ud.inclusivity = HighlightInclusionMethod::planar_corners_inclusive;
+            ud.mutation_opts.inclusivity = Mutate_Voxels_Opts::Inclusivity::Inclusive;
         }else if( std::regex_match(InclusivityStr, regex_pce) ){
-            ud.inclusivity = HighlightInclusionMethod::planar_corners_exclusive;
+            ud.mutation_opts.inclusivity = Mutate_Voxels_Opts::Inclusivity::Exclusive;
         }else{
             throw std::invalid_argument("Inclusivity argument '"_s + InclusivityStr + "' is not valid");
         }
 
+        std::function<void(long int, long int, long int, float &)> f_noop;
+        if(ShouldOverwriteInterior){
+            ud.f_bounded = [&](long int /*row*/, long int /*col*/, long int chan, float &voxel_val) {
+                if( (Channel < 0) || (Channel == chan) ){
+                    voxel_val = InteriorVal;
+                }
+            };
+        }else{
+            ud.f_bounded = f_noop;
+        }
+        if(ShouldOverwriteExterior){
+            ud.f_unbounded = [&](long int /*row*/, long int /*col*/, long int chan, float &voxel_val) {
+                if( (Channel < 0) || (Channel == chan) ){
+                    voxel_val = ExteriorVal;
+                }
+            };
+        }else{
+            ud.f_unbounded = f_noop;
+        }
+        ud.f_visitor = f_noop;
+
+
         if(!(*iap_it)->imagecoll.Process_Images_Parallel( GroupIndividualImages,
-                                                          HighlightROIVoxels,
+                                                          PartitionedImageVoxelVisitorMutator,
                                                           {}, cc_ROIs, &ud )){
             throw std::runtime_error("Unable to highlight voxels with the specified ROI(s).");
         }

@@ -13,7 +13,7 @@
 #include "../Structs.h"
 #include "../YgorImages_Functors/Grouping/Misc_Functors.h"
 #include "../YgorImages_Functors/Processing/DCEMRI_AUC_Map.h"
-#include "../YgorImages_Functors/Processing/Highlight_ROI_Voxels.h"
+#include "../YgorImages_Functors/Processing/Partitioned_Image_Voxel_Visitor_Mutator.h"
 #include "../YgorImages_Functors/Processing/Kitchen_Sink_Analysis.h"
 #include "../YgorImages_Functors/Transform/DCEMRI_Signal_Difference_C.h"
 #include "UBC3TMRI_DCE.h"
@@ -79,9 +79,15 @@ Drover UBC3TMRI_DCE(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std
             DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( *img_arr ) );
             roi_highlighted_img_arrays.emplace_back( DICOM_data.image_data.back() );
 
-            HighlightROIVoxelsUserData ud;
+            PartitionedImageVoxelVisitorMutatorUserData ud;
+            ud.f_bounded = [&](long int /*row*/, long int /*col*/, long int /*channel*/, float &voxel_val) {
+                    voxel_val = 2.0;
+            };
+            ud.f_unbounded = [&](long int /*row*/, long int /*col*/, long int /*channel*/, float &voxel_val) {
+                    voxel_val = 1.0;
+            };
             if(!roi_highlighted_img_arrays.back()->imagecoll.Process_Images( GroupIndividualImages,
-                                                                             HighlightROIVoxels,
+                                                                             PartitionedImageVoxelVisitorMutator,
                                                                              {}, cc_all,
                                                                              &ud )){
                 FUNCERR("Unable to highlight ROIs");
