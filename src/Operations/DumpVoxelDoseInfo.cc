@@ -29,8 +29,8 @@ Drover DumpVoxelDoseInfo(Drover DICOM_data, OperationArgPkg , std::map<std::stri
     //       verify it works (or re-write using the new methods) before using for anything important.
     //
 
-    double themin = std::numeric_limits<double>::max();
-    double themax = std::numeric_limits<double>::min();
+    double themin = std::numeric_limits<double>::infinity();
+    double themax = -(std::numeric_limits<double>::infinity());
 
     {
         std::list<std::shared_ptr<Dose_Array>> dose_data_to_use(DICOM_data.dose_data);
