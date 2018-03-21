@@ -4,6 +4,7 @@ add_library(Operations_objs OBJECT
     AccumulateRowsColumns.cc
     AnalyzeLightRadFieldCoincidence.cc
     AnalyzePicketFence.cc
+    ApplyCalibrationCurve.cc
     AutoCropImages.cc
     Average.cc
     BoostSerializeDrover.cc
