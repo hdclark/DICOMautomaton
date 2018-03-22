@@ -70,12 +70,24 @@ std::list<OperationArgDoc> OpArgDocAnalyzePicketFence(void){
                             R"***(Left Parotid|Right Parotid)***" };
 
     out.emplace_back();
-    out.back().name = "NumberOfLeaves";
-    out.back().desc = "The total number of leaves in the image.";
-    out.back().default_val = "60";
+    out.back().name = "MLCModel";
+    out.back().desc = "The MLC design geometry to use."
+                      " 'VarianMillenniumMLC80' has 80 leafs in each bank;"
+                      " leaves are 10mm wide at isocentre;"
+                      " and the maximum static field size is 40cm x 40cm."
+                      " 'VarianMillenniumMLC120' has 120 leafs in each bank;"
+                      " the 40 central leaves are 5mm wide at isocentre;"
+                      " the 20 peripheral leaves are 10mm wide;"
+                      " and the maximum static field size is 40cm x 40cm."
+                      " 'VarianHD120' has 120 leafs in each bank;"
+                      " the 32 central leaves are 2.5mm wide at isocentre;"
+                      " the 28 peripheral leaves are 5mm wide;"
+                      " and the maximum static field size is 40cm x 22cm.";
+    out.back().default_val = "VarianMillenniumMLC120";
     out.back().expected = true;
-    out.back().examples = { "60" };
-
+    out.back().examples = { "VarianMillenniumMLC80",
+                            "VarianMillenniumMLC120",
+                            "VarianHD120" };  // It would be nice to try auto-detect this...
 
     out.emplace_back();
     out.back().name = "MinimumJunctionSeparation";
@@ -97,7 +109,7 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
     const auto ROILabelRegex = OptArgs.getValueStr("ROILabelRegex").value();
     const auto NormalizedROILabelRegex = OptArgs.getValueStr("NormalizedROILabelRegex").value();
 
-    const auto NumberOfLeaves = std::stol( OptArgs.getValueStr("NumberOfLeaves").value() );
+    auto MLCModel = OptArgs.getValueStr("MLCModel").value();
     const auto MinimumJunctionSeparation = std::stol( OptArgs.getValueStr("MinimumJunctionSeparation").value() );
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -109,6 +121,11 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
     const auto regex_first = std::regex("^fi?r?s?t?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
     const auto regex_last  = std::regex("^la?s?t?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
     const auto regex_all   = std::regex("^al?l?$",   std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+
+    const auto regex_VMLC80  = std::regex("^va?r?i?a?n?m?i?l?l?e?n?n?i?u?m?m?l?c?80$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto regex_VMLC120 = std::regex("^va?r?i?a?n?mille?n?n?i?u?m?m?l?c?120$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto regex_VHD120  = std::regex("^va?r?i?a?n?hd120$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+
 
     if( !std::regex_match(ImageSelectionStr, regex_none)
     &&  !std::regex_match(ImageSelectionStr, regex_first)
@@ -350,45 +367,77 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
             leaf_lines.emplace_back( R_peak, R_peak + short_unit );
         }
 
-        //Create lines for leaf pairs computed from knowledge about each machine's MLC geometry.
+        //Auto-detect the MLC model, if possible.
         {
-            auto BeamLimitingDeviceAngle = animg->GetMetadataValueAs<std::string>("BeamLimitingDeviceAngle");
             auto StationName = animg->GetMetadataValueAs<std::string>("StationName");
-
-            //if(!BeamLimitingDeviceAngle){
-            //    throw std::domain_error("Unable to perform RTIMAGE auto-crop: lacking geometry data.");
-            //}
 
             const auto regex_FVAREA2TB = std::regex(".*FVAREA2TB.*", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
             const auto regex_FVAREA4TB = std::regex(".*FVAREA4TB.*", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+            const auto regex_FVAREA6TB = std::regex(".*FVAREA6TB.*", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
 
-            std::vector<double> mlc_offsets; // Closest point along leaf-pair line from CAX.
-
-            // High-definition MLCs.
             if(false){
             }else if( std::regex_match(StationName.value(), regex_FVAREA2TB)
-                  ||  std::regex_match(StationName.value(), regex_FVAREA4TB) ){
-                mlc_offsets.emplace_back(0.0);
-                for(long int x = 5; x <= 100; x += 5){
-                    mlc_offsets.emplace_back(x);
-                    mlc_offsets.emplace_back(-x);
+                  ||  std::regex_match(StationName.value(), regex_FVAREA4TB)
+                  ||  std::regex_match(StationName.value(), regex_FVAREA6TB) ){
+                MLCModel = "VarianMillenniumMLC120";
+            }else{
+                MLCModel = "VarianMillenniumMLC80";
+            }
+        }
+
+        //Create lines for leaf pairs computed from knowledge about each machine's MLC geometry.
+        {
+            std::vector<double> mlc_offsets; // Closest point along leaf-pair line from CAX.
+
+            //We have to project the MLC leaf pair positions according to the magnification at the image panel.
+            auto RTImageSID = std::stod( animg->GetMetadataValueAs<std::string>("RTImageSID").value_or("1000.0") );
+            auto magnify = [=](double CAX_offset){
+                return CAX_offset * (RTImageSID / 1000.0);
+            };
+
+            if(false){
+            }else if( std::regex_match(MLCModel, regex_VHD120) ){
+                for(long int i = 0; i < 16; ++i){ // The middle 32 leaves.
+                    const double x = (2.5 * i + 1.25);
+                    const double X = magnify(x);
+                    mlc_offsets.emplace_back( X );
+                    mlc_offsets.emplace_back(-X );
                 }
-                for(long int x = 110; x <= 200; x += 10){
-                    mlc_offsets.emplace_back(x);
-                    mlc_offsets.emplace_back(-x);
+                for(long int i = 0; i < 14; ++i){ // The peripheral 28 leaves.
+                    const double x = 40.0 + (5.0 * i + 2.5);
+                    const double X = magnify(x);
+                    mlc_offsets.emplace_back( X );
+                    mlc_offsets.emplace_back(-X );
                 }
 
-            //"Standard" MLCs.
-            }else{
-                FUNCWARN("Assuming 'standard' definition MLC");
-                mlc_offsets.emplace_back(0.0);
-                for(long int x = 10; x <= 200; x += 10){
-                    mlc_offsets.emplace_back(x);
-                    mlc_offsets.emplace_back(-x);
+            }else if( std::regex_match(MLCModel, regex_VMLC120) ){
+                for(long int i = 0; i < 20; ++i){ // The middle 40 leaves.
+                    const double x = (5.0 * i + 2.5);
+                    const double X = magnify(x);
+                    mlc_offsets.emplace_back( X );
+                    mlc_offsets.emplace_back(-X );
                 }
+                for(long int i = 0; i < 10; ++i){ // The peripheral 20 leaves.
+                    const double x = 100.0 + (10.0 * i + 5.0);
+                    const double X = magnify(x);
+                    mlc_offsets.emplace_back( X );
+                    mlc_offsets.emplace_back(-X );
+                }
+
+            }else if( std::regex_match(MLCModel, regex_VMLC80) ){
+                for(long int i = 0; i < 20; ++i){
+                    const double x = (10.0 * i + 5.0);
+                    const double X = magnify(x);
+                    mlc_offsets.emplace_back( X );
+                    mlc_offsets.emplace_back(-X );
+                }
+
+            }else{
+                throw std::invalid_argument("MLC model not understood");
             }
 
             // Extract the long and short units from this angle...  TODO
+            auto BeamLimitingDeviceAngle = animg->GetMetadataValueAs<std::string>("BeamLimitingDeviceAngle");
             auto rot_ang = std::stod( BeamLimitingDeviceAngle.value() ) * M_PI/180.0; // in radians.
 
             leaf_lines.clear();
