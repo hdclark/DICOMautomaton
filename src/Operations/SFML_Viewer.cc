@@ -174,21 +174,24 @@ Drover SFML_Viewer( Drover DICOM_data,
     cursortext.setFont(afont);
     cursortext.setString("");
     cursortext.setCharacterSize(15); //Size in pixels, not in points.
-    cursortext.setColor(sf::Color::Green);
+    cursortext.setFillColor(sf::Color::Green);
+    cursortext.setOutlineColor(sf::Color::Green);
 
     sf::Text BRcornertext;
     std::stringstream BRcornertextss;
     BRcornertext.setFont(afont);
     BRcornertext.setString("");
     BRcornertext.setCharacterSize(9); //Size in pixels, not in points.
-    BRcornertext.setColor(sf::Color::Red);
+    BRcornertext.setFillColor(sf::Color::Red);
+    BRcornertext.setOutlineColor(sf::Color::Red);
 
     sf::Text BLcornertext;
     std::stringstream BLcornertextss;
     BLcornertext.setFont(afont);
     BLcornertext.setString("");
     BLcornertext.setCharacterSize(15); //Size in pixels, not in points.
-    BLcornertext.setColor(sf::Color::Blue);
+    BLcornertext.setFillColor(sf::Color::Blue);
+    BLcornertext.setOutlineColor(sf::Color::Blue);
 
     const sf::Color NaN_Color(60,0,0); //Dark red. Should not be very distracting.
     const sf::Color Pos_Contour_Color(sf::Color::Blue);
@@ -1844,7 +1847,8 @@ Drover SFML_Viewer( Drover DICOM_data,
             contourtext.setFont(afont);
             contourtext.setString("");
             contourtext.setCharacterSize(12); //Size in pixels, not in points.
-            contourtext.setColor(sf::Color::Green);
+            contourtext.setFillColor(sf::Color::Green);
+            contourtext.setOutlineColor(sf::Color::Green);
 
             for(auto & cc : DICOM_data.contour_data->ccs){
                 //auto base_ptr = reinterpret_cast<contour_collection<double> *>(&cc);
