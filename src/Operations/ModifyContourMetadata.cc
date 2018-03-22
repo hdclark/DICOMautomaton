@@ -95,11 +95,13 @@ Drover ModifyContourMetadata(Drover DICOM_data,
     auto cc_ROIs = cc_all;
     cc_ROIs.remove_if([=](std::reference_wrapper<contour_collection<double>> cc) -> bool {
                    const auto ROINameOpt = cc.get().contours.front().GetMetadataValueAs<std::string>("ROIName");
+                   if(!ROINameOpt) return true; // Remove if the name is N/A.
                    const auto ROIName = ROINameOpt.value();
                    return !(std::regex_match(ROIName,theregex));
     });
     cc_ROIs.remove_if([=](std::reference_wrapper<contour_collection<double>> cc) -> bool {
                    const auto ROINameOpt = cc.get().contours.front().GetMetadataValueAs<std::string>("NormalizedROIName");
+                   if(!ROINameOpt) return true; // Remove if the name is N/A.
                    const auto ROIName = ROINameOpt.value();
                    return !(std::regex_match(ROIName,thenormalizedregex));
     });
