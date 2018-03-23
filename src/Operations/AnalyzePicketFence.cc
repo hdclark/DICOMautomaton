@@ -90,6 +90,27 @@ std::list<OperationArgDoc> OpArgDocAnalyzePicketFence(void){
                             "VarianHD120" };  // It would be nice to try auto-detect this...
 
     out.emplace_back();
+    out.back().name = "MLCROILabel";
+    out.back().desc = "An ROI imitating the MLC axes of leaf pairs is created. This is the label to apply"
+                      " to it. Note that the leaves are modeled with thin contour rectangles of virtually zero"
+                      " area. Also note that the outline colour is significant and denotes leaf pair pass/fail.";
+    out.back().default_val = "Leaves";
+    out.back().expected = true;
+    out.back().examples = { "MLC_leaves",
+                            "MLC",
+                            "approx_leaf_axes" };
+
+    out.emplace_back();
+    out.back().name = "JunctionROILabel";
+    out.back().desc = "An ROI imitating the junction is created. This is the label to apply to it."
+                      " Note that the junctions are modeled with thin contour rectangles of virtually zero"
+                      " area.";
+    out.back().default_val = "Junctions";
+    out.back().expected = true;
+    out.back().examples = { "Junctions",
+                            "Picket_Fence_Junction" };
+
+    out.emplace_back();
     out.back().name = "MinimumJunctionSeparation";
     out.back().desc = "The minimum distance between junctions in DICOM units. This number is used to"
                       " de-duplicate automatically detected junctions. Analysis results should not be"
@@ -101,7 +122,9 @@ std::list<OperationArgDoc> OpArgDocAnalyzePicketFence(void){
     return out;
 }
 
-Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){
+Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string> /*InvocationMetadata*/, std::string FilenameLex){
+
+    Explicator X(FilenameLex);
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto ImageSelectionStr = OptArgs.getValueStr("ImageSelection").value();
@@ -110,6 +133,10 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
     const auto NormalizedROILabelRegex = OptArgs.getValueStr("NormalizedROILabelRegex").value();
 
     auto MLCModel = OptArgs.getValueStr("MLCModel").value();
+
+    const auto MLCROILabel = OptArgs.getValueStr("MLCROILabel").value();
+    const auto JunctionROILabel = OptArgs.getValueStr("JunctionROILabel").value();
+
     const auto MinimumJunctionSeparation = std::stol( OptArgs.getValueStr("MinimumJunctionSeparation").value() );
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -126,6 +153,8 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
     const auto regex_VMLC120 = std::regex("^va?r?i?a?n?mille?n?n?i?u?m?m?l?c?120$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
     const auto regex_VHD120  = std::regex("^va?r?i?a?n?hd120$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
 
+    const auto NormalizedMLCROILabel = X(MLCROILabel);
+    const auto NormalizedJunctionROILabel = X(JunctionROILabel);
 
     if( !std::regex_match(ImageSelectionStr, regex_none)
     &&  !std::regex_match(ImageSelectionStr, regex_first)
@@ -255,12 +284,18 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
 
         //Add thin contours for inspecting the junction lines.
         DICOM_data.contour_data->ccs.emplace_back();
-        for(const auto &cent : junction_centroids){
-            Inject_Thin_Line_Contour(*animg,
-                                     line<double>(cent, cent + long_unit),
-                                     DICOM_data.contour_data->ccs.back(),
-                                     animg->metadata);
+        {
+            auto contour_metadata = animg->metadata;
+            contour_metadata["ROIName"] = JunctionROILabel;
+            contour_metadata["NormalizedROIName"] = NormalizedJunctionROILabel;
+            for(const auto &cent : junction_centroids){
+                Inject_Thin_Line_Contour(*animg,
+                                         line<double>(cent, cent + long_unit),
+                                         DICOM_data.contour_data->ccs.back(),
+                                         contour_metadata);
+            }
         }
+
 
         std::vector<double> junction_cax_separations;
         for(size_t i = 0; i < junction_centroids.size(); ++i){
@@ -452,13 +487,18 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
 
         //Add thin contours for visually inspecting the location of the peaks.
         DICOM_data.contour_data->ccs.emplace_back();
-        for(const auto &leaf_line : leaf_lines){
-            try{ // Will throw if grossly out-of-bounds, but it's a pain to pre-filter -- ignore exceptions for now... TODO
-                Inject_Thin_Line_Contour(*animg,
-                                         leaf_line,
-                                         DICOM_data.contour_data->ccs.back(),
-                                         animg->metadata);
-            }catch(const std::exception &){};
+        {
+            auto contour_metadata = animg->metadata;
+            contour_metadata["ROIName"] = MLCROILabel;
+            contour_metadata["NormalizedROIName"] = NormalizedMLCROILabel;
+            for(const auto &leaf_line : leaf_lines){
+                try{ // Will throw if grossly out-of-bounds, but it's a pain to pre-filter -- ignore exceptions for now... TODO
+                    Inject_Thin_Line_Contour(*animg,
+                                             leaf_line,
+                                             DICOM_data.contour_data->ccs.back(),
+                                             contour_metadata);
+                }catch(const std::exception &){};
+            }
         }
 
         std::vector<double> peak_separations;
