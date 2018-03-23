@@ -781,23 +781,6 @@ std::unique_ptr<Image_Array> Load_Image_Array(const std::string &FilenameIn){
     // ------------------------------------------- General --------------------------------------------------
     const auto modality = retrieve_as_string(0x0008, 0x0060).value();
 
-    // -------------------------------------- Temporal ordering ---------------------------------------------
-    const auto content_date = retrieve_as_string(0x0008, 0x0023).value(); //e.g., "20150228" as a string.
-    const auto content_time = retrieve_as_string(0x0008, 0x0033).value(); //e.g., "142301" as a string.
-
-    //These appear to refer to the moment the DICOM data was assembled or transmission began. Not terribly
-    // useful for anything like a keyframe.
-    //(0008,0012) DA [20150225]                                     # 8,1 Instance Creation Date
-    //(0008,0013) TM [142116]                                       # 6,1 Instance Creation Time
-
-    //These would be preferred to content date and time, but the only place I've seen them present
-    // is on a Philips scanner that just set them equal to the study date and time. What a shame!
-    //(0040,0244) DA [20150225]                                         # 8,1 Performed Procedure Step Start Date
-    //(0040,0245) TM [125151]                                           # 6,1 Performed Procedure Step Start Time
-    //(0040,0250) DA [20150225]                                         # 8,1 Performed Procedure Step End Date
-    //(0040,0251) TM [125151]                                           # 6,1 Performed Procedure Step End Time
-
-    //Try playing with dates and times if the above is not sufficient.
 
     // ---------------------------------------- Image Metadata ----------------------------------------------
 
@@ -842,7 +825,8 @@ std::unique_ptr<Image_Array> Load_Image_Array(const std::string &FilenameIn){
     //Determine how many frames there are in the pixel data. A CT scan may just be a 2d jpeg or something, 
     // but dose pixel data is 3d data composed of 'frames' of stacked 2d data.
     const auto frame_count = retrieve_coalesce_as_long_int({ {0x0028, 0x0008, 0} }).value_or(0.0);
-    if(frame_count != 0) FUNCERR("This routine only supports 2D images. Adapt the dose array loading code. Cannot continue");
+    if(frame_count != 0) throw std::domain_error("This routine only supports 2D images."
+                                                 " Adapt the dose array loading code. Cannot continue");
 
     const auto image_rows  = retrieve_coalesce_as_long_int({ {0x0028, 0x0010, 0} }).value();
     const auto image_cols  = retrieve_coalesce_as_long_int({ {0x0028, 0x0011, 0} }).value();
@@ -869,8 +853,8 @@ std::unique_ptr<Image_Array> Load_Image_Array(const std::string &FilenameIn){
     ||  (TopDataSet->getTag(0x0040,0,0x9210) != nullptr)
     ||  (TopDataSet->getTag(0x0028,0,0x3003) != nullptr)
     ||  (TopDataSet->getTag(0x0040,0,0x08EA) != nullptr) ){ 
-        FUNCERR("This image contains a 'Real World Value' LUT (Look-Up Table), which is not presently"
-                " not supported. You will need to fix the code to handle this");
+        throw std::domain_error("This image contains a 'Real World Value' LUT (Look-Up Table), which is not presently"
+                                " not supported. You will need to fix the code to handle this");
         // NOTE: See DICOM Supplement 49 "Enhanced MR Image Storage SOP Class" at 
         //       ftp://medical.nema.org/medical/dicom/final/sup49_ft.pdf 
         //       (or another document if it has been superceded) for more info.
@@ -890,7 +874,8 @@ std::unique_ptr<Image_Array> Load_Image_Array(const std::string &FilenameIn){
         try{
             firstImage = TopDataSet->getImage(0);
         }catch(const std::exception &e){
-            FUNCERR("This file does not have accessible pixel data. The DICOM image loader should not be called for this file");
+            throw std::domain_error("This file does not have accessible pixel data."
+                                    " The DICOM image loader should not be called for this file");
         }
     
         //Process image using modalityVOILUT transform to convert its pixel values into meaningful values.
@@ -1006,7 +991,7 @@ std::unique_ptr<Image_Array> Load_Image_Array(const std::string &FilenameIn){
 
         if((static_cast<long int>(sizeX) != image_cols) || (static_cast<long int>(sizeY) != image_rows)){
             FUNCWARN("sizeX = " << sizeX << ", sizeY = " << sizeY << " and image_cols = " << image_cols << ", image_rows = " << image_rows);
-            FUNCERR("The number of rows and columns in the image data differ when comparing sizeX/Y and img_rows/cols. Please verify");
+            throw std::domain_error("The number of rows and columns in the image data differ when comparing sizeX/Y and img_rows/cols. Please verify");
             //If this issue arises, I have likely confused definition of X and Y. The DICOM standard specifically calls (0028,0010) 
             // a 'row'. Perhaps I've got many things backward...
         }
@@ -1025,8 +1010,8 @@ std::unique_ptr<Image_Array> Load_Image_Array(const std::string &FilenameIn){
         // a float or uint32_t, the only practical concern is whether or not it will fit.
         const auto img_bits  = static_cast<unsigned int>(channelPixelSize*8); //16 bit, 32 bit, 8 bit, etc..
         if(img_bits > 32){
-            FUNCERR("The number of bits returned by Imebra (" << img_bits << ") is too large to fit in uint32_t"
-                    "You can increase this if needed, or try to scale down to 32 bits");
+            throw std::domain_error("The number of bits returned by Imebra is too large to fit in uint32_t"
+                                    " You can increase this if needed, or try to scale down to 32 bits");
         }
         out->bits = img_bits;
 
@@ -1125,14 +1110,15 @@ std::unique_ptr<Dose_Array>  Load_Dose_Array(const std::string &FilenameIn){
     //Determine how many frames there are in the pixel data. A CT scan may just be a 2d jpeg or something, 
     // but dose pixel data is 3d data composed of 'frames' of stacked 2d data.
     const auto frame_count = static_cast<unsigned long int>(TopDataSet->getUnsignedLong(0x0028, 0, 0x0008, 0));
-    if(frame_count == 0) FUNCERR("No frames were found in file '" << FilenameIn << "'. Is it a valid dose file?");
+    if(frame_count == 0) throw std::domain_error("No frames were found in file '"_s + FilenameIn + "'. Is it a valid dose file?");
 
     //This is a redirection to another tag. I've never seen it be anything but (0x3004,0x000c).
     const auto frame_inc_pntrU  = static_cast<long int>(TopDataSet->getUnsignedLong(0x0028, 0, 0x0009, 0));
     const auto frame_inc_pntrL  = static_cast<long int>(TopDataSet->getUnsignedLong(0x0028, 0, 0x0009, 1));
     if((frame_inc_pntrU != static_cast<long int>(0x3004)) || (frame_inc_pntrL != static_cast<long int>(0x000c)) ){
         FUNCWARN(" frame increment pointer U,L = " << frame_inc_pntrU << "," << frame_inc_pntrL);
-        FUNCERR("Dose file contains a frame increment pointer which we have not encountered before. Please ensure we can handle it properly");
+        throw std::domain_error("Dose file contains a frame increment pointer which we have not encountered before."
+                                " Please ensure we can handle it properly");
     }
 
     std::list<double> gfov;
@@ -1158,7 +1144,7 @@ std::unique_ptr<Dose_Array>  Load_Dose_Array(const std::string &FilenameIn){
         //--------------------------------------------------------------------------------------------------
         //Retrieve the pixel data from file. This is an excessively long exercise!
         ptr<puntoexe::imebra::image> firstImage = TopDataSet->getImage(curr_frame); 	
-        if(firstImage == nullptr) FUNCERR("This file does not have accessible pixel data. Double check the file");
+        if(firstImage == nullptr) throw std::domain_error("This file does not have accessible pixel data. Double check the file");
     
         //Process image using modalityVOILUT transform to convert its pixel values into meaningful values.
         ptr<imebra::transforms::transform> modVOILUT(new imebra::transforms::modalityVOILUT(TopDataSet));
@@ -1200,7 +1186,7 @@ std::unique_ptr<Dose_Array>  Load_Dose_Array(const std::string &FilenameIn){
 
         if((static_cast<long int>(sizeX) != image_cols) || (static_cast<long int>(sizeY) != image_rows)){
             FUNCWARN("sizeX = " << sizeX << ", sizeY = " << sizeY << " and image_cols = " << image_cols << ", image_rows = " << image_rows);
-            FUNCERR("The number of rows and columns in the image data differ when comparing sizeX/Y and img_rows/cols. Please verify");
+            throw std::domain_error("The number of rows and columns in the image data differ when comparing sizeX/Y and img_rows/cols. Please verify");
             //If this issue arises, I have likely confused definition of X and Y. The DICOM standard specifically calls (0028,0010) 
             // a 'row'. Perhaps I've got many things backward...
         }
@@ -1223,7 +1209,7 @@ std::unique_ptr<Dose_Array>  Load_Dose_Array(const std::string &FilenameIn){
 
         const auto img_bits  = static_cast<unsigned int>(channelPixelSize*8); //16 bit, 32 bit, 8 bit, etc..
         if(img_bits != image_bits){
-            FUNCERR("The number of bits in each channel varies between the DICOM header and the transformed image data");
+            throw std::domain_error("The number of bits in each channel varies between the DICOM header and the transformed image data");
             //Not sure what to do if this happens. Perhaps just go with the imebra result?
         }
 
