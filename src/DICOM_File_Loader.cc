@@ -64,8 +64,7 @@ bool Load_From_DICOM_Files( Drover &DICOM_data,
 
     auto bfit = Filenames.begin();
     while(bfit != Filenames.end()){
-        FUNCINFO("Parsing file #" << i+1 << "/" << N << " = " << 100*(i+1)/N << "% \t"
-              << *bfit);
+        FUNCINFO("Parsing file #" << i+1 << "/" << N << " = " << 100*(i+1)/N << "% \t" << *bfit);
         ++i;
 
         const auto Filename = bfit->string();
@@ -96,6 +95,7 @@ bool Load_From_DICOM_Files( Drover &DICOM_data,
             }catch(const std::exception &e){
                 FUNCWARN("Difficulty encountered during contour data loading: '" << e.what() << "'. Ignoring file and continuing");
                 //loaded_contour_data_storage.back().pop_back();
+                bfit = Filenames.erase( bfit ); 
                 continue;
             }
 
@@ -116,6 +116,7 @@ bool Load_From_DICOM_Files( Drover &DICOM_data,
             }catch(const std::exception &e){
                 FUNCWARN("Difficulty encountered during dose array loading: '" << e.what() << "'. Ignoring file and continuing");
                 //loaded_dose_storage.back().pop_back();
+                bfit = Filenames.erase( bfit ); 
                 continue;
             }
 
@@ -133,6 +134,7 @@ bool Load_From_DICOM_Files( Drover &DICOM_data,
             }catch(const std::exception &e){
                 FUNCWARN("Difficulty encountered during image array loading: '" << e.what() << "'. Ignoring file and continuing");
                 //loaded_imgs_storage.back().pop_back();
+                bfit = Filenames.erase( bfit ); 
                 continue;
             }
 
