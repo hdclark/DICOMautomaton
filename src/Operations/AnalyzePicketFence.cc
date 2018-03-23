@@ -137,7 +137,7 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
     const auto MLCROILabel = OptArgs.getValueStr("MLCROILabel").value();
     const auto JunctionROILabel = OptArgs.getValueStr("JunctionROILabel").value();
 
-    const auto MinimumJunctionSeparation = std::stol( OptArgs.getValueStr("MinimumJunctionSeparation").value() );
+    const auto MinimumJunctionSeparation = std::stod( OptArgs.getValueStr("MinimumJunctionSeparation").value() );
 
     //-----------------------------------------------------------------------------------------------------------------
     const auto roiregex = std::regex(ROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
@@ -188,6 +188,7 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
 
     if(NumberOfJunctions < 2) throw std::domain_error("At least 2 junctions are needed for this analysis.");
 
+    std::vector< YgorMathPlottingGnuplot::Shuttle<samples_1D<double>> > profile_shtl;
 
     auto iap_it = DICOM_data.image_data.begin();
     if(false){
@@ -203,6 +204,9 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
         const auto row_unit = animg->row_unit;
         const auto col_unit = animg->col_unit;
         //const auto ort_unit = row_unit.Cross(col_unit);
+
+        const auto corner_R = animg->position(0, 0); // A fixed point from which the profiles will be relative to. Better to use Isocentre instead! TODO
+        const auto sample_spacing = std::max(animg->pxl_dx, animg->pxl_dy); // The sampling frequency for profiles.
 
 
         //Auto-detect the MLC model, if possible.
@@ -373,14 +377,12 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
                 line_segment<double> leaf_edge_ints( edge_ints.front(), edge_ints.back() );
 
                 // Sample the image, interpolating every min(pxl_dx,pxl_dy) or so.
-                const auto sample_spacing = std::min(animg->pxl_dx, animg->pxl_dy);
                 const double sample_offset = 0.5 * sample_spacing;
                 double remainder;
                 const auto R_list = leaf_edge_ints.Sample_With_Spacing( sample_spacing, 
                                                                         sample_offset,
                                                                         remainder );
 
-                const auto corner_R = animg->position(0, 0);
 
                 leaf_profiles.emplace_back();
                 const bool inhibit_sort = true;
@@ -402,8 +404,121 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
         }
 
         // Detect junctions (1D peak finding?)
+        std::vector<line<double>> junction_lines;
+        {
+            samples_1D<double> profile_sum;
+            for(auto & profile : leaf_profiles){
+                profile_sum = profile_sum.Sum_With(profile);
+            }
+            profile_sum.Average_Coincident_Data(0.5 * sample_spacing);   // Summation can produce MANY samples.
+    //profile_sum = profile_sum.Multiply_With( 1.0 / static_cast<double>(leaf_profiles.size()) );
+            //profile_sum = profile_sum.Resample_Equal_Spacing(sample_spacing);
 
-        // ...
+            //auto profile_sum2 = profile_sum.Moving_Average_Two_Sided_Hendersons_23_point();
+            //auto profile_sum2 = profile_sum.Moving_Median_Filter_Two_Sided_Equal_Weighting(2);
+            //auto profile_sum2 = profile_sum.Moving_Average_Two_Sided_Gaussian_Weighting(4);
+            auto profile_sum2 = profile_sum.Moving_Average_Two_Sided_Spencers_15_point();
+            //bool l_OK;
+            //auto profile_sum2 = NPRLL::Attempt_Auto_Smooth(profile_sum, &l_OK);
+            //if(!l_OK) throw std::runtime_error("Unable to perform NPRLL to smooth junction-orthogonal profile.");
+
+            //Perform a high-pass filter to remove some beam profile and imager bias dependence.
+            //profile_sum2 = profile_sum2.Subtract(
+            //                                profile_sum2.Moving_Average_Two_Sided_Gaussian_Weighting(15) );
+
+            profile_shtl.emplace_back( profile_sum2, "High-pass filtered Junction Profile" );
+
+            //Now find all (local) peaks via the derivative of the crossing points.
+            auto peaks = profile_sum2.Peaks();
+
+            //Merge peaks that are separated by a small distance. These can be spurious, or can result if there is some
+            // MLC leaf overtravel.
+            //
+            // Note: We are generous here because the junction separation should be >2-3 mm or so.
+            peaks.Average_Coincident_Data(0.95*MinimumJunctionSeparation);
+
+            profile_shtl.emplace_back( peaks, "Junction Profile Peaks" );
+
+            //Filter out spurious peaks that are not 'sharp' enough.
+            auto Aspect_Ratio = [](const samples_1D<double> &A) -> double { // Computes aspect ratio for a snippet.
+                double A_aspect_r = std::numeric_limits<double>::quiet_NaN();
+                try{
+                    const auto A_extrema_x = A.Get_Extreme_Datum_x();
+                    const auto A_extrema_y = A.Get_Extreme_Datum_y();
+                    A_aspect_r = (A_extrema_y.second[2] - A_extrema_y.first[2])/(A_extrema_x.second[0] - A_extrema_x.first[0]);
+                }catch(const std::exception &){}
+                return A_aspect_r;
+            };
+
+            // Flatten and normalize the profile so we can consistently estimate which peaks are 'major'.
+            auto profile_sum3 = profile_sum2.Subtract(
+                                            profile_sum2.Moving_Average_Two_Sided_Gaussian_Weighting(10) );
+
+            // Normalize using only the inner region. Outer edges can be fairly noisy.
+            const auto sum3_xmm = profile_sum3.Get_Extreme_Datum_x();
+            const auto sum3_xmin = sum3_xmm.first[0];
+            const auto sum3_xmax = sum3_xmm.second[0];
+            const auto dL = (sum3_xmax - sum3_xmin);
+            const auto inner_region = profile_sum3.Select_Those_Within_Inc( sum3_xmin + 0.2*dL, sum3_xmax - 0.2*dL );
+
+            // Normalize so the lowest trough = 0 and highest peak = 1.
+            const auto sum3_ymm = inner_region.Get_Extreme_Datum_y();
+            const auto sum3_ymin = sum3_ymm.first[2];
+            const auto sum3_ymax = sum3_ymm.second[2];
+
+            profile_sum3 = profile_sum3.Sum_With(-sum3_ymin);
+            profile_sum3 = profile_sum3.Multiply_With(1.0/(sum3_ymax - sum3_ymin));
+
+            profile_shtl.emplace_back( profile_sum3, "Aspect Ratio Profile" );
+
+            auto curvature = profile_sum3.Local_Signed_Curvature_Three_Datum();
+            profile_shtl.emplace_back( curvature, "Curvature" );
+
+            if(peaks.size() < 2) std::runtime_error("Leaf-leakage peaks not correctly detected. Please verify input.");
+            samples_1D<double> filtered_peaks;
+            for(auto p4_it = peaks.samples.begin(); p4_it != peaks.samples.end(); ++p4_it){
+                double centre = (*p4_it)[0]; // peak centre.
+                const auto SearchDistance = 0.25*MinimumJunctionSeparation;
+
+                //Only bother looking at peaks that have enough surrounding room to estimate the aspect ratio.
+                if(!isininc(sum3_xmin + SearchDistance, centre, sum3_xmax - SearchDistance)) continue;
+
+                auto vicinity = profile_sum3.Select_Those_Within_Inc(centre - SearchDistance, centre + SearchDistance);
+                const auto ar = Aspect_Ratio(vicinity) * 2.0 * SearchDistance; //Aspect ratio with x rescaled to 1.
+
+                //FUNCINFO("Aspect ratio = " << ar);
+                if(std::isfinite(ar) && (ar > 0.15)){ // A fairly slight aspect ratio threshold is needed.
+                    filtered_peaks.push_back( *p4_it );
+                }
+            }
+            filtered_peaks.stable_sort();
+            peaks = filtered_peaks;
+            if(peaks.size() < 2) std::runtime_error("Leaf-leakage peaks incorrectly filtered out. Please verify input.");
+
+            profile_shtl.emplace_back( peaks, "Filtered Junction Profile Peaks" );
+
+            for(const auto &peak4 : peaks.samples){
+                const auto d = peak4[0]; // Projection of relative position onto the leaf axis unit vector.
+                const auto R_peak = corner_R + (leaf_axis * d);
+                junction_lines.emplace_back( R_peak, R_peak + junction_axis );
+            }
+        }
+
+        //Add thin contours for visually inspecting the location of the junctions.
+        DICOM_data.contour_data->ccs.emplace_back();
+        {
+            auto contour_metadata = animg->metadata;
+            contour_metadata["ROIName"] = JunctionROILabel;
+            contour_metadata["NormalizedROIName"] = NormalizedJunctionROILabel;
+            for(const auto &junction_line : junction_lines){
+                try{ // Will throw if grossly out-of-bounds, but it's a pain to pre-filter -- ignore exceptions for now... TODO
+                    Inject_Thin_Line_Contour(*animg,
+                                             junction_line,
+                                             DICOM_data.contour_data->ccs.back(),
+                                             contour_metadata);
+                }catch(const std::exception &){};
+            }
+        }
 
 
         // Examine each profile in the vicinity of the junction.
@@ -536,60 +651,6 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
 //        }
 
 
-        //Add thin contours for inspecting the junction lines.
-        DICOM_data.contour_data->ccs.emplace_back();
-        {
-            auto contour_metadata = animg->metadata;
-            contour_metadata["ROIName"] = JunctionROILabel;
-            contour_metadata["NormalizedROIName"] = NormalizedJunctionROILabel;
-            for(const auto &cent : junction_centroids){
-                Inject_Thin_Line_Contour(*animg,
-                                         line<double>(cent, cent + long_unit),
-                                         DICOM_data.contour_data->ccs.back(),
-                                         contour_metadata);
-            }
-        }
-
-
-
-        //Prepare the data to identify peaks in the junction-orthogonal direction to locate leaf pairs.
-        junction_ortho_projections.stable_sort();
-        const long int N_bins = static_cast<long int>( std::max(animg->rows, animg->columns));
-        auto junction_ortho_profile = junction_ortho_projections.Aggregate_Equal_Sized_Bins_Weighted_Mean(N_bins);
-
-        //auto junction_ortho_profile2 = junction_ortho_profile.Moving_Average_Two_Sided_Hendersons_23_point();
-        //auto junction_ortho_profile2 = junction_ortho_profile.Moving_Median_Filter_Two_Sided_Equal_Weighting(2);
-        //auto junction_ortho_profile2 = junction_ortho_profile.Moving_Average_Two_Sided_Gaussian_Weighting(4);
-        auto junction_ortho_profile2 = junction_ortho_profile.Moving_Average_Two_Sided_Spencers_15_point();
-        //bool l_OK;
-        //auto junction_ortho_profile2 = NPRLL::Attempt_Auto_Smooth(junction_ortho_profile, &l_OK);
-        //if(!l_OK) throw std::runtime_error("Unable to perform NPRLL to smooth junction-orthogonal profile.");
-
-        //Perform a high-pass filter to remove some beam profile and imager bias dependence.
-        junction_ortho_profile2 = junction_ortho_profile2.Subtract(
-                                        junction_ortho_profile2.Moving_Average_Two_Sided_Gaussian_Weighting(15) );
-
-        //Now find all (local) peaks via the derivative of the crossing points.
-        //
-        // Note: We find peaks (gaps between leaves) instead of troughs (middle of leaves) because the background (i.e.,
-        //       dose behind the jaws) confounds trough isolation for leaves on the boundaries. Peaks are also sharper
-        //       (i.e., more confined spatially owing to the smaller gap they arise from), whereas troughs can undulate
-        //       considerably more.
-        auto peaks = junction_ortho_profile2.Peaks();
-
-        //Merge peaks that are separated by a small distance.
-        //
-        // Note: We are generous here because the leaf thickness is bounded to >2mm or so.
-        peaks.Average_Coincident_Data(2.0);
-
-        //Filter out spurious peaks that are not 'sharp' enough.
-        //
-        // Fit a line to the left-adjacent N datum.
-        // Fit a line to the right-adjacent N datum.
-        // Threshold on the smallest angle that separates them.
-
-        if(peaks.size() < 5) std::runtime_error("Leaf-leakage peaks not correctly detected. Please verify input.");
-
 
         //Create lines for each detected leaf pair.
         std::vector<line<double>> leaf_lines;
@@ -626,7 +687,7 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
 */
 
         // Plot a sum of all profiles.
-        {
+        if(false){
             samples_1D<double> summed;
             for(auto & profile : leaf_profiles){
                 summed = summed.Sum_With(profile);
@@ -636,12 +697,17 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
         }
 
         // Plot individual profiles.
-        {
+        if(true){
             std::vector< YgorMathPlottingGnuplot::Shuttle<samples_1D<double>> > plot_shtl;
             for(auto & profile : leaf_profiles){
                 if(!profile.empty()) plot_shtl.emplace_back( profile, "title" );
             }
             YgorMathPlottingGnuplot::Plot<double>(plot_shtl, "Leaf-pair profiles", "DICOM position", "Pixel Intensity");
+        }
+
+        // Plot junction profiles.
+        {
+            YgorMathPlottingGnuplot::Plot<double>(profile_shtl, "Junction profiles", "DICOM position", "Pixel Intensity");
         }
 
         
