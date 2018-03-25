@@ -119,6 +119,15 @@ std::list<OperationArgDoc> OpArgDocAnalyzePicketFence(void){
     out.back().expected = true;
     out.back().examples = { "5.0", "10.0", "15.0", "25.0" };
 
+    out.emplace_back();
+    out.back().name = "ThresholdDistance";
+    out.back().desc = "The threshold distance (in DICOM units) above which MLC separations are considered"
+                      " to 'fail'. Each leaf pair is evaluated separately. Pass/fail status is also"
+                      " indicated by setting the leaf axis contour colour (blue for pass, red for fail).";
+    out.back().default_val = "1.0";
+    out.back().expected = true;
+    out.back().examples = { "0.5", "1.0", "2.0" };
+
     return out;
 }
 
@@ -138,6 +147,8 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
     const auto JunctionROILabel = OptArgs.getValueStr("JunctionROILabel").value();
 
     const auto MinimumJunctionSeparation = std::stod( OptArgs.getValueStr("MinimumJunctionSeparation").value() );
+
+    const auto ThresholdDistance = std::stod( OptArgs.getValueStr("ThresholdDistance").value() );
 
     //-----------------------------------------------------------------------------------------------------------------
     const auto roiregex = std::regex(ROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
@@ -208,7 +219,10 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
         const auto corner_R = animg->position(0, 0); // A fixed point from which the profiles will be relative to. Better to use Isocentre instead! TODO
         const auto sample_spacing = std::max(animg->pxl_dx, animg->pxl_dy); // The sampling frequency for profiles.
 
+        const auto NaN = std::numeric_limits<double>::quiet_NaN();
+        const auto NaN_vec = vec3<double>(NaN, NaN, NaN);
 
+        //---------------------------------------------------------------------------
         //Auto-detect the MLC model, if possible.
         {
             auto StationName = animg->GetMetadataValueAs<std::string>("StationName");
@@ -228,6 +242,7 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
         }
 
 
+        //---------------------------------------------------------------------------
         // Extract the junction and leaf pair travel axes.
         auto BeamLimitingDeviceAngle = animg->GetMetadataValueAs<std::string>("BeamLimitingDeviceAngle");
         auto rot_ang = std::stod( BeamLimitingDeviceAngle.value() ) * M_PI/180.0; // in radians.
@@ -242,6 +257,7 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
         const auto junction_axis = col_unit.rotate_around_z(rot_ang + 0.5*M_PI);
 
 
+        //---------------------------------------------------------------------------
         //Create lines for leaf pairs computed from knowledge about each machine's MLC geometry.
         std::vector<line<double>> leaf_lines;
         {
@@ -305,22 +321,7 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
             }
         }
 
-        //Add thin contours for visually inspecting the location of the peaks.
-        DICOM_data.contour_data->ccs.emplace_back();
-        {
-            auto contour_metadata = animg->metadata;
-            contour_metadata["ROIName"] = MLCROILabel;
-            contour_metadata["NormalizedROIName"] = NormalizedMLCROILabel;
-            for(const auto &leaf_line : leaf_lines){
-                try{ // Will throw if grossly out-of-bounds, but it's a pain to pre-filter -- ignore exceptions for now... TODO
-                    Inject_Thin_Line_Contour(*animg,
-                                             leaf_line,
-                                             DICOM_data.contour_data->ccs.back(),
-                                             contour_metadata);
-                }catch(const std::exception &){};
-            }
-        }
-
+        //---------------------------------------------------------------------------
         //Generate leaf-pair profiles.
         std::vector<samples_1D<double>> leaf_profiles;
         leaf_profiles.reserve( leaf_lines.size() );
@@ -343,12 +344,9 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
                 const line_segment<double> LSC(CC,CD);
                 const line_segment<double> LSD(CD,CA);
 
-                auto Intersects_Edge = [](line_segment<double> LS,
-                                          line<double> L) -> vec3<double> {
+                auto Intersects_Edge = [=](line_segment<double> LS,
+                                           line<double> L) -> vec3<double> {
                     const line<double> LSL(LS.Get_R0(), LS.Get_R1()); // The unbounded line segment line.
-                    const auto NaN = std::numeric_limits<double>::quiet_NaN();
-                    auto NaN_vec = vec3<double>(NaN, NaN, NaN);
-
                     auto L_LSL_int = NaN_vec; // The place where the unbounded lines intersect.
                     if(!LSL.Closest_Point_To_Line(L, L_LSL_int)) return NaN_vec;
 
@@ -403,7 +401,8 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
             }
         }
 
-        // Detect junctions (1D peak finding?)
+        //---------------------------------------------------------------------------
+        // Detect junctions.
         std::vector<line<double>> junction_lines;
         {
             samples_1D<double> profile_sum;
@@ -504,6 +503,154 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
             }
         }
 
+        //---------------------------------------------------------------------------
+        //Determine if the junction separation is consistent.
+        std::vector<double> junction_cax_separations;
+        std::vector<double> junction_separations;
+        {
+            for(const auto &junction_line : junction_lines){
+                const auto dR = (junction_line.R_0 - vec3<double>(0.0,0.0,0.0)); // 0,0,0 should be replaced with actual isocentre ... TODO.
+                const auto sep = dR.Dot(leaf_axis);
+                junction_cax_separations.push_back( sep );
+            }
+            std::sort(junction_cax_separations.begin(), junction_cax_separations.end());
+            std::cout << "Junction-CAX separations: ";
+            for(auto &d : junction_cax_separations) std::cout << d << "  ";
+            std::cout << std::endl;
+
+            for(size_t i = 1; i < junction_cax_separations.size(); ++i){
+                const auto sep = (junction_cax_separations[i] - junction_cax_separations[i-1]);
+                junction_separations.push_back( sep );
+            }
+            //std::sort(junction_separations.begin(), junction_separations.end());
+
+            std::cout << "Junction-junction separations: ";
+            for(auto &d : junction_separations) std::cout << d << "  ";
+            std::cout << std::endl;
+
+            const auto min_junction_sep = Stats::Min(junction_separations);
+            std::cout << "Minimum junction separation: " << min_junction_sep << std::endl;
+            const auto max_junction_sep = Stats::Max(junction_separations);
+            std::cout << "Maximum junction separation: " << max_junction_sep << std::endl;
+
+            if(RELATIVE_DIFF(min_junction_sep, max_junction_sep) > 0.10){
+                FUNCWARN("Junction separation is not consistent. Is this correct/intentional?");
+            }
+        }
+
+
+        //---------------------------------------------------------------------------
+        // Examine each profile in the vicinity of the junction.
+        std::vector<std::string> leaf_line_colour(leaf_lines.size(), "green");
+        {
+            for(size_t i = 0; i < leaf_lines.size(); ++i){
+                const auto leaf_line = leaf_lines[i];
+
+                //Find the leaf-junction intersection points (i.e., the nominal peak position).
+                //
+                // Note: We permit junction and leaf axes to be non-orthogonal, so have to test
+                //       for the intersection point for each junction each time.
+                std::vector<double> leaf_junction_int;
+                for(const auto &junction_line : junction_lines){
+                    // Find the intersection point in 3D.
+                    auto R = NaN_vec;
+                    if(!leaf_line.Closest_Point_To_Line(junction_line, R)) R = NaN_vec;
+                    if(!R.isfinite()) throw std::runtime_error("Cannot compute leaf-junction intersection.");
+
+                    // If the point is not within the image bounds, ignore it.
+                    animg->pxl_dz = 1.0;
+                    const auto within_img = animg->encompasses_point(R);
+                    animg->pxl_dz = 0.0;
+                    if(!within_img) continue;
+
+                    // Project the point into the same 2D space as the leaf profiles.
+                    const auto rel_R = (R - corner_R);
+                    const auto l = rel_R.Dot(leaf_axis);
+                    leaf_junction_int.push_back(l);
+                }
+                if(leaf_junction_int.empty()) continue;
+
+
+                //Determine the true peak location in the vicinity of the junction.
+                std::vector<double> peak_offsets;
+                for(const auto &nominal_peak : leaf_junction_int){
+                    const auto SearchDistance = 0.95*MinimumJunctionSeparation;
+                    try{
+
+                        const auto vicinity = leaf_profiles[i].Select_Those_Within_Inc(nominal_peak - SearchDistance,
+                                                                                       nominal_peak + SearchDistance);
+                        auto peaks = vicinity.Peaks();
+                        peaks.Average_Coincident_Data(0.5*MinimumJunctionSeparation);
+                        const auto peaks_mm = peaks.Get_Extreme_Datum_y();
+                        const auto actual_peak = peaks_mm.second[0];
+                        peak_offsets.push_back(actual_peak - nominal_peak);
+                    }catch(const std::exception &){}
+                }
+                if(peak_offsets.size() != leaf_junction_int.size()){
+                    throw std::runtime_error("Unable to find leaf profile peak near nominal junction.");
+                }
+
+                std::vector<double> adjacent_peak_diffs;
+                for(size_t i = 1; i < peak_offsets.size(); ++i){
+                    const auto sep = (peak_offsets[i] - peak_offsets[i-1]);
+                    adjacent_peak_diffs.push_back( sep );
+                }
+
+                const auto max_abs_sep = std::max( std::abs(Stats::Min(peak_offsets)),
+                                                   std::abs(Stats::Max(peak_offsets)) );
+                const auto mean_abs_sep = Stats::Mean(peak_offsets);
+
+                const auto max_adj_diff = std::max( std::abs(Stats::Min(adjacent_peak_diffs)),
+                                                    std::abs(Stats::Max(adjacent_peak_diffs)) );
+                const auto mean_adj_diff = Stats::Mean(adjacent_peak_diffs);
+                
+                const auto within_abs_sep  = (max_abs_sep < ThresholdDistance);
+                const auto within_adj_diff = (max_adj_diff < ThresholdDistance);
+ 
+                std::cout << "Leaf # " << i 
+                          << std::endl
+                          << "   max |actual-nominal| = " << std::setw(15) << max_abs_sep
+                          << "  mean (actual-nominal) = " << std::setw(15) << mean_abs_sep
+                          << (within_abs_sep ? " Pass" : "     Fail" )
+                          << std::endl
+                          << "   max |adjacent_diff.| = " << std::setw(15) << max_adj_diff
+                          << "  mean (adjacent_diff.) = " << std::setw(15) << mean_adj_diff
+                          << (within_adj_diff ? " Pass" : "     Fail" )
+                          << std::endl;
+
+                //Record whether this leaf passed or failed visually.
+                if( (max_abs_sep < ThresholdDistance)
+                &&  (max_adj_diff < ThresholdDistance) ){
+                    leaf_line_colour[i] = "blue";
+                }else{
+                    leaf_line_colour[i] = "red";
+                }
+            }
+
+        }
+
+        //---------------------------------------------------------------------------
+        //Add thin contours for visually inspecting the location of the peaks.
+        DICOM_data.contour_data->ccs.emplace_back();
+        {
+            auto contour_metadata = animg->metadata;
+            contour_metadata["ROIName"] = MLCROILabel;
+            contour_metadata["NormalizedROIName"] = NormalizedMLCROILabel;
+            for(size_t i = 0; i < leaf_lines.size(); ++i){
+                const auto leaf_line = leaf_lines[i];
+                contour_metadata["OutlineColour"] = leaf_line_colour[i];
+
+                try{ // Will throw if grossly out-of-bounds, but it's a pain to pre-filter -- ignore exceptions for now... TODO
+                    Inject_Thin_Line_Contour(*animg,
+                                             leaf_line,
+                                             DICOM_data.contour_data->ccs.back(),
+                                             contour_metadata);
+                }catch(const std::exception &){};
+            }
+        }
+
+
+        //---------------------------------------------------------------------------
         //Add thin contours for visually inspecting the location of the junctions.
         DICOM_data.contour_data->ccs.emplace_back();
         {
@@ -521,29 +668,7 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
         }
 
 
-        // Examine each profile in the vicinity of the junction.
-
-        // ...
-
-
-        //
-
-
-
 /*
-
-
-
-
-        // Using the contours that surround the leaf junctions, extract a 'long' and 'short' direction along the
-        // junctions. This will orient the image and give us some orientation independence. We use principle component
-        // analysis for this.
-        //
-        // Note: We can estimate these directions for each contour, but the analysis will be more consistent if all
-        //       contours are considered simultaneously. The trade-off is that results may depend on the aspect ratio of
-        //       the image. A zoomed-in picket fence may result in incorrect PCA estimation when using all contours
-        //       simultaneously.
-        //
 
         size_t N_verts = 0;
         for(auto &acop : cop_ROIs) N_verts += acop.get().points.size();
@@ -617,25 +742,6 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
         }
 
 
-
-        std::vector<double> junction_cax_separations;
-        for(size_t i = 0; i < junction_centroids.size(); ++i){
-            const auto dR = (junction_centroids[i] - vec3<double>( 0.0, 0.0, 0.0 ));
-            junction_cax_separations.push_back( dR.Dot(short_unit) );
-        }
-        std::sort(junction_cax_separations.begin(), junction_cax_separations.end());
-        std::cout << "Junction-CAX separations: ";
-        for(auto &d : junction_cax_separations) std::cout << d << "  ";
-        std::cout << std::endl;
-
-        std::vector<double> junction_separations;
-        for(size_t i = 1; i < junction_centroids.size(); ++i){
-            const auto dR = (junction_centroids[i] - junction_centroids[i-1]);
-            junction_separations.push_back( std::abs( dR.Dot(short_unit) ) );
-        }
-        //std::sort(junction_separations.begin(), junction_separations.end());
-        const auto min_junction_sep = Stats::Min(junction_separations);
-        std::cout << "Minimum junction separation: " << min_junction_sep << std::endl;
 
 //        for(long int row = 0; row < animg->rows; ++row){
 //            for(long int col = 0; col < animg->columns; ++col){
