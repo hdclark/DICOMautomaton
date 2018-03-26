@@ -40,28 +40,16 @@ major_exp(unsigned, const double *params, double *grad, void *voided_state){
 
     auto meas = reinterpret_cast<samples_1D<double>*>(voided_state);
 
-    const auto A     = params[0];
-    const auto sigma = params[1];
-    const auto x0    = params[2];
-    const auto B     = params[3];
-    
-    double RSS = 0;
-    for(auto &p4 : meas->samples){
-        const auto x = p4[0];
-        const auto f_meas = p4[2];
-        const auto f_model = std::abs(A) * std::exp(-std::pow((x-x0)/sigma,2.0))
-                           - std::abs(B) * std::exp(-std::pow((x-x0)/(0.5*sigma),2.0));
+    const auto x0 = params[0];
+    const auto inf = std::numeric_limits<double>::infinity();
 
-        RSS += std::pow(f_model - f_meas, 2.0);
-    }
-    FUNCINFO( "RSS = " << std::setw(15) << RSS
-           << " A = " << std::setw(15) << A
-           << " sigma = " << std::setw(15) << sigma
-           << " x0 = " << std::setw(15) << x0
-           << " B = " << std::setw(15) << B
-           //<< " d = " << std::setw(15) << d
-           );
-    return RSS;
+    //Align the snippets 
+    const auto L = meas->Select_Those_Within_Inc(-inf, x0 ).Sum_x_With(-x0).Multiply_x_With(-1.0);
+    const auto R = meas->Select_Those_Within_Inc(  x0, inf).Sum_x_With(-x0);
+   
+    const auto overlap = L.Integrate_Overlap(R)[0];
+    return -overlap; // Maximize overlap tantamount to minmizing negative overlap.
+
 }
 
 
@@ -663,23 +651,21 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
                         auto prepped_vicinity = vicinity.Sum_With(-v_mmy.first[2])
                                                         .Multiply_With(1.0 / v_mmy.second[2])
                                                         .Sum_x_With(-nominal_peak);
+                        prepped_vicinity = prepped_vicinity.Moving_Median_Filter_Two_Sided_Triangular_Weighting(5);
 
-    const int dimen = 4;
+    const int dimen = 1;
     double func_min;
 
-    //Fitting parameters: A, sigma, x0, B.
+    //Fitting parameters: reflection point.
     double params[dimen];
 
-    params[0] = 0.75;
-    params[1] = 0.05 * MinimumJunctionSeparation;
-    params[2] = 0.0;
-    params[3] = 0.01;
+    params[0] = 0.0;
 
     //Initial step sizes.
-    double initstpsz[dimen] = { 0.15, 0.02 * MinimumJunctionSeparation, 0.5, 0.01 };
+    double initstpsz[dimen] = { 1.0 };
 
     //Absolute param. change thresholds.
-    double xtol_abs_thresholds[dimen] = { 1E-3, 1E-3, 1E-3, 1E-3 };
+    double xtol_abs_thresholds[dimen] = { 1E-3 };
 
     {
         nlopt_opt opt; //See `man nlopt` to get list of available algorithms.
@@ -718,7 +704,7 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
         if(NLOPT_SUCCESS != nlopt_set_ftol_rel(opt, 1.0E-4)){
             FUNCERR("NLOpt unable to set ftol_rel stopping condition");
         }
-        if(NLOPT_SUCCESS != nlopt_set_ftol_abs(opt, 1.0E-6)){
+        if(NLOPT_SUCCESS != nlopt_set_ftol_abs(opt, 1.0E-4)){
             FUNCERR("NLOpt unable to set ftol_abs stopping condition");
         }
         if(NLOPT_SUCCESS != nlopt_set_maxtime(opt, 3.0)){ // In seconds.
@@ -756,11 +742,7 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
     }
     // ----------------------------------------------------------------------------
 
-    const auto A     = params[0];
-    const auto sigma = params[1];
-    const auto x0    = params[2] + nominal_peak;
-    const auto B     = params[3];
-    //const auto d     = params[3];
+    const auto x0    = params[0] + nominal_peak;
 
                         peak_offset = x0 - nominal_peak;
 
