@@ -1,5 +1,8 @@
 //AnalyzePicketFence.cc - A part of DICOMautomaton 2018. Written by hal clark.
 
+#include <nlopt.h>
+
+#include <limits>
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -26,6 +29,40 @@
 #include "YgorMathPlottingGnuplot.h" //Needed for YgorMathPlottingGnuplot::*.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorStats.h"        //Needed for Stats:: namespace.
+
+
+static
+double 
+major_exp(unsigned, const double *params, double *grad, void *voided_state){
+    if(grad != nullptr){
+        throw std::logic_error("This routine currently cannot compute the gradient.");
+    }
+
+    auto meas = reinterpret_cast<samples_1D<double>*>(voided_state);
+
+    const auto A     = params[0];
+    const auto sigma = params[1];
+    const auto x0    = params[2];
+    const auto B     = params[3];
+    
+    double RSS = 0;
+    for(auto &p4 : meas->samples){
+        const auto x = p4[0];
+        const auto f_meas = p4[2];
+        const auto f_model = std::abs(A) * std::exp(-std::pow((x-x0)/sigma,2.0))
+                           - std::abs(B) * std::exp(-std::pow((x-x0)/(0.5*sigma),2.0));
+
+        RSS += std::pow(f_model - f_meas, 2.0);
+    }
+    FUNCINFO( "RSS = " << std::setw(15) << RSS
+           << " A = " << std::setw(15) << A
+           << " sigma = " << std::setw(15) << sigma
+           << " x0 = " << std::setw(15) << x0
+           << " B = " << std::setw(15) << B
+           //<< " d = " << std::setw(15) << d
+           );
+    return RSS;
+}
 
 
 std::list<OperationArgDoc> OpArgDocAnalyzePicketFence(void){
@@ -588,33 +625,155 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
                 //Determine the true peak location in the vicinity of the junction.
                 std::vector<double> peak_offsets;
                 for(const auto &nominal_peak : leaf_junction_int){
+                    const auto SearchDistance = 0.95*MinimumJunctionSeparation;
+                    const auto vicinity = leaf_profiles[i].Select_Those_Within_Inc(nominal_peak - SearchDistance,
+                                                                                   nominal_peak + SearchDistance);
+
+                    double peak_offset = std::numeric_limits<double>::quiet_NaN();
 
                     // Using only peak detection. This only works if the data are not noisy or strange.
-                    const auto SearchDistance = 0.95*MinimumJunctionSeparation;
-                    try{
+                    if(false){
+                        try{
+                            auto peaks = vicinity.Peaks();
+                            peaks.Average_Coincident_Data(0.25*MinimumJunctionSeparation);
+                            
+                            const auto peaks_mm = peaks.Get_Extreme_Datum_y();
+                            const auto actual_peak = peaks_mm.second[0];
+                            peak_offset = actual_peak - nominal_peak;
 
-                        const auto vicinity = leaf_profiles[i].Select_Those_Within_Inc(nominal_peak - SearchDistance,
-                                                                                       nominal_peak + SearchDistance);
-                        auto peaks = vicinity.Peaks();
-                        peaks.Average_Coincident_Data(0.25*MinimumJunctionSeparation);
-                        
-                        const auto peaks_mm = peaks.Get_Extreme_Datum_y();
-                        const auto actual_peak = peaks_mm.second[0];
-                        const auto peak_offset = actual_peak - nominal_peak;
-                        peak_offsets.push_back(peak_offset);
+                            if(std::isfinite(peak_offset)){
+                                peak_offsets.push_back(peak_offset);
 
-if(std::abs(peak_offset) > 1.0){
-    leaf_plot_shtl.emplace_back(vicinity,
-                                "vicinity used for peak detection",
-                                std::vector<std::pair<std::string,std::string>>({{"1:2","lines"}}) );
-    leaf_plot_shtl.emplace_back(peaks,
-                                "averaged peaks");
-}
-                    }catch(const std::exception &){}
+                                if(std::abs(peak_offset) > ThresholdDistance){
+                                    leaf_plot_shtl.emplace_back(vicinity,
+                                                                "vicinity used for peak detection",
+                                                                std::vector<std::pair<std::string,std::string>>({{"1:2","lines"}}) );
+                                    leaf_plot_shtl.emplace_back(peaks,
+                                                                "averaged peaks");
+                                }
+                            }
+
+                        }catch(const std::exception &){}
+                    }
 
                     // Using a model-based approach.
+                    if(true){
+                        // Transform the curve so that it is numerically suitable for Gaussian fitting.
+                        const auto v_mmy = vicinity.Get_Extreme_Datum_y();
+                        auto prepped_vicinity = vicinity.Sum_With(-v_mmy.first[2])
+                                                        .Multiply_With(1.0 / v_mmy.second[2])
+                                                        .Sum_x_With(-nominal_peak);
 
-                    // ...
+    const int dimen = 4;
+    double func_min;
+
+    //Fitting parameters: A, sigma, x0, B.
+    double params[dimen];
+
+    params[0] = 0.75;
+    params[1] = 0.05 * MinimumJunctionSeparation;
+    params[2] = 0.0;
+    params[3] = 0.01;
+
+    //Initial step sizes.
+    double initstpsz[dimen] = { 0.15, 0.02 * MinimumJunctionSeparation, 0.5, 0.01 };
+
+    //Absolute param. change thresholds.
+    double xtol_abs_thresholds[dimen] = { 1E-3, 1E-3, 1E-3, 1E-3 };
+
+    {
+        nlopt_opt opt; //See `man nlopt` to get list of available algorithms.
+        opt = nlopt_create(NLOPT_LN_COBYLA, dimen);   //Local, no-derivative schemes.
+        //opt = nlopt_create(NLOPT_LN_BOBYQA, dimen);
+        //opt = nlopt_create(NLOPT_LN_SBPLX, dimen);
+
+        //opt = nlopt_create(NLOPT_LD_MMA, dimen);   //Local, derivative schemes.
+        //opt = nlopt_create(NLOPT_LD_SLSQP, dimen);
+        //opt = nlopt_create(NLOPT_LD_LBFGS, dimen);
+        //opt = nlopt_create(NLOPT_LD_VAR2, dimen);
+        //opt = nlopt_create(NLOPT_LD_TNEWTON_PRECOND_RESTART, dimen);
+        //opt = nlopt_create(NLOPT_LD_TNEWTON_PRECOND, dimen);
+        //opt = nlopt_create(NLOPT_LD_TNEWTON, dimen);
+
+        //opt = nlopt_create(NLOPT_GN_DIRECT, dimen); //Global, no-derivative schemes.
+        //opt = nlopt_create(NLOPT_GN_CRS2_LM, dimen);
+        //opt = nlopt_create(NLOPT_GN_ESCH, dimen);
+        //opt = nlopt_create(NLOPT_GN_ISRES, dimen);
+                        
+        if(NLOPT_SUCCESS != nlopt_set_initial_step(opt, initstpsz)){
+            FUNCERR("NLOpt unable to set initial step sizes");
+        }
+        if(NLOPT_SUCCESS != nlopt_set_min_objective(opt, major_exp, reinterpret_cast<void*>(&prepped_vicinity))){
+            FUNCERR("NLOpt unable to set objective function for minimization");
+        }
+        //if(NLOPT_SUCCESS != nlopt_set_xtol_rel(opt, 1.0E-1)){
+        //    FUNCERR("NLOpt unable to set xtol stopping condition");
+        //}
+        //if(NLOPT_SUCCESS != nlopt_set_xtol_abs(opt, 1.0E-1)){
+        //    FUNCERR("NLOpt unable to set xtol stopping condition");
+        //}
+        //if(NLOPT_SUCCESS != nlopt_set_xtol_abs(opt, xtol_abs_thresholds)){
+        //    FUNCERR("NLOpt unable to set xtol_abs stopping condition");
+        //}
+        if(NLOPT_SUCCESS != nlopt_set_ftol_rel(opt, 1.0E-4)){
+            FUNCERR("NLOpt unable to set ftol_rel stopping condition");
+        }
+        if(NLOPT_SUCCESS != nlopt_set_ftol_abs(opt, 1.0E-6)){
+            FUNCERR("NLOpt unable to set ftol_abs stopping condition");
+        }
+        if(NLOPT_SUCCESS != nlopt_set_maxtime(opt, 3.0)){ // In seconds.
+            FUNCERR("NLOpt unable to set maxtime stopping condition");
+        }
+        if(NLOPT_SUCCESS != nlopt_set_maxeval(opt, 50'000)){ // Maximum # of objective func evaluations.
+            FUNCERR("NLOpt unable to set maxeval stopping condition");
+        }
+        //if(NLOPT_SUCCESS != nlopt_set_vector_storage(opt, 10)){ // Amount of memory to use (MB).
+        //    FUNCERR("NLOpt unable to tell NLOpt to use more scratch space");
+        //}
+
+        const auto opt_status = nlopt_optimize(opt, params, &func_min);
+
+        if(opt_status < 0){
+            if(opt_status == NLOPT_FAILURE){                FUNCWARN("NLOpt fail: generic failure");
+            }else if(opt_status == NLOPT_INVALID_ARGS){     FUNCERR("NLOpt fail: invalid arguments");
+            }else if(opt_status == NLOPT_OUT_OF_MEMORY){    FUNCWARN("NLOpt fail: out of memory");
+            }else if(opt_status == NLOPT_ROUNDOFF_LIMITED){ FUNCWARN("NLOpt fail: roundoff limited");
+            }else if(opt_status == NLOPT_FORCED_STOP){      FUNCWARN("NLOpt fail: forced termination");
+            }else{ FUNCERR("NLOpt fail: unrecognized error code"); }
+            // See http://ab-initio.mit.edu/wiki/index.php/NLopt_Reference for error code info.
+        }else{
+            if(true){
+                if(opt_status == NLOPT_SUCCESS){                FUNCINFO("NLOpt: success");
+                }else if(opt_status == NLOPT_STOPVAL_REACHED){  FUNCINFO("NLOpt: stopval reached");
+                }else if(opt_status == NLOPT_FTOL_REACHED){     FUNCINFO("NLOpt: ftol reached");
+                }else if(opt_status == NLOPT_XTOL_REACHED){     FUNCINFO("NLOpt: xtol reached");
+                }else if(opt_status == NLOPT_MAXEVAL_REACHED){  FUNCINFO("NLOpt: maxeval count reached");
+                }else if(opt_status == NLOPT_MAXTIME_REACHED){  FUNCINFO("NLOpt: maxtime reached");
+                }else{ FUNCERR("NLOpt fail: unrecognized success code"); }
+            }
+        }
+        nlopt_destroy(opt);
+    }
+    // ----------------------------------------------------------------------------
+
+    const auto A     = params[0];
+    const auto sigma = params[1];
+    const auto x0    = params[2] + nominal_peak;
+    const auto B     = params[3];
+    //const auto d     = params[3];
+
+                        peak_offset = x0 - nominal_peak;
+
+                        if(std::isfinite(peak_offset)){
+                            peak_offsets.push_back(peak_offset);
+
+                            if(std::abs(peak_offset) > ThresholdDistance){
+                                leaf_plot_shtl.emplace_back(vicinity,
+                                                            "vicinity used for peak detection",
+                                                            std::vector<std::pair<std::string,std::string>>({{"1:2","lines"}}) );
+                            }
+                        }
+                    }
 
 
                 }
