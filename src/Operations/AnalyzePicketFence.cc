@@ -1,7 +1,5 @@
 //AnalyzePicketFence.cc - A part of DICOMautomaton 2018. Written by hal clark.
 
-#include <nlopt.h>
-
 #include <limits>
 #include <algorithm>
 #include <array>
@@ -29,28 +27,6 @@
 #include "YgorMathPlottingGnuplot.h" //Needed for YgorMathPlottingGnuplot::*.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorStats.h"        //Needed for Stats:: namespace.
-
-
-static
-double 
-major_exp(unsigned, const double *params, double *grad, void *voided_state){
-    if(grad != nullptr){
-        throw std::logic_error("This routine currently cannot compute the gradient.");
-    }
-
-    auto meas = reinterpret_cast<samples_1D<double>*>(voided_state);
-
-    const auto x0 = params[0];
-    const auto inf = std::numeric_limits<double>::infinity();
-
-    //Align the snippets 
-    const auto L = meas->Select_Those_Within_Inc(-inf, x0 ).Sum_x_With(-x0).Multiply_x_With(-1.0);
-    const auto R = meas->Select_Those_Within_Inc(  x0, inf).Sum_x_With(-x0);
-   
-    const auto overlap = L.Integrate_Overlap(R)[0];
-    return -overlap; // Maximize overlap tantamount to minmizing negative overlap.
-
-}
 
 
 std::list<OperationArgDoc> OpArgDocAnalyzePicketFence(void){
@@ -619,146 +595,53 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
 
                     double peak_offset = std::numeric_limits<double>::quiet_NaN();
 
-                    // Using only peak detection. This only works if the data are not noisy or strange.
-                    if(false){
-                        try{
-                            auto peaks = vicinity.Peaks();
-                            peaks.Average_Coincident_Data(0.25*MinimumJunctionSeparation);
-                            
-                            const auto peaks_mm = peaks.Get_Extreme_Datum_y();
-                            const auto actual_peak = peaks_mm.second[0];
-                            peak_offset = actual_peak - nominal_peak;
+                    // Using a robust, non-iterative peak-bounding procedure. It is robust in the sense that it uses the
+                    // median to estimate peak location.
+                    //
+                    // Note: This technique assumes the peak is symmetrical, and exploits this to estimate the peak
+                    //       centre. I can't think of a scenario where the symmetry assumption would be violated but the
+                    //       test would still pass.
+                    // 
+                    // Note: Thresholds were selected to avoid noise at the baseline and overtravel 'M'-shaped profiles
+                    //       with slightly differing heights. Since 'M'-shaped profiles are not as tall as uni-peaked
+                    //       profiles, the aspect ratio will generally differ. So you should not compare the profile
+                    //       width (e.g., FWHM) from profile to profile without somehow incorporating the profile shape.
+                    //
+                    const auto v_mmy = vicinity.Get_Extreme_Datum_y();
+                    const auto min_y = v_mmy.first[2];
+                    const auto max_y = v_mmy.second[2];
+                    std::vector<double> thresholds {   
+                        min_y + 0.85 * (max_y - min_y),
+                        min_y + 0.80 * (max_y - min_y),
+                        min_y + 0.75 * (max_y - min_y),
+                        min_y + 0.70 * (max_y - min_y),
+                        min_y + 0.65 * (max_y - min_y),
+                        min_y + 0.60 * (max_y - min_y),
+                        min_y + 0.55 * (max_y - min_y),
+                        min_y + 0.50 * (max_y - min_y),
+                        min_y + 0.40 * (max_y - min_y),
+                        min_y + 0.30 * (max_y - min_y) };
 
-                            if(std::isfinite(peak_offset)){
-                                peak_offsets.push_back(peak_offset);
-
-                                if(std::abs(peak_offset) > ThresholdDistance){
-                                    leaf_plot_shtl.emplace_back(vicinity,
-                                                                "vicinity used for peak detection",
-                                                                std::vector<std::pair<std::string,std::string>>({{"1:2","lines"}}) );
-                                    leaf_plot_shtl.emplace_back(peaks,
-                                                                "averaged peaks");
-                                }
-                            }
-
-                        }catch(const std::exception &){}
+                    std::vector<double> est_peaks;
+                    for(const auto &threshold : thresholds){
+                        auto crossings = vicinity.Crossings(threshold);
+                        const auto c_mmx = crossings.Get_Extreme_Datum_x();
+                        est_peaks.emplace_back( 0.5 * (c_mmx.second[0] + c_mmx.first[0]) );
                     }
+                    peak_offset = Stats::Median(est_peaks) - nominal_peak;
 
-                    // Using a model-based approach.
-                    if(true){
-                        // Transform the curve so that it is numerically suitable for Gaussian fitting.
-                        const auto v_mmy = vicinity.Get_Extreme_Datum_y();
-                        auto prepped_vicinity = vicinity.Sum_With(-v_mmy.first[2])
-                                                        .Multiply_With(1.0 / v_mmy.second[2])
-                                                        .Sum_x_With(-nominal_peak);
-                        prepped_vicinity = prepped_vicinity.Moving_Median_Filter_Two_Sided_Triangular_Weighting(5);
+                    if(std::isfinite(peak_offset)){
+                        peak_offsets.push_back(peak_offset);
 
-    const int dimen = 1;
-    double func_min;
-
-    //Fitting parameters: reflection point.
-    double params[dimen];
-
-    params[0] = 0.0;
-
-    //Initial step sizes.
-    double initstpsz[dimen] = { 1.0 };
-
-    //Absolute param. change thresholds.
-    double xtol_abs_thresholds[dimen] = { 1E-3 };
-
-    {
-        nlopt_opt opt; //See `man nlopt` to get list of available algorithms.
-        opt = nlopt_create(NLOPT_LN_COBYLA, dimen);   //Local, no-derivative schemes.
-        //opt = nlopt_create(NLOPT_LN_BOBYQA, dimen);
-        //opt = nlopt_create(NLOPT_LN_SBPLX, dimen);
-
-        //opt = nlopt_create(NLOPT_LD_MMA, dimen);   //Local, derivative schemes.
-        //opt = nlopt_create(NLOPT_LD_SLSQP, dimen);
-        //opt = nlopt_create(NLOPT_LD_LBFGS, dimen);
-        //opt = nlopt_create(NLOPT_LD_VAR2, dimen);
-        //opt = nlopt_create(NLOPT_LD_TNEWTON_PRECOND_RESTART, dimen);
-        //opt = nlopt_create(NLOPT_LD_TNEWTON_PRECOND, dimen);
-        //opt = nlopt_create(NLOPT_LD_TNEWTON, dimen);
-
-        //opt = nlopt_create(NLOPT_GN_DIRECT, dimen); //Global, no-derivative schemes.
-        //opt = nlopt_create(NLOPT_GN_CRS2_LM, dimen);
-        //opt = nlopt_create(NLOPT_GN_ESCH, dimen);
-        //opt = nlopt_create(NLOPT_GN_ISRES, dimen);
-                        
-        if(NLOPT_SUCCESS != nlopt_set_initial_step(opt, initstpsz)){
-            FUNCERR("NLOpt unable to set initial step sizes");
-        }
-        if(NLOPT_SUCCESS != nlopt_set_min_objective(opt, major_exp, reinterpret_cast<void*>(&prepped_vicinity))){
-            FUNCERR("NLOpt unable to set objective function for minimization");
-        }
-        //if(NLOPT_SUCCESS != nlopt_set_xtol_rel(opt, 1.0E-1)){
-        //    FUNCERR("NLOpt unable to set xtol stopping condition");
-        //}
-        //if(NLOPT_SUCCESS != nlopt_set_xtol_abs(opt, 1.0E-1)){
-        //    FUNCERR("NLOpt unable to set xtol stopping condition");
-        //}
-        //if(NLOPT_SUCCESS != nlopt_set_xtol_abs(opt, xtol_abs_thresholds)){
-        //    FUNCERR("NLOpt unable to set xtol_abs stopping condition");
-        //}
-        if(NLOPT_SUCCESS != nlopt_set_ftol_rel(opt, 1.0E-4)){
-            FUNCERR("NLOpt unable to set ftol_rel stopping condition");
-        }
-        if(NLOPT_SUCCESS != nlopt_set_ftol_abs(opt, 1.0E-4)){
-            FUNCERR("NLOpt unable to set ftol_abs stopping condition");
-        }
-        if(NLOPT_SUCCESS != nlopt_set_maxtime(opt, 3.0)){ // In seconds.
-            FUNCERR("NLOpt unable to set maxtime stopping condition");
-        }
-        if(NLOPT_SUCCESS != nlopt_set_maxeval(opt, 50'000)){ // Maximum # of objective func evaluations.
-            FUNCERR("NLOpt unable to set maxeval stopping condition");
-        }
-        //if(NLOPT_SUCCESS != nlopt_set_vector_storage(opt, 10)){ // Amount of memory to use (MB).
-        //    FUNCERR("NLOpt unable to tell NLOpt to use more scratch space");
-        //}
-
-        const auto opt_status = nlopt_optimize(opt, params, &func_min);
-
-        if(opt_status < 0){
-            if(opt_status == NLOPT_FAILURE){                FUNCWARN("NLOpt fail: generic failure");
-            }else if(opt_status == NLOPT_INVALID_ARGS){     FUNCERR("NLOpt fail: invalid arguments");
-            }else if(opt_status == NLOPT_OUT_OF_MEMORY){    FUNCWARN("NLOpt fail: out of memory");
-            }else if(opt_status == NLOPT_ROUNDOFF_LIMITED){ FUNCWARN("NLOpt fail: roundoff limited");
-            }else if(opt_status == NLOPT_FORCED_STOP){      FUNCWARN("NLOpt fail: forced termination");
-            }else{ FUNCERR("NLOpt fail: unrecognized error code"); }
-            // See http://ab-initio.mit.edu/wiki/index.php/NLopt_Reference for error code info.
-        }else{
-            if(true){
-                if(opt_status == NLOPT_SUCCESS){                FUNCINFO("NLOpt: success");
-                }else if(opt_status == NLOPT_STOPVAL_REACHED){  FUNCINFO("NLOpt: stopval reached");
-                }else if(opt_status == NLOPT_FTOL_REACHED){     FUNCINFO("NLOpt: ftol reached");
-                }else if(opt_status == NLOPT_XTOL_REACHED){     FUNCINFO("NLOpt: xtol reached");
-                }else if(opt_status == NLOPT_MAXEVAL_REACHED){  FUNCINFO("NLOpt: maxeval count reached");
-                }else if(opt_status == NLOPT_MAXTIME_REACHED){  FUNCINFO("NLOpt: maxtime reached");
-                }else{ FUNCERR("NLOpt fail: unrecognized success code"); }
-            }
-        }
-        nlopt_destroy(opt);
-    }
-    // ----------------------------------------------------------------------------
-
-    const auto x0    = params[0] + nominal_peak;
-
-                        peak_offset = x0 - nominal_peak;
-
-                        if(std::isfinite(peak_offset)){
-                            peak_offsets.push_back(peak_offset);
-
-                            if(std::abs(peak_offset) > ThresholdDistance){
-                                leaf_plot_shtl.emplace_back(vicinity,
-                                                            "vicinity used for peak detection",
-                                                            std::vector<std::pair<std::string,std::string>>({{"1:2","lines"}}) );
-                            }
+                        if(std::abs(peak_offset) > ThresholdDistance){
+                            leaf_plot_shtl.emplace_back(vicinity,
+                                                        "vicinity used for peak detection",
+                                                        std::vector<std::pair<std::string,std::string>>({{"1:2","lines"}}) );
                         }
                     }
-
-
                 }
+
+
                 if(peak_offsets.size() != leaf_junction_int.size()){
                     throw std::runtime_error("Unable to find leaf profile peak near nominal junction.");
                 }
