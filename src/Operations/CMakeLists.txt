@@ -71,6 +71,7 @@ add_library(Operations_objs OBJECT
     ModifyImageMetadata.cc
     PlotPerROITimeCourses.cc
     PreFilterEnormousCTValues.cc
+    PresentationImage.cc
     PruneEmptyImageDoseArrays.cc
     PurgeContours.cc
     RePlanReIrradiateDoseTrimming.cc
