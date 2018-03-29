@@ -949,7 +949,7 @@ void BaseWebServerApplication::createComputeGB(void){
 
         // If the file is an image, display it.
         if(OutputMimetype[param_name] == "image/png"){
-            auto img = gb->addWidget(std::make_unique<Wt::WImage>(Wt::WLink(fname)));
+            auto img = gb->addWidget(std::make_unique<Wt::WImage>(Wt::WLink(fr)));
             img->setAlternateText("Output image.");
 
             (void*) gb->addWidget(std::make_unique<Wt::WBreak>());
