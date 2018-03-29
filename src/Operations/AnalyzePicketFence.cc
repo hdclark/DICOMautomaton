@@ -218,6 +218,8 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
         const auto NaN = std::numeric_limits<double>::quiet_NaN();
         const auto NaN_vec = vec3<double>(NaN, NaN, NaN);
 
+        const std::string JunctionLineColour = "blue";
+
         std::string PatientID;
         if( auto o = animg->GetMetadataValueAs<std::string>("PatientID") ){
             PatientID = o.value();
@@ -846,6 +848,7 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
             auto contour_metadata = animg->metadata;
             contour_metadata["ROIName"] = JunctionROILabel;
             contour_metadata["NormalizedROIName"] = NormalizedJunctionROILabel;
+            contour_metadata["OutlineColour"] = JunctionLineColour;
             for(const auto &junction_line : junction_lines){
                 try{ // Will throw if grossly out-of-bounds, but it's a pain to pre-filter -- ignore exceptions for now... TODO
                     Inject_Thin_Line_Contour(*animg,
