@@ -60,7 +60,7 @@ std::list<OperationArgDoc> OpArgDocPresentationImage(void){
     out.back().examples = { "0.5", "1.0", "2.0", "5.23" };
 
     out.emplace_back();
-    out.back().name = "OutputFileName";
+    out.back().name = "ImageFileName";
     out.back().desc = " The file name to use for the image."
                       " If blank, a filename will be generated sequentially.";
     out.back().default_val = "";
@@ -77,7 +77,7 @@ Drover PresentationImage( Drover DICOM_data,
                     std::string /*FilenameLex*/ ){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
-    auto OutputFileName = OptArgs.getValueStr("OutputFileName").value();
+    auto ImageFileName = OptArgs.getValueStr("ImageFileName").value();
     auto ScaleFactor = std::stod( OptArgs.getValueStr("ScaleFactor").value() );
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -409,8 +409,8 @@ Drover PresentationImage( Drover DICOM_data,
         }
     }
 
-    const auto fname = (OutputFileName.empty()) ? Get_Unique_Sequential_Filename("/tmp/DICOMautomaton_presentationimage_",6,".png")
-                                                : OutputFileName;
+    const auto fname = (ImageFileName.empty()) ? Get_Unique_Sequential_Filename("/tmp/DICOMautomaton_presentationimage_",6,".png")
+                                               : ImageFileName;
 
     window.display(); // Required, even though nothing is displayed on the screen.
     window.getTexture().copyToImage().saveToFile(fname);
