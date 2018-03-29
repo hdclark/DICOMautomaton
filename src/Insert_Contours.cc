@@ -55,12 +55,41 @@ void Inject_Thin_Line_Contour( const planar_image<float,double> &animg,
     const auto IO1m = IO1 - perp_p;
 
     // Add the vertices and metadata to a new contour.
-    dest.contours.emplace_back();
+    contour_of_points<double> c;
+    c.closed = true;
+    c.points.emplace_back( IO0m );
+    c.points.emplace_back( IO0p );
+    c.points.emplace_back( IO1p );
+    c.points.emplace_back( IO1m );
+
+    // Trim the contour to the image bounding volume.
+    auto corners = animg.corners2D();
+    auto itA = corners.begin();
+    auto itB = std::next(corners.begin(),3);
+    while(itA != corners.end()){
+        //Form a plane that points inward using two adjacent vertices.
+        const auto N = (*itB - *itA).unit();
+        const auto R0 = *itA;
+        plane<double> bndry(N, R0);
+
+        auto splits = c.Split_Along_Plane(bndry);
+        splits.remove_if([=](const contour_of_points<double> &cop) -> bool {
+            const auto avg = cop.Average_Point();
+            return (!bndry.Is_Point_Above_Plane(avg));
+        });
+
+        // It might be possible that several contours emerge, possibly due to numerical ambiguities.
+        // If this happens, you'll have to use a shuttle list here instead of a single cop.
+        if(splits.size() != 1) throw std::logic_error("Contour broke into several parts. Cannot continue.");
+        c = splits.front();
+
+        itB = itA;
+        ++itA;
+    }
+
+    dest.contours.emplace_back(c);
+    dest.contours.back().Reorient_Counter_Clockwise();
     dest.contours.back().closed = true;
-    dest.contours.back().points.emplace_back( IO0p );
-    dest.contours.back().points.emplace_back( IO0m );
-    dest.contours.back().points.emplace_back( IO1p );
-    dest.contours.back().points.emplace_back( IO1m );
     dest.contours.back().metadata = metadata;
 
     return;
