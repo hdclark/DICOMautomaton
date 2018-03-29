@@ -48,31 +48,6 @@ std::list<OperationArgDoc> OpArgDocAnalyzePicketFence(void){
     out.back().expected = true;
     out.back().examples = { "none", "last", "first", "all" };
     
-    out.emplace_back();
-    out.back().name = "ROILabelRegex";
-    out.back().desc = "A regex matching ROI labels/names to consider. The default will match"
-                      " all available ROIs. Be aware that input spaces are trimmed to a single space."
-                      " If your ROI name has more than two sequential spaces, use regex to avoid them."
-                      " All ROIs have to match the single regex, so use the 'or' token if needed."
-                      " Regex is case insensitive and uses extended POSIX syntax.";
-    out.back().default_val = ".*";
-    out.back().expected = true;
-    out.back().examples = { ".*", ".*body.*", "body", "Gross_Liver",
-                            R"***(.*left.*parotid.*|.*right.*parotid.*|.*eyes.*)***",
-                            R"***(left_parotid|right_parotid)***" };
-
-    out.emplace_back();
-    out.back().name = "NormalizedROILabelRegex";
-    out.back().desc = "A regex matching ROI labels/names to consider. The default will match"
-                      " all available ROIs. Be aware that input spaces are trimmed to a single space."
-                      " If your ROI name has more than two sequential spaces, use regex to avoid them."
-                      " All ROIs have to match the single regex, so use the 'or' token if needed."
-                      " Regex is case insensitive and uses extended POSIX syntax.";
-    out.back().default_val = ".*";
-    out.back().expected = true;
-    out.back().examples = { ".*", ".*Body.*", "Body", "Gross_Liver",
-                            R"***(.*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*)***",
-                            R"***(Left Parotid|Right Parotid)***" };
 
     out.emplace_back();
     out.back().name = "MLCModel";
@@ -153,6 +128,7 @@ std::list<OperationArgDoc> OpArgDocAnalyzePicketFence(void){
     out.back().expected = true;
     out.back().examples = { "", "Using XYZ", "Patient treatment plan C" };
 
+
     out.emplace_back();
     out.back().name = "InteractivePlots";
     out.back().desc = "Whether to interactively show plots showing detected edges.";
@@ -170,9 +146,6 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto ImageSelectionStr = OptArgs.getValueStr("ImageSelection").value();
 
-    const auto ROILabelRegex = OptArgs.getValueStr("ROILabelRegex").value();
-    const auto NormalizedROILabelRegex = OptArgs.getValueStr("NormalizedROILabelRegex").value();
-
     auto MLCModel = OptArgs.getValueStr("MLCModel").value();
 
     const auto MLCROILabel = OptArgs.getValueStr("MLCROILabel").value();
@@ -189,10 +162,6 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
     const auto InteractivePlotsStr = OptArgs.getValueStr("InteractivePlots").value();
 
     //-----------------------------------------------------------------------------------------------------------------
-    const auto roiregex = std::regex(ROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-
-    const auto roinormalizedregex = std::regex(NormalizedROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-
     const auto regex_true = std::regex("^tr?u?e?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
 
     const auto regex_none  = std::regex("^no?n?e?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
@@ -224,22 +193,6 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
             cop_all.push_back( std::ref(cop) );
         }
     }
-
-    //Whitelist contours using the provided regex.
-    auto cop_ROIs = cop_all;
-    cop_ROIs.remove_if([=](std::reference_wrapper<contour_of_points<double>> cop) -> bool {
-                   const auto ROINameOpt = cop.get().GetMetadataValueAs<std::string>("ROIName");
-                   const auto ROIName = ROINameOpt.value_or("");
-                   return !(std::regex_match(ROIName,roiregex));
-    });
-    cop_ROIs.remove_if([=](std::reference_wrapper<contour_of_points<double>> cop) -> bool {
-                   const auto ROINameOpt = cop.get().GetMetadataValueAs<std::string>("NormalizedROIName");
-                   const auto ROIName = ROINameOpt.value_or("");
-                   return !(std::regex_match(ROIName,roinormalizedregex));
-    });
-    const auto NumberOfJunctions = static_cast<long int>(cop_ROIs.size());
-
-    if(NumberOfJunctions < 2) throw std::domain_error("At least 2 junctions are needed for this analysis.");
 
     std::vector< YgorMathPlottingGnuplot::Shuttle<samples_1D<double>> > junction_plot_shtl;
     std::vector< YgorMathPlottingGnuplot::Shuttle<samples_1D<double>> > leaf_plot_shtl;
