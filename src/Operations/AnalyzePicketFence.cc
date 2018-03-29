@@ -228,6 +228,28 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
         }
 
         //---------------------------------------------------------------------------
+        // Flip pixel values if the image is inverted. The junction peaks should be more positive than the baseline.
+        {
+            // Extract only from the inner portion of the image where there is likely to be background and junctions.
+            const auto row_c = static_cast<long int>(animg->rows / 2);
+            const auto col_c = static_cast<long int>(animg->columns / 2);
+            const auto drow = static_cast<long int>(row_c / 2);
+            const auto dcol = static_cast<long int>(col_c / 2);
+            const auto chnl = static_cast<long int>(0);
+
+            const auto mean = animg->block_average( row_c - drow, row_c + drow, col_c - dcol, col_c + dcol, chnl );
+            const auto median = animg->block_median( row_c - drow, row_c + drow, col_c - dcol, col_c + dcol, chnl );
+            if(mean < median){
+                FUNCINFO("Image was found to be inverted. Pixels were flipped so the peaks are positive");
+                animg->apply_to_pixels([](long int, long int, long int, float &val) -> void {
+                    val *= -1.0;
+                    return;
+                });
+            }
+        }
+
+
+        //---------------------------------------------------------------------------
         //Auto-detect the MLC model, if possible.
         auto StationName = animg->GetMetadataValueAs<std::string>("StationName");
         {
@@ -522,39 +544,71 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
         }
 
         //---------------------------------------------------------------------------
-        //Determine if the junction separation is consistent.
+        //Determine if the junction separation is consistent. Prune junctions that are not consistent.
         std::vector<double> junction_cax_separations;
         std::vector<double> junction_separations;
         double min_junction_sep = std::numeric_limits<double>::quiet_NaN();
+        double max_junction_sep = std::numeric_limits<double>::quiet_NaN();
         {
-            for(const auto &junction_line : junction_lines){
-                const auto dR = (junction_line.R_0 - vec3<double>(0.0,0.0,0.0)); // 0,0,0 should be replaced with actual isocentre ... TODO.
-                const auto sep = dR.Dot(leaf_axis);
-                junction_cax_separations.push_back( sep );
+            auto determine_junction_separations = [&](std::vector<line<double>> j_lines) -> void {
+                junction_cax_separations.clear();
+                for(const auto &junction_line : j_lines){
+                    const auto dR = (junction_line.R_0 - vec3<double>(0.0,0.0,0.0)); // 0,0,0 should be replaced with actual isocentre ... TODO.
+                    const auto sep = dR.Dot(leaf_axis);
+                    junction_cax_separations.push_back( sep );
+                }
+                junction_separations.clear();
+                for(size_t i = 1; i < junction_cax_separations.size(); ++i){
+                    const auto sep = (junction_cax_separations[i] - junction_cax_separations[i-1]);
+                    junction_separations.push_back( sep );
+                }
+
+                min_junction_sep = Stats::Min(junction_separations);
+                max_junction_sep = Stats::Max(junction_separations);
+                return;
+            };
+            auto all_except = [](std::vector<line<double>> j_lines, long int k) -> std::vector<line<double>> {
+                std::vector<line<double>> out;
+                const auto N_lines = static_cast<long int>(j_lines.size());
+                for(long int j = 0; j < N_lines; ++j){
+                    if(j != k) out.push_back(j_lines[j]);
+                }
+                return out;
+            };
+
+            auto trimmed_junction_lines = junction_lines;
+            determine_junction_separations(junction_lines);
+            while( RELATIVE_DIFF(min_junction_sep, max_junction_sep) > 0.10 ){
+                FUNCWARN("Junction separation is not consistent. Pruning the worst junction..");
+
+                std::vector<double> rdiffs;
+                const auto N_lines = static_cast<long int>(trimmed_junction_lines.size());
+                for(long int j = 0; j < N_lines; ++j){
+                    auto trimmed = all_except(trimmed_junction_lines, j);
+                    determine_junction_separations( trimmed );
+                    rdiffs.push_back( std::abs( RELATIVE_DIFF(min_junction_sep, max_junction_sep) ) );
+                }
+
+                auto worst_it = std::min_element(rdiffs.begin(), rdiffs.end());
+                const auto k = static_cast<long int>( std::distance(rdiffs.begin(), worst_it) );
+
+                // Recompute to regenerate side-effects.
+                trimmed_junction_lines = all_except(trimmed_junction_lines, k);
+                determine_junction_separations(trimmed_junction_lines);
             }
-            std::sort(junction_cax_separations.begin(), junction_cax_separations.end());
+            junction_lines = trimmed_junction_lines;
+
             std::cout << "Junction-CAX separations: ";
             for(auto &d : junction_cax_separations) std::cout << d << "  ";
             std::cout << std::endl;
-
-            for(size_t i = 1; i < junction_cax_separations.size(); ++i){
-                const auto sep = (junction_cax_separations[i] - junction_cax_separations[i-1]);
-                junction_separations.push_back( sep );
-            }
-            //std::sort(junction_separations.begin(), junction_separations.end());
 
             std::cout << "Junction-junction separations: ";
             for(auto &d : junction_separations) std::cout << d << "  ";
             std::cout << std::endl;
 
-            min_junction_sep = Stats::Min(junction_separations);
             std::cout << "Minimum junction separation: " << min_junction_sep << std::endl;
-            const auto max_junction_sep = Stats::Max(junction_separations);
             std::cout << "Maximum junction separation: " << max_junction_sep << std::endl;
 
-            if(RELATIVE_DIFF(min_junction_sep, max_junction_sep) > 0.10){
-                FUNCWARN("Junction separation is not consistent. Is this correct/intentional?");
-            }
         }
 
 
