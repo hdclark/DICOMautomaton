@@ -13,6 +13,7 @@
 #include <Wt/WFileUpload.h>
 #include <Wt/WGlobal.h>
 #include <Wt/WGroupBox.h>
+#include <Wt/WImage.h>
 #include <Wt/WJavaScript.h>
 #include <Wt/WLength.h>
 #include <Wt/WLineEdit.h>
@@ -863,6 +864,8 @@ void BaseWebServerApplication::createComputeGB(void){
                         fr->suggestFileName("output.obj");
                     }else if(op_doc.mimetype == "application/mtl"){
                         fr->suggestFileName("output.mtl");
+                    }else if(op_doc.mimetype == "image/png"){
+                        fr->suggestFileName("output.png");
                     }else if(op_doc.mimetype == "image/fits"){
                         fr->suggestFileName("output.fits");
                     }else{
@@ -942,6 +945,14 @@ void BaseWebServerApplication::createComputeGB(void){
 
             (void*) gb->addWidget(std::make_unique<Wt::WBreak>());
             table->enable();
+        }
+
+        // If the file is an image, display it.
+        if(OutputMimetype[param_name] == "image/png"){
+            auto img = gb->addWidget(std::make_unique<Wt::WImage>(Wt::WLink(fname)));
+            img->setAlternateText("Output image.");
+
+            (void*) gb->addWidget(std::make_unique<Wt::WBreak>());
         }
 
         Wt::WLink fr_link = Wt::WLink(fr);
