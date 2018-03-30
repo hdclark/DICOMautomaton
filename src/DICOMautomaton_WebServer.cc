@@ -456,7 +456,8 @@ void BaseWebServerApplication::createOperationSelectorGB(void){
     auto known_ops = Known_Operations();
     for(auto &anop : known_ops){
         const auto n = anop.first;
-        if( ( n == "HighlightROIs" )
+        if( ( n == "FVPicketFence" )
+        ||  ( n == "HighlightROIs" )
         ||  ( n == "DICOMExportImagesAsDose" )
         ||  ( n == "ConvertDoseToImage" ) 
         ||  ( n == "DecayDoseOverTimeJones2014" ) 
@@ -840,7 +841,24 @@ void BaseWebServerApplication::createComputeGB(void){
                 //       files back and there is little point in performing a multi-run operation.
                 std::string personal_fname;
                 if(OutputFilenames.count(param_name) == 0){
-                    personal_fname = Get_Unique_Filename(this->InstancePrivateDirectory + "generated_file_", 6);
+                    std::string suffix;
+                    if(false){
+                    }else if(op_doc.mimetype == "application/dicom"){
+                         suffix = ".dcm";
+                    }else if(op_doc.mimetype == "text/plain"){
+                         suffix = ".txt";
+                    }else if(op_doc.mimetype == "text/csv"){
+                         suffix = ".csv";
+                    }else if(op_doc.mimetype == "application/obj"){
+                         suffix = ".obj";
+                    }else if(op_doc.mimetype == "application/mtl"){
+                         suffix = ".mtl";
+                    }else if(op_doc.mimetype == "image/png"){
+                         suffix = ".png";
+                    }else if(op_doc.mimetype == "image/fits"){
+                         suffix = ".fits";
+                    }
+                    personal_fname = Get_Unique_Filename(this->InstancePrivateDirectory + "generated_file_", 6, suffix);
                     OutputFilenames[param_name] = personal_fname;
                 }else{
                     personal_fname = OutputFilenames[param_name];
