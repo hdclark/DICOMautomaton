@@ -39,6 +39,13 @@ set_target_properties(Insert_Contours_obj PROPERTIES
     POSITION_INDEPENDENT_CODE TRUE
 )
 
+add_library(Regex_Selectors_obj OBJECT
+    Regex_Selectors.cc
+)
+set_target_properties(Regex_Selectors_obj PROPERTIES
+    POSITION_INDEPENDENT_CODE TRUE
+)
+
 add_library(Common_Boost_Serialization_obj OBJECT
     Common_Boost_Serialization.cc     
 )
@@ -250,6 +257,7 @@ add_executable (dicomautomaton_dispatcher
     $<TARGET_OBJECTS:Contour_Boolean_Operations_obj>
     $<TARGET_OBJECTS:Contour_Collection_Estimates_obj>
     $<TARGET_OBJECTS:Insert_Contours_obj>
+    $<TARGET_OBJECTS:Regex_Selectors_obj>
 
     $<TARGET_OBJECTS:PACS_Loader_obj>
     $<TARGET_OBJECTS:Boost_Serialization_File_Loader_obj>
@@ -305,6 +313,7 @@ add_executable(dicomautomaton_webserver
     $<TARGET_OBJECTS:Contour_Boolean_Operations_obj>
     $<TARGET_OBJECTS:Contour_Collection_Estimates_obj>
     $<TARGET_OBJECTS:Insert_Contours_obj>
+    $<TARGET_OBJECTS:Regex_Selectors_obj>
 
     $<TARGET_OBJECTS:PACS_Loader_obj>
     $<TARGET_OBJECTS:Boost_Serialization_File_Loader_obj>
