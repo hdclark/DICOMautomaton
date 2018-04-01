@@ -9,6 +9,7 @@
 #include <utility>            //Needed for std::pair.
 
 #include "../Structs.h"
+#include "../Regex_Selectors.h"
 #include "DumpFilesPartitionedByTime.h"
 #include "YgorImages.h"
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.

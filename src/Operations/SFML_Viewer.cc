@@ -34,6 +34,7 @@
 #include "../KineticModel_1Compartment2Input_5Param_LinearInterp_Common.h"
 #include "../KineticModel_1Compartment2Input_Reduced3Param_Chebyshev_Common.h"
 #include "../Structs.h"
+#include "../Regex_Selectors.h"
 #include "../YgorImages_Functors/Compute/AccumulatePixelDistributions.h"
 #include "SFML_Viewer.h"
 #include "YgorFilesDirs.h"    //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..

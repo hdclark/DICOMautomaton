@@ -16,6 +16,7 @@
 #include <vector>
 
 #include "../Structs.h"
+#include "../Regex_Selectors.h"
 #include "../YgorImages_Functors/ConvenienceRoutines.h"
 #include "AccumulateRowsColumns.h"
 #include "YgorImages.h"

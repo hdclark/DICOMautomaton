@@ -10,6 +10,7 @@
 
 #include "../Dose_Meld.h"
 #include "../Structs.h"
+#include "../Regex_Selectors.h"
 #include "DumpVoxelDoseInfo.h"
 #include "YgorImages.h"
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.

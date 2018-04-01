@@ -8,6 +8,7 @@
 #include <string>    
 
 #include "../Structs.h"
+#include "../Regex_Selectors.h"
 #include "DroverDebug.h"
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.

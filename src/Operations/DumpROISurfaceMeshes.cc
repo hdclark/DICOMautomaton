@@ -74,6 +74,7 @@
 #include "Explicator.h"       //Needed for Explicator class.
 
 #include "../Structs.h"
+#include "../Regex_Selectors.h"
 
 #include "../YgorImages_Functors/Grouping/Misc_Functors.h"
 

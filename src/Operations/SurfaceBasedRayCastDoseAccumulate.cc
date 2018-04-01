@@ -72,6 +72,7 @@
 #include "Explicator.h"       //Needed for Explicator class.
 
 #include "../Structs.h"
+#include "../Regex_Selectors.h"
 #include "../Thread_Pool.h"
 #include "../Dose_Meld.h"
 

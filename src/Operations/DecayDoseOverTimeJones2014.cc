@@ -12,6 +12,7 @@
 #include <string>    
 
 #include "../Structs.h"
+#include "../Regex_Selectors.h"
 #include "../YgorImages_Functors/Grouping/Misc_Functors.h"
 #include "../YgorImages_Functors/Processing/DecayDoseOverTime.h"
 #include "DecayDoseOverTimeJones2014.h"
@@ -168,8 +169,6 @@ Drover DecayDoseOverTimeJones2014(Drover DICOM_data, OperationArgPkg OptArgs, st
     const auto TrueRegex = std::regex("^tr?u?e?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
     const auto IsPositiveFloat = std::regex("^[0-9.]*$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
 
-    const auto theregex = std::regex(ROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto thenormalizedregex = std::regex(NormalizedROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
 
 
     ud.UseMoreConservativeRecovery = std::regex_match(UseMoreConservativeRecovery_str, TrueRegex);
@@ -190,27 +189,9 @@ Drover DecayDoseOverTimeJones2014(Drover DICOM_data, OperationArgPkg OptArgs, st
 
     //Stuff references to all contours into a list. Remember that you can still address specific contours through
     // the original holding containers (which are not modified here).
-    std::list<std::reference_wrapper<contour_collection<double>>> cc_all;
-    for(auto & cc : DICOM_data.contour_data->ccs){
-        auto base_ptr = reinterpret_cast<contour_collection<double> *>(&cc);
-        cc_all.push_back( std::ref(*base_ptr) );
-    }
-
-    //Whitelist contours using the provided regex.
-    auto cc_ROIs = cc_all;
-    cc_ROIs.remove_if([=](std::reference_wrapper<contour_collection<double>> cc) -> bool {
-                   const auto ROINameOpt = cc.get().contours.front().GetMetadataValueAs<std::string>("ROIName");
-                   //if(!ROINameOpt) return true; // Note cannot do this because it can fail if the tag is merely missing.
-                   const auto ROIName = ROINameOpt.value();
-                   return !(std::regex_match(ROIName,theregex));
-    });
-    cc_ROIs.remove_if([=](std::reference_wrapper<contour_collection<double>> cc) -> bool {
-                   const auto ROINameOpt = cc.get().contours.front().GetMetadataValueAs<std::string>("NormalizedROIName");
-                   //if(!ROINameOpt) return true; // Note cannot do this because it can fail if the tag is merely missing.
-                   const auto ROIName = ROINameOpt.value();
-                   return !(std::regex_match(ROIName,thenormalizedregex));
-    });
-
+    auto cc_all = All_CCs( DICOM_data );
+    auto cc_ROIs = Whitelist( cc_all, { { "ROIName", ROILabelRegex },
+                                        { "NormalizedROIName", NormalizedROILabelRegex } } );
     if(cc_ROIs.empty()){
         throw std::invalid_argument("No contours selected. Cannot continue.");
     }

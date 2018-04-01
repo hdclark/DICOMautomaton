@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "../Structs.h"
+#include "../Regex_Selectors.h"
 #include "../YgorImages_Functors/Grouping/Misc_Functors.h"
 #include "../YgorImages_Functors/Processing/ImagePartialDerivative.h"
 #include "../YgorImages_Functors/Processing/In_Image_Plane_Bicubic_Supersample.h"

@@ -12,6 +12,7 @@
 #include <string>    
 
 #include "../Structs.h"
+#include "../Regex_Selectors.h"
 #include "ContourVote.h"
 #include "Explicator.h"       //Needed for Explicator class.
 #include "YgorMath.h"         //Needed for vec3 class.

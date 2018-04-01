@@ -10,6 +10,7 @@
 #include <string>    
 
 #include "../Structs.h"
+#include "../Regex_Selectors.h"
 #include "PurgeContours.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 

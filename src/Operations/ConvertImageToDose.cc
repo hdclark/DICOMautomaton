@@ -6,6 +6,7 @@
 #include <string>    
 
 #include "../Structs.h"
+#include "../Regex_Selectors.h"
 #include "ConvertImageToDose.h"
 
 

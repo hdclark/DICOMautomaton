@@ -12,6 +12,7 @@
 #include <string>    
 
 #include "../Structs.h"
+#include "../Regex_Selectors.h"
 #include "../YgorImages_Functors/Compute/CropToROIs.h"
 #include "CropImages.h"
 #include "YgorImages.h"

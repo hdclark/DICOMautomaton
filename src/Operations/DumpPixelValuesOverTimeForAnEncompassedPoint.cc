@@ -9,6 +9,7 @@
 #include <utility>            //Needed for std::pair.
 
 #include "../Structs.h"
+#include "../Regex_Selectors.h"
 #include "DumpPixelValuesOverTimeForAnEncompassedPoint.h"
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.

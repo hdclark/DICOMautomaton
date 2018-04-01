@@ -8,6 +8,7 @@
 #include <string>    
 
 #include "../Structs.h"
+#include "../Regex_Selectors.h"
 #include "../YgorImages_Functors/Grouping/Misc_Functors.h"
 #include "../YgorImages_Functors/Processing/CT_Convert_NaNs_to_Air.h"
 #include "ConvertNaNsToAir.h"

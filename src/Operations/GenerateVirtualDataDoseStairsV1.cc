@@ -10,6 +10,7 @@
 
 #include "../Imebra_Shim.h"
 #include "../Structs.h"
+#include "../Regex_Selectors.h"
 #include "Explicator.h"       //Needed for Explicator class.
 #include "GenerateVirtualDataDoseStairsV1.h"
 #include "YgorImages.h"

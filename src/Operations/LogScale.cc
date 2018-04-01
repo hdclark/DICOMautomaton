@@ -12,6 +12,7 @@
 #include <string>    
 
 #include "../Structs.h"
+#include "../Regex_Selectors.h"
 #include "../YgorImages_Functors/Grouping/Misc_Functors.h"
 #include "../YgorImages_Functors/Processing/Logarithmic_Pixel_Scale.h"
 #include "LogScale.h"

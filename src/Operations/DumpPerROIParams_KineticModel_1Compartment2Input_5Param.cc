@@ -22,6 +22,7 @@
 #include "../KineticModel_1Compartment2Input_5Param_LinearInterp_Common.h"
 #include "../KineticModel_1Compartment2Input_Reduced3Param_Chebyshev_Common.h"
 #include "../Structs.h"
+#include "../Regex_Selectors.h"
 #include "../YgorImages_Functors/Grouping/Misc_Functors.h"
 #include "DumpPerROIParams_KineticModel_1Compartment2Input_5Param.h"
 #include "YgorImages.h"

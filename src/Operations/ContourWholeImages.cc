@@ -12,6 +12,7 @@
 #include <string>    
 
 #include "../Structs.h"
+#include "../Regex_Selectors.h"
 #include "ContourWholeImages.h"
 #include "Explicator.h"       //Needed for Explicator class.
 #include "YgorImages.h"

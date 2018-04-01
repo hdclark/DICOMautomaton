@@ -15,6 +15,7 @@
 
 #include "../Contour_Boolean_Operations.h"
 #include "../Structs.h"
+#include "../Regex_Selectors.h"
 #include "ContourBooleanOperations.h"
 #include "Explicator.h"       //Needed for Explicator class.
 #include "YgorMath.h"         //Needed for vec3 class.

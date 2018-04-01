@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "../Structs.h"
+#include "../Regex_Selectors.h"
 #include "../YgorImages_Functors/Compute/Contour_Similarity.h"
 #include "ContourSimilarity.h"
 #include "YgorImages.h"

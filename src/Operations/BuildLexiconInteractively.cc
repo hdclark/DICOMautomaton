@@ -14,6 +14,7 @@
 #include <vector>
 
 #include "../Structs.h"
+#include "../Regex_Selectors.h"
 #include "BuildLexiconInteractively.h"
 #include "Explicator.h"       //Needed for Explicator class.
 #include "YgorMath.h"         //Needed for vec3 class.

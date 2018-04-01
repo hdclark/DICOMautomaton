@@ -14,6 +14,7 @@
 #include <vector>
 
 #include "../Structs.h"
+#include "../Regex_Selectors.h"
 #include "DumpROIContours.h"
 #include "YgorFilesDirs.h"    //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
 #include "YgorMath.h"         //Needed for vec3 class.
@@ -86,8 +87,6 @@ Drover DumpROIContours(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std:
     const auto NormalizedROILabelRegex = OptArgs.getValueStr("NormalizedROILabelRegex").value();
 
     //-----------------------------------------------------------------------------------------------------------------
-    const auto theregex = std::regex(ROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto thenormalizedregex = std::regex(NormalizedROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
 
     if(DumpFileName.empty()){
         DumpFileName = Get_Unique_Sequential_Filename("/tmp/dicomautomaton_dumproicontours_", 6, ".obj");
@@ -98,24 +97,9 @@ Drover DumpROIContours(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std:
 
     //Stuff references to all contours into a list. Remember that you can still address specific contours through
     // the original holding containers (which are not modified here).
-    std::list<std::reference_wrapper<contour_collection<double>>> cc_all;
-    for(auto & cc : DICOM_data.contour_data->ccs){
-        auto base_ptr = reinterpret_cast<contour_collection<double> *>(&cc);
-        cc_all.push_back( std::ref(*base_ptr) );
-    }
-
-    //Whitelist contours using the provided regex.
-    auto cc_ROIs = cc_all;
-    cc_ROIs.remove_if([=](std::reference_wrapper<contour_collection<double>> cc) -> bool {
-                   const auto ROINameOpt = cc.get().contours.front().GetMetadataValueAs<std::string>("ROIName");
-                   const auto ROIName = ROINameOpt.value();
-                   return !(std::regex_match(ROIName,theregex));
-    });
-    cc_ROIs.remove_if([=](std::reference_wrapper<contour_collection<double>> cc) -> bool {
-                   const auto ROINameOpt = cc.get().contours.front().GetMetadataValueAs<std::string>("NormalizedROIName");
-                   const auto ROIName = ROINameOpt.value();
-                   return !(std::regex_match(ROIName,thenormalizedregex));
-    });
+    auto cc_all = All_CCs( DICOM_data );
+    auto cc_ROIs = Whitelist( cc_all, { { "ROIName", ROILabelRegex },
+                                        { "NormalizedROIName", NormalizedROILabelRegex } } );
 
     if(cc_ROIs.empty()){
         throw std::invalid_argument("No contours selected. Cannot continue.");

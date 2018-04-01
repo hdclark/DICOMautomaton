@@ -9,6 +9,7 @@
 
 #include "../Imebra_Shim.h"
 #include "../Structs.h"
+#include "../Regex_Selectors.h"
 #include "GenerateVirtualDataContourViaThresholdTestV1.h"
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.

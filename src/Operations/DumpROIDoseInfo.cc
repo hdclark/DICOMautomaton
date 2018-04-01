@@ -12,6 +12,7 @@
 #include <utility>            //Needed for std::pair.
 
 #include "../Structs.h"
+#include "../Regex_Selectors.h"
 #include "DumpROIDoseInfo.h"
 #include "Explicator.h"       //Needed for Explicator class.
 

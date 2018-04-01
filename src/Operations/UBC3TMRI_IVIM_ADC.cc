@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "../Structs.h"
+#include "../Regex_Selectors.h"
 #include "../YgorImages_Functors/Grouping/Misc_Functors.h"
 #include "../YgorImages_Functors/Processing/IVIMMRI_ADC_Map.h"
 #include "../YgorImages_Functors/Processing/Time_Course_Slope_Map.h"

@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "../Structs.h"
+#include "../Regex_Selectors.h"
 #include "ModifyContourMetadata.h"
 #include "YgorImages.h"
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
@@ -80,31 +81,12 @@ Drover ModifyContourMetadata(Drover DICOM_data,
     const auto KeyValues = OptArgs.getValueStr("KeyValues").value();
 
     //-----------------------------------------------------------------------------------------------------------------
-    const auto theregex = std::regex(ROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto thenormalizedregex = std::regex(NormalizedROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
 
     //Stuff references to all contours into a list. Remember that you can still address specific contours through
     // the original holding containers (which are not modified here).
-    std::list<std::reference_wrapper<contour_collection<double>>> cc_all;
-    for(auto & cc : DICOM_data.contour_data->ccs){
-        auto base_ptr = reinterpret_cast<contour_collection<double> *>(&cc);
-        cc_all.push_back( std::ref(*base_ptr) );
-    }
-
-    //Whitelist contours using the provided regex.
-    auto cc_ROIs = cc_all;
-    cc_ROIs.remove_if([=](std::reference_wrapper<contour_collection<double>> cc) -> bool {
-                   const auto ROINameOpt = cc.get().contours.front().GetMetadataValueAs<std::string>("ROIName");
-                   if(!ROINameOpt) return true; // Remove if the name is N/A.
-                   const auto ROIName = ROINameOpt.value();
-                   return !(std::regex_match(ROIName,theregex));
-    });
-    cc_ROIs.remove_if([=](std::reference_wrapper<contour_collection<double>> cc) -> bool {
-                   const auto ROINameOpt = cc.get().contours.front().GetMetadataValueAs<std::string>("NormalizedROIName");
-                   if(!ROINameOpt) return true; // Remove if the name is N/A.
-                   const auto ROIName = ROINameOpt.value();
-                   return !(std::regex_match(ROIName,thenormalizedregex));
-    });
+    auto cc_all = All_CCs( DICOM_data );
+    auto cc_ROIs = Whitelist( cc_all, { { "ROIName", ROILabelRegex },
+                                        { "NormalizedROIName", NormalizedROILabelRegex } } );
     if(cc_ROIs.empty()){
         throw std::invalid_argument("No contours selected. Cannot continue.");
     }

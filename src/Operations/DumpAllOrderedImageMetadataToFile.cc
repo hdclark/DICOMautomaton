@@ -9,6 +9,7 @@
 #include <utility>            //Needed for std::pair.
 
 #include "../Structs.h"
+#include "../Regex_Selectors.h"
 #include "DumpAllOrderedImageMetadataToFile.h"
 #include "YgorFilesDirs.h"    //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
 #include "YgorImages.h"

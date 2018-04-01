@@ -8,6 +8,7 @@
 #include <string>    
 
 #include "../Structs.h"
+#include "../Regex_Selectors.h"
 #include "../YgorImages_Functors/Grouping/Misc_Functors.h"
 #include "../YgorImages_Functors/Processing/CT_Perf_Pixel_Filter.h"
 #include "PreFilterEnormousCTValues.h"

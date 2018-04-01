@@ -11,6 +11,7 @@
 #include <string>    
 
 #include "../Structs.h"
+#include "../Regex_Selectors.h"
 #include "CopyImages.h"
 
 std::list<OperationArgDoc> OpArgDocCopyImages(void){

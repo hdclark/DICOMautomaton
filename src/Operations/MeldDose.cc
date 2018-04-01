@@ -6,6 +6,7 @@
 
 #include "../Dose_Meld.h"
 #include "../Structs.h"
+#include "../Regex_Selectors.h"
 #include "MeldDose.h"
 
 

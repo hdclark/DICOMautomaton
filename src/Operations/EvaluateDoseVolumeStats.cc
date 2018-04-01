@@ -20,6 +20,7 @@
 #include <vector>
 
 #include "../Structs.h"
+#include "../Regex_Selectors.h"
 #include "../YgorImages_Functors/Compute/AccumulatePixelDistributions.h"
 #include "EvaluateDoseVolumeStats.h"
 #include "Explicator.h"       //Needed for Explicator class.

@@ -11,6 +11,7 @@
 #include <string>    
 
 #include "../Structs.h"
+#include "../Regex_Selectors.h"
 #include "../YgorImages_Functors/Grouping/Misc_Functors.h"
 #include "../YgorImages_Functors/Processing/Slope_Difference.h"
 #include "../YgorImages_Functors/Transform/DCEMRI_Signal_Difference_C.h"

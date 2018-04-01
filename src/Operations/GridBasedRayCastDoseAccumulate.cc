@@ -18,6 +18,7 @@
 
 #include "../Dose_Meld.h"
 #include "../Structs.h"
+#include "../Regex_Selectors.h"
 #include "../Thread_Pool.h"
 #include "../YgorImages_Functors/Compute/GenerateSurfaceMask.h"
 #include "../YgorImages_Functors/Grouping/Misc_Functors.h"

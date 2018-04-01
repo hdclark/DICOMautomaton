@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "../Structs.h"
+#include "../Regex_Selectors.h"
 #include "../YgorImages_Functors/Grouping/Misc_Functors.h"
 #include "../YgorImages_Functors/Processing/DCEMRI_AUC_Map.h"
 #include "DCEMRI_IAUC.h"

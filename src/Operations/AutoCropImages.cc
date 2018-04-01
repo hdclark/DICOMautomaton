@@ -15,6 +15,7 @@
 #include <vector>
 
 #include "../Structs.h"
+#include "../Regex_Selectors.h"
 #include "../YgorImages_Functors/Compute/CropToROIs.h"
 #include "AutoCropImages.h"
 #include "YgorImages.h"

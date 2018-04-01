@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "../Structs.h"
+#include "../Regex_Selectors.h"
 #include "ModifyImageMetadata.h"
 #include "YgorImages.h"
 #include "YgorString.h"       //Needed for GetFirstRegex(...)

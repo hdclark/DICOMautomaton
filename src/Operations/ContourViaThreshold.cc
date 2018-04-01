@@ -17,6 +17,7 @@
 #include <vector>
 
 #include "../Structs.h"
+#include "../Regex_Selectors.h"
 #include "../Thread_Pool.h"
 #include "ContourViaThreshold.h"
 #include "Explicator.h"       //Needed for Explicator class.

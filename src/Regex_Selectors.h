@@ -18,10 +18,13 @@
 struct Regex_Selector_Opts {
 
     enum class 
-    NAs {           // Items missing the specified metadata.
-        Include,    // Include them in the output.
-        Exclude,    // Filter them out.
-    } nas = NAs::Exclude;
+    NAs {             // Items missing the specified metadata.
+        TreatAsEmpty, // Treat as if they were the empty string.
+                      //   This is useful because often the regex will match everything and matching N/As is
+                      //   desired, but if something specific is needed the empty string often won't match.
+        Include,      // Unilaterally include them in the output.
+        Exclude,      // Unilaterally filter them out.
+    } nas = NAs::TreatAsEmpty;
 
     enum class
     Validation {        // How items are treated.

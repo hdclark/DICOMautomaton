@@ -11,6 +11,7 @@
 
 #include "../Common_Boost_Serialization.h"
 #include "../Structs.h"
+#include "../Regex_Selectors.h"
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 
 
