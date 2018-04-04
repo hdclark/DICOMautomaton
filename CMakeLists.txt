@@ -95,6 +95,8 @@ set(CPACK_DEBIAN_PACKAGE_DEPENDS
     libboost-dev,
     libboost-filesystem-dev,
     libboost-iostreams-dev,
+    libboost-program-options-dev,
+    libboost-thread-dev,
     libz-dev,
     libsfml-dev,
     libjansson-dev,
@@ -114,7 +116,8 @@ set(CPACK_DEBIAN_PACKAGE_RECOMMENDS
    "zenity, 
     libeigen3-dev,
     gnuplot,
-    ygorclustering")
+    ygorclustering,
+    libboost-all-dev")
 set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "amd64") # i386, amd64, armel, armhf, ...
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Various tools for medical physics applications.")
 set(CPACK_PACKAGE_CONTACT "hdeanclark@gmail.com")
