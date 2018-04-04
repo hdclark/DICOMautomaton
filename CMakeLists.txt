@@ -92,6 +92,7 @@ set(CPACK_STRIP_FILES TRUE)
 set(CPACK_DEBIAN_PACKAGE_DEPENDS 
    "ygor,
     explicator,
+    ygorclustering,
     libboost-dev,
     libboost-filesystem-dev,
     libboost-iostreams-dev,
@@ -102,7 +103,11 @@ set(CPACK_DEBIAN_PACKAGE_DEPENDS
     libjansson-dev,
     libpqxx-dev,
     postgresql-client,
+    freeglut3-dev,
     freeglut3,
+    libxi-dev,
+    libxmu-dev,
+    libeigen3-dev,
     libcgal-dev,
     libnlopt-dev,
     libasio-dev,
@@ -114,9 +119,7 @@ set(CPACK_DEBIAN_PACKAGE_DEPENDS
 # Recommended or optional packages, e.g., "liboptional-dev (>= 1.2.3-1), libmaybe-dev (>= 1:1.3.2-10)"
 set(CPACK_DEBIAN_PACKAGE_RECOMMENDS 
    "zenity, 
-    libeigen3-dev,
     gnuplot,
-    ygorclustering,
     libboost-all-dev")
 set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "amd64") # i386, amd64, armel, armhf, ...
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Various tools for medical physics applications.")
