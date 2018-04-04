@@ -188,12 +188,12 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
 
     //Stuff references to all contours into a list. Remember that you can still address specific contours through
     // the original holding containers (which are not modified here).
-    std::list<std::reference_wrapper<contour_of_points<double>>> cop_all;
-    for(auto & cc : DICOM_data.contour_data->ccs){
-        for(auto & cop : cc.contours){
-            cop_all.push_back( std::ref(cop) );
-        }
-    }
+    //std::list<std::reference_wrapper<contour_of_points<double>>> cop_all;
+    //for(auto & cc : DICOM_data.contour_data->ccs){
+    //    for(auto & cop : cc.contours){
+    //        cop_all.push_back( std::ref(cop) );
+    //    }
+    //}
 
     std::vector< YgorMathPlottingGnuplot::Shuttle<samples_1D<double>> > junction_plot_shtl;
     std::vector< YgorMathPlottingGnuplot::Shuttle<samples_1D<double>> > leaf_plot_shtl;
@@ -823,6 +823,11 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
 
         //---------------------------------------------------------------------------
         //Add thin contours for visually inspecting the location of the peaks.
+        if(DICOM_data.contour_data == nullptr){
+            std::unique_ptr<Contour_Data> output (new Contour_Data());
+            DICOM_data.contour_data = std::move(output);
+        }
+
         DICOM_data.contour_data->ccs.emplace_back();
         {
             auto contour_metadata = animg->metadata;
