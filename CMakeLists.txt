@@ -95,7 +95,7 @@ set(CPACK_DEBIAN_PACKAGE_DEPENDS
     libboost-dev,
     libboost-filesystem-dev,
     libboost-iostreams-dev,
-    zlibc,
+    libz-dev,
     libsfml-dev,
     libjansson-dev,
     libpqxx-dev,
