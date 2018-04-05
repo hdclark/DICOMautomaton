@@ -1,4 +1,4 @@
-//DICOMautomaton_Dispatcher.cc - A part of DICOMautomaton 2016. Written by hal clark.
+//DICOMautomaton_Dispatcher.cc - A part of DICOMautomaton 2017, 2018. Written by hal clark.
 //
 // This program provides a standard entry-point into some DICOMautomaton analysis routines.
 //
@@ -27,7 +27,9 @@
 #include <Wt/WTableCell.h>
 #include <Wt/WText.h>
 #include <Wt/WWidget.h>
+
 #include <boost/filesystem.hpp>
+
 #include <algorithm>
 //#include <cfenv>              //Needed for std::feclearexcept(FE_ALL_EXCEPT).
 #include <chrono>
@@ -61,41 +63,6 @@
 namespace Wt {
 class WEnvironment;
 }  // namespace Wt
-
-/*
-class fileBackedStreamResource : public Wt::WStreamResource {
-  public:
-    fileBackedStreamResource(std::string fileName, 
-                             std::string suggestedFileName,
-                             Wt::WObject *parent = 0) : Wt::WStreamResource(parent),
-                                                        fileName_(fileName) {
-        this->setMimeType("application/octet-stream");
-        this->suggestFileName(suggestedFileName);
-    }
-
-    ~fileBackedStreamResource(){
-        this->beingDeleted();
-    }
-
-    std::string getFileName(void){
-        return this->fileName_;
-    }
-
-    void handleRequest(const Wt::Http::Request &request,
-                       Wt::Http::Response &response){
-        std::ifstream r(fileName_.c_str(), std::ios::in | std::ios::binary);
-        if(r.ok()){
-            this->handleRequestPiecewise(request, response, r);
-        }else{
-            throw std::runtime_error("File not accessible. Computation failed.");
-        }
-        return;
-    }
-
-  private:
-    std::string fileName_;
-};
-*/
 
 static
 std::string CreateUniqueDirectoryTimestamped(std::string prefix, std::string postfix){
@@ -218,21 +185,6 @@ BaseWebServerApplication::BaseWebServerApplication(const Wt::WEnvironment &env) 
 }
 
 
-//void BaseWebServerApplication::createInvocationMetadataGB(void){
-//
-//    //Create a groupbox widget that allows invocation metadata be entered. 
-//    //  This is extra info not contained in the DICOM files. Also useful for non-DICOM files.
-//    //  Maybe it should be optional? Not really needed at the moment. Eventually though.
-//    
-//
-//    // NOTE: If you are implementing this, begin by copying the Operation Parameter Specification table.
-//    //       Also insert it into the dialog widget sequence (probably immediately after loading completes).
-//
-//    for( each row in the table ){
-//        InvocationMetadata[ parameter name ] += user-supplied value;
-//    }
-//}
-
 void BaseWebServerApplication::createFileUploadGB(void){
     // This routine creates a file upload box.
 
@@ -240,7 +192,7 @@ void BaseWebServerApplication::createFileUploadGB(void){
     gb->setObjectName("file_upload_gb");
     gb->addStyleClass("DataEntryGroupBlock");
 
-    auto instruct = gb->addWidget(std::make_unique<Wt::WText>("Please select the RTSTRUCT and RTDOSE files to upload."));
+    auto instruct = gb->addWidget(std::make_unique<Wt::WText>("Please upload DICOM files."));
     instruct->addStyleClass("InstructionText");
 
     (void*) gb->addWidget(std::make_unique<Wt::WBreak>());
@@ -457,6 +409,7 @@ void BaseWebServerApplication::createOperationSelectorGB(void){
     for(auto &anop : known_ops){
         const auto n = anop.first;
         if( ( n == "FVPicketFence" )
+        ||  ( n == "PresentationImage" )
         ||  ( n == "HighlightROIs" )
         ||  ( n == "DICOMExportImagesAsDose" )
         ||  ( n == "ConvertDoseToImage" ) 
