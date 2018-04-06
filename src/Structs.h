@@ -446,7 +446,21 @@ class OperationArgPkg {
 };
 
 
+enum class OpArgVisibility {
+    // This class is used to conceal operation arguments from user-facing interfaces.
+    //
+    // Note: This setting will not affect visibility for the operation itself.
+    Show,
+    Hide,
+};
 
+enum class OpArgFlow {
+    // This class is used to denote whether operation arguments are used as inputs (ingress) or outputs (egress).
+    Ingress,
+    Egress,
+    IngressEgress,
+    Unknown,
+};
 
 // Class for documenting commandline argument operation options.
 struct OperationArgDoc {
@@ -456,6 +470,11 @@ struct OperationArgDoc {
     bool expected;
     std::list<std::string> examples;
 
+    // Auxiliary information.
     std::string mimetype; // If applicable.
+
+    OpArgVisibility visibility = OpArgVisibility::Show;
+    OpArgFlow flow = OpArgFlow::Unknown;
+
 };
 

@@ -562,6 +562,11 @@ void BaseWebServerApplication::appendOperationParamsColumn(void){
         }
 
         for(auto &a : optdocs){
+            // Do not expose argmuents that have been concealed.
+            if(a.visibility == OpArgVisibility::Hide){
+                continue;
+            }
+
             //Since this is an interactive session, do not expose normalized selections.
             // (This might be useful in some cases though ... change if necessary.)
             if(std::regex_match(a.name,normroiregex)){
@@ -739,8 +744,15 @@ void BaseWebServerApplication::createComputeGB(void){
 
             //Find documentation for the current parameter.
             OperationArgDoc op_doc;
-            for(auto &o : op_doc_l){
+            for(const auto &o : op_doc_l){
                 if(o.name == param_name) op_doc = o;
+            }
+
+            //Reject this argument if the parameter has been concealed.
+            // This will hopefully prevent the user being able to provide parameters via DOM alteration.
+            if(op_doc.visibility == OpArgVisibility::Hide){
+                op_args.insert(op_doc.name, op_doc.default_val);
+                continue;
             }
 
             std::string param_val;

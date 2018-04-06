@@ -17,37 +17,53 @@
 std::list<OperationArgDoc> OpArgDocFVPicketFence(void){
     std::list<OperationArgDoc> out;
 
-    auto c1 = OpArgDocCropImages();
-    auto c2 = OpArgDocAutoCropImages();
-    auto c5 = OpArgDocAnalyzePicketFence();
-    auto c7 = OpArgDocPresentationImage();
-
-    out.splice( out.end(), c1 );
-    out.splice( out.end(), c2 );
-    out.splice( out.end(), c5 );
-    out.splice( out.end(), c7 );
+    out.splice( out.end(), OpArgDocCropImages() );
+    out.splice( out.end(), OpArgDocAutoCropImages() );
+    out.splice( out.end(), OpArgDocAnalyzePicketFence() );
+    out.splice( out.end(), OpArgDocPresentationImage() );
 
     // Adjust the defaults to suit this particular workflow.
     for(auto &oparg : out){
         if(false){
         }else if(oparg.name == "ImageSelection"){
             oparg.default_val = "last";
+            oparg.visibility  = OpArgVisibility::Hide;
+
         }else if(oparg.name == "RowsL"){
-            oparg.default_val = "30px";
+            oparg.default_val = "5px";
+            oparg.visibility  = OpArgVisibility::Hide;
         }else if(oparg.name == "RowsH"){
-            oparg.default_val = "30px";
+            oparg.default_val = "5px";
+            oparg.visibility  = OpArgVisibility::Hide;
         }else if(oparg.name == "ColumnsL"){
-            oparg.default_val = "30px";
+            oparg.default_val = "5px";
+            oparg.visibility  = OpArgVisibility::Hide;
         }else if(oparg.name == "ColumnsH"){
-            oparg.default_val = "30px";
+            oparg.default_val = "5px";
+            oparg.visibility  = OpArgVisibility::Hide;
 
         }else if(oparg.name == "RTIMAGE"){
             oparg.default_val = "true";
+            oparg.visibility  = OpArgVisibility::Hide;
 
         }else if(oparg.name == "ThresholdDistance"){
             oparg.default_val = "1.0";
+
         }else if(oparg.name == "InteractivePlots"){
             oparg.default_val = "false";
+            oparg.visibility  = OpArgVisibility::Hide;
+
+        }else if(oparg.name == "UserComment"){
+            oparg.visibility  = OpArgVisibility::Hide;
+
+        }else if(oparg.name == "MLCROILabel"){
+            oparg.visibility  = OpArgVisibility::Hide;
+
+        }else if(oparg.name == "JunctionROILabel"){
+            oparg.visibility  = OpArgVisibility::Hide;
+
+        }else if(oparg.name == "DICOMMargin"){
+            oparg.visibility  = OpArgVisibility::Hide;
 
         }else if(oparg.name == "ScaleFactor"){
             oparg.default_val = "1.0";
