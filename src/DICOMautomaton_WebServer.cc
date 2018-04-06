@@ -100,6 +100,23 @@ std::string CreateUniqueDirectoryTimestamped(std::string prefix, std::string pos
     return out;
 }
 
+static
+std::string CamelToHuman(std::string in){
+    // This routine endeavours to convert as follows:
+    //   MinimumJunctionSeparation  --> Minimum Junction Separation
+    //   MLCModel                   --> MLC Model
+    //   CSVFileName                --> CSV Output File
+    std::regex fname = std::regex("filename", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    in = std::regex_replace(in, fname, "OutputFile");
+
+    std::regex dblcaps = std::regex("([A-Z])([A-Z][a-z])", std::regex::optimize | std::regex::extended);
+    in = std::regex_replace(in, dblcaps, R"***($1 $2)***");
+
+    std::regex acap = std::regex("([^A-Z ])([A-Z][a-z])", std::regex::optimize | std::regex::extended);
+    in = std::regex_replace(in, acap, R"***($1 $2)***");
+    return in;
+}
+
 // This class is instanced for each client. It holds all state for a single session.
 class BaseWebServerApplication : public Wt::WApplication {
   public:
@@ -388,7 +405,7 @@ void BaseWebServerApplication::createOperationSelectorGB(void){
     gb->setObjectName("op_select_gb");
     gb->addStyleClass("DataEntryGroupBlock");
 
-    auto instruct = gb->addWidget(std::make_unique<Wt::WText>("Please select the operation of interest."));
+    auto instruct = gb->addWidget(std::make_unique<Wt::WText>("Please select the operation to perform."));
     instruct->addStyleClass("InstructionText");
 
     (void*) gb->addWidget(std::make_unique<Wt::WBreak>());
@@ -650,7 +667,7 @@ void BaseWebServerApplication::createOperationParamSelectorGB(void){
     gb->setObjectName("op_paramspec_gb");
     gb->addStyleClass("DataEntryGroupBlock");
 
-    auto instruct = gb->addWidget(std::make_unique<Wt::WText>("Please specify operation parameters. Hover over for descriptions."));
+    auto instruct = gb->addWidget(std::make_unique<Wt::WText>("Please specify parameters. Hover over for descriptions."));
     instruct->addStyleClass("InstructionText");
 
     auto addbutton = gb->addWidget(std::make_unique<Wt::WPushButton>("Add another pass"));
@@ -894,16 +911,26 @@ void BaseWebServerApplication::createComputeGB(void){
     // Corral the output.
     for(auto &apair : OutputFiles){
         const auto param_name = apair.first;
-        auto fr = apair.second;
+        const auto HumanParamName = CamelToHuman(param_name);
 
+        auto fr = apair.second;
         const auto fname = fr->fileName();
-        (void*) gb->addWidget(std::make_unique<Wt::WBreak>());
 
         //Wt will serve an empty file if the backing file does not exist. This approach is more explicit.
-        if(! Does_File_Exist_And_Can_Be_Read(fname)){
-            (void *) gb->addWidget(std::make_unique<Wt::WText>("<p>Output file: "_s + fname + " not available.</p>"));
+        if(! Does_File_Exist_And_Can_Be_Read(fname) ){
+            (void *) gb->addWidget(std::make_unique<Wt::WText>("<p>Output file for '"_s + param_name + "' not available.</p>"));
             break;
         }
+
+        (void *) gb->addWidget(std::make_unique<Wt::WBreak>());
+        auto outparamname = gb->addWidget(std::make_unique<Wt::WText>(HumanParamName));
+        outparamname->addStyleClass("OutputParameterName");
+        (void *) gb->addWidget(std::make_unique<Wt::WText>(" "));
+
+        Wt::WLink fr_link = Wt::WLink(fr);
+        fr_link.setTarget(Wt::LinkTarget::Self);
+        (void *) gb->addWidget(std::make_unique<Wt::WAnchor>(fr_link, "download"_s));
+
 
         // If the file is tabular, create a table to display the info.
         if(OutputMimetype[param_name] == "text/csv"){
@@ -928,20 +955,36 @@ void BaseWebServerApplication::createComputeGB(void){
 
             (void*) gb->addWidget(std::make_unique<Wt::WBreak>());
             table->enable();
+
+            // If the table is large, hide it behind a toggle button.
+            if( (table->rowCount() > 5) || (table->columnCount() > 4) ){
+                table->hide();
+                auto ttbutton = gb->addWidget(std::make_unique<Wt::WPushButton>("Show table"));
+                ttbutton->clicked().connect(std::bind([=](){
+                    //ttbutton->disable();
+                    if( table->isHidden() ){
+                        table->show();
+                        ttbutton->setText("Hide table");
+                    }else{
+                        table->hide();
+                        ttbutton->setText("Show table");
+                    }
+                    this->processEvents();
+                    return;
+                }));
+            }
         }
 
         // If the file is an image, display it.
         if(OutputMimetype[param_name] == "image/png"){
+            (void *) gb->addWidget(std::make_unique<Wt::WBreak>());
             auto img = gb->addWidget(std::make_unique<Wt::WImage>(Wt::WLink(fr)));
             img->setAlternateText("Output image.");
 
             (void*) gb->addWidget(std::make_unique<Wt::WBreak>());
         }
 
-        Wt::WLink fr_link = Wt::WLink(fr);
-        fr_link.setTarget(Wt::LinkTarget::Self);
-        (void *) gb->addWidget(std::make_unique<Wt::WAnchor>(fr_link, "Download file"_s));
-
+        (void *) gb->addWidget(std::make_unique<Wt::WBreak>());
     }
     this->processEvents();
 
