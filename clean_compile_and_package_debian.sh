@@ -11,7 +11,7 @@ pushd .
 cd "${BUILDDIR}"
 mkdir -p build && cd build/
 cmake ../ -DCMAKE_INSTALL_PREFIX=/usr
-make -j 4 && make package
+make -j $(nproc) && make package
 mv *.deb "${BUILTPKGSDIR}/"
 popd
 

@@ -14,7 +14,7 @@ if [ -f CMakeCache.txt ] ; then
 else
     cmake . -DCMAKE_INSTALL_PREFIX=/usr
 fi
-make -j 4 && make package
+make -j $(nproc) && make package
 mv *.deb "${BUILTPKGSDIR}/"
 popd
 
