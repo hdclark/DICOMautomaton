@@ -27,6 +27,7 @@
 #include <Wt/WTableCell.h>
 #include <Wt/WText.h>
 #include <Wt/WWidget.h>
+#include <Wt/WAnimation.h>
 
 #include <boost/filesystem.hpp>
 
@@ -106,14 +107,47 @@ std::string CamelToHuman(std::string in){
     //   MinimumJunctionSeparation  --> Minimum Junction Separation
     //   MLCModel                   --> MLC Model
     //   CSVFileName                --> CSV Output File
-    std::regex fname = std::regex("filename", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    in = std::regex_replace(in, fname, "OutputFile");
+
+    // We have to preserve case sensitivity for filename-related parameters because they are mapped by name.
+    // TODO: support case insensitivity for filename parameters?
+    std::regex FName = std::regex("FileName", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    in = std::regex_replace(in, FName, "OutputFile");
+/*    
+    std::regex fname = std::regex("filename", std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    in = std::regex_replace(in, fname, " output file");
+    std::regex Fname = std::regex("Filename", std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    in = std::regex_replace(in, Fname, "Output file");
+    std::regex fName = std::regex("fileName", std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    in = std::regex_replace(in, fName, " output File");
+*/
 
     std::regex dblcaps = std::regex("([A-Z])([A-Z][a-z])", std::regex::optimize | std::regex::extended);
     in = std::regex_replace(in, dblcaps, R"***($1 $2)***");
 
     std::regex acap = std::regex("([^A-Z ])([A-Z][a-z])", std::regex::optimize | std::regex::extended);
     in = std::regex_replace(in, acap, R"***($1 $2)***");
+    return in;
+}
+
+static
+std::string HumanToCamel(std::string in){
+    // This routine is the opposite of CamelToHuman(), and should round-trip endeavours to convert as follows:
+    //   MinimumJunctionSeparation  --> Minimum Junction Separation
+    //   MLCModel                   --> MLC Model
+    //   CSVFileName                --> CSV Output File
+    std::regex spaces = std::regex("[ ]*", std::regex::optimize | std::regex::extended);
+    in = std::regex_replace(in, spaces, "");
+
+    std::regex FName = std::regex("OutputFile", std::regex::icase | std::regex::optimize | std::regex::extended);
+    in = std::regex_replace(in, FName, "FileName");
+/*    
+    std::regex fname = std::regex("outputfile", std::regex::optimize | std::regex::extended);
+    in = std::regex_replace(in, fname, "filename");
+    std::regex Fname = std::regex("Outputfile", std::regex::optimize | std::regex::extended);
+    in = std::regex_replace(in, Fname, "Filename");
+    std::regex fName = std::regex("outputFile", std::regex::optimize | std::regex::extended);
+    in = std::regex_replace(in, fName, "fileName");
+*/    
     return in;
 }
 
@@ -151,6 +185,11 @@ class BaseWebServerApplication : public Wt::WApplication {
     std::regex normroiregex = std::regex(".*normalized.*roi.*label.*regex.*", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
     
     // --------------------- Web widget shared functors ---------------------
+    Wt::WAnimation anim = Wt::WAnimation( 
+                              Wt::AnimationEffect::Fade,
+                              Wt::TimingFunction::Ease,
+                              //Wt::TimingFunction::Linear,
+                              1000 ); // animation time in ms.
 
     //void createInvocationMetadataGB(void);
     void createFileUploadGB(void);
@@ -208,6 +247,7 @@ void BaseWebServerApplication::createFileUploadGB(void){
     auto gb = root()->addWidget(std::make_unique<Wt::WGroupBox>("File Upload"));
     gb->setObjectName("file_upload_gb");
     gb->addStyleClass("DataEntryGroupBlock");
+    gb->hide();
 
     auto instruct = gb->addWidget(std::make_unique<Wt::WText>("Please upload DICOM files."));
     instruct->addStyleClass("InstructionText");
@@ -231,6 +271,9 @@ void BaseWebServerApplication::createFileUploadGB(void){
     auto feedback = gb->addWidget(std::make_unique<Wt::WText>());
     feedback->setObjectName("file_upload_gb_feedback");
     feedback->addStyleClass("FeedbackText");
+
+    auto sep_break = root()->addWidget(std::make_unique<Wt::WBreak>());
+    sep_break->setCanReceiveFocus(true);
 
     // -------
 
@@ -272,6 +315,10 @@ void BaseWebServerApplication::createFileUploadGB(void){
 
     fileup->uploaded().connect(this, &BaseWebServerApplication::filesUploaded);
 
+    this->processEvents();
+    sep_break->setFocus(true);
+    gb->animateShow(this->anim);
+    this->processEvents();
     upbutton->setCanReceiveFocus(true);
     upbutton->setFocus(true);
     this->processEvents();
@@ -334,14 +381,23 @@ void BaseWebServerApplication::filesUploaded(void){
         auto gb = root()->addWidget(std::make_unique<Wt::WGroupBox>("File Loading"));
         gb->setObjectName("file_loading_gb");
         gb->addStyleClass("DataEntryGroupBlock");
+        gb->hide();
  
         auto feedback = gb->addWidget(std::make_unique<Wt::WText>());
         feedback->setObjectName("file_loading_gb_feedback");
         feedback->addStyleClass("FeedbackText");
         feedback->setText("<p>Loading files now...</p>");
 
+        auto sep_break = root()->addWidget(std::make_unique<Wt::WBreak>());
+        sep_break->setCanReceiveFocus(true);
+
+        this->processEvents();
+        sep_break->setFocus(true);
+        gb->animateShow(this->anim);
+        this->processEvents();
         gb->setCanReceiveFocus(true);
         gb->setFocus(true);
+        gb->setFocus(false);
         this->processEvents();
 
         //Uploaded file loading: Boost.Serialization archives.
@@ -404,6 +460,7 @@ void BaseWebServerApplication::createOperationSelectorGB(void){
     auto gb = root()->addWidget(std::make_unique<Wt::WGroupBox>("Operation Selection"));
     gb->setObjectName("op_select_gb");
     gb->addStyleClass("DataEntryGroupBlock");
+    gb->hide();
 
     auto instruct = gb->addWidget(std::make_unique<Wt::WText>("Please select the operation to perform."));
     instruct->addStyleClass("InstructionText");
@@ -446,9 +503,11 @@ void BaseWebServerApplication::createOperationSelectorGB(void){
 
     auto gobutton = gb->addWidget(std::make_unique<Wt::WPushButton>("Proceed"));
 
-    // -------
+    auto sep_break = root()->addWidget(std::make_unique<Wt::WBreak>());
+    sep_break->setCanReceiveFocus(true);
 
-    gobutton->clicked().connect(std::bind([=](){
+    // -------
+    auto proceed = [=](){
         //const std::set<int> selected = selector->selectedIndexes();
         //if(selected.empty()) return; // Warn about selecting something?
         if(selector->currentText().empty()) return; // Warn about selecting something?
@@ -458,72 +517,19 @@ void BaseWebServerApplication::createOperationSelectorGB(void){
         //this->createROISelectorGB();
         this->createOperationParamSelectorGB();
         return;
-    }));
+    };
+    gobutton->clicked().connect(std::bind(proceed));
+    selector->doubleClicked().connect(std::bind(proceed));
 
+    this->processEvents();
+    sep_break->setFocus(true);
+    gb->animateShow(this->anim);
+    this->processEvents();
     gobutton->setCanReceiveFocus(true);
     gobutton->setFocus(true);
     this->processEvents();
     return;
 }
-
-/*
-void BaseWebServerApplication::createROISelectorGB(void){
-    //This routine creates a selector box populated with the ROI labels found in the loaded ROIs.
-
-    (void*) root()->addWidget(std::make_unique<Wt::WBreak>());
-
-    auto gb = root()->addWidget(std::make_unique<Wt::WGroupBox>("ROI Selection"));
-    gb->setObjectName("roi_select_gb");
-    gb->addStyleClass("DataEntryGroupBlock");
-
-    auto instruct = gb->addWidget(std::make_unique<Wt::WText>("Please select the ROI(s) of interest, if applicable."));
-    instruct->addStyleClass("InstructionText");
-
-    (void*) gb->addWidget(std::make_unique<Wt::WBreak>());
-
-    auto selector = gb->addWidget(std::make_unique<Wt::WSelectionBox>());
-    selector->setSelectionMode(Wt::ExtendedSelection);
-    selector->setVerticalSize(15);
-    selector->disable();
-
-    (void*) gb->addWidget(std::make_unique<Wt::WBreak>());
-
-    auto feedback = gb->addWidget(std::make_unique<Wt::WText>());
-    feedback->setObjectName("roi_select_gb_feedback");
-    feedback->addStyleClass("FeedbackText");
-
-    //Determine which ROIs are available.
-    std::set<std::string> ROI_labels;
-    if(this->DICOM_data.contour_data != nullptr){
-        for(auto &cc : this->DICOM_data.contour_data->ccs){
-            for(auto &c : cc.contours){
-                ROI_labels.insert( c.metadata["ROIName"] );
-            }
-        }
-    }
-    for(const auto &l : ROI_labels){
-        selector->addItem(l);
-    }
-    selector->enable();
-
-    (void*) gb->addWidget(std::make_unique<Wt::WBreak>());
-
-    auto gobutton = gb->addWidget(std::make_unique<Wt::WPushButton>("Proceed"));
-    gobutton->clicked().connect(std::bind([=](){
-        //Possible to proceed without selecting any ROI.
-        //const std::set<int> selected = selector->selectedIndexes();
-        //if(selected.empty()) return; // Warn about selecting something?
-
-        selector->disable();
-        gobutton->disable();
-        this->createOperationParamSelectorGB();
-        return;
-    }));
-
-    this->processEvents();
-    return;
-}
-*/
 
 void BaseWebServerApplication::appendOperationParamsColumn(void){
     //This routine appends a parameter input column to the operation parameter selection table. 
@@ -574,7 +580,7 @@ void BaseWebServerApplication::appendOperationParamsColumn(void){
 
         auto optdocs = anop.second.first();
         if(optdocs.empty()){
-            feedback->setText("<p>No adjustable options.</p>");
+            feedback->setText("<p>No parameters to adjust...</p>");
             break;
         }
 
@@ -592,7 +598,12 @@ void BaseWebServerApplication::appendOperationParamsColumn(void){
 
             auto pn = table->elementAt(table_row,0); // Param name.
             if(first_run){
-                (void *) pn->addWidget(std::make_unique<Wt::WText>(a.name));
+                // Generate a display name for the parameter.
+                //
+                // Note: Filenames are not renamed because they refer to specific resources.
+                const auto param_name = (a.mimetype.empty()) ? CamelToHuman(a.name)
+                                                             : a.name;
+                (void *) pn->addWidget(std::make_unique<Wt::WText>( param_name ));
             }
 
             //ROI selection parameters.
@@ -609,7 +620,7 @@ void BaseWebServerApplication::appendOperationParamsColumn(void){
             //Filename parameters are not exposed to the user, but we encode them with a non-visible element.
             }else if(std::regex_match(a.name,fnameregex)){
                  //Hide the parameter name from the user.
-                 pn->hide();
+                 //pn->hide();
 
                  //Notify that we have to prepare a Wt::WResource for the output.
                  // ...
@@ -621,6 +632,9 @@ void BaseWebServerApplication::appendOperationParamsColumn(void){
                  //table->elementAt(table_row,cols)->addWidget( reinterpret_cast<Wt::WWidget *>(new Wt::WFileResource()) );
                  auto pb = table->elementAt(table_row,cols)->addWidget(std::make_unique<Wt::WProgressBar>()); //Dummy encoding for generated files.
                  pb->hide();
+
+                 auto tr = table->rowAt(table_row);
+                 tr->hide();
 
             //Boolean parameters.
             }else if( (a.examples.size() == 2)
@@ -666,8 +680,9 @@ void BaseWebServerApplication::createOperationParamSelectorGB(void){
     auto gb = root()->addWidget(std::make_unique<Wt::WGroupBox>("Operation Parameter Specification"));
     gb->setObjectName("op_paramspec_gb");
     gb->addStyleClass("DataEntryGroupBlock");
+    gb->hide();
 
-    auto instruct = gb->addWidget(std::make_unique<Wt::WText>("Please specify parameters. Hover over for descriptions."));
+    auto instruct = gb->addWidget(std::make_unique<Wt::WText>("Please specify parameters. Hover for descriptions."));
     instruct->addStyleClass("InstructionText");
 
     auto addbutton = gb->addWidget(std::make_unique<Wt::WPushButton>("Add another pass"));
@@ -690,6 +705,9 @@ void BaseWebServerApplication::createOperationParamSelectorGB(void){
 
     auto gobutton = gb->addWidget(std::make_unique<Wt::WPushButton>("Proceed"));
 
+    auto sep_break = root()->addWidget(std::make_unique<Wt::WBreak>());
+    sep_break->setCanReceiveFocus(true);
+
     // -------
 
     this->appendOperationParamsColumn();
@@ -703,10 +721,6 @@ void BaseWebServerApplication::createOperationParamSelectorGB(void){
     }));
 
     gobutton->clicked().connect(std::bind([=](){
-//    auto selector = reinterpret_cast<Wt::WSelectionBox *>( root()->find("op_select_gb_selector") );
-//    if(selector == nullptr) throw std::logic_error("Cannot find operation selector widget in DOM tree. Cannot continue.");
-    
-//        selector->disable();
         addbutton->disable();
         table->disable();
         gobutton->disable();
@@ -714,8 +728,13 @@ void BaseWebServerApplication::createOperationParamSelectorGB(void){
         return;
     }));
 
+    this->processEvents();
+    sep_break->setFocus(true);
+    gb->animateShow(this->anim);
+    this->processEvents();
     gb->setCanReceiveFocus(true);
     gb->setFocus(true);
+    gb->setFocus(false);
     this->processEvents();
     return;
 }
@@ -729,16 +748,24 @@ void BaseWebServerApplication::createComputeGB(void){
     auto gb = root()->addWidget(std::make_unique<Wt::WGroupBox>("Computation"));
     gb->setObjectName("compute_gb");
     gb->addStyleClass("DataEntryGroupBlock");
+    gb->hide();
 
     auto feedback = gb->addWidget(std::make_unique<Wt::WText>());
     feedback->setObjectName("compute_gb_feedback");
     feedback->addStyleClass("FeedbackText");
     feedback->setText("<p>Computing now...</p>");
 
+    auto sep_break = root()->addWidget(std::make_unique<Wt::WBreak>());
+    sep_break->setCanReceiveFocus(true);
+
+    this->processEvents();
+    sep_break->setFocus(true);
+    gb->animateShow(this->anim);
+    this->processEvents();
     gb->setCanReceiveFocus(true);
     gb->setFocus(true);
+    gb->setFocus(false);
     this->processEvents();
-
 
     // Gather the operation and parameters specified.
     auto selector = reinterpret_cast<Wt::WSelectionBox *>( root()->find("op_select_gb_selector") );
@@ -757,7 +784,9 @@ void BaseWebServerApplication::createComputeGB(void){
         auto op_doc_l = (Known_Operations()[selected_op].first)(); // Documentation parameter list.
         OperationArgPkg op_args(selected_op); // The list of parameters passed to the operation.
         for(int row = 1; row < rows; ++row){
-            const auto param_name = reinterpret_cast<Wt::WText *>(table->elementAt(row,0)->children().back())->text().toUTF8();
+            const auto param_human_name = reinterpret_cast<Wt::WText *>(table->elementAt(row,0)->children().back())->text().toUTF8();
+            const auto param_name = HumanToCamel(param_human_name);
+    
 
             //Find documentation for the current parameter.
             OperationArgDoc op_doc;
@@ -902,8 +931,13 @@ void BaseWebServerApplication::createComputeGB(void){
     }
     feedback->setText("<p>Operation successful. </p>");
 
+    this->processEvents();
+    sep_break->setFocus(true);
+    gb->animateShow(this->anim);
+    this->processEvents();
     gb->setCanReceiveFocus(true);
     gb->setFocus(true);
+    gb->setFocus(false);
     this->processEvents();
 
     // ---
@@ -938,6 +972,7 @@ void BaseWebServerApplication::createComputeGB(void){
             table->setHeaderCount(1);
             table->setWidth(Wt::WLength("100%"));
             table->disable();
+            table->hide();
 
             //Populate the file.
             auto lines = LoadFileToList(fname);
@@ -955,6 +990,7 @@ void BaseWebServerApplication::createComputeGB(void){
 
             (void*) gb->addWidget(std::make_unique<Wt::WBreak>());
             table->enable();
+            table->animateShow(this->anim);
 
             // If the table is large, hide it behind a toggle button.
             if( (table->rowCount() > 5) || (table->columnCount() > 4) ){
@@ -963,10 +999,10 @@ void BaseWebServerApplication::createComputeGB(void){
                 ttbutton->clicked().connect(std::bind([=](){
                     //ttbutton->disable();
                     if( table->isHidden() ){
-                        table->show();
+                        table->animateShow(this->anim);
                         ttbutton->setText("Hide table");
                     }else{
-                        table->hide();
+                        table->animateHide(this->anim);
                         ttbutton->setText("Show table");
                     }
                     this->processEvents();
@@ -980,6 +1016,8 @@ void BaseWebServerApplication::createComputeGB(void){
             (void *) gb->addWidget(std::make_unique<Wt::WBreak>());
             auto img = gb->addWidget(std::make_unique<Wt::WImage>(Wt::WLink(fr)));
             img->setAlternateText("Output image.");
+            img->hide();
+            img->animateShow(this->anim);
 
             (void*) gb->addWidget(std::make_unique<Wt::WBreak>());
         }
@@ -1038,9 +1076,14 @@ void BaseWebServerApplication::createComputeGB(void){
         return;
     }));
 
+    this->processEvents();
+    sep_break->setFocus(true);
+    gb->animateShow(this->anim);
+    this->processEvents();
     gobutton->setCanReceiveFocus(true);
     gobutton->setFocus(true);
     this->processEvents();
+
     return;
 }
 
