@@ -1534,8 +1534,6 @@ void Write_Dose_Array(std::shared_ptr<Image_Array> IA, const std::string &Filena
             cm["InstanceCreatorUID"]   = Generate_Random_UID(60);
 
             //Patient Module.
-//            cm["PatientsName"]      = "";
-//            cm["PatientID"]         = "";
             cm["PatientsBirthDate"] = "";
             cm["PatientsGender"]    = "";
             cm["PatientsBirthTime"] = "";
@@ -1563,7 +1561,6 @@ void Write_Dose_Array(std::shared_ptr<Image_Array> IA, const std::string &Filena
             cm["PatientsMass"] = "";
 
             //Frame of Reference Module.
-//            cm["FrameofReferenceUID"] = "";
             cm["PositionReferenceIndicator"] = "";
 
             //General Equipment Module.
