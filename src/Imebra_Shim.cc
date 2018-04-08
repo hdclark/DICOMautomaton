@@ -1209,7 +1209,11 @@ std::unique_ptr<Dose_Array>  Load_Dose_Array(const std::string &FilenameIn){
 
         const auto img_bits  = static_cast<unsigned int>(channelPixelSize*8); //16 bit, 32 bit, 8 bit, etc..
         if(img_bits != image_bits){
-            throw std::domain_error("The number of bits in each channel varies between the DICOM header and the transformed image data");
+            throw std::domain_error("The number of bits in each channel varies between the DICOM header ("_s
+                                   + std::to_string(image_bits) 
+                                   + ") and the transformed image data ("_s
+                                   + std::to_string(img_bits)
+                                   + ")");
             //Not sure what to do if this happens. Perhaps just go with the imebra result?
         }
 
@@ -1270,6 +1274,22 @@ static std::string Generate_Random_UID(long int len){
         last = achar;
     }
     return out;
+}
+
+static std::string Generate_Random_Int_Str(long int L, long int H){
+    std::string out;
+    std::default_random_engine gen;
+
+    try{
+        std::random_device rd;  //Constructor can fail if many threads create instances (maybe limited fd's?).
+        gen.seed(rd()); //Seed with a true random number.
+    }catch(const std::exception &){
+        const auto timeseed = std::chrono::high_resolution_clock::now().time_since_epoch().count();
+        gen.seed(timeseed); //Seed with time. 
+    }
+
+    std::uniform_int_distribution<long int> dist(L,H);
+    return std::to_string(dist(gen));
 }
 
 
@@ -1599,8 +1619,8 @@ void Write_Dose_Array(std::shared_ptr<Image_Array> IA, const std::string &Filena
         ds_insert(tds, 0x0008, 0x0016, "1.2.840.10008.5.1.4.1.1.481.2"); // "SOPClassUID"
         ds_insert(tds, 0x0008, 0x0018, SOPInstanceUID); // "SOPInstanceUID"
         //ds_insert(tds, 0x0008, 0x0005, "ISO_IR 100"); //fne({ cm["SpecificCharacterSet"], "ISO_IR 100" })); // Set above!
-        ds_insert(tds, 0x0008, 0x0012, fne({ cm["InstanceCreationDate"], "20170102" }));
-        ds_insert(tds, 0x0008, 0x0013, fne({ cm["InstanceCreationTime"], "130101" }));
+        ds_insert(tds, 0x0008, 0x0012, fne({ cm["InstanceCreationDate"], "19720101" }));
+        ds_insert(tds, 0x0008, 0x0013, fne({ cm["InstanceCreationTime"], "010101" }));
         ds_insert(tds, 0x0008, 0x0014, foe({ cm["InstanceCreatorUID"] }));
         ds_insert(tds, 0x0008, 0x0114, foe({ cm["CodingSchemeExternalUID"] }));
         ds_insert(tds, 0x0020, 0x0013, foe({ cm["InstanceNumber"] }));
@@ -1608,24 +1628,23 @@ void Write_Dose_Array(std::shared_ptr<Image_Array> IA, const std::string &Filena
         //Patient Module.
         ds_insert(tds, 0x0010, 0x0010, fne({ cm["PatientsName"], "DICOMautomaton^DICOMautomaton" }));
         ds_insert(tds, 0x0010, 0x0020, fne({ cm["PatientID"], "DCMA_"_s + Generate_Random_String_of_Length(10) }));
-        ds_insert(tds, 0x0010, 0x0030, fne({ cm["PatientsBirthDate"], "20170101" }));
+        ds_insert(tds, 0x0010, 0x0030, fne({ cm["PatientsBirthDate"], "19720101" }));
         ds_insert(tds, 0x0010, 0x0040, fne({ cm["PatientsGender"], "O" }));
-        ds_insert(tds, 0x0010, 0x0032, fne({ cm["PatientsBirthTime"], "130101" }));
+        ds_insert(tds, 0x0010, 0x0032, fne({ cm["PatientsBirthTime"], "010101" }));
 
         //General Study Module.
         ds_insert(tds, 0x0020, 0x000D, fne({ cm["StudyInstanceUID"], Generate_Random_UID(31) }));
-        ds_insert(tds, 0x0008, 0x0020, fne({ cm["StudyDate"], "20170102" }));
-        ds_insert(tds, 0x0008, 0x0030, fne({ cm["StudyTime"], "130101" }));
+        ds_insert(tds, 0x0008, 0x0020, fne({ cm["StudyDate"], "19720101" }));
+        ds_insert(tds, 0x0008, 0x0030, fne({ cm["StudyTime"], "010101" }));
         ds_insert(tds, 0x0008, 0x0090, fne({ cm["ReferringPhysiciansName"], "UNSPECIFIED^UNSPECIFIED" }));
-        ds_insert(tds, 0x0020, 0x0010, fne({ cm["StudyID"], "HCTest_"_s + Generate_Random_String_of_Length(10) }));
+        ds_insert(tds, 0x0020, 0x0010, fne({ cm["StudyID"], "DCMA_"_s + Generate_Random_String_of_Length(10) }));
         ds_insert(tds, 0x0008, 0x0050, fne({ cm["AccessionNumber"], Generate_Random_String_of_Length(14) }));
         ds_insert(tds, 0x0008, 0x1030, fne({ cm["StudyDescription"], "UNSPECIFIED" }));
-
 
         //General Series Module.
         ds_insert(tds, 0x0008, 0x0060, "RTDOSE");
         ds_insert(tds, 0x0020, 0x000E, fne({ cm["SeriesInstanceUID"], Generate_Random_UID(31) }));
-        ds_insert(tds, 0x0020, 0x0011, fne({ cm["SeriesNumber"], "7121254961" }));
+        ds_insert(tds, 0x0020, 0x0011, fne({ cm["SeriesNumber"], Generate_Random_Int_Str(5000, 4294967295) }));
         ds_insert(tds, 0x0008, 0x0021, foe({ cm["SeriesDate"] }));
         ds_insert(tds, 0x0008, 0x0031, foe({ cm["SeriesTime"] }));
         ds_insert(tds, 0x0008, 0x103E, fne({ cm["SeriesDescription"], "UNSPECIFIED" }));
@@ -1686,9 +1705,9 @@ void Write_Dose_Array(std::shared_ptr<Image_Array> IA, const std::string &Filena
 
         //Multi-Frame Module.
         ds_insert(tds, 0x0028, 0x0008, fne({ std::to_string(num_of_imgs) })); // "NumberOfFrames".
-        ds_insert(tds, 0x0028, 0x0009, fne({ cm["FrameIncrementPointer"],
-                                             R"***(12292\12)***" })); // (3004,000c) -- Imebra accepts this...
-                                             //"\x04\x30\x0c\x00" })); // (3004,000c) -- may not work; depends on endianness.
+        ds_insert(tds, 0x0028, 0x0009, fne({ cm["FrameIncrementPointer"], // Default to (3004,000c).
+                                             R"***(12292\12)***" })); // Imebra default deserialization, but is brittle and depends on endianness.
+                                             //"\x04\x30\x0c\x00" })); // Imebra won't accept this...
         ds_insert(tds, 0x3004, 0x000c, GridFrameOffsetVector );
 
         //Modality LUT Module.
