@@ -1712,9 +1712,9 @@ void Write_Dose_Array(std::shared_ptr<Image_Array> IA, const std::string &Filena
         ds_insert(tds, 0x0028, 0x3002, foe({ cm["LUTDescriptor"] }));
         ds_insert(tds, 0x0028, 0x3004, foe({ cm["ModalityLUTType"] }));
         ds_insert(tds, 0x0028, 0x3006, foe({ cm["LUTData"] }));
-        ds_insert(tds, 0x0028, 0x1052, foe({ cm["RescaleIntercept"] }));
-        ds_insert(tds, 0x0028, 0x1053, foe({ cm["RescaleSlope"] }));
-        ds_insert(tds, 0x0028, 0x1054, foe({ cm["RescaleType"] }));
+        //ds_insert(tds, 0x0028, 0x1052, foe({ cm["RescaleIntercept"] })); // These force interpretation by Imebra
+        //ds_insert(tds, 0x0028, 0x1053, foe({ cm["RescaleSlope"] }));     //  as 8 byte pixel depth, regardless of
+        //ds_insert(tds, 0x0028, 0x1054, foe({ cm["RescaleType"] }));      //  the actual depth (@ current settings).
 
         //RT Dose Module.
         //ds_insert(tds, 0x0028, 0x0002, fne({ cm["SamplesPerPixel"], "1" }));
