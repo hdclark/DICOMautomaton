@@ -1686,7 +1686,9 @@ void Write_Dose_Array(std::shared_ptr<Image_Array> IA, const std::string &Filena
 
         //Multi-Frame Module.
         ds_insert(tds, 0x0028, 0x0008, fne({ std::to_string(num_of_imgs) })); // "NumberOfFrames".
-        ds_insert(tds, 0x0028, 0x0009, fne({ cm["FrameIncrementPointer"], "(3004,000c)" })); //May not work to specify like this!
+        ds_insert(tds, 0x0028, 0x0009, fne({ cm["FrameIncrementPointer"],
+                                             R"***(12292\12)***" })); // (3004,000c) -- Imebra accepts this...
+                                             //"\x04\x30\x0c\x00" })); // (3004,000c) -- may not work; depends on endianness.
         ds_insert(tds, 0x3004, 0x000c, GridFrameOffsetVector );
 
         //Modality LUT Module.
