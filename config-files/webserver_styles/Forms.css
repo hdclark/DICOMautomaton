@@ -21,11 +21,32 @@ button {
     margin-left: 0;
     margin-right: 0;
     font-weight: bold;
+    float: left;
+}
+
+.Homepage {
+    display: block;
+    font-size: 0.8em;
+    float: right;
 }
 
 .InstructionText {
     display: block;
     color: DarkGreen; 
+}
+
+.OutputParameterName {
+    display: block;
+    /* float: left; */
+    /* color: Indigo; */
+    background: rgba(255,255,100,0.25);
+}
+
+.DownloadLink {
+    /* float: right; */
+    text-align: right;
+    font-size: 0.8em;
+    /* color: DarkGreen; */
 }
 
 .FeedbackText {
@@ -35,6 +56,8 @@ button {
     margin-bottom: -0.5em;
     margin-left: 2em;
     font-size: 0.85em;
+    /* float: right; */
+    text-align: right;
 }
 
 .DataEntryGroupBlock {

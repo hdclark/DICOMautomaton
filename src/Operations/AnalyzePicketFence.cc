@@ -123,8 +123,7 @@ std::list<OperationArgDoc> OpArgDocAnalyzePicketFence(void){
     out.emplace_back();
     out.back().name = "UserComment";
     out.back().desc = "A string that will be inserted into the output file which will simplify merging output"
-                      " with differing parameters, from different sources, or using sub-selections of the data."
-                      " If left empty, the column will be omitted from the output.";
+                      " with differing parameters, from different sources, or using sub-selections of the data.";
     out.back().default_val = "";
     out.back().expected = true;
     out.back().examples = { "", "Using XYZ", "Patient treatment plan C" };
@@ -762,8 +761,7 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
                         throw std::runtime_error("Unable to open file for reporting picket fence data. Cannot continue.");
                     }
                     if(FirstWrite){ // Write a CSV header.
-                        FO_pf << "UserComment,"
-                              << "PatientID,"
+                        FO_pf << "PatientID,"
                               << "StationName,"
                               << "LeafNumber,"
 
@@ -777,26 +775,27 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
 
                               << "\"min dosimetric spread\","
                               << "\"max dosimetric spread\","
-                              << "\"mean dosimetric spread\""
+                              << "\"mean dosimetric spread\","
+                              << "UserComment"
                               << std::endl;
                     }
-                    FO_pf  << UserComment.value_or("") << ","
-                           << PatientID << ","
-                           << StationName.value_or("") << ","
-                           << (i+1) << ","  // MLC numbers traditionally start at 1.
+                    FO_pf << PatientID << ","
+                          << StationName.value_or("") << ","
+                          << (i+1) << ","  // MLC numbers traditionally start at 1.
 
-                           << max_abs_sep << ","
-                           << mean_abs_sep << ","
-                           << (within_abs_sep ? 1 : 0) << ","
+                          << max_abs_sep << ","
+                          << mean_abs_sep << ","
+                          << (within_abs_sep ? "pass" : "fail") << ","
 
-                           << max_adj_diff << ","
-                           << mean_adj_diff << ","
-                           << (within_adj_diff ? 1 : 0) << ","
+                          << max_adj_diff << ","
+                          << mean_adj_diff << ","
+                          << (within_adj_diff ? "pass" : "fail") << ","
 
-                           << min_spread << ","
-                           << max_spread << ","
-                           << mean_spread
-                           << std::endl;
+                          << min_spread << ","
+                          << max_spread << ","
+                          << mean_spread << ","
+                          << UserComment.value_or("")
+                          << std::endl;
                     FO_pf.flush();
                     FO_pf.close();
 

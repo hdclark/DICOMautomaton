@@ -235,6 +235,12 @@ BaseWebServerApplication::BaseWebServerApplication(const Wt::WEnvironment &env) 
     {
         auto title = root()->addWidget(std::make_unique<Wt::WText>("DICOMautomaton Web Services"));
         title->addStyleClass("Title");
+
+        auto homeurl = Wt::WLink("http://www.halclark.ca/");
+        homeurl.setTarget(Wt::LinkTarget::NewWindow);
+
+        auto hpage = root()->addWidget(std::make_unique<Wt::WAnchor>(homeurl, "halclark.ca"));
+        hpage->addStyleClass("Homepage");
     }
 
     this->createFileUploadGB();
@@ -963,7 +969,8 @@ void BaseWebServerApplication::createComputeGB(void){
 
         Wt::WLink fr_link = Wt::WLink(fr);
         fr_link.setTarget(Wt::LinkTarget::Self);
-        (void *) gb->addWidget(std::make_unique<Wt::WAnchor>(fr_link, "download"_s));
+        auto dllink = gb->addWidget(std::make_unique<Wt::WAnchor>(fr_link, "download"_s));
+        dllink->addStyleClass("DownloadLink");
 
 
         // If the file is tabular, create a table to display the info.
