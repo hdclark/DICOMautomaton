@@ -359,8 +359,13 @@ Drover PresentationImage( Drover DICOM_data,
             //auto base_ptr = reinterpret_cast<contour_collection<double> *>(&cc);
             for(auto & c : cc.contours){
                 if(!c.points.empty() 
-                && ( disp_img_it->encompasses_any_of_contour_of_points(c) 
-                     || (disp_img_it->pxl_dz <= std::numeric_limits<double>::min()) ) ){ //Permit contours on purely 2D images.
+                && ( 
+                      // Permit contours with any included vertices or at least the 'centre' within the image.
+                      ( disp_img_it->sandwiches_point_within_top_bottom_planes(c.Average_Point())
+                        || disp_img_it->encompasses_any_of_contour_of_points(c) )
+                      || 
+                      ( disp_img_it->pxl_dz <= std::numeric_limits<double>::min() ) // //Permit contours on purely 2D images.
+                   ) ){
                     sf::VertexArray lines;
                     lines.setPrimitiveType(sf::LinesStrip);
 

@@ -203,6 +203,9 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
         const auto col_unit = animg->col_unit;
         //const auto ort_unit = row_unit.Cross(col_unit);
 
+        auto RTImageSID = std::stod( animg->GetMetadataValueAs<std::string>("RTImageSID").value_or("1000.0") );
+        auto SAD = std::stod( animg->GetMetadataValueAs<std::string>("RadiationMachineSAD").value_or("1000.0") );
+
         const auto corner_R = animg->position(0, 0); // A fixed point from which the profiles will be relative to. Better to use Isocentre instead! TODO
         const auto sample_spacing = std::max(animg->pxl_dx, animg->pxl_dy); // The sampling frequency for profiles.
 
@@ -284,17 +287,15 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
         const auto leaf_axis     = col_unit.rotate_around_z(rot_ang);
         const auto junction_axis = col_unit.rotate_around_z(rot_ang + 0.5*M_PI);
 
-
         //---------------------------------------------------------------------------
         //Create lines for leaf pairs computed from knowledge about each machine's MLC geometry.
-        std::vector<line<double>> leaf_lines;
+        std::vector<line<double>> SAD_leaf_lines;
         {
             std::vector<double> mlc_offsets; // Closest point along leaf-pair line from CAX.
 
             //We have to project the MLC leaf pair positions according to the magnification at the image panel.
-            auto RTImageSID = std::stod( animg->GetMetadataValueAs<std::string>("RTImageSID").value_or("1000.0") );
             auto magnify = [=](double CAX_offset){
-                return CAX_offset * (RTImageSID / 1000.0);
+                return CAX_offset * (RTImageSID / SAD);
             };
 
             if(false){
@@ -340,12 +341,22 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
 
             std::sort(mlc_offsets.begin(), mlc_offsets.end());
 
-            leaf_lines.clear();
+            SAD_leaf_lines.clear();
             for(const auto &offset : mlc_offsets){
-                const auto origin = vec3<double>(0.0, 0.0, 0.0); // NOTE: assuming isocentre is (0,0,0). TODO.
-                                                                 //       leafs need to be explicitly projected onto the image plane!
+                const auto origin = vec3<double>(0.0, 0.0, SAD);
                 const auto pos = origin + (junction_axis * offset);
-                leaf_lines.emplace_back( pos, pos + leaf_axis );
+                SAD_leaf_lines.emplace_back( pos, pos + leaf_axis );
+            }
+        }
+
+        //---------------------------------------------------------------------------
+        //Project the leaf lines onto the image.
+        std::vector<line<double>> leaf_lines;
+        {
+            auto img_plane = animg->image_plane();
+            for(const auto &l : SAD_leaf_lines){
+                const auto proj_R_0 = img_plane.Project_Onto_Plane_Orthogonally(l.R_0);
+                leaf_lines.emplace_back( proj_R_0, proj_R_0 + l.U_0 );
             }
         }
 
@@ -412,7 +423,8 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
                 leaf_profiles.emplace_back();
                 const bool inhibit_sort = true;
                 const long int chan = 0;
-                animg->pxl_dz = 1.0; // Give the image some thickness.
+                const auto orig_pxl_dz = animg->pxl_dz;
+                animg->pxl_dz = 1.0; // Ensure there is some thickness.
                 const std::vector<double> sample_dists { -2.0, -1.5, -0.5, 0.0, 0.5, 1.0, 1.5, 2.0 };
                 for(const auto &R : R_list){
                     const auto rel_R = (R - corner_R);
@@ -432,7 +444,7 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
                     }
                 }
                 leaf_profiles.back().stable_sort();
-                animg->pxl_dz = 0.0; // TODO -- reset to existing value?
+                animg->pxl_dz = orig_pxl_dz;
             }
         }
 
@@ -631,9 +643,10 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
                     if(!R.isfinite()) throw std::runtime_error("Cannot compute leaf-junction intersection.");
 
                     // If the point is not within the image bounds, ignore it.
-                    animg->pxl_dz = 1.0;
+                    const auto orig_pxl_dz = animg->pxl_dz;
+                    animg->pxl_dz = 1.0; // Ensure there is some thickness.
                     const auto within_img = animg->encompasses_point(R);
-                    animg->pxl_dz = 0.0;
+                    animg->pxl_dz = orig_pxl_dz;
                     if(!within_img) continue;
 
                     // Project the point into the same 2D space as the leaf profiles.

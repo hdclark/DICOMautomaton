@@ -792,8 +792,16 @@ std::unique_ptr<Image_Array> Load_Image_Array(const std::string &FilenameIn){
     const auto image_pos_y = retrieve_coalesce_as_double({ {0x0020, 0x0032, 1}, //"ImagePositionPatient".
                                                            {0x3002, 0x0012, 1}  //"RTImagePosition".
                                                          }).value_or(0.0);
-    const auto image_pos_z = retrieve_coalesce_as_double({ {0x0020, 0x0032, 2}  //"ImagePositionPatient".
-                                                         }).value_or(0.0);
+
+    auto image_pos_z = retrieve_coalesce_as_double({ {0x0020, 0x0032, 2}, //"ImagePositionPatient".
+                                                     {0x3002, 0x000d, 2}  //"XRayImageReceptorTranslation".
+                                                   }).value_or(std::numeric_limits<double>::quiet_NaN());
+    if(!std::isfinite(image_pos_z)){ // Try derived values.
+        // This is useful for RTIMAGES.
+        const auto RTImageSID = retrieve_coalesce_as_double({ {0x3002, 0x0026, 0} }).value_or(1000.0);
+        const auto RadMchnSAD = retrieve_coalesce_as_double({ {0x3002, 0x0022, 0} }).value_or(1000.0);
+        image_pos_z = (RTImageSID - RadMchnSAD);
+    }
     const vec3<double> image_pos(image_pos_x,image_pos_y,image_pos_z); //Only for first image!
 
 
@@ -840,7 +848,10 @@ std::unique_ptr<Image_Array> Load_Image_Array(const std::string &FilenameIn){
 
     //For 2D images, there is often no thickness given. For CT we might have to compare to other files to figure this out.
     // For MR images, the thickness should be specified.
-    const auto image_thickness = retrieve_coalesce_as_double({ {0x0018, 0x0050, 0} }).value_or(0.0); //"SliceThickness"
+    //
+    // Note: In general, images should be given a non-zero thickness since many core routines are build around slices of
+    //       finite thickness.
+    const auto image_thickness = retrieve_coalesce_as_double({ {0x0018, 0x0050, 0} }).value_or(1.0); //"SliceThickness"
 
     // -------------------------------------- Pixel Interpretation ------------------------------------------
     if( (TopDataSet->getTag(0x0040,0,0x9212) != nullptr)

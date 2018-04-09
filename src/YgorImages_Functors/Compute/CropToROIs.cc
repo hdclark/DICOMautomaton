@@ -98,12 +98,12 @@ bool ComputeCropToROIs(planar_image_collection<float,double> &imagecoll,
     }
 
     //Add margins.
-    grid_x_min -= (user_data_s->row_margin + std::numeric_limits<double>::epsilon());
-    grid_x_max += (user_data_s->row_margin + std::numeric_limits<double>::epsilon());
-    grid_y_min -= (user_data_s->col_margin + std::numeric_limits<double>::epsilon());
-    grid_y_max += (user_data_s->col_margin + std::numeric_limits<double>::epsilon());
-    grid_z_min -= (user_data_s->ort_margin + std::numeric_limits<double>::epsilon());
-    grid_z_max += (user_data_s->ort_margin + std::numeric_limits<double>::epsilon());
+    grid_x_min -= (user_data_s->row_margin + std::sqrt(std::numeric_limits<double>::epsilon()));
+    grid_x_max += (user_data_s->row_margin + std::sqrt(std::numeric_limits<double>::epsilon()));
+    grid_y_min -= (user_data_s->col_margin + std::sqrt(std::numeric_limits<double>::epsilon()));
+    grid_y_max += (user_data_s->col_margin + std::sqrt(std::numeric_limits<double>::epsilon()));
+    grid_z_min -= (user_data_s->ort_margin + std::sqrt(std::numeric_limits<double>::epsilon()));
+    grid_z_max += (user_data_s->ort_margin + std::sqrt(std::numeric_limits<double>::epsilon()));
 
     //Create planes that bound the volume to crop.
     const auto row_min_plane = plane<double>(GridX, zero + (GridX * grid_x_min));
