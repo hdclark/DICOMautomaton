@@ -220,6 +220,14 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
             PatientID = "unknown_patient";
         }
 
+        {
+            auto Modality     = animg->GetMetadataValueAs<std::string>("Modality").value_or("");
+            auto RTImagePlane = animg->GetMetadataValueAs<std::string>("RTImagePlane").value_or("");
+            if((Modality != "RTIMAGE") || (RTImagePlane != "NORMAL")){
+                throw std::domain_error("This routine can only handle RTIMAGES with RTImagePlane=NORMAL.");
+            }
+        }
+
         //---------------------------------------------------------------------------
         // Flip pixel values if the image is inverted. The junction peaks should be more positive than the baseline.
         {
