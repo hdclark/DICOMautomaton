@@ -4,7 +4,7 @@ commit_id=$(git rev-parse HEAD)
 
 clean_dirty="clean"
 sstat=$(git diff --shortstat)
-if [ -z "${sstat}" ] ; then
+if [ ! -z "${sstat}" ] ; then
     clean_dirty="dirty"
 fi
 
