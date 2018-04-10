@@ -241,6 +241,9 @@ BaseWebServerApplication::BaseWebServerApplication(const Wt::WEnvironment &env) 
 
         auto hpage = root()->addWidget(std::make_unique<Wt::WAnchor>(homeurl, "halclark.ca"));
         hpage->addStyleClass("Homepage");
+
+        auto brk = root()->addWidget(std::make_unique<Wt::WBreak>());
+        brk->addStyleClass("ClearFix");
     }
 
     this->createFileUploadGB();

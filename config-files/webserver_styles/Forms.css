@@ -60,6 +60,12 @@ button {
     text-align: right;
 }
 
+.ClearFix {
+    content: "";
+    clear: both;
+    display: table;
+}
+
 .DataEntryGroupBlock {
     display: block;
 }
