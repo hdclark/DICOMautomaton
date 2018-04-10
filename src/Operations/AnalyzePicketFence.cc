@@ -41,6 +41,11 @@ std::list<OperationArgDoc> OpArgDocAnalyzePicketFence(void){
     //
     // Note: This routine requires data to be pre-processed. The gross picket area should be isolated and the leaf
     //       junction areas contoured (one contour per junction). Both can be accomplished via thresholding.
+    //
+    // Note: This routine analyzes the picket fences on the plane in which they are specified within the DICOM file,
+    //       which often coincides with the image receptor ("RTImageSID"). Tolerances are evaluated on the isoplane,
+    //       so the image is projected before measuring distances, but the image itself is not altered; a uniform
+    //       magnification factor of SAD/SID is applied to all distances.
 
     out.emplace_back();
     out.back().name = "ImageSelection";
@@ -93,7 +98,8 @@ std::list<OperationArgDoc> OpArgDocAnalyzePicketFence(void){
 
     out.emplace_back();
     out.back().name = "MinimumJunctionSeparation";
-    out.back().desc = "The minimum distance between junctions in DICOM units. This number is used to"
+    out.back().desc = "The minimum distance between junctions on the SAD isoplane in DICOM units (mm)."
+                      " This number is used to"
                       " de-duplicate automatically detected junctions. Analysis results should not be"
                       " sensitive to the specific value.";
     out.back().default_val = "10.0";
@@ -206,6 +212,9 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
         auto RTImageSID = std::stod( animg->GetMetadataValueAs<std::string>("RTImageSID").value_or("1000.0") );
         auto SAD = std::stod( animg->GetMetadataValueAs<std::string>("RadiationMachineSAD").value_or("1000.0") );
 
+        auto SIDToSAD = SAD / RTImageSID; // Factor for scaling distance on image panel plane to distance on SAD plane.
+        auto SADToSID = RTImageSID / SAD; // Factor for scaling distance on SAD plane to distance on image panel plane.
+
         const auto corner_R = animg->position(0, 0); // A fixed point from which the profiles will be relative to. Better to use Isocentre instead! TODO
         const auto sample_spacing = std::max(animg->pxl_dx, animg->pxl_dy); // The sampling frequency for profiles.
 
@@ -289,8 +298,13 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
 
         //---------------------------------------------------------------------------
         //Create lines for leaf pairs computed from knowledge about each machine's MLC geometry.
-        std::vector<line<double>> SAD_leaf_lines;
+        //
+        // Note: Leaf geometry is specified on the isoplane. These lines are magnified (or shrunk) to correspond to the
+        //       SID plane, and then projected directly onto the plane of the image. Because they are magnified prior to
+        //       projection, the projection should be orthographic (i.e., magnificcation-free).
+        std::vector<line<double>> leaf_lines;
         {
+            auto img_plane = animg->image_plane();
             std::vector<double> mlc_offsets; // Closest point along leaf-pair line from CAX.
 
             //We have to project the MLC leaf pair positions according to the magnification at the image panel.
@@ -341,22 +355,12 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
 
             std::sort(mlc_offsets.begin(), mlc_offsets.end());
 
-            SAD_leaf_lines.clear();
+            leaf_lines.clear();
             for(const auto &offset : mlc_offsets){
                 const auto origin = vec3<double>(0.0, 0.0, SAD);
                 const auto pos = origin + (junction_axis * offset);
-                SAD_leaf_lines.emplace_back( pos, pos + leaf_axis );
-            }
-        }
-
-        //---------------------------------------------------------------------------
-        //Project the leaf lines onto the image.
-        std::vector<line<double>> leaf_lines;
-        {
-            auto img_plane = animg->image_plane();
-            for(const auto &l : SAD_leaf_lines){
-                const auto proj_R_0 = img_plane.Project_Onto_Plane_Orthogonally(l.R_0);
-                leaf_lines.emplace_back( proj_R_0, proj_R_0 + l.U_0 );
+                const auto proj_pos = img_plane.Project_Onto_Plane_Orthogonally(pos);
+                leaf_lines.emplace_back( proj_pos, proj_pos + leaf_axis );
             }
         }
 
@@ -465,7 +469,7 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
 
             avgd_profile.Average_Coincident_Data(0.5 * sample_spacing);   // Summation can produce MANY samples.
             //avgd_profile = avgd_profile.Resample_Equal_Spacing(sample_spacing);
-            leaf_plot_shtl.emplace_back(avgd_profile, 
+            leaf_plot_shtl.emplace_back(avgd_profile.Multiply_x_With(SIDToSAD), 
                                         "Average leaf profile", 
                                         std::vector<std::pair<std::string,std::string>>({{"1:2","lines"}}) );
 
@@ -481,7 +485,7 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
             //avgd_profile2 = avgd_profile2.Subtract(
             //                                avgd_profile2.Moving_Average_Two_Sided_Gaussian_Weighting(15) );
 
-            junction_plot_shtl.emplace_back( avgd_profile2, "High-pass filtered Junction Profile" );
+            junction_plot_shtl.emplace_back( avgd_profile2.Multiply_x_With(SIDToSAD), "High-pass filtered Junction Profile" );
 
             //Now find all (local) peaks via the derivative of the crossing points.
             auto peaks = avgd_profile2.Peaks();
@@ -490,9 +494,9 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
             // MLC leaf overtravel.
             //
             // Note: We are generous here because the junction separation should be >2-3 mm or so.
-            peaks.Average_Coincident_Data(0.45*MinimumJunctionSeparation);
+            peaks.Average_Coincident_Data(0.45 * (MinimumJunctionSeparation * SADToSID));
 
-            junction_plot_shtl.emplace_back( peaks, "Junction Profile Peaks" );
+            junction_plot_shtl.emplace_back( peaks.Multiply_x_With(SIDToSAD), "Junction Profile Peaks" );
 
             //Filter out spurious peaks that are not 'sharp' enough.
             auto Aspect_Ratio = [](const samples_1D<double> &A) -> double { // Computes aspect ratio for a snippet.
@@ -523,13 +527,13 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
 
             avgd_profile3 = avgd_profile3.Sum_With(-sum3_ymin);
             avgd_profile3 = avgd_profile3.Multiply_With(1.0/(sum3_ymax - sum3_ymin));
-            //junction_plot_shtl.emplace_back( avgd_profile3, "Aspect Ratio Profile" );
+            //junction_plot_shtl.emplace_back( avgd_profile3.Multiply_x_With(SIDToSAD), "Aspect Ratio Profile" );
 
             if(peaks.size() < 2) std::runtime_error("Leaf-leakage peaks not correctly detected. Please verify input.");
             samples_1D<double> filtered_peaks;
             for(auto p4_it = peaks.samples.begin(); p4_it != peaks.samples.end(); ++p4_it){
                 double centre = (*p4_it)[0]; // peak centre.
-                const auto SearchDistance = 0.25*MinimumJunctionSeparation;
+                const auto SearchDistance = 0.25 * (MinimumJunctionSeparation * SADToSID);
 
                 //Only bother looking at peaks that have enough surrounding room to estimate the aspect ratio.
                 if(!isininc(sum3_xmin + SearchDistance, centre, sum3_xmax - SearchDistance)) continue;
@@ -546,7 +550,7 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
             peaks = filtered_peaks;
             if(peaks.size() < 2) std::runtime_error("Leaf-leakage peaks incorrectly filtered out. Please verify input.");
 
-            junction_plot_shtl.emplace_back( peaks, "Filtered Junction Profile Peaks" );
+            junction_plot_shtl.emplace_back( peaks.Multiply_x_With(SIDToSAD), "Filtered Junction Profile Peaks" );
 
             for(const auto &peak4 : peaks.samples){
                 const auto d = peak4[0]; // Projection of relative position onto the leaf axis unit vector.
@@ -611,15 +615,15 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
             junction_lines = trimmed_junction_lines;
 
             std::cout << "Junction-CAX separations: ";
-            for(auto &d : junction_cax_separations) std::cout << d << "  ";
+            for(auto &d : junction_cax_separations) std::cout << (d * SIDToSAD) << "  ";
             std::cout << std::endl;
 
             std::cout << "Junction-junction separations: ";
-            for(auto &d : junction_separations) std::cout << d << "  ";
+            for(auto &d : junction_separations) std::cout << (d * SIDToSAD) << "  ";
             std::cout << std::endl;
 
-            std::cout << "Minimum junction separation: " << min_junction_sep << std::endl;
-            std::cout << "Maximum junction separation: " << max_junction_sep << std::endl;
+            std::cout << "Minimum junction separation: " << (min_junction_sep * SIDToSAD) << std::endl;
+            std::cout << "Maximum junction separation: " << (max_junction_sep * SIDToSAD) << std::endl;
 
         }
 
@@ -707,8 +711,8 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
                         peak_offsets.push_back(peak_offset);
                         peak_spreads.push_back(peak_spread);
 
-                        if(std::abs(peak_offset) > ThresholdDistance){
-                            leaf_plot_shtl.emplace_back(vicinity,
+                        if(std::abs(peak_offset) > (ThresholdDistance * SADToSID)){
+                            leaf_plot_shtl.emplace_back(vicinity.Multiply_x_With(SIDToSAD),
                                                         "vicinity used for peak detection",
                                                         std::vector<std::pair<std::string,std::string>>({{"1:2","lines"}}) );
                         }
@@ -734,24 +738,12 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
                                                     std::abs(Stats::Max(adjacent_peak_diffs)) );
                 const auto mean_adj_diff = Stats::Mean(adjacent_peak_diffs);
                 
-                const auto within_abs_sep  = (max_abs_sep < ThresholdDistance);
-                const auto within_adj_diff = (max_adj_diff < ThresholdDistance);
+                const auto within_abs_sep  = (max_abs_sep < (ThresholdDistance * SADToSID));
+                const auto within_adj_diff = (max_adj_diff < (ThresholdDistance * SADToSID));
 
                 const auto min_spread = Stats::Min(peak_spreads);
                 const auto max_spread = Stats::Max(peak_spreads);
                 const auto mean_spread = Stats::Mean(peak_spreads);
-
-/*
-                std::cout << "Leaf " << i 
-                          << "   max |actual-nominal| = " << std::setw(15) << max_abs_sep
-                          << "  mean (actual-nominal) = " << std::setw(15) << mean_abs_sep
-                          << (within_abs_sep ? " Pass" : "     Fail" )
-                          << std::endl
-                          << "   max |adjacent_diff.| = " << std::setw(15) << max_adj_diff
-                          << "  mean (adjacent_diff.) = " << std::setw(15) << mean_adj_diff
-                          << (within_adj_diff ? " Pass" : "     Fail" )
-                          << std::endl;
-*/
 
                 //Report the findings. 
                 FUNCINFO("Attempting to claim a mutex");
@@ -794,17 +786,17 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
                           << StationName.value_or("") << ","
                           << (i+1) << ","  // MLC numbers traditionally start at 1.
 
-                          << max_abs_sep << ","
-                          << mean_abs_sep << ","
+                          << (max_abs_sep * SIDToSAD) << ","
+                          << (mean_abs_sep * SIDToSAD) << ","
                           << (within_abs_sep ? "pass" : "fail") << ","
 
-                          << max_adj_diff << ","
-                          << mean_adj_diff << ","
+                          << (max_adj_diff * SIDToSAD) << ","
+                          << (mean_adj_diff * SIDToSAD) << ","
                           << (within_adj_diff ? "pass" : "fail") << ","
 
-                          << min_spread << ","
-                          << max_spread << ","
-                          << mean_spread << ","
+                          << (min_spread * SIDToSAD) << ","
+                          << (max_spread * SIDToSAD) << ","
+                          << (mean_spread * SIDToSAD) << ","
                           << UserComment.value_or("")
                           << std::endl;
                     FO_pf.flush();
@@ -816,7 +808,7 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
 
                 //If failed, display the profile for debugging.
                 if( !within_abs_sep || !within_adj_diff ){
-                    leaf_plot_shtl.emplace_back( leaf_profiles[i],
+                    leaf_plot_shtl.emplace_back( leaf_profiles[i].Multiply_x_With(SIDToSAD),
                                                  "Failed leaf "_s + std::to_string(i),
                                                  std::vector<std::pair<std::string,std::string>>({{"1:2","lines"}}) );
                 }
@@ -880,39 +872,9 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
         //Display some interactive plots.
         if(InteractivePlots){
 
-            // Add an average leaf profile to compare failed leaf profiles to.
-            if(false){
-                samples_1D<double> avgd;
-                size_t N_visible_leaves = 0;
-                for(auto & profile : leaf_profiles){
-                    if(!profile.empty()){
-                        avgd = avgd.Sum_With(profile);
-                        ++N_visible_leaves;
-                    }
-                }
-                if(N_visible_leaves == 0) throw std::logic_error("No visible leaves. Cannot continue.");
-                avgd = avgd.Multiply_With(1.0 / static_cast<double>(N_visible_leaves));
-                avgd.Average_Coincident_Data(0.5 * sample_spacing);   // Summation can produce MANY samples.
-
-                leaf_plot_shtl.emplace_back(avgd, 
-                                            "Average leaf profile",
-                                            std::vector<std::pair<std::string,std::string>>({{"1:2","lines"}}) );
-            }
-
             // Plot leaf-pair profiles that were over tolerance.
             if(true){
                 YgorMathPlottingGnuplot::Plot<double>(leaf_plot_shtl, "Failed leaf-pair profiles", "DICOM position", "Pixel Intensity");
-            }
-
-            // Plot (all) individual leaf-pair profiles. (This is onnly relevant in a debugging or development context.)
-            if(false){
-                std::vector< YgorMathPlottingGnuplot::Shuttle<samples_1D<double>> > plot_shtl;
-                size_t i = 0;
-                for(auto & profile : leaf_profiles){
-                    ++i;
-                    if(!profile.empty()) plot_shtl.emplace_back( profile, "Leaf "_s + std::to_string(i) );
-                }
-                YgorMathPlottingGnuplot::Plot<double>(plot_shtl, "All visible leaf-pair profiles", "DICOM position", "Pixel Intensity");
             }
 
             // Plot junction profiles.
