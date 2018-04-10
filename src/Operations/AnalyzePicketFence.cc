@@ -219,11 +219,14 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
         const auto col_unit = animg->col_unit;
         //const auto ort_unit = row_unit.Cross(col_unit);
 
-        auto RTImageSID = std::stod( animg->GetMetadataValueAs<std::string>("RTImageSID").value_or("1000.0") );
-        auto SAD = std::stod( animg->GetMetadataValueAs<std::string>("RadiationMachineSAD").value_or("1000.0") );
+        const auto ImageDate = animg->GetMetadataValueAs<std::string>("AcquisitionDate").value_or("Unknown");
+        const auto PatientID = animg->GetMetadataValueAs<std::string>("PatientID").value_or("Unknown");
 
-        auto SIDToSAD = SAD / RTImageSID; // Factor for scaling distance on image panel plane to distance on SAD plane.
-        auto SADToSID = RTImageSID / SAD; // Factor for scaling distance on SAD plane to distance on image panel plane.
+        const auto RTImageSID = std::stod( animg->GetMetadataValueAs<std::string>("RTImageSID").value_or("1000.0") );
+        const auto SAD = std::stod( animg->GetMetadataValueAs<std::string>("RadiationMachineSAD").value_or("1000.0") );
+
+        const auto SIDToSAD = SAD / RTImageSID; // Factor for scaling distance on image panel plane to distance on SAD plane.
+        const auto SADToSID = RTImageSID / SAD; // Factor for scaling distance on SAD plane to distance on image panel plane.
 
         const auto corner_R = animg->position(0, 0); // A fixed point from which the profiles will be relative to. Better to use Isocentre instead! TODO
         const auto sample_spacing = std::max(animg->pxl_dx, animg->pxl_dy); // The sampling frequency for profiles.
@@ -232,15 +235,6 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
         const auto NaN_vec = vec3<double>(NaN, NaN, NaN);
 
         const std::string JunctionLineColour = "blue";
-
-        std::string PatientID;
-        if( auto o = animg->GetMetadataValueAs<std::string>("PatientID") ){
-            PatientID = o.value();
-        }else if( auto o = animg->GetMetadataValueAs<std::string>("StudyInstanceUID") ){
-            PatientID = o.value();
-        }else{
-            PatientID = "unknown_patient";
-        }
 
         {
             auto Modality     = animg->GetMetadataValueAs<std::string>("Modality").value_or("");
@@ -853,6 +847,15 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
                    << std::endl;
 
             std::stringstream body;
+            body << "Patient ID,"
+                 << PatientID
+                 << std::endl;
+            body << "Acquisition date,"
+                 << ImageDate
+                 << std::endl;
+            body << "Overall result,"
+                 << ( (failed_leaf_count == 0) ? "pass" : "fail" )
+                 << std::endl;
             body << "Number of failed leaf pairs,"
                  << failed_leaf_count
                  << std::endl;
