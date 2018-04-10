@@ -103,6 +103,13 @@ set_target_properties(Boost_Serialization_File_Loader_obj PROPERTIES
     POSITION_INDEPENDENT_CODE TRUE
 )
 
+add_library(Write_File_obj OBJECT
+    Write_File.cc  
+)
+set_target_properties(Write_File_obj PROPERTIES
+    POSITION_INDEPENDENT_CODE TRUE
+)
+
 add_library(Operation_Dispatcher_obj OBJECT
     Operation_Dispatcher.cc
 )
@@ -263,6 +270,7 @@ add_executable (dicomautomaton_dispatcher
     $<TARGET_OBJECTS:Boost_Serialization_File_Loader_obj>
     $<TARGET_OBJECTS:DICOM_File_Loader_obj>
     $<TARGET_OBJECTS:FITS_File_Loader_obj>
+    $<TARGET_OBJECTS:Write_File_obj>
     $<TARGET_OBJECTS:Operation_Dispatcher_obj>
 
     $<TARGET_OBJECTS:YgorImaging_Functor_objs>
@@ -319,6 +327,7 @@ add_executable(dicomautomaton_webserver
     $<TARGET_OBJECTS:Boost_Serialization_File_Loader_obj>
     $<TARGET_OBJECTS:DICOM_File_Loader_obj>
     $<TARGET_OBJECTS:FITS_File_Loader_obj>
+    $<TARGET_OBJECTS:Write_File_obj>
     $<TARGET_OBJECTS:Operation_Dispatcher_obj>
 
     $<TARGET_OBJECTS:YgorImaging_Functor_objs>
