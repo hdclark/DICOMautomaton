@@ -1003,7 +1003,7 @@ void BaseWebServerApplication::createComputeGB(void){
             table->animateShow(this->anim);
 
             // If the table is large, hide it behind a toggle button.
-            if( (table->rowCount() > 5) || (table->columnCount() > 4) ){
+            if( (table->rowCount() > 10) || (table->columnCount() > 4) ){
                 table->hide();
                 auto ttbutton = gb->addWidget(std::make_unique<Wt::WPushButton>("Show table"));
                 ttbutton->clicked().connect(std::bind([=](){
