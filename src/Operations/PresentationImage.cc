@@ -54,7 +54,7 @@ std::list<OperationArgDoc> OpArgDocPresentationImage(void){
     out.emplace_back();
     out.back().name = "ScaleFactor";
     out.back().desc = " This factor is applied to the image width and height to magnify (larger than 1) or shrink"
-                      " (less than 1) the image."
+                      " (less than 1) the image. This factor only affects the output image size."
                       " Note that aspect ratio is retained, but rounding for non-integer factors may lead to small (1-2"
                       " pixel) discrepancies.";
     out.back().default_val = "1.0";
