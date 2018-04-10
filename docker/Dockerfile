@@ -9,7 +9,9 @@ EXPOSE 80
 EXPOSE 443
 
 WORKDIR /scratch
-ADD . /scratch
+ADD ./docker /scratch
+ADD . /dcma
+
 
 # Install build dependencies.
 ENV DEBIAN_FRONTEND noninteractive
@@ -60,8 +62,12 @@ RUN apt-get install --yes -f ./libwt-dev_10.0_all.deb ./libwthttp-dev_10.0_all.d
 
 
 # Install Ygor.
+#
+# Option 1: install a binary package.
 #WORKDIR /scratch
 #RUN apt-get install --yes -f ./Ygor*deb
+#
+# Option 2: clone the latest upstream commit.
 WORKDIR /ygor
 RUN git clone https://github.com/hdclark/Ygor . && \
     mkdir -p build && cd build && \
@@ -73,8 +79,12 @@ RUN git clone https://github.com/hdclark/Ygor . && \
 
 
 # Install Explicator.
+#
+# Option 1: install a binary package.
 #WORKDIR /scratch
 #RUN apt-get install --yes -f ./Explicator*deb
+#
+# Option 2: clone the latest upstream commit.
 WORKDIR /explicator
 RUN git clone https://github.com/hdclark/explicator . && \
     mkdir -p build && cd build && \
@@ -92,11 +102,19 @@ RUN git clone https://github.com/hdclark/YgorClustering . && \
 
 
 # Install DICOMautomaton.
+#
+# Option 1: install a binary package.
 #WORKDIR /scratch
 #RUN apt-get install --yes -f ./DICOMautomaton*deb 
+#
+# Option 2: clone the latest upstream commit.
+#WORKDIR /dcma
+#RUN git clone https://github.com/hdclark/DICOMautomaton . && \
+#   ...
+#
+# Option 3: use the working directory.
 WORKDIR /dcma
-RUN git clone https://github.com/hdclark/DICOMautomaton . && \
-    mkdir -p build && cd build && \
+RUN mkdir -p build && cd build && \
     cmake -DCMAKE_INSTALL_PREFIX=/usr ../ && \
     make -j$(nproc) && \
     make package && \
