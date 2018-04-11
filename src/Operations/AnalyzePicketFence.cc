@@ -268,7 +268,7 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
 
         //---------------------------------------------------------------------------
         //Auto-detect the MLC model, if possible.
-        auto StationName = animg->GetMetadataValueAs<std::string>("StationName");
+        const auto StationName = animg->GetMetadataValueAs<std::string>("StationName").value_or("Unknown");
         {
 
             const auto regex_FVAREA2TB = std::regex(".*FVAREA2TB.*", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
@@ -276,9 +276,9 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
             const auto regex_FVAREA6TB = std::regex(".*FVAREA6TB.*", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
 
             if(false){
-            }else if( std::regex_match(StationName.value(), regex_FVAREA2TB)
-                  ||  std::regex_match(StationName.value(), regex_FVAREA4TB)
-                  ||  std::regex_match(StationName.value(), regex_FVAREA6TB) ){
+            }else if( std::regex_match(StationName, regex_FVAREA2TB)
+                  ||  std::regex_match(StationName, regex_FVAREA4TB)
+                  ||  std::regex_match(StationName, regex_FVAREA6TB) ){
                 MLCModel = "VarianMillenniumMLC120";
             }else{
                 MLCModel = "VarianMillenniumMLC80";
@@ -788,7 +788,7 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
 
                     std::stringstream body;
                     body << PatientID << ","
-                         << StationName.value_or("") << ","
+                         << StationName << ","
                          << (i+1) << ","  // MLC numbers traditionally start at 1.
 
                          << (max_abs_sep * SIDToSAD) << ","
@@ -849,6 +849,9 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
             std::stringstream body;
             body << "Patient ID,"
                  << PatientID
+                 << std::endl;
+            body << "Station name,"
+                 << StationName
                  << std::endl;
             body << "Acquisition date,"
                  << ImageDate
