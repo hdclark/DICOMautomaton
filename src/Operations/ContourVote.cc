@@ -20,72 +20,77 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocContourVote(void){
-    std::list<OperationArgDoc> out;
+OperationDoc OpArgDocContourVote(void){
+    OperationDoc out;
+    out.name = "ContourVote";
+    out.desc = "";
+
+    out.notes.emplace_back("");
 
 
-    out.emplace_back();
-    out.back().name = "WinnerROILabel";
-    out.back().desc = "The ROI label to attach to the winning contour(s)."
+
+    out.args.emplace_back();
+    out.args.back().name = "WinnerROILabel";
+    out.args.back().desc = "The ROI label to attach to the winning contour(s)."
                       " All other metadata remains the same.";
-    out.back().default_val = "unspecified";
-    out.back().expected = true;
-    out.back().examples = { "closest", "best", "winners", "best-matches" };
+    out.args.back().default_val = "unspecified";
+    out.args.back().expected = true;
+    out.args.back().examples = { "closest", "best", "winners", "best-matches" };
 
-    out.emplace_back();
-    out.back().name = "ROILabelRegex";
-    out.back().desc = "A regex matching ROI labels/names to consider. The default will match"
+    out.args.emplace_back();
+    out.args.back().name = "ROILabelRegex";
+    out.args.back().desc = "A regex matching ROI labels/names to consider. The default will match"
                       " all available ROIs. Be aware that input spaces are trimmed to a single space."
                       " If your ROI name has more than two sequential spaces, use regex to avoid them."
                       " All ROIs have to match the single regex, so use the 'or' token if needed."
                       " Regex is case insensitive and uses extended POSIX syntax.";
-    out.back().default_val = ".*";
-    out.back().expected = true;
-    out.back().examples = { ".*", ".*body.*", "body", "Gross_Liver",
+    out.args.back().default_val = ".*";
+    out.args.back().expected = true;
+    out.args.back().examples = { ".*", ".*body.*", "body", "Gross_Liver",
                             R"***(.*left.*parotid.*|.*right.*parotid.*|.*eyes.*)***",
                             R"***(left_parotid|right_parotid)***" };
 
-    out.emplace_back();
-    out.back().name = "NormalizedROILabelRegex";
-    out.back().desc = "A regex matching ROI labels/names to consider. The default will match"
+    out.args.emplace_back();
+    out.args.back().name = "NormalizedROILabelRegex";
+    out.args.back().desc = "A regex matching ROI labels/names to consider. The default will match"
                       " all available ROIs. Be aware that input spaces are trimmed to a single space."
                       " If your ROI name has more than two sequential spaces, use regex to avoid them."
                       " All ROIs have to match the single regex, so use the 'or' token if needed."
                       " Regex is case insensitive and uses extended POSIX syntax.";
-    out.back().default_val = ".*";
-    out.back().expected = true;
-    out.back().examples = { ".*", ".*Body.*", "Body", "Gross_Liver",
+    out.args.back().default_val = ".*";
+    out.args.back().expected = true;
+    out.args.back().examples = { ".*", ".*Body.*", "Body", "Gross_Liver",
                             R"***(.*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*)***",
                             R"***(Left Parotid|Right Parotid)***" };
 
-    out.emplace_back();
-    out.back().name = "Area";
-    out.back().desc = "If this option is provided with a valid positive number, the contour(s) with an area"
+    out.args.emplace_back();
+    out.args.back().name = "Area";
+    out.args.back().desc = "If this option is provided with a valid positive number, the contour(s) with an area"
                       " closest to the specified value is/are retained. Note that the DICOM coordinate"
                       " space is used. (Supplying the default, NaN, will disable this option.)"
                       " Note: if several criteria are specified, it is not specified in which order they"
                       " are considered.";
-    out.back().default_val = "nan";
-    out.back().expected = true;
-    out.back().examples = { "nan", "100.0", "1000", "10.23E8" };
+    out.args.back().default_val = "nan";
+    out.args.back().expected = true;
+    out.args.back().examples = { "nan", "100.0", "1000", "10.23E8" };
 
-    out.emplace_back();
-    out.back().name = "Perimeter";
-    out.back().desc = "If this option is provided with a valid positive number, the contour(s) with a perimeter"
+    out.args.emplace_back();
+    out.args.back().name = "Perimeter";
+    out.args.back().desc = "If this option is provided with a valid positive number, the contour(s) with a perimeter"
                       " closest to the specified value is/are retained. Note that the DICOM coordinate"
                       " space is used. (Supplying the default, NaN, will disable this option.)"
                       " Note: if several criteria are specified, it is not specified in which order they"
                       " are considered.";
-    out.back().default_val = "nan";
-    out.back().expected = true;
-    out.back().examples = { "nan", "0.0", "123.456", "1E6" };
+    out.args.back().default_val = "nan";
+    out.args.back().expected = true;
+    out.args.back().examples = { "nan", "0.0", "123.456", "1E6" };
 
-    out.emplace_back();
-    out.back().name = "WinnerCount";
-    out.back().desc = "Retain this number of 'best' or 'winning' contours.";
-    out.back().default_val = "1";
-    out.back().expected = true;
-    out.back().examples = { "0", "1", "3", "10000" };
+    out.args.emplace_back();
+    out.args.back().name = "WinnerCount";
+    out.args.back().desc = "Retain this number of 'best' or 'winning' contours.";
+    out.args.back().default_val = "1";
+    out.args.back().expected = true;
+    out.args.back().examples = { "0", "1", "3", "10000" };
 
     return out;
 }

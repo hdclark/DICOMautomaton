@@ -48,26 +48,31 @@
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
 
-std::list<OperationArgDoc> OpArgDocSFML_Viewer(void){
-    std::list<OperationArgDoc> out;
+OperationDoc OpArgDocSFML_Viewer(void){
+    OperationDoc out;
+    out.name = "SFML_Viewer";
+    out.desc = "";
 
-    out.emplace_back();
-    out.back().name = "SingleScreenshot";
-    out.back().desc = "If 'true', a single screenshot is taken and then the viewer is exited."
+    out.notes.emplace_back("");
+
+
+    out.args.emplace_back();
+    out.args.back().name = "SingleScreenshot";
+    out.args.back().desc = "If 'true', a single screenshot is taken and then the viewer is exited."
                       " This option works best for quick visual inspections, and should not be"
                       " used for later processing or analysis.";
-    out.back().default_val = "false";
-    out.back().expected = true;
-    out.back().examples = { "true", "false" };
+    out.args.back().default_val = "false";
+    out.args.back().expected = true;
+    out.args.back().examples = { "true", "false" };
 
-    out.emplace_back();
-    out.back().name = "SingleScreenshotFileName";
-    out.back().desc = "Iff invoking the 'SingleScreenshot' argument, use this string as the screenshot filename."
+    out.args.emplace_back();
+    out.args.back().name = "SingleScreenshotFileName";
+    out.args.back().desc = "Iff invoking the 'SingleScreenshot' argument, use this string as the screenshot filename."
                       " If blank, a filename will be generated sequentially.";
-    out.back().default_val = "";
-    out.back().expected = true;
-    out.back().examples = { "", "/tmp/a_screenshot.png", "afile.png" };
-    out.back().mimetype = "image/png";
+    out.args.back().default_val = "";
+    out.args.back().expected = true;
+    out.args.back().examples = { "", "/tmp/a_screenshot.png", "afile.png" };
+    out.args.back().mimetype = "image/png";
 
     return out;
 }

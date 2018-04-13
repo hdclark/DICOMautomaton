@@ -17,8 +17,13 @@
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 
 
-std::list<OperationArgDoc> OpArgDocContouringAides(void){
-    return std::list<OperationArgDoc>();
+OperationDoc OpArgDocContouringAides(void){
+    OperationDoc out;
+    out.name = "ContouringAides";
+    out.desc = "";
+
+    out.notes.emplace_back("");
+    return out;
 }
 
 Drover ContouringAides(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string,std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){

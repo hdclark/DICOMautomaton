@@ -78,7 +78,7 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocLogScale(void);
+OperationDoc OpArgDocLogScale(void);
 
 
 Drover

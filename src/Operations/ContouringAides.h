@@ -79,7 +79,7 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocContouringAides(void);
+OperationDoc OpArgDocContouringAides(void);
 
 Drover ContouringAides(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                        std::map<std::string, std::string> /*InvocationMetadata*/,

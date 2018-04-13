@@ -79,7 +79,7 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocCopyImages(void);
+OperationDoc OpArgDocCopyImages(void);
 
 Drover CopyImages(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                      std::map<std::string, std::string> /*InvocationMetadata*/,

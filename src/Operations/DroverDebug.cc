@@ -16,8 +16,13 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocDroverDebug(void){
-    std::list<OperationArgDoc> out;
+OperationDoc OpArgDocDroverDebug(void){
+    OperationDoc out;
+    out.name = "DroverDebug";
+    out.desc = "";
+
+    out.notes.emplace_back("");
+
 
     // This operation reports basic information on the state of the main Drover class.
     // It can be used to report on the state of the data, which can be useful for debugging.

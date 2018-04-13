@@ -79,7 +79,7 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocContourWholeImages(void);
+OperationDoc OpArgDocContourWholeImages(void);
 
 Drover ContourWholeImages(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                              std::map<std::string, std::string> /*InvocationMetadata*/,

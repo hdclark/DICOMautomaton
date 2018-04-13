@@ -22,54 +22,59 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocDumpROIContours(void){
-    std::list<OperationArgDoc> out;
+OperationDoc OpArgDocDumpROIContours(void){
+    OperationDoc out;
+    out.name = "DumpROIContours";
+    out.desc = "";
+
+    out.notes.emplace_back("");
+
 
     // This operation exports contours in 'tabular' format.
 
-    out.emplace_back();
-    out.back().name = "DumpFileName";
-    out.back().desc = "A filename (or full path) in which to (over)write with contour data."
+    out.args.emplace_back();
+    out.args.back().name = "DumpFileName";
+    out.args.back().desc = "A filename (or full path) in which to (over)write with contour data."
                       " File format is Wavefront obj."
                       " Leave empty to dump to generate a unique temporary file.";
-    out.back().default_val = "";
-    out.back().expected = true;
-    out.back().examples = { "", "/tmp/somefile.obj", "localfile.obj", "derivative_data.obj" };
-    out.back().mimetype = "application/obj";
+    out.args.back().default_val = "";
+    out.args.back().expected = true;
+    out.args.back().examples = { "", "/tmp/somefile.obj", "localfile.obj", "derivative_data.obj" };
+    out.args.back().mimetype = "application/obj";
 
-    out.emplace_back();
-    out.back().name = "MTLFileName";
-    out.back().desc = "A filename (or full path) in which to (over)write a Wavefront material library file."
+    out.args.emplace_back();
+    out.args.back().name = "MTLFileName";
+    out.args.back().desc = "A filename (or full path) in which to (over)write a Wavefront material library file."
                       " This file is used to colour the contours to help differentiate them."
                       " Leave empty to dump to generate a unique temporary file.";
-    out.back().default_val = "";
-    out.back().expected = true;
-    out.back().examples = { "", "/tmp/materials.mtl", "localfile.mtl", "somefile.mtl" };
-    out.back().mimetype = "application/mtl";
+    out.args.back().default_val = "";
+    out.args.back().expected = true;
+    out.args.back().examples = { "", "/tmp/materials.mtl", "localfile.mtl", "somefile.mtl" };
+    out.args.back().mimetype = "application/mtl";
 
-    out.emplace_back();
-    out.back().name = "NormalizedROILabelRegex";
-    out.back().desc = "A regex matching ROI labels/names to consider. The default will match"
+    out.args.emplace_back();
+    out.args.back().name = "NormalizedROILabelRegex";
+    out.args.back().desc = "A regex matching ROI labels/names to consider. The default will match"
                       " all available ROIs. Be aware that input spaces are trimmed to a single space."
                       " If your ROI name has more than two sequential spaces, use regex to avoid them."
                       " All ROIs have to match the single regex, so use the 'or' token if needed."
                       " Regex is case insensitive and uses extended POSIX syntax.";
-    out.back().default_val = ".*";
-    out.back().expected = true;
-    out.back().examples = { ".*", ".*Body.*", "Body", "Gross_Liver",
+    out.args.back().default_val = ".*";
+    out.args.back().expected = true;
+    out.args.back().examples = { ".*", ".*Body.*", "Body", "Gross_Liver",
                             R"***(.*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*)***",
                             R"***(Left Parotid|Right Parotid)***" };
 
-    out.emplace_back();
-    out.back().name = "ROILabelRegex";
-    out.back().desc = "A regex matching ROI labels/names to consider. The default will match"
+    out.args.emplace_back();
+    out.args.back().name = "ROILabelRegex";
+    out.args.back().desc = "A regex matching ROI labels/names to consider. The default will match"
                       " all available ROIs. Be aware that input spaces are trimmed to a single space."
                       " If your ROI name has more than two sequential spaces, use regex to avoid them."
                       " All ROIs have to match the single regex, so use the 'or' token if needed."
                       " Regex is case insensitive and uses extended POSIX syntax.";
-    out.back().default_val = ".*";
-    out.back().expected = true;
-    out.back().examples = { ".*", ".*body.*", "body", "Gross_Liver",
+    out.args.back().default_val = ".*";
+    out.args.back().expected = true;
+    out.args.back().examples = { ".*", ".*body.*", "body", "Gross_Liver",
                             R"***(.*left.*parotid.*|.*right.*parotid.*|.*eyes.*)***",
                             R"***(left_parotid|right_parotid)***" };
 

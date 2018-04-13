@@ -20,29 +20,34 @@
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
 
-std::list<OperationArgDoc> OpArgDocSpatialDerivative(void){
-    std::list<OperationArgDoc> out;
+OperationDoc OpArgDocSpatialDerivative(void){
+    OperationDoc out;
+    out.name = "SpatialDerivative";
+    out.desc = "";
+
+    out.notes.emplace_back("");
+
 
     // This operation estimates various partial derivatives (of pixel values) within an image.
 
-    out.emplace_back();
-    out.back().name = "ImageSelection";
-    out.back().desc = "Images to operate on. Either 'none', 'last', 'first', or 'all'.";
-    out.back().default_val = "last";
-    out.back().expected = true;
-    out.back().examples = { "none", "last", "first", "all" };
+    out.args.emplace_back();
+    out.args.back().name = "ImageSelection";
+    out.args.back().desc = "Images to operate on. Either 'none', 'last', 'first', or 'all'.";
+    out.args.back().default_val = "last";
+    out.args.back().expected = true;
+    out.args.back().examples = { "none", "last", "first", "all" };
     
-    out.emplace_back();
-    out.back().name = "Estimator";
-    out.back().desc = "Controls the finite-difference partial derivative order or estimator used. All estimators are"
+    out.args.emplace_back();
+    out.args.back().name = "Estimator";
+    out.args.back().desc = "Controls the finite-difference partial derivative order or estimator used. All estimators are"
                       " centred and use mirror boundary conditions. First-order estimators include the basic"
                       " nearest-neighbour first derivative, and Roberts' cross, Prewitt, Sobel, Scharr estimators."
                       " 'XxY' denotes the size of the convolution kernel (i.e., the number of adjacent pixels"
                       " considered)."
                       " The only second-order estimator is the basic nearest-neighbour second derivative.";
-    out.back().default_val = "Scharr-3x3";
-    out.back().expected = true;
-    out.back().examples = { "first",
+    out.args.back().default_val = "Scharr-3x3";
+    out.args.back().expected = true;
+    out.args.back().examples = { "first",
                             "Roberts-cross-3x3",
                             "Prewitt-3x3",
                             "Sobel-3x3",
@@ -51,17 +56,17 @@ std::list<OperationArgDoc> OpArgDocSpatialDerivative(void){
                             "Scharr-5x5",
                             "second" };
 
-    out.emplace_back();
-    out.back().name = "Method";
-    out.back().desc = "Controls partial derivative method. First-order derivatives can be row- or column-aligned,"
+    out.args.emplace_back();
+    out.args.back().name = "Method";
+    out.args.back().desc = "Controls partial derivative method. First-order derivatives can be row- or column-aligned,"
                       " Roberts' cross can be (+row,+col)-aligned or (-row,+col)-aligned."
                       " Second-order derivatives can be row-aligned, column-aligned, or 'cross' --meaning the"
                       " compound partial derivative."
                       " All methods support magnitude (addition of orthogonal components in quadrature) and"
                       " orientation (in radians; [0,2pi) ).";
-    out.back().default_val = "magnitude";
-    out.back().expected = true;
-    out.back().examples = { "row-aligned",
+    out.args.back().default_val = "magnitude";
+    out.args.back().expected = true;
+    out.args.back().examples = { "row-aligned",
                             "column-aligned",
                             "prow-pcol-aligned",
                             "nrow-pcol-aligned",

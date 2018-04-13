@@ -77,7 +77,7 @@
 #include "YgorString.h"              //Needed for GetFirstRegex(...)
 
 
-std::list<OperationArgDoc> OpArgDocDumpROIData(void);
+OperationDoc OpArgDocDumpROIData(void);
 
 Drover
 DumpROIData(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string, std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/);

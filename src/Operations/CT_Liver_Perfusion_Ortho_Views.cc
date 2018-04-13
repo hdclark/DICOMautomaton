@@ -18,8 +18,13 @@
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 
 
-std::list<OperationArgDoc> OpArgDocCT_Liver_Perfusion_Ortho_Views (void){
-    return std::list<OperationArgDoc>();
+OperationDoc OpArgDocCT_Liver_Perfusion_Ortho_Views (void){
+    OperationDoc out;
+    out.name = "CT_Liver_Perfusion_Ortho_Views ";
+    out.desc = "";
+
+    out.notes.emplace_back("");
+    return out;
 }
 
 Drover CT_Liver_Perfusion_Ortho_Views (Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string,std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){

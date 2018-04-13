@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-std::list<OperationArgDoc> OpArgDocRePlanReIrradiateDoseTrimming(void);
+OperationDoc OpArgDocRePlanReIrradiateDoseTrimming(void);
 
 Drover
 RePlanReIrradiateDoseTrimming(Drover DICOM_data, 

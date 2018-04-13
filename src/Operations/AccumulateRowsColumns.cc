@@ -26,8 +26,13 @@
 #include "YgorStats.h"        //Needed for Stats:: namespace.
 
 
-std::list<OperationArgDoc> OpArgDocAccumulateRowsColumns(void){
-    std::list<OperationArgDoc> out;
+OperationDoc OpArgDocAccumulateRowsColumns(void){
+    OperationDoc out;
+    out.name = "AccumulateRowsColumns";
+    out.desc = "";
+
+    out.notes.emplace_back("");
+
 
     // This operation generates row- and column-profiles of images in which the entire row or column has been summed
     // together. It is useful primarily for detection of axes-aligned edges or ridges.
@@ -36,12 +41,12 @@ std::list<OperationArgDoc> OpArgDocAccumulateRowsColumns(void){
     //       similar (i.e., something to emphasize edges) before calling this routine. It is not necessary, however.
     //
 
-    out.emplace_back();
-    out.back().name = "ImageSelection";
-    out.back().desc = "Images to operate on. Either 'none', 'last', 'first', or 'all'.";
-    out.back().default_val = "last";
-    out.back().expected = true;
-    out.back().examples = { "none", "last", "first", "all" };
+    out.args.emplace_back();
+    out.args.back().name = "ImageSelection";
+    out.args.back().desc = "Images to operate on. Either 'none', 'last', 'first', or 'all'.";
+    out.args.back().default_val = "last";
+    out.args.back().expected = true;
+    out.args.back().examples = { "none", "last", "first", "all" };
     
     return out;
 }

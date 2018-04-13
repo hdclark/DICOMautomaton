@@ -29,8 +29,13 @@
 template <class T> class contour_collection;
 
 
-std::list<OperationArgDoc> OpArgDocUBC3TMRI_DCE_Experimental(void){
-    return std::list<OperationArgDoc>();
+OperationDoc OpArgDocUBC3TMRI_DCE_Experimental(void){
+    OperationDoc out;
+    out.name = "UBC3TMRI_DCE_Experimental";
+    out.desc = "";
+
+    out.notes.emplace_back("");
+    return out;
 }
 
 Drover UBC3TMRI_DCE_Experimental(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string,std::string> InvocationMetadata, std::string /*FilenameLex*/){

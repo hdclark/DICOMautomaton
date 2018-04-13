@@ -79,7 +79,7 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocEvaluateDoseVolumeStats(void);
+OperationDoc OpArgDocEvaluateDoseVolumeStats(void);
 
 Drover EvaluateDoseVolumeStats(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                              std::map<std::string, std::string> /*InvocationMetadata*/,

@@ -15,8 +15,13 @@
 #include "YgorMath.h"         //Needed for vec3 class.
 
 
-std::list<OperationArgDoc> OpArgDocDumpPixelValuesOverTimeForAnEncompassedPoint(void){
-    return std::list<OperationArgDoc>();
+OperationDoc OpArgDocDumpPixelValuesOverTimeForAnEncompassedPoint(void){
+    OperationDoc out;
+    out.name = "DumpPixelValuesOverTimeForAnEncompassedPoint";
+    out.desc = "";
+
+    out.notes.emplace_back("");
+    return out;
 }
 
 Drover DumpPixelValuesOverTimeForAnEncompassedPoint(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string,std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){

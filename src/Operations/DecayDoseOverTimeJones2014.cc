@@ -25,49 +25,54 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocDecayDoseOverTimeJones2014(void){
-    std::list<OperationArgDoc> out;
+OperationDoc OpArgDocDecayDoseOverTimeJones2014(void){
+    OperationDoc out;
+    out.name = "DecayDoseOverTimeJones2014";
+    out.desc = "";
+
+    out.notes.emplace_back("");
 
 
-    out.emplace_back();
-    out.back().name = "NormalizedROILabelRegex";
-    out.back().desc = "A regex matching ROI labels/names to consider. The default will match"
+
+    out.args.emplace_back();
+    out.args.back().name = "NormalizedROILabelRegex";
+    out.args.back().desc = "A regex matching ROI labels/names to consider. The default will match"
                       " all available ROIs. Be aware that input spaces are trimmed to a single space."
                       " If your ROI name has more than two sequential spaces, use regex to avoid them."
                       " All ROIs have to match the single regex, so use the 'or' token if needed."
                       " Regex is case insensitive and uses extended POSIX syntax.";
-    out.back().default_val = ".*";
-    out.back().expected = true;
-    out.back().examples = { ".*", ".*Body.*", "Body", "Gross_Liver",
+    out.args.back().default_val = ".*";
+    out.args.back().expected = true;
+    out.args.back().examples = { ".*", ".*Body.*", "Body", "Gross_Liver",
                             R"***(.*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*)***",
                             R"***(Left Parotid|Right Parotid)***" };
 
 
-    out.emplace_back();
-    out.back().name = "ROILabelRegex";
-    out.back().desc = "A regex matching ROI labels/names to consider. The default will match"
+    out.args.emplace_back();
+    out.args.back().name = "ROILabelRegex";
+    out.args.back().desc = "A regex matching ROI labels/names to consider. The default will match"
                       " all available ROIs. Be aware that input spaces are trimmed to a single space."
                       " If your ROI name has more than two sequential spaces, use regex to avoid them."
                       " All ROIs have to match the single regex, so use the 'or' token if needed."
                       " Regex is case insensitive and uses extended POSIX syntax.";
-    out.back().default_val = ".*";
-    out.back().expected = true;
-    out.back().examples = { ".*", ".*body.*", "body", "Gross_Liver",
+    out.args.back().default_val = ".*";
+    out.args.back().expected = true;
+    out.args.back().examples = { ".*", ".*body.*", "body", "Gross_Liver",
                             R"***(.*left.*parotid.*|.*right.*parotid.*|.*eyes.*)***",
                             R"***(left_parotid|right_parotid)***" };
 
-    out.emplace_back();
-    out.back().name = "Course1NumberOfFractions";
-    out.back().desc = "The number of fractions delivered for the first (i.e., previous) course."
+    out.args.emplace_back();
+    out.args.back().name = "Course1NumberOfFractions";
+    out.args.back().desc = "The number of fractions delivered for the first (i.e., previous) course."
                       " If several apply, you can provide a single effective fractionation scheme's 'n'.";
-    out.back().default_val = "35";
-    out.back().expected = true;
-    out.back().examples = { "15", "25", "30.001", "35.3" };
+    out.args.back().default_val = "35";
+    out.args.back().expected = true;
+    out.args.back().examples = { "15", "25", "30.001", "35.3" };
 
 
-    out.emplace_back();
-    out.back().name = "ToleranceTotalDose";
-    out.back().desc = "The dose delivered (in Gray) for a hypothetical 'lifetime dose tolerance' course."
+    out.args.emplace_back();
+    out.args.back().name = "ToleranceTotalDose";
+    out.args.back().desc = "The dose delivered (in Gray) for a hypothetical 'lifetime dose tolerance' course."
                       " This dose corresponds to a hypothetical radiation course that nominally"
                       " corresponds to the toxicity of interest. For CNS tissues, it will probably be myelopathy"
                       " or necrosis at some population-level onset risk (e.g., 5% risk of myelopathy)."
@@ -77,52 +82,52 @@ std::list<OperationArgDoc> OpArgDocDecayDoseOverTimeJones2014(void){
                       " not be directly applicable to per-voxel risk estimation!) Note that the QUANTEC 2010 reports"
                       " almost all assume 2 Gy/fraction."
                       " If several fractionation schemes were used, you should provide a cumulative BED-derived dose here.";
-    out.back().default_val = "52";
-    out.back().expected = true;
-    out.back().examples = { "15", "20", "25", "50", "83.2" };
+    out.args.back().default_val = "52";
+    out.args.back().expected = true;
+    out.args.back().examples = { "15", "20", "25", "50", "83.2" };
 
 
-    out.emplace_back();
-    out.back().name = "ToleranceNumberOfFractions";
-    out.back().desc = "The number of fractions ('n') the 'lifetime dose tolerance' toxicity you are interested in."
+    out.args.emplace_back();
+    out.args.back().name = "ToleranceNumberOfFractions";
+    out.args.back().desc = "The number of fractions ('n') the 'lifetime dose tolerance' toxicity you are interested in."
                       " Note that this is converted to a BED_{a/b} so you can safely provide a 'nominal' value."
                       " If several apply, you can provide a single effective fractionation scheme's 'n'.";
-    out.back().default_val = "35";
-    out.back().expected = true;
-    out.back().examples = { "15", "25", "30.001", "35.3" };
+    out.args.back().default_val = "35";
+    out.args.back().expected = true;
+    out.args.back().examples = { "15", "25", "30.001", "35.3" };
 
 
-    out.emplace_back();
-    out.back().name = "TimeGap";
-    out.back().desc = "The number of years between radiotherapy courses. Note that this is normally estimated by"
+    out.args.emplace_back();
+    out.args.back().name = "TimeGap";
+    out.args.back().desc = "The number of years between radiotherapy courses. Note that this is normally estimated by"
                       " (1) extracting study/series dates from the provided dose files and (2) using the current"
                       " date as the second course date. Use this parameter to override the autodetected gap time."
                       " Note: if the provided value is negative, autodetection will be used.";
-    out.back().default_val = "-1";
-    out.back().expected = true;
-    out.back().examples = { "0.91", "2.6", "5" };
+    out.args.back().default_val = "-1";
+    out.args.back().expected = true;
+    out.args.back().examples = { "0.91", "2.6", "5" };
 
 
-    out.emplace_back();
-    out.back().name = "AlphaBetaRatio";
-    out.back().desc = "The ratio alpha/beta (in Gray) to use when converting to a biologically-equivalent"
+    out.args.emplace_back();
+    out.args.back().name = "AlphaBetaRatio";
+    out.args.back().desc = "The ratio alpha/beta (in Gray) to use when converting to a biologically-equivalent"
                       " dose distribution for central nervous tissues. "
                       " Jones and Grant (2014) recommend alpha/beta = 2 Gy to be conservative. "
                       " It is more commonplace to use alpha/beta = 3 Gy, but this is less conservative and there "
                       " is some evidence that it may be erroneous to use 3 Gy.";
-    out.back().default_val = "2";
-    out.back().expected = true;
-    out.back().examples = { "2", "3" };
+    out.args.back().default_val = "2";
+    out.args.back().expected = true;
+    out.args.back().examples = { "2", "3" };
     
 
-    out.emplace_back();
-    out.back().name = "UseMoreConservativeRecovery";
-    out.back().desc = "Jones and Grant (2014) provide two ways to estimate the function 'r'. One is fitted to"
+    out.args.emplace_back();
+    out.args.back().name = "UseMoreConservativeRecovery";
+    out.args.back().desc = "Jones and Grant (2014) provide two ways to estimate the function 'r'. One is fitted to"
                       " experimental data, and one is a more conservative estimate of the fitted function."
                       " This parameter controls whether or not the more conservative function is used.";
-    out.back().default_val = "true";
-    out.back().expected = true;
-    out.back().examples = { "true", "false" };
+    out.args.back().default_val = "true";
+    out.args.back().expected = true;
+    out.args.back().examples = { "true", "false" };
 
     
     return out;

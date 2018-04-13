@@ -119,219 +119,224 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocSurfaceBasedRayCastDoseAccumulate(void){
-    std::list<OperationArgDoc> out;
+OperationDoc OpArgDocSurfaceBasedRayCastDoseAccumulate(void){
+    OperationDoc out;
+    out.name = "SurfaceBasedRayCastDoseAccumulate";
+    out.desc = "";
+
+    out.notes.emplace_back("");
 
 
-    out.emplace_back();
-    out.back().name = "TotalDoseMapFileName";
-    out.back().desc = "A filename (or full path) for the total dose image map (at all ray-surface intersection points)."
+
+    out.args.emplace_back();
+    out.args.back().name = "TotalDoseMapFileName";
+    out.args.back().desc = "A filename (or full path) for the total dose image map (at all ray-surface intersection points)."
                       " The dose for each ray is summed over all ray-surface point intersections."
                       " The format is FITS. This file is always generated."
                       " Leave the argument empty to generate a unique filename.";
-    out.back().default_val = "";
-    out.back().expected = true;
-    out.back().examples = { "", "total_dose_map.fits", "/tmp/out.fits" };
-    out.back().mimetype = "image/fits";
+    out.args.back().default_val = "";
+    out.args.back().expected = true;
+    out.args.back().examples = { "", "total_dose_map.fits", "/tmp/out.fits" };
+    out.args.back().mimetype = "image/fits";
 
 
-    out.emplace_back();
-    out.back().name = "IntersectionCountMapFileName";
-    out.back().desc = "A filename (or full path) for the (number of ray-surface intersections) image map."
+    out.args.emplace_back();
+    out.args.back().name = "IntersectionCountMapFileName";
+    out.args.back().desc = "A filename (or full path) for the (number of ray-surface intersections) image map."
                       " Each pixel in this map (and the total dose map) represents a single ray;"
                       " the number of times the ray intersects the surface can be useful for various purposes,"
                       " but most often it will simply be a sanity check for the cross-sectional shape or that "
                       " a specific number of intersections were recorded in regions with geometrical folds."
                       " Pixels will all be within [0,MaxRaySurfaceIntersections]."
                       " The format is FITS. Leave empty to dump to generate a unique filename.";
-    out.back().default_val = "";
-    out.back().expected = true;
-    out.back().examples = { "", "intersection_count_map.fits", "/tmp/out.fits" };
-    out.back().mimetype = "image/fits";
+    out.args.back().default_val = "";
+    out.args.back().expected = true;
+    out.args.back().examples = { "", "intersection_count_map.fits", "/tmp/out.fits" };
+    out.args.back().mimetype = "image/fits";
 
 
-    out.emplace_back();
-    out.back().name = "DepthMapFileName";
-    out.back().desc = "A filename (or full path) for the distance (depth) of each ray-surface intersection point from"
+    out.args.emplace_back();
+    out.args.back().name = "DepthMapFileName";
+    out.args.back().desc = "A filename (or full path) for the distance (depth) of each ray-surface intersection point from"
                       " the detector. Has DICOM coordinate system units. This image is potentially multi-channel with"
                       " [MaxRaySurfaceIntersections] channels (when MaxRaySurfaceIntersections = 1 there is 1 channel)."
                       " The format is FITS. Leaving empty will result in no file being written.";
-    out.back().default_val = "";
-    out.back().expected = true;
-    out.back().examples = { "", "depth_map.fits", "/tmp/out.fits" };
-    out.back().mimetype = "image/fits";
+    out.args.back().default_val = "";
+    out.args.back().expected = true;
+    out.args.back().examples = { "", "depth_map.fits", "/tmp/out.fits" };
+    out.args.back().mimetype = "image/fits";
 
 
-    out.emplace_back();
-    out.back().name = "RadialDistMapFileName";
-    out.back().desc = "A filename (or full path) for the distance of each ray-surface intersection point from the"
+    out.args.emplace_back();
+    out.args.back().name = "RadialDistMapFileName";
+    out.args.back().desc = "A filename (or full path) for the distance of each ray-surface intersection point from the"
                       " line joining reference and target ROI centre-of-masses. This helps quantify position in 3D."
                       " Has DICOM coordinate system units. This image is potentially multi-channel with"
                       " [MaxRaySurfaceIntersections] channels (when MaxRaySurfaceIntersections = 1 there is 1 channel)."
                       " The format is FITS. Leaving empty will result in no file being written.";
-    out.back().default_val = "";
-    out.back().expected = true;
-    out.back().examples = { "", "radial_dist_map.fits", "/tmp/out.fits" };
-    out.back().mimetype = "image/fits";
+    out.args.back().default_val = "";
+    out.args.back().expected = true;
+    out.args.back().examples = { "", "radial_dist_map.fits", "/tmp/out.fits" };
+    out.args.back().mimetype = "image/fits";
 
 
-    out.emplace_back();
-    out.back().name = "ROISurfaceMeshFileName";
-    out.back().desc = "A filename (or full path) for the (pre-subdivided) surface mesh that is contructed from the ROI contours."
+    out.args.emplace_back();
+    out.args.back().name = "ROISurfaceMeshFileName";
+    out.args.back().desc = "A filename (or full path) for the (pre-subdivided) surface mesh that is contructed from the ROI contours."
                       " The format is OFF. This file is mostly useful for inspection of the surface or comparison with contours."
                       " Leaving empty will result in no file being written.";
-    out.back().default_val = "";
-    out.back().expected = true;
-    out.back().examples = { "", "/tmp/roi_surface_mesh.off", "roi_surface_mesh.off" };
-    out.back().mimetype = "application/off";
+    out.args.back().default_val = "";
+    out.args.back().expected = true;
+    out.args.back().examples = { "", "/tmp/roi_surface_mesh.off", "roi_surface_mesh.off" };
+    out.args.back().mimetype = "application/off";
 
 
-    out.emplace_back();
-    out.back().name = "SubdividedROISurfaceMeshFileName";
-    out.back().desc = "A filename (or full path) for the Loop-subdivided surface mesh that is contructed from the ROI contours."
+    out.args.emplace_back();
+    out.args.back().name = "SubdividedROISurfaceMeshFileName";
+    out.args.back().desc = "A filename (or full path) for the Loop-subdivided surface mesh that is contructed from the ROI contours."
                       " The format is OFF. This file is mostly useful for inspection of the surface or comparison with contours."
                       " Leaving empty will result in no file being written.";
-    out.back().default_val = "";
-    out.back().expected = true;
-    out.back().examples = { "", "/tmp/subdivided_roi_surface_mesh.off", "subdivided_roi_surface_mesh.off" };
-    out.back().mimetype = "application/off";
+    out.args.back().default_val = "";
+    out.args.back().expected = true;
+    out.args.back().examples = { "", "/tmp/subdivided_roi_surface_mesh.off", "subdivided_roi_surface_mesh.off" };
+    out.args.back().mimetype = "application/off";
 
 
-    out.emplace_back();
-    out.back().name = "ROICOMCOMLineFileName";
-    out.back().desc = "A filename (or full path) for the line segment that connected the centre-of-mass (COM) of"
+    out.args.emplace_back();
+    out.args.back().name = "ROICOMCOMLineFileName";
+    out.args.back().desc = "A filename (or full path) for the line segment that connected the centre-of-mass (COM) of"
                       " reference and target ROI. The format is OFF."
                       " This file is mostly useful for inspection of the surface or comparison with contours."
                       " Leaving empty will result in no file being written.";
-    out.back().default_val = "";
-    out.back().expected = true;
-    out.back().examples = { "", "/tmp/roi_com_com_line.off", "roi_com_com_line.off" };
+    out.args.back().default_val = "";
+    out.args.back().expected = true;
+    out.args.back().examples = { "", "/tmp/roi_com_com_line.off", "roi_com_com_line.off" };
 
 
-    out.emplace_back();
-    out.back().name = "NormalizedReferenceROILabelRegex";
-    out.back().desc = "A regex matching reference ROI labels/names to consider. The default will match"
+    out.args.emplace_back();
+    out.args.back().name = "NormalizedReferenceROILabelRegex";
+    out.args.back().desc = "A regex matching reference ROI labels/names to consider. The default will match"
                       " all available ROIs, which is non-sensical. The reference ROI is used to orient"
                       " the cleaving plane to trim the grid surface mask.";
-    out.back().default_val = ".*";
-    out.back().expected = true;
-    out.back().examples = { ".*", ".*Prostate.*", "Left Kidney", "Gross Liver" };
+    out.args.back().default_val = ".*";
+    out.args.back().expected = true;
+    out.args.back().examples = { ".*", ".*Prostate.*", "Left Kidney", "Gross Liver" };
 
 
-    out.emplace_back();
-    out.back().name = "NormalizedROILabelRegex";
-    out.back().desc = "A regex matching ROI labels/names to consider. The default will match"
+    out.args.emplace_back();
+    out.args.back().name = "NormalizedROILabelRegex";
+    out.args.back().desc = "A regex matching ROI labels/names to consider. The default will match"
                       " all available ROIs. Be aware that input spaces are trimmed to a single space."
                       " If your ROI name has more than two sequential spaces, use regex to avoid them."
                       " All ROIs have to match the single regex, so use the 'or' token if needed."
                       " Regex is case insensitive and uses extended POSIX syntax.";
-    out.back().default_val = ".*";
-    out.back().expected = true;
-    out.back().examples = { ".*", ".*Body.*", "Body", "Gross_Liver",
+    out.args.back().default_val = ".*";
+    out.args.back().expected = true;
+    out.args.back().examples = { ".*", ".*Body.*", "Body", "Gross_Liver",
                             R"***(.*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*)***",
                             R"***(Left Parotid|Right Parotid)***" };
 
-    out.emplace_back();
-    out.back().name = "ReferenceROILabelRegex";
-    out.back().desc = "A regex matching reference ROI labels/names to consider. The default will match"
+    out.args.emplace_back();
+    out.args.back().name = "ReferenceROILabelRegex";
+    out.args.back().desc = "A regex matching reference ROI labels/names to consider. The default will match"
                       " all available ROIs, which is non-sensical. The reference ROI is used to orient"
                       " the cleaving plane to trim the grid surface mask.";
-    out.back().default_val = ".*";
-    out.back().expected = true;
-    out.back().examples = { ".*", ".*[pP]rostate.*", "body", "Gross_Liver",
+    out.args.back().default_val = ".*";
+    out.args.back().expected = true;
+    out.args.back().examples = { ".*", ".*[pP]rostate.*", "body", "Gross_Liver",
                             R"***(.*left.*parotid.*|.*right.*parotid.*|.*eyes.*)***",
                             R"***(left_parotid|right_parotid)***" };
 
 
-    out.emplace_back();
-    out.back().name = "ROILabelRegex";
-    out.back().desc = "A regex matching ROI labels/names to consider. The default will match"
+    out.args.emplace_back();
+    out.args.back().name = "ROILabelRegex";
+    out.args.back().desc = "A regex matching ROI labels/names to consider. The default will match"
                       " all available ROIs. Be aware that input spaces are trimmed to a single space."
                       " If your ROI name has more than two sequential spaces, use regex to avoid them."
                       " All ROIs have to match the single regex, so use the 'or' token if needed."
                       " Regex is case insensitive and uses extended POSIX syntax.";
-    out.back().default_val = ".*";
-    out.back().expected = true;
-    out.back().examples = { ".*", ".*body.*", "body", "Gross_Liver",
+    out.args.back().default_val = ".*";
+    out.args.back().expected = true;
+    out.args.back().examples = { ".*", ".*body.*", "body", "Gross_Liver",
                             R"***(.*left.*parotid.*|.*right.*parotid.*|.*eyes.*)***",
                             R"***(left_parotid|right_parotid)***" };
 
 
-    out.emplace_back();
-    out.back().name = "SourceDetectorRows";
-    out.back().desc = "The number of rows in the resulting images, which also defines how many rays are used."
+    out.args.emplace_back();
+    out.args.back().name = "SourceDetectorRows";
+    out.args.back().desc = "The number of rows in the resulting images, which also defines how many rays are used."
                       " (Each pixel in the source image represents a single ray.)"
                       " Setting too fine relative to the surface mask grid or dose grid is futile.";
-    out.back().default_val = "1024";
-    out.back().expected = true;
-    out.back().examples = { "100", "128", "1024", "4096" };
+    out.args.back().default_val = "1024";
+    out.args.back().expected = true;
+    out.args.back().examples = { "100", "128", "1024", "4096" };
     
 
-    out.emplace_back();
-    out.back().name = "SourceDetectorColumns";
-    out.back().desc = "The number of columns in the resulting images."
+    out.args.emplace_back();
+    out.args.back().name = "SourceDetectorColumns";
+    out.args.back().desc = "The number of columns in the resulting images."
                       " (Each pixel in the source image represents a single ray.)"
                       " Setting too fine relative to the surface mask grid or dose grid is futile.";
-    out.back().default_val = "1024";
-    out.back().expected = true;
-    out.back().examples = { "100", "128", "1024", "4096" };
+    out.args.back().default_val = "1024";
+    out.args.back().expected = true;
+    out.args.back().examples = { "100", "128", "1024", "4096" };
     
 
-    out.emplace_back();
-    out.back().name = "MeshingAngularBound";
-    out.back().desc = "The minimum internal angle each triangle facet must have in the surface mesh (in degrees)."
+    out.args.emplace_back();
+    out.args.back().name = "MeshingAngularBound";
+    out.args.back().desc = "The minimum internal angle each triangle facet must have in the surface mesh (in degrees)."
                       " The computation may become unstable if an angle larger than 30 degree is specified."
                       " Note that for intersection purposes triangles with small angles isn't a big deal."
                       " Rather, having a large minimal angle can constrain the surface in strange ways."
                       " Consult the CGAL '3D Surface Mesh Generation' package documentation for additional info.";
-    out.back().default_val = "1.0";
-    out.back().expected = true;
-    out.back().examples = { "1.0", "10.0", "25.0", "30.0" };
+    out.args.back().default_val = "1.0";
+    out.args.back().expected = true;
+    out.args.back().examples = { "1.0", "10.0", "25.0", "30.0" };
     
 
-    out.emplace_back();
-    out.back().name = "MeshingFacetSphereRadiusBound";
-    out.back().desc = "The maximum radius of facet-bounding spheres, which are centred on each facet (one per facet)"
+    out.args.emplace_back();
+    out.args.back().name = "MeshingFacetSphereRadiusBound";
+    out.args.back().desc = "The maximum radius of facet-bounding spheres, which are centred on each facet (one per facet)"
                       " and grown as large as possible without enclosing any facet vertices."
                       " In a nutshell, this controls the maximum individual facet size."
                       " Units are in DICOM space. Setting too low will cause triangulation to be slow and many facets;"
                       " it is recommended instead to rely on subdivision to create a smooth surface approximation."
                       " Consult the CGAL '3D Surface Mesh Generation' package documentation for additional info.";
-    out.back().default_val = "5.0";
-    out.back().expected = true;
-    out.back().examples = { "1.0", "2.0", "5.0" };
+    out.args.back().default_val = "5.0";
+    out.args.back().expected = true;
+    out.args.back().examples = { "1.0", "2.0", "5.0" };
    
 
-    out.emplace_back();
-    out.back().name = "MeshingCentreCentreBound";
-    out.back().desc = "The maximum facet centre-centre distance between facet circumcentres and facet-bounding spheres,"
+    out.args.emplace_back();
+    out.args.back().name = "MeshingCentreCentreBound";
+    out.args.back().desc = "The maximum facet centre-centre distance between facet circumcentres and facet-bounding spheres,"
                       " which are centred on each facet (one per facet) and grown as large as possible without enclosing"
                       " any facet vertices. In a nutshell, this controls the trade-off between minimizing deviation from"
                       " the (implicit) ROI contour-derived surface and having smooth connectivity between facets."
                       " Units are in DICOM space. Setting too low will cause triangulation to be slow and many facets;"
                       " it is recommended instead to rely on subdivision to create a smooth surface approximation."
                       " Consult the CGAL '3D Surface Mesh Generation' package documentation for additional info.";
-    out.back().default_val = "5.0";
-    out.back().expected = true;
-    out.back().examples = { "1.0", "2.0", "5.0", "10.0" };
+    out.args.back().default_val = "5.0";
+    out.args.back().expected = true;
+    out.args.back().examples = { "1.0", "2.0", "5.0", "10.0" };
    
 
-    out.emplace_back();
-    out.back().name = "MeshingSubdivisionIterations";
-    out.back().desc = "The number of iterations of Loop's subdivision to apply to the surface mesh."
+    out.args.emplace_back();
+    out.args.back().name = "MeshingSubdivisionIterations";
+    out.args.back().desc = "The number of iterations of Loop's subdivision to apply to the surface mesh."
                       " The aim of subdivision in this context is to have a smooth surface to work with, but too many"
                       " applications will create too many facets. More facets will not lead to more precise results"
                       " beyond a certain (modest) amount of smoothing. If the geometry is relatively spherical already,"
                       " and meshing bounds produce reasonably smooth (but 'blocky') surface meshes, then 2-3"
                       " iterations should suffice. More than 3-4 iterations will almost always be inappropriate.";
-    out.back().default_val = "2";
-    out.back().expected = true;
-    out.back().examples = { "0", "1", "2", "3" };
+    out.args.back().default_val = "2";
+    out.args.back().expected = true;
+    out.args.back().examples = { "0", "1", "2", "3" };
 
 
-    out.emplace_back();
-    out.back().name = "MaxRaySurfaceIntersections";
-    out.back().desc = "The maximum number of ray-surface intersections to accumulate before retiring each ray."
+    out.args.emplace_back();
+    out.args.back().name = "MaxRaySurfaceIntersections";
+    out.args.back().desc = "The maximum number of ray-surface intersections to accumulate before retiring each ray."
                       " Note that intersections are sorted spatially by their distance to the detector, and those"
                       " closest to the detector are considered first."
                       " If the ROI surface is opaque, setting this value to 1 will emulate visibility."
@@ -340,18 +345,18 @@ std::list<OperationArgDoc> OpArgDocSurfaceBasedRayCastDoseAccumulate(void){
                       " This value should most often be 1 or some very high number (e.g., 1000) to make the surface"
                       " either completely opaque or completely transparent. (A transparent surface may help to"
                       " visualize geometrical 'folds' or other surface details of interest.)";
-    out.back().default_val = "1";
-    out.back().expected = true;
-    out.back().examples = { "1", "4", "1000"};
+    out.args.back().default_val = "1";
+    out.args.back().expected = true;
+    out.args.back().examples = { "1", "4", "1000"};
 
 
-    out.emplace_back();
-    out.back().name = "OnlyGenerateSurface";
-    out.back().desc = "Stop processing after writing the surface and subdivided surface meshes."
+    out.args.emplace_back();
+    out.args.back().name = "OnlyGenerateSurface";
+    out.args.back().desc = "Stop processing after writing the surface and subdivided surface meshes."
                       " This option is primarily used for debugging and visualization.";
-    out.back().default_val = "false";
-    out.back().expected = true;
-    out.back().examples = { "true", "false" };
+    out.args.back().default_val = "false";
+    out.args.back().expected = true;
+    out.args.back().examples = { "true", "false" };
 
     return out;
 }

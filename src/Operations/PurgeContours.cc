@@ -16,71 +16,76 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocPurgeContours(void){
-    std::list<OperationArgDoc> out;
+OperationDoc OpArgDocPurgeContours(void){
+    OperationDoc out;
+    out.name = "PurgeContours";
+    out.desc = "";
 
-    out.emplace_back();
-    out.back().name = "ROILabelRegex";
-    out.back().desc = "A regex matching ROI labels/names to consider. The default will match"
+    out.notes.emplace_back("");
+
+
+    out.args.emplace_back();
+    out.args.back().name = "ROILabelRegex";
+    out.args.back().desc = "A regex matching ROI labels/names to consider. The default will match"
                       " all available ROIs. Be aware that input spaces are trimmed to a single space."
                       " If your ROI name has more than two sequential spaces, use regex to avoid them."
                       " All ROIs have to match the single regex, so use the 'or' token if needed."
                       " Regex is case insensitive and uses extended POSIX syntax.";
-    out.back().default_val = ".*";
-    out.back().expected = true;
-    out.back().examples = { ".*", ".*body.*", "body", "Gross_Liver",
+    out.args.back().default_val = ".*";
+    out.args.back().expected = true;
+    out.args.back().examples = { ".*", ".*body.*", "body", "Gross_Liver",
                             R"***(.*left.*parotid.*|.*right.*parotid.*|.*eyes.*)***",
                             R"***(left_parotid|right_parotid)***" };
 
-    out.emplace_back();
-    out.back().name = "NormalizedROILabelRegex";
-    out.back().desc = "A regex matching ROI labels/names to consider. The default will match"
+    out.args.emplace_back();
+    out.args.back().name = "NormalizedROILabelRegex";
+    out.args.back().desc = "A regex matching ROI labels/names to consider. The default will match"
                       " all available ROIs. Be aware that input spaces are trimmed to a single space."
                       " If your ROI name has more than two sequential spaces, use regex to avoid them."
                       " All ROIs have to match the single regex, so use the 'or' token if needed."
                       " Regex is case insensitive and uses extended POSIX syntax.";
-    out.back().default_val = ".*";
-    out.back().expected = true;
-    out.back().examples = { ".*", ".*Body.*", "Body", "Gross_Liver",
+    out.args.back().default_val = ".*";
+    out.args.back().expected = true;
+    out.args.back().examples = { ".*", ".*Body.*", "Body", "Gross_Liver",
                             R"***(.*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*)***",
                             R"***(Left Parotid|Right Parotid)***" };
 
-    out.emplace_back();
-    out.back().name = "AreaAbove";
-    out.back().desc = "If this option is provided with a valid positive number, contour(s) with an area"
+    out.args.emplace_back();
+    out.args.back().name = "AreaAbove";
+    out.args.back().desc = "If this option is provided with a valid positive number, contour(s) with an area"
                       " greater than the specified value are purged. Note that the DICOM coordinate"
                       " space is used. (Supplying the default, inf, will disable this option.)";
-    out.back().default_val = "inf";
-    out.back().expected = true;
-    out.back().examples = { "inf", "100.0", "1000", "10.23E8" };
+    out.args.back().default_val = "inf";
+    out.args.back().expected = true;
+    out.args.back().examples = { "inf", "100.0", "1000", "10.23E8" };
 
-    out.emplace_back();
-    out.back().name = "AreaBelow";
-    out.back().desc = "If this option is provided with a valid positive number, contour(s) with an area"
+    out.args.emplace_back();
+    out.args.back().name = "AreaBelow";
+    out.args.back().desc = "If this option is provided with a valid positive number, contour(s) with an area"
                       " less than the specified value are purged. Note that the DICOM coordinate"
                       " space is used. (Supplying the default, -inf, will disable this option.)";
-    out.back().default_val = "-inf";
-    out.back().expected = true;
-    out.back().examples = { "-inf", "100.0", "1000", "10.23E8" };
+    out.args.back().default_val = "-inf";
+    out.args.back().expected = true;
+    out.args.back().examples = { "-inf", "100.0", "1000", "10.23E8" };
 
 
-    out.emplace_back();
-    out.back().name = "PerimeterAbove";
-    out.back().desc = "If this option is provided with a valid positive number, contour(s) with a perimeter"
+    out.args.emplace_back();
+    out.args.back().name = "PerimeterAbove";
+    out.args.back().desc = "If this option is provided with a valid positive number, contour(s) with a perimeter"
                       " greater than the specified value are purged. Note that the DICOM coordinate"
                       " space is used. (Supplying the default, inf, will disable this option.)";
-    out.back().default_val = "inf";
-    out.back().expected = true;
-    out.back().examples = { "inf", "10.0", "100", "10.23E4" };
+    out.args.back().default_val = "inf";
+    out.args.back().expected = true;
+    out.args.back().examples = { "inf", "10.0", "100", "10.23E4" };
 
-    out.emplace_back();
-    out.back().name = "PerimeterBelow";
-    out.back().desc = "If this option is provided with a valid positive number, contour(s) with a perimeter"
+    out.args.emplace_back();
+    out.args.back().name = "PerimeterBelow";
+    out.args.back().desc = "If this option is provided with a valid positive number, contour(s) with a perimeter"
                       " less than the specified value are purged. Note that the DICOM coordinate"
                       " space is used. (Supplying the default, -inf, will disable this option.)";
-    out.back().default_val = "-inf";
-    out.back().expected = true;
-    out.back().examples = { "-inf", "10.0", "100", "10.23E4" };
+    out.args.back().default_val = "-inf";
+    out.args.back().expected = true;
+    out.args.back().examples = { "-inf", "10.0", "100", "10.23E4" };
 
     return out;
 }

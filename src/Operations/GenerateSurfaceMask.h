@@ -79,7 +79,7 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocGenerateSurfaceMask(void);
+OperationDoc OpArgDocGenerateSurfaceMask(void);
 
 Drover GenerateSurfaceMask(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                              std::map<std::string, std::string> /*InvocationMetadata*/,

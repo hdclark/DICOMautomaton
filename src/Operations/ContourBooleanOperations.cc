@@ -23,72 +23,77 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocContourBooleanOperations(void){
-    std::list<OperationArgDoc> out;
+OperationDoc OpArgDocContourBooleanOperations(void){
+    OperationDoc out;
+    out.name = "ContourBooleanOperations";
+    out.desc = "";
+
+    out.notes.emplace_back("");
 
 
-    out.emplace_back();
-    out.back().name = "ROILabelRegexA";
-    out.back().desc = "A regex matching ROI labels/names that comprise the set of contour polygons 'A'"
+
+    out.args.emplace_back();
+    out.args.back().name = "ROILabelRegexA";
+    out.args.back().desc = "A regex matching ROI labels/names that comprise the set of contour polygons 'A'"
                       " as in f(A,B) where f is some Boolean operation." 
                       " The default with match all available ROIs, which is probably not what you want.";
-    out.back().default_val = ".*";
-    out.back().expected = true;
-    out.back().examples = { ".*", ".*[pP]rostate.*", "body", "Gross_Liver",
+    out.args.back().default_val = ".*";
+    out.args.back().expected = true;
+    out.args.back().examples = { ".*", ".*[pP]rostate.*", "body", "Gross_Liver",
                             R"***(.*left.*parotid.*|.*right.*parotid.*|.*eyes.*)***",
                             R"***(left_parotid|right_parotid)***" };
 
-    out.emplace_back();
-    out.back().name = "ROILabelRegexB";
-    out.back().desc = "A regex matching ROI labels/names that comprise the set of contour polygons 'B'"
+    out.args.emplace_back();
+    out.args.back().name = "ROILabelRegexB";
+    out.args.back().desc = "A regex matching ROI labels/names that comprise the set of contour polygons 'B'"
                       " as in f(A,B) where f is some Boolean operation." 
                       " The default with match all available ROIs, which is probably not what you want.";
-    out.back().default_val = ".*";
-    out.back().expected = true;
-    out.back().examples = { ".*", ".*body.*", "body", "Gross_Liver",
+    out.args.back().default_val = ".*";
+    out.args.back().expected = true;
+    out.args.back().examples = { ".*", ".*body.*", "body", "Gross_Liver",
                             R"***(.*left.*parotid.*|.*right.*parotid.*|.*eyes.*)***",
                             R"***(left_parotid|right_parotid)***" };
 
-    out.emplace_back();
-    out.back().name = "NormalizedROILabelRegexA";
-    out.back().desc = "A regex matching ROI labels/names that comprise the set of contour polygons 'A'"
+    out.args.emplace_back();
+    out.args.back().name = "NormalizedROILabelRegexA";
+    out.args.back().desc = "A regex matching ROI labels/names that comprise the set of contour polygons 'A'"
                       " as in f(A,B) where f is some Boolean operation. "
                       " The regex is applied to normalized ROI labels/names, which are translated using"
                       " a user-provided lexicon (i.e., a dictionary that supports fuzzy matching)."
                       " The default with match all available ROIs, which is probably not what you want.";
-    out.back().default_val = ".*";
-    out.back().expected = true;
-    out.back().examples = { ".*", ".*Body.*", "Body", "Gross_Liver",
+    out.args.back().default_val = ".*";
+    out.args.back().expected = true;
+    out.args.back().examples = { ".*", ".*Body.*", "Body", "Gross_Liver",
                             R"***(.*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*)***",
                             R"***(Left Parotid|Right Parotid)***" };
 
-    out.emplace_back();
-    out.back().name = "NormalizedROILabelRegexB";
-    out.back().desc = "A regex matching ROI labels/names that comprise the set of contour polygons 'B'"
+    out.args.emplace_back();
+    out.args.back().name = "NormalizedROILabelRegexB";
+    out.args.back().desc = "A regex matching ROI labels/names that comprise the set of contour polygons 'B'"
                       " as in f(A,B) where f is some Boolean operation. "
                       " The regex is applied to normalized ROI labels/names, which are translated using"
                       " a user-provided lexicon (i.e., a dictionary that supports fuzzy matching)."
                       " The default with match all available ROIs, which is probably not what you want.";
-    out.back().default_val = ".*";
-    out.back().expected = true;
-    out.back().examples = { ".*", ".*Body.*", "Body", "Gross_Liver",
+    out.args.back().default_val = ".*";
+    out.args.back().expected = true;
+    out.args.back().examples = { ".*", ".*Body.*", "Body", "Gross_Liver",
                             R"***(.*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*)***",
                             R"***(Left Parotid|Right Parotid)***" };
 
-    out.emplace_back();
-    out.back().name = "Operation";
-    out.back().desc = "The Boolean operation (e.g., the function 'f') to perform on the sets of"
+    out.args.emplace_back();
+    out.args.back().name = "Operation";
+    out.args.back().desc = "The Boolean operation (e.g., the function 'f') to perform on the sets of"
                       " contour polygons 'A' and 'B'. 'Symmetric difference' is also known as 'XOR'.";
-    out.back().default_val = "join";
-    out.back().expected = true;
-    out.back().examples = { "intersection", "join", "difference", "symmetric_difference" };
+    out.args.back().default_val = "join";
+    out.args.back().expected = true;
+    out.args.back().examples = { "intersection", "join", "difference", "symmetric_difference" };
 
-    out.emplace_back();
-    out.back().name = "OutputROILabel";
-    out.back().desc = "The label to attach to the ROI contour product of f(A,B).";
-    out.back().default_val = "Boolean_result";
-    out.back().expected = true;
-    out.back().examples = { "A+B", "A-B", "AuB", "AnB", "AxB", "A^B", "union", "xor", "combined", "body_without_spinal_cord" };
+    out.args.emplace_back();
+    out.args.back().name = "OutputROILabel";
+    out.args.back().desc = "The label to attach to the ROI contour product of f(A,B).";
+    out.args.back().default_val = "Boolean_result";
+    out.args.back().expected = true;
+    out.args.back().examples = { "A+B", "A-B", "AuB", "AnB", "AxB", "A^B", "union", "xor", "combined", "body_without_spinal_cord" };
 
     return out;
 }

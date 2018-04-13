@@ -18,8 +18,13 @@
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
 
-std::list<OperationArgDoc> OpArgDocDumpImageMetadataOccurrencesToFile(void){
-    return std::list<OperationArgDoc>();
+OperationDoc OpArgDocDumpImageMetadataOccurrencesToFile(void){
+    OperationDoc out;
+    out.name = "DumpImageMetadataOccurrencesToFile";
+    out.desc = "";
+
+    out.notes.emplace_back("");
+    return out;
 }
 
 Drover DumpImageMetadataOccurrencesToFile(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string,std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){

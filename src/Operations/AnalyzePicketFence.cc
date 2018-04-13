@@ -31,30 +31,31 @@
 #include "YgorStats.h"        //Needed for Stats:: namespace.
 
 
-std::list<OperationArgDoc> OpArgDocAnalyzePicketFence(void){
-    std::list<OperationArgDoc> out;
+OperationDoc OpArgDocAnalyzePicketFence(void){
+    OperationDoc out;
+    out.name = "AnalyzePicketFence";
+    out.desc = "This operation extracts MLC positions from a picket fence image.";
 
-    // This operation extracts MLC positions from a picket fence image.
-    //
-    // Note: This routine requires data to be pre-processed. The gross picket area should be isolated and the leaf
-    //       junction areas contoured (one contour per junction). Both can be accomplished via thresholding.
-    //
-    // Note: This routine analyzes the picket fences on the plane in which they are specified within the DICOM file,
-    //       which often coincides with the image receptor ("RTImageSID"). Tolerances are evaluated on the isoplane,
-    //       so the image is projected before measuring distances, but the image itself is not altered; a uniform
-    //       magnification factor of SAD/SID is applied to all distances.
+    out.notes.emplace_back(
+      "This routine requires data to be pre-processed. The gross picket area should be isolated and the leaf"
+      " junction areas contoured (one contour per junction). Both can be accomplished via thresholding.");
+    out.notes.emplace_back(
+      "This routine analyzes the picket fences on the plane in which they are specified within the DICOM file,"
+      " which often coincides with the image receptor ('RTImageSID'). Tolerances are evaluated on the isoplane,"
+      " so the image is projected before measuring distances, but the image itself is not altered; a uniform"
+      " magnification factor of SAD/SID is applied to all distances.");
 
-    out.emplace_back();
-    out.back().name = "ImageSelection";
-    out.back().desc = "Images to operate on. Either 'none', 'last', 'first', or 'all'.";
-    out.back().default_val = "last";
-    out.back().expected = true;
-    out.back().examples = { "none", "last", "first", "all" };
+    out.args.emplace_back();
+    out.args.back().name = "ImageSelection";
+    out.args.back().desc = "Images to operate on. Either 'none', 'last', 'first', or 'all'.";
+    out.args.back().default_val = "last";
+    out.args.back().expected = true;
+    out.args.back().examples = { "none", "last", "first", "all" };
     
 
-    out.emplace_back();
-    out.back().name = "MLCModel";
-    out.back().desc = "The MLC design geometry to use."
+    out.args.emplace_back();
+    out.args.back().name = "MLCModel";
+    out.args.back().desc = "The MLC design geometry to use."
                       " 'VarianMillenniumMLC80' has 80 leafs in each bank;"
                       " leaves are 10mm wide at isocentre;"
                       " and the maximum static field size is 40cm x 40cm."
@@ -66,90 +67,90 @@ std::list<OperationArgDoc> OpArgDocAnalyzePicketFence(void){
                       " the 32 central leaves are 2.5mm wide at isocentre;"
                       " the 28 peripheral leaves are 5mm wide;"
                       " and the maximum static field size is 40cm x 22cm.";
-    out.back().default_val = "VarianMillenniumMLC120";
-    out.back().expected = true;
-    out.back().examples = { "VarianMillenniumMLC80",
+    out.args.back().default_val = "VarianMillenniumMLC120";
+    out.args.back().expected = true;
+    out.args.back().examples = { "VarianMillenniumMLC80",
                             "VarianMillenniumMLC120",
                             "VarianHD120" };  // It would be nice to try auto-detect this...
 
-    out.emplace_back();
-    out.back().name = "MLCROILabel";
-    out.back().desc = "An ROI imitating the MLC axes of leaf pairs is created. This is the label to apply"
+    out.args.emplace_back();
+    out.args.back().name = "MLCROILabel";
+    out.args.back().desc = "An ROI imitating the MLC axes of leaf pairs is created. This is the label to apply"
                       " to it. Note that the leaves are modeled with thin contour rectangles of virtually zero"
                       " area. Also note that the outline colour is significant and denotes leaf pair pass/fail.";
-    out.back().default_val = "Leaves";
-    out.back().expected = true;
-    out.back().examples = { "MLC_leaves",
+    out.args.back().default_val = "Leaves";
+    out.args.back().expected = true;
+    out.args.back().examples = { "MLC_leaves",
                             "MLC",
                             "approx_leaf_axes" };
 
-    out.emplace_back();
-    out.back().name = "JunctionROILabel";
-    out.back().desc = "An ROI imitating the junction is created. This is the label to apply to it."
+    out.args.emplace_back();
+    out.args.back().name = "JunctionROILabel";
+    out.args.back().desc = "An ROI imitating the junction is created. This is the label to apply to it."
                       " Note that the junctions are modeled with thin contour rectangles of virtually zero"
                       " area.";
-    out.back().default_val = "Junctions";
-    out.back().expected = true;
-    out.back().examples = { "Junctions",
+    out.args.back().default_val = "Junctions";
+    out.args.back().expected = true;
+    out.args.back().examples = { "Junctions",
                             "Picket_Fence_Junction" };
 
-    out.emplace_back();
-    out.back().name = "MinimumJunctionSeparation";
-    out.back().desc = "The minimum distance between junctions on the SAD isoplane in DICOM units (mm)."
+    out.args.emplace_back();
+    out.args.back().name = "MinimumJunctionSeparation";
+    out.args.back().desc = "The minimum distance between junctions on the SAD isoplane in DICOM units (mm)."
                       " This number is used to"
                       " de-duplicate automatically detected junctions. Analysis results should not be"
                       " sensitive to the specific value.";
-    out.back().default_val = "10.0";
-    out.back().expected = true;
-    out.back().examples = { "5.0", "10.0", "15.0", "25.0" };
+    out.args.back().default_val = "10.0";
+    out.args.back().expected = true;
+    out.args.back().examples = { "5.0", "10.0", "15.0", "25.0" };
 
-    out.emplace_back();
-    out.back().name = "ThresholdDistance";
-    out.back().desc = "The threshold distance (in DICOM units) above which MLC separations are considered"
+    out.args.emplace_back();
+    out.args.back().name = "ThresholdDistance";
+    out.args.back().desc = "The threshold distance (in DICOM units) above which MLC separations are considered"
                       " to 'fail'. Each leaf pair is evaluated separately. Pass/fail status is also"
                       " indicated by setting the leaf axis contour colour (blue for pass, red for fail).";
-    out.back().default_val = "1.0";
-    out.back().expected = true;
-    out.back().examples = { "0.5", "1.0", "2.0" };
+    out.args.back().default_val = "1.0";
+    out.args.back().expected = true;
+    out.args.back().examples = { "0.5", "1.0", "2.0" };
 
 
-    out.emplace_back();
-    out.back().name = "LeafGapsFileName";
-    out.back().desc = "This file will contain gap and nominal-vs-actual offset distances for each leaf pair."
+    out.args.emplace_back();
+    out.args.back().name = "LeafGapsFileName";
+    out.args.back().desc = "This file will contain gap and nominal-vs-actual offset distances for each leaf pair."
                       " The format is CSV. Leave empty to dump to generate a unique temporary file."
                       " If an existing file is present, rows will be appended without writing a header.";
-    out.back().default_val = "";
-    out.back().expected = true;
-    out.back().examples = { "", "/tmp/somefile", "localfile.csv", "derivative_data.csv" };
-    out.back().mimetype = "text/csv";
+    out.args.back().default_val = "";
+    out.args.back().expected = true;
+    out.args.back().examples = { "", "/tmp/somefile", "localfile.csv", "derivative_data.csv" };
+    out.args.back().mimetype = "text/csv";
 
 
-    out.emplace_back();
-    out.back().name = "ResultsSummaryFileName";
-    out.back().desc = "This file will contain a brief summary of the results.";
+    out.args.emplace_back();
+    out.args.back().name = "ResultsSummaryFileName";
+    out.args.back().desc = "This file will contain a brief summary of the results."
                       " The format is CSV. Leave empty to dump to generate a unique temporary file."
                       " If an existing file is present, rows will be appended without writing a header.";
-    out.back().default_val = "";
-    out.back().expected = true;
-    out.back().examples = { "", "/tmp/somefile", "localfile.csv", "derivative_data.csv" };
-    out.back().mimetype = "text/csv";
+    out.args.back().default_val = "";
+    out.args.back().expected = true;
+    out.args.back().examples = { "", "/tmp/somefile", "localfile.csv", "derivative_data.csv" };
+    out.args.back().mimetype = "text/csv";
 
 
-    out.emplace_back();
-    out.back().name = "UserComment";
-    out.back().desc = "A string that will be inserted into the output file which will simplify merging output"
+    out.args.emplace_back();
+    out.args.back().name = "UserComment";
+    out.args.back().desc = "A string that will be inserted into the output file which will simplify merging output"
                       " with differing parameters, from different sources, or using sub-selections of the data.";
-    out.back().default_val = "";
-    out.back().expected = true;
-    out.back().examples = { "", "Using XYZ", "Patient treatment plan C" };
+    out.args.back().default_val = "";
+    out.args.back().expected = true;
+    out.args.back().examples = { "", "Using XYZ", "Patient treatment plan C" };
 
 
-    out.emplace_back();
-    out.back().name = "InteractivePlots";
-    out.back().desc = "Whether to interactively show plots showing detected edges.";
-    out.back().default_val = "false";
-    out.back().expected = true;
-    out.back().examples = { "true", "false" };
+    out.args.emplace_back();
+    out.args.back().name = "InteractivePlots";
+    out.args.back().desc = "Whether to interactively show plots showing detected edges.";
+    out.args.back().default_val = "false";
+    out.args.back().expected = true;
+    out.args.back().examples = { "true", "false" };
 
     return out;
 }

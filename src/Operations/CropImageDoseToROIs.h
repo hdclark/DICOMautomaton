@@ -79,7 +79,7 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocCropImageDoseToROIs(void);
+OperationDoc OpArgDocCropImageDoseToROIs(void);
 
 Drover CropImageDoseToROIs(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                                    std::map<std::string, std::string> /*InvocationMetadata*/,

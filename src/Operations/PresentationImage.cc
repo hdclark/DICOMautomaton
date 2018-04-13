@@ -48,27 +48,32 @@
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
 
-std::list<OperationArgDoc> OpArgDocPresentationImage(void){
-    std::list<OperationArgDoc> out;
+OperationDoc OpArgDocPresentationImage(void){
+    OperationDoc out;
+    out.name = "PresentationImage";
+    out.desc = "";
 
-    out.emplace_back();
-    out.back().name = "ScaleFactor";
-    out.back().desc = " This factor is applied to the image width and height to magnify (larger than 1) or shrink"
+    out.notes.emplace_back("");
+
+
+    out.args.emplace_back();
+    out.args.back().name = "ScaleFactor";
+    out.args.back().desc = " This factor is applied to the image width and height to magnify (larger than 1) or shrink"
                       " (less than 1) the image. This factor only affects the output image size."
                       " Note that aspect ratio is retained, but rounding for non-integer factors may lead to small (1-2"
                       " pixel) discrepancies.";
-    out.back().default_val = "1.0";
-    out.back().expected = true;
-    out.back().examples = { "0.5", "1.0", "2.0", "5.23" };
+    out.args.back().default_val = "1.0";
+    out.args.back().expected = true;
+    out.args.back().examples = { "0.5", "1.0", "2.0", "5.23" };
 
-    out.emplace_back();
-    out.back().name = "ImageFileName";
-    out.back().desc = " The file name to use for the image."
+    out.args.emplace_back();
+    out.args.back().name = "ImageFileName";
+    out.args.back().desc = " The file name to use for the image."
                       " If blank, a filename will be generated sequentially.";
-    out.back().default_val = "";
-    out.back().expected = true;
-    out.back().examples = { "", "/tmp/an_image.png", "afile.png" };
-    out.back().mimetype = "image/png";
+    out.args.back().default_val = "";
+    out.args.back().expected = true;
+    out.args.back().examples = { "", "/tmp/an_image.png", "afile.png" };
+    out.args.back().mimetype = "image/png";
 
     return out;
 }

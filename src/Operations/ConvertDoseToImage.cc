@@ -10,8 +10,13 @@
 #include "ConvertDoseToImage.h"
 
 
-std::list<OperationArgDoc> OpArgDocConvertDoseToImage(void){
-    return std::list<OperationArgDoc>();
+OperationDoc OpArgDocConvertDoseToImage(void){
+    OperationDoc out;
+    out.name = "ConvertDoseToImage";
+    out.desc = "";
+
+    out.notes.emplace_back("");
+    return out;
 }
 
 Drover ConvertDoseToImage(Drover DICOM_data, OperationArgPkg, std::map<std::string,std::string>, std::string ){

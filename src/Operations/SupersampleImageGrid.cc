@@ -21,8 +21,13 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocSupersampleImageGrid(void){
-    std::list<OperationArgDoc> out;
+OperationDoc OpArgDocSupersampleImageGrid(void){
+    OperationDoc out;
+    out.name = "SupersampleImageGrid";
+    out.desc = "";
+
+    out.notes.emplace_back("");
+
 
     // This operation scales supersamples images so they have more rows and/or columns, but the whole image keeps its
     // shape and spatial extent.
@@ -34,45 +39,45 @@ std::list<OperationArgDoc> OpArgDocSupersampleImageGrid(void){
     //       memory. It is best to pre-crop images to a region of interest if possible.
     //
 
-    out.emplace_back();
-    out.back().name = "ColumnScaleFactor";
-    out.back().desc = "A positive integer specifying how many columns will be in the new images."
+    out.args.emplace_back();
+    out.args.back().name = "ColumnScaleFactor";
+    out.args.back().desc = "A positive integer specifying how many columns will be in the new images."
                       " The number is relative to the incoming image column count. Specifying '1' will"
                       " result in nothing happening. Specifying '8' will result in 8x as many columns.";
-    out.back().default_val = "2";
-    out.back().expected = true;
-    out.back().examples = { "1", "2", "3", "8" };
+    out.args.back().default_val = "2";
+    out.args.back().expected = true;
+    out.args.back().examples = { "1", "2", "3", "8" };
 
-    out.emplace_back();
-    out.back().name = "DoseImageSelection";
-    out.back().desc = "Dose images to operate on. Either 'none', 'last', or 'all'.";
-    out.back().default_val = "none";
-    out.back().expected = true;
-    out.back().examples = { "none", "last", "all" };
+    out.args.emplace_back();
+    out.args.back().name = "DoseImageSelection";
+    out.args.back().desc = "Dose images to operate on. Either 'none', 'last', or 'all'.";
+    out.args.back().default_val = "none";
+    out.args.back().expected = true;
+    out.args.back().examples = { "none", "last", "all" };
     
-    out.emplace_back();
-    out.back().name = "ImageSelection";
-    out.back().desc = "Images to operate on. Either 'none', 'last', or 'all'.";
-    out.back().default_val = "last";
-    out.back().expected = true;
-    out.back().examples = { "none", "last", "all" };
+    out.args.emplace_back();
+    out.args.back().name = "ImageSelection";
+    out.args.back().desc = "Images to operate on. Either 'none', 'last', or 'all'.";
+    out.args.back().default_val = "last";
+    out.args.back().expected = true;
+    out.args.back().examples = { "none", "last", "all" };
     
-    out.emplace_back();
-    out.back().name = "RowScaleFactor";
-    out.back().desc = "A positive integer specifying how many rows will be in the new images."
+    out.args.emplace_back();
+    out.args.back().name = "RowScaleFactor";
+    out.args.back().desc = "A positive integer specifying how many rows will be in the new images."
                       " The number is relative to the incoming image row count. Specifying '1' will"
                       " result in nothing happening. Specifying '8' will result in 8x as many rows.";
-    out.back().default_val = "2";
-    out.back().expected = true;
-    out.back().examples = { "1", "2", "3", "8" };
+    out.args.back().default_val = "2";
+    out.args.back().expected = true;
+    out.args.back().examples = { "1", "2", "3", "8" };
 
-    out.emplace_back();
-    out.back().name = "SamplingMethod";
-    out.back().desc = "The supersampling method to use. Note: 'inplane-' methods only consider neighbours"
+    out.args.emplace_back();
+    out.args.back().name = "SamplingMethod";
+    out.args.back().desc = "The supersampling method to use. Note: 'inplane-' methods only consider neighbours"
                       " in the plane of a single image -- neighbours in adjacent images are not considered.";
-    out.back().default_val = "inplane-bicubic";
-    out.back().expected = true;
-    out.back().examples = { "inplane-bicubic", "inplane-bilinear" };
+    out.args.back().default_val = "inplane-bicubic";
+    out.args.back().expected = true;
+    out.args.back().examples = { "inplane-bicubic", "inplane-bilinear" };
 
     return out;
 }

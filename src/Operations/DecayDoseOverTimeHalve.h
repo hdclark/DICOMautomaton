@@ -79,7 +79,7 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocDecayDoseOverTimeHalve(void);
+OperationDoc OpArgDocDecayDoseOverTimeHalve(void);
 
 Drover DecayDoseOverTimeHalve(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                              std::map<std::string, std::string> /*InvocationMetadata*/,

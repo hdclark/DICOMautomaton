@@ -79,7 +79,7 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocGiveWholeImageArrayAnAbdominalWindowLevel(void);
+OperationDoc OpArgDocGiveWholeImageArrayAnAbdominalWindowLevel(void);
 
 Drover GiveWholeImageArrayAnAbdominalWindowLevel(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                                                  std::map<std::string, std::string> /*InvocationMetadata*/,

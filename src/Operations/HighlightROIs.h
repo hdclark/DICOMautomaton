@@ -79,7 +79,7 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocHighlightROIs(void);
+OperationDoc OpArgDocHighlightROIs(void);
 
 Drover HighlightROIs(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                      std::map<std::string, std::string> /*InvocationMetadata*/,

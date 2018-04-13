@@ -79,7 +79,7 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocContourBooleanOperations(void);
+OperationDoc OpArgDocContourBooleanOperations(void);
 
 Drover ContourBooleanOperations(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                              std::map<std::string, std::string> /*InvocationMetadata*/,

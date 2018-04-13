@@ -17,26 +17,31 @@
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 
 
-std::list<OperationArgDoc> OpArgDocDecimatePixels(void){
-    std::list<OperationArgDoc> out;
+OperationDoc OpArgDocDecimatePixels(void){
+    OperationDoc out;
+    out.name = "DecimatePixels";
+    out.desc = "";
 
-    out.emplace_back();
-    out.back().name = "OutSizeR";
-    out.back().desc = "The number of pixels along the row unit vector to group into an outgoing pixel."
+    out.notes.emplace_back("");
+
+
+    out.args.emplace_back();
+    out.args.back().name = "OutSizeR";
+    out.args.back().desc = "The number of pixels along the row unit vector to group into an outgoing pixel."
                       " Must be a multiplicative factor of the incoming image's row count."
                       " No decimation occurs if either this or 'OutSizeC' is zero or negative.";
-    out.back().default_val = "8";
-    out.back().expected = true;
-    out.back().examples = { "0", "2", "4", "8", "16", "32", "64", "128", "256", "512" };
+    out.args.back().default_val = "8";
+    out.args.back().expected = true;
+    out.args.back().examples = { "0", "2", "4", "8", "16", "32", "64", "128", "256", "512" };
 
-    out.emplace_back();
-    out.back().name = "OutSizeC";
-    out.back().desc = "The number of pixels along the column unit vector to group into an outgoing pixel."
+    out.args.emplace_back();
+    out.args.back().name = "OutSizeC";
+    out.args.back().desc = "The number of pixels along the column unit vector to group into an outgoing pixel."
                       " Must be a multiplicative factor of the incoming image's column count."
                       " No decimation occurs if either this or 'OutSizeR' is zero or negative.";
-    out.back().default_val = "8";
-    out.back().expected = true;
-    out.back().examples = { "0", "2", "4", "8", "16", "32", "64", "128", "256", "512" };
+    out.args.back().default_val = "8";
+    out.args.back().expected = true;
+    out.args.back().examples = { "0", "2", "4", "8", "16", "32", "64", "128", "256", "512" };
 
     return out;
 }

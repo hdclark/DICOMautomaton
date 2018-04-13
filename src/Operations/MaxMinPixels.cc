@@ -16,8 +16,13 @@
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 
 
-std::list<OperationArgDoc> OpArgDocMaxMinPixels(void){
-    return std::list<OperationArgDoc>();
+OperationDoc OpArgDocMaxMinPixels(void){
+    OperationDoc out;
+    out.name = "MaxMinPixels";
+    out.desc = "";
+
+    out.notes.emplace_back("");
+    return out;
 }
 
 Drover MaxMinPixels(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string,std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){

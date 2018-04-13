@@ -79,7 +79,7 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocDumpROIContours(void);
+OperationDoc OpArgDocDumpROIContours(void);
 
 Drover DumpROIContours(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                              std::map<std::string, std::string> /*InvocationMetadata*/,

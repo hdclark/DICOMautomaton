@@ -79,7 +79,7 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocModifyImageMetadata(void);
+OperationDoc OpArgDocModifyImageMetadata(void);
 
 Drover ModifyImageMetadata(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                      std::map<std::string, std::string> /*InvocationMetadata*/,

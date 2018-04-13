@@ -478,3 +478,14 @@ struct OperationArgDoc {
 
 };
 
+
+// Class for wrapping documentation about an operation, including the operation itself and descriptions of parameters.
+struct OperationDoc {
+    std::list<OperationArgDoc> args; // Documentation for the arguments. 
+
+    std::string name; // Documentation for the operation itself.
+    std::string desc; // Documentation for the operation itself.
+    std::list<std::string> notes; // Special notes concerning the operation, usually caveats or notices.
+
+};
+

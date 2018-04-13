@@ -23,106 +23,111 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocHighlightROIs(void){
-    std::list<OperationArgDoc> out;
+OperationDoc OpArgDocHighlightROIs(void){
+    OperationDoc out;
+    out.name = "HighlightROIs";
+    out.desc = "";
+
+    out.notes.emplace_back("");
+
 
     // This operation overwrites voxel data inside and/or outside of ROI(s) to 'highlight' them.
     // It can handle overlapping or duplicate contours.
 
-    out.emplace_back();
-    out.back().name = "Channel";
-    out.back().desc = "The image channel to use. Zero-based. Use '-1' to operate on all available channels.";
-    out.back().default_val = "-1";
-    out.back().expected = true;
-    out.back().examples = { "-1", "0", "1", "2" };
+    out.args.emplace_back();
+    out.args.back().name = "Channel";
+    out.args.back().desc = "The image channel to use. Zero-based. Use '-1' to operate on all available channels.";
+    out.args.back().default_val = "-1";
+    out.args.back().expected = true;
+    out.args.back().examples = { "-1", "0", "1", "2" };
 
-    out.emplace_back();
-    out.back().name = "ImageSelection";
-    out.back().desc = "Images to operate on. Either 'none', 'last', or 'all'.";
-    out.back().default_val = "last";
-    out.back().expected = true;
-    out.back().examples = { "none", "last", "all" };
+    out.args.emplace_back();
+    out.args.back().name = "ImageSelection";
+    out.args.back().desc = "Images to operate on. Either 'none', 'last', or 'all'.";
+    out.args.back().default_val = "last";
+    out.args.back().expected = true;
+    out.args.back().examples = { "none", "last", "all" };
 
-    out.emplace_back();
-    out.back().name = "ContourOverlap";
-    out.back().desc = "Controls overlapping contours are treated."
+    out.args.emplace_back();
+    out.args.back().name = "ContourOverlap";
+    out.args.back().desc = "Controls overlapping contours are treated."
                       " The default 'ignore' treats overlapping contours as a single contour, regardless of"
                       " contour orientation. The option 'honour_opposite_orientations' makes overlapping contours"
                       " with opposite orientation cancel. Otherwise, orientation is ignored. The latter is useful"
                       " for Boolean structures where contour orientation is significant for interior contours (holes)."
                       " The option 'overlapping_contours_cancel' ignores orientation and cancels all contour overlap.";
-    out.back().default_val = "ignore";
-    out.back().expected = true;
-    out.back().examples = { "ignore", "honour_opposite_orientations", 
+    out.args.back().default_val = "ignore";
+    out.args.back().expected = true;
+    out.args.back().examples = { "ignore", "honour_opposite_orientations", 
                             "overlapping_contours_cancel", "honour_opps", "overlap_cancel" }; 
 
-    out.emplace_back();
-    out.back().name = "Inclusivity";
-    out.back().desc = "Controls how voxels are deemed to be 'within' the interior of the selected ROI(s)."
+    out.args.emplace_back();
+    out.args.back().name = "Inclusivity";
+    out.args.back().desc = "Controls how voxels are deemed to be 'within' the interior of the selected ROI(s)."
                       " The default 'center' considers only the central-most point of each voxel."
                       " There are two corner options that correspond to a 2D projection of the voxel onto the image plane."
                       " The first, 'planar_corner_inclusive', considers a voxel interior if ANY corner is interior."
                       " The second, 'planar_corner_exclusive', considers a voxel interior if ALL (four) corners are interior.";
-    out.back().default_val = "center";
-    out.back().expected = true;
-    out.back().examples = { "center", "centre", 
+    out.args.back().default_val = "center";
+    out.args.back().expected = true;
+    out.args.back().examples = { "center", "centre", 
                             "planar_corner_inclusive", "planar_inc",
                             "planar_corner_exclusive", "planar_exc" };
 
-    out.emplace_back();
-    out.back().name = "ExteriorVal";
-    out.back().desc = "The value to give to voxels outside the specified ROI(s). Note that this value"
+    out.args.emplace_back();
+    out.args.back().name = "ExteriorVal";
+    out.args.back().desc = "The value to give to voxels outside the specified ROI(s). Note that this value"
                       " will be ignored if exterior overwrites are disabled.";
-    out.back().default_val = "0.0";
-    out.back().expected = true;
-    out.back().examples = { "0.0", "-1.0", "1.23", "2.34E26" };
+    out.args.back().default_val = "0.0";
+    out.args.back().expected = true;
+    out.args.back().examples = { "0.0", "-1.0", "1.23", "2.34E26" };
 
-    out.emplace_back();
-    out.back().name = "InteriorVal";
-    out.back().desc = "The value to give to voxels within the volume of the specified ROI(s). Note that this value"
+    out.args.emplace_back();
+    out.args.back().name = "InteriorVal";
+    out.args.back().desc = "The value to give to voxels within the volume of the specified ROI(s). Note that this value"
                       " will be ignored if interior overwrites are disabled.";
-    out.back().default_val = "1.0";
-    out.back().expected = true;
-    out.back().examples = { "0.0", "-1.0", "1.23", "2.34E26" };
+    out.args.back().default_val = "1.0";
+    out.args.back().expected = true;
+    out.args.back().examples = { "0.0", "-1.0", "1.23", "2.34E26" };
 
-    out.emplace_back();
-    out.back().name = "ExteriorOverwrite";
-    out.back().desc = "Whether to overwrite voxels exterior to the specified ROI(s).";
-    out.back().default_val = "true";
-    out.back().expected = true;
-    out.back().examples = { "true", "false" };
+    out.args.emplace_back();
+    out.args.back().name = "ExteriorOverwrite";
+    out.args.back().desc = "Whether to overwrite voxels exterior to the specified ROI(s).";
+    out.args.back().default_val = "true";
+    out.args.back().expected = true;
+    out.args.back().examples = { "true", "false" };
 
-    out.emplace_back();
-    out.back().name = "InteriorOverwrite";
-    out.back().desc = "Whether to overwrite voxels interior to the specified ROI(s).";
-    out.back().default_val = "true";
-    out.back().expected = true;
-    out.back().examples = { "true", "false" };
+    out.args.emplace_back();
+    out.args.back().name = "InteriorOverwrite";
+    out.args.back().desc = "Whether to overwrite voxels interior to the specified ROI(s).";
+    out.args.back().default_val = "true";
+    out.args.back().expected = true;
+    out.args.back().examples = { "true", "false" };
 
 
-    out.emplace_back();
-    out.back().name = "NormalizedROILabelRegex";
-    out.back().desc = "A regex matching ROI labels/names to consider. The default will match"
+    out.args.emplace_back();
+    out.args.back().name = "NormalizedROILabelRegex";
+    out.args.back().desc = "A regex matching ROI labels/names to consider. The default will match"
                       " all available ROIs. Be aware that input spaces are trimmed to a single space."
                       " If your ROI name has more than two sequential spaces, use regex to avoid them."
                       " All ROIs have to match the single regex, so use the 'or' token if needed."
                       " Regex is case insensitive and uses extended POSIX syntax.";
-    out.back().default_val = ".*";
-    out.back().expected = true;
-    out.back().examples = { ".*", ".*Body.*", "Body", "Gross_Liver",
+    out.args.back().default_val = ".*";
+    out.args.back().expected = true;
+    out.args.back().examples = { ".*", ".*Body.*", "Body", "Gross_Liver",
                             R"***(.*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*)***",
                             R"***(Left Parotid|Right Parotid)***" };
 
-    out.emplace_back();
-    out.back().name = "ROILabelRegex";
-    out.back().desc = "A regex matching ROI labels/names to consider. The default will match"
+    out.args.emplace_back();
+    out.args.back().name = "ROILabelRegex";
+    out.args.back().desc = "A regex matching ROI labels/names to consider. The default will match"
                       " all available ROIs. Be aware that input spaces are trimmed to a single space."
                       " If your ROI name has more than two sequential spaces, use regex to avoid them."
                       " All ROIs have to match the single regex, so use the 'or' token if needed."
                       " Regex is case insensitive and uses extended POSIX syntax.";
-    out.back().default_val = ".*";
-    out.back().expected = true;
-    out.back().examples = { ".*", ".*body.*", "body", "Gross_Liver",
+    out.args.back().default_val = ".*";
+    out.args.back().expected = true;
+    out.args.back().examples = { ".*", ".*body.*", "body", "Gross_Liver",
                             R"***(.*left.*parotid.*|.*right.*parotid.*|.*eyes.*)***",
                             R"***(left_parotid|right_parotid)***" };
 

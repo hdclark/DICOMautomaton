@@ -79,7 +79,7 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocGiveWholeImageArrayAHeadAndNeckWindowLevel(void);
+OperationDoc OpArgDocGiveWholeImageArrayAHeadAndNeckWindowLevel(void);
 
 Drover GiveWholeImageArrayAHeadAndNeckWindowLevel(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                                                   std::map<std::string, std::string> /*InvocationMetadata*/,

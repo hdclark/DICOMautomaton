@@ -79,7 +79,7 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocAnalyzeLightRadFieldCoincidence(void);
+OperationDoc OpArgDocAnalyzeLightRadFieldCoincidence(void);
 
 Drover AnalyzeLightRadFieldCoincidence(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                          std::map<std::string, std::string> /*InvocationMetadata*/,

@@ -87,7 +87,7 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocSurfaceBasedRayCastDoseAccumulate(void);
+OperationDoc OpArgDocSurfaceBasedRayCastDoseAccumulate(void);
 
 Drover SurfaceBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                              std::map<std::string, std::string> /*InvocationMetadata*/,

@@ -14,16 +14,21 @@
 #include "PresentationImage.h"
 
 
-std::list<OperationArgDoc> OpArgDocFVPicketFence(void){
-    std::list<OperationArgDoc> out;
+OperationDoc OpArgDocFVPicketFence(void){
+    OperationDoc out;
+    out.name = "FVPicketFence";
+    out.desc = "";
 
-    out.splice( out.end(), OpArgDocCropImages() );
-    out.splice( out.end(), OpArgDocAutoCropImages() );
-    out.splice( out.end(), OpArgDocAnalyzePicketFence() );
-    out.splice( out.end(), OpArgDocPresentationImage() );
+    out.notes.emplace_back("");
+
+
+    out.args.splice( out.args.end(), OpArgDocCropImages().args );
+    out.args.splice( out.args.end(), OpArgDocAutoCropImages().args );
+    out.args.splice( out.args.end(), OpArgDocAnalyzePicketFence().args );
+    out.args.splice( out.args.end(), OpArgDocPresentationImage().args );
 
     // Adjust the defaults to suit this particular workflow.
-    for(auto &oparg : out){
+    for(auto &oparg : out.args){
         if(false){
         }else if(oparg.name == "ImageSelection"){
             oparg.default_val = "last";

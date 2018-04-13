@@ -79,7 +79,7 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocGenerateVirtualDataDoseStairsV1(void);
+OperationDoc OpArgDocGenerateVirtualDataDoseStairsV1(void);
 
 Drover GenerateVirtualDataDoseStairsV1(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                       std::map<std::string, std::string> /*InvocationMetadata*/,

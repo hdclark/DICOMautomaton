@@ -21,8 +21,13 @@
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 
 
-std::list<OperationArgDoc> OpArgDocDCEMRI_Nonparametric_CE(void){
-    return std::list<OperationArgDoc>();
+OperationDoc OpArgDocDCEMRI_Nonparametric_CE(void){
+    OperationDoc out;
+    out.name = "DCEMRI_Nonparametric_CE";
+    out.desc = "";
+
+    out.notes.emplace_back("");
+    return out;
 }
 
 Drover DCEMRI_Nonparametric_CE(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string,std::string> InvocationMetadata, std::string /*FilenameLex*/){

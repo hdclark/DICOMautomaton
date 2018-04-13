@@ -20,44 +20,49 @@
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
 
-std::list<OperationArgDoc> OpArgDocSpatialBlur(void){
-    std::list<OperationArgDoc> out;
+OperationDoc OpArgDocSpatialBlur(void){
+    OperationDoc out;
+    out.name = "SpatialBlur";
+    out.desc = "";
+
+    out.notes.emplace_back("");
+
 
     // This operation blurs pixels (within the plane of the image only) using the specified estimator.
 
-    out.emplace_back();
-    out.back().name = "ImageSelection";
-    out.back().desc = "Images to operate on. Either 'none', 'last', 'first', or 'all'.";
-    out.back().default_val = "all";
-    out.back().expected = true;
-    out.back().examples = { "none", "last", "first", "all" };
+    out.args.emplace_back();
+    out.args.back().name = "ImageSelection";
+    out.args.back().desc = "Images to operate on. Either 'none', 'last', 'first', or 'all'.";
+    out.args.back().default_val = "all";
+    out.args.back().expected = true;
+    out.args.back().examples = { "none", "last", "first", "all" };
     
-    out.emplace_back();
-    out.back().name = "Estimator";
-    out.back().desc = "Controls the (in-plane) blur estimator to use."
+    out.args.emplace_back();
+    out.args.back().name = "Estimator";
+    out.args.back().desc = "Controls the (in-plane) blur estimator to use."
                       " Options are currently: box_3x3, box_5x5, gaussian_3x3, gaussian_5x5, and gaussian_open."
                       " The latter (gaussian_open) is adaptive and requires a supplementary parameter that controls"
                       " the number of adjacent pixels to consider. The former ('...3x3' and '...5x5') are 'fixed'"
                       " estimators that use a convolution kernel with a fixed size (3x3 or 5x5 pixel neighbourhoods)."
                       " All estimators operate in 'pixel-space' and are ignorant about the image spatial extent."
                       " All estimators are normalized, and thus won't significantly affect the pixel magnitude scale.";
-    out.back().default_val = "gaussian_open";
-    out.back().expected = true;
-    out.back().examples = { "box_3x3",
+    out.args.back().default_val = "gaussian_open";
+    out.args.back().expected = true;
+    out.args.back().examples = { "box_3x3",
                             "box_5x5",
                             "gaussian_3x3",
                             "gaussian_5x5",
                             "gaussian_open" };
 
-    out.emplace_back();
-    out.back().name = "GaussianOpenSigma";
-    out.back().desc = "Controls the number of neighbours to consider (only) when using the gaussian_open estimator."
+    out.args.emplace_back();
+    out.args.back().name = "GaussianOpenSigma";
+    out.args.back().desc = "Controls the number of neighbours to consider (only) when using the gaussian_open estimator."
                       " The number of pixels is computed automatically to accommodate the specified sigma"
                       " (currently ignored pixels have 3*sigma or less weighting). Be aware this operation can take"
                       " an enormous amount of time, since the pixel neighbourhoods quickly grow large.";
-    out.back().default_val = "1.5";
-    out.back().expected = true;
-    out.back().examples = { "0.5",
+    out.args.back().default_val = "1.5";
+    out.args.back().expected = true;
+    out.args.back().examples = { "0.5",
                             "1.0",
                             "1.5",
                             "2.5",

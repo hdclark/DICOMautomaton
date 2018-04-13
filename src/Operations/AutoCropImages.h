@@ -79,7 +79,7 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocAutoCropImages(void);
+OperationDoc OpArgDocAutoCropImages(void);
 
 Drover AutoCropImages(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                                    std::map<std::string, std::string> /*InvocationMetadata*/,

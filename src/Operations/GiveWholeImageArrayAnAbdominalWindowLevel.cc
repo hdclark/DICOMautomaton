@@ -16,8 +16,13 @@
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 
 
-std::list<OperationArgDoc> OpArgDocGiveWholeImageArrayAnAbdominalWindowLevel(void){
-    return std::list<OperationArgDoc>();
+OperationDoc OpArgDocGiveWholeImageArrayAnAbdominalWindowLevel(void){
+    OperationDoc out;
+    out.name = "GiveWholeImageArrayAnAbdominalWindowLevel";
+    out.desc = "";
+
+    out.notes.emplace_back("");
+    return out;
 }
 
 Drover GiveWholeImageArrayAnAbdominalWindowLevel(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string,std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){

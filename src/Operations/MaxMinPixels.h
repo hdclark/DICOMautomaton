@@ -79,7 +79,7 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocMaxMinPixels(void);
+OperationDoc OpArgDocMaxMinPixels(void);
 
 Drover MaxMinPixels(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                       std::map<std::string, std::string> /*InvocationMetadata*/,

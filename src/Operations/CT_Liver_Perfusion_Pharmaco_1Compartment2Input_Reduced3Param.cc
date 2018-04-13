@@ -39,38 +39,43 @@
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
 
-std::list<OperationArgDoc> OpArgDocCT_Liver_Perfusion_Pharmaco_1C2I_Reduced3Param(void){
-    std::list<OperationArgDoc> out;
+OperationDoc OpArgDocCT_Liver_Perfusion_Pharmaco_1C2I_Reduced3Param(void){
+    OperationDoc out;
+    out.name = "CT_Liver_Perfusion_Pharmaco_1C2I_Reduced3Param";
+    out.desc = "";
 
-    out.emplace_back();
-    out.back().name = "AIFROINameRegex";
-    out.back().desc = "Regex for the name of the ROI to use as the AIF. It should generally be a"
+    out.notes.emplace_back("");
+
+
+    out.args.emplace_back();
+    out.args.back().name = "AIFROINameRegex";
+    out.args.back().desc = "Regex for the name of the ROI to use as the AIF. It should generally be a"
                       " major artery near the trunk or near the tissue of interest.";
-    out.back().default_val = "Abdominal_Aorta";
-    out.back().expected = true;
-    out.back().examples = { "Abdominal_Aorta",
+    out.args.back().default_val = "Abdominal_Aorta";
+    out.args.back().expected = true;
+    out.args.back().examples = { "Abdominal_Aorta",
                             ".*Aorta.*",
                             "Major_Artery" };
 
 
-    out.emplace_back();
-    out.back().name = "ExponentialKernelCoeffTruncation";
-    out.back().desc = "Control the number of Chebyshev coefficients used to approximate the exponential"
+    out.args.emplace_back();
+    out.args.back().name = "ExponentialKernelCoeffTruncation";
+    out.args.back().desc = "Control the number of Chebyshev coefficients used to approximate the exponential"
                       " kernel. Usually ~10 will suffice. ~20 is probably overkill, and ~5 is probably"
                       " too few. It is probably better to err on the side of caution and enlarge this"
                       " number if you're worried about loss of precision -- this will slow the computation"
                       " somewhat. (You might be able to offset by retaining fewer coefficients in"
                       " Chebyshev multiplication; see 'FastChebyshevMultiplication' parameter.)";
-    out.back().default_val = "10";
-    out.back().expected = true;
-    out.back().examples = { "20",
+    out.args.back().default_val = "10";
+    out.args.back().expected = true;
+    out.args.back().examples = { "20",
                             "15",
                             "10",
                             "5"};
 
-    out.emplace_back();
-    out.back().name = "FastChebyshevMultiplication";
-    out.back().desc = "Control coefficient truncation/pruning to speed up Chebyshev polynomial multiplication."
+    out.args.emplace_back();
+    out.args.back().name = "FastChebyshevMultiplication";
+    out.args.back().desc = "Control coefficient truncation/pruning to speed up Chebyshev polynomial multiplication."
                       " (This setting does nothing if the Chebyshev method is not being used.)"
                       " The choice of this number depends on how much precision you are willing to forgo."
                       " It also strongly depends on the number of datum in the AIF, VIF, and the number"
@@ -79,90 +84,90 @@ std::list<OperationArgDoc> OpArgDocCT_Liver_Perfusion_Pharmaco_1C2I_Reduced3Para
                       " coefficients in the two Chebyshev expansions taking part in the multiplication."
                       " If too many coefficients are requested (i.e., more than (N+M-2)) then the full"
                       " non-approximate multiplication is carried out.";
-    out.back().default_val = "*10000000.0";
-    out.back().expected = true;
-    out.back().examples = { "*2.0",
+    out.args.back().default_val = "*10000000.0";
+    out.args.back().expected = true;
+    out.args.back().examples = { "*2.0",
                             "*1.5",
                             "*1.0",
                             "*0.5",
                             "*0.3"};
 
-    out.emplace_back();
-    out.back().name = "PlotAIFVIF";
-    out.back().desc = "Control whether the AIF and VIF should be shown prior to modeling.";
-    out.back().default_val = "false";
-    out.back().expected = true;
-    out.back().examples = { "true",
+    out.args.emplace_back();
+    out.args.back().name = "PlotAIFVIF";
+    out.args.back().desc = "Control whether the AIF and VIF should be shown prior to modeling.";
+    out.args.back().default_val = "false";
+    out.args.back().expected = true;
+    out.args.back().examples = { "true",
                             "false" };
 
-    out.emplace_back();
-    out.back().name = "PlotPixelModel";
-    out.back().desc = "Show a plot of the fitted model for a specified pixel. Plotting happens "
+    out.args.emplace_back();
+    out.args.back().name = "PlotPixelModel";
+    out.args.back().desc = "Show a plot of the fitted model for a specified pixel. Plotting happens "
                       " immediately after the pixel is processed. You can supply arbitrary"
                       " metadata, but must also supply Row and Column numbers. Note that numerical "
                       " comparisons are performed lexically, so you have to be exact. Also note the"
                       " sub-separation token is a semi-colon, not a colon.";
-    out.back().default_val = "";
-    out.back().expected = true;
-    out.back().examples = { "Row@12;Column@4;Description@.*k1A.*",
+    out.args.back().default_val = "";
+    out.args.back().expected = true;
+    out.args.back().examples = { "Row@12;Column@4;Description@.*k1A.*",
                             "Row@256;Column@500;SliceLocation@23;SliceThickness@0.5",
                             "Row@256;Column@500;Some@thing#Row@256;Column@501;Another@thing",
                             "Row@0;Column@5#Row@4;Column@5#Row@8;Column@5#Row@12;Column@5"};
 
-    out.emplace_back();
-    out.back().name = "PreDecimateOutSizeR";
-    out.back().desc = "The number of pixels along the row unit vector to group into an outgoing pixel."
+    out.args.emplace_back();
+    out.args.back().name = "PreDecimateOutSizeR";
+    out.args.back().desc = "The number of pixels along the row unit vector to group into an outgoing pixel."
                       " This optional step can reduce computation effort by downsampling (decimating)"
                       " images before computing fitted parameter maps (but *after* computing AIF and"
                       " VIF time courses)."
                       " Must be a multiplicative factor of the incoming image's row count."
                       " No decimation occurs if either this or 'PreDecimateOutSizeC' is zero or negative.";
-    out.back().default_val = "8";
-    out.back().expected = true;
-    out.back().examples = { "0", "2", "4", "8", "16", "32", "64", "128", "256", "512" };
+    out.args.back().default_val = "8";
+    out.args.back().expected = true;
+    out.args.back().examples = { "0", "2", "4", "8", "16", "32", "64", "128", "256", "512" };
 
-    out.emplace_back();
-    out.back().name = "PreDecimateOutSizeC";
-    out.back().desc = "The number of pixels along the column unit vector to group into an outgoing pixel."
+    out.args.emplace_back();
+    out.args.back().name = "PreDecimateOutSizeC";
+    out.args.back().desc = "The number of pixels along the column unit vector to group into an outgoing pixel."
                       " This optional step can reduce computation effort by downsampling (decimating)"
                       " images before computing fitted parameter maps (but *after* computing AIF and"
                       " VIF time courses)."
                       " Must be a multiplicative factor of the incoming image's column count."
                       " No decimation occurs if either this or 'PreDecimateOutSizeR' is zero or negative.";
-    out.back().default_val = "8";
-    out.back().expected = true;
-    out.back().examples = { "0", "2", "4", "8", "16", "32", "64", "128", "256", "512" };
+    out.args.back().default_val = "8";
+    out.args.back().expected = true;
+    out.args.back().examples = { "0", "2", "4", "8", "16", "32", "64", "128", "256", "512" };
 
-    out.emplace_back();
-    out.back().name = "TargetROINameRegex";
-    out.back().desc = "Regex for the name of the ROI to perform modeling within. The largest contour is"
+    out.args.emplace_back();
+    out.args.back().name = "TargetROINameRegex";
+    out.args.back().desc = "Regex for the name of the ROI to perform modeling within. The largest contour is"
                       " usually what you want, but you can also be more focused.";
-    out.back().default_val = ".*Body.*";
-    out.back().expected = true;
-    out.back().examples = { "Liver_Patches_For_Testing_Smaller",
+    out.args.back().default_val = ".*Body.*";
+    out.args.back().expected = true;
+    out.args.back().examples = { "Liver_Patches_For_Testing_Smaller",
                             "Liver_Patches_For_Testing",
                             "Suspected_Liver_Rough",
                             "Rough_Body",
                             ".*body.*",
                             ".*something.*\\|.*another.*thing.*" };
 
-    out.emplace_back();
-    out.back().name = "UseBasisSplineInterpolation";
-    out.back().desc = "Control whether the AIF and VIF should use basis spline interpolation in"
+    out.args.emplace_back();
+    out.args.back().name = "UseBasisSplineInterpolation";
+    out.args.back().desc = "Control whether the AIF and VIF should use basis spline interpolation in"
                       " conjunction with the Chebyshev polynomial method. If this option is not"
                       " set, linear interpolation is used instead. Linear interpolation may"
                       " result in a less-smooth AIF and VIF (and therefore possibly slower "
                       " optimizer convergence), but is safer if you cannot verify"
                       " the AIF and VIF plots are reasonable. This option currently produces an effect"
                       " only if the Chebyshev polynomial method is being used.";
-    out.back().default_val = "false";
-    out.back().expected = true;
-    out.back().examples = { "true",
+    out.args.back().default_val = "false";
+    out.args.back().expected = true;
+    out.args.back().examples = { "true",
                             "false" };
 
-    out.emplace_back();
-    out.back().name = "BasisSplineCoefficients";
-    out.back().desc = "Control the number of basis spline coefficients to use, if applicable."
+    out.args.emplace_back();
+    out.args.back().name = "BasisSplineCoefficients";
+    out.args.back().desc = "Control the number of basis spline coefficients to use, if applicable."
                       " (This setting does nothing when basis splines are not being used.)"
                       " Valid options for this setting depend on the amount of data and b-spline order."
                       " This number controls the number of coefficients that are fitted (via least-squares)."
@@ -179,24 +184,24 @@ std::list<OperationArgDoc> OpArgDocCT_Liver_Perfusion_Pharmaco_1C2I_Reduced3Para
                       " It often makes more sense to use relative specification."
                       " Be aware that not all inputs can be honoured due to limits on b-spline knots and breaks,"
                       " and may cause unpredictable behaviour or internal failure.";
-    out.back().default_val = "*0.5";
-    out.back().expected = true;
-    out.back().examples = { "*0.8",
+    out.args.back().default_val = "*0.5";
+    out.args.back().expected = true;
+    out.args.back().examples = { "*0.8",
                             "*0.5",
                             "*0.3",
                             "20.0",
                             "10.0"};
 
-    out.emplace_back();
-    out.back().name = "BasisSplineOrder";
-    out.back().desc = "Control the polynomial order of basis spline interpolation to use, if applicable."
+    out.args.emplace_back();
+    out.args.back().name = "BasisSplineOrder";
+    out.args.back().desc = "Control the polynomial order of basis spline interpolation to use, if applicable."
                       " (This setting does nothing when basis splines are not being used.)"
                       " This parameter controls the order of polynomial used for b-spline interpolation,"
                       " and therefore has ramifications for the computability and numerical stability of"
                       " AIF and VIF derivatives. Stick with '4' or '5' if you're unsure.";
-    out.back().default_val = "4";
-    out.back().expected = true;
-    out.back().examples = { "1",
+    out.args.back().default_val = "4";
+    out.args.back().expected = true;
+    out.args.back().examples = { "1",
                             "2",
                             "3",
                             "4",
@@ -207,9 +212,9 @@ std::list<OperationArgDoc> OpArgDocCT_Liver_Perfusion_Pharmaco_1C2I_Reduced3Para
                             "9",
                             "10"};
 
-    out.emplace_back();
-    out.back().name = "ChebyshevPolyCoefficients";
-    out.back().desc = "Control the number of Chebyshev polynomial coefficients to use, if applicable."
+    out.args.emplace_back();
+    out.args.back().name = "ChebyshevPolyCoefficients";
+    out.args.back().desc = "Control the number of Chebyshev polynomial coefficients to use, if applicable."
                       " (This setting does nothing when the Chebyshev polynomial method is not being used.)"
                       " This number controls the number of coefficients that are computed."
                       " There are two ways to specify the number: relative and absolute."
@@ -223,9 +228,9 @@ std::list<OperationArgDoc> OpArgDocCT_Liver_Perfusion_Pharmaco_1C2I_Reduced3Para
                       " It often makes more sense to use relative specification."
                       " Be aware that not all inputs can be honoured (i.e., too large, too small, or negative),"
                       " and may cause unpredictable behaviour or internal failure.";
-    out.back().default_val = "*2.0";
-    out.back().expected = true;
-    out.back().examples = { "*10.0",
+    out.args.back().default_val = "*2.0";
+    out.args.back().expected = true;
+    out.args.back().examples = { "*10.0",
                             "*5.0",
                             "*2.0",
                             "*1.23",
@@ -240,13 +245,13 @@ std::list<OperationArgDoc> OpArgDocCT_Liver_Perfusion_Pharmaco_1C2I_Reduced3Para
                             "10.01"};
 
 
-    out.emplace_back();
-    out.back().name = "VIFROINameRegex";
-    out.back().desc = "Regex for the name of the ROI to use as the VIF. It should generally be a"
+    out.args.emplace_back();
+    out.args.back().name = "VIFROINameRegex";
+    out.args.back().desc = "Regex for the name of the ROI to use as the VIF. It should generally be a"
                       " major vein near the trunk or near the tissue of interest.";
-    out.back().default_val = "Hepatic_Portal_Vein";
-    out.back().expected = true;
-    out.back().examples = { "Hepatic_Portal_Vein",
+    out.args.back().default_val = "Hepatic_Portal_Vein";
+    out.args.back().expected = true;
+    out.args.back().examples = { "Hepatic_Portal_Vein",
                             ".*Portal.*Vein.*",
                             "Major_Vein" };
 

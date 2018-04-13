@@ -20,56 +20,61 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocCropImageDoseToROIs(void){
-    std::list<OperationArgDoc> out;
+OperationDoc OpArgDocCropImageDoseToROIs(void){
+    OperationDoc out;
+    out.name = "CropImageDoseToROIs";
+    out.desc = "";
+
+    out.notes.emplace_back("");
+
 
     // This operation crops image and/or dose array slices to the specified ROI(s), with an additional margin.
     //
 
-    out.emplace_back();
-    out.back().name = "DICOMMargin";
-    out.back().desc = "The amount of margin (in the DICOM coordinate system) to surround the ROI(s).";
-    out.back().default_val = "0.5";
-    out.back().expected = true;
-    out.back().examples = { "0.1", "2.0", "-0.5", "20.0" };
+    out.args.emplace_back();
+    out.args.back().name = "DICOMMargin";
+    out.args.back().desc = "The amount of margin (in the DICOM coordinate system) to surround the ROI(s).";
+    out.args.back().default_val = "0.5";
+    out.args.back().expected = true;
+    out.args.back().examples = { "0.1", "2.0", "-0.5", "20.0" };
 
-    out.emplace_back();
-    out.back().name = "DoseImageSelection";
-    out.back().desc = "Dose images to operate on. Either 'none', 'last', or 'all'.";
-    out.back().default_val = "none";
-    out.back().expected = true;
-    out.back().examples = { "none", "last", "all" };
+    out.args.emplace_back();
+    out.args.back().name = "DoseImageSelection";
+    out.args.back().desc = "Dose images to operate on. Either 'none', 'last', or 'all'.";
+    out.args.back().default_val = "none";
+    out.args.back().expected = true;
+    out.args.back().examples = { "none", "last", "all" };
     
-    out.emplace_back();
-    out.back().name = "ImageSelection";
-    out.back().desc = "Images to operate on. Either 'none', 'last', or 'all'.";
-    out.back().default_val = "last";
-    out.back().expected = true;
-    out.back().examples = { "none", "last", "all" };
+    out.args.emplace_back();
+    out.args.back().name = "ImageSelection";
+    out.args.back().desc = "Images to operate on. Either 'none', 'last', or 'all'.";
+    out.args.back().default_val = "last";
+    out.args.back().expected = true;
+    out.args.back().examples = { "none", "last", "all" };
     
-    out.emplace_back();
-    out.back().name = "NormalizedROILabelRegex";
-    out.back().desc = "A regex matching ROI labels/names to consider. The default will match"
+    out.args.emplace_back();
+    out.args.back().name = "NormalizedROILabelRegex";
+    out.args.back().desc = "A regex matching ROI labels/names to consider. The default will match"
                       " all available ROIs. Be aware that input spaces are trimmed to a single space."
                       " If your ROI name has more than two sequential spaces, use regex to avoid them."
                       " All ROIs have to match the single regex, so use the 'or' token if needed."
                       " Regex is case insensitive and uses extended POSIX syntax.";
-    out.back().default_val = ".*";
-    out.back().expected = true;
-    out.back().examples = { ".*", ".*Body.*", "Body", "Gross_Liver",
+    out.args.back().default_val = ".*";
+    out.args.back().expected = true;
+    out.args.back().examples = { ".*", ".*Body.*", "Body", "Gross_Liver",
                             R"***(.*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*)***",
                             R"***(Left Parotid|Right Parotid)***" };
 
-    out.emplace_back();
-    out.back().name = "ROILabelRegex";
-    out.back().desc = "A regex matching ROI labels/names to consider. The default will match"
+    out.args.emplace_back();
+    out.args.back().name = "ROILabelRegex";
+    out.args.back().desc = "A regex matching ROI labels/names to consider. The default will match"
                       " all available ROIs. Be aware that input spaces are trimmed to a single space."
                       " If your ROI name has more than two sequential spaces, use regex to avoid them."
                       " All ROIs have to match the single regex, so use the 'or' token if needed."
                       " Regex is case insensitive and uses extended POSIX syntax.";
-    out.back().default_val = ".*";
-    out.back().expected = true;
-    out.back().examples = { ".*", ".*body.*", "body", "Gross_Liver",
+    out.args.back().default_val = ".*";
+    out.args.back().expected = true;
+    out.args.back().examples = { ".*", ".*body.*", "body", "Gross_Liver",
                             R"***(.*left.*parotid.*|.*right.*parotid.*|.*eyes.*)***",
                             R"***(left_parotid|right_parotid)***" };
 

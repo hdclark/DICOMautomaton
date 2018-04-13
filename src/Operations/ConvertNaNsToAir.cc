@@ -16,8 +16,13 @@
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 
 
-std::list<OperationArgDoc> OpArgDocConvertNaNsToAir(void){
-    return std::list<OperationArgDoc>();
+OperationDoc OpArgDocConvertNaNsToAir(void){
+    OperationDoc out;
+    out.name = "ConvertNaNsToAir";
+    out.desc = "";
+
+    out.notes.emplace_back("");
+    return out;
 }
 
 Drover ConvertNaNsToAir(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string,std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){

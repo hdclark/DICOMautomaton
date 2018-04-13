@@ -15,8 +15,13 @@
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 
 
-std::list<OperationArgDoc> OpArgDocDumpFilesPartitionedByTime(void){
-    return std::list<OperationArgDoc>();
+OperationDoc OpArgDocDumpFilesPartitionedByTime(void){
+    OperationDoc out;
+    out.name = "DumpFilesPartitionedByTime";
+    out.desc = "";
+
+    out.notes.emplace_back("");
+    return out;
 }
 
 Drover DumpFilesPartitionedByTime(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string,std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){

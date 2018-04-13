@@ -79,7 +79,7 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocPruneEmptyImageDoseArrays(void);
+OperationDoc OpArgDocPruneEmptyImageDoseArrays(void);
 
 Drover PruneEmptyImageDoseArrays(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                      std::map<std::string, std::string> /*InvocationMetadata*/,

@@ -33,8 +33,13 @@
 
 template <class T> class contour_collection;
 
-std::list<OperationArgDoc> OpArgDocCT_Liver_Perfusion(void){
-    return std::list<OperationArgDoc>();
+OperationDoc OpArgDocCT_Liver_Perfusion(void){
+    OperationDoc out;
+    out.name = "CT_Liver_Perfusion";
+    out.desc = "";
+
+    out.notes.emplace_back("");
+    return out;
 }
 
 Drover CT_Liver_Perfusion(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string,std::string> InvocationMetadata, std::string /*FilenameLex*/){

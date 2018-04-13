@@ -19,28 +19,33 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocModifyImageMetadata(void){
-    std::list<OperationArgDoc> out;
+OperationDoc OpArgDocModifyImageMetadata(void){
+    OperationDoc out;
+    out.name = "ModifyImageMetadata";
+    out.desc = "";
+
+    out.notes.emplace_back("");
+
 
     // This operation injects metadata into images.
 
-    out.emplace_back();
-    out.back().name = "ImageSelection";
-    out.back().desc = "Images to operate on. Either 'none', 'last', or 'all'.";
-    out.back().default_val = "last";
-    out.back().expected = true;
-    out.back().examples = { "none", "last", "all" };
+    out.args.emplace_back();
+    out.args.back().name = "ImageSelection";
+    out.args.back().desc = "Images to operate on. Either 'none', 'last', or 'all'.";
+    out.args.back().default_val = "last";
+    out.args.back().expected = true;
+    out.args.back().examples = { "none", "last", "all" };
 
-    out.emplace_back();
-    out.back().name = "KeyValues";
-    out.back().desc = "Key-value pairs in the form of 'key1@value1;key2@value2' that will be injected into the"
+    out.args.emplace_back();
+    out.args.back().name = "KeyValues";
+    out.args.back().desc = "Key-value pairs in the form of 'key1@value1;key2@value2' that will be injected into the"
                       " selected images. Existing metadata will be overwritten. Both keys and values are"
                       " case-sensitive. Note that a semi-colon separates key-value pairs, not a colon."
                       " Note that quotation marks are not stripped internally, but may have to be"
                       " provided for the shell to properly interpret the argument.";
-    out.back().default_val = "";
-    out.back().expected = true;
-    out.back().examples = { "Description@'some description'",
+    out.args.back().default_val = "";
+    out.args.back().expected = true;
+    out.args.back().examples = { "Description@'some description'",
                             "'Description@some description'", 
                             "MinimumSeparation@1.23", 
                             "'Description@some description;MinimumSeparation@1.23'" };

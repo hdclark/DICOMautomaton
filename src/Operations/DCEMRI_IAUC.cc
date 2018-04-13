@@ -17,8 +17,13 @@
 #include "YgorImages.h"
 
 
-std::list<OperationArgDoc> OpArgDocDCEMRI_IAUC(void){
-    return std::list<OperationArgDoc>();
+OperationDoc OpArgDocDCEMRI_IAUC(void){
+    OperationDoc out;
+    out.name = "DCEMRI_IAUC";
+    out.desc = "";
+
+    out.notes.emplace_back("");
+    return out;
 }
 
 Drover DCEMRI_IAUC(Drover DICOM_data, OperationArgPkg, std::map<std::string,std::string> , std::string){

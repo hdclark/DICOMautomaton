@@ -79,7 +79,7 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocContourBasedRayCastDoseAccumulate(void);
+OperationDoc OpArgDocContourBasedRayCastDoseAccumulate(void);
 
 Drover ContourBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                              std::map<std::string, std::string> /*InvocationMetadata*/,

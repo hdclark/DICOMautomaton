@@ -79,7 +79,7 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocCT_Liver_Perfusion(void);
+OperationDoc OpArgDocCT_Liver_Perfusion(void);
 
 Drover CT_Liver_Perfusion(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                           std::map<std::string, std::string> /*InvocationMetadata*/,

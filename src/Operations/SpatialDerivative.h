@@ -79,7 +79,7 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocSpatialDerivative(void);
+OperationDoc OpArgDocSpatialDerivative(void);
 
 Drover SpatialDerivative(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                          std::map<std::string, std::string> /*InvocationMetadata*/,

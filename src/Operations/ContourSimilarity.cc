@@ -21,8 +21,13 @@
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
 
-std::list<OperationArgDoc> OpArgDocContourSimilarity(void){
-    return std::list<OperationArgDoc>();
+OperationDoc OpArgDocContourSimilarity(void){
+    OperationDoc out;
+    out.name = "ContourSimilarity";
+    out.desc = "";
+
+    out.notes.emplace_back("");
+    return out;
 }
 
 Drover ContourSimilarity(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string,std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){

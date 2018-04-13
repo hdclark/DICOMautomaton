@@ -79,7 +79,7 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocGrowContours(void);
+OperationDoc OpArgDocGrowContours(void);
 
 Drover GrowContours(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                              std::map<std::string, std::string> /*InvocationMetadata*/,

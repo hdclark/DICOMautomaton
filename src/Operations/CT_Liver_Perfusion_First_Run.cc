@@ -19,8 +19,13 @@
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 
 
-std::list<OperationArgDoc> OpArgDocCT_Liver_Perfusion_First_Run(void){
-    return std::list<OperationArgDoc>();
+OperationDoc OpArgDocCT_Liver_Perfusion_First_Run(void){
+    OperationDoc out;
+    out.name = "CT_Liver_Perfusion_First_Run";
+    out.desc = "";
+
+    out.notes.emplace_back("");
+    return out;
 }
 
 Drover CT_Liver_Perfusion_First_Run(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string,std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){

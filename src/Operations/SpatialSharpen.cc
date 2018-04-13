@@ -20,26 +20,31 @@
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
 
-std::list<OperationArgDoc> OpArgDocSpatialSharpen(void){
-    std::list<OperationArgDoc> out;
+OperationDoc OpArgDocSpatialSharpen(void){
+    OperationDoc out;
+    out.name = "SpatialSharpen";
+    out.desc = "";
+
+    out.notes.emplace_back("");
+
 
     // This operation 'sharpens' pixels (within the plane of the image only) using the specified estimator.
 
-    out.emplace_back();
-    out.back().name = "ImageSelection";
-    out.back().desc = "Images to operate on. Either 'none', 'last', 'first', or 'all'.";
-    out.back().default_val = "all";
-    out.back().expected = true;
-    out.back().examples = { "none", "last", "first", "all" };
+    out.args.emplace_back();
+    out.args.back().name = "ImageSelection";
+    out.args.back().desc = "Images to operate on. Either 'none', 'last', 'first', or 'all'.";
+    out.args.back().default_val = "all";
+    out.args.back().expected = true;
+    out.args.back().examples = { "none", "last", "first", "all" };
     
-    out.emplace_back();
-    out.back().name = "Estimator";
-    out.back().desc = "Controls the (in-plane) sharpening estimator to use."
+    out.args.emplace_back();
+    out.args.back().name = "Estimator";
+    out.args.back().desc = "Controls the (in-plane) sharpening estimator to use."
                       " Options are currently: sharpen_3x3 and unsharp_mask_5x5. The latter is based"
                       " on a 5x5 Gaussian blur estimator.";
-    out.back().default_val = "unsharp_mask";
-    out.back().expected = true;
-    out.back().examples = { "sharpen_3x3",
+    out.args.back().default_val = "unsharp_mask";
+    out.args.back().expected = true;
+    out.args.back().examples = { "sharpen_3x3",
                             "unsharp_mask_5x5" };
 
     return out;

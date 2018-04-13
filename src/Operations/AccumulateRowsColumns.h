@@ -79,7 +79,7 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocAccumulateRowsColumns(void);
+OperationDoc OpArgDocAccumulateRowsColumns(void);
 
 Drover AccumulateRowsColumns(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                          std::map<std::string, std::string> /*InvocationMetadata*/,

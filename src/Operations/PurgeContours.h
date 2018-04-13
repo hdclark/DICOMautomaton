@@ -79,7 +79,7 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocPurgeContours(void);
+OperationDoc OpArgDocPurgeContours(void);
 
 Drover PurgeContours(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                              std::map<std::string, std::string> /*InvocationMetadata*/,

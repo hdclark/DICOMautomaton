@@ -22,8 +22,13 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocSeamContours(void){
-    std::list<OperationArgDoc> out;
+OperationDoc OpArgDocSeamContours(void){
+    OperationDoc out;
+    out.name = "SeamContours";
+    out.desc = "";
+
+    out.notes.emplace_back("");
+
 
     return out;
 }

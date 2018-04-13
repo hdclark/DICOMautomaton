@@ -20,8 +20,13 @@
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
 
-std::list<OperationArgDoc> OpArgDocGenerateVirtualDataPerfusionV1(void){
-    return std::list<OperationArgDoc>();
+OperationDoc OpArgDocGenerateVirtualDataPerfusionV1(void){
+    OperationDoc out;
+    out.name = "GenerateVirtualDataPerfusionV1";
+    out.desc = "";
+
+    out.notes.emplace_back("");
+    return out;
 }
 
 Drover GenerateVirtualDataPerfusionV1(Drover DICOM_data, OperationArgPkg , std::map<std::string,std::string>, std::string){

@@ -15,18 +15,23 @@
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 
 
-std::list<OperationArgDoc> OpArgDocBoost_Serialize_Drover(void){
-    std::list<OperationArgDoc> out;
+OperationDoc OpArgDocBoost_Serialize_Drover(void){
+    OperationDoc out;
+    out.name = "Boost_Serialize_Drover";
+    out.desc = "";
 
-    out.emplace_back();
-    out.back().name = "Filename";
-    out.back().desc = "The filename (or full path name) to which the serialized data should be written";
-    out.back().default_val = "/tmp/boost_serialized_drover.bin.gz";
-    out.back().expected = true;
-    out.back().examples = { "/tmp/out.bin.gz", 
+    out.notes.emplace_back("");
+
+
+    out.args.emplace_back();
+    out.args.back().name = "Filename";
+    out.args.back().desc = "The filename (or full path name) to which the serialized data should be written";
+    out.args.back().default_val = "/tmp/boost_serialized_drover.bin.gz";
+    out.args.back().expected = true;
+    out.args.back().examples = { "/tmp/out.bin.gz", 
                             "./out.bin.gz",
                             "out.bin.gz" };
-    out.back().mimetype = "application/octet-stream";
+    out.args.back().mimetype = "application/octet-stream";
 
     return out;
 }

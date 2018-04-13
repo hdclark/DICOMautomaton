@@ -79,7 +79,7 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocGenerateVirtualDataPerfusionV1(void);
+OperationDoc OpArgDocGenerateVirtualDataPerfusionV1(void);
 
 Drover GenerateVirtualDataPerfusionV1(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                       std::map<std::string, std::string> /*InvocationMetadata*/,

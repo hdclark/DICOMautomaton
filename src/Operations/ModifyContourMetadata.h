@@ -79,7 +79,7 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocModifyContourMetadata(void);
+OperationDoc OpArgDocModifyContourMetadata(void);
 
 Drover ModifyContourMetadata(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                      std::map<std::string, std::string> /*InvocationMetadata*/,

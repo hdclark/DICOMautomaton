@@ -24,35 +24,40 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocAutoCropImages(void){
-    std::list<OperationArgDoc> out;
+OperationDoc OpArgDocAutoCropImages(void){
+    OperationDoc out;
+    out.name = "AutoCropImages";
+    out.desc = "";
+
+    out.notes.emplace_back("");
+
 
     // This operation crops image slices using image-specific metadata embedded within the image.
     //
 
-    out.emplace_back();
-    out.back().name = "ImageSelection";
-    out.back().desc = "Images to operate on. Either 'none', 'last', 'first', or 'all'.";
-    out.back().default_val = "all";
-    out.back().expected = true;
-    out.back().examples = { "none", "last", "first", "all" };
+    out.args.emplace_back();
+    out.args.back().name = "ImageSelection";
+    out.args.back().desc = "Images to operate on. Either 'none', 'last', 'first', or 'all'.";
+    out.args.back().default_val = "all";
+    out.args.back().expected = true;
+    out.args.back().examples = { "none", "last", "first", "all" };
     
 
-    out.emplace_back();
-    out.back().name = "DICOMMargin";
-    out.back().desc = "The amount of margin (in the DICOM coordinate system) to spare from cropping.";
-    out.back().default_val = "0.0";
-    out.back().expected = true;
-    out.back().examples = { "0.1", "2.0", "-0.5", "20.0" };
+    out.args.emplace_back();
+    out.args.back().name = "DICOMMargin";
+    out.args.back().desc = "The amount of margin (in the DICOM coordinate system) to spare from cropping.";
+    out.args.back().default_val = "0.0";
+    out.args.back().expected = true;
+    out.args.back().examples = { "0.1", "2.0", "-0.5", "20.0" };
 
 
-    out.emplace_back();
-    out.back().name = "RTIMAGE";
-    out.back().desc = "If true, attempt to crop the image using information embedded in an RTIMAGE."
+    out.args.emplace_back();
+    out.args.back().name = "RTIMAGE";
+    out.args.back().desc = "If true, attempt to crop the image using information embedded in an RTIMAGE."
                       " This option cannot be used with the other options.";
-    out.back().default_val = "true";
-    out.back().expected = true;
-    out.back().examples = { "true", "false" };
+    out.args.back().default_val = "true";
+    out.args.back().expected = true;
+    out.args.back().examples = { "true", "false" };
 
 
     return out;

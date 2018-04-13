@@ -78,7 +78,7 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocDumpAllOrderedImageMetadataToFile(void);
+OperationDoc OpArgDocDumpAllOrderedImageMetadataToFile(void);
 
 Drover DumpAllOrderedImageMetadataToFile(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                                          std::map<std::string, std::string> /*InvocationMetadata*/,

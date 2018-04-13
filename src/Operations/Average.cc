@@ -20,8 +20,13 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocAverage(void){
-    std::list<OperationArgDoc> out;
+OperationDoc OpArgDocAverage(void){
+    OperationDoc out;
+    out.name = "Average";
+    out.desc = "";
+
+    out.notes.emplace_back("");
+
 
     // This operation averages image or dose volumes. It can average over spatial or temporal dimensions. However, rather than
     // relying specifically on time for temporal averaging, any images that have overlapping voxels can be averaged.
@@ -30,28 +35,28 @@ std::list<OperationArgDoc> OpArgDocAverage(void){
     // and can be used for contouring purposes.
     //
 
-    out.emplace_back();
-    out.back().name = "DoseImageSelection";
-    out.back().desc = "Dose images to operate on. Either 'none', 'last', or 'all'.";
-    out.back().default_val = "none";
-    out.back().expected = true;
-    out.back().examples = { "none", "last", "all" };
+    out.args.emplace_back();
+    out.args.back().name = "DoseImageSelection";
+    out.args.back().desc = "Dose images to operate on. Either 'none', 'last', or 'all'.";
+    out.args.back().default_val = "none";
+    out.args.back().expected = true;
+    out.args.back().examples = { "none", "last", "all" };
 
     
-    out.emplace_back();
-    out.back().name = "ImageSelection";
-    out.back().desc = "Images to operate on. Either 'none', 'last', or 'all'.";
-    out.back().default_val = "last";
-    out.back().expected = true;
-    out.back().examples = { "none", "last", "all" };
+    out.args.emplace_back();
+    out.args.back().name = "ImageSelection";
+    out.args.back().desc = "Images to operate on. Either 'none', 'last', or 'all'.";
+    out.args.back().default_val = "last";
+    out.args.back().expected = true;
+    out.args.back().examples = { "none", "last", "all" };
 
    
-    out.emplace_back();
-    out.back().name = "AveragingMethod";
-    out.back().desc = "The averaging method to use. Valid methods are 'overlapping-spatially' and 'overlapping-temporally'.";
-    out.back().default_val = "";
-    out.back().expected = true;
-    out.back().examples = { "overlapping-spatially", "overlapping-temporally" };
+    out.args.emplace_back();
+    out.args.back().name = "AveragingMethod";
+    out.args.back().desc = "The averaging method to use. Valid methods are 'overlapping-spatially' and 'overlapping-temporally'.";
+    out.args.back().default_val = "";
+    out.args.back().expected = true;
+    out.args.back().examples = { "overlapping-spatially", "overlapping-temporally" };
 
     return out;
 }

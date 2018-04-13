@@ -79,7 +79,7 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocContourViaThreshold(void);
+OperationDoc OpArgDocContourViaThreshold(void);
 
 Drover ContourViaThreshold(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                              std::map<std::string, std::string> /*InvocationMetadata*/,

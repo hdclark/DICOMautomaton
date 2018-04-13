@@ -79,7 +79,7 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocDecayDoseOverTimeJones2014(void);
+OperationDoc OpArgDocDecayDoseOverTimeJones2014(void);
 
 Drover DecayDoseOverTimeJones2014(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                              std::map<std::string, std::string> /*InvocationMetadata*/,

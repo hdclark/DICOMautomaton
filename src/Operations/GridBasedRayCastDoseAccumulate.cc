@@ -33,145 +33,150 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocGridBasedRayCastDoseAccumulate(void){
-    std::list<OperationArgDoc> out;
+OperationDoc OpArgDocGridBasedRayCastDoseAccumulate(void){
+    OperationDoc out;
+    out.name = "GridBasedRayCastDoseAccumulate";
+    out.desc = "";
 
-    out.emplace_back();
-    out.back().name = "DoseMapFileName";
-    out.back().desc = "A filename (or full path) for the dose image map."
+    out.notes.emplace_back("");
+
+
+    out.args.emplace_back();
+    out.args.back().name = "DoseMapFileName";
+    out.args.back().desc = "A filename (or full path) for the dose image map."
                       " Note that this file is approximate, and may not be accurate."
                       " There is more information available when you use the length and dose*length maps instead."
                       " However, this file is useful for viewing and eyeballing tuning settings."
                       " The format is FITS. Leave empty to dump to generate a unique temporary file.";
-    out.back().default_val = "";
-    out.back().expected = true;
-    out.back().examples = { "", "/tmp/dose.fits", "localfile.fits", "derivative_data.fits" };
-    out.back().mimetype = "image/fits";
+    out.args.back().default_val = "";
+    out.args.back().expected = true;
+    out.args.back().examples = { "", "/tmp/dose.fits", "localfile.fits", "derivative_data.fits" };
+    out.args.back().mimetype = "image/fits";
 
-    out.emplace_back();
-    out.back().name = "DoseLengthMapFileName";
-    out.back().desc = "A filename (or full path) for the (dose)*(length traveled through the ROI peel) image map."
+    out.args.emplace_back();
+    out.args.back().name = "DoseLengthMapFileName";
+    out.args.back().desc = "A filename (or full path) for the (dose)*(length traveled through the ROI peel) image map."
                       " The format is FITS. Leave empty to dump to generate a unique temporary file.";
-    out.back().default_val = "";
-    out.back().expected = true;
-    out.back().examples = { "", "/tmp/doselength.fits", "localfile.fits", "derivative_data.fits" };
-    out.back().mimetype = "image/fits";
+    out.args.back().default_val = "";
+    out.args.back().expected = true;
+    out.args.back().examples = { "", "/tmp/doselength.fits", "localfile.fits", "derivative_data.fits" };
+    out.args.back().mimetype = "image/fits";
 
 
-    out.emplace_back();
-    out.back().name = "LengthMapFileName";
-    out.back().desc = "A filename (or full path) for the (length traveled through the ROI peel) image map."
+    out.args.emplace_back();
+    out.args.back().name = "LengthMapFileName";
+    out.args.back().desc = "A filename (or full path) for the (length traveled through the ROI peel) image map."
                       " The format is FITS. Leave empty to dump to generate a unique temporary file.";
-    out.back().default_val = "";
-    out.back().expected = true;
-    out.back().examples = { "", "/tmp/surfacelength.fits", "localfile.fits", "derivative_data.fits" };
-    out.back().mimetype = "image/fits";
+    out.args.back().default_val = "";
+    out.args.back().expected = true;
+    out.args.back().examples = { "", "/tmp/surfacelength.fits", "localfile.fits", "derivative_data.fits" };
+    out.args.back().mimetype = "image/fits";
 
 
-    out.emplace_back();
-    out.back().name = "NormalizedReferenceROILabelRegex";
-    out.back().desc = "A regex matching reference ROI labels/names to consider. The default will match"
+    out.args.emplace_back();
+    out.args.back().name = "NormalizedReferenceROILabelRegex";
+    out.args.back().desc = "A regex matching reference ROI labels/names to consider. The default will match"
                       " all available ROIs, which is non-sensical. The reference ROI is used to orient"
                       " the cleaving plane to trim the grid surface mask.";
-    out.back().default_val = ".*";
-    out.back().expected = true;
-    out.back().examples = { ".*", ".*Prostate.*", "Left Kidney", "Gross Liver" };
+    out.args.back().default_val = ".*";
+    out.args.back().expected = true;
+    out.args.back().examples = { ".*", ".*Prostate.*", "Left Kidney", "Gross Liver" };
 
-    out.emplace_back();
-    out.back().name = "NormalizedROILabelRegex";
-    out.back().desc = "A regex matching ROI labels/names to consider. The default will match"
+    out.args.emplace_back();
+    out.args.back().name = "NormalizedROILabelRegex";
+    out.args.back().desc = "A regex matching ROI labels/names to consider. The default will match"
                       " all available ROIs. Be aware that input spaces are trimmed to a single space."
                       " If your ROI name has more than two sequential spaces, use regex to avoid them."
                       " All ROIs have to match the single regex, so use the 'or' token if needed."
                       " Regex is case insensitive and uses extended POSIX syntax.";
-    out.back().default_val = ".*";
-    out.back().expected = true;
-    out.back().examples = { ".*", ".*Body.*", "Body", "Gross_Liver",
+    out.args.back().default_val = ".*";
+    out.args.back().expected = true;
+    out.args.back().examples = { ".*", ".*Body.*", "Body", "Gross_Liver",
                             R"***(.*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*)***",
                             R"***(Left Parotid|Right Parotid)***" };
 
-    out.emplace_back();
-    out.back().name = "ReferenceROILabelRegex";
-    out.back().desc = "A regex matching reference ROI labels/names to consider. The default will match"
+    out.args.emplace_back();
+    out.args.back().name = "ReferenceROILabelRegex";
+    out.args.back().desc = "A regex matching reference ROI labels/names to consider. The default will match"
                       " all available ROIs, which is non-sensical. The reference ROI is used to orient"
                       " the cleaving plane to trim the grid surface mask.";
-    out.back().default_val = ".*";
-    out.back().expected = true;
-    out.back().examples = { ".*", ".*[pP]rostate.*", "body", "Gross_Liver",
+    out.args.back().default_val = ".*";
+    out.args.back().expected = true;
+    out.args.back().examples = { ".*", ".*[pP]rostate.*", "body", "Gross_Liver",
                             R"***(.*left.*parotid.*|.*right.*parotid.*|.*eyes.*)***",
                             R"***(left_parotid|right_parotid)***" };
 
-    out.emplace_back();
-    out.back().name = "ROILabelRegex";
-    out.back().desc = "A regex matching ROI labels/names to consider. The default will match"
+    out.args.emplace_back();
+    out.args.back().name = "ROILabelRegex";
+    out.args.back().desc = "A regex matching ROI labels/names to consider. The default will match"
                       " all available ROIs. Be aware that input spaces are trimmed to a single space."
                       " If your ROI name has more than two sequential spaces, use regex to avoid them."
                       " All ROIs have to match the single regex, so use the 'or' token if needed."
                       " Regex is case insensitive and uses extended POSIX syntax.";
-    out.back().default_val = ".*";
-    out.back().expected = true;
-    out.back().examples = { ".*", ".*body.*", "body", "Gross_Liver",
+    out.args.back().default_val = ".*";
+    out.args.back().expected = true;
+    out.args.back().examples = { ".*", ".*body.*", "body", "Gross_Liver",
                             R"***(.*left.*parotid.*|.*right.*parotid.*|.*eyes.*)***",
                             R"***(left_parotid|right_parotid)***" };
 
-    out.emplace_back();
-    out.back().name = "SmallestFeature";
-    out.back().desc = "A length giving an estimate of the smallest feature you want to resolve."
+    out.args.emplace_back();
+    out.args.back().name = "SmallestFeature";
+    out.args.back().desc = "A length giving an estimate of the smallest feature you want to resolve."
                       " Quantity is in the DICOM coordinate system.";
-    out.back().default_val = "0.5";
-    out.back().expected = true;
-    out.back().examples = { "1.0", "2.0", "0.5", "5.0" };
+    out.args.back().default_val = "0.5";
+    out.args.back().expected = true;
+    out.args.back().examples = { "1.0", "2.0", "0.5", "5.0" };
     
-    out.emplace_back();
-    out.back().name = "RaydL";
-    out.back().desc = "The distance to move a ray each iteration. Should be << img_thickness and << cylinder_radius."
+    out.args.emplace_back();
+    out.args.back().name = "RaydL";
+    out.args.back().desc = "The distance to move a ray each iteration. Should be << img_thickness and << cylinder_radius."
                       " Making too large will invalidate results, causing rays to pass through the surface without"
                       " registering any dose accumulation. Making too small will cause the run-time to grow and may"
                       " eventually lead to truncation or round-off errors. Quantity is in the DICOM coordinate system.";
-    out.back().default_val = "0.1";
-    out.back().expected = true;
-    out.back().examples = { "0.1", "0.05", "0.01", "0.005" };
+    out.args.back().default_val = "0.1";
+    out.args.back().expected = true;
+    out.args.back().examples = { "0.1", "0.05", "0.01", "0.005" };
    
 
-    out.emplace_back();
-    out.back().name = "GridRows";
-    out.back().desc = "The number of rows in the surface mask grid images.";
-    out.back().default_val = "512";
-    out.back().expected = true;
-    out.back().examples = { "10", "50", "128", "1024" };
+    out.args.emplace_back();
+    out.args.back().name = "GridRows";
+    out.args.back().desc = "The number of rows in the surface mask grid images.";
+    out.args.back().default_val = "512";
+    out.args.back().expected = true;
+    out.args.back().examples = { "10", "50", "128", "1024" };
     
     
-    out.emplace_back();
-    out.back().name = "GridColumns";
-    out.back().desc = "The number of columns in the surface mask grid images.";
-    out.back().default_val = "512";
-    out.back().expected = true;
-    out.back().examples = { "10", "50", "128", "1024" };
+    out.args.emplace_back();
+    out.args.back().name = "GridColumns";
+    out.args.back().desc = "The number of columns in the surface mask grid images.";
+    out.args.back().default_val = "512";
+    out.args.back().expected = true;
+    out.args.back().examples = { "10", "50", "128", "1024" };
 
-    out.emplace_back();
-    out.back().name = "SourceDetectorRows";
-    out.back().desc = "The number of rows in the resulting images."
+    out.args.emplace_back();
+    out.args.back().name = "SourceDetectorRows";
+    out.args.back().desc = "The number of rows in the resulting images."
                       " Setting too fine relative to the surface mask grid or dose grid is futile.";
-    out.back().default_val = "1024";
-    out.back().expected = true;
-    out.back().examples = { "10", "50", "128", "1024" };
+    out.args.back().default_val = "1024";
+    out.args.back().expected = true;
+    out.args.back().examples = { "10", "50", "128", "1024" };
     
-    out.emplace_back();
-    out.back().name = "SourceDetectorColumns";
-    out.back().desc = "The number of columns in the resulting images."
+    out.args.emplace_back();
+    out.args.back().name = "SourceDetectorColumns";
+    out.args.back().desc = "The number of columns in the resulting images."
                       " Setting too fine relative to the surface mask grid or dose grid is futile.";
-    out.back().default_val = "1024";
-    out.back().expected = true;
-    out.back().examples = { "10", "50", "128", "1024" };
+    out.args.back().default_val = "1024";
+    out.args.back().expected = true;
+    out.args.back().examples = { "10", "50", "128", "1024" };
 
     
-    out.emplace_back();
-    out.back().name = "NumberOfImages";
-    out.back().desc = "The number of images used for grid-based surface detection. Leave negative for computation"
+    out.args.emplace_back();
+    out.args.back().name = "NumberOfImages";
+    out.args.back().desc = "The number of images used for grid-based surface detection. Leave negative for computation"
                       " of a reasonable value; set to something specific to force an override.";
-    out.back().default_val = "-1";
-    out.back().expected = true;
-    out.back().examples = { "-1", "10", "50", "100" };
+    out.args.back().default_val = "-1";
+    out.args.back().expected = true;
+    out.args.back().examples = { "-1", "10", "50", "100" };
     
     
     return out;

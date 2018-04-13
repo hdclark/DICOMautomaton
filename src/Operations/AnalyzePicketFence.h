@@ -79,7 +79,7 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocAnalyzePicketFence(void);
+OperationDoc OpArgDocAnalyzePicketFence(void);
 
 Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                          std::map<std::string, std::string> /*InvocationMetadata*/,

@@ -79,7 +79,7 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocDumpFilesPartitionedByTime(void);
+OperationDoc OpArgDocDumpFilesPartitionedByTime(void);
 
 Drover DumpFilesPartitionedByTime(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                                   std::map<std::string, std::string> /*InvocationMetadata*/,

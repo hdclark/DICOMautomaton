@@ -79,7 +79,7 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocSelectSlicesIntersectingROI(void);
+OperationDoc OpArgDocSelectSlicesIntersectingROI(void);
 
 Drover SelectSlicesIntersectingROI(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                                    std::map<std::string, std::string> /*InvocationMetadata*/,

@@ -11,8 +11,13 @@
 #include "PruneEmptyImageDoseArrays.h"
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 
-std::list<OperationArgDoc> OpArgDocPruneEmptyImageDoseArrays(void){
-    return std::list<OperationArgDoc>();
+OperationDoc OpArgDocPruneEmptyImageDoseArrays(void){
+    OperationDoc out;
+    out.name = "PruneEmptyImageDoseArrays";
+    out.desc = "";
+
+    out.notes.emplace_back("");
+    return out;
 }
 
 Drover PruneEmptyImageDoseArrays(Drover DICOM_data, OperationArgPkg, std::map<std::string,std::string> , std::string){

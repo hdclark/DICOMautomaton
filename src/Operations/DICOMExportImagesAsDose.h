@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-std::list<OperationArgDoc> OpArgDocDICOMExportImagesAsDose(void);
+OperationDoc OpArgDocDICOMExportImagesAsDose(void);
 
 Drover
 DICOMExportImagesAsDose(Drover DICOM_data, 

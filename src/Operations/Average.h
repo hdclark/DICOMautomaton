@@ -79,7 +79,7 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocAverage(void);
+OperationDoc OpArgDocAverage(void);
 
 Drover Average(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                             std::map<std::string, std::string> /*InvocationMetadata*/,

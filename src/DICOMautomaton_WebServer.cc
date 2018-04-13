@@ -588,12 +588,12 @@ void BaseWebServerApplication::appendOperationParamsColumn(void){
         if(anop.first != selected_op) continue; 
 
         auto optdocs = anop.second.first();
-        if(optdocs.empty()){
+        if(optdocs.args.empty()){
             feedback->setText("<p>No parameters to adjust...</p>");
             break;
         }
 
-        for(auto &a : optdocs){
+        for(auto &a : optdocs.args){
             // Do not expose argmuents that have been concealed.
             if(a.visibility == OpArgVisibility::Hide){
                 continue;
@@ -799,7 +799,7 @@ void BaseWebServerApplication::createComputeGB(void){
 
             //Find documentation for the current parameter.
             OperationArgDoc op_doc;
-            for(const auto &o : op_doc_l){
+            for(const auto &o : op_doc_l.args){
                 if(o.name == param_name) op_doc = o;
             }
 

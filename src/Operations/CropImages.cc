@@ -20,66 +20,71 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocCropImages(void){
-    std::list<OperationArgDoc> out;
+OperationDoc OpArgDocCropImages(void){
+    OperationDoc out;
+    out.name = "CropImages";
+    out.desc = "";
+
+    out.notes.emplace_back("");
+
 
     // This operation crops image slices.
     //
 
-    out.emplace_back();
-    out.back().name = "ImageSelection";
-    out.back().desc = "Images to operate on. Either 'none', 'last', 'first', or 'all'.";
-    out.back().default_val = "all";
-    out.back().expected = true;
-    out.back().examples = { "none", "last", "first", "all" };
+    out.args.emplace_back();
+    out.args.back().name = "ImageSelection";
+    out.args.back().desc = "Images to operate on. Either 'none', 'last', 'first', or 'all'.";
+    out.args.back().default_val = "all";
+    out.args.back().expected = true;
+    out.args.back().examples = { "none", "last", "first", "all" };
     
 
-    out.emplace_back();
-    out.back().name = "RowsL";
-    out.back().desc = "The number of rows to remove, starting with the first row. Can be absolute (px), percentage (%), or"
+    out.args.emplace_back();
+    out.args.back().name = "RowsL";
+    out.args.back().desc = "The number of rows to remove, starting with the first row. Can be absolute (px), percentage (%), or"
                       " distance in terms of the DICOM coordinate system. Note the DICOM coordinate system can be flipped, so"
                       " the first row can be either on the top or bottom of the image.";
-    out.back().default_val = "0px";
-    out.back().expected = true;
-    out.back().examples = { "0px", "10px", "100px", "15%", "15.75%", "123.45" };
+    out.args.back().default_val = "0px";
+    out.args.back().expected = true;
+    out.args.back().examples = { "0px", "10px", "100px", "15%", "15.75%", "123.45" };
 
 
-    out.emplace_back();
-    out.back().name = "RowsH";
-    out.back().desc = "The number of rows to remove, starting with the last row. Can be absolute (px), percentage (%), or"
+    out.args.emplace_back();
+    out.args.back().name = "RowsH";
+    out.args.back().desc = "The number of rows to remove, starting with the last row. Can be absolute (px), percentage (%), or"
                       " distance in terms of the DICOM coordinate system. Note the DICOM coordinate system can be flipped, so"
                       " the first row can be either on the top or bottom of the image.";
-    out.back().default_val = "0px";
-    out.back().expected = true;
-    out.back().examples = { "0px", "10px", "100px", "15%", "15.75%", "123.45" };
+    out.args.back().default_val = "0px";
+    out.args.back().expected = true;
+    out.args.back().examples = { "0px", "10px", "100px", "15%", "15.75%", "123.45" };
 
 
-    out.emplace_back();
-    out.back().name = "ColumnsL";
-    out.back().desc = "The number of columns to remove, starting with the first column. Can be absolute (px), percentage (%), or"
+    out.args.emplace_back();
+    out.args.back().name = "ColumnsL";
+    out.args.back().desc = "The number of columns to remove, starting with the first column. Can be absolute (px), percentage (%), or"
                       " distance in terms of the DICOM coordinate system. Note the DICOM coordinate system can be flipped, so"
                       " the first column can be either on the top or bottom of the image.";
-    out.back().default_val = "0px";
-    out.back().expected = true;
-    out.back().examples = { "0px", "10px", "100px", "15%", "15.75%", "123.45" };
+    out.args.back().default_val = "0px";
+    out.args.back().expected = true;
+    out.args.back().examples = { "0px", "10px", "100px", "15%", "15.75%", "123.45" };
 
 
-    out.emplace_back();
-    out.back().name = "ColumnsH";
-    out.back().desc = "The number of columns to remove, starting with the last column. Can be absolute (px), percentage (%), or"
+    out.args.emplace_back();
+    out.args.back().name = "ColumnsH";
+    out.args.back().desc = "The number of columns to remove, starting with the last column. Can be absolute (px), percentage (%), or"
                       " distance in terms of the DICOM coordinate system. Note the DICOM coordinate system can be flipped, so"
                       " the first column can be either on the top or bottom of the image.";
-    out.back().default_val = "0px";
-    out.back().expected = true;
-    out.back().examples = { "0px", "10px", "100px", "15%", "15.75%", "123.45" };
+    out.args.back().default_val = "0px";
+    out.args.back().expected = true;
+    out.args.back().examples = { "0px", "10px", "100px", "15%", "15.75%", "123.45" };
 
 
-    out.emplace_back();
-    out.back().name = "DICOMMargin";
-    out.back().desc = "The amount of margin (in the DICOM coordinate system) to spare from cropping.";
-    out.back().default_val = "0.0";
-    out.back().expected = true;
-    out.back().examples = { "0.1", "2.0", "-0.5", "20.0" };
+    out.args.emplace_back();
+    out.args.back().name = "DICOMMargin";
+    out.args.back().desc = "The amount of margin (in the DICOM coordinate system) to spare from cropping.";
+    out.args.back().default_val = "0.0";
+    out.args.back().expected = true;
+    out.args.back().examples = { "0.1", "2.0", "-0.5", "20.0" };
 
     return out;
 }

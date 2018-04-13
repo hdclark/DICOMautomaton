@@ -120,12 +120,30 @@ int main(int argc, char* argv[]){
         auto known_ops = Known_Operations();
         for(auto &anop : known_ops){
             std::cout << "Operation: '" << anop.first << "'" << std::endl;
+
             auto optdocs = anop.second.first();
-            if(optdocs.empty()){
+
+            std::cout << "\tDescription:" << std::endl;
+            for(auto &e : Reflow_Line_to_Fit_Width_Left_Just(optdocs.desc,70)){
+                std::cout << "\t\t" << e << std::endl;
+            }
+            std::cout << std::endl;
+
+            std::cout << "\tNotes:" << std::endl;
+            for(auto &n : optdocs.notes){
+                for(auto &e : Reflow_Line_to_Fit_Width_Left_Just(n,70)){
+                    std::cout << "\t\t" << e << std::endl;
+                }
+                std::cout << std::endl;
+            }
+            std::cout << std::endl;
+
+            std::cout << "\tParameters:" << std::endl;
+            if(optdocs.args.empty()){
                 std::cout << "\tNo registered options." << std::endl;
             }else{
-                for(auto &a : optdocs){
-                    std::cout << "\t'" << a.name << "'" << std::endl;
+                for(auto &a : optdocs.args){
+                    std::cout << "\t  '" << a.name << "'" << std::endl;
                     for(const auto &aline : Reflow_Line_to_Fit_Width_Left_Just(a.desc,70)){
                         std::cout << "\t\t" << aline << std::endl;
                     }

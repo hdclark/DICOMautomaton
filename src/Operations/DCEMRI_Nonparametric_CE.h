@@ -78,7 +78,7 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocDCEMRI_Nonparametric_CE(void);
+OperationDoc OpArgDocDCEMRI_Nonparametric_CE(void);
 
 
 Drover

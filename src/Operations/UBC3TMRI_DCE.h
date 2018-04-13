@@ -78,7 +78,7 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocUBC3TMRI_DCE(void);
+OperationDoc OpArgDocUBC3TMRI_DCE(void);
 
 
 Drover

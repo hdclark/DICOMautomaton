@@ -16,22 +16,27 @@
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 
 
-std::list<OperationArgDoc> OpArgDocDICOMExportImagesAsDose(void){
-    std::list<OperationArgDoc> out;
+OperationDoc OpArgDocDICOMExportImagesAsDose(void){
+    OperationDoc out;
+    out.name = "DICOMExportImagesAsDose";
+    out.desc = "";
 
-    out.emplace_back();
-    out.back().name = "Filename";
-    out.back().desc = "The filename (or full path name) to which the DICOM file should be written.";
-    out.back().default_val = "/tmp/RD.dcm";
-    out.back().expected = true;
-    out.back().examples = { "/tmp/RD.dcm", 
+    out.notes.emplace_back("");
+
+
+    out.args.emplace_back();
+    out.args.back().name = "Filename";
+    out.args.back().desc = "The filename (or full path name) to which the DICOM file should be written.";
+    out.args.back().default_val = "/tmp/RD.dcm";
+    out.args.back().expected = true;
+    out.args.back().examples = { "/tmp/RD.dcm", 
                             "./RD.dcm",
                             "RD.dcm" };
-    out.back().mimetype = "application/dicom";
+    out.args.back().mimetype = "application/dicom";
 
-    out.emplace_back();
-    out.back().name = "ParanoiaLevel";
-    out.back().desc = "At low paranoia setting, only top-level UIDs are replaced."
+    out.args.emplace_back();
+    out.args.back().name = "ParanoiaLevel";
+    out.args.back().desc = "At low paranoia setting, only top-level UIDs are replaced."
                       " At medium paranoia setting, many UIDs, descriptions, and"
                       " labels are replaced, but the PatientID and FrameOfReferenceUID are retained."
                       " The high paranoia setting is the same as the medium setting, but the "
@@ -40,9 +45,9 @@ std::list<OperationArgDoc> OpArgDocDICOMExportImagesAsDose(void){
                       " Use the low setting if you want to retain linkage to the originating data set."
                       " Use the medium setting if you don't. Use the high setting if your TPS goes"
                       " overboard linking data sets by PatientID and/or FrameOfReferenceUID.";
-    out.back().default_val = "medium";
-    out.back().expected = true;
-    out.back().examples = { "low", "medium", "high" };
+    out.args.back().default_val = "medium";
+    out.args.back().expected = true;
+    out.args.back().examples = { "low", "medium", "high" };
 
     return out;
 }

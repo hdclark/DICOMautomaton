@@ -11,7 +11,7 @@
 #include "Structs.h"
 
 using op_func_t = std::function<Drover (Drover, OperationArgPkg, std::map<std::string, std::string>, std::string)>;
-using op_doc_func_t = std::function<std::list<OperationArgDoc> ()>;
+using op_doc_func_t = std::function<OperationDoc ()>;
 typedef std::pair<op_doc_func_t,op_func_t> op_packet_t;
 
 std::map<std::string, op_packet_t> Known_Operations(void);

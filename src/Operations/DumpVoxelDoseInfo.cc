@@ -16,8 +16,13 @@
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 
 
-std::list<OperationArgDoc> OpArgDocDumpVoxelDoseInfo(void){
-    std::list<OperationArgDoc> out;
+OperationDoc OpArgDocDumpVoxelDoseInfo(void){
+    OperationDoc out;
+    out.name = "DumpVoxelDoseInfo";
+    out.desc = "";
+
+    out.notes.emplace_back("");
+
 
     return out;
 }

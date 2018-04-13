@@ -23,8 +23,13 @@
 #include "YgorMath.h"         //Needed for vec3 class.
 
 
-std::list<OperationArgDoc> OpArgDocDumpROIData(void){
-    return std::list<OperationArgDoc>();
+OperationDoc OpArgDocDumpROIData(void){
+    OperationDoc out;
+    out.name = "DumpROIData";
+    out.desc = "";
+
+    out.notes.emplace_back("");
+    return out;
 }
 
 Drover DumpROIData(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string,std::string> /*InvocationMetadata*/, std::string FilenameLex){

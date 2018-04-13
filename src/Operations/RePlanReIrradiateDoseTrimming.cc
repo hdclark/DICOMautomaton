@@ -12,20 +12,20 @@
 #include "HighlightROIs.h"
 
 
-std::list<OperationArgDoc> OpArgDocRePlanReIrradiateDoseTrimming(void){
-    std::list<OperationArgDoc> out;
+OperationDoc OpArgDocRePlanReIrradiateDoseTrimming(void){
+    OperationDoc out;
+    out.name = "RePlanReIrradiateDoseTrimming";
+    out.desc = "";
 
-    auto c1 = OpArgDocConvertDoseToImage();
-    auto c2 = OpArgDocHighlightROIs();
-    auto c3 = OpArgDocDICOMExportImagesAsDose();
+    out.notes.emplace_back("");
 
-    out.splice( out.end(), c1 );
-    out.splice( out.end(), c2 );
-    out.splice( out.end(), c3 );
+    out.args.splice( out.args.end(), OpArgDocConvertDoseToImage().args );
+    out.args.splice( out.args.end(), OpArgDocHighlightROIs().args );
+    out.args.splice( out.args.end(), OpArgDocDICOMExportImagesAsDose().args );
 
 
     // Adjust the defaults to suit this particular workflow.
-    for(auto &oparg : out){
+    for(auto &oparg : out.args){
         if(false){
         }else if(oparg.name == "Inclusivity"){
             oparg.default_val = "planar_inc";

@@ -79,7 +79,7 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocSubsegment_ComputeDose_VanLuijk(void);
+OperationDoc OpArgDocSubsegment_ComputeDose_VanLuijk(void);
 
 Drover Subsegment_ComputeDose_VanLuijk(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                              std::map<std::string, std::string> /*InvocationMetadata*/,

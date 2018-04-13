@@ -80,7 +80,7 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocEQD2Convert(void);
+OperationDoc OpArgDocEQD2Convert(void);
 
 Drover EQD2Convert(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                    std::map<std::string, std::string> /*InvocationMetadata*/,

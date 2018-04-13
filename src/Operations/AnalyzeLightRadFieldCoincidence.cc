@@ -36,8 +36,13 @@
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
 
-std::list<OperationArgDoc> OpArgDocAnalyzeLightRadFieldCoincidence(void){
-    std::list<OperationArgDoc> out;
+OperationDoc OpArgDocAnalyzeLightRadFieldCoincidence(void){
+    OperationDoc out;
+    out.name = "AnalyzeLightRadFieldCoincidence";
+    out.desc = "";
+
+    out.notes.emplace_back("");
+
 
     // This operation analyzes the selected images to compare light and radiation field coincidence for fixed, symmetric
     // field sizes. Coincidences are extracted automatically by fitting Gaussians to the peak nearest to one of the
@@ -54,38 +59,38 @@ std::list<OperationArgDoc> OpArgDocAnalyzeLightRadFieldCoincidence(void){
     //       similar (i.e., something to emphasize edges) before calling this routine. It may not be necessary, however.
     //
 
-    out.emplace_back();
-    out.back().name = "ImageSelection";
-    out.back().desc = "Images to operate on. Either 'none', 'last', 'first', or 'all'.";
-    out.back().default_val = "last";
-    out.back().expected = true;
-    out.back().examples = { "none", "last", "first", "all" };
+    out.args.emplace_back();
+    out.args.back().name = "ImageSelection";
+    out.args.back().desc = "Images to operate on. Either 'none', 'last', 'first', or 'all'.";
+    out.args.back().default_val = "last";
+    out.args.back().expected = true;
+    out.args.back().examples = { "none", "last", "first", "all" };
 
 
-    out.emplace_back();
-    out.back().name = "ToleranceLevel";
-    out.back().desc = "Controls detected edge visualization for easy identification of edges out of tolerance."
+    out.args.emplace_back();
+    out.args.back().name = "ToleranceLevel";
+    out.args.back().desc = "Controls detected edge visualization for easy identification of edges out of tolerance."
                       " Note: this value refers to edge-to-edge separation, not edge-to-nominal distances."
                       " This value is in DICOM units.";
-    out.back().default_val = "1.0";
-    out.back().expected = true;
-    out.back().examples = { "0.5", "1.0", "2.0", "inf" };
+    out.args.back().default_val = "1.0";
+    out.args.back().expected = true;
+    out.args.back().examples = { "0.5", "1.0", "2.0", "inf" };
 
 
-    out.emplace_back();
-    out.back().name = "EdgeLengths";
-    out.back().desc = "Comma-separated list of (symmetric) edge lengths fields should be analyzed at."
+    out.args.emplace_back();
+    out.args.back().name = "EdgeLengths";
+    out.args.back().desc = "Comma-separated list of (symmetric) edge lengths fields should be analyzed at."
                       " For example, if 50x50, 100x100, 150x150, and 200x200 (all in mm) fields are to be analyzed,"
                       " this argument would be '50,100,150,200' and it will be assumed that the field centre"
                       " is at DICOM position (0,0,0). All values are in DICOM units.";
-    out.back().default_val = "100";
-    out.back().expected = true;
-    out.back().examples = { "100.0", "50,100,150,200,300", "10.273,20.2456" };
+    out.args.back().default_val = "100";
+    out.args.back().expected = true;
+    out.args.back().examples = { "100.0", "50,100,150,200,300", "10.273,20.2456" };
 
 
-    out.emplace_back();
-    out.back().name = "SearchDistance";
-    out.back().desc = "The distance around the anticipated field edges to search for edges (actually sharp peaks"
+    out.args.emplace_back();
+    out.args.back().name = "SearchDistance";
+    out.args.back().desc = "The distance around the anticipated field edges to search for edges (actually sharp peaks"
                       " arising from edges). If an edge is further away than this value from the anticipated field"
                       " edge, then the coincidence will be ignored altogether. The value should be greater than"
                       " the largest action/tolerance threshold with some additional margin (so gross errors can"
@@ -97,49 +102,49 @@ std::list<OperationArgDoc> OpArgDocAnalyzeLightRadFieldCoincidence(void){
                       " is pre-processed. Note that both radiation field and light field edges may differ from"
                       " the 'nominal' anticipated edges, so this wobble factor should be incorporated in the"
                       " search distance. This quantity must be in DICOM units.";
-    out.back().default_val = "3.0";
-    out.back().expected = true;
-    out.back().examples = { "2.5", "3.0", "5.0" };
+    out.args.back().default_val = "3.0";
+    out.args.back().expected = true;
+    out.args.back().examples = { "2.5", "3.0", "5.0" };
 
 
-    out.emplace_back();
-    out.back().name = "PeakSimilarityThreshold";
-    out.back().desc = "Images can be taken such that duplicate peaks will occur, such as when field sizes are re-used."
+    out.args.emplace_back();
+    out.args.back().name = "PeakSimilarityThreshold";
+    out.args.back().desc = "Images can be taken such that duplicate peaks will occur, such as when field sizes are re-used."
                       " Peaks are therefore de-duplicated. This value (as a %, ranging from [0,100]) specifies the"
                       " threshold of disimilarity below which peaks are considered duplicates. A low value will make"
                       " duplicates confuse the analysis, but a high value may cause legitimate peaks to be discarded"
                       " depending on the attenuation cababilties of the field edge markers.";
-    out.back().default_val = "25";
-    out.back().expected = true;
-    out.back().examples = { "5", "10", "15", "50" };
+    out.args.back().default_val = "25";
+    out.args.back().expected = true;
+    out.args.back().examples = { "5", "10", "15", "50" };
 
 
-    out.emplace_back();
-    out.back().name = "UserComment";
-    out.back().desc = "A string that will be inserted into the output file which will simplify merging output"
+    out.args.emplace_back();
+    out.args.back().name = "UserComment";
+    out.args.back().desc = "A string that will be inserted into the output file which will simplify merging output"
                       " with differing parameters, from different sources, or using sub-selections of the data."
                       " If left empty, the column will be omitted from the output.";
-    out.back().default_val = "";
-    out.back().expected = true;
-    out.back().examples = { "", "6MV", "Using XYZ", "Test with thick metal edges" };
+    out.args.back().default_val = "";
+    out.args.back().expected = true;
+    out.args.back().examples = { "", "6MV", "Using XYZ", "Test with thick metal edges" };
 
 
-    out.emplace_back();
-    out.back().name = "OutputFileName";
-    out.back().desc = "A filename (or full path) in which to append field edge coincidence data generated by this routine."
+    out.args.emplace_back();
+    out.args.back().name = "OutputFileName";
+    out.args.back().desc = "A filename (or full path) in which to append field edge coincidence data generated by this routine."
                       " The format is CSV. Leave empty to dump to generate a unique temporary file.";
-    out.back().default_val = "";
-    out.back().expected = true;
-    out.back().examples = { "", "/tmp/somefile", "localfile.csv", "derivative_data.csv" };
-    out.back().mimetype = "text/csv";
+    out.args.back().default_val = "";
+    out.args.back().expected = true;
+    out.args.back().examples = { "", "/tmp/somefile", "localfile.csv", "derivative_data.csv" };
+    out.args.back().mimetype = "text/csv";
 
 
-    out.emplace_back();
-    out.back().name = "InteractivePlots";
-    out.back().desc = "Whether to interactively show plots showing detected edges.";
-    out.back().default_val = "false";
-    out.back().expected = true;
-    out.back().examples = { "true", "false" };
+    out.args.emplace_back();
+    out.args.back().name = "InteractivePlots";
+    out.args.back().desc = "Whether to interactively show plots showing detected edges.";
+    out.args.back().default_val = "false";
+    out.args.back().expected = true;
+    out.args.back().examples = { "true", "false" };
 
     return out;
 }

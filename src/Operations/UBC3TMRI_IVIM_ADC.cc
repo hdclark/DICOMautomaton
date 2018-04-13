@@ -19,8 +19,13 @@
 #include "YgorImages.h"
 
 
-std::list<OperationArgDoc> OpArgDocUBC3TMRI_IVIM_ADC(void){
-    return std::list<OperationArgDoc>();
+OperationDoc OpArgDocUBC3TMRI_IVIM_ADC(void){
+    OperationDoc out;
+    out.name = "UBC3TMRI_IVIM_ADC";
+    out.desc = "";
+
+    out.notes.emplace_back("");
+    return out;
 }
 
 Drover UBC3TMRI_IVIM_ADC(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string,std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){

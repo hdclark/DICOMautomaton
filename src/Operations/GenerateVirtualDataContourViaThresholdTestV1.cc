@@ -17,8 +17,13 @@
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
 
-std::list<OperationArgDoc> OpArgDocGenerateVirtualDataContourViaThresholdTestV1(void){
-    return std::list<OperationArgDoc>();
+OperationDoc OpArgDocGenerateVirtualDataContourViaThresholdTestV1(void){
+    OperationDoc out;
+    out.name = "GenerateVirtualDataContourViaThresholdTestV1";
+    out.desc = "";
+
+    out.notes.emplace_back("");
+    return out;
 }
 
 Drover GenerateVirtualDataContourViaThresholdTestV1(Drover DICOM_data, OperationArgPkg , std::map<std::string,std::string>, std::string){

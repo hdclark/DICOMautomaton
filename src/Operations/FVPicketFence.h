@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-std::list<OperationArgDoc> OpArgDocFVPicketFence(void);
+OperationDoc OpArgDocFVPicketFence(void);
 
 Drover
 FVPicketFence(Drover DICOM_data, 

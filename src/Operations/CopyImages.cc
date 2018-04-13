@@ -14,17 +14,22 @@
 #include "../Regex_Selectors.h"
 #include "CopyImages.h"
 
-std::list<OperationArgDoc> OpArgDocCopyImages(void){
-    std::list<OperationArgDoc> out;
+OperationDoc OpArgDocCopyImages(void){
+    OperationDoc out;
+    out.name = "CopyImages";
+    out.desc = "";
+
+    out.notes.emplace_back("");
+
 
     // This operation deep-copies the selected images.
 
-    out.emplace_back();
-    out.back().name = "ImageSelection";
-    out.back().desc = "Images to operate on. Either 'none', 'last', 'first', or 'all'.";
-    out.back().default_val = "last";
-    out.back().expected = true;
-    out.back().examples = { "none", "last", "first", "all" };
+    out.args.emplace_back();
+    out.args.back().name = "ImageSelection";
+    out.args.back().desc = "Images to operate on. Either 'none', 'last', 'first', or 'all'.";
+    out.args.back().default_val = "last";
+    out.args.back().expected = true;
+    out.args.back().examples = { "none", "last", "first", "all" };
     
     return out;
 }

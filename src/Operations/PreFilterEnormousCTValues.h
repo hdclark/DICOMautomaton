@@ -79,7 +79,7 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocPreFilterEnormousCTValues(void);
+OperationDoc OpArgDocPreFilterEnormousCTValues(void);
 
 Drover PreFilterEnormousCTValues(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                                  std::map<std::string, std::string> /*InvocationMetadata*/,

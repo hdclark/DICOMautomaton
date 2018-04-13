@@ -79,7 +79,7 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocDroverDebug(void);
+OperationDoc OpArgDocDroverDebug(void);
 
 Drover DroverDebug(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                      std::map<std::string, std::string> /*InvocationMetadata*/,

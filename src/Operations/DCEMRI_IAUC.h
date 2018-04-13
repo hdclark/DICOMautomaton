@@ -78,7 +78,7 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocDCEMRI_IAUC(void);
+OperationDoc OpArgDocDCEMRI_IAUC(void);
 
 
 Drover

@@ -19,55 +19,60 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocGenerateSurfaceMask(void){
-    std::list<OperationArgDoc> out;
+OperationDoc OpArgDocGenerateSurfaceMask(void){
+    OperationDoc out;
+    out.name = "GenerateSurfaceMask";
+    out.desc = "";
 
-    out.emplace_back();
-    out.back().name = "BackgroundVal";
-    out.back().desc = "The value to give to voxels neither inside nor on the surface of the ROI(s).";
-    out.back().default_val = "0.0";
-    out.back().expected = true;
-    out.back().examples = { "0.0", "-1.0", "1.23", "2.34E26" };
-
-    out.emplace_back();
-    out.back().name = "InteriorVal";
-    out.back().desc = "The value to give to voxels within the volume of the ROI(s) but not on the surface.";
-    out.back().default_val = "1.0";
-    out.back().expected = true;
-    out.back().examples = { "0.0", "-1.0", "1.23", "2.34E26" };
-
-    out.emplace_back();
-    out.back().name = "SurfaceVal";
-    out.back().desc = "The value to give to voxels on the surface/boundary of ROI(s).";
-    out.back().default_val = "2.0";
-    out.back().expected = true;
-    out.back().examples = { "0.0", "-1.0", "1.23", "2.34E26" };
+    out.notes.emplace_back("");
 
 
+    out.args.emplace_back();
+    out.args.back().name = "BackgroundVal";
+    out.args.back().desc = "The value to give to voxels neither inside nor on the surface of the ROI(s).";
+    out.args.back().default_val = "0.0";
+    out.args.back().expected = true;
+    out.args.back().examples = { "0.0", "-1.0", "1.23", "2.34E26" };
 
-    out.emplace_back();
-    out.back().name = "NormalizedROILabelRegex";
-    out.back().desc = "A regex matching ROI labels/names to consider. The default will match"
+    out.args.emplace_back();
+    out.args.back().name = "InteriorVal";
+    out.args.back().desc = "The value to give to voxels within the volume of the ROI(s) but not on the surface.";
+    out.args.back().default_val = "1.0";
+    out.args.back().expected = true;
+    out.args.back().examples = { "0.0", "-1.0", "1.23", "2.34E26" };
+
+    out.args.emplace_back();
+    out.args.back().name = "SurfaceVal";
+    out.args.back().desc = "The value to give to voxels on the surface/boundary of ROI(s).";
+    out.args.back().default_val = "2.0";
+    out.args.back().expected = true;
+    out.args.back().examples = { "0.0", "-1.0", "1.23", "2.34E26" };
+
+
+
+    out.args.emplace_back();
+    out.args.back().name = "NormalizedROILabelRegex";
+    out.args.back().desc = "A regex matching ROI labels/names to consider. The default will match"
                       " all available ROIs. Be aware that input spaces are trimmed to a single space."
                       " If your ROI name has more than two sequential spaces, use regex to avoid them."
                       " All ROIs have to match the single regex, so use the 'or' token if needed."
                       " Regex is case insensitive and uses extended POSIX syntax.";
-    out.back().default_val = ".*";
-    out.back().expected = true;
-    out.back().examples = { ".*", ".*Body.*", "Body", "Gross_Liver",
+    out.args.back().default_val = ".*";
+    out.args.back().expected = true;
+    out.args.back().examples = { ".*", ".*Body.*", "Body", "Gross_Liver",
                             R"***(.*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*)***",
                             R"***(Left Parotid|Right Parotid)***" };
 
-    out.emplace_back();
-    out.back().name = "ROILabelRegex";
-    out.back().desc = "A regex matching ROI labels/names to consider. The default will match"
+    out.args.emplace_back();
+    out.args.back().name = "ROILabelRegex";
+    out.args.back().desc = "A regex matching ROI labels/names to consider. The default will match"
                       " all available ROIs. Be aware that input spaces are trimmed to a single space."
                       " If your ROI name has more than two sequential spaces, use regex to avoid them."
                       " All ROIs have to match the single regex, so use the 'or' token if needed."
                       " Regex is case insensitive and uses extended POSIX syntax.";
-    out.back().default_val = ".*";
-    out.back().expected = true;
-    out.back().examples = { ".*", ".*body.*", "body", "Gross_Liver",
+    out.args.back().default_val = ".*";
+    out.args.back().expected = true;
+    out.args.back().examples = { ".*", ".*body.*", "body", "Gross_Liver",
                             R"***(.*left.*parotid.*|.*right.*parotid.*|.*eyes.*)***",
                             R"***(left_parotid|right_parotid)***" };
 

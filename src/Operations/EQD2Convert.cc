@@ -21,8 +21,13 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocEQD2Convert(void){
-    std::list<OperationArgDoc> out;
+OperationDoc OpArgDocEQD2Convert(void){
+    OperationDoc out;
+    out.name = "EQD2Convert";
+    out.desc = "";
+
+    out.notes.emplace_back("");
+
 
     // This operation performs a BED-based conversion to a dose-equivalent that would have 2Gy fractions.
     //
@@ -30,24 +35,24 @@ std::list<OperationArgDoc> OpArgDocEQD2Convert(void){
     // The reasoning is that the DosePerFraction would need to be specified for each individual voxel;
     // the prescription DosePerFraction is NOT the same as voxels outside the PTV.
 
-    out.emplace_back();
-    out.back().name = "DoseImageSelection";
-    out.back().desc = "Dose images to operate on. Either 'none', 'last', or 'all'.";
-    out.back().default_val = "none";
-    out.back().expected = true;
-    out.back().examples = { "none", "last", "all" };
+    out.args.emplace_back();
+    out.args.back().name = "DoseImageSelection";
+    out.args.back().desc = "Dose images to operate on. Either 'none', 'last', or 'all'.";
+    out.args.back().default_val = "none";
+    out.args.back().expected = true;
+    out.args.back().examples = { "none", "last", "all" };
     
-    out.emplace_back();
-    out.back().name = "ImageSelection";
-    out.back().desc = "Images to operate on. Either 'none', 'last', or 'all'.";
-    out.back().default_val = "last";
-    out.back().expected = true;
-    out.back().examples = { "none", "last", "all" };
+    out.args.emplace_back();
+    out.args.back().name = "ImageSelection";
+    out.args.back().desc = "Images to operate on. Either 'none', 'last', or 'all'.";
+    out.args.back().default_val = "last";
+    out.args.back().expected = true;
+    out.args.back().examples = { "none", "last", "all" };
     
 
-    out.emplace_back();
-    out.back().name = "AlphaBetaRatioNormal";
-    out.back().desc = "The value to use for alpha/beta in normal (non-cancerous) tissues."
+    out.args.emplace_back();
+    out.args.back().name = "AlphaBetaRatioNormal";
+    out.args.back().desc = "The value to use for alpha/beta in normal (non-cancerous) tissues."
                       " Generally a value of 3.0 Gy is used. Tissues that are sensitive to fractionation"
                       " may warrant smaller ratios, such as 1.5-3 Gy for cervical central nervous tissues"
                       " and 2.3-4.9 for lumbar central nervous tissues (consult table 8.1, page 107 in: "
@@ -55,64 +60,64 @@ std::list<OperationArgDoc> OpArgDocEQD2Convert(void){
                       " in the book 'Basic Clinical Radiobiology', ISBN: 0340929669)."
                       " Note that the selected ROIs denote which tissues are diseased. The remaining tissues are "
                       " considered to be normal.";
-    out.back().default_val = "3.0";
-    out.back().expected = true;
-    out.back().examples = { "2.0", "3.0" };
+    out.args.back().default_val = "3.0";
+    out.args.back().expected = true;
+    out.args.back().examples = { "2.0", "3.0" };
 
-    out.emplace_back();
-    out.back().name = "AlphaBetaRatioTumour";
-    out.back().desc = "The value to use for alpha/beta in diseased (tumourous) tissues."
+    out.args.emplace_back();
+    out.args.back().name = "AlphaBetaRatioTumour";
+    out.args.back().desc = "The value to use for alpha/beta in diseased (tumourous) tissues."
                       " Generally a value of 10.0 is used. Note that the selected ROIs"
                       " denote which tissues are diseased. The remaining tissues are "
                       " considered to be normal.";
-    out.back().default_val = "10.0";
-    out.back().expected = true;
-    out.back().examples = { "10.0" };
+    out.args.back().default_val = "10.0";
+    out.args.back().expected = true;
+    out.args.back().examples = { "10.0" };
 
-    out.emplace_back();
-    out.back().name = "NumberOfFractions";
-    out.back().desc = "The number of fractions in which a plan was (or will be) delivered."
+    out.args.emplace_back();
+    out.args.back().name = "NumberOfFractions";
+    out.args.back().desc = "The number of fractions in which a plan was (or will be) delivered."
                       " Decimal fractions are supported to accommodate previous BED conversions.";
-    out.back().default_val = "35";
-    out.back().expected = true;
-    out.back().examples = { "10", "20.5", "35", "40.123" };
+    out.args.back().default_val = "35";
+    out.args.back().expected = true;
+    out.args.back().examples = { "10", "20.5", "35", "40.123" };
 
 
-    out.emplace_back();
-    out.back().name = "PrescriptionDose";
-    out.back().desc = "The prescription dose that was (or will be) delivered to the PTV."
+    out.args.emplace_back();
+    out.args.back().name = "PrescriptionDose";
+    out.args.back().desc = "The prescription dose that was (or will be) delivered to the PTV."
                       " Note that this is a theoretical dose since the PTV or CTV will only nominally"
                       " receive this dose. Also note that the specified dose need not exist somewhere"
                       " in the image. It can be purely theoretical to accommodate previous BED"
                       " conversions.";
-    out.back().default_val = "70";
-    out.back().expected = true;
-    out.back().examples = { "15", "22.5", "45.0", "66", "70.001" };
+    out.args.back().default_val = "70";
+    out.args.back().expected = true;
+    out.args.back().examples = { "15", "22.5", "45.0", "66", "70.001" };
 
 
-    out.emplace_back();
-    out.back().name = "NormalizedROILabelRegex";
-    out.back().desc = "A regex matching ROI labels/names to consider as bounding tumourous tissues."
+    out.args.emplace_back();
+    out.args.back().name = "NormalizedROILabelRegex";
+    out.args.back().desc = "A regex matching ROI labels/names to consider as bounding tumourous tissues."
                       " The default will match"
                       " all available ROIs. Be aware that input spaces are trimmed to a single space."
                       " If your ROI name has more than two sequential spaces, use regex to avoid them."
                       " All ROIs have to match the single regex, so use the 'or' token if needed."
                       " Regex is case insensitive and uses extended POSIX syntax.";
-    out.back().default_val = ".*";
-    out.back().expected = true;
-    out.back().examples = { ".*", ".*GTV.*", "PTV66", R"***(.*PTV.*|.*GTV.**)***" };
+    out.args.back().default_val = ".*";
+    out.args.back().expected = true;
+    out.args.back().examples = { ".*", ".*GTV.*", "PTV66", R"***(.*PTV.*|.*GTV.**)***" };
 
-    out.emplace_back();
-    out.back().name = "ROILabelRegex";
-    out.back().desc = "A regex matching ROI labels/names to consider as bounding tumourous tissues."
+    out.args.emplace_back();
+    out.args.back().name = "ROILabelRegex";
+    out.args.back().desc = "A regex matching ROI labels/names to consider as bounding tumourous tissues."
                       "The default will match"
                       " all available ROIs. Be aware that input spaces are trimmed to a single space."
                       " If your ROI name has more than two sequential spaces, use regex to avoid them."
                       " All ROIs have to match the single regex, so use the 'or' token if needed."
                       " Regex is case insensitive and uses extended POSIX syntax.";
-    out.back().default_val = ".*";
-    out.back().expected = true;
-    out.back().examples = { ".*", ".*GTV.*", "PTV66", R"***(.*PTV.*|.*GTV.**)***" };
+    out.args.back().default_val = ".*";
+    out.args.back().expected = true;
+    out.args.back().examples = { ".*", ".*GTV.*", "PTV66", R"***(.*PTV.*|.*GTV.**)***" };
 
     return out;
 }

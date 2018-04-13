@@ -79,7 +79,7 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocGenerateVirtualDataContourViaThresholdTestV1(void);
+OperationDoc OpArgDocGenerateVirtualDataContourViaThresholdTestV1(void);
 
 Drover GenerateVirtualDataContourViaThresholdTestV1(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                       std::map<std::string, std::string> /*InvocationMetadata*/,

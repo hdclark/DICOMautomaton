@@ -79,7 +79,7 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocEvaluateTCPModels(void);
+OperationDoc OpArgDocEvaluateTCPModels(void);
 
 Drover EvaluateTCPModels(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                              std::map<std::string, std::string> /*InvocationMetadata*/,

@@ -159,28 +159,33 @@ static void dump_reconstruction(const Reconstruction &reconstruct, std::string n
 
 
 
-std::list<OperationArgDoc> OpArgDocDumpROISurfaceMeshes(void){
-    std::list<OperationArgDoc> out;
+OperationDoc OpArgDocDumpROISurfaceMeshes(void){
+    OperationDoc out;
+    out.name = "DumpROISurfaceMeshes";
+    out.desc = "";
 
-    out.emplace_back();
-    out.back().name = "OutDir";
-    out.back().desc = "The directory in which to dump surface mesh files."
+    out.notes.emplace_back("");
+
+
+    out.args.emplace_back();
+    out.args.back().name = "OutDir";
+    out.args.back().desc = "The directory in which to dump surface mesh files."
                       " It will be created if it doesn't exist.";
-    out.back().default_val = "/tmp/";
-    out.back().expected = true;
-    out.back().examples = { "./", "../somedir/", "/path/to/some/destination" };
+    out.args.back().default_val = "/tmp/";
+    out.args.back().expected = true;
+    out.args.back().examples = { "./", "../somedir/", "/path/to/some/destination" };
 
 
-    out.emplace_back();
-    out.back().name = "ROILabelRegex";
-    out.back().desc = "A regex matching ROI labels/names to consider. The default will match"
+    out.args.emplace_back();
+    out.args.back().name = "ROILabelRegex";
+    out.args.back().desc = "A regex matching ROI labels/names to consider. The default will match"
                       " all available ROIs. Be aware that input spaces are trimmed to a single space."
                       " If your ROI name has more than two sequential spaces, use regex to avoid them."
                       " All ROIs have to match the single regex, so use the 'or' token if needed."
                       " Regex is case insensitive and uses grep syntax.";
-    out.back().default_val = ".*";
-    out.back().expected = true;
-    out.back().examples = { ".*", ".*body.*", "body", "Gross_Liver", 
+    out.args.back().default_val = ".*";
+    out.args.back().expected = true;
+    out.args.back().examples = { ".*", ".*body.*", "body", "Gross_Liver", 
                             R"***(.*parotid.*|.*sub.*mand.*)***", 
                             R"***(left_parotid|right_parotid|eyes)***" };
 

@@ -78,7 +78,7 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocSpatialBlur(void);
+OperationDoc OpArgDocSpatialBlur(void);
 
 
 Drover

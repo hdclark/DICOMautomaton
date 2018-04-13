@@ -20,8 +20,13 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocContourWholeImages(void){
-    std::list<OperationArgDoc> out;
+OperationDoc OpArgDocContourWholeImages(void){
+    OperationDoc out;
+    out.name = "ContourWholeImages";
+    out.desc = "";
+
+    out.notes.emplace_back("");
+
 
     // This operation constructs contours for an ROI that encompasses the whole of all specified images.
     // It is useful for operations that operate on ROIs whenever you want to compute something over the whole image.
@@ -37,20 +42,20 @@ std::list<OperationArgDoc> OpArgDocContourWholeImages(void){
     //       image. All voxel centres will be within the bounds.
     //
 
-    out.emplace_back();
-    out.back().name = "ROILabel";
-    out.back().desc = "A label to attach to the ROI contours.";
-    out.back().default_val = "everything";
-    out.back().expected = true;
-    out.back().examples = { "everything", "whole_images", "unspecified" };
+    out.args.emplace_back();
+    out.args.back().name = "ROILabel";
+    out.args.back().desc = "A label to attach to the ROI contours.";
+    out.args.back().default_val = "everything";
+    out.args.back().expected = true;
+    out.args.back().examples = { "everything", "whole_images", "unspecified" };
 
     
-    out.emplace_back();
-    out.back().name = "ImageSelection";
-    out.back().desc = "Image collection to operate on. Either 'none', 'last', or 'all'.";
-    out.back().default_val = "last";
-    out.back().expected = true;
-    out.back().examples = { "none", "last", "all" };
+    out.args.emplace_back();
+    out.args.back().name = "ImageSelection";
+    out.args.back().desc = "Image collection to operate on. Either 'none', 'last', or 'all'.";
+    out.args.back().default_val = "last";
+    out.args.back().expected = true;
+    out.args.back().examples = { "none", "last", "all" };
 
     return out;
 }

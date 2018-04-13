@@ -22,39 +22,44 @@
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
 
-std::list<OperationArgDoc> OpArgDocBuildLexiconInteractively(void){
-    std::list<OperationArgDoc> out;
+OperationDoc OpArgDocBuildLexiconInteractively(void){
+    OperationDoc out;
+    out.name = "BuildLexiconInteractively";
+    out.desc = "";
 
-    out.emplace_back();
-    out.back().name = "CleanLabels";
-    out.back().desc = "A listing of the labels of interest. These will be (some of) the 'clean' entries in the"
+    out.notes.emplace_back("");
+
+
+    out.args.emplace_back();
+    out.args.back().name = "CleanLabels";
+    out.args.back().desc = "A listing of the labels of interest. These will be (some of) the 'clean' entries in the"
                       " finished lexicon. You should only name ROIs you specifically care about and which have"
                       " a single, unambiguous occurence in the data set (e.g., 'Left_Parotid' is good, but"
                       " 'JUNK' and 'Parotids' are bad -- you won't be able to select the single 'JUNK' label"
                       " if all you care about are parotids.";
-    out.back().default_val = "Body,Brainstem,Chiasm,Cord,Larynx Pharynx,Left Eye,Left Optic Nerve"
+    out.args.back().default_val = "Body,Brainstem,Chiasm,Cord,Larynx Pharynx,Left Eye,Left Optic Nerve"
                              ",Left Parotid,Left Submand,Left Temp Lobe,Oral Cavity,Right Eye,Right Optic Nerve"
                              ",Right Parotid,Right Submand,Right Temp Lobe";
-    out.back().expected = true;
-    out.back().examples = { "Left Parotid,Right Parotid,Left Submand,Right Submand", 
+    out.args.back().expected = true;
+    out.args.back().examples = { "Left Parotid,Right Parotid,Left Submand,Right Submand", 
                             "Left Submand,Right Submand" };
 
-    out.emplace_back();
-    out.back().name = "JunkLabel";
-    out.back().desc = "A label to apply to the un-matched labels. This helps prevent false positives by"
+    out.args.emplace_back();
+    out.args.back().name = "JunkLabel";
+    out.args.back().desc = "A label to apply to the un-matched labels. This helps prevent false positives by"
                       " excluding names which are close to a desired clean label. For example, if you"
                       " are looking for 'Left_Parotid' you will want to mark 'left-parotid_opti' and"
                       " 'OLDLeftParotid' as junk. Passing an empty string disables junk labeling.";
-    out.back().default_val = "JUNK";
-    out.back().expected = true;
-    out.back().examples = { "",
+    out.args.back().default_val = "JUNK";
+    out.args.back().expected = true;
+    out.args.back().examples = { "",
                             "Junk",
                             "Irrelevant",
                             "NA_Organ" };
 
-    out.emplace_back();
-    out.back().name = "OmitROILabelRegex";
-    out.back().desc = "A regex matching ROI labels/names to prune. Only matching ROIs will be pruned."
+    out.args.emplace_back();
+    out.args.back().name = "OmitROILabelRegex";
+    out.args.back().desc = "A regex matching ROI labels/names to prune. Only matching ROIs will be pruned."
                       " The default will match no ROIs. "
                       " Be aware that input spaces are trimmed to a single space."
                       " If your ROI name has more than two sequential spaces, use regex to avoid them."
@@ -62,18 +67,18 @@ std::list<OperationArgDoc> OpArgDocBuildLexiconInteractively(void){
                       " Regex is case insensitive and uses extended POSIX syntax. "
                       " (Note: an exclusive approach is taken rather than an inclusive approach because "
                       " regex negations are not easily supported in the POSIX syntax.)";
-    out.back().default_val = "";
-    out.back().expected = false;
-    out.back().examples = { R"***(.*left.*|.*right.*|.*eyes.*)***",
+    out.args.back().default_val = "";
+    out.args.back().expected = false;
+    out.args.back().examples = { R"***(.*left.*|.*right.*|.*eyes.*)***",
                             R"***(.*PTV.*|.*CTV.*|.*GTV.*)***" };
 
-    out.emplace_back();
-    out.back().name = "LexiconSeedFile";
-    out.back().desc = "A file containing a 'seed' lexicon to use and add to. This is the lexicon that"
+    out.args.emplace_back();
+    out.args.back().name = "LexiconSeedFile";
+    out.args.back().desc = "A file containing a 'seed' lexicon to use and add to. This is the lexicon that"
                       " is being built. It will be modified.";
-    out.back().default_val = "";
-    out.back().expected = true;
-    out.back().examples = { "./some_lexicon", "/tmp/temp_lexicon" };
+    out.args.back().default_val = "";
+    out.args.back().expected = true;
+    out.args.back().examples = { "./some_lexicon", "/tmp/temp_lexicon" };
 
     return out;
 }

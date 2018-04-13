@@ -79,7 +79,7 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocMeldDose(void);
+OperationDoc OpArgDocMeldDose(void);
 
 Drover MeldDose(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                      std::map<std::string, std::string> /*InvocationMetadata*/,

@@ -77,7 +77,7 @@
 #include "YgorString.h"              //Needed for GetFirstRegex(...)
 
 
-std::list<OperationArgDoc> OpArgDocBuildLexiconInteractively(void);
+OperationDoc OpArgDocBuildLexiconInteractively(void);
 
 Drover
 BuildLexiconInteractively(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string, std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/);

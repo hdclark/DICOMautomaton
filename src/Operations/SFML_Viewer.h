@@ -78,7 +78,7 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocSFML_Viewer(void);
+OperationDoc OpArgDocSFML_Viewer(void);
 
 Drover
 SFML_Viewer(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string, std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/);

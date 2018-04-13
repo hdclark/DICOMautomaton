@@ -79,7 +79,7 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocDumpROISNR(void);
+OperationDoc OpArgDocDumpROISNR(void);
 
 Drover DumpROISNR(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                              std::map<std::string, std::string> /*InvocationMetadata*/,

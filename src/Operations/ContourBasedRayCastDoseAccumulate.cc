@@ -27,88 +27,93 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocContourBasedRayCastDoseAccumulate(void){
-    std::list<OperationArgDoc> out;
+OperationDoc OpArgDocContourBasedRayCastDoseAccumulate(void){
+    OperationDoc out;
+    out.name = "ContourBasedRayCastDoseAccumulate";
+    out.desc = "";
 
-    out.emplace_back();
-    out.back().name = "DoseLengthMapFileName";
-    out.back().desc = "A filename (or full path) for the (dose)*(length traveled through the ROI peel) image map."
+    out.notes.emplace_back("");
+
+
+    out.args.emplace_back();
+    out.args.back().name = "DoseLengthMapFileName";
+    out.args.back().desc = "A filename (or full path) for the (dose)*(length traveled through the ROI peel) image map."
                       " The format is TBD. Leave empty to dump to generate a unique temporary file.";
-    out.back().default_val = "";
-    out.back().expected = true;
-    out.back().examples = { "", "/tmp/somefile", "localfile.img", "derivative_data.img" };
-    out.back().mimetype = "image/fits";
+    out.args.back().default_val = "";
+    out.args.back().expected = true;
+    out.args.back().examples = { "", "/tmp/somefile", "localfile.img", "derivative_data.img" };
+    out.args.back().mimetype = "image/fits";
 
 
-    out.emplace_back();
-    out.back().name = "LengthMapFileName";
-    out.back().desc = "A filename (or full path) for the (length traveled through the ROI peel) image map."
+    out.args.emplace_back();
+    out.args.back().name = "LengthMapFileName";
+    out.args.back().desc = "A filename (or full path) for the (length traveled through the ROI peel) image map."
                       " The format is TBD. Leave empty to dump to generate a unique temporary file.";
-    out.back().default_val = "";
-    out.back().expected = true;
-    out.back().examples = { "", "/tmp/somefile", "localfile.img", "derivative_data.img" };
-    out.back().mimetype = "image/fits";
+    out.args.back().default_val = "";
+    out.args.back().expected = true;
+    out.args.back().examples = { "", "/tmp/somefile", "localfile.img", "derivative_data.img" };
+    out.args.back().mimetype = "image/fits";
 
 
-    out.emplace_back();
-    out.back().name = "NormalizedROILabelRegex";
-    out.back().desc = "A regex matching ROI labels/names to consider. The default will match"
+    out.args.emplace_back();
+    out.args.back().name = "NormalizedROILabelRegex";
+    out.args.back().desc = "A regex matching ROI labels/names to consider. The default will match"
                       " all available ROIs. Be aware that input spaces are trimmed to a single space."
                       " If your ROI name has more than two sequential spaces, use regex to avoid them."
                       " All ROIs have to match the single regex, so use the 'or' token if needed."
                       " Regex is case insensitive and uses extended POSIX syntax.";
-    out.back().default_val = ".*";
-    out.back().expected = true;
-    out.back().examples = { ".*", ".*Body.*", "Body", "Gross_Liver",
+    out.args.back().default_val = ".*";
+    out.args.back().expected = true;
+    out.args.back().examples = { ".*", ".*Body.*", "Body", "Gross_Liver",
                             R"***(.*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*)***",
                             R"***(Left Parotid|Right Parotid)***" };
 
-    out.emplace_back();
-    out.back().name = "ROILabelRegex";
-    out.back().desc = "A regex matching ROI labels/names to consider. The default will match"
+    out.args.emplace_back();
+    out.args.back().name = "ROILabelRegex";
+    out.args.back().desc = "A regex matching ROI labels/names to consider. The default will match"
                       " all available ROIs. Be aware that input spaces are trimmed to a single space."
                       " If your ROI name has more than two sequential spaces, use regex to avoid them."
                       " All ROIs have to match the single regex, so use the 'or' token if needed."
                       " Regex is case insensitive and uses extended POSIX syntax.";
-    out.back().default_val = ".*";
-    out.back().expected = true;
-    out.back().examples = { ".*", ".*body.*", "body", "Gross_Liver",
+    out.args.back().default_val = ".*";
+    out.args.back().expected = true;
+    out.args.back().examples = { ".*", ".*body.*", "body", "Gross_Liver",
                             R"***(.*left.*parotid.*|.*right.*parotid.*|.*eyes.*)***",
                             R"***(left_parotid|right_parotid)***" };
 
-    out.emplace_back();
-    out.back().name = "CylinderRadius";
-    out.back().desc = "The radius of the cylinder surrounding contour line segments that defines the 'surface'."
+    out.args.emplace_back();
+    out.args.back().name = "CylinderRadius";
+    out.args.back().desc = "The radius of the cylinder surrounding contour line segments that defines the 'surface'."
                       " Quantity is in the DICOM coordinate system.";
-    out.back().default_val = "3.0";
-    out.back().expected = true;
-    out.back().examples = { "1.0", "2.0", "0.5", "5.0" };
+    out.args.back().default_val = "3.0";
+    out.args.back().expected = true;
+    out.args.back().examples = { "1.0", "2.0", "0.5", "5.0" };
     
-    out.emplace_back();
-    out.back().name = "RaydL";
-    out.back().desc = "The distance to move a ray each iteration. Should be << img_thickness and << cylinder_radius."
+    out.args.emplace_back();
+    out.args.back().name = "RaydL";
+    out.args.back().desc = "The distance to move a ray each iteration. Should be << img_thickness and << cylinder_radius."
                       " Making too large will invalidate results, causing rays to pass through the surface without"
                       " registering any dose accumulation. Making too small will cause the run-time to grow and may"
                       " eventually lead to truncation or round-off errors. Quantity is in the DICOM coordinate system.";
-    out.back().default_val = "0.1";
-    out.back().expected = true;
-    out.back().examples = { "0.1", "0.05", "0.01", "0.005" };
+    out.args.back().default_val = "0.1";
+    out.args.back().expected = true;
+    out.args.back().examples = { "0.1", "0.05", "0.01", "0.005" };
    
 
-    out.emplace_back();
-    out.back().name = "Rows";
-    out.back().desc = "The number of rows in the resulting images.";
-    out.back().default_val = "256";
-    out.back().expected = true;
-    out.back().examples = { "10", "50", "128", "1024" };
+    out.args.emplace_back();
+    out.args.back().name = "Rows";
+    out.args.back().desc = "The number of rows in the resulting images.";
+    out.args.back().default_val = "256";
+    out.args.back().expected = true;
+    out.args.back().examples = { "10", "50", "128", "1024" };
     
     
-    out.emplace_back();
-    out.back().name = "Columns";
-    out.back().desc = "The number of columns in the resulting images.";
-    out.back().default_val = "256";
-    out.back().expected = true;
-    out.back().examples = { "10", "50", "128", "1024" };
+    out.args.emplace_back();
+    out.args.back().name = "Columns";
+    out.args.back().desc = "The number of columns in the resulting images.";
+    out.args.back().default_val = "256";
+    out.args.back().expected = true;
+    out.args.back().examples = { "10", "50", "128", "1024" };
     
     
     return out;

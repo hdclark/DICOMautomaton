@@ -78,7 +78,7 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocSpatialSharpen(void);
+OperationDoc OpArgDocSpatialSharpen(void);
 
 
 Drover

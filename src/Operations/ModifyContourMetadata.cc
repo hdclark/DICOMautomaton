@@ -19,47 +19,52 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocModifyContourMetadata(void){
-    std::list<OperationArgDoc> out;
+OperationDoc OpArgDocModifyContourMetadata(void){
+    OperationDoc out;
+    out.name = "ModifyContourMetadata";
+    out.desc = "";
+
+    out.notes.emplace_back("");
+
 
     // This operation injects metadata into contours.
 
-    out.emplace_back();
-    out.back().name = "NormalizedROILabelRegex";
-    out.back().desc = "A regex matching ROI labels/names to consider. The default will match"
+    out.args.emplace_back();
+    out.args.back().name = "NormalizedROILabelRegex";
+    out.args.back().desc = "A regex matching ROI labels/names to consider. The default will match"
                       " all available ROIs. Be aware that input spaces are trimmed to a single space."
                       " If your ROI name has more than two sequential spaces, use regex to avoid them."
                       " All ROIs have to match the single regex, so use the 'or' token if needed."
                       " Regex is case insensitive and uses extended POSIX syntax.";
-    out.back().default_val = ".*";
-    out.back().expected = true;
-    out.back().examples = { ".*", ".*Body.*", "Body", "Gross_Liver",
+    out.args.back().default_val = ".*";
+    out.args.back().expected = true;
+    out.args.back().examples = { ".*", ".*Body.*", "Body", "Gross_Liver",
                             R"***(.*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*)***",
                             R"***(Left Parotid|Right Parotid)***" };
 
-    out.emplace_back();
-    out.back().name = "ROILabelRegex";
-    out.back().desc = "A regex matching ROI labels/names to consider. The default will match"
+    out.args.emplace_back();
+    out.args.back().name = "ROILabelRegex";
+    out.args.back().desc = "A regex matching ROI labels/names to consider. The default will match"
                       " all available ROIs. Be aware that input spaces are trimmed to a single space."
                       " If your ROI name has more than two sequential spaces, use regex to avoid them."
                       " All ROIs have to match the single regex, so use the 'or' token if needed."
                       " Regex is case insensitive and uses extended POSIX syntax.";
-    out.back().default_val = ".*";
-    out.back().expected = true;
-    out.back().examples = { ".*", ".*body.*", "body", "Gross_Liver",
+    out.args.back().default_val = ".*";
+    out.args.back().expected = true;
+    out.args.back().examples = { ".*", ".*body.*", "body", "Gross_Liver",
                             R"***(.*left.*parotid.*|.*right.*parotid.*|.*eyes.*)***",
                             R"***(left_parotid|right_parotid)***" };
 
-    out.emplace_back();
-    out.back().name = "KeyValues";
-    out.back().desc = "Key-value pairs in the form of 'key1@value1;key2@value2' that will be injected into the"
+    out.args.emplace_back();
+    out.args.back().name = "KeyValues";
+    out.args.back().desc = "Key-value pairs in the form of 'key1@value1;key2@value2' that will be injected into the"
                       " selected images. Existing metadata will be overwritten. Both keys and values are"
                       " case-sensitive. Note that a semi-colon separates key-value pairs, not a colon."
                       " Note that quotation marks are not stripped internally, but may have to be"
                       " provided for the shell to properly interpret the argument.";
-    out.back().default_val = "";
-    out.back().expected = true;
-    out.back().examples = { "Description@'some description'",
+    out.args.back().default_val = "";
+    out.args.back().expected = true;
+    out.args.back().examples = { "Description@'some description'",
                             "'Description@some description'", 
                             "MinimumSeparation@1.23", 
                             "'Description@some description;MinimumSeparation@1.23'" };

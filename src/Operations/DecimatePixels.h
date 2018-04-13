@@ -79,7 +79,7 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocDecimatePixels(void);
+OperationDoc OpArgDocDecimatePixels(void);
 
 Drover DecimatePixels(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                       std::map<std::string, std::string> /*InvocationMetadata*/,

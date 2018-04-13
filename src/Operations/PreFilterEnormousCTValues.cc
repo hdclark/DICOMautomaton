@@ -16,8 +16,13 @@
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 
 
-std::list<OperationArgDoc> OpArgDocPreFilterEnormousCTValues(void){
-    return std::list<OperationArgDoc>();
+OperationDoc OpArgDocPreFilterEnormousCTValues(void){
+    OperationDoc out;
+    out.name = "PreFilterEnormousCTValues";
+    out.desc = "";
+
+    out.notes.emplace_back("");
+    return out;
 }
 
 Drover PreFilterEnormousCTValues(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string,std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){

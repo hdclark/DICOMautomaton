@@ -226,8 +226,8 @@ bool Operation_Dispatcher( Drover &DICOM_data,
                     WasFound = true;
 
                     //Attempt to insert all expected, documented parameters with the default value.
-                    auto OpArgDocs = op_func.second.first();
-                    for(const auto &r : OpArgDocs){
+                    auto OpDocs = op_func.second.first();
+                    for(const auto &r : OpDocs.args){
                         if(r.expected) optargs.insert( r.name, r.default_val );
                     }
 

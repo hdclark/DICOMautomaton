@@ -79,7 +79,7 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocUBC3TMRI_DCE_Differences(void);
+OperationDoc OpArgDocUBC3TMRI_DCE_Differences(void);
 
 Drover UBC3TMRI_DCE_Differences(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                                 std::map<std::string, std::string> /*InvocationMetadata*/,

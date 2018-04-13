@@ -79,7 +79,7 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocConvertNaNsToAir(void);
+OperationDoc OpArgDocConvertNaNsToAir(void);
 
 Drover ConvertNaNsToAir(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                         std::map<std::string, std::string> /*InvocationMetadata*/,

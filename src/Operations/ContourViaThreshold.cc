@@ -29,8 +29,13 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocContourViaThreshold(void){
-    std::list<OperationArgDoc> out;
+OperationDoc OpArgDocContourViaThreshold(void){
+    OperationDoc out;
+    out.name = "ContourViaThreshold";
+    out.desc = "";
+
+    out.notes.emplace_back("");
+
 
     // This operation constructs ROI contours using images and pixel/voxel value thresholds.
     // The output is 'ephemeral' and is not commited to any database.
@@ -46,68 +51,68 @@ std::list<OperationArgDoc> OpArgDocContourViaThreshold(void){
     //       the computational penalty.
     //
 
-    out.emplace_back();
-    out.back().name = "ROILabel";
-    out.back().desc = "A label to attach to the ROI contours.";
-    out.back().default_val = "unspecified";
-    out.back().expected = true;
-    out.back().examples = { "unspecified", "body", "air", "bone", "invalid", "above_zero", "below_5.3" };
+    out.args.emplace_back();
+    out.args.back().name = "ROILabel";
+    out.args.back().desc = "A label to attach to the ROI contours.";
+    out.args.back().default_val = "unspecified";
+    out.args.back().expected = true;
+    out.args.back().examples = { "unspecified", "body", "air", "bone", "invalid", "above_zero", "below_5.3" };
 
 
-    out.emplace_back();
-    out.back().name = "Lower";
-    out.back().desc = "The lower bound (inclusive). Pixels with values < this number are excluded from the ROI."
+    out.args.emplace_back();
+    out.args.back().name = "Lower";
+    out.args.back().desc = "The lower bound (inclusive). Pixels with values < this number are excluded from the ROI."
                       " If the number is followed by a '%', the bound will be scaled between the min and max"
                       " pixel values [0-100%]. If the number is followed by 'tile', the bound will be replaced"
                       " with the corresponding percentile [0-100tile]."
                       " Note that upper and lower bounds can be specified separately (e.g., lower bound is a"
                       " percentage, but upper bound is a percentile).";
-    out.back().default_val = "-inf";
-    out.back().expected = true;
-    out.back().examples = { "0.0", "-1E-99", "1.23", "0.2%", "23tile", "23.123 tile" };
+    out.args.back().default_val = "-inf";
+    out.args.back().expected = true;
+    out.args.back().examples = { "0.0", "-1E-99", "1.23", "0.2%", "23tile", "23.123 tile" };
 
 
-    out.emplace_back();
-    out.back().name = "Upper";
-    out.back().desc = "The upper bound (inclusive). Pixels with values > this number are excluded from the ROI."
+    out.args.emplace_back();
+    out.args.back().name = "Upper";
+    out.args.back().desc = "The upper bound (inclusive). Pixels with values > this number are excluded from the ROI."
                       " If the number is followed by a '%', the bound will be scaled between the min and max"
                       " pixel values [0-100%]. If the number is followed by 'tile', the bound will be replaced"
                       " with the corresponding percentile [0-100tile]."
                       " Note that upper and lower bounds can be specified separately (e.g., lower bound is a"
                       " percentage, but upper bound is a percentile).";
-    out.back().default_val = "inf";
-    out.back().expected = true;
-    out.back().examples = { "1.0", "1E-99", "2.34", "98.12%", "94tile", "94.123 tile" };
+    out.args.back().default_val = "inf";
+    out.args.back().expected = true;
+    out.args.back().examples = { "1.0", "1E-99", "2.34", "98.12%", "94tile", "94.123 tile" };
 
 
-    out.emplace_back();
-    out.back().name = "Channel";
-    out.back().desc = "The image channel to use. Zero-based.";
-    out.back().default_val = "0";
-    out.back().expected = true;
-    out.back().examples = { "0", "1", "2" };
+    out.args.emplace_back();
+    out.args.back().name = "Channel";
+    out.args.back().desc = "The image channel to use. Zero-based.";
+    out.args.back().default_val = "0";
+    out.args.back().expected = true;
+    out.args.back().examples = { "0", "1", "2" };
 
     
-    out.emplace_back();
-    out.back().name = "ImageSelection";
-    out.back().desc = "Images to operate on. Either 'none', 'last', or 'all'.";
-    out.back().default_val = "last";
-    out.back().expected = true;
-    out.back().examples = { "none", "last", "all" };
+    out.args.emplace_back();
+    out.args.back().name = "ImageSelection";
+    out.args.back().desc = "Images to operate on. Either 'none', 'last', or 'all'.";
+    out.args.back().default_val = "last";
+    out.args.back().expected = true;
+    out.args.back().examples = { "none", "last", "all" };
    
 
-    out.emplace_back();
-    out.back().name = "SimplifyMergeAdjacent";
-    out.back().desc = "Simplify contours by merging adjacent contours. This reduces the number of contours dramatically,"
+    out.args.emplace_back();
+    out.args.back().name = "SimplifyMergeAdjacent";
+    out.args.back().desc = "Simplify contours by merging adjacent contours. This reduces the number of contours dramatically,"
                       " but will cause issues if there are holes (two contours are generated if there is a single hole,"
                       " but most DICOMautomaton code disregards orientation -- so the pixels within the hole will be"
                       " considered part of the ROI, possibly even doubly so depending on the algorithm). Disabling merges"
                       " is always safe (and is therefore the default) but can be extremely costly for large images."
                       " Furthermore, if you know the ROI does not have holes (or if you don't care) then it is safe to"
                       " enable merges.";
-    out.back().default_val = "false";
-    out.back().expected = true;
-    out.back().examples = { "true", "false" };
+    out.args.back().default_val = "false";
+    out.args.back().expected = true;
+    out.args.back().examples = { "true", "false" };
     
 
     return out;

@@ -31,40 +31,45 @@
 
 
 
-std::list<OperationArgDoc> OpArgDocDumpPerROIParams_KineticModel_1Compartment2Input_5Param(void){
-    std::list<OperationArgDoc> out;
+OperationDoc OpArgDocDumpPerROIParams_KineticModel_1Compartment2Input_5Param(void){
+    OperationDoc out;
+    out.name = "DumpPerROIParams_KineticModel_1Compartment2Input_5Param";
+    out.desc = "";
 
-    out.emplace_back();
-    out.back().name = "ROILabelRegex";
-    out.back().desc = "A regex matching ROI labels/names to consider. The default will match"
+    out.notes.emplace_back("");
+
+
+    out.args.emplace_back();
+    out.args.back().name = "ROILabelRegex";
+    out.args.back().desc = "A regex matching ROI labels/names to consider. The default will match"
                       " all available ROIs. Be aware that input spaces are trimmed to a single space."
                       " If your ROI name has more than two sequential spaces, use regex to avoid them."
                       " All ROIs have to match the single regex, so use the 'or' token if needed."
                       " Regex is case insensitive and uses extended POSIX syntax.";
-    out.back().default_val = ".*";
-    out.back().expected = true;
-    out.back().examples = { ".*", ".*body.*", "body", "Gross_Liver",
+    out.args.back().default_val = ".*";
+    out.args.back().expected = true;
+    out.args.back().examples = { ".*", ".*body.*", "body", "Gross_Liver",
                             R"***(.*left.*parotid.*|.*right.*parotid.*|.*eyes.*)***",
                             R"***(left_parotid|right_parotid)***" };
 
-    out.emplace_back();
-    out.back().name = "Filename";
-    out.back().desc = "A file into which the results should be dumped. If the filename is empty, the"
+    out.args.emplace_back();
+    out.args.back().name = "Filename";
+    out.args.back().desc = "A file into which the results should be dumped. If the filename is empty, the"
                       " results are dumped to the console only.";
-    out.back().default_val = "";
-    out.back().expected = true;
-    out.back().examples = { "/tmp/results.txt", "/dev/null", "~/output.txt" };
-    out.back().mimetype = "text/plain";
+    out.args.back().default_val = "";
+    out.args.back().expected = true;
+    out.args.back().examples = { "/tmp/results.txt", "/dev/null", "~/output.txt" };
+    out.args.back().mimetype = "text/plain";
 
-    out.emplace_back();
-    out.back().name = "Separator";
-    out.back().desc = "The token(s) to place between adjacent columns of output. Note: because"
+    out.args.emplace_back();
+    out.args.back().name = "Separator";
+    out.args.back().desc = "The token(s) to place between adjacent columns of output. Note: because"
                       " whitespace is trimmed from user parameters, whitespace separators other than"
                       " the default are shortened to an empty string. So non-default whitespace are"
                       " not currently supported."; // I do not *currently* need this to be fixed...
-    out.back().default_val = " ";
-    out.back().expected = true;
-    out.back().examples = { ",", ";", "_a_long_separator_" };
+    out.args.back().default_val = " ";
+    out.args.back().expected = true;
+    out.args.back().examples = { ",", ";", "_a_long_separator_" };
 
     return out;
 }
