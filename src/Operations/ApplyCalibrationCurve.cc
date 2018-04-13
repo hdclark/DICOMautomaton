@@ -25,13 +25,15 @@
 OperationDoc OpArgDocApplyCalibrationCurve(void){
     OperationDoc out;
     out.name = "ApplyCalibrationCurve";
-    out.desc = "";
 
-    out.notes.emplace_back("");
+    out.desc = 
+        "This operation applies a given calibration curve to voxel data inside the specified ROI(s)."
+        " It is designed to apply calibration curves, but is useful for transforming voxel"
+        " intensities using any supplied 1D curve.";
 
-
-    // This operation overwrites applies a given calibration curve to voxel data inside the specified ROI(s).
-    // This routine can handle overlapping or duplicate contours.
+    out.notes.emplace_back(
+        "This routine can handle overlapping or duplicate contours."
+    );
 
     out.args.emplace_back();
     out.args.back().name = "Channel";

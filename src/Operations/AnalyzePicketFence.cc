@@ -34,16 +34,20 @@
 OperationDoc OpArgDocAnalyzePicketFence(void){
     OperationDoc out;
     out.name = "AnalyzePicketFence";
+
     out.desc = "This operation extracts MLC positions from a picket fence image.";
 
     out.notes.emplace_back(
-      "This routine requires data to be pre-processed. The gross picket area should be isolated and the leaf"
-      " junction areas contoured (one contour per junction). Both can be accomplished via thresholding.");
+        "This routine requires data to be pre-processed. The gross picket area should be isolated and the leaf"
+        " junction areas contoured (one contour per junction). Both can be accomplished via thresholding."
+    );
+
     out.notes.emplace_back(
-      "This routine analyzes the picket fences on the plane in which they are specified within the DICOM file,"
-      " which often coincides with the image receptor ('RTImageSID'). Tolerances are evaluated on the isoplane,"
-      " so the image is projected before measuring distances, but the image itself is not altered; a uniform"
-      " magnification factor of SAD/SID is applied to all distances.");
+        "This routine analyzes the picket fences on the plane in which they are specified within the DICOM file,"
+        " which often coincides with the image receptor ('RTImageSID'). Tolerances are evaluated on the isoplane,"
+        " so the image is projected before measuring distances, but the image itself is not altered; a uniform"
+        " magnification factor of SAD/SID is applied to all distances."
+    );
 
     out.args.emplace_back();
     out.args.back().name = "ImageSelection";

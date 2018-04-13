@@ -26,13 +26,11 @@
 OperationDoc OpArgDocHighlightROIs(void){
     OperationDoc out;
     out.name = "HighlightROIs";
-    out.desc = "";
 
-    out.notes.emplace_back("");
+    out.desc = 
+        "This operation overwrites voxel data inside and/or outside of ROI(s) to 'highlight' them."
+        " It can handle overlapping or duplicate contours.";
 
-
-    // This operation overwrites voxel data inside and/or outside of ROI(s) to 'highlight' them.
-    // It can handle overlapping or duplicate contours.
 
     out.args.emplace_back();
     out.args.back().name = "Channel";

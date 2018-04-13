@@ -18,15 +18,18 @@
 OperationDoc OpArgDocDumpPixelValuesOverTimeForAnEncompassedPoint(void){
     OperationDoc out;
     out.name = "DumpPixelValuesOverTimeForAnEncompassedPoint";
-    out.desc = "";
 
-    out.notes.emplace_back("");
+    out.desc = 
+        "Output the pixel values over time for a generic point."
+        " Currently the point is arbitrarily taken to tbe the centre of the first image."
+        " This is useful for quickly and programmatically inspecting trends, but the"
+        " SFML_Viewer operation is better for interactive exploration.";
+
     return out;
 }
 
 Drover DumpPixelValuesOverTimeForAnEncompassedPoint(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string,std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){
 
-    //Output the pixel values over time for a generic point.
     const auto apoint = DICOM_data.image_data.front()->imagecoll.images.front().center();
     auto encompassing_images = DICOM_data.image_data.front()->imagecoll.get_images_which_encompass_point(apoint);
     const int channel = 0;

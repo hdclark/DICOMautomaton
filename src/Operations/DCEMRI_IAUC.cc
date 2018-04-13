@@ -20,17 +20,19 @@
 OperationDoc OpArgDocDCEMRI_IAUC(void){
     OperationDoc out;
     out.name = "DCEMRI_IAUC";
-    out.desc = "";
 
-    out.notes.emplace_back("");
+    out.desc = 
+        " This operation will compute the Integrated Area Under the Curve (IAUC) for any images present.";
+
+    out.notes.emplace_back(
+        "This operation is not optimized in any way and operates on whole images."
+        " It can be fairly slow, especially if the image volume is huge, so it is best to crop images if possible."
+    );
+
     return out;
 }
 
 Drover DCEMRI_IAUC(Drover DICOM_data, OperationArgPkg, std::map<std::string,std::string> , std::string){
-
-    //This operation will compute the Integrated Area Under the Curve (IAUC) for any images present.
-    // It can be fairly slow, especially if the image volume is huge, so it is best to crop images if possible.
-    //
 
     std::vector<std::shared_ptr<Image_Array>> orig_img_arrays;
     for(auto & img_arr : DICOM_data.image_data) orig_img_arrays.push_back(img_arr);

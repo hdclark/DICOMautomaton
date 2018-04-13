@@ -21,15 +21,15 @@
 OperationDoc OpArgDocDumpImageMetadataOccurrencesToFile(void){
     OperationDoc out;
     out.name = "DumpImageMetadataOccurrencesToFile";
-    out.desc = "";
 
-    out.notes.emplace_back("");
+    out.desc = 
+        "Dump all the metadata elements, but group like-items together and also print the occurence number.";
+
     return out;
 }
 
 Drover DumpImageMetadataOccurrencesToFile(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string,std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){
 
-    //Dump all the metadata elements, but group like-items together and also print the occurence number.
     const auto Dump_Image_Metadata_Occurrences_To_File =
         [](const std::list<planar_image<float,double>> &images, const std::string &dumpfile) -> void {
 

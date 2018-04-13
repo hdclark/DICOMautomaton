@@ -17,12 +17,9 @@
 OperationDoc OpArgDocCopyImages(void){
     OperationDoc out;
     out.name = "CopyImages";
-    out.desc = "";
 
-    out.notes.emplace_back("");
-
-
-    // This operation deep-copies the selected images.
+    out.desc = 
+        " This operation deep-copies the selected images.";
 
     out.args.emplace_back();
     out.args.back().name = "ImageSelection";

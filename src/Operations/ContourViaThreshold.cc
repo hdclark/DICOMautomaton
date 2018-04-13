@@ -32,24 +32,27 @@
 OperationDoc OpArgDocContourViaThreshold(void){
     OperationDoc out;
     out.name = "ContourViaThreshold";
-    out.desc = "";
 
-    out.notes.emplace_back("");
-
-
-    // This operation constructs ROI contours using images and pixel/voxel value thresholds.
-    // The output is 'ephemeral' and is not commited to any database.
-    //
-    // NOTE: This routine expects images to be non-overlapping. In other words, if images overlap then the contours
-    //       generated may also overlap. This is probably not what you want (but there is nothing intrinsically wrong
-    //       with presenting this routine with multiple images if you intentionally want overlapping contours). 
-    //
-    // NOTE: Existing contours are ignored and unaltered.
-    //
-    // NOTE: Contour orientation is (likely) not properly handled in this routine, so 'pinches' and holes will produce
-    //       contours with inconsistent or invalid topology. If in doubt, disable merge simplifications and live with
-    //       the computational penalty.
-    //
+    out.desc = 
+        "This operation constructs ROI contours using images and pixel/voxel value thresholds."
+        " The output is 'ephemeral' and is not commited to any database.";
+        
+    out.notes.emplace_back(
+        "This routine expects images to be non-overlapping. In other words, if images overlap then the contours"
+        " generated may also overlap. This is probably not what you want (but there is nothing intrinsically wrong"
+        " with presenting this routine with multiple images if you intentionally want overlapping contours)."
+    );
+        
+    out.notes.emplace_back(
+        "Existing contours are ignored and unaltered."
+    );
+        
+    out.notes.emplace_back(
+        "Contour orientation is (likely) not properly handled in this routine, so 'pinches' and holes will produce"
+        " contours with inconsistent or invalid topology. If in doubt, disable merge simplifications and live with"
+        " the computational penalty."
+    );
+        
 
     out.args.emplace_back();
     out.args.back().name = "ROILabel";

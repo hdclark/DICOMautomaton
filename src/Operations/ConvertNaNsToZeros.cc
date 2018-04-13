@@ -19,15 +19,15 @@
 OperationDoc OpArgDocConvertNaNsToZeros(void){
     OperationDoc out;
     out.name = "ConvertNaNsToZeros";
-    out.desc = "";
 
-    out.notes.emplace_back("");
+    out.desc = 
+        "This operation runs the data through a per-pixel filter, converting NaN's to zeros.";
+
     return out;
 }
 
 Drover ConvertNaNsToZeros(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string,std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){
 
-    //This operation runs the data through a per-pixel filter, converting NaN's to zeros.
     for(auto & img_arr : DICOM_data.image_data){
         if(!img_arr->imagecoll.Process_Images_Parallel( GroupIndividualImages,
                                                NaNsToZeros,

@@ -24,9 +24,14 @@
 OperationDoc OpArgDocContourSimilarity(void){
     OperationDoc out;
     out.name = "ContourSimilarity";
-    out.desc = "";
+    out.desc = 
+        "This operation estimates the similarity or overlap between two sets of contours."
+        " The comparison is based on point samples. It is useful for comparing contouring styles.";
 
-    out.notes.emplace_back("");
+    out.notes.emplace_back(
+        "This routine requires an image grid, which is used to control the sampling rate."
+    );
+
     return out;
 }
 

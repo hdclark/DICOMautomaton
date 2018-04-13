@@ -19,16 +19,15 @@
 OperationDoc OpArgDocGiveWholeImageArrayAThoraxWindowLevel(void){
     OperationDoc out;
     out.name = "GiveWholeImageArrayAThoraxWindowLevel";
-    out.desc = "";
 
-    out.notes.emplace_back("");
+    out.desc = 
+        "This operation runs the images in an image array through a uniform window-and-leveler instead of per-slice"
+        " window-and-level or no window-and-level at all. Data is modified and no copy is made!";
+
     return out;
 }
 
 Drover GiveWholeImageArrayAThoraxWindowLevel(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string,std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){
-
-    //This operation runs the images in an image array through a uniform window-and-leveler instead of per-slice
-    // window-and-level or no window-and-level at all. Data is modified and no copy is made!
     for(auto & img_arr : DICOM_data.image_data){
         if(!img_arr->imagecoll.Process_Images_Parallel( GroupIndividualImages,
                                                StandardThoraxHUWindow,

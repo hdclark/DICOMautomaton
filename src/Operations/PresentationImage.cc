@@ -51,9 +51,7 @@
 OperationDoc OpArgDocPresentationImage(void){
     OperationDoc out;
     out.name = "PresentationImage";
-    out.desc = "";
-
-    out.notes.emplace_back("");
+    out.desc = "This operation renders an image with any contours in-place and colour mapping using an SFML backend.";
 
 
     out.args.emplace_back();

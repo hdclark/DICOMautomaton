@@ -18,17 +18,17 @@
 OperationDoc OpArgDocDumpFilesPartitionedByTime(void){
     OperationDoc out;
     out.name = "DumpFilesPartitionedByTime";
-    out.desc = "";
+       
+    out.desc = 
+        " This operation prints PACS filenames along with the associated time. It is more focused than the metadata "
+        " dumpers above. This data can be used for many things, such as image viewers which are not DICOM-aware or"
+        " deformable registration on time series data.";
 
-    out.notes.emplace_back("");
     return out;
 }
 
 Drover DumpFilesPartitionedByTime(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string,std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){
-       
-    //This operation prints PACS filenames along with the associated time. It is more focused than the metadata 
-    // dumpers above. This data can be used for many things, such as image viewers which are not DICOM-aware or
-    // deformable registration on time series data.
+
     std::multimap<std::string,std::string> partitions;
     for(auto &img_arr : DICOM_data.image_data){
         for(auto &img : img_arr->imagecoll.images){

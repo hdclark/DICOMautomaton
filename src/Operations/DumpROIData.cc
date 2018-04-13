@@ -26,7 +26,7 @@
 OperationDoc OpArgDocDumpROIData(void){
     OperationDoc out;
     out.name = "DumpROIData";
-    out.desc = "";
+    out.desc = "This operation dumps ROI contour information for debugging and quick inspection purposes.";
 
     out.notes.emplace_back("");
     return out;
@@ -34,7 +34,6 @@ OperationDoc OpArgDocDumpROIData(void){
 
 Drover DumpROIData(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string,std::string> /*InvocationMetadata*/, std::string FilenameLex){
 
-    //Simply dump ROI contour information to stdout.
     typedef std::tuple<std::string,std::string,std::string> key_t; //PatientID, ROIName, NormalizedROIName.
 
     //Individual contour information.

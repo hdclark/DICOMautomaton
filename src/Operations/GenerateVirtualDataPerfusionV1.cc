@@ -23,17 +23,16 @@
 OperationDoc OpArgDocGenerateVirtualDataPerfusionV1(void){
     OperationDoc out;
     out.name = "GenerateVirtualDataPerfusionV1";
-    out.desc = "";
 
-    out.notes.emplace_back("");
+    out.desc = 
+        "This operation generates data suitable for testing perfusion modeling operations. There are no specific checks in"
+        " this code. Another operation performs the actual validation. You might be able to manually verify if the perfusion"
+        " model admits a simple solution.";
+
     return out;
 }
 
 Drover GenerateVirtualDataPerfusionV1(Drover DICOM_data, OperationArgPkg , std::map<std::string,std::string>, std::string){
-
-    //This operation generates data suitable for testing perfusion modeling operations. There are no specific checks in
-    // this code. Another operation performs the actual validation. You might be able to manually verify if the perfusion
-    // model admits a simple solution.
 
     using loaded_imgs_storage_t = decltype(DICOM_data.image_data);
     std::list<loaded_imgs_storage_t> loaded_imgs_storage;

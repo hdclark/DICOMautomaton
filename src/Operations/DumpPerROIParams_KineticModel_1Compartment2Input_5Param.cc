@@ -34,10 +34,7 @@
 OperationDoc OpArgDocDumpPerROIParams_KineticModel_1Compartment2Input_5Param(void){
     OperationDoc out;
     out.name = "DumpPerROIParams_KineticModel_1Compartment2Input_5Param";
-    out.desc = "";
-
-    out.notes.emplace_back("");
-
+    out.desc = "Given a perfusion model, this routine computes parameter estimates for ROIs.";
 
     out.args.emplace_back();
     out.args.back().name = "ROILabelRegex";

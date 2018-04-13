@@ -20,10 +20,10 @@
 OperationDoc OpArgDocDecimatePixels(void){
     OperationDoc out;
     out.name = "DecimatePixels";
-    out.desc = "";
 
-    out.notes.emplace_back("");
-
+    out.desc = 
+        " This operation spatially aggregates blocks of pixels, thereby decimating them and making the images consume"
+        " far less memory. The precise size reduction and spatial aggregate can be set in the source.";
 
     out.args.emplace_back();
     out.args.back().name = "OutSizeR";
@@ -47,9 +47,6 @@ OperationDoc OpArgDocDecimatePixels(void){
 }
 
 Drover DecimatePixels(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){
-
-    //This operation spatially aggregates blocks of pixels, thereby decimating them and making the images consume
-    // far less memory. The precise size reduction and spatial aggregate can be set in the source. 
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const long int DecimateR = std::stol( OptArgs.getValueStr("OutSizeR").value() );

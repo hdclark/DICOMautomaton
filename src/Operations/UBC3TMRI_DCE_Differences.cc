@@ -26,16 +26,18 @@ template <class T> class contour_collection;
 OperationDoc OpArgDocUBC3TMRI_DCE_Differences(void){
     OperationDoc out;
     out.name = "UBC3TMRI_DCE_Differences";
-    out.desc = "";
+    out.desc = 
+        "This operation is used to generate dynamic contrast-enhanced MRI contrast enhancement maps.";
 
-    out.notes.emplace_back("");
+    out.notes.emplace_back(
+        "This routine generates difference maps using both long DCE scans. Thus it takes up a LOT of memory! Try avoid "
+        " unnecessary copies of large (temporally long) arrays."
+    );
+
     return out;
 }
 
 Drover UBC3TMRI_DCE_Differences(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string,std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){
-
-    //This routine generates difference maps using both long DCE scans. Thus it takes up a LOT of memory! Try avoid 
-    // unnecessary copies of large (temporally long) arrays.
 
     //Stuff references to all contours into a list. Remember that you can still address specific contours through
     // the original holding containers (which are not modified here).

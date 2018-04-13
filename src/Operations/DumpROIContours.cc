@@ -25,12 +25,9 @@
 OperationDoc OpArgDocDumpROIContours(void){
     OperationDoc out;
     out.name = "DumpROIContours";
-    out.desc = "";
 
-    out.notes.emplace_back("");
-
-
-    // This operation exports contours in 'tabular' format.
+    out.desc = 
+        "This operation exports contours in a standard surface mesh format.";
 
     out.args.emplace_back();
     out.args.back().name = "DumpFileName";

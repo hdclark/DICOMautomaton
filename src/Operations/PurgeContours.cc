@@ -19,9 +19,14 @@
 OperationDoc OpArgDocPurgeContours(void){
     OperationDoc out;
     out.name = "PurgeContours";
-    out.desc = "";
-
-    out.notes.emplace_back("");
+    out.desc = 
+        " This routine purges contours if they satisfy various criteria.";
+        
+    out.notes.emplace_back(
+        "This operation considers individual contours only at the moment. It could be extended to operate on whole"
+        " ROIs (i.e., contour_collections), or to perform a separate vote within each ROI. The individual contour"
+        " approach was taken since filtering out small contour 'islands' is the primary use-case."
+    );
 
 
     out.args.emplace_back();
@@ -93,12 +98,6 @@ OperationDoc OpArgDocPurgeContours(void){
 
 
 Drover PurgeContours(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string>, std::string ){
-    // This routine purges contours if they satisfy various criteria.
-    //
-    // Note: This operation considers individual contours only at the moment. It could be extended to operate on whole
-    //       ROIs (i.e., contour_collections), or to perform a separate vote within each ROI. The individual contour
-    //       approach was taken since filtering out small contour 'islands' is the primary use-case.
-    //
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto ROILabelRegex = OptArgs.getValueStr("ROILabelRegex").value();

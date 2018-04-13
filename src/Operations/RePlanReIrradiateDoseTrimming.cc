@@ -15,9 +15,7 @@
 OperationDoc OpArgDocRePlanReIrradiateDoseTrimming(void){
     OperationDoc out;
     out.name = "RePlanReIrradiateDoseTrimming";
-    out.desc = "";
-
-    out.notes.emplace_back("");
+    out.desc = "This operation provides a simplified interface for replanning dose trimming.";
 
     out.args.splice( out.args.end(), OpArgDocConvertDoseToImage().args );
     out.args.splice( out.args.end(), OpArgDocHighlightROIs().args );

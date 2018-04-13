@@ -23,24 +23,26 @@
 OperationDoc OpArgDocContourWholeImages(void){
     OperationDoc out;
     out.name = "ContourWholeImages";
-    out.desc = "";
 
-    out.notes.emplace_back("");
-
-
-    // This operation constructs contours for an ROI that encompasses the whole of all specified images.
-    // It is useful for operations that operate on ROIs whenever you want to compute something over the whole image.
-    // This routine avoids having to manually contour anything.
-    // The output is 'ephemeral' and is not commited to any database.
-    //
-    // NOTE: This routine will attempt to avoid repeat contours. Generated contours are tested for intersection with an
-    //       image before the image is processed. 
-    //
-    // NOTE: Existing contours are ignored and unaltered.
-    //
-    // NOTE: Contours are set slightly inside the outer boundary so they can be easily visualized by overlaying on the
-    //       image. All voxel centres will be within the bounds.
-    //
+    out.desc = 
+        "This operation constructs contours for an ROI that encompasses the whole of all specified images."
+        " It is useful for operations that operate on ROIs whenever you want to compute something over the whole image."
+        " This routine avoids having to manually contour anything."
+        " The output is 'ephemeral' and is not commited to any database.";
+        
+    out.notes.emplace_back(
+        "This routine will attempt to avoid repeat contours. Generated contours are tested for intersection with an"
+        " image before the image is processed."
+    );
+        
+    out.notes.emplace_back(
+        "Existing contours are ignored and unaltered."
+    );
+        
+    out.notes.emplace_back(
+        "Contours are set slightly inside the outer boundary so they can be easily visualized by overlaying on the"
+        " image. All voxel centres will be within the bounds."
+    );
 
     out.args.emplace_back();
     out.args.back().name = "ROILabel";

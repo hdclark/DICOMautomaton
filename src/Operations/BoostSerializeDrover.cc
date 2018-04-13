@@ -18,9 +18,9 @@
 OperationDoc OpArgDocBoost_Serialize_Drover(void){
     OperationDoc out;
     out.name = "Boost_Serialize_Drover";
-    out.desc = "";
-
-    out.notes.emplace_back("");
+    out.desc = 
+        "This operation exports all loaded state to a serialized format that can be loaded again later."
+        " Is is especially useful for suspending long-running operations with intermittant interactive sub-operations.";
 
 
     out.args.emplace_back();

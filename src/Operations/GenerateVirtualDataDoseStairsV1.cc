@@ -21,15 +21,14 @@
 OperationDoc OpArgDocGenerateVirtualDataDoseStairsV1(void){
     OperationDoc out;
     out.name = "GenerateVirtualDataDoseStairsV1";
-    out.desc = "";
+    out.desc = 
+        "This operation generates a dosimetric stairway. It can be used for testing how dosimetric data is transformed.";
 
-    out.notes.emplace_back("");
     return out;
 }
 
 Drover GenerateVirtualDataDoseStairsV1(Drover DICOM_data, OperationArgPkg , std::map<std::string,std::string>, std::string FilenameLex){
 
-    //This operation generates a dosimetric stairway. It can be used for testing how dosimetric data is transformed.
     Explicator X(FilenameLex);
 
     using loaded_imgs_storage_t = decltype(DICOM_data.image_data);

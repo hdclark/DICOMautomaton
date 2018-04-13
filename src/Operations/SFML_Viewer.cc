@@ -51,9 +51,12 @@
 OperationDoc OpArgDocSFML_Viewer(void){
     OperationDoc out;
     out.name = "SFML_Viewer";
-    out.desc = "";
-
-    out.notes.emplace_back("");
+    out.desc = 
+        "Launch an interactive viewer based on SFML."
+        " Using this viewer, it is possible to contour ROIs,"
+        " generate plots of pixel intensity along profiles or through time,"
+        " inspect and compare metadata,"
+        " and various other things.";
 
 
     out.args.emplace_back();

@@ -30,9 +30,7 @@
 OperationDoc OpArgDocPlotPerROITimeCourses(void){
     OperationDoc out;
     out.name = "PlotPerROITimeCourses";
-    out.desc = "";
-
-    out.notes.emplace_back("");
+    out.desc = "Interactively plot time courses for the specified ROI(s).";
 
 
     out.args.emplace_back();

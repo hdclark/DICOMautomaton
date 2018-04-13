@@ -20,15 +20,14 @@
 OperationDoc OpArgDocGenerateVirtualDataContourViaThresholdTestV1(void){
     OperationDoc out;
     out.name = "GenerateVirtualDataContourViaThresholdTestV1";
-    out.desc = "";
 
-    out.notes.emplace_back("");
+    out.desc = 
+        "This operation generates data suitable for testing the ContourViaThreshold operation.";
+
     return out;
 }
 
 Drover GenerateVirtualDataContourViaThresholdTestV1(Drover DICOM_data, OperationArgPkg , std::map<std::string,std::string>, std::string){
-
-    //This operation generates data suitable for testing the ContourViaThreshold operation.
 
     using loaded_imgs_storage_t = decltype(DICOM_data.image_data);
     std::list<loaded_imgs_storage_t> loaded_imgs_storage;

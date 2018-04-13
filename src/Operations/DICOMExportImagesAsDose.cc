@@ -19,9 +19,14 @@
 OperationDoc OpArgDocDICOMExportImagesAsDose(void){
     OperationDoc out;
     out.name = "DICOMExportImagesAsDose";
-    out.desc = "";
+    out.desc = "This operation exports the last Image_Array to a DICOM dose file.";
 
-    out.notes.emplace_back("");
+    out.notes.emplace_back(
+        "There are various 'paranoia' levels that can be used to partially anonymize the output."
+        " In particular, most metadata and UIDs are replaced, but the files may still be recognized"
+        " by a determined individual by comparing the coordinate system and pixel values."
+        " Do NOT rely on this routine to fully anonymize the data!"
+    );
 
 
     out.args.emplace_back();

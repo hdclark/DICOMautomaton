@@ -23,12 +23,9 @@
 OperationDoc OpArgDocSpatialDerivative(void){
     OperationDoc out;
     out.name = "SpatialDerivative";
-    out.desc = "";
 
-    out.notes.emplace_back("");
-
-
-    // This operation estimates various partial derivatives (of pixel values) within an image.
+    out.desc = 
+        "This operation estimates various partial derivatives (of pixel values) within an image.";
 
     out.args.emplace_back();
     out.args.back().name = "ImageSelection";

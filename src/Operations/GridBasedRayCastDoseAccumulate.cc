@@ -36,9 +36,8 @@
 OperationDoc OpArgDocGridBasedRayCastDoseAccumulate(void){
     OperationDoc out;
     out.name = "GridBasedRayCastDoseAccumulate";
-    out.desc = "";
-
-    out.notes.emplace_back("");
+    out.desc = 
+        "This operation performs a ray casting to estimate the surface dose of an ROI.";
 
 
     out.args.emplace_back();

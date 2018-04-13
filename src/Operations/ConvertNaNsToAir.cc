@@ -19,15 +19,14 @@
 OperationDoc OpArgDocConvertNaNsToAir(void){
     OperationDoc out;
     out.name = "ConvertNaNsToAir";
-    out.desc = "";
+    out.desc = 
+        "This operation runs the data through a per-pixel filter, converting NaN's to air in Hounsfield units (-1024).";
 
-    out.notes.emplace_back("");
     return out;
 }
 
 Drover ConvertNaNsToAir(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string,std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){
 
-    //This operation runs the data through a per-pixel filter, converting NaN's to air in Hounsfield units (-1024).
     for(auto & img_arr : DICOM_data.image_data){
         if(!img_arr->imagecoll.Process_Images_Parallel( GroupIndividualImages,
                                                CTNaNsToAir,

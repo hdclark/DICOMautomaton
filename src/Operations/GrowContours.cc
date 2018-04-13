@@ -17,9 +17,12 @@
 OperationDoc OpArgDocGrowContours(void){
     OperationDoc out;
     out.name = "GrowContours";
-    out.desc = "";
 
-    out.notes.emplace_back("");
+    out.desc = 
+        "This routine will grow (or shrink) 2D contours in their plane by the specified amount. "
+        " Growth is accomplish by translating vertices away from the interior by the specified amount."
+        " The direction is chosen to be the direction opposite of the in-plane normal produced by averaging the line"
+        " segments connecting the contours.";
 
 
     out.args.emplace_back();
@@ -56,19 +59,12 @@ OperationDoc OpArgDocGrowContours(void){
     out.args.back().expected = true;
     out.args.back().examples = { "1E-5", "0.321", "1.1", "15.3" };
 
-
-
     return out;
 }
 
 
 
 Drover GrowContours(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string>, std::string ){
-    // This routine will grow (or shrink) 2D contours in their plane by the specified amount. 
-    // Growth is accomplish by translating vertices away from the interior by the specified amount.
-    // The direction is chosen to be the direction opposite of the in-plane normal produced by averaging the line
-    // segments connecting the contours.
-
     if(DICOM_data.contour_data == nullptr) return DICOM_data;
 
     //---------------------------------------------- User Parameters --------------------------------------------------

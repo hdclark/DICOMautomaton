@@ -35,10 +35,20 @@
 OperationDoc OpArgDocDumpROISNR(void){
     OperationDoc out;
     out.name = "DumpROISNR";
-    out.desc = "";
 
-    out.notes.emplace_back("");
-
+    out.desc = 
+        "This operation computes the Signal-to-Noise ratio (SNR) for each ROI. The specific 'SNR' computed is SNR = (mean"
+        " pixel) / (pixel std dev) which is the inverse of the coefficient of variation.";
+        
+    out.notes.emplace_back(
+        "This routine uses image_arrays so convert dose_arrays beforehand if dose SNR is desired."
+    );
+        
+    out.notes.emplace_back(
+        "This routine will combine spatially-overlapping images by summing voxel intensities. So if you have a time"
+        " course it may be more sensible to aggregate images in some way (e.g., spatial averaging) prior to calling"
+        " this routine."
+    );
 
 
     out.args.emplace_back();
@@ -84,16 +94,6 @@ OperationDoc OpArgDocDumpROISNR(void){
 
 
 Drover DumpROISNR(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string> /*InvocationMetadata*/, std::string FilenameLex){
-
-    // This operation computes the Signal-to-Noise ratio (SNR) for each ROI. The specific 'SNR' computed is SNR = (mean
-    // pixel) / (pixel std dev) which is the inverse of the coefficient of variation. 
-    //
-    // Note: this routine uses image_arrays so convert dose_arrays beforehand if dose SNR is desired.
-    //
-    // Note: this routine will combine spatially-overlapping images by summing voxel intensities. So if you have a time
-    //       course it may be more sensible to aggregate images in some way (e.g., spatial averaging) prior to calling
-    //       this routine.
-    //
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     auto SNRFileName = OptArgs.getValueStr("SNRFileName").value();

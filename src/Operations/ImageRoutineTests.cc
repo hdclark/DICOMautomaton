@@ -22,9 +22,8 @@
 OperationDoc OpArgDocImageRoutineTests(void){
     OperationDoc out;
     out.name = "ImageRoutineTests";
-    out.desc = "";
+    out.desc = "This operation performs a series of sub-operations that are generally useful when inspecting an image.";
 
-    out.notes.emplace_back("");
     return out;
 }
 

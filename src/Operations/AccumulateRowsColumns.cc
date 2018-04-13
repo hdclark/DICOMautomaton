@@ -29,17 +29,16 @@
 OperationDoc OpArgDocAccumulateRowsColumns(void){
     OperationDoc out;
     out.name = "AccumulateRowsColumns";
-    out.desc = "";
 
-    out.notes.emplace_back("");
-
-
-    // This operation generates row- and column-profiles of images in which the entire row or column has been summed
-    // together. It is useful primarily for detection of axes-aligned edges or ridges.
-    //
-    // Note: it is often useful to pre-process inputs by computing an in-image-plane derivative, gradient magnitude, or
-    //       similar (i.e., something to emphasize edges) before calling this routine. It is not necessary, however.
-    //
+    out.desc = 
+        "This operation generates row- and column-profiles of images in which the entire row or column has been summed"
+        " together. It is useful primarily for detection of axes-aligned edges or ridges.";
+        
+    out.notes.emplace_back(
+        "It is often useful to pre-process inputs by computing an in-image-plane derivative, gradient magnitude, or"
+        " similar (i.e., something to emphasize edges) before calling this routine. It is not necessary, however."
+    );
+        
 
     out.args.emplace_back();
     out.args.back().name = "ImageSelection";

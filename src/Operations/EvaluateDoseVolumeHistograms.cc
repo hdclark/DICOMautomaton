@@ -36,10 +36,28 @@
 OperationDoc OpArgDocEvaluateDoseVolumeHistograms(void){
     OperationDoc out;
     out.name = "EvaluateDoseVolumeHistograms";
-    out.desc = "";
 
-    out.notes.emplace_back("");
-
+    out.desc = 
+        " This operation evaluates dose-volume histograms for the selected ROI(s).";
+        
+    out.notes.emplace_back(
+        "This routine generates cumulative DVHs with absolute dose on the x-axis and fractional volume on the y-axis."
+    );
+        
+    out.notes.emplace_back(
+        "This routine will naively treat voxels of different size with the same weighting rather than weighting each"
+        " voxel using its spatial extent. This is done to improve precision and reduce numerical issues. If"
+        " necessary, resample images to have uniform spatial extent."
+    );
+        
+    out.notes.emplace_back(
+        "This routine uses image_arrays so convert dose_arrays beforehand."
+    );
+        
+    out.notes.emplace_back(
+        "This routine will combine spatially-overlapping images by summing voxel intensities. It will not"
+        " combine separate image_arrays though. If needed, you'll have to perform a meld on them beforehand."
+    );
 
 
     out.args.emplace_back();
@@ -102,20 +120,6 @@ OperationDoc OpArgDocEvaluateDoseVolumeHistograms(void){
 
 
 Drover EvaluateDoseVolumeHistograms(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string> /*InvocationMetadata*/, std::string FilenameLex){
-
-    // This operation evaluates dose-volume histograms for the selected ROI(s). 
-    //
-    // Note: This routine generates cumulative DVHs with absolute dose on the x-axis and fractional volume on the y-axis.
-    //
-    // Note: This routine will naively treat voxels of different size with the same weighting rather than weighting each
-    //       voxel using its spatial extent. This is done to improve precision and reduce numerical issues. If
-    //       necessary, resample images to have uniform spatial extent.
-    //
-    // Note: This routine uses image_arrays so convert dose_arrays beforehand.
-    //
-    // Note: This routine will combine spatially-overlapping images by summing voxel intensities. It will not
-    //       combine separate image_arrays though. If needed, you'll have to perform a meld on them beforehand.
-    //
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     auto OutFilename = OptArgs.getValueStr("OutFileName").value();

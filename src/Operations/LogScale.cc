@@ -22,14 +22,10 @@
 OperationDoc OpArgDocLogScale(void){
     OperationDoc out;
     out.name = "LogScale";
-    out.desc = "";
 
-    out.notes.emplace_back("");
-
-
-    //This operation log-scales pixels for all available image arrays. This functionality is often desired for viewing
-    // purposes, to make the pixel level changes appear more linear. Be weary of using for anything quantitative!
-    //
+    out.desc = 
+        "This operation log-scales pixels for all available image arrays. This functionality is often desired for viewing"
+        " purposes, to make the pixel level changes appear more linear. Be weary of using for anything quantitative!";
 
     out.args.emplace_back();
     out.args.back().name = "ImageSelection";

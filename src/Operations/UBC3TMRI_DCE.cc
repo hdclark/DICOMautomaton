@@ -27,9 +27,9 @@ template <class T> class contour_collection;
 OperationDoc OpArgDocUBC3TMRI_DCE(void){
     OperationDoc out;
     out.name = "UBC3TMRI_DCE";
-    out.desc = "";
+    out.desc = 
+        "This operation is used to generate dynamic contrast-enhanced MRI contrast enhancement maps.";
 
-    out.notes.emplace_back("");
     return out;
 }
 

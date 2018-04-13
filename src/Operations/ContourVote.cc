@@ -23,11 +23,23 @@
 OperationDoc OpArgDocContourVote(void){
     OperationDoc out;
     out.name = "ContourVote";
-    out.desc = "";
 
-    out.notes.emplace_back("");
-
-
+    out.desc = 
+        " This routine pits contours against one another using various criteria. A number of 'closest' or 'best' or"
+        " 'winning' contours are copied into a new contour collection with the specified ROILabel. The original ROIs are"
+        " not altered, even the winning ROIs.";
+        
+    out.notes.emplace_back(
+        "This operation considers individual contours only at the moment. It could be extended to operate on whole"
+        " ROIs (i.e., contour_collections), or to perform a separate vote within each ROI. The individual contour"
+        " approach was taken for relevance in 2D image (e.g., RTIMAGE) analysis."
+    );
+        
+    out.notes.emplace_back(
+        "This operation currently cannot perform voting on multiple criteria. Several criteria could be specified,"
+        " but an awkward weighting system would also be needed."
+    );
+        
 
     out.args.emplace_back();
     out.args.back().name = "WinnerROILabel";
@@ -98,17 +110,6 @@ OperationDoc OpArgDocContourVote(void){
 
 
 Drover ContourVote(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string> /*InvocationMetadata*/, std::string FilenameLex){
-    // This routine pits contours against one another using various criteria. A number of 'closest' or 'best' or
-    // 'winning' contours are copied into a new contour collection with the specified ROILabel. The original ROIs are
-    // not altered, even the winning ROIs.
-    //
-    // Note: This operation considers individual contours only at the moment. It could be extended to operate on whole
-    //       ROIs (i.e., contour_collections), or to perform a separate vote within each ROI. The individual contour
-    //       approach was taken for relevance in 2D image (e.g., RTIMAGE) analysis.
-    //
-    // Note: This operation currently cannot perform voting on multiple criteria. Several criteria could be specified,
-    //       but an awkward weighting system would also be needed.
-    //
 
     Explicator X(FilenameLex);
 

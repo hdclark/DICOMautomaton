@@ -27,13 +27,9 @@
 OperationDoc OpArgDocAutoCropImages(void){
     OperationDoc out;
     out.name = "AutoCropImages";
-    out.desc = "";
 
-    out.notes.emplace_back("");
-
-
-    // This operation crops image slices using image-specific metadata embedded within the image.
-    //
+    out.desc = 
+        "This operation crops image slices using image-specific metadata embedded within the image.";
 
     out.args.emplace_back();
     out.args.back().name = "ImageSelection";

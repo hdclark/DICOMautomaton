@@ -14,9 +14,8 @@
 OperationDoc OpArgDocPruneEmptyImageDoseArrays(void){
     OperationDoc out;
     out.name = "PruneEmptyImageDoseArrays";
-    out.desc = "";
+    out.desc = "This operation deletes Image_Arrays that do not contain any images.";
 
-    out.notes.emplace_back("");
     return out;
 }
 

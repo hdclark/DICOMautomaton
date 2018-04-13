@@ -22,9 +22,9 @@
 OperationDoc OpArgDocUBC3TMRI_IVIM_ADC(void){
     OperationDoc out;
     out.name = "UBC3TMRI_IVIM_ADC";
-    out.desc = "";
+    out.desc = 
+        "This operation is an experimental operation for processing IVIM MR images into ADC maps.";
 
-    out.notes.emplace_back("");
     return out;
 }
 

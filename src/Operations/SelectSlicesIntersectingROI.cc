@@ -19,16 +19,12 @@
 OperationDoc OpArgDocSelectSlicesIntersectingROI(void){
     OperationDoc out;
     out.name = "SelectSlicesIntersectingROI";
-    out.desc = "";
 
-    out.notes.emplace_back("");
-
-
-    // This operation applies a whitelist to the most-recently loaded images. Images must 'slice' through one of the
-    // described ROIs in order to make the whitelist.
-    //
-    // This operation is typically used to reduce long computations by trimming the field of view of extraneous image
-    // slices.
+    out.desc = 
+        "This operation applies a whitelist to the most-recently loaded images. Images must 'slice' through one of the"
+        " described ROIs in order to make the whitelist."
+        " This operation is typically used to reduce long computations by trimming the field of view of extraneous image"
+        " slices.";
 
 
     out.args.emplace_back();

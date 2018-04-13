@@ -17,9 +17,12 @@
 OperationDoc OpArgDocFVPicketFence(void){
     OperationDoc out;
     out.name = "FVPicketFence";
-    out.desc = "";
+    out.desc = "This operation performs a picket fence QA test using an RTIMAGE file.";
 
-    out.notes.emplace_back("");
+    out.notes.emplace_back(
+        "This is a 'simplified' version of the full picket fence analysis program that uses defaults"
+        " that are expected to be reasonable across a wide range of scenarios." 
+    );
 
 
     out.args.splice( out.args.end(), OpArgDocCropImages().args );

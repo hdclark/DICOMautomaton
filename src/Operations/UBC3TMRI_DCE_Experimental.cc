@@ -32,9 +32,9 @@ template <class T> class contour_collection;
 OperationDoc OpArgDocUBC3TMRI_DCE_Experimental(void){
     OperationDoc out;
     out.name = "UBC3TMRI_DCE_Experimental";
-    out.desc = "";
+    out.desc = 
+        "This operation is an experimental operation for processing dynamic contrast-enhanced MR images.";
 
-    out.notes.emplace_back("");
     return out;
 }
 

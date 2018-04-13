@@ -22,12 +22,8 @@
 OperationDoc OpArgDocModifyImageMetadata(void){
     OperationDoc out;
     out.name = "ModifyImageMetadata";
-    out.desc = "";
-
-    out.notes.emplace_back("");
-
-
-    // This operation injects metadata into images.
+    out.desc = 
+        "This operation injects metadata into images.";
 
     out.args.emplace_back();
     out.args.back().name = "ImageSelection";

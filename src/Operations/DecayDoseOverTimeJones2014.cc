@@ -28,6 +28,24 @@
 OperationDoc OpArgDocDecayDoseOverTimeJones2014(void){
     OperationDoc out;
     out.name = "DecayDoseOverTimeJones2014";
+
+    out.desc = 
+        "This operation transforms a dose map (assumed to be delivered some time in the past) to 'decay' or 'evaporate' or"
+        " 'forgive' some of the dose using the time-dependent model of Jones and Grant (2014;"
+        " doi:10.1016/j.clon.2014.04.027). This model is specific to reirradiation of central nervous tissues. See"
+        " the Jones and Grant paper or 'Nasopharyngeal Carcinoma' by Wai Tong Ng et al. (2016; doi:10.1007/174_2016_48) for"
+        " more information.";
+        
+    out.notes.emplace_back(
+        "This routine uses image_arrays so convert dose_arrays beforehand."
+    );
+        
+    out.notes.emplace_back(
+        "This routine will combine spatially-overlapping images by summing voxel intensities. So if you have a time"
+        " course it may be more sensible to aggregate images in some way (e.g., spatial averaging) prior to calling"
+        " this routine."
+    );
+
     out.desc = "";
 
     out.notes.emplace_back("");
@@ -136,19 +154,6 @@ OperationDoc OpArgDocDecayDoseOverTimeJones2014(void){
 
 
 Drover DecayDoseOverTimeJones2014(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string> /*InvocationMetadata*/, std::string FilenameLex){
-
-    // This operation transforms a dose map (assumed to be delivered some time in the past) to 'decay' or 'evaporate' or
-    // 'forgive' some of the dose using the time-dependent model of Jones and Grant (2014;
-    // doi:10.1016/j.clon.2014.04.027). This model is specific to reirradiation of central nervous tissues. See
-    // the Jones and Grant paper or 'Nasopharyngeal Carcinoma' by Wai Tong Ng et al. (2016; doi:10.1007/174_2016_48) for
-    // more information.
-    //
-    // Note: this routine uses image_arrays so convert dose_arrays beforehand.
-    //
-    // Note: this routine will combine spatially-overlapping images by summing voxel intensities. So if you have a time
-    //       course it may be more sensible to aggregate images in some way (e.g., spatial averaging) prior to calling
-    //       this routine.
-    //
 
     DecayDoseOverTimeUserData ud;
     ud.model = DecayDoseOverTimeMethod::Jones_and_Grant_2014; 

@@ -24,10 +24,22 @@
 OperationDoc OpArgDocDecayDoseOverTimeHalve(void){
     OperationDoc out;
     out.name = "DecayDoseOverTimeHalve";
-    out.desc = "";
 
-    out.notes.emplace_back("");
-
+    out.desc = 
+        "This operation transforms a dose map (assumed to be delivered some distant time in the past) to simulate 'decay'"
+        " or 'evaporation' or 'forgivance' of radiation dose by simply halving the value. This model is only appropriate "
+        " at long time-scales, but there is no cut-off or threshold to denote what is sufficiently 'long'. So use at "
+        " your own risk. As a rule of thumb, do not use this routine if fewer than 2-3y have elapsed.";
+        
+    out.notes.emplace_back(
+        "This routine uses image_arrays so convert dose_arrays beforehand."
+    );
+        
+    out.notes.emplace_back(
+        "This routine will combine spatially-overlapping images by summing voxel intensities. So if you have a time"
+        " course it may be more sensible to aggregate images in some way (e.g., spatial averaging) prior to calling"
+        " this routine."
+    );
 
 
     out.args.emplace_back();
@@ -64,18 +76,6 @@ OperationDoc OpArgDocDecayDoseOverTimeHalve(void){
 
 
 Drover DecayDoseOverTimeHalve(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string> /*InvocationMetadata*/, std::string FilenameLex){
-
-    // This operation transforms a dose map (assumed to be delivered some distant time in the past) to simulate 'decay'
-    // or 'evaporation' or 'forgivance' of radiation dose by simply halving the value. This model is only appropriate 
-    // at long time-scales, but there is no cut-off or threshold to denote what is sufficiently 'long'. So use at 
-    // your own risk. As a rule of thumb, do not use this routine if fewer than 2-3y have elapsed.
-    //
-    // Note: this routine uses image_arrays so convert dose_arrays beforehand.
-    //
-    // Note: this routine will combine spatially-overlapping images by summing voxel intensities. So if you have a time
-    //       course it may be more sensible to aggregate images in some way (e.g., spatial averaging) prior to calling
-    //       this routine.
-    //
 
     DecayDoseOverTimeUserData ud;
     ud.model = DecayDoseOverTimeMethod::Halve;

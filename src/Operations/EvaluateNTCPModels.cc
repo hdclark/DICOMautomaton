@@ -35,10 +35,34 @@
 OperationDoc OpArgDocEvaluateNTCPModels(void){
     OperationDoc out;
     out.name = "EvaluateNTCPModels";
-    out.desc = "";
 
-    out.notes.emplace_back("");
-
+    out.desc = 
+        "This operation evaluates a variety of NTCP models for each provided ROI. The selected ROI should be OARs."
+        " Currently the following are implemented:"
+        " (1) The LKB model."
+        " (2) The 'Fenwick' model for solid tumours (in the lung; for a whole-lung OAR).";
+        //" (3) Forthcoming: modified Equivalent Uniform Dose (mEUD) NTCP model.";
+        
+    out.notes.emplace_back(
+        "Generally these models require dose in 2Gy/fractions equivalents ('EQD2'). You must pre-convert the data"
+        " if the RT plan is not already 2Gy/fraction. There is no easy way to ensure this conversion has taken place"
+        " or was unnecessary."
+    );
+        
+    out.notes.emplace_back(
+        "This routine uses image_arrays so convert dose_arrays beforehand."
+    );
+        
+    out.notes.emplace_back(
+        "This routine will combine spatially-overlapping images by summing voxel intensities. So if you have a time"
+        " course it may be more sensible to aggregate images in some way (e.g., spatial averaging) prior to calling"
+        " this routine."
+    );
+        
+    out.notes.emplace_back(
+        "The LKB and mEUD both have their own gEUD 'alpha' parameter, but they are not necessarily shared."
+        " Huang et al. 2015 (doi:10.1038/srep18010) used alpha=1 for the LKB model and alpha=5 for the mEUD model."
+    );
 
 
     out.args.emplace_back();
@@ -191,26 +215,6 @@ OperationDoc OpArgDocEvaluateNTCPModels(void){
 
 
 Drover EvaluateNTCPModels(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string> /*InvocationMetadata*/, std::string FilenameLex){
-
-    // This operation evaluates a variety of NTCP models for each provided ROI. The selected ROI should be OARs.
-    // Currently the following are implemented:
-    //   - The LKB model.
-    //   - The "Fenwick" model for solid tumours (in the lung; for a whole-lung OAR).
-    //   - Forthcoming: modified Equivalent Uniform Dose (mEUD) NTCP model.
-    //   - ...TODO...
-    //
-    // Note: Generally these models require dose in 2Gy/fractions equivalents ("EQD2"). You must pre-convert the data
-    //       if the RT plan is not already 2Gy/fraction. There is no easy way to ensure this conversion has taken place
-    //       or was unnecessary.
-    //
-    // Note: This routine uses image_arrays so convert dose_arrays beforehand.
-    //
-    // Note: This routine will combine spatially-overlapping images by summing voxel intensities. So if you have a time
-    //       course it may be more sensible to aggregate images in some way (e.g., spatial averaging) prior to calling
-    //       this routine.
-    //
-    // Note: The LKB and mEUD both have their own gEUD 'alpha' parameter, but they are not necessarily shared.
-    //       Huang et al. 2015 (doi:10.1038/srep18010) used alpha=1 for the LKB model and alpha=5 for the mEUD model.
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     auto NTCPFileName = OptArgs.getValueStr("NTCPFileName").value();

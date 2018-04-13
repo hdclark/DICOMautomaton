@@ -20,10 +20,9 @@
 OperationDoc OpArgDocDumpROIDoseInfo(void){
     OperationDoc out;
     out.name = "DumpROIDoseInfo";
-    out.desc = "";
 
-    out.notes.emplace_back("");
-
+    out.desc = 
+        " This operation computes mean voxel doses with the given ROIs.";
 
     out.args.emplace_back();
     out.args.back().name = "ROILabelRegex";
@@ -43,9 +42,6 @@ OperationDoc OpArgDocDumpROIDoseInfo(void){
 }
 
 Drover DumpROIDoseInfo(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string> /*InvocationMetadata*/, std::string FilenameLex){
-
-    //This operation computes mean voxel doses with the given ROIs.
-    // 
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto ROILabelRegex = OptArgs.getValueStr("ROILabelRegex").value();

@@ -36,10 +36,37 @@
 OperationDoc OpArgDocEvaluateTCPModels(void){
     OperationDoc out;
     out.name = "EvaluateTCPModels";
-    out.desc = "";
 
-    out.notes.emplace_back("");
-
+    out.desc = 
+        " This operation evaluates a variety of TCP models for each provided ROI. The selected ROI should be the GTV"
+        " (according to the Fenwick model). Currently the following are implemented:"
+        " (1) The 'Martel' model."
+        " (2) Equivalent Uniform Dose (EUD) TCP."
+        " (3) The 'Fenwick' model for solid tumours.";
+        
+    out.notes.emplace_back(
+        "Generally these models require dose in 2Gy/fractions equivalents ('EQD2'). You must pre-convert the data"
+        " if the RT plan is not already 2Gy/fraction. There is no easy way to ensure this conversion has taken place"
+        " or was unnecessary."
+    );
+        
+    out.notes.emplace_back(
+        "This routine uses image_arrays so convert dose_arrays beforehand."
+    );
+        
+    out.notes.emplace_back(
+        "This routine will combine spatially-overlapping images by summing voxel intensities. So if you have a time"
+        " course it may be more sensible to aggregate images in some way (e.g., spatial averaging) prior to calling"
+        " this routine."
+    );
+        
+    out.notes.emplace_back(
+        "The Fenwick and Martel models share the value of D_{50}. There may be a slight difference in some cases."
+        " Huang et al. 2015 (doi:10.1038/srep18010) used both models and used 84.5 Gy for the Martel model while"
+        " using 84.6 Gy for the Fenwick model. (The paper also reported using a Fenwick 'm' of 0.329 whereas the"
+        " original report by Fenwick reported 0.392, so I don't think this should be taken as strong evidence of the"
+        " equality of D_{50}. However, the difference seems relatively insignificant.)"
+    );
 
 
     out.args.emplace_back();
@@ -224,29 +251,6 @@ OperationDoc OpArgDocEvaluateTCPModels(void){
 
 
 Drover EvaluateTCPModels(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string> /*InvocationMetadata*/, std::string FilenameLex){
-
-    // This operation evaluates a variety of TCP models for each provided ROI. The selected ROI should be the GTV
-    // (according to the Fenwick model). Currently the following are implemented:
-    //   - The "Martel" model.
-    //   - Equivalent Uniform Dose (EUD) TCP.
-    //   - The "Fenwick" model for solid tumours.
-    //   - ...TODO...
-    //
-    // Note: Generally these models require dose in 2Gy/fractions equivalents ("EQD2"). You must pre-convert the data
-    //       if the RT plan is not already 2Gy/fraction. There is no easy way to ensure this conversion has taken place
-    //       or was unnecessary.
-    //
-    // Note: This routine uses image_arrays so convert dose_arrays beforehand.
-    //
-    // Note: This routine will combine spatially-overlapping images by summing voxel intensities. So if you have a time
-    //       course it may be more sensible to aggregate images in some way (e.g., spatial averaging) prior to calling
-    //       this routine.
-    //
-    // Note: The Fenwick and Martel models share the value of D_{50}. There may be a slight difference in some cases.
-    //       Huang et al. 2015 (doi:10.1038/srep18010) used both models and used 84.5 Gy for the Martel model while
-    //       using 84.6 Gy for the Fenwick model. (The paper also reported using a Fenwick 'm' of 0.329 whereas the
-    //       original report by Fenwick reported 0.392, so I don't think this should be taken as strong evidence of the
-    //       equality of D_{50}. However, the difference seems relatively insignificant.)
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     auto TCPFileName = OptArgs.getValueStr("TCPFileName").value();

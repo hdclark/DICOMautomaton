@@ -25,10 +25,45 @@
 OperationDoc OpArgDocSeamContours(void){
     OperationDoc out;
     out.name = "SeamContours";
-    out.desc = "";
 
-    out.notes.emplace_back("");
-
+    out.desc = 
+        "This routine converts contours that represent 'outer' and 'inner' via contour orientation into contours that are"
+        " uniformly outer but have a zero-area seam connecting the inner and outer portions.";
+        
+    out.notes.emplace_back(
+        "This routine currently operates on all available ROIs."
+    );
+        
+    out.notes.emplace_back(
+        "This routine operates on one contour_collection at a time. It will combine contours that are in the same"
+        " contour_collection and overlap, even if they have different ROINames. Consider making a complementary routine"
+        " that partitions contours into ROIs based on ROIName (or other metadata) if more rigorous enforcement is needed."
+    );
+        
+    out.notes.emplace_back(
+        "This routine actually computes the XOR Boolean of contours that overlap. So if contours partially overlap,"
+        " this routine will treat the overlapping parts as if they are holes, and the non-overlapping parts as if they"
+        " represent the ROI. This behaviour may be surprising in some cases."
+    );
+        
+    out.notes.emplace_back(
+        "This routine will also treat overlapping contours with like orientation as if the smaller contour were a"
+        " hole of the larger contour."
+    );
+        
+    out.notes.emplace_back(
+        "This routine will ignore contour orientation if there is only a single contour. More specifically, for a"
+        " given ROI label, planes with a single contour will be unaltered."
+    );
+        
+    out.notes.emplace_back(
+        "Only the common metadata between outer and inner contours is propagated to the seamed contours."
+    );
+        
+    out.notes.emplace_back(
+        "This routine will NOT combine disconnected contours with a seam. Disconnected contours will remain"
+        " disconnected."
+    );
 
     return out;
 }
@@ -36,30 +71,7 @@ OperationDoc OpArgDocSeamContours(void){
 
 
 Drover SeamContours(Drover DICOM_data, OperationArgPkg, std::map<std::string,std::string>, std::string ){
-    // This routine converts contours that represent 'outer' and 'inner' via contour orientation into contours that are
-    // uniformly outer but have a zero-area seam connecting the inner and outer portions.
-    //
-    // Note: This routine currently operates on all available ROIs.
-    //
-    // Note: This routine operates on one contour_collection at a time. It will combine contours that are in the same
-    // contour_collection and overlap, even if they have different ROINames. Consider making a complementary routine
-    // that partitions contours into ROIs based on ROIName (or other metadata) if more rigorous enforcement is needed.
-    //
-    // Note: This routine actually computes the XOR Boolean of contours that overlap. So if contours partially overlap,
-    // this routine will treat the overlapping parts as if they are holes, and the non-overlapping parts as if they
-    // represent the ROI. This behaviour may be surprising in some cases.
-    //
-    // Note: This routine will also treat overlapping contours with like orientation as if the smaller contour were a
-    // hole of the larger contour.
-    // 
-    // Note: This routine will ignore contour orientation if there is only a single contour. More specifically, for a
-    // given ROI label, planes with a single contour will be unaltered.
-    //
-    // Note: Only the common metadata between outer and inner contours is propagated to the seamed contours.
-    //
-    // Note: This routine will NOT combine disconnected contours with a seam. Disconnected contours will remain
-    // disconnected.
-    //
+
     if(DICOM_data.contour_data == nullptr) return DICOM_data;
 
     //For identifying duplicate vertices later.

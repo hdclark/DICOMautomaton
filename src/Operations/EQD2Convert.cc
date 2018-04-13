@@ -24,16 +24,15 @@
 OperationDoc OpArgDocEQD2Convert(void){
     OperationDoc out;
     out.name = "EQD2Convert";
-    out.desc = "";
 
-    out.notes.emplace_back("");
-
-
-    // This operation performs a BED-based conversion to a dose-equivalent that would have 2Gy fractions.
-    //
-    // Note that this operation requires NumberOfFractions and cannot use DosePerFraction.
-    // The reasoning is that the DosePerFraction would need to be specified for each individual voxel;
-    // the prescription DosePerFraction is NOT the same as voxels outside the PTV.
+    out.desc = 
+        "This operation performs a BED-based conversion to a dose-equivalent that would have 2Gy fractions.";
+        
+    out.notes.emplace_back(
+        "This operation requires NumberOfFractions and cannot use DosePerFraction."
+        " The reasoning is that the DosePerFraction would need to be specified for each individual voxel;"
+        " the prescription DosePerFraction is NOT the same as voxels outside the PTV."
+    );
 
     out.args.emplace_back();
     out.args.back().name = "DoseImageSelection";

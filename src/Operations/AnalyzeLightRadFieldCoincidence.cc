@@ -39,25 +39,26 @@
 OperationDoc OpArgDocAnalyzeLightRadFieldCoincidence(void){
     OperationDoc out;
     out.name = "AnalyzeLightRadFieldCoincidence";
-    out.desc = "";
 
-    out.notes.emplace_back("");
-
-
-    // This operation analyzes the selected images to compare light and radiation field coincidence for fixed, symmetric
-    // field sizes. Coincidences are extracted automatically by fitting Gaussians to the peak nearest to one of the
-    // specified field boundaries and comparing offset from one another. So, for example, a 10x10cm MLC-defined field
-    // would be compared to a 15x15cm field if there are sharp edges (say, metal rulers) that define a 10x10cm field
-    // (i.e., considered to represent the light field). Horizontal and vertical directions (both positive and negative)
-    // are all analyzed separately.
-    //
-    // Note: This routine assumes both fields are squarely aligned with the image axes. Alignment need not be perfect,
-    //       but the Gaussians may be significantly broadened if there is misalignment. This should be fixed in a future
-    //       revision.
-    //
-    // Note: It is often useful to pre-process inputs by computing an in-image-plane derivative, gradient magnitude, or
-    //       similar (i.e., something to emphasize edges) before calling this routine. It may not be necessary, however.
-    //
+    out.desc = 
+        "This operation analyzes the selected images to compare light and radiation field coincidence for fixed, symmetric"
+        " field sizes. Coincidences are extracted automatically by fitting Gaussians to the peak nearest to one of the"
+        " specified field boundaries and comparing offset from one another. So, for example, a 10x10cm MLC-defined field"
+        " would be compared to a 15x15cm field if there are sharp edges (say, metal rulers) that define a 10x10cm field"
+        " (i.e., considered to represent the light field). Horizontal and vertical directions (both positive and negative)"
+        " are all analyzed separately.";
+        
+    out.notes.emplace_back(
+        "This routine assumes both fields are squarely aligned with the image axes. Alignment need not be perfect,"
+        " but the Gaussians may be significantly broadened if there is misalignment. This should be fixed in a future"
+        " revision."
+    );
+        
+    out.notes.emplace_back(
+        "It is often useful to pre-process inputs by computing an in-image-plane derivative, gradient magnitude, or"
+        " similar (i.e., something to emphasize edges) before calling this routine. It may not be necessary, however."
+    );
+        
 
     out.args.emplace_back();
     out.args.back().name = "ImageSelection";

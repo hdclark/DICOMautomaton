@@ -17,14 +17,14 @@
 OperationDoc OpArgDocDumpAnEncompassedPoint(void){
     OperationDoc out;
     out.name = "DumpAnEncompassedPoint";
-    out.desc = "";
+    out.desc = 
+        "This operation estimates the number of spatially-overlapping images. It finds an arbitrary point within an"
+        " arbitrary image, and then finds all other images which encompass the point.";
 
-    out.notes.emplace_back("");
     return out;
 }
 
 Drover DumpAnEncompassedPoint(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string,std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){
-    //Grab an arbitrary point from one of the images. Find all other images which encompass the point.
     const auto apoint = DICOM_data.image_data.front()->imagecoll.images.front().center();
     auto encompassing_images = DICOM_data.image_data.front()->imagecoll.get_images_which_encompass_point(apoint);
 

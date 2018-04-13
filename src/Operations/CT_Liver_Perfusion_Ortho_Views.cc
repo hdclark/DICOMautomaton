@@ -21,16 +21,17 @@
 OperationDoc OpArgDocCT_Liver_Perfusion_Ortho_Views (void){
     OperationDoc out;
     out.name = "CT_Liver_Perfusion_Ortho_Views ";
-    out.desc = "";
+    out.desc = 
+        "This operation performed dynamic contrast-enhanced CT perfusion image modeling on a time series image volume.";
 
-    out.notes.emplace_back("");
+    out.notes.emplace_back(
+        "Use this mode when you are only interested in oblique/orthogonal views."
+        " The point of this operation is to keep memory low so image sets can be compared."
+    );
     return out;
 }
 
 Drover CT_Liver_Perfusion_Ortho_Views (Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string,std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){
-
-    //Use this mode when you are only interested in oblique/orthogonal views.
-    // The point of this operation is to keep memory low so image sets can be compared.
 
     //Get handles for each of the original image arrays so we can easily refer to them later.
     std::vector<std::shared_ptr<Image_Array>> orig_img_arrays;

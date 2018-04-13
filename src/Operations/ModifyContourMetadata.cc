@@ -22,12 +22,9 @@
 OperationDoc OpArgDocModifyContourMetadata(void){
     OperationDoc out;
     out.name = "ModifyContourMetadata";
-    out.desc = "";
+    out.desc = 
+        "This operation injects metadata into contours.";
 
-    out.notes.emplace_back("");
-
-
-    // This operation injects metadata into contours.
 
     out.args.emplace_back();
     out.args.back().name = "NormalizedROILabelRegex";

@@ -14,14 +14,11 @@
 OperationDoc OpArgDocMeldDose(void){
     OperationDoc out;
     out.name = "MeldDose";
-    out.desc = "";
 
-    out.notes.emplace_back("");
-
-
-    // This operation melds all available dose image data. At a high level, dose melding sums overlapping pixel values
-    // for multi-part dose arrays. For more information about what this specifically entails, refer to the appropriate
-    // subroutine.
+    out.desc = 
+        "This operation melds all available dose image data. At a high level, dose melding sums overlapping pixel values"
+        " for multi-part dose arrays. For more information about what this specifically entails, refer to the appropriate"
+        " subroutine.";
 
     return out;
 }

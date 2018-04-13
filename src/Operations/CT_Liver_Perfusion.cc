@@ -36,9 +36,11 @@ template <class T> class contour_collection;
 OperationDoc OpArgDocCT_Liver_Perfusion(void){
     OperationDoc out;
     out.name = "CT_Liver_Perfusion";
-    out.desc = "";
+    out.desc = 
+        "This operation performed dynamic contrast-enhanced CT perfusion image modeling on a time series image volume.";
 
-    out.notes.emplace_back("");
+    out.notes.emplace_back("This routine is used for research purposes only.");
+
     return out;
 }
 

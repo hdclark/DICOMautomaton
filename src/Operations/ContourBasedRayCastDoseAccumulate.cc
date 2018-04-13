@@ -30,9 +30,9 @@
 OperationDoc OpArgDocContourBasedRayCastDoseAccumulate(void){
     OperationDoc out;
     out.name = "ContourBasedRayCastDoseAccumulate";
-    out.desc = "";
-
-    out.notes.emplace_back("");
+    out.desc = 
+        "This operation performs ray-casting to estimate the dose of a surface."
+        " The surface is represented as a set of contours (i.e., an ROI).";
 
 
     out.args.emplace_back();

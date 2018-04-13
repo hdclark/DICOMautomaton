@@ -19,20 +19,19 @@
 OperationDoc OpArgDocMaxMinPixels(void){
     OperationDoc out;
     out.name = "MaxMinPixels";
-    out.desc = "";
+    out.desc = 
+        "This operation replaces pixels with the pixel-wise difference (max)-(min).";
 
-    out.notes.emplace_back("");
     return out;
 }
 
 Drover MaxMinPixels(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string,std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){
 
-    //This operation replaces pixels with the pixel-wise difference (max)-(min).
     auto img_arr = DICOM_data.image_data.back();
     if(!img_arr->imagecoll.Process_Images_Parallel( GroupSpatiallyOverlappingImages,
                                            CondenseMaxMinPixel,
                                            {}, {} )){
-        FUNCERR("Unable to decimate pixels");
+        FUNCERR("Unable to max-min pixel values");
     }
 
     return DICOM_data;

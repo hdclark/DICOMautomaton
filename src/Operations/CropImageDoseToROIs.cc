@@ -23,13 +23,9 @@
 OperationDoc OpArgDocCropImageDoseToROIs(void){
     OperationDoc out;
     out.name = "CropImageDoseToROIs";
-    out.desc = "";
 
-    out.notes.emplace_back("");
-
-
-    // This operation crops image and/or dose array slices to the specified ROI(s), with an additional margin.
-    //
+    out.desc = 
+        " This operation crops image and/or dose array slices to the specified ROI(s), with an additional margin.";
 
     out.args.emplace_back();
     out.args.back().name = "DICOMMargin";

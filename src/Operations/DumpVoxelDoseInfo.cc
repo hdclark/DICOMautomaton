@@ -19,21 +19,19 @@
 OperationDoc OpArgDocDumpVoxelDoseInfo(void){
     OperationDoc out;
     out.name = "DumpVoxelDoseInfo";
-    out.desc = "";
 
-    out.notes.emplace_back("");
-
+    out.desc = 
+        "This operation locates the minimum and maximum dose voxel values. It is useful for estimating prescription doses.";
+        
+    out.notes.emplace_back(
+        "This implementation makes use of an older way of estimating dose. Please"
+        " verify it works (or re-write using the new methods) before using for anything important."
+    );
 
     return out;
 }
 
 Drover DumpVoxelDoseInfo(Drover DICOM_data, OperationArgPkg , std::map<std::string,std::string>, std::string ){
-
-    //This operation locates the minimum and maximum dose voxel values. It is useful for estimating prescription doses.
-    // 
-    // Note: This implementation makes use of the 'old' way as implemented in the Drover class via melding dose. Please
-    //       verify it works (or re-write using the new methods) before using for anything important.
-    //
 
     double themin = std::numeric_limits<double>::infinity();
     double themax = -(std::numeric_limits<double>::infinity());

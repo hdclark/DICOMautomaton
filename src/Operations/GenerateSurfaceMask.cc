@@ -22,9 +22,9 @@
 OperationDoc OpArgDocGenerateSurfaceMask(void){
     OperationDoc out;
     out.name = "GenerateSurfaceMask";
-    out.desc = "";
-
-    out.notes.emplace_back("");
+    out.desc = 
+        "This operation generates a surface image mask, which contains information about whether each voxel is"
+        " within, on, or outside the selected ROI(s).";
 
 
     out.args.emplace_back();

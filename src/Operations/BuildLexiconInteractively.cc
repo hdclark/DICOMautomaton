@@ -25,9 +25,9 @@
 OperationDoc OpArgDocBuildLexiconInteractively(void){
     OperationDoc out;
     out.name = "BuildLexiconInteractively";
-    out.desc = "";
-
-    out.notes.emplace_back("");
+    out.desc = 
+        "This operation interactively builds a lexicon using the currently loaded contour labels."
+        " It is useful for constructing a domain-specific lexicon from a set of representative data.";
 
 
     out.args.emplace_back();
@@ -85,8 +85,7 @@ OperationDoc OpArgDocBuildLexiconInteractively(void){
 
 Drover BuildLexiconInteractively(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string>, std::string){
 
-    //This operation interactively builds a lexicon using the currently loaded contour labels.
-    // 
+        
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto CleanLabelsStr       = OptArgs.getValueStr("CleanLabels").value();

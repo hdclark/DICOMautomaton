@@ -20,9 +20,12 @@
 OperationDoc OpArgDocContouringAides(void){
     OperationDoc out;
     out.name = "ContouringAides";
-    out.desc = "";
+    out.desc = "This operation attempts to prepare an image for easier contouring.";
 
-    out.notes.emplace_back("");
+    out.notes.emplace_back(
+        "At the moment, only logarithmic scaling is applied."
+    );
+
     return out;
 }
 

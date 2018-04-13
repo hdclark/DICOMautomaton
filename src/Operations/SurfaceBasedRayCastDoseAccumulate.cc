@@ -122,10 +122,17 @@
 OperationDoc OpArgDocSurfaceBasedRayCastDoseAccumulate(void){
     OperationDoc out;
     out.name = "SurfaceBasedRayCastDoseAccumulate";
-    out.desc = "";
 
-    out.notes.emplace_back("");
-
+    out.desc = 
+        "This routine uses rays (actually: line segments) to estimate point-dose on the surface of an ROI. The ROI is "
+        " approximated by surface mesh and rays are passed through. Dose is interpolated at the intersection points and"
+        " intersecting lines (i.e., where the ray 'glances' the surface) are discarded. The surface reconstruction can be"
+        " tweaked, but appear to reasonably approximate the ROI contours; both can be output to compare visually."
+        " Though it is not required by the implementation, only the ray-surface intersection nearest to the detector is"
+        " considered. All other intersections (i.e., on the far side of the surface mesh) are ignored."
+        " This routine is fairly fast compared to the slow grid-based counterpart previously implemented. The speedup comes"
+        " from use of an AABB-tree to accelerate intersection queries and avoid having to 'walk' rays step-by-step through"
+        " over/through the geometry.";
 
 
     out.args.emplace_back();
@@ -364,20 +371,6 @@ OperationDoc OpArgDocSurfaceBasedRayCastDoseAccumulate(void){
 
 
 Drover SurfaceBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string> /*InvocationMetadata*/, std::string FilenameLex){
-    //
-    // This routine uses rays (actually: line segments) to estimate point-dose on the surface of an ROI. The ROI is 
-    // approximated by surface mesh and rays are passed through. Dose is interpolated at the intersection points and
-    // intersecting lines (i.e., where the ray 'glances' the surface) are discarded. The surface reconstruction can be
-    // tweaked, but appear to reasonably approximate the ROI contours; both can be output to compare visually.
-    //
-    // Though it is not required by the implementation, only the ray-surface intersection nearest to the detector is
-    // considered. All other intersections (i.e., on the far side of the surface mesh) are ignored.
-    //
-    // This routine is fairly fast compared to the slow grid-based counterpart previously implemented. The speedup comes
-    // from use of an AABB-tree to accelerate intersection queries and avoid having to 'walk' rays step-by-step through
-    // over/through the geometry. 
-    //
-
     //---------------------------------------------- User Parameters --------------------------------------------------
     auto TotalDoseMapFileName = OptArgs.getValueStr("TotalDoseMapFileName").value();
     auto IntersectionCountMapFileName = OptArgs.getValueStr("IntersectionCountMapFileName").value();

@@ -35,9 +35,26 @@
 OperationDoc OpArgDocEvaluateDoseVolumeStats(void){
     OperationDoc out;
     out.name = "EvaluateDoseVolumeStats";
-    out.desc = "";
 
-    out.notes.emplace_back("");
+    out.desc = 
+        R"***(This operation evaluates a variety of Dose-Volume statistics. It is geared toward PTV ROIs.)***"
+        R"***( Currently the following are implemented:)***"
+        R"***( (1) Dose Homogeneity Index: H = (D_{2%} - D_{98%})/D_{median} | over one or more PTVs, where)***"
+        R"***( D_{2%} is the maximum dose that covers 2% of the volume of the PTV, and)***"
+        R"***( D_{98%} is the minimum dose that covers 98% of the volume of the PTV. )***"
+        R"***( (2) Conformity Number: C = V_{T,pres}^{2} / ( V_{T} * V_{pres} ) where)***"
+        R"***( V_{T,pres} is the PTV volume receiving at least 95% of the PTV prescription dose,)***"
+        R"***( V_{T} is the volume of the PTV, and)***"
+        R"***( V_{pres} is volume of all (tissue) voxels receiving at least 95% of the PTV prescription dose.)***";
+        
+    out.notes.emplace_back(
+        "This routine uses image_arrays so convert dose_arrays beforehand."
+    );
+        
+    out.notes.emplace_back(
+        "This routine will combine spatially-overlapping images by summing voxel intensities. It will not"
+        " combine separate image_arrays though. If needed, you'll have to perform a meld on them beforehand."
+    );
 
 
 
@@ -125,22 +142,6 @@ OperationDoc OpArgDocEvaluateDoseVolumeStats(void){
 
 
 Drover EvaluateDoseVolumeStats(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string> /*InvocationMetadata*/, std::string FilenameLex){
-
-    // This operation evaluates a variety of Dose-Volume statistics. It is geared toward PTV ROIs.
-    // Currently the following are implemented:
-    //   - Dose Homogeneity Index: H = (D_{2%} - D_{98%})/D_{median} | over one or more PTVs, where
-    //       D_{2%} is the maximum dose that covers 2% of the volume of the PTV, and
-    //       D_{98%} is the minimum dose that covers 98% of the volume of the PTV. 
-    //   - Conformity Number: C = V_{T,pres}^{2} / ( V_{T} * V_{pres} ) where
-    //       V_{T,pres} is the PTV volume receiving at least 95% of the PTV prescription dose,
-    //       V_{T} is the volume of the PTV, and
-    //       V_{pres} is volume of all (tissue) voxels receiving at least 95% of the PTV prescription dose.
-    //
-    // Note: This routine uses image_arrays so convert dose_arrays beforehand.
-    //
-    // Note: This routine will combine spatially-overlapping images by summing voxel intensities. It will not
-    //       combine separate image_arrays though. If needed, you'll have to perform a meld on them beforehand.
-    //
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     auto OutFilename = OptArgs.getValueStr("OutFileName").value();

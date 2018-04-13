@@ -23,17 +23,16 @@
 OperationDoc OpArgDocAverage(void){
     OperationDoc out;
     out.name = "Average";
-    out.desc = "";
 
-    out.notes.emplace_back("");
+    out.desc = 
+        "This operation averages image or dose volumes. It can average over spatial or temporal dimensions. However, rather than"
+        " relying specifically on time for temporal averaging, any images that have overlapping voxels can be averaged.";
 
-
-    // This operation averages image or dose volumes. It can average over spatial or temporal dimensions. However, rather than
-    // relying specifically on time for temporal averaging, any images that have overlapping voxels can be averaged.
-    //
-    // This operation is typically used to create an aggregate view of a large volume of data. It may also increase SNR
-    // and can be used for contouring purposes.
-    //
+    out.notes.emplace_back(
+        "This operation is typically used to create an aggregate view of a large volume of data. It may also increase SNR"
+        " and can be used for contouring purposes."
+    );
+        
 
     out.args.emplace_back();
     out.args.back().name = "DoseImageSelection";

@@ -24,6 +24,24 @@
 OperationDoc OpArgDocDCEMRI_Nonparametric_CE(void){
     OperationDoc out;
     out.name = "DCEMRI_Nonparametric_CE";
+
+    out.desc = 
+        "This operation takes a single DCE-MRI scan ('measurement') and generates a \"poor-mans's\" contrast enhancement"
+        " signal. This is accomplished by subtracting the pre-contrast injection images average ('baseline') from later"
+        " images (and then possibly/optionally averaging relative to the baseline).";
+        
+    out.notes.emplace_back(
+        "Only a single image volume is required. It is expected to have temporal sampling beyond the contrast injection"
+        " timepoint (or some default value -- currently around ~30s). The resulting images retain the baseline portion, so"
+        " you'll need to trim yourself if needed."
+    );
+        
+    out.notes.emplace_back(
+        "Be aware that this method of deriving contrast enhancement is not valid! It ignores nuances due to differing T1"
+        " or T2 values due to the presence of contrast agent. It should only be used for exploratory purposes or cases"
+        " where the distinction with reality is irrelevant."
+    );
+
     out.desc = "";
 
     out.notes.emplace_back("");
@@ -31,19 +49,6 @@ OperationDoc OpArgDocDCEMRI_Nonparametric_CE(void){
 }
 
 Drover DCEMRI_Nonparametric_CE(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string,std::string> InvocationMetadata, std::string /*FilenameLex*/){
-
-    //This operation takes a single DCE-MRI scan ('measurement') and generates a "poor-mans's" contrast enhancement
-    // signal. This is accomplished by subtracting the pre-contrast injection images average ('baseline') from later
-    // images (and then possibly/optionally averaging relative to the baseline).
-    //
-    // Only a single image volume is required. It is expected to have temporal sampling beyond the contrast injection
-    // timepoint (or some default value -- currently around ~30s). The resulting images retain the baseline portion, so
-    // you'll need to trim yourself if needed.
-    //
-    // Be aware that this method of deriving contrast enhancement is not valid! It ignores nuances due to differing T1
-    // or T2 values due to the presence of contrast agent. It should only be used for exploratory purposes or cases
-    // where the distinction with reality is irrelevant.
-    //
 
     //Verify there is data to work on.
     if( DICOM_data.image_data.empty() ){

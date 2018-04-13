@@ -42,10 +42,8 @@
 OperationDoc OpArgDocCT_Liver_Perfusion_Pharmaco_1C2I_Reduced3Param(void){
     OperationDoc out;
     out.name = "CT_Liver_Perfusion_Pharmaco_1C2I_Reduced3Param";
-    out.desc = "";
-
-    out.notes.emplace_back("");
-
+    out.desc = 
+        "This operation performed dynamic contrast-enhanced CT perfusion image modeling on a time series image volume.";
 
     out.args.emplace_back();
     out.args.back().name = "AIFROINameRegex";

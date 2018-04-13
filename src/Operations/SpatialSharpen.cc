@@ -23,12 +23,9 @@
 OperationDoc OpArgDocSpatialSharpen(void){
     OperationDoc out;
     out.name = "SpatialSharpen";
-    out.desc = "";
 
-    out.notes.emplace_back("");
-
-
-    // This operation 'sharpens' pixels (within the plane of the image only) using the specified estimator.
+    out.desc = 
+        "This operation 'sharpens' pixels (within the plane of the image only) using the specified estimator.";
 
     out.args.emplace_back();
     out.args.back().name = "ImageSelection";

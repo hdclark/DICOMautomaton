@@ -24,20 +24,17 @@
 OperationDoc OpArgDocSupersampleImageGrid(void){
     OperationDoc out;
     out.name = "SupersampleImageGrid";
-    out.desc = "";
 
-    out.notes.emplace_back("");
-
-
-    // This operation scales supersamples images so they have more rows and/or columns, but the whole image keeps its
-    // shape and spatial extent.
-    //
-    // This operation is typically used for zooming into images or trying to ensure a sufficient number of voxels are
-    // within small contours.
-    //
-    // Note: Be aware that specifying large multipliers (or even small multipliers on large images) will consume much
-    //       memory. It is best to pre-crop images to a region of interest if possible.
-    //
+    out.desc = 
+        " This operation scales supersamples images so they have more rows and/or columns, but the whole image keeps its"
+        " shape and spatial extent."
+        " This operation is typically used for zooming into images or trying to ensure a sufficient number of voxels are"
+        " within small contours.";
+        
+    out.notes.emplace_back(
+        "Be aware that specifying large multipliers (or even small multipliers on large images) will consume much"
+        " memory. It is best to pre-crop images to a region of interest if possible."
+    );
 
     out.args.emplace_back();
     out.args.back().name = "ColumnScaleFactor";

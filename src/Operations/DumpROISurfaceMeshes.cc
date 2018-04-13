@@ -162,10 +162,10 @@ static void dump_reconstruction(const Reconstruction &reconstruct, std::string n
 OperationDoc OpArgDocDumpROISurfaceMeshes(void){
     OperationDoc out;
     out.name = "DumpROISurfaceMeshes";
-    out.desc = "";
 
-    out.notes.emplace_back("");
-
+    out.desc = 
+        " This operation generates surface meshes from contour volumes. Output is written to file(s) for viewing with an"
+        " external viewer (e.g., meshlab).";
 
     out.args.emplace_back();
     out.args.back().name = "OutDir";
@@ -194,10 +194,6 @@ OperationDoc OpArgDocDumpROISurfaceMeshes(void){
 }
 
 Drover DumpROISurfaceMeshes(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string>, std::string ){
-
-    //This operation generates surface meshes from contour volumes. Output is written to file(s) for viewing with an
-    // external viewer (e.g., meshlab).
-    // 
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto OutDir = OptArgs.getValueStr("OutDir").value();

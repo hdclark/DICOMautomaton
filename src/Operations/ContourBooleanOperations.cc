@@ -26,11 +26,30 @@
 OperationDoc OpArgDocContourBooleanOperations(void){
     OperationDoc out;
     out.name = "ContourBooleanOperations";
-    out.desc = "";
 
-    out.notes.emplace_back("");
-
-
+    out.desc = 
+        "This routine performs 2D Boolean operations on user-provided sets of ROIs. The ROIs themselves are planar"
+        " contours embedded in R^3, but the Boolean operation is performed once for each 2D plane where the selected ROIs"
+        " reside. This routine can only perform Boolean operations on co-planar contours. This routine can operate on"
+        " single contours (rather than ROIs composed of several contours) by simply presenting this routine with a single"
+        " contour to select.";
+        
+    out.notes.emplace_back(
+        "This routine DOES support disconnected ROIs, such as left- and right-parotid contours that have been"
+        " joined into a single 'parotids' ROI."
+    );
+        
+    out.notes.emplace_back(
+        "Many Boolean operations can produce contours with holes. This operation currently connects the interior"
+        " and exterior with a seam so that holes can be represented by a single polygon (rather than a separate hole"
+        " polygon). It *is* possible to export holes as contours with a negative orientation, but this was not needed when"
+        " writing."
+    );
+        
+    out.notes.emplace_back(
+        "Only the common metadata between contours is propagated to the product contours."
+    );
+        
 
     out.args.emplace_back();
     out.args.back().name = "ROILabelRegexA";
@@ -101,22 +120,6 @@ OperationDoc OpArgDocContourBooleanOperations(void){
 
 
 Drover ContourBooleanOperations(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string> /*InvocationMetadata*/, std::string FilenameLex){
-    // This routine performs 2D Boolean operations on user-provided sets of ROIs. The ROIs themselves are planar
-    // contours embedded in R^3, but the Boolean operation is performed once for each 2D plane where the selected ROIs
-    // reside. This routine can only perform Boolean operations on co-planar contours. This routine can operate on
-    // single contours (rather than ROIs composed of several contours) by simply presenting this routine with a single
-    // contour to select. 
-    //
-    // Note that this routine DOES support disconnected ROIs, such as left- and right-parotid contours that have been
-    // joined into a single 'parotids' ROI.
-    //
-    // Note that many Boolean operations can produce contours with holes. This operation currently connects the interior
-    // and exterior with a seam so that holes can be represented by a single polygon (rather than a separate hole
-    // polygon). It *is* possible to export holes as contours with a negative orientation, but this was not needed when
-    // writing.
-    //
-    // Note that only the common metadata between contours is propagated to the product contours.
-    //
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto ROILabelRegexA = OptArgs.getValueStr("ROILabelRegexA").value();
