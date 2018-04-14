@@ -26,6 +26,7 @@
 #include <Wt/WTable.h>
 #include <Wt/WTableCell.h>
 #include <Wt/WText.h>
+#include <Wt/WTextArea.h>
 #include <Wt/WWidget.h>
 #include <Wt/WAnimation.h>
 
@@ -476,13 +477,29 @@ void BaseWebServerApplication::createOperationSelectorGB(void){
 
     (void*) gb->addWidget(std::make_unique<Wt::WBreak>());
 
-    auto selector = gb->addWidget(std::make_unique<Wt::WSelectionBox>());
+    auto selectcont = gb->addWidget(std::make_unique<Wt::WContainerWidget>());
+    selectcont->addStyleClass("SelectorCont");
+
+    auto selector = selectcont->addWidget(std::make_unique<Wt::WSelectionBox>());
     selector->setObjectName("op_select_gb_selector");
     //selector->setSelectionMode(Wt::ExtendedSelection);
+    selector->addStyleClass("OperationSelector");
     selector->setVerticalSize(15);
     selector->disable();
 
-    (void*) gb->addWidget(std::make_unique<Wt::WBreak>());
+    auto desccont = selectcont->addWidget(std::make_unique<Wt::WContainerWidget>());
+    desccont->addStyleClass("OperationSelectorDescriptionPanel");
+
+    auto descpanel = desccont->addWidget(std::make_unique<Wt::WTextArea>());
+    descpanel->setObjectName("op_select_gb_descpanel");
+    //descpanel->addStyleClass("OperationSelectorDescriptionPanel");
+    descpanel->setRows(15);
+    descpanel->setColumns(40);
+
+    {
+        auto brk = gb->addWidget(std::make_unique<Wt::WBreak>());
+        brk->addStyleClass("ClearFix");
+    }
 
     auto feedback = gb->addWidget(std::make_unique<Wt::WText>());
     feedback->setObjectName("op_select_gb_feedback");
@@ -507,8 +524,7 @@ void BaseWebServerApplication::createOperationSelectorGB(void){
         }
     }
     selector->enable();
-
-    (void*) gb->addWidget(std::make_unique<Wt::WBreak>());
+    descpanel->enable();
 
     auto gobutton = gb->addWidget(std::make_unique<Wt::WPushButton>("Proceed"));
 
@@ -523,12 +539,32 @@ void BaseWebServerApplication::createOperationSelectorGB(void){
 
         selector->disable();
         gobutton->disable();
+        descpanel->disable();
         //this->createROISelectorGB();
         this->createOperationParamSelectorGB();
         return;
     };
     gobutton->clicked().connect(std::bind(proceed));
     selector->doubleClicked().connect(std::bind(proceed));
+
+    auto describe = [=](){
+        const std::string selected_op = selector->currentText().toUTF8();
+        std::stringstream ss;
+        for(auto &anop : known_ops){
+            const auto n = anop.first;
+            if( n == selected_op ){
+                auto op_docs = (anop.second.first)();
+                ss << op_docs.desc << std::endl;
+                for(auto &note : op_docs.notes){
+                    ss << std::endl;
+                    ss << "Note: " << note << std::endl;
+                }
+            }
+        }
+        descpanel->setText(Wt::WString(ss.str()));
+        return;
+    };
+    selector->activated().connect(std::bind(describe));
 
     this->processEvents();
     sep_break->setFocus(true);
@@ -1063,6 +1099,7 @@ void BaseWebServerApplication::createComputeGB(void){
 
                                          "op_select_gb",
                                          "op_select_gb_selector",
+                                         "op_select_gb_descpanel",
                                          "op_select_gb_feedback",
 
                                          "roi_select_gb",

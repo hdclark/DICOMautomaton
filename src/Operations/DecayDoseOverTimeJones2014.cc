@@ -46,11 +46,6 @@ OperationDoc OpArgDocDecayDoseOverTimeJones2014(void){
         " this routine."
     );
 
-    out.desc = "";
-
-    out.notes.emplace_back("");
-
-
 
     out.args.emplace_back();
     out.args.back().name = "NormalizedROILabelRegex";

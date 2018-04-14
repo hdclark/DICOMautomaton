@@ -42,9 +42,6 @@ OperationDoc OpArgDocDCEMRI_Nonparametric_CE(void){
         " where the distinction with reality is irrelevant."
     );
 
-    out.desc = "";
-
-    out.notes.emplace_back("");
     return out;
 }
 

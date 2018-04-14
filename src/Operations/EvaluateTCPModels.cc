@@ -38,7 +38,7 @@ OperationDoc OpArgDocEvaluateTCPModels(void){
     out.name = "EvaluateTCPModels";
 
     out.desc = 
-        " This operation evaluates a variety of TCP models for each provided ROI. The selected ROI should be the GTV"
+        "This operation evaluates a variety of TCP models for each provided ROI. The selected ROI should be the GTV"
         " (according to the Fenwick model). Currently the following are implemented:"
         " (1) The 'Martel' model."
         " (2) Equivalent Uniform Dose (EUD) TCP."

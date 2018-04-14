@@ -26,9 +26,9 @@
 OperationDoc OpArgDocDumpROIData(void){
     OperationDoc out;
     out.name = "DumpROIData";
+
     out.desc = "This operation dumps ROI contour information for debugging and quick inspection purposes.";
 
-    out.notes.emplace_back("");
     return out;
 }
 

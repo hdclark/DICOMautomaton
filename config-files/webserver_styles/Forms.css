@@ -30,6 +30,23 @@ button {
     float: right;
 }
 
+.OperationSelector {
+    display: block;
+    /*float: left;*/
+    /*margin-left: 2em;*/
+    height: auto;
+    width: auto;
+}
+
+.OperationSelectorDescriptionPanel {
+    display: block;
+    /*float: left;*/
+    margin-left: 2em;
+    /*margin-right: 2em;*/
+    height: auto;
+    width: 100%;
+}
+
 .InstructionText {
     display: block;
     color: DarkGreen; 
@@ -40,6 +57,18 @@ button {
     /* float: left; */
     /* color: Indigo; */
     background: rgba(255,255,100,0.25);
+}
+
+.SelectorCont {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    align-items: center;
+    align-content: center;
+    margin-left: 2em;
+    margin-right: 2em;
+    margin-bottom: 2em;
 }
 
 .DownloadLink {
