@@ -52,6 +52,7 @@ button {
     width: auto;
     font-size: 0.85em;
     flex-grow: 100;
+    /*border: 0px solid black;*/
 }
 
 .OperationSelectorDescriptionPanel {
@@ -132,6 +133,14 @@ thead th:nth-of-type(odd) {
     background: rgba(255,255,100,0.25);
 }
 
+thead {
+    font-size: 0.9em;
+}
+
+tbody {
+    font-size: 0.8em;
+}
+
 th, td {
     padding: 5px;
 }
@@ -144,3 +153,8 @@ img {
     height: auto;
 }
 
+input {
+    width: 100%;
+    box-sizing: border-box;
+    border: 0px solid black;
+}
