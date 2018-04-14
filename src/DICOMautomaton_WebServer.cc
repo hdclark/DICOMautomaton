@@ -1009,13 +1009,16 @@ void BaseWebServerApplication::createComputeGB(void){
         }
 
         (void *) gb->addWidget(std::make_unique<Wt::WBreak>());
-        auto outparamname = gb->addWidget(std::make_unique<Wt::WText>(HumanParamName));
+
+        auto pnamecont = gb->addWidget(std::make_unique<Wt::WContainerWidget>());
+        pnamecont->addStyleClass("ParameterNameCont");
+
+        auto outparamname = pnamecont->addWidget(std::make_unique<Wt::WText>(HumanParamName));
         outparamname->addStyleClass("OutputParameterName");
-        (void *) gb->addWidget(std::make_unique<Wt::WText>(" "));
 
         Wt::WLink fr_link = Wt::WLink(fr);
         fr_link.setTarget(Wt::LinkTarget::Self);
-        auto dllink = gb->addWidget(std::make_unique<Wt::WAnchor>(fr_link, "download"_s));
+        auto dllink = pnamecont->addWidget(std::make_unique<Wt::WAnchor>(fr_link, "download"_s));
         dllink->addStyleClass("DownloadLink");
 
 
@@ -1041,7 +1044,6 @@ void BaseWebServerApplication::createComputeGB(void){
                 ++row;
             }
 
-            (void*) gb->addWidget(std::make_unique<Wt::WBreak>());
             table->enable();
             table->animateShow(this->anim);
 
@@ -1066,16 +1068,11 @@ void BaseWebServerApplication::createComputeGB(void){
 
         // If the file is an image, display it.
         if(OutputMimetype[param_name] == "image/png"){
-            (void *) gb->addWidget(std::make_unique<Wt::WBreak>());
             auto img = gb->addWidget(std::make_unique<Wt::WImage>(Wt::WLink(fr)));
             img->setAlternateText("Output image.");
             img->hide();
             img->animateShow(this->anim);
-
-            (void*) gb->addWidget(std::make_unique<Wt::WBreak>());
         }
-
-        (void *) gb->addWidget(std::make_unique<Wt::WBreak>());
     }
     this->processEvents();
 

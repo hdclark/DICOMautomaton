@@ -1,8 +1,8 @@
 
 body {
     display: block;
-    width: 50%;
-    min-width: 25em;
+    width: 60%;
+    min-width: 30em;
     margin-left: auto;
     margin-right: auto;
 }
@@ -81,10 +81,22 @@ button {
     color: DarkGreen; 
 }
 
+.ParameterNameCont {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    justify-content: space-between;
+    align-items: baseline;
+    align-content: center;
+    font-size: 0.9em;
+    background: moccasin;
+    margin-top: 1em;
+    margin-bottom: 1em;
+}
+
 .OutputParameterName {
     display: block;
     /* color: Indigo; */
-    background: rgba(255,255,100,0.25);
 }
 
 .DownloadLink {
@@ -131,6 +143,10 @@ tr:hover {
     background-color: rgba(210,105,100,0.15);
 }
 
+tr {
+    border-top: 0.1px solid moccasin;
+}
+
 tbody td:nth-of-type(even),
 thead th:nth-of-type(even) {
     background: rgba(100,200,255,0.15);
@@ -143,6 +159,7 @@ thead th:nth-of-type(odd) {
 
 thead {
     font-size: 0.9em;
+    background-color: papayawhip;
 }
 
 tbody {
@@ -153,9 +170,16 @@ th, td {
     padding: 5px;
 }
 
+table {
+    margin-top: 1em;
+    margin-bottom: 1em;
+}
+
 img {
     margin-left: auto;
     margin-right: auto;
+    margin-top: 1em;
+    margin-bottom: 1em;
     display: block;
     max-width: 100%;
     height: auto;
