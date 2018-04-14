@@ -490,11 +490,9 @@ void BaseWebServerApplication::createOperationSelectorGB(void){
     auto desccont = selectcont->addWidget(std::make_unique<Wt::WContainerWidget>());
     desccont->addStyleClass("OperationSelectorDescriptionPanel");
 
-    auto descpanel = desccont->addWidget(std::make_unique<Wt::WTextArea>());
+    auto descpanel = desccont->addWidget(std::make_unique<Wt::WText>());
     descpanel->setObjectName("op_select_gb_descpanel");
     //descpanel->addStyleClass("OperationSelectorDescriptionPanel");
-    descpanel->setRows(15);
-    descpanel->setColumns(40);
 
     {
         auto brk = gb->addWidget(std::make_unique<Wt::WBreak>());
@@ -554,10 +552,16 @@ void BaseWebServerApplication::createOperationSelectorGB(void){
             const auto n = anop.first;
             if( n == selected_op ){
                 auto op_docs = (anop.second.first)();
-                ss << op_docs.desc << std::endl;
-                for(auto &note : op_docs.notes){
-                    ss << std::endl;
-                    ss << "Note: " << note << std::endl;
+                ss << "<p>" << op_docs.desc << "</p>";
+                if(!op_docs.notes.empty()){
+                    ss << "<p>Notes: <ul>" << std::endl;
+                    for(auto &note : op_docs.notes){
+                        ss << "<li>"
+                           << note
+                           << "</li>"
+                           << std::endl;
+                    }
+                    ss << "</ul></p>";
                 }
             }
         }
