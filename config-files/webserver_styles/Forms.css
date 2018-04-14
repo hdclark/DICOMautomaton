@@ -14,20 +14,31 @@ button {
 }
 
 .Title {
-    display: block;
+    display: flex;
     font-size: 1.75em;
     margin-top: 1em;
     margin-bottom: 1em;
     margin-left: 0;
     margin-right: 0;
     font-weight: bold;
-    float: left;
 }
 
 .Homepage {
-    display: block;
+    display: flex;
     font-size: 0.8em;
-    float: right;
+    text-decoration: italic;
+}
+
+.HeaderCont {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    justify-content: space-around;
+    align-items: baseline;
+    align-content: center;
+    margin-left: 0.5em;
+    margin-right: 0.5em;
+    margin-bottom: 0em;
 }
 
 .SelectorCont {
@@ -44,7 +55,6 @@ button {
 
 .OperationSelector {
     display: block;
-    /*float: left;*/
     margin-left: 0em;
     margin-right: 0em;
     font-size: 0.8em;
@@ -57,7 +67,6 @@ button {
 
 .OperationSelectorDescriptionPanel {
     display: block;
-    /*float: left;*/
     margin-left: 2em;
     /*margin-right: 2em;*/
     height: auto;
@@ -74,7 +83,6 @@ button {
 
 .OutputParameterName {
     display: block;
-    /* float: left; */
     /* color: Indigo; */
     background: rgba(255,255,100,0.25);
 }

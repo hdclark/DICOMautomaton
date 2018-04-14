@@ -234,13 +234,16 @@ BaseWebServerApplication::BaseWebServerApplication(const Wt::WEnvironment &env) 
     this->useStyleSheet("webserver_styles/Forms.css");
     setTitle("DICOMautomaton Web Services");
     {
-        auto title = root()->addWidget(std::make_unique<Wt::WText>("DICOMautomaton Web Services"));
+        auto headercont = root()->addWidget(std::make_unique<Wt::WContainerWidget>());
+        headercont->addStyleClass("HeaderCont");
+
+        auto title = headercont->addWidget(std::make_unique<Wt::WText>("DICOMautomaton Web Services"));
         title->addStyleClass("Title");
 
         auto homeurl = Wt::WLink("http://www.halclark.ca/");
         homeurl.setTarget(Wt::LinkTarget::NewWindow);
 
-        auto hpage = root()->addWidget(std::make_unique<Wt::WAnchor>(homeurl, "halclark.ca"));
+        auto hpage = headercont->addWidget(std::make_unique<Wt::WAnchor>(homeurl, "halclark.ca"));
         hpage->addStyleClass("Homepage");
 
         auto brk = root()->addWidget(std::make_unique<Wt::WBreak>());
