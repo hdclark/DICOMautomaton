@@ -125,6 +125,7 @@ button {
 
 .DataEntryGroupBlock {
     display: block;
+    animation: inplace-fade 1.0s ease-in-out;
 }
 
 .DataEntryGroupBlock legend {
@@ -173,20 +174,61 @@ th, td {
 table {
     margin-top: 1em;
     margin-bottom: 1em;
+    animation: inplace-fade 1.0s ease-in-out;
 }
 
 img {
+    display: block;
     margin-left: auto;
     margin-right: auto;
     margin-top: 1em;
     margin-bottom: 1em;
-    display: block;
     max-width: 100%;
     height: auto;
+    animation: inplace-fade 1.0s ease-in-out;
+
+    /* For hover animations. */
+    z-index: 2;
+    position: relative;
+    transition: transform 0.25s ease;
+}
+
+img:hover {
+    -ms-transform: scale(1.5);
+    -webkit-transform: scale(1.5);
+    -moz-transform: scale(1.5);
+    transform: scale(1.5);
+}
+
+.ImageHoverOverlay { /* This class obscures the background when hovering over images. */
+    display: block;
+    background-color: rgba(0,0,0,0);
+    width: 0px;
+    min-height: 0px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1;
+    transition: height 0s, width 0s, background-color 0.25s ease;
+}
+
+img:hover ~ .ImageHoverOverlay {
+    width: 100%;
+    min-height: 100%;
+    background-color: rgba(0,0,0,0.9);
 }
 
 input {
     width: 100%;
     box-sizing: border-box;
     border: 0px solid black;
+}
+
+@keyframes inplace-fade {
+    0% {
+        opacity: 0;
+    }
+    100% {
+        opacity: 1;
+    }
 }

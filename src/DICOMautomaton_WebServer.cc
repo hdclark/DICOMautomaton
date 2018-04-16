@@ -189,8 +189,7 @@ class BaseWebServerApplication : public Wt::WApplication {
     Wt::WAnimation anim = Wt::WAnimation( 
                               Wt::AnimationEffect::Fade,
                               Wt::TimingFunction::Ease,
-                              //Wt::TimingFunction::Linear,
-                              1000 ); // animation time in ms.
+                              0 ); // animation time in ms.
 
     //void createInvocationMetadataGB(void);
     void createFileUploadGB(void);
@@ -485,7 +484,7 @@ void BaseWebServerApplication::createOperationSelectorGB(void){
 
     auto selector = selectcont->addWidget(std::make_unique<Wt::WSelectionBox>());
     selector->setObjectName("op_select_gb_selector");
-    //selector->setSelectionMode(Wt::ExtendedSelection);
+    selector->setSelectionMode(Wt::SelectionMode::Single);
     selector->addStyleClass("OperationSelector");
     selector->setVerticalSize(15);
     selector->disable();
@@ -495,7 +494,6 @@ void BaseWebServerApplication::createOperationSelectorGB(void){
 
     auto descpanel = desccont->addWidget(std::make_unique<Wt::WText>());
     descpanel->setObjectName("op_select_gb_descpanel");
-    //descpanel->addStyleClass("OperationSelectorDescriptionPanel");
 
     {
         auto brk = gb->addWidget(std::make_unique<Wt::WBreak>());
@@ -752,8 +750,6 @@ void BaseWebServerApplication::createOperationParamSelectorGB(void){
     auto feedback = gb->addWidget(std::make_unique<Wt::WText>());
     feedback->setObjectName("op_paramspec_gb_feedback");
     feedback->addStyleClass("FeedbackText");
-
-//    (void*) gb->addWidget(std::make_unique<Wt::WBreak>());
 
     auto gobutton = gb->addWidget(std::make_unique<Wt::WPushButton>("Proceed"));
 
@@ -1069,16 +1065,18 @@ void BaseWebServerApplication::createComputeGB(void){
         // If the file is an image, display it.
         if(OutputMimetype[param_name] == "image/png"){
             auto img = gb->addWidget(std::make_unique<Wt::WImage>(Wt::WLink(fr)));
-            img->setAlternateText("Output image.");
+            img->setAlternateText("Generated image.");
             img->hide();
-            img->animateShow(this->anim);
+            img->show(); // Do not use this->anim. CSS :hover animations are sequential, so flicker results.
+
+            // This is a CSS sibling class for <image> that obscures the background when hovering over images.
+            auto overlay = gb->addWidget(std::make_unique<Wt::WContainerWidget>());
+            overlay->addStyleClass("ImageHoverOverlay");
         }
     }
     this->processEvents();
 
     // ---
-
-//    (void*) gb->addWidget(std::make_unique<Wt::WBreak>());
 
     auto gobutton = gb->addWidget(std::make_unique<Wt::WPushButton>("Perform another operation"));
 
