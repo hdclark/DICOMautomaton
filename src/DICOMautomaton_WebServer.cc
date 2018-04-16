@@ -186,10 +186,6 @@ class BaseWebServerApplication : public Wt::WApplication {
     std::regex normroiregex = std::regex(".*normalized.*roi.*label.*regex.*", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
     
     // --------------------- Web widget shared functors ---------------------
-    Wt::WAnimation anim = Wt::WAnimation( 
-                              Wt::AnimationEffect::Fade,
-                              Wt::TimingFunction::Ease,
-                              0 ); // animation time in ms.
 
     //void createInvocationMetadataGB(void);
     void createFileUploadGB(void);
@@ -327,10 +323,8 @@ void BaseWebServerApplication::createFileUploadGB(void){
 
     fileup->uploaded().connect(this, &BaseWebServerApplication::filesUploaded);
 
-    this->processEvents();
+    gb->show();
     sep_break->setFocus(true);
-    gb->animateShow(this->anim);
-    this->processEvents();
     upbutton->setCanReceiveFocus(true);
     upbutton->setFocus(true);
     this->processEvents();
@@ -403,10 +397,8 @@ void BaseWebServerApplication::filesUploaded(void){
         auto sep_break = root()->addWidget(std::make_unique<Wt::WBreak>());
         sep_break->setCanReceiveFocus(true);
 
-        this->processEvents();
+        gb->show();
         sep_break->setFocus(true);
-        gb->animateShow(this->anim);
-        this->processEvents();
         gb->setCanReceiveFocus(true);
         gb->setFocus(true);
         gb->setFocus(false);
@@ -571,10 +563,8 @@ void BaseWebServerApplication::createOperationSelectorGB(void){
     };
     selector->activated().connect(std::bind(describe));
 
-    this->processEvents();
+    gb->show();
     sep_break->setFocus(true);
-    gb->animateShow(this->anim);
-    this->processEvents();
     gobutton->setCanReceiveFocus(true);
     gobutton->setFocus(true);
     this->processEvents();
@@ -776,10 +766,8 @@ void BaseWebServerApplication::createOperationParamSelectorGB(void){
         return;
     }));
 
-    this->processEvents();
+    gb->show();
     sep_break->setFocus(true);
-    gb->animateShow(this->anim);
-    this->processEvents();
     gb->setCanReceiveFocus(true);
     gb->setFocus(true);
     gb->setFocus(false);
@@ -806,10 +794,8 @@ void BaseWebServerApplication::createComputeGB(void){
     auto sep_break = root()->addWidget(std::make_unique<Wt::WBreak>());
     sep_break->setCanReceiveFocus(true);
 
-    this->processEvents();
+    gb->show();
     sep_break->setFocus(true);
-    gb->animateShow(this->anim);
-    this->processEvents();
     gb->setCanReceiveFocus(true);
     gb->setFocus(true);
     gb->setFocus(false);
@@ -979,10 +965,8 @@ void BaseWebServerApplication::createComputeGB(void){
     }
     feedback->setText("<p>Operation successful. </p>");
 
-    this->processEvents();
+    gb->show();
     sep_break->setFocus(true);
-    gb->animateShow(this->anim);
-    this->processEvents();
     gb->setCanReceiveFocus(true);
     gb->setFocus(true);
     gb->setFocus(false);
@@ -1041,7 +1025,7 @@ void BaseWebServerApplication::createComputeGB(void){
             }
 
             table->enable();
-            table->animateShow(this->anim);
+            table->show();
 
             // If the table is large, hide it behind a toggle button.
             if( (table->rowCount() > 10) || (table->columnCount() > 4) ){
@@ -1050,10 +1034,10 @@ void BaseWebServerApplication::createComputeGB(void){
                 ttbutton->clicked().connect(std::bind([=](){
                     //ttbutton->disable();
                     if( table->isHidden() ){
-                        table->animateShow(this->anim);
+                        table->show();
                         ttbutton->setText("Hide table");
                     }else{
-                        table->animateHide(this->anim);
+                        table->hide();
                         ttbutton->setText("Show table");
                     }
                     this->processEvents();
@@ -1067,7 +1051,7 @@ void BaseWebServerApplication::createComputeGB(void){
             auto img = gb->addWidget(std::make_unique<Wt::WImage>(Wt::WLink(fr)));
             img->setAlternateText("Generated image.");
             img->hide();
-            img->show(); // Do not use this->anim. CSS :hover animations are sequential, so flicker results.
+            img->show();
 
             // This is a CSS sibling class for <image> that obscures the background when hovering over images.
             auto overlay = gb->addWidget(std::make_unique<Wt::WContainerWidget>());
@@ -1125,10 +1109,8 @@ void BaseWebServerApplication::createComputeGB(void){
         return;
     }));
 
-    this->processEvents();
+    gb->show();
     sep_break->setFocus(true);
-    gb->animateShow(this->anim);
-    this->processEvents();
     gobutton->setCanReceiveFocus(true);
     gobutton->setFocus(true);
     this->processEvents();
