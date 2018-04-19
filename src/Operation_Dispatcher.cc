@@ -80,6 +80,7 @@
 #include "Operations/GiveWholeImageArrayAnAbdominalWindowLevel.h"
 #include "Operations/GridBasedRayCastDoseAccumulate.h"
 #include "Operations/GrowContours.h"
+#include "Operations/GroupImages.h"
 #include "Operations/HighlightROIs.h"
 #include "Operations/ImageRoutineTests.h"
 #include "Operations/LogScale.h"
@@ -179,6 +180,7 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["GiveWholeImageArrayAnAbdominalWindowLevel"] = std::make_pair(OpArgDocGiveWholeImageArrayAnAbdominalWindowLevel, GiveWholeImageArrayAnAbdominalWindowLevel);
     out["GridBasedRayCastDoseAccumulate"] = std::make_pair(OpArgDocGridBasedRayCastDoseAccumulate, GridBasedRayCastDoseAccumulate);
     out["GrowContours"] = std::make_pair(OpArgDocGrowContours, GrowContours);
+    out["GroupImages"] = std::make_pair(OpArgDocGroupImages, GroupImages);
     out["HighlightROIs"] = std::make_pair(OpArgDocHighlightROIs, HighlightROIs);
     out["ImageRoutineTests"] = std::make_pair(OpArgDocImageRoutineTests, ImageRoutineTests);
     out["LogScale"] = std::make_pair(OpArgDocLogScale, LogScale);
