@@ -27,7 +27,16 @@ OperationDoc OpArgDocDumpROIContours(void){
     out.name = "DumpROIContours";
 
     out.desc = 
-        "This operation exports contours in a standard surface mesh format.";
+        "This operation exports contours in a standard surface mesh format (structured ASCII Wavefront OBJ)"
+        " in planar polygon format. A companion material library file (MTL) assigns colours to each ROI to help"
+        " differentiate them.";
+
+    out.notes.emplace_back(
+        "Contours that are grouped together into a contour_collection are treated as a logical within the output."
+        " For example, all contours in a collection will share a common material property (e.g., colour)."
+        " If more fine-grained grouping is required, this routine can be called once for each group which will"
+        " result in a logical grouping of one ROI per file."
+    );
 
     out.args.emplace_back();
     out.args.back().name = "DumpFileName";
@@ -113,7 +122,6 @@ Drover DumpROIContours(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std:
     {
         std::ofstream FO(MTLFileName, std::fstream::out);
 
-
         const auto write_mat = [&](const std::string &name,
                                    const vec3<double> &c_amb,
                                    const vec3<double> &c_dif,
@@ -138,7 +146,6 @@ Drover DumpROIContours(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std:
         //write_mat("Red",     vec3<double>(1.0, 0.0, 0.0), vec3<double>(1.0, 0.0, 0.0), vec3<double>(1.0, 0.0, 0.0), 10.0, 0.9);
         //write_mat("Green",   vec3<double>(0.0, 1.0, 0.0), vec3<double>(0.0, 1.0, 0.0), vec3<double>(0.0, 1.0, 0.0), 10.0, 0.9);
         //write_mat("Blue",    vec3<double>(0.0, 0.0, 1.0), vec3<double>(0.0, 0.0, 1.0), vec3<double>(0.0, 0.0, 1.0), 10.0, 0.9);
-
 
         // From 'http://stackoverflow.com/questions/470690/how-to-automatically-generate-n-distinct-colors' on 20160919
         // which originate from: Kelly, Kenneth L. "Twenty-two colors of maximum contrast." Color Engineering 3.26 (1965): 26-27.
