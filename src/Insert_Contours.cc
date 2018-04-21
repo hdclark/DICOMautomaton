@@ -18,7 +18,12 @@
 void Inject_Thin_Line_Contour( const planar_image<float,double> &animg,
                                line<double> aline, // The line to insert.
                                contour_collection<double> &dest, // Where to put the contours.
-                               std::map<std::string, std::string> metadata ){
+                               std::map<std::string, std::string> metadata,
+                               double c_thickness ){ // The contour thickness.
+
+    if(!std::isfinite(c_thickness)){
+        c_thickness = (1E-4) * std::min(animg.pxl_dx, animg.pxl_dy); // Small relative to the image features.
+    }
 
     // Enclose the image with a sphere (i.e., a convenient geometrical shape for computing intersections).
     const auto img_C = animg.center();
@@ -49,7 +54,7 @@ void Inject_Thin_Line_Contour( const planar_image<float,double> &animg,
     const auto perp = img_ortho.Cross( aline.U_0 ).unit();
 
     // Split the intersection points by a small amount, to give the line a small width.
-    const auto perp_p = perp * (1E-4) * std::min(animg.pxl_dx, animg.pxl_dy);
+    const auto perp_p = perp * c_thickness * 0.5;
     const auto IO0p = IO0 + perp_p;
     const auto IO0m = IO0 - perp_p;
     const auto IO1p = IO1 + perp_p;

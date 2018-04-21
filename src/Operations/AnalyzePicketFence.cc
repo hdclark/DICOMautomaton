@@ -958,7 +958,8 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
                     Inject_Thin_Line_Contour(*animg,
                                              junction_line,
                                              DICOM_data.contour_data->ccs.back(),
-                                             contour_metadata);
+                                             contour_metadata,
+                                             2.0*(ThresholdDistance * SADToSID) );
                 }catch(const std::exception &){};
             }
         }
