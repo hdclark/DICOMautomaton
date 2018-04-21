@@ -13,9 +13,10 @@
 #include "YgorMath.h"
 
 
+
 //Injects contours that mimic the provided line.
 void Inject_Thin_Line_Contour( const planar_image<float,double> &animg,
-                               line<double> aline, // The line to plot.
+                               line<double> aline, // The line to insert.
                                contour_collection<double> &dest, // Where to put the contours.
                                std::map<std::string, std::string> metadata ){
 
@@ -63,35 +64,63 @@ void Inject_Thin_Line_Contour( const planar_image<float,double> &animg,
     c.points.emplace_back( IO1m );
 
     // Trim the contour to the image bounding volume.
-    auto corners = animg.corners2D();
-    auto itA = corners.begin();
-    auto itB = std::next(corners.begin(),3);
-    while(itA != corners.end()){
-        //Form a plane that points inward using two adjacent vertices.
-        const auto N = (*itB - *itA).unit();
-        const auto R0 = *itA;
-        plane<double> bndry(N, R0);
+    contour_collection<double> cc({c});
+    auto clipped = animg.clip_to_volume(cc);
 
-        auto splits = c.Split_Along_Plane(bndry);
-        splits.remove_if([=](const contour_of_points<double> &cop) -> bool {
-            const auto avg = cop.Average_Point();
-            return (!bndry.Is_Point_Above_Plane(avg));
-        });
-
-        // It might be possible that several contours emerge, possibly due to numerical ambiguities.
-        // If this happens, you'll have to use a shuttle list here instead of a single cop.
-        if(splits.size() != 1) throw std::logic_error("Contour broke into several parts. Cannot continue.");
-        c = splits.front();
-
-        itB = itA;
-        ++itA;
+    for(auto &c : clipped.contours){
+        if(c.points.size() >= 3){
+            dest.contours.emplace_back(c);
+            dest.contours.back().Reorient_Counter_Clockwise();
+            dest.contours.back().closed = true;
+            dest.contours.back().metadata = metadata;
+        }
     }
-
-    dest.contours.emplace_back(c);
-    dest.contours.back().Reorient_Counter_Clockwise();
-    dest.contours.back().closed = true;
-    dest.contours.back().metadata = metadata;
 
     return;
 };
 
+//Injects contours that mimic the provided point.
+void Inject_Point_Contour( const planar_image<float,double> &animg,
+                           vec3<double> apoint, // The point to insert.
+                           contour_collection<double> &dest, // Where to put the contours.
+                           std::map<std::string, std::string> metadata,
+                           double radius,
+                           long int num_verts){
+
+    // Project the points onto the (central) plane of the image.
+    const auto img_plane = animg.image_plane();
+    const auto proj = img_plane.Project_Onto_Plane_Orthogonally(apoint);
+
+    const auto row_unit = animg.row_unit;
+    const auto col_unit = animg.col_unit;
+
+    // Split the intersection points by a small amount, to give the line a small width.
+    if(!std::isfinite(radius)){
+        radius = std::max(animg.pxl_dx, animg.pxl_dy); // Something reasonable relative to the image features.
+    }
+    if(num_verts < 3) throw std::logic_error("This routine requires >=3 vertices for approximations."); 
+
+    // Add the vertices and metadata to a new contour.
+    contour_of_points<double> c;
+    c.closed = true;
+    for(long int n = 0; n < num_verts; ++n){
+        const auto angle = 2.0 * M_PI * static_cast<double>(n) / static_cast<double>(num_verts);
+        c.points.emplace_back( proj + row_unit * std::cos(angle) * radius
+                                    + col_unit * std::sin(angle) * radius );
+    }
+
+    // Trim the contours to the (rectangular) bounding box.
+    contour_collection<double> cc({c});
+    auto clipped = animg.clip_to_volume(cc);
+
+    for(auto &c : clipped.contours){
+        if(c.points.size() >= 3){
+            dest.contours.emplace_back(c);
+            dest.contours.back().Reorient_Counter_Clockwise();
+            dest.contours.back().closed = true;
+            dest.contours.back().metadata = metadata;
+        }
+    }
+
+    return;
+};

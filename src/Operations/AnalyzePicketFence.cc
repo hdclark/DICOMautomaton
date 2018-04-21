@@ -93,10 +93,19 @@ OperationDoc OpArgDocAnalyzePicketFence(void){
     out.args.back().desc = "An ROI imitating the junction is created. This is the label to apply to it."
                       " Note that the junctions are modeled with thin contour rectangles of virtually zero"
                       " area.";
-    out.args.back().default_val = "Junctions";
+    out.args.back().default_val = "Junction";
     out.args.back().expected = true;
-    out.args.back().examples = { "Junctions",
-                            "Picket_Fence_Junction" };
+    out.args.back().examples = { "Junction",
+                                 "Picket_Fence_Junction" };
+
+    out.args.emplace_back();
+    out.args.back().name = "PeakROILabel";
+    out.args.back().desc = "ROIs encircling the leaf profile peaks are created. This is the label to apply to it."
+                      " Note that the peaks are modeled with small squares.";
+    out.args.back().default_val = "Peak";
+    out.args.back().expected = true;
+    out.args.back().examples = { "Peak",
+                                 "Picket_Fence_Peak" };
 
     out.args.emplace_back();
     out.args.back().name = "MinimumJunctionSeparation";
@@ -170,6 +179,7 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
 
     const auto MLCROILabel = OptArgs.getValueStr("MLCROILabel").value();
     const auto JunctionROILabel = OptArgs.getValueStr("JunctionROILabel").value();
+    const auto PeakROILabel = OptArgs.getValueStr("PeakROILabel").value();
 
     const auto MinimumJunctionSeparation = std::stod( OptArgs.getValueStr("MinimumJunctionSeparation").value() );
 
@@ -196,6 +206,7 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
 
     const auto NormalizedMLCROILabel = X(MLCROILabel);
     const auto NormalizedJunctionROILabel = X(JunctionROILabel);
+    const auto NormalizedPeakROILabel = X(PeakROILabel);
 
     const auto InteractivePlots = std::regex_match(InteractivePlotsStr, regex_true);
 
@@ -240,6 +251,7 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
         const auto NaN_vec = vec3<double>(NaN, NaN, NaN);
 
         const std::string JunctionLineColour = "blue";
+        const std::string PeakLineColour = "black";
 
         {
             auto Modality     = animg->GetMetadataValueAs<std::string>("Modality").value_or("");
@@ -643,6 +655,8 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
         long int failed_leaf_count = 0;
         long int worst_leaf_pair = -1;
         double worst_discrepancy = 0.0;
+
+        DICOM_data.contour_data->ccs.emplace_back();
         {
             for(size_t i = 0; i < leaf_lines.size(); ++i){
                 const auto leaf_line = leaf_lines[i];
@@ -651,24 +665,21 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
                 //
                 // Note: We permit junction and leaf axes to be non-orthogonal, so have to test
                 //       for the intersection point for each junction each time.
-                std::vector<double> leaf_junction_int;
+                std::vector<vec3<double>> leaf_junction_int;
                 for(const auto &junction_line : junction_lines){
                     // Find the intersection point in 3D.
-                    auto R = NaN_vec;
-                    if(!leaf_line.Closest_Point_To_Line(junction_line, R)) R = NaN_vec;
-                    if(!R.isfinite()) throw std::runtime_error("Cannot compute leaf-junction intersection.");
+                    auto lj_int = NaN_vec;
+                    if(!leaf_line.Closest_Point_To_Line(junction_line, lj_int)) lj_int = NaN_vec;
+                    if(!lj_int.isfinite()) throw std::runtime_error("Cannot compute leaf-junction intersection.");
 
                     // If the point is not within the image bounds, ignore it.
                     const auto orig_pxl_dz = animg->pxl_dz;
                     animg->pxl_dz = 1.0; // Ensure there is some thickness.
-                    const auto within_img = animg->encompasses_point(R);
+                    const auto within_img = animg->encompasses_point(lj_int);
                     animg->pxl_dz = orig_pxl_dz;
                     if(!within_img) continue;
 
-                    // Project the point into the same 2D space as the leaf profiles.
-                    const auto rel_R = (R - corner_R);
-                    const auto l = rel_R.Dot(leaf_axis);
-                    leaf_junction_int.push_back(l);
+                    leaf_junction_int.emplace_back(lj_int);
                 }
                 if(leaf_junction_int.empty()) continue;
 
@@ -676,7 +687,12 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
                 //Determine the true peak location in the vicinity of the junction.
                 std::vector<double> peak_offsets;
                 std::vector<double> peak_spreads;
-                for(const auto &nominal_peak : leaf_junction_int){
+                for(const auto &lj_int : leaf_junction_int){
+
+                    // Project the point into the same 2D space as the leaf profiles.
+                    const auto rel_R = (lj_int - corner_R);
+                    const auto nominal_peak = rel_R.Dot(leaf_axis); // = an offset projected along the leaf axis.
+
                     const auto SearchDistance = 0.5*min_junction_sep;
                     const auto vicinity = leaf_profiles[i].Select_Those_Within_Inc(nominal_peak - SearchDistance,
                                                                                    nominal_peak + SearchDistance);
@@ -716,7 +732,9 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
                         est_peaks.emplace_back( 0.5 * (c_mmx.second[0] + c_mmx.first[0]) );
                         est_spread.emplace_back( c_mmx.second[0] - c_mmx.first[0] );
                     }
-                    const auto peak_offset = Stats::Median(est_peaks) - nominal_peak;
+                    const auto est_peak = Stats::Median(est_peaks);
+                    const auto peak_offset = est_peak - nominal_peak;
+                    const auto peak_actual = lj_int + (leaf_axis * peak_offset); // R^3 position of peak.
                     const auto peak_spread = Stats::Median(est_spread);
 
                     if(std::isfinite(peak_offset) && std::isfinite(peak_spread)){
@@ -728,6 +746,24 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
                                                         "vicinity used for peak detection",
                                                         std::vector<std::pair<std::string,std::string>>({{"1:2","lines"}}) );
                         }
+                    }
+
+                    // Draw a small contour to indicate the position of the peak.
+                    {
+                        auto contour_metadata = animg->metadata;
+                        contour_metadata["ROIName"] = PeakROILabel;
+                        contour_metadata["NormalizedROIName"] = NormalizedPeakROILabel;
+                        contour_metadata["OutlineColour"] = PeakLineColour;
+                        const auto radius = 2.0 * std::max(animg->pxl_dx, animg->pxl_dy); // Something reasonable relative to the image features.
+                        const long int num_verts = 4; // Squares.
+                        try{
+                            Inject_Point_Contour(*animg,
+                                                 peak_actual,
+                                                 DICOM_data.contour_data->ccs.back(),
+                                                 contour_metadata,
+                                                 radius,
+                                                 num_verts );
+                        }catch(const std::exception &){};
                     }
                 }
 
