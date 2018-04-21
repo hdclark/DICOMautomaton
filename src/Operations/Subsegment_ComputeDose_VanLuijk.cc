@@ -192,7 +192,39 @@ OperationDoc OpArgDocSubsegment_ComputeDose_VanLuijk(void){
     out.args.back().default_val = "1.0;0.0";
     out.args.back().expected = true;
     out.args.back().examples = { "0.50;0.50", "0.50;0.0", "0.30;0.0", "0.30;0.70" };
+
+
+    out.args.emplace_back();
+    out.args.back().name = "FractionalTolerance";
+    out.args.back().desc = "The tolerance of X, Y, and Z fractional area bisection criteria"
+                           " (see ZSelection description)."
+                           " This parameter specifies a stopping condition for the bisection procedure."
+                           " If it is set too high, sub-segments may be inadequatly rough."
+                           " If it is set too low, bisection below the machine precision floor may be attempted,"
+                           " which will result in instabilities."
+                           " Note that the number of permitted iterations will control whether this tolerance"
+                           " can possibly be reached; if strict adherence is required, set the maximum number"
+                           " of iterations to be excessively large.";
+    out.args.back().default_val = "0.001";
+    out.args.back().expected = true;
+    out.args.back().examples = { "1E-2", "1E-3", "1E-4", "1E-5" };
     
+
+
+    out.args.emplace_back();
+    out.args.back().name = "MaxBisects";
+    out.args.back().desc = "The maximum number of iterations the bisection procedure can perform."
+                           " This parameter specifies a stopping condition for the bisection procedure."
+                           " If it is set too low, sub-segments may be inadequatly rough."
+                           " If it is set too high, bisection below the machine precision floor may be attempted,"
+                           " which will result in instabilities."
+                           " Note that the fractional tolerance will control whether this tolerance"
+                           " can possibly be reached; if an exact number of iterations is required, set"
+                           " the fractional tolerance to be excessively small.";
+    out.args.back().default_val = "20";
+    out.args.back().expected = true;
+    out.args.back().examples = { "10", "20", "30" };
+
     return out;
 }
 
@@ -213,6 +245,9 @@ Drover Subsegment_ComputeDose_VanLuijk(Drover DICOM_data, OperationArgPkg OptArg
     const auto XSelectionStr = OptArgs.getValueStr("XSelection").value();
     const auto YSelectionStr = OptArgs.getValueStr("YSelection").value();
     const auto ZSelectionStr = OptArgs.getValueStr("ZSelection").value();
+
+    const auto FractionalTolerance = std::stod( OptArgs.getValueStr("FractionalTolerance").value() );
+    const auto MaxBisects = std::stol( OptArgs.getValueStr("MaxBisects").value() );
 
     //-----------------------------------------------------------------------------------------------------------------
     const auto theregex = std::regex(ROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
@@ -335,16 +370,12 @@ Drover Subsegment_ComputeDose_VanLuijk(Drover DICOM_data, OperationArgPkg OptArg
     //This routine returns a pair of planes that approximately encompass the desired interior volume. The ROIs are not
     // altered. The lower plane is the first element of the pair. This routine can be applied to any contour_collection
     // and the planes can also be applied to any contour_collection.
-    const auto bisect_ROIs = [](const contour_collection<double> &ROIs,
-                                const vec3<double> &planar_normal,
-                                double SelectionLower,
-                                double SelectionUpper) -> 
-                                    std::pair<plane<double>, plane<double>> {
-
-
-        // Bisection parameters. It usually converges quickly but can get stuck, so cap the max_iters fairly low.
-        const double acceptable_deviation = 0.001; //Deviation from desired_total_area_fraction_above_plane.
-        const size_t max_iters = 20; //If the tolerance cannot be reached after this many iters, report the current plane as-is.
+    const auto bisect_ROIs = [FractionalTolerance,MaxBisects](
+                                 const contour_collection<double> &ROIs,
+                                 const vec3<double> &planar_normal,
+                                 double SelectionLower,
+                                 double SelectionUpper) -> 
+                                     std::pair<plane<double>, plane<double>> {
 
         if(ROIs.contours.empty()) throw std::logic_error("Unable to split empty contour collection.");
         size_t iters_taken = 0;
@@ -354,8 +385,8 @@ Drover Subsegment_ComputeDose_VanLuijk(Drover DICOM_data, OperationArgPkg OptArg
         plane<double> lower_plane;
         ROIs.Total_Area_Bisection_Along_Plane(planar_normal,
                                                       SelectionLower,
-                                                      acceptable_deviation,
-                                                      max_iters,
+                                                      FractionalTolerance,
+                                                      MaxBisects,
                                                       &lower_plane,
                                                       &iters_taken,
                                                       &final_area_frac);
@@ -369,8 +400,8 @@ Drover Subsegment_ComputeDose_VanLuijk(Drover DICOM_data, OperationArgPkg OptArg
         plane<double> upper_plane;
         ROIs.Total_Area_Bisection_Along_Plane(planar_normal,
                                                       SelectionUpper,
-                                                      acceptable_deviation,
-                                                      max_iters,
+                                                      FractionalTolerance,
+                                                      MaxBisects,
                                                       &upper_plane,
                                                       &iters_taken,
                                                       &final_area_frac);
