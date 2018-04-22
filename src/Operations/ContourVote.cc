@@ -98,6 +98,39 @@ OperationDoc OpArgDocContourVote(void){
     out.args.back().examples = { "nan", "0.0", "123.456", "1E6" };
 
     out.args.emplace_back();
+    out.args.back().name = "CentroidX";
+    out.args.back().desc = "If this option is provided with a valid positive number, the contour(s) with a centroid"
+                      " closest to the specified value is/are retained. Note that the DICOM coordinate"
+                      " space is used. (Supplying the default, NaN, will disable this option.)"
+                      " Note: if several criteria are specified, it is not specified in which order they"
+                      " are considered.";
+    out.args.back().default_val = "nan";
+    out.args.back().expected = true;
+    out.args.back().examples = { "nan", "0.0", "123.456", "-1E6" };
+
+    out.args.emplace_back();
+    out.args.back().name = "CentroidY";
+    out.args.back().desc = "If this option is provided with a valid positive number, the contour(s) with a centroid"
+                      " closest to the specified value is/are retained. Note that the DICOM coordinate"
+                      " space is used. (Supplying the default, NaN, will disable this option.)"
+                      " Note: if several criteria are specified, it is not specified in which order they"
+                      " are considered.";
+    out.args.back().default_val = "nan";
+    out.args.back().expected = true;
+    out.args.back().examples = { "nan", "0.0", "123.456", "-1E6" };
+
+    out.args.emplace_back();
+    out.args.back().name = "CentroidZ";
+    out.args.back().desc = "If this option is provided with a valid positive number, the contour(s) with a centroid"
+                      " closest to the specified value is/are retained. Note that the DICOM coordinate"
+                      " space is used. (Supplying the default, NaN, will disable this option.)"
+                      " Note: if several criteria are specified, it is not specified in which order they"
+                      " are considered.";
+    out.args.back().default_val = "nan";
+    out.args.back().expected = true;
+    out.args.back().examples = { "nan", "0.0", "123.456", "-1E6" };
+
+    out.args.emplace_back();
     out.args.back().name = "WinnerCount";
     out.args.back().desc = "Retain this number of 'best' or 'winning' contours.";
     out.args.back().default_val = "1";
@@ -121,6 +154,9 @@ Drover ContourVote(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::str
     const auto Perimeter = std::stod( OptArgs.getValueStr("Perimeter").value() );
     const auto Area = std::stod( OptArgs.getValueStr("Area").value() );
     const auto WinnerCount = std::stol( OptArgs.getValueStr("WinnerCount").value() );
+    const auto CentroidX = std::stod( OptArgs.getValueStr("CentroidX").value() );
+    const auto CentroidY = std::stod( OptArgs.getValueStr("CentroidY").value() );
+    const auto CentroidZ = std::stod( OptArgs.getValueStr("CentroidZ").value() );
 
     //-----------------------------------------------------------------------------------------------------------------
     const auto roiregex = std::regex(ROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
@@ -170,6 +206,27 @@ Drover ContourVote(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::str
                                const auto AP = A.get().Perimeter();
                                const auto BP = B.get().Perimeter();
                                return std::abs(Perimeter - AP) < std::abs(Perimeter - BP);
+                      });
+    }else if(!std::isnan( CentroidX )){
+        cop_ROIs.sort( [&](const std::reference_wrapper<contour_of_points<double>> A,
+                           const std::reference_wrapper<contour_of_points<double>> B ){
+                               const auto AX = A.get().Centroid().x;
+                               const auto BX = B.get().Centroid().x;
+                               return std::abs(CentroidX - AX) < std::abs(CentroidX - BX);
+                      });
+    }else if(!std::isnan( CentroidY )){
+        cop_ROIs.sort( [&](const std::reference_wrapper<contour_of_points<double>> A,
+                           const std::reference_wrapper<contour_of_points<double>> B ){
+                               const auto AY = A.get().Centroid().y;
+                               const auto BY = B.get().Centroid().y;
+                               return std::abs(CentroidY - AY) < std::abs(CentroidY - BY);
+                      });
+    }else if(!std::isnan( CentroidZ )){
+        cop_ROIs.sort( [&](const std::reference_wrapper<contour_of_points<double>> A,
+                           const std::reference_wrapper<contour_of_points<double>> B ){
+                               const auto AZ = A.get().Centroid().z;
+                               const auto BZ = B.get().Centroid().z;
+                               return std::abs(CentroidZ - AZ) < std::abs(CentroidZ - BZ);
                       });
     }
 
