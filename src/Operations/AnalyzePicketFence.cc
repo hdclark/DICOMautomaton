@@ -250,6 +250,17 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
         const auto NaN = std::numeric_limits<double>::quiet_NaN();
         const auto NaN_vec = vec3<double>(NaN, NaN, NaN);
 
+        const auto IsocentreStr = animg->GetMetadataValueAs<std::string>("IsocenterPosition");
+        auto Isocentre = vec3<double>(0.0, 0.0, 0.0);
+        if(IsocentreStr){
+            // Note: assuming the form "1.23/2.34/3.45".
+            const auto xyz = SplitStringToVector(IsocentreStr.value(), '\\', 'd');
+            if(xyz.size() != 3) throw std::logic_error("Unable to parse DICOM IsocenterPosition. Refusing to continue.");
+            Isocentre.x = std::stod(xyz.at(0));
+            Isocentre.y = std::stod(xyz.at(1));
+            Isocentre.z = std::stod(xyz.at(2));
+        }
+
         const std::string JunctionLineColour = "blue";
         const std::string PeakLineColour = "black";
 
@@ -378,8 +389,7 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
 
             leaf_lines.clear();
             for(const auto &offset : mlc_offsets){
-                const auto origin = vec3<double>(0.0, 0.0, SAD);
-                const auto pos = origin + (junction_axis * offset);
+                const auto pos = Isocentre + (junction_axis * offset);
                 const auto proj_pos = img_plane.Project_Onto_Plane_Orthogonally(pos);
                 leaf_lines.emplace_back( proj_pos, proj_pos + leaf_axis );
             }
@@ -590,7 +600,7 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
             auto determine_junction_separations = [&](std::vector<line<double>> j_lines) -> void {
                 junction_cax_separations.clear();
                 for(const auto &junction_line : j_lines){
-                    const auto dR = (junction_line.R_0 - vec3<double>(0.0,0.0,0.0)); // 0,0,0 should be replaced with actual isocentre ... TODO.
+                    const auto dR = (junction_line.R_0 - Isocentre);
                     const auto sep = dR.Dot(leaf_axis);
                     junction_cax_separations.push_back( sep );
                 }
