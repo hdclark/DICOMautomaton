@@ -311,6 +311,9 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
 
         // Picket fence context. This holds the mutated state for a picket fence analysis.
         struct PF_Context {
+            using l_num = long int;  // Leaf-pair number. Controlled by the MLC.
+            using j_num = long int;  // Junction number. Detected.
+
             // Plotting shuttles.
             std::vector< YgorMathPlottingGnuplot::Shuttle<samples_1D<double>> > junction_plot_shtl;
             std::vector< YgorMathPlottingGnuplot::Shuttle<samples_1D<double>> > leaf_plot_shtl;
@@ -320,26 +323,30 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
             vec3<double> junction_axis;
 
             // Lines along which individual MLC leaf pairs travel.
-            std::vector<line<double>> leaf_lines;
+            std::map<l_num, line<double>> leaf_lines;
 
             // Dose profiles along each leaf-pair line.
-            std::vector<samples_1D<double>> leaf_profiles;
+            std::map<l_num, samples_1D<double>> leaf_profiles;
 
             // Lines along which the junctions (nominally) coincide. These are detected.
-            std::vector<line<double>> junction_lines;
+            std::map<j_num, line<double>> junction_lines;
 
             // The separation of junctions from one another and from the central axis.
-            std::vector<double> junction_cax_separations;
-            std::vector<double> junction_separations;
+            std::map<j_num, double> junction_cax_separations;
+            std::map<j_num, double> junction_separations;
             double min_junction_sep;
             double max_junction_sep;
 
             // Information about individual leaf failures.
             //std::vector<std::string> leaf_line_colour(PFC.leaf_lines.size(), "green");
-            std::vector<std::string> leaf_line_colour;
-            long int failed_leaf_count;
-            long int worst_leaf_pair;
+            std::map<l_num, std::string> leaf_line_colour;
+            l_num failed_leaf_count;
+            l_num worst_leaf_pair;
             double worst_discrepancy;
+
+            // Junction- and leaf-pair intersections: actual and nominal.
+            std::map<l_num, std::map<j_num, vec3<double>>> nominal_jl_int;
+            std::map<l_num, std::map<j_num, vec3<double>>> actual_jl_int;
 
             // Shuttles for various contours.
             std::list<contours_with_meta> peak_contours;
@@ -425,19 +432,23 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
             std::sort(mlc_offsets.begin(), mlc_offsets.end());
 
             PFC.leaf_lines.clear();
+            PF_Context::l_num leaf_num = 1;
             for(const auto &offset : mlc_offsets){
                 const auto pos = Isocentre + (PFC.junction_axis * offset);
                 const auto proj_pos = img_plane.Project_Onto_Plane_Orthogonally(pos);
-                PFC.leaf_lines.emplace_back( proj_pos, proj_pos + PFC.leaf_axis );
+                const auto theline = line<double>(proj_pos, proj_pos + PFC.leaf_axis);
+                PFC.leaf_lines.emplace(leaf_num, theline );
+                ++leaf_num;
             }
         }
 
         //---------------------------------------------------------------------------
         //Generate leaf-pair profiles.
         PFC.leaf_profiles.clear();
-        PFC.leaf_profiles.reserve( PFC.leaf_lines.size() );
         {
-            for(const auto &leaf_line : PFC.leaf_lines){
+            for(const auto &leaf_line_p : PFC.leaf_lines){
+                auto leaf_num = leaf_line_p.first;
+                auto leaf_line = leaf_line_p.second;
 
                 // Determine if the leaf is within view in the image. If not, push_back() an empty and continue.
                 //
@@ -477,7 +488,6 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
                 if(LSD_int.isfinite()) edge_ints.push_back(LSD_int);
 
                 if(edge_ints.size() != 2){
-                    PFC.leaf_profiles.emplace_back();
                     continue;
                 }
 
@@ -492,11 +502,11 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
                                                                         sample_offset,
                                                                         remainder );
 
-                PFC.leaf_profiles.emplace_back();
+                samples_1D<double> profile;
                 const bool inhibit_sort = true;
                 const long int chan = 0;
                 const auto orig_pxl_dz = animg->pxl_dz;
-                animg->pxl_dz = 1.0; // Ensure there is some thickness.
+                animg->pxl_dz = 1.0; // Ensure there is some image thickness.
                 const std::vector<double> sample_dists { -2.0, -1.5, -0.5, 0.0, 0.5, 1.0, 1.5, 2.0 };
                 for(const auto &R : R_list){
                     const auto rel_R = (R - corner_R);
@@ -512,10 +522,11 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
                     }
                     if(!samples.empty()){
                         const auto avgd = Stats::Mean(samples);
-                        PFC.leaf_profiles.back().push_back( { l, 0.0, avgd, 0.0 }, inhibit_sort );
+                        profile.push_back( { l, 0.0, avgd, 0.0 }, inhibit_sort );
                     }
                 }
-                PFC.leaf_profiles.back().stable_sort();
+                profile.stable_sort();
+                PFC.leaf_profiles.emplace(leaf_num, profile);
                 animg->pxl_dz = orig_pxl_dz;
             }
         }
@@ -526,7 +537,8 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
         {
             samples_1D<double> avgd_profile;
             size_t N_visible_leaves = 0;
-            for(auto & profile : PFC.leaf_profiles){
+            for(auto & profile_p : PFC.leaf_profiles){
+                auto profile = profile_p.second;
                 if(!profile.empty()){
                     avgd_profile = avgd_profile.Sum_With(profile);
                     ++N_visible_leaves;
@@ -620,10 +632,13 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
 
             PFC.junction_plot_shtl.emplace_back( peaks.Multiply_x_With(SIDToSAD), "Filtered Junction Profile Peaks" );
 
+            PF_Context::j_num junction_num = 0;
             for(const auto &peak4 : peaks.samples){
                 const auto d = peak4[0]; // Projection of relative position onto the leaf axis unit vector.
                 const auto R_peak = corner_R + (PFC.leaf_axis * d);
-                PFC.junction_lines.emplace_back( R_peak, R_peak + PFC.junction_axis );
+                const auto theline = line<double>(R_peak, R_peak + PFC.junction_axis);
+                PFC.junction_lines.emplace(junction_num, theline);
+                ++junction_num;
             }
         }
 
@@ -634,28 +649,51 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
         PFC.min_junction_sep = std::numeric_limits<double>::quiet_NaN();
         PFC.max_junction_sep = std::numeric_limits<double>::quiet_NaN();
         {
-            auto determine_junction_separations = [&](std::vector<line<double>> j_lines) -> void {
+            using j_lines_t = decltype(PF_Context::junction_lines);
+
+            const auto p_lt = [](std::pair<PF_Context::j_num, double> A,
+                                 std::pair<PF_Context::j_num, double> B){
+                                 return (A.second < B.second);
+                              };
+
+            auto determine_junction_separations = [&](j_lines_t j_lines) -> void {
                 PFC.junction_cax_separations.clear();
-                for(const auto &junction_line : j_lines){
+                for(const auto &j_line_p : j_lines){
+                    const auto junction_num = j_line_p.first;
+                    const auto junction_line = j_line_p.second;
                     const auto dR = (junction_line.R_0 - Isocentre);
                     const auto sep = dR.Dot(PFC.leaf_axis);
-                    PFC.junction_cax_separations.push_back( sep );
+                    PFC.junction_cax_separations.emplace( junction_num, sep );
                 }
                 PFC.junction_separations.clear();
-                for(size_t i = 1; i < PFC.junction_cax_separations.size(); ++i){
-                    const auto sep = (PFC.junction_cax_separations[i] - PFC.junction_cax_separations[i-1]);
-                    PFC.junction_separations.push_back( sep );
+
+                //Adjacent difference. std::adjacent_difference() causing issues here due to std::pair<> (?) ... TODO.
+                {
+                    auto it_A = PFC.junction_cax_separations.begin();
+                    auto it_B = std::next(it_A);
+                    while(it_B != PFC.junction_cax_separations.end()){
+                        auto j_num_A = it_A->first;
+                        auto sep_diff = (it_B->second - it_A->second);
+                        PFC.junction_separations.emplace(j_num_A, sep_diff);
+                        ++it_A;
+                        ++it_B;
+                    }
                 }
 
-                PFC.min_junction_sep = Stats::Min(PFC.junction_separations);
-                PFC.max_junction_sep = Stats::Max(PFC.junction_separations);
+                if(PFC.junction_separations.empty()){
+                    throw std::logic_error("No junction separations. Refusing to continue.");
+                }
+                PFC.min_junction_sep = (std::min_element(PFC.junction_separations.begin(),
+                                                         PFC.junction_separations.end(), p_lt))->second;
+                PFC.max_junction_sep = (std::max_element(PFC.junction_separations.begin(),
+                                                         PFC.junction_separations.end(), p_lt))->second;
                 return;
             };
-            auto all_except = [](std::vector<line<double>> j_lines, long int k) -> std::vector<line<double>> {
-                std::vector<line<double>> out;
-                const auto N_lines = static_cast<long int>(j_lines.size());
-                for(long int j = 0; j < N_lines; ++j){
-                    if(j != k) out.push_back(j_lines[j]);
+            auto all_except = [](j_lines_t j_lines, PF_Context::j_num k) -> j_lines_t {
+                j_lines_t out;
+                for(auto &j_line_p : j_lines){
+                    const auto j_num = j_line_p.first;
+                    if(j_num != k) out.emplace(j_line_p);
                 }
                 return out;
             };
@@ -665,16 +703,16 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
             while( RELATIVE_DIFF(PFC.min_junction_sep, PFC.max_junction_sep) > 0.10 ){
                 FUNCWARN("Junction separation is not consistent. Pruning the worst junction..");
 
-                std::vector<double> rdiffs;
-                const auto N_lines = static_cast<long int>(trimmed_junction_lines.size());
-                for(long int j = 0; j < N_lines; ++j){
-                    auto trimmed = all_except(trimmed_junction_lines, j);
+                std::map<PF_Context::j_num, double> rdiffs;
+                for(auto &j_line_p : PFC.junction_lines){
+                    const auto j_num = j_line_p.first;
+                    auto trimmed = all_except(trimmed_junction_lines, j_num);
                     determine_junction_separations( trimmed );
-                    rdiffs.push_back( std::abs( RELATIVE_DIFF(PFC.min_junction_sep, PFC.max_junction_sep) ) );
+                    rdiffs.emplace( j_num, std::abs( RELATIVE_DIFF(PFC.min_junction_sep, PFC.max_junction_sep) ) );
                 }
 
-                auto worst_it = std::min_element(rdiffs.begin(), rdiffs.end());
-                const auto k = static_cast<long int>( std::distance(rdiffs.begin(), worst_it) );
+                auto worst_it = std::min_element(rdiffs.begin(), rdiffs.end(), p_lt);
+                const auto k = worst_it->first;
 
                 // Recompute to regenerate side-effects.
                 trimmed_junction_lines = all_except(trimmed_junction_lines, k);
@@ -683,11 +721,11 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
             PFC.junction_lines = trimmed_junction_lines;
 
             std::cout << "Junction-CAX separations: ";
-            for(auto &d : PFC.junction_cax_separations) std::cout << (d * SIDToSAD) << "  ";
+            for(auto &d : PFC.junction_cax_separations) std::cout << (d.second * SIDToSAD) << "  ";
             std::cout << std::endl;
 
             std::cout << "Junction-junction separations: ";
-            for(auto &d : PFC.junction_separations) std::cout << (d * SIDToSAD) << "  ";
+            for(auto &d : PFC.junction_separations) std::cout << (d.second * SIDToSAD) << "  ";
             std::cout << std::endl;
 
             std::cout << "Minimum junction separation: " << (PFC.min_junction_sep * SIDToSAD) << std::endl;
@@ -698,23 +736,34 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
 
         //---------------------------------------------------------------------------
         // Examine each profile in the vicinity of the junction.
-        PFC.leaf_line_colour = std::vector<std::string>(PFC.leaf_lines.size(), "green");
-        PFC.failed_leaf_count = 0;
-        PFC.worst_leaf_pair = -1;
+        PFC.leaf_line_colour.clear();
+        for(const auto &leaf_profile : PFC.leaf_profiles){
+            const auto l_num = leaf_profile.first;
+            PFC.leaf_line_colour.emplace(l_num, "green");
+        }
+        PFC.failed_leaf_count = static_cast<PF_Context::l_num>(0);
+        PFC.worst_leaf_pair = static_cast<PF_Context::l_num>(-1);
         PFC.worst_discrepancy = 0.0;
 
         PFC.peak_contours.clear();
         PFC.peak_contours.emplace_back();
+
+        PFC.actual_jl_int.clear();
+        PFC.nominal_jl_int.clear();
+
         {
-            for(size_t i = 0; i < PFC.leaf_lines.size(); ++i){
-                const auto leaf_line = PFC.leaf_lines[i];
+            for(auto &leaf_line_p : PFC.leaf_lines){
+                const auto leaf_num = leaf_line_p.first;
+                const auto leaf_line = leaf_line_p.second;
 
                 //Find the leaf-junction intersection points (i.e., the nominal peak position).
                 //
                 // Note: We permit junction and leaf axes to be non-orthogonal, so have to test
                 //       for the intersection point for each junction each time.
-                std::vector<vec3<double>> leaf_junction_int;
-                for(const auto &junction_line : PFC.junction_lines){
+                for(const auto &j_line_p : PFC.junction_lines){
+                    const auto junction_num = j_line_p.first;
+                    const auto junction_line = j_line_p.second;
+
                     // Find the intersection point in 3D.
                     auto lj_int = NaN_vec;
                     if(!leaf_line.Closest_Point_To_Line(junction_line, lj_int)) lj_int = NaN_vec;
@@ -727,22 +776,24 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
                     animg->pxl_dz = orig_pxl_dz;
                     if(!within_img) continue;
 
-                    leaf_junction_int.emplace_back(lj_int);
+                    PFC.nominal_jl_int[leaf_num][junction_num] = lj_int;
                 }
-                if(leaf_junction_int.empty()) continue;
+                if(PFC.nominal_jl_int[leaf_num].empty()) continue;
 
 
                 //Determine the true peak location in the vicinity of the junction.
                 std::vector<double> peak_offsets;
                 std::vector<double> peak_spreads;
-                for(const auto &lj_int : leaf_junction_int){
+                for(const auto &lj_int_p : PFC.nominal_jl_int[leaf_num]){
+                    const auto j_num = lj_int_p.first;
+                    const auto lj_int = lj_int_p.second;
 
                     // Project the point into the same 2D space as the leaf profiles.
                     const auto rel_R = (lj_int - corner_R);
                     const auto nominal_peak = rel_R.Dot(PFC.leaf_axis); // = an offset projected along the leaf axis.
 
                     const auto SearchDistance = 0.5*PFC.min_junction_sep;
-                    const auto vicinity = PFC.leaf_profiles[i].Select_Those_Within_Inc(nominal_peak - SearchDistance,
+                    const auto vicinity = PFC.leaf_profiles[leaf_num].Select_Those_Within_Inc(nominal_peak - SearchDistance,
                                                                                    nominal_peak + SearchDistance);
 
                     // Using a robust, non-iterative peak-bounding procedure. It is robust in the sense that it uses the
@@ -782,8 +833,10 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
                     }
                     const auto est_peak = Stats::Median(est_peaks);
                     const auto peak_offset = est_peak - nominal_peak;
-                    const auto peak_actual = lj_int + (PFC.leaf_axis * peak_offset); // R^3 position of peak.
                     const auto peak_spread = Stats::Median(est_spread);
+
+                    const auto peak_actual = lj_int + (PFC.leaf_axis * peak_offset); // R^3 position of peak.
+                    PFC.actual_jl_int[leaf_num][j_num] = peak_actual;
 
                     if(std::isfinite(peak_offset) && std::isfinite(peak_spread)){
                         peak_offsets.push_back(peak_offset);
@@ -795,37 +848,16 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
                                                         std::vector<std::pair<std::string,std::string>>({{"1:2","lines"}}) );
                         }
                     }
-
-                    // Draw a small contour to indicate the position of the peak.
-                    {
-                        auto contour_metadata = animg->metadata;
-                        contour_metadata["ROIName"] = PeakROILabel;
-                        contour_metadata["NormalizedROIName"] = NormalizedPeakROILabel;
-                        contour_metadata["OutlineColour"] = PeakLineColour;
-                        const auto radius = 2.0 * std::max(animg->pxl_dx, animg->pxl_dy); // Something reasonable relative to the image features.
-                        const long int num_verts = 4; // Squares.
-                        try{
-                            Inject_Point_Contour(*animg,
-                                                 peak_actual,
-                                                 PFC.peak_contours.back(),
-                                                 contour_metadata,
-                                                 radius,
-                                                 num_verts );
-                        }catch(const std::exception &){};
-                    }
                 }
 
-
                 // Compare the nominal and actual intersections.
-                if(peak_offsets.size() != leaf_junction_int.size()){
+                if(peak_offsets.size() != PFC.nominal_jl_int[leaf_num].size()){
                     throw std::runtime_error("Unable to find leaf profile peak near nominal junction.");
                 }
 
                 std::vector<double> adjacent_peak_diffs;
-                for(size_t j = 1; j < peak_offsets.size(); ++j){
-                    const auto sep = (peak_offsets[j] - peak_offsets[j-1]);
-                    adjacent_peak_diffs.push_back( sep );
-                }
+                std::adjacent_difference(peak_offsets.begin(), peak_offsets.end(),
+                                         std::back_inserter(adjacent_peak_diffs));
 
                 const auto max_abs_sep = std::max( std::abs(Stats::Min(peak_offsets)),
                                                    std::abs(Stats::Max(peak_offsets)) );
@@ -844,7 +876,7 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
 
                 if(max_abs_sep > PFC.worst_discrepancy){
                     PFC.worst_discrepancy = max_abs_sep;
-                    PFC.worst_leaf_pair = (i+1);
+                    PFC.worst_leaf_pair = leaf_num;
                 }
 
                 //Report the findings.                  TODO: SIDE-EFFECT.
@@ -879,7 +911,7 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
                     std::stringstream body;
                     body << PatientID << ","
                          << StationName << ","
-                         << (i+1) << ","  // MLC numbers traditionally start at 1.
+                         << leaf_num << ","
 
                          << (max_abs_sep * SIDToSAD) << ","
                          << (mean_abs_sep * SIDToSAD) << ","
@@ -907,14 +939,14 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
 
                 //Record whether this leaf passed or failed visually.
                 if( within_abs_sep && within_adj_diff ){
-                    PFC.leaf_line_colour[i] = "blue";
+                    PFC.leaf_line_colour[leaf_num] = "blue";
                 }else{
-                    PFC.leaf_line_colour[i] = "red";
+                    PFC.leaf_line_colour[leaf_num] = "red";
                     PFC.failed_leaf_count++;
 
                     //Display the failing profile for inspection.
-                    PFC.leaf_plot_shtl.emplace_back( PFC.leaf_profiles[i].Multiply_x_With(SIDToSAD),
-                                                 "Failed leaf "_s + std::to_string(i),
+                    PFC.leaf_plot_shtl.emplace_back( PFC.leaf_profiles[leaf_num].Multiply_x_With(SIDToSAD),
+                                                 "Failed leaf "_s + std::to_string(leaf_num),
                                                  std::vector<std::pair<std::string,std::string>>({{"1:2","lines"}}) );
                 }
             }
@@ -978,9 +1010,11 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
             auto contour_metadata = animg->metadata;
             contour_metadata["ROIName"] = MLCROILabel;
             contour_metadata["NormalizedROIName"] = NormalizedMLCROILabel;
-            for(size_t i = 0; i < PFC.leaf_lines.size(); ++i){
-                const auto leaf_line = PFC.leaf_lines[i];
-                contour_metadata["OutlineColour"] = PFC.leaf_line_colour[i];
+            for(const auto &leaf_line_p : PFC.leaf_lines){
+                const auto leaf_num = leaf_line_p.first;
+                const auto leaf_line = leaf_line_p.second;
+                contour_metadata["OutlineColour"] = PFC.leaf_line_colour[leaf_num];
+                contour_metadata["PicketFenceLeafNumber"] = std::to_string(leaf_num);
 
                 try{ // Will throw if grossly out-of-bounds, but it's a pain to pre-filter -- ignore exceptions for now... TODO
                     Inject_Thin_Line_Contour(*animg,
@@ -1001,7 +1035,10 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
             contour_metadata["ROIName"] = JunctionROILabel;
             contour_metadata["NormalizedROIName"] = NormalizedJunctionROILabel;
             contour_metadata["OutlineColour"] = JunctionLineColour;
-            for(const auto &junction_line : PFC.junction_lines){
+            for(const auto &j_line_p : PFC.junction_lines){
+                const auto junction_num = j_line_p.first;
+                const auto junction_line = j_line_p.second;
+                contour_metadata["PicketFenceJunctionNumber"] = std::to_string(junction_num);
                 try{ // Will throw if grossly out-of-bounds, but it's a pain to pre-filter -- ignore exceptions for now... TODO
                     Inject_Thin_Line_Contour(*animg,
                                              junction_line,
@@ -1009,6 +1046,38 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
                                              contour_metadata,
                                              2.0*(ThresholdDistance * SADToSID) );
                 }catch(const std::exception &){};
+            }
+        }
+
+
+        //---------------------------------------------------------------------------
+        //Draw a small contour to indicate the position of the peak.
+        PFC.peak_contours.clear();
+        PFC.peak_contours.emplace_back();
+        {
+            auto contour_metadata = animg->metadata;
+            contour_metadata["ROIName"] = PeakROILabel;
+            contour_metadata["NormalizedROIName"] = NormalizedPeakROILabel;
+            contour_metadata["OutlineColour"] = PeakLineColour;
+            const auto radius = 2.0 * std::max(animg->pxl_dx, animg->pxl_dy); // Something reasonable relative to the image features.
+            const long int num_verts = 4; // Squares.
+
+            for(const auto &l_int_p : PFC.actual_jl_int){
+                const auto leaf_num = l_int_p.first;
+                for(const auto &j_int_p : l_int_p.second){
+                    const auto junction_num = j_int_p.first;
+                    const auto peak_actual = j_int_p.second;
+                    contour_metadata["PicketFenceLeafNumber"] = std::to_string(leaf_num);
+                    contour_metadata["PicketFenceJunctionNumber"] = std::to_string(junction_num);
+                    try{
+                        Inject_Point_Contour(*animg,
+                                             peak_actual,
+                                             PFC.peak_contours.back(),
+                                             contour_metadata,
+                                             radius,
+                                             num_verts );
+                    }catch(const std::exception &){};
+                }
             }
         }
 
