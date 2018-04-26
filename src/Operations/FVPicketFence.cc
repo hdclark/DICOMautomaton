@@ -55,7 +55,7 @@ OperationDoc OpArgDocFVPicketFence(void){
             oparg.visibility  = OpArgVisibility::Hide;
 
         }else if(oparg.name == "ThresholdDistance"){
-            oparg.default_val = "1.0";
+            oparg.default_val = "0.5";
 
         }else if(oparg.name == "InteractivePlots"){
             oparg.default_val = "false";
@@ -70,11 +70,14 @@ OperationDoc OpArgDocFVPicketFence(void){
         }else if(oparg.name == "JunctionROILabel"){
             oparg.visibility  = OpArgVisibility::Hide;
 
+        }else if(oparg.name == "PeakROILabel"){
+            oparg.visibility  = OpArgVisibility::Hide;
+
         }else if(oparg.name == "DICOMMargin"){
             oparg.visibility  = OpArgVisibility::Hide;
 
         }else if(oparg.name == "ScaleFactor"){
-            oparg.default_val = "1.0";
+            oparg.default_val = "1.5";
         }
     }
 

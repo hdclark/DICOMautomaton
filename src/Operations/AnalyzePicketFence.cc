@@ -119,7 +119,7 @@ OperationDoc OpArgDocAnalyzePicketFence(void){
 
     out.args.emplace_back();
     out.args.back().name = "ThresholdDistance";
-    out.args.back().desc = "The threshold distance (in DICOM units) above which MLC separations are considered"
+    out.args.back().desc = "The threshold distance in DICOM units (mm) above which MLC separations are considered"
                       " to 'fail'. Each leaf pair is evaluated separately. Pass/fail status is also"
                       " indicated by setting the leaf axis contour colour (blue for pass, red for fail).";
     out.args.back().default_val = "1.0";
