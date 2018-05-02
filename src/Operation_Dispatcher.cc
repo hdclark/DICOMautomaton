@@ -1,4 +1,4 @@
-//Operation_Dispatcher.cc - A part of DICOMautomaton 2015, 2016, 2017, 2018. Written by hal clark.
+//oPERATIon_Dispatcher.cc - A part of DICOMautomaton 2015, 2016, 2017, 2018. Written by hal clark.
 //
 // This routine routes loaded data to/through specified operations.
 // Operations can be anything, e.g., analyses, serialization, and visualization.
@@ -93,7 +93,6 @@
 #include "Operations/PresentationImage.h"
 #include "Operations/PruneEmptyImageDoseArrays.h"
 #include "Operations/PurgeContours.h"
-#include "Operations/RePlanReIrradiateDoseTrimming.h"
 #include "Operations/SFML_Viewer.h"
 #include "Operations/SeamContours.h"
 #include "Operations/SelectSlicesIntersectingROI.h"
@@ -103,6 +102,7 @@
 #include "Operations/Subsegment_ComputeDose_VanLuijk.h"
 #include "Operations/SupersampleImageGrid.h"
 #include "Operations/SurfaceBasedRayCastDoseAccumulate.h"
+#include "Operations/TrimROIDose.h"
 #include "Operations/UBC3TMRI_DCE.h"
 #include "Operations/UBC3TMRI_DCE_Differences.h"
 #include "Operations/UBC3TMRI_DCE_Experimental.h"
@@ -193,7 +193,6 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["PresentationImage"] = std::make_pair(OpArgDocPresentationImage, PresentationImage);
     out["PruneEmptyImageDoseArrays"] = std::make_pair(OpArgDocPruneEmptyImageDoseArrays, PruneEmptyImageDoseArrays);
     out["PurgeContours"] = std::make_pair(OpArgDocPurgeContours, PurgeContours);
-    out["RePlanReIrradiateDoseTrimming"] = std::make_pair(OpArgDocRePlanReIrradiateDoseTrimming, RePlanReIrradiateDoseTrimming);
     out["SeamContours"] = std::make_pair(OpArgDocSeamContours, SeamContours);
     out["SelectSlicesIntersectingROI"] = std::make_pair(OpArgDocSelectSlicesIntersectingROI, SelectSlicesIntersectingROI);
     out["SFML_Viewer"] = std::make_pair(OpArgDocSFML_Viewer, SFML_Viewer);
@@ -203,6 +202,7 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["Subsegment_ComputeDose_VanLuijk"] = std::make_pair(OpArgDocSubsegment_ComputeDose_VanLuijk, Subsegment_ComputeDose_VanLuijk);
     out["SupersampleImageGrid"] = std::make_pair(OpArgDocSupersampleImageGrid, SupersampleImageGrid);
     out["SurfaceBasedRayCastDoseAccumulate"] = std::make_pair(OpArgDocSurfaceBasedRayCastDoseAccumulate, SurfaceBasedRayCastDoseAccumulate);
+    out["TrimROIDose"] = std::make_pair(OpArgDocTrimROIDose, TrimROIDose);
     out["UBC3TMRI_DCE"] = std::make_pair(OpArgDocUBC3TMRI_DCE, UBC3TMRI_DCE);
     out["UBC3TMRI_DCE_Differences"] = std::make_pair(OpArgDocUBC3TMRI_DCE_Differences, UBC3TMRI_DCE_Differences);
     out["UBC3TMRI_DCE_Experimental"] = std::make_pair(OpArgDocUBC3TMRI_DCE_Experimental, UBC3TMRI_DCE_Experimental);

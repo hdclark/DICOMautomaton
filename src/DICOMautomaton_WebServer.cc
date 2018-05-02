@@ -501,16 +501,16 @@ void BaseWebServerApplication::createOperationSelectorGB(void){
         const auto n = anop.first;
         if( ( n == "FVPicketFence" )
         ||  ( n == "PresentationImage" )
-        ||  ( n == "HighlightROIs" )
-        ||  ( n == "DICOMExportImagesAsDose" )
-        ||  ( n == "ConvertDoseToImage" ) 
+        //||  ( n == "HighlightROIs" )
+        //||  ( n == "DICOMExportImagesAsDose" )
+        //||  ( n == "ConvertDoseToImage" ) 
         ||  ( n == "DecayDoseOverTimeJones2014" ) 
         ||  ( n == "DecayDoseOverTimeHalve" ) 
-        ||  ( n == "EvaluateNTCPModels" ) 
-        ||  ( n == "EvaluateTCPModels" ) 
-        ||  ( n == "SeamContours" )
-        ||  ( n == "GrowContours" )
-        ||  ( n == "RePlanReIrradiateDoseTrimming" ) ){    //Whitelist ... for now.
+        //||  ( n == "EvaluateNTCPModels" ) 
+        //||  ( n == "EvaluateTCPModels" ) 
+        //||  ( n == "SeamContours" )
+        //||  ( n == "GrowContours" )
+        ||  ( n == "TrimROIDose" ) ){    //Whitelist ... for now.
             selector->addItem(anop.first);
         }
     }

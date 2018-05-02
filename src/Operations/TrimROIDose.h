@@ -1,4 +1,4 @@
-// RePlanReIrradiateDoseTrimming.h.
+// TrimROIDose.h.
 
 #pragma once
 
@@ -8,10 +8,10 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocRePlanReIrradiateDoseTrimming(void);
+OperationDoc OpArgDocTrimROIDose(void);
 
 Drover
-RePlanReIrradiateDoseTrimming(Drover DICOM_data, 
+TrimROIDose(Drover DICOM_data, 
                               OperationArgPkg /*OptArgs*/,
                               std::map<std::string, std::string> /*InvocationMetadata*/,
                               std::string /*FilenameLex*/);

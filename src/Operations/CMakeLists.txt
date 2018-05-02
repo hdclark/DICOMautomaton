@@ -76,7 +76,6 @@ add_library(Operations_objs OBJECT
     PresentationImage.cc
     PruneEmptyImageDoseArrays.cc
     PurgeContours.cc
-    RePlanReIrradiateDoseTrimming.cc
     SeamContours.cc
     SelectSlicesIntersectingROI.cc
     SFML_Viewer.cc
@@ -86,6 +85,7 @@ add_library(Operations_objs OBJECT
     Subsegment_ComputeDose_VanLuijk.cc
     SupersampleImageGrid.cc
     SurfaceBasedRayCastDoseAccumulate.cc
+    TrimROIDose.cc
     UBC3TMRI_DCE.cc
     UBC3TMRI_DCE_Differences.cc
     UBC3TMRI_DCE_Experimental.cc
