@@ -71,6 +71,7 @@ add_library(Operations_objs OBJECT
     MeldDose.cc
     ModifyContourMetadata.cc
     ModifyImageMetadata.cc
+    OptimizeStaticBeams.cc
     PlotPerROITimeCourses.cc
     PreFilterEnormousCTValues.cc
     PresentationImage.cc

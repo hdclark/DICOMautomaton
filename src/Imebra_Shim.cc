@@ -429,6 +429,12 @@ std::map<std::string,std::string> get_metadata_top_level_tags(const std::string 
     //insert_as_string_if_nonempty(0x300C, 0x0004, "ReferencedBeamSequence");
     //insert_as_string_if_nonempty(0x300C, 0x0006, "ReferencedBeamNumber");
     
+    insert_seq_vec_tag_as_string_if_nonempty( std::deque<path_node>(
+                                              { { 0x300C, 0x0002, "ReferencedRTPlanSequence" },
+                                                { 0x300C, 0x0020, "ReferencedFractionGroupSequence" },
+                                                { 0x300C, 0x0004, "ReferencedBeamSequence" },
+                                                { 0x300C, 0x0006, "ReferencedBeamNumber" } }) );
+
     //RT Image Module.
     insert_as_string_if_nonempty(0x3002, 0x0002, "RTImageLabel");
     insert_as_string_if_nonempty(0x3002, 0x0004, "RTImageDescription");
@@ -476,6 +482,7 @@ std::map<std::string,std::string> get_metadata_top_level_tags(const std::string 
                                               { { 0x3002, 0x0030, "ExposureSequence" },
                                                 { 0x300A, 0x00B6, "BeamLimitingDeviceSequence" },
                                                 { 0x300A, 0x011C, "LeafJawPositions" } }) );
+
 
     //Unclassified others...
     insert_as_string_if_nonempty(0x0018, 0x0020, "ScanningSequence");
