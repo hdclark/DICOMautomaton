@@ -26,7 +26,7 @@
 int main(int argc, char **argv){
     //std::string db_params("dbname=pacs user=hal host=localhost port=63443");
     std::string db_params("dbname=pacs user=hal host=localhost");
-    std::string DICOMFileSystemStoreBase("/home/pacs_file_store");
+    std::string DICOMFileSystemStoreBase("/home/pacs_store");
     std::string DICOMFile;  //The filename to use.
     std::string Project;    //Human-readable project of data origin. MSc, PhD, Special_Project_...
     std::string Comments;   //Human-readable general comments.
