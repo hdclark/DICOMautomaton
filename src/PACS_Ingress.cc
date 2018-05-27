@@ -26,7 +26,7 @@
 int main(int argc, char **argv){
     //std::string db_params("dbname=pacs user=hal host=localhost port=63443");
     std::string db_params("dbname=pacs user=hal host=localhost");
-    const std::string DICOMFileSystemStoreBase("/home/pacs_file_store");
+    std::string DICOMFileSystemStoreBase("/home/pacs_file_store");
     std::string DICOMFile;  //The filename to use.
     std::string Project;    //Human-readable project of data origin. MSc, PhD, Special_Project_...
     std::string Comments;   //Human-readable general comments.
@@ -98,6 +98,13 @@ int main(int argc, char **argv){
                                      "Print extra information.",
                                      [&](const std::string &optarg) -> void {
         verbose = true;
+        return;
+    }));
+    arger.push_back( std::make_tuple(1, 'b', "store-base", true, DICOMFileSystemStoreBase,
+                                     "The root of the DB file storage directory.",
+                                     [&](const std::string &optarg) -> void {
+        if(!Does_Dir_Exist_And_Can_Be_Read(optarg)) FUNCERR("Cannot access root directory '" << optarg << "'");
+        DICOMFileSystemStoreBase = optarg;
         return;
     }));
 
