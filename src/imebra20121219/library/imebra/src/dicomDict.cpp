@@ -643,6 +643,7 @@ dicomDictionary::dicomDictionary()
 	registerTag(0x00200100, L"Temporal Position Identifier","IS");
 	registerTag(0x00200105, L"Number of Temporal Positions","IS");
 	registerTag(0x00200110, L"Temporal Resolution","DS");
+    registerTag(0x00209128, L"Temporal Position Index", "UL");         /* Added by HC on 20180526 */
 	registerTag(0x00200200, L"Synchronization Frame of Reference","UI");
 	registerTag(0x00201000, L"Series in Study","IS");
 	registerTag(0x00201001, L"Acquisitions in Series","");

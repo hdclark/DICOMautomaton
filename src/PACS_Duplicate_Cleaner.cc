@@ -28,7 +28,7 @@
 int main(int argc, char **argv){
     //std::string db_params("dbname=pacs user=hal host=localhost port=63443");
     std::string db_params("dbname=pacs user=hal host=localhost");
-    const std::string DICOMFileSystemStoreBase("/home/pacs_file_store");
+    const std::string DICOMFileSystemStoreBase("/home/pacs_store");
     std::string DICOMFile;  //The filename to use.
     bool dryrun = false;    //Do not actually insert the file into the db, just test for errors.
     bool verbose = false;   //Print extra information. Normally successful info is suppresed.

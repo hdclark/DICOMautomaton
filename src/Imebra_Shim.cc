@@ -139,8 +139,10 @@ std::map<std::string,std::string> get_metadata_top_level_tags(const std::string 
         if(!trimmed.empty()) out.emplace(name, trimmed);
 
         //Check if there are additional elements.
-        for(uint32_t i = 1 ;  ; ++i){
-            try{
+        try{
+            const uint32_t buffer_id = 0;
+            auto dh = tds->getDataHandler(group, first_order, tag, buffer_id, create_if_not_found);
+            for(uint32_t i = 1 ; i < dh->getSize(); ++i){
                 const auto str = tds->getString(group, first_order, tag, first_element + i);
                 const auto trimmed = Canonicalize_String2(str, ctrim);
                 if(!trimmed.empty()){
@@ -148,10 +150,9 @@ std::map<std::string,std::string> get_metadata_top_level_tags(const std::string 
                 }else{
                     return;
                 }
-            }catch(const std::exception &){
-                return;
             }
-        }
+        }catch(const std::exception &){ }
+
         return;
     };
 
@@ -179,8 +180,10 @@ std::map<std::string,std::string> get_metadata_top_level_tags(const std::string 
         if(!trimmed.empty()) out.emplace(full_name, trimmed);
 
         //Check if there are additional elements.
-        for(uint32_t i = 1 ;  ; ++i){
-            try{
+        try{
+            const uint32_t buffer_id = 0;
+            auto dh = seq_ptr->getDataHandler(tag_group, first_order, tag_tag, buffer_id, create_if_not_found);
+            for(uint32_t i = 1 ; i < dh->getSize(); ++i){
                 const auto str = seq_ptr->getString(tag_group, first_order, tag_tag, first_element + i);
                 const auto trimmed = Canonicalize_String2(str, ctrim);
                 if(!trimmed.empty()){
@@ -188,10 +191,9 @@ std::map<std::string,std::string> get_metadata_top_level_tags(const std::string 
                 }else{
                     return;
                 }
-            }catch(const std::exception &){
-                return;
             }
-        }
+        }catch(const std::exception &){ }
+
         return;
     };
 
@@ -429,6 +431,12 @@ std::map<std::string,std::string> get_metadata_top_level_tags(const std::string 
     //insert_as_string_if_nonempty(0x300C, 0x0004, "ReferencedBeamSequence");
     //insert_as_string_if_nonempty(0x300C, 0x0006, "ReferencedBeamNumber");
     
+    insert_seq_vec_tag_as_string_if_nonempty( std::deque<path_node>(
+                                              { { 0x300C, 0x0002, "ReferencedRTPlanSequence" },
+                                                { 0x300C, 0x0020, "ReferencedFractionGroupSequence" },
+                                                { 0x300C, 0x0004, "ReferencedBeamSequence" },
+                                                { 0x300C, 0x0006, "ReferencedBeamNumber" } }) );
+
     //RT Image Module.
     insert_as_string_if_nonempty(0x3002, 0x0002, "RTImageLabel");
     insert_as_string_if_nonempty(0x3002, 0x0004, "RTImageDescription");
@@ -477,6 +485,7 @@ std::map<std::string,std::string> get_metadata_top_level_tags(const std::string 
                                                 { 0x300A, 0x00B6, "BeamLimitingDeviceSequence" },
                                                 { 0x300A, 0x011C, "LeafJawPositions" } }) );
 
+
     //Unclassified others...
     insert_as_string_if_nonempty(0x0018, 0x0020, "ScanningSequence");
     insert_as_string_if_nonempty(0x0018, 0x0021, "SequenceVariant");
@@ -493,6 +502,8 @@ std::map<std::string,std::string> get_metadata_top_level_tags(const std::string 
 
     insert_as_string_if_nonempty(0x0020, 0x0100, "TemporalPositionIdentifier");
     insert_as_string_if_nonempty(0x0020, 0x9128, "TemporalPositionIndex");
+    //insert_seq_vec_tag_as_string_if_nonempty(std::deque<path_node>(
+    //                                         { { 0x0020, 0x9128, "TemporalPositionIndex" } }) );
     insert_as_string_if_nonempty(0x0020, 0x0105, "NumberofTemporalPositions");
 
     insert_as_string_if_nonempty(0x0020, 0x0110, "TemporalResolution");
