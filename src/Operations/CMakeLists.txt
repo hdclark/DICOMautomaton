@@ -47,6 +47,7 @@ add_library(Operations_objs OBJECT
     DumpROISNR.cc
     DumpVoxelDoseInfo.cc
     DICOMExportImagesAsDose.cc
+    DeleteImages.cc
     EQD2Convert.cc
     EvaluateDoseVolumeHistograms.cc
     EvaluateDoseVolumeStats.cc
