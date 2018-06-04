@@ -85,6 +85,7 @@ add_library(Operations_objs OBJECT
     SpatialSharpen.cc
     SpatialDerivative.cc
     Subsegment_ComputeDose_VanLuijk.cc
+    SubtractImages.cc
     SupersampleImageGrid.cc
     SurfaceBasedRayCastDoseAccumulate.cc
     TrimROIDose.cc

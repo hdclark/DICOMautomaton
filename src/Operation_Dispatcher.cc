@@ -102,6 +102,7 @@
 #include "Operations/SpatialDerivative.h"
 #include "Operations/SpatialSharpen.h"
 #include "Operations/Subsegment_ComputeDose_VanLuijk.h"
+#include "Operations/SubtractImages.h"
 #include "Operations/SupersampleImageGrid.h"
 #include "Operations/SurfaceBasedRayCastDoseAccumulate.h"
 #include "Operations/TrimROIDose.h"
@@ -204,6 +205,7 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["SpatialDerivative"] = std::make_pair(OpArgDocSpatialDerivative, SpatialDerivative);
     out["SpatialSharpen"] = std::make_pair(OpArgDocSpatialSharpen, SpatialSharpen);
     out["Subsegment_ComputeDose_VanLuijk"] = std::make_pair(OpArgDocSubsegment_ComputeDose_VanLuijk, Subsegment_ComputeDose_VanLuijk);
+    out["SubtractImages"] = std::make_pair(OpArgDocSubtractImages, SubtractImages);
     out["SupersampleImageGrid"] = std::make_pair(OpArgDocSupersampleImageGrid, SupersampleImageGrid);
     out["SurfaceBasedRayCastDoseAccumulate"] = std::make_pair(OpArgDocSurfaceBasedRayCastDoseAccumulate, SurfaceBasedRayCastDoseAccumulate);
     out["TrimROIDose"] = std::make_pair(OpArgDocTrimROIDose, TrimROIDose);
