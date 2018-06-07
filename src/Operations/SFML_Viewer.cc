@@ -59,6 +59,11 @@ OperationDoc OpArgDocSFML_Viewer(void){
         " and various other things.";
 
 
+    out.notes.emplace_back(
+      "If there are no images available, this operation will silently convert dose arrays to image arrays."
+      " If there are images to display, dose arrays must be explicitly converted to be visible."
+    );
+
     out.args.emplace_back();
     out.args.back().name = "SingleScreenshot";
     out.args.back().desc = "If 'true', a single screenshot is taken and then the viewer is exited."
@@ -104,7 +109,15 @@ Drover SFML_Viewer( Drover DICOM_data,
             ++it;
         }
     }
-    if(DICOM_data.image_data.empty()) FUNCERR("No image data available to view. Cannot continue");
+    if(DICOM_data.image_data.empty()){
+        FUNCWARN("No image arrays found. Attempting to convert dose arrays now");
+        for(const auto &da : DICOM_data.dose_data){
+            DICOM_data.image_data.emplace_back();
+            DICOM_data.image_data.back() = std::make_shared<Image_Array>(*da);
+        }
+        DICOM_data.dose_data.clear();
+    }
+    if(DICOM_data.image_data.empty()) throw std::invalid_argument("No image data available to view. Cannot continue");
 
     //If, for some reason, several image arrays are available for viewing, we need to provide a means for stepping
     // through the arrays. 

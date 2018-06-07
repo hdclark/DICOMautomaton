@@ -1,4 +1,4 @@
-//PresentationImage.cc - A part of DICOMautomaton 2015 - 2017. Written by hal clark.
+//PresentationImage.cc - A part of DICOMautomaton 2015 - 2018. Written by hal clark.
 
 #include <SFML/Graphics.hpp>
 #include <boost/filesystem.hpp>
@@ -54,6 +54,15 @@ OperationDoc OpArgDocPresentationImage(void){
     out.desc = "This operation renders an image with any contours in-place and colour mapping using an SFML backend.";
 
 
+    out.notes.emplace_back(
+      "By default this operation displays the last available image. This makes it easier to produce a sequence of"
+      " images by inserting this operation into a sequence of operations."
+    );
+    out.notes.emplace_back(
+      "Iff there are no images available, this operation will silently convert dose arrays to image arrays."
+      " If there are images to display, dose arrays must be explicitly converted to be visible."
+    );
+
     out.args.emplace_back();
     out.args.back().name = "ScaleFactor";
     out.args.back().desc = " This factor is applied to the image width and height to magnify (larger than 1) or shrink"
@@ -95,6 +104,14 @@ Drover PresentationImage( Drover DICOM_data,
             ++it;
         }
     }
+    if(DICOM_data.image_data.empty()){
+        FUNCWARN("No image arrays found. Attempting to convert dose arrays now");
+        for(const auto &da : DICOM_data.dose_data){
+            DICOM_data.image_data.emplace_back();
+            DICOM_data.image_data.back() = std::make_shared<Image_Array>(*da);
+        }
+        DICOM_data.dose_data.clear();
+    }
     if(DICOM_data.image_data.empty()) throw std::invalid_argument("No image data available to view. Cannot continue");
 
     //If, for some reason, several image arrays are available for viewing, we need to provide a means for stepping
@@ -106,15 +123,22 @@ Drover PresentationImage( Drover DICOM_data,
     img_data_ptr_it_t img_array_ptr_beg  = DICOM_data.image_data.begin();
     img_data_ptr_it_t img_array_ptr_end  = DICOM_data.image_data.end();
     img_data_ptr_it_t img_array_ptr_last = std::prev(DICOM_data.image_data.end());
-    img_data_ptr_it_t img_array_ptr_it   = img_array_ptr_beg;
+    img_data_ptr_it_t img_array_ptr_it   = img_array_ptr_last;
 
     //At the moment, we keep a single 'display' image active at a time. To help walk through the neighbouring images
     // (and the rest of the images, for that matter) we keep a container iterator to the image.
     using disp_img_it_t = decltype(DICOM_data.image_data.front()->imagecoll.images.begin());
     disp_img_it_t disp_img_beg  = (*img_array_ptr_it)->imagecoll.images.begin();
-    //disp_img_it_t disp_img_end  = (*img_array_ptr_it)->imagecoll.images.end();  // Not used atm.
+    disp_img_it_t disp_img_end  = (*img_array_ptr_it)->imagecoll.images.end();
     disp_img_it_t disp_img_last = std::prev((*img_array_ptr_it)->imagecoll.images.end());
-    disp_img_it_t disp_img_it   = disp_img_beg;
+
+    //Find the image closest to (0,0,0), which is frequently the portion of interest.
+    using disp_img_t = decltype(*disp_img_beg);
+    auto disp_img_it = std::min_element(disp_img_beg, disp_img_end, 
+                    [](const disp_img_t &L, const disp_img_t &R) -> bool {
+                        const auto zero = vec3<double>().zero();
+                        return (L.center().sq_dist(zero) < R.center().sq_dist(zero));
+                    });
 
     //Because SFML requires us to keep a sf::Texture alive for the duration of a sf::Sprite, we simply package them
     // together into a texture-sprite bundle. This means a single sf::Sprite must be accompanied by a sf::Texture, 
