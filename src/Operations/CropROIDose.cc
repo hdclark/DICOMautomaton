@@ -1,4 +1,4 @@
-//TrimROIDose.cc - A part of DICOMautomaton 2017. Written by hal clark.
+//CropROIDose.cc - A part of DICOMautomaton 2018. Written by hal clark.
 
 #include <algorithm>
 #include <list>
@@ -13,17 +13,17 @@
 #include "HighlightROIs.h"
 
 
-OperationDoc OpArgDocTrimROIDose(void){
+OperationDoc OpArgDocCropROIDose(void){
     OperationDoc out;
-    out.name = "TrimROIDose";
+    out.name = "CropROIDose";
     out.desc = 
-      "This operation provides a simplified interface for overriding the dose within a ROI."
-      " For example, this operation can be used to modify a base plan by eliminating dose"
-      " that coincides with a PTV/CTV/GTV/ROI etc.";
+      "This operation provides a simplified interface for overriding the dose outside a ROI."
+      " For example, this operation can be used to modify a base plan by eliminating dose "
+      " outside an OAR.";
 
     out.notes.emplace_back(
-      "This operation performs the opposite of the 'Crop' operation, which trims the dose"
-      " outside a ROI."
+      "This operation performs the opposite of the 'Trim' operation, which trims the dose"
+      " inside a ROI."
     );
     out.notes.emplace_back(
       "The inclusivity of a dose voxel that straddles the ROI boundary can be specified in"
@@ -63,17 +63,17 @@ OperationDoc OpArgDocTrimROIDose(void){
 
         }else if(oparg.name == "ExteriorVal"){
             oparg.default_val = "0.0";
-            oparg.visibility  = OpArgVisibility::Hide;
 
         }else if(oparg.name == "InteriorVal"){
             oparg.default_val = "0.0";
+            oparg.visibility  = OpArgVisibility::Hide;
 
         }else if(oparg.name == "ExteriorOverwrite"){
-            oparg.default_val = "false";
+            oparg.default_val = "true";
             oparg.visibility  = OpArgVisibility::Hide;
 
         }else if(oparg.name == "InteriorOverwrite"){
-            oparg.default_val = "true";
+            oparg.default_val = "false";
             oparg.visibility  = OpArgVisibility::Hide;
 
         // DICOMExportImagesAsDose options.
@@ -88,7 +88,7 @@ OperationDoc OpArgDocTrimROIDose(void){
 
 
 Drover
-TrimROIDose(Drover DICOM_data, 
+CropROIDose(Drover DICOM_data, 
             OperationArgPkg OptArgs,
             std::map<std::string, std::string> InvocationMetadata,
             std::string FilenameLex){

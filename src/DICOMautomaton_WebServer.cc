@@ -510,7 +510,9 @@ void BaseWebServerApplication::createOperationSelectorGB(void){
         //||  ( n == "EvaluateTCPModels" ) 
         //||  ( n == "SeamContours" )
         //||  ( n == "GrowContours" )
-        ||  ( n == "TrimROIDose" ) ){    //Whitelist ... for now.
+        ||  ( n == "TrimROIDose" )
+        ||  ( n == "CropROIDose" )
+    ){    //Whitelist ... for now.
             selector->addItem(anop.first);
         }
     }

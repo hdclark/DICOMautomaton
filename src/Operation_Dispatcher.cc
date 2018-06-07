@@ -45,6 +45,7 @@
 #include "Operations/CopyImages.h"
 #include "Operations/CropImageDoseToROIs.h"
 #include "Operations/CropImages.h"
+#include "Operations/CropROIDose.h"
 #include "Operations/DCEMRI_IAUC.h"
 #include "Operations/DCEMRI_Nonparametric_CE.h"
 #include "Operations/DICOMExportImagesAsDose.h"
@@ -145,6 +146,7 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["CopyImages"] = std::make_pair(OpArgDocCopyImages, CopyImages);
     out["CropImageDoseToROIs"] = std::make_pair(OpArgDocCropImageDoseToROIs, CropImageDoseToROIs);
     out["CropImages"] = std::make_pair(OpArgDocCropImages, CropImages);
+    out["CropROIDose"] = std::make_pair(OpArgDocCropROIDose, CropROIDose);
     out["EQD2Convert"] = std::make_pair(OpArgDocEQD2Convert, EQD2Convert);
     out["DCEMRI_IAUC"] = std::make_pair(OpArgDocDCEMRI_IAUC, DCEMRI_IAUC);
     out["DroverDebug"] = std::make_pair(OpArgDocDroverDebug, DroverDebug);
