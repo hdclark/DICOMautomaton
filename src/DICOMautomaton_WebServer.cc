@@ -694,7 +694,7 @@ void BaseWebServerApplication::appendOperationParamsColumn(void){
 
             }
 
-            //Make a tool-tip containing descriptions and examples. Attach it to all columns we may have altered.
+            //Make a tool-tip containing descriptions and examples. Attach it to the parameter name column.
             std::stringstream tooltip_ss;
             tooltip_ss << "<p>" << a.desc << "</p>";
             tooltip_ss << "<p>Examples: <br /><ul>";
@@ -702,7 +702,6 @@ void BaseWebServerApplication::appendOperationParamsColumn(void){
             tooltip_ss << "</ul></p>";
 
             table->elementAt(table_row, 0  )->setToolTip(Wt::WString::fromUTF8(tooltip_ss.str()), Wt::TextFormat::XHTML);
-            table->elementAt(table_row,cols)->setToolTip(Wt::WString::fromUTF8(tooltip_ss.str()), Wt::TextFormat::XHTML);
 
             ++table_row;
         }
