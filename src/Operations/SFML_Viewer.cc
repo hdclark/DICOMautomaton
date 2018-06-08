@@ -1888,7 +1888,12 @@ Drover SFML_Viewer( Drover DICOM_data,
 
                         //Change colour depending on the orientation.
                         const auto arb_pos_unit = disp_img_it->row_unit.Cross(disp_img_it->col_unit).unit();
-                        const auto c_orient = c.Estimate_Planar_Normal();
+                        vec3<double> c_orient;
+                        try{ // Protect against degenerate contours. (Should we instead ignore them altogether?)
+                            c_orient = c.Estimate_Planar_Normal();
+                        }catch(const std::exception &){
+                            c_orient = arb_pos_unit;
+                        }
                         const auto c_orient_pos = (c_orient.Dot(arb_pos_unit) > 0);
                         auto c_color = ( c_orient_pos ? Neg_Contour_Color : Pos_Contour_Color );
 
