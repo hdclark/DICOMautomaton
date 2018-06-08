@@ -104,6 +104,7 @@ Drover AutoCropImages(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::
             // Create a contour collection for the relevant images.
             contour_collection<double> cc;  // These are used only for purposes of cropping.
 
+
             const auto rows = img_it->rows;
             const auto cols = img_it->columns;
 
@@ -118,6 +119,18 @@ Drover AutoCropImages(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::
 
             //Override crop specifications using metadata from the image.
             if(RTIMAGE){
+                {
+                    auto Modality     = img_it->GetMetadataValueAs<std::string>("Modality").value_or("");
+                    auto RTImagePlane = img_it->GetMetadataValueAs<std::string>("RTImagePlane").value_or("");
+                    if((Modality != "RTIMAGE") || (RTImagePlane != "NORMAL")){
+                        throw std::domain_error("This routine can only handle RTIMAGES with RTImagePlane=NORMAL.");
+                    }
+                }
+
+                const auto RTImageSID = std::stod( img_it->GetMetadataValueAs<std::string>("RTImageSID").value_or("1000.0") );
+                const auto SAD = std::stod( img_it->GetMetadataValueAs<std::string>("RadiationMachineSAD").value_or("1000.0") );
+                const auto SADToSID = RTImageSID / SAD; // Factor for scaling distance on SAD plane to distance on image panel plane.
+
                 auto LeafJawPositions0 = img_it->GetMetadataValueAs<std::string>("ExposureSequence/BeamLimitingDeviceSequence#0/LeafJawPositions");
                 auto LeafJawPositions1 = img_it->GetMetadataValueAs<std::string>("ExposureSequence/BeamLimitingDeviceSequence#1/LeafJawPositions");
                 auto RTBeamLimitingDeviceType0 = img_it->GetMetadataValueAs<std::string>("ExposureSequence/BeamLimitingDeviceSequence#0/RTBeamLimitingDeviceType");
@@ -153,10 +166,10 @@ Drover AutoCropImages(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::
                     auto rot_ang = std::stod( BeamLimitingDeviceAngle.value() ) * M_PI/180.0; // in radians.
 
                     
-                    const auto x_lower = std::stod(x_coords.at(0));
-                    const auto x_upper = std::stod(x_coords.at(1));
-                    const auto y_lower = std::stod(y_coords.at(0));
-                    const auto y_upper = std::stod(y_coords.at(1));
+                    const auto x_lower = std::stod(x_coords.at(0)) * SADToSID;
+                    const auto x_upper = std::stod(x_coords.at(1)) * SADToSID;
+                    const auto y_lower = std::stod(y_coords.at(0)) * SADToSID;
+                    const auto y_upper = std::stod(y_coords.at(1)) * SADToSID;
 
                     auto A = (vec2<double>(x_upper, y_upper)).rotate_around_z(rot_ang);
                     auto B = (vec2<double>(x_lower, y_lower)).rotate_around_z(rot_ang);
@@ -167,10 +180,23 @@ Drover AutoCropImages(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::
                     cc.contours.emplace_back();
                     cc.contours.back().closed = true;
                     cc.contours.back().points.emplace_back( Ucol * A.x + Urow * A.y );
-                    cc.contours.back().points.emplace_back( Ucol * B.x + Urow * B.y );
                     cc.contours.back().points.emplace_back( Ucol * C.x + Urow * C.y );
+                    cc.contours.back().points.emplace_back( Ucol * B.x + Urow * B.y );
                     cc.contours.back().points.emplace_back( Ucol * D.x + Urow * D.y );
                     cc.contours.back() = cc.contours.back().Project_Onto_Plane_Orthogonally(img_plane); //Ensure orthogonal positioning.
+
+/*
+                    // Save the contour for later viewing.
+                    if(DICOM_data.contour_data == nullptr){
+                        std::unique_ptr<Contour_Data> output (new Contour_Data());
+                        DICOM_data.contour_data = std::move(output);
+                    }
+                    DICOM_data.contour_data->ccs.emplace_back();
+                    DICOM_data.contour_data->ccs.back().Raw_ROI_name = "AutoCrop";
+                    DICOM_data.contour_data->ccs.back().ROI_number = 10000; // TODO: find highest existing and ++ it.
+                    DICOM_data.contour_data->ccs.back().Minimum_Separation = 1.0;
+                    DICOM_data.contour_data->ccs.back().contours.emplace_back( cc.contours.back() );
+*/
 
                 }catch(const std::exception &e){
                     throw std::domain_error("Unable to perform RTIMAGE auto-crop: coordinate transforms: "_s + e.what());
@@ -195,13 +221,13 @@ Drover AutoCropImages(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::
                 throw std::runtime_error("Unable to perform crop.");
             }
 
-            //Move the cropped Replace the original with the cropped image.
+            //Move the cropped image into a buffer for later insertion.
             if(!shtl.images.empty()){
                 cropped_imagecoll.images.splice( cropped_imagecoll.images.end(), shtl.images );
             }
         }
 
-        //Return the cropped images.
+        //Return the cropped images to the image collection.
         (*iap_it)->imagecoll.images.splice( (*iap_it)->imagecoll.images.end(), 
                                             cropped_imagecoll.images );
 
