@@ -25,8 +25,8 @@ OperationDoc OpArgDocFVPicketFence(void){
     );
 
 
-    out.args.splice( out.args.end(), OpArgDocCropImages().args );
     out.args.splice( out.args.end(), OpArgDocAutoCropImages().args );
+    out.args.splice( out.args.end(), OpArgDocCropImages().args );
     out.args.splice( out.args.end(), OpArgDocAnalyzePicketFence().args );
     out.args.splice( out.args.end(), OpArgDocPresentationImage().args );
 
@@ -91,8 +91,8 @@ FVPicketFence(Drover DICOM_data,
               std::map<std::string, std::string> InvocationMetadata,
               std::string FilenameLex){
 
-    DICOM_data = CropImages(std::move(DICOM_data), OptArgs, InvocationMetadata, FilenameLex);
     DICOM_data = AutoCropImages(std::move(DICOM_data), OptArgs, InvocationMetadata, FilenameLex);
+    DICOM_data = CropImages(std::move(DICOM_data), OptArgs, InvocationMetadata, FilenameLex);
     DICOM_data = AnalyzePicketFence(std::move(DICOM_data), OptArgs, InvocationMetadata, FilenameLex);
     DICOM_data = PresentationImage(std::move(DICOM_data), OptArgs, InvocationMetadata, FilenameLex);
 
