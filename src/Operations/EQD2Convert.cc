@@ -37,17 +37,20 @@ OperationDoc OpArgDocEQD2Convert(void){
     out.args.emplace_back();
     out.args.back().name = "DoseImageSelection";
     out.args.back().desc = "Dose images to operate on. Either 'none', 'last', or 'all'.";
-    out.args.back().default_val = "none";
+    out.args.back().default_val = "last";
     out.args.back().expected = true;
     out.args.back().examples = { "none", "last", "all" };
-    
+    out.args.back().visibility = OpArgVisibility::Hide;
+
+
     out.args.emplace_back();
     out.args.back().name = "ImageSelection";
     out.args.back().desc = "Images to operate on. Either 'none', 'last', or 'all'.";
     out.args.back().default_val = "last";
     out.args.back().expected = true;
     out.args.back().examples = { "none", "last", "all" };
-    
+    out.args.back().visibility = OpArgVisibility::Hide;
+
 
     out.args.emplace_back();
     out.args.back().name = "AlphaBetaRatioNormal";
@@ -63,6 +66,7 @@ OperationDoc OpArgDocEQD2Convert(void){
     out.args.back().expected = true;
     out.args.back().examples = { "2.0", "3.0" };
 
+
     out.args.emplace_back();
     out.args.back().name = "AlphaBetaRatioTumour";
     out.args.back().desc = "The value to use for alpha/beta in diseased (tumourous) tissues."
@@ -72,6 +76,7 @@ OperationDoc OpArgDocEQD2Convert(void){
     out.args.back().default_val = "10.0";
     out.args.back().expected = true;
     out.args.back().examples = { "10.0" };
+
 
     out.args.emplace_back();
     out.args.back().name = "NumberOfFractions";
@@ -106,10 +111,11 @@ OperationDoc OpArgDocEQD2Convert(void){
     out.args.back().expected = true;
     out.args.back().examples = { ".*", ".*GTV.*", "PTV66", R"***(.*PTV.*|.*GTV.**)***" };
 
+
     out.args.emplace_back();
     out.args.back().name = "ROILabelRegex";
     out.args.back().desc = "A regex matching ROI labels/names to consider as bounding tumourous tissues."
-                      "The default will match"
+                      " The default will match"
                       " all available ROIs. Be aware that input spaces are trimmed to a single space."
                       " If your ROI name has more than two sequential spaces, use regex to avoid them."
                       " All ROIs have to match the single regex, so use the 'or' token if needed."
