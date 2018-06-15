@@ -55,6 +55,17 @@ OperationDoc OpArgDocPurgeContours(void){
                             R"***(.*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*)***",
                             R"***(Left Parotid|Right Parotid)***" };
 
+
+    out.args.emplace_back();
+    out.args.back().name = "Invert";
+    out.args.back().desc = "If false, matching contours will be purged. If true, matching contours"
+                           " will be retained and non-matching contours will be purged."
+                           " Enabling this option is equivalent to a 'Keep if and only if' operation.";
+    out.args.back().default_val = "false";
+    out.args.back().expected = true;
+    out.args.back().examples = { "true", "false" };
+
+
     out.args.emplace_back();
     out.args.back().name = "AreaAbove";
     out.args.back().desc = "If this option is provided with a valid positive number, contour(s) with an area"
@@ -103,16 +114,22 @@ Drover PurgeContours(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::s
     const auto ROILabelRegex = OptArgs.getValueStr("ROILabelRegex").value();
     const auto NormalizedROILabelRegex = OptArgs.getValueStr("NormalizedROILabelRegex").value();
 
+    const auto InvertStr = OptArgs.getValueStr("Invert").value();
+
     const auto AreaAbove = std::stod( OptArgs.getValueStr("AreaAbove").value() );
     const auto AreaBelow = std::stod( OptArgs.getValueStr("AreaBelow").value() );
     const auto PerimeterAbove = std::stod( OptArgs.getValueStr("PerimeterAbove").value() );
     const auto PerimeterBelow = std::stod( OptArgs.getValueStr("PerimeterBelow").value() );
 
     //-----------------------------------------------------------------------------------------------------------------
-    const auto roiregex = std::regex(ROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto regex_true = Compile_Regex("^tr?u?e?$");
 
-    const auto roinormalizedregex = std::regex(NormalizedROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto roiregex = Compile_Regex(ROILabelRegex);
+    const auto roinormalizedregex = Compile_Regex(NormalizedROILabelRegex);
 
+    const auto invert_logic = (std::regex_match(InvertStr, regex_true)) ?
+                      [](bool in){ return !in; }
+                    : [](bool in){ return in; };
 
     auto matches_ROIName = [=](const contour_of_points<double> &cop) -> bool {
                    const auto ROINameOpt = cop.GetMetadataValueAs<std::string>("ROIName");
@@ -149,8 +166,8 @@ Drover PurgeContours(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::s
         return false;
     };
     auto remove_all_criteria = [&](const contour_of_points<double> &cop) -> bool {
-        if(!matches_ROIName(cop) && !matches_NormalizedROIName(cop)) return false; //Ignore.
-        return area_criteria(cop) || perimeter_criteria(cop);
+        if(!matches_ROIName(cop) && !matches_NormalizedROIName(cop)) return invert_logic(false); //Ignore.
+        return invert_logic( area_criteria(cop) || perimeter_criteria(cop) );
     };
 
     //Walk the contours, testing each contour iff selected.
