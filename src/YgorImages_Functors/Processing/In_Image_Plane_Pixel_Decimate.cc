@@ -24,13 +24,11 @@ bool InImagePlanePixelDecimate(
     //This routine reduces the number of pixels in an image by computing some sort of aggregate of a
     // block of adjacent pixels. 
     //
-    // This routine presently requires that the outgoing pixel edge length scaling factor be a 
-    // clean divisor of the existing dimensions so that pixels have well-defined membership in the
-    // outgoing pixels. (The alternative would be to 'blur' pixels that straddle a boundary, which 
-    // would take much longer -- but it very much possible if you need to implement it. Just use a
-    // weighted average and prepare yourself for some fuzzy boundary calculations!)
+    // This routine does NOT requires that the outgoing pixel edge length scaling factor be a 
+    // clean divisor of the existing dimensions, but ensuring so will eliminate boundary 
+    // short-sampling effects.
     //
-    // If your imcoming image size is 512x512, you can specify powers of 8 up to 512:
+    // If your incoming image size is 512x512, you can specify powers of 2 up to 512:
     //   • 1   (Should result in no averaging, but will probably result in NaN's due to the
     //          "average" of a single entity being kind of poorly defined),
     //   • 2   (Outgoing pixels are 2x2 as large as the original pixels.)
@@ -43,15 +41,18 @@ bool InImagePlanePixelDecimate(
     //   • 256 (256x256 etc..)
     //   • 512 (512x512 etc.. Will result in a single pixel!)
     //
+    // If your incoming image size is 513x513, you can still specify powers of 2, but 
+    // there will be a strip of pixels on the boundary that are effectively not averaged.
+    //
 
-    const auto NumberOfRowsRequired = first_img_it->rows / ScaleFactorR;
-    const auto NumberOfColsRequired = first_img_it->columns / ScaleFactorC;
+    const auto NumberOfRowsRequired = static_cast<long int>( std::ceil( 1.0 * first_img_it->rows / ScaleFactorR )  );
+    const auto NumberOfColsRequired = static_cast<long int>( std::ceil( 1.0 * first_img_it->columns / ScaleFactorC ) );
 
     if((NumberOfRowsRequired * ScaleFactorR) != first_img_it->rows){
-        throw std::logic_error("ScaleFactorR must be a clean divisor of the image size. Rows = " +
+        FUNCWARN("ScaleFactorR should be a clean divisor of the image size to avoid boundary effect: Rows = " +
                                 std::to_string(first_img_it->rows));
     }else if((NumberOfColsRequired * ScaleFactorC) != first_img_it->columns){
-        throw std::logic_error("ScaleFactorC must be a clean divisor of the image size. Columns = " +
+        FUNCWARN("ScaleFactorC should be a clean divisor of the image size to avoid boundary effect: Columns = " +
                                 std::to_string(first_img_it->columns));
     } 
 
