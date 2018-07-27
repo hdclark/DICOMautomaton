@@ -723,7 +723,7 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
                     PFC.junction_separations.clear();
 
                     //Adjacent difference. std::adjacent_difference() causing issues here due to std::pair<> (?) ... TODO.
-                    {
+                    if(PFC.junction_cax_separations.size() >= 2){
                         auto it_A = PFC.junction_cax_separations.begin();
                         auto it_B = std::next(it_A);
                         while(it_B != PFC.junction_cax_separations.end()){

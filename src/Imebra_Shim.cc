@@ -760,8 +760,13 @@ std::unique_ptr<Image_Array> Load_Image_Array(const std::string &FilenameIn){
                                             uint32_t element = 0) 
                                             -> std::experimental::optional<double> {
         auto o = retrieve_as_string(group,tag,element);
-        if(!o) return std::experimental::nullopt;
-        return std::stod(o.value());
+
+        std::experimental::optional<double> out = std::experimental::nullopt;
+        if(!o) return out;
+        try{
+            out = std::stod(o.value());
+        }catch(const std::exception &){}
+        return out;
     };                                            
     auto retrieve_coalesce_as_string = [&TopDataSet,&retrieve_as_string](std::list<std::array<uint32_t,3>> qs) 
                                                     -> std::experimental::optional<std::string> {
@@ -779,14 +784,24 @@ std::unique_ptr<Image_Array> Load_Image_Array(const std::string &FilenameIn){
     auto retrieve_coalesce_as_long_int = [&TopDataSet,&retrieve_coalesce_as_string](std::list<std::array<uint32_t,3>> qs)
                                                        -> std::experimental::optional<double> {
         auto o = retrieve_coalesce_as_string(qs);
-        if(!o) return std::experimental::nullopt;
-        return std::stol(o.value());
+
+        std::experimental::optional<double> out = std::experimental::nullopt;
+        if(!o) return out;
+        try{
+            out = std::stol(o.value());
+        }catch(const std::exception &){}
+        return out;
     };                                            
     auto retrieve_coalesce_as_double = [&TopDataSet,&retrieve_coalesce_as_string](std::list<std::array<uint32_t,3>> qs)
                                                      -> std::experimental::optional<double> {
         auto o = retrieve_coalesce_as_string(qs);
-        if(!o) return std::experimental::nullopt;
-        return std::stod(o.value());
+
+        std::experimental::optional<double> out = std::experimental::nullopt;
+        if(!o) return out;
+        try{
+            out = std::stod(o.value());
+        }catch(const std::exception &){}
+        return out;
     };                                            
 
     // ------------------------------------------- General --------------------------------------------------
