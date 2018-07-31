@@ -28,6 +28,7 @@
 #include <SFML/Audio.hpp>
 
 #include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
+//#include <CGAL/Exact_predicates_exact_constructions_kernel.h>
 
 #include <CGAL/Cartesian.h>
 #include <CGAL/Min_sphere_of_spheres_d.h>
@@ -39,7 +40,8 @@
 #include <CGAL/Implicit_surface_3.h>
 
 #include <CGAL/IO/Complex_2_in_triangulation_3_file_writer.h>
-#include <CGAL/IO/output_surface_facets_to_polyhedron.h>
+#include <CGAL/IO/facets_in_complex_2_to_triangle_mesh.h>
+//#include <CGAL/IO/output_surface_facets_to_polyhedron.h>
 
 #include <CGAL/Polyhedron_3.h>
 #include <CGAL/IO/Polyhedron_iostream.h>
@@ -616,18 +618,31 @@ Drover SurfaceBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptA
 
     //Convert to a polyhedron.
     using Kernel = CGAL::Exact_predicates_inexact_constructions_kernel;
+    //using Kernel = CGAL::Exact_predicates_exact_constructions_kernel;
     using Polyhedron = CGAL::Polyhedron_3<Kernel>;
     //typedef Polyhedron::Halfedge_handle Halfedge_handle;
     Polyhedron polyhedron;
 
-    if(!CGAL::output_surface_facets_to_polyhedron(c2t3, polyhedron)){
-        throw std::runtime_error("Could not convert surface mesh to a polyhedron representation. Is it manifold & orientable?");
+    //if(!CGAL::output_surface_facets_to_polyhedron(c2t3, polyhedron)){  // Deprecated.
+    try{
+        CGAL::facets_in_complex_2_to_triangle_mesh(c2t3, polyhedron);
+    }catch(const std::exception &e){
+        throw std::runtime_error(std::string("Could not convert surface mesh to a polyhedron representation: ") + e.what());
     }
+    FUNCINFO("The polyhedron surface has " << polyhedron.size_of_vertices() << " vertices"
+             " and " << polyhedron.size_of_facets() << " faces");
+
 
     //Perform surface subdivision.
-    CGAL::Subdivision_method_3::Loop_subdivision(polyhedron,MeshingSubdivisionIterations);
-    FUNCINFO("The subdivided triangulated surface has " << polyhedron.size_of_vertices() << " vertices"
-             " and " << polyhedron.size_of_facets() << " faces");
+    if(!polyhedron.is_pure_triangle()) throw std::runtime_error("Mesh is not purely triangular.");
+    if(MeshingSubdivisionIterations > 0){
+        CGAL::Subdivision_method_3::Loop_subdivision(polyhedron, MeshingSubdivisionIterations);
+        //CGAL::Subdivision_method_3::DooSabin_subdivision(polyhedron,MeshingSubdivisionIterations);
+        //CGAL::Subdivision_method_3::Sqrt3_subdivision(polyhedron,MeshingSubdivisionIterations);
+        FUNCINFO("The subdivided triangulated surface has " << polyhedron.size_of_vertices() << " vertices"
+                 " and " << polyhedron.size_of_facets() << " faces");
+    }
+
 
     if(!SubdividedROISurfaceMeshFileName.empty()){
         std::ofstream out(SubdividedROISurfaceMeshFileName);
@@ -798,12 +813,12 @@ Drover SurfaceBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptA
                             const Point *pA = boost::get<Point>(&(A->first));
                             const Point *pB = boost::get<Point>(&(B->first));
                             if( (pA) && (pB) ){ // Both valid points.
-                                const vec3<double> PA(static_cast<double>(pA->x()),
-                                                      static_cast<double>(pA->y()),
-                                                      static_cast<double>(pA->z()));
-                                const vec3<double> PB(static_cast<double>(pB->x()),
-                                                      static_cast<double>(pB->y()),
-                                                      static_cast<double>(pB->z()));
+                                const vec3<double> PA(static_cast<double>( CGAL::to_double( pA->x() )),
+                                                      static_cast<double>( CGAL::to_double( pA->y() )),
+                                                      static_cast<double>( CGAL::to_double( pA->z() )));
+                                const vec3<double> PB(static_cast<double>( CGAL::to_double( pB->x() )),
+                                                      static_cast<double>( CGAL::to_double( pB->y() )),
+                                                      static_cast<double>( CGAL::to_double( pB->z() )));
                                 return std::abs( detector_plane.Get_Signed_Distance_To_Point(PA) ) 
                                           < std::abs( detector_plane.Get_Signed_Distance_To_Point(PB) );
                             }else if((pA) && !(pB)){
@@ -821,9 +836,9 @@ Drover SurfaceBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptA
                                 const Point* p = boost::get<Point>(&(intersection->first));
                                 if(p){
                                     //Convert from CGAL vector to Ygor vector.
-                                    const vec3<double> P(static_cast<double>(p->x()),
-                                                         static_cast<double>(p->y()),
-                                                         static_cast<double>(p->z()));
+                                    const vec3<double> P(static_cast<double>( CGAL::to_double( p->x() )),
+                                                         static_cast<double>( CGAL::to_double( p->y() )),
+                                                         static_cast<double>( CGAL::to_double( p->z() )));
 
                                     //Compute the distance to the detector.
                                     const auto P_src_dist = std::abs( detector_plane.Get_Signed_Distance_To_Point(P) );
