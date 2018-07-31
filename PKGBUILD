@@ -53,11 +53,11 @@ options=(strip staticlibs)
 
 build() {
   cmake ../ -DCMAKE_INSTALL_PREFIX=/usr
-  make -j 4
+  make -j 8
 }
 
 package() {
-  make -j 4 DESTDIR="${pkgdir}" install
+  make -j 8 DESTDIR="${pkgdir}" install
 }
 
 # vim:set ts=2 sw=2 et:
