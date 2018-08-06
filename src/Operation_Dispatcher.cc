@@ -88,6 +88,7 @@
 #include "Operations/LogScale.h"
 #include "Operations/MaxMinPixels.h"
 #include "Operations/MeldDose.h"
+#include "Operations/MinkowskiSum3D.h"
 #include "Operations/ModifyContourMetadata.h"
 #include "Operations/ModifyImageMetadata.h"
 #include "Operations/OptimizeStaticBeams.h"
@@ -191,6 +192,7 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["ImageRoutineTests"] = std::make_pair(OpArgDocImageRoutineTests, ImageRoutineTests);
     out["LogScale"] = std::make_pair(OpArgDocLogScale, LogScale);
     out["MeldDose"] = std::make_pair(OpArgDocMeldDose, MeldDose);
+    out["MinkowskiSum3D"] = std::make_pair(OpArgDocMinkowskiSum3D, MinkowskiSum3D);
     out["ModifyContourMetadata"] = std::make_pair(OpArgDocModifyContourMetadata, ModifyContourMetadata);
     out["ModifyImageMetadata"] = std::make_pair(OpArgDocModifyImageMetadata, ModifyImageMetadata);
     out["MaxMinPixels"] = std::make_pair(OpArgDocMaxMinPixels, MaxMinPixels);

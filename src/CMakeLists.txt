@@ -103,6 +103,13 @@ set_target_properties(Boost_Serialization_File_Loader_obj PROPERTIES
     POSITION_INDEPENDENT_CODE TRUE
 )
 
+add_library(Surface_Meshes_obj OBJECT
+    Surface_Meshes.cc     
+)
+set_target_properties(Surface_Meshes_obj PROPERTIES
+    POSITION_INDEPENDENT_CODE TRUE
+)
+
 add_library(Write_File_obj OBJECT
     Write_File.cc  
 )
@@ -264,6 +271,7 @@ add_executable (dicomautomaton_dispatcher
     $<TARGET_OBJECTS:Contour_Boolean_Operations_obj>
     $<TARGET_OBJECTS:Contour_Collection_Estimates_obj>
     $<TARGET_OBJECTS:Insert_Contours_obj>
+    $<TARGET_OBJECTS:Surface_Meshes_obj>
     $<TARGET_OBJECTS:Regex_Selectors_obj>
 
     $<TARGET_OBJECTS:PACS_Loader_obj>
@@ -321,6 +329,7 @@ add_executable(dicomautomaton_webserver
     $<TARGET_OBJECTS:Contour_Boolean_Operations_obj>
     $<TARGET_OBJECTS:Contour_Collection_Estimates_obj>
     $<TARGET_OBJECTS:Insert_Contours_obj>
+    $<TARGET_OBJECTS:Surface_Meshes_obj>
     $<TARGET_OBJECTS:Regex_Selectors_obj>
 
     $<TARGET_OBJECTS:PACS_Loader_obj>

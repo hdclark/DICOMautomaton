@@ -71,6 +71,7 @@ add_library(Operations_objs OBJECT
     LogScale.cc
     MaxMinPixels.cc
     MeldDose.cc
+    MinkowskiSum3D.cc
     ModifyContourMetadata.cc
     ModifyImageMetadata.cc
     OptimizeStaticBeams.cc
