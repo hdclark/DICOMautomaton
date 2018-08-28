@@ -2,6 +2,8 @@
 
 set -e 
 
+base_name="dicomautomaton_webserver"
+
 commit_id=$(git rev-parse HEAD)
 
 clean_dirty="clean"
@@ -17,9 +19,9 @@ cd "${reporoot}"
 
 time sudo docker build \
     --no-cache=true \
-    -t dicomautomaton_webserver:"built_${build_datetime}" \
-    -t dicomautomaton_webserver:"commit_${commit_id}_${clean_dirty}" \
-    -t dicomautomaton_webserver:latest \
+    -t "${base_name}":"built_${build_datetime}" \
+    -t "${base_name}":"commit_${commit_id}_${clean_dirty}" \
+    -t "${base_name}":latest \
     -f docker/Dockerfile \
     .
 

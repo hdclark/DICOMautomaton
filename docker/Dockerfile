@@ -1,6 +1,5 @@
 
-FROM debian:testing
-#FROM debian:unstable
+FROM base/archlinux
 
 LABEL maintainer="http://www.halclark.ca" \
       description="DICOMautomaton Web Server."
@@ -14,91 +13,90 @@ ADD . /dcma
 
 
 # Install build dependencies.
-ENV DEBIAN_FRONTEND noninteractive
+RUN pacman -Syu --noconfirm --needed base-devel git cmake gcc vim gdb \
+    ` # Needed for an AUR helper ` \
+    sudo pyalpm
 
-RUN apt-get --yes update && \
-    apt-get --yes install git cmake g++ vim gdb
 
-RUN apt-get install --yes \
-    ` # Ygor dependencies ` \
-        libhtmlcxx-dev \
-        libboost-dev \
-        libgsl-dev \
-        libeigen3-dev \
-    ` # DICOMautomaton dependencies ` \
-        libeigen3-dev \
-        libboost-dev libboost-filesystem-dev libboost-iostreams-dev libboost-program-options-dev libboost-thread-dev \
-        libz-dev libsfml-dev libjansson-dev \
-        libpqxx-dev postgresql-client \
-        libcgal-dev \
-        libnlopt-dev \
-        libasio-dev \
-        fonts-freefont-ttf fonts-cmu \
-        freeglut3 freeglut3-dev libxi-dev libxmu-dev \
-        gnuplot zenity \
+# Create a temporary user for building AUR packages.
+RUN useradd -r -d /var/empty aurbuild  && \
+    mkdir -p /var/empty/ && \
+    chown -R aurbuild:aurbuild /var/empty/ && \
+    printf '\n''aurbuild ALL=(ALL) NOPASSWD: ALL''\n' >> /etc/sudoers
+
+
+# Install an AUR helper.
+WORKDIR /yay
+RUN git clone https://aur.archlinux.org/yay.git . && \
+    chown -R aurbuild:aurbuild . && \
+    su - aurbuild -c "cd /yay && makepkg --syncdeps --install --clean --needed --noconfirm" && \
+    rm -rf /yay
+
+
+# Install all AUR dependencies.
+RUN su - aurbuild -c \
+    "yay -S --noconfirm --needed --afterclean --aur htmlcxx ttf-computer-modern-fonts nlopt"
+
+
+# Install known official dependencies.
+RUN pacman -S --noconfirm --needed  \
+   gcc-libs \
+   ttf-freefont \
+   zenity \
+   sfml \
+   jansson \
+   libpqxx \
+   postgresql \
+   freeglut \
+   gsl \
+   boost-libs \
+   zlib \
+   cgal \
+   wt \
+   dialog \
+   gnuplot \
+   asio \
+   freeglut libxi libxmu \
     ` # Additional dependencies for headless OpenGL rendering with SFML ` \
-        x-window-system mesa-utils \
-        xserver-xorg-video-dummy x11-apps
+   xorg-server xorg-apps mesa xf86-video-dummy
 
-RUN mv xpra-xorg.conf /etc/X11/xorg.conf
-
-
-# Install Wt from source to get around outdated and buggy Debian package.
-#
-# Note: Add additional dependencies if functionality is needed -- this is a basic install.
-#
-# Note: Could also install build-deps for the distribution packages, but the dependencies are not
-#       guaranteed to be stable (e.g., major version bumps).
-WORKDIR /wt
-RUN git clone https://github.com/emweb/wt.git . && \
-    mkdir -p build && cd build && \
-    cmake -DCMAKE_INSTALL_PREFIX=/usr ../ && \
-    make -j$(nproc) && \
-    make install && \
-    make clean
-
-WORKDIR /scratch
-RUN apt-get install --yes -f ./libwt-dev_10.0_all.deb ./libwthttp-dev_10.0_all.deb
+RUN mv /scratch/xpra-xorg.conf /etc/X11/xorg.conf
 
 
 # Install Ygor.
 #
 # Option 1: install a binary package.
 #WORKDIR /scratch
-#RUN apt-get install --yes -f ./Ygor*deb
+#RUN pacman -U ./Ygor*deb
 #
 # Option 2: clone the latest upstream commit.
 WORKDIR /ygor
 RUN git clone https://github.com/hdclark/Ygor . && \
-    mkdir -p build && cd build && \
-    cmake -DCMAKE_INSTALL_PREFIX=/usr ../ && \
-    make -j$(nproc) && \
-    make package && \
-    apt-get install --yes -f ./*deb && \
-    make clean
+    chown -R aurbuild:aurbuild . && \
+    su - aurbuild -c "cd /ygor && makepkg --syncdeps --install --clean --needed --noconfirm" && \
+    rm -rf /ygor
 
 
 # Install Explicator.
 #
 # Option 1: install a binary package.
 #WORKDIR /scratch
-#RUN apt-get install --yes -f ./Explicator*deb
+#RUN pacman -U ./Explicator*deb
 #
 # Option 2: clone the latest upstream commit.
 WORKDIR /explicator
 RUN git clone https://github.com/hdclark/explicator . && \
-    mkdir -p build && cd build && \
-    cmake -DCMAKE_INSTALL_PREFIX=/usr ../ && \
-    make -j$(nproc) && \
-    make package && \
-    apt-get install --yes -f ./*deb && \
-    make clean
+    chown -R aurbuild:aurbuild . && \
+    su - aurbuild -c "cd /explicator && makepkg --syncdeps --install --clean --needed --noconfirm" && \
+    rm -rf /explicator
 
 
 # Install YgorClustering.
 WORKDIR /ygorcluster
 RUN git clone https://github.com/hdclark/YgorClustering . && \
-    ./install_directly.sh
+    chown -R aurbuild:aurbuild . && \
+    su - aurbuild -c "cd /ygorcluster && makepkg --syncdeps --install --clean --needed --noconfirm" && \
+    rm -rf /ygorcluster
 
 
 # Install DICOMautomaton.
@@ -114,13 +112,9 @@ RUN git clone https://github.com/hdclark/YgorClustering . && \
 #
 # Option 3: use the working directory.
 WORKDIR /dcma
-RUN mkdir -p build && cd build && \
-    cmake -DCMAKE_INSTALL_PREFIX=/usr ../ && \
-    make -j$(nproc) && \
-    make package && \
-    apt-get install --yes -f ./*deb && \
-    make clean
-
+RUN chown -R aurbuild:aurbuild . && \
+    su - aurbuild -c "cd /dcma && makepkg --syncdeps --install --clean --needed --noconfirm" && \
+    rm -rf /dcma
 
 # Default to launching the webserver.
 WORKDIR /scratch

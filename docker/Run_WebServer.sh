@@ -43,6 +43,7 @@ mkdir -p "${WT_TMP_DIR}" || {
 }
 
 
+rm /tmp/.X1-lock 2>/dev/null || true  # In case a lock exists from terminating the container.
 /usr/bin/Xorg \
   -noreset \
   +extension GLX \
