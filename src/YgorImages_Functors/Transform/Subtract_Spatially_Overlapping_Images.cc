@@ -9,7 +9,7 @@
 #include "YgorMath.h"
 
 
-//Subtracts the provided external images that spatially overlap on a voxel-by-voxel basis.
+//Subtracts the provided external images that spatially overlap via voxel interpolation.
 bool SubtractSpatiallyOverlappingImages(planar_image_collection<float,double>::images_list_it_t  local_img_it,
                                         std::list<std::reference_wrapper<planar_image_collection<float,double>>> external_imgs,
                                         std::list<std::reference_wrapper<contour_collection<double>>>, 
@@ -28,20 +28,60 @@ bool SubtractSpatiallyOverlappingImages(planar_image_collection<float,double>::i
 
         for(auto & overlapping_img : overlapping_imgs){
 
-            //Loop over the rows, columns, and channels.
-            for(auto row = 0; row < local_img_it->rows; ++row){
-                for(auto col = 0; col < local_img_it->columns; ++col){
-                    for(auto chan = 0; chan < local_img_it->channels; ++chan){
+            const auto N_rows = local_img_it->rows;
+            const auto N_cols = local_img_it->columns;
+            if( (N_rows < 1) || (N_cols < 1) ) continue;
 
-                        const auto Lval = local_img_it->value(row, col, chan);
-                        const auto Rval = overlapping_img->value(row, col, chan);
-                        const auto newval = (Lval - Rval);
 
-                        local_img_it->reference(row, col, chan) = newval;
-                        minmax_pixel.Digest(newval);
+            // For images that exactly overlap.
+            if( (local_img_it->rows == overlapping_img->rows)
+            &&  (local_img_it->columns == overlapping_img->columns)
+            &&  (local_img_it->channels == overlapping_img->channels)
+            &&  (local_img_it->position(0,0) == overlapping_img->position(0,0)) 
+            &&  (local_img_it->position(N_rows-1,0) == overlapping_img->position(N_rows-1,0)) 
+            &&  (local_img_it->position(0,N_cols-1) == overlapping_img->position(0,N_cols-1)) ){
+
+                // TODO: just subtract the entire vectors instead of iterating over each?
+                for(auto row = 0; row < local_img_it->rows; ++row){
+                    for(auto col = 0; col < local_img_it->columns; ++col){
+                        for(auto chan = 0; chan < local_img_it->channels; ++chan){
+                            const auto Lval = local_img_it->value(row, col, chan);
+                            const auto Rval = overlapping_img->value(row, col, chan);
+                            const auto newval = (Lval - Rval);
+     
+                            local_img_it->reference(row, col, chan) = newval;
+                            minmax_pixel.Digest(newval);
+                        }
+                    }
+                }
+
+            // For images that need to be interpolated because they don't exactly overlap.
+            // This is much slower.
+            }else{
+                for(auto row = 0; row < local_img_it->rows; ++row){
+                    for(auto col = 0; col < local_img_it->columns; ++col){
+                        for(auto chan = 0; chan < local_img_it->channels; ++chan){
+
+                            const auto Lval = local_img_it->value(row, col, chan);
+                            const auto Lpos = local_img_it->position(row, col);
+
+                            try{
+                                const auto R_row_col = overlapping_img->fractional_row_column(Lpos);
+
+                                const auto R_row = R_row_col.first;
+                                const auto R_col = R_row_col.second;
+                                const auto Rval = overlapping_img->bilinearly_interpolate_in_pixel_number_space(R_row, R_col, chan);
+
+                                const auto newval = (Lval - Rval);
+
+                                local_img_it->reference(row, col, chan) = newval;
+                                minmax_pixel.Digest(newval);
+                            }catch(const std::exception &){}
+                        }
                     }
                 }
             }
+
         }
     }
 

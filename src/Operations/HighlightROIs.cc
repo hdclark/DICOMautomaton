@@ -40,10 +40,10 @@ OperationDoc OpArgDocHighlightROIs(void){
 
     out.args.emplace_back();
     out.args.back().name = "ImageSelection";
-    out.args.back().desc = "Images to operate on. Either 'none', 'last', or 'all'.";
+    out.args.back().desc = "Images to operate on. Either 'none', 'first', 'last', or 'all'.";
     out.args.back().default_val = "last";
     out.args.back().expected = true;
-    out.args.back().examples = { "none", "last", "all" };
+    out.args.back().examples = { "none", "first", "last", "all" };
 
     out.args.emplace_back();
     out.args.back().name = "ContourOverlap";
@@ -155,6 +155,7 @@ Drover HighlightROIs(Drover DICOM_data,
     //-----------------------------------------------------------------------------------------------------------------
 
     const auto regex_none = std::regex("no?n?e?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto regex_first = std::regex("^fi?r?s?t?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
     const auto regex_last = std::regex("la?s?t?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
     const auto regex_all  = std::regex("al?l?$",   std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
     const auto TrueRegex = std::regex("^tr?u?e?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
@@ -173,6 +174,7 @@ Drover HighlightROIs(Drover DICOM_data,
     const auto ShouldOverwriteInterior = std::regex_match(InteriorOverwriteStr, TrueRegex);
 
     if( !std::regex_match(ImageSelectionStr, regex_none)
+    &&  !std::regex_match(ImageSelectionStr, regex_first)
     &&  !std::regex_match(ImageSelectionStr, regex_last)
     &&  !std::regex_match(ImageSelectionStr, regex_all) ){
         throw std::invalid_argument("Image selection is not valid. Cannot continue.");
@@ -255,6 +257,7 @@ Drover HighlightROIs(Drover DICOM_data,
             throw std::runtime_error("Unable to highlight voxels with the specified ROI(s).");
         }
         ++iap_it;
+        if(std::regex_match(ImageSelectionStr, regex_first)) break;
     }
 
     return DICOM_data;

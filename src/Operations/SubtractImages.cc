@@ -24,6 +24,9 @@ OperationDoc OpArgDocSubtractImages(void){
         " This routine subtracts images that spatially overlap.";
 
     out.notes.emplace_back(
+        "This operation currently performs a subtraction necessarily using the first image volume."
+    );
+    out.notes.emplace_back(
         "This operation is currently extremely limited in that the selected images must be selected by position."
         " A more flexible approach will be eventually be implemented when the image selection mechanism is overhauled."
     );
