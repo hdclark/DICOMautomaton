@@ -13,9 +13,10 @@ ADD . /dcma
 
 
 # Install build dependencies.
-RUN pacman -Syu --noconfirm --needed base-devel git cmake gcc vim gdb \
+RUN pacman -Syu --noconfirm --needed base-devel git cmake gcc vim gdb screen \
     ` # Needed for an AUR helper ` \
-    sudo pyalpm
+    sudo pyalpm && \
+    rm -f /var/cache/pacman/pkg/*
 
 
 # Create a temporary user for building AUR packages.
@@ -29,36 +30,35 @@ RUN useradd -r -d /var/empty aurbuild  && \
 WORKDIR /yay
 RUN git clone https://aur.archlinux.org/yay.git . && \
     chown -R aurbuild:aurbuild . && \
-    su - aurbuild -c "cd /yay && makepkg --syncdeps --install --clean --needed --noconfirm" && \
+    su - aurbuild -c "cd /yay && makepkg --syncdeps --install --clean --needed --noconfirm --rmdeps" && \
     rm -rf /yay
 
 
 # Install all AUR dependencies.
 RUN su - aurbuild -c \
-    "yay -S --noconfirm --needed --afterclean --aur htmlcxx ttf-computer-modern-fonts nlopt"
+    "yay -S --noconfirm --needed --afterclean --aur htmlcxx ttf-computer-modern-fonts nlopt" && \
+    pacman -Rc --noconfirm octave
 
 
 # Install known official dependencies.
 RUN pacman -S --noconfirm --needed  \
-   gcc-libs \
-   ttf-freefont \
-   zenity \
-   sfml \
-   jansson \
-   libpqxx \
-   postgresql \
-   freeglut \
-   gsl \
-   boost-libs \
-   zlib \
-   cgal \
-   wt \
-   dialog \
-   gnuplot \
-   asio \
-   freeglut libxi libxmu \
-    ` # Additional dependencies for headless OpenGL rendering with SFML ` \
-   xorg-server xorg-apps mesa xf86-video-dummy
+    gcc-libs \
+    ttf-freefont \
+    sfml \
+    jansson \
+    libpqxx \
+    postgresql \
+    freeglut \
+    gsl \
+    boost-libs \
+    zlib \
+    cgal \
+    wt \
+    asio \
+    freeglut libxi libxmu \
+     ` # Additional dependencies for headless OpenGL rendering with SFML ` \
+    xorg-server xorg-apps mesa xf86-video-dummy && \
+    rm -f /var/cache/pacman/pkg/*
 
 RUN mv /scratch/xpra-xorg.conf /etc/X11/xorg.conf
 
@@ -74,7 +74,8 @@ WORKDIR /ygor
 RUN git clone https://github.com/hdclark/Ygor . && \
     chown -R aurbuild:aurbuild . && \
     su - aurbuild -c "cd /ygor && makepkg --syncdeps --install --clean --needed --noconfirm" && \
-    rm -rf /ygor
+    git reset --hard && \
+    git clean -fxd :/ 
 
 
 # Install Explicator.
@@ -88,7 +89,8 @@ WORKDIR /explicator
 RUN git clone https://github.com/hdclark/explicator . && \
     chown -R aurbuild:aurbuild . && \
     su - aurbuild -c "cd /explicator && makepkg --syncdeps --install --clean --needed --noconfirm" && \
-    rm -rf /explicator
+    git reset --hard && \
+    git clean -fxd :/ 
 
 
 # Install YgorClustering.
@@ -96,7 +98,8 @@ WORKDIR /ygorcluster
 RUN git clone https://github.com/hdclark/YgorClustering . && \
     chown -R aurbuild:aurbuild . && \
     su - aurbuild -c "cd /ygorcluster && makepkg --syncdeps --install --clean --needed --noconfirm" && \
-    rm -rf /ygorcluster
+    git reset --hard && \
+    git clean -fxd :/ 
 
 
 # Install DICOMautomaton.
@@ -114,9 +117,12 @@ RUN git clone https://github.com/hdclark/YgorClustering . && \
 WORKDIR /dcma
 RUN chown -R aurbuild:aurbuild . && \
     su - aurbuild -c "cd /dcma && makepkg --syncdeps --install --clean --needed --noconfirm" && \
-    rm -rf /dcma
+    git reset --hard && \
+    git clean -fxd :/ 
+
 
 # Default to launching the webserver.
 WORKDIR /scratch
 CMD ["/bin/bash", "/scratch/Run_WebServer.sh"]
+
 
