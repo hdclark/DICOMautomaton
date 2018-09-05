@@ -20,7 +20,7 @@ RUN printf -- 'Server = http://mirror.cedille.club/archlinux/$repo/os/$arch\n' >
 # Install build dependencies.
 RUN pacman -Syu --noconfirm --needed base-devel git cmake gcc vim gdb screen \
     ` # Needed for an AUR helper ` \
-    sudo pyalpm wget && \
+    sudo pyalpm wget rsync && \
     rm -f /var/cache/pacman/pkg/*
 
 
