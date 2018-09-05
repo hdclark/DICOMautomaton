@@ -441,6 +441,7 @@ Drover OptimizeStaticBeams(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
             const auto weight = weights[beam];
             ss << "," << weight;
         }
+        ss << std::endl;
 
     };
 
