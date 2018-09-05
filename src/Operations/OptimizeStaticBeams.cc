@@ -476,9 +476,9 @@ Drover OptimizeStaticBeams(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
                     std::stringstream curr; 
                     curr << "Current best: " 
                          << current_best 
-                         << "with weights: ";
+                         << " with weights: ";
                     for(long int beam = 0; beam < N_beams; ++beam){
-                        const auto weight = weights[beam];
+                        const auto weight = best_weights[beam];
                         curr << weight << "  ";
                     }
                     FUNCINFO(curr.str());
