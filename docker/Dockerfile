@@ -15,7 +15,7 @@ ADD . /dcma
 # Install build dependencies.
 RUN pacman -Syu --noconfirm --needed base-devel git cmake gcc vim gdb screen \
     ` # Needed for an AUR helper ` \
-    sudo pyalpm && \
+    sudo pyalpm wget && \
     rm -f /var/cache/pacman/pkg/*
 
 
