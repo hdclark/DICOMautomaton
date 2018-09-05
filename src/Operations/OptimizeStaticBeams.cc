@@ -155,6 +155,24 @@ OperationDoc OpArgDocOptimizeStaticBeams(void){
     out.args.back().examples = { "10", "20", "50", "100", "500" };
 
 
+    out.args.emplace_back();
+    out.args.back().name = "DLower";
+    out.args.back().desc = "The lower percentile (as a floating-point number in the range [0:1]) to consider when"
+                           " optimizing the uniformity.";
+    out.args.back().default_val = "0.05";
+    out.args.back().expected = true;
+    out.args.back().examples = { "0.0", "0.02", "0.05" };
+
+
+    out.args.emplace_back();
+    out.args.back().name = "DUpper";
+    out.args.back().desc = "The upper percentile (as a floating-point number in the range [0:1]) to consider when"
+                           " optimizing the uniformity.";
+    out.args.back().default_val = "0.95";
+    out.args.back().expected = true;
+    out.args.back().examples = { "0.90", "0.95", "1.0" };
+
+
     return out;
 }
 
@@ -174,9 +192,16 @@ Drover OptimizeStaticBeams(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
     const auto GridResolutionStr = OptArgs.getValueStr("GridResolution").value();
     const auto MaxVoxelSamplesStr = OptArgs.getValueStr("MaxVoxelSamples").value();
 
+    const auto DLowerStr = OptArgs.getValueStr("DLower").value();
+    const auto DUpperStr = OptArgs.getValueStr("DUpper").value();
+
     //-----------------------------------------------------------------------------------------------------------------
     const auto GridResolution = std::stol(GridResolutionStr);
     const auto MaxVoxelSamples = std::stol(MaxVoxelSamplesStr);
+
+    const auto D_lower = std::stod(DLowerStr);
+    const auto D_upper = std::stod(DUpperStr);
+    FUNCINFO("Optimizing with [D_lower, D_upper] = [" << D_lower << ", " << D_upper << "]")
 
     if(ResultsSummaryFileName.empty()){
         ResultsSummaryFileName = Get_Unique_Sequential_Filename("/tmp/dicomautomaton_optimizestaticbeamssummary_", 6, ".csv");
@@ -311,7 +336,7 @@ Drover OptimizeStaticBeams(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
 
     std::stringstream ss;
 
-    double current_best = 0.0;
+    double current_best = std::numeric_limits<double>::quiet_NaN();
     std::vector<double> best_weights;
 
     // Recursive combinatoric generator for candidate weights. This routine generates candidate weightings and then
@@ -356,6 +381,8 @@ Drover OptimizeStaticBeams(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
                             [=](const double &L, const double &R){ return L + weight * R; });
         }
 
+        //--------------------- 95% - 107% inclusion -------------
+        /*
         //Compute the D_max.
         const auto D_max = Stats::Max(working);
         if(!std::isfinite(D_max) || (D_max < 1E-3)) return;
@@ -373,18 +400,48 @@ Drover OptimizeStaticBeams(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
         std::lock_guard<std::mutex> lock(common_access);
 
         //Evaluate if this is better than the previous best.
-        if(N_above > current_best){
+        if(!std::isfinite(current_best) || (N_above > current_best)){
             current_best = N_above;
             best_weights = weights;
         }
 
         //Record the results.
+        ss << N_above << ",";
         for(long int beam = 0; beam < N_beams; ++beam){
             const auto weight = weights[beam];
             ss << weight << ",";
         }
-        ss << std::accumulate(weights.begin(), weights.end(), 0.0) << ",";
-        ss << N_above << std::endl;
+        ss << std::accumulate(weights.begin(), weights.end(), 0.0) << std::endl;
+        */
+
+        //--------------------- percentile compression -------------
+
+        //Compute the D_max.
+        const auto D_max = Stats::Max(working);
+        if(!std::isfinite(D_max) || (D_max < 1E-3)) return;
+
+        //Compute the median and percentiles.
+        const auto D_05 = Stats::Percentile(working, D_lower);
+        const auto D_50 = Stats::Percentile(working, 0.50);
+        const auto D_95 = Stats::Percentile(working, D_upper);
+        const auto D_span = std::abs(D_95 - D_05);
+        const auto norm_D_span = D_span / D_50;
+
+        std::lock_guard<std::mutex> lock(common_access);
+
+        //Evaluate if this is better than the previous best.
+        if(!std::isfinite(current_best) || (norm_D_span < current_best)){
+            current_best = norm_D_span;
+            best_weights = weights;
+        }
+
+        //Record the results.
+        ss << norm_D_span;
+        for(long int beam = 0; beam < N_beams; ++beam){
+            const auto weight = weights[beam];
+            ss << "," << weight;
+        }
+
     };
 
     //Launch in serial.
@@ -415,26 +472,55 @@ Drover OptimizeStaticBeams(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
                     ++counter;
                     FUNCINFO("Completed " << counter << " of " << W_N << " --> " 
                       << static_cast<long int>(1000.0*(counter)/W_N)/10.0 << "\% done");
+
+                    std::stringstream curr; 
+                    curr << "Current best: " 
+                         << current_best 
+                         << "with weights: ";
+                    for(long int beam = 0; beam < N_beams; ++beam){
+                        const auto weight = weights[beam];
+                        curr << weight << "  ";
+                    }
+                    FUNCINFO(curr.str());
                 }
             }); // thread pool task closure.
         }
     }
 
 
-    std::cout << "The best weights are: " << std::endl;
+    std::stringstream summary;
+    summary << "The best weights are: " << std::endl;
     for(size_t i = 0; ( (i < best_weights.size()) && (i < beam_id.size()) ); ++i){
-        std::cout << beam_id[i] << ": " << best_weights[i] << std::endl;
+        summary << beam_id[i] << ": " << best_weights[i] << std::endl;
     }
-    std::cout << std::endl;
+    summary << std::endl;
 
-    std::cout << "At best, " << current_best << " out of " << N_voxels 
-              << " (" << static_cast<long int>(1000.0*(current_best)/N_voxels)/10.0 << "%)"
-              << " are above 95\%" 
-              << std::endl;
+    summary << "  The best score was " 
+            << current_best
+            << std::endl;
 
+    std::cout << summary.str();
+
+    //Write the summary report.
+    try{
+        auto gen_filename = [&](void) -> std::string {
+            if(ResultsSummaryFileName.empty()){
+                ResultsSummaryFileName = Get_Unique_Sequential_Filename("/tmp/dicomautomaton_staticbeamoptisummary_", 6, ".csv");
+            }
+            return ResultsSummaryFileName;
+        };
+
+        FUNCINFO("About to claim a mutex");
+        Append_File( gen_filename,
+                     "dicomautomaton_operation_optimizestaticbeam_mutex",
+                     "",
+                     summary.str() );
+
+    }catch(const std::exception &e){
+        FUNCERR("Unable to write to output file: '" << e.what() << "'");
+    }
 
     //Write the full report.
-    FUNCINFO("Attempting to claim a mutex");
     try{
         auto gen_filename = [&](void) -> std::string {
             if(FullResultsFileName.empty()){
@@ -444,16 +530,19 @@ Drover OptimizeStaticBeams(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
         };
 
         std::stringstream header;
-        header << "Weights,Number_of_voxels_above_X" << std::endl;
+        header << "Score,Weights" << std::endl;
 
+        FUNCINFO("About to claim a mutex");
         Append_File( gen_filename,
-                     "dicomautomaton_operation_analyzepicketfence_mutex",
+                     "dicomautomaton_operation_optimizestaticbeam_mutex",
                      header.str(),
                      ss.str() );
 
     }catch(const std::exception &e){
         FUNCERR("Unable to write to output file: '" << e.what() << "'");
     }
+
+
 
 /*
     //Write the full report.
