@@ -126,6 +126,35 @@ OperationDoc OpArgDocOptimizeStaticBeams(void){
                             R"***(.*left.*parotid.*|.*right.*parotid.*|.*eyes.*)***",
                             R"***(left_parotid|right_parotid)***" };
 
+    out.args.emplace_back();
+    out.args.back().name = "MaxVoxelSamples";
+    out.args.back().desc = "The maximum number of voxels to randomly sample (deterministically) within the PTV."
+                           " Setting lower will result in faster calculation, but lower precision."
+                           " A reasonable setting depends on the size of the target structure; small"
+                           " targets may suffice with a few hundred voxels, but larger targets"
+                           " probably require several thousand.";
+    out.args.back().default_val = "1000";
+    out.args.back().expected = true;
+    out.args.back().examples = { "200", "500", "1000", "2000", "5000" };
+
+
+    out.args.emplace_back();
+    out.args.back().name = "GridResolution";
+    out.args.back().desc = "The number of weights to try for each beam, which effectively controls the"
+                           " precision of beam weightings that can be found using this routine."
+                           " A value of 100 will give weighting resolution to 0.01."
+                           " Higher numbers will take dramatically longer to compute since the grid dimensionality"
+                           " is equal to the number of beams, so this operation scales like ~N^M where N is the grid"
+                           " resolution and M is the number of beams. For example, if there are 7 beams"
+                           " and you halve the resolution from 100 to 50, computation will be ~2^7 = 128 times faster."
+                           " Reducing from 100 (i.e., beam weight grid discretized to 0.01) to 25 (discretized to 0.04)"
+                           " will yield a speed-up of ~4^7 = 16384 times. For 7 beams, resolution beyond 10 (grid"
+                           " discretized to 0.1) is not recommended.";
+    out.args.back().default_val = "50";
+    out.args.back().expected = true;
+    out.args.back().examples = { "10", "20", "50", "100", "500" };
+
+
     return out;
 }
 
@@ -141,7 +170,13 @@ Drover OptimizeStaticBeams(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
 
     const auto NormalizedROILabelRegex = OptArgs.getValueStr("NormalizedROILabelRegex").value();
     const auto ROILabelRegex = OptArgs.getValueStr("ROILabelRegex").value();
+
+    const auto GridResolutionStr = OptArgs.getValueStr("GridResolution").value();
+    const auto MaxVoxelSamplesStr = OptArgs.getValueStr("MaxVoxelSamples").value();
+
     //-----------------------------------------------------------------------------------------------------------------
+    const auto GridResolution = std::stol(GridResolutionStr);
+    const auto MaxVoxelSamples = std::stol(MaxVoxelSamplesStr);
 
     if(ResultsSummaryFileName.empty()){
         ResultsSummaryFileName = Get_Unique_Sequential_Filename("/tmp/dicomautomaton_optimizestaticbeamssummary_", 6, ".csv");
@@ -188,7 +223,7 @@ Drover OptimizeStaticBeams(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
             Fname = Filename.value();
         }
 
-        beam_id.emplace_back(BeamID.value_or("unknown") + " (" + Fname.value_or("unknown") + ")");
+        beam_id.emplace_back(BeamID.value_or("unknown beam number") + " (" + Fname.value_or("unknown field name") + ")");
         FUNCINFO("Processing dose corresponding to beam number: " << beam_id.back());
 
         PartitionedImageVoxelVisitorMutatorUserData ud;
@@ -243,7 +278,7 @@ Drover OptimizeStaticBeams(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
     }
 
     //Reduce the number of voxels by randomly trimming until a small, hopefully representative collection remain.
-    const long int N_voxels_max = 3000;
+    const long int N_voxels_max = MaxVoxelSamples;
     const long int random_seed = 123456;
     std::mt19937 re_orig( random_seed );
     {
@@ -269,7 +304,7 @@ Drover OptimizeStaticBeams(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
     // renormalized afterward (because some renormalizations may make invalid combinations valid).
     const double W_target = 1.0; 
 
-    const long int W_N = 100 + 1; // The number of weights to try for each beam. Defines the search grid size.
+    const long int W_N = GridResolution + 1; // The number of weights to try for each beam. Defines the search grid size.
     const double dW = (W_max - W_min) / static_cast<double>(W_N - 1);
 
     const long int W_budget = static_cast<long int>( std::round((W_target - W_min)/dW) );
