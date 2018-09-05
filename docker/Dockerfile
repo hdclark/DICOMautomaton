@@ -12,6 +12,11 @@ ADD ./docker /scratch
 ADD . /dcma
 
 
+# Prepare alternative mirrors.
+RUN printf -- 'Server = http://mirror.cedille.club/archlinux/$repo/os/$arch\n' > /etc/pacman.d/mirrorlist \
+    printf -- 'Server = http://mirrors.xmission.com/archlinux/$repo/os/$arch\n' >> /etc/pacman.d/mirrorlist \
+    printf -- 'Server = http://archlinux.mirror.rafal.ca/$repo/os/$arch\n' >> /etc/pacman.d/mirrorlist
+
 # Install build dependencies.
 RUN pacman -Syu --noconfirm --needed base-devel git cmake gcc vim gdb screen \
     ` # Needed for an AUR helper ` \
