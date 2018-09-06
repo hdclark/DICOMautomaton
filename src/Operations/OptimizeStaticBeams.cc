@@ -19,6 +19,8 @@
 #include <vector>
 #include <utility>
 
+#include <nlopt.hpp>
+
 #include "../Insert_Contours.h"
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
@@ -31,6 +33,74 @@
 #include "YgorMathPlottingGnuplot.h" //Needed for YgorMathPlottingGnuplot::*.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorStats.h"        //Needed for Stats:: namespace.
+
+
+std::function<double(std::vector<double> &, std::vector<double> &)> global_evaluate_weights;
+std::vector<double> global_working;
+
+
+
+// This routine maps from spherical coordinates on an embedded sphere centered at the origin to Cartesian coordinates
+// (x_1, x_2, ..., x_N).
+//
+// This routine was written because it is useful to convert a constrained optimization problem into a more conveniently
+// constrained problem by mapping uniformly constrained coordinates ([0:pi] for all but the last angle, [0:2pi) for the
+// last angle) to the spherical surface.
+//
+// Note: The inputs should be: ( r, theta_1, theta_2, theta_3, ..., theta_(N-2), phi ). The radius should be positive,
+//       but need not be. The range of the thetas is [0:pi]. The range of the phi is [0:2pi). There is always a phi. 
+//       For N=2, there are no thetas.
+//       
+// Note: T should be something like std::array<double,long int>.
+//
+template<typename T>
+T Spherical_to_Cartesian( T radius_angles ){
+
+    auto N = radius_angles.size();
+    if(N < 2){
+        throw std::logic_error("This routine cannot handle n-spheres in dimensions lower than 2");
+    }
+    using VT = typename T::value_type; // probably double.
+
+    T sines(radius_angles);
+    T cosines(radius_angles);
+    T x;
+
+    std::transform(std::next(std::begin(sines)), 
+                   std::end(sines), 
+                   std::next(std::begin(sines)), 
+                   [](VT t) -> VT { return std::sin(t); });
+    std::transform(std::next(std::begin(cosines)), 
+                   std::end(cosines), 
+                   std::next(std::begin(cosines)), 
+                   [](VT t) -> VT { return std::cos(t); });
+
+    sines[0] = static_cast<VT>(1);
+    cosines[0] = static_cast<VT>(0);
+    
+    x = sines;
+    {
+        VT running_sine_prod = static_cast<VT>(1);
+        for(auto &s : x){
+            s = s * running_sine_prod;
+            running_sine_prod = s;
+        }
+    }
+
+    std::transform(std::begin(x),
+                   std::prev(std::end(x)),
+                   std::next(std::begin(cosines)),
+                   std::begin(x),
+                   [](VT sp, VT c) -> VT { return sp*c; });
+
+    std::transform(std::begin(x),
+                   std::end(x),
+                   std::begin(x),
+                   [&](VT spc) -> VT { return radius_angles[0]*spc; });
+
+    return x;
+}
+    
 
 
 OperationDoc OpArgDocOptimizeStaticBeams(void){
@@ -347,18 +417,37 @@ Drover OptimizeStaticBeams(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
     //       surface is bounded such that the sum of all weights is a constant. 
     std::function<void(std::vector<double> &,
                        std::vector<double> &,
-                       const std::function<void(std::vector<double> &, std::vector<double> &)> &,
+                       const std::function<double(std::vector<double> &, std::vector<double> &)> &,
                        long int,
                        long int )> cycle_thru_weights;
     cycle_thru_weights = [&](std::vector<double> &weights,
                              std::vector<double> &working,
-                             const std::function<void(std::vector<double> &, std::vector<double> &)> &f,
+                             const std::function<double(std::vector<double> &, std::vector<double> &)> &f,
                              long int beam,
                              long int remaining_budget ) -> void {
         if(remaining_budget < 0) return; // Nothing left to do, so do not recurse.
 
         if(beam >= N_beams){
-            if(remaining_budget == 0) f(weights, working);
+            if(remaining_budget == 0){
+                auto res = f(weights, working);
+
+                std::lock_guard<std::mutex> lock(common_access);
+
+                //Evaluate if this is better than the previous best.
+                if(!std::isfinite(current_best) || (res < current_best)){
+                    current_best = res;
+                    best_weights = weights;
+                }
+
+                //Record the results.
+                ss << res;
+                for(long int beam = 0; beam < N_beams; ++beam){
+                    const auto weight = weights[beam];
+                    ss << "," << weight;
+                }
+                ss << std::endl;
+            }
+
         }else{
             for(long int i = 0; i < W_N; ++i){
                 weights[beam] = W_min + dW * i;
@@ -370,7 +459,7 @@ Drover OptimizeStaticBeams(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
     };
             
     // This routine evaluates a given weighting scheme.
-    auto evaluate_weights = [&,N_beams](std::vector<double> &weights, std::vector<double> &working) -> void {
+    auto evaluate_weights = [&,N_beams](std::vector<double> &weights, std::vector<double> &working) -> double {
         //Compute the total dose using the current weighting scheme.
         std::fill(working.begin(), working.end(), 0.0);
         for(long int beam = 0; beam < N_beams; ++beam){
@@ -418,7 +507,7 @@ Drover OptimizeStaticBeams(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
 
         //Compute the D_max.
         const auto D_max = Stats::Max(working);
-        if(!std::isfinite(D_max) || (D_max < 1E-3)) return;
+        if(!std::isfinite(D_max) || (D_max < 1E-3)) return std::numeric_limits<double>::quiet_NaN();
 
         //Compute the median and percentiles.
         const auto D_05 = Stats::Percentile(working, D_lower);
@@ -427,34 +516,19 @@ Drover OptimizeStaticBeams(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
         const auto D_span = std::abs(D_95 - D_05);
         const auto norm_D_span = D_span / D_50;
 
-        std::lock_guard<std::mutex> lock(common_access);
-
-        //Evaluate if this is better than the previous best.
-        if(!std::isfinite(current_best) || (norm_D_span < current_best)){
-            current_best = norm_D_span;
-            best_weights = weights;
-        }
-
-        //Record the results.
-        ss << norm_D_span;
-        for(long int beam = 0; beam < N_beams; ++beam){
-            const auto weight = weights[beam];
-            ss << "," << weight;
-        }
-        ss << std::endl;
-
+        return norm_D_span;
     };
+    global_evaluate_weights = evaluate_weights;
 
-    //Launch in serial.
+    //Recursive enumeration: launch in serial.
     if(false){
         std::vector<double> working(N_voxels, 0.0);
         std::vector<double> weights(N_beams, 0.0);
         cycle_thru_weights(weights, working, evaluate_weights, 0, W_budget);
     }
 
-    //Launch in parallel.
-    if(true){
-        const long int beam = 0;
+    //Recursive enumeration: launch in parallel.
+    if(false){
         std::mutex printer;
         long int counter = 0;
 
@@ -465,8 +539,8 @@ Drover OptimizeStaticBeams(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
                 std::vector<double> working(N_voxels, 0.0);
                 std::vector<double> weights(N_beams, 0.0);
 
-                weights[beam] = W_min + dW * i;
-                cycle_thru_weights(weights, working, evaluate_weights, beam+1, W_budget-i);
+                weights[0] = W_min + dW * i; // Fix the first beam.
+                cycle_thru_weights(weights, working, evaluate_weights, 1, W_budget-i);
 
                 {
                     std::lock_guard<std::mutex> lock(printer);
@@ -485,6 +559,56 @@ Drover OptimizeStaticBeams(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
                     FUNCINFO(curr.str());
                 }
             }); // thread pool task closure.
+        }
+    }
+
+    //Spherical discretization: launch in parallel.
+    if(true){
+        std::vector<double> working(N_voxels, 0.0);
+        std::vector<double> angles(N_beams-1, 0.0); // Angles of an n-sphere.
+
+        global_working = working;
+ 
+        auto f_to_optimize = [](const std::vector<double> &angles, 
+                                std::vector<double> &grad, 
+                                void * ) -> double {
+            if(!grad.empty()) throw std::logic_error("This implementation cannot handle derivatives.");
+
+            // Because we constrain to the surface of a unit n-sphere, the number of variables being optimized is N_beams-1.
+            std::vector<double> radius_angles {1.0};
+            radius_angles.insert( radius_angles.end(), angles.begin(), angles.end() );
+            auto weights = Spherical_to_Cartesian(radius_angles);
+            std::transform(weights.begin(), weights.end(), weights.begin(), [](double sr_w) -> double { return std::pow(sr_w, 2.0); });
+
+            return global_evaluate_weights(weights, global_working);
+        };
+
+        nlopt::opt optimizer(nlopt::LN_COBYLA, N_beams-1);
+
+        std::vector<double> lower_bounds(N_beams-1, 0.0);
+        std::vector<double> upper_bounds(N_beams-1, M_PI);
+        upper_bounds.back() = 0.999999*2.0*M_PI; // Non-inclusive upper boundary for last angle.
+
+        optimizer.set_lower_bounds(lower_bounds);
+        optimizer.set_upper_bounds(upper_bounds);
+        optimizer.set_min_objective(f_to_optimize, NULL);
+        optimizer.set_ftol_rel(1e-5);
+        double minf;
+
+        try{
+            
+            nlopt::result result = optimizer.optimize(angles, minf);
+
+            //Convert from angular coordinates to beam weights.
+            std::vector<double> radius_angles {1.0};
+            radius_angles.insert( radius_angles.end(), angles.begin(), angles.end() );
+            auto weights = Spherical_to_Cartesian(radius_angles);
+            std::transform(weights.begin(), weights.end(), weights.begin(), [](double sr_w) -> double { return std::pow(sr_w, 2.0); });
+
+            best_weights = weights;
+            current_best = minf;
+        }catch(std::exception &e){
+            std::cout << "nlopt failed: " << e.what() << std::endl;
         }
     }
 
