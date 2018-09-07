@@ -37,6 +37,7 @@
 
 std::function<double(std::vector<double> &, std::vector<double> &)> global_evaluate_weights;
 std::vector<double> global_working;
+static long int eval_count = 0;
 
 
 
@@ -47,11 +48,14 @@ std::vector<double> global_working;
 // constrained problem by mapping uniformly constrained coordinates ([0:pi] for all but the last angle, [0:2pi) for the
 // last angle) to the spherical surface.
 //
-// Note: The inputs should be: ( r, theta_1, theta_2, theta_3, ..., theta_(N-2), phi ). The radius should be positive,
-//       but need not be. The range of the thetas is [0:pi]. The range of the phi is [0:2pi). There is always a phi. 
-//       For N=2, there are no thetas.
-//       
 // Note: T should be something like std::array<double,long int>.
+//
+// Note: The inputs should be: ( r, theta_1, theta_2, theta_3, ..., theta_(N-2), phi ). The radius should be positive,
+//       but need not be. The range of the thetas is [0:pi]. The range of the phi is [0:2pi) (n.b., endpoint exclusive
+//       here). There is always a phi, but for N=2, there are no thetas.
+//       
+// Note: If you want to constrain all Cartesian coordinates to be >= 0, then the thetas should range from [0:pi/2] and
+//       the phi should range from [0:pi] (n.b., endpoints are all inclusive here).
 //
 template<typename T>
 T Spherical_to_Cartesian( T radius_angles ){
@@ -507,16 +511,19 @@ Drover OptimizeStaticBeams(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
 
         //Compute the D_max.
         const auto D_max = Stats::Max(working);
-        if(!std::isfinite(D_max) || (D_max < 1E-3)) return std::numeric_limits<double>::quiet_NaN();
+        //if(!std::isfinite(D_max) || (D_max < 1E-3)) return std::numeric_limits<double>::max();
 
         //Compute the median and percentiles.
         const auto D_05 = Stats::Percentile(working, D_lower);
         const auto D_50 = Stats::Percentile(working, 0.50);
         const auto D_95 = Stats::Percentile(working, D_upper);
         const auto D_span = std::abs(D_95 - D_05);
-        const auto norm_D_span = D_span / D_50;
+        //const auto norm_D_span = D_span / D_50;
 
-        return norm_D_span;
+        std::cout << "Evaluation # " << eval_count++ << std::endl;
+
+        //return norm_D_span;
+        return D_span;
     };
     global_evaluate_weights = evaluate_weights;
 
@@ -583,21 +590,23 @@ Drover OptimizeStaticBeams(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
             return global_evaluate_weights(weights, global_working);
         };
 
-        nlopt::opt optimizer(nlopt::LN_COBYLA, N_beams-1);
+        nlopt::opt optimizer(nlopt::LN_NELDERMEAD, N_beams-1);
 
-        std::vector<double> lower_bounds(N_beams-1, 0.0);
-        std::vector<double> upper_bounds(N_beams-1, M_PI);
-        upper_bounds.back() = 0.999999*2.0*M_PI; // Non-inclusive upper boundary for last angle.
+        std::vector<double> lower_bounds(N_beams-1, 0.0);  // Constrain all angles to the positive sector of the n-sphere.
+        std::vector<double> upper_bounds(N_beams-1, 0.5*M_PI);
+        upper_bounds.back() = M_PI;
 
         optimizer.set_lower_bounds(lower_bounds);
         optimizer.set_upper_bounds(upper_bounds);
         optimizer.set_min_objective(f_to_optimize, NULL);
-        optimizer.set_ftol_rel(1e-5);
+        //optimizer.set_ftol_rel(1e-4);
+        optimizer.set_maxeval(10000);
         double minf;
 
         try{
             
             nlopt::result result = optimizer.optimize(angles, minf);
+            FUNCINFO("Optimizer result: " << result);
 
             //Convert from angular coordinates to beam weights.
             std::vector<double> radius_angles {1.0};
