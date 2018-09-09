@@ -34,77 +34,51 @@
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorStats.h"        //Needed for Stats:: namespace.
 
+// This struct is used for evaluating a given beam weight configuration in terms of the dose to a target ROI.
+struct dose_dist_stats {
+    
+    double D_min    = std::numeric_limits<double>::quiet_NaN();
+    double D_mean   = std::numeric_limits<double>::quiet_NaN();
+    double D_max    = std::numeric_limits<double>::quiet_NaN();
 
-std::function<double(std::vector<double> &, std::vector<double> &)> global_evaluate_weights;
+    double D_02     = std::numeric_limits<double>::quiet_NaN(); // 2nd percentile.
+    double D_05     = std::numeric_limits<double>::quiet_NaN(); // 5th percentile.
+    double D_50     = std::numeric_limits<double>::quiet_NaN(); // Median.
+    double D_95     = std::numeric_limits<double>::quiet_NaN(); // 95th percentile.
+    double D_98     = std::numeric_limits<double>::quiet_NaN(); // 98th percentile.
+
+    double cost     = std::numeric_limits<double>::quiet_NaN();
+
+};
+
+// Global objects so lambdas can be non-capturing and thus passed as function pointers.
+std::function< dose_dist_stats (std::vector<double> &, std::vector<double> &)> global_evaluate_weights;
 std::vector<double> global_working;
-static long int eval_count = 0;
+bool generate_dose_dist_stats = false;
 
 
-
-// This routine maps from spherical coordinates on an embedded sphere centered at the origin to Cartesian coordinates
-// (x_1, x_2, ..., x_N).
+// This routine determines the normalization factor required to satisfy the given DVH criteria: $V_{D} \geq V_{min}$.
+// Every element in the input should be multiplied with the return value to satisfy the DVH criteria.
 //
-// This routine was written because it is useful to convert a constrained optimization problem into a more conveniently
-// constrained problem by mapping uniformly constrained coordinates ([0:pi] for all but the last angle, [0:2pi) for the
-// last angle) to the spherical surface.
+// Note: it may not be possible to satisfy the criteria. Check the result for non-finite values.
 //
-// Note: T should be something like std::array<double,long int>.
+// Note: Vmin is assumed to be a fraction (of the number of elements, but if each element represents the same fractional
+//       volume of the whole then Vmin is also a fraction of the whole volume).
 //
-// Note: The inputs should be: ( r, theta_1, theta_2, theta_3, ..., theta_(N-2), phi ). The radius should be positive,
-//       but need not be. The range of the thetas is [0:pi]. The range of the phi is [0:2pi) (n.b., endpoint exclusive
-//       here). There is always a phi, but for N=2, there are no thetas.
-//       
-// Note: If you want to constrain all Cartesian coordinates to be >= 0, then the thetas should range from [0:pi/2] and
-//       the phi should range from [0:pi] (n.b., endpoints are all inclusive here).
+// Note: D is in whatever units the input data is; most likely absolute dose. If the normalization condition is a
+//       fraction of the prescribed dose, it will need to be converted into absolute dose if the input data is in
+//       absolute dose.
 //
-template<typename T>
-T Spherical_to_Cartesian( T radius_angles ){
+double DVH_Normalize(std::vector<double> in, 
+                     double D, 
+                     double Vmin){
 
-    auto N = radius_angles.size();
-    if(N < 2){
-        throw std::logic_error("This routine cannot handle n-spheres in dimensions lower than 2");
-    }
-    using VT = typename T::value_type; // probably double.
+    // Compute the current dose that corresponds to Vmin.
+    const auto D_current = Stats::Percentile(in, (1.0 - Vmin));
 
-    T sines(radius_angles);
-    T cosines(radius_angles);
-    T x;
-
-    std::transform(std::next(std::begin(sines)), 
-                   std::end(sines), 
-                   std::next(std::begin(sines)), 
-                   [](VT t) -> VT { return std::sin(t); });
-    std::transform(std::next(std::begin(cosines)), 
-                   std::end(cosines), 
-                   std::next(std::begin(cosines)), 
-                   [](VT t) -> VT { return std::cos(t); });
-
-    sines[0] = static_cast<VT>(1);
-    cosines[0] = static_cast<VT>(0);
-    
-    x = sines;
-    {
-        VT running_sine_prod = static_cast<VT>(1);
-        for(auto &s : x){
-            s = s * running_sine_prod;
-            running_sine_prod = s;
-        }
-    }
-
-    std::transform(std::begin(x),
-                   std::prev(std::end(x)),
-                   std::next(std::begin(cosines)),
-                   std::begin(x),
-                   [](VT sp, VT c) -> VT { return sp*c; });
-
-    std::transform(std::begin(x),
-                   std::end(x),
-                   std::begin(x),
-                   [&](VT spc) -> VT { return radius_angles[0]*spc; });
-
-    return x;
+    // Scale needed to make it coincide with desired dose.
+    return D / D_current;
 }
-    
 
 
 OperationDoc OpArgDocOptimizeStaticBeams(void){
@@ -155,17 +129,6 @@ OperationDoc OpArgDocOptimizeStaticBeams(void){
 
 
     out.args.emplace_back();
-    out.args.back().name = "FullResultsFileName";
-    out.args.back().desc = "This file will contain an exhaustive summary of the results."
-                           " The format is CSV. Leave empty to dump to generate a unique temporary file."
-                           " If an existing file is present, rows will be appended without writing a header.";
-    out.args.back().default_val = "";
-    out.args.back().expected = true;
-    out.args.back().examples = { "", "/tmp/somefile", "localfile.csv", "derivative_data.csv" };
-    out.args.back().mimetype = "text/csv";
-
-
-    out.args.emplace_back();
     out.args.back().name = "UserComment";
     out.args.back().desc = "A string that will be inserted into the output file which will simplify merging output"
                            " with differing parameters, from different sources, or using sub-selections of the data.";
@@ -187,6 +150,7 @@ OperationDoc OpArgDocOptimizeStaticBeams(void){
                             R"***(.*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*)***",
                             R"***(Left Parotid|Right Parotid)***" };
 
+
     out.args.emplace_back();
     out.args.back().name = "ROILabelRegex";
     out.args.back().desc = "A regex matching ROI labels/names to consider. The default will match"
@@ -199,6 +163,7 @@ OperationDoc OpArgDocOptimizeStaticBeams(void){
     out.args.back().examples = { ".*", ".*body.*", "body", "Gross_Liver",
                             R"***(.*left.*parotid.*|.*right.*parotid.*|.*eyes.*)***",
                             R"***(left_parotid|right_parotid)***" };
+
 
     out.args.emplace_back();
     out.args.back().name = "MaxVoxelSamples";
@@ -213,39 +178,38 @@ OperationDoc OpArgDocOptimizeStaticBeams(void){
 
 
     out.args.emplace_back();
-    out.args.back().name = "GridResolution";
-    out.args.back().desc = "The number of weights to try for each beam, which effectively controls the"
-                           " precision of beam weightings that can be found using this routine."
-                           " A value of 100 will give weighting resolution to 0.01."
-                           " Higher numbers will take dramatically longer to compute since the grid dimensionality"
-                           " is equal to the number of beams, so this operation scales like ~N^M where N is the grid"
-                           " resolution and M is the number of beams. For example, if there are 7 beams"
-                           " and you halve the resolution from 100 to 50, computation will be ~2^7 = 128 times faster."
-                           " Reducing from 100 (i.e., beam weight grid discretized to 0.01) to 25 (discretized to 0.04)"
-                           " will yield a speed-up of ~4^7 = 16384 times. For 7 beams, resolution beyond 10 (grid"
-                           " discretized to 0.1) is not recommended.";
-    out.args.back().default_val = "50";
-    out.args.back().expected = true;
-    out.args.back().examples = { "10", "20", "50", "100", "500" };
-
-
-    out.args.emplace_back();
-    out.args.back().name = "DLower";
-    out.args.back().desc = "The lower percentile (as a floating-point number in the range [0:1]) to consider when"
-                           " optimizing the uniformity.";
-    out.args.back().default_val = "0.05";
-    out.args.back().expected = true;
-    out.args.back().examples = { "0.0", "0.02", "0.05" };
-
-
-    out.args.emplace_back();
-    out.args.back().name = "DUpper";
-    out.args.back().desc = "The upper percentile (as a floating-point number in the range [0:1]) to consider when"
-                           " optimizing the uniformity.";
+    out.args.back().name = "NormalizationD";
+    out.args.back().desc = "The isodose value that should envelop a given volume in the PTV ROI."
+                           " In other words, this parameter is the 'D' parameter in a DVH constraint"
+                           " of the form $V_{D} \\geq V_{min}$. It should be given as a fraction"
+                           " within [0:1] relative to the prescription dose."
+                           " For example, 95\% isodose should be provided as '0.95'.";
     out.args.back().default_val = "0.95";
     out.args.back().expected = true;
-    out.args.back().examples = { "0.90", "0.95", "1.0" };
+    out.args.back().examples = { "0.90", "0.95", "0.98", "0.99", "1.0" };
 
+
+    out.args.emplace_back();
+    out.args.back().name = "NormalizationV";
+    out.args.back().desc = "The minimal fractional volume of ROI that should be enclosed within one or more surfaces"
+                           " that demarcate the given isodose value."
+                           " In other words, this parameter is the 'Vmin' parameter in a DVH constraint"
+                           " of the form $V_{D} \\geq V_{min}$. It should be given as a fraction"
+                           " within [0:1] relative to the volume of the ROI (typically discretized to the number of"
+                           " voxels in the ROI)."
+                           " For example, if Vmin = 99\%, provide the value '0.99'.";
+    out.args.back().default_val = "0.99";
+    out.args.back().expected = true;
+    out.args.back().examples = { "0.90", "0.95", "0.98", "0.99", "1.0" };
+
+
+    out.args.emplace_back();
+    out.args.back().name = "RxDose";
+    out.args.back().desc = "The dose prescribed to the ROI that will be optimized."
+                           " The units depend on the DICOM file, but will likely be Gy.";
+    out.args.back().default_val = "70.0";
+    out.args.back().expected = true;
+    out.args.back().examples = { "48.0", "60.0", "63.3", "70.0", "100.0" };
 
     return out;
 }
@@ -256,32 +220,22 @@ Drover OptimizeStaticBeams(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     auto ResultsSummaryFileName = OptArgs.getValueStr("ResultsSummaryFileName").value();
-    auto FullResultsFileName = OptArgs.getValueStr("FullResultsFileName").value();
 
     const auto UserComment = OptArgs.getValueStr("UserComment");
 
     const auto NormalizedROILabelRegex = OptArgs.getValueStr("NormalizedROILabelRegex").value();
     const auto ROILabelRegex = OptArgs.getValueStr("ROILabelRegex").value();
 
-    const auto GridResolutionStr = OptArgs.getValueStr("GridResolution").value();
-    const auto MaxVoxelSamplesStr = OptArgs.getValueStr("MaxVoxelSamples").value();
+    const auto MaxVoxelSamples = std::stol( OptArgs.getValueStr("MaxVoxelSamples").value() );
 
-    const auto DLowerStr = OptArgs.getValueStr("DLower").value();
-    const auto DUpperStr = OptArgs.getValueStr("DUpper").value();
+    const auto dvh_D_frac = std::stod(  OptArgs.getValueStr("NormalizationD").value() );
+    const auto dvh_Vmin_frac = std::stod(  OptArgs.getValueStr("NormalizationV").value() );
+    const auto D_Rx = std::stod(  OptArgs.getValueStr("RxDose").value() );
 
     //-----------------------------------------------------------------------------------------------------------------
-    const auto GridResolution = std::stol(GridResolutionStr);
-    const auto MaxVoxelSamples = std::stol(MaxVoxelSamplesStr);
-
-    const auto D_lower = std::stod(DLowerStr);
-    const auto D_upper = std::stod(DUpperStr);
-    FUNCINFO("Optimizing with [D_lower, D_upper] = [" << D_lower << ", " << D_upper << "]")
 
     if(ResultsSummaryFileName.empty()){
         ResultsSummaryFileName = Get_Unique_Sequential_Filename("/tmp/dicomautomaton_optimizestaticbeamssummary_", 6, ".csv");
-    }
-    if(FullResultsFileName.empty()){
-        FullResultsFileName = Get_Unique_Sequential_Filename("/tmp/dicomautomaton_optimizestaticbeamsfull_", 6, ".csv");
     }
 
     //Stuff references to all contours into a list. Remember that you can still address specific contours through
@@ -346,12 +300,10 @@ Drover OptimizeStaticBeams(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
         ud.f_bounded = [&](long int /*row*/, long int /*col*/, long int chan, float &voxel_val) {
             // For small ROIs this routine will infrequently be called because most time will be spent checking whether
             // voxels are inside the ROI. It is faster to parallelize with a spinlock than using a single core.
-//            std::lock_guard<std::mutex> lock(common_access);
             voxels.back().emplace_back(voxel_val);
         };
 
         voxels.emplace_back();
-        //if(!(*iap_it)->imagecoll.Process_Images_Parallel( GroupIndividualImages,
         if(!(*iap_it)->imagecoll.Process_Images( GroupIndividualImages,
                                                  PartitionedImageVoxelVisitorMutator,
                                                  {}, cc_ROIs, &ud )){
@@ -366,17 +318,21 @@ Drover OptimizeStaticBeams(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
 
     if(voxels.empty()) throw std::domain_error("No voxels identified interior to the selected ROI(s). Cannot continue.");
 
-    auto same_size = [&](const std::vector<double> &v){
-        return (voxels.front().size() == v.size());
-    };
-    if(! std::all_of(voxels.begin(), voxels.end(), same_size) ){
-        throw std::domain_error("Dose matrices do not align. Cannot continue.");
-        // Note: this is a reasonable scenario, but not currently supported. If needed you could try: resampling
-        //       or resizing all matrices, implementing a grid-independent sampling routine for this operation, or
-        //       using a dose meld + zeroing-out dose matrices to get a common grid.
+    {
+        auto same_size = [&](const std::vector<double> &v){
+            return (voxels.front().size() == v.size());
+        };
+        if(! std::all_of(voxels.begin(), voxels.end(), same_size) ){
+            throw std::domain_error("Dose matrices do not align. Cannot continue.");
+            // Note: this is a reasonable scenario, but not currently supported. If needed you could try: resampling
+            //       or resizing all matrices, implementing a grid-independent sampling routine for this operation, or
+            //       using a dose meld + zeroing-out dose matrices to get a common grid.
+        }
     }
 
-    //Reduce the number of voxels by randomly trimming until a small, hopefully representative collection remain.
+    //Reduce the number of voxels by randomly trimming until a small, *hopefully* representative collection remain.
+    //
+    // TODO: Use a more consistent and intellingent sampling routine to ensure representative coverage of the ROI.
     const long int N_voxels_max = MaxVoxelSamples;
     const long int random_seed = 123456;
     std::mt19937 re_orig( random_seed );
@@ -395,76 +351,17 @@ Drover OptimizeStaticBeams(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
     const auto N_beams = static_cast<long int>(voxels.size());
     const auto N_voxels = voxels.front().size();
 
-    const double W_min = 0.0; // Inclusive weighting endpoints for individual beams.
-    const double W_max = 1.0;
-
-    // What the sum of all weights should be. Need NOT be within [W_min,W_max], but will result in combinations that are
-    // artificially excluded by the per-beam W_min and W_max limits if outside. This can be problematic when weights are
-    // renormalized afterward (because some renormalizations may make invalid combinations valid).
-    const double W_target = 1.0; 
-
-    const long int W_N = GridResolution + 1; // The number of weights to try for each beam. Defines the search grid size.
-    const double dW = (W_max - W_min) / static_cast<double>(W_N - 1);
-
-    const long int W_budget = static_cast<long int>( std::round((W_target - W_min)/dW) );
-
     std::stringstream ss;
 
-    double current_best = std::numeric_limits<double>::quiet_NaN();
-    std::vector<double> best_weights;
+    // This routine evaluates weighting schemes to produce cost and quality metrics.
+    auto evaluate_weights = [&,N_beams](std::vector<double> &weights, 
+                                        std::vector<double> &working) -> dose_dist_stats {
 
-    // Recursive combinatoric generator for candidate weights. This routine generates candidate weightings and then
-    // invokes an evaluation routine to validate them.
-    //
-    // Note: This routine enumerates points on the surface of an N-cross-polytope, which is a surface defined by the
-    //       taxicab distance on an integer grid. The grid is a discretization of beam weights, and the N-cross-polytope
-    //       surface is bounded such that the sum of all weights is a constant. 
-    std::function<void(std::vector<double> &,
-                       std::vector<double> &,
-                       const std::function<double(std::vector<double> &, std::vector<double> &)> &,
-                       long int,
-                       long int )> cycle_thru_weights;
-    cycle_thru_weights = [&](std::vector<double> &weights,
-                             std::vector<double> &working,
-                             const std::function<double(std::vector<double> &, std::vector<double> &)> &f,
-                             long int beam,
-                             long int remaining_budget ) -> void {
-        if(remaining_budget < 0) return; // Nothing left to do, so do not recurse.
+        dose_dist_stats out;
 
-        if(beam >= N_beams){
-            if(remaining_budget == 0){
-                auto res = f(weights, working);
-
-                std::lock_guard<std::mutex> lock(common_access);
-
-                //Evaluate if this is better than the previous best.
-                if(!std::isfinite(current_best) || (res < current_best)){
-                    current_best = res;
-                    best_weights = weights;
-                }
-
-                //Record the results.
-                ss << res;
-                for(long int beam = 0; beam < N_beams; ++beam){
-                    const auto weight = weights[beam];
-                    ss << "," << weight;
-                }
-                ss << std::endl;
-            }
-
-        }else{
-            for(long int i = 0; i < W_N; ++i){
-                weights[beam] = W_min + dW * i;
-                const auto new_budget = remaining_budget - i;
-                cycle_thru_weights(weights, working, f, beam+1, new_budget);
-            }
-        }
-        return;
-    };
-            
-    // This routine evaluates a given weighting scheme.
-    auto evaluate_weights = [&,N_beams](std::vector<double> &weights, std::vector<double> &working) -> double {
-        //Compute the total dose using the current weighting scheme.
+        // Compute the total dose using the current weighting scheme.
+        //
+        // Note: This requires consistent voxel ordering!
         std::fill(working.begin(), working.end(), 0.0);
         for(long int beam = 0; beam < N_beams; ++beam){
             const auto weight = weights[beam];
@@ -474,168 +371,131 @@ Drover OptimizeStaticBeams(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
                             [=](const double &L, const double &R){ return L + weight * R; });
         }
 
-        //--------------------- 95% - 107% inclusion -------------
-        /*
-        //Compute the D_max.
+        // Sanity check.
         const auto D_max = Stats::Max(working);
-        if(!std::isfinite(D_max) || (D_max < 1E-3)) return;
-
-        //Scale so the D_max is the maximum permissable.
-        {
-            const double scale = 107.0 / D_max;
-            for(auto &D : working) D *= scale;
+        if(!std::isfinite(D_max) || (D_max < 1E-3)){
+            out.cost = std::numeric_limits<double>::max();
         }
 
-        //Compute the number of voxels above the Xth percentile.
-        const long int N_above = std::count_if(working.begin(), working.end(), 
-                                         [=](const double &D){ return (D >= 95.0); });
+        // Scale the weighted dose distribution to achieve the specified normalization.
+        const auto DVH_norm_D = dvh_D_frac * D_Rx;
+        const auto DVH_norm_Vmin = dvh_Vmin_frac;
+        const auto dose_scaler = DVH_Normalize(working, DVH_norm_D, DVH_norm_Vmin);
 
-        std::lock_guard<std::mutex> lock(common_access);
-
-        //Evaluate if this is better than the previous best.
-        if(!std::isfinite(current_best) || (N_above > current_best)){
-            current_best = N_above;
-            best_weights = weights;
+        std::transform(working.begin(), working.end(), 
+                       working.begin(), [=](double D) -> double { return D*dose_scaler; });
+        
+        // Generate descriptive stats for the dose distribution.
+        if(generate_dose_dist_stats){
+            out.D_min  = 100.0 * Stats::Min(working) / D_Rx;
+            out.D_max  = 100.0 * Stats::Max(working) / D_Rx;
+            out.D_mean = 100.0 * Stats::Mean(working) / D_Rx;
+            out.D_02   = Stats::Percentile(working, 0.02);
+            out.D_05   = Stats::Percentile(working, 0.05);
+            out.D_50   = Stats::Percentile(working, 0.50);
+            out.D_95   = Stats::Percentile(working, 0.95);
+            out.D_98   = Stats::Percentile(working, 0.98);
         }
 
-        //Record the results.
-        ss << N_above << ",";
-        for(long int beam = 0; beam < N_beams; ++beam){
-            const auto weight = weights[beam];
-            ss << weight << ",";
-        }
-        ss << std::accumulate(weights.begin(), weights.end(), 0.0) << std::endl;
-        */
+        //Compute the cost function for each dose element.
+        std::transform(working.begin(), working.end(), 
+                       working.begin(), [=](double D) -> double { return std::pow(D - D_Rx, 2.0); });
+        out.cost = Stats::Sum(working);
 
-        //--------------------- percentile compression -------------
-
-        //Compute the D_max.
-        const auto D_max = Stats::Max(working);
-        //if(!std::isfinite(D_max) || (D_max < 1E-3)) return std::numeric_limits<double>::max();
-
-        //Compute the median and percentiles.
-        const auto D_05 = Stats::Percentile(working, D_lower);
-        const auto D_50 = Stats::Percentile(working, 0.50);
-        const auto D_95 = Stats::Percentile(working, D_upper);
-        const auto D_span = std::abs(D_95 - D_05);
-        //const auto norm_D_span = D_span / D_50;
-
-        std::cout << "Evaluation # " << eval_count++ << std::endl;
-
-        //return norm_D_span;
-        return D_span;
+/*
+            std::cout << "Evaluation # " << eval_count << " yields " << total_cost << " with weights ";
+            for(auto &w : weights) std::cout << w << " ";
+            std::cout << "Dmin= " << Dmin << "\% Dmean= " << Dmean << "\% Dmax= " << Dmax << "\%";
+            std::cout << std::endl;
+*/
+        return out;
     };
     global_evaluate_weights = evaluate_weights;
 
-    //Recursive enumeration: launch in serial.
-    if(false){
-        std::vector<double> working(N_voxels, 0.0);
-        std::vector<double> weights(N_beams, 0.0);
-        cycle_thru_weights(weights, working, evaluate_weights, 0, W_budget);
-    }
+    //Constrained surface optimization.
+    auto f_to_optimize = [](const std::vector<double> &open_weights, 
+                            std::vector<double> &grad, 
+                            void * ) -> double {
+        if(!grad.empty()) throw std::logic_error("This implementation cannot handle derivatives.");
 
-    //Recursive enumeration: launch in parallel.
-    if(false){
-        std::mutex printer;
-        long int counter = 0;
+        std::vector<double> weights(open_weights);
+        const auto sum = std::accumulate(weights.begin(), weights.end(), 0.0);
+        std::transform(weights.begin(), weights.end(), weights.begin(), [=](double ow) -> double { return ow / sum; });
 
-        FUNCINFO("Launching thread pool");
-        asio_thread_pool tp;
-        for(long int i = 0; i < W_N; ++i){
-            tp.submit_task([&,i,N_voxels,N_beams](void) -> void {
-                std::vector<double> working(N_voxels, 0.0);
-                std::vector<double> weights(N_beams, 0.0);
+        auto res = global_evaluate_weights(weights, global_working);
+        return res.cost;
+    };
 
-                weights[0] = W_min + dW * i; // Fix the first beam.
-                cycle_thru_weights(weights, working, evaluate_weights, 1, W_budget-i);
+    std::vector<double> open_weights(N_beams, 0.5);
+    std::vector<double> working(N_voxels, 0.0);
+    global_working = working;
 
-                {
-                    std::lock_guard<std::mutex> lock(printer);
-                    ++counter;
-                    FUNCINFO("Completed " << counter << " of " << W_N << " --> " 
-                      << static_cast<long int>(1000.0*(counter)/W_N)/10.0 << "\% done");
+    //nlopt::opt optimizer(nlopt::LN_NELDERMEAD, N_beams);
+    nlopt::opt optimizer(nlopt::GN_DIRECT_L, N_beams);
+    //nlopt::opt optimizer(nlopt::GN_ISRES, N_beams);
+    //nlopt::opt optimizer(nlopt::GN_ESCH, N_beams);
 
-                    std::stringstream curr; 
-                    curr << "Current best: " 
-                         << current_best 
-                         << " with weights: ";
-                    for(long int beam = 0; beam < N_beams; ++beam){
-                        const auto weight = best_weights[beam];
-                        curr << weight << "  ";
-                    }
-                    FUNCINFO(curr.str());
-                }
-            }); // thread pool task closure.
-        }
-    }
+    std::vector<double> lower_bounds(N_beams, 0.0);
+    std::vector<double> upper_bounds(N_beams, 1.0);
 
-    //Spherical discretization: launch in parallel.
-    if(true){
-        std::vector<double> working(N_voxels, 0.0);
-        std::vector<double> angles(N_beams-1, 0.0); // Angles of an n-sphere.
+    optimizer.set_lower_bounds(lower_bounds);
+    optimizer.set_upper_bounds(upper_bounds);
+    optimizer.set_min_objective(f_to_optimize, NULL);
+    optimizer.set_ftol_abs(-HUGE_VAL);
+    optimizer.set_ftol_rel(1.0E-8);
+    optimizer.set_xtol_abs(-HUGE_VAL);
+    optimizer.set_xtol_rel(-HUGE_VAL);
+    optimizer.set_maxeval(500'000);
+    double minf;
 
-        global_working = working;
- 
-        auto f_to_optimize = [](const std::vector<double> &angles, 
-                                std::vector<double> &grad, 
-                                void * ) -> double {
-            if(!grad.empty()) throw std::logic_error("This implementation cannot handle derivatives.");
+    generate_dose_dist_stats = false;
+    FUNCINFO("Beginning optimization now..")
+    nlopt::result nlopt_result = optimizer.optimize(open_weights, minf); // open_weights will contain the current-best weights on success.
+    FUNCINFO("Optimizer result: " << nlopt_result);
 
-            // Because we constrain to the surface of a unit n-sphere, the number of variables being optimized is N_beams-1.
-            std::vector<double> radius_angles {1.0};
-            radius_angles.insert( radius_angles.end(), angles.begin(), angles.end() );
-            auto weights = Spherical_to_Cartesian(radius_angles);
-            std::transform(weights.begin(), weights.end(), weights.begin(), [](double sr_w) -> double { return std::pow(sr_w, 2.0); });
+    std::vector<double> weights(open_weights);
+    const auto sum = std::accumulate(weights.begin(), weights.end(), 0.0);
+    std::transform(weights.begin(), weights.end(), 
+                   weights.begin(), [=](double ow) -> double { return ow / sum; });
 
-            return global_evaluate_weights(weights, global_working);
-        };
+    generate_dose_dist_stats = true;
+    const auto res = global_evaluate_weights(weights, global_working);
 
-        nlopt::opt optimizer(nlopt::LN_NELDERMEAD, N_beams-1);
-
-        std::vector<double> lower_bounds(N_beams-1, 0.0);  // Constrain all angles to the positive sector of the n-sphere.
-        std::vector<double> upper_bounds(N_beams-1, 0.5*M_PI);
-        upper_bounds.back() = M_PI;
-
-        optimizer.set_lower_bounds(lower_bounds);
-        optimizer.set_upper_bounds(upper_bounds);
-        optimizer.set_min_objective(f_to_optimize, NULL);
-        //optimizer.set_ftol_rel(1e-4);
-        optimizer.set_maxeval(10000);
-        double minf;
-
-        try{
-            
-            nlopt::result result = optimizer.optimize(angles, minf);
-            FUNCINFO("Optimizer result: " << result);
-
-            //Convert from angular coordinates to beam weights.
-            std::vector<double> radius_angles {1.0};
-            radius_angles.insert( radius_angles.end(), angles.begin(), angles.end() );
-            auto weights = Spherical_to_Cartesian(radius_angles);
-            std::transform(weights.begin(), weights.end(), weights.begin(), [](double sr_w) -> double { return std::pow(sr_w, 2.0); });
-
-            best_weights = weights;
-            current_best = minf;
-        }catch(std::exception &e){
-            std::cout << "nlopt failed: " << e.what() << std::endl;
-        }
-    }
-
-
+    // Construct a summary.
     std::stringstream summary;
     summary << "The best weights are: " << std::endl;
-    for(size_t i = 0; ( (i < best_weights.size()) && (i < beam_id.size()) ); ++i){
-        summary << beam_id[i] << ": " << best_weights[i] << std::endl;
+    for(size_t i = 0; ( (i < weights.size()) && (i < beam_id.size()) ); ++i){
+        summary << beam_id[i] << ": " << weights[i] << std::endl;
     }
     summary << std::endl;
+    
+    summary << "# of voxels = " << N_voxels << std::endl
+            << "# of beams  = " << N_beams << std::endl
+            << std::endl;
 
-    summary << "  The best score was " 
-            << current_best
+    summary << "D_min  = " << res.D_min << std::endl
+            << "D_mean = " << res.D_mean << std::endl
+            << "D_max  = " << res.D_max << std::endl
+            << std::endl;
+
+    summary << "D_02   = " << res.D_02 << std::endl
+            << "D_05   = " << res.D_05 << std::endl
+            << "D_50   = " << res.D_50 << std::endl
+            << "D_95   = " << res.D_95 << std::endl
+            << "D_98   = " << res.D_98 << std::endl
+            << std::endl;
+
+    summary << "D_min -- D_max span = " << std::abs(res.D_min - res.D_max) << std::endl
+            << "D_02  -- D_98  span = " << std::abs(res.D_02  - res.D_98) << std::endl
+            << "D_05  -- D_95  span = " << std::abs(res.D_05  - res.D_95) << std::endl
+            << std::endl;
+
+    summary << "cost   = " << res.cost << std::endl
             << std::endl;
 
     std::cout << summary.str();
 
-    //Write the summary report.
+    //Write the summary to file.
     try{
         auto gen_filename = [&](void) -> std::string {
             if(ResultsSummaryFileName.empty()){
@@ -653,64 +513,6 @@ Drover OptimizeStaticBeams(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
     }catch(const std::exception &e){
         FUNCERR("Unable to write to output file: '" << e.what() << "'");
     }
-
-    //Write the full report.
-    try{
-        auto gen_filename = [&](void) -> std::string {
-            if(FullResultsFileName.empty()){
-                FullResultsFileName = Get_Unique_Sequential_Filename("/tmp/dicomautomaton_staticbeamoptifull_", 6, ".csv");
-            }
-            return FullResultsFileName;
-        };
-
-        std::stringstream header;
-        header << "Score,Weights" << std::endl;
-
-        FUNCINFO("About to claim a mutex");
-        Append_File( gen_filename,
-                     "dicomautomaton_operation_optimizestaticbeam_mutex",
-                     header.str(),
-                     ss.str() );
-
-    }catch(const std::exception &e){
-        FUNCERR("Unable to write to output file: '" << e.what() << "'");
-    }
-
-
-
-/*
-    //Write the full report.
-    FUNCINFO("Attempting to claim a mutex");
-    try{
-        auto gen_filename = [&](void) -> std::string {
-            if(ResultsSummaryFileName.empty()){
-                ResultsSummaryFileName = Get_Unique_Sequential_Filename("/tmp/dicomautomaton_pfsummary_", 6, ".csv");
-            }
-            return ResultsSummaryFileName;
-        };
-
-        std::stringstream header;
-        header << "Quantity,"
-               << "Result"
-               << std::endl;
-
-        std::stringstream body;
-        body << "Patient ID,"
-             << PatientID
-             << std::endl;
-        body << "Detected uncompensated rotation (degrees),"
-             << PFC.CollimatorCompensation
-             << std::endl;
-
-        Append_File( gen_filename,
-                     "dicomautomaton_operation_analyzepicketfence_mutex",
-                     header.str(),
-                     body.str() );
-
-    }catch(const std::exception &e){
-        FUNCERR("Unable to write to output file: '" << e.what() << "'");
-    }
-*/
 
     return DICOM_data;
 }
