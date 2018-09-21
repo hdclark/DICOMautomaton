@@ -130,15 +130,30 @@ SaveAsOFF(Polyhedron &mesh,
           std::string filename);
 
 
+// Exact Minkowski dilation for meshes.
 void
 Dilate(Polyhedron &mesh,
        Polyhedron sphere);
 
+// Exact Minkowski dilation for contour vertex point clouds.
 void
 Dilate( Polyhedron &output_mesh, 
         std::list<std::reference_wrapper<contour_collection<double>>> cc_ROIs,
         Polyhedron sphere );
 
+// Approximate dilation, erosion, or core/peel using approximate Minkowski sums/differences with a sphere-like shape.
+enum class TransformOp {
+    Dilate,  // Grow the surface boundary.
+    Erode,   // Shrink the surface boundary.
+    Shell    // Keep only the outer shell (original - eroded_original).
+};
+
+void
+Transform( Polyhedron &output_mesh,
+           double distance,
+           TransformOp op);
+
+// Slice a polyhedron to produce planar contours on the given planes.
 contour_collection<double> 
 Slice_Polyhedron(
         const Polyhedron &mesh,

@@ -72,7 +72,6 @@
 #include <CGAL/Surface_mesh_simplification/Policies/Edge_collapse/Edge_length_cost.h>
 #include <CGAL/Surface_mesh_simplification/Policies/Edge_collapse/Midpoint_placement.h>
 
-
 #include <CGAL/Advancing_front_surface_reconstruction.h>
 #include <CGAL/Surface_mesh.h>
 //#include <CGAL/disable_warnings.h>
@@ -80,6 +79,9 @@
 #include <CGAL/Nef_polyhedron_3.h>
 //#include <CGAL/IO/Nef_polyhedron_iostream_3.h>
 #include <CGAL/minkowski_sum_3.h>
+
+#include <CGAL/boost/graph/convert_nef_polyhedron_to_polygon_mesh.h>
+
 
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorMath.h"         //Needed for vec3 class.
@@ -364,6 +366,7 @@ Polyhedron Estimate_Surface_Mesh(
                                                         params.MeshingCentreCentreBound);
 
     // Generate the surface mesh.
+    FUNCINFO("Generating surface mesh now");
     CGAL::make_surface_mesh(c2t3, surface, criteria, CGAL::Manifold_tag());
     FUNCINFO("The triangulated surface has " << tr.number_of_vertices() << " vertices");
 
@@ -702,6 +705,94 @@ void Dilate( Polyhedron &output_mesh,
         throw std::invalid_argument("Dilated mesh is not simple. Unable to convert to polyhedron. Cannot continue.");
     }
     result.convert_to_polyhedron( output_mesh );
+    return;
+}
+
+// Approximate dilation, erosion, or core/peel using approximate Minkowski sums/differences with a sphere-like shape.
+void
+Transform( Polyhedron &output_mesh,
+           double distance,
+           TransformOp op){
+
+    const auto N_edges = output_mesh.size_of_halfedges() / 2;
+
+    //Generate a Nef polyhedron from the surface mesh.
+    using Nef_polyhedron = CGAL::Nef_polyhedron_3<Kernel>;
+    using Vector_3 = Kernel::Vector_3;
+    Nef_polyhedron orig(output_mesh);
+    Nef_polyhedron amal(orig); // Amalgamated mesh -- the working mesh that is repeatedly Booleaned.
+
+    //For a variety of orientations, translate a copy of the original mesh and boolean with the amalgamated mesh.
+    std::list< vec3<double> > dUs {
+        vec3<double>( 1.0, 0.0, 0.0 ).unit(),
+        vec3<double>( 0.0, 1.0, 0.0 ).unit(),
+        vec3<double>( 0.0, 0.0, 1.0 ).unit(),
+
+        vec3<double>(-1.0, 0.0, 0.0 ).unit(),
+        vec3<double>( 0.0,-1.0, 0.0 ).unit(),
+        vec3<double>( 0.0, 0.0,-1.0 ).unit(),
+
+        vec3<double>( 1.0, 1.0, 0.0 ).unit(),
+        vec3<double>( 0.0, 1.0, 1.0 ).unit(),
+        vec3<double>( 1.0, 0.0, 1.0 ).unit(),
+
+        vec3<double>(-1.0, 1.0, 0.0 ).unit(),
+        vec3<double>( 0.0,-1.0, 1.0 ).unit(),
+        vec3<double>(-1.0, 0.0, 1.0 ).unit(),
+
+        vec3<double>( 1.0,-1.0, 0.0 ).unit(),
+        vec3<double>( 0.0, 1.0,-1.0 ).unit(),
+        vec3<double>( 1.0, 0.0,-1.0 ).unit(),
+
+        vec3<double>(-1.0,-1.0, 0.0 ).unit(),
+        vec3<double>( 0.0,-1.0,-1.0 ).unit(),
+        vec3<double>(-1.0, 0.0,-1.0 ).unit() };
+
+    for(const auto dU : dUs){
+        FUNCINFO("Performing another Boolean operation round now");
+        auto u = dU * std::abs(distance);
+        Nef_polyhedron::Aff_transformation_3 trans(CGAL::TRANSLATION, Vector_3(u.x, u.y, u.z));;
+
+        Nef_polyhedron shifted(output_mesh);
+        shifted.transform(trans);
+        
+        if(false){
+        }else if(op == TransformOp::Dilate){
+            amal += shifted;
+        }else if(op == TransformOp::Erode){
+            amal ^= shifted;  // Symmetric difference.
+        }else if(op == TransformOp::Shell){ 
+            amal ^= shifted;
+        }
+
+
+        // Simplify the mesh to reduce the complexity of future Boolean operations.
+
+
+//        if(!amal.is_simple()){
+//            throw std::invalid_argument("Transformed mesh is not simple. Unable to convert to polyhedron. Cannot continue.");
+//        }
+//        amal.convert_to_polyhedron( output_mesh );
+        const bool triangulate_all_faces = true;
+        CGAL::convert_nef_polyhedron_to_polygon_mesh( amal, output_mesh, triangulate_all_faces );
+
+        Simplify(output_mesh, N_edges * 2);
+        amal = Nef_polyhedron(output_mesh);
+        
+    }
+
+    FUNCINFO("About to transform surface mesh");
+    Nef_polyhedron result(amal);
+    if(op == TransformOp::Shell) result = orig - amal;
+
+
+    if(!result.is_simple()){
+        throw std::invalid_argument("Transformed mesh is not simple. Unable to convert to polyhedron. Cannot continue.");
+    }
+    
+    result.convert_to_polyhedron( output_mesh );
+    Simplify(output_mesh, N_edges);
+
     return;
 }
 

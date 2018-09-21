@@ -52,9 +52,10 @@ OperationDoc OpArgDocMinkowskiSum3D(void){
     out.name = "MinkowskiSum3D";
 
     out.desc = 
-        "This operation computes a Minkowski sum of a 3D surface mesh generated from the selected ROIs with a sphere."
+        "This operation computes a Minkowski sum or symmetric difference of a 3D surface mesh generated from the"
+        " selected ROIs with a sphere."
         " The effect is that a margin is added or subtracted to the ROIs, causing them to 'grow' outward or 'shrink'"
-        " inward.";
+        " inward. Exact and inexact routines can be used.";
 
     out.args.emplace_back();
     out.args.back().name = "NormalizedROILabelRegex";
@@ -91,6 +92,34 @@ OperationDoc OpArgDocMinkowskiSum3D(void){
     out.args.back().expected = true;
     out.args.back().examples = { "none", "last", "all" };
 
+
+    out.args.emplace_back();
+    out.args.back().name = "Operation";
+    out.args.back().desc = "The specific operation to perform."
+                           " Available options are:"
+                           " 'dilate_exact_surface',"
+                           " 'dilate_exact_vertex',"
+                           " 'dilate_inexact_isotropic',"
+                           " 'erode_inexact_isotropic', and"
+                           " 'shell_inexact_isotropic'.";
+    out.args.back().default_val = "dilate_inexact_isotropic";
+    out.args.back().expected = true;
+    out.args.back().examples = { "dilate_exact_surface", 
+                                 "dilate_exact_vertex", 
+                                 "dilate_inexact_isotropic",
+                                 "erode_inexact_isotropic", 
+                                 "shell_inexact_isotropic" };
+
+    out.args.emplace_back();
+    out.args.back().name = "Distance";
+    out.args.back().desc = "For dilation and erosion operations, this parameter controls the distance the surface should travel."
+                           " For shell operations, this parameter controls the resultant thickness of the shell."
+                           " In all cases DICOM units are assumed.";
+    out.args.back().default_val = "1.0";
+    out.args.back().expected = true;
+    out.args.back().examples = { "0.5", "1.0", "2.0", "3.0", "5.0" };
+
+
 /*
     out.args.emplace_back();
     out.args.back().name = "ContourOverlap";
@@ -117,6 +146,8 @@ Drover MinkowskiSum3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::
 
     const auto ImageSelectionStr = OptArgs.getValueStr("ImageSelection").value();
 //    const auto ContourOverlapStr = OptArgs.getValueStr("ContourOverlap").value();
+    const auto OpSelectionStr = OptArgs.getValueStr("Operation").value();
+    const auto Distance = std::stod( OptArgs.getValueStr("Distance").value() );
 
     const std::string base_dir("/tmp/MinkowskiSum3D");
     const std::string NewROIName("New ROI");
@@ -131,11 +162,11 @@ Drover MinkowskiSum3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::
     const auto regex_last = std::regex("la?s?t?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
     const auto regex_all  = std::regex("al?l?$",   std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
 
-//    const auto regex_ignore = std::regex("^ig?n?o?r?e?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-//    const auto regex_honopps = std::regex("^ho?n?o?u?r?_?o?p?p?o?s?i?t?e?_?o?r?i?e?n?t?a?t?i?o?n?s?$", 
-//                                          std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-//    const auto regex_cancel = std::regex("^ov?e?r?l?a?p?p?i?n?g?_?c?o?n?t?o?u?r?s?_?c?a?n?c?e?l?s?$",
-//                                          std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto regex_dilate_exact_surface     = Compile_Regex("dil?a?t?e?_?exa?c?t?_?surfa?c?e?"); // diexsurf
+    const auto regex_dilate_exact_vertex      = Compile_Regex("dil?a?t?e?_?exa?c?t?_?verte?x?");   // diexvert
+    const auto regex_dilate_inexact_isotropic = Compile_Regex("dil?a?t?e?_?ine?x?a?c?t?_?isot?r?o?p?i?c?"); //diiniso
+    const auto regex_erode_inexact_isotropic  = Compile_Regex("ero?d?e?_?ine?x?a?c?t?_?isot?r?o?p?i?c?"); //eriniso
+    const auto regex_shell_inexact_isotropic  = Compile_Regex("she?l?l?_?ine?x?a?c?t?_?isot?r?o?p?i?c?"); //shiniso
 
     if( !std::regex_match(ImageSelectionStr, regex_none)
     &&  !std::regex_match(ImageSelectionStr, regex_last)
@@ -143,6 +174,13 @@ Drover MinkowskiSum3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::
         throw std::invalid_argument("Image selection is not valid. Cannot continue.");
     }
 
+    if( !std::regex_match(OpSelectionStr, regex_dilate_exact_surface)
+    &&  !std::regex_match(OpSelectionStr, regex_dilate_exact_vertex)
+    &&  !std::regex_match(OpSelectionStr, regex_dilate_inexact_isotropic)
+    &&  !std::regex_match(OpSelectionStr, regex_erode_inexact_isotropic)
+    &&  !std::regex_match(OpSelectionStr, regex_shell_inexact_isotropic) ){
+        throw std::invalid_argument("Operation selection is not valid. Cannot continue.");
+    }
 
     //Stuff references to all contours into a list. Remember that you can still address specific contours through
     // the original holding containers (which are not modified here).
@@ -166,9 +204,33 @@ Drover MinkowskiSum3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::
     polyhedron_processing::SaveAsOFF(output_mesh, base_dir + "_polyhedron.off");
 
     // Dilate the mesh.
-    const auto sphere_mesh = polyhedron_processing::Regular_Icosahedron();
-    polyhedron_processing::Dilate(output_mesh, sphere_mesh); // Full 3D dilation/"offset."
-    //polyhedron_processing::Dilate(output_mesh, cc_ROIs, sphere_mesh); // Vertex-based dilation/"offset."
+    if(false){
+    }else if(std::regex_match(OpSelectionStr, regex_dilate_exact_surface)){
+        const auto sphere_mesh = polyhedron_processing::Regular_Icosahedron();
+        polyhedron_processing::Dilate(output_mesh, sphere_mesh); // Full 3D dilation/"offset."
+
+    }else if(std::regex_match(OpSelectionStr, regex_dilate_exact_vertex)){
+        const auto sphere_mesh = polyhedron_processing::Regular_Icosahedron();
+        polyhedron_processing::Dilate(output_mesh, cc_ROIs, sphere_mesh); // Vertex-based dilation/"offset."
+
+    }else if(std::regex_match(OpSelectionStr, regex_dilate_inexact_isotropic)){
+        polyhedron_processing::Transform( output_mesh, 
+                                          Distance,
+                                          polyhedron_processing::TransformOp::Dilate );
+
+    }else if(std::regex_match(OpSelectionStr, regex_erode_inexact_isotropic)){
+        polyhedron_processing::Transform( output_mesh, 
+                                          Distance,
+                                          polyhedron_processing::TransformOp::Erode );
+
+    }else if(std::regex_match(OpSelectionStr, regex_shell_inexact_isotropic)){
+        polyhedron_processing::Transform( output_mesh, 
+                                          Distance,
+                                          polyhedron_processing::TransformOp::Shell );
+
+    }else{
+        throw std::invalid_argument("Operation not recognized");
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
