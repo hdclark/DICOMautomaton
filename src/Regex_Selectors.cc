@@ -66,8 +66,10 @@ Whitelist( std::list<std::reference_wrapper<contour_collection<double>>> ccs,
                 return false;
             }else if(Opts.nas == Regex_Selector_Opts::NAs::Exclude){
                 return true;
+            }else if(Opts.nas == Regex_Selector_Opts::NAs::TreatAsEmpty){
+                return !(std::regex_match("",theregex));
             }
-            throw std::logic_error("Regex selector option not understood. Cannot continue.");
+            throw std::logic_error("Regex selector representative->NAs option not understood. Cannot continue.");
 
         }else if(Opts.validation == Regex_Selector_Opts::Validation::Pedantic){
             const auto Values = cc.get().get_unique_values_for_key(MetadataKey);
@@ -79,7 +81,7 @@ Whitelist( std::list<std::reference_wrapper<contour_collection<double>>> ccs,
                 }else if(Opts.nas == Regex_Selector_Opts::NAs::Exclude){
                     return true;
                 }
-                throw std::logic_error("Regex selector option not understood. Cannot continue.");
+                throw std::logic_error("Regex selector pedantic->NAs option not understood. Cannot continue.");
 
             }else{
                 for(const auto & Value : Values){
@@ -87,7 +89,7 @@ Whitelist( std::list<std::reference_wrapper<contour_collection<double>>> ccs,
                 }
                 return false;
             }
-            throw std::logic_error("Regex selector option not understood. Cannot continue.");
+            throw std::logic_error("Regex selector pedantic option not understood. Cannot continue.");
 
         }
         throw std::logic_error("Regex selector option not understood. Cannot continue.");
