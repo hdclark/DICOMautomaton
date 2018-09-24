@@ -662,7 +662,7 @@ using Polyhedron = CGAL::Polyhedron_3<Kernel>;
 // It can be subdivided to quickly approach a spherical surface.
 // This routine is meant to assist surface mesh dilation and Minkowski sums.
 Polyhedron
-Regular_Icosahedron(void){
+Regular_Icosahedron(double radius){
     std::stringstream ss;
     ss << "OFF" << std::endl
        << "12 20 0" << std::endl
@@ -701,6 +701,11 @@ Regular_Icosahedron(void){
 
     Polyhedron output_mesh;
     ss >> output_mesh;
+
+    CGAL::Aff_transformation_3<Kernel> Aff(CGAL::SCALING, radius);
+    std::transform( output_mesh.points_begin(), output_mesh.points_end(),
+                    output_mesh.points_begin(), Aff );
+
     return output_mesh;
 }
 

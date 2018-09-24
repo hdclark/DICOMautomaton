@@ -220,12 +220,12 @@ Drover MinkowskiSum3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::
     // Operate on the mesh.
     if(false){
     }else if(std::regex_match(OpSelectionStr, regex_dilate_exact_surface)){
-        const auto sphere_mesh = polyhedron_processing::Regular_Icosahedron();
+        const auto sphere_mesh = polyhedron_processing::Regular_Icosahedron(Distance);
         polyhedron_processing::Dilate(output_mesh,
                                       sphere_mesh); // Full 3D dilation/"offset."
 
     }else if(std::regex_match(OpSelectionStr, regex_dilate_exact_vertex)){
-        const auto sphere_mesh = polyhedron_processing::Regular_Icosahedron();
+        const auto sphere_mesh = polyhedron_processing::Regular_Icosahedron(Distance);
         polyhedron_processing::Dilate(output_mesh, 
                                       cc_ROIs, 
                                       sphere_mesh); // Vertex-based dilation/"offset."

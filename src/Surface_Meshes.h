@@ -116,7 +116,7 @@ using Polyhedron = CGAL::Polyhedron_3<Kernel>;
 
 
 Polyhedron
-Regular_Icosahedron(void);
+Regular_Icosahedron(double radius = 1.0);
 
 void
 Subdivide(Polyhedron &mesh,
