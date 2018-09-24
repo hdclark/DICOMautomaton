@@ -193,25 +193,42 @@ Drover MinkowskiSum3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::
 
     auto common_metadata = contour_collection<double>().get_common_metadata(cc_ROIs, {});
 
-    // Generate a polyhedron surface mesh.
-    contour_surface_meshes::Parameters meshing_params;
+    // Generate a polyhedron surface mesh iff necessary.
+    contour_surface_meshes::Polyhedron output_mesh;
+    if(false){
+    }else if( (std::regex_match(OpSelectionStr, regex_dilate_exact_vertex)) ){
+        // Do nothing -- no surface is needed.
 
-    auto output_mesh = contour_surface_meshes::Estimate_Surface_Mesh( cc_ROIs, meshing_params );
-    //auto output_mesh = contour_surface_meshes::Estimate_Surface_Mesh_AdvancingFront( cc_ROIs, meshing_params );
+    }else if( (std::regex_match(OpSelectionStr, regex_dilate_exact_surface))
+          ||  (std::regex_match(OpSelectionStr, regex_dilate_inexact_isotropic))
+          ||  (std::regex_match(OpSelectionStr, regex_erode_inexact_isotropic))
+          ||  (std::regex_match(OpSelectionStr, regex_shell_inexact_isotropic)) ){
+        // Generate a surface and prepare it for a Minkowski operation.
+        contour_surface_meshes::Parameters meshing_params;
+        output_mesh = contour_surface_meshes::Estimate_Surface_Mesh( cc_ROIs, meshing_params );
+        //output_mesh = contour_surface_meshes::Estimate_Surface_Mesh_AdvancingFront( cc_ROIs, meshing_params );
 
-    polyhedron_processing::Subdivide(output_mesh, MeshSubdivisions);
-    polyhedron_processing::Simplify(output_mesh, MeshSimplificationEdgeCountLimit);
-    polyhedron_processing::SaveAsOFF(output_mesh, base_dir + "_polyhedron.off");
+        polyhedron_processing::Subdivide(output_mesh, MeshSubdivisions);
+        polyhedron_processing::Simplify(output_mesh, MeshSimplificationEdgeCountLimit);
+        polyhedron_processing::SaveAsOFF(output_mesh, base_dir + "_polyhedron.off");
 
-    // Dilate the mesh.
+    }else{
+        throw std::invalid_argument("Operation not recognized");
+    }
+
+
+    // Operate on the mesh.
     if(false){
     }else if(std::regex_match(OpSelectionStr, regex_dilate_exact_surface)){
         const auto sphere_mesh = polyhedron_processing::Regular_Icosahedron();
-        polyhedron_processing::Dilate(output_mesh, sphere_mesh); // Full 3D dilation/"offset."
+        polyhedron_processing::Dilate(output_mesh,
+                                      sphere_mesh); // Full 3D dilation/"offset."
 
     }else if(std::regex_match(OpSelectionStr, regex_dilate_exact_vertex)){
         const auto sphere_mesh = polyhedron_processing::Regular_Icosahedron();
-        polyhedron_processing::Dilate(output_mesh, cc_ROIs, sphere_mesh); // Vertex-based dilation/"offset."
+        polyhedron_processing::Dilate(output_mesh, 
+                                      cc_ROIs, 
+                                      sphere_mesh); // Vertex-based dilation/"offset."
 
     }else if(std::regex_match(OpSelectionStr, regex_dilate_inexact_isotropic)){
         polyhedron_processing::Transform( output_mesh, 

@@ -57,8 +57,16 @@
 
 namespace contour_surface_meshes {
 
-using Kernel = CGAL::Exact_predicates_exact_constructions_kernel;
+using Kernel = CGAL::Exact_predicates_inexact_constructions_kernel;
 using Polyhedron = CGAL::Polyhedron_3<Kernel>;
+
+
+typedef enum {
+        Fast,
+        Medium,
+        High
+} ReproductionQuality;
+
 
 struct Parameters {
     long int NumberOfImages = -1; // If not sensible, defaults to ~number of unique contour planes.
@@ -66,27 +74,20 @@ struct Parameters {
     long int GridRows = 512;  // As of writing, the procedure limiting ramping this up is inclusivity testing.
     long int GridColumns = 512;
 
-    // Meshing lower bound for surface face angle (degrees).
-    double MeshingAngularBound = 0.05;
 
-    // Meshing upper bound for Delauney spheres enclosing each face and centered on the surface.
-    // Note that the surface and face need intersect. This parameter controls the maximum face size.
-    // Setting too large will wastefully cause too many faces on flat surfaces, but setting too large
-    // can lead to sharp faces that are numerically probematic. If possible, opt for the largest face
-    // sizes possible.
+    // Control the mesh quality-vs-speed tradeoff.
     //
-    // Reasonable scale: 1.5 - 100.0 (DICOM units).
-    double MeshingFacetSphereRadiusBound = 50.0; 
-
-    // Meshing upper bound on the deviation from the Delauney sphere centre and the face circumcentre.
-    // This parameter controls how sharp edges are approximated: lower numbers produce better approximations.
-    // Setting too large will cause large surface inaccuracies in the presence of unsmooth surface features.
-    // Setting too small will cause an explosion of faces. Ideally, it should probably be 1/10 of the smallest
-    // surface feature size or less. Practically, this may cause massive polyhedra unsuitable for further 
-    // processing.
+    // - Fast trades off final mesh quality for speed. It is useful in situations where a mesh is needed for somewhat
+    //   imprecise purposes. Contour slices through the resultant mesh will most likely not reproduce the input contours
+    //   very closely.
     //
-    // Reasonable scale: 0.1 - 3.0 (DICOM units).
-    double MeshingCentreCentreBound = 0.25; 
+    // - Medium tries to strike a balance between meshing time and final mesh quality. It should suffice for most
+    //   purposes.
+    //
+    // - High will manipulate the mesh to try achieve the greatest reproducibility; contour slices through the resultant
+    //   mesh should be nearly identical to the input contours. Note that meshes with high quality will generally have too
+    //   many vertices to reasonably dilate or erode.
+    ReproductionQuality RQ = ReproductionQuality::High;
 
 };
 
@@ -110,7 +111,7 @@ Estimate_Surface_Mesh_AdvancingFront(
 
 namespace polyhedron_processing {
 
-using Kernel = CGAL::Exact_predicates_exact_constructions_kernel;
+using Kernel = CGAL::Exact_predicates_inexact_constructions_kernel;
 using Polyhedron = CGAL::Polyhedron_3<Kernel>;
 
 
