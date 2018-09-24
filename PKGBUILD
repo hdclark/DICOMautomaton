@@ -53,11 +53,15 @@ options=(strip staticlibs)
 
 build() {
   cmake ../ -DCMAKE_INSTALL_PREFIX=/usr
-  make -j 8
+
+  # Scale compilation, but limit to 8 concurrent jobs to temper memory usage.
+  JOBS=$(nproc)
+  JOBS=$(( $JOBS < 8 ? $JOBS : 8 ))
+  make -j "$JOBS"
 }
 
 package() {
-  make -j 8 DESTDIR="${pkgdir}" install
+  make DESTDIR="${pkgdir}" install
 }
 
 # vim:set ts=2 sw=2 et:
