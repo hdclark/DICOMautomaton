@@ -165,11 +165,21 @@ Drover ExtractRadiomicFeatures(Drover DICOM_data, OperationArgPkg OptArgs, std::
     while(iap_it != DICOM_data.image_data.end()){
         if((*iap_it)->imagecoll.images.empty()) throw std::invalid_argument("Unable to find an image to analyze.");
 
+        //Determine which PatientID(s) to report.
         const auto PatientIDs = (*iap_it)->imagecoll.get_unique_values_for_key("PatientID");
-        const auto PatientID = (PatientIDs.size() == 1) ? PatientIDs.front() : "Unknown";
+        std::string PatientID;
+        if(PatientIDs.empty()){
+            PatientID = "Unknown";
+        }else if(PatientIDs.size() == 1){
+            PatientID = PatientIDs.front();
+        }else if(PatientIDs.size() == 1){
+            PatientID = std::accumulate(std::begin(PatientIDs), std::end(PatientIDs), std::string(), 
+                            [](const std::string &run, const std::string &id){
+                                return (run + (run.empty() ? "" : "_") + id);
+                            });
+        }
 
-        std::vector<float> f_voxel_vals;
-        std::vector<long int> i_voxel_vals;
+        std::vector<double> voxel_vals;
 
         PartitionedImageVoxelVisitorMutatorUserData ud;
         ud.mutation_opts.editstyle = Mutate_Voxels_Opts::EditStyle::InPlace;
@@ -194,8 +204,10 @@ Drover ExtractRadiomicFeatures(Drover DICOM_data, OperationArgPkg OptArgs, std::
                            long int chan, 
                            float &voxel_val) {
             // Append the value to the voxel store.
-            f_voxel_vals.emplace_back(voxel_val);
-            i_voxel_vals.emplace_back( static_cast<long int>( std::round(voxel_val) ) );
+            voxel_vals.emplace_back(voxel_val);
+
+            // Append the value rounded to the nearest integer to the voxel store.
+            //voxel_vals.emplace_back( static_cast<long int>( std::round(voxel_val) ) );
             return;
         };
 
@@ -206,7 +218,7 @@ Drover ExtractRadiomicFeatures(Drover DICOM_data, OperationArgPkg OptArgs, std::
         }
 
         // Process the voxel data.
-        if(f_voxel_vals.empty() || i_voxel_vals.empty()){
+        if(voxel_vals.empty()){
             throw std::domain_error("No voxels identified interior to the selected ROI(s). Cannot continue.");
         }
 
@@ -216,23 +228,19 @@ Drover ExtractRadiomicFeatures(Drover DICOM_data, OperationArgPkg OptArgs, std::
             header = std::move(dummy);
         }
 
-        const auto f_I_min  = Stats::Min(f_voxel_vals);
-        const auto f_I_max  = Stats::Max(f_voxel_vals);
-        const auto f_I_mean = Stats::Mean(f_voxel_vals);
-        //const auto f_I_02   = Stats::Percentile(f_voxel_vals, 0.02);
-        //const auto f_I_05   = Stats::Percentile(f_voxel_vals, 0.05);
-        //const auto f_I_50   = Stats::Percentile(f_voxel_vals, 0.50);
-        //const auto f_I_95   = Stats::Percentile(f_voxel_vals, 0.95);
-        //const auto f_I_98   = Stats::Percentile(f_voxel_vals, 0.98);
-
-        const auto i_I_min  = Stats::Min(i_voxel_vals);
-        const auto i_I_max  = Stats::Max(i_voxel_vals);
-        const auto i_I_mean = Stats::Mean(i_voxel_vals);
-        //const auto i_I_02   = Stats::Percentile(i_voxel_vals, 0.02);
-        //const auto i_I_05   = Stats::Percentile(i_voxel_vals, 0.05);
-        //const auto i_I_50   = Stats::Percentile(i_voxel_vals, 0.50);
-        //const auto i_I_95   = Stats::Percentile(i_voxel_vals, 0.95);
-        //const auto i_I_98   = Stats::Percentile(i_voxel_vals, 0.98);
+        const auto N_I    = static_cast<double>(voxel_vals.size());
+        const auto I_min  = Stats::Min(voxel_vals);
+        const auto I_max  = Stats::Max(voxel_vals);
+        const auto I_mean = Stats::Mean(voxel_vals);
+        const auto I_02   = Stats::Percentile(voxel_vals, 0.02);
+        const auto I_05   = Stats::Percentile(voxel_vals, 0.05);
+        const auto I_10   = Stats::Percentile(voxel_vals, 0.10);
+        const auto I_25   = Stats::Percentile(voxel_vals, 0.25);
+        const auto I_50   = Stats::Percentile(voxel_vals, 0.50);
+        const auto I_75   = Stats::Percentile(voxel_vals, 0.75);
+        const auto I_90   = Stats::Percentile(voxel_vals, 0.90);
+        const auto I_95   = Stats::Percentile(voxel_vals, 0.95);
+        const auto I_98   = Stats::Percentile(voxel_vals, 0.98);
 
         // Patient metadata.
         {
@@ -246,24 +254,177 @@ Drover ExtractRadiomicFeatures(Drover DICOM_data, OperationArgPkg OptArgs, std::
             report << "," << UserComment;
         }
 
-        // Pixel intensity 'image energy' with voxel intensities translated so the smallest voxel intensity contributes
-        // zero energy.
+
+        // Simple first-order statistics and derived quantities.
+        {
+            header << ",Min";
+            report << "," << I_min;
+
+            header << ",Percentile02";
+            report << "," << I_02;
+
+            header << ",Percentile05";
+            report << "," << I_05;
+
+            header << ",Percentile10";
+            report << "," << I_10;
+
+            header << ",Percentile25";
+            report << "," << I_25;
+
+            header << ",Mean";
+            report << "," << I_mean;
+
+            header << ",Median";
+            report << "," << I_50;
+
+            header << ",Percentile75";
+            report << "," << I_75;
+
+            header << ",Percentile90";
+            report << "," << I_90;
+
+            header << ",Percentile95";
+            report << "," << I_95;
+
+            header << ",Percentile98";
+            report << "," << I_98;
+
+            header << ",Max";
+            report << "," << I_max;
+
+            header << ",InterQuartileRange";
+            report << "," << (I_75 - I_25);
+
+            header << ",Range";
+            report << "," << (I_max - I_min);
+
+/*
+            header << ",";
+            report << "," << ;
+*/
+
+        }
+
+        // Deviations.
+        {
+            const auto StdDev = std::accumulate(
+                               std::begin(voxel_vals), std::end(voxel_vals),
+                               static_cast<double>(0),
+                               [&](double run, double I) -> double {
+                                   return run + (I - I_mean) * (I - I_mean);
+                               }) / N_I;
+                                
+            const auto CM3 = std::accumulate(
+                               std::begin(voxel_vals), std::end(voxel_vals),
+                               static_cast<double>(0),
+                               [&](double run, double I) -> double {
+                                   return run + (I - I_mean) * (I - I_mean) * (I - I_mean);
+                               }) / N_I;
+                                
+            const auto CM4 = std::accumulate(
+                               std::begin(voxel_vals), std::end(voxel_vals),
+                               static_cast<double>(0),
+                               [&](double run, double I) -> double {
+                                   return run + (I - I_mean) * (I - I_mean) * (I - I_mean) * (I - I_mean);
+                               }) / N_I;
+                                
+            header << ",StandardDeviation";
+            report << "," << StdDev;
+
+            const auto Var = StdDev*StdDev;
+
+            header << ",Variance";
+            report << "," << Var;
+
+            const auto CV = StdDev / I_mean;
+
+            header << ",CoefficientOfVariation";
+            report << "," << CV;
+
+            const auto Skewness = CM3 / (StdDev * StdDev * StdDev);
+
+            header << ",Skewness";
+            report << "," << Skewness;
+
+            const auto pSkewness = 3.0 * (I_mean - I_50) / StdDev;
+
+            header << ",PearsonsMedianSkewness"; // Also known as Pearson's non-parametric second skewness coefficient.
+            report << "," << pSkewness;
+
+            const auto Kurtosis = CM4 / (StdDev * StdDev * StdDev * StdDev);
+
+            header << ",Kurtosis";
+            report << "," << Kurtosis;
+
+            const auto eKurtosis = Kurtosis - 3.0;
+
+            header << ",ExcessKurtosis";
+            report << "," << eKurtosis;
+
+            const auto MAD = std::accumulate(
+                               std::begin(voxel_vals), std::end(voxel_vals),
+                               static_cast<double>(0),
+                               [&](double run, double I) -> double {
+                                   return run + std::abs(I - I_mean);
+                               }) / N_I;
+                                
+            header << ",MeanAbsoluteDeviation";
+            report << "," << MAD;
+
+            auto v = voxel_vals; // A vector comprised only of the inner 10th-90th percentile data.
+            v.erase( std::remove_if( std::begin(v), std::end(v), [&](double I){
+                        //Remove all intensities not within the 10th and 90th percentiles.
+                        return !isininc(I_10, I, I_90);
+                     }),
+                     std::end(v) );
+
+            const auto v_N_I    = static_cast<double>(v.size());
+            const auto v_I_mean = Stats::Mean(v);
+            const auto rMAD = std::accumulate(
+                               std::begin(v), std::end(v),
+                               static_cast<double>(0),
+                               [&](double run, double I) -> double {
+                                   return run + std::abs(I - v_I_mean);
+                               }) / v_N_I;
+                                
+            header << ",RobustMeanAbsoluteDeviation";
+            report << "," << rMAD;
+        }
+
+        // Pixel intensity 'image energy.' Also a shifted energy with voxel intensities translated so the smallest voxel
+        // intensity contributes zero energy.
         {
             const auto E = std::accumulate(std::begin(
-                               i_voxel_vals), std::end(i_voxel_vals),
-                               static_cast<long int>(0),
-                               [&](long int run, long int I) -> long int {
-                                   return (I + i_I_min) * (I + i_I_min);
+                               voxel_vals), std::end(voxel_vals),
+                               static_cast<double>(0),
+                               [&](double run, double I) -> double {
+                                   return run + I*I;
                                });
                                 
             header << ",IntensityEnergy";
             report << "," << E;
+
+            const auto RMSI = std::sqrt(1.0*E/N_I);
+            header << ",RootMeanSquaredIntensity";
+            report << "," << RMSI;
+
+            const auto E_shifted = std::accumulate(std::begin(
+                               voxel_vals), std::end(voxel_vals),
+                               static_cast<double>(0),
+                               [&](double run, double I) -> double {
+                                   return run + (I + I_min) * (I + I_min);
+                               });
+                                
+            header << ",ShiftedIntensityEnergy";
+            report << "," << E_shifted;
+
+            const auto RMSI_shifted = std::sqrt(1.0*E_shifted/N_I);
+            header << ",ShiftedRootMeanSquaredIntensity";
+            report << "," << RMSI_shifted;
         }
 
 
-
-
-        // ... TODO implement more features here.
 
 
 
