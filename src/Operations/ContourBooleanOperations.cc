@@ -137,25 +137,21 @@ Drover ContourBooleanOperations(Drover DICOM_data, OperationArgPkg OptArgs, std:
     const auto roinormalizedregexA = std::regex(NormalizedROILabelRegexA, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
     const auto roinormalizedregexB = std::regex(NormalizedROILabelRegexB, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
 
-    const auto JoinRegex = std::regex("^jo?i?n?$", 
-                            std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto IntersectionRegex = std::regex("^in?t?e?r?s?e?c?t?i?o?n?$", 
-                            std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto DifferenceRegex = std::regex("^di?f?f?e?r?e?n?c?e?$", 
-                            std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto SymmDiffRegex = std::regex("^sy?m?m?e?t?r?i?c?_?d?i?f?f?e?r?e?n?c?e?$", 
-                            std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto regex_join = Compile_Regex("^jo?i?n?$");
+    const auto regex_intersection = Compile_Regex("^inte?r?s?e?c?t?i?o?n?$");
+    const auto regex_difference = Compile_Regex("^diffe?r?e?n?c?e?$");
+    const auto regex_symmdiff = Compile_Regex("^symme?t?r?i?c?_?d?i?f?f?e?r?e?n?c?e?$");
 
     //Figure out which operation is desired.
     ContourBooleanMethod op = ContourBooleanMethod::join;
     if(false){
-    }else if(std::regex_match(Operation_str,JoinRegex)){
+    }else if(std::regex_match(Operation_str,regex_join)){
         op = ContourBooleanMethod::join;
-    }else if(std::regex_match(Operation_str,IntersectionRegex)){
+    }else if(std::regex_match(Operation_str,regex_intersection)){
         op = ContourBooleanMethod::intersection;
-    }else if(std::regex_match(Operation_str,DifferenceRegex)){
+    }else if(std::regex_match(Operation_str,regex_difference)){
         op = ContourBooleanMethod::difference;
-    }else if(std::regex_match(Operation_str,SymmDiffRegex)){
+    }else if(std::regex_match(Operation_str,regex_symmdiff)){
         op = ContourBooleanMethod::symmetric_difference;
     }else{
         throw std::logic_error("Unanticipated Boolean operation request.");
@@ -206,7 +202,7 @@ Drover ContourBooleanOperations(Drover DICOM_data, OperationArgPkg OptArgs, std:
     const auto est_cont_normal = cc_A_B.front().get().contours.front().Estimate_Planar_Normal();
     const auto ucp = Unique_Contour_Planes(cc_A_B, est_cont_normal, /*distance_eps=*/ 0.005);
 
-    const double fallback_spacing = 0.005; // in DICOM units (usually mm).
+    const double fallback_spacing = 0.25; // in DICOM units (usually mm).
     const auto cont_sep_range = std::abs(ucp.front().Get_Signed_Distance_To_Point( ucp.back().R_0 ));
     const double est_cont_spacing = (ucp.size() <= 1) ? fallback_spacing : cont_sep_range / static_cast<double>(ucp.size() - 1);
     const double est_cont_thickness = 0.5005 * est_cont_spacing; // Made slightly thicker to avoid gaps.
