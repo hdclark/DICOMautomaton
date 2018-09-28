@@ -222,6 +222,17 @@ Drover ExtractRadiomicFeatures(Drover DICOM_data, OperationArgPkg OptArgs, std::
             throw std::domain_error("No voxels identified interior to the selected ROI(s). Cannot continue.");
         }
 
+        //Resegment the voxel values to a fixed window for comparison with IBSI benchmarks.
+        {
+            voxel_vals.erase( std::remove_if( std::begin(voxel_vals), std::end(voxel_vals), [&](double I){
+                        //Remove all intensities not within the 10th and 90th percentiles.
+                        return !isininc(-500.0, I, 400.0);
+                     }),
+                     std::end(voxel_vals) );
+        }
+FUNCERR("This commit was saved for reference purposes and must be edited to proceed");
+
+
         //Reset the header.
         {
             std::stringstream dummy;
@@ -308,13 +319,22 @@ Drover ExtractRadiomicFeatures(Drover DICOM_data, OperationArgPkg OptArgs, std::
 
         // Deviations.
         {
-            const auto StdDev = std::accumulate(
+            const auto Var = std::accumulate(
                                std::begin(voxel_vals), std::end(voxel_vals),
                                static_cast<double>(0),
                                [&](double run, double I) -> double {
                                    return run + (I - I_mean) * (I - I_mean);
                                }) / N_I;
                                 
+            header << ",Variance";
+            report << "," << Var;
+
+            const auto StdDev = std::sqrt(Var);
+
+            header << ",StandardDeviation";
+            report << "," << StdDev;
+
+
             const auto CM3 = std::accumulate(
                                std::begin(voxel_vals), std::end(voxel_vals),
                                static_cast<double>(0),
@@ -329,14 +349,6 @@ Drover ExtractRadiomicFeatures(Drover DICOM_data, OperationArgPkg OptArgs, std::
                                    return run + (I - I_mean) * (I - I_mean) * (I - I_mean) * (I - I_mean);
                                }) / N_I;
                                 
-            header << ",StandardDeviation";
-            report << "," << StdDev;
-
-            const auto Var = StdDev*StdDev;
-
-            header << ",Variance";
-            report << "," << Var;
-
             const auto CV = StdDev / I_mean;
 
             header << ",CoefficientOfVariation";
