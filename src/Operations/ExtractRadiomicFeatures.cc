@@ -222,7 +222,10 @@ Drover ExtractRadiomicFeatures(Drover DICOM_data, OperationArgPkg OptArgs, std::
             throw std::domain_error("No voxels identified interior to the selected ROI(s). Cannot continue.");
         }
 
-        //Resegment the voxel values to a fixed window for comparison with IBSI benchmarks.
+/*
+        //Ignore voxels outside of a specific window.
+        //
+        // Note: require the user to provide the window, or do not enable this step! TODO
         {
             voxel_vals.erase( std::remove_if( std::begin(voxel_vals), std::end(voxel_vals), [&](double I){
                         //Remove all intensities not within the 10th and 90th percentiles.
@@ -230,8 +233,7 @@ Drover ExtractRadiomicFeatures(Drover DICOM_data, OperationArgPkg OptArgs, std::
                      }),
                      std::end(voxel_vals) );
         }
-FUNCERR("This commit was saved for reference purposes and must be edited to proceed");
-
+*/       
 
         //Reset the header.
         {
