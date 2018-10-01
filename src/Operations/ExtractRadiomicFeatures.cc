@@ -448,89 +448,33 @@ Drover ExtractRadiomicFeatures(Drover DICOM_data, OperationArgPkg OptArgs, std::
         if(std::regex_match(ImageSelectionStr, regex_first)) break;
     }
 
+    // Contour-based features.
+    {
+        double TotalPerimeter = std::numeric_limits<double>::quiet_NaN();
+        double LongestPerimeter = std::numeric_limits<double>::quiet_NaN();
 
+        for(const auto &cc_refw : cc_ROIs){
+            const auto p = cc_refw.get().Perimeter();
+            if(!std::isfinite(TotalPerimeter)){
+                TotalPerimeter = p;
+            }else{
+                TotalPerimeter += p;
+            }
 
-/*
-            const auto weight = weights[beam];
-            std::transform( working.begin(), working.end(),
-                            voxels[beam].begin(), 
-                            working.begin(),
-                            [=](const double &L, const double &R){ return L + weight * R; });
-
-        // Sanity check.
-        const auto D_max = Stats::Max(working);
-        if(!std::isfinite(D_max) || (D_max < 1E-3)){
-            out.cost = std::numeric_limits<double>::max();
+            const auto pl = cc_refw.get().Longest_Perimeter();
+            if(!std::isfinite(LongestPerimeter)){
+                LongestPerimeter = pl;
+            }else{
+                LongestPerimeter = std::max(LongestPerimeter, pl);
+            }
         }
+        header << ",TotalPerimeter";
+        report << "," << TotalPerimeter;
 
-        // Scale the weighted dose distribution to achieve the specified normalization.
-        const auto DVH_norm_D = dvh_D_frac * D_Rx;
-        const auto DVH_norm_Vmin = dvh_Vmin_frac;
-        const auto dose_scaler = DVH_Normalize(working, DVH_norm_D, DVH_norm_Vmin);
-
-        std::transform(working.begin(), working.end(), 
-                       working.begin(), [=](double D) -> double { return D*dose_scaler; });
-        
-        // Generate descriptive stats for the dose distribution.
-        if(generate_dose_dist_stats){
-            out.D_min  = 100.0 * Stats::Min(working) / D_Rx;
-            out.D_max  = 100.0 * Stats::Max(working) / D_Rx;
-            out.D_mean = 100.0 * Stats::Mean(working) / D_Rx;
-            out.D_02   = Stats::Percentile(working, 0.02);
-            out.D_05   = Stats::Percentile(working, 0.05);
-            out.D_50   = Stats::Percentile(working, 0.50);
-            out.D_95   = Stats::Percentile(working, 0.95);
-            out.D_98   = Stats::Percentile(working, 0.98);
-        }
-
-        //Compute the cost function for each dose element.
-        std::transform(working.begin(), working.end(), 
-                       working.begin(), [=](double D) -> double { return std::pow(D - D_Rx, 2.0); });
-        out.cost = Stats::Sum(working);
-
-
-        std::vector<double> weights(open_weights);
-        const auto sum = std::accumulate(weights.begin(), weights.end(), 0.0);
-        std::transform(weights.begin(), weights.end(), weights.begin(), [=](double ow) -> double { return ow / sum; });
-
-    std::vector<double> weights(open_weights);
-    const auto sum = std::accumulate(weights.begin(), weights.end(), 0.0);
-    std::transform(weights.begin(), weights.end(), 
-                   weights.begin(), [=](double ow) -> double { return ow / sum; });
-
-
-
-    // Construct a report.
-    report << "The best weights are: " << std::endl;
-    for(size_t i = 0; ( (i < weights.size()) && (i < beam_id.size()) ); ++i){
-        report << beam_id[i] << ": " << weights[i] << std::endl;
+        header << ",LongestPerimeter";
+        report << "," << LongestPerimeter;
     }
-    report << std::endl;
-    
-    report << "# of voxels = " << N_voxels << std::endl
-            << "# of beams  = " << N_beams << std::endl
-            << std::endl;
 
-    report << "D_min  = " << res.D_min << std::endl
-            << "D_mean = " << res.D_mean << std::endl
-            << "D_max  = " << res.D_max << std::endl
-            << std::endl;
-
-    report << "D_02   = " << res.D_02 << std::endl
-            << "D_05   = " << res.D_05 << std::endl
-            << "D_50   = " << res.D_50 << std::endl
-            << "D_95   = " << res.D_95 << std::endl
-            << "D_98   = " << res.D_98 << std::endl
-            << std::endl;
-
-    report << "D_min -- D_max span = " << std::abs(res.D_min - res.D_max) << std::endl
-            << "D_02  -- D_98  span = " << std::abs(res.D_02  - res.D_98) << std::endl
-            << "D_05  -- D_95  span = " << std::abs(res.D_05  - res.D_95) << std::endl
-            << std::endl;
-
-    report << "cost   = " << res.cost << std::endl
-            << std::endl;
-*/
 
 
     //Finalize the report.
