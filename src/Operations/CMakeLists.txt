@@ -84,6 +84,7 @@ add_library(Operations_objs OBJECT
     SeamContours.cc
     SelectSlicesIntersectingROI.cc
     SFML_Viewer.cc
+    SimplifyContours.cc
     SpatialBlur.cc
     SpatialSharpen.cc
     SpatialDerivative.cc

@@ -99,6 +99,7 @@
 #include "Operations/PruneEmptyImageDoseArrays.h"
 #include "Operations/PurgeContours.h"
 #include "Operations/SFML_Viewer.h"
+#include "Operations/SimplifyContours.h"
 #include "Operations/SeamContours.h"
 #include "Operations/SelectSlicesIntersectingROI.h"
 #include "Operations/SpatialBlur.h"
@@ -207,6 +208,7 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["SeamContours"] = std::make_pair(OpArgDocSeamContours, SeamContours);
     out["SelectSlicesIntersectingROI"] = std::make_pair(OpArgDocSelectSlicesIntersectingROI, SelectSlicesIntersectingROI);
     out["SFML_Viewer"] = std::make_pair(OpArgDocSFML_Viewer, SFML_Viewer);
+    out["SimplifyContours"] = std::make_pair(OpArgDocSimplifyContours, SimplifyContours);
     out["SpatialBlur"] = std::make_pair(OpArgDocSpatialBlur, SpatialBlur);
     out["SpatialDerivative"] = std::make_pair(OpArgDocSpatialDerivative, SpatialDerivative);
     out["SpatialSharpen"] = std::make_pair(OpArgDocSpatialSharpen, SpatialSharpen);
