@@ -69,8 +69,8 @@
 #include <CGAL/mesh_segmentation.h>
 
 #include <CGAL/Polygon_mesh_processing/repair.h>
-
 #include <CGAL/Polygon_mesh_slicer.h>
+#include <CGAL/Polygon_mesh_processing/measure.h>
 
 #include <CGAL/Surface_mesh_simplification/edge_collapse.h>
 #include <CGAL/Surface_mesh_simplification/Policies/Edge_collapse/Count_stop_predicate.h>
@@ -1158,6 +1158,26 @@ contour_collection<double> Slice_Polyhedron(
 
     return cc;
 }        
+
+
+double
+Volume(const Polyhedron &mesh){
+    double volume = std::numeric_limits<double>::quiet_NaN();
+    if(!mesh.is_closed()){
+        volume = static_cast<double>( CGAL::Polygon_mesh_processing::volume(mesh) );
+    }
+    return volume;
+}
+
+double
+SurfaceArea(const Polyhedron &mesh){
+    double sarea = std::numeric_limits<double>::quiet_NaN();
+    if(!mesh.is_closed()){
+        sarea = static_cast<double>( CGAL::Polygon_mesh_processing::area(mesh) );
+    }
+    return sarea;
+}
+
 
 } // namespace polyhedron_processing
 

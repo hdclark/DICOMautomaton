@@ -24,6 +24,7 @@
 #include "../Regex_Selectors.h"
 #include "../Write_File.h"
 #include "../Thread_Pool.h"
+#include "../Surface_Meshes.h"
 
 #include "ExtractRadiomicFeatures.h"
 #include "YgorImages.h"
@@ -149,6 +150,66 @@ Drover ExtractRadiomicFeatures(Drover DICOM_data, OperationArgPkg OptArgs, std::
     const auto ROINameOpt = cc_ROIs.front().get().contours.front().GetMetadataValueAs<std::string>("ROIName");  // HACK! FIXME. TODO.
     const auto ROIName = ROINameOpt.value();
 
+
+    // Contour-based features.
+    std::stringstream contours_header;
+    std::stringstream contours_report;
+    {
+        double TotalPerimeter = std::numeric_limits<double>::quiet_NaN();
+        double LongestPerimeter = std::numeric_limits<double>::quiet_NaN();
+
+        for(const auto &cc_refw : cc_ROIs){
+            const auto p = cc_refw.get().Perimeter();
+            if(!std::isfinite(TotalPerimeter)){
+                TotalPerimeter = p;
+            }else{
+                TotalPerimeter += p;
+            }
+
+            const auto pl = cc_refw.get().Longest_Perimeter();
+            if(!std::isfinite(LongestPerimeter)){
+                LongestPerimeter = pl;
+            }else{
+                LongestPerimeter = std::max(LongestPerimeter, pl);
+            }
+        }
+        contours_header << ",TotalPerimeter";
+        contours_report << "," << TotalPerimeter;
+
+        contours_header << ",LongestPerimeter";
+        contours_report << "," << LongestPerimeter;
+    }
+
+    // Surface-mesh-based features.
+    std::stringstream smesh_header;
+    std::stringstream smesh_report;
+    {
+        contour_surface_meshes::Parameters meshing_params;
+        meshing_params.RQ = contour_surface_meshes::ReproductionQuality::Medium;
+        meshing_params.GridRows = 50;
+        meshing_params.GridColumns = 50;
+        auto smesh = contour_surface_meshes::Estimate_Surface_Mesh( cc_ROIs, meshing_params );
+
+        //polyhedron_processing::Subdivide(smesh, MeshSubdivisions);
+        //polyhedron_processing::Simplify(smesh, MeshSimplificationEdgeCountLimit);
+        //polyhedron_processing::SaveAsOFF(smesh, base_dir + "_polyhedron.off");
+
+        const auto V = polyhedron_processing::Volume(smesh);
+        smesh_header << ",MeshVolume";
+        smesh_report << "," << V;
+
+        const auto A = polyhedron_processing::SurfaceArea(smesh);
+        smesh_header << ",MeshSurfaceArea";
+        smesh_report << "," << A;
+
+        const auto SA_V = A/V;
+        smesh_header << ",MeshSurfaceAreaVolumeRatio";
+        smesh_report << "," << SA_V;
+
+        const auto Sph = std::pow(26.0 * M_PI * V * V, 1.0/3.0)/A;
+        smesh_header << ",MeshSphericity";
+        smesh_report << "," << Sph;
+    }
 
 
     std::mutex common_access;
@@ -439,47 +500,19 @@ Drover ExtractRadiomicFeatures(Drover DICOM_data, OperationArgPkg OptArgs, std::
         }
 
 
+        // Add the contour- and surface-mesh-based features.
+        header << contours_header.str();
+        report << contours_report.str();
 
+        header << smesh_header.str();
+        report << smesh_report.str();
 
-
-
+        header << std::endl;
+        report << std::endl;
 
         ++iap_it;
         if(std::regex_match(ImageSelectionStr, regex_first)) break;
     }
-
-    // Contour-based features.
-    {
-        double TotalPerimeter = std::numeric_limits<double>::quiet_NaN();
-        double LongestPerimeter = std::numeric_limits<double>::quiet_NaN();
-
-        for(const auto &cc_refw : cc_ROIs){
-            const auto p = cc_refw.get().Perimeter();
-            if(!std::isfinite(TotalPerimeter)){
-                TotalPerimeter = p;
-            }else{
-                TotalPerimeter += p;
-            }
-
-            const auto pl = cc_refw.get().Longest_Perimeter();
-            if(!std::isfinite(LongestPerimeter)){
-                LongestPerimeter = pl;
-            }else{
-                LongestPerimeter = std::max(LongestPerimeter, pl);
-            }
-        }
-        header << ",TotalPerimeter";
-        report << "," << TotalPerimeter;
-
-        header << ",LongestPerimeter";
-        report << "," << LongestPerimeter;
-    }
-
-
-
-    //Finalize the report.
-    header << std::endl;
-    report << std::endl;
 
     //Print the report.
     //std::cout << report.str();

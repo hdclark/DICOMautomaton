@@ -160,6 +160,11 @@ Slice_Polyhedron(
         const Polyhedron &mesh,
         std::list<plane<double>> planes );
 
+double
+Volume(const Polyhedron &mesh);
+
+double
+SurfaceArea(const Polyhedron &mesh);
 
 } // namespace polyhedron_processing
 
