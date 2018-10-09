@@ -460,11 +460,11 @@ Polyhedron Estimate_Surface_Mesh(
     double err_bound;
     if(false){
     }else if(params.RQ == ReproductionQuality::Fast){
-        err_bound = 0.01;
+        err_bound = 0.50 / bounding_sphere_radius;
     }else if(params.RQ == ReproductionQuality::Medium){
-        err_bound = 0.01;
+        err_bound = 0.15 / bounding_sphere_radius;
     }else if(params.RQ == ReproductionQuality::High){
-        err_bound = 0.001;
+        err_bound = 0.05 / bounding_sphere_radius;
     }
     Mesh_domain domain(surface_oracle,
                        cgal_bounding_sphere, 
@@ -480,23 +480,23 @@ Polyhedron Estimate_Surface_Mesh(
                             // Setting below the smallest contour vertex-to-vertex spacing will result                                                   
                             // in interpolation between the vertices. It probably won't increase overall
                             // mesh quality, but will add additional complexity to the mesh.
-                            CGAL::parameters::edge_size = 100'000.0, 
+                            CGAL::parameters::edge_size = 1.0, 
   
                             // For surfaces.
                             //
                             // Facet angle is a lower bound, in degrees. Should be <=30.
                             // High angles mostly relevant for visual quality.
-                            CGAL::parameters::facet_angle = 5.0, 
+                            CGAL::parameters::facet_angle = 15.0, 
   
-                            CGAL::parameters::facet_size = 100'000.0, 
-                            //CGAL::parameters::facet_distance = 100'000.0,
+                            CGAL::parameters::facet_size = 2.0, 
+                            CGAL::parameters::facet_distance = 0.5,
                             //CGAL::parameters::facet_topology = CGAL::FACET_VERTICES_ON_SAME_SURFACE_PATCH,
   
                             // For tetrahedra.
                             //
                             // Cell radius edge ratio should be >= 2.
                             CGAL::parameters::cell_radius_edge_ratio = 5.0,
-                            CGAL::parameters::cell_size = 100'000.0 );
+                            CGAL::parameters::cell_size = 5.0 );
   
   
     // Perform the meshing.

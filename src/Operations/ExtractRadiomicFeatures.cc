@@ -46,6 +46,11 @@ OperationDoc OpArgDocExtractRadiomicFeatures(void){
     out.notes.emplace_back(
         "This routine is meant to be processed by an external analysis."
     );
+    out.notes.emplace_back(
+        "If this routine is slow, simplifying ROI contours may help speed surface-mesh-based feature extraction."
+        " Often removing the highest-frequency components of the contour will help, such as edges that conform"
+        " tightly to individual voxels."
+    );
 
 
     out.args.emplace_back();
@@ -186,9 +191,14 @@ Drover ExtractRadiomicFeatures(Drover DICOM_data, OperationArgPkg OptArgs, std::
     {
         contour_surface_meshes::Parameters meshing_params;
         meshing_params.RQ = contour_surface_meshes::ReproductionQuality::Medium;
-        meshing_params.GridRows = 50;
-        meshing_params.GridColumns = 50;
+        meshing_params.GridRows = 1024;
+        meshing_params.GridColumns = 1024;
         auto smesh = contour_surface_meshes::Estimate_Surface_Mesh( cc_ROIs, meshing_params );
+
+        //if(!polyhedron_processing::SaveAsOFF(smesh, "/tmp/test.off")){
+        //    FUNCERR("Unable to write mesh as OFF file");
+        //}
+
 
         //polyhedron_processing::Subdivide(smesh, MeshSubdivisions);
         //polyhedron_processing::Simplify(smesh, MeshSimplificationEdgeCountLimit);
