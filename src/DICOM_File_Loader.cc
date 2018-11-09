@@ -76,9 +76,16 @@ bool Load_From_DICOM_Files( Drover &DICOM_data,
         };
 
         if(false){
+        }else if(boost::iequals(Modality,"REG")){
+            FUNCWARN("REG file encountered. "
+                     "DICOMautomaton currently is not equipped to read REG-modality DICOM files. "
+                     "Disregarding it. ");
+
+            bfit = Filenames.erase( bfit ); 
+
         }else if(boost::iequals(Modality,"RTPLAN")){
             FUNCWARN("RTPLAN file encountered. "
-                     "DICOMautomaton currently is not equipped to process RTPLAN files. "
+                     "DICOMautomaton currently is not equipped to process RTPLAN-modality DICOM files. "
                      "Disregarding it. "
                      "Note that some of the tags *could* be loaded as common metadata (e.g., fractionation info), "
                      "but this is not currently implemented.");
