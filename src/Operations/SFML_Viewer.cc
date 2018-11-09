@@ -343,6 +343,9 @@ Drover SFML_Viewer( Drover DICOM_data,
             const auto lowest = std::get<0>(pixel_minmax_allchnls);
             const auto highest = std::get<1>(pixel_minmax_allchnls);
 
+            //const auto lowest = Stats::Percentile(img_it->data, 0.01);
+            //const auto highest = Stats::Percentile(img_it->data, 0.99);
+
             const auto pixel_type_max = static_cast<double>(std::numeric_limits<pixel_value_t>::max());
             const auto pixel_type_min = static_cast<double>(std::numeric_limits<pixel_value_t>::min());
             const auto dest_type_max = static_cast<double>(std::numeric_limits<uint8_t>::max()); //Min is implicitly 0.
@@ -357,7 +360,13 @@ Drover SFML_Viewer( Drover DICOM_data,
                         animage.setPixel(i,j,NaN_Color);
                     }else{
                         const double clamped_value = (static_cast<double>(val) - pixel_type_min)/(pixel_type_max - pixel_type_min);
-                        const auto rescaled_value = (clamped_value - clamped_low)/(clamped_high - clamped_low);
+                        auto rescaled_value = (clamped_value - clamped_low)/(clamped_high - clamped_low);
+                        if(false){
+                        }else if( rescaled_value < 0.0 ){
+                            rescaled_value = 0.0;
+                        }else if( rescaled_value > 1.0 ){
+                            rescaled_value = 1.0;
+                        }
 
                         const auto res = colour_maps[colour_map].second(rescaled_value);
                         const double x_R = res.R;
