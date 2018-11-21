@@ -183,6 +183,23 @@ Drover ExtractRadiomicFeatures(Drover DICOM_data, OperationArgPkg OptArgs, std::
 
         contours_header << ",LongestPerimeter";
         contours_report << "," << LongestPerimeter;
+
+        double LongestVertVertDistance = -1.0;
+        for(const auto &cc_refw : cc_ROIs){
+            for(const auto &cA : cc_refw.get().contours){
+                for(const auto &vA : cA.points){
+                    for(const auto &cB : cc_refw.get().contours){
+                        for(const auto &vB : cB.points){
+                            const auto dist = vB.distance( vA );
+                            if(dist > LongestVertVertDistance) LongestVertVertDistance = dist;
+                        }
+                    }
+                }
+            }
+        }
+        contours_header << ",LongestVertexVertexDistance";
+        contours_report << "," << LongestVertVertDistance;
+
     }
 
     // Surface-mesh-based features.
@@ -216,9 +233,13 @@ Drover ExtractRadiomicFeatures(Drover DICOM_data, OperationArgPkg OptArgs, std::
         smesh_header << ",MeshSurfaceAreaVolumeRatio";
         smesh_report << "," << SA_V;
 
-        const auto Sph = std::pow(26.0 * M_PI * V * V, 1.0/3.0)/A;
+        const auto Sph = std::pow(36.0 * M_PI * V * V, 1.0/3.0)/A;
         smesh_header << ",MeshSphericity";
         smesh_report << "," << Sph;
+
+        const auto C = V/std::sqrt( M_PI * std::pow(A, 3.0) );
+        smesh_header << ",MeshCompactness";
+        smesh_report << "," << C;
     }
 
 

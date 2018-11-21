@@ -1184,7 +1184,7 @@ contour_collection<double> Slice_Polyhedron(
 double
 Volume(const Polyhedron &mesh){
     double volume = std::numeric_limits<double>::quiet_NaN();
-    if(!mesh.is_closed()){
+    if(mesh.is_closed()){
         volume = static_cast<double>( CGAL::Polygon_mesh_processing::volume(mesh) );
     }
     return volume;
@@ -1193,7 +1193,7 @@ Volume(const Polyhedron &mesh){
 double
 SurfaceArea(const Polyhedron &mesh){
     double sarea = std::numeric_limits<double>::quiet_NaN();
-    if(!mesh.is_closed()){
+    if(mesh.is_closed()){
         sarea = static_cast<double>( CGAL::Polygon_mesh_processing::area(mesh) );
     }
     return sarea;
