@@ -256,9 +256,21 @@ Polyhedron Estimate_Surface_Mesh(
         const auto total_sep =  std::abs(ucp.front().Get_Signed_Distance_To_Point(ucp.back().R_0));
         const auto sep_per_plane = total_sep / static_cast<double>(ucp.size()-1);
 
-        // Add TOTAL zmargin of 1*sep_per_plane each for 2 extra images, and 0.5*sep_per_plane for each of the images
-        // which will stick out beyond the contour planes. (The margin is added at the top and the bottom.)
+        // Alternative computation of separations. It is more robust, but the whole procedure falls apart if the slices
+        // are not regularly separated. Leaving here to potentially incorporate into Ygor or elsewhere at a later date.
+        //std::vector<double> seps;
+        //for(auto itA = std::begin(ucp); ; ++itA){
+        //    auto itB = std::next(itA);
+        //    if(itB == std::end(ucp)) break;
+        //    seps.emplace_back( std::abs(itA->Get_Signed_Distance_To_Point(itB->R_0)) );
+        //}
+        //const auto sep_per_plane = Stats::YgorMedian(seps);
+
+        // Add TOTAL zmargin of 1*sep_per_plane each for each extra images, and 0.5*sep_per_plane for each of the images
+        // which will stick out beyond the contour planes. However, the margin is added to both the top and the bottom so
+        // halve the total amount.
         z_margin = sep_per_plane * 1.5;
+
     }else{
         FUNCWARN("Only a single contour plane was detected. Guessing its thickness.."); 
         z_margin = 5.0;
@@ -323,6 +335,15 @@ Polyhedron Estimate_Surface_Mesh(
         }
     }
     
+    // Inspect the grid by exporting since injecting into DICOM_data is not possible.
+    //for(auto & img : grid_image_collection.images){
+    //    const auto filename = Get_Unique_Sequential_Filename("./inspect_", 6, ".fits");
+    //    WriteToFITS(img, filename);
+    //}
+    //for(auto & img : grid_image_collection.images){
+    //    std::cout << "Image z: " << img.center() << std::endl;
+    //}
+
 
     // ============================================== Modify the mask ==============================================
 /*
