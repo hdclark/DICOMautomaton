@@ -7,6 +7,7 @@ add_library(Operations_objs OBJECT
     ApplyCalibrationCurve.cc
     AutoCropImages.cc
     Average.cc
+    BCCAExtractRadiomicFeatures.cc
     BoostSerializeDrover.cc
     BuildLexiconInteractively.cc
     ConvertImageToDose.cc

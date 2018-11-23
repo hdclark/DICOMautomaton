@@ -513,6 +513,7 @@ void BaseWebServerApplication::createOperationSelectorGB(void){
         ||  ( n == "TrimROIDose" )
         ||  ( n == "CropROIDose" )
         ||  ( n == "EQD2Convert" )
+        ||  ( n == "BCCAExtractRadiomicFeatures" )
     ){    //Whitelist ... for now.
             selector->addItem(anop.first);
         }
