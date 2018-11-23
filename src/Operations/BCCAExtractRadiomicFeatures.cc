@@ -34,7 +34,11 @@ OperationDoc OpArgDocBCCAExtractRadiomicFeatures(void){
         // SimplifyContours
         if(false){
         }else if(oparg.name == "FractionalAreaTolerance"){
-            oparg.default_val = "0.10";
+            oparg.default_val = "0.05";
+
+        }else if(oparg.name == "SimplificationMethod"){
+            oparg.default_val = "vert-rem";
+            oparg.visibility  = OpArgVisibility::Hide;
 
         // ExtractRadiomicFeatures
         }else if(oparg.name == "ImageSelection"){
