@@ -37,7 +37,8 @@ Drover DumpROIData(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
     typedef std::tuple<std::string,std::string,std::string> key_t; //PatientID, ROIName, NormalizedROIName.
 
     //Individual contour information.
-    std::map<key_t,int> ContourCounts;
+    std::map<key_t,long int> ContourCounts;
+    std::map<key_t,long int> VertexCounts;
     std::map<key_t,double> MinimumSeparation; // Almost always the 'thickness' of contours.
     std::map<key_t,double> SlabVolume;
     std::map<key_t,double> TotalPerimeter; // Total perimeter of all contours.
@@ -63,6 +64,10 @@ Drover DumpROIData(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
                 MinimumSeparation[key] = min_sep;
                 SlabVolume[key] += std::abs( c.Get_Signed_Area(PlanarContourAssumption) * min_sep );
                 TotalPerimeter[key] += std::abs( c.Perimeter() );
+
+                for(auto & p : c.points){
+                    VertexCounts[key] += 1;
+                }
 
                 //Find the axes-aligned extrema. 
                 {
@@ -146,6 +151,7 @@ Drover DumpROIData(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
                   << "ROIName='" << std::get<1>(thekey) << "'\t"
                   << "NormalizedROIName='" << std::get<2>(thekey) << "'\t"
                   << "ContourCount=" << ContourCount.second << "\t"
+                  << "VertexCount=" << VertexCounts[thekey] << "\t"
                   << "MinimumSeparation=" << MinimumSeparation[thekey] << "\t"
                   << "SlabVolume=" << SlabVolume[thekey] << "\t"
                   << "TotalPerimeter=" << TotalPerimeter[thekey] << "\t"
