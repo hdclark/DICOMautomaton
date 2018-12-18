@@ -46,6 +46,8 @@ typedef enum { // Controls how image derivatives are computed and combined.
     magnitude,  //Magnitude of the gradient vector.
     orientation, //Orientation of the gradient vector.
 
+    non_maximum_suppression, //Edge-thinning technique to erode thick edges.
+
     cross //Applicable for higher-order (compound) derivatives.
 
 } PartialDerivativeMethod;

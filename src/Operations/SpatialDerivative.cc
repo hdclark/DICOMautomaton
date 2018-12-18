@@ -59,6 +59,8 @@ OperationDoc OpArgDocSpatialDerivative(void){
                       " Roberts' cross can be (+row,+col)-aligned or (-row,+col)-aligned."
                       " Second-order derivatives can be row-aligned, column-aligned, or 'cross' --meaning the"
                       " compound partial derivative."
+                      " All methods support non-maximum-suppression for edge thinning, but currently only"
+                      " the magnitude is output."
                       " All methods support magnitude (addition of orthogonal components in quadrature) and"
                       " orientation (in radians; [0,2pi) ).";
     out.args.back().default_val = "magnitude";
@@ -69,6 +71,7 @@ OperationDoc OpArgDocSpatialDerivative(void){
                             "nrow-pcol-aligned",
                             "magnitude",
                             "orientation",
+                            "non-maximum-suppression",
                             "cross" };
 
     return out;
@@ -99,9 +102,10 @@ Drover SpatialDerivative(Drover DICOM_data, OperationArgPkg OptArgs, std::map<st
     const auto regex_row  = std::regex("^ro?w?-?a?l?i?g?n?e?d?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
     const auto regex_col  = std::regex("^col?u?m?n?-?a?l?i?g?n?e?d?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
     const auto regex_prpc = std::regex("^pr?o?w?-?p?c?o?l?-?a?l?i?g?n?e?d?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto regex_nrpc = std::regex("^nr?o?w?_?p?c?o?l?u?m?n?-?a?l?i?g?n?e?d?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto regex_nrpc = std::regex("^nr?o?w?-?p?c?o?l?u?m?n?-?a?l?i?g?n?e?d?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
     const auto regex_mag  = std::regex("^ma?g?n?i?t?u?d?e?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
     const auto regex_orn  = std::regex("^or?i?e?n?t?a?t?i?o?n?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto regex_nms  = std::regex("^no?n?-?m?a?x?i?m?u?m?-?s?u?p?p?r?e?s?s?i?o?n?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
     const auto regex_crs  = std::regex("^cro?s?s?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
 
     if( !std::regex_match(ImageSelectionStr, regex_none)
@@ -157,6 +161,8 @@ Drover SpatialDerivative(Drover DICOM_data, OperationArgPkg OptArgs, std::map<st
             ud.method = PartialDerivativeMethod::magnitude;
         }else if( std::regex_match(MethodStr, regex_orn) ){
             ud.method = PartialDerivativeMethod::orientation;
+        }else if( std::regex_match(MethodStr, regex_nms) ){
+            ud.method = PartialDerivativeMethod::non_maximum_suppression;
         }else if( std::regex_match(MethodStr, regex_crs) ){
             ud.method = PartialDerivativeMethod::cross;
         }else{

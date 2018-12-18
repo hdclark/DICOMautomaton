@@ -42,8 +42,12 @@ bool ImagePartialDerivative(
 
     if(selected_img_its.size() != 1) throw std::invalid_argument("This routine operates on individual images only.");
 
-    //Make a destination image that has twice the linear dimensions as the input image.
+    //Make a destination image that has the same linear dimensions as the input image.
     planar_image<float,double> working = *first_img_it;
+    planar_image<float,double> nms_working;  // Additional storage for edge thinning.
+    if(user_data_s->method == PartialDerivativeMethod::non_maximum_suppression){
+        nms_working = *first_img_it;
+    }
 
     //Record the min and max actual pixel values for windowing purposes.
     Stats::Running_MinMax<float> minmax_pixel;
@@ -54,6 +58,7 @@ bool ImagePartialDerivative(
             for(auto chan = 0; chan < working.channels; ++chan){
 
                 auto newval = std::numeric_limits<float>::quiet_NaN();
+                auto nms_newval = std::numeric_limits<float>::quiet_NaN();
 
                 if(false){
                 }else if(user_data_s->order == PartialDerivativeEstimator::first){
@@ -74,6 +79,12 @@ bool ImagePartialDerivative(
                         const auto ca = first_img_it->column_aligned_derivative_centered_finite_difference(row, col, chan);
                         newval = std::atan2(ca,ra) + M_PI;
 
+                    }else if(user_data_s->method == PartialDerivativeMethod::non_maximum_suppression){
+                        const auto ra = first_img_it->row_aligned_derivative_centered_finite_difference(row, col, chan);
+                        const auto ca = first_img_it->column_aligned_derivative_centered_finite_difference(row, col, chan);
+                        newval = std::hypot(ra,ca); // magnitude.
+                        nms_newval = std::atan2(ca,ra) + M_PI; // orientation.
+
                     }else{
                         throw std::invalid_argument("Selected method not applicable to selected order or estimator.");
                     }
@@ -87,15 +98,22 @@ bool ImagePartialDerivative(
                         newval = first_img_it->nrow_pcol_aligned_Roberts_cross_3x3(row, col, chan);
 
                     }else if(user_data_s->method == PartialDerivativeMethod::magnitude){
-                        const auto ra = first_img_it->prow_pcol_aligned_Roberts_cross_3x3(row, col, chan);
-                        const auto ca = first_img_it->nrow_pcol_aligned_Roberts_cross_3x3(row, col, chan);
-                        newval = std::hypot(ra,ca);
+                        const auto prpca = first_img_it->prow_pcol_aligned_Roberts_cross_3x3(row, col, chan);
+                        const auto nrpca = first_img_it->nrow_pcol_aligned_Roberts_cross_3x3(row, col, chan);
+                        newval = std::hypot(prpca,nrpca);
 
                     }else if(user_data_s->method == PartialDerivativeMethod::orientation){
                         const auto prpca = first_img_it->prow_pcol_aligned_Roberts_cross_3x3(row, col, chan);
                         const auto nrpca = first_img_it->nrow_pcol_aligned_Roberts_cross_3x3(row, col, chan);
                         newval = std::atan2(prpca,nrpca) + M_PI/8.0 + M_PI/2.0; // For consistency with others.
                         newval = std::fmod(newval + 2.0*M_PI, 2.0*M_PI); 
+
+                    }else if(user_data_s->method == PartialDerivativeMethod::non_maximum_suppression){
+                        const auto prpca = first_img_it->prow_pcol_aligned_Roberts_cross_3x3(row, col, chan);
+                        const auto nrpca = first_img_it->nrow_pcol_aligned_Roberts_cross_3x3(row, col, chan);
+                        newval = std::hypot(prpca,nrpca); // magnitude.
+                        nms_newval = std::atan2(prpca,nrpca) + M_PI/8.0 + M_PI/2.0; // For consistency with others.
+                        nms_newval = std::fmod(nms_newval + 2.0*M_PI, 2.0*M_PI); // orientation.
 
                     }else{
                         throw std::invalid_argument("Selected method not applicable to selected order or estimator.");
@@ -119,6 +137,12 @@ bool ImagePartialDerivative(
                         const auto ca = first_img_it->column_aligned_Prewitt_derivative_3x3(row, col, chan);
                         newval = std::atan2(ca,ra) + M_PI;
 
+                    }else if(user_data_s->method == PartialDerivativeMethod::non_maximum_suppression){
+                        const auto ra = first_img_it->row_aligned_Prewitt_derivative_3x3(row, col, chan);
+                        const auto ca = first_img_it->column_aligned_Prewitt_derivative_3x3(row, col, chan);
+                        newval = std::hypot(ra,ca); // magnitude.
+                        nms_newval = std::atan2(ca,ra) + M_PI; // orientation.
+
                     }else{
                         throw std::invalid_argument("Selected method not applicable to selected order or estimator.");
                     }
@@ -140,6 +164,12 @@ bool ImagePartialDerivative(
                         const auto ra = first_img_it->row_aligned_Sobel_derivative_3x3(row, col, chan);
                         const auto ca = first_img_it->column_aligned_Sobel_derivative_3x3(row, col, chan);
                         newval = std::atan2(ca,ra) + M_PI;
+
+                    }else if(user_data_s->method == PartialDerivativeMethod::non_maximum_suppression){
+                        const auto ra = first_img_it->row_aligned_Sobel_derivative_3x3(row, col, chan);
+                        const auto ca = first_img_it->column_aligned_Sobel_derivative_3x3(row, col, chan);
+                        newval = std::hypot(ra,ca); // magnitude.
+                        nms_newval = std::atan2(ca,ra) + M_PI; // orientation.
 
                     }else{
                         throw std::invalid_argument("Selected method not applicable to selected order or estimator.");
@@ -163,6 +193,12 @@ bool ImagePartialDerivative(
                         const auto ca = first_img_it->column_aligned_Sobel_derivative_5x5(row, col, chan);
                         newval = std::atan2(ca,ra) + M_PI;
 
+                    }else if(user_data_s->method == PartialDerivativeMethod::non_maximum_suppression){
+                        const auto ra = first_img_it->row_aligned_Sobel_derivative_5x5(row, col, chan);
+                        const auto ca = first_img_it->column_aligned_Sobel_derivative_5x5(row, col, chan);
+                        newval = std::hypot(ra,ca); // magnitude.
+                        nms_newval = std::atan2(ca,ra) + M_PI; // orientation.
+
                     }else{
                         throw std::invalid_argument("Selected method not applicable to selected order or estimator.");
                     }
@@ -185,6 +221,12 @@ bool ImagePartialDerivative(
                         const auto ca = first_img_it->column_aligned_Scharr_derivative_3x3(row, col, chan);
                         newval = std::atan2(ca,ra) + M_PI;
 
+                    }else if(user_data_s->method == PartialDerivativeMethod::non_maximum_suppression){
+                        const auto ra = first_img_it->row_aligned_Scharr_derivative_3x3(row, col, chan);
+                        const auto ca = first_img_it->column_aligned_Scharr_derivative_3x3(row, col, chan);
+                        newval = std::hypot(ra,ca); // magnitude.
+                        nms_newval = std::atan2(ca,ra) + M_PI; // orientation.
+
                     }else{
                         throw std::invalid_argument("Selected method not applicable to selected order or estimator.");
                     }
@@ -206,6 +248,12 @@ bool ImagePartialDerivative(
                         const auto ra = first_img_it->row_aligned_Scharr_derivative_5x5(row, col, chan);
                         const auto ca = first_img_it->column_aligned_Scharr_derivative_5x5(row, col, chan);
                         newval = std::atan2(ca,ra) + M_PI;
+
+                    }else if(user_data_s->method == PartialDerivativeMethod::non_maximum_suppression){
+                        const auto ra = first_img_it->row_aligned_Scharr_derivative_5x5(row, col, chan);
+                        const auto ca = first_img_it->column_aligned_Scharr_derivative_5x5(row, col, chan);
+                        newval = std::hypot(ra,ca); // magnitude.
+                        nms_newval = std::atan2(ca,ra) + M_PI; // orientation.
 
                     }else{
                         throw std::invalid_argument("Selected method not applicable to selected order or estimator.");
@@ -232,6 +280,12 @@ bool ImagePartialDerivative(
                         const auto ca = first_img_it->column_aligned_second_derivative_centered_finite_difference(row, col, chan);
                         newval = std::atan2(ca,ra) + M_PI;
 
+                    }else if(user_data_s->method == PartialDerivativeMethod::non_maximum_suppression){
+                        const auto ra = first_img_it->row_aligned_second_derivative_centered_finite_difference(row, col, chan);
+                        const auto ca = first_img_it->column_aligned_second_derivative_centered_finite_difference(row, col, chan);
+                        newval = std::hypot(ra,ca); // magnitude.
+                        newval = std::atan2(ca,ra) + M_PI; // orientation.
+
                     }else{
                         throw std::invalid_argument("Selected method not applicable to selected order or estimator.");
                     }
@@ -240,10 +294,62 @@ bool ImagePartialDerivative(
                 }
 
                 working.reference(row, col, chan) = newval;
+                if(user_data_s->method == PartialDerivativeMethod::non_maximum_suppression){
+                    nms_working.reference(row, col, chan) = nms_newval; // orientation.
+                }
                 minmax_pixel.Digest(newval);
             }//Loop over channels.
         } //Loop over cols
     } //Loop over rows
+
+
+    //Thin edges if requested.
+    if(user_data_s->method == PartialDerivativeMethod::non_maximum_suppression){
+        for(auto row = 0; row < working.rows; ++row){
+            for(auto col = 0; col < working.columns; ++col){
+                for(auto chan = 0; chan < working.channels; ++chan){
+                    const auto magn = working.value(row, col, chan);
+                    const auto angle = nms_working.value(row, col, chan) - M_PI;
+                    const auto ra = std::cos(angle); // pixel-space unit vector of gradient direction.
+                    const auto ca = std::sin(angle);
+
+                    const auto row_r = static_cast<double>(row);
+                    const auto col_r = static_cast<double>(col);
+
+                    auto row_p = row_r + ca;
+                    auto row_m = row_r - ca;
+                    auto col_p = col_r + ra;
+                    auto col_m = col_r - ra;
+
+                    row_p = (row_p < 0.0) ? 0.0 : row_p;
+                    row_m = (row_m < 0.0) ? 0.0 : row_m;
+                    col_p = (col_p < 0.0) ? 0.0 : col_p;
+                    col_m = (col_m < 0.0) ? 0.0 : col_m;
+
+                    const auto row_max = static_cast<double>(working.rows)-1.0;
+                    const auto col_max = static_cast<double>(working.columns)-1.0;
+
+                    row_p = (row_p > row_max) ? row_max : row_p;
+                    row_m = (row_m > row_max) ? row_max : row_m;
+                    col_p = (col_p > col_max) ? col_max : col_p;
+                    col_m = (col_m > col_max) ? col_max : col_m;
+
+                    const auto g_p = working.bilinearly_interpolate_in_pixel_number_space( row_p, col_p, chan );
+                    const auto g_m = working.bilinearly_interpolate_in_pixel_number_space( row_m, col_m, chan );
+
+                    // Embed the updated magnitude in the orientation image so we can continue sampling the original magnitudes.
+                    if( (magn >= g_p) && (magn >= g_m) ){
+                        nms_working.reference(row, col, chan) = magn;
+                    }else{
+                        const auto zero = static_cast<float>(0);
+                        nms_working.reference(row, col, chan) = zero;
+                        minmax_pixel.Digest(zero);
+                    }
+                }//Loop over channels.
+            } //Loop over cols
+        } //Loop over rows
+        working = nms_working;
+    }
 
     //Replace the old image data with the new image data.
     *first_img_it = working;
@@ -297,6 +403,9 @@ bool ImagePartialDerivative(
 
     }else if(user_data_s->method == PartialDerivativeMethod::magnitude){
         img_desc += " magnitude";
+
+    }else if(user_data_s->method == PartialDerivativeMethod::non_maximum_suppression){
+        img_desc += " magnitude (thinned)";
 
     }else if(user_data_s->method == PartialDerivativeMethod::orientation){
         img_desc += " orientation";
