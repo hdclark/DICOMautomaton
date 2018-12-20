@@ -93,6 +93,7 @@ add_library(Operations_objs OBJECT
     SubtractImages.cc
     SupersampleImageGrid.cc
     SurfaceBasedRayCastDoseAccumulate.cc
+    ThresholdImages.cc
     TrimROIDose.cc
     UBC3TMRI_DCE.cc
     UBC3TMRI_DCE_Differences.cc
