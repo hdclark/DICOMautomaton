@@ -26,11 +26,9 @@ OperationDoc OpArgDocModifyImageMetadata(void){
         "This operation injects metadata into images.";
 
     out.args.emplace_back();
+    out.args.back() = IAWhitelistOpArgDoc();
     out.args.back().name = "ImageSelection";
-    out.args.back().desc = "Images to operate on. Either 'none', 'last', or 'all'.";
     out.args.back().default_val = "last";
-    out.args.back().expected = true;
-    out.args.back().examples = { "none", "last", "all" };
 
     out.args.emplace_back();
     out.args.back().name = "KeyValues";
@@ -62,16 +60,6 @@ Drover ModifyImageMetadata(Drover DICOM_data,
     const auto KeyValues = OptArgs.getValueStr("KeyValues").value();
 
     //-----------------------------------------------------------------------------------------------------------------
-    const auto regex_none = std::regex("no?n?e?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto regex_last = std::regex("la?s?t?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto regex_all  = std::regex("al?l?$",   std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-
-    if( !std::regex_match(ImageSelectionStr, regex_none)
-    &&  !std::regex_match(ImageSelectionStr, regex_last)
-    &&  !std::regex_match(ImageSelectionStr, regex_all) ){
-        throw std::invalid_argument("Image selection is not valid. Cannot continue.");
-    }
-
 
     std::map<std::string,std::string> key_values;
     for(auto a : SplitStringToVector(KeyValues, ';', 'd')){
@@ -83,21 +71,14 @@ Drover ModifyImageMetadata(Drover DICOM_data,
     //if(key_values.empty()) return std::move(DICOM_data);
 
 
-    //Image data.
-    auto iap_it = DICOM_data.image_data.begin();
-    if(false){
-    }else if(std::regex_match(ImageSelectionStr, regex_none)){
-        iap_it = DICOM_data.image_data.end();
-    }else if(std::regex_match(ImageSelectionStr, regex_last)){
-        if(!DICOM_data.image_data.empty()) iap_it = std::prev(DICOM_data.image_data.end());
-    }
-    while(iap_it != DICOM_data.image_data.end()){
+    auto IAs_all = All_IAs( DICOM_data );
+    auto IAs = Whitelist( IAs_all, ImageSelectionStr );
+    for(auto & iap_it : IAs){
         for(auto &animg : (*iap_it)->imagecoll.images){
             for(const auto &kv_pair : key_values){
                 animg.metadata[ kv_pair.first ] = kv_pair.second;
             }
         }
-        ++iap_it;
     }
 
     return DICOM_data;

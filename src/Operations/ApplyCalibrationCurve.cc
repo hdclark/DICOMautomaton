@@ -43,11 +43,9 @@ OperationDoc OpArgDocApplyCalibrationCurve(void){
     out.args.back().examples = { "-1", "0", "1", "2" };
 
     out.args.emplace_back();
+    out.args.back() = IAWhitelistOpArgDoc();
     out.args.back().name = "ImageSelection";
-    out.args.back().desc = "Images to operate on. Either 'none', 'last', or 'all'.";
     out.args.back().default_val = "last";
-    out.args.back().expected = true;
-    out.args.back().examples = { "none", "last", "all" };
 
     out.args.emplace_back();
     out.args.back().name = "ContourOverlap";
@@ -177,15 +175,10 @@ Drover ApplyCalibrationCurve(Drover DICOM_data,
     }
 
 
-    //Image data.
-    auto iap_it = DICOM_data.image_data.begin();
-    if(false){
-    }else if(std::regex_match(ImageSelectionStr, regex_none)){
-        iap_it = DICOM_data.image_data.end();
-    }else if(std::regex_match(ImageSelectionStr, regex_last)){
-        if(!DICOM_data.image_data.empty()) iap_it = std::prev(DICOM_data.image_data.end());
-    }
-    while(iap_it != DICOM_data.image_data.end()){
+    auto IAs_all = All_IAs( DICOM_data );
+    auto IAs = Whitelist( IAs_all, ImageSelectionStr );
+
+    for(auto & iap_it : IAs){
         PartitionedImageVoxelVisitorMutatorUserData ud;
 
         ud.mutation_opts.editstyle = Mutate_Voxels_Opts::EditStyle::InPlace;
@@ -229,7 +222,6 @@ Drover ApplyCalibrationCurve(Drover DICOM_data,
                                                           {}, cc_ROIs, &ud )){
             throw std::runtime_error("Unable to apply calibration curve to voxels with the specified ROI(s).");
         }
-        ++iap_it;
     }
 
     return DICOM_data;

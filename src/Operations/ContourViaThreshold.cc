@@ -97,11 +97,9 @@ OperationDoc OpArgDocContourViaThreshold(void){
 
     
     out.args.emplace_back();
+    out.args.back() = IAWhitelistOpArgDoc();
     out.args.back().name = "ImageSelection";
-    out.args.back().desc = "Images to operate on. Either 'none', 'last', or 'all'.";
     out.args.back().default_val = "last";
-    out.args.back().expected = true;
-    out.args.back().examples = { "none", "last", "all" };
    
 
     out.args.emplace_back();
@@ -148,20 +146,11 @@ Drover ContourViaThreshold(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
     const auto Lower_is_Ptile = std::regex_match(LowerStr, regex_is_tile);
     const auto Upper_is_Ptile = std::regex_match(UpperStr, regex_is_tile);
 
-    const auto regex_none = std::regex("no?n?e?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto regex_last = std::regex("la?s?t?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto regex_all  = std::regex("al?l?$",   std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
     const auto TrueRegex = std::regex("^tr?u?e?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
 
     const auto ShouldSimplifyMergeAdjacent = std::regex_match(SimplifyMergeAdjacent, TrueRegex);
 
     const auto NormalizedROILabel = X(ROILabel);
-
-    if( !std::regex_match(ImageSelectionStr, regex_none)
-    &&  !std::regex_match(ImageSelectionStr, regex_last)
-    &&  !std::regex_match(ImageSelectionStr, regex_all) ){
-        throw std::invalid_argument("Image selection is not valid. Cannot continue.");
-    }
 
     //Construct a destination for the ROI contours.
     if(DICOM_data.contour_data == nullptr){
@@ -176,13 +165,9 @@ Drover ContourViaThreshold(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
     DICOM_data.contour_data->ccs.back().Minimum_Separation = MinimumSeparation;
 
     //Iterate over each requested image_array. Each image is processed independently, so a thread pool is used.
-    auto iap_it = DICOM_data.image_data.begin();
-    if(false){
-    }else if(std::regex_match(ImageSelectionStr, regex_none)){ iap_it = DICOM_data.image_data.end();
-    }else if(std::regex_match(ImageSelectionStr, regex_last)){
-        if(!DICOM_data.image_data.empty()) iap_it = std::prev(DICOM_data.image_data.end());
-    }
-    for( ; iap_it != DICOM_data.image_data.end(); ++iap_it){
+    auto IAs_all = All_IAs( DICOM_data );
+    auto IAs = Whitelist( IAs_all, ImageSelectionStr );
+    for(auto & iap_it : IAs){
         asio_thread_pool tp;
         std::mutex saver_printer; // Who gets to save generated contours, print to the console, and iterate the counter.
         long int completed = 0;

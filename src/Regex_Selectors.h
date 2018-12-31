@@ -67,3 +67,37 @@ Whitelist( std::list<std::reference_wrapper<contour_collection<double>>> ccs,
            Regex_Selector_Opts Opts = Regex_Selector_Opts() );
 
 
+// ----------------------------------- Image Arrays ------------------------------------
+
+// Provide iterators for all image arrays into a list.
+//
+// Note: The output is meant to be filtered out using the selectors below.
+//
+// Note: Iterators returned by this routine will be invalidated when the Drover object is copied!
+std::list<std::list<std::shared_ptr<Image_Array>>::iterator>
+All_IAs( Drover &DICOM_data );
+
+
+// Whitelist image arrays using the provided regex.
+std::list<std::list<std::shared_ptr<Image_Array>>::iterator>
+Whitelist( std::list<std::list<std::shared_ptr<Image_Array>>::iterator> ias,
+           std::string MetadataKey,
+           std::string MetadataValueRegex,
+           Regex_Selector_Opts Opts = Regex_Selector_Opts() );
+
+// Whitelist image arrays using a limited vocabulary of specifiers.
+std::list<std::list<std::shared_ptr<Image_Array>>::iterator>
+Whitelist( std::list<std::list<std::shared_ptr<Image_Array>>::iterator> ias,
+           std::string Specifier,
+           Regex_Selector_Opts Opts = Regex_Selector_Opts() );
+
+// This is a convenience routine to combine multiple filtering passes into a single logical statement.
+std::list<std::list<std::shared_ptr<Image_Array>>::iterator>
+Whitelist( std::list<std::list<std::shared_ptr<Image_Array>>::iterator> ias,
+           std::initializer_list< std::pair<std::string,        // MetadataKey
+                                            std::string> > MetadataKeyValueRegex, // MetadataValueRegex
+           Regex_Selector_Opts Opts = Regex_Selector_Opts() );
+
+// Utility function documenting the image array whitelist routines for operations.
+OperationArgDoc IAWhitelistOpArgDoc(void);
+

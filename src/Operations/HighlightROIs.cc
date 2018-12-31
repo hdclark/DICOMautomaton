@@ -39,11 +39,9 @@ OperationDoc OpArgDocHighlightROIs(void){
     out.args.back().examples = { "-1", "0", "1", "2" };
 
     out.args.emplace_back();
+    out.args.back() = IAWhitelistOpArgDoc();
     out.args.back().name = "ImageSelection";
-    out.args.back().desc = "Images to operate on. Either 'none', 'first', 'last', or 'all'.";
     out.args.back().default_val = "last";
-    out.args.back().expected = true;
-    out.args.back().examples = { "none", "first", "last", "all" };
 
     out.args.emplace_back();
     out.args.back().name = "ContourOverlap";
@@ -154,10 +152,6 @@ Drover HighlightROIs(Drover DICOM_data,
 
     //-----------------------------------------------------------------------------------------------------------------
 
-    const auto regex_none = std::regex("no?n?e?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto regex_first = std::regex("^fi?r?s?t?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto regex_last = std::regex("la?s?t?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto regex_all  = std::regex("al?l?$",   std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
     const auto TrueRegex = std::regex("^tr?u?e?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
 
     const auto regex_centre = std::regex("^cent.*", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
@@ -173,14 +167,6 @@ Drover HighlightROIs(Drover DICOM_data,
     const auto ShouldOverwriteExterior = std::regex_match(ExteriorOverwriteStr, TrueRegex);
     const auto ShouldOverwriteInterior = std::regex_match(InteriorOverwriteStr, TrueRegex);
 
-    if( !std::regex_match(ImageSelectionStr, regex_none)
-    &&  !std::regex_match(ImageSelectionStr, regex_first)
-    &&  !std::regex_match(ImageSelectionStr, regex_last)
-    &&  !std::regex_match(ImageSelectionStr, regex_all) ){
-        throw std::invalid_argument("Image selection is not valid. Cannot continue.");
-    }
-
-
     //Stuff references to all contours into a list. Remember that you can still address specific contours through
     // the original holding containers (which are not modified here).
     auto cc_all = All_CCs( DICOM_data );
@@ -191,15 +177,9 @@ Drover HighlightROIs(Drover DICOM_data,
     }
 
 
-    //Image data.
-    auto iap_it = DICOM_data.image_data.begin();
-    if(false){
-    }else if(std::regex_match(ImageSelectionStr, regex_none)){
-        iap_it = DICOM_data.image_data.end();
-    }else if(std::regex_match(ImageSelectionStr, regex_last)){
-        if(!DICOM_data.image_data.empty()) iap_it = std::prev(DICOM_data.image_data.end());
-    }
-    while(iap_it != DICOM_data.image_data.end()){
+    auto IAs_all = All_IAs( DICOM_data );
+    auto IAs = Whitelist( IAs_all, ImageSelectionStr );
+    for(auto & iap_it : IAs){
         PartitionedImageVoxelVisitorMutatorUserData ud;
 
         ud.mutation_opts.editstyle = Mutate_Voxels_Opts::EditStyle::InPlace;
@@ -256,8 +236,6 @@ Drover HighlightROIs(Drover DICOM_data,
                                                           {}, cc_ROIs, &ud )){
             throw std::runtime_error("Unable to highlight voxels with the specified ROI(s).");
         }
-        ++iap_it;
-        if(std::regex_match(ImageSelectionStr, regex_first)) break;
     }
 
     return DICOM_data;

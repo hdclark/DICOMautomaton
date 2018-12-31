@@ -46,12 +46,9 @@ OperationDoc OpArgDocGroupImages(void){
 
 
     out.args.emplace_back();
+    out.args.back() = IAWhitelistOpArgDoc();
     out.args.back().name = "ImageSelection";
-    out.args.back().desc = "Images to operate on. Either 'none', 'last', or 'all'. Only images from the selection"
-                           " will be grouped.";
     out.args.back().default_val = "all";
-    out.args.back().expected = true;
-    out.args.back().examples = { "last", "all" };
 
 
     out.args.emplace_back();
@@ -83,15 +80,6 @@ Drover GroupImages(Drover DICOM_data,
     const auto KeysCommonStr = OptArgs.getValueStr("KeysCommon").value();
 
     //-----------------------------------------------------------------------------------------------------------------
-    const auto regex_none = std::regex("no?n?e?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto regex_last = std::regex("la?s?t?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto regex_all  = std::regex("al?l?$",   std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-
-    if( !std::regex_match(ImageSelectionStr, regex_none)
-    &&  !std::regex_match(ImageSelectionStr, regex_last)
-    &&  !std::regex_match(ImageSelectionStr, regex_all) ){
-        throw std::invalid_argument("Image selection is not valid. Cannot continue.");
-    }
 
     std::vector<std::string> KeysCommon;
     for(auto a : SplitStringToVector(KeysCommonStr, ';', 'd')){
@@ -103,15 +91,9 @@ Drover GroupImages(Drover DICOM_data,
 
     std::shared_ptr<Image_Array> na_group; // The special N/A group.
 
-    //Image data.
-    auto iap_it = DICOM_data.image_data.begin();
-    if(false){
-    }else if(std::regex_match(ImageSelectionStr, regex_none)){
-        iap_it = DICOM_data.image_data.end();
-    }else if(std::regex_match(ImageSelectionStr, regex_last)){
-        if(!DICOM_data.image_data.empty()) iap_it = std::prev(DICOM_data.image_data.end());
-    }
-    while(iap_it != DICOM_data.image_data.end()){
+    auto IAs_all = All_IAs( DICOM_data );
+    auto IAs = Whitelist( IAs_all, ImageSelectionStr );
+    for(auto & iap_it : IAs){
         while(!(*iap_it)->imagecoll.images.empty()){
             auto img_it = (*iap_it)->imagecoll.images.begin();
 
@@ -142,7 +124,6 @@ Drover GroupImages(Drover DICOM_data,
             }
 
         }
-        ++iap_it;
     }
 
     // Inject the new Image_Array groups.

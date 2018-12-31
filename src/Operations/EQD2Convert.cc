@@ -44,11 +44,9 @@ OperationDoc OpArgDocEQD2Convert(void){
 
 
     out.args.emplace_back();
+    out.args.back() = IAWhitelistOpArgDoc();
     out.args.back().name = "ImageSelection";
-    out.args.back().desc = "Images to operate on. Either 'none', 'last', or 'all'.";
     out.args.back().default_val = "last";
-    out.args.back().expected = true;
-    out.args.back().examples = { "none", "last", "all" };
     out.args.back().visibility = OpArgVisibility::Hide;
 
 
@@ -160,11 +158,6 @@ Drover EQD2Convert(Drover DICOM_data,
     &&  !std::regex_match(DoseImageSelectionStr, regex_all) ){
         throw std::invalid_argument("Dose Image selection is not valid. Cannot continue.");
     }
-    if( !std::regex_match(ImageSelectionStr, regex_none)
-    &&  !std::regex_match(ImageSelectionStr, regex_last)
-    &&  !std::regex_match(ImageSelectionStr, regex_all) ){
-        throw std::invalid_argument("Image selection is not valid. Cannot continue.");
-    }
 
     if( ud.PrescriptionDose <= 0.0 ){
         throw std::invalid_argument("PrescriptionDose must be specified (>0.0)");
@@ -184,20 +177,14 @@ Drover EQD2Convert(Drover DICOM_data,
 
 
     //Image data.
-    auto iap_it = DICOM_data.image_data.begin();
-    if(false){
-    }else if(std::regex_match(ImageSelectionStr, regex_none)){
-        iap_it = DICOM_data.image_data.end();
-    }else if(std::regex_match(ImageSelectionStr, regex_last)){
-        if(!DICOM_data.image_data.empty()) iap_it = std::prev(DICOM_data.image_data.end());
-    }
-    while(iap_it != DICOM_data.image_data.end()){
+    auto IAs_all = All_IAs( DICOM_data );
+    auto IAs = Whitelist( IAs_all, ImageSelectionStr );
+    for(auto & iap_it : IAs){
         if(!(*iap_it)->imagecoll.Process_Images_Parallel( GroupIndividualImages,
                                                           EQD2Conversion,
                                                           {}, cc_ROIs, &ud )){
             throw std::runtime_error("Unable to convert image_array voxels to EQD2 using the specified ROI(s).");
         }
-        ++iap_it;
     }
 
     //Dose data.

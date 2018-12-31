@@ -118,6 +118,11 @@ OperationDoc OpArgDocOptimizeStaticBeams(void){
     );
 
     out.args.emplace_back();
+    out.args.back() = IAWhitelistOpArgDoc();
+    out.args.back().name = "ImageSelection";
+    out.args.back().default_val = "all";
+
+    out.args.emplace_back();
     out.args.back().name = "ResultsSummaryFileName";
     out.args.back().desc = "This file will contain a brief summary of the results."
                            " The format is CSV. Leave empty to dump to generate a unique temporary file."
@@ -219,6 +224,8 @@ Drover OptimizeStaticBeams(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
     Explicator X(FilenameLex);
 
     //---------------------------------------------- User Parameters --------------------------------------------------
+    const auto ImageSelectionStr = OptArgs.getValueStr("ImageSelection").value();
+
     auto ResultsSummaryFileName = OptArgs.getValueStr("ResultsSummaryFileName").value();
 
     const auto UserComment = OptArgs.getValueStr("UserComment");
@@ -258,8 +265,9 @@ Drover OptimizeStaticBeams(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
     //       In practice, it might be best to use any single field and contour at a very low threshold dose.
     //       There are obvious issues if the fields do not overlap. Another option is to boolean-or contours
     //       from every field. This might be overkill.
-    auto iap_it = DICOM_data.image_data.begin();
-    while(iap_it != DICOM_data.image_data.end()){
+    auto IAs_all = All_IAs( DICOM_data );
+    auto IAs = Whitelist( IAs_all, ImageSelectionStr );
+    for(auto & iap_it : IAs){
         if((*iap_it)->imagecoll.images.empty()) throw std::invalid_argument("Unable to find an image to analyze.");
 
         std::experimental::optional<std::string> BeamID;
@@ -313,7 +321,6 @@ Drover OptimizeStaticBeams(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
             voxels.pop_back();
             beam_id.pop_back();
         }
-        ++iap_it;
     }
 
     if(voxels.empty()) throw std::domain_error("No voxels identified interior to the selected ROI(s). Cannot continue.");

@@ -28,11 +28,9 @@ OperationDoc OpArgDocSpatialDerivative(void){
         "This operation estimates various partial derivatives (of pixel values) within an image.";
 
     out.args.emplace_back();
+    out.args.back() = IAWhitelistOpArgDoc();
     out.args.back().name = "ImageSelection";
-    out.args.back().desc = "Images to operate on. Either 'none', 'last', 'first', or 'all'.";
     out.args.back().default_val = "last";
-    out.args.back().expected = true;
-    out.args.back().examples = { "none", "last", "first", "all" };
     
     out.args.emplace_back();
     out.args.back().name = "Estimator";
@@ -85,11 +83,6 @@ Drover SpatialDerivative(Drover DICOM_data, OperationArgPkg OptArgs, std::map<st
     const auto MethodStr = OptArgs.getValueStr("Method").value();
 
     //-----------------------------------------------------------------------------------------------------------------
-    const auto regex_none  = std::regex("^no?n?e?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto regex_first = std::regex("^fi?r?s?t?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto regex_last  = std::regex("^la?s?t?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto regex_all   = std::regex("^al?l?$",   std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-
     const auto regex_1st = std::regex("^fi?r?s?t?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
     const auto regex_2nd = std::regex("^se?c?o?n?d?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
     const auto regex_rcr3x3 = std::regex("^ro?b?e?r?t?s?-?c?r?o?s?s?-?3x?3?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
@@ -108,20 +101,9 @@ Drover SpatialDerivative(Drover DICOM_data, OperationArgPkg OptArgs, std::map<st
     const auto regex_nms  = std::regex("^no?n?-?m?a?x?i?m?u?m?-?s?u?p?p?r?e?s?s?i?o?n?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
     const auto regex_crs  = std::regex("^cro?s?s?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
 
-    if( !std::regex_match(ImageSelectionStr, regex_none)
-    &&  !std::regex_match(ImageSelectionStr, regex_first)
-    &&  !std::regex_match(ImageSelectionStr, regex_last)
-    &&  !std::regex_match(ImageSelectionStr, regex_all) ){
-        throw std::invalid_argument("Image selection is not valid. Cannot continue.");
-    }
-
-    auto iap_it = DICOM_data.image_data.begin();
-    if(false){
-    }else if(std::regex_match(ImageSelectionStr, regex_none)){ iap_it = DICOM_data.image_data.end();
-    }else if(std::regex_match(ImageSelectionStr, regex_last)){
-        if(!DICOM_data.image_data.empty()) iap_it = std::prev(DICOM_data.image_data.end());
-    }
-    while(iap_it != DICOM_data.image_data.end()){
+    auto IAs_all = All_IAs( DICOM_data );
+    auto IAs = Whitelist( IAs_all, ImageSelectionStr );
+    for(auto & iap_it : IAs){
 
         // Compute image derivatives.
         ImagePartialDerivativeUserData ud;
@@ -174,10 +156,6 @@ Drover SpatialDerivative(Drover DICOM_data, OperationArgPkg OptArgs, std::map<st
                                                           {}, {}, &ud )){
             throw std::runtime_error("Unable to compute in-plane partial derivative.");
         }
-
-        // Loop control.
-        ++iap_it;
-        if(std::regex_match(ImageSelectionStr, regex_first)) break;
     }
 
     return DICOM_data;

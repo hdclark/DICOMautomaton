@@ -26,11 +26,9 @@ OperationDoc OpArgDocCropImages(void){
     out.desc = "This operation crops image slices in either pixel or DICOM coordinate spaces.";
 
     out.args.emplace_back();
+    out.args.back() = IAWhitelistOpArgDoc();
     out.args.back().name = "ImageSelection";
-    out.args.back().desc = "Images to operate on. Either 'none', 'last', 'first', or 'all'.";
     out.args.back().default_val = "all";
-    out.args.back().expected = true;
-    out.args.back().examples = { "none", "last", "first", "all" };
     
 
     out.args.emplace_back();
@@ -97,20 +95,8 @@ Drover CropImages(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::stri
     const auto ImageSelectionStr = OptArgs.getValueStr("ImageSelection").value();
 
     //-----------------------------------------------------------------------------------------------------------------
-    const auto regex_none  = std::regex("^no?n?e?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto regex_first = std::regex("^fi?r?s?t?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto regex_last  = std::regex("^la?s?t?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto regex_all   = std::regex("^al?l?$",   std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-
     const auto regex_is_pixel = std::regex("px$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
     const auto regex_is_percent = std::regex("[%]$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-
-    if( !std::regex_match(ImageSelectionStr, regex_none)
-    &&  !std::regex_match(ImageSelectionStr, regex_first)
-    &&  !std::regex_match(ImageSelectionStr, regex_last)
-    &&  !std::regex_match(ImageSelectionStr, regex_all) ){
-        throw std::invalid_argument("Image selection is not valid. Cannot continue.");
-    }
 
     const auto RowsL = std::stod( RowsL_str );
     const auto RowsH = std::stod( RowsH_str );
@@ -130,13 +116,9 @@ Drover CropImages(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::stri
     // Create a contour collection for the relevant images.
     contour_collection<double> cc;  // These are used only for purposes of cropping.
     {
-        auto iap_it = DICOM_data.image_data.begin();
-        if(false){
-        }else if(std::regex_match(ImageSelectionStr, regex_none)){ iap_it = DICOM_data.image_data.end();
-        }else if(std::regex_match(ImageSelectionStr, regex_last)){
-            if(!DICOM_data.image_data.empty()) iap_it = std::prev(DICOM_data.image_data.end());
-        }
-        while(iap_it != DICOM_data.image_data.end()){
+        auto IAs_all = All_IAs( DICOM_data );
+        auto IAs = Whitelist( IAs_all, ImageSelectionStr );
+        for(auto & iap_it : IAs){
             for(auto &animg : (*iap_it)->imagecoll.images){
 
                 const auto rows = animg.rows;
@@ -193,8 +175,6 @@ Drover CropImages(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::stri
 
                 cc.contours.splice( cc.contours.end(), cc_new.contours );
             }
-            ++iap_it;
-            if(std::regex_match(ImageSelectionStr, regex_first)) break;
         }
     }
     std::list<std::reference_wrapper<contour_collection<double>>> cc_ROIs;
@@ -202,13 +182,9 @@ Drover CropImages(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::stri
 
     // Perform the crop.
     {
-        auto iap_it = DICOM_data.image_data.begin();
-        if(false){
-        }else if(std::regex_match(ImageSelectionStr, regex_none)){ iap_it = DICOM_data.image_data.end();
-        }else if(std::regex_match(ImageSelectionStr, regex_last)){
-            if(!DICOM_data.image_data.empty()) iap_it = std::prev(DICOM_data.image_data.end());
-        }
-        while(iap_it != DICOM_data.image_data.end()){
+        auto IAs_all = All_IAs( DICOM_data );
+        auto IAs = Whitelist( IAs_all, ImageSelectionStr );
+        for(auto & iap_it : IAs){
             CropToROIsUserData ud;
             ud.row_margin = DICOMMargin;
             ud.col_margin = DICOMMargin;
@@ -218,8 +194,6 @@ Drover CropImages(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::stri
                                                      cc_ROIs, &ud )){
                 throw std::runtime_error("Unable to perform crop.");
             }
-            ++iap_it;
-            if(std::regex_match(ImageSelectionStr, regex_first)) break;
         }
     }
 

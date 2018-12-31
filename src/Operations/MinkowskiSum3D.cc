@@ -84,14 +84,11 @@ OperationDoc OpArgDocMinkowskiSum3D(void){
                                  R"***(left_parotid|right_parotid|eyes)***" };
 
     out.args.emplace_back();
+    out.args.back() = IAWhitelistOpArgDoc();
     out.args.back().name = "ImageSelection";
-    out.args.back().desc = "Images to sample the new contours on. Note that the image planes need not match"
-                           " the original since a full 3D mesh surface is generated."
-                           " Either 'none', 'last', or 'all'.";
+    out.args.back().desc += " Note that the selected images are used to sample the new contours on."
+                            " Image planes need not match the original since a full 3D mesh surface is generated.";
     out.args.back().default_val = "last";
-    out.args.back().expected = true;
-    out.args.back().examples = { "none", "last", "all" };
-
 
     out.args.emplace_back();
     out.args.back().name = "Operation";
@@ -158,21 +155,11 @@ Drover MinkowskiSum3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::
     //-----------------------------------------------------------------------------------------------------------------
 
 
-    const auto regex_none = std::regex("no?n?e?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto regex_last = std::regex("la?s?t?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto regex_all  = std::regex("al?l?$",   std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-
     const auto regex_dilate_exact_surface     = Compile_Regex("dil?a?t?e?_?exa?c?t?_?surfa?c?e?"); // diexsurf
     const auto regex_dilate_exact_vertex      = Compile_Regex("dil?a?t?e?_?exa?c?t?_?verte?x?");   // diexvert
     const auto regex_dilate_inexact_isotropic = Compile_Regex("dil?a?t?e?_?ine?x?a?c?t?_?isot?r?o?p?i?c?"); //diiniso
     const auto regex_erode_inexact_isotropic  = Compile_Regex("ero?d?e?_?ine?x?a?c?t?_?isot?r?o?p?i?c?"); //eriniso
     const auto regex_shell_inexact_isotropic  = Compile_Regex("she?l?l?_?ine?x?a?c?t?_?isot?r?o?p?i?c?"); //shiniso
-
-    if( !std::regex_match(ImageSelectionStr, regex_none)
-    &&  !std::regex_match(ImageSelectionStr, regex_last)
-    &&  !std::regex_match(ImageSelectionStr, regex_all) ){
-        throw std::invalid_argument("Image selection is not valid. Cannot continue.");
-    }
 
     if( !std::regex_match(OpSelectionStr, regex_dilate_exact_surface)
     &&  !std::regex_match(OpSelectionStr, regex_dilate_exact_vertex)
@@ -252,14 +239,9 @@ Drover MinkowskiSum3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::
 
     //-----------------------------------------------------------------------------------------------------------------
 
-    auto iap_it = DICOM_data.image_data.begin();
-    if(false){
-    }else if(std::regex_match(ImageSelectionStr, regex_none)){
-        iap_it = DICOM_data.image_data.end();
-    }else if(std::regex_match(ImageSelectionStr, regex_last)){
-        if(!DICOM_data.image_data.empty()) iap_it = std::prev(DICOM_data.image_data.end());
-    }
-    while(iap_it != DICOM_data.image_data.end()){
+    auto IAs_all = All_IAs( DICOM_data );
+    auto IAs = Whitelist( IAs_all, ImageSelectionStr );
+    for(auto & iap_it : IAs){
 
         // Sample new contours on the selected images.
         //
@@ -291,10 +273,7 @@ Drover MinkowskiSum3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::
             }
             DICOM_data.contour_data->ccs.emplace_back(cc);
         }
-
-        ++iap_it;
     }
-
 
     return DICOM_data;
 }
