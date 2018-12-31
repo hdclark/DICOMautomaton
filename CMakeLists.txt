@@ -27,6 +27,7 @@ include_directories( ${EIGEN3_INCLUDE_DIRS} )
 find_package(CGAL REQUIRED COMPONENTS Core)
 include(${CGAL_USE_FILE})
 add_definitions(-DCGAL_EIGEN3_ENABLED=1) # Explicitly instruct CGAL to use Eigen.
+#add_definitions(-DCGAL_DISABLE_ROUNDING_MATH_CHECK=1) # May be needed for Valgrind debugging.
 
 
 ####################################################################################
