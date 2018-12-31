@@ -182,8 +182,6 @@ Drover ThresholdImages(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std:
                         if(Upper_is_Ptile) cu = Stats::Percentile(pixel_vals, Upper / 100.0);
                     }
                 }
-FUNCINFO("cl = " << cl);
-FUNCINFO("cu = " << cu);
 
                 //Construct pixel 'oracle' closures using the user-specified threshold criteria. 
                 // These functions identify whether pixels are within the threshold values.
