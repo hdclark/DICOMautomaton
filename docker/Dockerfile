@@ -18,7 +18,8 @@ RUN printf -- 'Server = http://mirror.cedille.club/archlinux/$repo/os/$arch\n' >
     printf -- 'Server = http://archlinux.mirror.rafal.ca/$repo/os/$arch\n' >> /etc/pacman.d/mirrorlist
 
 # Install build dependencies.
-RUN pacman -Syu --noconfirm --needed base-devel git cmake gcc vim gdb screen \
+RUN pacman -Sy --noconfirm archlinux-keyring && \
+    pacman -Syu --noconfirm --needed base-devel git cmake gcc vim gdb screen \
     ` # Needed for an AUR helper ` \
     sudo pyalpm wget rsync && \
     rm -f /var/cache/pacman/pkg/*
