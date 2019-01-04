@@ -1305,8 +1305,9 @@ static std::string Generate_Random_UID(long int len){
     char last = '.';
     while(static_cast<long int>(out.size()) != len){
         const auto achar = alphanum[dist(gen)];
-        if((achar == '.') && (achar == last)) continue;
-        if((achar == '.') && (static_cast<long int>(out.size()+1) == len)) continue;
+        if((achar == '0') && (last == '.')) continue; // Zeros are not significant.
+        if((achar == '.') && (achar == last)) continue; // Do not double separators.
+        if((achar == '.') && (static_cast<long int>(out.size()+1) == len)) continue; // Do not stop on a separator.
         out += achar;
         last = achar;
     }
@@ -1678,7 +1679,7 @@ void Write_Dose_Array(std::shared_ptr<Image_Array> IA, const std::string &Filena
         //General Series Module.
         ds_insert(tds, 0x0008, 0x0060, "RTDOSE");
         ds_insert(tds, 0x0020, 0x000E, fne({ cm["SeriesInstanceUID"], Generate_Random_UID(31) }));
-        ds_insert(tds, 0x0020, 0x0011, fne({ cm["SeriesNumber"], Generate_Random_Int_Str(5000, 4294967295) }));
+        ds_insert(tds, 0x0020, 0x0011, fne({ cm["SeriesNumber"], Generate_Random_Int_Str(5000, 32767) })); // Upper: 2^15 - 1.
         ds_insert(tds, 0x0008, 0x0021, foe({ cm["SeriesDate"] }));
         ds_insert(tds, 0x0008, 0x0031, foe({ cm["SeriesTime"] }));
         ds_insert(tds, 0x0008, 0x103E, fne({ cm["SeriesDescription"], "UNSPECIFIED" }));
