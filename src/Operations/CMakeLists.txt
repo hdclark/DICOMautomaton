@@ -77,6 +77,7 @@ add_library(Operations_objs OBJECT
     ModifyContourMetadata.cc
     ModifyImageMetadata.cc
     OptimizeStaticBeams.cc
+    OrderImages.cc
     PlotPerROITimeCourses.cc
     PreFilterEnormousCTValues.cc
     PresentationImage.cc
