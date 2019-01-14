@@ -42,6 +42,11 @@ bool DecayDoseOverTime(planar_image_collection<float,double>::images_list_it_t f
         return false;
     }
 
+    //Allocate a second channel to store a mask.
+    if(first_img_it->channels == 1){
+        first_img_it->add_channel(0.0);
+    }
+
     //Work out some model parameters.
     const auto BED_abr_tol = BEDabr_from_n_D_abr(user_data_s->ToleranceNumberOfFractions, 
                                                  user_data_s->ToleranceTotalDose,
@@ -61,14 +66,25 @@ bool DecayDoseOverTime(planar_image_collection<float,double>::images_list_it_t f
 
     //Record the min and max (outgoing) pixel values for windowing purposes.
     Mutate_Voxels_Opts ebv_opts;
-    ebv_opts.editstyle      = Mutate_Voxels_Opts::EditStyle::InPlace;
+    ebv_opts.editstyle      = Mutate_Voxels_Opts::EditStyle::InPlace; // Note: the mask scheme below requires in-place in order to decay with a single pass.
     ebv_opts.inclusivity    = Mutate_Voxels_Opts::Inclusivity::Centre;
     ebv_opts.contouroverlap = Mutate_Voxels_Opts::ContourOverlap::HonourOppositeOrientations;
     ebv_opts.aggregate      = Mutate_Voxels_Opts::Aggregate::Mean;
     ebv_opts.adjacency      = Mutate_Voxels_Opts::Adjacency::SingleVoxel;
     ebv_opts.maskmod        = Mutate_Voxels_Opts::MaskMod::Noop;
 
-    auto f_bounded = [=](long int /*row*/, long int /*col*/, long int /*channel*/, float &voxel_val) {
+    auto f_bounded = [=](long int row, long int col, long int channel, float &voxel_val) {
+
+        // First, check if the mask is set for this voxel. If it is, do NOT re-process.
+        // It means the voxel has been processed in a previous decay operation (e.g., for another overlapping ROI) and
+        // should not be decayed again.
+        const auto mask_val = first_img_it->value(row, col, 1);
+        if(mask_val != 0.0) return;
+
+        // If the voxel is in the mask channel, disregard it.
+        if(channel == 1) return;
+
+        // Otherwise, perform the decay and then mark the mask.
         if(false){
         }else if(user_data_s->model == DecayDoseOverTimeMethod::Halve){
             voxel_val *= 0.5;
@@ -105,6 +121,7 @@ bool DecayDoseOverTime(planar_image_collection<float,double>::images_list_it_t f
         }else{
             throw std::logic_error("Provided an invalid model. Cannot continue.");
         }
+        first_img_it->reference(row, col, 1) = 1.0;
         return;
     };
 
