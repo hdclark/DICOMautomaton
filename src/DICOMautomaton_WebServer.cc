@@ -508,6 +508,7 @@ void BaseWebServerApplication::createOperationSelectorGB(void){
     grouper->addItem("QA");
     grouper->addItem("Planning");
     grouper->addItem("Replans");
+    grouper->addItem("Modeling");
     grouper->addItem("Research");
     grouper->addItem("Misc");
     //grouper->addItem("All");
@@ -580,6 +581,8 @@ void BaseWebServerApplication::createOperationSelectorGB(void){
 
             if(selected_group == "QA"){
                 if( false
+                    ||  ( n == "AnalyzeLightRadFieldCoincidence" ) 
+                    ||  ( n == "ApplyCalibrationCurve" )
                     ||  ( n == "ConvertDoseToImage" ) 
                     ||  ( n == "FVPicketFence" )
                     ||  ( n == "HighlightROIs" )
@@ -597,8 +600,8 @@ void BaseWebServerApplication::createOperationSelectorGB(void){
                     ||  ( n == "DecayDoseOverTimeJones2014" ) 
                     ||  ( n == "DICOMExportImagesAsDose" )
                     ||  ( n == "EQD2Convert" )
-                    ||  ( n == "TrimROIDose" )
                     ||  ( n == "OptimizeStaticBeams" )
+                    ||  ( n == "TrimROIDose" )
                 ){
                     selector->addItem(anop.first);
                 }
@@ -618,17 +621,42 @@ void BaseWebServerApplication::createOperationSelectorGB(void){
                 }
             }
 
+            if(selected_group == "Modeling"){
+                if( false
+                    ||  ( n == "CT_Liver_Perfusion" ) 
+                    ||  ( n == "CT_Liver_Perfusion_First_Run" ) 
+                    ||  ( n == "CT_Liver_Perfusion_Ortho_Views" ) 
+                    ||  ( n == "CT_Liver_Perfusion_Pharmaco_1C2I_5Param" ) 
+                    ||  ( n == "CT_Liver_Perfusion_Pharmaco_1C2I_Reduced3Param" ) 
+                    ||  ( n == "DCEMRI_IAUC" ) 
+                    ||  ( n == "DCEMRI_Nonparametric_CE" ) 
+                    ||  ( n == "DumpPerROIParams_KineticModel_1C2I_5P" ) 
+                    ||  ( n == "UBC3TMRI_DCE" ) 
+                    ||  ( n == "UBC3TMRI_DCE_Differences" ) 
+                    ||  ( n == "UBC3TMRI_DCE_Experimental" ) 
+                    ||  ( n == "UBC3TMRI_IVIM_ADC" ) 
+                ){
+                    selector->addItem(anop.first);
+                }
+            }
+
             if(selected_group == "Research"){
                 if( false
                     ||  ( n == "BCCAExtractRadiomicFeatures" )
                     ||  ( n == "ConvertDoseToImage" ) 
+                    ||  ( n == "DetectShapes3D" )
                     ||  ( n == "DICOMExportImagesAsDose" )
                     ||  ( n == "EvaluateNTCPModels" ) 
                     ||  ( n == "EvaluateTCPModels" ) 
                     ||  ( n == "GrowContours" )
                     ||  ( n == "HighlightROIs" )
+                    ||  ( n == "MinkowskiSum3D" )
+                    ||  ( n == "OrderImages" )
                     ||  ( n == "PresentationImage" )
                     ||  ( n == "SeamContours" )
+                    ||  ( n == "SimplifyContours" )
+                    ||  ( n == "SubtractImages" )
+                    ||  ( n == "ThresholdImages" )
                 ){
                     selector->addItem(anop.first);
                 }
@@ -638,7 +666,9 @@ void BaseWebServerApplication::createOperationSelectorGB(void){
                 if( false
                     ||  ( n == "AutoCropImages" )
                     ||  ( n == "Average" )
+                    ||  ( n == "BoostSerializeDrover" ) 
                     ||  ( n == "ContourBooleanOperations" )
+                    ||  ( n == "ContouringAides" ) 
                     ||  ( n == "ContourSimilarity" )
                     ||  ( n == "ContourViaThreshold" )
                     ||  ( n == "ContourVote" )
@@ -652,6 +682,7 @@ void BaseWebServerApplication::createOperationSelectorGB(void){
                     ||  ( n == "CropImages" )
                     ||  ( n == "DecimatePixels" )
                     ||  ( n == "DICOMExportImagesAsDose" )
+                    ||  ( n == "DroverDebug" )
                     ||  ( n == "DumpAllOrderedImageMetadataToFile" )
                     ||  ( n == "DumpAnEncompassedPoint" )
                     ||  ( n == "DumpImageMetadataOccurrencesToFile" )
@@ -671,18 +702,23 @@ void BaseWebServerApplication::createOperationSelectorGB(void){
                     ||  ( n == "HighlightROIs" )
                     ||  ( n == "LogScale" )
                     ||  ( n == "MeldDose" )
+                    ||  ( n == "MinkowskiSum3D" )
                     ||  ( n == "ModifyContourMetadata" )
                     ||  ( n == "ModifyImageMetadata" )
                     ||  ( n == "OptimizeStaticBeams" )
+                    ||  ( n == "OrderImages" )
                     ||  ( n == "PresentationImage" )
                     ||  ( n == "PruneEmptyImageDoseArrays" )
                     ||  ( n == "PurgeContours" )
                     ||  ( n == "SeamContours" )
                     ||  ( n == "SelectSlicesIntersectingROI" )
+                    ||  ( n == "SimplifyContours" )
                     ||  ( n == "SpatialBlur" )
                     ||  ( n == "SpatialDerivative" )
                     ||  ( n == "SpatialSharpen" )
+                    ||  ( n == "SubtractImages" )
                     ||  ( n == "SupersampleImageGrid" )
+                    ||  ( n == "ThresholdImages" )
                 ){
                     selector->addItem(anop.first);
                 }
