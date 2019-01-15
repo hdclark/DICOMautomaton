@@ -67,7 +67,7 @@ bool DecayDoseOverTime(planar_image_collection<float,double>::images_list_it_t f
     //Record the min and max (outgoing) pixel values for windowing purposes.
     Mutate_Voxels_Opts ebv_opts;
     ebv_opts.editstyle      = Mutate_Voxels_Opts::EditStyle::InPlace; // Note: the mask scheme below requires in-place in order to decay with a single pass.
-    ebv_opts.inclusivity    = Mutate_Voxels_Opts::Inclusivity::Centre;
+    ebv_opts.inclusivity    = Mutate_Voxels_Opts::Inclusivity::Inclusive;
     ebv_opts.contouroverlap = Mutate_Voxels_Opts::ContourOverlap::HonourOppositeOrientations;
     ebv_opts.aggregate      = Mutate_Voxels_Opts::Aggregate::Mean;
     ebv_opts.adjacency      = Mutate_Voxels_Opts::Adjacency::SingleVoxel;
