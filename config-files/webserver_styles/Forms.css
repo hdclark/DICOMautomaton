@@ -65,6 +65,18 @@ button {
     /*border: 0px solid black;*/
 }
 
+.OperationGrouper {
+    display: block;
+    margin-left: 0em;
+    margin-right: 0em;
+    font-size: 0.8em;
+    height: auto;
+    width: auto;
+    font-size: 0.85em;
+    flex-grow: 100;
+    /*border: 0px solid black;*/
+}
+
 .OperationSelectorDescriptionPanel {
     display: block;
     margin-left: 2em;

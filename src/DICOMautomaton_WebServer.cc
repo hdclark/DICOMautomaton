@@ -474,6 +474,15 @@ void BaseWebServerApplication::createOperationSelectorGB(void){
     auto selectcont = gb->addWidget(std::make_unique<Wt::WContainerWidget>());
     selectcont->addStyleClass("SelectorCont");
 
+    auto grouper = selectcont->addWidget(std::make_unique<Wt::WSelectionBox>());
+    grouper->setObjectName("op_select_gb_grouper");
+    grouper->setSelectionMode(Wt::SelectionMode::Single);
+    grouper->addStyleClass("OperationGrouper");
+    grouper->setVerticalSize(15);
+    grouper->disable();
+
+    (void*) selectcont->addWidget(std::make_unique<Wt::WBreak>());
+
     auto selector = selectcont->addWidget(std::make_unique<Wt::WSelectionBox>());
     selector->setObjectName("op_select_gb_selector");
     selector->setSelectionMode(Wt::SelectionMode::Single);
@@ -496,32 +505,18 @@ void BaseWebServerApplication::createOperationSelectorGB(void){
     feedback->setObjectName("op_select_gb_feedback");
     feedback->addStyleClass("FeedbackText");
 
-    auto known_ops = Known_Operations();
-    for(auto &anop : known_ops){
-        const auto n = anop.first;
-        if( ( n == "FVPicketFence" )
-        ||  ( n == "PresentationImage" )
-        //||  ( n == "HighlightROIs" )
-        //||  ( n == "DICOMExportImagesAsDose" )
-        //||  ( n == "ConvertDoseToImage" ) 
-        ||  ( n == "DecayDoseOverTimeJones2014" ) 
-        ||  ( n == "DecayDoseOverTimeHalve" ) 
-        //||  ( n == "EvaluateNTCPModels" ) 
-        //||  ( n == "EvaluateTCPModels" ) 
-        //||  ( n == "SeamContours" )
-        //||  ( n == "GrowContours" )
-        ||  ( n == "TrimROIDose" )
-        ||  ( n == "CropROIDose" )
-        ||  ( n == "EQD2Convert" )
-        ||  ( n == "BCCAExtractRadiomicFeatures" )
-    ){    //Whitelist ... for now.
-            selector->addItem(anop.first);
-        }
-    }
+    grouper->addItem("QA");
+    grouper->addItem("Planning");
+    grouper->addItem("Research");
+    grouper->addItem("Misc");
+    //grouper->addItem("All");
+
+    grouper->enable();
     selector->enable();
     descpanel->enable();
 
     auto gobutton = gb->addWidget(std::make_unique<Wt::WPushButton>("Proceed"));
+    gobutton->disable();
 
     auto sep_break = root()->addWidget(std::make_unique<Wt::WBreak>());
     sep_break->setCanReceiveFocus(true);
@@ -532,6 +527,7 @@ void BaseWebServerApplication::createOperationSelectorGB(void){
         //if(selected.empty()) return; // Warn about selecting something?
         if(selector->currentText().empty()) return; // Warn about selecting something?
 
+        grouper->disable();
         selector->disable();
         gobutton->disable();
         descpanel->disable();
@@ -545,6 +541,7 @@ void BaseWebServerApplication::createOperationSelectorGB(void){
     auto describe = [=](){
         const std::string selected_op = selector->currentText().toUTF8();
         std::stringstream ss;
+        auto known_ops = Known_Operations();
         for(auto &anop : known_ops){
             const auto n = anop.first;
             if( n == selected_op ){
@@ -563,9 +560,83 @@ void BaseWebServerApplication::createOperationSelectorGB(void){
             }
         }
         descpanel->setText(Wt::WString(ss.str()));
+        gobutton->enable();
         return;
     };
     selector->activated().connect(std::bind(describe));
+
+    auto populate = [=](){
+        selector->disable();
+        selector->clear();
+        descpanel->setText(Wt::WString());
+        gobutton->disable();
+        if(grouper == nullptr) throw std::logic_error("Cannot find operation grouper widget in DOM tree. Cannot continue.");
+        const std::string selected_group = grouper->currentText().toUTF8(); 
+
+        auto known_ops = Known_Operations();
+        for(auto &anop : known_ops){
+            const auto n = anop.first;
+
+            if(selected_group == "QA"){
+                if(     ( n == "FVPicketFence" )
+                    ||  ( n == "PresentationImage" )
+                    ||  ( n == "HighlightROIs" )
+                    ||  ( n == "ConvertDoseToImage" ) 
+                ){
+                    selector->addItem(anop.first);
+                }
+            }
+
+            if(selected_group == "Planning"){
+                if(     ( n == "DICOMExportImagesAsDose" )
+                    ||  ( n == "ConvertDoseToImage" ) 
+                    ||  ( n == "DecayDoseOverTimeJones2014" ) 
+                    ||  ( n == "DecayDoseOverTimeHalve" ) 
+                    //||  ( n == "SeamContours" )
+                    //||  ( n == "GrowContours" )
+                    ||  ( n == "TrimROIDose" )
+                    ||  ( n == "CropROIDose" )
+                    ||  ( n == "EQD2Convert" )
+                ){
+                    selector->addItem(anop.first);
+                }
+            }
+
+            if(selected_group == "Research"){
+                if(     ( n == "PresentationImage" )
+                    ||  ( n == "HighlightROIs" )
+                    ||  ( n == "DICOMExportImagesAsDose" )
+                    ||  ( n == "ConvertDoseToImage" ) 
+                    ||  ( n == "EvaluateNTCPModels" ) 
+                    ||  ( n == "EvaluateTCPModels" ) 
+                    ||  ( n == "SeamContours" )
+                    ||  ( n == "GrowContours" )
+                    ||  ( n == "BCCAExtractRadiomicFeatures" )
+                ){
+                    selector->addItem(anop.first);
+                }
+            }
+
+            if(selected_group == "Misc"){
+                if(     ( n == "PresentationImage" )
+                    ||  ( n == "HighlightROIs" )
+                    ||  ( n == "DICOMExportImagesAsDose" )
+                    ||  ( n == "ConvertDoseToImage" ) 
+                    ||  ( n == "SeamContours" )
+                    ||  ( n == "GrowContours" )
+                ){
+                    selector->addItem(anop.first);
+                }
+            }
+
+            //if(selected_group == "All"){
+            //    selector->addItem(anop.first);
+            //}
+        }
+        selector->enable();
+        return;
+    };
+    grouper->activated().connect(std::bind(populate));
 
     gb->show();
     sep_break->setFocus(true);
@@ -1087,6 +1158,7 @@ void BaseWebServerApplication::createComputeGB(void){
                                          "file_loading_gb_feedback",
 
                                          "op_select_gb",
+                                         "op_select_gb_grouper",
                                          "op_select_gb_selector",
                                          "op_select_gb_descpanel",
                                          "op_select_gb_feedback",
