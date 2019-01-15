@@ -507,6 +507,7 @@ void BaseWebServerApplication::createOperationSelectorGB(void){
 
     grouper->addItem("QA");
     grouper->addItem("Planning");
+    grouper->addItem("Replans");
     grouper->addItem("Research");
     grouper->addItem("Misc");
     //grouper->addItem("All");
@@ -578,52 +579,110 @@ void BaseWebServerApplication::createOperationSelectorGB(void){
             const auto n = anop.first;
 
             if(selected_group == "QA"){
-                if(     ( n == "FVPicketFence" )
-                    ||  ( n == "PresentationImage" )
-                    ||  ( n == "HighlightROIs" )
+                if( false
                     ||  ( n == "ConvertDoseToImage" ) 
+                    ||  ( n == "FVPicketFence" )
+                    ||  ( n == "HighlightROIs" )
+                    ||  ( n == "PresentationImage" )
                 ){
                     selector->addItem(anop.first);
                 }
             }
 
             if(selected_group == "Planning"){
-                if(     ( n == "DICOMExportImagesAsDose" )
+                if( false
                     ||  ( n == "ConvertDoseToImage" ) 
-                    ||  ( n == "DecayDoseOverTimeJones2014" ) 
-                    ||  ( n == "DecayDoseOverTimeHalve" ) 
-                    //||  ( n == "SeamContours" )
-                    //||  ( n == "GrowContours" )
-                    ||  ( n == "TrimROIDose" )
                     ||  ( n == "CropROIDose" )
+                    ||  ( n == "DecayDoseOverTimeHalve" ) 
+                    ||  ( n == "DecayDoseOverTimeJones2014" ) 
+                    ||  ( n == "DICOMExportImagesAsDose" )
                     ||  ( n == "EQD2Convert" )
+                    ||  ( n == "TrimROIDose" )
+                    ||  ( n == "OptimizeStaticBeams" )
+                ){
+                    selector->addItem(anop.first);
+                }
+            }
+
+            if(selected_group == "Replans"){
+                if( false
+                    ||  ( n == "ConvertDoseToImage" ) 
+                    ||  ( n == "CropROIDose" )
+                    ||  ( n == "DecayDoseOverTimeHalve" ) 
+                    ||  ( n == "DecayDoseOverTimeJones2014" ) 
+                    ||  ( n == "DICOMExportImagesAsDose" )
+                    ||  ( n == "EQD2Convert" )
+                    ||  ( n == "TrimROIDose" )
                 ){
                     selector->addItem(anop.first);
                 }
             }
 
             if(selected_group == "Research"){
-                if(     ( n == "PresentationImage" )
-                    ||  ( n == "HighlightROIs" )
-                    ||  ( n == "DICOMExportImagesAsDose" )
+                if( false
+                    ||  ( n == "BCCAExtractRadiomicFeatures" )
                     ||  ( n == "ConvertDoseToImage" ) 
+                    ||  ( n == "DICOMExportImagesAsDose" )
                     ||  ( n == "EvaluateNTCPModels" ) 
                     ||  ( n == "EvaluateTCPModels" ) 
-                    ||  ( n == "SeamContours" )
                     ||  ( n == "GrowContours" )
-                    ||  ( n == "BCCAExtractRadiomicFeatures" )
+                    ||  ( n == "HighlightROIs" )
+                    ||  ( n == "PresentationImage" )
+                    ||  ( n == "SeamContours" )
                 ){
                     selector->addItem(anop.first);
                 }
             }
 
             if(selected_group == "Misc"){
-                if(     ( n == "PresentationImage" )
-                    ||  ( n == "HighlightROIs" )
-                    ||  ( n == "DICOMExportImagesAsDose" )
+                if( false
+                    ||  ( n == "AutoCropImages" )
+                    ||  ( n == "Average" )
+                    ||  ( n == "ContourBooleanOperations" )
+                    ||  ( n == "ContourSimilarity" )
+                    ||  ( n == "ContourViaThreshold" )
+                    ||  ( n == "ContourVote" )
+                    ||  ( n == "ContourWholeImages" )
                     ||  ( n == "ConvertDoseToImage" ) 
-                    ||  ( n == "SeamContours" )
+                    ||  ( n == "ConvertImageToDose" )
+                    ||  ( n == "ConvertNaNsToAir" )
+                    ||  ( n == "ConvertNaNsToZeros" )
+                    ||  ( n == "CopyImages" )
+                    ||  ( n == "CropImageDoseToROIs" )
+                    ||  ( n == "CropImages" )
+                    ||  ( n == "DecimatePixels" )
+                    ||  ( n == "DICOMExportImagesAsDose" )
+                    ||  ( n == "DumpAllOrderedImageMetadataToFile" )
+                    ||  ( n == "DumpAnEncompassedPoint" )
+                    ||  ( n == "DumpImageMetadataOccurrencesToFile" )
+                    ||  ( n == "DumpPixelValuesOverTimeForAnEncompassedPoint" )
+                    ||  ( n == "EvaluateDoseVolumeHistograms" )
+                    ||  ( n == "EvaluateDoseVolumeStats" )
+                    ||  ( n == "GenerateSurfaceMask" )
+                    ||  ( n == "GenerateVirtualDataContourViaThresholdTestV1" )
+                    ||  ( n == "GenerateVirtualDataDoseStairsV1" )
+                    ||  ( n == "GenerateVirtualDataPerfusionV1" )
+                    ||  ( n == "GiveWholeImageArrayABoneWindowLevel" )
+                    ||  ( n == "GiveWholeImageArrayAHeadAndNeckWindowLevel" )
+                    ||  ( n == "GiveWholeImageArrayAnAbdominalWindowLevel" )
+                    ||  ( n == "GiveWholeImageArrayAThoraxWindowLevel" )
+                    ||  ( n == "GridBasedRayCastDoseAccumulate" )
                     ||  ( n == "GrowContours" )
+                    ||  ( n == "HighlightROIs" )
+                    ||  ( n == "LogScale" )
+                    ||  ( n == "MeldDose" )
+                    ||  ( n == "ModifyContourMetadata" )
+                    ||  ( n == "ModifyImageMetadata" )
+                    ||  ( n == "OptimizeStaticBeams" )
+                    ||  ( n == "PresentationImage" )
+                    ||  ( n == "PruneEmptyImageDoseArrays" )
+                    ||  ( n == "PurgeContours" )
+                    ||  ( n == "SeamContours" )
+                    ||  ( n == "SelectSlicesIntersectingROI" )
+                    ||  ( n == "SpatialBlur" )
+                    ||  ( n == "SpatialDerivative" )
+                    ||  ( n == "SpatialSharpen" )
+                    ||  ( n == "SupersampleImageGrid" )
                 ){
                     selector->addItem(anop.first);
                 }
