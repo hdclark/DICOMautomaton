@@ -49,6 +49,7 @@
 #include "Operations/CropROIDose.h"
 #include "Operations/DCEMRI_IAUC.h"
 #include "Operations/DCEMRI_Nonparametric_CE.h"
+#include "Operations/DetectShapes3D.h"
 #include "Operations/DICOMExportImagesAsDose.h"
 #include "Operations/DecayDoseOverTimeHalve.h"
 #include "Operations/DecayDoseOverTimeJones2014.h"
@@ -157,6 +158,7 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["EQD2Convert"] = std::make_pair(OpArgDocEQD2Convert, EQD2Convert);
     out["DCEMRI_IAUC"] = std::make_pair(OpArgDocDCEMRI_IAUC, DCEMRI_IAUC);
     out["DCEMRI_Nonparametric_CE"] = std::make_pair(OpArgDocDCEMRI_Nonparametric_CE, DCEMRI_Nonparametric_CE);
+    out["DetectShapes3D"] = std::make_pair(OpArgDocDetectShapes3D, DetectShapes3D);
     out["DecayDoseOverTimeHalve"] = std::make_pair(OpArgDocDecayDoseOverTimeHalve, DecayDoseOverTimeHalve);
     out["DecayDoseOverTimeJones2014"] = std::make_pair(OpArgDocDecayDoseOverTimeJones2014, DecayDoseOverTimeJones2014);
     out["DecimatePixels"] = std::make_pair(OpArgDocDecimatePixels, DecimatePixels);
