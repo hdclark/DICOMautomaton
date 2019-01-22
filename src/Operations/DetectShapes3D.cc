@@ -13,7 +13,6 @@
 
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
-#include "../YgorImages_Functors/Compute/Sphere_Detect_Hough.h"
 #include "../YgorImages_Functors/Compute/Detect_Geometry_Clustered_RANSAC.h"
 #include "DetectShapes3D.h"
 #include "YgorImages.h"

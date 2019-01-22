@@ -27,9 +27,9 @@ bool ComputeDetectGeometryClusteredRANSAC(planar_image_collection<float,double> 
                           std::list<std::reference_wrapper<contour_collection<double>>>,
                           std::experimental::any user_data ){
 
-    //This routine performs Hough shape detection in 3D to identify fixed-radius spheres. 
+    //This routine performs shape detection in 3D to identify fixed-radius spheres. 
     //
-    // The Hough algorithm in 3D is computationally expensive. This routine should be provided images that already have
+    // 3D shape detection methods are computationally expensive. This routine should be provided images that already have
     // edges and/or lines separated from irrelevant voxels. A Canny edge detector is typical.
     // 
     // Contiguous image volumes must be processed together as a whole for proper 3D shape detection. Because grouping
