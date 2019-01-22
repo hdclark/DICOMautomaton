@@ -37,7 +37,7 @@ OperationDoc OpArgDocSpatialSharpen(void){
     out.args.back().desc = "Controls the (in-plane) sharpening estimator to use."
                       " Options are currently: sharpen_3x3 and unsharp_mask_5x5. The latter is based"
                       " on a 5x5 Gaussian blur estimator.";
-    out.args.back().default_val = "unsharp_mask";
+    out.args.back().default_val = "unsharp_mask_5x5";
     out.args.back().expected = true;
     out.args.back().examples = { "sharpen_3x3",
                             "unsharp_mask_5x5" };
@@ -52,8 +52,8 @@ Drover SpatialSharpen(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::
     const auto EstimatorStr = OptArgs.getValueStr("Estimator").value();
 
     //-----------------------------------------------------------------------------------------------------------------
-    const auto regex_shrp3x3 = std::regex("^sh?a?r?p?e?n?_?3x?3?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto regex_unsp5x5 = std::regex("^un?s?h?a?r?p?_?m?a?s?k?_?5x?5?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto regex_shrp3x3 = Compile_Regex("^sh?a?r?p?e?n?_?3?x?3?$");
+    const auto regex_unsp5x5 = Compile_Regex("^un?s?h?a?r?p?_?m?a?s?k?_?5?x?5?$");
 
     auto IAs_all = All_IAs( DICOM_data );
     auto IAs = Whitelist( IAs_all, ImageSelectionStr );
