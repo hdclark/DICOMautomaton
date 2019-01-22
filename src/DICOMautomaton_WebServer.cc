@@ -983,6 +983,7 @@ void BaseWebServerApplication::createComputeGB(void){
     std::map<std::string,std::string> OutputMimetype;
     const auto rows = table->rowCount(); 
     const auto cols = table->columnCount(); 
+    bool AllSuccessful = true;
     for(auto col = 1; col < cols; ++col){
         auto op_doc_l = (Known_Operations()[selected_op].first)(); // Documentation parameter list.
         OperationArgPkg op_args(selected_op); // The list of parameters passed to the operation.
@@ -1129,10 +1130,13 @@ void BaseWebServerApplication::createComputeGB(void){
             }
         }catch(const std::exception &e){
             feedback->setText("<p>Operation failed: "_s + e.what() + ".</p>");
+            AllSuccessful = false;
             //return;
         }
     }
-    feedback->setText("<p>Operation successful. </p>");
+    if(AllSuccessful){
+        feedback->setText("<p>Operation successful.</p>");
+    }
 
     gb->show();
     sep_break->setFocus(true);
