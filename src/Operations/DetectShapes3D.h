@@ -28,9 +28,9 @@
 
 #include "../Structs.h"
 #include "../YgorImages_Functors/Compute/Contour_Similarity.h"
+#include "../YgorImages_Functors/Compute/Detect_Geometry_Clustered_RANSAC.h"
 #include "../YgorImages_Functors/Compute/Per_ROI_Time_Courses.h"
 #include "../YgorImages_Functors/Compute/Per_ROI_Time_Courses.h"
-#include "../YgorImages_Functors/Compute/Sphere_Detect_Hough.h"
 #include "../YgorImages_Functors/Grouping/Misc_Functors.h"
 #include "../YgorImages_Functors/Processing/CT_Convert_NaNs_to_Air.h"
 #include "../YgorImages_Functors/Processing/CT_Perf_Pixel_Filter.h"
