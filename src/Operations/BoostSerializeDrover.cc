@@ -25,12 +25,13 @@ OperationDoc OpArgDocBoost_Serialize_Drover(void){
 
     out.args.emplace_back();
     out.args.back().name = "Filename";
-    out.args.back().desc = "The filename (or full path name) to which the serialized data should be written";
-    out.args.back().default_val = "/tmp/boost_serialized_drover.bin.gz";
+    out.args.back().desc = "The filename (or full path name) to which the serialized data should be written."
+                           " The file format is gzipped XML, which should be portable across most CPUs.";
+    out.args.back().default_val = "/tmp/boost_serialized_drover.xml.gz";
     out.args.back().expected = true;
-    out.args.back().examples = { "/tmp/out.bin.gz", 
-                            "./out.bin.gz",
-                            "out.bin.gz" };
+    out.args.back().examples = { "/tmp/out.xml.gz", 
+                            "./out.xml.gz",
+                            "out.xml.gz" };
     out.args.back().mimetype = "application/octet-stream";
 
     return out;
