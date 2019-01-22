@@ -1129,7 +1129,7 @@ void BaseWebServerApplication::createComputeGB(void){
             }
         }catch(const std::exception &e){
             feedback->setText("<p>Operation failed: "_s + e.what() + ".</p>");
-            return;
+            //return;
         }
     }
     feedback->setText("<p>Operation successful. </p>");
