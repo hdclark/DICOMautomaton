@@ -77,6 +77,7 @@ add_library(Operations_objs OBJECT
     MinkowskiSum3D.cc
     ModifyContourMetadata.cc
     ModifyImageMetadata.cc
+    NegatePixels.cc
     OptimizeStaticBeams.cc
     OrderImages.cc
     PlotPerROITimeCourses.cc
