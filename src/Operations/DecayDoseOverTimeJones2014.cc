@@ -30,9 +30,10 @@ OperationDoc OpArgDocDecayDoseOverTimeJones2014(void){
     out.name = "DecayDoseOverTimeJones2014";
 
     out.desc = 
-        "This operation transforms a dose map (assumed to be delivered some time in the past) to 'decay' or 'evaporate' or"
-        " 'forgive' some of the dose using the time-dependent model of Jones and Grant (2014;"
-        " doi:10.1016/j.clon.2014.04.027). This model is specific to reirradiation of central nervous tissues. See"
+        "This operation transforms a dose map (delivered some time in the past) to account for tissue recovery"
+        " (i.e., 'dose decay,' 'dose evaporation,' or 'dose forgivance')"
+        " using the time-dependent model of Jones and Grant (2014; doi:10.1016/j.clon.2014.04.027)."
+        " This model is specific to reirradiation of central nervous tissues. See"
         " the Jones and Grant paper or 'Nasopharyngeal Carcinoma' by Wai Tong Ng et al. (2016; doi:10.1007/174_2016_48) for"
         " more information.";
         
@@ -102,7 +103,7 @@ OperationDoc OpArgDocDecayDoseOverTimeJones2014(void){
 
     out.args.emplace_back();
     out.args.back().name = "ToleranceNumberOfFractions";
-    out.args.back().desc = "The number of fractions ('n') the 'lifetime dose tolerance' toxicity you are interested in."
+    out.args.back().desc = "The number of fractions ('n') for the 'lifetime dose tolerance' toxicity you are interested in."
                       " Note that this is converted to a BED_{a/b} so you can safely provide a 'nominal' value."
                       " If several apply, you can provide a single effective fractionation scheme's 'n'.";
     out.args.back().default_val = "35";
@@ -115,7 +116,8 @@ OperationDoc OpArgDocDecayDoseOverTimeJones2014(void){
     out.args.back().desc = "The number of years between radiotherapy courses. Note that this is normally estimated by"
                       " (1) extracting study/series dates from the provided dose files and (2) using the current"
                       " date as the second course date. Use this parameter to override the autodetected gap time."
-                      " Note: if the provided value is negative, autodetection will be used.";
+                      " Note: if the provided value is negative, autodetection will be used."
+                      " Autodetection can fail if the data has been anonymized with date-shifting.";
     out.args.back().default_val = "-1";
     out.args.back().expected = true;
     out.args.back().examples = { "0.91", "2.6", "5" };
@@ -124,13 +126,13 @@ OperationDoc OpArgDocDecayDoseOverTimeJones2014(void){
     out.args.emplace_back();
     out.args.back().name = "AlphaBetaRatio";
     out.args.back().desc = "The ratio alpha/beta (in Gray) to use when converting to a biologically-equivalent"
-                      " dose distribution for central nervous tissues. "
-                      " Jones and Grant (2014) recommend alpha/beta = 2 Gy to be conservative. "
-                      " It is more commonplace to use alpha/beta = 3 Gy, but this is less conservative and there "
+                      " dose distribution for central nervous tissues."
+                      " Jones and Grant (2014) recommend alpha/beta = 2 Gy to be conservative."
+                      " It is more commonplace to use alpha/beta = 3 Gy, but this is less conservative and there"
                       " is some evidence that it may be erroneous to use 3 Gy.";
     out.args.back().default_val = "2";
     out.args.back().expected = true;
-    out.args.back().examples = { "2", "3" };
+    out.args.back().examples = { "2", "2.5", "3" };
     
 
     out.args.emplace_back();
