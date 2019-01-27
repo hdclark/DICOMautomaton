@@ -49,6 +49,7 @@
 #include "Operations/CropROIDose.h"
 #include "Operations/DCEMRI_IAUC.h"
 #include "Operations/DCEMRI_Nonparametric_CE.h"
+#include "Operations/DetectShapes3D.h"
 #include "Operations/DICOMExportImagesAsDose.h"
 #include "Operations/DecayDoseOverTimeHalve.h"
 #include "Operations/DecayDoseOverTimeJones2014.h"
@@ -93,7 +94,9 @@
 #include "Operations/MinkowskiSum3D.h"
 #include "Operations/ModifyContourMetadata.h"
 #include "Operations/ModifyImageMetadata.h"
+#include "Operations/NegatePixels.h"
 #include "Operations/OptimizeStaticBeams.h"
+#include "Operations/OrderImages.h"
 #include "Operations/PlotPerROITimeCourses.h"
 #include "Operations/PreFilterEnormousCTValues.h"
 #include "Operations/PresentationImage.h"
@@ -155,13 +158,14 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["CropROIDose"] = std::make_pair(OpArgDocCropROIDose, CropROIDose);
     out["EQD2Convert"] = std::make_pair(OpArgDocEQD2Convert, EQD2Convert);
     out["DCEMRI_IAUC"] = std::make_pair(OpArgDocDCEMRI_IAUC, DCEMRI_IAUC);
-    out["DroverDebug"] = std::make_pair(OpArgDocDroverDebug, DroverDebug);
     out["DCEMRI_Nonparametric_CE"] = std::make_pair(OpArgDocDCEMRI_Nonparametric_CE, DCEMRI_Nonparametric_CE);
+    out["DetectShapes3D"] = std::make_pair(OpArgDocDetectShapes3D, DetectShapes3D);
     out["DecayDoseOverTimeHalve"] = std::make_pair(OpArgDocDecayDoseOverTimeHalve, DecayDoseOverTimeHalve);
     out["DecayDoseOverTimeJones2014"] = std::make_pair(OpArgDocDecayDoseOverTimeJones2014, DecayDoseOverTimeJones2014);
     out["DecimatePixels"] = std::make_pair(OpArgDocDecimatePixels, DecimatePixels);
     out["DeleteImages"] = std::make_pair(OpArgDocDeleteImages, DeleteImages);
     out["DICOMExportImagesAsDose"] = std::make_pair(OpArgDocDICOMExportImagesAsDose, DICOMExportImagesAsDose);
+    out["DroverDebug"] = std::make_pair(OpArgDocDroverDebug, DroverDebug);
     out["DumpAllOrderedImageMetadataToFile"] = std::make_pair(OpArgDocDumpAllOrderedImageMetadataToFile, DumpAllOrderedImageMetadataToFile);
     out["DumpAnEncompassedPoint"] = std::make_pair(OpArgDocDumpAnEncompassedPoint, DumpAnEncompassedPoint);
     out["DumpFilesPartitionedByTime"] = std::make_pair(OpArgDocDumpFilesPartitionedByTime, DumpFilesPartitionedByTime);
@@ -202,7 +206,9 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["ModifyContourMetadata"] = std::make_pair(OpArgDocModifyContourMetadata, ModifyContourMetadata);
     out["ModifyImageMetadata"] = std::make_pair(OpArgDocModifyImageMetadata, ModifyImageMetadata);
     out["MaxMinPixels"] = std::make_pair(OpArgDocMaxMinPixels, MaxMinPixels);
+    out["NegatePixels"] = std::make_pair(OpArgDocNegatePixels, NegatePixels);
     out["OptimizeStaticBeams"] = std::make_pair(OpArgDocOptimizeStaticBeams, OptimizeStaticBeams);
+    out["OrderImages"] = std::make_pair(OpArgDocOrderImages, OrderImages);
     out["PlotPerROITimeCourses"] = std::make_pair(OpArgDocPlotPerROITimeCourses, PlotPerROITimeCourses);
     out["PreFilterEnormousCTValues"] = std::make_pair(OpArgDocPreFilterEnormousCTValues, PreFilterEnormousCTValues);
     out["PresentationImage"] = std::make_pair(OpArgDocPresentationImage, PresentationImage);

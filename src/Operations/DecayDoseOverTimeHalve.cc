@@ -41,6 +41,13 @@ OperationDoc OpArgDocDecayDoseOverTimeHalve(void){
         " this routine."
     );
 
+    out.notes.emplace_back(
+        "Since this routine is meant to be applied multiple times in succession for different ROIs (which possibly"
+        " overlap), all images are imbued with a second channel that is treated as a mask. Mask channels are"
+        " permanently attached so that multiple passes will not erroneously decay dose. If this will be problematic,"
+        " the extra column should be trimmed immediately after calling this routine."
+    );
+
 
     out.args.emplace_back();
     out.args.back().name = "NormalizedROILabelRegex";
@@ -79,7 +86,7 @@ Drover DecayDoseOverTimeHalve(Drover DICOM_data, OperationArgPkg OptArgs, std::m
 
     DecayDoseOverTimeUserData ud;
     ud.model = DecayDoseOverTimeMethod::Halve;
-    ud.channel = -1; // -1 ==> all channels.
+    ud.channel = 0; // A second channel (added on-the-fly) will be used to store a modification mask.
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto ROILabelRegex = OptArgs.getValueStr("ROILabelRegex").value();

@@ -474,6 +474,15 @@ void BaseWebServerApplication::createOperationSelectorGB(void){
     auto selectcont = gb->addWidget(std::make_unique<Wt::WContainerWidget>());
     selectcont->addStyleClass("SelectorCont");
 
+    auto grouper = selectcont->addWidget(std::make_unique<Wt::WSelectionBox>());
+    grouper->setObjectName("op_select_gb_grouper");
+    grouper->setSelectionMode(Wt::SelectionMode::Single);
+    grouper->addStyleClass("OperationGrouper");
+    grouper->setVerticalSize(15);
+    grouper->disable();
+
+    (void*) selectcont->addWidget(std::make_unique<Wt::WBreak>());
+
     auto selector = selectcont->addWidget(std::make_unique<Wt::WSelectionBox>());
     selector->setObjectName("op_select_gb_selector");
     selector->setSelectionMode(Wt::SelectionMode::Single);
@@ -496,32 +505,20 @@ void BaseWebServerApplication::createOperationSelectorGB(void){
     feedback->setObjectName("op_select_gb_feedback");
     feedback->addStyleClass("FeedbackText");
 
-    auto known_ops = Known_Operations();
-    for(auto &anop : known_ops){
-        const auto n = anop.first;
-        if( ( n == "FVPicketFence" )
-        ||  ( n == "PresentationImage" )
-        //||  ( n == "HighlightROIs" )
-        //||  ( n == "DICOMExportImagesAsDose" )
-        //||  ( n == "ConvertDoseToImage" ) 
-        ||  ( n == "DecayDoseOverTimeJones2014" ) 
-        ||  ( n == "DecayDoseOverTimeHalve" ) 
-        //||  ( n == "EvaluateNTCPModels" ) 
-        //||  ( n == "EvaluateTCPModels" ) 
-        //||  ( n == "SeamContours" )
-        //||  ( n == "GrowContours" )
-        ||  ( n == "TrimROIDose" )
-        ||  ( n == "CropROIDose" )
-        ||  ( n == "EQD2Convert" )
-        ||  ( n == "BCCAExtractRadiomicFeatures" )
-    ){    //Whitelist ... for now.
-            selector->addItem(anop.first);
-        }
-    }
+    grouper->addItem("QA");
+    grouper->addItem("Planning");
+    grouper->addItem("Replans");
+    grouper->addItem("Modeling");
+    grouper->addItem("Research");
+    grouper->addItem("Misc");
+    //grouper->addItem("All");
+
+    grouper->enable();
     selector->enable();
     descpanel->enable();
 
     auto gobutton = gb->addWidget(std::make_unique<Wt::WPushButton>("Proceed"));
+    gobutton->disable();
 
     auto sep_break = root()->addWidget(std::make_unique<Wt::WBreak>());
     sep_break->setCanReceiveFocus(true);
@@ -532,6 +529,7 @@ void BaseWebServerApplication::createOperationSelectorGB(void){
         //if(selected.empty()) return; // Warn about selecting something?
         if(selector->currentText().empty()) return; // Warn about selecting something?
 
+        grouper->disable();
         selector->disable();
         gobutton->disable();
         descpanel->disable();
@@ -545,6 +543,7 @@ void BaseWebServerApplication::createOperationSelectorGB(void){
     auto describe = [=](){
         const std::string selected_op = selector->currentText().toUTF8();
         std::stringstream ss;
+        auto known_ops = Known_Operations();
         for(auto &anop : known_ops){
             const auto n = anop.first;
             if( n == selected_op ){
@@ -563,9 +562,176 @@ void BaseWebServerApplication::createOperationSelectorGB(void){
             }
         }
         descpanel->setText(Wt::WString(ss.str()));
+        gobutton->enable();
         return;
     };
     selector->activated().connect(std::bind(describe));
+
+    auto populate = [=](){
+        selector->disable();
+        selector->clear();
+        descpanel->setText(Wt::WString());
+        gobutton->disable();
+        if(grouper == nullptr) throw std::logic_error("Cannot find operation grouper widget in DOM tree. Cannot continue.");
+        const std::string selected_group = grouper->currentText().toUTF8(); 
+
+        auto known_ops = Known_Operations();
+        for(auto &anop : known_ops){
+            const auto n = anop.first;
+
+            if(selected_group == "QA"){
+                if( false
+                    ||  ( n == "AnalyzeLightRadFieldCoincidence" ) 
+                    ||  ( n == "ApplyCalibrationCurve" )
+                    ||  ( n == "ConvertDoseToImage" ) 
+                    ||  ( n == "FVPicketFence" )
+                    ||  ( n == "HighlightROIs" )
+                    ||  ( n == "PresentationImage" )
+                ){
+                    selector->addItem(anop.first);
+                }
+            }
+
+            if(selected_group == "Planning"){
+                if( false
+                    ||  ( n == "ConvertDoseToImage" ) 
+                    ||  ( n == "CropROIDose" )
+                    ||  ( n == "DecayDoseOverTimeHalve" ) 
+                    ||  ( n == "DecayDoseOverTimeJones2014" ) 
+                    ||  ( n == "DICOMExportImagesAsDose" )
+                    ||  ( n == "EQD2Convert" )
+                    ||  ( n == "OptimizeStaticBeams" )
+                    ||  ( n == "TrimROIDose" )
+                ){
+                    selector->addItem(anop.first);
+                }
+            }
+
+            if(selected_group == "Replans"){
+                if( false
+                    ||  ( n == "ConvertDoseToImage" ) 
+                    ||  ( n == "CropROIDose" )
+                    ||  ( n == "DecayDoseOverTimeHalve" ) 
+                    ||  ( n == "DecayDoseOverTimeJones2014" ) 
+                    ||  ( n == "DICOMExportImagesAsDose" )
+                    ||  ( n == "EQD2Convert" )
+                    ||  ( n == "TrimROIDose" )
+                ){
+                    selector->addItem(anop.first);
+                }
+            }
+
+            if(selected_group == "Modeling"){
+                if( false
+                    ||  ( n == "CT_Liver_Perfusion" ) 
+                    ||  ( n == "CT_Liver_Perfusion_First_Run" ) 
+                    ||  ( n == "CT_Liver_Perfusion_Ortho_Views" ) 
+                    ||  ( n == "CT_Liver_Perfusion_Pharmaco_1C2I_5Param" ) 
+                    ||  ( n == "CT_Liver_Perfusion_Pharmaco_1C2I_Reduced3Param" ) 
+                    ||  ( n == "DCEMRI_IAUC" ) 
+                    ||  ( n == "DCEMRI_Nonparametric_CE" ) 
+                    ||  ( n == "DumpPerROIParams_KineticModel_1C2I_5P" ) 
+                    ||  ( n == "UBC3TMRI_DCE" ) 
+                    ||  ( n == "UBC3TMRI_DCE_Differences" ) 
+                    ||  ( n == "UBC3TMRI_DCE_Experimental" ) 
+                    ||  ( n == "UBC3TMRI_IVIM_ADC" ) 
+                ){
+                    selector->addItem(anop.first);
+                }
+            }
+
+            if(selected_group == "Research"){
+                if( false
+                    ||  ( n == "BCCAExtractRadiomicFeatures" )
+                    ||  ( n == "ConvertDoseToImage" ) 
+                    ||  ( n == "DetectShapes3D" )
+                    ||  ( n == "DICOMExportImagesAsDose" )
+                    ||  ( n == "EvaluateNTCPModels" ) 
+                    ||  ( n == "EvaluateTCPModels" ) 
+                    ||  ( n == "GrowContours" )
+                    ||  ( n == "HighlightROIs" )
+                    ||  ( n == "MinkowskiSum3D" )
+                    ||  ( n == "OrderImages" )
+                    ||  ( n == "PresentationImage" )
+                    ||  ( n == "SeamContours" )
+                    ||  ( n == "SimplifyContours" )
+                    ||  ( n == "SubtractImages" )
+                    ||  ( n == "ThresholdImages" )
+                ){
+                    selector->addItem(anop.first);
+                }
+            }
+
+            if(selected_group == "Misc"){
+                if( false
+                    ||  ( n == "AutoCropImages" )
+                    ||  ( n == "Average" )
+                    ||  ( n == "BoostSerializeDrover" ) 
+                    ||  ( n == "ContourBooleanOperations" )
+                    ||  ( n == "ContouringAides" ) 
+                    ||  ( n == "ContourSimilarity" )
+                    ||  ( n == "ContourViaThreshold" )
+                    ||  ( n == "ContourVote" )
+                    ||  ( n == "ContourWholeImages" )
+                    ||  ( n == "ConvertDoseToImage" ) 
+                    ||  ( n == "ConvertImageToDose" )
+                    ||  ( n == "ConvertNaNsToAir" )
+                    ||  ( n == "ConvertNaNsToZeros" )
+                    ||  ( n == "CopyImages" )
+                    ||  ( n == "CropImageDoseToROIs" )
+                    ||  ( n == "CropImages" )
+                    ||  ( n == "DecimatePixels" )
+                    ||  ( n == "DICOMExportImagesAsDose" )
+                    ||  ( n == "DroverDebug" )
+                    ||  ( n == "DumpAllOrderedImageMetadataToFile" )
+                    ||  ( n == "DumpAnEncompassedPoint" )
+                    ||  ( n == "DumpImageMetadataOccurrencesToFile" )
+                    ||  ( n == "DumpPixelValuesOverTimeForAnEncompassedPoint" )
+                    ||  ( n == "EvaluateDoseVolumeHistograms" )
+                    ||  ( n == "EvaluateDoseVolumeStats" )
+                    ||  ( n == "GenerateSurfaceMask" )
+                    ||  ( n == "GenerateVirtualDataContourViaThresholdTestV1" )
+                    ||  ( n == "GenerateVirtualDataDoseStairsV1" )
+                    ||  ( n == "GenerateVirtualDataPerfusionV1" )
+                    ||  ( n == "GiveWholeImageArrayABoneWindowLevel" )
+                    ||  ( n == "GiveWholeImageArrayAHeadAndNeckWindowLevel" )
+                    ||  ( n == "GiveWholeImageArrayAnAbdominalWindowLevel" )
+                    ||  ( n == "GiveWholeImageArrayAThoraxWindowLevel" )
+                    ||  ( n == "GridBasedRayCastDoseAccumulate" )
+                    ||  ( n == "GrowContours" )
+                    ||  ( n == "HighlightROIs" )
+                    ||  ( n == "LogScale" )
+                    ||  ( n == "MeldDose" )
+                    ||  ( n == "MinkowskiSum3D" )
+                    ||  ( n == "ModifyContourMetadata" )
+                    ||  ( n == "ModifyImageMetadata" )
+                    ||  ( n == "OptimizeStaticBeams" )
+                    ||  ( n == "OrderImages" )
+                    ||  ( n == "PresentationImage" )
+                    ||  ( n == "PruneEmptyImageDoseArrays" )
+                    ||  ( n == "PurgeContours" )
+                    ||  ( n == "SeamContours" )
+                    ||  ( n == "SelectSlicesIntersectingROI" )
+                    ||  ( n == "SimplifyContours" )
+                    ||  ( n == "SpatialBlur" )
+                    ||  ( n == "SpatialDerivative" )
+                    ||  ( n == "SpatialSharpen" )
+                    ||  ( n == "SubtractImages" )
+                    ||  ( n == "SupersampleImageGrid" )
+                    ||  ( n == "ThresholdImages" )
+                ){
+                    selector->addItem(anop.first);
+                }
+            }
+
+            //if(selected_group == "All"){
+            //    selector->addItem(anop.first);
+            //}
+        }
+        selector->enable();
+        return;
+    };
+    grouper->activated().connect(std::bind(populate));
 
     gb->show();
     sep_break->setFocus(true);
@@ -817,6 +983,7 @@ void BaseWebServerApplication::createComputeGB(void){
     std::map<std::string,std::string> OutputMimetype;
     const auto rows = table->rowCount(); 
     const auto cols = table->columnCount(); 
+    bool AllSuccessful = true;
     for(auto col = 1; col < cols; ++col){
         auto op_doc_l = (Known_Operations()[selected_op].first)(); // Documentation parameter list.
         OperationArgPkg op_args(selected_op); // The list of parameters passed to the operation.
@@ -963,10 +1130,13 @@ void BaseWebServerApplication::createComputeGB(void){
             }
         }catch(const std::exception &e){
             feedback->setText("<p>Operation failed: "_s + e.what() + ".</p>");
-            return;
+            AllSuccessful = false;
+            //return;
         }
     }
-    feedback->setText("<p>Operation successful. </p>");
+    if(AllSuccessful){
+        feedback->setText("<p>Operation successful.</p>");
+    }
 
     gb->show();
     sep_break->setFocus(true);
@@ -1087,6 +1257,7 @@ void BaseWebServerApplication::createComputeGB(void){
                                          "file_loading_gb_feedback",
 
                                          "op_select_gb",
+                                         "op_select_gb_grouper",
                                          "op_select_gb_selector",
                                          "op_select_gb_descpanel",
                                          "op_select_gb_feedback",

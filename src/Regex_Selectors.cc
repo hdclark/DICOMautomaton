@@ -228,17 +228,37 @@ Whitelist( std::list<std::list<std::shared_ptr<Image_Array>>::iterator> ias,
     // numerical specifiers, e.g., "#0" (front), "#1" (second), "#-0" (last), and "#-1" (second-from-last).
     do{
         const auto regex_none  = Compile_Regex("^no?n?e?$");
+        const auto regex_all   = Compile_Regex("^al?l?$");
         const auto regex_first = Compile_Regex("^fi?r?s?t?$");
         const auto regex_last  = Compile_Regex("^la?s?t?$");
-        const auto regex_all   = Compile_Regex("^al?l?$");
-        const auto regex_pnum  = Compile_Regex("^#[0-9].*$");
-        const auto regex_nnum  = Compile_Regex("^#-[0-9].*$");
+        const auto regex_pnum  = Compile_Regex("^[#][0-9].*$");
+        const auto regex_nnum  = Compile_Regex("^[#]-[0-9].*$");
+
+        const auto regex_i_none  = Compile_Regex("^[!]no?n?e?$"); // Inverted variants of the above.
+        const auto regex_i_all   = Compile_Regex("^[!]al?l?$");
+        const auto regex_i_first = Compile_Regex("^[!]fi?r?s?t?$");
+        const auto regex_i_last  = Compile_Regex("^[!]la?s?t?$");
+        const auto regex_i_pnum  = Compile_Regex("^[!][#][0-9].*$");
+        const auto regex_i_nnum  = Compile_Regex("^[!][#]-[0-9].*$");
         
+        if(std::regex_match(Specifier, regex_i_none)){
+            return ias;
+        }
         if(std::regex_match(Specifier, regex_none)){
             ias.clear();
             return ias;
         }
+
+        if(std::regex_match(Specifier, regex_i_all)){
+            ias.clear();
+            return ias;
+        }
         if(std::regex_match(Specifier, regex_all)){
+            return ias;
+        }
+
+        if(std::regex_match(Specifier, regex_i_first)){
+            if(!ias.empty()) ias.pop_front();
             return ias;
         }
         if(std::regex_match(Specifier, regex_first)){
@@ -246,13 +266,33 @@ Whitelist( std::list<std::list<std::shared_ptr<Image_Array>>::iterator> ias,
             if(!ias.empty()) out.emplace_back(ias.front());
             return out;
         }
+
+        if(std::regex_match(Specifier, regex_i_last)){
+            if(!ias.empty()) ias.pop_back();
+            return ias;
+        }
         if(std::regex_match(Specifier, regex_last)){
             decltype(ias) out;
             if(!ias.empty()) out.emplace_back(ias.back());
             return out;
         }
+
+        if(std::regex_match(Specifier, regex_i_pnum)){
+            auto pnum_extractor = std::regex("^[!][#]([0-9]*).*$", std::regex::icase |
+                                                                   std::regex::optimize |
+                                                                   std::regex::extended);
+            auto N = std::stoul(GetFirstRegex(Specifier, pnum_extractor));
+
+            if(N < ias.size()){
+                auto l_it = std::next( ias.begin(), N );
+                ias.erase( l_it );
+            }
+            return ias;
+        }
         if(std::regex_match(Specifier, regex_pnum)){
-            auto pnum_extractor = Compile_Regex("^#([0-9]*).*$");
+            auto pnum_extractor = std::regex("^[#]([0-9]*).*$", std::regex::icase |
+                                                                std::regex::optimize |
+                                                                std::regex::extended);
             auto N = std::stoul(GetFirstRegex(Specifier, pnum_extractor));
 
             decltype(ias) out;
@@ -262,8 +302,28 @@ Whitelist( std::list<std::list<std::shared_ptr<Image_Array>>::iterator> ias,
             }
             return out;
         }
+
+        if(std::regex_match(Specifier, regex_i_nnum)){
+            auto nnum_extractor = std::regex("^[!][#]-([0-9]*).*$", std::regex::icase |
+                                                                    std::regex::optimize |
+                                                                    std::regex::extended);
+            auto N = std::stoul(GetFirstRegex(Specifier, nnum_extractor));
+
+            if(N < ias.size()) return ias;
+
+            // Note: this one is slightly harder than the rest because you cannot directly erase() a reverse iterator.
+            decltype(ias) out;
+            size_t i = ias.size();
+            for(auto l_it = ias.begin(); l_it != ias.end(); ++l_it, --i){
+                if(i == N) continue;
+                out.emplace_back(*l_it);
+            }
+            return out;
+        }
         if(std::regex_match(Specifier, regex_nnum)){
-            auto nnum_extractor = Compile_Regex("^#-([0-9]*).*$");
+            auto nnum_extractor = std::regex("^[#]-([0-9]*).*$", std::regex::icase |
+                                                                 std::regex::optimize |
+                                                                 std::regex::extended);
             auto N = std::stoul(GetFirstRegex(Specifier, nnum_extractor));
 
             decltype(ias) out;
@@ -273,6 +333,7 @@ Whitelist( std::list<std::list<std::shared_ptr<Image_Array>>::iterator> ias,
             }
             return out;
         }
+
     }while(false);
 
     throw std::invalid_argument("Image selection is not valid. Cannot continue.");
@@ -304,7 +365,10 @@ OperationArgDoc IAWhitelistOpArgDoc(void){
                " Positional specifiers can be 'first', 'last', 'none', or 'all' literals."
                " Additionally '#N' for some positive integer N selects the Nth image array (with zero-based indexing)."
                " Likewise, '#-N' selects the Nth-from-last image array."
+               " Positional specifiers can be inverted by prefixing with a '!'."
                " Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex."
+               " In order to invert metadata-based selectors, the regex logic must be inverted"
+               " (i.e., you can *not* prefix metadata-based selectors with a '!')."
                " Multiple criteria can be specified by separating them with a ';' and are applied in the order specified."
                " Both positional and metadata-based criteria can be mixed together."
                " Note that image arrays can hold anything, but will typically represent a single contiguous"
@@ -312,7 +376,9 @@ OperationArgDoc IAWhitelistOpArgDoc(void){
                " Note regexes are case insensitive and should use extended POSIX syntax.";
     out.default_val = "all";
     out.expected = true;
-    out.examples = { "last", "first", "all", "none", "#0", "#-0",
+    out.examples = { "last", "first", "all", "none", 
+                     "#0", "#-0",
+                     "!last", "!#-3",
                      "key@.*value.*", "key1@.*value1.*;key2@^value2$;first" };
 
     return out;

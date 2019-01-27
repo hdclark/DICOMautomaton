@@ -32,6 +32,7 @@ add_library(Operations_objs OBJECT
     ConvertNaNsToZeros.cc
     DCEMRI_Nonparametric_CE.cc
     DCEMRI_IAUC.cc
+    DetectShapes3D.cc
     DroverDebug.cc
     DecayDoseOverTimeJones2014.cc
     DecayDoseOverTimeHalve.cc
@@ -76,7 +77,9 @@ add_library(Operations_objs OBJECT
     MinkowskiSum3D.cc
     ModifyContourMetadata.cc
     ModifyImageMetadata.cc
+    NegatePixels.cc
     OptimizeStaticBeams.cc
+    OrderImages.cc
     PlotPerROITimeCourses.cc
     PreFilterEnormousCTValues.cc
     PresentationImage.cc

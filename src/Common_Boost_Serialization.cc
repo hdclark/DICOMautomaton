@@ -44,16 +44,13 @@ Common_Boost_Serialize_Drover(const Drover &in,
 
     //This routine serializes the entire Drover class to a single file.
     //
-    // NOTE: Because these dumps can be large:
-    //        1. Boost.Iostreams are used to compress the outgoing file stream, and
-    //        2. Non-portable binary data is written.
-    //
+    // NOTE: Gzipped XML output is the default. XML dumps are large, but binary dumps are not portable.
     //       If you need to transport this data, inspect it manually, or ad-hoc transfer the data to another
     //       program that does not understand the file as-is, you should use an accompanying helper routine 
     //       to convert the format. In other words, you should not alter how *this* routine writes data.
     //
 
-    return Common_Boost_Serialize_Drover_to_Gzip_Binary(in,Filename);
+    return Common_Boost_Serialize_Drover_to_Gzip_XML(in,Filename);
 }
 
 
@@ -91,27 +88,17 @@ Common_Boost_Deserialize_Drover(Drover &out,
         if(length == 0) return false;
     }
 
-    //Binary, gzip compression.
+    //XML, gzip compression.
     try{
         std::ifstream ifs(Filename.string(), std::ios::in | std::ios::binary);
 
         boost::iostreams::filtering_istream ifsb;
+        ifsb.imbue(std::locale(std::locale().classic(), new boost::math::nonfinite_num_get<char>));
         ifsb.push(boost::iostreams::gzip_decompressor());
         ifsb.push(ifs);
-
+ 
         {
-            boost::archive::binary_iarchive ar(ifsb);
-            ar & boost::serialization::make_nvp("dicom_data", out);
-        }
-        return true;
-    }catch(const std::exception &){ }
-
-    //Binary, no compression.
-    try{
-        std::ifstream ifs(Filename.string(), std::ios::in | std::ios::binary);
-
-        {
-            boost::archive::binary_iarchive ar(ifs);
+            boost::archive::xml_iarchive ar(ifsb, boost::archive::no_codecvt);
             ar & boost::serialization::make_nvp("dicom_data", out);
         }
         return true;
@@ -133,17 +120,27 @@ Common_Boost_Deserialize_Drover(Drover &out,
         return true;
     }catch(const std::exception &){ }
 
-    //XML, gzip compression.
+    //Binary, gzip compression.
     try{
         std::ifstream ifs(Filename.string(), std::ios::in | std::ios::binary);
 
         boost::iostreams::filtering_istream ifsb;
-        ifsb.imbue(std::locale(std::locale().classic(), new boost::math::nonfinite_num_get<char>));
         ifsb.push(boost::iostreams::gzip_decompressor());
         ifsb.push(ifs);
- 
+
         {
-            boost::archive::xml_iarchive ar(ifsb, boost::archive::no_codecvt);
+            boost::archive::binary_iarchive ar(ifsb);
+            ar & boost::serialization::make_nvp("dicom_data", out);
+        }
+        return true;
+    }catch(const std::exception &){ }
+
+    //Binary, no compression.
+    try{
+        std::ifstream ifs(Filename.string(), std::ios::in | std::ios::binary);
+
+        {
+            boost::archive::binary_iarchive ar(ifs);
             ar & boost::serialization::make_nvp("dicom_data", out);
         }
         return true;

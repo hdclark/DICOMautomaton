@@ -19,9 +19,19 @@ RUN printf -- 'Server = http://mirror.cedille.club/archlinux/$repo/os/$arch\n' >
 
 # Install build dependencies.
 RUN pacman -Sy --noconfirm archlinux-keyring && \
-    pacman -Syu --noconfirm --needed base-devel git cmake gcc vim gdb screen \
+    pacman -Syu --noconfirm --needed \
+      base-devel \
+      git \
+      cmake \
+      gcc \
+      vim \
+      gdb \
+      screen \
     ` # Needed for an AUR helper ` \
-    sudo pyalpm wget rsync && \
+      sudo \
+      pyalpm \
+      wget \
+      rsync && \
     rm -f /var/cache/pacman/pkg/*
 
 
@@ -125,6 +135,14 @@ RUN chown -R aurbuild:aurbuild . && \
     su - aurbuild -c "cd /dcma && makepkg --syncdeps --install --clean --needed --noconfirm" && \
     git reset --hard && \
     git clean -fxd :/ 
+
+
+# Attempt to shrink the image.
+#RUN pacman -Rsc --nosave --noconfirm git cmake gcc vim gdb screen pyalpm wget rsync && \
+#    ` # Remove unnecessary packages (e.g., make- and optional-dependencies). ` \
+#    pacman -Qdttq | sudo pacman -Rns --noconfirm - && \
+#    rm -rf /yay/ /ygor/ /ygorcluster/ /explicator/ /dcma/ && \
+#    rm -f /var/cache/pacman/pkg/* || true
 
 
 # Default to launching the webserver.
