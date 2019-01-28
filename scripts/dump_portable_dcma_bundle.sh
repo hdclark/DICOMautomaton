@@ -24,6 +24,7 @@ mkdir -p "${out_dir}"
 rsync -L -r --delete \
   --exclude='ld-linux*' \
   --exclude='libc.*' \
+  --exclude='libm.*' \
   $( ldd $(which dicomautomaton_dispatcher) | 
      grep '=>' | 
      sed -e 's@.*=> @@' -e 's@ (.*@@' 
