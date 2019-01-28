@@ -85,6 +85,7 @@ add_library(Operations_objs OBJECT
     PresentationImage.cc
     PruneEmptyImageDoseArrays.cc
     PurgeContours.cc
+    RankPixels.cc
     SeamContours.cc
     SelectSlicesIntersectingROI.cc
     SFML_Viewer.cc

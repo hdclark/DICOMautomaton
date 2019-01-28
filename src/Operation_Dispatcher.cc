@@ -102,6 +102,7 @@
 #include "Operations/PresentationImage.h"
 #include "Operations/PruneEmptyImageDoseArrays.h"
 #include "Operations/PurgeContours.h"
+#include "Operations/RankPixels.h"
 #include "Operations/SFML_Viewer.h"
 #include "Operations/SimplifyContours.h"
 #include "Operations/SeamContours.h"
@@ -214,6 +215,7 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["PresentationImage"] = std::make_pair(OpArgDocPresentationImage, PresentationImage);
     out["PruneEmptyImageDoseArrays"] = std::make_pair(OpArgDocPruneEmptyImageDoseArrays, PruneEmptyImageDoseArrays);
     out["PurgeContours"] = std::make_pair(OpArgDocPurgeContours, PurgeContours);
+    out["RankPixels"] = std::make_pair(OpArgDocRankPixels, RankPixels);
     out["SeamContours"] = std::make_pair(OpArgDocSeamContours, SeamContours);
     out["SelectSlicesIntersectingROI"] = std::make_pair(OpArgDocSelectSlicesIntersectingROI, SelectSlicesIntersectingROI);
     out["SFML_Viewer"] = std::make_pair(OpArgDocSFML_Viewer, SFML_Viewer);
