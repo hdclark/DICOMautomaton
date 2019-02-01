@@ -32,6 +32,7 @@
 #include "Operations/CT_Liver_Perfusion_Ortho_Views.h"
 #include "Operations/CT_Liver_Perfusion_Pharmaco_1Compartment2Input_5Param.h"
 #include "Operations/CT_Liver_Perfusion_Pharmaco_1Compartment2Input_Reduced3Param.h"
+#include "Operations/ComparePixels.h"
 #include "Operations/ContourBasedRayCastDoseAccumulate.h"
 #include "Operations/ContourBooleanOperations.h"
 #include "Operations/ContourSimilarity.h"
@@ -142,6 +143,7 @@ std::map<std::string, op_packet_t> Known_Operations(void){
                                                                     CT_Liver_Perfusion_Pharmaco_1C2I_5Param);
     out["CT_Liver_Perfusion_Pharmaco_1C2I_Reduced3Param"] = std::make_pair(OpArgDocCT_Liver_Perfusion_Pharmaco_1C2I_Reduced3Param, 
                                                                            CT_Liver_Perfusion_Pharmaco_1C2I_Reduced3Param);
+    out["ComparePixels"] = std::make_pair(OpArgDocComparePixels, ComparePixels);
     out["ContourBooleanOperations"] = std::make_pair(OpArgDocContourBooleanOperations, ContourBooleanOperations);
     out["ContourBasedRayCastDoseAccumulate"] = std::make_pair(OpArgDocContourBasedRayCastDoseAccumulate, ContourBasedRayCastDoseAccumulate);
     out["ContourSimilarity"] = std::make_pair(OpArgDocContourSimilarity, ContourSimilarity);
