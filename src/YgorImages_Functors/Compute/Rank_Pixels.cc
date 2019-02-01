@@ -86,8 +86,8 @@ bool ComputeRankPixels(planar_image_collection<float,double> &imagecoll,
                         const auto origval = static_cast<double>(img_it->value(row, col, chan));
                         if(isininc( user_data_s->inc_lower_threshold, origval, user_data_s->inc_upper_threshold)){
 
-                            auto l_it = std::lower_bound(std::begin(samples), std::end(samples), val); // First instance of val.
-                            auto u_it = std::upper_bound(l_it, std::end(samples), val); // One after last instance of val.
+                            auto l_it = std::lower_bound(std::begin(samples), std::end(samples), origval); // First instance of val.
+                            auto u_it = std::upper_bound(l_it, std::end(samples), origval); // One after last instance of val.
 
                             double newval = std::numeric_limits<double>::quiet_NaN();
                             const auto l_rank = std::distance(std::begin(samples), l_it);
