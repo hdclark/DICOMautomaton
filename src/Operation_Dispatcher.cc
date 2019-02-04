@@ -1,4 +1,4 @@
-//oPERATIon_Dispatcher.cc - A part of DICOMautomaton 2015, 2016, 2017, 2018. Written by hal clark.
+//Operation_Dispatcher.cc - A part of DICOMautomaton 2015, 2016, 2017, 2018. Written by hal clark.
 //
 // This routine routes loaded data to/through specified operations.
 // Operations can be anything, e.g., analyses, serialization, and visualization.

@@ -16,7 +16,6 @@ typedef std::pair<op_doc_func_t,op_func_t> op_packet_t;
 
 std::map<std::string, op_packet_t> Known_Operations(void);
 
-
 bool Operation_Dispatcher( Drover &DICOM_data,
                            std::map<std::string,std::string> &InvocationMetadata,
                            std::string &FilenameLex, 
