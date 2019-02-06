@@ -108,14 +108,13 @@ Drover ComparePixels(Drover DICOM_data,
     }
     std::list<std::reference_wrapper<planar_image_collection<float, double>>> RIARL = { std::ref( (*( RIAs.front() ))->imagecoll ) };
 
-//Need:  std::list<std::reference_wrapper<planar_image_collection<T,R>>>
-//Have:  std::list<std::list<std::shared_ptr<Image_Array>>::iterator>
 
     auto IAs_all = All_IAs( DICOM_data );
     auto IAs = Whitelist( IAs_all, ImageSelectionStr );
     for(auto & iap_it : IAs){
 
         ComputeCompareImagesUserData ud;
+        // TODO: set options.
         //ud. ... = ...;
 
         if(!(*iap_it)->imagecoll.Compute_Images( ComputeCompareImages, 

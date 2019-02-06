@@ -17,8 +17,32 @@
 template <class T, class R> class planar_image_collection;
 template <class T> class contour_collection;
 
+typedef enum {
+    DTA,             // Distance-to-agreement (i.e., search neighbourhood until agreement is found).
+    Discrepancy,     // Discrepancy (i.e., value comparison from voxel to nearest reference voxel only).
+    GammaIndex,      // Gamma index -- a blend of DTA and discrepancy comparisons. 
+} ComputeCompareImagesComparisonMethod;
+
 
 struct ComputeCompareImagesUserData {
+
+    // -----------------------------
+    // The type of comparison method to use.
+
+    //ComputeCompareImagesComparisonMethod comparison_method = ComputeCompareImagesComparisonMethod::Discrepancy;
+    //ComputeCompareImagesComparisonMethod comparison_method = ComputeCompareImagesComparisonMethod::DTA;
+    ComputeCompareImagesComparisonMethod comparison_method = ComputeCompareImagesComparisonMethod::GammaIndex;
+
+
+    // -----------------------------
+    // The channel to consider. 
+    //
+    // Note: Channel numbers in the images that will be edited and reference images must match.
+    long int channel = 0;
+
+
+    // -----------------------------
+    // Parameters for pixel thresholds.
 
     // Pixel thresholds for the images that will be edited. Only pixels with values between these thresholds (inclusive)
     // will be compared.
@@ -28,31 +52,51 @@ struct ComputeCompareImagesUserData {
     // Pixel thresholds for the reference images. Only pixels with values between these thresholds (inclusive)
     // will be made available for comparison.
     //
-    // Note that these thresholds should accommodate at least the acceptable discrepancy range, and ideally a reasonable
-    // buffer beyond, otherwise the comparison can fail (possibly in hard-to-notice ways). These thresholds are meant to
-    // exclude obviously irrelevant voxels or invalid portions of the images.
+    // Note: These thresholds should accommodate at least the acceptable discrepancy range, and ideally a reasonable
+    //      buffer beyond, otherwise the comparison can fail (possibly in hard-to-notice ways). These thresholds are
+    //      meant to exclude obviously irrelevant voxels or invalid portions of the images.
     double ref_img_inc_lower_threshold = -(std::numeric_limits<double>::infinity());
     double ref_img_inc_upper_threshold = std::numeric_limits<double>::infinity();
 
-    // The channel to consider. 
+
+    // -----------------------------
+    // Parameters for all comparisons involving a distance-to-agreement (DTA) search.
+    
+    // The difference in voxel values considered to be sufficiently equal (absolute; in voxel intensity units).
     //
-    // Note that the channel numbers in the images that will be edited and reference images must match.
-    long int channel = 0;
+    // Note: This value CAN be zero.
+    double DTA_vox_val_eq_abs = 1.0E-3;
+    
+    // The difference in voxel values considered to be sufficiently equal (~percent-difference; in %).
+    //
+    // Note: This value CAN be zero.
+    double DTA_vox_val_eq_reldiff = 1.0;
 
-    // Comparisons involving a distance-to-agreement (DTA) search.
-    double DTA_vox_val_eq_abs = 1.0E-3;  // The difference in voxel values considered to be sufficiently equal (absolute; in voxel intensity units).
-    double DTA_vox_val_eq_pdiff = 1.0;   // The difference in voxel values considered to be sufficiently equal (percent-difference; in %).
-    double DTA_sampling_dx = 0.1;        // Sampling resolution (in DICOM units).
+    // Maximally acceptable distance-to-agreement (in DICOM units: mm) above which to stop searching.
+    //
+    // Note: Some voxels further than the DTA_max may be evaluated. All voxels within the DTA_max will be evaluated.
+    double DTA_max = 30.0;
 
 
-    // Gamma comparisons.
-    double gamma_DTA_max = 3.0; // Maximally acceptable distance-to-agreement (in DICOM units).
-    double gamma_DTA_stop_when_max_exceeded = true; // Halt spatial searching if the gamma index will necessarily indicate failure.
-                                                    // This can considerably reduce the computational effort required,
-                                                    // but the reported gamma indicies will be invalid when they are >1.
+    // -----------------------------
+    // Parameters for Gamma comparisons.
 
-    double gamma_Dis_max_abs = 1.0;    // Voxel value discrepancy (absolute; in voxel intensity units).
-    double gamma_Dis_max_pdiff = 1.0;  // Voxel value discrepancy (percent-difference; in %);
+    // Maximally acceptable distance-to-agreement (in DICOM units: mm).
+    //
+    // Note: This parameter can differ from the DTA_max search cut-off, but should be <= to it.
+    double gamma_DTA_threshold = 5.0;
+
+    // Voxel value relative discrepancy (~percent-difference; in %);
+    double gamma_Dis_reldiff_threshold = 5.0;
+
+
+    // Halt spatial searching if the gamma index will necessarily indicate failure.
+    //
+    // Note: This can parameter can drastically reduce the computational effort required to compute the gamma index,
+    //       but the reported gamma values will be invalid whenever they are >1. This is often tolerable since the
+    //       magnitude only matters when it is <1.
+    double gamma_terminate_when_max_exceeded = true;
+    double gamma_terminated_early = std::nextafter(1.0, std::numeric_limits<double>::infinity());
 
 };
 

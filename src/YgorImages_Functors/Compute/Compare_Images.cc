@@ -11,12 +11,6 @@
 #include <ostream>
 #include <stdexcept>
 
-#include <boost/geometry.hpp>
-#include <boost/geometry/geometries/point.hpp>
-//#include <boost/geometry/geometries/box.hpp>
-
-#include <boost/geometry/index/rtree.hpp>
-
 #include "../Grouping/Misc_Functors.h"
 #include "../ConvenienceRoutines.h"
 #include "Compare_Images.h"
@@ -32,8 +26,6 @@ bool ComputeCompareImages(planar_image_collection<float,double> &imagecoll,
                           std::list<std::reference_wrapper<planar_image_collection<float,double>>> external_imgs,
                           std::list<std::reference_wrapper<contour_collection<double>>> ccsl,
                           std::experimental::any user_data ){
-
-    FUNCERR("This routine is not yet implemented.");
 
     // This routine compares pixel values between two image arrays in any combination of 2D and 3D. It support multiple
     // comparison types.
@@ -83,49 +75,31 @@ bool ComputeCompareImages(planar_image_collection<float,double> &imagecoll,
 
     const auto channel = user_data_s->channel;
 
-    std::list<std::reference_wrapper<planar_image<float,double>>> selected_imgs;
-    for(auto &imgcoll_refw : external_imgs){
-        for(auto &img : imgcoll_refw.get().images){
-            selected_imgs.push_back( std::ref(img) );
+    const auto inaccessible_val = std::numeric_limits<double>::quiet_NaN();
+
+    const auto machine_eps = std::sqrt(std::numeric_limits<double>::epsilon());
+
+    const auto relative_diff = [](const double &A, const double &B) -> double {
+        const auto max_abs = std::max( std::abs(A), std::abs(B) );
+        const auto machine_eps = std::sqrt(std::numeric_limits<double>::epsilon());
+        return (max_abs < machine_eps) ? 0.0 
+                                       : std::abs(A-B) / max_abs;
+    };
+
+    // Ensure the reference images form a regular grid.
+    {
+        std::list<std::reference_wrapper<planar_image<float,double>>> selected_imgs;
+        for(auto &imgcoll_refw : external_imgs){
+            for(auto &img : imgcoll_refw.get().images){
+                selected_imgs.push_back( std::ref(img) );
+            }
+        }
+
+        if(!Images_Form_Rectilinear_Grid(selected_imgs)){
+            FUNCWARN("Reference images do not form a rectilinear grid. Cannot continue");
+            return false;
         }
     }
-
-    // Spatially-index the (relevant) voxels in the selected images so we can easily query for nearby voxels.
-    constexpr size_t MaxElementsInANode = 16; // 16, 32, 128, 256, ... ?
-    typedef boost::geometry::index::rstar<MaxElementsInANode> RTreeParameter_t;
-
-    typedef float UserData_t;
-    typedef boost::geometry::model::point<float, 3, boost::geometry::cs::cartesian> point_t;
-    typedef std::pair<point_t, UserData_t> dat_t;
-    typedef boost::geometry::index::rtree<dat_t,RTreeParameter_t> RTree_t;
-
-    RTree_t rtree;
-    std::reference_wrapper<RTree_t> rtree_refw( std::ref(rtree) ); // A copyable reference to the rtree.
-
-    long int VoxelCount = 0;
-    for(auto & img_refw : selected_imgs){
-        for(auto row = 0; row < img_refw.get().rows; ++row){
-            for(auto col = 0; col < img_refw.get().columns; ++col){
-                const auto val = static_cast<double>(img_refw.get().value(row, col, channel));
-                if(isininc( user_data_s->ref_img_inc_lower_threshold, val, user_data_s->ref_img_inc_upper_threshold)){
-                    const auto p = img_refw.get().position(row,col);
-                    //const auto index = img_refw.get().index(row,col,chan);
-                    //rtree.insert(CDat_t({ p.x, p.y, p.z }, {}, 
-                    //                    std::make_pair(&(*img_it), index) ));
-
-                    point_t bgi_p(p.x, p.y, p.z);
-                    rtree.insert(std::make_pair(bgi_p, val));
-                    ++VoxelCount;
-                }
-            } //Loop over cols
-        } //Loop over rows
-    } // Loop over images.
-    if( VoxelCount == 0 ){
-        throw std::runtime_error("No voxels could be indexed. Unable to continue.");
-        // Note: Check if the images contain any voxels and also check the thresholds are appropriate.
-    }
-    FUNCINFO("Number of voxels spatially indexed: " << VoxelCount);
-    
 
     Mutate_Voxels_Opts mv_opts;
     mv_opts.editstyle      = Mutate_Voxels_Opts::EditStyle::InPlace;
@@ -135,405 +109,306 @@ bool ComputeCompareImages(planar_image_collection<float,double> &imagecoll,
     mv_opts.adjacency      = Mutate_Voxels_Opts::Adjacency::SingleVoxel;
     mv_opts.maskmod        = Mutate_Voxels_Opts::MaskMod::Noop;
 
+    size_t N_remaining_imgs = imagecoll.images.size();
+
     for(auto &img : imagecoll.images){
         std::reference_wrapper< planar_image<float, double>> img_refw( std::ref(img) );
-        auto f_bounded = [=](long int row, long int col, long int channel, float &voxel_val) {
+
+//------------------ image indexing sub-routine -----------------
+
+        const auto orientation_normal = img_refw.get().image_plane().N_0.unit();
+
+        // Provide a look-up for quickly finding the nearest image for a given point.
+        //
+        // Note: Planes are used here, but could also use distance to image centres.
+        //       Then at least you only have to work with vec3s rather than vec3s + planes.
+        using img_ptr_t = planar_image<float,double>*;
+        using img_planes_t = std::pair< plane<double>, img_ptr_t >;
+        std::vector<img_planes_t> img_plane_to_img;
+        for(auto &imgcoll_refw : external_imgs){
+            for(auto &l_img : imgcoll_refw.get().images){
+                auto plane = l_img.image_plane();
+                img_plane_to_img.emplace_back( std::make_pair(plane, std::addressof(l_img)) );
+            }
+            //for(auto img_it = std::begin(imgcoll_refw.get().images); img_it != std::end(imgcoll_refw.get().images); ++img_it){
+            //    auto plane = img_it->image_plane();
+            //    img_plane_to_img.emplace_back( std::make_pair(plane, std::addressof(*img_it)) );
+            //}
+        }
+        const auto pos_to_img = [&](const vec3<double> &pos){ // Find the nearest image plane; not necessarily overlapping!
+            const auto it = std::min_element( std::begin(img_plane_to_img), 
+                                              std::end(img_plane_to_img),
+                                              [&](const img_planes_t &lhs, const img_planes_t &rhs){
+                                                  const auto lhs_dist = std::abs(std::get<0>(lhs).Get_Signed_Distance_To_Point(pos));
+                                                  const auto rhs_dist = std::abs(std::get<0>(rhs).Get_Signed_Distance_To_Point(pos));
+                                                  return (lhs_dist < rhs_dist);
+                                              } );
+            if(it == std::end(img_plane_to_img)){
+                throw std::logic_error("No nearest image can be located.");
+            }
+            return std::get<1>(*it);
+        };
+
+        // Sort the images along the planar normal. 
+        std::sort( std::begin(img_plane_to_img),
+                   std::end(img_plane_to_img),
+                   [&](const img_planes_t &lhs, const img_planes_t &rhs){
+                       const auto lhs_proj = (std::get<0>(lhs).R_0.Dot( orientation_normal ));
+                       const auto rhs_proj = (std::get<0>(rhs).R_0.Dot( orientation_normal ));
+                       return (lhs_proj < rhs_proj);
+                   } );
+
+        std::map<long int, img_ptr_t> int_to_img;
+        std::map<img_ptr_t, long int> img_to_int;
+        long int dummy = 1; // Arbitrary, but 0 is also the default map value initializer.
+        for(auto &p : img_plane_to_img){
+            const auto img_ptr = std::get<1>(p);
+            int_to_img[dummy] = img_ptr;
+            img_to_int[img_ptr] = dummy;
+            ++dummy;
+        }
+
+//------------------------------------------------------------------------
+        
+        //---------
+        // Identify the reference image which overlaps the whole image, if any.
+        //
+        // This approach attempts to identify a reference image which wholy overlaps the image to edit. This arrangement
+        // is common in many scenarios and can be exploited to reduce costly checks for each voxel.
+        // If no overlapping image is found, another lookup is performed for each voxel (which is much slower).
+        if( (img_refw.get().rows < 1) || (img_refw.get().columns < 1) ){
+            throw std::runtime_error("Edit image dimensions are too small to compare. Cannot continue.");
+        }
+        const auto corner_A = img_refw.get().position(0,0);
+        const auto corner_B = img_refw.get().position(img_refw.get().rows-1,0);
+        const auto corner_C = img_refw.get().position(0,img_refw.get().columns-1);
+
+        auto int_img_its = external_imgs.front().get().get_images_which_encompass_all_points({ corner_A, corner_B, corner_C });
+        img_ptr_t int_img_ptr = (int_img_its.empty()) ? nullptr
+                                                      : std::addressof(*(int_img_its.front()));
+        if(int_img_its.empty()) FUNCWARN("No wholy overlapping reference images found, using slower per-voxel sampling");
+        //---------
+
+
+        auto f_bounded = [&,img_refw](long int E_row, long int E_col, long int channel, float &voxel_val) {
             if( !isininc( user_data_s->inc_lower_threshold, voxel_val, user_data_s->inc_upper_threshold) ){
                 return; // No-op if outside of the thresholds.
             }
 
-            //Get the position of the voxel.
-            const auto pos = img_refw.get().position(row, col);
+            do{
+                const auto edit_val = voxel_val;
 
-            // Find the nearest voxel for discrepancy assessment.
-            point_t bgi_p(pos.x, pos.y, pos.z);
-            RTree_t::const_query_iterator it;
-            it = rtree_refw.get().qbegin(boost::geometry::index::nearest( bgi_p, 1));
-            for( ; it != rtree_refw.get().qend(); ++it){
-                break;
-                //const auto bgi_p = it->first;
-                //const auto val = it->second;
-                // ... do something with bgi_p and val
-            }
+                // Get the position of the voxel in the overlapping reference image.
+                const auto pos = img_refw.get().position(E_row, E_col);
 
-//            voxel_val = ;
+                // If no wholy overlapping image was identified, perform a lookup for this specific voxel.
+                img_ptr_t l_int_img_ptr = int_img_ptr;
+                if(l_int_img_ptr == nullptr){
+                    try{
+                        l_int_img_ptr = pos_to_img(pos);
+                    }catch(const std::exception &){
+                        voxel_val = inaccessible_val; // Cannot assess this voxel.
+                        return;
+                    }
+                }
+
+                // Ensure the image supports the specified channel.
+                if(l_int_img_ptr->channels <= channel){
+                    voxel_val = inaccessible_val;
+                    break;
+                }
+
+                // Calculate the index in the intersecting image.
+                const auto index = l_int_img_ptr->index(pos, channel);
+                if(index < 0){ // If not valid, ignore the voxel.
+                    voxel_val = inaccessible_val;
+                    break;
+                }
+
+                // Verify if the voxel needs to be compared.
+                const auto ring_0_val = l_int_img_ptr->value(index);
+                if(!isininc( user_data_s->ref_img_inc_lower_threshold, ring_0_val, user_data_s->ref_img_inc_upper_threshold)){
+                    voxel_val = inaccessible_val;
+                    break;
+                }
+
+                // Determine the row, column, and image numbers for the reference image.
+                const auto rcc = l_int_img_ptr->row_column_channel_from_index(index);
+                const auto R_row = std::get<0>(rcc);
+                const auto R_col = std::get<1>(rcc);
+                const auto R_num = img_to_int.at( std::addressof( *l_int_img_ptr ) );
+
+                // Determine the smallest dimension of the voxel, protecting against the pxl_dz = 0 case.
+                const auto pxl_dx = l_int_img_ptr->pxl_dx;
+                const auto pxl_dy = l_int_img_ptr->pxl_dy;
+                const auto pxl_dz = l_int_img_ptr->pxl_dz;
+                const auto pxl_dl = std::max( std::min({ pxl_dx, pxl_dy, pxl_dz }), 10.0 * machine_eps );
+
+                // Ensure the voxel position in the edit image and reference image match reasonably.
+                const auto ring_0_pos = l_int_img_ptr->position(R_row, R_col);
+                if(ring_0_pos.distance(pos) > pxl_dl){ // If no suitable voxel for discrepancy testing, ignore voxel.
+                    voxel_val = inaccessible_val;
+                    break;
+                }
+
+                // Perform a discrepancy comparison.
+                const auto Disc = relative_diff(edit_val, ring_0_val);
+
+                // If computing the gamma index, check if we can avoid a costly DTA search.
+                if( (user_data_s->comparison_method == ComputeCompareImagesComparisonMethod::GammaIndex) 
+                &&  (user_data_s->gamma_terminate_when_max_exceeded)
+                &&  (100.0 * Disc > user_data_s->gamma_Dis_reldiff_threshold) ){
+                    voxel_val = user_data_s->gamma_terminated_early;
+                    break;
+                }
+
+                // Perform a DTA analysis IFF needed.
+                double Dist = std::numeric_limits<double>::infinity();
+                if( (user_data_s->comparison_method == ComputeCompareImagesComparisonMethod::DTA)
+                    ||
+                    ( 
+                       (user_data_s->comparison_method == ComputeCompareImagesComparisonMethod::GammaIndex)
+                       &&
+                       (std::isfinite(Disc)) 
+                    ) ){
+
+                    // Create a growing 3D 'wavefront' in which the outer shell of a rectangular bunch of adjacent
+                    // voxels is evaluated compared to the edit image's voxel value.
+                    long int w = 0;                  // Neighbour voxel wavefront epoch number.
+                    bool encountered_lower = false;  // Whether a voxel lower than required was found.
+                    bool encountered_higher = false; // Whether a voxel higher than required was found.
+                    while(true){
+                        double nearest_dist = std::numeric_limits<double>::infinity(); // Nearest of any voxel considered.
+
+                        // Evaluate all voxels on this wavefront before proceeding.
+                        for(long int k = -w; k < (w+1); ++k){
+                            const auto l_num = R_num + k; // Adjacent image number.
+                            if(int_to_img.count(l_num) == 0) continue; // This adjacent image does not exist.
+                            auto adj_img_ptr = int_to_img[l_num];
+
+                            for(long int i = -w; i < (w+1); ++i){ 
+                                const auto l_row = R_row + i;
+                                if(!isininc(0, l_row, adj_img_ptr->rows-1)) continue; // Wavefront surface not valid.
+                                for(long int j = -w; j < (w+1); ++j){
+                                    const auto l_col = R_col + j;
+                                    if(!isininc(0, l_col, adj_img_ptr->columns-1)) continue; // Wavefront surface not valid.
+
+                                    // We only consider the voxels on the wavefront's surface . The wavefront is
+                                    // characterized by at least one of i, j, or k being equal to w or -w.
+                                    if( !(   (std::abs(k) == w)
+                                          || (std::abs(i) == w)
+                                          || (std::abs(j) == w) ) ) continue; // Not on the wavefront surface.
+
+                                    // Update the current nearest suitable voxel, if appropriate.
+                                    //
+                                    // Note: We often have to continue to search to ensure no better match is available.
+                                    //       This is because we search a rectangular wavefront but are interested in an
+                                    //       ellipsoid (or spherical) shell of voxels.
+                                    const auto adj_img_val = adj_img_ptr->value(l_row, l_num, channel);
+                                    const auto adj_vox_pos = adj_img_ptr->position(l_row, l_col);
+                                    const auto adj_vox_dist = adj_vox_pos.distance(ring_0_pos);
+                                    if(adj_vox_dist < nearest_dist) nearest_dist = adj_vox_dist;
+
+                                    // Check if voxel values have been seen both above and below the desired value.
+                                    // If so, then the grid can be interpolated (at some unknown location) to achieve
+                                    // the desired value, so we count the current voxel as a match (necessarily
+                                    // over-estimating the value somewhat).
+                                    const bool is_lower = (adj_img_val < edit_val);
+                                    const bool is_higher = (edit_val < adj_img_val);
+                                    if(!encountered_lower && is_lower){
+                                        encountered_lower = true;
+                                    }
+                                    if(!encountered_higher && is_higher){
+                                        encountered_higher = true;
+                                    }
+                                        
+                                    // Evaluate whether this voxel should be marked as the current best.
+                                    if(adj_vox_dist < Dist){
+                                        if( false
+                                        || ( encountered_lower && is_higher )
+                                        || ( encountered_higher && is_lower )
+                                        ||  ( std::abs(adj_img_val - edit_val) < user_data_s->DTA_vox_val_eq_abs )
+                                        ||  ( 100.0*relative_diff(adj_img_val, edit_val) < user_data_s->DTA_vox_val_eq_reldiff ) ){
+                                            Dist = adj_vox_dist;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        if(Dist < nearest_dist){
+                            // It is now impossible to improve the DTA because the next wavefront will all necessarily
+                            // be further away. So terminate the search.
+                            break; // note: voxel_val set below.
+                        }
+                        
+                        if(!std::isfinite(nearest_dist)){
+                            // No voxels found to assess within this epoch. Further epochs will be futile, so
+                            // discontinue the search, taking whatever value (finite or infinite) was found to be best.
+                            break; // note: voxel_val set below.
+                        }
+                        
+                        if(nearest_dist > user_data_s->DTA_max){
+                            // Terminate the search if the user has instructed so.
+                            // Take the current best value if there is any.
+                            break; // note: voxel_val set below.
+                        }
+
+                        // If computing the gamma index, check if we can avoid continuing the DTA search since gamma
+                        // will necessarily be >1 at this point.
+                        if( (user_data_s->gamma_terminate_when_max_exceeded)
+                        &&  (nearest_dist > user_data_s->gamma_DTA_threshold) ){
+                            voxel_val = user_data_s->gamma_terminated_early;
+                            return;
+                        }
+
+                        // Otherwise, advance the wavefront and continue searching.
+                        ++w;
+                    }
+                }
+
+                // Assign the voxel a value.
+                if(false){
+                }else if(user_data_s->comparison_method == ComputeCompareImagesComparisonMethod::Discrepancy){
+                    voxel_val = Disc;
+
+                }else if(user_data_s->comparison_method == ComputeCompareImagesComparisonMethod::DTA){
+                    if(std::isfinite(Dist)){
+                        voxel_val = Dist;
+                    }else{
+                        voxel_val = inaccessible_val;
+                    }
+
+                }else if(user_data_s->comparison_method == ComputeCompareImagesComparisonMethod::GammaIndex){
+                    if(std::isfinite(Dist) && std::isfinite(Disc)){
+                        voxel_val = std::sqrt( std::pow(Dist / user_data_s->gamma_DTA_threshold, 2.0)
+                                             + std::pow(100.0 * Disc / user_data_s->gamma_Dis_reldiff_threshold, 2.0) );
+
+                    }else{
+                        voxel_val = inaccessible_val;
+                    }
+
+                }else{
+                    throw std::logic_error("Unrecognized comparison operation requested. Refusing to continue.");
+                }
+                return;
+            }while(false);
             return;
         };
 
         Mutate_Voxels<float,double>( img_refw,
-                                     { img_refw },  // Not a typo! Neighbour look-ups happen in the visitor functor.
+                                     { img_refw },
                                      ccsl, 
                                      mv_opts, 
                                      f_bounded );
 
         UpdateImageDescription( img_refw, "Compared" );
         UpdateImageWindowCentreWidth( img_refw );
+
+        FUNCINFO("Images still to be assessed: " << N_remaining_imgs);
+        --N_remaining_imgs;
     }
 
-// GAMEPLAN:
-//  [X] 1. Move to Compute operation.
-//  [X] 2. R*-tree index the entirety of selected imgs ASAP.
-//  [X] 3. Use Mutate_Voxels() to limit the computation region to some ROIs.  (The update functional will call into the R*-tree).
-//  [ ] 4. For each visited voxel:
-//         IFF no exact image match: a. trilinearlly interpolate for the discrepancy assessment (( IFF the geometry does not match exactly for SOME selected image! -- and then warn about it! ))
-//         Otherwise:                b. iterate over the nearest voxels processing them one-at-a-time to compute DTA.
-//                                      - Break when you reach the distance limit.
-//                                      - If you have seen one lower and then see one higher, consider that some interpolation will give the same value.
-//                                        So accept the DTA agreement and worst-case assume the current voxel is the point of agreement (over estimates!)
-//
-//  [ ] 5. Parallelize the loop. (Or optionally parallelize Mutate_Voxels() somehow.)
-//
-//  [ ] 6. Assess if Sheppard interpolation should be added to Mutate_Voxels. It PROBABLY should... (Would require addition of Boost dependency for Ygor, but not too bad...)
-//         NO! It naturally fits in as a separate routine that complements Mutate_Voxels!
-////
-
-
-
-
-
-/*
-
-    //Partition external images into those above, below, and overlapping with this image.
-    auto local_img_plane = local_img_it->image_plane();
-    std::list< std::pair< double, std::reference_wrapper<planar_image<float,double>> > > ext_imgs_above;
-    std::list< std::pair< double, std::reference_wrapper<planar_image<float,double>> > > ext_imgs_overlapping;
-    std::list< std::pair< double, std::reference_wrapper<planar_image<float,double>> > > ext_imgs_below;
-    for(auto & ext_img_refw : all_ext_imgs){
-        const auto ext_img_plane = ext_img_refw.get().image_plane();
-        const auto signed_dist = ext_img_plane.Get_Signed_Distance_To_Point(local_img_plane.R_0);
-        const auto dist = std::abs(signed_dist);
-        const auto overlap_dist_max = local_img_it->pxl_dz * 0.50;
-
-        const auto overlaps = (dist < overlap_dist_max);
-        const auto is_above = (signed_dist >= static_cast<double>(0));
-
-        if(false){
-        }else if(overlaps){
-            ext_imgs_overlapping.push_back(std::make_pair<R,std::reference_wrapper<planar_image<T,R>>>(dist, std::ref(animg)));
-        }else if(is_above){
-            ext_imgs_above.push_back(std::make_pair<R,std::reference_wrapper<planar_image<T,R>>>(dist, std::ref(animg)));
-        }else{
-            ext_imgs_below.push_back(std::make_pair<R,std::reference_wrapper<planar_image<T,R>>>(dist, std::ref(animg)));
-        }
-    }
-
-    //Sort both lists using the distance magnitude.
-    const auto sort_less = [](const std::pair<R,std::reference_wrapper<planar_image<T,R>>> &A,
-                              const std::pair<R,std::reference_wrapper<planar_image<T,R>>> &B) -> bool {
-        return A.first < B.first;
-    };
-    ext_imgs_above.sort(sort_less);
-    ext_imgs_overlapping.sort(sort_less);
-    ext_imgs_below.sort(sort_less);
-
-    if(ext_imgs_overlapping.empty()){
-        FUNCWARN("No reference images overlap.
-    ext_imgs_overlapping.resize(1);
-
-
-
-
-    const auto out_of_bounds = std::numeric_limits<double>::quiet_NaN();
-
-    const auto relative_diff = [](const double &A, const double &B) -> double {
-        const auto max_abs = std::max( std::abs(A), std::abs(B) );
-        const auto machine_eps = std::sqrt(std::numeric_limits<double>::epsilon());
-        return (max_abs < machine_eps) ? 0.0 
-                                       : std::abs(A-B) / max_abs;
-    };
-
-    for(auto row = 0; row < local_img_it->rows; ++row){
-        for(auto col = 0; col < local_img_it->columns; ++col){
-            for(auto chan = 0; chan < local_img_it->channels; ++chan){
-
-                const auto Lval = local_img_it->value(row, col, chan);
-                const auto Lpos = local_img_it->position(row, col);
-
-                const auto Rval = ref_img_refw.get().trilinearly_interpolate(Lpos, chan, out_of_bounds);
-
-                const auto Dis = relative_diff(Lval, Rval);
-
-                const auto newval = std::isfinite(Rval) ? Dis : Rval;
-
-                local_img_it->reference(row, col, chan) = newval;
-                minmax_pixel.Digest(newval);
-            }
-        }
-    }
-
-
-    for(auto & ext_img : external_imgs){
-        auto overlapping_imgs = ext_img.get().get_images_which_encompass_all_points(points);
-
-        for(auto & overlapping_img : overlapping_imgs){
-
-            const auto N_rows = local_img_it->rows;
-            const auto N_cols = local_img_it->columns;
-            if( (N_rows < 1) || (N_cols < 1) ) continue;
-
-
-            // For images that exactly overlap.
-            if( (local_img_it->rows == overlapping_img->rows)
-            &&  (local_img_it->columns == overlapping_img->columns)
-            &&  (local_img_it->channels == overlapping_img->channels)
-            &&  (local_img_it->position(0,0) == overlapping_img->position(0,0)) 
-            &&  (local_img_it->position(N_rows-1,0) == overlapping_img->position(N_rows-1,0)) 
-            &&  (local_img_it->position(0,N_cols-1) == overlapping_img->position(0,N_cols-1)) ){
-
-                for(auto row = 0; row < local_img_it->rows; ++row){
-                    for(auto col = 0; col < local_img_it->columns; ++col){
-                        for(auto chan = 0; chan < local_img_it->channels; ++chan){
-                            const auto Lval = local_img_it->value(row, col, chan);
-                            const auto Rval = overlapping_img->value(row, col, chan);
-                            const auto newval = (Lval - Rval);
-     
-                            local_img_it->reference(row, col, chan) = newval;
-                            minmax_pixel.Digest(newval);
-                        }
-                    }
-                }
-
-            // For images that need to be interpolated because they don't exactly overlap.
-            // This is much slower.
-            }else{
-                for(auto row = 0; row < local_img_it->rows; ++row){
-                    for(auto col = 0; col < local_img_it->columns; ++col){
-                        for(auto chan = 0; chan < local_img_it->channels; ++chan){
-
-                            const auto Lval = local_img_it->value(row, col, chan);
-                            const auto Lpos = local_img_it->position(row, col);
-
-                            try{
-                                const auto R_row_col = overlapping_img->fractional_row_column(Lpos);
-
-                                const auto R_row = R_row_col.first;
-                                const auto R_col = R_row_col.second;
-                                const auto Rval = overlapping_img->bilinearly_interpolate_in_pixel_number_space(R_row, R_col, chan);
-
-                                const auto newval = (Lval - Rval);
-
-                                local_img_it->reference(row, col, chan) = newval;
-                                minmax_pixel.Digest(newval);
-                            }catch(const std::exception &){}
-                        }
-                    }
-                }
-            }
-
-        }
-    }
-
-    UpdateImageDescription( std::ref(*local_img_it), "Compared" );
-    UpdateImageWindowCentreWidth( std::ref(*local_img_it), minmax_pixel );
-
-    return true;
-}
-
-
-
-
-
-
-
-    //Generate a comprehensive list of iterators to all as-of-yet-unused images. This list will be
-    // pruned after images have been successfully operated on.
-    auto all_images = imagecoll.get_all_images();
-    while(!all_images.empty()){
-        FUNCINFO("Images still to be processed: " << all_images.size());
-
-        // Find the images which fit with this image.
-        auto curr_img_it = all_images.front();
-        //auto selected_imgs = GroupSpatiallyOverlappingImages(curr_img_it, std::ref(imagecoll));
-        auto selected_imgs = all_images;
-
-        if(selected_imgs.empty()){
-            throw std::logic_error("No grouped images found. There should be at least one"
-                                   " image (the 'seed' image) which should match. Verify the spatial" 
-                                   " overlap grouping routine.");
-        }
-        {
-          auto rows     = curr_img_it->rows;
-          auto columns  = curr_img_it->columns;
-          auto channels = curr_img_it->channels;
-
-          for(const auto &an_img_it : selected_imgs){
-              if( (rows     != an_img_it->rows)
-              ||  (columns  != an_img_it->columns)
-              ||  (channels != an_img_it->channels) ){
-                  throw std::domain_error("Images have differing number of rows, columns, or channels."
-                                          " This is not currently supported -- though it could be if needed."
-                                          " Are you sure you've got the correct data?");
-              }
-              // NOTE: We assume the first image in the selected_images set is representative of the following
-              //       images. We assume they all share identical row and column units, spatial extent, planar
-              //       orientation, and (possibly) that row and column indices for one image are spatially
-              //       equal to all other images. Breaking the last assumption would require an expensive 
-              //       position_space-to-row_and_column_index lookup for each voxel.
-          }
-        }
-        for(auto &an_img_it : selected_imgs){
-             all_images.remove(an_img_it); //std::list::remove() erases all elements equal to input value.
-        }
-
-        // ----- Perform DBSCAN clustering -----
-
-        constexpr size_t MaxElementsInANode = 6; // 16, 32, 128, 256, ... ?
-        typedef boost::geometry::index::rstar<MaxElementsInANode> RTreeParameter_t;
-
-        typedef std::pair< planar_image<float,double>*, long int > UserData_t;
-        typedef ClusteringDatum<3, double, // Spatial dimensions.
-                                0, double, // Attribute dimensions (not used).
-                                uint32_t,  // Cluster ID type.
-                                UserData_t> CDat_t;
-        //typedef boost::geometry::model::box<CDat_t> Box_t;
-        typedef boost::geometry::index::rtree<CDat_t,RTreeParameter_t> RTree_t;
-
-        RTree_t rtree;
-
-        long int BeforeCount = 0;
-        for(auto & img_it : selected_imgs){
-            for(auto row = 0; row < img_it->rows; ++row){
-                for(auto col = 0; col < img_it->columns; ++col){
-                    for(auto chan = 0; chan < img_it->channels; ++chan){
-                        const auto val = static_cast<double>(img_it->value(row, col, chan));
-                        if(isininc( user_data_s->inc_lower_threshold, val, user_data_s->inc_upper_threshold)){
-                            const auto p = img_it->position(row,col);
-                            const auto index = img_it->index(row,col,chan);
-
-                            rtree.insert(CDat_t({ p.x, p.y, p.z }, {}, 
-                                                std::make_pair(&(*img_it), index) ));
-                            ++BeforeCount;
-                        }
-                    }//Loop over channels.
-                } //Loop over cols
-            } //Loop over rows
-        } // Loop over images.
-        FUNCINFO("Number of voxels being clustered: " << BeforeCount);
-
-        //const size_t MinPts = 6; // 2 * dimensionality.
-        const size_t MinPts = 6; // 2 * dimensionality.
-        const double Eps = 4.0; // DICOM units (mm).
-
-        DBSCAN<RTree_t,CDat_t>(rtree,Eps,MinPts);
-
-        //Record the min and max actual pixel values for windowing purposes.
-        Stats::Running_MinMax<float> minmax_pixel;
-
-        std::set<typename CDat_t::ClusterIDType_> unique_cluster_ids;
-        long int AfterCount = 0;
-        {
-            constexpr auto RTreeSpatialQueryGetAll = [](const CDat_t &) -> bool { return true; };
-            RTree_t::const_query_iterator it;
-            it = rtree.qbegin(boost::geometry::index::satisfies( RTreeSpatialQueryGetAll ));
-            for( ; it != rtree.qend(); ++it){
-                const auto img_ptr = it->UserData.first;
-                const auto index = it->UserData.second;
-
-                if(it->CID.IsRegular()){
-                    ++AfterCount;
-                    const auto cluster_id = it->CID.Raw;
-                    unique_cluster_ids.insert(cluster_id);
-
-                    const auto new_val = static_cast<float>(cluster_id);
-                    img_ptr->reference(index) = new_val;
-                    minmax_pixel.Digest(new_val);
-
-                }else{
-                    const auto new_val = static_cast<float>(0);
-                    img_ptr->reference(index) = new_val;
-                    minmax_pixel.Digest(new_val);
-                    continue;
-                }
-            }
-        }
-        FUNCINFO("Number of voxels with valid cluster IDs: " << AfterCount 
-            << " (" << (1.0 / 100.0) * static_cast<long int>( 10000.0 * AfterCount / BeforeCount ) << "%)");
-
-
-        //Segregate the data based on ClusterID.
-        std::map<uint32_t, std::vector<CDat_t> > Segregated;
-        if(true){
-            constexpr auto RTreeSpatialQueryGetAll = [](const CDat_t &) -> bool { return true; };
-            RTree_t::const_query_iterator it;
-            it = rtree.qbegin(boost::geometry::index::satisfies( RTreeSpatialQueryGetAll ));
-            for( ; it != rtree.qend(); ++it){
-                if(it->CID.IsRegular()){
-                    Segregated[it->CID.Raw].push_back( *it );
-                }
-            }
-        }
-        FUNCINFO("Number of unique clusters: " << Segregated.size());
-
-
-        // ----- Fit the clusters -----
-        for(const auto &cluster_p : Segregated){
-            const auto ClusterID = cluster_p.first;
-
-            std::vector<vec3<double>> positions;
-            positions.reserve( cluster_p.second.size() );
-
-            for(const auto &cdat : cluster_p.second){
-                const auto img_ptr = cdat.UserData.first;
-                const auto index = cdat.UserData.second;
-
-                const auto rcc = img_ptr->row_column_channel_from_index(index);
-                const auto row = std::get<0>(rcc);
-                const auto col = std::get<1>(rcc);
-
-                const auto pos = img_ptr->position(row, col);
-                positions.push_back(pos);
-            }
-
-            if(positions.size() >= 4){
-                try{ // Note that co-linear clusters will lead to infinite spheres that won't converge.
-
-
-// NOTE: At the moment, no RANSAC is being performed. All elements (actually a random sampling of N of them) in each
-// cluster is fitted to a sphere/plane. The clustered RANSAC algorithm will randomly sample inter and intra-cluster
-// (the latter with a higher cost) to locate shapes.
-
-                    const long int max_iters = 2500;
-                    const double centre_stopping_tol = 0.05; // DICOM units (mm).
-                    const double radius_stopping_tol = 0.05; // DICOM units (mm).
-                    const size_t max_N_sample = 5000;
-                    const unsigned int random_seed = 17317;
-                    
-                    // Randomly sample the positions (if there are many points) to reduce the fitting difficulty.
-                    const size_t N_sample = std::min(positions.size(), max_N_sample);
-                    std::vector<vec3<double>> sampled;
-                    if(N_sample == positions.size()){ // Avoid sampling if everything will be used.
-                        sampled = positions;
-                    }else{
-                        sampled.reserve(N_sample);
-                        std::sample( std::begin(positions), std::end(positions),
-                                     std::back_inserter(sampled), N_sample,
-                                     std::mt19937{random_seed});
-                    }
-
-                    // Fit a sphere.
-                    const auto asphere = Sphere_Orthogonal_Regression( sampled, max_iters, centre_stopping_tol, radius_stopping_tol );
-                    FUNCINFO("The fitted sphere for cluster " << ClusterID << " has"
-                          << " centre = " << asphere.C_0 << " and radius = " << asphere.r_0);
-
-
-                    const auto aplane = Plane_Orthogonal_Regression( sampled );
-                    FUNCINFO("The fitted plane for cluster " << ClusterID << " has"
-                          << " anchor = " << aplane.R_0 << " and normal = " << aplane.N_0);
-
-                }catch(const std::exception &e){
-                    FUNCWARN("Fitting of cluster " << ClusterID << " failed to converge. Ignoring it");
-                };
-            }
-        }
-
-
-        for(auto & img_it : selected_imgs){
-            UpdateImageDescription( std::ref(*img_it), "Clustered voxels" );
-            UpdateImageWindowCentreWidth( std::ref(*img_it), minmax_pixel );
-        }
-
-    }
-*/
 
     return true;
 }
