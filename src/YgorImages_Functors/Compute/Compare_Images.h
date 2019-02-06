@@ -17,21 +17,16 @@
 template <class T, class R> class planar_image_collection;
 template <class T> class contour_collection;
 
-typedef enum {
-    DTA,             // Distance-to-agreement (i.e., search neighbourhood until agreement is found).
-    Discrepancy,     // Discrepancy (i.e., value comparison from voxel to nearest reference voxel only).
-    GammaIndex,      // Gamma index -- a blend of DTA and discrepancy comparisons. 
-} ComputeCompareImagesComparisonMethod;
-
-
 struct ComputeCompareImagesUserData {
 
     // -----------------------------
     // The type of comparison method to use.
-
-    //ComputeCompareImagesComparisonMethod comparison_method = ComputeCompareImagesComparisonMethod::Discrepancy;
-    //ComputeCompareImagesComparisonMethod comparison_method = ComputeCompareImagesComparisonMethod::DTA;
-    ComputeCompareImagesComparisonMethod comparison_method = ComputeCompareImagesComparisonMethod::GammaIndex;
+    enum class
+    ComparisonMethod {
+        DTA,             // Distance-to-agreement (i.e., search neighbourhood until agreement is found).
+        Discrepancy,     // Discrepancy (i.e., value comparison from voxel to nearest reference voxel only).
+        GammaIndex,      // Gamma index -- a blend of DTA and discrepancy comparisons. 
+    } comparison_method = ComparisonMethod::GammaIndex;
 
 
     // -----------------------------
@@ -75,7 +70,7 @@ struct ComputeCompareImagesUserData {
     // Maximally acceptable distance-to-agreement (in DICOM units: mm) above which to stop searching.
     //
     // Note: Some voxels further than the DTA_max may be evaluated. All voxels within the DTA_max will be evaluated.
-    double DTA_max = 30.0;
+    double DTA_max = 3.0;
 
 
     // -----------------------------

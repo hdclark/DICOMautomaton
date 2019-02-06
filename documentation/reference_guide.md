@@ -265,7 +265,7 @@ used to convert archive types.
 
 - ```dicomautomaton_bsarchive_convert -i file.xml.gz -o file.bin.gz -t
   'gzip-binary'```  
-  *Convert a compressed archive to a compressed binary file..*
+  *Convert a compressed archive to a compressed binary file.*
 
 ### dicomautomaton_dump
 
@@ -2419,12 +2419,38 @@ vein near the trunk or near the tissue of interest.
 
 ### Description
 
-This operation compares images on a per-voxel/per-pixel basis.
+This operation compares images ('test' images and 'reference' images) on a
+per-voxel/per-pixel basis. Any combination of 2D and 3D images is supported,
+including images which do not fully overlap, but the reference image array must
+be rectilinear (this property is verified).
 
 ### Notes
 
 - Images are overwritten, but ReferenceImages are not. Multiple Images may be
   specified, but only one ReferenceImages may be specified.
+
+- The reference image array must be rectilinear. (This is a requirement specific
+  to this implementation, a less restrictive implementation could overcome the
+  issue.)
+
+- For the fastest and most accurate results, test and reference image arrays
+  should spatially align. However, alignment is **not** necessary. If test and
+  reference image arrays are aligned, image adjacency can be precomputed and the
+  analysis will be faster. If not, image adjacency must be evaluated for every
+  voxel.
+
+- This operation does **not** make use of interpolation for any comparison. Only
+  direct voxel-to-voxel comparisons are used. Implicit interpolation is used
+  (via the intermediate value theorem) for the distance-to-agreement comparison.
+  For this reason, the accuracy of all comparisons should be expected to be
+  limited by image spatial resolution (i.e., voxel dimensions). For example,
+  accuracy of the distance-to-agreement comparison is limited to the largest
+  voxel dimension (in the worst case). Reference images should be supersampled
+  if necessary.
+
+- The distance-to-agreement comparison will tend to overestimate the distance,
+  especially when the DTA value is low, because only implicit interpolation is
+  used. Reference images should be supersampled if necessary.
 
 ### Parameters
 
@@ -2432,6 +2458,18 @@ This operation compares images on a per-voxel/per-pixel basis.
 - ReferenceImageSelection
 - NormalizedROILabelRegex
 - ROILabelRegex
+- Method
+- Channel
+- TestImgLowerThreshold
+- TestImgUpperThreshold
+- RefImgLowerThreshold
+- RefImgUpperThreshold
+- DTAVoxValEqAbs
+- DTAVoxValEqRelDiff
+- DTAMax
+- GammaDTAThreshold
+- GammaDiscThreshold
+- GammaTerminateAboveOne
 
 #### ImageSelection
 
@@ -2550,6 +2588,242 @@ case insensitive and uses extended POSIX syntax.
 - ```"Gross_Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
+
+#### Method
+
+##### Description
+
+The comparison method to compute. Three options are currently available:
+distance-to-agreement (DTA), discrepancy, and gamma-index. All three are fully
+3D, but can also work for 2D or mixed 2D-3D comparisons. DTA is a measure of how
+far away the nearest voxel (in the reference images) is with a voxel intensity
+sufficiently close to each voxel in the test images. This comparison ignores
+pixel intensities except to test if the values match within the specified
+tolerance. The voxel neighbourhood is exhaustively explored until a suitable
+voxel is found. Implicit interpolation is used to detect when the value could be
+found via interpolation, but explicit interpolation is not used. Thus distance
+might be overestimated. A discrepancy comparison measures the point-dose
+intensity discrepancy without accounting for spatial shifts. A gamma analysis
+combines distance-to-agreement and point dose differences into a single index
+which is best used to test if both DTA and discrepancy criteria are satisfied
+(gamma <= 1 iff both pass). It was proposed by Low et al. in 1998
+((doi:10.1118/1.598248). Gamma analyses permits trade-offs between spatial and
+dosimetric discrepancies which can arise when the image arrays slightly differ
+in alignment or pixel values.
+
+##### Default
+
+- ```"gamma-index"```
+
+##### Examples
+
+- ```"gamma-index"```
+- ```"DTA"```
+- ```"discrepancy"```
+
+#### Channel
+
+##### Description
+
+The channel to compare (zero-based). Note that both test images and reference
+images will share this specifier.
+
+##### Default
+
+- ```"0"```
+
+##### Examples
+
+- ```"0"```
+- ```"1"```
+- ```"2"```
+
+#### TestImgLowerThreshold
+
+##### Description
+
+Pixel lower threshold for the test images. Only voxels with values above this
+threshold (inclusive) will be altered.
+
+##### Default
+
+- ```"-inf"```
+
+##### Examples
+
+- ```"-inf"```
+- ```"0.0"```
+- ```"200"```
+
+#### TestImgUpperThreshold
+
+##### Description
+
+Pixel upper threshold for the test images. Only voxels with values below this
+threshold (inclusive) will be altered.
+
+##### Default
+
+- ```"inf"```
+
+##### Examples
+
+- ```"inf"```
+- ```"1.23"```
+- ```"1000"```
+
+#### RefImgLowerThreshold
+
+##### Description
+
+Pixel lower threshold for the reference images. Only voxels with values above
+this threshold (inclusive) will be altered.
+
+##### Default
+
+- ```"-inf"```
+
+##### Examples
+
+- ```"-inf"```
+- ```"0.0"```
+- ```"200"```
+
+#### RefImgUpperThreshold
+
+##### Description
+
+Pixel upper threshold for the reference images. Only voxels with values below
+this threshold (inclusive) will be altered.
+
+##### Default
+
+- ```"inf"```
+
+##### Examples
+
+- ```"inf"```
+- ```"1.23"```
+- ```"1000"```
+
+#### DTAVoxValEqAbs
+
+##### Description
+
+Parameter for all comparisons involving a distance-to-agreement (DTA) search.
+The difference in voxel values considered to be sufficiently equal (absolute; in
+voxel intensity units). Note: This value CAN be zero. It is meant to help
+overcome noise.
+
+##### Default
+
+- ```"1.0E-3"```
+
+##### Examples
+
+- ```"1.0E-3"```
+- ```"1.0E-5"```
+- ```"0.0"```
+- ```"0.5"```
+
+#### DTAVoxValEqRelDiff
+
+##### Description
+
+Parameter for all comparisons involving a distance-to-agreement (DTA) search.
+The difference in voxel values considered to be sufficiently equal (~relative
+difference; in %). Note: This value CAN be zero. It is meant to help overcome
+noise.
+
+##### Default
+
+- ```"1.0"```
+
+##### Examples
+
+- ```"0.1"```
+- ```"1.0"```
+- ```"10.0"```
+
+#### DTAMax
+
+##### Description
+
+Parameter for all comparisons involving a distance-to-agreement (DTA) search.
+Maximally acceptable distance-to-agreement (in DICOM units: mm) above which to
+stop searching. All voxels within this distance will be searched unless a
+matching voxel is found. Note that a gamma-index comparison may terminate this
+search early if the gamma-index is known to be greater than one. It is
+recommended to make this value approximately 1 voxel width larger than necessary
+in case a matching voxel can be located near the boundary. Also note that some
+voxels beyond the DTA_max distance may be evaluated.
+
+##### Default
+
+- ```"30.0"```
+
+##### Examples
+
+- ```"3.0"```
+- ```"5.0"```
+- ```"50.0"```
+
+#### GammaDTAThreshold
+
+##### Description
+
+Parameter for gamma-index comparisons. Maximally acceptable
+distance-to-agreement (in DICOM units: mm). When the measured DTA is above this
+value, the gamma index will necessarily be greater than one. Note this parameter
+can differ from the DTA_max search cut-off, but should be <= to it.
+
+##### Default
+
+- ```"5.0"```
+
+##### Examples
+
+- ```"3.0"```
+- ```"5.0"```
+- ```"10.0"```
+
+#### GammaDiscThreshold
+
+##### Description
+
+Parameter for gamma-index comparisons. Voxel value relative discrepancy
+(relative difference; in %). When the measured discrepancy is above this value,
+the gamma index will necessarily be greater than one.
+
+##### Default
+
+- ```"5.0"```
+
+##### Examples
+
+- ```"3.0"```
+- ```"5.0"```
+- ```"10.0"```
+
+#### GammaTerminateAboveOne
+
+##### Description
+
+Parameter for gamma-index comparisons. Halt spatial searching if the gamma index
+will necessarily indicate failure (i.e., gamma >1). Note this can parameter can
+drastically reduce the computational effort required to compute the gamma index,
+but the reported gamma values will be invalid whenever they are >1. This is
+often tolerable since the magnitude only matters when it is <1. In lieu of the
+true gamma-index, a value slightly >1 will be assumed.
+
+##### Default
+
+- ```"true"```
+
+##### Examples
+
+- ```"true"```
+- ```"false"```
 
 
 ## ContourBasedRayCastDoseAccumulate

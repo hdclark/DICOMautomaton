@@ -361,7 +361,7 @@ can fail or may need to be tweaked later.*
 .PD 0
 .P
 .PD
-\f[I]Convert a compressed archive to a compressed binary file..\f[]
+\f[I]Convert a compressed archive to a compressed binary file.\f[]
 .SS dicomautomaton_dump
 .SS Description
 .PP
@@ -2749,12 +2749,43 @@ interest.
 .SS ComparePixels
 .SS Description
 .PP
-This operation compares images on a per\-voxel/per\-pixel basis.
+This operation compares images (`test' images and `reference' images) on
+a per\-voxel/per\-pixel basis.
+Any combination of 2D and 3D images is supported, including images which
+do not fully overlap, but the reference image array must be rectilinear
+(this property is verified).
 .SS Notes
 .IP \[bu] 2
 Images are overwritten, but ReferenceImages are not.
 Multiple Images may be specified, but only one ReferenceImages may be
 specified.
+.IP \[bu] 2
+The reference image array must be rectilinear.
+(This is a requirement specific to this implementation, a less
+restrictive implementation could overcome the issue.)
+.IP \[bu] 2
+For the fastest and most accurate results, test and reference image
+arrays should spatially align.
+However, alignment is \f[B]not\f[] necessary.
+If test and reference image arrays are aligned, image adjacency can be
+precomputed and the analysis will be faster.
+If not, image adjacency must be evaluated for every voxel.
+.IP \[bu] 2
+This operation does \f[B]not\f[] make use of interpolation for any
+comparison.
+Only direct voxel\-to\-voxel comparisons are used.
+Implicit interpolation is used (via the intermediate value theorem) for
+the distance\-to\-agreement comparison.
+For this reason, the accuracy of all comparisons should be expected to
+be limited by image spatial resolution (i.e., voxel dimensions).
+For example, accuracy of the distance\-to\-agreement comparison is
+limited to the largest voxel dimension (in the worst case).
+Reference images should be supersampled if necessary.
+.IP \[bu] 2
+The distance\-to\-agreement comparison will tend to overestimate the
+distance, especially when the DTA value is low, because only implicit
+interpolation is used.
+Reference images should be supersampled if necessary.
 .SS Parameters
 .IP \[bu] 2
 ImageSelection
@@ -2764,6 +2795,30 @@ ReferenceImageSelection
 NormalizedROILabelRegex
 .IP \[bu] 2
 ROILabelRegex
+.IP \[bu] 2
+Method
+.IP \[bu] 2
+Channel
+.IP \[bu] 2
+TestImgLowerThreshold
+.IP \[bu] 2
+TestImgUpperThreshold
+.IP \[bu] 2
+RefImgLowerThreshold
+.IP \[bu] 2
+RefImgUpperThreshold
+.IP \[bu] 2
+DTAVoxValEqAbs
+.IP \[bu] 2
+DTAVoxValEqRelDiff
+.IP \[bu] 2
+DTAMax
+.IP \[bu] 2
+GammaDTAThreshold
+.IP \[bu] 2
+GammaDiscThreshold
+.IP \[bu] 2
+GammaTerminateAboveOne
 .SS ImageSelection
 .SS Description
 .PP
@@ -2912,6 +2967,243 @@ Regex is case insensitive and uses extended POSIX syntax.
 \f[C]".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"\f[]
 .IP \[bu] 2
 \f[C]"left_parotid|right_parotid"\f[]
+.SS Method
+.SS Description
+.PP
+The comparison method to compute.
+Three options are currently available: distance\-to\-agreement (DTA),
+discrepancy, and gamma\-index.
+All three are fully 3D, but can also work for 2D or mixed 2D\-3D
+comparisons.
+DTA is a measure of how far away the nearest voxel (in the reference
+images) is with a voxel intensity sufficiently close to each voxel in
+the test images.
+This comparison ignores pixel intensities except to test if the values
+match within the specified tolerance.
+The voxel neighbourhood is exhaustively explored until a suitable voxel
+is found.
+Implicit interpolation is used to detect when the value could be found
+via interpolation, but explicit interpolation is not used.
+Thus distance might be overestimated.
+A discrepancy comparison measures the point\-dose intensity discrepancy
+without accounting for spatial shifts.
+A gamma analysis combines distance\-to\-agreement and point dose
+differences into a single index which is best used to test if both DTA
+and discrepancy criteria are satisfied (gamma <= 1 iff both pass).
+It was proposed by Low et al.\ in 1998 ((doi:10.1118/1.598248).
+Gamma analyses permits trade\-offs between spatial and dosimetric
+discrepancies which can arise when the image arrays slightly differ in
+alignment or pixel values.
+.SS Default
+.IP \[bu] 2
+\f[C]"gamma\-index"\f[]
+.SS Examples
+.IP \[bu] 2
+\f[C]"gamma\-index"\f[]
+.IP \[bu] 2
+\f[C]"DTA"\f[]
+.IP \[bu] 2
+\f[C]"discrepancy"\f[]
+.SS Channel
+.SS Description
+.PP
+The channel to compare (zero\-based).
+Note that both test images and reference images will share this
+specifier.
+.SS Default
+.IP \[bu] 2
+\f[C]"0"\f[]
+.SS Examples
+.IP \[bu] 2
+\f[C]"0"\f[]
+.IP \[bu] 2
+\f[C]"1"\f[]
+.IP \[bu] 2
+\f[C]"2"\f[]
+.SS TestImgLowerThreshold
+.SS Description
+.PP
+Pixel lower threshold for the test images.
+Only voxels with values above this threshold (inclusive) will be
+altered.
+.SS Default
+.IP \[bu] 2
+\f[C]"\-inf"\f[]
+.SS Examples
+.IP \[bu] 2
+\f[C]"\-inf"\f[]
+.IP \[bu] 2
+\f[C]"0.0"\f[]
+.IP \[bu] 2
+\f[C]"200"\f[]
+.SS TestImgUpperThreshold
+.SS Description
+.PP
+Pixel upper threshold for the test images.
+Only voxels with values below this threshold (inclusive) will be
+altered.
+.SS Default
+.IP \[bu] 2
+\f[C]"inf"\f[]
+.SS Examples
+.IP \[bu] 2
+\f[C]"inf"\f[]
+.IP \[bu] 2
+\f[C]"1.23"\f[]
+.IP \[bu] 2
+\f[C]"1000"\f[]
+.SS RefImgLowerThreshold
+.SS Description
+.PP
+Pixel lower threshold for the reference images.
+Only voxels with values above this threshold (inclusive) will be
+altered.
+.SS Default
+.IP \[bu] 2
+\f[C]"\-inf"\f[]
+.SS Examples
+.IP \[bu] 2
+\f[C]"\-inf"\f[]
+.IP \[bu] 2
+\f[C]"0.0"\f[]
+.IP \[bu] 2
+\f[C]"200"\f[]
+.SS RefImgUpperThreshold
+.SS Description
+.PP
+Pixel upper threshold for the reference images.
+Only voxels with values below this threshold (inclusive) will be
+altered.
+.SS Default
+.IP \[bu] 2
+\f[C]"inf"\f[]
+.SS Examples
+.IP \[bu] 2
+\f[C]"inf"\f[]
+.IP \[bu] 2
+\f[C]"1.23"\f[]
+.IP \[bu] 2
+\f[C]"1000"\f[]
+.SS DTAVoxValEqAbs
+.SS Description
+.PP
+Parameter for all comparisons involving a distance\-to\-agreement (DTA)
+search.
+The difference in voxel values considered to be sufficiently equal
+(absolute; in voxel intensity units).
+Note: This value CAN be zero.
+It is meant to help overcome noise.
+.SS Default
+.IP \[bu] 2
+\f[C]"1.0E\-3"\f[]
+.SS Examples
+.IP \[bu] 2
+\f[C]"1.0E\-3"\f[]
+.IP \[bu] 2
+\f[C]"1.0E\-5"\f[]
+.IP \[bu] 2
+\f[C]"0.0"\f[]
+.IP \[bu] 2
+\f[C]"0.5"\f[]
+.SS DTAVoxValEqRelDiff
+.SS Description
+.PP
+Parameter for all comparisons involving a distance\-to\-agreement (DTA)
+search.
+The difference in voxel values considered to be sufficiently equal
+(~relative difference; in %).
+Note: This value CAN be zero.
+It is meant to help overcome noise.
+.SS Default
+.IP \[bu] 2
+\f[C]"1.0"\f[]
+.SS Examples
+.IP \[bu] 2
+\f[C]"0.1"\f[]
+.IP \[bu] 2
+\f[C]"1.0"\f[]
+.IP \[bu] 2
+\f[C]"10.0"\f[]
+.SS DTAMax
+.SS Description
+.PP
+Parameter for all comparisons involving a distance\-to\-agreement (DTA)
+search.
+Maximally acceptable distance\-to\-agreement (in DICOM units: mm) above
+which to stop searching.
+All voxels within this distance will be searched unless a matching voxel
+is found.
+Note that a gamma\-index comparison may terminate this search early if
+the gamma\-index is known to be greater than one.
+It is recommended to make this value approximately 1 voxel width larger
+than necessary in case a matching voxel can be located near the
+boundary.
+Also note that some voxels beyond the DTA_max distance may be evaluated.
+.SS Default
+.IP \[bu] 2
+\f[C]"30.0"\f[]
+.SS Examples
+.IP \[bu] 2
+\f[C]"3.0"\f[]
+.IP \[bu] 2
+\f[C]"5.0"\f[]
+.IP \[bu] 2
+\f[C]"50.0"\f[]
+.SS GammaDTAThreshold
+.SS Description
+.PP
+Parameter for gamma\-index comparisons.
+Maximally acceptable distance\-to\-agreement (in DICOM units: mm).
+When the measured DTA is above this value, the gamma index will
+necessarily be greater than one.
+Note this parameter can differ from the DTA_max search cut\-off, but
+should be <= to it.
+.SS Default
+.IP \[bu] 2
+\f[C]"5.0"\f[]
+.SS Examples
+.IP \[bu] 2
+\f[C]"3.0"\f[]
+.IP \[bu] 2
+\f[C]"5.0"\f[]
+.IP \[bu] 2
+\f[C]"10.0"\f[]
+.SS GammaDiscThreshold
+.SS Description
+.PP
+Parameter for gamma\-index comparisons.
+Voxel value relative discrepancy (relative difference; in %).
+When the measured discrepancy is above this value, the gamma index will
+necessarily be greater than one.
+.SS Default
+.IP \[bu] 2
+\f[C]"5.0"\f[]
+.SS Examples
+.IP \[bu] 2
+\f[C]"3.0"\f[]
+.IP \[bu] 2
+\f[C]"5.0"\f[]
+.IP \[bu] 2
+\f[C]"10.0"\f[]
+.SS GammaTerminateAboveOne
+.SS Description
+.PP
+Parameter for gamma\-index comparisons.
+Halt spatial searching if the gamma index will necessarily indicate
+failure (i.e., gamma >1).
+Note this can parameter can drastically reduce the computational effort
+required to compute the gamma index, but the reported gamma values will
+be invalid whenever they are >1.
+This is often tolerable since the magnitude only matters when it is <1.
+In lieu of the true gamma\-index, a value slightly >1 will be assumed.
+.SS Default
+.IP \[bu] 2
+\f[C]"true"\f[]
+.SS Examples
+.IP \[bu] 2
+\f[C]"true"\f[]
+.IP \[bu] 2
+\f[C]"false"\f[]
 .SS ContourBasedRayCastDoseAccumulate
 .SS Description
 .PP

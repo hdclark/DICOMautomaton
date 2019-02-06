@@ -28,7 +28,7 @@ bool ComputeCompareImages(planar_image_collection<float,double> &imagecoll,
                           std::experimental::any user_data ){
 
     // This routine compares pixel values between two image arrays in any combination of 2D and 3D. It support multiple
-    // comparison types.
+    // comparison types, but all consider **only** voxel-to-voxel comparisons -- interpolation is **not** used.
     //
     // Distance-to-agreement is a measure of how far away the nearest voxel (from the external set) is with a voxel
     // intensity sufficiently close to each voxel in the present image. This comparison ignores pixel intensities except
@@ -41,13 +41,10 @@ bool ComputeCompareImages(planar_image_collection<float,double> &imagecoll,
     // It was proposed by Low et al. in 1998 (doi:10.1118/1.598248). Gamma analyses permits trade-offs between spatial
     // and dosimetric discrepancies which can arise when the image arrays slightly differ in alignment or pixel values.
     //
-    // Contiguous image volumes must be processed together as a whole for a proper 3D gamma analysis. Because grouping
-    // is outside of the scope of this routine, all images are assumed to comprise a single volume. 
-    //
-    // For best results, image arrays should align and contain the same number of rows and columns. However, it is not
-    // strictly necessary; image adjacency is determined by spatially sorting and voxel adjacency is determined by
-    // projecting voxel positions onto adjacent images (nb. so the number of rows and columns are in some sense
-    // irrelevant).
+    // The reference image array must be rectilinear.
+    // For the fastest and most accurate results, test and reference image arrays should exactly align. However, it is not
+    // necessary. Ii test and reference image arrays are aligned, image adjacency is precomputed. Otherwise image
+    // adjacency is evaluated for every voxel.
 
 
     //We require a valid ComputeCompareImagesUserData struct packed into the user_data.
@@ -73,7 +70,7 @@ bool ComputeCompareImages(planar_image_collection<float,double> &imagecoll,
         return false;
     }
 
-    const auto channel = user_data_s->channel;
+    const auto ud_channel = user_data_s->channel;
 
     const auto inaccessible_val = std::numeric_limits<double>::quiet_NaN();
 
@@ -194,6 +191,9 @@ bool ComputeCompareImages(planar_image_collection<float,double> &imagecoll,
             if( !isininc( user_data_s->inc_lower_threshold, voxel_val, user_data_s->inc_upper_threshold) ){
                 return; // No-op if outside of the thresholds.
             }
+            if( channel != ud_channel){
+                return; // No-op if this is the wrong channel.
+            }
 
             do{
                 const auto edit_val = voxel_val;
@@ -255,7 +255,7 @@ bool ComputeCompareImages(planar_image_collection<float,double> &imagecoll,
                 const auto Disc = relative_diff(edit_val, ring_0_val);
 
                 // If computing the gamma index, check if we can avoid a costly DTA search.
-                if( (user_data_s->comparison_method == ComputeCompareImagesComparisonMethod::GammaIndex) 
+                if( (user_data_s->comparison_method == ComputeCompareImagesUserData::ComparisonMethod::GammaIndex) 
                 &&  (user_data_s->gamma_terminate_when_max_exceeded)
                 &&  (100.0 * Disc > user_data_s->gamma_Dis_reldiff_threshold) ){
                     voxel_val = user_data_s->gamma_terminated_early;
@@ -264,10 +264,10 @@ bool ComputeCompareImages(planar_image_collection<float,double> &imagecoll,
 
                 // Perform a DTA analysis IFF needed.
                 double Dist = std::numeric_limits<double>::infinity();
-                if( (user_data_s->comparison_method == ComputeCompareImagesComparisonMethod::DTA)
+                if( (user_data_s->comparison_method == ComputeCompareImagesUserData::ComparisonMethod::DTA)
                     ||
                     ( 
-                       (user_data_s->comparison_method == ComputeCompareImagesComparisonMethod::GammaIndex)
+                       (user_data_s->comparison_method == ComputeCompareImagesUserData::ComparisonMethod::GammaIndex)
                        &&
                        (std::isfinite(Disc)) 
                     ) ){
@@ -304,7 +304,7 @@ bool ComputeCompareImages(planar_image_collection<float,double> &imagecoll,
                                     // Note: We often have to continue to search to ensure no better match is available.
                                     //       This is because we search a rectangular wavefront but are interested in an
                                     //       ellipsoid (or spherical) shell of voxels.
-                                    const auto adj_img_val = adj_img_ptr->value(l_row, l_num, channel);
+                                    const auto adj_img_val = adj_img_ptr->value(l_row, l_col, channel);
                                     const auto adj_vox_pos = adj_img_ptr->position(l_row, l_col);
                                     const auto adj_vox_dist = adj_vox_pos.distance(ring_0_pos);
                                     if(adj_vox_dist < nearest_dist) nearest_dist = adj_vox_dist;
@@ -327,8 +327,8 @@ bool ComputeCompareImages(planar_image_collection<float,double> &imagecoll,
                                         if( false
                                         || ( encountered_lower && is_higher )
                                         || ( encountered_higher && is_lower )
-                                        ||  ( std::abs(adj_img_val - edit_val) < user_data_s->DTA_vox_val_eq_abs )
-                                        ||  ( 100.0*relative_diff(adj_img_val, edit_val) < user_data_s->DTA_vox_val_eq_reldiff ) ){
+                                        || ( std::abs(adj_img_val - edit_val) < user_data_s->DTA_vox_val_eq_abs )
+                                        || ( 100.0*relative_diff(adj_img_val, edit_val) < user_data_s->DTA_vox_val_eq_reldiff ) ){
                                             Dist = adj_vox_dist;
                                         }
                                     }
@@ -369,17 +369,17 @@ bool ComputeCompareImages(planar_image_collection<float,double> &imagecoll,
 
                 // Assign the voxel a value.
                 if(false){
-                }else if(user_data_s->comparison_method == ComputeCompareImagesComparisonMethod::Discrepancy){
+                }else if(user_data_s->comparison_method == ComputeCompareImagesUserData::ComparisonMethod::Discrepancy){
                     voxel_val = Disc;
 
-                }else if(user_data_s->comparison_method == ComputeCompareImagesComparisonMethod::DTA){
+                }else if(user_data_s->comparison_method == ComputeCompareImagesUserData::ComparisonMethod::DTA){
                     if(std::isfinite(Dist)){
                         voxel_val = Dist;
                     }else{
                         voxel_val = inaccessible_val;
                     }
 
-                }else if(user_data_s->comparison_method == ComputeCompareImagesComparisonMethod::GammaIndex){
+                }else if(user_data_s->comparison_method == ComputeCompareImagesUserData::ComparisonMethod::GammaIndex){
                     if(std::isfinite(Dist) && std::isfinite(Disc)){
                         voxel_val = std::sqrt( std::pow(Dist / user_data_s->gamma_DTA_threshold, 2.0)
                                              + std::pow(100.0 * Disc / user_data_s->gamma_Dis_reldiff_threshold, 2.0) );
@@ -402,7 +402,14 @@ bool ComputeCompareImages(planar_image_collection<float,double> &imagecoll,
                                      mv_opts, 
                                      f_bounded );
 
-        UpdateImageDescription( img_refw, "Compared" );
+        if(false){
+        }else if(user_data_s->comparison_method == ComputeCompareImagesUserData::ComparisonMethod::Discrepancy){
+            UpdateImageDescription( img_refw, "Compared (discrepancy)" );
+        }else if(user_data_s->comparison_method == ComputeCompareImagesUserData::ComparisonMethod::DTA){
+            UpdateImageDescription( img_refw, "Compared (DTA)" );
+        }else if(user_data_s->comparison_method == ComputeCompareImagesUserData::ComparisonMethod::GammaIndex){
+            UpdateImageDescription( img_refw, "Compared (gamma-index)" );
+        }
         UpdateImageWindowCentreWidth( img_refw );
 
         FUNCINFO("Images still to be assessed: " << N_remaining_imgs);
