@@ -117,80 +117,21 @@ bool ComputeCompareImages(planar_image_collection<float,double> &imagecoll,
         std::reference_wrapper< planar_image<float, double>> img_refw( std::ref(img) );
 
         tp.submit_task([&,img_refw](void) -> void {
-    //------------------ image indexing sub-routine -----------------
-
             const auto orientation_normal = img_refw.get().image_plane().N_0.unit();
 
-            // Provide a look-up for quickly finding the nearest image for a given point.
-            //
-            // Note: Planes are used here, but could also use distance to image centres.
-            //       Then at least you only have to work with vec3s rather than vec3s + planes.
-            using img_ptr_t = planar_image<float,double>*;
-            using img_planes_t = std::pair< plane<double>, img_ptr_t >;
-            std::vector<img_planes_t> img_plane_to_img;
-            for(auto &imgcoll_refw : external_imgs){
-                for(auto &l_img : imgcoll_refw.get().images){
-                    auto plane = l_img.image_plane();
-                    img_plane_to_img.emplace_back( std::make_pair(plane, std::addressof(l_img)) );
-                }
-                //for(auto img_it = std::begin(imgcoll_refw.get().images); img_it != std::end(imgcoll_refw.get().images); ++img_it){
-                //    auto plane = img_it->image_plane();
-                //    img_plane_to_img.emplace_back( std::make_pair(plane, std::addressof(*img_it)) );
-                //}
-            }
-            const auto pos_to_img = [&](const vec3<double> &pos){ // Find the nearest image plane; not necessarily overlapping!
-                const auto it = std::min_element( std::begin(img_plane_to_img), 
-                                                  std::end(img_plane_to_img),
-                                                  [&](const img_planes_t &lhs, const img_planes_t &rhs){
-                                                      const auto lhs_dist = std::abs(std::get<0>(lhs).Get_Signed_Distance_To_Point(pos));
-                                                      const auto rhs_dist = std::abs(std::get<0>(rhs).Get_Signed_Distance_To_Point(pos));
-                                                      return (lhs_dist < rhs_dist);
-                                                  } );
-                if(it == std::end(img_plane_to_img)){
-                    throw std::logic_error("No nearest image can be located.");
-                }
-                return std::get<1>(*it);
-            };
+            planar_image_adjacency<float,double> img_adj( {}, external_imgs, orientation_normal );
 
-            // Sort the images along the planar normal. 
-            std::sort( std::begin(img_plane_to_img),
-                       std::end(img_plane_to_img),
-                       [&](const img_planes_t &lhs, const img_planes_t &rhs){
-                           const auto lhs_proj = (std::get<0>(lhs).R_0.Dot( orientation_normal ));
-                           const auto rhs_proj = (std::get<0>(rhs).R_0.Dot( orientation_normal ));
-                           return (lhs_proj < rhs_proj);
-                       } );
+            using img_ptr_t = planar_image<float,double> *;
 
-            std::map<long int, img_ptr_t> int_to_img;
-            std::map<img_ptr_t, long int> img_to_int;
-            long int dummy = 1; // Arbitrary, but 0 is also the default map value initializer.
-            for(auto &p : img_plane_to_img){
-                const auto img_ptr = std::get<1>(p);
-                int_to_img[dummy] = img_ptr;
-                img_to_int[img_ptr] = dummy;
-                ++dummy;
-            }
-
-    //------------------------------------------------------------------------
-            
-            //---------
             // Identify the reference image which overlaps the whole image, if any.
             //
             // This approach attempts to identify a reference image which wholy overlaps the image to edit. This arrangement
             // is common in many scenarios and can be exploited to reduce costly checks for each voxel.
             // If no overlapping image is found, another lookup is performed for each voxel (which is much slower).
-            if( (img_refw.get().rows < 1) || (img_refw.get().columns < 1) ){
-                throw std::runtime_error("Edit image dimensions are too small to compare. Cannot continue.");
-            }
-            const auto corner_A = img_refw.get().position(0,0);
-            const auto corner_B = img_refw.get().position(img_refw.get().rows-1,0);
-            const auto corner_C = img_refw.get().position(0,img_refw.get().columns-1);
-
-            auto int_img_its = external_imgs.front().get().get_images_which_encompass_all_points({ corner_A, corner_B, corner_C });
-            img_ptr_t int_img_ptr = (int_img_its.empty()) ? nullptr
-                                                          : std::addressof(*(int_img_its.front()));
-            if(int_img_its.empty()) FUNCWARN("No wholy overlapping reference images found, using slower per-voxel sampling");
-            //---------
+            auto overlapping_img_refws = img_adj.get_wholy_overlapping_images(img_refw);
+            img_ptr_t int_img_ptr = (overlapping_img_refws.empty()) ? nullptr
+                                                                    : std::addressof(overlapping_img_refws.front().get());
+            if(overlapping_img_refws.empty()) FUNCWARN("No wholy overlapping reference images found, using slower per-voxel sampling");
 
 
             auto f_bounded = [&,img_refw](long int E_row, long int E_col, long int channel, float &voxel_val) {
@@ -211,7 +152,7 @@ bool ComputeCompareImages(planar_image_collection<float,double> &imagecoll,
                     img_ptr_t l_int_img_ptr = int_img_ptr;
                     if(l_int_img_ptr == nullptr){
                         try{
-                            l_int_img_ptr = pos_to_img(pos);
+                            l_int_img_ptr = std::addressof( img_adj.position_to_image(pos).get() );
                         }catch(const std::exception &){
                             voxel_val = inaccessible_val; // Cannot assess this voxel.
                             return;
@@ -242,7 +183,10 @@ bool ComputeCompareImages(planar_image_collection<float,double> &imagecoll,
                     const auto rcc = l_int_img_ptr->row_column_channel_from_index(index);
                     const auto R_row = std::get<0>(rcc);
                     const auto R_col = std::get<1>(rcc);
-                    const auto R_num = img_to_int.at( std::addressof( *l_int_img_ptr ) );
+                    if(!img_adj.image_present( std::ref( *l_int_img_ptr ) )){
+                        throw std::logic_error("One or more images were not included in the image adjacency determination. Refusing to continue.");
+                    }
+                    const auto R_num = img_adj.image_to_index( std::ref( *l_int_img_ptr ) );
 
                     // Determine the smallest dimension of the voxel, protecting against the pxl_dz = 0 case.
                     const auto pxl_dx = l_int_img_ptr->pxl_dx;
@@ -289,8 +233,8 @@ bool ComputeCompareImages(planar_image_collection<float,double> &imagecoll,
                             // Evaluate all voxels on this wavefront before proceeding.
                             for(long int k = -w; k < (w+1); ++k){
                                 const auto l_num = R_num + k; // Adjacent image number.
-                                if(int_to_img.count(l_num) == 0) continue; // This adjacent image does not exist.
-                                auto adj_img_ptr = int_to_img[l_num];
+                                if(!img_adj.index_present(l_num)) continue; // This adjacent image does not exist.
+                                auto adj_img_ptr = std::addressof( img_adj.index_to_image(l_num).get() );
 
                                 for(long int i = -w; i < (w+1); ++i){ 
                                     const auto l_row = R_row + i;
