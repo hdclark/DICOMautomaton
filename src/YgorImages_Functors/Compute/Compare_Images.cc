@@ -125,13 +125,13 @@ bool ComputeCompareImages(planar_image_collection<float,double> &imagecoll,
 
             // Identify the reference image which overlaps the whole image, if any.
             //
-            // This approach attempts to identify a reference image which wholy overlaps the image to edit. This arrangement
+            // This approach attempts to identify a reference image which wholly overlaps the image to edit. This arrangement
             // is common in many scenarios and can be exploited to reduce costly checks for each voxel.
             // If no overlapping image is found, another lookup is performed for each voxel (which is much slower).
-            auto overlapping_img_refws = img_adj.get_wholy_overlapping_images(img_refw);
+            auto overlapping_img_refws = img_adj.get_wholly_overlapping_images(img_refw);
             img_ptr_t int_img_ptr = (overlapping_img_refws.empty()) ? nullptr
                                                                     : std::addressof(overlapping_img_refws.front().get());
-            if(overlapping_img_refws.empty()) FUNCWARN("No wholy overlapping reference images found, using slower per-voxel sampling");
+            if(overlapping_img_refws.empty()) FUNCWARN("No wholly overlapping reference images found, using slower per-voxel sampling");
 
 
             auto f_bounded = [&,img_refw](long int E_row, long int E_col, long int channel, float &voxel_val) {
@@ -148,7 +148,7 @@ bool ComputeCompareImages(planar_image_collection<float,double> &imagecoll,
                     // Get the position of the voxel in the overlapping reference image.
                     const auto pos = img_refw.get().position(E_row, E_col);
 
-                    // If no wholy overlapping image was identified, perform a lookup for this specific voxel.
+                    // If no wholly overlapping image was identified, perform a lookup for this specific voxel.
                     img_ptr_t l_int_img_ptr = int_img_ptr;
                     if(l_int_img_ptr == nullptr){
                         try{
