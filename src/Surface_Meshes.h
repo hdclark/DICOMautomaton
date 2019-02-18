@@ -99,6 +99,12 @@ Estimate_Surface_Mesh(
 
 
 Polyhedron
+Estimate_Surface_Mesh_Marching_Cubes(
+        std::list<std::reference_wrapper<contour_collection<double>>> cc_ROIs,
+        Parameters p );
+
+
+Polyhedron
 Estimate_Surface_Mesh_AdvancingFront(
         std::list<std::reference_wrapper<contour_collection<double>>> cc_ROIs,
         Parameters p );

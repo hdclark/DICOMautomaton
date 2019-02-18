@@ -21,6 +21,7 @@
 #include <cstdlib>            //Needed for exit() calls.
 #include <utility>            //Needed for std::pair.
 #include <algorithm>
+//#include <execution>
 #include <experimental/optional>
 
 #define BOOST_PARAMETER_MAX_ARITY 12
@@ -71,6 +72,9 @@
 #include <CGAL/Polygon_mesh_processing/repair.h>
 #include <CGAL/Polygon_mesh_slicer.h>
 #include <CGAL/Polygon_mesh_processing/measure.h>
+#include <CGAL/Polygon_mesh_processing/orient_polygon_soup.h>
+#include <CGAL/Polygon_mesh_processing/polygon_soup_to_polygon_mesh.h>
+#include <CGAL/Polygon_mesh_processing/orientation.h>
 
 #include <CGAL/Surface_mesh_simplification/edge_collapse.h>
 #include <CGAL/Surface_mesh_simplification/Policies/Edge_collapse/Count_stop_predicate.h>
@@ -563,6 +567,714 @@ Polyhedron Estimate_Surface_Mesh(
     }catch(const std::exception &e){
         throw std::runtime_error(std::string("Could not convert surface mesh to a polyhedron representation: ") + e.what());
     }
+    FUNCINFO("The triangulated surface has " << output_mesh.size_of_vertices() << " vertices"
+             " and " << output_mesh.size_of_facets() << " faces");
+  
+    // Remove disconnected vertices, if there are any.
+    const auto removed_verts = CGAL::Polygon_mesh_processing::remove_isolated_vertices(output_mesh);
+    if(removed_verts != 0){
+        FUNCWARN(removed_verts << " isolated vertices were removed");
+    }
+  
+    return output_mesh;
+}
+
+
+// This sub-routine performs the Marching Cubes algorithm for the given ROI contours.
+// ROI inclusivity is separately pre-computed before surface probing by generating an inclusivity mask on a
+// custom-fitted planar image collection. This is done for performance purposes and so inclusivity and surface
+// meshing can be separately tweaked as necessary.
+//
+// NOTE: This routine does not require the images that the contours were originally generated on.
+//       A custom set of dummy images that contiguously cover all ROIs are generated and used internally.
+//
+// NOTE: This routine assumes all ROIs are co-planar.
+//
+// NOTE: This routine will handle ROIs with several disconnected components (e.g., "eyes"). But all components
+//       will be lumped together into a single polyhedron.
+//
+// NOTE: This implementation borrows from the public domain implementation available at
+//       <https://paulbourke.net/geometry/polygonise/marchingsource.cpp> (accessed 20190217).
+//       The header lists Cory Bloyd as the author. The implementation provided here extends the public domain
+//       version to support rectangular cubes, avoid 3D interpolation, and explicitly constructs a polyhedron mesh.
+//       Thanks Cory! Thanks Paul!
+//
+Polyhedron Estimate_Surface_Mesh_Marching_Cubes(
+        std::list<std::reference_wrapper<contour_collection<double>>> cc_ROIs,
+        Parameters params ){
+
+    const vec3<double> zero3( static_cast<double>(0),
+                              static_cast<double>(0),
+                              static_cast<double>(0) );
+
+    constexpr auto machine_eps = std::numeric_limits<double>::epsilon();
+    constexpr auto dvec3_tol = std::sqrt(100.0 * machine_eps);
+
+
+    // Figure out plane alignment and work out spacing. (Spacing is twice the thickness.)
+    const auto est_cont_normal = cc_ROIs.front().get().contours.front().Estimate_Planar_Normal();
+    const auto unique_planar_separation_threshold = 0.005; // Contours separated by less are considered to be on the same plane.
+    const auto ucp = Unique_Contour_Planes(cc_ROIs, est_cont_normal, unique_planar_separation_threshold);
+
+    // ============================================= Export the data ================================================
+    // Export the contour vertices for inspection or processing with other tools.
+    /*
+    {
+        std::vector<Point_3> verts;
+        std::ofstream out("/tmp/SurfaceMesh_ROI_vertices.xyz");
+
+        for(auto &cc_ref : cc_ROIs){
+            for(const auto &c : cc_ref.get().contours){
+                for(const auto &p : c.points){
+                    Point_3 cgal_p( p.x, p.y, p.z );
+                    verts.push_back(cgal_p);
+                }
+            }
+        }
+        if(!out || !CGAL::write_xyz_points(out, verts)){
+            throw std::runtime_error("Unable to write contour vertices.");
+        } 
+    }
+    */
+
+
+    // ============================================== Generate a grid  ==============================================
+
+    // Compute the number of images to make into the grid: number of unique contour planes + 2.
+    // The extra two help provide slices above and below the contour extent to ensure polyhedron will be closed.
+    if(params.NumberOfImages <= 0) params.NumberOfImages = (ucp.size() + 2);
+    FUNCINFO("Number of images: " << params.NumberOfImages);
+
+    // Find grid alignment vectors.
+    //
+    // Note: Because we want to be able to compare images from different scans, we use a deterministic technique for
+    //       generating two orthogonal directions involving the cardinal directions and Gram-Schmidt
+    //       orthogonalization.
+    const auto GridZ = est_cont_normal.unit();
+    vec3<double> GridX = GridZ.rotate_around_z(M_PI * 0.5); // Try Z. Will often be idempotent.
+    if(GridX.Dot(GridZ) > 0.25){
+        GridX = GridZ.rotate_around_y(M_PI * 0.5);  //Should always work since GridZ is parallel to Z.
+    }
+    vec3<double> GridY = GridZ.Cross(GridX);
+    if(!GridZ.GramSchmidt_orthogonalize(GridX, GridY)){
+        throw std::runtime_error("Unable to find grid orientation vectors.");
+    }
+    GridX = GridX.unit();
+    GridY = GridY.unit();
+
+    // Figure out what z-margin is needed so the extra two images do not interfere with the grid lining up with the
+    // contours. (Want exactly one contour plane per image.) So the margin should be large enough so the empty
+    // images have no contours inside them, but small enough so that it doesn't affect the location of contours in the
+    // other image slices. The ideal is if each image slice has the same thickness so contours are all separated by some
+    // constant separation -- in this case we make the margin exactly as big as if two images were also included.
+    double z_margin = 0.0;
+    if(ucp.size() > 1){
+        // Compute the total distance between the (centre of the) top and (centre of the) bottom planes.
+        // (Note: the images associated with these contours will usually extend further. This is dealt with below.)
+        const auto total_sep =  std::abs(ucp.front().Get_Signed_Distance_To_Point(ucp.back().R_0));
+        const auto sep_per_plane = total_sep / static_cast<double>(ucp.size()-1);
+
+        // Alternative computation of separations. It is more robust, but the whole procedure falls apart if the slices
+        // are not regularly separated. Leaving here to potentially incorporate into Ygor or elsewhere at a later date.
+        //std::vector<double> seps;
+        //for(auto itA = std::begin(ucp); ; ++itA){
+        //    auto itB = std::next(itA);
+        //    if(itB == std::end(ucp)) break;
+        //    seps.emplace_back( std::abs(itA->Get_Signed_Distance_To_Point(itB->R_0)) );
+        //}
+        //const auto sep_per_plane = Stats::YgorMedian(seps);
+
+        // Add TOTAL zmargin of 1*sep_per_plane each for each extra images, and 0.5*sep_per_plane for each of the images
+        // which will stick out beyond the contour planes. However, the margin is added to both the top and the bottom so
+        // halve the total amount.
+        z_margin = sep_per_plane * 1.5;
+
+    }else{
+        FUNCWARN("Only a single contour plane was detected. Guessing its thickness.."); 
+        z_margin = 5.0;
+    }
+
+    // Figure out what a reasonable x-margin and y-margin are. 
+    //
+    // NOTE: Could also use (median? maximum?) distance from centroid to vertex.
+    double x_margin = z_margin;
+    double y_margin = z_margin;
+
+    // Generate a grid volume bounding the ROI(s).
+    const long int NumberOfChannels = 1;
+    const double PixelFill = std::numeric_limits<double>::quiet_NaN();
+    const bool OnlyExtremeSlices = false;
+    auto grid_image_collection = Contiguously_Grid_Volume<float,double>(
+             cc_ROIs, 
+             x_margin, y_margin, z_margin,
+             params.GridRows, params.GridColumns, 
+             NumberOfChannels, params.NumberOfImages,
+             GridX, GridY, GridZ,
+             PixelFill, OnlyExtremeSlices );
+
+    // Generate an ROI inclusivity voxel map.
+    const auto InteriorVal = -1.0;
+    const auto ExteriorVal = -InteriorVal;
+    {
+        PartitionedImageVoxelVisitorMutatorUserData ud;
+
+        ud.mutation_opts.editstyle = Mutate_Voxels_Opts::EditStyle::InPlace;
+        ud.mutation_opts.aggregate = Mutate_Voxels_Opts::Aggregate::First;
+        ud.mutation_opts.adjacency = Mutate_Voxels_Opts::Adjacency::SingleVoxel;
+        ud.mutation_opts.maskmod   = Mutate_Voxels_Opts::MaskMod::Noop;
+        ud.mutation_opts.inclusivity = Mutate_Voxels_Opts::Inclusivity::Centre;
+        ud.description = "ROI Inclusivity";
+
+        /*
+        if(false){
+        }else if( std::regex_match(ContourOverlapStr, regex_ignore) ){
+            ud.mutation_opts.contouroverlap = Mutate_Voxels_Opts::ContourOverlap::Ignore;
+        }else if( std::regex_match(ContourOverlapStr, regex_honopps) ){
+            ud.mutation_opts.contouroverlap = Mutate_Voxels_Opts::ContourOverlap::HonourOppositeOrientations;
+        }else if( std::regex_match(ContourOverlapStr, regex_cancel) ){
+            ud.mutation_opts.contouroverlap = Mutate_Voxels_Opts::ContourOverlap::ImplicitOrientations;
+        }else{
+            throw std::invalid_argument("ContourOverlap argument '"_s + ContourOverlapStr + "' is not valid");
+        }
+        */
+        ud.mutation_opts.contouroverlap = Mutate_Voxels_Opts::ContourOverlap::Ignore;
+
+        ud.f_bounded = [&](long int /*row*/, long int /*col*/, long int /*chan*/, float &voxel_val) {
+            voxel_val = InteriorVal;
+        };
+        ud.f_unbounded = [&](long int /*row*/, long int /*col*/, long int /*chan*/, float &voxel_val) {
+            voxel_val = ExteriorVal;
+        };
+
+        if(!grid_image_collection.Process_Images_Parallel( GroupIndividualImages,
+                                                           PartitionedImageVoxelVisitorMutator,
+                                                           {}, cc_ROIs, &ud )){
+            throw std::runtime_error("Unable to create an ROI inclusivity map.");
+        }
+    }
+
+    std::list<std::reference_wrapper<planar_image<float,double>>> grid_imgs;
+    for(auto &img : grid_image_collection.images){
+        grid_imgs.push_back( std::ref(img) );
+    }
+
+    if(!Images_Form_Rectilinear_Grid(grid_imgs)){
+        throw std::logic_error("Grid images do not form a rectilinear grid. Cannot continue");
+    }
+
+    planar_image_adjacency<float,double> img_adj( grid_imgs, {}, GridZ );
+
+    // ============================================== Marching Cubes ================================================
+
+    // Use a curb vertex inclusivity int (8 bits) to determine which (of 12) edges are intersected by the ROI surface.
+    std::array<int32_t, 256> aiCubeEdgeFlags { {
+        0b000000000000, 0b000100001001, 0b001000000011, 0b001100001010, 0b010000000110, 0b010100001111, 0b011000000101,
+        0b011100001100, 0b100000001100, 0b100100000101, 0b101000001111, 0b101100000110, 0b110000001010, 0b110100000011,
+        0b111000001001, 0b111100000000, 0b000110010000, 0b000010011001, 0b001110010011, 0b001010011010, 0b010110010110,
+        0b010010011111, 0b011110010101, 0b011010011100, 0b100110011100, 0b100010010101, 0b101110011111, 0b101010010110,
+        0b110110011010, 0b110010010011, 0b111110011001, 0b111010010000, 0b001000110000, 0b001100111001, 0b000000110011,
+        0b000100111010, 0b011000110110, 0b011100111111, 0b010000110101, 0b010100111100, 0b101000111100, 0b101100110101,
+        0b100000111111, 0b100100110110, 0b111000111010, 0b111100110011, 0b110000111001, 0b110100110000, 0b001110100000,
+        0b001010101001, 0b000110100011, 0b000010101010, 0b011110100110, 0b011010101111, 0b010110100101, 0b010010101100,
+        0b101110101100, 0b101010100101, 0b100110101111, 0b100010100110, 0b111110101010, 0b111010100011, 0b110110101001,
+        0b110010100000, 0b010001100000, 0b010101101001, 0b011001100011, 0b011101101010, 0b000001100110, 0b000101101111,
+        0b001001100101, 0b001101101100, 0b110001101100, 0b110101100101, 0b111001101111, 0b111101100110, 0b100001101010,
+        0b100101100011, 0b101001101001, 0b101101100000, 0b010111110000, 0b010011111001, 0b011111110011, 0b011011111010,
+        0b000111110110, 0b000011111111, 0b001111110101, 0b001011111100, 0b110111111100, 0b110011110101, 0b111111111111,
+        0b111011110110, 0b100111111010, 0b100011110011, 0b101111111001, 0b101011110000, 0b011001010000, 0b011101011001,
+        0b010001010011, 0b010101011010, 0b001001010110, 0b001101011111, 0b000001010101, 0b000101011100, 0b111001011100,
+        0b111101010101, 0b110001011111, 0b110101010110, 0b101001011010, 0b101101010011, 0b100001011001, 0b100101010000,
+        0b011111000000, 0b011011001001, 0b010111000011, 0b010011001010, 0b001111000110, 0b001011001111, 0b000111000101,
+        0b000011001100, 0b111111001100, 0b111011000101, 0b110111001111, 0b110011000110, 0b101111001010, 0b101011000011,
+        0b100111001001, 0b100011000000, 0b100011000000, 0b100111001001, 0b101011000011, 0b101111001010, 0b110011000110,
+        0b110111001111, 0b111011000101, 0b111111001100, 0b000011001100, 0b000111000101, 0b001011001111, 0b001111000110,
+        0b010011001010, 0b010111000011, 0b011011001001, 0b011111000000, 0b100101010000, 0b100001011001, 0b101101010011,
+        0b101001011010, 0b110101010110, 0b110001011111, 0b111101010101, 0b111001011100, 0b000101011100, 0b000001010101,
+        0b001101011111, 0b001001010110, 0b010101011010, 0b010001010011, 0b011101011001, 0b011001010000, 0b101011110000,
+        0b101111111001, 0b100011110011, 0b100111111010, 0b111011110110, 0b111111111111, 0b110011110101, 0b110111111100,
+        0b001011111100, 0b001111110101, 0b000011111111, 0b000111110110, 0b011011111010, 0b011111110011, 0b010011111001,
+        0b010111110000, 0b101101100000, 0b101001101001, 0b100101100011, 0b100001101010, 0b111101100110, 0b111001101111,
+        0b110101100101, 0b110001101100, 0b001101101100, 0b001001100101, 0b000101101111, 0b000001100110, 0b011101101010,
+        0b011001100011, 0b010101101001, 0b010001100000, 0b110010100000, 0b110110101001, 0b111010100011, 0b111110101010,
+        0b100010100110, 0b100110101111, 0b101010100101, 0b101110101100, 0b010010101100, 0b010110100101, 0b011010101111,
+        0b011110100110, 0b000010101010, 0b000110100011, 0b001010101001, 0b001110100000, 0b110100110000, 0b110000111001,
+        0b111100110011, 0b111000111010, 0b100100110110, 0b100000111111, 0b101100110101, 0b101000111100, 0b010100111100,
+        0b010000110101, 0b011100111111, 0b011000110110, 0b000100111010, 0b000000110011, 0b001100111001, 0b001000110000,
+        0b111010010000, 0b111110011001, 0b110010010011, 0b110110011010, 0b101010010110, 0b101110011111, 0b100010010101,
+        0b100110011100, 0b011010011100, 0b011110010101, 0b010010011111, 0b010110010110, 0b001010011010, 0b001110010011,
+        0b000010011001, 0b000110010000, 0b111100000000, 0b111000001001, 0b110100000011, 0b110000001010, 0b101100000110,
+        0b101000001111, 0b100100000101, 0b100000001100, 0b011100001100, 0b011000000101, 0b010100001111, 0b010000000110,
+        0b001100001010, 0b001000000011, 0b000100001001, 0b000000000000
+    } };
+
+    // Determine which triangulation (0-5 triangles) is needed given the edge-surface intersections.
+    std::array< std::array<int32_t, 16>, 256> a2iTriangleConnectionTable  { {
+           { -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  0,  8,  3,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  0,  1,  9,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  1,  8,  3,    9,  8,  1,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  1,  2, 10,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  0,  8,  3,    1,  2, 10,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  9,  2, 10,    0,  2,  9,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  2,  8,  3,    2, 10,  8,   10,  9,  8,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  3, 11,  2,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  0, 11,  2,    8, 11,  0,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  1,  9,  0,    2,  3, 11,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  1, 11,  2,    1,  9, 11,    9,  8, 11,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  3, 10,  1,   11, 10,  3,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  0, 10,  1,    0,  8, 10,    8, 11, 10,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  3,  9,  0,    3, 11,  9,   11, 10,  9,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  9,  8, 10,   10,  8, 11,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  4,  7,  8,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  4,  3,  0,    7,  3,  4,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  0,  1,  9,    8,  4,  7,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  4,  1,  9,    4,  7,  1,    7,  3,  1,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  1,  2, 10,    8,  4,  7,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  3,  4,  7,    3,  0,  4,    1,  2, 10,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  9,  2, 10,    9,  0,  2,    8,  4,  7,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  2, 10,  9,    2,  9,  7,    2,  7,  3,    7,  9,  4,   -1, -1, -1,   -1 },
+           {  8,  4,  7,    3, 11,  2,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1 },
+           { 11,  4,  7,   11,  2,  4,    2,  0,  4,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  9,  0,  1,    8,  4,  7,    2,  3, 11,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  4,  7, 11,    9,  4, 11,    9, 11,  2,    9,  2,  1,   -1, -1, -1,   -1 },
+           {  3, 10,  1,    3, 11, 10,    7,  8,  4,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  1, 11, 10,    1,  4, 11,    1,  0,  4,    7, 11,  4,   -1, -1, -1,   -1 },
+           {  4,  7,  8,    9,  0, 11,    9, 11, 10,   11,  0,  3,   -1, -1, -1,   -1 },
+           {  4,  7, 11,    4, 11,  9,    9, 11, 10,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  9,  5,  4,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  9,  5,  4,    0,  8,  3,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  0,  5,  4,    1,  5,  0,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  8,  5,  4,    8,  3,  5,    3,  1,  5,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  1,  2, 10,    9,  5,  4,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  3,  0,  8,    1,  2, 10,    4,  9,  5,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  5,  2, 10,    5,  4,  2,    4,  0,  2,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  2, 10,  5,    3,  2,  5,    3,  5,  4,    3,  4,  8,   -1, -1, -1,   -1 },
+           {  9,  5,  4,    2,  3, 11,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  0, 11,  2,    0,  8, 11,    4,  9,  5,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  0,  5,  4,    0,  1,  5,    2,  3, 11,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  2,  1,  5,    2,  5,  8,    2,  8, 11,    4,  8,  5,   -1, -1, -1,   -1 },
+           { 10,  3, 11,   10,  1,  3,    9,  5,  4,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  4,  9,  5,    0,  8,  1,    8, 10,  1,    8, 11, 10,   -1, -1, -1,   -1 },
+           {  5,  4,  0,    5,  0, 11,    5, 11, 10,   11,  0,  3,   -1, -1, -1,   -1 },
+           {  5,  4,  8,    5,  8, 10,   10,  8, 11,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  9,  7,  8,    5,  7,  9,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  9,  3,  0,    9,  5,  3,    5,  7,  3,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  0,  7,  8,    0,  1,  7,    1,  5,  7,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  1,  5,  3,    3,  5,  7,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  9,  7,  8,    9,  5,  7,   10,  1,  2,   -1, -1, -1,   -1, -1, -1,   -1 },
+           { 10,  1,  2,    9,  5,  0,    5,  3,  0,    5,  7,  3,   -1, -1, -1,   -1 },
+           {  8,  0,  2,    8,  2,  5,    8,  5,  7,   10,  5,  2,   -1, -1, -1,   -1 },
+           {  2, 10,  5,    2,  5,  3,    3,  5,  7,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  7,  9,  5,    7,  8,  9,    3, 11,  2,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  9,  5,  7,    9,  7,  2,    9,  2,  0,    2,  7, 11,   -1, -1, -1,   -1 },
+           {  2,  3, 11,    0,  1,  8,    1,  7,  8,    1,  5,  7,   -1, -1, -1,   -1 },
+           { 11,  2,  1,   11,  1,  7,    7,  1,  5,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  9,  5,  8,    8,  5,  7,   10,  1,  3,   10,  3, 11,   -1, -1, -1,   -1 },
+           {  5,  7,  0,    5,  0,  9,    7, 11,  0,    1,  0, 10,   11, 10,  0,   -1 },
+           { 11, 10,  0,   11,  0,  3,   10,  5,  0,    8,  0,  7,    5,  7,  0,   -1 },
+           { 11, 10,  5,    7, 11,  5,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1 },
+           { 10,  6,  5,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  0,  8,  3,    5, 10,  6,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  9,  0,  1,    5, 10,  6,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  1,  8,  3,    1,  9,  8,    5, 10,  6,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  1,  6,  5,    2,  6,  1,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  1,  6,  5,    1,  2,  6,    3,  0,  8,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  9,  6,  5,    9,  0,  6,    0,  2,  6,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  5,  9,  8,    5,  8,  2,    5,  2,  6,    3,  2,  8,   -1, -1, -1,   -1 },
+           {  2,  3, 11,   10,  6,  5,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1 },
+           { 11,  0,  8,   11,  2,  0,   10,  6,  5,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  0,  1,  9,    2,  3, 11,    5, 10,  6,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  5, 10,  6,    1,  9,  2,    9, 11,  2,    9,  8, 11,   -1, -1, -1,   -1 },
+           {  6,  3, 11,    6,  5,  3,    5,  1,  3,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  0,  8, 11,    0, 11,  5,    0,  5,  1,    5, 11,  6,   -1, -1, -1,   -1 },
+           {  3, 11,  6,    0,  3,  6,    0,  6,  5,    0,  5,  9,   -1, -1, -1,   -1 },
+           {  6,  5,  9,    6,  9, 11,   11,  9,  8,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  5, 10,  6,    4,  7,  8,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  4,  3,  0,    4,  7,  3,    6,  5, 10,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  1,  9,  0,    5, 10,  6,    8,  4,  7,   -1, -1, -1,   -1, -1, -1,   -1 },
+           { 10,  6,  5,    1,  9,  7,    1,  7,  3,    7,  9,  4,   -1, -1, -1,   -1 },
+           {  6,  1,  2,    6,  5,  1,    4,  7,  8,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  1,  2,  5,    5,  2,  6,    3,  0,  4,    3,  4,  7,   -1, -1, -1,   -1 },
+           {  8,  4,  7,    9,  0,  5,    0,  6,  5,    0,  2,  6,   -1, -1, -1,   -1 },
+           {  7,  3,  9,    7,  9,  4,    3,  2,  9,    5,  9,  6,    2,  6,  9,   -1 },
+           {  3, 11,  2,    7,  8,  4,   10,  6,  5,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  5, 10,  6,    4,  7,  2,    4,  2,  0,    2,  7, 11,   -1, -1, -1,   -1 },
+           {  0,  1,  9,    4,  7,  8,    2,  3, 11,    5, 10,  6,   -1, -1, -1,   -1 },
+           {  9,  2,  1,    9, 11,  2,    9,  4, 11,    7, 11,  4,    5, 10,  6,   -1 },
+           {  8,  4,  7,    3, 11,  5,    3,  5,  1,    5, 11,  6,   -1, -1, -1,   -1 },
+           {  5,  1, 11,    5, 11,  6,    1,  0, 11,    7, 11,  4,    0,  4, 11,   -1 },
+           {  0,  5,  9,    0,  6,  5,    0,  3,  6,   11,  6,  3,    8,  4,  7,   -1 },
+           {  6,  5,  9,    6,  9, 11,    4,  7,  9,    7, 11,  9,   -1, -1, -1,   -1 },
+           { 10,  4,  9,    6,  4, 10,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  4, 10,  6,    4,  9, 10,    0,  8,  3,   -1, -1, -1,   -1, -1, -1,   -1 },
+           { 10,  0,  1,   10,  6,  0,    6,  4,  0,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  8,  3,  1,    8,  1,  6,    8,  6,  4,    6,  1, 10,   -1, -1, -1,   -1 },
+           {  1,  4,  9,    1,  2,  4,    2,  6,  4,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  3,  0,  8,    1,  2,  9,    2,  4,  9,    2,  6,  4,   -1, -1, -1,   -1 },
+           {  0,  2,  4,    4,  2,  6,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  8,  3,  2,    8,  2,  4,    4,  2,  6,   -1, -1, -1,   -1, -1, -1,   -1 },
+           { 10,  4,  9,   10,  6,  4,   11,  2,  3,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  0,  8,  2,    2,  8, 11,    4,  9, 10,    4, 10,  6,   -1, -1, -1,   -1 },
+           {  3, 11,  2,    0,  1,  6,    0,  6,  4,    6,  1, 10,   -1, -1, -1,   -1 },
+           {  6,  4,  1,    6,  1, 10,    4,  8,  1,    2,  1, 11,    8, 11,  1,   -1 },
+           {  9,  6,  4,    9,  3,  6,    9,  1,  3,   11,  6,  3,   -1, -1, -1,   -1 },
+           {  8, 11,  1,    8,  1,  0,   11,  6,  1,    9,  1,  4,    6,  4,  1,   -1 },
+           {  3, 11,  6,    3,  6,  0,    0,  6,  4,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  6,  4,  8,   11,  6,  8,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  7, 10,  6,    7,  8, 10,    8,  9, 10,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  0,  7,  3,    0, 10,  7,    0,  9, 10,    6,  7, 10,   -1, -1, -1,   -1 },
+           { 10,  6,  7,    1, 10,  7,    1,  7,  8,    1,  8,  0,   -1, -1, -1,   -1 },
+           { 10,  6,  7,   10,  7,  1,    1,  7,  3,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  1,  2,  6,    1,  6,  8,    1,  8,  9,    8,  6,  7,   -1, -1, -1,   -1 },
+           {  2,  6,  9,    2,  9,  1,    6,  7,  9,    0,  9,  3,    7,  3,  9,   -1 },
+           {  7,  8,  0,    7,  0,  6,    6,  0,  2,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  7,  3,  2,    6,  7,  2,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  2,  3, 11,   10,  6,  8,   10,  8,  9,    8,  6,  7,   -1, -1, -1,   -1 },
+           {  2,  0,  7,    2,  7, 11,    0,  9,  7,    6,  7, 10,    9, 10,  7,   -1 },
+           {  1,  8,  0,    1,  7,  8,    1, 10,  7,    6,  7, 10,    2,  3, 11,   -1 },
+           { 11,  2,  1,   11,  1,  7,   10,  6,  1,    6,  7,  1,   -1, -1, -1,   -1 },
+           {  8,  9,  6,    8,  6,  7,    9,  1,  6,   11,  6,  3,    1,  3,  6,   -1 },
+           {  0,  9,  1,   11,  6,  7,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  7,  8,  0,    7,  0,  6,    3, 11,  0,   11,  6,  0,   -1, -1, -1,   -1 },
+           {  7, 11,  6,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  7,  6, 11,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  3,  0,  8,   11,  7,  6,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  0,  1,  9,   11,  7,  6,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  8,  1,  9,    8,  3,  1,   11,  7,  6,   -1, -1, -1,   -1, -1, -1,   -1 },
+           { 10,  1,  2,    6, 11,  7,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  1,  2, 10,    3,  0,  8,    6, 11,  7,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  2,  9,  0,    2, 10,  9,    6, 11,  7,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  6, 11,  7,    2, 10,  3,   10,  8,  3,   10,  9,  8,   -1, -1, -1,   -1 },
+           {  7,  2,  3,    6,  2,  7,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  7,  0,  8,    7,  6,  0,    6,  2,  0,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  2,  7,  6,    2,  3,  7,    0,  1,  9,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  1,  6,  2,    1,  8,  6,    1,  9,  8,    8,  7,  6,   -1, -1, -1,   -1 },
+           { 10,  7,  6,   10,  1,  7,    1,  3,  7,   -1, -1, -1,   -1, -1, -1,   -1 },
+           { 10,  7,  6,    1,  7, 10,    1,  8,  7,    1,  0,  8,   -1, -1, -1,   -1 },
+           {  0,  3,  7,    0,  7, 10,    0, 10,  9,    6, 10,  7,   -1, -1, -1,   -1 },
+           {  7,  6, 10,    7, 10,  8,    8, 10,  9,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  6,  8,  4,   11,  8,  6,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  3,  6, 11,    3,  0,  6,    0,  4,  6,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  8,  6, 11,    8,  4,  6,    9,  0,  1,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  9,  4,  6,    9,  6,  3,    9,  3,  1,   11,  3,  6,   -1, -1, -1,   -1 },
+           {  6,  8,  4,    6, 11,  8,    2, 10,  1,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  1,  2, 10,    3,  0, 11,    0,  6, 11,    0,  4,  6,   -1, -1, -1,   -1 },
+           {  4, 11,  8,    4,  6, 11,    0,  2,  9,    2, 10,  9,   -1, -1, -1,   -1 },
+           { 10,  9,  3,   10,  3,  2,    9,  4,  3,   11,  3,  6,    4,  6,  3,   -1 },
+           {  8,  2,  3,    8,  4,  2,    4,  6,  2,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  0,  4,  2,    4,  6,  2,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  1,  9,  0,    2,  3,  4,    2,  4,  6,    4,  3,  8,   -1, -1, -1,   -1 },
+           {  1,  9,  4,    1,  4,  2,    2,  4,  6,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  8,  1,  3,    8,  6,  1,    8,  4,  6,    6, 10,  1,   -1, -1, -1,   -1 },
+           { 10,  1,  0,   10,  0,  6,    6,  0,  4,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  4,  6,  3,    4,  3,  8,    6, 10,  3,    0,  3,  9,   10,  9,  3,   -1 },
+           { 10,  9,  4,    6, 10,  4,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  4,  9,  5,    7,  6, 11,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  0,  8,  3,    4,  9,  5,   11,  7,  6,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  5,  0,  1,    5,  4,  0,    7,  6, 11,   -1, -1, -1,   -1, -1, -1,   -1 },
+           { 11,  7,  6,    8,  3,  4,    3,  5,  4,    3,  1,  5,   -1, -1, -1,   -1 },
+           {  9,  5,  4,   10,  1,  2,    7,  6, 11,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  6, 11,  7,    1,  2, 10,    0,  8,  3,    4,  9,  5,   -1, -1, -1,   -1 },
+           {  7,  6, 11,    5,  4, 10,    4,  2, 10,    4,  0,  2,   -1, -1, -1,   -1 },
+           {  3,  4,  8,    3,  5,  4,    3,  2,  5,   10,  5,  2,   11,  7,  6,   -1 },
+           {  7,  2,  3,    7,  6,  2,    5,  4,  9,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  9,  5,  4,    0,  8,  6,    0,  6,  2,    6,  8,  7,   -1, -1, -1,   -1 },
+           {  3,  6,  2,    3,  7,  6,    1,  5,  0,    5,  4,  0,   -1, -1, -1,   -1 },
+           {  6,  2,  8,    6,  8,  7,    2,  1,  8,    4,  8,  5,    1,  5,  8,   -1 },
+           {  9,  5,  4,   10,  1,  6,    1,  7,  6,    1,  3,  7,   -1, -1, -1,   -1 },
+           {  1,  6, 10,    1,  7,  6,    1,  0,  7,    8,  7,  0,    9,  5,  4,   -1 },
+           {  4,  0, 10,    4, 10,  5,    0,  3, 10,    6, 10,  7,    3,  7, 10,   -1 },
+           {  7,  6, 10,    7, 10,  8,    5,  4, 10,    4,  8, 10,   -1, -1, -1,   -1 },
+           {  6,  9,  5,    6, 11,  9,   11,  8,  9,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  3,  6, 11,    0,  6,  3,    0,  5,  6,    0,  9,  5,   -1, -1, -1,   -1 },
+           {  0, 11,  8,    0,  5, 11,    0,  1,  5,    5,  6, 11,   -1, -1, -1,   -1 },
+           {  6, 11,  3,    6,  3,  5,    5,  3,  1,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  1,  2, 10,    9,  5, 11,    9, 11,  8,   11,  5,  6,   -1, -1, -1,   -1 },
+           {  0, 11,  3,    0,  6, 11,    0,  9,  6,    5,  6,  9,    1,  2, 10,   -1 },
+           { 11,  8,  5,   11,  5,  6,    8,  0,  5,   10,  5,  2,    0,  2,  5,   -1 },
+           {  6, 11,  3,    6,  3,  5,    2, 10,  3,   10,  5,  3,   -1, -1, -1,   -1 },
+           {  5,  8,  9,    5,  2,  8,    5,  6,  2,    3,  8,  2,   -1, -1, -1,   -1 },
+           {  9,  5,  6,    9,  6,  0,    0,  6,  2,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  1,  5,  8,    1,  8,  0,    5,  6,  8,    3,  8,  2,    6,  2,  8,   -1 },
+           {  1,  5,  6,    2,  1,  6,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  1,  3,  6,    1,  6, 10,    3,  8,  6,    5,  6,  9,    8,  9,  6,   -1 },
+           { 10,  1,  0,   10,  0,  6,    9,  5,  0,    5,  6,  0,   -1, -1, -1,   -1 },
+           {  0,  3,  8,    5,  6, 10,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1 },
+           { 10,  5,  6,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1 },
+           { 11,  5, 10,    7,  5, 11,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1 },
+           { 11,  5, 10,   11,  7,  5,    8,  3,  0,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  5, 11,  7,    5, 10, 11,    1,  9,  0,   -1, -1, -1,   -1, -1, -1,   -1 },
+           { 10,  7,  5,   10, 11,  7,    9,  8,  1,    8,  3,  1,   -1, -1, -1,   -1 },
+           { 11,  1,  2,   11,  7,  1,    7,  5,  1,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  0,  8,  3,    1,  2,  7,    1,  7,  5,    7,  2, 11,   -1, -1, -1,   -1 },
+           {  9,  7,  5,    9,  2,  7,    9,  0,  2,    2, 11,  7,   -1, -1, -1,   -1 },
+           {  7,  5,  2,    7,  2, 11,    5,  9,  2,    3,  2,  8,    9,  8,  2,   -1 },
+           {  2,  5, 10,    2,  3,  5,    3,  7,  5,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  8,  2,  0,    8,  5,  2,    8,  7,  5,   10,  2,  5,   -1, -1, -1,   -1 },
+           {  9,  0,  1,    5, 10,  3,    5,  3,  7,    3, 10,  2,   -1, -1, -1,   -1 },
+           {  9,  8,  2,    9,  2,  1,    8,  7,  2,   10,  2,  5,    7,  5,  2,   -1 },
+           {  1,  3,  5,    3,  7,  5,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  0,  8,  7,    0,  7,  1,    1,  7,  5,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  9,  0,  3,    9,  3,  5,    5,  3,  7,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  9,  8,  7,    5,  9,  7,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  5,  8,  4,    5, 10,  8,   10, 11,  8,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  5,  0,  4,    5, 11,  0,    5, 10, 11,   11,  3,  0,   -1, -1, -1,   -1 },
+           {  0,  1,  9,    8,  4, 10,    8, 10, 11,   10,  4,  5,   -1, -1, -1,   -1 },
+           { 10, 11,  4,   10,  4,  5,   11,  3,  4,    9,  4,  1,    3,  1,  4,   -1 },
+           {  2,  5,  1,    2,  8,  5,    2, 11,  8,    4,  5,  8,   -1, -1, -1,   -1 },
+           {  0,  4, 11,    0, 11,  3,    4,  5, 11,    2, 11,  1,    5,  1, 11,   -1 },
+           {  0,  2,  5,    0,  5,  9,    2, 11,  5,    4,  5,  8,   11,  8,  5,   -1 },
+           {  9,  4,  5,    2, 11,  3,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  2,  5, 10,    3,  5,  2,    3,  4,  5,    3,  8,  4,   -1, -1, -1,   -1 },
+           {  5, 10,  2,    5,  2,  4,    4,  2,  0,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  3, 10,  2,    3,  5, 10,    3,  8,  5,    4,  5,  8,    0,  1,  9,   -1 },
+           {  5, 10,  2,    5,  2,  4,    1,  9,  2,    9,  4,  2,   -1, -1, -1,   -1 },
+           {  8,  4,  5,    8,  5,  3,    3,  5,  1,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  0,  4,  5,    1,  0,  5,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  8,  4,  5,    8,  5,  3,    9,  0,  5,    0,  3,  5,   -1, -1, -1,   -1 },
+           {  9,  4,  5,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  4, 11,  7,    4,  9, 11,    9, 10, 11,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  0,  8,  3,    4,  9,  7,    9, 11,  7,    9, 10, 11,   -1, -1, -1,   -1 },
+           {  1, 10, 11,    1, 11,  4,    1,  4,  0,    7,  4, 11,   -1, -1, -1,   -1 },
+           {  3,  1,  4,    3,  4,  8,    1, 10,  4,    7,  4, 11,   10, 11,  4,   -1 },
+           {  4, 11,  7,    9, 11,  4,    9,  2, 11,    9,  1,  2,   -1, -1, -1,   -1 },
+           {  9,  7,  4,    9, 11,  7,    9,  1, 11,    2, 11,  1,    0,  8,  3,   -1 },
+           { 11,  7,  4,   11,  4,  2,    2,  4,  0,   -1, -1, -1,   -1, -1, -1,   -1 },
+           { 11,  7,  4,   11,  4,  2,    8,  3,  4,    3,  2,  4,   -1, -1, -1,   -1 },
+           {  2,  9, 10,    2,  7,  9,    2,  3,  7,    7,  4,  9,   -1, -1, -1,   -1 },
+           {  9, 10,  7,    9,  7,  4,   10,  2,  7,    8,  7,  0,    2,  0,  7,   -1 },
+           {  3,  7, 10,    3, 10,  2,    7,  4, 10,    1, 10,  0,    4,  0, 10,   -1 },
+           {  1, 10,  2,    8,  7,  4,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  4,  9,  1,    4,  1,  7,    7,  1,  3,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  4,  9,  1,    4,  1,  7,    0,  8,  1,    8,  7,  1,   -1, -1, -1,   -1 },
+           {  4,  0,  3,    7,  4,  3,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  4,  8,  7,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  9, 10,  8,   10, 11,  8,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  3,  0,  9,    3,  9, 11,   11,  9, 10,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  0,  1, 10,    0, 10,  8,    8, 10, 11,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  3,  1, 10,   11,  3, 10,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  1,  2, 11,    1, 11,  9,    9, 11,  8,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  3,  0,  9,    3,  9, 11,    1,  2,  9,    2, 11,  9,   -1, -1, -1,   -1 },
+           {  0,  2, 11,    8,  0, 11,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  3,  2, 11,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  2,  3,  8,    2,  8, 10,   10,  8,  9,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  9, 10,  2,    0,  9,  2,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  2,  3,  8,    2,  8, 10,    0,  1,  8,    1, 10,  8,   -1, -1, -1,   -1 },
+           {  1, 10,  2,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  1,  3,  8,    9,  1,  8,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  0,  9,  1,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1 },
+           {  0,  3,  8,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1 },
+           { -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1, -1, -1,   -1 }
+    } };
+
+    // Convert an edge index to the corner vertex indices for a cube.
+    const std::array< std::array<int32_t, 2>, 12> a2iEdgeConnection { {
+        {0, 1}, {1, 2}, {2, 3}, {3, 0}, {4, 5}, {5, 6}, 
+        {6, 7}, {7, 4}, {0, 4}, {1, 5}, {2, 6}, {3, 7}
+    } };
+
+    // Storage used for the final mesh triangle vertices and faces.
+    std::vector<Kernel::Point_3> mesh_triangle_verts;
+    std::vector< std::array<size_t, 3> > mesh_triangle_faces;
+
+    std::mutex saver_printer; // Thread synchro lock for saving shared data, logging, and counter iterating.
+    long int completed = 0;
+    const long int img_count = grid_imgs.size();
+
+    // Iterate over all voxels.
+    for(auto &img_refw : grid_imgs){
+        const auto pxl_dx = img_refw.get().pxl_dx;
+        const auto pxl_dy = img_refw.get().pxl_dy;
+        const auto pxl_dz = img_refw.get().pxl_dz;
+
+        const auto row_unit = img_refw.get().row_unit.unit();
+        const auto col_unit = img_refw.get().col_unit.unit();
+        const auto img_unit = row_unit.Cross(col_unit).unit();
+
+        // List of Marching Cube voxel corner positions relative to image voxel centre.
+        //
+        // Note that the Marching cube and image voxels are not the same. They are offset such that
+        // the corner of the Marching Cube voxel is at the centre of the image voxel. This is done
+        // to avoid surface discontinuties that would arise from sampling the boundary of border
+        // voxels; numerical instability could potentially lead to random fluctuation by 1 voxel width on
+        // straight borders.
+        const std::array< vec3<double>, 8> a2fVertexOffset { {
+            (zero3),
+            (zero3 + row_unit * pxl_dx),
+            (zero3 + row_unit * pxl_dx + col_unit * pxl_dy),
+            (zero3 + col_unit * pxl_dy),
+            (zero3 + img_unit * pxl_dz),
+            (zero3 + row_unit * pxl_dx + img_unit * pxl_dz),
+            (zero3 + row_unit * pxl_dx + col_unit * pxl_dy + img_unit * pxl_dz),
+            (zero3 + col_unit * pxl_dy + img_unit * pxl_dz)
+        } };
+
+        // The vector needed to translate from tail to head for each edge.
+        const std::array< vec3<double>, 12> a2fEdgeDirection { {
+            vec3<double>(  1.0,  0.0,  0.0) * pxl_dx,
+            vec3<double>(  0.0,  1.0,  0.0) * pxl_dy,
+            vec3<double>( -1.0,  0.0,  0.0) * pxl_dx,
+            vec3<double>(  0.0, -1.0,  0.0) * pxl_dy,
+            vec3<double>(  1.0,  0.0,  0.0) * pxl_dx,
+            vec3<double>(  0.0,  1.0,  0.0) * pxl_dy,
+            vec3<double>( -1.0,  0.0,  0.0) * pxl_dx,
+            vec3<double>(  0.0, -1.0,  0.0) * pxl_dy,
+            vec3<double>(  0.0,  0.0,  1.0) * pxl_dz,
+            vec3<double>(  0.0,  0.0,  1.0) * pxl_dz,
+            vec3<double>(  0.0,  0.0,  1.0) * pxl_dz,
+            vec3<double>(  0.0,  0.0,  1.0) * pxl_dz
+        } };
+
+        const auto N_rows = img_refw.get().rows;
+        const auto N_cols = img_refw.get().columns;
+        for(long int row = 0; row < N_rows; ++row){
+            for(long int col = 0; col < N_cols; ++col){
+                const auto pos = img_refw.get().position(row, col);
+
+                // Sample voxel corner values.
+                std::array<double, 8> afCubeValue;
+                //
+                // Option A: Interpolate. This way is slow but extremely flexible.
+                //for(int32_t corner = 0; corner < 8; ++corner){
+                //    afCubeValue[corner] = surface_oracle(pos + a2fVertexOffset[corner]);
+                //}
+                //
+                // Option B: Align Marching Cube voxel corners with image voxel centres. This way is fast.
+                {
+                    const auto row_p1 = (row+1);
+                    const auto row_is_adj = (row_p1 < N_rows);
+
+                    const auto col_p1 = (col+1);
+                    const auto col_is_adj = (col_p1 < N_cols);
+
+                    const auto img_num = img_adj.image_to_index( img_refw );
+                    const auto img_num_p1 = img_num + 1;
+                    const auto img_is_adj = img_adj.index_present(img_num_p1);
+                    const auto img_p1 = (img_is_adj) ? img_adj.index_to_image(img_num_p1) : img_refw;
+
+                    afCubeValue[0] = img_refw.get().value(row, col, 0);
+                    afCubeValue[1] = (row_is_adj)                             ? img_refw.get().value(row_p1, col, 0)    : ExteriorVal;
+                    afCubeValue[2] = (row_is_adj && col_is_adj)               ? img_refw.get().value(row_p1, col_p1, 0) : ExteriorVal;
+                    afCubeValue[3] = (col_is_adj)                             ? img_refw.get().value(row, col_p1, 0)    : ExteriorVal;
+                    afCubeValue[4] = (img_is_adj)                             ? img_p1.get().value(row, col, 0)         : ExteriorVal;
+                    afCubeValue[5] = (row_is_adj && img_is_adj)               ? img_p1.get().value(row_p1, col, 0)      : ExteriorVal;
+                    afCubeValue[6] = (row_is_adj && col_is_adj && img_is_adj) ? img_p1.get().value(row_p1, col_p1, 0)   : ExteriorVal;
+                    afCubeValue[7] = (col_is_adj && img_is_adj)               ? img_p1.get().value(row, col_p1, 0)      : ExteriorVal;
+                }
+
+                // Convert vertex inclusion to a bitmask.
+                int32_t iFlagIndex = 0;
+                const double interior_threshold = 0.0; // Anything <= is considered to be interior to the ROI.
+                for(int32_t corner = 0; corner < 8; ++corner){
+                    if(afCubeValue[corner] <= interior_threshold) iFlagIndex |= (1 << corner);
+                }
+
+                // Convert vertex inclusion into a list of 'involved' edges that cross the ROI surface.
+                int32_t iEdgeFlags = aiCubeEdgeFlags[iFlagIndex];
+
+                //If the cube is entirely inside or outside of the surface, then there will be no intersections
+                if(iEdgeFlags == 0) continue;
+
+                //Find the point of intersection of the surface with each edge
+                //Then find the normal to the surface at those points
+                std::array<vec3<double>, 12> asEdgeVertex;
+                for(int32_t edge = 0; edge < 12; edge++){
+                    if(iEdgeFlags & (1 << edge)){ // continue iff involved.
+
+                        const double value_A = afCubeValue[a2iEdgeConnection[edge][0]];
+                        const double value_B = afCubeValue[a2iEdgeConnection[edge][1]];
+
+                        // Find the (approximate) point along the edge where the surface intersects, parameterized to [0:1].
+                        const double d_value = (value_B - value_A);
+                        const double inv_d_value = static_cast<double>(1.0)/d_value;
+                        const double lin_interp = (interior_threshold - value_A) * inv_d_value;
+                        const double surf_dl = std::isfinite(lin_interp) ? lin_interp : static_cast<double>(0.5);
+                        if(!isininc(0.0,surf_dl,1.0)){
+                            throw std::logic_error("Interpolation of surface-edge intersection failed. Refusing to continue");
+                        }
+
+                        asEdgeVertex[edge] = (a2fEdgeDirection[edge] * surf_dl);
+                        asEdgeVertex[edge] += a2fVertexOffset[a2iEdgeConnection[edge][0]];
+                        asEdgeVertex[edge] += pos;
+                    }
+                }
+
+                // Process the triangles that were identified.
+                for(int32_t tri = 0; tri < 5; tri++){
+
+                    // Stop when the first -1 index is encountered (signifying there are no further triangles).
+                    if(a2iTriangleConnectionTable[iFlagIndex][3*tri] < 0) break;
+
+                    std::array<vec3<double>, 3> tri_verts;
+                    for(int32_t tri_corner = 0; tri_corner < 3; ++tri_corner){
+                        const int32_t vert_idx = a2iTriangleConnectionTable[iFlagIndex][3*tri + tri_corner];
+                        tri_verts[tri_corner] = asEdgeVertex[vert_idx];
+    
+                    }
+
+                    // Determine which vertices should be used; if there are existing vertices sufficiently nearby, use
+                    // them rather than adding a new (disconnected) vertex.
+                    //
+                    // Note: Existing vertices created for adjacent voxels are more likely to be placed near the back of
+                    //       the vector. Using reverse iterators for searching rather than forward iterators more than
+                    //       halves the time this entire routine takes. 
+                    //
+                    // TODO: Use spatial indexing of some kind to speed up dupe vertex searching (or try fully eliminate
+                    //       the need for it via grid indexing).
+                    std::array<size_t, 3> vert_indices;
+                    for(int32_t tri_corner = 0; tri_corner < 3; ++tri_corner){
+                        auto v_it = std::find_if( //std::execution::par_unseq,
+                                                  std::rbegin(mesh_triangle_verts),
+                                                  std::rend(mesh_triangle_verts),
+                                                  [=]( const Kernel::Point_3 &cv ) -> bool {
+                                                      const vec3<double> v( cv[0], cv[1], cv[2] );
+                                                      return (tri_verts[tri_corner].sq_dist(v) < dvec3_tol);
+                                                  } );
+                        
+                        if(v_it != std::rend(mesh_triangle_verts)){
+                            vert_indices[tri_corner] = mesh_triangle_verts.size() - std::distance(std::rbegin(mesh_triangle_verts), v_it) - 1;
+                        }else{
+                            mesh_triangle_verts.emplace_back( Kernel::Point_3( 
+                                    tri_verts[tri_corner].x, tri_verts[tri_corner].y, tri_verts[tri_corner].z ) );
+                            vert_indices[tri_corner] = (mesh_triangle_verts.size() - 1);
+                        }
+                    }
+
+                    mesh_triangle_faces.emplace_back(vert_indices);
+                }
+
+            } // Loop over columns.
+        } // Loop over rows.
+
+        //Report operation progress.
+        {
+            std::lock_guard<std::mutex> lock(saver_printer);
+            ++completed;
+            FUNCINFO("Completed " << completed << " of " << img_count
+                  << " --> " << static_cast<int>(1000.0*(completed)/img_count)/10.0 << "\% done");
+        }
+    } // Loop over images.
+
+    FUNCINFO("Orienting face normals");
+    CGAL::Polygon_mesh_processing::orient_polygon_soup(mesh_triangle_verts, mesh_triangle_faces);
+
+    // Output the mesh for inspection.
+    //std::ofstream off_file("/tmp/out.off");
+    //c3t3.output_boundary_to_off(off_file);
+  
+    // Extract the polyhedral surface.
+    FUNCINFO("Extracting the polyhedral surface");
+    Polyhedron output_mesh;
+    CGAL::Polygon_mesh_processing::polygon_soup_to_polygon_mesh(mesh_triangle_verts, mesh_triangle_faces, output_mesh);
+
+    if(!CGAL::is_closed(output_mesh)){
+        throw std::runtime_error("Mesh not closed but should be. Verify vector equality is not too loose.");
+    }
+    if(!CGAL::Polygon_mesh_processing::is_outward_oriented(output_mesh)){
+        FUNCINFO("Reorienting face orientation so faces face outward");
+        CGAL::Polygon_mesh_processing::reverse_face_orientations(output_mesh);
+    }
+
     FUNCINFO("The triangulated surface has " << output_mesh.size_of_vertices() << " vertices"
              " and " << output_mesh.size_of_facets() << " faces");
   
