@@ -75,6 +75,7 @@
 #include <CGAL/Polygon_mesh_processing/orient_polygon_soup.h>
 #include <CGAL/Polygon_mesh_processing/polygon_soup_to_polygon_mesh.h>
 #include <CGAL/Polygon_mesh_processing/orientation.h>
+#include <CGAL/Polygon_mesh_processing/remesh.h>
 
 #include <CGAL/Surface_mesh_simplification/edge_collapse.h>
 #include <CGAL/Surface_mesh_simplification/Policies/Edge_collapse/Count_stop_predicate.h>
@@ -1479,10 +1480,44 @@ Subdivide(Polyhedron &mesh,
         FUNCINFO("The subdivided surface has " << mesh.size_of_vertices() << " vertices"
                  " and " << mesh.size_of_facets() << " faces");
     }
-
     return;
 }
 
+void
+Remesh(Polyhedron &mesh,
+       double target_edge_length,
+       long int iters){
+
+    // This function remeshes a given mesh to improve the triangle quality. From the CGAL documentation:
+    //    "The incremental triangle-based isotropic remeshing algorithm introduced by Botsch et al [2], [4] is implemented
+    //     in this package. This algorithm incrementally performs simple operations such as edge splits, edge collapses,
+    //     edge flips, and Laplacian smoothing. All the vertices of the remeshed patch are reprojected to the original
+    //     surface to keep a good approximation of the input."
+    if(!mesh.is_pure_triangle()) throw std::runtime_error("Mesh is not purely triangular.");
+    if(!mesh.is_valid()) throw std::runtime_error("Mesh is not combinatorially valid.");
+    if(!mesh.is_closed()) throw std::runtime_error("Mesh is not closed; it has a boundary. Refusing to continue.");
+
+    if(iters > 0){
+        // Polyhedron_3 do not have a queryable face_index_map, so we need to provide one.
+        using face_descriptor = boost::graph_traits<Polyhedron>::face_descriptor;
+        std::map<face_descriptor, std::size_t> fi_map;
+        std::size_t id = 0;
+        for(auto &f : faces(mesh)){
+            fi_map[f] = id++;
+        }
+    
+        CGAL::Polygon_mesh_processing::isotropic_remeshing(
+                faces(mesh),
+                target_edge_length,
+                mesh,
+                CGAL::Polygon_mesh_processing::parameters::number_of_iterations(iters)
+                  .face_index_map(boost::make_assoc_property_map(fi_map))
+        );
+        FUNCINFO("The remeshed surface has " << mesh.size_of_vertices() << " vertices"
+                 " and " << mesh.size_of_facets() << " faces");
+    }
+    return;
+}    
 
 void
 Simplify(Polyhedron &mesh,

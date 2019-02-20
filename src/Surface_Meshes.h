@@ -126,7 +126,12 @@ Regular_Icosahedron(double radius = 1.0);
 
 void
 Subdivide(Polyhedron &mesh,
-          long int iters);
+          long int iters = 3);
+
+void
+Remesh(Polyhedron &mesh,
+          double target_edge_length = 1.0,
+          long int iters = 3);
 
 void
 Simplify(Polyhedron &mesh,

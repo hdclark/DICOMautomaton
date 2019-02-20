@@ -162,7 +162,7 @@ OperationDoc OpArgDocDumpROISurfaceMeshes(void){
     out.args.back().default_val = ".*";
     out.args.back().expected = true;
     out.args.back().examples = { ".*", ".*body.*", "body", "Gross_Liver", 
-                            R"***(.*parotid.*|.*sub.*mand.*)***", 
+                             R"***(.*parotid.*|.*sub.*mand.*)***", 
                             R"***(left_parotid|right_parotid|eyes)***" };
 
 
@@ -176,10 +176,19 @@ Drover DumpROISurfaceMeshes(Drover DICOM_data, OperationArgPkg OptArgs, std::map
     const auto NormalizedROILabelRegex = OptArgs.getValueStr("NormalizedROILabelRegex").value();
     const auto ROILabelRegex = OptArgs.getValueStr("ROILabelRegex").value();
 
-    const long int MeshSubdivisions = 2;
-    const long int MeshSimplificationEdgeCountLimit = 75'000;
-    const long int GridRows = 256;
-    const long int GridColumns = 256;
+    const auto MarchingCubes = true;
+    const auto ReastrictedDelauney = false;
+    long int GridRows = 256;
+    long int GridColumns = 256;
+
+    bool Subdivide = false;
+    bool Remesh = true;
+    bool Simplify = false;
+   
+    long int MeshSubdivisions = 2;
+    long int RemeshIterations = 5;
+    long int RemeshTargetEdgeLength = 2.5; // DICOM units (mm).
+    long int MeshSimplificationEdgeCountLimit = 75'000;
     //-----------------------------------------------------------------------------------------------------------------
 
     //Stuff references to all contours into a list. Remember that you can still address specific contours through
@@ -201,8 +210,16 @@ Drover DumpROISurfaceMeshes(Drover DICOM_data, OperationArgPkg OptArgs, std::map
         //auto output_mesh = contour_surface_meshes::Estimate_Surface_Mesh( cc_ROIs, meshing_params );
         auto output_mesh = contour_surface_meshes::Estimate_Surface_Mesh_Marching_Cubes( cc_ROIs, meshing_params );
 
-        polyhedron_processing::Subdivide(output_mesh, MeshSubdivisions);
-        polyhedron_processing::Simplify(output_mesh, MeshSimplificationEdgeCountLimit);
+        if(Subdivide){
+            polyhedron_processing::Subdivide(output_mesh, MeshSubdivisions);
+        }
+        if(Remesh){
+            polyhedron_processing::Remesh(output_mesh, RemeshTargetEdgeLength, RemeshIterations);
+        }
+        if(Simplify){
+            polyhedron_processing::Simplify(output_mesh, MeshSimplificationEdgeCountLimit);
+        }
+
         polyhedron_processing::SaveAsOFF(output_mesh, OutBase + "_polyhedron.off");
 
     }while(false);
