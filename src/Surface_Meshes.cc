@@ -607,12 +607,12 @@ Polyhedron Estimate_Surface_Mesh_Marching_Cubes(
                               static_cast<double>(0),
                               static_cast<double>(0) );
 
-    constexpr auto machine_eps = std::numeric_limits<double>::epsilon();
-    constexpr auto dvec3_tol = std::sqrt(100.0 * machine_eps);
+    const double ExteriorVal = 1.0;
+    const double InteriorVal = -ExteriorVal;
+    const double interior_threshold = 0.0; // Anything <= is considered to be interior to the ROI.
 
-
-    // Figure out plane alignment and work out spacing. (Spacing is twice the thickness.)
-    const auto est_cont_normal = cc_ROIs.front().get().contours.front().Estimate_Planar_Normal();
+    // Figure out plane alignment and work out spacing.
+    const auto est_cont_normal = Average_Contour_Normals(cc_ROIs);
     const auto unique_planar_separation_threshold = 0.005; // Contours separated by less are considered to be on the same plane.
     const auto ucp = Unique_Contour_Planes(cc_ROIs, est_cont_normal, unique_planar_separation_threshold);
 
@@ -646,10 +646,6 @@ Polyhedron Estimate_Surface_Mesh_Marching_Cubes(
     FUNCINFO("Number of images: " << params.NumberOfImages);
 
     // Find grid alignment vectors.
-    //
-    // Note: Because we want to be able to compare images from different scans, we use a deterministic technique for
-    //       generating two orthogonal directions involving the cardinal directions and Gram-Schmidt
-    //       orthogonalization.
     const auto GridZ = est_cont_normal.unit();
     vec3<double> GridX = GridZ.rotate_around_z(M_PI * 0.5); // Try Z. Will often be idempotent.
     if(GridX.Dot(GridZ) > 0.25){
@@ -669,20 +665,31 @@ Polyhedron Estimate_Surface_Mesh_Marching_Cubes(
     // constant separation -- in this case we make the margin exactly as big as if two images were also included.
     double z_margin = 0.0;
     if(ucp.size() > 1){
-        // Compute the total distance between the (centre of the) top and (centre of the) bottom planes.
-        // (Note: the images associated with these contours will usually extend further. This is dealt with below.)
-        const auto total_sep =  std::abs(ucp.front().Get_Signed_Distance_To_Point(ucp.back().R_0));
-        const auto sep_per_plane = total_sep / static_cast<double>(ucp.size()-1);
+        // Determine the minimum contour plane spacing.
+        //
+        // This approach is not robust, breaking down when a single contour plane is translated or out of place.
+        //const auto sep_per_plane = Estimate_Contour_Separation(cc_ROIs, est_cont_normal, unique_planar_separation_threshold);
 
-        // Alternative computation of separations. It is more robust, but the whole procedure falls apart if the slices
-        // are not regularly separated. Leaving here to potentially incorporate into Ygor or elsewhere at a later date.
-        //std::vector<double> seps;
-        //for(auto itA = std::begin(ucp); ; ++itA){
-        //    auto itB = std::next(itA);
-        //    if(itB == std::end(ucp)) break;
-        //    seps.emplace_back( std::abs(itA->Get_Signed_Distance_To_Point(itB->R_0)) );
-        //}
-        //const auto sep_per_plane = Stats::YgorMedian(seps);
+        // Alternative computation of separations using medians. It is more robust, but the whole procedure falls apart
+        // if the slices are not regularly separated. Leaving here to potentially incorporate into Ygor or elsewhere at
+        // a later date.
+        std::vector<double> seps;
+        for(auto itA = std::begin(ucp); ; ++itA){
+            auto itB = std::next(itA);
+            if(itB == std::end(ucp)) break;
+            seps.emplace_back( std::abs(itA->Get_Signed_Distance_To_Point(itB->R_0)) );
+        }
+        const auto sep_min = Stats::Min(seps);
+        const auto sep_med = Stats::Median(seps);
+        const auto sep_max = Stats::Max(seps);
+        const auto sep_per_plane = sep_med;
+
+        if(RELATIVE_DIFF(sep_min, sep_max) > 0.01){
+            FUNCINFO("Planar separation: min, median, max = " << sep_min << ", " << sep_med << ", " << sep_max);
+            FUNCWARN("Planar separations are not consistent."
+                     " This could result in topological invalidity (e.g., disconnected or open meshes)."
+                     " Assuming the median separation for all contours.");
+        }
 
         // Add TOTAL zmargin of 1*sep_per_plane each for each extra images, and 0.5*sep_per_plane for each of the images
         // which will stick out beyond the contour planes. However, the margin is added to both the top and the bottom so
@@ -697,12 +704,13 @@ Polyhedron Estimate_Surface_Mesh_Marching_Cubes(
     // Figure out what a reasonable x-margin and y-margin are. 
     //
     // NOTE: Could also use (median? maximum?) distance from centroid to vertex.
-    double x_margin = z_margin;
-    double y_margin = z_margin;
+    //       These should always be 1-2 voxels from the image edge, and are really unrelated from the z-margin. TODO.
+    double x_margin = std::max(2.0, z_margin);
+    double y_margin = std::max(2.0, z_margin);
 
     // Generate a grid volume bounding the ROI(s).
     const long int NumberOfChannels = 1;
-    const double PixelFill = std::numeric_limits<double>::quiet_NaN();
+    const double PixelFill = ExteriorVal; //std::numeric_limits<double>::quiet_NaN();
     const bool OnlyExtremeSlices = false;
     auto grid_image_collection = Contiguously_Grid_Volume<float,double>(
              cc_ROIs, 
@@ -713,8 +721,6 @@ Polyhedron Estimate_Surface_Mesh_Marching_Cubes(
              PixelFill, OnlyExtremeSlices );
 
     // Generate an ROI inclusivity voxel map.
-    const auto InteriorVal = -1.0;
-    const auto ExteriorVal = -InteriorVal;
     {
         PartitionedImageVoxelVisitorMutatorUserData ud;
 
@@ -742,9 +748,9 @@ Polyhedron Estimate_Surface_Mesh_Marching_Cubes(
         ud.f_bounded = [&](long int /*row*/, long int /*col*/, long int /*chan*/, float &voxel_val) {
             voxel_val = InteriorVal;
         };
-        ud.f_unbounded = [&](long int /*row*/, long int /*col*/, long int /*chan*/, float &voxel_val) {
-            voxel_val = ExteriorVal;
-        };
+        //ud.f_unbounded = [&](long int /*row*/, long int /*col*/, long int /*chan*/, float &voxel_val) {
+        //    voxel_val = ExteriorVal;
+        //};
 
         if(!grid_image_collection.Process_Images_Parallel( GroupIndividualImages,
                                                            PartitionedImageVoxelVisitorMutator,
@@ -1091,6 +1097,11 @@ Polyhedron Estimate_Surface_Mesh_Marching_Cubes(
         const auto col_unit = img_refw.get().col_unit.unit();
         const auto img_unit = row_unit.Cross(col_unit).unit();
 
+        constexpr auto machine_eps = std::numeric_limits<double>::epsilon();
+        const auto dvec3_tol = std::max(
+                                   std::min( { pxl_dx, pxl_dy, pxl_dz } ) * 1E-3,
+                                   std::sqrt(machine_eps) * 100.0 ); // Guard against pxl_dz = 0.
+
         // List of Marching Cube voxel corner positions relative to image voxel centre.
         //
         // Note that the Marching cube and image voxels are not the same. They are offset such that
@@ -1111,18 +1122,18 @@ Polyhedron Estimate_Surface_Mesh_Marching_Cubes(
 
         // The vector needed to translate from tail to head for each edge.
         const std::array< vec3<double>, 12> a2fEdgeDirection { {
-            vec3<double>(  1.0,  0.0,  0.0) * pxl_dx,
-            vec3<double>(  0.0,  1.0,  0.0) * pxl_dy,
-            vec3<double>( -1.0,  0.0,  0.0) * pxl_dx,
-            vec3<double>(  0.0, -1.0,  0.0) * pxl_dy,
-            vec3<double>(  1.0,  0.0,  0.0) * pxl_dx,
-            vec3<double>(  0.0,  1.0,  0.0) * pxl_dy,
-            vec3<double>( -1.0,  0.0,  0.0) * pxl_dx,
-            vec3<double>(  0.0, -1.0,  0.0) * pxl_dy,
-            vec3<double>(  0.0,  0.0,  1.0) * pxl_dz,
-            vec3<double>(  0.0,  0.0,  1.0) * pxl_dz,
-            vec3<double>(  0.0,  0.0,  1.0) * pxl_dz,
-            vec3<double>(  0.0,  0.0,  1.0) * pxl_dz
+            row_unit * pxl_dx,
+            col_unit * pxl_dy,
+            row_unit * -pxl_dx,
+            col_unit * -pxl_dy,
+            row_unit * pxl_dx,
+            col_unit * pxl_dy,
+            row_unit * -pxl_dx,
+            col_unit * -pxl_dy,
+            img_unit * pxl_dz,
+            img_unit * pxl_dz,
+            img_unit * pxl_dz,
+            img_unit * pxl_dz
         } };
 
         const auto N_rows = img_refw.get().rows;
@@ -1164,7 +1175,6 @@ Polyhedron Estimate_Surface_Mesh_Marching_Cubes(
 
                 // Convert vertex inclusion to a bitmask.
                 int32_t iFlagIndex = 0;
-                const double interior_threshold = 0.0; // Anything <= is considered to be interior to the ROI.
                 for(int32_t corner = 0; corner < 8; ++corner){
                     if(afCubeValue[corner] <= interior_threshold) iFlagIndex |= (1 << corner);
                 }
@@ -1222,6 +1232,7 @@ Polyhedron Estimate_Surface_Mesh_Marching_Cubes(
                     // TODO: Use spatial indexing of some kind to speed up dupe vertex searching (or try fully eliminate
                     //       the need for it via grid indexing).
                     std::array<size_t, 3> vert_indices;
+                    std::vector<Kernel::Point_3> new_verts;
                     for(int32_t tri_corner = 0; tri_corner < 3; ++tri_corner){
                         auto v_it = std::find_if( //std::execution::par_unseq,
                                                   std::rbegin(mesh_triangle_verts),
@@ -1234,13 +1245,20 @@ Polyhedron Estimate_Surface_Mesh_Marching_Cubes(
                         if(v_it != std::rend(mesh_triangle_verts)){
                             vert_indices[tri_corner] = mesh_triangle_verts.size() - std::distance(std::rbegin(mesh_triangle_verts), v_it) - 1;
                         }else{
-                            mesh_triangle_verts.emplace_back( Kernel::Point_3( 
+                            new_verts.emplace_back( Kernel::Point_3( 
                                     tri_verts[tri_corner].x, tri_verts[tri_corner].y, tri_verts[tri_corner].z ) );
-                            vert_indices[tri_corner] = (mesh_triangle_verts.size() - 1);
+                            vert_indices[tri_corner] = (mesh_triangle_verts.size() + new_verts.size() - 1);
                         }
                     }
-
-                    mesh_triangle_faces.emplace_back(vert_indices);
+                    if( (vert_indices[0] != vert_indices[1]) // IFF all three vertices are distinct.
+                    &&  (vert_indices[0] != vert_indices[2])
+                    &&  (vert_indices[1] != vert_indices[2]) ){
+                        mesh_triangle_faces.emplace_back(vert_indices);
+                        mesh_triangle_verts.insert( std::end(mesh_triangle_verts), std::begin(new_verts),
+                        std::end(new_verts) );
+                    }else{
+                        FUNCWARN("Encountered a zero-area triangle face. Ignoring it");
+                    }
                 }
 
             } // Loop over columns.
@@ -1268,7 +1286,9 @@ Polyhedron Estimate_Surface_Mesh_Marching_Cubes(
     CGAL::Polygon_mesh_processing::polygon_soup_to_polygon_mesh(mesh_triangle_verts, mesh_triangle_faces, output_mesh);
 
     if(!CGAL::is_closed(output_mesh)){
-        throw std::runtime_error("Mesh not closed but should be. Verify vector equality is not too loose.");
+        std::ofstream openmesh("/tmp/open_mesh.off");
+        openmesh << output_mesh;
+        throw std::runtime_error("Mesh not closed but should be. Verify vector equality is not too loose. Dumped to /tmp/open_mesh.off.");
     }
     if(!CGAL::Polygon_mesh_processing::is_outward_oriented(output_mesh)){
         FUNCINFO("Reorienting face orientation so faces face outward");
