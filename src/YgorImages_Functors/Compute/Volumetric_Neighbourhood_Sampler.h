@@ -13,7 +13,6 @@
 #include "YgorImages.h"
 #include "YgorMath.h"
 #include "YgorMisc.h"
-#include "YgorStats.h"
 
 template <class T, class R> class planar_image_collection;
 template <class T> class contour_collection;
@@ -57,9 +56,17 @@ struct ComputeVolumetricNeighbourhoodSamplerUserData {
 
     // -----------------------------
     // Reduction functor for bounded voxels.
-    std::function<double(std::vector<double> &)> f_reduce = [](std::vector<double> &shtl) -> double {
-                                                                return Stats::Mean(shtl);
-                                                            };
+    //
+    // The scalar parameter contains the existing voxel value and the vector contains the entire enighbourhood
+    // (possibly including the existing voxel value).
+    std::function<float(float, std::vector<float> &)> 
+    f_reduce = [](float v, std::vector<float> &) -> float {
+        return v; // Effectively does nothing.
+    };
+
+    // -----------------------------
+    // Outgoing image description to imbue.
+    std::string description;
 
 };
 

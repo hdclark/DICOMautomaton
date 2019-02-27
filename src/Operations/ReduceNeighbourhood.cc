@@ -27,10 +27,11 @@ OperationDoc OpArgDocReduceNeighbourhood(void){
     out.name = "ReduceNeighbourhood";
 
     out.desc = 
-        "This routine walks the voxels of a 3D rectilinear image collection, invoking a user-provided"
-        " functor to reduce the distribution of voxels within the local neighbourhood to a scalar value,"
+        "This routine walks the voxels of a 3D rectilinear image collection, "
+        " reduciing the distribution of voxels within the local neighbourhood to a scalar value,"
         " and updating the voxel value with this scalar. This routine can be used to implement mean and"
-        " median filters (amongst others) that operate over a variety of 3D neighbourhoods.";
+        " median filters (amongst others) that operate over a variety of 3D neighbourhoods."
+        " Besides purely statistical reductions, logical reductions can be applied.";
     
     out.notes.emplace_back(
         "The provided image collection must be rectilinear."
@@ -93,13 +94,18 @@ OperationDoc OpArgDocReduceNeighbourhood(void){
     out.args.emplace_back();
     out.args.back().name = "Reduction";
     out.args.back().desc = "Controls how the distribution of voxel values from neighbouring voxels is reduced."
-                           " Currently, 'min', 'mean', 'median', and 'max' are defined.";
+                           " Statistical distribution reducers 'min', 'mean', 'median', and 'max' are defined."
+                           " Logical reducers 'is_min' and 'is_max' are also available -- is_min (is_max)"
+                           " replace the voxel value with 1.0 if it was the min (max) in the neighbourhood and"
+                           " 0.0 otherwise.";
     out.args.back().default_val = "Median";
     out.args.back().expected = true;
     out.args.back().examples = { "min",
                                  "mean", 
                                  "median",
-                                 "max" };
+                                 "max",
+                                 "is_min",
+                                 "is_max" };
 
 
     out.args.emplace_back();
@@ -143,6 +149,8 @@ Drover ReduceNeighbourhood(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
     const auto regex_mean   = Compile_Regex("^mean?$");
     const auto regex_max    = Compile_Regex("^maxi?m?u?m?$");
 
+    const auto regex_is_min = Compile_Regex("^is?_?m?ini?m?u?m?$");
+    const auto regex_is_max = Compile_Regex("^is?_?m?axi?m?u?m?$");
 
     //Stuff references to all contours into a list. Remember that you can still address specific contours through
     // the original holding containers (which are not modified here).
@@ -161,6 +169,11 @@ Drover ReduceNeighbourhood(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
         ComputeVolumetricNeighbourhoodSamplerUserData ud;
         ud.channel = Channel;
         ud.maximum_distance = MaxDistance;
+        {
+            std::stringstream oss;
+            oss << "Neighbourhood-reduced (max-dist=" << ud.maximum_distance << ")";
+            ud.description = oss.str();
+        }
 
         if(false){
         }else if( std::regex_match(NeighbourhoodStr, regex_sph) ){
@@ -173,20 +186,36 @@ Drover ReduceNeighbourhood(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
 
         if(false){
         }else if( std::regex_match(ReductionStr, regex_min) ){
-            ud.f_reduce = [](std::vector<double> &shtl) -> double {
+            ud.f_reduce = [](float, std::vector<float> &shtl) -> float {
                               return Stats::Min(shtl);
                           };
         }else if( std::regex_match(ReductionStr, regex_median) ){
-            ud.f_reduce = [](std::vector<double> &shtl) -> double {
+            ud.f_reduce = [](float, std::vector<float> &shtl) -> float {
                               return Stats::Median(shtl);
                           };
         }else if( std::regex_match(ReductionStr, regex_mean) ){
-            ud.f_reduce = [](std::vector<double> &shtl) -> double {
+            ud.f_reduce = [](float, std::vector<float> &shtl) -> float {
                               return Stats::Mean(shtl);
                           };
         }else if( std::regex_match(ReductionStr, regex_max) ){
-            ud.f_reduce = [](std::vector<double> &shtl) -> double {
+            ud.f_reduce = [](float, std::vector<float> &shtl) -> float {
                               return Stats::Max(shtl);
+                          };
+
+        }else if( std::regex_match(ReductionStr, regex_is_min) ){
+            const auto machine_eps = std::sqrt( std::numeric_limits<float>::epsilon() );
+            ud.f_reduce = [=](float v, std::vector<float> &shtl) -> float {
+                              const auto min = Stats::Min(shtl);
+                              const auto diff = std::abs(v - min);
+                              //return (diff < machine_eps) ? 1.0f : 0.0f;
+                              return (diff < machine_eps) ? std::numeric_limits<float>::quiet_NaN() : v;
+                          };
+        }else if( std::regex_match(ReductionStr, regex_is_max) ){
+            const auto machine_eps = std::sqrt( std::numeric_limits<float>::epsilon() );
+            ud.f_reduce = [=](float v, std::vector<float> &shtl) -> float {
+                              const auto max = Stats::Max(shtl);
+                              const auto diff = std::abs(v - max);
+                              return (diff < machine_eps) ? 1.0f : 0.0f;
                           };
         }else{
             throw std::invalid_argument("Reduction argument '"_s + ReductionStr + "' is not valid");
@@ -196,14 +225,6 @@ Drover ReduceNeighbourhood(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
                                                  {}, cc_ROIs, &ud )){
             throw std::runtime_error("Unable to reduce voxel neighbourhood.");
         }
-
-        for(auto &img : (*iap_it)->imagecoll.images){
-            std::stringstream oss;
-            oss << "Neighbourhood-reduced (max-dist=" << ud.maximum_distance << ")";
-            UpdateImageDescription( std::ref(img), oss.str() );
-            UpdateImageWindowCentreWidth( std::ref(img) );
-        }
-
     }
 
     return DICOM_data;

@@ -162,10 +162,12 @@ Drover VolumetricSpatialDerivative(Drover DICOM_data, OperationArgPkg OptArgs, s
         ComputeVolumetricNeighbourhoodSamplerUserData ud;
         ud.channel = Channel;
         ud.neighbourhood = ComputeVolumetricNeighbourhoodSamplerUserData::Neighbourhood::Selection;
+            ud.description = "Volumetric Spatial Derivative:"; // Appended to later.
 
 
         if(false){
         }else if( std::regex_match(EstimatorStr, regex_1st) ){
+            ud.description += " first,";
             ud.voxel_triplets = {{ {  0,  0,  0 },    // 0
                                    { -1,  0,  0 },    // 1
                                    {  1,  0,  0 },    // 2
@@ -175,23 +177,26 @@ Drover VolumetricSpatialDerivative(Drover DICOM_data, OperationArgPkg OptArgs, s
                                    {  0,  0,  1 } }}; // 6
             if(false){
             }else if( std::regex_match(MethodStr, regex_row) ){
-                ud.f_reduce = [](std::vector<double> &shtl) -> double {
+                ud.description += " row-aligned";
+                ud.f_reduce = [](float, std::vector<float> &shtl) -> float {
                                   const auto col_m = std::isfinite(shtl[3]) ? shtl[3] : shtl[0];
                                   const auto col_p = std::isfinite(shtl[4]) ? shtl[4] : shtl[0];
-                                  return (col_p - col_m) * 0.5;
+                                  return (col_p - col_m) * 0.5f;
                               };
             }else if( std::regex_match(MethodStr, regex_col) ){
-                ud.f_reduce = [](std::vector<double> &shtl) -> double {
+                ud.description += " column-aligned";
+                ud.f_reduce = [](float, std::vector<float> &shtl) -> float {
                                   const auto row_m = std::isfinite(shtl[1]) ? shtl[1] : shtl[0];
                                   const auto row_p = std::isfinite(shtl[2]) ? shtl[2] : shtl[0];
-                                  return (row_p - row_m) * 0.5;
+                                  return (row_p - row_m) * 0.5f;
                               };
 
             }else if( std::regex_match(MethodStr, regex_img) ){
-                ud.f_reduce = [](std::vector<double> &shtl) -> double {
+                ud.description += " image-aligned";
+                ud.f_reduce = [](float, std::vector<float> &shtl) -> float {
                                   const auto img_m = std::isfinite(shtl[5]) ? shtl[5] : shtl[0];
                                   const auto img_p = std::isfinite(shtl[6]) ? shtl[6] : shtl[0];
-                                  return (img_p - img_m) * 0.5;
+                                  return (img_p - img_m) * 0.5f;
                               };
 
             //}else if( std::regex_match(MethodStr, regex_prpc) ){
@@ -199,16 +204,17 @@ Drover VolumetricSpatialDerivative(Drover DICOM_data, OperationArgPkg OptArgs, s
             //}else if( std::regex_match(MethodStr, regex_nrpc) ){
             //    throw std::invalid_argument("Method '"_s + MethodStr + "' and estimator '"_s + EstimatorStr + "' currently cannot be combined.");
             }else if( std::regex_match(MethodStr, regex_mag) ){
-                ud.f_reduce = [](std::vector<double> &shtl) -> double {
+                ud.description += " magnitude";
+                ud.f_reduce = [](float, std::vector<float> &shtl) -> float {
                                   const auto col_m = std::isfinite(shtl[3]) ? shtl[3] : shtl[0];
                                   const auto col_p = std::isfinite(shtl[4]) ? shtl[4] : shtl[0];
                                   const auto row_m = std::isfinite(shtl[1]) ? shtl[1] : shtl[0];
                                   const auto row_p = std::isfinite(shtl[2]) ? shtl[2] : shtl[0];
                                   const auto img_m = std::isfinite(shtl[5]) ? shtl[5] : shtl[0];
                                   const auto img_p = std::isfinite(shtl[6]) ? shtl[6] : shtl[0];
-                                  return std::hypot( (col_p - col_m) * 0.5,
-                                                     (row_p - row_m) * 0.5,
-                                                     (img_p - img_m) * 0.5 );
+                                  return std::hypot( (col_p - col_m) * 0.5f,
+                                                     (row_p - row_m) * 0.5f,
+                                                     (img_p - img_m) * 0.5f );
                               };
 
             //}else if( std::regex_match(MethodStr, regex_orn) ){
@@ -222,6 +228,7 @@ Drover VolumetricSpatialDerivative(Drover DICOM_data, OperationArgPkg OptArgs, s
             }
 
         }else if( std::regex_match(EstimatorStr, regex_sob3x3x3) ){
+            ud.description += " Sobel-3x3x3,";
             ud.voxel_triplets = {{ { -1, -1, -1 },    //  0
                                    { -1,  0, -1 },    //  1
                                    { -1,  1, -1 },    //  2
@@ -254,7 +261,7 @@ Drover VolumetricSpatialDerivative(Drover DICOM_data, OperationArgPkg OptArgs, s
 
             // Note: The convolution kernel used here was adapted from
             // https://en.wikipedia.org/wiki/Sobel_operator#Extension_to_other_dimensions (accessed 20190226).
-            const auto row_aligned = [](std::vector<double> &shtl) -> double {
+            const auto row_aligned = [](float, std::vector<float> &shtl) -> float {
                                     const auto r_m_c_m_i_m = std::isfinite(shtl[ 0]) ? shtl[ 0] : shtl[13];
                                     //const auto r_m_c_0_i_m = std::isfinite(shtl[ 1]) ? shtl[ 1] : shtl[13];
                                     const auto r_m_c_p_i_m = std::isfinite(shtl[ 2]) ? shtl[ 2] : shtl[13];
@@ -291,7 +298,8 @@ Drover VolumetricSpatialDerivative(Drover DICOM_data, OperationArgPkg OptArgs, s
                                     //const auto r_p_c_0_i_p = std::isfinite(shtl[25]) ? shtl[25] : shtl[13];
                                     const auto r_p_c_p_i_p = std::isfinite(shtl[26]) ? shtl[26] : shtl[13];
 
-                                    return (  1.0 * r_p_c_p_i_p
+                                    return static_cast<float>( 
+                                           (  1.0 * r_p_c_p_i_p
                                             + 1.0 * r_m_c_p_i_p
                                             + 1.0 * r_p_c_p_i_m
                                             + 1.0 * r_m_c_p_i_m
@@ -314,10 +322,10 @@ Drover VolumetricSpatialDerivative(Drover DICOM_data, OperationArgPkg OptArgs, s
                                             - 2.0 * r_p_c_m_i_0
 
                                             - 4.0 * r_0_c_m_i_0)
-                                           / 32.0;
+                                           / 32.0 );
             };
 
-            const auto col_aligned = [](std::vector<double> &shtl) -> double {
+            const auto col_aligned = [](float, std::vector<float> &shtl) -> float {
                                     const auto r_m_c_m_i_m = std::isfinite(shtl[ 0]) ? shtl[ 0] : shtl[13];
                                     const auto r_m_c_0_i_m = std::isfinite(shtl[ 1]) ? shtl[ 1] : shtl[13];
                                     const auto r_m_c_p_i_m = std::isfinite(shtl[ 2]) ? shtl[ 2] : shtl[13];
@@ -354,7 +362,8 @@ Drover VolumetricSpatialDerivative(Drover DICOM_data, OperationArgPkg OptArgs, s
                                     const auto r_p_c_0_i_p = std::isfinite(shtl[25]) ? shtl[25] : shtl[13];
                                     const auto r_p_c_p_i_p = std::isfinite(shtl[26]) ? shtl[26] : shtl[13];
 
-                                    return (  1.0 * r_p_c_p_i_p
+                                    return static_cast<float>( 
+                                           (  1.0 * r_p_c_p_i_p
                                             + 1.0 * r_p_c_m_i_p
                                             + 1.0 * r_p_c_p_i_m
                                             + 1.0 * r_p_c_m_i_m
@@ -377,10 +386,10 @@ Drover VolumetricSpatialDerivative(Drover DICOM_data, OperationArgPkg OptArgs, s
                                             - 2.0 * r_m_c_p_i_0
 
                                             - 4.0 * r_m_c_0_i_0)
-                                           / 32.0;
+                                           / 32.0 );
             };
 
-            const auto img_aligned = [](std::vector<double> &shtl) -> double {
+            const auto img_aligned = [](float, std::vector<float> &shtl) -> float {
                                     const auto r_m_c_m_i_m = std::isfinite(shtl[ 0]) ? shtl[ 0] : shtl[13];
                                     const auto r_m_c_0_i_m = std::isfinite(shtl[ 1]) ? shtl[ 1] : shtl[13];
                                     const auto r_m_c_p_i_m = std::isfinite(shtl[ 2]) ? shtl[ 2] : shtl[13];
@@ -417,7 +426,8 @@ Drover VolumetricSpatialDerivative(Drover DICOM_data, OperationArgPkg OptArgs, s
                                     const auto r_p_c_0_i_p = std::isfinite(shtl[25]) ? shtl[25] : shtl[13];
                                     const auto r_p_c_p_i_p = std::isfinite(shtl[26]) ? shtl[26] : shtl[13];
 
-                                    return (  1.0 * r_p_c_p_i_p
+                                    return static_cast<float>( 
+                                           (  1.0 * r_p_c_p_i_p
                                             + 1.0 * r_m_c_p_i_p
                                             + 1.0 * r_p_c_m_i_p
                                             + 1.0 * r_m_c_m_i_p
@@ -440,17 +450,20 @@ Drover VolumetricSpatialDerivative(Drover DICOM_data, OperationArgPkg OptArgs, s
                                             - 2.0 * r_p_c_0_i_m
 
                                             - 4.0 * r_0_c_0_i_m)
-                                           / 32.0;
+                                           / 32.0 );
             };
 
             if(false){
             }else if( std::regex_match(MethodStr, regex_row) ){
+                ud.description += " row-aligned";
                 ud.f_reduce = row_aligned;
 
             }else if( std::regex_match(MethodStr, regex_col) ){
+                ud.description += " column-aligned";
                 ud.f_reduce = col_aligned;
 
             }else if( std::regex_match(MethodStr, regex_img) ){
+                ud.description += " image-aligned";
                 ud.f_reduce = img_aligned;
 
             //}else if( std::regex_match(MethodStr, regex_prpc) ){
@@ -458,10 +471,11 @@ Drover VolumetricSpatialDerivative(Drover DICOM_data, OperationArgPkg OptArgs, s
             //}else if( std::regex_match(MethodStr, regex_nrpc) ){
             //    throw std::invalid_argument("Method '"_s + MethodStr + "' and estimator '"_s + EstimatorStr + "' currently cannot be combined.");
             }else if( std::regex_match(MethodStr, regex_mag) ){
-                ud.f_reduce = [&](std::vector<double> &shtl) -> double {
-                                    return std::hypot( row_aligned(shtl),
-                                                       col_aligned(shtl),
-                                                       img_aligned(shtl) );
+                ud.description += " magnitude";
+                ud.f_reduce = [&](float v, std::vector<float> &shtl) -> float {
+                                    return std::hypot( row_aligned(v, shtl),
+                                                       col_aligned(v, shtl),
+                                                       img_aligned(v, shtl) );
                 };
 
             //}else if( std::regex_match(MethodStr, regex_orn) ){

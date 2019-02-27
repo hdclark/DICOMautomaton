@@ -24,7 +24,7 @@
 
 
 bool ComputeVolumetricNeighbourhoodSampler(planar_image_collection<float,double> &imagecoll,
-                      std::list<std::reference_wrapper<planar_image_collection<float,double>>> external_imgs,
+                      std::list<std::reference_wrapper<planar_image_collection<float,double>>> /*external_imgs*/,
                       std::list<std::reference_wrapper<contour_collection<double>>> ccsl,
                       std::experimental::any user_data ){
 
@@ -113,7 +113,7 @@ bool ComputeVolumetricNeighbourhoodSampler(planar_image_collection<float,double>
             const auto pxl_dy = ref_img_refw.get().pxl_dy;
             const auto pxl_dz = ref_img_refw.get().pxl_dz;
 
-            std::vector<double> shtl;
+            std::vector<float> shtl;
             shtl.reserve(100); // An arbitrary guess.
 
             auto f_bounded = [&,ref_img_refw](long int E_row, long int E_col, long int channel, float &voxel_val) {
@@ -124,6 +124,7 @@ bool ComputeVolumetricNeighbourhoodSampler(planar_image_collection<float,double>
 
                 // Get the position of the voxel in the overlapping reference image.
                 const auto E_pos = ref_img_refw.get().position(E_row, E_col);
+                const auto E_val = ref_img_refw.get().value(E_row, E_col, channel);
 
                 // Calculate the index in the intersecting image.
                 const auto index = ref_img_refw.get().index(E_pos, channel);
@@ -251,7 +252,7 @@ bool ComputeVolumetricNeighbourhoodSampler(planar_image_collection<float,double>
                         const auto l_col = R_col + triplets[1];
                         const auto l_img = R_num + triplets[2];
 
-                        double res = std::numeric_limits<double>::quiet_NaN();
+                        float res = std::numeric_limits<float>::quiet_NaN();
                         if(img_adj.index_present(l_img)
                         && isininc(0, l_row, ref_img_refw.get().rows - 1L)
                         && isininc(0, l_col, ref_img_refw.get().columns - 1L) ){
@@ -267,7 +268,7 @@ bool ComputeVolumetricNeighbourhoodSampler(planar_image_collection<float,double>
                 }
 
                 // Assign the voxel a value.
-                voxel_val = user_data_s->f_reduce(shtl);
+                voxel_val = user_data_s->f_reduce(E_val, shtl);
 
                 return;
             };
@@ -277,6 +278,9 @@ bool ComputeVolumetricNeighbourhoodSampler(planar_image_collection<float,double>
                                          ccsl, 
                                          mv_opts, 
                                          f_bounded );
+
+            UpdateImageDescription( img_refw, user_data_s->description );
+            UpdateImageWindowCentreWidth( img_refw );
 
             //Report operation progress.
             {
