@@ -62,6 +62,7 @@ add_library(Operations_objs OBJECT
     GenerateSurfaceMask.cc
     GenerateVirtualDataContourViaThresholdTestV1.cc
     GenerateVirtualDataDoseStairsV1.cc
+    GenerateVirtualDataImageSphereV1.cc
     GenerateVirtualDataPerfusionV1.cc
     GiveWholeImageArrayABoneWindowLevel.cc
     GiveWholeImageArrayAHeadAndNeckWindowLevel.cc
@@ -87,6 +88,7 @@ add_library(Operations_objs OBJECT
     PruneEmptyImageDoseArrays.cc
     PurgeContours.cc
     RankPixels.cc
+    ReduceNeighbourhood.cc
     SeamContours.cc
     SelectSlicesIntersectingROI.cc
     SFML_Viewer.cc
@@ -104,6 +106,7 @@ add_library(Operations_objs OBJECT
     UBC3TMRI_DCE_Differences.cc
     UBC3TMRI_DCE_Experimental.cc
     UBC3TMRI_IVIM_ADC.cc
+    VolumetricSpatialDerivative.cc
 )
 set_target_properties(Operations_objs
     PROPERTIES POSITION_INDEPENDENT_CODE TRUE
