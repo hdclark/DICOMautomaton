@@ -73,7 +73,7 @@ bool EQD2Conversion(planar_image_collection<float,double>::images_list_it_t firs
     ebv_opts.adjacency      = Mutate_Voxels_Opts::Adjacency::SingleVoxel;
     ebv_opts.maskmod        = Mutate_Voxels_Opts::MaskMod::Noop;
 
-    auto f_bounded = [=](long int /*row*/, long int /*col*/, long int /*channel*/, float &voxel_val) {
+    auto f_bounded = [=](long int /*row*/, long int /*col*/, long int /*channel*/, std::reference_wrapper<planar_image<float,double>> /*img_refw*/, float &voxel_val) {
         if(voxel_val <= 0.0) return; // No-op if there is no dose.
 
         BEDabr BED_voxel;
@@ -84,7 +84,7 @@ bool EQD2Conversion(planar_image_collection<float,double>::images_list_it_t firs
         return;
     };
 
-    auto f_unbounded = [=](long int /*row*/, long int /*col*/, long int /*channel*/, float &voxel_val) {
+    auto f_unbounded = [=](long int /*row*/, long int /*col*/, long int /*channel*/, std::reference_wrapper<planar_image<float,double>> /*img_refw*/, float &voxel_val) {
         if(voxel_val <= 0.0) return; // No-op if there is no dose.
 
         BEDabr BED_voxel;

@@ -86,10 +86,10 @@ Drover UBC3TMRI_DCE(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std
             roi_highlighted_img_arrays.emplace_back( DICOM_data.image_data.back() );
 
             PartitionedImageVoxelVisitorMutatorUserData ud;
-            ud.f_bounded = [&](long int /*row*/, long int /*col*/, long int /*channel*/, float &voxel_val) {
+            ud.f_bounded = [&](long int /*row*/, long int /*col*/, long int /*channel*/, std::reference_wrapper<planar_image<float,double>> /*img_refw*/, float &voxel_val) {
                     voxel_val = 2.0;
             };
-            ud.f_unbounded = [&](long int /*row*/, long int /*col*/, long int /*channel*/, float &voxel_val) {
+            ud.f_unbounded = [&](long int /*row*/, long int /*col*/, long int /*channel*/, std::reference_wrapper<planar_image<float,double>> /*img_refw*/, float &voxel_val) {
                     voxel_val = 1.0;
             };
             if(!roi_highlighted_img_arrays.back()->imagecoll.Process_Images( GroupIndividualImages,

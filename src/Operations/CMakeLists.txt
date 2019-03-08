@@ -59,6 +59,7 @@ add_library(Operations_objs OBJECT
     EvaluateTCPModels.cc
     ExtractRadiomicFeatures.cc
     FVPicketFence.cc
+    GenerateCalibrationCurve.cc
     GenerateSurfaceMask.cc
     GenerateVirtualDataContourViaThresholdTestV1.cc
     GenerateVirtualDataDoseStairsV1.cc

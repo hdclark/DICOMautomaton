@@ -73,7 +73,7 @@ bool DecayDoseOverTime(planar_image_collection<float,double>::images_list_it_t f
     ebv_opts.adjacency      = Mutate_Voxels_Opts::Adjacency::SingleVoxel;
     ebv_opts.maskmod        = Mutate_Voxels_Opts::MaskMod::Noop;
 
-    auto f_bounded = [=](long int row, long int col, long int channel, float &voxel_val) {
+    auto f_bounded = [=](long int row, long int col, long int channel, std::reference_wrapper<planar_image<float,double>> /*img_refw*/, float &voxel_val) {
 
         // First, check if the mask is set for this voxel. If it is, do NOT re-process.
         // It means the voxel has been processed in a previous decay operation (e.g., for another overlapping ROI) and

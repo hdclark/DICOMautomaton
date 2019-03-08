@@ -76,6 +76,7 @@
 #include "Operations/EvaluateTCPModels.h"
 #include "Operations/ExtractRadiomicFeatures.h"
 #include "Operations/FVPicketFence.h"
+#include "Operations/GenerateCalibrationCurve.h"
 #include "Operations/GenerateSurfaceMask.h"
 #include "Operations/GenerateVirtualDataContourViaThresholdTestV1.h"
 #include "Operations/GenerateVirtualDataDoseStairsV1.h"
@@ -193,6 +194,7 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["EvaluateTCPModels"] = std::make_pair(OpArgDocEvaluateTCPModels, EvaluateTCPModels);
     out["ExtractRadiomicFeatures"] = std::make_pair(OpArgDocExtractRadiomicFeatures, ExtractRadiomicFeatures);
     out["FVPicketFence"] = std::make_pair(OpArgDocFVPicketFence, FVPicketFence);
+    out["GenerateCalibrationCurve"] = std::make_pair(OpArgDocGenerateCalibrationCurve, GenerateCalibrationCurve);
     out["GenerateSurfaceMask"] = std::make_pair(OpArgDocGenerateSurfaceMask, GenerateSurfaceMask);
     out["GenerateVirtualDataContourViaThresholdTestV1"] = std::make_pair(OpArgDocGenerateVirtualDataContourViaThresholdTestV1, GenerateVirtualDataContourViaThresholdTestV1);
     out["GenerateVirtualDataDoseStairsV1"] = std::make_pair(OpArgDocGenerateVirtualDataDoseStairsV1, GenerateVirtualDataDoseStairsV1);
