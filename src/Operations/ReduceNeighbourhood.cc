@@ -85,7 +85,7 @@ OperationDoc OpArgDocReduceNeighbourhood(void){
     out.args.back().name = "Neighbourhood";
     out.args.back().desc = "Controls how the neighbourhood surrounding a voxel is defined."
                            " Currently, 'spherical' and 'cubic' are defined.";
-    out.args.back().default_val = "Spherical";
+    out.args.back().default_val = "spherical";
     out.args.back().expected = true;
     out.args.back().examples = { "spherical",
                                  "cubic"};
@@ -97,15 +97,19 @@ OperationDoc OpArgDocReduceNeighbourhood(void){
                            " Statistical distribution reducers 'min', 'mean', 'median', and 'max' are defined."
                            " Logical reducers 'is_min' and 'is_max' are also available -- is_min (is_max)"
                            " replace the voxel value with 1.0 if it was the min (max) in the neighbourhood and"
-                           " 0.0 otherwise.";
-    out.args.back().default_val = "Median";
+                           " 0.0 otherwise. Logical reducers 'is_min_nan' and 'is_max_nan' are variants that"
+                           " replace the voxel with a NaN instead of 1.0 and otherwise do not overwrite the"
+                           " original voxel value.";
+    out.args.back().default_val = "median";
     out.args.back().expected = true;
     out.args.back().examples = { "min",
                                  "mean", 
                                  "median",
                                  "max",
                                  "is_min",
-                                 "is_max" };
+                                 "is_max",
+                                 "is_min_nan",
+                                 "is_max_nan" };
 
 
     out.args.emplace_back();
@@ -151,6 +155,8 @@ Drover ReduceNeighbourhood(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
 
     const auto regex_is_min = Compile_Regex("^is?_?m?ini?m?u?m?$");
     const auto regex_is_max = Compile_Regex("^is?_?m?axi?m?u?m?$");
+    const auto regex_is_min_nan = Compile_Regex("^is?_?m?ini?m?u?m?_?nan$");
+    const auto regex_is_max_nan = Compile_Regex("^is?_?m?axi?m?u?m?_?nan$");
 
     //Stuff references to all contours into a list. Remember that you can still address specific contours through
     // the original holding containers (which are not modified here).
@@ -202,13 +208,27 @@ Drover ReduceNeighbourhood(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
                               return Stats::Max(shtl);
                           };
 
+        }else if( std::regex_match(ReductionStr, regex_is_min_nan) ){
+            const auto machine_eps = std::sqrt( std::numeric_limits<float>::epsilon() );
+            ud.f_reduce = [=](float v, std::vector<float> &shtl) -> float {
+                              const auto min = Stats::Min(shtl);
+                              const auto diff = std::abs(v - min);
+                              return (diff < machine_eps) ? std::numeric_limits<float>::quiet_NaN() : v;
+                          };
+        }else if( std::regex_match(ReductionStr, regex_is_max_nan) ){
+            const auto machine_eps = std::sqrt( std::numeric_limits<float>::epsilon() );
+            ud.f_reduce = [=](float v, std::vector<float> &shtl) -> float {
+                              const auto max = Stats::Max(shtl);
+                              const auto diff = std::abs(v - max);
+                              return (diff < machine_eps) ? std::numeric_limits<float>::quiet_NaN() : v;
+                          };
+
         }else if( std::regex_match(ReductionStr, regex_is_min) ){
             const auto machine_eps = std::sqrt( std::numeric_limits<float>::epsilon() );
             ud.f_reduce = [=](float v, std::vector<float> &shtl) -> float {
                               const auto min = Stats::Min(shtl);
                               const auto diff = std::abs(v - min);
-                              //return (diff < machine_eps) ? 1.0f : 0.0f;
-                              return (diff < machine_eps) ? std::numeric_limits<float>::quiet_NaN() : v;
+                              return (diff < machine_eps) ? 1.0f : 0.0f;
                           };
         }else if( std::regex_match(ReductionStr, regex_is_max) ){
             const auto machine_eps = std::sqrt( std::numeric_limits<float>::epsilon() );
