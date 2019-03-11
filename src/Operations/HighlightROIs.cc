@@ -209,9 +209,9 @@ Drover HighlightROIs(Drover DICOM_data,
             throw std::invalid_argument("Inclusivity argument '"_s + InclusivityStr + "' is not valid");
         }
 
-        std::function<void(long int, long int, long int, float &)> f_noop;
+        std::function<void(long int, long int, long int, std::reference_wrapper<planar_image<float,double>>, float &)> f_noop;
         if(ShouldOverwriteInterior){
-            ud.f_bounded = [&](long int /*row*/, long int /*col*/, long int chan, float &voxel_val) {
+            ud.f_bounded = [&](long int /*row*/, long int /*col*/, long int chan, std::reference_wrapper<planar_image<float,double>> /*img_refw*/, float &voxel_val) {
                 if( (Channel < 0) || (Channel == chan) ){
                     voxel_val = InteriorVal;
                 }
@@ -220,7 +220,7 @@ Drover HighlightROIs(Drover DICOM_data,
             ud.f_bounded = f_noop;
         }
         if(ShouldOverwriteExterior){
-            ud.f_unbounded = [&](long int /*row*/, long int /*col*/, long int chan, float &voxel_val) {
+            ud.f_unbounded = [&](long int /*row*/, long int /*col*/, long int chan, std::reference_wrapper<planar_image<float,double>> /*img_refw*/, float &voxel_val) {
                 if( (Channel < 0) || (Channel == chan) ){
                     voxel_val = ExteriorVal;
                 }

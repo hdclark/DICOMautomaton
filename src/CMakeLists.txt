@@ -124,6 +124,13 @@ set_target_properties(Operation_Dispatcher_obj PROPERTIES
     POSITION_INDEPENDENT_CODE TRUE
 )
 
+add_library(Documentation_obj OBJECT
+    Documentation.cc
+)
+set_target_properties(Documentation_obj PROPERTIES
+    POSITION_INDEPENDENT_CODE TRUE
+)
+
 
 FILE(GLOB ygorimaging_functors "./YgorImages_Functors/*/*cc")
 add_library(YgorImaging_Functor_objs OBJECT
@@ -280,6 +287,7 @@ add_executable (dicomautomaton_dispatcher
     $<TARGET_OBJECTS:FITS_File_Loader_obj>
     $<TARGET_OBJECTS:Write_File_obj>
     $<TARGET_OBJECTS:Operation_Dispatcher_obj>
+    $<TARGET_OBJECTS:Documentation_obj>
 
     $<TARGET_OBJECTS:YgorImaging_Functor_objs>
     $<TARGET_OBJECTS:YgorImaging_Helper_objs>
@@ -338,6 +346,7 @@ add_executable(dicomautomaton_webserver
     $<TARGET_OBJECTS:FITS_File_Loader_obj>
     $<TARGET_OBJECTS:Write_File_obj>
     $<TARGET_OBJECTS:Operation_Dispatcher_obj>
+    $<TARGET_OBJECTS:Documentation_obj>
 
     $<TARGET_OBJECTS:YgorImaging_Functor_objs>
     $<TARGET_OBJECTS:YgorImaging_Helper_objs>

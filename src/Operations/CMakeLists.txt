@@ -21,6 +21,7 @@ add_library(Operations_objs OBJECT
     CT_Liver_Perfusion_Ortho_Views.cc
     CT_Liver_Perfusion_Pharmaco_1Compartment2Input_5Param.cc
     CT_Liver_Perfusion_Pharmaco_1Compartment2Input_Reduced3Param.cc
+    ComparePixels.cc
     ContourBasedRayCastDoseAccumulate.cc
     ContourBooleanOperations.cc
     ContourSimilarity.cc
@@ -58,9 +59,11 @@ add_library(Operations_objs OBJECT
     EvaluateTCPModels.cc
     ExtractRadiomicFeatures.cc
     FVPicketFence.cc
+    GenerateCalibrationCurve.cc
     GenerateSurfaceMask.cc
     GenerateVirtualDataContourViaThresholdTestV1.cc
     GenerateVirtualDataDoseStairsV1.cc
+    GenerateVirtualDataImageSphereV1.cc
     GenerateVirtualDataPerfusionV1.cc
     GiveWholeImageArrayABoneWindowLevel.cc
     GiveWholeImageArrayAHeadAndNeckWindowLevel.cc
@@ -85,6 +88,8 @@ add_library(Operations_objs OBJECT
     PresentationImage.cc
     PruneEmptyImageDoseArrays.cc
     PurgeContours.cc
+    RankPixels.cc
+    ReduceNeighbourhood.cc
     SeamContours.cc
     SelectSlicesIntersectingROI.cc
     SFML_Viewer.cc
@@ -102,6 +107,7 @@ add_library(Operations_objs OBJECT
     UBC3TMRI_DCE_Differences.cc
     UBC3TMRI_DCE_Experimental.cc
     UBC3TMRI_IVIM_ADC.cc
+    VolumetricSpatialDerivative.cc
 )
 set_target_properties(Operations_objs
     PROPERTIES POSITION_INDEPENDENT_CODE TRUE

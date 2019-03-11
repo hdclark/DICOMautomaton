@@ -1,4 +1,4 @@
-//SurfaceBasedRayCastDoseAccumulate.cc - A part of DICOMautomaton 2015-2017. Written by hal clark.
+//SurfaceBasedRayCastDoseAccumulate.cc - A part of DICOMautomaton 2015-2019. Written by hal clark.
 
 #include <iostream>
 #include <sstream>
@@ -76,6 +76,7 @@
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
 #include "../Thread_Pool.h"
+#include "../Surface_Meshes.h"
 #include "../Dose_Meld.h"
 
 #include "../YgorImages_Functors/Grouping/Misc_Functors.h"
@@ -150,6 +151,19 @@ OperationDoc OpArgDocSurfaceBasedRayCastDoseAccumulate(void){
 
 
     out.args.emplace_back();
+    out.args.back().name = "RefCroppedTotalDoseMapFileName";
+    out.args.back().desc = "A filename (or full path) for the total dose image map (at all ray-surface intersection points)."
+                      " The dose for each ray is summed over all ray-surface point intersections."
+                      " Doses in this map are only registered when the ray intersects the reference ROI mesh."
+                      " The format is FITS. This file is always generated."
+                      " Leave the argument empty to generate a unique filename.";
+    out.args.back().default_val = "";
+    out.args.back().expected = true;
+    out.args.back().examples = { "", "total_dose_map.fits", "/tmp/out.fits" };
+    out.args.back().mimetype = "image/fits";
+
+
+    out.args.emplace_back();
     out.args.back().name = "IntersectionCountMapFileName";
     out.args.back().desc = "A filename (or full path) for the (number of ray-surface intersections) image map."
                       " Each pixel in this map (and the total dose map) represents a single ray;"
@@ -190,6 +204,21 @@ OperationDoc OpArgDocSurfaceBasedRayCastDoseAccumulate(void){
 
 
     out.args.emplace_back();
+    out.args.back().name = "RefIntersectionCountMapFileName";
+    out.args.back().desc = "A filename (or full path) for the (number of ray-surface intersections) for the reference ROIs."
+                      " Each pixel in this map (and the total dose map) represents a single ray;"
+                      " the number of times the ray intersects the surface can be useful for various purposes,"
+                      " but most often it will simply be a sanity check for the cross-sectional shape or that "
+                      " a specific number of intersections were recorded in regions with geometrical folds."
+                      " Note: currently, the number of intersections is limited to 0 or 1!"
+                      " The format is FITS. Leave empty to dump to generate a unique filename.";
+    out.args.back().default_val = "";
+    out.args.back().expected = true;
+    out.args.back().examples = { "", "ref_roi_intersection_count_map.fits", "/tmp/out.fits" };
+    out.args.back().mimetype = "image/fits";
+
+
+    out.args.emplace_back();
     out.args.back().name = "ROISurfaceMeshFileName";
     out.args.back().desc = "A filename (or full path) for the (pre-subdivided) surface mesh that is contructed from the ROI contours."
                       " The format is OFF. This file is mostly useful for inspection of the surface or comparison with contours."
@@ -203,6 +232,30 @@ OperationDoc OpArgDocSurfaceBasedRayCastDoseAccumulate(void){
     out.args.emplace_back();
     out.args.back().name = "SubdividedROISurfaceMeshFileName";
     out.args.back().desc = "A filename (or full path) for the Loop-subdivided surface mesh that is contructed from the ROI contours."
+                      " The format is OFF. This file is mostly useful for inspection of the surface or comparison with contours."
+                      " Leaving empty will result in no file being written.";
+    out.args.back().default_val = "";
+    out.args.back().expected = true;
+    out.args.back().examples = { "", "/tmp/subdivided_roi_surface_mesh.off", "subdivided_roi_surface_mesh.off" };
+    out.args.back().mimetype = "application/off";
+
+
+    out.args.emplace_back();
+    out.args.back().name = "RefSurfaceMeshFileName";
+    out.args.back().desc = "A filename (or full path) for the (pre-subdivided) surface mesh that is contructed from the"
+                      " reference ROI contours."
+                      " The format is OFF. This file is mostly useful for inspection of the surface or comparison with contours."
+                      " Leaving empty will result in no file being written.";
+    out.args.back().default_val = "";
+    out.args.back().expected = true;
+    out.args.back().examples = { "", "/tmp/roi_surface_mesh.off", "roi_surface_mesh.off" };
+    out.args.back().mimetype = "application/off";
+
+
+    out.args.emplace_back();
+    out.args.back().name = "SubdividedRefSurfaceMeshFileName";
+    out.args.back().desc = "A filename (or full path) for the Loop-subdivided surface mesh that is contructed from the"
+                      " reference ROI contours."
                       " The format is OFF. This file is mostly useful for inspection of the surface or comparison with contours."
                       " Leaving empty will result in no file being written.";
     out.args.back().default_val = "";
@@ -290,7 +343,7 @@ OperationDoc OpArgDocSurfaceBasedRayCastDoseAccumulate(void){
     out.args.back().expected = true;
     out.args.back().examples = { "100", "128", "1024", "4096" };
     
-
+/*
     out.args.emplace_back();
     out.args.back().name = "MeshingAngularBound";
     out.args.back().desc = "The minimum internal angle each triangle facet must have in the surface mesh (in degrees)."
@@ -328,7 +381,7 @@ OperationDoc OpArgDocSurfaceBasedRayCastDoseAccumulate(void){
     out.args.back().default_val = "5.0";
     out.args.back().expected = true;
     out.args.back().examples = { "1.0", "2.0", "5.0", "10.0" };
-   
+*/   
 
     out.args.emplace_back();
     out.args.back().name = "MeshingSubdivisionIterations";
@@ -375,12 +428,16 @@ OperationDoc OpArgDocSurfaceBasedRayCastDoseAccumulate(void){
 Drover SurfaceBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string> /*InvocationMetadata*/, std::string FilenameLex){
     //---------------------------------------------- User Parameters --------------------------------------------------
     auto TotalDoseMapFileName = OptArgs.getValueStr("TotalDoseMapFileName").value();
+    auto RefCroppedTotalDoseMapFileName = OptArgs.getValueStr("RefCroppedTotalDoseMapFileName").value();
     auto IntersectionCountMapFileName = OptArgs.getValueStr("IntersectionCountMapFileName").value();
     auto DepthMapFileName = OptArgs.getValueStr("DepthMapFileName").value();
     auto RadialDistMapFileName = OptArgs.getValueStr("RadialDistMapFileName").value();
+    auto RefIntersectionCountMapFileName = OptArgs.getValueStr("RefIntersectionCountMapFileName").value();
 
     auto ROISurfaceMeshFileName = OptArgs.getValueStr("ROISurfaceMeshFileName").value();
     auto SubdividedROISurfaceMeshFileName = OptArgs.getValueStr("SubdividedROISurfaceMeshFileName").value();
+    auto RefSurfaceMeshFileName = OptArgs.getValueStr("RefSurfaceMeshFileName").value();
+    auto SubdividedRefSurfaceMeshFileName = OptArgs.getValueStr("SubdividedRefSurfaceMeshFileName").value();
     auto ROICOMCOMLineFileName = OptArgs.getValueStr("ROICOMCOMLineFileName").value();
 
     const auto ROILabelRegex = OptArgs.getValueStr("ROILabelRegex").value();
@@ -391,9 +448,11 @@ Drover SurfaceBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptA
     const auto SourceDetectorRows = std::stol(OptArgs.getValueStr("SourceDetectorRows").value());
     const auto SourceDetectorColumns = std::stol(OptArgs.getValueStr("SourceDetectorColumns").value());
 
+/*
     const auto MeshingAngularBound = std::stod(OptArgs.getValueStr("MeshingAngularBound").value());
     const auto MeshingFacetSphereRadiusBound = std::stod(OptArgs.getValueStr("MeshingFacetSphereRadiusBound").value());
     const auto MeshingCentreCentreBound = std::stod(OptArgs.getValueStr("MeshingCentreCentreBound").value());
+*/
 
     const auto MeshingSubdivisionIterations = std::stol(OptArgs.getValueStr("MeshingSubdivisionIterations").value());
     const auto MaxRaySurfaceIntersections = std::stol(OptArgs.getValueStr("MaxRaySurfaceIntersections").value());
@@ -485,186 +544,86 @@ Drover SurfaceBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptA
     //Figure out plane alignment and work out spacing. (Spacing is twice the thickness.)
     const auto est_cont_normal = cc_ROIs.front().get().contours.front().Estimate_Planar_Normal();
     const auto ucp = Unique_Contour_Planes(cc_ROIs, est_cont_normal, /*distance_eps=*/ 0.005);
-    
-    const double fallback_spacing = 2.5; // in DICOM units.
-    const auto cont_sep_range = std::abs(ucp.front().Get_Signed_Distance_To_Point( ucp.back().R_0 ));
-    const double est_cont_spacing = (ucp.size() <= 1) ? fallback_spacing : cont_sep_range / static_cast<double>(ucp.size() - 1);
-    const double est_cont_thickness = 0.5005 * est_cont_spacing; // Made slightly thicker to avoid gaps.
 
 
-    //Construct a sphere surrounding the vertices to bound the surface.
-    vec3<double> bounding_sphere_center;
-    double bounding_sphere_radius; 
-    const double extra_space = 1.0; //Extra space around each point, in DICOM coords.
-    {
-        using FT = double;
-        using K = CGAL::Cartesian<FT>;
-        using UseSqrts = CGAL::Tag_true;
-        typedef CGAL::Min_sphere_of_spheres_d_traits_3<K,FT,UseSqrts> Traits;
-        using Min_sphere = CGAL::Min_sphere_of_spheres_d<Traits>;
-        using Point = K::Point_3;
-        using Sphere = Traits::Sphere;
+    contour_surface_meshes::Parameters meshing_params;
+    //meshing_params.RQ = contour_surface_meshes::ReproductionQuality::Medium;
+    meshing_params.GridRows = 128;
+    meshing_params.GridColumns = 128;
+    auto polyhedron = contour_surface_meshes::Estimate_Surface_Mesh_Marching_Cubes( cc_ROIs, meshing_params );
 
-        std::vector<Sphere> spheres;
-        for(const auto & cc_ref : cc_ROIs){
-            const auto cc = cc_ref.get();
-            for(const auto & c : cc.contours){    
-                for(const auto & p : c.points){
-                    Point cgal_p( p.x, p.y, p.z );
-                    spheres.emplace_back(cgal_p,extra_space);
-                }
-            }
-        }
-
-        Min_sphere ms(spheres.begin(),spheres.end());
-        if(!ms.is_valid()) throw std::runtime_error("Unable to compute a bounding sphere. Cannot continue.");
-
-        auto center_coord_it = ms.center_cartesian_begin();
-        bounding_sphere_center.x = *(center_coord_it++);
-        bounding_sphere_center.y = *(center_coord_it++);
-        bounding_sphere_center.z = *(center_coord_it);
-        bounding_sphere_radius = ms.radius();
-
-        //Ensure the sphere's centre is somewhere in the ROI by translating to some point within a contour and growing the sphere.
-        vec3<double> nearest_incontour_p = cc_ROIs.front().get().contours.front().First_N_Point_Avg(3);
-        for(const auto & cc_ref : cc_ROIs){
-            const auto cc = cc_ref.get();
-            for(const auto & c : cc.contours){ 
-                const auto incontour_p = c.Get_Point_Within_Contour();
-                if(incontour_p.sq_dist(bounding_sphere_center) < nearest_incontour_p.sq_dist(bounding_sphere_center)){
-                    nearest_incontour_p = incontour_p;
-                }
-            }
-        }
-        bounding_sphere_radius += nearest_incontour_p.distance(bounding_sphere_center); //A superset enclosing sphere.
-        bounding_sphere_center = nearest_incontour_p;
-    }
-    FUNCINFO("Finished computing bounding sphere for selected ROIs; centre, radius = " << bounding_sphere_center << ", " << bounding_sphere_radius);
-
-    //Pre-compute least-squares planes and contour projections onto those planes (in case of non-planar contours).
-    // This substantially speeds up the computation.
-    std::vector< std::pair< plane<double>, contour_of_points<double> > > projected_contours;
-    for(const auto & cc_ref : cc_ROIs){
-        const auto cc = cc_ref.get();
-        for(const auto & c : cc.contours){    
-            const auto c_plane = c.Least_Squares_Best_Fit_Plane(est_cont_normal);
-            projected_contours.emplace_back( std::make_pair(c_plane, c.Project_Onto_Plane_Orthogonally(c_plane)) );
-        }
-    }
-   
-    using Tr = CGAL::Surface_mesh_default_triangulation_3;
-    using C2t3 = CGAL::Complex_2_in_triangulation_3<Tr>;
-    using GT = Tr::Geom_traits;
-    using Sphere_3 = GT::Sphere_3;
-    using Point_3 = GT::Point_3;
-    using FT = GT::FT;
-
-    auto surface_oracle = [&](Point_3 p) -> FT {
-        //This routine is an 'oracle' that reports if a given point is inside or outside the surface to be triangulated.
-        // The inside of the surface returns negative numbers and the outside returns positive numbers. The surface is
-        // defined by the isosurface where this function is zero.
-        //
-        // Note that this oracle provides only binary information (in or out).
-        //
-        const vec3<double> P(static_cast<double>(p.x()), static_cast<double>(p.y()), static_cast<double>(p.z()));
-
-        for(const auto & pc : projected_contours){
-            //Check if the point is bounded by the top and bottom planes.
-            const auto within_planar_bounds = ( std::abs(pc.first.Get_Signed_Distance_To_Point(P)) < est_cont_thickness);
-            if(!within_planar_bounds) continue;
-
-            //Check if the point is within the polygon bounds when projected onto its plane.
-            const auto proj_P = pc.first.Project_Onto_Plane_Orthogonally(P);
-            const auto already_proj = true;
-            const auto within_poly = pc.second.Is_Point_In_Polygon_Projected_Orthogonally(pc.first,proj_P,already_proj);
-            if(!within_poly) continue;
-
-            return static_cast<FT>(-1.0);
-        }
-        return static_cast<FT>(1.0);
-    };
-
-    const Point_3 cgal_bounding_sphere_center(bounding_sphere_center.x, bounding_sphere_center.y, bounding_sphere_center.z );
-    const Sphere_3 cgal_bounding_sphere( cgal_bounding_sphere_center, std::pow(bounding_sphere_radius,2.0) );
- 
-    //Verify the center of the sphere is internal to the surface, as is required by the surface mesher.
-    if(surface_oracle(cgal_bounding_sphere_center) >= 0.0){
-        throw std::runtime_error("Bounding sphere's centre is not within the surface."
-                                 " The sphere will need to be tweaked to place the centre within the surface but"
-                                 " still bound all vertices.");
-    }
-
-    typedef CGAL::Implicit_surface_3<GT, decltype(surface_oracle)> Surface_3;
-
-    Tr tr;            // 3D-Delaunay triangulation
-    C2t3 c2t3(tr);    // 2D-complex in 3D-Delaunay triangulation
-
-    // defining the surface
-    const auto surface_error_bound = static_cast<FT>(1.0e-5); //Relative to bounding volume.
-    Surface_3 surface(surface_oracle, cgal_bounding_sphere, surface_error_bound);
-
-    // defining meshing criteria
-    CGAL::Surface_mesh_default_criteria_3<Tr> criteria(MeshingAngularBound,
-                                                       MeshingFacetSphereRadiusBound,
-                                                       MeshingCentreCentreBound);
-    // meshing surface
-    CGAL::make_surface_mesh(c2t3, surface, criteria, CGAL::Manifold_tag());
-    FUNCINFO("The triangulated surface has " << tr.number_of_vertices() << " vertices");
-
-    if(!ROISurfaceMeshFileName.empty()){
-        std::ofstream out(ROISurfaceMeshFileName);
-        CGAL::output_surface_facets_to_off(out,c2t3);
-    }
-
-    //Convert to a polyhedron.
-    using Kernel = CGAL::Exact_predicates_inexact_constructions_kernel;
-    //using Kernel = CGAL::Exact_predicates_exact_constructions_kernel;
-    using Polyhedron = CGAL::Polyhedron_3<Kernel>;
-    //typedef Polyhedron::Halfedge_handle Halfedge_handle;
-    Polyhedron polyhedron;
-
-    //if(!CGAL::output_surface_facets_to_polyhedron(c2t3, polyhedron)){  // Deprecated.
-    try{
-        CGAL::facets_in_complex_2_to_triangle_mesh(c2t3, polyhedron);
-    }catch(const std::exception &e){
-        throw std::runtime_error(std::string("Could not convert surface mesh to a polyhedron representation: ") + e.what());
-    }
     FUNCINFO("The polyhedron surface has " << polyhedron.size_of_vertices() << " vertices"
              " and " << polyhedron.size_of_facets() << " faces");
 
-
-    //Perform surface subdivision.
-    if(!polyhedron.is_pure_triangle()) throw std::runtime_error("Mesh is not purely triangular.");
-    if(MeshingSubdivisionIterations > 0){
-        CGAL::Subdivision_method_3::Loop_subdivision(polyhedron, MeshingSubdivisionIterations);
-        //CGAL::Subdivision_method_3::DooSabin_subdivision(polyhedron,MeshingSubdivisionIterations);
-        //CGAL::Subdivision_method_3::Sqrt3_subdivision(polyhedron,MeshingSubdivisionIterations);
-        FUNCINFO("The subdivided triangulated surface has " << polyhedron.size_of_vertices() << " vertices"
-                 " and " << polyhedron.size_of_facets() << " faces");
+    if(!ROISurfaceMeshFileName.empty()){
+        std::ofstream out(ROISurfaceMeshFileName);
+        out << polyhedron;
     }
+    if(!polyhedron.is_pure_triangle()) throw std::runtime_error("ROI mesh is not purely triangular.");
+    if(!polyhedron.is_valid()) throw std::runtime_error("ROI mesh is not combinatorially valid.");
 
-
+    {
+        polyhedron_processing::Subdivide(polyhedron, MeshingSubdivisionIterations);
+        //const long int MeshSimplificationEdgeCountLimit = 7500;
+        //polyhedron_processing::Simplify(polyhedron, MeshSimplificationEdgeCountLimit);
+    }
+    FUNCINFO("The subdivided triangulated polyhedron has " << polyhedron.size_of_vertices() << " vertices"
+             " and " << polyhedron.size_of_facets() << " faces");
     if(!SubdividedROISurfaceMeshFileName.empty()){
         std::ofstream out(SubdividedROISurfaceMeshFileName);
         out << polyhedron;
     }
     if(!polyhedron.is_pure_triangle()) throw std::runtime_error("Mesh is not purely triangular.");
 
+
+    // ================================= Construct a Polyhedron for the ref ROIs ===================================
+
+    //contour_surface_meshes::Parameters meshing_params;
+    //meshing_params.RQ = contour_surface_meshes::ReproductionQuality::Medium;
+    meshing_params.GridRows = 128;
+    meshing_params.GridColumns = 128;
+    auto ref_polyhedron = contour_surface_meshes::Estimate_Surface_Mesh_Marching_Cubes( cc_Refs, meshing_params );
+
+    FUNCINFO("The reference polyhedron surface has " << ref_polyhedron.size_of_vertices() << " vertices"
+             " and " << ref_polyhedron.size_of_facets() << " faces");
+
+    if(!ROISurfaceMeshFileName.empty()){
+        std::ofstream out(ROISurfaceMeshFileName);
+        out << ref_polyhedron;
+    }
+    if(!ref_polyhedron.is_pure_triangle()) throw std::runtime_error("Ref ROI mesh is not purely triangular.");
+    if(!ref_polyhedron.is_valid()) throw std::runtime_error("Ref ROI mesh is not combinatorially valid.");
+
+    {
+        polyhedron_processing::Subdivide(ref_polyhedron, MeshingSubdivisionIterations);
+        //const long int MeshSimplificationEdgeCountLimit = 7500;
+        //polyhedron_processing::Simplify(ref_polyhedron, MeshSimplificationEdgeCountLimit);
+    }
+    FUNCINFO("The subdivided triangulated reference polyhedron has " << ref_polyhedron.size_of_vertices() << " vertices"
+             " and " << ref_polyhedron.size_of_facets() << " faces");
+    if(!SubdividedRefSurfaceMeshFileName.empty()){
+        std::ofstream out(SubdividedRefSurfaceMeshFileName);
+        out << ref_polyhedron;
+    }
+
     if(OnlyGenerateSurface) return DICOM_data;
 
-    // =============================== Construct an AABB Tree for Spatial Lookups ==================================
 
+    // ================================ Construct AABB Trees for Spatial Lookups ===================================
     //typedef CGAL::Exact_predicates_inexact_constructions_kernel Kernel;
-    using Point = Kernel::Point_3;
-    using Segment = Kernel::Segment_3;
-    using Triangle_Primitive = CGAL::AABB_face_graph_triangle_primitive<Polyhedron>;
-    typedef CGAL::AABB_traits<Kernel, Triangle_Primitive> Traits;
-    using AABB_Tree = CGAL::AABB_tree<Traits>;
-    using Segment_intersection = boost::optional<AABB_Tree::Intersection_and_primitive_id<Segment>::Type>;
+    using Kernel                = contour_surface_meshes::Kernel;
+    using Point                 = Kernel::Point_3;
+    using Segment               = Kernel::Segment_3;
+    using Line                  = Kernel::Line_3;
+    using Triangle_Primitive    = CGAL::AABB_face_graph_triangle_primitive<contour_surface_meshes::Polyhedron>;
+    using Traits                = CGAL::AABB_traits<Kernel, Triangle_Primitive>;
+    using AABB_Tree             = CGAL::AABB_tree<Traits>;
+    using Segment_intersection  = boost::optional<AABB_Tree::Intersection_and_primitive_id<Segment>::Type>;
+    //using Line_intersection     = boost::optional<AABB_Tree::Intersection_and_primitive_id<Line>::Type>;
 
     //Construct the tree.
     AABB_Tree tree(faces(polyhedron).first, faces(polyhedron).second, polyhedron);
-
+    AABB_Tree ref_tree(faces(ref_polyhedron).first, faces(ref_polyhedron).second, ref_polyhedron);
 
     //Figure out what z-margin is needed so the extra two images do not interfere with the grid lining up with the
     // contours. (Want exactly one contour plane per image.) So the margin should be large enough so the empty
@@ -765,16 +724,28 @@ Drover SurfaceBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptA
     sd_image_collection.images.emplace_back( sd_image_collection.images.front() );
     sd_image_collection.images.back().init_buffer(SourceDetectorRows, SourceDetectorColumns, MaxRaySurfaceIntersections);
 
+    //Generate an additional image map for the reference ROI intersection tests.
+    sd_image_collection.images.emplace_back( sd_image_collection.images.front() );
+    sd_image_collection.images.back().init_buffer(SourceDetectorRows, SourceDetectorColumns, 1);
+
+    //Generate an additional image map for the total dose cropped to the reference ROI orthogonally projected.
+    sd_image_collection.images.emplace_back( sd_image_collection.images.front() );
+    sd_image_collection.images.back().init_buffer(SourceDetectorRows, SourceDetectorColumns, 1);
+
     //Get handles for each image.
     planar_image<float, double> *DetectImg     = &(*std::next(sd_image_collection.images.begin(),0));
     planar_image<float, double> *SourceImg     = &(*std::next(sd_image_collection.images.begin(),1));
     planar_image<float, double> *DepthImg      = &(*std::next(sd_image_collection.images.begin(),2));
     planar_image<float, double> *RadialDistImg = &(*std::next(sd_image_collection.images.begin(),3));
+    planar_image<float, double> *DetectRefImg  = &(*std::next(sd_image_collection.images.begin(),4));
+    planar_image<float, double> *RefCroppedImg = &(*std::next(sd_image_collection.images.begin(),5));
 
     DetectImg->metadata["Description"]     = "Total Dose Map";
     SourceImg->metadata["Description"]     = "Intersection Count Map (number of Ray-Surface Intersectons)";
     DepthImg->metadata["Description"]      = "Ray-surface Depth Intersection Map";
     RadialDistImg->metadata["Description"] = "Radial Distance from COM-COM line to Ray-Surface Intersection";
+    DetectRefImg->metadata["Description"]  = "Intersection Count Map (reference ROIs)";
+    RefCroppedImg->metadata["Description"] = "Total Dose Map cropped to reference ROI projection.";
 
     const auto detector_plane = DetectImg->image_plane();
 
@@ -794,6 +765,7 @@ Drover SurfaceBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptA
 
                     //Construct a line segment between the source and detector. 
                     long int accumulated_counts = 0;      //The number of ray-surface intersections.
+                    long int ref_accumulated_counts = 0;  //Whether the ray intersects the reference ROI anywhere..
                     double accumulated_totaldose = 0.0;   //The total accumulated dose from all intersections.
                     const vec3<double> ray_start = SourceImg->position(row, col); // The naive starting position, without boosting.
                     const vec3<double> ray_end = DetectImg->position(row, col);
@@ -854,6 +826,15 @@ Drover SurfaceBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptA
                                     accumulated_totaldose += interp_val;
                                     ++accumulated_counts;
 
+                                    //Determine whether the reference ROI is orthogonally adjacent to this intersection.
+                                    Line cgal_line( Point(ray_start.x, ray_start.y, ray_start.z),
+                                                    Point(ray_end.x,   ray_end.y,   ray_end.z)   );
+                                    
+                                    //Fast check for intersections with the reference ROI.
+                                    if(ref_tree.do_intersect(cgal_line)){
+                                        ++ref_accumulated_counts;
+                                    }
+
                                     //Terminate the loop after desired number of intersections.
                                     if(accumulated_counts >= MaxRaySurfaceIntersections) break;
                                 }
@@ -862,8 +843,12 @@ Drover SurfaceBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptA
                     }
 
                     //Deposit the dose in the images.
-                    SourceImg->reference(row, col, 0) = static_cast<float>(accumulated_counts);
-                    DetectImg->reference(row, col, 0) = static_cast<float>(accumulated_totaldose);
+                    SourceImg->reference(row, col, 0)    = static_cast<float>(accumulated_counts);
+                    DetectImg->reference(row, col, 0)    = static_cast<float>(accumulated_totaldose);
+                    DetectRefImg->reference(row, col, 0) = static_cast<float>(ref_accumulated_counts);
+                    if(ref_accumulated_counts != 0){
+                        RefCroppedImg->reference(row, col, 0)    = static_cast<float>(accumulated_totaldose);
+                    }
                 }
 
                 {
@@ -881,8 +866,14 @@ Drover SurfaceBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptA
     if(TotalDoseMapFileName.empty()){
         TotalDoseMapFileName = Get_Unique_Sequential_Filename("/tmp/dicomautomaton_surfaceraycast_totaldose_", 6, ".fits");
     }
+    if(RefCroppedTotalDoseMapFileName.empty()){
+        RefCroppedTotalDoseMapFileName = Get_Unique_Sequential_Filename("/tmp/dicomautomaton_surfaceraycast_refroicropped_totaldose_", 6, ".fits");
+    }
     if(IntersectionCountMapFileName.empty()){
         IntersectionCountMapFileName = Get_Unique_Sequential_Filename("/tmp/dicomautomaton_surfaceraycast_intersection_count_", 6, ".fits");
+    }
+    if(RefIntersectionCountMapFileName.empty()){
+        IntersectionCountMapFileName = Get_Unique_Sequential_Filename("/tmp/dicomautomaton_surfaceraycast_ref_roi_intersection_count_", 6, ".fits");
     }
 
 
@@ -892,11 +883,17 @@ Drover SurfaceBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptA
     if(!WriteToFITS(*DetectImg, TotalDoseMapFileName)){
         throw std::runtime_error("Unable to write FITS file for total dose map.");
     }
+    if(!WriteToFITS(*RefCroppedImg, RefCroppedTotalDoseMapFileName)){
+        throw std::runtime_error("Unable to write FITS file for total dose map.");
+    }
     if(!DepthMapFileName.empty() && !WriteToFITS(*DepthImg, DepthMapFileName)){
         throw std::runtime_error("Unable to write FITS file for depth map.");
     }
     if(!RadialDistMapFileName.empty() && !WriteToFITS(*RadialDistImg, RadialDistMapFileName)){
         throw std::runtime_error("Unable to write FITS file for radial distance map.");
+    }
+    if(!WriteToFITS(*DetectRefImg, RefIntersectionCountMapFileName)){
+        throw std::runtime_error("Unable to write FITS file for reference image intersection count map.");
     }
 
     // Insert the image maps as images for later processing and/or viewing, if desired.

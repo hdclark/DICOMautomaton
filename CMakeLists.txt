@@ -27,7 +27,6 @@ include_directories( ${EIGEN3_INCLUDE_DIRS} )
 find_package(CGAL REQUIRED COMPONENTS Core)
 include(${CGAL_USE_FILE})
 add_definitions(-DCGAL_EIGEN3_ENABLED=1) # Explicitly instruct CGAL to use Eigen.
-#add_definitions(-DCGAL_DISABLE_ROUNDING_MATH_CHECK=1) # May be needed for Valgrind debugging.
 
 
 ####################################################################################
@@ -39,6 +38,9 @@ set(CMAKE_BUILD_TYPE Release) # Comment this line to use fallback default.
 if(NOT CMAKE_BUILD_TYPE)
     # Default to debug builds.
     set(CMAKE_BUILD_TYPE Debug CACHE STRING "default to debug" FORCE)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2 -pg")
+    add_definitions(-DCGAL_DISABLE_ROUNDING_MATH_CHECK=1) # May be needed for Valgrind debugging.
+    # Note: if profiling/debugging on Arch Linux, disable binary stripping in PKGBUILD.
 endif()
 
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)

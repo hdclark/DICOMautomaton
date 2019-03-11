@@ -284,7 +284,7 @@ bool ImagePartialDerivative(
                         const auto ra = first_img_it->row_aligned_second_derivative_centered_finite_difference(row, col, chan);
                         const auto ca = first_img_it->column_aligned_second_derivative_centered_finite_difference(row, col, chan);
                         newval = std::hypot(ra,ca); // magnitude.
-                        newval = std::atan2(ca,ra) + M_PI; // orientation.
+                        nms_newval = std::atan2(ca,ra) + M_PI; // orientation.
 
                     }else{
                         throw std::invalid_argument("Selected method not applicable to selected order or estimator.");
@@ -321,18 +321,27 @@ bool ImagePartialDerivative(
                     auto col_p = col_r + ra;
                     auto col_m = col_r - ra;
 
-                    row_p = (row_p < 0.0) ? 0.0 : row_p;
-                    row_m = (row_m < 0.0) ? 0.0 : row_m;
-                    col_p = (col_p < 0.0) ? 0.0 : col_p;
-                    col_m = (col_m < 0.0) ? 0.0 : col_m;
-
+                    const auto row_min = static_cast<double>(0.0);
+                    const auto col_min = static_cast<double>(0.0);
                     const auto row_max = static_cast<double>(working.rows)-1.0;
                     const auto col_max = static_cast<double>(working.columns)-1.0;
+
+                    row_p = (row_p < row_min) ? row_min : row_p;
+                    row_m = (row_m < row_min) ? row_min : row_m;
+                    col_p = (col_p < col_min) ? col_min : col_p;
+                    col_m = (col_m < col_min) ? col_min : col_m;
 
                     row_p = (row_p > row_max) ? row_max : row_p;
                     row_m = (row_m > row_max) ? row_max : row_m;
                     col_p = (col_p > col_max) ? col_max : col_p;
                     col_m = (col_m > col_max) ? col_max : col_m;
+
+                    if( !std::isfinite(row_p)
+                    ||  !std::isfinite(row_m)
+                    ||  !std::isfinite(col_p)
+                    ||  !std::isfinite(col_m) ){
+                        throw std::logic_error("Non-finite row/column numbers encountered. Verify gradient computation.");
+                    }
 
                     const auto g_p = working.bilinearly_interpolate_in_pixel_number_space( row_p, col_p, chan );
                     const auto g_m = working.bilinearly_interpolate_in_pixel_number_space( row_m, col_m, chan );

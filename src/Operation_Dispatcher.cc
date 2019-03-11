@@ -1,4 +1,4 @@
-//oPERATIon_Dispatcher.cc - A part of DICOMautomaton 2015, 2016, 2017, 2018. Written by hal clark.
+//Operation_Dispatcher.cc - A part of DICOMautomaton 2015, 2016, 2017, 2018. Written by hal clark.
 //
 // This routine routes loaded data to/through specified operations.
 // Operations can be anything, e.g., analyses, serialization, and visualization.
@@ -32,6 +32,7 @@
 #include "Operations/CT_Liver_Perfusion_Ortho_Views.h"
 #include "Operations/CT_Liver_Perfusion_Pharmaco_1Compartment2Input_5Param.h"
 #include "Operations/CT_Liver_Perfusion_Pharmaco_1Compartment2Input_Reduced3Param.h"
+#include "Operations/ComparePixels.h"
 #include "Operations/ContourBasedRayCastDoseAccumulate.h"
 #include "Operations/ContourBooleanOperations.h"
 #include "Operations/ContourSimilarity.h"
@@ -75,9 +76,11 @@
 #include "Operations/EvaluateTCPModels.h"
 #include "Operations/ExtractRadiomicFeatures.h"
 #include "Operations/FVPicketFence.h"
+#include "Operations/GenerateCalibrationCurve.h"
 #include "Operations/GenerateSurfaceMask.h"
 #include "Operations/GenerateVirtualDataContourViaThresholdTestV1.h"
 #include "Operations/GenerateVirtualDataDoseStairsV1.h"
+#include "Operations/GenerateVirtualDataImageSphereV1.h"
 #include "Operations/GenerateVirtualDataPerfusionV1.h"
 #include "Operations/GiveWholeImageArrayABoneWindowLevel.h"
 #include "Operations/GiveWholeImageArrayAHeadAndNeckWindowLevel.h"
@@ -102,6 +105,8 @@
 #include "Operations/PresentationImage.h"
 #include "Operations/PruneEmptyImageDoseArrays.h"
 #include "Operations/PurgeContours.h"
+#include "Operations/RankPixels.h"
+#include "Operations/ReduceNeighbourhood.h"
 #include "Operations/SFML_Viewer.h"
 #include "Operations/SimplifyContours.h"
 #include "Operations/SeamContours.h"
@@ -119,6 +124,7 @@
 #include "Operations/UBC3TMRI_DCE_Differences.h"
 #include "Operations/UBC3TMRI_DCE_Experimental.h"
 #include "Operations/UBC3TMRI_IVIM_ADC.h"
+#include "Operations/VolumetricSpatialDerivative.h"
 
 
 
@@ -141,6 +147,7 @@ std::map<std::string, op_packet_t> Known_Operations(void){
                                                                     CT_Liver_Perfusion_Pharmaco_1C2I_5Param);
     out["CT_Liver_Perfusion_Pharmaco_1C2I_Reduced3Param"] = std::make_pair(OpArgDocCT_Liver_Perfusion_Pharmaco_1C2I_Reduced3Param, 
                                                                            CT_Liver_Perfusion_Pharmaco_1C2I_Reduced3Param);
+    out["ComparePixels"] = std::make_pair(OpArgDocComparePixels, ComparePixels);
     out["ContourBooleanOperations"] = std::make_pair(OpArgDocContourBooleanOperations, ContourBooleanOperations);
     out["ContourBasedRayCastDoseAccumulate"] = std::make_pair(OpArgDocContourBasedRayCastDoseAccumulate, ContourBasedRayCastDoseAccumulate);
     out["ContourSimilarity"] = std::make_pair(OpArgDocContourSimilarity, ContourSimilarity);
@@ -187,9 +194,11 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["EvaluateTCPModels"] = std::make_pair(OpArgDocEvaluateTCPModels, EvaluateTCPModels);
     out["ExtractRadiomicFeatures"] = std::make_pair(OpArgDocExtractRadiomicFeatures, ExtractRadiomicFeatures);
     out["FVPicketFence"] = std::make_pair(OpArgDocFVPicketFence, FVPicketFence);
+    out["GenerateCalibrationCurve"] = std::make_pair(OpArgDocGenerateCalibrationCurve, GenerateCalibrationCurve);
     out["GenerateSurfaceMask"] = std::make_pair(OpArgDocGenerateSurfaceMask, GenerateSurfaceMask);
     out["GenerateVirtualDataContourViaThresholdTestV1"] = std::make_pair(OpArgDocGenerateVirtualDataContourViaThresholdTestV1, GenerateVirtualDataContourViaThresholdTestV1);
     out["GenerateVirtualDataDoseStairsV1"] = std::make_pair(OpArgDocGenerateVirtualDataDoseStairsV1, GenerateVirtualDataDoseStairsV1);
+    out["GenerateVirtualDataImageSphereV1"] = std::make_pair(OpArgDocGenerateVirtualDataImageSphereV1, GenerateVirtualDataImageSphereV1);
     out["GenerateVirtualDataPerfusionV1"] = std::make_pair(OpArgDocGenerateVirtualDataPerfusionV1, GenerateVirtualDataPerfusionV1);
     out["GiveWholeImageArrayABoneWindowLevel"] = std::make_pair(OpArgDocGiveWholeImageArrayABoneWindowLevel, GiveWholeImageArrayABoneWindowLevel);
     out["GiveWholeImageArrayAHeadAndNeckWindowLevel"] = std::make_pair(OpArgDocGiveWholeImageArrayAHeadAndNeckWindowLevel, GiveWholeImageArrayAHeadAndNeckWindowLevel);
@@ -214,6 +223,8 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["PresentationImage"] = std::make_pair(OpArgDocPresentationImage, PresentationImage);
     out["PruneEmptyImageDoseArrays"] = std::make_pair(OpArgDocPruneEmptyImageDoseArrays, PruneEmptyImageDoseArrays);
     out["PurgeContours"] = std::make_pair(OpArgDocPurgeContours, PurgeContours);
+    out["RankPixels"] = std::make_pair(OpArgDocRankPixels, RankPixels);
+    out["ReduceNeighbourhood"] = std::make_pair(OpArgDocReduceNeighbourhood, ReduceNeighbourhood);
     out["SeamContours"] = std::make_pair(OpArgDocSeamContours, SeamContours);
     out["SelectSlicesIntersectingROI"] = std::make_pair(OpArgDocSelectSlicesIntersectingROI, SelectSlicesIntersectingROI);
     out["SFML_Viewer"] = std::make_pair(OpArgDocSFML_Viewer, SFML_Viewer);
@@ -231,6 +242,7 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["UBC3TMRI_DCE_Differences"] = std::make_pair(OpArgDocUBC3TMRI_DCE_Differences, UBC3TMRI_DCE_Differences);
     out["UBC3TMRI_DCE_Experimental"] = std::make_pair(OpArgDocUBC3TMRI_DCE_Experimental, UBC3TMRI_DCE_Experimental);
     out["UBC3TMRI_IVIM_ADC"] = std::make_pair(OpArgDocUBC3TMRI_IVIM_ADC, UBC3TMRI_IVIM_ADC);
+    out["VolumetricSpatialDerivative"] = std::make_pair(OpArgDocVolumetricSpatialDerivative, VolumetricSpatialDerivative);
 
     return out;
 }

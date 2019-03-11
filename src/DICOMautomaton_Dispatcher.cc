@@ -19,6 +19,7 @@
 
 #include "Boost_Serialization_File_Loader.h"
 #include "DICOM_File_Loader.h"
+#include "Documentation.h"
 #include "FITS_File_Loader.h"
 #include "Operation_Dispatcher.h"
 #include "PACS_Loader.h"
@@ -116,47 +117,7 @@ int main(int argc, char* argv[]){
     arger.push_back( ygor_arg_handlr_t(0, 'u', "detailed-usage", false, "",
       "Print detailed information about operation arguments and quit.",
       [&](const std::string &) -> void {
-
-        auto known_ops = Known_Operations();
-        for(auto &anop : known_ops){
-            std::cout << "Operation: '" << anop.first << "'" << std::endl;
-
-            auto optdocs = anop.second.first();
-
-            std::cout << "\tDescription:" << std::endl;
-            for(auto &e : Reflow_Line_to_Fit_Width_Left_Just(optdocs.desc,70)){
-                std::cout << "\t\t" << e << std::endl;
-            }
-            std::cout << std::endl;
-
-            std::cout << "\tNotes:" << std::endl;
-            for(auto &n : optdocs.notes){
-                for(auto &e : Reflow_Line_to_Fit_Width_Left_Just(n,70)){
-                    std::cout << "\t\t" << e << std::endl;
-                }
-                std::cout << std::endl;
-            }
-            std::cout << std::endl;
-
-            std::cout << "\tParameters:" << std::endl;
-            if(optdocs.args.empty()){
-                std::cout << "\tNo registered options." << std::endl;
-            }else{
-                for(auto &a : optdocs.args){
-                    std::cout << "\t  '" << a.name << "'" << std::endl;
-                    for(const auto &aline : Reflow_Line_to_Fit_Width_Left_Just(a.desc,70)){
-                        std::cout << "\t\t" << aline << std::endl;
-                    }
-                    std::cout << "\t    Default: \"" << a.default_val << "\"" << std::endl;
-                    std::cout << "\t    Examples: " << std::endl;
-                    for(auto &e : a.examples){
-                        std::cout << "\t\t\t\"" << e << "\"" << std::endl;
-                    }
-                    std::cout << std::endl;
-                }
-            }
-            std::cout << std::endl;
-        }
+        Emit_Documentation(std::cout);
         std::exit(0);
         return;
       })

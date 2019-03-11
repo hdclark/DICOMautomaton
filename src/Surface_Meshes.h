@@ -99,6 +99,12 @@ Estimate_Surface_Mesh(
 
 
 Polyhedron
+Estimate_Surface_Mesh_Marching_Cubes(
+        std::list<std::reference_wrapper<contour_collection<double>>> cc_ROIs,
+        Parameters p );
+
+
+Polyhedron
 Estimate_Surface_Mesh_AdvancingFront(
         std::list<std::reference_wrapper<contour_collection<double>>> cc_ROIs,
         Parameters p );
@@ -120,7 +126,12 @@ Regular_Icosahedron(double radius = 1.0);
 
 void
 Subdivide(Polyhedron &mesh,
-          long int iters);
+          long int iters = 3);
+
+void
+Remesh(Polyhedron &mesh,
+          double target_edge_length = 1.0,
+          long int iters = 3);
 
 void
 Simplify(Polyhedron &mesh,

@@ -22,9 +22,9 @@ struct PartitionedImageVoxelVisitorMutatorUserData {
     // Algorithmic changes passed through to the driver function.
     Mutate_Voxels_Opts  mutation_opts;
 
-    std::function<void(long int, long int, long int, float &)> f_bounded;   // Applied to voxels bounded by contours.
-    std::function<void(long int, long int, long int, float &)> f_unbounded; // Applied to voxels NOT bounded by contours.
-    std::function<void(long int, long int, long int, float &)> f_visitor;   // Applied to all voxels.
+    std::function<void(long int, long int, long int, std::reference_wrapper<planar_image<float,double>>, float &)> f_bounded;   // Applied to voxels bounded by contours.
+    std::function<void(long int, long int, long int, std::reference_wrapper<planar_image<float,double>>, float &)> f_unbounded; // Applied to voxels NOT bounded by contours.
+    std::function<void(long int, long int, long int, std::reference_wrapper<planar_image<float,double>>, float &)> f_visitor;   // Applied to all voxels.
     
     std::string description; // If non-empty, used to update image metadata.
 };

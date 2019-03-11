@@ -36,12 +36,17 @@ OperationDoc OpArgDocThresholdImages(void){
     out.name = "ThresholdImages";
 
     out.desc = 
-        "This operation applies thresholds to images.";
+        "This operation applies thresholds to images. Both upper and lower thresholds can be specified.";
         
     out.notes.emplace_back(
         "This routine operates on individual images."
         " When thresholds are specified on a percentile basis, each image is considered separately and therefore"
         " each image may be thresholded with different values."
+    );
+    out.notes.emplace_back(
+        "Both thresholds are inclusive. To binarize an image, use the same threshold for both upper and lower"
+        " threshold parameters. Voxels that fall on the threshold will currently be treated as if they"
+        " exclusively satisfy the upper threshold, but this behaviour is not guaranteed."
     );
         
 
@@ -150,9 +155,11 @@ Drover ThresholdImages(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std:
             if( (animg.rows < 1) || (animg.columns < 1) || (Channel >= animg.channels) ){
                 throw std::runtime_error("Image or channel is empty -- cannot contour via thresholds.");
             }
-            tp.submit_task([&](void) -> void {
-                const auto R = animg.rows;
-                const auto C = animg.columns;
+            std::reference_wrapper<planar_image<float,double>> img_refw( std::ref(animg) );
+
+            tp.submit_task([&,img_refw](void) -> void {
+                const auto R = img_refw.get().rows;
+                const auto C = img_refw.get().columns;
 
                 //Determine the bounds in terms of pixel-value thresholds.
                 auto cl = Lower; // Will be replaced if percentages/percentiles requested.
@@ -162,7 +169,7 @@ Drover ThresholdImages(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std:
                     //Percentage-based.
                     if(Lower_is_Percent || Upper_is_Percent){
                         Stats::Running_MinMax<float> rmm;
-                        animg.apply_to_pixels([&rmm,Channel](long int, long int, long int chnl, float val) -> void {
+                        img_refw.get().apply_to_pixels([&rmm,Channel](long int, long int, long int chnl, float val) -> void {
                              if(Channel == chnl) rmm.Digest(val);
                              return;
                         });
@@ -173,8 +180,8 @@ Drover ThresholdImages(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std:
                     //Percentile-based.
                     if(Lower_is_Ptile || Upper_is_Ptile){
                         std::vector<float> pixel_vals;
-                        pixel_vals.reserve(animg.rows * animg.columns * animg.channels);
-                        animg.apply_to_pixels([&pixel_vals,Channel](long int, long int, long int chnl, float val) -> void {
+                        pixel_vals.reserve(img_refw.get().rows * img_refw.get().columns * img_refw.get().channels);
+                        img_refw.get().apply_to_pixels([&pixel_vals,Channel](long int, long int, long int chnl, float val) -> void {
                              if(Channel == chnl) pixel_vals.push_back(val);
                              return;
                         });
@@ -186,32 +193,32 @@ Drover ThresholdImages(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std:
                 //Construct pixel 'oracle' closures using the user-specified threshold criteria. 
                 // These functions identify whether pixels are within the threshold values.
                 auto lower_pixel_oracle = [cu,cl](float p) -> bool {
-                    return (cl <= p);
+                    return (cl < p);
                 };
                 auto upper_pixel_oracle = [cu,cl](float p) -> bool {
-                    return (p <= cu);
+                    return (p < cu);
                 };
 
                 //Iterate over each pixel, asking the oracle to identify each.
                 Stats::Running_MinMax<float> minmax_pixel;
                 for(auto r = 0; r < R; ++r){
                     for(auto c = 0; c < C; ++c){
-                        const auto v = animg.value(r, c, Channel);
+                        const auto v = img_refw.get().value(r, c, Channel);
 
                         if(!lower_pixel_oracle(v)){
-                            animg.reference(r, c, Channel) = Low;
+                            img_refw.get().reference(r, c, Channel) = Low;
                         }
                         if(!upper_pixel_oracle(v)){
-                            animg.reference(r, c, Channel) = High;
+                            img_refw.get().reference(r, c, Channel) = High;
                         }
-                        minmax_pixel.Digest( animg.value(r, c, Channel) );
+                        minmax_pixel.Digest( img_refw.get().value(r, c, Channel) );
                     }
                 }
 
-                UpdateImageDescription( std::ref(animg), "Thresholded" );
-                UpdateImageWindowCentreWidth( std::ref(animg), minmax_pixel );
+                UpdateImageDescription( img_refw, "Thresholded" );
+                UpdateImageWindowCentreWidth( img_refw, minmax_pixel );
 
-                //Save the contours and print some information to screen.
+                //Report operation progress.
                 {
                     std::lock_guard<std::mutex> lock(saver_printer);
                     ++completed;
