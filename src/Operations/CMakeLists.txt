@@ -10,6 +10,7 @@ add_library(Operations_objs OBJECT
     BCCAExtractRadiomicFeatures.cc
     BoostSerializeDrover.cc
     BuildLexiconInteractively.cc
+    ClusterDBSCAN.cc
     ConvertImageToDose.cc
     ConvertDoseToImage.cc
     CopyImages.cc
@@ -74,6 +75,7 @@ add_library(Operations_objs OBJECT
     GrowContours.cc
     HighlightROIs.cc
     ImageRoutineTests.cc
+    IsolatedVoxelFilter.cc
     LogScale.cc
     MaxMinPixels.cc
     MeldDose.cc
@@ -108,6 +110,7 @@ add_library(Operations_objs OBJECT
     UBC3TMRI_DCE_Experimental.cc
     UBC3TMRI_IVIM_ADC.cc
     VolumetricSpatialDerivative.cc
+    VoxelRANSAC.cc
 )
 set_target_properties(Operations_objs
     PROPERTIES POSITION_INDEPENDENT_CODE TRUE

@@ -32,6 +32,7 @@
 #include "Operations/CT_Liver_Perfusion_Ortho_Views.h"
 #include "Operations/CT_Liver_Perfusion_Pharmaco_1Compartment2Input_5Param.h"
 #include "Operations/CT_Liver_Perfusion_Pharmaco_1Compartment2Input_Reduced3Param.h"
+#include "Operations/ClusterDBSCAN.h"
 #include "Operations/ComparePixels.h"
 #include "Operations/ContourBasedRayCastDoseAccumulate.h"
 #include "Operations/ContourBooleanOperations.h"
@@ -91,6 +92,7 @@
 #include "Operations/GroupImages.h"
 #include "Operations/HighlightROIs.h"
 #include "Operations/ImageRoutineTests.h"
+#include "Operations/IsolatedVoxelFilter.h"
 #include "Operations/LogScale.h"
 #include "Operations/MaxMinPixels.h"
 #include "Operations/MeldDose.h"
@@ -125,6 +127,7 @@
 #include "Operations/UBC3TMRI_DCE_Experimental.h"
 #include "Operations/UBC3TMRI_IVIM_ADC.h"
 #include "Operations/VolumetricSpatialDerivative.h"
+#include "Operations/VoxelRANSAC.h"
 
 
 
@@ -147,6 +150,7 @@ std::map<std::string, op_packet_t> Known_Operations(void){
                                                                     CT_Liver_Perfusion_Pharmaco_1C2I_5Param);
     out["CT_Liver_Perfusion_Pharmaco_1C2I_Reduced3Param"] = std::make_pair(OpArgDocCT_Liver_Perfusion_Pharmaco_1C2I_Reduced3Param, 
                                                                            CT_Liver_Perfusion_Pharmaco_1C2I_Reduced3Param);
+    out["ClusterDBSCAN"] = std::make_pair(OpArgDocClusterDBSCAN, ClusterDBSCAN);
     out["ComparePixels"] = std::make_pair(OpArgDocComparePixels, ComparePixels);
     out["ContourBooleanOperations"] = std::make_pair(OpArgDocContourBooleanOperations, ContourBooleanOperations);
     out["ContourBasedRayCastDoseAccumulate"] = std::make_pair(OpArgDocContourBasedRayCastDoseAccumulate, ContourBasedRayCastDoseAccumulate);
@@ -209,6 +213,7 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["GroupImages"] = std::make_pair(OpArgDocGroupImages, GroupImages);
     out["HighlightROIs"] = std::make_pair(OpArgDocHighlightROIs, HighlightROIs);
     out["ImageRoutineTests"] = std::make_pair(OpArgDocImageRoutineTests, ImageRoutineTests);
+    out["IsolatedVoxelFilter"] = std::make_pair(OpArgDocIsolatedVoxelFilter, IsolatedVoxelFilter);
     out["LogScale"] = std::make_pair(OpArgDocLogScale, LogScale);
     out["MeldDose"] = std::make_pair(OpArgDocMeldDose, MeldDose);
     out["MinkowskiSum3D"] = std::make_pair(OpArgDocMinkowskiSum3D, MinkowskiSum3D);
@@ -243,6 +248,7 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["UBC3TMRI_DCE_Experimental"] = std::make_pair(OpArgDocUBC3TMRI_DCE_Experimental, UBC3TMRI_DCE_Experimental);
     out["UBC3TMRI_IVIM_ADC"] = std::make_pair(OpArgDocUBC3TMRI_IVIM_ADC, UBC3TMRI_IVIM_ADC);
     out["VolumetricSpatialDerivative"] = std::make_pair(OpArgDocVolumetricSpatialDerivative, VolumetricSpatialDerivative);
+    out["VoxelRANSAC"] = std::make_pair(OpArgDocVoxelRANSAC, VoxelRANSAC);
 
     return out;
 }
