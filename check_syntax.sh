@@ -14,4 +14,6 @@ git ls-files -z -o -m |
   xargs -0 -I '{}' -P $(nproc || echo 2) -n 1 -r \
     g++ --std=c++14 -fsyntax-only '{}'
 
+# Compile, but do not link:
+#   g++ --std=c++14 -c in.cc -o /dev/null 
 
