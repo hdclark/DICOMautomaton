@@ -9,8 +9,9 @@
 
 
 # Check only modified and untracked files.
-git ls-files -o -m | 
-  grep -E '*[.]h|*[.]cc|*[.]cpp' |
-  xargs g++ --std=c++14 -fsyntax-only
+git ls-files -z -o -m |
+  grep -z -E '*[.]h|*[.]cc|*[.]cpp' |
+  xargs -0 -I '{}' -P $(nproc || echo 2) -n 1 -r \
+    g++ --std=c++14 -fsyntax-only '{}'
 
 
