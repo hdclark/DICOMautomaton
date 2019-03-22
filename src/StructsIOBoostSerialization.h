@@ -18,6 +18,7 @@
 //#include <boost/serialization/vector.hpp>
 //#include <boost/serialization/map.hpp>
 #include <boost/serialization/shared_ptr.hpp>
+#include <boost/serialization/version.hpp>
 
 #include "YgorMath.h"
 #include "YgorImages.h"
@@ -80,3 +81,7 @@ void serialize(Archive &a, Drover &d, const unsigned int /*version*/){
 
 } // namespace serialization
 } // namespace boost
+
+
+BOOST_CLASS_VERSION(Drover, 0); // Default version number.
+
