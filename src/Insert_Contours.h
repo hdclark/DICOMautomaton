@@ -12,8 +12,23 @@
 
 template <class T, class R> class planar_image;
 template <class T> class contour_collection;
+template <class T> class plane;
 template <class T> class line;
 
+
+//Injects contours that mimic the provided plane (only) where it intersects the image plane.
+// Contour thickness can be controlled.
+//
+// Note: If the contour thickness is not finite, a default relative to the image features is used instead.
+//       The units are DICOM coordinate system units.
+// 
+// Note: This routine can handle large contour thicknesses, which generate rectangular contours.
+//
+void Inject_Thin_Plane_Contour( const planar_image<float,double> &animg,
+                                plane<double> aplane, // The plane to mimic.
+                                contour_collection<double> &dest, // Where to put the contours.
+                                std::map<std::string, std::string> metadata,
+                                double c_thickness = std::numeric_limits<double>::quiet_NaN() );
 
 //Injects contours that mimic the provided line. Contour thickness can be controlled.
 //
