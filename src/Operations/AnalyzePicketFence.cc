@@ -57,14 +57,14 @@ OperationDoc OpArgDocAnalyzePicketFence(void){
     out.args.emplace_back();
     out.args.back().name = "MLCModel";
     out.args.back().desc = "The MLC design geometry to use."
-                      " 'VarianMillenniumMLC80' has 80 leafs in each bank;"
+                      " 'VarianMillenniumMLC80' has 40 leafs in each bank;"
                       " leaves are 10mm wide at isocentre;"
                       " and the maximum static field size is 40cm x 40cm."
-                      " 'VarianMillenniumMLC120' has 120 leafs in each bank;"
+                      " 'VarianMillenniumMLC120' has 60 leafs in each bank;"
                       " the 40 central leaves are 5mm wide at isocentre;"
                       " the 20 peripheral leaves are 10mm wide;"
                       " and the maximum static field size is 40cm x 40cm."
-                      " 'VarianHD120' has 120 leafs in each bank;"
+                      " 'VarianHD120' has 60 leafs in each bank;"
                       " the 32 central leaves are 2.5mm wide at isocentre;"
                       " the 28 peripheral leaves are 5mm wide;"
                       " and the maximum static field size is 40cm x 22cm.";
@@ -281,6 +281,7 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
         {
             const auto regex_FVAREA2TB = std::regex(".*FVAREA2TB.*", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
             const auto regex_FVAREA4TB = std::regex(".*FVAREA4TB.*", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+            const auto regex_FVAREA5TB = std::regex(".*FVAREA5TB.*", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
             const auto regex_FVAREA6TB = std::regex(".*FVAREA6TB.*", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
 
             if(false){
@@ -288,8 +289,8 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
                   ||  std::regex_match(StationName, regex_FVAREA4TB)
                   ||  std::regex_match(StationName, regex_FVAREA6TB) ){
                 MLCModel = "VarianMillenniumMLC120";
-            }else{
-                MLCModel = "VarianMillenniumMLC80";
+            }else if( std::regex_match(StationName, regex_FVAREA5TB) ){
+                MLCModel = "VarianHD120";
             }
         }
 
