@@ -52,8 +52,7 @@ RUN git clone https://aur.archlinux.org/yay.git . && \
 
 # Install all AUR dependencies.
 RUN su - aurbuild -c \
-    "yay -S --noconfirm --needed --afterclean --aur htmlcxx ttf-computer-modern-fonts nlopt" && \
-    pacman -Rc --noconfirm octave
+    "yay -S --noconfirm --needed --afterclean --aur htmlcxx ttf-computer-modern-fonts"
 
 
 # Install known official dependencies.
@@ -71,6 +70,7 @@ RUN pacman -S --noconfirm --needed  \
     cgal \
     wt \
     asio \
+    nlopt \
     freeglut libxi libxmu \
      ` # Additional dependencies for headless OpenGL rendering with SFML ` \
     xorg-server xorg-apps mesa xf86-video-dummy && \
