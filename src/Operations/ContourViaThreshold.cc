@@ -26,6 +26,7 @@
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorStats.h"        //Needed for Stats:: namespace.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
+#include "../Surface_Meshes.h"
 
 
 
@@ -131,7 +132,7 @@ Drover ContourViaThreshold(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
     const auto UpperStr = OptArgs.getValueStr("Upper").value();
     const auto ChannelStr = OptArgs.getValueStr("Channel").value();
     const auto ImageSelectionStr = OptArgs.getValueStr("ImageSelection").value();
-    const auto SimplifyMergeAdjacent = OptArgs.getValueStr("SimplifyMergeAdjacent").value();
+    const auto SimplifyMergeAdjacentStr = OptArgs.getValueStr("SimplifyMergeAdjacent").value();
 
     //-----------------------------------------------------------------------------------------------------------------
     const auto Lower = std::stod( LowerStr );
@@ -148,7 +149,7 @@ Drover ContourViaThreshold(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
 
     const auto TrueRegex = std::regex("^tr?u?e?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
 
-    const auto ShouldSimplifyMergeAdjacent = std::regex_match(SimplifyMergeAdjacent, TrueRegex);
+    const auto SimplifyMergeAdjacent = std::regex_match(SimplifyMergeAdjacentStr, TrueRegex);
 
     const auto NormalizedROILabel = X(ROILabel);
 
@@ -178,41 +179,10 @@ Drover ContourViaThreshold(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
                 throw std::runtime_error("Image or channel is empty -- cannot contour via thresholds.");
             }
             tp.submit_task([&](void) -> void {
-                const auto R = animg.rows;
-                const auto C = animg.columns;
-
-                //Construct the vertex grid. Vertices are in the corners of pixels, but we also need a mapping from
-                // pixel coordinate space to the vertex grid storage indices.
-                const auto vert_count = (R+1)*(C+1);
-                std::vector<vec3<double>> verts( vert_count );
-                enum row_modif { r_neg = 0, r_pos = 1 }; // Modifiers which translate (in the img plane) +-1/2 of pxl_dx.
-                enum col_modif { c_neg = 0, c_pos = 1 }; // Modifiers which translate (in the img plane) +-1/2 of pxl_dy.
-
-                const auto vert_index = [R,C](long int vert_row, long int vert_col) -> long int {
-                    return (C+1)*vert_row + vert_col;
-                };
-                const auto vert_mapping = [vert_index,R,C](long int r, long int c, row_modif rm, col_modif cm ) -> long int {
-                    const auto vert_row = r + rm;
-                    const auto vert_col = c + cm;
-                    return vert_index(vert_row,vert_col);
-                };
-
-                //Pin each vertex grid element to the appropriate pixel corner.
-                const auto corner = animg.position(0,0) - animg.row_unit*animg.pxl_dx*0.5 - animg.col_unit*animg.pxl_dy*0.5;
-                for(auto r = 0; r < (R+1); ++r){
-                    for(auto c = 0; c < (C+1); ++c){
-                        verts.at(vert_index(r,c)) = corner + animg.row_unit*animg.pxl_dx*r
-                                                           + animg.col_unit*animg.pxl_dy*c;
-                    }
-                }
-
-                //Construct a container for storing half-edges.
-                std::map<long int, std::set<long int>> half_edges;
 
                 //Determine the bounds in terms of pixel-value thresholds.
                 auto cl = Lower; // Will be replaced if percentages/percentiles requested.
                 auto cu = Upper; // Will be replaced if percentages/percentiles requested.
-          
                 {
                     //Percentage-based.
                     if(Lower_is_Percent || Upper_is_Percent){
@@ -244,87 +214,60 @@ Drover ContourViaThreshold(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
                     return (cl <= p) && (p <= cu);
                 };
 
-
-                //Iterate over each pixel. If the oracle tells us the pixel is within the ROI, add four half-edges
-                // around the pixel's perimeter.
-                for(auto r = 0; r < R; ++r){
-                    for(auto c = 0; c < C; ++c){
-                        if(pixel_oracle(animg.value(r, c, Channel))){
-                            const auto bot_l = vert_mapping(r,c,r_pos,c_neg);
-                            const auto bot_r = vert_mapping(r,c,r_pos,c_pos);
-                            const auto top_r = vert_mapping(r,c,r_neg,c_pos);
-                            const auto top_l = vert_mapping(r,c,r_neg,c_neg);
-
-                            half_edges[bot_l].insert(bot_r);
-                            half_edges[bot_r].insert(top_r);
-                            half_edges[top_r].insert(top_l);
-                            half_edges[top_l].insert(bot_l);
+                //Prepare a mask image for contouring.
+                auto mask = animg;
+                const double interior_value = -1.0;
+                const double exterior_value =  1.0;
+                const double inclusion_threshold = 0.0;
+                const bool below_is_interior = true;
+                mask.apply_to_pixels([pixel_oracle,
+                                      Channel,
+                                      interior_value,
+                                      exterior_value](long int, 
+                                                      long int,
+                                                      long int chnl,
+                                                      float &val) -> void {
+                        if(Channel == chnl){
+                            val = (pixel_oracle(val) ? interior_value : exterior_value);
                         }
-                    }
-                }
+                        return;
+                    });
 
-                //Find and remove all cancelling half-edges, which are equivalent to circular two-vertex loops.
-                if(ShouldSimplifyMergeAdjacent){
-                    //'Retire' half-edges by merely removing their endpoint, invalidating them.
-                    for(auto &he_group : half_edges){
-                        const auto A = he_group.first;
-                        auto B_it = he_group.second.begin();
-                        while(B_it != he_group.second.end()){
-                            const auto he_group2_it = half_edges.find(*B_it);
-                            if( (he_group2_it != half_edges.end()) 
-                            &&  (he_group2_it->second.count(A) != 0) ){
-                                //Cycle detected -- remove both half-edges.
-                                he_group2_it->second.erase(A);
-                                B_it = he_group.second.erase(B_it);
-                            }else{
-                                ++B_it;
-                            }
-                        }
-                    }
-                }
+                const auto N_0 = mask.image_plane().N_0;
+                auto above = animg;
+                auto below = animg;
+                above.fill_pixels(exterior_value);
+                below.fill_pixels(exterior_value);
+                above.offset += N_0 * mask.pxl_dz;
+                below.offset -= N_0 * mask.pxl_dz;
 
-                // Additional simplification could be performed here...
-                // 
-                // Ideas:
-                //   - Simplify straight lines by removing redundant vertices along line segments.
-                //     (Can this be done on the contour later?)
-                //
-                //   - Remove vertices that do not affect the total area appreciably. (Note: do this for the contour.)
-                //  
+                std::list<std::reference_wrapper<planar_image<float,double>>> grid_imgs;
+                grid_imgs = {{ 
+                    std::ref(above),
+                    std::ref(mask),
+                    std::ref(below) }};
 
-                
-                //Walk all available half-edges forming contour perimeters.
-                std::list<contour_of_points<double>> copl;
-                if(!half_edges.empty()){
-                    auto he_it = half_edges.begin();
-                    while(he_it != half_edges.end()){
-                        if(he_it->second.empty()){
-                            ++he_it;
-                            continue;
-                        }
+                //Generate the surface mesh.
+                auto surface_mesh = dcma_surface_meshes::Estimate_Surface_Mesh_Marching_Cubes( 
+                                                                grid_imgs,
+                                                                inclusion_threshold, 
+                                                                below_is_interior,
+                                                                dcma_surface_meshes::Parameters() );
 
-                        copl.emplace_back();
-                        copl.back().closed = true;
-                        copl.back().metadata["ROIName"] = ROILabel;
-                        copl.back().metadata["NormalizedROIName"] = NormalizedROILabel;
-                        copl.back().metadata["Description"] = "Contoured via threshold ("_s + std::to_string(Lower)
-                                                             + " <= pixel_val <= " + std::to_string(Upper) + ")";
-                        copl.back().metadata["MinimumSeparation"] = MinimumSeparation;
-                        for(const auto &key : { "StudyInstanceUID", "FrameofReferenceUID" }){
-                            if(animg.metadata.count(key) != 0) copl.back().metadata[key] = animg.metadata.at(key);
-                        }
+                //Slice the mesh along the image plane.
+                auto lcc = polyhedron_processing::Slice_Polyhedron( surface_mesh, 
+                                                                    {{ mask.image_plane() }} );
 
-                        const auto A = he_it->first; //The starting node.
-                        auto B = A;
-                        do{
-                            const auto B_he_it = half_edges.find(B);
-                            auto B_it = B_he_it->second.begin(); // TODO: pick left-most (relative to current direction) node.
-                                                                 //       This is how you can will get consistent orientation handling!
-
-                            B = *B_it;
-                            copl.back().points.emplace_back(verts[B]); //Add the vertex to the current contour.
-                            B_he_it->second.erase(B_it); //Retire the node.
-                        }while(B != A);
+                //Tag the contours with metadata.
+                for(auto &cop : lcc.contours){
+                    cop.closed = true;
+                    cop.metadata["ROIName"] = ROILabel;
+                    cop.metadata["NormalizedROIName"] = NormalizedROILabel;
+                    cop.metadata["Description"] = "Contoured via threshold ("_s + std::to_string(Lower)
+                                                 + " <= pixel_val <= " + std::to_string(Upper) + ")";
+                    cop.metadata["MinimumSeparation"] = MinimumSeparation;
+                    for(const auto &key : { "StudyInstanceUID", "FrameofReferenceUID" }){
+                        if(animg.metadata.count(key) != 0) cop.metadata[key] = animg.metadata.at(key);
                     }
                 }
 
@@ -333,20 +276,22 @@ Drover ContourViaThreshold(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
                 // The following will straddle each vertex, interpolate the adjacent vertices, and compare the
                 // interpolated vertex to the actual (straddled) vertex. If they differ by a small amount, the straddled
                 // vertex is pruned. 1% should be more than enough to account for numerical fluctuations.
-                const auto tolerance_sq_dist = 0.01*(animg.pxl_dx*animg.pxl_dx + animg.pxl_dy*animg.pxl_dy + animg.pxl_dz*animg.pxl_dz);
-                const auto verts_are_equal = [=](const vec3<double> &A, const vec3<double> &B) -> bool {
-                    return A.sq_dist(B) < tolerance_sq_dist;
-                };
-                for(auto &cop : copl){
-                    cop.Remove_Sequential_Duplicate_Points(verts_are_equal);
-                    cop.Remove_Extraneous_Points(verts_are_equal);
+                if(SimplifyMergeAdjacent){
+                    const auto tolerance_sq_dist = 0.01*(animg.pxl_dx*animg.pxl_dx + animg.pxl_dy*animg.pxl_dy + animg.pxl_dz*animg.pxl_dz);
+                    const auto verts_are_equal = [=](const vec3<double> &A, const vec3<double> &B) -> bool {
+                        return A.sq_dist(B) < tolerance_sq_dist;
+                    };
+                    for(auto &cop : lcc.contours){
+                        cop.Remove_Sequential_Duplicate_Points(verts_are_equal);
+                        cop.Remove_Extraneous_Points(verts_are_equal);
+                    }
                 }
-
 
                 //Save the contours and print some information to screen.
                 {
                     std::lock_guard<std::mutex> lock(saver_printer);
-                    DICOM_data.contour_data->ccs.back().contours.splice(DICOM_data.contour_data->ccs.back().contours.end(), copl);
+                    DICOM_data.contour_data->ccs.back().contours.splice(DICOM_data.contour_data->ccs.back().contours.end(),
+                                                                        lcc.contours);
 
                     ++completed;
                     FUNCINFO("Completed " << completed << " of " << img_count

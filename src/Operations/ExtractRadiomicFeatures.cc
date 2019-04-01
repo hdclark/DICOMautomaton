@@ -193,11 +193,11 @@ Drover ExtractRadiomicFeatures(Drover DICOM_data, OperationArgPkg OptArgs, std::
     std::stringstream smesh_header;
     std::stringstream smesh_report;
     {
-        contour_surface_meshes::Parameters meshing_params;
-        meshing_params.RQ = contour_surface_meshes::ReproductionQuality::Medium;
+        dcma_surface_meshes::Parameters meshing_params;
+        meshing_params.RQ = dcma_surface_meshes::ReproductionQuality::Medium;
         meshing_params.GridRows = 1024;
         meshing_params.GridColumns = 1024;
-        auto smesh = contour_surface_meshes::Estimate_Surface_Mesh( cc_ROIs, meshing_params );
+        auto smesh = dcma_surface_meshes::Estimate_Surface_Mesh( cc_ROIs, meshing_params );
 
         //if(!polyhedron_processing::SaveAsOFF(smesh, "/tmp/test.off")){
         //    FUNCERR("Unable to write mesh as OFF file");

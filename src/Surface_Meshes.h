@@ -55,7 +55,7 @@
 #include <CGAL/mesh_segmentation.h>
 
 
-namespace contour_surface_meshes {
+namespace dcma_surface_meshes {
 
 using Kernel = CGAL::Exact_predicates_inexact_constructions_kernel;
 using Polyhedron = CGAL::Polyhedron_3<Kernel>;
@@ -105,12 +105,22 @@ Estimate_Surface_Mesh_Marching_Cubes(
 
 
 Polyhedron
+Estimate_Surface_Mesh_Marching_Cubes(
+        std::list<std::reference_wrapper<planar_image<float,double>>> grid_imgs,
+        double inclusion_threshold, // The voxel value threshold demarcating surface 'interior' and 'exterior.'
+        bool below_is_interior,  // Controls how the inclusion_threshold is interpretted.
+                                 // If true, anything <= is considered to be interior to the surface.
+                                 // If false, anything >= is considered to be interior to the surface.
+        Parameters p );
+
+
+Polyhedron
 Estimate_Surface_Mesh_AdvancingFront(
         std::list<std::reference_wrapper<contour_collection<double>>> cc_ROIs,
         Parameters p );
 
 
-} // namespace contour_surface_meshes
+} // namespace dcma_surface_meshes
 
 
 

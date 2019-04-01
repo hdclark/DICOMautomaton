@@ -181,7 +181,7 @@ Drover MinkowskiSum3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::
     auto common_metadata = contour_collection<double>().get_common_metadata(cc_ROIs, {});
 
     // Generate a polyhedron surface mesh iff necessary.
-    contour_surface_meshes::Polyhedron output_mesh;
+    dcma_surface_meshes::Polyhedron output_mesh;
     if(false){
     }else if( (std::regex_match(OpSelectionStr, regex_dilate_exact_vertex)) ){
         // Do nothing -- no surface is needed.
@@ -191,9 +191,9 @@ Drover MinkowskiSum3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::
           ||  (std::regex_match(OpSelectionStr, regex_erode_inexact_isotropic))
           ||  (std::regex_match(OpSelectionStr, regex_shell_inexact_isotropic)) ){
         // Generate a surface and prepare it for a Minkowski operation.
-        contour_surface_meshes::Parameters meshing_params;
-        output_mesh = contour_surface_meshes::Estimate_Surface_Mesh( cc_ROIs, meshing_params );
-        //output_mesh = contour_surface_meshes::Estimate_Surface_Mesh_AdvancingFront( cc_ROIs, meshing_params );
+        dcma_surface_meshes::Parameters meshing_params;
+        output_mesh = dcma_surface_meshes::Estimate_Surface_Mesh( cc_ROIs, meshing_params );
+        //output_mesh = dcma_surface_meshes::Estimate_Surface_Mesh_AdvancingFront( cc_ROIs, meshing_params );
 
         polyhedron_processing::Subdivide(output_mesh, MeshSubdivisions);
         polyhedron_processing::Simplify(output_mesh, MeshSimplificationEdgeCountLimit);

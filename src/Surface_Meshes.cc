@@ -134,7 +134,7 @@
 
 
 // ----------------------------------------------- Pure contour meshing -----------------------------------------------
-namespace contour_surface_meshes {
+namespace dcma_surface_meshes {
 
 // This sub-routine assumes ROI contours are 'cylindrically' extruded 2D polygons with a fixed separation.
 // ROI inclusivity is separately pre-computed before surface probing by generating an inclusivity mask on a
@@ -581,18 +581,7 @@ Polyhedron Estimate_Surface_Mesh(
 }
 
 
-// This sub-routine performs the Marching Cubes algorithm for the given ROI contours.
-// ROI inclusivity is separately pre-computed before surface probing by generating an inclusivity mask on a
-// custom-fitted planar image collection. This is done for performance purposes and so inclusivity and surface
-// meshing can be separately tweaked as necessary.
-//
-// NOTE: This routine does not require the images that the contours were originally generated on.
-//       A custom set of dummy images that contiguously cover all ROIs are generated and used internally.
-//
-// NOTE: This routine assumes all ROIs are co-planar.
-//
-// NOTE: This routine will handle ROIs with several disconnected components (e.g., "eyes"). But all components
-//       will be lumped together into a single polyhedron.
+// Marching Cubes core implementation. This routine must be fed an image volume.
 //
 // NOTE: This implementation borrows from the public domain implementation available at
 //       <https://paulbourke.net/geometry/polygonise/marchingsource.cpp> (accessed 20190217).
@@ -600,174 +589,30 @@ Polyhedron Estimate_Surface_Mesh(
 //       version to support rectangular cubes, avoid 3D interpolation, and explicitly constructs a polyhedron mesh.
 //       Thanks Cory! Thanks Paul!
 //
-Polyhedron Estimate_Surface_Mesh_Marching_Cubes(
-        std::list<std::reference_wrapper<contour_collection<double>>> cc_ROIs,
-        Parameters params ){
+static
+Polyhedron
+Marching_Cubes_Implementation(
+        std::list<std::reference_wrapper<planar_image<float,double>>> grid_imgs,
+        double inclusion_threshold, // The voxel value threshold demarcating surface 'interior' and 'exterior.'
+        bool below_is_interior,  // Controls how the inclusion_threshold is interpretted.
+                                 // If true, anything <= is considered to be interior to the surface.
+                                 // If false, anything >= is considered to be interior to the surface.
+        Parameters /*params*/ ){
+
+    const double ExteriorVal = inclusion_threshold + (below_is_interior ? 1.0 : -1.0);
+
+    if(grid_imgs.empty()){
+        throw std::invalid_argument("An insufficient number of images was provided. Cannot continue.");
+    }
+    if(!Images_Form_Rectilinear_Grid(grid_imgs)){
+        throw std::logic_error("Grid images do not form a rectilinear grid. Cannot continue");
+    }
+
+    const auto GridZ = grid_imgs.front().get().image_plane().N_0;
 
     const vec3<double> zero3( static_cast<double>(0),
                               static_cast<double>(0),
                               static_cast<double>(0) );
-
-    const double ExteriorVal = 1.0;
-    const double InteriorVal = -ExteriorVal;
-    const double interior_threshold = 0.0; // Anything <= is considered to be interior to the ROI.
-
-    // Figure out plane alignment and work out spacing.
-    const auto est_cont_normal = Average_Contour_Normals(cc_ROIs);
-    const auto unique_planar_separation_threshold = 0.005; // Contours separated by less are considered to be on the same plane.
-    const auto ucp = Unique_Contour_Planes(cc_ROIs, est_cont_normal, unique_planar_separation_threshold);
-
-    // ============================================= Export the data ================================================
-    // Export the contour vertices for inspection or processing with other tools.
-    /*
-    {
-        std::vector<Point_3> verts;
-        std::ofstream out("/tmp/SurfaceMesh_ROI_vertices.xyz");
-
-        for(auto &cc_ref : cc_ROIs){
-            for(const auto &c : cc_ref.get().contours){
-                for(const auto &p : c.points){
-                    Point_3 cgal_p( p.x, p.y, p.z );
-                    verts.push_back(cgal_p);
-                }
-            }
-        }
-        if(!out || !CGAL::write_xyz_points(out, verts)){
-            throw std::runtime_error("Unable to write contour vertices.");
-        } 
-    }
-    */
-
-
-    // ============================================== Generate a grid  ==============================================
-
-    // Compute the number of images to make into the grid: number of unique contour planes + 2.
-    // The extra two help provide slices above and below the contour extent to ensure polyhedron will be closed.
-    if(params.NumberOfImages <= 0) params.NumberOfImages = (ucp.size() + 2);
-    FUNCINFO("Number of images: " << params.NumberOfImages);
-
-    // Find grid alignment vectors.
-    const auto GridZ = est_cont_normal.unit();
-    vec3<double> GridX = GridZ.rotate_around_z(M_PI * 0.5); // Try Z. Will often be idempotent.
-    if(GridX.Dot(GridZ) > 0.25){
-        GridX = GridZ.rotate_around_y(M_PI * 0.5);  //Should always work since GridZ is parallel to Z.
-    }
-    vec3<double> GridY = GridZ.Cross(GridX);
-    if(!GridZ.GramSchmidt_orthogonalize(GridX, GridY)){
-        throw std::runtime_error("Unable to find grid orientation vectors.");
-    }
-    GridX = GridX.unit();
-    GridY = GridY.unit();
-
-    // Figure out what z-margin is needed so the extra two images do not interfere with the grid lining up with the
-    // contours. (Want exactly one contour plane per image.) So the margin should be large enough so the empty
-    // images have no contours inside them, but small enough so that it doesn't affect the location of contours in the
-    // other image slices. The ideal is if each image slice has the same thickness so contours are all separated by some
-    // constant separation -- in this case we make the margin exactly as big as if two images were also included.
-    double z_margin = 0.0;
-    if(ucp.size() > 1){
-        // Determine the minimum contour plane spacing.
-        //
-        // This approach is not robust, breaking down when a single contour plane is translated or out of place.
-        //const auto sep_per_plane = Estimate_Contour_Separation(cc_ROIs, est_cont_normal, unique_planar_separation_threshold);
-
-        // Alternative computation of separations using medians. It is more robust, but the whole procedure falls apart
-        // if the slices are not regularly separated. Leaving here to potentially incorporate into Ygor or elsewhere at
-        // a later date.
-        std::vector<double> seps;
-        for(auto itA = std::begin(ucp); ; ++itA){
-            auto itB = std::next(itA);
-            if(itB == std::end(ucp)) break;
-            seps.emplace_back( std::abs(itA->Get_Signed_Distance_To_Point(itB->R_0)) );
-        }
-        const auto sep_min = Stats::Min(seps);
-        const auto sep_med = Stats::Median(seps);
-        const auto sep_max = Stats::Max(seps);
-        const auto sep_per_plane = sep_med;
-
-        if(RELATIVE_DIFF(sep_min, sep_max) > 0.01){
-            FUNCINFO("Planar separation: min, median, max = " << sep_min << ", " << sep_med << ", " << sep_max);
-            FUNCWARN("Planar separations are not consistent."
-                     " This could result in topological invalidity (e.g., disconnected or open meshes)."
-                     " Assuming the median separation for all contours.");
-        }
-
-        // Add TOTAL zmargin of 1*sep_per_plane each for each extra images, and 0.5*sep_per_plane for each of the images
-        // which will stick out beyond the contour planes. However, the margin is added to both the top and the bottom so
-        // halve the total amount.
-        z_margin = sep_per_plane * 1.5;
-
-    }else{
-        FUNCWARN("Only a single contour plane was detected. Guessing its thickness.."); 
-        z_margin = 5.0;
-    }
-
-    // Figure out what a reasonable x-margin and y-margin are. 
-    //
-    // NOTE: Could also use (median? maximum?) distance from centroid to vertex.
-    //       These should always be 1-2 voxels from the image edge, and are really unrelated from the z-margin. TODO.
-    double x_margin = std::max(2.0, z_margin);
-    double y_margin = std::max(2.0, z_margin);
-
-    // Generate a grid volume bounding the ROI(s).
-    const long int NumberOfChannels = 1;
-    const double PixelFill = ExteriorVal; //std::numeric_limits<double>::quiet_NaN();
-    const bool OnlyExtremeSlices = false;
-    auto grid_image_collection = Contiguously_Grid_Volume<float,double>(
-             cc_ROIs, 
-             x_margin, y_margin, z_margin,
-             params.GridRows, params.GridColumns, 
-             NumberOfChannels, params.NumberOfImages,
-             GridX, GridY, GridZ,
-             PixelFill, OnlyExtremeSlices );
-
-    // Generate an ROI inclusivity voxel map.
-    {
-        PartitionedImageVoxelVisitorMutatorUserData ud;
-
-        ud.mutation_opts.editstyle = Mutate_Voxels_Opts::EditStyle::InPlace;
-        ud.mutation_opts.aggregate = Mutate_Voxels_Opts::Aggregate::First;
-        ud.mutation_opts.adjacency = Mutate_Voxels_Opts::Adjacency::SingleVoxel;
-        ud.mutation_opts.maskmod   = Mutate_Voxels_Opts::MaskMod::Noop;
-        ud.mutation_opts.inclusivity = Mutate_Voxels_Opts::Inclusivity::Centre;
-        ud.description = "ROI Inclusivity";
-
-        /*
-        if(false){
-        }else if( std::regex_match(ContourOverlapStr, regex_ignore) ){
-            ud.mutation_opts.contouroverlap = Mutate_Voxels_Opts::ContourOverlap::Ignore;
-        }else if( std::regex_match(ContourOverlapStr, regex_honopps) ){
-            ud.mutation_opts.contouroverlap = Mutate_Voxels_Opts::ContourOverlap::HonourOppositeOrientations;
-        }else if( std::regex_match(ContourOverlapStr, regex_cancel) ){
-            ud.mutation_opts.contouroverlap = Mutate_Voxels_Opts::ContourOverlap::ImplicitOrientations;
-        }else{
-            throw std::invalid_argument("ContourOverlap argument '"_s + ContourOverlapStr + "' is not valid");
-        }
-        */
-        ud.mutation_opts.contouroverlap = Mutate_Voxels_Opts::ContourOverlap::Ignore;
-
-        ud.f_bounded = [&](long int /*row*/, long int /*col*/, long int /*chan*/, std::reference_wrapper<planar_image<float,double>> /*img_refw*/, float &voxel_val) {
-            voxel_val = InteriorVal;
-        };
-        //ud.f_unbounded = [&](long int /*row*/, long int /*col*/, long int /*chan*/, std::reference_wrapper<planar_image<float,double>> /*img_refw*/, float &voxel_val) {
-        //    voxel_val = ExteriorVal;
-        //};
-
-        if(!grid_image_collection.Process_Images_Parallel( GroupIndividualImages,
-                                                           PartitionedImageVoxelVisitorMutator,
-                                                           {}, cc_ROIs, &ud )){
-            throw std::runtime_error("Unable to create an ROI inclusivity map.");
-        }
-    }
-
-    std::list<std::reference_wrapper<planar_image<float,double>>> grid_imgs;
-    for(auto &img : grid_image_collection.images){
-        grid_imgs.push_back( std::ref(img) );
-    }
-
-    if(!Images_Form_Rectilinear_Grid(grid_imgs)){
-        throw std::logic_error("Grid images do not form a rectilinear grid. Cannot continue");
-    }
 
     planar_image_adjacency<float,double> img_adj( grid_imgs, {}, GridZ );
 
@@ -1177,7 +1022,11 @@ Polyhedron Estimate_Surface_Mesh_Marching_Cubes(
                 // Convert vertex inclusion to a bitmask.
                 int32_t iFlagIndex = 0;
                 for(int32_t corner = 0; corner < 8; ++corner){
-                    if(afCubeValue[corner] <= interior_threshold) iFlagIndex |= (1 << corner);
+                    if(below_is_interior){
+                        if(afCubeValue[corner] <= inclusion_threshold) iFlagIndex |= (1 << corner);
+                    }else{
+                        if(afCubeValue[corner] >= inclusion_threshold) iFlagIndex |= (1 << corner);
+                    }
                 }
 
                 // Convert vertex inclusion into a list of 'involved' edges that cross the ROI surface.
@@ -1198,7 +1047,7 @@ Polyhedron Estimate_Surface_Mesh_Marching_Cubes(
                         // Find the (approximate) point along the edge where the surface intersects, parameterized to [0:1].
                         const double d_value = (value_B - value_A);
                         const double inv_d_value = static_cast<double>(1.0)/d_value;
-                        const double lin_interp = (interior_threshold - value_A) * inv_d_value;
+                        const double lin_interp = (inclusion_threshold - value_A) * inv_d_value;
                         const double surf_dl = std::isfinite(lin_interp) ? lin_interp : static_cast<double>(0.5);
                         if(!isininc(0.0,surf_dl,1.0)){
                             throw std::logic_error("Interpolation of surface-edge intersection failed. Refusing to continue");
@@ -1286,11 +1135,11 @@ Polyhedron Estimate_Surface_Mesh_Marching_Cubes(
     Polyhedron output_mesh;
     CGAL::Polygon_mesh_processing::polygon_soup_to_polygon_mesh(mesh_triangle_verts, mesh_triangle_faces, output_mesh);
 
-    if(!CGAL::is_closed(output_mesh)){
-        std::ofstream openmesh("/tmp/open_mesh.off");
-        openmesh << output_mesh;
-        throw std::runtime_error("Mesh not closed but should be. Verify vector equality is not too loose. Dumped to /tmp/open_mesh.off.");
-    }
+//    if(!CGAL::is_closed(output_mesh)){
+//        std::ofstream openmesh("/tmp/open_mesh.off");
+//        openmesh << output_mesh;
+//        throw std::runtime_error("Mesh not closed but should be. Verify vector equality is not too loose. Dumped to /tmp/open_mesh.off.");
+//    }
     if(!CGAL::Polygon_mesh_processing::is_outward_oriented(output_mesh)){
         FUNCINFO("Reorienting face orientation so faces face outward");
         CGAL::Polygon_mesh_processing::reverse_face_orientations(output_mesh);
@@ -1306,6 +1155,223 @@ Polyhedron Estimate_Surface_Mesh_Marching_Cubes(
     }
   
     return output_mesh;
+}
+
+
+
+// This sub-routine performs the Marching Cubes algorithm for the given ROI contours.
+// ROI inclusivity is separately pre-computed before surface probing by generating an inclusivity mask on a
+// custom-fitted planar image collection. This is done for performance purposes and so inclusivity and surface
+// meshing can be separately tweaked as necessary.
+//
+// NOTE: This routine does not require the images that the contours were originally generated on.
+//       A custom set of dummy images that contiguously cover all ROIs are generated and used internally.
+//
+// NOTE: This routine assumes all ROIs are co-planar.
+//
+// NOTE: This routine will handle ROIs with several disconnected components (e.g., "eyes"). But all components
+//       will be lumped together into a single polyhedron.
+//
+Polyhedron Estimate_Surface_Mesh_Marching_Cubes(
+        std::list<std::reference_wrapper<contour_collection<double>>> cc_ROIs,
+        Parameters params ){
+
+    // Define the convention we will use in our mask.
+    const double inclusion_threshold = 0.0;
+    const bool below_is_interior = true;  // Anything <= is considered to be interior to the ROI.
+
+    const double InteriorVal = inclusion_threshold - (below_is_interior ? 1.0 : -1.0);
+    const double ExteriorVal = inclusion_threshold + (below_is_interior ? 1.0 : -1.0);
+
+    // Figure out plane alignment and work out spacing.
+    const auto est_cont_normal = Average_Contour_Normals(cc_ROIs);
+    const auto unique_planar_separation_threshold = 0.005; // Contours separated by less are considered to be on the same plane.
+    const auto ucp = Unique_Contour_Planes(cc_ROIs, est_cont_normal, unique_planar_separation_threshold);
+
+    // ============================================= Export the data ================================================
+    // Export the contour vertices for inspection or processing with other tools.
+    /*
+    {
+        std::vector<Point_3> verts;
+        std::ofstream out("/tmp/SurfaceMesh_ROI_vertices.xyz");
+
+        for(auto &cc_ref : cc_ROIs){
+            for(const auto &c : cc_ref.get().contours){
+                for(const auto &p : c.points){
+                    Point_3 cgal_p( p.x, p.y, p.z );
+                    verts.push_back(cgal_p);
+                }
+            }
+        }
+        if(!out || !CGAL::write_xyz_points(out, verts)){
+            throw std::runtime_error("Unable to write contour vertices.");
+        } 
+    }
+    */
+
+
+    // ============================================== Generate a grid  ==============================================
+
+    // Compute the number of images to make into the grid: number of unique contour planes + 2.
+    // The extra two help provide slices above and below the contour extent to ensure polyhedron will be closed.
+    if(params.NumberOfImages <= 0) params.NumberOfImages = (ucp.size() + 2);
+    FUNCINFO("Number of images: " << params.NumberOfImages);
+
+    // Find grid alignment vectors.
+    const auto GridZ = est_cont_normal.unit();
+    vec3<double> GridX = GridZ.rotate_around_z(M_PI * 0.5); // Try Z. Will often be idempotent.
+    if(GridX.Dot(GridZ) > 0.25){
+        GridX = GridZ.rotate_around_y(M_PI * 0.5);  //Should always work since GridZ is parallel to Z.
+    }
+    vec3<double> GridY = GridZ.Cross(GridX);
+    if(!GridZ.GramSchmidt_orthogonalize(GridX, GridY)){
+        throw std::runtime_error("Unable to find grid orientation vectors.");
+    }
+    GridX = GridX.unit();
+    GridY = GridY.unit();
+
+    // Figure out what z-margin is needed so the extra two images do not interfere with the grid lining up with the
+    // contours. (Want exactly one contour plane per image.) So the margin should be large enough so the empty
+    // images have no contours inside them, but small enough so that it doesn't affect the location of contours in the
+    // other image slices. The ideal is if each image slice has the same thickness so contours are all separated by some
+    // constant separation -- in this case we make the margin exactly as big as if two images were also included.
+    double z_margin = 0.0;
+    if(ucp.size() > 1){
+        // Determine the minimum contour plane spacing.
+        //
+        // This approach is not robust, breaking down when a single contour plane is translated or out of place.
+        //const auto sep_per_plane = Estimate_Contour_Separation(cc_ROIs, est_cont_normal, unique_planar_separation_threshold);
+
+        // Alternative computation of separations using medians. It is more robust, but the whole procedure falls apart
+        // if the slices are not regularly separated. Leaving here to potentially incorporate into Ygor or elsewhere at
+        // a later date.
+        std::vector<double> seps;
+        for(auto itA = std::begin(ucp); ; ++itA){
+            auto itB = std::next(itA);
+            if(itB == std::end(ucp)) break;
+            seps.emplace_back( std::abs(itA->Get_Signed_Distance_To_Point(itB->R_0)) );
+        }
+        const auto sep_min = Stats::Min(seps);
+        const auto sep_med = Stats::Median(seps);
+        const auto sep_max = Stats::Max(seps);
+        const auto sep_per_plane = sep_med;
+
+        if(RELATIVE_DIFF(sep_min, sep_max) > 0.01){
+            FUNCINFO("Planar separation: min, median, max = " << sep_min << ", " << sep_med << ", " << sep_max);
+            FUNCWARN("Planar separations are not consistent."
+                     " This could result in topological invalidity (e.g., disconnected or open meshes)."
+                     " Assuming the median separation for all contours.");
+        }
+
+        // Add TOTAL zmargin of 1*sep_per_plane each for each extra images, and 0.5*sep_per_plane for each of the images
+        // which will stick out beyond the contour planes. However, the margin is added to both the top and the bottom so
+        // halve the total amount.
+        z_margin = sep_per_plane * 1.5;
+
+    }else{
+        FUNCWARN("Only a single contour plane was detected. Guessing its thickness.."); 
+        z_margin = 5.0;
+    }
+
+    // Figure out what a reasonable x-margin and y-margin are. 
+    //
+    // NOTE: Could also use (median? maximum?) distance from centroid to vertex.
+    //       These should always be 1-2 voxels from the image edge, and are really unrelated from the z-margin. TODO.
+    double x_margin = std::max(2.0, z_margin);
+    double y_margin = std::max(2.0, z_margin);
+
+    // Generate a grid volume bounding the ROI(s).
+    const long int NumberOfChannels = 1;
+    const double PixelFill = ExteriorVal; //std::numeric_limits<double>::quiet_NaN();
+    const bool OnlyExtremeSlices = false;
+    auto grid_image_collection = Contiguously_Grid_Volume<float,double>(
+             cc_ROIs, 
+             x_margin, y_margin, z_margin,
+             params.GridRows, params.GridColumns, 
+             NumberOfChannels, params.NumberOfImages,
+             GridX, GridY, GridZ,
+             PixelFill, OnlyExtremeSlices );
+
+    // Generate an ROI inclusivity voxel map.
+    {
+        PartitionedImageVoxelVisitorMutatorUserData ud;
+
+        ud.mutation_opts.editstyle = Mutate_Voxels_Opts::EditStyle::InPlace;
+        ud.mutation_opts.aggregate = Mutate_Voxels_Opts::Aggregate::First;
+        ud.mutation_opts.adjacency = Mutate_Voxels_Opts::Adjacency::SingleVoxel;
+        ud.mutation_opts.maskmod   = Mutate_Voxels_Opts::MaskMod::Noop;
+        ud.mutation_opts.inclusivity = Mutate_Voxels_Opts::Inclusivity::Centre;
+        ud.description = "ROI Inclusivity";
+
+        /*
+        if(false){
+        }else if( std::regex_match(ContourOverlapStr, regex_ignore) ){
+            ud.mutation_opts.contouroverlap = Mutate_Voxels_Opts::ContourOverlap::Ignore;
+        }else if( std::regex_match(ContourOverlapStr, regex_honopps) ){
+            ud.mutation_opts.contouroverlap = Mutate_Voxels_Opts::ContourOverlap::HonourOppositeOrientations;
+        }else if( std::regex_match(ContourOverlapStr, regex_cancel) ){
+            ud.mutation_opts.contouroverlap = Mutate_Voxels_Opts::ContourOverlap::ImplicitOrientations;
+        }else{
+            throw std::invalid_argument("ContourOverlap argument '"_s + ContourOverlapStr + "' is not valid");
+        }
+        */
+        ud.mutation_opts.contouroverlap = Mutate_Voxels_Opts::ContourOverlap::Ignore;
+
+        ud.f_bounded = [&](long int /*row*/, long int /*col*/, long int /*chan*/, std::reference_wrapper<planar_image<float,double>> /*img_refw*/, float &voxel_val) {
+            voxel_val = InteriorVal;
+        };
+        //ud.f_unbounded = [&](long int /*row*/, long int /*col*/, long int /*chan*/, std::reference_wrapper<planar_image<float,double>> /*img_refw*/, float &voxel_val) {
+        //    voxel_val = ExteriorVal;
+        //};
+
+        if(!grid_image_collection.Process_Images_Parallel( GroupIndividualImages,
+                                                           PartitionedImageVoxelVisitorMutator,
+                                                           {}, cc_ROIs, &ud )){
+            throw std::runtime_error("Unable to create an ROI inclusivity map.");
+        }
+    }
+
+    std::list<std::reference_wrapper<planar_image<float,double>>> grid_imgs;
+    for(auto &img : grid_image_collection.images){
+        grid_imgs.push_back( std::ref(img) );
+    }
+
+    if(!Images_Form_Rectilinear_Grid(grid_imgs)){
+        throw std::logic_error("Grid images do not form a rectilinear grid. Cannot continue");
+    }
+
+    // Offload the actual Marching Cubes computation.
+    return Marching_Cubes_Implementation( grid_imgs,
+                                          inclusion_threshold,
+                                          below_is_interior,
+                                          params );
+}
+
+// This sub-routine performs the Marching Cubes algorithm for the provided images.
+// Images should abut and not overlap; if they do, the generated surface will have seams where the images do not abut.
+// Meshes with seams might be acceptable in some cases, so grids are only explicitly checked for rectilinearity.
+//
+Polyhedron
+Estimate_Surface_Mesh_Marching_Cubes(
+        std::list<std::reference_wrapper<planar_image<float,double>>> grid_imgs,
+        double inclusion_threshold, // The voxel value threshold demarcating surface 'interior' and 'exterior.'
+        bool below_is_interior,  // Controls how the inclusion_threshold is interpretted.
+                                 // If true, anything <= is considered to be interior to the surface.
+                                 // If false, anything >= is considered to be interior to the surface.
+        Parameters params ){
+
+    if(grid_imgs.empty()){
+        throw std::invalid_argument("An insufficient number of images was provided. Cannot continue.");
+    }
+    if(!Images_Form_Rectilinear_Grid(grid_imgs)){
+        throw std::logic_error("Grid images do not form a rectilinear grid. Cannot continue");
+    }
+
+    // Offload the actual Marching Cubes computation.
+    return Marching_Cubes_Implementation( grid_imgs,
+                                          inclusion_threshold,
+                                          below_is_interior,
+                                          params );
 }
 
 
@@ -1403,7 +1469,7 @@ Polyhedron Estimate_Surface_Mesh_AdvancingFront(
     return Polyhedron();
 }
 
-} // namespace contour_surface_meshes.
+} // namespace dcma_surface_meshes.
 
 
 
@@ -1943,6 +2009,24 @@ contour_collection<double> Slice_Polyhedron(
             }
         }
     }
+
+/*    
+    // Write the contours to a file.
+    {
+        std::vector<Kernel::Point_3> verts;
+        std::ofstream out(Get_Unique_Sequential_Filename("/tmp/roi_verts_",3, ".xyz"));
+
+        for(const auto &c : cc.contours){
+            for(const auto &p : c.points){
+                Kernel::Point_3 cgal_p( p.x, p.y, p.z );
+                verts.push_back(cgal_p);
+            }
+        }
+        if(!out || !CGAL::write_xyz_points(out, verts)){
+            throw std::runtime_error("Unable to write contour vertices.");
+        } 
+    }
+*/
 
     return cc;
 }        

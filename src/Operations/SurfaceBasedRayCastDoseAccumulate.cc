@@ -546,11 +546,11 @@ Drover SurfaceBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptA
     const auto ucp = Unique_Contour_Planes(cc_ROIs, est_cont_normal, /*distance_eps=*/ 0.005);
 
 
-    contour_surface_meshes::Parameters meshing_params;
-    //meshing_params.RQ = contour_surface_meshes::ReproductionQuality::Medium;
+    dcma_surface_meshes::Parameters meshing_params;
+    //meshing_params.RQ = dcma_surface_meshes::ReproductionQuality::Medium;
     meshing_params.GridRows = 128;
     meshing_params.GridColumns = 128;
-    auto polyhedron = contour_surface_meshes::Estimate_Surface_Mesh_Marching_Cubes( cc_ROIs, meshing_params );
+    auto polyhedron = dcma_surface_meshes::Estimate_Surface_Mesh_Marching_Cubes( cc_ROIs, meshing_params );
 
     FUNCINFO("The polyhedron surface has " << polyhedron.size_of_vertices() << " vertices"
              " and " << polyhedron.size_of_facets() << " faces");
@@ -578,11 +578,11 @@ Drover SurfaceBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptA
 
     // ================================= Construct a Polyhedron for the ref ROIs ===================================
 
-    //contour_surface_meshes::Parameters meshing_params;
-    //meshing_params.RQ = contour_surface_meshes::ReproductionQuality::Medium;
+    //dcma_surface_meshes::Parameters meshing_params;
+    //meshing_params.RQ = dcma_surface_meshes::ReproductionQuality::Medium;
     meshing_params.GridRows = 128;
     meshing_params.GridColumns = 128;
-    auto ref_polyhedron = contour_surface_meshes::Estimate_Surface_Mesh_Marching_Cubes( cc_Refs, meshing_params );
+    auto ref_polyhedron = dcma_surface_meshes::Estimate_Surface_Mesh_Marching_Cubes( cc_Refs, meshing_params );
 
     FUNCINFO("The reference polyhedron surface has " << ref_polyhedron.size_of_vertices() << " vertices"
              " and " << ref_polyhedron.size_of_facets() << " faces");
@@ -611,11 +611,11 @@ Drover SurfaceBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptA
 
     // ================================ Construct AABB Trees for Spatial Lookups ===================================
     //typedef CGAL::Exact_predicates_inexact_constructions_kernel Kernel;
-    using Kernel                = contour_surface_meshes::Kernel;
+    using Kernel                = dcma_surface_meshes::Kernel;
     using Point                 = Kernel::Point_3;
     using Segment               = Kernel::Segment_3;
     using Line                  = Kernel::Line_3;
-    using Triangle_Primitive    = CGAL::AABB_face_graph_triangle_primitive<contour_surface_meshes::Polyhedron>;
+    using Triangle_Primitive    = CGAL::AABB_face_graph_triangle_primitive<dcma_surface_meshes::Polyhedron>;
     using Traits                = CGAL::AABB_traits<Kernel, Triangle_Primitive>;
     using AABB_Tree             = CGAL::AABB_tree<Traits>;
     using Segment_intersection  = boost::optional<AABB_Tree::Intersection_and_primitive_id<Segment>::Type>;

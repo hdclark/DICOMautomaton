@@ -203,12 +203,12 @@ Drover DumpROISurfaceMeshes(Drover DICOM_data, OperationArgPkg OptArgs, std::map
     //For the selected ROIs, generate a surface mesh.
     const auto OutBase = OutDir + "/SurfaceMesh"; // TODO: clean up temp file naming/specification.
     do{
-        contour_surface_meshes::Parameters meshing_params;
+        dcma_surface_meshes::Parameters meshing_params;
         meshing_params.GridRows = GridRows;
         meshing_params.GridColumns = GridColumns;
 
-        //auto output_mesh = contour_surface_meshes::Estimate_Surface_Mesh( cc_ROIs, meshing_params );
-        auto output_mesh = contour_surface_meshes::Estimate_Surface_Mesh_Marching_Cubes( cc_ROIs, meshing_params );
+        //auto output_mesh = dcma_surface_meshes::Estimate_Surface_Mesh( cc_ROIs, meshing_params );
+        auto output_mesh = dcma_surface_meshes::Estimate_Surface_Mesh_Marching_Cubes( cc_ROIs, meshing_params );
 
         if(Subdivide){
             polyhedron_processing::Subdivide(output_mesh, MeshSubdivisions);
