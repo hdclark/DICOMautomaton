@@ -172,6 +172,22 @@ OperationDoc OpArgDocComparePixels(void){
                                  "1000" };
 
     out.args.emplace_back();
+    out.args.back().name = "DiscType";
+    out.args.back().desc = "Parameter for all comparisons estimating the direct, voxel-to-voxel discrepancy."
+                           " There are currently three types available."
+                           " 'Relative' is the absolute value of the difference"
+                           " of two voxel values divided by the largest of the two values."
+                           " 'Difference' is the difference of two voxel values."
+                           " 'PinnedToMax' is the absolute value of the"
+                           " difference of two voxel values divided by the largest voxel value in the selected"
+                           " images.";
+    out.args.back().default_val = "relative";
+    out.args.back().expected = true;
+    out.args.back().examples = { "relative",
+                                 "difference",
+                                 "pinned-to-max" };
+
+    out.args.emplace_back();
     out.args.back().name = "DTAVoxValEqAbs";
     out.args.back().desc = "Parameter for all comparisons involving a distance-to-agreement (DTA) search."
                            " The difference in voxel values considered to be sufficiently equal (absolute;"
@@ -227,9 +243,12 @@ OperationDoc OpArgDocComparePixels(void){
     out.args.emplace_back();
     out.args.back().name = "GammaDiscThreshold";
     out.args.back().desc = "Parameter for gamma-index comparisons."
-                           " Voxel value relative discrepancy (relative difference; in %)."
-                           " When the measured discrepancy is above this value, the gamma index will necessarily"
-                           " be greater than one.";
+                           " Voxel value discrepancies lower than this value are considered acceptable, but values"
+                           " above will result in gamma values >1. The specific interpretation of this parameter"
+                           " (and the units) depend on the specific type of discrepancy used. For percentage-based"
+                           " discrepancies, this parameter is interpretted as a percentage (i.e., '5.0' = '5%')."
+                           " For voxel intensity measures such as the absolute difference, this value is interpretted"
+                           " as an absolute threshold with the same intensity units (i.e., '5.0' = '5 HU' or similar).";
     out.args.back().default_val = "5.0";
     out.args.back().expected = true;
     out.args.back().examples = { "3.0",
@@ -273,6 +292,7 @@ Drover ComparePixels(Drover DICOM_data,
     const auto TestImgUpperThreshold = std::stod( OptArgs.getValueStr("TestImgUpperThreshold").value() );
     const auto RefImgLowerThreshold = std::stod( OptArgs.getValueStr("RefImgLowerThreshold").value() );
     const auto RefImgUpperThreshold = std::stod( OptArgs.getValueStr("RefImgUpperThreshold").value() );
+    const auto DiscTypeStr = OptArgs.getValueStr("DiscType").value();
     const auto DTAVoxValEqAbs = std::stod( OptArgs.getValueStr("DTAVoxValEqAbs").value() );
     const auto DTAVoxValEqRelDiff = std::stod( OptArgs.getValueStr("DTAVoxValEqRelDiff").value() );
     const auto DTAMax = std::stod( OptArgs.getValueStr("DTAMax").value() );
@@ -281,10 +301,15 @@ Drover ComparePixels(Drover DICOM_data,
     const auto GammaTerminateAboveOneStr = OptArgs.getValueStr("GammaTerminateAboveOne").value();
 
     //-----------------------------------------------------------------------------------------------------------------
+    const auto regex_true = Compile_Regex("^tr?u?e?$");
+
     const auto method_gam = Compile_Regex("^ga?m?m?a?-?i?n?d?e?x?$");
     const auto method_dta = Compile_Regex("^dta?$");
     const auto method_dis = Compile_Regex("^dis?c?r?e?p?a?n?c?y?$");
-    const auto regex_true = Compile_Regex("^tr?u?e?$");
+
+    const auto disctype_rel = Compile_Regex("^re?l?a?t?i?v?e?$");
+    const auto disctype_dif = Compile_Regex("^di?f?f?e?r?e?n?c?e?$");
+    const auto disctype_pin = Compile_Regex("^pi?n?n?e?d?-?t?o?-?m?a?x?$");
 
     const auto GammaTerminateAboveOne = std::regex_match(GammaTerminateAboveOneStr, regex_true);
     //-----------------------------------------------------------------------------------------------------------------
@@ -323,6 +348,23 @@ Drover ComparePixels(Drover DICOM_data,
             throw std::invalid_argument("Method not understood. Cannot continue.");
         }
 
+        if(false){
+        }else if(std::regex_match(DiscTypeStr, disctype_rel)){
+            ud.discrepancy_type = ComputeCompareImagesUserData::DiscrepancyType::Relative;
+            ud.gamma_Dis_threshold = GammaDiscThreshold / 100.0;
+
+        }else if(std::regex_match(DiscTypeStr, disctype_dif)){
+            ud.discrepancy_type = ComputeCompareImagesUserData::DiscrepancyType::Difference;
+            ud.gamma_Dis_threshold = GammaDiscThreshold; // Note: not a percentage! Do not need to scale!
+
+        }else if(std::regex_match(DiscTypeStr, disctype_pin)){
+            ud.discrepancy_type = ComputeCompareImagesUserData::DiscrepancyType::PinnedToMax;
+            ud.gamma_Dis_threshold = GammaDiscThreshold / 100.0;
+
+        }else{
+            throw std::invalid_argument("Discrepancy type not understood. Cannot continue.");
+        }
+
         ud.channel = Channel;
 
         ud.inc_lower_threshold = TestImgLowerThreshold;
@@ -330,13 +372,11 @@ Drover ComparePixels(Drover DICOM_data,
         ud.ref_img_inc_lower_threshold = RefImgLowerThreshold;
         ud.ref_img_inc_upper_threshold = RefImgUpperThreshold;
 
-
         ud.DTA_vox_val_eq_abs = DTAVoxValEqAbs;
-        ud.DTA_vox_val_eq_reldiff = DTAVoxValEqRelDiff;
+        ud.DTA_vox_val_eq_reldiff = DTAVoxValEqRelDiff / 100.0;
         ud.DTA_max = DTAMax;
 
         ud.gamma_DTA_threshold = GammaDTAThreshold;
-        ud.gamma_Dis_reldiff_threshold = GammaDiscThreshold;
 
         ud.gamma_terminate_when_max_exceeded = GammaTerminateAboveOne;
         //ud.gamma_terminated_early = std::nextafter(1.0, std::numeric_limits<double>::infinity());
@@ -344,6 +384,17 @@ Drover ComparePixels(Drover DICOM_data,
         if(!(*iap_it)->imagecoll.Compute_Images( ComputeCompareImages, 
                                                  RIARL, cc_ROIs, &ud )){
             throw std::runtime_error("Unable to compare images.");
+        }
+
+
+        if(std::regex_match(MethodStr, method_gam)){
+            FUNCINFO("Passing rate: " 
+                     << ud.passed
+                     << " out of " 
+                     << ud.count 
+                     << " = " 
+                     << 100.0 * ud.passed / ud.count 
+                     << " %");
         }
     }
 

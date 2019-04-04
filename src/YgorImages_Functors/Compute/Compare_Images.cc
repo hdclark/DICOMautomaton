@@ -99,6 +99,39 @@ bool ComputeCompareImages(planar_image_collection<float,double> &imagecoll,
         }
     }
 
+    // Determine how discrepancy should be estimated.
+    std::function< double (const double &, const double &) > estimate_discrepancy;
+    if(false){
+    }else if(user_data_s->discrepancy_type == ComputeCompareImagesUserData::DiscrepancyType::Relative){
+        estimate_discrepancy = relative_diff;
+
+    }else if(user_data_s->discrepancy_type == ComputeCompareImagesUserData::DiscrepancyType::Difference){
+        estimate_discrepancy = [](const double &A, const double &B) -> double {
+            return std::abs(A - B);
+        };
+
+    }else if(user_data_s->discrepancy_type == ComputeCompareImagesUserData::DiscrepancyType::PinnedToMax){
+        Stats::Running_MinMax<float> rmm;
+        auto find_max = [&rmm,ud_channel](long int, long int, long int chnl, float val) -> void {
+            if(chnl == ud_channel){
+                rmm.Digest(val);
+            }
+            return;
+        };
+        imagecoll.apply_to_pixels(find_max);
+        // TODO: identify max_val from all images, or just the selected images?
+        // ...
+
+        const auto max_val = rmm.Current_Max();
+        FUNCINFO("Maximum intensity found: " << max_val);
+        estimate_discrepancy = [max_val](const double &A, const double &B) -> double {
+            return std::abs( (A - B) / max_val );
+        };
+
+    }else{
+        throw std::invalid_argument("Unknown discrepancy method requested. Cannot continue.");
+    }
+
     Mutate_Voxels_Opts mv_opts;
     mv_opts.editstyle      = Mutate_Voxels_Opts::EditStyle::InPlace;
     mv_opts.inclusivity    = Mutate_Voxels_Opts::Inclusivity::Centre;
@@ -107,6 +140,8 @@ bool ComputeCompareImages(planar_image_collection<float,double> &imagecoll,
     mv_opts.adjacency      = Mutate_Voxels_Opts::Adjacency::SingleVoxel;
     mv_opts.maskmod        = Mutate_Voxels_Opts::MaskMod::Noop;
 
+
+    std::mutex passing_counter; // Used to tally the gamma passing rate.
 
     asio_thread_pool tp;
     std::mutex saver_printer; // Who gets to save generated contours, print to the console, and iterate the counter.
@@ -202,12 +237,12 @@ bool ComputeCompareImages(planar_image_collection<float,double> &imagecoll,
                     }
 
                     // Perform a discrepancy comparison.
-                    const auto Disc = relative_diff(edit_val, ring_0_val);
+                    const auto Disc = estimate_discrepancy(edit_val, ring_0_val);
 
                     // If computing the gamma index, check if we can avoid a costly DTA search.
                     if( (user_data_s->comparison_method == ComputeCompareImagesUserData::ComparisonMethod::GammaIndex) 
                     &&  (user_data_s->gamma_terminate_when_max_exceeded)
-                    &&  (100.0 * Disc > user_data_s->gamma_Dis_reldiff_threshold) ){
+                    &&  (Disc > user_data_s->gamma_Dis_threshold) ){
                         voxel_val = user_data_s->gamma_terminated_early;
                         break;
                     }
@@ -256,7 +291,8 @@ bool ComputeCompareImages(planar_image_collection<float,double> &imagecoll,
                                         //       ellipsoid (or spherical) shell of voxels.
                                         const auto adj_img_val = adj_img_ptr->value(l_row, l_col, channel);
                                         const auto adj_vox_pos = adj_img_ptr->position(l_row, l_col);
-                                        const auto adj_vox_dist = adj_vox_pos.distance(ring_0_pos);
+                                        //const auto adj_vox_dist = adj_vox_pos.distance(ring_0_pos);
+                                        const auto adj_vox_dist = adj_vox_pos.distance(pos);
                                         if(adj_vox_dist < nearest_dist) nearest_dist = adj_vox_dist;
 
                                         // Check if voxel values have been seen both above and below the desired value.
@@ -278,7 +314,7 @@ bool ComputeCompareImages(planar_image_collection<float,double> &imagecoll,
                                             || ( encountered_lower && is_higher )
                                             || ( encountered_higher && is_lower )
                                             || ( std::abs(adj_img_val - edit_val) < user_data_s->DTA_vox_val_eq_abs )
-                                            || ( 100.0*relative_diff(adj_img_val, edit_val) < user_data_s->DTA_vox_val_eq_reldiff ) ){
+                                            || ( relative_diff(adj_img_val, edit_val) < user_data_s->DTA_vox_val_eq_reldiff ) ){
                                                 Dist = adj_vox_dist;
                                             }
                                         }
@@ -330,10 +366,14 @@ bool ComputeCompareImages(planar_image_collection<float,double> &imagecoll,
                         }
 
                     }else if(user_data_s->comparison_method == ComputeCompareImagesUserData::ComparisonMethod::GammaIndex){
+                        std::lock_guard<std::mutex> lock(passing_counter);
+                        user_data_s->count += 1;
+
                         if(std::isfinite(Dist) && std::isfinite(Disc)){
                             voxel_val = std::sqrt( std::pow(Dist / user_data_s->gamma_DTA_threshold, 2.0)
-                                                 + std::pow(100.0 * Disc / user_data_s->gamma_Dis_reldiff_threshold, 2.0) );
+                                                 + std::pow(Disc / user_data_s->gamma_Dis_threshold, 2.0) );
 
+                            if(voxel_val < 1.0) user_data_s->passed += 1;
                         }else{
                             voxel_val = inaccessible_val;
                         }

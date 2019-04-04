@@ -20,6 +20,13 @@ template <class T> class contour_collection;
 struct ComputeCompareImagesUserData {
 
     // -----------------------------
+    // The channel to consider. 
+    //
+    // Note: Channel numbers in the images that will be edited and reference images must match.
+    long int channel = 0;
+
+
+    // -----------------------------
     // The type of comparison method to use.
     enum class
     ComparisonMethod {
@@ -27,13 +34,6 @@ struct ComputeCompareImagesUserData {
         Discrepancy,     // Discrepancy (i.e., value comparison from voxel to nearest reference voxel only).
         GammaIndex,      // Gamma index -- a blend of DTA and discrepancy comparisons. 
     } comparison_method = ComparisonMethod::GammaIndex;
-
-
-    // -----------------------------
-    // The channel to consider. 
-    //
-    // Note: Channel numbers in the images that will be edited and reference images must match.
-    long int channel = 0;
 
 
     // -----------------------------
@@ -48,8 +48,8 @@ struct ComputeCompareImagesUserData {
     // will be made available for comparison.
     //
     // Note: These thresholds should accommodate at least the acceptable discrepancy range, and ideally a reasonable
-    //      buffer beyond, otherwise the comparison can fail (possibly in hard-to-notice ways). These thresholds are
-    //      meant to exclude obviously irrelevant voxels or invalid portions of the images.
+    //       buffer beyond, otherwise the comparison can fail (possibly in hard-to-notice ways). These thresholds are
+    //       meant to exclude obviously irrelevant voxels or invalid portions of the images.
     double ref_img_inc_lower_threshold = -(std::numeric_limits<double>::infinity());
     double ref_img_inc_upper_threshold = std::numeric_limits<double>::infinity();
 
@@ -62,15 +62,25 @@ struct ComputeCompareImagesUserData {
     // Note: This value CAN be zero.
     double DTA_vox_val_eq_abs = 1.0E-3;
     
-    // The difference in voxel values considered to be sufficiently equal (~percent-difference; in %).
+    // The difference in voxel values considered to be sufficiently equal (~percent-difference; in %/100).
     //
     // Note: This value CAN be zero.
-    double DTA_vox_val_eq_reldiff = 1.0;
+    double DTA_vox_val_eq_reldiff = 1.0 / 100.0;  // Note: 1/100 = 1%.
 
     // Maximally acceptable distance-to-agreement (in DICOM units: mm) above which to stop searching.
     //
     // Note: Some voxels further than the DTA_max may be evaluated. All voxels within the DTA_max will be evaluated.
     double DTA_max = 3.0;
+
+
+    // -----------------------------
+    // Parameters for all comparisons involving discrepancy.
+    enum class
+    DiscrepancyType {
+        Difference,    // Absolute value of the difference between two voxels (i.e., subtraction; in voxel intensity units).
+        Relative,      // Relative discrepancy between two voxels; the difference divided by the largest value (in %).
+        PinnedToMax,   // Normalized relative discrepancy; the difference divided by the image's largest voxel value (in %).
+    } discrepancy_type = DiscrepancyType::Relative;
 
 
     // -----------------------------
@@ -81,9 +91,8 @@ struct ComputeCompareImagesUserData {
     // Note: This parameter can differ from the DTA_max search cut-off, but should be <= to it.
     double gamma_DTA_threshold = 5.0;
 
-    // Voxel value relative discrepancy (~percent-difference; in %);
-    double gamma_Dis_reldiff_threshold = 5.0;
-
+    // Direct, voxel-to-voxel value discrepancy threshold (~percent-difference in %/100, but depends on the DiscrepancyType);
+    double gamma_Dis_threshold = 5.0 / 100.0;  // Note: 5/100 = 5%.
 
     // Halt spatial searching if the gamma index will necessarily indicate failure.
     //
@@ -92,6 +101,12 @@ struct ComputeCompareImagesUserData {
     //       magnitude only matters when it is <1.
     double gamma_terminate_when_max_exceeded = true;
     double gamma_terminated_early = std::nextafter(1.0, std::numeric_limits<double>::infinity());
+
+    // Outgoing gamma passing counts.
+    //
+    // These can be read by the caller after performing a gamma analysis.
+    long int passed = 0;  // The number of voxels that passed (i.e., gamma < 1).
+    long int count = 0;   // The number of voxels that were considered (i.e., within the inclusivity thresholds).
 
 };
 
