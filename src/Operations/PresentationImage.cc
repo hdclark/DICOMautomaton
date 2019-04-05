@@ -82,6 +82,30 @@ OperationDoc OpArgDocPresentationImage(void){
     out.args.back().examples = { "", "/tmp/an_image.png", "afile.png" };
     out.args.back().mimetype = "image/png";
 
+    out.args.emplace_back();
+    out.args.back().name = "ColourMapRegex";
+    out.args.back().desc = " The colour mapping to apply to the image if there is a single channel."
+                           " The default will match the first available, and if there is no matching"
+                           " map found, the first available will be selected.";
+    out.args.back().default_val = ".*";
+    out.args.back().expected = true;
+    out.args.back().examples = { "Viridis",
+                                 "Magma",
+                                 "Plasma",
+                                 "Inferno",
+                                 "Jet",
+                                 "MorelandBlueRed",
+                                 "MorelandBlackBody",
+                                 "MorelandExtendedBlackBody",
+                                 "KRC",
+                                 "ExtendedKRC",
+                                 "Kovesi_LinKRYW_5-100_c64",
+                                 "Kovesi_LinKRYW_0-100_c71",
+                                 "Kovesi_Cyclic_cet-c2",
+                                 "LANLOliveGreentoBlue",
+                                 "YgorIncandescent",
+                                 "LinearRamp" };
+
     return out;
 }
 
@@ -93,7 +117,10 @@ Drover PresentationImage( Drover DICOM_data,
     //---------------------------------------------- User Parameters --------------------------------------------------
     auto ImageFileName = OptArgs.getValueStr("ImageFileName").value();
     auto ScaleFactor = std::stod( OptArgs.getValueStr("ScaleFactor").value() );
+    auto ColourMapRegexStr = OptArgs.getValueStr("ColourMapRegex").value();
 
+    //-----------------------------------------------------------------------------------------------------------------
+    const auto regex_cm = Compile_Regex(ColourMapRegexStr);
     //-----------------------------------------------------------------------------------------------------------------
 
     //Trim any empty image sets.
@@ -194,6 +221,14 @@ Drover PresentationImage( Drover DICOM_data,
         std::make_pair("LinearRamp", ColourMap_Linear)
     };
     size_t colour_map = 0;
+    
+    // Find the requested map, if one is specified.
+    for(size_t i = 0; i < colour_maps.size(); ++i){
+        if(std::regex_match(colour_maps[i].first, regex_cm)){
+            colour_map = i;
+            break;
+        }
+    }
 
     const auto load_img_texture_sprite = [&](const disp_img_it_t &img_it, disp_img_texture_sprite_t &out) -> bool {
         //This routine returns a pair of (texture,sprite) because the texture must be kept around
