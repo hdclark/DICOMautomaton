@@ -43,19 +43,21 @@ OperationDoc OpArgDocComparePixels(void){
         " must be evaluated for every voxel."
     );
     out.notes.emplace_back(
-        "This operation does **not** make use of interpolation for any comparison."
-        " Only direct voxel-to-voxel comparisons are used."
-        " Implicit interpolation is used (via the intermediate value theorem) for the"
-        " distance-to-agreement comparison."
-        " For this reason, the accuracy of all comparisons should be expected to be limited by"
-        " image spatial resolution (i.e., voxel dimensions). For example, accuracy of the"
-        " distance-to-agreement comparison is limited to the largest voxel dimension (in the"
-        " worst case). Reference images should be supersampled if necessary."
+        "The distance-to-agreement comparison will tend to overestimate the distance, especially"
+        " when the DTA value is low, because voxel size effects will dominate the estimation."
+        " Reference images should be supersampled as necessary."
     );
     out.notes.emplace_back(
-        "The distance-to-agreement comparison will tend to overestimate the distance, especially"
-        " when the DTA value is low, because only implicit interpolation is used."
-        " Reference images should be supersampled if necessary."
+        "This operation optionally makes use of interpolation for sub-voxel distance estimation."
+        " However, interpolation is currently limited to be along the edges connecting nearest-"
+        " and next-nearest voxel centres."
+        " In other words, true volumetric interpolation is **not** available."
+        " Implicit interpolation is also used (via the intermediate value theorem) for the"
+        " distance-to-agreement comparison, which results in distance estimation that may"
+        " vary up to the largest caliper distance of a voxel."
+        " For this reason, the accuracy of all comparisons should be expected to be limited by"
+        " image spatial resolution (i.e., voxel dimensions)."
+        " Reference images should be supersampled as necessary."
     );
 
 
@@ -72,28 +74,28 @@ OperationDoc OpArgDocComparePixels(void){
     out.args.emplace_back();
     out.args.back().name = "NormalizedROILabelRegex";
     out.args.back().desc = "A regex matching ROI labels/names to consider. The default will match"
-                      " all available ROIs. Be aware that input spaces are trimmed to a single space."
-                      " If your ROI name has more than two sequential spaces, use regex to avoid them."
-                      " All ROIs have to match the single regex, so use the 'or' token if needed."
-                      " Regex is case insensitive and uses extended POSIX syntax.";
+                           " all available ROIs. Be aware that input spaces are trimmed to a single space."
+                           " If your ROI name has more than two sequential spaces, use regex to avoid them."
+                           " All ROIs have to match the single regex, so use the 'or' token if needed."
+                           " Regex is case insensitive and uses extended POSIX syntax.";
     out.args.back().default_val = ".*";
     out.args.back().expected = true;
     out.args.back().examples = { ".*", ".*Body.*", "Body", "Gross_Liver",
-                            R"***(.*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*)***",
-                            R"***(Left Parotid|Right Parotid)***" };
+                                 R"***(.*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*)***",
+                                 R"***(Left Parotid|Right Parotid)***" };
 
     out.args.emplace_back();
     out.args.back().name = "ROILabelRegex";
     out.args.back().desc = "A regex matching ROI labels/names to consider. The default will match"
-                      " all available ROIs. Be aware that input spaces are trimmed to a single space."
-                      " If your ROI name has more than two sequential spaces, use regex to avoid them."
-                      " All ROIs have to match the single regex, so use the 'or' token if needed."
-                      " Regex is case insensitive and uses extended POSIX syntax.";
+                           " all available ROIs. Be aware that input spaces are trimmed to a single space."
+                           " If your ROI name has more than two sequential spaces, use regex to avoid them."
+                           " All ROIs have to match the single regex, so use the 'or' token if needed."
+                           " Regex is case insensitive and uses extended POSIX syntax.";
     out.args.back().default_val = ".*";
     out.args.back().expected = true;
     out.args.back().examples = { ".*", ".*body.*", "body", "Gross_Liver",
-                            R"***(.*left.*parotid.*|.*right.*parotid.*|.*eyes.*)***",
-                            R"***(left_parotid|right_parotid)***" };
+                                 R"***(.*left.*parotid.*|.*right.*parotid.*|.*eyes.*)***",
+                                 R"***(left_parotid|right_parotid)***" };
 
     out.args.emplace_back();
     out.args.back().name = "Method";
@@ -192,7 +194,8 @@ OperationDoc OpArgDocComparePixels(void){
     out.args.back().desc = "Parameter for all comparisons involving a distance-to-agreement (DTA) search."
                            " The difference in voxel values considered to be sufficiently equal (absolute;"
                            " in voxel intensity units). Note: This value CAN be zero. It is meant to"
-                           " help overcome noise.";
+                           " help overcome noise. Note that this value is ignored by all interpolation"
+                           " methods.";
     out.args.back().default_val = "1.0E-3";
     out.args.back().expected = true;
     out.args.back().examples = { "1.0E-3",
@@ -205,7 +208,7 @@ OperationDoc OpArgDocComparePixels(void){
     out.args.back().desc = "Parameter for all comparisons involving a distance-to-agreement (DTA) search."
                            " The difference in voxel values considered to be sufficiently equal (~relative"
                            " difference; in %). Note: This value CAN be zero. It is meant to help overcome"
-                           " noise.";
+                           " noise. Note that this value is ignored by all interpolation methods.";
     out.args.back().default_val = "1.0";
     out.args.back().expected = true;
     out.args.back().examples = { "0.1",
@@ -227,6 +230,42 @@ OperationDoc OpArgDocComparePixels(void){
     out.args.back().examples = { "3.0",
                                  "5.0",
                                  "50.0" };
+
+    out.args.emplace_back();
+    out.args.back().name = "DTAInterpolationMethod";
+    out.args.back().desc = "Parameter for all comparisons involving a distance-to-agreement (DTA) search."
+                           " Controls how precisely and how often the space between voxel centres are interpolated to identify the exact"
+                           " position of agreement. There are currently three options: no interpolation ('None'),"
+                           " nearest-neighbour ('NN'), and next-nearest-neighbour ('NNN')."
+                           " (1) If no interpolation is selected, the agreement position will only be established to"
+                           " within approximately the reference image voxels dimensions. To avoid interpolation, voxels that straddle the"
+                           " target value are taken as the agreement distance. Conceptually, if you view a voxel as having a finite spatial"
+                           " extent then this method may be sufficient for distance assessment. Though it is not precise, it is fast. "
+                           " This method will tend to over-estimate the actual distance, though it is possible that it slightly"
+                           " under-estimates it. This method works best when the reference image grid size is small in comparison to the"
+                           " desired spatial accuracy (e.g., if computing gamma, the tolerance should be much larger than the largest voxel"
+                           " dimension) so supersampling is recommended."
+                           " (2) Nearest-neighbour interpolation considers the line connecting directly adjacent voxels. Using linear"
+                           " interpolation along this line when adjacent voxels straddle the target value, the 3D point where the target value"
+                           " appears can be predicted. This method can significantly improve distance estimation accuracy, though will"
+                           " typically be much slower than no interpolation. On the other hand, this method lower amounts of supersampling,"
+                           " though it is most reliable when the reference image grid size is small in comparison to the desired spatial"
+                           " accuracy. Note that nearest-neighbour interpolation also makes use of the 'no interpolation' methods."
+                           " If you have a fine reference image, prefer either no interpolation or nearest-neighbour interpolation."
+                           " (3) Finally, next-nearest-neighbour considers the diagonally-adjacent neighbours separated by taxi-cab distance of 2"
+                           " (so in-plane diagonals are considered, but 3D diagonals are not). Quadratic (i.e., bi-linear) interpolation is"
+                           " analytically solved to determine where along the straddling diagonal the target value appears. This method is"
+                           " more expensive than linear interpolation but will generally result in more accurate distance estimates. This"
+                           " method may require lower amounts of supersampling than linear interpolation, but is most reliable when the"
+                           " reference image grid size is small in comparison to the desired spatial accuracy. Use of this method may not be"
+                           " appropriate in all cases considering that supersampling may be needed and a quadratic equation is solved for"
+                           " every voxel diagonal. Note that next-nearest-neighbour interpolation also makes use of the nearest-neighbour and"
+                           " 'no interpolation' methods.";
+    out.args.back().default_val = "NN";
+    out.args.back().expected = true;
+    out.args.back().examples = { "None",
+                                 "NN",
+                                 "NNN" };
 
     out.args.emplace_back();
     out.args.back().name = "GammaDTAThreshold";
@@ -292,10 +331,14 @@ Drover ComparePixels(Drover DICOM_data,
     const auto TestImgUpperThreshold = std::stod( OptArgs.getValueStr("TestImgUpperThreshold").value() );
     const auto RefImgLowerThreshold = std::stod( OptArgs.getValueStr("RefImgLowerThreshold").value() );
     const auto RefImgUpperThreshold = std::stod( OptArgs.getValueStr("RefImgUpperThreshold").value() );
+
     const auto DiscTypeStr = OptArgs.getValueStr("DiscType").value();
+
     const auto DTAVoxValEqAbs = std::stod( OptArgs.getValueStr("DTAVoxValEqAbs").value() );
     const auto DTAVoxValEqRelDiff = std::stod( OptArgs.getValueStr("DTAVoxValEqRelDiff").value() );
     const auto DTAMax = std::stod( OptArgs.getValueStr("DTAMax").value() );
+    const auto DTAInterpolationMethodStr = OptArgs.getValueStr("DTAInterpolationMethod").value();
+
     const auto GammaDTAThreshold = std::stod( OptArgs.getValueStr("GammaDTAThreshold").value() );
     const auto GammaDiscThreshold = std::stod( OptArgs.getValueStr("GammaDiscThreshold").value() );
     const auto GammaTerminateAboveOneStr = OptArgs.getValueStr("GammaTerminateAboveOne").value();
@@ -306,6 +349,10 @@ Drover ComparePixels(Drover DICOM_data,
     const auto method_gam = Compile_Regex("^ga?m?m?a?-?i?n?d?e?x?$");
     const auto method_dta = Compile_Regex("^dta?$");
     const auto method_dis = Compile_Regex("^dis?c?r?e?p?a?n?c?y?$");
+
+    const auto interp_none = Compile_Regex("^non?e?$");
+    const auto interp_nn   = Compile_Regex("^nn$");
+    const auto interp_nnn  = Compile_Regex("^nnn$");
 
     const auto disctype_rel = Compile_Regex("^re?l?a?t?i?v?e?$");
     const auto disctype_dif = Compile_Regex("^di?f?f?e?r?e?n?c?e?$");
@@ -363,6 +410,20 @@ Drover ComparePixels(Drover DICOM_data,
 
         }else{
             throw std::invalid_argument("Discrepancy type not understood. Cannot continue.");
+        }
+
+        if(false){
+        }else if(std::regex_match(DTAInterpolationMethodStr, interp_none)){
+            ud.interpolation_method = ComputeCompareImagesUserData::InterpolationMethod::None;
+
+        }else if(std::regex_match(DTAInterpolationMethodStr, interp_nnn)){
+            ud.interpolation_method = ComputeCompareImagesUserData::InterpolationMethod::NNN;
+
+        }else if(std::regex_match(DTAInterpolationMethodStr, interp_nn)){
+            ud.interpolation_method = ComputeCompareImagesUserData::InterpolationMethod::NN;
+
+        }else{
+            throw std::invalid_argument("Interpolation method not understood. Cannot continue.");
         }
 
         ud.channel = Channel;
