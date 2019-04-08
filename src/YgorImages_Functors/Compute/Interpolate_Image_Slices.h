@@ -20,15 +20,6 @@ template <class T> class contour_collection;
 struct ComputeInterpolateImageSlicesUserData {
 
     // -----------------------------
-    // The type of interpolation method to use.
-    enum class
-    InterpolationMethod {
-        Linear,               // Linear interpolation without extrapolation at the extrema.
-        LinearExtrapolation,  // Linear interpolation with extrapolation at the extrema.
-    } interpolation_method = InterpolationMethod::LinearExtrapolation;
-
-
-    // -----------------------------
     // The channel to consider. 
     //
     // Note: Channel numbers in the images that will be edited and reference images must match.

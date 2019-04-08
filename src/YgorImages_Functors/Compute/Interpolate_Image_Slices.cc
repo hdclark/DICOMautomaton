@@ -36,16 +36,6 @@ bool ComputeInterpolateImageSlices(planar_image_collection<float,double> &imagec
     // information -- the only thing that will be modified are the voxel values.
     //
 
-/*
-    // -----------------------------
-    // The type of interpolation method to use.
-    enum class
-    InterpolationMethod {
-        Linear,               // Linear interpolation without extrapolation at the extrema.
-        LinearExtrapolation,  // Linear interpolation with extrapolation at the extrema.
-    } interpolation_method = CInterpolationMethod::LinearExtrapolation;
-*/
-
     //We require a valid ComputeInterpolateImageSlicesUserData struct packed into the user_data.
     ComputeInterpolateImageSlicesUserData *user_data_s;
     try{
@@ -141,6 +131,7 @@ bool ComputeInterpolateImageSlices(planar_image_collection<float,double> &imagec
             for(auto row = 0; row < N_rows; ++row){
                 for(auto col = 0; col < N_columns; ++col){
                     for(auto chan = 0; chan < N_channels; ++chan){
+                        if( (chan != ud_channel) && (ud_channel >= 0) ) continue;
                         const auto v_pos = img_refw.get().position(row, col);
 
                         //Identify the nearest planes above and below this voxel.

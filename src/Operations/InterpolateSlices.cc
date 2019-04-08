@@ -56,10 +56,13 @@ OperationDoc OpArgDocInterpolateSlices(void){
     out.args.emplace_back();
     out.args.back().name = "Channel";
     out.args.back().desc = "The channel to compare (zero-based)."
+                           " A negative value will result in all channels being interpolated, otherwise"
+                           " unspecified channels are merely default initialized."
                            " Note that both test images and reference images will share this specifier.";
-    out.args.back().default_val = "0";
+    out.args.back().default_val = "-1";
     out.args.back().expected = true;
-    out.args.back().examples = { "0",
+    out.args.back().examples = { "-1",
+                                 "0",
                                  "1",
                                  "2" };
 
