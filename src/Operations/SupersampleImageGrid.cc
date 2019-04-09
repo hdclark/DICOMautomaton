@@ -27,7 +27,7 @@ OperationDoc OpArgDocSupersampleImageGrid(void){
     out.name = "SupersampleImageGrid";
 
     out.desc = 
-        " This operation scales supersamples images so they have more rows and/or columns, but the whole image keeps its"
+        "This operation scales supersamples images so they have more rows and/or columns, but the whole image keeps its"
         " shape and spatial extent. This operation is typically used for zooming into images or trying to ensure a"
         " sufficient number of voxels are within small contours.";
         
@@ -212,7 +212,7 @@ Drover SupersampleImageGrid(Drover DICOM_data, OperationArgPkg OptArgs, std::map
             for(const auto &img : (*iap_it)->imagecoll.images){
                 const auto img_plane = img.image_plane();
                 //const auto dR = (R_0 - img_plane.R_0).Dot(N_0);
-                const auto dR = (R_0 - img.position(0,0)).Dot(N_0);
+                const auto dR = (img.position(0,0) - R_0).Dot(N_0);
                 const auto up = dR + 0.5 * img.pxl_dz;
                 const auto lo = dR - 0.5 * img.pxl_dz;
                 if(!std::isfinite(upper_extent) || (upper_extent < up)) upper_extent = up;
