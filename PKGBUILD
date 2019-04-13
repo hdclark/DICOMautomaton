@@ -19,7 +19,6 @@ depends=(
    'jansson'
    'libpqxx'
    'postgresql'
-   'freeglut'
    'nlopt' 
    'gsl'
    'boost-libs'

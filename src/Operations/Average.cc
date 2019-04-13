@@ -25,7 +25,7 @@ OperationDoc OpArgDocAverage(void){
     out.name = "Average";
 
     out.desc = 
-        "This operation averages image or dose volumes. It can average over spatial or temporal dimensions. However, rather than"
+        "This operation averages image arrays/volumes. It can average over spatial or temporal dimensions. However, rather than"
         " relying specifically on time for temporal averaging, any images that have overlapping voxels can be averaged.";
 
     out.notes.emplace_back(
@@ -33,20 +33,10 @@ OperationDoc OpArgDocAverage(void){
         " and can be used for contouring purposes."
     );
         
-
-    out.args.emplace_back();
-    out.args.back().name = "DoseImageSelection";
-    out.args.back().desc = "Dose images to operate on. Either 'none', 'last', or 'all'.";
-    out.args.back().default_val = "none";
-    out.args.back().expected = true;
-    out.args.back().examples = { "none", "last", "all" };
-
-    
     out.args.emplace_back();
     out.args.back() = IAWhitelistOpArgDoc();
     out.args.back().name = "ImageSelection";
     out.args.back().default_val = "last";
-
    
     out.args.emplace_back();
     out.args.back().name = "AveragingMethod";
@@ -62,7 +52,6 @@ OperationDoc OpArgDocAverage(void){
 Drover Average(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
-    const auto DoseImageSelectionStr = OptArgs.getValueStr("DoseImageSelection").value();
     const auto ImageSelectionStr = OptArgs.getValueStr("ImageSelection").value();
     const auto AveragingMethodStr = OptArgs.getValueStr("AveragingMethod").value();
     //-----------------------------------------------------------------------------------------------------------------
@@ -74,15 +63,8 @@ Drover Average(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,
     const auto overlap_temp = std::regex("overlapping-temporally", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
 
 
-    if( !std::regex_match(DoseImageSelectionStr, regex_none)
-    &&  !std::regex_match(DoseImageSelectionStr, regex_last)
-    &&  !std::regex_match(DoseImageSelectionStr, regex_all) ){
-        throw std::invalid_argument("Dose Image selection is not valid. Cannot continue.");
-    }
-    
     if(false){
     }else if(std::regex_match(AveragingMethodStr, overlap_spat)){
-        //Image data.
         auto IAs_all = All_IAs( DICOM_data );
         auto IAs = Whitelist( IAs_all, ImageSelectionStr );
         for(auto & iap_it : IAs){
@@ -93,25 +75,7 @@ Drover Average(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,
             }
         }
 
-        //Dose data.
-        auto dap_it = DICOM_data.dose_data.begin();
-        if(false){
-        }else if(std::regex_match(DoseImageSelectionStr, regex_none)){ 
-            dap_it = DICOM_data.dose_data.end();
-        }else if(std::regex_match(DoseImageSelectionStr, regex_last)){
-            if(!DICOM_data.dose_data.empty()) dap_it = std::prev(DICOM_data.dose_data.end());
-        }
-        while(dap_it != DICOM_data.dose_data.end()){
-            if(!(*dap_it)->imagecoll.Process_Images_Parallel( GroupSpatiallyOverlappingImages,
-                                                              CondenseAveragePixel,
-                                                              {}, {} )){
-                throw std::runtime_error("Unable to average (dose_array, overlapping-spatially).");
-            }
-            ++dap_it;
-        }
-
     }else if(std::regex_match(AveragingMethodStr, overlap_temp)){
-        //Image data.
         auto IAs_all = All_IAs( DICOM_data );
         auto IAs = Whitelist( IAs_all, ImageSelectionStr );
         for(auto & iap_it : IAs){
@@ -121,24 +85,6 @@ Drover Average(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,
                 throw std::runtime_error("Unable to average (image_array, overlapping-temporally).");
             }
         }
-
-        //Dose data.
-        auto dap_it = DICOM_data.dose_data.begin();
-        if(false){
-        }else if(std::regex_match(DoseImageSelectionStr, regex_none)){ 
-            dap_it = DICOM_data.dose_data.end();
-        }else if(std::regex_match(DoseImageSelectionStr, regex_last)){
-            if(!DICOM_data.dose_data.empty()) dap_it = std::prev(DICOM_data.dose_data.end());
-        }
-        while(dap_it != DICOM_data.dose_data.end()){
-            if(!(*dap_it)->imagecoll.Process_Images_Parallel( GroupTemporallyOverlappingImages,
-                                                              CondenseAveragePixel,
-                                                              {}, {} )){
-                throw std::runtime_error("Unable to average (dose_array, overlapping-temporally).");
-            }
-            ++dap_it;
-        }
-
 
     }else{
         throw std::invalid_argument("Invalid averaging method specified. Cannot continue");

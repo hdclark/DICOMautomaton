@@ -30,7 +30,7 @@ Drover MeldDose(Drover DICOM_data,
                 std::map<std::string,std::string> /*InvocationMetadata*/, 
                 std::string /*FilenameLex*/ ){
 
-    DICOM_data.dose_data = Meld_Dose_Data(DICOM_data.dose_data);
+    DICOM_data = Meld_Only_Dose_Data(DICOM_data);
 
     return DICOM_data;
 }

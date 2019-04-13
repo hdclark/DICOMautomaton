@@ -32,10 +32,6 @@ OperationDoc OpArgDocDecayDoseOverTimeHalve(void){
         " your own risk. As a rule of thumb, do not use this routine if fewer than 2-3y have elapsed.";
         
     out.notes.emplace_back(
-        "This routine uses image_arrays so convert dose_arrays beforehand."
-    );
-        
-    out.notes.emplace_back(
         "This routine will combine spatially-overlapping images by summing voxel intensities. So if you have a time"
         " course it may be more sensible to aggregate images in some way (e.g., spatial averaging) prior to calling"
         " this routine."

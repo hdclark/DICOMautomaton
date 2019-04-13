@@ -539,66 +539,6 @@ void Emit_Documentation(std::ostream &os){
         "*Check if 'file.dcm' is already in the PACS DB, but do not delete anything.*"
     );
 
-    //----------------
-    reflow_and_emit_paragraph(os, max_width, nobullet, nobullet, nolinebreak,
-        "### automaton"
-    );
-    reflow_and_emit_paragraph(os, max_width, nobullet, nobullet, nolinebreak,
-        "#### Description"
-    );
-    reflow_and_emit_paragraph(os, max_width, nobullet, nobullet, nolinebreak,
-        "An earlier prototype of [dicomautomaton_dispatcher](#dicomautomaton_dispatcher) that will"
-        " likely be deprecated soon. Use is discouraged."
-        " The means of switching operations was via source editing and recompilation."
-    );
-    reflow_and_emit_paragraph(os, max_width, nobullet, nobullet, nolinebreak,
-        "This program allows for performing rapid, no-nonsense, no-GUI computations using DICOM files. As much as possible,"
-        " emphasis is placed on having the program 'do the right thing', which refers to the attempts to deal with incomplete"
-        " information (such as missing files, non-matching DICOM data sets, and the careful treatment of existing data.)"
-    );
-    reflow_and_emit_paragraph(os, max_width, nobullet, nobullet, nolinebreak,
-        "This program is designed to accept an input structure name(s) (pre-sanitized or not) and some DICOM data, and then produce"
-        " output for the structure(s). An example might be computation of a DVH for the left parotid."
-    );
-    reflow_and_emit_paragraph(os, max_width, nobullet, nobullet, nolinebreak,
-          "In some ways this program is very forgiving of user behaviour, but in general it has very strictly-defined behaviour."
-          " For example, input files can be either directories or files, and non-DICOM files will be automatically weeded-out."
-          " However, it is intentionally difficult to accidentally overwrite existing data: if an output file already exists, "
-          " will usually refuse to overwrite it. To be user-friendly, though, a non-existing filename will be chosen and the the"
-          " user will be warned. This might occasionally be frustrating for the user, but is the 'safe' thing to do in most cases."
-    );
-    reflow_and_emit_paragraph(os, max_width, nobullet, nobullet, nolinebreak,
-        "#### Usage Examples"
-    );
-    reflow_and_emit_paragraph(os, max_width, bulleta, bulletb,
-        "```automaton --help```"
-        ,
-        "*Print a listing of all available options.*"
-    );
-
-    //----------------
-    reflow_and_emit_paragraph(os, max_width, nobullet, nobullet, nolinebreak,
-        "### overlaydosedata"
-    );
-    reflow_and_emit_paragraph(os, max_width, nobullet, nobullet, nolinebreak,
-        "#### Description"
-    );
-    reflow_and_emit_paragraph(os, max_width, nobullet, nobullet, nolinebreak,
-        "Like [automaton](#automaton), this program is an earlier prototype of"
-        " [dicomautomaton_dispatcher](#dicomautomaton_dispatcher) that will"
-        " likely be deprecated soon. Use is discouraged." 
-        " The aim of overlaydosedata was to provide a semi-interactive viewer capable of"
-        " simultaneous display of medical images, ROI structures, and dose information."
-    );
-    reflow_and_emit_paragraph(os, max_width, nobullet, nobullet, nolinebreak,
-        "#### Usage Examples"
-    );
-    reflow_and_emit_paragraph(os, max_width, bulleta, bulletb,
-        "```overlaydosedata --help```"
-        ,
-        "*Print a listing of all available options.*"
-    );
-
     // -----------------------------------------------------
     reflow_and_emit_paragraph(os, max_width, nobullet, nobullet, nolinebreak,
         "# Operations"

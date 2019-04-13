@@ -15,19 +15,34 @@ OperationDoc OpArgDocConvertDoseToImage(void){
     out.name = "ConvertDoseToImage";
 
     out.desc = 
-        "This operation converts all loaded Dose_Arrays to Image_Arrays. Neither image contents nor metadata should change,"
-        " but the intent to treat as an image or dose matrix will of course change. A deep copy may be performed.";
+        "This operation converts all loaded images from RTDOSE modality to CT modality. Image contents will not change,"
+        " but the intent to treat as an image or dose matrix will of course change.";
+
+    out.args.emplace_back();
+    out.args.back().name = "Modality";
+    out.args.back().desc = "The modality that will replace 'RTDOSE'.";
+    out.args.back().default_val = "CT";
+    out.args.back().expected = true;
+    out.args.back().examples = { "CT",
+                                 "MR",
+                                 "UNKNOWN" };
 
     return out;
 }
 
-Drover ConvertDoseToImage(Drover DICOM_data, OperationArgPkg, std::map<std::string,std::string>, std::string ){
+Drover ConvertDoseToImage(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string>, std::string ){
 
-    for(const auto &da : DICOM_data.dose_data){
-        DICOM_data.image_data.emplace_back();
-        DICOM_data.image_data.back() = std::make_shared<Image_Array>(*da);
+    //---------------------------------------------- User Parameters --------------------------------------------------
+    const auto ModalityStr = OptArgs.getValueStr("Modality").value();
+
+    //-----------------------------------------------------------------------------------------------------------------
+
+    for(auto &ia_ptr : DICOM_data.image_data){
+        for(auto &img : ia_ptr->imagecoll.images){
+            if( (img.metadata.count("Modality") != 0)
+            &&  (img.metadata["Modality"] == "RTDOSE") ) img.metadata["Modality"] = ModalityStr;
+        }
     }
-    DICOM_data.dose_data.clear();
 
     return DICOM_data;
 }

@@ -87,9 +87,6 @@ Drover SelectSlicesIntersectingROI(Drover DICOM_data, OperationArgPkg OptArgs, s
     for(auto &img_arr : DICOM_data.image_data){
         img_arr->imagecoll.Retain_Images_Satisfying( retain_encompassing_imgs );
     }
-    for(auto &dimg_arr : DICOM_data.dose_data){
-        dimg_arr->imagecoll.Retain_Images_Satisfying( retain_encompassing_imgs );
-    }
 
     return DICOM_data;
 }

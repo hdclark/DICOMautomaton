@@ -40,9 +40,6 @@ OperationDoc OpArgDocDumpROISNR(void){
         "This operation computes the Signal-to-Noise ratio (SNR) for each ROI. The specific 'SNR' computed is SNR = (mean"
         " pixel) / (pixel std dev) which is the inverse of the coefficient of variation.";
         
-    out.notes.emplace_back(
-        "This routine uses image_arrays so convert dose_arrays beforehand if dose SNR is desired."
-    );
         
     out.notes.emplace_back(
         "This routine will combine spatially-overlapping images by summing voxel intensities. So if you have a time"

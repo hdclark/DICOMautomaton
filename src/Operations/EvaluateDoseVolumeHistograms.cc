@@ -51,10 +51,6 @@ OperationDoc OpArgDocEvaluateDoseVolumeHistograms(void){
     );
         
     out.notes.emplace_back(
-        "This routine uses image_arrays so convert dose_arrays beforehand."
-    );
-        
-    out.notes.emplace_back(
         "This routine will combine spatially-overlapping images by summing voxel intensities. It will not"
         " combine separate image_arrays though. If needed, you'll have to perform a meld on them beforehand."
     );

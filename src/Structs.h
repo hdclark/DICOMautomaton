@@ -20,13 +20,13 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+#include <any>
 
 #include "YgorFilesDirs.h"
 #include "YgorImages.h"
 #include "YgorMath.h"
 #include "YgorPlot.h"
 
-class Dose_Array;
 class Image_Array;
 
 //This is a wrapper around the YgorMath.h class "contour_of_points." It holds an instance of a contour_of_points, but also provides some meta information
@@ -167,62 +167,6 @@ std::unique_ptr<Contour_Data> Split_Per_Volume_Along_Transverse_Plane(void) cons
 };
 
 
-//This class holds one set of DICOM dose planes. This lets us split up a large 3D dose array into layers which are easier to 
-// reason about and integrate with planar imaging data.
-//
-//If multiple 3D dose arrays are required, then other functions should take a std::list of this class. The reasoning for this
-// is that it is not always clear in what way to combine them. (Or the application should handle the logic of properly ordering 
-// and dealing with them in that order. This is what I have done so far, using PostgreSQL as a PACs for ordering.)
-//
-////////////////////////////////////////////
-//NOTE: Resist the temptation to inherit from planar_image collection. This will simplify some minor things (like image viewing) but will
-// actually make the programming interface worse. Instead, use a sort of 'poor-mans' inheritance: make each class have similar
-// member names and functions (except the specialized members required for each). This way, although the compiler cannot treat
-// both classes as children of a common parent, the programmer should still be able to swap types and have everything work.
-//
-// FIXME:    ALTERNATIVE: Inherit from a common, custom-made, purely-virtual base class. This gains the best of both worlds!   :FIXME
-////////////////////////////////////////////
-
-/*
-class Base_Array {
-    public: 
-        planar_image_collection<float,double> imagecoll;
-
-        std::string filename; //The filename from which the data originated, if applicable.
-
-        unsigned int bits;     //(0028,0101) "Bits Stored". 8 bit, 16 bit, 24 bit, 32 bit, etc..
-                               // Note: (0028,0100) "Bits Allocated" will usually be identical. It defines the storage atom size.
-
-        virtual ~Base_Array(){ } //Needed for safe deallocation of derived classes, and also enables use of dynamic_cast.
-};
-*/
-
-class Dose_Array { //: public Base_Array {
-    public:
-
-        planar_image_collection<float,double> imagecoll;
-        //std::unique_ptr<unsigned int []> max;  //The maximal pixel value in one channel. Only useful for display purposes.
-
-        std::string filename; //The filename from which the data originated, if applicable.
-
-        unsigned int bits;     //(0028,0101) "Bits Stored". 8 bit, 16 bit, 24 bit, 32 bit, etc..
-                               // Note: (0028,0100) "Bits Allocated" will usually be identical. It defines the storage atom size.
-
-
-        double grid_scale;     //(3004,000e) "Dose Grid Scaling". The scaling factor for converting (integer) channel data to 
-                               // doses (in units of Gy, from what I can tell). 
-                               // Should be used like:   Dose = (channel integer)*(grid_scale);
-
-        //Constructor/Destructors.
-        Dose_Array();
-        Dose_Array(const Dose_Array &rhs); //Performs a deep copy (unless copying self).
-        Dose_Array(const Image_Array &rhs); //Performs a deep copy.
-//        ~Dose_Array(){}
-
-        //Member functions.
-        Dose_Array & operator=(const Dose_Array &rhs); //Performs a deep copy (unless copying self).
-};
-
 class Image_Array { //: public Base_Array {
     public:
 
@@ -230,17 +174,43 @@ class Image_Array { //: public Base_Array {
 
         std::string filename; //The filename from which the data originated, if applicable.
 
-        unsigned int bits;    //(0028,0101) "Bits Stored". 8 bit, 16 bit, 24 bit, 32 bit, etc..
-                              // Note: (0028,0100) "Bits Allocated" will usually be identical. It defines the storage atom size.
-
         //Constructor/Destructors.
         Image_Array();
         Image_Array(const Image_Array &rhs); //Performs a deep copy (unless copying self).
-        Image_Array(const Dose_Array &rhs); //Performs a deep copy.
-//        ~Image_Array(){}
 
         //Member functions.
         Image_Array & operator=(const Image_Array &rhs); //Performs a deep copy (unless copying self).
+};
+
+
+// This class is meant to hold a point cloud which may be dynamically tagged with attributes.
+// Attributes are flexible, permitting specification of per-point attributes (via this->points index or some other
+// index) or for multiple points.
+class Point_Cloud {
+    public:
+
+        // All points must have a location and can optionally be assigned an integer tag.
+        // The integer is important because it allows implementations without knowledge of the dynamic attributes to
+        // perform some basic operations, such as removing points and keeping the cloud consistent.
+        std::vector< std::pair< vec3<double>, long int > > points;
+
+        //std::map< size_t, vec3<double> > orientation;
+        //std::map< size_t, vec3<double> > colour;
+        //std::map< size_t, double > radius;
+        //std::map< size_t, double > weight;
+
+        // Used for defining attributes at run-time.
+        // The std::any can be replaced by something like std::map<size_t, double> but doesn't have to.
+        std::map< std::string, std::any > attributes; 
+
+        std::map< std::string, std::string > metadata; //User-defined metadata.
+
+        //Constructor/Destructors.
+        Point_Cloud();
+        Point_Cloud(const Point_Cloud &rhs); //Performs a deep copy (unless copying self).
+
+        //Member functions.
+        Point_Cloud & operator=(const Point_Cloud &rhs); //Performs a deep copy (unless copying self).
 };
 
 
@@ -275,22 +245,6 @@ using bnded_dose_map_key_t = std::list<contours_with_meta>::iterator; //Required
 
 using bnded_dose_map_cmp_func_t = std::function<bool (const bnded_dose_map_key_t &, const bnded_dose_map_key_t &)>;
 
-/*
-typedef std::function<size_t (const bnded_dose_map_key_t &)>  bnded_dose_map_cmp_func_t;
-const auto bnded_dose_map_cmp_lambda = [](const bnded_dose_map_key_t &n) -> size_t {
-    //This lambda gets the address of the object pointed to by the key_t (an iterator or pointer type).
-    // The address is explicitly casted to size_t. Maybe this should be changed to a fixed-width type?
-    //
-    //NOTE: This is quite dangerous and WILL lead to segfaults if improperly used! Always ensure the given 
-    // key_t is valid!
-    return reinterpret_cast<size_t>(&(*n));
-};
-
-typedef std::unordered_map<bnded_dose_map_key_t,double,                          bnded_dose_map_cmp_func_t>  drover_bnded_dose_mean_dose_map_t;
-typedef std::unordered_map<bnded_dose_map_key_t,std::pair<int64_t,int64_t>,      bnded_dose_map_cmp_func_t>  drover_bnded_dose_accm_dose_map_t;
-typedef std::unordered_map<bnded_dose_map_key_t,std::pair<double,double>,        bnded_dose_map_cmp_func_t>  drover_bnded_dose_min_max_dose_map_t;
-typedef std::unordered_map<bnded_dose_map_key_t,std::tuple<double,double,double>,bnded_dose_map_cmp_func_t>  drover_bnded_dose_min_mean_max_dose_map_t;
-*/
 
 const auto bnded_dose_map_cmp_lambda = [](const bnded_dose_map_key_t &A, const bnded_dose_map_key_t &B) -> bool {
     //Given that we are dealing with iterators, we must be careful with possibly-invalid data sent to 
@@ -347,14 +301,10 @@ drover_bnded_dose_stat_moments_map_t             drover_bnded_dose_stat_moments_
 
 class Drover {
     public:
-        bool Has_Been_Melded;   //This is a safety switch: we are *unable* to compute specific routines (DVH, etc..) unless we have called the 'Meld' function.
-                                // A meld will become invalidated if certain data is modified, though you can be sneaky and directly access the buffers.
-
-    public:
 
         std::shared_ptr<Contour_Data>           contour_data; //Should I allow for multiple contour data? I think it would be logical...
-        std::list<std::shared_ptr<Dose_Array>>  dose_data;    //Some operations will accumulate all dose, some will not!
         std::list<std::shared_ptr<Image_Array>> image_data;   //In case we ever get more than one set of images (different modalities?)
+        std::list<std::shared_ptr<Point_Cloud>> point_data;
     
         //Constructors.
         Drover();
@@ -387,21 +337,18 @@ class Drover {
         Drover Duplicate(const Contour_Data &in) const; 
         Drover Duplicate(const Drover &in) const;
     
-        bool Is_Melded(void) const;
-        bool Meld(bool); //Attempts to verify the various pieces of data properly fit together.
-    
         bool Has_Contour_Data(void) const;
-        bool Has_Dose_Data(void) const;
         bool Has_Image_Data(void) const;
+        bool Has_Point_Data(void) const;
 
         void Concatenate(std::shared_ptr<Contour_Data> in);
-        void Concatenate(std::list<std::shared_ptr<Dose_Array>> in);
         void Concatenate(std::list<std::shared_ptr<Image_Array>> in);
+        void Concatenate(std::list<std::shared_ptr<Point_Cloud>> in);
         void Concatenate(Drover in);
 
         void Consume(std::shared_ptr<Contour_Data> in);
-        void Consume(std::list<std::shared_ptr<Dose_Array>> in);
         void Consume(std::list<std::shared_ptr<Image_Array>> in);
+        void Consume(std::list<std::shared_ptr<Point_Cloud>> in);
         void Consume(Drover in);
     
         void Plot_Dose_And_Contours(void) const;

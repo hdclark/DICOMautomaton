@@ -1,4 +1,4 @@
-//DICOMautomaton_Dispatcher.cc - A part of DICOMautomaton 2017, 2018. Written by hal clark.
+//DICOMautomaton_Webserver.cc - A part of DICOMautomaton 2017, 2018. Written by hal clark.
 //
 // This program provides a standard entry-point into some DICOMautomaton analysis routines.
 //
@@ -202,7 +202,7 @@ BaseWebServerApplication::BaseWebServerApplication(const Wt::WEnvironment &env) 
 
     // Create a private working directory somewhere.
     this->InstancePrivateDirectory = CreateUniqueDirectoryTimestamped("/home/hal/DICOMautomaton_Webserver_Artifacts/", // timestamp goes here
-                                                                      "_dose_modification_project/");
+                                                                      "/");
     FUNCINFO("The unique directory for this session is '" << this->InstancePrivateDirectory << "'");
 
     //Try find a lexicon file if none were provided.
@@ -609,7 +609,6 @@ void BaseWebServerApplication::createOperationSelectorGB(void){
 
             if(selected_group == "Replans"){
                 if( false
-                    ||  ( n == "ConvertDoseToImage" ) 
                     ||  ( n == "CropROIDose" )
                     ||  ( n == "DecayDoseOverTimeHalve" ) 
                     ||  ( n == "DecayDoseOverTimeJones2014" ) 

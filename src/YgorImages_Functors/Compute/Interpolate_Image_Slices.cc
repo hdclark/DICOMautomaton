@@ -141,6 +141,7 @@ bool ComputeInterpolateImageSlices(planar_image_collection<float,double> &imagec
             for(auto row = 0; row < N_rows; ++row){
                 for(auto col = 0; col < N_columns; ++col){
                     for(auto chan = 0; chan < N_channels; ++chan){
+                        if( (chan != ud_channel) && (ud_channel >= 0) ) continue;
                         const auto v_pos = img_refw.get().position(row, col);
 
                         //Identify the nearest planes above and below this voxel.

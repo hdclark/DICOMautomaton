@@ -17,24 +17,19 @@ OperationDoc OpArgDocCropROIDose(void){
     OperationDoc out;
     out.name = "CropROIDose";
     out.desc = 
-      "This operation provides a simplified interface for overriding the dose outside a ROI."
+      "This operation provides a simplified interface for overriding voxel values outside a ROI."
       " For example, this operation can be used to modify a base plan by eliminating dose "
       " outside an OAR.";
 
     out.notes.emplace_back(
-      "This operation performs the opposite of the 'Trim' operation, which trims the dose"
-      " inside a ROI."
+      "This operation performs the opposite of the 'Trim' operation, which trims voxel values"
+      " **inside** a ROI."
     );
     out.notes.emplace_back(
-      "The inclusivity of a dose voxel that straddles the ROI boundary can be specified in"
+      "The inclusivity of a voxel that straddles the ROI boundary can be specified in"
       " various ways. Refer to the Inclusivity parameter documentation."
     );
-    out.notes.emplace_back(
-      "By default this operation only overrides dose within a ROI. The opposite, overriding"
-      " dose outside of a ROI, can be accomplished using the expert interface."
-    );
 
-    out.args.splice( out.args.end(), OpArgDocConvertDoseToImage().args );
     out.args.splice( out.args.end(), OpArgDocHighlightROIs().args );
     out.args.splice( out.args.end(), OpArgDocDICOMExportImagesAsDose().args );
 
@@ -42,8 +37,6 @@ OperationDoc OpArgDocCropROIDose(void){
     // Adjust the defaults to suit this particular workflow.
     for(auto &oparg : out.args){
         if(false){
-        // ConvertDoseToImage options.
-        // ... currently no options...
 
         // HighlightROIs options.
         }else if(oparg.name == "Channel"){
@@ -93,9 +86,7 @@ CropROIDose(Drover DICOM_data,
             std::map<std::string, std::string> InvocationMetadata,
             std::string FilenameLex){
 
-    DICOM_data.dose_data = Meld_Dose_Data(DICOM_data.dose_data);
-
-    DICOM_data = ConvertDoseToImage(std::move(DICOM_data), OptArgs, InvocationMetadata, FilenameLex);
+    DICOM_data = Meld_Only_Dose_Data(DICOM_data);
 
     DICOM_data = HighlightROIs(std::move(DICOM_data), OptArgs, InvocationMetadata, FilenameLex);
 

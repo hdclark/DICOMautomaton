@@ -78,6 +78,9 @@ OperationDoc OpArgDocFVPicketFence(void){
 
         }else if(oparg.name == "ScaleFactor"){
             oparg.default_val = "1.5";
+
+        }else if(oparg.name == "ColourMapRegex"){
+            oparg.visibility  = OpArgVisibility::Hide;
         }
     }
 

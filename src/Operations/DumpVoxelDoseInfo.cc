@@ -24,7 +24,7 @@ OperationDoc OpArgDocDumpVoxelDoseInfo(void){
         "This operation locates the minimum and maximum dose voxel values. It is useful for estimating prescription doses.";
         
     out.notes.emplace_back(
-        "This implementation makes use of an older way of estimating dose. Please"
+        "This implementation makes use of a primitive way of estimating dose. Please"
         " verify it works (or re-write using the new methods) before using for anything important."
     );
 
@@ -37,9 +37,10 @@ Drover DumpVoxelDoseInfo(Drover DICOM_data, OperationArgPkg , std::map<std::stri
     double themax = -(std::numeric_limits<double>::infinity());
 
     {
-        std::list<std::shared_ptr<Dose_Array>> dose_data_to_use(DICOM_data.dose_data);
-        if(DICOM_data.dose_data.size() > 1){
-            dose_data_to_use = Meld_Dose_Data(DICOM_data.dose_data);
+        auto d = Isolate_Dose_Data(DICOM_data);
+        std::list<std::shared_ptr<Image_Array>> dose_data_to_use(d.image_data);
+        if(d.image_data.size() > 1){
+            dose_data_to_use = Meld_Image_Data(d.image_data);
             if(dose_data_to_use.size() != 1){
                 FUNCERR("This routine cannot handle multiple dose data which cannot be melded. This has " << dose_data_to_use.size());
             }
@@ -60,7 +61,7 @@ Drover DumpVoxelDoseInfo(Drover DICOM_data, OperationArgPkg , std::map<std::stri
                 for(long int i=0; i<i_it->rows; ++i)  for(long int j=0; j<i_it->columns; ++j){
                     //Greyscale or R channel. We assume the channels satisfy: R = G = B.
                     const auto pointval = i_it->value(i,j,0); 
-                    const auto pointdose = static_cast<double>(dd_it->grid_scale * pointval); 
+                    const auto pointdose = static_cast<double>(pointval); 
 
                     if(pointdose < themin) themin = pointdose;
                     if(pointdose > themax) themax = pointdose;
