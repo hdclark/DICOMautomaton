@@ -19,6 +19,7 @@
 #include <tuple>
 #include <utility>   //For std::pair.
 #include <vector>
+#include <any>
 
 #include "Dose_Meld.h"
 #include "Structs.h"
@@ -928,125 +929,38 @@ std::unique_ptr<Contour_Data> Contour_Data::Get_Contours_With_Segmentation(const
     return output;
 }
 
-
-
-
-/*
-//-----------------------------------------------------------------------------------------------------
-//--------------------------------------- planar_image_with_meta --------------------------------------
-//-----------------------------------------------------------------------------------------------------
-//Constructors.
-planar_image_with_meta::planar_image_with_meta(){
-    this->bits = 0;
-    this->grid_scale = -1.0;
-    this->frame_num  = -1;
-    //Should call the planar_image() constructor automatically!
-};
-
-planar_image_with_meta::planar_image_with_meta( const planar_image<unsigned int,double> &in ){
-    //Copy the image using the copy operator.
-    (*this) = in;
-
-    //Copy the additional meta information this class provides.
-    this->
-}
-
-planar_image_with_meta( const planar_image_with_meta &in ){
-
-
-
-}
-*/
-//planar_image_with_meta & planar_image_with_meta::operator=(.....)
-
-/*
-//-----------------------------------------------------------------------------------------------------
-//----------------------------------------- Pixel Data stuff ------------------------------------------
-//-----------------------------------------------------------------------------------------------------
-
-unsigned int Pixel_Data::index(unsigned int i, unsigned int j, unsigned int k){
-    //return k*columns*rows*channels + i*columns*channels + j*channels;
-    return channels*( columns*( rows*k + i ) + j );
-}
-
-float Pixel_Data::clamped_channel(unsigned int channel, unsigned int i, unsigned int j, unsigned int k){
-    return static_cast<float>( data[ index(i,j,k) + channel ]) / static_cast<float>( max[ channel ] );
-}
-unsigned int Pixel_Data::channel(unsigned int channel, unsigned int i, unsigned int j, unsigned int k){
-    return data[ index(i,j,k) + channel ];
-}
-
-float Pixel_Data::x(unsigned int i, unsigned int j, unsigned int k){
-    return image_pos_x + static_cast<float>(i)*pixel_dx;
-}
-float Pixel_Data::y(unsigned int i, unsigned int j, unsigned int k){
-    return image_pos_y + static_cast<float>(j)*pixel_dy;
-}
-float Pixel_Data::z(unsigned int i, unsigned int j, unsigned int k){
-    return -slice_height + static_cast<float>(k)*pixel_dz;   //Using image_pos_z seems to be troublesome..
-}
-
-float Pixel_Data::ortho_inner(unsigned int k){   //For OpenGL, negate this function. For filtering layers, do not negate. See Overlay_Pixel_Data.cc.
-    return -( slice_height - 0.5*pixel_dz - static_cast<float>(k)*pixel_dz );
-}
-float Pixel_Data::ortho_outer(unsigned int k){
-    return -( slice_height + 0.5*pixel_dz - static_cast<float>(k)*pixel_dz );
-}
-
-*/
-
-//---------------------------------------------------------------------------------------------------------------------------
-//--------------------------------------------------------- Dose_Array ------------------------------------------------------
-//---------------------------------------------------------------------------------------------------------------------------
-Dose_Array::Dose_Array(){
-    this->bits = 0;
-    this->grid_scale = -1.0;
-}
-
-Dose_Array::Dose_Array(const Image_Array &rhs){
-    //Performs a deep copy.
-    this->imagecoll  = rhs.imagecoll;
-    this->bits       = rhs.bits;
-    this->grid_scale = 1.0;
-    this->filename   = rhs.filename;
-}
-
-Dose_Array & Dose_Array::operator=(const Dose_Array &rhs){
-    if(this == &rhs) return *this;
-    this->imagecoll  = rhs.imagecoll; //Performs a deep copy (unless copying self).
-    this->bits       = rhs.bits;
-    this->grid_scale = rhs.grid_scale;
-    this->filename   = rhs.filename;
-    return *this;
-}
-
-
-
 //---------------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------- Image_Array ------------------------------------------------------
 //---------------------------------------------------------------------------------------------------------------------------
-Image_Array::Image_Array(){
-    this->bits = 0;
-}
+Image_Array::Image_Array() {}
 
 Image_Array::Image_Array(const Image_Array &rhs){
     *this = rhs; //Performs a deep copy (unless copying self).
 }
 
-Image_Array::Image_Array(const Dose_Array &rhs){
-    //Performs a deep copy (unless copying self).
-    this->imagecoll  = rhs.imagecoll;
-    this->bits       = rhs.bits;
-    this->filename   = rhs.filename;
-    //We drop and ignore the grid_scale member.
+Image_Array & Image_Array::operator=(const Image_Array &rhs){
+    if(this != &rhs){
+        this->imagecoll  = rhs.imagecoll;
+    }
+    return *this;
 }
 
-Image_Array & Image_Array::operator=(const Image_Array &rhs){
+//---------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------- Point_Cloud ------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------------
+Point_Cloud::Point_Cloud(){ }
+
+Point_Cloud::Point_Cloud(const Point_Cloud &rhs){
+    *this = rhs; //Performs a deep copy (unless copying self).
+}
+
+Point_Cloud & Point_Cloud::operator=(const Point_Cloud &rhs){
     //Performs a deep copy (unless copying self).
-    if(this == &rhs) return *this;
-    this->imagecoll  = rhs.imagecoll;
-    this->bits       = rhs.bits;
-    this->filename   = rhs.filename;
+    if(this != &rhs){
+        this->points     = rhs.points;
+        this->attributes = rhs.attributes;
+        this->metadata   = rhs.metadata;
+    }
     return *this;
 }
 
@@ -1096,222 +1010,17 @@ drover_bnded_dose_stat_moments_map_t drover_bnded_dose_stat_moments_map_factory(
 
 
 //Constructors.
-Drover::Drover(){
-    Has_Been_Melded = false;
-};
-Drover::Drover( const Drover &in ) : contour_data(in.contour_data), dose_data(in.dose_data), image_data(in.image_data) {
-    Has_Been_Melded = false;
-};
+Drover::Drover() {};
+Drover::Drover( const Drover &in ) : contour_data(in.contour_data), image_data(in.image_data) {};
 
 //Member functions.
 void Drover::operator=(const Drover &rhs){
     if(this != &rhs){
-        //this->Has_Been_Melded = false;
-        this->Has_Been_Melded = rhs.Has_Been_Melded;
         this->contour_data    = rhs.contour_data;
-        this->dose_data       = rhs.dose_data;
         this->image_data      = rhs.image_data;
     }
     return;
 }
-
-/*
-//This routine works fine. It groups everything in terms of ROI numbers instead of contour collections. This makes it unsuitable
-// for operating on sub-segmented structures (which have identical roi numbers) unless some fancy footwork is done.
-//
-//In my opinion, currently it is more flexible to group things in terms of contour_collections. One limitation of this is that
-// it will be impossible to compute bounded doses for compound structures (eg. left and right parotid together) unless they are
-// both placed in the same contour collection (and the roi number is thus disposed of). In some sense, this is a fairly logical
-// thing to do: if two independent contours are merged, then the resulting structure should at least have a unique roi number.
-//
-//Anyways, the functionality of this routine have been moved into the replacement routine below. This version may be deleted
-// if no need exists for this version after some reasonable period of time.
-//
-
-void Drover::Bounded_Dose_General(std::list<double> *pixel_doses, std::map<long int,double> *mean_doses) const {
-    //This function is a general routine for working with pixels bounded by contour data. It *might* be better to stick it in 
-    // the contour or pixel classes, but it seems better (at the moment) to place it in the Drover class, where we have clearly
-    // indicated which contour, which dose pixels, and which CT data we want to work with.
-    //
-    //This function should (probably) only be called internally. Use the wrapper member functions. There is no reason why one
-    // couldn't use this function, however, so do whatever you want to!
-    //
-    //Output options:
-    //  std::list<double> *pixel_doses;            <-- Holds the each voxel's dose. Discards spatial info about voxels.
-    //  std::map<long int,double> *mean_doses;     <-- Holds the mean dose for each ROI contour number within the contour data.
-    //
-    // Pass a pointer to the desired container to compute the desired quantities.
-
-    //----------------------------------------- Sanity/Safety Checks ----------------------------------------
-    if(!this->Has_Been_Melded){
-        FUNCERR("Attempted to use bounded dose routine without melding data. It is required to do so");
-    }
-    if((pixel_doses == nullptr) && (mean_doses == nullptr)){
-        FUNCWARN("No valid output pointers provided. Nothing will be computed");
-        return;
-    }
-    if(!this->Has_Contour_Data() || !this->Has_Dose_Data()){
-        FUNCERR("Attempted to use bounded dose routine, but we do not have contours and/or dose");
-    }
-    if((pixel_doses != nullptr) && !pixel_doses->empty()){
-        FUNCWARN("Requesting to push pixel doses to a non-empty container. Assuming this was intentional");
-    }
-    if((mean_doses != nullptr) && !mean_doses->empty()){
-        FUNCWARN("Requesting to push mean doses to a non-empty container. The vector will be emptied prior to continuing - this is surely a programming error.");
-        mean_doses->clear();
-    }
-
-
-    //Determine which ROI numbers we have in the contour data.
-    std::set<long int> the_roi_numbers;
-    for(auto cc_it = this->contour_data->ccs.begin(); cc_it != this->contour_data->ccs.end(); ++cc_it){
-        the_roi_numbers.insert(cc_it->ROI_number);
-    }
-
-    //Push back zeros for the output mean_doses so we can += our results to it.
-    if(mean_doses != nullptr){
-        for(auto it=the_roi_numbers.begin(); it != the_roi_numbers.end(); ++it) (*mean_doses)[*it] = 0.0;
-    }
-
-    //This is used to store info about total accumulated dose and total number of voxels within the contours. 
-    // It can be used to compute the mean doses.
-    // map<ROI number, pair<Total dose (in unscaled integer units), Number of voxels>>.
-    std::map<long int, std::pair<int64_t,int64_t>> accumulated_dose;
-
-    //Loop over the attached dose datasets (NOT the dose slices!). It is implied that we have to sum up doses 
-    // from each attached data in order to find the total (actual) dose.
-    for(auto dd_it = this->dose_data.begin(); dd_it != this->dose_data.end(); ++dd_it){
-        //Note: dd_it is something like std::list<std::shared_ptr<Dose_Array>>::iterator.
-
-        //Clear the map/initialize the elements.
-        for(auto it = the_roi_numbers.begin(); it != the_roi_numbers.end(); ++it){
-            accumulated_dose[*it] = std::pair<int64_t,int64_t>(0,0);
-        }
-
-        //We now loop through all dose frames (slices) and accumulate dose within a the contour bounds.
-        for(auto i_it = (*dd_it)->imagecoll.images.begin(); i_it != (*dd_it)->imagecoll.images.end(); ++i_it){
-            //Note: i_it is something like std::list<planar_image<T,R>>::iterator.
-    
-            //Loop over the roi numbers we have found. Typically, this will be one single number (ie. maybe it denotes the 'Left Parotid' contours.)
-            for(auto r_it = the_roi_numbers.begin(); r_it != the_roi_numbers.end(); ++r_it){
-                const long int the_roi_number = *r_it;
-
-                for(auto cc_it = this->contour_data->ccs.begin(); cc_it != this->contour_data->ccs.end(); ++cc_it){
-                    if(cc_it->ROI_number != the_roi_number) continue;
-
-                    for(auto c_it = cc_it->contours.begin(); c_it != cc_it->contours.end(); ++c_it){
-                        if(c_it->points.size() < 3) continue;
-
-                        const auto filtering_avg_point = c_it->First_N_Point_Avg(3); //Average_Point(); //Just need a point at the correct height, somewhere inside contour.
-                        if(!i_it->sandwiches_point_within_top_bottom_planes(filtering_avg_point)) continue;
- 
-                        //Now we have a contour of points and pixel data (note: we can ignore the z components for both) 
-                        // which may or may not lie within the contour. This is called the 'Point-in-polygon' problem and is
-                        // a well-known problem. Unfortunately, it can be a costly problem to solve. We will bound the contour with
-                        // a cartesian bounding box (in the XY plane) and poll each point. We can immediately ignore points outside the box.
-                        // This will save a considerable amount of time for small contours within a large volume, and probably won't greatly
-                        // slow the large contour/large volume case too much.
-                        //
-                        // We then examine line crossings. For a regular polygon, whether or not the number of line crossings (from the point
-                        // to infinity (in this case - the edge of the box)) is even or odd will determine whether or not the point is within
-                        // the contour. I *believe* there would be an issue if the contour would wrap around and touch exactly on some segment
-                        // (like a "C" where the two sharp edges touch to form an "O".) ***BEWARE*** that this is most likely the case!
-                        //
-                        // See http://www.visibone.com/inpoly/ (Accessed Jan 2012,) 
-                        //     http://paulbourke.net/geometry/insidepoly/ (January 2012,)
-                        //     http://stackoverflow.com/questions/217578/point-in-polygon-aka-hit-test (January 2012).
-                        //     NOTE: Some web servers/web applications used to have to implement this routine to deal with image maps. 
-                        //           Check their sources for leads if looking/scrouging for code. I would like a fully 3D version!
-                        //
-                        //     |---------------------|
-                        //     | /-----\  /--------\ |
-                        //     | |     |__|        / |
-                        //     |/                 /  |
-                        //     ||   X            /   |
-                        //     | \______________/    |
-                        //     |---------------------|
-                        //
-                        const contour_of_points<double> BB(c_it->Bounding_Box_Along(vec3<double>(1.0,0.0,0.0)));
-                        const float alrgnum(1E30);
-                        float min_x = alrgnum, max_x = -alrgnum;
-                        float min_y = alrgnum, max_y = -alrgnum;
-                        for(auto i = BB.points.begin(); i != BB.points.end(); ++i){
-                            if(i->x < min_x) min_x = i->x;
-                            if(i->x > max_x) max_x = i->x;
-                            if(i->y < min_y) min_y = i->y;
-                            if(i->y > max_y) max_y = i->y;
-                        }
-                        if((min_x == alrgnum) || (min_y == alrgnum) || (max_x == -alrgnum) || (max_y == -alrgnum)){
-                            FUNCERR("Unable to find a reasonable bounding box around this contour");
-                        }
-    
-                        //Now cycle through every pixel in the plane. This is kind of a shit way to do this, but then again this entire program is basically
-                        // a shit way to do it. I would like to have had more time to properly fix/plan/think about what I've got here...  -h
-                        for(long int i=0; i<i_it->rows; ++i)  for(long int j=0; j<i_it->columns; ++j){
-                            const auto pos = i_it->position(i,j);
-                            const float X = pos.x, Y = pos.y;
-    
-                            //Check if it is outside the bounding box.
-                            if(!isininc(min_x,X,max_x) || !isininc(min_y,Y,max_y)) continue;
-    
-                            bool is_in_the_polygon = false;
-                            auto p_j = --(c_it->points.end());
-                            for(auto p_i = c_it->points.begin(); p_i != c_it->points.end(); p_j = (p_i++)){
-                                //If the points cross a line, we simply toggle the 'bool is_in_the_polygon.'
-                                if( ((p_i->y <= Y) && (Y < p_j->y)) || ((p_j->y <= Y) && (Y < p_i->y)) ){ 
-                                    const auto B = (p_j->x - p_i->x)*(Y - p_i->y)/(p_j->y - p_i->y);
-                                    if(X < (B + p_i->x)){
-                                        is_in_the_polygon = !is_in_the_polygon;
-                                    }
-                                }
-                            }
-    
-                            if(is_in_the_polygon){
-                                //-----------------------------------------------------------------------------------------------------------------------
-                                //FUNCINFO("Bounding box (x,y)min (x,y)max = (" << min_x << "," << min_y << ") (" << max_x << "," << max_y << ")");
-                                //FUNCINFO("Point has (X,Y) = " << X << " " << Y);
-    
-                                //NOTE: Remember: this is some integer representing dose. If we want a clamped [0:1] 
-                                // value, we would use the clamped_channel(...) member instead!
-                                const auto pointval = static_cast<int64_t>(i_it->value(i,j,0)); //Greyscale or R channel. We assume the channels satisfy: R = G = B.
-     
-                                if(mean_doses != nullptr){
-                                    accumulated_dose[the_roi_number].first  += pointval;
-                                    accumulated_dose[the_roi_number].second += 1;
-                                }
-    
-                                if(pixel_doses != nullptr){ //If we are collecting raw pixel values.
-                                    pixel_doses->push_back((*dd_it)->grid_scale * static_cast<double>(pointval)); 
-                                }
-    
-                                //-----------------------------------------------------------------------------------------------------------------------
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        //Determine the mean dose if required.
-        if(mean_doses != nullptr){
-            for(auto it = accumulated_dose.begin(); it != accumulated_dose.end(); it++){
-                //If there were no voxels within the contour then we have nothing to do.
-                if(it->second.second == 0) continue;
-
-                const auto roinumb = it->first;
-                const auto ttldose = static_cast<double>(it->second.first)*(*dd_it)->grid_scale;
-                const auto numvxls = static_cast<double>(it->second.second);
-
-                if(ttldose < 0.0) FUNCERR("Total dose was negative (" << ttldose << "). This is not possible");
-                if(numvxls < 0.0) FUNCERR("Total number of voxels was negative (" << numvxls << "). This is not possible");
-
-                (*mean_doses)[roinumb] += (ttldose/numvxls); //This dose is now in Gy (cGy?)
-            }
-        }
-    }//Loop over the distinct dose file data.
-    return;
-}
-*/
 
 void Drover::Bounded_Dose_General( std::list<double> *pixel_doses, 
                                    drover_bnded_dose_bulk_doses_map_t *bulk_doses, //NOTE: similar to pixel_doses but not all grouped together...
@@ -1333,17 +1042,15 @@ void Drover::Bounded_Dose_General( std::list<double> *pixel_doses,
     //  ....many more implemented...   They should be fairly self-describing...
     //
     // Pass a pointer to the desired container to compute the desired quantities.
+    auto d = Isolate_Dose_Data(*this);
 
     //----------------------------------------- Sanity/Safety Checks ----------------------------------------
-    if(!this->Has_Been_Melded){
-        FUNCERR("Attempted to use bounded dose routine without melding data. It is required to do so");
-    }
     if((pixel_doses == nullptr) && (mean_doses == nullptr) && (min_max_doses == nullptr) 
     && (pos_doses   == nullptr) && (bulk_doses == nullptr) && (cent_moms     == nullptr) ){
         FUNCWARN("No valid output pointers provided. Nothing will be computed");
         return;
     }
-    if(!this->Has_Contour_Data() || !this->Has_Dose_Data()){
+    if(!d.Has_Contour_Data() || !d.Has_Image_Data()){
         FUNCERR("Attempted to use bounded dose routine, but we do not have contours and/or dose");
     }
     if((pixel_doses != nullptr) && !pixel_doses->empty()){
@@ -1375,30 +1082,9 @@ void Drover::Bounded_Dose_General( std::list<double> *pixel_doses,
         //Since we have to normalize them at the end, we have to begin with empty space.
     }
 
-    std::list<std::shared_ptr<Dose_Array>> dose_data_to_use(this->dose_data);
-    if((min_max_doses != nullptr) && (this->dose_data.size() > 1)){ //Only dose data meld when needed. Moments, for instance, probably don't need to be melded!
-/*
-        //We need to check if the dose volumes and voxels overlap exactly or not. If they do, we can compute the mean within each
-        // separately and sum them afterward. If they don't, the situation becomes very tricky. It is possible to compute it, but
-        // it is not done here (if they overlap with zero volume then it is again easy, but it doesn't fit this routine terribly well).
-        //
-        auto d2_it = this->dose_data.begin(); //Note: d*_it are ~ std::list<std::shared_ptr<Dose_Array>>::iterator
-        auto d1_it = --(this->dose_data.end());
-        while((d1_it != this->dose_data.end()) && (d2_it != this->dose_data.end())){
-            //We will try to compare the layout of the dose volume/array. If everything about them (except the dose values) is 
-            // identical, then we can easily handle them (by strictly summing the doses in each voxel).
-            if((*d1_it)->imagecoll.Spatially_eq((*d2_it)->imagecoll)){
-                d1_it = d2_it;
-                ++d2_it;
-            }else{
-                FUNCINFO("Bits: this: " << (*d1_it)->bits << " and rhs: " << (*d2_it)->bits);
-                FUNCINFO("Grid scaling: this: " << (*d1_it)->grid_scale << " and rhs: " << (*d2_it)->grid_scale);
-                FUNCERR("This function cannot handle data sets with multiple, distinctly-shaped dose data");
-            }
-        }
-FUNCWARN("This routine will most likely NOT compute valid min/max from multiple dose data. Try collapsing them, if possible, first");
-*/
-        dose_data_to_use = Meld_Dose_Data(this->dose_data);
+    std::list<std::shared_ptr<Image_Array>> dose_data_to_use(d.image_data);
+    if((min_max_doses != nullptr) && (d.image_data.size() > 1)){ //Only dose data meld when needed. Moments, for instance, probably don't need to be melded!
+        dose_data_to_use = Meld_Image_Data(d.image_data);
         if(dose_data_to_use.size() != 1){
             FUNCERR("This routine cannot handle multiple dose data which cannot be melded. This has " << dose_data_to_use.size());
         }
@@ -1430,9 +1116,6 @@ FUNCWARN("This routine will most likely NOT compute valid min/max from multiple 
     //NOTE: Should I get rid of the idea of cycling through multiple dose data? The only way we get here is if the data
     // cannot be melded... This is probably not a worthwhile feature to keep in this code.
     for(auto & dd_it : dose_data_to_use){
-//    for(auto dd_it = this->dose_data.begin(); dd_it != this->dose_data.end(); ++dd_it){
-        //Note: dd_it is something like std::list<std::shared_ptr<Dose_Array>>::iterator.
-
         //Clear the accumulation map/initialize the elements.
         for(auto cc_it = this->contour_data->ccs.begin(); cc_it != this->contour_data->ccs.end(); ++cc_it){
             accumulated_dose[cc_it] = std::pair<int64_t,int64_t>(0,0);
@@ -1519,7 +1202,7 @@ FUNCWARN("This routine will most likely NOT compute valid min/max from multiple 
                             //NOTE: Remember: this is some integer representing dose. If we want a clamped [0:1] 
                             // value, we would use the clamped_channel(...) member instead!
                             const auto pointval = static_cast<int64_t>(i_it->value(i,j,0)); //Greyscale or R channel. We assume the channels satisfy: R = G = B.
-                            const auto pointdose = dd_it->grid_scale * static_cast<double>(pointval); 
+                            const auto pointdose = static_cast<double>(pointval); 
 
                             if(mean_doses != nullptr){
                                 accumulated_dose[cc_it].first  += pointval;
@@ -1569,7 +1252,7 @@ FUNCWARN("This routine will most likely NOT compute valid min/max from multiple 
                 if(it.second.second == 0) continue;
 
                 const auto cc_iter = it.first;
-                const auto ttldose = static_cast<double>(it.second.first)*dd_it->grid_scale;
+                const auto ttldose = static_cast<double>(it.second.first);
                 const auto numvxls = static_cast<double>(it.second.second);
 
                 if(ttldose < 0.0) FUNCERR("Total dose was negative (" << ttldose << "). This is not possible");
@@ -1711,7 +1394,6 @@ drover_bnded_dose_stat_moments_map_t Drover::Bounded_Dose_Normalized_Cent_Moment
 
 Drover Drover::Segment_Contours_Heuristically(std::function<bool(bnded_dose_pos_dose_tup_t)> Fselection) const {
     Drover out(*this);
-    if(!out.Meld(false)) FUNCERR("Unable to meld data");
  
     if(!Fselection) FUNCERR("Passed an unaccessible heuristic function. Unable to continue");
 
@@ -1797,11 +1479,6 @@ std::pair<double,double> Drover::Bounded_Dose_Limits(void) const {
 std::map<double,double>  Drover::Get_DVH(void) const {
     std::map<double,double> output;
 
-    if( this->Has_Been_Melded != true ){
-        FUNCWARN("Attempted to compute a DVH prior to melding data. Ensure Drover::Meld(); is called *prior* to computing anything using the data!");
-        return output;  //We need to meld first!
-    }
-
     std::list<double> pixel_doses = this->Bounded_Dose_Bulk_Values();
     if(pixel_doses.empty()){
         //FUNCERR("Unable to compute DVH: There was no data in the pixel_doses structure!");
@@ -1841,85 +1518,8 @@ Drover Drover::Duplicate(const Drover &in) const {
 }
 
 
-bool Drover::Is_Melded(void) const {
-    return this->Has_Been_Melded;
-}
-
-bool Drover::Meld(bool VERBOSITY){
-    //This function attempts to identify mismatched data. It looks for data which is not positioned
-    // in the same region, or data which does not 'smell' like it should fit together.
-    //
-    //Although UID's and patient numbers will handle the brunt of finding mismatched data from 
-    // separate patients, the intent of this function is to ensure that WE are able to correctly
-    // work with the data. In other words, if we have made a mistake parsing the data, this code
-    // tries to identify that fact. It might save us from producing non-sensical outputs.
-    //
-    //This function returns 'true' if no errors are suspected, 'false' if any are.
-    // A verbosity parameter is used to explicitly state if any (non-error) oddities are encountered.
-    this->Has_Been_Melded = true;
-
-
-    //------------------------------------ contour checks ----------------------------------------
-    if(!this->Has_Contour_Data()){
-        if(VERBOSITY) FUNCINFO("No contour data attached");
-    }else{
-
-        //If there are multiple sets, check them against each other.
-
-        // ...
-
-
-    }
-
-
-    //-------------------------------------- dose checks -----------------------------------------
-    if(!this->Has_Dose_Data()){
-        if(VERBOSITY) FUNCINFO("No dose data attached");
-    }else{
-
-        //If there are multiple sets, check them against each other.
-
-        // ...
-
-
-    //NOTE: Dose_Data_Meld now performs an explicit dose meld. It is in a separate file. It is not
-    // perfect or complete, so it should be finished and augmented with simple melding (here?)
-
-
-    }
-
-    //-------------------------------------- image checks ----------------------------------------
-    if(!this->Has_Image_Data()){
-        if(VERBOSITY) FUNCINFO("No image data attached");
-    }else{
-
-        //If there are multiple sets, check them against each other.
-
-        // ...
-
-
-    }
-
-
-    //-------------------------------------- other checks ----------------------------------------
-
-    // ...
-
-    return true;
-}
-
-
 bool Drover::Has_Contour_Data(void) const {
     return (this->contour_data != nullptr);
-}
-
-bool Drover::Has_Dose_Data(void) const {
-    //Does not verify the image data itself, it merely looks to see if we have any valid Dose_Arrays attached.
-    if(this->dose_data.size() == 0) return false;
-    for(const auto & dd_it : this->dose_data){
-        if(dd_it == nullptr ) return false;
-    }
-    return true;
 }
 
 bool Drover::Has_Image_Data(void) const {
@@ -1927,6 +1527,15 @@ bool Drover::Has_Image_Data(void) const {
     if(this->image_data.size() == 0) return false;
     for(const auto & id_it : this->image_data){
         if(id_it == nullptr ) return false; 
+    }
+    return true;
+}
+
+bool Drover::Has_Point_Data(void) const {
+    //Does not verify the point data itself, it merely looks to see if we have any valid Point_Clouds attached.
+    if(this->point_data.size() == 0) return false;
+    for(const auto & pd_it : this->point_data){
+        if(pd_it == nullptr) return false; 
     }
     return true;
 }
@@ -1947,20 +1556,20 @@ void Drover::Concatenate(std::shared_ptr<Contour_Data> in){
     return;
 }
 
-void Drover::Concatenate(std::list<std::shared_ptr<Dose_Array>> in){
-    this->dose_data.splice( this->dose_data.end(), in );
-    return;
-}
-
 void Drover::Concatenate(std::list<std::shared_ptr<Image_Array>> in){
     this->image_data.splice( this->image_data.end(), in );
     return;
 }
 
+void Drover::Concatenate(std::list<std::shared_ptr<Point_Cloud>> in){
+    this->point_data.splice( this->point_data.end(), in );
+    return;
+}
+
 void Drover::Concatenate(Drover in){
     this->Concatenate(in.contour_data);
-    this->Concatenate(in.dose_data);
     this->Concatenate(in.image_data);
+    this->Concatenate(in.point_data);
     return;
 }
 
@@ -1984,12 +1593,12 @@ void Drover::Consume(std::shared_ptr<Contour_Data> in){
     return;
 }
 
-void Drover::Consume(std::list<std::shared_ptr<Dose_Array>> in){
+void Drover::Consume(std::list<std::shared_ptr<Image_Array>> in){
     this->Concatenate(in);
     return;
 }
 
-void Drover::Consume(std::list<std::shared_ptr<Image_Array>> in){
+void Drover::Consume(std::list<std::shared_ptr<Point_Cloud>> in){
     this->Concatenate(in);
     return;
 }
@@ -2008,8 +1617,9 @@ void Drover::Plot_Dose_And_Contours(void) const {
     a_plot.Set_Global_Title("Dose and Contours.");//: Object with address " + Xtostring<long int>((size_t)((void *)(this))));
     vec3<double> r;
 
-    if(this->Has_Dose_Data()){
-        for(const auto & l_it : this->dose_data){  //std::list<std::shared_ptr<Dose_Array>>.
+    auto d = Isolate_Dose_Data(*this);
+    if(d.Has_Image_Data()){
+        for(const auto & l_it : d.image_data){  //std::list<std::shared_ptr<Image_Array>>.
             for(auto pi_it = l_it->imagecoll.images.begin(); pi_it != l_it->imagecoll.images.end(); ++pi_it){ //std::list<planar_image<T,R>> images.
                 //Plot the corners in a closed contour to show the outline.
                 r = pi_it->position(             0,                0);    a_plot.Insert(r.x,r.y,r.z);

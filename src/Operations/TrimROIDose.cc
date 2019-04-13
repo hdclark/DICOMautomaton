@@ -34,7 +34,6 @@ OperationDoc OpArgDocTrimROIDose(void){
       " dose outside of a ROI, can be accomplished using the expert interface."
     );
 
-    out.args.splice( out.args.end(), OpArgDocConvertDoseToImage().args );
     out.args.splice( out.args.end(), OpArgDocHighlightROIs().args );
     out.args.splice( out.args.end(), OpArgDocDICOMExportImagesAsDose().args );
 
@@ -42,8 +41,6 @@ OperationDoc OpArgDocTrimROIDose(void){
     // Adjust the defaults to suit this particular workflow.
     for(auto &oparg : out.args){
         if(false){
-        // ConvertDoseToImage options.
-        // ... currently no options...
 
         // HighlightROIs options.
         }else if(oparg.name == "Channel"){
@@ -93,9 +90,7 @@ TrimROIDose(Drover DICOM_data,
             std::map<std::string, std::string> InvocationMetadata,
             std::string FilenameLex){
 
-    DICOM_data.dose_data = Meld_Dose_Data(DICOM_data.dose_data);
-
-    DICOM_data = ConvertDoseToImage(std::move(DICOM_data), OptArgs, InvocationMetadata, FilenameLex);
+    DICOM_data = Meld_Only_Dose_Data(DICOM_data);
 
     DICOM_data = HighlightROIs(std::move(DICOM_data), OptArgs, InvocationMetadata, FilenameLex);
 

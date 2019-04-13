@@ -92,7 +92,7 @@ Drover GenerateVirtualDataPerfusionV1(Drover DICOM_data, OperationArgPkg , std::
         std::unique_ptr<Image_Array> out(new Image_Array());
         out->imagecoll.images.emplace_back();
 
-        out->filename = OriginFilename;
+        out->imagecoll.images.back().metadata["Filename"] = OriginFilename;
 
         out->imagecoll.images.back().metadata["PatientID"] = PatientID;
         out->imagecoll.images.back().metadata["StudyInstanceUID"] = StudyInstanceUID;
@@ -190,7 +190,6 @@ Drover GenerateVirtualDataPerfusionV1(Drover DICOM_data, OperationArgPkg , std::
 
 
     //Collate each group of images into a single set, if possible. Also stuff the correct contour data in the same set.
-    // Also load dose data into the fray.
     for(auto &loaded_img_set : loaded_imgs_storage){
         if(loaded_img_set.empty()) continue;
 

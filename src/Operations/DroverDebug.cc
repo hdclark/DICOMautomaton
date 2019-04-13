@@ -34,22 +34,6 @@ Drover DroverDebug(Drover DICOM_data,
                    std::map<std::string,std::string> /*InvocationMetadata*/, 
                    std::string /*FilenameLex*/ ){
 
-    //Dose data.
-    {
-        FUNCINFO("There are " <<
-                 DICOM_data.dose_data.size() <<
-                 " Dose_Arrays loaded");
-
-        size_t d_arr = 0;
-        for(auto &dap : DICOM_data.dose_data){
-            FUNCINFO("  Dose_Array " <<
-                     d_arr++ <<
-                     " has " <<
-                     dap->imagecoll.images.size() <<
-                     " image slices");
-        }
-    }
-
     //Image data.
     {
         FUNCINFO("There are " <<

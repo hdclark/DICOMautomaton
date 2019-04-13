@@ -209,23 +209,25 @@ Drover GridBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptArgs
 
     Explicator X(FilenameLex);
 
-    //Merge the dose arrays if necessary.
-    if(DICOM_data.dose_data.empty()){
-        throw std::invalid_argument("This routine requires at least one dose image array. Cannot continue");
+    //Merge the dose arrays if multiple are available.
+    DICOM_data = Meld_Only_Dose_Data(DICOM_data);
+
+    //Gather only dose images.
+    auto IAs_all = All_IAs( DICOM_data );
+    auto IAs = Whitelist( IAs_all, "Modality@RTDOSE" );
+    if(IAs.empty()){
+        throw std::invalid_argument("No dose arrays selected. Cannot continue.");
     }
-    DICOM_data.dose_data = Meld_Dose_Data(DICOM_data.dose_data);
-    if(DICOM_data.dose_data.size() != 1){
-        throw std::invalid_argument("Unable to meld doses into a single dose array. Cannot continue.");
+    if(IAs.size() != 1){
+        throw std::invalid_argument("Unable to meld images into a single image array. Cannot continue.");
+    }
+    auto img_arr_ptr = (*(IAs.front()));
+    if(img_arr_ptr == nullptr){
+        throw std::runtime_error("Encountered a nullptr when expecting a valid Image_Array ptr.");
+    }else if(img_arr_ptr->imagecoll.images.empty()){
+        throw std::runtime_error("Encountered a Image_Array with valid images -- no images found.");
     }
 
-    //Look for dose data.
-    //auto dose_arr_ptr = DICOM_data.image_data.front();
-    auto dose_arr_ptr = DICOM_data.dose_data.front();
-    if(dose_arr_ptr == nullptr){
-        throw std::runtime_error("Encountered a nullptr when expecting a valid Image_Array or Dose_Array ptr.");
-    }else if(dose_arr_ptr->imagecoll.images.empty()){
-        throw std::runtime_error("Encountered a Image_Array or Dose_Array with valid images -- no images found.");
-    }
 
     //Stuff references to all contours into a list. Remember that you can still address specific contours through
     // the original holding containers (which are not modified here).
@@ -493,7 +495,7 @@ Drover GridBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptArgs
                             accumulated_length += RaydL;
 
                             //Find the dose at the half-way point.
-                            auto encompass_imgs = dose_arr_ptr->imagecoll.get_images_which_encompass_point( midpoint );
+                            auto encompass_imgs = img_arr_ptr->imagecoll.get_images_which_encompass_point( midpoint );
                             for(const auto &enc_img : encompass_imgs){
                                 const auto pix_val = enc_img->value(midpoint, 0);
                                 accumulated_doselength += RaydL * pix_val;

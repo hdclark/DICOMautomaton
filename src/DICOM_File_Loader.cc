@@ -50,7 +50,7 @@ bool Load_From_DICOM_Files( Drover &DICOM_data,
 
     using loaded_imgs_storage_t = decltype(DICOM_data.image_data);
     std::list<loaded_imgs_storage_t> loaded_imgs_storage;
-    using loaded_dose_storage_t = decltype(DICOM_data.dose_data);
+    using loaded_dose_storage_t = decltype(DICOM_data.image_data);
     std::list<loaded_dose_storage_t> loaded_dose_storage;
     std::shared_ptr<Contour_Data> loaded_contour_data_storage = std::make_shared<Contour_Data>();
 
@@ -216,9 +216,9 @@ bool Load_From_DICOM_Files( Drover &DICOM_data,
         // special dose images. The more 'modern' way is to treat everything uniformly as images, but the old dose
         // computation methods require the distinction to be made. 
 
-        // Option A: stuff the dose data into the Drover's Dose_Array.
+        // Option A: stuff the dose data into the Drover's Image_Array.
         for(auto &lds : loaded_dose_set){
-            DICOM_data.dose_data.emplace_back( std::move(lds) );
+            DICOM_data.image_data.emplace_back( std::move(lds) );
         }
 
         // Option B: stuff the dose data into the Drover's Image_Array so it can be more easily used with image

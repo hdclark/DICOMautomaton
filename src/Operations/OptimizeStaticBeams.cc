@@ -102,11 +102,6 @@ OperationDoc OpArgDocOptimizeStaticBeams(void){
     );
 
     out.notes.emplace_back(
-        "This operation uses Image_Arrays, so convert from Dose_Arrays if necessary prior to calling"
-        " this routine. This may be fixed in a future release. Patches are welcome."
-    );
-
-    out.notes.emplace_back(
         "If no PTV ROI is available, the BODY contour may suffice. If this is not available, dose outside"
         " the body should somehow be set to zero to avoid confusing D_{max} metrics."
         " For example, bolus D_{max} can be high, but is ultimately irrelevant."
@@ -267,6 +262,7 @@ Drover OptimizeStaticBeams(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
     //       from every field. This might be overkill.
     auto IAs_all = All_IAs( DICOM_data );
     auto IAs = Whitelist( IAs_all, ImageSelectionStr );
+    IAs = Whitelist(IAs, "Modality", "RTDOSE");
     for(auto & iap_it : IAs){
         if((*iap_it)->imagecoll.images.empty()) throw std::invalid_argument("Unable to find an image to analyze.");
 

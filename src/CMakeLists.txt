@@ -392,6 +392,7 @@ add_executable(dicomautomaton_bsarchive_convert
     $<TARGET_OBJECTS:Structs_obj>
     $<TARGET_OBJECTS:Dose_Meld_obj>
     $<TARGET_OBJECTS:Common_Boost_Serialization_obj>
+    $<TARGET_OBJECTS:Regex_Selectors_obj>
 
     $<TARGET_OBJECTS:Boost_Serialization_File_Loader_obj>
 )
@@ -412,6 +413,7 @@ add_executable(pacs_ingress
     PACS_Ingress.cc
     $<TARGET_OBJECTS:Structs_obj>
     $<TARGET_OBJECTS:Dose_Meld_obj>
+    $<TARGET_OBJECTS:Regex_Selectors_obj>
 )
 target_link_libraries(pacs_ingress
     imebrashim
@@ -428,6 +430,7 @@ add_executable(pacs_duplicate_cleaner
     PACS_Duplicate_Cleaner.cc
     $<TARGET_OBJECTS:Structs_obj>
     $<TARGET_OBJECTS:Dose_Meld_obj>
+    $<TARGET_OBJECTS:Regex_Selectors_obj>
 )
 target_link_libraries(pacs_duplicate_cleaner
     imebrashim
@@ -444,6 +447,7 @@ add_executable(pacs_refresh
     PACS_Refresh.cc
     $<TARGET_OBJECTS:Structs_obj>
     $<TARGET_OBJECTS:Dose_Meld_obj>
+    $<TARGET_OBJECTS:Regex_Selectors_obj>
 )
 target_link_libraries(pacs_refresh
     imebrashim
@@ -455,51 +459,13 @@ target_link_libraries(pacs_refresh
     Threads::Threads
 )
 
-# Executable.    
-add_executable(overlaydosedata
-    Overlay_Dose_Data.cc
-    $<TARGET_OBJECTS:Structs_obj>
-    $<TARGET_OBJECTS:Dose_Meld_obj>
-)
-target_link_libraries(overlaydosedata
-    imebrashim
-    explicator 
-    ygor 
-    pqxx 
-    pq
-    X11
-    Xi
-    Xmu
-    glut
-    GL
-    GLU
-    m
-    Threads::Threads
-)
-target_include_directories (overlaydosedata SYSTEM PUBLIC /usr/X11R6/lib/ )
-
-
-# Executable.
-add_executable(automaton
-    Automaton.cc
-    $<TARGET_OBJECTS:Structs_obj>
-    $<TARGET_OBJECTS:Dose_Meld_obj>
-)
-target_link_libraries(automaton
-    imebrashim
-    explicator 
-    ygor 
-    pqxx 
-    pq
-    m
-    Threads::Threads
-)
 
 # Executable.
 add_executable(dicomautomaton_dump
     DICOMautomaton_Dump.cc
     $<TARGET_OBJECTS:Structs_obj>
     $<TARGET_OBJECTS:Dose_Meld_obj>
+    $<TARGET_OBJECTS:Regex_Selectors_obj>
 )
 target_link_libraries(dicomautomaton_dump
     imebrashim
@@ -515,8 +481,6 @@ install(TARGETS
     pacs_ingress
     pacs_duplicate_cleaner
     pacs_refresh
-    overlaydosedata
-    automaton
     dicomautomaton_dump
     imebrashim
     kineticmodel_1c2i_5param_linearinterp_levenbergmarquardt

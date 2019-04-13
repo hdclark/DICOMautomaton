@@ -11,9 +11,6 @@
 // the original data except in special circumstances (such as for the sole purpose of 
 // computing the min/max dose).
 //
-//NOTE: These routines *may* be placed into the Drover or Dose_Array classes down the road.
-// For now, I didn't want to have to wait for compiles to complete by placing them in those
-// files!
 
 #include <list>
 #include <memory>
@@ -23,23 +20,89 @@
 //#include <algorithm> //std::min_element/max_element.
 //#include <tuple>
 
-#include "Dose_Meld.h"
 #include "Structs.h"
+#include "Regex_Selectors.h"
+
+#include "Dose_Meld.h"
+
 #include "YgorImages.h"
 #include "YgorMisc.h"
 #include "YgorString.h"
 
+//Filter out all non-dose images, presenting a Drover with only dose image_data.
+Drover
+Isolate_Dose_Data(Drover d){
+
+    //Gather only dose images.
+    auto IAs_all = All_IAs( d );
+    auto IAs = Whitelist( IAs_all, "Modality@RTDOSE" );
+    if(IAs.empty()){
+        throw std::invalid_argument("No dose arrays selected. Cannot continue.");
+    }
+
+    //Move the dose images to a list.
+    std::list<std::shared_ptr<Image_Array>> dose_imgs;
+    for(auto & iap_it : IAs){
+        if(!((*iap_it)->imagecoll.images.empty())){
+            dose_imgs.push_back( *iap_it );
+        }
+    }
+
+    d.image_data.clear();
+    for(auto &ptr : dose_imgs){
+        d.image_data.emplace_back(ptr);
+    }
+
+    return d;
+}
+
+//This routine removes all dose images (i.e., modality = RTDOSE), melds them, and places only the melded result back.
+Drover Meld_Only_Dose_Data(Drover d){
+
+    //Gather only dose images.
+    auto IAs_all = All_IAs( d );
+    auto IAs = Whitelist( IAs_all, "Modality@RTDOSE" );
+    if(IAs.empty()){
+        throw std::invalid_argument("No dose arrays selected. Cannot continue.");
+    }
+
+    //Move the dose images to a list for melding.
+    std::list<std::shared_ptr<Image_Array>> dose_imgs;
+    for(auto & iap_it : IAs){
+        if(!((*iap_it)->imagecoll.images.empty())){
+            dose_imgs.push_back( *iap_it );
+            d.image_data.erase( iap_it );
+        }
+    }
+
+    //Merge the arrays as necessary.
+    if(dose_imgs.empty()){
+        throw std::invalid_argument("This routine requires at least one image array. Cannot continue");
+    }
+    dose_imgs = Meld_Image_Data(dose_imgs);
+
+    // Re-attach the melded images.
+    //if(dose_imgs.size() != 1){
+    //    throw std::invalid_argument("Unable to meld images into a single image array. Cannot continue.");
+    //}
+    for(auto &ptr : dose_imgs){
+        d.image_data.emplace_back(ptr);
+    }
+
+    return d;
+    
+}
+
 //This routine will attempt to meld all data into a single unit. It may not be possible, so multiple data *may* be returned. 
-std::list<std::shared_ptr<Dose_Array>>  Meld_Dose_Data(const std::list<std::shared_ptr<Dose_Array>> &dalist){
+std::list<std::shared_ptr<Image_Array>>  Meld_Image_Data(const std::list<std::shared_ptr<Image_Array>> &dalist){
     //Cycle through the data, checking if neighbouring collections have identical geometry. 
-    // If they do, it is fairly safe to combine them. All which is required is a simple 
-    // rescaling of the integer dose data and grid scaling.
+    // If they do, it is fairly safe to combine them. 
     //
     //We need to check if the dose volumes and voxels overlap exactly or not. If they do, we can compute the mean within each
     // separately and sum them afterward. If they don't, the situation becomes very tricky. It is possible to compute it, but
     // it is not done here (if they overlap with zero volume then it is again easy, but it doesn't fit this routine terribly well).
     //
-    std::list<std::shared_ptr<Dose_Array>> out(dalist);
+    std::list<std::shared_ptr<Image_Array>> out(dalist);
     out.remove_if([](auto dap){
         return (dap == nullptr);
     });
@@ -47,23 +110,23 @@ std::list<std::shared_ptr<Dose_Array>>  Meld_Dose_Data(const std::list<std::shar
     if(out.size() == 0) return out;
     if(out.size() == 1) return out;
 
-    auto d2_it = out.begin(); //Note: d*_it are ~ std::list<std::shared_ptr<Dose_Array>>::iterator
+    auto d2_it = out.begin(); //Note: d*_it are ~ std::list<std::shared_ptr<Image_Array>>::iterator
     auto d1_it = --(out.end());
     while((d1_it != out.end()) && (d2_it != out.end()) && (d1_it != d2_it)){
         //If the geometry is the same, we can easily meld the data. Do so and erase the superfluous data.
         if((*d1_it)->imagecoll.Spatially_eq((*d2_it)->imagecoll)){
-            FUNCINFO("Dose images are spatially equal. Performing the equivalent-geometry meld routine");
+            FUNCINFO("Image images are spatially equal. Performing the equivalent-geometry meld routine");
 
             //Put the melded data into the first position.
-            *d1_it = Meld_Equal_Geom_Dose_Data(*d1_it, *d2_it);
+            *d1_it = Meld_Equal_Geom_Image_Data(*d1_it, *d2_it);
             d2_it = out.erase(d2_it);
             continue;
 
         //If the geometry is not the same, we have to further investigate whether we can handle it or not. 
         }else{
-            FUNCINFO("Dose images are not spatially equal. Performing the nonequivalent-geometry meld routine");
+            FUNCINFO("Image images are not spatially equal. Performing the nonequivalent-geometry meld routine");
 
-            *d1_it = Meld_Unequal_Geom_Dose_Data(*d1_it, *d2_it);
+            *d1_it = Meld_Unequal_Geom_Image_Data(*d1_it, *d2_it);
             if(*d1_it != nullptr){
                 d2_it = out.erase(d2_it);
                 continue;
@@ -76,21 +139,9 @@ std::list<std::shared_ptr<Dose_Array>>  Meld_Dose_Data(const std::list<std::shar
     return out;
 }
 
-std::unique_ptr<Dose_Array> Meld_Equal_Geom_Dose_Data(std::shared_ptr<Dose_Array> A, std::shared_ptr<Dose_Array> B){
-    std::unique_ptr<Dose_Array> out(new Dose_Array());
+std::unique_ptr<Image_Array> Meld_Equal_Geom_Image_Data(std::shared_ptr<Image_Array> A, std::shared_ptr<Image_Array> B){
+    std::unique_ptr<Image_Array> out(new Image_Array());
     *out = *A; //Performs a deep copy.
-
-    //First we need to determine an appropriate grid scaling. A good approach would be to maximize
-    // precision loss by making grid_scaling as small as possible. Because there is a chance of 
-    // of overflow, we should check the max integer doses.
-    //
-    //A quicker way is to simply double the larger of the grid_scalings. This will ensure we do
-    // not overflow - but it (probably unnecessarily) kills our dose precision!
-    const double largest_grid_scale = (A->grid_scale > B->grid_scale) ? A->grid_scale : B->grid_scale;
-    const double new_grid_scale = (A->grid_scale == B->grid_scale) ? A->grid_scale : 2.0*largest_grid_scale;  
-
-    out->grid_scale = new_grid_scale;
-    out->filename   = "Equal-geom dose meld of: "_s + A->filename + " and "_s + B->filename;
 
     //Now cycle through the voxel data, adjusting the integer dose. We can run through all data 
     // in one pass (each) because the geometry is the same.
@@ -108,9 +159,9 @@ std::unique_ptr<Dose_Array> Meld_Equal_Geom_Dose_Data(std::shared_ptr<Dose_Array
             for(long int c = 0; c < columns; ++c){
                 for(long int l = 0; l < channels; ++l){
                     //Get the (floating-point) dose from each image.
-                    const double dose = static_cast<double>(i1_it->value(r,c,l))*A->grid_scale \
-                                      + static_cast<double>(i2_it->value(r,c,l))*B->grid_scale;
-                    const auto dose_int = static_cast<decltype(i0_it->value(r,c,l))>( dose/new_grid_scale );                  
+                    const double dose = static_cast<double>(i1_it->value(r,c,l)) 
+                                      + static_cast<double>(i2_it->value(r,c,l));
+                    const auto dose_int = static_cast<decltype(i0_it->value(r,c,l))>( dose );                  
 
                     //Set the new value of the channel.
                     i0_it->reference(r,c,l) = dose_int;
@@ -118,6 +169,11 @@ std::unique_ptr<Dose_Array> Meld_Equal_Geom_Dose_Data(std::shared_ptr<Dose_Array
             }
         }
     }
+
+    for(auto &img : out->imagecoll.images){
+        img.metadata["Description"] = "Equal-geometry dose melded.";
+    }
+
     return out;
 }
 
@@ -135,15 +191,15 @@ std::unique_ptr<Dose_Array> Meld_Equal_Geom_Dose_Data(std::shared_ptr<Dose_Array
 --(I) In function: Compare_Geom: offset   LHS: (-235.05, -493.05, -1049.62), RHS: (-235.05, -463.05, -1049.62).
 --(I) In function: Compare_Geom: row_unit LHS: (0, 1, 0), RHS: (0, 1, 0).
 --(I) In function: Compare_Geom: col_unit LHS: (1, 0, 0), RHS: (1, 0, 0).
---(I) In function: Bounded_Dose_General: Bits: this: 32 and rhs: 32.
---(I) In function: Bounded_Dose_General: Grid scaling: this: 5.34888e-06 and rhs: 1.04901e-05.
---(E) In function: Bounded_Dose_General: This function cannot handle data sets with multiple, distinctly-shaped dose data. Terminating program.
+--(I) In function: Bounded_Image_General: Bits: this: 32 and rhs: 32.
+--(I) In function: Bounded_Image_General: Grid scaling: this: 5.34888e-06 and rhs: 1.04901e-05.
+--(E) In function: Bounded_Image_General: This function cannot handle data sets with multiple, distinctly-shaped dose data. Terminating program.
 */
 
 //Returns a nullptr on failure to meld. This is a fairly risky operation, so be weary of the data coming
 // from this function.
-std::unique_ptr<Dose_Array> Meld_Unequal_Geom_Dose_Data(std::shared_ptr<Dose_Array> A, std::shared_ptr<Dose_Array> B){
-    std::unique_ptr<Dose_Array> out(new Dose_Array());
+std::unique_ptr<Image_Array> Meld_Unequal_Geom_Image_Data(std::shared_ptr<Image_Array> A, std::shared_ptr<Image_Array> B){
+    std::unique_ptr<Image_Array> out(new Image_Array());
 
     //Determine whether or not we can meld the data. Currently we can only handle the case where
     // a) all images in each set are same # of rows and columns as the others of the (same) set,
@@ -185,12 +241,6 @@ std::unique_ptr<Dose_Array> Meld_Unequal_Geom_Dose_Data(std::shared_ptr<Dose_Arr
 
     *out = *larger; //Make a deep copy of the data.
 
-    const double largest_grid_scale = (A->grid_scale > B->grid_scale) ? A->grid_scale : B->grid_scale;
-    const double new_grid_scale = (A->grid_scale == B->grid_scale) ? A->grid_scale : 2.0*largest_grid_scale;  
-
-    out->grid_scale = new_grid_scale;
-    out->filename   = "Unequal-geom dose meld of: "_s + A->filename + " and "_s + B->filename;
-
     //Now cycle through the voxel data, collecting the dose contributions from either A or B. 
     auto i0_it = out->imagecoll.images.begin();
     auto i1_it = A->imagecoll.images.begin();
@@ -216,12 +266,12 @@ std::unique_ptr<Dose_Array> Meld_Unequal_Geom_Dose_Data(std::shared_ptr<Dose_Arr
 
                     const auto indexA = i1_it->index(pos,l);
                     if(indexA != -1){
-                        dose_sum += i1_it->value(indexA) / new_grid_scale;
+                        dose_sum += i1_it->value(indexA);
                     }
 
                     const auto indexB = i2_it->index(pos,l);
                     if(indexB != -1){
-                        dose_sum += i2_it->value(indexB) / new_grid_scale;
+                        dose_sum += i2_it->value(indexB);
                     }
 
                     //Set the new value.
@@ -229,6 +279,10 @@ std::unique_ptr<Dose_Array> Meld_Unequal_Geom_Dose_Data(std::shared_ptr<Dose_Arr
                 }
             }
         }
+    }
+
+    for(auto &img : out->imagecoll.images){
+        img.metadata["Description"] = "Unequal-geometry dose melded.";
     }
 
     return out;

@@ -36,6 +36,16 @@ bool ComputeInterpolateImageSlices(planar_image_collection<float,double> &imagec
     // information -- the only thing that will be modified are the voxel values.
     //
 
+/*
+    // -----------------------------
+    // The type of interpolation method to use.
+    enum class
+    InterpolationMethod {
+        Linear,               // Linear interpolation without extrapolation at the extrema.
+        LinearExtrapolation,  // Linear interpolation with extrapolation at the extrema.
+    } interpolation_method = CInterpolationMethod::LinearExtrapolation;
+*/
+
     //We require a valid ComputeInterpolateImageSlicesUserData struct packed into the user_data.
     ComputeInterpolateImageSlicesUserData *user_data_s;
     try{

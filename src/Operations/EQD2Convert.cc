@@ -35,15 +35,6 @@ OperationDoc OpArgDocEQD2Convert(void){
     );
 
     out.args.emplace_back();
-    out.args.back().name = "DoseImageSelection";
-    out.args.back().desc = "Dose images to operate on. Either 'none', 'last', or 'all'.";
-    out.args.back().default_val = "last";
-    out.args.back().expected = true;
-    out.args.back().examples = { "none", "last", "all" };
-    out.args.back().visibility = OpArgVisibility::Hide;
-
-
-    out.args.emplace_back();
     out.args.back() = IAWhitelistOpArgDoc();
     out.args.back().name = "ImageSelection";
     out.args.back().default_val = "last";
@@ -144,7 +135,6 @@ Drover EQD2Convert(Drover DICOM_data,
     const auto NormalizedROILabelRegex = OptArgs.getValueStr("NormalizedROILabelRegex").value();
     const auto ROILabelRegex = OptArgs.getValueStr("ROILabelRegex").value();
 
-    const auto DoseImageSelectionStr = OptArgs.getValueStr("DoseImageSelection").value();
     const auto ImageSelectionStr = OptArgs.getValueStr("ImageSelection").value();
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -152,12 +142,6 @@ Drover EQD2Convert(Drover DICOM_data,
     const auto regex_none = std::regex("no?n?e?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
     const auto regex_last = std::regex("la?s?t?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
     const auto regex_all  = std::regex("al?l?$",   std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-
-    if( !std::regex_match(DoseImageSelectionStr, regex_none)
-    &&  !std::regex_match(DoseImageSelectionStr, regex_last)
-    &&  !std::regex_match(DoseImageSelectionStr, regex_all) ){
-        throw std::invalid_argument("Dose Image selection is not valid. Cannot continue.");
-    }
 
     if( ud.PrescriptionDose <= 0.0 ){
         throw std::invalid_argument("PrescriptionDose must be specified (>0.0)");
@@ -176,31 +160,15 @@ Drover EQD2Convert(Drover DICOM_data,
     }
 
 
-    //Image data.
     auto IAs_all = All_IAs( DICOM_data );
     auto IAs = Whitelist( IAs_all, ImageSelectionStr );
+    IAs = Whitelist(IAs, "Modality", "RTDOSE");
     for(auto & iap_it : IAs){
         if(!(*iap_it)->imagecoll.Process_Images_Parallel( GroupIndividualImages,
                                                           EQD2Conversion,
                                                           {}, cc_ROIs, &ud )){
             throw std::runtime_error("Unable to convert image_array voxels to EQD2 using the specified ROI(s).");
         }
-    }
-
-    //Dose data.
-    auto dap_it = DICOM_data.dose_data.begin();
-    if(false){
-    }else if(std::regex_match(DoseImageSelectionStr, regex_none)){ dap_it = DICOM_data.dose_data.end();
-    }else if(std::regex_match(DoseImageSelectionStr, regex_last)){
-        if(!DICOM_data.dose_data.empty()) dap_it = std::prev(DICOM_data.dose_data.end());
-    }
-    while(dap_it != DICOM_data.dose_data.end()){
-        if(!(*dap_it)->imagecoll.Process_Images_Parallel( GroupIndividualImages,
-                                                          EQD2Conversion,
-                                                          {}, cc_ROIs, &ud )){
-            throw std::runtime_error("Unable to convert dose_array voxels to EQD2 using the specified ROI(s).");
-        }
-        ++dap_it;
     }
 
     return DICOM_data;

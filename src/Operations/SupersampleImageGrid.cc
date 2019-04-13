@@ -46,13 +46,6 @@ OperationDoc OpArgDocSupersampleImageGrid(void){
     out.args.back().examples = { "1", "2", "3", "8" };
 
     out.args.emplace_back();
-    out.args.back().name = "DoseImageSelection";
-    out.args.back().desc = "Dose images to operate on. Either 'none', 'last', or 'all'.";
-    out.args.back().default_val = "none";
-    out.args.back().expected = true;
-    out.args.back().examples = { "none", "last", "all" };
-    
-    out.args.emplace_back();
     out.args.back() = IAWhitelistOpArgDoc();
     out.args.back().name = "ImageSelection";
     out.args.back().default_val = "last";
@@ -96,7 +89,6 @@ Drover SupersampleImageGrid(Drover DICOM_data, OperationArgPkg OptArgs, std::map
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto ColumnScaleFactor = std::stol(OptArgs.getValueStr("ColumnScaleFactor").value());
-    const auto DoseImageSelectionStr = OptArgs.getValueStr("DoseImageSelection").value();
     const auto ImageSelectionStr = OptArgs.getValueStr("ImageSelection").value();
     const auto RowScaleFactor = std::stol(OptArgs.getValueStr("RowScaleFactor").value());
     const auto SliceScaleFactor = std::stol(OptArgs.getValueStr("SliceScaleFactor").value());
@@ -111,19 +103,12 @@ Drover SupersampleImageGrid(Drover DICOM_data, OperationArgPkg OptArgs, std::map
     const auto inplane_bicub = Compile_Regex("inp?l?a?n?e?-?b?i?cubi?c?");
     const auto trilin = Compile_Regex("tr?i?l?i?n?e?a?r?");
 
-    if( !std::regex_match(DoseImageSelectionStr, regex_none)
-    &&  !std::regex_match(DoseImageSelectionStr, regex_last)
-    &&  !std::regex_match(DoseImageSelectionStr, regex_all) ){
-        throw std::invalid_argument("Dose Image selection is not valid. Cannot continue.");
-    }
-
     auto IAs_all = All_IAs( DICOM_data );
     auto IAs = Whitelist( IAs_all, ImageSelectionStr );
     
     if(false){
     }else if( std::regex_match(SamplingMethodStr, inplane_bilin)
           ||  std::regex_match(SamplingMethodStr, trilin) ){
-        //Image data.
         for(auto & iap_it : IAs){
             InImagePlaneBilinearSupersampleUserData bilin_ud;
             bilin_ud.RowScaleFactor = RowScaleFactor; 
@@ -135,27 +120,7 @@ Drover SupersampleImageGrid(Drover DICOM_data, OperationArgPkg OptArgs, std::map
             }
         }
 
-        //Dose data.
-        auto dap_it = DICOM_data.dose_data.begin();
-        if(false){
-        }else if(std::regex_match(DoseImageSelectionStr, regex_none)){ dap_it = DICOM_data.dose_data.end();
-        }else if(std::regex_match(DoseImageSelectionStr, regex_last)){
-            if(!DICOM_data.dose_data.empty()) dap_it = std::prev(DICOM_data.dose_data.end());
-        }
-        while(dap_it != DICOM_data.dose_data.end()){
-            InImagePlaneBilinearSupersampleUserData bilin_ud;
-            bilin_ud.RowScaleFactor = RowScaleFactor; 
-            bilin_ud.ColumnScaleFactor = ColumnScaleFactor; 
-            if(!(*dap_it)->imagecoll.Process_Images_Parallel( GroupIndividualImages,
-                                                              InImagePlaneBilinearSupersample,
-                                                              {}, {}, &bilin_ud )){
-                throw std::runtime_error("Unable to bilinearly supersample dose images. Cannot continue.");
-            }
-            ++dap_it;
-        }
-
     }else if(std::regex_match(SamplingMethodStr, inplane_bicub)){
-        //Image data.
         for(auto & iap_it : IAs){
             InImagePlaneBicubicSupersampleUserData bicub_ud;
             bicub_ud.RowScaleFactor = RowScaleFactor; 
@@ -165,25 +130,6 @@ Drover SupersampleImageGrid(Drover DICOM_data, OperationArgPkg OptArgs, std::map
                                                               {}, {}, &bicub_ud )){
                 throw std::runtime_error("Unable to bicubically supersample images. Cannot continue.");
             }
-        }
-
-        //Dose data.
-        auto dap_it = DICOM_data.dose_data.begin();
-        if(false){
-        }else if(std::regex_match(DoseImageSelectionStr, regex_none)){ dap_it = DICOM_data.dose_data.end();
-        }else if(std::regex_match(DoseImageSelectionStr, regex_last)){
-            if(!DICOM_data.dose_data.empty()) dap_it = std::prev(DICOM_data.dose_data.end());
-        }
-        while(dap_it != DICOM_data.dose_data.end()){
-            InImagePlaneBicubicSupersampleUserData bicub_ud;
-            bicub_ud.RowScaleFactor = RowScaleFactor; 
-            bicub_ud.ColumnScaleFactor = ColumnScaleFactor; 
-            if(!(*dap_it)->imagecoll.Process_Images_Parallel( GroupIndividualImages,
-                                                              InImagePlaneBicubicSupersample,
-                                                              {}, {}, &bicub_ud )){
-                throw std::runtime_error("Unable to bicubically supersample dose images. Cannot continue.");
-            }
-            ++dap_it;
         }
 
     }else{

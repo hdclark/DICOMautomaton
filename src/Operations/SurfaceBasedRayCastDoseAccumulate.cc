@@ -472,23 +472,25 @@ Drover SurfaceBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptA
     //Boolean options.
     const auto OnlyGenerateSurface = std::regex_match(OnlyGenerateSurfaceStr, TrueRegex);
 
-    //Merge the dose arrays if necessary.
-    if(DICOM_data.dose_data.empty()){
-        throw std::invalid_argument("This routine requires at least one dose image array. Cannot continue");
+    //Merge the dose arrays if multiple are available.
+    DICOM_data = Meld_Only_Dose_Data(DICOM_data);
+
+    //Gather only dose images.
+    auto IAs_all = All_IAs( DICOM_data );
+    auto IAs = Whitelist( IAs_all, "Modality@RTDOSE" );
+    if(IAs.empty()){
+        throw std::invalid_argument("No dose arrays selected. Cannot continue.");
     }
-    DICOM_data.dose_data = Meld_Dose_Data(DICOM_data.dose_data);
-    if(DICOM_data.dose_data.size() != 1){
-        throw std::invalid_argument("Unable to meld doses into a single dose array. Cannot continue.");
+    if(IAs.size() != 1){
+        throw std::invalid_argument("Unable to meld images into a single image array. Cannot continue.");
+    }
+    auto img_arr_ptr = (*(IAs.front()));
+    if(img_arr_ptr == nullptr){
+        throw std::runtime_error("Encountered a nullptr when expecting a valid Image_Array ptr.");
+    }else if(img_arr_ptr->imagecoll.images.empty()){
+        throw std::runtime_error("Encountered a Image_Array with valid images -- no images found.");
     }
 
-    //Look for dose data.
-    //auto dose_arr_ptr = DICOM_data.image_data.front();
-    auto dose_arr_ptr = DICOM_data.dose_data.front();
-    if(dose_arr_ptr == nullptr){
-        throw std::runtime_error("Encountered a nullptr when expecting a valid Image_Array or Dose_Array ptr.");
-    }else if(dose_arr_ptr->imagecoll.images.empty()){
-        throw std::runtime_error("Encountered a Image_Array or Dose_Array with valid images -- no images found.");
-    }
 
     //Stuff references to all contours into a list. Remember that you can still address specific contours through
     // the original holding containers (which are not modified here).
@@ -821,7 +823,7 @@ Drover SurfaceBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptA
                                     RadialDistImg->reference(row, col, accumulated_counts) = static_cast<float>( P_rad_dist );
 
                                     //Find the dose at the intersection point.
-                                    const auto interp_val = dose_arr_ptr->imagecoll.trilinearly_interpolate(P,0);
+                                    const auto interp_val = img_arr_ptr->imagecoll.trilinearly_interpolate(P,0);
 
                                     accumulated_totaldose += interp_val;
                                     ++accumulated_counts;

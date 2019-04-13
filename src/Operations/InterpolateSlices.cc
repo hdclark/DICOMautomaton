@@ -94,6 +94,8 @@ Drover InterpolateSlices(Drover DICOM_data,
     auto IAs_all = All_IAs( DICOM_data );
     auto IAs = Whitelist( IAs_all, ImageSelectionStr );
     for(auto & iap_it : IAs){
+        const auto common_metadata = (*iap_it)->imagecoll.get_common_metadata({});
+
         ComputeInterpolateImageSlicesUserData ud;
         ud.channel = Channel;
 
@@ -103,6 +105,10 @@ Drover InterpolateSlices(Drover DICOM_data,
         if(!edit_imagecoll.Compute_Images( ComputeInterpolateImageSlices, 
                                            IARL, {}, &ud )){
             throw std::runtime_error("Unable to interpolate image slices.");
+        }
+
+        for(auto &img : edit_imagecoll.images){
+            img.metadata = common_metadata;
         }
 
         DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>() );

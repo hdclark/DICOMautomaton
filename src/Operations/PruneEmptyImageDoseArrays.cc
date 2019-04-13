@@ -22,15 +22,6 @@ OperationDoc OpArgDocPruneEmptyImageDoseArrays(void){
 Drover PruneEmptyImageDoseArrays(Drover DICOM_data, OperationArgPkg, std::map<std::string,std::string> , std::string){
 
     FUNCINFO("Pre-prune: there are " << DICOM_data.image_data.size() << " image_arrays");
-/*
-    for(auto it = DICOM_data.image_data.begin(); it != DICOM_data.image_data.end();  ){
-        if((*it)->imagecoll.images.empty()){
-            it = DICOM_data.image_data.erase(it);
-        }else{
-            ++it;
-        }
-    }
-*/
 
     DICOM_data.image_data.erase(
         std::remove_if(DICOM_data.image_data.begin(), DICOM_data.image_data.end(), 
@@ -38,13 +29,6 @@ Drover PruneEmptyImageDoseArrays(Drover DICOM_data, OperationArgPkg, std::map<st
                 return img_arr_ptr->imagecoll.images.empty();
             }),
         DICOM_data.image_data.end());
-
-    DICOM_data.dose_data.erase(
-        std::remove_if(DICOM_data.dose_data.begin(), DICOM_data.dose_data.end(), 
-            [](auto dose_arr_ptr) -> bool {
-                return dose_arr_ptr->imagecoll.images.empty();
-            }),
-        DICOM_data.dose_data.end());
 
     FUNCINFO("Post-prune: " << DICOM_data.image_data.size() << " image_arrays remain");
 

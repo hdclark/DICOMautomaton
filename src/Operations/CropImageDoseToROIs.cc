@@ -25,7 +25,7 @@ OperationDoc OpArgDocCropImageDoseToROIs(void){
     out.name = "CropImageDoseToROIs";
 
     out.desc = 
-        " This operation crops image and/or dose array slices to the specified ROI(s), with an additional margin.";
+        " This operation crops image slices to the specified ROI(s), with an additional margin.";
 
     out.args.emplace_back();
     out.args.back().name = "DICOMMargin";
@@ -34,13 +34,6 @@ OperationDoc OpArgDocCropImageDoseToROIs(void){
     out.args.back().expected = true;
     out.args.back().examples = { "0.1", "2.0", "-0.5", "20.0" };
 
-    out.args.emplace_back();
-    out.args.back().name = "DoseImageSelection";
-    out.args.back().desc = "Dose images to operate on. Either 'none', 'last', or 'all'.";
-    out.args.back().default_val = "none";
-    out.args.back().expected = true;
-    out.args.back().examples = { "none", "last", "all" };
-    
     out.args.emplace_back();
     out.args.back() = IAWhitelistOpArgDoc();
     out.args.back().name = "ImageSelection";
@@ -81,7 +74,6 @@ Drover CropImageDoseToROIs(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto DICOMMargin = std::stod(OptArgs.getValueStr("DICOMMargin").value());
-    const auto DoseImageSelectionStr = OptArgs.getValueStr("DoseImageSelection").value();
     const auto ImageSelectionStr = OptArgs.getValueStr("ImageSelection").value();
     const auto ROILabelRegex = OptArgs.getValueStr("ROILabelRegex").value();
     const auto NormalizedROILabelRegex = OptArgs.getValueStr("NormalizedROILabelRegex").value();
@@ -91,21 +83,13 @@ Drover CropImageDoseToROIs(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
     const auto regex_last = std::regex("la?s?t?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
     const auto regex_all  = std::regex("al?l?$",   std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
 
-    if( !std::regex_match(DoseImageSelectionStr, regex_none)
-    &&  !std::regex_match(DoseImageSelectionStr, regex_last)
-    &&  !std::regex_match(DoseImageSelectionStr, regex_all) ){
-        throw std::invalid_argument("Dose Image selection is not valid. Cannot continue.");
-    }
-
-    //Stuff references to all contours into a list. Remember that you can still address specific contours through
+    // Stuff references to all contours into a list. Remember that you can still address specific contours through
     // the original holding containers (which are not modified here).
     auto cc_all = All_CCs( DICOM_data );
     auto cc_ROIs = Whitelist( cc_all, { { "ROIName", ROILabelRegex },
                                         { "NormalizedROIName", NormalizedROILabelRegex } } );
 
-    // --- Cycle over all images and dose arrays, performing the crop ---
-
-    //Image data.
+    // Cycle over all images arrays, performing the crop.
     auto IAs_all = All_IAs( DICOM_data );
     auto IAs = Whitelist( IAs_all, ImageSelectionStr );
     for(auto & iap_it : IAs){
@@ -118,26 +102,6 @@ Drover CropImageDoseToROIs(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
                                                  cc_ROIs, &ud )){
             throw std::runtime_error("Unable to perform crop.");
         }
-    }
-
-    //Dose data.
-    auto dap_it = DICOM_data.dose_data.begin();
-    if(false){
-    }else if(std::regex_match(DoseImageSelectionStr, regex_none)){ dap_it = DICOM_data.dose_data.end();
-    }else if(std::regex_match(DoseImageSelectionStr, regex_last)){
-        if(!DICOM_data.dose_data.empty()) dap_it = std::prev(DICOM_data.dose_data.end());
-    }
-    while(dap_it != DICOM_data.dose_data.end()){
-        CropToROIsUserData ud;
-        ud.row_margin = DICOMMargin;
-        ud.col_margin = DICOMMargin;
-        ud.ort_margin = DICOMMargin;
-
-        if(!(*dap_it)->imagecoll.Compute_Images( ComputeCropToROIs, { },
-                                                 cc_ROIs, &ud )){
-            throw std::runtime_error("Unable to perform crop.");
-        }
-        ++dap_it;
     }
 
     return DICOM_data;

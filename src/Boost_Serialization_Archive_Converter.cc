@@ -33,7 +33,7 @@ int main(int argc, char* argv[]){
     //Default output conversion type.
     std::string ConvertTo("gzip-txt");
 
-    //We cannot assume this is any specific object. It could be a Drover, a Dose_Array, a Contour_Data, etc..
+    //We cannot assume this is any specific object. It could be a Drover, a Contour_Data, etc..
     boost::filesystem::path FilenameIn;
 
     //The file extension is completely ignored at the moment.

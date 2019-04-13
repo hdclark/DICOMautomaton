@@ -300,6 +300,9 @@ std::map<std::string,std::string> get_metadata_top_level_tags(const std::string 
                                                               std::placeholders::_1,
                                                               tds, "");
     
+    //Misc.
+    out["Filename"] = filename;
+
     //SOP Common Module.
     insert_as_string_if_nonempty(0x0008, 0x0016, "SOPClassUID");
     insert_as_string_if_nonempty(0x0008, 0x0018, "SOPInstanceUID");
@@ -718,8 +721,6 @@ std::unique_ptr<Contour_Data> get_Contour_Data(const std::string &filename){
 std::unique_ptr<Image_Array> Load_Image_Array(const std::string &FilenameIn){
     std::unique_ptr<Image_Array> out(new Image_Array());
 
-    out->filename   = FilenameIn;
-
     using namespace puntoexe;
     ptr<puntoexe::stream> readStream(new puntoexe::stream);
     readStream->openFile(FilenameIn.c_str(), std::ios::in);
@@ -1050,7 +1051,6 @@ std::unique_ptr<Image_Array> Load_Image_Array(const std::string &FilenameIn){
             throw std::domain_error("The number of bits returned by Imebra is too large to fit in uint32_t"
                                     " You can increase this if needed, or try to scale down to 32 bits");
         }
-        out->bits = img_bits;
 
         //Write the data to our allocated memory. We do it pixel-by-pixel because the 'PixelRepresentation' could mean
         // the pixel locality is laid out in various ways (two ways?). This approach abstracts the issue away.
@@ -1112,10 +1112,10 @@ std::unique_ptr<Image_Array> Collate_Image_Arrays(std::list<std::shared_ptr<Imag
 
 //--------------------- Dose -----------------------
 //This routine reads a single DICOM dose file.
-std::unique_ptr<Dose_Array>  Load_Dose_Array(const std::string &FilenameIn){
+std::unique_ptr<Image_Array>  Load_Dose_Array(const std::string &FilenameIn){
     auto metadata = get_metadata_top_level_tags(FilenameIn);
 
-    std::unique_ptr<Dose_Array> out(new Dose_Array());
+    std::unique_ptr<Image_Array> out(new Image_Array());
 
     using namespace puntoexe;
     ptr<puntoexe::stream> readStream(new puntoexe::stream);
@@ -1270,17 +1270,12 @@ std::unique_ptr<Dose_Array>  Load_Dose_Array(const std::string &FilenameIn){
         } //Loop over rows.
     } //Loop over frames.
 
-    //Finally, pass the collection-specific items out.
-
-    out->bits       = image_bits;
-    out->grid_scale = 1.0; //grid_scale; <-- NOTE: pixels now hold dose directly and do not require scaling!
-    out->filename   = FilenameIn;
     return out;
 }
 
 //These 'shared' pointers will actually be unique. This routine just converts from unique to shared for you.
-std::list<std::shared_ptr<Dose_Array>>  Load_Dose_Arrays(const std::list<std::string> &filenames){
-    std::list<std::shared_ptr<Dose_Array>> out;
+std::list<std::shared_ptr<Image_Array>>  Load_Dose_Arrays(const std::list<std::string> &filenames){
+    std::list<std::shared_ptr<Image_Array>> out;
     for(const auto & filename : filenames){
         out.push_back(Load_Dose_Array(filename));
     }

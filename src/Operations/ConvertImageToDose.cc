@@ -15,19 +15,20 @@ OperationDoc OpArgDocConvertImageToDose(void){
     out.name = "ConvertImageToDose";
 
     out.desc = 
-        "This operation converts all loaded Image_Arrays to Dose_Arrays. Neither image contents nor metadata should change,"
-        " but the intent to treat as an image or dose matrix will of course change. A deep copy may be performed.";
+        "This operation converts all loaded image modalities into RTDOSE. Image contents will not change,"
+        " but the intent to treat as an image or dose matrix will of course change.";
 
     return out;
 }
 
 Drover ConvertImageToDose(Drover DICOM_data, OperationArgPkg, std::map<std::string,std::string>, std::string ){
 
-    for(const auto &ia : DICOM_data.image_data){
-        DICOM_data.dose_data.emplace_back();
-        DICOM_data.dose_data.back() = std::make_shared<Dose_Array>(*ia);
+    for(auto &ia_ptr : DICOM_data.image_data){
+        for(auto &img : ia_ptr->imagecoll.images){
+            if( (img.metadata.count("Modality") != 0)
+            &&  (img.metadata["Modality"] != "RTDOSE") ) img.metadata["Modality"] = "RTDOSE";
+        }
     }
-    DICOM_data.image_data.clear();
 
     return DICOM_data;
 }

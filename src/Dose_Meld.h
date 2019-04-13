@@ -8,14 +8,28 @@
 
 #include "Structs.h"
 
-class Dose_Array;
+class Image_Array;
+class Drover;
 
-std::list<std::shared_ptr<Dose_Array>>  Meld_Dose_Data(const std::list<std::shared_ptr<Dose_Array>> &dalist);
+//Filter out all non-dose images, presenting a Drover with only dose image_data.
+Drover
+Isolate_Dose_Data(Drover);
+
+//This routine removes all dose images (i.e., modality = RTDOSE), melds them, and places only the melded result back.
+Drover
+Meld_Only_Dose_Data(Drover);
+
+//Meld function for an arbitrary collection of user-provided images.
+std::list<std::shared_ptr<Image_Array>> 
+Meld_Image_Data(const std::list<std::shared_ptr<Image_Array>> &dalist);
 
 //Resamples dose data to ensure no overflow occurs. Is a lossy operation.
-std::unique_ptr<Dose_Array> Meld_Equal_Geom_Dose_Data(std::shared_ptr<Dose_Array> A, std::shared_ptr<Dose_Array> B);
+std::unique_ptr<Image_Array>
+Meld_Equal_Geom_Image_Data(std::shared_ptr<Image_Array> A, std::shared_ptr<Image_Array> B);
 
 //Resamples dose data AND the smaller of the dose data grids onto the larger. Is a lossy operation.
-std::unique_ptr<Dose_Array> Meld_Unequal_Geom_Dose_Data(std::shared_ptr<Dose_Array> A, std::shared_ptr<Dose_Array> B);
+std::unique_ptr<Image_Array>
+Meld_Unequal_Geom_Image_Data(std::shared_ptr<Image_Array> A, std::shared_ptr<Image_Array> B);
+
 #endif
 

@@ -58,10 +58,6 @@ OperationDoc OpArgDocPresentationImage(void){
       "By default this operation displays the last available image. This makes it easier to produce a sequence of"
       " images by inserting this operation into a sequence of operations."
     );
-    out.notes.emplace_back(
-      "Iff there are no images available, this operation will silently convert dose arrays to image arrays."
-      " If there are images to display, dose arrays must be explicitly converted to be visible."
-    );
 
     out.args.emplace_back();
     out.args.back().name = "ScaleFactor";
@@ -130,14 +126,6 @@ Drover PresentationImage( Drover DICOM_data,
         }else{
             ++it;
         }
-    }
-    if(DICOM_data.image_data.empty()){
-        FUNCWARN("No image arrays found. Attempting to convert dose arrays now");
-        for(const auto &da : DICOM_data.dose_data){
-            DICOM_data.image_data.emplace_back();
-            DICOM_data.image_data.back() = std::make_shared<Image_Array>(*da);
-        }
-        DICOM_data.dose_data.clear();
     }
     if(DICOM_data.image_data.empty()) throw std::invalid_argument("No image data available to view. Cannot continue");
 

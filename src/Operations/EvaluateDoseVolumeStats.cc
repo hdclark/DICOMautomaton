@@ -47,9 +47,6 @@ OperationDoc OpArgDocEvaluateDoseVolumeStats(void){
         R"***( V_{T} is the volume of the PTV, and)***"
         R"***( V_{pres} is volume of all (tissue) voxels receiving at least 95% of the PTV prescription dose.)***";
         
-    out.notes.emplace_back(
-        "This routine uses image_arrays so convert dose_arrays beforehand."
-    );
         
     out.notes.emplace_back(
         "This routine will combine spatially-overlapping images by summing voxel intensities. It will not"

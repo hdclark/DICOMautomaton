@@ -50,53 +50,7 @@ Drover DumpROIDoseInfo(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std:
 
     Explicator X(FilenameLex);
 
-    //Using the "old" method. Specific ROIs cannot be individually selected.
-    //
-    // NOTE: Ensure doses have been loaded into Dose_Arrays and not into Image_Arrays. Do this by altering the
-    //       loader. You should also be able to simply cast Image_Arrays to Dose_Arrays for purposes of this routine.
-    //
-
-    if(!DICOM_data.Meld(false)) throw std::runtime_error("Unable to meld dose, image, and contour data");
-    auto bdm = DICOM_data.Bounded_Dose_Means();
-
-    for(auto & apair : bdm){
-        auto cwm_it = apair.first;
-        auto mean_dose = apair.second;
-
-        auto raw_roi_name = cwm_it->Raw_ROI_name;
-        auto norm_roi_name = X(raw_roi_name);
-
-        std::cout << "Mean dose: " << mean_dose << " for raw-named ROI '" << raw_roi_name << "'" << std::endl;
-        std::cout << "Mean dose: " << mean_dose << " for normalize-named ROI '" << norm_roi_name << "'" << std::endl;
-    }
-
-
-    //Using the "new" method of YgorImaging functors.
-
-/*
-    //Stuff references to all contours into a list. Remember that you can still address specific contours through
-    // the original holding containers (which are not modified here).
-    std::list<std::reference_wrapper<contour_collection<double>>> cc_all;
-    for(auto & cc : DICOM_data.contour_data->ccs){
-        auto base_ptr = reinterpret_cast<contour_collection<double> *>(&cc);
-        cc_all.push_back( std::ref(*base_ptr) );
-    }
-
-    //Whitelist contours using the provided regex.
-    auto cc_ROIs = cc_all;
-    cc_ROIs.remove_if([=](std::reference_wrapper<contour_collection<double>> cc) -> bool {
-                   const auto ROINameOpt = cc.get().contours.front().GetMetadataValueAs<std::string>("ROIName");
-                   const auto ROIName = ROINameOpt.value();
-                   return !(std::regex_match(ROIName,theregex));
-    });
-
-
-    //Gather all contours for each volume of interest.
-    typedef std::tuple<std::string,std::string,std::string> key_t; //PatientID, ROIName, NormalizedROIName.
-    typedef std::list<std::reference_wrapper< contour_of_points<double>>> val_t; 
-*/
-
-
+    FUNCERR("This operation has been removed");
 
     return DICOM_data;
 }

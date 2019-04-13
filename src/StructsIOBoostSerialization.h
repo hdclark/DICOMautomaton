@@ -20,6 +20,8 @@
 #include <boost/serialization/shared_ptr.hpp>
 #include <boost/serialization/version.hpp>
 
+#include "Structs.h"
+
 #include "YgorMath.h"
 #include "YgorImages.h"
 
@@ -48,40 +50,66 @@ void serialize(Archive &a, Contour_Data &c, const unsigned int /*version*/){
     return;
 }
 
-//Class: Dose_Array.
-template<typename Archive>
-void serialize(Archive &a, Dose_Array &d, const unsigned int /*version*/){
-    a & boost::serialization::make_nvp("imagecoll",d.imagecoll)
-      & boost::serialization::make_nvp("filename",d.filename)
-      & boost::serialization::make_nvp("bits",d.bits)
-      & boost::serialization::make_nvp("grid_scale",d.grid_scale);
-    return;
-}
 
 //Class: Image_Array.
 template<typename Archive>
-void serialize(Archive &a, Image_Array &i, const unsigned int /*version*/){
-    a & boost::serialization::make_nvp("imagecoll",i.imagecoll)
-      & boost::serialization::make_nvp("filename",i.filename)
-      & boost::serialization::make_nvp("bits",i.bits);
+void serialize(Archive &a, Image_Array &i, const unsigned int version){
+    if(false){
+    }else if(version == 0){
+        std::string dummy_filename;
+        unsigned int dummy_bits;
+        a & boost::serialization::make_nvp("imagecoll",i.imagecoll)
+          & boost::serialization::make_nvp("filename",dummy_filename)
+          & boost::serialization::make_nvp("bits",dummy_bits);
+    }else if(version == 1){
+        a & boost::serialization::make_nvp("imagecoll",i.imagecoll);
+    }else{
+        FUNCWARN("Image_Array archives with version " << version << " are not recognized");
+    }
+    return;
+}
+
+//Class: Point_Cloud.
+template<typename Archive>
+void serialize(Archive &a, Point_Cloud &p, const unsigned int version){
+    if(false){
+    }else if(version == 0){
+        // Note: No dynamic point_cloud attributes are saved in version 0 due to use of std::any.
+        //       Until a suitable reflection mechanism is located, we are stuck ignoring members
+        //       that make use of std::any.
+        a & boost::serialization::make_nvp("points",p.points)
+          & boost::serialization::make_nvp("metadata",p.metadata);
+    }else{
+        FUNCWARN("Point_Cloud archives with version " << version << " are not recognized");
+    }
     return;
 }
 
 //Class: Drover.
 template<typename Archive>
-void serialize(Archive &a, Drover &d, const unsigned int /*version*/){
-    a & boost::serialization::make_nvp("has_been_melded",d.Has_Been_Melded)
-      & boost::serialization::make_nvp("contour_data",d.contour_data)
-      & boost::serialization::make_nvp("dose_data",d.dose_data)
-      & boost::serialization::make_nvp("image_data",d.image_data);
+void serialize(Archive &a, Drover &d, const unsigned int version){
+    if(false){
+    }else if(version == 0){
+        FUNCERR("Archives with version 0 are no longer supported. Cannot continue");
+    }else if(version == 1){
+        a & boost::serialization::make_nvp("contour_data",d.contour_data)
+          & boost::serialization::make_nvp("image_data",d.image_data)
+          & boost::serialization::make_nvp("point_data",d.point_data);
+    }else{
+        FUNCWARN("Drover archives with version " << version << " are not recognized");
+    }
     return;
 }
-
-
 
 } // namespace serialization
 } // namespace boost
 
 
-BOOST_CLASS_VERSION(Drover, 0); // Default version number.
+//BOOST_CLASS_VERSION(Image_Array, 0); // Initial version number.
+BOOST_CLASS_VERSION(Image_Array, 1); // After removing the disused 'bits' and 'filename' members.
+
+BOOST_CLASS_VERSION(Point_Cloud, 0); // Initial version number.
+
+//BOOST_CLASS_VERSION(Drover, 0); // Initial version number.
+BOOST_CLASS_VERSION(Drover, 1); // After removing Dose_Arrays and Drover::Has_Been_Melded.
 
