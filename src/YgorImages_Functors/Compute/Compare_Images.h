@@ -120,16 +120,6 @@ struct ComputeCompareImagesUserData {
 
 
     // -----------------------------
-    // Parameters for all comparisons involving discrepancy.
-    enum class
-    DiscrepancyType {
-        Difference,    // Absolute value of the difference between two voxels (i.e., subtraction; in voxel intensity units).
-        Relative,      // Relative discrepancy between two voxels; the difference divided by the largest value (in %).
-        PinnedToMax,   // Normalized relative discrepancy; the difference divided by the image's largest voxel value (in %).
-    } discrepancy_type = DiscrepancyType::Relative;
-
-
-    // -----------------------------
     // Parameters for Gamma comparisons.
 
     // Maximally acceptable distance-to-agreement (in DICOM units: mm).
