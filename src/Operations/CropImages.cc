@@ -95,8 +95,8 @@ Drover CropImages(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::stri
     const auto ImageSelectionStr = OptArgs.getValueStr("ImageSelection").value();
 
     //-----------------------------------------------------------------------------------------------------------------
-    const auto regex_is_pixel = std::regex("px$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto regex_is_percent = std::regex("[%]$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto regex_is_pixel = Compile_Regex("px$");
+    const auto regex_is_percent = Compile_Regex("[%]$");
 
     const auto RowsL = std::stod( RowsL_str );
     const auto RowsH = std::stod( RowsH_str );

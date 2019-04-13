@@ -190,11 +190,11 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
     const auto InteractivePlotsStr = OptArgs.getValueStr("InteractivePlots").value();
 
     //-----------------------------------------------------------------------------------------------------------------
-    const auto regex_true = std::regex("^tr?u?e?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto regex_true = Compile_Regex("^tr?u?e?$");
 
-    const auto regex_VMLC80  = std::regex("^va?r?i?a?n?m?i?l?l?e?n?n?i?u?m?m?l?c?80$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto regex_VMLC120 = std::regex("^va?r?i?a?n?mille?n?n?i?u?m?m?l?c?120$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto regex_VHD120  = std::regex("^va?r?i?a?n?hd120$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto regex_VMLC80  = Compile_Regex("^va?r?i?a?n?m?i?l?l?e?n?n?i?u?m?m?l?c?80$");
+    const auto regex_VMLC120 = Compile_Regex("^va?r?i?a?n?mille?n?n?i?u?m?m?l?c?120$");
+    const auto regex_VHD120  = Compile_Regex("^va?r?i?a?n?hd120$");
 
     const auto NormalizedMLCROILabel = X(MLCROILabel);
     const auto NormalizedJunctionROILabel = X(JunctionROILabel);
@@ -279,10 +279,10 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
         //Auto-detect the MLC model, if possible.
         const auto StationName = animg->GetMetadataValueAs<std::string>("StationName").value_or("Unknown");
         {
-            const auto regex_FVAREA2TB = std::regex(".*FVAREA2TB.*", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-            const auto regex_FVAREA4TB = std::regex(".*FVAREA4TB.*", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-            const auto regex_FVAREA5TB = std::regex(".*FVAREA5TB.*", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-            const auto regex_FVAREA6TB = std::regex(".*FVAREA6TB.*", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+            const auto regex_FVAREA2TB = Compile_Regex(".*FVAREA2TB.*");
+            const auto regex_FVAREA4TB = Compile_Regex(".*FVAREA4TB.*");
+            const auto regex_FVAREA5TB = Compile_Regex(".*FVAREA5TB.*");
+            const auto regex_FVAREA6TB = Compile_Regex(".*FVAREA6TB.*");
 
             if(false){
             }else if( std::regex_match(StationName, regex_FVAREA2TB)

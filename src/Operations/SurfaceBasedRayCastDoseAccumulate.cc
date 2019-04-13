@@ -460,11 +460,11 @@ Drover SurfaceBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptA
     const auto OnlyGenerateSurfaceStr = OptArgs.getValueStr("OnlyGenerateSurface").value();
 
     //-----------------------------------------------------------------------------------------------------------------
-    const auto roiregex = std::regex(ROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto roinormalizedregex = std::regex(NormalizedROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto refregex = std::regex(ReferenceROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto refnormalizedregex = std::regex(NormalizedReferenceROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto TrueRegex = std::regex("^tr?u?e?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto roiregex = Compile_Regex(ROILabelRegex);
+    const auto roinormalizedregex = Compile_Regex(NormalizedROILabelRegex);
+    const auto refregex = Compile_Regex(ReferenceROILabelRegex);
+    const auto refnormalizedregex = Compile_Regex(NormalizedReferenceROILabelRegex);
+    const auto TrueRegex = Compile_Regex("^tr?u?e?$");
 
     Explicator X(FilenameLex);
 

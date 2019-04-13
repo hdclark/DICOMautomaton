@@ -134,11 +134,11 @@ Drover ThresholdImages(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std:
     const auto High  = std::stod( HighStr );
     const auto Channel = std::stol( ChannelStr );
 
-    const auto regex_is_percent = std::regex(".*[%].*", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto regex_is_percent = Compile_Regex(".*[%].*");
     const auto Lower_is_Percent = std::regex_match(LowerStr, regex_is_percent);
     const auto Upper_is_Percent = std::regex_match(UpperStr, regex_is_percent);
 
-    const auto regex_is_tile = std::regex(".*p?e?r?c?e?n?tile.*", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto regex_is_tile = Compile_Regex(".*p?e?r?c?e?n?tile.*");
     const auto Lower_is_Ptile = std::regex_match(LowerStr, regex_is_tile);
     const auto Upper_is_Ptile = std::regex_match(UpperStr, regex_is_tile);
 

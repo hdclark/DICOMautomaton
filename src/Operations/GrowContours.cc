@@ -75,8 +75,8 @@ Drover GrowContours(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
 
     //-----------------------------------------------------------------------------------------------------------------
 
-    const auto theregex = std::regex(ROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto thenormalizedregex = std::regex(NormalizedROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto theregex = Compile_Regex(ROILabelRegex);
+    const auto thenormalizedregex = Compile_Regex(NormalizedROILabelRegex);
 
     for(auto &cc : DICOM_data.contour_data->ccs){
         for(auto &cop : cc.contours){

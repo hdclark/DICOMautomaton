@@ -153,11 +153,11 @@ Drover EvaluateDoseVolumeStats(Drover DICOM_data, OperationArgPkg OptArgs, std::
     const auto UserComment = OptArgs.getValueStr("UserComment");
 
     //-----------------------------------------------------------------------------------------------------------------
-    const auto theregex_PTV = std::regex(PTVROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto thenormalizedregex_PTV = std::regex(PTVNormalizedROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto theregex_PTV = Compile_Regex(PTVROILabelRegex);
+    const auto thenormalizedregex_PTV = Compile_Regex(PTVNormalizedROILabelRegex);
 
-    const auto theregex_Body = std::regex(BodyROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto thenormalizedregex_Body = std::regex(BodyNormalizedROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto theregex_Body = Compile_Regex(BodyROILabelRegex);
+    const auto thenormalizedregex_Body = Compile_Regex(BodyNormalizedROILabelRegex);
 
     Explicator X(FilenameLex);
 

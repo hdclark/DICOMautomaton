@@ -55,12 +55,12 @@ Drover Average(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,
     const auto ImageSelectionStr = OptArgs.getValueStr("ImageSelection").value();
     const auto AveragingMethodStr = OptArgs.getValueStr("AveragingMethod").value();
     //-----------------------------------------------------------------------------------------------------------------
-    const auto regex_none = std::regex("no?n?e?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto regex_last = std::regex("la?s?t?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto regex_all  = std::regex("al?l?$",   std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto regex_none = Compile_Regex("no?n?e?$");
+    const auto regex_last = Compile_Regex("la?s?t?$");
+    const auto regex_all  = Compile_Regex("al?l?$");
 
-    const auto overlap_spat = std::regex("overlapping-spatially", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto overlap_temp = std::regex("overlapping-temporally", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto overlap_spat = Compile_Regex("ov?e?r?l?a?p?p?i?n?g?-?sp?a?t?i?a?l?l?y?");
+    const auto overlap_temp = Compile_Regex("ov?e?r?l?a?p?p?i?n?g?-?te?m?p?o?r?a?l?l?y?");
 
 
     if(false){

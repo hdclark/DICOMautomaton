@@ -90,7 +90,7 @@ Drover SFML_Viewer( Drover DICOM_data,
     const auto SingleScreenshotFileName = OptArgs.getValueStr("SingleScreenshotFileName").value();
 
     //-----------------------------------------------------------------------------------------------------------------
-    const auto TrueRegex = std::regex("^tr?u?e?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto TrueRegex = Compile_Regex("^tr?u?e?$");
 
     const auto SingleScreenshot = std::regex_match(SingleScreenshotStr, TrueRegex);
     long int SingleScreenshotCounter = 3; // Used to count down frames before taking the snapshot.
@@ -868,11 +868,11 @@ Drover SFML_Viewer( Drover DICOM_data,
                                                                       pix_pos - ortho * disp_img_it->pxl_dz * 0.25 };
 
                     //Metadata quantities of interest.
-                    std::regex  k1A_regex(".*k1A.*",  std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-                    std::regex tauA_regex(".*tauA.*", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-                    std::regex  k1V_regex(".*k1V.*",  std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-                    std::regex tauV_regex(".*tauV.*", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-                    std::regex   k2_regex(".*k2.*",   std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+                    const auto  k1A_regex = Compile_Regex(".*k1A.*");
+                    const auto tauA_regex = Compile_Regex(".*tauA.*");
+                    const auto  k1V_regex = Compile_Regex(".*k1V.*");
+                    const auto tauV_regex = Compile_Regex(".*tauV.*");
+                    const auto   k2_regex = Compile_Regex(".*k2.*");
 
                     enum {
                         Have_No_Model,

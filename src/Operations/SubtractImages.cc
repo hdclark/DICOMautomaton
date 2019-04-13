@@ -49,10 +49,10 @@ Drover SubtractImages(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::
     const auto ImageSelectionStr = OptArgs.getValueStr("ImageSelection").value();
 
     //-----------------------------------------------------------------------------------------------------------------
-    const auto regex_none  = std::regex("^no?n?e?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto regex_first = std::regex("^fi?r?s?t?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto regex_last  = std::regex("^la?s?t?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto regex_all   = std::regex("^al?l?$",   std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto regex_none  = Compile_Regex("^no?n?e?$");
+    const auto regex_first = Compile_Regex("^fi?r?s?t?$");
+    const auto regex_last  = Compile_Regex("^la?s?t?$");
+    const auto regex_all   = Compile_Regex("^al?l?$");
 
     if( !std::regex_match(ImageSelectionStr, regex_none)
     &&  !std::regex_match(ImageSelectionStr, regex_first)

@@ -85,7 +85,7 @@ DumpPerROIParams_KineticModel_1Compartment2Input_5Param(Drover DICOM_data,
     const auto Separator = OptArgs.getValueStr("Separator").value();
 
     //-----------------------------------------------------------------------------------------------------------------
-    const auto theregex = std::regex(ROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto theregex = Compile_Regex(ROILabelRegex);
 
 
     //To keep the results sorted per-ROI (but in the same file) we have to defer output until all data is gathered.
@@ -121,11 +121,11 @@ DumpPerROIParams_KineticModel_1Compartment2Input_5Param(Drover DICOM_data,
 
 
     //Figure out which image collection corresponds to each of the needed images or parameter maps.
-    std::regex  k1A_regex(".*k1A.*",  std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    std::regex tauA_regex(".*tauA.*", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    std::regex  k1V_regex(".*k1V.*",  std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    std::regex tauV_regex(".*tauV.*", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    std::regex   k2_regex(".*k2.*",   std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto  k1A_regex = Compile_Regex(".*k1A.*");
+    const auto tauA_regex = Compile_Regex(".*tauA.*");
+    const auto  k1V_regex = Compile_Regex(".*k1V.*");
+    const auto tauV_regex = Compile_Regex(".*tauV.*");
+    const auto   k2_regex = Compile_Regex(".*k2.*");
 
     planar_image_collection<float,double> *imgcoll_k1A   = nullptr;
     planar_image_collection<float,double> *imgcoll_tauA  = nullptr;

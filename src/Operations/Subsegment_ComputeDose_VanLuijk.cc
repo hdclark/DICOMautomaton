@@ -250,14 +250,14 @@ Drover Subsegment_ComputeDose_VanLuijk(Drover DICOM_data, OperationArgPkg OptArg
     const auto MaxBisects = std::stol( OptArgs.getValueStr("MaxBisects").value() );
 
     //-----------------------------------------------------------------------------------------------------------------
-    const auto theregex = std::regex(ROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto TrueRegex = std::regex("^tr?u?e?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto thenormalizedregex = std::regex(NormalizedROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto SubsegMethodCompound = std::regex("Compound", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto SubsegMethodNested = std::regex("Nested", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto theregex = Compile_Regex(ROILabelRegex);
+    const auto TrueRegex = Compile_Regex("^tr?u?e?$");
+    const auto thenormalizedregex = Compile_Regex(NormalizedROILabelRegex);
+    const auto SubsegMethodCompound = Compile_Regex("Compound");
+    const auto SubsegMethodNested = Compile_Regex("Nested");
 
-    const auto OrientAxisAligned = std::regex("AxisAligned", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto OrientStaticObl = std::regex("StaticOblique", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto OrientAxisAligned = Compile_Regex("AxisAligned");
+    const auto OrientStaticObl = Compile_Regex("StaticOblique");
 
     const auto ReplaceAllWithSubsegment = std::regex_match(ReplaceAllWithSubsegmentStr, TrueRegex);
 

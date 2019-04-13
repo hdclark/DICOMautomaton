@@ -163,7 +163,7 @@ Drover AnalyzeLightRadFieldCoincidence(Drover DICOM_data, OperationArgPkg OptArg
     const auto InteractivePlotsStr = OptArgs.getValueStr("InteractivePlots").value();
 
     //-----------------------------------------------------------------------------------------------------------------
-    const auto regex_true = std::regex("^tr?u?e?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto regex_true = Compile_Regex("^tr?u?e?$");
 
     const auto InteractivePlots = std::regex_match(InteractivePlotsStr, regex_true);
 

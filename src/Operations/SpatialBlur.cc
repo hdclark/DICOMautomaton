@@ -74,11 +74,11 @@ Drover SpatialBlur(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::str
     const auto GaussianOpenSigma = std::stod( OptArgs.getValueStr("GaussianOpenSigma").value() );
 
     //-----------------------------------------------------------------------------------------------------------------
-    const auto regex_box3x3 = std::regex("^bo?x?_?3x?3?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto regex_box5x5 = std::regex("^bo?x?_?5x?5?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto regex_gau3x3 = std::regex("^ga?u?s?s?i?a?n?_?3x?3?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto regex_gau5x5 = std::regex("^ga?u?s?s?i?a?n?_?5x?5?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto regex_gauopn = std::regex("^ga?u?s?s?i?a?n?_?op?e?n?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto regex_box3x3 = Compile_Regex("^bo?x?_?3x?3?$");
+    const auto regex_box5x5 = Compile_Regex("^bo?x?_?5x?5?$");
+    const auto regex_gau3x3 = Compile_Regex("^ga?u?s?s?i?a?n?_?3x?3?$");
+    const auto regex_gau5x5 = Compile_Regex("^ga?u?s?s?i?a?n?_?5x?5?$");
+    const auto regex_gauopn = Compile_Regex("^ga?u?s?s?i?a?n?_?op?e?n?$");
 
 
     auto IAs_all = All_IAs( DICOM_data );

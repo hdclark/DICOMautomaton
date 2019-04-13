@@ -202,10 +202,10 @@ Drover GridBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptArgs
     auto NumberOfImages = std::stol(OptArgs.getValueStr("NumberOfImages").value());
 
     //-----------------------------------------------------------------------------------------------------------------
-    const auto roiregex = std::regex(ROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto roinormalizedregex = std::regex(NormalizedROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto refregex = std::regex(ReferenceROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto refnormalizedregex = std::regex(NormalizedReferenceROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto roiregex = Compile_Regex(ROILabelRegex);
+    const auto roinormalizedregex = Compile_Regex(NormalizedROILabelRegex);
+    const auto refregex = Compile_Regex(ReferenceROILabelRegex);
+    const auto refnormalizedregex = Compile_Regex(NormalizedReferenceROILabelRegex);
 
     Explicator X(FilenameLex);
 

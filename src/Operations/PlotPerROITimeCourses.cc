@@ -56,7 +56,7 @@ Drover PlotPerROITimeCourses(Drover DICOM_data, OperationArgPkg OptArgs, std::ma
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto ROILabelRegex = OptArgs.getValueStr("ROILabelRegex").value();
     //-----------------------------------------------------------------------------------------------------------------
-    const auto theregex = std::regex(ROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto theregex = Compile_Regex(ROILabelRegex);
 
     auto img_arr = DICOM_data.image_data.back();
 

@@ -131,11 +131,11 @@ Drover ContourBooleanOperations(Drover DICOM_data, OperationArgPkg OptArgs, std:
     const auto OutputROILabel = OptArgs.getValueStr("OutputROILabel").value();
 
     //-----------------------------------------------------------------------------------------------------------------
-    const auto roiregexA = std::regex(ROILabelRegexA, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto roiregexB = std::regex(ROILabelRegexB, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto roiregexA = Compile_Regex(ROILabelRegexA);
+    const auto roiregexB = Compile_Regex(ROILabelRegexB);
 
-    const auto roinormalizedregexA = std::regex(NormalizedROILabelRegexA, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto roinormalizedregexB = std::regex(NormalizedROILabelRegexB, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto roinormalizedregexA = Compile_Regex(NormalizedROILabelRegexA);
+    const auto roinormalizedregexB = Compile_Regex(NormalizedROILabelRegexB);
 
     const auto regex_join = Compile_Regex("^jo?i?n?$");
     const auto regex_intersection = Compile_Regex("^inte?r?s?e?c?t?i?o?n?$");

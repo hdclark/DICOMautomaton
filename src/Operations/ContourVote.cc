@@ -159,9 +159,9 @@ Drover ContourVote(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::str
     const auto CentroidZ = std::stod( OptArgs.getValueStr("CentroidZ").value() );
 
     //-----------------------------------------------------------------------------------------------------------------
-    const auto roiregex = std::regex(ROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto roiregex = Compile_Regex(ROILabelRegex);
 
-    const auto roinormalizedregex = std::regex(NormalizedROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto roinormalizedregex = Compile_Regex(NormalizedROILabelRegex);
 
     if(!std::isfinite(WinnerCount) || (WinnerCount < 0)){
         throw std::invalid_argument("The number of winners to retain has to be [0,inf).");

@@ -139,9 +139,9 @@ Drover EQD2Convert(Drover DICOM_data,
 
     //-----------------------------------------------------------------------------------------------------------------
 
-    const auto regex_none = std::regex("no?n?e?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto regex_last = std::regex("la?s?t?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto regex_all  = std::regex("al?l?$",   std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto regex_none = Compile_Regex("no?n?e?$");
+    const auto regex_last = Compile_Regex("la?s?t?$");
+    const auto regex_all  = Compile_Regex("al?l?$");
 
     if( ud.PrescriptionDose <= 0.0 ){
         throw std::invalid_argument("PrescriptionDose must be specified (>0.0)");

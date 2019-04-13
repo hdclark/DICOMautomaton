@@ -68,9 +68,9 @@ DICOMExportImagesAsDose(Drover DICOM_data,
     const auto ParanoiaStr = OptArgs.getValueStr("ParanoiaLevel").value();
 
     //-----------------------------------------------------------------------------------------------------------------
-    const auto LowRegex  = std::regex("^lo?w?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto MedRegex  = std::regex("^me?d?i?u?m?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto HighRegex = std::regex("^hi?g?h?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto LowRegex  = Compile_Regex("^lo?w?$");
+    const auto MedRegex  = Compile_Regex("^me?d?i?u?m?$");
+    const auto HighRegex = Compile_Regex("^hi?g?h?$");
 
     ParanoiaLevel p;
     if(false){

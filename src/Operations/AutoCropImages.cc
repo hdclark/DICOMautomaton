@@ -69,10 +69,12 @@ Drover AutoCropImages(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::
     const auto RTIMAGE_str = OptArgs.getValueStr("RTIMAGE").value();
 
     //-----------------------------------------------------------------------------------------------------------------
-    const auto regex_true = std::regex("^tr?u?e?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto regex_true = Compile_Regex("^tr?u?e?$");
 
     const auto RTIMAGE = std::regex_match(RTIMAGE_str, regex_true);
 
+    const auto regex_x = Compile_Regex(".*x.*");
+    const auto regex_y = Compile_Regex(".*y.*");
 
     auto IAs_all = All_IAs( DICOM_data );
     auto IAs = Whitelist( IAs_all, ImageSelectionStr );
@@ -126,8 +128,6 @@ Drover AutoCropImages(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::
                 //Figure out which jaw corresponds to which set of coordinates.
                 decltype(LeafJawPositions0) x_jaws;
                 decltype(LeafJawPositions1) y_jaws;
-                const auto regex_x = std::regex(".*x.*", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-                const auto regex_y = std::regex(".*y.*", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
 
                 if(false){
                 }else if( std::regex_match(RTBeamLimitingDeviceType0.value(), regex_x)

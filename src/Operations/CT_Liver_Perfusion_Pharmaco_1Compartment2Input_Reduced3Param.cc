@@ -277,13 +277,13 @@ Drover CT_Liver_Perfusion_Pharmaco_1C2I_Reduced3Param(Drover DICOM_data, Operati
 
     const auto VIFROIName = OptArgs.getValueStr("VIFROINameRegex").value();
     //-----------------------------------------------------------------------------------------------------------------
-    const auto AIFROINameRegex = std::regex(AIFROIName, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto VIFROINameRegex = std::regex(VIFROIName, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto TargetROINameRegex = std::regex(TargetROIName, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto TrueRegex = std::regex("^tr?u?e?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto IsPositiveInteger = std::regex("^[0-9]*$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto IsPositiveFloat = std::regex("^[0-9.]*$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto IsRelativePosFloat = std::regex("^[*][0-9.]*$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto AIFROINameRegex = Compile_Regex(AIFROIName);
+    const auto VIFROINameRegex = Compile_Regex(VIFROIName);
+    const auto TargetROINameRegex = Compile_Regex(TargetROIName);
+    const auto TrueRegex = Compile_Regex("^tr?u?e?$");
+    const auto IsPositiveInteger = Compile_Regex("^[0-9]*$");
+    const auto IsPositiveFloat = Compile_Regex("^[0-9.]*$");
+    const auto IsRelativePosFloat = Compile_Regex("^[*][0-9.]*$");
 
 
     //Figure out how many coefficients to use.
@@ -333,8 +333,8 @@ Drover CT_Liver_Perfusion_Pharmaco_1C2I_Reduced3Param(Drover DICOM_data, Operati
 
     //Tokenize the plotting criteria.
     std::list<KineticModel_PixelSelectionCriteria> pixels_to_plot;
-    const auto RowRegex = std::regex("row", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto ColRegex = std::regex("column", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto RowRegex = Compile_Regex("row");
+    const auto ColRegex = Compile_Regex("column");
     for(auto a : SplitStringToVector(PlotPixelModel, '#', 'd')){
         pixels_to_plot.emplace_back();
         pixels_to_plot.back().row = -1;
@@ -349,7 +349,8 @@ Drover CT_Liver_Perfusion_Pharmaco_1C2I_Reduced3Param(Drover DICOM_data, Operati
                 pixels_to_plot.back().column = std::stol(c.back());
             }else{
                 pixels_to_plot.back().metadata_criteria.insert( { c.front(), 
-                    std::regex(c.back(), std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended) } );
+                    Compile_Regex(c.back())
+                } );
             }
         }
     }

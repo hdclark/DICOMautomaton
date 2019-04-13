@@ -46,7 +46,7 @@ Drover DumpROIDoseInfo(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std:
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto ROILabelRegex = OptArgs.getValueStr("ROILabelRegex").value();
     //-----------------------------------------------------------------------------------------------------------------
-    const auto theregex = std::regex(ROILabelRegex, std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto theregex = Compile_Regex(ROILabelRegex);
 
     Explicator X(FilenameLex);
 

@@ -176,8 +176,8 @@ Drover DecayDoseOverTimeJones2014(Drover DICOM_data, OperationArgPkg OptArgs, st
     const auto UseMoreConservativeRecovery_str = OptArgs.getValueStr("UseMoreConservativeRecovery").value();
 
     //-----------------------------------------------------------------------------------------------------------------
-    const auto TrueRegex = std::regex("^tr?u?e?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    const auto IsPositiveFloat = std::regex("^[0-9.]*$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    const auto TrueRegex = Compile_Regex("^tr?u?e?$");
+    const auto IsPositiveFloat = Compile_Regex("^[0-9.]*$");
 
 
 

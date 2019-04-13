@@ -57,6 +57,7 @@
 #include "FITS_File_Loader.h"
 #include "Operation_Dispatcher.h"
 #include "Structs.h"
+#include "Regex_Selectors.h"
 #include "YgorFilesDirs.h"    //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
@@ -111,7 +112,7 @@ std::string CamelToHuman(std::string in){
 
     // We have to preserve case sensitivity for filename-related parameters because they are mapped by name.
     // TODO: support case insensitivity for filename parameters?
-    std::regex FName = std::regex("FileName", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    std::regex FName = Compile_Regex("FileName");
     in = std::regex_replace(in, FName, "OutputFile");
 /*    
     std::regex fname = std::regex("filename", std::regex::nosubs | std::regex::optimize | std::regex::extended);
@@ -179,11 +180,11 @@ class BaseWebServerApplication : public Wt::WApplication {
     
 
     //Regex for operation parameters.
-    std::regex trueregex    = std::regex("^tr?u?e?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    std::regex falseregex   = std::regex("^fa?l?s?e?$", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    std::regex fnameregex   = std::regex(".*filename.*", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    std::regex roiregex     = std::regex(".*roi.*label.*regex.*", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    std::regex normroiregex = std::regex(".*normalized.*roi.*label.*regex.*", std::regex::icase | std::regex::nosubs | std::regex::optimize | std::regex::extended);
+    std::regex trueregex    = Compile_Regex("^tr?u?e?$");
+    std::regex falseregex   = Compile_Regex("^fa?l?s?e?$");
+    std::regex fnameregex   = Compile_Regex(".*filename.*");
+    std::regex roiregex     = Compile_Regex(".*roi.*label.*regex.*");
+    std::regex normroiregex = Compile_Regex(".*normalized.*roi.*label.*regex.*");
     
     // --------------------- Web widget shared functors ---------------------
 
