@@ -4,9 +4,11 @@ services:
   - docker
 
 before_install:
-  - sudo docker build -t dcma:latest -f docker/Dockerfile .
+  - df -h .
+  - free -h
+  - time sudo docker build -t dcma:latest -f docker/Dockerfile .
   - sudo docker ps -a
 
 script:
-  - sudo docker run -it --rm -w /start/ dcma:latest dicomautomaton_dispatcher -h
+  - time sudo docker run -it --rm -w /start/ dcma:latest dicomautomaton_dispatcher -h
 
