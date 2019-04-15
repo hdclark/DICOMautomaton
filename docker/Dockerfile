@@ -1,5 +1,5 @@
 
-FROM base/archlinux
+FROM archlinux/base
 
 LABEL maintainer="http://www.halclark.ca" \
       description="DICOMautomaton Web Server."
