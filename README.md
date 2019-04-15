@@ -2,8 +2,9 @@
 ![DICOMautomaton logo](artifacts/DCMA_cycle_opti.svg)
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
-[![](https://tokei.rs/b1/gitlab/hdeanclark/DICOMautomaton)](https://gitlab.com/hdeanclark/DICOMautomaton)
-![](https://img.shields.io/github/languages/top/hdclark/DICOMautomaton.svg)
+[![LOC](https://tokei.rs/b1/gitlab/hdeanclark/DICOMautomaton)](https://gitlab.com/hdeanclark/DICOMautomaton)
+![Language](https://img.shields.io/github/languages/top/hdclark/DICOMautomaton.svg)
+[![HitCount](http://hits.dwyl.io/hdclark/DICOMautomaton.svg)](http://hits.dwyl.io/hdclark/DICOMautomaton)
 
 # About
 
