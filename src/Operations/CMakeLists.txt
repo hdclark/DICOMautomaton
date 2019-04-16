@@ -10,35 +10,38 @@ add_library(Operations_objs OBJECT
     BCCAExtractRadiomicFeatures.cc
     BoostSerializeDrover.cc
     BuildLexiconInteractively.cc
-    ClusterDBSCAN.cc
-    ConvertImageToDose.cc
-    ConvertDoseToImage.cc
-    CopyImages.cc
-    CropImageDoseToROIs.cc
-    CropImages.cc
-    CropROIDose.cc
     CT_Liver_Perfusion.cc
     CT_Liver_Perfusion_First_Run.cc
     CT_Liver_Perfusion_Ortho_Views.cc
     CT_Liver_Perfusion_Pharmaco_1Compartment2Input_5Param.cc
     CT_Liver_Perfusion_Pharmaco_1Compartment2Input_Reduced3Param.cc
+    ClusterDBSCAN.cc
     ComparePixels.cc
     ContourBasedRayCastDoseAccumulate.cc
     ContourBooleanOperations.cc
     ContourSimilarity.cc
-    ContouringAides.cc
     ContourViaThreshold.cc
     ContourVote.cc
     ContourWholeImages.cc
+    ContouringAides.cc
+    ConvertDoseToImage.cc
+    ConvertImageToDose.cc
     ConvertNaNsToAir.cc
     ConvertNaNsToZeros.cc
-    DCEMRI_Nonparametric_CE.cc
+    ConvertPixelsToPoints.cc
+    CopyImages.cc
+    CropImageDoseToROIs.cc
+    CropImages.cc
+    CropROIDose.cc
     DCEMRI_IAUC.cc
+    DCEMRI_Nonparametric_CE.cc
+    DICOMExportImagesAsDose.cc
+    DecayDoseOverTimeHalve.cc
+    DecayDoseOverTimeJones2014.cc
+    DecimatePixels.cc
+    DeleteImages.cc
     DetectShapes3D.cc
     DroverDebug.cc
-    DecayDoseOverTimeJones2014.cc
-    DecayDoseOverTimeHalve.cc
-    DecimatePixels.cc
     DumpAllOrderedImageMetadataToFile.cc
     DumpAnEncompassedPoint.cc
     DumpFilesPartitionedByTime.cc
@@ -48,11 +51,9 @@ add_library(Operations_objs OBJECT
     DumpROIContours.cc
     DumpROIData.cc
     DumpROIDoseInfo.cc
-    DumpROISurfaceMeshes.cc
     DumpROISNR.cc
+    DumpROISurfaceMeshes.cc
     DumpVoxelDoseInfo.cc
-    DICOMExportImagesAsDose.cc
-    DeleteImages.cc
     EQD2Convert.cc
     EvaluateDoseVolumeHistograms.cc
     EvaluateDoseVolumeStats.cc
@@ -74,8 +75,8 @@ add_library(Operations_objs OBJECT
     GroupImages.cc
     GrowContours.cc
     HighlightROIs.cc
-    InterpolateSlices.cc
     ImageRoutineTests.cc
+    InterpolateSlices.cc
     IsolatedVoxelFilter.cc
     LogScale.cc
     MaxMinPixels.cc
@@ -93,13 +94,13 @@ add_library(Operations_objs OBJECT
     PurgeContours.cc
     RankPixels.cc
     ReduceNeighbourhood.cc
+    SFML_Viewer.cc
     SeamContours.cc
     SelectSlicesIntersectingROI.cc
-    SFML_Viewer.cc
     SimplifyContours.cc
     SpatialBlur.cc
-    SpatialSharpen.cc
     SpatialDerivative.cc
+    SpatialSharpen.cc
     Subsegment_ComputeDose_VanLuijk.cc
     SubtractImages.cc
     SupersampleImageGrid.cc
