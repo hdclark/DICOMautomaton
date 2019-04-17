@@ -93,7 +93,7 @@ Or, if building for Debian:
 
      $>  cmake ../ -DCMAKE_INSTALL_PREFIX=/usr
      $>  make && make package
-     $>  sudo apt install ./*.deb
+     $>  sudo apt install -f ./*.deb
 
 Or, if building for Arch Linux:
 
