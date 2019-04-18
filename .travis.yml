@@ -7,7 +7,7 @@ before_install:
   - df -h .
   - free -h
   - |
-    ( ( sleep 550 ; printf ' ' ; sleep 550 ; printf ' ' ; sleep 550 ; printf ' ' ; ) &)
+    ( ( sleep 550 ; printf ' ' ; sleep 550 ; printf ' ' ; sleep 550 ; printf ' ' ; sleep 550 ; printf ' ' ; sleep 550 ; printf ' ' ) &)
     time sudo docker build -t dcma:latest -f docker/Dockerfile .
   - sudo docker ps -a
 
