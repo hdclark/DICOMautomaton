@@ -58,6 +58,7 @@
 #include "Operations/DecayDoseOverTimeJones2014.h"
 #include "Operations/DecimatePixels.h"
 #include "Operations/DeleteImages.h"
+#include "Operations/DetectGrid3D.h"
 #include "Operations/DetectShapes3D.h"
 #include "Operations/DroverDebug.h"
 #include "Operations/DumpAllOrderedImageMetadataToFile.h"
@@ -179,6 +180,7 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["DecayDoseOverTimeJones2014"] = std::make_pair(OpArgDocDecayDoseOverTimeJones2014, DecayDoseOverTimeJones2014);
     out["DecimatePixels"] = std::make_pair(OpArgDocDecimatePixels, DecimatePixels);
     out["DeleteImages"] = std::make_pair(OpArgDocDeleteImages, DeleteImages);
+    out["DetectGrid3D"] = std::make_pair(OpArgDocDetectGrid3D, DetectGrid3D);
     out["DetectShapes3D"] = std::make_pair(OpArgDocDetectShapes3D, DetectShapes3D);
     out["DroverDebug"] = std::make_pair(OpArgDocDroverDebug, DroverDebug);
     out["DumpAllOrderedImageMetadataToFile"] = std::make_pair(OpArgDocDumpAllOrderedImageMetadataToFile, DumpAllOrderedImageMetadataToFile);

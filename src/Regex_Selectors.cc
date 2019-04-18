@@ -190,8 +190,9 @@ Whitelist( std::list<std::list<std::shared_ptr<Image_Array>>::iterator> ias,
 // 
 // Note: Positional specifiers (e.g., "first") act on the current whitelist. 
 //       Beware when chaining filters!
-std::list<std::list<std::shared_ptr<Image_Array>>::iterator>
-Whitelist( std::list<std::list<std::shared_ptr<Image_Array>>::iterator> ias,
+template <class L> // L is a list of list::iterators of shared_ptr<Image_Array or Point_Cloud>.
+L
+Whitelist( L lops,
            std::string Specifier,
            Regex_Selector_Opts Opts ){
 
@@ -205,9 +206,9 @@ Whitelist( std::list<std::list<std::shared_ptr<Image_Array>>::iterator> ias,
         if(v_kvs.size() <= 1) throw std::logic_error("Unable to separate multiple key@value specifiers");
 
         for(auto & keyvalue : v_kvs){
-            ias = Whitelist(ias, keyvalue, Opts);
+            lops = Whitelist(lops, keyvalue, Opts);
         }
-        return ias;
+        return lops;
     }while(false);
 
     // A single key-value specifications stringified together.
@@ -220,8 +221,8 @@ Whitelist( std::list<std::list<std::shared_ptr<Image_Array>>::iterator> ias,
         if(v_k_v.size() <= 1) throw std::logic_error("Unable to separate key@value specifier");
         if(v_k_v.size() != 2) break; // Not a key@value statement (hint: maybe multiple @'s present?).
 
-        ias = Whitelist(ias, v_k_v.front(), v_k_v.back(), Opts);
-        return ias;
+        lops = Whitelist(lops, v_k_v.front(), v_k_v.back(), Opts);
+        return lops;
     }while(false);
 
     // Single-word positional specifiers, i.e. "all", "none", "first", "last", or zero-based 
@@ -242,38 +243,38 @@ Whitelist( std::list<std::list<std::shared_ptr<Image_Array>>::iterator> ias,
         const auto regex_i_nnum  = Compile_Regex("^[!][#]-[0-9].*$");
         
         if(std::regex_match(Specifier, regex_i_none)){
-            return ias;
+            return lops;
         }
         if(std::regex_match(Specifier, regex_none)){
-            ias.clear();
-            return ias;
+            lops.clear();
+            return lops;
         }
 
         if(std::regex_match(Specifier, regex_i_all)){
-            ias.clear();
-            return ias;
+            lops.clear();
+            return lops;
         }
         if(std::regex_match(Specifier, regex_all)){
-            return ias;
+            return lops;
         }
 
         if(std::regex_match(Specifier, regex_i_first)){
-            if(!ias.empty()) ias.pop_front();
-            return ias;
+            if(!lops.empty()) lops.pop_front();
+            return lops;
         }
         if(std::regex_match(Specifier, regex_first)){
-            decltype(ias) out;
-            if(!ias.empty()) out.emplace_back(ias.front());
+            decltype(lops) out;
+            if(!lops.empty()) out.emplace_back(lops.front());
             return out;
         }
 
         if(std::regex_match(Specifier, regex_i_last)){
-            if(!ias.empty()) ias.pop_back();
-            return ias;
+            if(!lops.empty()) lops.pop_back();
+            return lops;
         }
         if(std::regex_match(Specifier, regex_last)){
-            decltype(ias) out;
-            if(!ias.empty()) out.emplace_back(ias.back());
+            decltype(lops) out;
+            if(!lops.empty()) out.emplace_back(lops.back());
             return out;
         }
 
@@ -283,11 +284,11 @@ Whitelist( std::list<std::list<std::shared_ptr<Image_Array>>::iterator> ias,
                                                                    std::regex::extended);
             auto N = std::stoul(GetFirstRegex(Specifier, pnum_extractor));
 
-            if(N < ias.size()){
-                auto l_it = std::next( ias.begin(), N );
-                ias.erase( l_it );
+            if(N < lops.size()){
+                auto l_it = std::next( lops.begin(), N );
+                lops.erase( l_it );
             }
-            return ias;
+            return lops;
         }
         if(std::regex_match(Specifier, regex_pnum)){
             auto pnum_extractor = std::regex("^[#]([0-9]*).*$", std::regex::icase |
@@ -295,9 +296,9 @@ Whitelist( std::list<std::list<std::shared_ptr<Image_Array>>::iterator> ias,
                                                                 std::regex::extended);
             auto N = std::stoul(GetFirstRegex(Specifier, pnum_extractor));
 
-            decltype(ias) out;
-            if(N < ias.size()){
-                auto l_it = std::next( ias.begin(), N );
+            decltype(lops) out;
+            if(N < lops.size()){
+                auto l_it = std::next( lops.begin(), N );
                 out.emplace_back(*l_it);
             }
             return out;
@@ -309,12 +310,12 @@ Whitelist( std::list<std::list<std::shared_ptr<Image_Array>>::iterator> ias,
                                                                     std::regex::extended);
             auto N = std::stoul(GetFirstRegex(Specifier, nnum_extractor));
 
-            if(N < ias.size()) return ias;
+            if(N < lops.size()) return lops;
 
             // Note: this one is slightly harder than the rest because you cannot directly erase() a reverse iterator.
-            decltype(ias) out;
-            size_t i = ias.size();
-            for(auto l_it = ias.begin(); l_it != ias.end(); ++l_it, --i){
+            decltype(lops) out;
+            size_t i = lops.size();
+            for(auto l_it = lops.begin(); l_it != lops.end(); ++l_it, --i){
                 if(i == N) continue;
                 out.emplace_back(*l_it);
             }
@@ -326,9 +327,9 @@ Whitelist( std::list<std::list<std::shared_ptr<Image_Array>>::iterator> ias,
                                                                  std::regex::extended);
             auto N = std::stoul(GetFirstRegex(Specifier, nnum_extractor));
 
-            decltype(ias) out;
-            if(N < ias.size()){
-                auto l_it = std::next( ias.rbegin(), N );
+            decltype(lops) out;
+            if(N < lops.size()){
+                auto l_it = std::next( lops.rbegin(), N );
                 out.emplace_back(*l_it);
             }
             return out;
@@ -336,24 +337,39 @@ Whitelist( std::list<std::list<std::shared_ptr<Image_Array>>::iterator> ias,
 
     }while(false);
 
-    throw std::invalid_argument("Image selection is not valid. Cannot continue.");
-    decltype(ias) out;
+    throw std::invalid_argument("Selection is not valid. Cannot continue.");
+    decltype(lops) out;
     return out;
 }
 
-
-// This is a convenience routine to combine multiple filtering passes into a single logical statement.
+template
 std::list<std::list<std::shared_ptr<Image_Array>>::iterator>
 Whitelist( std::list<std::list<std::shared_ptr<Image_Array>>::iterator> ias,
+           std::string Specifier,
+           Regex_Selector_Opts Opts );
+
+
+// This is a convenience routine to combine multiple filtering passes into a single logical statement.
+template <class L> // L is a list of list::iterators of shared_ptr<Image_Array or Point_Cloud>.
+L
+Whitelist( L lops,
            std::initializer_list< std::pair<std::string, 
                                             std::string> > MetadataKeyValueRegex,
            Regex_Selector_Opts Opts ){
 
     for(auto kv_pair : MetadataKeyValueRegex){
-        ias = Whitelist(ias, kv_pair.first, kv_pair.second, Opts);
+        lops = Whitelist(lops, kv_pair.first, kv_pair.second, Opts);
     }
-    return ias;
+    return lops;
 }
+
+template
+std::list<std::list<std::shared_ptr<Image_Array>>::iterator>
+Whitelist( std::list<std::list<std::shared_ptr<Image_Array>>::iterator> ias,
+           std::initializer_list< std::pair<std::string, 
+                                            std::string> > MetadataKeyValueRegex,
+           Regex_Selector_Opts Opts );
+
 
 // Utility function documenting the image array whitelist routines for operations.
 OperationArgDoc IAWhitelistOpArgDoc(void){
@@ -383,4 +399,113 @@ OperationArgDoc IAWhitelistOpArgDoc(void){
 
     return out;
 }
+
+// ----------------------------------- Point Clouds ------------------------------------
+
+// Provide pointers for all point clouds into a list.
+//
+// Note: The output is meant to be filtered using the selectors below.
+std::list<std::list<std::shared_ptr<Point_Cloud>>::iterator>
+All_PCs( Drover &DICOM_data ){
+    std::list<std::list<std::shared_ptr<Point_Cloud>>::iterator> pc_all;
+
+    for(auto pcp_it = DICOM_data.point_data.begin(); pcp_it != DICOM_data.point_data.end(); ++pcp_it){
+        if((*pcp_it) == nullptr) continue;
+        pc_all.push_back(pcp_it);
+    }
+    return pc_all;
+}
+
+
+// Whitelist point clouds using the provided regex.
+std::list<std::list<std::shared_ptr<Point_Cloud>>::iterator>
+Whitelist( std::list<std::list<std::shared_ptr<Point_Cloud>>::iterator> pcs,
+           std::string MetadataKey,
+           std::string MetadataValueRegex,
+           Regex_Selector_Opts Opts ){
+
+    auto theregex = Compile_Regex(MetadataValueRegex);
+
+    pcs.remove_if([&](std::list<std::shared_ptr<Point_Cloud>>::iterator pcp_it) -> bool {
+        if((*pcp_it) == nullptr) return true;
+        if((*pcp_it)->points.empty()) return true; // Remove arrays containing no images.
+
+        if(false){
+        }else if( // Note: Point_Clouds are dissimilar to Image_Arrays in that individual images can have different
+                  //       metadata, but point clouds cannot. We keep these options for consistency.
+                  (Opts.validation == Regex_Selector_Opts::Validation::Representative)
+              ||  (Opts.validation == Regex_Selector_Opts::Validation::Pedantic)        ){
+
+            std::experimental::optional<std::string> ValueOpt 
+                    = ( (*pcp_it)->metadata.count(MetadataKey) != 0 ) ?
+                      (*pcp_it)->metadata[MetadataKey] :
+                      std::experimental::optional<std::string>();
+            if(ValueOpt){
+                return !(std::regex_match(ValueOpt.value(),theregex));
+            }else if(Opts.nas == Regex_Selector_Opts::NAs::Include){
+                return false;
+            }else if(Opts.nas == Regex_Selector_Opts::NAs::Exclude){
+                return true;
+            }else if(Opts.nas == Regex_Selector_Opts::NAs::TreatAsEmpty){
+                return !(std::regex_match("",theregex));
+            }
+            throw std::logic_error("NAs option not understood. Cannot continue.");
+        }
+        throw std::logic_error("Regex selector option not understood. Cannot continue.");
+        return true; // Should never get here.
+    });
+    return pcs;
+}
+
+
+// Whitelist point clouds using a limited vocabulary of specifiers.
+//
+// Note: this routine shares the generic Image_Arrays implementation above.
+template
+std::list<std::list<std::shared_ptr<Point_Cloud>>::iterator>
+Whitelist( std::list<std::list<std::shared_ptr<Point_Cloud>>::iterator> pcs,
+           std::string Specifier,
+           Regex_Selector_Opts Opts );
+
+
+// This is a convenience routine to combine multiple filtering passes into a single logical statement.
+//
+// Note: this routine shares the generic Image_Arrays implementation above.
+template
+std::list<std::list<std::shared_ptr<Point_Cloud>>::iterator>
+Whitelist( std::list<std::list<std::shared_ptr<Point_Cloud>>::iterator> ias,
+           std::initializer_list< std::pair<std::string, 
+                                            std::string> > MetadataKeyValueRegex,
+           Regex_Selector_Opts Opts );
+
+
+// Utility function documenting the point cloud whitelist routines for operations.
+OperationArgDoc PCWhitelistOpArgDoc(void){
+    OperationArgDoc out;
+
+    out.name = "PointSelection";
+    out.desc = "Select point clouds to operate on."
+               " Specifiers can be of two types: positional or metadata-based key@value regex."
+               " Positional specifiers can be 'first', 'last', 'none', or 'all' literals."
+               " Additionally '#N' for some positive integer N selects the Nth point cloud (with zero-based indexing)."
+               " Likewise, '#-N' selects the Nth-from-last point cloud."
+               " Positional specifiers can be inverted by prefixing with a '!'."
+               " Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex."
+               " In order to invert metadata-based selectors, the regex logic must be inverted"
+               " (i.e., you can *not* prefix metadata-based selectors with a '!')."
+               " Multiple criteria can be specified by separating them with a ';' and are applied in the order specified."
+               " Both positional and metadata-based criteria can be mixed together."
+               " Note that point clouds can hold a variety of data with varying attributes,"
+               " but each point cloud is meant to represent a single cohesive collection in which points are all related."
+               " Note regexes are case insensitive and should use extended POSIX syntax.";
+    out.default_val = "all";
+    out.expected = true;
+    out.examples = { "last", "first", "all", "none", 
+                     "#0", "#-0",
+                     "!last", "!#-3",
+                     "key@.*value.*", "key1@.*value1.*;key2@^value2$;first" };
+
+    return out;
+}
+
 

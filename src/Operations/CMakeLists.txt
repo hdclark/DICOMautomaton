@@ -40,6 +40,7 @@ add_library(Operations_objs OBJECT
     DecayDoseOverTimeJones2014.cc
     DecimatePixels.cc
     DeleteImages.cc
+    DetectGrid3D.cc
     DetectShapes3D.cc
     DroverDebug.cc
     DumpAllOrderedImageMetadataToFile.cc
