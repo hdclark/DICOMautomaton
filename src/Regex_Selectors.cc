@@ -14,6 +14,178 @@
 
 #include "Structs.h"
 
+// ------------------------------------- Templates -------------------------------------
+
+// Whitelist image arrays or point clouds using a limited vocabulary of specifiers.
+// 
+// Note: Positional specifiers (e.g., "first") act on the current whitelist. 
+//       Beware when chaining filters!
+template <class L> // L is a list of list::iterators of shared_ptr<Image_Array or Point_Cloud>.
+L
+Whitelist_Core( L lops,
+           std::string Specifier,
+           Regex_Selector_Opts Opts ){
+
+    // Multiple key-value specifications stringified together.
+    // For example, "key1@value1;key2@value2".
+    do{
+        const auto regex_split = Compile_Regex("^.*;.*$");
+        if(!std::regex_match(Specifier, regex_split)) break; // Not a multi-key@value statement.
+
+        auto v_kvs = SplitStringToVector(Specifier, ';', 'd');
+        if(v_kvs.size() <= 1) throw std::logic_error("Unable to separate multiple key@value specifiers");
+
+        for(auto & keyvalue : v_kvs){
+            lops = Whitelist(lops, keyvalue, Opts);
+        }
+        return lops;
+    }while(false);
+
+    // A single key-value specifications stringified together.
+    // For example, "key@value".
+    do{
+        const auto regex_split = Compile_Regex("^.*@.*$");
+        if(!std::regex_match(Specifier, regex_split)) break; // Not a key@value statement.
+        
+        auto v_k_v = SplitStringToVector(Specifier, '@', 'd');
+        if(v_k_v.size() <= 1) throw std::logic_error("Unable to separate key@value specifier");
+        if(v_k_v.size() != 2) break; // Not a key@value statement (hint: maybe multiple @'s present?).
+
+        lops = Whitelist(lops, v_k_v.front(), v_k_v.back(), Opts);
+        return lops;
+    }while(false);
+
+    // Single-word positional specifiers, i.e. "all", "none", "first", "last", or zero-based 
+    // numerical specifiers, e.g., "#0" (front), "#1" (second), "#-0" (last), and "#-1" (second-from-last).
+    do{
+        const auto regex_none  = Compile_Regex("^no?n?e?$");
+        const auto regex_all   = Compile_Regex("^al?l?$");
+        const auto regex_first = Compile_Regex("^fi?r?s?t?$");
+        const auto regex_last  = Compile_Regex("^la?s?t?$");
+        const auto regex_pnum  = Compile_Regex("^[#][0-9].*$");
+        const auto regex_nnum  = Compile_Regex("^[#]-[0-9].*$");
+
+        const auto regex_i_none  = Compile_Regex("^[!]no?n?e?$"); // Inverted variants of the above.
+        const auto regex_i_all   = Compile_Regex("^[!]al?l?$");
+        const auto regex_i_first = Compile_Regex("^[!]fi?r?s?t?$");
+        const auto regex_i_last  = Compile_Regex("^[!]la?s?t?$");
+        const auto regex_i_pnum  = Compile_Regex("^[!][#][0-9].*$");
+        const auto regex_i_nnum  = Compile_Regex("^[!][#]-[0-9].*$");
+        
+        if(std::regex_match(Specifier, regex_i_none)){
+            return lops;
+        }
+        if(std::regex_match(Specifier, regex_none)){
+            lops.clear();
+            return lops;
+        }
+
+        if(std::regex_match(Specifier, regex_i_all)){
+            lops.clear();
+            return lops;
+        }
+        if(std::regex_match(Specifier, regex_all)){
+            return lops;
+        }
+
+        if(std::regex_match(Specifier, regex_i_first)){
+            if(!lops.empty()) lops.pop_front();
+            return lops;
+        }
+        if(std::regex_match(Specifier, regex_first)){
+            decltype(lops) out;
+            if(!lops.empty()) out.emplace_back(lops.front());
+            return out;
+        }
+
+        if(std::regex_match(Specifier, regex_i_last)){
+            if(!lops.empty()) lops.pop_back();
+            return lops;
+        }
+        if(std::regex_match(Specifier, regex_last)){
+            decltype(lops) out;
+            if(!lops.empty()) out.emplace_back(lops.back());
+            return out;
+        }
+
+        if(std::regex_match(Specifier, regex_i_pnum)){
+            auto pnum_extractor = std::regex("^[!][#]([0-9]*).*$", std::regex::icase |
+                                                                   std::regex::optimize |
+                                                                   std::regex::extended);
+            auto N = std::stoul(GetFirstRegex(Specifier, pnum_extractor));
+
+            if(N < lops.size()){
+                auto l_it = std::next( lops.begin(), N );
+                lops.erase( l_it );
+            }
+            return lops;
+        }
+        if(std::regex_match(Specifier, regex_pnum)){
+            auto pnum_extractor = std::regex("^[#]([0-9]*).*$", std::regex::icase |
+                                                                std::regex::optimize |
+                                                                std::regex::extended);
+            auto N = std::stoul(GetFirstRegex(Specifier, pnum_extractor));
+
+            decltype(lops) out;
+            if(N < lops.size()){
+                auto l_it = std::next( lops.begin(), N );
+                out.emplace_back(*l_it);
+            }
+            return out;
+        }
+
+        if(std::regex_match(Specifier, regex_i_nnum)){
+            auto nnum_extractor = std::regex("^[!][#]-([0-9]*).*$", std::regex::icase |
+                                                                    std::regex::optimize |
+                                                                    std::regex::extended);
+            auto N = std::stoul(GetFirstRegex(Specifier, nnum_extractor));
+
+            if(N < lops.size()) return lops;
+
+            // Note: this one is slightly harder than the rest because you cannot directly erase() a reverse iterator.
+            decltype(lops) out;
+            size_t i = lops.size();
+            for(auto l_it = lops.begin(); l_it != lops.end(); ++l_it, --i){
+                if(i == N) continue;
+                out.emplace_back(*l_it);
+            }
+            return out;
+        }
+        if(std::regex_match(Specifier, regex_nnum)){
+            auto nnum_extractor = std::regex("^[#]-([0-9]*).*$", std::regex::icase |
+                                                                 std::regex::optimize |
+                                                                 std::regex::extended);
+            auto N = std::stoul(GetFirstRegex(Specifier, nnum_extractor));
+
+            decltype(lops) out;
+            if(N < lops.size()){
+                auto l_it = std::next( lops.rbegin(), N );
+                out.emplace_back(*l_it);
+            }
+            return out;
+        }
+
+    }while(false);
+
+    throw std::invalid_argument("Selection is not valid. Cannot continue.");
+    decltype(lops) out;
+    return out;
+}
+
+// This is a convenience routine to combine multiple filtering passes into a single logical statement.
+template <class L> // L is a list of list::iterators of shared_ptr<Image_Array or Point_Cloud>.
+L
+Whitelist_Core( L lops,
+           std::initializer_list< std::pair<std::string, 
+                                            std::string> > MetadataKeyValueRegex,
+           Regex_Selector_Opts Opts ){
+
+    for(auto kv_pair : MetadataKeyValueRegex){
+        lops = Whitelist(lops, kv_pair.first, kv_pair.second, Opts);
+    }
+    return lops;
+}
+
 
 // --------------------------------------- Misc. ---------------------------------------
 
@@ -187,188 +359,24 @@ Whitelist( std::list<std::list<std::shared_ptr<Image_Array>>::iterator> ias,
 }
 
 // Whitelist image arrays using a limited vocabulary of specifiers.
-// 
-// Note: Positional specifiers (e.g., "first") act on the current whitelist. 
-//       Beware when chaining filters!
-template <class L> // L is a list of list::iterators of shared_ptr<Image_Array or Point_Cloud>.
-L
-Whitelist( L lops,
-           std::string Specifier,
-           Regex_Selector_Opts Opts ){
-
-    // Multiple key-value specifications stringified together.
-    // For example, "key1@value1;key2@value2".
-    do{
-        const auto regex_split = Compile_Regex("^.*;.*$");
-        if(!std::regex_match(Specifier, regex_split)) break; // Not a multi-key@value statement.
-
-        auto v_kvs = SplitStringToVector(Specifier, ';', 'd');
-        if(v_kvs.size() <= 1) throw std::logic_error("Unable to separate multiple key@value specifiers");
-
-        for(auto & keyvalue : v_kvs){
-            lops = Whitelist(lops, keyvalue, Opts);
-        }
-        return lops;
-    }while(false);
-
-    // A single key-value specifications stringified together.
-    // For example, "key@value".
-    do{
-        const auto regex_split = Compile_Regex("^.*@.*$");
-        if(!std::regex_match(Specifier, regex_split)) break; // Not a key@value statement.
-        
-        auto v_k_v = SplitStringToVector(Specifier, '@', 'd');
-        if(v_k_v.size() <= 1) throw std::logic_error("Unable to separate key@value specifier");
-        if(v_k_v.size() != 2) break; // Not a key@value statement (hint: maybe multiple @'s present?).
-
-        lops = Whitelist(lops, v_k_v.front(), v_k_v.back(), Opts);
-        return lops;
-    }while(false);
-
-    // Single-word positional specifiers, i.e. "all", "none", "first", "last", or zero-based 
-    // numerical specifiers, e.g., "#0" (front), "#1" (second), "#-0" (last), and "#-1" (second-from-last).
-    do{
-        const auto regex_none  = Compile_Regex("^no?n?e?$");
-        const auto regex_all   = Compile_Regex("^al?l?$");
-        const auto regex_first = Compile_Regex("^fi?r?s?t?$");
-        const auto regex_last  = Compile_Regex("^la?s?t?$");
-        const auto regex_pnum  = Compile_Regex("^[#][0-9].*$");
-        const auto regex_nnum  = Compile_Regex("^[#]-[0-9].*$");
-
-        const auto regex_i_none  = Compile_Regex("^[!]no?n?e?$"); // Inverted variants of the above.
-        const auto regex_i_all   = Compile_Regex("^[!]al?l?$");
-        const auto regex_i_first = Compile_Regex("^[!]fi?r?s?t?$");
-        const auto regex_i_last  = Compile_Regex("^[!]la?s?t?$");
-        const auto regex_i_pnum  = Compile_Regex("^[!][#][0-9].*$");
-        const auto regex_i_nnum  = Compile_Regex("^[!][#]-[0-9].*$");
-        
-        if(std::regex_match(Specifier, regex_i_none)){
-            return lops;
-        }
-        if(std::regex_match(Specifier, regex_none)){
-            lops.clear();
-            return lops;
-        }
-
-        if(std::regex_match(Specifier, regex_i_all)){
-            lops.clear();
-            return lops;
-        }
-        if(std::regex_match(Specifier, regex_all)){
-            return lops;
-        }
-
-        if(std::regex_match(Specifier, regex_i_first)){
-            if(!lops.empty()) lops.pop_front();
-            return lops;
-        }
-        if(std::regex_match(Specifier, regex_first)){
-            decltype(lops) out;
-            if(!lops.empty()) out.emplace_back(lops.front());
-            return out;
-        }
-
-        if(std::regex_match(Specifier, regex_i_last)){
-            if(!lops.empty()) lops.pop_back();
-            return lops;
-        }
-        if(std::regex_match(Specifier, regex_last)){
-            decltype(lops) out;
-            if(!lops.empty()) out.emplace_back(lops.back());
-            return out;
-        }
-
-        if(std::regex_match(Specifier, regex_i_pnum)){
-            auto pnum_extractor = std::regex("^[!][#]([0-9]*).*$", std::regex::icase |
-                                                                   std::regex::optimize |
-                                                                   std::regex::extended);
-            auto N = std::stoul(GetFirstRegex(Specifier, pnum_extractor));
-
-            if(N < lops.size()){
-                auto l_it = std::next( lops.begin(), N );
-                lops.erase( l_it );
-            }
-            return lops;
-        }
-        if(std::regex_match(Specifier, regex_pnum)){
-            auto pnum_extractor = std::regex("^[#]([0-9]*).*$", std::regex::icase |
-                                                                std::regex::optimize |
-                                                                std::regex::extended);
-            auto N = std::stoul(GetFirstRegex(Specifier, pnum_extractor));
-
-            decltype(lops) out;
-            if(N < lops.size()){
-                auto l_it = std::next( lops.begin(), N );
-                out.emplace_back(*l_it);
-            }
-            return out;
-        }
-
-        if(std::regex_match(Specifier, regex_i_nnum)){
-            auto nnum_extractor = std::regex("^[!][#]-([0-9]*).*$", std::regex::icase |
-                                                                    std::regex::optimize |
-                                                                    std::regex::extended);
-            auto N = std::stoul(GetFirstRegex(Specifier, nnum_extractor));
-
-            if(N < lops.size()) return lops;
-
-            // Note: this one is slightly harder than the rest because you cannot directly erase() a reverse iterator.
-            decltype(lops) out;
-            size_t i = lops.size();
-            for(auto l_it = lops.begin(); l_it != lops.end(); ++l_it, --i){
-                if(i == N) continue;
-                out.emplace_back(*l_it);
-            }
-            return out;
-        }
-        if(std::regex_match(Specifier, regex_nnum)){
-            auto nnum_extractor = std::regex("^[#]-([0-9]*).*$", std::regex::icase |
-                                                                 std::regex::optimize |
-                                                                 std::regex::extended);
-            auto N = std::stoul(GetFirstRegex(Specifier, nnum_extractor));
-
-            decltype(lops) out;
-            if(N < lops.size()){
-                auto l_it = std::next( lops.rbegin(), N );
-                out.emplace_back(*l_it);
-            }
-            return out;
-        }
-
-    }while(false);
-
-    throw std::invalid_argument("Selection is not valid. Cannot continue.");
-    decltype(lops) out;
-    return out;
-}
-
-template
 std::list<std::list<std::shared_ptr<Image_Array>>::iterator>
 Whitelist( std::list<std::list<std::shared_ptr<Image_Array>>::iterator> ias,
            std::string Specifier,
-           Regex_Selector_Opts Opts );
+           Regex_Selector_Opts Opts ){
+
+    return Whitelist_Core( ias, Specifier, Opts );
+}
 
 
 // This is a convenience routine to combine multiple filtering passes into a single logical statement.
-template <class L> // L is a list of list::iterators of shared_ptr<Image_Array or Point_Cloud>.
-L
-Whitelist( L lops,
-           std::initializer_list< std::pair<std::string, 
-                                            std::string> > MetadataKeyValueRegex,
-           Regex_Selector_Opts Opts ){
-
-    for(auto kv_pair : MetadataKeyValueRegex){
-        lops = Whitelist(lops, kv_pair.first, kv_pair.second, Opts);
-    }
-    return lops;
-}
-
-template
 std::list<std::list<std::shared_ptr<Image_Array>>::iterator>
 Whitelist( std::list<std::list<std::shared_ptr<Image_Array>>::iterator> ias,
            std::initializer_list< std::pair<std::string, 
                                             std::string> > MetadataKeyValueRegex,
-           Regex_Selector_Opts Opts );
+           Regex_Selector_Opts Opts ){
+
+    return Whitelist_Core( ias, MetadataKeyValueRegex, Opts );
+}
 
 
 // Utility function documenting the image array whitelist routines for operations.
@@ -461,22 +469,26 @@ Whitelist( std::list<std::list<std::shared_ptr<Point_Cloud>>::iterator> pcs,
 // Whitelist point clouds using a limited vocabulary of specifiers.
 //
 // Note: this routine shares the generic Image_Arrays implementation above.
-template
 std::list<std::list<std::shared_ptr<Point_Cloud>>::iterator>
 Whitelist( std::list<std::list<std::shared_ptr<Point_Cloud>>::iterator> pcs,
            std::string Specifier,
-           Regex_Selector_Opts Opts );
+           Regex_Selector_Opts Opts ){
+
+    return Whitelist_Core( pcs, Specifier, Opts );
+}    
 
 
 // This is a convenience routine to combine multiple filtering passes into a single logical statement.
 //
 // Note: this routine shares the generic Image_Arrays implementation above.
-template
 std::list<std::list<std::shared_ptr<Point_Cloud>>::iterator>
-Whitelist( std::list<std::list<std::shared_ptr<Point_Cloud>>::iterator> ias,
+Whitelist( std::list<std::list<std::shared_ptr<Point_Cloud>>::iterator> pcs,
            std::initializer_list< std::pair<std::string, 
                                             std::string> > MetadataKeyValueRegex,
-           Regex_Selector_Opts Opts );
+           Regex_Selector_Opts Opts ){
+
+    return Whitelist_Core( pcs, MetadataKeyValueRegex, Opts );
+}
 
 
 // Utility function documenting the point cloud whitelist routines for operations.
