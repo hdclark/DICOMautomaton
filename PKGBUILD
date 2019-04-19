@@ -51,7 +51,7 @@ makedepends=(
 options=(strip staticlibs)
 
 build() {
-  cmake ../ -DCMAKE_INSTALL_PREFIX=/usr
+  cmake -DMEMORY_CONSTRAINED_BUILD=OFF -DCMAKE_INSTALL_PREFIX=/usr ../
 
   # Scale compilation, but limit to 8 concurrent jobs to temper memory usage.
   JOBS=$(nproc)

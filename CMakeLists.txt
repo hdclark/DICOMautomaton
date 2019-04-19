@@ -33,6 +33,8 @@ add_definitions(-DCGAL_EIGEN3_ENABLED=1) # Explicitly instruct CGAL to use Eigen
 #                                  Configuration
 ####################################################################################
 
+option(MEMORY_CONSTRAINED_BUILD "Compile with minimal memory usage." OFF)
+
 # Set the release type. 
 set(CMAKE_BUILD_TYPE Release) # Comment this line to use fallback default.
 if(NOT CMAKE_BUILD_TYPE)
@@ -56,9 +58,14 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ffast-math -frounding-math -fno-finite-math-only")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fdiagnostics-color=always -fno-var-tracking-assignments")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated -Wall -Wextra")
+    if(MEMORY_CONSTRAINED_BUILD)
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --param ggc-min-expand=10 --param ggc-min-heapsize=32768")
+    endif()
+
 elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ffast-math -frounding-math -fno-finite-math-only")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated -Wall -Wextra")
+
 endif()
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON) # For clang-tidy et al.
