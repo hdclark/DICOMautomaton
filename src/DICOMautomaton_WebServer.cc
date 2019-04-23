@@ -106,6 +106,7 @@ std::string CreateUniqueDirectoryTimestamped(std::string prefix, std::string pos
 static
 std::string CamelToHuman(std::string in){
     // This routine endeavours to convert as follows:
+    //   ROILabelRegex              --> ROI Label Selector
     //   MinimumJunctionSeparation  --> Minimum Junction Separation
     //   MLCModel                   --> MLC Model
     //   CSVFileName                --> CSV Output File
@@ -123,20 +124,30 @@ std::string CamelToHuman(std::string in){
     in = std::regex_replace(in, fName, " output File");
 */
 
+    std::regex rgx = std::regex("Regex$", std::regex::optimize | std::regex::extended);
+    in = std::regex_replace(in, rgx, R"***(Selector)***");
+
     std::regex dblcaps = std::regex("([A-Z])([A-Z][a-z])", std::regex::optimize | std::regex::extended);
     in = std::regex_replace(in, dblcaps, R"***($1 $2)***");
 
     std::regex acap = std::regex("([^A-Z ])([A-Z][a-z])", std::regex::optimize | std::regex::extended);
     in = std::regex_replace(in, acap, R"***($1 $2)***");
+
+    std::regex of = std::regex("(Of)([A-Z])", std::regex::optimize | std::regex::extended);
+    in = std::regex_replace(in, of, R"***($1 $2)***");
     return in;
 }
 
 static
 std::string HumanToCamel(std::string in){
     // This routine is the opposite of CamelToHuman(), and should round-trip endeavours to convert as follows:
+    //   ROILabelRegex              --> ROI Label Selector
     //   MinimumJunctionSeparation  --> Minimum Junction Separation
     //   MLCModel                   --> MLC Model
     //   CSVFileName                --> CSV Output File
+    std::regex rgx = std::regex("Selector$", std::regex::optimize | std::regex::extended);
+    in = std::regex_replace(in, rgx, R"***(Regex)***");
+
     std::regex spaces = std::regex("[ ]*", std::regex::optimize | std::regex::extended);
     in = std::regex_replace(in, spaces, "");
 
