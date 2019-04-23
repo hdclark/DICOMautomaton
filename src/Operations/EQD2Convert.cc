@@ -29,6 +29,12 @@ OperationDoc OpArgDocEQD2Convert(void){
         "This operation performs a BED-based conversion to a dose-equivalent that would have 2Gy fractions.";
         
     out.notes.emplace_back(
+        "This operation treats all tissue as either tumourous or not, and allows specification of a single"
+        " alpha/beta for each type (i.e., one for tumourous tissues, one for normal tissues)."
+        " Owing to this limitation, use of this operation is generally limited to single-OAR or PTV-only"
+        " EQD2 conversions."
+    );
+    out.notes.emplace_back(
         "This operation requires NumberOfFractions and cannot use DosePerFraction."
         " The reasoning is that the DosePerFraction would need to be specified for each individual voxel;"
         " the prescription DosePerFraction is NOT the same as voxels outside the PTV."
@@ -44,13 +50,13 @@ OperationDoc OpArgDocEQD2Convert(void){
     out.args.emplace_back();
     out.args.back().name = "AlphaBetaRatioNormal";
     out.args.back().desc = "The value to use for alpha/beta in normal (non-cancerous) tissues."
-                      " Generally a value of 3.0 Gy is used. Tissues that are sensitive to fractionation"
-                      " may warrant smaller ratios, such as 1.5-3 Gy for cervical central nervous tissues"
-                      " and 2.3-4.9 for lumbar central nervous tissues (consult table 8.1, page 107 in: "
-                      " Joiner et al., 'Fractionation: the linear-quadratic approach', 4th Ed., 2009,"
-                      " in the book 'Basic Clinical Radiobiology', ISBN: 0340929669)."
-                      " Note that the selected ROIs denote which tissues are diseased. The remaining tissues are "
-                      " considered to be normal.";
+                           " Generally a value of 3.0 Gy is used. Tissues that are sensitive to fractionation"
+                           " may warrant smaller ratios, such as 1.5-3 Gy for cervical central nervous tissues"
+                           " and 2.3-4.9 for lumbar central nervous tissues (consult table 8.1, page 107 in: "
+                           " Joiner et al., 'Fractionation: the linear-quadratic approach', 4th Ed., 2009,"
+                           " in the book 'Basic Clinical Radiobiology', ISBN: 0340929669)."
+                           " Note that the selected ROIs denote which tissues are diseased. The remaining tissues are "
+                           " considered to be normal.";
     out.args.back().default_val = "3.0";
     out.args.back().expected = true;
     out.args.back().examples = { "2.0", "3.0" };
@@ -59,9 +65,9 @@ OperationDoc OpArgDocEQD2Convert(void){
     out.args.emplace_back();
     out.args.back().name = "AlphaBetaRatioTumour";
     out.args.back().desc = "The value to use for alpha/beta in diseased (tumourous) tissues."
-                      " Generally a value of 10.0 is used. Note that the selected ROIs"
-                      " denote which tissues are diseased. The remaining tissues are "
-                      " considered to be normal.";
+                           " Generally a value of 10.0 is used. Note that the selected ROIs"
+                           " denote which tissues are diseased. The remaining tissues are "
+                           " considered to be normal.";
     out.args.back().default_val = "10.0";
     out.args.back().expected = true;
     out.args.back().examples = { "10.0" };
@@ -70,7 +76,7 @@ OperationDoc OpArgDocEQD2Convert(void){
     out.args.emplace_back();
     out.args.back().name = "NumberOfFractions";
     out.args.back().desc = "The number of fractions in which a plan was (or will be) delivered."
-                      " Decimal fractions are supported to accommodate previous BED conversions.";
+                           " Decimal fractions are supported to accommodate previous BED conversions.";
     out.args.back().default_val = "35";
     out.args.back().expected = true;
     out.args.back().examples = { "10", "20.5", "35", "40.123" };
@@ -79,10 +85,10 @@ OperationDoc OpArgDocEQD2Convert(void){
     out.args.emplace_back();
     out.args.back().name = "PrescriptionDose";
     out.args.back().desc = "The prescription dose that was (or will be) delivered to the PTV."
-                      " Note that this is a theoretical dose since the PTV or CTV will only nominally"
-                      " receive this dose. Also note that the specified dose need not exist somewhere"
-                      " in the image. It can be purely theoretical to accommodate previous BED"
-                      " conversions.";
+                           " Note that this is a theoretical dose since the PTV or CTV will only nominally"
+                           " receive this dose. Also note that the specified dose need not exist somewhere"
+                           " in the image. It can be purely theoretical to accommodate previous BED"
+                           " conversions.";
     out.args.back().default_val = "70";
     out.args.back().expected = true;
     out.args.back().examples = { "15", "22.5", "45.0", "66", "70.001" };
@@ -91,11 +97,11 @@ OperationDoc OpArgDocEQD2Convert(void){
     out.args.emplace_back();
     out.args.back().name = "NormalizedROILabelRegex";
     out.args.back().desc = "A regex matching ROI labels/names to consider as bounding tumourous tissues."
-                      " The default will match"
-                      " all available ROIs. Be aware that input spaces are trimmed to a single space."
-                      " If your ROI name has more than two sequential spaces, use regex to avoid them."
-                      " All ROIs have to match the single regex, so use the 'or' token if needed."
-                      " Regex is case insensitive and uses extended POSIX syntax.";
+                           " The default will match"
+                           " all available ROIs. Be aware that input spaces are trimmed to a single space."
+                           " If your ROI name has more than two sequential spaces, use regex to avoid them."
+                           " All ROIs have to match the single regex, so use the 'or' token if needed."
+                           " Regex is case insensitive and uses extended POSIX syntax.";
     out.args.back().default_val = ".*";
     out.args.back().expected = true;
     out.args.back().examples = { ".*", ".*GTV.*", "PTV66", R"***(.*PTV.*|.*GTV.**)***" };
@@ -104,11 +110,11 @@ OperationDoc OpArgDocEQD2Convert(void){
     out.args.emplace_back();
     out.args.back().name = "ROILabelRegex";
     out.args.back().desc = "A regex matching ROI labels/names to consider as bounding tumourous tissues."
-                      " The default will match"
-                      " all available ROIs. Be aware that input spaces are trimmed to a single space."
-                      " If your ROI name has more than two sequential spaces, use regex to avoid them."
-                      " All ROIs have to match the single regex, so use the 'or' token if needed."
-                      " Regex is case insensitive and uses extended POSIX syntax.";
+                           " The default will match"
+                           " all available ROIs. Be aware that input spaces are trimmed to a single space."
+                           " If your ROI name has more than two sequential spaces, use regex to avoid them."
+                           " All ROIs have to match the single regex, so use the 'or' token if needed."
+                           " Regex is case insensitive and uses extended POSIX syntax.";
     out.args.back().default_val = ".*";
     out.args.back().expected = true;
     out.args.back().examples = { ".*", ".*GTV.*", "PTV66", R"***(.*PTV.*|.*GTV.**)***" };
@@ -138,10 +144,6 @@ Drover EQD2Convert(Drover DICOM_data,
     const auto ImageSelectionStr = OptArgs.getValueStr("ImageSelection").value();
 
     //-----------------------------------------------------------------------------------------------------------------
-
-    const auto regex_none = Compile_Regex("no?n?e?$");
-    const auto regex_last = Compile_Regex("la?s?t?$");
-    const auto regex_all  = Compile_Regex("al?l?$");
 
     if( ud.PrescriptionDose <= 0.0 ){
         throw std::invalid_argument("PrescriptionDose must be specified (>0.0)");
