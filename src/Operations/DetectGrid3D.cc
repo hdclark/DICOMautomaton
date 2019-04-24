@@ -138,10 +138,12 @@ Drover DetectGrid3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
         vec3<double> current_grid_anchor = zero_vec3;
 
 // Loop point.
+for(size_t loop = 0; loop < 50; ++loop){
 
         // Using the current grid axes directions and anchor point, project all points into the 'unit' cube.
         auto p_unit = (*pcp_it)->points; // Holds the projection of each point cloud point into the grid-defined unit cube.
-        {
+
+        const auto project_into_unit_cube = [&](void) -> void {
             auto p_unit_it = std::begin(p_unit);
             for(const auto &pp : (*pcp_it)->points){
                 const auto P = pp.first;
@@ -157,7 +159,8 @@ Drover DetectGrid3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
                 p_unit_it->first = C;
                 ++p_unit_it;
             }
-        }
+        };
+        project_into_unit_cube();
 
         // Determine the optimal translation.
         //
@@ -166,41 +169,46 @@ Drover DetectGrid3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
         // scalar distance; since all points have been projecting into the unit cube, at most the point will be
         // 0.5*separation from the nearest plane. Thus if we subtract 1.0*separation for the points in the upper half, we can
         // use simple 1D distribution analysis to determine optimal translations of the anchor point.
-        std::vector<double> dist_x;
-        std::vector<double> dist_y;
-        std::vector<double> dist_z;
+        const auto translate_grid_optimally = [&](void) -> void {
+            std::vector<double> dist_x;
+            std::vector<double> dist_y;
+            std::vector<double> dist_z;
 
-        dist_x.reserve(p_unit.size());
-        dist_y.reserve(p_unit.size());
-        dist_z.reserve(p_unit.size());
-        {
-            auto p_unit_it = std::begin(p_unit);
-            for(const auto &pp : (*pcp_it)->points){
-                const auto P = pp.first;
-                const auto C = p_unit_it->first - current_grid_anchor;
+            dist_x.reserve(p_unit.size());
+            dist_y.reserve(p_unit.size());
+            dist_z.reserve(p_unit.size());
+            {
+                auto p_unit_it = std::begin(p_unit);
+                for(const auto &pp : (*pcp_it)->points){
+                    //const auto P = pp.first;
+                    const auto C = p_unit_it->first - current_grid_anchor;
 
-                const auto dx = (0.5*GridSeparation < C.x) ? C.x - GridSeparation : C.x;
-                const auto dy = (0.5*GridSeparation < C.y) ? C.y - GridSeparation : C.y;
-                const auto dz = (0.5*GridSeparation < C.z) ? C.z - GridSeparation : C.z;
+                    const auto dx = (0.5*GridSeparation < C.x) ? C.x - GridSeparation : C.x;
+                    const auto dy = (0.5*GridSeparation < C.y) ? C.y - GridSeparation : C.y;
+                    const auto dz = (0.5*GridSeparation < C.z) ? C.z - GridSeparation : C.z;
 
-                dist_x.emplace_back(dx);
-                dist_y.emplace_back(dy);
-                dist_z.emplace_back(dz);
+                    dist_x.emplace_back(dx);
+                    dist_y.emplace_back(dy);
+                    dist_z.emplace_back(dz);
 
-                ++p_unit_it;
+                    ++p_unit_it;
+                }
             }
-        }
 
-        const auto shift_x = Stats::Median(dist_x);
-        const auto shift_y = Stats::Median(dist_y);
-        const auto shift_z = Stats::Median(dist_z);
+            const auto shift_x = Stats::Mean(dist_x);
+            const auto shift_y = Stats::Mean(dist_y);
+            const auto shift_z = Stats::Mean(dist_z);
 
-        current_grid_anchor += current_grid_x * shift_x
-                             + current_grid_y * shift_y
-                             + current_grid_z * shift_z;
+            current_grid_anchor += current_grid_x * shift_x
+                                 + current_grid_y * shift_y
+                                 + current_grid_z * shift_z;
+
+        };
+        translate_grid_optimally();
 
 // TODO: re-project points into the unit cube using the new anchor.
 //       (Note: will the optimal translation be ruined since the orientations have not changed?)
+        project_into_unit_cube();
 
 
         // Determine correspondence points.
@@ -234,6 +242,9 @@ Drover DetectGrid3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
                         closest_proj = pl.Project_Onto_Plane_Orthogonally(P);
                     }
                 }
+                if(!closest_proj.isfinite()){
+                    throw std::logic_error("Projected point is not finite. Cannot continue");
+                }
 
                 c_it->first = closest_proj;
                 ++c_it;
@@ -246,6 +257,12 @@ Drover DetectGrid3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
         // This routine rotates the grid axes unit vectors by estimating the optimal rotation of corresponding points.
         // A SVD decomposition provides the rotation matrix that minimizes the difference between corresponding points.
         {
+
+// TODO: Translate about the centre of the unit cube rather than the current (arbitrary) origin. 
+//       This will help de-couple the rotational and translational degrees of freedom. 
+//       The tricky part will be applying the rotations to the grid afterward, but basically just amounting to a
+//       shift->rotate->shift. Be sure the anchor handled correctly too!
+
             const auto N_rows = 3;
             const auto N_cols = (*pcp_it)->points.size();
             Eigen::MatrixXf A(N_rows, N_cols);
@@ -257,22 +274,47 @@ Drover DetectGrid3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
                 const auto P = pp.first; // The point projected into the unit cube.
                 const auto C = c_it->first; // The corresponding point somewhere on the unit cube surface.
 
-                A(col, 0) = C.x;
-                A(col, 1) = C.y;
-                A(col, 2) = C.z;
+                A(0, col) = C.x;
+                A(1, col) = C.y;
+                A(2, col) = C.z;
 
-                B(col, 0) = P.x;
-                B(col, 1) = P.y;
-                B(col, 2) = P.z;
+                B(0, col) = P.x;
+                B(1, col) = P.y;
+                B(2, col) = P.z;
 
                 ++c_it;
                 ++col;
             }
             auto AT = A.transpose();
             auto BAT = B * AT;
+//FUNCINFO("A dimensions: " << A.rows() << "x" << A.cols());
+//FUNCINFO("B dimensions: " << B.rows() << "x" << B.cols());
+//FUNCINFO("AT dimensions: " << AT.rows() << "x" << AT.cols());
+//FUNCINFO("BAT dimensions: " << BAT.rows() << "x" << BAT.cols());
+//std::cerr << "A is: " << std::endl;
+//std::cerr << A << std::endl;
+//std::cerr << "B is: " << std::endl;
+//std::cerr << B << std::endl;
+//std::cerr << "BAT is: " << std::endl;
+//std::cerr << BAT << std::endl;
 
-            Eigen::JacobiSVD<Eigen::MatrixXf> SVD(BAT, Eigen::ComputeThinU | Eigen::ComputeThinV);
-            auto M = SVD.matrixU() * SVD.matrixV().transpose();
+            //Eigen::JacobiSVD<Eigen::MatrixXf> SVD(BAT, Eigen::ComputeThinU | Eigen::ComputeThinV);
+            Eigen::JacobiSVD<Eigen::MatrixXf> SVD(BAT, Eigen::ComputeFullU | Eigen::ComputeFullV );
+            auto U = SVD.matrixU();
+            auto V = SVD.matrixV();
+//FUNCINFO("Singular values are: " << SVD.singularValues());
+            auto M = U * V.transpose();
+            //auto M = SVD.matrixU() * SVD.matrixV();
+//FUNCINFO("U dimensions: " << U.rows() << "x" << U.cols());
+//FUNCINFO("V dimensions: " << V.rows() << "x" << V.cols());
+//FUNCINFO("M dimensions: " << M.rows() << "x" << M.cols());
+
+//std::cerr << "U is: " << std::endl;
+//std::cerr << U << std::endl;
+//std::cerr << "V is: " << std::endl;
+//std::cerr << V << std::endl;
+//std::cerr << "M is: " << std::endl;
+//std::cerr << M << std::endl;
 
             Eigen::Vector3f new_grid_x( current_grid_x.x, current_grid_x.y, current_grid_x.z );
             Eigen::Vector3f new_grid_y( current_grid_y.x, current_grid_y.y, current_grid_y.z );
@@ -286,21 +328,27 @@ Drover DetectGrid3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
             const auto previous_grid_y = current_grid_y;
             const auto previous_grid_z = current_grid_z;
 
-            current_grid_x = vec3<double>( rot_grid_x(0), rot_grid_x(1), rot_grid_x(2) );
-            current_grid_y = vec3<double>( rot_grid_y(0), rot_grid_y(1), rot_grid_y(2) );
-            current_grid_z = vec3<double>( rot_grid_z(0), rot_grid_z(1), rot_grid_z(2) );
+            current_grid_x = vec3<double>( rot_grid_x(0), rot_grid_x(1), rot_grid_x(2) ).unit();
+            current_grid_y = vec3<double>( rot_grid_y(0), rot_grid_y(1), rot_grid_y(2) ).unit();
+            current_grid_z = vec3<double>( rot_grid_z(0), rot_grid_z(1), rot_grid_z(2) ).unit();
 
-            std::cerr << "Grid axes moving from: " << std::endl;
-            std::cerr << previous_grid_x << std::endl;
-            std::cerr << previous_grid_y << std::endl;
-            std::cerr << previous_grid_z << std::endl;
-            std::cerr << " to " << std::endl;
-            std::cerr << current_grid_x << "  (angle change: " << current_grid_x.angle(previous_grid_x)*180.0/M_PI << "deg. )" << std::endl;
-            std::cerr << current_grid_y << "  (angle change: " << current_grid_y.angle(previous_grid_y)*180.0/M_PI << "deg. )" << std::endl;
-            std::cerr << current_grid_z << "  (angle change: " << current_grid_z.angle(previous_grid_z)*180.0/M_PI << "deg. )" << std::endl;
-            std::cerr << " " << std::endl;
+std::cerr << "Grid axes moving from: " << std::endl;
+std::cerr << previous_grid_x << std::endl;
+std::cerr << previous_grid_y << std::endl;
+std::cerr << previous_grid_z << std::endl;
+std::cerr << " to " << std::endl;
+std::cerr << current_grid_x << std::endl;
+std::cerr << current_grid_y << std::endl;
+std::cerr << current_grid_z << std::endl;
+std::cerr << " angle changes: " << std::endl;
+std::cerr << current_grid_x.angle(previous_grid_x)*180.0/M_PI << " deg." << std::endl;
+std::cerr << current_grid_y.angle(previous_grid_y)*180.0/M_PI << " deg." << std::endl;
+std::cerr << current_grid_z.angle(previous_grid_z)*180.0/M_PI << " deg." << std::endl;
+std::cerr << " " << std::endl;
+
         }
 
+}
 
 /*
 
