@@ -168,20 +168,74 @@ Drover DetectGrid3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
             const auto dR = static_cast<double>(i) * GridSeparation;
 
             //plane(const vec3<T> &N_0_in, const vec3<T> &R_0_in);
-            const auto N_0 = current_grid_x;
+            const auto N_0_x = current_grid_x;
+            const auto N_0_y = current_grid_y;
+            const auto N_0_z = current_grid_z;
 
-            planes.emplace_back(N_0,
-                                current_grid_anchor + current_grid_x * dR);
+            planes.emplace_back(N_0_x, current_grid_anchor + N_0_x * dR);
+            planes.emplace_back(N_0_y, current_grid_anchor + N_0_y * dR);
+            planes.emplace_back(N_0_z, current_grid_anchor + N_0_z * dR);
             if(i != 0){
-                planes.emplace_back(N_0,
-                                    current_grid_anchor - current_grid_x * dR);
+                planes.emplace_back(N_0_x, current_grid_anchor - N_0_x * dR);
+                planes.emplace_back(N_0_y, current_grid_anchor - N_0_y * dR);
+                planes.emplace_back(N_0_z, current_grid_anchor - N_0_z * dR);
             }
 
-            if(dR >= (x_diff * 0.5 + GridSeparation)) break;
+            if( (dR >= (x_diff * 0.5 + GridSeparation))
+            &&  (dR >= (y_diff * 0.5 + GridSeparation))
+            &&  (dR >= (z_diff * 0.5 + GridSeparation)) ){
+                FUNCINFO("Placed " << 3 + (i-1)*2*3 << " planes in total");
+                break;
+            }
         }
 
+// Loop point.
+
+        // Project every point onto every plane. Keep only the nearest projection.
+        auto corresp = (*pcp_it)->points; // Holds the closest corresponding projected point for each point cloud point.
+        auto c_it = std::begin(corresp);
+
+        for(const auto &pp : (*pcp_it)->points){
+            const auto P = pp.first;
+
+            double closest_dist = std::numeric_limits<double>::infinity();
+            vec3<double> closest_proj = vec3<double>( std::numeric_limits<double>::quiet_NaN(),
+                                                      std::numeric_limits<double>::quiet_NaN(),
+                                                      std::numeric_limits<double>::quiet_NaN() );
+            for(const auto &p : planes){
+                const auto dist = p.Get_Signed_Distance_To_Point(P);
+                if(dist < closest_dist){
+                    closest_proj = p.Project_Onto_Plane_Orthogonally(P);
+                }
+            }
+
+            c_it->first = closest_proj;
+            ++c_it;
+        }
+
+        // Determine the Procrustes solution with the given correspondence.
 
 
+        // ...
+
+
+        // Transform the planar grid according to the Procrustes solution.
+
+
+        // ...
+
+
+        // Go back to the loop point above and continue until the grid settles.
+
+        // ...
+
+
+
+        // Return the final grid via fit statistics and visually.
+        //
+        // Note: Either try using any available images or create a set of images with points blitted and grid contours?
+
+        // ...
 
 
 
@@ -190,8 +244,6 @@ Drover DetectGrid3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
 
 
          
-
-        // Creates planes for all grid intersections.
             
 
 FUNCERR("This routine has not yet been implemented. Refusing to continue");
