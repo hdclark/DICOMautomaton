@@ -49,22 +49,33 @@ Drover DroverDebug(Drover DICOM_data,
                      " image slices");
             size_t i_num = 0;
             for(auto &img : iap->imagecoll.images){
+                const auto ModalityOpt = img.GetMetadataValueAs<std::string>("Modality");
+                const auto mm = img.minmax();
                 FUNCINFO("    Image " <<
-                         i_num++ <<
+                         i_num <<
+                         " has Modality = " <<
+                         ModalityOpt.value_or("(unspecified)") );
+                FUNCINFO("    Image " <<
+                         i_num <<
+                         " has pixel value range = [" <<
+                         mm.first << "," << mm.second << "]");
+                FUNCINFO("    Image " <<
+                         i_num <<
                          " has pxl_dx, pxl_dy, pxl_dz = " <<
                          img.pxl_dx << ", " <<
                          img.pxl_dy << ", " <<
                          img.pxl_dz);
                 FUNCINFO("    Image " <<
-                         (i_num-1) <<
+                         i_num <<
                          " has anchor, offset = " <<
                          img.anchor << ", " <<
                          img.offset);
                 FUNCINFO("    Image " <<
-                         (i_num-1) <<
+                         i_num <<
                          " has row_unit, col_unit = " <<
                          img.row_unit << ", " <<
                          img.col_unit);
+                ++i_num;
             }
         }
     }
