@@ -104,5 +104,22 @@ Drover DroverDebug(Drover DICOM_data,
         }
     }while(false);
 
+    //Point data.
+    {
+        FUNCINFO("There are " <<
+                 DICOM_data.point_data.size() <<
+                 " Point_Clouds loaded");
+
+        size_t p_cnt = 0;
+        for(auto &pc : DICOM_data.point_data){
+            FUNCINFO("  Point_Cloud " <<
+                     p_cnt++ <<
+                     " has " <<
+                     pc->points.size() <<
+                     " points and" <<
+                     pc->attributes.size() <<
+                     " attributes");
+        }
+    }
     return DICOM_data;
 }
