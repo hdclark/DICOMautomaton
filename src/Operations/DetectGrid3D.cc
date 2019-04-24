@@ -16,6 +16,7 @@
 #include "../YgorImages_Functors/ConvenienceRoutines.h"
 #include "../YgorImages_Functors/Grouping/Misc_Functors.h"
 #include "../YgorImages_Functors/Compute/Volumetric_Neighbourhood_Sampler.h"
+
 #include "DetectGrid3D.h"
 #include "YgorImages.h"
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
@@ -34,6 +35,7 @@
 
 #include <eigen3/Eigen/Dense>
 #include <eigen3/Eigen/Eigenvalues>
+#include <eigen3/Eigen/SVD>
 
 #include "YgorClustering.hpp"
 
@@ -117,6 +119,11 @@ Drover DetectGrid3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
         throw std::invalid_argument("Line thickness is impossible with given grid spacing. Refusing to continue.");
     }
 
+    const vec3<double> zero_vec3( 0.0, 0.0, 0.0 );
+    const vec3<double> NaN_vec3( std::numeric_limits<double>::quiet_NaN(),
+                                 std::numeric_limits<double>::quiet_NaN(),
+                                 std::numeric_limits<double>::quiet_NaN() );
+
     auto PCs_all = All_PCs( DICOM_data );
     auto PCs = Whitelist( PCs_all, PointSelectionStr );
     for(auto & pcp_it : PCs){
@@ -128,11 +135,178 @@ Drover DetectGrid3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
         vec3<double> current_grid_x = x_unit;
         vec3<double> current_grid_y = y_unit;
         vec3<double> current_grid_z = z_unit;
-        vec3<double> current_grid_anchor(0.0, 0.0, 0.0);
+        vec3<double> current_grid_anchor = zero_vec3;
 
-        Stats::Running_MinMax<float> rmm_x;
-        Stats::Running_MinMax<float> rmm_y;
-        Stats::Running_MinMax<float> rmm_z;
+// Loop point.
+
+        // Using the current grid axes directions and anchor point, project all points into the 'unit' cube.
+        auto p_unit = (*pcp_it)->points; // Holds the projection of each point cloud point into the grid-defined unit cube.
+        {
+            auto p_unit_it = std::begin(p_unit);
+            for(const auto &pp : (*pcp_it)->points){
+                const auto P = pp.first;
+
+                // Vector rel. to grid. anchor.
+                const auto R = (P - current_grid_anchor);
+
+                // Vector within the unit cube, described in the grid axes basis.
+                const auto C = vec3<double>( std::fmod( R.Dot(current_grid_x), GridSeparation ),
+                                             std::fmod( R.Dot(current_grid_y), GridSeparation ),
+                                             std::fmod( R.Dot(current_grid_z), GridSeparation ) ) + current_grid_anchor;
+
+                p_unit_it->first = C;
+                ++p_unit_it;
+            }
+        }
+
+        // Determine the optimal translation.
+        //
+        // Along each grid direction, the distance from each point to the nearest grid plane will be recorded.
+        // Note that we dramatically simplify determining distance to the cube face by adding or subtracting half the
+        // scalar distance; since all points have been projecting into the unit cube, at most the point will be
+        // 0.5*separation from the nearest plane. Thus if we subtract 1.0*separation for the points in the upper half, we can
+        // use simple 1D distribution analysis to determine optimal translations of the anchor point.
+        std::vector<double> dist_x;
+        std::vector<double> dist_y;
+        std::vector<double> dist_z;
+
+        dist_x.reserve(p_unit.size());
+        dist_y.reserve(p_unit.size());
+        dist_z.reserve(p_unit.size());
+        {
+            auto p_unit_it = std::begin(p_unit);
+            for(const auto &pp : (*pcp_it)->points){
+                const auto P = pp.first;
+                const auto C = p_unit_it->first - current_grid_anchor;
+
+                const auto dx = (0.5*GridSeparation < C.x) ? C.x - GridSeparation : C.x;
+                const auto dy = (0.5*GridSeparation < C.y) ? C.y - GridSeparation : C.y;
+                const auto dz = (0.5*GridSeparation < C.z) ? C.z - GridSeparation : C.z;
+
+                dist_x.emplace_back(dx);
+                dist_y.emplace_back(dy);
+                dist_z.emplace_back(dz);
+
+                ++p_unit_it;
+            }
+        }
+
+        const auto shift_x = Stats::Median(dist_x);
+        const auto shift_y = Stats::Median(dist_y);
+        const auto shift_z = Stats::Median(dist_z);
+
+        current_grid_anchor += current_grid_x * shift_x
+                             + current_grid_y * shift_y
+                             + current_grid_z * shift_z;
+
+// TODO: re-project points into the unit cube using the new anchor.
+//       (Note: will the optimal translation be ruined since the orientations have not changed?)
+
+
+        // Determine correspondence points.
+        //
+        // Every point cloud point is projected onto the faces of the cube. Only the nearest projection is kept.
+        auto corresp = (*pcp_it)->points; // Holds the closest corresponding projected point for each point cloud point.
+        {
+            // Creates plane for all faces.
+            //
+            // Note: There is a faster way to do this using the same approach as the translation routine above.
+            //       This way is more convenient for testing.
+            std::vector<plane<double>> planes;
+
+            planes.emplace_back( current_grid_x, current_grid_anchor );
+            planes.emplace_back( current_grid_y, current_grid_anchor );
+            planes.emplace_back( current_grid_z, current_grid_anchor );
+
+            planes.emplace_back( current_grid_x, current_grid_anchor + current_grid_x * GridSeparation );
+            planes.emplace_back( current_grid_y, current_grid_anchor + current_grid_y * GridSeparation );
+            planes.emplace_back( current_grid_z, current_grid_anchor + current_grid_z * GridSeparation );
+
+            auto c_it = std::begin(corresp);
+            for(const auto &pp : p_unit){
+                const auto P = pp.first;
+
+                double closest_dist = std::numeric_limits<double>::infinity();
+                vec3<double> closest_proj = NaN_vec3;
+                for(const auto &pl : planes){
+                    const auto dist = pl.Get_Signed_Distance_To_Point(P);
+                    if(dist < closest_dist){
+                        closest_proj = pl.Project_Onto_Plane_Orthogonally(P);
+                    }
+                }
+
+                c_it->first = closest_proj;
+                ++c_it;
+            }
+        }
+        
+
+        // Determine optimal rotations.
+        //
+        // This routine rotates the grid axes unit vectors by estimating the optimal rotation of corresponding points.
+        // A SVD decomposition provides the rotation matrix that minimizes the difference between corresponding points.
+        {
+            const auto N_rows = 3;
+            const auto N_cols = (*pcp_it)->points.size();
+            Eigen::MatrixXf A(N_rows, N_cols);
+            Eigen::MatrixXf B(N_rows, N_cols);
+
+            auto c_it = std::begin(corresp);
+            size_t col = 0;
+            for(const auto &pp : p_unit){
+                const auto P = pp.first; // The point projected into the unit cube.
+                const auto C = c_it->first; // The corresponding point somewhere on the unit cube surface.
+
+                A(col, 0) = C.x;
+                A(col, 1) = C.y;
+                A(col, 2) = C.z;
+
+                B(col, 0) = P.x;
+                B(col, 1) = P.y;
+                B(col, 2) = P.z;
+
+                ++c_it;
+                ++col;
+            }
+            auto AT = A.transpose();
+            auto BAT = B * AT;
+
+            Eigen::JacobiSVD<Eigen::MatrixXf> SVD(BAT, Eigen::ComputeThinU | Eigen::ComputeThinV);
+            auto M = SVD.matrixU() * SVD.matrixV().transpose();
+
+            Eigen::Vector3f new_grid_x( current_grid_x.x, current_grid_x.y, current_grid_x.z );
+            Eigen::Vector3f new_grid_y( current_grid_y.x, current_grid_y.y, current_grid_y.z );
+            Eigen::Vector3f new_grid_z( current_grid_z.x, current_grid_z.y, current_grid_z.z );
+
+            auto rot_grid_x = M * new_grid_x;
+            auto rot_grid_y = M * new_grid_y;
+            auto rot_grid_z = M * new_grid_z;
+
+            const auto previous_grid_x = current_grid_x;
+            const auto previous_grid_y = current_grid_y;
+            const auto previous_grid_z = current_grid_z;
+
+            current_grid_x = vec3<double>( rot_grid_x(0), rot_grid_x(1), rot_grid_x(2) );
+            current_grid_y = vec3<double>( rot_grid_y(0), rot_grid_y(1), rot_grid_y(2) );
+            current_grid_z = vec3<double>( rot_grid_z(0), rot_grid_z(1), rot_grid_z(2) );
+
+            std::cerr << "Grid axes moving from: " << std::endl;
+            std::cerr << previous_grid_x << std::endl;
+            std::cerr << previous_grid_y << std::endl;
+            std::cerr << previous_grid_z << std::endl;
+            std::cerr << " to " << std::endl;
+            std::cerr << current_grid_x << "  (angle change: " << current_grid_x.angle(previous_grid_x)*180.0/M_PI << "deg. )" << std::endl;
+            std::cerr << current_grid_y << "  (angle change: " << current_grid_y.angle(previous_grid_y)*180.0/M_PI << "deg. )" << std::endl;
+            std::cerr << current_grid_z << "  (angle change: " << current_grid_z.angle(previous_grid_z)*180.0/M_PI << "deg. )" << std::endl;
+            std::cerr << " " << std::endl;
+        }
+
+
+/*
+
+
+
+
 
         // Determine point cloud bounds.
         for(const auto &pp : (*pcp_it)->points){
@@ -189,7 +363,6 @@ Drover DetectGrid3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
             }
         }
 
-// Loop point.
 
         // Project every point onto every plane. Keep only the nearest projection.
         auto corresp = (*pcp_it)->points; // Holds the closest corresponding projected point for each point cloud point.
@@ -199,9 +372,7 @@ Drover DetectGrid3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
             const auto P = pp.first;
 
             double closest_dist = std::numeric_limits<double>::infinity();
-            vec3<double> closest_proj = vec3<double>( std::numeric_limits<double>::quiet_NaN(),
-                                                      std::numeric_limits<double>::quiet_NaN(),
-                                                      std::numeric_limits<double>::quiet_NaN() );
+            vec3<double> closest_proj = NaN_vec3;
             for(const auto &p : planes){
                 const auto dist = p.Get_Signed_Distance_To_Point(P);
                 if(dist < closest_dist){
@@ -240,7 +411,7 @@ Drover DetectGrid3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
 
 
 
-
+*/
 
 
          
