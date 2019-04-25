@@ -124,6 +124,93 @@ Drover DetectGrid3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
                                  std::numeric_limits<double>::quiet_NaN(),
                                  std::numeric_limits<double>::quiet_NaN() );
 
+
+
+    //////////////////////////////////////////////////////////////////////////////
+    const auto Write_XYZ = [](const std::string &fname,
+                              std::vector< std::pair< vec3<double>, long int > > points) -> void {
+        std::ofstream OF(fname);
+        for(const auto &pp : points){
+            const auto v = pp.first;
+            OF << v.x << " " << v.y << " " << v.z << std::endl;
+        }
+        OF.close();
+        return;
+    };
+
+    const auto Write_Cube_OBJ = [](const std::string &fname,
+                                   const vec3<double> &corner,
+                                   const vec3<double> &edge1,
+                                   const vec3<double> &edge2,
+                                   const vec3<double> &edge3 ) -> void {
+        
+        // This routine takes a corner vertex and three edge vectors stemming from the corner and draws a cube.
+        // The edges need not be orthogonal. They can also have different lengths.
+        const auto A = corner;
+        const auto B = corner + edge1;
+        const auto C = corner + edge1 + edge3;
+        const auto D = corner + edge3;
+
+        const auto E = corner + edge2;
+        const auto F = corner + edge1 + edge2;
+        const auto G = corner + edge1 + edge2 + edge3;
+        const auto H = corner + edge2 + edge3;
+
+        std::ofstream OF(fname);
+        OF << "# Wavefront OBJ file." << std::endl;
+
+        // Vertices.
+        OF << "v " << A.x << " " << A.y << " " << A.z << std::endl 
+           << "v " << B.x << " " << B.y << " " << B.z << std::endl 
+           << "v " << C.x << " " << C.y << " " << C.z << std::endl 
+           << "v " << D.x << " " << D.y << " " << D.z << std::endl 
+
+           << "v " << E.x << " " << E.y << " " << E.z << std::endl 
+           << "v " << F.x << " " << F.y << " " << F.z << std::endl 
+           << "v " << G.x << " " << G.y << " " << G.z << std::endl 
+           << "v " << H.x << " " << H.y << " " << H.z << std::endl; 
+
+        // Faces (n.b. one-indexed, not zero-indexed).
+        OF << "f 1 2 5" << std::endl
+           << "f 2 6 5" << std::endl
+
+           << "f 2 3 6" << std::endl
+           << "f 3 7 6" << std::endl
+
+           << "f 3 4 7" << std::endl
+           << "f 4 8 7" << std::endl
+
+           << "f 4 1 8" << std::endl
+           << "f 1 5 8" << std::endl
+
+           << "f 5 6 7" << std::endl
+           << "f 7 8 5" << std::endl
+
+           << "f 2 1 3" << std::endl
+           << "f 1 4 3" << std::endl;
+
+        // Edges (n.b. one-indexed, not zero-indexed).
+        OF << "l 1 2" << std::endl
+           << "l 2 3" << std::endl
+           << "l 3 4" << std::endl
+           << "l 4 1" << std::endl
+
+           << "l 1 5" << std::endl
+           << "l 2 6" << std::endl
+           << "l 3 7" << std::endl
+           << "l 4 8" << std::endl
+
+           << "l 5 6" << std::endl
+           << "l 6 7" << std::endl
+           << "l 7 8" << std::endl
+           << "l 8 5" << std::endl;
+
+        OF.close();
+        return;
+    };
+    //////////////////////////////////////////////////////////////////////////////
+
+
     auto PCs_all = All_PCs( DICOM_data );
     auto PCs = Whitelist( PCs_all, PointSelectionStr );
     for(auto & pcp_it : PCs){
@@ -137,8 +224,11 @@ Drover DetectGrid3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
         vec3<double> current_grid_z = z_unit;
         vec3<double> current_grid_anchor = zero_vec3;
 
+        Write_XYZ("/tmp/original_points.xyz", (*pcp_it)->points);
+
 // Loop point.
-for(size_t loop = 0; loop < 50; ++loop){
+size_t loop_max = 5000;
+for(size_t loop = 0; loop < loop_max; ++loop){
 
         // Using the current grid axes directions and anchor point, project all points into the 'unit' cube.
         auto p_unit = (*pcp_it)->points; // Holds the projection of each point cloud point into the grid-defined unit cube.
@@ -152,15 +242,67 @@ for(size_t loop = 0; loop < 50; ++loop){
                 const auto R = (P - current_grid_anchor);
 
                 // Vector within the unit cube, described in the grid axes basis.
-                const auto C = vec3<double>( std::fmod( R.Dot(current_grid_x), GridSeparation ),
-                                             std::fmod( R.Dot(current_grid_y), GridSeparation ),
-                                             std::fmod( R.Dot(current_grid_z), GridSeparation ) ) + current_grid_anchor;
+                auto C_x = std::fmod( R.Dot(current_grid_x), GridSeparation );
+                auto C_y = std::fmod( R.Dot(current_grid_y), GridSeparation );
+                auto C_z = std::fmod( R.Dot(current_grid_z), GridSeparation );
+                if(C_x < 0.0) C_x += GridSeparation; // Ensure the result is within the cube (fmod can be negative).
+                if(C_y < 0.0) C_y += GridSeparation;
+                if(C_z < 0.0) C_z += GridSeparation;
+
+                const auto C = current_grid_anchor
+                             + current_grid_x * C_x
+                             + current_grid_y * C_y
+                             + current_grid_z * C_z;
+                //const auto C = vec3<double>( std::fmod( R.Dot(current_grid_x), GridSeparation ),
+                //                             std::fmod( R.Dot(current_grid_y), GridSeparation ),
+                //                             std::fmod( R.Dot(current_grid_z), GridSeparation ) ) + current_grid_anchor;
+
+
+                // Verify that the projected point is indeed within the unit cube.
+                
+                plane<double> pl_x_A( current_grid_x, current_grid_anchor );
+                plane<double> pl_y_A( current_grid_y, current_grid_anchor );
+                plane<double> pl_z_A( current_grid_z, current_grid_anchor );
+
+                plane<double> pl_x_B( current_grid_x, current_grid_anchor + current_grid_x * GridSeparation );
+                plane<double> pl_y_B( current_grid_y, current_grid_anchor + current_grid_y * GridSeparation );
+                plane<double> pl_z_B( current_grid_z, current_grid_anchor + current_grid_z * GridSeparation );
+
+/*
+                plane<double> pl_x_A( current_grid_x, current_grid_anchor - current_grid_x * GridSeparation * 0.5 );
+                plane<double> pl_y_A( current_grid_y, current_grid_anchor - current_grid_y * GridSeparation * 0.5 );
+                plane<double> pl_z_A( current_grid_z, current_grid_anchor - current_grid_z * GridSeparation * 0.5 );
+
+                plane<double> pl_x_B( current_grid_x, current_grid_anchor + current_grid_x * GridSeparation * 0.5 );
+                plane<double> pl_y_B( current_grid_y, current_grid_anchor + current_grid_y * GridSeparation * 0.5 );
+                plane<double> pl_z_B( current_grid_z, current_grid_anchor + current_grid_z * GridSeparation * 0.5 );
+*/
+
+                if(  ( pl_x_A.Is_Point_Above_Plane(C) == pl_x_B.Is_Point_Above_Plane(C) )
+                ||   ( pl_y_A.Is_Point_Above_Plane(C) == pl_y_B.Is_Point_Above_Plane(C) )
+                ||   ( pl_z_A.Is_Point_Above_Plane(C) == pl_z_B.Is_Point_Above_Plane(C) ) ){
+                    std::stringstream ss;
+                    ss << "Projection is outside the cube: "
+                       << C 
+                       << " originally: " 
+                       << P
+                       << " anchor: " 
+                       << current_grid_anchor
+                       << " axes: "
+                       << current_grid_x * GridSeparation
+                       << " " 
+                       << current_grid_y * GridSeparation
+                       << " " 
+                       << current_grid_z * GridSeparation;
+                    throw std::logic_error(ss.str());
+                }
 
                 p_unit_it->first = C;
                 ++p_unit_it;
             }
         };
         project_into_unit_cube();
+
 
         // Determine the optimal translation.
         //
@@ -183,9 +325,13 @@ for(size_t loop = 0; loop < 50; ++loop){
                     //const auto P = pp.first;
                     const auto C = p_unit_it->first - current_grid_anchor;
 
-                    const auto dx = (0.5*GridSeparation < C.x) ? C.x - GridSeparation : C.x;
-                    const auto dy = (0.5*GridSeparation < C.y) ? C.y - GridSeparation : C.y;
-                    const auto dz = (0.5*GridSeparation < C.z) ? C.z - GridSeparation : C.z;
+                    const auto proj_x = current_grid_x.Dot(C - current_grid_anchor);
+                    const auto proj_y = current_grid_y.Dot(C - current_grid_anchor);
+                    const auto proj_z = current_grid_z.Dot(C - current_grid_anchor);
+
+                    const auto dx = (0.5*GridSeparation < proj_x) ? proj_x - GridSeparation : proj_x;
+                    const auto dy = (0.5*GridSeparation < proj_y) ? proj_y - GridSeparation : proj_y;
+                    const auto dz = (0.5*GridSeparation < proj_z) ? proj_z - GridSeparation : proj_z;
 
                     dist_x.emplace_back(dx);
                     dist_y.emplace_back(dy);
@@ -195,9 +341,16 @@ for(size_t loop = 0; loop < 50; ++loop){
                 }
             }
 
+
             const auto shift_x = Stats::Mean(dist_x);
             const auto shift_y = Stats::Mean(dist_y);
             const auto shift_z = Stats::Mean(dist_z);
+
+/*
+            const auto shift_x = Stats::Median(dist_x);
+            const auto shift_y = Stats::Median(dist_y);
+            const auto shift_z = Stats::Median(dist_z);
+*/            
 
             current_grid_anchor += current_grid_x * shift_x
                                  + current_grid_y * shift_y
@@ -212,9 +365,10 @@ for(size_t loop = 0; loop < 50; ++loop){
 
         // Determine correspondence points.
         //
-        // Every point cloud point is projected onto the faces of the cube. Only the nearest projection is kept.
+        // Every unit-cube projected point is projected onto the faces of the cube. Only the projection on the nearest
+        // face is kept.
         auto corresp = (*pcp_it)->points; // Holds the closest corresponding projected point for each point cloud point.
-        {
+        auto find_corresponding_points = [&](void) -> void {
             // Creates plane for all faces.
             //
             // Note: There is a faster way to do this using the same approach as the translation routine above.
@@ -236,8 +390,9 @@ for(size_t loop = 0; loop < 50; ++loop){
                 double closest_dist = std::numeric_limits<double>::infinity();
                 vec3<double> closest_proj = NaN_vec3;
                 for(const auto &pl : planes){
-                    const auto dist = pl.Get_Signed_Distance_To_Point(P);
+                    const auto dist = std::abs(pl.Get_Signed_Distance_To_Point(P));
                     if(dist < closest_dist){
+                        closest_dist = dist;
                         closest_proj = pl.Project_Onto_Plane_Orthogonally(P);
                     }
                 }
@@ -248,7 +403,48 @@ for(size_t loop = 0; loop < 50; ++loop){
                 c_it->first = closest_proj;
                 ++c_it;
             }
+        };
+        find_corresponding_points();
+
+
+        if((loop+1) == loop_max){
+            // Write the project points to a file for inspection.
+            Write_XYZ("/tmp/cube_projected_points.xyz", p_unit);
+
+            // Write the unit cube edges to a file for inspection.
+            Write_Cube_OBJ("/tmp/cube.obj",
+                           current_grid_anchor,
+                           current_grid_x * GridSeparation,
+                           current_grid_y * GridSeparation,
+                           current_grid_z * GridSeparation );
+
+            // Write the correspondence points to a file for inspection.
+            Write_XYZ("/tmp/cube_corresp_points.xyz", corresp);
+
         }
+
+        // Compute some stats about the correspondence.
+        //if((loop % 5) == 1){
+        {
+            std::vector<double> dists;
+            auto c_it = std::begin(corresp);
+            for(const auto &pp : p_unit){
+                const auto P = pp.first;
+                const auto C = c_it->first;
+
+                const auto dist = P.distance(C);
+                dists.emplace_back(dist);
+
+                ++c_it;
+            }
+
+            std::cerr << "Loop: " << loop << std::endl
+                      << "  Min:    " << Stats::Min(dists)    << std::endl
+                      << "  Mean:   " << Stats::Mean(dists)   << std::endl
+                      << "  Median: " << Stats::Median(dists) << std::endl
+                      << "  Max:    " << Stats::Max(dists)    << std::endl;
+        }
+
         
 
         // Determine optimal rotations.
