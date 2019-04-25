@@ -148,7 +148,7 @@ for(size_t loop = 0; loop < 50; ++loop){
             for(const auto &pp : (*pcp_it)->points){
                 const auto P = pp.first;
 
-                // Vector rel. to grid. anchor.
+                // Vector rel. to grid anchor.
                 const auto R = (P - current_grid_anchor);
 
                 // Vector within the unit cube, described in the grid axes basis.
@@ -206,8 +206,7 @@ for(size_t loop = 0; loop < 50; ++loop){
         };
         translate_grid_optimally();
 
-// TODO: re-project points into the unit cube using the new anchor.
-//       (Note: will the optimal translation be ruined since the orientations have not changed?)
+// TODO: Does this invalidate the optimal translation we just found? If so, can anything be done?
         project_into_unit_cube();
 
 
@@ -263,6 +262,11 @@ for(size_t loop = 0; loop < 50; ++loop){
 //       The tricky part will be applying the rotations to the grid afterward, but basically just amounting to a
 //       shift->rotate->shift. Be sure the anchor handled correctly too!
 
+            const auto unit_cube_centre = current_grid_x * GridSeparation * 0.5
+                                        + current_grid_y * GridSeparation * 0.5
+                                        + current_grid_z * GridSeparation * 0.5
+                                        + current_grid_anchor;
+
             const auto N_rows = 3;
             const auto N_cols = (*pcp_it)->points.size();
             Eigen::MatrixXf A(N_rows, N_cols);
@@ -274,13 +278,16 @@ for(size_t loop = 0; loop < 50; ++loop){
                 const auto P = pp.first; // The point projected into the unit cube.
                 const auto C = c_it->first; // The corresponding point somewhere on the unit cube surface.
 
-                A(0, col) = C.x;
-                A(1, col) = C.y;
-                A(2, col) = C.z;
+                const auto P_0 = P - unit_cube_centre;
+                const auto C_0 = C - unit_cube_centre;
 
-                B(0, col) = P.x;
-                B(1, col) = P.y;
-                B(2, col) = P.z;
+                A(0, col) = C_0.x;
+                A(1, col) = C_0.y;
+                A(2, col) = C_0.z;
+
+                B(0, col) = P_0.x;
+                B(1, col) = P_0.y;
+                B(2, col) = P_0.z;
 
                 ++c_it;
                 ++col;
@@ -303,8 +310,25 @@ for(size_t loop = 0; loop < 50; ++loop){
             auto U = SVD.matrixU();
             auto V = SVD.matrixV();
 //FUNCINFO("Singular values are: " << SVD.singularValues());
-            auto M = U * V.transpose();
-            //auto M = SVD.matrixU() * SVD.matrixV();
+            
+            // Use the SVD result directly.
+            //auto M = U * V.transpose();
+
+            // Attempt to restrict to rotations only.
+            Eigen::Matrix3f PI;
+            PI << 1.0 , 0.0 , 0.0,
+                  0.0 , 1.0 , 0.0,
+                  0.0 , 0.0 , ( U * V.transpose() ).determinant();
+            auto M = U * PI * V.transpose();
+
+            // Restrict the solution to rotations only. (Refer to the 'Kabsch algorithm' for more info.)
+            // NOTE: Probably requires Nx3 matrices rather than 3xN matrices...
+            //Eigen::Matrix3f PI;
+            //PI << 1.0 << 0.0 << 0.0
+            //   << 0.0 << 1.0 << 0.0
+            //   << 0.0 << 0.0 << Eigen::Determinant( V * U.transpose() );
+            //auto M = V * PI * U.transpose();
+
 //FUNCINFO("U dimensions: " << U.rows() << "x" << U.cols());
 //FUNCINFO("V dimensions: " << V.rows() << "x" << V.cols());
 //FUNCINFO("M dimensions: " << M.rows() << "x" << M.cols());
@@ -315,6 +339,7 @@ for(size_t loop = 0; loop < 50; ++loop){
 //std::cerr << V << std::endl;
 //std::cerr << "M is: " << std::endl;
 //std::cerr << M << std::endl;
+
 
             Eigen::Vector3f new_grid_x( current_grid_x.x, current_grid_x.y, current_grid_x.z );
             Eigen::Vector3f new_grid_y( current_grid_y.x, current_grid_y.y, current_grid_y.z );
@@ -332,6 +357,25 @@ for(size_t loop = 0; loop < 50; ++loop){
             current_grid_y = vec3<double>( rot_grid_y(0), rot_grid_y(1), rot_grid_y(2) ).unit();
             current_grid_z = vec3<double>( rot_grid_z(0), rot_grid_z(1), rot_grid_z(2) ).unit();
 
+            //Determine how the anchor point moves.
+            //
+            // Since we permitted only rotations (relative to the centre of the unit cube) when optimizing the grid axes
+            // unit vectors, the centre of the unit cube will be invariant after transforming the grid axes. When th
+            // grid axes were rotated, the anchor point also rotated. Starting from the unit cube centre, the anchor can
+            // be easily found by translating along the grid axes.
+            const auto previous_grid_anchor = current_grid_anchor;
+            current_grid_anchor = unit_cube_centre 
+                                - current_grid_x * GridSeparation * 0.5
+                                - current_grid_y * GridSeparation * 0.5
+                                - current_grid_z * GridSeparation * 0.5 ;
+
+std::cerr << "Dot product of new grid axes vectors: " 
+          << current_grid_x.Dot(current_grid_y) << "  "
+          << current_grid_x.Dot(current_grid_z) << "  "
+          << current_grid_y.Dot(current_grid_z) << " # should be (0,0,0)." << std::endl;
+
+std::cerr << "Grid anchor translation: " << std::endl;
+std::cerr << (current_grid_anchor - previous_grid_anchor) << std::endl;
 std::cerr << "Grid axes moving from: " << std::endl;
 std::cerr << previous_grid_x << std::endl;
 std::cerr << previous_grid_y << std::endl;
