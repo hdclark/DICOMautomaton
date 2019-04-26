@@ -208,6 +208,155 @@ Drover DetectGrid3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
         OF.close();
         return;
     };
+
+    const auto Write_Grid_OBJ = [](const std::string &fname,
+                                   std::vector< std::pair< vec3<double>, long int > > points,
+                                   const vec3<double> &corner,
+                                   const vec3<double> &edge1,
+                                   const vec3<double> &edge2,
+                                   const vec3<double> &edge3 ) -> void {
+        
+        // This routine takes a grid intersection (i.e., a corner of a single grid voxel) and three edge vectors that
+        // describe where the adjacent cells are and draws a 3D grid that tiles the region occupied by the given points.
+        //
+
+        // Find the grid lines that enclose the given points.
+        Stats::Running_MinMax<double> mm_x;
+        Stats::Running_MinMax<double> mm_y;
+        Stats::Running_MinMax<double> mm_z;
+        for(const auto &pp : points){
+            const auto P = pp.first;
+
+            mm_x.Digest(P.Dot(edge1));
+            mm_y.Digest(P.Dot(edge2));
+            mm_z.Digest(P.Dot(edge3));
+        }
+
+        const auto bounding_corner = vec3<double>( mm_x.Current_Min(),
+                                                   mm_y.Current_Min(),
+                                                   mm_z.Current_Min() );
+        auto v = corner;
+
+        const auto dx = (v - bounding_corner).Dot(edge1);
+        const auto dy = (v - bounding_corner).Dot(edge2);
+        const auto dz = (v - bounding_corner).Dot(edge3);
+
+        v +=  edge1 * std::round(dx / edge1.length())
+            + edge2 * std::round(dy / edge2.length())
+            + edge3 * std::round(dz / edge3.length());
+
+/*
+        auto v = corner;
+        while(true){
+            const auto proj_v = v.Dot(edge1);
+            const auto is_below = (proj_v < mm_x.Current_Min());
+            const auto next_is_below = ((proj_v + edge1.length()) < mm_x.Current_Min());
+            if(is_below && !next_is_below){
+                break;
+            }else if(is_below){
+                v += edge1;
+            }else if(!is_below){
+                v -= edge1;
+            }
+        }
+        while(true){
+            const auto proj_v = v.Dot(edge2);
+            const auto is_below = (proj_v < mm_y.Current_Min());
+            const auto next_is_below = ((proj_v + edge2.length()) < mm_y.Current_Min());
+            if(is_below && !next_is_below){
+                break;
+            }else if(is_below){
+                v += edge2;
+            }else if(!is_below){
+                v -= edge2;
+            }
+        }
+        while(true){
+            const auto proj_v = v.Dot(edge3);
+            const auto is_below = (proj_v < mm_z.Current_Min());
+            const auto next_is_below = ((proj_v + edge3.length()) < mm_z.Current_Min());
+            if(is_below && !next_is_below){
+                break;
+            }else if(is_below){
+                v += edge3;
+            }else if(!is_below){
+                v -= edge3;
+            }
+        }
+*/
+
+        const auto N_lines_1 = static_cast<long int>( (mm_x.Current_Max() - mm_x.Current_Min() + edge1.length()) / edge1.length() );
+        const auto N_lines_2 = static_cast<long int>( (mm_y.Current_Max() - mm_y.Current_Min() + edge2.length()) / edge2.length() );
+        const auto N_lines_3 = static_cast<long int>( (mm_z.Current_Max() - mm_z.Current_Min() + edge3.length()) / edge3.length() );
+
+
+        std::ofstream OF(fname);
+        OF << "# Wavefront OBJ file." << std::endl;
+
+        for(long int i = 0; i < N_lines_1; ++i){
+            for(long int j = 0; j < N_lines_2; ++j){
+                for(long int k = 0; k < N_lines_3; ++k){
+
+                       const auto l_corner = v + (edge1 * (i * 1.0))
+                                               + (edge2 * (j * 1.0))
+                                               + (edge3 * (k * 1.0));
+                        const auto A = l_corner;
+                        const auto B = l_corner + edge1;
+                        const auto C = l_corner + edge1 + edge3;
+                        const auto D = l_corner + edge3;
+
+                        const auto E = l_corner + edge2;
+                        const auto F = l_corner + edge1 + edge2;
+                        const auto G = l_corner + edge1 + edge2 + edge3;
+                        const auto H = l_corner + edge2 + edge3;
+
+/*                        
+                        // Vertices.
+                        OF << "v " << A.x << " " << A.y << " " << A.z << "\n" 
+                           << "v " << B.x << " " << B.y << " " << B.z << "\n" 
+                           << "v " << C.x << " " << C.y << " " << C.z << "\n" 
+                           << "v " << D.x << " " << D.y << " " << D.z << "\n" 
+
+                           << "v " << E.x << " " << E.y << " " << E.z << "\n" 
+                           << "v " << F.x << " " << F.y << " " << F.z << "\n" 
+                           << "v " << G.x << " " << G.y << " " << G.z << "\n" 
+                           << "v " << H.x << " " << H.y << " " << H.z << std::endl; 
+
+                        // Faces (n.b. one-indexed, not zero-indexed).
+                        OF << "f -8 -7 -4" << "\n"
+                           << "f -7 -3 -4" << "\n"
+
+                           << "f -7 -6 -3" << "\n"
+                           << "f -6 -2 -3" << "\n"
+
+                           << "f -6 -5 -2" << "\n"
+                           << "f -5 -1 -2" << "\n"
+
+                           << "f -5 -8 -1" << "\n"
+                           << "f -8 -4 -1" << "\n"
+
+                           << "f -4 -3 -2" << "\n"
+                           << "f -2 -1 -4" << "\n"
+
+                           << "f -7 -8 -6" << "\n"
+                           << "f -8 -5 -6" << std::endl;
+*/
+                        // Vertices.
+                        OF << "v " << A.x << " " << A.y << " " << A.z << "\n" 
+                           << "v " << B.x << " " << B.y << " " << B.z << "\n" 
+                           << "v " << E.x << " " << E.y << " " << E.z << "\n" 
+                           << "v " << F.x << " " << F.y << " " << F.z << "\n";
+
+                        // Faces (n.b. one-indexed, not zero-indexed).
+                        OF << "f -4 -3 -2 -1" << "\n";
+                           //<< "f -3 -1 -2" << "\n";
+                }
+            }
+        }
+
+        OF.close();
+        return;
+    };
     //////////////////////////////////////////////////////////////////////////////
 
 
@@ -227,7 +376,7 @@ Drover DetectGrid3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
         Write_XYZ("/tmp/original_points.xyz", (*pcp_it)->points);
 
 // Loop point.
-size_t loop_max = 5000;
+size_t loop_max = 50;
 for(size_t loop = 0; loop < loop_max; ++loop){
 
         // Using the current grid axes directions and anchor point, project all points into the 'unit' cube.
@@ -421,6 +570,14 @@ for(size_t loop = 0; loop < loop_max; ++loop){
             // Write the correspondence points to a file for inspection.
             Write_XYZ("/tmp/cube_corresp_points.xyz", corresp);
 
+            // Write the grid for inspection.
+            Write_Grid_OBJ("/tmp/grid.obj",
+                           (*pcp_it)->points,
+                           current_grid_anchor,
+                           current_grid_x * GridSeparation,
+                           current_grid_y * GridSeparation,
+                           current_grid_z * GridSeparation );
+
         }
 
         // Compute some stats about the correspondence.
@@ -508,14 +665,14 @@ for(size_t loop = 0; loop < loop_max; ++loop){
 //FUNCINFO("Singular values are: " << SVD.singularValues());
             
             // Use the SVD result directly.
-            //auto M = U * V.transpose();
+            auto M = U * V.transpose();
 
             // Attempt to restrict to rotations only.
-            Eigen::Matrix3f PI;
-            PI << 1.0 , 0.0 , 0.0,
-                  0.0 , 1.0 , 0.0,
-                  0.0 , 0.0 , ( U * V.transpose() ).determinant();
-            auto M = U * PI * V.transpose();
+            //Eigen::Matrix3f PI;
+            //PI << 1.0 , 0.0 , 0.0,
+            //      0.0 , 1.0 , 0.0,
+            //      0.0 , 0.0 , ( U * V.transpose() ).determinant();
+            //auto M = U * PI * V.transpose();
 
             // Restrict the solution to rotations only. (Refer to the 'Kabsch algorithm' for more info.)
             // NOTE: Probably requires Nx3 matrices rather than 3xN matrices...
