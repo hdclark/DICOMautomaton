@@ -13,6 +13,7 @@
 
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
+#include "../Insert_Contours.h"
 #include "../YgorImages_Functors/ConvenienceRoutines.h"
 #include "../YgorImages_Functors/Grouping/Misc_Functors.h"
 #include "../YgorImages_Functors/Compute/Volumetric_Neighbourhood_Sampler.h"
@@ -209,7 +210,7 @@ Drover DetectGrid3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
         return;
     };
 
-    const auto Write_Grid_OBJ = [](const std::string &fname,
+    const auto Write_Grid_OBJ = [&DICOM_data](const std::string &fname,
                                    std::vector< std::pair< vec3<double>, long int > > points,
                                    const vec3<double> &corner,
                                    const vec3<double> &edge1,
@@ -227,14 +228,19 @@ Drover DetectGrid3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
         for(const auto &pp : points){
             const auto P = pp.first;
 
-            mm_x.Digest(P.Dot(edge1));
-            mm_y.Digest(P.Dot(edge2));
-            mm_z.Digest(P.Dot(edge3));
+            //mm_x.Digest(P.Dot(edge1));
+            //mm_y.Digest(P.Dot(edge2));
+            //mm_z.Digest(P.Dot(edge3));
+
+            mm_x.Digest(P.x);
+            mm_y.Digest(P.y);
+            mm_z.Digest(P.z);
         }
 
         const auto bounding_corner = vec3<double>( mm_x.Current_Min(),
                                                    mm_y.Current_Min(),
                                                    mm_z.Current_Min() );
+        /*
         auto v = corner;
 
         const auto dx = (v - bounding_corner).Dot(edge1);
@@ -244,6 +250,10 @@ Drover DetectGrid3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
         v +=  edge1 * std::round(dx / edge1.length())
             + edge2 * std::round(dy / edge2.length())
             + edge3 * std::round(dz / edge3.length());
+        */
+        auto v = bounding_corner;
+
+
 
 /*
         auto v = corner;
@@ -290,6 +300,70 @@ Drover DetectGrid3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
         const auto N_lines_3 = static_cast<long int>( (mm_z.Current_Max() - mm_z.Current_Min() + edge3.length()) / edge3.length() );
 
 
+
+        std::vector<plane<double>> planes;
+        for(long int i = 0; i < N_lines_1; ++i){
+            const auto l_corner = v + (edge1 * (i * 1.0));
+            planes.emplace_back(edge1, l_corner);
+        }
+        for(long int i = 0; i < N_lines_2; ++i){
+            const auto l_corner = v + (edge2 * (i * 1.0));
+            planes.emplace_back(edge2, l_corner);
+        }
+        for(long int i = 0; i < N_lines_3; ++i){
+            const auto l_corner = v + (edge3 * (i * 1.0));
+            planes.emplace_back(edge3, l_corner);
+        }
+
+// Save the planes as contours on an image.
+{
+    const std::string ImageSelectionStr = "last";
+    const std::string ROILabel = "grid";
+    const std::string NormalizedROILabel = ROILabel;
+    const auto contour_thickness = 0.02; // in DICOM units (i.e., mm).
+
+    std::list<contours_with_meta> new_contours;
+
+    auto IAs_all = All_IAs( DICOM_data );
+    auto IAs = Whitelist( IAs_all, ImageSelectionStr );
+    if(IAs.empty()){
+        throw std::runtime_error("No images to place contours onto. Cannot continue.");
+    }
+    for(auto & iap_it : IAs){
+        if((*iap_it)->imagecoll.images.empty()) throw std::invalid_argument("Unable to find images to place contours on.");
+        for(auto &animg : (*iap_it)->imagecoll.images){
+
+            auto contour_metadata = animg.metadata;
+            contour_metadata["ROIName"] = ROILabel;
+            contour_metadata["NormalizedROIName"] = NormalizedROILabel;
+
+            new_contours.emplace_back();
+
+            for(const auto &aplane : planes){
+                //contour_metadata["OutlineColour"] = PFC.leaf_line_colour[leaf_num];
+                //contour_metadata["PicketFenceLeafNumber"] = std::to_string(leaf_num);
+
+                try{ // Will throw if grossly out-of-bounds, but it's a pain to pre-filter -- ignore exceptions for now... TODO
+                    Inject_Thin_Plane_Contour(animg,
+                                             aplane, 
+                                             new_contours.back(),
+                                             contour_metadata, 
+                                             contour_thickness);
+                }catch(const std::exception &){};
+            }
+        }
+    }
+
+    // Insert contours.
+    if(DICOM_data.contour_data == nullptr){
+        std::unique_ptr<Contour_Data> output (new Contour_Data());
+        DICOM_data.contour_data = std::move(output);
+    }
+    DICOM_data.contour_data->ccs.splice( DICOM_data.contour_data->ccs.end(), new_contours );
+
+}
+
+/*
         std::ofstream OF(fname);
         OF << "# Wavefront OBJ file." << std::endl;
 
@@ -310,7 +384,7 @@ Drover DetectGrid3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
                         const auto G = l_corner + edge1 + edge2 + edge3;
                         const auto H = l_corner + edge2 + edge3;
 
-/*                        
+                        // All vertices and faces.
                         // Vertices.
                         OF << "v " << A.x << " " << A.y << " " << A.z << "\n" 
                            << "v " << B.x << " " << B.y << " " << B.z << "\n" 
@@ -340,21 +414,23 @@ Drover DetectGrid3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
 
                            << "f -7 -8 -6" << "\n"
                            << "f -8 -5 -6" << std::endl;
-*/
-                        // Vertices.
-                        OF << "v " << A.x << " " << A.y << " " << A.z << "\n" 
-                           << "v " << B.x << " " << B.y << " " << B.z << "\n" 
-                           << "v " << E.x << " " << E.y << " " << E.z << "\n" 
-                           << "v " << F.x << " " << F.y << " " << F.z << "\n";
 
-                        // Faces (n.b. one-indexed, not zero-indexed).
-                        OF << "f -4 -3 -2 -1" << "\n";
-                           //<< "f -3 -1 -2" << "\n";
+                        //// Minimal number of verts and faces to visualize the grid.
+                        //// Vertices.
+                        //OF << "v " << A.x << " " << A.y << " " << A.z << "\n" 
+                        //   << "v " << B.x << " " << B.y << " " << B.z << "\n" 
+                        //   << "v " << E.x << " " << E.y << " " << E.z << "\n" 
+                        //   << "v " << F.x << " " << F.y << " " << F.z << "\n";
+                        //
+                        //// Faces (n.b. one-indexed, not zero-indexed).
+                        //OF << "f -4 -3 -2 -1" << "\n";
+                        //   //<< "f -3 -1 -2" << "\n";
                 }
             }
         }
 
         OF.close();
+*/        
         return;
     };
     //////////////////////////////////////////////////////////////////////////////
@@ -862,7 +938,7 @@ std::cerr << " " << std::endl;
          
             
 
-FUNCERR("This routine has not yet been implemented. Refusing to continue");
+//FUNCERR("This routine has not yet been implemented. Refusing to continue");
 
     }
 
