@@ -210,7 +210,7 @@ Drover DetectGrid3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
         return;
     };
 
-    const auto Write_Grid_OBJ = [&DICOM_data](const std::string &fname,
+    const auto Insert_Grid_Contours = [&DICOM_data](const std::string &ROILabel,
                                    std::vector< std::pair< vec3<double>, long int > > points,
                                    const vec3<double> &corner,
                                    const vec3<double> &edge1,
@@ -240,77 +240,48 @@ Drover DetectGrid3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
         const auto bounding_corner = vec3<double>( mm_x.Current_Min(),
                                                    mm_y.Current_Min(),
                                                    mm_z.Current_Min() );
-        /*
-        auto v = corner;
-
-        const auto dx = (v - bounding_corner).Dot(edge1);
-        const auto dy = (v - bounding_corner).Dot(edge2);
-        const auto dz = (v - bounding_corner).Dot(edge3);
-
-        v +=  edge1 * std::round(dx / edge1.length())
-            + edge2 * std::round(dy / edge2.length())
-            + edge3 * std::round(dz / edge3.length());
-        */
         auto v = bounding_corner;
 
-
-
 /*
-        auto v = corner;
-        while(true){
-            const auto proj_v = v.Dot(edge1);
-            const auto is_below = (proj_v < mm_x.Current_Min());
-            const auto next_is_below = ((proj_v + edge1.length()) < mm_x.Current_Min());
-            if(is_below && !next_is_below){
-                break;
-            }else if(is_below){
-                v += edge1;
-            }else if(!is_below){
-                v -= edge1;
-            }
-        }
-        while(true){
-            const auto proj_v = v.Dot(edge2);
-            const auto is_below = (proj_v < mm_y.Current_Min());
-            const auto next_is_below = ((proj_v + edge2.length()) < mm_y.Current_Min());
-            if(is_below && !next_is_below){
-                break;
-            }else if(is_below){
-                v += edge2;
-            }else if(!is_below){
-                v -= edge2;
-            }
-        }
-        while(true){
-            const auto proj_v = v.Dot(edge3);
-            const auto is_below = (proj_v < mm_z.Current_Min());
-            const auto next_is_below = ((proj_v + edge3.length()) < mm_z.Current_Min());
-            if(is_below && !next_is_below){
-                break;
-            }else if(is_below){
-                v += edge3;
-            }else if(!is_below){
-                v -= edge3;
-            }
-        }
+        const auto dx = (v - corner).Dot(edge1.unit());
+        const auto dy = (v - corner).Dot(edge2.unit());
+        const auto dz = (v - corner).Dot(edge3.unit());
+        v += (edge1.unit() * std::fmod(dx, edge1.length()) * -1.0)
+          +  (edge2.unit() * std::fmod(dy, edge2.length()) * -1.0)
+          +  (edge3.unit() * std::fmod(dz, edge3.length()) * -1.0);
 */
+        const auto dx = (corner - v).Dot(edge1.unit());
+        const auto dy = (corner - v).Dot(edge2.unit());
+        const auto dz = (corner - v).Dot(edge3.unit());
+        v += (edge1.unit() * std::fmod(dx, edge1.length()) * 1.0)
+          +  (edge2.unit() * std::fmod(dy, edge2.length()) * 1.0)
+          +  (edge3.unit() * std::fmod(dz, edge3.length()) * 1.0);
 
-        const auto N_lines_1 = static_cast<long int>( (mm_x.Current_Max() - mm_x.Current_Min() + edge1.length()) / edge1.length() );
-        const auto N_lines_2 = static_cast<long int>( (mm_y.Current_Max() - mm_y.Current_Min() + edge2.length()) / edge2.length() );
-        const auto N_lines_3 = static_cast<long int>( (mm_z.Current_Max() - mm_z.Current_Min() + edge3.length()) / edge3.length() );
+        if(false){ // Debugging.
+            const auto dx = std::remainder( (v - corner).Dot(edge1.unit()), edge1.length() );
+            const auto dy = std::remainder( (v - corner).Dot(edge2.unit()), edge2.length() );
+            const auto dz = std::remainder( (v - corner).Dot(edge3.unit()), edge3.length() );
+            FUNCINFO("dx, dy, dz = " << dx << "  " << dy << "  " << dz);
+        }
 
+        // The number of lines needed to bound the point cloud.
+        const auto N_lines_1 = static_cast<long int>( (mm_x.Current_Max() - mm_x.Current_Min()) / edge1.length() );
+        const auto N_lines_2 = static_cast<long int>( (mm_y.Current_Max() - mm_y.Current_Min()) / edge2.length() );
+        const auto N_lines_3 = static_cast<long int>( (mm_z.Current_Max() - mm_z.Current_Min()) / edge3.length() );
 
-
+        // Create planes for every grid line.
+        //
+        // Note: one extra grid line will flank the point cloud on all sides. 
         std::vector<plane<double>> planes;
-        for(long int i = 0; i < N_lines_1; ++i){
+        for(long int i = -1; i <= N_lines_1; ++i){
             const auto l_corner = v + (edge1 * (i * 1.0));
             planes.emplace_back(edge1, l_corner);
         }
-        for(long int i = 0; i < N_lines_2; ++i){
+        for(long int i = -1; i <= N_lines_2; ++i){
             const auto l_corner = v + (edge2 * (i * 1.0));
             planes.emplace_back(edge2, l_corner);
         }
-        for(long int i = 0; i < N_lines_3; ++i){
+        for(long int i = -1; i <= N_lines_3; ++i){
             const auto l_corner = v + (edge3 * (i * 1.0));
             planes.emplace_back(edge3, l_corner);
         }
@@ -318,9 +289,8 @@ Drover DetectGrid3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
 // Save the planes as contours on an image.
 {
     const std::string ImageSelectionStr = "last";
-    const std::string ROILabel = "grid";
     const std::string NormalizedROILabel = ROILabel;
-    const auto contour_thickness = 0.02; // in DICOM units (i.e., mm).
+    const auto contour_thickness = 0.001; // in DICOM units (i.e., mm).
 
     std::list<contours_with_meta> new_contours;
 
@@ -452,7 +422,7 @@ Drover DetectGrid3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
         Write_XYZ("/tmp/original_points.xyz", (*pcp_it)->points);
 
 // Loop point.
-size_t loop_max = 50;
+size_t loop_max = 15;
 for(size_t loop = 0; loop < loop_max; ++loop){
 
         // Using the current grid axes directions and anchor point, project all points into the 'unit' cube.
@@ -503,23 +473,25 @@ for(size_t loop = 0; loop < loop_max; ++loop){
                 plane<double> pl_z_B( current_grid_z, current_grid_anchor + current_grid_z * GridSeparation * 0.5 );
 */
 
-                if(  ( pl_x_A.Is_Point_Above_Plane(C) == pl_x_B.Is_Point_Above_Plane(C) )
-                ||   ( pl_y_A.Is_Point_Above_Plane(C) == pl_y_B.Is_Point_Above_Plane(C) )
-                ||   ( pl_z_A.Is_Point_Above_Plane(C) == pl_z_B.Is_Point_Above_Plane(C) ) ){
-                    std::stringstream ss;
-                    ss << "Projection is outside the cube: "
-                       << C 
-                       << " originally: " 
-                       << P
-                       << " anchor: " 
-                       << current_grid_anchor
-                       << " axes: "
-                       << current_grid_x * GridSeparation
-                       << " " 
-                       << current_grid_y * GridSeparation
-                       << " " 
-                       << current_grid_z * GridSeparation;
-                    throw std::logic_error(ss.str());
+                if(false){ // Debugging.
+                    if(  ( pl_x_A.Is_Point_Above_Plane(C) == pl_x_B.Is_Point_Above_Plane(C) )
+                    ||   ( pl_y_A.Is_Point_Above_Plane(C) == pl_y_B.Is_Point_Above_Plane(C) )
+                    ||   ( pl_z_A.Is_Point_Above_Plane(C) == pl_z_B.Is_Point_Above_Plane(C) ) ){
+                        std::stringstream ss;
+                        ss << "Projection is outside the cube: "
+                           << C 
+                           << " originally: " 
+                           << P
+                           << " anchor: " 
+                           << current_grid_anchor
+                           << " axes: "
+                           << current_grid_x * GridSeparation
+                           << " " 
+                           << current_grid_y * GridSeparation
+                           << " " 
+                           << current_grid_z * GridSeparation;
+                        throw std::logic_error(ss.str());
+                    }
                 }
 
                 p_unit_it->first = C;
@@ -647,7 +619,7 @@ for(size_t loop = 0; loop < loop_max; ++loop){
             Write_XYZ("/tmp/cube_corresp_points.xyz", corresp);
 
             // Write the grid for inspection.
-            Write_Grid_OBJ("/tmp/grid.obj",
+            Insert_Grid_Contours("grid_final",
                            (*pcp_it)->points,
                            current_grid_anchor,
                            current_grid_x * GridSeparation,
@@ -655,6 +627,13 @@ for(size_t loop = 0; loop < loop_max; ++loop){
                            current_grid_z * GridSeparation );
 
         }
+
+        Insert_Grid_Contours("grid_"_s + std::to_string(loop),
+                       (*pcp_it)->points,
+                       current_grid_anchor,
+                       current_grid_x * GridSeparation,
+                       current_grid_y * GridSeparation,
+                       current_grid_z * GridSeparation );
 
         // Compute some stats about the correspondence.
         //if((loop % 5) == 1){
