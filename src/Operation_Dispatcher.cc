@@ -82,6 +82,7 @@
 #include "Operations/FVPicketFence.h"
 #include "Operations/GenerateCalibrationCurve.h"
 #include "Operations/GenerateSurfaceMask.h"
+#include "Operations/GenerateSyntheticImages.h"
 #include "Operations/GenerateVirtualDataContourViaThresholdTestV1.h"
 #include "Operations/GenerateVirtualDataDoseStairsV1.h"
 #include "Operations/GenerateVirtualDataImageSphereV1.h"
@@ -207,6 +208,7 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["FVPicketFence"] = std::make_pair(OpArgDocFVPicketFence, FVPicketFence);
     out["GenerateCalibrationCurve"] = std::make_pair(OpArgDocGenerateCalibrationCurve, GenerateCalibrationCurve);
     out["GenerateSurfaceMask"] = std::make_pair(OpArgDocGenerateSurfaceMask, GenerateSurfaceMask);
+    out["GenerateSyntheticImages"] = std::make_pair(OpArgDocGenerateSyntheticImages, GenerateSyntheticImages);
     out["GenerateVirtualDataContourViaThresholdTestV1"] = std::make_pair(OpArgDocGenerateVirtualDataContourViaThresholdTestV1, GenerateVirtualDataContourViaThresholdTestV1);
     out["GenerateVirtualDataDoseStairsV1"] = std::make_pair(OpArgDocGenerateVirtualDataDoseStairsV1, GenerateVirtualDataDoseStairsV1);
     out["GenerateVirtualDataImageSphereV1"] = std::make_pair(OpArgDocGenerateVirtualDataImageSphereV1, GenerateVirtualDataImageSphereV1);

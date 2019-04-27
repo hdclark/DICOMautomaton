@@ -64,6 +64,7 @@ add_library(Operations_objs OBJECT
     FVPicketFence.cc
     GenerateCalibrationCurve.cc
     GenerateSurfaceMask.cc
+    GenerateSyntheticImages.cc
     GenerateVirtualDataContourViaThresholdTestV1.cc
     GenerateVirtualDataDoseStairsV1.cc
     GenerateVirtualDataImageSphereV1.cc
