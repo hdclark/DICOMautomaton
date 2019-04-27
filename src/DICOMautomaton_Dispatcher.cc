@@ -21,6 +21,7 @@
 #include "DICOM_File_Loader.h"
 #include "Documentation.h"
 #include "FITS_File_Loader.h"
+#include "XYZ_File_Loader.h"
 #include "Operation_Dispatcher.h"
 #include "PACS_Loader.h"
 #include "Structs.h"
@@ -311,8 +312,14 @@ int main(int argc, char* argv[]){
         FUNCERR("Failed to load FITS file");
     }
 
-    //Other loaders ...
+    //Standalone file loading: XYZ files.
+    if(!StandaloneFilesDirsReachable.empty()
+    && !Load_From_XYZ_Files( DICOM_data, InvocationMetadata, FilenameLex,
+                               StandaloneFilesDirsReachable )){
+        FUNCERR("Failed to load XYZ file");
+    }
 
+    //Other loaders ...
 
     //If any standalone files remain, they cannot be loaded.
     if(!StandaloneFilesDirsReachable.empty()){

@@ -55,6 +55,7 @@
 #include "Boost_Serialization_File_Loader.h"
 #include "DICOM_File_Loader.h"
 #include "FITS_File_Loader.h"
+#include "XYZ_File_Loader.h"
 #include "Operation_Dispatcher.h"
 #include "Structs.h"
 #include "Regex_Selectors.h"
@@ -443,6 +444,16 @@ void BaseWebServerApplication::filesUploaded(void){
                                   this->FilenameLex,
                                   UploadedFilesDirsReachable )){
             feedback->setText("<p>Failed to load client-provided FITS file. Instance terminated.</p>");
+            return;
+        }
+
+        //Uploaded file loading: XYZ files.
+        if(!UploadedFilesDirsReachable.empty()
+        && !Load_From_XYZ_Files( this->DICOM_data, 
+                                  this->InvocationMetadata, 
+                                  this->FilenameLex,
+                                  UploadedFilesDirsReachable )){
+            feedback->setText("<p>Failed to load client-provided XYZ file. Instance terminated.</p>");
             return;
         }
 

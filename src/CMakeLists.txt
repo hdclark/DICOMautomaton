@@ -95,6 +95,13 @@ set_target_properties(FITS_File_Loader_obj PROPERTIES
     POSITION_INDEPENDENT_CODE TRUE
 )
 
+add_library(XYZ_File_Loader_obj OBJECT
+    XYZ_File_Loader.cc  
+)
+set_target_properties(XYZ_File_Loader_obj PROPERTIES
+    POSITION_INDEPENDENT_CODE TRUE
+)
+
 add_library(Boost_Serialization_File_Loader_obj OBJECT
     Boost_Serialization_File_Loader.cc  
     StructsIOBoostSerialization.h
@@ -285,6 +292,7 @@ add_executable (dicomautomaton_dispatcher
     $<TARGET_OBJECTS:Boost_Serialization_File_Loader_obj>
     $<TARGET_OBJECTS:DICOM_File_Loader_obj>
     $<TARGET_OBJECTS:FITS_File_Loader_obj>
+    $<TARGET_OBJECTS:XYZ_File_Loader_obj>
     $<TARGET_OBJECTS:Write_File_obj>
     $<TARGET_OBJECTS:Operation_Dispatcher_obj>
     $<TARGET_OBJECTS:Documentation_obj>
@@ -344,6 +352,7 @@ add_executable(dicomautomaton_webserver
     $<TARGET_OBJECTS:Boost_Serialization_File_Loader_obj>
     $<TARGET_OBJECTS:DICOM_File_Loader_obj>
     $<TARGET_OBJECTS:FITS_File_Loader_obj>
+    $<TARGET_OBJECTS:XYZ_File_Loader_obj>
     $<TARGET_OBJECTS:Write_File_obj>
     $<TARGET_OBJECTS:Operation_Dispatcher_obj>
     $<TARGET_OBJECTS:Documentation_obj>
