@@ -116,7 +116,7 @@ Drover GenerateVirtualDataImageSphereV1(Drover DICOM_data, OperationArgPkg , std
 
         out->imagecoll.images.back().init_orientation(ImageOrientationRow, ImageOrientationColumn);
         out->imagecoll.images.back().init_buffer(Rows, Columns, Channels);
-        out->imagecoll.images.back().init_spatial(ImagePixeldx, ImagePixeldx, SliceThickness, ImageAnchor, ImagePosition);
+        out->imagecoll.images.back().init_spatial(ImagePixeldx, ImagePixeldy, SliceThickness, ImageAnchor, ImagePosition);
 
         for(long int row = 0; row < Rows; ++row){
             for(long int col = 0; col < Columns; ++col){
@@ -149,11 +149,10 @@ Drover GenerateVirtualDataImageSphereV1(Drover DICOM_data, OperationArgPkg , std
     }
 
     //Create an empty contour set.
-    {
+    if(DICOM_data.contour_data == nullptr){
         std::unique_ptr<Contour_Data> output (new Contour_Data());
         DICOM_data.contour_data = std::move(output);
     }
-
 
     return DICOM_data;
 }

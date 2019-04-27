@@ -124,7 +124,7 @@ Drover GenerateVirtualDataContourViaThresholdTestV1(Drover DICOM_data, Operation
 
         out->imagecoll.images.back().init_orientation(ImageOrientationRow,ImageOrientationColumn);
         out->imagecoll.images.back().init_buffer(Rows, Columns, Channels);
-        out->imagecoll.images.back().init_spatial(ImagePixeldx,ImagePixeldx,ImageThickness, ImageAnchor, ImagePosition);
+        out->imagecoll.images.back().init_spatial(ImagePixeldx,ImagePixeldy,ImageThickness, ImageAnchor, ImagePosition);
 
         for(long int row = 0; row < Rows; ++row){
             for(long int col = 0; col < Columns; ++col){
