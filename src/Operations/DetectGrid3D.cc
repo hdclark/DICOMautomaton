@@ -8,6 +8,7 @@
 #include <map>
 #include <memory>
 #include <regex>
+#include <random>
 #include <stdexcept>
 #include <string>    
 
@@ -125,7 +126,8 @@ Drover DetectGrid3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
                                  std::numeric_limits<double>::quiet_NaN(),
                                  std::numeric_limits<double>::quiet_NaN() );
 
-
+    long int random_seed = 123456;
+    std::mt19937 re( random_seed );
 
     //////////////////////////////////////////////////////////////////////////////
     const auto Write_XYZ = [](const std::string &fname,
@@ -422,8 +424,10 @@ Drover DetectGrid3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
         Write_XYZ("/tmp/original_points.xyz", (*pcp_it)->points);
 
 // Loop point.
-size_t loop_max = 15;
-for(size_t loop = 0; loop < loop_max; ++loop){
+size_t loop_max = 10;
+for(size_t loop = 1; loop <= loop_max; ++loop){
+
+std::cout << "====================================== " << "Loop: " << loop << std::endl;
 
         // Using the current grid axes directions and anchor point, project all points into the 'unit' cube.
         auto p_unit = (*pcp_it)->points; // Holds the projection of each point cloud point into the grid-defined unit cube.
@@ -522,9 +526,14 @@ for(size_t loop = 0; loop < loop_max; ++loop){
                     //const auto P = pp.first;
                     const auto C = p_unit_it->first - current_grid_anchor;
 
+/*
                     const auto proj_x = current_grid_x.Dot(C - current_grid_anchor);
                     const auto proj_y = current_grid_y.Dot(C - current_grid_anchor);
                     const auto proj_z = current_grid_z.Dot(C - current_grid_anchor);
+*/
+                    const auto proj_x = current_grid_x.Dot(C);
+                    const auto proj_y = current_grid_y.Dot(C);
+                    const auto proj_z = current_grid_z.Dot(C);
 
                     const auto dx = (0.5*GridSeparation < proj_x) ? proj_x - GridSeparation : proj_x;
                     const auto dy = (0.5*GridSeparation < proj_y) ? proj_y - GridSeparation : proj_y;
@@ -554,7 +563,14 @@ for(size_t loop = 0; loop < loop_max; ++loop){
                                  + current_grid_z * shift_z;
 
         };
+std::cout << " Optimal translation: " << std::endl
+          << "    " << "Begin current_grid_anchor = " << current_grid_anchor
+          << std::endl;
+
         translate_grid_optimally();
+
+std::cout << "    " << "After current_grid_anchor = " << current_grid_anchor
+          << std::endl;
 
 // TODO: Does this invalidate the optimal translation we just found? If so, can anything be done?
         project_into_unit_cube();
@@ -604,7 +620,7 @@ for(size_t loop = 0; loop < loop_max; ++loop){
         find_corresponding_points();
 
 
-        if((loop+1) == loop_max){
+        if(loop == loop_max){
             // Write the project points to a file for inspection.
             Write_XYZ("/tmp/cube_projected_points.xyz", p_unit);
 
@@ -650,11 +666,11 @@ for(size_t loop = 0; loop < loop_max; ++loop){
                 ++c_it;
             }
 
-            std::cerr << "Loop: " << loop << std::endl
-                      << "  Min:    " << Stats::Min(dists)    << std::endl
-                      << "  Mean:   " << Stats::Mean(dists)   << std::endl
-                      << "  Median: " << Stats::Median(dists) << std::endl
-                      << "  Max:    " << Stats::Max(dists)    << std::endl;
+            std::cout << " Stats:    " << std::endl;
+            std::cout << "    Min:    " << Stats::Min(dists)    << std::endl
+                      << "    Mean:   " << Stats::Mean(dists)   << std::endl
+                      << "    Median: " << Stats::Median(dists) << std::endl
+                      << "    Max:    " << Stats::Max(dists)    << std::endl;
         }
 
         
@@ -670,10 +686,20 @@ for(size_t loop = 0; loop < loop_max; ++loop){
 //       The tricky part will be applying the rotations to the grid afterward, but basically just amounting to a
 //       shift->rotate->shift. Be sure the anchor handled correctly too!
 
+            // Nominate a random point to be the rotation centre.
+            std::uniform_int_distribution<long int> rd(0, (*pcp_it)->points.size());
+            const auto N_c = rd(re);
+            const auto Rtn_cntr = std::next( std::begin((*pcp_it)->points), N_c )->first;
+
+            const auto Anchor_to_Rtn_cntr = (Rtn_cntr - current_grid_anchor);
+            const auto Rtn_cntr_to_Anchor = (current_grid_anchor - Rtn_cntr);
+
+/*
             const auto unit_cube_centre = current_grid_x * GridSeparation * 0.5
                                         + current_grid_y * GridSeparation * 0.5
                                         + current_grid_z * GridSeparation * 0.5
                                         + current_grid_anchor;
+*/
 
             const auto N_rows = 3;
             const auto N_cols = (*pcp_it)->points.size();
@@ -688,16 +714,19 @@ for(size_t loop = 0; loop < loop_max; ++loop){
                 const auto P = pp.first; // The point projected into the unit cube.
                 const auto C = c_it->first; // The corresponding point somewhere on the unit cube surface.
 
-                const auto P_0 = P - unit_cube_centre;
-                const auto C_0 = C - unit_cube_centre;
+                //const auto P_A = (O - Rtn_cntr); // O from the rotation centre; the actual point location.
+                //const auto P_B = P_A + (C - P); // O's corresponding point from the rotation centre; the desired point location.
 
-                A(0, col) = C_0.x;
-                A(1, col) = C_0.y;
-                A(2, col) = C_0.z;
+                const auto P_B = (O - Rtn_cntr); // O from the rotation centre; the actual point location.
+                const auto P_A = P_B + (C - P); // O's corresponding point from the rotation centre; the desired point location.
 
-                B(0, col) = P_0.x;
-                B(1, col) = P_0.y;
-                B(2, col) = P_0.z;
+                A(0, col) = P_A.x;
+                A(1, col) = P_A.y;
+                A(2, col) = P_A.z;
+
+                B(0, col) = P_B.x;
+                B(1, col) = P_B.y;
+                B(2, col) = P_B.z;
 
                 ++c_it;
                 ++o_it;
@@ -709,12 +738,12 @@ for(size_t loop = 0; loop < loop_max; ++loop){
 //FUNCINFO("B dimensions: " << B.rows() << "x" << B.cols());
 //FUNCINFO("AT dimensions: " << AT.rows() << "x" << AT.cols());
 //FUNCINFO("BAT dimensions: " << BAT.rows() << "x" << BAT.cols());
-//std::cerr << "A is: " << std::endl;
-//std::cerr << A << std::endl;
-//std::cerr << "B is: " << std::endl;
-//std::cerr << B << std::endl;
-//std::cerr << "BAT is: " << std::endl;
-//std::cerr << BAT << std::endl;
+//std::cout << "A is: " << std::endl;
+//std::cout << A << std::endl;
+//std::cout << "B is: " << std::endl;
+//std::cout << B << std::endl;
+//std::cout << "BAT is: " << std::endl;
+//std::cout << BAT << std::endl;
 
             //Eigen::JacobiSVD<Eigen::MatrixXf> SVD(BAT, Eigen::ComputeThinU | Eigen::ComputeThinV);
             Eigen::JacobiSVD<Eigen::MatrixXf> SVD(BAT, Eigen::ComputeFullU | Eigen::ComputeFullV );
@@ -744,30 +773,33 @@ for(size_t loop = 0; loop < loop_max; ++loop){
 //FUNCINFO("V dimensions: " << V.rows() << "x" << V.cols());
 //FUNCINFO("M dimensions: " << M.rows() << "x" << M.cols());
 
-//std::cerr << "U is: " << std::endl;
-//std::cerr << U << std::endl;
-//std::cerr << "V is: " << std::endl;
-//std::cerr << V << std::endl;
-//std::cerr << "M is: " << std::endl;
-//std::cerr << M << std::endl;
-
-
-            Eigen::Vector3f new_grid_x( current_grid_x.x, current_grid_x.y, current_grid_x.z );
-            Eigen::Vector3f new_grid_y( current_grid_y.x, current_grid_y.y, current_grid_y.z );
-            Eigen::Vector3f new_grid_z( current_grid_z.x, current_grid_z.y, current_grid_z.z );
-
-            auto rot_grid_x = M * new_grid_x;
-            auto rot_grid_y = M * new_grid_y;
-            auto rot_grid_z = M * new_grid_z;
+//std::cout << "U is: " << std::endl;
+//std::cout << U << std::endl;
+//std::cout << "V is: " << std::endl;
+//std::cout << V << std::endl;
+//std::cout << "M is: " << std::endl;
+//std::cout << M << std::endl;
+            auto Apply_Rotation = [&](const vec3<double> &v) -> vec3<double> {
+                Eigen::Vector3f e_vec3(v.x, v.y, v.z);
+                auto new_v = M * e_vec3;
+                return vec3<double>( new_v(0), new_v(1), new_v(2) );
+            };
 
             const auto previous_grid_x = current_grid_x;
             const auto previous_grid_y = current_grid_y;
             const auto previous_grid_z = current_grid_z;
 
-            current_grid_x = vec3<double>( rot_grid_x(0), rot_grid_x(1), rot_grid_x(2) ).unit();
-            current_grid_y = vec3<double>( rot_grid_y(0), rot_grid_y(1), rot_grid_y(2) ).unit();
-            current_grid_z = vec3<double>( rot_grid_z(0), rot_grid_z(1), rot_grid_z(2) ).unit();
+            current_grid_x = Apply_Rotation(current_grid_x).unit();
+            current_grid_y = Apply_Rotation(current_grid_y).unit();
+            current_grid_z = Apply_Rotation(current_grid_z).unit();
 
+
+            const auto Rtn_cntr_to_new_Anchor = Apply_Rotation(Rtn_cntr_to_Anchor).unit() * Rtn_cntr_to_Anchor.length();
+
+            const auto previous_grid_anchor = current_grid_anchor;
+            current_grid_anchor = (Rtn_cntr + Rtn_cntr_to_new_Anchor);
+
+/*
             //Determine how the anchor point moves.
             //
             // Since we permitted only rotations (relative to the centre of the unit cube) when optimizing the grid axes
@@ -779,27 +811,30 @@ for(size_t loop = 0; loop < loop_max; ++loop){
                                 - current_grid_x * GridSeparation * 0.5
                                 - current_grid_y * GridSeparation * 0.5
                                 - current_grid_z * GridSeparation * 0.5 ;
+*/
 
-std::cerr << "Dot product of new grid axes vectors: " 
+std::cout << " Rotations: " << std::endl;
+std::cout << "    Rotating about point at " << Rtn_cntr << std::endl;
+std::cout << "    Dot product of new grid axes vectors: " 
           << current_grid_x.Dot(current_grid_y) << "  "
           << current_grid_x.Dot(current_grid_z) << "  "
           << current_grid_y.Dot(current_grid_z) << " # should be (0,0,0)." << std::endl;
 
-std::cerr << "Grid anchor translation: " << std::endl;
-std::cerr << (current_grid_anchor - previous_grid_anchor) << std::endl;
-std::cerr << "Grid axes moving from: " << std::endl;
-std::cerr << previous_grid_x << std::endl;
-std::cerr << previous_grid_y << std::endl;
-std::cerr << previous_grid_z << std::endl;
-std::cerr << " to " << std::endl;
-std::cerr << current_grid_x << std::endl;
-std::cerr << current_grid_y << std::endl;
-std::cerr << current_grid_z << std::endl;
-std::cerr << " angle changes: " << std::endl;
-std::cerr << current_grid_x.angle(previous_grid_x)*180.0/M_PI << " deg." << std::endl;
-std::cerr << current_grid_y.angle(previous_grid_y)*180.0/M_PI << " deg." << std::endl;
-std::cerr << current_grid_z.angle(previous_grid_z)*180.0/M_PI << " deg." << std::endl;
-std::cerr << " " << std::endl;
+std::cout << "    Grid anchor was " << previous_grid_anchor << " and is now " << current_grid_anchor;
+std::cout << "  translation was " << (current_grid_anchor - previous_grid_anchor) << std::endl;
+std::cout << "    Grid axes moving from: " << std::endl;
+std::cout << "        " << previous_grid_x;
+std::cout << "  " << previous_grid_y;
+std::cout << "  " << previous_grid_z << std::endl;
+std::cout << "      to " << std::endl;
+std::cout << "        " << current_grid_x;
+std::cout << "  " << current_grid_y;
+std::cout << "  " << current_grid_z << std::endl;
+std::cout << "      angle changes: " << std::endl;
+std::cout << "        " << current_grid_x.angle(previous_grid_x)*180.0/M_PI << " deg.";
+std::cout << "  " << current_grid_y.angle(previous_grid_y)*180.0/M_PI << " deg.";
+std::cout << "  " << current_grid_z.angle(previous_grid_z)*180.0/M_PI << " deg." << std::endl;
+std::cout << " " << std::endl;
 
         }
 
