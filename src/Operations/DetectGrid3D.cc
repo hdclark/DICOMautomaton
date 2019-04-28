@@ -680,9 +680,11 @@ for(size_t loop = 0; loop < loop_max; ++loop){
             Eigen::MatrixXf A(N_rows, N_cols);
             Eigen::MatrixXf B(N_rows, N_cols);
 
+            auto o_it = std::begin((*pcp_it)->points);
             auto c_it = std::begin(corresp);
             size_t col = 0;
             for(const auto &pp : p_unit){
+                const auto O = o_it->first; // The original point location.
                 const auto P = pp.first; // The point projected into the unit cube.
                 const auto C = c_it->first; // The corresponding point somewhere on the unit cube surface.
 
@@ -698,6 +700,7 @@ for(size_t loop = 0; loop < loop_max; ++loop){
                 B(2, col) = P_0.z;
 
                 ++c_it;
+                ++o_it;
                 ++col;
             }
             auto AT = A.transpose();
