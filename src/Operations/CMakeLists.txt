@@ -78,6 +78,7 @@ add_library(Operations_objs OBJECT
     GrowContours.cc
     HighlightROIs.cc
     ImageRoutineTests.cc
+    ImprintImages.cc
     InterpolateSlices.cc
     IsolatedVoxelFilter.cc
     LogScale.cc

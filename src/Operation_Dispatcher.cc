@@ -96,6 +96,7 @@
 #include "Operations/GrowContours.h"
 #include "Operations/HighlightROIs.h"
 #include "Operations/ImageRoutineTests.h"
+#include "Operations/ImprintImages.h"
 #include "Operations/InterpolateSlices.h"
 #include "Operations/IsolatedVoxelFilter.h"
 #include "Operations/LogScale.h"
@@ -222,6 +223,7 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["GrowContours"] = std::make_pair(OpArgDocGrowContours, GrowContours);
     out["HighlightROIs"] = std::make_pair(OpArgDocHighlightROIs, HighlightROIs);
     out["ImageRoutineTests"] = std::make_pair(OpArgDocImageRoutineTests, ImageRoutineTests);
+    out["ImprintImages"] = std::make_pair(OpArgDocImprintImages, ImprintImages);
     out["InterpolateSlices"] = std::make_pair(OpArgDocInterpolateSlices, InterpolateSlices);
     out["IsolatedVoxelFilter"] = std::make_pair(OpArgDocIsolatedVoxelFilter, IsolatedVoxelFilter);
     out["LogScale"] = std::make_pair(OpArgDocLogScale, LogScale);
