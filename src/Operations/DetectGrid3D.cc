@@ -11,6 +11,7 @@
 #include <random>
 #include <stdexcept>
 #include <string>    
+#include <algorithm>    
 
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
@@ -40,6 +41,532 @@
 #include <eigen3/Eigen/SVD>
 
 #include "YgorClustering.hpp"
+
+// Used to store state about a fitted 3D grid.
+struct Grid_Context {
+    double grid_sep = std::numeric_limits<double>::quiet_NaN();
+
+    vec3<double> current_grid_anchor = vec3<double>(0.0, 0.0, 0.0);
+
+    vec3<double> current_grid_x = vec3<double>(1.0, 0.0, 0.0);
+    vec3<double> current_grid_y = vec3<double>(0.0, 1.0, 0.0);
+    vec3<double> current_grid_z = vec3<double>(0.0, 0.0, 1.0);
+
+    double score = std::numeric_limits<double>::quiet_NaN();
+};
+
+// Used to cache working state while fitting a 3D grid.
+struct ICP_Context {
+
+    vec3<double> ransac_centre = vec3<double>(0.0, 0.0, 0.0);
+    vec3<double> rot_centre    = vec3<double>(0.0, 0.0, 0.0);
+
+    using pcp_c_t = decltype(Point_Cloud().points); // Point_Cloud point container type.
+
+    // Point cloud points participating in a single RANSAC phase.
+    //
+    // This list is regenerated for each round of RANSAC. Only some point cloud points within a fixed distance from
+    // some randomly-selected point will be retained. The points are not altered, just copied for ease-of-use.
+    pcp_c_t cohort;
+
+    // Cohort points projected into a single volumetric proto cell.
+    pcp_c_t p_cell;
+
+    // Holds projected points for each cohort point.
+    //
+    // The projection is on the surface of the proto cell.
+    pcp_c_t p_corr;
+};
+
+
+static
+void
+Write_XYZ( const std::string &fname,
+           decltype(Point_Cloud().points) points ){
+
+    // This routine writes or appends to a simple "XYZ"-format file which contains point cloud vertices.
+    //
+    // Appending to any (valid) XYZ file will create a valid combined point cloud.
+    std::ofstream OF(fname, std::ios::out | std::ios::app);
+    OF << "# XYZ point cloud file." << std::endl;
+    for(const auto &pp : points){
+        const auto v = pp.first;
+        OF << v.x << " " << v.y << " " << v.z << std::endl;
+    }
+    OF.close();
+    return;
+};
+
+static
+void
+Write_Cube_OBJ(const std::string &fname,
+               const vec3<double> &corner,
+               const vec3<double> &edge1,
+               const vec3<double> &edge2,
+               const vec3<double> &edge3 ){
+        
+    // This routine takes a corner vertex and three edge vectors (originating from the corner) and writes a cube.
+    // The edges need not be orthogonal. They can also have different lengths; the lengths provide the cube size.
+    //
+    // Note: This routine creates relative OBJ files. It can append to an existing (valid, relative) OBJ file. 
+    //       The resulting file will be valid, all existing geometry will remain valid, and the new geometry will be
+    //       valid too. This routine can also append to non-relative OBJ files and everything will be valid, but
+    //       later appending a non-relative file will cause the additions to be invalid. So it is best not to mix
+    //       relative and non-relative geometry if possible.
+    const auto A = corner;
+    const auto B = corner + edge1;
+    const auto C = corner + edge1 + edge3;
+    const auto D = corner + edge3;
+
+    const auto E = corner + edge2;
+    const auto F = corner + edge1 + edge2;
+    const auto G = corner + edge1 + edge2 + edge3;
+    const auto H = corner + edge2 + edge3;
+
+    std::ofstream OF(fname, std::ios::out | std::ios::app);
+    OF << "# Wavefront OBJ file." << std::endl;
+
+    // Vertices.
+    OF << "v " << A.x << " " << A.y << " " << A.z << "\n" 
+       << "v " << B.x << " " << B.y << " " << B.z << "\n" 
+       << "v " << C.x << " " << C.y << " " << C.z << "\n" 
+       << "v " << D.x << " " << D.y << " " << D.z << "\n" 
+
+       << "v " << E.x << " " << E.y << " " << E.z << "\n" 
+       << "v " << F.x << " " << F.y << " " << F.z << "\n" 
+       << "v " << G.x << " " << G.y << " " << G.z << "\n" 
+       << "v " << H.x << " " << H.y << " " << H.z << std::endl; 
+
+    // Faces (n.b. one-indexed, not zero-indexed).
+    OF << "f -8 -7 -4" << "\n"
+       << "f -7 -3 -4" << "\n"
+
+       << "f -7 -6 -3" << "\n"
+       << "f -6 -2 -3" << "\n"
+
+       << "f -6 -5 -2" << "\n"
+       << "f -5 -1 -2" << "\n"
+
+       << "f -5 -8 -1" << "\n"
+       << "f -8 -4 -1" << "\n"
+
+       << "f -4 -3 -2" << "\n"
+       << "f -2 -1 -4" << "\n"
+
+       << "f -7 -8 -6" << "\n"
+       << "f -8 -5 -6" << std::endl;
+
+    // Edges (n.b. one-indexed, not zero-indexed).
+    OF << "l -8 -7" << "\n"
+       << "l -7 -6" << "\n"
+       << "l -6 -5" << "\n"
+       << "l -5 -8" << "\n"
+
+       << "l -8 -4" << "\n"
+       << "l -7 -3" << "\n"
+       << "l -6 -2" << "\n"
+       << "l -5 -1" << "\n"
+
+       << "l -4 -3" << "\n"
+       << "l -3 -2" << "\n"
+       << "l -2 -1" << "\n"
+       << "l -1 -4" << std::endl;
+
+    OF.close();
+    return;
+}
+
+static
+void
+Insert_Grid_Contours(Drover &DICOM_data,
+                     const std::string &ROILabel,
+                     decltype(Point_Cloud().points) points,
+                     const vec3<double> &corner,
+                     const vec3<double> &edge1,
+                     const vec3<double> &edge2,
+                     const vec3<double> &edge3 ){
+        
+    // This routine takes a grid intersection (i.e., a corner of a single grid voxel) and three edge vectors that
+    // describe where the adjacent cells are and draws a 3D grid that tiles the region occupied by the given points.
+    //
+
+    // Find the grid lines that enclose the given points.
+    Stats::Running_MinMax<double> mm_x;
+    Stats::Running_MinMax<double> mm_y;
+    Stats::Running_MinMax<double> mm_z;
+    for(const auto &pp : points){
+        const auto P = pp.first;
+
+        mm_x.Digest(P.x);
+        mm_y.Digest(P.y);
+        mm_z.Digest(P.z);
+    }
+
+    const auto bounding_corner = vec3<double>( mm_x.Current_Min(),
+                                               mm_y.Current_Min(),
+                                               mm_z.Current_Min() );
+    auto v = bounding_corner;
+
+    const auto dx = (corner - v).Dot(edge1.unit());
+    const auto dy = (corner - v).Dot(edge2.unit());
+    const auto dz = (corner - v).Dot(edge3.unit());
+    v += (edge1.unit() * std::fmod(dx, edge1.length()) * 1.0)
+      +  (edge2.unit() * std::fmod(dy, edge2.length()) * 1.0)
+      +  (edge3.unit() * std::fmod(dz, edge3.length()) * 1.0);
+
+    if(false){ // Debugging.
+        const auto dx = std::remainder( (v - corner).Dot(edge1.unit()), edge1.length() );
+        const auto dy = std::remainder( (v - corner).Dot(edge2.unit()), edge2.length() );
+        const auto dz = std::remainder( (v - corner).Dot(edge3.unit()), edge3.length() );
+        FUNCINFO("dx, dy, dz = " << dx << "  " << dy << "  " << dz);
+    }
+
+    // The number of lines needed to bound the point cloud.
+    const auto N_lines_1 = static_cast<long int>( (mm_x.Current_Max() - mm_x.Current_Min()) / edge1.length() );
+    const auto N_lines_2 = static_cast<long int>( (mm_y.Current_Max() - mm_y.Current_Min()) / edge2.length() );
+    const auto N_lines_3 = static_cast<long int>( (mm_z.Current_Max() - mm_z.Current_Min()) / edge3.length() );
+
+    // Create planes for every grid line.
+    //
+    // Note: one extra grid line will flank the point cloud on all sides. 
+    std::vector<plane<double>> planes;
+    for(long int i = -1; i <= N_lines_1; ++i){
+        const auto l_corner = v + (edge1 * (i * 1.0));
+        planes.emplace_back(edge1, l_corner);
+    }
+    for(long int i = -1; i <= N_lines_2; ++i){
+        const auto l_corner = v + (edge2 * (i * 1.0));
+        planes.emplace_back(edge2, l_corner);
+    }
+    for(long int i = -1; i <= N_lines_3; ++i){
+        const auto l_corner = v + (edge3 * (i * 1.0));
+        planes.emplace_back(edge3, l_corner);
+    }
+
+    // Save the planes as contours on an image.
+    {
+        const std::string ImageSelectionStr = "last";
+        const std::string NormalizedROILabel = ROILabel;
+        const auto contour_thickness = 0.001; // in DICOM units (i.e., mm).
+
+        std::list<contours_with_meta> new_contours;
+
+        auto IAs_all = All_IAs( DICOM_data );
+        auto IAs = Whitelist( IAs_all, ImageSelectionStr );
+        if(IAs.empty()){
+            throw std::runtime_error("No images to place contours onto. Cannot continue.");
+        }
+        for(auto & iap_it : IAs){
+            if((*iap_it)->imagecoll.images.empty()) throw std::invalid_argument("Unable to find images to place contours on.");
+            for(auto &animg : (*iap_it)->imagecoll.images){
+
+                auto contour_metadata = animg.metadata;
+                contour_metadata["ROIName"] = ROILabel;
+                contour_metadata["NormalizedROIName"] = NormalizedROILabel;
+
+                new_contours.emplace_back();
+
+                for(const auto &aplane : planes){
+                    //contour_metadata["OutlineColour"] = PFC.leaf_line_colour[leaf_num];
+                    //contour_metadata["PicketFenceLeafNumber"] = std::to_string(leaf_num);
+
+                    try{ // Will throw if grossly out-of-bounds, but it's a pain to pre-filter -- ignore exceptions for now... TODO
+                        Inject_Thin_Plane_Contour(animg,
+                                                 aplane, 
+                                                 new_contours.back(),
+                                                 contour_metadata, 
+                                                 contour_thickness);
+                    }catch(const std::exception &){};
+                }
+            }
+        }
+
+        // Insert contours.
+        if(DICOM_data.contour_data == nullptr){
+            std::unique_ptr<Contour_Data> output (new Contour_Data());
+            DICOM_data.contour_data = std::move(output);
+        }
+        DICOM_data.contour_data->ccs.splice( DICOM_data.contour_data->ccs.end(), new_contours );
+
+    }
+    return;
+}
+
+static
+void
+Project_Into_Unit_Cube( Grid_Context &GC,
+                        ICP_Context &ICPC ){
+    // Using the current grid axes directions and anchor point, project all points into the proto cell.
+    auto p_cell_it = std::begin(ICPC.p_cell);
+    for(const auto &pp : ICPC.cohort){
+        const auto P = pp.first;
+
+        // Vector rel. to grid anchor.
+        const auto R = (P - GC.current_grid_anchor);
+
+        // Vector within the unit cube, described in the grid axes basis.
+        auto C_x = std::fmod( R.Dot(GC.current_grid_x), GC.grid_sep );
+        auto C_y = std::fmod( R.Dot(GC.current_grid_y), GC.grid_sep );
+        auto C_z = std::fmod( R.Dot(GC.current_grid_z), GC.grid_sep );
+        if(C_x < 0.0) C_x += GC.grid_sep; // Ensure the result is within the cube (fmod can be negative).
+        if(C_y < 0.0) C_y += GC.grid_sep;
+        if(C_z < 0.0) C_z += GC.grid_sep;
+
+        const auto C = GC.current_grid_anchor
+                     + GC.current_grid_x * C_x
+                     + GC.current_grid_y * C_y
+                     + GC.current_grid_z * C_z;
+
+        // Verify that the projected point is indeed within the unit cube.
+        if(false){ // Debugging.
+            plane<double> pl_x_A( GC.current_grid_x, GC.current_grid_anchor );
+            plane<double> pl_y_A( GC.current_grid_y, GC.current_grid_anchor );
+            plane<double> pl_z_A( GC.current_grid_z, GC.current_grid_anchor );
+
+            plane<double> pl_x_B( GC.current_grid_x, GC.current_grid_anchor + GC.current_grid_x * GC.grid_sep );
+            plane<double> pl_y_B( GC.current_grid_y, GC.current_grid_anchor + GC.current_grid_y * GC.grid_sep );
+            plane<double> pl_z_B( GC.current_grid_z, GC.current_grid_anchor + GC.current_grid_z * GC.grid_sep );
+
+            if(  ( pl_x_A.Is_Point_Above_Plane(C) == pl_x_B.Is_Point_Above_Plane(C) )
+            ||   ( pl_y_A.Is_Point_Above_Plane(C) == pl_y_B.Is_Point_Above_Plane(C) )
+            ||   ( pl_z_A.Is_Point_Above_Plane(C) == pl_z_B.Is_Point_Above_Plane(C) ) ){
+                std::stringstream ss;
+                ss << "Projection is outside the cube: "
+                   << C 
+                   << " originally: " 
+                   << P
+                   << " anchor: " 
+                   << GC.current_grid_anchor
+                   << " axes: "
+                   << GC.current_grid_x * GC.grid_sep
+                   << " " 
+                   << GC.current_grid_y * GC.grid_sep
+                   << " " 
+                   << GC.current_grid_z * GC.grid_sep;
+                throw std::logic_error(ss.str());
+            }
+        }
+
+        p_cell_it->first = C;
+        ++p_cell_it;
+    }
+    return;
+}
+
+static
+void
+Translate_Grid_Optimally( Grid_Context &GC,
+                          ICP_Context &ICPC ){
+
+    // Determine the optimal translation.
+    //
+    // Along each grid direction, the distance from each point to the nearest grid plane will be recorded.
+    // Note that we dramatically simplify determining distance to the cube face by adding or subtracting half the
+    // scalar distance; since all points have been projecting into the unit cube, at most the point will be
+    // 0.5*separation from the nearest plane. Thus if we subtract 1.0*separation for the points in the upper half, we can
+    // use simple 1D distribution analysis to determine optimal translations of the anchor point.
+    std::vector<double> dist_x;
+    std::vector<double> dist_y;
+    std::vector<double> dist_z;
+
+    dist_x.reserve(ICPC.p_cell.size());
+    dist_y.reserve(ICPC.p_cell.size());
+    dist_z.reserve(ICPC.p_cell.size());
+    {
+        auto p_cell_it = std::begin(ICPC.p_cell);
+        for(const auto &pp : ICPC.cohort){
+            //const auto P = pp.first;
+            const auto C = p_cell_it->first - GC.current_grid_anchor;
+
+            const auto proj_x = GC.current_grid_x.Dot(C);
+            const auto proj_y = GC.current_grid_y.Dot(C);
+            const auto proj_z = GC.current_grid_z.Dot(C);
+
+            const auto dx = (0.5*GC.grid_sep < proj_x) ? proj_x - GC.grid_sep : proj_x;
+            const auto dy = (0.5*GC.grid_sep < proj_y) ? proj_y - GC.grid_sep : proj_y;
+            const auto dz = (0.5*GC.grid_sep < proj_z) ? proj_z - GC.grid_sep : proj_z;
+
+            dist_x.emplace_back(dx);
+            dist_y.emplace_back(dy);
+            dist_z.emplace_back(dz);
+
+            ++p_cell_it;
+        }
+    }
+
+    const auto shift_x = Stats::Mean(dist_x);
+    const auto shift_y = Stats::Mean(dist_y);
+    const auto shift_z = Stats::Mean(dist_z);
+
+    GC.current_grid_anchor += GC.current_grid_x * shift_x
+                         + GC.current_grid_y * shift_y
+                         + GC.current_grid_z * shift_z;
+    return;
+}
+
+static
+void
+Find_Corresponding_Points( Grid_Context &GC,
+                           ICP_Context &ICPC ){
+
+    // This routine takes every proto cube projected point and projects it onto the faces of the proto cube.
+    // Only the projection on the nearest face is kept.
+    //
+    // Note: There is a faster way to do this using the same approach as the optimal translation routine.
+    // This way is easy to debug and reason about.
+
+    const vec3<double> NaN_vec3( std::numeric_limits<double>::quiet_NaN(),
+                                 std::numeric_limits<double>::quiet_NaN(),
+                                 std::numeric_limits<double>::quiet_NaN() );
+
+    // Creates plane for all faces.
+    std::vector<plane<double>> planes;
+
+    planes.emplace_back( GC.current_grid_x, GC.current_grid_anchor );
+    planes.emplace_back( GC.current_grid_y, GC.current_grid_anchor );
+    planes.emplace_back( GC.current_grid_z, GC.current_grid_anchor );
+
+    planes.emplace_back( GC.current_grid_x, GC.current_grid_anchor + GC.current_grid_x * GC.grid_sep );
+    planes.emplace_back( GC.current_grid_y, GC.current_grid_anchor + GC.current_grid_y * GC.grid_sep );
+    planes.emplace_back( GC.current_grid_z, GC.current_grid_anchor + GC.current_grid_z * GC.grid_sep );
+
+    auto c_it = std::begin(ICPC.p_corr);
+    for(const auto &pp : ICPC.p_cell){
+        const auto P = pp.first;
+
+        double closest_dist = std::numeric_limits<double>::infinity();
+        vec3<double> closest_proj = NaN_vec3;
+        for(const auto &pl : planes){
+            const auto dist = std::abs(pl.Get_Signed_Distance_To_Point(P));
+            if(dist < closest_dist){
+                closest_dist = dist;
+                closest_proj = pl.Project_Onto_Plane_Orthogonally(P);
+            }
+        }
+        if(!closest_proj.isfinite()){
+            throw std::logic_error("Projected point is not finite. Cannot continue");
+        }
+
+        c_it->first = closest_proj;
+        ++c_it;
+    }
+    return;
+}
+
+static
+void
+Rotate_Grid_Optimally( Grid_Context &GC,
+                       ICP_Context &ICPC ){
+
+    // Determine optimal rotations.
+    //
+    // This routine rotates the grid axes unit vectors by estimating the optimal rotation of corresponding points.
+    // A SVD decomposition provides the rotation matrix that minimizes the difference between corresponding points.
+    const auto Anchor_to_Rtn_cntr = (ICPC.rot_centre - GC.current_grid_anchor);
+    const auto Rtn_cntr_to_Anchor = (GC.current_grid_anchor - ICPC.rot_centre);
+
+    const auto N_rows = 3;
+    const auto N_cols = ICPC.cohort.size();
+    Eigen::MatrixXf A(N_rows, N_cols);
+    Eigen::MatrixXf B(N_rows, N_cols);
+
+    auto o_it = std::begin(ICPC.cohort);
+    auto c_it = std::begin(ICPC.p_corr);
+    size_t col = 0;
+    for(const auto &pp : ICPC.p_cell){
+        const auto O = o_it->first; // The original point location.
+        const auto P = pp.first; // The point projected into the unit cube.
+        const auto C = c_it->first; // The corresponding point somewhere on the unit cube surface.
+
+        const auto P_B = (O - ICPC.rot_centre); // O from the rotation centre; the actual point location.
+        const auto P_A = P_B + (C - P); // O's corresponding point from the rotation centre; the desired point location.
+
+        A(0, col) = P_A.x;
+        A(1, col) = P_A.y;
+        A(2, col) = P_A.z;
+
+        B(0, col) = P_B.x;
+        B(1, col) = P_B.y;
+        B(2, col) = P_B.z;
+
+        ++c_it;
+        ++o_it;
+        ++col;
+    }
+    auto AT = A.transpose();
+    auto BAT = B * AT;
+
+    //Eigen::JacobiSVD<Eigen::MatrixXf> SVD(BAT, Eigen::ComputeThinU | Eigen::ComputeThinV);
+    Eigen::JacobiSVD<Eigen::MatrixXf> SVD(BAT, Eigen::ComputeFullU | Eigen::ComputeFullV );
+    auto U = SVD.matrixU();
+    auto V = SVD.matrixV();
+    
+    // Use the SVD result directly.
+    auto M = U * V.transpose();
+
+    // Attempt to restrict to rotations only.
+    //Eigen::Matrix3f PI;
+    //PI << 1.0 , 0.0 , 0.0,
+    //      0.0 , 1.0 , 0.0,
+    //      0.0 , 0.0 , ( U * V.transpose() ).determinant();
+    //auto M = U * PI * V.transpose();
+
+    // Restrict the solution to rotations only. (Refer to the 'Kabsch algorithm' for more info.)
+    // NOTE: Probably requires Nx3 matrices rather than 3xN matrices...
+    //Eigen::Matrix3f PI;
+    //PI << 1.0 << 0.0 << 0.0
+    //   << 0.0 << 1.0 << 0.0
+    //   << 0.0 << 0.0 << Eigen::Determinant( V * U.transpose() );
+    //auto M = V * PI * U.transpose();
+
+    // Apply the transformation to the grid axis unit vectors.
+    auto Apply_Rotation = [&](const vec3<double> &v) -> vec3<double> {
+        Eigen::Vector3f e_vec3(v.x, v.y, v.z);
+        auto new_v = M * e_vec3;
+        return vec3<double>( new_v(0), new_v(1), new_v(2) );
+    };
+
+    const auto previous_grid_x = GC.current_grid_x;
+    const auto previous_grid_y = GC.current_grid_y;
+    const auto previous_grid_z = GC.current_grid_z;
+
+    GC.current_grid_x = Apply_Rotation(GC.current_grid_x).unit();
+    GC.current_grid_y = Apply_Rotation(GC.current_grid_y).unit();
+    GC.current_grid_z = Apply_Rotation(GC.current_grid_z).unit();
+
+    //Determine how the anchor point moves.
+    //
+    // Since we permitted only rotations relative to some fixed centre, the translation from the grid anchor to
+    // the fixed rotation centre remains constant (within the grid coordinate system). So rotating and reversing
+    // the old anchor -> rotation centre transformation will transform rotation centre -> new anchor.
+    const auto previous_grid_anchor = GC.current_grid_anchor;
+    const auto Rtn_cntr_to_new_Anchor = Apply_Rotation(Rtn_cntr_to_Anchor).unit() * Rtn_cntr_to_Anchor.length();
+    GC.current_grid_anchor = (ICPC.rot_centre + Rtn_cntr_to_new_Anchor);
+
+std::cout << " Rotations: " << std::endl;
+std::cout << "    Rotating about point at " << ICPC.rot_centre << std::endl;
+std::cout << "    Dot product of new grid axes vectors: " 
+  << GC.current_grid_x.Dot(GC.current_grid_y) << "  "
+  << GC.current_grid_x.Dot(GC.current_grid_z) << "  "
+  << GC.current_grid_y.Dot(GC.current_grid_z) << " # should be (0,0,0)." << std::endl;
+
+std::cout << "    Grid anchor was " << previous_grid_anchor << " and is now " << GC.current_grid_anchor;
+std::cout << "  translation was " << (GC.current_grid_anchor - previous_grid_anchor) << std::endl;
+std::cout << "    Grid axes moving from: " << std::endl;
+std::cout << "        " << previous_grid_x;
+std::cout << "  " << previous_grid_y;
+std::cout << "  " << previous_grid_z << std::endl;
+std::cout << "      to " << std::endl;
+std::cout << "        " << GC.current_grid_x;
+std::cout << "  " << GC.current_grid_y;
+std::cout << "  " << GC.current_grid_z << std::endl;
+std::cout << "      angle changes: " << std::endl;
+std::cout << "        " << GC.current_grid_x.angle(previous_grid_x)*180.0/M_PI << " deg.";
+std::cout << "  " << GC.current_grid_y.angle(previous_grid_y)*180.0/M_PI << " deg.";
+std::cout << "  " << GC.current_grid_z.angle(previous_grid_z)*180.0/M_PI << " deg." << std::endl;
+std::cout << " " << std::endl;
+    return;
+}
 
 
 OperationDoc OpArgDocDetectGrid3D(void){
@@ -109,6 +636,9 @@ Drover DetectGrid3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
     const auto GridSeparation = std::stod( OptArgs.getValueStr("GridSeparation").value() );
     const auto LineThickness = std::stod( OptArgs.getValueStr("LineThickness").value() );
 
+    long int random_seed = 123456;
+    const size_t ransac_max = 100;
+    const double ransac_dist = GridSeparation * 1.5;
     //-----------------------------------------------------------------------------------------------------------------
 
     if(!std::isfinite(GridSeparation) || (GridSeparation <= 0.0)){
@@ -121,843 +651,138 @@ Drover DetectGrid3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
         throw std::invalid_argument("Line thickness is impossible with given grid spacing. Refusing to continue.");
     }
 
-    const vec3<double> zero_vec3( 0.0, 0.0, 0.0 );
-    const vec3<double> NaN_vec3( std::numeric_limits<double>::quiet_NaN(),
-                                 std::numeric_limits<double>::quiet_NaN(),
-                                 std::numeric_limits<double>::quiet_NaN() );
-
-    long int random_seed = 123456;
     std::mt19937 re( random_seed );
-
-    //////////////////////////////////////////////////////////////////////////////
-    const auto Write_XYZ = [](const std::string &fname,
-                              std::vector< std::pair< vec3<double>, long int > > points) -> void {
-        std::ofstream OF(fname);
-        for(const auto &pp : points){
-            const auto v = pp.first;
-            OF << v.x << " " << v.y << " " << v.z << std::endl;
-        }
-        OF.close();
-        return;
-    };
-
-    const auto Write_Cube_OBJ = [](const std::string &fname,
-                                   const vec3<double> &corner,
-                                   const vec3<double> &edge1,
-                                   const vec3<double> &edge2,
-                                   const vec3<double> &edge3 ) -> void {
-        
-        // This routine takes a corner vertex and three edge vectors stemming from the corner and draws a cube.
-        // The edges need not be orthogonal. They can also have different lengths.
-        const auto A = corner;
-        const auto B = corner + edge1;
-        const auto C = corner + edge1 + edge3;
-        const auto D = corner + edge3;
-
-        const auto E = corner + edge2;
-        const auto F = corner + edge1 + edge2;
-        const auto G = corner + edge1 + edge2 + edge3;
-        const auto H = corner + edge2 + edge3;
-
-        std::ofstream OF(fname);
-        OF << "# Wavefront OBJ file." << std::endl;
-
-        // Vertices.
-        OF << "v " << A.x << " " << A.y << " " << A.z << std::endl 
-           << "v " << B.x << " " << B.y << " " << B.z << std::endl 
-           << "v " << C.x << " " << C.y << " " << C.z << std::endl 
-           << "v " << D.x << " " << D.y << " " << D.z << std::endl 
-
-           << "v " << E.x << " " << E.y << " " << E.z << std::endl 
-           << "v " << F.x << " " << F.y << " " << F.z << std::endl 
-           << "v " << G.x << " " << G.y << " " << G.z << std::endl 
-           << "v " << H.x << " " << H.y << " " << H.z << std::endl; 
-
-        // Faces (n.b. one-indexed, not zero-indexed).
-        OF << "f 1 2 5" << std::endl
-           << "f 2 6 5" << std::endl
-
-           << "f 2 3 6" << std::endl
-           << "f 3 7 6" << std::endl
-
-           << "f 3 4 7" << std::endl
-           << "f 4 8 7" << std::endl
-
-           << "f 4 1 8" << std::endl
-           << "f 1 5 8" << std::endl
-
-           << "f 5 6 7" << std::endl
-           << "f 7 8 5" << std::endl
-
-           << "f 2 1 3" << std::endl
-           << "f 1 4 3" << std::endl;
-
-        // Edges (n.b. one-indexed, not zero-indexed).
-        OF << "l 1 2" << std::endl
-           << "l 2 3" << std::endl
-           << "l 3 4" << std::endl
-           << "l 4 1" << std::endl
-
-           << "l 1 5" << std::endl
-           << "l 2 6" << std::endl
-           << "l 3 7" << std::endl
-           << "l 4 8" << std::endl
-
-           << "l 5 6" << std::endl
-           << "l 6 7" << std::endl
-           << "l 7 8" << std::endl
-           << "l 8 5" << std::endl;
-
-        OF.close();
-        return;
-    };
-
-    const auto Insert_Grid_Contours = [&DICOM_data](const std::string &ROILabel,
-                                   std::vector< std::pair< vec3<double>, long int > > points,
-                                   const vec3<double> &corner,
-                                   const vec3<double> &edge1,
-                                   const vec3<double> &edge2,
-                                   const vec3<double> &edge3 ) -> void {
-        
-        // This routine takes a grid intersection (i.e., a corner of a single grid voxel) and three edge vectors that
-        // describe where the adjacent cells are and draws a 3D grid that tiles the region occupied by the given points.
-        //
-
-        // Find the grid lines that enclose the given points.
-        Stats::Running_MinMax<double> mm_x;
-        Stats::Running_MinMax<double> mm_y;
-        Stats::Running_MinMax<double> mm_z;
-        for(const auto &pp : points){
-            const auto P = pp.first;
-
-            //mm_x.Digest(P.Dot(edge1));
-            //mm_y.Digest(P.Dot(edge2));
-            //mm_z.Digest(P.Dot(edge3));
-
-            mm_x.Digest(P.x);
-            mm_y.Digest(P.y);
-            mm_z.Digest(P.z);
-        }
-
-        const auto bounding_corner = vec3<double>( mm_x.Current_Min(),
-                                                   mm_y.Current_Min(),
-                                                   mm_z.Current_Min() );
-        auto v = bounding_corner;
-
-/*
-        const auto dx = (v - corner).Dot(edge1.unit());
-        const auto dy = (v - corner).Dot(edge2.unit());
-        const auto dz = (v - corner).Dot(edge3.unit());
-        v += (edge1.unit() * std::fmod(dx, edge1.length()) * -1.0)
-          +  (edge2.unit() * std::fmod(dy, edge2.length()) * -1.0)
-          +  (edge3.unit() * std::fmod(dz, edge3.length()) * -1.0);
-*/
-        const auto dx = (corner - v).Dot(edge1.unit());
-        const auto dy = (corner - v).Dot(edge2.unit());
-        const auto dz = (corner - v).Dot(edge3.unit());
-        v += (edge1.unit() * std::fmod(dx, edge1.length()) * 1.0)
-          +  (edge2.unit() * std::fmod(dy, edge2.length()) * 1.0)
-          +  (edge3.unit() * std::fmod(dz, edge3.length()) * 1.0);
-
-        if(false){ // Debugging.
-            const auto dx = std::remainder( (v - corner).Dot(edge1.unit()), edge1.length() );
-            const auto dy = std::remainder( (v - corner).Dot(edge2.unit()), edge2.length() );
-            const auto dz = std::remainder( (v - corner).Dot(edge3.unit()), edge3.length() );
-            FUNCINFO("dx, dy, dz = " << dx << "  " << dy << "  " << dz);
-        }
-
-        // The number of lines needed to bound the point cloud.
-        const auto N_lines_1 = static_cast<long int>( (mm_x.Current_Max() - mm_x.Current_Min()) / edge1.length() );
-        const auto N_lines_2 = static_cast<long int>( (mm_y.Current_Max() - mm_y.Current_Min()) / edge2.length() );
-        const auto N_lines_3 = static_cast<long int>( (mm_z.Current_Max() - mm_z.Current_Min()) / edge3.length() );
-
-        // Create planes for every grid line.
-        //
-        // Note: one extra grid line will flank the point cloud on all sides. 
-        std::vector<plane<double>> planes;
-        for(long int i = -1; i <= N_lines_1; ++i){
-            const auto l_corner = v + (edge1 * (i * 1.0));
-            planes.emplace_back(edge1, l_corner);
-        }
-        for(long int i = -1; i <= N_lines_2; ++i){
-            const auto l_corner = v + (edge2 * (i * 1.0));
-            planes.emplace_back(edge2, l_corner);
-        }
-        for(long int i = -1; i <= N_lines_3; ++i){
-            const auto l_corner = v + (edge3 * (i * 1.0));
-            planes.emplace_back(edge3, l_corner);
-        }
-
-// Save the planes as contours on an image.
-{
-    const std::string ImageSelectionStr = "last";
-    const std::string NormalizedROILabel = ROILabel;
-    const auto contour_thickness = 0.001; // in DICOM units (i.e., mm).
-
-    std::list<contours_with_meta> new_contours;
-
-    auto IAs_all = All_IAs( DICOM_data );
-    auto IAs = Whitelist( IAs_all, ImageSelectionStr );
-    if(IAs.empty()){
-        throw std::runtime_error("No images to place contours onto. Cannot continue.");
-    }
-    for(auto & iap_it : IAs){
-        if((*iap_it)->imagecoll.images.empty()) throw std::invalid_argument("Unable to find images to place contours on.");
-        for(auto &animg : (*iap_it)->imagecoll.images){
-
-            auto contour_metadata = animg.metadata;
-            contour_metadata["ROIName"] = ROILabel;
-            contour_metadata["NormalizedROIName"] = NormalizedROILabel;
-
-            new_contours.emplace_back();
-
-            for(const auto &aplane : planes){
-                //contour_metadata["OutlineColour"] = PFC.leaf_line_colour[leaf_num];
-                //contour_metadata["PicketFenceLeafNumber"] = std::to_string(leaf_num);
-
-                try{ // Will throw if grossly out-of-bounds, but it's a pain to pre-filter -- ignore exceptions for now... TODO
-                    Inject_Thin_Plane_Contour(animg,
-                                             aplane, 
-                                             new_contours.back(),
-                                             contour_metadata, 
-                                             contour_thickness);
-                }catch(const std::exception &){};
-            }
-        }
-    }
-
-    // Insert contours.
-    if(DICOM_data.contour_data == nullptr){
-        std::unique_ptr<Contour_Data> output (new Contour_Data());
-        DICOM_data.contour_data = std::move(output);
-    }
-    DICOM_data.contour_data->ccs.splice( DICOM_data.contour_data->ccs.end(), new_contours );
-
-}
-
-/*
-        std::ofstream OF(fname);
-        OF << "# Wavefront OBJ file." << std::endl;
-
-        for(long int i = 0; i < N_lines_1; ++i){
-            for(long int j = 0; j < N_lines_2; ++j){
-                for(long int k = 0; k < N_lines_3; ++k){
-
-                       const auto l_corner = v + (edge1 * (i * 1.0))
-                                               + (edge2 * (j * 1.0))
-                                               + (edge3 * (k * 1.0));
-                        const auto A = l_corner;
-                        const auto B = l_corner + edge1;
-                        const auto C = l_corner + edge1 + edge3;
-                        const auto D = l_corner + edge3;
-
-                        const auto E = l_corner + edge2;
-                        const auto F = l_corner + edge1 + edge2;
-                        const auto G = l_corner + edge1 + edge2 + edge3;
-                        const auto H = l_corner + edge2 + edge3;
-
-                        // All vertices and faces.
-                        // Vertices.
-                        OF << "v " << A.x << " " << A.y << " " << A.z << "\n" 
-                           << "v " << B.x << " " << B.y << " " << B.z << "\n" 
-                           << "v " << C.x << " " << C.y << " " << C.z << "\n" 
-                           << "v " << D.x << " " << D.y << " " << D.z << "\n" 
-
-                           << "v " << E.x << " " << E.y << " " << E.z << "\n" 
-                           << "v " << F.x << " " << F.y << " " << F.z << "\n" 
-                           << "v " << G.x << " " << G.y << " " << G.z << "\n" 
-                           << "v " << H.x << " " << H.y << " " << H.z << std::endl; 
-
-                        // Faces (n.b. one-indexed, not zero-indexed).
-                        OF << "f -8 -7 -4" << "\n"
-                           << "f -7 -3 -4" << "\n"
-
-                           << "f -7 -6 -3" << "\n"
-                           << "f -6 -2 -3" << "\n"
-
-                           << "f -6 -5 -2" << "\n"
-                           << "f -5 -1 -2" << "\n"
-
-                           << "f -5 -8 -1" << "\n"
-                           << "f -8 -4 -1" << "\n"
-
-                           << "f -4 -3 -2" << "\n"
-                           << "f -2 -1 -4" << "\n"
-
-                           << "f -7 -8 -6" << "\n"
-                           << "f -8 -5 -6" << std::endl;
-
-                        //// Minimal number of verts and faces to visualize the grid.
-                        //// Vertices.
-                        //OF << "v " << A.x << " " << A.y << " " << A.z << "\n" 
-                        //   << "v " << B.x << " " << B.y << " " << B.z << "\n" 
-                        //   << "v " << E.x << " " << E.y << " " << E.z << "\n" 
-                        //   << "v " << F.x << " " << F.y << " " << F.z << "\n";
-                        //
-                        //// Faces (n.b. one-indexed, not zero-indexed).
-                        //OF << "f -4 -3 -2 -1" << "\n";
-                        //   //<< "f -3 -1 -2" << "\n";
-                }
-            }
-        }
-
-        OF.close();
-*/        
-        return;
-    };
-    //////////////////////////////////////////////////////////////////////////////
 
 
     auto PCs_all = All_PCs( DICOM_data );
     auto PCs = Whitelist( PCs_all, PointSelectionStr );
     for(auto & pcp_it : PCs){
 
-        const vec3<double> x_unit(1.0, 0.0, 0.0);
-        const vec3<double> y_unit(0.0, 1.0, 0.0);
-        const vec3<double> z_unit(0.0, 0.0, 1.0);
-
-        vec3<double> current_grid_x = x_unit;
-        vec3<double> current_grid_y = y_unit;
-        vec3<double> current_grid_z = z_unit;
-        vec3<double> current_grid_anchor = zero_vec3;
-
         Write_XYZ("/tmp/original_points.xyz", (*pcp_it)->points);
 
-// Loop point.
-size_t loop_max = 10;
-for(size_t loop = 1; loop <= loop_max; ++loop){
+        Grid_Context GC;
+        GC.grid_sep = GridSeparation;
 
-std::cout << "====================================== " << "Loop: " << loop << std::endl;
+        ICP_Context ICPC;
 
-        // Using the current grid axes directions and anchor point, project all points into the 'unit' cube.
-        auto p_unit = (*pcp_it)->points; // Holds the projection of each point cloud point into the grid-defined unit cube.
+        // Perform a RANSAC analysis by only analyzing the vicinity of a randomly selected point.
+        for(size_t ransac_loop = 0; ransac_loop < ransac_max; ++ransac_loop){
 
-        const auto project_into_unit_cube = [&](void) -> void {
-            auto p_unit_it = std::begin(p_unit);
-            for(const auto &pp : (*pcp_it)->points){
-                const auto P = pp.first;
-
-                // Vector rel. to grid anchor.
-                const auto R = (P - current_grid_anchor);
-
-                // Vector within the unit cube, described in the grid axes basis.
-                auto C_x = std::fmod( R.Dot(current_grid_x), GridSeparation );
-                auto C_y = std::fmod( R.Dot(current_grid_y), GridSeparation );
-                auto C_z = std::fmod( R.Dot(current_grid_z), GridSeparation );
-                if(C_x < 0.0) C_x += GridSeparation; // Ensure the result is within the cube (fmod can be negative).
-                if(C_y < 0.0) C_y += GridSeparation;
-                if(C_z < 0.0) C_z += GridSeparation;
-
-                const auto C = current_grid_anchor
-                             + current_grid_x * C_x
-                             + current_grid_y * C_y
-                             + current_grid_z * C_z;
-                //const auto C = vec3<double>( std::fmod( R.Dot(current_grid_x), GridSeparation ),
-                //                             std::fmod( R.Dot(current_grid_y), GridSeparation ),
-                //                             std::fmod( R.Dot(current_grid_z), GridSeparation ) ) + current_grid_anchor;
-
-
-                // Verify that the projected point is indeed within the unit cube.
-                
-                plane<double> pl_x_A( current_grid_x, current_grid_anchor );
-                plane<double> pl_y_A( current_grid_y, current_grid_anchor );
-                plane<double> pl_z_A( current_grid_z, current_grid_anchor );
-
-                plane<double> pl_x_B( current_grid_x, current_grid_anchor + current_grid_x * GridSeparation );
-                plane<double> pl_y_B( current_grid_y, current_grid_anchor + current_grid_y * GridSeparation );
-                plane<double> pl_z_B( current_grid_z, current_grid_anchor + current_grid_z * GridSeparation );
-
-/*
-                plane<double> pl_x_A( current_grid_x, current_grid_anchor - current_grid_x * GridSeparation * 0.5 );
-                plane<double> pl_y_A( current_grid_y, current_grid_anchor - current_grid_y * GridSeparation * 0.5 );
-                plane<double> pl_z_A( current_grid_z, current_grid_anchor - current_grid_z * GridSeparation * 0.5 );
-
-                plane<double> pl_x_B( current_grid_x, current_grid_anchor + current_grid_x * GridSeparation * 0.5 );
-                plane<double> pl_y_B( current_grid_y, current_grid_anchor + current_grid_y * GridSeparation * 0.5 );
-                plane<double> pl_z_B( current_grid_z, current_grid_anchor + current_grid_z * GridSeparation * 0.5 );
-*/
-
-                if(false){ // Debugging.
-                    if(  ( pl_x_A.Is_Point_Above_Plane(C) == pl_x_B.Is_Point_Above_Plane(C) )
-                    ||   ( pl_y_A.Is_Point_Above_Plane(C) == pl_y_B.Is_Point_Above_Plane(C) )
-                    ||   ( pl_z_A.Is_Point_Above_Plane(C) == pl_z_B.Is_Point_Above_Plane(C) ) ){
-                        std::stringstream ss;
-                        ss << "Projection is outside the cube: "
-                           << C 
-                           << " originally: " 
-                           << P
-                           << " anchor: " 
-                           << current_grid_anchor
-                           << " axes: "
-                           << current_grid_x * GridSeparation
-                           << " " 
-                           << current_grid_y * GridSeparation
-                           << " " 
-                           << current_grid_z * GridSeparation;
-                        throw std::logic_error(ss.str());
-                    }
-                }
-
-                p_unit_it->first = C;
-                ++p_unit_it;
-            }
-        };
-        project_into_unit_cube();
-
-
-        // Determine the optimal translation.
-        //
-        // Along each grid direction, the distance from each point to the nearest grid plane will be recorded.
-        // Note that we dramatically simplify determining distance to the cube face by adding or subtracting half the
-        // scalar distance; since all points have been projecting into the unit cube, at most the point will be
-        // 0.5*separation from the nearest plane. Thus if we subtract 1.0*separation for the points in the upper half, we can
-        // use simple 1D distribution analysis to determine optimal translations of the anchor point.
-        const auto translate_grid_optimally = [&](void) -> void {
-            std::vector<double> dist_x;
-            std::vector<double> dist_y;
-            std::vector<double> dist_z;
-
-            dist_x.reserve(p_unit.size());
-            dist_y.reserve(p_unit.size());
-            dist_z.reserve(p_unit.size());
-            {
-                auto p_unit_it = std::begin(p_unit);
-                for(const auto &pp : (*pcp_it)->points){
-                    //const auto P = pp.first;
-                    const auto C = p_unit_it->first - current_grid_anchor;
-
-/*
-                    const auto proj_x = current_grid_x.Dot(C - current_grid_anchor);
-                    const auto proj_y = current_grid_y.Dot(C - current_grid_anchor);
-                    const auto proj_z = current_grid_z.Dot(C - current_grid_anchor);
-*/
-                    const auto proj_x = current_grid_x.Dot(C);
-                    const auto proj_y = current_grid_y.Dot(C);
-                    const auto proj_z = current_grid_z.Dot(C);
-
-                    const auto dx = (0.5*GridSeparation < proj_x) ? proj_x - GridSeparation : proj_x;
-                    const auto dy = (0.5*GridSeparation < proj_y) ? proj_y - GridSeparation : proj_y;
-                    const auto dz = (0.5*GridSeparation < proj_z) ? proj_z - GridSeparation : proj_z;
-
-                    dist_x.emplace_back(dx);
-                    dist_y.emplace_back(dy);
-                    dist_z.emplace_back(dz);
-
-                    ++p_unit_it;
-                }
-            }
-
-
-            const auto shift_x = Stats::Mean(dist_x);
-            const auto shift_y = Stats::Mean(dist_y);
-            const auto shift_z = Stats::Mean(dist_z);
-
-/*
-            const auto shift_x = Stats::Median(dist_x);
-            const auto shift_y = Stats::Median(dist_y);
-            const auto shift_z = Stats::Median(dist_z);
-*/            
-
-            current_grid_anchor += current_grid_x * shift_x
-                                 + current_grid_y * shift_y
-                                 + current_grid_z * shift_z;
-
-        };
-std::cout << " Optimal translation: " << std::endl
-          << "    " << "Begin current_grid_anchor = " << current_grid_anchor
-          << std::endl;
-
-        translate_grid_optimally();
-
-std::cout << "    " << "After current_grid_anchor = " << current_grid_anchor
-          << std::endl;
-
-// TODO: Does this invalidate the optimal translation we just found? If so, can anything be done?
-        project_into_unit_cube();
-
-
-        // Determine correspondence points.
-        //
-        // Every unit-cube projected point is projected onto the faces of the cube. Only the projection on the nearest
-        // face is kept.
-        auto corresp = (*pcp_it)->points; // Holds the closest corresponding projected point for each point cloud point.
-        auto find_corresponding_points = [&](void) -> void {
-            // Creates plane for all faces.
-            //
-            // Note: There is a faster way to do this using the same approach as the translation routine above.
-            //       This way is more convenient for testing.
-            std::vector<plane<double>> planes;
-
-            planes.emplace_back( current_grid_x, current_grid_anchor );
-            planes.emplace_back( current_grid_y, current_grid_anchor );
-            planes.emplace_back( current_grid_z, current_grid_anchor );
-
-            planes.emplace_back( current_grid_x, current_grid_anchor + current_grid_x * GridSeparation );
-            planes.emplace_back( current_grid_y, current_grid_anchor + current_grid_y * GridSeparation );
-            planes.emplace_back( current_grid_z, current_grid_anchor + current_grid_z * GridSeparation );
-
-            auto c_it = std::begin(corresp);
-            for(const auto &pp : p_unit){
-                const auto P = pp.first;
-
-                double closest_dist = std::numeric_limits<double>::infinity();
-                vec3<double> closest_proj = NaN_vec3;
-                for(const auto &pl : planes){
-                    const auto dist = std::abs(pl.Get_Signed_Distance_To_Point(P));
-                    if(dist < closest_dist){
-                        closest_dist = dist;
-                        closest_proj = pl.Project_Onto_Plane_Orthogonally(P);
-                    }
-                }
-                if(!closest_proj.isfinite()){
-                    throw std::logic_error("Projected point is not finite. Cannot continue");
-                }
-
-                c_it->first = closest_proj;
-                ++c_it;
-            }
-        };
-        find_corresponding_points();
-
-
-        if(loop == loop_max){
-            // Write the project points to a file for inspection.
-            Write_XYZ("/tmp/cube_projected_points.xyz", p_unit);
-
-            // Write the unit cube edges to a file for inspection.
-            Write_Cube_OBJ("/tmp/cube.obj",
-                           current_grid_anchor,
-                           current_grid_x * GridSeparation,
-                           current_grid_y * GridSeparation,
-                           current_grid_z * GridSeparation );
-
-            // Write the correspondence points to a file for inspection.
-            Write_XYZ("/tmp/cube_corresp_points.xyz", corresp);
-
-            // Write the grid for inspection.
-            Insert_Grid_Contours("grid_final",
-                           (*pcp_it)->points,
-                           current_grid_anchor,
-                           current_grid_x * GridSeparation,
-                           current_grid_y * GridSeparation,
-                           current_grid_z * GridSeparation );
-
-        }
-
-        Insert_Grid_Contours("grid_"_s + std::to_string(loop),
-                       (*pcp_it)->points,
-                       current_grid_anchor,
-                       current_grid_x * GridSeparation,
-                       current_grid_y * GridSeparation,
-                       current_grid_z * GridSeparation );
-
-        // Compute some stats about the correspondence.
-        //if((loop % 5) == 1){
-        {
-            std::vector<double> dists;
-            auto c_it = std::begin(corresp);
-            for(const auto &pp : p_unit){
-                const auto P = pp.first;
-                const auto C = c_it->first;
-
-                const auto dist = P.distance(C);
-                dists.emplace_back(dist);
-
-                ++c_it;
-            }
-
-            std::cout << " Stats:    " << std::endl;
-            std::cout << "    Min:    " << Stats::Min(dists)    << std::endl
-                      << "    Mean:   " << Stats::Mean(dists)   << std::endl
-                      << "    Median: " << Stats::Median(dists) << std::endl
-                      << "    Max:    " << Stats::Max(dists)    << std::endl;
-        }
-
-        
-
-        // Determine optimal rotations.
-        //
-        // This routine rotates the grid axes unit vectors by estimating the optimal rotation of corresponding points.
-        // A SVD decomposition provides the rotation matrix that minimizes the difference between corresponding points.
-        {
-
-// TODO: Translate about the centre of the unit cube rather than the current (arbitrary) origin. 
-//       This will help de-couple the rotational and translational degrees of freedom. 
-//       The tricky part will be applying the rotations to the grid afterward, but basically just amounting to a
-//       shift->rotate->shift. Be sure the anchor handled correctly too!
-
-            // Nominate a random point to be the rotation centre.
+            // Randomly select a point from the cloud.
             std::uniform_int_distribution<long int> rd(0, (*pcp_it)->points.size());
-            const auto N_c = rd(re);
-            const auto Rtn_cntr = std::next( std::begin((*pcp_it)->points), N_c )->first;
+            const auto N = rd(re);
+            ICPC.ransac_centre = std::next( std::begin((*pcp_it)->points), N )->first;
 
-            const auto Anchor_to_Rtn_cntr = (Rtn_cntr - current_grid_anchor);
-            const auto Rtn_cntr_to_Anchor = (current_grid_anchor - Rtn_cntr);
+            // Retain only the points within a small distance of the RANSAC centre.
+            using pcp_t = decltype((*pcp_it)->points.front());
+            ICPC.cohort = (*pcp_it)->points;
+            ICPC.cohort.erase(
+                std::remove_if(std::begin(ICPC.cohort), 
+                               std::end(ICPC.cohort),
+                               [&](const pcp_t &pcp) -> bool {
+                                   return (pcp.first.distance(ICPC.ransac_centre) > ransac_dist);
+                               }),
+                std::end(ICPC.cohort) );
 
-/*
-            const auto unit_cube_centre = current_grid_x * GridSeparation * 0.5
-                                        + current_grid_y * GridSeparation * 0.5
-                                        + current_grid_z * GridSeparation * 0.5
-                                        + current_grid_anchor;
-*/
+            // Allocate storage for ICP loops.
+            ICPC.p_cell = ICPC.cohort;
+            ICPC.p_corr = ICPC.cohort;
+            ICPC.rot_centre = ICPC.ransac_centre;
 
-            const auto N_rows = 3;
-            const auto N_cols = (*pcp_it)->points.size();
-            Eigen::MatrixXf A(N_rows, N_cols);
-            Eigen::MatrixXf B(N_rows, N_cols);
+            // ICP loop.
+            const size_t loop_max = 10;
+            for(size_t loop = 1; loop <= loop_max; ++loop){
+                std::cout << "====================================== " << "Loop: " << loop << std::endl;
 
-            auto o_it = std::begin((*pcp_it)->points);
-            auto c_it = std::begin(corresp);
-            size_t col = 0;
-            for(const auto &pp : p_unit){
-                const auto O = o_it->first; // The original point location.
-                const auto P = pp.first; // The point projected into the unit cube.
-                const auto C = c_it->first; // The corresponding point somewhere on the unit cube surface.
+                // Nominate a random point to be the rotation centre.
+                /*
+                std::uniform_int_distribution<long int> rd(0, ICPC.cohort.size());
+                const auto N_c = rd(re);
+                const auto ICPC.rot_centre = std::next( std::begin((ICPC.cohort), N_c )->first;
+                */
 
-                //const auto P_A = (O - Rtn_cntr); // O from the rotation centre; the actual point location.
-                //const auto P_B = P_A + (C - P); // O's corresponding point from the rotation centre; the desired point location.
+                Project_Into_Unit_Cube(GC, ICPC);
 
-                const auto P_B = (O - Rtn_cntr); // O from the rotation centre; the actual point location.
-                const auto P_A = P_B + (C - P); // O's corresponding point from the rotation centre; the desired point location.
+                std::cout << " Optimal translation: " << std::endl
+                          << "    " << "Begin GC.current_grid_anchor = " << GC.current_grid_anchor
+                          << std::endl;
 
-                A(0, col) = P_A.x;
-                A(1, col) = P_A.y;
-                A(2, col) = P_A.z;
+                Translate_Grid_Optimally(GC, ICPC);
 
-                B(0, col) = P_B.x;
-                B(1, col) = P_B.y;
-                B(2, col) = P_B.z;
+                std::cout << "    " << "After GC.current_grid_anchor = " << GC.current_grid_anchor
+                          << std::endl;
 
-                ++c_it;
-                ++o_it;
-                ++col;
-            }
-            auto AT = A.transpose();
-            auto BAT = B * AT;
-//FUNCINFO("A dimensions: " << A.rows() << "x" << A.cols());
-//FUNCINFO("B dimensions: " << B.rows() << "x" << B.cols());
-//FUNCINFO("AT dimensions: " << AT.rows() << "x" << AT.cols());
-//FUNCINFO("BAT dimensions: " << BAT.rows() << "x" << BAT.cols());
-//std::cout << "A is: " << std::endl;
-//std::cout << A << std::endl;
-//std::cout << "B is: " << std::endl;
-//std::cout << B << std::endl;
-//std::cout << "BAT is: " << std::endl;
-//std::cout << BAT << std::endl;
+                // TODO: Does this invalidate the optimal translation we just found? If so, can anything be done?
+                Project_Into_Unit_Cube(GC, ICPC);
 
-            //Eigen::JacobiSVD<Eigen::MatrixXf> SVD(BAT, Eigen::ComputeThinU | Eigen::ComputeThinV);
-            Eigen::JacobiSVD<Eigen::MatrixXf> SVD(BAT, Eigen::ComputeFullU | Eigen::ComputeFullV );
-            auto U = SVD.matrixU();
-            auto V = SVD.matrixV();
-//FUNCINFO("Singular values are: " << SVD.singularValues());
-            
-            // Use the SVD result directly.
-            auto M = U * V.transpose();
+                Find_Corresponding_Points(GC, ICPC);
 
-            // Attempt to restrict to rotations only.
-            //Eigen::Matrix3f PI;
-            //PI << 1.0 , 0.0 , 0.0,
-            //      0.0 , 1.0 , 0.0,
-            //      0.0 , 0.0 , ( U * V.transpose() ).determinant();
-            //auto M = U * PI * V.transpose();
+                if(loop == loop_max){
+                    // Write the project points to a file for inspection.
+                    Write_XYZ("/tmp/cube_projected_points.xyz", ICPC.p_cell);
 
-            // Restrict the solution to rotations only. (Refer to the 'Kabsch algorithm' for more info.)
-            // NOTE: Probably requires Nx3 matrices rather than 3xN matrices...
-            //Eigen::Matrix3f PI;
-            //PI << 1.0 << 0.0 << 0.0
-            //   << 0.0 << 1.0 << 0.0
-            //   << 0.0 << 0.0 << Eigen::Determinant( V * U.transpose() );
-            //auto M = V * PI * U.transpose();
+                    // Write the unit cube edges to a file for inspection.
+                    Write_Cube_OBJ("/tmp/cube.obj",
+                                   GC.current_grid_anchor,
+                                   GC.current_grid_x * GC.grid_sep,
+                                   GC.current_grid_y * GC.grid_sep,
+                                   GC.current_grid_z * GC.grid_sep );
 
-//FUNCINFO("U dimensions: " << U.rows() << "x" << U.cols());
-//FUNCINFO("V dimensions: " << V.rows() << "x" << V.cols());
-//FUNCINFO("M dimensions: " << M.rows() << "x" << M.cols());
+                    // Write the correspondence points to a file for inspection.
+                    Write_XYZ("/tmp/cube_corresp_points.xyz", ICPC.p_corr);
 
-//std::cout << "U is: " << std::endl;
-//std::cout << U << std::endl;
-//std::cout << "V is: " << std::endl;
-//std::cout << V << std::endl;
-//std::cout << "M is: " << std::endl;
-//std::cout << M << std::endl;
-            auto Apply_Rotation = [&](const vec3<double> &v) -> vec3<double> {
-                Eigen::Vector3f e_vec3(v.x, v.y, v.z);
-                auto new_v = M * e_vec3;
-                return vec3<double>( new_v(0), new_v(1), new_v(2) );
-            };
+                    // Write the grid for inspection.
+                    Insert_Grid_Contours(DICOM_data,
+                                   "grid_final",
+                                   ICPC.cohort,
+                                   GC.current_grid_anchor,
+                                   GC.current_grid_x * GC.grid_sep,
+                                   GC.current_grid_y * GC.grid_sep,
+                                   GC.current_grid_z * GC.grid_sep );
 
-            const auto previous_grid_x = current_grid_x;
-            const auto previous_grid_y = current_grid_y;
-            const auto previous_grid_z = current_grid_z;
-
-            current_grid_x = Apply_Rotation(current_grid_x).unit();
-            current_grid_y = Apply_Rotation(current_grid_y).unit();
-            current_grid_z = Apply_Rotation(current_grid_z).unit();
-
-
-            const auto Rtn_cntr_to_new_Anchor = Apply_Rotation(Rtn_cntr_to_Anchor).unit() * Rtn_cntr_to_Anchor.length();
-
-            const auto previous_grid_anchor = current_grid_anchor;
-            current_grid_anchor = (Rtn_cntr + Rtn_cntr_to_new_Anchor);
-
-/*
-            //Determine how the anchor point moves.
-            //
-            // Since we permitted only rotations (relative to the centre of the unit cube) when optimizing the grid axes
-            // unit vectors, the centre of the unit cube will be invariant after transforming the grid axes. When th
-            // grid axes were rotated, the anchor point also rotated. Starting from the unit cube centre, the anchor can
-            // be easily found by translating along the grid axes.
-            const auto previous_grid_anchor = current_grid_anchor;
-            current_grid_anchor = unit_cube_centre 
-                                - current_grid_x * GridSeparation * 0.5
-                                - current_grid_y * GridSeparation * 0.5
-                                - current_grid_z * GridSeparation * 0.5 ;
-*/
-
-std::cout << " Rotations: " << std::endl;
-std::cout << "    Rotating about point at " << Rtn_cntr << std::endl;
-std::cout << "    Dot product of new grid axes vectors: " 
-          << current_grid_x.Dot(current_grid_y) << "  "
-          << current_grid_x.Dot(current_grid_z) << "  "
-          << current_grid_y.Dot(current_grid_z) << " # should be (0,0,0)." << std::endl;
-
-std::cout << "    Grid anchor was " << previous_grid_anchor << " and is now " << current_grid_anchor;
-std::cout << "  translation was " << (current_grid_anchor - previous_grid_anchor) << std::endl;
-std::cout << "    Grid axes moving from: " << std::endl;
-std::cout << "        " << previous_grid_x;
-std::cout << "  " << previous_grid_y;
-std::cout << "  " << previous_grid_z << std::endl;
-std::cout << "      to " << std::endl;
-std::cout << "        " << current_grid_x;
-std::cout << "  " << current_grid_y;
-std::cout << "  " << current_grid_z << std::endl;
-std::cout << "      angle changes: " << std::endl;
-std::cout << "        " << current_grid_x.angle(previous_grid_x)*180.0/M_PI << " deg.";
-std::cout << "  " << current_grid_y.angle(previous_grid_y)*180.0/M_PI << " deg.";
-std::cout << "  " << current_grid_z.angle(previous_grid_z)*180.0/M_PI << " deg." << std::endl;
-std::cout << " " << std::endl;
-
-        }
-
-}
-
-/*
-
-
-
-
-
-        // Determine point cloud bounds.
-        for(const auto &pp : (*pcp_it)->points){
-            rmm_x.Digest( pp.first.Dot(x_unit) );
-            rmm_y.Digest( pp.first.Dot(y_unit) );
-            rmm_z.Digest( pp.first.Dot(z_unit) );
-        }
-
-        // Determine where to centre the grid.
-        //
-        // TODO: Use the median here instead of mean. It will more often correspond to an actual grid line if the
-        //       point cloud orientation is comparable to the grid.
-        const double x_mid = (rmm_x.Current_Max() + rmm_x.Current_Min()) * 0.5;
-        const double y_mid = (rmm_y.Current_Max() + rmm_y.Current_Min()) * 0.5;
-        const double z_mid = (rmm_z.Current_Max() + rmm_z.Current_Min()) * 0.5;
-
-        const double x_diff = (rmm_x.Current_Max() - rmm_x.Current_Min());
-        const double y_diff = (rmm_y.Current_Max() - rmm_y.Current_Min());
-        const double z_diff = (rmm_z.Current_Max() - rmm_z.Current_Min());
-
-        FUNCINFO("x width = " << x_mid << " +- " << x_diff * 0.5);
-        FUNCINFO("y width = " << y_mid << " +- " << y_diff * 0.5);
-        FUNCINFO("z width = " << z_mid << " +- " << z_diff * 0.5);
-
-        current_grid_anchor = vec3<double>(x_mid, y_mid, z_mid);
-
-        // Determine initial positions for planes.
-        //
-        // They should be spaced evenly and should adaquately cover the point cloud with at least one grid line margin.
-        std::list<plane<double>> planes;
-
-        for(size_t i = 0; ; ++i){
-            const auto dR = static_cast<double>(i) * GridSeparation;
-
-            //plane(const vec3<T> &N_0_in, const vec3<T> &R_0_in);
-            const auto N_0_x = current_grid_x;
-            const auto N_0_y = current_grid_y;
-            const auto N_0_z = current_grid_z;
-
-            planes.emplace_back(N_0_x, current_grid_anchor + N_0_x * dR);
-            planes.emplace_back(N_0_y, current_grid_anchor + N_0_y * dR);
-            planes.emplace_back(N_0_z, current_grid_anchor + N_0_z * dR);
-            if(i != 0){
-                planes.emplace_back(N_0_x, current_grid_anchor - N_0_x * dR);
-                planes.emplace_back(N_0_y, current_grid_anchor - N_0_y * dR);
-                planes.emplace_back(N_0_z, current_grid_anchor - N_0_z * dR);
-            }
-
-            if( (dR >= (x_diff * 0.5 + GridSeparation))
-            &&  (dR >= (y_diff * 0.5 + GridSeparation))
-            &&  (dR >= (z_diff * 0.5 + GridSeparation)) ){
-                FUNCINFO("Placed " << 3 + (i-1)*2*3 << " planes in total");
-                break;
-            }
-        }
-
-
-        // Project every point onto every plane. Keep only the nearest projection.
-        auto corresp = (*pcp_it)->points; // Holds the closest corresponding projected point for each point cloud point.
-        auto c_it = std::begin(corresp);
-
-        for(const auto &pp : (*pcp_it)->points){
-            const auto P = pp.first;
-
-            double closest_dist = std::numeric_limits<double>::infinity();
-            vec3<double> closest_proj = NaN_vec3;
-            for(const auto &p : planes){
-                const auto dist = p.Get_Signed_Distance_To_Point(P);
-                if(dist < closest_dist){
-                    closest_proj = p.Project_Onto_Plane_Orthogonally(P);
                 }
-            }
 
-            c_it->first = closest_proj;
-            ++c_it;
-        }
+                Insert_Grid_Contours(DICOM_data,
+                               "grid_"_s + std::to_string(loop),
+                               ICPC.cohort,
+                               GC.current_grid_anchor,
+                               GC.current_grid_x * GC.grid_sep,
+                               GC.current_grid_y * GC.grid_sep,
+                               GC.current_grid_z * GC.grid_sep );
 
-        // Determine the Procrustes solution with the given correspondence.
+                Rotate_Grid_Optimally(GC, ICPC);
 
+                Project_Into_Unit_Cube(GC, ICPC);
 
-        // ...
+                // Evaluate over the entire point cloud, retaining the global best.
+                if(false){
+                    std::vector<double> dists;
+                    auto c_it = std::begin(ICPC.p_corr);
+                    for(const auto &pp : ICPC.p_cell){
+                        const auto P = pp.first;
+                        const auto C = c_it->first;
 
+                        const auto dist = P.distance(C);
+                        dists.emplace_back(dist);
 
-        // Transform the planar grid according to the Procrustes solution.
+                        ++c_it;
+                    }
 
+                    std::cout << " Stats:    " << std::endl;
+                    std::cout << "    Min:    " << Stats::Min(dists)    << std::endl
+                              << "    Mean:   " << Stats::Mean(dists)   << std::endl
+                              << "    Median: " << Stats::Median(dists) << std::endl
+                              << "    Max:    " << Stats::Max(dists)    << std::endl;
 
-        // ...
+                    const auto proj_med = Stats::Median(dists);
+                    GC.score = proj_med;
+                }
 
+            } // ICP loop.
 
-        // Go back to the loop point above and continue until the grid settles.
+        } // RANSAC loop.
 
-        // ...
-
-
-
-        // Return the final grid via fit statistics and visually.
-        //
-        // Note: Either try using any available images or create a set of images with points blitted and grid contours?
-
-        // ...
-
-
-
-
-*/
-
-
-         
-            
-
-//FUNCERR("This routine has not yet been implemented. Refusing to continue");
-
-    }
+    } // Point_Cloud loop.
 
     return DICOM_data;
 }
