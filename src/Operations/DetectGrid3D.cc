@@ -420,35 +420,82 @@ Find_Corresponding_Points( Grid_Context &GC,
                                  std::numeric_limits<double>::quiet_NaN() );
 
     // Creates plane for all faces.
-    std::vector<plane<double>> planes;
+    std::vector<plane<double>> x_planes;
+    std::vector<plane<double>> y_planes;
+    std::vector<plane<double>> z_planes;
 
-    planes.emplace_back( GC.current_grid_x, GC.current_grid_anchor );
-    planes.emplace_back( GC.current_grid_y, GC.current_grid_anchor );
-    planes.emplace_back( GC.current_grid_z, GC.current_grid_anchor );
+    x_planes.emplace_back( GC.current_grid_x, GC.current_grid_anchor );
+    y_planes.emplace_back( GC.current_grid_y, GC.current_grid_anchor );
+    z_planes.emplace_back( GC.current_grid_z, GC.current_grid_anchor );
 
-    planes.emplace_back( GC.current_grid_x, GC.current_grid_anchor + GC.current_grid_x * GC.grid_sep );
-    planes.emplace_back( GC.current_grid_y, GC.current_grid_anchor + GC.current_grid_y * GC.grid_sep );
-    planes.emplace_back( GC.current_grid_z, GC.current_grid_anchor + GC.current_grid_z * GC.grid_sep );
+    x_planes.emplace_back( GC.current_grid_x, GC.current_grid_anchor + GC.current_grid_x * GC.grid_sep );
+    y_planes.emplace_back( GC.current_grid_y, GC.current_grid_anchor + GC.current_grid_y * GC.grid_sep );
+    z_planes.emplace_back( GC.current_grid_z, GC.current_grid_anchor + GC.current_grid_z * GC.grid_sep );
 
+    if(ICPC.p_corr.size() != 3*ICPC.cohort.size()){
+        throw std::logic_error("Insufficient working space allocated. Cannot continue.");
+    }
     auto c_it = std::begin(ICPC.p_corr);
     for(const auto &pp : ICPC.p_cell){
         const auto P = pp.first;
 
-        double closest_dist = std::numeric_limits<double>::infinity();
-        vec3<double> closest_proj = NaN_vec3;
-        for(const auto &pl : planes){
-            const auto dist = std::abs(pl.Get_Signed_Distance_To_Point(P));
-            if(dist < closest_dist){
-                closest_dist = dist;
-                closest_proj = pl.Project_Onto_Plane_Orthogonally(P);
+
+        // grid_x direction.
+        {
+            double closest_dist = std::numeric_limits<double>::infinity();
+            vec3<double> closest_proj = NaN_vec3;
+            for(const auto &pl : x_planes){
+                const auto dist = std::abs(pl.Get_Signed_Distance_To_Point(P));
+                if(dist < closest_dist){
+                    closest_dist = dist;
+                    closest_proj = pl.Project_Onto_Plane_Orthogonally(P);
+                }
             }
-        }
-        if(!closest_proj.isfinite()){
-            throw std::logic_error("Projected point is not finite. Cannot continue");
+            if(!closest_proj.isfinite()){
+                throw std::logic_error("Projected point is not finite. Cannot continue");
+            }
+
+            c_it->first = closest_proj;
+            ++c_it;
         }
 
-        c_it->first = closest_proj;
-        ++c_it;
+        // grid_y direction.
+        {
+            double closest_dist = std::numeric_limits<double>::infinity();
+            vec3<double> closest_proj = NaN_vec3;
+            for(const auto &pl : y_planes){
+                const auto dist = std::abs(pl.Get_Signed_Distance_To_Point(P));
+                if(dist < closest_dist){
+                    closest_dist = dist;
+                    closest_proj = pl.Project_Onto_Plane_Orthogonally(P);
+                }
+            }
+            if(!closest_proj.isfinite()){
+                throw std::logic_error("Projected point is not finite. Cannot continue");
+            }
+
+            c_it->first = closest_proj;
+            ++c_it;
+        }
+
+        // grid_z direction.
+        {
+            double closest_dist = std::numeric_limits<double>::infinity();
+            vec3<double> closest_proj = NaN_vec3;
+            for(const auto &pl : z_planes){
+                const auto dist = std::abs(pl.Get_Signed_Distance_To_Point(P));
+                if(dist < closest_dist){
+                    closest_dist = dist;
+                    closest_proj = pl.Project_Onto_Plane_Orthogonally(P);
+                }
+            }
+            if(!closest_proj.isfinite()){
+                throw std::logic_error("Projected point is not finite. Cannot continue");
+            }
+
+            c_it->first = closest_proj;
+            ++c_it;
+        }
     }
     return;
 }
@@ -466,16 +513,17 @@ Rotate_Grid_Optimally( Grid_Context &GC,
     const auto Rtn_cntr_to_Anchor = (GC.current_grid_anchor - ICPC.rot_centre);
 
     const auto N_rows = 3;
-    const auto N_cols = ICPC.cohort.size();
+    const auto N_cols = ICPC.p_corr.size();
     Eigen::MatrixXf A(N_rows, N_cols);
     Eigen::MatrixXf B(N_rows, N_cols);
 
     auto o_it = std::begin(ICPC.cohort);
     auto c_it = std::begin(ICPC.p_corr);
+    auto p_it = std::begin(ICPC.p_cell);
     size_t col = 0;
-    for(const auto &pp : ICPC.p_cell){
+    while(c_it != std::end(ICPC.p_corr)){
         const auto O = o_it->first; // The original point location.
-        const auto P = pp.first; // The point projected into the unit cube.
+        const auto P = p_it->first; // The point projected into the unit cube.
         const auto C = c_it->first; // The corresponding point somewhere on the unit cube surface.
 
         const auto P_B = (O - ICPC.rot_centre); // O from the rotation centre; the actual point location.
@@ -489,9 +537,12 @@ Rotate_Grid_Optimally( Grid_Context &GC,
         B(1, col) = P_B.y;
         B(2, col) = P_B.z;
 
-        ++c_it;
-        ++o_it;
         ++col;
+        ++c_it;
+        if((col % 3) == 0){ // Only advance the other iterators every third time.
+            ++o_it;
+            ++p_it;
+        }
     }
     auto AT = A.transpose();
     auto BAT = B * AT;
@@ -575,15 +626,17 @@ Score_Fit( Grid_Context &GC,
 
     // Evaluate the fit using the corresponding points.
     std::vector<double> dists;
+    dists.reserve(ICPC.p_corr.size());
     auto c_it = std::begin(ICPC.p_corr);
     for(const auto &pp : ICPC.p_cell){
         const auto P = pp.first;
-        const auto C = c_it->first;
 
-        const auto dist = P.distance(C);
-        dists.emplace_back(dist);
-
-        ++c_it;
+        for(size_t i = 0; i < 3; ++i){
+            const auto C = c_it->first;
+            ++c_it;
+            const auto dist = P.distance(C);
+            dists.emplace_back(dist);
+        }
     }
 
     std::cout << " Score fit stats:    " << std::endl;
@@ -689,7 +742,10 @@ OperationDoc OpArgDocDetectGrid3D(void){
 
     out.desc = 
         "This routine fits a 3D grid to a point cloud using a Procrustes analysis with "
-        " point-to-model correspondence estimated via an iterative closest point approach.";
+        " point-to-model correspondence estimated via an iterative closest point approach."
+        " A RANSAC-powered loop is used to (1) randomly select a subset of the grid for coarse"
+        " iterative closest point grid fitting, and then (2) use the coarse fit results as a"
+        " guess for the whole point cloud in a refinement stage.";
     
     out.notes.emplace_back(
         "Traditional Procrustes analysis requires a priori point-to-point correspondence knowledge."
@@ -705,8 +761,42 @@ OperationDoc OpArgDocDetectGrid3D(void){
         " with the point cloud (i.e., when the first guess is very close to a solution)."
         " If this cannot be guaranteed, it may be advantageous to have a nearly continuous point"
         " cloud to avoid gaps in which the iteration can get stuck in a local minimum."
-        " If this cannot be guaranteed, it might be worthwhile to perform a bootstrap (or RANSAC)"
-        " and discard all but the best fit."
+        " For this reason, RANSAC is applied to continuously reboot the fitting procedure."
+        " All but the best fit are discarded."
+    );
+    out.notes.emplace_back(
+        "A two-stage RANSAC inner-loop iterative closest point fitting procedure is used."
+        " Coarse grid fitting is first performed with a limited subset of the whole point cloud."
+        " This is followed with a refinment stage in which the enire point cloud is fitted using an"
+        " initial guess carried forward from the coarse fitting stage."
+        " This guess is expected to be reasonably close to the true grid in cases where the coarse"
+        " fitting procedure was not tainted by outliers, but is only derived from a small portion"
+        " of the point cloud."
+        " (Thus RANSAC is used to perform this coarse-fine iterative procedure multiple times to"
+        " provide resilience to poor-quality coarse fits.)"
+        " CoarseICPMaxLoops is the maximum number of iterative-closest point loop iterations"
+        " performed during the coarse grid fitting stage (on a subset of the point cloud),"
+        " and FineICPMaxLoops is the maximum number of iterative-closest point loop iterations"
+        " performed during the refinement stage (using the whole point cloud)."
+        " Note that, depending on the noise level and number of points considered (i.e.,"
+        " whether the RANSACDist parameter is sufficiently small to avoid spatial wrapping of"
+        " corresponding points into adjacent grid cells, but sufficiently large to enclose at"
+        " least one whole grid cell), the coarse phase should converge within a few iterations."
+        " However, on each loop a single point is selected as the"
+        " grid's rotation centre. This means that a few extra iterations should always be used"
+        " in case outliers are selected as rotation centres. Additionally, if the point cloud"
+        " is dense or there are lots of outliers present, increase CoarseICPMaxLoops to ensure"
+        " there is a reasonable chance of selecting legitimate rotation points. On the other"
+        " hand, be aware that the coarse-fine iterative procedure is performed afresh for every"
+        " RANSAC loop, and RANSAC loops are better able to ensure the point cloud is sampled"
+        " ergodically. It might therefore be more productive to increase the RANSACMaxLoops"
+        " parameter and reduce the number of CoarseICPMaxLoops."
+        " FineICPMaxLoops should converge quickly if the coarse fitting stage was representative"
+        " of the true grid. However, as in the coarse stage a rotation centre is nominated in"
+        " each loop, so it will be a good idea to keep a sufficient number of loops to ensure"
+        " a legitimate and appropriate non-outlier point is nominated during this stage."
+        " Given the complicated interplay between parameters and stages, it is always best"
+        " to tune using a representative sample of the point cloud you need to fit!"
     );
 
     out.args.emplace_back();
@@ -728,6 +818,25 @@ OperationDoc OpArgDocDetectGrid3D(void){
                                  "1.23E4" };
 
     out.args.emplace_back();
+    out.args.back().name = "RANSACDist";
+    out.args.back().desc = "Every iteration of RANSAC selects a single point from the point cloud. Only the"
+                           " near-vicinity of points are retained for iterative-closest-point Procrustes solving."
+                           " This parameter determines the maximum distance from the RANSAC point within which"
+                           " point cloud points will be retained; all points further than this distance away"
+                           " will be pruned for a given round of RANSAC. This is needed because corresponding"
+                           " points begin to alias to incorrect cell faces when the ICP procedure begins with"
+                           " a poor guess. Pruing points around 1-2x the GridSeparation will help mitigate"
+                           " aliasing even when the initial guess is poor. However, smaller windows may increase"
+                           " susceptibility to noise/outliers, and RANSACDist should never be smaller than a"
+                           " grid voxel. If RANSACDist is not provided, a default of"
+                           " (1.5 * GridSeparation) is used.";
+    out.args.back().default_val = "nan";
+    out.args.back().expected = false;
+    out.args.back().examples = { "15.0", 
+                                 "31.0",
+                                 "2.46E4" };
+
+    out.args.emplace_back();
     out.args.back().name = "LineThickness";
     out.args.back().desc = "The thickness of grid lines (in DICOM units; mm)."
                            " If zero, lines are treated simply as lines."
@@ -739,6 +848,53 @@ OperationDoc OpArgDocDetectGrid3D(void){
                                  "10.0",
                                  "1.23E4" };
 
+    out.args.emplace_back();
+    out.args.back().name = "RandomSeed";
+    out.args.back().desc = "A whole number seed value to use for random number generation.";
+    out.args.back().default_val = "1317";
+    out.args.back().expected = true;
+    out.args.back().examples = { "1", 
+                                 "2",
+                                 "1113523431" };
+
+    out.args.emplace_back();
+    out.args.back().name = "RANSACMaxLoops";
+    out.args.back().desc = "The maximum number of iterations of RANSAC."
+                           " (See operation notes for further details.)";
+    out.args.back().default_val = "100";
+    out.args.back().expected = true;
+    out.args.back().examples = { "100", 
+                                 "2000",
+                                 "1E4" };
+
+    out.args.emplace_back();
+    out.args.back().name = "CoarseICPMaxLoops";
+    out.args.back().desc = "Coarse grid fitting is performed with a limited subset of the whole point cloud."
+                           " This is followed with a refinment stage in which the enire point is fitted using an"
+                           " initial guess from the coarse fitting stage."
+                           " CoarseICPMaxLoops is the maximum number of iterative-closest point loop iterations"
+                           " performed during the coarse grid fitting stage."
+                           " (See operation notes for further details.)";
+    out.args.back().default_val = "10";
+    out.args.back().expected = true;
+    out.args.back().examples = { "10", 
+                                 "100",
+                                 "1E4" };
+
+    out.args.emplace_back();
+    out.args.back().name = "FineICPMaxLoops";
+    out.args.back().desc = "Coarse grid fitting is performed with a limited subset of the whole point cloud."
+                           " This is followed with a refinment stage in which the enire point is fitted using an"
+                           " initial guess from the coarse fitting stage."
+                           " FineICPMaxLoops is the maximum number of iterative-closest point loop iterations"
+                           " performed during the refinement stage."
+                           " (See operation notes for further details.)";
+    out.args.back().default_val = "20";
+    out.args.back().expected = true;
+    out.args.back().examples = { "10", 
+                                 "50",
+                                 "100" };
+
     return out;
 }
 
@@ -748,18 +904,21 @@ Drover DetectGrid3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
     const auto PointSelectionStr = OptArgs.getValueStr("PointSelection").value();
 
     const auto GridSeparation = std::stod( OptArgs.getValueStr("GridSeparation").value() );
-    const auto LineThickness = std::stod( OptArgs.getValueStr("LineThickness").value() );
+    const auto RANSACDist = std::stod( OptArgs.getValueStr("RANSACDist").value_or(GridSeparation * 1.5) );
 
-    long int random_seed = 123456;
-    const size_t ransac_max = 100;
-    const double ransac_dist = GridSeparation * 1.5;
-    const long int cohort_icp_max_loops = 10;
-    const long int refinement_icp_max_loops = 5;
+    const auto LineThickness = std::stod( OptArgs.getValueStr("LineThickness").value() );
+    const auto RandomSeed = std::stol( OptArgs.getValueStr("RandomSeed").value() );
+    const auto RANSACMaxLoops = std::stol( OptArgs.getValueStr("RANSACMaxLoops").value() );
+
+    const auto CoarseICPMaxLoops = std::stol( OptArgs.getValueStr("CoarseICPMaxLoops").value() ); 
+    const auto FineICPMaxLoops = std::stol( OptArgs.getValueStr("FineICPMaxLoops").value() ); 
 
     //-----------------------------------------------------------------------------------------------------------------
 
-    std::mt19937 re( random_seed );
 
+    if(!std::isfinite(RANSACDist)){
+        throw std::invalid_argument("RANSAC distance is not valid. Cannot continue.");
+    }
 
     if(!std::isfinite(GridSeparation) || (GridSeparation <= 0.0)){
         throw std::invalid_argument("Grid separation is not valid. Cannot continue.");
@@ -770,6 +929,8 @@ Drover DetectGrid3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
     if(GridSeparation < LineThickness){
         throw std::invalid_argument("Line thickness is impossible with given grid spacing. Refusing to continue.");
     }
+
+    std::mt19937 re( RandomSeed );
 
 
     auto PCs_all = All_PCs( DICOM_data );
@@ -788,10 +949,11 @@ Drover DetectGrid3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
         whole_ICPC.cohort = (*pcp_it)->points;
         whole_ICPC.p_cell = whole_ICPC.cohort; // Prime the container with dummy info.
         whole_ICPC.p_corr = whole_ICPC.cohort; // Prime the container with dummy info.
+        whole_ICPC.p_corr.resize(3*whole_ICPC.cohort.size());
         //whole_ICPC.rot_centre = whole_ICPC.ransac_centre;
 
         // Perform a RANSAC analysis by only analyzing the vicinity of a randomly selected point.
-        for(size_t ransac_loop = 0; ransac_loop < ransac_max; ++ransac_loop){
+        for(size_t ransac_loop = 0; ransac_loop < RANSACMaxLoops; ++ransac_loop){
 
             // Randomly select a point from the cloud.
             std::uniform_int_distribution<long int> rd(0, (*pcp_it)->points.size());
@@ -805,24 +967,25 @@ Drover DetectGrid3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
                 std::remove_if(std::begin(ICPC.cohort), 
                                std::end(ICPC.cohort),
                                [&](const pcp_t &pcp) -> bool {
-                                   return (pcp.first.distance(ICPC.ransac_centre) > ransac_dist);
+                                   return (pcp.first.distance(ICPC.ransac_centre) > RANSACDist);
                                }),
                 std::end(ICPC.cohort) );
 
             // Allocate storage for ICP loops.
             ICPC.p_cell = ICPC.cohort;
             ICPC.p_corr = ICPC.cohort;
+            ICPC.p_corr.resize(3*ICPC.cohort.size());
             //ICPC.rot_centre = ICPC.ransac_centre;
 
             // Perform ICP on the sub-set cohort.
-            ICP_Fit_Grid(DICOM_data, re, cohort_icp_max_loops, GC, ICPC);
+            ICP_Fit_Grid(DICOM_data, re, CoarseICPMaxLoops, GC, ICPC);
 
             // Using the subset cohort fit, perform an ICP using the whole point cloud.
             //Grid_Context whole_GC = GC; // Needed?
             //whole_GC.grid_sep = GridSeparation;
             whole_ICPC.ransac_centre = ICPC.ransac_centre;
 
-            ICP_Fit_Grid(DICOM_data, re, refinement_icp_max_loops, GC, whole_ICPC);
+            ICP_Fit_Grid(DICOM_data, re, FineICPMaxLoops, GC, whole_ICPC);
 
             // Evaluate over the entire point cloud, retaining the global best.
             GC.score = Score_Fit(GC, whole_ICPC);
