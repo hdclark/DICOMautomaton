@@ -568,6 +568,120 @@ std::cout << " " << std::endl;
     return;
 }
 
+static
+double
+Score_Fit( Grid_Context &GC,
+           ICP_Context &ICPC ){
+
+    // Evaluate the fit using the corresponding points.
+    std::vector<double> dists;
+    auto c_it = std::begin(ICPC.p_corr);
+    for(const auto &pp : ICPC.p_cell){
+        const auto P = pp.first;
+        const auto C = c_it->first;
+
+        const auto dist = P.distance(C);
+        dists.emplace_back(dist);
+
+        ++c_it;
+    }
+
+    std::cout << " Score fit stats:    " << std::endl;
+    std::cout << "    Min:    " << Stats::Min(dists)    << std::endl
+              << "    Mean:   " << Stats::Mean(dists)   << std::endl
+              << "    Median: " << Stats::Median(dists) << std::endl
+              << "    Max:    " << Stats::Max(dists)    << std::endl;
+
+    const auto score = Stats::Mean(dists); // Better scores should be less than worse scores.
+    return score;
+}
+
+static
+void
+ICP_Fit_Grid( Drover &DICOM_data,
+              std::mt19937 re, 
+              long int icp_max_loops,
+              Grid_Context &GC,
+              ICP_Context &ICPC ){
+
+    Grid_Context best_GC;
+
+    for(long int loop = 1; loop <= icp_max_loops; ++loop){
+        std::cout << "====================================== " << "Loop: " << loop << std::endl;
+
+        // Nominate a random point to be the rotation centre.
+        //
+        // Note: This *might* be wasteful, but it will also help protect against picking an irrelevant point and being
+        // stuck with it for the entire ICP procedure. TODO: try commenting out this code to always use the ransac point
+        // as the rotation centre.
+        std::uniform_int_distribution<long int> rd(0, ICPC.cohort.size());
+        const auto N_select = rd(re);
+        ICPC.rot_centre = std::next( std::begin(ICPC.cohort), N_select )->first;
+
+        Project_Into_Unit_Cube(GC, ICPC);
+
+        std::cout << " Optimal translation: " << std::endl
+                  << "    " << "Begin GC.current_grid_anchor = " << GC.current_grid_anchor
+                  << std::endl;
+
+        Translate_Grid_Optimally(GC, ICPC);
+
+        std::cout << "    " << "After GC.current_grid_anchor = " << GC.current_grid_anchor
+                  << std::endl;
+
+        // TODO: Does this invalidate the optimal translation we just found? If so, can anything be done?
+        Project_Into_Unit_Cube(GC, ICPC);
+
+        Find_Corresponding_Points(GC, ICPC);
+
+/*
+        if(loop == icp_max_loops){
+            // Write the project points to a file for inspection.
+            Write_XYZ("/tmp/cube_projected_points.xyz", ICPC.p_cell);
+
+            // Write the unit cube edges to a file for inspection.
+            Write_Cube_OBJ("/tmp/cube.obj",
+                           GC.current_grid_anchor,
+                           GC.current_grid_x * GC.grid_sep,
+                           GC.current_grid_y * GC.grid_sep,
+                           GC.current_grid_z * GC.grid_sep );
+
+            // Write the correspondence points to a file for inspection.
+            Write_XYZ("/tmp/cube_corresp_points.xyz", ICPC.p_corr);
+
+            // Write the grid for inspection.
+            Insert_Grid_Contours(DICOM_data,
+                           "grid_final",
+                           ICPC.cohort,
+                           GC.current_grid_anchor,
+                           GC.current_grid_x * GC.grid_sep,
+                           GC.current_grid_y * GC.grid_sep,
+                           GC.current_grid_z * GC.grid_sep );
+
+        }
+
+        Insert_Grid_Contours(DICOM_data,
+                       "grid_"_s + std::to_string(loop),
+                       ICPC.cohort,
+                       GC.current_grid_anchor,
+                       GC.current_grid_x * GC.grid_sep,
+                       GC.current_grid_y * GC.grid_sep,
+                       GC.current_grid_z * GC.grid_sep );
+*/
+
+        Rotate_Grid_Optimally(GC, ICPC);
+
+        Project_Into_Unit_Cube(GC, ICPC);
+
+        // Evaluate over the entire point cloud, retaining the global best.
+        GC.score = Score_Fit(GC, ICPC);
+        if(!std::isfinite(best_GC.score) || (GC.score < best_GC.score)){
+            best_GC = GC;
+        }
+
+    } // ICP loop.
+    return;
+}
 
 OperationDoc OpArgDocDetectGrid3D(void){
     OperationDoc out;
@@ -639,7 +753,13 @@ Drover DetectGrid3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
     long int random_seed = 123456;
     const size_t ransac_max = 100;
     const double ransac_dist = GridSeparation * 1.5;
+    const long int cohort_icp_max_loops = 10;
+    const long int refinement_icp_max_loops = 5;
+
     //-----------------------------------------------------------------------------------------------------------------
+
+    std::mt19937 re( random_seed );
+
 
     if(!std::isfinite(GridSeparation) || (GridSeparation <= 0.0)){
         throw std::invalid_argument("Grid separation is not valid. Cannot continue.");
@@ -651,8 +771,6 @@ Drover DetectGrid3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
         throw std::invalid_argument("Line thickness is impossible with given grid spacing. Refusing to continue.");
     }
 
-    std::mt19937 re( random_seed );
-
 
     auto PCs_all = All_PCs( DICOM_data );
     auto PCs = Whitelist( PCs_all, PointSelectionStr );
@@ -660,10 +778,17 @@ Drover DetectGrid3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
 
         Write_XYZ("/tmp/original_points.xyz", (*pcp_it)->points);
 
+        Grid_Context best_GC;
         Grid_Context GC;
         GC.grid_sep = GridSeparation;
 
-        ICP_Context ICPC;
+        ICP_Context ICPC; // Working ICP context.
+
+        ICP_Context whole_ICPC; // Whole (i.e., entire point cloud) context.
+        whole_ICPC.cohort = (*pcp_it)->points;
+        whole_ICPC.p_cell = whole_ICPC.cohort; // Prime the container with dummy info.
+        whole_ICPC.p_corr = whole_ICPC.cohort; // Prime the container with dummy info.
+        //whole_ICPC.rot_centre = whole_ICPC.ransac_centre;
 
         // Perform a RANSAC analysis by only analyzing the vicinity of a randomly selected point.
         for(size_t ransac_loop = 0; ransac_loop < ransac_max; ++ransac_loop){
@@ -687,100 +812,50 @@ Drover DetectGrid3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
             // Allocate storage for ICP loops.
             ICPC.p_cell = ICPC.cohort;
             ICPC.p_corr = ICPC.cohort;
-            ICPC.rot_centre = ICPC.ransac_centre;
+            //ICPC.rot_centre = ICPC.ransac_centre;
 
-            // ICP loop.
-            const size_t loop_max = 10;
-            for(size_t loop = 1; loop <= loop_max; ++loop){
-                std::cout << "====================================== " << "Loop: " << loop << std::endl;
+            // Perform ICP on the sub-set cohort.
+            ICP_Fit_Grid(DICOM_data, re, cohort_icp_max_loops, GC, ICPC);
 
-                // Nominate a random point to be the rotation centre.
-                /*
-                std::uniform_int_distribution<long int> rd(0, ICPC.cohort.size());
-                const auto N_c = rd(re);
-                const auto ICPC.rot_centre = std::next( std::begin((ICPC.cohort), N_c )->first;
-                */
+            // Using the subset cohort fit, perform an ICP using the whole point cloud.
+            //Grid_Context whole_GC = GC; // Needed?
+            //whole_GC.grid_sep = GridSeparation;
+            whole_ICPC.ransac_centre = ICPC.ransac_centre;
 
-                Project_Into_Unit_Cube(GC, ICPC);
+            ICP_Fit_Grid(DICOM_data, re, refinement_icp_max_loops, GC, whole_ICPC);
 
-                std::cout << " Optimal translation: " << std::endl
-                          << "    " << "Begin GC.current_grid_anchor = " << GC.current_grid_anchor
-                          << std::endl;
-
-                Translate_Grid_Optimally(GC, ICPC);
-
-                std::cout << "    " << "After GC.current_grid_anchor = " << GC.current_grid_anchor
-                          << std::endl;
-
-                // TODO: Does this invalidate the optimal translation we just found? If so, can anything be done?
-                Project_Into_Unit_Cube(GC, ICPC);
-
-                Find_Corresponding_Points(GC, ICPC);
-
-                if(loop == loop_max){
-                    // Write the project points to a file for inspection.
-                    Write_XYZ("/tmp/cube_projected_points.xyz", ICPC.p_cell);
-
-                    // Write the unit cube edges to a file for inspection.
-                    Write_Cube_OBJ("/tmp/cube.obj",
-                                   GC.current_grid_anchor,
-                                   GC.current_grid_x * GC.grid_sep,
-                                   GC.current_grid_y * GC.grid_sep,
-                                   GC.current_grid_z * GC.grid_sep );
-
-                    // Write the correspondence points to a file for inspection.
-                    Write_XYZ("/tmp/cube_corresp_points.xyz", ICPC.p_corr);
-
-                    // Write the grid for inspection.
-                    Insert_Grid_Contours(DICOM_data,
-                                   "grid_final",
-                                   ICPC.cohort,
-                                   GC.current_grid_anchor,
-                                   GC.current_grid_x * GC.grid_sep,
-                                   GC.current_grid_y * GC.grid_sep,
-                                   GC.current_grid_z * GC.grid_sep );
-
-                }
-
-                Insert_Grid_Contours(DICOM_data,
-                               "grid_"_s + std::to_string(loop),
-                               ICPC.cohort,
-                               GC.current_grid_anchor,
-                               GC.current_grid_x * GC.grid_sep,
-                               GC.current_grid_y * GC.grid_sep,
-                               GC.current_grid_z * GC.grid_sep );
-
-                Rotate_Grid_Optimally(GC, ICPC);
-
-                Project_Into_Unit_Cube(GC, ICPC);
-
-                // Evaluate over the entire point cloud, retaining the global best.
-                if(false){
-                    std::vector<double> dists;
-                    auto c_it = std::begin(ICPC.p_corr);
-                    for(const auto &pp : ICPC.p_cell){
-                        const auto P = pp.first;
-                        const auto C = c_it->first;
-
-                        const auto dist = P.distance(C);
-                        dists.emplace_back(dist);
-
-                        ++c_it;
-                    }
-
-                    std::cout << " Stats:    " << std::endl;
-                    std::cout << "    Min:    " << Stats::Min(dists)    << std::endl
-                              << "    Mean:   " << Stats::Mean(dists)   << std::endl
-                              << "    Median: " << Stats::Median(dists) << std::endl
-                              << "    Max:    " << Stats::Max(dists)    << std::endl;
-
-                    const auto proj_med = Stats::Median(dists);
-                    GC.score = proj_med;
-                }
-
-            } // ICP loop.
+            // Evaluate over the entire point cloud, retaining the global best.
+            GC.score = Score_Fit(GC, whole_ICPC);
+            if(!std::isfinite(best_GC.score) || (GC.score < best_GC.score)){
+                best_GC = GC;
+            }
 
         } // RANSAC loop.
+
+        // Do something with the results.
+        if(true){
+            // Write the project points to a file for inspection.
+            Write_XYZ("/tmp/cube_proj_points.xyz", whole_ICPC.p_cell);
+
+            // Write the correspondence points to a file for inspection.
+            Write_XYZ("/tmp/cube_corr_points.xyz", whole_ICPC.p_corr);
+
+            // Write the proto cube edges to a file for inspection.
+            Write_Cube_OBJ("/tmp/proto_cube.obj",
+                           best_GC.current_grid_anchor,
+                           best_GC.current_grid_x * best_GC.grid_sep,
+                           best_GC.current_grid_y * best_GC.grid_sep,
+                           best_GC.current_grid_z * best_GC.grid_sep );
+
+            // Write the grid for inspection.
+            Insert_Grid_Contours(DICOM_data,
+                           "best_grid",
+                           whole_ICPC.cohort,
+                           best_GC.current_grid_anchor,
+                           best_GC.current_grid_x * best_GC.grid_sep,
+                           best_GC.current_grid_y * best_GC.grid_sep,
+                           best_GC.current_grid_z * best_GC.grid_sep );
+        }
 
     } // Point_Cloud loop.
 
