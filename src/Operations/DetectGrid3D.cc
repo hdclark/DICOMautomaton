@@ -44,29 +44,40 @@
 
 // Used to store state about a fitted 3D grid.
 struct Grid_Context {
+    // The number of corresponding points per point (1, 2, or 3).
+    size_t N_corres;
+
+    // The distance between nearest-neighbour grid lines.
+    // Note: an isotropic grid is assumed, so this number is valid for all three directions.
     double grid_sep = std::numeric_limits<double>::quiet_NaN();
 
+    // A location in space in which a grid line intersection occurs.
     vec3<double> current_grid_anchor = vec3<double>(0.0, 0.0, 0.0);
 
+    // The grid line directions. These should always be orthonormal.
     vec3<double> current_grid_x = vec3<double>(1.0, 0.0, 0.0);
     vec3<double> current_grid_y = vec3<double>(0.0, 1.0, 0.0);
     vec3<double> current_grid_z = vec3<double>(0.0, 0.0, 1.0);
 
+    // A number describing how good this grid fits the point cloud.
+    // The lower the number, the better the fit.
     double score = std::numeric_limits<double>::quiet_NaN();
 };
 
 // Used to cache working state while fitting a 3D grid.
 struct ICP_Context {
 
+    // A point selected by the RANSAC procedure. Only the near vicinity of this point is used for coarse grid fitting.
     vec3<double> ransac_centre = vec3<double>(0.0, 0.0, 0.0);
-    vec3<double> rot_centre    = vec3<double>(0.0, 0.0, 0.0);
 
-    using pcp_c_t = decltype(Point_Cloud().points); // Point_Cloud point container type.
+    // A point selected by the ICP procedure. The optimal grid rotation about this affixed point is estimated.
+    vec3<double> rot_centre    = vec3<double>(0.0, 0.0, 0.0);
 
     // Point cloud points participating in a single RANSAC phase.
     //
     // This list is regenerated for each round of RANSAC. Only some point cloud points within a fixed distance from
     // some randomly-selected point will be retained. The points are not altered, just copied for ease-of-use.
+    using pcp_c_t = decltype(Point_Cloud().points); // Point_Cloud point container type.
     pcp_c_t cohort;
 
     // Cohort points projected into a single volumetric proto cell.
@@ -230,15 +241,15 @@ Insert_Grid_Contours(Drover &DICOM_data,
     //
     // Note: one extra grid line will flank the point cloud on all sides. 
     std::vector<plane<double>> planes;
-    for(long int i = -1; i <= N_lines_1; ++i){
+    for(long int i = -2; i < (2+N_lines_1); ++i){
         const auto l_corner = v + (edge1 * (i * 1.0));
         planes.emplace_back(edge1, l_corner);
     }
-    for(long int i = -1; i <= N_lines_2; ++i){
+    for(long int i = -2; i < (2+N_lines_2); ++i){
         const auto l_corner = v + (edge2 * (i * 1.0));
         planes.emplace_back(edge2, l_corner);
     }
-    for(long int i = -1; i <= N_lines_3; ++i){
+    for(long int i = -2; i < (2+N_lines_3); ++i){
         const auto l_corner = v + (edge3 * (i * 1.0));
         planes.emplace_back(edge3, l_corner);
     }
@@ -294,7 +305,7 @@ Insert_Grid_Contours(Drover &DICOM_data,
 
 static
 void
-Project_Into_Unit_Cube( Grid_Context &GC,
+Project_Into_Proto_Cube( Grid_Context &GC,
                         ICP_Context &ICPC ){
     // Using the current grid axes directions and anchor point, project all points into the proto cell.
     auto p_cell_it = std::begin(ICPC.p_cell);
@@ -420,80 +431,39 @@ Find_Corresponding_Points( Grid_Context &GC,
                                  std::numeric_limits<double>::quiet_NaN() );
 
     // Creates plane for all faces.
-    std::vector<plane<double>> x_planes;
-    std::vector<plane<double>> y_planes;
-    std::vector<plane<double>> z_planes;
+    std::vector<plane<double>> planes;
 
-    x_planes.emplace_back( GC.current_grid_x, GC.current_grid_anchor );
-    y_planes.emplace_back( GC.current_grid_y, GC.current_grid_anchor );
-    z_planes.emplace_back( GC.current_grid_z, GC.current_grid_anchor );
+    planes.emplace_back( GC.current_grid_x, GC.current_grid_anchor );
+    planes.emplace_back( GC.current_grid_y, GC.current_grid_anchor );
+    planes.emplace_back( GC.current_grid_z, GC.current_grid_anchor );
 
-    x_planes.emplace_back( GC.current_grid_x, GC.current_grid_anchor + GC.current_grid_x * GC.grid_sep );
-    y_planes.emplace_back( GC.current_grid_y, GC.current_grid_anchor + GC.current_grid_y * GC.grid_sep );
-    z_planes.emplace_back( GC.current_grid_z, GC.current_grid_anchor + GC.current_grid_z * GC.grid_sep );
+    planes.emplace_back( GC.current_grid_x, GC.current_grid_anchor + GC.current_grid_x * GC.grid_sep );
+    planes.emplace_back( GC.current_grid_y, GC.current_grid_anchor + GC.current_grid_y * GC.grid_sep );
+    planes.emplace_back( GC.current_grid_z, GC.current_grid_anchor + GC.current_grid_z * GC.grid_sep );
 
-    if(ICPC.p_corr.size() != 3*ICPC.cohort.size()){
+
+    if(ICPC.p_corr.size() != (ICPC.cohort.size() * GC.N_corres) ){
         throw std::logic_error("Insufficient working space allocated. Cannot continue.");
     }
     auto c_it = std::begin(ICPC.p_corr);
     for(const auto &pp : ICPC.p_cell){
         const auto P = pp.first;
 
-
-        // grid_x direction.
-        {
-            double closest_dist = std::numeric_limits<double>::infinity();
-            vec3<double> closest_proj = NaN_vec3;
-            for(const auto &pl : x_planes){
-                const auto dist = std::abs(pl.Get_Signed_Distance_To_Point(P));
-                if(dist < closest_dist){
-                    closest_dist = dist;
-                    closest_proj = pl.Project_Onto_Plane_Orthogonally(P);
-                }
-            }
-            if(!closest_proj.isfinite()){
+        std::vector< std::pair<double, vec3<double>> > dist_point;
+        dist_point.reserve( planes.size() );
+        for(const auto &pl : planes){
+            const auto dist = std::abs(pl.Get_Signed_Distance_To_Point(P));
+            const auto proj = pl.Project_Onto_Plane_Orthogonally(P);
+            if(!proj.isfinite()){
                 throw std::logic_error("Projected point is not finite. Cannot continue");
             }
-
-            c_it->first = closest_proj;
-            ++c_it;
+            dist_point.emplace_back(std::make_pair(dist, proj));
         }
+        std::sort( std::begin(dist_point), std::end(dist_point) );
 
-        // grid_y direction.
-        {
-            double closest_dist = std::numeric_limits<double>::infinity();
-            vec3<double> closest_proj = NaN_vec3;
-            for(const auto &pl : y_planes){
-                const auto dist = std::abs(pl.Get_Signed_Distance_To_Point(P));
-                if(dist < closest_dist){
-                    closest_dist = dist;
-                    closest_proj = pl.Project_Onto_Plane_Orthogonally(P);
-                }
-            }
-            if(!closest_proj.isfinite()){
-                throw std::logic_error("Projected point is not finite. Cannot continue");
-            }
-
-            c_it->first = closest_proj;
-            ++c_it;
-        }
-
-        // grid_z direction.
-        {
-            double closest_dist = std::numeric_limits<double>::infinity();
-            vec3<double> closest_proj = NaN_vec3;
-            for(const auto &pl : z_planes){
-                const auto dist = std::abs(pl.Get_Signed_Distance_To_Point(P));
-                if(dist < closest_dist){
-                    closest_dist = dist;
-                    closest_proj = pl.Project_Onto_Plane_Orthogonally(P);
-                }
-            }
-            if(!closest_proj.isfinite()){
-                throw std::logic_error("Projected point is not finite. Cannot continue");
-            }
-
-            c_it->first = closest_proj;
+        for(auto i = 0; i < GC.N_corres; ++i){
+            auto dp_it = std::next( std::begin(dist_point), i );
+            c_it->first = dp_it->second;
             ++c_it;
         }
     }
@@ -539,7 +509,7 @@ Rotate_Grid_Optimally( Grid_Context &GC,
 
         ++col;
         ++c_it;
-        if((col % 3) == 0){ // Only advance the other iterators every third time.
+        if((col % GC.N_corres) == 0){ // Only advance the other iterators every third time.
             ++o_it;
             ++p_it;
         }
@@ -594,29 +564,31 @@ Rotate_Grid_Optimally( Grid_Context &GC,
     const auto Rtn_cntr_to_new_Anchor = Apply_Rotation(Rtn_cntr_to_Anchor).unit() * Rtn_cntr_to_Anchor.length();
     GC.current_grid_anchor = (ICPC.rot_centre + Rtn_cntr_to_new_Anchor);
 
-std::cout << " Rotations: " << std::endl;
-std::cout << "    Rotating about point at " << ICPC.rot_centre << std::endl;
-std::cout << "    Dot product of new grid axes vectors: " 
-  << GC.current_grid_x.Dot(GC.current_grid_y) << "  "
-  << GC.current_grid_x.Dot(GC.current_grid_z) << "  "
-  << GC.current_grid_y.Dot(GC.current_grid_z) << " # should be (0,0,0)." << std::endl;
+    if(false){ // Debugging.
+        std::cout << " Rotations: " << std::endl;
+        std::cout << "    Rotating about point at " << ICPC.rot_centre << std::endl;
+        std::cout << "    Dot product of new grid axes vectors: " 
+          << GC.current_grid_x.Dot(GC.current_grid_y) << "  "
+          << GC.current_grid_x.Dot(GC.current_grid_z) << "  "
+          << GC.current_grid_y.Dot(GC.current_grid_z) << " # should be (0,0,0)." << std::endl;
 
-std::cout << "    Grid anchor was " << previous_grid_anchor << " and is now " << GC.current_grid_anchor;
-std::cout << "  translation was " << (GC.current_grid_anchor - previous_grid_anchor) << std::endl;
-std::cout << "    Grid axes moving from: " << std::endl;
-std::cout << "        " << previous_grid_x;
-std::cout << "  " << previous_grid_y;
-std::cout << "  " << previous_grid_z << std::endl;
-std::cout << "      to " << std::endl;
-std::cout << "        " << GC.current_grid_x;
-std::cout << "  " << GC.current_grid_y;
-std::cout << "  " << GC.current_grid_z << std::endl;
-std::cout << "      angle changes: " << std::endl;
-std::cout << "        " << GC.current_grid_x.angle(previous_grid_x)*180.0/M_PI << " deg.";
-std::cout << "  " << GC.current_grid_y.angle(previous_grid_y)*180.0/M_PI << " deg.";
-std::cout << "  " << GC.current_grid_z.angle(previous_grid_z)*180.0/M_PI << " deg." << std::endl;
-std::cout << " " << std::endl;
-    return;
+        std::cout << "    Grid anchor was " << previous_grid_anchor << " and is now " << GC.current_grid_anchor;
+        std::cout << "  translation was " << (GC.current_grid_anchor - previous_grid_anchor) << std::endl;
+        std::cout << "    Grid axes moving from: " << std::endl;
+        std::cout << "        " << previous_grid_x;
+        std::cout << "  " << previous_grid_y;
+        std::cout << "  " << previous_grid_z << std::endl;
+        std::cout << "      to " << std::endl;
+        std::cout << "        " << GC.current_grid_x;
+        std::cout << "  " << GC.current_grid_y;
+        std::cout << "  " << GC.current_grid_z << std::endl;
+        std::cout << "      angle changes: " << std::endl;
+        std::cout << "        " << GC.current_grid_x.angle(previous_grid_x)*180.0/M_PI << " deg.";
+        std::cout << "  " << GC.current_grid_y.angle(previous_grid_y)*180.0/M_PI << " deg.";
+        std::cout << "  " << GC.current_grid_z.angle(previous_grid_z)*180.0/M_PI << " deg." << std::endl;
+        std::cout << " " << std::endl;
+     }
+     return;
 }
 
 static
@@ -631,7 +603,7 @@ Score_Fit( Grid_Context &GC,
     for(const auto &pp : ICPC.p_cell){
         const auto P = pp.first;
 
-        for(size_t i = 0; i < 3; ++i){
+        for(size_t i = 0; i < GC.N_corres; ++i){
             const auto C = c_it->first;
             ++c_it;
             const auto dist = P.distance(C);
@@ -671,7 +643,7 @@ ICP_Fit_Grid( Drover &DICOM_data,
         const auto N_select = rd(re);
         ICPC.rot_centre = std::next( std::begin(ICPC.cohort), N_select )->first;
 
-        Project_Into_Unit_Cube(GC, ICPC);
+        Project_Into_Proto_Cube(GC, ICPC);
 
         std::cout << " Optimal translation: " << std::endl
                   << "    " << "Begin GC.current_grid_anchor = " << GC.current_grid_anchor
@@ -683,7 +655,7 @@ ICP_Fit_Grid( Drover &DICOM_data,
                   << std::endl;
 
         // TODO: Does this invalidate the optimal translation we just found? If so, can anything be done?
-        Project_Into_Unit_Cube(GC, ICPC);
+        Project_Into_Proto_Cube(GC, ICPC);
 
         Find_Corresponding_Points(GC, ICPC);
 
@@ -724,7 +696,7 @@ ICP_Fit_Grid( Drover &DICOM_data,
 
         Rotate_Grid_Optimally(GC, ICPC);
 
-        Project_Into_Unit_Cube(GC, ICPC);
+        Project_Into_Proto_Cube(GC, ICPC);
 
         // Evaluate over the entire point cloud, retaining the global best.
         GC.score = Score_Fit(GC, ICPC);
@@ -821,19 +793,20 @@ OperationDoc OpArgDocDetectGrid3D(void){
     out.args.back().name = "RANSACDist";
     out.args.back().desc = "Every iteration of RANSAC selects a single point from the point cloud. Only the"
                            " near-vicinity of points are retained for iterative-closest-point Procrustes solving."
-                           " This parameter determines the maximum distance from the RANSAC point within which"
+                           " This parameter determines the maximum radial distance from the RANSAC point within which"
                            " point cloud points will be retained; all points further than this distance away"
                            " will be pruned for a given round of RANSAC. This is needed because corresponding"
                            " points begin to alias to incorrect cell faces when the ICP procedure begins with"
-                           " a poor guess. Pruing points around 1-2x the GridSeparation will help mitigate"
+                           " a poor guess. Pruning points in a spherical neighbourhood with a diameter 1-2x the"
+                           " GridSeparation (so a radius 0.5-0.75x GridSeparation) will help mitigate"
                            " aliasing even when the initial guess is poor. However, smaller windows may increase"
                            " susceptibility to noise/outliers, and RANSACDist should never be smaller than a"
                            " grid voxel. If RANSACDist is not provided, a default of"
-                           " (1.5 * GridSeparation) is used.";
+                           " (0.7 * GridSeparation) is used.";
     out.args.back().default_val = "nan";
     out.args.back().expected = false;
-    out.args.back().examples = { "15.0", 
-                                 "31.0",
+    out.args.back().examples = { "7.0", 
+                                 "10.0",
                                  "2.46E4" };
 
     out.args.emplace_back();
@@ -904,7 +877,7 @@ Drover DetectGrid3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
     const auto PointSelectionStr = OptArgs.getValueStr("PointSelection").value();
 
     const auto GridSeparation = std::stod( OptArgs.getValueStr("GridSeparation").value() );
-    const auto RANSACDist = std::stod( OptArgs.getValueStr("RANSACDist").value_or(GridSeparation * 1.5) );
+    const auto RANSACDist = std::stod( OptArgs.getValueStr("RANSACDist").value_or(std::to_string(GridSeparation * 0.7)) );
 
     const auto LineThickness = std::stod( OptArgs.getValueStr("LineThickness").value() );
     const auto RandomSeed = std::stol( OptArgs.getValueStr("RandomSeed").value() );
@@ -915,7 +888,41 @@ Drover DetectGrid3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
 
     //-----------------------------------------------------------------------------------------------------------------
 
+    const auto N_corres = 2; // The number of corresponding points per point (1, 2, or 3).
 
+// TODO:
+//  [x] Keep 3 proto cube planar projections rather than 1.
+//
+//  [x] Make RANSAC and ICP parameters above adjustable by user.
+//
+//  [X] Protect against failed SVD / numerical instabilities.
+//
+//  [X] Protect against too few points being selected during the coarse ICP phase.
+//      - Just re-do the current iteration and try again? (No -- need to protect against infinite loop if there is, say,
+//        only 1 point in total.)
+//      - Maybe accept as low as 3-4 points? I don't think rotation-fitting 2 will work conceptually otherwise.
+//
+//  [ ] Switch to pointer-based storage (of vec3's only?) to reduce wasted memory.
+//      NOTE: Using ref_w's causes the ICP_context struct to be non-constructible with the default constructor!
+//
+//  [ ] Test (confined) 3D gradient analysis. (Worry about confining afterward.)
+//
+//  [ ] Test whether linking RANSAC and ICP rotation point is worthwhile or not (not currently done).
+//
+//  [ ] Figure out how to analyze the final fitted grid.
+//      - Something like a DVH showing the total number within and outside of tolerance?
+//
+//  [ ] Support finite grid line thickness during the scoring and final evaluation stage.
+//
+//  [ ] Figure out how to protray anaglyphic results -- perhaps confine to a single image slice for now?
+//
+//  [ ] Render the iterations of a fitted proto cube for the presentation.
+//      - Has to be flashy and cool. Maybe a large panel (i.e., 5 wide by 4 tall) of anaglyphic cubes iterating toward a
+//        convergent solution?
+//      - Basically something to show while you are explaining the algorithm.
+//      - DEFINATELY OK to show failed earlier attempts / methodologies.
+//
+//
     if(!std::isfinite(RANSACDist)){
         throw std::invalid_argument("RANSAC distance is not valid. Cannot continue.");
     }
@@ -937,11 +944,11 @@ Drover DetectGrid3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
     auto PCs = Whitelist( PCs_all, PointSelectionStr );
     for(auto & pcp_it : PCs){
 
-        Write_XYZ("/tmp/original_points.xyz", (*pcp_it)->points);
+        Grid_Context best_GC; // The current best estimate of the grid position.
 
-        Grid_Context best_GC;
-        Grid_Context GC;
+        Grid_Context GC; // A working estimate of the grid position.
         GC.grid_sep = GridSeparation;
+        GC.N_corres = N_corres;
 
         ICP_Context ICPC; // Working ICP context.
 
@@ -949,12 +956,32 @@ Drover DetectGrid3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
         whole_ICPC.cohort = (*pcp_it)->points;
         whole_ICPC.p_cell = whole_ICPC.cohort; // Prime the container with dummy info.
         whole_ICPC.p_corr = whole_ICPC.cohort; // Prime the container with dummy info.
-        whole_ICPC.p_corr.resize(3*whole_ICPC.cohort.size());
+        whole_ICPC.p_corr.resize(GC.N_corres*whole_ICPC.cohort.size());
         //whole_ICPC.rot_centre = whole_ICPC.ransac_centre;
 
-        // Perform a RANSAC analysis by only analyzing the vicinity of a randomly selected point.
-        for(size_t ransac_loop = 0; ransac_loop < RANSACMaxLoops; ++ransac_loop){
+        // Some RANSAC failures are expected due to outliers and noisy data, so a fairly number of failures will be
+        // tolerated. However, RANSAC must eventually terminate if too many errors are encountered. It is tricky to
+        // identify a reasonable default threshold. Here we tailor to the case of extremely noisy data and try allow for
+        // *most* points to be randomly sampled. This might result in an excessive amount of tries for large data sets,
+        // but it will also minimize the likelihood that valid cases will erroneously be rejected.
+        //
+        // The routine below can be called only a certain number of times before throwing.
+        long int RANSACFails = 0;
+        const long int PermittedRANSACFails = std::max(100L, static_cast<long int>((*pcp_it)->points.size() * 2));
+        auto Handle_RANSAC_Failure = [&](void) -> void {
+            ++RANSACFails;
+            if(RANSACFails > PermittedRANSACFails){
+                std::stringstream ss;
+                ss << "Encountered too many RANSAC failures."
+                   << " Confirm GridSeparation and RANSACDist are valid and appropriate for the point cloud density.";
+                throw std::runtime_error(ss.str());
+            }
+            return;
+        };
 
+        // Perform a RANSAC analysis by only analyzing the vicinity of a randomly selected point.
+        long int ransac_loop = 0;
+        while(ransac_loop < RANSACMaxLoops){
             // Randomly select a point from the cloud.
             std::uniform_int_distribution<long int> rd(0, (*pcp_it)->points.size());
             const auto N = rd(re);
@@ -971,21 +998,43 @@ Drover DetectGrid3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
                                }),
                 std::end(ICPC.cohort) );
 
+            if(ICPC.cohort.size() < 4){
+                // If there are too few points to meaningfully continue, then the only thing we can assume is that the
+                // selected point is in a region with a low density of points. So re-do the loop. However, if multiple
+                // failures occur then we can probably conclude that the grid parameters are inappropriate. For example,
+                // if the GridSeparation is too small then all points will appear to be in regions of low density.
+                FUNCWARN("Too few adjacent points, rebooting RANSAC loop.");
+                Handle_RANSAC_Failure(); // Will throw if too many failures encountered.
+                continue;
+            }
+
             // Allocate storage for ICP loops.
             ICPC.p_cell = ICPC.cohort;
             ICPC.p_corr = ICPC.cohort;
-            ICPC.p_corr.resize(3*ICPC.cohort.size());
+            ICPC.p_corr.resize(GC.N_corres*ICPC.cohort.size());
             //ICPC.rot_centre = ICPC.ransac_centre;
 
             // Perform ICP on the sub-set cohort.
-            ICP_Fit_Grid(DICOM_data, re, CoarseICPMaxLoops, GC, ICPC);
+            try{
+                ICP_Fit_Grid(DICOM_data, re, CoarseICPMaxLoops, GC, ICPC);
+            }catch(const std::exception &e){
+                FUNCWARN("Error encountered during coarse ICP (" << e.what() << "), rebooting RANSAC loop.");
+                Handle_RANSAC_Failure(); // Will throw if too many failures encountered.
+                continue;
+            }
 
             // Using the subset cohort fit, perform an ICP using the whole point cloud.
             //Grid_Context whole_GC = GC; // Needed?
             //whole_GC.grid_sep = GridSeparation;
             whole_ICPC.ransac_centre = ICPC.ransac_centre;
 
-            ICP_Fit_Grid(DICOM_data, re, FineICPMaxLoops, GC, whole_ICPC);
+            try{
+                ICP_Fit_Grid(DICOM_data, re, FineICPMaxLoops, GC, whole_ICPC);
+            }catch(const std::exception &e){
+                FUNCWARN("Error encountered during fine ICP (" << e.what() << "), rebooting RANSAC loop.");
+                Handle_RANSAC_Failure(); // Will throw if too many failures encountered.
+                continue;
+            }
 
             // Evaluate over the entire point cloud, retaining the global best.
             GC.score = Score_Fit(GC, whole_ICPC);
@@ -993,10 +1042,17 @@ Drover DetectGrid3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
                 best_GC = GC;
             }
 
+            ++ransac_loop;
         } // RANSAC loop.
 
         // Do something with the results.
         if(true){
+            FUNCINFO("Grid estimate found");
+            const auto best_score = Score_Fit(best_GC, whole_ICPC);
+            FUNCINFO("Best score: " << best_score);
+
+            Write_XYZ("/tmp/original_points.xyz", (*pcp_it)->points);
+
             // Write the project points to a file for inspection.
             Write_XYZ("/tmp/cube_proj_points.xyz", whole_ICPC.p_cell);
 
