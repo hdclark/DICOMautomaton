@@ -858,12 +858,12 @@ OperationDoc OpArgDocDetectGrid3D(void){
                            " point cloud points will be retained; all points further than this distance away"
                            " will be pruned for a given round of RANSAC. This is needed because corresponding"
                            " points begin to alias to incorrect cell faces when the ICP procedure begins with"
-                           " a poor guess. Pruning points in a spherical neighbourhood with a diameter 1-2x the"
-                           " GridSeparation (so a radius 0.5-0.75x GridSeparation) will help mitigate"
+                           " a poor guess. Pruning points in a spherical neighbourhood with a diameter 2-4x the"
+                           " GridSeparation (so a radius 1-2x GridSeparation) will help mitigate"
                            " aliasing even when the initial guess is poor. However, smaller windows may increase"
                            " susceptibility to noise/outliers, and RANSACDist should never be smaller than a"
                            " grid voxel. If RANSACDist is not provided, a default of"
-                           " (0.7 * GridSeparation) is used.";
+                           " (1.5 * GridSeparation) is used.";
     out.args.back().default_val = "nan";
     out.args.back().expected = false;
     out.args.back().examples = { "7.0", 
@@ -950,7 +950,7 @@ Drover DetectGrid3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
     const auto PointSelectionStr = OptArgs.getValueStr("PointSelection").value();
 
     const auto GridSeparation = std::stod( OptArgs.getValueStr("GridSeparation").value() );
-    const auto RANSACDist = std::stod( OptArgs.getValueStr("RANSACDist").value_or(std::to_string(GridSeparation * 0.7)) );
+    const auto RANSACDist = std::stod( OptArgs.getValueStr("RANSACDist").value_or(std::to_string(GridSeparation * 1.5)) );
     const auto GridSampling = std::stol( OptArgs.getValueStr("GridSampling").value() ); 
 
     const auto LineThickness = std::stod( OptArgs.getValueStr("LineThickness").value() );
@@ -1072,12 +1072,12 @@ Drover DetectGrid3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
                                }),
                 std::end(ICPC.cohort) );
 
-            if(ICPC.cohort.size() < 4){
+            if(ICPC.cohort.size() < 3){
                 // If there are too few points to meaningfully continue, then the only thing we can assume is that the
                 // selected point is in a region with a low density of points. So re-do the loop. However, if multiple
                 // failures occur then we can probably conclude that the grid parameters are inappropriate. For example,
                 // if the GridSeparation is too small then all points will appear to be in regions of low density.
-                FUNCWARN("Too few adjacent points, rebooting RANSAC loop.");
+                FUNCWARN("Too few adjacent points (" << ICPC.cohort.size() << "), rebooting RANSAC loop.");
                 Handle_RANSAC_Failure(); // Will throw if too many failures encountered.
                 continue;
             }
