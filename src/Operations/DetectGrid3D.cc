@@ -44,8 +44,8 @@
 
 // Used to store state about a fitted 3D grid.
 struct Grid_Context {
-    // The number of corresponding points per point (1, 2, or 3).
-    size_t N_corres;
+    // Controls how the corresponding points are determined. See operation documentation for more information.
+    size_t grid_sampling;
 
     // The distance between nearest-neighbour grid lines.
     // Note: an isotropic grid is assumed, so this number is valid for all three directions.
@@ -420,18 +420,25 @@ void
 Find_Corresponding_Points( Grid_Context &GC,
                            ICP_Context &ICPC ){
 
-    // This routine takes every proto cube projected point and projects it onto the faces of the proto cube.
-    // Only the projection on the nearest face is kept.
+    // This routine takes every proto cube projected point and projects it onto the faces, edges, or corners of the
+    // proto cube. The projection that is the smallest distance from the proto cube projected point is kept.
     //
-    // Note: There is a faster way to do this using the same approach as the optimal translation routine.
+    // Note: There is likely a faster way to do the following using the same approach as the optimal translation routine.
     // This way is easy to debug and reason about.
 
     const vec3<double> NaN_vec3( std::numeric_limits<double>::quiet_NaN(),
                                  std::numeric_limits<double>::quiet_NaN(),
                                  std::numeric_limits<double>::quiet_NaN() );
 
+    if(ICPC.p_corr.size() != ICPC.cohort.size() ){
+        throw std::logic_error("Insufficient working space allocated. Cannot continue.");
+    }
+
+    // There are three different cases that depend on how the grid is sampled. They all amount to the same basic
+    // procedure -- project the proto cube point to the boundary of the proto cube.
     // Creates plane for all faces.
-    std::vector<plane<double>> planes;
+
+    std::vector<plane<double>> planes; // Planar faces of the proto cube.
 
     planes.emplace_back( GC.current_grid_x, GC.current_grid_anchor );
     planes.emplace_back( GC.current_grid_y, GC.current_grid_anchor );
@@ -442,30 +449,88 @@ Find_Corresponding_Points( Grid_Context &GC,
     planes.emplace_back( GC.current_grid_z, GC.current_grid_anchor + GC.current_grid_z * GC.grid_sep );
 
 
-    if(ICPC.p_corr.size() != (ICPC.cohort.size() * GC.N_corres) ){
-        throw std::logic_error("Insufficient working space allocated. Cannot continue.");
-    }
+    // Corners of the cube.
+    const auto c_A = GC.current_grid_anchor;
+    const auto c_B = GC.current_grid_anchor + GC.current_grid_x;
+    const auto c_C = GC.current_grid_anchor + GC.current_grid_x + GC.current_grid_z;
+    const auto c_D = GC.current_grid_anchor + GC.current_grid_z;
+
+    const auto c_E = GC.current_grid_anchor + GC.current_grid_y;
+    const auto c_F = GC.current_grid_anchor + GC.current_grid_y + GC.current_grid_x;
+    const auto c_G = GC.current_grid_anchor + GC.current_grid_y + GC.current_grid_x + GC.current_grid_z;
+    const auto c_H = GC.current_grid_anchor + GC.current_grid_y + GC.current_grid_z;
+
+    std::vector<vec3<double>> corners = { { // Corners of the proto cube.
+        c_A, c_B, c_C, c_D,
+        c_E, c_F, c_G, c_H
+    } };
+
+    std::vector<line<double>> lines; // Lines that overlap with the edge line segments.
+
+    lines.emplace_back( c_A, c_B );
+    lines.emplace_back( c_B, c_C );
+    lines.emplace_back( c_C, c_D );
+    lines.emplace_back( c_D, c_A );
+
+    lines.emplace_back( c_A, c_E );
+    lines.emplace_back( c_B, c_F );
+    lines.emplace_back( c_C, c_G );
+    lines.emplace_back( c_D, c_H );
+
+    lines.emplace_back( c_E, c_F );
+    lines.emplace_back( c_F, c_G );
+    lines.emplace_back( c_G, c_H );
+    lines.emplace_back( c_H, c_E );
+
+    auto closest_dist = std::numeric_limits<double>::quiet_NaN();
+    auto closest_proj = NaN_vec3;
+
     auto c_it = std::begin(ICPC.p_corr);
     for(const auto &pp : ICPC.p_cell){
         const auto P = pp.first;
 
-        std::vector< std::pair<double, vec3<double>> > dist_point;
-        dist_point.reserve( planes.size() );
-        for(const auto &pl : planes){
-            const auto dist = std::abs(pl.Get_Signed_Distance_To_Point(P));
-            const auto proj = pl.Project_Onto_Plane_Orthogonally(P);
-            if(!proj.isfinite()){
-                throw std::logic_error("Projected point is not finite. Cannot continue");
-            }
-            dist_point.emplace_back(std::make_pair(dist, proj));
-        }
-        std::sort( std::begin(dist_point), std::end(dist_point) );
+        closest_dist = std::numeric_limits<double>::quiet_NaN();
+        closest_proj = NaN_vec3;
 
-        for(auto i = 0; i < GC.N_corres; ++i){
-            auto dp_it = std::next( std::begin(dist_point), i );
-            c_it->first = dp_it->second;
-            ++c_it;
+        if(false){
+        }else if(GC.grid_sampling == 1){ // Grid cell corners (i.e., "0D" grid intersections) are sampled.
+            for(const auto &c : corners){
+                const auto dist = c.distance(P);
+                if(!std::isfinite(closest_dist) || (dist < closest_dist)){
+                    closest_dist = dist;
+                    closest_proj = c;
+                }
+            }
+
+        }else if(GC.grid_sampling == 2){ // Grid cell edges (i.e., 1D grid lines) are sampled.
+            for(const auto &l : lines){
+                const auto dist = l.Distance_To_Point(P);
+                if(!std::isfinite(closest_dist) || (dist < closest_dist)){
+                    const auto proj = l.Project_Point_Orthogonally(P);
+                    if(!proj.isfinite()){
+                        throw std::logic_error("Projected point is not finite. Cannot continue");
+                    }
+                    closest_dist = dist;
+                    closest_proj = proj;
+                }
+            }
+
+        }else if(GC.grid_sampling == 3){ // Grid cell faces (i.e., 2D planar faces) are sampled.
+            for(const auto &pl : planes){
+                const auto dist = std::abs(pl.Get_Signed_Distance_To_Point(P));
+                if(!std::isfinite(closest_dist) || (dist < closest_dist)){
+                    const auto proj = pl.Project_Onto_Plane_Orthogonally(P);
+                    if(!proj.isfinite()){
+                        throw std::logic_error("Projected point is not finite. Cannot continue");
+                    }
+                    closest_dist = dist;
+                    closest_proj = proj;
+                }
+            }
         }
+
+        c_it->first = closest_proj;
+        ++c_it;
     }
     return;
 }
@@ -509,10 +574,8 @@ Rotate_Grid_Optimally( Grid_Context &GC,
 
         ++col;
         ++c_it;
-        if((col % GC.N_corres) == 0){ // Only advance the other iterators every third time.
-            ++o_it;
-            ++p_it;
-        }
+        ++o_it;
+        ++p_it;
     }
     auto AT = A.transpose();
     auto BAT = B * AT;
@@ -603,12 +666,10 @@ Score_Fit( Grid_Context &GC,
     for(const auto &pp : ICPC.p_cell){
         const auto P = pp.first;
 
-        for(size_t i = 0; i < GC.N_corres; ++i){
-            const auto C = c_it->first;
-            ++c_it;
-            const auto dist = P.distance(C);
-            dists.emplace_back(dist);
-        }
+        const auto C = c_it->first;
+        const auto dist = P.distance(C);
+        dists.emplace_back(dist);
+        ++c_it;
     }
 
     std::cout << " Score fit stats:    " << std::endl;
@@ -810,6 +871,18 @@ OperationDoc OpArgDocDetectGrid3D(void){
                                  "2.46E4" };
 
     out.args.emplace_back();
+    out.args.back().name = "GridSampling";
+    out.args.back().desc = "Specifies how the grid data has been sampled."
+                           " Use value '1' if only grid cell corners (i.e., '0D' grid intersections) are sampled."
+                           " Use value '2' if grid cell edges (i.e., 1D grid lines) are sampled."
+                           " Use value '3' if grid cell faces (i.e., 2D planar faces) are sampled.";
+    out.args.back().default_val = "1";
+    out.args.back().expected = true;
+    out.args.back().examples = { "1", 
+                                 "2",
+                                 "3" };
+
+    out.args.emplace_back();
     out.args.back().name = "LineThickness";
     out.args.back().desc = "The thickness of grid lines (in DICOM units; mm)."
                            " If zero, lines are treated simply as lines."
@@ -878,6 +951,7 @@ Drover DetectGrid3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
 
     const auto GridSeparation = std::stod( OptArgs.getValueStr("GridSeparation").value() );
     const auto RANSACDist = std::stod( OptArgs.getValueStr("RANSACDist").value_or(std::to_string(GridSeparation * 0.7)) );
+    const auto GridSampling = std::stol( OptArgs.getValueStr("GridSampling").value() ); 
 
     const auto LineThickness = std::stod( OptArgs.getValueStr("LineThickness").value() );
     const auto RandomSeed = std::stol( OptArgs.getValueStr("RandomSeed").value() );
@@ -888,10 +962,10 @@ Drover DetectGrid3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
 
     //-----------------------------------------------------------------------------------------------------------------
 
-    const auto N_corres = 2; // The number of corresponding points per point (1, 2, or 3).
-
 // TODO:
 //  [x] Keep 3 proto cube planar projections rather than 1.
+//
+//  [x] Revert to keeping 1 proto cube surface projections rather than 3, but support multiple grid sampling styles..
 //
 //  [x] Make RANSAC and ICP parameters above adjustable by user.
 //
@@ -948,7 +1022,7 @@ Drover DetectGrid3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
 
         Grid_Context GC; // A working estimate of the grid position.
         GC.grid_sep = GridSeparation;
-        GC.N_corres = N_corres;
+        GC.grid_sampling = GridSampling;
 
         ICP_Context ICPC; // Working ICP context.
 
@@ -956,7 +1030,7 @@ Drover DetectGrid3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
         whole_ICPC.cohort = (*pcp_it)->points;
         whole_ICPC.p_cell = whole_ICPC.cohort; // Prime the container with dummy info.
         whole_ICPC.p_corr = whole_ICPC.cohort; // Prime the container with dummy info.
-        whole_ICPC.p_corr.resize(GC.N_corres*whole_ICPC.cohort.size());
+        //whole_ICPC.p_corr.resize(whole_ICPC.cohort.size());
         //whole_ICPC.rot_centre = whole_ICPC.ransac_centre;
 
         // Some RANSAC failures are expected due to outliers and noisy data, so a fairly number of failures will be
@@ -1011,7 +1085,7 @@ Drover DetectGrid3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
             // Allocate storage for ICP loops.
             ICPC.p_cell = ICPC.cohort;
             ICPC.p_corr = ICPC.cohort;
-            ICPC.p_corr.resize(GC.N_corres*ICPC.cohort.size());
+            //ICPC.p_corr.resize(ICPC.cohort.size());
             //ICPC.rot_centre = ICPC.ransac_centre;
 
             // Perform ICP on the sub-set cohort.
