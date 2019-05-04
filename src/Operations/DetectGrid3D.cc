@@ -426,10 +426,6 @@ Find_Corresponding_Points( Grid_Context &GC,
     // Note: There is likely a faster way to do the following using the same approach as the optimal translation routine.
     // This way is easy to debug and reason about.
 
-    const vec3<double> NaN_vec3( std::numeric_limits<double>::quiet_NaN(),
-                                 std::numeric_limits<double>::quiet_NaN(),
-                                 std::numeric_limits<double>::quiet_NaN() );
-
     if(ICPC.p_corr.size() != ICPC.cohort.size() ){
         throw std::logic_error("Insufficient working space allocated. Cannot continue.");
     }
@@ -438,34 +434,46 @@ Find_Corresponding_Points( Grid_Context &GC,
     // procedure -- project the proto cube point to the boundary of the proto cube.
     // Creates plane for all faces.
 
-    std::vector<plane<double>> planes; // Planar faces of the proto cube.
+    const vec3<double> NaN_vec3( std::numeric_limits<double>::quiet_NaN(),
+                                 std::numeric_limits<double>::quiet_NaN(),
+                                 std::numeric_limits<double>::quiet_NaN() );
 
-    planes.emplace_back( GC.current_grid_x, GC.current_grid_anchor );
-    planes.emplace_back( GC.current_grid_y, GC.current_grid_anchor );
-    planes.emplace_back( GC.current_grid_z, GC.current_grid_anchor );
+    const auto anchor = GC.current_grid_anchor;
+    const auto edge_x = GC.current_grid_x * GC.grid_sep;
+    const auto edge_y = GC.current_grid_y * GC.grid_sep;
+    const auto edge_z = GC.current_grid_z * GC.grid_sep;
 
-    planes.emplace_back( GC.current_grid_x, GC.current_grid_anchor + GC.current_grid_x * GC.grid_sep );
-    planes.emplace_back( GC.current_grid_y, GC.current_grid_anchor + GC.current_grid_y * GC.grid_sep );
-    planes.emplace_back( GC.current_grid_z, GC.current_grid_anchor + GC.current_grid_z * GC.grid_sep );
+    // Corners of the proto cube.
+    const auto c_A = anchor;
+    const auto c_B = anchor + edge_x;
+    const auto c_C = anchor + edge_x + edge_z;
+    const auto c_D = anchor + edge_z;
+
+    const auto c_E = anchor + edge_y;
+    const auto c_F = anchor + edge_y + edge_x;
+    const auto c_G = anchor + edge_y + edge_x + edge_z;
+    const auto c_H = anchor + edge_y + edge_z;
+
+    // List of planar faces of the proto cube.
+    std::vector<plane<double>> planes;
+
+    planes.emplace_back( GC.current_grid_x, anchor );
+    planes.emplace_back( GC.current_grid_y, anchor );
+    planes.emplace_back( GC.current_grid_z, anchor );
+
+    planes.emplace_back( GC.current_grid_x, anchor + edge_x );
+    planes.emplace_back( GC.current_grid_y, anchor + edge_y );
+    planes.emplace_back( GC.current_grid_z, anchor + edge_z );
 
 
-    // Corners of the cube.
-    const auto c_A = GC.current_grid_anchor;
-    const auto c_B = GC.current_grid_anchor + GC.current_grid_x;
-    const auto c_C = GC.current_grid_anchor + GC.current_grid_x + GC.current_grid_z;
-    const auto c_D = GC.current_grid_anchor + GC.current_grid_z;
-
-    const auto c_E = GC.current_grid_anchor + GC.current_grid_y;
-    const auto c_F = GC.current_grid_anchor + GC.current_grid_y + GC.current_grid_x;
-    const auto c_G = GC.current_grid_anchor + GC.current_grid_y + GC.current_grid_x + GC.current_grid_z;
-    const auto c_H = GC.current_grid_anchor + GC.current_grid_y + GC.current_grid_z;
-
-    std::vector<vec3<double>> corners = { { // Corners of the proto cube.
+    // List of corners of the proto cube.
+    std::vector<vec3<double>> corners = { {
         c_A, c_B, c_C, c_D,
         c_E, c_F, c_G, c_H
     } };
 
-    std::vector<line<double>> lines; // Lines that overlap with the edge line segments.
+    // List of lines that overlap with the edge line segments.
+    std::vector<line<double>> lines;
 
     lines.emplace_back( c_A, c_B );
     lines.emplace_back( c_B, c_C );
@@ -482,9 +490,10 @@ Find_Corresponding_Points( Grid_Context &GC,
     lines.emplace_back( c_G, c_H );
     lines.emplace_back( c_H, c_E );
 
+
+    // Find the corresponding point for each projected proto cube point.
     auto closest_dist = std::numeric_limits<double>::quiet_NaN();
     auto closest_proj = NaN_vec3;
-
     auto c_it = std::begin(ICPC.p_corr);
     for(const auto &pp : ICPC.p_cell){
         const auto P = pp.first;
@@ -508,7 +517,7 @@ Find_Corresponding_Points( Grid_Context &GC,
                 if(!std::isfinite(closest_dist) || (dist < closest_dist)){
                     const auto proj = l.Project_Point_Orthogonally(P);
                     if(!proj.isfinite()){
-                        throw std::logic_error("Projected point is not finite. Cannot continue");
+                        throw std::logic_error("Projected point is not finite. Cannot continue.");
                     }
                     closest_dist = dist;
                     closest_proj = proj;
@@ -521,12 +530,14 @@ Find_Corresponding_Points( Grid_Context &GC,
                 if(!std::isfinite(closest_dist) || (dist < closest_dist)){
                     const auto proj = pl.Project_Onto_Plane_Orthogonally(P);
                     if(!proj.isfinite()){
-                        throw std::logic_error("Projected point is not finite. Cannot continue");
+                        throw std::logic_error("Projected point is not finite. Cannot continue.");
                     }
                     closest_dist = dist;
                     closest_proj = proj;
                 }
             }
+        }else{
+            throw std::logic_error("Invalid grid sampling method. Cannot continue.");
         }
 
         c_it->first = closest_proj;
@@ -669,6 +680,7 @@ Score_Fit( Grid_Context &GC,
         const auto C = c_it->first;
         const auto dist = P.distance(C);
         dists.emplace_back(dist);
+
         ++c_it;
     }
 
