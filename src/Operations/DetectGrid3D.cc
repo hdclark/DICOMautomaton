@@ -110,6 +110,32 @@ Write_XYZ( const std::string &fname,
 
 static
 void
+Write_PLY( const std::string &fname,
+           decltype(Point_Cloud().points) points ){
+
+    // This routine write to a simple "PLY"-format file which contains point cloud vertices.
+    //
+    // An existing file will be overwritten.
+    std::ofstream OF(fname, std::ios::out);
+    OF << "ply" << "\n"
+       << "format ascii 1.0" << "\n"
+       << "comment This file contains a point cloud." << "\n"
+       << "comment This file was produced by DICOMautomaton." << "\n"
+       << "element vertex " << points.size() << "\n"
+       << "property double x" << "\n"
+       << "property double y" << "\n"
+       << "property double z" << "\n"
+       << "end_header" << std::endl;
+    for(const auto &pp : points){
+        const auto v = pp.first;
+        OF << v.x << " " << v.y << " " << v.z << std::endl;
+    }
+    OF.close();
+    return;
+};
+
+static
+void
 Write_Cube_OBJ(const std::string &fname,
                const vec3<double> &corner,
                const vec3<double> &edge1,
@@ -1113,12 +1139,15 @@ Drover DetectGrid3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
             FUNCINFO("Best score: " << best_score);
 
             Write_XYZ("/tmp/original_points.xyz", (*pcp_it)->points);
+            Write_PLY("/tmp/original_points.ply", (*pcp_it)->points);
 
             // Write the project points to a file for inspection.
             Write_XYZ("/tmp/cube_proj_points.xyz", whole_ICPC.p_cell);
+            Write_PLY("/tmp/cube_proj_points.ply", whole_ICPC.p_cell);
 
             // Write the correspondence points to a file for inspection.
             Write_XYZ("/tmp/cube_corr_points.xyz", whole_ICPC.p_corr);
+            Write_PLY("/tmp/cube_corr_points.ply", whole_ICPC.p_corr);
 
             // Write the proto cube edges to a file for inspection.
             Write_Cube_OBJ("/tmp/proto_cube.obj",
