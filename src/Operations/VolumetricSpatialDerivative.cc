@@ -11,14 +11,15 @@
 #include <stdexcept>
 #include <string>    
 
+#include "YgorImages.h"
+#include "YgorString.h"       //Needed for GetFirstRegex(...)
+
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
 #include "../YgorImages_Functors/Grouping/Misc_Functors.h"
-#include "../YgorImages_Functors/Processing/ImagePartialDerivative.h"
-#include "../YgorImages_Functors/Compute/Volumetric_Neighbourhood_Sampler.h"
+#include "../YgorImages_Functors/Compute/Volumetric_Spatial_Derivative.h"
+
 #include "VolumetricSpatialDerivative.h"
-#include "YgorImages.h"
-#include "YgorString.h"       //Needed for GetFirstRegex(...)
 
 
 OperationDoc OpArgDocVolumetricSpatialDerivative(void){
@@ -26,7 +27,7 @@ OperationDoc OpArgDocVolumetricSpatialDerivative(void){
     out.name = "VolumetricSpatialDerivative";
 
     out.desc = 
-        "This operation estimates various partial derivatives (of pixel values) within 3D rectilinear image arrays.";
+        "This operation estimates various spatial partial derivatives (of pixel values) within 3D rectilinear image arrays.";
 
     out.notes.emplace_back(
         "The provided image collection must be rectilinear."
@@ -70,7 +71,7 @@ OperationDoc OpArgDocVolumetricSpatialDerivative(void){
     out.args.back().name = "Channel";
     out.args.back().desc = "The channel to operated on (zero-based)."
                            " Negative values will cause all channels to be operated on.";
-    out.args.back().default_val = "0";
+    out.args.back().default_val = "-1";
     out.args.back().expected = true;
     out.args.back().examples = { "-1",
                                  "0",
@@ -87,13 +88,8 @@ OperationDoc OpArgDocVolumetricSpatialDerivative(void){
     out.args.back().default_val = "Sobel-3x3x3";
     out.args.back().expected = true;
     out.args.back().examples = { "first",
-                                 //"Roberts-cross-3x3x3",
-                                 //"Prewitt-3x3x3",
                                  "Sobel-3x3x3" };
-                                 //"Sobel-5x5x5",
-                                 //"Scharr-3x3x3",
-                                 //"Scharr-5x5x5",
-                                 //"second" };
+
 
     out.args.emplace_back();
     out.args.back().name = "Method";
@@ -104,12 +100,8 @@ OperationDoc OpArgDocVolumetricSpatialDerivative(void){
     out.args.back().examples = { "row-aligned",
                                  "column-aligned",
                                  "image-aligned",
-                                 //"prow-pcol-aligned",
-                                 //"nrow-pcol-aligned",
-                                 "magnitude" };
-                                 //"orientation",
-                                 //"non-maximum-suppression",
-                                 //"cross" };
+                                 "magnitude",
+                                 "non-maximum-suppression" };
 
     return out;
 }
@@ -129,23 +121,13 @@ Drover VolumetricSpatialDerivative(Drover DICOM_data, OperationArgPkg OptArgs, s
 
     //-----------------------------------------------------------------------------------------------------------------
     const auto regex_1st = Compile_Regex("^fi?r?s?t?$");
-    //const auto regex_2nd = Compile_Regex("^se?c?o?n?d?$");
-    //const auto regex_rcr3x3x3 = Compile_Regex("^ro?b?e?r?t?s?-?c?r?o?s?s?-?3x?3?x?3?$");
-    //const auto regex_pre3x3x3 = Compile_Regex("^pr?e?w?i?t?t?-?3x?3?x?3?$");
     const auto regex_sob3x3x3 = Compile_Regex("^so?b?e?l?-?3x?3?x?3?$");
-    //const auto regex_sch3x3x3 = Compile_Regex("^sc?h?a?r?r?-?3x?3?x?3?$");
-    //const auto regex_sob5x5x5 = Compile_Regex("^so?b?e?l?-?5x?5?x?5?$");
-    //const auto regex_sch5x5x5 = Compile_Regex("^sc?h?a?r?r?-?5x?5?x?5?$");
 
     const auto regex_row  = Compile_Regex("^ro?w?-?a?l?i?g?n?e?d?$");
     const auto regex_col  = Compile_Regex("^col?u?m?n?-?a?l?i?g?n?e?d?$");
     const auto regex_img  = Compile_Regex("^im?a?g?e?-?a?l?i?g?n?e?d?$");
-    //const auto regex_prpc = Compile_Regex("^pr?o?w?-?p?c?o?l?-?a?l?i?g?n?e?d?$");
-    //const auto regex_nrpc = Compile_Regex("^nr?o?w?-?p?c?o?l?u?m?n?-?a?l?i?g?n?e?d?$");
     const auto regex_mag  = Compile_Regex("^ma?g?n?i?t?u?d?e?$");
-    //const auto regex_orn  = Compile_Regex("^or?i?e?n?t?a?t?i?o?n?$");
-    //const auto regex_nms  = Compile_Regex("^no?n?-?m?a?x?i?m?u?m?-?s?u?p?p?r?e?s?s?i?o?n?$");
-    //const auto regex_crs  = Compile_Regex("^cro?s?s?$");
+    const auto regex_nms  = Compile_Regex("^no?n?-?m?a?x?i?m?u?m?-?s?u?p?p?r?e?s?s?i?o?n?$");
 
 
     auto cc_all = All_CCs( DICOM_data );
@@ -155,349 +137,67 @@ Drover VolumetricSpatialDerivative(Drover DICOM_data, OperationArgPkg OptArgs, s
         throw std::invalid_argument("No contours selected. Cannot continue.");
     }
 
+
     auto IAs_all = All_IAs( DICOM_data );
     auto IAs = Whitelist( IAs_all, ImageSelectionStr );
     for(auto & iap_it : IAs){
 
-        ComputeVolumetricNeighbourhoodSamplerUserData ud;
-        ud.channel = Channel;
-        ud.neighbourhood = ComputeVolumetricNeighbourhoodSamplerUserData::Neighbourhood::Selection;
-            ud.description = "Volumetric Spatial Derivative:"; // Appended to later.
+/*
+        ////////////////////////
+        // If non-maximum suppression is enabled, the magnitude will need to be pre-computed on a copy of the images.
+        // In this case we make a local copy to feed to the magnitude routine.
+        Drover DD_magn;
+        if( std::regex_match(MethodStr, regex_nms) ){
+            DD_magn.image_data.emplace_back( std::make_shared<Image_Array>( *(*iap_it) ) );
 
+            OperationArgPkg Op("VolumetricSpatialDerivative:ImageSelectionStr=last:";
+
+            auto OpDocs = OpArgDocVolumetricSpatialDerivative();
+            for(const auto &r : OpDocs.args){
+                if(r.expected) optargs.insert( r.name, r.default_val );
+            }
+            DD_magn = VolumetricSpatialDerivative(DD_magn, OptArgs, {}, "" );
+        }
+        ////////////////////////
+*/
+
+        // Planar derivatives.
+        ComputeVolumetricSpatialDerivativeUserData ud;
+        ud.channel = Channel;
+        ud.order = VolumetricSpatialDerivativeEstimator::first;
+        ud.method = VolumetricSpatialDerivativeMethod::row_aligned;
 
         if(false){
         }else if( std::regex_match(EstimatorStr, regex_1st) ){
-            ud.description += " first,";
-            ud.voxel_triplets = {{ {  0,  0,  0 },    // 0
-                                   { -1,  0,  0 },    // 1
-                                   {  1,  0,  0 },    // 2
-                                   {  0, -1,  0 },    // 3
-                                   {  0,  1,  0 },    // 4
-                                   {  0,  0, -1 },    // 5
-                                   {  0,  0,  1 } }}; // 6
-            if(false){
-            }else if( std::regex_match(MethodStr, regex_row) ){
-                ud.description += " row-aligned";
-                ud.f_reduce = [](float, std::vector<float> &shtl) -> float {
-                                  const auto col_m = std::isfinite(shtl[3]) ? shtl[3] : shtl[0];
-                                  const auto col_p = std::isfinite(shtl[4]) ? shtl[4] : shtl[0];
-                                  return (col_p - col_m) * 0.5f;
-                              };
-            }else if( std::regex_match(MethodStr, regex_col) ){
-                ud.description += " column-aligned";
-                ud.f_reduce = [](float, std::vector<float> &shtl) -> float {
-                                  const auto row_m = std::isfinite(shtl[1]) ? shtl[1] : shtl[0];
-                                  const auto row_p = std::isfinite(shtl[2]) ? shtl[2] : shtl[0];
-                                  return (row_p - row_m) * 0.5f;
-                              };
-
-            }else if( std::regex_match(MethodStr, regex_img) ){
-                ud.description += " image-aligned";
-                ud.f_reduce = [](float, std::vector<float> &shtl) -> float {
-                                  const auto img_m = std::isfinite(shtl[5]) ? shtl[5] : shtl[0];
-                                  const auto img_p = std::isfinite(shtl[6]) ? shtl[6] : shtl[0];
-                                  return (img_p - img_m) * 0.5f;
-                              };
-
-            //}else if( std::regex_match(MethodStr, regex_prpc) ){
-            //    throw std::invalid_argument("Method '"_s + MethodStr + "' and estimator '"_s + EstimatorStr + "' currently cannot be combined.");
-            //}else if( std::regex_match(MethodStr, regex_nrpc) ){
-            //    throw std::invalid_argument("Method '"_s + MethodStr + "' and estimator '"_s + EstimatorStr + "' currently cannot be combined.");
-            }else if( std::regex_match(MethodStr, regex_mag) ){
-                ud.description += " magnitude";
-                ud.f_reduce = [](float, std::vector<float> &shtl) -> float {
-                                  const auto col_m = std::isfinite(shtl[3]) ? shtl[3] : shtl[0];
-                                  const auto col_p = std::isfinite(shtl[4]) ? shtl[4] : shtl[0];
-                                  const auto row_m = std::isfinite(shtl[1]) ? shtl[1] : shtl[0];
-                                  const auto row_p = std::isfinite(shtl[2]) ? shtl[2] : shtl[0];
-                                  const auto img_m = std::isfinite(shtl[5]) ? shtl[5] : shtl[0];
-                                  const auto img_p = std::isfinite(shtl[6]) ? shtl[6] : shtl[0];
-                                  return std::hypot( (col_p - col_m) * 0.5f,
-                                                     (row_p - row_m) * 0.5f,
-                                                     (img_p - img_m) * 0.5f );
-                              };
-
-            //}else if( std::regex_match(MethodStr, regex_orn) ){
-            //    throw std::invalid_argument("Method '"_s + MethodStr + "' and estimator '"_s + EstimatorStr + "' currently cannot be combined.");
-            //}else if( std::regex_match(MethodStr, regex_nms) ){
-            //    throw std::invalid_argument("Method '"_s + MethodStr + "' and estimator '"_s + EstimatorStr + "' currently cannot be combined.");
-            //}else if( std::regex_match(MethodStr, regex_crs) ){
-            //    throw std::invalid_argument("Method '"_s + MethodStr + "' and estimator '"_s + EstimatorStr + "' currently cannot be combined.");
-            }else{
-                throw std::invalid_argument("Method argument '"_s + MethodStr + "' is not valid");
-            }
-
+            ud.order = VolumetricSpatialDerivativeEstimator::first;
         }else if( std::regex_match(EstimatorStr, regex_sob3x3x3) ){
-            ud.description += " Sobel-3x3x3,";
-            ud.voxel_triplets = {{ { -1, -1, -1 },    //  0
-                                   { -1,  0, -1 },    //  1
-                                   { -1,  1, -1 },    //  2
-                                   {  0, -1, -1 },    //  3
-                                   {  0,  0, -1 },    //  4
-                                   {  0,  1, -1 },    //  5
-                                   {  1, -1, -1 },    //  6
-                                   {  1,  0, -1 },    //  7
-                                   {  1,  1, -1 },    //  8
-
-                                   { -1, -1,  0 },    //  9
-                                   { -1,  0,  0 },    // 10
-                                   { -1,  1,  0 },    // 11
-                                   {  0, -1,  0 },    // 12
-                                   {  0,  0,  0 },    // 13
-                                   {  0,  1,  0 },    // 14
-                                   {  1, -1,  0 },    // 15
-                                   {  1,  0,  0 },    // 16
-                                   {  1,  1,  0 },    // 17
-
-                                   { -1, -1,  1 },    // 18
-                                   { -1,  0,  1 },    // 19
-                                   { -1,  1,  1 },    // 20
-                                   {  0, -1,  1 },    // 21
-                                   {  0,  0,  1 },    // 22
-                                   {  0,  1,  1 },    // 23
-                                   {  1, -1,  1 },    // 24
-                                   {  1,  0,  1 },    // 25
-                                   {  1,  1,  1 } }}; // 26
-
-            // Note: The convolution kernel used here was adapted from
-            // https://en.wikipedia.org/wiki/Sobel_operator#Extension_to_other_dimensions (accessed 20190226).
-            const auto row_aligned = [](float, std::vector<float> &shtl) -> float {
-                                    const auto r_m_c_m_i_m = std::isfinite(shtl[ 0]) ? shtl[ 0] : shtl[13];
-                                    //const auto r_m_c_0_i_m = std::isfinite(shtl[ 1]) ? shtl[ 1] : shtl[13];
-                                    const auto r_m_c_p_i_m = std::isfinite(shtl[ 2]) ? shtl[ 2] : shtl[13];
-
-                                    const auto r_0_c_m_i_m = std::isfinite(shtl[ 3]) ? shtl[ 3] : shtl[13];
-                                    //const auto r_0_c_0_i_m = std::isfinite(shtl[ 4]) ? shtl[ 4] : shtl[13];
-                                    const auto r_0_c_p_i_m = std::isfinite(shtl[ 5]) ? shtl[ 5] : shtl[13];
-
-                                    const auto r_p_c_m_i_m = std::isfinite(shtl[ 6]) ? shtl[ 6] : shtl[13];
-                                    //const auto r_p_c_0_i_m = std::isfinite(shtl[ 7]) ? shtl[ 7] : shtl[13];
-                                    const auto r_p_c_p_i_m = std::isfinite(shtl[ 8]) ? shtl[ 8] : shtl[13];
-
-                                    const auto r_m_c_m_i_0 = std::isfinite(shtl[ 9]) ? shtl[ 9] : shtl[13];
-                                    //const auto r_m_c_0_i_0 = std::isfinite(shtl[10]) ? shtl[10] : shtl[13];
-                                    const auto r_m_c_p_i_0 = std::isfinite(shtl[11]) ? shtl[11] : shtl[13];
-
-                                    const auto r_0_c_m_i_0 = std::isfinite(shtl[12]) ? shtl[12] : shtl[13];
-                                    //const auto r_0_c_0_i_0 = shtl[13];
-                                    const auto r_0_c_p_i_0 = std::isfinite(shtl[14]) ? shtl[14] : shtl[13];
-
-                                    const auto r_p_c_m_i_0 = std::isfinite(shtl[15]) ? shtl[15] : shtl[13];
-                                    //const auto r_p_c_0_i_0 = std::isfinite(shtl[16]) ? shtl[16] : shtl[13];
-                                    const auto r_p_c_p_i_0 = std::isfinite(shtl[17]) ? shtl[17] : shtl[13];
-
-                                    const auto r_m_c_m_i_p = std::isfinite(shtl[18]) ? shtl[18] : shtl[13];
-                                    //const auto r_m_c_0_i_p = std::isfinite(shtl[19]) ? shtl[19] : shtl[13];
-                                    const auto r_m_c_p_i_p = std::isfinite(shtl[20]) ? shtl[20] : shtl[13];
-
-                                    const auto r_0_c_m_i_p = std::isfinite(shtl[21]) ? shtl[21] : shtl[13];
-                                    //const auto r_0_c_0_i_p = std::isfinite(shtl[22]) ? shtl[22] : shtl[13];
-                                    const auto r_0_c_p_i_p = std::isfinite(shtl[23]) ? shtl[23] : shtl[13];
-
-                                    const auto r_p_c_m_i_p = std::isfinite(shtl[24]) ? shtl[24] : shtl[13];
-                                    //const auto r_p_c_0_i_p = std::isfinite(shtl[25]) ? shtl[25] : shtl[13];
-                                    const auto r_p_c_p_i_p = std::isfinite(shtl[26]) ? shtl[26] : shtl[13];
-
-                                    return static_cast<float>( 
-                                           (  1.0 * r_p_c_p_i_p
-                                            + 1.0 * r_m_c_p_i_p
-                                            + 1.0 * r_p_c_p_i_m
-                                            + 1.0 * r_m_c_p_i_m
-
-                                            + 2.0 * r_0_c_p_i_m
-                                            + 2.0 * r_0_c_p_i_p
-                                            + 2.0 * r_m_c_p_i_0
-                                            + 2.0 * r_p_c_p_i_0
-
-                                            + 4.0 * r_0_c_p_i_0
-
-                                            - 1.0 * r_p_c_m_i_p
-                                            - 1.0 * r_m_c_m_i_p
-                                            - 1.0 * r_p_c_m_i_m
-                                            - 1.0 * r_m_c_m_i_m
-
-                                            - 2.0 * r_0_c_m_i_m
-                                            - 2.0 * r_0_c_m_i_p
-                                            - 2.0 * r_m_c_m_i_0
-                                            - 2.0 * r_p_c_m_i_0
-
-                                            - 4.0 * r_0_c_m_i_0)
-                                           / 32.0 );
-            };
-
-            const auto col_aligned = [](float, std::vector<float> &shtl) -> float {
-                                    const auto r_m_c_m_i_m = std::isfinite(shtl[ 0]) ? shtl[ 0] : shtl[13];
-                                    const auto r_m_c_0_i_m = std::isfinite(shtl[ 1]) ? shtl[ 1] : shtl[13];
-                                    const auto r_m_c_p_i_m = std::isfinite(shtl[ 2]) ? shtl[ 2] : shtl[13];
-
-                                    //const auto r_0_c_m_i_m = std::isfinite(shtl[ 3]) ? shtl[ 3] : shtl[13];
-                                    //const auto r_0_c_0_i_m = std::isfinite(shtl[ 4]) ? shtl[ 4] : shtl[13];
-                                    //const auto r_0_c_p_i_m = std::isfinite(shtl[ 5]) ? shtl[ 5] : shtl[13];
-
-                                    const auto r_p_c_m_i_m = std::isfinite(shtl[ 6]) ? shtl[ 6] : shtl[13];
-                                    const auto r_p_c_0_i_m = std::isfinite(shtl[ 7]) ? shtl[ 7] : shtl[13];
-                                    const auto r_p_c_p_i_m = std::isfinite(shtl[ 8]) ? shtl[ 8] : shtl[13];
-
-                                    const auto r_m_c_m_i_0 = std::isfinite(shtl[ 9]) ? shtl[ 9] : shtl[13];
-                                    const auto r_m_c_0_i_0 = std::isfinite(shtl[10]) ? shtl[10] : shtl[13];
-                                    const auto r_m_c_p_i_0 = std::isfinite(shtl[11]) ? shtl[11] : shtl[13];
-
-                                    //const auto r_0_c_m_i_0 = std::isfinite(shtl[12]) ? shtl[12] : shtl[13];
-                                    //const auto r_0_c_0_i_0 = shtl[13];
-                                    //const auto r_0_c_p_i_0 = std::isfinite(shtl[14]) ? shtl[14] : shtl[13];
-
-                                    const auto r_p_c_m_i_0 = std::isfinite(shtl[15]) ? shtl[15] : shtl[13];
-                                    const auto r_p_c_0_i_0 = std::isfinite(shtl[16]) ? shtl[16] : shtl[13];
-                                    const auto r_p_c_p_i_0 = std::isfinite(shtl[17]) ? shtl[17] : shtl[13];
-
-                                    const auto r_m_c_m_i_p = std::isfinite(shtl[18]) ? shtl[18] : shtl[13];
-                                    const auto r_m_c_0_i_p = std::isfinite(shtl[19]) ? shtl[19] : shtl[13];
-                                    const auto r_m_c_p_i_p = std::isfinite(shtl[20]) ? shtl[20] : shtl[13];
-
-                                    //const auto r_0_c_m_i_p = std::isfinite(shtl[21]) ? shtl[21] : shtl[13];
-                                    //const auto r_0_c_0_i_p = std::isfinite(shtl[22]) ? shtl[22] : shtl[13];
-                                    //const auto r_0_c_p_i_p = std::isfinite(shtl[23]) ? shtl[23] : shtl[13];
-
-                                    const auto r_p_c_m_i_p = std::isfinite(shtl[24]) ? shtl[24] : shtl[13];
-                                    const auto r_p_c_0_i_p = std::isfinite(shtl[25]) ? shtl[25] : shtl[13];
-                                    const auto r_p_c_p_i_p = std::isfinite(shtl[26]) ? shtl[26] : shtl[13];
-
-                                    return static_cast<float>( 
-                                           (  1.0 * r_p_c_p_i_p
-                                            + 1.0 * r_p_c_m_i_p
-                                            + 1.0 * r_p_c_p_i_m
-                                            + 1.0 * r_p_c_m_i_m
-
-                                            + 2.0 * r_p_c_0_i_m
-                                            + 2.0 * r_p_c_0_i_p
-                                            + 2.0 * r_p_c_m_i_0
-                                            + 2.0 * r_p_c_p_i_0
-
-                                            + 4.0 * r_p_c_0_i_0
-
-                                            - 1.0 * r_m_c_p_i_p
-                                            - 1.0 * r_m_c_m_i_p
-                                            - 1.0 * r_m_c_p_i_m
-                                            - 1.0 * r_m_c_m_i_m
-
-                                            - 2.0 * r_m_c_0_i_m
-                                            - 2.0 * r_m_c_0_i_p
-                                            - 2.0 * r_m_c_m_i_0
-                                            - 2.0 * r_m_c_p_i_0
-
-                                            - 4.0 * r_m_c_0_i_0)
-                                           / 32.0 );
-            };
-
-            const auto img_aligned = [](float, std::vector<float> &shtl) -> float {
-                                    const auto r_m_c_m_i_m = std::isfinite(shtl[ 0]) ? shtl[ 0] : shtl[13];
-                                    const auto r_m_c_0_i_m = std::isfinite(shtl[ 1]) ? shtl[ 1] : shtl[13];
-                                    const auto r_m_c_p_i_m = std::isfinite(shtl[ 2]) ? shtl[ 2] : shtl[13];
-
-                                    const auto r_0_c_m_i_m = std::isfinite(shtl[ 3]) ? shtl[ 3] : shtl[13];
-                                    const auto r_0_c_0_i_m = std::isfinite(shtl[ 4]) ? shtl[ 4] : shtl[13];
-                                    const auto r_0_c_p_i_m = std::isfinite(shtl[ 5]) ? shtl[ 5] : shtl[13];
-
-                                    const auto r_p_c_m_i_m = std::isfinite(shtl[ 6]) ? shtl[ 6] : shtl[13];
-                                    const auto r_p_c_0_i_m = std::isfinite(shtl[ 7]) ? shtl[ 7] : shtl[13];
-                                    const auto r_p_c_p_i_m = std::isfinite(shtl[ 8]) ? shtl[ 8] : shtl[13];
-
-                                    //const auto r_m_c_m_i_0 = std::isfinite(shtl[ 9]) ? shtl[ 9] : shtl[13];
-                                    //const auto r_m_c_0_i_0 = std::isfinite(shtl[10]) ? shtl[10] : shtl[13];
-                                    //const auto r_m_c_p_i_0 = std::isfinite(shtl[11]) ? shtl[11] : shtl[13];
-
-                                    //const auto r_0_c_m_i_0 = std::isfinite(shtl[12]) ? shtl[12] : shtl[13];
-                                    //const auto r_0_c_0_i_0 = shtl[13];
-                                    //const auto r_0_c_p_i_0 = std::isfinite(shtl[14]) ? shtl[14] : shtl[13];
-
-                                    //const auto r_p_c_m_i_0 = std::isfinite(shtl[15]) ? shtl[15] : shtl[13];
-                                    //const auto r_p_c_0_i_0 = std::isfinite(shtl[16]) ? shtl[16] : shtl[13];
-                                    //const auto r_p_c_p_i_0 = std::isfinite(shtl[17]) ? shtl[17] : shtl[13];
-
-                                    const auto r_m_c_m_i_p = std::isfinite(shtl[18]) ? shtl[18] : shtl[13];
-                                    const auto r_m_c_0_i_p = std::isfinite(shtl[19]) ? shtl[19] : shtl[13];
-                                    const auto r_m_c_p_i_p = std::isfinite(shtl[20]) ? shtl[20] : shtl[13];
-
-                                    const auto r_0_c_m_i_p = std::isfinite(shtl[21]) ? shtl[21] : shtl[13];
-                                    const auto r_0_c_0_i_p = std::isfinite(shtl[22]) ? shtl[22] : shtl[13];
-                                    const auto r_0_c_p_i_p = std::isfinite(shtl[23]) ? shtl[23] : shtl[13];
-
-                                    const auto r_p_c_m_i_p = std::isfinite(shtl[24]) ? shtl[24] : shtl[13];
-                                    const auto r_p_c_0_i_p = std::isfinite(shtl[25]) ? shtl[25] : shtl[13];
-                                    const auto r_p_c_p_i_p = std::isfinite(shtl[26]) ? shtl[26] : shtl[13];
-
-                                    return static_cast<float>( 
-                                           (  1.0 * r_p_c_p_i_p
-                                            + 1.0 * r_m_c_p_i_p
-                                            + 1.0 * r_p_c_m_i_p
-                                            + 1.0 * r_m_c_m_i_p
-
-                                            + 2.0 * r_0_c_m_i_p
-                                            + 2.0 * r_0_c_p_i_p
-                                            + 2.0 * r_m_c_0_i_p
-                                            + 2.0 * r_p_c_0_i_p
-
-                                            + 4.0 * r_0_c_0_i_p
-
-                                            - 1.0 * r_p_c_p_i_m
-                                            - 1.0 * r_m_c_p_i_m
-                                            - 1.0 * r_p_c_m_i_m
-                                            - 1.0 * r_m_c_m_i_m
-
-                                            - 2.0 * r_0_c_m_i_m
-                                            - 2.0 * r_0_c_p_i_m
-                                            - 2.0 * r_m_c_0_i_m
-                                            - 2.0 * r_p_c_0_i_m
-
-                                            - 4.0 * r_0_c_0_i_m)
-                                           / 32.0 );
-            };
-
-            if(false){
-            }else if( std::regex_match(MethodStr, regex_row) ){
-                ud.description += " row-aligned";
-                ud.f_reduce = row_aligned;
-
-            }else if( std::regex_match(MethodStr, regex_col) ){
-                ud.description += " column-aligned";
-                ud.f_reduce = col_aligned;
-
-            }else if( std::regex_match(MethodStr, regex_img) ){
-                ud.description += " image-aligned";
-                ud.f_reduce = img_aligned;
-
-            //}else if( std::regex_match(MethodStr, regex_prpc) ){
-            //    throw std::invalid_argument("Method '"_s + MethodStr + "' and estimator '"_s + EstimatorStr + "' currently cannot be combined.");
-            //}else if( std::regex_match(MethodStr, regex_nrpc) ){
-            //    throw std::invalid_argument("Method '"_s + MethodStr + "' and estimator '"_s + EstimatorStr + "' currently cannot be combined.");
-            }else if( std::regex_match(MethodStr, regex_mag) ){
-                ud.description += " magnitude";
-                ud.f_reduce = [&](float v, std::vector<float> &shtl) -> float {
-                                    return std::hypot( row_aligned(v, shtl),
-                                                       col_aligned(v, shtl),
-                                                       img_aligned(v, shtl) );
-                };
-
-            //}else if( std::regex_match(MethodStr, regex_orn) ){
-            //    throw std::invalid_argument("Method '"_s + MethodStr + "' and estimator '"_s + EstimatorStr + "' currently cannot be combined.");
-            //}else if( std::regex_match(MethodStr, regex_nms) ){
-            //    throw std::invalid_argument("Method '"_s + MethodStr + "' and estimator '"_s + EstimatorStr + "' currently cannot be combined.");
-            //}else if( std::regex_match(MethodStr, regex_crs) ){
-            //    throw std::invalid_argument("Method '"_s + MethodStr + "' and estimator '"_s + EstimatorStr + "' currently cannot be combined.");
-            }else{
-                throw std::invalid_argument("Method argument '"_s + MethodStr + "' is not valid");
-            }
-
+            ud.order = VolumetricSpatialDerivativeEstimator::Sobel_3x3x3;
         }else{
             throw std::invalid_argument("Estimator argument '"_s + EstimatorStr + "' is not valid");
         }
+        if(false){
+        }else if( std::regex_match(MethodStr, regex_row) ){
+            ud.method = VolumetricSpatialDerivativeMethod::row_aligned;
+        }else if( std::regex_match(MethodStr, regex_col) ){
+            ud.method = VolumetricSpatialDerivativeMethod::column_aligned;
+        }else if( std::regex_match(MethodStr, regex_img) ){
+            ud.method = VolumetricSpatialDerivativeMethod::image_aligned;
+        }else if( std::regex_match(MethodStr, regex_mag) ){
+            ud.method = VolumetricSpatialDerivativeMethod::magnitude;
+        }else if( std::regex_match(MethodStr, regex_nms) ){
+            ud.method = VolumetricSpatialDerivativeMethod::non_maximum_suppression;
+FUNCERR("This routine is not yet implemented");    // Do I need to take any extra steps here ???
 
-        if(!(*iap_it)->imagecoll.Compute_Images( ComputeVolumetricNeighbourhoodSampler, 
+        }else{
+            throw std::invalid_argument("Method argument '"_s + MethodStr + "' is not valid");
+        }
+
+        if(!(*iap_it)->imagecoll.Compute_Images( ComputeVolumetricSpatialDerivative,
                                                  {}, cc_ROIs, &ud )){
             throw std::runtime_error("Unable to compute volumetric partial derivative.");
         }
-
     }
 
     return DICOM_data;
 }
+
