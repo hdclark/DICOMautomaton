@@ -192,32 +192,32 @@ Drover ReduceNeighbourhood(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
 
         if(false){
         }else if( std::regex_match(ReductionStr, regex_min) ){
-            ud.f_reduce = [](float, std::vector<float> &shtl) -> float {
+            ud.f_reduce = [](float, std::vector<float> &shtl, vec3<double>) -> float {
                               return Stats::Min(shtl);
                           };
         }else if( std::regex_match(ReductionStr, regex_median) ){
-            ud.f_reduce = [](float, std::vector<float> &shtl) -> float {
+            ud.f_reduce = [](float, std::vector<float> &shtl, vec3<double>) -> float {
                               return Stats::Median(shtl);
                           };
         }else if( std::regex_match(ReductionStr, regex_mean) ){
-            ud.f_reduce = [](float, std::vector<float> &shtl) -> float {
+            ud.f_reduce = [](float, std::vector<float> &shtl, vec3<double>) -> float {
                               return Stats::Mean(shtl);
                           };
         }else if( std::regex_match(ReductionStr, regex_max) ){
-            ud.f_reduce = [](float, std::vector<float> &shtl) -> float {
+            ud.f_reduce = [](float, std::vector<float> &shtl, vec3<double>) -> float {
                               return Stats::Max(shtl);
                           };
 
         }else if( std::regex_match(ReductionStr, regex_is_min_nan) ){
             const auto machine_eps = std::sqrt( std::numeric_limits<float>::epsilon() );
-            ud.f_reduce = [=](float v, std::vector<float> &shtl) -> float {
+            ud.f_reduce = [=](float v, std::vector<float> &shtl, vec3<double>) -> float {
                               const auto min = Stats::Min(shtl);
                               const auto diff = std::abs(v - min);
                               return (diff < machine_eps) ? std::numeric_limits<float>::quiet_NaN() : v;
                           };
         }else if( std::regex_match(ReductionStr, regex_is_max_nan) ){
             const auto machine_eps = std::sqrt( std::numeric_limits<float>::epsilon() );
-            ud.f_reduce = [=](float v, std::vector<float> &shtl) -> float {
+            ud.f_reduce = [=](float v, std::vector<float> &shtl, vec3<double>) -> float {
                               const auto max = Stats::Max(shtl);
                               const auto diff = std::abs(v - max);
                               return (diff < machine_eps) ? std::numeric_limits<float>::quiet_NaN() : v;
@@ -225,14 +225,14 @@ Drover ReduceNeighbourhood(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
 
         }else if( std::regex_match(ReductionStr, regex_is_min) ){
             const auto machine_eps = std::sqrt( std::numeric_limits<float>::epsilon() );
-            ud.f_reduce = [=](float v, std::vector<float> &shtl) -> float {
+            ud.f_reduce = [=](float v, std::vector<float> &shtl, vec3<double>) -> float {
                               const auto min = Stats::Min(shtl);
                               const auto diff = std::abs(v - min);
                               return (diff < machine_eps) ? 1.0f : 0.0f;
                           };
         }else if( std::regex_match(ReductionStr, regex_is_max) ){
             const auto machine_eps = std::sqrt( std::numeric_limits<float>::epsilon() );
-            ud.f_reduce = [=](float v, std::vector<float> &shtl) -> float {
+            ud.f_reduce = [=](float v, std::vector<float> &shtl, vec3<double>) -> float {
                               const auto max = Stats::Max(shtl);
                               const auto diff = std::abs(v - max);
                               return (diff < machine_eps) ? 1.0f : 0.0f;

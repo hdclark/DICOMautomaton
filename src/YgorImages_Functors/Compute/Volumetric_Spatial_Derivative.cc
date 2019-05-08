@@ -55,20 +55,25 @@ bool ComputeVolumetricSpatialDerivative(planar_image_collection<float,double> &i
         return false;
     }
 
+    // If non-maximum suppression has been requested, pre-compute the magnitude via recursion.
+    planar_image_collection<float,double> nms_working;  // Additional storage for edge thinning.
+    if(user_data_s->method == VolumetricSpatialDerivativeMethod::non_maximum_suppression){
+        nms_working = imagecoll; // Deep copy.
+
+        ComputeVolumetricSpatialDerivativeUserData nms_ud;
+        nms_ud = *user_data_s;
+        nms_ud.method = VolumetricSpatialDerivativeMethod::magnitude;
+        const auto ret = ComputeVolumetricSpatialDerivative(nms_working, {}, ccsl, &nms_ud);
+        if(!ret) return false;
+    }
+
     ComputeVolumetricNeighbourhoodSamplerUserData ud;
     ud.channel = user_data_s->channel;
     ud.neighbourhood = ComputeVolumetricNeighbourhoodSamplerUserData::Neighbourhood::Selection;
 
-/*
-    planar_image<float,double> nms_working;  // Additional storage for edge thinning.
-    if(user_data_s->method == VolumetricSpatialDerivativeMethod::non_maximum_suppression){
-        nms_working = *first_img_it;
-    }
-*/
 
     if(false){
     }else if(user_data_s->order == VolumetricSpatialDerivativeEstimator::first){
-        ud.description += " first,";
         ud.voxel_triplets = {{ {  0,  0,  0 },    // 0
                                { -1,  0,  0 },    // 1
                                {  1,  0,  0 },    // 2
@@ -78,36 +83,32 @@ bool ComputeVolumetricSpatialDerivative(planar_image_collection<float,double> &i
                                {  0,  0,  1 } }}; // 6
         if(false){
         }else if(user_data_s->method == VolumetricSpatialDerivativeMethod::row_aligned){
-            ud.description += " row-aligned";
-            ud.f_reduce = [](float, std::vector<float> &shtl) -> float {
+            ud.f_reduce = [](float, std::vector<float> &shtl, vec3<double>) -> float {
                               const auto col_m = std::isfinite(shtl[3]) ? shtl[3] : shtl[0];
                               const auto col_p = std::isfinite(shtl[4]) ? shtl[4] : shtl[0];
                               return (col_p - col_m) * 0.5f;
                           };
 
         }else if(user_data_s->method == VolumetricSpatialDerivativeMethod::column_aligned){
-            ud.description += " column-aligned";
-            ud.f_reduce = [](float, std::vector<float> &shtl) -> float {
+            ud.f_reduce = [](float, std::vector<float> &shtl, vec3<double>) -> float {
                               const auto row_m = std::isfinite(shtl[1]) ? shtl[1] : shtl[0];
                               const auto row_p = std::isfinite(shtl[2]) ? shtl[2] : shtl[0];
                               return (row_p - row_m) * 0.5f;
                           };
 
         }else if(user_data_s->method == VolumetricSpatialDerivativeMethod::image_aligned){
-            ud.description += " image-aligned";
-            ud.f_reduce = [](float, std::vector<float> &shtl) -> float {
+            ud.f_reduce = [](float, std::vector<float> &shtl, vec3<double>) -> float {
                               const auto img_m = std::isfinite(shtl[5]) ? shtl[5] : shtl[0];
                               const auto img_p = std::isfinite(shtl[6]) ? shtl[6] : shtl[0];
                               return (img_p - img_m) * 0.5f;
                           };
 
         }else if(user_data_s->method == VolumetricSpatialDerivativeMethod::magnitude){
-            ud.description += " magnitude";
-            ud.f_reduce = [](float, std::vector<float> &shtl) -> float {
-                              const auto col_m = std::isfinite(shtl[3]) ? shtl[3] : shtl[0];
-                              const auto col_p = std::isfinite(shtl[4]) ? shtl[4] : shtl[0];
+            ud.f_reduce = [](float, std::vector<float> &shtl, vec3<double>) -> float {
                               const auto row_m = std::isfinite(shtl[1]) ? shtl[1] : shtl[0];
                               const auto row_p = std::isfinite(shtl[2]) ? shtl[2] : shtl[0];
+                              const auto col_m = std::isfinite(shtl[3]) ? shtl[3] : shtl[0];
+                              const auto col_p = std::isfinite(shtl[4]) ? shtl[4] : shtl[0];
                               const auto img_m = std::isfinite(shtl[5]) ? shtl[5] : shtl[0];
                               const auto img_p = std::isfinite(shtl[6]) ? shtl[6] : shtl[0];
                               return std::hypot( (col_p - col_m) * 0.5f,
@@ -116,14 +117,43 @@ bool ComputeVolumetricSpatialDerivative(planar_image_collection<float,double> &i
                           };
 
         }else if(user_data_s->method == VolumetricSpatialDerivativeMethod::non_maximum_suppression){
-            FUNCERR("Not yet implemented");
+            // Note: This method is extremely slow, requiring a fresh search for each trilinear interpolation.
+            // It can easily be made faster, but might require modifying the volumetric neighbourhood sampler. TODO.
+            ud.f_reduce = [&](float v, std::vector<float> &shtl, vec3<double> pos) -> float {
+                    const auto row_m = std::isfinite(shtl[1]) ? shtl[1] : shtl[0];
+                    const auto row_p = std::isfinite(shtl[2]) ? shtl[2] : shtl[0];
+                    const auto col_m = std::isfinite(shtl[3]) ? shtl[3] : shtl[0];
+                    const auto col_p = std::isfinite(shtl[4]) ? shtl[4] : shtl[0];
+                    const auto img_m = std::isfinite(shtl[5]) ? shtl[5] : shtl[0];
+                    const auto img_p = std::isfinite(shtl[6]) ? shtl[6] : shtl[0];
+
+                    const auto ra = (col_p - col_m) * 0.5f;
+                    const auto ca = (row_p - row_m) * 0.5f;
+                    const auto ia = (img_p - img_m) * 0.5f;
+
+                    const auto magn = std::hypot(ra, ca, ia);
+                    const auto unit = vec3<double>(ra, ca, ia).unit(); // Unit vector in direction of gradient.
+
+                    const long int channel = (user_data_s->channel < 0) ? 0 : user_data_s->channel;
+                    const auto n_magn_m = nms_working.trilinearly_interpolate(pos - unit, channel);
+                    const auto n_magn_p = nms_working.trilinearly_interpolate(pos + unit, channel);
+
+                    float new_val = 0.0f;
+                    if( true
+                    && std::isfinite(n_magn_m)
+                    && std::isfinite(n_magn_p)
+                    && (n_magn_m <= magn)
+                    && (n_magn_p <= magn) ){
+                        new_val = magn;
+                    }
+                    return new_val;
+            };
 
         }else{
             throw std::invalid_argument("Selected method not applicable to selected order or estimator.");
         }
 
     }else if(user_data_s->order == VolumetricSpatialDerivativeEstimator::Sobel_3x3x3){
-        ud.description += " Sobel-3x3x3,";
         ud.voxel_triplets = {{ { -1, -1, -1 },    //  0
                                { -1,  0, -1 },    //  1
                                { -1,  1, -1 },    //  2
@@ -156,7 +186,7 @@ bool ComputeVolumetricSpatialDerivative(planar_image_collection<float,double> &i
 
         // Note: The convolution kernel used here was adapted from
         // https://en.wikipedia.org/wiki/Sobel_operator#Extension_to_other_dimensions (accessed 20190226).
-        const auto row_aligned = [](float, std::vector<float> &shtl) -> float {
+        const auto row_aligned = [](float, std::vector<float> &shtl, vec3<double>) -> float {
                                 const auto r_m_c_m_i_m = std::isfinite(shtl[ 0]) ? shtl[ 0] : shtl[13];
                                 //const auto r_m_c_0_i_m = std::isfinite(shtl[ 1]) ? shtl[ 1] : shtl[13];
                                 const auto r_m_c_p_i_m = std::isfinite(shtl[ 2]) ? shtl[ 2] : shtl[13];
@@ -220,7 +250,7 @@ bool ComputeVolumetricSpatialDerivative(planar_image_collection<float,double> &i
                                        / 32.0 );
         };
 
-        const auto col_aligned = [](float, std::vector<float> &shtl) -> float {
+        const auto col_aligned = [](float, std::vector<float> &shtl, vec3<double>) -> float {
                                 const auto r_m_c_m_i_m = std::isfinite(shtl[ 0]) ? shtl[ 0] : shtl[13];
                                 const auto r_m_c_0_i_m = std::isfinite(shtl[ 1]) ? shtl[ 1] : shtl[13];
                                 const auto r_m_c_p_i_m = std::isfinite(shtl[ 2]) ? shtl[ 2] : shtl[13];
@@ -284,7 +314,7 @@ bool ComputeVolumetricSpatialDerivative(planar_image_collection<float,double> &i
                                        / 32.0 );
         };
 
-        const auto img_aligned = [](float, std::vector<float> &shtl) -> float {
+        const auto img_aligned = [](float, std::vector<float> &shtl, vec3<double>) -> float {
                                 const auto r_m_c_m_i_m = std::isfinite(shtl[ 0]) ? shtl[ 0] : shtl[13];
                                 const auto r_m_c_0_i_m = std::isfinite(shtl[ 1]) ? shtl[ 1] : shtl[13];
                                 const auto r_m_c_p_i_m = std::isfinite(shtl[ 2]) ? shtl[ 2] : shtl[13];
@@ -350,89 +380,46 @@ bool ComputeVolumetricSpatialDerivative(planar_image_collection<float,double> &i
 
         if(false){
         }else if(user_data_s->method == VolumetricSpatialDerivativeMethod::row_aligned){
-            ud.description += " row-aligned";
             ud.f_reduce = row_aligned;
 
         }else if(user_data_s->method == VolumetricSpatialDerivativeMethod::column_aligned){
-            ud.description += " column-aligned";
             ud.f_reduce = col_aligned;
 
         }else if(user_data_s->method == VolumetricSpatialDerivativeMethod::image_aligned){
-            ud.description += " image-aligned";
             ud.f_reduce = img_aligned;
 
         }else if(user_data_s->method == VolumetricSpatialDerivativeMethod::magnitude){
-            ud.description += " magnitude";
-            ud.f_reduce = [&](float v, std::vector<float> &shtl) -> float {
-                                return std::hypot( row_aligned(v, shtl),
-                                                   col_aligned(v, shtl),
-                                                   img_aligned(v, shtl) );
+            ud.f_reduce = [&](float v, std::vector<float> &shtl, vec3<double> pos) -> float {
+                                return std::hypot( row_aligned(v, shtl, pos),
+                                                   col_aligned(v, shtl, pos),
+                                                   img_aligned(v, shtl, pos) );
             };
 
         }else if(user_data_s->method == VolumetricSpatialDerivativeMethod::non_maximum_suppression){
-            ud.description += " non-maximum-suppression";
-            ud.f_reduce = [&](float v, std::vector<float> &shtl) -> float {
-                const auto ra = row_aligned(v, shtl);
-                const auto ca = col_aligned(v, shtl);
-                const auto ia = img_aligned(v, shtl);
+            // Note: This method is extremely slow, requiring a fresh search for each trilinear interpolation.
+            // It can easily be made faster, but might require modifying the volumetric neighbourhood sampler. TODO.
+            ud.f_reduce = [&](float v, std::vector<float> &shtl, vec3<double> pos) -> float {
+                    const auto ra = row_aligned(v, shtl, pos);
+                    const auto ca = col_aligned(v, shtl, pos);
+                    const auto ia = img_aligned(v, shtl, pos);
 
-                const auto magn = std::hypot( ra, ca, ia );
-                const auto unit = vec3<double>(ra, ca, ia).unit(); // Unit vector in direction of gradient.
+                    const auto magn = std::hypot(ra, ca, ia);
+                    const auto unit = vec3<double>(ra, ca, ia).unit(); // Unit vector in direction of gradient.
 
-FUNCERR("This functionality is not yet available");
+                    const long int channel = (user_data_s->channel < 0) ? 0 : user_data_s->channel;
+                    const auto n_magn_m = nms_working.trilinearly_interpolate(pos - unit, channel);
+                    const auto n_magn_p = nms_working.trilinearly_interpolate(pos + unit, channel);
 
-// TODO: 
-// I either need to:
-//    1) Precompute magnitudes in a working image volume, and then modify the VolumetricNeighbourhoodSampler routine to
-//       provide voxel position (or index + img + adjacency information) so I can look-up the working image magnitude.
-// or
-//    2) Sample enough of the local neighbourhood to compute the magnitude normally, but also the magnitude of all 9
-//       neighbouring voxels. Then compute the 4 magnitudes I need on-the-fly for nms. This will of course fail if I
-//       overwrite the existing image as I go.
-/*
-                const auto row_r = static_cast<double>(row); // Pixel-space coordinates of the voxel in question.
-                const auto col_r = static_cast<double>(col);
-
-                auto row_p = row_r + ca;
-                auto row_m = row_r - ca;
-                auto col_p = col_r + ra;
-                auto col_m = col_r - ra;
-
-                const auto row_min = static_cast<double>(0.0);
-                const auto col_min = static_cast<double>(0.0);
-                const auto row_max = static_cast<double>(working.rows)-1.0;
-                const auto col_max = static_cast<double>(working.columns)-1.0;
-
-                row_p = (row_p < row_min) ? row_min : row_p;
-                row_m = (row_m < row_min) ? row_min : row_m;
-                col_p = (col_p < col_min) ? col_min : col_p;
-                col_m = (col_m < col_min) ? col_min : col_m;
-
-                row_p = (row_p > row_max) ? row_max : row_p;
-                row_m = (row_m > row_max) ? row_max : row_m;
-                col_p = (col_p > col_max) ? col_max : col_p;
-                col_m = (col_m > col_max) ? col_max : col_m;
-
-                if( !std::isfinite(row_p)
-                ||  !std::isfinite(row_m)
-                ||  !std::isfinite(col_p)
-                ||  !std::isfinite(col_m) ){
-                    throw std::logic_error("Non-finite row/column numbers encountered. Verify gradient computation.");
-                }
-
-                const auto g_p = working.bilinearly_interpolate_in_pixel_number_space( row_p, col_p, chan );
-                const auto g_m = working.bilinearly_interpolate_in_pixel_number_space( row_m, col_m, chan );
-
-                // Embed the updated magnitude in the orientation image so we can continue sampling the original magnitudes.
-                if( (magn >= g_p) && (magn >= g_m) ){
-                    nms_working.reference(row, col, chan) = magn;
-                }else{
-                    const auto zero = static_cast<float>(0);
-                    nms_working.reference(row, col, chan) = zero;
-                    minmax_pixel.Digest(zero);
-                }
-*/                    
-            };
+                    float new_val = 0.0f;
+                    if( true
+                    && std::isfinite(n_magn_m)
+                    && std::isfinite(n_magn_p)
+                    && (n_magn_m <= magn)
+                    && (n_magn_p <= magn) ){
+                        new_val = magn;
+                    }
+                    return new_val;
+            }; 
 
         }else{
             throw std::invalid_argument("Selected method not applicable to selected order or estimator.");
@@ -441,6 +428,7 @@ FUNCERR("This functionality is not yet available");
         throw std::invalid_argument("Unrecognized user-provided estimator argument.");
     }
 
+    // Invoke the volumetric sampling routine to compute the above functors.
     if(!imagecoll.Compute_Images( ComputeVolumetricNeighbourhoodSampler, 
                                   {}, ccsl, &ud )){
         throw std::runtime_error("Unable to compute volumetric spatial derivative.");

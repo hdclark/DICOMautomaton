@@ -268,7 +268,7 @@ bool ComputeVolumetricNeighbourhoodSampler(planar_image_collection<float,double>
                 }
 
                 // Assign the voxel a value.
-                voxel_val = user_data_s->f_reduce(E_val, shtl);
+                voxel_val = user_data_s->f_reduce(E_val, shtl, E_pos);
 
                 return;
             };

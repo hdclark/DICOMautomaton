@@ -58,9 +58,9 @@ struct ComputeVolumetricNeighbourhoodSamplerUserData {
     // Reduction functor for bounded voxels.
     //
     // The scalar parameter contains the existing voxel value and the vector contains the entire enighbourhood
-    // (possibly including the existing voxel value).
-    std::function<float(float, std::vector<float> &)> 
-    f_reduce = [](float v, std::vector<float> &) -> float {
+    // (possibly including the existing voxel value). The vec3 contains the voxel's location.
+    std::function<float(float, std::vector<float> &, vec3<double>)> 
+    f_reduce = [](float v, std::vector<float> &, vec3<double>) -> float {
         return v; // Effectively does nothing.
     };
 

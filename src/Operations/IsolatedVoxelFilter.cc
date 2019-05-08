@@ -319,7 +319,7 @@ Drover IsolatedVoxelFilter(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
         const auto neighbour_count = ud.voxel_triplets.size();
 
 
-        ud.f_reduce = [=](float v, std::vector<float> &shtl) -> float {
+        ud.f_reduce = [=](float v, std::vector<float> &shtl, vec3<double>) -> float {
                 long int agree = 0; // The number of neighbouring voxels that are in agreement.
                 for(const auto &n : shtl){
                     if(std::isfinite(v)){

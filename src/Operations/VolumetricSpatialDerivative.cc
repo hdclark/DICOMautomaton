@@ -186,8 +186,6 @@ Drover VolumetricSpatialDerivative(Drover DICOM_data, OperationArgPkg OptArgs, s
             ud.method = VolumetricSpatialDerivativeMethod::magnitude;
         }else if( std::regex_match(MethodStr, regex_nms) ){
             ud.method = VolumetricSpatialDerivativeMethod::non_maximum_suppression;
-FUNCERR("This routine is not yet implemented");    // Do I need to take any extra steps here ???
-
         }else{
             throw std::invalid_argument("Method argument '"_s + MethodStr + "' is not valid");
         }
