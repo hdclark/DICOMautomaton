@@ -56,21 +56,41 @@ bool ComputeVolumetricSpatialDerivative(planar_image_collection<float,double> &i
     }
 
     // If non-maximum suppression has been requested, pre-compute the magnitude via recursion.
-    planar_image_collection<float,double> nms_working;  // Additional storage for edge thinning.
+    planar_image_collection<float,double> nms_working; // Additional storage for edge thinning.
+    std::shared_ptr<planar_image_adjacency<float,double>> img_adj_ptr;
     if(user_data_s->method == VolumetricSpatialDerivativeMethod::non_maximum_suppression){
         nms_working = imagecoll; // Deep copy.
 
+        // Compute gradient magnitude for later reference.
         ComputeVolumetricSpatialDerivativeUserData nms_ud;
         nms_ud = *user_data_s;
         nms_ud.method = VolumetricSpatialDerivativeMethod::magnitude;
         const auto ret = ComputeVolumetricSpatialDerivative(nms_working, {}, ccsl, &nms_ud);
         if(!ret) return false;
+
+        // Ensure the images in the volume are rectilinear.
+        //
+        // Note: This will most likely be verified in the volumetric neighbourhood sampler routine, but it is best to
+        // explicitly verify just in case.
+        std::list<std::reference_wrapper<planar_image<float,double>>> selected_imgs;
+        for(auto &img : nms_working.images){
+            selected_imgs.push_back( std::ref(img) );
+        }
+        if(!Images_Form_Rectilinear_Grid(selected_imgs)){
+            FUNCWARN("Images do not form a rectilinear grid. Cannot continue");
+            return false;
+        }
+
+        // Construct an adjacency index for later 3D interpolation.
+        const auto orientation_normal = Average_Contour_Normals(ccsl);
+        using pia_t = planar_image_adjacency<float,double>;
+        planar_image_adjacency<float,double> l_img_adj( {}, { { std::ref(nms_working) } }, orientation_normal );
+        img_adj_ptr = std::make_shared< pia_t >( std::move(l_img_adj) ); // Note: direct construction here won't work ATM.
     }
 
     ComputeVolumetricNeighbourhoodSamplerUserData ud;
     ud.channel = user_data_s->channel;
     ud.neighbourhood = ComputeVolumetricNeighbourhoodSamplerUserData::Neighbourhood::Selection;
-
 
     if(false){
     }else if(user_data_s->order == VolumetricSpatialDerivativeEstimator::first){
@@ -117,9 +137,8 @@ bool ComputeVolumetricSpatialDerivative(planar_image_collection<float,double> &i
                           };
 
         }else if(user_data_s->method == VolumetricSpatialDerivativeMethod::non_maximum_suppression){
-            // Note: This method is extremely slow, requiring a fresh search for each trilinear interpolation.
-            // It can easily be made faster, but might require modifying the volumetric neighbourhood sampler. TODO.
-            ud.f_reduce = [&](float v, std::vector<float> &shtl, vec3<double> pos) -> float {
+            ud.f_reduce = [&](float, std::vector<float> &shtl, vec3<double> pos) -> float {
+                    // Compute the gradient magnitude.
                     const auto row_m = std::isfinite(shtl[1]) ? shtl[1] : shtl[0];
                     const auto row_p = std::isfinite(shtl[2]) ? shtl[2] : shtl[0];
                     const auto col_m = std::isfinite(shtl[3]) ? shtl[3] : shtl[0];
@@ -132,11 +151,13 @@ bool ComputeVolumetricSpatialDerivative(planar_image_collection<float,double> &i
                     const auto ia = (img_p - img_m) * 0.5f;
 
                     const auto magn = std::hypot(ra, ca, ia);
+
+                    // Compare the gradient magnitude to the (pre-computed) neighbouring voxels.
                     const auto unit = vec3<double>(ra, ca, ia).unit(); // Unit vector in direction of gradient.
 
                     const long int channel = (user_data_s->channel < 0) ? 0 : user_data_s->channel;
-                    const auto n_magn_m = nms_working.trilinearly_interpolate(pos - unit, channel);
-                    const auto n_magn_p = nms_working.trilinearly_interpolate(pos + unit, channel);
+                    const auto n_magn_m = img_adj_ptr->trilinearly_interpolate(pos - unit, channel);
+                    const auto n_magn_p = img_adj_ptr->trilinearly_interpolate(pos + unit, channel);
 
                     float new_val = 0.0f;
                     if( true
@@ -396,8 +417,6 @@ bool ComputeVolumetricSpatialDerivative(planar_image_collection<float,double> &i
             };
 
         }else if(user_data_s->method == VolumetricSpatialDerivativeMethod::non_maximum_suppression){
-            // Note: This method is extremely slow, requiring a fresh search for each trilinear interpolation.
-            // It can easily be made faster, but might require modifying the volumetric neighbourhood sampler. TODO.
             ud.f_reduce = [&](float v, std::vector<float> &shtl, vec3<double> pos) -> float {
                     const auto ra = row_aligned(v, shtl, pos);
                     const auto ca = col_aligned(v, shtl, pos);
@@ -407,8 +426,8 @@ bool ComputeVolumetricSpatialDerivative(planar_image_collection<float,double> &i
                     const auto unit = vec3<double>(ra, ca, ia).unit(); // Unit vector in direction of gradient.
 
                     const long int channel = (user_data_s->channel < 0) ? 0 : user_data_s->channel;
-                    const auto n_magn_m = nms_working.trilinearly_interpolate(pos - unit, channel);
-                    const auto n_magn_p = nms_working.trilinearly_interpolate(pos + unit, channel);
+                    const auto n_magn_m = img_adj_ptr->trilinearly_interpolate(pos - unit, channel);
+                    const auto n_magn_p = img_adj_ptr->trilinearly_interpolate(pos + unit, channel);
 
                     float new_val = 0.0f;
                     if( true
