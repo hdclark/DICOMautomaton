@@ -48,6 +48,7 @@
 #include "Operations/ConvertNaNsToZeros.h"
 #include "Operations/ConvertPixelsToPoints.h"
 #include "Operations/CopyImages.h"
+#include "Operations/CountVoxels.h"
 #include "Operations/CropImageDoseToROIs.h"
 #include "Operations/CropImages.h"
 #include "Operations/CropROIDose.h"
@@ -172,6 +173,7 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["ConvertNaNsToZeros"] = std::make_pair(OpArgDocConvertNaNsToZeros, ConvertNaNsToZeros);
     out["ConvertPixelsToPoints"] = std::make_pair(OpArgDocConvertPixelsToPoints, ConvertPixelsToPoints);
     out["CopyImages"] = std::make_pair(OpArgDocCopyImages, CopyImages);
+    out["CountVoxels"] = std::make_pair(OpArgDocCountVoxels, CountVoxels);
     out["CropImageDoseToROIs"] = std::make_pair(OpArgDocCropImageDoseToROIs, CropImageDoseToROIs);
     out["CropImages"] = std::make_pair(OpArgDocCropImages, CropImages);
     out["CropROIDose"] = std::make_pair(OpArgDocCropROIDose, CropROIDose);

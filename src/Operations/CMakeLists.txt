@@ -30,6 +30,7 @@ add_library(Operations_objs OBJECT
     ConvertNaNsToZeros.cc
     ConvertPixelsToPoints.cc
     CopyImages.cc
+    CountVoxels.cc
     CropImageDoseToROIs.cc
     CropImages.cc
     CropROIDose.cc
