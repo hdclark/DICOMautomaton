@@ -182,7 +182,7 @@ OperationDoc OpArgDocGenerateSyntheticImages(void){
     out.args.back().desc = "A semicolon-separated list of 'key@value' metadata to imbue into each image."
                            " This metadata will overwrite any existing keys with the provided values.";
     out.args.back().default_val = "";
-    out.args.back().expected = true;
+    out.args.back().expected = false;
     out.args.back().examples = { "keyA@valueA;keyB@valueB" };
 
     return out;
@@ -216,7 +216,7 @@ Drover GenerateSyntheticImages(Drover DICOM_data, OperationArgPkg OptArgs, std::
     const auto VoxelValue = std::stod( OptArgs.getValueStr("VoxelValue").value() );
     const auto StipleValue = std::stod( OptArgs.getValueStr("StipleValue").value() );
 
-    const auto MetadataStr = OptArgs.getValueStr("Metadata").value();
+    const auto MetadataOpt = OptArgs.getValueStr("Metadata");
 
     //-----------------------------------------------------------------------------------------------------------------
 
@@ -245,16 +245,16 @@ Drover GenerateSyntheticImages(Drover DICOM_data, OperationArgPkg OptArgs, std::
 
     // Parse user-provided metadata.
     std::map<std::string, std::string> Metadata;
-    {
+    if(MetadataOpt){
         // First, check if this is a multi-key@value statement.
         const auto regex_split = Compile_Regex("^.*;.*$");
-        const auto ismulti = std::regex_match(MetadataStr, regex_split);
+        const auto ismulti = std::regex_match(MetadataOpt.value(), regex_split);
 
         std::vector<std::string> v_kvs;
         if(!ismulti){
-            v_kvs.emplace_back(MetadataStr);
+            v_kvs.emplace_back(MetadataOpt.value());
         }else{
-            v_kvs = SplitStringToVector(MetadataStr, ';', 'd');
+            v_kvs = SplitStringToVector(MetadataOpt.value(), ';', 'd');
             if(v_kvs.size() < 1){
                 throw std::logic_error("Unable to separate multiple key@value tokens");
             }
