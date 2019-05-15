@@ -332,8 +332,8 @@ Drover GenerateSyntheticImages(Drover DICOM_data, OperationArgPkg OptArgs, std::
         out->imagecoll.images.back().metadata["AcquisitionDate"] = ContentDate;
         out->imagecoll.images.back().metadata["ContentDate"] = ContentDate;
 
-        out->imagecoll.images.back().metadata["InstanceNumber"] = InstanceNumber;
-        out->imagecoll.images.back().metadata["AcquisitionNumber"] = AcquisitionNumber;
+        out->imagecoll.images.back().metadata["InstanceNumber"] = std::to_string(InstanceNumber);
+        out->imagecoll.images.back().metadata["AcquisitionNumber"] = std::to_string(AcquisitionNumber);
 
         out->imagecoll.images.back().metadata["Modality"] = Modality;
 
