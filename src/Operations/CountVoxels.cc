@@ -212,6 +212,7 @@ Drover CountVoxels(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::str
     std::mutex locker;
     long int count_inside = 0;
     long int count_outside = 0;
+    long int count_nan = 0;
     std::experimental::optional<std::string> PatientID;
 
     auto IAs_all = All_IAs( DICOM_data );
@@ -258,11 +259,12 @@ Drover CountVoxels(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::str
 
         ud.f_bounded = [&](long int, long int, long int chan, std::reference_wrapper<planar_image<float,double>>, float &val) {
             if( (Channel < 0) || (Channel == chan) ){
-                if(isininc(Lower, val, Upper)){
-                    std::lock_guard<std::mutex> lock(locker);
+                std::lock_guard<std::mutex> lock(locker);
+                if(!std::isfinite(val)){
+                    ++count_nan;
+                }else if(isininc(Lower, val, Upper)){
                     ++count_inside;
                 }else{
-                    std::lock_guard<std::mutex> lock(locker);
                     ++count_outside;
                 }
             }
@@ -292,17 +294,26 @@ Drover CountVoxels(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::str
                << "Voxels within range (rel),"
                << "Voxels outside of range (abs),"
                << "Voxels outside of range (rel),"
+               << "NaN voxels (abs),"
+               << "NaN voxels (rel),"
                << "Total number of voxels considered,"
                << "User comment"
                << std::endl;
 
+        const auto count_all = count_inside + count_outside + count_nan;
+
         std::stringstream body;
         body << PatientID.value_or("Unknown") << ","
              << count_inside << ","
-             << (100.0 * static_cast<double>(count_inside) / static_cast<double>(count_inside + count_outside)) << "%,"
+             << (100.0 * static_cast<double>(count_inside) / static_cast<double>(count_all)) << "%,"
+
              << count_outside << ","
-             << (100.0 * static_cast<double>(count_outside) / static_cast<double>(count_inside + count_outside)) << "%,"
-             << (count_inside + count_outside) << ","
+             << (100.0 * static_cast<double>(count_outside) / static_cast<double>(count_all)) << "%,"
+
+             << count_nan << ","
+             << (100.0 * static_cast<double>(count_nan) / static_cast<double>(count_all)) << "%,"
+
+             << count_all << ","
              << UserComment.value_or("")
              << std::endl;
 
