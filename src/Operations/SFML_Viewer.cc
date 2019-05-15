@@ -426,6 +426,75 @@ Drover SFML_Viewer( Drover DICOM_data,
     scale_sprite_to_fill_screen(window,disp_img_it,disp_img_texture_sprite);
 
 
+    // Routine for converting the current mouse position to a position in the display image's frame, if possible.
+    struct Mouse_Positions {
+        // SFML-provided window position.
+        bool window_pos_valid = false;
+        vec2<long int> window_pos; // = vec2<long int>(-1, -1);
+
+        // Clamped image position in the image coordinate system (as fractional row and column numbers), iff the mouse
+        // is hovering over an image. These are useful for in-plane voxel value interpolation.
+        bool clamped_image_pos_valid = false;
+        vec2<float> clamped_image_pos; // = vec2<float>(std::numeric_limits<float>::quiet_NaN(),
+                                       //             std::numeric_limits<float>::quiet_NaN());
+
+        // Image positions in the image coordinate system (as pixel row and column numbers), iff the mouse is hovering
+        // over an image. These are useful for querying voxel values.
+        bool pixel_image_pos_valid = false;
+        vec2<long int> pixel_image_pos; // = vec2<long int>(-1, -1);
+
+        // DICOM position of the mouse, assuming the mouse lies in the image plane.
+        bool mouse_DICOM_pos_valid = false;
+        vec3<double> mouse_DICOM_pos;
+
+        // DICOM position of the voxel being hovered over, assuming the mouse lies in the image plane.
+        bool voxel_DICOM_pos_valid = false;
+        vec3<double> voxel_DICOM_pos;
+
+    };
+
+
+    // Routine for printing current mouse pixel and DICOM coordinates.
+    // Also samples the voxel value underneath the mouse, if applicable.
+    const auto Update_Mouse_Coords_Voxel_Sample = [&](void) -> void {                
+        const sf::Vector2i MousePos = sf::Mouse::getPosition(window);
+
+        cursortext.setPosition(MousePos.x, MousePos.y);
+        smallcirc.setPosition(MousePos.x - smallcirc.getRadius(),
+                              MousePos.y - smallcirc.getRadius());
+
+        //Display info at the cursor about which image pixel we are on, pixel intensity.
+        sf::Vector2f WorldPos = window.mapPixelToCoords(MousePos);
+        sf::FloatRect DispImgBBox = disp_img_texture_sprite.second.getGlobalBounds();
+        if(DispImgBBox.contains(WorldPos)){
+            //Assuming the image is not rotated or skewed (though possibly scaled), determine which image pixel
+            // we are hovering over.
+            const auto clamped_col_as_f = fabs(WorldPos.x - DispImgBBox.left)/(DispImgBBox.width);
+            const auto clamped_row_as_f = fabs(DispImgBBox.top - WorldPos.y )/(DispImgBBox.height);
+
+            const auto img_w_h = disp_img_texture_sprite.first.getSize();
+            const auto col_as_u = static_cast<long int>(clamped_col_as_f * static_cast<float>(img_w_h.x));
+            const auto row_as_u = static_cast<long int>(clamped_row_as_f * static_cast<float>(img_w_h.y));
+
+            //FUNCINFO("Suspected updated row, col = " << row_as_u << ", " << col_as_u);
+            const auto pix_val = disp_img_it->value(row_as_u,col_as_u,0);
+            std::stringstream ss;
+            ss << "(r,c)=(" << row_as_u << "," << col_as_u << ") -- " << pix_val;
+            ss << "    (DICOM Position)=" << disp_img_it->position(row_as_u,col_as_u);
+            cursortext.setString(ss.str());
+            BLcornertextss.str(""); //Clear stringstream.
+            BLcornertextss << ss.str();
+        }else{
+            cursortext.setString("");
+            BLcornertextss.str(""); //Clear stringstream.
+        }
+        return;
+    };
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////  Main loop  ///////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////
+
     //Run until the window is closed or the user wishes to exit.
     while(window.isOpen()){
         BRcornertextss.str(""); //Clear stringstream.
@@ -1179,6 +1248,8 @@ Drover SFML_Viewer( Drover DICOM_data,
                         window.setTitle("DICOMautomaton IV: <no description available>");
                     }
 
+                    Update_Mouse_Coords_Voxel_Sample();
+
                 //Advance to the next/previous display image in the current Image_Array.
                 }else if( (thechar == 'n') || (thechar == 'p') ){
                     if(thechar == 'n'){
@@ -1219,6 +1290,8 @@ Drover SFML_Viewer( Drover DICOM_data,
 
                     //Scale the image to fill the available space.
                     scale_sprite_to_fill_screen(window,disp_img_it,disp_img_texture_sprite);
+
+                    Update_Mouse_Coords_Voxel_Sample();
 
                 //Sample pixels from an external image into the current frame.
                 }else if( thechar == 'f' ){
@@ -1286,6 +1359,7 @@ Drover SFML_Viewer( Drover DICOM_data,
                         //Scale the image to fill the available space.
                         scale_sprite_to_fill_screen(window,disp_img_it,disp_img_texture_sprite);
 
+                        Update_Mouse_Coords_Voxel_Sample();
                     }while(false);
 
                 //Flood the current image with a uniform pixel intensity.
@@ -1316,6 +1390,8 @@ Drover SFML_Viewer( Drover DICOM_data,
  
                     //Scale the image to fill the available space.
                     scale_sprite_to_fill_screen(window,disp_img_it,disp_img_texture_sprite);
+
+                    Update_Mouse_Coords_Voxel_Sample();
 
                 //Step to the next/previous image which spatially overlaps with the current display image.
                 }else if( (thechar == '-') || (thechar == '+') || (thechar == '_') || (thechar == '=') ){
@@ -1371,11 +1447,14 @@ Drover SFML_Viewer( Drover DICOM_data,
                     //Scale the image to fill the available space.
                     scale_sprite_to_fill_screen(window,disp_img_it,disp_img_texture_sprite);
 
+                    Update_Mouse_Coords_Voxel_Sample();
 
                 //Reset the image scale to be pixel-for-pixel what is seen on screen. (Unless there is a view
                 // that has some transformation over on-screen objects.)
                 }else if( (thechar == 'l') || (thechar == 'L')){
                     disp_img_texture_sprite.second.setScale(1.0f,1.0f);
+
+                    Update_Mouse_Coords_Voxel_Sample();
 
                 //Toggle showing metadata tags that are identical to the neighbouring image's metadata tags.
                 }else if( thechar == 'u' ){
@@ -1641,39 +1720,7 @@ Drover SFML_Viewer( Drover DICOM_data,
             }else if(window.hasFocus() && (event.type == sf::Event::MouseButtonReleased)){
 
             }else if(window.hasFocus() && (event.type == sf::Event::MouseMoved)){
-                cursortext.setPosition(event.mouseMove.x,event.mouseMove.y);
-                smallcirc.setPosition(event.mouseMove.x - smallcirc.getRadius(),
-                                      event.mouseMove.y - smallcirc.getRadius());
-
-                //Print the world coordinates to the console.
-                sf::Vector2f worldPos = window.mapPixelToCoords(sf::Vector2i(event.mouseMove.x,event.mouseMove.y));
-
-                //Display info at the cursor about which image pixel we are on, pixel intensity.
-                sf::Vector2f ClickWorldPos = window.mapPixelToCoords(sf::Vector2i(event.mouseMove.x,event.mouseMove.y));
-                sf::FloatRect DispImgBBox = disp_img_texture_sprite.second.getGlobalBounds();
-                if(DispImgBBox.contains(ClickWorldPos)){
-                    //Assuming the image is not rotated or skewed (though possibly scaled), determine which image pixel
-                    // we are hovering over.
-                    const auto clamped_col_as_f = fabs(ClickWorldPos.x - DispImgBBox.left)/(DispImgBBox.width);
-                    const auto clamped_row_as_f = fabs(DispImgBBox.top - ClickWorldPos.y )/(DispImgBBox.height);
-
-                    const auto img_w_h = disp_img_texture_sprite.first.getSize();
-                    const auto col_as_u = static_cast<long int>(clamped_col_as_f * static_cast<float>(img_w_h.x));
-                    const auto row_as_u = static_cast<long int>(clamped_row_as_f * static_cast<float>(img_w_h.y));
-
-                    //FUNCINFO("Suspected updated row, col = " << row_as_u << ", " << col_as_u);
-                    const auto pix_val = disp_img_it->value(row_as_u,col_as_u,0);
-                    std::stringstream ss;
-                    ss << "(r,c)=(" << row_as_u << "," << col_as_u << ") -- " << pix_val;
-                    ss << "    (DICOM Position)=" << disp_img_it->position(row_as_u,col_as_u);
-                    cursortext.setString(ss.str());
-                    BLcornertextss.str(""); //Clear stringstream.
-                    BLcornertextss << ss.str();
-                }else{
-                    cursortext.setString("");
-                    BLcornertextss.str(""); //Clear stringstream.
-                }
-
+                Update_Mouse_Coords_Voxel_Sample();
 
             }else if(event.type == sf::Event::Resized){
                 sf::View view;
