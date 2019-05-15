@@ -1,4 +1,4 @@
-//DICOMautomaton_Dispatcher.cc - A part of DICOMautomaton 2016. Written by hal clark.
+//DICOMautomaton_Dispatcher.cc - A part of DICOMautomaton 2019. Written by hal clark.
 //
 // This program provides a standard entry-point into some DICOMautomaton analysis routines.
 //
@@ -17,18 +17,22 @@
 #include <cstdlib>            //Needed for exit() calls.
 #include <utility>            //Needed for std::pair.
 
-#include "Boost_Serialization_File_Loader.h"
-#include "DICOM_File_Loader.h"
-#include "Documentation.h"
-#include "FITS_File_Loader.h"
-#include "XYZ_File_Loader.h"
-#include "Operation_Dispatcher.h"
-#include "PACS_Loader.h"
-#include "Structs.h"
 #include "YgorArguments.h"    //Needed for ArgumentHandler class.
 #include "YgorFilesDirs.h"    //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
+
+#include "Structs.h"
+
+#include "Documentation.h"
+#include "PACS_Loader.h"
+#include "File_Loader.h"
+//#include "Boost_Serialization_File_Loader.h"
+//#include "DICOM_File_Loader.h"
+//#include "FITS_File_Loader.h"
+//#include "XYZ_File_Loader.h"
+
+#include "Operation_Dispatcher.h"
 
 
 int main(int argc, char* argv[]){
@@ -290,40 +294,9 @@ int main(int argc, char* argv[]){
     }
 
     //Standalone file loading.
-
-    //Standalone file loading: Boost.Serialization archives.
-    if(!StandaloneFilesDirsReachable.empty()
-    && !Load_From_Boost_Serialization_Files( DICOM_data, InvocationMetadata, FilenameLex,
-                                             StandaloneFilesDirsReachable )){
-        FUNCERR("Failed to load Boost.Serialization archive");
-    }
-
-    //Standalone file loading: DICOM files.
-    if(!StandaloneFilesDirsReachable.empty()
-    && !Load_From_DICOM_Files( DICOM_data, InvocationMetadata, FilenameLex,
-                               StandaloneFilesDirsReachable )){
-        FUNCERR("Failed to load DICOM file");
-    }
-
-    //Standalone file loading: FITS files.
-    if(!StandaloneFilesDirsReachable.empty()
-    && !Load_From_FITS_Files( DICOM_data, InvocationMetadata, FilenameLex,
-                               StandaloneFilesDirsReachable )){
-        FUNCERR("Failed to load FITS file");
-    }
-
-    //Standalone file loading: XYZ files.
-    if(!StandaloneFilesDirsReachable.empty()
-    && !Load_From_XYZ_Files( DICOM_data, InvocationMetadata, FilenameLex,
-                               StandaloneFilesDirsReachable )){
-        FUNCERR("Failed to load XYZ file");
-    }
-
-    //Other loaders ...
-
-    //If any standalone files remain, they cannot be loaded.
-    if(!StandaloneFilesDirsReachable.empty()){
-        FUNCERR("Unable to load file " << StandaloneFilesDirsReachable.front() << ". Refusing to continue");
+    if(!Load_Files(DICOM_data, InvocationMetadata, FilenameLex, StandaloneFilesDirsReachable)){
+        //FUNCERR("Unable to load file " << StandaloneFilesDirsReachable.front() << ". Refusing to continue");
+        FUNCERR("File loading unsuccessful. Refusing to continue"); // TODO: provide better diagnostic here.
     }
 
     //============================================= Dispatch to Analyses =============================================

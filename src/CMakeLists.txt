@@ -88,6 +88,13 @@ set_target_properties(Contour_Collection_Estimates_obj PROPERTIES
     POSITION_INDEPENDENT_CODE TRUE
 )
 
+add_library(File_Loader_obj OBJECT
+    File_Loader.cc  
+)
+set_target_properties(File_Loader_obj PROPERTIES
+    POSITION_INDEPENDENT_CODE TRUE
+)
+
 add_library(FITS_File_Loader_obj OBJECT
     FITS_File_Loader.cc  
 )
@@ -289,6 +296,7 @@ add_executable (dicomautomaton_dispatcher
     $<TARGET_OBJECTS:Regex_Selectors_obj>
 
     $<TARGET_OBJECTS:PACS_Loader_obj>
+    $<TARGET_OBJECTS:File_Loader_obj>
     $<TARGET_OBJECTS:Boost_Serialization_File_Loader_obj>
     $<TARGET_OBJECTS:DICOM_File_Loader_obj>
     $<TARGET_OBJECTS:FITS_File_Loader_obj>
@@ -349,6 +357,7 @@ add_executable(dicomautomaton_webserver
     $<TARGET_OBJECTS:Regex_Selectors_obj>
 
     $<TARGET_OBJECTS:PACS_Loader_obj>
+    $<TARGET_OBJECTS:File_Loader_obj>
     $<TARGET_OBJECTS:Boost_Serialization_File_Loader_obj>
     $<TARGET_OBJECTS:DICOM_File_Loader_obj>
     $<TARGET_OBJECTS:FITS_File_Loader_obj>
