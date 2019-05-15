@@ -82,6 +82,7 @@ add_library(Operations_objs OBJECT
     ImprintImages.cc
     InterpolateSlices.cc
     IsolatedVoxelFilter.cc
+    LoadFiles.cc
     LogScale.cc
     MaxMinPixels.cc
     MeldDose.cc

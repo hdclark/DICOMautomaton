@@ -1607,7 +1607,9 @@ void Drover::Consume(std::list<std::shared_ptr<Point_Cloud>> in){
 }
 
 void Drover::Consume(Drover in){
-    this->Concatenate(in);
+    this->Consume(in.contour_data);
+    this->Consume(in.image_data);
+    this->Consume(in.point_data);
     return;
 }
 
