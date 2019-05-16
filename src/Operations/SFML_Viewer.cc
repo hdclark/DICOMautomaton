@@ -428,9 +428,13 @@ Drover SFML_Viewer( Drover DICOM_data,
 
     // Routine for converting the current mouse position to a position in the display image's frame, if possible.
     struct Mouse_Positions {
-        // SFML-provided window position.
+        // SFML-provided window pixel position.
         bool window_pos_valid = false;
         vec2<long int> window_pos; // = vec2<long int>(-1, -1);
+
+        // OpenGL (2D) 'world' coordinates.
+        bool world_pos_valid = false;
+        vec2<float> world_pos;
 
         // Clamped image position in the image coordinate system (as fractional row and column numbers), iff the mouse
         // is hovering over an image. These are useful for in-plane voxel value interpolation.
@@ -447,49 +451,122 @@ Drover SFML_Viewer( Drover DICOM_data,
         bool mouse_DICOM_pos_valid = false;
         vec3<double> mouse_DICOM_pos;
 
-        // DICOM position of the voxel being hovered over, assuming the mouse lies in the image plane.
+        // DICOM position of the centre of the voxel being hovered over, assuming the mouse lies in the image plane.
         bool voxel_DICOM_pos_valid = false;
         vec3<double> voxel_DICOM_pos;
-
     };
 
+    // Convert from SFML mouse coordinates to DICOM coordinates using the current display image.
+    // 
+    // Not all conversions will be possible, so verify each set of coordinates are available prior to using them.
+    // However, coordinates are converted sequentially, so if a later coordinate pair are valid then all preceeding
+    // coordinate pairs will also be valid.
+    //
+    // Note: This routine assumes the image is neither rotated nor skewed. It will handle scaled and offset (i.e.,
+    // translated) images though.
+    const auto Convert_Mouse_Coords = [&](void) -> Mouse_Positions {
+        Mouse_Positions out;
+
+        // Get the *realtime* current mouse coordinates.
+        const sf::Vector2i MousePosWindow = sf::Mouse::getPosition(window);
+        out.window_pos.x = MousePosWindow.x;
+        out.window_pos.y = MousePosWindow.y;
+        out.window_pos_valid = true;
+
+        // Convert to SFML/OpenGL "World" coordinates. 
+        sf::Vector2f MousePosWorld = window.mapPixelToCoords(MousePosWindow);
+        out.world_pos.x = MousePosWorld.x;
+        out.world_pos.y = MousePosWorld.y;
+        out.world_pos_valid = true;
+
+        // Check if the mouse is within the image bounding box. We can only proceed if it is.
+        sf::FloatRect ImgBBox = disp_img_texture_sprite.second.getGlobalBounds();
+        if(!ImgBBox.contains(MousePosWorld)) return out;
+
+        // Determine which image pixel we are hovering over.
+        const auto clamped_row_as_f = fabs(ImgBBox.top - MousePosWorld.y )/ImgBBox.height;
+        const auto clamped_col_as_f = fabs(MousePosWorld.x - ImgBBox.left)/ImgBBox.width;
+        out.clamped_image_pos.x = clamped_row_as_f;
+        out.clamped_image_pos.y = clamped_col_as_f;
+        out.clamped_image_pos_valid = true;
+
+        const auto img_w_h = disp_img_texture_sprite.first.getSize();
+        const auto col_as_u = static_cast<uint32_t>(clamped_col_as_f * static_cast<float>(img_w_h.x));
+        const auto row_as_u = static_cast<uint32_t>(clamped_row_as_f * static_cast<float>(img_w_h.y));
+        out.pixel_image_pos.x = row_as_u;
+        out.pixel_image_pos.y = col_as_u;
+        out.pixel_image_pos_valid = true;
+
+        // Get the DICOM coordinates at the centre of the voxel.
+        try{
+            const auto pix_pos = disp_img_it->position(row_as_u,col_as_u);
+            out.mouse_DICOM_pos = pix_pos;
+            out.mouse_DICOM_pos_valid = true;
+        }catch(const std::exception &){
+            return out;
+        }
+
+        // Get the DICOM coordinates at the tip of the mouse.
+        const auto img_dicom_width = disp_img_it->pxl_dx * disp_img_it->rows;
+        const auto img_dicom_height = disp_img_it->pxl_dy * disp_img_it->columns; 
+        const auto img_top_left = disp_img_it->anchor + disp_img_it->offset
+                                - disp_img_it->row_unit * disp_img_it->pxl_dx * 0.5f
+                                - disp_img_it->col_unit * disp_img_it->pxl_dy * 0.5f;
+        //const auto img_top_right = img_top_left + disp_img_it->row_unit * img_dicom_width;
+        //const auto img_bottom_left = img_top_left + disp_img_it->col_unit * img_dicom_height;
+
+        const auto dicom_pos = img_top_left 
+                             + disp_img_it->row_unit * img_dicom_width  * clamped_row_as_f
+                             + disp_img_it->col_unit * img_dicom_height * clamped_col_as_f;
+        out.voxel_DICOM_pos = dicom_pos;
+        out.voxel_DICOM_pos_valid = true;
+
+        return out;
+    };
 
     // Routine for printing current mouse pixel and DICOM coordinates.
     // Also samples the voxel value underneath the mouse, if applicable.
     const auto Update_Mouse_Coords_Voxel_Sample = [&](void) -> void {                
-        const sf::Vector2i MousePos = sf::Mouse::getPosition(window);
+        auto mc = Convert_Mouse_Coords();
 
-        cursortext.setPosition(MousePos.x, MousePos.y);
-        smallcirc.setPosition(MousePos.x - smallcirc.getRadius(),
-                              MousePos.y - smallcirc.getRadius());
+        // Position the text elements.
+        if(mc.window_pos_valid){
+            cursortext.setPosition(mc.window_pos.x, mc.window_pos.y);
+            smallcirc.setPosition(mc.window_pos.x - smallcirc.getRadius(),
+                                  mc.window_pos.y - smallcirc.getRadius());
+        }
 
-        //Display info at the cursor about which image pixel we are on, pixel intensity.
-        sf::Vector2f WorldPos = window.mapPixelToCoords(MousePos);
-        sf::FloatRect DispImgBBox = disp_img_texture_sprite.second.getGlobalBounds();
-        if(DispImgBBox.contains(WorldPos)){
-            //Assuming the image is not rotated or skewed (though possibly scaled), determine which image pixel
-            // we are hovering over.
-            const auto clamped_col_as_f = fabs(WorldPos.x - DispImgBBox.left)/(DispImgBBox.width);
-            const auto clamped_row_as_f = fabs(DispImgBBox.top - WorldPos.y )/(DispImgBBox.height);
+        cursortext.setString("");
+        BLcornertextss.str(""); //Clear stringstream.
 
-            const auto img_w_h = disp_img_texture_sprite.first.getSize();
-            const auto col_as_u = static_cast<long int>(clamped_col_as_f * static_cast<float>(img_w_h.x));
-            const auto row_as_u = static_cast<long int>(clamped_row_as_f * static_cast<float>(img_w_h.y));
-
-            //FUNCINFO("Suspected updated row, col = " << row_as_u << ", " << col_as_u);
-            const auto pix_val = disp_img_it->value(row_as_u,col_as_u,0);
+        //Display pixel intensity and DICOM position at the mouse for the image being hovered over.
+        if(mc.mouse_DICOM_pos_valid){
+            const auto pix_val = disp_img_it->value(mc.pixel_image_pos.x, mc.pixel_image_pos.y, 0);
             std::stringstream ss;
-            ss << "(r,c)=(" << row_as_u << "," << col_as_u << ") -- " << pix_val;
-            ss << "    (DICOM Position)=" << disp_img_it->position(row_as_u,col_as_u);
+            ss << "(r,c)=(" << mc.pixel_image_pos.x << "," << mc.pixel_image_pos.y << ") -- " << pix_val;
+            ss << "    (DICOM Position)=" << mc.mouse_DICOM_pos;
             cursortext.setString(ss.str());
-            BLcornertextss.str(""); //Clear stringstream.
             BLcornertextss << ss.str();
-        }else{
-            cursortext.setString("");
-            BLcornertextss.str(""); //Clear stringstream.
         }
         return;
     };
+
+/*
+        ///////////////////////////////////////
+        // Example usage
+        auto mc = Convert_Mouse_Coords();
+
+        if(mc.window_pos_valid){
+            // ...
+        }
+
+        //Display pixel intensity and DICOM position at the mouse for the image being hovered over.
+        if(mc.mouse_DICOM_pos_valid){
+            const auto pix_val = disp_img_it->value(mc.pixel_image_pos.x, mc.pixel_image_pos.y, 0);
+            // ...
+        }
+        ///////////////////////////////////////
+*/
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////  Main loop  ///////////////////////////////////////////////
@@ -752,27 +829,14 @@ Drover SFML_Viewer( Drover DICOM_data,
                 //Given the current mouse coordinates, dump pixel intensity profiles along the current row and column.
                 //
                 }else if( (thechar == 'r') || (thechar == 'c') ){
-                    //Get the current mouse coordinates.
-                    const sf::Vector2i curr_m_pos = sf::Mouse::getPosition(window);
-
-                    //Convert to SFML/OpenGL "World" coordinates. 
-                    sf::Vector2f curr_m_pos_w = window.mapPixelToCoords(curr_m_pos);
-
-                    //Check if the mouse is within the image bounding box. We can only proceed if it is.
-                    sf::FloatRect disp_img_bbox = disp_img_texture_sprite.second.getGlobalBounds();
-                    if(!disp_img_bbox.contains(curr_m_pos_w)){
+                    auto mc = Convert_Mouse_Coords();
+                    if(!mc.pixel_image_pos_valid){
                         FUNCWARN("The mouse is not currently hovering over the image. Cannot dump row/column profiles");
                         break;
                     }
+                    const auto row_as_u = mc.pixel_image_pos.x;
+                    const auto col_as_u = mc.pixel_image_pos.y;
 
-                    //Assuming the image is not rotated or skewed (though possibly scaled), determine which image pixel
-                    // we are hovering over.
-                    const auto clamped_col_as_f = fabs(curr_m_pos_w.x - disp_img_bbox.left)/disp_img_bbox.width;
-                    const auto clamped_row_as_f = fabs(disp_img_bbox.top - curr_m_pos_w.y )/disp_img_bbox.height;
-
-                    const auto img_w_h = disp_img_texture_sprite.first.getSize();
-                    const auto col_as_u = static_cast<long int>(clamped_col_as_f * static_cast<float>(img_w_h.x));
-                    const auto row_as_u = static_cast<long int>(clamped_row_as_f * static_cast<float>(img_w_h.y));
                     FUNCINFO("Dumping row and column profiles for row,col = " << row_as_u << "," << col_as_u);
 
                     samples_1D<double> row_profile, col_profile;
@@ -831,31 +895,15 @@ Drover SFML_Viewer( Drover DICOM_data,
                 // So this routine dumps a time course at the mouse pixel.
                 //
                 }else if( thechar == 't' ){
-                    //Get the *realtime* current mouse coordinates.
-                    const sf::Vector2i curr_m_pos = sf::Mouse::getPosition(window);
-
-                    //Convert to SFML/OpenGL "World" coordinates. 
-                    sf::Vector2f curr_m_pos_w = window.mapPixelToCoords(curr_m_pos);
-
-                    //Check if the mouse is within the image bounding box. We can only proceed if it is.
-                    sf::FloatRect disp_img_bbox = disp_img_texture_sprite.second.getGlobalBounds();
-                    if(!disp_img_bbox.contains(curr_m_pos_w)){
+                    auto mc = Convert_Mouse_Coords();
+                    if(!mc.voxel_DICOM_pos_valid){
                         FUNCWARN("The mouse is not currently hovering over the image. Cannot dump time course");
                         break;
                     }
-
-                    //Assuming the image is not rotated or skewed (though possibly scaled), determine which image pixel
-                    // we are hovering over.
-                    const auto clamped_col_as_f = fabs(curr_m_pos_w.x - disp_img_bbox.left)/disp_img_bbox.width;
-                    const auto clamped_row_as_f = fabs(disp_img_bbox.top - curr_m_pos_w.y )/disp_img_bbox.height;
-
-                    const auto img_w_h = disp_img_texture_sprite.first.getSize();
-                    const auto col_as_u = static_cast<uint32_t>(clamped_col_as_f * static_cast<float>(img_w_h.x));
-                    const auto row_as_u = static_cast<uint32_t>(clamped_row_as_f * static_cast<float>(img_w_h.y));
+                    const auto row_as_u = mc.pixel_image_pos.x;
+                    const auto col_as_u = mc.pixel_image_pos.y;
+                    const auto pix_pos = mc.voxel_DICOM_pos;
                     FUNCINFO("Dumping time course for row,col = " << row_as_u << "," << col_as_u);
-
-                    //Get the YgorImage (DICOM) pixel coordinates.
-                    const auto pix_pos = disp_img_it->position(row_as_u,col_as_u);
 
                     //Get a list of images which spatially overlap this point. Order should be maintained.
                     const auto ortho = disp_img_it->row_unit.Cross( disp_img_it->col_unit ).unit();
@@ -908,30 +956,15 @@ Drover SFML_Viewer( Drover DICOM_data,
                 // other images. Also show a time course of the raw data for comparison with the model fit.
                 //
                 }else if( (thechar == 'M') ){
-                    //Get the *realtime* current mouse coordinates.
-                    const sf::Vector2i curr_m_pos = sf::Mouse::getPosition(window);
-
-                    //Convert to SFML/OpenGL "World" coordinates. 
-                    sf::Vector2f curr_m_pos_w = window.mapPixelToCoords(curr_m_pos);
-
-                    //Check if the mouse is within the image bounding box. We can only proceed if it is.
-                    sf::FloatRect disp_img_bbox = disp_img_texture_sprite.second.getGlobalBounds();
-                    if(!disp_img_bbox.contains(curr_m_pos_w)){
-                        FUNCWARN("The mouse is not currently hovering over the image. Cannot dump time course");
+                    auto mc = Convert_Mouse_Coords();
+                    if(!mc.voxel_DICOM_pos_valid){
+                        FUNCWARN("The mouse is not currently hovering over the image. Cannot compute perfusion model");
                         break;
                     }
+                    const auto row_as_u = mc.pixel_image_pos.x;
+                    const auto col_as_u = mc.pixel_image_pos.y;
+                    const auto pix_pos = mc.voxel_DICOM_pos;
 
-                    //Assuming the image is not rotated or skewed (though possibly scaled), determine which image pixel
-                    // we are hovering over.
-                    const auto clamped_col_as_f = fabs(curr_m_pos_w.x - disp_img_bbox.left)/disp_img_bbox.width;
-                    const auto clamped_row_as_f = fabs(disp_img_bbox.top - curr_m_pos_w.y )/disp_img_bbox.height;
-
-                    const auto img_w_h = disp_img_texture_sprite.first.getSize();
-                    const auto col_as_u = static_cast<uint32_t>(clamped_col_as_f * static_cast<float>(img_w_h.x));
-                    const auto row_as_u = static_cast<uint32_t>(clamped_row_as_f * static_cast<float>(img_w_h.y));
-
-                    //Get the YgorImage (DICOM) pixel coordinates.
-                    const auto pix_pos = disp_img_it->position(row_as_u,col_as_u);
                     const auto ortho = disp_img_it->row_unit.Cross( disp_img_it->col_unit ).unit();
                     const std::list<vec3<double>> points = { pix_pos, pix_pos + ortho * disp_img_it->pxl_dz * 0.25,
                                                                       pix_pos - ortho * disp_img_it->pxl_dz * 0.25 };
@@ -1108,30 +1141,15 @@ Drover SFML_Viewer( Drover DICOM_data,
                 //       coordinates you don't want.
                 //
                 }else if( (thechar == 'a') || (thechar == 'A') ){
-                    //Get the *realtime* current mouse coordinates.
-                    const sf::Vector2i curr_m_pos = sf::Mouse::getPosition(window);
-
-                    //Convert to SFML/OpenGL "World" coordinates. 
-                    sf::Vector2f curr_m_pos_w = window.mapPixelToCoords(curr_m_pos);
-
-                    //Check if the mouse is within the image bounding box. We can only proceed if it is.
-                    sf::FloatRect disp_img_bbox = disp_img_texture_sprite.second.getGlobalBounds();
-                    if(!disp_img_bbox.contains(curr_m_pos_w)){
-                        FUNCWARN("The mouse is not currently hovering over the image. Cannot dump time course");
+                    auto mc = Convert_Mouse_Coords();
+                    if(!mc.voxel_DICOM_pos_valid){
+                        FUNCWARN("The mouse is not currently hovering over the image. Cannot dump overlapping pixel values");
                         break;
                     }
+                    const auto row_as_u = mc.pixel_image_pos.x;
+                    const auto col_as_u = mc.pixel_image_pos.y;
+                    const auto pix_pos = mc.voxel_DICOM_pos;
 
-                    //Assuming the image is not rotated or skewed (though possibly scaled), determine which image pixel
-                    // we are hovering over.
-                    const auto clamped_col_as_f = fabs(curr_m_pos_w.x - disp_img_bbox.left)/disp_img_bbox.width;
-                    const auto clamped_row_as_f = fabs(disp_img_bbox.top - curr_m_pos_w.y )/disp_img_bbox.height;
-
-                    const auto img_w_h = disp_img_texture_sprite.first.getSize();
-                    const auto col_as_u = static_cast<uint32_t>(clamped_col_as_f * static_cast<float>(img_w_h.x));
-                    const auto row_as_u = static_cast<uint32_t>(clamped_row_as_f * static_cast<float>(img_w_h.y));
-
-                    //Get the YgorImage (DICOM) pixel coordinates.
-                    const auto pix_pos = disp_img_it->position(row_as_u,col_as_u);
                     const auto ortho = disp_img_it->row_unit.Cross( disp_img_it->col_unit ).unit();
                     const std::list<vec3<double>> points = { pix_pos, pix_pos + ortho * disp_img_it->pxl_dz * 0.25,
                                                                       pix_pos - ortho * disp_img_it->pxl_dz * 0.25 };
@@ -1684,37 +1702,29 @@ Drover SFML_Viewer( Drover DICOM_data,
             }else if(window.hasFocus() && (event.type == sf::Event::MouseButtonPressed)){
 
                 if(event.mouseButton.button == sf::Mouse::Left){
-                    sf::Vector2f ClickWorldPos = window.mapPixelToCoords(sf::Vector2i(event.mouseButton.x,event.mouseButton.y));
-                    sf::FloatRect DispImgBBox = disp_img_texture_sprite.second.getGlobalBounds();
-                    if(DispImgBBox.contains(ClickWorldPos)){
-                        // ---- Draw on the image where we have clicked ----
-                        //Assuming the image is not rotated or skewed (though possibly scaled), determine which image pixel
-                        // we are hovering over.
-                        const auto clamped_col_as_f = fabs(ClickWorldPos.x - DispImgBBox.left)/(DispImgBBox.width);
-                        const auto clamped_row_as_f = fabs(DispImgBBox.top - ClickWorldPos.y )/(DispImgBBox.height);
-
-                        const auto img_w_h = disp_img_texture_sprite.first.getSize();
-                        const auto col_as_u = static_cast<uint32_t>(clamped_col_as_f * static_cast<float>(img_w_h.x));
-                        const auto row_as_u = static_cast<uint32_t>(clamped_row_as_f * static_cast<float>(img_w_h.y));
-
-                        //FUNCINFO("Suspected updated row, col = " << row_as_u << ", " << col_as_u);                           
-                        sf::Uint8 newpixvals[4] = {255, 0, 0, 255};
-                        disp_img_texture_sprite.first.update(newpixvals,1,1,col_as_u,row_as_u);
-                        disp_img_texture_sprite.second.setTexture(disp_img_texture_sprite.first);
-
-                        const auto dicom_pos = disp_img_it->position(row_as_u, col_as_u); 
-                        auto FrameofReferenceUID = disp_img_it->GetMetadataValueAs<std::string>("FrameofReferenceUID");
-                        if(FrameofReferenceUID){
-                            //Record the point in the working contour buffer.
-                            contour_coll_shtl.contours.back().closed = true;
-                            contour_coll_shtl.contours.back().points.push_back( dicom_pos );
-                            contour_coll_shtl.contours.back().metadata["FrameofReferenceUID"] = FrameofReferenceUID.value();
-                        }else{
-                            FUNCWARN("Unable to find display image's FrameofReferenceUID. Cannot insert point in contour");
-
-                        }
+                    auto mc = Convert_Mouse_Coords();
+                    if(!mc.mouse_DICOM_pos_valid){
+                        FUNCWARN("The mouse is not currently hovering over the image. Cannot place contour vertex");
+                        break;
                     }
+                    const auto row_as_u = mc.pixel_image_pos.x;
+                    const auto col_as_u = mc.pixel_image_pos.y;
+                    const auto mouse_pos = mc.mouse_DICOM_pos;
 
+                    sf::Uint8 newpixvals[4] = {255, 0, 0, 255};
+                    disp_img_texture_sprite.first.update(newpixvals,1,1,col_as_u,row_as_u);
+                    disp_img_texture_sprite.second.setTexture(disp_img_texture_sprite.first);
+
+                    auto FrameofReferenceUID = disp_img_it->GetMetadataValueAs<std::string>("FrameofReferenceUID");
+                    if(FrameofReferenceUID){
+                        //Record the point in the working contour buffer.
+                        contour_coll_shtl.contours.back().closed = true;
+                        contour_coll_shtl.contours.back().points.push_back( mouse_pos );
+                        contour_coll_shtl.contours.back().metadata["FrameofReferenceUID"] = FrameofReferenceUID.value();
+                    }else{
+                        FUNCWARN("Unable to find display image's FrameofReferenceUID. Cannot insert point in contour");
+
+                    }
                 }
 
             }else if(window.hasFocus() && (event.type == sf::Event::MouseButtonReleased)){
@@ -2110,32 +2120,16 @@ Drover SFML_Viewer( Drover DICOM_data,
             plotwindow.clear(sf::Color::Black);
 
             // ---- Get time course data for the current pixel, if available ----
-
-            //Get the *realtime* current mouse coordinates.
-            const sf::Vector2i curr_m_pos = sf::Mouse::getPosition(window);
-
-            //Convert to SFML/OpenGL "World" coordinates. 
-            sf::Vector2f curr_m_pos_w = window.mapPixelToCoords(curr_m_pos);
-
-            //Check if the mouse is within the image bounding box. We can only proceed if it is.
-            sf::FloatRect disp_img_bbox = disp_img_texture_sprite.second.getGlobalBounds();
-            if(!disp_img_bbox.contains(curr_m_pos_w)){
-                //FUNCWARN("Mouse not over the image. Cannot dump time course");
+            auto mc = Convert_Mouse_Coords();
+            if(!mc.voxel_DICOM_pos_valid){
+                FUNCWARN("The mouse is not currently hovering over the image. Cannot place contour vertex");
                 break;
             }
-
-            //Assuming the image is not rotated or skewed (though possibly scaled), determine which image pixel
-            // we are hovering over.
-            const auto clamped_col_as_f = fabs(curr_m_pos_w.x - disp_img_bbox.left)/disp_img_bbox.width;
-            const auto clamped_row_as_f = fabs(disp_img_bbox.top - curr_m_pos_w.y )/disp_img_bbox.height;
-
-            const auto img_w_h = disp_img_texture_sprite.first.getSize();
-            const auto col_as_u = static_cast<uint32_t>(clamped_col_as_f * static_cast<float>(img_w_h.x));
-            const auto row_as_u = static_cast<uint32_t>(clamped_row_as_f * static_cast<float>(img_w_h.y));
-            //FUNCINFO("Dumping time course for row,col = " << row_as_u << "," << col_as_u);
-
-            //Get the YgorImage (DICOM) pixel coordinates.
-            const auto pix_pos = disp_img_it->position(row_as_u,col_as_u);
+            const auto row_as_u = mc.pixel_image_pos.x;
+            const auto col_as_u = mc.pixel_image_pos.y;
+            const auto pix_pos = mc.voxel_DICOM_pos;
+            const auto clamped_row_as_f = mc.clamped_image_pos.x;
+            const auto clamped_col_as_f = mc.clamped_image_pos.y;
 
             //Get a list of images which spatially overlap this point. Order should be maintained.
             const auto ortho = disp_img_it->row_unit.Cross( disp_img_it->col_unit ).unit();
