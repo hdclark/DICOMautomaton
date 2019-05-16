@@ -135,6 +135,9 @@ Drover SFML_Viewer( Drover DICOM_data,
     std::experimental::optional<double> custom_width;
     std::experimental::optional<double> custom_centre;
 
+    //A tagged point for measuring distance.
+    std::experimental::optional<vec3<double>> tagged_pos;
+
     //Flags for various things.
     bool DumpScreenshot = false; //One-shot instruction to dump a screenshot immediately after rendering.
     bool OnlyShowTagsDifferentToNeighbours = true;
@@ -593,7 +596,7 @@ Drover SFML_Viewer( Drover DICOM_data,
                             "\\t Commands: \\n"
                             "\\t\\t h,H \\t Display this help.\\n"
                             "\\t\\t x \\t\\t Toggle whether existing contours should be displayed.\\n"
-                            "\\t\\t m \\t\\t Invoke minetest to perform contouring for this slice.\\n"
+                            "\\t\\t m \\t\\t Place or remove an invisible marker at the current mouse position for distance measurement.\\n"
                             "\\t\\t d \\t\\t Dump the window contents as an image after the next render.\\n"
                             "\\t\\t D \\t\\t Dump raw pixels for all spatially overlapping images from the current array (e.g., time courses).\\n"
                             "\\t\\t i \\t\\t Dump the current image to file.\\n"
@@ -657,112 +660,22 @@ Drover SFML_Viewer( Drover DICOM_data,
                 }else if( thechar == 'x' ){
                     ShowExistingContours = !ShowExistingContours;
 
-                //Invoke minetest to perform contouring for this slice.
+                //Place or remove an invisible marker for measurement in the DICOM coordinate system.
                 }else if( thechar == 'm' ){
-                    try{
-                        //Step 0: Create a new contour buffer if needed.
-                        if(!contour_coll_shtl.contours.back().points.empty()){
-                            contour_coll_shtl.contours.emplace_back();
-                            contour_coll_shtl.contours.back().closed = true;
+                    // If a valid point exists, clear it.
+                    if(!tagged_pos){
+                        tagged_pos = {}; // Reset the optional.
+
+                    // If a valid point does not yet exist, try to tag the current mouse point.
+                    }else{
+                        auto mc = Convert_Mouse_Coords();
+                        if(mc.mouse_DICOM_pos_valid){
+                            const auto mouse_pos = mc.mouse_DICOM_pos;
+                            tagged_pos = mouse_pos;
+                        }else{
+                            FUNCWARN("Unable to place marker: mouse not hovering over an image");
                         }
-
-                        //Step 1: Write current image as a FITS file.
-                        //        We want the current window to be present too.
-                        disp_img_texture_sprite_t asprite;
-                        if(!load_img_texture_sprite(disp_img_it, asprite)){
-                            throw std::runtime_error("Unable to load image into sprite with window settings.");
-                        }
-                        planar_image<uint8_t,double> for_mt;
-                        for_mt.init_buffer(disp_img_it->rows, disp_img_it->columns, disp_img_it->channels);
-                        for_mt.init_spatial(disp_img_it->pxl_dx, disp_img_it->pxl_dy, disp_img_it->pxl_dz,
-                                            disp_img_it->anchor, disp_img_it->offset);
-                        for_mt.init_orientation(disp_img_it->row_unit, disp_img_it->col_unit);
-                        for_mt.fill_pixels(0);
- 
-                        sf::Image animage = asprite.first.copyToImage();
-                        for(auto i = 0; i < for_mt.columns; ++i){
-                            for(auto j = 0; j < for_mt.rows; ++j){
-                                const uint8_t rchnl = animage.getPixel(i,j).r;
-                                for_mt.reference(j,i,0) = rchnl;
-                            }
-                        }
-
-                        //Perform a pixel compression before writing to file.
-                        for(auto i = 0; i < for_mt.columns; ++i){
-                            for(auto j = 0; j < for_mt.rows; ++j){
-                                //const auto orig = for_mt.value(j,i,0) * 1.0;
-                                //const auto scaled = std::log(orig + 1.0) * 45.8; // Range: [0:254].
-                                //for_mt.reference(j,i,0) = static_cast<uint8_t>(scaled);
-
-                                const auto orig = for_mt.value(j,i,0) * 1.0;
-                                //const auto scaled = (1.0*orig/8.0) + (7.0*253.0/8.0); // Use only top 1/8 of voxels.
-                                const auto scaled = (1.0*orig/4.0) + (3.0*253.0/4.0); // Use only top 1/4 of voxels.
-                                //const auto scaled = (2.0*orig/5.0) + (3.0*253.0/5.0); // Use only top 2/5 of voxels.
-                                //const auto scaled = (2.0*orig/4.0) + (2.0*253.0/4.0); // Use only top 2/4 of voxels.
-                                //const auto scaled = (3.0*orig/4.0) + (1.0*253.0/4.0); // Use only top 3/4 of voxels.
-                                for_mt.reference(j,i,0) = static_cast<uint8_t>(scaled);
-                            }
-                        }
-
-                        const std::string shtl_file("/tmp/minetest_u8_in.fits");
-                        if(!WriteToFITS(for_mt,shtl_file)){
-                            throw std::runtime_error("Unable to write shuttle FITS file.");
-                        }
-
-                        //Step 2: Prepare minetest for faster/easier contouring.
-                        //        The following skeleton includes fast, fly, and noclip, and is positioned at
-                        //        the ~centre of the image looking slightly north.
-                        const std::string rs_res = Execute_Command_In_Pipe( "rsync -L --delete -az "
-                                " '/home/hal/Research/2016_ICCR_Voxel_Contouring/20160118-195048_minetest_world_T_skeleton/' "
-                                " '/home/hal/.minetest/' ");
-
-                        //Step 3: Invoke minetest.
-                        const std::string mt_res = Execute_Command_In_Pipe("minetest 2>&1");
-
-                        //Step 4: Parse the output looking for notable events.
-                        //        See journal notes for examples of these logs. Basically look for notation like (-123,45,234).
-                        std::vector<std::string> events = SplitStringToVector(mt_res, '\n', 'd');
-                        std::vector<std::string> relevant;
-                        for(auto &event : events){
-                            const auto pos = event.find(" singleplayer digs ");
-
-                            if(std::string::npos != pos){
-                                //FUNCINFO("Found relevant event: " << event);
-                                const auto l_B = GetFirstRegex(event, R"***(([-0-9]{1,3},[-0-9]{1,3},[-0-9]{1,3}))***");
-                                //FUNCINFO("Relevant part: " << l_B);
-                                relevant.push_back(l_B); // Should be like "179,-2,210".
-                            }
-                        }
-
-                        //Step 5: iff reasonable events detected, overwrite the existing slice's working contour.
-                        for(const auto &event : relevant){
-                            std::stringstream ss(event);
-                            long int l_row, l_col, l_height;
-                            char dummy;
-                            ss >> l_row >> dummy >> l_height >> dummy >> l_col;
-                            //FUNCINFO("Parsed (row,col) = (" << l_row << "," << l_col << ")");
-
-                            if( isininc(0,l_row,disp_img_it->rows - 1)
-                            &&  isininc(0,l_col,disp_img_it->columns - 1) ){
-                                const auto dicom_pos = disp_img_it->position(l_row, l_col);
-                                //FUNCINFO("Corresponding DICOM position: " << dicom_pos);
-                                auto FrameofReferenceUID = disp_img_it->GetMetadataValueAs<std::string>("FrameofReferenceUID");
-                                if(FrameofReferenceUID){
-                                    //Record the point in the working contour buffer.
-                                    contour_coll_shtl.contours.back().closed = true;
-                                    contour_coll_shtl.contours.back().points.push_back( dicom_pos );
-                                    contour_coll_shtl.contours.back().metadata["FrameofReferenceUID"] = FrameofReferenceUID.value();
-                                }else{
-                                    FUNCWARN("Unable to find display image's FrameofReferenceUID. Cannot insert point in contour");
-                                }
-                            }
-                        }
-
-
-                    }catch(const std::exception &e){
-                        FUNCWARN("Unable to contour via minetest: " << e.what());
                     }
-
 
                 //Set the flag for dumping the window contents as an image after the next render.
                 }else if( thechar == 'd' ){
@@ -1879,6 +1792,18 @@ Drover SFML_Viewer( Drover DICOM_data,
                    << "Custom c/w: " << custom_centre.value()
                    << " / " << custom_width.value();
                 BLcornertext.setString(ss.str());
+            }
+            if(tagged_pos){
+                auto mc = Convert_Mouse_Coords();
+                if(mc.mouse_DICOM_pos_valid){
+                    const auto mouse_pos = mc.mouse_DICOM_pos;
+
+                    const auto existing = BLcornertext.getString();
+                    std::stringstream ss;
+                    ss << existing.toAnsiString() << std::endl 
+                       << "Distance from " << tagged_pos.value() << ": " << tagged_pos.value().distance(mouse_pos);
+                    BLcornertext.setString(ss.str());
+                }
             }
 
             const auto item_bbox = BLcornertext.getGlobalBounds();
