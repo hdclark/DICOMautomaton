@@ -117,6 +117,7 @@
 #include "Operations/PurgeContours.h"
 #include "Operations/RankPixels.h"
 #include "Operations/ReduceNeighbourhood.h"
+#include "Operations/ScalePixels.h"
 #include "Operations/SFML_Viewer.h"
 #include "Operations/SeamContours.h"
 #include "Operations/SelectSlicesIntersectingROI.h"
@@ -246,6 +247,7 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["PurgeContours"] = std::make_pair(OpArgDocPurgeContours, PurgeContours);
     out["RankPixels"] = std::make_pair(OpArgDocRankPixels, RankPixels);
     out["ReduceNeighbourhood"] = std::make_pair(OpArgDocReduceNeighbourhood, ReduceNeighbourhood);
+    out["ScalePixels"] = std::make_pair(OpArgDocScalePixels, ScalePixels);
     out["SFML_Viewer"] = std::make_pair(OpArgDocSFML_Viewer, SFML_Viewer);
     out["SeamContours"] = std::make_pair(OpArgDocSeamContours, SeamContours);
     out["SelectSlicesIntersectingROI"] = std::make_pair(OpArgDocSelectSlicesIntersectingROI, SelectSlicesIntersectingROI);

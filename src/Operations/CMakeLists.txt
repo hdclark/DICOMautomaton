@@ -99,6 +99,7 @@ add_library(Operations_objs OBJECT
     PurgeContours.cc
     RankPixels.cc
     ReduceNeighbourhood.cc
+    ScalePixels.cc
     SFML_Viewer.cc
     SeamContours.cc
     SelectSlicesIntersectingROI.cc
