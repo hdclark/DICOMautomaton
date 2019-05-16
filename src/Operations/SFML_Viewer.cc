@@ -430,7 +430,8 @@ Drover SFML_Viewer( Drover DICOM_data,
     struct Mouse_Positions {
         // SFML-provided window pixel position.
         bool window_pos_valid = false;
-        vec2<long int> window_pos; // = vec2<long int>(-1, -1);
+        long int window_pos_row;
+        long int window_pos_col;
 
         // OpenGL (2D) 'world' coordinates.
         bool world_pos_valid = false;
@@ -445,7 +446,8 @@ Drover SFML_Viewer( Drover DICOM_data,
         // Image positions in the image coordinate system (as pixel row and column numbers), iff the mouse is hovering
         // over an image. These are useful for querying voxel values.
         bool pixel_image_pos_valid = false;
-        vec2<long int> pixel_image_pos; // = vec2<long int>(-1, -1);
+        long int pixel_image_pos_row;
+        long int pixel_image_pos_col;
 
         // DICOM position of the mouse, assuming the mouse lies in the image plane.
         bool mouse_DICOM_pos_valid = false;
@@ -469,8 +471,8 @@ Drover SFML_Viewer( Drover DICOM_data,
 
         // Get the *realtime* current mouse coordinates.
         const sf::Vector2i MousePosWindow = sf::Mouse::getPosition(window);
-        out.window_pos.x = MousePosWindow.x;
-        out.window_pos.y = MousePosWindow.y;
+        out.window_pos_row = MousePosWindow.x;
+        out.window_pos_col = MousePosWindow.y;
         out.window_pos_valid = true;
 
         // Convert to SFML/OpenGL "World" coordinates. 
@@ -493,8 +495,8 @@ Drover SFML_Viewer( Drover DICOM_data,
         const auto img_w_h = disp_img_texture_sprite.first.getSize();
         const auto col_as_u = static_cast<uint32_t>(clamped_col_as_f * static_cast<float>(img_w_h.x));
         const auto row_as_u = static_cast<uint32_t>(clamped_row_as_f * static_cast<float>(img_w_h.y));
-        out.pixel_image_pos.x = row_as_u;
-        out.pixel_image_pos.y = col_as_u;
+        out.pixel_image_pos_row = row_as_u;
+        out.pixel_image_pos_col = col_as_u;
         out.pixel_image_pos_valid = true;
 
         // Get the DICOM coordinates at the centre of the voxel.
@@ -531,9 +533,9 @@ Drover SFML_Viewer( Drover DICOM_data,
 
         // Position the text elements.
         if(mc.window_pos_valid){
-            cursortext.setPosition(mc.window_pos.x, mc.window_pos.y);
-            smallcirc.setPosition(mc.window_pos.x - smallcirc.getRadius(),
-                                  mc.window_pos.y - smallcirc.getRadius());
+            cursortext.setPosition(mc.window_pos_row, mc.window_pos_col);
+            smallcirc.setPosition(mc.window_pos_row - smallcirc.getRadius(),
+                                  mc.window_pos_col - smallcirc.getRadius());
         }
 
         cursortext.setString("");
@@ -541,9 +543,9 @@ Drover SFML_Viewer( Drover DICOM_data,
 
         //Display pixel intensity and DICOM position at the mouse for the image being hovered over.
         if(mc.mouse_DICOM_pos_valid){
-            const auto pix_val = disp_img_it->value(mc.pixel_image_pos.x, mc.pixel_image_pos.y, 0);
+            const auto pix_val = disp_img_it->value(mc.pixel_image_pos_row, mc.pixel_image_pos_col, 0);
             std::stringstream ss;
-            ss << "(r,c)=(" << mc.pixel_image_pos.x << "," << mc.pixel_image_pos.y << ") -- " << pix_val;
+            ss << "(r,c)=(" << mc.pixel_image_pos_row << "," << mc.pixel_image_pos_col << ") -- " << pix_val;
             ss << "    (DICOM Position)=" << mc.mouse_DICOM_pos;
             cursortext.setString(ss.str());
             BLcornertextss << ss.str();
@@ -551,22 +553,6 @@ Drover SFML_Viewer( Drover DICOM_data,
         return;
     };
 
-/*
-        ///////////////////////////////////////
-        // Example usage
-        auto mc = Convert_Mouse_Coords();
-
-        if(mc.window_pos_valid){
-            // ...
-        }
-
-        //Display pixel intensity and DICOM position at the mouse for the image being hovered over.
-        if(mc.mouse_DICOM_pos_valid){
-            const auto pix_val = disp_img_it->value(mc.pixel_image_pos.x, mc.pixel_image_pos.y, 0);
-            // ...
-        }
-        ///////////////////////////////////////
-*/
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////  Main loop  ///////////////////////////////////////////////
@@ -834,8 +820,8 @@ Drover SFML_Viewer( Drover DICOM_data,
                         FUNCWARN("The mouse is not currently hovering over the image. Cannot dump row/column profiles");
                         break;
                     }
-                    const auto row_as_u = mc.pixel_image_pos.x;
-                    const auto col_as_u = mc.pixel_image_pos.y;
+                    const auto row_as_u = mc.pixel_image_pos_row;
+                    const auto col_as_u = mc.pixel_image_pos_col;
 
                     FUNCINFO("Dumping row and column profiles for row,col = " << row_as_u << "," << col_as_u);
 
@@ -900,8 +886,8 @@ Drover SFML_Viewer( Drover DICOM_data,
                         FUNCWARN("The mouse is not currently hovering over the image. Cannot dump time course");
                         break;
                     }
-                    const auto row_as_u = mc.pixel_image_pos.x;
-                    const auto col_as_u = mc.pixel_image_pos.y;
+                    const auto row_as_u = mc.pixel_image_pos_row;
+                    const auto col_as_u = mc.pixel_image_pos_col;
                     const auto pix_pos = mc.voxel_DICOM_pos;
                     FUNCINFO("Dumping time course for row,col = " << row_as_u << "," << col_as_u);
 
@@ -961,8 +947,8 @@ Drover SFML_Viewer( Drover DICOM_data,
                         FUNCWARN("The mouse is not currently hovering over the image. Cannot compute perfusion model");
                         break;
                     }
-                    const auto row_as_u = mc.pixel_image_pos.x;
-                    const auto col_as_u = mc.pixel_image_pos.y;
+                    const auto row_as_u = mc.pixel_image_pos_row;
+                    const auto col_as_u = mc.pixel_image_pos_col;
                     const auto pix_pos = mc.voxel_DICOM_pos;
 
                     const auto ortho = disp_img_it->row_unit.Cross( disp_img_it->col_unit ).unit();
@@ -1146,8 +1132,8 @@ Drover SFML_Viewer( Drover DICOM_data,
                         FUNCWARN("The mouse is not currently hovering over the image. Cannot dump overlapping pixel values");
                         break;
                     }
-                    const auto row_as_u = mc.pixel_image_pos.x;
-                    const auto col_as_u = mc.pixel_image_pos.y;
+                    const auto row_as_u = mc.pixel_image_pos_row;
+                    const auto col_as_u = mc.pixel_image_pos_col;
                     const auto pix_pos = mc.voxel_DICOM_pos;
 
                     const auto ortho = disp_img_it->row_unit.Cross( disp_img_it->col_unit ).unit();
@@ -1707,8 +1693,8 @@ Drover SFML_Viewer( Drover DICOM_data,
                         FUNCWARN("The mouse is not currently hovering over the image. Cannot place contour vertex");
                         break;
                     }
-                    const auto row_as_u = mc.pixel_image_pos.x;
-                    const auto col_as_u = mc.pixel_image_pos.y;
+                    const auto row_as_u = mc.pixel_image_pos_row;
+                    const auto col_as_u = mc.pixel_image_pos_col;
                     const auto mouse_pos = mc.mouse_DICOM_pos;
 
                     sf::Uint8 newpixvals[4] = {255, 0, 0, 255};
@@ -2125,8 +2111,8 @@ Drover SFML_Viewer( Drover DICOM_data,
                 FUNCWARN("The mouse is not currently hovering over the image. Cannot place contour vertex");
                 break;
             }
-            const auto row_as_u = mc.pixel_image_pos.x;
-            const auto col_as_u = mc.pixel_image_pos.y;
+            const auto row_as_u = mc.pixel_image_pos_row;
+            const auto col_as_u = mc.pixel_image_pos_col;
             const auto pix_pos = mc.voxel_DICOM_pos;
             const auto clamped_row_as_f = mc.clamped_image_pos.x;
             const auto clamped_col_as_f = mc.clamped_image_pos.y;
