@@ -207,11 +207,13 @@ Compile_Regex(std::string input){
 std::list<std::reference_wrapper<contour_collection<double>>>
 All_CCs( Drover DICOM_data ){
     std::list<std::reference_wrapper<contour_collection<double>>> cc_all;
-    for(auto & cc : DICOM_data.contour_data->ccs){
-        if(cc.contours.empty()) continue;
-        auto base_ptr = reinterpret_cast<contour_collection<double> *>(&cc);
-        if(base_ptr == nullptr) continue;
-        cc_all.push_back( std::ref(*base_ptr) );
+    if(DICOM_data.contour_data != nullptr){
+        for(auto & cc : DICOM_data.contour_data->ccs){
+            if(cc.contours.empty()) continue;
+            auto base_ptr = reinterpret_cast<contour_collection<double> *>(&cc);
+            if(base_ptr == nullptr) continue;
+            cc_all.push_back( std::ref(*base_ptr) );
+        }
     }
     return cc_all;
 }
