@@ -2006,17 +2006,30 @@ Drover SFML_Viewer( Drover DICOM_data,
         if(DumpScreenshot){
             DumpScreenshot = false;
             const auto fname_sshot = Get_Unique_Sequential_Filename("/tmp/DICOMautomaton_screenshot_",6,".png");
-            if(!window.capture().saveToFile(fname_sshot)){
+
+            auto windowSize = window.getSize();
+            sf::Texture texture;
+            texture.create(windowSize.x, windowSize.y);
+            texture.update(window);
+            sf::Image screenshot = texture.copyToImage();
+            if(!screenshot.saveToFile(fname_sshot)){
                 FUNCWARN("Unable to dump screenshot to file '" << fname_sshot << "'");
             }
+
         }
         if(SingleScreenshot){
             if((--SingleScreenshotCounter) <= 0){
                 const auto fname_sshot = (SingleScreenshotFileName.empty()) ? Get_Unique_Sequential_Filename("/tmp/DICOMautomaton_singlescreenshot_",6,".png")
                                                                             : SingleScreenshotFileName;
-                if(!window.capture().saveToFile(fname_sshot)){
+                auto windowSize = window.getSize();
+                sf::Texture texture;
+                texture.create(windowSize.x, windowSize.y);
+                texture.update(window);
+                sf::Image screenshot = texture.copyToImage();
+                if(!screenshot.saveToFile(fname_sshot)){
                     FUNCWARN("Unable to dump screenshot to file '" << fname_sshot << "'");
                 }
+
                 window.close();
                 break;
             }
