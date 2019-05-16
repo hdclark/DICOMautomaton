@@ -316,9 +316,12 @@ Drover GenerateSyntheticImages(Drover DICOM_data, OperationArgPkg OptArgs, std::
         out->imagecoll.images.back().metadata["ImagePositionPatient"] = std::to_string(ImagePosition.x) + "\\"
                                                                       + std::to_string(ImagePosition.y) + "\\"
                                                                       + std::to_string(ImagePosition.z);
-        out->imagecoll.images.back().metadata["ImageOrientationPatient"] = std::to_string(ImagePosition.x) + "\\"
-                                                                         + std::to_string(ImagePosition.y) + "\\"
-                                                                         + std::to_string(ImagePosition.z);
+        out->imagecoll.images.back().metadata["ImageOrientationPatient"] = std::to_string(ImageOrientationRow.x) + "\\"
+                                                                         + std::to_string(ImageOrientationRow.y) + "\\"
+                                                                         + std::to_string(ImageOrientationRow.z) + "\\"
+                                                                         + std::to_string(ImageOrientationColumn.x) + "\\"
+                                                                         + std::to_string(ImageOrientationColumn.y) + "\\"
+                                                                         + std::to_string(ImageOrientationColumn.z);
         out->imagecoll.images.back().metadata["PixelSpacing"] = std::to_string(VoxelWidth) + "\\" + std::to_string(VoxelHeight);
         out->imagecoll.images.back().metadata["FrameofReferenceUID"] = FrameofReferenceUID;
 
