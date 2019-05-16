@@ -5,7 +5,7 @@
 # This script is most useful for testing builds.
 
 USER_AT_REMOTE="$@"  # e.g., user@machine
-BUILD_DIR="/tmp/build/" # Scratch directory on the remote, created if necessary.
+BUILD_DIR="/tmp/dcma_remote_build/" # Scratch directory on the remote, created if necessary.
 
 rsync -avz --no-links --cvs-exclude ./ "${USER_AT_REMOTE}:${BUILD_DIR}"
 
@@ -13,10 +13,18 @@ set -e
 
 ssh "${USER_AT_REMOTE}" " 
   cd '${BUILD_DIR}' && 
-  ( rm -rf build || true ) &&
-  mkdir build && 
+  mkdir -p build && 
   cd build &&
-  cmake ../ &&
-  make -j 8 
-  " 
+  cmake ../ && "'
+  JOBS=$(nproc)
+  JOBS=$(( $JOBS < 8 ? $JOBS : 8 )) # Limit to reduce memory use.
+  make -j "$JOBS"
+  '
+
+printf ' ======================================== \n'
+printf ' ===    Compilation was successful.   === \n'
+printf ' === Note that nothing was installed! === \n'
+printf ' ======================================== \n'
+
+#  ( rm -rf build || true ) &&
 
