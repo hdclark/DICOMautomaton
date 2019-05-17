@@ -663,7 +663,7 @@ Drover SFML_Viewer( Drover DICOM_data,
                 //Place or remove an invisible marker for measurement in the DICOM coordinate system.
                 }else if( thechar == 'm' ){
                     // If a valid point exists, clear it.
-                    if(!tagged_pos){
+                    if(tagged_pos){
                         tagged_pos = {}; // Reset the optional.
 
                     // If a valid point does not yet exist, try to tag the current mouse point.
