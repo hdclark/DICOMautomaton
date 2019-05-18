@@ -38,6 +38,7 @@
 #include "Operations/ContourBasedRayCastDoseAccumulate.h"
 #include "Operations/ContourBooleanOperations.h"
 #include "Operations/ContourSimilarity.h"
+#include "Operations/ContourViaGeometry.h"
 #include "Operations/ContourViaThreshold.h"
 #include "Operations/ContourVote.h"
 #include "Operations/ContourWholeImages.h"
@@ -165,6 +166,7 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["ContourBasedRayCastDoseAccumulate"] = std::make_pair(OpArgDocContourBasedRayCastDoseAccumulate, ContourBasedRayCastDoseAccumulate);
     out["ContourBooleanOperations"] = std::make_pair(OpArgDocContourBooleanOperations, ContourBooleanOperations);
     out["ContourSimilarity"] = std::make_pair(OpArgDocContourSimilarity, ContourSimilarity);
+    out["ContourViaGeometry"] = std::make_pair(OpArgDocContourViaGeometry, ContourViaGeometry);
     out["ContourViaThreshold"] = std::make_pair(OpArgDocContourViaThreshold, ContourViaThreshold);
     out["ContourVote"] = std::make_pair(OpArgDocContourVote, ContourVote);
     out["ContourWholeImages"] = std::make_pair(OpArgDocContourWholeImages, ContourWholeImages);

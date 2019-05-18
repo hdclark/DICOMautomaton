@@ -20,6 +20,7 @@ add_library(Operations_objs OBJECT
     ContourBasedRayCastDoseAccumulate.cc
     ContourBooleanOperations.cc
     ContourSimilarity.cc
+    ContourViaGeometry.cc
     ContourViaThreshold.cc
     ContourVote.cc
     ContourWholeImages.cc
