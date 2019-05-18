@@ -54,6 +54,12 @@ OperationDoc OpArgDocContourViaGeometry(void){
         "Existing contours are ignored and unaltered."
     );
         
+    out.notes.emplace_back(
+        "Small and degenerate contours produced by this routine are suppressed."
+        " If a specific number of contours must be generated, provide a slightly larger radius to compensate"
+        " for the degenerate cases at the extrema."
+    );
+        
 
     out.args.emplace_back();
     out.args.back().name = "ROILabel";
@@ -167,6 +173,9 @@ Drover ContourViaGeometry(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
 
                 // rho is radius of the circle projected onto this image.
                 const auto rho = radius * std::sqrt( 1.0 - std::pow(plane_centre_sphere_dist / radius, 2.0) );
+                const auto proj_centre = img_plane.Project_Onto_Plane_Orthogonally(centre);
+
+                if(rho < 0.05) continue; // Skip small contours, which can be problematic.
 
                 // ensure vertex sampling is sufficient.
                 const auto min_vert_sep = 1.0; // DICOM units (mm).
@@ -176,7 +185,7 @@ Drover ContourViaGeometry(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
 
                 try{
                     Inject_Point_Contour(animg,
-                                         centre,
+                                         proj_centre,
                                          DICOM_data.contour_data->ccs.back(),
                                          contour_metadata,
                                          rho,
