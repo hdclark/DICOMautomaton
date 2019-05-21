@@ -1164,6 +1164,65 @@ Drover DetectGrid3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
                            best_GC.current_grid_x * best_GC.grid_sep,
                            best_GC.current_grid_y * best_GC.grid_sep,
                            best_GC.current_grid_z * best_GC.grid_sep );
+
+            // Evaluate the fit using the corresponding points.
+            {
+                std::vector<double> dists;
+                std::vector<double> dists_x;
+                std::vector<double> dists_y;
+                std::vector<double> dists_z;
+                dists.reserve(ICPC.p_corr.size());
+                dists_x.reserve(ICPC.p_corr.size());
+                dists_y.reserve(ICPC.p_corr.size());
+                dists_z.reserve(ICPC.p_corr.size());
+                const double proj_eps = 1.0E-4; // The amount of numerical uncertainty in the planar projection.
+
+                auto c_it = std::begin(ICPC.p_corr);
+                for(const auto &pp : ICPC.p_cell){
+                    const auto P = pp.first;
+                    const auto C = c_it->first;
+                    const auto R = (C - P);
+
+                    const auto dist = R.length();
+                    const auto dist_x = R.Dot(best_GC.current_grid_x);
+                    const auto dist_y = R.Dot(best_GC.current_grid_y);
+                    const auto dist_z = R.Dot(best_GC.current_grid_z);
+                    dists.emplace_back(dist);
+
+                    // Only consider the two largest projections since the third will be close to zero due to the
+                    // projection.
+                    if(false){
+                    }else if( (std::abs(dist_y) > std::abs(dist_x))
+                          &&  (std::abs(dist_z) > std::abs(dist_x)) ){
+                        dists_y.emplace_back(dist_y);
+                        dists_z.emplace_back(dist_z);
+                    }else if( (std::abs(dist_x) > std::abs(dist_y))
+                          &&  (std::abs(dist_z) > std::abs(dist_y)) ){
+                        dists_x.emplace_back(dist_x);
+                        dists_z.emplace_back(dist_z);
+                    }else if( (std::abs(dist_x) > std::abs(dist_z))
+                          &&  (std::abs(dist_y) > std::abs(dist_z)) ){
+                        dists_x.emplace_back(dist_x);
+                        dists_y.emplace_back(dist_y);
+                    }
+
+                    ++c_it;
+                }
+
+                const long int N_bins = 100;
+                const bool explicitbins = true;
+                const auto hist_dists  = Bag_of_numbers_to_N_equal_bin_samples_1D_histogram(dists, N_bins, explicitbins);
+                const auto hist_dist_x = Bag_of_numbers_to_N_equal_bin_samples_1D_histogram(dists_x, N_bins, explicitbins);
+                const auto hist_dist_y = Bag_of_numbers_to_N_equal_bin_samples_1D_histogram(dists_y, N_bins, explicitbins);
+                const auto hist_dist_z = Bag_of_numbers_to_N_equal_bin_samples_1D_histogram(dists_z, N_bins, explicitbins);
+
+                if( !hist_dists.Write_To_File("/tmp/hist_distance.data")
+                ||  !hist_dist_x.Write_To_File("/tmp/hist_distance_x.data")
+                ||  !hist_dist_y.Write_To_File("/tmp/hist_distance_y.data")
+                ||  !hist_dist_z.Write_To_File("/tmp/hist_distance_z.data") ){
+                    throw std::runtime_error("Unable to write histograms to file. Refusing to continue.");
+                }
+            }
         }
 
     } // Point_Cloud loop.
