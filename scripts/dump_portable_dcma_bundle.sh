@@ -20,19 +20,33 @@ mkdir -p "${out_dir}"
 # Display which libraries will be copied.
 #ldd $(which dicomautomaton_dispatcher) | grep '=>' | sed -e 's@.*=> @@' -e 's@ (.*@@'
 
+# Figure out which binary to use. If there is a build directory then favour the build version.
+export SCRIPT_DIR="$(dirname "$(readlink -f "${BASH_SOURCE[0]}" )" )"
+if [ -d "${SCRIPT_DIR}/../build" ] ; then
+    printf 'Using the dcma in build/ ...\n'
+    which_dcma=$(which "${SCRIPT_DIR}/../build/bin/dicomautomaton_dispatcher")
+else
+    printf 'Using the system dcma installation ...\n'
+    which_dcma=$(which dicomautomaton_dispatcher)
+fi
+if [ ! -f "${which_dcma}" ] ; then
+    printf 'Unable to locate a suitable version of dicomautomaton_dispatcher to use. Cannot continue.\n' 
+    exit 1
+fi
+
 # Gather the necessary libraries.
 rsync -L -r --delete \
   --exclude='ld-linux*' \
   --exclude='libc.*' \
   --exclude='libm.*' \
-  $( ldd $(which dicomautomaton_dispatcher) | 
+  $( ldd "${which_dcma}" | 
      grep '=>' | 
      sed -e 's@.*=> @@' -e 's@ (.*@@' 
   ) \
   "${out_dir}/"
 
 # Also grab the dcma binary.
-rsync -L -r --delete $( which dicomautomaton_dispatcher ) "${out_dir}/"
+rsync -L -r --delete "${which_dcma}" "${out_dir}/"
 
 
 # Create a native wrapper script for the portable binary.
