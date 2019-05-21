@@ -84,9 +84,15 @@ chmod 777 "${out_dir}/emulate_dcma"
 
 
 # Attempt to run the native binary.
-"${out_dir}/portable_dcma" -h
-
-
-printf '\n\nSuccess!\n\n'
+set +e
+"${out_dir}/portable_dcma" -h >/dev/null
+ret=$?
+if [ "$ret" -eq 0 ] ; then
+    printf '\nSuccess.\n'
+    exit 0
+else
+    printf '\nFailed.\n'
+    exit 1
+fi
 
 
