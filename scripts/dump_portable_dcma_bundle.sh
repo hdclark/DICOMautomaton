@@ -34,8 +34,9 @@ rsync -L -r --delete \
 # Also grab the dcma binary.
 rsync -L -r --delete $( which dicomautomaton_dispatcher ) "${out_dir}/"
 
-# Create a wrapper script for the portable binary.
-cat > "${out_dir}/portable_dcma" <<'HEREDOC_EOF'
+
+# Create a native wrapper script for the portable binary.
+cat > "${out_dir}/portable_dcma" <<'PORTABLE_EOF'
 #!/bin/bash
 
 set -e
@@ -46,12 +47,31 @@ export SCRIPT_DIR="$(dirname "$(readlink -f "${BASH_SOURCE[0]}" )" )"
 # Assume that this script, the libraries, and the binary are all bundled together.
 LD_LIBRARY_PATH="${SCRIPT_DIR}" exec "${SCRIPT_DIR}/"dicomautomaton_dispatcher "$@"
 
-HEREDOC_EOF
-
+PORTABLE_EOF
 chmod 777 "${out_dir}/portable_dcma"
 
-# Attempt to run the portable binary.
+
+# Create an emulation wrapper script for the portable binary.
+cat > "${out_dir}/emulate_dcma" <<'EMULATE_EOF'
+#!/bin/bash
+
+set -e
+
+# This script requires `qemu` and `qemu-user` packages to emulate an x86_64 runtime.
+
+# Identify the location of this script.
+export SCRIPT_DIR="$(dirname "$(readlink -f "${BASH_SOURCE[0]}" )" )"
+
+# Assume that this script, the libraries, and the binary are all bundled together.
+qemu-x86_64 -E LD_LIBRARY_PATH="${SCRIPT_DIR}" -L "${SCRIPT_DIR}" dicomautomaton_dispatcher "$@"
+
+EMULATE_EOF
+chmod 777 "${out_dir}/emulate_dcma"
+
+
+# Attempt to run the native binary.
 "${out_dir}/portable_dcma" -h
+
 
 printf '\n\nSuccess!\n\n'
 
