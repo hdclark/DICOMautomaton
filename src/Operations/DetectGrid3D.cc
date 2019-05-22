@@ -968,41 +968,6 @@ Drover DetectGrid3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
 
     //-----------------------------------------------------------------------------------------------------------------
 
-// TODO:
-//  [x] Keep 3 proto cube planar projections rather than 1.
-//
-//  [x] Revert to keeping 1 proto cube surface projections rather than 3, but support multiple grid sampling styles..
-//
-//  [x] Make RANSAC and ICP parameters above adjustable by user.
-//
-//  [X] Protect against failed SVD / numerical instabilities.
-//
-//  [X] Protect against too few points being selected during the coarse ICP phase.
-//      - Just re-do the current iteration and try again? (No -- need to protect against infinite loop if there is, say,
-//        only 1 point in total.)
-//      - Maybe accept as low as 3-4 points? I don't think rotation-fitting 2 will work conceptually otherwise.
-//
-//  [ ] Switch to pointer-based storage (of vec3's only?) to reduce wasted memory.
-//      NOTE: Using ref_w's causes the ICP_context struct to be non-constructible with the default constructor!
-//
-//  [ ] Test (confined) 3D gradient analysis. (Worry about confining afterward.)
-//
-//  [ ] Test whether linking RANSAC and ICP rotation point is worthwhile or not (not currently done).
-//
-//  [ ] Figure out how to analyze the final fitted grid.
-//      - Something like a DVH showing the total number within and outside of tolerance?
-//
-//  [ ] Support finite grid line thickness during the scoring and final evaluation stage.
-//
-//  [ ] Figure out how to protray anaglyphic results -- perhaps confine to a single image slice for now?
-//
-//  [ ] Render the iterations of a fitted proto cube for the presentation.
-//      - Has to be flashy and cool. Maybe a large panel (i.e., 5 wide by 4 tall) of anaglyphic cubes iterating toward a
-//        convergent solution?
-//      - Basically something to show while you are explaining the algorithm.
-//      - DEFINATELY OK to show failed earlier attempts / methodologies.
-//
-//
     if(!std::isfinite(RANSACDist)){
         throw std::invalid_argument("RANSAC distance is not valid. Cannot continue.");
     }
@@ -1061,7 +1026,14 @@ Drover DetectGrid3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
 
         // Perform a RANSAC analysis by only analyzing the vicinity of a randomly selected point.
         long int ransac_loop = 0;
+        std::mutex saver_printer;
         while(ransac_loop < RANSACMaxLoops){
+            {
+                std::lock_guard<std::mutex> lock(saver_printer);
+                FUNCINFO("Completed RANSAC loop " << ransac_loop << " of " << RANSACMaxLoops
+                      << " --> " << static_cast<int>(1000.0*(ransac_loop)/RANSACMaxLoops)/10.0 << "\% done");
+            }
+            
             // Randomly select a point from the cloud.
             std::uniform_int_distribution<long int> rd(0, (*pcp_it)->points.size());
             const auto N = rd(re);
