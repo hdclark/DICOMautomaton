@@ -46,11 +46,11 @@ OperationDoc OpArgDocHighlightROIs(void){
     out.args.emplace_back();
     out.args.back().name = "ContourOverlap";
     out.args.back().desc = "Controls overlapping contours are treated."
-                      " The default 'ignore' treats overlapping contours as a single contour, regardless of"
-                      " contour orientation. The option 'honour_opposite_orientations' makes overlapping contours"
-                      " with opposite orientation cancel. Otherwise, orientation is ignored. The latter is useful"
-                      " for Boolean structures where contour orientation is significant for interior contours (holes)."
-                      " The option 'overlapping_contours_cancel' ignores orientation and cancels all contour overlap.";
+                           " The default 'ignore' treats overlapping contours as a single contour, regardless of"
+                           " contour orientation. The option 'honour_opposite_orientations' makes overlapping contours"
+                           " with opposite orientation cancel. Otherwise, orientation is ignored. The latter is useful"
+                           " for Boolean structures where contour orientation is significant for interior contours (holes)."
+                           " The option 'overlapping_contours_cancel' ignores orientation and cancels all contour overlap.";
     out.args.back().default_val = "ignore";
     out.args.back().expected = true;
     out.args.back().examples = { "ignore", "honour_opposite_orientations", 
@@ -59,20 +59,20 @@ OperationDoc OpArgDocHighlightROIs(void){
     out.args.emplace_back();
     out.args.back().name = "Inclusivity";
     out.args.back().desc = "Controls how voxels are deemed to be 'within' the interior of the selected ROI(s)."
-                      " The default 'center' considers only the central-most point of each voxel."
-                      " There are two corner options that correspond to a 2D projection of the voxel onto the image plane."
-                      " The first, 'planar_corner_inclusive', considers a voxel interior if ANY corner is interior."
-                      " The second, 'planar_corner_exclusive', considers a voxel interior if ALL (four) corners are interior.";
+                           " The default 'center' considers only the central-most point of each voxel."
+                           " There are two corner options that correspond to a 2D projection of the voxel onto the image plane."
+                           " The first, 'planar_corner_inclusive', considers a voxel interior if ANY corner is interior."
+                           " The second, 'planar_corner_exclusive', considers a voxel interior if ALL (four) corners are interior.";
     out.args.back().default_val = "center";
     out.args.back().expected = true;
     out.args.back().examples = { "center", "centre", 
-                            "planar_corner_inclusive", "planar_inc",
-                            "planar_corner_exclusive", "planar_exc" };
+                                 "planar_corner_inclusive", "planar_inc",
+                                 "planar_corner_exclusive", "planar_exc" };
 
     out.args.emplace_back();
     out.args.back().name = "ExteriorVal";
     out.args.back().desc = "The value to give to voxels outside the specified ROI(s). Note that this value"
-                      " will be ignored if exterior overwrites are disabled.";
+                           " will be ignored if exterior overwrites are disabled.";
     out.args.back().default_val = "0.0";
     out.args.back().expected = true;
     out.args.back().examples = { "0.0", "-1.0", "1.23", "2.34E26" };
@@ -80,7 +80,7 @@ OperationDoc OpArgDocHighlightROIs(void){
     out.args.emplace_back();
     out.args.back().name = "InteriorVal";
     out.args.back().desc = "The value to give to voxels within the volume of the specified ROI(s). Note that this value"
-                      " will be ignored if interior overwrites are disabled.";
+                           " will be ignored if interior overwrites are disabled.";
     out.args.back().default_val = "1.0";
     out.args.back().expected = true;
     out.args.back().examples = { "0.0", "-1.0", "1.23", "2.34E26" };
@@ -99,14 +99,13 @@ OperationDoc OpArgDocHighlightROIs(void){
     out.args.back().expected = true;
     out.args.back().examples = { "true", "false" };
 
-
     out.args.emplace_back();
     out.args.back().name = "NormalizedROILabelRegex";
     out.args.back().desc = "A regex matching ROI labels/names to consider. The default will match"
-                      " all available ROIs. Be aware that input spaces are trimmed to a single space."
-                      " If your ROI name has more than two sequential spaces, use regex to avoid them."
-                      " All ROIs have to match the single regex, so use the 'or' token if needed."
-                      " Regex is case insensitive and uses extended POSIX syntax.";
+                           " all available ROIs. Be aware that input spaces are trimmed to a single space."
+                           " If your ROI name has more than two sequential spaces, use regex to avoid them."
+                           " All ROIs have to match the single regex, so use the 'or' token if needed."
+                           " Regex is case insensitive and uses extended POSIX syntax.";
     out.args.back().default_val = ".*";
     out.args.back().expected = true;
     out.args.back().examples = { ".*", ".*Body.*", "Body", "Gross_Liver",
@@ -116,15 +115,15 @@ OperationDoc OpArgDocHighlightROIs(void){
     out.args.emplace_back();
     out.args.back().name = "ROILabelRegex";
     out.args.back().desc = "A regex matching ROI labels/names to consider. The default will match"
-                      " all available ROIs. Be aware that input spaces are trimmed to a single space."
-                      " If your ROI name has more than two sequential spaces, use regex to avoid them."
-                      " All ROIs have to match the single regex, so use the 'or' token if needed."
-                      " Regex is case insensitive and uses extended POSIX syntax.";
+                           " all available ROIs. Be aware that input spaces are trimmed to a single space."
+                           " If your ROI name has more than two sequential spaces, use regex to avoid them."
+                           " All ROIs have to match the single regex, so use the 'or' token if needed."
+                           " Regex is case insensitive and uses extended POSIX syntax.";
     out.args.back().default_val = ".*";
     out.args.back().expected = true;
     out.args.back().examples = { ".*", ".*body.*", "body", "Gross_Liver",
-                            R"***(.*left.*parotid.*|.*right.*parotid.*|.*eyes.*)***",
-                            R"***(left_parotid|right_parotid)***" };
+                                 R"***(.*left.*parotid.*|.*right.*parotid.*|.*eyes.*)***",
+                                 R"***(left_parotid|right_parotid)***" };
 
     return out;
 }
@@ -232,7 +231,7 @@ Drover HighlightROIs(Drover DICOM_data,
         if(!(*iap_it)->imagecoll.Process_Images_Parallel( GroupIndividualImages,
                                                           PartitionedImageVoxelVisitorMutator,
                                                           {}, cc_ROIs, &ud )){
-            throw std::runtime_error("Unable to highlight voxels with the specified ROI(s).");
+            throw std::runtime_error("Unable to highlight voxels within the specified ROI(s).");
         }
     }
 

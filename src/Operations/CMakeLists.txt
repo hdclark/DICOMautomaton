@@ -44,6 +44,7 @@ add_library(Operations_objs OBJECT
     DeleteImages.cc
     DetectGrid3D.cc
     DetectShapes3D.cc
+    DrawGeometry.cc
     DroverDebug.cc
     DumpAllOrderedImageMetadataToFile.cc
     DumpAnEncompassedPoint.cc

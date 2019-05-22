@@ -62,6 +62,7 @@
 #include "Operations/DeleteImages.h"
 #include "Operations/DetectGrid3D.h"
 #include "Operations/DetectShapes3D.h"
+#include "Operations/DrawGeometry.h"
 #include "Operations/DroverDebug.h"
 #include "Operations/DumpAllOrderedImageMetadataToFile.h"
 #include "Operations/DumpAnEncompassedPoint.h"
@@ -190,6 +191,7 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["DeleteImages"] = std::make_pair(OpArgDocDeleteImages, DeleteImages);
     out["DetectGrid3D"] = std::make_pair(OpArgDocDetectGrid3D, DetectGrid3D);
     out["DetectShapes3D"] = std::make_pair(OpArgDocDetectShapes3D, DetectShapes3D);
+    out["DrawGeometry"] = std::make_pair(OpArgDocDrawGeometry, DrawGeometry);
     out["DroverDebug"] = std::make_pair(OpArgDocDroverDebug, DroverDebug);
     out["DumpAllOrderedImageMetadataToFile"] = std::make_pair(OpArgDocDumpAllOrderedImageMetadataToFile, DumpAllOrderedImageMetadataToFile);
     out["DumpAnEncompassedPoint"] = std::make_pair(OpArgDocDumpAnEncompassedPoint, DumpAnEncompassedPoint);
