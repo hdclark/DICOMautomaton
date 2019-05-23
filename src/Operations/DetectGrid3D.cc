@@ -1034,12 +1034,6 @@ Drover DetectGrid3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
         long int ransac_loop = 0;
         std::mutex saver_printer;
         while(ransac_loop < RANSACMaxLoops){
-            {
-                std::lock_guard<std::mutex> lock(saver_printer);
-                FUNCINFO("Completed RANSAC loop " << ransac_loop << " of " << RANSACMaxLoops
-                      << " --> " << static_cast<int>(1000.0*(ransac_loop)/RANSACMaxLoops)/10.0 << "\% done");
-            }
-            
             // Randomly select a point from the cloud.
             std::uniform_int_distribution<long int> rd(0, (*pcp_it)->points.size());
             const auto N = rd(re);
@@ -1103,6 +1097,15 @@ Drover DetectGrid3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
                 best_GC = GC;
             }
 
+            {
+                std::lock_guard<std::mutex> lock(saver_printer);
+                std::stringstream ss;
+
+                ss << "Completed RANSAC loop " << ransac_loop << " of " << RANSACMaxLoops
+                   << " --> " << static_cast<int>(1000.0*(ransac_loop)/RANSACMaxLoops)/10.0 << "\%."
+                   << " Best and current scores are " << best_GC.score << " and " << GC.score;
+                FUNCINFO(ss.str());
+            }
             ++ransac_loop;
         } // RANSAC loop.
 
