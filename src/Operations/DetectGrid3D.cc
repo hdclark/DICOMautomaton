@@ -655,6 +655,12 @@ Rotate_Grid_Optimally( Grid_Context &GC,
     GC.current_grid_y = Apply_Rotation(GC.current_grid_y).unit();
     GC.current_grid_z = Apply_Rotation(GC.current_grid_z).unit();
 
+    // Ensure the grid axes are orthonormal.
+    GC.current_grid_z.GramSchmidt_orthogonalize(GC.current_grid_x, GC.current_grid_y);
+    GC.current_grid_x = GC.current_grid_x.unit();
+    GC.current_grid_y = GC.current_grid_y.unit();
+    GC.current_grid_z = GC.current_grid_z.unit();
+
     //Determine how the anchor point moves.
     //
     // Since we permitted only rotations relative to some fixed centre, the translation from the grid anchor to
