@@ -238,6 +238,10 @@ Drover ModifyImageMetadata(Drover DICOM_data,
                 if(!ImageOrientationColumn.GramSchmidt_orthogonalize(ImageOrientationRow, ImageOrientationOrtho)){
                     throw std::invalid_argument("ImageOrientation vectors could not be orthogonalized. Refusing to continue.");
                 }
+                ImageOrientationColumn = ImageOrientationColumn.unit();
+                ImageOrientationRow = ImageOrientationRow.unit();
+                ImageOrientationOrtho = ImageOrientationOrtho.unit();
+
                 animg.init_orientation(ImageOrientationRow, ImageOrientationColumn);
                 animg.metadata["ImageOrientationPatient"] = std::to_string(ImageOrientationRow.x) + "\\"
                                                           + std::to_string(ImageOrientationRow.y) + "\\"

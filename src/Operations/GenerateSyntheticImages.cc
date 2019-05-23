@@ -241,6 +241,9 @@ Drover GenerateSyntheticImages(Drover DICOM_data, OperationArgPkg OptArgs, std::
     if(!ImageOrientationColumn.GramSchmidt_orthogonalize(ImageOrientationRow, ImageOrientationOrtho)){
         throw std::invalid_argument("ImageOrientation vectors could not be orthogonalized. Refusing to continue.");
     }
+    ImageOrientationColumn = ImageOrientationColumn.unit();
+    ImageOrientationRow = ImageOrientationRow.unit();
+    ImageOrientationOrtho = ImageOrientationOrtho.unit();
 
 
     // Parse user-provided metadata.

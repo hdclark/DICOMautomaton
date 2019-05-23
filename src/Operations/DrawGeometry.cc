@@ -205,12 +205,16 @@ Drover DrawGeometry(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
             //const auto grid_origin = img_centre; // + (img_centre - img_origin).unit() * grid_sep * 0.25;
             const auto grid_origin = img_centre; // Note: changing this will require changing N_lines below!
 
-            auto unit_x = img_unit_x.rotate_around_y(M_PI*0.05).rotate_around_z( M_PI*0.03);
-            auto unit_y = img_unit_y.rotate_around_z(M_PI*0.15).rotate_around_x( M_PI*0.05);
-            auto unit_z = img_unit_z.rotate_around_x(M_PI*0.25).rotate_around_y(-M_PI*0.07);
+            auto unit_x = img_unit_x.rotate_around_y(M_PI*0.05).rotate_around_z( M_PI*0.03).unit();
+            auto unit_y = img_unit_y.rotate_around_z(M_PI*0.15).rotate_around_x( M_PI*0.05).unit();
+            auto unit_z = img_unit_z.rotate_around_x(M_PI*0.25).rotate_around_y(-M_PI*0.07).unit();
             if(!unit_x.GramSchmidt_orthogonalize(unit_y, unit_z)){
                 throw std::invalid_argument("Cannot orthogonalize grid unit vectors. Cannot continue.");
             }
+            unit_x = unit_x.unit();
+            unit_y = unit_y.unit();
+            unit_z = unit_z.unit();
+
 
             // Ensure the image will be tiled with grid lines by ensuring the maximum spatial extent will be covered no
             // matter how the grid is oriented.

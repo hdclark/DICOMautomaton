@@ -363,6 +363,9 @@ Drover Subsegment_ComputeDose_VanLuijk(Drover DICOM_data, OperationArgPkg OptArg
         y_normal = (col_normal - row_normal * 0.5).unit();
         z_normal = (ort_normal - col_normal * 0.5).unit();
         z_normal.GramSchmidt_orthogonalize(x_normal, y_normal);
+        x_normal = x_normal.unit();
+        y_normal = y_normal.unit();
+        z_normal = z_normal.unit();
 
     }else{
         throw std::invalid_argument("Planar orientations not understood. Cannot continue.");
