@@ -178,8 +178,8 @@ Drover DumpROISurfaceMeshes(Drover DICOM_data, OperationArgPkg OptArgs, std::map
 
     const auto MarchingCubes = true;
     const auto ReastrictedDelauney = false;
-    long int GridRows = 256;
-    long int GridColumns = 256;
+    long int GridRows = 512;
+    long int GridColumns = 512;
 
     bool Subdivide = false;
     bool Remesh = true;
@@ -210,6 +210,8 @@ Drover DumpROISurfaceMeshes(Drover DICOM_data, OperationArgPkg OptArgs, std::map
         //auto output_mesh = dcma_surface_meshes::Estimate_Surface_Mesh( cc_ROIs, meshing_params );
         auto output_mesh = dcma_surface_meshes::Estimate_Surface_Mesh_Marching_Cubes( cc_ROIs, meshing_params );
 
+        polyhedron_processing::SaveAsOFF(output_mesh, OutBase + "_polyhedron_original.off");
+
         if(Subdivide){
             polyhedron_processing::Subdivide(output_mesh, MeshSubdivisions);
         }
@@ -220,7 +222,7 @@ Drover DumpROISurfaceMeshes(Drover DICOM_data, OperationArgPkg OptArgs, std::map
             polyhedron_processing::Simplify(output_mesh, MeshSimplificationEdgeCountLimit);
         }
 
-        polyhedron_processing::SaveAsOFF(output_mesh, OutBase + "_polyhedron.off");
+        polyhedron_processing::SaveAsOFF(output_mesh, OutBase + "_polyhedron_processed.off");
 
     }while(false);
 
