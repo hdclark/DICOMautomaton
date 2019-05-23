@@ -55,7 +55,8 @@ OperationDoc OpArgDocImprintImages(void){
 
     out.args.emplace_back();
     out.args.back().name = "VoxelValue";
-    out.args.back().desc = "The value to give voxels which are coincident with a point from the point cloud.";
+    out.args.back().desc = "The value to give voxels which are coincident with a point from the point cloud."
+                           " Note that point cloud attributes, if present, may override this value.";
     out.args.back().default_val = "1.0";
     out.args.back().expected = true;
     out.args.back().examples = { "-1.0", "0.0", "1.23", "nan", "inf" };
@@ -94,11 +95,36 @@ Drover ImprintImages(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::s
     for(auto & pcp_it : PCs){
         for(auto & iap_it : IAs){
             for(auto &img : (*iap_it)->imagecoll.images){
-                for(const auto &pp : (*pcp_it)->points){
-                    //auto p_unit = (*pcp_it)->points;
-                    const auto P = pp.first;
-                    const auto index = img.index( P, Channel );
-                    if(0 <= index) img.reference(index) = VoxelValue;
+
+                // If there is a magnitude attribute, use it.
+                if(false){
+                }else if( (*pcp_it)->attributes.count("magnitude") != 0 ){
+                    // Verify it is valid.
+                    auto *magn = std::any_cast<std::vector<double>>( &((*pcp_it)->attributes["magnitude"]) );
+                    if( (magn == nullptr) 
+                    ||  (magn->size() != (*pcp_it)->points.size()) ){
+                        throw std::runtime_error("Point cloud magnitude present, but invalid. Refusing to continue.");
+                    }
+
+                    // Imprint the images.
+                    auto m_it = std::begin(*magn);
+                    for(const auto &pp : (*pcp_it)->points){
+                        const auto P = pp.first;
+                        const auto index = img.index( P, Channel );
+                        if(0 <= index){
+                            img.reference(index) = *m_it;
+                        }
+                        ++m_it;
+                    }
+
+
+                // If there is no magnitude attribute, simply use the user-provided VoxelValue.
+                }else{
+                    for(const auto &pp : (*pcp_it)->points){
+                        const auto P = pp.first;
+                        const auto index = img.index( P, Channel );
+                        if(0 <= index) img.reference(index) = VoxelValue;
+                    }
                 }
             }
         }

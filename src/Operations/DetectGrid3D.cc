@@ -1191,7 +1191,7 @@ Drover DetectGrid3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
                 }
 
                 const long int N_bins = 100;
-                const bool explicitbins = true;
+                const bool explicitbins = false;
                 const auto hist_dists  = Bag_of_numbers_to_N_equal_bin_samples_1D_histogram(dists, N_bins, explicitbins);
                 const auto hist_dist_x = Bag_of_numbers_to_N_equal_bin_samples_1D_histogram(dists_x, N_bins, explicitbins);
                 const auto hist_dist_y = Bag_of_numbers_to_N_equal_bin_samples_1D_histogram(dists_y, N_bins, explicitbins);
@@ -1204,6 +1204,30 @@ Drover DetectGrid3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
                     throw std::runtime_error("Unable to write histograms to file. Refusing to continue.");
                 }
             }
+        }
+
+        // Imbue the point cloud with metadata for visualization.
+        {
+            std::vector<double> displacement(whole_ICPC.cohort.size(), std::numeric_limits<double>::quiet_NaN());
+
+            auto d_it = std::begin(displacement);
+            auto c_it = std::begin(whole_ICPC.p_corr);
+            for(const auto &pp : whole_ICPC.p_cell){
+                const auto P = pp.first;
+                const auto C = c_it->first;
+                const auto R = (C - P);
+
+                const auto dist = R.length();
+                //const auto dist_x = R.Dot(best_GC.current_grid_x);
+                //const auto dist_y = R.Dot(best_GC.current_grid_y);
+                //const auto dist_z = R.Dot(best_GC.current_grid_z);
+                //dists.emplace_back(dist);
+                *d_it = dist;
+
+                ++c_it;
+                ++d_it;
+            }
+            (*pcp_it)->attributes["magnitude"] = displacement;
         }
 
     } // Point_Cloud loop.
