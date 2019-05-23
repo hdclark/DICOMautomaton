@@ -166,93 +166,6 @@ Drover DrawGeometry(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
 
     //-----------------------------------------------------------------------------------------------------------------
 
-    ////////////////////////////////////////////////////////////
-    // Grid pattern.
-    const auto img_origin = vec3<double>(0.0, 0.0, 0.0);
-    const auto img_unit_x = vec3<double>(1.0, 0.0, 0.0);
-    const auto img_unit_y = vec3<double>(0.0, 1.0, 0.0);
-    const auto img_unit_z = vec3<double>(0.0, 0.0, 1.0);
-    const auto img_span_x = 100.0; // DICOM units.
-    const auto img_span_y = 100.0; // DICOM units.
-    const auto img_span_z = 100.0; // DICOM units.
-    const auto img_centre = img_origin + (img_unit_x * img_span_x * 0.5)
-                                       + (img_unit_y * img_span_y * 0.5)
-                                       + (img_unit_z * img_span_z * 0.5);
-
-    const auto origin = vec3<double>(50.0, 50.0, 50.0);
-    auto unit_x = img_unit_x.rotate_around_z(M_PI*0.10).rotate_around_x(M_PI*0.10);
-    auto unit_y = img_unit_y.rotate_around_z(M_PI*0.25).rotate_around_x(M_PI*0.25);
-    auto unit_z = img_unit_z.rotate_around_y(M_PI*0.25).rotate_around_x(M_PI*0.25);
-
-    if(!unit_x.GramSchmidt_orthogonalize(unit_y, unit_z)){
-        throw std::invalid_argument("Cannot orthogonalize grid unit vectors. Cannot continue.");
-    }
-
-    const double grid_sep = 15.0;
-    const double grid_rad = 1.5;
-
-    long int N_x = 5;
-    long int N_y = 10;
-    long int N_z = 4;
-
-/*
-    std::vector<plane<double>> bounding_planes;
-    bounding_planes.emplace_back(  img_unit_x, img_origin );
-    bounding_planes.emplace_back( -img_unit_x, img_origin + (img_unit_x * img_span_x) );
-    bounding_planes.emplace_back(  img_unit_y, img_origin );
-    bounding_planes.emplace_back( -img_unit_y, img_origin + (img_unit_y * img_span_y) );
-    bounding_planes.emplace_back(  img_unit_z, img_origin );
-    bounding_planes.emplace_back( -img_unit_z, img_origin + (img_unit_z * img_span_z) );
-*/
-    // Create the grid lines.
-    std::vector<line<double>> lines;
-    for(long int y = 0; y < N_y; ++y){
-        for(long int z = 0; z < N_z; ++z){
-            const auto A = origin + (unit_y * grid_sep * (y * 1.0))
-                                  + (unit_z * grid_sep * (z * 1.0));
-            const auto B = A + unit_x;
-            lines.emplace_back(A, B);
-        }
-    }
-    for(long int x = 0; x < N_x; ++x){
-        for(long int y = 0; y < N_y; ++y){
-            const auto A = origin + (unit_x * grid_sep * (x * 1.0))
-                                  + (unit_y * grid_sep * (y * 1.0));
-            const auto B = A + unit_z;
-            lines.emplace_back(A, B);
-        }
-    }
-    for(long int x = 0; x < N_x; ++x){
-        for(long int z = 0; z < N_z; ++z){
-            const auto A = origin + (unit_x * grid_sep * (x * 1.0))
-                                  + (unit_z * grid_sep * (z * 1.0));
-            const auto B = A + unit_y;
-            lines.emplace_back(A, B);
-        }
-    }
-
-/*
-    // Create line segments where the lines intersect the image boundaries.
-    std::vector<line_segments<double>> line_segments;
-    for(auto &l : lines){
-        std::vector<vec3<double>> intersections;
-        for(auto &bp : bounding_planes){
-            vec3<double> i;
-            if(!bp.Intersects_With_Line_Once(l, i)) intersections.push_back(i);
-        }
-        std::sort(std::begin(intersections),
-                  std::end(intersections),
-                  [&](const vec3<double> &A, const vec3<double> &B) -> bool {
-                      return (A.distance(img_centre) < B.distance(img_centre));
-                  });
-        if(intersections.size() < 2){
-            throw std::logic_error("Unable to determine line_segment endpoints. Cannot continue.");
-        }
-        line_segments.emplace_back( intersections.at(0), intersections.at(1) );
-    }
-*/
-
-    ////////////////////////////////////////////////////////////
 
     // Gather contours.
     auto cc_all = All_CCs( DICOM_data );
@@ -266,6 +179,72 @@ Drover DrawGeometry(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
     auto IAs_all = All_IAs( DICOM_data );
     auto IAs = Whitelist( IAs_all, ImageSelectionStr );
     for(auto & iap_it : IAs){
+        if((*iap_it)->imagecoll.images.empty()) continue;
+
+        // Used to determine image characteristics.
+        std::reference_wrapper<planar_image<float,double>> img_refw = std::ref(*(std::begin((*iap_it)->imagecoll.images)));
+
+        ////////////////////////////////////////////////////////////
+        // Grid pattern.
+        std::vector<line<double>> grid_lines;
+        const double grid_sep = 15.0;
+        const double grid_rad = 1.5;
+        {
+
+            const auto img_origin = img_refw.get().anchor + img_refw.get().offset;
+
+            const auto img_unit_x = img_refw.get().row_unit;
+            const auto img_unit_y = img_refw.get().col_unit;
+            const auto img_unit_z = img_unit_x.Cross( img_unit_y );
+            const auto img_centre = (*iap_it)->imagecoll.center();
+
+            //const auto img_span_x = img_unit_x.Dot( img_centre - img_origin ) * 2.0;
+            //const auto img_span_y = img_unit_y.Dot( img_centre - img_origin ) * 2.0;
+            //const auto img_span_z = img_unit_z.Dot( img_centre - img_origin ) * 2.0;
+
+            //const auto grid_origin = img_centre; // + (img_centre - img_origin).unit() * grid_sep * 0.25;
+            const auto grid_origin = img_centre; // Note: changing this will require changing N_lines below!
+
+            auto unit_x = img_unit_x.rotate_around_y(M_PI*0.05).rotate_around_z( M_PI*0.03);
+            auto unit_y = img_unit_y.rotate_around_z(M_PI*0.15).rotate_around_x( M_PI*0.05);
+            auto unit_z = img_unit_z.rotate_around_x(M_PI*0.25).rotate_around_y(-M_PI*0.07);
+            if(!unit_x.GramSchmidt_orthogonalize(unit_y, unit_z)){
+                throw std::invalid_argument("Cannot orthogonalize grid unit vectors. Cannot continue.");
+            }
+
+            // Ensure the image will be tiled with grid lines by ensuring the maximum spatial extent will be covered no
+            // matter how the grid is oriented.
+            const auto img_halfspan = (img_centre - img_origin).length();
+            const long int N_lines = static_cast<long int>(std::ceil(img_halfspan / grid_sep));
+
+            // Create the grid lines.
+            for(long int y = -N_lines; y <= N_lines; ++y){
+                for(long int z = -N_lines; z <= N_lines; ++z){
+                    const auto A = grid_origin + (unit_y * grid_sep * (y * 1.0))
+                                               + (unit_z * grid_sep * (z * 1.0));
+                    const auto B = A + unit_x;
+                    grid_lines.emplace_back(A, B);
+                }
+            }
+            for(long int x = -N_lines; x <= N_lines; ++x){
+                for(long int y = -N_lines; y <= N_lines; ++y){
+                    const auto A = grid_origin + (unit_x * grid_sep * (x * 1.0))
+                                               + (unit_y * grid_sep * (y * 1.0));
+                    const auto B = A + unit_z;
+                    grid_lines.emplace_back(A, B);
+                }
+            }
+            for(long int x = -N_lines; x <= N_lines; ++x){
+                for(long int z = -N_lines; z <= N_lines; ++z){
+                    const auto A = grid_origin + (unit_x * grid_sep * (x * 1.0))
+                                               + (unit_z * grid_sep * (z * 1.0));
+                    const auto B = A + unit_y;
+                    grid_lines.emplace_back(A, B);
+                }
+            }
+        }
+        ////////////////////////////////////////////////////////////
+
         PartitionedImageVoxelVisitorMutatorUserData ud;
 
         ud.mutation_opts.editstyle = Mutate_Voxels_Opts::EditStyle::InPlace;
@@ -309,7 +288,7 @@ Drover DrawGeometry(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
                 if( (Channel < 0) || (Channel == chan) ){
                     const auto pos = img_refw.get().position(row,col);
 
-                    for(const auto &l : lines){
+                    for(const auto &l : grid_lines){
                         const auto dist = l.Distance_To_Point(pos);
                         if(dist < grid_rad){
                             voxel_val = VoxelValue;
