@@ -16,6 +16,7 @@
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
 #include "../Insert_Contours.h"
+#include "../Write_File.h"
 #include "../YgorImages_Functors/ConvenienceRoutines.h"
 #include "../YgorImages_Functors/Grouping/Misc_Functors.h"
 #include "../YgorImages_Functors/Compute/Volumetric_Neighbourhood_Sampler.h"
@@ -701,6 +702,7 @@ static
 double
 Score_Fit( Grid_Context &GC,
            ICP_Context &ICPC, 
+           std::function<std::string(void)> gen_filename = {}, // For optionally reporting to a CSV file.
            bool verbose = false){
 
     // Evaluate the fit using the corresponding points.
@@ -723,6 +725,39 @@ Score_Fit( Grid_Context &GC,
                   << "    Mean:   " << Stats::Mean(dists)   << std::endl
                   << "    Median: " << Stats::Median(dists) << std::endl
                   << "    Max:    " << Stats::Max(dists)    << std::endl;
+    }
+
+    //Report a summary.
+    if(gen_filename){
+        FUNCINFO("Attempting to claim a mutex");
+        try{
+            std::stringstream header;
+            header << "Patient ID,"
+                   << "Minimum,"
+                   << "Mean,"
+                   << "Median,"
+                   << "Maximum,"
+                   << "User comment"
+                   << std::endl;
+
+            std::stringstream body;
+            body << "unknown" << "," //PatientID.value_or("Unknown") << ","
+                 << Stats::Min(dists) << ","
+                 << Stats::Mean(dists) << ","
+                 << Stats::Median(dists) << ","
+                 << Stats::Max(dists) << ","
+                 << "" //UserComment.value_or("")
+                 << std::endl;
+
+            Append_File( gen_filename,
+                         "dicomautomaton_operation_detectgrid3d_mutex",
+                         header.str(),
+                         body.str() );
+
+            FUNCINFO("Writing file containing:" << std::endl << header.str() << std::endl << body.str() << std::endl);
+        }catch(const std::exception &e){
+            FUNCERR("Unable to write to output file: '" << e.what() << "'");
+        }
     }
 
     const auto score = Stats::Mean(dists); // Better scores should be less than worse scores.
@@ -953,6 +988,24 @@ OperationDoc OpArgDocDetectGrid3D(void){
                                  "50",
                                  "100" };
 
+    out.args.emplace_back();
+    out.args.back().name = "ResultsSummaryFileName";
+    out.args.back().desc = "This file will contain a brief summary of the results."
+                           " The format is CSV. Leave empty to dump to generate a unique temporary file."
+                           " If an existing file is present, rows will be appended without writing a header.";
+    out.args.back().default_val = "";
+    out.args.back().expected = true;
+    out.args.back().examples = { "", "/tmp/somefile", "localfile.csv", "derivative_data.csv" };
+    out.args.back().mimetype = "text/csv";
+
+    out.args.emplace_back();
+    out.args.back().name = "UserComment";
+    out.args.back().desc = "A string that will be inserted into the output file which will simplify merging output"
+                           " with differing parameters, from different sources, or using sub-selections of the data.";
+    out.args.back().default_val = "";
+    out.args.back().expected = true;
+    out.args.back().examples = { "", "Using XYZ", "Patient treatment plan C" };
+
     return out;
 }
 
@@ -972,6 +1025,9 @@ Drover DetectGrid3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
     const auto CoarseICPMaxLoops = std::stol( OptArgs.getValueStr("CoarseICPMaxLoops").value() ); 
     const auto FineICPMaxLoops = std::stol( OptArgs.getValueStr("FineICPMaxLoops").value() ); 
 
+    auto ResultsSummaryFileName = OptArgs.getValueStr("ResultsSummaryFileName").value();
+    const auto UserComment = OptArgs.getValueStr("UserComment");
+
     //-----------------------------------------------------------------------------------------------------------------
 
     if(!std::isfinite(RANSACDist)){
@@ -987,6 +1043,13 @@ Drover DetectGrid3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
     if(GridSeparation < LineThickness){
         throw std::invalid_argument("Line thickness is impossible with given grid spacing. Refusing to continue.");
     }
+
+    auto gen_filename = [&](void) -> std::string {
+        if(ResultsSummaryFileName.empty()){
+            ResultsSummaryFileName = Get_Unique_Sequential_Filename("/tmp/dicomautomaton_detectgrid3d_", 6, ".csv");
+        }
+        return ResultsSummaryFileName;
+    };
 
     std::mt19937 re( RandomSeed );
 
@@ -1115,8 +1178,9 @@ Drover DetectGrid3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
             Project_Into_Proto_Cube(best_GC, whole_ICPC);
             Find_Corresponding_Points(best_GC, whole_ICPC);
 
+
             const bool verbose = true;
-            const auto best_score = Score_Fit(best_GC, whole_ICPC, verbose);
+            const auto best_score = Score_Fit(best_GC, whole_ICPC, gen_filename, verbose);
             FUNCINFO("Best score: " << best_score);
 
             Write_XYZ("/tmp/original_points.xyz", (*pcp_it)->points);
