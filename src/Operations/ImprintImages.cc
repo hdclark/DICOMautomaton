@@ -99,7 +99,7 @@ Drover ImprintImages(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::s
                 // If there is a magnitude attribute, use it.
                 if(false){
                 }else if( (*pcp_it)->attributes.count("magnitude") != 0 ){
-                    // Verify it is valid.
+                    // Verify it is a simple scalar attribute.
                     auto *magn = std::any_cast<std::vector<double>>( &((*pcp_it)->attributes["magnitude"]) );
                     if( (magn == nullptr) 
                     ||  (magn->size() != (*pcp_it)->points.size()) ){
@@ -134,6 +134,7 @@ Drover ImprintImages(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::s
     for(auto & iap_it : IAs){
         for(auto & img_refw : (*iap_it)->imagecoll.images){
             UpdateImageWindowCentreWidth( img_refw );
+            UpdateImageDescription( img_refw, "Imprinted point cloud" );
         }
     }
 
