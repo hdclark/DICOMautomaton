@@ -61,6 +61,9 @@ bool ComputeVolumetricSpatialBlur(planar_image_collection<float,double> &imageco
                           double f = 0.0;
                           double w = 0.0;
 
+                          // Note: The following weights come from the 1D Gaussian with sigma=1 integrated over the
+                          //       length of each voxel. These weights are normalized to 1, so the w summation is only
+                          //       necessary in case some voxels are inaccessible.
                           if(std::isfinite(shtl[0])){
                               w += 0.006;
                               f += 0.006 * shtl[0];
@@ -74,8 +77,8 @@ bool ComputeVolumetricSpatialBlur(planar_image_collection<float,double> &imageco
                               f += 0.242 * shtl[2];
                           }
                           if(std::isfinite(shtl[3])){
-                              w += 0.383;
-                              f += 0.383 * shtl[3];
+                              w += 0.382;
+                              f += 0.382 * shtl[3];
                           }
                           if(std::isfinite(shtl[4])){
                               w += 0.242;
