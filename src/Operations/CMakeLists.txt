@@ -114,6 +114,7 @@ add_library(Operations_objs OBJECT
     SupersampleImageGrid.cc
     SurfaceBasedRayCastDoseAccumulate.cc
     ThresholdImages.cc
+    ThresholdOtsu.cc
     TrimROIDose.cc
     UBC3TMRI_DCE.cc
     UBC3TMRI_DCE_Differences.cc
