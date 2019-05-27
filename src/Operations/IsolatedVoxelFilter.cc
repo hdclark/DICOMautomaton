@@ -27,8 +27,8 @@ OperationDoc OpArgDocIsolatedVoxelFilter(void){
     out.name = "IsolatedVoxelFilter";
 
     out.desc = 
-        "This routine applies a filter that discriminates between well-connected and isolated vertices."
-        " Isolated vertices can either be filtered out or retained."
+        "This routine applies a filter that discriminates between well-connected and isolated voxels."
+        " Isolated voxels can either be filtered out or retained."
         " This operation considers the 3D neighbourhood surrounding a voxel.";
     
     out.notes.emplace_back(
@@ -87,14 +87,18 @@ OperationDoc OpArgDocIsolatedVoxelFilter(void){
     out.args.emplace_back();
     out.args.back().name = "Replacement";
     out.args.back().desc = "Controls how replacements are generated."
-                           " Currently, 'mean' and 'median' are defined."
-                           " These replacement strategies replace the voxel value with the mean and median,"
+                           " 'Mean' and 'median' replacement strategies replace the voxel value with the mean and median,"
                            " respectively, from the surrounding neighbourhood."
-                           " A numeric value can also be supplied, which will replace all voxels.";
+                           " 'Conservative' refers to the so-called conservative filter"
+                           " that suppresses isolated peaks; for every voxel considered, the voxel intensity"
+                           " is clamped to the local neighbourhood's extrema. This filter works best for"
+                           " removing spurious peak and trough voxels and performs no averaging."
+                           " A numeric value can also be supplied, which will replace all isolated or well-connected voxels.";
     out.args.back().default_val = "mean";
     out.args.back().expected = true;
     out.args.back().examples = { "mean",
                                  "median", 
+                                 "conservative",
                                  "0.0",
                                  "-1.23",
                                  "1E6",
@@ -167,10 +171,12 @@ Drover IsolatedVoxelFilter(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
     //-----------------------------------------------------------------------------------------------------------------
     const auto regex_mean = Compile_Regex("^mea?n?$");
     const auto regex_median = Compile_Regex("^medi?a?n?$");
+    const auto regex_conserv = Compile_Regex("^co?n?s?e?r?v?a?t?i?v?e?$");
 
-    bool replacement_is_mean   = false;
-    bool replacement_is_median = false;
-    bool replacement_is_value  = false;
+    bool replacement_is_mean    = false;
+    bool replacement_is_median  = false;
+    bool replacement_is_value   = false;
+    bool replacement_is_conserv = false;
     double replacement_value = std::numeric_limits<double>::quiet_NaN();
 
     try{
@@ -182,6 +188,26 @@ Drover IsolatedVoxelFilter(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
         replacement_is_mean = true;
     }else if( std::regex_match(ReplacementStr, regex_median) ){
         replacement_is_median = true;
+    }else if( std::regex_match(ReplacementStr, regex_conserv) ){
+        replacement_is_conserv = true;
+/*        
+        ud.f_reduce = [](float v, std::vector<float> &shtl, vec3<double>) -> float {
+                          if(shtl.size() < 3){
+                              throw std::runtime_error("Voxel neighbourhood comprises insufficient voxels for this filter. Cannot continue.");
+                          }
+
+                          //First, remove the voxel corresponding to this voxel, which will confound this filter.
+                          std::sort(std::begin(shtl), std::end(shtl), [&](float A, float B) -> bool {
+                              return std::abs(A - v) > std::abs(B - v);
+                          });
+                          shtl.pop_back();
+
+                          //Then clamp the voxel value.
+                          std::sort(std::begin(shtl), std::end(shtl));
+                          const auto clamped = std::clamp(v, shtl.front(), shtl.back());
+                          return clamped;
+                      };
+*/
     }else{
         throw std::invalid_argument("'Replacement' parameter is invalid. Cannot continue.");
     }
@@ -195,7 +221,7 @@ Drover IsolatedVoxelFilter(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
     if(false){
     }else if( std::regex_match(ReplaceStr, regex_iso) ){
         replace_is_iso = true;
-    }else if( std::regex_match(ReplaceStr, regex_median) ){
+    }else if( std::regex_match(ReplaceStr, regex_well) ){
         replace_is_well = true;
     }else{
         throw std::invalid_argument("'Replace' parameter is invalid. Cannot continue.");
@@ -230,9 +256,11 @@ Drover IsolatedVoxelFilter(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
         ud.neighbourhood = ComputeVolumetricNeighbourhoodSamplerUserData::Neighbourhood::Selection;
 
         ud.voxel_triplets.empty();
-        //using udvt = decltype(ud.voxel_triplets);
 
         if(false){
+            if(replacement_is_conserv){
+                throw std::logic_error("Replacement strategy incompatible with including self voxel. Refusing to continue.");
+            }
             ud.voxel_triplets = {{ 
                   {  0,  0,  0 }
             }};
@@ -316,76 +344,146 @@ Drover IsolatedVoxelFilter(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
                   {  1,  1,  1 } 
             }};
         }
-        const auto neighbour_count = ud.voxel_triplets.size();
+        //const auto neighbour_count = ud.voxel_triplets.size();
 
 
-        ud.f_reduce = [=](float v, std::vector<float> &shtl, vec3<double>) -> float {
-                long int agree = 0; // The number of neighbouring voxels that are in agreement.
-                for(const auto &n : shtl){
-                    if(std::isfinite(v)){
-                        // Agreement based on numerical value.
-                        if( std::abs(v - n) < machine_eps ) ++agree;
-                    }else{
-                        // Agreement based on non-finiteness (e.g., to ensure infs and NaNs alike match).
-                        if(std::isfinite(v) == std::isfinite(n)) ++agree;
+        if( replacement_is_mean 
+        ||  replacement_is_median
+        ||  replacement_is_value  ){
+            ud.f_reduce = [=](float v, std::vector<float> &shtl, vec3<double>) -> float {
+                    long int agree = 0; // The number of neighbouring voxels that are in agreement.
+                    for(const auto &n : shtl){
+                        if(std::isfinite(v)){
+                            // Agreement based on numerical value.
+                            if( std::abs(v - n) < machine_eps ) ++agree;
+                        }else{
+                            // Agreement based on non-finiteness (e.g., to ensure infs and NaNs alike match).
+                            if(std::isfinite(v) == std::isfinite(n)) ++agree;
+                        }
                     }
-                }
 
-                const bool connected = (agree > 6); // 0.5 < (1.0 * agree / neighbour_count);
-                const bool isolated = !connected;
+                    const bool connected = (agree > 6); // 0.5 < (1.0 * agree / neighbour_count);
+                    const bool isolated = !connected;
 
-                float new_val = v;
-
-
-                if(false){
-                }else if( connected  && replace_is_iso  && replacement_is_mean    ){
-                    new_val = v; // Existing value, a no-op.
-
-                }else if( connected  && replace_is_iso  && replacement_is_median  ){
-                    new_val = v; // Existing value, a no-op.
-
-                }else if( connected  && replace_is_iso  && replacement_is_value   ){
-                    new_val = v; // Existing value, a no-op.
+                    float new_val = v;
 
 
-                }else if( connected  && replace_is_well && replacement_is_median  ){
-                    throw std::logic_error("The requested parameter combination is not yet supported.");
-                    // Not sure how useful this will be. The aggregate will probably be tainted by well-connected voxels.
+                    if(false){
+                    }else if( connected  && replace_is_iso  && replacement_is_mean    ){
+                        new_val = v; // Existing value, a no-op.
 
-                }else if( connected  && replace_is_well && replacement_is_mean    ){
-                    throw std::logic_error("The requested parameter combination is not yet supported.");
+                    }else if( connected  && replace_is_iso  && replacement_is_median  ){
+                        new_val = v; // Existing value, a no-op.
 
-                }else if( connected  && replace_is_well && replacement_is_value   ){
-                    new_val = replacement_value;
+                    }else if( connected  && replace_is_iso  && replacement_is_value   ){
+                        new_val = v; // Existing value, a no-op.
 
 
+                    }else if( connected  && replace_is_well && replacement_is_median  ){
+                        throw std::logic_error("The requested parameter combination is not yet supported.");
+                        // Not sure how useful this will be. The aggregate will probably be tainted by well-connected voxels.
 
-                }else if( isolated  && replace_is_iso  && replacement_is_mean    ){
-                    new_val = Stats::Mean(shtl);
+                    }else if( connected  && replace_is_well && replacement_is_mean    ){
+                        throw std::logic_error("The requested parameter combination is not yet supported.");
 
-                }else if( isolated  && replace_is_iso  && replacement_is_median  ){
-                    new_val = Stats::Median(shtl);
-
-                }else if( isolated  && replace_is_iso  && replacement_is_value   ){
-                    new_val = replacement_value;
+                    }else if( connected  && replace_is_well && replacement_is_value   ){
+                        new_val = replacement_value;
 
 
 
-                }else if( isolated  && replace_is_well && replacement_is_mean    ){
-                    new_val = v; // Existing value, a no-op.
+                    }else if( isolated  && replace_is_iso  && replacement_is_mean    ){
+                        new_val = Stats::Mean(shtl);
 
-                }else if( isolated  && replace_is_well && replacement_is_median  ){
-                    new_val = v; // Existing value, a no-op.
+                    }else if( isolated  && replace_is_iso  && replacement_is_median  ){
+                        new_val = Stats::Median(shtl);
 
-                }else if( isolated  && replace_is_well && replacement_is_value   ){
-                    new_val = v; // Existing value, a no-op.
+                    }else if( isolated  && replace_is_iso  && replacement_is_value   ){
+                        new_val = replacement_value;
 
-                }else{
-                    throw std::logic_error("Parameter combination was not anticipated. Cannot continue.");
-                }
 
-                return new_val;
-        };
+
+                    }else if( isolated  && replace_is_well && replacement_is_mean    ){
+                        new_val = v; // Existing value, a no-op.
+
+                    }else if( isolated  && replace_is_well && replacement_is_median  ){
+                        new_val = v; // Existing value, a no-op.
+
+                    }else if( isolated  && replace_is_well && replacement_is_value   ){
+                        new_val = v; // Existing value, a no-op.
+
+                    }else{
+                        throw std::logic_error("Parameter combination was not anticipated. Cannot continue.");
+                    }
+
+                    return new_val;
+            };
+
+        }else if(replacement_is_conserv){
+
+            ud.f_reduce = [=](float v, std::vector<float> &shtl, vec3<double>) -> float {
+                    if(shtl.size() != 26){
+                        throw std::logic_error("Voxel neighbourhood has been altered. Please ensure it is still compatible...");
+                    }
+
+                    
+                    /*
+                    //First, remove the voxel corresponding to this voxel, which will confound this filter.
+                    std::sort(std::begin(shtl), std::end(shtl), [&](float A, float B) -> bool {
+                        return std::abs(A - v) > std::abs(B - v);
+                    });
+                    shtl.pop_back();
+                    */
+                    
+                    //Then remove inaccessible voxels.
+                    shtl.erase( std::remove_if( std::begin(shtl),
+                                                std::end(shtl),
+                                                [](float x) -> bool { return !std::isfinite(x); }),
+                                std::end(shtl) );
+
+                    if(shtl.size() < 2){
+                        throw std::runtime_error("Voxel neighbourhood comprises insufficient voxels for this filter. Cannot continue.");
+                    }
+
+                    //Then clamp the voxel value.
+                    std::sort(std::begin(shtl), std::end(shtl));
+                    const auto low = shtl.front();
+                    const auto high = shtl.back();
+                    const auto clamped = std::clamp(v, low, high);
+
+                    const bool connected = isininc(low, v, high);
+                    const bool isolated = !connected;
+
+                    float new_val = v;
+                    if(false){
+                    }else if( connected  && replace_is_well && replacement_is_conserv ){
+                        // I'm not exactly sure what a sensible action is in this case.
+                        // Presumably the user wants to find isolated points, so suppress
+                        // well-connected voxels to make isolated voxels more apparent.
+                        new_val = std::numeric_limits<float>::quiet_NaN();
+
+                    }else if( isolated   && replace_is_well && replacement_is_conserv ){
+                        new_val = v; // No change.
+
+                    }else if( connected  && replace_is_iso  && replacement_is_conserv ){
+                        new_val = v; // No change.
+
+                    }else if( isolated   && replace_is_iso  && replacement_is_conserv ){
+                        new_val = clamped;
+
+                    }
+                    return new_val;
+            };
+
+        }else{
+            throw std::logic_error("Replacement strategy is unknown. Cannot continue.");
+
+        }
+
+/*        
+        ud.f_reduce = [](float v, std::vector<float> &shtl, vec3<double>) -> float {
+*/
+
+
 
         if(!(*iap_it)->imagecoll.Compute_Images( ComputeVolumetricNeighbourhoodSampler, 
                                                  {}, cc_ROIs, &ud )){

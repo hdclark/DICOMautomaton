@@ -7,11 +7,15 @@
 
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
-#include "FVPicketFence.h"
+
+#include "ContourWholeImages.h"
+#include "IsolatedVoxelFilter.h"
 #include "CropImages.h"
 #include "AutoCropImages.h"
 #include "AnalyzePicketFence.h"
 #include "PresentationImage.h"
+
+#include "FVPicketFence.h"
 
 
 OperationDoc OpArgDocFVPicketFence(void){
@@ -25,18 +29,47 @@ OperationDoc OpArgDocFVPicketFence(void){
     );
 
 
+    out.args.splice( out.args.end(), OpArgDocContourWholeImages().args );
+    out.args.splice( out.args.end(), OpArgDocIsolatedVoxelFilter().args );
+
     out.args.splice( out.args.end(), OpArgDocAutoCropImages().args );
     out.args.splice( out.args.end(), OpArgDocCropImages().args );
+
     out.args.splice( out.args.end(), OpArgDocAnalyzePicketFence().args );
+
     out.args.splice( out.args.end(), OpArgDocPresentationImage().args );
 
     // Adjust the defaults to suit this particular workflow.
     for(auto &oparg : out.args){
+
+        // ContourWholeImages
         if(false){
         }else if(oparg.name == "ImageSelection"){
             oparg.default_val = "last";
             oparg.visibility  = OpArgVisibility::Hide;
 
+        }else if(oparg.name == "ROILabel"){
+            oparg.default_val = "entire_image";
+            oparg.visibility  = OpArgVisibility::Hide;
+
+        // IsolatedVoxelFilter 
+        //}else if(oparg.name == "ImageSelection"){
+        //    oparg.default_val = "last";
+        //    oparg.visibility  = OpArgVisibility::Hide;
+        //
+        }else if(oparg.name == "Replacement"){
+            oparg.default_val = "conservative";
+            oparg.visibility  = OpArgVisibility::Hide;
+
+        }else if(oparg.name == "Replace"){
+            oparg.default_val = "isolated";
+            oparg.visibility  = OpArgVisibility::Hide;
+
+        // CropImages
+        //}else if(oparg.name == "ImageSelection"){
+        //    oparg.default_val = "last";
+        //    oparg.visibility  = OpArgVisibility::Hide;
+        //
         }else if(oparg.name == "RowsL"){
             oparg.default_val = "5px";
             oparg.visibility  = OpArgVisibility::Hide;
@@ -50,10 +83,23 @@ OperationDoc OpArgDocFVPicketFence(void){
             oparg.default_val = "5px";
             oparg.visibility  = OpArgVisibility::Hide;
 
+        // AutoCropImages
+        //}else if(oparg.name == "ImageSelection"){
+        //    oparg.default_val = "last";
+        //    oparg.visibility  = OpArgVisibility::Hide;
+        //
         }else if(oparg.name == "RTIMAGE"){
             oparg.default_val = "true";
             oparg.visibility  = OpArgVisibility::Hide;
 
+        }else if(oparg.name == "DICOMMargin"){
+            oparg.visibility  = OpArgVisibility::Hide;
+
+        // AnalyzePicketFence
+        //}else if(oparg.name == "ImageSelection"){
+        //    oparg.default_val = "last";
+        //    oparg.visibility  = OpArgVisibility::Hide;
+        //
         }else if(oparg.name == "ThresholdDistance"){
             oparg.default_val = "0.5";
 
@@ -73,9 +119,12 @@ OperationDoc OpArgDocFVPicketFence(void){
         }else if(oparg.name == "PeakROILabel"){
             oparg.visibility  = OpArgVisibility::Hide;
 
-        }else if(oparg.name == "DICOMMargin"){
-            oparg.visibility  = OpArgVisibility::Hide;
 
+        // PresentationImage
+        //}else if(oparg.name == "ImageSelection"){
+        //    oparg.default_val = "last";
+        //    oparg.visibility  = OpArgVisibility::Hide;
+        //
         }else if(oparg.name == "ScaleFactor"){
             oparg.default_val = "1.5";
 
@@ -94,9 +143,14 @@ FVPicketFence(Drover DICOM_data,
               std::map<std::string, std::string> InvocationMetadata,
               std::string FilenameLex){
 
+    DICOM_data = ContourWholeImages(std::move(DICOM_data), OptArgs, InvocationMetadata, FilenameLex);
+    DICOM_data = IsolatedVoxelFilter(std::move(DICOM_data), OptArgs, InvocationMetadata, FilenameLex);
+
     DICOM_data = AutoCropImages(std::move(DICOM_data), OptArgs, InvocationMetadata, FilenameLex);
     DICOM_data = CropImages(std::move(DICOM_data), OptArgs, InvocationMetadata, FilenameLex);
+
     DICOM_data = AnalyzePicketFence(std::move(DICOM_data), OptArgs, InvocationMetadata, FilenameLex);
+
     DICOM_data = PresentationImage(std::move(DICOM_data), OptArgs, InvocationMetadata, FilenameLex);
 
     return DICOM_data;

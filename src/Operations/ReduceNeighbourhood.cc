@@ -99,10 +99,7 @@ OperationDoc OpArgDocReduceNeighbourhood(void){
                            " replace the voxel value with 1.0 if it was the min (max) in the neighbourhood and"
                            " 0.0 otherwise. Logical reducers 'is_min_nan' and 'is_max_nan' are variants that"
                            " replace the voxel with a NaN instead of 1.0 and otherwise do not overwrite the"
-                           " original voxel value. 'Conservative' refers to the so-called conservative filter"
-                           " that suppresses isolated peaks; for every voxel considered, the voxel intensity"
-                           " is clamped to the local neighbourhood's extrema. This filter works best for"
-                           " removing spurious peak and trough voxels and performs no averaging.";
+                           " original voxel value.";
     out.args.back().default_val = "median";
     out.args.back().expected = true;
     out.args.back().examples = { "min",
@@ -112,8 +109,7 @@ OperationDoc OpArgDocReduceNeighbourhood(void){
                                  "is_min",
                                  "is_max",
                                  "is_min_nan",
-                                 "is_max_nan",
-                                 "conservative" };
+                                 "is_max_nan" };
 
 
     out.args.emplace_back();
@@ -161,8 +157,6 @@ Drover ReduceNeighbourhood(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
     const auto regex_is_max = Compile_Regex("^is?_?m?axi?m?u?m?$");
     const auto regex_is_min_nan = Compile_Regex("^is?_?m?ini?m?u?m?_?nan$");
     const auto regex_is_max_nan = Compile_Regex("^is?_?m?axi?m?u?m?_?nan$");
-
-    const auto regex_conserv = Compile_Regex("^co?n?s?e?r?v?a?t?i?v?e?$");
 
     //Stuff references to all contours into a list. Remember that you can still address specific contours through
     // the original holding containers (which are not modified here).
@@ -242,24 +236,6 @@ Drover ReduceNeighbourhood(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
                               const auto max = Stats::Max(shtl);
                               const auto diff = std::abs(v - max);
                               return (diff < machine_eps) ? 1.0f : 0.0f;
-                          };
-
-        }else if( std::regex_match(ReductionStr, regex_conserv) ){
-            ud.f_reduce = [](float v, std::vector<float> &shtl, vec3<double>) -> float {
-                              if(shtl.size() < 3){
-                                  throw std::runtime_error("Voxel neighbourhood comprises insufficient voxels for this filter. Cannot continue.");
-                              }
-
-                              //First, remove the voxel corresponding to this voxel, which will confound this filter.
-                              std::sort(std::begin(shtl), std::end(shtl), [&](float A, float B) -> bool {
-                                  return std::abs(A - v) > std::abs(B - v);
-                              });
-                              shtl.pop_back();
-
-                              //Then clamp the voxel value.
-                              std::sort(std::begin(shtl), std::end(shtl));
-                              const auto clamped = std::clamp(v, shtl.front(), shtl.back());
-                              return clamped;
                           };
 
         }else{

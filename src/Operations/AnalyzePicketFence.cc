@@ -40,6 +40,7 @@ OperationDoc OpArgDocAnalyzePicketFence(void){
     out.notes.emplace_back(
         "This routine requires data to be pre-processed. The gross picket area should be isolated and the leaf"
         " junction areas contoured (one contour per junction). Both can be accomplished via thresholding."
+        " Additionally, stray pixels should be filtered out using, for example, median or conservative filters."
     );
 
     out.notes.emplace_back(
