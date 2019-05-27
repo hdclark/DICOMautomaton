@@ -65,6 +65,22 @@ OperationDoc OpArgDocFVPicketFence(void){
             oparg.default_val = "isolated";
             oparg.visibility  = OpArgVisibility::Hide;
 
+        }else if(oparg.name == "ROILabelRegex"){
+            oparg.default_val = "entire_image";
+            oparg.visibility  = OpArgVisibility::Hide;
+
+        }else if(oparg.name == "Channel"){
+            oparg.visibility  = OpArgVisibility::Hide;
+
+        }else if(oparg.name == "NeighbourCount"){
+            oparg.visibility  = OpArgVisibility::Hide;
+
+        }else if(oparg.name == "AgreementCount"){
+            oparg.visibility  = OpArgVisibility::Hide;
+
+        }else if(oparg.name == "MaxDistance"){
+            oparg.visibility  = OpArgVisibility::Hide;
+
         // CropImages
         //}else if(oparg.name == "ImageSelection"){
         //    oparg.default_val = "last";
