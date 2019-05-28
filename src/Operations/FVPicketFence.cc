@@ -42,110 +42,75 @@ OperationDoc OpArgDocFVPicketFence(void){
     // Adjust the defaults to suit this particular workflow.
     for(auto &oparg : out.args){
 
+        // Hide all options by default. This is important to maintain a streamlined facade in case the constituent
+        // operations are altered (which is likely).
+        oparg.visibility  = OpArgVisibility::Hide;
+
         // ContourWholeImages
         if(false){
         }else if(oparg.name == "ImageSelection"){
             oparg.default_val = "last";
-            oparg.visibility  = OpArgVisibility::Hide;
 
         }else if(oparg.name == "ROILabel"){
             oparg.default_val = "entire_image";
-            oparg.visibility  = OpArgVisibility::Hide;
 
         // IsolatedVoxelFilter 
         //}else if(oparg.name == "ImageSelection"){
         //    oparg.default_val = "last";
-        //    oparg.visibility  = OpArgVisibility::Hide;
         //
         }else if(oparg.name == "Replacement"){
             oparg.default_val = "conservative";
-            oparg.visibility  = OpArgVisibility::Hide;
 
         }else if(oparg.name == "Replace"){
             oparg.default_val = "isolated";
-            oparg.visibility  = OpArgVisibility::Hide;
 
         }else if(oparg.name == "ROILabelRegex"){
             oparg.default_val = "entire_image";
-            oparg.visibility  = OpArgVisibility::Hide;
-
-        }else if(oparg.name == "Channel"){
-            oparg.visibility  = OpArgVisibility::Hide;
-
-        }else if(oparg.name == "NeighbourCount"){
-            oparg.visibility  = OpArgVisibility::Hide;
-
-        }else if(oparg.name == "AgreementCount"){
-            oparg.visibility  = OpArgVisibility::Hide;
-
-        }else if(oparg.name == "MaxDistance"){
-            oparg.visibility  = OpArgVisibility::Hide;
 
         // CropImages
         //}else if(oparg.name == "ImageSelection"){
         //    oparg.default_val = "last";
-        //    oparg.visibility  = OpArgVisibility::Hide;
         //
         }else if(oparg.name == "RowsL"){
             oparg.default_val = "5px";
-            oparg.visibility  = OpArgVisibility::Hide;
         }else if(oparg.name == "RowsH"){
             oparg.default_val = "5px";
-            oparg.visibility  = OpArgVisibility::Hide;
         }else if(oparg.name == "ColumnsL"){
             oparg.default_val = "5px";
-            oparg.visibility  = OpArgVisibility::Hide;
         }else if(oparg.name == "ColumnsH"){
             oparg.default_val = "5px";
-            oparg.visibility  = OpArgVisibility::Hide;
 
         // AutoCropImages
         //}else if(oparg.name == "ImageSelection"){
         //    oparg.default_val = "last";
-        //    oparg.visibility  = OpArgVisibility::Hide;
         //
         }else if(oparg.name == "RTIMAGE"){
             oparg.default_val = "true";
-            oparg.visibility  = OpArgVisibility::Hide;
-
-        }else if(oparg.name == "DICOMMargin"){
-            oparg.visibility  = OpArgVisibility::Hide;
 
         // AnalyzePicketFence
         //}else if(oparg.name == "ImageSelection"){
         //    oparg.default_val = "last";
-        //    oparg.visibility  = OpArgVisibility::Hide;
         //
         }else if(oparg.name == "ThresholdDistance"){
             oparg.default_val = "0.5";
+            oparg.visibility  = OpArgVisibility::Show;
 
         }else if(oparg.name == "InteractivePlots"){
             oparg.default_val = "false";
-            oparg.visibility  = OpArgVisibility::Hide;
 
-        }else if(oparg.name == "UserComment"){
-            oparg.visibility  = OpArgVisibility::Hide;
+        }else if(oparg.name == "MLCModel"){
+            oparg.visibility  = OpArgVisibility::Show;
 
-        }else if(oparg.name == "MLCROILabel"){
-            oparg.visibility  = OpArgVisibility::Hide;
-
-        }else if(oparg.name == "JunctionROILabel"){
-            oparg.visibility  = OpArgVisibility::Hide;
-
-        }else if(oparg.name == "PeakROILabel"){
-            oparg.visibility  = OpArgVisibility::Hide;
-
+        }else if(oparg.name == "MinimumJunctionSeparation"){
+            oparg.visibility  = OpArgVisibility::Show;
 
         // PresentationImage
         //}else if(oparg.name == "ImageSelection"){
         //    oparg.default_val = "last";
-        //    oparg.visibility  = OpArgVisibility::Hide;
         //
         }else if(oparg.name == "ScaleFactor"){
             oparg.default_val = "1.5";
-
-        }else if(oparg.name == "ColourMapRegex"){
-            oparg.visibility  = OpArgVisibility::Hide;
+            oparg.visibility  = OpArgVisibility::Show;
         }
     }
 
