@@ -1216,23 +1216,30 @@ Drover DetectGrid3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
                 std::vector<double> dists_x;
                 std::vector<double> dists_y;
                 std::vector<double> dists_z;
-                dists.reserve(ICPC.p_corr.size());
-                dists_x.reserve(ICPC.p_corr.size());
-                dists_y.reserve(ICPC.p_corr.size());
-                dists_z.reserve(ICPC.p_corr.size());
-                const double proj_eps = 1.0E-4; // The amount of numerical uncertainty in the planar projection.
+                samples_1D<double> dist_vs_dist; // Distortion vs. distance from (0,0,0).
 
-                auto c_it = std::begin(ICPC.p_corr);
-                for(const auto &pp : ICPC.p_cell){
+                dists.reserve(whole_ICPC.p_corr.size());
+                dists_x.reserve(whole_ICPC.p_corr.size());
+                dists_y.reserve(whole_ICPC.p_corr.size());
+                dists_z.reserve(whole_ICPC.p_corr.size());
+                const double proj_eps = 1.0E-4; // The amount of numerical uncertainty in the planar projection.
+                const bool inhibit_sort = true;
+
+                auto o_it = std::begin(whole_ICPC.cohort);
+                auto c_it = std::begin(whole_ICPC.p_corr);
+                for(const auto &pp : whole_ICPC.p_cell){
                     const auto P = pp.first;
                     const auto C = c_it->first;
                     const auto R = (C - P);
+                    const auto O = o_it->first;
 
                     const auto dist = R.length();
                     const auto dist_x = R.Dot(best_GC.current_grid_x);
                     const auto dist_y = R.Dot(best_GC.current_grid_y);
                     const auto dist_z = R.Dot(best_GC.current_grid_z);
                     dists.emplace_back(dist);
+
+                    dist_vs_dist.push_back(O.length(), dist, inhibit_sort);
 
                     // Only consider the two largest projections since the third will be close to zero due to the
                     // projection.
@@ -1252,6 +1259,7 @@ Drover DetectGrid3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
                     }
 
                     ++c_it;
+                    ++o_it;
                 }
 
                 const long int N_bins = 100;
@@ -1260,12 +1268,14 @@ Drover DetectGrid3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
                 const auto hist_dist_x = Bag_of_numbers_to_N_equal_bin_samples_1D_histogram(dists_x, N_bins, explicitbins);
                 const auto hist_dist_y = Bag_of_numbers_to_N_equal_bin_samples_1D_histogram(dists_y, N_bins, explicitbins);
                 const auto hist_dist_z = Bag_of_numbers_to_N_equal_bin_samples_1D_histogram(dists_z, N_bins, explicitbins);
+                dist_vs_dist.stable_sort();
 
                 if( !hist_dists.Write_To_File("/tmp/hist_distance.data")
                 ||  !hist_dist_x.Write_To_File("/tmp/hist_distance_x.data")
                 ||  !hist_dist_y.Write_To_File("/tmp/hist_distance_y.data")
-                ||  !hist_dist_z.Write_To_File("/tmp/hist_distance_z.data") ){
-                    throw std::runtime_error("Unable to write histograms to file. Refusing to continue.");
+                ||  !hist_dist_z.Write_To_File("/tmp/hist_distance_z.data")
+                ||  !dist_vs_dist.Write_To_File("/tmp/distortion_vs_distance.data") ){
+                    throw std::runtime_error("Unable to write histograms and plot data to file. Refusing to continue.");
                 }
             }
         }
