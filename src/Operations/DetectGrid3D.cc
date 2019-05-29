@@ -13,19 +13,6 @@
 #include <string>    
 #include <algorithm>    
 
-#include "../Structs.h"
-#include "../Regex_Selectors.h"
-#include "../Insert_Contours.h"
-#include "../Write_File.h"
-#include "../YgorImages_Functors/ConvenienceRoutines.h"
-#include "../YgorImages_Functors/Grouping/Misc_Functors.h"
-#include "../YgorImages_Functors/Compute/Volumetric_Neighbourhood_Sampler.h"
-
-#include "DetectGrid3D.h"
-#include "YgorImages.h"
-#include "YgorString.h"       //Needed for GetFirstRegex(...)
-#include "YgorStats.h"       //Needed for Stats:: namespace.
-
 /*
 #include <boost/geometry.hpp>
 #include <boost/geometry/geometries/point.hpp>
@@ -41,7 +28,22 @@
 #include <eigen3/Eigen/Eigenvalues>
 #include <eigen3/Eigen/SVD>
 
+#include "YgorMath.h"
+#include "YgorImages.h"
+#include "YgorString.h"       //Needed for GetFirstRegex(...)
+#include "YgorStats.h"       //Needed for Stats:: namespace.
+
+#include "../Structs.h"
+#include "../Regex_Selectors.h"
+#include "../Insert_Contours.h"
+#include "../Write_File.h"
+#include "../YgorImages_Functors/ConvenienceRoutines.h"
+#include "../YgorImages_Functors/Grouping/Misc_Functors.h"
+#include "../YgorImages_Functors/Compute/Volumetric_Neighbourhood_Sampler.h"
+
 #include "YgorClustering.hpp"
+
+#include "DetectGrid3D.h"
 
 // Used to store state about a fitted 3D grid.
 struct Grid_Context {
@@ -1053,10 +1055,15 @@ Drover DetectGrid3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
 
     std::mt19937 re( RandomSeed );
 
+FUNCINFO("Loading point clouds");
 
     auto PCs_all = All_PCs( DICOM_data );
     auto PCs = Whitelist( PCs_all, PointSelectionStr );
     for(auto & pcp_it : PCs){
+
+        if((*pcp_it == nullptr) || ((*pcp_it)->points.size() < 8)){
+            throw std::invalid_argument("This routine will likely fail with fewer than 8 points. Refusing to continue.");
+        }
 
         Grid_Context best_GC; // The current best estimate of the grid position.
 
@@ -1357,9 +1364,33 @@ Drover DetectGrid3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
                 } // For loop over full cohort.
 
 FUNCINFO("There are " << partitioned.size() << " involved grid unions");
+
+                // Filter out union points with compromised catchment areas (e.g., those unions on the outer boundary).
+                //
+                // We assume that intact catchment areas will tend to have a similar number of points, so catchment
+                // areas with fewer points are suspect.
+                std::vector<double> partition_counts;
+                for(const auto &apair : partitioned){
+                    partition_counts.push_back( static_cast<double>( apair.second.size() ) );
+                }
+
+                const long int N_bins = 100;
+                const bool explicitbins = false;
+                const auto hist_dists = Bag_of_numbers_to_N_equal_bin_samples_1D_histogram(partition_counts, N_bins, explicitbins);
+                const auto min_thresh = hist_dists.Find_Otsu_Binarization_Threshold();
+
+                FUNCINFO("Ignoring grid unions with fewer than " << min_thresh << " points in their catchment volume");
+                {
+                    long int drop_count = 0;
+                    for(const auto &apair : partitioned){
+                        if(apair.second.size() < min_thresh) ++drop_count;
+                    }
+                    FUNCINFO("Note that " << drop_count << " / " << partitioned.size() << " unions will be ignored");
+                }
+
                 // Now for each 3D grid intersection fit the associated data, if enough is available.
                 for(const auto &apair : partitioned){
-                    if(apair.second.size() < 10) continue;
+                    if(apair.second.size() < min_thresh) continue;
                     const auto grid_union = grid_unions[ apair.first ];
 
                     vec3<double> mean(0.0, 0.0, 0.0);
