@@ -279,7 +279,9 @@ bool ComputeVolumetricNeighbourhoodSampler(planar_image_collection<float,double>
                                          mv_opts, 
                                          f_bounded );
 
-            UpdateImageDescription( img_refw, user_data_s->description );
+            if(!(user_data_s->description.empty())){
+                UpdateImageDescription( img_refw, user_data_s->description );
+            }
             UpdateImageWindowCentreWidth( img_refw );
 
             //Report operation progress.
