@@ -42,7 +42,7 @@ OperationDoc OpArgDocThresholdOtsu(void){
         "This routine performs Otsu thresholding (i.e., 'binarization') on an image volume."
         " The thresholding is limited within ROI(s)."
         " Otsu thresholding works best on images with a well-defined bimodal voxel intensity histogram."
-        " It works by finding the threshold that partitions the voxel intensity historgram"
+        " It works by finding the threshold that partitions the voxel intensity histogram"
         " into two parts, essentially so that the sum of each partition's variance is minimal."
         " The number of histogram bins (i.e., number of distinct voxel magnitude levels) is configurable."
         " Voxels are binarized; the replacement values are also configurable.";
@@ -233,7 +233,7 @@ Drover ThresholdOtsu(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::s
             ud.mutation_opts.aggregate = Mutate_Voxels_Opts::Aggregate::First;
             ud.mutation_opts.adjacency = Mutate_Voxels_Opts::Adjacency::SingleVoxel;
             ud.mutation_opts.maskmod   = Mutate_Voxels_Opts::MaskMod::Noop;
-            ud.description = "";
+            //ud.description = "";
 
             if(false){
             }else if( std::regex_match(ContourOverlapStr, regex_ignore) ){
@@ -292,75 +292,10 @@ Drover ThresholdOtsu(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::s
             }
         }
 
-        // ============== Otsu's method =============
-        //const auto total_bin_magnitude = 1.0; // Sum of all bins.
-        const auto total_bin_magnitude = [&](void) -> double {
-            double out = 0.0;
-            for(const auto &s : hist.samples) out += s[2];
-            return out;
-        }();
+        // Compute the Otsu threshold.
+        const auto f_threshold = hist.Find_Otsu_Binarization_Threshold();
 
-        const double total_moment = [&](void) -> double {
-            double moment = 0.0;
-            double i = 0.0;
-            for(const auto &s : hist.samples){
-                moment += (s[2] * i);
-                i += 1.0;
-            }
-            return moment;
-        }();
-
-        double running_low_moment = 0.0;
-        double running_magnitude_low = 0.0;
-
-        double max_variance = -1.0;
-        size_t threshold_index = 0;
-
-        size_t i = 0;
-        for(const auto &s : hist.samples){
-            running_magnitude_low += s[2];
-
-            // If no bins with any height have yet been seen, skip them.
-            if(running_magnitude_low == 0.0){
-                ++i;
-                continue;
-            }
-
-            const auto running_magnitude_high = total_bin_magnitude - running_magnitude_low;
-
-            // If we've reached the end, or numerical losses will cause issues, then bail.
-            if(running_magnitude_high <= 0.0) break;
-
-            running_low_moment += (s[2] * static_cast<double>(i));
-            const auto mean_low = running_low_moment / running_magnitude_low;
-            const auto mean_high = (total_moment - running_low_moment) / running_magnitude_high;
-
-            // If numerical issues cause negative or non-finite means (which should always be >= 0), then bail.
-            if( !std::isfinite(mean_low)
-            ||  !std::isfinite(mean_high)
-            ||  (mean_low < 0.0)
-            ||  (mean_high < 0.0) ){
-                break;
-            }
-
-            // Test if the current threshold's variance is maximal.
-            const auto current_variance = running_magnitude_low 
-                                        * running_magnitude_high 
-                                        * std::pow(mean_high - mean_low, 2.0);
-            if(max_variance < current_variance){
-                max_variance = current_variance;
-                threshold_index = i;
-            }
-            ++i;
-        }
-
-        if(max_variance < 0.0){
-            throw std::logic_error("Unable to perform Otsu thresholding; no suitable thresholds were identified");
-        }
-
-        const auto f_threshold = hist.samples.at(threshold_index)[0];
-        FUNCINFO("Threshold found to be in bin " << threshold_index << "/" << HistogramBins 
-                 << ", which has a voxel value = " << f_threshold);
+        FUNCINFO("Otsu threshold found to be " << f_threshold);
 
         // ==========================================================
 
