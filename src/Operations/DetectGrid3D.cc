@@ -1278,9 +1278,125 @@ Drover DetectGrid3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
                     throw std::runtime_error("Unable to write histograms and plot data to file. Refusing to continue.");
                 }
             }
-        }
 
-        // Imbue the point cloud with metadata for visualization.
+            // Estimate the shift along each 3D cylinder union.
+            {
+                using triplet_t = std::array<long int, 3>; // Index of grid intersections.
+
+                std::map<triplet_t, std::vector<vec3<double>>> partitioned; // Points assigned to nearest grid intersection.
+                std::map<triplet_t, vec3<double>> grid_unions; // The 3D grid cylinder unions with associated data.
+
+                // Corners of the proto cube.
+                const auto anchor = best_GC.current_grid_anchor;
+                const auto edge_x = best_GC.current_grid_x * best_GC.grid_sep;
+                const auto edge_y = best_GC.current_grid_y * best_GC.grid_sep;
+                const auto edge_z = best_GC.current_grid_z * best_GC.grid_sep;
+                const auto c_A = anchor;
+                const auto c_B = anchor + edge_x;
+                const auto c_C = anchor + edge_x + edge_z;
+                const auto c_D = anchor + edge_z;
+
+                const auto c_E = anchor + edge_y;
+                const auto c_F = anchor + edge_y + edge_x;
+                const auto c_G = anchor + edge_y + edge_x + edge_z;
+                const auto c_H = anchor + edge_y + edge_z;
+
+                // List of corners of the proto cube.
+                std::vector<vec3<double>> corners = { {
+                    c_A, c_B, c_C, c_D,
+                    c_E, c_F, c_G, c_H
+                } };
+
+                const vec3<double> NaN_vec3( std::numeric_limits<double>::quiet_NaN(),
+                                             std::numeric_limits<double>::quiet_NaN(),
+                                             std::numeric_limits<double>::quiet_NaN() );
+
+                auto o_it = std::begin(whole_ICPC.cohort);
+                auto c_it = std::begin(whole_ICPC.p_corr);
+                for(const auto &pp : whole_ICPC.p_cell){
+                    const auto P = pp.first;     // Proto cell point.
+                    const auto C = c_it->first;  // Corresponding point (in the proto cell).
+                    //const auto R = (C - P);      // Shift from proto cell point to corresponding point.
+                    const auto O = o_it->first;  // Original point.
+
+                    // Using the proto cube projection, figure out which corner the point is nearest to.
+                    auto closest_dist = std::numeric_limits<double>::quiet_NaN();
+                    auto closest_proj = NaN_vec3;
+                    for(const auto &c : corners){
+                        const auto dist = c.distance(P);
+                        if(!std::isfinite(closest_dist) || (dist < closest_dist)){
+                            closest_dist = dist;
+                            closest_proj = c;
+                        }
+                    }
+
+                    // Convert back to the original coordinate system.
+                    const auto P_owner = O + (closest_proj - P);
+
+                    // Determine which triplet of indices the corner corresponds to.
+                    //
+                    // Vector rel. to grid anchor.
+                    const auto R_owner = (P_owner - GC.current_grid_anchor);
+
+                    // Vector within the unit cube, described in the grid axes basis.
+                    auto index_x = static_cast<long int>( std::round( R_owner.Dot(best_GC.current_grid_x) / best_GC.grid_sep ) );
+                    auto index_y = static_cast<long int>( std::round( R_owner.Dot(best_GC.current_grid_y) / best_GC.grid_sep ) );
+                    auto index_z = static_cast<long int>( std::round( R_owner.Dot(best_GC.current_grid_z) / best_GC.grid_sep ) );
+            /*
+                    auto C_x = static_cast<long int>( (R_owner.Dot(best_GC.current_grid_x) + best_GC.grid_sep * 0.5) / best_GC.grid_sep );
+                    auto C_y = std::fmod( R_owner.Dot(best_GC.current_grid_y), best_GC.grid_sep );
+                    auto C_z = std::fmod( R_owner.Dot(best_GC.current_grid_z), best_GC.grid_sep );
+            */
+
+                    const triplet_t triplet_index = {{ index_x, index_y, index_z }};
+                    partitioned[ triplet_index ].push_back(O);
+                    grid_unions[ triplet_index ] = P_owner;
+
+                    ++c_it;
+                    ++o_it;
+                } // For loop over full cohort.
+
+FUNCINFO("There are " << partitioned.size() << " involved grid unions");
+                // Now for each 3D grid intersection fit the associated data, if enough is available.
+                for(const auto &apair : partitioned){
+                    if(apair.second.size() < 10) continue;
+                    const auto grid_union = grid_unions[ apair.first ];
+
+                    vec3<double> mean(0.0, 0.0, 0.0);
+                    for(const auto &O : apair.second){
+                        mean += (O - grid_union);
+                        // Note: can we weight this to be point-count independent? Basically want a centroid, not a
+                        // mean... TODO.
+
+                        // An idea:
+                        // for each of the 3 grid lines, project all points onto the grid line and use 1D average or
+                        // distribution statistics (percentiles?). Then you can combine all directions (x, y, and z) to
+                        // make an overall displacement vector. At least this way you can use percentiles or moments or
+                        // something...
+                    }
+                    mean *= 1.0 / static_cast<double>(apair.second.size());
+
+                    //Express in the grid basis.
+                    const vec3<double> grid_mean( mean.Dot(best_GC.current_grid_x),
+                                                  mean.Dot(best_GC.current_grid_y),
+                                                  mean.Dot(best_GC.current_grid_z) );
+
+                    FUNCINFO("Grid union " << apair.first[0] << ", "
+                                           << apair.first[1] << ", "
+                                           << apair.first[2] << " "
+                                           << "i.e., " <<  grid_union
+                                           << " has " << apair.second.size() << " nearby points."
+                                           << " They is offset by "
+                                           << grid_mean 
+                                           << " or " 
+                                           << grid_mean.length() << " mm");
+                }
+
+
+            } // Estimating shift by 3D cylinder union fitting.
+        } // If post-fit analysis should be performed.
+
+        // Imbue the fitted point cloud with metadata for visualization.
         {
             std::vector<double> displacement(whole_ICPC.cohort.size(), std::numeric_limits<double>::quiet_NaN());
 
