@@ -1389,6 +1389,10 @@ FUNCINFO("There are " << partitioned.size() << " involved grid unions");
                 }
 
                 // Now for each 3D grid intersection fit the associated data, if enough is available.
+                samples_1D<double> unions_dist_vs_dist;
+                samples_1D<double> unions_dist_x_vs_dist;
+                samples_1D<double> unions_dist_y_vs_dist;
+                samples_1D<double> unions_dist_z_vs_dist;
                 for(const auto &apair : partitioned){
                     if(apair.second.size() < min_thresh) continue;
                     const auto grid_union = grid_unions[ apair.first ];
@@ -1412,16 +1416,29 @@ FUNCINFO("There are " << partitioned.size() << " involved grid unions");
                                                   mean.Dot(best_GC.current_grid_y),
                                                   mean.Dot(best_GC.current_grid_z) );
 
+                    const auto union_dist = (grid_union - vec3<double>(0.0,0.0,0.0)).length();
+                    unions_dist_vs_dist.push_back( union_dist, grid_mean.length() );
+                    unions_dist_x_vs_dist.push_back( union_dist, grid_mean.x );
+                    unions_dist_y_vs_dist.push_back( union_dist, grid_mean.y );
+                    unions_dist_z_vs_dist.push_back( union_dist, grid_mean.z );
+
                     FUNCINFO("Grid union " << apair.first[0] << ", "
                                            << apair.first[1] << ", "
                                            << apair.first[2] << " "
                                            << "i.e., " <<  grid_union
                                            << " has " << apair.second.size() << " nearby points."
-                                           << " They is offset by "
+                                           << " They are offset by "
                                            << grid_mean 
                                            << " or " 
                                            << grid_mean.length() << " mm");
                 }
+                if( !unions_dist_vs_dist.Write_To_File("/tmp/unions_dist_vs_dist.data")
+                ||  !unions_dist_x_vs_dist.Write_To_File("/tmp/unions_dist_x_vs_dist.data")
+                ||  !unions_dist_x_vs_dist.Write_To_File("/tmp/unions_dist_y_vs_dist.data")
+                ||  !unions_dist_x_vs_dist.Write_To_File("/tmp/unions_dist_z_vs_dist.data") ){
+                    throw std::runtime_error("Unable to dist-vs-dist plots for unions. Refusing to continue.");
+                }
+
 
 
             } // Estimating shift by 3D cylinder union fitting.
