@@ -55,6 +55,18 @@ bool ComputeVolumetricSpatialDerivative(planar_image_collection<float,double> &i
         return false;
     }
 
+    if(imagecoll.images.empty()){
+        FUNCWARN("No images available for computation. Nothing to do.");
+        return false;
+    }
+
+    // Estimate the typical image pxl_dx, pxl_dy, and pxl_dz in case it is needed for thinning later.
+    //
+    // Note: this routine assumes the first image is representative of all images.
+    const auto pxl_dx = imagecoll.images.front().pxl_dx;
+    const auto pxl_dy = imagecoll.images.front().pxl_dy;
+    const auto pxl_dz = imagecoll.images.front().pxl_dz;
+
     // If non-maximum suppression has been requested, pre-compute the magnitude via recursion.
     planar_image_collection<float,double> nms_working; // Additional storage for edge thinning.
     std::shared_ptr<planar_image_adjacency<float,double>> img_adj_ptr;
@@ -152,21 +164,34 @@ bool ComputeVolumetricSpatialDerivative(planar_image_collection<float,double> &i
 
                     const auto magn = std::hypot(ra, ca, ia);
 
-                    // Compare the gradient magnitude to the (pre-computed) neighbouring voxels.
-                    const auto unit = vec3<double>(ra, ca, ia).unit(); // Unit vector in direction of gradient.
-
-                    const long int channel = (user_data_s->channel < 0) ? 0 : user_data_s->channel;
-                    const auto n_magn_m = img_adj_ptr->trilinearly_interpolate(pos - unit, channel);
-                    const auto n_magn_p = img_adj_ptr->trilinearly_interpolate(pos + unit, channel);
-
                     float new_val = 0.0f;
-                    if( true
-                    && std::isfinite(n_magn_m)
-                    && std::isfinite(n_magn_p)
-                    && (n_magn_m <= magn)
-                    && (n_magn_p <= magn) ){
-                        new_val = magn;
-                    }
+                    do{ // Dummy loop so we can easily break out.
+                        if(magn <= 0.0) break; // If there is no gradient we cannot proceed.
+
+                        // Compare the gradient magnitude to the (pre-computed) neighbouring voxels.
+                        auto unit = vec3<double>(ra, ca, ia).unit(); // Unit vector in direction of gradient.
+                        if(!unit.isfinite()) break;
+
+                        // Scale the unit vector so it is aware of the voxel dimensions. This effectively converts the
+                        // vector into pixel number coordinates, but expressed in the DICOM coordinate system. This step
+                        // is important in order to produce thinned lines that are one voxel wide.
+                        unit.x *= pxl_dx;
+                        unit.y *= pxl_dy;
+                        unit.z *= pxl_dz;
+
+                        const long int channel = (user_data_s->channel < 0) ? 0 : user_data_s->channel;
+                        const auto n_magn_m = img_adj_ptr->trilinearly_interpolate(pos - unit, channel);
+                        const auto n_magn_p = img_adj_ptr->trilinearly_interpolate(pos + unit, channel);
+
+                        if( true
+                        && std::isfinite(n_magn_m)
+                        && std::isfinite(n_magn_p)
+                        && (n_magn_m <= magn)
+                        && (n_magn_p <= magn) ){
+                            new_val = magn;
+                        }
+                    }while(false);
+
                     return new_val;
             };
 
@@ -423,20 +448,35 @@ bool ComputeVolumetricSpatialDerivative(planar_image_collection<float,double> &i
                     const auto ia = img_aligned(v, shtl, pos);
 
                     const auto magn = std::hypot(ra, ca, ia);
-                    const auto unit = vec3<double>(ra, ca, ia).unit(); // Unit vector in direction of gradient.
-
-                    const long int channel = (user_data_s->channel < 0) ? 0 : user_data_s->channel;
-                    const auto n_magn_m = img_adj_ptr->trilinearly_interpolate(pos - unit, channel);
-                    const auto n_magn_p = img_adj_ptr->trilinearly_interpolate(pos + unit, channel);
 
                     float new_val = 0.0f;
-                    if( true
-                    && std::isfinite(n_magn_m)
-                    && std::isfinite(n_magn_p)
-                    && (n_magn_m <= magn)
-                    && (n_magn_p <= magn) ){
-                        new_val = magn;
-                    }
+                    do{ // Dummy loop so we can easily break out.
+                        if(magn <= 0.0) break; // If there is no gradient we cannot proceed.
+
+                        // Compare the gradient magnitude to the (pre-computed) neighbouring voxels.
+                        auto unit = vec3<double>(ra, ca, ia).unit(); // Unit vector in direction of gradient.
+                        if(!unit.isfinite()) break;
+
+                        // Scale the unit vector so it is aware of the voxel dimensions. This effectively converts the
+                        // vector into pixel number coordinates, but expressed in the DICOM coordinate system. This step
+                        // is important in order to produce thinned lines that are one voxel wide.
+                        unit.x *= pxl_dx;
+                        unit.y *= pxl_dy;
+                        unit.z *= pxl_dz;
+
+                        const long int channel = (user_data_s->channel < 0) ? 0 : user_data_s->channel;
+                        const auto n_magn_m = img_adj_ptr->trilinearly_interpolate(pos - unit, channel);
+                        const auto n_magn_p = img_adj_ptr->trilinearly_interpolate(pos + unit, channel);
+
+                        if( true
+                        && std::isfinite(n_magn_m)
+                        && std::isfinite(n_magn_p)
+                        && (n_magn_m <= magn)
+                        && (n_magn_p <= magn) ){
+                            new_val = magn;
+                        }
+                    }while(false);
+
                     return new_val;
             }; 
 
