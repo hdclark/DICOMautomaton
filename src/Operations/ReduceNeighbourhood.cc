@@ -36,6 +36,13 @@ OperationDoc OpArgDocReduceNeighbourhood(void){
     out.notes.emplace_back(
         "The provided image collection must be rectilinear."
     );
+    out.notes.emplace_back(
+        "This operation can be used to compute core 3D morphology operations (erosion and dilation)"
+        " as well as composite operations like opening (i.e., erosion followed by dilation),"
+        " closing (i.e., dilation followed by erosion), 'gradient' (i.e., the difference between"
+        " dilation and erosion, which produces an outline), and various other combinations of core"
+        " and composite operations."
+    );
     
     out.args.emplace_back();
     out.args.back() = IAWhitelistOpArgDoc();
@@ -88,15 +95,26 @@ OperationDoc OpArgDocReduceNeighbourhood(void){
                            " An appropriate isotropic extent must be provided for these neighbourhoods."
                            " (See below; extents must be provided in DICOM units, i.e., mm.)"
                            " Fixed-size neighbourhoods specify a fixed number of adjacent voxels."
-                           " These neighbourhoods are rectangular and are specified like 'RxCxI' for"
+                           " Fixed rectagular neighbourhoods are specified like 'RxCxI' for"
                            " row, column, and image slice extents (as integer number of rows, columns,"
-                           " and slices).";
+                           " and slices)."
+                           " Fixed spherical neighbourhoods are specified like 'Wsphere' where W"
+                           " is the width (i.e., the number of voxels wide)."
+                           " In morphological terminology, the neighbourhood is referred to as a"
+                           " 'structuring element.' A similar concept is the convolutional 'kernel.'";
     out.args.back().default_val = "spherical";
     out.args.back().expected = true;
     out.args.back().examples = { "spherical",
                                  "cubic",
                                  "3x3x3",
-                                 "5x5x5" };
+                                 "5x5x5",
+                                 "3sphere",
+                                 "5sphere",
+                                 "7sphere",
+                                 "9sphere",
+                                 "11sphere",
+                                 "13sphere",
+                                 "15sphere" };
 
 
     out.args.emplace_back();
@@ -105,6 +123,8 @@ OperationDoc OpArgDocReduceNeighbourhood(void){
                            " Statistical distribution reducers 'min', 'mean', 'median', and 'max' are defined."
                            " 'Min' is also known as the 'erosion' operation. Likewise, 'max' is also known as"
                            " the 'dilation' operation."
+                           " Note that the morphological 'opening' operation can be accomplished by sequentially"
+                           " performing an erosion and then a dilation using the same neighbourhood."
                            " Logical reducers 'is_min' and 'is_max' are also available -- is_min (is_max)"
                            " replace the voxel value with 1.0 if it was the min (max) in the neighbourhood and"
                            " 0.0 otherwise. Logical reducers 'is_min_nan' and 'is_max_nan' are variants that"
@@ -162,8 +182,15 @@ Drover ReduceNeighbourhood(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
     //-----------------------------------------------------------------------------------------------------------------
     const auto regex_sph = Compile_Regex("^sp?h?e?r?i?c?a?l?$");
     const auto regex_cub = Compile_Regex("^cu?b?i?c?$");
-    const auto regex_333 = Compile_Regex("^3x?3?x?3?$");
-    const auto regex_555 = Compile_Regex("^5x?5?x?5?$");
+    const auto regex_333 = Compile_Regex("^3x?3x?3$");
+    const auto regex_555 = Compile_Regex("^5x?5x?5$");
+    const auto regex_sp3 = Compile_Regex("^3sphe?r?e?$");
+    const auto regex_sp5 = Compile_Regex("^5sphe?r?e?$");
+    const auto regex_sp7 = Compile_Regex("^7sphe?r?e?$");
+    const auto regex_sp9 = Compile_Regex("^9sphe?r?e?$");
+    const auto regex_sp11 = Compile_Regex("^11sphe?r?e?$");
+    const auto regex_sp13 = Compile_Regex("^13sphe?r?e?$");
+    const auto regex_sp15 = Compile_Regex("^15sphe?r?e?$");
 
     const auto regex_min    = Compile_Regex("^mini?m?u?m?$");
     const auto regex_erode  = Compile_Regex("^er?o?.*"); // 'erode' and 'erosion'.
@@ -187,6 +214,39 @@ Drover ReduceNeighbourhood(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
     }
 
 
+    // This routine constructs an isotropic voxel neighbourhood (in pixel number coordinates) to speed up neighbourhood
+    // sampling for large neighbourhoods.
+    //
+    // Note that this routine assumes the grid is isotropically regular. If the grid is not fully regular but is
+    // still rectilinear, the neighbourhood will be non-isotropic (e.g., elliptical).
+    //
+    // Note that this routine accounts for a small amount of numerical uncertainty when determining voxel inclusivity.
+    // Specifying a max_radius of 2.5 should reliably give you a sphere 5 voxels wide.
+    //
+    // Note that this routine includes the self voxel (0,0,0). This is done for consistency.
+    //
+    const auto make_fixed_neighbourhood_spherical = [](double max_radius){ // in pixel coordinates.
+        std::vector<std::array<long int,3>> voxel_triplets;
+
+        const auto max_px_coord = static_cast<long int>(std::ceil(max_radius));
+        const auto machine_eps = 2.0 * std::sqrt(std::numeric_limits<double>::epsilon());
+        const vec3<double> zero(0.0, 0.0, 0.0);
+        for(long int i = -max_px_coord; i <= max_px_coord; ++i){
+            for(long int j = -max_px_coord; j <= max_px_coord; ++j){
+                for(long int k = -max_px_coord; k <= max_px_coord; ++k){
+                    const vec3<double> R( static_cast<double>(i),
+                                          static_cast<double>(j),
+                                          static_cast<double>(k) );
+                    const auto dist = (R - zero).length();
+                    if(dist <= (max_radius + machine_eps)){
+                        voxel_triplets.emplace_back( std::array<long int, 3>{i, j, k} );
+                    }
+                }
+            }
+        }
+        return voxel_triplets;
+    };
+
     auto IAs_all = All_IAs( DICOM_data );
     auto IAs = Whitelist( IAs_all, ImageSelectionStr );
     for(auto & iap_it : IAs){
@@ -194,20 +254,21 @@ Drover ReduceNeighbourhood(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
         ComputeVolumetricNeighbourhoodSamplerUserData ud;
         ud.channel = Channel;
         ud.maximum_distance = MaxDistance;
-        {
-            std::stringstream oss;
-            oss << "Neighbourhood-reduced (max-dist=" << ud.maximum_distance << ")";
-            ud.description = oss.str();
-        }
+        ud.description = "Neighbourhood-reduced";
 
         if(false){
         }else if( std::regex_match(NeighbourhoodStr, regex_sph) ){
             ud.neighbourhood = ComputeVolumetricNeighbourhoodSamplerUserData::Neighbourhood::Spherical;
+            ud.description += " (spherical, max-radius=" + std::to_string(ud.maximum_distance) + ")";
+
         }else if( std::regex_match(NeighbourhoodStr, regex_cub) ){
             ud.neighbourhood = ComputeVolumetricNeighbourhoodSamplerUserData::Neighbourhood::Cubic;
+            ud.description += " (cubic, max-dist=" + std::to_string(ud.maximum_distance) + ")";
+
         }else if( std::regex_match(NeighbourhoodStr, regex_333) ){
             ud.neighbourhood = ComputeVolumetricNeighbourhoodSamplerUserData::Neighbourhood::Selection;
-            ud.maximum_distance = MaxDistance;
+            ud.maximum_distance = std::numeric_limits<double>::quiet_NaN();
+            ud.description += " (3x3x3 pixel cube)";
             ud.voxel_triplets = { { 
 
                 { -1, -1, -1 }, { -1, -1,  0 }, { -1, -1,  1 }, { -1,  0, -1 }, { -1,  0,  0 },
@@ -224,7 +285,8 @@ Drover ReduceNeighbourhood(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
 
         }else if( std::regex_match(NeighbourhoodStr, regex_555) ){
             ud.neighbourhood = ComputeVolumetricNeighbourhoodSamplerUserData::Neighbourhood::Selection;
-            ud.maximum_distance = MaxDistance;
+            ud.maximum_distance = std::numeric_limits<double>::quiet_NaN();
+            ud.description += " (5x5x5 pixel cube)";
             ud.voxel_triplets = { { 
 
                 { -2, -2, -2 }, { -2, -2, -1 }, { -2, -2,  0 }, { -2, -2,  1 }, { -2, -2,  2 },
@@ -260,6 +322,62 @@ Drover ReduceNeighbourhood(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
                 {  2,  2, -2 }, {  2,  2, -1 }, {  2,  2,  0 }, {  2,  2,  1 }, {  2,  2,  2 }
 
             } };
+
+        }else if( std::regex_match(NeighbourhoodStr, regex_sp3) ){
+            ud.neighbourhood = ComputeVolumetricNeighbourhoodSamplerUserData::Neighbourhood::Selection;
+            ud.maximum_distance = std::numeric_limits<double>::quiet_NaN();
+            ud.description += " (3-pixel-wide sphere)";
+
+            const double max_radius = 1.5;
+            ud.voxel_triplets = make_fixed_neighbourhood_spherical(max_radius);
+
+        }else if( std::regex_match(NeighbourhoodStr, regex_sp5) ){
+            ud.neighbourhood = ComputeVolumetricNeighbourhoodSamplerUserData::Neighbourhood::Selection;
+            ud.maximum_distance = std::numeric_limits<double>::quiet_NaN();
+            ud.description += " (5-pixel-wide sphere)";
+
+            const double max_radius = 2.5;
+            ud.voxel_triplets = make_fixed_neighbourhood_spherical(max_radius);
+
+        }else if( std::regex_match(NeighbourhoodStr, regex_sp7) ){
+            ud.neighbourhood = ComputeVolumetricNeighbourhoodSamplerUserData::Neighbourhood::Selection;
+            ud.maximum_distance = std::numeric_limits<double>::quiet_NaN();
+            ud.description += " (7-pixel-wide sphere)";
+
+            const double max_radius = 3.5;
+            ud.voxel_triplets = make_fixed_neighbourhood_spherical(max_radius);
+
+        }else if( std::regex_match(NeighbourhoodStr, regex_sp9) ){
+            ud.neighbourhood = ComputeVolumetricNeighbourhoodSamplerUserData::Neighbourhood::Selection;
+            ud.maximum_distance = std::numeric_limits<double>::quiet_NaN();
+            ud.description += " (9-pixel-wide sphere)";
+
+            const double max_radius = 4.5;
+            ud.voxel_triplets = make_fixed_neighbourhood_spherical(max_radius);
+
+        }else if( std::regex_match(NeighbourhoodStr, regex_sp11) ){
+            ud.neighbourhood = ComputeVolumetricNeighbourhoodSamplerUserData::Neighbourhood::Selection;
+            ud.maximum_distance = std::numeric_limits<double>::quiet_NaN();
+            ud.description += " (11-pixel-wide sphere)";
+
+            const double max_radius = 5.5;
+            ud.voxel_triplets = make_fixed_neighbourhood_spherical(max_radius);
+
+        }else if( std::regex_match(NeighbourhoodStr, regex_sp13) ){
+            ud.neighbourhood = ComputeVolumetricNeighbourhoodSamplerUserData::Neighbourhood::Selection;
+            ud.maximum_distance = std::numeric_limits<double>::quiet_NaN();
+            ud.description += " (13-pixel-wide sphere)";
+
+            const double max_radius = 6.5;
+            ud.voxel_triplets = make_fixed_neighbourhood_spherical(max_radius);
+
+        }else if( std::regex_match(NeighbourhoodStr, regex_sp15) ){
+            ud.neighbourhood = ComputeVolumetricNeighbourhoodSamplerUserData::Neighbourhood::Selection;
+            ud.maximum_distance = std::numeric_limits<double>::quiet_NaN();
+            ud.description += " (15-pixel-wide sphere)";
+
+            const double max_radius = 7.5;
+            ud.voxel_triplets = make_fixed_neighbourhood_spherical(max_radius);
 
         }else{
             throw std::invalid_argument("Neighbourhood argument '"_s + NeighbourhoodStr + "' is not valid");
@@ -317,6 +435,10 @@ Drover ReduceNeighbourhood(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
 
         }else{
             throw std::invalid_argument("Reduction argument '"_s + ReductionStr + "' is not valid");
+        }
+
+        if(!ud.voxel_triplets.empty()){
+            FUNCINFO("Neighbourhood comprises " << ud.voxel_triplets.size() << " neighbours");
         }
 
         if(!(*iap_it)->imagecoll.Compute_Images( ComputeVolumetricNeighbourhoodSampler, 
