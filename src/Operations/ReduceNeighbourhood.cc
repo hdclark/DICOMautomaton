@@ -84,17 +84,27 @@ OperationDoc OpArgDocReduceNeighbourhood(void){
     out.args.emplace_back();
     out.args.back().name = "Neighbourhood";
     out.args.back().desc = "Controls how the neighbourhood surrounding a voxel is defined."
-                           " Currently, 'spherical' and 'cubic' are defined.";
+                           " Variable-size neighbourhoods 'spherical' and 'cubic' are defined."
+                           " An appropriate isotropic extent must be provided for these neighbourhoods."
+                           " (See below; extents must be provided in DICOM units, i.e., mm.)"
+                           " Fixed-size neighbourhoods specify a fixed number of adjacent voxels."
+                           " These neighbourhoods are rectangular and are specified like 'RxCxI' for"
+                           " row, column, and image slice extents (as integer number of rows, columns,"
+                           " and slices).";
     out.args.back().default_val = "spherical";
     out.args.back().expected = true;
     out.args.back().examples = { "spherical",
-                                 "cubic"};
+                                 "cubic",
+                                 "3x3x3",
+                                 "5x5x5" };
 
 
     out.args.emplace_back();
     out.args.back().name = "Reduction";
     out.args.back().desc = "Controls how the distribution of voxel values from neighbouring voxels is reduced."
                            " Statistical distribution reducers 'min', 'mean', 'median', and 'max' are defined."
+                           " 'Min' is also known as the 'erosion' operation. Likewise, 'max' is also known as"
+                           " the 'dilation' operation."
                            " Logical reducers 'is_min' and 'is_max' are also available -- is_min (is_max)"
                            " replace the voxel value with 1.0 if it was the min (max) in the neighbourhood and"
                            " 0.0 otherwise. Logical reducers 'is_min_nan' and 'is_max_nan' are variants that"
@@ -103,9 +113,11 @@ OperationDoc OpArgDocReduceNeighbourhood(void){
     out.args.back().default_val = "median";
     out.args.back().expected = true;
     out.args.back().examples = { "min",
+                                 "erode",
                                  "mean", 
                                  "median",
                                  "max",
+                                 "dilate",
                                  "is_min",
                                  "is_max",
                                  "is_min_nan",
@@ -115,7 +127,10 @@ OperationDoc OpArgDocReduceNeighbourhood(void){
     out.args.emplace_back();
     out.args.back().name = "MaxDistance";
     out.args.back().desc = "The maximum distance (inclusive, in DICOM units: mm) within which neighbouring"
-                           " voxels will be evaluated. For spherical neighbourhoods, this distance refers to the"
+                           " voxels will be evaluated for variable-size neighbourhoods."
+                           " Note that this parameter will be ignored if a fixed-size neighbourhood has"
+                           " been specified."
+                           " For spherical neighbourhoods, this distance refers to the"
                            " radius. For cubic neighbourhoods, this distance refers to 'box radius' or the distance"
                            " from the cube centre to the nearest point on each bounding face."
                            " Voxels separated by more than this distance will not be evaluated together.";
@@ -147,11 +162,15 @@ Drover ReduceNeighbourhood(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
     //-----------------------------------------------------------------------------------------------------------------
     const auto regex_sph = Compile_Regex("^sp?h?e?r?i?c?a?l?$");
     const auto regex_cub = Compile_Regex("^cu?b?i?c?$");
+    const auto regex_333 = Compile_Regex("^3x?3?x?3?$");
+    const auto regex_555 = Compile_Regex("^5x?5?x?5?$");
 
     const auto regex_min    = Compile_Regex("^mini?m?u?m?$");
+    const auto regex_erode  = Compile_Regex("^er?o?.*"); // 'erode' and 'erosion'.
     const auto regex_median = Compile_Regex("^medi?a?n?$");
     const auto regex_mean   = Compile_Regex("^mean?$");
     const auto regex_max    = Compile_Regex("^maxi?m?u?m?$");
+    const auto regex_dilate = Compile_Regex("^di?l?a?t?.*"); // 'dilate' and 'dilation'.
 
     const auto regex_is_min = Compile_Regex("^is?_?m?ini?m?u?m?$");
     const auto regex_is_max = Compile_Regex("^is?_?m?axi?m?u?m?$");
@@ -186,12 +205,69 @@ Drover ReduceNeighbourhood(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
             ud.neighbourhood = ComputeVolumetricNeighbourhoodSamplerUserData::Neighbourhood::Spherical;
         }else if( std::regex_match(NeighbourhoodStr, regex_cub) ){
             ud.neighbourhood = ComputeVolumetricNeighbourhoodSamplerUserData::Neighbourhood::Cubic;
+        }else if( std::regex_match(NeighbourhoodStr, regex_333) ){
+            ud.neighbourhood = ComputeVolumetricNeighbourhoodSamplerUserData::Neighbourhood::Selection;
+            ud.maximum_distance = MaxDistance;
+            ud.voxel_triplets = { { 
+
+                { -1, -1, -1 }, { -1, -1,  0 }, { -1, -1,  1 }, { -1,  0, -1 }, { -1,  0,  0 },
+                { -1,  0,  1 }, { -1,  1, -1 }, { -1,  1,  0 }, { -1,  1,  1 },
+
+                {  0, -1, -1 }, {  0, -1,  0 }, {  0, -1,  1 }, {  0,  0, -1 },
+                {  0,  0,  0 },  // Note: this sampler includes the self voxel for consistency with other neighbourhoods.
+                {  0,  0,  1 }, {  0,  1, -1 }, {  0,  1,  0 }, {  0,  1,  1 },
+
+                {  1, -1, -1 }, {  1, -1,  0 }, {  1, -1,  1 }, {  1,  0, -1 }, {  1,  0,  0 },
+                {  1,  0,  1 }, {  1,  1, -1 }, {  1,  1,  0 }, {  1,  1,  1 }
+                
+            } };
+
+        }else if( std::regex_match(NeighbourhoodStr, regex_555) ){
+            ud.neighbourhood = ComputeVolumetricNeighbourhoodSamplerUserData::Neighbourhood::Selection;
+            ud.maximum_distance = MaxDistance;
+            ud.voxel_triplets = { { 
+
+                { -2, -2, -2 }, { -2, -2, -1 }, { -2, -2,  0 }, { -2, -2,  1 }, { -2, -2,  2 },
+                { -2, -1, -2 }, { -2, -1, -1 }, { -2, -1,  0 }, { -2, -1,  1 }, { -2, -1,  2 },
+                { -2,  0, -2 }, { -2,  0, -1 }, { -2,  0,  0 }, { -2,  0,  1 }, { -2,  0,  2 },
+                { -2,  1, -2 }, { -2,  1, -1 }, { -2,  1,  0 }, { -2,  1,  1 }, { -2,  1,  2 },
+                { -2,  2, -2 }, { -2,  2, -1 }, { -2,  2,  0 }, { -2,  2,  1 }, { -2,  2,  2 },
+
+                { -1, -2, -2 }, { -1, -2, -1 }, { -1, -2,  0 }, { -1, -2,  1 }, { -1, -2,  2 },
+                { -1, -1, -2 }, { -1, -1, -1 }, { -1, -1,  0 }, { -1, -1,  1 }, { -1, -1,  2 },
+                { -1,  0, -2 }, { -1,  0, -1 }, { -1,  0,  0 }, { -1,  0,  1 }, { -1,  0,  2 },
+                { -1,  1, -2 }, { -1,  1, -1 }, { -1,  1,  0 }, { -1,  1,  1 }, { -1,  1,  2 },
+                { -1,  2, -2 }, { -1,  2, -1 }, { -1,  2,  0 }, { -1,  2,  1 }, { -1,  2,  2 },
+
+                {  0, -2, -2 }, {  0, -2, -1 }, {  0, -2,  0 }, {  0, -2,  1 }, {  0, -2,  2 },
+                {  0, -1, -2 }, {  0, -1, -1 }, {  0, -1,  0 }, {  0, -1,  1 }, {  0, -1,  2 },
+                {  0,  0, -2 }, {  0,  0, -1 },
+                {  0,  0,  0 }, // Note: this sampler includes the self voxel for consistency with other neighbourhoods.
+                {  0,  0,  1 }, {  0,  0,  2 },
+                {  0,  1, -2 }, {  0,  1, -1 }, {  0,  1,  0 }, {  0,  1,  1 }, {  0,  1,  2 },
+                {  0,  2, -2 }, {  0,  2, -1 }, {  0,  2,  0 }, {  0,  2,  1 }, {  0,  2,  2 },
+
+                {  1, -2, -2 }, {  1, -2, -1 }, {  1, -2,  0 }, {  1, -2,  1 }, {  1, -2,  2 },
+                {  1, -1, -2 }, {  1, -1, -1 }, {  1, -1,  0 }, {  1, -1,  1 }, {  1, -1,  2 },
+                {  1,  0, -2 }, {  1,  0, -1 }, {  1,  0,  0 }, {  1,  0,  1 }, {  1,  0,  2 },
+                {  1,  1, -2 }, {  1,  1, -1 }, {  1,  1,  0 }, {  1,  1,  1 }, {  1,  1,  2 },
+                {  1,  2, -2 }, {  1,  2, -1 }, {  1,  2,  0 }, {  1,  2,  1 }, {  1,  2,  2 },
+
+                {  2, -2, -2 }, {  2, -2, -1 }, {  2, -2,  0 }, {  2, -2,  1 }, {  2, -2,  2 }, 
+                {  2, -1, -2 }, {  2, -1, -1 }, {  2, -1,  0 }, {  2, -1,  1 }, {  2, -1,  2 },
+                {  2,  0, -2 }, {  2,  0, -1 }, {  2,  0,  0 }, {  2,  0,  1 }, {  2,  0,  2 },
+                {  2,  1, -2 }, {  2,  1, -1 }, {  2,  1,  0 }, {  2,  1,  1 }, {  2,  1,  2 },
+                {  2,  2, -2 }, {  2,  2, -1 }, {  2,  2,  0 }, {  2,  2,  1 }, {  2,  2,  2 }
+
+            } };
+
         }else{
             throw std::invalid_argument("Neighbourhood argument '"_s + NeighbourhoodStr + "' is not valid");
         }
 
         if(false){
-        }else if( std::regex_match(ReductionStr, regex_min) ){
+        }else if( std::regex_match(ReductionStr, regex_min)
+              ||  std::regex_match(ReductionStr, regex_erode) ){
             ud.f_reduce = [](float, std::vector<float> &shtl, vec3<double>) -> float {
                               return Stats::Min(shtl);
                           };
@@ -203,7 +279,8 @@ Drover ReduceNeighbourhood(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
             ud.f_reduce = [](float, std::vector<float> &shtl, vec3<double>) -> float {
                               return Stats::Mean(shtl);
                           };
-        }else if( std::regex_match(ReductionStr, regex_max) ){
+        }else if( std::regex_match(ReductionStr, regex_max)
+              ||  std::regex_match(ReductionStr, regex_dilate) ){
             ud.f_reduce = [](float, std::vector<float> &shtl, vec3<double>) -> float {
                               return Stats::Max(shtl);
                           };
