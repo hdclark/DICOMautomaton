@@ -120,6 +120,7 @@ add_library(Operations_objs OBJECT
     UBC3TMRI_DCE_Differences.cc
     UBC3TMRI_DCE_Experimental.cc
     UBC3TMRI_IVIM_ADC.cc
+    VolumetricCorrelationDetector.cc
     VolumetricSpatialBlur.cc
     VolumetricSpatialDerivative.cc
     VoxelRANSAC.cc
