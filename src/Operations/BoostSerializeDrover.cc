@@ -34,6 +34,18 @@ OperationDoc OpArgDocBoost_Serialize_Drover(void){
                             "out.xml.gz" };
     out.args.back().mimetype = "application/octet-stream";
 
+
+    out.args.emplace_back();
+    out.args.back().name = "Components";
+    out.args.back().desc = "Which components to include in the output."
+                           " Currently, any combination of (all images), (all contours), and (all point clouds)"
+                           " can be selected.";
+    out.args.back().default_val = "images+contours+pointclouds";
+    out.args.back().expected = true;
+    out.args.back().examples = { "images",
+                                 "images+pointclouds",
+                                 "contours+images+pointclouds" };
+
     return out;
 }
 
@@ -41,12 +53,37 @@ Drover
 Boost_Serialize_Drover(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string, std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
-    auto fname = OptArgs.getValueStr("Filename").value();    
+    auto FilenameStr = OptArgs.getValueStr("Filename").value();
+    auto ComponentsStr = OptArgs.getValueStr("Components").value();
+
     //-----------------------------------------------------------------------------------------------------------------
 
-    const boost::filesystem::path apath(fname);
+    const auto regex_images   = Compile_Regex(".*ima?ge?s?.*");
+    const auto regex_contours = Compile_Regex(".*cont?o?u?r?s?.*");
+    const auto regex_pclouds  = Compile_Regex(".*po?i?n?t?.*clo?u?d?s?.*");
 
-    const auto res = Common_Boost_Serialize_Drover(DICOM_data, apath);
+    const bool include_images   = std::regex_match(ComponentsStr, regex_images);
+    const bool include_contours = std::regex_match(ComponentsStr, regex_contours);
+    const bool include_pclouds  = std::regex_match(ComponentsStr, regex_pclouds);
+
+    const boost::filesystem::path apath(FilenameStr);
+
+    // Figure out what needs to be serialized.
+    //
+    // Note: The Drover class holds everything as shared_ptrs or containers of shared_ptrs, so these copies are
+    // superficial.
+    Drover d;
+    if(include_images){
+        d.image_data = DICOM_data.image_data;
+    }
+    if(include_contours){
+        d.contour_data = DICOM_data.contour_data;
+    }
+    if(include_pclouds){
+        d.point_data = DICOM_data.point_data;
+    }
+
+    const auto res = Common_Boost_Serialize_Drover(d, apath);
     if(res){
         FUNCINFO("Dumped serialization to file " << apath);
     }else{
