@@ -623,6 +623,7 @@ Drover SFML_Viewer( Drover DICOM_data,
                             "\\t\\t E \\t\\t Empty the current working ROI buffer. (The entire buffer; all contours.)\\n"
                             "\\t\\t s,S \\t\\t Save the current contour collection.\\n"
                             "\\t\\t # \\t\\t Compute stats for the working, unsaved contour collection.\\n"
+                            "\\t\\t % \\t\\t Open a dialog box to select an explicit window and level.\\n"
                             "\\t\\t b \\t\\t Serialize Drover instance (all data) to file.\\n"
                             "\\n\""
                     );
@@ -1552,6 +1553,31 @@ Drover SFML_Viewer( Drover DICOM_data,
 
                     }catch(const std::exception &e){
                         FUNCWARN("Unable to compute working contour collection stats: '" << e.what() << "'");
+                    }
+
+                //Query the user to provide a window and level explicitly.
+                }else if( thechar == '%' ){
+                    try{
+                        const std::string low_str = Detox_String(Execute_Command_In_Pipe(
+                            "zenity --entry --text='What is the new window low?' --entry-text='100.0' 2>/dev/null"));
+                        const std::string high_str = Detox_String(Execute_Command_In_Pipe(
+                            "zenity --entry --text='What is the new window high?' --entry-text='500.0' 2>/dev/null"));
+
+                        // Parse the values and protect against mixing low and high values.
+                        const auto new_low  = std::stod(low_str);
+                        const auto new_high = std::stod(high_str);
+                        const auto new_fullwidth = std::abs(new_high - new_low);
+                        const auto new_centre = std::min(new_low, new_high) + 0.5 * new_fullwidth;
+                        custom_width.emplace(new_fullwidth);
+                        custom_centre.emplace(new_centre);
+
+                        if(load_img_texture_sprite(disp_img_it, disp_img_texture_sprite)){
+                            scale_sprite_to_fill_screen(window,disp_img_it,disp_img_texture_sprite);
+                        }else{
+                            FUNCERR("Unable to reload image after adjusting window/level");
+                        }
+                    }catch(const std::exception &e){
+                        FUNCWARN("Unable to parse window and level: '" << e.what() << "'");
                     }
 
                 }else{
