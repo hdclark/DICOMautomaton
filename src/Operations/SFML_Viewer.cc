@@ -1,7 +1,5 @@
 //SFML_Viewer.cc - A part of DICOMautomaton 2015 - 2017. Written by hal clark.
 
-#include <SFML/Graphics.hpp>
-#include <boost/filesystem.hpp>
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -18,7 +16,6 @@
 #include <list>
 #include <map>
 #include <memory>
-#include <pqxx/pqxx>          //PostgreSQL C++ interface.
 #include <regex>
 #include <stdexcept>
 #include <string>    
@@ -26,6 +23,20 @@
 #include <type_traits>
 #include <utility>            //Needed for std::pair.
 #include <vector>
+
+#include <boost/filesystem.hpp>
+
+#include <SFML/Graphics.hpp>
+
+#include "YgorFilesDirs.h"    //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
+#include "YgorImages.h"
+#include "YgorImagesIO.h"
+#include "YgorMath.h"         //Needed for vec3 class.
+#include "YgorMathChebyshev.h" //Needed for cheby_approx class.
+#include "YgorMathPlottingGnuplot.h" //Needed for YgorMathPlottingGnuplot::*.
+#include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorStats.h"        //Needed for Stats:: namespace.
+#include "YgorString.h"       //Needed for GetFirstRegex(...)
 
 #include "../Colour_Maps.h"
 #include "../Common_Boost_Serialization.h"
@@ -36,16 +47,8 @@
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
 #include "../YgorImages_Functors/Compute/AccumulatePixelDistributions.h"
+
 #include "SFML_Viewer.h"
-#include "YgorFilesDirs.h"    //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
-#include "YgorImages.h"
-#include "YgorImagesIO.h"
-#include "YgorMath.h"         //Needed for vec3 class.
-#include "YgorMathChebyshev.h" //Needed for cheby_approx class.
-#include "YgorMathPlottingGnuplot.h" //Needed for YgorMathPlottingGnuplot::*.
-#include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
-#include "YgorStats.h"        //Needed for Stats:: namespace.
-#include "YgorString.h"       //Needed for GetFirstRegex(...)
 
 
 OperationDoc OpArgDocSFML_Viewer(void){
@@ -83,7 +86,7 @@ OperationDoc OpArgDocSFML_Viewer(void){
 Drover SFML_Viewer( Drover DICOM_data, 
                     OperationArgPkg OptArgs, 
                     std::map<std::string,std::string> /*InvocationMetadata*/, 
-                    std::string /*FilenameLex*/ ){
+                    std::string FilenameLex ){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto SingleScreenshotStr = OptArgs.getValueStr("SingleScreenshot").value();
@@ -94,6 +97,8 @@ Drover SFML_Viewer( Drover DICOM_data,
 
     const auto SingleScreenshot = std::regex_match(SingleScreenshotStr, TrueRegex);
     long int SingleScreenshotCounter = 3; // Used to count down frames before taking the snapshot.
+
+    Explicator X(FilenameLex);
 
 
     //Trim any empty image sets.
@@ -1453,10 +1458,7 @@ Drover SFML_Viewer( Drover DICOM_data,
                 }else if( (thechar == 's') || (thechar == 'S') ){
 
                     try{
-                        auto FrameofReferenceUID = disp_img_it->GetMetadataValueAs<std::string>("FrameofReferenceUID");
-                        auto StudyInstanceUID    = disp_img_it->GetMetadataValueAs<std::string>("StudyInstanceUID");
-                        if(!FrameofReferenceUID || !StudyInstanceUID) throw std::runtime_error("Missing needed image metadata.");
-
+                        // Ask the user for additional information.
                         const std::string save_roi = Detox_String(Execute_Command_In_Pipe("zenity --question --text='Save ROI?' 2>/dev/null && echo 1"));
                         if(save_roi != "1"){
                             FUNCINFO("Not saving contours. Here it is for inspection purposes:" << contour_coll_shtl.write_to_string());
@@ -1464,7 +1466,7 @@ Drover SFML_Viewer( Drover DICOM_data,
                         }
 
                         const std::string roi_name = Detox_String(Execute_Command_In_Pipe(
-                            "zenity --entry --text='What is the name of the ROI?' --entry-text='ICCR2016_' 2>/dev/null"));
+                            "zenity --entry --text='What is the name of the ROI?' --entry-text='unspecified' 2>/dev/null"));
                         if(roi_name.empty()) throw std::runtime_error("Cannot save with an empty ROI name. (Punctuation is removed.)");
 
                         //Trim empty contours from the shuttle.
@@ -1472,35 +1474,43 @@ Drover SFML_Viewer( Drover DICOM_data,
                         if(contour_coll_shtl.contours.empty()) throw std::runtime_error("Given empty contour collection. Contours need >3 points each.");
                         const std::string cc_as_str( contour_coll_shtl.write_to_string() );                             
 
-                        //Attempt to save to a database.
-                        const std::string db_params("dbname=pacs user=hal host=localhost port=5432");
-                        pqxx::connection c(db_params);
-                        pqxx::work txn(c);
+                        //Add metadata.
+                        auto FrameofReferenceUID = disp_img_it->GetMetadataValueAs<std::string>("FrameofReferenceUID");
+                        if(FrameofReferenceUID){
+                            contour_coll_shtl.Insert_Metadata("FrameofReferenceUID", FrameofReferenceUID.value());
+                        }else{
+                            throw std::runtime_error("Missing 'FrameofReferenceUID' metadata element. Cannot continue.");
+                        }
 
-                        std::stringstream ss;
-                        ss << "INSERT INTO contours ";
-                        ss << "    (ROIName, ContourCollectionString, StudyInstanceUID, FrameofReferenceUID) ";
-                        ss << "VALUES ";
-                        ss << "    (" << txn.quote(roi_name);
-                        ss << "    ," << txn.quote(cc_as_str);
-                        ss << "    ," << txn.quote(StudyInstanceUID.value());
-                        ss << "    ," << txn.quote(FrameofReferenceUID.value());
-                        ss << "    ) ";   // TODO: Insert contour_collection's metadata?
-                        ss << "RETURNING ROIName;";
+                        auto StudyInstanceUID = disp_img_it->GetMetadataValueAs<std::string>("StudyInstanceUID");
+                        if(StudyInstanceUID){
+                            contour_coll_shtl.Insert_Metadata("StudyInstanceUID", StudyInstanceUID.value());
+                        }else{
+                            throw std::runtime_error("Missing 'StudyInstanceUID' metadata element. Cannot continue.");
+                        }
 
-                        FUNCINFO("Executing query:\n\t" << ss.str());
-                        pqxx::result res = txn.exec(ss.str());
-                        if(res.empty()) throw std::runtime_error("Should have received an ROIName but didn't.");
-                        txn.commit();
+                        contour_coll_shtl.Insert_Metadata("ROIName", roi_name);
+                        contour_coll_shtl.Insert_Metadata("NormalizedROIName", X(roi_name));
+                        contour_coll_shtl.Raw_ROI_name = roi_name;
+                        contour_coll_shtl.ROI_number = 1000;
+                        contour_coll_shtl.Minimum_Separation = disp_img_it->pxl_dz;
+
+
+                        //Insert the contours into the Drover object.
+                        if(DICOM_data.contour_data == nullptr){
+                            std::unique_ptr<Contour_Data> output (new Contour_Data());
+                            DICOM_data.contour_data = std::move(output);
+                        }
+                        DICOM_data.contour_data->ccs.emplace_back(contour_coll_shtl);
 
                         //Clear the data in preparation for the next contour collection.
                         contour_coll_shtl.contours.clear();
                         contour_coll_shtl.contours.emplace_back();
                         contour_coll_shtl.contours.back().closed = true;
 
-                        FUNCINFO("Contour collection saved to db and cleared");
+                        FUNCINFO("Drover class imbued with new contour collection");
                     }catch(const std::exception &e){
-                        FUNCWARN("Unable to push contour collection to db: '" << e.what() << "'");
+                        FUNCWARN("Unable to save contour collection: '" << e.what() << "'");
                     }
 
                 //Compute some stats for the working, unsaved contour collection.
