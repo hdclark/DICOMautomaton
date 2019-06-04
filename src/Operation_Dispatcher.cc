@@ -67,6 +67,7 @@
 #include "Operations/DumpAllOrderedImageMetadataToFile.h"
 #include "Operations/DumpAnEncompassedPoint.h"
 #include "Operations/DumpFilesPartitionedByTime.h"
+#include "Operations/DumpImageMeshes.h"
 #include "Operations/DumpImageMetadataOccurrencesToFile.h"
 #include "Operations/DumpPerROIParams_KineticModel_1Compartment2Input_5Param.h"
 #include "Operations/DumpPixelValuesOverTimeForAnEncompassedPoint.h"
@@ -199,6 +200,7 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["DumpAllOrderedImageMetadataToFile"] = std::make_pair(OpArgDocDumpAllOrderedImageMetadataToFile, DumpAllOrderedImageMetadataToFile);
     out["DumpAnEncompassedPoint"] = std::make_pair(OpArgDocDumpAnEncompassedPoint, DumpAnEncompassedPoint);
     out["DumpFilesPartitionedByTime"] = std::make_pair(OpArgDocDumpFilesPartitionedByTime, DumpFilesPartitionedByTime);
+    out["DumpImageMeshes"] = std::make_pair(OpArgDocDumpImageMeshes, DumpImageMeshes);
     out["DumpImageMetadataOccurrencesToFile"] = std::make_pair(OpArgDocDumpImageMetadataOccurrencesToFile, DumpImageMetadataOccurrencesToFile);
     out["EQD2Convert"] = std::make_pair(OpArgDocEQD2Convert, EQD2Convert);
       

@@ -49,6 +49,7 @@ add_library(Operations_objs OBJECT
     DumpAllOrderedImageMetadataToFile.cc
     DumpAnEncompassedPoint.cc
     DumpFilesPartitionedByTime.cc
+    DumpImageMeshes.cc
     DumpImageMetadataOccurrencesToFile.cc
     DumpPerROIParams_KineticModel_1Compartment2Input_5Param.cc
     DumpPixelValuesOverTimeForAnEncompassedPoint.cc
