@@ -124,15 +124,21 @@ OperationDoc OpArgDocDrawGeometry(void){
     out.args.emplace_back();
     out.args.back().name = "Shapes";
     out.args.back().desc = "This parameter is used to specify the shapes and patterns to consider."
-                           " Grids have five configurable parameters: centre, orientation, thickness, and separation."
-                           " A grid intersecting at the image array's centre aligned with (1.0,0.0,0.0) and (0.0,1.0,0.0), with"
+                           " Currently grids and wireframecubes are available."
+                           " Grids have five configurable parameters: two orientations, line thickness, and line separation."
+                           " A grid intersecting at the image array's centre, aligned with (1.0,0.0,0.0) and (0.0,1.0,0.0), with"
                            " line thickness (i.e., diameter) 3.0 (DICOM units; mm), and separation 15.0 can be specified as"
                            " 'grid(1.0,0.0,0.0, 0.0,1.0,0.0, 3.0, 15.0)'."
                            " Unit vectors will be Gram-Schmidt orthogonalized."
-                           " Note that currently the grid must intersect the image array's centre.";
+                           " Note that currently the grid *must* intersect the image array's centre."
+                           " Cubes have the same number of configurable parameters, but only a single cube of the grid is drawn."
+                           " However, the wireframecube is centred at the image centre."
+                           " Both grid and wireframecube shapes only overwrite voxels that intersect the geometry,"
+                           " permitting easier composition of multiple shapes or custom backgrounds.";
     out.args.back().default_val = "grid(-0.0941083,0.995562,0, 0.992667,0.0938347,0.0762047, 3.0, 15.0)";
     out.args.back().expected = true;
-    out.args.back().examples = { "grid(1.0,0.0,0.0, 0.0,1.0,0.0, 3.0, 15.0)" };
+    out.args.back().examples = { "grid(1.0,0.0,0.0, 0.0,1.0,0.0, 3.0, 15.0)",
+                                 "wireframecube(1.0,0.0,0.0, 0.0,1.0,0.0, 3.0, 15.0)" };
 
     return out;
 }
@@ -157,6 +163,7 @@ Drover DrawGeometry(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
     const auto ROILabelRegex = OptArgs.getValueStr("ROILabelRegex").value();
 
     const auto ShapesStr = OptArgs.getValueStr("Shapes").value();
+
     //-----------------------------------------------------------------------------------------------------------------
 
     const auto regex_centre = Compile_Regex("^cent.*");
@@ -177,6 +184,7 @@ Drover DrawGeometry(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
     }
 
     const auto regex_grid = Compile_Regex("^gr?i?d?.*$");
+    const auto regex_wcube = Compile_Regex("^wi?r?e?f?r?a?m?e?c?u?b?e?.*$");
 
     std::function<void(long int, long int, long int, std::reference_wrapper<planar_image<float,double>>, float &)> f_noop;
 
@@ -186,7 +194,9 @@ Drover DrawGeometry(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
 
     //-----------------------------------------------------------------------------------------------------------------
 
-    bool shape_is_grid = false;
+    // Note: cubes and grids share much of the same basic specifications.
+    bool shape_is_grid = std::regex_match(ShapesStr, regex_grid);
+    bool shape_is_wcube = std::regex_match(ShapesStr, regex_wcube);
     double grid_sep = std::numeric_limits<double>::quiet_NaN();
     double grid_rad = std::numeric_limits<double>::quiet_NaN();
     vec3<double> unit_x = vec3_nan;
@@ -194,7 +204,7 @@ Drover DrawGeometry(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
     vec3<double> unit_z = vec3_nan;
 
     if(false){
-    }else if(std::regex_match(ShapesStr, regex_grid)){
+    }else if(shape_is_grid || shape_is_wcube){
         auto split = SplitStringToVector(ShapesStr, '(', 'd');
         split = SplitVector(split, ')', 'd');
         split = SplitVector(split, ',', 'd');
@@ -207,10 +217,9 @@ Drover DrawGeometry(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
            }catch(const std::exception &){ }
         }
         if(numbers.size() != 8){
-            throw std::invalid_argument("Unable to parse grid shape parameters. Cannot continue.");
+            throw std::invalid_argument("Unable to parse grid/cube shape parameters. Cannot continue.");
         }
 
-        shape_is_grid = true;
         unit_x = vec3<double>( numbers.at(0),
                                numbers.at(1),
                                numbers.at(2) ).unit();
@@ -220,12 +229,11 @@ Drover DrawGeometry(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
         grid_rad = numbers.at(6) * 0.5;
         grid_sep = numbers.at(7);
 
-        if(!std::isfinite(grid_sep)) throw std::invalid_argument("Grid separation invalid.");
-        if(!std::isfinite(grid_rad)) throw std::invalid_argument("Grid line thickness invalid.");
+        if(!std::isfinite(grid_sep)) throw std::invalid_argument("Grid/cube separation invalid.");
+        if(!std::isfinite(grid_rad)) throw std::invalid_argument("Grid/cube line thickness invalid.");
 
-        if(!unit_x.isfinite()) throw std::invalid_argument("Grid orientation vector #1 invalid.");
-        if(!unit_y.isfinite()) throw std::invalid_argument("Grid orientation vector #2 invalid.");
-
+        if(!unit_x.isfinite()) throw std::invalid_argument("Grid/cube orientation vector #1 invalid.");
+        if(!unit_y.isfinite()) throw std::invalid_argument("Grid/cube orientation vector #2 invalid.");
     }else{
         throw std::invalid_argument("Shape not understood. Refusing to continue.");
     }
@@ -253,10 +261,6 @@ Drover DrawGeometry(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
         std::vector<line<double>> grid_lines;
         if(shape_is_grid){
             const auto img_origin = img_refw.get().anchor + img_refw.get().offset;
-
-            const auto img_unit_x = img_refw.get().row_unit;
-            const auto img_unit_y = img_refw.get().col_unit;
-            //const auto img_unit_z = img_unit_x.Cross( img_unit_y );
             const auto img_centre = (*iap_it)->imagecoll.center();
 
             const auto grid_origin = img_centre; // Note: changing this will require changing N_lines below!
@@ -305,7 +309,68 @@ Drover DrawGeometry(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
                 }
             }
         }
+
         ////////////////////////////////////////////////////////////
+        // Wireframe cube pattern.
+        std::vector<line_segment<double>> wcube_lines;
+        if(shape_is_wcube){
+            const auto img_centre = (*iap_it)->imagecoll.center();
+
+            unit_z = unit_x.Cross(unit_y).unit();
+            if(!unit_x.GramSchmidt_orthogonalize(unit_y, unit_z)){
+                throw std::invalid_argument("Cannot orthogonalize wireframecube unit vectors. Cannot continue.");
+            }
+            unit_x = unit_x.unit();
+            unit_y = unit_y.unit();
+            unit_z = unit_z.unit();
+
+            FUNCINFO("Proceeding with orthogonalized wireframecube orientation unit vectors: " 
+                     << unit_x << ", "
+                     << unit_y << ", and "
+                     << unit_z );
+
+            const auto c_A = img_centre - unit_x * grid_sep * 0.5 
+                                        - unit_y * grid_sep * 0.5
+                                        - unit_z * grid_sep * 0.5;
+            const auto c_B = img_centre + unit_x * grid_sep * 0.5 
+                                        - unit_y * grid_sep * 0.5
+                                        - unit_z * grid_sep * 0.5;
+            const auto c_C = img_centre + unit_x * grid_sep * 0.5 
+                                        + unit_y * grid_sep * 0.5
+                                        - unit_z * grid_sep * 0.5;
+            const auto c_D = img_centre - unit_x * grid_sep * 0.5 
+                                        + unit_y * grid_sep * 0.5
+                                        - unit_z * grid_sep * 0.5;
+
+            const auto c_E = img_centre - unit_x * grid_sep * 0.5 
+                                        - unit_y * grid_sep * 0.5
+                                        + unit_z * grid_sep * 0.5;
+            const auto c_F = img_centre + unit_x * grid_sep * 0.5 
+                                        - unit_y * grid_sep * 0.5
+                                        + unit_z * grid_sep * 0.5;
+            const auto c_G = img_centre + unit_x * grid_sep * 0.5 
+                                        + unit_y * grid_sep * 0.5
+                                        + unit_z * grid_sep * 0.5;
+            const auto c_H = img_centre - unit_x * grid_sep * 0.5 
+                                        + unit_y * grid_sep * 0.5
+                                        + unit_z * grid_sep * 0.5;
+            wcube_lines.emplace_back( c_A, c_B );
+            wcube_lines.emplace_back( c_B, c_C );
+            wcube_lines.emplace_back( c_C, c_D );
+            wcube_lines.emplace_back( c_D, c_A );
+
+            wcube_lines.emplace_back( c_E, c_F );
+            wcube_lines.emplace_back( c_F, c_G );
+            wcube_lines.emplace_back( c_G, c_H );
+            wcube_lines.emplace_back( c_H, c_E );
+
+            wcube_lines.emplace_back( c_A, c_E );
+            wcube_lines.emplace_back( c_B, c_F );
+            wcube_lines.emplace_back( c_C, c_G );
+            wcube_lines.emplace_back( c_D, c_H );
+        }
+        ////////////////////////////////////////////////////////////
+
 
         PartitionedImageVoxelVisitorMutatorUserData ud;
 
@@ -357,7 +422,29 @@ Drover DrawGeometry(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
                             return;
                         }
                     }
-                    voxel_val = 0.0f;
+                    //voxel_val = 0.0f;
+                    return;
+                }
+            };
+        }
+
+        // Cube pattern.
+        if(shape_is_wcube){
+            f_overwrite = [&]( long int row,
+                               long int col,
+                               long int chan,
+                               std::reference_wrapper<planar_image<float,double>> img_refw,
+                               float &voxel_val ) -> void {
+                if( (Channel < 0) || (Channel == chan) ){
+                    const auto pos = img_refw.get().position(row,col);
+
+                    for(const auto &l : wcube_lines){
+                        if(l.Within_Pill_Volume(pos, grid_rad)){
+                            voxel_val = VoxelValue;
+                            return;
+                        }
+                    }
+                    //voxel_val = 0.0f;
                     return;
                 }
             };
