@@ -77,10 +77,10 @@ Drover DumpImageMeshes(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std:
     //-----------------------------------------------------------------------------------------------------------------
 
     if(DumpFileName.empty()){
-        DumpFileName = Get_Unique_Sequential_Filename("/tmp/dicomautomaton_dumproicontours_", 6, ".obj");
+        DumpFileName = Get_Unique_Sequential_Filename("/tmp/dicomautomaton_dumpimagemeshes_", 6, ".obj");
     }
     if(MTLFileName.empty()){
-        MTLFileName = Get_Unique_Sequential_Filename("/tmp/dicomautomaton_dumproicontours_", 6, ".mtl");
+        MTLFileName = Get_Unique_Sequential_Filename("/tmp/dicomautomaton_dumpimagemeshes_", 6, ".mtl");
     }
 
     auto IAs_all = All_IAs( DICOM_data );
@@ -88,8 +88,8 @@ Drover DumpImageMeshes(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std:
     for(const auto & iap_it : IAs){
         for(const auto & img : (*iap_it)->imagecoll.images){
 
-            DumpFileName = Get_Unique_Sequential_Filename("/tmp/dicomautomaton_dumproicontours_", 6, ".obj");
-            MTLFileName = Get_Unique_Sequential_Filename("/tmp/dicomautomaton_dumproicontours_", 6, ".mtl");
+            DumpFileName = Get_Unique_Sequential_Filename("/tmp/dicomautomaton_dumpimagemeshes_", 6, ".obj");
+            MTLFileName = Get_Unique_Sequential_Filename("/tmp/dicomautomaton_dumpimagemeshes_", 6, ".mtl");
 
             // Determine the min and max pixel values.
             const auto mm = img.minmax();
@@ -187,6 +187,10 @@ Drover DumpImageMeshes(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std:
                     return;
                 };
 
+                // Give the entire image a name.
+                FO << "o ImageMesh" << std::endl;
+                FO << std::endl;
+
                 const auto ortho_unit = img.row_unit.Cross( img.col_unit ).unit();
                 long int gvc = 1; // Global vertex counter. Used to track vert number because they have whole-file scope.
                                   // Indices start at 1.
@@ -206,8 +210,8 @@ Drover DumpImageMeshes(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std:
                         //const auto val_r0cm = get_virtual_intensity(row, col-1);
 
                         // Generate an object name.
-                        FO << "o Pixel_r" << row << "_c" << col << std::endl;
-                        FO << std::endl;
+                        //FO << "o Pixel_r" << row << "_c" << col << std::endl;
+                        //FO << std::endl;
 
                         // Choose a face colour.
                         //
