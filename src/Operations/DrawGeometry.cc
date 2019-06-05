@@ -121,6 +121,19 @@ OperationDoc OpArgDocDrawGeometry(void){
                                  "planar_corner_inclusive", "planar_inc",
                                  "planar_corner_exclusive", "planar_exc" };
 
+    out.args.emplace_back();
+    out.args.back().name = "Shapes";
+    out.args.back().desc = "This parameter is used to specify the shapes and patterns to consider."
+                           " Grids have five configurable parameters: centre, orientation, thickness, and separation."
+                           " A grid intersecting at the image array's centre aligned with (1.0,0.0,0.0) and (0.0,1.0,0.0), with"
+                           " line thickness (i.e., diameter) 3.0 (DICOM units; mm), and separation 15.0 can be specified as"
+                           " 'grid(1.0,0.0,0.0, 0.0,1.0,0.0, 3.0, 15.0)'."
+                           " Unit vectors will be Gram-Schmidt orthogonalized."
+                           " Note that currently the grid must intersect the image array's centre.";
+    out.args.back().default_val = "grid(-0.0941083,0.995562,0, 0.992667,0.0938347,0.0762047, 3.0, 15.0)";
+    out.args.back().expected = true;
+    out.args.back().examples = { "grid(1.0,0.0,0.0, 0.0,1.0,0.0, 3.0, 15.0)" };
+
     return out;
 }
 
@@ -143,6 +156,7 @@ Drover DrawGeometry(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
     const auto NormalizedROILabelRegex = OptArgs.getValueStr("NormalizedROILabelRegex").value();
     const auto ROILabelRegex = OptArgs.getValueStr("ROILabelRegex").value();
 
+    const auto ShapesStr = OptArgs.getValueStr("Shapes").value();
     //-----------------------------------------------------------------------------------------------------------------
 
     const auto regex_centre = Compile_Regex("^cent.*");
@@ -162,9 +176,59 @@ Drover DrawGeometry(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
         throw std::invalid_argument("Nothing will be overwritten. Refusing to continue.");
     }
 
+    const auto regex_grid = Compile_Regex("^gr?i?d?.*$");
+
     std::function<void(long int, long int, long int, std::reference_wrapper<planar_image<float,double>>, float &)> f_noop;
 
+    const vec3<double> vec3_nan( std::numeric_limits<double>::quiet_NaN(),
+                                 std::numeric_limits<double>::quiet_NaN(),
+                                 std::numeric_limits<double>::quiet_NaN() );
+
     //-----------------------------------------------------------------------------------------------------------------
+
+    bool shape_is_grid = false;
+    double grid_sep = std::numeric_limits<double>::quiet_NaN();
+    double grid_rad = std::numeric_limits<double>::quiet_NaN();
+    vec3<double> unit_x = vec3_nan;
+    vec3<double> unit_y = vec3_nan;
+    vec3<double> unit_z = vec3_nan;
+
+    if(false){
+    }else if(std::regex_match(ShapesStr, regex_grid)){
+        auto split = SplitStringToVector(ShapesStr, '(', 'd');
+        split = SplitVector(split, ')', 'd');
+        split = SplitVector(split, ',', 'd');
+
+        std::vector<double> numbers;
+        for(const auto &w : split){
+           try{
+               const auto x = std::stod(w);
+               numbers.emplace_back(x);
+           }catch(const std::exception &){ }
+        }
+        if(numbers.size() != 8){
+            throw std::invalid_argument("Unable to parse grid shape parameters. Cannot continue.");
+        }
+
+        shape_is_grid = true;
+        unit_x = vec3<double>( numbers.at(0),
+                               numbers.at(1),
+                               numbers.at(2) ).unit();
+        unit_y = vec3<double>( numbers.at(3),
+                               numbers.at(4),
+                               numbers.at(5) ).unit();
+        grid_rad = numbers.at(6) * 0.5;
+        grid_sep = numbers.at(7);
+
+        if(!std::isfinite(grid_sep)) throw std::invalid_argument("Grid separation invalid.");
+        if(!std::isfinite(grid_rad)) throw std::invalid_argument("Grid line thickness invalid.");
+
+        if(!unit_x.isfinite()) throw std::invalid_argument("Grid orientation vector #1 invalid.");
+        if(!unit_y.isfinite()) throw std::invalid_argument("Grid orientation vector #2 invalid.");
+
+    }else{
+        throw std::invalid_argument("Shape not understood. Refusing to continue.");
+    }
 
 
     // Gather contours.
@@ -187,27 +251,17 @@ Drover DrawGeometry(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
         ////////////////////////////////////////////////////////////
         // Grid pattern.
         std::vector<line<double>> grid_lines;
-        const double grid_sep = 15.0;
-        const double grid_rad = 1.5;
-        {
-
+        if(shape_is_grid){
             const auto img_origin = img_refw.get().anchor + img_refw.get().offset;
 
             const auto img_unit_x = img_refw.get().row_unit;
             const auto img_unit_y = img_refw.get().col_unit;
-            const auto img_unit_z = img_unit_x.Cross( img_unit_y );
+            //const auto img_unit_z = img_unit_x.Cross( img_unit_y );
             const auto img_centre = (*iap_it)->imagecoll.center();
 
-            //const auto img_span_x = img_unit_x.Dot( img_centre - img_origin ) * 2.0;
-            //const auto img_span_y = img_unit_y.Dot( img_centre - img_origin ) * 2.0;
-            //const auto img_span_z = img_unit_z.Dot( img_centre - img_origin ) * 2.0;
-
-            //const auto grid_origin = img_centre; // + (img_centre - img_origin).unit() * grid_sep * 0.25;
             const auto grid_origin = img_centre; // Note: changing this will require changing N_lines below!
 
-            auto unit_x = img_unit_x.rotate_around_y(M_PI*0.05).rotate_around_z( M_PI*0.03).unit();
-            auto unit_y = img_unit_y.rotate_around_z(M_PI*0.15).rotate_around_x( M_PI*0.05).unit();
-            auto unit_z = img_unit_z.rotate_around_x(M_PI*0.25).rotate_around_y(-M_PI*0.07).unit();
+            unit_z = unit_x.Cross(unit_y).unit();
             if(!unit_x.GramSchmidt_orthogonalize(unit_y, unit_z)){
                 throw std::invalid_argument("Cannot orthogonalize grid unit vectors. Cannot continue.");
             }
@@ -215,6 +269,10 @@ Drover DrawGeometry(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
             unit_y = unit_y.unit();
             unit_z = unit_z.unit();
 
+            FUNCINFO("Proceeding with orthogonalized grid orientation unit vectors: " 
+                     << unit_x << ", "
+                     << unit_y << ", and "
+                     << unit_z );
 
             // Ensure the image will be tiled with grid lines by ensuring the maximum spatial extent will be covered no
             // matter how the grid is oriented.
@@ -283,7 +341,7 @@ Drover DrawGeometry(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
 
 
         // Grid pattern.
-        if(true){
+        if(shape_is_grid){
             f_overwrite = [&]( long int row,
                                long int col,
                                long int chan,
