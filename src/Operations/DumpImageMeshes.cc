@@ -33,7 +33,9 @@ OperationDoc OpArgDocDumpImageMeshes(void){
         " A companion material library file (MTL) assigns colours to each ROI based on the voxel intensity.";
 
     out.notes.emplace_back(
-        "Each image is processed separately."
+        "Each image is processed separately. Each mesh effectively produces a 2D relief map embedded into"
+        " a 3D model that can be easily rendered to produce various effects (e.g., perspective, stereoscopy,"
+        " extrusion, surface smoothing, etc.)."
     );
 
     out.args.emplace_back();
@@ -42,24 +44,65 @@ OperationDoc OpArgDocDumpImageMeshes(void){
     out.args.back().default_val = "all";
 
     out.args.emplace_back();
-    out.args.back().name = "DumpFileName";
-    out.args.back().desc = "A filename (or full path) in which to (over)write with the image mesh."
+    out.args.back().name = "DumpFileNameBase";
+    out.args.back().desc = "A base filename (or full path) in which to (over)write with the image mesh."
                            " File format is Wavefront obj."
-                           " Leave empty to dump to generate a unique temporary file.";
+                           " Every image will receive a unique and sequentially-numbered filename using this prefix."
+                           " Leave empty to dump to generate a unique temporary filenames.";
     out.args.back().default_val = "";
     out.args.back().expected = true;
-    out.args.back().examples = { "", "/tmp/somefile.obj", "localfile.obj", "derivative_data.obj" };
+    out.args.back().examples = { "", "/tmp/model", "localfile", "../object" };
     out.args.back().mimetype = "application/obj";
 
     out.args.emplace_back();
-    out.args.back().name = "MTLFileName";
-    out.args.back().desc = "A filename (or full path) in which to (over)write a Wavefront material library file."
-                           " This file is used to colour the contours to help differentiate them."
-                           " Leave empty to dump to generate a unique temporary file.";
+    out.args.back().name = "MTLFileNameBase";
+    out.args.back().desc = "A base filename (or full path) in which to (over)write a Wavefront material library file."
+                           " File format is Wavefront mtl."
+                           " Every image will receive a unique and sequentially-numbered filename using this prefix."
+                           " These files are used to colour the image mesh according to pixel intensity."
+                           " Leave empty to dump to generate unique temporary filenames.";
     out.args.back().default_val = "";
     out.args.back().expected = true;
-    out.args.back().examples = { "", "/tmp/materials.mtl", "localfile.mtl", "somefile.mtl" };
+    out.args.back().examples = { "", "/tmp/materials", "localfile", "../object" };
     out.args.back().mimetype = "application/mtl";
+
+    out.args.emplace_back();
+    out.args.back().name = "HistogramBins";
+    out.args.back().desc = "The number of equal-width bins pixel intensities should be grouped into."
+                           " Binning is performed in order to more easily associate material properties with pixels."
+                           " If pixel intensities were continuous, each pixel would receive its own material definition."
+                           " This could result in enormous MTL files and wasted disk space. Binning solves this issue."
+                           " However, if images are small or must be differentiated precisely consider using a"
+                           " large number of bins. Otherwise 150-1000 bins should suffice for display purposes.";
+    out.args.back().default_val = "255";
+    out.args.back().expected = true;
+    out.args.back().examples = { "10", "50", "100", "200", "500" };
+
+    out.args.emplace_back();
+    out.args.back().name = "MagnitudeAmplification";
+    out.args.back().desc = "Pixel magnitudes (i.e., intensities) are scaled according to the image thickness, but"
+                           " a small gap is left between meshes so that abutting images do not quite intersect"
+                           " (this can cause non-manifold scenarios). However, if stackability is not a concern"
+                           " then pixel magnitudes can be magnified to exaggerate the relief effect."
+                           " A value of 1.0 provides no magnification. A value of 2.0 provides 2x magnification,"
+                           " but note that the base of each pixel is slightly offset from the top to avoid top-bottom face"
+                           " intersections, even when magnification is 0.0.";
+    out.args.back().default_val = "1.0";
+    out.args.back().expected = true;
+    out.args.back().examples = { "0.75", "1.0", "2.0", "5.0", "75.6" };
+
+    out.args.emplace_back();
+    out.args.back().name = "Normalize";
+    out.args.back().desc = "This parameter controls whether the model will be 'normalized,' which effectively makes"
+                           " the outgoing model more consistent for all images. Currently this means centring the"
+                           " model at (0,0,0), mapping the row and column directions to (1,0,0) and (0,1,0)"
+                           " respectively, and scaling the image (respecting the aspect ratio) to fit within a"
+                           " bounding square of size 100x100 (DICOM units; mm). If normalization is *not* used,"
+                           " the image mesh will inherit the spatial characteristics of the image it is derived"
+                           " from.";
+    out.args.back().default_val = "false";
+    out.args.back().expected = true;
+    out.args.back().examples = { "true", "false" };
 
     return out;
 }
@@ -71,16 +114,26 @@ Drover DumpImageMeshes(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std:
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto ImageSelectionStr = OptArgs.getValueStr("ImageSelection").value();
 
-    auto DumpFileName = OptArgs.getValueStr("DumpFileName").value();
-    auto MTLFileName = OptArgs.getValueStr("MTLFileName").value();
+    auto DumpFileNameBase = OptArgs.getValueStr("DumpFileNameBase").value();
+    auto MTLFileNameBase = OptArgs.getValueStr("MTLFileNameBase").value();
+
+    const auto HistogramBins = std::stol( OptArgs.getValueStr("HistogramBins").value() );
+    const auto MagnitudeAmplification = std::stod( OptArgs.getValueStr("MagnitudeAmplification").value() );
+
+    const auto NormalizeStr = OptArgs.getValueStr("Normalize").value();
 
     //-----------------------------------------------------------------------------------------------------------------
 
-    if(DumpFileName.empty()){
-        DumpFileName = Get_Unique_Sequential_Filename("/tmp/dicomautomaton_dumpimagemeshes_", 6, ".obj");
+    const auto regex_true = Compile_Regex("^tr?u?e?$");
+    const auto ShouldNormalize = std::regex_match(NormalizeStr, regex_true);
+
+    if(DumpFileNameBase.empty()){
+        DumpFileNameBase = "/tmp/dicomautomaton_dumpimagemeshes_";
+        FUNCINFO("Using DumpFileNameBase '" << DumpFileNameBase << "'");
     }
-    if(MTLFileName.empty()){
-        MTLFileName = Get_Unique_Sequential_Filename("/tmp/dicomautomaton_dumpimagemeshes_", 6, ".mtl");
+    if(MTLFileNameBase.empty()){
+        MTLFileNameBase = "/tmp/dicomautomaton_dumpimagemeshes_";
+        FUNCINFO("Using MTLFileNameBase '" << MTLFileNameBase << "'");
     }
 
     auto IAs_all = All_IAs( DICOM_data );
@@ -88,16 +141,16 @@ Drover DumpImageMeshes(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std:
     for(const auto & iap_it : IAs){
         for(const auto & img : (*iap_it)->imagecoll.images){
 
-            DumpFileName = Get_Unique_Sequential_Filename("/tmp/dicomautomaton_dumpimagemeshes_", 6, ".obj");
-            MTLFileName = Get_Unique_Sequential_Filename("/tmp/dicomautomaton_dumpimagemeshes_", 6, ".mtl");
+            const auto DumpFileName = Get_Unique_Sequential_Filename(DumpFileNameBase, 6, ".obj");
+            const auto MTLFileName  = Get_Unique_Sequential_Filename(MTLFileNameBase,  6, ".mtl");
+            FUNCINFO("Using OBJ filename '" 
+                     << DumpFileName 
+                     << "' and MTL filename '"
+                     << MTLFileName
+                     << "'");
 
             // Determine the min and max pixel values.
             const auto mm = img.minmax();
-
-            // Create an implicit histogram of the voxel intensities defined by the voxel range.
-            const long int N_bins = 255;
-
-            const double magnitude_magnification = 5.0; // The amount of magnitification to apply to pixel magnitudes.
 
             //Generate a Wavefront materials file to colour the contours differently.
             std::map<long int, std::string> mats; // List of materials defined.
@@ -123,8 +176,8 @@ Drover DumpImageMeshes(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std:
 
                 //write_mat("Red", vec3<double>(R, G, B), vec3<double>(R, G, B), vec3<double>(R, G, B), 10.0, 0.9);
                 // Create a colour for each histogram bin.
-                for(long int i = 0; i <= N_bins; ++i){
-                    const auto c = ColourMap_MorelandBlackBody( static_cast<double>(i)/static_cast<double>(N_bins) );
+                for(long int i = 0; i <= HistogramBins; ++i){
+                    const auto c = ColourMap_MorelandBlackBody( static_cast<double>(i)/static_cast<double>(HistogramBins) );
                     const auto name = "colour"_s + std::to_string(i);
                     mats[i] = name;
                     write_mat(name, 
@@ -160,12 +213,36 @@ Drover DumpImageMeshes(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std:
 
                 // Get voxel position, including virtual voxels that do not exist so we can determine where the voxel
                 // boundaries are. This routine will happily accept out-of-bounds and negative voxel coordinates.
-                const auto get_virtual_position = [&](long int row, long int col){
-                    return (  img.anchor
-                            + img.offset
-                            + img.row_unit*( img.pxl_dx * static_cast<double>(row))
-                            + img.col_unit*( img.pxl_dy * static_cast<double>(col)) );
-                };
+                std::function<vec3<double>(long int, long int)> get_virtual_position;
+                double scale = 1.0; // Scale spatial characteristics iff normalizing.
+                if(ShouldNormalize){
+                    // Note: width and height extended by 1 to account for true image extent.
+                    const auto width  = img.pxl_dx * static_cast<double>(img.rows + 1);
+                    const auto height = img.pxl_dy * static_cast<double>(img.columns + 1);
+                    scale = ((width / height) < 1.0) ? 100.0 / height
+                                                     : 100.0 / width;
+                    if(!std::isfinite(scale)) throw std::logic_error("Computed scale factor is invalid. Cannot continue.");
+
+                    get_virtual_position = [&,width,height](long int row, long int col){
+                        // Transform the image spatial characteristics to lie in the plane intersecting (0,0,0) and
+                        // orthogonal to (0,0,1), with row and unit vectors (1,0,0) and (0,1,0), respectively, and
+                        // uniformly scaled such that the entire image fits within a bounding square of size 100x100.
+                        // The centre of the image should coincide with (0,0,0).
+
+                        const auto x = (img.pxl_dx * (static_cast<double>(row) + 0.5) - (width  * 0.5)) * scale;
+                        const auto y = (img.pxl_dy * (static_cast<double>(col) + 0.5) - (height * 0.5)) * scale;
+
+                        return vec3<double>( y, x, 0.0 );
+                    };
+                }else{
+                    get_virtual_position = [&](long int row, long int col){
+                        // Use the image spatial characteristics as-is.
+                        return (  img.anchor
+                                + img.offset
+                                + img.row_unit*( img.pxl_dx * static_cast<double>(row))
+                                + img.col_unit*( img.pxl_dy * static_cast<double>(col)) );
+                    };
+                }
 
                 // Get voxel binned intensity, returning 0 when out of bounds.
                 const auto get_virtual_intensity = [&](long int row, long int col) -> long int {
@@ -175,7 +252,7 @@ Drover DumpImageMeshes(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std:
                     const long int chan = 0;
                     const auto val = img.value(row, col, chan);
                     const auto clamped = (val - mm.first)/(mm.second - mm.first);
-                    const auto v_binned = static_cast<long int>( std::round(clamped * N_bins) );
+                    const auto v_binned = static_cast<long int>( std::round(clamped * HistogramBins) );
                     return v_binned;
                 };
 
@@ -187,7 +264,7 @@ Drover DumpImageMeshes(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std:
                     return;
                 };
 
-                // Give the entire image a name.
+                // Give the entire image a simple name. This makes is easier to address by name in, e.g., Blender.
                 FO << "o ImageMesh" << std::endl;
                 FO << std::endl;
 
@@ -232,10 +309,12 @@ Drover DumpImageMeshes(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std:
                         emit_vert( pos_rpcp );
                         emit_vert( pos_rmcp );
 
-                        const auto vertical_offset = ortho_unit * (img.pxl_dz * 0.945) 
-                                                                * static_cast<double>(val_r0c0)/static_cast<double>(N_bins)
-                                                                * magnitude_magnification
-                                                   + ortho_unit * (img.pxl_dz * 0.005); // Give all pixels a small space between top and bottom.
+                        const auto offset_unit = (ShouldNormalize ) ? vec3<double>(0.0,0.0,1.0) 
+                                                                    : ortho_unit;
+                        const auto vertical_offset = offset_unit * (img.pxl_dz * scale * 0.945) 
+                                                                 * static_cast<double>(val_r0c0)/static_cast<double>(HistogramBins)
+                                                                 * MagnitudeAmplification
+                                                   + offset_unit * (img.pxl_dz * scale * 0.005); // Give all pixels a small space between top and bottom.
                         emit_vert( pos_rmcm + vertical_offset ); // Tops are scaled according to pxl_dz (for stackability) and intensity.
                         emit_vert( pos_rpcm + vertical_offset );
                         emit_vert( pos_rpcp + vertical_offset );
