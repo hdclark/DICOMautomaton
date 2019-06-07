@@ -44,27 +44,15 @@ OperationDoc OpArgDocDumpImageMeshes(void){
     out.args.back().default_val = "all";
 
     out.args.emplace_back();
-    out.args.back().name = "DumpFileNameBase";
-    out.args.back().desc = "A base filename (or full path) in which to (over)write with the image mesh."
-                           " File format is Wavefront obj."
-                           " Every image will receive a unique and sequentially-numbered filename using this prefix."
-                           " Leave empty to dump to generate a unique temporary filenames.";
-    out.args.back().default_val = "";
+    out.args.back().name = "OutBase";
+    out.args.back().desc = "A base filename (or full path) in which to (over)write image mesh and"
+                           " material library files. File formats are Wavefront Object (obj) and"
+                           " Material Library (mtl). Every image will receive one unique and "
+                           " sequentially-numbered obj and mtl file using this prefix.";
+    out.args.back().default_val = "/tmp/dicomautomaton_dumpimagemeshes_";
     out.args.back().expected = true;
-    out.args.back().examples = { "", "/tmp/model", "localfile", "../object" };
-    out.args.back().mimetype = "application/obj";
-
-    out.args.emplace_back();
-    out.args.back().name = "MTLFileNameBase";
-    out.args.back().desc = "A base filename (or full path) in which to (over)write a Wavefront material library file."
-                           " File format is Wavefront mtl."
-                           " Every image will receive a unique and sequentially-numbered filename using this prefix."
-                           " These files are used to colour the image mesh according to pixel intensity."
-                           " Leave empty to dump to generate unique temporary filenames.";
-    out.args.back().default_val = "";
-    out.args.back().expected = true;
-    out.args.back().examples = { "", "/tmp/materials", "localfile", "../object" };
-    out.args.back().mimetype = "application/mtl";
+    out.args.back().examples = { "/tmp/image_mesh_", "./", "../model_" };
+    //out.args.back().mimetype = "application/obj"; // "application/mtl";
 
     out.args.emplace_back();
     out.args.back().name = "HistogramBins";
@@ -114,8 +102,7 @@ Drover DumpImageMeshes(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std:
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto ImageSelectionStr = OptArgs.getValueStr("ImageSelection").value();
 
-    auto DumpFileNameBase = OptArgs.getValueStr("DumpFileNameBase").value();
-    auto MTLFileNameBase = OptArgs.getValueStr("MTLFileNameBase").value();
+    const auto OutBase = OptArgs.getValueStr("OutBase").value();
 
     const auto HistogramBins = std::stol( OptArgs.getValueStr("HistogramBins").value() );
     const auto MagnitudeAmplification = std::stod( OptArgs.getValueStr("MagnitudeAmplification").value() );
@@ -127,22 +114,13 @@ Drover DumpImageMeshes(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std:
     const auto regex_true = Compile_Regex("^tr?u?e?$");
     const auto ShouldNormalize = std::regex_match(NormalizeStr, regex_true);
 
-    if(DumpFileNameBase.empty()){
-        DumpFileNameBase = "/tmp/dicomautomaton_dumpimagemeshes_";
-        FUNCINFO("Using DumpFileNameBase '" << DumpFileNameBase << "'");
-    }
-    if(MTLFileNameBase.empty()){
-        MTLFileNameBase = "/tmp/dicomautomaton_dumpimagemeshes_";
-        FUNCINFO("Using MTLFileNameBase '" << MTLFileNameBase << "'");
-    }
-
     auto IAs_all = All_IAs( DICOM_data );
     auto IAs = Whitelist( IAs_all, ImageSelectionStr );
     for(const auto & iap_it : IAs){
         for(const auto & img : (*iap_it)->imagecoll.images){
 
-            const auto DumpFileName = Get_Unique_Sequential_Filename(DumpFileNameBase, 6, ".obj");
-            const auto MTLFileName  = Get_Unique_Sequential_Filename(MTLFileNameBase,  6, ".mtl");
+            const auto DumpFileName = Get_Unique_Sequential_Filename(OutBase, 6, ".obj");
+            const auto MTLFileName  = Get_Unique_Sequential_Filename(OutBase, 6, ".mtl");
             FUNCINFO("Using OBJ filename '" 
                      << DumpFileName 
                      << "' and MTL filename '"
