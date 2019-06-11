@@ -768,6 +768,152 @@ Score_Fit( Grid_Context &GC,
 
 static
 void
+Write_Everything(const std::string &filename_base,
+                 Grid_Context &GC,
+                 ICP_Context &ICPC ){
+
+return;
+
+    {
+        std::vector< std::pair< vec3<double>, long int > > points;
+        points.emplace_back( std::make_pair<vec3<double>, long int >( vec3<double>(ICPC.ransac_centre), 0L ) );
+
+        Write_XYZ(filename_base + "ransac_point.xyz", points);
+        Write_PLY(filename_base + "ransac_point.ply", points);
+    }
+
+    Write_XYZ(filename_base + "original_points.xyz", ICPC.cohort);
+    Write_PLY(filename_base + "original_points.ply", ICPC.cohort);
+
+    Write_XYZ(filename_base + "cube_proj_points.xyz", ICPC.p_cell);
+    Write_PLY(filename_base + "cube_proj_points.ply", ICPC.p_cell);
+
+    Write_XYZ(filename_base + "cube_corr_points.xyz", ICPC.p_corr);
+    Write_PLY(filename_base + "cube_corr_points.ply", ICPC.p_corr);
+
+    // Write the proto-cube as-is. Note that coincidence with orig points not likely.
+    {
+        Write_Cube_OBJ(filename_base + "proto_cube.obj",
+                       GC.current_grid_anchor,
+                       GC.current_grid_x * GC.grid_sep,
+                       GC.current_grid_y * GC.grid_sep,
+                       GC.current_grid_z * GC.grid_sep );
+    }
+
+    // Shift the proto cube to be coincident with average point location.
+    // (This works best for single-cube or symmetric point clouds.)
+    vec3<double> shifted_proto_cube;
+    {
+        // Determine where the average original point is.
+        vec3<double> avg(0.0, 0.0, 0.0);
+        for(const auto &vp : ICPC.cohort) avg += vp.first;
+        avg *= (1.0 / (1.0 * ICPC.cohort.size()));
+
+        const auto proto_mid = GC.current_grid_anchor
+                             + GC.current_grid_x * GC.grid_sep * 0.5
+                             + GC.current_grid_y * GC.grid_sep * 0.5
+                             + GC.current_grid_z * GC.grid_sep * 0.5;
+        const auto R = (avg - proto_mid);
+
+        auto C_x = std::round( R.Dot(GC.current_grid_x) / GC.grid_sep );
+        auto C_y = std::round( R.Dot(GC.current_grid_y) / GC.grid_sep );
+        auto C_z = std::round( R.Dot(GC.current_grid_z) / GC.grid_sep );
+
+        const auto C = GC.current_grid_anchor
+                     + GC.current_grid_x * GC.grid_sep * C_x
+                     + GC.current_grid_y * GC.grid_sep * C_y
+                     + GC.current_grid_z * GC.grid_sep * C_z;
+        shifted_proto_cube = C;
+
+        Write_Cube_OBJ(filename_base + "shifted_proto_cube.obj",
+                       C,
+                       GC.current_grid_x * GC.grid_sep,
+                       GC.current_grid_y * GC.grid_sep,
+                       GC.current_grid_z * GC.grid_sep );
+    }
+
+    // Write a model with the corresponding points linked via lines.
+    //
+    // Note: the model is repeatedly appended to. Not very efficient...
+    {
+        const vec3<double> NaN_vec3( std::numeric_limits<double>::quiet_NaN(),
+                                     std::numeric_limits<double>::quiet_NaN(),
+                                     std::numeric_limits<double>::quiet_NaN() );
+
+        const auto anchor = shifted_proto_cube;
+        const auto edge_x = GC.current_grid_x * GC.grid_sep;
+        const auto edge_y = GC.current_grid_y * GC.grid_sep;
+        const auto edge_z = GC.current_grid_z * GC.grid_sep;
+
+        // Corners of the proto cube.
+        const auto c_A = anchor;
+        const auto c_B = anchor + edge_x;
+        const auto c_C = anchor + edge_x + edge_z;
+        const auto c_D = anchor + edge_z;
+
+        const auto c_E = anchor + edge_y;
+        const auto c_F = anchor + edge_y + edge_x;
+        const auto c_G = anchor + edge_y + edge_x + edge_z;
+        const auto c_H = anchor + edge_y + edge_z;
+
+        std::vector<line_segment<double>> lines;
+
+        lines.emplace_back( c_A, c_B );
+        lines.emplace_back( c_B, c_C );
+        lines.emplace_back( c_C, c_D );
+        lines.emplace_back( c_D, c_A );
+
+        lines.emplace_back( c_A, c_E );
+        lines.emplace_back( c_B, c_F );
+        lines.emplace_back( c_C, c_G );
+        lines.emplace_back( c_D, c_H );
+
+        lines.emplace_back( c_E, c_F );
+        lines.emplace_back( c_F, c_G );
+        lines.emplace_back( c_G, c_H );
+        lines.emplace_back( c_H, c_E );
+
+
+        for(const auto &O : ICPC.cohort){
+            const auto P = O.first;
+
+            double closest_dist = std::numeric_limits<double>::quiet_NaN();
+            vec3<double> closest_proj = NaN_vec3;
+            for(const auto &l : lines){
+                const auto proj = l.Closest_Point_To(P);
+                const auto dist = P.distance(proj);
+                if(!std::isfinite(closest_dist) || (dist < closest_dist)){
+                    closest_dist = dist;
+                    closest_proj = proj;
+                }
+            }
+            const auto C = closest_proj;
+
+            // Draw an elongated cube (i.e., the 3D equivalent of a rectangle).
+            const auto z_dist = P.distance(C);
+            const auto z_unit = (P-C).unit();
+
+            auto x_unit = z_unit.rotate_around_x(90.0 * M_PI / 180.0).rotate_around_y(45.0 * M_PI / 180.0);
+            auto y_unit = x_unit.rotate_around_z(15.0 * M_PI / 180.0).rotate_around_y(-15.0 * M_PI / 180.0);
+            z_unit.GramSchmidt_orthogonalize(x_unit, y_unit);
+            x_unit = x_unit.unit();
+            y_unit = y_unit.unit();
+
+            const double line_width = 0.05; // in DICOM units (mm).
+
+            Write_Cube_OBJ(filename_base + "corr_lines.obj",
+                           C - (x_unit * line_width * 0.5) - (y_unit * line_width * 0.5),
+                           x_unit * line_width,
+                           y_unit * line_width,
+                           z_unit * z_dist );
+        }
+
+    }
+    return;
+}
+
+static
+void
 ICP_Fit_Grid( Drover &DICOM_data,
               std::mt19937 re, 
               long int icp_max_loops,
@@ -781,6 +927,8 @@ ICP_Fit_Grid( Drover &DICOM_data,
 
     Grid_Context best_GC = GC;
 
+static int icp_invoke = 0;
+
     for(long int loop = 1; loop <= icp_max_loops; ++loop){
 //        std::cout << "====================================== " << "Loop: " << loop << std::endl;
 
@@ -793,17 +941,25 @@ ICP_Fit_Grid( Drover &DICOM_data,
         const auto N_select = rd(re);
         ICPC.rot_centre = std::next( std::begin(ICPC.cohort), N_select )->first;
 
+Write_Everything("/tmp/ransac"_s + std::to_string(icp_invoke) + "_icp" + std::to_string(loop) + "_01loopbegins_", GC, ICPC);
         Project_Into_Proto_Cube(GC, ICPC);
+Write_Everything("/tmp/ransac"_s + std::to_string(icp_invoke) + "_icp" + std::to_string(loop) + "_02projected_", GC, ICPC);
         Translate_Grid_Optimally(GC, ICPC);
+Write_Everything("/tmp/ransac"_s + std::to_string(icp_invoke) + "_icp" + std::to_string(loop) + "_03translated_", GC, ICPC);
 
         // TODO: Does this invalidate the optimal translation we just found? If so, can anything be done?
         Project_Into_Proto_Cube(GC, ICPC);
+Write_Everything("/tmp/ransac"_s + std::to_string(icp_invoke) + "_icp" + std::to_string(loop) + "_04projected_", GC, ICPC);
         Find_Corresponding_Points(GC, ICPC);
+Write_Everything("/tmp/ransac"_s + std::to_string(icp_invoke) + "_icp" + std::to_string(loop) + "_05corresfound_", GC, ICPC);
         Rotate_Grid_Optimally(GC, ICPC);
+Write_Everything("/tmp/ransac"_s + std::to_string(icp_invoke) + "_icp" + std::to_string(loop) + "_06rotated_", GC, ICPC);
 
         // Evaluate over the entire point cloud, retaining the global best.
         Project_Into_Proto_Cube(GC, ICPC);
+Write_Everything("/tmp/ransac"_s + std::to_string(icp_invoke) + "_icp" + std::to_string(loop) + "_07projected_", GC, ICPC);
         Find_Corresponding_Points(GC, ICPC);
+Write_Everything("/tmp/ransac"_s + std::to_string(icp_invoke) + "_icp" + std::to_string(loop) + "_08corresfound_", GC, ICPC);
 
         GC.score = Score_Fit(GC, ICPC);
         if(!std::isfinite(best_GC.score) || (GC.score < best_GC.score)){
@@ -814,6 +970,7 @@ ICP_Fit_Grid( Drover &DICOM_data,
 
     } // ICP loop.
 
+++icp_invoke;
     //GC = best_GC; 
     return;
 }
@@ -1064,6 +1221,23 @@ FUNCINFO("Loading point clouds");
         if((*pcp_it == nullptr) || ((*pcp_it)->points.size() < 8)){
             throw std::invalid_argument("This routine will likely fail with fewer than 8 points. Refusing to continue.");
         }
+
+// Trim the point clouds randomly.
+if(false){
+  const double fraction = 0.004 * 0.05 * 8.447 * 4.0; //05 * 0.08617;
+  long int random_seed = 123456;
+  std::mt19937 re( random_seed );
+
+  std::shuffle(std::begin((*pcp_it)->points),
+               std::end((*pcp_it)->points),
+               re);
+
+  auto N_retain = static_cast<long int>(std::round(fraction * (*pcp_it)->points.size()));
+  if(N_retain > (*pcp_it)->points.size()) N_retain = (*pcp_it)->points.size();
+  (*pcp_it)->points.resize(N_retain);
+}
+
+
 
         Grid_Context best_GC; // The current best estimate of the grid position.
 
