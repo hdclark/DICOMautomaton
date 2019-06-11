@@ -166,6 +166,32 @@ OperationDoc OpArgDocDumpROISurfaceMeshes(void){
                             R"***(left_parotid|right_parotid|eyes)***" };
 
 
+    out.args.emplace_back();
+    out.args.back().name = "ContourOverlap";
+    out.args.back().desc = "Controls overlapping contours are treated."
+                           " The default 'ignore' treats overlapping contours as a single contour, regardless of"
+                           " contour orientation. The option 'honour_opposite_orientations' makes overlapping contours"
+                           " with opposite orientation cancel. Otherwise, orientation is ignored. The latter is useful"
+                           " for Boolean structures where contour orientation is significant for interior contours (holes)."
+                           " The option 'overlapping_contours_cancel' ignores orientation and cancels all contour overlap.";
+    out.args.back().default_val = "ignore";
+    out.args.back().expected = true;
+    out.args.back().examples = { "ignore", "honour_opposite_orientations", 
+                            "overlapping_contours_cancel", "honour_opps", "overlap_cancel" }; 
+
+    out.args.emplace_back();
+    out.args.back().name = "Inclusivity";
+    out.args.back().desc = "Controls how voxels are deemed to be 'within' the interior of the selected ROI(s)."
+                           " The default 'center' considers only the central-most point of each voxel."
+                           " There are two corner options that correspond to a 2D projection of the voxel onto the image plane."
+                           " The first, 'planar_corner_inclusive', considers a voxel interior if ANY corner is interior."
+                           " The second, 'planar_corner_exclusive', considers a voxel interior if ALL (four) corners are interior.";
+    out.args.back().default_val = "center";
+    out.args.back().expected = true;
+    out.args.back().examples = { "center", "centre", 
+                                 "planar_corner_inclusive", "planar_inc",
+                                 "planar_corner_exclusive", "planar_exc" };
+
     return out;
 }
 
@@ -175,6 +201,9 @@ Drover DumpROISurfaceMeshes(Drover DICOM_data, OperationArgPkg OptArgs, std::map
     const auto OutDir = OptArgs.getValueStr("OutDir").value();
     const auto NormalizedROILabelRegex = OptArgs.getValueStr("NormalizedROILabelRegex").value();
     const auto ROILabelRegex = OptArgs.getValueStr("ROILabelRegex").value();
+
+    const auto InclusivityStr = OptArgs.getValueStr("Inclusivity").value();
+    const auto ContourOverlapStr = OptArgs.getValueStr("ContourOverlap").value();
 
     const auto MarchingCubes = true;
     const auto ReastrictedDelauney = false;
@@ -187,9 +216,20 @@ Drover DumpROISurfaceMeshes(Drover DICOM_data, OperationArgPkg OptArgs, std::map
    
     long int MeshSubdivisions = 2;
     long int RemeshIterations = 5;
-    long int RemeshTargetEdgeLength = 2.5; // DICOM units (mm).
-    long int MeshSimplificationEdgeCountLimit = 75'000;
+    //long int RemeshTargetEdgeLength = 2.5; // DICOM units (mm).
+    long int RemeshTargetEdgeLength = 1.5; // DICOM units (mm).
+    //long int MeshSimplificationEdgeCountLimit = 75'000; // For later (volumetric) analysis.
+    long int MeshSimplificationEdgeCountLimit = 250'000; // For later rendering.
     //-----------------------------------------------------------------------------------------------------------------
+
+    const auto regex_centre = Compile_Regex("^cent.*");
+    const auto regex_pci = Compile_Regex("^planar_?c?o?r?n?e?r?s?_?inc?l?u?s?i?v?e?$");
+    const auto regex_pce = Compile_Regex("^planar_?c?o?r?n?e?r?s?_?exc?l?u?s?i?v?e?$");
+
+    const auto regex_ignore = Compile_Regex("^ig?n?o?r?e?$");
+    const auto regex_honopps = Compile_Regex("^ho?n?o?u?r?_?o?p?p?o?s?i?t?e?_?o?r?i?e?n?t?a?t?i?o?n?s?$");
+    const auto regex_cancel = Compile_Regex("^ov?e?r?l?a?p?p?i?n?g?_?c?o?n?t?o?u?r?s?_?c?a?n?c?e?l?s?$");
+
 
     //Stuff references to all contours into a list. Remember that you can still address specific contours through
     // the original holding containers (which are not modified here).
@@ -207,10 +247,34 @@ Drover DumpROISurfaceMeshes(Drover DICOM_data, OperationArgPkg OptArgs, std::map
         meshing_params.GridRows = GridRows;
         meshing_params.GridColumns = GridColumns;
 
+        if(false){
+        }else if( std::regex_match(ContourOverlapStr, regex_ignore) ){
+            meshing_params.MutateOpts.contouroverlap = Mutate_Voxels_Opts::ContourOverlap::Ignore;
+        }else if( std::regex_match(ContourOverlapStr, regex_honopps) ){
+            meshing_params.MutateOpts.contouroverlap = Mutate_Voxels_Opts::ContourOverlap::HonourOppositeOrientations;
+        }else if( std::regex_match(ContourOverlapStr, regex_cancel) ){
+            meshing_params.MutateOpts.contouroverlap = Mutate_Voxels_Opts::ContourOverlap::ImplicitOrientations;
+        }else{
+            throw std::invalid_argument("ContourOverlap argument '"_s + ContourOverlapStr + "' is not valid");
+        }
+        if(false){
+        }else if( std::regex_match(InclusivityStr, regex_centre) ){
+            meshing_params.MutateOpts.inclusivity = Mutate_Voxels_Opts::Inclusivity::Centre;
+        }else if( std::regex_match(InclusivityStr, regex_pci) ){
+            meshing_params.MutateOpts.inclusivity = Mutate_Voxels_Opts::Inclusivity::Inclusive;
+        }else if( std::regex_match(InclusivityStr, regex_pce) ){
+            meshing_params.MutateOpts.inclusivity = Mutate_Voxels_Opts::Inclusivity::Exclusive;
+        }else{
+            throw std::invalid_argument("Inclusivity argument '"_s + InclusivityStr + "' is not valid");
+        }
+
         //auto output_mesh = dcma_surface_meshes::Estimate_Surface_Mesh( cc_ROIs, meshing_params );
         auto output_mesh = dcma_surface_meshes::Estimate_Surface_Mesh_Marching_Cubes( cc_ROIs, meshing_params );
 
-        polyhedron_processing::SaveAsOFF(output_mesh, OutBase + "_polyhedron_original.off");
+        const std::string FN_orig = OutBase + "_polyhedron_original.off";
+        if(!polyhedron_processing::SaveAsOFF(output_mesh, FN_orig)){
+            throw std::runtime_error("Unable to save original mesh as OFF file. Refusing to continue.");
+        }
 
         if(Subdivide){
             polyhedron_processing::Subdivide(output_mesh, MeshSubdivisions);
@@ -222,7 +286,11 @@ Drover DumpROISurfaceMeshes(Drover DICOM_data, OperationArgPkg OptArgs, std::map
             polyhedron_processing::Simplify(output_mesh, MeshSimplificationEdgeCountLimit);
         }
 
-        polyhedron_processing::SaveAsOFF(output_mesh, OutBase + "_polyhedron_processed.off");
+        const std::string FN_processed = OutBase + "_polyhedron_processed.off";
+        if(!polyhedron_processing::SaveAsOFF(output_mesh, FN_processed)){
+            throw std::runtime_error("Unable to save processed mesh as OFF file. Refusing to continue.");
+        }
+        FUNCINFO("Processed Mesh written to '" << FN_processed << "'");
 
     }while(false);
 
