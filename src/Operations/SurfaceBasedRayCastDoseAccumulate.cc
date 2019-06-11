@@ -552,6 +552,9 @@ Drover SurfaceBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptA
     //meshing_params.RQ = dcma_surface_meshes::ReproductionQuality::Medium;
     meshing_params.GridRows = 128;
     meshing_params.GridColumns = 128;
+    meshing_params.MutateOpts.inclusivity = Mutate_Voxels_Opts::Inclusivity::Centre;
+    meshing_params.MutateOpts.contouroverlap = Mutate_Voxels_Opts::ContourOverlap::Ignore;
+    FUNCWARN("Ignoring contour orientations; assuming ROI polyhderon is simple");
     auto polyhedron = dcma_surface_meshes::Estimate_Surface_Mesh_Marching_Cubes( cc_ROIs, meshing_params );
 
     FUNCINFO("The polyhedron surface has " << polyhedron.size_of_vertices() << " vertices"
@@ -584,6 +587,9 @@ Drover SurfaceBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptA
     //meshing_params.RQ = dcma_surface_meshes::ReproductionQuality::Medium;
     meshing_params.GridRows = 128;
     meshing_params.GridColumns = 128;
+    meshing_params.MutateOpts.inclusivity = Mutate_Voxels_Opts::Inclusivity::Centre;
+    meshing_params.MutateOpts.contouroverlap = Mutate_Voxels_Opts::ContourOverlap::Ignore;
+    FUNCWARN("Ignoring contour orientations; assuming ROI polyhderon is simple");
     auto ref_polyhedron = dcma_surface_meshes::Estimate_Surface_Mesh_Marching_Cubes( cc_Refs, meshing_params );
 
     FUNCINFO("The reference polyhedron surface has " << ref_polyhedron.size_of_vertices() << " vertices"

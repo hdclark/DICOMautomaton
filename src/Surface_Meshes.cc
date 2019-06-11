@@ -1296,31 +1296,28 @@ Polyhedron Estimate_Surface_Mesh_Marching_Cubes(
     {
         PartitionedImageVoxelVisitorMutatorUserData ud;
 
+        // Use options from the user, but override what we need to for a valid mesh extraction.
+        ud.mutation_opts = params.MutateOpts;
+
         ud.mutation_opts.editstyle = Mutate_Voxels_Opts::EditStyle::InPlace;
         ud.mutation_opts.aggregate = Mutate_Voxels_Opts::Aggregate::First;
         ud.mutation_opts.adjacency = Mutate_Voxels_Opts::Adjacency::SingleVoxel;
         ud.mutation_opts.maskmod   = Mutate_Voxels_Opts::MaskMod::Noop;
-        ud.mutation_opts.inclusivity = Mutate_Voxels_Opts::Inclusivity::Centre;
+
+        /// Leave the following options up to the caller.
+        //ud.mutation_opts.inclusivity = Mutate_Voxels_Opts::Inclusivity::Centre;
+        //ud.mutation_opts.contouroverlap = Mutate_Voxels_Opts::ContourOverlap::ImplicitOrientations;
+
         ud.description = "ROI Inclusivity";
 
-        /*
-        if(false){
-        }else if( std::regex_match(ContourOverlapStr, regex_ignore) ){
-            ud.mutation_opts.contouroverlap = Mutate_Voxels_Opts::ContourOverlap::Ignore;
-        }else if( std::regex_match(ContourOverlapStr, regex_honopps) ){
-            ud.mutation_opts.contouroverlap = Mutate_Voxels_Opts::ContourOverlap::HonourOppositeOrientations;
-        }else if( std::regex_match(ContourOverlapStr, regex_cancel) ){
-            ud.mutation_opts.contouroverlap = Mutate_Voxels_Opts::ContourOverlap::ImplicitOrientations;
-        }else{
-            throw std::invalid_argument("ContourOverlap argument '"_s + ContourOverlapStr + "' is not valid");
-        }
-        */
-        ud.mutation_opts.contouroverlap = Mutate_Voxels_Opts::ContourOverlap::Ignore;
-
-        ud.f_bounded = [&](long int /*row*/, long int /*col*/, long int /*chan*/, std::reference_wrapper<planar_image<float,double>> /*img_refw*/, float &voxel_val) {
+        ud.f_bounded = [&](long int /*row*/, long int /*col*/, long int /*chan*/,
+                                          std::reference_wrapper<planar_image<float,double>> /*img_refw*/,
+                                          float &voxel_val) {
             voxel_val = InteriorVal;
         };
-        //ud.f_unbounded = [&](long int /*row*/, long int /*col*/, long int /*chan*/, std::reference_wrapper<planar_image<float,double>> /*img_refw*/, float &voxel_val) {
+        //ud.f_unbounded = [&](long int /*row*/, long int /*col*/, long int /*chan*/,
+        //                                    std::reference_wrapper<planar_image<float,double>> /*img_refw*/,
+        //                                    float &voxel_val) {
         //    voxel_val = ExteriorVal;
         //};
 

@@ -27,6 +27,7 @@
 #include "../Regex_Selectors.h"
 #include "../Thread_Pool.h"
 #include "../YgorImages_Functors/ConvenienceRoutines.h"
+#include "../YgorImages_Functors/Processing/Partitioned_Image_Voxel_Visitor_Mutator.h"
 
 #include "../Surface_Meshes.h"
 

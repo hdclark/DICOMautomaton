@@ -26,8 +26,8 @@
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorStats.h"        //Needed for Stats:: namespace.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
-#include "../Surface_Meshes.h"
 
+#include "../Surface_Meshes.h"
 
 
 OperationDoc OpArgDocContourViaThreshold(void){
@@ -422,11 +422,15 @@ Drover ContourViaThreshold(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
                         std::ref(below) }};
 
                     //Generate the surface mesh.
+                    auto meshing_params = dcma_surface_meshes::Parameters();
+                    meshing_params.MutateOpts.inclusivity = Mutate_Voxels_Opts::Inclusivity::Centre;
+                    meshing_params.MutateOpts.contouroverlap = Mutate_Voxels_Opts::ContourOverlap::Ignore;
+                    FUNCWARN("Ignoring contour orientations; assuming ROI polyhderon is simple");
                     auto surface_mesh = dcma_surface_meshes::Estimate_Surface_Mesh_Marching_Cubes( 
                                                                     grid_imgs,
                                                                     inclusion_threshold, 
                                                                     below_is_interior,
-                                                                    dcma_surface_meshes::Parameters() );
+                                                                    meshing_params );
 
                     //Slice the mesh along the image plane.
                     auto lcc = polyhedron_processing::Slice_Polyhedron( surface_mesh, 

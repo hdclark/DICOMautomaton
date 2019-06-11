@@ -54,6 +54,7 @@
 #include <CGAL/boost/graph/graph_traits_Polyhedron_3.h>
 #include <CGAL/mesh_segmentation.h>
 
+#include "YgorImages_Functors/Processing/Partitioned_Image_Voxel_Visitor_Mutator.h"
 
 namespace dcma_surface_meshes {
 
@@ -74,6 +75,7 @@ struct Parameters {
     long int GridRows = 512;  // As of writing, the procedure limiting ramping this up is inclusivity testing.
     long int GridColumns = 512;
 
+    Mutate_Voxels_Opts MutateOpts; // Controls how contours are interpretted.
 
     // Control the mesh quality-vs-speed tradeoff.
     //
