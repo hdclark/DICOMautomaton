@@ -102,6 +102,26 @@ OperationDoc OpArgDocPresentationImage(void){
                                  "YgorIncandescent",
                                  "LinearRamp" };
 
+    out.args.emplace_back();
+    out.args.back().name = "WindowLow";
+    out.args.back().desc = "If provided, this parameter will override any existing window and level."
+                           " All pixels with the intensity value or lower will be assigned the lowest"
+                           " possible colour according to the colour map."
+                           " Not providing a valid number will disable window overrides.";
+    out.args.back().default_val = "";
+    out.args.back().expected = true;
+    out.args.back().examples = { "", "-1.23", "0", "1E4" };
+
+    out.args.emplace_back();
+    out.args.back().name = "WindowHigh";
+    out.args.back().desc = "If provided, this parameter will override any existing window and level."
+                           " All pixels with the intensity value or higher will be assigned the highest"
+                           " possible colour according to the colour map."
+                           " Not providing a valid number will disable window overrides.";
+    out.args.back().default_val = "";
+    out.args.back().expected = true;
+    out.args.back().examples = { "", "1.23", "0", "10.3E4" };
+
     return out;
 }
 
@@ -114,6 +134,9 @@ Drover PresentationImage( Drover DICOM_data,
     auto ImageFileName = OptArgs.getValueStr("ImageFileName").value();
     auto ScaleFactor = std::stod( OptArgs.getValueStr("ScaleFactor").value() );
     auto ColourMapRegexStr = OptArgs.getValueStr("ColourMapRegex").value();
+
+    auto WindowLowOpt = OptArgs.getValueStr("WindowLow");
+    auto WindowHighOpt = OptArgs.getValueStr("WindowHigh");
 
     //-----------------------------------------------------------------------------------------------------------------
     const auto regex_cm = Compile_Regex(ColourMapRegexStr);
@@ -164,6 +187,24 @@ Drover PresentationImage( Drover DICOM_data,
     //Real-time modifiable sticky window and level.
     std::experimental::optional<double> custom_width;
     std::experimental::optional<double> custom_centre;
+
+    // Adjust the window and level if the user has specified to do so.
+    if(WindowLowOpt && WindowHighOpt){
+        try{
+            const std::string low_str = WindowLowOpt.value();
+            const std::string high_str = WindowHighOpt.value();
+
+            // Parse the values and protect against mixing low and high values.
+            const auto new_low  = std::stod(low_str);
+            const auto new_high = std::stod(high_str);
+            const auto new_fullwidth = std::abs(new_high - new_low);
+            const auto new_centre = std::min(new_low, new_high) + 0.5 * new_fullwidth;
+            custom_width.emplace(new_fullwidth);
+            custom_centre.emplace(new_centre);
+        }catch(const std::exception &e){
+            throw std::runtime_error("Unable to parse window and level: '"_s + e.what() + "'");
+        }
+    }
 
     //Open a window.
     sf::RenderTexture window;
@@ -391,7 +432,7 @@ Drover PresentationImage( Drover DICOM_data,
         return;
     };
 
-    //Prep the first image.
+    // Prep the first image.
     if(!load_img_texture_sprite(disp_img_it, disp_img_texture_sprite)){
         FUNCERR("Unable to load image --> texture --> sprite");
     }
