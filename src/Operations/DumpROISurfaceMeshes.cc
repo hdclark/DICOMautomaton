@@ -131,13 +131,14 @@ OperationDoc OpArgDocDumpROISurfaceMeshes(void){
     );
 
     out.args.emplace_back();
-    out.args.back().name = "OutDir";
-    out.args.back().desc = "The directory in which to dump surface mesh files."
-                      " It will be created if it doesn't exist.";
-    out.args.back().default_val = "/tmp/";
+    out.args.back().name = "OutBase";
+    out.args.back().desc = "The prefix of the filename that surface mesh files will be saved as."
+                           " If no name is given, unique names will be chosen automatically.";
+    out.args.back().default_val = "";
     out.args.back().expected = true;
-    out.args.back().examples = { "./", "../somedir/", "/path/to/some/destination" };
-
+    out.args.back().examples = { "/tmp/dicomautomaton_dumproisurfacemesh", 
+                                 "../somedir/output", 
+                                 "/path/to/some/mesh" };
 
     out.args.emplace_back();
     out.args.back().name = "NormalizedROILabelRegex";
@@ -164,6 +165,27 @@ OperationDoc OpArgDocDumpROISurfaceMeshes(void){
     out.args.back().examples = { ".*", ".*body.*", "body", "Gross_Liver", 
                              R"***(.*parotid.*|.*sub.*mand.*)***", 
                             R"***(left_parotid|right_parotid|eyes)***" };
+
+    out.args.emplace_back();
+    out.args.back().name = "GridRows";
+    out.args.back().desc = "Controls the spatial resolution of the grid used to approximate the ROI(s)."
+                           " Specifically, the number of rows. Note that the number of slices is fixed"
+                           " by the contour separation. A larger number will result in a more accurate"
+                           " mesh, but will also result longer runtimes and higher mesh complexity."
+                           " Setting this parameter too high will result in excessive runtime and memory"
+                           " usage, so consider post-processing (i.e., subdivision) if a smooth mesh is"
+                           " needed.";
+    out.args.back().default_val = "256";
+    out.args.back().expected = true;
+    out.args.back().examples = { "64", "128", "256", "512", "1024" };
+
+    out.args.emplace_back();
+    out.args.back().name = "GridColumns";
+    out.args.back().desc = "Controls the spatial resolution of the grid used to approximate the ROI(s)."
+                           " (Refer to GridRows for more information.)";
+    out.args.back().default_val = "256";
+    out.args.back().expected = true;
+    out.args.back().examples = { "64", "128", "256", "512", "1024" };
 
 
     out.args.emplace_back();
@@ -198,21 +220,22 @@ OperationDoc OpArgDocDumpROISurfaceMeshes(void){
 Drover DumpROISurfaceMeshes(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string>, std::string ){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
-    const auto OutDir = OptArgs.getValueStr("OutDir").value();
+    auto OutBase = OptArgs.getValueStr("OutBase").value();
     const auto NormalizedROILabelRegex = OptArgs.getValueStr("NormalizedROILabelRegex").value();
     const auto ROILabelRegex = OptArgs.getValueStr("ROILabelRegex").value();
 
     const auto InclusivityStr = OptArgs.getValueStr("Inclusivity").value();
     const auto ContourOverlapStr = OptArgs.getValueStr("ContourOverlap").value();
 
+    const auto GridRows = std::stol( OptArgs.getValueStr("GridRows").value() );
+    const auto GridColumns = std::stol( OptArgs.getValueStr("GridColumns").value() );
+
     const auto MarchingCubes = true;
     const auto ReastrictedDelauney = false;
-    long int GridRows = 512;
-    long int GridColumns = 512;
 
     bool Subdivide = false;
-    bool Remesh = true;
     bool Simplify = false;
+    bool Remesh = true;
    
     long int MeshSubdivisions = 2;
     long int RemeshIterations = 5;
@@ -230,6 +253,9 @@ Drover DumpROISurfaceMeshes(Drover DICOM_data, OperationArgPkg OptArgs, std::map
     const auto regex_honopps = Compile_Regex("^ho?n?o?u?r?_?o?p?p?o?s?i?t?e?_?o?r?i?e?n?t?a?t?i?o?n?s?$");
     const auto regex_cancel = Compile_Regex("^ov?e?r?l?a?p?p?i?n?g?_?c?o?n?t?o?u?r?s?_?c?a?n?c?e?l?s?$");
 
+    if(OutBase.empty()){
+        OutBase = "/tmp/dicomautomaton_dumproisurfacemeshes";
+    }
 
     //Stuff references to all contours into a list. Remember that you can still address specific contours through
     // the original holding containers (which are not modified here).
@@ -241,7 +267,6 @@ Drover DumpROISurfaceMeshes(Drover DICOM_data, OperationArgPkg OptArgs, std::map
     }
 
     //For the selected ROIs, generate a surface mesh.
-    const auto OutBase = OutDir + "/SurfaceMesh"; // TODO: clean up temp file naming/specification.
     do{
         dcma_surface_meshes::Parameters meshing_params;
         meshing_params.GridRows = GridRows;
@@ -271,9 +296,13 @@ Drover DumpROISurfaceMeshes(Drover DICOM_data, OperationArgPkg OptArgs, std::map
         //auto output_mesh = dcma_surface_meshes::Estimate_Surface_Mesh( cc_ROIs, meshing_params );
         auto output_mesh = dcma_surface_meshes::Estimate_Surface_Mesh_Marching_Cubes( cc_ROIs, meshing_params );
 
-        const std::string FN_orig = OutBase + "_polyhedron_original.off";
-        if(!polyhedron_processing::SaveAsOFF(output_mesh, FN_orig)){
-            throw std::runtime_error("Unable to save original mesh as OFF file. Refusing to continue.");
+
+        {
+            const auto FN = Get_Unique_Sequential_Filename(OutBase + "_original_mesh_", 6, ".off");
+            if(!polyhedron_processing::SaveAsOFF(output_mesh, FN)){
+                throw std::runtime_error("Unable to save original mesh as OFF file. Refusing to continue.");
+            }
+            FUNCINFO("Original mesh written to '" << FN << "'");
         }
 
         if(Subdivide){
@@ -286,11 +315,13 @@ Drover DumpROISurfaceMeshes(Drover DICOM_data, OperationArgPkg OptArgs, std::map
             polyhedron_processing::Simplify(output_mesh, MeshSimplificationEdgeCountLimit);
         }
 
-        const std::string FN_processed = OutBase + "_polyhedron_processed.off";
-        if(!polyhedron_processing::SaveAsOFF(output_mesh, FN_processed)){
-            throw std::runtime_error("Unable to save processed mesh as OFF file. Refusing to continue.");
+        {
+            const auto FN = Get_Unique_Sequential_Filename(OutBase + "_processed_mesh_", 6, ".off");
+            if(!polyhedron_processing::SaveAsOFF(output_mesh, FN)){
+                throw std::runtime_error("Unable to save processed mesh as OFF file. Refusing to continue.");
+            }
+            FUNCINFO("Processed mesh written to '" << FN << "'");
         }
-        FUNCINFO("Processed Mesh written to '" << FN_processed << "'");
 
     }while(false);
 
