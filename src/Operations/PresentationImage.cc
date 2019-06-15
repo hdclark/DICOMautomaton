@@ -109,7 +109,7 @@ OperationDoc OpArgDocPresentationImage(void){
                            " possible colour according to the colour map."
                            " Not providing a valid number will disable window overrides.";
     out.args.back().default_val = "";
-    out.args.back().expected = true;
+    out.args.back().expected = false;
     out.args.back().examples = { "", "-1.23", "0", "1E4" };
 
     out.args.emplace_back();
@@ -119,7 +119,7 @@ OperationDoc OpArgDocPresentationImage(void){
                            " possible colour according to the colour map."
                            " Not providing a valid number will disable window overrides.";
     out.args.back().default_val = "";
-    out.args.back().expected = true;
+    out.args.back().expected = false;
     out.args.back().examples = { "", "1.23", "0", "10.3E4" };
 
     return out;
