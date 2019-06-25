@@ -6,7 +6,6 @@
 [![LOC](https://tokei.rs/b1/gitlab/hdeanclark/DICOMautomaton)](https://gitlab.com/hdeanclark/DICOMautomaton)
 [![Language](https://img.shields.io/github/languages/top/hdclark/DICOMautomaton.svg)](https://gitlab.com/hdeanclark/DICOMautomaton)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/1ac93861be524c7f9f18324b64960f28)](https://www.codacy.com/app/hdclark/DICOMautomaton?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=hdclark/DICOMautomaton&amp;utm_campaign=Badge_Grade)
-[![Hit count](http://hits.dwyl.io/hdclark/DICOMautomaton.svg)](http://hits.dwyl.io/hdclark/DICOMautomaton)
 
 # About
 
@@ -26,9 +25,9 @@ The basic workflow is:
   3. Files of various kinds can be written or a viewer can be invoked. Both
      are implemented as operations that can be chained together sequentially.
 
-Some operations are interactive. Others will run on their own for days (weeks).
-Each operation provides a description of the parameters that can be configured.
-To see this documentation, invoke:
+Some operations are interactive. Others will run on their own (possibly for for
+days or even weeks). Each operation provides a description of the parameters
+that can be configured. To see this documentation, invoke:
 
     $>  dicomautomaton_dispatcher -u
 
@@ -79,8 +78,10 @@ and "YgorClustering" projects which are hosted at:
   
 # Installation
 
-This project uses CMake. Use the usual commands to compile:
+This project uses CMake. Use the usual commands to compile on Linux:
 
+     $>  git clone https://gitlab.com/hdeanclark/DICOMautomaton/ && cd DICOMautomaton/ # or
+     $>  git clone https://github.com/hdclark/DICOMautomaton/ && cd DICOMautomaton/ # or
      $>  cd /path/to/source/directory
      $>  mkdir build && cd build/
 
@@ -99,6 +100,70 @@ Or, if building for Arch Linux:
 
      $>  rsync -aC --exclude build ../ ./
      $>  makepkg --syncdeps --noconfirm # Optionally also [--install].
+
+Direct installation on non-Linux systems is not officially supported. However, a
+portable Docker image can be built that is portable across non-Linux systems.
+
+
+# Containerization
+
+`DICOMautomaton` can be built as a Docker image. This method automatically
+handles installation of all dependencies. The resulting image can be run
+interactively, or accessed through a web server.
+
+In order to build the Docker image, you will need `git`, `Docker`, and a `bash`
+shell. On `Windows` systems the `git` shell should be used. To build the image:
+
+     $>  git clone https://gitlab.com/hdeanclark/DICOMautomaton/ && cd DICOMautomaton/ # or
+     $>  git clone https://github.com/hdclark/DICOMautomaton/ && cd DICOMautomaton/ # or
+     $>  cd /path/to/source/directory
+     $>  ./docker/build.sh
+
+After building, the default webserver can be launched using the convenience
+script:
+
+     $>  ./docker/Run_Container.sh
+
+and a container can be run interactively with the convenience script:
+
+     $>  ./docker/Run_Container_Interactively.sh
+
+[Continuous integration](https://travis-ci.com/hdclark/DICOMautomaton) is used
+to build Docker images for all commits using `Travis-CI`. Build artifacts may be
+available [here](https://travis-ci.com/hdclark/DICOMautomaton), but are
+unofficial.
+
+
+# Portable Binaries
+
+The well-known `LD_PRELOAD` trick can be used to provide somewhat portable
+`DICOMautomaton` binaries for Linux systems. Binaries from the system-installed
+or locally-built `DICOMautomaton` will be automatically gathered by building and
+then invoking:
+
+     $>  ./scripts/dump_portable_dcma_bundle.sh /tmp/portable_dcma/
+
+If successful, the portable outputs will be dumped to `/tmp/portable_dcma/`. A
+convenience script that performs the preload trick and forwards all user
+arguments is `portable_dcma`. 
+
+Note that this trick works *only* on Linux systems, and a similar Linux system
+must be used to generate the binaries. The interactive Docker container will
+likely suffice. Additionally this technique only provides the
+`dicomautomaton_dispatcher` binary. All shared libraries needed to run it are
+bundled, but `glibc` and some other intrinsic libraries are not and must
+therefore be similar. Also note that compilation arguments and
+architecture-specific tunings will ruin portability. 
+
+Alternatively, a second wrapper script (`emulate_dcma`) uses `qemu-x86_64` to
+emulate a 64 bit x86 system and preload bundled libraries. This script may work
+when the native `LD_PRELOAD` trick fails, but emulation may be slow.
+
+Portability, validity of the program, and full functionality are *NOT*
+guaranteed using either script! The preload trick is best run in a controlled
+environment, and targetting the same controlled environment and architecture.
+This method of distributing `DICOMautomaton` is not officially supported, but
+can simplify distributing custom builds in some situations. 
 
 
 # Known Issues
