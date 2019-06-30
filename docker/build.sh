@@ -18,6 +18,7 @@ reporoot=$(git rev-parse --show-toplevel)
 cd "${reporoot}"
 
 time sudo docker build \
+    --network=host \
     --no-cache=true \
     -t "${base_name}":"built_${build_datetime}" \
     -t "${base_name}":"commit_${commit_id}_${clean_dirty}" \

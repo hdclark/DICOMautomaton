@@ -11,9 +11,8 @@ ADD . /dcma
 
 
 # Prepare alternative mirrors.
-RUN printf -- 'Server = http://mirror.cedille.club/archlinux/$repo/os/$arch\n' > /etc/pacman.d/mirrorlist \
-    printf -- 'Server = http://mirrors.xmission.com/archlinux/$repo/os/$arch\n' >> /etc/pacman.d/mirrorlist \
-    printf -- 'Server = http://archlinux.mirror.rafal.ca/$repo/os/$arch\n' >> /etc/pacman.d/mirrorlist
+RUN curl -o /etc/pacman.d/mirrorlist "https://www.archlinux.org/mirrorlist/?country=all&protocol=http&ip_version=4&use_mirror_status=on" && \
+    sed -i 's/^#Server/Server/' /etc/pacman.d/mirrorlist
 
 # Install build dependencies.
 RUN pacman -Sy --noconfirm archlinux-keyring && \
