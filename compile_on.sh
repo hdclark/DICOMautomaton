@@ -25,7 +25,7 @@ ssh "${USER_AT_REMOTE}" "
   ./scripts/dump_portable_dcma_bundle.sh '${PORTABLE_BIN_DIR}'
   '
 
-rsync -avPz --no-links --cvs-exclude --delete "${USER_AT_REMOTE}:${PORTABLE_BIN_DIR}/" "${L_PORTABLE_BIN_DIR}/"
+rsync -avPz --no-links --delete "${USER_AT_REMOTE}:${PORTABLE_BIN_DIR}/" "${L_PORTABLE_BIN_DIR}/"
 
 printf ' ============================================================== \n'
 printf ' ===               Compilation was successful.              === \n'
