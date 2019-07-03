@@ -390,23 +390,52 @@ Drover ContourViaThreshold(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
 
                     //Prepare a mask image for contouring.
                     auto mask = animg;
-                    const double interior_value = -1.0;
-                    const double exterior_value =  1.0;
-                    const double inclusion_threshold = 0.0;
-                    const bool below_is_interior = true;
-                    mask.apply_to_pixels([pixel_oracle,
-                                          Channel,
-                                          interior_value,
-                                          exterior_value](long int, 
-                                                          long int,
-                                                          long int chnl,
-                                                          float &val) -> void {
-                            if(Channel == chnl){
-                                val = (pixel_oracle(val) ? interior_value : exterior_value);
-                            }
-                            return;
-                        });
 
+                    double inclusion_threshold = std::numeric_limits<double>::quiet_NaN();
+                    double exterior_value = std::numeric_limits<double>::quiet_NaN();
+                    bool below_is_interior = false;
+
+                    if(false){
+                    }else if(std::isfinite(cl) && std::isfinite(cu)){
+                        if(cl > cu){
+                            throw std::invalid_argument("Thresholds conflict. Mesh will contain zero faces. Refusing to continue.");
+                        }
+
+                        // Transform voxels by their |distance| from the midpoint. Only interior voxels will be within
+                        // [0,width*0.5], and all others will be (width*0.5,inf).
+                        const double midpoint = (cl + cu) * 0.5;
+                        const double width = (cu - cl);
+
+                        inclusion_threshold = width * 0.5;
+                        exterior_value = inclusion_threshold + 1.0;
+                        below_is_interior = true;
+                        mask.apply_to_pixels([Channel,midpoint](long int, long int, long int chnl, float &val) -> void {
+                                if(Channel == chnl){
+                                    val = std::abs(val - midpoint);
+                                }
+                                return;
+                            });
+
+                    }else if(std::isfinite(cl)){
+                        inclusion_threshold = cl;
+                        exterior_value = inclusion_threshold - 1.0;
+                        below_is_interior = false;
+
+                    }else if(std::isfinite(cu)){
+                        inclusion_threshold = cu;
+                        exterior_value = inclusion_threshold + 1.0;
+                        below_is_interior = true;
+
+                    }else{ // Neither threshold is finite.
+                        throw std::invalid_argument("Unable to discern finite threshold for meshing. Refusing to continue.");
+                        // Note: it is possible to deal with these cases and generate meshings for each, i.e., either all
+                        // voxels are included or no voxels are included (both are valid meshings). However, it seems
+                        // most likely this is a user error. Add this functionality if necessary.
+
+                    }
+
+                    // Sandwich the mask with images that have no voxels included to give the mesh a valid pxl_dz to
+                    // work with.
                     const auto N_0 = mask.image_plane().N_0;
                     auto above = animg;
                     auto below = animg;
@@ -421,7 +450,7 @@ Drover ContourViaThreshold(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
                         std::ref(mask),
                         std::ref(below) }};
 
-                    //Generate the surface mesh.
+                    // Generate the surface mesh.
                     auto meshing_params = dcma_surface_meshes::Parameters();
                     meshing_params.MutateOpts.inclusivity = Mutate_Voxels_Opts::Inclusivity::Centre;
                     meshing_params.MutateOpts.contouroverlap = Mutate_Voxels_Opts::ContourOverlap::Ignore;
@@ -432,11 +461,11 @@ Drover ContourViaThreshold(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
                                                                     below_is_interior,
                                                                     meshing_params );
 
-                    //Slice the mesh along the image plane.
+                    // Slice the mesh along the image plane.
                     auto lcc = polyhedron_processing::Slice_Polyhedron( surface_mesh, 
                                                                         {{ mask.image_plane() }} );
 
-                    //Tag the contours with metadata.
+                    // Tag the contours with metadata.
                     for(auto &cop : lcc.contours){
                         cop.closed = true;
                         cop.metadata["ROIName"] = ROILabel;
@@ -467,7 +496,7 @@ Drover ContourViaThreshold(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
                     }
                     */
 
-                    //Save the contours and print some information to screen.
+                    // Save the contours and print some information to screen.
                     {
                         std::lock_guard<std::mutex> lock(saver_printer);
                         DICOM_data.contour_data->ccs.back().contours.splice(DICOM_data.contour_data->ccs.back().contours.end(),

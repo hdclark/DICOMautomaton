@@ -921,8 +921,9 @@ Marching_Cubes_Implementation(
 
     // Convert an edge index to the corner vertex indices for a cube.
     const std::array< std::array<int32_t, 2>, 12> a2iEdgeConnection { {
-        {0, 1}, {1, 2}, {2, 3}, {3, 0}, {4, 5}, {5, 6}, 
-        {6, 7}, {7, 4}, {0, 4}, {1, 5}, {2, 6}, {3, 7}
+        {0, 1}, {1, 2}, {2, 3}, {3, 0},  // Bottom face.
+        {4, 5}, {5, 6}, {6, 7}, {7, 4},  // Top face.
+        {0, 4}, {1, 5}, {2, 6}, {3, 7}   // Side faces.
     } };
 
     // Storage used for the final mesh triangle vertices and faces.
@@ -943,9 +944,17 @@ Marching_Cubes_Implementation(
         const auto col_unit = img_refw.get().col_unit.unit();
         const auto img_unit = row_unit.Cross(col_unit).unit();
 
+        // Tolerance for deciding if meshed vertices are identical. If too lax, then topological inconsistencies may
+        // result; if too tight, then the mesh will either be non-watertight, non-manifold, or will be constructed in an
+        // invalid way by the mesher.
+        //
+        // The following tolerance was estimated with a Gaussian-smoothed spherical phantom.
+        // If these tolerances are increased, meshing will 'wobble' around the boundary and possibly create zero-area
+        // needles and surface crossovers. However, merely setting the tolerance to zero will likely cause meshing to
+        // fail outright.
         constexpr auto machine_eps = std::numeric_limits<double>::epsilon();
         const auto dvec3_tol = std::max(
-                                   std::min( { pxl_dx, pxl_dy, pxl_dz } ) * 1E-3,
+                                   std::min( { pxl_dx, pxl_dy, pxl_dz } ) * 1E-4,
                                    std::sqrt(machine_eps) * 100.0 ); // Guard against pxl_dz = 0.
 
         // List of Marching Cube voxel corner positions relative to image voxel centre.
@@ -960,6 +969,7 @@ Marching_Cubes_Implementation(
             (zero3 + row_unit * pxl_dx),
             (zero3 + row_unit * pxl_dx + col_unit * pxl_dy),
             (zero3 + col_unit * pxl_dy),
+
             (zero3 + img_unit * pxl_dz),
             (zero3 + row_unit * pxl_dx + img_unit * pxl_dz),
             (zero3 + row_unit * pxl_dx + col_unit * pxl_dy + img_unit * pxl_dz),
@@ -968,15 +978,17 @@ Marching_Cubes_Implementation(
 
         // The vector needed to translate from tail to head for each edge.
         const std::array< vec3<double>, 12> a2fEdgeDirection { {
-            row_unit * pxl_dx,
+            row_unit * pxl_dx, // Bottom face.
             col_unit * pxl_dy,
             row_unit * -pxl_dx,
             col_unit * -pxl_dy,
-            row_unit * pxl_dx,
+
+            row_unit * pxl_dx, // Top face.
             col_unit * pxl_dy,
             row_unit * -pxl_dx,
             col_unit * -pxl_dy,
-            img_unit * pxl_dz,
+
+            img_unit * pxl_dz, // Side faces.
             img_unit * pxl_dz,
             img_unit * pxl_dz,
             img_unit * pxl_dz
@@ -1030,13 +1042,12 @@ Marching_Cubes_Implementation(
                 }
 
                 // Convert vertex inclusion into a list of 'involved' edges that cross the ROI surface.
-                int32_t iEdgeFlags = aiCubeEdgeFlags[iFlagIndex];
+                const int32_t iEdgeFlags = aiCubeEdgeFlags[iFlagIndex];
 
-                //If the cube is entirely inside or outside of the surface, then there will be no intersections
+                // If the cube is entirely inside or outside of the surface, then there will be no intersections.
                 if(iEdgeFlags == 0) continue;
 
-                //Find the point of intersection of the surface with each edge
-                //Then find the normal to the surface at those points
+                // Find the point of intersection of the surface with each edge.
                 std::array<vec3<double>, 12> asEdgeVertex;
                 for(int32_t edge = 0; edge < 12; edge++){
                     if(iEdgeFlags & (1 << edge)){ // continue iff involved.
@@ -1089,7 +1100,7 @@ Marching_Cubes_Implementation(
                                                   std::rend(mesh_triangle_verts),
                                                   [=]( const Kernel::Point_3 &cv ) -> bool {
                                                       const vec3<double> v( cv[0], cv[1], cv[2] );
-                                                      return (tri_verts[tri_corner].sq_dist(v) < dvec3_tol);
+                                                      return (tri_verts[tri_corner].sq_dist(v) < (dvec3_tol*dvec3_tol));
                                                   } );
                         
                         if(v_it != std::rend(mesh_triangle_verts)){
@@ -1104,8 +1115,8 @@ Marching_Cubes_Implementation(
                     &&  (vert_indices[0] != vert_indices[2])
                     &&  (vert_indices[1] != vert_indices[2]) ){
                         mesh_triangle_faces.emplace_back(vert_indices);
-                        mesh_triangle_verts.insert( std::end(mesh_triangle_verts), std::begin(new_verts),
-                        std::end(new_verts) );
+                        mesh_triangle_verts.insert( std::end(mesh_triangle_verts), 
+                                                    std::begin(new_verts), std::end(new_verts) );
                     }else{
                         FUNCWARN("Encountered a zero-area triangle face. Ignoring it");
                     }
