@@ -125,21 +125,26 @@ OperationDoc OpArgDocDrawGeometry(void){
     out.args.emplace_back();
     out.args.back().name = "Shapes";
     out.args.back().desc = "This parameter is used to specify the shapes and patterns to consider."
-                           " Currently grids and wireframecubes are available."
-                           " Grids have five configurable parameters: two orientations, line thickness, and line separation."
+                           " Currently grids, wireframecubes, and solidspheres are available."
+                           " Grids have four configurable parameters: two orientation unit vectors, line thickness, and line separation."
                            " A grid intersecting at the image array's centre, aligned with (1.0,0.0,0.0) and (0.0,1.0,0.0), with"
                            " line thickness (i.e., diameter) 3.0 (DICOM units; mm), and separation 15.0 can be specified as"
                            " 'grid(1.0,0.0,0.0, 0.0,1.0,0.0, 3.0, 15.0)'."
                            " Unit vectors will be Gram-Schmidt orthogonalized."
                            " Note that currently the grid *must* intersect the image array's centre."
                            " Cubes have the same number of configurable parameters, but only a single cube of the grid is drawn."
-                           " However, the wireframecube is centred at the image centre."
-                           " Both grid and wireframecube shapes only overwrite voxels that intersect the geometry,"
+                           " The wireframecube is centred at the image centre, rather than intersecting it."
+                           " Solid spheres have two configurable parameters: a centre vector and a radius."
+                           " A solid sphere at (1.0,2.0,3.0) with radius 15.0 (all DICOM units; mm) can be specified as"
+                           " 'solidsphere(1.0,2.0,3.0, 15.0)'."
+                           " Grid, wireframecube, and solidsphere shapes only overwrite voxels that intersect the geometry"
+                           " (i.e., the surface if hollow or the internal volume if solid)"
                            " permitting easier composition of multiple shapes or custom backgrounds.";
     out.args.back().default_val = "grid(-0.0941083,0.995562,0, 0.992667,0.0938347,0.0762047, 3.0, 15.0)";
     out.args.back().expected = true;
     out.args.back().examples = { "grid(1.0,0.0,0.0, 0.0,1.0,0.0, 3.0, 15.0)",
-                                 "wireframecube(1.0,0.0,0.0, 0.0,1.0,0.0, 3.0, 15.0)" };
+                                 "wireframecube(1.0,0.0,0.0, 0.0,1.0,0.0, 3.0, 15.0)",
+                                 "solidsphere(0.0,0.0,0.0, 15.0)"  };
 
     return out;
 }
@@ -186,6 +191,11 @@ Drover DrawGeometry(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
 
     const auto regex_grid = Compile_Regex("^gr?i?d?.*$");
     const auto regex_wcube = Compile_Regex("^wi?r?e?f?r?a?m?e?c?u?b?e?.*$");
+    const auto regex_ssph = Compile_Regex("^so?l?i?d?sp?h?e?r?e?.*$");
+
+    const bool shape_is_grid = std::regex_match(ShapesStr, regex_grid);
+    const bool shape_is_wcube = std::regex_match(ShapesStr, regex_wcube);
+    const bool shape_is_ssph = std::regex_match(ShapesStr, regex_ssph);
 
     std::function<void(long int, long int, long int, std::reference_wrapper<planar_image<float,double>>, float &)> f_noop;
 
@@ -195,14 +205,17 @@ Drover DrawGeometry(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
 
     //-----------------------------------------------------------------------------------------------------------------
 
+    // Grids and Wireframe cubes.
     // Note: cubes and grids share much of the same basic specifications.
-    bool shape_is_grid = std::regex_match(ShapesStr, regex_grid);
-    bool shape_is_wcube = std::regex_match(ShapesStr, regex_wcube);
     double grid_sep = std::numeric_limits<double>::quiet_NaN();
     double grid_rad = std::numeric_limits<double>::quiet_NaN();
     vec3<double> unit_x = vec3_nan;
     vec3<double> unit_y = vec3_nan;
     vec3<double> unit_z = vec3_nan;
+
+    // Solid spheres.
+    vec3<double> ssph_centre = vec3_nan;
+    double ssph_radius = std::numeric_limits<double>::quiet_NaN();
 
     if(false){
     }else if(shape_is_grid || shape_is_wcube){
@@ -235,6 +248,30 @@ Drover DrawGeometry(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
 
         if(!unit_x.isfinite()) throw std::invalid_argument("Grid/cube orientation vector #1 invalid.");
         if(!unit_y.isfinite()) throw std::invalid_argument("Grid/cube orientation vector #2 invalid.");
+
+    }else if(shape_is_ssph){
+        auto split = SplitStringToVector(ShapesStr, '(', 'd');
+        split = SplitVector(split, ')', 'd');
+        split = SplitVector(split, ',', 'd');
+
+        std::vector<double> numbers;
+        for(const auto &w : split){
+           try{
+               const auto x = std::stod(w);
+               numbers.emplace_back(x);
+           }catch(const std::exception &){ }
+        }
+        if(numbers.size() != 4){
+            throw std::invalid_argument("Unable to parse solidsphere shape parameters. Cannot continue.");
+        }
+
+        ssph_centre = vec3<double>( numbers.at(0),
+                                    numbers.at(1),
+                                    numbers.at(2) );
+        ssph_radius = numbers.at(3);
+
+        if(!std::isfinite(ssph_radius) || (ssph_radius <= 0.0)) throw std::invalid_argument("Sphere radius is invalid.");
+        if(!ssph_centre.isfinite()) throw std::invalid_argument("Sphere centre is invalid.");
     }else{
         throw std::invalid_argument("Shape not understood. Refusing to continue.");
     }
@@ -382,6 +419,17 @@ Drover DrawGeometry(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
         ud.description = "Drawn geometry";
 
         if(false){
+        }else if(shape_is_wcube){
+            ud.description += ": wireframe cube";
+        }else if(shape_is_grid){
+            ud.description += ": grid";
+        }else if(shape_is_ssph){
+            ud.description += ": solid sphere";
+        }else{
+            throw std::invalid_argument("Shape not understood. Refusing to continue.");
+        }
+
+        if(false){
         }else if( std::regex_match(ContourOverlapStr, regex_ignore) ){
             ud.mutation_opts.contouroverlap = Mutate_Voxels_Opts::ContourOverlap::Ignore;
         }else if( std::regex_match(ContourOverlapStr, regex_honopps) ){
@@ -446,6 +494,25 @@ Drover DrawGeometry(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
                         }
                     }
                     //voxel_val = 0.0f;
+                    return;
+                }
+            };
+        }
+
+        // Sphere pattern.
+        if(shape_is_ssph){
+            f_overwrite = [&]( long int row,
+                               long int col,
+                               long int chan,
+                               std::reference_wrapper<planar_image<float,double>> img_refw,
+                               float &voxel_val ) -> void {
+                if( (Channel < 0) || (Channel == chan) ){
+                    const auto pos = img_refw.get().position(row,col);
+
+                    const auto dist = pos.distance(ssph_centre);
+                    if(dist <= ssph_radius){
+                        voxel_val = VoxelValue;
+                    }
                     return;
                 }
             };
