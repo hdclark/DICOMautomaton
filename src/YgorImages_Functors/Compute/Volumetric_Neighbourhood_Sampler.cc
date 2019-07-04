@@ -105,7 +105,7 @@ bool ComputeVolumetricNeighbourhoodSampler(planar_image_collection<float,double>
             // If no overlapping image is found, another lookup is performed for each voxel (which is much slower).
             auto overlapping_img_refws = img_adj.get_wholly_overlapping_images(img_refw);
             if(overlapping_img_refws.size() != 1){
-                throw std::logic_error("Duplicated image volume does not self-overlap. Cannot continue.");
+                throw std::logic_error("Number of overlapping images is not 1. Cannot continue.");
             }
             auto ref_img_refw = overlapping_img_refws.front();
 
