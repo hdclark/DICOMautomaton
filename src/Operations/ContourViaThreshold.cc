@@ -191,50 +191,58 @@ Drover ContourViaThreshold(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
     auto IAs_all = All_IAs( DICOM_data );
     auto IAs = Whitelist( IAs_all, ImageSelectionStr );
     for(auto & iap_it : IAs){
+        const long int img_count = (*iap_it)->imagecoll.images.size();
+
         asio_thread_pool tp;
         std::mutex saver_printer; // Who gets to save generated contours, print to the console, and iterate the counter.
         long int completed = 0;
-        const long int img_count = (*iap_it)->imagecoll.images.size();
+
+        //Determine the bounds in terms of pixel-value thresholds.
+        auto cl = Lower; // Will be replaced if percentages/percentiles requested.
+        auto cu = Upper; // Will be replaced if percentages/percentiles requested.
+        {
+            //Percentage-based.
+            if(Lower_is_Percent || Upper_is_Percent){
+                Stats::Running_MinMax<float> rmm;
+                for(const auto &animg : (*iap_it)->imagecoll.images){
+                    animg.apply_to_pixels([&rmm,Channel](long int, long int, long int chnl, float val) -> void {
+                         if(Channel == chnl) rmm.Digest(val);
+                         return;
+                    });
+                }
+                if(Lower_is_Percent) cl = (rmm.Current_Min() + (rmm.Current_Max() - rmm.Current_Min()) * Lower / 100.0);
+                if(Upper_is_Percent) cu = (rmm.Current_Min() + (rmm.Current_Max() - rmm.Current_Min()) * Upper / 100.0);
+            }
+
+            //Percentile-based.
+            if(Lower_is_Ptile || Upper_is_Ptile){
+                std::vector<float> pixel_vals;
+                //pixel_vals.reserve(animg.rows * animg.columns * animg.channels * img_count);
+                for(const auto &animg : (*iap_it)->imagecoll.images){
+                    animg.apply_to_pixels([&pixel_vals,Channel](long int, long int, long int chnl, float val) -> void {
+                         if(Channel == chnl) pixel_vals.push_back(val);
+                         return;
+                    });
+                }
+                if(Lower_is_Ptile) cl = Stats::Percentile(pixel_vals, Lower / 100.0);
+                if(Upper_is_Ptile) cu = Stats::Percentile(pixel_vals, Upper / 100.0);
+            }
+        }
+        if(cl > cu){
+            throw std::invalid_argument("Thresholds conflict. Mesh will contain zero faces. Refusing to continue.");
+        }
+
+        //Construct a pixel 'oracle' closure using the user-specified threshold criteria. This function identifies whether
+        //the pixel is within (true) or outside of (false) the final ROI.
+        auto pixel_oracle = [cu,cl](float p) -> bool {
+            return (cl <= p) && (p <= cu);
+        };
 
         for(const auto &animg : (*iap_it)->imagecoll.images){
             if( (animg.rows < 1) || (animg.columns < 1) || (Channel >= animg.channels) ){
                 throw std::runtime_error("Image or channel is empty -- cannot contour via thresholds.");
             }
             tp.submit_task([&](void) -> void {
-
-                //Determine the bounds in terms of pixel-value thresholds.
-                auto cl = Lower; // Will be replaced if percentages/percentiles requested.
-                auto cu = Upper; // Will be replaced if percentages/percentiles requested.
-                {
-                    //Percentage-based.
-                    if(Lower_is_Percent || Upper_is_Percent){
-                        Stats::Running_MinMax<float> rmm;
-                        animg.apply_to_pixels([&rmm,Channel](long int, long int, long int chnl, float val) -> void {
-                             if(Channel == chnl) rmm.Digest(val);
-                             return;
-                        });
-                        if(Lower_is_Percent) cl = (rmm.Current_Min() + (rmm.Current_Max() - rmm.Current_Min()) * Lower / 100.0);
-                        if(Upper_is_Percent) cu = (rmm.Current_Min() + (rmm.Current_Max() - rmm.Current_Min()) * Upper / 100.0);
-                    }
-
-                    //Percentile-based.
-                    if(Lower_is_Ptile || Upper_is_Ptile){
-                        std::vector<float> pixel_vals;
-                        pixel_vals.reserve(animg.rows * animg.columns * animg.channels);
-                        animg.apply_to_pixels([&pixel_vals,Channel](long int, long int, long int chnl, float val) -> void {
-                             if(Channel == chnl) pixel_vals.push_back(val);
-                             return;
-                        });
-                        if(Lower_is_Ptile) cl = Stats::Percentile(pixel_vals, Lower / 100.0);
-                        if(Upper_is_Ptile) cu = Stats::Percentile(pixel_vals, Upper / 100.0);
-                    }
-                }
-
-                //Construct a pixel 'oracle' closure using the user-specified threshold criteria. This function identifies whether
-                //the pixel is within (true) or outside of (false) the final ROI.
-                auto pixel_oracle = [cu,cl](float p) -> bool {
-                    return (cl <= p) && (p <= cu);
-                };
 
                 // ---------------------------------------------------
                 // The binary inclusivity method.
@@ -390,17 +398,12 @@ Drover ContourViaThreshold(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
 
                     //Prepare a mask image for contouring.
                     auto mask = animg;
-
                     double inclusion_threshold = std::numeric_limits<double>::quiet_NaN();
                     double exterior_value = std::numeric_limits<double>::quiet_NaN();
                     bool below_is_interior = false;
 
                     if(false){
                     }else if(std::isfinite(cl) && std::isfinite(cu)){
-                        if(cl > cu){
-                            throw std::invalid_argument("Thresholds conflict. Mesh will contain zero faces. Refusing to continue.");
-                        }
-
                         // Transform voxels by their |distance| from the midpoint. Only interior voxels will be within
                         // [0,width*0.5], and all others will be (width*0.5,inf).
                         const double midpoint = (cl + cu) * 0.5;
@@ -470,8 +473,8 @@ Drover ContourViaThreshold(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
                         cop.closed = true;
                         cop.metadata["ROIName"] = ROILabel;
                         cop.metadata["NormalizedROIName"] = NormalizedROILabel;
-                        cop.metadata["Description"] = "Contoured via threshold ("_s + std::to_string(Lower)
-                                                     + " <= pixel_val <= " + std::to_string(Upper) + ")";
+                        cop.metadata["Description"] = "Contoured via threshold ("_s + LowerStr
+                                                     + " <= pixel_val <= " + UpperStr + ")";
                         cop.metadata["MinimumSeparation"] = MinimumSeparation;
                         for(const auto &key : { "StudyInstanceUID", "FrameofReferenceUID" }){
                             if(animg.metadata.count(key) != 0) cop.metadata[key] = animg.metadata.at(key);

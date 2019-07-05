@@ -30,6 +30,8 @@ OperationDoc OpArgDocDumpImageMeshes(void){
     out.desc = 
         "This operation exports images as a 3D surface mesh model (structured ASCII Wavefront OBJ)"
         " that can be manipulated in various ways (e.g., stereographic projection)."
+        " Note that the mesh will be a 3D depiction of the image(s) as they naturally are "
+        " -- meshes will always be rectangular."
         " A companion material library file (MTL) assigns colours to each ROI based on the voxel intensity.";
 
     out.notes.emplace_back(
