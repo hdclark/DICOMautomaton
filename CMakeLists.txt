@@ -127,7 +127,8 @@ set(CPACK_DEBIAN_PACKAGE_RECOMMENDS
    "zenity, 
     gnuplot,
     ygorclustering,
-    libboost-all-dev")
+    libboost-all-dev,
+    patchelf")
 set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "amd64") # i386, amd64, armel, armhf, ...
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Various tools for medical physics applications.")
 set(CPACK_PACKAGE_CONTACT "hdeanclark@gmail.com")

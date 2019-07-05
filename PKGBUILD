@@ -32,6 +32,7 @@ optdepends=(
    'zenity'
    'dialog'
    'gnuplot'
+   'patchelf'
 )
 makedepends=(
    'cmake'

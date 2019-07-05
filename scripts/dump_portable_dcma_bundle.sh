@@ -35,10 +35,14 @@ if [ ! -f "${which_dcma}" ] ; then
 fi
 
 # Gather the necessary libraries.
+#
+# Note: if glibc versions match on host and client (or the host is older than the client),
+#       then the client's system glibc distribution can be used. Add the following rsync excludes:
+#           --exclude='ld-linux*' \
+#           --exclude='libc.*' \
+#           --exclude='libm.*' \
+#       Otherwise, bundle the host's glibc distribution and hope that patching the binary will suffice!
 rsync -L -r --delete \
-  --exclude='ld-linux*' \
-  --exclude='libc.*' \
-  --exclude='libm.*' \
   $( ldd "${which_dcma}" | 
      grep '=>' | 
      sed -e 's@.*=> @@' -e 's@ (.*@@' 
@@ -58,6 +62,28 @@ set -e
 # Identify the location of this script.
 export SCRIPT_DIR="$(dirname "$(readlink -f "${BASH_SOURCE[0]}" )" )"
 
+# Patch the binary to use the bundled ld-linux.so
+function command_exists () {
+    type "$1" &> /dev/null ;
+}
+if command_exists patchelf ; then
+    printf 'Relying on bundled glibc distribution. Execution may fail in bizarre ways...\n'
+
+    current_rpath=$( patchelf --print-rpath "${SCRIPT_DIR}/"dicomautomaton_dispatcher )
+    if [ "$(readlink -m "${current_rpath}")" != "$(readlink -m "${SCRIPT_DIR}")" ] ; then
+        # Note: this step should only trigger when this script is first run after moving 
+        #       the binary to a new location.
+        printf 'Patching ELF binary...\n'
+        patchelf \
+          --set-interpreter "${SCRIPT_DIR}/"ld-linux*so* \
+          --set-rpath "${SCRIPT_DIR}/" \
+          "${SCRIPT_DIR}/"dicomautomaton_dispatcher
+    fi
+
+else
+    printf 'Relying on hardcoded system glibc distribution. Symbol resolution may fail...\n'
+fi
+
 # Assume that this script, the libraries, and the binary are all bundled together.
 LD_LIBRARY_PATH="${SCRIPT_DIR}" exec "${SCRIPT_DIR}/"dicomautomaton_dispatcher "$@"
 
@@ -75,6 +101,31 @@ set -e
 
 # Identify the location of this script.
 export SCRIPT_DIR="$(dirname "$(readlink -f "${BASH_SOURCE[0]}" )" )"
+
+# Patch the binary to use the bundled ld-linux.so
+#
+# Note: it would be better to provide a custom runtime rather than patching the binary. TODO.
+#      
+function command_exists () {
+    type "$1" &> /dev/null ;
+}
+if command_exists patchelf ; then
+    printf 'Relying on bundled glibc distribution. Execution may fail in bizarre ways...\n'
+
+    current_rpath=$( patchelf --print-rpath "${SCRIPT_DIR}/"dicomautomaton_dispatcher )
+    if [ "$(readlink -m "${current_rpath}")" != "$(readlink -m "${SCRIPT_DIR}")" ] ; then
+        # Note: this step should only trigger when this script is first run after moving 
+        #       the binary to a new location.
+        printf 'Patching ELF binary...\n'
+        patchelf \
+          --set-interpreter "${SCRIPT_DIR}/"ld-linux*so* \
+          --set-rpath "${SCRIPT_DIR}/" \
+          "${SCRIPT_DIR}/"dicomautomaton_dispatcher
+    fi
+
+else
+    printf 'Relying on hardcoded system glibc distribution. Symbol resolution may fail...\n'
+fi
 
 # Assume that this script, the libraries, and the binary are all bundled together.
 qemu-x86_64 -E LD_LIBRARY_PATH="${SCRIPT_DIR}" -L "${SCRIPT_DIR}" dicomautomaton_dispatcher "$@"
