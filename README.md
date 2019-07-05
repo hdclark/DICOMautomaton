@@ -151,13 +151,22 @@ Note that this trick works *only* on Linux systems, and a similar Linux system
 must be used to generate the binaries. The interactive Docker container will
 likely suffice. Additionally this technique only provides the
 `dicomautomaton_dispatcher` binary. All shared libraries needed to run it are
-bundled, but `glibc` and some other intrinsic libraries are not and must
-therefore be similar. Also note that compilation arguments and
-architecture-specific tunings will ruin portability. 
+bundled, including `glibc` and some other intrinsic libraries in case the host
+and target `glibc` differ. If the `patchelf` program is available, the binary
+will be patched to use the bundled `ld-linux.so` interpreter and `glibc`,
+otherwise the system interpreter will be used. If `patchelf` is not available it
+is best to remove `ld-linux`, `libm`, and `libc` from the bundle and rely fully
+on the target `glibc`. Mixing and matching bits of different `glibc`
+installations will almost certainly result in segmentation faults or silent
+failures so it is not recommended in any circumstances. Also note that
+compilation arguments and architecture-specific tunings will likely ruin
+portability. 
 
 Alternatively, a second wrapper script (`emulate_dcma`) uses `qemu-x86_64` to
 emulate a 64 bit x86 system and preload bundled libraries. This script may work
-when the native `LD_PRELOAD` trick fails, but emulation may be slow.
+when the native `LD_PRELOAD` trick fails, but emulation may be slow. The cpu can
+be emulated, so it may be possible to support architecture-specific tunings this
+way.
 
 Portability, validity of the program, and full functionality are *NOT*
 guaranteed using either script! The preload trick is best run in a controlled
