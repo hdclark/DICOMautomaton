@@ -58,12 +58,11 @@ RUN su - aurbuild -c \
 # Install known official dependencies.
 RUN pacman -S --noconfirm --needed  \
     gcc-libs \
-    ttf-freefont \
+    gnu-free-fonts \
     sfml \
     jansson \
     libpqxx \
     postgresql \
-    freeglut \
     gsl \
     boost-libs \
     zlib \
