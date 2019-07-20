@@ -38,7 +38,9 @@ OperationDoc OpArgDocContourViaThreshold(void){
         "This operation constructs ROI contours using images and pixel/voxel value thresholds."
         " There are two methods of contour generation available:"
         " a simple binary method in which voxels are either fully in or fully out of the contour,"
-        " and a method based on marching cubes that will provide smoother contours.";
+        " and a method based on marching cubes that will provide smoother contours."
+        " The marching cubes method does **not** construct a full surface mesh; rather each"
+        " individual image slice has their own mesh constructed in parallel.";
         
     out.notes.emplace_back(
         "This routine expects images to be non-overlapping. In other words, if images overlap then the contours"
@@ -344,7 +346,7 @@ Drover ContourViaThreshold(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
                             copl.back().metadata["NormalizedROIName"] = NormalizedROILabel;
                             copl.back().metadata["Description"] = "Contoured via threshold ("_s + std::to_string(Lower)
                                                                  + " <= pixel_val <= " + std::to_string(Upper) + ")";
-                            copl.back().metadata["MinimumSeparation"] = MinimumSeparation;
+                            copl.back().metadata["MinimumSeparation"] = std::to_string(MinimumSeparation);
                             for(const auto &key : { "StudyInstanceUID", "FrameofReferenceUID" }){
                                 if(animg.metadata.count(key) != 0) copl.back().metadata[key] = animg.metadata.at(key);
                             }
@@ -475,7 +477,7 @@ Drover ContourViaThreshold(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
                         cop.metadata["NormalizedROIName"] = NormalizedROILabel;
                         cop.metadata["Description"] = "Contoured via threshold ("_s + LowerStr
                                                      + " <= pixel_val <= " + UpperStr + ")";
-                        cop.metadata["MinimumSeparation"] = MinimumSeparation;
+                        cop.metadata["MinimumSeparation"] = std::to_string(MinimumSeparation);
                         for(const auto &key : { "StudyInstanceUID", "FrameofReferenceUID" }){
                             if(animg.metadata.count(key) != 0) cop.metadata[key] = animg.metadata.at(key);
                         }

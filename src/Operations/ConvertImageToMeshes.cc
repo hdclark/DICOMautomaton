@@ -1,4 +1,4 @@
-//DumpImageSurfaceMeshes.cc - A part of DICOMautomaton 2019. Written by hal clark.
+//ConvertImageToMeshes.cc - A part of DICOMautomaton 2019. Written by hal clark.
 
 #include <asio.hpp>
 #include <algorithm>
@@ -19,24 +19,25 @@
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
 #include "../Thread_Pool.h"
-#include "DumpImageSurfaceMeshes.h"
+#include "ConvertImageToMeshes.h"
 #include "Explicator.h"       //Needed for Explicator class.
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorStats.h"        //Needed for Stats:: namespace.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
+#include "YgorMathIOOFF.h"
 
 #include "../Surface_Meshes.h"
 
 
-OperationDoc OpArgDocDumpImageSurfaceMeshes(void){
+OperationDoc OpArgDocConvertImageToMeshes(void){
     OperationDoc out;
-    out.name = "DumpImageSurfaceMeshes";
+    out.name = "ConvertImageToMeshes";
 
     out.desc = 
-        "This operation generates surface meshes from images and pixel/voxel value thresholds."
-        " Output is written to file(s) for viewing with an external viewer (e.g., meshlab)."
+        "This operation extracts surface meshes from images and pixel/voxel value thresholds."
+        " Meshes are appended to the back of the Surface_Mesh stack."
         " There are two methods of contour generation available:"
         " a simple binary method in which voxels are either fully in or fully out of the contour,"
         " and a method based on marching cubes that will provide smoother contours."
@@ -107,21 +108,20 @@ OperationDoc OpArgDocDumpImageSurfaceMeshes(void){
 
     
     out.args.emplace_back();
-    out.args.back().name = "OutBase";
-    out.args.back().desc = "The prefix of the filename that surface mesh files will be saved as."
-                           " If no name is given, unique names will be chosen automatically.";
-    out.args.back().default_val = "";
+    out.args.back().name = "MeshLabel";
+    out.args.back().desc = "A label to attach to the surface mesh.";
+    out.args.back().default_val = "unspecified";
     out.args.back().expected = true;
-    out.args.back().examples = { "/tmp/dicomautomaton_dumpimagesurfacemesh", 
-                                 "../somedir/output", 
-                                 "/path/to/some/mesh" };
+    out.args.back().examples = { "unspecified", "body", "air", "bone", "invalid", "above_zero", "below_5.3" };
 
     return out;
 }
 
 
 
-Drover DumpImageSurfaceMeshes(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string> /*InvocationMetadata*/, std::string FilenameLex){
+Drover ConvertImageToMeshes(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string> /*InvocationMetadata*/, std::string FilenameLex){
+
+    Explicator X(FilenameLex);
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto ImageSelectionStr = OptArgs.getValueStr("ImageSelection").value();
@@ -129,20 +129,11 @@ Drover DumpImageSurfaceMeshes(Drover DICOM_data, OperationArgPkg OptArgs, std::m
     const auto UpperStr = OptArgs.getValueStr("Upper").value();
     const auto ChannelStr = OptArgs.getValueStr("Channel").value();
     const auto MethodStr = OptArgs.getValueStr("Method").value();
-    auto OutBase = OptArgs.getValueStr("OutBase").value();
-
-    bool Subdivide = false;
-    bool Simplify = false;
-    bool Remesh = true;
-   
-    long int MeshSubdivisions = 2;
-    long int RemeshIterations = 5;
-    //long int RemeshTargetEdgeLength = 2.5; // DICOM units (mm).
-    long int RemeshTargetEdgeLength = 1.5; // DICOM units (mm).
-    //long int MeshSimplificationEdgeCountLimit = 75'000; // For later (volumetric) analysis.
-    long int MeshSimplificationEdgeCountLimit = 250'000; // For later rendering.
+    const auto MeshLabel = OptArgs.getValueStr("MeshLabel").value();
 
     //-----------------------------------------------------------------------------------------------------------------
+    const auto NormalizedMeshLabel = X(MeshLabel);
+
     const auto Lower = std::stod( LowerStr );
     const auto Upper = std::stod( UpperStr );
     const auto Channel = std::stol( ChannelStr );
@@ -165,6 +156,9 @@ Drover DumpImageSurfaceMeshes(Drover DICOM_data, OperationArgPkg OptArgs, std::m
     auto IAs = Whitelist( IAs_all, ImageSelectionStr );
     for(auto & iap_it : IAs){
         const long int img_count = (*iap_it)->imagecoll.images.size();
+
+        // The mesh will inheret image metadata.
+        auto ia_metadata = (*iap_it)->imagecoll.get_common_metadata({});
 
         asio_thread_pool tp;
         std::mutex saver_printer; // Who gets to save generated contours, print to the console, and iterate the counter.
@@ -302,31 +296,20 @@ Drover DumpImageSurfaceMeshes(Drover DICOM_data, OperationArgPkg OptArgs, std::m
 
         // Emit the meshes.
         {
-            const auto FN = Get_Unique_Sequential_Filename(OutBase + "_original_mesh_", 6, ".off");
-            if(!polyhedron_processing::SaveAsOFF(output_mesh, FN)){
-                throw std::runtime_error("Unable to save original mesh as OFF file. Refusing to continue.");
+            std::stringstream ss;
+            if(!(ss << output_mesh)){
+                throw std::runtime_error("Unable to emit mesh OFF format. Cannot continue.");
             }
-            FUNCINFO("Original mesh written to '" << FN << "'");
-        }
-
-        if(Subdivide){
-            polyhedron_processing::Subdivide(output_mesh, MeshSubdivisions);
-        }
-        if(Remesh){
-            polyhedron_processing::Remesh(output_mesh, RemeshTargetEdgeLength, RemeshIterations);
-        }
-        if(Simplify){
-            polyhedron_processing::Simplify(output_mesh, MeshSimplificationEdgeCountLimit);
-        }
-
-        {
-            const auto FN = Get_Unique_Sequential_Filename(OutBase + "_processed_mesh_", 6, ".off");
-            if(!polyhedron_processing::SaveAsOFF(output_mesh, FN)){
-                throw std::runtime_error("Unable to save processed mesh as OFF file. Refusing to continue.");
+            DICOM_data.smesh_data.emplace_back();
+            if(!ReadFVSMeshFromOFF( DICOM_data.smesh_data.back()->meshes, ss )){
+                throw std::runtime_error("Unable to parse mesh OFF format. Cannot continue.");
             }
-            FUNCINFO("Processed mesh written to '" << FN << "'");
-        }
 
+            DICOM_data.smesh_data.back()->meshes.metadata = ia_metadata;
+            DICOM_data.smesh_data.back()->meshes.metadata["MeshLabel"] = MeshLabel;
+            DICOM_data.smesh_data.back()->meshes.metadata["NormalizedMeshLabel"] = NormalizedMeshLabel;
+            DICOM_data.smesh_data.back()->meshes.metadata["Description"] = "Extracted surface mesh";
+        }
     }
 
     return DICOM_data;

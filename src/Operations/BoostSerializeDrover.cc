@@ -38,12 +38,14 @@ OperationDoc OpArgDocBoost_Serialize_Drover(void){
     out.args.emplace_back();
     out.args.back().name = "Components";
     out.args.back().desc = "Which components to include in the output."
-                           " Currently, any combination of (all images), (all contours), and (all point clouds)"
-                           " can be selected.";
-    out.args.back().default_val = "images+contours+pointclouds";
+                           " Currently, any combination of (all images), (all contours), (all point clouds), "
+                           " and (all surface meshes) can be selected.";
+    out.args.back().default_val = "images+contours+pointclouds+surfacemeshes";
     out.args.back().expected = true;
     out.args.back().examples = { "images",
                                  "images+pointclouds",
+                                 "images+pointclouds+surfacemeshes",
+                                 "pointclouds+surfacemeshes",
                                  "contours+images+pointclouds" };
 
     return out;
@@ -61,10 +63,12 @@ Boost_Serialize_Drover(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std:
     const auto regex_images   = Compile_Regex(".*ima?ge?s?.*");
     const auto regex_contours = Compile_Regex(".*cont?o?u?r?s?.*");
     const auto regex_pclouds  = Compile_Regex(".*po?i?n?t?.*clo?u?d?s?.*");
+    const auto regex_smeshes  = Compile_Regex(".*su?r?f?a?c?e?.*mes?h?e?s?.*");
 
     const bool include_images   = std::regex_match(ComponentsStr, regex_images);
     const bool include_contours = std::regex_match(ComponentsStr, regex_contours);
     const bool include_pclouds  = std::regex_match(ComponentsStr, regex_pclouds);
+    const bool include_smeshes  = std::regex_match(ComponentsStr, regex_smeshes);
 
     const boost::filesystem::path apath(FilenameStr);
 
@@ -81,6 +85,9 @@ Boost_Serialize_Drover(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std:
     }
     if(include_pclouds){
         d.point_data = DICOM_data.point_data;
+    }
+    if(include_smeshes){
+        d.smesh_data = DICOM_data.smesh_data;
     }
 
     const auto res = Common_Boost_Serialize_Drover(d, apath);

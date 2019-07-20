@@ -27,10 +27,13 @@ add_library(Operations_objs OBJECT
     ContouringAides.cc
     ConvertDoseToImage.cc
     ConvertImageToDose.cc
+    ConvertImageToMeshes.cc
+    ConvertMeshesToContours.cc
     ConvertNaNsToAir.cc
     ConvertNaNsToZeros.cc
     ConvertPixelsToPoints.cc
     CopyImages.cc
+    CopyMeshes.cc
     CountVoxels.cc
     CropImageDoseToROIs.cc
     CropImages.cc
@@ -42,6 +45,7 @@ add_library(Operations_objs OBJECT
     DecayDoseOverTimeJones2014.cc
     DecimatePixels.cc
     DeleteImages.cc
+    DeleteMeshes.cc
     DetectGrid3D.cc
     DetectShapes3D.cc
     DrawGeometry.cc
@@ -50,7 +54,6 @@ add_library(Operations_objs OBJECT
     DumpAnEncompassedPoint.cc
     DumpFilesPartitionedByTime.cc
     DumpImageMeshes.cc
-    DumpImageSurfaceMeshes.cc
     DumpImageMetadataOccurrencesToFile.cc
     DumpPerROIParams_KineticModel_1Compartment2Input_5Param.cc
     DumpPixelValuesOverTimeForAnEncompassedPoint.cc
@@ -65,6 +68,7 @@ add_library(Operations_objs OBJECT
     EvaluateDoseVolumeStats.cc
     EvaluateNTCPModels.cc
     EvaluateTCPModels.cc
+    ExportSurfaceMeshes.cc
     ExtractRadiomicFeatures.cc
     FVPicketFence.cc
     GenerateCalibrationCurve.cc

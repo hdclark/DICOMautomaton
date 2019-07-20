@@ -45,10 +45,13 @@
 #include "Operations/ContouringAides.h"
 #include "Operations/ConvertDoseToImage.h"
 #include "Operations/ConvertImageToDose.h"
+#include "Operations/ConvertImageToMeshes.h"
+#include "Operations/ConvertMeshesToContours.h"
 #include "Operations/ConvertNaNsToAir.h"
 #include "Operations/ConvertNaNsToZeros.h"
 #include "Operations/ConvertPixelsToPoints.h"
 #include "Operations/CopyImages.h"
+#include "Operations/CopyMeshes.h"
 #include "Operations/CountVoxels.h"
 #include "Operations/CropImageDoseToROIs.h"
 #include "Operations/CropImages.h"
@@ -60,6 +63,7 @@
 #include "Operations/DecayDoseOverTimeJones2014.h"
 #include "Operations/DecimatePixels.h"
 #include "Operations/DeleteImages.h"
+#include "Operations/DeleteMeshes.h"
 #include "Operations/DetectGrid3D.h"
 #include "Operations/DetectShapes3D.h"
 #include "Operations/DrawGeometry.h"
@@ -68,7 +72,6 @@
 #include "Operations/DumpAnEncompassedPoint.h"
 #include "Operations/DumpFilesPartitionedByTime.h"
 #include "Operations/DumpImageMeshes.h"
-#include "Operations/DumpImageSurfaceMeshes.h"
 #include "Operations/DumpImageMetadataOccurrencesToFile.h"
 #include "Operations/DumpPerROIParams_KineticModel_1Compartment2Input_5Param.h"
 #include "Operations/DumpPixelValuesOverTimeForAnEncompassedPoint.h"
@@ -83,6 +86,7 @@
 #include "Operations/EvaluateDoseVolumeStats.h"
 #include "Operations/EvaluateNTCPModels.h"
 #include "Operations/EvaluateTCPModels.h"
+#include "Operations/ExportSurfaceMeshes.h"
 #include "Operations/ExtractRadiomicFeatures.h"
 #include "Operations/FVPicketFence.h"
 #include "Operations/GenerateCalibrationCurve.h"
@@ -179,10 +183,13 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["ContouringAides"] = std::make_pair(OpArgDocContouringAides, ContouringAides);
     out["ConvertDoseToImage"] = std::make_pair(OpArgDocConvertDoseToImage, ConvertDoseToImage);
     out["ConvertImageToDose"] = std::make_pair(OpArgDocConvertImageToDose, ConvertImageToDose);
+    out["ConvertImageToMeshes"] = std::make_pair(OpArgDocConvertImageToMeshes, ConvertImageToMeshes);
+    out["ConvertMeshesToContours"] = std::make_pair(OpArgDocConvertMeshesToContours, ConvertMeshesToContours);
     out["ConvertNaNsToAir"] = std::make_pair(OpArgDocConvertNaNsToAir, ConvertNaNsToAir);
     out["ConvertNaNsToZeros"] = std::make_pair(OpArgDocConvertNaNsToZeros, ConvertNaNsToZeros);
     out["ConvertPixelsToPoints"] = std::make_pair(OpArgDocConvertPixelsToPoints, ConvertPixelsToPoints);
     out["CopyImages"] = std::make_pair(OpArgDocCopyImages, CopyImages);
+    out["CopyMeshes"] = std::make_pair(OpArgDocCopyMeshes, CopyMeshes);
     out["CountVoxels"] = std::make_pair(OpArgDocCountVoxels, CountVoxels);
     out["CropImageDoseToROIs"] = std::make_pair(OpArgDocCropImageDoseToROIs, CropImageDoseToROIs);
     out["CropImages"] = std::make_pair(OpArgDocCropImages, CropImages);
@@ -194,6 +201,7 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["DecayDoseOverTimeJones2014"] = std::make_pair(OpArgDocDecayDoseOverTimeJones2014, DecayDoseOverTimeJones2014);
     out["DecimatePixels"] = std::make_pair(OpArgDocDecimatePixels, DecimatePixels);
     out["DeleteImages"] = std::make_pair(OpArgDocDeleteImages, DeleteImages);
+    out["DeleteMeshes"] = std::make_pair(OpArgDocDeleteMeshes, DeleteMeshes);
     out["DetectGrid3D"] = std::make_pair(OpArgDocDetectGrid3D, DetectGrid3D);
     out["DetectShapes3D"] = std::make_pair(OpArgDocDetectShapes3D, DetectShapes3D);
     out["DrawGeometry"] = std::make_pair(OpArgDocDrawGeometry, DrawGeometry);
@@ -202,7 +210,6 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["DumpAnEncompassedPoint"] = std::make_pair(OpArgDocDumpAnEncompassedPoint, DumpAnEncompassedPoint);
     out["DumpFilesPartitionedByTime"] = std::make_pair(OpArgDocDumpFilesPartitionedByTime, DumpFilesPartitionedByTime);
     out["DumpImageMeshes"] = std::make_pair(OpArgDocDumpImageMeshes, DumpImageMeshes);
-    out["DumpImageSurfaceMeshes"] = std::make_pair(OpArgDocDumpImageSurfaceMeshes, DumpImageSurfaceMeshes);
     out["DumpImageMetadataOccurrencesToFile"] = std::make_pair(OpArgDocDumpImageMetadataOccurrencesToFile, DumpImageMetadataOccurrencesToFile);
     out["EQD2Convert"] = std::make_pair(OpArgDocEQD2Convert, EQD2Convert);
       
@@ -220,6 +227,7 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["EvaluateDoseVolumeStats"] = std::make_pair(OpArgDocEvaluateDoseVolumeStats, EvaluateDoseVolumeStats);
     out["EvaluateNTCPModels"] = std::make_pair(OpArgDocEvaluateNTCPModels, EvaluateNTCPModels);
     out["EvaluateTCPModels"] = std::make_pair(OpArgDocEvaluateTCPModels, EvaluateTCPModels);
+    out["ExportSurfaceMeshes"] = std::make_pair(OpArgDocExportSurfaceMeshes, ExportSurfaceMeshes);
     out["ExtractRadiomicFeatures"] = std::make_pair(OpArgDocExtractRadiomicFeatures, ExtractRadiomicFeatures);
     out["FVPicketFence"] = std::make_pair(OpArgDocFVPicketFence, FVPicketFence);
     out["GenerateCalibrationCurve"] = std::make_pair(OpArgDocGenerateCalibrationCurve, GenerateCalibrationCurve);

@@ -1,4 +1,4 @@
-// DumpImageSurfaceMeshes.h.
+// ConvertMeshesToContours.h.
 
 #pragma once
 
@@ -79,8 +79,8 @@
 
 
 
-OperationDoc OpArgDocDumpImageSurfaceMeshes(void);
+OperationDoc OpArgDocConvertMeshesToContours(void);
 
-Drover DumpImageSurfaceMeshes(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
+Drover ConvertMeshesToContours(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                              std::map<std::string, std::string> /*InvocationMetadata*/,
                              std::string /*FilenameLex*/);
