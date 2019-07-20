@@ -85,6 +85,21 @@ void serialize(Archive &a, Point_Cloud &p, const unsigned int version){
     return;
 }
 
+//Class: Surface_Mesh.
+template<typename Archive>
+void serialize(Archive &a, Surface_Mesh &p, const unsigned int version){
+    if(false){
+    }else if(version == 0){
+        // Note: No dynamic surface_mesh attributes are saved in version 0 due to use of std::any.
+        //       Until a suitable reflection mechanism is located, we are stuck ignoring members
+        //       that make use of std::any.
+        a & boost::serialization::make_nvp("meshes",p.meshes);
+    }else{
+        FUNCWARN("Surface_Mesh archives with version " << version << " are not recognized");
+    }
+    return;
+}
+
 //Class: Drover.
 template<typename Archive>
 void serialize(Archive &a, Drover &d, const unsigned int version){
@@ -95,6 +110,11 @@ void serialize(Archive &a, Drover &d, const unsigned int version){
         a & boost::serialization::make_nvp("contour_data",d.contour_data)
           & boost::serialization::make_nvp("image_data",d.image_data)
           & boost::serialization::make_nvp("point_data",d.point_data);
+    }else if(version == 2){
+        a & boost::serialization::make_nvp("contour_data",d.contour_data)
+          & boost::serialization::make_nvp("image_data",d.image_data)
+          & boost::serialization::make_nvp("point_data",d.point_data)
+          & boost::serialization::make_nvp("smesh_data",d.smesh_data);
     }else{
         FUNCWARN("Drover archives with version " << version << " are not recognized");
     }
@@ -110,6 +130,9 @@ BOOST_CLASS_VERSION(Image_Array, 1); // After removing the disused 'bits' and 'f
 
 BOOST_CLASS_VERSION(Point_Cloud, 0); // Initial version number.
 
+BOOST_CLASS_VERSION(Surface_Mesh, 0); // Initial version number, effectively just a fv_surface_mesh wrapper class.
+
 //BOOST_CLASS_VERSION(Drover, 0); // Initial version number.
-BOOST_CLASS_VERSION(Drover, 1); // After removing Dose_Arrays and Drover::Has_Been_Melded.
+//BOOST_CLASS_VERSION(Drover, 1); // After removing Dose_Arrays and Drover::Has_Been_Melded.
+BOOST_CLASS_VERSION(Drover, 2); // After adding v0 of the Surface_Mesh member.
 

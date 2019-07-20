@@ -21,7 +21,7 @@ OperationDoc OpArgDocDroverDebug(void){
     out.name = "DroverDebug";
 
     out.desc = 
-        " This operation reports basic information on the state of the main Drover class."
+        "This operation reports basic information on the state of the main Drover class."
         " It can be used to report on the state of the data, which can be useful for debugging.";
 
     return out;
@@ -127,9 +127,27 @@ Drover DroverDebug(Drover DICOM_data,
                      p_cnt++ <<
                      " has " <<
                      pc->points.size() <<
-                     " points and" <<
+                     " points and " <<
                      pc->attributes.size() <<
                      " attributes");
+        }
+    }
+
+    //Surface mesh data.
+    {
+        FUNCINFO("There are " <<
+                 DICOM_data.smesh_data.size() <<
+                 " Surface_Meshes loaded");
+
+        size_t m_cnt = 0;
+        for(auto &sm : DICOM_data.smesh_data){
+            FUNCINFO("  Surface_Mesh " <<
+                     m_cnt++ <<
+                     " has " <<
+                     sm->meshes.vertices.size() <<
+                     " vertices and " <<
+                     sm->meshes.faces.size() <<
+                     " faces");
         }
     }
     return DICOM_data;

@@ -60,14 +60,18 @@ Whitelist_Core( L lops,
     do{
         const auto regex_none  = Compile_Regex("^no?n?e?$");
         const auto regex_all   = Compile_Regex("^al?l?$");
-        const auto regex_first = Compile_Regex("^fi?r?s?t?$");
+        const auto regex_1st   = Compile_Regex("^fi?r?s?t?$");
+        const auto regex_2nd   = Compile_Regex("^se?c?o?n?d?$");
+        const auto regex_3rd   = Compile_Regex("^th?i?r?d?$");
         const auto regex_last  = Compile_Regex("^la?s?t?$");
         const auto regex_pnum  = Compile_Regex("^[#][0-9].*$");
         const auto regex_nnum  = Compile_Regex("^[#]-[0-9].*$");
 
         const auto regex_i_none  = Compile_Regex("^[!]no?n?e?$"); // Inverted variants of the above.
         const auto regex_i_all   = Compile_Regex("^[!]al?l?$");
-        const auto regex_i_first = Compile_Regex("^[!]fi?r?s?t?$");
+        const auto regex_i_1st   = Compile_Regex("^[!]fi?r?s?t?$");
+        const auto regex_i_2nd   = Compile_Regex("^[!]se?c?o?n?d?$");
+        const auto regex_i_3rd   = Compile_Regex("^[!]th?i?r?d?$");
         const auto regex_i_last  = Compile_Regex("^[!]la?s?t?$");
         const auto regex_i_pnum  = Compile_Regex("^[!][#][0-9].*$");
         const auto regex_i_nnum  = Compile_Regex("^[!][#]-[0-9].*$");
@@ -88,13 +92,39 @@ Whitelist_Core( L lops,
             return lops;
         }
 
-        if(std::regex_match(Specifier, regex_i_first)){
-            if(!lops.empty()) lops.pop_front();
-            return lops;
-        }
-        if(std::regex_match(Specifier, regex_first)){
+        if( std::regex_match(Specifier, regex_i_1st)
+        ||  std::regex_match(Specifier, regex_i_2nd) 
+        ||  std::regex_match(Specifier, regex_i_3rd)  ){
+            size_t N = 0; // Target.
+            if(false){
+            }else if( std::regex_match(Specifier, regex_i_1st) ){ N = 1;
+            }else if( std::regex_match(Specifier, regex_i_2nd) ){ N = 2;
+            }else if( std::regex_match(Specifier, regex_i_3rd) ){ N = 3;
+            }else{
+                throw std::logic_error("Regex positional specifier not understood. Cannot continue.");
+            }
+
             decltype(lops) out;
-            if(!lops.empty()) out.emplace_back(lops.front());
+            size_t i = 1;
+            for(const auto &l : lops) if(N != i++) out.emplace_back(l);
+            return out;
+        }
+
+        if( std::regex_match(Specifier, regex_1st)
+        ||  std::regex_match(Specifier, regex_2nd) 
+        ||  std::regex_match(Specifier, regex_3rd)  ){
+            size_t N = 0; // Target.
+            if(false){
+            }else if( std::regex_match(Specifier, regex_1st) ){ N = 1;
+            }else if( std::regex_match(Specifier, regex_2nd) ){ N = 2;
+            }else if( std::regex_match(Specifier, regex_3rd) ){ N = 3;
+            }else{
+                throw std::logic_error("Regex positional specifier not understood. Cannot continue.");
+            }
+
+            decltype(lops) out;
+            size_t i = 1;
+            for(const auto &l : lops) if(N == i++) out.emplace_back(l);
             return out;
         }
 
@@ -510,6 +540,121 @@ OperationArgDoc PCWhitelistOpArgDoc(void){
                " Multiple criteria can be specified by separating them with a ';' and are applied in the order specified."
                " Both positional and metadata-based criteria can be mixed together."
                " Note that point clouds can hold a variety of data with varying attributes,"
+               " but each point cloud is meant to represent a single cohesive collection in which points are all related."
+               " Note regexes are case insensitive and should use extended POSIX syntax.";
+    out.default_val = "all";
+    out.expected = true;
+    out.examples = { "last", "first", "all", "none", 
+                     "#0", "#-0",
+                     "!last", "!#-3",
+                     "key@.*value.*", "key1@.*value1.*;key2@^value2$;first" };
+
+    return out;
+}
+
+// ----------------------------------- Surface Meshes ------------------------------------
+
+// Provide pointers for all surface meshes into a list.
+//
+// Note: The output is meant to be filtered using the selectors below.
+std::list<std::list<std::shared_ptr<Surface_Mesh>>::iterator>
+All_SMs( Drover &DICOM_data ){
+    std::list<std::list<std::shared_ptr<Surface_Mesh>>::iterator> sm_all;
+
+    for(auto smp_it = DICOM_data.smesh_data.begin(); smp_it != DICOM_data.smesh_data.end(); ++smp_it){
+        if((*smp_it) == nullptr) continue;
+        sm_all.push_back(smp_it);
+    }
+    return sm_all;
+}
+
+
+// Whitelist surface meshes using the provided regex.
+std::list<std::list<std::shared_ptr<Surface_Mesh>>::iterator>
+Whitelist( std::list<std::list<std::shared_ptr<Surface_Mesh>>::iterator> sms,
+           std::string MetadataKey,
+           std::string MetadataValueRegex,
+           Regex_Selector_Opts Opts ){
+
+    auto theregex = Compile_Regex(MetadataValueRegex);
+
+    sms.remove_if([&](std::list<std::shared_ptr<Surface_Mesh>>::iterator smp_it) -> bool {
+        if((*smp_it) == nullptr) return true;
+        if((*smp_it)->meshes.vertices.empty()) return true; // Remove meshes containing no vertices.
+        if((*smp_it)->meshes.faces.empty()) return true; // Remove meshes containing no faces.
+
+        if(false){
+        }else if( // Note: A single Surface_Mesh corresponds to one individual metadata store. While a single
+                  //       Surface_Mesh can be comprised of multiple disconnected meshes, they are herein considered
+                  //       to be part of the same logical group. As for Point_Clouds, we keep the following options for
+                  //       consistency.
+                  (Opts.validation == Regex_Selector_Opts::Validation::Representative)
+              ||  (Opts.validation == Regex_Selector_Opts::Validation::Pedantic)        ){
+
+            std::experimental::optional<std::string> ValueOpt 
+                    = ( (*smp_it)->meshes.metadata.count(MetadataKey) != 0 ) ?
+                      (*smp_it)->meshes.metadata[MetadataKey] :
+                      std::experimental::optional<std::string>();
+            if(ValueOpt){
+                return !(std::regex_match(ValueOpt.value(),theregex));
+            }else if(Opts.nas == Regex_Selector_Opts::NAs::Include){
+                return false;
+            }else if(Opts.nas == Regex_Selector_Opts::NAs::Exclude){
+                return true;
+            }else if(Opts.nas == Regex_Selector_Opts::NAs::TreatAsEmpty){
+                return !(std::regex_match("",theregex));
+            }
+            throw std::logic_error("NAs option not understood. Cannot continue.");
+        }
+        throw std::logic_error("Regex selector option not understood. Cannot continue.");
+        return true; // Should never get here.
+    });
+    return sms;
+}
+
+
+// Whitelist surface meshes using a limited vocabulary of specifiers.
+//
+// Note: this routine shares the generic Image_Arrays and Point_Clouds implementation above.
+std::list<std::list<std::shared_ptr<Surface_Mesh>>::iterator>
+Whitelist( std::list<std::list<std::shared_ptr<Surface_Mesh>>::iterator> sms,
+           std::string Specifier,
+           Regex_Selector_Opts Opts ){
+
+    return Whitelist_Core( sms, Specifier, Opts );
+}    
+
+
+// This is a convenience routine to combine multiple filtering passes into a single logical statement.
+//
+// Note: this routine shares the generic Image_Arrays and Point_Clouds implementation above.
+std::list<std::list<std::shared_ptr<Surface_Mesh>>::iterator>
+Whitelist( std::list<std::list<std::shared_ptr<Surface_Mesh>>::iterator> sms,
+           std::initializer_list< std::pair<std::string, 
+                                            std::string> > MetadataKeyValueRegex,
+           Regex_Selector_Opts Opts ){
+
+    return Whitelist_Core( sms, MetadataKeyValueRegex, Opts );
+}
+
+
+// Utility function documenting the surface mesh whitelist routines for operations.
+OperationArgDoc SMWhitelistOpArgDoc(void){
+    OperationArgDoc out;
+
+    out.name = "MeshSelection";
+    out.desc = "Select surface meshes to operate on."
+               " Specifiers can be of two types: positional or metadata-based key@value regex."
+               " Positional specifiers can be 'first', 'last', 'none', or 'all' literals."
+               " Additionally '#N' for some positive integer N selects the Nth point cloud (with zero-based indexing)."
+               " Likewise, '#-N' selects the Nth-from-last surface mesh."
+               " Positional specifiers can be inverted by prefixing with a '!'."
+               " Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex."
+               " In order to invert metadata-based selectors, the regex logic must be inverted"
+               " (i.e., you can *not* prefix metadata-based selectors with a '!')."
+               " Multiple criteria can be specified by separating them with a ';' and are applied in the order specified."
+               " Both positional and metadata-based criteria can be mixed together."
+               " Note that surface meshes can hold a variety of data with varying attributes,"
                " but each point cloud is meant to represent a single cohesive collection in which points are all related."
                " Note regexes are case insensitive and should use extended POSIX syntax.";
     out.default_val = "all";

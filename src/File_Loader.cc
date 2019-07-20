@@ -24,6 +24,8 @@
 #include "DICOM_File_Loader.h"
 #include "FITS_File_Loader.h"
 #include "XYZ_File_Loader.h"
+#include "OFF_Mesh_File_Loader.h"
+#include "OBJ_Mesh_File_Loader.h"
 
 
 
@@ -79,7 +81,21 @@ Load_Files( Drover &DICOM_data,
         return false;
     }
 
-    //Standalone file loading: XYZ files.
+    //Standalone file loading: OFF mesh files.
+    if(!Paths.empty()
+    && !Load_Mesh_From_OFF_Files( DICOM_data, InvocationMetadata, FilenameLex, Paths )){
+        FUNCWARN("Failed to load OFF mesh file");
+        return false;
+    }
+
+    //Standalone file loading: OBJ files.
+    if(!Paths.empty()
+    && !Load_Mesh_From_OBJ_Files( DICOM_data, InvocationMetadata, FilenameLex, Paths )){
+        FUNCWARN("Failed to load OBJ mesh file");
+        return false;
+    }
+
+    //Standalone file loading: XYZ point cloud files.
     if(!Paths.empty()
     && !Load_From_XYZ_Files( DICOM_data, InvocationMetadata, FilenameLex, Paths )){
         FUNCWARN("Failed to load XYZ file");

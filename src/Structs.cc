@@ -964,6 +964,24 @@ Point_Cloud & Point_Cloud::operator=(const Point_Cloud &rhs){
     return *this;
 }
 
+//---------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------- Surface_Mesh ------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------------
+Surface_Mesh::Surface_Mesh(){ }
+
+Surface_Mesh::Surface_Mesh(const Surface_Mesh &rhs){
+    *this = rhs; //Performs a deep copy (unless copying self).
+}
+
+Surface_Mesh & Surface_Mesh::operator=(const Surface_Mesh &rhs){
+    //Performs a deep copy (unless copying self).
+    if(this != &rhs){
+        this->meshes            = rhs.meshes;
+        this->vertex_attributes = rhs.vertex_attributes;
+        this->face_attributes   = rhs.face_attributes;
+    }
+    return *this;
+}
 
 //---------------------------------------------------------------------------------------------------------------------------
 //------------------------------------------------------------ Drover -------------------------------------------------------
@@ -1013,7 +1031,8 @@ drover_bnded_dose_stat_moments_map_t drover_bnded_dose_stat_moments_map_factory(
 Drover::Drover() {};
 Drover::Drover( const Drover &in ) : contour_data(in.contour_data), 
                                      image_data(in.image_data),
-                                     point_data(in.point_data) {};
+                                     point_data(in.point_data),
+                                     smesh_data(in.smesh_data) {};
 
 //Member functions.
 void Drover::operator=(const Drover &rhs){
@@ -1021,6 +1040,7 @@ void Drover::operator=(const Drover &rhs){
         this->contour_data    = rhs.contour_data;
         this->image_data      = rhs.image_data;
         this->point_data      = rhs.point_data;
+        this->smesh_data      = rhs.smesh_data;
     }
     return;
 }
@@ -1543,6 +1563,15 @@ bool Drover::Has_Point_Data(void) const {
     return true;
 }
 
+bool Drover::Has_Mesh_Data(void) const {
+    //Does not verify the point data itself, it merely looks to see if we have any valid Surface_Meshes attached.
+    if(this->smesh_data.size() == 0) return false;
+    for(const auto & sm_it : this->smesh_data){
+        if(sm_it == nullptr) return false; 
+    }
+    return true;
+}
+
 
 void Drover::Concatenate(std::shared_ptr<Contour_Data> in){
     //If there are no existing contours, incoming contours are shared instead of copied.
@@ -1569,10 +1598,16 @@ void Drover::Concatenate(std::list<std::shared_ptr<Point_Cloud>> in){
     return;
 }
 
+void Drover::Concatenate(std::list<std::shared_ptr<Surface_Mesh>> in){
+    this->smesh_data.splice( this->smesh_data.end(), in );
+    return;
+}
+
 void Drover::Concatenate(Drover in){
     this->Concatenate(in.contour_data);
     this->Concatenate(in.image_data);
     this->Concatenate(in.point_data);
+    this->Concatenate(in.smesh_data);
     return;
 }
 
@@ -1606,10 +1641,16 @@ void Drover::Consume(std::list<std::shared_ptr<Point_Cloud>> in){
     return;
 }
 
+void Drover::Consume(std::list<std::shared_ptr<Surface_Mesh>> in){
+    this->Concatenate(in);
+    return;
+}
+
 void Drover::Consume(Drover in){
     this->Consume(in.contour_data);
     this->Consume(in.image_data);
     this->Consume(in.point_data);
+    this->Consume(in.smesh_data);
     return;
 }
 

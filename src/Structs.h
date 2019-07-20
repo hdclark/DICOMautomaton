@@ -214,6 +214,26 @@ class Point_Cloud {
 };
 
 
+// This class is meant to hold multiple surface meshes that represent a single logical object.
+class Surface_Mesh {
+    public:
+
+        fv_surface_mesh<double, uint64_t> meshes;
+
+        // Used for defining attributes at run-time.
+        // The std::any can be replaced by something like std::map<size_t, double> but doesn't have to.
+        std::map< std::string, std::any > vertex_attributes; 
+        std::map< std::string, std::any > face_attributes; 
+
+        //Constructor/Destructors.
+        Surface_Mesh();
+        Surface_Mesh(const Surface_Mesh &rhs); //Performs a deep copy (unless copying self).
+
+        //Member functions.
+        Surface_Mesh & operator=(const Surface_Mesh &rhs); //Performs a deep copy (unless copying self).
+};
+
+
 //---------------------------------------------------------------------------------------------------------------------------
 //------------------------------------------------------------ Drover -------------------------------------------------------
 //---------------------------------------------------------------------------------------------------------------------------
@@ -302,9 +322,10 @@ drover_bnded_dose_stat_moments_map_t             drover_bnded_dose_stat_moments_
 class Drover {
     public:
 
-        std::shared_ptr<Contour_Data>           contour_data; //Should I allow for multiple contour data? I think it would be logical...
-        std::list<std::shared_ptr<Image_Array>> image_data;   //In case we ever get more than one set of images (different modalities?)
-        std::list<std::shared_ptr<Point_Cloud>> point_data;
+        std::shared_ptr<Contour_Data>            contour_data; //Should I allow for multiple contour data? I think it would be logical...
+        std::list<std::shared_ptr<Image_Array>>  image_data;   //In case we ever get more than one set of images (different modalities?)
+        std::list<std::shared_ptr<Point_Cloud>>  point_data;
+        std::list<std::shared_ptr<Surface_Mesh>> smesh_data;
     
         //Constructors.
         Drover();
@@ -340,15 +361,18 @@ class Drover {
         bool Has_Contour_Data(void) const;
         bool Has_Image_Data(void) const;
         bool Has_Point_Data(void) const;
+        bool Has_Mesh_Data(void) const;
 
         void Concatenate(std::shared_ptr<Contour_Data> in);
         void Concatenate(std::list<std::shared_ptr<Image_Array>> in);
         void Concatenate(std::list<std::shared_ptr<Point_Cloud>> in);
+        void Concatenate(std::list<std::shared_ptr<Surface_Mesh>> in);
         void Concatenate(Drover in);
 
         void Consume(std::shared_ptr<Contour_Data> in);
         void Consume(std::list<std::shared_ptr<Image_Array>> in);
         void Consume(std::list<std::shared_ptr<Point_Cloud>> in);
+        void Consume(std::list<std::shared_ptr<Surface_Mesh>> in);
         void Consume(Drover in);
     
         void Plot_Dose_And_Contours(void) const;
