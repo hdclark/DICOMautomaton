@@ -1547,8 +1547,10 @@ Subdivide(Polyhedron &mesh,
     //if(!mesh.is_closed()) throw std::runtime_error("Mesh is not closed; it has a boundary")
 
     FUNCINFO("About to perform mesh subdivision. If this fails, the mesh topology is probably incompatible");
-    if(iters > 0){
-        CGAL::Subdivision_method_3::Loop_subdivision(mesh, iters);
+    for(long int i = 0; i < iters; ++i){
+        // Note: the following takes a parameter indicating the number of interations to perform, but seems to ignore
+        // it. (Perhaps the interface has changed?)
+        CGAL::Subdivision_method_3::Loop_subdivision(mesh);
         //CGAL::Subdivision_method_3::DooSabin_subdivision(output_mesh,params.MeshingSubdivisionIterations);
         //CGAL::Subdivision_method_3::Sqrt3_subdivision(output_mesh,params.MeshingSubdivisionIterations);
         FUNCINFO("The subdivided surface has " << mesh.size_of_vertices() << " vertices"

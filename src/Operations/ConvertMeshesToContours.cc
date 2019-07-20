@@ -39,6 +39,9 @@ OperationDoc OpArgDocConvertMeshesToContours(void){
         "This operation constructs ROI contours by slicing the given meshes on a set of image planes.";
         
     out.notes.emplace_back(
+        "Surface meshes should represent polyhedra."
+    );
+    out.notes.emplace_back(
         "This routine does **not** require images to be regular, rectilinear, or even contiguous."
     );
     out.notes.emplace_back(
@@ -99,6 +102,9 @@ Drover ConvertMeshesToContours(Drover DICOM_data, OperationArgPkg OptArgs, std::
 
     auto SMs_all = All_SMs( DICOM_data );
     auto SMs = Whitelist( SMs_all, MeshSelectionStr );
+
+    long int completed = 0;
+    const auto sm_count = SMs.size();
     for(auto & smp_it : SMs){
         // Convert to a CGAL mesh.
         std::stringstream ss;
@@ -135,6 +141,10 @@ Drover ConvertMeshesToContours(Drover DICOM_data, OperationArgPkg OptArgs, std::
                                                                     lcc.contours);
             }
         }
+
+        ++completed;
+        FUNCINFO("Completed " << completed << " of " << sm_count
+              << " --> " << static_cast<int>(1000.0*(completed)/sm_count)/10.0 << "\% done");
     }
 
     return DICOM_data;

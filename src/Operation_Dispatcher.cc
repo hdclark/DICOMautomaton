@@ -125,14 +125,17 @@
 #include "Operations/PurgeContours.h"
 #include "Operations/RankPixels.h"
 #include "Operations/ReduceNeighbourhood.h"
+#include "Operations/RemeshSurfaceMeshes.h"
 #include "Operations/ScalePixels.h"
 #include "Operations/SFML_Viewer.h"
 #include "Operations/SeamContours.h"
 #include "Operations/SelectSlicesIntersectingROI.h"
 #include "Operations/SimplifyContours.h"
+#include "Operations/SimplifySurfaceMeshes.h"
 #include "Operations/SpatialBlur.h"
 #include "Operations/SpatialDerivative.h"
 #include "Operations/SpatialSharpen.h"
+#include "Operations/SubdivideSurfaceMeshes.h"
 #include "Operations/Subsegment_ComputeDose_VanLuijk.h"
 #include "Operations/SubtractImages.h"
 #include "Operations/SupersampleImageGrid.h"
@@ -266,14 +269,17 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["PurgeContours"] = std::make_pair(OpArgDocPurgeContours, PurgeContours);
     out["RankPixels"] = std::make_pair(OpArgDocRankPixels, RankPixels);
     out["ReduceNeighbourhood"] = std::make_pair(OpArgDocReduceNeighbourhood, ReduceNeighbourhood);
+    out["RemeshSurfaceMeshes"] = std::make_pair(OpArgDocRemeshSurfaceMeshes, RemeshSurfaceMeshes);
     out["ScalePixels"] = std::make_pair(OpArgDocScalePixels, ScalePixels);
     out["SFML_Viewer"] = std::make_pair(OpArgDocSFML_Viewer, SFML_Viewer);
     out["SeamContours"] = std::make_pair(OpArgDocSeamContours, SeamContours);
     out["SelectSlicesIntersectingROI"] = std::make_pair(OpArgDocSelectSlicesIntersectingROI, SelectSlicesIntersectingROI);
     out["SimplifyContours"] = std::make_pair(OpArgDocSimplifyContours, SimplifyContours);
+    out["SimplifySurfaceMeshes"] = std::make_pair(OpArgDocSimplifySurfaceMeshes, SimplifySurfaceMeshes);
     out["SpatialBlur"] = std::make_pair(OpArgDocSpatialBlur, SpatialBlur);
     out["SpatialDerivative"] = std::make_pair(OpArgDocSpatialDerivative, SpatialDerivative);
     out["SpatialSharpen"] = std::make_pair(OpArgDocSpatialSharpen, SpatialSharpen);
+    out["SubdivideSurfaceMeshes"] = std::make_pair(OpArgDocSubdivideSurfaceMeshes, SubdivideSurfaceMeshes);
     out["Subsegment_ComputeDose_VanLuijk"] = std::make_pair(OpArgDocSubsegment_ComputeDose_VanLuijk, Subsegment_ComputeDose_VanLuijk);
     out["SubtractImages"] = std::make_pair(OpArgDocSubtractImages, SubtractImages);
     out["SupersampleImageGrid"] = std::make_pair(OpArgDocSupersampleImageGrid, SupersampleImageGrid);

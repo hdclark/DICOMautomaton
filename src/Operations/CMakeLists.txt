@@ -107,14 +107,17 @@ add_library(Operations_objs OBJECT
     PurgeContours.cc
     RankPixels.cc
     ReduceNeighbourhood.cc
+    RemeshSurfaceMeshes.cc
     ScalePixels.cc
     SFML_Viewer.cc
     SeamContours.cc
     SelectSlicesIntersectingROI.cc
     SimplifyContours.cc
+    SimplifySurfaceMeshes.cc
     SpatialBlur.cc
     SpatialDerivative.cc
     SpatialSharpen.cc
+    SubdivideSurfaceMeshes.cc
     Subsegment_ComputeDose_VanLuijk.cc
     SubtractImages.cc
     SupersampleImageGrid.cc
