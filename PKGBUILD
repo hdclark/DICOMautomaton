@@ -1,6 +1,6 @@
 # Maintainer: Hal Clark <gmail.com[at]hdeanclark>
 pkgname=dicomautomaton
-pkgver=20151106_202000
+pkgver=20190713_202000
 pkgver() {
   date +%Y%m%d_%H%M%S
 }
@@ -13,7 +13,7 @@ license=('unknown')
 depends=(
    'gcc-libs'
    'ttf-computer-modern-fonts'
-   'ttf-freefont'
+   'gnu-free-fonts'
    'zenity'
    'sfml'
    'jansson'

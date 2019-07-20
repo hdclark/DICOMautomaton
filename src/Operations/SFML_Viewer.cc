@@ -175,8 +175,10 @@ Drover SFML_Viewer( Drover DICOM_data,
 
     //Attempt to load fonts. We should try a few different files, and include a back-up somewhere accessible...
     sf::Font afont;
-    if( !afont.loadFromFile("/usr/share/fonts/TTF/cmr10.ttf")
-    &&  !afont.loadFromFile("/usr/share/fonts/truetype/freefont/FreeMono.ttf") ){
+    if( !afont.loadFromFile("/usr/share/fonts/TTF/cmr10.ttf") // Arch Linux 'ttf-computer-modern-fonts' pkg.
+    &&  !afont.loadFromFile("/usr/share/fonts/truetype/cmu/cmunrm.ttf") // Debian 'fonts-cmu' pkg.
+    &&  !afont.loadFromFile("/usr/share/fonts/gnu-free/FreeMono.otf") // Arch Linux 'gnu-free-fonts' pkg.
+    &&  !afont.loadFromFile("/usr/share/fonts/truetype/freefont/FreeMono.ttf") ){ // Debian 'fonts-freefont-ttf' pkg.
         FUNCERR("Unable to find a suitable font file");
     }
 
