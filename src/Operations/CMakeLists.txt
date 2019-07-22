@@ -124,6 +124,7 @@ add_library(Operations_objs OBJECT
     SurfaceBasedRayCastDoseAccumulate.cc
     ThresholdImages.cc
     ThresholdOtsu.cc
+    TransformMeshes.cc
     TrimROIDose.cc
     UBC3TMRI_DCE.cc
     UBC3TMRI_DCE_Differences.cc

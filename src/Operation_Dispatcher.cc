@@ -142,6 +142,7 @@
 #include "Operations/SurfaceBasedRayCastDoseAccumulate.h"
 #include "Operations/ThresholdImages.h"
 #include "Operations/ThresholdOtsu.h"
+#include "Operations/TransformMeshes.h"
 #include "Operations/TrimROIDose.h"
 #include "Operations/UBC3TMRI_DCE.h"
 #include "Operations/UBC3TMRI_DCE_Differences.h"
@@ -286,6 +287,7 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["SurfaceBasedRayCastDoseAccumulate"] = std::make_pair(OpArgDocSurfaceBasedRayCastDoseAccumulate, SurfaceBasedRayCastDoseAccumulate);
     out["ThresholdImages"] = std::make_pair(OpArgDocThresholdImages, ThresholdImages);
     out["ThresholdOtsu"] = std::make_pair(OpArgDocThresholdOtsu, ThresholdOtsu);
+    out["TransformMeshes"] = std::make_pair(OpArgDocTransformMeshes, TransformMeshes);
     out["TrimROIDose"] = std::make_pair(OpArgDocTrimROIDose, TrimROIDose);
     out["UBC3TMRI_DCE"] = std::make_pair(OpArgDocUBC3TMRI_DCE, UBC3TMRI_DCE);
     out["UBC3TMRI_DCE_Differences"] = std::make_pair(OpArgDocUBC3TMRI_DCE_Differences, UBC3TMRI_DCE_Differences);
