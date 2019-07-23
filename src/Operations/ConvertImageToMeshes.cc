@@ -300,7 +300,7 @@ Drover ConvertImageToMeshes(Drover DICOM_data, OperationArgPkg OptArgs, std::map
             if(!(ss << output_mesh)){
                 throw std::runtime_error("Unable to emit mesh OFF format. Cannot continue.");
             }
-            DICOM_data.smesh_data.emplace_back();
+            DICOM_data.smesh_data.emplace_back( std::make_unique<Surface_Mesh>() );
             if(!ReadFVSMeshFromOFF( DICOM_data.smesh_data.back()->meshes, ss )){
                 throw std::runtime_error("Unable to parse mesh OFF format. Cannot continue.");
             }

@@ -120,7 +120,7 @@ Drover ConvertPixelsToPoints(Drover DICOM_data, OperationArgPkg OptArgs, std::ma
     const auto Upper_is_Ptile = std::regex_match(UpperStr, regex_is_tile);
 
 
-    //Construct a destination for the ROI contours.
+    //Construct a destination for the point clouds.
     DICOM_data.point_data.emplace_back( std::make_unique<Point_Cloud>() );
 
     std::mutex point_pusher; // Who gets to save points.
