@@ -563,6 +563,1072 @@ Drover SFML_Viewer( Drover DICOM_data,
         return;
     };
 
+    // --------------------------------------------------------------------------------------
+    // Event handlers.
+
+    //Show a simple help dialog with some keyboard commands.
+    const auto show_help = [&](void){
+            // Easy way to get list of commands:
+            // `grep -C 3 'thechar == ' src/PETCT_Perfusion_Analysis.cc | grep '//\|thechar'`
+            Execute_Command_In_Pipe(
+                    "zenity --info --no-wrap --text=\""
+                    "DICOMautomaton Image Viewer\\n\\n"
+                    "\\t Commands: \\n"
+                    "\\t\\t h,H \\t Display this help.\\n"
+                    "\\t\\t x \\t\\t Toggle whether existing contours should be displayed.\\n"
+                    "\\t\\t m \\t\\t Place or remove an invisible marker at the current mouse position for distance measurement.\\n"
+                    "\\t\\t d \\t\\t Dump the window contents as an image after the next render.\\n"
+                    "\\t\\t D \\t\\t Dump raw pixels for all spatially overlapping images from the current array (e.g., time courses).\\n"
+                    "\\t\\t i \\t\\t Dump the current image to file.\\n"
+                    "\\t\\t I \\t\\t Dump all images in the current array to file.\\n"
+                    "\\t\\t r,c \\t\\t Plot pixel intensity profiles along the mouse\\'s current row and column with Gnuplot.\\n"
+                    "\\t\\t R,C \\t\\t Plot realtime pixel intensity profiles along the mouse\\'s current row and column.\\n"
+                    "\\t\\t t \\t\\t Plot a time course at the mouse\\'s current row and column.\\n"
+                    "\\t\\t T \\t\\t Open a realtime plotting window.\\n"
+                    "\\t\\t a,A \\t\\t Plot or dump the pixel values for [a]ll image sets which spatially overlap.\\n"
+                    "\\t\\t M \\t\\t Try plot a pharmacokinetic [M]odel using image map parameters and ROI time courses.\\n"
+                    "\\t\\t N,P \\t\\t Advance to the next/previous image series.\\n"
+                    "\\t\\t n,p \\t\\t Advance to the next/previous image in this series.\\n"
+                    "\\t\\t -,+ \\t\\t Advance to the next/previous image that spatially overlaps this image.\\n"
+                    "\\t\\t (,) \\t\\t Cycle through the available colour maps/transformations.\\n"
+                    "\\t\\t l,L \\t\\t Reset the image scale to be pixel-for-pixel what is seen on screen.\\n"
+                    "\\t\\t u \\t\\t Toggle showing metadata tags that are identical to the neighbouring image\\'s metadata tags.\\n"
+                    "\\t\\t U \\t\\t Dump and show the current image\\'s metadata.\\n"
+                    "\\t\\t e \\t\\t Erase latest non-empty contour. (A single contour.)\\n"
+                    "\\t\\t E \\t\\t Empty the current working ROI buffer. (The entire buffer; all contours.)\\n"
+                    "\\t\\t s,S \\t\\t Save the current contour collection.\\n"
+                    "\\t\\t # \\t\\t Compute stats for the working, unsaved contour collection.\\n"
+                    "\\t\\t % \\t\\t Open a dialog box to select an explicit window and level.\\n"
+                    "\\t\\t b \\t\\t Serialize Drover instance (all data) to file.\\n"
+                    "\\n\""
+            );
+            return;
+    };
+
+    //Dump a serialization of the current (*entire*) Drover class.
+    const auto dump_serialized_drover = [&](void){
+            const boost::filesystem::path out_fname("/tmp/boost_serialized_drover.xml.gz");
+            const bool res = Common_Boost_Serialize_Drover(DICOM_data, out_fname);
+            if(res){
+                FUNCINFO("Dumped serialization to file " << out_fname.string());
+            }else{
+                FUNCWARN("Unable dump serialization to file " << out_fname.string());
+            }
+            return;
+    };
+
+    //Cycle through the available colour maps/transformations.
+    const auto cycle_colour_maps_next = [&](void){
+            colour_map = (colour_map + 1) % colour_maps.size();
+
+            if(load_img_texture_sprite(disp_img_it, disp_img_texture_sprite)){
+                scale_sprite_to_fill_screen(window,disp_img_it,disp_img_texture_sprite);
+                const auto img_number = std::distance(disp_img_beg, disp_img_it);
+                FUNCINFO("Reloaded texture using '" << colour_maps[colour_map].first << "' colour map");
+            }else{
+                FUNCERR("Unable to reload texture using selected colour map");
+            }
+            return;
+    };
+
+    const auto cycle_colour_maps_prev = [&](void){
+            colour_map = (colour_map + colour_maps.size() - 1) % colour_maps.size();
+
+            if(load_img_texture_sprite(disp_img_it, disp_img_texture_sprite)){
+                scale_sprite_to_fill_screen(window,disp_img_it,disp_img_texture_sprite);
+                const auto img_number = std::distance(disp_img_beg, disp_img_it);
+                FUNCINFO("Reloaded texture using '" << colour_maps[colour_map].first << "' colour map");
+            }else{
+                FUNCERR("Unable to reload texture using selected colour map");
+            }
+            return;
+    };
+
+    //Toggle whether existing contours should be displayed.
+    const auto toggle_showing_existing_contours = [&](void){
+            ShowExistingContours = !ShowExistingContours;
+            return;
+    };
+
+    //Place or remove an invisible marker for measurement in the DICOM coordinate system.
+    const auto toggle_measurement_mode = [&](void){
+            // If a valid point exists, clear it.
+            if(tagged_pos){
+                tagged_pos = {}; // Reset the optional.
+
+            // If a valid point does not yet exist, try to tag the current mouse point.
+            }else{
+                auto mc = Convert_Mouse_Coords();
+                if(mc.mouse_DICOM_pos_valid){
+                    const auto mouse_pos = mc.mouse_DICOM_pos;
+                    tagged_pos = mouse_pos;
+                }else{
+                    FUNCWARN("Unable to place marker: mouse not hovering over an image");
+                }
+            }
+            return;
+    };
+
+    //Set the flag for dumping the window contents as an image after the next render.
+    const auto initiate_screenshot = [&](void){
+            DumpScreenshot = true;
+            return;
+    };
+
+    //Dump raw pixels for all spatially overlapping images from the current array.
+    // (Useful for dumping time courses.)
+    const auto dump_raw_pixels_for_overlapping_images = [&](void){
+            //Get a list of images which spatially overlap this point. Order should be maintained.
+            const auto pix_pos = disp_img_it->position(0,0);
+            const auto ortho = disp_img_it->row_unit.Cross( disp_img_it->col_unit ).unit();
+            const std::list<vec3<double>> points = { pix_pos, pix_pos + ortho * disp_img_it->pxl_dz * 0.25,
+                                                              pix_pos - ortho * disp_img_it->pxl_dz * 0.25 };
+            auto encompassing_images = (*img_array_ptr_it)->imagecoll.get_images_which_encompass_all_points(points);
+
+            long int count = 0;
+            for(auto & pimg : encompassing_images){
+                const auto pixel_dump_filename_out = Get_Unique_Sequential_Filename("/tmp/spatially_overlapping_dump_",6,".fits");
+                if(WriteToFITS(*pimg,pixel_dump_filename_out)){
+                    FUNCINFO("Dumped pixel data for image " << count << " to file '" << pixel_dump_filename_out << "'");
+                }else{
+                    FUNCWARN("Unable to dump pixel data for image " << count << " to file '" << pixel_dump_filename_out << "'");
+                }
+
+            }
+            return;
+    };
+
+    //Dump the current image to file.
+    const auto dump_current_image_to_file = [&](void){
+            const auto pixel_dump_filename_out = Get_Unique_Sequential_Filename("/tmp/display_image_dump_",6,".fits");
+            if(WriteToFITS(*disp_img_it,pixel_dump_filename_out)){
+                FUNCINFO("Dumped pixel data for this image to file '" << pixel_dump_filename_out << "'");
+            }else{
+                FUNCWARN("Unable to dump pixel data for this image to file '" << pixel_dump_filename_out << "'");
+            }
+            return;
+    };
+
+    //Dump all images in the current array to file.
+    const auto dump_current_image_array_to_files = [&](void){
+            long int count = 0;
+            for(auto &pimg : (*img_array_ptr_it)->imagecoll.images){
+                const auto pixel_dump_filename_out = Get_Unique_Sequential_Filename("/tmp/image_dump_",6,".fits");
+                if(WriteToFITS(pimg,pixel_dump_filename_out)){
+                    FUNCINFO("Dumped pixel data for image " << count << " to file '" << pixel_dump_filename_out << "'");
+                }else{
+                    FUNCWARN("Unable to dump pixel data for this image to file '" << pixel_dump_filename_out << "'");
+                }
+                ++count;
+            }
+            return;
+    };
+
+    //Given the current mouse coordinates, dump pixel intensity profiles along the current row and column.
+    const auto dump_rc_aligned_image_intensity_profiles = [&](char r_or_c){
+            auto mc = Convert_Mouse_Coords();
+            if(!mc.pixel_image_pos_valid){
+                FUNCWARN("The mouse is not currently hovering over the image. Cannot dump row/column profiles");
+                return;
+            }
+            const auto row_as_u = mc.pixel_image_pos_row;
+            const auto col_as_u = mc.pixel_image_pos_col;
+
+            FUNCINFO("Dumping row and column profiles for row,col = " << row_as_u << "," << col_as_u);
+
+            samples_1D<double> row_profile, col_profile;
+            std::stringstream title;
+
+            for(auto i = 0; i < disp_img_it->columns; ++i){
+                const auto val_raw = disp_img_it->value(row_as_u,i,0);
+                const auto col_num = static_cast<double>(i);
+                if(std::isfinite(val_raw)) row_profile.push_back({ col_num, 0.0, val_raw, 0.0 });
+            }
+            for(auto i = 0; i < disp_img_it->rows; ++i){
+                const auto val_raw = disp_img_it->value(i,col_as_u,0);
+                const auto row_num = static_cast<double>(i);
+                if(std::isfinite(val_raw)) col_profile.push_back({ row_num, 0.0, val_raw, 0.0 });
+            }
+
+            try{
+                if(r_or_c == 'r'){
+                    if(row_profile.size() < 2) throw std::runtime_error("Insufficient data for plot");
+                    title << "Profile for row " << row_as_u << ")";
+
+                    YgorMathPlottingGnuplot::Shuttle<samples_1D<double>> row_shtl(row_profile, "Row Profile");
+                    YgorMathPlottingGnuplot::Plot<double>({row_shtl}, title.str(), "Pixel Index (row #)", "Pixel Intensity");
+                }else{
+                    if(col_profile.size() < 2) throw std::runtime_error("Insufficient data for plot");
+                    title << "Profile for column " << col_as_u << ")";
+
+                    YgorMathPlottingGnuplot::Shuttle<samples_1D<double>> col_shtl(col_profile, "Col Profile");
+                    YgorMathPlottingGnuplot::Plot<double>({col_shtl}, title.str(), "Pixel Index (column #)", "Pixel Intensity");
+                }
+            }catch(const std::exception &e){
+                FUNCWARN("Failed to plot: " << e.what());
+            }
+            return;
+    };
+
+    //Launch/open a realtime plotting window.
+    const auto launch_time_plot_window = [&](void){
+            plotwindow.create(sf::VideoMode(640, 480), "DICOMautomaton Time Courses");
+            plotwindow.setFramerateLimit(30);
+            plotwindowtype = SecondaryPlot::TimeCourse;
+            return;
+    };
+
+    const auto launch_row_plot_window = [&](void){
+            plotwindow.create(sf::VideoMode(640, 480), "DICOMautomaton Row Profile Inspector");
+            plotwindow.setFramerateLimit(30);
+            plotwindowtype = SecondaryPlot::RowProfile;
+            return;
+    };
+
+    const auto launch_column_plot_window = [&](void){
+            plotwindow.create(sf::VideoMode(640, 480), "DICOMautomaton Column Profile Inspector");
+            plotwindow.setFramerateLimit(30);
+            plotwindowtype = SecondaryPlot::ColumnProfile;
+            return;
+    };
+
+    //Given the current mouse coordinates, dump a time series at the image pixel over all available images
+    // which spatially overlap.
+    //
+    // So this routine dumps a time course at the mouse pixel.
+    //
+    const auto dump_voxel_time_series = [&](void){
+            auto mc = Convert_Mouse_Coords();
+            if(!mc.voxel_DICOM_pos_valid){
+                FUNCWARN("The mouse is not currently hovering over the image. Cannot dump time course");
+                return;
+            }
+            const auto row_as_u = mc.pixel_image_pos_row;
+            const auto col_as_u = mc.pixel_image_pos_col;
+            const auto pix_pos = mc.voxel_DICOM_pos;
+            FUNCINFO("Dumping time course for row,col = " << row_as_u << "," << col_as_u);
+
+            //Get a list of images which spatially overlap this point. Order should be maintained.
+            const auto ortho = disp_img_it->row_unit.Cross( disp_img_it->col_unit ).unit();
+            const std::list<vec3<double>> points = { pix_pos, pix_pos + ortho * disp_img_it->pxl_dz * 0.25,
+                                                              pix_pos - ortho * disp_img_it->pxl_dz * 0.25 };
+            auto encompassing_images = (*img_array_ptr_it)->imagecoll.get_images_which_encompass_all_points(points);
+
+            //Cycle over the images, dumping the ordinate (pixel values) vs abscissa (time) derived from metadata.
+            samples_1D<double> shtl;
+            const std::string quantity("dt"); //As it appears in the metadata. Must convert to a double!
+
+            const double radius = 2.1; //Circle of certain radius (in DICOM-coord. system).
+            std::stringstream title;
+            title << "P_{row,col,rad} = P_{" << row_as_u << "," << col_as_u << "," << radius << "}";
+            title << " vs " << quantity << ". ";
+
+            for(const auto &enc_img_it : encompassing_images){
+                if(auto abscissa = enc_img_it->GetMetadataValueAs<double>(quantity)){
+                    //Circle of certain radius (in DICOM-coord. system).
+                    std::list<double> vals;
+                    for(auto lrow = 0; lrow < enc_img_it->rows; ++lrow){
+                        for(auto lcol = 0; lcol < enc_img_it->columns; ++lcol){
+                            const auto row_col_pix_pos = enc_img_it->position(lrow,lcol);
+                            if(pix_pos.distance(row_col_pix_pos) <= radius){
+                                const auto pix_val = enc_img_it->value(lrow,lcol,0);
+                                if(std::isfinite(pix_val)) vals.push_back( static_cast<double>(pix_val) );
+                            }
+                        }
+                    }
+                    const auto dabscissa = 0.0;
+                    const auto ordinate  = Stats::Mean(vals);
+                    const auto dordinate = (vals.size() > 2) ? std::sqrt(Stats::Unbiased_Var_Est(vals))/std::sqrt(1.0*vals.size()) 
+                                                             : 0.0;
+                    shtl.push_back(abscissa.value(),dabscissa,ordinate,dordinate);
+                }
+            }
+
+
+            title << "Time Course. Images encompass " << pix_pos << ". ";
+            try{
+                YgorMathPlottingGnuplot::Shuttle<samples_1D<double>> ymp_shtl(shtl, "Buffer A");
+                YgorMathPlottingGnuplot::Plot<double>({ymp_shtl}, title.str(), "Time (s)", "Pixel Intensity");
+            }catch(const std::exception &e){
+                FUNCWARN("Failed to plot: " << e.what());
+            }
+            shtl.Write_To_File(Get_Unique_Sequential_Filename("/tmp/pixel_intensity_time_course_",6,".txt"));
+            return;
+    };
+
+    //Given the current mouse coordinates, try to show a perfusion model using model parameters from
+    // other images. Also show a time course of the raw data for comparison with the model fit.
+    const auto show_perfusion_model = [&](void){
+            auto mc = Convert_Mouse_Coords();
+            if(!mc.voxel_DICOM_pos_valid){
+                FUNCWARN("The mouse is not currently hovering over the image. Cannot compute perfusion model");
+                return;
+            }
+            const auto row_as_u = mc.pixel_image_pos_row;
+            const auto col_as_u = mc.pixel_image_pos_col;
+            const auto pix_pos = mc.voxel_DICOM_pos;
+
+            const auto ortho = disp_img_it->row_unit.Cross( disp_img_it->col_unit ).unit();
+            const std::list<vec3<double>> points = { pix_pos, pix_pos + ortho * disp_img_it->pxl_dz * 0.25,
+                                                              pix_pos - ortho * disp_img_it->pxl_dz * 0.25 };
+
+            //Metadata quantities of interest.
+            const auto  k1A_regex = Compile_Regex(".*k1A.*");
+            const auto tauA_regex = Compile_Regex(".*tauA.*");
+            const auto  k1V_regex = Compile_Regex(".*k1V.*");
+            const auto tauV_regex = Compile_Regex(".*tauV.*");
+            const auto   k2_regex = Compile_Regex(".*k2.*");
+
+            enum {
+                Have_No_Model,
+                Have_1Compartment2Input_5Param_LinearInterp_Model,
+                Have_1Compartment2Input_5Param_Chebyshev_Model,
+                Have_1Compartment2Input_Reduced3Param_Chebyshev_Model
+            } HaveModel;
+            HaveModel = Have_No_Model;
+
+            KineticModel_1Compartment2Input_5Param_LinearInterp_Parameters model_5params_linear;
+            KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters model_5params_cheby;
+            KineticModel_1Compartment2Input_Reduced3Param_Chebyshev_Parameters model_3params_cheby;
+
+            try{
+                //First pass: look for serialized model_params. Deserialize.
+                //
+                // Note: we have to do this first, before loading voxel-specific data (e.g., k1A) because the
+                // model_state is stripped of individual-voxel-specific data. Deserialization will overwrite 
+                // individual-voxel-specific data with NaNs.
+                //
+                for(auto l_img_array_ptr_it = img_array_ptr_beg; l_img_array_ptr_it != img_array_ptr_end; ++l_img_array_ptr_it){
+                    auto encompassing_images = (*l_img_array_ptr_it)->imagecoll.get_images_which_encompass_all_points(points);
+
+                    for(const auto &enc_img_it : encompassing_images){
+                        if(auto m_str = enc_img_it->GetMetadataValueAs<std::string>("ModelState")){
+                            if(HaveModel == Have_No_Model){
+                                if(Deserialize(m_str.value(),model_5params_linear)){
+                                    HaveModel = Have_1Compartment2Input_5Param_LinearInterp_Model;
+                                }else if(Deserialize(m_str.value(),model_3params_cheby)){
+                                    HaveModel = Have_1Compartment2Input_Reduced3Param_Chebyshev_Model;
+                                }else if(Deserialize(m_str.value(),model_5params_cheby)){
+                                    HaveModel = Have_1Compartment2Input_5Param_Chebyshev_Model;
+                                }else{
+                                    throw std::runtime_error("Unable to deserialize model parameters.");
+                                }
+                                return;
+                            }
+                        }
+                    }
+                }
+                if(HaveModel == Have_No_Model){
+                    throw std::logic_error("We should have a valid model here, but do not.");
+                }
+
+                //Second pass: locate individual-voxel-specific data needed to evaluate the model.
+                std::map<std::string, samples_1D<double>> time_courses;
+                for(auto l_img_array_ptr_it = img_array_ptr_beg; l_img_array_ptr_it != img_array_ptr_end; ++l_img_array_ptr_it){
+                    auto encompassing_images = (*l_img_array_ptr_it)->imagecoll.get_images_which_encompass_all_points(points);
+
+                    for(const auto &enc_img_it : encompassing_images){
+                        //Find the pixel of interest.
+                        for(auto l_chnl = 0; l_chnl < enc_img_it->channels; ++l_chnl){
+                            double pix_val;
+                            try{
+                                const auto indx = enc_img_it->index(pix_pos, l_chnl);
+                                if(indx < 0) continue;
+                            
+                                auto rcc = enc_img_it->row_column_channel_from_index(indx);
+                                const long int l_row = std::get<0>(rcc);
+                                const long int l_col = std::get<1>(rcc);
+                                if(l_chnl != std::get<2>(rcc)) continue;
+
+                                pix_val = enc_img_it->value(l_row, l_col, l_chnl);
+
+                            }catch(const std::exception &){
+                                continue;
+                            }
+
+                            //Now have pixel value. Figure out what to do with it.
+                            if(auto desc = enc_img_it->GetMetadataValueAs<std::string>("Description")){
+
+                                if(false){
+                                }else if(std::regex_match(desc.value(), k1A_regex)){
+                                    model_5params_linear.k1A = pix_val;
+                                    model_5params_cheby.k1A  = pix_val;
+                                    model_3params_cheby.k1A  = pix_val;
+                                }else if(std::regex_match(desc.value(), tauA_regex)){
+                                    model_5params_linear.tauA = pix_val;
+                                    model_5params_cheby.tauA  = pix_val;
+                                    model_3params_cheby.tauA  = pix_val;
+                                }else if(std::regex_match(desc.value(), k1V_regex)){
+                                    model_5params_linear.k1V = pix_val;
+                                    model_5params_cheby.k1V  = pix_val;
+                                    model_3params_cheby.k1V  = pix_val;
+                                }else if(std::regex_match(desc.value(), tauV_regex)){
+                                    model_5params_linear.tauV = pix_val;
+                                    model_5params_cheby.tauV  = pix_val;
+                                    model_3params_cheby.tauV  = pix_val;
+                                }else if(std::regex_match(desc.value(), k2_regex)){
+                                    model_5params_linear.k2 = pix_val;
+                                    model_5params_cheby.k2  = pix_val;
+                                    model_3params_cheby.k2  = pix_val;
+
+                                //Otherwise, if there is a timestamp then assume it is a time course we should show.
+                                }else{
+                                    if(auto dt = enc_img_it->GetMetadataValueAs<double>("dt")){
+                                        time_courses[desc.value()].push_back(dt.value(), 0.0, pix_val, 0.0);
+                                    }
+                                }
+                            }
+                            
+                        }
+                    }
+                }
+
+                //Now plot the time courses, evaluate the model, and plot the model.
+                {
+                    const long int samples = 200;
+                    double tmin = std::numeric_limits<double>::infinity();
+                    double tmax = -tmin;
+                    for(const auto &p : time_courses){
+                        const auto extrema = p.second.Get_Extreme_Datum_x();
+                        tmin = std::min(tmin, extrema.first[0] - 5.0);
+                        tmax = std::max(tmax, extrema.second[0] + 5.0);
+                    }
+                    if( !std::isfinite(tmin) || !std::isfinite(tmax) ){
+                        tmin = -5.0;
+                        tmax = 200.0;
+                    }
+                    const double dt = (tmax - tmin) / static_cast<double>(samples);
+
+                    samples_1D<double> fitted_model;
+                    for(long int i = 0; i < samples; ++i){
+                        const double t = tmin + dt * i;
+                        if(HaveModel == Have_1Compartment2Input_5Param_LinearInterp_Model){
+                            KineticModel_1Compartment2Input_5Param_LinearInterp_Results eval_res;
+                            Evaluate_Model(model_5params_linear,t,eval_res);
+                            fitted_model.push_back(t, 0.0, eval_res.I, 0.0);
+                        }else if(HaveModel == Have_1Compartment2Input_5Param_Chebyshev_Model){
+                            KineticModel_1Compartment2Input_5Param_Chebyshev_Results eval_res;
+                            Evaluate_Model(model_5params_cheby,t,eval_res);
+                            fitted_model.push_back(t, 0.0, eval_res.I, 0.0);
+                        }else if(HaveModel == Have_1Compartment2Input_Reduced3Param_Chebyshev_Model){
+                            KineticModel_1Compartment2Input_Reduced3Param_Chebyshev_Results eval_res;
+                            Evaluate_Model(model_3params_cheby,t,eval_res);
+                            fitted_model.push_back(t, 0.0, eval_res.I, 0.0);
+                        }
+                    }
+
+                    std::string model_title = "Fitted model"_s;
+                    if(HaveModel == Have_1Compartment2Input_5Param_LinearInterp_Model){
+                        model_title += "(1C2I, 5Param, LinearInterp)";
+                    }else if(HaveModel == Have_1Compartment2Input_5Param_Chebyshev_Model){
+                        model_title += "(1C2I, 5Param, Chebyshev)";
+                    }else if(HaveModel == Have_1Compartment2Input_Reduced3Param_Chebyshev_Model){
+                        model_title += "(1C2I, Reduced3Param, Chebyshev)";
+                    }
+                    time_courses[model_title] = fitted_model;
+                }
+
+                const std::string Title = "Time course: row = " + std::to_string(row_as_u) + ", col = " + std::to_string(col_as_u);
+                PlotTimeCourses(Title, time_courses, {});
+            }catch(const std::exception &e){
+                FUNCWARN("Unable to reconstruct model: " << e.what());
+            }
+
+            return;
+    };
+
+    //Given the current mouse coordinates, dump the pixel value for [A]ll image sets which spatially overlap.
+    // This routine is useful for debugging problematic pixels, or trying to follow per-pixel calculations.
+    //
+    // NOTE: This routine finds the pixel nearest to the specified voxel in DICOM space. So if the image was
+    //       resampled, you will still be able to track the pixel nearest to the centre. In case only exact
+    //       pixels should be tracked, the row and column numbers are spit out; so just filter out pixel
+    //       coordinates you don't want.
+    //
+    const auto dump_overlapping_voxels = [&](void){
+            auto mc = Convert_Mouse_Coords();
+            if(!mc.voxel_DICOM_pos_valid){
+                FUNCWARN("The mouse is not currently hovering over the image. Cannot dump overlapping pixel values");
+                return;
+            }
+            const auto row_as_u = mc.pixel_image_pos_row;
+            const auto col_as_u = mc.pixel_image_pos_col;
+            const auto pix_pos = mc.voxel_DICOM_pos;
+
+            const auto ortho = disp_img_it->row_unit.Cross( disp_img_it->col_unit ).unit();
+            const std::list<vec3<double>> points = { pix_pos, pix_pos + ortho * disp_img_it->pxl_dz * 0.25,
+                                                              pix_pos - ortho * disp_img_it->pxl_dz * 0.25 };
+
+            const auto FOname = Get_Unique_Sequential_Filename("/tmp/pixel_intensity_from_all_overlapping_images_", 6, ".csv");
+            std::fstream FO(FOname, std::fstream::out);
+            if(!FO) FUNCERR("Unable to write to the file '" << FOname << "'. Cannot continue");
+
+            //Metadata quantities to also harvest.
+            std::vector<std::string> quantities_d = { "dt", "FlipAngle" };
+            std::vector<std::string> quantities_s = { "Description" };
+
+            FO << "# Image Array Number, Row, Column, Channel, Pixel Value, ";
+            for(auto quantity : quantities_d) FO << quantity << ", ";
+            for(auto quantity : quantities_s) FO << quantity << ", ";
+            FO << std::endl;
+
+            //Get a list of images which spatially overlap this point. Order should be maintained.
+            size_t ImageArrayNumber = 0;
+            for(auto l_img_array_ptr_it = img_array_ptr_beg; l_img_array_ptr_it != img_array_ptr_end; ++l_img_array_ptr_it, ++ImageArrayNumber){
+                auto encompassing_images = (*l_img_array_ptr_it)->imagecoll.get_images_which_encompass_all_points(points);
+                for(const auto &enc_img_it : encompassing_images){
+                    //Find the pixel of interest.
+                    for(auto l_chnl = 0; l_chnl < enc_img_it->channels; ++l_chnl){
+                        long int l_row, l_col;
+                        double pix_val;
+                        try{
+                            const auto indx = enc_img_it->index(pix_pos, l_chnl);
+                            if(indx < 0) continue;
+                        
+                            auto rcc = enc_img_it->row_column_channel_from_index(indx);
+                            l_row = std::get<0>(rcc);
+                            l_col = std::get<1>(rcc);
+                            if(l_chnl != std::get<2>(rcc)) continue;
+
+                            pix_val = enc_img_it->value(l_row, l_col, l_chnl);
+
+                        }catch(const std::exception &e){
+                            continue;
+                        }
+                        FO << ImageArrayNumber << ", ";
+                        FO << l_row << ", " << l_col << ", " << l_chnl << ", ";
+                        FO << pix_val << ", ";
+
+                        for(auto quantity : quantities_d){
+                            if(auto q = enc_img_it->GetMetadataValueAs<double>(quantity)){
+                                FO << q.value() << ", ";
+                            }
+                        }
+                        for(auto quantity : quantities_s){
+                            if(auto q = enc_img_it->GetMetadataValueAs<std::string>(quantity)){
+                                FO << Quote_Static_for_Bash(q.value()) << ", ";
+                            }
+                        }
+                        FO << std::endl;
+
+                    }
+                }
+            }
+            FO.close();
+            FUNCINFO("Dumped pixel values which coincide with the specified voxel at"
+                     " row,col = " << row_as_u << "," << col_as_u);
+
+            return;
+    };
+
+    //Advance to the next/previous Image_Array. Also reset necessary display image iterators.
+    //
+    // Note: 'N' for next, 'P' for previous.
+    const auto advance_to_next_prev_image_array = [&](const long int n){
+            //Save the current image position. We will attempt to find the same spot after switching arrays.
+            const auto disp_img_pos = static_cast<size_t>( std::distance(disp_img_beg, disp_img_it) );
+
+            custom_width  = std::experimental::optional<double>();
+            custom_centre = std::experimental::optional<double>();
+
+            if(n == 0) return;
+            const auto n_clamped = (n > 0) ? 1 : -1;
+
+            if(false){
+            }else if(n_clamped == 1){
+                if(img_array_ptr_it == img_array_ptr_last){ //Wrap around forwards.
+                    img_array_ptr_it = img_array_ptr_beg;
+                }else{
+                    std::advance(img_array_ptr_it, 1);
+                }
+
+            }else if(n_clamped == -1){
+                if(img_array_ptr_it == img_array_ptr_beg){ //Wrap around backwards.
+                    img_array_ptr_it = img_array_ptr_last;
+                }else{
+                    std::advance(img_array_ptr_it,-1);
+                }
+
+            }else{
+                throw std::logic_error("Advancement direction not understood. Cannot continue.");
+            }
+
+            FUNCINFO("There are " << (*img_array_ptr_it)->imagecoll.images.size() << " images in this Image_Array");
+
+            disp_img_beg  = (*img_array_ptr_it)->imagecoll.images.begin();
+            disp_img_last = std::prev((*img_array_ptr_it)->imagecoll.images.end());
+            disp_img_it   = disp_img_beg;
+
+            if(disp_img_pos < (*img_array_ptr_it)->imagecoll.images.size()){
+                std::advance(disp_img_it, disp_img_pos);
+            }
+
+            if(!contour_coll_shtl.contours.back().points.empty()){
+                contour_coll_shtl.contours.emplace_back();
+                contour_coll_shtl.contours.back().closed = true;
+            }
+
+            if(load_img_texture_sprite(disp_img_it, disp_img_texture_sprite)){
+                scale_sprite_to_fill_screen(window,disp_img_it,disp_img_texture_sprite);
+                FUNCINFO("Loaded Image_Array " << std::distance(img_array_ptr_beg,img_array_ptr_it) << ". "
+                         "There are " << (*img_array_ptr_it)->imagecoll.images.size() << " images in this Image_Array");
+                
+            }else{ 
+                FUNCERR("Unable to load image --> texture --> sprite");
+            }   
+
+            if(auto ImageDesc = disp_img_it->GetMetadataValueAs<std::string>("Description")){
+                window.setTitle("DICOMautomaton IV: '"_s + ImageDesc.value() + "'");
+            }else{
+                window.setTitle("DICOMautomaton IV: <no description available>");
+            }
+
+            Update_Mouse_Coords_Voxel_Sample();
+            return;
+    };
+
+    //Advance to the next/previous display image in the current Image_Array.
+    //
+    // Note: 'n' can be positive or negative.
+    const auto advance_to_next_prev_image = [&](const long int n){
+            if(n == 0) return;
+            const auto n_clamped = (n > 0) ? 1 : -1;
+
+            if(false){
+            }else if(n_clamped == 1){
+                if(disp_img_it == disp_img_last){
+                    disp_img_it = disp_img_beg;
+                }else{
+                    std::advance(disp_img_it, 1);
+                }
+
+            }else if(n_clamped == -1){
+                if(disp_img_it == disp_img_beg){
+                    disp_img_it = disp_img_last;
+                }else{
+                    std::advance(disp_img_it,-1);
+                }
+            
+            }else{
+                throw std::logic_error("Advancement direction not understood. Cannot continue.");
+            }
+
+            if(!contour_coll_shtl.contours.back().points.empty()){
+                contour_coll_shtl.contours.emplace_back();       
+                contour_coll_shtl.contours.back().closed = true;
+            }
+
+            if(load_img_texture_sprite(disp_img_it, disp_img_texture_sprite)){
+                scale_sprite_to_fill_screen(window,disp_img_it,disp_img_texture_sprite);
+
+                //const auto img_number = std::distance((*img_array_ptr_it)->imagecoll.images.begin(), disp_img_it);
+                const auto img_number = std::distance(disp_img_beg, disp_img_it);
+                FUNCINFO("Loaded next texture in unaltered Image_Array order. Displaying image number " << img_number);
+                
+            }else{
+                FUNCERR("Unable to load image --> texture --> sprite");
+            }
+
+            if(auto ImageDesc = disp_img_it->GetMetadataValueAs<std::string>("Description")){
+                window.setTitle("DICOMautomaton IV: '"_s + ImageDesc.value() + "'");
+            }else{
+                window.setTitle("DICOMautomaton IV: <no description available>");
+            }
+
+            //Scale the image to fill the available space.
+            scale_sprite_to_fill_screen(window,disp_img_it,disp_img_texture_sprite);
+
+            Update_Mouse_Coords_Voxel_Sample();
+            return;
+    };
+
+    //Sample pixels from an external image into the current frame.
+    const auto overwrite_current_frame = [&](void){
+            do{ // Does not loop, just lets us break out.
+                //std::string fname;
+                //std::cout << std::endl;
+                //std::cout << "Please enter the filename you wish to sample from: " << std::endl;
+                //std::cin >> fname;
+                const auto raw_fname = Execute_Command_In_Pipe(
+                            "zenity --title='Select a file to sample from (FITS format).' --file-selection --separator='\n' 2>/dev/null");
+                const auto fname_vec = SplitStringToVector(raw_fname + "\n\n", '\n', 'd');
+                if(fname_vec.empty()) break;
+                const std::string fname = fname_vec.front();
+
+                planar_image<float,double> casted_img; // External image with casted pixel values.
+                bool loaded = false;
+
+                if(!loaded){
+                    try{
+                        auto animg = ReadFromFITS<uint8_t,double>(fname);
+                        casted_img.cast_from(animg);
+                        loaded = true;
+                    }catch(const std::exception &e){ };
+                }
+                if(!loaded){
+                    try{
+                        auto animg = ReadFromFITS<float,double>(fname);
+                        casted_img = animg;
+                        loaded = true;
+                    }catch(const std::exception &e){ };
+                }
+                if(!loaded){
+                    FUNCINFO("Cannot load file '" << fname << "'");
+                    break;
+                }
+
+                //Sample the image by ignoring aspect ratio and scaling dimensions to fit.
+                const auto r_scale = static_cast<double>(casted_img.rows)    / static_cast<double>(disp_img_it->rows);
+                const auto c_scale = static_cast<double>(casted_img.columns) / static_cast<double>(disp_img_it->columns);
+                for(long int ch = 0; ch < disp_img_it->channels; ++ch){
+                    for(long int r = 0; r < disp_img_it->rows; ++r){
+                        for(long int c = 0; c < disp_img_it->columns; ++c){
+                            const auto clamped_r = static_cast<double>(r) * r_scale;
+                            const auto clamped_c = static_cast<double>(c) * c_scale;
+                            const long int clamped_ch = (ch >= casted_img.channels) ? 0 : ch;
+
+                            disp_img_it->reference(r,c,ch) = 
+                                casted_img.bilinearly_interpolate_in_pixel_number_space(clamped_r, clamped_c, clamped_ch);
+                                //casted_img.bicubically_interpolate_in_pixel_number_space(clamped_r, clamped_c, clamped_ch);
+                        }
+                    }
+                }
+
+                if(load_img_texture_sprite(disp_img_it, disp_img_texture_sprite)){
+                    scale_sprite_to_fill_screen(window,disp_img_it,disp_img_texture_sprite);
+
+                    const auto img_number = std::distance(disp_img_beg, disp_img_it);
+                    FUNCINFO("Loaded next texture in unaltered Image_Array order. Displaying image number " << img_number);
+                    
+                }else{
+                    FUNCERR("Unable to load image --> texture --> sprite");
+                }
+
+                //Scale the image to fill the available space.
+                scale_sprite_to_fill_screen(window,disp_img_it,disp_img_texture_sprite);
+
+                Update_Mouse_Coords_Voxel_Sample();
+            }while(false);
+            return;
+    };
+
+    //Flood the current image with a uniform pixel intensity.
+    const auto flood_current_pixels = [&](void){
+            float intensity;
+            std::cout << std::endl;
+            std::cout << "Please enter the intensity to flood with: " << std::endl;
+            std::cin >> intensity;
+
+            for(long int ch = 0; ch < disp_img_it->channels; ++ch){
+                for(long int r = 0; r < disp_img_it->rows; ++r){
+                    for(long int c = 0; c < disp_img_it->columns; ++c){
+                        disp_img_it->reference(r,c,ch) = intensity;
+                    }
+                }
+            }
+
+            if(load_img_texture_sprite(disp_img_it, disp_img_texture_sprite)){
+                scale_sprite_to_fill_screen(window,disp_img_it,disp_img_texture_sprite);
+
+                const auto img_number = std::distance(disp_img_beg, disp_img_it);
+                FUNCINFO("Loaded next texture in unaltered Image_Array order. Displaying image number " << img_number);
+                
+            }else{
+                FUNCERR("Unable to load image --> texture --> sprite");
+            }
+
+            //Scale the image to fill the available space.
+            scale_sprite_to_fill_screen(window,disp_img_it,disp_img_texture_sprite);
+
+            Update_Mouse_Coords_Voxel_Sample();
+            return;
+    };
+
+    //Step to the next/previous image which spatially overlaps with the current display image.
+    const auto advance_to_next_prev_overlapping_image = [&](const long int n){
+            const auto disp_img_pos = disp_img_it->center();
+
+            //Get a list of images which spatially overlap this point. Order should be maintained.
+            const auto ortho = disp_img_it->row_unit.Cross( disp_img_it->col_unit ).unit();
+            const std::list<vec3<double>> points = { disp_img_pos, disp_img_pos + ortho * disp_img_it->pxl_dz * 0.25,
+                                                                   disp_img_pos - ortho * disp_img_it->pxl_dz * 0.25 };
+            auto encompassing_images = (*img_array_ptr_it)->imagecoll.get_images_which_encompass_all_points(points);
+
+            //Find the images neighbouring the current image.
+            auto enc_img_it = encompassing_images.begin();
+            for(  ; enc_img_it != encompassing_images.end(); ++enc_img_it){
+                if(*enc_img_it == disp_img_it) break;
+            }
+            if(enc_img_it == encompassing_images.end()){
+                FUNCWARN("Unable to step over spatially overlapping images. None found");
+            }else{
+                if(n == 0) return;
+                const auto n_clamped = (n > 0) ? 1 : -1;
+
+                if(false){
+                }else if(n_clamped == 1){
+                    ++enc_img_it;
+                    if(enc_img_it == encompassing_images.end()){
+                        disp_img_it = encompassing_images.front();
+                    }else{
+                        disp_img_it = *enc_img_it;
+                    }
+
+                }else if(n_clamped == -1){
+                    if(enc_img_it == encompassing_images.begin()){
+                        disp_img_it = encompassing_images.back();
+                    }else{
+                        --enc_img_it;
+                        disp_img_it = *enc_img_it;
+                    }
+                
+                }else{
+                    throw std::logic_error("Advancement direction not understood. Cannot continue.");
+                }
+            }
+
+            if(load_img_texture_sprite(disp_img_it, disp_img_texture_sprite)){
+                scale_sprite_to_fill_screen(window,disp_img_it,disp_img_texture_sprite);
+
+                const auto img_number = std::distance(disp_img_beg, disp_img_it);
+                FUNCINFO("Loaded next/previous spatially-overlapping texture. Displaying image number " << img_number);
+
+            }else{
+                FUNCERR("Unable to load image --> texture --> sprite");
+            }
+
+            if(auto ImageDesc = disp_img_it->GetMetadataValueAs<std::string>("Description")){
+                window.setTitle("DICOMautomaton IV: '"_s + ImageDesc.value() + "'");
+            }else{
+                window.setTitle("DICOMautomaton IV: <no description available>");
+            }
+           
+            //Scale the image to fill the available space.
+            scale_sprite_to_fill_screen(window,disp_img_it,disp_img_texture_sprite);
+
+            Update_Mouse_Coords_Voxel_Sample();
+            return;
+    };
+
+    //Reset the image scale to be pixel-for-pixel what is seen on screen. (Unless there is a view
+    // that has some transformation over on-screen objects.)
+    const auto reset_image_scale = [&](void){
+            disp_img_texture_sprite.second.setScale(1.0f,1.0f);
+
+            Update_Mouse_Coords_Voxel_Sample();
+            return;
+    };
+
+    //Toggle showing metadata tags that are identical to the neighbouring image's metadata tags.
+    const auto toggle_showing_adjacently_different_metadata = [&](void){
+            OnlyShowTagsDifferentToNeighbours = !OnlyShowTagsDifferentToNeighbours;
+            return;
+    };
+
+    //Dump to file and show a pop-up window with the full metadata of the present image.
+    const auto dump_and_expand_image_metadata = [&](void){
+            const auto FOname = Get_Unique_Sequential_Filename("/tmp/image_metadata_dump_", 6, ".txt");
+            try{
+                //Dump the metadata to a file.
+                {
+                    std::fstream FO(FOname, std::fstream::out);
+                    if(!FO) throw std::runtime_error("Unable to write metadata to file.");
+                    for(const auto &apair : disp_img_it->metadata){
+                        FO << apair.first << " : " << apair.second << std::endl;
+                    }
+                }
+
+                //Notify that the file has been created.
+                FUNCINFO("Dumped metadata to file '" << FOname << "'");
+
+                //Try launch a pop-up window with the metadata from the file displayed.
+                std::stringstream ss;
+                ss << "zenity --text-info --no-wrap --filename='" << FOname << "' 2>/dev/null";
+                Execute_Command_In_Pipe(ss.str());
+
+            }catch(const std::exception &e){ 
+                FUNCWARN("Metadata dump failed: " << e.what());
+            }
+
+            return;
+    };
+
+    //Erase the present contour, or, if empty, the previous non-empty contour. (Not the whole organ.)
+    const auto erase_most_recently_drawn_contour = [&](void){
+            try{
+                const std::string erase_roi = Detox_String(Execute_Command_In_Pipe(
+                        "zenity --question --text='Erase current or previous non-empty contour?' 2>/dev/null && echo 1"));
+                if(erase_roi != "1"){
+                    FUNCINFO("Not erasing contours. Here it is for inspection purposes:" << contour_coll_shtl.write_to_string());
+                    throw std::runtime_error("Instructed not to erase contour.");
+                }
+
+                //Trim empty contours from the shuttle.
+                contour_coll_shtl.Purge_Contours_Below_Point_Count_Threshold(1);
+                if(contour_coll_shtl.contours.empty()) throw std::runtime_error("Nothing to erase.");
+
+                //Erase the last contour.
+                const std::string c_as_str( contour_coll_shtl.contours.back().write_to_string() );                             
+                FUNCINFO("About to erase contour. Here it is for inspection purposes: " << c_as_str);
+                contour_coll_shtl.contours.pop_back();
+                
+                //Provide an empty contour for future contouring.
+                contour_coll_shtl.contours.emplace_back();
+                contour_coll_shtl.contours.back().closed = true;
+
+                FUNCINFO("Latest non-empty contour erased");
+            }catch(const std::exception &){ }
+            return;
+    };
+
+    //Erase or Empty the current working contour buffer. 
+    const auto purge_whole_contour_buffer = [&](void){
+            try{
+                const std::string erase_roi = Detox_String(Execute_Command_In_Pipe(
+                        "zenity --question --text='Erase whole working ROI?' 2>/dev/null && echo 1"));
+                if(erase_roi != "1"){
+                    FUNCINFO("Not erasing contours. Here it is for inspection purposes:" << contour_coll_shtl.write_to_string());
+                    throw std::runtime_error("Instructed not to clear contour buffer.");
+                }
+
+                //Clear the data in preparation for the next contour collection.
+                contour_coll_shtl.contours.clear();
+                contour_coll_shtl.contours.emplace_back();
+                contour_coll_shtl.contours.back().closed = true;
+
+                FUNCINFO("Contour collection cleared from working buffer");
+            }catch(const std::exception &){ }
+            return;
+    };
+
+    //Save the current contour collection.
+    const auto save_contour_buffer = [&](void){
+            try{
+                // Ask the user for additional information.
+                const std::string save_roi = Detox_String(Execute_Command_In_Pipe("zenity --question --text='Save ROI?' 2>/dev/null && echo 1"));
+                if(save_roi != "1"){
+                    FUNCINFO("Not saving contours. Here it is for inspection purposes:" << contour_coll_shtl.write_to_string());
+                    throw std::runtime_error("Instructed not to save.");
+                }
+
+                const std::string roi_name = Detox_String(Execute_Command_In_Pipe(
+                    "zenity --entry --text='What is the name of the ROI?' --entry-text='unspecified' 2>/dev/null"));
+                if(roi_name.empty()) throw std::runtime_error("Cannot save with an empty ROI name. (Punctuation is removed.)");
+
+                //Trim empty contours from the shuttle.
+                contour_coll_shtl.Purge_Contours_Below_Point_Count_Threshold(3);
+                if(contour_coll_shtl.contours.empty()) throw std::runtime_error("Given empty contour collection. Contours need >3 points each.");
+                const std::string cc_as_str( contour_coll_shtl.write_to_string() );                             
+
+                //Add metadata.
+                auto FrameofReferenceUID = disp_img_it->GetMetadataValueAs<std::string>("FrameofReferenceUID");
+                if(FrameofReferenceUID){
+                    contour_coll_shtl.Insert_Metadata("FrameofReferenceUID", FrameofReferenceUID.value());
+                }else{
+                    throw std::runtime_error("Missing 'FrameofReferenceUID' metadata element. Cannot continue.");
+                }
+
+                auto StudyInstanceUID = disp_img_it->GetMetadataValueAs<std::string>("StudyInstanceUID");
+                if(StudyInstanceUID){
+                    contour_coll_shtl.Insert_Metadata("StudyInstanceUID", StudyInstanceUID.value());
+                }else{
+                    throw std::runtime_error("Missing 'StudyInstanceUID' metadata element. Cannot continue.");
+                }
+
+                contour_coll_shtl.Insert_Metadata("ROIName", roi_name);
+                contour_coll_shtl.Insert_Metadata("NormalizedROIName", X(roi_name));
+                contour_coll_shtl.Raw_ROI_name = roi_name;
+                contour_coll_shtl.ROI_number = 1000;
+                contour_coll_shtl.Minimum_Separation = disp_img_it->pxl_dz;
+
+
+                //Insert the contours into the Drover object.
+                if(DICOM_data.contour_data == nullptr){
+                    std::unique_ptr<Contour_Data> output (new Contour_Data());
+                    DICOM_data.contour_data = std::move(output);
+                }
+                DICOM_data.contour_data->ccs.emplace_back(contour_coll_shtl);
+
+                //Clear the data in preparation for the next contour collection.
+                contour_coll_shtl.contours.clear();
+                contour_coll_shtl.contours.emplace_back();
+                contour_coll_shtl.contours.back().closed = true;
+
+                FUNCINFO("Drover class imbued with new contour collection");
+            }catch(const std::exception &e){
+                FUNCWARN("Unable to save contour collection: '" << e.what() << "'");
+            }
+            return;
+    };
+
+    //Compute some stats for the working, unsaved contour collection.
+    const auto compute_stats_for_contour_buffer = [&](void){
+            try{
+                //Trim empty contours from the shuttle.
+                auto cccopy = contour_coll_shtl;
+                cccopy.Purge_Contours_Below_Point_Count_Threshold(3);
+                if(cccopy.contours.empty()) throw std::runtime_error("Given empty contour collection. Contours need >3 points each.");
+
+                //Create a dummy shuttle with the working contours.
+                std::list<std::reference_wrapper<contour_collection<double>>> cc_ROI;
+                auto base_ptr = reinterpret_cast<contour_collection<double> *>(&contour_coll_shtl);
+                base_ptr->Insert_Metadata("ROIName", "working_ROI");
+                cc_ROI.push_back( std::ref(*base_ptr) );
+
+                //Accumulate the voxel intensity distributions.
+                AccumulatePixelDistributionsUserData ud;
+                if(!(*img_array_ptr_it)->imagecoll.Compute_Images( AccumulatePixelDistributions, { },
+                                                           cc_ROI, &ud )){
+                    throw std::runtime_error("Unable to accumulate pixel distributions.");
+                }
+
+                std::stringstream ss;
+                for(const auto &av : ud.accumulated_voxels){
+                    const auto lROIname = av.first;
+                    const auto PixelMean = Stats::Mean( av.second );
+                    const auto PixelMedian = Stats::Median( av.second );
+                    const auto PixelStdDev = std::sqrt(Stats::Unbiased_Var_Est( av.second ));
+        
+                    ss << "PixelMedian=" << PixelMedian << ", "
+                       << "PixelMean=" << PixelMean << ", "
+                       << "PixelStdDev=" << PixelStdDev << ", "
+                       << "SNR=" << PixelMean/PixelStdDev << ", "
+                       << "VoxelCount=" << av.second.size() << std::endl;
+                }
+                FUNCINFO("Working contour collection stats:\n\t" << ss.str());
+
+            }catch(const std::exception &e){
+                FUNCWARN("Unable to compute working contour collection stats: '" << e.what() << "'");
+            }
+            return;
+    };
+
+    //Query the user to provide a window and level explicitly.
+    const auto query_for_window_and_level = [&](void){
+            try{
+                const std::string low_str = Detox_String(Execute_Command_In_Pipe(
+                    "zenity --entry --text='What is the new window low?' --entry-text='100.0' 2>/dev/null"));
+                const std::string high_str = Detox_String(Execute_Command_In_Pipe(
+                    "zenity --entry --text='What is the new window high?' --entry-text='500.0' 2>/dev/null"));
+
+                // Parse the values and protect against mixing low and high values.
+                const auto new_low  = std::stod(low_str);
+                const auto new_high = std::stod(high_str);
+                const auto new_fullwidth = std::abs(new_high - new_low);
+                const auto new_centre = std::min(new_low, new_high) + 0.5 * new_fullwidth;
+                custom_width.emplace(new_fullwidth);
+                custom_centre.emplace(new_centre);
+
+                if(load_img_texture_sprite(disp_img_it, disp_img_texture_sprite)){
+                    scale_sprite_to_fill_screen(window,disp_img_it,disp_img_texture_sprite);
+                }else{
+                    FUNCERR("Unable to reload image after adjusting window/level");
+                }
+            }catch(const std::exception &e){
+                FUNCWARN("Unable to parse window and level: '" << e.what() << "'");
+            }
+            return;
+    };
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////  Main loop  ///////////////////////////////////////////////
@@ -595,206 +1661,61 @@ Drover SFML_Viewer( Drover DICOM_data,
 
                 //Show a simple help dialog with some keyboard commands.
                 }else if( (thechar == 'h') || (thechar == 'H') ){
-                    // Easy way to get list of commands:
-                    // `grep -C 3 'thechar == ' src/PETCT_Perfusion_Analysis.cc | grep '//\|thechar'`
-                    Execute_Command_In_Pipe(
-                            "zenity --info --no-wrap --text=\""
-                            "DICOMautomaton Image Viewer\\n\\n"
-                            "\\t Commands: \\n"
-                            "\\t\\t h,H \\t Display this help.\\n"
-                            "\\t\\t x \\t\\t Toggle whether existing contours should be displayed.\\n"
-                            "\\t\\t m \\t\\t Place or remove an invisible marker at the current mouse position for distance measurement.\\n"
-                            "\\t\\t d \\t\\t Dump the window contents as an image after the next render.\\n"
-                            "\\t\\t D \\t\\t Dump raw pixels for all spatially overlapping images from the current array (e.g., time courses).\\n"
-                            "\\t\\t i \\t\\t Dump the current image to file.\\n"
-                            "\\t\\t I \\t\\t Dump all images in the current array to file.\\n"
-                            "\\t\\t r,c \\t\\t Plot pixel intensity profiles along the mouse\\'s current row and column with Gnuplot.\\n"
-                            "\\t\\t R,C \\t\\t Plot realtime pixel intensity profiles along the mouse\\'s current row and column.\\n"
-                            "\\t\\t t \\t\\t Plot a time course at the mouse\\'s current row and column.\\n"
-                            "\\t\\t T \\t\\t Open a realtime plotting window.\\n"
-                            "\\t\\t a,A \\t\\t Plot or dump the pixel values for [a]ll image sets which spatially overlap.\\n"
-                            "\\t\\t M \\t\\t Try plot a pharmacokinetic [M]odel using image map parameters and ROI time courses.\\n"
-                            "\\t\\t N,P \\t\\t Advance to the next/previous image series.\\n"
-                            "\\t\\t n,p \\t\\t Advance to the next/previous image in this series.\\n"
-                            "\\t\\t -,+ \\t\\t Advance to the next/previous image that spatially overlaps this image.\\n"
-                            "\\t\\t (,) \\t\\t Cycle through the available colour maps/transformations.\\n"
-                            "\\t\\t l,L \\t\\t Reset the image scale to be pixel-for-pixel what is seen on screen.\\n"
-                            "\\t\\t u \\t\\t Toggle showing metadata tags that are identical to the neighbouring image\\'s metadata tags.\\n"
-                            "\\t\\t U \\t\\t Dump and show the current image\\'s metadata.\\n"
-                            "\\t\\t e \\t\\t Erase latest non-empty contour. (A single contour.)\\n"
-                            "\\t\\t E \\t\\t Empty the current working ROI buffer. (The entire buffer; all contours.)\\n"
-                            "\\t\\t s,S \\t\\t Save the current contour collection.\\n"
-                            "\\t\\t # \\t\\t Compute stats for the working, unsaved contour collection.\\n"
-                            "\\t\\t % \\t\\t Open a dialog box to select an explicit window and level.\\n"
-                            "\\t\\t b \\t\\t Serialize Drover instance (all data) to file.\\n"
-                            "\\n\""
-                    );
+                    show_help();
 
                 //Dump a serialization of the current (*entire*) Drover class.
                 }else if( thechar == 'b' ){
-                    const boost::filesystem::path out_fname("/tmp/boost_serialized_drover.xml.gz");
-                    const bool res = Common_Boost_Serialize_Drover(DICOM_data, out_fname);
-                    if(res){
-                        FUNCINFO("Dumped serialization to file " << out_fname.string());
-                    }else{
-                        FUNCWARN("Unable dump serialization to file " << out_fname.string());
-                    }
-
+                    dump_serialized_drover();
 
                 //Cycle through the available colour maps/transformations.
                 }else if( thechar == ')' ){
-                    colour_map = (colour_map + 1) % colour_maps.size();
-
-                    if(load_img_texture_sprite(disp_img_it, disp_img_texture_sprite)){
-                        scale_sprite_to_fill_screen(window,disp_img_it,disp_img_texture_sprite);
-                        const auto img_number = std::distance(disp_img_beg, disp_img_it);
-                        FUNCINFO("Reloaded texture using '" << colour_maps[colour_map].first << "' colour map");
-                    }else{
-                        FUNCERR("Unable to reload texture using selected colour map");
-                    }
+                    cycle_colour_maps_next();
 
                 }else if( thechar == '(' ){
-                    colour_map = (colour_map + colour_maps.size() - 1) % colour_maps.size();
-
-                    if(load_img_texture_sprite(disp_img_it, disp_img_texture_sprite)){
-                        scale_sprite_to_fill_screen(window,disp_img_it,disp_img_texture_sprite);
-                        const auto img_number = std::distance(disp_img_beg, disp_img_it);
-                        FUNCINFO("Reloaded texture using '" << colour_maps[colour_map].first << "' colour map");
-                    }else{
-                        FUNCERR("Unable to reload texture using selected colour map");
-                    }
+                    cycle_colour_maps_prev();
 
                 //Toggle whether existing contours should be displayed.
                 }else if( thechar == 'x' ){
-                    ShowExistingContours = !ShowExistingContours;
+                    toggle_showing_existing_contours();
 
                 //Place or remove an invisible marker for measurement in the DICOM coordinate system.
                 }else if( thechar == 'm' ){
-                    // If a valid point exists, clear it.
-                    if(tagged_pos){
-                        tagged_pos = {}; // Reset the optional.
-
-                    // If a valid point does not yet exist, try to tag the current mouse point.
-                    }else{
-                        auto mc = Convert_Mouse_Coords();
-                        if(mc.mouse_DICOM_pos_valid){
-                            const auto mouse_pos = mc.mouse_DICOM_pos;
-                            tagged_pos = mouse_pos;
-                        }else{
-                            FUNCWARN("Unable to place marker: mouse not hovering over an image");
-                        }
-                    }
+                    toggle_measurement_mode();
 
                 //Set the flag for dumping the window contents as an image after the next render.
                 }else if( thechar == 'd' ){
-                    DumpScreenshot = true;
+                    initiate_screenshot();
 
                 //Dump raw pixels for all spatially overlapping images from the current array.
                 // (Useful for dumping time courses.)
                 }else if( thechar == 'D' ){
-
-                    //Get a list of images which spatially overlap this point. Order should be maintained.
-                    const auto pix_pos = disp_img_it->position(0,0);
-                    const auto ortho = disp_img_it->row_unit.Cross( disp_img_it->col_unit ).unit();
-                    const std::list<vec3<double>> points = { pix_pos, pix_pos + ortho * disp_img_it->pxl_dz * 0.25,
-                                                                      pix_pos - ortho * disp_img_it->pxl_dz * 0.25 };
-                    auto encompassing_images = (*img_array_ptr_it)->imagecoll.get_images_which_encompass_all_points(points);
-
-                    long int count = 0;
-                    for(auto & pimg : encompassing_images){
-                        const auto pixel_dump_filename_out = Get_Unique_Sequential_Filename("/tmp/spatially_overlapping_dump_",6,".fits");
-                        if(WriteToFITS(*pimg,pixel_dump_filename_out)){
-                            FUNCINFO("Dumped pixel data for image " << count << " to file '" << pixel_dump_filename_out << "'");
-                        }else{
-                            FUNCWARN("Unable to dump pixel data for image " << count << " to file '" << pixel_dump_filename_out << "'");
-                        }
-
-                    }
+                    dump_raw_pixels_for_overlapping_images();
 
                 //Dump the current image to file.
                 }else if(thechar == 'i'){
-                    const auto pixel_dump_filename_out = Get_Unique_Sequential_Filename("/tmp/display_image_dump_",6,".fits");
-                    if(WriteToFITS(*disp_img_it,pixel_dump_filename_out)){
-                        FUNCINFO("Dumped pixel data for this image to file '" << pixel_dump_filename_out << "'");
-                    }else{
-                        FUNCWARN("Unable to dump pixel data for this image to file '" << pixel_dump_filename_out << "'");
-                    }
+                    dump_current_image_to_file();
 
                 //Dump all images in the current array to file.
                 }else if(thechar == 'I'){
-                    long int count = 0;
-                    for(auto &pimg : (*img_array_ptr_it)->imagecoll.images){
-                        const auto pixel_dump_filename_out = Get_Unique_Sequential_Filename("/tmp/image_dump_",6,".fits");
-                        if(WriteToFITS(pimg,pixel_dump_filename_out)){
-                            FUNCINFO("Dumped pixel data for image " << count << " to file '" << pixel_dump_filename_out << "'");
-                        }else{
-                            FUNCWARN("Unable to dump pixel data for this image to file '" << pixel_dump_filename_out << "'");
-                        }
-                        ++count;
-                    }
+                    dump_current_image_array_to_files();
 
                 //Given the current mouse coordinates, dump pixel intensity profiles along the current row and column.
-                //
-                }else if( (thechar == 'r') || (thechar == 'c') ){
-                    auto mc = Convert_Mouse_Coords();
-                    if(!mc.pixel_image_pos_valid){
-                        FUNCWARN("The mouse is not currently hovering over the image. Cannot dump row/column profiles");
-                        break;
-                    }
-                    const auto row_as_u = mc.pixel_image_pos_row;
-                    const auto col_as_u = mc.pixel_image_pos_col;
-
-                    FUNCINFO("Dumping row and column profiles for row,col = " << row_as_u << "," << col_as_u);
-
-                    samples_1D<double> row_profile, col_profile;
-                    std::stringstream title;
-
-                    for(auto i = 0; i < disp_img_it->columns; ++i){
-                        const auto val_raw = disp_img_it->value(row_as_u,i,0);
-                        const auto col_num = static_cast<double>(i);
-                        if(std::isfinite(val_raw)) row_profile.push_back({ col_num, 0.0, val_raw, 0.0 });
-                    }
-                    for(auto i = 0; i < disp_img_it->rows; ++i){
-                        const auto val_raw = disp_img_it->value(i,col_as_u,0);
-                        const auto row_num = static_cast<double>(i);
-                        if(std::isfinite(val_raw)) col_profile.push_back({ row_num, 0.0, val_raw, 0.0 });
-                    }
-
-                    try{
-                        if(thechar == 'r'){
-                            if(row_profile.size() < 2) throw std::runtime_error("Insufficient data for plot");
-                            title << "Profile for row " << row_as_u << ")";
-
-                            YgorMathPlottingGnuplot::Shuttle<samples_1D<double>> row_shtl(row_profile, "Row Profile");
-                            YgorMathPlottingGnuplot::Plot<double>({row_shtl}, title.str(), "Pixel Index (row #)", "Pixel Intensity");
-                        }else{
-                            if(col_profile.size() < 2) throw std::runtime_error("Insufficient data for plot");
-                            title << "Profile for column " << col_as_u << ")";
-
-                            YgorMathPlottingGnuplot::Shuttle<samples_1D<double>> col_shtl(col_profile, "Col Profile");
-                            YgorMathPlottingGnuplot::Plot<double>({col_shtl}, title.str(), "Pixel Index (column #)", "Pixel Intensity");
-                        }
-                    }catch(const std::exception &e){
-                        FUNCWARN("Failed to plot: " << e.what());
-                    }
+                }else if(thechar == 'r'){
+                    dump_rc_aligned_image_intensity_profiles('r');
+                }else if(thechar == 'c'){
+                    dump_rc_aligned_image_intensity_profiles('c');
 
                 //Launch/open a realtime plotting window.
                 }else if( thechar == 'T' ){
-                    plotwindow.create(sf::VideoMode(640, 480), "DICOMautomaton Time Courses");
-                    plotwindow.setFramerateLimit(30);
-                    plotwindowtype = SecondaryPlot::TimeCourse;
+                    launch_time_plot_window();
 
                 //Launch/open a realtime plotting window.
                 }else if( thechar == 'R' ){
-                    plotwindow.create(sf::VideoMode(640, 480), "DICOMautomaton Row Profile Inspector");
-                    plotwindow.setFramerateLimit(30);
-                    plotwindowtype = SecondaryPlot::RowProfile;
+                    launch_row_plot_window();
 
                 //Launch/open a realtime plotting window.
                 }else if( thechar == 'C' ){
-                    plotwindow.create(sf::VideoMode(640, 480), "DICOMautomaton Column Profile Inspector");
-                    plotwindow.setFramerateLimit(30);
-                    plotwindowtype = SecondaryPlot::ColumnProfile;
+                    launch_column_plot_window();
 
                 //Given the current mouse coordinates, dump a time series at the image pixel over all available images
                 // which spatially overlap.
@@ -802,785 +1723,88 @@ Drover SFML_Viewer( Drover DICOM_data,
                 // So this routine dumps a time course at the mouse pixel.
                 //
                 }else if( thechar == 't' ){
-                    auto mc = Convert_Mouse_Coords();
-                    if(!mc.voxel_DICOM_pos_valid){
-                        FUNCWARN("The mouse is not currently hovering over the image. Cannot dump time course");
-                        break;
-                    }
-                    const auto row_as_u = mc.pixel_image_pos_row;
-                    const auto col_as_u = mc.pixel_image_pos_col;
-                    const auto pix_pos = mc.voxel_DICOM_pos;
-                    FUNCINFO("Dumping time course for row,col = " << row_as_u << "," << col_as_u);
-
-                    //Get a list of images which spatially overlap this point. Order should be maintained.
-                    const auto ortho = disp_img_it->row_unit.Cross( disp_img_it->col_unit ).unit();
-                    const std::list<vec3<double>> points = { pix_pos, pix_pos + ortho * disp_img_it->pxl_dz * 0.25,
-                                                                      pix_pos - ortho * disp_img_it->pxl_dz * 0.25 };
-                    auto encompassing_images = (*img_array_ptr_it)->imagecoll.get_images_which_encompass_all_points(points);
-
-                    //Cycle over the images, dumping the ordinate (pixel values) vs abscissa (time) derived from metadata.
-                    samples_1D<double> shtl;
-                    const std::string quantity("dt"); //As it appears in the metadata. Must convert to a double!
-
-                    const double radius = 2.1; //Circle of certain radius (in DICOM-coord. system).
-                    std::stringstream title;
-                    title << "P_{row,col,rad} = P_{" << row_as_u << "," << col_as_u << "," << radius << "}";
-                    title << " vs " << quantity << ". ";
-
-                    for(const auto &enc_img_it : encompassing_images){
-                        if(auto abscissa = enc_img_it->GetMetadataValueAs<double>(quantity)){
-                            //Circle of certain radius (in DICOM-coord. system).
-                            std::list<double> vals;
-                            for(auto lrow = 0; lrow < enc_img_it->rows; ++lrow){
-                                for(auto lcol = 0; lcol < enc_img_it->columns; ++lcol){
-                                    const auto row_col_pix_pos = enc_img_it->position(lrow,lcol);
-                                    if(pix_pos.distance(row_col_pix_pos) <= radius){
-                                        const auto pix_val = enc_img_it->value(lrow,lcol,0);
-                                        if(std::isfinite(pix_val)) vals.push_back( static_cast<double>(pix_val) );
-                                    }
-                                }
-                            }
-                            const auto dabscissa = 0.0;
-                            const auto ordinate  = Stats::Mean(vals);
-                            const auto dordinate = (vals.size() > 2) ? std::sqrt(Stats::Unbiased_Var_Est(vals))/std::sqrt(1.0*vals.size()) 
-                                                                     : 0.0;
-                            shtl.push_back(abscissa.value(),dabscissa,ordinate,dordinate);
-                        }
-                    }
-
-
-                    title << "Time Course. Images encompass " << pix_pos << ". ";
-                    try{
-                        YgorMathPlottingGnuplot::Shuttle<samples_1D<double>> ymp_shtl(shtl, "Buffer A");
-                        YgorMathPlottingGnuplot::Plot<double>({ymp_shtl}, title.str(), "Time (s)", "Pixel Intensity");
-                    }catch(const std::exception &e){
-                        FUNCWARN("Failed to plot: " << e.what());
-                    }
-                    shtl.Write_To_File(Get_Unique_Sequential_Filename("/tmp/pixel_intensity_time_course_",6,".txt"));
+                    dump_voxel_time_series();
 
 
                 //Given the current mouse coordinates, try to show a perfusion model using model parameters from
                 // other images. Also show a time course of the raw data for comparison with the model fit.
-                //
                 }else if( (thechar == 'M') ){
-                    auto mc = Convert_Mouse_Coords();
-                    if(!mc.voxel_DICOM_pos_valid){
-                        FUNCWARN("The mouse is not currently hovering over the image. Cannot compute perfusion model");
-                        break;
-                    }
-                    const auto row_as_u = mc.pixel_image_pos_row;
-                    const auto col_as_u = mc.pixel_image_pos_col;
-                    const auto pix_pos = mc.voxel_DICOM_pos;
-
-                    const auto ortho = disp_img_it->row_unit.Cross( disp_img_it->col_unit ).unit();
-                    const std::list<vec3<double>> points = { pix_pos, pix_pos + ortho * disp_img_it->pxl_dz * 0.25,
-                                                                      pix_pos - ortho * disp_img_it->pxl_dz * 0.25 };
-
-                    //Metadata quantities of interest.
-                    const auto  k1A_regex = Compile_Regex(".*k1A.*");
-                    const auto tauA_regex = Compile_Regex(".*tauA.*");
-                    const auto  k1V_regex = Compile_Regex(".*k1V.*");
-                    const auto tauV_regex = Compile_Regex(".*tauV.*");
-                    const auto   k2_regex = Compile_Regex(".*k2.*");
-
-                    enum {
-                        Have_No_Model,
-                        Have_1Compartment2Input_5Param_LinearInterp_Model,
-                        Have_1Compartment2Input_5Param_Chebyshev_Model,
-                        Have_1Compartment2Input_Reduced3Param_Chebyshev_Model
-                    } HaveModel;
-                    HaveModel = Have_No_Model;
-
-                    KineticModel_1Compartment2Input_5Param_LinearInterp_Parameters model_5params_linear;
-                    KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters model_5params_cheby;
-                    KineticModel_1Compartment2Input_Reduced3Param_Chebyshev_Parameters model_3params_cheby;
-
-                    try{
-                        //First pass: look for serialized model_params. Deserialize.
-                        //
-                        // Note: we have to do this first, before loading voxel-specific data (e.g., k1A) because the
-                        // model_state is stripped of individual-voxel-specific data. Deserialization will overwrite 
-                        // individual-voxel-specific data with NaNs.
-                        //
-                        for(auto l_img_array_ptr_it = img_array_ptr_beg; l_img_array_ptr_it != img_array_ptr_end; ++l_img_array_ptr_it){
-                            auto encompassing_images = (*l_img_array_ptr_it)->imagecoll.get_images_which_encompass_all_points(points);
-
-                            for(const auto &enc_img_it : encompassing_images){
-                                if(auto m_str = enc_img_it->GetMetadataValueAs<std::string>("ModelState")){
-                                    if(HaveModel == Have_No_Model){
-                                        if(Deserialize(m_str.value(),model_5params_linear)){
-                                            HaveModel = Have_1Compartment2Input_5Param_LinearInterp_Model;
-                                        }else if(Deserialize(m_str.value(),model_3params_cheby)){
-                                            HaveModel = Have_1Compartment2Input_Reduced3Param_Chebyshev_Model;
-                                        }else if(Deserialize(m_str.value(),model_5params_cheby)){
-                                            HaveModel = Have_1Compartment2Input_5Param_Chebyshev_Model;
-                                        }else{
-                                            throw std::runtime_error("Unable to deserialize model parameters.");
-                                        }
-                                        break;
-                                    }
-                                }
-                            }
-                        }
-                        if(HaveModel == Have_No_Model){
-                            throw std::logic_error("We should have a valid model here, but do not.");
-                        }
-
-                        //Second pass: locate individual-voxel-specific data needed to evaluate the model.
-                        std::map<std::string, samples_1D<double>> time_courses;
-                        for(auto l_img_array_ptr_it = img_array_ptr_beg; l_img_array_ptr_it != img_array_ptr_end; ++l_img_array_ptr_it){
-                            auto encompassing_images = (*l_img_array_ptr_it)->imagecoll.get_images_which_encompass_all_points(points);
-
-                            for(const auto &enc_img_it : encompassing_images){
-                                //Find the pixel of interest.
-                                for(auto l_chnl = 0; l_chnl < enc_img_it->channels; ++l_chnl){
-                                    double pix_val;
-                                    try{
-                                        const auto indx = enc_img_it->index(pix_pos, l_chnl);
-                                        if(indx < 0) continue;
-                                    
-                                        auto rcc = enc_img_it->row_column_channel_from_index(indx);
-                                        const long int l_row = std::get<0>(rcc);
-                                        const long int l_col = std::get<1>(rcc);
-                                        if(l_chnl != std::get<2>(rcc)) continue;
-
-                                        pix_val = enc_img_it->value(l_row, l_col, l_chnl);
-
-                                    }catch(const std::exception &){
-                                        continue;
-                                    }
-
-                                    //Now have pixel value. Figure out what to do with it.
-                                    if(auto desc = enc_img_it->GetMetadataValueAs<std::string>("Description")){
-
-                                        if(false){
-                                        }else if(std::regex_match(desc.value(), k1A_regex)){
-                                            model_5params_linear.k1A = pix_val;
-                                            model_5params_cheby.k1A  = pix_val;
-                                            model_3params_cheby.k1A  = pix_val;
-                                        }else if(std::regex_match(desc.value(), tauA_regex)){
-                                            model_5params_linear.tauA = pix_val;
-                                            model_5params_cheby.tauA  = pix_val;
-                                            model_3params_cheby.tauA  = pix_val;
-                                        }else if(std::regex_match(desc.value(), k1V_regex)){
-                                            model_5params_linear.k1V = pix_val;
-                                            model_5params_cheby.k1V  = pix_val;
-                                            model_3params_cheby.k1V  = pix_val;
-                                        }else if(std::regex_match(desc.value(), tauV_regex)){
-                                            model_5params_linear.tauV = pix_val;
-                                            model_5params_cheby.tauV  = pix_val;
-                                            model_3params_cheby.tauV  = pix_val;
-                                        }else if(std::regex_match(desc.value(), k2_regex)){
-                                            model_5params_linear.k2 = pix_val;
-                                            model_5params_cheby.k2  = pix_val;
-                                            model_3params_cheby.k2  = pix_val;
-
-                                        //Otherwise, if there is a timestamp then assume it is a time course we should show.
-                                        }else{
-                                            if(auto dt = enc_img_it->GetMetadataValueAs<double>("dt")){
-                                                time_courses[desc.value()].push_back(dt.value(), 0.0, pix_val, 0.0);
-                                            }
-                                        }
-                                    }
-                                    
-                                }
-                            }
-                        }
-
-                        //Now plot the time courses, evaluate the model, and plot the model.
-                        {
-                            const long int samples = 200;
-                            double tmin = std::numeric_limits<double>::infinity();
-                            double tmax = -tmin;
-                            for(const auto &p : time_courses){
-                                const auto extrema = p.second.Get_Extreme_Datum_x();
-                                tmin = std::min(tmin, extrema.first[0] - 5.0);
-                                tmax = std::max(tmax, extrema.second[0] + 5.0);
-                            }
-                            if( !std::isfinite(tmin) || !std::isfinite(tmax) ){
-                                tmin = -5.0;
-                                tmax = 200.0;
-                            }
-                            const double dt = (tmax - tmin) / static_cast<double>(samples);
-
-                            samples_1D<double> fitted_model;
-                            for(long int i = 0; i < samples; ++i){
-                                const double t = tmin + dt * i;
-                                if(HaveModel == Have_1Compartment2Input_5Param_LinearInterp_Model){
-                                    KineticModel_1Compartment2Input_5Param_LinearInterp_Results eval_res;
-                                    Evaluate_Model(model_5params_linear,t,eval_res);
-                                    fitted_model.push_back(t, 0.0, eval_res.I, 0.0);
-                                }else if(HaveModel == Have_1Compartment2Input_5Param_Chebyshev_Model){
-                                    KineticModel_1Compartment2Input_5Param_Chebyshev_Results eval_res;
-                                    Evaluate_Model(model_5params_cheby,t,eval_res);
-                                    fitted_model.push_back(t, 0.0, eval_res.I, 0.0);
-                                }else if(HaveModel == Have_1Compartment2Input_Reduced3Param_Chebyshev_Model){
-                                    KineticModel_1Compartment2Input_Reduced3Param_Chebyshev_Results eval_res;
-                                    Evaluate_Model(model_3params_cheby,t,eval_res);
-                                    fitted_model.push_back(t, 0.0, eval_res.I, 0.0);
-                                }
-                            }
-
-                            std::string model_title = "Fitted model"_s;
-                            if(HaveModel == Have_1Compartment2Input_5Param_LinearInterp_Model){
-                                model_title += "(1C2I, 5Param, LinearInterp)";
-                            }else if(HaveModel == Have_1Compartment2Input_5Param_Chebyshev_Model){
-                                model_title += "(1C2I, 5Param, Chebyshev)";
-                            }else if(HaveModel == Have_1Compartment2Input_Reduced3Param_Chebyshev_Model){
-                                model_title += "(1C2I, Reduced3Param, Chebyshev)";
-                            }
-                            time_courses[model_title] = fitted_model;
-                        }
-
-                        const std::string Title = "Time course: row = " + std::to_string(row_as_u) + ", col = " + std::to_string(col_as_u);
-                        PlotTimeCourses(Title, time_courses, {});
-                    }catch(const std::exception &e){
-                        FUNCWARN("Unable to reconstruct model: " << e.what());
-                    }
-                             
+                    show_perfusion_model();
 
                 //Given the current mouse coordinates, dump the pixel value for [A]ll image sets which spatially overlap.
                 // This routine is useful for debugging problematic pixels, or trying to follow per-pixel calculations.
-                //
-                // NOTE: This routine finds the pixel nearest to the specified voxel in DICOM space. So if the image was
-                //       resampled, you will still be able to track the pixel nearest to the centre. In case only exact
-                //       pixels should be tracked, the row and column numbers are spit out; so just filter out pixel
-                //       coordinates you don't want.
-                //
                 }else if( (thechar == 'a') || (thechar == 'A') ){
-                    auto mc = Convert_Mouse_Coords();
-                    if(!mc.voxel_DICOM_pos_valid){
-                        FUNCWARN("The mouse is not currently hovering over the image. Cannot dump overlapping pixel values");
-                        break;
-                    }
-                    const auto row_as_u = mc.pixel_image_pos_row;
-                    const auto col_as_u = mc.pixel_image_pos_col;
-                    const auto pix_pos = mc.voxel_DICOM_pos;
-
-                    const auto ortho = disp_img_it->row_unit.Cross( disp_img_it->col_unit ).unit();
-                    const std::list<vec3<double>> points = { pix_pos, pix_pos + ortho * disp_img_it->pxl_dz * 0.25,
-                                                                      pix_pos - ortho * disp_img_it->pxl_dz * 0.25 };
-
-                    const auto FOname = Get_Unique_Sequential_Filename("/tmp/pixel_intensity_from_all_overlapping_images_", 6, ".csv");
-                    std::fstream FO(FOname, std::fstream::out);
-                    if(!FO) FUNCERR("Unable to write to the file '" << FOname << "'. Cannot continue");
-
-                    //Metadata quantities to also harvest.
-                    std::vector<std::string> quantities_d = { "dt", "FlipAngle" };
-                    std::vector<std::string> quantities_s = { "Description" };
-
-                    FO << "# Image Array Number, Row, Column, Channel, Pixel Value, ";
-                    for(auto quantity : quantities_d) FO << quantity << ", ";
-                    for(auto quantity : quantities_s) FO << quantity << ", ";
-                    FO << std::endl;
-
-                    //Get a list of images which spatially overlap this point. Order should be maintained.
-                    size_t ImageArrayNumber = 0;
-                    for(auto l_img_array_ptr_it = img_array_ptr_beg; l_img_array_ptr_it != img_array_ptr_end; ++l_img_array_ptr_it, ++ImageArrayNumber){
-                        auto encompassing_images = (*l_img_array_ptr_it)->imagecoll.get_images_which_encompass_all_points(points);
-                        for(const auto &enc_img_it : encompassing_images){
-                            //Find the pixel of interest.
-                            for(auto l_chnl = 0; l_chnl < enc_img_it->channels; ++l_chnl){
-                                long int l_row, l_col;
-                                double pix_val;
-                                try{
-                                    const auto indx = enc_img_it->index(pix_pos, l_chnl);
-                                    if(indx < 0) continue;
-                                
-                                    auto rcc = enc_img_it->row_column_channel_from_index(indx);
-                                    l_row = std::get<0>(rcc);
-                                    l_col = std::get<1>(rcc);
-                                    if(l_chnl != std::get<2>(rcc)) continue;
-
-                                    pix_val = enc_img_it->value(l_row, l_col, l_chnl);
-
-                                }catch(const std::exception &e){
-                                    continue;
-                                }
-                                FO << ImageArrayNumber << ", ";
-                                FO << l_row << ", " << l_col << ", " << l_chnl << ", ";
-                                FO << pix_val << ", ";
-
-                                for(auto quantity : quantities_d){
-                                    if(auto q = enc_img_it->GetMetadataValueAs<double>(quantity)){
-                                        FO << q.value() << ", ";
-                                    }
-                                }
-                                for(auto quantity : quantities_s){
-                                    if(auto q = enc_img_it->GetMetadataValueAs<std::string>(quantity)){
-                                        FO << Quote_Static_for_Bash(q.value()) << ", ";
-                                    }
-                                }
-                                FO << std::endl;
-
-                            }
-                        }
-                    }
-                    FO.close();
-                    FUNCINFO("Dumped pixel values which coincide with the specified voxel at"
-                             " row,col = " << row_as_u << "," << col_as_u);
-
+                    dump_overlapping_voxels();
 
                //Advance to the next/previous Image_Array. Also reset necessary display image iterators.
                }else if( (thechar == 'N') || (thechar == 'P') ){
-                    //Save the current image position. We will attempt to find the same spot after switching arrays.
-                    const auto disp_img_pos = static_cast<size_t>( std::distance(disp_img_beg, disp_img_it) );
-
-                    custom_width  = std::experimental::optional<double>();
-                    custom_centre = std::experimental::optional<double>();
-
                     if(thechar == 'N'){
-                        if(img_array_ptr_it == img_array_ptr_last){ //Wrap around forwards.
-                            img_array_ptr_it = img_array_ptr_beg;
-                        }else{
-                            std::advance(img_array_ptr_it, 1);
-                        }
-
+                        advance_to_next_prev_image_array(1);
                     }else if(thechar == 'P'){
-                        if(img_array_ptr_it == img_array_ptr_beg){ //Wrap around backwards.
-                            img_array_ptr_it = img_array_ptr_last;
-                        }else{
-                            std::advance(img_array_ptr_it,-1);
-                        }
-                    }
-                    FUNCINFO("There are " << (*img_array_ptr_it)->imagecoll.images.size() << " images in this Image_Array");
-
-                    disp_img_beg  = (*img_array_ptr_it)->imagecoll.images.begin();
-                    disp_img_last = std::prev((*img_array_ptr_it)->imagecoll.images.end());
-                    disp_img_it   = disp_img_beg;
-
-                    if(disp_img_pos < (*img_array_ptr_it)->imagecoll.images.size()){
-                        std::advance(disp_img_it, disp_img_pos);
-                    }
-
-                    if(!contour_coll_shtl.contours.back().points.empty()){
-                        contour_coll_shtl.contours.emplace_back();
-                        contour_coll_shtl.contours.back().closed = true;
-                    }
-
-                    if(load_img_texture_sprite(disp_img_it, disp_img_texture_sprite)){
-                        scale_sprite_to_fill_screen(window,disp_img_it,disp_img_texture_sprite);
-                        FUNCINFO("Loaded Image_Array " << std::distance(img_array_ptr_beg,img_array_ptr_it) << ". "
-                                 "There are " << (*img_array_ptr_it)->imagecoll.images.size() << " images in this Image_Array");
-                        
-                    }else{ 
-                        FUNCERR("Unable to load image --> texture --> sprite");
-                    }   
-
-                    if(auto ImageDesc = disp_img_it->GetMetadataValueAs<std::string>("Description")){
-                        window.setTitle("DICOMautomaton IV: '"_s + ImageDesc.value() + "'");
+                        advance_to_next_prev_image_array(-1);
                     }else{
-                        window.setTitle("DICOMautomaton IV: <no description available>");
+                        throw std::logic_error("Advancement direction not understood. Cannot continue.");
                     }
-
-                    Update_Mouse_Coords_Voxel_Sample();
 
                 //Advance to the next/previous display image in the current Image_Array.
                 }else if( (thechar == 'n') || (thechar == 'p') ){
                     if(thechar == 'n'){
-                        if(disp_img_it == disp_img_last){
-                            disp_img_it = disp_img_beg;
-                        }else{
-                            std::advance(disp_img_it, 1);
-                        }
+                        advance_to_next_prev_image(1);
                     }else if(thechar == 'p'){
-                        if(disp_img_it == disp_img_beg){
-                            disp_img_it = disp_img_last;
-                        }else{
-                            std::advance(disp_img_it,-1);
-                        }
-                    }
-
-                    if(!contour_coll_shtl.contours.back().points.empty()){
-                        contour_coll_shtl.contours.emplace_back();       
-                        contour_coll_shtl.contours.back().closed = true;
-                    }
-
-                    if(load_img_texture_sprite(disp_img_it, disp_img_texture_sprite)){
-                        scale_sprite_to_fill_screen(window,disp_img_it,disp_img_texture_sprite);
-
-                        //const auto img_number = std::distance((*img_array_ptr_it)->imagecoll.images.begin(), disp_img_it);
-                        const auto img_number = std::distance(disp_img_beg, disp_img_it);
-                        FUNCINFO("Loaded next texture in unaltered Image_Array order. Displaying image number " << img_number);
-                        
+                        advance_to_next_prev_image(-1);
                     }else{
-                        FUNCERR("Unable to load image --> texture --> sprite");
+                        throw std::logic_error("Advancement direction not understood. Cannot continue.");
                     }
- 
-                    if(auto ImageDesc = disp_img_it->GetMetadataValueAs<std::string>("Description")){
-                        window.setTitle("DICOMautomaton IV: '"_s + ImageDesc.value() + "'");
-                    }else{
-                        window.setTitle("DICOMautomaton IV: <no description available>");
-                    }
-
-                    //Scale the image to fill the available space.
-                    scale_sprite_to_fill_screen(window,disp_img_it,disp_img_texture_sprite);
-
-                    Update_Mouse_Coords_Voxel_Sample();
 
                 //Sample pixels from an external image into the current frame.
                 }else if( thechar == 'f' ){
-
-                    do{ // Does not loop, just lets us break out.
-                        //std::string fname;
-                        //std::cout << std::endl;
-                        //std::cout << "Please enter the filename you wish to sample from: " << std::endl;
-                        //std::cin >> fname;
-                        const auto raw_fname = Execute_Command_In_Pipe(
-                                    "zenity --title='Select a file to sample from (FITS format).' --file-selection --separator='\n' 2>/dev/null");
-                        const auto fname_vec = SplitStringToVector(raw_fname + "\n\n", '\n', 'd');
-                        if(fname_vec.empty()) break;
-                        const std::string fname = fname_vec.front();
-
-                        planar_image<float,double> casted_img; // External image with casted pixel values.
-                        bool loaded = false;
-
-                        if(!loaded){
-                            try{
-                                auto animg = ReadFromFITS<uint8_t,double>(fname);
-                                casted_img.cast_from(animg);
-                                loaded = true;
-                            }catch(const std::exception &e){ };
-                        }
-                        if(!loaded){
-                            try{
-                                auto animg = ReadFromFITS<float,double>(fname);
-                                casted_img = animg;
-                                loaded = true;
-                            }catch(const std::exception &e){ };
-                        }
-                        if(!loaded){
-                            FUNCINFO("Cannot load file '" << fname << "'");
-                            break;
-                        }
-
-                        //Sample the image by ignoring aspect ratio and scaling dimensions to fit.
-                        const auto r_scale = static_cast<double>(casted_img.rows)    / static_cast<double>(disp_img_it->rows);
-                        const auto c_scale = static_cast<double>(casted_img.columns) / static_cast<double>(disp_img_it->columns);
-                        for(long int ch = 0; ch < disp_img_it->channels; ++ch){
-                            for(long int r = 0; r < disp_img_it->rows; ++r){
-                                for(long int c = 0; c < disp_img_it->columns; ++c){
-                                    const auto clamped_r = static_cast<double>(r) * r_scale;
-                                    const auto clamped_c = static_cast<double>(c) * c_scale;
-                                    const long int clamped_ch = (ch >= casted_img.channels) ? 0 : ch;
-
-                                    disp_img_it->reference(r,c,ch) = 
-                                        casted_img.bilinearly_interpolate_in_pixel_number_space(clamped_r, clamped_c, clamped_ch);
-                                        //casted_img.bicubically_interpolate_in_pixel_number_space(clamped_r, clamped_c, clamped_ch);
-                                }
-                            }
-                        }
-
-                        if(load_img_texture_sprite(disp_img_it, disp_img_texture_sprite)){
-                            scale_sprite_to_fill_screen(window,disp_img_it,disp_img_texture_sprite);
-
-                            const auto img_number = std::distance(disp_img_beg, disp_img_it);
-                            FUNCINFO("Loaded next texture in unaltered Image_Array order. Displaying image number " << img_number);
-                            
-                        }else{
-                            FUNCERR("Unable to load image --> texture --> sprite");
-                        }
-     
-                        //Scale the image to fill the available space.
-                        scale_sprite_to_fill_screen(window,disp_img_it,disp_img_texture_sprite);
-
-                        Update_Mouse_Coords_Voxel_Sample();
-                    }while(false);
+                    overwrite_current_frame();
 
                 //Flood the current image with a uniform pixel intensity.
                 }else if( thechar == 'F' ){
-
-                    float intensity;
-                    std::cout << std::endl;
-                    std::cout << "Please enter the intensity to flood with: " << std::endl;
-                    std::cin >> intensity;
-
-                    for(long int ch = 0; ch < disp_img_it->channels; ++ch){
-                        for(long int r = 0; r < disp_img_it->rows; ++r){
-                            for(long int c = 0; c < disp_img_it->columns; ++c){
-                                disp_img_it->reference(r,c,ch) = intensity;
-                            }
-                        }
-                    }
-
-                    if(load_img_texture_sprite(disp_img_it, disp_img_texture_sprite)){
-                        scale_sprite_to_fill_screen(window,disp_img_it,disp_img_texture_sprite);
-
-                        const auto img_number = std::distance(disp_img_beg, disp_img_it);
-                        FUNCINFO("Loaded next texture in unaltered Image_Array order. Displaying image number " << img_number);
-                        
-                    }else{
-                        FUNCERR("Unable to load image --> texture --> sprite");
-                    }
- 
-                    //Scale the image to fill the available space.
-                    scale_sprite_to_fill_screen(window,disp_img_it,disp_img_texture_sprite);
-
-                    Update_Mouse_Coords_Voxel_Sample();
+                    flood_current_pixels();
 
                 //Step to the next/previous image which spatially overlaps with the current display image.
                 }else if( (thechar == '-') || (thechar == '+') || (thechar == '_') || (thechar == '=') ){
-                    const auto disp_img_pos = disp_img_it->center();
-
-                    //Get a list of images which spatially overlap this point. Order should be maintained.
-                    const auto ortho = disp_img_it->row_unit.Cross( disp_img_it->col_unit ).unit();
-                    const std::list<vec3<double>> points = { disp_img_pos, disp_img_pos + ortho * disp_img_it->pxl_dz * 0.25,
-                                                                           disp_img_pos - ortho * disp_img_it->pxl_dz * 0.25 };
-                    auto encompassing_images = (*img_array_ptr_it)->imagecoll.get_images_which_encompass_all_points(points);
-
-                    //Find the images neighbouring the current image.
-                    auto enc_img_it = encompassing_images.begin();
-                    for(  ; enc_img_it != encompassing_images.end(); ++enc_img_it){
-                        if(*enc_img_it == disp_img_it) break;
+                    if(false){
+                    }else if((thechar == '+') || (thechar == '=')){
+                        advance_to_next_prev_overlapping_image(1);
+                    }else if((thechar == '-') || (thechar == '_')){
+                        advance_to_next_prev_overlapping_image(-1);
                     }
-                    if(enc_img_it == encompassing_images.end()){
-                        FUNCWARN("Unable to step over spatially overlapping images. None found");
-                    }else{
-                        if((thechar == '-') || (thechar == '_')){
-                            if(enc_img_it == encompassing_images.begin()){
-                                disp_img_it = encompassing_images.back();
-                            }else{
-                                --enc_img_it;
-                                disp_img_it = *enc_img_it;
-                            }
-                        }else if((thechar == '+') || (thechar == '=')){
-                            ++enc_img_it;
-                            if(enc_img_it == encompassing_images.end()){
-                                disp_img_it = encompassing_images.front();
-                            }else{
-                                disp_img_it = *enc_img_it;
-                            }
-                        }
-                    }
-
-                    if(load_img_texture_sprite(disp_img_it, disp_img_texture_sprite)){
-                        scale_sprite_to_fill_screen(window,disp_img_it,disp_img_texture_sprite);
-
-                        const auto img_number = std::distance(disp_img_beg, disp_img_it);
-                        FUNCINFO("Loaded next/previous spatially-overlapping texture. Displaying image number " << img_number);
-
-                    }else{
-                        FUNCERR("Unable to load image --> texture --> sprite");
-                    }
-
-                    if(auto ImageDesc = disp_img_it->GetMetadataValueAs<std::string>("Description")){
-                        window.setTitle("DICOMautomaton IV: '"_s + ImageDesc.value() + "'");
-                    }else{
-                        window.setTitle("DICOMautomaton IV: <no description available>");
-                    }
-                   
-                    //Scale the image to fill the available space.
-                    scale_sprite_to_fill_screen(window,disp_img_it,disp_img_texture_sprite);
-
-                    Update_Mouse_Coords_Voxel_Sample();
 
                 //Reset the image scale to be pixel-for-pixel what is seen on screen. (Unless there is a view
                 // that has some transformation over on-screen objects.)
                 }else if( (thechar == 'l') || (thechar == 'L')){
-                    disp_img_texture_sprite.second.setScale(1.0f,1.0f);
-
-                    Update_Mouse_Coords_Voxel_Sample();
+                    reset_image_scale();
 
                 //Toggle showing metadata tags that are identical to the neighbouring image's metadata tags.
                 }else if( thechar == 'u' ){
-                    OnlyShowTagsDifferentToNeighbours = !OnlyShowTagsDifferentToNeighbours;
+                    toggle_showing_adjacently_different_metadata();
 
-                //dump to file and show a pop-up window with the full metadata of the present image.
+                //Dump to file and show a pop-up window with the full metadata of the present image.
                 }else if( thechar == 'U' ){
-                    const auto FOname = Get_Unique_Sequential_Filename("/tmp/image_metadata_dump_", 6, ".txt");
-                    try{
-                        //Dump the metadata to a file.
-                        {
-                            std::fstream FO(FOname, std::fstream::out);
-                            if(!FO) throw std::runtime_error("Unable to write metadata to file.");
-                            for(const auto &apair : disp_img_it->metadata){
-                                FO << apair.first << " : " << apair.second << std::endl;
-                            }
-                        }
-
-                        //Notify that the file has been created.
-                        FUNCINFO("Dumped metadata to file '" << FOname << "'");
-
-                        //Try launch a pop-up window with the metadata from the file displayed.
-                        std::stringstream ss;
-                        ss << "zenity --text-info --no-wrap --filename='" << FOname << "' 2>/dev/null";
-                        Execute_Command_In_Pipe(ss.str());
-
-                    }catch(const std::exception &e){ 
-                        FUNCWARN("Metadata dump failed: " << e.what());
-                    }
-
+                    dump_and_expand_image_metadata();
 
                 //Erase the present contour, or, if empty, the previous non-empty contour. (Not the whole organ.)
                 }else if( thechar == 'e' ){
-                    try{
-                        const std::string erase_roi = Detox_String(Execute_Command_In_Pipe(
-                                "zenity --question --text='Erase current or previous non-empty contour?' 2>/dev/null && echo 1"));
-                        if(erase_roi != "1"){
-                            FUNCINFO("Not erasing contours. Here it is for inspection purposes:" << contour_coll_shtl.write_to_string());
-                            throw std::runtime_error("Instructed not to erase contour.");
-                        }
-
-                        //Trim empty contours from the shuttle.
-                        contour_coll_shtl.Purge_Contours_Below_Point_Count_Threshold(1);
-                        if(contour_coll_shtl.contours.empty()) throw std::runtime_error("Nothing to erase.");
-
-                        //Erase the last contour.
-                        const std::string c_as_str( contour_coll_shtl.contours.back().write_to_string() );                             
-                        FUNCINFO("About to erase contour. Here it is for inspection purposes: " << c_as_str);
-                        contour_coll_shtl.contours.pop_back();
-                        
-                        //Provide an empty contour for future contouring.
-                        contour_coll_shtl.contours.emplace_back();
-                        contour_coll_shtl.contours.back().closed = true;
-
-                        FUNCINFO("Latest non-empty contour erased");
-                    }catch(const std::exception &){ }
-
+                    erase_most_recently_drawn_contour();
 
                 //Erase or Empty the current working contour buffer. 
                 }else if( thechar == 'E' ){
-
-                    try{
-                        const std::string erase_roi = Detox_String(Execute_Command_In_Pipe(
-                                "zenity --question --text='Erase whole working ROI?' 2>/dev/null && echo 1"));
-                        if(erase_roi != "1"){
-                            FUNCINFO("Not erasing contours. Here it is for inspection purposes:" << contour_coll_shtl.write_to_string());
-                            throw std::runtime_error("Instructed not to clear contour buffer.");
-                        }
-
-                        //Clear the data in preparation for the next contour collection.
-                        contour_coll_shtl.contours.clear();
-                        contour_coll_shtl.contours.emplace_back();
-                        contour_coll_shtl.contours.back().closed = true;
-
-                        FUNCINFO("Contour collection cleared from working buffer");
-                    }catch(const std::exception &){ }
+                    purge_whole_contour_buffer();
 
                 //Save the current contour collection.
                 }else if( (thechar == 's') || (thechar == 'S') ){
-
-                    try{
-                        // Ask the user for additional information.
-                        const std::string save_roi = Detox_String(Execute_Command_In_Pipe("zenity --question --text='Save ROI?' 2>/dev/null && echo 1"));
-                        if(save_roi != "1"){
-                            FUNCINFO("Not saving contours. Here it is for inspection purposes:" << contour_coll_shtl.write_to_string());
-                            throw std::runtime_error("Instructed not to save.");
-                        }
-
-                        const std::string roi_name = Detox_String(Execute_Command_In_Pipe(
-                            "zenity --entry --text='What is the name of the ROI?' --entry-text='unspecified' 2>/dev/null"));
-                        if(roi_name.empty()) throw std::runtime_error("Cannot save with an empty ROI name. (Punctuation is removed.)");
-
-                        //Trim empty contours from the shuttle.
-                        contour_coll_shtl.Purge_Contours_Below_Point_Count_Threshold(3);
-                        if(contour_coll_shtl.contours.empty()) throw std::runtime_error("Given empty contour collection. Contours need >3 points each.");
-                        const std::string cc_as_str( contour_coll_shtl.write_to_string() );                             
-
-                        //Add metadata.
-                        auto FrameofReferenceUID = disp_img_it->GetMetadataValueAs<std::string>("FrameofReferenceUID");
-                        if(FrameofReferenceUID){
-                            contour_coll_shtl.Insert_Metadata("FrameofReferenceUID", FrameofReferenceUID.value());
-                        }else{
-                            throw std::runtime_error("Missing 'FrameofReferenceUID' metadata element. Cannot continue.");
-                        }
-
-                        auto StudyInstanceUID = disp_img_it->GetMetadataValueAs<std::string>("StudyInstanceUID");
-                        if(StudyInstanceUID){
-                            contour_coll_shtl.Insert_Metadata("StudyInstanceUID", StudyInstanceUID.value());
-                        }else{
-                            throw std::runtime_error("Missing 'StudyInstanceUID' metadata element. Cannot continue.");
-                        }
-
-                        contour_coll_shtl.Insert_Metadata("ROIName", roi_name);
-                        contour_coll_shtl.Insert_Metadata("NormalizedROIName", X(roi_name));
-                        contour_coll_shtl.Raw_ROI_name = roi_name;
-                        contour_coll_shtl.ROI_number = 1000;
-                        contour_coll_shtl.Minimum_Separation = disp_img_it->pxl_dz;
-
-
-                        //Insert the contours into the Drover object.
-                        if(DICOM_data.contour_data == nullptr){
-                            std::unique_ptr<Contour_Data> output (new Contour_Data());
-                            DICOM_data.contour_data = std::move(output);
-                        }
-                        DICOM_data.contour_data->ccs.emplace_back(contour_coll_shtl);
-
-                        //Clear the data in preparation for the next contour collection.
-                        contour_coll_shtl.contours.clear();
-                        contour_coll_shtl.contours.emplace_back();
-                        contour_coll_shtl.contours.back().closed = true;
-
-                        FUNCINFO("Drover class imbued with new contour collection");
-                    }catch(const std::exception &e){
-                        FUNCWARN("Unable to save contour collection: '" << e.what() << "'");
-                    }
+                    save_contour_buffer();
 
                 //Compute some stats for the working, unsaved contour collection.
                 }else if( thechar == '#' ){
-
-                    try{
-                        //Trim empty contours from the shuttle.
-                        auto cccopy = contour_coll_shtl;
-                        cccopy.Purge_Contours_Below_Point_Count_Threshold(3);
-                        if(cccopy.contours.empty()) throw std::runtime_error("Given empty contour collection. Contours need >3 points each.");
-
-                        //Create a dummy shuttle with the working contours.
-                        std::list<std::reference_wrapper<contour_collection<double>>> cc_ROI;
-                        auto base_ptr = reinterpret_cast<contour_collection<double> *>(&contour_coll_shtl);
-                        base_ptr->Insert_Metadata("ROIName", "working_ROI");
-                        cc_ROI.push_back( std::ref(*base_ptr) );
-
-                        //Accumulate the voxel intensity distributions.
-                        AccumulatePixelDistributionsUserData ud;
-                        if(!(*img_array_ptr_it)->imagecoll.Compute_Images( AccumulatePixelDistributions, { },
-                                                                   cc_ROI, &ud )){
-                            throw std::runtime_error("Unable to accumulate pixel distributions.");
-                        }
-
-                        std::stringstream ss;
-                        for(const auto &av : ud.accumulated_voxels){
-                            const auto lROIname = av.first;
-                            const auto PixelMean = Stats::Mean( av.second );
-                            const auto PixelMedian = Stats::Median( av.second );
-                            const auto PixelStdDev = std::sqrt(Stats::Unbiased_Var_Est( av.second ));
-                
-                            ss << "PixelMedian=" << PixelMedian << ", "
-                               << "PixelMean=" << PixelMean << ", "
-                               << "PixelStdDev=" << PixelStdDev << ", "
-                               << "SNR=" << PixelMean/PixelStdDev << ", "
-                               << "VoxelCount=" << av.second.size() << std::endl;
-                        }
-                        FUNCINFO("Working contour collection stats:\n\t" << ss.str());
-
-                    }catch(const std::exception &e){
-                        FUNCWARN("Unable to compute working contour collection stats: '" << e.what() << "'");
-                    }
+                    compute_stats_for_contour_buffer();
 
                 //Query the user to provide a window and level explicitly.
                 }else if( thechar == '%' ){
-                    try{
-                        const std::string low_str = Detox_String(Execute_Command_In_Pipe(
-                            "zenity --entry --text='What is the new window low?' --entry-text='100.0' 2>/dev/null"));
-                        const std::string high_str = Detox_String(Execute_Command_In_Pipe(
-                            "zenity --entry --text='What is the new window high?' --entry-text='500.0' 2>/dev/null"));
-
-                        // Parse the values and protect against mixing low and high values.
-                        const auto new_low  = std::stod(low_str);
-                        const auto new_high = std::stod(high_str);
-                        const auto new_fullwidth = std::abs(new_high - new_low);
-                        const auto new_centre = std::min(new_low, new_high) + 0.5 * new_fullwidth;
-                        custom_width.emplace(new_fullwidth);
-                        custom_centre.emplace(new_centre);
-
-                        if(load_img_texture_sprite(disp_img_it, disp_img_texture_sprite)){
-                            scale_sprite_to_fill_screen(window,disp_img_it,disp_img_texture_sprite);
-                        }else{
-                            FUNCERR("Unable to reload image after adjusting window/level");
-                        }
-                    }catch(const std::exception &e){
-                        FUNCWARN("Unable to parse window and level: '" << e.what() << "'");
-                    }
+                    query_for_window_and_level();
 
                 }else{
                     FUNCINFO("Character '" << thechar << "' is not yet bound to any action");
