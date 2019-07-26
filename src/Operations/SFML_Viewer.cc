@@ -1719,12 +1719,8 @@ Drover SFML_Viewer( Drover DICOM_data,
 
                 //Given the current mouse coordinates, dump a time series at the image pixel over all available images
                 // which spatially overlap.
-                //
-                // So this routine dumps a time course at the mouse pixel.
-                //
                 }else if( thechar == 't' ){
                     dump_voxel_time_series();
-
 
                 //Given the current mouse coordinates, try to show a perfusion model using model parameters from
                 // other images. Also show a time course of the raw data for comparison with the model fit.
@@ -1736,25 +1732,17 @@ Drover SFML_Viewer( Drover DICOM_data,
                 }else if( (thechar == 'a') || (thechar == 'A') ){
                     dump_overlapping_voxels();
 
-               //Advance to the next/previous Image_Array. Also reset necessary display image iterators.
-               }else if( (thechar == 'N') || (thechar == 'P') ){
-                    if(thechar == 'N'){
-                        advance_to_next_prev_image_array(1);
-                    }else if(thechar == 'P'){
-                        advance_to_next_prev_image_array(-1);
-                    }else{
-                        throw std::logic_error("Advancement direction not understood. Cannot continue.");
-                    }
+                //Advance to the next/previous Image_Array. Also reset necessary display image iterators.
+                }else if( thechar == 'N' ){
+                    advance_to_next_prev_image_array(1);
+                }else if( thechar == 'P' ){
+                    advance_to_next_prev_image_array(-1);
 
                 //Advance to the next/previous display image in the current Image_Array.
-                }else if( (thechar == 'n') || (thechar == 'p') ){
-                    if(thechar == 'n'){
-                        advance_to_next_prev_image(1);
-                    }else if(thechar == 'p'){
-                        advance_to_next_prev_image(-1);
-                    }else{
-                        throw std::logic_error("Advancement direction not understood. Cannot continue.");
-                    }
+                }else if( thechar == 'n' ){
+                    advance_to_next_prev_image(1);
+                }else if( thechar == 'p' ){
+                    advance_to_next_prev_image(-1);
 
                 //Sample pixels from an external image into the current frame.
                 }else if( thechar == 'f' ){
@@ -1765,13 +1753,10 @@ Drover SFML_Viewer( Drover DICOM_data,
                     flood_current_pixels();
 
                 //Step to the next/previous image which spatially overlaps with the current display image.
-                }else if( (thechar == '-') || (thechar == '+') || (thechar == '_') || (thechar == '=') ){
-                    if(false){
-                    }else if((thechar == '+') || (thechar == '=')){
-                        advance_to_next_prev_overlapping_image(1);
-                    }else if((thechar == '-') || (thechar == '_')){
-                        advance_to_next_prev_overlapping_image(-1);
-                    }
+                }else if( (thechar == '+') || (thechar == '=') ){
+                    advance_to_next_prev_overlapping_image(1);
+                }else if( (thechar == '-') || (thechar == '_') ){
+                    advance_to_next_prev_overlapping_image(-1);
 
                 //Reset the image scale to be pixel-for-pixel what is seen on screen. (Unless there is a view
                 // that has some transformation over on-screen objects.)
