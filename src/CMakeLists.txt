@@ -109,6 +109,13 @@ set_target_properties(XYZ_File_Loader_obj PROPERTIES
     POSITION_INDEPENDENT_CODE TRUE
 )
 
+add_library(3ddose_File_Loader_obj OBJECT
+    3ddose_File_Loader.cc  
+)
+set_target_properties(3ddose_File_Loader_obj PROPERTIES
+    POSITION_INDEPENDENT_CODE TRUE
+)
+
 add_library(OFF_Mesh_File_Loader_obj OBJECT
     OFF_Mesh_File_Loader.cc  
 )
@@ -315,6 +322,7 @@ add_executable (dicomautomaton_dispatcher
     $<TARGET_OBJECTS:DICOM_File_Loader_obj>
     $<TARGET_OBJECTS:FITS_File_Loader_obj>
     $<TARGET_OBJECTS:XYZ_File_Loader_obj>
+    $<TARGET_OBJECTS:3ddose_File_Loader_obj>
     $<TARGET_OBJECTS:OFF_Mesh_File_Loader_obj>
     $<TARGET_OBJECTS:OBJ_Mesh_File_Loader_obj>
     $<TARGET_OBJECTS:Write_File_obj>
@@ -378,6 +386,7 @@ add_executable(dicomautomaton_webserver
     $<TARGET_OBJECTS:DICOM_File_Loader_obj>
     $<TARGET_OBJECTS:FITS_File_Loader_obj>
     $<TARGET_OBJECTS:XYZ_File_Loader_obj>
+    $<TARGET_OBJECTS:3ddose_File_Loader_obj>
     $<TARGET_OBJECTS:OFF_Mesh_File_Loader_obj>
     $<TARGET_OBJECTS:OBJ_Mesh_File_Loader_obj>
     $<TARGET_OBJECTS:Write_File_obj>

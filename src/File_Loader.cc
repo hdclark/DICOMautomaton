@@ -26,6 +26,7 @@
 #include "XYZ_File_Loader.h"
 #include "OFF_Mesh_File_Loader.h"
 #include "OBJ_Mesh_File_Loader.h"
+#include "3ddose_File_Loader.h"
 
 
 
@@ -78,6 +79,13 @@ Load_Files( Drover &DICOM_data,
     if(!Paths.empty()
     && !Load_From_FITS_Files( DICOM_data, InvocationMetadata, FilenameLex, Paths )){
         FUNCWARN("Failed to load FITS file");
+        return false;
+    }
+
+    //Standalone file loading: DOSXYZnrc 3ddose files.
+    if(!Paths.empty()
+    && !Load_From_3ddose_Files( DICOM_data, InvocationMetadata, FilenameLex, Paths )){
+        FUNCWARN("Failed to load 3ddose file");
         return false;
     }
 
