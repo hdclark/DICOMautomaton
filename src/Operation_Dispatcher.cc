@@ -50,6 +50,7 @@
 #include "Operations/ConvertNaNsToAir.h"
 #include "Operations/ConvertNaNsToZeros.h"
 #include "Operations/ConvertPixelsToPoints.h"
+#include "Operations/ConvolveImages.h"
 #include "Operations/CopyImages.h"
 #include "Operations/CopyMeshes.h"
 #include "Operations/CountVoxels.h"
@@ -192,6 +193,7 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["ConvertNaNsToAir"] = std::make_pair(OpArgDocConvertNaNsToAir, ConvertNaNsToAir);
     out["ConvertNaNsToZeros"] = std::make_pair(OpArgDocConvertNaNsToZeros, ConvertNaNsToZeros);
     out["ConvertPixelsToPoints"] = std::make_pair(OpArgDocConvertPixelsToPoints, ConvertPixelsToPoints);
+    out["ConvolveImages"] = std::make_pair(OpArgDocConvolveImages, ConvolveImages);
     out["CopyImages"] = std::make_pair(OpArgDocCopyImages, CopyImages);
     out["CopyMeshes"] = std::make_pair(OpArgDocCopyMeshes, CopyMeshes);
     out["CountVoxels"] = std::make_pair(OpArgDocCountVoxels, CountVoxels);
