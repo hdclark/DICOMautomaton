@@ -70,6 +70,7 @@ add_library(Operations_objs OBJECT
     EvaluateNTCPModels.cc
     EvaluateTCPModels.cc
     ExportSurfaceMeshes.cc
+    ExportFITSImages.cc
     ExtractRadiomicFeatures.cc
     FVPicketFence.cc
     GenerateCalibrationCurve.cc
