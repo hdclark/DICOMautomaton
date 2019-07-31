@@ -135,6 +135,7 @@
 #include "Operations/SelectSlicesIntersectingROI.h"
 #include "Operations/SimplifyContours.h"
 #include "Operations/SimplifySurfaceMeshes.h"
+#include "Operations/SimulateRadiograph.h"
 #include "Operations/SpatialBlur.h"
 #include "Operations/SpatialDerivative.h"
 #include "Operations/SpatialSharpen.h"
@@ -283,6 +284,7 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["SelectSlicesIntersectingROI"] = std::make_pair(OpArgDocSelectSlicesIntersectingROI, SelectSlicesIntersectingROI);
     out["SimplifyContours"] = std::make_pair(OpArgDocSimplifyContours, SimplifyContours);
     out["SimplifySurfaceMeshes"] = std::make_pair(OpArgDocSimplifySurfaceMeshes, SimplifySurfaceMeshes);
+    out["SimulateRadiograph"] = std::make_pair(OpArgDocSimulateRadiograph, SimulateRadiograph);
     out["SpatialBlur"] = std::make_pair(OpArgDocSpatialBlur, SpatialBlur);
     out["SpatialDerivative"] = std::make_pair(OpArgDocSpatialDerivative, SpatialDerivative);
     out["SpatialSharpen"] = std::make_pair(OpArgDocSpatialSharpen, SpatialSharpen);
