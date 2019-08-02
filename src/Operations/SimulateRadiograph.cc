@@ -58,14 +58,30 @@ OperationDoc OpArgDocSimulateRadiograph(void){
     out.name = "SimulateRadiograph";
 
     out.desc = 
-        "This routine uses ray sampling to simulate radiographs from an image array.";
+        "This routine uses ray marching an volumteric sampling to simulate radiographs from a CT image array."
+        " Voxels are assumed to have intensities in HU. A simplisitic conversion"
+        " from CT number (in HU) to relative electron density (see note below) is performed for marched"
+        " rays.";
+        //" A ficticious, global 'reference' linear attenuation coefficient"
+        //" (or HVL) provided by the user is used to simulate the total attenuation of each ray."
+        //" Note that the virtual x-ray beam energy spectra is specified indirectly through"
+        //" the global linear attenuation coefficient (or HVL).";
 
     out.notes.emplace_back(
-         "Images must be rectilinear."
-         // Note: while this operation could be implemented without requiring rectilinearity, it is much faster to
-         // require it. If this functionality is required then modify this operation.
+        "Images must be rectilinear."
+        // Note: while this operation could be implemented without requiring rectilinearity, it is much faster to
+        // require it. If this functionality is required then modify this operation.
     );
-    
+    out.notes.emplace_back(
+        "This operation currently takes a simplistic approach and should only be used for purposes"
+        " where the simulated radiograph contrast can be tuned and validated (e.g., in a relative way)."
+    );
+    out.notes.emplace_back(
+        "This operation assumes mass density (in g/cm^3^) and relative"
+        " electron density (dimensionless; relative to electron density of water, which is $3.343E23$ cm^3^)"
+        " are numerically equivalent. This assumption appears to be reasonable for bulk human tissue"
+        " (arXiv:1508.00226v1)."
+    );
 
     out.args.emplace_back();
     out.args.back() = IAWhitelistOpArgDoc();
@@ -83,6 +99,34 @@ OperationDoc OpArgDocSimulateRadiograph(void){
     out.args.back().mimetype = "image/fits";
 
 
+/*
+    out.args.emplace_back();
+    out.args.back().name = "ReferenceHVL";
+    out.args.back().desc = "The reference half-value layer (HVL) to assume when converting total encountered relative"
+                           " electron density to radiograph contrast (in DICOM units; mm)."
+                           " Note that the HVL is related to the total linear attentuation"
+                           " coefficient via $\\mu = ln(2)/HVL$."
+                           " Also note that this routine assumes mass density (in g/cm^3^) and relative electron density"
+                           " (dimensionless; relative to electron density of water, which is $3.343E23$ cm^3^)"
+                           " are numerically equivalent. (Consult arXiv:1508.00226v1.)";
+    out.args.back().default_val = "6.93";
+    out.args.back().expected = true;
+    out.args.back().examples = { "1.23", "7.0", "15.0" };
+*/
+
+    out.args.emplace_back();
+    out.args.back().name = "MarchingDistance";
+    out.args.back().desc = "The distance (in DICOM units; mm) that rays will incrementally be marched at each iteration."
+                           " This value should be on the order of the smallest image voxel size to give the best image"
+                           " quality. Conversely, if a course radiograph is needed then larger values can be used."
+                           " Trilinear interpolation is used to sample the CT number at arbitrary points in 3D."
+                           " Note that the CT numbers between sample points are ignored, so tissue heterogeneities"
+                           " and features smaller than the marching distance are not likely to show up in the image.";
+    out.args.back().default_val = "0.5";
+    out.args.back().expected = true;
+    out.args.back().examples = { "0.25", "0.5", "1.0" };
+
+
     return out;
 }
 
@@ -97,11 +141,14 @@ Drover SimulateRadiograph(Drover DICOM_data,
 
     auto FilenameStr = OptArgs.getValueStr("Filename").value();
 
+//    const auto ReferenceHVL = std::stod( OptArgs.getValueStr("ReferenceHVL").value() );
+
+    const auto MarchingDistance = std::stod( OptArgs.getValueStr("MarchingDistance").value() );
+
     const auto RadiographRows = 512;
     const auto RadiographColumns = 512;
     const auto Channel = 0;
     //-----------------------------------------------------------------------------------------------------------------
-
 
     auto IAs_all = All_IAs( DICOM_data );
     //auto IAs = Whitelist( IAs_all, "Modality@CT" );
@@ -247,6 +294,60 @@ Drover SimulateRadiograph(Drover DICOM_data,
     const auto detector_plane = DetectImg->image_plane();
     const auto orthosrc_plane = OrthoSrcImg->image_plane();
 
+/*
+    // Compute tight bounding planes for the image volume to avoid costly interpolation outside the image volume.
+    std::vector<plane<double>> ia_bounding_planes;
+{
+    R grid_x_min = std::numeric_limits<R>::quiet_NaN();
+    R grid_x_max = std::numeric_limits<R>::quiet_NaN();
+    R grid_y_min = std::numeric_limits<R>::quiet_NaN();
+    R grid_y_max = std::numeric_limits<R>::quiet_NaN();
+    R grid_z_min = std::numeric_limits<R>::quiet_NaN();
+    R grid_z_max = std::numeric_limits<R>::quiet_NaN();
+
+    //Make three planes defined by the orientation normals. (They intersect the origin to simplify computing offsets.)
+    const vec3<R> zero(0.0, 0.0, 0.0);
+    const plane<R> GridXZeroPlane(GridX, zero);
+    const plane<R> GridYZeroPlane(GridY, zero);
+    const plane<R> GridZZeroPlane(GridZ, zero);
+
+    //Bound the vertices on the ROI.
+    for(const auto &cc_ref : ccs){
+        for(const auto &cop : cc_ref.get().contours){
+            for(const auto &v : cop.points){
+                //Compute the distance to each plane.
+                const auto distX = GridXZeroPlane.Get_Signed_Distance_To_Point(v);
+                const auto distY = GridYZeroPlane.Get_Signed_Distance_To_Point(v);
+                const auto distZ = GridZZeroPlane.Get_Signed_Distance_To_Point(v);
+
+                //Score the minimum and maximum distances.
+                if(!std::isfinite(grid_x_min) || (distX < grid_x_min)){  grid_x_min = distX; }
+                if(!std::isfinite(grid_x_max) || (distX > grid_x_max)){  grid_x_max = distX; }
+                if(!std::isfinite(grid_y_min) || (distY < grid_y_min)){  grid_y_min = distY; }
+                if(!std::isfinite(grid_y_max) || (distY > grid_y_max)){  grid_y_max = distY; }
+                if(!std::isfinite(grid_z_min) || (distZ < grid_z_min)){  grid_z_min = distZ; }
+                if(!std::isfinite(grid_z_max) || (distZ > grid_z_max)){  grid_z_max = distZ; }
+            }
+        }
+    }
+
+    //Add margins.
+    grid_x_min -= x_margin;
+    grid_x_max += x_margin;
+    grid_y_min -= y_margin;
+    grid_y_max += y_margin;
+    grid_z_min -= z_margin;
+    grid_z_max += z_margin;
+
+    //Create images that live on each Z-plane.
+    const R xwidth = grid_x_max - grid_x_min;
+    const R ywidth = grid_y_max - grid_y_min;
+    const R zwidth = grid_z_max - grid_z_min;
+    const auto voxel_dx = xwidth / static_cast<R>(number_of_columns);
+    const auto voxel_dy = ywidth / static_cast<R>(number_of_rows);
+    const auto voxel_dz = zwidth / static_cast<R>(number_of_images);
+}
+*/
 
     // ============================================== Ray-cast ==============================================
 
@@ -264,8 +365,7 @@ Drover SimulateRadiograph(Drover DICOM_data,
                     const auto ray_terminus = DetectImg->position(row, col);
                     const auto ray_line = line<double>(ray_terminus, ray_source);
 
-                    // Find the intersection of the ray with the near and far bounding planes. This will reduce the
-                    // amount of computation required.
+                    // Find the intersection of the ray with the near and far bounding planes.
                     vec3<double> near_bp_intersection;
                     if(!orthosrc_plane.Intersects_With_Line_Once(ray_line, near_bp_intersection)){
                         throw std::logic_error("Ray line does not intersect near image array bounding plane. Cannot continue.");
@@ -278,27 +378,29 @@ Drover SimulateRadiograph(Drover DICOM_data,
                     const vec3<double> ray_end = far_bp_intersection;
 
                     const auto travel_dist = ray_end.distance(ray_start);
-                    const auto ray_advance_dist = 1.0; // DICOM units (mm);
-                    const auto N_advances = static_cast<long int>(travel_dist/ray_advance_dist) + 1L;
+                    const auto N_advances = static_cast<long int>(travel_dist/MarchingDistance) + 1L;
+                    const auto actual_ray_march_dist = static_cast<double>(1)/static_cast<double>(N_advances);
 
-                    double accumulated_contrast = 0.0;   //The total accumulated contrast by the ray.
-                    long int accumulated_counts = 0;
+                    // Each time the ray samples the CT number, the ray is simulated to have interacted with the medium
+                    // for the length of the ray advancement. The remaining fractional ray intensity could be
+                    // immediately reduced by multiplying by a factor of exp(-density*dL). However, it is easier to sum
+                    // all the density*dL contributions and apply the reduction factor once at the end.
+                    double accumulated_mass_density_length = 0.0;
                     for(long int i = 0; i <= N_advances; ++i){
                         const auto x = static_cast<double>(i)/static_cast<double>(N_advances);
                         const auto P = (ray_end - ray_start) * x + ray_start;
 
-                        //Sample the image array at this point.
-                        //const auto interp_val = img_arr_ptr->imagecoll.trilinearly_interpolate(P,Channel);
-                        const auto interp_val = img_adj.trilinearly_interpolate(P,Channel,-1024.0f);
+                        const auto interp_val = img_adj.trilinearly_interpolate(P,Channel,-1000.0f);
 
-                        const auto intensity = (interp_val < -1024.0f) ? -1024.0f : interp_val; // Enforce physicality.
-                        const auto density = 1.0f + (intensity / 1024.0f);  // Electron density, assuming linear map from CT number.
-                        accumulated_contrast += density;
-                        ++accumulated_counts;
+                        // Ficticious mass density encountered by the ray.
+                        const auto intensity = (interp_val < -1000.0f) ? -1000.0f : interp_val; // Enforce physicality.
+                        const auto mass_density = 1.0f + (intensity / 1000.0f); 
+
+                        accumulated_mass_density_length += mass_density * actual_ray_march_dist;
                     }
 
                     //Record the result in the image.
-                    DetectImg->reference(row, col, 0) = static_cast<float>(accumulated_contrast);
+                    DetectImg->reference(row, col, 0) = static_cast<float>(accumulated_mass_density_length);
                 }
 
                 {
@@ -314,7 +416,8 @@ Drover SimulateRadiograph(Drover DICOM_data,
         for(long int row = 0; row < RadiographRows; ++row){
             for(long int col = 0; col < RadiographColumns; ++col){
                 const auto ad = DetectImg->reference(row, col, 0);
-                const auto f = 1.0 - std::exp(-ad / 10.0);
+                //const auto f = 1.0 - std::exp(-ad * std::log(2) / ReferenceHVL);
+                const auto f = 1.0 - std::exp(-ad);
                 DetectImg->reference(row, col, 0) = f;
             }
         }
