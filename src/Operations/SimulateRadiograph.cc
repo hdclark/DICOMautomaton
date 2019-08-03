@@ -62,10 +62,6 @@ OperationDoc OpArgDocSimulateRadiograph(void){
         " Voxels are assumed to have intensities in HU. A simplisitic conversion"
         " from CT number (in HU) to relative electron density (see note below) is performed for marched"
         " rays.";
-        //" A ficticious, global 'reference' linear attenuation coefficient"
-        //" (or HVL) provided by the user is used to simulate the total attenuation of each ray."
-        //" Note that the virtual x-ray beam energy spectra is specified indirectly through"
-        //" the global linear attenuation coefficient (or HVL).";
 
     out.notes.emplace_back(
         "Images must be rectilinear."
@@ -99,21 +95,6 @@ OperationDoc OpArgDocSimulateRadiograph(void){
     out.args.back().mimetype = "image/fits";
 
 
-/*
-    out.args.emplace_back();
-    out.args.back().name = "ReferenceHVL";
-    out.args.back().desc = "The reference half-value layer (HVL) to assume when converting total encountered relative"
-                           " electron density to radiograph contrast (in DICOM units; mm)."
-                           " Note that the HVL is related to the total linear attentuation"
-                           " coefficient via $\\mu = ln(2)/HVL$."
-                           " Also note that this routine assumes mass density (in g/cm^3^) and relative electron density"
-                           " (dimensionless; relative to electron density of water, which is $3.343E23$ cm^3^)"
-                           " are numerically equivalent. (Consult arXiv:1508.00226v1.)";
-    out.args.back().default_val = "6.93";
-    out.args.back().expected = true;
-    out.args.back().examples = { "1.23", "7.0", "15.0" };
-*/
-
     out.args.emplace_back();
     out.args.back().name = "MarchingDistance";
     out.args.back().desc = "The distance (in DICOM units; mm) that rays will incrementally be marched at each iteration."
@@ -125,6 +106,55 @@ OperationDoc OpArgDocSimulateRadiograph(void){
     out.args.back().default_val = "0.5";
     out.args.back().expected = true;
     out.args.back().examples = { "0.25", "0.5", "1.0" };
+
+
+    out.args.emplace_back();
+    out.args.back().name = "SourcePosition";
+    out.args.back().desc = "This parameter controls where the virtual point source is."
+                           " Both absolute and relative positioning are available."
+                           " A source located at point (1.0, -2.3, 4.5) in the DICOM coordinate system of a given image"
+                           " can be specified as 'absolute(1.0, -2.3, 4.5)'."
+                           " A source located relative to the image centre by offset (10.0, -23.4, 45.6) in the DICOM"
+                           " coordinate system of a given image can be specified as 'relative(10.0, -23.4, 45.6)'."
+                           " Relative offsets must be specified relative to the image centre."
+                           " Note that DICOM units (i.e., mm) are used for all coordinates.";
+    out.args.back().default_val = "relative(0.0, 1000.0, 20.0)";
+    out.args.back().expected = true;
+    out.args.back().examples = { "relative(0.0, 1610.0, 20.0)",
+                                 "absolute(-123.0, 123.0, 1.23)" };
+
+
+    out.args.emplace_back();
+    out.args.back().name = "AttenuationScale";
+    out.args.back().desc = "This parameter globally scales all attenuation factors derived via ray marching."
+                           " Adjusting this parameter will alter the radiograph image contrast;"
+                           " numbers within (0:1) will result in less attenuation, whereas numbers within (1:inf] will"
+                           " result in more attenuation. Thin or low-mass subjects might require artifically increased"
+                           " attenuation, whereas thick or high-mass subjects might require artifically decreased"
+                           " attenuation. Setting this number to 1 will result in no scaling.";
+    out.args.back().default_val = "1.0";
+    out.args.back().expected = true;
+    out.args.back().examples = { "0.01", "0.1", "1.0", "10.0", "1E2" };
+
+
+    out.args.emplace_back();
+    out.args.back().name = "Rows";
+    out.args.back().desc = "The number of rows that the simulated radiograph will contain."
+                           " Note that the field of view is determined separately from the number of rows and columns,"
+                           " so increasing the row count will only result in increased spatial resolution.";
+    out.args.back().default_val = "512";
+    out.args.back().expected = true;
+    out.args.back().examples = { "100", "500", "2000" };
+
+
+    out.args.emplace_back();
+    out.args.back().name = "Columns";
+    out.args.back().desc = "The number of columns that the simulated radiograph will contain."
+                           " Note that the field of view is determined separately from the number of rows and columns,"
+                           " so increasing the column count will only result in increased spatial resolution.";
+    out.args.back().default_val = "512";
+    out.args.back().expected = true;
+    out.args.back().examples = { "100", "500", "2000" };
 
 
     return out;
@@ -141,14 +171,50 @@ Drover SimulateRadiograph(Drover DICOM_data,
 
     auto FilenameStr = OptArgs.getValueStr("Filename").value();
 
-//    const auto ReferenceHVL = std::stod( OptArgs.getValueStr("ReferenceHVL").value() );
-
     const auto MarchingDistance = std::stod( OptArgs.getValueStr("MarchingDistance").value() );
 
-    const auto RadiographRows = 512;
-    const auto RadiographColumns = 512;
-    const auto Channel = 0;
+    const auto SourcePositionStr = OptArgs.getValueStr("SourcePosition").value();
+
+    const auto AttenuationScale = std::stod( OptArgs.getValueStr("AttenuationScale").value() );
+
+    const auto RadiographRows = std::stol( OptArgs.getValueStr("Rows").value() );
+    const auto RadiographColumns = std::stol( OptArgs.getValueStr("Columns").value() );
+
     //-----------------------------------------------------------------------------------------------------------------
+    const auto Channel = 0;
+
+    const auto regex_rel = Compile_Regex("^re?l?a?t?i?v?e?.*$");
+    const auto regex_abs = Compile_Regex("^ab?s?o?l?u?t?e?.*$");
+
+    const bool spos_is_relative = std::regex_match(SourcePositionStr, regex_rel);
+    const bool spos_is_absolute = std::regex_match(SourcePositionStr, regex_abs);
+
+    const vec3<double> vec3_nan( std::numeric_limits<double>::quiet_NaN(),
+                                 std::numeric_limits<double>::quiet_NaN(),
+                                 std::numeric_limits<double>::quiet_NaN() );
+    //-----------------------------------------------------------------------------------------------------------------
+    vec3<double> source_position = vec3_nan;
+    {
+        auto split = SplitStringToVector(SourcePositionStr, '(', 'd');
+        split = SplitVector(split, ')', 'd');
+        split = SplitVector(split, ',', 'd');
+
+        std::vector<double> numbers;
+        for(const auto &w : split){
+           try{
+               const auto x = std::stod(w);
+               numbers.emplace_back(x);
+           }catch(const std::exception &){ }
+        }
+        if(numbers.size() != 3){
+            throw std::invalid_argument("Unable to parse grid/cube shape parameters. Cannot continue.");
+        }
+
+        source_position = vec3<double>( numbers.at(0),
+                                        numbers.at(1),
+                                        numbers.at(2) );
+        if(!source_position.isfinite()) throw std::invalid_argument("Source position invalid.");
+    }
 
     auto IAs_all = All_IAs( DICOM_data );
     //auto IAs = Whitelist( IAs_all, "Modality@CT" );
@@ -191,19 +257,26 @@ Drover SimulateRadiograph(Drover DICOM_data,
 
     // Determine an appropriate radiograph orientation.
     const auto img_centre = img_arr_ptr->imagecoll.center(); // TODO: For TBI, should be at the t0 point (i.e., at the level of the lung).
-    auto ray_source = img_centre + vec3<double>(0.0, 1390.0, 0.0);  // Should be relative to voxel at (0,0,0), not image centre.
+    auto ray_source = vec3_nan;
+    if(spos_is_relative){
+        ray_source = img_centre + source_position;  // Should be relative to voxel at (0,0,0), not image centre.
+    }else if(spos_is_absolute){
+        ray_source = source_position;
+    }else{
+        throw std::logic_error("Unknown option. Cannot continue.");
+    }
     const line<double> source_centre_line(ray_source, img_centre); 
 
     // Determine which way will be 'up' in the radiograph.
     const auto ray_unit = (img_centre - ray_source).unit();
     auto rg_up = ortho_unit;
     auto rg_left = rg_up.Cross(ray_unit).unit();
-
     if(!ray_unit.GramSchmidt_orthogonalize(rg_up, rg_left)){
         throw std::invalid_argument("Cannot orthogonalize radiograph orientation unit vectors. Cannot continue.");
     }
     rg_up = rg_up.unit();
     rg_left = rg_left.unit();
+
     FUNCINFO("Proceeding with radiograph into-plane orientation unit vector: " << ray_unit);
     FUNCINFO("Proceeding with radiograph leftward orientation unit vector: " << rg_left);
     FUNCINFO("Proceeding with radiograph upward orientation unit vector: " << rg_up);
@@ -211,25 +284,7 @@ Drover SimulateRadiograph(Drover DICOM_data,
     FUNCINFO("Proceeding with image centre at: " << img_centre);
     FUNCINFO("Proceeding with ray source - image centre line: " << source_centre_line);
 
-/*
-    // Determine the bounds of the image volume at this orientation.
-
-    // First determine the furthest voxel so we can place the image on the plane fully behind the image.
-    double furthest_voxel_dist = std::numeric_limits<double>::quiet_NaN();
-    vec3<double> furthest_voxel_pos;
-    for(const auto &animg : img_arr_ptr->imagecoll.images){
-        for(long int row = 0; row < animg.rows; ++row){
-            for(long int col = 0; col < animg.columns; ++col){
-                const auto p = animg.position(row, col);
-                const auto dist = ray_source.distance(p);
-                if(!std::isfinite(dist) || (dist > furthest_voxel_dist)){
-                    furthest_voxel_dist = dist;
-                    furthest_voxel_pos = p;
-                }
-            }
-        }
-    }
-*/
+    // Encode the image geometry as contours for volumetric bounds determination.
     contour_collection<double> cc;
     for(const auto &animg : img_arr_ptr->imagecoll.images){
         cc.contours.emplace_back();
@@ -243,31 +298,11 @@ Drover SimulateRadiograph(Drover DICOM_data,
     }
     std::list<std::reference_wrapper<contour_collection<double>>> cc_ROIs = { std::ref(cc) };
 
-//    const plane<double> detector_plane( -ray_unit, 
-//                                        furthest_voxel_pos + ray_unit ); // Slightly further than the furthest voxel.
-//    const plane<double> ray_source_plane( (ROI_centroid - Ref_centroid).unit(), ROI_centroid );
-
-    // ============================================== Source, Detector creation  ==============================================
-    //Create source and detector images. 
+    //------------------------
+    // Create a detector that will encompass the images.
     //
-    // NOTE: They do not need to be aligned with the geometry, contours, or grid. But leave a big margin so you
-    //       can ensure you're getting all the surface available.
-
-/*
-    //const auto SDGridZ = vec3<double>(0.0, 1.0, 1.0).unit();
-    const auto SDGridZ = ROICleaving.N_0.unit();
-    vec3<double> SDGridY = vec3<double>(1.0, 0.0, 0.0);
-    if(SDGridY.Dot(SDGridZ) > 0.25){
-        SDGridY = SDGridZ.rotate_around_x(M_PI * 0.5);
-    }
-    vec3<double> SDGridX = SDGridZ.Cross(SDGridY);
-    if(!SDGridZ.GramSchmidt_orthogonalize(SDGridY, SDGridX)){
-        throw std::runtime_error("Unable to find grid orientation vectors.");
-    }
-    SDGridX = SDGridX.unit();
-    SDGridY = SDGridY.unit();
-*/
-
+    // Note: We are generous here because the source is a single point. The image projection will therefore be
+    //       magnified. If the source is too close the projection will 
     double grid_x_margin = 5.0;
     double grid_y_margin = 5.0;
     double grid_z_margin = 5.0;
@@ -290,68 +325,11 @@ Drover SimulateRadiograph(Drover DICOM_data,
     DetectImg->metadata["Description"] = "Virtual radiograph detector";
     OrthoSrcImg->metadata["Description"] = "(unused)";
 
-    //const auto detector_plane = DetectImg->image_plane();
     const auto detector_plane = DetectImg->image_plane();
     const auto orthosrc_plane = OrthoSrcImg->image_plane();
 
-/*
-    // Compute tight bounding planes for the image volume to avoid costly interpolation outside the image volume.
-    std::vector<plane<double>> ia_bounding_planes;
-{
-    R grid_x_min = std::numeric_limits<R>::quiet_NaN();
-    R grid_x_max = std::numeric_limits<R>::quiet_NaN();
-    R grid_y_min = std::numeric_limits<R>::quiet_NaN();
-    R grid_y_max = std::numeric_limits<R>::quiet_NaN();
-    R grid_z_min = std::numeric_limits<R>::quiet_NaN();
-    R grid_z_max = std::numeric_limits<R>::quiet_NaN();
-
-    //Make three planes defined by the orientation normals. (They intersect the origin to simplify computing offsets.)
-    const vec3<R> zero(0.0, 0.0, 0.0);
-    const plane<R> GridXZeroPlane(GridX, zero);
-    const plane<R> GridYZeroPlane(GridY, zero);
-    const plane<R> GridZZeroPlane(GridZ, zero);
-
-    //Bound the vertices on the ROI.
-    for(const auto &cc_ref : ccs){
-        for(const auto &cop : cc_ref.get().contours){
-            for(const auto &v : cop.points){
-                //Compute the distance to each plane.
-                const auto distX = GridXZeroPlane.Get_Signed_Distance_To_Point(v);
-                const auto distY = GridYZeroPlane.Get_Signed_Distance_To_Point(v);
-                const auto distZ = GridZZeroPlane.Get_Signed_Distance_To_Point(v);
-
-                //Score the minimum and maximum distances.
-                if(!std::isfinite(grid_x_min) || (distX < grid_x_min)){  grid_x_min = distX; }
-                if(!std::isfinite(grid_x_max) || (distX > grid_x_max)){  grid_x_max = distX; }
-                if(!std::isfinite(grid_y_min) || (distY < grid_y_min)){  grid_y_min = distY; }
-                if(!std::isfinite(grid_y_max) || (distY > grid_y_max)){  grid_y_max = distY; }
-                if(!std::isfinite(grid_z_min) || (distZ < grid_z_min)){  grid_z_min = distZ; }
-                if(!std::isfinite(grid_z_max) || (distZ > grid_z_max)){  grid_z_max = distZ; }
-            }
-        }
-    }
-
-    //Add margins.
-    grid_x_min -= x_margin;
-    grid_x_max += x_margin;
-    grid_y_min -= y_margin;
-    grid_y_max += y_margin;
-    grid_z_min -= z_margin;
-    grid_z_max += z_margin;
-
-    //Create images that live on each Z-plane.
-    const R xwidth = grid_x_max - grid_x_min;
-    const R ywidth = grid_y_max - grid_y_min;
-    const R zwidth = grid_z_max - grid_z_min;
-    const auto voxel_dx = xwidth / static_cast<R>(number_of_columns);
-    const auto voxel_dy = ywidth / static_cast<R>(number_of_rows);
-    const auto voxel_dz = zwidth / static_cast<R>(number_of_images);
-}
-*/
-
-    // ============================================== Ray-cast ==============================================
-
-    //Now ready to ray cast. Loop over integer pixel coordinates.
+    //------------------------
+    // March rays through the image data.
     {
         asio_thread_pool tp;
         std::mutex printer; // Who gets to print to the console and iterate the counter.
@@ -416,18 +394,16 @@ Drover SimulateRadiograph(Drover DICOM_data,
         for(long int row = 0; row < RadiographRows; ++row){
             for(long int col = 0; col < RadiographColumns; ++col){
                 const auto ad = DetectImg->reference(row, col, 0);
-                //const auto f = 1.0 - std::exp(-ad * std::log(2) / ReferenceHVL);
-                const auto f = 1.0 - std::exp(-ad);
+                const auto f = 1.0 - std::exp(-ad * AttenuationScale);
                 DetectImg->reference(row, col, 0) = f;
             }
         }
 
     } // Complete tasks and terminate thread pool.
 
-
-    //-----------------------------------------------------------------------------------------------------------------
-
+    //------------------------
     // Save image maps to file.
+
     if(FilenameStr.empty()){
         FilenameStr = Get_Unique_Sequential_Filename("/tmp/dicomautomaton_simulateradiograph_", 6, ".fits");
     }
@@ -437,6 +413,9 @@ Drover SimulateRadiograph(Drover DICOM_data,
     }
 
     // Insert the image maps as images for later processing and/or viewing, if desired.
+    OrthoSrcImg = nullptr;
+    sd_image_collection.images.resize(1);
+
     DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>() );
     DICOM_data.image_data.back()->imagecoll = sd_image_collection;
 
