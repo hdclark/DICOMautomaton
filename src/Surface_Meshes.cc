@@ -934,8 +934,11 @@ Marching_Cubes_Implementation(
     long int completed = 0;
     const long int img_count = grid_imgs.size();
 
-    // Iterate over all voxels.
-    for(auto &img_refw : grid_imgs){
+    // Iterate over all voxels, traversing the images in order of adjacency for consistency.
+    //for(auto &img_refw : grid_imgs){
+    for(const auto &apair : img_adj.int_to_img){
+        const auto img_refw = std::ref( *apair.second );
+
         const auto pxl_dx = img_refw.get().pxl_dx;
         const auto pxl_dy = img_refw.get().pxl_dy;
         const auto pxl_dz = img_refw.get().pxl_dz;
@@ -994,6 +997,12 @@ Marching_Cubes_Implementation(
             img_unit * pxl_dz
         } };
 
+
+        const auto img_num = img_adj.image_to_index( img_refw );
+        const auto img_num_p1 = img_num + 1;
+        const auto img_is_adj = img_adj.index_present(img_num_p1);
+        const auto img_p1 = (img_is_adj) ? img_adj.index_to_image(img_num_p1) : img_refw;
+
         const auto N_rows = img_refw.get().rows;
         const auto N_cols = img_refw.get().columns;
         for(long int row = 0; row < N_rows; ++row){
@@ -1015,11 +1024,6 @@ Marching_Cubes_Implementation(
 
                     const auto col_p1 = (col+1);
                     const auto col_is_adj = (col_p1 < N_cols);
-
-                    const auto img_num = img_adj.image_to_index( img_refw );
-                    const auto img_num_p1 = img_num + 1;
-                    const auto img_is_adj = img_adj.index_present(img_num_p1);
-                    const auto img_p1 = (img_is_adj) ? img_adj.index_to_image(img_num_p1) : img_refw;
 
                     afCubeValue[0] = img_refw.get().value(row, col, 0);
                     afCubeValue[1] = (row_is_adj)                             ? img_refw.get().value(row_p1, col, 0)    : ExteriorVal;
@@ -1111,7 +1115,7 @@ Marching_Cubes_Implementation(
                             vert_indices[tri_corner] = (mesh_triangle_verts.size() + new_verts.size() - 1);
                         }
                     }
-                    if( (vert_indices[0] != vert_indices[1]) // IFF all three vertices are distinct.
+                    if( (vert_indices[0] != vert_indices[1]) // IFF all three vertices are distinct from one another.
                     &&  (vert_indices[0] != vert_indices[2])
                     &&  (vert_indices[1] != vert_indices[2]) ){
                         mesh_triangle_faces.emplace_back(vert_indices);
@@ -1134,7 +1138,7 @@ Marching_Cubes_Implementation(
         }
     } // Loop over images.
 
-    FUNCINFO("Orienting face normals");
+    FUNCINFO("Orienting face normals..");
     CGAL::Polygon_mesh_processing::orient_polygon_soup(mesh_triangle_verts, mesh_triangle_faces);
 
     // Output the mesh for inspection.
@@ -1142,7 +1146,7 @@ Marching_Cubes_Implementation(
     //c3t3.output_boundary_to_off(off_file);
   
     // Extract the polyhedral surface.
-    FUNCINFO("Extracting the polyhedral surface");
+    FUNCINFO("Extracting the polyhedral surface..");
     Polyhedron output_mesh;
     CGAL::Polygon_mesh_processing::polygon_soup_to_polygon_mesh(mesh_triangle_verts, mesh_triangle_faces, output_mesh);
 
@@ -1152,7 +1156,7 @@ Marching_Cubes_Implementation(
 //        throw std::runtime_error("Mesh not closed but should be. Verify vector equality is not too loose. Dumped to /tmp/open_mesh.off.");
 //    }
     if(!CGAL::Polygon_mesh_processing::is_outward_oriented(output_mesh)){
-        FUNCINFO("Reorienting face orientation so faces face outward");
+        FUNCINFO("Reorienting face orientation so faces face outward..");
         CGAL::Polygon_mesh_processing::reverse_face_orientations(output_mesh);
     }
 
