@@ -64,6 +64,9 @@ int main(int argc, char* argv[]){
     //A explicit declaration that the user will generate data in an operation.
     bool GeneratingVirtualData = false;
 
+    //A Boolean guard variable to ensure loose parameters are only added to valid, active operations.
+    bool MostRecentOperationActive = false;
+
     //------------------------------------------------- Data: Database -----------------------------------------------
     // The following objects are only relevant for the PACS database loader.
 
@@ -101,12 +104,15 @@ int main(int argc, char* argv[]){
                          "Load a SQL common file that creates a SQL view, issue a query involving the view"
                          " which returns some DICOM file(s). Perform analysis 'ComputeSomething' with the"
                          " files." },
-                       { "-f common.sql -f seriesA.sql -n -f seriesB.sql -o View",
+                       { "-f common.sql -f seriesA.sql -n -f seriesB.sql -o OperationXYZ",
                          "Load two distinct groups of data. The second group does not 'see' the"
                          " file 'common.sql' side effects -- the queries are totally separate." },
-                       { "fileA fileB -s fileC adir/ -m PatientID=XYZ003 -o ComputeXYZ -o View",
+                       { "fileA fileB -s fileC adir/ -m PatientID=XYZ003 -o ComputeXYZ",
                          "Load standalone files and all files in specified directory. Inform"
-                         " the analysis 'ComputeXYZ' of the patient's ID, launch the analyses." }
+                         " the analysis 'ComputeXYZ' of the patient's ID, launch the analyses." },
+                       { "file.dcm -o ComputeX:abc=123 -x ComputeY -p def=456 -o ComputeZ -p ghi=678 -z ghi=789",
+                         "Load file 'file.dcm', perform 'ComputeX' using abc=123, do *not* perform"
+                         " 'ComputeY', and perform 'ComputeZ' using ghi=678 (not ghi=789)." }
                      };
     arger.description = "A program for launching DICOMautomaton analyses.";
 
@@ -196,6 +202,7 @@ int main(int argc, char* argv[]){
       [&](const std::string &optarg) -> void {
         try{
           Operations.emplace_back(optarg);
+          MostRecentOperationActive = true;
         }catch(const std::exception &e){
           FUNCERR("Unable to parse operation: " << e.what());
         }
@@ -204,7 +211,34 @@ int main(int argc, char* argv[]){
     );
 
     arger.push_back( ygor_arg_handlr_t(400, 'x', "disregard", true, "SFML_Viewer",
-      "Ignore the associated argument; essentially a 'no-op.' This option simplifies tweaking scripts.",
+      "Ignore the following operation and all following parameters; essentially a 'no-op.'"
+      " This option simplifies tweaking a workflow.",
+      [&](const std::string &) -> void {
+        MostRecentOperationActive = false;
+        return;
+      })
+    );
+
+    arger.push_back( ygor_arg_handlr_t(500, 'p', "parameter", true, "ABC=xyz",
+      "A parameter to apply to the previous operation. This option is convenient when the number or length"
+      " or parameters supplied to an operation is large.",
+      [&](const std::string &optarg) -> void {
+        try{
+          if(MostRecentOperationActive){
+              if(!Operations.back().insert(optarg)){
+                  throw std::invalid_argument("Parameter insertion failed (is it duplicated?");
+              }
+          }
+        }catch(const std::exception &e){
+          FUNCERR("Unable to append parameter: " << e.what());
+        }
+        return;
+      })
+    );
+
+    arger.push_back( ygor_arg_handlr_t(500, 'z', "ignore", true, "ABC=xyz",
+      "Ignore the following parameter, but still perform the operation without it."
+      " This option simplifies tweaking a workflow.",
       [&](const std::string &) -> void {
         return;
       })

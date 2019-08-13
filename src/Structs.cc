@@ -1856,4 +1856,17 @@ OperationArgPkg::insert(std::string key, std::string val){
     return true;
 }
 
+bool
+OperationArgPkg::insert(std::string keyval){
+    std::string name("_placeholder_:");
+    OperationArgPkg shtl(name + keyval);
+
+    for(const auto &p : shtl.opts){
+        if(!this->insert(p.first, p.second)){
+            return false;
+        }
+    }
+    return true;
+}
+
 

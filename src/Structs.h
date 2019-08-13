@@ -413,6 +413,7 @@ class OperationArgPkg {
         std::experimental::optional<std::string> getValueStr(std::string key) const;
 
         bool insert(std::string key, std::string val); //Will not overwrite.
+        bool insert(std::string keyval); //Will not overwrite.
 
 };
 
