@@ -17,10 +17,14 @@ ssh "${USER_AT_REMOTE}" "
   cd '${BUILD_DIR}' && 
   mkdir -p build && 
   cd build &&
-  cmake ../ && "'
+  cmake \
+    -DMEMORY_CONSTRAINED_BUILD=OFF \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DCMAKE_BUILD_TYPE=Release \
+    ../ && "'
   JOBS=$(nproc)
   JOBS=$(( $JOBS < 8 ? $JOBS : 8 )) # Limit to reduce memory use.
-  make -j "$JOBS" &&
+  make -j "$JOBS" VERBOSE=1 &&
   cd '${BUILD_DIR}' &&
   ./scripts/dump_portable_dcma_bundle.sh '${PORTABLE_BIN_DIR}'
   '

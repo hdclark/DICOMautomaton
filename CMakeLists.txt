@@ -1,9 +1,9 @@
 
 cmake_minimum_required(VERSION 3.1.0 FATAL_ERROR)
 project(DICOMautomaton LANGUAGES CXX)
-set(DICOMautomaton_VERSION_MAJOR 3)
-set(DICOMautomaton_VERSION_MINOR 0)
-set(DICOMautomaton_VERSION_PATCH 0)
+#set(DICOMautomaton_VERSION_MAJOR 0)
+#set(DICOMautomaton_VERSION_MINOR 0)
+#set(DICOMautomaton_VERSION_PATCH 0)
 
 
 ####################################################################################
@@ -26,7 +26,6 @@ include_directories( ${EIGEN3_INCLUDE_DIRS} )
 
 find_package(CGAL REQUIRED COMPONENTS Core)
 include(${CGAL_USE_FILE})
-add_definitions(-DCGAL_EIGEN3_ENABLED=1) # Explicitly instruct CGAL to use Eigen.
 
 
 ####################################################################################
@@ -35,40 +34,84 @@ add_definitions(-DCGAL_EIGEN3_ENABLED=1) # Explicitly instruct CGAL to use Eigen
 
 option(MEMORY_CONSTRAINED_BUILD "Compile with minimal memory usage." OFF)
 
-# Set the release type. 
-set(CMAKE_BUILD_TYPE Release) # Comment this line to use fallback default.
-if(NOT CMAKE_BUILD_TYPE)
-    # Default to debug builds.
-    set(CMAKE_BUILD_TYPE Debug CACHE STRING "default to debug" FORCE)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2 -pg")
-    add_definitions(-DCGAL_DISABLE_ROUNDING_MATH_CHECK=1) # May be needed for Valgrind debugging.
-    # Note: if profiling/debugging on Arch Linux, disable binary stripping in PKGBUILD.
+
+# Provide a default build type if none were specified.
+#
+# Note: This is not necessary -- a 
+#if(NOT CMAKE_BUILD_TYPE)
+#    set(CMAKE_BUILD_TYPE Release CACHE STRING "default to release" FORCE)
+#endif()
+
+
+# Override the default CXX flags, which are controlled by the release type.
+#
+# Note: The '_DEBUG' flags are only applied when the release mode is 'Debug' -- likewise for the other flags.
+#
+# Note: If you want to fully override the CXX_FLAGS, then do not supply a build type and specify your CXX_FLAGS by
+#       defining CMAKE_CXX_FLAGS when calling cmake.
+set(CMAKE_CXX_FLAGS_DEBUG           "-O2 -g")
+set(CMAKE_CXX_FLAGS_MINSIZEREL      "-Os -DNDEBUG")
+set(CMAKE_CXX_FLAGS_RELEASE         "-O3 -DNDEBUG")
+set(CMAKE_CXX_FLAGS_RELWITHDEBINFO  "-O3 -g")
+
+if(MEMORY_CONSTRAINED_BUILD)
+    # Do not overwrite user-provided flags, but do provide sane defaults.
+    if(NOT CMAKE_CXX_FLAGS)
+        set(CMAKE_CXX_FLAGS "-O0 -DNDEBUG")
+    endif()
+    set(CMAKE_CXX_FLAGS_DEBUG           "-O0 -DNDEBUG")
+    set(CMAKE_CXX_FLAGS_MINSIZEREL      "-O0 -DNDEBUG")
+    set(CMAKE_CXX_FLAGS_RELEASE         "-O0 -DNDEBUG")
+    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO  "-O0 -DNDEBUG")
 endif()
 
+
+# Add other appropriate CXX flags.
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fdiagnostics-color=always")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-var-tracking-assignments")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wextra")
+
+    if("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
+        # Add gprof profiling flag.
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pg")
+    endif()
+
+    if(MEMORY_CONSTRAINED_BUILD)
+        # Trigger garbage collection more frequently.
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --param ggc-min-expand=10")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --param ggc-min-heapsize=32768")
+    endif()
+
+elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fdiagnostics-color=always")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-var-tracking-assignments")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wextra")
+endif()
+
+    
+# Add definitions.
+if("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
+    add_definitions(-DCGAL_DISABLE_ROUNDING_MATH_CHECK=1) # May be needed for Valgrind debugging.
+    message(WARNING "If profiling/debugging on Arch Linux, disable binary stripping in PKGBUILD.")
+endif()
+add_definitions(-DUSTREAM_H) # -DUSE_ICU_STRINGS
+add_definitions(-DCGAL_EIGEN3_ENABLED=1) # Explicitly instruct CGAL to use Eigen.
+
+
+# Add other compiler options.
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 set(BUILD_SHARED_LIBS TRUE)
 set(POSITION_INDEPENDENT_CODE TRUE)
 set(THREADS_PREFER_PTHREAD_FLAG ON)
-
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_EXTENSIONS OFF) # Disable GNU extensions (e.g., std=gnu++14).
-add_definitions(-DUSTREAM_H) # -DUSE_ICU_STRINGS
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2")
-if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ffast-math -frounding-math -fno-finite-math-only")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fdiagnostics-color=always -fno-var-tracking-assignments")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated -Wall -Wextra")
-    if(MEMORY_CONSTRAINED_BUILD)
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --param ggc-min-expand=10 --param ggc-min-heapsize=32768")
-    endif()
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON) # For use with clang-tidy et al.
 
-elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ffast-math -frounding-math -fno-finite-math-only")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated -Wall -Wextra")
-
-endif()
-
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON) # For clang-tidy et al.
 
 # Use the directory where CMakeLists.txt is for inclusions.
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
