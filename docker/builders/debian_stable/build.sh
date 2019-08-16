@@ -2,7 +2,7 @@
 
 set -e 
 
-base_name="dicomautomaton_webserver"
+base_name="dicomautomaton_webserver_debian_stable"
 
 commit_id=$(git rev-parse HEAD)
 
@@ -23,6 +23,6 @@ time sudo docker build \
     -t "${base_name}":"built_${build_datetime}" \
     -t "${base_name}":"commit_${commit_id}_${clean_dirty}" \
     -t "${base_name}":latest \
-    -f docker/Dockerfile \
+    -f docker/builders/debian_stable/Dockerfile \
     .
 

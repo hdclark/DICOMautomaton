@@ -117,21 +117,24 @@ shell. On `Windows` systems the `git` shell should be used. To build the image:
      $>  git clone https://gitlab.com/hdeanclark/DICOMautomaton/ && cd DICOMautomaton/ # or
      $>  git clone https://github.com/hdclark/DICOMautomaton/ && cd DICOMautomaton/ # or
      $>  cd /path/to/source/directory
-     $>  ./docker/build.sh
+     $>  ./docker/build_bases/arch/build.sh
+     $>  ./docker/builder/arch/build.sh
 
 After building, the default webserver can be launched using the convenience
 script:
 
-     $>  ./docker/Run_Container.sh
+     $>  ./docker/scripts/arch/Run_Container.sh
 
 and a container can be run interactively with the convenience script:
 
-     $>  ./docker/Run_Container_Interactively.sh
+     $>  ./docker/scripts/arch/Run_Container_Interactively.sh
 
 [Continuous integration](https://travis-ci.com/hdclark/DICOMautomaton) is used
 to build Docker images for all commits using `Travis-CI`. Build artifacts may be
 available [here](https://travis-ci.com/hdclark/DICOMautomaton), but are
-unofficial.
+unofficial. Docker containers can be built using Arch Linux or Debian bases; 
+Arch Linux provides the latest upstream features, whereas Debian will provide
+greater portability since an older glibc is used.
 
 
 # Portable Binaries
@@ -145,11 +148,11 @@ then invoking:
 
 If successful, the portable outputs will be dumped to `/tmp/portable_dcma/`. A
 convenience script that performs the preload trick and forwards all user
-arguments is `portable_dcma`. 
+arguments is `portable_dcma`.
 
 Note that this trick works *only* on Linux systems, and a similar Linux system
-must be used to generate the binaries. The interactive Docker container will
-likely suffice. Additionally this technique only provides the
+must be used to generate the binaries. The interactive Debian Docker container
+will likely suffice. Additionally this technique only provides the
 `dicomautomaton_dispatcher` binary. All shared libraries needed to run it are
 bundled, including `glibc` and some other intrinsic libraries in case the host
 and target `glibc` differ. If the `patchelf` program is available, the binary

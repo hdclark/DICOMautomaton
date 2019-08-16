@@ -2,17 +2,17 @@
 FROM archlinux/base
 
 LABEL maintainer="http://www.halclark.ca" \
-      description="DICOMautomaton minimal CI build."
+      description="DICOMautomaton build base for Arch Linux."
 
 
-WORKDIR /scratch
-ADD ./docker /scratch
-ADD . /dcma
+WORKDIR /scratch_base
+ADD docker/build_bases/arch /scratch_base
 
 
 # Prepare alternative mirrors.
 RUN curl -o /etc/pacman.d/mirrorlist "https://www.archlinux.org/mirrorlist/?country=all&protocol=http&ip_version=4&use_mirror_status=on" && \
     sed -i 's/^#Server/Server/' /etc/pacman.d/mirrorlist
+
 
 # Install build dependencies.
 RUN pacman -Sy --noconfirm archlinux-keyring && \
@@ -21,11 +21,15 @@ RUN pacman -Sy --noconfirm archlinux-keyring && \
       git \
       cmake \
       gcc \
+      vim \
+      gdb \
+      screen \
     ` # Needed for an AUR helper ` \
       sudo \
       pyalpm \
       wget \
-      rsync && \
+      rsync \
+      patchelf && \
     rm -f /var/cache/pacman/pkg/*
 
 
@@ -63,8 +67,14 @@ RUN pacman -S --noconfirm --needed  \
     cgal \
     wt \
     asio \
-    nlopt && \
+    nlopt \
+    freeglut libxi libxmu \
+     ` # Additional dependencies for headless OpenGL rendering with SFML ` \
+    xorg-server xorg-apps mesa xf86-video-dummy && \
     rm -f /var/cache/pacman/pkg/*
+
+
+RUN cp /scratch_base/xpra-xorg.conf /etc/X11/xorg.conf
 
 
 # Install Ygor.
@@ -104,38 +114,5 @@ RUN git clone https://github.com/hdclark/YgorClustering . && \
     su - aurbuild -c "cd /ygorcluster && makepkg --syncdeps --install --clean --needed --noconfirm" && \
     git reset --hard && \
     git clean -fxd :/ 
-
-
-# Install DICOMautomaton.
-#
-# Option 1: install a binary package.
-#WORKDIR /scratch
-#RUN apt-get install --yes -f ./DICOMautomaton*deb 
-#
-# Option 2: clone the latest upstream commit.
-#WORKDIR /dcma
-#RUN git clone https://github.com/hdclark/DICOMautomaton . && \
-#   ...
-#
-# Option 3: use the working directory.
-WORKDIR /dcma
-RUN chown -R aurbuild:aurbuild . && \
-    sed -i -e 's@MEMORY_CONSTRAINED_BUILD=OFF@MEMORY_CONSTRAINED_BUILD=ON@' /dcma/PKGBUILD && \
-    su - aurbuild -c "cd /dcma && makepkg --syncdeps --install --clean --needed --noconfirm" && \
-    git reset --hard && \
-    git clean -fxd :/ 
-
-
-# Attempt to shrink the image.
-#RUN pacman -Rsc --nosave --noconfirm git cmake gcc vim gdb screen pyalpm wget rsync && \
-#    ` # Remove unnecessary packages (e.g., make- and optional-dependencies). ` \
-#    pacman -Qdttq | sudo pacman -Rns --noconfirm - && \
-#    rm -rf /yay/ /ygor/ /ygorcluster/ /explicator/ /dcma/ && \
-#    rm -f /var/cache/pacman/pkg/* || true
-
-
-# Default to launching the webserver.
-WORKDIR /scratch
-CMD ["/bin/false"]
 
 

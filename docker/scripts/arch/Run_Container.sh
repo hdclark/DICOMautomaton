@@ -12,8 +12,9 @@ printf "Client uploads go to: ${uploads_dir}\n"
 printf "WebServer artifacts go to: ${artifacts_dir}\n"
 
 sudo docker run -it --rm -p 8080:80 \
+    --network=host \
     -v "${uploads_dir}":/client_uploads/:rw \
     -v "${artifacts_dir}":/home/hal/DICOMautomaton_Webserver_Artifacts/:rw \
-    dicomautomaton_webserver:latest
+    dicomautomaton_webserver_arch:latest
 
 #    --entrypoint /bin/bash \

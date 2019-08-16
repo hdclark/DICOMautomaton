@@ -2,20 +2,17 @@
 FROM archlinux/base
 
 LABEL maintainer="http://www.halclark.ca" \
-      description="DICOMautomaton Web Server."
+      description="DICOMautomaton minimal CI build."
 
-EXPOSE 80
-EXPOSE 443
 
 WORKDIR /scratch
-ADD ./docker /scratch
+ADD docker/builders/ci /scratch
 ADD . /dcma
 
 
 # Prepare alternative mirrors.
 RUN curl -o /etc/pacman.d/mirrorlist "https://www.archlinux.org/mirrorlist/?country=all&protocol=http&ip_version=4&use_mirror_status=on" && \
     sed -i 's/^#Server/Server/' /etc/pacman.d/mirrorlist
-
 
 # Install build dependencies.
 RUN pacman -Sy --noconfirm archlinux-keyring && \
@@ -24,9 +21,6 @@ RUN pacman -Sy --noconfirm archlinux-keyring && \
       git \
       cmake \
       gcc \
-      vim \
-      gdb \
-      screen \
     ` # Needed for an AUR helper ` \
       sudo \
       pyalpm \
@@ -69,13 +63,8 @@ RUN pacman -S --noconfirm --needed  \
     cgal \
     wt \
     asio \
-    nlopt \
-    freeglut libxi libxmu \
-     ` # Additional dependencies for headless OpenGL rendering with SFML ` \
-    xorg-server xorg-apps mesa xf86-video-dummy && \
+    nlopt && \
     rm -f /var/cache/pacman/pkg/*
-
-RUN mv /scratch/xpra-xorg.conf /etc/X11/xorg.conf
 
 
 # Install Ygor.
@@ -131,6 +120,7 @@ RUN git clone https://github.com/hdclark/YgorClustering . && \
 # Option 3: use the working directory.
 WORKDIR /dcma
 RUN chown -R aurbuild:aurbuild . && \
+    sed -i -e 's@MEMORY_CONSTRAINED_BUILD=OFF@MEMORY_CONSTRAINED_BUILD=ON@' /dcma/PKGBUILD && \
     su - aurbuild -c "cd /dcma && makepkg --syncdeps --install --clean --needed --noconfirm" && \
     git reset --hard && \
     git clean -fxd :/ 
@@ -146,6 +136,6 @@ RUN chown -R aurbuild:aurbuild . && \
 
 # Default to launching the webserver.
 WORKDIR /scratch
-CMD ["/bin/bash", "/scratch/Run_WebServer.sh"]
+CMD ["/bin/false"]
 
 

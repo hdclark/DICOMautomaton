@@ -22,7 +22,7 @@ mkdir -p "${out_dir}"
 
 # Figure out which binary to use. If there is a build directory then favour the build version.
 export SCRIPT_DIR="$(dirname "$(readlink -f "${BASH_SOURCE[0]}" )" )"
-if [ -d "${SCRIPT_DIR}/../build" ] ; then
+if [ -f "${SCRIPT_DIR}/../build/bin/dicomautomaton_dispatcher" ] ; then
     printf 'Using the dcma in build/ ...\n'
     which_dcma=$(which "${SCRIPT_DIR}/../build/bin/dicomautomaton_dispatcher")
 else
@@ -136,7 +136,7 @@ chmod 777 "${out_dir}/emulate_dcma"
 
 # Attempt to run the native binary.
 set +e
-"${out_dir}/portable_dcma" -h >/dev/null
+"${out_dir}/dicomautomaton_dispatcher" -h >/dev/null
 ret=$?
 if [ "$ret" -eq 0 ] ; then
     printf '\nSuccess.\n'

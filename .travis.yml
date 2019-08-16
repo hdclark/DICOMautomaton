@@ -8,11 +8,11 @@ before_install:
   - free -h
   - |
     ( ( while true ; do sleep 225 ; printf '\n\n' ; free -h ; printf '\n\n' ; done ) &)
-    time sudo docker build -t dcma:latest -f docker/Dockerfile.minimal .
+    time sudo docker build --network=host -t dcma_ci:latest -f docker/builders/ci/Dockerfile .
   - sudo docker ps -a
 
 script:
-  - time sudo docker run -it --rm -w /start/ dcma:latest dicomautomaton_dispatcher -h
+  - time sudo docker run -it --rm -w /start/ dcma_ci:latest dicomautomaton_dispatcher -h
 
 after_failure:
   - free -h
