@@ -132,9 +132,10 @@ and a container can be run interactively with the convenience script:
 [Continuous integration](https://travis-ci.com/hdclark/DICOMautomaton) is used
 to build Docker images for all commits using `Travis-CI`. Build artifacts may be
 available [here](https://travis-ci.com/hdclark/DICOMautomaton), but are
-unofficial. Docker containers can be built using Arch Linux or Debian bases; 
-Arch Linux provides the latest upstream features, whereas Debian will provide
-greater portability since an older glibc is used.
+unofficial. Docker containers can be built using Arch Linux, Debian, or Void
+Linux bases; Arch Linux and Void Linux provide the latest upstream packages,
+whereas Debian provides greater portability since an older `glibc` is used. Arch
+Linux builds use `glibc`, Void Linux builds use `musl`.
 
 
 # Portable Binaries
@@ -183,6 +184,8 @@ can simplify distributing custom builds in some situations.
 - The `SFML_Viewer` operation hangs on some systems after viewing a plot with
   Gnuplot. This stems from a known issue in Ygor. 
 
+- Building with `musl` may cause character conversion to fail for some DICOM
+  files in some circumstances.
 
 # Project Home
 
