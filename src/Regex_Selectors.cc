@@ -228,6 +228,23 @@ Compile_Regex(std::string input){
                              std::regex::extended);
 }
 
+// Human-readable information about how selectors can be specified.
+static
+std::string
+GenericSelectionInfo(const std::string &name_of_unit){
+    return  " Selection specifiers can be of two types: positional or metadata-based key@value regex."_s
+         +  " Positional specifiers can be 'first', 'last', 'none', or 'all' literals."_s
+         +  " Additionally '#N' for some positive integer N selects the Nth "_s + name_of_unit 
+         +  " (with zero-based indexing)."_s
+         +  " Likewise, '#-N' selects the Nth-from-last "_s + name_of_unit + "."_s
+         +  " Positional specifiers can be inverted by prefixing with a '!'."_s
+         +  " Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex."_s
+         +  " In order to invert metadata-based selectors, the regex logic must be inverted"_s
+         +  " (i.e., you can *not* prefix metadata-based selectors with a '!')."_s
+         +  " Multiple criteria can be specified by separating them with a ';' and are applied in the order specified."_s
+         +  " Both positional and metadata-based criteria can be mixed together."_s
+         +  " Note regexes are case insensitive and should use extended POSIX syntax."_s;
+}
 
 // ---------------------------------- Contours / ROIs ----------------------------------
 
@@ -416,20 +433,11 @@ OperationArgDoc IAWhitelistOpArgDoc(void){
     OperationArgDoc out;
 
     out.name = "ImageSelection";
-    out.desc = "Select image arrays to operate on."
-               " Specifiers can be of two types: positional or metadata-based key@value regex."
-               " Positional specifiers can be 'first', 'last', 'none', or 'all' literals."
-               " Additionally '#N' for some positive integer N selects the Nth image array (with zero-based indexing)."
-               " Likewise, '#-N' selects the Nth-from-last image array."
-               " Positional specifiers can be inverted by prefixing with a '!'."
-               " Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex."
-               " In order to invert metadata-based selectors, the regex logic must be inverted"
-               " (i.e., you can *not* prefix metadata-based selectors with a '!')."
-               " Multiple criteria can be specified by separating them with a ';' and are applied in the order specified."
-               " Both positional and metadata-based criteria can be mixed together."
-               " Note that image arrays can hold anything, but will typically represent a single contiguous"
-               " 3D volume (i.e., a volumetric CT scan) or '4D' time-series."
-               " Note regexes are case insensitive and should use extended POSIX syntax.";
+    out.desc = "Select one or more image arrays."_s
+               + " Note that image arrays can hold anything, but will typically represent a single contiguous"_s
+               + " 3D volume (i.e., a volumetric CT scan) or '4D' time-series."_s
+               + " Be aware that it is possible to mix logically unrelated images together."_s
+               + GenericSelectionInfo("image array");
     out.default_val = "all";
     out.expected = true;
     out.examples = { "last", "first", "all", "none", 
@@ -528,20 +536,11 @@ OperationArgDoc PCWhitelistOpArgDoc(void){
     OperationArgDoc out;
 
     out.name = "PointSelection";
-    out.desc = "Select point clouds to operate on."
-               " Specifiers can be of two types: positional or metadata-based key@value regex."
-               " Positional specifiers can be 'first', 'last', 'none', or 'all' literals."
-               " Additionally '#N' for some positive integer N selects the Nth point cloud (with zero-based indexing)."
-               " Likewise, '#-N' selects the Nth-from-last point cloud."
-               " Positional specifiers can be inverted by prefixing with a '!'."
-               " Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex."
-               " In order to invert metadata-based selectors, the regex logic must be inverted"
-               " (i.e., you can *not* prefix metadata-based selectors with a '!')."
-               " Multiple criteria can be specified by separating them with a ';' and are applied in the order specified."
-               " Both positional and metadata-based criteria can be mixed together."
-               " Note that point clouds can hold a variety of data with varying attributes,"
-               " but each point cloud is meant to represent a single cohesive collection in which points are all related."
-               " Note regexes are case insensitive and should use extended POSIX syntax.";
+    out.desc = "Select one or more point clouds."_s
+               + " Note that point clouds can hold a variety of data with varying attributes,"_s
+               + " but each point cloud is meant to represent a single logically cohesive collection of points."_s
+               + " Be aware that it is possible to mix logically unrelated points together."_s
+               + GenericSelectionInfo("point cloud");
     out.default_val = "all";
     out.expected = true;
     out.examples = { "last", "first", "all", "none", 
@@ -643,20 +642,117 @@ OperationArgDoc SMWhitelistOpArgDoc(void){
     OperationArgDoc out;
 
     out.name = "MeshSelection";
-    out.desc = "Select surface meshes to operate on."
-               " Specifiers can be of two types: positional or metadata-based key@value regex."
-               " Positional specifiers can be 'first', 'last', 'none', or 'all' literals."
-               " Additionally '#N' for some positive integer N selects the Nth point cloud (with zero-based indexing)."
-               " Likewise, '#-N' selects the Nth-from-last surface mesh."
-               " Positional specifiers can be inverted by prefixing with a '!'."
-               " Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex."
-               " In order to invert metadata-based selectors, the regex logic must be inverted"
-               " (i.e., you can *not* prefix metadata-based selectors with a '!')."
-               " Multiple criteria can be specified by separating them with a ';' and are applied in the order specified."
-               " Both positional and metadata-based criteria can be mixed together."
-               " Note that surface meshes can hold a variety of data with varying attributes,"
-               " but each point cloud is meant to represent a single cohesive collection in which points are all related."
-               " Note regexes are case insensitive and should use extended POSIX syntax.";
+    out.desc = "Select one or more surface meshes."_s
+               + " Note that a single surface mesh may hold many disconnected mesh components;"_s
+               + " they should collectively represent a single logically cohesive object."_s
+               + " Be aware that it is possible to mix logically unrelated sub-meshes together in a single mesh."_s
+               + GenericSelectionInfo("surface mesh");
+    out.default_val = "all";
+    out.expected = true;
+    out.examples = { "last", "first", "all", "none", 
+                     "#0", "#-0",
+                     "!last", "!#-3",
+                     "key@.*value.*", "key1@.*value1.*;key2@^value2$;first" };
+
+    return out;
+}
+
+// ------------------------------------ TPlan_Config -------------------------------------
+
+// Provide pointers for all treatment plans into a list.
+//
+// Note: The output is meant to be filtered using the selectors below.
+std::list<std::list<std::shared_ptr<TPlan_Config>>::iterator>
+All_TPs( Drover &DICOM_data ){
+    std::list<std::list<std::shared_ptr<TPlan_Config>>::iterator> tp_all;
+
+    for(auto tpp_it = DICOM_data.tplan_data.begin(); tpp_it != DICOM_data.tplan_data.end(); ++tpp_it){
+        if((*tpp_it) == nullptr) continue;
+        tp_all.push_back(tpp_it);
+    }
+    return tp_all;
+}
+
+
+// Whitelist treatment plans using the provided regex.
+std::list<std::list<std::shared_ptr<TPlan_Config>>::iterator>
+Whitelist( std::list<std::list<std::shared_ptr<TPlan_Config>>::iterator> tps,
+           std::string MetadataKey,
+           std::string MetadataValueRegex,
+           Regex_Selector_Opts Opts ){
+
+    auto theregex = Compile_Regex(MetadataValueRegex);
+
+    tps.remove_if([&](std::list<std::shared_ptr<TPlan_Config>>::iterator tpp_it) -> bool {
+        if((*tpp_it) == nullptr) return true;
+        if((*tpp_it)->dynamic_states.empty()) return true; // Remove plans containing no beams.
+
+        if(false){
+        }else if( // Note: A TPlan_Config corresponds to one individual metadata store. While a single
+                  //       TPlan_Config can be comprised of multiple disconnected beams, they are 
+                  //       herein considered to be part of the same logical group.
+                  (Opts.validation == Regex_Selector_Opts::Validation::Representative)
+              ||  (Opts.validation == Regex_Selector_Opts::Validation::Pedantic)        ){
+
+            std::experimental::optional<std::string> ValueOpt 
+                    = ( (*tpp_it)->metadata.count(MetadataKey) != 0 ) ?
+                      (*tpp_it)->metadata[MetadataKey] :
+                      std::experimental::optional<std::string>();
+
+            // TODO: support selection of Dynamic_Machine_State and Static_Machine_State metadata too.
+
+            if(ValueOpt){
+                return !(std::regex_match(ValueOpt.value(),theregex));
+            }else if(Opts.nas == Regex_Selector_Opts::NAs::Include){
+                return false;
+            }else if(Opts.nas == Regex_Selector_Opts::NAs::Exclude){
+                return true;
+            }else if(Opts.nas == Regex_Selector_Opts::NAs::TreatAsEmpty){
+                return !(std::regex_match("",theregex));
+            }
+            throw std::logic_error("NAs option not understood. Cannot continue.");
+        }
+        throw std::logic_error("Regex selector option not understood. Cannot continue.");
+        return true; // Should never get here.
+    });
+    return tps;
+}
+
+
+// Whitelist treatment plans using a limited vocabulary of specifiers.
+//
+// Note: this routine shares the generic Image_Arrays, Point_Clouds, and Surface_Mesh implementation above.
+std::list<std::list<std::shared_ptr<TPlan_Config>>::iterator>
+Whitelist( std::list<std::list<std::shared_ptr<TPlan_Config>>::iterator> tps,
+           std::string Specifier,
+           Regex_Selector_Opts Opts ){
+
+    return Whitelist_Core( tps, Specifier, Opts );
+}    
+
+
+// This is a convenience routine to combine multiple filtering passes into a single logical statement.
+//
+// Note: this routine shares the generic Image_Arrays, Point_Clouds, and Surface_Mesh implementation above.
+std::list<std::list<std::shared_ptr<TPlan_Config>>::iterator>
+Whitelist( std::list<std::list<std::shared_ptr<TPlan_Config>>::iterator> tps,
+           std::initializer_list< std::pair<std::string, 
+                                            std::string> > MetadataKeyValueRegex,
+           Regex_Selector_Opts Opts ){
+
+    return Whitelist_Core( tps, MetadataKeyValueRegex, Opts );
+}
+
+
+// Utility function documenting the treatment plan whitelist routines for operations.
+OperationArgDoc TPWhitelistOpArgDoc(void){
+    OperationArgDoc out;
+
+    out.name = "TPlanSelection";
+    out.desc = "Select one or more treatment plans."_s
+               + " Note that a single treatment plan may be composed of multiple beams;"_s
+               + " if delivered sequentially, they should collectively represent a single logically cohesive plan."_s
+               + GenericSelectionInfo("treatment plan");
     out.default_val = "all";
     out.expected = true;
     out.examples = { "last", "first", "all", "none", 

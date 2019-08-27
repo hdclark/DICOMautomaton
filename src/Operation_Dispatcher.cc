@@ -76,11 +76,13 @@
 #include "Operations/DumpImageMetadataOccurrencesToFile.h"
 #include "Operations/DumpPerROIParams_KineticModel_1Compartment2Input_5Param.h"
 #include "Operations/DumpPixelValuesOverTimeForAnEncompassedPoint.h"
+#include "Operations/DumpPlanSummary.h"
 #include "Operations/DumpROIContours.h"
 #include "Operations/DumpROIData.h"
 #include "Operations/DumpROIDoseInfo.h"
 #include "Operations/DumpROISNR.h"
 #include "Operations/DumpROISurfaceMeshes.h"
+#include "Operations/DumpTPlanMetadataOccurrencesToFile.h"
 #include "Operations/DumpVoxelDoseInfo.h"
 #include "Operations/EQD2Convert.h"
 #include "Operations/EvaluateDoseVolumeHistograms.h"
@@ -226,11 +228,13 @@ std::map<std::string, op_packet_t> Known_Operations(void){
                                                                   DumpPerROIParams_KineticModel_1Compartment2Input_5Param);
     out["DumpPixelValuesOverTimeForAnEncompassedPoint"] = std::make_pair(OpArgDocDumpPixelValuesOverTimeForAnEncompassedPoint,
                                                                          DumpPixelValuesOverTimeForAnEncompassedPoint);
+    out["DumpPlanSummary"] = std::make_pair(OpArgDocDumpPlanSummary, DumpPlanSummary);
     out["DumpROIContours"] = std::make_pair(OpArgDocDumpROIContours, DumpROIContours);
     out["DumpROIData"] = std::make_pair(OpArgDocDumpROIData, DumpROIData);
     out["DumpROIDoseInfo"] = std::make_pair(OpArgDocDumpROIDoseInfo, DumpROIDoseInfo);
     out["DumpROISNR"] = std::make_pair(OpArgDocDumpROISNR, DumpROISNR);
     out["DumpROISurfaceMeshes"] = std::make_pair(OpArgDocDumpROISurfaceMeshes, DumpROISurfaceMeshes);
+    out["DumpTPlanMetadataOccurrencesToFile"] = std::make_pair(OpArgDocDumpTPlanMetadataOccurrencesToFile, DumpTPlanMetadataOccurrencesToFile);
     out["DumpVoxelDoseInfo"] = std::make_pair(OpArgDocDumpVoxelDoseInfo, DumpVoxelDoseInfo);
     out["EvaluateDoseVolumeHistograms"] = std::make_pair(OpArgDocEvaluateDoseVolumeHistograms, EvaluateDoseVolumeHistograms);
     out["EvaluateDoseVolumeStats"] = std::make_pair(OpArgDocEvaluateDoseVolumeStats, EvaluateDoseVolumeStats);

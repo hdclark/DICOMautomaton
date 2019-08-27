@@ -1,17 +1,12 @@
-//Imebra_Shim.cc - DICOMautomaton 2012-2013. Written by hal clark.
+//Imebra_Shim.cc - DICOMautomaton 2012-2013, 2017-2019. Written by hal clark.
 //
-//This file is supposed to be a kind of 'shim' or 'wrapper' around the Imebra library.
+// This file is supposed to 'shim' or wrap the Imebra library. It is used to abstract the Imebra library so that it can
+// eventually be replaced with an alternative library, and also reduce the number of template instantiations generated
+// in calling translation units.
 //
-//Why is it needed? **Strictly for convenice.** Compilation of the Imembra library requires
-// a lot of time, and the library must be compiled without linking parts of code which 
-// use Imebra stuff. This is not a design flaw, but it is an inconvenience when one 
-// wants to (write) (compile) (test), (write) (compile) (test), etc.. because it becomes
-// more like (write) (       c   o   m   p   i   l   e       ) (test), etc..
-//
-//NOTE: that we do not properly handle unicode. Everything is stuffed into a std::string.
+// NOTE: Support for unicode is absent. All text is marchalled into std::strings.
 //
 
-#include <YgorImages.h>
 #include <algorithm>      //Needed for std::sort.
 #include <array>
 #include <chrono>
@@ -46,6 +41,236 @@
 #include "YgorMath.h"       //Needed for 'vec3' class.
 #include "YgorMisc.h"       //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorString.h"     //Needed for Canonicalize_String2().
+#include "YgorImages.h"
+
+//----------------- Accessors ---------------------
+
+// seq_group,seq_tag,seq_name or tag_group,tag_tag,tag_name.
+struct path_node {
+    uint16_t group   = 0; // The first number in common DICOM tag parlance.
+    uint16_t tag     = 0; // The second number in common DICOM tag parlance.
+
+    uint32_t order   = 0; // Rarely used in modern DICOM. Almost always going to be zero.
+    uint32_t element = 0; // Used to enumerate items in lists.
+
+};
+
+
+static
+std::vector<std::string>
+extract_tag_as_string( puntoexe::ptr<puntoexe::imebra::dataSet> base_node_ptr,
+                       path_node path ){
+
+    // This routine extracts DICOM tags (multiple, if multiple exist at the level of the pointed-to data frame) as
+    // strings. Multi-element data are a little trickier, especially with Imebra apparently unable to get the whole
+    // element in the raw DICOM representation as string. We break these items into individual elements.
+    //
+    // Note: If there are multiple elements available after the given element, all following elements will be returned.
+    //       (If only the first is needed, discard the following.)
+    //
+    // TODO: It would be better to handle some VR's directly rather than converting to string and back. For example
+    //       doubles. There is currently a lot of unnecessary loss of precision, and I doubt NaN's and Inf's are handled
+    //       correctly, since they are locale-dependent in several ways.
+    //
+    std::vector<std::string> out;
+
+    if(base_node_ptr == nullptr) throw std::logic_error("Passed invalid base node. Cannot continue.");
+    
+    //Check if the tag is present in the file.
+    const bool create_if_not_found = false;
+    const auto ptr = base_node_ptr->getTag(path.group, path.order, path.tag, create_if_not_found);
+    if(ptr == nullptr) return out;
+
+    //Add the first element.
+    const auto str = base_node_ptr->getString(path.group, path.order, path.tag, path.element);
+    //const auto ctrim = CANONICALIZE::TRIM_ENDS;
+    //const auto trimmed = Canonicalize_String2(str, ctrim);
+    //if(!trimmed.empty()) out.emplace_back(trimmed);
+    out.emplace_back(str);
+
+    //Check if there are additional elements.
+    try{
+        const uint32_t buffer_id = 0;
+        auto dh = base_node_ptr->getDataHandler(path.group, path.order, path.tag, buffer_id, create_if_not_found);
+        //FUNCINFO("Encountered " << dh->getSize() << " elements");
+        for(uint32_t i = 1 ; i < dh->getSize(); ++i){
+            const auto str = base_node_ptr->getString(path.group, path.order, path.tag, path.element + i);
+            //const auto trimmed = Canonicalize_String2(str, ctrim);
+            //if(!trimmed.empty()){
+            //    out.emplace_back(trimmed);
+            //}else{
+            //    return out;
+            //}
+            out.emplace_back(str);
+        }
+    }catch(const std::exception &){ }
+
+    return out;
+}
+
+static
+std::vector<std::string>
+extract_seq_tag_as_string( puntoexe::ptr<puntoexe::imebra::dataSet> base_node_ptr,
+                           std::deque<path_node> apath ){
+                           //uint16_t seq_group, uint16_t seq_tag,
+                           //uint16_t tag_group, uint16_t tag_tag ){
+
+    // This routine extracts a DICOM tag that is part of a sequence. Only a single sequence item is consulted, but there
+    // may be multiple elements (i.e., a 3-vector in which each coordinate is individually accessible as an element).
+    //
+    // This routine is not suitable if all items in a *sequence* need to be extracted, but is suitable if multiple
+    // *elements* need to be extracted from a single tag. In practice, this routine works best for extracting
+    // tags like 'ReferencedBeamNumber' which is expected to be a single item in the 'ReferencedBeamSequence'.
+    //
+    // TODO: It would be better to handle some VR's directly rather than converting to string and back. For example
+    //       doubles. There is currently a lot of unnecessary loss of precision, and I doubt NaN's and Inf's are handled
+    //       correctly, since they are locale-dependent in several ways.
+    //
+    std::vector<std::string> out;
+
+    if(base_node_ptr == nullptr) throw std::logic_error("Passed invalid base node. Cannot continue.");
+    if(apath.empty()) throw std::logic_error("Reached DICOM path terminus node -- verify element group/tag are valid.");
+
+    // Extract info about the current node.
+    const auto this_node = apath.front();
+    apath.pop_front();
+
+    //If this is a sequence, jump to the sequence node as the new base and recurse.
+    if(!apath.empty()){
+
+        //Check if the sequence can be found.
+        auto seq_ptr = base_node_ptr->getSequenceItem(this_node.group, this_node.order,
+                                                      this_node.tag,   this_node.element);
+        if(seq_ptr != nullptr){
+            auto res = extract_seq_tag_as_string(seq_ptr, apath);
+            out.insert(std::end(out), std::begin(res), std::end(res));
+        }
+
+    //Otherwise, this is a leaf node.
+    }else{
+        //Check if the tag is present in the sequence.
+        const bool create_if_not_found = false;
+        const auto tag_ptr = base_node_ptr->getTag(this_node.group, this_node.order,
+                                                   this_node.tag,
+                                                   create_if_not_found);
+        if(tag_ptr == nullptr) return out;
+
+        //Add the first element outright.
+        const auto str = base_node_ptr->getString(this_node.group, this_node.order,
+                                                  this_node.tag,   this_node.element);
+        //const auto ctrim = CANONICALIZE::TRIM_ENDS;
+        //const auto trimmed = Canonicalize_String2(str, ctrim);
+        //if(!trimmed.empty()) out.emplace_back(trimmed);
+        out.emplace_back(str);
+
+        //Check if there are additional elements.
+        try{
+            const uint32_t buffer_id = 0;
+            auto dh = base_node_ptr->getDataHandler(this_node.group, this_node.order,
+                                                    this_node.tag,
+                                                    buffer_id, create_if_not_found);
+            //FUNCINFO("Encountered " << dh->getSize() << " elements");
+
+            for(uint32_t i = 1 ; i < dh->getSize(); ++i){
+                const auto str = base_node_ptr->getString(this_node.group, this_node.order,
+                                                          this_node.tag,   this_node.element + i);
+                //const auto trimmed = Canonicalize_String2(str, ctrim);
+                //if(!trimmed.empty()){
+                //    out.emplace_back(trimmed);
+                //}else{
+                //    return out;
+                //}
+                out.emplace_back(str);
+            }
+        }catch(const std::exception &){ }
+    }
+
+    return out;
+}
+
+
+static
+std::vector<std::string>
+extract_seq_vec_tag_as_string( puntoexe::ptr<puntoexe::imebra::dataSet> base_node_ptr,
+                               //Remaining path elements (relative to base_node_ptr).
+                               std::deque<path_node> apath ){
+
+    // This routine extracts DICOM tags, iterating over both sequence items and elements that match the given
+    // hierarchial path. This routine can access tags with deeply-nested sequences in their path, including paths with
+    // multiple items.
+    //
+    // TODO: It would be better to handle some VR's directly rather than converting to string and back. For example
+    //       doubles. There is currently a lot of unnecessary loss of precision, and I doubt NaN's and Inf's are handled
+    //       correctly, since they are locale-dependent in several ways.
+    //
+    std::vector<std::string> out;
+
+    if(base_node_ptr == nullptr) throw std::logic_error("Passed invalid base node. Cannot continue.");
+    if(apath.empty()) throw std::logic_error("Reached DICOM path terminus node -- verify element group/tag are valid.");
+
+    // Extract info about the current node.
+    const auto this_node = apath.front();
+    apath.pop_front();
+
+    //If this is a sequence, jump to the sequence node as the new base and recurse.
+    if(!apath.empty()){
+
+        //Cycle through all sequence items, breaking when no items remain.
+        for(uint32_t i = 0; i < 100000; ++i){
+            auto seq_ptr = base_node_ptr->getSequenceItem(this_node.group, this_node.order,
+                                                          this_node.tag,   this_node.element + i);
+            if(seq_ptr != nullptr){
+                auto res = extract_seq_vec_tag_as_string(seq_ptr, apath);
+                out.insert(std::end(out), std::begin(res), std::end(res));
+            }else{
+                break;
+            }
+        }
+
+    //Otherwise, this is a leaf node.
+    }else{
+        //Check if the tag is present in the sequence.
+        const bool create_if_not_found = false;
+        const auto tag_ptr = base_node_ptr->getTag(this_node.group, this_node.order,
+                                                   this_node.tag,
+                                                   create_if_not_found);
+        if(tag_ptr == nullptr) return out;
+
+        //Add the first element outright.
+        const auto str = base_node_ptr->getString(this_node.group, this_node.order,
+                                                  this_node.tag,   this_node.element);
+        //const auto ctrim = CANONICALIZE::TRIM_ENDS;
+        //const auto trimmed = Canonicalize_String2(str, ctrim);
+        //if(!trimmed.empty()) out.emplace_back(trimmed);
+        out.emplace_back(str);
+
+        //Check if there are additional elements.
+        try{
+            const uint32_t buffer_id = 0;
+            auto dh = base_node_ptr->getDataHandler(this_node.group, this_node.order,
+                                                    this_node.tag,
+                                                    buffer_id, create_if_not_found);
+            //FUNCINFO("Encountered " << dh->getSize() << " elements");
+
+            for(uint32_t i = 1 ; i < dh->getSize(); ++i){
+                const auto str = base_node_ptr->getString(this_node.group, this_node.order,
+                                                          this_node.tag,   this_node.element + i);
+                //const auto trimmed = Canonicalize_String2(str, ctrim);
+                //if(!trimmed.empty()){
+                //    out.emplace_back(trimmed);
+                //}else{
+                //    return out;
+                //}
+                out.emplace_back(str);
+            }
+        }catch(const std::exception &){ }
+    }
+
+    return out;
+}
+
+
+
 
 //------------------ General ----------------------
 //This is used to grab the contents of a single DICOM tag. It can be used for whatever. Some routines
@@ -74,7 +299,6 @@ std::string get_patient_ID(const std::string &filename){
     return get_tag_as_string(filename,0x0010,0x0020);
 }
 
-//------------------ General ----------------------
 //Mass top-level tag enumeration, for ingress into database.
 //
 //NOTE: May not be complete. Add additional tags as needed!
@@ -488,6 +712,13 @@ std::map<std::string,std::string> get_metadata_top_level_tags(const std::string 
                                                 { 0x300A, 0x00B6, "BeamLimitingDeviceSequence" },
                                                 { 0x300A, 0x011C, "LeafJawPositions" } }) );
 
+    //RT Plan Module.
+    insert_as_string_if_nonempty(0x300a, 0x0002, "RTPlanLabel");
+    insert_as_string_if_nonempty(0x300a, 0x0003, "RTPlanName");
+    insert_as_string_if_nonempty(0x300a, 0x0004, "RTPlanDescription");
+    insert_as_string_if_nonempty(0x300a, 0x0006, "RTPlanDate");
+    insert_as_string_if_nonempty(0x300a, 0x0007, "RTPlanTime");
+    insert_as_string_if_nonempty(0x300a, 0x000c, "RTPlanGeometry");
 
     //Unclassified others...
     insert_as_string_if_nonempty(0x0018, 0x0020, "ScanningSequence");
@@ -557,13 +788,6 @@ std::map<std::string,std::string> get_metadata_top_level_tags(const std::string 
     insert_as_string_if_nonempty(0x0028, 0x1050, "WindowCenter");
     insert_as_string_if_nonempty(0x0028, 0x1051, "WindowWidth");
 
-    insert_as_string_if_nonempty(0x300a, 0x0002, "RTPlanLabel");
-    insert_as_string_if_nonempty(0x300a, 0x0003, "RTPlanName");
-    insert_as_string_if_nonempty(0x300a, 0x0004, "RTPlanDescription");
-    insert_as_string_if_nonempty(0x300a, 0x0006, "RTPlanDate");
-    insert_as_string_if_nonempty(0x300a, 0x0007, "RTPlanTime");
-    insert_as_string_if_nonempty(0x300a, 0x000c, "RTPlanGeometry");
-
     insert_as_string_if_nonempty(0x0008, 0x0090, "ReferringPhysicianName");
 
 
@@ -615,13 +839,12 @@ bimap<std::string,long int> get_ROI_tags_and_numbers(const std::string &Filename
 }
 
 
-//Returns contour data from a DICOM RS file sorted into organ-specific collections.
+//Returns contour data from a DICOM RTSTRUCT file sorted into ROI-specific collections.
 std::unique_ptr<Contour_Data> get_Contour_Data(const std::string &filename){
     std::unique_ptr<Contour_Data> output (new Contour_Data());
     bimap<std::string,long int> tags_names_and_numbers = get_ROI_tags_and_numbers(filename);
 
     auto FileMetadata = get_metadata_top_level_tags(filename);
-
 
     using namespace puntoexe;
     ptr<puntoexe::stream> readStream(new puntoexe::stream);
@@ -891,7 +1114,7 @@ std::unique_ptr<Image_Array> Load_Image_Array(const std::string &FilenameIn){
     ||  (TopDataSet->getTag(0x0040,0,0x9210) != nullptr)
     ||  (TopDataSet->getTag(0x0028,0,0x3003) != nullptr)
     ||  (TopDataSet->getTag(0x0040,0,0x08EA) != nullptr) ){ 
-        throw std::domain_error("This image contains a 'Real World Value' LUT (Look-Up Table), which is not presently"
+        throw std::domain_error("This image contains a 'Real World Value' LUT (Look-Up Table), which is presently"
                                 " not supported. You will need to fix the code to handle this");
         // NOTE: See DICOM Supplement 49 "Enhanced MR Image Storage SOP Class" at 
         //       ftp://medical.nema.org/medical/dicom/final/sup49_ft.pdf 
@@ -1282,6 +1505,423 @@ std::list<std::shared_ptr<Image_Array>>  Load_Dose_Arrays(const std::list<std::s
     return out;
 }
 
+//-------------------- Plans ------------------------
+//This routine loads a radiotherapy plan file.
+//
+// See DICOM standard, RT Beams module (C.8.8.14).
+
+std::unique_ptr<TPlan_Config> 
+Load_TPlan_Config(const std::string &FilenameIn){
+    std::unique_ptr<TPlan_Config> out(new TPlan_Config());
+
+    using namespace puntoexe;
+    ptr<puntoexe::stream> readStream(new puntoexe::stream);
+    readStream->openFile(FilenameIn.c_str(), std::ios::in);
+
+    ptr<puntoexe::streamReader> reader(new puntoexe::streamReader(readStream));
+    ptr<imebra::dataSet> base_node_ptr = imebra::codecs::codecFactory::getCodecFactory()->load(reader);
+
+
+    const auto convert_first_to_string = [](const std::vector<std::string> &in) -> std::experimental::optional<std::string> {
+        if(!in.empty()){
+            return std::experimental::optional<std::string>(in.front());
+        }
+        return std::experimental::optional<std::string>();
+    };
+
+    const auto convert_first_to_long_int = [](const std::vector<std::string> &in) -> std::experimental::optional<long int> {
+        if(!in.empty()){
+            try{
+                const auto res = std::stol(in.front());
+                return std::experimental::optional<long int>(res);
+            }catch(const std::exception &){}
+        }
+        return std::experimental::optional<long int>();
+    };
+
+    const auto convert_first_to_double = [](const std::vector<std::string> &in) -> std::experimental::optional<double> {
+        if(!in.empty()){
+            try{
+                const auto res = std::stod(in.front());
+                return std::experimental::optional<double>(res);
+            }catch(const std::exception &){}
+        }
+        return std::experimental::optional<double>();
+    };
+
+    const auto convert_to_vec3_double = [](const std::vector<std::string> &in) -> std::experimental::optional<vec3<double>> {
+        if(in.size() == 3){
+            try{
+                const auto x = std::stod(in.at(0));
+                const auto y = std::stod(in.at(1));
+                const auto z = std::stod(in.at(2));
+                return std::experimental::optional<vec3<double>>( vec3<double>(x,y,z) );
+            }catch(const std::exception &){}
+        }
+        return std::experimental::optional<vec3<double>>();
+    };
+
+    const auto convert_to_vector_double = [](const std::vector<std::string> &in) -> std::vector<double> {
+        std::vector<double> out;
+        for(const auto &x : in){
+            try{
+                const auto y = std::stod(x);
+                out.emplace_back(y);
+            }catch(const std::exception &){}
+        }
+        return out;
+    };
+
+    const auto insert_as_string_if_nonempty = []( std::map<std::string, std::string> &metadata,
+                                                  puntoexe::ptr<puntoexe::imebra::dataSet> base_node_ptr,
+                                                  path_node dicom_path,
+                                                  const std::string name) -> void {
+
+        auto res_str_vec = extract_tag_as_string(base_node_ptr, dicom_path);
+
+        const auto ctrim = CANONICALIZE::TRIM_ENDS;
+        bool add_sep = (metadata.count(name) != 0); // Controls whether a separator will be added.
+        for(const auto &s : res_str_vec){
+            const auto trimmed = Canonicalize_String2(s, ctrim);
+            if(trimmed.empty()) continue;
+            metadata[name] += (add_sep ? R"***(\)***"_s : ""_s) + trimmed;
+            add_sep = true;
+        }
+        return;
+    };
+
+
+    // ------------------------------------------- General --------------------------------------------------
+    out->metadata = get_metadata_top_level_tags(FilenameIn);
+
+    // DoseReferenceSequence
+    for(uint32_t i = 0; i < 100000; ++i){
+        ptr<imebra::dataSet> seq_item_ptr = base_node_ptr->getSequenceItem(0x300a, 0, 0x0010, i);
+        if(seq_item_ptr == nullptr) break;
+
+        const std::string prfx = R"***(DoseReferenceSequence)***"_s + std::to_string(i) + R"***(/)***"_s;
+
+        insert_as_string_if_nonempty(out->metadata, seq_item_ptr, {0x300a, 0x0012}, prfx + "DoseReferenceNumber");
+        insert_as_string_if_nonempty(out->metadata, seq_item_ptr, {0x300a, 0x0013}, prfx + "DoseReferenceUID");
+
+        insert_as_string_if_nonempty(out->metadata, seq_item_ptr, {0x300a, 0x0014}, prfx + "DoseReferenceStructureType");
+        insert_as_string_if_nonempty(out->metadata, seq_item_ptr, {0x300a, 0x0016}, prfx + "DoseReferenceDescription");
+        insert_as_string_if_nonempty(out->metadata, seq_item_ptr, {0x300a, 0x0020}, prfx + "DoseReferenceType");
+        insert_as_string_if_nonempty(out->metadata, seq_item_ptr, {0x300a, 0x0026}, prfx + "TargetPrescriptionDose");
+
+    } // DoseReferenceSequence
+
+
+    // ToleranceTableSequence
+    for(uint32_t i = 0; i < 100000; ++i){
+        ptr<imebra::dataSet> seq_item_ptr = base_node_ptr->getSequenceItem(0x300a, 0, 0x0040, i);
+        if(seq_item_ptr == nullptr) break;
+
+        const std::string prfx = R"***(ToleranceTableSequence)***"_s + std::to_string(i) + R"***(/)***"_s;
+
+        insert_as_string_if_nonempty(out->metadata, seq_item_ptr, {0x300a, 0x0042}, prfx + "ToleranceTableNumber");
+        insert_as_string_if_nonempty(out->metadata, seq_item_ptr, {0x300a, 0x0043}, prfx + "ToleranceTableLabel");
+
+        insert_as_string_if_nonempty(out->metadata, seq_item_ptr, {0x300a, 0x0044}, prfx + "GantryAngleTolerance");
+        insert_as_string_if_nonempty(out->metadata, seq_item_ptr, {0x300a, 0x0046}, prfx + "BeamLimitingDeviceAngleTolerance");
+        insert_as_string_if_nonempty(out->metadata, seq_item_ptr, {0x300a, 0x004c}, prfx + "PatientSupportAngleTolerance");
+        insert_as_string_if_nonempty(out->metadata, seq_item_ptr, {0x300a, 0x0051}, prfx + "TableTopVerticalPositionTolerance");
+        insert_as_string_if_nonempty(out->metadata, seq_item_ptr, {0x300a, 0x0052}, prfx + "TableTopLongitudinalPositionTolerance");
+        insert_as_string_if_nonempty(out->metadata, seq_item_ptr, {0x300a, 0x0053}, prfx + "TableTopLateralPositionTolerance");
+
+        // BeamLimitingDeviceToleranceSequence
+        for(uint32_t j = 0; j < 100000; ++j){
+            ptr<imebra::dataSet> sseq_item_ptr = seq_item_ptr->getSequenceItem(0x300a, 0, 0x0048, j);
+            if(sseq_item_ptr == nullptr) break;
+
+            const std::string pprfx = prfx + R"***(BeamLimitingDeviceToleranceSequence)***"_s + std::to_string(j) + R"***(/)***"_s;
+
+            insert_as_string_if_nonempty(out->metadata, sseq_item_ptr, {0x300a, 0x004a}, pprfx + "BeamLimitingDevicePositionTolerance");
+            insert_as_string_if_nonempty(out->metadata, sseq_item_ptr, {0x300a, 0x00b8}, pprfx + "RTBeamLimitingDeviceType");
+
+        } // BeamLimitingDeviceToleranceSequence
+    } // ToleranceTableSequence
+
+
+    // FractionGroupSequence
+    for(uint32_t i = 0; i < 100000; ++i){
+        ptr<imebra::dataSet> seq_item_ptr = base_node_ptr->getSequenceItem(0x300a, 0, 0x0070, i);
+        if(seq_item_ptr == nullptr) break;
+
+        const std::string prfx = R"***(FractionGroupSequence)***"_s + std::to_string(i) + R"***(/)***"_s;
+
+        insert_as_string_if_nonempty(out->metadata, seq_item_ptr, {0x300a, 0x0071}, prfx + "FractionGroupNumber");
+        insert_as_string_if_nonempty(out->metadata, seq_item_ptr, {0x300a, 0x0078}, prfx + "NumberOfFractionsPlanned");
+        insert_as_string_if_nonempty(out->metadata, seq_item_ptr, {0x300a, 0x0080}, prfx + "NumberOfBeams");
+        insert_as_string_if_nonempty(out->metadata, seq_item_ptr, {0x300a, 0x00a0}, prfx + "NumberOfBrachyApplicationSetups");
+
+        // ReferencedBeamSequence
+        for(uint32_t j = 0; j < 100000; ++j){
+            ptr<imebra::dataSet> sseq_item_ptr = seq_item_ptr->getSequenceItem(0x300c, 0, 0x0004, j);
+            if(sseq_item_ptr == nullptr) break;
+
+            const std::string pprfx = prfx + R"***(ControlPointSequence)***"_s + std::to_string(j) + R"***(/)***"_s;
+
+            insert_as_string_if_nonempty(out->metadata, sseq_item_ptr, {0x300a, 0x0084}, pprfx + "BeamDose");
+            insert_as_string_if_nonempty(out->metadata, sseq_item_ptr, {0x300a, 0x0086}, pprfx + "BeamMeterset");
+            insert_as_string_if_nonempty(out->metadata, sseq_item_ptr, {0x300c, 0x0006}, pprfx + "ReferencedBeamNumber");
+
+        } // ReferencedBeamSequence.
+    } // FractionGroupSequence.
+
+
+    // BeamSequence.
+    for(uint32_t i = 0; i < 100000; ++i){
+        ptr<imebra::dataSet> seq_item_ptr = base_node_ptr->getSequenceItem(0x300a, 0, 0x00b0, i);
+        if(seq_item_ptr == nullptr) break;
+
+        const std::string prfx = R"***(BeamSequence)***"_s + std::to_string(i) + R"***(/)***"_s;
+
+        out->dynamic_states.emplace_back();
+        Dynamic_Machine_State *dms = &(out->dynamic_states.back());
+
+        insert_as_string_if_nonempty(dms->metadata, seq_item_ptr, {0x0008, 0x0070}, /*prfx +*/ "Manufacturer");
+        insert_as_string_if_nonempty(dms->metadata, seq_item_ptr, {0x0008, 0x0080}, /*prfx +*/ "InstitutionName");
+        insert_as_string_if_nonempty(dms->metadata, seq_item_ptr, {0x0008, 0x1040}, /*prfx +*/ "InstitutionalDepartmentName");
+        insert_as_string_if_nonempty(dms->metadata, seq_item_ptr, {0x0008, 0x1090}, /*prfx +*/ "ManufacturerModelName");
+        insert_as_string_if_nonempty(dms->metadata, seq_item_ptr, {0x0018, 0x1000}, /*prfx +*/ "DeviceSerialNumber");
+
+        insert_as_string_if_nonempty(dms->metadata, seq_item_ptr, {0x300a, 0x00b2}, /*prfx +*/ "TreatmentMachineName");
+        insert_as_string_if_nonempty(dms->metadata, seq_item_ptr, {0x300a, 0x00b3}, /*prfx +*/ "PrimaryDosimeterUnit"); // generally HU.
+        insert_as_string_if_nonempty(dms->metadata, seq_item_ptr, {0x300a, 0x00b4}, /*prfx +*/ "SourceAxisDistance"); // in mm.
+
+        insert_as_string_if_nonempty(dms->metadata, seq_item_ptr, {0x300a, 0x00c0}, /*prfx +*/ "BeamNumber");
+        auto BeamNumberOpt  = convert_first_to_long_int( extract_tag_as_string(seq_item_ptr, {0x300a, 0x00c0}) );
+
+        insert_as_string_if_nonempty(dms->metadata, seq_item_ptr, {0x300a, 0x00c2}, /*prfx +*/ "BeamName");
+        auto BeamNameOpt = convert_first_to_string(   extract_tag_as_string(seq_item_ptr, {0x300a, 0x00c2}) );
+
+        insert_as_string_if_nonempty(dms->metadata, seq_item_ptr, {0x300a, 0x00c4}, /*prfx +*/ "BeamType");
+        insert_as_string_if_nonempty(dms->metadata, seq_item_ptr, {0x300a, 0x00c6}, /*prfx +*/ "RadiationType");
+        insert_as_string_if_nonempty(dms->metadata, seq_item_ptr, {0x300a, 0x00ce}, /*prfx +*/ "TreatmentDeliveryType");
+
+        insert_as_string_if_nonempty(dms->metadata, seq_item_ptr, {0x300a, 0x00d0}, /*prfx +*/ "NumberOfWedges");
+        insert_as_string_if_nonempty(dms->metadata, seq_item_ptr, {0x300a, 0x00e0}, /*prfx +*/ "NumberOfCompensators");
+        insert_as_string_if_nonempty(dms->metadata, seq_item_ptr, {0x300a, 0x00ed}, /*prfx +*/ "NumberOfBoli");
+        insert_as_string_if_nonempty(dms->metadata, seq_item_ptr, {0x300a, 0x00f0}, /*prfx +*/ "NumberOfBlocks");
+
+        insert_as_string_if_nonempty(dms->metadata, seq_item_ptr, {0x300a, 0x010e}, /*prfx +*/ "FinalCumulativeMetersetWeight");
+        auto FinalCumulativeMetersetWeightOpt = convert_first_to_double(   extract_tag_as_string(seq_item_ptr, {0x300a, 0x010e}) );
+
+        insert_as_string_if_nonempty(dms->metadata, seq_item_ptr, {0x300a, 0x0110}, /*prfx +*/ "NumberOfControlPoints");
+        auto NumberOfControlPointsOpt = convert_first_to_long_int( extract_tag_as_string(seq_item_ptr, {0x300a, 0x0110}) );
+
+        insert_as_string_if_nonempty(dms->metadata, seq_item_ptr, {0x300c, 0x006a}, /*prfx +*/ "ReferencedPatientSetupNumber");
+        insert_as_string_if_nonempty(dms->metadata, seq_item_ptr, {0x300c, 0x00a0}, /*prfx +*/ "ReferencedToleranceTableNumber");
+
+        if( !BeamNumberOpt
+        ||  !BeamNameOpt 
+        ||  !FinalCumulativeMetersetWeightOpt
+        ||  !NumberOfControlPointsOpt ){
+            throw std::runtime_error("RTPLAN is missing required data. Refusing to continue.");
+        }
+
+        dms->BeamNumber = BeamNumberOpt.value();
+        dms->FinalCumulativeMetersetWeight = FinalCumulativeMetersetWeightOpt.value();
+
+        // BeamLimitingDeviceSequence
+        for(uint32_t j = 0; j < 100000; ++j){
+            ptr<imebra::dataSet> sseq_item_ptr = seq_item_ptr->getSequenceItem(0x300a, 0, 0x00b6, j);
+            if(sseq_item_ptr == nullptr) break;
+
+            const std::string pprfx = prfx + R"***(BeamLimitingDeviceSequence)***"_s + std::to_string(j) + R"***(/)***"_s;
+
+            insert_as_string_if_nonempty(dms->metadata, sseq_item_ptr, {0x300a, 0x00b8}, pprfx + "RTBeamLimitingDeviceType");
+            insert_as_string_if_nonempty(dms->metadata, sseq_item_ptr, {0x300a, 0x00bc}, pprfx + "NumberOfLeafJawPairs");
+            insert_as_string_if_nonempty(dms->metadata, sseq_item_ptr, {0x300a, 0x00be}, pprfx + "LeafPositionBoundaries");
+
+        } // BeamLimitingDeviceSequence
+
+        // PrimaryFluenceModeSequence
+        for(uint32_t j = 0; j < 100000; ++j){
+            ptr<imebra::dataSet> sseq_item_ptr = seq_item_ptr->getSequenceItem(0x3002, 0, 0x0050, j);
+            if(sseq_item_ptr == nullptr) break;
+
+            const std::string pprfx = prfx + R"***(PrimaryFluenceModeSequence)***"_s + std::to_string(j) + R"***(/)***"_s;
+
+            insert_as_string_if_nonempty(dms->metadata, sseq_item_ptr, {0x3002, 0x0051}, pprfx + "FluenceMode");
+            insert_as_string_if_nonempty(dms->metadata, sseq_item_ptr, {0x3002, 0x0052}, pprfx + "FluenceModeID");
+
+        } // PrimaryFluenceModeSequence
+
+        // ControlPointSequence.
+        for(uint32_t j = 0; j < 100000; ++j){
+            ptr<imebra::dataSet> sseq_item_ptr = seq_item_ptr->getSequenceItem(0x300a, 0, 0x0111, j);
+            if(sseq_item_ptr == nullptr) break;
+
+            const std::string pprfx = prfx + R"***(ControlPointSequence)***"_s + std::to_string(j) + R"***(/)***"_s;
+
+            dms->static_states.emplace_back();
+            Static_Machine_State *sms = &(dms->static_states.back());
+
+            const auto nan = std::numeric_limits<double>::quiet_NaN();
+
+            // Necessary elements.
+            auto ControlPointIndexOpt        = convert_first_to_long_int( extract_tag_as_string(sseq_item_ptr, {0x300a, 0x0112}) );
+            auto CumulativeMetersetWeightOpt = convert_first_to_double(   extract_tag_as_string(sseq_item_ptr, {0x300a, 0x0134}) );
+
+            if( !ControlPointIndexOpt
+            ||  !CumulativeMetersetWeightOpt ){
+                throw std::runtime_error("RTPLAN has an invalid control point. Refusing to continue.");
+            }
+
+            // If the following elements are missing, they are considered unchanged from the previous time the element was present.
+
+            insert_as_string_if_nonempty(sms->metadata, sseq_item_ptr, {0x300a, 0x0114}, pprfx + "NominalBeamEnergy");
+            insert_as_string_if_nonempty(sms->metadata, sseq_item_ptr, {0x300a, 0x0115}, pprfx + "DoseRateSet");
+
+            auto GantryAngleOpt                         = convert_first_to_double( extract_tag_as_string(sseq_item_ptr, {0x300a, 0x011e}) );
+            auto GantryRotationDirectionOpt             = convert_first_to_string( extract_tag_as_string(sseq_item_ptr, {0x300a, 0x011f}) );
+
+            auto BeamLimitingDeviceAngleOpt             = convert_first_to_double( extract_tag_as_string(sseq_item_ptr, {0x300a, 0x0120}) );
+            auto BeamLimitingDeviceRotationDirectionOpt = convert_first_to_string( extract_tag_as_string(sseq_item_ptr, {0x300a, 0x0121}) );
+
+            auto PatientSupportAngleOpt                 = convert_first_to_double( extract_tag_as_string(sseq_item_ptr, {0x300a, 0x0122}) );
+            auto PatientSupportRotationDirectionOpt     = convert_first_to_string( extract_tag_as_string(sseq_item_ptr, {0x300a, 0x0123}) );
+
+            auto TableTopEccentricAngleOpt              = convert_first_to_double( extract_tag_as_string(sseq_item_ptr, {0x300a, 0x0125}) );
+            auto TableTopEccentricRotationDirectionOpt  = convert_first_to_string( extract_tag_as_string(sseq_item_ptr, {0x300a, 0x0126}) );
+            auto TableTopVerticalPositionOpt            = convert_first_to_double( extract_tag_as_string(sseq_item_ptr, {0x300a, 0x0128}) );
+            auto TableTopLongitudinalPositionOpt        = convert_first_to_double( extract_tag_as_string(sseq_item_ptr, {0x300a, 0x0129}) );
+            auto TableTopLateralPositionOpt             = convert_first_to_double( extract_tag_as_string(sseq_item_ptr, {0x300a, 0x012a}) );
+
+            auto IsocentrePositionOpt                   = convert_to_vec3_double(  extract_tag_as_string(sseq_item_ptr, {0x300a, 0x012c}) );
+
+            auto TableTopPitchAngleOpt                  = convert_first_to_double( extract_tag_as_string(sseq_item_ptr, {0x300a, 0x0140}) );
+            auto TableTopPitchRotationDirectionOpt      = convert_first_to_string( extract_tag_as_string(sseq_item_ptr, {0x300a, 0x0142}) );
+
+            auto TableTopRollAngleOpt                   = convert_first_to_double( extract_tag_as_string(sseq_item_ptr, {0x300a, 0x0144}) );
+            auto TableTopRollRotationDirectionOpt       = convert_first_to_string( extract_tag_as_string(sseq_item_ptr, {0x300a, 0x0146}) );
+
+            const auto dir_str_to_double = [](const std::string &s) -> double {
+                const auto ctrim = CANONICALIZE::TRIM_ENDS | CANONICALIZE::TO_UPPER;
+                const auto trimmed = Canonicalize_String2(s, ctrim);
+                double out = std::numeric_limits<double>::quiet_NaN();
+                if(false){
+                }else if(trimmed == "NONE"){
+                    out = 0.0;
+                }else if(trimmed == "CCW"){
+                    out = 1.0;
+                }else if(trimmed == "CW"){
+                    out = -1.0;
+                }
+                return out;
+            };
+
+
+            sms->ControlPointIndex = ControlPointIndexOpt.value();
+            sms->CumulativeMetersetWeight = CumulativeMetersetWeightOpt.value();
+
+            sms->GantryAngle = GantryAngleOpt.value_or(nan);
+            sms->GantryRotationDirection = dir_str_to_double( GantryRotationDirectionOpt.value_or("") );
+
+            sms->BeamLimitingDeviceAngle = BeamLimitingDeviceAngleOpt.value_or(nan);
+            sms->BeamLimitingDeviceRotationDirection = dir_str_to_double( BeamLimitingDeviceRotationDirectionOpt.value_or("") );
+
+            sms->PatientSupportAngle = PatientSupportAngleOpt.value_or(nan);
+            sms->PatientSupportRotationDirection = dir_str_to_double( PatientSupportRotationDirectionOpt.value_or("") );
+
+            sms->TableTopEccentricAngle = TableTopEccentricAngleOpt.value_or(nan);
+            sms->TableTopEccentricRotationDirection = dir_str_to_double( TableTopEccentricRotationDirectionOpt.value_or("") );
+
+            sms->TableTopVerticalPosition     = TableTopVerticalPositionOpt.value_or(nan);
+            sms->TableTopLongitudinalPosition = TableTopLongitudinalPositionOpt.value_or(nan);
+            sms->TableTopLateralPosition      = TableTopLateralPositionOpt.value_or(nan);
+
+            sms->TableTopPitchAngle = TableTopPitchAngleOpt.value_or(nan);
+            sms->TableTopPitchRotationDirection = dir_str_to_double( TableTopPitchRotationDirectionOpt.value_or("") );
+
+            sms->TableTopRollAngle = TableTopRollAngleOpt.value_or(nan);
+            sms->TableTopRollRotationDirection = dir_str_to_double( TableTopRollRotationDirectionOpt.value_or("") );
+
+            sms->IsocentrePosition = IsocentrePositionOpt.value_or(vec3<double>(nan,nan,nan));
+
+            // BeamLimitingDevicePositionSequence.
+            for(uint32_t k = 0; k < 100000; ++k){
+                ptr<imebra::dataSet> ssseq_item_ptr = sseq_item_ptr->getSequenceItem(0x300a, 0, 0x011a, k);
+                if(ssseq_item_ptr == nullptr) break;
+
+                auto RTBeamLimitingDeviceTypeOpt = convert_first_to_string(   extract_tag_as_string(ssseq_item_ptr, {0x300a, 0x00b8}) );
+                auto LeafJawPositionsVec         = convert_to_vector_double(  extract_tag_as_string(ssseq_item_ptr, {0x300a, 0x011c}) );
+
+                if( !RTBeamLimitingDeviceTypeOpt
+                ||  LeafJawPositionsVec.empty()  ){
+                    throw std::runtime_error("RTPLAN has an invalid beam limiting device position. Refusing to continue.");
+                }
+
+                const auto ctrim = CANONICALIZE::TRIM_ENDS | CANONICALIZE::TO_UPPER;
+                const auto trimmed = Canonicalize_String2(RTBeamLimitingDeviceTypeOpt.value(), ctrim);
+
+                if(false){
+                }else if((trimmed == "ASYMX") || (trimmed == "X")){
+                    sms->JawPositionsX = LeafJawPositionsVec;
+
+                }else if((trimmed == "ASYMY") || (trimmed == "Y")){
+                    sms->JawPositionsY = LeafJawPositionsVec;
+
+                }else if(trimmed == "MLCX"){
+                    sms->MLCPositionsX = LeafJawPositionsVec;
+
+                }
+            } // BeamLimitingDevicePositionSequence.
+
+            // ReferencedDoseReferenceSequence
+            for(uint32_t k = 0; k < 100000; ++k){
+                ptr<imebra::dataSet> ssseq_item_ptr = sseq_item_ptr->getSequenceItem(0x300c, 0, 0x0050, k);
+                if(ssseq_item_ptr == nullptr) break;
+
+                const std::string ppprfx = pprfx + R"***(ReferencedDoseReferenceSequence)***"_s + std::to_string(k) + R"***(/)***"_s;
+
+                insert_as_string_if_nonempty(sms->metadata, ssseq_item_ptr, {0x300a, 0x010c}, ppprfx + "CumulativeDoseReferenceCoefficient");
+                insert_as_string_if_nonempty(sms->metadata, ssseq_item_ptr, {0x300c, 0x0051}, ppprfx + "ReferencedDoseReferenceNumber");
+
+                // TODO: should implement this as a map<string,double> for easier differential comparison.
+
+            } // ReferencedDoseReferenceSequence
+
+        } // ControlPointSequence
+
+    } // BeamSequence
+
+
+    // Order the beams.
+    std::sort( std::begin(out->dynamic_states),
+               std::end(out->dynamic_states),
+               [](const Dynamic_Machine_State &L, const Dynamic_Machine_State &R) -> bool {
+                   return (L.BeamNumber < R.BeamNumber);
+               });
+
+    // Ensure control points are ordered correctly.
+    for(auto &ds : out->dynamic_states){
+        ds.sort_states();
+    }
+
+    // Ensure there are no missing control points.
+    for(const auto &ds : out->dynamic_states){
+        if(ds.static_states.size() < 2){
+            throw std::runtime_error("Insufficient number of control points. Refusing to continue.");
+        }
+        if(!ds.verify_states_are_ordered()){
+            throw std::runtime_error("A control point is missing. Refusing to continue.");
+        }
+    }
+
+    // Propagate control point state explicitly.
+    for(auto &ds : out->dynamic_states){
+        ds.normalize_states();
+    }
+
+    // TODO: verify all states are finite (except for missing components, e.g., MLC positions on a machine not equipped with MLCs.
+
+    return std::move(out);
+}
+
+//-------------------- Export -----------------------
 static std::string Generate_Random_UID(long int len){
     std::string out;
     static const std::string alphanum(R"***(.0123456789)***");

@@ -81,21 +81,20 @@ bool Load_From_DICOM_Files( Drover &DICOM_data,
                      "DICOMautomaton currently is not equipped to read RTRECORD-modality DICOM files. "
                      "Disregarding it");
 
-            bfit = Filenames.erase( bfit ); 
+            bfit = Filenames.erase( bfit );  // Consume the file; we know what it is, but cannot make use of it.
 
         }else if(boost::iequals(Modality,"REG")){
             FUNCWARN("REG file encountered. "
                      "DICOMautomaton currently is not equipped to read REG-modality DICOM files. "
                      "Disregarding it");
 
-            bfit = Filenames.erase( bfit ); 
+            bfit = Filenames.erase( bfit );  // Consume the file; we know what it is, but cannot make use of it.
 
         }else if(boost::iequals(Modality,"RTPLAN")){
-            FUNCWARN("RTPLAN file encountered. "
-                     "DICOMautomaton currently is not equipped to process RTPLAN-modality DICOM files. "
-                     "Disregarding it. "
-                     "Note that some of the tags *could* be loaded as common metadata (e.g., fractionation info), "
-                     "but this is not currently implemented");
+            FUNCWARN("RTPLAN file support is experimental");
+
+            auto tplan = Load_TPlan_Config(Filename);
+            DICOM_data.tplan_data.emplace_back( std::move(tplan) );
 
             bfit = Filenames.erase( bfit ); 
 

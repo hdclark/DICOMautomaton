@@ -165,3 +165,36 @@ Whitelist( std::list<std::list<std::shared_ptr<Surface_Mesh>>::iterator> pcs,
 // Utility function documenting the surface mesh whitelist routines for operations.
 OperationArgDoc SMWhitelistOpArgDoc(void);
 
+
+// ------------------------------------ TPlan_Config -------------------------------------
+
+// Provide pointers for all surface meshes into a list.
+//
+// Note: The output is meant to be filtered using the selectors below.
+std::list<std::list<std::shared_ptr<TPlan_Config>>::iterator>
+All_TPs( Drover &DICOM_data );
+
+
+// Whitelist surface meshes using the provided regex.
+std::list<std::list<std::shared_ptr<TPlan_Config>>::iterator>
+Whitelist( std::list<std::list<std::shared_ptr<TPlan_Config>>::iterator> pcs,
+           std::string MetadataKey,
+           std::string MetadataValueRegex,
+           Regex_Selector_Opts Opts = Regex_Selector_Opts() );
+
+// Whitelist surface meshes using a limited vocabulary of specifiers.
+std::list<std::list<std::shared_ptr<TPlan_Config>>::iterator>
+Whitelist( std::list<std::list<std::shared_ptr<TPlan_Config>>::iterator> pcs,
+           std::string Specifier,
+           Regex_Selector_Opts Opts = Regex_Selector_Opts() );
+
+// This is a convenience routine to combine multiple filtering passes into a single logical statement.
+std::list<std::list<std::shared_ptr<TPlan_Config>>::iterator>
+Whitelist( std::list<std::list<std::shared_ptr<TPlan_Config>>::iterator> pcs,
+           std::initializer_list< std::pair<std::string,        // MetadataKey
+                                            std::string> > MetadataKeyValueRegex, // MetadataValueRegex
+           Regex_Selector_Opts Opts = Regex_Selector_Opts() );
+
+// Utility function documenting the surface mesh whitelist routines for operations.
+OperationArgDoc TPWhitelistOpArgDoc(void);
+

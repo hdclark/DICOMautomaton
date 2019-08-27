@@ -234,6 +234,112 @@ class Surface_Mesh {
 };
 
 
+// The class represents a static, instantaneous snapshot of a radiotherapy treatment machine.
+// It represents a 'control point' or 'keyframe' for a dynamic particle beam trajectory in state space that can be
+// interpolated against another control point to provide a dynamic view.
+//
+// Note: NaNs in member variables can either denote the data is not applicable, or has not changed since the last time
+//       it was specified. 
+class Static_Machine_State {
+    public:
+
+        double CumulativeMetersetWeight             = std::numeric_limits<double>::quiet_NaN();
+        long int ControlPointIndex                  = std::numeric_limits<long int>::min();
+
+        double GantryAngle                          = std::numeric_limits<double>::quiet_NaN();
+        double GantryRotationDirection              = std::numeric_limits<double>::quiet_NaN();
+
+        double BeamLimitingDeviceAngle              = std::numeric_limits<double>::quiet_NaN();
+        double BeamLimitingDeviceRotationDirection  = std::numeric_limits<double>::quiet_NaN();
+
+        double PatientSupportAngle                  = std::numeric_limits<double>::quiet_NaN();
+        double PatientSupportRotationDirection      = std::numeric_limits<double>::quiet_NaN();
+
+        double TableTopEccentricAngle               = std::numeric_limits<double>::quiet_NaN();
+        double TableTopEccentricRotationDirection   = std::numeric_limits<double>::quiet_NaN();
+
+        double TableTopVerticalPosition             = std::numeric_limits<double>::quiet_NaN();
+        double TableTopLongitudinalPosition         = std::numeric_limits<double>::quiet_NaN();
+        double TableTopLateralPosition              = std::numeric_limits<double>::quiet_NaN();
+
+        double TableTopPitchAngle                   = std::numeric_limits<double>::quiet_NaN();
+        double TableTopPitchRotationDirection       = std::numeric_limits<double>::quiet_NaN();
+
+        double TableTopRollAngle                    = std::numeric_limits<double>::quiet_NaN();
+        double TableTopRollRotationDirection        = std::numeric_limits<double>::quiet_NaN();
+
+        vec3<double> IsocentrePosition              = vec3<double>( std::numeric_limits<double>::quiet_NaN(),
+                                                                    std::numeric_limits<double>::quiet_NaN(),
+                                                                    std::numeric_limits<double>::quiet_NaN() );
+
+        //long int JawPairsX = 0;                  // (300a,00b8) CS [ASYMX]
+        std::vector<double> JawPositionsX;       // (300a,00bc) IS [1] 
+
+        //long int JawPairsY = 0;                  // (300a,00b8) CS [ASYMY]
+        std::vector<double> JawPositionsY;       // (300a,00bc) IS [1] 
+
+        //long int MLCPairsX = 0;                  // (300a,00b8) CS [MLCX]
+        std::vector<double> MLCPositionsX;       // (300a,00bc) IS [60]
+
+        //long int MLCPairsY = 0;                  // (300a,00b8) CS [MLCY]
+        //std::vector<double> MLCPositionsY;       // (300a,00bc) IS [60]
+        
+        std::map< std::string, std::string > metadata; //User-defined metadata.
+
+        //Constructor/Destructors.
+        Static_Machine_State();
+        Static_Machine_State(const Static_Machine_State &rhs); //Performs a deep copy (unless copying self).
+
+        //Member functions.
+        Static_Machine_State & operator=(const Static_Machine_State &rhs); //Performs a deep copy (unless copying self).
+
+};
+
+// The class represents a dynamic configuration of a treatment machine composed of interpolated static states.
+class Dynamic_Machine_State {
+    public:
+
+        long int BeamNumber = -1;
+
+        double FinalCumulativeMetersetWeight = std::numeric_limits<double>::quiet_NaN();
+
+
+        std::vector<Static_Machine_State> static_states; // Each static state represents a keyframe.
+
+        std::map< std::string, std::string > metadata; //User-defined metadata.
+
+        //Constructor/Destructors.
+        Dynamic_Machine_State();
+        Dynamic_Machine_State(const Dynamic_Machine_State &rhs); //Performs a deep copy (unless copying self).
+
+        //Member functions.
+        Dynamic_Machine_State & operator=(const Dynamic_Machine_State &rhs); //Performs a deep copy (unless copying self).
+
+        void sort_states(void); // Sorts static states so that CumulativeMetersetWeight monotonically increases.
+        bool verify_states_are_ordered(void) const; // Ensures the static states are ordered and none are missing.
+        void normalize_states(void); // Replaces NaNs with previously specified static states, where possible.
+        Static_Machine_State interpolate(double CumulativeMetersetWeight) const; // Interpolates adjacent states.
+
+};
+
+// This class holds a radiotherapy plan, i.e., an arrangement of multiple dynamic particle beams and treatment
+// structures (e.g., treatment couch) combined with other relevant information, such as prescription dose.
+class TPlan_Config {
+    public:
+
+        std::vector<Dynamic_Machine_State> dynamic_states; // Each dynamic state represents a unique beam.
+
+        std::map< std::string, std::string > metadata; //User-defined metadata.
+
+        //Constructor/Destructors.
+        TPlan_Config();
+        TPlan_Config(const TPlan_Config &rhs); //Performs a deep copy (unless copying self).
+
+        //Member functions.
+        TPlan_Config & operator=(const TPlan_Config &rhs); //Performs a deep copy (unless copying self).
+};
+
+
 //---------------------------------------------------------------------------------------------------------------------------
 //------------------------------------------------------------ Drover -------------------------------------------------------
 //---------------------------------------------------------------------------------------------------------------------------
@@ -326,6 +432,7 @@ class Drover {
         std::list<std::shared_ptr<Image_Array>>  image_data;   //In case we ever get more than one set of images (different modalities?)
         std::list<std::shared_ptr<Point_Cloud>>  point_data;
         std::list<std::shared_ptr<Surface_Mesh>> smesh_data;
+        std::list<std::shared_ptr<TPlan_Config>> tplan_data;
     
         //Constructors.
         Drover();
@@ -362,17 +469,20 @@ class Drover {
         bool Has_Image_Data(void) const;
         bool Has_Point_Data(void) const;
         bool Has_Mesh_Data(void) const;
+        bool Has_TPlan_Data(void) const;
 
         void Concatenate(std::shared_ptr<Contour_Data> in);
         void Concatenate(std::list<std::shared_ptr<Image_Array>> in);
         void Concatenate(std::list<std::shared_ptr<Point_Cloud>> in);
         void Concatenate(std::list<std::shared_ptr<Surface_Mesh>> in);
+        void Concatenate(std::list<std::shared_ptr<TPlan_Config>> in);
         void Concatenate(Drover in);
 
         void Consume(std::shared_ptr<Contour_Data> in);
         void Consume(std::list<std::shared_ptr<Image_Array>> in);
         void Consume(std::list<std::shared_ptr<Point_Cloud>> in);
         void Consume(std::list<std::shared_ptr<Surface_Mesh>> in);
+        void Consume(std::list<std::shared_ptr<TPlan_Config>> in);
         void Consume(Drover in);
     
         void Plot_Dose_And_Contours(void) const;

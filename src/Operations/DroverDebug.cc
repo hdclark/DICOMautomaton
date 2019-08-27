@@ -36,46 +36,42 @@ Drover DroverDebug(Drover DICOM_data,
 
     //Image data.
     {
-        FUNCINFO("There are " <<
-                 DICOM_data.image_data.size() <<
-                 " Image_Arrays loaded");
+        FUNCINFO("There are " << DICOM_data.image_data.size() << " Image_Arrays loaded");
 
         size_t i_arr = 0;
         for(auto &iap : DICOM_data.image_data){
-            FUNCINFO("  Image_Array " <<
-                     i_arr++ <<
-                     " has " <<
-                     iap->imagecoll.images.size() <<
-                     " image slices");
-            size_t i_num = 0;
-            for(auto &img : iap->imagecoll.images){
-                const auto ModalityOpt = img.GetMetadataValueAs<std::string>("Modality");
-                const auto mm = img.minmax();
-                FUNCINFO("    Image " <<
-                         i_num <<
-                         " has Modality = " <<
-                         ModalityOpt.value_or("(unspecified)") );
-                FUNCINFO("    Image " <<
-                         i_num <<
-                         " has pixel value range = [" <<
-                         mm.first << "," << mm.second << "]");
-                FUNCINFO("    Image " <<
-                         i_num <<
-                         " has pxl_dx, pxl_dy, pxl_dz = " <<
-                         img.pxl_dx << ", " <<
-                         img.pxl_dy << ", " <<
-                         img.pxl_dz);
-                FUNCINFO("    Image " <<
-                         i_num <<
-                         " has anchor, offset = " <<
-                         img.anchor << ", " <<
-                         img.offset);
-                FUNCINFO("    Image " <<
-                         i_num <<
-                         " has row_unit, col_unit = " <<
-                         img.row_unit << ", " <<
-                         img.col_unit);
-                ++i_num;
+            if(iap == nullptr){
+                FUNCINFO("  Image_Array " << i_arr << " is not valid");
+
+            }else{
+                FUNCINFO("  Image_Array " << i_arr << " has " <<
+                         iap->imagecoll.images.size() << " image slices");
+
+                size_t i_num = 0;
+                for(auto &img : iap->imagecoll.images){
+                    const auto ModalityOpt = img.GetMetadataValueAs<std::string>("Modality");
+                    const auto mm = img.minmax();
+
+                    FUNCINFO("    Image " << i_num << " has" <<
+                             " Modality = " << ModalityOpt.value_or("(unspecified)") );
+                    FUNCINFO("    Image " << i_num << " has" <<
+                             " pixel value range = [" << mm.first << "," << mm.second << "]");
+                    FUNCINFO("    Image " << i_num << " has" <<
+                             " has pxl_dx, pxl_dy, pxl_dz = " <<
+                                 img.pxl_dx << ", " <<
+                                 img.pxl_dy << ", " <<
+                                 img.pxl_dz);
+                    FUNCINFO("    Image " << i_num << " has" <<
+                             " anchor, offset = " <<
+                                 img.anchor << ", " <<
+                                 img.offset);
+                    FUNCINFO("    Image " << i_num << " has" <<
+                             " row_unit, col_unit = " <<
+                                 img.row_unit << ", " <<
+                                 img.col_unit);
+                    ++i_num;
+                }
+                ++i_arr;
             }
         }
     }
@@ -117,38 +113,63 @@ Drover DroverDebug(Drover DICOM_data,
 
     //Point data.
     {
-        FUNCINFO("There are " <<
-                 DICOM_data.point_data.size() <<
-                 " Point_Clouds loaded");
+        FUNCINFO("There are " << DICOM_data.point_data.size() << " Point_Clouds loaded");
 
         size_t p_cnt = 0;
         for(auto &pc : DICOM_data.point_data){
-            FUNCINFO("  Point_Cloud " <<
-                     p_cnt++ <<
-                     " has " <<
-                     pc->points.size() <<
-                     " points and " <<
-                     pc->attributes.size() <<
-                     " attributes");
+            if(pc == nullptr){
+                FUNCINFO("  Point_Cloud " << p_cnt << " is not valid");
+
+            }else{
+                FUNCINFO("  Point_Cloud " << p_cnt << " has " <<
+                         pc->points.size() << " points and " <<
+                         pc->attributes.size() << " attributes");
+            }
+            ++p_cnt;
         }
     }
 
     //Surface mesh data.
     {
-        FUNCINFO("There are " <<
-                 DICOM_data.smesh_data.size() <<
-                 " Surface_Meshes loaded");
+        FUNCINFO("There are " << DICOM_data.smesh_data.size() << " Surface_Meshes loaded");
 
         size_t m_cnt = 0;
         for(auto &sm : DICOM_data.smesh_data){
-            FUNCINFO("  Surface_Mesh " <<
-                     m_cnt++ <<
-                     " has " <<
-                     sm->meshes.vertices.size() <<
-                     " vertices and " <<
-                     sm->meshes.faces.size() <<
-                     " faces");
+            if(sm == nullptr){
+                FUNCINFO("  Surface_Mesh " << m_cnt << " is not valid");
+
+            }else{
+                FUNCINFO("  Surface_Mesh " << m_cnt << " has " << 
+                         sm->meshes.vertices.size() << " vertices and " <<
+                         sm->meshes.faces.size() << " faces");
+            }
+            ++m_cnt;
         }
     }
+
+    //Treatment plan data.
+    {
+        FUNCINFO("There are " << DICOM_data.tplan_data.size() << " TPlan_Configs loaded");
+
+        size_t tp_cnt = 0;
+        for(auto &tp : DICOM_data.tplan_data){
+            if(tp == nullptr){
+                FUNCINFO("  TPlan_Config " << tp_cnt << " is not valid");
+
+            }else{
+                FUNCINFO("  TPlan_Config " << tp_cnt << " has " <<
+                         tp->dynamic_states.size() << " beams");
+
+                size_t b_cnt = 0;
+                for(const auto &ds : tp->dynamic_states){
+                    FUNCINFO("    Beam " << b_cnt << " has " <<
+                             ds.static_states.size() << " control points");
+                    ++b_cnt;
+                }
+            }
+            ++tp_cnt;
+        }
+    }
+
     return DICOM_data;
 }

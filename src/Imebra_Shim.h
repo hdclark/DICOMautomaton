@@ -44,12 +44,17 @@ std::list<std::shared_ptr<Image_Array>>  Load_Image_Arrays(const std::list<std::
 //Since many images must be loaded individually from a file, we will often have to collate them together.
 std::unique_ptr<Image_Array> Collate_Image_Arrays(std::list<std::shared_ptr<Image_Array>> &in);
 
+
 //--------------------- Dose -----------------------
 std::unique_ptr<Image_Array> Load_Dose_Array(const std::string &filename);
 
 //These pointers will actually be unique. This just aims to convert from unique_ptr to shared_ptr for you.
 std::list<std::shared_ptr<Image_Array>>  Load_Dose_Arrays(const std::list<std::string> &filenames);
 
+//-------------------- Plans ------------------------
+std::unique_ptr<TPlan_Config> Load_TPlan_Config(const std::string &filename);
+
+//-------------------- Export -----------------------
 //Writes an Image_Array as if it were a dose matrix.
 enum ParanoiaLevel {
     Low,      // Reuse many of the metadata tags.

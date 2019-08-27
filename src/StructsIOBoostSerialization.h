@@ -100,6 +100,80 @@ void serialize(Archive &a, Surface_Mesh &p, const unsigned int version){
     return;
 }
 
+//Class: Static_Machine_State.
+template<typename Archive>
+void serialize(Archive &a, Static_Machine_State &p, const unsigned int version){
+    if(false){
+    }else if(version == 0){
+        a & boost::serialization::make_nvp("CumulativeMetersetWeight",p.CumulativeMetersetWeight)
+          & boost::serialization::make_nvp("ControlPointIndex",p.ControlPointIndex)
+
+          & boost::serialization::make_nvp("GantryAngle",p.GantryAngle)
+          & boost::serialization::make_nvp("GantryRotationDirection",p.GantryRotationDirection)
+
+          & boost::serialization::make_nvp("BeamLimitingDeviceAngle",p.BeamLimitingDeviceAngle)
+          & boost::serialization::make_nvp("BeamLimitingDeviceRotationDirection",p.BeamLimitingDeviceRotationDirection)
+
+          & boost::serialization::make_nvp("PatientSupportAngle",p.PatientSupportAngle)
+          & boost::serialization::make_nvp("PatientSupportRotationDirection",p.PatientSupportRotationDirection)
+
+          & boost::serialization::make_nvp("TableTopEccentricAngle",p.TableTopEccentricAngle)
+          & boost::serialization::make_nvp("TableTopEccentricRotationDirection",p.TableTopEccentricRotationDirection)
+
+          & boost::serialization::make_nvp("TableTopVerticalPosition",p.TableTopVerticalPosition)
+          & boost::serialization::make_nvp("TableTopLongitudinalPosition",p.TableTopLongitudinalPosition)
+          & boost::serialization::make_nvp("TableTopLateralPosition",p.TableTopLateralPosition)
+
+          & boost::serialization::make_nvp("TableTopPitchAngle",p.TableTopPitchAngle)
+          & boost::serialization::make_nvp("TableTopPitchRotationDirection",p.TableTopPitchRotationDirection)
+
+          & boost::serialization::make_nvp("TableTopRollAngle",p.TableTopRollAngle)
+          & boost::serialization::make_nvp("TableTopRollRotationDirection",p.TableTopRollRotationDirection)
+
+          & boost::serialization::make_nvp("IsocentrePosition",p.IsocentrePosition)
+
+          & boost::serialization::make_nvp("JawPositionsX",p.JawPositionsX)
+          & boost::serialization::make_nvp("JawPositionsY",p.JawPositionsY)
+          & boost::serialization::make_nvp("MLCPositionsX",p.MLCPositionsX)
+
+          & boost::serialization::make_nvp("metadata",p.metadata);
+    }else{
+        FUNCWARN("Static_Machine_State archives with version " << version << " are not recognized");
+    }
+    return;
+}
+
+//Class: Dynamic_Machine_State.
+template<typename Archive>
+void serialize(Archive &a, Dynamic_Machine_State &p, const unsigned int version){
+    if(false){
+    }else if(version == 0){
+        a & boost::serialization::make_nvp("BeamNumber",p.BeamNumber)
+          & boost::serialization::make_nvp("FinalCumulativeMetersetWeight",p.FinalCumulativeMetersetWeight)
+
+          & boost::serialization::make_nvp("static_states",p.static_states)
+
+          & boost::serialization::make_nvp("metadata",p.metadata);
+    }else{
+        FUNCWARN("Dynamic_Machine_State archives with version " << version << " are not recognized");
+    }
+    return;
+}
+
+//Class: TPlan_Config.
+template<typename Archive>
+void serialize(Archive &a, TPlan_Config &p, const unsigned int version){
+    if(false){
+    }else if(version == 0){
+        a & boost::serialization::make_nvp("dynamic_states",p.dynamic_states)
+
+          & boost::serialization::make_nvp("metadata",p.metadata);
+    }else{
+        FUNCWARN("TPlan_Config archives with version " << version << " are not recognized");
+    }
+    return;
+}
+
 //Class: Drover.
 template<typename Archive>
 void serialize(Archive &a, Drover &d, const unsigned int version){
@@ -115,6 +189,12 @@ void serialize(Archive &a, Drover &d, const unsigned int version){
           & boost::serialization::make_nvp("image_data",d.image_data)
           & boost::serialization::make_nvp("point_data",d.point_data)
           & boost::serialization::make_nvp("smesh_data",d.smesh_data);
+    }else if(version == 3){
+        a & boost::serialization::make_nvp("contour_data",d.contour_data)
+          & boost::serialization::make_nvp("image_data",d.image_data)
+          & boost::serialization::make_nvp("point_data",d.point_data)
+          & boost::serialization::make_nvp("smesh_data",d.smesh_data)
+          & boost::serialization::make_nvp("tplan_data",d.tplan_data);
     }else{
         FUNCWARN("Drover archives with version " << version << " are not recognized");
     }
@@ -134,5 +214,6 @@ BOOST_CLASS_VERSION(Surface_Mesh, 0); // Initial version number, effectively jus
 
 //BOOST_CLASS_VERSION(Drover, 0); // Initial version number.
 //BOOST_CLASS_VERSION(Drover, 1); // After removing Dose_Arrays and Drover::Has_Been_Melded.
-BOOST_CLASS_VERSION(Drover, 2); // After adding v0 of the Surface_Mesh member.
+//BOOST_CLASS_VERSION(Drover, 2); // After adding v0 of the Surface_Mesh member.
+BOOST_CLASS_VERSION(Drover, 3); // After adding v0 of the TPlan_Config member.
 

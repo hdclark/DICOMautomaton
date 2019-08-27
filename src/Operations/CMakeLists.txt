@@ -58,11 +58,13 @@ add_library(Operations_objs OBJECT
     DumpImageMetadataOccurrencesToFile.cc
     DumpPerROIParams_KineticModel_1Compartment2Input_5Param.cc
     DumpPixelValuesOverTimeForAnEncompassedPoint.cc
+    DumpPlanSummary.cc
     DumpROIContours.cc
     DumpROIData.cc
     DumpROIDoseInfo.cc
     DumpROISNR.cc
     DumpROISurfaceMeshes.cc
+    DumpTPlanMetadataOccurrencesToFile.cc
     DumpVoxelDoseInfo.cc
     EQD2Convert.cc
     EvaluateDoseVolumeHistograms.cc

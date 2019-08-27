@@ -39,13 +39,15 @@ OperationDoc OpArgDocBoost_Serialize_Drover(void){
     out.args.back().name = "Components";
     out.args.back().desc = "Which components to include in the output."
                            " Currently, any combination of (all images), (all contours), (all point clouds), "
-                           " and (all surface meshes) can be selected.";
-    out.args.back().default_val = "images+contours+pointclouds+surfacemeshes";
+                           " (all surface meshes), and (all treatment plans) can be selected."
+                           " Note that RTDOSEs are treated as images.";
+    out.args.back().default_val = "images+contours+pointclouds+surfacemeshes+tplans";
     out.args.back().expected = true;
     out.args.back().examples = { "images",
                                  "images+pointclouds",
                                  "images+pointclouds+surfacemeshes",
                                  "pointclouds+surfacemeshes",
+                                 "tplans+images+contours",
                                  "contours+images+pointclouds" };
 
     return out;
@@ -64,11 +66,13 @@ Boost_Serialize_Drover(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std:
     const auto regex_contours = Compile_Regex(".*cont?o?u?r?s?.*");
     const auto regex_pclouds  = Compile_Regex(".*po?i?n?t?.*clo?u?d?s?.*");
     const auto regex_smeshes  = Compile_Regex(".*su?r?f?a?c?e?.*mes?h?e?s?.*");
+    const auto regex_tplans   = Compile_Regex(".*t?r?e?a?t?m?e?n?t?.*pla?n?s?.*");
 
     const bool include_images   = std::regex_match(ComponentsStr, regex_images);
     const bool include_contours = std::regex_match(ComponentsStr, regex_contours);
     const bool include_pclouds  = std::regex_match(ComponentsStr, regex_pclouds);
     const bool include_smeshes  = std::regex_match(ComponentsStr, regex_smeshes);
+    const bool include_tplans   = std::regex_match(ComponentsStr, regex_tplans);
 
     const boost::filesystem::path apath(FilenameStr);
 
@@ -88,6 +92,9 @@ Boost_Serialize_Drover(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std:
     }
     if(include_smeshes){
         d.smesh_data = DICOM_data.smesh_data;
+    }
+    if(include_tplans){
+        d.tplan_data = DICOM_data.tplan_data;
     }
 
     const auto res = Common_Boost_Serialize_Drover(d, apath);

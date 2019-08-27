@@ -965,6 +965,313 @@ Point_Cloud & Point_Cloud::operator=(const Point_Cloud &rhs){
 }
 
 //---------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------- Static_Machine_State ------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------------
+Static_Machine_State::Static_Machine_State(){ }
+
+Static_Machine_State::Static_Machine_State(const Static_Machine_State &rhs){
+    *this = rhs; //Performs a deep copy (unless copying self).
+}
+
+Static_Machine_State & Static_Machine_State::operator=(const Static_Machine_State &rhs){
+    //Performs a deep copy (unless copying self).
+    if(this != &rhs){
+        this->metadata = rhs.metadata;
+
+        this->CumulativeMetersetWeight = rhs.CumulativeMetersetWeight;
+        this->ControlPointIndex = rhs.ControlPointIndex;
+        
+        this->GantryAngle = rhs.GantryAngle;
+        this->GantryRotationDirection = rhs.GantryRotationDirection;
+        
+        this->BeamLimitingDeviceAngle = rhs.BeamLimitingDeviceAngle;
+        this->BeamLimitingDeviceRotationDirection = rhs.BeamLimitingDeviceRotationDirection;
+        
+        this->PatientSupportAngle = rhs.PatientSupportAngle;
+        this->PatientSupportRotationDirection = rhs.PatientSupportRotationDirection;
+        
+        this->TableTopEccentricAngle = rhs.TableTopEccentricAngle;
+        this->TableTopEccentricRotationDirection = rhs.TableTopEccentricRotationDirection;
+        
+        this->TableTopVerticalPosition = rhs.TableTopVerticalPosition;
+        this->TableTopLongitudinalPosition = rhs.TableTopLongitudinalPosition;
+        this->TableTopLateralPosition = rhs.TableTopLateralPosition;
+        
+        this->TableTopPitchAngle = rhs.TableTopPitchAngle;
+        this->TableTopPitchRotationDirection = rhs.TableTopPitchRotationDirection;
+        
+        this->TableTopRollAngle = rhs.TableTopRollAngle;
+        this->TableTopRollRotationDirection = rhs.TableTopRollRotationDirection;
+        
+        this->IsocentrePosition = rhs.IsocentrePosition;
+        
+        this->JawPositionsX = rhs.JawPositionsX;
+        this->JawPositionsY = rhs.JawPositionsY;
+        this->MLCPositionsX = rhs.MLCPositionsX;
+    }
+    return *this;
+}
+
+//---------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------- Dynamic_Machine_State ------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------------
+Dynamic_Machine_State::Dynamic_Machine_State(){ }
+
+Dynamic_Machine_State::Dynamic_Machine_State(const Dynamic_Machine_State &rhs){
+    *this = rhs; //Performs a deep copy (unless copying self).
+}
+
+Dynamic_Machine_State & Dynamic_Machine_State::operator=(const Dynamic_Machine_State &rhs){
+    //Performs a deep copy (unless copying self).
+    if(this != &rhs){
+        this->BeamNumber = rhs.BeamNumber;
+        this->FinalCumulativeMetersetWeight = rhs.FinalCumulativeMetersetWeight;
+        this->static_states = rhs.static_states;
+        this->metadata = rhs.metadata;
+    }
+    return *this;
+}
+
+void
+Dynamic_Machine_State::sort_states(void){
+    // Sorts static states so that CumulativeMetersetWeight monotonically increase.
+    std::sort( std::begin(this->static_states),
+               std::end(this->static_states),
+               [](const Static_Machine_State &l, const Static_Machine_State &r) -> bool {
+                   return (l.ControlPointIndex < r.ControlPointIndex);
+               } );
+    return;
+}
+
+bool
+Dynamic_Machine_State::verify_states_are_ordered(void) const {
+    // Ensures the static states are ordered and none are missing.
+    //
+    // Returns true iff states are ordered, none are missing, and there are sufficient static states to interpolate
+    // (i.e., 2).
+    if(this->static_states.size() < 2){
+        return false;
+        //throw std::runtime_error("Insufficient number of control points. Refusing to continue.");
+    }
+    for(auto it =  std::next(std::begin(this->static_states)); it != std::end(this->static_states); ++it){
+        const auto prev_it = std::prev(it);
+        const auto diff = (it->ControlPointIndex - prev_it->ControlPointIndex);
+        if(diff != 1L){
+            //throw std::runtime_error("A control point is missing. Refusing to continue.");
+            return false;
+        }
+    }
+    return true;
+}
+
+void
+Dynamic_Machine_State::normalize_states(void){
+    // This routine 'normalizes' in the sense that it replaces NaNs with previously specified static states, where possible.
+    // 
+    // Note that additional types of normalization *may* be added in the future. TODO.
+    for(auto B = std::next(std::begin(this->static_states)); B != std::end(this->static_states); ++B){
+        auto A = std::prev(B);
+
+        //if( std::isfinite(A->CumulativeMetersetWeight) 
+        //&& !std::isfinite(B->CumulativeMetersetWeight)) B->CumulativeMetersetWeight = A->CumulativeMetersetWeight;
+        //if( std::isfinite(A->ControlPointIndex)
+        //&& !std::isfinite(B->ControlPointIndex)) B->ControlPointIndex = A->ControlPointIndex;
+
+        if( std::isfinite(A->GantryAngle)
+        && !std::isfinite(B->GantryAngle)) B->GantryAngle = A->GantryAngle;
+        if( std::isfinite(A->GantryRotationDirection)
+        && !std::isfinite(B->GantryRotationDirection)) B->GantryRotationDirection = A->GantryRotationDirection;
+
+        if( std::isfinite(A->BeamLimitingDeviceAngle)
+        && !std::isfinite(B->BeamLimitingDeviceAngle)) B->BeamLimitingDeviceAngle = A->BeamLimitingDeviceAngle;
+        if( std::isfinite(A->BeamLimitingDeviceRotationDirection) 
+        && !std::isfinite(B->BeamLimitingDeviceRotationDirection)) B->BeamLimitingDeviceRotationDirection = A->BeamLimitingDeviceRotationDirection;
+
+        if( std::isfinite(A->PatientSupportAngle) 
+        && !std::isfinite(B->PatientSupportAngle)) B->PatientSupportAngle = A->PatientSupportAngle;
+        if( std::isfinite(A->PatientSupportRotationDirection) 
+        && !std::isfinite(B->PatientSupportRotationDirection)) B->PatientSupportRotationDirection = A->PatientSupportRotationDirection;
+
+        if( std::isfinite(A->TableTopEccentricAngle) 
+        && !std::isfinite(B->TableTopEccentricAngle)) B->TableTopEccentricAngle = A->TableTopEccentricAngle;
+        if( std::isfinite(A->TableTopEccentricRotationDirection) 
+        && !std::isfinite(B->TableTopEccentricRotationDirection)) B->TableTopEccentricRotationDirection = A->TableTopEccentricRotationDirection;
+
+        if( std::isfinite(A->TableTopVerticalPosition) 
+        && !std::isfinite(B->TableTopVerticalPosition)) B->TableTopVerticalPosition = A->TableTopVerticalPosition;
+        if( std::isfinite(A->TableTopLongitudinalPosition) 
+        && !std::isfinite(B->TableTopLongitudinalPosition)) B->TableTopLongitudinalPosition = A->TableTopLongitudinalPosition;
+        if( std::isfinite(A->TableTopLateralPosition) 
+        && !std::isfinite(B->TableTopLateralPosition)) B->TableTopLateralPosition = A->TableTopLateralPosition;
+
+        if( std::isfinite(A->TableTopPitchAngle) 
+        && !std::isfinite(B->TableTopPitchAngle)) B->TableTopPitchAngle = A->TableTopPitchAngle;
+        if( std::isfinite(A->TableTopPitchRotationDirection) 
+        && !std::isfinite(B->TableTopPitchRotationDirection)) B->TableTopPitchRotationDirection = A->TableTopPitchRotationDirection;
+
+        if( std::isfinite(A->TableTopRollAngle) 
+        && !std::isfinite(B->TableTopRollAngle)) B->TableTopRollAngle = A->TableTopRollAngle;
+        if( std::isfinite(A->TableTopRollRotationDirection) 
+        && !std::isfinite(B->TableTopRollRotationDirection)) B->TableTopRollRotationDirection = A->TableTopRollRotationDirection;
+
+        if( A->IsocentrePosition.isfinite() 
+        && !B->IsocentrePosition.isfinite()) B->IsocentrePosition = A->IsocentrePosition;
+
+        if( !A->JawPositionsX.empty()
+        &&   B->JawPositionsX.empty()) B->JawPositionsX = A->JawPositionsX;
+
+        if( A->JawPositionsY.empty() 
+        && !B->JawPositionsY.empty()) B->JawPositionsY = A->JawPositionsY;
+
+        if( A->MLCPositionsX.empty() 
+        && !B->MLCPositionsX.empty()) B->MLCPositionsX = A->MLCPositionsX;
+    }
+
+    return;
+}
+
+Static_Machine_State
+Dynamic_Machine_State::interpolate(double CumulativeMetersetWeight) const {
+    // Interpolates adjacent states.
+    //
+    // Note: This routine requires states to be ordered and normalized!
+    Static_Machine_State out;
+    out.CumulativeMetersetWeight = CumulativeMetersetWeight;
+
+    //Find the upper and lower bounds.
+    const auto lb_it = std::lower_bound( std::begin(this->static_states),
+                                         std::end(this->static_states),
+                                         out,
+                                         [](const Static_Machine_State &l, const Static_Machine_State &r) -> bool {
+                                             return (l.CumulativeMetersetWeight < r.CumulativeMetersetWeight);
+                                         } );
+
+    if(lb_it == std::end(this->static_states)) return out; // Is this valid? TODO.
+    const auto ub_it = std::next(lb_it);
+    if(ub_it == std::end(this->static_states)) return out; // Is this valid? TODO.
+
+    // Ensure the control points can sensibly be interpolated.
+    //
+    // Note: will fail if not normalized.
+    if( (    std::isfinite(lb_it->GantryAngle)
+         !=  std::isfinite(ub_it->GantryAngle) )
+    ||  (    std::isfinite(lb_it->GantryRotationDirection)
+         !=  std::isfinite(ub_it->GantryRotationDirection) )
+
+    ||  (    std::isfinite(lb_it->BeamLimitingDeviceAngle)
+         !=  std::isfinite(ub_it->BeamLimitingDeviceAngle) )
+    ||  (    std::isfinite(lb_it->BeamLimitingDeviceRotationDirection) 
+         !=  std::isfinite(ub_it->BeamLimitingDeviceRotationDirection) )
+
+    ||  (    std::isfinite(lb_it->PatientSupportAngle) 
+         !=  std::isfinite(ub_it->PatientSupportAngle) )
+    ||  (    std::isfinite(lb_it->PatientSupportRotationDirection) 
+         !=  std::isfinite(ub_it->PatientSupportRotationDirection) )
+
+    ||  (    std::isfinite(lb_it->TableTopEccentricAngle) 
+         !=  std::isfinite(ub_it->TableTopEccentricAngle) )
+    ||  (    std::isfinite(lb_it->TableTopEccentricRotationDirection) 
+         !=  std::isfinite(ub_it->TableTopEccentricRotationDirection) )
+
+    ||  (    std::isfinite(lb_it->TableTopVerticalPosition) 
+         !=  std::isfinite(ub_it->TableTopVerticalPosition) )
+    ||  (    std::isfinite(lb_it->TableTopLongitudinalPosition) 
+         !=  std::isfinite(ub_it->TableTopLongitudinalPosition) )
+    ||  (    std::isfinite(lb_it->TableTopLateralPosition) 
+         !=  std::isfinite(ub_it->TableTopLateralPosition) )
+
+    ||  (    std::isfinite(lb_it->TableTopPitchAngle) 
+         !=  std::isfinite(ub_it->TableTopPitchAngle) )
+    ||  (    std::isfinite(lb_it->TableTopPitchRotationDirection) 
+         !=  std::isfinite(ub_it->TableTopPitchRotationDirection) )
+
+    ||  (    std::isfinite(lb_it->TableTopRollAngle) 
+         !=  std::isfinite(ub_it->TableTopRollAngle) )
+    ||  (    std::isfinite(lb_it->TableTopRollRotationDirection) 
+         !=  std::isfinite(ub_it->TableTopRollRotationDirection) )
+
+    ||  (    lb_it->IsocentrePosition.isfinite() 
+         !=  ub_it->IsocentrePosition.isfinite() )
+
+    ||  (    lb_it->JawPositionsX.size()
+         !=  ub_it->JawPositionsX.size() )
+
+    ||  (    lb_it->JawPositionsY.size()
+         !=  ub_it->JawPositionsY.size() )
+
+    ||  (    lb_it->MLCPositionsX.size()
+         !=  ub_it->MLCPositionsX.size() ) ){
+
+        throw std::runtime_error("Adjacent control points are inconsistent and cannot be interpolated. Cannot continue.");
+    }
+
+    // Determine the fraction of lower and upper control points to blend.
+    const auto x = (ub_it->CumulativeMetersetWeight - CumulativeMetersetWeight)
+                 / (ub_it->CumulativeMetersetWeight - lb_it->CumulativeMetersetWeight);
+
+
+    // Blend the measurements.
+    out = *lb_it; // Allocates vectors appropriately. Also provides metadata.
+    out.CumulativeMetersetWeight = CumulativeMetersetWeight;
+    out.ControlPointIndex = std::numeric_limits<long int>::min();
+
+    out.GantryAngle = lb_it->GantryAngle * x + ub_it->GantryAngle * (1.0 - x);
+    out.GantryRotationDirection = lb_it->GantryRotationDirection * x + ub_it->GantryRotationDirection * (1.0 - x);
+
+    out.BeamLimitingDeviceAngle = lb_it->BeamLimitingDeviceAngle * x + ub_it->BeamLimitingDeviceAngle * (1.0 - x);
+    out.BeamLimitingDeviceRotationDirection = lb_it->BeamLimitingDeviceRotationDirection * x + ub_it->BeamLimitingDeviceRotationDirection * (1.0 - x);
+
+    out.PatientSupportAngle = lb_it->PatientSupportAngle * x + ub_it->PatientSupportAngle * (1.0 - x);
+    out.PatientSupportRotationDirection = lb_it->PatientSupportRotationDirection * x + ub_it->PatientSupportRotationDirection * (1.0 - x);
+
+    out.TableTopEccentricAngle = lb_it->TableTopEccentricAngle * x + ub_it->TableTopEccentricAngle * (1.0 - x);
+    out.TableTopEccentricRotationDirection = lb_it->TableTopEccentricRotationDirection * x + ub_it->TableTopEccentricRotationDirection * (1.0 - x);
+
+    out.TableTopVerticalPosition = lb_it->TableTopVerticalPosition * x + ub_it->TableTopVerticalPosition * (1.0 - x);
+    out.TableTopLongitudinalPosition = lb_it->TableTopLongitudinalPosition * x + ub_it->TableTopLongitudinalPosition * (1.0 - x);
+    out.TableTopLateralPosition = lb_it->TableTopLateralPosition * x + ub_it->TableTopLateralPosition * (1.0 - x);
+
+    out.TableTopPitchAngle = lb_it->TableTopPitchAngle * x + ub_it->TableTopPitchAngle * (1.0 - x);
+    out.TableTopPitchRotationDirection = lb_it->TableTopPitchRotationDirection * x + ub_it->TableTopPitchRotationDirection * (1.0 - x);
+
+    out.TableTopRollAngle = lb_it->TableTopRollAngle * x + ub_it->TableTopRollAngle * (1.0 - x);
+    out.TableTopRollRotationDirection = lb_it->TableTopRollRotationDirection * x + ub_it->TableTopRollRotationDirection * (1.0 - x);
+
+    out.IsocentrePosition.x = lb_it->IsocentrePosition.x * x + ub_it->IsocentrePosition.x * (1.0 - x);
+    out.IsocentrePosition.y = lb_it->IsocentrePosition.y * x + ub_it->IsocentrePosition.y * (1.0 - x);
+    out.IsocentrePosition.z = lb_it->IsocentrePosition.z * x + ub_it->IsocentrePosition.z * (1.0 - x);
+
+    for(size_t i = 0; i < out.JawPositionsX.size(); ++i){
+        out.JawPositionsX[i] = lb_it->JawPositionsX.at(i) * x + ub_it->JawPositionsX.at(i) * (1.0 - x);
+    }
+    for(size_t i = 0; i < out.JawPositionsY.size(); ++i){
+        out.JawPositionsY[i] = lb_it->JawPositionsY.at(i) * x + ub_it->JawPositionsY.at(i) * (1.0 - x);
+    }
+    for(size_t i = 0; i < out.MLCPositionsX.size(); ++i){
+        out.MLCPositionsX[i] = lb_it->MLCPositionsX.at(i) * x + ub_it->MLCPositionsX.at(i) * (1.0 - x);
+    }
+
+    return out;
+}
+//---------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------- TPlan_Config ------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------------
+TPlan_Config::TPlan_Config(){ }
+
+TPlan_Config::TPlan_Config(const TPlan_Config &rhs){
+    *this = rhs; //Performs a deep copy (unless copying self).
+}
+
+TPlan_Config & TPlan_Config::operator=(const TPlan_Config &rhs){
+    //Performs a deep copy (unless copying self).
+    if(this != &rhs){
+        this->metadata       = rhs.metadata;
+        this->dynamic_states = rhs.dynamic_states;
+    }
+    return *this;
+}
+
+//---------------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------- Surface_Mesh ------------------------------------------------------
 //---------------------------------------------------------------------------------------------------------------------------
 Surface_Mesh::Surface_Mesh(){ }
@@ -1032,7 +1339,8 @@ Drover::Drover() {};
 Drover::Drover( const Drover &in ) : contour_data(in.contour_data), 
                                      image_data(in.image_data),
                                      point_data(in.point_data),
-                                     smesh_data(in.smesh_data) {};
+                                     smesh_data(in.smesh_data),
+                                     tplan_data(in.tplan_data) {};
 
 //Member functions.
 void Drover::operator=(const Drover &rhs){
@@ -1041,6 +1349,7 @@ void Drover::operator=(const Drover &rhs){
         this->image_data      = rhs.image_data;
         this->point_data      = rhs.point_data;
         this->smesh_data      = rhs.smesh_data;
+        this->tplan_data      = rhs.tplan_data;
     }
     return;
 }
@@ -1549,27 +1858,37 @@ bool Drover::Has_Image_Data(void) const {
     //Does not verify the image data itself, it merely looks to see if we have any valid Image_Arrays attached.
     if(this->image_data.size() == 0) return false;
     for(const auto & id_it : this->image_data){
-        if(id_it == nullptr ) return false; 
+        if(id_it != nullptr ) return true; 
     }
-    return true;
+    return false;
 }
 
 bool Drover::Has_Point_Data(void) const {
     //Does not verify the point data itself, it merely looks to see if we have any valid Point_Clouds attached.
     if(this->point_data.size() == 0) return false;
     for(const auto & pd_it : this->point_data){
-        if(pd_it == nullptr) return false; 
+        if(pd_it != nullptr) return true; 
     }
-    return true;
+    return false;
 }
 
 bool Drover::Has_Mesh_Data(void) const {
     //Does not verify the point data itself, it merely looks to see if we have any valid Surface_Meshes attached.
     if(this->smesh_data.size() == 0) return false;
     for(const auto & sm_it : this->smesh_data){
-        if(sm_it == nullptr) return false; 
+        if(sm_it != nullptr) return true; 
     }
-    return true;
+    return false;
+}
+
+
+bool Drover::Has_TPlan_Data(void) const {
+    //Does not verify the point data itself, it merely looks to see if we have any valid TPlan_Configs attached.
+    if(this->tplan_data.size() == 0) return false;
+    for(const auto & sm_it : this->tplan_data){
+        if(sm_it != nullptr) return true; 
+    }
+    return false;
 }
 
 
@@ -1603,11 +1922,17 @@ void Drover::Concatenate(std::list<std::shared_ptr<Surface_Mesh>> in){
     return;
 }
 
+void Drover::Concatenate(std::list<std::shared_ptr<TPlan_Config>> in){
+    this->tplan_data.splice( this->tplan_data.end(), in );
+    return;
+}
+
 void Drover::Concatenate(Drover in){
     this->Concatenate(in.contour_data);
     this->Concatenate(in.image_data);
     this->Concatenate(in.point_data);
     this->Concatenate(in.smesh_data);
+    this->Concatenate(in.tplan_data);
     return;
 }
 
@@ -1646,11 +1971,17 @@ void Drover::Consume(std::list<std::shared_ptr<Surface_Mesh>> in){
     return;
 }
 
+void Drover::Consume(std::list<std::shared_ptr<TPlan_Config>> in){
+    this->Concatenate(in);
+    return;
+}
+
 void Drover::Consume(Drover in){
     this->Consume(in.contour_data);
     this->Consume(in.image_data);
     this->Consume(in.point_data);
     this->Consume(in.smesh_data);
+    this->Consume(in.tplan_data);
     return;
 }
 
