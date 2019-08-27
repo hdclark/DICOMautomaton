@@ -72,93 +72,10 @@ bool ComputeVolumetricCorrelationDetector(planar_image_collection<float,double> 
     // Pack the sampler with a variety of voxels to sample. A sample will be accompanied by instructions whether to
     // penalize or reward the difference in intensity (aka the 'score multiplier').
     ud.voxel_triplets.clear();
-    std::vector<double> score_multipliers;
 
     long int random_seed = 123456;
     std::mt19937 re( random_seed );
     std::uniform_real_distribution<> rd(0.0, 1.0);
-
-    const auto score_multiplier = [&](double radius) -> double { // In DICOM coordinates (mm).
-        // Determine if the point should be penalized or rewarded when compared to the central voxel.
-        const double dr = 1.5;   // Radius of cylinder.
-        const double dl = 15.0;  // Separation of adjacent grid lines.
-
-        const double should_be_similar = 1.0;
-        const double should_be_dissimilar = -1.0;
-        double score_multiplier = should_be_dissimilar;
-/*
-        // Centered on a 3D union.
-        if(false){
-        }else if(isininc(0.0, radius, dr)){
-            score_multiplier = should_be_similar;
-
-        }else if(isininc(0.0*dl+dr, radius, 1.0*dl-dr)){
-            score_multiplier = should_be_dissimilar;
-        }else if(isininc(1.0*dl-dr, radius, 1.0*dl+dr)){
-            score_multiplier = should_be_similar;
-
-        }else if(isininc(1.0*dl+dr, radius, 2.0*dl-dr)){
-            score_multiplier = should_be_dissimilar;
-        }else if(isininc(2.0*dl-dr, radius, 2.0*dl+dr)){
-            score_multiplier = should_be_similar;
-
-        }else if(isininc(2.0*dl+dr, radius, 3.0*dl-dr)){
-            score_multiplier = should_be_dissimilar;
-        }else if(isininc(3.0*dl-dr, radius, 3.0*dl+dr)){
-            score_multiplier = should_be_similar;
-
-        }else if(isininc(3.0*dl+dr, radius, 4.0*dl-dr)){
-            score_multiplier = should_be_dissimilar;
-        }else if(isininc(4.0*dl-dr, radius, 4.0*dl+dr)){
-            score_multiplier = should_be_similar;
-
-        }else if(isininc(4.0*dl+dr, radius, 5.0*dl-dr)){
-            score_multiplier = should_be_dissimilar;
-        }else if(isininc(5.0*dl-dr, radius, 5.0*dl+dr)){
-            score_multiplier = should_be_similar;
-
-        }else{
-            // Can keep going indefinitely, but better to simply use the remainder to project it.
-            score_multiplier = should_be_dissimilar;
-        }
-*/        
-
-        // Centered on the middle of a square.
-        if(false){
-        }else if(isininc(0.0, radius, dr)){
-            score_multiplier = should_be_similar;
-
-        }else if(isininc(0.0*dl+dr, radius, 1.0*dl-dr)){
-            score_multiplier = should_be_dissimilar;
-        }else if(isininc(1.0*dl-dr, radius, 1.0*dl+dr)){
-            score_multiplier = should_be_similar;
-
-        }else if(isininc(1.0*dl+dr, radius, 2.0*dl-dr)){
-            score_multiplier = should_be_dissimilar;
-        }else if(isininc(2.0*dl-dr, radius, 2.0*dl+dr)){
-            score_multiplier = should_be_similar;
-
-        }else if(isininc(2.0*dl+dr, radius, 3.0*dl-dr)){
-            score_multiplier = should_be_dissimilar;
-        }else if(isininc(3.0*dl-dr, radius, 3.0*dl+dr)){
-            score_multiplier = should_be_similar;
-
-        }else if(isininc(3.0*dl+dr, radius, 4.0*dl-dr)){
-            score_multiplier = should_be_dissimilar;
-        }else if(isininc(4.0*dl-dr, radius, 4.0*dl+dr)){
-            score_multiplier = should_be_similar;
-
-        }else if(isininc(4.0*dl+dr, radius, 5.0*dl-dr)){
-            score_multiplier = should_be_dissimilar;
-        }else if(isininc(5.0*dl-dr, radius, 5.0*dl+dr)){
-            score_multiplier = should_be_similar;
-
-        }else{
-            // Can keep going indefinitely, but better to simply use the remainder to project it.
-            score_multiplier = should_be_dissimilar;
-        }
-        return score_multiplier;
-    };
 
     const auto sample_at_radius = [&](double radius, // In DICOM coordinates (mm).
                                       long int count ) -> void {
@@ -182,7 +99,6 @@ bool ComputeVolumetricCorrelationDetector(planar_image_collection<float,double> 
 
             // Insert the sampling triplet.
             ud.voxel_triplets.emplace_back( std::array<long int, 3>{dx_i, dy_i, dz_i} );
-            score_multipliers.emplace_back( score_multiplier(radius) );
         }
         return;
     };
@@ -193,60 +109,65 @@ bool ComputeVolumetricCorrelationDetector(planar_image_collection<float,double> 
     };
 
     // Large sampling radii.
-    //sample_at_radius( 5.0,  samples_needed_for_areal_density(  5.0, 15.0 ) );
-    //sample_at_radius( 10.0, samples_needed_for_areal_density( 10.0, 40.0 ) );
-    //sample_at_radius( 15.0, samples_needed_for_areal_density( 15.0, 20.0 ) );
-    //sample_at_radius( 20.0, samples_needed_for_areal_density( 20.0, 60.0 ) );
-
-
-/*    
-    // Focus on a smaller region surrounding a grid cylinder or 3D union point.
-    sample_at_radius( 1.0,  samples_needed_for_areal_density(  1.0, 2.0 ) );
-    sample_at_radius( 1.5,  samples_needed_for_areal_density(  1.5, 2.0 ) );
-    sample_at_radius( 2.0,  samples_needed_for_areal_density(  2.0, 3.0 ) );
-    sample_at_radius( 3.0,  samples_needed_for_areal_density(  3.0, 4.0 ) );
-    sample_at_radius( 4.0,  samples_needed_for_areal_density(  4.0, 5.0 ) );
-    sample_at_radius( 5.0,  samples_needed_for_areal_density(  5.0, 6.0 ) );
-    sample_at_radius( 6.0,  samples_needed_for_areal_density(  6.0, 7.0 ) );
-    sample_at_radius( 7.0,  samples_needed_for_areal_density(  7.0, 8.0 ) );
-    sample_at_radius( 8.0,  samples_needed_for_areal_density(  8.0, 9.0 ) );
-    sample_at_radius( 9.0,  samples_needed_for_areal_density(  9.0,15.0 ) );
-    sample_at_radius(10.0,  samples_needed_for_areal_density( 10.0,15.0 ) );
-    sample_at_radius(11.0,  samples_needed_for_areal_density( 11.0,20.0 ) );
-    sample_at_radius(12.0,  samples_needed_for_areal_density( 12.0,20.0 ) );
-    sample_at_radius(13.0,  samples_needed_for_areal_density( 13.0,20.0 ) );
-
-    sample_at_radius(14.0,  samples_needed_for_areal_density( 14.0,20.0 ) );
-    sample_at_radius(15.0,  samples_needed_for_areal_density( 15.0,20.0 ) );
-    sample_at_radius(16.0,  samples_needed_for_areal_density( 16.0,20.0 ) );
-    sample_at_radius(17.0,  samples_needed_for_areal_density( 17.0,25.0 ) );
-    sample_at_radius(18.0,  samples_needed_for_areal_density( 18.0,25.0 ) );
-
-    sample_at_radius(28.0,  samples_needed_for_areal_density( 28.0,25.0 ) );
-    sample_at_radius(30.0,  samples_needed_for_areal_density( 30.0,25.0 ) );
-    sample_at_radius(32.0,  samples_needed_for_areal_density( 32.0,25.0 ) );
-*/
-
+    //sample_at_radius( 15.0,  samples_needed_for_areal_density(  15.0, 1.0 ) );
+    sample_at_radius( 5.0,  samples_needed_for_areal_density(  5.0, 1.0 ) );
 
     ud.f_reduce = [&](float v, std::vector<float> &shtl, vec3<double> pos) -> float {
-        double score = 0.0;
-        auto sm_it = std::begin(score_multipliers);
-        double valid = 0.0;
+        std::vector<float> shtl2;
+        shtl2.reserve(shtl.size());
+
         for(const auto &nv : shtl){
             if(std::isfinite(nv)){
-                score += (*sm_it) * std::abs(nv - v);
-                valid += 1.0;
+                shtl2.emplace_back(std::abs(nv - v));
             }
-            ++sm_it;
         }
-        const auto new_val = score / valid;
-        return new_val;
+
+/*
+if((pos - vec3<double>(-15.9, 31.9, 1.15)).length() < 0.45){
+    std::ofstream f("/tmp/percentile_filtering_good_01.data");
+    for(size_t i = 0; i < 100; ++i) f << i << " " << Stats::Percentile(shtl2, 1.0 * i / 100.0) << std::endl;
+    f.close();
+}
+
+if((pos - vec3<double>(-7.91, 40.71, 7.45)).length() < 0.45){
+    std::ofstream f("/tmp/percentile_filtering_bad_01.data");
+    for(size_t i = 0; i < 100; ++i) f << i << " " << Stats::Percentile(shtl2, 1.0 * i / 100.0) << std::endl;
+    f.close();
+}
+
+if((pos - vec3<double>(-49.52, -17.69, 7.45)).length() < 0.45){
+    std::ofstream f("/tmp/percentile_filtering_bad_02.data");
+    for(size_t i = 0; i < 100; ++i) f << i << " " << Stats::Percentile(shtl2, 1.0 * i / 100.0) << std::endl;
+    f.close();
+}
+
+if((pos - vec3<double>(-63.91, 74.31, 7.45)).length() < 0.45){
+    std::ofstream f("/tmp/percentile_filtering_bad_03.data");
+    for(size_t i = 0; i < 100; ++i) f << i << " " << Stats::Percentile(shtl2, 1.0 * i / 100.0) << std::endl;
+    f.close();
+}
+
+if((pos - vec3<double>(0.08, 88.71, 57.85)).length() < 0.45){
+    std::ofstream f("/tmp/percentile_filtering_bad_04.data");
+    for(size_t i = 0; i < 100; ++i) f << i << " " << Stats::Percentile(shtl2, 1.0 * i / 100.0) << std::endl;
+    f.close();
+}
+*/
+
+        // Works pretty good for 5mm. Works OK for 15mm, but not great.
+        //const auto low = Stats::Percentile(shtl2, 0.01);
+        //const auto high = Stats::Percentile(shtl2, 0.25);
+
+        // Tuned for 5mm, but works worse than previous.
+        //const auto low = Stats::Percentile(shtl2, 0.15);
+        //const auto high = Stats::Percentile(shtl2, 0.30);
+
+        const auto low = Stats::Percentile(shtl2, user_data_s->low);
+        const auto high = Stats::Percentile(shtl2, user_data_s->high);
+
+        return (high - low);
     }; 
 
-    // Verify consistency.
-    if(ud.voxel_triplets.size() != score_multipliers.size()){
-        throw std::logic_error("Voxel sampling triplets are uncoupled from score multipliers. Refusing to continue.");
-    }
     FUNCINFO("Proceeding with each voxel sampling " << ud.voxel_triplets.size() << " neighbouring voxels");
 
     // Invoke the volumetric sampling routine to compute the above functors.
@@ -257,7 +178,9 @@ bool ComputeVolumetricCorrelationDetector(planar_image_collection<float,double> 
 
     //Update the image metadata. 
     std::string img_desc;
-    img_desc += "Self-correlation";
+    img_desc += "Self-correlation (" + std::to_string(user_data_s->low) 
+                                     + " to " 
+                                     + std::to_string(user_data_s->high) + ")";
 
     for(auto &img : imagecoll.images){
         UpdateImageDescription( std::ref(img), img_desc );

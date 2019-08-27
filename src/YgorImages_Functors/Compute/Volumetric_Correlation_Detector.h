@@ -47,6 +47,9 @@ struct ComputeVolumetricCorrelationDetectorUserData {
     VolumetricCorrelationDetectorMethod method = VolumetricCorrelationDetectorMethod::magnitude;
 */
 
+    float low  = 0.05; // 5th percentile.
+    float high = 0.95; // 95th percentile.
+
     // The channel to analyze. If negative, all channels are analyzed.
     long int channel = -1;
 

@@ -35,7 +35,7 @@ OperationDoc OpArgDocVolumetricCorrelationDetector(void){
         "The provided image collection must be rectilinear."
     );
     out.notes.emplace_back(
-        "At the moment this routine can only be modified be recompilation."
+        "At the moment this routine can only be modified via recompilation."
     );
 
     out.args.emplace_back();
@@ -73,6 +73,26 @@ OperationDoc OpArgDocVolumetricCorrelationDetector(void){
 
 
     out.args.emplace_back();
+    out.args.back().name = "Low";
+    out.args.back().desc = "The low percentile.";
+    out.args.back().default_val = "0.05";
+    out.args.back().expected = true;
+    out.args.back().examples = { "0.05",
+                                 "0.5",
+                                 "0.99" };
+
+
+    out.args.emplace_back();
+    out.args.back().name = "High";
+    out.args.back().desc = "The high percentile.";
+    out.args.back().default_val = "0.95";
+    out.args.back().expected = true;
+    out.args.back().examples = { "0.95",
+                                 "0.5",
+                                 "0.05" };
+
+
+    out.args.emplace_back();
     out.args.back().name = "Channel";
     out.args.back().desc = "The channel to operated on (zero-based)."
                            " Negative values will cause all channels to be operated on.";
@@ -94,6 +114,9 @@ Drover VolumetricCorrelationDetector(Drover DICOM_data, OperationArgPkg OptArgs,
     const auto NormalizedROILabelRegex = OptArgs.getValueStr("NormalizedROILabelRegex").value();
     const auto ROILabelRegex = OptArgs.getValueStr("ROILabelRegex").value();
 
+    const auto Low = std::stod( OptArgs.getValueStr("Low").value() );
+    const auto High = std::stod( OptArgs.getValueStr("High").value() );
+
     const auto Channel = std::stol( OptArgs.getValueStr("Channel").value() );
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -113,6 +136,8 @@ Drover VolumetricCorrelationDetector(Drover DICOM_data, OperationArgPkg OptArgs,
         // Planar derivatives.
         ComputeVolumetricCorrelationDetectorUserData ud;
         ud.channel = Channel;
+        ud.low = Low;
+        ud.high = High;
 
         if(!(*iap_it)->imagecoll.Compute_Images( ComputeVolumetricCorrelationDetector,
                                                  {}, cc_ROIs, &ud )){
