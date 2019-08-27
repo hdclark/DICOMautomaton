@@ -57,7 +57,23 @@ rsync -L -r --delete "${which_dcma}" "${out_dir}/"
 cat > "${out_dir}/portable_dcma" <<'PORTABLE_EOF'
 #!/bin/bash
 
-set -e
+set -eu
+
+# Identify the location of this script.
+export SCRIPT_DIR="$(dirname "$(readlink -f "${BASH_SOURCE[0]}" )" )"
+
+# Assume that this script, the libraries, and the binary are all bundled together.
+LD_LIBRARY_PATH="${SCRIPT_DIR}" exec "${SCRIPT_DIR}/"dicomautomaton_dispatcher "$@"
+
+PORTABLE_EOF
+chmod 777 "${out_dir}/portable_dcma"
+
+
+# Create a native wrapper script for the self-adjusting binary.
+cat > "${out_dir}/adjusting_dcma" <<'ADJUSTING_EOF'
+#!/bin/bash
+
+set -eu
 
 # Identify the location of this script.
 export SCRIPT_DIR="$(dirname "$(readlink -f "${BASH_SOURCE[0]}" )" )"
@@ -87,8 +103,8 @@ fi
 # Assume that this script, the libraries, and the binary are all bundled together.
 LD_LIBRARY_PATH="${SCRIPT_DIR}" exec "${SCRIPT_DIR}/"dicomautomaton_dispatcher "$@"
 
-PORTABLE_EOF
-chmod 777 "${out_dir}/portable_dcma"
+ADJUSTING_EOF
+chmod 777 "${out_dir}/adjusting_dcma"
 
 
 # Create an emulation wrapper script for the portable binary.
