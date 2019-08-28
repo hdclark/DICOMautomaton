@@ -48,20 +48,33 @@ bool InImagePlaneBicubicSupersample(
     newOffset += first_img_it->row_unit * first_img_it->pxl_dx * 0.5 / RowScaleFactorR;
     newOffset += first_img_it->col_unit * first_img_it->pxl_dy * 0.5 / ColumnScaleFactorR;
 
+    const auto new_pxl_dx = first_img_it->pxl_dx / RowScaleFactorR;
+    const auto new_pxl_dy = first_img_it->pxl_dy / ColumnScaleFactorR;
+
+    const auto new_rows = first_img_it->rows * RowScaleFactor;
+    const auto new_columns = first_img_it->columns * ColumnScaleFactor;
+
 
     //Make a destination image that has twice the linear dimensions as the input image.
     planar_image<float,double> working;
-    working.init_buffer( first_img_it->rows * RowScaleFactor, 
-                         first_img_it->columns * ColumnScaleFactor, 
+    working.init_buffer( new_rows,
+                         new_columns,
                          first_img_it->channels );
-    working.init_spatial( first_img_it->pxl_dx / RowScaleFactorR,
-                          first_img_it->pxl_dy / ColumnScaleFactorR,
+    working.init_spatial( new_pxl_dx,
+                          new_pxl_dy,
                           first_img_it->pxl_dz,
                           first_img_it->anchor,
                           newOffset );
     working.init_orientation( first_img_it->row_unit,
                               first_img_it->col_unit );
     working.metadata = first_img_it->metadata;
+
+    working.metadata["Rows"] = std::to_string(new_rows);
+    working.metadata["Columns"] = std::to_string(new_columns);
+
+    working.metadata["PixelSpacing"] = std::to_string(new_pxl_dx) 
+                                       + R"***(\)***"_s 
+                                       + std::to_string(new_pxl_dy);
 
     //Paint all pixels black.
     //working.fill_pixels(static_cast<float>(0));
@@ -90,9 +103,6 @@ bool InImagePlaneBicubicSupersample(
                                                       + std::to_string(RowScaleFactor) + "x,"_s
                                                       + std::to_string(ColumnScaleFactor) + "x ");
     UpdateImageWindowCentreWidth( std::ref(*first_img_it), minmax_pixel );
-
-    first_img_it->metadata["Rows"] = std::to_string(first_img_it->rows);
-    first_img_it->metadata["Columns"] = std::to_string(first_img_it->columns);
 
     return true;
 }

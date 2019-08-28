@@ -37,15 +37,6 @@ OperationDoc OpArgDocSupersampleImageGrid(void){
     );
 
     out.args.emplace_back();
-    out.args.back().name = "ColumnScaleFactor";
-    out.args.back().desc = "A positive integer specifying how many columns will be in the new images."
-                           " The number is relative to the incoming image column count. Specifying '1' will"
-                           " result in nothing happening. Specifying '8' will result in 8x as many columns.";
-    out.args.back().default_val = "2";
-    out.args.back().expected = true;
-    out.args.back().examples = { "1", "2", "3", "8" };
-
-    out.args.emplace_back();
     out.args.back() = IAWhitelistOpArgDoc();
     out.args.back().name = "ImageSelection";
     out.args.back().default_val = "last";
@@ -60,11 +51,22 @@ OperationDoc OpArgDocSupersampleImageGrid(void){
     out.args.back().examples = { "1", "2", "3", "8" };
 
     out.args.emplace_back();
+    out.args.back().name = "ColumnScaleFactor";
+    out.args.back().desc = "A positive integer specifying how many columns will be in the new images."
+                           " The number is relative to the incoming image column count. Specifying '1' will"
+                           " result in nothing happening. Specifying '8' will result in 8x as many columns.";
+    out.args.back().default_val = "2";
+    out.args.back().expected = true;
+    out.args.back().examples = { "1", "2", "3", "8" };
+
+    out.args.emplace_back();
     out.args.back().name = "SliceScaleFactor";
     out.args.back().desc = "A positive integer specifying how many image slices will be in the new images."
                            " The number is relative to the incoming image slice count. Specifying '1' will"
                            " result in nothing happening. Specifying '8' will result in 8x as many slices."
-                           " Note that slice supersampling always happens *after* in-plane supersampling.";
+                           " Note that slice supersampling always happens *after* in-plane supersampling."
+                           " Also note that merely setting this factor will not enable 3D supersampling;"
+                           " you also need to specify a 3D-aware SamplingMethod.";
     out.args.back().default_val = "2";
     out.args.back().expected = true;
     out.args.back().examples = { "1", "2", "3", "8" };
@@ -88,9 +90,9 @@ OperationDoc OpArgDocSupersampleImageGrid(void){
 Drover SupersampleImageGrid(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
-    const auto ColumnScaleFactor = std::stol(OptArgs.getValueStr("ColumnScaleFactor").value());
     const auto ImageSelectionStr = OptArgs.getValueStr("ImageSelection").value();
     const auto RowScaleFactor = std::stol(OptArgs.getValueStr("RowScaleFactor").value());
+    const auto ColumnScaleFactor = std::stol(OptArgs.getValueStr("ColumnScaleFactor").value());
     const auto SliceScaleFactor = std::stol(OptArgs.getValueStr("SliceScaleFactor").value());
     const auto SamplingMethodStr = OptArgs.getValueStr("SamplingMethod").value();
 
@@ -169,6 +171,8 @@ Drover SupersampleImageGrid(Drover DICOM_data, OperationArgPkg OptArgs, std::map
             const auto N_new = N_old * SliceScaleFactor;
             const auto pxl_dz = std::abs(upper_extent - lower_extent) / static_cast<double>(N_new);
 
+            const auto common_metadata = (*iap_it)->imagecoll.get_common_metadata({});
+
             for(long int i = 0; i < N_new; ++i){
                 edit_imagecoll.images.push_back( (*iap_it)->imagecoll.images.front() );
                 const auto offset = R_0
@@ -180,12 +184,21 @@ Drover SupersampleImageGrid(Drover DICOM_data, OperationArgPkg OptArgs, std::map
                                                           pxl_dz,
                                                           edit_imagecoll.images.back().anchor,
                                                           offset);
+                edit_imagecoll.images.back().metadata = common_metadata;
+                edit_imagecoll.images.back().metadata["SliceThickness"] = std::to_string(pxl_dz);
             }
+            edit_imagecoll.images.reverse();
+
 
             // Interpolate the slices using the original slices as a reference.
             std::list<std::reference_wrapper<planar_image_collection<float, double>>> IARL = { std::ref( (*iap_it)->imagecoll ) };
             ComputeInterpolateImageSlicesUserData ud;
             ud.channel = -1; // Operate on all channels to maintain consistency with in-plane only methods.
+            ud.description = "Supersampled "_s
+                           + std::to_string(RowScaleFactor) + "x, "_s
+                           + std::to_string(ColumnScaleFactor) + "x, "_s
+                           + std::to_string(SliceScaleFactor) + "x"_s
+                           + " with trilinear interpolation";
 
             if(!edit_imagecoll.Compute_Images( ComputeInterpolateImageSlices, 
                                                IARL, {}, &ud )){
@@ -197,9 +210,14 @@ Drover SupersampleImageGrid(Drover DICOM_data, OperationArgPkg OptArgs, std::map
             // ... 
 
             // Inject the data.
-            DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>() );
-            DICOM_data.image_data.back()->imagecoll.images.splice(
-                DICOM_data.image_data.back()->imagecoll.images.end(),
+            //DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>() );
+            //DICOM_data.image_data.back()->imagecoll.images.splice(
+            //    DICOM_data.image_data.back()->imagecoll.images.end(),
+            //    edit_imagecoll.images );
+
+            (*iap_it)->imagecoll.images.clear();
+            (*iap_it)->imagecoll.images.splice(
+                (*iap_it)->imagecoll.images.end(),
                 edit_imagecoll.images );
         }
     }
