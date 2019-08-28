@@ -34,6 +34,11 @@ struct ComputeInterpolateImageSlicesUserData {
     // Note: Channel numbers in the images that will be edited and reference images must match.
     long int channel = 0;
 
+
+    // -----------------------------
+    // The description to imbue images with.
+    std::string description;
+
 };
 
 bool ComputeInterpolateImageSlices(planar_image_collection<float,double> &,

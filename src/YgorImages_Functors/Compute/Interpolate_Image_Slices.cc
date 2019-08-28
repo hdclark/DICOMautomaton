@@ -138,72 +138,96 @@ bool ComputeInterpolateImageSlices(planar_image_collection<float,double> &imagec
             const auto N_rows = img_refw.get().rows;
             const auto N_columns = img_refw.get().columns;
             const auto N_channels = img_refw.get().channels;
-            for(auto row = 0; row < N_rows; ++row){
-                for(auto col = 0; col < N_columns; ++col){
-                    for(auto chan = 0; chan < N_channels; ++chan){
-                        if( (chan != ud_channel) && (ud_channel >= 0) ) continue;
-                        const auto v_pos = img_refw.get().position(row, col);
 
-                        //Identify the nearest planes above and below this voxel.
-                        planar_image<float,double> *nearest_above = nullptr;
-                        planar_image<float,double> *nearest_below = nullptr;
-                        auto above_dist = std::numeric_limits<double>::infinity();
-                        auto below_dist = std::numeric_limits<double>::infinity();
-                        {
+            //These parameters get updated by the following lambda.
+            planar_image<float,double> *nearest_above = nullptr;
+            planar_image<float,double> *nearest_below = nullptr;
+            auto above_dist = std::numeric_limits<double>::infinity();
+            auto below_dist = std::numeric_limits<double>::infinity();
+            auto total_dist = std::numeric_limits<double>::infinity();
 
-                            for(auto &ref_img_refw : reference_imgs){
-                                const auto theplane = ref_img_refw.get().image_plane();
-                                const auto signed_dist = theplane.Get_Signed_Distance_To_Point(v_pos);
-                                const auto is_above = (signed_dist >= static_cast<double>(0));
-                                const auto dist = std::abs(signed_dist);
+            //Identify the nearest planes above and below a specific point in space.
+            const auto identify_nearest_adjacent_neighbours = [&](const vec3<double> pos) -> void {
+                nearest_above = nullptr;
+                nearest_below = nullptr;
+                above_dist = std::numeric_limits<double>::infinity();
+                below_dist = std::numeric_limits<double>::infinity();
+                total_dist = std::numeric_limits<double>::infinity();
 
-                                if(is_above){
-                                    if(dist < above_dist){
-                                        above_dist = dist;
-                                        nearest_above = std::addressof(ref_img_refw.get());
-                                    }
-                                }else{
-                                    if(dist < below_dist){
-                                        below_dist = dist;
-                                        nearest_below = std::addressof(ref_img_refw.get());
-                                    }
-                                }
-                            }
+                for(auto &ref_img_refw : reference_imgs){
+                    const auto theplane = ref_img_refw.get().image_plane();
+                    const auto signed_dist = theplane.Get_Signed_Distance_To_Point(pos);
+                    const auto is_above = (signed_dist >= static_cast<double>(0));
+                    const auto dist = std::abs(signed_dist);
+
+                    if(is_above){
+                        if(dist < above_dist){
+                            above_dist = dist;
+                            nearest_above = std::addressof(ref_img_refw.get());
                         }
-
-
-                        // Determine the new value via interpolation.
-                        //
-                        // If there are two overlapping images, simply re-weight them equally but in a
-                        // numerically-stable way.
-                        auto total_dist = below_dist + above_dist;
-                        if(total_dist < 1E-3){ 
-                            above_dist = 1.0;
-                            below_dist = 1.0;
-                            total_dist = 2.0;
+                    }else{
+                        if(dist < below_dist){
+                            below_dist = dist;
+                            nearest_below = std::addressof(ref_img_refw.get());
                         }
-                        float newval = std::numeric_limits<float>::quiet_NaN();
+                    }
+                }
 
-                        // If all images are rectilinear, then no in-plane interpolation is needed.
-                        if(ImagesAreRectilinear){
-                            if(false){
-                            }else if( (nearest_above != nullptr) && (nearest_below != nullptr) ){
-                                newval = ( nearest_above->value(row, col, chan) * below_dist
-                                         + nearest_below->value(row, col, chan) * above_dist ) / total_dist;
-                                
-                            }else if( (nearest_above == nullptr) && (nearest_below != nullptr) ){
-                                newval = nearest_below->value(row, col, chan);
+                // If there are two overlapping images, simply re-weight them equally but in a more
+                // numerically-stable way.
+                total_dist = below_dist + above_dist;
+                if(total_dist < 1E-3){ 
+                    above_dist = 1.0;
+                    below_dist = 1.0;
+                    total_dist = 2.0;
+                }
+                return;
+            };
 
-                            }else if( (nearest_above != nullptr) && (nearest_below == nullptr) ){
-                                newval = nearest_above->value(row, col, chan);
+            
+            // If all images are rectilinear, then no in-plane interpolation is needed and we can avoid adjacency lookup
+            // for each voxel.
+            if(ImagesAreRectilinear){
+                const auto v_pos = img_refw.get().position(0, 0); // Pick any point...
+                identify_nearest_adjacent_neighbours(v_pos);
 
-                            }else{
-                                std::logic_error("No neighbouring planes found. Cannot interpolate. Cannot continue.");
-                            }
+                if( ( (nearest_below != nullptr) && (nearest_below->data.size() != img_refw.get().data.size()) )
+                ||  ( (nearest_above != nullptr) && (nearest_above->data.size() != img_refw.get().data.size()) ) ){
+                    throw std::logic_error("Non-rectilinear images found after rectilinearity check. Verify implementation.");
+                }
 
-                        // If all images are NOT rectilinear, then in-plane interpolation is needed because the voxel
-                        // coordinates will differ in general..
-                        }else{
+                if(false){
+                }else if( (nearest_above != nullptr) && (nearest_below != nullptr) ){
+                    const auto N_elem = img_refw.get().data.size();
+                    for(size_t i = 0; i < N_elem; ++i){
+                        img_refw.get().data[i] = ( nearest_above->data[i] * below_dist
+                                                 + nearest_below->data[i] * above_dist ) / total_dist;  
+                    }
+
+                }else if( (nearest_above == nullptr) && (nearest_below != nullptr) ){
+                    img_refw.get().data = nearest_below->data;
+
+                }else if( (nearest_above != nullptr) && (nearest_below == nullptr) ){
+                    img_refw.get().data = nearest_above->data;
+
+                }else{
+                    std::logic_error("No neighbouring planes found. Cannot interpolate. Cannot continue.");
+                }
+
+            // If all images are NOT rectilinear, then in-plane interpolation is needed because the voxel
+            // coordinates will differ in general..
+            }else{
+                for(auto row = 0; row < N_rows; ++row){
+                    for(auto col = 0; col < N_columns; ++col){
+                        for(auto chan = 0; chan < N_channels; ++chan){
+                            if( (chan != ud_channel) && (ud_channel >= 0) ) continue;
+                            const auto v_pos = img_refw.get().position(row, col);
+
+                            //Identify the nearest planes above and below this voxel.
+                            identify_nearest_adjacent_neighbours(v_pos);
+
+                            float newval = std::numeric_limits<float>::quiet_NaN();
+
                             // Routine for projecting a point onto a planar image and interpolating in pixel coordinates.
                             auto project_and_interpolate = [chan]( planar_image<float,double> *img_ptr, vec3<double> pos ) -> double {
                                     auto proj_pos = img_ptr->image_plane().Project_Onto_Plane_Orthogonally(pos);
@@ -239,13 +263,13 @@ bool ComputeInterpolateImageSlices(planar_image_collection<float,double> &imagec
                                 std::logic_error("No neighbouring planes found. Cannot interpolate. Cannot continue.");
                             }
 
+                            img_refw.get().reference(row, col, chan) = newval;
                         }
-                        img_refw.get().reference(row, col, chan) = newval;
                     }
                 }
             }
 
-            UpdateImageDescription( img_refw, "Slice interpolated" );
+            UpdateImageDescription( img_refw, user_data_s->description );
             UpdateImageWindowCentreWidth( img_refw );
 
             //Report operation progress.
