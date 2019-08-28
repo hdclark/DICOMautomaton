@@ -263,6 +263,8 @@ add_library (imebrashim
 target_include_directories(imebrashim SYSTEM PUBLIC 
     ./imebra20121219/library/imebra/include/ 
 )
+target_compile_options(imebrashim
+    PUBLIC -w ) # Inhibit all imebra-related warnings.
 
 
 # Pharmacokinetic modeling libraries (built separately for easier reuse).
