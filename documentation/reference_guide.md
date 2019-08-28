@@ -344,53 +344,6 @@ will work.
 - ```pacs_duplicate_cleaner -f '/path/to/a/dicom/file.dcm' -n```  
   *Check if 'file.dcm' is already in the PACS DB, but do not delete anything.*
 
-### automaton
-
-#### Description
-
-An earlier prototype of [dicomautomaton_dispatcher](#dicomautomaton_dispatcher)
-that will likely be deprecated soon. Use is discouraged. The means of switching
-operations was via source editing and recompilation.
-
-This program allows for performing rapid, no-nonsense, no-GUI computations using
-DICOM files. As much as possible, emphasis is placed on having the program 'do
-the right thing', which refers to the attempts to deal with incomplete
-information (such as missing files, non-matching DICOM data sets, and the
-careful treatment of existing data.)
-
-This program is designed to accept an input structure name(s) (pre-sanitized or
-not) and some DICOM data, and then produce output for the structure(s). An
-example might be computation of a DVH for the left parotid.
-
-In some ways this program is very forgiving of user behaviour, but in general it
-has very strictly-defined behaviour. For example, input files can be either
-directories or files, and non-DICOM files will be automatically weeded-out.
-However, it is intentionally difficult to accidentally overwrite existing data:
-if an output file already exists, will usually refuse to overwrite it. To be
-user-friendly, though, a non-existing filename will be chosen and the the user
-will be warned. This might occasionally be frustrating for the user, but is the
-'safe' thing to do in most cases.
-
-#### Usage Examples
-
-- ```automaton --help```  
-  *Print a listing of all available options.*
-
-### overlaydosedata
-
-#### Description
-
-Like [automaton](#automaton), this program is an earlier prototype of
-[dicomautomaton_dispatcher](#dicomautomaton_dispatcher) that will likely be
-deprecated soon. Use is discouraged. The aim of overlaydosedata was to provide a
-semi-interactive viewer capable of simultaneous display of medical images, ROI
-structures, and dose information.
-
-#### Usage Examples
-
-- ```overlaydosedata --help```  
-  *Print a listing of all available options.*
-
 # Operations
 
 ## AccumulateRowsColumns
@@ -415,8 +368,11 @@ axes-aligned edges or ridges.
 
 ##### Description
 
-Select image arrays to operate on. Specifiers can be of two types: positional or
-metadata-based key@value regex. Positional specifiers can be 'first', 'last',
+Select one or more image arrays. Note that image arrays can hold anything, but
+will typically represent a single contiguous 3D volume (i.e., a volumetric CT
+scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of two types: positional
+or metadata-based key@value regex. Positional specifiers can be 'first', 'last',
 'none', or 'all' literals. Additionally '#N' for some positive integer N selects
 the Nth image array (with zero-based indexing). Likewise, '#-N' selects the
 Nth-from-last image array. Positional specifiers can be inverted by prefixing
@@ -425,10 +381,8 @@ keys verbatim and the values with regex. In order to invert metadata-based
 selectors, the regex logic must be inverted (i.e., you can *not* prefix
 metadata-based selectors with a '!'). Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified. Both
-positional and metadata-based criteria can be mixed together. Note that image
-arrays can hold anything, but will typically represent a single contiguous 3D
-volume (i.e., a volumetric CT scan) or '4D' time-series. Note regexes are case
-insensitive and should use extended POSIX syntax.
+positional and metadata-based criteria can be mixed together. Note regexes are
+case insensitive and should use extended POSIX syntax.
 
 ##### Default
 
@@ -486,8 +440,11 @@ and negative) are all analyzed separately.
 
 ##### Description
 
-Select image arrays to operate on. Specifiers can be of two types: positional or
-metadata-based key@value regex. Positional specifiers can be 'first', 'last',
+Select one or more image arrays. Note that image arrays can hold anything, but
+will typically represent a single contiguous 3D volume (i.e., a volumetric CT
+scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of two types: positional
+or metadata-based key@value regex. Positional specifiers can be 'first', 'last',
 'none', or 'all' literals. Additionally '#N' for some positive integer N selects
 the Nth image array (with zero-based indexing). Likewise, '#-N' selects the
 Nth-from-last image array. Positional specifiers can be inverted by prefixing
@@ -496,10 +453,8 @@ keys verbatim and the values with regex. In order to invert metadata-based
 selectors, the regex logic must be inverted (i.e., you can *not* prefix
 metadata-based selectors with a '!'). Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified. Both
-positional and metadata-based criteria can be mixed together. Note that image
-arrays can hold anything, but will typically represent a single contiguous 3D
-volume (i.e., a volumetric CT scan) or '4D' time-series. Note regexes are case
-insensitive and should use extended POSIX syntax.
+positional and metadata-based criteria can be mixed together. Note regexes are
+case insensitive and should use extended POSIX syntax.
 
 ##### Default
 
@@ -671,7 +626,8 @@ This operation extracts MLC positions from a picket fence image.
 
 - This routine requires data to be pre-processed. The gross picket area should
   be isolated and the leaf junction areas contoured (one contour per junction).
-  Both can be accomplished via thresholding.
+  Both can be accomplished via thresholding. Additionally, stray pixels should
+  be filtered out using, for example, median or conservative filters.
 
 - This routine analyzes the picket fences on the plane in which they are
   specified within the DICOM file, which often coincides with the image receptor
@@ -697,8 +653,11 @@ This operation extracts MLC positions from a picket fence image.
 
 ##### Description
 
-Select image arrays to operate on. Specifiers can be of two types: positional or
-metadata-based key@value regex. Positional specifiers can be 'first', 'last',
+Select one or more image arrays. Note that image arrays can hold anything, but
+will typically represent a single contiguous 3D volume (i.e., a volumetric CT
+scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of two types: positional
+or metadata-based key@value regex. Positional specifiers can be 'first', 'last',
 'none', or 'all' literals. Additionally '#N' for some positive integer N selects
 the Nth image array (with zero-based indexing). Likewise, '#-N' selects the
 Nth-from-last image array. Positional specifiers can be inverted by prefixing
@@ -707,10 +666,8 @@ keys verbatim and the values with regex. In order to invert metadata-based
 selectors, the regex logic must be inverted (i.e., you can *not* prefix
 metadata-based selectors with a '!'). Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified. Both
-positional and metadata-based criteria can be mixed together. Note that image
-arrays can hold anything, but will typically represent a single contiguous 3D
-volume (i.e., a volumetric CT scan) or '4D' time-series. Note regexes are case
-insensitive and should use extended POSIX syntax.
+positional and metadata-based criteria can be mixed together. Note regexes are
+case insensitive and should use extended POSIX syntax.
 
 ##### Default
 
@@ -733,12 +690,12 @@ insensitive and should use extended POSIX syntax.
 
 ##### Description
 
-The MLC design geometry to use. 'VarianMillenniumMLC80' has 80 leafs in each
+The MLC design geometry to use. 'VarianMillenniumMLC80' has 40 leafs in each
 bank; leaves are 10mm wide at isocentre; and the maximum static field size is
-40cm x 40cm. 'VarianMillenniumMLC120' has 120 leafs in each bank; the 40 central
+40cm x 40cm. 'VarianMillenniumMLC120' has 60 leafs in each bank; the 40 central
 leaves are 5mm wide at isocentre; the 20 peripheral leaves are 10mm wide; and
-the maximum static field size is 40cm x 40cm. 'VarianHD120' has 120 leafs in
-each bank; the 32 central leaves are 2.5mm wide at isocentre; the 28 peripheral
+the maximum static field size is 40cm x 40cm. 'VarianHD120' has 60 leafs in each
+bank; the 32 central leaves are 2.5mm wide at isocentre; the 28 peripheral
 leaves are 5mm wide; and the maximum static field size is 40cm x 22cm.
 
 ##### Default
@@ -958,8 +915,11 @@ channels.
 
 ##### Description
 
-Select image arrays to operate on. Specifiers can be of two types: positional or
-metadata-based key@value regex. Positional specifiers can be 'first', 'last',
+Select one or more image arrays. Note that image arrays can hold anything, but
+will typically represent a single contiguous 3D volume (i.e., a volumetric CT
+scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of two types: positional
+or metadata-based key@value regex. Positional specifiers can be 'first', 'last',
 'none', or 'all' literals. Additionally '#N' for some positive integer N selects
 the Nth image array (with zero-based indexing). Likewise, '#-N' selects the
 Nth-from-last image array. Positional specifiers can be inverted by prefixing
@@ -968,10 +928,8 @@ keys verbatim and the values with regex. In order to invert metadata-based
 selectors, the regex logic must be inverted (i.e., you can *not* prefix
 metadata-based selectors with a '!'). Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified. Both
-positional and metadata-based criteria can be mixed together. Note that image
-arrays can hold anything, but will typically represent a single contiguous 3D
-volume (i.e., a volumetric CT scan) or '4D' time-series. Note regexes are case
-insensitive and should use extended POSIX syntax.
+positional and metadata-based criteria can be mixed together. Note regexes are
+case insensitive and should use extended POSIX syntax.
 
 ##### Default
 
@@ -1123,8 +1081,11 @@ the image.
 
 ##### Description
 
-Select image arrays to operate on. Specifiers can be of two types: positional or
-metadata-based key@value regex. Positional specifiers can be 'first', 'last',
+Select one or more image arrays. Note that image arrays can hold anything, but
+will typically represent a single contiguous 3D volume (i.e., a volumetric CT
+scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of two types: positional
+or metadata-based key@value regex. Positional specifiers can be 'first', 'last',
 'none', or 'all' literals. Additionally '#N' for some positive integer N selects
 the Nth image array (with zero-based indexing). Likewise, '#-N' selects the
 Nth-from-last image array. Positional specifiers can be inverted by prefixing
@@ -1133,10 +1094,8 @@ keys verbatim and the values with regex. In order to invert metadata-based
 selectors, the regex logic must be inverted (i.e., you can *not* prefix
 metadata-based selectors with a '!'). Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified. Both
-positional and metadata-based criteria can be mixed together. Note that image
-arrays can hold anything, but will typically represent a single contiguous 3D
-volume (i.e., a volumetric CT scan) or '4D' time-series. Note regexes are case
-insensitive and should use extended POSIX syntax.
+positional and metadata-based criteria can be mixed together. Note regexes are
+case insensitive and should use extended POSIX syntax.
 
 ##### Default
 
@@ -1193,7 +1152,7 @@ This option cannot be used with the other options.
 
 ### Description
 
-This operation averages image or dose volumes. It can average over spatial or
+This operation averages image arrays/volumes. It can average over spatial or
 temporal dimensions. However, rather than relying specifically on time for
 temporal averaging, any images that have overlapping voxels can be averaged.
 
@@ -1204,32 +1163,18 @@ temporal averaging, any images that have overlapping voxels can be averaged.
 
 ### Parameters
 
-- DoseImageSelection
 - ImageSelection
 - AveragingMethod
-
-#### DoseImageSelection
-
-##### Description
-
-Dose images to operate on. Either 'none', 'last', or 'all'.
-
-##### Default
-
-- ```"none"```
-
-##### Examples
-
-- ```"none"```
-- ```"last"```
-- ```"all"```
 
 #### ImageSelection
 
 ##### Description
 
-Select image arrays to operate on. Specifiers can be of two types: positional or
-metadata-based key@value regex. Positional specifiers can be 'first', 'last',
+Select one or more image arrays. Note that image arrays can hold anything, but
+will typically represent a single contiguous 3D volume (i.e., a volumetric CT
+scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of two types: positional
+or metadata-based key@value regex. Positional specifiers can be 'first', 'last',
 'none', or 'all' literals. Additionally '#N' for some positive integer N selects
 the Nth image array (with zero-based indexing). Likewise, '#-N' selects the
 Nth-from-last image array. Positional specifiers can be inverted by prefixing
@@ -1238,10 +1183,8 @@ keys verbatim and the values with regex. In order to invert metadata-based
 selectors, the regex logic must be inverted (i.e., you can *not* prefix
 metadata-based selectors with a '!'). Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified. Both
-positional and metadata-based criteria can be mixed together. Note that image
-arrays can hold anything, but will typically represent a single contiguous 3D
-volume (i.e., a volumetric CT scan) or '4D' time-series. Note regexes are case
-insensitive and should use extended POSIX syntax.
+positional and metadata-based criteria can be mixed together. Note regexes are
+case insensitive and should use extended POSIX syntax.
 
 ##### Default
 
@@ -1301,6 +1244,9 @@ This operation extracts radiomic features from an image and one or more ROIs.
 - ROILabelRegex
 - ScaleFactor
 - ImageFileName
+- ColourMapRegex
+- WindowLow
+- WindowHigh
 
 #### NormalizedROILabelRegex
 
@@ -1437,8 +1383,11 @@ be appended without writing a header.
 
 ##### Description
 
-Select image arrays to operate on. Specifiers can be of two types: positional or
-metadata-based key@value regex. Positional specifiers can be 'first', 'last',
+Select one or more image arrays. Note that image arrays can hold anything, but
+will typically represent a single contiguous 3D volume (i.e., a volumetric CT
+scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of two types: positional
+or metadata-based key@value regex. Positional specifiers can be 'first', 'last',
 'none', or 'all' literals. Additionally '#N' for some positive integer N selects
 the Nth image array (with zero-based indexing). Likewise, '#-N' selects the
 Nth-from-last image array. Positional specifiers can be inverted by prefixing
@@ -1447,10 +1396,8 @@ keys verbatim and the values with regex. In order to invert metadata-based
 selectors, the regex logic must be inverted (i.e., you can *not* prefix
 metadata-based selectors with a '!'). Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified. Both
-positional and metadata-based criteria can be mixed together. Note that image
-arrays can hold anything, but will typically represent a single contiguous 3D
-volume (i.e., a volumetric CT scan) or '4D' time-series. Note regexes are case
-insensitive and should use extended POSIX syntax.
+positional and metadata-based criteria can be mixed together. Note regexes are
+case insensitive and should use extended POSIX syntax.
 
 ##### Default
 
@@ -1552,6 +1499,77 @@ sequentially.
 - ```"/tmp/an_image.png"```
 - ```"afile.png"```
 
+#### ColourMapRegex
+
+##### Description
+
+The colour mapping to apply to the image if there is a single channel. The
+default will match the first available, and if there is no matching map found,
+the first available will be selected.
+
+##### Default
+
+- ```".*"```
+
+##### Examples
+
+- ```"Viridis"```
+- ```"Magma"```
+- ```"Plasma"```
+- ```"Inferno"```
+- ```"Jet"```
+- ```"MorelandBlueRed"```
+- ```"MorelandBlackBody"```
+- ```"MorelandExtendedBlackBody"```
+- ```"KRC"```
+- ```"ExtendedKRC"```
+- ```"Kovesi_LinKRYW_5-100_c64"```
+- ```"Kovesi_LinKRYW_0-100_c71"```
+- ```"Kovesi_Cyclic_cet-c2"```
+- ```"LANLOliveGreentoBlue"```
+- ```"YgorIncandescent"```
+- ```"LinearRamp"```
+
+#### WindowLow
+
+##### Description
+
+If provided, this parameter will override any existing window and level. All
+pixels with the intensity value or lower will be assigned the lowest possible
+colour according to the colour map. Not providing a valid number will disable
+window overrides.
+
+##### Default
+
+- ```""```
+
+##### Examples
+
+- ```""```
+- ```"-1.23"```
+- ```"0"```
+- ```"1E4"```
+
+#### WindowHigh
+
+##### Description
+
+If provided, this parameter will override any existing window and level. All
+pixels with the intensity value or higher will be assigned the highest possible
+colour according to the colour map. Not providing a valid number will disable
+window overrides.
+
+##### Default
+
+- ```""```
+
+##### Examples
+
+- ```""```
+- ```"1.23"```
+- ```"0"```
+- ```"10.3E4"```
+
 
 ## BoostSerializeDrover
 
@@ -1564,6 +1582,7 @@ operations with intermittant interactive sub-operations.
 ### Parameters
 
 - Filename
+- Components
 
 #### Filename
 
@@ -1581,6 +1600,27 @@ The file format is gzipped XML, which should be portable across most CPUs.
 - ```"/tmp/out.xml.gz"```
 - ```"./out.xml.gz"```
 - ```"out.xml.gz"```
+
+#### Components
+
+##### Description
+
+Which components to include in the output. Currently, any combination of (all
+images), (all contours), (all point clouds), (all surface meshes), and (all
+treatment plans) can be selected. Note that RTDOSEs are treated as images.
+
+##### Default
+
+- ```"images+contours+pointclouds+surfacemeshes+tplans"```
+
+##### Examples
+
+- ```"images"```
+- ```"images+pointclouds"```
+- ```"images+pointclouds+surfacemeshes"```
+- ```"pointclouds+surfacemeshes"```
+- ```"tplans+images+contours"```
+- ```"contours+images+pointclouds"```
 
 
 ## BuildLexiconInteractively
@@ -2415,6 +2455,321 @@ vein near the trunk or near the tissue of interest.
 - ```"Major_Vein"```
 
 
+## ClusterDBSCAN
+
+### Description
+
+This routine performs DBSCAN clustering on an image volume. The clustering is
+limited within ROI(s) and also within a range of voxel intensities. Voxels
+values are overwritten with the cluster ID (if applicable) or a generic
+configurable background value.
+
+### Notes
+
+- This operation will work with single images and image volumes. Images need not
+  be rectilinear.
+
+### Parameters
+
+- ImageSelection
+- NormalizedROILabelRegex
+- ROILabelRegex
+- ContourOverlap
+- Inclusivity
+- Channel
+- Lower
+- Upper
+- MinPoints
+- MaxPoints
+- Eps
+- BackgroundValue
+- Reduction
+
+#### ImageSelection
+
+##### Description
+
+Select one or more image arrays. Note that image arrays can hold anything, but
+will typically represent a single contiguous 3D volume (i.e., a volumetric CT
+scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of two types: positional
+or metadata-based key@value regex. Positional specifiers can be 'first', 'last',
+'none', or 'all' literals. Additionally '#N' for some positive integer N selects
+the Nth image array (with zero-based indexing). Likewise, '#-N' selects the
+Nth-from-last image array. Positional specifiers can be inverted by prefixing
+with a '!'. Metadata-based key@value expressions are applied by matching the
+keys verbatim and the values with regex. In order to invert metadata-based
+selectors, the regex logic must be inverted (i.e., you can *not* prefix
+metadata-based selectors with a '!'). Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified. Both
+positional and metadata-based criteria can be mixed together. Note regexes are
+case insensitive and should use extended POSIX syntax.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+
+#### NormalizedROILabelRegex
+
+##### Description
+
+A regex matching ROI labels/names to consider. The default will match all
+available ROIs. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regex to avoid them. All
+ROIs have to match the single regex, so use the 'or' token if needed. Regex is
+case insensitive and uses extended POSIX syntax.
+
+##### Default
+
+- ```".*"```
+
+##### Examples
+
+- ```".*"```
+- ```".*Body.*"```
+- ```"Body"```
+- ```"Gross_Liver"```
+- ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
+- ```"Left Parotid|Right Parotid"```
+
+#### ROILabelRegex
+
+##### Description
+
+A regex matching ROI labels/names to consider. The default will match all
+available ROIs. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regex to avoid them. All
+ROIs have to match the single regex, so use the 'or' token if needed. Regex is
+case insensitive and uses extended POSIX syntax.
+
+##### Default
+
+- ```".*"```
+
+##### Examples
+
+- ```".*"```
+- ```".*body.*"```
+- ```"body"```
+- ```"Gross_Liver"```
+- ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
+- ```"left_parotid|right_parotid"```
+
+#### ContourOverlap
+
+##### Description
+
+Controls overlapping contours are treated. The default 'ignore' treats
+overlapping contours as a single contour, regardless of contour orientation. The
+option 'honour_opposite_orientations' makes overlapping contours with opposite
+orientation cancel. Otherwise, orientation is ignored. The latter is useful for
+Boolean structures where contour orientation is significant for interior
+contours (holes). The option 'overlapping_contours_cancel' ignores orientation
+and cancels all contour overlap.
+
+##### Default
+
+- ```"ignore"```
+
+##### Examples
+
+- ```"ignore"```
+- ```"honour_opposite_orientations"```
+- ```"overlapping_contours_cancel"```
+- ```"honour_opps"```
+- ```"overlap_cancel"```
+
+#### Inclusivity
+
+##### Description
+
+Controls how voxels are deemed to be 'within' the interior of the selected
+ROI(s). The default 'center' considers only the central-most point of each
+voxel. There are two corner options that correspond to a 2D projection of the
+voxel onto the image plane. The first, 'planar_corner_inclusive', considers a
+voxel interior if ANY corner is interior. The second, 'planar_corner_exclusive',
+considers a voxel interior if ALL (four) corners are interior.
+
+##### Default
+
+- ```"center"```
+
+##### Examples
+
+- ```"center"```
+- ```"centre"```
+- ```"planar_corner_inclusive"```
+- ```"planar_inc"```
+- ```"planar_corner_exclusive"```
+- ```"planar_exc"```
+
+#### Channel
+
+##### Description
+
+The channel to operated on (zero-based). Negative values will cause all channels
+to be operated on.
+
+##### Default
+
+- ```"0"```
+
+##### Examples
+
+- ```"-1"```
+- ```"0"```
+- ```"1"```
+
+#### Lower
+
+##### Description
+
+Lower threshold (inclusive) below which voxels will be ignored by this routine.
+
+##### Default
+
+- ```"-inf"```
+
+##### Examples
+
+- ```"-inf"```
+- ```"0.0"```
+- ```"1024"```
+
+#### Upper
+
+##### Description
+
+Upper threshold (inclusive) above which voxels will be ignored by this routine.
+
+##### Default
+
+- ```"inf"```
+
+##### Examples
+
+- ```"inf"```
+- ```"1.0"```
+- ```"2048"```
+
+#### MinPoints
+
+##### Description
+
+DBSCAN algorithm parameter representing the minimum number of points that must
+appear in the vicinity for a cluster to be recognized. Sanders, et al. (1998)
+recommend a default of twice the dimensionality, but what is considered to be a
+reasonable value depends on the sparsity of the inputs and geometry. For regular
+grids, a slightly smaller value might be more appropriate.
+
+##### Default
+
+- ```"5"```
+
+##### Examples
+
+- ```"4"```
+- ```"6"```
+- ```"15"```
+
+#### MaxPoints
+
+##### Description
+
+Reject clusters if they would contain more than this many members. This
+parameter can be used to reject irrelevant background clusters or to help search
+for disconnected clusters. Setting this parameter appropriately will improve
+both memory usage and runtime considerably.
+
+##### Default
+
+- ```"inf"```
+
+##### Examples
+
+- ```"10"```
+- ```"1000"```
+- ```"1E6"```
+- ```"inf"```
+
+#### Eps
+
+##### Description
+
+DBSCAN algorithm parameter representing the threshold separation distance (in
+DICOM units; mm) between members of a cluster. All members in a cluster must be
+separated from at least MinPoints points within a distance of Eps. There is a
+standard way to determine an optimal value from the data itself, but requires
+generating a k-nearest-neighbours clustering first, and then visually
+identifying an appropriate 'kink' in the k-distances plot. This approach is not
+implemented here. Alternatively, the sparsity of the data and the specific
+problem domain must be used to estimate a desirable separation Eps.
+
+##### Default
+
+- ```"4.0"```
+
+##### Examples
+
+- ```"1.5"```
+- ```"2.5"```
+- ```"4.0"```
+- ```"10.0"```
+
+#### BackgroundValue
+
+##### Description
+
+The voxel intensity that will be assigned to all voxels that are not members of
+a cluster. Note that this value can be anything, but cluster numbers are
+zero-based, so a negative background is probably desired.
+
+##### Default
+
+- ```"-1.0"```
+
+##### Examples
+
+- ```"-1.0"```
+- ```"0.0"```
+- ```"100.23"```
+- ```"nan"```
+- ```"-inf"```
+
+#### Reduction
+
+##### Description
+
+Voxels within a cluster can be marked as-is, or reduced in a variety of ways. If
+reduction is not used, voxels in a valid cluster will have their values replaced
+with the cluster ID number. If 'median' reduction is specified, the
+component-wise median is reported for each cluster; the x-, y-, and
+z-coordinates of all voxels in each individual cluster will be reduced to the
+median coordinate.
+
+##### Default
+
+- ```"none"```
+
+##### Examples
+
+- ```"none"```
+- ```"median"```
+
+
 ## ComparePixels
 
 ### Description
@@ -2439,18 +2794,20 @@ be rectilinear (this property is verified).
   analysis will be faster. If not, image adjacency must be evaluated for every
   voxel.
 
-- This operation does **not** make use of interpolation for any comparison. Only
-  direct voxel-to-voxel comparisons are used. Implicit interpolation is used
-  (via the intermediate value theorem) for the distance-to-agreement comparison.
-  For this reason, the accuracy of all comparisons should be expected to be
-  limited by image spatial resolution (i.e., voxel dimensions). For example,
-  accuracy of the distance-to-agreement comparison is limited to the largest
-  voxel dimension (in the worst case). Reference images should be supersampled
-  if necessary.
-
 - The distance-to-agreement comparison will tend to overestimate the distance,
-  especially when the DTA value is low, because only implicit interpolation is
-  used. Reference images should be supersampled if necessary.
+  especially when the DTA value is low, because voxel size effects will dominate
+  the estimation. Reference images should be supersampled as necessary.
+
+- This operation optionally makes use of interpolation for sub-voxel distance
+  estimation. However, interpolation is currently limited to be along the edges
+  connecting nearest- and next-nearest voxel centres. In other words, true
+  volumetric interpolation is **not** available. Implicit interpolation is also
+  used (via the intermediate value theorem) for the distance-to-agreement
+  comparison, which results in distance estimation that may vary up to the
+  largest caliper distance of a voxel. For this reason, the accuracy of all
+  comparisons should be expected to be limited by image spatial resolution
+  (i.e., voxel dimensions). Reference images should be supersampled as
+  necessary.
 
 ### Parameters
 
@@ -2464,9 +2821,11 @@ be rectilinear (this property is verified).
 - TestImgUpperThreshold
 - RefImgLowerThreshold
 - RefImgUpperThreshold
+- DiscType
 - DTAVoxValEqAbs
 - DTAVoxValEqRelDiff
 - DTAMax
+- DTAInterpolationMethod
 - GammaDTAThreshold
 - GammaDiscThreshold
 - GammaTerminateAboveOne
@@ -2475,8 +2834,11 @@ be rectilinear (this property is verified).
 
 ##### Description
 
-Select image arrays to operate on. Specifiers can be of two types: positional or
-metadata-based key@value regex. Positional specifiers can be 'first', 'last',
+Select one or more image arrays. Note that image arrays can hold anything, but
+will typically represent a single contiguous 3D volume (i.e., a volumetric CT
+scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of two types: positional
+or metadata-based key@value regex. Positional specifiers can be 'first', 'last',
 'none', or 'all' literals. Additionally '#N' for some positive integer N selects
 the Nth image array (with zero-based indexing). Likewise, '#-N' selects the
 Nth-from-last image array. Positional specifiers can be inverted by prefixing
@@ -2485,10 +2847,8 @@ keys verbatim and the values with regex. In order to invert metadata-based
 selectors, the regex logic must be inverted (i.e., you can *not* prefix
 metadata-based selectors with a '!'). Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified. Both
-positional and metadata-based criteria can be mixed together. Note that image
-arrays can hold anything, but will typically represent a single contiguous 3D
-volume (i.e., a volumetric CT scan) or '4D' time-series. Note regexes are case
-insensitive and should use extended POSIX syntax.
+positional and metadata-based criteria can be mixed together. Note regexes are
+case insensitive and should use extended POSIX syntax.
 
 ##### Default
 
@@ -2511,8 +2871,11 @@ insensitive and should use extended POSIX syntax.
 
 ##### Description
 
-Select image arrays to operate on. Specifiers can be of two types: positional or
-metadata-based key@value regex. Positional specifiers can be 'first', 'last',
+Select one or more image arrays. Note that image arrays can hold anything, but
+will typically represent a single contiguous 3D volume (i.e., a volumetric CT
+scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of two types: positional
+or metadata-based key@value regex. Positional specifiers can be 'first', 'last',
 'none', or 'all' literals. Additionally '#N' for some positive integer N selects
 the Nth image array (with zero-based indexing). Likewise, '#-N' selects the
 Nth-from-last image array. Positional specifiers can be inverted by prefixing
@@ -2521,10 +2884,8 @@ keys verbatim and the values with regex. In order to invert metadata-based
 selectors, the regex logic must be inverted (i.e., you can *not* prefix
 metadata-based selectors with a '!'). Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified. Both
-positional and metadata-based criteria can be mixed together. Note that image
-arrays can hold anything, but will typically represent a single contiguous 3D
-volume (i.e., a volumetric CT scan) or '4D' time-series. Note regexes are case
-insensitive and should use extended POSIX syntax.
+positional and metadata-based criteria can be mixed together. Note regexes are
+case insensitive and should use extended POSIX syntax.
 
 ##### Default
 
@@ -2602,14 +2963,13 @@ pixel intensities except to test if the values match within the specified
 tolerance. The voxel neighbourhood is exhaustively explored until a suitable
 voxel is found. Implicit interpolation is used to detect when the value could be
 found via interpolation, but explicit interpolation is not used. Thus distance
-might be overestimated. A discrepancy comparison measures the point-dose
-intensity discrepancy without accounting for spatial shifts. A gamma analysis
-combines distance-to-agreement and point dose differences into a single index
-which is best used to test if both DTA and discrepancy criteria are satisfied
-(gamma <= 1 iff both pass). It was proposed by Low et al. in 1998
-((doi:10.1118/1.598248). Gamma analyses permits trade-offs between spatial and
-dosimetric discrepancies which can arise when the image arrays slightly differ
-in alignment or pixel values.
+might be overestimated. A discrepancy comparison measures the point intensity
+discrepancy without accounting for spatial shifts. A gamma analysis combines
+distance-to-agreement and point differences into a single index which is best
+used to test if both DTA and discrepancy criteria are satisfied (gamma <= 1 iff
+both pass). It was proposed by Low et al. in 1998 ((doi:10.1118/1.598248). Gamma
+analyses permits trade-offs between spatial and dosimetric discrepancies which
+can arise when the image arrays slightly differ in alignment or pixel values.
 
 ##### Default
 
@@ -2706,6 +3066,27 @@ this threshold (inclusive) will be altered.
 - ```"1.23"```
 - ```"1000"```
 
+#### DiscType
+
+##### Description
+
+Parameter for all comparisons estimating the direct, voxel-to-voxel discrepancy.
+There are currently three types available. 'Relative' is the absolute value of
+the difference of two voxel values divided by the largest of the two values.
+'Difference' is the difference of two voxel values. 'PinnedToMax' is the
+absolute value of the difference of two voxel values divided by the largest
+voxel value in the selected images.
+
+##### Default
+
+- ```"relative"```
+
+##### Examples
+
+- ```"relative"```
+- ```"difference"```
+- ```"pinned-to-max"```
+
 #### DTAVoxValEqAbs
 
 ##### Description
@@ -2713,7 +3094,7 @@ this threshold (inclusive) will be altered.
 Parameter for all comparisons involving a distance-to-agreement (DTA) search.
 The difference in voxel values considered to be sufficiently equal (absolute; in
 voxel intensity units). Note: This value CAN be zero. It is meant to help
-overcome noise.
+overcome noise. Note that this value is ignored by all interpolation methods.
 
 ##### Default
 
@@ -2733,7 +3114,7 @@ overcome noise.
 Parameter for all comparisons involving a distance-to-agreement (DTA) search.
 The difference in voxel values considered to be sufficiently equal (~relative
 difference; in %). Note: This value CAN be zero. It is meant to help overcome
-noise.
+noise. Note that this value is ignored by all interpolation methods.
 
 ##### Default
 
@@ -2768,6 +3149,58 @@ voxels beyond the DTA_max distance may be evaluated.
 - ```"5.0"```
 - ```"50.0"```
 
+#### DTAInterpolationMethod
+
+##### Description
+
+Parameter for all comparisons involving a distance-to-agreement (DTA) search.
+Controls how precisely and how often the space between voxel centres are
+interpolated to identify the exact position of agreement. There are currently
+three options: no interpolation ('None'), nearest-neighbour ('NN'), and
+next-nearest-neighbour ('NNN'). (1) If no interpolation is selected, the
+agreement position will only be established to within approximately the
+reference image voxels dimensions. To avoid interpolation, voxels that straddle
+the target value are taken as the agreement distance. Conceptually, if you view
+a voxel as having a finite spatial extent then this method may be sufficient for
+distance assessment. Though it is not precise, it is fast. This method will tend
+to over-estimate the actual distance, though it is possible that it slightly
+under-estimates it. This method works best when the reference image grid size is
+small in comparison to the desired spatial accuracy (e.g., if computing gamma,
+the tolerance should be much larger than the largest voxel dimension) so
+supersampling is recommended. (2) Nearest-neighbour interpolation considers the
+line connecting directly adjacent voxels. Using linear interpolation along this
+line when adjacent voxels straddle the target value, the 3D point where the
+target value appears can be predicted. This method can significantly improve
+distance estimation accuracy, though will typically be much slower than no
+interpolation. On the other hand, this method lower amounts of supersampling,
+though it is most reliable when the reference image grid size is small in
+comparison to the desired spatial accuracy. Note that nearest-neighbour
+interpolation also makes use of the 'no interpolation' methods. If you have a
+fine reference image, prefer either no interpolation or nearest-neighbour
+interpolation. (3) Finally, next-nearest-neighbour considers the
+diagonally-adjacent neighbours separated by taxi-cab distance of 2 (so in-plane
+diagonals are considered, but 3D diagonals are not). Quadratic (i.e., bi-linear)
+interpolation is analytically solved to determine where along the straddling
+diagonal the target value appears. This method is more expensive than linear
+interpolation but will generally result in more accurate distance estimates.
+This method may require lower amounts of supersampling than linear
+interpolation, but is most reliable when the reference image grid size is small
+in comparison to the desired spatial accuracy. Use of this method may not be
+appropriate in all cases considering that supersampling may be needed and a
+quadratic equation is solved for every voxel diagonal. Note that
+next-nearest-neighbour interpolation also makes use of the nearest-neighbour and
+'no interpolation' methods.
+
+##### Default
+
+- ```"NN"```
+
+##### Examples
+
+- ```"None"```
+- ```"NN"```
+- ```"NNN"```
+
 #### GammaDTAThreshold
 
 ##### Description
@@ -2791,9 +3224,14 @@ can differ from the DTA_max search cut-off, but should be <= to it.
 
 ##### Description
 
-Parameter for gamma-index comparisons. Voxel value relative discrepancy
-(relative difference; in %). When the measured discrepancy is above this value,
-the gamma index will necessarily be greater than one.
+Parameter for gamma-index comparisons. Voxel value discrepancies lower than this
+value are considered acceptable, but values above will result in gamma values
+>1. The specific interpretation of this parameter (and the units) depend on the
+specific type of discrepancy used. For percentage-based discrepancies, this
+parameter is interpretted as a percentage (i.e., '5.0' = '5%'). For voxel
+intensity measures such as the absolute difference, this value is interpretted
+as an absolute threshold with the same intensity units (i.e., '5.0' = '5 HU' or
+similar).
 
 ##### Default
 
@@ -3175,19 +3613,299 @@ styles.
 
 ### Notes
 
-- This routine requires an image grid, which is used to control the sampling
-  rate.
+- This routine requires an image grid, which is used to control where the
+  contours are sampled. Images are not modified.
 
 ### Parameters
 
-No registered options.
+- ImageSelection
+- NormalizedROILabelRegexA
+- ROILabelRegexA
+- NormalizedROILabelRegexB
+- ROILabelRegexB
+- FileName
+- UserComment
+
+#### ImageSelection
+
+##### Description
+
+Select one or more image arrays. Note that image arrays can hold anything, but
+will typically represent a single contiguous 3D volume (i.e., a volumetric CT
+scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of two types: positional
+or metadata-based key@value regex. Positional specifiers can be 'first', 'last',
+'none', or 'all' literals. Additionally '#N' for some positive integer N selects
+the Nth image array (with zero-based indexing). Likewise, '#-N' selects the
+Nth-from-last image array. Positional specifiers can be inverted by prefixing
+with a '!'. Metadata-based key@value expressions are applied by matching the
+keys verbatim and the values with regex. In order to invert metadata-based
+selectors, the regex logic must be inverted (i.e., you can *not* prefix
+metadata-based selectors with a '!'). Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified. Both
+positional and metadata-based criteria can be mixed together. Note regexes are
+case insensitive and should use extended POSIX syntax.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+
+#### NormalizedROILabelRegexA
+
+##### Description
+
+A regex matching ROI labels/names to consider. The default will match all
+available ROIs. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regex to avoid them. All
+ROIs have to match the single regex, so use the 'or' token if needed. Regex is
+case insensitive and uses extended POSIX syntax.
+
+##### Default
+
+- ```".*"```
+
+##### Examples
+
+- ```".*"```
+- ```".*Body.*"```
+- ```"Body"```
+- ```"Gross_Liver"```
+- ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
+- ```"Left Parotid|Right Parotid"```
+
+#### ROILabelRegexA
+
+##### Description
+
+A regex matching ROI labels/names to consider. The default will match all
+available ROIs. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regex to avoid them. All
+ROIs have to match the single regex, so use the 'or' token if needed. Regex is
+case insensitive and uses extended POSIX syntax.
+
+##### Default
+
+- ```".*"```
+
+##### Examples
+
+- ```".*"```
+- ```".*body.*"```
+- ```"body"```
+- ```"Gross_Liver"```
+- ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
+- ```"left_parotid|right_parotid"```
+
+#### NormalizedROILabelRegexB
+
+##### Description
+
+A regex matching ROI labels/names to consider. The default will match all
+available ROIs. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regex to avoid them. All
+ROIs have to match the single regex, so use the 'or' token if needed. Regex is
+case insensitive and uses extended POSIX syntax.
+
+##### Default
+
+- ```".*"```
+
+##### Examples
+
+- ```".*"```
+- ```".*Body.*"```
+- ```"Body"```
+- ```"Gross_Liver"```
+- ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
+- ```"Left Parotid|Right Parotid"```
+
+#### ROILabelRegexB
+
+##### Description
+
+A regex matching ROI labels/names to consider. The default will match all
+available ROIs. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regex to avoid them. All
+ROIs have to match the single regex, so use the 'or' token if needed. Regex is
+case insensitive and uses extended POSIX syntax.
+
+##### Default
+
+- ```".*"```
+
+##### Examples
+
+- ```".*"```
+- ```".*body.*"```
+- ```"body"```
+- ```"Gross_Liver"```
+- ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
+- ```"left_parotid|right_parotid"```
+
+#### FileName
+
+##### Description
+
+A filename (or full path) in which to append similarity data generated by this
+routine. The format is CSV. Leave empty to dump to generate a unique temporary
+file.
+
+##### Default
+
+- ```""```
+
+##### Examples
+
+- ```""```
+- ```"/tmp/somefile"```
+- ```"localfile.csv"```
+- ```"derivative_data.csv"```
+
+#### UserComment
+
+##### Description
+
+A string that will be inserted into the output file which will simplify merging
+output with differing parameters, from different sources, or using
+sub-selections of the data.
+
+##### Default
+
+- ```""```
+
+##### Examples
+
+- ```""```
+- ```"Using XYZ"```
+- ```"Patient treatment plan C"```
+
+
+## ContourViaGeometry
+
+### Description
+
+This operation constructs ROI contours using geometrical primitives.
+
+### Notes
+
+- This routine requires an image array onto which the contours will be written.
+
+- This routine expects images to be non-overlapping. In other words, if images
+  overlap then the contours generated may also overlap. This is probably not
+  what you want (but there is nothing intrinsically wrong with presenting this
+  routine with multiple images if you intentionally want overlapping contours).
+
+- Existing contours are ignored and unaltered.
+
+- Small and degenerate contours produced by this routine are suppressed. If a
+  specific number of contours must be generated, provide a slightly larger
+  radius to compensate for the degenerate cases at the extrema.
+
+### Parameters
+
+- ROILabel
+- ImageSelection
+- Shapes
+
+#### ROILabel
+
+##### Description
+
+A label to attach to the ROI contours.
+
+##### Default
+
+- ```"unspecified"```
+
+##### Examples
+
+- ```"unspecified"```
+- ```"body"```
+- ```"air"```
+- ```"bone"```
+- ```"invalid"```
+- ```"above_zero"```
+- ```"below_5.3"```
+
+#### ImageSelection
+
+##### Description
+
+Select one or more image arrays. Note that image arrays can hold anything, but
+will typically represent a single contiguous 3D volume (i.e., a volumetric CT
+scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of two types: positional
+or metadata-based key@value regex. Positional specifiers can be 'first', 'last',
+'none', or 'all' literals. Additionally '#N' for some positive integer N selects
+the Nth image array (with zero-based indexing). Likewise, '#-N' selects the
+Nth-from-last image array. Positional specifiers can be inverted by prefixing
+with a '!'. Metadata-based key@value expressions are applied by matching the
+keys verbatim and the values with regex. In order to invert metadata-based
+selectors, the regex logic must be inverted (i.e., you can *not* prefix
+metadata-based selectors with a '!'). Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified. Both
+positional and metadata-based criteria can be mixed together. Note regexes are
+case insensitive and should use extended POSIX syntax.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+
+#### Shapes
+
+##### Description
+
+This parameter is used to specify the shapes to consider. There is currently a
+single supported shape: sphere. However, it is likely that more shapes will be
+accepted in the future. Spheres have two configurable parameters: centre and
+radius. A sphere with centre (1.0,2.0,3.0) and radius 12.3 can be specified as
+'sphere(1.0, 2.0, 3.0, 12.3)'.
+
+##### Default
+
+- ```""```
+
+##### Examples
+
+- ```"sphere(-1.0, 2.0, 3.0,  12.3)"```
+
 
 ## ContourViaThreshold
 
 ### Description
 
 This operation constructs ROI contours using images and pixel/voxel value
-thresholds. The output is 'ephemeral' and is not commited to any database.
+thresholds. There are two methods of contour generation available: a simple
+binary method in which voxels are either fully in or fully out of the contour,
+and a method based on marching cubes that will provide smoother contours. The
+marching cubes method does **not** construct a full surface mesh; rather each
+individual image slice has their own mesh constructed in parallel.
 
 ### Notes
 
@@ -3201,7 +3919,8 @@ thresholds. The output is 'ephemeral' and is not commited to any database.
 - Contour orientation is (likely) not properly handled in this routine, so
   'pinches' and holes will produce contours with inconsistent or invalid
   topology. If in doubt, disable merge simplifications and live with the
-  computational penalty.
+  computational penalty. The marching cubes approach will properly handle
+  'pinches' and contours should all be topologically valid.
 
 ### Parameters
 
@@ -3210,6 +3929,7 @@ thresholds. The output is 'ephemeral' and is not commited to any database.
 - Upper
 - Channel
 - ImageSelection
+- Method
 - SimplifyMergeAdjacent
 
 #### ROILabel
@@ -3300,8 +4020,11 @@ The image channel to use. Zero-based.
 
 ##### Description
 
-Select image arrays to operate on. Specifiers can be of two types: positional or
-metadata-based key@value regex. Positional specifiers can be 'first', 'last',
+Select one or more image arrays. Note that image arrays can hold anything, but
+will typically represent a single contiguous 3D volume (i.e., a volumetric CT
+scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of two types: positional
+or metadata-based key@value regex. Positional specifiers can be 'first', 'last',
 'none', or 'all' literals. Additionally '#N' for some positive integer N selects
 the Nth image array (with zero-based indexing). Likewise, '#-N' selects the
 Nth-from-last image array. Positional specifiers can be inverted by prefixing
@@ -3310,10 +4033,8 @@ keys verbatim and the values with regex. In order to invert metadata-based
 selectors, the regex logic must be inverted (i.e., you can *not* prefix
 metadata-based selectors with a '!'). Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified. Both
-positional and metadata-based criteria can be mixed together. Note that image
-arrays can hold anything, but will typically represent a single contiguous 3D
-volume (i.e., a volumetric CT scan) or '4D' time-series. Note regexes are case
-insensitive and should use extended POSIX syntax.
+positional and metadata-based criteria can be mixed together. Note regexes are
+case insensitive and should use extended POSIX syntax.
 
 ##### Default
 
@@ -3331,6 +4052,28 @@ insensitive and should use extended POSIX syntax.
 - ```"!#-3"```
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
+
+#### Method
+
+##### Description
+
+There are currently two supported methods for generating contours: (1) a simple
+(and fast) binary inclusivity checker, that simply checks if a voxel is within
+the ROI by testing the value at the voxel centre, and (2) a robust (but slow)
+method based on marching cubes. The binary method is fast, but produces
+extremely jagged contours. It may also have problems with 'pinches' and
+topological consistency. The marching method is more robust and should reliably
+produce contours for even the most complicated topologies, but is considerably
+slower than the binary method.
+
+##### Default
+
+- ```"binary"```
+
+##### Examples
+
+- ```"binary"```
+- ```"marching"```
 
 #### SimplifyMergeAdjacent
 
@@ -3620,8 +4363,11 @@ A label to attach to the ROI contours.
 
 ##### Description
 
-Select image arrays to operate on. Specifiers can be of two types: positional or
-metadata-based key@value regex. Positional specifiers can be 'first', 'last',
+Select one or more image arrays. Note that image arrays can hold anything, but
+will typically represent a single contiguous 3D volume (i.e., a volumetric CT
+scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of two types: positional
+or metadata-based key@value regex. Positional specifiers can be 'first', 'last',
 'none', or 'all' literals. Additionally '#N' for some positive integer N selects
 the Nth image array (with zero-based indexing). Likewise, '#-N' selects the
 Nth-from-last image array. Positional specifiers can be inverted by prefixing
@@ -3630,10 +4376,8 @@ keys verbatim and the values with regex. In order to invert metadata-based
 selectors, the regex logic must be inverted (i.e., you can *not* prefix
 metadata-based selectors with a '!'). Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified. Both
-positional and metadata-based criteria can be mixed together. Note that image
-arrays can hold anything, but will typically represent a single contiguous 3D
-volume (i.e., a volumetric CT scan) or '4D' time-series. Note regexes are case
-insensitive and should use extended POSIX syntax.
+positional and metadata-based criteria can be mixed together. Note regexes are
+case insensitive and should use extended POSIX syntax.
 
 ##### Default
 
@@ -3671,25 +4415,333 @@ No registered options.
 
 ### Description
 
-This operation converts all loaded Dose_Arrays to Image_Arrays. Neither image
-contents nor metadata should change, but the intent to treat as an image or dose
-matrix will of course change. A deep copy may be performed.
+This operation converts all loaded images from RTDOSE modality to CT modality.
+Image contents will not change, but the intent to treat as an image or dose
+matrix will of course change.
 
 ### Parameters
 
-No registered options.
+- Modality
+
+#### Modality
+
+##### Description
+
+The modality that will replace 'RTDOSE'.
+
+##### Default
+
+- ```"CT"```
+
+##### Examples
+
+- ```"CT"```
+- ```"MR"```
+- ```"UNKNOWN"```
+
 
 ## ConvertImageToDose
 
 ### Description
 
-This operation converts all loaded Image_Arrays to Dose_Arrays. Neither image
-contents nor metadata should change, but the intent to treat as an image or dose
-matrix will of course change. A deep copy may be performed.
+This operation converts all loaded image modalities into RTDOSE. Image contents
+will not change, but the intent to treat as an image or dose matrix will of
+course change.
 
 ### Parameters
 
 No registered options.
+
+## ConvertImageToMeshes
+
+### Description
+
+This operation extracts surface meshes from images and pixel/voxel value
+thresholds. Meshes are appended to the back of the Surface_Mesh stack. There are
+two methods of contour generation available: a simple binary method in which
+voxels are either fully in or fully out of the contour, and a method based on
+marching cubes that will provide smoother contours. Both methods make use of
+marching cubes -- the binary method involves pre-processing.
+
+### Notes
+
+- This routine requires images to be regular (i.e., exactly abut nearest
+  adjacent images without any overlap).
+
+### Parameters
+
+- ImageSelection
+- Lower
+- Upper
+- Channel
+- Method
+- MeshLabel
+
+#### ImageSelection
+
+##### Description
+
+Select one or more image arrays. Note that image arrays can hold anything, but
+will typically represent a single contiguous 3D volume (i.e., a volumetric CT
+scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of two types: positional
+or metadata-based key@value regex. Positional specifiers can be 'first', 'last',
+'none', or 'all' literals. Additionally '#N' for some positive integer N selects
+the Nth image array (with zero-based indexing). Likewise, '#-N' selects the
+Nth-from-last image array. Positional specifiers can be inverted by prefixing
+with a '!'. Metadata-based key@value expressions are applied by matching the
+keys verbatim and the values with regex. In order to invert metadata-based
+selectors, the regex logic must be inverted (i.e., you can *not* prefix
+metadata-based selectors with a '!'). Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified. Both
+positional and metadata-based criteria can be mixed together. Note regexes are
+case insensitive and should use extended POSIX syntax.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+
+#### Lower
+
+##### Description
+
+The lower bound (inclusive). Pixels with values < this number are excluded from
+the ROI. If the number is followed by a '%', the bound will be scaled between
+the min and max pixel values [0-100%]. If the number is followed by 'tile', the
+bound will be replaced with the corresponding percentile [0-100tile]. Note that
+upper and lower bounds can be specified separately (e.g., lower bound is a
+percentage, but upper bound is a percentile). Note that computed bounds (i.e.,
+percentages and percentiles) consider the entire image volume.
+
+##### Default
+
+- ```"-inf"```
+
+##### Examples
+
+- ```"0.0"```
+- ```"-1E-99"```
+- ```"1.23"```
+- ```"0.2%"```
+- ```"23tile"```
+- ```"23.123 tile"```
+
+#### Upper
+
+##### Description
+
+The upper bound (inclusive). Pixels with values > this number are excluded from
+the ROI. If the number is followed by a '%', the bound will be scaled between
+the min and max pixel values [0-100%]. If the number is followed by 'tile', the
+bound will be replaced with the corresponding percentile [0-100tile]. Note that
+upper and lower bounds can be specified separately (e.g., lower bound is a
+percentage, but upper bound is a percentile). Note that computed bounds (i.e.,
+percentages and percentiles) consider the entire image volume.
+
+##### Default
+
+- ```"inf"```
+
+##### Examples
+
+- ```"1.0"```
+- ```"1E-99"```
+- ```"2.34"```
+- ```"98.12%"```
+- ```"94tile"```
+- ```"94.123 tile"```
+
+#### Channel
+
+##### Description
+
+The image channel to use. Zero-based.
+
+##### Default
+
+- ```"0"```
+
+##### Examples
+
+- ```"0"```
+- ```"1"```
+- ```"2"```
+
+#### Method
+
+##### Description
+
+There are currently two supported methods for generating contours: (1) a simple
+(and fast) binary inclusivity checker, that simply checks if a voxel is within
+the ROI by testing the value at the voxel centre, and (2) a robust (but slow)
+method based on marching cubes. The binary method is fast, but produces
+extremely jagged contours. It may also have problems with 'pinches' and
+topological consistency. The marching method is more robust and should reliably
+produce contours for even the most complicated topologies, but is considerably
+slower than the binary method.
+
+##### Default
+
+- ```"marching"```
+
+##### Examples
+
+- ```"binary"```
+- ```"marching"```
+
+#### MeshLabel
+
+##### Description
+
+A label to attach to the surface mesh.
+
+##### Default
+
+- ```"unspecified"```
+
+##### Examples
+
+- ```"unspecified"```
+- ```"body"```
+- ```"air"```
+- ```"bone"```
+- ```"invalid"```
+- ```"above_zero"```
+- ```"below_5.3"```
+
+
+## ConvertMeshesToContours
+
+### Description
+
+This operation constructs ROI contours by slicing the given meshes on a set of
+image planes.
+
+### Notes
+
+- Surface meshes should represent polyhedra.
+
+- This routine does **not** require images to be regular, rectilinear, or even
+  contiguous.
+
+- Images and meshes are unaltered. Existing contours are ignored and unaltered.
+
+- Contour orientation is (likely) not guaranteed to be consistent in this
+  routine.
+
+### Parameters
+
+- ROILabel
+- MeshSelection
+- ImageSelection
+
+#### ROILabel
+
+##### Description
+
+A label to attach to the ROI contours.
+
+##### Default
+
+- ```"unspecified"```
+
+##### Examples
+
+- ```"unspecified"```
+- ```"body"```
+- ```"air"```
+- ```"bone"```
+- ```"invalid"```
+- ```"above_zero"```
+- ```"below_5.3"```
+
+#### MeshSelection
+
+##### Description
+
+Select one or more surface meshes. Note that a single surface mesh may hold many
+disconnected mesh components; they should collectively represent a single
+logically cohesive object. Be aware that it is possible to mix logically
+unrelated sub-meshes together in a single mesh. Selection specifiers can be of
+two types: positional or metadata-based key@value regex. Positional specifiers
+can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some
+positive integer N selects the Nth surface mesh (with zero-based indexing).
+Likewise, '#-N' selects the Nth-from-last surface mesh. Positional specifiers
+can be inverted by prefixing with a '!'. Metadata-based key@value expressions
+are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can
+*not* prefix metadata-based selectors with a '!'). Multiple criteria can be
+specified by separating them with a ';' and are applied in the order specified.
+Both positional and metadata-based criteria can be mixed together. Note regexes
+are case insensitive and should use extended POSIX syntax.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+
+#### ImageSelection
+
+##### Description
+
+Select one or more image arrays. Note that image arrays can hold anything, but
+will typically represent a single contiguous 3D volume (i.e., a volumetric CT
+scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of two types: positional
+or metadata-based key@value regex. Positional specifiers can be 'first', 'last',
+'none', or 'all' literals. Additionally '#N' for some positive integer N selects
+the Nth image array (with zero-based indexing). Likewise, '#-N' selects the
+Nth-from-last image array. Positional specifiers can be inverted by prefixing
+with a '!'. Metadata-based key@value expressions are applied by matching the
+keys verbatim and the values with regex. In order to invert metadata-based
+selectors, the regex logic must be inverted (i.e., you can *not* prefix
+metadata-based selectors with a '!'). Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified. Both
+positional and metadata-based criteria can be mixed together. Note regexes are
+case insensitive and should use extended POSIX syntax.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+
 
 ## ConvertNaNsToAir
 
@@ -3713,22 +4765,116 @@ zeros.
 
 No registered options.
 
-## CopyImages
+## ConvertPixelsToPoints
 
 ### Description
 
-This operation deep-copies the selected image arrays.
+This operation extracts pixels from the selected images and converts them into a
+point cloud. Images are not modified.
+
+### Notes
+
+- Existing point clouds are ignored and unaltered.
 
 ### Parameters
 
+- Label
+- Lower
+- Upper
+- Channel
 - ImageSelection
+
+#### Label
+
+##### Description
+
+A label to attach to the point cloud.
+
+##### Default
+
+- ```"unspecified"```
+
+##### Examples
+
+- ```"unspecified"```
+- ```"POIs"```
+- ```"peaks"```
+- ```"above_zero"```
+- ```"below_5.3"```
+
+#### Lower
+
+##### Description
+
+The lower bound (inclusive). Pixels with values < this number are excluded from
+the ROI. If the number is followed by a '%', the bound will be scaled between
+the min and max pixel values [0-100%]. If the number is followed by 'tile', the
+bound will be replaced with the corresponding percentile [0-100tile]. Note that
+upper and lower bounds can be specified separately (e.g., lower bound is a
+percentage, but upper bound is a percentile).
+
+##### Default
+
+- ```"-inf"```
+
+##### Examples
+
+- ```"0.0"```
+- ```"-1E-99"```
+- ```"1.23"```
+- ```"0.2%"```
+- ```"23tile"```
+- ```"23.123 tile"```
+
+#### Upper
+
+##### Description
+
+The upper bound (inclusive). Pixels with values > this number are excluded from
+the ROI. If the number is followed by a '%', the bound will be scaled between
+the min and max pixel values [0-100%]. If the number is followed by 'tile', the
+bound will be replaced with the corresponding percentile [0-100tile]. Note that
+upper and lower bounds can be specified separately (e.g., lower bound is a
+percentage, but upper bound is a percentile).
+
+##### Default
+
+- ```"inf"```
+
+##### Examples
+
+- ```"1.0"```
+- ```"1E-99"```
+- ```"2.34"```
+- ```"98.12%"```
+- ```"94tile"```
+- ```"94.123 tile"```
+
+#### Channel
+
+##### Description
+
+The image channel to use. Zero-based.
+
+##### Default
+
+- ```"0"```
+
+##### Examples
+
+- ```"0"```
+- ```"1"```
+- ```"2"```
 
 #### ImageSelection
 
 ##### Description
 
-Select image arrays to operate on. Specifiers can be of two types: positional or
-metadata-based key@value regex. Positional specifiers can be 'first', 'last',
+Select one or more image arrays. Note that image arrays can hold anything, but
+will typically represent a single contiguous 3D volume (i.e., a volumetric CT
+scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of two types: positional
+or metadata-based key@value regex. Positional specifiers can be 'first', 'last',
 'none', or 'all' literals. Additionally '#N' for some positive integer N selects
 the Nth image array (with zero-based indexing). Likewise, '#-N' selects the
 Nth-from-last image array. Positional specifiers can be inverted by prefixing
@@ -3737,10 +4883,8 @@ keys verbatim and the values with regex. In order to invert metadata-based
 selectors, the regex logic must be inverted (i.e., you can *not* prefix
 metadata-based selectors with a '!'). Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified. Both
-positional and metadata-based criteria can be mixed together. Note that image
-arrays can hold anything, but will typically represent a single contiguous 3D
-volume (i.e., a volumetric CT scan) or '4D' time-series. Note regexes are case
-insensitive and should use extended POSIX syntax.
+positional and metadata-based criteria can be mixed together. Note regexes are
+case insensitive and should use extended POSIX syntax.
 
 ##### Default
 
@@ -3760,17 +4904,573 @@ insensitive and should use extended POSIX syntax.
 - ```"key1@.*value1.*;key2@^value2$;first"```
 
 
+## ConvolveImages
+
+### Description
+
+This routine convolves, correlates, or pattern-matches one rectilinear image
+array with another in voxel number space (i.e., the DICOM coordinate system of
+the convolution kernel image is entirely disregarded).
+
+### Notes
+
+- Both provided image arrays must be rectilinear. In many instances they should
+  both be regular, not just rectilinear, but rectilinearity is sufficient for
+  constructing voxel-by-voxel adjacency relatively quickly, and some
+  applications may require rectilinear kernels to be supported, so rectilinear
+  inputs are permitted.
+
+- This operation can be used to apply arbitrary convolution kernels to an image
+  array. It can also be used to search for instances of one image array in
+  another.
+
+- If the magnitude of the outgoing voxels will be interpretted in absolute
+  (i.e., thresholding based on an absolute magnitude) then the kernel should be
+  weighted so that the sum of all kernel voxel intensities is zero. This will
+  maintain the average voxel intensity. However, for pattern matching the kernel
+  need not be normalized (though it may make interpretting partial matches
+  easier.)
+
+### Parameters
+
+- ImageSelection
+- ReferenceImageSelection
+- NormalizedROILabelRegex
+- ROILabelRegex
+- Channel
+- Operation
+
+#### ImageSelection
+
+##### Description
+
+Select one or more image arrays. Note that image arrays can hold anything, but
+will typically represent a single contiguous 3D volume (i.e., a volumetric CT
+scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of two types: positional
+or metadata-based key@value regex. Positional specifiers can be 'first', 'last',
+'none', or 'all' literals. Additionally '#N' for some positive integer N selects
+the Nth image array (with zero-based indexing). Likewise, '#-N' selects the
+Nth-from-last image array. Positional specifiers can be inverted by prefixing
+with a '!'. Metadata-based key@value expressions are applied by matching the
+keys verbatim and the values with regex. In order to invert metadata-based
+selectors, the regex logic must be inverted (i.e., you can *not* prefix
+metadata-based selectors with a '!'). Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified. Both
+positional and metadata-based criteria can be mixed together. Note regexes are
+case insensitive and should use extended POSIX syntax.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+
+#### ReferenceImageSelection
+
+##### Description
+
+Select one or more image arrays. Note that image arrays can hold anything, but
+will typically represent a single contiguous 3D volume (i.e., a volumetric CT
+scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of two types: positional
+or metadata-based key@value regex. Positional specifiers can be 'first', 'last',
+'none', or 'all' literals. Additionally '#N' for some positive integer N selects
+the Nth image array (with zero-based indexing). Likewise, '#-N' selects the
+Nth-from-last image array. Positional specifiers can be inverted by prefixing
+with a '!'. Metadata-based key@value expressions are applied by matching the
+keys verbatim and the values with regex. In order to invert metadata-based
+selectors, the regex logic must be inverted (i.e., you can *not* prefix
+metadata-based selectors with a '!'). Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified. Both
+positional and metadata-based criteria can be mixed together. Note regexes are
+case insensitive and should use extended POSIX syntax.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+
+#### NormalizedROILabelRegex
+
+##### Description
+
+A regex matching ROI labels/names to consider. The default will match all
+available ROIs. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regex to avoid them. All
+ROIs have to match the single regex, so use the 'or' token if needed. Regex is
+case insensitive and uses extended POSIX syntax.
+
+##### Default
+
+- ```".*"```
+
+##### Examples
+
+- ```".*"```
+- ```".*Body.*"```
+- ```"Body"```
+- ```"Gross_Liver"```
+- ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
+- ```"Left Parotid|Right Parotid"```
+
+#### ROILabelRegex
+
+##### Description
+
+A regex matching ROI labels/names to consider. The default will match all
+available ROIs. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regex to avoid them. All
+ROIs have to match the single regex, so use the 'or' token if needed. Regex is
+case insensitive and uses extended POSIX syntax.
+
+##### Default
+
+- ```".*"```
+
+##### Examples
+
+- ```".*"```
+- ```".*body.*"```
+- ```"body"```
+- ```"Gross_Liver"```
+- ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
+- ```"left_parotid|right_parotid"```
+
+#### Channel
+
+##### Description
+
+The channel to operate on (zero-based). Negative values will cause all channels
+to be operated on.
+
+##### Default
+
+- ```"0"```
+
+##### Examples
+
+- ```"-1"```
+- ```"0"```
+- ```"1"```
+
+#### Operation
+
+##### Description
+
+Controls the way the kernel is applied and the reduction is tallied. Currently,
+'convolution', 'correlation', and 'pattern-match' are supported. For
+convolution, the reference image is spatially inverted along row-, column-, and
+image-axes. The outgoing voxel intensity is the inner (i.e., dot) product of the
+paired intensities of the surrounding voxel neighbourhood (i.e., the voxel at
+(-1,3,0) from the centre of the kernel is paired with the neighbouring voxel at
+(-1,3,0) from the current/outgoing voxel). For pattern-matching, the difference
+between the kernel and each voxel's neighbourhood voxels is compared using a
+2-norm (i.e., Euclidean) cost function. With this cost function, a perfect,
+pixel-for-pixel match (i.e., if the kernel images appears exactly in the image
+being transformed) will result in the outgoing voxel having zero intensity
+(i.e., zero cost). For correlation, the kernel is applied as-is (just like
+pattern-matching), but the inner product of the paired voxel neighbourhood
+intensities is reported (just like convolution). In all cases the kernel is
+(approximately) centred.
+
+##### Default
+
+- ```"convolution"```
+
+##### Examples
+
+- ```"convolution"```
+- ```"correlation"```
+- ```"pattern-match"```
+
+
+## CopyImages
+
+### Description
+
+This operation deep-copies the selected image arrays.
+
+### Parameters
+
+- ImageSelection
+
+#### ImageSelection
+
+##### Description
+
+Select one or more image arrays. Note that image arrays can hold anything, but
+will typically represent a single contiguous 3D volume (i.e., a volumetric CT
+scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of two types: positional
+or metadata-based key@value regex. Positional specifiers can be 'first', 'last',
+'none', or 'all' literals. Additionally '#N' for some positive integer N selects
+the Nth image array (with zero-based indexing). Likewise, '#-N' selects the
+Nth-from-last image array. Positional specifiers can be inverted by prefixing
+with a '!'. Metadata-based key@value expressions are applied by matching the
+keys verbatim and the values with regex. In order to invert metadata-based
+selectors, the regex logic must be inverted (i.e., you can *not* prefix
+metadata-based selectors with a '!'). Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified. Both
+positional and metadata-based criteria can be mixed together. Note regexes are
+case insensitive and should use extended POSIX syntax.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+
+
+## CopyMeshes
+
+### Description
+
+This operation deep-copies the selected surface meshes.
+
+### Parameters
+
+- MeshSelection
+
+#### MeshSelection
+
+##### Description
+
+Select one or more surface meshes. Note that a single surface mesh may hold many
+disconnected mesh components; they should collectively represent a single
+logically cohesive object. Be aware that it is possible to mix logically
+unrelated sub-meshes together in a single mesh. Selection specifiers can be of
+two types: positional or metadata-based key@value regex. Positional specifiers
+can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some
+positive integer N selects the Nth surface mesh (with zero-based indexing).
+Likewise, '#-N' selects the Nth-from-last surface mesh. Positional specifiers
+can be inverted by prefixing with a '!'. Metadata-based key@value expressions
+are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can
+*not* prefix metadata-based selectors with a '!'). Multiple criteria can be
+specified by separating them with a ';' and are applied in the order specified.
+Both positional and metadata-based criteria can be mixed together. Note regexes
+are case insensitive and should use extended POSIX syntax.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+
+
+## CountVoxels
+
+### Description
+
+This operation counts the number of voxels confined to one or more ROIs within a
+user-provided range.
+
+### Notes
+
+- This operation is read-only.
+
+### Parameters
+
+- ImageSelection
+- NormalizedROILabelRegex
+- ROILabelRegex
+- Inclusivity
+- ContourOverlap
+- Lower
+- Upper
+- Channel
+- ResultsSummaryFileName
+- UserComment
+
+#### ImageSelection
+
+##### Description
+
+Select one or more image arrays. Note that image arrays can hold anything, but
+will typically represent a single contiguous 3D volume (i.e., a volumetric CT
+scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of two types: positional
+or metadata-based key@value regex. Positional specifiers can be 'first', 'last',
+'none', or 'all' literals. Additionally '#N' for some positive integer N selects
+the Nth image array (with zero-based indexing). Likewise, '#-N' selects the
+Nth-from-last image array. Positional specifiers can be inverted by prefixing
+with a '!'. Metadata-based key@value expressions are applied by matching the
+keys verbatim and the values with regex. In order to invert metadata-based
+selectors, the regex logic must be inverted (i.e., you can *not* prefix
+metadata-based selectors with a '!'). Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified. Both
+positional and metadata-based criteria can be mixed together. Note regexes are
+case insensitive and should use extended POSIX syntax.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+
+#### NormalizedROILabelRegex
+
+##### Description
+
+A regex matching ROI labels/names to consider. The default will match all
+available ROIs. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regex to avoid them. All
+ROIs have to match the single regex, so use the 'or' token if needed. Regex is
+case insensitive and uses extended POSIX syntax.
+
+##### Default
+
+- ```".*"```
+
+##### Examples
+
+- ```".*"```
+- ```".*Body.*"```
+- ```"Body"```
+- ```"Gross_Liver"```
+- ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
+- ```"Left Parotid|Right Parotid"```
+
+#### ROILabelRegex
+
+##### Description
+
+A regex matching ROI labels/names to consider. The default will match all
+available ROIs. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regex to avoid them. All
+ROIs have to match the single regex, so use the 'or' token if needed. Regex is
+case insensitive and uses extended POSIX syntax.
+
+##### Default
+
+- ```".*"```
+
+##### Examples
+
+- ```".*"```
+- ```".*body.*"```
+- ```"body"```
+- ```"Gross_Liver"```
+- ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
+- ```"left_parotid|right_parotid"```
+
+#### Inclusivity
+
+##### Description
+
+Controls how voxels are deemed to be 'within' the interior of the selected
+ROI(s). The default 'center' considers only the central-most point of each
+voxel. There are two corner options that correspond to a 2D projection of the
+voxel onto the image plane. The first, 'planar_corner_inclusive', considers a
+voxel interior if ANY corner is interior. The second, 'planar_corner_exclusive',
+considers a voxel interior if ALL (four) corners are interior.
+
+##### Default
+
+- ```"center"```
+
+##### Examples
+
+- ```"center"```
+- ```"centre"```
+- ```"planar_corner_inclusive"```
+- ```"planar_inc"```
+- ```"planar_corner_exclusive"```
+- ```"planar_exc"```
+
+#### ContourOverlap
+
+##### Description
+
+Controls overlapping contours are treated. The default 'ignore' treats
+overlapping contours as a single contour, regardless of contour orientation. The
+option 'honour_opposite_orientations' makes overlapping contours with opposite
+orientation cancel. Otherwise, orientation is ignored. The latter is useful for
+Boolean structures where contour orientation is significant for interior
+contours (holes). The option 'overlapping_contours_cancel' ignores orientation
+and cancels all contour overlap.
+
+##### Default
+
+- ```"ignore"```
+
+##### Examples
+
+- ```"ignore"```
+- ```"honour_opposite_orientations"```
+- ```"overlapping_contours_cancel"```
+- ```"honour_opps"```
+- ```"overlap_cancel"```
+
+#### Lower
+
+##### Description
+
+The lower bound (inclusive). Pixels with values < this number are excluded from
+the ROI. If the number is followed by a '%', the bound will be scaled between
+the min and max pixel values [0-100%]. If the number is followed by 'tile', the
+bound will be replaced with the corresponding percentile [0-100tile]. Note that
+upper and lower bounds can be specified separately (e.g., lower bound is a
+percentage, but upper bound is a percentile).
+
+##### Default
+
+- ```"-inf"```
+
+##### Examples
+
+- ```"0.0"```
+- ```"-1E-99"```
+- ```"1.23"```
+- ```"0.2%"```
+- ```"23tile"```
+- ```"23.123 tile"```
+
+#### Upper
+
+##### Description
+
+The upper bound (inclusive). Pixels with values > this number are excluded from
+the ROI. If the number is followed by a '%', the bound will be scaled between
+the min and max pixel values [0-100%]. If the number is followed by 'tile', the
+bound will be replaced with the corresponding percentile [0-100tile]. Note that
+upper and lower bounds can be specified separately (e.g., lower bound is a
+percentage, but upper bound is a percentile).
+
+##### Default
+
+- ```"inf"```
+
+##### Examples
+
+- ```"1.0"```
+- ```"1E-99"```
+- ```"2.34"```
+- ```"98.12%"```
+- ```"94tile"```
+- ```"94.123 tile"```
+
+#### Channel
+
+##### Description
+
+The image channel to use. Zero-based.
+
+##### Default
+
+- ```"0"```
+
+##### Examples
+
+- ```"0"```
+- ```"1"```
+- ```"2"```
+
+#### ResultsSummaryFileName
+
+##### Description
+
+This file will contain a brief summary of the results. The format is CSV. Leave
+empty to dump to generate a unique temporary file. If an existing file is
+present, rows will be appended without writing a header.
+
+##### Default
+
+- ```""```
+
+##### Examples
+
+- ```""```
+- ```"/tmp/somefile"```
+- ```"localfile.csv"```
+- ```"derivative_data.csv"```
+
+#### UserComment
+
+##### Description
+
+A string that will be inserted into the output file which will simplify merging
+output with differing parameters, from different sources, or using
+sub-selections of the data.
+
+##### Default
+
+- ```""```
+
+##### Examples
+
+- ```""```
+- ```"Using XYZ"```
+- ```"Patient treatment plan C"```
+
+
 ## CropImageDoseToROIs
 
 ### Description
 
-This operation crops image and/or dose array slices to the specified ROI(s),
-with an additional margin.
+This operation crops image slices to the specified ROI(s), with an additional
+margin.
 
 ### Parameters
 
 - DICOMMargin
-- DoseImageSelection
 - ImageSelection
 - NormalizedROILabelRegex
 - ROILabelRegex
@@ -3792,28 +5492,15 @@ The amount of margin (in the DICOM coordinate system) to surround the ROI(s).
 - ```"-0.5"```
 - ```"20.0"```
 
-#### DoseImageSelection
-
-##### Description
-
-Dose images to operate on. Either 'none', 'last', or 'all'.
-
-##### Default
-
-- ```"none"```
-
-##### Examples
-
-- ```"none"```
-- ```"last"```
-- ```"all"```
-
 #### ImageSelection
 
 ##### Description
 
-Select image arrays to operate on. Specifiers can be of two types: positional or
-metadata-based key@value regex. Positional specifiers can be 'first', 'last',
+Select one or more image arrays. Note that image arrays can hold anything, but
+will typically represent a single contiguous 3D volume (i.e., a volumetric CT
+scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of two types: positional
+or metadata-based key@value regex. Positional specifiers can be 'first', 'last',
 'none', or 'all' literals. Additionally '#N' for some positive integer N selects
 the Nth image array (with zero-based indexing). Likewise, '#-N' selects the
 Nth-from-last image array. Positional specifiers can be inverted by prefixing
@@ -3822,10 +5509,8 @@ keys verbatim and the values with regex. In order to invert metadata-based
 selectors, the regex logic must be inverted (i.e., you can *not* prefix
 metadata-based selectors with a '!'). Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified. Both
-positional and metadata-based criteria can be mixed together. Note that image
-arrays can hold anything, but will typically represent a single contiguous 3D
-volume (i.e., a volumetric CT scan) or '4D' time-series. Note regexes are case
-insensitive and should use extended POSIX syntax.
+positional and metadata-based criteria can be mixed together. Note regexes are
+case insensitive and should use extended POSIX syntax.
 
 ##### Default
 
@@ -3910,8 +5595,11 @@ This operation crops image slices in either pixel or DICOM coordinate spaces.
 
 ##### Description
 
-Select image arrays to operate on. Specifiers can be of two types: positional or
-metadata-based key@value regex. Positional specifiers can be 'first', 'last',
+Select one or more image arrays. Note that image arrays can hold anything, but
+will typically represent a single contiguous 3D volume (i.e., a volumetric CT
+scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of two types: positional
+or metadata-based key@value regex. Positional specifiers can be 'first', 'last',
 'none', or 'all' literals. Additionally '#N' for some positive integer N selects
 the Nth image array (with zero-based indexing). Likewise, '#-N' selects the
 Nth-from-last image array. Positional specifiers can be inverted by prefixing
@@ -3920,10 +5608,8 @@ keys verbatim and the values with regex. In order to invert metadata-based
 selectors, the regex logic must be inverted (i.e., you can *not* prefix
 metadata-based selectors with a '!'). Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified. Both
-positional and metadata-based criteria can be mixed together. Note that image
-arrays can hold anything, but will typically represent a single contiguous 3D
-volume (i.e., a volumetric CT scan) or '4D' time-series. Note regexes are case
-insensitive and should use extended POSIX syntax.
+positional and metadata-based criteria can be mixed together. Note regexes are
+case insensitive and should use extended POSIX syntax.
 
 ##### Default
 
@@ -4052,21 +5738,17 @@ The amount of margin (in the DICOM coordinate system) to spare from cropping.
 
 ### Description
 
-This operation provides a simplified interface for overriding the dose outside a
-ROI. For example, this operation can be used to modify a base plan by
+This operation provides a simplified interface for overriding voxel values
+outside a ROI. For example, this operation can be used to modify a base plan by
 eliminating dose outside an OAR.
 
 ### Notes
 
-- This operation performs the opposite of the 'Trim' operation, which trims the
-  dose inside a ROI.
+- This operation performs the opposite of the 'Trim' operation, which trims
+  voxel values **inside** a ROI.
 
-- The inclusivity of a dose voxel that straddles the ROI boundary can be
-  specified in various ways. Refer to the Inclusivity parameter documentation.
-
-- By default this operation only overrides dose within a ROI. The opposite,
-  overriding dose outside of a ROI, can be accomplished using the expert
-  interface.
+- The inclusivity of a voxel that straddles the ROI boundary can be specified in
+  various ways. Refer to the Inclusivity parameter documentation.
 
 ### Parameters
 
@@ -4105,8 +5787,11 @@ channels.
 
 ##### Description
 
-Select image arrays to operate on. Specifiers can be of two types: positional or
-metadata-based key@value regex. Positional specifiers can be 'first', 'last',
+Select one or more image arrays. Note that image arrays can hold anything, but
+will typically represent a single contiguous 3D volume (i.e., a volumetric CT
+scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of two types: positional
+or metadata-based key@value regex. Positional specifiers can be 'first', 'last',
 'none', or 'all' literals. Additionally '#N' for some positive integer N selects
 the Nth image array (with zero-based indexing). Likewise, '#-N' selects the
 Nth-from-last image array. Positional specifiers can be inverted by prefixing
@@ -4115,10 +5800,8 @@ keys verbatim and the values with regex. In order to invert metadata-based
 selectors, the regex logic must be inverted (i.e., you can *not* prefix
 metadata-based selectors with a '!'). Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified. Both
-positional and metadata-based criteria can be mixed together. Note that image
-arrays can hold anything, but will typically represent a single contiguous 3D
-volume (i.e., a volumetric CT scan) or '4D' time-series. Note regexes are case
-insensitive and should use extended POSIX syntax.
+positional and metadata-based criteria can be mixed together. Note regexes are
+case insensitive and should use extended POSIX syntax.
 
 ##### Default
 
@@ -4451,8 +6134,6 @@ fewer than 2-3y have elapsed.
 
 ### Notes
 
-- This routine uses image_arrays so convert dose_arrays beforehand.
-
 - This routine will combine spatially-overlapping images by summing voxel
   intensities. So if you have a time course it may be more sensible to aggregate
   images in some way (e.g., spatial averaging) prior to calling this routine.
@@ -4520,16 +6201,15 @@ case insensitive and uses extended POSIX syntax.
 
 ### Description
 
-This operation transforms a dose map (assumed to be delivered some time in the
-past) to 'decay' or 'evaporate' or 'forgive' some of the dose using the
-time-dependent model of Jones and Grant (2014; doi:10.1016/j.clon.2014.04.027).
-This model is specific to reirradiation of central nervous tissues. See the
-Jones and Grant paper or 'Nasopharyngeal Carcinoma' by Wai Tong Ng et al. (2016;
-doi:10.1007/174_2016_48) for more information.
+This operation transforms a dose map (delivered some time in the past) to
+account for tissue recovery (i.e., 'dose decay,' 'dose evaporation,' or 'dose
+forgivance') using the time-dependent model of Jones and Grant (2014;
+doi:10.1016/j.clon.2014.04.027). This model is specific to reirradiation of
+central nervous tissues. See the Jones and Grant paper or 'Nasopharyngeal
+Carcinoma' by Wai Tong Ng et al. (2016; doi:10.1007/174_2016_48) for more
+information.
 
 ### Notes
-
-- This routine uses image_arrays so convert dose_arrays beforehand.
 
 - This routine will combine spatially-overlapping images by summing voxel
   intensities. So if you have a time course it may be more sensible to aggregate
@@ -4649,7 +6329,7 @@ used, you should provide a cumulative BED-derived dose here.
 
 ##### Description
 
-The number of fractions ('n') the 'lifetime dose tolerance' toxicity you are
+The number of fractions ('n') for the 'lifetime dose tolerance' toxicity you are
 interested in. Note that this is converted to a BED_{a/b} so you can safely
 provide a 'nominal' value. If several apply, you can provide a single effective
 fractionation scheme's 'n'.
@@ -4673,7 +6353,8 @@ The number of years between radiotherapy courses. Note that this is normally
 estimated by (1) extracting study/series dates from the provided dose files and
 (2) using the current date as the second course date. Use this parameter to
 override the autodetected gap time. Note: if the provided value is negative,
-autodetection will be used.
+autodetection will be used. Autodetection can fail if the data has been
+anonymized with date-shifting.
 
 ##### Default
 
@@ -4702,6 +6383,7 @@ some evidence that it may be erroneous to use 3 Gy.
 ##### Examples
 
 - ```"2"```
+- ```"2.5"```
 - ```"3"```
 
 #### UseMoreConservativeRecovery
@@ -4802,8 +6484,11 @@ positional operations in stages.
 
 ##### Description
 
-Select image arrays to operate on. Specifiers can be of two types: positional or
-metadata-based key@value regex. Positional specifiers can be 'first', 'last',
+Select one or more image arrays. Note that image arrays can hold anything, but
+will typically represent a single contiguous 3D volume (i.e., a volumetric CT
+scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of two types: positional
+or metadata-based key@value regex. Positional specifiers can be 'first', 'last',
 'none', or 'all' literals. Additionally '#N' for some positive integer N selects
 the Nth image array (with zero-based indexing). Likewise, '#-N' selects the
 Nth-from-last image array. Positional specifiers can be inverted by prefixing
@@ -4812,14 +6497,12 @@ keys verbatim and the values with regex. In order to invert metadata-based
 selectors, the regex logic must be inverted (i.e., you can *not* prefix
 metadata-based selectors with a '!'). Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified. Both
-positional and metadata-based criteria can be mixed together. Note that image
-arrays can hold anything, but will typically represent a single contiguous 3D
-volume (i.e., a volumetric CT scan) or '4D' time-series. Note regexes are case
-insensitive and should use extended POSIX syntax.
+positional and metadata-based criteria can be mixed together. Note regexes are
+case insensitive and should use extended POSIX syntax.
 
 ##### Default
 
-- ```"all"```
+- ```"last"```
 
 ##### Examples
 
@@ -4833,6 +6516,365 @@ insensitive and should use extended POSIX syntax.
 - ```"!#-3"```
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
+
+
+## DeleteMeshes
+
+### Description
+
+This routine deletes surface meshes from memory. It is most useful when working
+with positional operations in stages.
+
+### Parameters
+
+- MeshSelection
+
+#### MeshSelection
+
+##### Description
+
+Select one or more surface meshes. Note that a single surface mesh may hold many
+disconnected mesh components; they should collectively represent a single
+logically cohesive object. Be aware that it is possible to mix logically
+unrelated sub-meshes together in a single mesh. Selection specifiers can be of
+two types: positional or metadata-based key@value regex. Positional specifiers
+can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some
+positive integer N selects the Nth surface mesh (with zero-based indexing).
+Likewise, '#-N' selects the Nth-from-last surface mesh. Positional specifiers
+can be inverted by prefixing with a '!'. Metadata-based key@value expressions
+are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can
+*not* prefix metadata-based selectors with a '!'). Multiple criteria can be
+specified by separating them with a ';' and are applied in the order specified.
+Both positional and metadata-based criteria can be mixed together. Note regexes
+are case insensitive and should use extended POSIX syntax.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+
+
+## DetectGrid3D
+
+### Description
+
+This routine fits a 3D grid to a point cloud using a Procrustes analysis with
+point-to-model correspondence estimated via an iterative closest point approach.
+A RANSAC-powered loop is used to (1) randomly select a subset of the grid for
+coarse iterative closest point grid fitting, and then (2) use the coarse fit
+results as a guess for the whole point cloud in a refinement stage.
+
+### Notes
+
+- Traditional Procrustes analysis requires a priori point-to-point
+  correspondence knowledge. Because this operation fits a model (with infinite
+  extent), point-to-point correspondence is not known and the model is
+  effectively an infinite continuum of potential points. To overcome this
+  problem, correspondence is estimated by projecting each point in the point
+  cloud onto every grid line and selecting the closest projected point. The
+  point cloud point and the project point are then treated as corresponding
+  points. Using this phony correspondence, the Procrustes problem is solved and
+  the grid is reoriented. This is performed iteratively. However **there is no
+  guarantee the procedure will converge** and furthermore, even if it does
+  converge, **there is no guarantee that the grid will be appropriately fit**.
+  The best results will occur when the grid is already closely aligned with the
+  point cloud (i.e., when the first guess is very close to a solution). If this
+  cannot be guaranteed, it may be advantageous to have a nearly continuous point
+  cloud to avoid gaps in which the iteration can get stuck in a local minimum.
+  For this reason, RANSAC is applied to continuously reboot the fitting
+  procedure. All but the best fit are discarded.
+
+- A two-stage RANSAC inner-loop iterative closest point fitting procedure is
+  used. Coarse grid fitting is first performed with a limited subset of the
+  whole point cloud. This is followed with a refinment stage in which the enire
+  point cloud is fitted using an initial guess carried forward from the coarse
+  fitting stage. This guess is expected to be reasonably close to the true grid
+  in cases where the coarse fitting procedure was not tainted by outliers, but
+  is only derived from a small portion of the point cloud. (Thus RANSAC is used
+  to perform this coarse-fine iterative procedure multiple times to provide
+  resilience to poor-quality coarse fits.) CoarseICPMaxLoops is the maximum
+  number of iterative-closest point loop iterations performed during the coarse
+  grid fitting stage (on a subset of the point cloud), and FineICPMaxLoops is
+  the maximum number of iterative-closest point loop iterations performed during
+  the refinement stage (using the whole point cloud). Note that, depending on
+  the noise level and number of points considered (i.e., whether the RANSACDist
+  parameter is sufficiently small to avoid spatial wrapping of corresponding
+  points into adjacent grid cells, but sufficiently large to enclose at least
+  one whole grid cell), the coarse phase should converge within a few
+  iterations. However, on each loop a single point is selected as the grid's
+  rotation centre. This means that a few extra iterations should always be used
+  in case outliers are selected as rotation centres. Additionally, if the point
+  cloud is dense or there are lots of outliers present, increase
+  CoarseICPMaxLoops to ensure there is a reasonable chance of selecting
+  legitimate rotation points. On the other hand, be aware that the coarse-fine
+  iterative procedure is performed afresh for every RANSAC loop, and RANSAC
+  loops are better able to ensure the point cloud is sampled ergodically. It
+  might therefore be more productive to increase the RANSACMaxLoops parameter
+  and reduce the number of CoarseICPMaxLoops. FineICPMaxLoops should converge
+  quickly if the coarse fitting stage was representative of the true grid.
+  However, as in the coarse stage a rotation centre is nominated in each loop,
+  so it will be a good idea to keep a sufficient number of loops to ensure a
+  legitimate and appropriate non-outlier point is nominated during this stage.
+  Given the complicated interplay between parameters and stages, it is always
+  best to tune using a representative sample of the point cloud you need to fit!
+
+### Parameters
+
+- PointSelection
+- GridSeparation
+- RANSACDist
+- GridSampling
+- LineThickness
+- RandomSeed
+- RANSACMaxLoops
+- CoarseICPMaxLoops
+- FineICPMaxLoops
+- ResultsSummaryFileName
+- UserComment
+
+#### PointSelection
+
+##### Description
+
+Select one or more point clouds. Note that point clouds can hold a variety of
+data with varying attributes, but each point cloud is meant to represent a
+single logically cohesive collection of points. Be aware that it is possible to
+mix logically unrelated points together. Selection specifiers can be of two
+types: positional or metadata-based key@value regex. Positional specifiers can
+be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some
+positive integer N selects the Nth point cloud (with zero-based indexing).
+Likewise, '#-N' selects the Nth-from-last point cloud. Positional specifiers can
+be inverted by prefixing with a '!'. Metadata-based key@value expressions are
+applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can
+*not* prefix metadata-based selectors with a '!'). Multiple criteria can be
+specified by separating them with a ';' and are applied in the order specified.
+Both positional and metadata-based criteria can be mixed together. Note regexes
+are case insensitive and should use extended POSIX syntax.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+
+#### GridSeparation
+
+##### Description
+
+The separation of the grid (in DICOM units; mm) being fit. This parameter
+describes how close adjacent grid lines are to one another. Separation is
+measured from one grid line centre to the nearest adjacent grid line centre.
+
+##### Default
+
+- ```"10.0"```
+
+##### Examples
+
+- ```"10.0"```
+- ```"15.5"```
+- ```"25.0"```
+- ```"1.23E4"```
+
+#### RANSACDist
+
+##### Description
+
+Every iteration of RANSAC selects a single point from the point cloud. Only the
+near-vicinity of points are retained for iterative-closest-point Procrustes
+solving. This parameter determines the maximum radial distance from the RANSAC
+point within which point cloud points will be retained; all points further than
+this distance away will be pruned for a given round of RANSAC. This is needed
+because corresponding points begin to alias to incorrect cell faces when the ICP
+procedure begins with a poor guess. Pruning points in a spherical neighbourhood
+with a diameter 2-4x the GridSeparation (so a radius 1-2x GridSeparation) will
+help mitigate aliasing even when the initial guess is poor. However, smaller
+windows may increase susceptibility to noise/outliers, and RANSACDist should
+never be smaller than a grid voxel. If RANSACDist is not provided, a default of
+(1.5 * GridSeparation) is used.
+
+##### Default
+
+- ```"nan"```
+
+##### Examples
+
+- ```"7.0"```
+- ```"10.0"```
+- ```"2.46E4"```
+
+#### GridSampling
+
+##### Description
+
+Specifies how the grid data has been sampled. Use value '1' if only grid cell
+corners (i.e., '0D' grid intersections) are sampled. Use value '2' if grid cell
+edges (i.e., 1D grid lines) are sampled. Use value '3' if grid cell faces (i.e.,
+2D planar faces) are sampled.
+
+##### Default
+
+- ```"1"```
+
+##### Examples
+
+- ```"1"```
+- ```"2"```
+- ```"3"```
+
+#### LineThickness
+
+##### Description
+
+The thickness of grid lines (in DICOM units; mm). If zero, lines are treated
+simply as lines. If non-zero, grid lines are treated as hollow cylinders with a
+diameter of this thickness.
+
+##### Default
+
+- ```"0.0"```
+
+##### Examples
+
+- ```"1.0"```
+- ```"1.5"```
+- ```"10.0"```
+- ```"1.23E4"```
+
+#### RandomSeed
+
+##### Description
+
+A whole number seed value to use for random number generation.
+
+##### Default
+
+- ```"1317"```
+
+##### Examples
+
+- ```"1"```
+- ```"2"```
+- ```"1113523431"```
+
+#### RANSACMaxLoops
+
+##### Description
+
+The maximum number of iterations of RANSAC. (See operation notes for further
+details.)
+
+##### Default
+
+- ```"100"```
+
+##### Examples
+
+- ```"100"```
+- ```"2000"```
+- ```"1E4"```
+
+#### CoarseICPMaxLoops
+
+##### Description
+
+Coarse grid fitting is performed with a limited subset of the whole point cloud.
+This is followed with a refinment stage in which the enire point is fitted using
+an initial guess from the coarse fitting stage. CoarseICPMaxLoops is the maximum
+number of iterative-closest point loop iterations performed during the coarse
+grid fitting stage. (See operation notes for further details.)
+
+##### Default
+
+- ```"10"```
+
+##### Examples
+
+- ```"10"```
+- ```"100"```
+- ```"1E4"```
+
+#### FineICPMaxLoops
+
+##### Description
+
+Coarse grid fitting is performed with a limited subset of the whole point cloud.
+This is followed with a refinment stage in which the enire point is fitted using
+an initial guess from the coarse fitting stage. FineICPMaxLoops is the maximum
+number of iterative-closest point loop iterations performed during the
+refinement stage. (See operation notes for further details.)
+
+##### Default
+
+- ```"20"```
+
+##### Examples
+
+- ```"10"```
+- ```"50"```
+- ```"100"```
+
+#### ResultsSummaryFileName
+
+##### Description
+
+This file will contain a brief summary of the results. The format is CSV. Leave
+empty to dump to generate a unique temporary file. If an existing file is
+present, rows will be appended without writing a header.
+
+##### Default
+
+- ```""```
+
+##### Examples
+
+- ```""```
+- ```"/tmp/somefile"```
+- ```"localfile.csv"```
+- ```"derivative_data.csv"```
+
+#### UserComment
+
+##### Description
+
+A string that will be inserted into the output file which will simplify merging
+output with differing parameters, from different sources, or using
+sub-selections of the data.
+
+##### Default
+
+- ```""```
+
+##### Examples
+
+- ```""```
+- ```"Using XYZ"```
+- ```"Patient treatment plan C"```
 
 
 ## DetectShapes3D
@@ -4849,8 +6891,11 @@ This operation attempts to detect shapes in image volumes.
 
 ##### Description
 
-Select image arrays to operate on. Specifiers can be of two types: positional or
-metadata-based key@value regex. Positional specifiers can be 'first', 'last',
+Select one or more image arrays. Note that image arrays can hold anything, but
+will typically represent a single contiguous 3D volume (i.e., a volumetric CT
+scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of two types: positional
+or metadata-based key@value regex. Positional specifiers can be 'first', 'last',
 'none', or 'all' literals. Additionally '#N' for some positive integer N selects
 the Nth image array (with zero-based indexing). Likewise, '#-N' selects the
 Nth-from-last image array. Positional specifiers can be inverted by prefixing
@@ -4859,10 +6904,8 @@ keys verbatim and the values with regex. In order to invert metadata-based
 selectors, the regex logic must be inverted (i.e., you can *not* prefix
 metadata-based selectors with a '!'). Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified. Both
-positional and metadata-based criteria can be mixed together. Note that image
-arrays can hold anything, but will typically represent a single contiguous 3D
-volume (i.e., a volumetric CT scan) or '4D' time-series. Note regexes are case
-insensitive and should use extended POSIX syntax.
+positional and metadata-based criteria can be mixed together. Note regexes are
+case insensitive and should use extended POSIX syntax.
 
 ##### Default
 
@@ -4880,6 +6923,237 @@ insensitive and should use extended POSIX syntax.
 - ```"!#-3"```
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
+
+
+## DrawGeometry
+
+### Description
+
+This operation draws shapes and patterns on images. Drawing is confined to one
+or more ROIs.
+
+### Parameters
+
+- ImageSelection
+- VoxelValue
+- Overwrite
+- Channel
+- NormalizedROILabelRegex
+- ROILabelRegex
+- ContourOverlap
+- Inclusivity
+- Shapes
+
+#### ImageSelection
+
+##### Description
+
+Select one or more image arrays. Note that image arrays can hold anything, but
+will typically represent a single contiguous 3D volume (i.e., a volumetric CT
+scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of two types: positional
+or metadata-based key@value regex. Positional specifiers can be 'first', 'last',
+'none', or 'all' literals. Additionally '#N' for some positive integer N selects
+the Nth image array (with zero-based indexing). Likewise, '#-N' selects the
+Nth-from-last image array. Positional specifiers can be inverted by prefixing
+with a '!'. Metadata-based key@value expressions are applied by matching the
+keys verbatim and the values with regex. In order to invert metadata-based
+selectors, the regex logic must be inverted (i.e., you can *not* prefix
+metadata-based selectors with a '!'). Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified. Both
+positional and metadata-based criteria can be mixed together. Note regexes are
+case insensitive and should use extended POSIX syntax.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+
+#### VoxelValue
+
+##### Description
+
+The value to give voxels which are coincident with a point from the point cloud.
+
+##### Default
+
+- ```"1.0"```
+
+##### Examples
+
+- ```"-1.0"```
+- ```"0.0"```
+- ```"1.23"```
+- ```"nan"```
+- ```"inf"```
+
+#### Overwrite
+
+##### Description
+
+Whether to overwrite voxels interior or exterior to the specified ROI(s).
+
+##### Default
+
+- ```"interior"```
+
+##### Examples
+
+- ```"interior"```
+- ```"exterior"```
+
+#### Channel
+
+##### Description
+
+The image channel to use. Zero-based.
+
+##### Default
+
+- ```"0"```
+
+##### Examples
+
+- ```"0"```
+- ```"1"```
+- ```"2"```
+
+#### NormalizedROILabelRegex
+
+##### Description
+
+A regex matching ROI labels/names to consider. The default will match all
+available ROIs. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regex to avoid them. All
+ROIs have to match the single regex, so use the 'or' token if needed. Regex is
+case insensitive and uses extended POSIX syntax.
+
+##### Default
+
+- ```".*"```
+
+##### Examples
+
+- ```".*"```
+- ```".*Body.*"```
+- ```"Body"```
+- ```"Gross_Liver"```
+- ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
+- ```"Left Parotid|Right Parotid"```
+
+#### ROILabelRegex
+
+##### Description
+
+A regex matching ROI labels/names to consider. The default will match all
+available ROIs. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regex to avoid them. All
+ROIs have to match the single regex, so use the 'or' token if needed. Regex is
+case insensitive and uses extended POSIX syntax.
+
+##### Default
+
+- ```".*"```
+
+##### Examples
+
+- ```".*"```
+- ```".*body.*"```
+- ```"body"```
+- ```"Gross_Liver"```
+- ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
+- ```"left_parotid|right_parotid"```
+
+#### ContourOverlap
+
+##### Description
+
+Controls overlapping contours are treated. The default 'ignore' treats
+overlapping contours as a single contour, regardless of contour orientation. The
+option 'honour_opposite_orientations' makes overlapping contours with opposite
+orientation cancel. Otherwise, orientation is ignored. The latter is useful for
+Boolean structures where contour orientation is significant for interior
+contours (holes). The option 'overlapping_contours_cancel' ignores orientation
+and cancels all contour overlap.
+
+##### Default
+
+- ```"ignore"```
+
+##### Examples
+
+- ```"ignore"```
+- ```"honour_opposite_orientations"```
+- ```"overlapping_contours_cancel"```
+- ```"honour_opps"```
+- ```"overlap_cancel"```
+
+#### Inclusivity
+
+##### Description
+
+Controls how voxels are deemed to be 'within' the interior of the selected
+ROI(s). The default 'center' considers only the central-most point of each
+voxel. There are two corner options that correspond to a 2D projection of the
+voxel onto the image plane. The first, 'planar_corner_inclusive', considers a
+voxel interior if ANY corner is interior. The second, 'planar_corner_exclusive',
+considers a voxel interior if ALL (four) corners are interior.
+
+##### Default
+
+- ```"center"```
+
+##### Examples
+
+- ```"center"```
+- ```"centre"```
+- ```"planar_corner_inclusive"```
+- ```"planar_inc"```
+- ```"planar_corner_exclusive"```
+- ```"planar_exc"```
+
+#### Shapes
+
+##### Description
+
+This parameter is used to specify the shapes and patterns to consider. Currently
+grids, wireframecubes, and solidspheres are available. Grids have four
+configurable parameters: two orientation unit vectors, line thickness, and line
+separation. A grid intersecting at the image array's centre, aligned with
+(1.0,0.0,0.0) and (0.0,1.0,0.0), with line thickness (i.e., diameter) 3.0 (DICOM
+units; mm), and separation 15.0 can be specified as 'grid(1.0,0.0,0.0,
+0.0,1.0,0.0, 3.0, 15.0)'. Unit vectors will be Gram-Schmidt orthogonalized. Note
+that currently the grid *must* intersect the image array's centre. Cubes have
+the same number of configurable parameters, but only a single cube of the grid
+is drawn. The wireframecube is centred at the image centre, rather than
+intersecting it. Solid spheres have two configurable parameters: a centre vector
+and a radius. A solid sphere at (1.0,2.0,3.0) with radius 15.0 (all DICOM units;
+mm) can be specified as 'solidsphere(1.0,2.0,3.0, 15.0)'. Grid, wireframecube,
+and solidsphere shapes only overwrite voxels that intersect the geometry (i.e.,
+the surface if hollow or the internal volume if solid) permitting easier
+composition of multiple shapes or custom backgrounds.
+
+##### Default
+
+- ```"grid(-0.0941083,0.995562,0, 0.992667,0.0938347,0.0762047, 3.0, 15.0)"```
+
+##### Examples
+
+- ```"grid(1.0,0.0,0.0, 0.0,1.0,0.0, 3.0, 15.0)"```
+- ```"wireframecube(1.0,0.0,0.0, 0.0,1.0,0.0, 3.0, 15.0)"```
+- ```"solidsphere(0.0,0.0,0.0, 15.0)"```
 
 
 ## DroverDebug
@@ -4929,6 +7203,157 @@ time series data.
 
 No registered options.
 
+## DumpImageMeshes
+
+### Description
+
+This operation exports images as a 3D surface mesh model (structured ASCII
+Wavefront OBJ) that can be manipulated in various ways (e.g., stereographic
+projection). Note that the mesh will be a 3D depiction of the image(s) as they
+naturally are -- meshes will always be rectangular. A companion material library
+file (MTL) assigns colours to each ROI based on the voxel intensity.
+
+### Notes
+
+- Each image is processed separately. Each mesh effectively produces a 2D relief
+  map embedded into a 3D model that can be easily rendered to produce various
+  effects (e.g., perspective, stereoscopy, extrusion, surface smoothing, etc.).
+
+### Parameters
+
+- ImageSelection
+- OutBase
+- HistogramBins
+- MagnitudeAmplification
+- Normalize
+
+#### ImageSelection
+
+##### Description
+
+Select one or more image arrays. Note that image arrays can hold anything, but
+will typically represent a single contiguous 3D volume (i.e., a volumetric CT
+scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of two types: positional
+or metadata-based key@value regex. Positional specifiers can be 'first', 'last',
+'none', or 'all' literals. Additionally '#N' for some positive integer N selects
+the Nth image array (with zero-based indexing). Likewise, '#-N' selects the
+Nth-from-last image array. Positional specifiers can be inverted by prefixing
+with a '!'. Metadata-based key@value expressions are applied by matching the
+keys verbatim and the values with regex. In order to invert metadata-based
+selectors, the regex logic must be inverted (i.e., you can *not* prefix
+metadata-based selectors with a '!'). Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified. Both
+positional and metadata-based criteria can be mixed together. Note regexes are
+case insensitive and should use extended POSIX syntax.
+
+##### Default
+
+- ```"all"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+
+#### OutBase
+
+##### Description
+
+A base filename (or full path) in which to (over)write image mesh and material
+library files. File formats are Wavefront Object (obj) and Material Library
+(mtl). Every image will receive one unique and sequentially-numbered obj and mtl
+file using this prefix.
+
+##### Default
+
+- ```"/tmp/dicomautomaton_dumpimagemeshes_"```
+
+##### Examples
+
+- ```"/tmp/image_mesh_"```
+- ```"./"```
+- ```"../model_"```
+
+#### HistogramBins
+
+##### Description
+
+The number of equal-width bins pixel intensities should be grouped into. Binning
+is performed in order to more easily associate material properties with pixels.
+If pixel intensities were continuous, each pixel would receive its own material
+definition. This could result in enormous MTL files and wasted disk space.
+Binning solves this issue. However, if images are small or must be
+differentiated precisely consider using a large number of bins. Otherwise
+150-1000 bins should suffice for display purposes.
+
+##### Default
+
+- ```"255"```
+
+##### Examples
+
+- ```"10"```
+- ```"50"```
+- ```"100"```
+- ```"200"```
+- ```"500"```
+
+#### MagnitudeAmplification
+
+##### Description
+
+Pixel magnitudes (i.e., intensities) are scaled according to the image
+thickness, but a small gap is left between meshes so that abutting images do not
+quite intersect (this can cause non-manifold scenarios). However, if
+stackability is not a concern then pixel magnitudes can be magnified to
+exaggerate the relief effect. A value of 1.0 provides no magnification. A value
+of 2.0 provides 2x magnification, but note that the base of each pixel is
+slightly offset from the top to avoid top-bottom face intersections, even when
+magnification is 0.0.
+
+##### Default
+
+- ```"1.0"```
+
+##### Examples
+
+- ```"0.75"```
+- ```"1.0"```
+- ```"2.0"```
+- ```"5.0"```
+- ```"75.6"```
+
+#### Normalize
+
+##### Description
+
+This parameter controls whether the model will be 'normalized,' which
+effectively makes the outgoing model more consistent for all images. Currently
+this means centring the model at (0,0,0), mapping the row and column directions
+to (1,0,0) and (0,1,0) respectively, and scaling the image (respecting the
+aspect ratio) to fit within a bounding square of size 100x100 (DICOM units; mm).
+If normalization is *not* used, the image mesh will inherit the spatial
+characteristics of the image it is derived from.
+
+##### Default
+
+- ```"false"```
+
+##### Examples
+
+- ```"true"```
+- ```"false"```
+
+
 ## DumpImageMetadataOccurrencesToFile
 
 ### Description
@@ -4938,7 +7363,85 @@ occurence number.
 
 ### Parameters
 
-No registered options.
+- ImageSelection
+- FileName
+- UserComment
+
+#### ImageSelection
+
+##### Description
+
+Select one or more image arrays. Note that image arrays can hold anything, but
+will typically represent a single contiguous 3D volume (i.e., a volumetric CT
+scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of two types: positional
+or metadata-based key@value regex. Positional specifiers can be 'first', 'last',
+'none', or 'all' literals. Additionally '#N' for some positive integer N selects
+the Nth image array (with zero-based indexing). Likewise, '#-N' selects the
+Nth-from-last image array. Positional specifiers can be inverted by prefixing
+with a '!'. Metadata-based key@value expressions are applied by matching the
+keys verbatim and the values with regex. In order to invert metadata-based
+selectors, the regex logic must be inverted (i.e., you can *not* prefix
+metadata-based selectors with a '!'). Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified. Both
+positional and metadata-based criteria can be mixed together. Note regexes are
+case insensitive and should use extended POSIX syntax.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+
+#### FileName
+
+##### Description
+
+A filename (or full path) in which to append metadata reported by this routine.
+The format is tab-separated values (TSV). Leave empty to dump to generate a
+unique temporary file.
+
+##### Default
+
+- ```""```
+
+##### Examples
+
+- ```""```
+- ```"/tmp/somefile"```
+- ```"localfile.tsv"```
+- ```"derivative_data.tsv"```
+
+#### UserComment
+
+##### Description
+
+A string that will be inserted into the output file which will simplify merging
+output with differing parameters, from different sources, or using
+sub-selections of the data. If left empty, the column will be empty in the
+output.
+
+##### Default
+
+- ```""```
+
+##### Examples
+
+- ```""```
+- ```"Using XYZ"```
+- ```"Patient treatment plan C"```
+
 
 ## DumpPerROIParams_KineticModel_1C2I_5P
 
@@ -5024,6 +7527,57 @@ better for interactive exploration.
 ### Parameters
 
 No registered options.
+
+## DumpPlanSummary
+
+### Description
+
+This operation dumps a summary of a radiotherapy plan. This operation can be
+used to gain insight into a plan from a high-level overview.
+
+### Parameters
+
+- SummaryFileName
+- UserComment
+
+#### SummaryFileName
+
+##### Description
+
+A filename (or full path) in which to append summary data generated by this
+routine. The format is CSV. Leave empty to dump to generate a unique temporary
+file.
+
+##### Default
+
+- ```""```
+
+##### Examples
+
+- ```""```
+- ```"/tmp/somefile"```
+- ```"localfile.csv"```
+- ```"derivative_data.csv"```
+
+#### UserComment
+
+##### Description
+
+A string that will be inserted into the output file which will simplify merging
+output with differing parameters, from different sources, or using
+sub-selections of the data. If left empty, the column will be omitted from the
+output.
+
+##### Default
+
+- ```""```
+
+##### Examples
+
+- ```""```
+- ```"Using XYZ"```
+- ```"Patient treatment plan C"```
+
 
 ## DumpROIContours
 
@@ -5187,9 +7741,6 @@ inverse of the coefficient of variation.
 
 ### Notes
 
-- This routine uses image_arrays so convert dose_arrays beforehand if dose SNR
-  is desired.
-
 - This routine will combine spatially-overlapping images by summing voxel
   intensities. So if you have a time course it may be more sensible to aggregate
   images in some way (e.g., spatial averaging) prior to calling this routine.
@@ -5272,28 +7823,37 @@ case insensitive and uses extended POSIX syntax.
 This operation generates surface meshes from contour volumes. Output is written
 to file(s) for viewing with an external viewer (e.g., meshlab).
 
+### Notes
+
+- This routine is currently limited. Many parameters can only be modified via
+  recompilation. This will be addressed in a future version.
+
 ### Parameters
 
-- OutDir
+- OutBase
 - NormalizedROILabelRegex
 - ROILabelRegex
+- GridRows
+- GridColumns
+- ContourOverlap
+- Inclusivity
 
-#### OutDir
+#### OutBase
 
 ##### Description
 
-The directory in which to dump surface mesh files. It will be created if it
-doesn't exist.
+The prefix of the filename that surface mesh files will be saved as. If no name
+is given, unique names will be chosen automatically.
 
 ##### Default
 
-- ```"/tmp/"```
+- ```""```
 
 ##### Examples
 
-- ```"./"```
-- ```"../somedir/"```
-- ```"/path/to/some/destination"```
+- ```"/tmp/dicomautomaton_dumproisurfacemesh"```
+- ```"../somedir/output"```
+- ```"/path/to/some/mesh"```
 
 #### NormalizedROILabelRegex
 
@@ -5341,6 +7901,184 @@ case insensitive and uses grep syntax.
 - ```".*parotid.*|.*sub.*mand.*"```
 - ```"left_parotid|right_parotid|eyes"```
 
+#### GridRows
+
+##### Description
+
+Controls the spatial resolution of the grid used to approximate the ROI(s).
+Specifically, the number of rows. Note that the number of slices is fixed by the
+contour separation. A larger number will result in a more accurate mesh, but
+will also result longer runtimes and higher mesh complexity. Setting this
+parameter too high will result in excessive runtime and memory usage, so
+consider post-processing (i.e., subdivision) if a smooth mesh is needed.
+
+##### Default
+
+- ```"256"```
+
+##### Examples
+
+- ```"64"```
+- ```"128"```
+- ```"256"```
+- ```"512"```
+- ```"1024"```
+
+#### GridColumns
+
+##### Description
+
+Controls the spatial resolution of the grid used to approximate the ROI(s).
+(Refer to GridRows for more information.)
+
+##### Default
+
+- ```"256"```
+
+##### Examples
+
+- ```"64"```
+- ```"128"```
+- ```"256"```
+- ```"512"```
+- ```"1024"```
+
+#### ContourOverlap
+
+##### Description
+
+Controls overlapping contours are treated. The default 'ignore' treats
+overlapping contours as a single contour, regardless of contour orientation. The
+option 'honour_opposite_orientations' makes overlapping contours with opposite
+orientation cancel. Otherwise, orientation is ignored. The latter is useful for
+Boolean structures where contour orientation is significant for interior
+contours (holes). The option 'overlapping_contours_cancel' ignores orientation
+and cancels all contour overlap.
+
+##### Default
+
+- ```"ignore"```
+
+##### Examples
+
+- ```"ignore"```
+- ```"honour_opposite_orientations"```
+- ```"overlapping_contours_cancel"```
+- ```"honour_opps"```
+- ```"overlap_cancel"```
+
+#### Inclusivity
+
+##### Description
+
+Controls how voxels are deemed to be 'within' the interior of the selected
+ROI(s). The default 'center' considers only the central-most point of each
+voxel. There are two corner options that correspond to a 2D projection of the
+voxel onto the image plane. The first, 'planar_corner_inclusive', considers a
+voxel interior if ANY corner is interior. The second, 'planar_corner_exclusive',
+considers a voxel interior if ALL (four) corners are interior.
+
+##### Default
+
+- ```"center"```
+
+##### Examples
+
+- ```"center"```
+- ```"centre"```
+- ```"planar_corner_inclusive"```
+- ```"planar_inc"```
+- ```"planar_corner_exclusive"```
+- ```"planar_exc"```
+
+
+## DumpTPlanMetadataOccurrencesToFile
+
+### Description
+
+Dump all the metadata elements, but group like-items together and also print the
+occurence number.
+
+### Parameters
+
+- TPlanSelection
+- FileName
+- UserComment
+
+#### TPlanSelection
+
+##### Description
+
+Select one or more treatment plans. Note that a single treatment plan may be
+composed of multiple beams; if delivered sequentially, they should collectively
+represent a single logically cohesive plan. Selection specifiers can be of two
+types: positional or metadata-based key@value regex. Positional specifiers can
+be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some
+positive integer N selects the Nth treatment plan (with zero-based indexing).
+Likewise, '#-N' selects the Nth-from-last treatment plan. Positional specifiers
+can be inverted by prefixing with a '!'. Metadata-based key@value expressions
+are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can
+*not* prefix metadata-based selectors with a '!'). Multiple criteria can be
+specified by separating them with a ';' and are applied in the order specified.
+Both positional and metadata-based criteria can be mixed together. Note regexes
+are case insensitive and should use extended POSIX syntax.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+
+#### FileName
+
+##### Description
+
+A filename (or full path) in which to append metadata reported by this routine.
+The format is tab-separated values (TSV). Leave empty to dump to generate a
+unique temporary file.
+
+##### Default
+
+- ```""```
+
+##### Examples
+
+- ```""```
+- ```"/tmp/somefile"```
+- ```"localfile.tsv"```
+- ```"derivative_data.tsv"```
+
+#### UserComment
+
+##### Description
+
+A string that will be inserted into the output file which will simplify merging
+output with differing parameters, from different sources, or using
+sub-selections of the data. If left empty, the column will be empty in the
+output.
+
+##### Default
+
+- ```""```
+
+##### Examples
+
+- ```""```
+- ```"Using XYZ"```
+- ```"Patient treatment plan C"```
+
 
 ## DumpVoxelDoseInfo
 
@@ -5351,7 +8089,7 @@ for estimating prescription doses.
 
 ### Notes
 
-- This implementation makes use of an older way of estimating dose. Please
+- This implementation makes use of a primitive way of estimating dose. Please
   verify it works (or re-write using the new methods) before using for anything
   important.
 
@@ -5368,6 +8106,11 @@ have 2Gy fractions.
 
 ### Notes
 
+- This operation treats all tissue as either tumourous or not, and allows
+  specification of a single alpha/beta for each type (i.e., one for tumourous
+  tissues, one for normal tissues). Owing to this limitation, use of this
+  operation is generally limited to single-OAR or PTV-only EQD2 conversions.
+
 - This operation requires NumberOfFractions and cannot use DosePerFraction. The
   reasoning is that the DosePerFraction would need to be specified for each
   individual voxel; the prescription DosePerFraction is NOT the same as voxels
@@ -5375,7 +8118,6 @@ have 2Gy fractions.
 
 ### Parameters
 
-- DoseImageSelection
 - ImageSelection
 - AlphaBetaRatioNormal
 - AlphaBetaRatioTumour
@@ -5384,28 +8126,15 @@ have 2Gy fractions.
 - NormalizedROILabelRegex
 - ROILabelRegex
 
-#### DoseImageSelection
-
-##### Description
-
-Dose images to operate on. Either 'none', 'last', or 'all'.
-
-##### Default
-
-- ```"last"```
-
-##### Examples
-
-- ```"none"```
-- ```"last"```
-- ```"all"```
-
 #### ImageSelection
 
 ##### Description
 
-Select image arrays to operate on. Specifiers can be of two types: positional or
-metadata-based key@value regex. Positional specifiers can be 'first', 'last',
+Select one or more image arrays. Note that image arrays can hold anything, but
+will typically represent a single contiguous 3D volume (i.e., a volumetric CT
+scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of two types: positional
+or metadata-based key@value regex. Positional specifiers can be 'first', 'last',
 'none', or 'all' literals. Additionally '#N' for some positive integer N selects
 the Nth image array (with zero-based indexing). Likewise, '#-N' selects the
 Nth-from-last image array. Positional specifiers can be inverted by prefixing
@@ -5414,10 +8143,8 @@ keys verbatim and the values with regex. In order to invert metadata-based
 selectors, the regex logic must be inverted (i.e., you can *not* prefix
 metadata-based selectors with a '!'). Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified. Both
-positional and metadata-based criteria can be mixed together. Note that image
-arrays can hold anything, but will typically represent a single contiguous 3D
-volume (i.e., a volumetric CT scan) or '4D' time-series. Note regexes are case
-insensitive and should use extended POSIX syntax.
+positional and metadata-based criteria can be mixed together. Note regexes are
+case insensitive and should use extended POSIX syntax.
 
 ##### Default
 
@@ -5565,46 +8292,91 @@ This operation evaluates dose-volume histograms for the selected ROI(s).
 ### Notes
 
 - This routine generates cumulative DVHs with absolute dose on the x-axis and
-  fractional volume on the y-axis.
+  both absolute and fractional volume on the y-axis. Dose is reported in DICOM
+  units (nominally Gy), absolute volume is reported in volumetric DICOM units
+  (mm^3^), and relative volume is reported as a fraction of the given ROI's
+  total volume.
 
-- This routine will naively treat voxels of different size with the same
-  weighting rather than weighting each voxel using its spatial extent. This is
-  done to improve precision and reduce numerical issues. If necessary, resample
-  images to have uniform spatial extent.
+- This routine will correctly handle logically-related contours that are
+  scattered amongst many contour collections, re-partitioning them based on
+  ROIName. While this is often the desired behaviour, beware that any
+  user-specified partitions will be overridden.
 
-- This routine uses image_arrays so convert dose_arrays beforehand.
+- This routine will correctly handle voxels of different volumes. It will not
+  correctly handle overlapping voxels (i.e., each overlapping voxel will be
+  counted without regard for overlap). If necessary, resample image arrays to be
+  rectilinear.
 
 - This routine will combine spatially-overlapping images by summing voxel
-  intensities. It will not combine separate image_arrays though. If needed,
-  you'll have to perform a meld on them beforehand.
+  intensities. It will not combine separate image_arrays. If needed, you'll have
+  to perform a meld on them beforehand.
 
 ### Parameters
 
-- OutFileName
+- ImageSelection
+- Channel
 - NormalizedROILabelRegex
 - ROILabelRegex
+- ContourOverlap
+- Inclusivity
 - dDose
 - UserComment
+- OutFileName
 
-#### OutFileName
+#### ImageSelection
 
 ##### Description
 
-A filename (or full path) in which to append the histogram data generated by
-this routine. The format is a two-column data file suitable for plotting. A
-short header separates entries. Leave empty to dump to generate a unique
-temporary file.
+Select one or more image arrays. Note that image arrays can hold anything, but
+will typically represent a single contiguous 3D volume (i.e., a volumetric CT
+scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of two types: positional
+or metadata-based key@value regex. Positional specifiers can be 'first', 'last',
+'none', or 'all' literals. Additionally '#N' for some positive integer N selects
+the Nth image array (with zero-based indexing). Likewise, '#-N' selects the
+Nth-from-last image array. Positional specifiers can be inverted by prefixing
+with a '!'. Metadata-based key@value expressions are applied by matching the
+keys verbatim and the values with regex. In order to invert metadata-based
+selectors, the regex logic must be inverted (i.e., you can *not* prefix
+metadata-based selectors with a '!'). Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified. Both
+positional and metadata-based criteria can be mixed together. Note regexes are
+case insensitive and should use extended POSIX syntax.
 
 ##### Default
 
-- ```""```
+- ```"last"```
 
 ##### Examples
 
-- ```""```
-- ```"/tmp/somefile"```
-- ```"localfile.dat"```
-- ```"derivative_data.dat"```
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+
+#### Channel
+
+##### Description
+
+The image channel to use. Zero-based. Use '-1' to operate on all available
+channels.
+
+##### Default
+
+- ```"-1"```
+
+##### Examples
+
+- ```"-1"```
+- ```"0"```
+- ```"1"```
+- ```"2"```
 
 #### NormalizedROILabelRegex
 
@@ -5652,15 +8424,63 @@ case insensitive and uses extended POSIX syntax.
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
 
+#### ContourOverlap
+
+##### Description
+
+Controls overlapping contours are treated. The default 'ignore' treats
+overlapping contours as a single contour, regardless of contour orientation. The
+option 'honour_opposite_orientations' makes overlapping contours with opposite
+orientation cancel. Otherwise, orientation is ignored. The latter is useful for
+Boolean structures where contour orientation is significant for interior
+contours (holes). The option 'overlapping_contours_cancel' ignores orientation
+and cancels all contour overlap.
+
+##### Default
+
+- ```"ignore"```
+
+##### Examples
+
+- ```"ignore"```
+- ```"honour_opposite_orientations"```
+- ```"overlapping_contours_cancel"```
+- ```"honour_opps"```
+- ```"overlap_cancel"```
+
+#### Inclusivity
+
+##### Description
+
+Controls how voxels are deemed to be 'within' the interior of the selected
+ROI(s). The default 'center' considers only the central-most point of each
+voxel. There are two corner options that correspond to a 2D projection of the
+voxel onto the image plane. The first, 'planar_corner_inclusive', considers a
+voxel interior if ANY corner is interior. The second, 'planar_corner_exclusive',
+considers a voxel interior if ALL (four) corners are interior.
+
+##### Default
+
+- ```"center"```
+
+##### Examples
+
+- ```"center"```
+- ```"centre"```
+- ```"planar_corner_inclusive"```
+- ```"planar_inc"```
+- ```"planar_corner_exclusive"```
+- ```"planar_exc"```
+
 #### dDose
 
 ##### Description
 
-The (fixed) bin width, in units of dose.
+The (fixed) bin width, in units of dose (DICOM units; nominally Gy).
 
 ##### Default
 
-- ```"2.0"```
+- ```"1.0"```
 
 ##### Examples
 
@@ -5689,6 +8509,31 @@ output.
 - ```"Using XYZ"```
 - ```"Patient treatment plan C"```
 
+#### OutFileName
+
+##### Description
+
+A filename (or full path) in which to append the histogram data generated by
+this routine. The format is a three-column data file suitable for plotting
+consisting of dose (absolute, in DICOM units of dose; nominally Gy), cumulative
+volume (absolute, in DICOM units of volume; mm^3^), and cumulative volume
+(relative to the ROI's total volume, [0,1]). Existing files will be appended to;
+a short header will separate entries. Each distinct ROI name will have a
+distinct DVH entry, which will need to be delineated. (Alternatively, select a
+single ROI and write to a unique file.) Leave this parameter empty to generate a
+unique temporary file.
+
+##### Default
+
+- ```""```
+
+##### Examples
+
+- ```""```
+- ```"/tmp/somefile"```
+- ```"localfile.dat"```
+- ```"derivative_data.dat"```
+
 
 ## EvaluateDoseVolumeStats
 
@@ -5705,8 +8550,6 @@ PTV, and V_{pres} is volume of all (tissue) voxels receiving at least 95% of the
 PTV prescription dose.
 
 ### Notes
-
-- This routine uses image_arrays so convert dose_arrays beforehand.
 
 - This routine will combine spatially-overlapping images by summing voxel
   intensities. It will not combine separate image_arrays though. If needed,
@@ -5884,8 +8727,6 @@ whole-lung OAR).
 - Generally these models require dose in 2Gy/fractions equivalents ('EQD2'). You
   must pre-convert the data if the RT plan is not already 2Gy/fraction. There is
   no easy way to ensure this conversion has taken place or was unnecessary.
-
-- This routine uses image_arrays so convert dose_arrays beforehand.
 
 - This routine will combine spatially-overlapping images by summing voxel
   intensities. So if you have a time course it may be more sensible to aggregate
@@ -6070,8 +8911,6 @@ following are implemented: (1) The 'Martel' model. (2) Equivalent Uniform Dose
 - Generally these models require dose in 2Gy/fractions equivalents ('EQD2'). You
   must pre-convert the data if the RT plan is not already 2Gy/fraction. There is
   no easy way to ensure this conversion has taken place or was unnecessary.
-
-- This routine uses image_arrays so convert dose_arrays beforehand.
 
 - This routine will combine spatially-overlapping images by summing voxel
   intensities. So if you have a time course it may be more sensible to aggregate
@@ -6387,6 +9226,146 @@ output.
 - ```"Patient treatment plan C"```
 
 
+## ExportFITSImages
+
+### Description
+
+This operation writes image arrays to FITS-formatted image files.
+
+### Notes
+
+- Only pixel information and basic image positioning metadata are exported. In
+  particular, contours and arbitrary metadata are **not** exported by this
+  routine. (If a rendering of the image with contours drawn is needed, consult
+  the PresentationImage operation.)
+
+### Parameters
+
+- ImageSelection
+- FilenameBase
+
+#### ImageSelection
+
+##### Description
+
+Select one or more image arrays. Note that image arrays can hold anything, but
+will typically represent a single contiguous 3D volume (i.e., a volumetric CT
+scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of two types: positional
+or metadata-based key@value regex. Positional specifiers can be 'first', 'last',
+'none', or 'all' literals. Additionally '#N' for some positive integer N selects
+the Nth image array (with zero-based indexing). Likewise, '#-N' selects the
+Nth-from-last image array. Positional specifiers can be inverted by prefixing
+with a '!'. Metadata-based key@value expressions are applied by matching the
+keys verbatim and the values with regex. In order to invert metadata-based
+selectors, the regex logic must be inverted (i.e., you can *not* prefix
+metadata-based selectors with a '!'). Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified. Both
+positional and metadata-based criteria can be mixed together. Note regexes are
+case insensitive and should use extended POSIX syntax.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+
+#### FilenameBase
+
+##### Description
+
+The base filename that images will be written to. A sequentially-increasing
+number and file suffix are appended after the base filename. Note that the file
+type is FITS.
+
+##### Default
+
+- ```"/tmp/dcma_exportfitsimages"```
+
+##### Examples
+
+- ```"../somedir/out"```
+- ```"/path/to/some/dir/file_prefix"```
+
+
+## ExportSurfaceMeshes
+
+### Description
+
+This operation writes a surface mesh to a file.
+
+### Parameters
+
+- MeshSelection
+- Filename
+
+#### MeshSelection
+
+##### Description
+
+Select one or more surface meshes. Note that a single surface mesh may hold many
+disconnected mesh components; they should collectively represent a single
+logically cohesive object. Be aware that it is possible to mix logically
+unrelated sub-meshes together in a single mesh. Selection specifiers can be of
+two types: positional or metadata-based key@value regex. Positional specifiers
+can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some
+positive integer N selects the Nth surface mesh (with zero-based indexing).
+Likewise, '#-N' selects the Nth-from-last surface mesh. Positional specifiers
+can be inverted by prefixing with a '!'. Metadata-based key@value expressions
+are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can
+*not* prefix metadata-based selectors with a '!'). Multiple criteria can be
+specified by separating them with a ';' and are applied in the order specified.
+Both positional and metadata-based criteria can be mixed together. Note regexes
+are case insensitive and should use extended POSIX syntax.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+
+#### Filename
+
+##### Description
+
+The filename (or full path name) to which the surface mesh data should be
+written. The file format is an ASCII OFF model. If no name is given, unique
+names will be chosen automatically.
+
+##### Default
+
+- ```""```
+
+##### Examples
+
+- ```"smesh.off"```
+- ```"../somedir/mesh.off"```
+- ```"/path/to/some/surface_mesh.off"```
+
+
 ## ExtractRadiomicFeatures
 
 ### Description
@@ -6454,8 +9433,11 @@ be appended without writing a header.
 
 ##### Description
 
-Select image arrays to operate on. Specifiers can be of two types: positional or
-metadata-based key@value regex. Positional specifiers can be 'first', 'last',
+Select one or more image arrays. Note that image arrays can hold anything, but
+will typically represent a single contiguous 3D volume (i.e., a volumetric CT
+scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of two types: positional
+or metadata-based key@value regex. Positional specifiers can be 'first', 'last',
 'none', or 'all' literals. Additionally '#N' for some positive integer N selects
 the Nth image array (with zero-based indexing). Likewise, '#-N' selects the
 Nth-from-last image array. Positional specifiers can be inverted by prefixing
@@ -6464,10 +9446,8 @@ keys verbatim and the values with regex. In order to invert metadata-based
 selectors, the regex logic must be inverted (i.e., you can *not* prefix
 metadata-based selectors with a '!'). Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified. Both
-positional and metadata-based criteria can be mixed together. Note that image
-arrays can hold anything, but will typically represent a single contiguous 3D
-volume (i.e., a volumetric CT scan) or '4D' time-series. Note regexes are case
-insensitive and should use extended POSIX syntax.
+positional and metadata-based criteria can be mixed together. Note regexes are
+case insensitive and should use extended POSIX syntax.
 
 ##### Default
 
@@ -6547,6 +9527,17 @@ This operation performs a picket fence QA test using an RTIMAGE file.
 
 ### Parameters
 
+- ROILabel
+- ImageSelection
+- ImageSelection
+- NormalizedROILabelRegex
+- ROILabelRegex
+- Channel
+- Replacement
+- Replace
+- NeighbourCount
+- AgreementCount
+- MaxDistance
 - ImageSelection
 - DICOMMargin
 - RTIMAGE
@@ -6569,13 +9560,35 @@ This operation performs a picket fence QA test using an RTIMAGE file.
 - InteractivePlots
 - ScaleFactor
 - ImageFileName
+- ColourMapRegex
+- WindowLow
+- WindowHigh
+
+#### ROILabel
+
+##### Description
+
+A label to attach to the ROI contours.
+
+##### Default
+
+- ```"entire_image"```
+
+##### Examples
+
+- ```"everything"```
+- ```"whole_images"```
+- ```"unspecified"```
 
 #### ImageSelection
 
 ##### Description
 
-Select image arrays to operate on. Specifiers can be of two types: positional or
-metadata-based key@value regex. Positional specifiers can be 'first', 'last',
+Select one or more image arrays. Note that image arrays can hold anything, but
+will typically represent a single contiguous 3D volume (i.e., a volumetric CT
+scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of two types: positional
+or metadata-based key@value regex. Positional specifiers can be 'first', 'last',
 'none', or 'all' literals. Additionally '#N' for some positive integer N selects
 the Nth image array (with zero-based indexing). Likewise, '#-N' selects the
 Nth-from-last image array. Positional specifiers can be inverted by prefixing
@@ -6584,10 +9597,241 @@ keys verbatim and the values with regex. In order to invert metadata-based
 selectors, the regex logic must be inverted (i.e., you can *not* prefix
 metadata-based selectors with a '!'). Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified. Both
-positional and metadata-based criteria can be mixed together. Note that image
-arrays can hold anything, but will typically represent a single contiguous 3D
-volume (i.e., a volumetric CT scan) or '4D' time-series. Note regexes are case
-insensitive and should use extended POSIX syntax.
+positional and metadata-based criteria can be mixed together. Note regexes are
+case insensitive and should use extended POSIX syntax.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+
+#### ImageSelection
+
+##### Description
+
+Select one or more image arrays. Note that image arrays can hold anything, but
+will typically represent a single contiguous 3D volume (i.e., a volumetric CT
+scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of two types: positional
+or metadata-based key@value regex. Positional specifiers can be 'first', 'last',
+'none', or 'all' literals. Additionally '#N' for some positive integer N selects
+the Nth image array (with zero-based indexing). Likewise, '#-N' selects the
+Nth-from-last image array. Positional specifiers can be inverted by prefixing
+with a '!'. Metadata-based key@value expressions are applied by matching the
+keys verbatim and the values with regex. In order to invert metadata-based
+selectors, the regex logic must be inverted (i.e., you can *not* prefix
+metadata-based selectors with a '!'). Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified. Both
+positional and metadata-based criteria can be mixed together. Note regexes are
+case insensitive and should use extended POSIX syntax.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+
+#### NormalizedROILabelRegex
+
+##### Description
+
+A regex matching ROI labels/names to consider. The default will match all
+available ROIs. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regex to avoid them. All
+ROIs have to match the single regex, so use the 'or' token if needed. Regex is
+case insensitive and uses extended POSIX syntax.
+
+##### Default
+
+- ```".*"```
+
+##### Examples
+
+- ```".*"```
+- ```".*Body.*"```
+- ```"Body"```
+- ```"Gross_Liver"```
+- ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
+- ```"Left Parotid|Right Parotid"```
+
+#### ROILabelRegex
+
+##### Description
+
+A regex matching ROI labels/names to consider. The default will match all
+available ROIs. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regex to avoid them. All
+ROIs have to match the single regex, so use the 'or' token if needed. Regex is
+case insensitive and uses extended POSIX syntax.
+
+##### Default
+
+- ```"entire_image"```
+
+##### Examples
+
+- ```".*"```
+- ```".*body.*"```
+- ```"body"```
+- ```"Gross_Liver"```
+- ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
+- ```"left_parotid|right_parotid"```
+
+#### Channel
+
+##### Description
+
+The channel to operated on (zero-based). Negative values will cause all channels
+to be operated on.
+
+##### Default
+
+- ```"0"```
+
+##### Examples
+
+- ```"-1"```
+- ```"0"```
+- ```"1"```
+
+#### Replacement
+
+##### Description
+
+Controls how replacements are generated. 'Mean' and 'median' replacement
+strategies replace the voxel value with the mean and median, respectively, from
+the surrounding neighbourhood. 'Conservative' refers to the so-called
+conservative filter that suppresses isolated peaks; for every voxel considered,
+the voxel intensity is clamped to the local neighbourhood's extrema. This filter
+works best for removing spurious peak and trough voxels and performs no
+averaging. A numeric value can also be supplied, which will replace all isolated
+or well-connected voxels.
+
+##### Default
+
+- ```"conservative"```
+
+##### Examples
+
+- ```"mean"```
+- ```"median"```
+- ```"conservative"```
+- ```"0.0"```
+- ```"-1.23"```
+- ```"1E6"```
+- ```"nan"```
+
+#### Replace
+
+##### Description
+
+Controls whether isolated or well-connected voxels are retained.
+
+##### Default
+
+- ```"isolated"```
+
+##### Examples
+
+- ```"isolated"```
+- ```"well-connected"```
+
+#### NeighbourCount
+
+##### Description
+
+Controls the number of neighbours being considered. For purposes of speed, this
+option is limited to specific levels of neighbour adjacency.
+
+##### Default
+
+- ```"isolated"```
+
+##### Examples
+
+- ```"1"```
+- ```"2"```
+- ```"3"```
+
+#### AgreementCount
+
+##### Description
+
+Controls the number of neighbours that must be in agreement for a voxel to be
+considered 'well-connected.'
+
+##### Default
+
+- ```"6"```
+
+##### Examples
+
+- ```"1"```
+- ```"2"```
+- ```"25"```
+
+#### MaxDistance
+
+##### Description
+
+The maximum distance (inclusive, in DICOM units: mm) within which neighbouring
+voxels will be evaluated. For spherical neighbourhoods, this distance refers to
+the radius. For cubic neighbourhoods, this distance refers to 'box radius' or
+the distance from the cube centre to the nearest point on each bounding face.
+Voxels separated by more than this distance will not be evaluated together.
+
+##### Default
+
+- ```"2.0"```
+
+##### Examples
+
+- ```"0.5"```
+- ```"2.0"```
+- ```"15.0"```
+
+#### ImageSelection
+
+##### Description
+
+Select one or more image arrays. Note that image arrays can hold anything, but
+will typically represent a single contiguous 3D volume (i.e., a volumetric CT
+scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of two types: positional
+or metadata-based key@value regex. Positional specifiers can be 'first', 'last',
+'none', or 'all' literals. Additionally '#N' for some positive integer N selects
+the Nth image array (with zero-based indexing). Likewise, '#-N' selects the
+Nth-from-last image array. Positional specifiers can be inverted by prefixing
+with a '!'. Metadata-based key@value expressions are applied by matching the
+keys verbatim and the values with regex. In order to invert metadata-based
+selectors, the regex logic must be inverted (i.e., you can *not* prefix
+metadata-based selectors with a '!'). Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified. Both
+positional and metadata-based criteria can be mixed together. Note regexes are
+case insensitive and should use extended POSIX syntax.
 
 ##### Default
 
@@ -6643,8 +9887,11 @@ This option cannot be used with the other options.
 
 ##### Description
 
-Select image arrays to operate on. Specifiers can be of two types: positional or
-metadata-based key@value regex. Positional specifiers can be 'first', 'last',
+Select one or more image arrays. Note that image arrays can hold anything, but
+will typically represent a single contiguous 3D volume (i.e., a volumetric CT
+scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of two types: positional
+or metadata-based key@value regex. Positional specifiers can be 'first', 'last',
 'none', or 'all' literals. Additionally '#N' for some positive integer N selects
 the Nth image array (with zero-based indexing). Likewise, '#-N' selects the
 Nth-from-last image array. Positional specifiers can be inverted by prefixing
@@ -6653,10 +9900,8 @@ keys verbatim and the values with regex. In order to invert metadata-based
 selectors, the regex logic must be inverted (i.e., you can *not* prefix
 metadata-based selectors with a '!'). Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified. Both
-positional and metadata-based criteria can be mixed together. Note that image
-arrays can hold anything, but will typically represent a single contiguous 3D
-volume (i.e., a volumetric CT scan) or '4D' time-series. Note regexes are case
-insensitive and should use extended POSIX syntax.
+positional and metadata-based criteria can be mixed together. Note regexes are
+case insensitive and should use extended POSIX syntax.
 
 ##### Default
 
@@ -6784,8 +10029,11 @@ The amount of margin (in the DICOM coordinate system) to spare from cropping.
 
 ##### Description
 
-Select image arrays to operate on. Specifiers can be of two types: positional or
-metadata-based key@value regex. Positional specifiers can be 'first', 'last',
+Select one or more image arrays. Note that image arrays can hold anything, but
+will typically represent a single contiguous 3D volume (i.e., a volumetric CT
+scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of two types: positional
+or metadata-based key@value regex. Positional specifiers can be 'first', 'last',
 'none', or 'all' literals. Additionally '#N' for some positive integer N selects
 the Nth image array (with zero-based indexing). Likewise, '#-N' selects the
 Nth-from-last image array. Positional specifiers can be inverted by prefixing
@@ -6794,10 +10042,8 @@ keys verbatim and the values with regex. In order to invert metadata-based
 selectors, the regex logic must be inverted (i.e., you can *not* prefix
 metadata-based selectors with a '!'). Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified. Both
-positional and metadata-based criteria can be mixed together. Note that image
-arrays can hold anything, but will typically represent a single contiguous 3D
-volume (i.e., a volumetric CT scan) or '4D' time-series. Note regexes are case
-insensitive and should use extended POSIX syntax.
+positional and metadata-based criteria can be mixed together. Note regexes are
+case insensitive and should use extended POSIX syntax.
 
 ##### Default
 
@@ -6820,12 +10066,12 @@ insensitive and should use extended POSIX syntax.
 
 ##### Description
 
-The MLC design geometry to use. 'VarianMillenniumMLC80' has 80 leafs in each
+The MLC design geometry to use. 'VarianMillenniumMLC80' has 40 leafs in each
 bank; leaves are 10mm wide at isocentre; and the maximum static field size is
-40cm x 40cm. 'VarianMillenniumMLC120' has 120 leafs in each bank; the 40 central
+40cm x 40cm. 'VarianMillenniumMLC120' has 60 leafs in each bank; the 40 central
 leaves are 5mm wide at isocentre; the 20 peripheral leaves are 10mm wide; and
-the maximum static field size is 40cm x 40cm. 'VarianHD120' has 120 leafs in
-each bank; the 32 central leaves are 2.5mm wide at isocentre; the 28 peripheral
+the maximum static field size is 40cm x 40cm. 'VarianHD120' has 60 leafs in each
+bank; the 32 central leaves are 2.5mm wide at isocentre; the 28 peripheral
 leaves are 5mm wide; and the maximum static field size is 40cm x 22cm.
 
 ##### Default
@@ -7037,6 +10283,312 @@ sequentially.
 - ```"/tmp/an_image.png"```
 - ```"afile.png"```
 
+#### ColourMapRegex
+
+##### Description
+
+The colour mapping to apply to the image if there is a single channel. The
+default will match the first available, and if there is no matching map found,
+the first available will be selected.
+
+##### Default
+
+- ```".*"```
+
+##### Examples
+
+- ```"Viridis"```
+- ```"Magma"```
+- ```"Plasma"```
+- ```"Inferno"```
+- ```"Jet"```
+- ```"MorelandBlueRed"```
+- ```"MorelandBlackBody"```
+- ```"MorelandExtendedBlackBody"```
+- ```"KRC"```
+- ```"ExtendedKRC"```
+- ```"Kovesi_LinKRYW_5-100_c64"```
+- ```"Kovesi_LinKRYW_0-100_c71"```
+- ```"Kovesi_Cyclic_cet-c2"```
+- ```"LANLOliveGreentoBlue"```
+- ```"YgorIncandescent"```
+- ```"LinearRamp"```
+
+#### WindowLow
+
+##### Description
+
+If provided, this parameter will override any existing window and level. All
+pixels with the intensity value or lower will be assigned the lowest possible
+colour according to the colour map. Not providing a valid number will disable
+window overrides.
+
+##### Default
+
+- ```""```
+
+##### Examples
+
+- ```""```
+- ```"-1.23"```
+- ```"0"```
+- ```"1E4"```
+
+#### WindowHigh
+
+##### Description
+
+If provided, this parameter will override any existing window and level. All
+pixels with the intensity value or higher will be assigned the highest possible
+colour according to the colour map. Not providing a valid number will disable
+window overrides.
+
+##### Default
+
+- ```""```
+
+##### Examples
+
+- ```""```
+- ```"1.23"```
+- ```"0"```
+- ```"10.3E4"```
+
+
+## GenerateCalibrationCurve
+
+### Description
+
+This operation uses two overlapping images volumes to generate a calibration
+curve mapping from the first image volume to the second. Only the region within
+the specified ROI(s) is considered.
+
+### Notes
+
+- ROI(s) are interpretted relative to the mapped-to ('reference' or 'fixed')
+  image. The reason for this is that typically the reference images are
+  associated with contours (e.g., planning data) and the mapped-from images do
+  not (e.g., CBCTs that have been registered).
+
+- This routine can handle overlapping or duplicate contours.
+
+### Parameters
+
+- Channel
+- ImageSelection
+- RefImageSelection
+- ContourOverlap
+- Inclusivity
+- CalibCurveFileName
+- NormalizedROILabelRegex
+- ROILabelRegex
+
+#### Channel
+
+##### Description
+
+The image channel to use. Zero-based. Use '-1' to operate on all available
+channels.
+
+##### Default
+
+- ```"-1"```
+
+##### Examples
+
+- ```"-1"```
+- ```"0"```
+- ```"1"```
+- ```"2"```
+
+#### ImageSelection
+
+##### Description
+
+Select one or more image arrays. Note that image arrays can hold anything, but
+will typically represent a single contiguous 3D volume (i.e., a volumetric CT
+scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of two types: positional
+or metadata-based key@value regex. Positional specifiers can be 'first', 'last',
+'none', or 'all' literals. Additionally '#N' for some positive integer N selects
+the Nth image array (with zero-based indexing). Likewise, '#-N' selects the
+Nth-from-last image array. Positional specifiers can be inverted by prefixing
+with a '!'. Metadata-based key@value expressions are applied by matching the
+keys verbatim and the values with regex. In order to invert metadata-based
+selectors, the regex logic must be inverted (i.e., you can *not* prefix
+metadata-based selectors with a '!'). Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified. Both
+positional and metadata-based criteria can be mixed together. Note regexes are
+case insensitive and should use extended POSIX syntax. Note that these images
+are the 'mapped-from' or 'moving' images.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+
+#### RefImageSelection
+
+##### Description
+
+Select one or more image arrays. Note that image arrays can hold anything, but
+will typically represent a single contiguous 3D volume (i.e., a volumetric CT
+scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of two types: positional
+or metadata-based key@value regex. Positional specifiers can be 'first', 'last',
+'none', or 'all' literals. Additionally '#N' for some positive integer N selects
+the Nth image array (with zero-based indexing). Likewise, '#-N' selects the
+Nth-from-last image array. Positional specifiers can be inverted by prefixing
+with a '!'. Metadata-based key@value expressions are applied by matching the
+keys verbatim and the values with regex. In order to invert metadata-based
+selectors, the regex logic must be inverted (i.e., you can *not* prefix
+metadata-based selectors with a '!'). Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified. Both
+positional and metadata-based criteria can be mixed together. Note regexes are
+case insensitive and should use extended POSIX syntax. Note that these images
+are the 'mapped-to' or 'fixed' images.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+
+#### ContourOverlap
+
+##### Description
+
+Controls overlapping contours are treated. The default 'ignore' treats
+overlapping contours as a single contour, regardless of contour orientation. The
+option 'honour_opposite_orientations' makes overlapping contours with opposite
+orientation cancel. Otherwise, orientation is ignored. The latter is useful for
+Boolean structures where contour orientation is significant for interior
+contours (holes). The option 'overlapping_contours_cancel' ignores orientation
+and cancels all contour overlap.
+
+##### Default
+
+- ```"ignore"```
+
+##### Examples
+
+- ```"ignore"```
+- ```"honour_opposite_orientations"```
+- ```"overlapping_contours_cancel"```
+- ```"honour_opps"```
+- ```"overlap_cancel"```
+
+#### Inclusivity
+
+##### Description
+
+Controls how voxels are deemed to be 'within' the interior of the selected
+ROI(s). The default 'center' considers only the central-most point of each
+voxel. There are two corner options that correspond to a 2D projection of the
+voxel onto the image plane. The first, 'planar_corner_inclusive', considers a
+voxel interior if ANY corner is interior. The second, 'planar_corner_exclusive',
+considers a voxel interior if ALL (four) corners are interior.
+
+##### Default
+
+- ```"center"```
+
+##### Examples
+
+- ```"center"```
+- ```"centre"```
+- ```"planar_corner_inclusive"```
+- ```"planar_inc"```
+- ```"planar_corner_exclusive"```
+- ```"planar_exc"```
+
+#### CalibCurveFileName
+
+##### Description
+
+The file to which a calibration curve will be written to. The format is
+line-based with 4 numbers per line: (original pixel value) (uncertainty) (new
+pixel value) (uncertainty). Uncertainties refer to the prior number and may be
+uniformly zero if unknown. Lines beginning with '#' are comments. The curve is
+meant to be interpolated. (Later attempts to extrapolate may result in failure.)
+
+##### Default
+
+- ```""```
+
+##### Examples
+
+- ```"./calib.dat"```
+
+#### NormalizedROILabelRegex
+
+##### Description
+
+A regex matching ROI labels/names to consider. The default will match all
+available ROIs. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regex to avoid them. All
+ROIs have to match the single regex, so use the 'or' token if needed. Regex is
+case insensitive and uses extended POSIX syntax.
+
+##### Default
+
+- ```".*"```
+
+##### Examples
+
+- ```".*"```
+- ```".*Body.*"```
+- ```"Body"```
+- ```"Gross_Liver"```
+- ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
+- ```"Left Parotid|Right Parotid"```
+
+#### ROILabelRegex
+
+##### Description
+
+A regex matching ROI labels/names to consider. The default will match all
+available ROIs. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regex to avoid them. All
+ROIs have to match the single regex, so use the 'or' token if needed. Regex is
+case insensitive and uses extended POSIX syntax.
+
+##### Default
+
+- ```".*"```
+
+##### Examples
+
+- ```".*"```
+- ```".*body.*"```
+- ```"body"```
+- ```"Gross_Liver"```
+- ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
+- ```"left_parotid|right_parotid"```
+
 
 ## GenerateSurfaceMask
 
@@ -7152,6 +10704,343 @@ case insensitive and uses extended POSIX syntax.
 - ```"left_parotid|right_parotid"```
 
 
+## GenerateSyntheticImages
+
+### Description
+
+This operation generates a synthetic, regular bitmap image array. It can be used
+for testing how images are quantified or transformed.
+
+### Parameters
+
+- NumberOfImages
+- NumberOfRows
+- NumberOfColumns
+- NumberOfChannels
+- SliceThickness
+- SpacingBetweenSlices
+- VoxelWidth
+- VoxelHeight
+- ImageAnchor
+- ImagePosition
+- ImageOrientationColumn
+- ImageOrientationRow
+- InstanceNumber
+- AcquisitionNumber
+- VoxelValue
+- StipleValue
+- Metadata
+
+#### NumberOfImages
+
+##### Description
+
+The number of images to create.
+
+##### Default
+
+- ```"100"```
+
+##### Examples
+
+- ```"1"```
+- ```"100"```
+- ```"1000"```
+
+#### NumberOfRows
+
+##### Description
+
+The number of rows each image should contain.
+
+##### Default
+
+- ```"256"```
+
+##### Examples
+
+- ```"1"```
+- ```"100"```
+- ```"1000"```
+
+#### NumberOfColumns
+
+##### Description
+
+The number of columns each image should contain.
+
+##### Default
+
+- ```"256"```
+
+##### Examples
+
+- ```"1"```
+- ```"100"```
+- ```"1000"```
+
+#### NumberOfChannels
+
+##### Description
+
+The number of channels each image should contain.
+
+##### Default
+
+- ```"1"```
+
+##### Examples
+
+- ```"1"```
+- ```"10"```
+- ```"100"```
+
+#### SliceThickness
+
+##### Description
+
+Image slices will be have this thickness (in DICOM units: mm). For most
+purposes, SliceThickness should be equal to SpacingBetweenSlices. If
+SpacingBetweenSlices is smaller than SliceThickness, images will overlap. If
+SpacingBetweenSlices is larger than SliceThickness, there will be a gap between
+images.
+
+##### Default
+
+- ```"1.0"```
+
+##### Examples
+
+- ```"0.1"```
+- ```"0.5"```
+- ```"1.0"```
+- ```"10.0"```
+
+#### SpacingBetweenSlices
+
+##### Description
+
+Image slice centres will be separated by this distance (in DICOM units: mm). For
+most purposes, SpacingBetweenSlices should be equal to SliceThickness. If
+SpacingBetweenSlices is smaller than SliceThickness, images will overlap. If
+SpacingBetweenSlices is larger than SliceThickness, there will be a gap between
+images.
+
+##### Default
+
+- ```"1.0"```
+
+##### Examples
+
+- ```"0.1"```
+- ```"0.5"```
+- ```"1.0"```
+- ```"10.0"```
+
+#### VoxelWidth
+
+##### Description
+
+Voxels will have this (in-plane) width (in DICOM units: mm). This means that
+row-adjacent voxels centres will be separated by VoxelWidth). Each voxel will
+have dimensions: VoxelWidth x VoxelHeight x SliceThickness.
+
+##### Default
+
+- ```"1.0"```
+
+##### Examples
+
+- ```"0.1"```
+- ```"0.5"```
+- ```"1.0"```
+- ```"10.0"```
+
+#### VoxelHeight
+
+##### Description
+
+Voxels will have this (in-plane) height (in DICOM units: mm). This means that
+column-adjacent voxels centres will be separated by VoxelHeight). Each voxel
+will have dimensions: VoxelWidth x VoxelHeight x SliceThickness.
+
+##### Default
+
+- ```"1.0"```
+
+##### Examples
+
+- ```"0.1"```
+- ```"0.5"```
+- ```"1.0"```
+- ```"10.0"```
+
+#### ImageAnchor
+
+##### Description
+
+A point in 3D space which denotes the origin (in DICOM units: mm). All other
+vectors are taken to be relative to this point. Under most circumstance the
+anchor should be (0,0,0). Specify coordinates separated by commas.
+
+##### Default
+
+- ```"0.0, 0.0, 0.0"```
+
+##### Examples
+
+- ```"0.0, 0.0, 0.0"```
+- ```"0.0,0.0,0.0"```
+- ```"1.0, -2.3, 45.6"```
+
+#### ImagePosition
+
+##### Description
+
+The centre of the row=0, column=0 voxel in the first image (in DICOM units: mm).
+Specify coordinates separated by commas.
+
+##### Default
+
+- ```"0.0, 0.0, 0.0"```
+
+##### Examples
+
+- ```"0.0, 0.0, 0.0"```
+- ```"100.0,100.0,100.0"```
+- ```"1.0, -2.3, 45.6"```
+
+#### ImageOrientationColumn
+
+##### Description
+
+The orientation unit vector that is aligned with image columns. Care should be
+taken to ensure ImageOrientationRow and ImageOrientationColumn are orthogonal.
+(A Gram-Schmidt orthogonalization procedure ensures they are, but the image
+orientation may not match the expected orientation.) Note that the magnitude
+will also be scaled to unit length for convenience. Specify coordinates
+separated by commas.
+
+##### Default
+
+- ```"1.0, 0.0, 0.0"```
+
+##### Examples
+
+- ```"1.0, 0.0, 0.0"```
+- ```"1.0, 1.0, 0.0"```
+- ```"0.0, 0.0, -1.0"```
+
+#### ImageOrientationRow
+
+##### Description
+
+The orientation unit vector that is aligned with image rows. Care should be
+taken to ensure ImageOrientationRow and ImageOrientationColumn are orthogonal.
+(A Gram-Schmidt orthogonalization procedure ensures they are, but the image
+orientation may not match the expected orientation.) Note that the magnitude
+will also be scaled to unit length for convenience. Specify coordinates
+separated by commas.
+
+##### Default
+
+- ```"0.0, 1.0, 0.0"```
+
+##### Examples
+
+- ```"0.0, 1.0, 0.0"```
+- ```"0.0, 1.0, 1.0"```
+- ```"-1.0, 0.0, 0.0"```
+
+#### InstanceNumber
+
+##### Description
+
+A number affixed to the first image, and then incremented and affixed for each
+subsequent image.
+
+##### Default
+
+- ```"1"```
+
+##### Examples
+
+- ```"1"```
+- ```"100"```
+- ```"1234"```
+
+#### AcquisitionNumber
+
+##### Description
+
+A number affixed to all images, meant to indicate membership in a single
+acquisition.
+
+##### Default
+
+- ```"1"```
+
+##### Examples
+
+- ```"1"```
+- ```"100"```
+- ```"1234"```
+
+#### VoxelValue
+
+##### Description
+
+The value that is assigned to all voxels, or possibly every other voxel. Note
+that if StipleValue is given a finite value, only half the voxels will be
+assigned a value of VoxelValue and the other half will be assigned a value of
+StipleValue. This produces a checkerboard pattern.
+
+##### Default
+
+- ```"0.0"```
+
+##### Examples
+
+- ```"0.0"```
+- ```"1.0E4"```
+- ```"-1234"```
+- ```"nan"```
+
+#### StipleValue
+
+##### Description
+
+The value that is assigned to every other voxel. If StipleValue is given a
+finite value, half of all voxels will be assigned a value of VoxelValue and the
+other half will be assigned a value of StipleValue. This produces a checkerboard
+pattern.
+
+##### Default
+
+- ```"nan"```
+
+##### Examples
+
+- ```"1.0"```
+- ```"-1.0E4"```
+- ```"1234"```
+
+#### Metadata
+
+##### Description
+
+A semicolon-separated list of 'key@value' metadata to imbue into each image.
+This metadata will overwrite any existing keys with the provided values.
+
+##### Default
+
+- ```""```
+
+##### Examples
+
+- ```"keyA@valueA;keyB@valueB"```
+
+
 ## GenerateVirtualDataContourViaThresholdTestV1
 
 ### Description
@@ -7169,6 +11058,17 @@ No registered options.
 
 This operation generates a dosimetric stairway. It can be used for testing how
 dosimetric data is transformed.
+
+### Parameters
+
+No registered options.
+
+## GenerateVirtualDataImageSphereV1
+
+### Description
+
+This operation generates a bitmap image of a sphere. It can be used for testing
+how images are quantified or transformed.
 
 ### Parameters
 
@@ -7566,8 +11466,11 @@ given plane, or were taken on a specified StationName.
 
 ##### Description
 
-Select image arrays to operate on. Specifiers can be of two types: positional or
-metadata-based key@value regex. Positional specifiers can be 'first', 'last',
+Select one or more image arrays. Note that image arrays can hold anything, but
+will typically represent a single contiguous 3D volume (i.e., a volumetric CT
+scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of two types: positional
+or metadata-based key@value regex. Positional specifiers can be 'first', 'last',
 'none', or 'all' literals. Additionally '#N' for some positive integer N selects
 the Nth image array (with zero-based indexing). Likewise, '#-N' selects the
 Nth-from-last image array. Positional specifiers can be inverted by prefixing
@@ -7576,10 +11479,8 @@ keys verbatim and the values with regex. In order to invert metadata-based
 selectors, the regex logic must be inverted (i.e., you can *not* prefix
 metadata-based selectors with a '!'). Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified. Both
-positional and metadata-based criteria can be mixed together. Note that image
-arrays can hold anything, but will typically represent a single contiguous 3D
-volume (i.e., a volumetric CT scan) or '4D' time-series. Note regexes are case
-insensitive and should use extended POSIX syntax.
+positional and metadata-based criteria can be mixed together. Note regexes are
+case insensitive and should use extended POSIX syntax.
 
 ##### Default
 
@@ -7775,8 +11676,11 @@ channels.
 
 ##### Description
 
-Select image arrays to operate on. Specifiers can be of two types: positional or
-metadata-based key@value regex. Positional specifiers can be 'first', 'last',
+Select one or more image arrays. Note that image arrays can hold anything, but
+will typically represent a single contiguous 3D volume (i.e., a volumetric CT
+scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of two types: positional
+or metadata-based key@value regex. Positional specifiers can be 'first', 'last',
 'none', or 'all' literals. Additionally '#N' for some positive integer N selects
 the Nth image array (with zero-based indexing). Likewise, '#-N' selects the
 Nth-from-last image array. Positional specifiers can be inverted by prefixing
@@ -7785,10 +11689,8 @@ keys verbatim and the values with regex. In order to invert metadata-based
 selectors, the regex logic must be inverted (i.e., you can *not* prefix
 metadata-based selectors with a '!'). Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified. Both
-positional and metadata-based criteria can be mixed together. Note that image
-arrays can hold anything, but will typically represent a single contiguous 3D
-volume (i.e., a volumetric CT scan) or '4D' time-series. Note regexes are case
-insensitive and should use extended POSIX syntax.
+positional and metadata-based criteria can be mixed together. Note regexes are
+case insensitive and should use extended POSIX syntax.
 
 ##### Default
 
@@ -7979,6 +11881,515 @@ when inspecting an image.
 
 No registered options.
 
+## ImprintImages
+
+### Description
+
+This operation creates imprints of point clouds on the selected images. Images
+are modified where the points are coindicident.
+
+### Parameters
+
+- ImageSelection
+- PointSelection
+- VoxelValue
+- Channel
+
+#### ImageSelection
+
+##### Description
+
+Select one or more image arrays. Note that image arrays can hold anything, but
+will typically represent a single contiguous 3D volume (i.e., a volumetric CT
+scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of two types: positional
+or metadata-based key@value regex. Positional specifiers can be 'first', 'last',
+'none', or 'all' literals. Additionally '#N' for some positive integer N selects
+the Nth image array (with zero-based indexing). Likewise, '#-N' selects the
+Nth-from-last image array. Positional specifiers can be inverted by prefixing
+with a '!'. Metadata-based key@value expressions are applied by matching the
+keys verbatim and the values with regex. In order to invert metadata-based
+selectors, the regex logic must be inverted (i.e., you can *not* prefix
+metadata-based selectors with a '!'). Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified. Both
+positional and metadata-based criteria can be mixed together. Note regexes are
+case insensitive and should use extended POSIX syntax.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+
+#### PointSelection
+
+##### Description
+
+Select one or more point clouds. Note that point clouds can hold a variety of
+data with varying attributes, but each point cloud is meant to represent a
+single logically cohesive collection of points. Be aware that it is possible to
+mix logically unrelated points together. Selection specifiers can be of two
+types: positional or metadata-based key@value regex. Positional specifiers can
+be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some
+positive integer N selects the Nth point cloud (with zero-based indexing).
+Likewise, '#-N' selects the Nth-from-last point cloud. Positional specifiers can
+be inverted by prefixing with a '!'. Metadata-based key@value expressions are
+applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can
+*not* prefix metadata-based selectors with a '!'). Multiple criteria can be
+specified by separating them with a ';' and are applied in the order specified.
+Both positional and metadata-based criteria can be mixed together. Note regexes
+are case insensitive and should use extended POSIX syntax.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+
+#### VoxelValue
+
+##### Description
+
+The value to give voxels which are coincident with a point from the point cloud.
+Note that point cloud attributes, if present, may override this value.
+
+##### Default
+
+- ```"1.0"```
+
+##### Examples
+
+- ```"-1.0"```
+- ```"0.0"```
+- ```"1.23"```
+- ```"nan"```
+- ```"inf"```
+
+#### Channel
+
+##### Description
+
+The image channel to use. Zero-based.
+
+##### Default
+
+- ```"0"```
+
+##### Examples
+
+- ```"0"```
+- ```"1"```
+- ```"2"```
+
+
+## InterpolateSlices
+
+### Description
+
+This operation interpolates the slices of an image array using a reference image
+array, effectively performing trilinear interpolation. This operation is meant
+to prepare image arrays to be compared or operated on in a per-voxel manner.
+
+### Notes
+
+- No images are overwritten by this operation. The outgoing images will inherit
+  (interpolated) voxel values from the selected images and image geometry from
+  the reference images.
+
+- If all images (selected and reference, altogether) are detected to be
+  rectilinear, this operation will avoid in-plane interpolation and will thus be
+  much faster. There is no **need** for rectilinearity, however without it
+  sections of the image that cannot reasonably be interpolated (via
+  plane-orthogonal projection onto the reference images) will be invalid and
+  marked with NaNs. Non-rectilearity which amounts to a differing number of rows
+  or columns will merely be slower to interpolate.
+
+### Parameters
+
+- ImageSelection
+- ReferenceImageSelection
+- Channel
+
+#### ImageSelection
+
+##### Description
+
+Select one or more image arrays. Note that image arrays can hold anything, but
+will typically represent a single contiguous 3D volume (i.e., a volumetric CT
+scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of two types: positional
+or metadata-based key@value regex. Positional specifiers can be 'first', 'last',
+'none', or 'all' literals. Additionally '#N' for some positive integer N selects
+the Nth image array (with zero-based indexing). Likewise, '#-N' selects the
+Nth-from-last image array. Positional specifiers can be inverted by prefixing
+with a '!'. Metadata-based key@value expressions are applied by matching the
+keys verbatim and the values with regex. In order to invert metadata-based
+selectors, the regex logic must be inverted (i.e., you can *not* prefix
+metadata-based selectors with a '!'). Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified. Both
+positional and metadata-based criteria can be mixed together. Note regexes are
+case insensitive and should use extended POSIX syntax.
+
+##### Default
+
+- ```"all"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+
+#### ReferenceImageSelection
+
+##### Description
+
+Select one or more image arrays. Note that image arrays can hold anything, but
+will typically represent a single contiguous 3D volume (i.e., a volumetric CT
+scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of two types: positional
+or metadata-based key@value regex. Positional specifiers can be 'first', 'last',
+'none', or 'all' literals. Additionally '#N' for some positive integer N selects
+the Nth image array (with zero-based indexing). Likewise, '#-N' selects the
+Nth-from-last image array. Positional specifiers can be inverted by prefixing
+with a '!'. Metadata-based key@value expressions are applied by matching the
+keys verbatim and the values with regex. In order to invert metadata-based
+selectors, the regex logic must be inverted (i.e., you can *not* prefix
+metadata-based selectors with a '!'). Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified. Both
+positional and metadata-based criteria can be mixed together. Note regexes are
+case insensitive and should use extended POSIX syntax.
+
+##### Default
+
+- ```"all"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+
+#### Channel
+
+##### Description
+
+The channel to compare (zero-based). A negative value will result in all
+channels being interpolated, otherwise unspecified channels are merely default
+initialized. Note that both test images and reference images will share this
+specifier.
+
+##### Default
+
+- ```"-1"```
+
+##### Examples
+
+- ```"-1"```
+- ```"0"```
+- ```"1"```
+- ```"2"```
+
+
+## IsolatedVoxelFilter
+
+### Description
+
+This routine applies a filter that discriminates between well-connected and
+isolated voxels. Isolated voxels can either be filtered out or retained. This
+operation considers the 3D neighbourhood surrounding a voxel.
+
+### Notes
+
+- The provided image collection must be rectilinear.
+
+- If the neighbourhood involves voxels that do not exist, they are treated as
+  NaNs in the same way that voxels with the NaN value are treated.
+
+### Parameters
+
+- ImageSelection
+- NormalizedROILabelRegex
+- ROILabelRegex
+- Channel
+- Replacement
+- Replace
+- NeighbourCount
+- AgreementCount
+- MaxDistance
+
+#### ImageSelection
+
+##### Description
+
+Select one or more image arrays. Note that image arrays can hold anything, but
+will typically represent a single contiguous 3D volume (i.e., a volumetric CT
+scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of two types: positional
+or metadata-based key@value regex. Positional specifiers can be 'first', 'last',
+'none', or 'all' literals. Additionally '#N' for some positive integer N selects
+the Nth image array (with zero-based indexing). Likewise, '#-N' selects the
+Nth-from-last image array. Positional specifiers can be inverted by prefixing
+with a '!'. Metadata-based key@value expressions are applied by matching the
+keys verbatim and the values with regex. In order to invert metadata-based
+selectors, the regex logic must be inverted (i.e., you can *not* prefix
+metadata-based selectors with a '!'). Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified. Both
+positional and metadata-based criteria can be mixed together. Note regexes are
+case insensitive and should use extended POSIX syntax.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+
+#### NormalizedROILabelRegex
+
+##### Description
+
+A regex matching ROI labels/names to consider. The default will match all
+available ROIs. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regex to avoid them. All
+ROIs have to match the single regex, so use the 'or' token if needed. Regex is
+case insensitive and uses extended POSIX syntax.
+
+##### Default
+
+- ```".*"```
+
+##### Examples
+
+- ```".*"```
+- ```".*Body.*"```
+- ```"Body"```
+- ```"Gross_Liver"```
+- ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
+- ```"Left Parotid|Right Parotid"```
+
+#### ROILabelRegex
+
+##### Description
+
+A regex matching ROI labels/names to consider. The default will match all
+available ROIs. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regex to avoid them. All
+ROIs have to match the single regex, so use the 'or' token if needed. Regex is
+case insensitive and uses extended POSIX syntax.
+
+##### Default
+
+- ```".*"```
+
+##### Examples
+
+- ```".*"```
+- ```".*body.*"```
+- ```"body"```
+- ```"Gross_Liver"```
+- ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
+- ```"left_parotid|right_parotid"```
+
+#### Channel
+
+##### Description
+
+The channel to operated on (zero-based). Negative values will cause all channels
+to be operated on.
+
+##### Default
+
+- ```"0"```
+
+##### Examples
+
+- ```"-1"```
+- ```"0"```
+- ```"1"```
+
+#### Replacement
+
+##### Description
+
+Controls how replacements are generated. 'Mean' and 'median' replacement
+strategies replace the voxel value with the mean and median, respectively, from
+the surrounding neighbourhood. 'Conservative' refers to the so-called
+conservative filter that suppresses isolated peaks; for every voxel considered,
+the voxel intensity is clamped to the local neighbourhood's extrema. This filter
+works best for removing spurious peak and trough voxels and performs no
+averaging. A numeric value can also be supplied, which will replace all isolated
+or well-connected voxels.
+
+##### Default
+
+- ```"mean"```
+
+##### Examples
+
+- ```"mean"```
+- ```"median"```
+- ```"conservative"```
+- ```"0.0"```
+- ```"-1.23"```
+- ```"1E6"```
+- ```"nan"```
+
+#### Replace
+
+##### Description
+
+Controls whether isolated or well-connected voxels are retained.
+
+##### Default
+
+- ```"isolated"```
+
+##### Examples
+
+- ```"isolated"```
+- ```"well-connected"```
+
+#### NeighbourCount
+
+##### Description
+
+Controls the number of neighbours being considered. For purposes of speed, this
+option is limited to specific levels of neighbour adjacency.
+
+##### Default
+
+- ```"isolated"```
+
+##### Examples
+
+- ```"1"```
+- ```"2"```
+- ```"3"```
+
+#### AgreementCount
+
+##### Description
+
+Controls the number of neighbours that must be in agreement for a voxel to be
+considered 'well-connected.'
+
+##### Default
+
+- ```"6"```
+
+##### Examples
+
+- ```"1"```
+- ```"2"```
+- ```"25"```
+
+#### MaxDistance
+
+##### Description
+
+The maximum distance (inclusive, in DICOM units: mm) within which neighbouring
+voxels will be evaluated. For spherical neighbourhoods, this distance refers to
+the radius. For cubic neighbourhoods, this distance refers to 'box radius' or
+the distance from the cube centre to the nearest point on each bounding face.
+Voxels separated by more than this distance will not be evaluated together.
+
+##### Default
+
+- ```"2.0"```
+
+##### Examples
+
+- ```"0.5"```
+- ```"2.0"```
+- ```"15.0"```
+
+
+## LoadFiles
+
+### Description
+
+This operation loads files on-the-fly.
+
+### Notes
+
+- This operation requires all files provided to it to exist and be accessible.
+  Inaccessible files are not silently ignored and will cause this operation to
+  fail.
+
+### Parameters
+
+- FileName
+
+#### FileName
+
+##### Description
+
+This file will be parsed and loaded. All file types supported by the
+DICOMautomaton system can be loaded in this way. Currently this includes
+serialized Drover class files, DICOM files, FITS image files, and XYZ point
+cloud files.
+
+##### Default
+
+- ```""```
+
+##### Examples
+
+- ```"/tmp/image.dcm"```
+- ```"rois.dcm"```
+- ```"dose.dcm"```
+- ```"image.fits"```
+- ```"point_cloud.xyz"```
+
+
 ## LogScale
 
 ### Description
@@ -7995,8 +12406,11 @@ changes appear more linear. Be weary of using for anything quantitative!
 
 ##### Description
 
-Select image arrays to operate on. Specifiers can be of two types: positional or
-metadata-based key@value regex. Positional specifiers can be 'first', 'last',
+Select one or more image arrays. Note that image arrays can hold anything, but
+will typically represent a single contiguous 3D volume (i.e., a volumetric CT
+scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of two types: positional
+or metadata-based key@value regex. Positional specifiers can be 'first', 'last',
 'none', or 'all' literals. Additionally '#N' for some positive integer N selects
 the Nth image array (with zero-based indexing). Likewise, '#-N' selects the
 Nth-from-last image array. Positional specifiers can be inverted by prefixing
@@ -8005,10 +12419,8 @@ keys verbatim and the values with regex. In order to invert metadata-based
 selectors, the regex logic must be inverted (i.e., you can *not* prefix
 metadata-based selectors with a '!'). Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified. Both
-positional and metadata-based criteria can be mixed together. Note that image
-arrays can hold anything, but will typically represent a single contiguous 3D
-volume (i.e., a volumetric CT scan) or '4D' time-series. Note regexes are case
-insensitive and should use extended POSIX syntax.
+positional and metadata-based criteria can be mixed together. Note regexes are
+case insensitive and should use extended POSIX syntax.
 
 ##### Default
 
@@ -8118,8 +12530,11 @@ case insensitive and uses grep syntax.
 
 ##### Description
 
-Select image arrays to operate on. Specifiers can be of two types: positional or
-metadata-based key@value regex. Positional specifiers can be 'first', 'last',
+Select one or more image arrays. Note that image arrays can hold anything, but
+will typically represent a single contiguous 3D volume (i.e., a volumetric CT
+scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of two types: positional
+or metadata-based key@value regex. Positional specifiers can be 'first', 'last',
 'none', or 'all' literals. Additionally '#N' for some positive integer N selects
 the Nth image array (with zero-based indexing). Likewise, '#-N' selects the
 Nth-from-last image array. Positional specifiers can be inverted by prefixing
@@ -8128,12 +12543,10 @@ keys verbatim and the values with regex. In order to invert metadata-based
 selectors, the regex logic must be inverted (i.e., you can *not* prefix
 metadata-based selectors with a '!'). Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified. Both
-positional and metadata-based criteria can be mixed together. Note that image
-arrays can hold anything, but will typically represent a single contiguous 3D
-volume (i.e., a volumetric CT scan) or '4D' time-series. Note regexes are case
-insensitive and should use extended POSIX syntax. Note that the selected images
-are used to sample the new contours on. Image planes need not match the original
-since a full 3D mesh surface is generated.
+positional and metadata-based criteria can be mixed together. Note regexes are
+case insensitive and should use extended POSIX syntax. Note that the selected
+images are used to sample the new contours on. Image planes need not match the
+original since a full 3D mesh surface is generated.
 
 ##### Default
 
@@ -8277,19 +12690,30 @@ be provided for the shell to properly interpret the argument.
 
 ### Description
 
-This operation injects metadata into images.
+This operation injects metadata into images. It can also modify image spatial
+characteristics, which are distinct from metadata.
 
 ### Parameters
 
 - ImageSelection
 - KeyValues
+- SliceThickness
+- VoxelWidth
+- VoxelHeight
+- ImageAnchor
+- ImagePosition
+- ImageOrientationColumn
+- ImageOrientationRow
 
 #### ImageSelection
 
 ##### Description
 
-Select image arrays to operate on. Specifiers can be of two types: positional or
-metadata-based key@value regex. Positional specifiers can be 'first', 'last',
+Select one or more image arrays. Note that image arrays can hold anything, but
+will typically represent a single contiguous 3D volume (i.e., a volumetric CT
+scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of two types: positional
+or metadata-based key@value regex. Positional specifiers can be 'first', 'last',
 'none', or 'all' literals. Additionally '#N' for some positive integer N selects
 the Nth image array (with zero-based indexing). Likewise, '#-N' selects the
 Nth-from-last image array. Positional specifiers can be inverted by prefixing
@@ -8298,10 +12722,8 @@ keys verbatim and the values with regex. In order to invert metadata-based
 selectors, the regex logic must be inverted (i.e., you can *not* prefix
 metadata-based selectors with a '!'). Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified. Both
-positional and metadata-based criteria can be mixed together. Note that image
-arrays can hold anything, but will typically represent a single contiguous 3D
-volume (i.e., a volumetric CT scan) or '4D' time-series. Note regexes are case
-insensitive and should use extended POSIX syntax.
+positional and metadata-based criteria can be mixed together. Note regexes are
+case insensitive and should use extended POSIX syntax.
 
 ##### Default
 
@@ -8328,7 +12750,10 @@ Key-value pairs in the form of 'key1@value1;key2@value2' that will be injected
 into the selected images. Existing metadata will be overwritten. Both keys and
 values are case-sensitive. Note that a semi-colon separates key-value pairs, not
 a colon. Note that quotation marks are not stripped internally, but may have to
-be provided for the shell to properly interpret the argument.
+be provided for the shell to properly interpret the argument. Also note that
+updating spatial metadata will not result in the image characteristics being
+altered -- use the specific parameters provided to update spatial
+characteristics.
 
 ##### Default
 
@@ -8340,6 +12765,146 @@ be provided for the shell to properly interpret the argument.
 - ```"'Description@some description'"```
 - ```"MinimumSeparation@1.23"```
 - ```"'Description@some description;MinimumSeparation@1.23'"```
+
+#### SliceThickness
+
+##### Description
+
+Image slices will be have this thickness (in DICOM units: mm). For most
+purposes, SliceThickness should be equal to SpacingBetweenSlices. If
+SpacingBetweenSlices is smaller than SliceThickness, images will overlap. If
+SpacingBetweenSlices is larger than SliceThickness, there will be a gap between
+images. Updating the SliceThickness or image positioning using this operation
+will alter the image, but will not update SpacingBetweenSlices. This gives the
+user freedom to alter all image planes individually, allowing construction of
+non-rectilinear image volumes. If SpacingBetweenSlices is known and consistent,
+it should be reflected in the image metadata (by the user).
+
+##### Default
+
+- ```"1.0"```
+
+##### Examples
+
+- ```"0.1"```
+- ```"0.5"```
+- ```"1.0"```
+- ```"10.0"```
+
+#### VoxelWidth
+
+##### Description
+
+Voxels will have this (in-plane) width (in DICOM units: mm). This means that
+row-adjacent voxels centres will be separated by VoxelWidth). Each voxel will
+have dimensions: VoxelWidth x VoxelHeight x SliceThickness.
+
+##### Default
+
+- ```"1.0"```
+
+##### Examples
+
+- ```"0.1"```
+- ```"0.5"```
+- ```"1.0"```
+- ```"10.0"```
+
+#### VoxelHeight
+
+##### Description
+
+Voxels will have this (in-plane) height (in DICOM units: mm). This means that
+column-adjacent voxels centres will be separated by VoxelHeight). Each voxel
+will have dimensions: VoxelWidth x VoxelHeight x SliceThickness.
+
+##### Default
+
+- ```"1.0"```
+
+##### Examples
+
+- ```"0.1"```
+- ```"0.5"```
+- ```"1.0"```
+- ```"10.0"```
+
+#### ImageAnchor
+
+##### Description
+
+A point in 3D space which denotes the origin (in DICOM units: mm). All other
+vectors are taken to be relative to this point. Under most circumstance the
+anchor should be (0,0,0). Specify coordinates separated by commas.
+
+##### Default
+
+- ```"0.0, 0.0, 0.0"```
+
+##### Examples
+
+- ```"0.0, 0.0, 0.0"```
+- ```"0.0,0.0,0.0"```
+- ```"1.0, -2.3, 45.6"```
+
+#### ImagePosition
+
+##### Description
+
+The centre of the row=0, column=0 voxel in the first image (in DICOM units: mm).
+Specify coordinates separated by commas.
+
+##### Default
+
+- ```"0.0, 0.0, 0.0"```
+
+##### Examples
+
+- ```"0.0, 0.0, 0.0"```
+- ```"100.0,100.0,100.0"```
+- ```"1.0, -2.3, 45.6"```
+
+#### ImageOrientationColumn
+
+##### Description
+
+The orientation unit vector that is aligned with image columns. Care should be
+taken to ensure ImageOrientationRow and ImageOrientationColumn are orthogonal.
+(A Gram-Schmidt orthogonalization procedure ensures they are, but the image
+orientation may not match the expected orientation.) Note that the magnitude
+will also be scaled to unit length for convenience. Specify coordinates
+separated by commas.
+
+##### Default
+
+- ```"1.0, 0.0, 0.0"```
+
+##### Examples
+
+- ```"1.0, 0.0, 0.0"```
+- ```"1.0, 1.0, 0.0"```
+- ```"0.0, 0.0, -1.0"```
+
+#### ImageOrientationRow
+
+##### Description
+
+The orientation unit vector that is aligned with image rows. Care should be
+taken to ensure ImageOrientationRow and ImageOrientationColumn are orthogonal.
+(A Gram-Schmidt orthogonalization procedure ensures they are, but the image
+orientation may not match the expected orientation.) Note that the magnitude
+will also be scaled to unit length for convenience. Specify coordinates
+separated by commas.
+
+##### Default
+
+- ```"0.0, 1.0, 0.0"```
+
+##### Examples
+
+- ```"0.0, 1.0, 0.0"```
+- ```"0.0, 1.0, 1.0"```
+- ```"-1.0, 0.0, 0.0"```
 
 
 ## NegatePixels
@@ -8357,8 +12922,11 @@ is often desired for processing MR images.
 
 ##### Description
 
-Select image arrays to operate on. Specifiers can be of two types: positional or
-metadata-based key@value regex. Positional specifiers can be 'first', 'last',
+Select one or more image arrays. Note that image arrays can hold anything, but
+will typically represent a single contiguous 3D volume (i.e., a volumetric CT
+scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of two types: positional
+or metadata-based key@value regex. Positional specifiers can be 'first', 'last',
 'none', or 'all' literals. Additionally '#N' for some positive integer N selects
 the Nth image array (with zero-based indexing). Likewise, '#-N' selects the
 Nth-from-last image array. Positional specifiers can be inverted by prefixing
@@ -8367,10 +12935,8 @@ keys verbatim and the values with regex. In order to invert metadata-based
 selectors, the regex logic must be inverted (i.e., you can *not* prefix
 metadata-based selectors with a '!'). Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified. Both
-positional and metadata-based criteria can be mixed together. Note that image
-arrays can hold anything, but will typically represent a single contiguous 3D
-volume (i.e., a volumetric CT scan) or '4D' time-series. Note regexes are case
-insensitive and should use extended POSIX syntax.
+positional and metadata-based criteria can be mixed together. Note regexes are
+case insensitive and should use extended POSIX syntax.
 
 ##### Default
 
@@ -8388,6 +12954,200 @@ insensitive and should use extended POSIX syntax.
 - ```"!#-3"```
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
+
+
+## NormalizePixels
+
+### Description
+
+This routine normalizes voxel intensities by adjusting them so they satisfy a
+'normalization' criteria. This operation is useful as a pre-processing step when
+performing convolution or thresholding with absolute magnitudes.
+
+### Notes
+
+- This operation considers entire image arrays, not just single images.
+
+### Parameters
+
+- ImageSelection
+- NormalizedROILabelRegex
+- ROILabelRegex
+- Inclusivity
+- ContourOverlap
+- Channel
+- Method
+
+#### ImageSelection
+
+##### Description
+
+Select one or more image arrays. Note that image arrays can hold anything, but
+will typically represent a single contiguous 3D volume (i.e., a volumetric CT
+scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of two types: positional
+or metadata-based key@value regex. Positional specifiers can be 'first', 'last',
+'none', or 'all' literals. Additionally '#N' for some positive integer N selects
+the Nth image array (with zero-based indexing). Likewise, '#-N' selects the
+Nth-from-last image array. Positional specifiers can be inverted by prefixing
+with a '!'. Metadata-based key@value expressions are applied by matching the
+keys verbatim and the values with regex. In order to invert metadata-based
+selectors, the regex logic must be inverted (i.e., you can *not* prefix
+metadata-based selectors with a '!'). Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified. Both
+positional and metadata-based criteria can be mixed together. Note regexes are
+case insensitive and should use extended POSIX syntax.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+
+#### NormalizedROILabelRegex
+
+##### Description
+
+A regex matching ROI labels/names to consider. The default will match all
+available ROIs. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regex to avoid them. All
+ROIs have to match the single regex, so use the 'or' token if needed. Regex is
+case insensitive and uses extended POSIX syntax.
+
+##### Default
+
+- ```".*"```
+
+##### Examples
+
+- ```".*"```
+- ```".*Body.*"```
+- ```"Body"```
+- ```"Gross_Liver"```
+- ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
+- ```"Left Parotid|Right Parotid"```
+
+#### ROILabelRegex
+
+##### Description
+
+A regex matching ROI labels/names to consider. The default will match all
+available ROIs. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regex to avoid them. All
+ROIs have to match the single regex, so use the 'or' token if needed. Regex is
+case insensitive and uses extended POSIX syntax.
+
+##### Default
+
+- ```".*"```
+
+##### Examples
+
+- ```".*"```
+- ```".*body.*"```
+- ```"body"```
+- ```"Gross_Liver"```
+- ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
+- ```"left_parotid|right_parotid"```
+
+#### Inclusivity
+
+##### Description
+
+Controls how voxels are deemed to be 'within' the interior of the selected
+ROI(s). The default 'center' considers only the central-most point of each
+voxel. There are two corner options that correspond to a 2D projection of the
+voxel onto the image plane. The first, 'planar_corner_inclusive', considers a
+voxel interior if ANY corner is interior. The second, 'planar_corner_exclusive',
+considers a voxel interior if ALL (four) corners are interior.
+
+##### Default
+
+- ```"center"```
+
+##### Examples
+
+- ```"center"```
+- ```"centre"```
+- ```"planar_corner_inclusive"```
+- ```"planar_inc"```
+- ```"planar_corner_exclusive"```
+- ```"planar_exc"```
+
+#### ContourOverlap
+
+##### Description
+
+Controls overlapping contours are treated. The default 'ignore' treats
+overlapping contours as a single contour, regardless of contour orientation. The
+option 'honour_opposite_orientations' makes overlapping contours with opposite
+orientation cancel. Otherwise, orientation is ignored. The latter is useful for
+Boolean structures where contour orientation is significant for interior
+contours (holes). The option 'overlapping_contours_cancel' ignores orientation
+and cancels all contour overlap.
+
+##### Default
+
+- ```"ignore"```
+
+##### Examples
+
+- ```"ignore"```
+- ```"honour_opposite_orientations"```
+- ```"overlapping_contours_cancel"```
+- ```"honour_opps"```
+- ```"overlap_cancel"```
+
+#### Channel
+
+##### Description
+
+The channel to operate on (zero-based). Negative values will cause all channels
+to be operated on.
+
+##### Default
+
+- ```"0"```
+
+##### Examples
+
+- ```"-1"```
+- ```"0"```
+- ```"1"```
+
+#### Method
+
+##### Description
+
+Controls the specific type of normalization that will be applied. 'Stretch01'
+will rescale the voxel values so the minima are 0 and the maxima are 1.
+Likewise, 'stretch11' will rescale such that the minima are -1 and the maxima
+are 1. Clamp will ensure all voxel intensities are within [0:1] by setting those
+lower than 0 to 0 and those higher than 1 to 1. (Voxels already within [0:1]
+will not be altered.) 'Sum-to-zero' will shift all voxels so that the sum of all
+voxel intensities is zero. (This is useful for convolution kernels.)
+
+##### Default
+
+- ```"stretch11"```
+
+##### Examples
+
+- ```"clamp"```
+- ```"stretch01"```
+- ```"stretch11"```
+- ```"sum-to-zero"```
 
 
 ## OptimizeStaticBeams
@@ -8408,10 +13168,6 @@ criteria.
 - Because beam weights are (generally) not specified in DICOM RTDOSE files, the
   beam weights are assumed to all be 1.0. If they are not all 1.0, the weights
   reported here will be relative to whatever the existing weights are.
-
-- This operation uses Image_Arrays, so convert from Dose_Arrays if necessary
-  prior to calling this routine. This may be fixed in a future release. Patches
-  are welcome.
 
 - If no PTV ROI is available, the BODY contour may suffice. If this is not
   available, dose outside the body should somehow be set to zero to avoid
@@ -8437,8 +13193,11 @@ criteria.
 
 ##### Description
 
-Select image arrays to operate on. Specifiers can be of two types: positional or
-metadata-based key@value regex. Positional specifiers can be 'first', 'last',
+Select one or more image arrays. Note that image arrays can hold anything, but
+will typically represent a single contiguous 3D volume (i.e., a volumetric CT
+scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of two types: positional
+or metadata-based key@value regex. Positional specifiers can be 'first', 'last',
 'none', or 'all' literals. Additionally '#N' for some positive integer N selects
 the Nth image array (with zero-based indexing). Likewise, '#-N' selects the
 Nth-from-last image array. Positional specifiers can be inverted by prefixing
@@ -8447,10 +13206,8 @@ keys verbatim and the values with regex. In order to invert metadata-based
 selectors, the regex logic must be inverted (i.e., you can *not* prefix
 metadata-based selectors with a '!'). Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified. Both
-positional and metadata-based criteria can be mixed together. Note that image
-arrays can hold anything, but will typically represent a single contiguous 3D
-volume (i.e., a volumetric CT scan) or '4D' time-series. Note regexes are case
-insensitive and should use extended POSIX syntax.
+positional and metadata-based criteria can be mixed together. Note regexes are
+case insensitive and should use extended POSIX syntax.
 
 ##### Default
 
@@ -8663,8 +13420,11 @@ This operation will order individual image slices within collections
 
 ##### Description
 
-Select image arrays to operate on. Specifiers can be of two types: positional or
-metadata-based key@value regex. Positional specifiers can be 'first', 'last',
+Select one or more image arrays. Note that image arrays can hold anything, but
+will typically represent a single contiguous 3D volume (i.e., a volumetric CT
+scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of two types: positional
+or metadata-based key@value regex. Positional specifiers can be 'first', 'last',
 'none', or 'all' literals. Additionally '#N' for some positive integer N selects
 the Nth image array (with zero-based indexing). Likewise, '#-N' selects the
 Nth-from-last image array. Positional specifiers can be inverted by prefixing
@@ -8673,10 +13433,8 @@ keys verbatim and the values with regex. In order to invert metadata-based
 selectors, the regex logic must be inverted (i.e., you can *not* prefix
 metadata-based selectors with a '!'). Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified. Both
-positional and metadata-based criteria can be mixed together. Note that image
-arrays can hold anything, but will typically represent a single contiguous 3D
-volume (i.e., a volumetric CT scan) or '4D' time-series. Note regexes are case
-insensitive and should use extended POSIX syntax.
+positional and metadata-based criteria can be mixed together. Note regexes are
+case insensitive and should use extended POSIX syntax.
 
 ##### Default
 
@@ -8775,14 +13533,13 @@ using an SFML backend.
   easier to produce a sequence of images by inserting this operation into a
   sequence of operations.
 
-- Iff there are no images available, this operation will silently convert dose
-  arrays to image arrays. If there are images to display, dose arrays must be
-  explicitly converted to be visible.
-
 ### Parameters
 
 - ScaleFactor
 - ImageFileName
+- ColourMapRegex
+- WindowLow
+- WindowHigh
 
 #### ScaleFactor
 
@@ -8820,6 +13577,77 @@ sequentially.
 - ```""```
 - ```"/tmp/an_image.png"```
 - ```"afile.png"```
+
+#### ColourMapRegex
+
+##### Description
+
+The colour mapping to apply to the image if there is a single channel. The
+default will match the first available, and if there is no matching map found,
+the first available will be selected.
+
+##### Default
+
+- ```".*"```
+
+##### Examples
+
+- ```"Viridis"```
+- ```"Magma"```
+- ```"Plasma"```
+- ```"Inferno"```
+- ```"Jet"```
+- ```"MorelandBlueRed"```
+- ```"MorelandBlackBody"```
+- ```"MorelandExtendedBlackBody"```
+- ```"KRC"```
+- ```"ExtendedKRC"```
+- ```"Kovesi_LinKRYW_5-100_c64"```
+- ```"Kovesi_LinKRYW_0-100_c71"```
+- ```"Kovesi_Cyclic_cet-c2"```
+- ```"LANLOliveGreentoBlue"```
+- ```"YgorIncandescent"```
+- ```"LinearRamp"```
+
+#### WindowLow
+
+##### Description
+
+If provided, this parameter will override any existing window and level. All
+pixels with the intensity value or lower will be assigned the lowest possible
+colour according to the colour map. Not providing a valid number will disable
+window overrides.
+
+##### Default
+
+- ```""```
+
+##### Examples
+
+- ```""```
+- ```"-1.23"```
+- ```"0"```
+- ```"1E4"```
+
+#### WindowHigh
+
+##### Description
+
+If provided, this parameter will override any existing window and level. All
+pixels with the intensity value or higher will be assigned the highest possible
+colour according to the colour map. Not providing a valid number will disable
+window overrides.
+
+##### Default
+
+- ```""```
+
+##### Examples
+
+- ```""```
+- ```"1.23"```
+- ```"0"```
+- ```"10.3E4"```
 
 
 ## PruneEmptyImageDoseArrays
@@ -9028,8 +13856,11 @@ This operation ranks pixels throughout an image array.
 
 ##### Description
 
-Select image arrays to operate on. Specifiers can be of two types: positional or
-metadata-based key@value regex. Positional specifiers can be 'first', 'last',
+Select one or more image arrays. Note that image arrays can hold anything, but
+will typically represent a single contiguous 3D volume (i.e., a volumetric CT
+scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of two types: positional
+or metadata-based key@value regex. Positional specifiers can be 'first', 'last',
 'none', or 'all' literals. Additionally '#N' for some positive integer N selects
 the Nth image array (with zero-based indexing). Likewise, '#-N' selects the
 Nth-from-last image array. Positional specifiers can be inverted by prefixing
@@ -9038,10 +13869,8 @@ keys verbatim and the values with regex. In order to invert metadata-based
 selectors, the regex logic must be inverted (i.e., you can *not* prefix
 metadata-based selectors with a '!'). Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified. Both
-positional and metadata-based criteria can be mixed together. Note that image
-arrays can hold anything, but will typically represent a single contiguous 3D
-volume (i.e., a volumetric CT scan) or '4D' time-series. Note regexes are case
-insensitive and should use extended POSIX syntax.
+positional and metadata-based criteria can be mixed together. Note regexes are
+case insensitive and should use extended POSIX syntax.
 
 ##### Default
 
@@ -9113,6 +13942,315 @@ participate in the rank.
 - ```"1500"```
 
 
+## ReduceNeighbourhood
+
+### Description
+
+This routine walks the voxels of a 3D rectilinear image collection, reducing the
+distribution of voxels within the local volumetric neighbourhood to a scalar
+value, and updating the voxel value with this scalar. This routine can be used
+to implement mean and median filters (amongst others) that operate over a
+variety of 3D neighbourhoods. Besides purely statistical reductions, logical
+reductions can be applied.
+
+### Notes
+
+- The provided image collection must be rectilinear.
+
+- This operation can be used to compute core 3D morphology operations (erosion
+  and dilation) as well as composite operations like opening (i.e., erosion
+  followed by dilation), closing (i.e., dilation followed by erosion),
+  'gradient' (i.e., the difference between dilation and erosion, which produces
+  an outline), and various other combinations of core and composite operations.
+
+### Parameters
+
+- ImageSelection
+- NormalizedROILabelRegex
+- ROILabelRegex
+- Channel
+- Neighbourhood
+- Reduction
+- MaxDistance
+
+#### ImageSelection
+
+##### Description
+
+Select one or more image arrays. Note that image arrays can hold anything, but
+will typically represent a single contiguous 3D volume (i.e., a volumetric CT
+scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of two types: positional
+or metadata-based key@value regex. Positional specifiers can be 'first', 'last',
+'none', or 'all' literals. Additionally '#N' for some positive integer N selects
+the Nth image array (with zero-based indexing). Likewise, '#-N' selects the
+Nth-from-last image array. Positional specifiers can be inverted by prefixing
+with a '!'. Metadata-based key@value expressions are applied by matching the
+keys verbatim and the values with regex. In order to invert metadata-based
+selectors, the regex logic must be inverted (i.e., you can *not* prefix
+metadata-based selectors with a '!'). Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified. Both
+positional and metadata-based criteria can be mixed together. Note regexes are
+case insensitive and should use extended POSIX syntax.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+
+#### NormalizedROILabelRegex
+
+##### Description
+
+A regex matching ROI labels/names to consider. The default will match all
+available ROIs. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regex to avoid them. All
+ROIs have to match the single regex, so use the 'or' token if needed. Regex is
+case insensitive and uses extended POSIX syntax.
+
+##### Default
+
+- ```".*"```
+
+##### Examples
+
+- ```".*"```
+- ```".*Body.*"```
+- ```"Body"```
+- ```"Gross_Liver"```
+- ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
+- ```"Left Parotid|Right Parotid"```
+
+#### ROILabelRegex
+
+##### Description
+
+A regex matching ROI labels/names to consider. The default will match all
+available ROIs. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regex to avoid them. All
+ROIs have to match the single regex, so use the 'or' token if needed. Regex is
+case insensitive and uses extended POSIX syntax.
+
+##### Default
+
+- ```".*"```
+
+##### Examples
+
+- ```".*"```
+- ```".*body.*"```
+- ```"body"```
+- ```"Gross_Liver"```
+- ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
+- ```"left_parotid|right_parotid"```
+
+#### Channel
+
+##### Description
+
+The channel to operated on (zero-based). Negative values will cause all channels
+to be operated on.
+
+##### Default
+
+- ```"0"```
+
+##### Examples
+
+- ```"-1"```
+- ```"0"```
+- ```"1"```
+
+#### Neighbourhood
+
+##### Description
+
+Controls how the neighbourhood surrounding a voxel is defined. Variable-size
+neighbourhoods 'spherical' and 'cubic' are defined. An appropriate isotropic
+extent must be provided for these neighbourhoods. (See below; extents must be
+provided in DICOM units, i.e., mm.) Fixed-size neighbourhoods specify a fixed
+number of adjacent voxels. Fixed rectagular neighbourhoods are specified like
+'RxCxI' for row, column, and image slice extents (as integer number of rows,
+columns, and slices). Fixed spherical neighbourhoods are specified like
+'Wsphere' where W is the width (i.e., the number of voxels wide). In
+morphological terminology, the neighbourhood is referred to as a 'structuring
+element.' A similar concept is the convolutional 'kernel.'
+
+##### Default
+
+- ```"spherical"```
+
+##### Examples
+
+- ```"spherical"```
+- ```"cubic"```
+- ```"3x3x3"```
+- ```"5x5x5"```
+- ```"3sphere"```
+- ```"5sphere"```
+- ```"7sphere"```
+- ```"9sphere"```
+- ```"11sphere"```
+- ```"13sphere"```
+- ```"15sphere"```
+
+#### Reduction
+
+##### Description
+
+Controls how the distribution of voxel values from neighbouring voxels is
+reduced. Statistical distribution reducers 'min', 'mean', 'median', and 'max'
+are defined. 'Min' is also known as the 'erosion' operation. Likewise, 'max' is
+also known as the 'dilation' operation. Note that the morphological 'opening'
+operation can be accomplished by sequentially performing an erosion and then a
+dilation using the same neighbourhood. Logical reducers 'is_min' and 'is_max'
+are also available -- is_min (is_max) replace the voxel value with 1.0 if it was
+the min (max) in the neighbourhood and 0.0 otherwise. Logical reducers
+'is_min_nan' and 'is_max_nan' are variants that replace the voxel with a NaN
+instead of 1.0 and otherwise do not overwrite the original voxel value.
+
+##### Default
+
+- ```"median"```
+
+##### Examples
+
+- ```"min"```
+- ```"erode"```
+- ```"mean"```
+- ```"median"```
+- ```"max"```
+- ```"dilate"```
+- ```"is_min"```
+- ```"is_max"```
+- ```"is_min_nan"```
+- ```"is_max_nan"```
+
+#### MaxDistance
+
+##### Description
+
+The maximum distance (inclusive, in DICOM units: mm) within which neighbouring
+voxels will be evaluated for variable-size neighbourhoods. Note that this
+parameter will be ignored if a fixed-size neighbourhood has been specified. For
+spherical neighbourhoods, this distance refers to the radius. For cubic
+neighbourhoods, this distance refers to 'box radius' or the distance from the
+cube centre to the nearest point on each bounding face. Voxels separated by more
+than this distance will not be evaluated together.
+
+##### Default
+
+- ```"2.0"```
+
+##### Examples
+
+- ```"0.5"```
+- ```"2.0"```
+- ```"15.0"```
+
+
+## RemeshSurfaceMeshes
+
+### Description
+
+This operation re-meshes existing surface meshes according to the specified
+criteria, replacing the original meshes with remeshed copies.
+
+### Notes
+
+- Selected surface meshes should represent polyhedra.
+
+### Parameters
+
+- MeshSelection
+- Iterations
+- TargetEdgeLength
+
+#### MeshSelection
+
+##### Description
+
+Select one or more surface meshes. Note that a single surface mesh may hold many
+disconnected mesh components; they should collectively represent a single
+logically cohesive object. Be aware that it is possible to mix logically
+unrelated sub-meshes together in a single mesh. Selection specifiers can be of
+two types: positional or metadata-based key@value regex. Positional specifiers
+can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some
+positive integer N selects the Nth surface mesh (with zero-based indexing).
+Likewise, '#-N' selects the Nth-from-last surface mesh. Positional specifiers
+can be inverted by prefixing with a '!'. Metadata-based key@value expressions
+are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can
+*not* prefix metadata-based selectors with a '!'). Multiple criteria can be
+specified by separating them with a ';' and are applied in the order specified.
+Both positional and metadata-based criteria can be mixed together. Note regexes
+are case insensitive and should use extended POSIX syntax.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+
+#### Iterations
+
+##### Description
+
+The number of remeshing iterations to perform.
+
+##### Default
+
+- ```"5"```
+
+##### Examples
+
+- ```"1"```
+- ```"3"```
+- ```"5"```
+- ```"10"```
+
+#### TargetEdgeLength
+
+##### Description
+
+The desired length of all edges in the remeshed mesh in DICOM units (mm).
+
+##### Default
+
+- ```"1.5"```
+
+##### Examples
+
+- ```"0.2"```
+- ```"0.75"```
+- ```"1.0"```
+- ```"1.5"```
+- ```"2.015"```
+
+
 ## SFML_Viewer
 
 ### Description
@@ -9120,12 +14258,6 @@ participate in the rank.
 Launch an interactive viewer based on SFML. Using this viewer, it is possible to
 contour ROIs, generate plots of pixel intensity along profiles or through time,
 inspect and compare metadata, and various other things.
-
-### Notes
-
-- If there are no images available, this operation will silently convert dose
-  arrays to image arrays. If there are images to display, dose arrays must be
-  explicitly converted to be visible.
 
 ### Parameters
 
@@ -9165,6 +14297,191 @@ filename. If blank, a filename will be generated sequentially.
 - ```""```
 - ```"/tmp/a_screenshot.png"```
 - ```"afile.png"```
+
+
+## ScalePixels
+
+### Description
+
+This operation scales pixel (voxel) values confined to one or more ROIs.
+
+### Notes
+
+- This routine could be used to derive, for example, per-fraction dose from a
+  total dose image array.
+
+### Parameters
+
+- ImageSelection
+- NormalizedROILabelRegex
+- ROILabelRegex
+- Inclusivity
+- ContourOverlap
+- ScaleFactor
+- Channel
+
+#### ImageSelection
+
+##### Description
+
+Select one or more image arrays. Note that image arrays can hold anything, but
+will typically represent a single contiguous 3D volume (i.e., a volumetric CT
+scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of two types: positional
+or metadata-based key@value regex. Positional specifiers can be 'first', 'last',
+'none', or 'all' literals. Additionally '#N' for some positive integer N selects
+the Nth image array (with zero-based indexing). Likewise, '#-N' selects the
+Nth-from-last image array. Positional specifiers can be inverted by prefixing
+with a '!'. Metadata-based key@value expressions are applied by matching the
+keys verbatim and the values with regex. In order to invert metadata-based
+selectors, the regex logic must be inverted (i.e., you can *not* prefix
+metadata-based selectors with a '!'). Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified. Both
+positional and metadata-based criteria can be mixed together. Note regexes are
+case insensitive and should use extended POSIX syntax.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+
+#### NormalizedROILabelRegex
+
+##### Description
+
+A regex matching ROI labels/names to consider. The default will match all
+available ROIs. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regex to avoid them. All
+ROIs have to match the single regex, so use the 'or' token if needed. Regex is
+case insensitive and uses extended POSIX syntax.
+
+##### Default
+
+- ```".*"```
+
+##### Examples
+
+- ```".*"```
+- ```".*Body.*"```
+- ```"Body"```
+- ```"Gross_Liver"```
+- ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
+- ```"Left Parotid|Right Parotid"```
+
+#### ROILabelRegex
+
+##### Description
+
+A regex matching ROI labels/names to consider. The default will match all
+available ROIs. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regex to avoid them. All
+ROIs have to match the single regex, so use the 'or' token if needed. Regex is
+case insensitive and uses extended POSIX syntax.
+
+##### Default
+
+- ```".*"```
+
+##### Examples
+
+- ```".*"```
+- ```".*body.*"```
+- ```"body"```
+- ```"Gross_Liver"```
+- ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
+- ```"left_parotid|right_parotid"```
+
+#### Inclusivity
+
+##### Description
+
+Controls how voxels are deemed to be 'within' the interior of the selected
+ROI(s). The default 'center' considers only the central-most point of each
+voxel. There are two corner options that correspond to a 2D projection of the
+voxel onto the image plane. The first, 'planar_corner_inclusive', considers a
+voxel interior if ANY corner is interior. The second, 'planar_corner_exclusive',
+considers a voxel interior if ALL (four) corners are interior.
+
+##### Default
+
+- ```"center"```
+
+##### Examples
+
+- ```"center"```
+- ```"centre"```
+- ```"planar_corner_inclusive"```
+- ```"planar_inc"```
+- ```"planar_corner_exclusive"```
+- ```"planar_exc"```
+
+#### ContourOverlap
+
+##### Description
+
+Controls overlapping contours are treated. The default 'ignore' treats
+overlapping contours as a single contour, regardless of contour orientation. The
+option 'honour_opposite_orientations' makes overlapping contours with opposite
+orientation cancel. Otherwise, orientation is ignored. The latter is useful for
+Boolean structures where contour orientation is significant for interior
+contours (holes). The option 'overlapping_contours_cancel' ignores orientation
+and cancels all contour overlap.
+
+##### Default
+
+- ```"ignore"```
+
+##### Examples
+
+- ```"ignore"```
+- ```"honour_opposite_orientations"```
+- ```"overlapping_contours_cancel"```
+- ```"honour_opps"```
+- ```"overlap_cancel"```
+
+#### ScaleFactor
+
+##### Description
+
+The numeric factor to multiply all pixel (voxel) values with.
+
+##### Default
+
+- ```"1.0"```
+
+##### Examples
+
+- ```"-1.0"```
+- ```"0.0"```
+- ```"1.23E-5"```
+
+#### Channel
+
+##### Description
+
+The image channel to use. Zero-based.
+
+##### Default
+
+- ```"0"```
+
+##### Examples
+
+- ```"0"```
+- ```"1"```
+- ```"2"```
 
 
 ## SeamContours
@@ -9386,6 +14703,269 @@ may result in numerical imprecision.
 - ```"vertex-removal"```
 
 
+## SimplifySurfaceMeshes
+
+### Description
+
+This operation performs mesh simplification on existing surface meshes according
+to the specified criteria, replacing the original meshes with simplified copies.
+
+### Notes
+
+- Selected surface meshes should represent polyhedra.
+
+### Parameters
+
+- MeshSelection
+- EdgeCountLimit
+
+#### MeshSelection
+
+##### Description
+
+Select one or more surface meshes. Note that a single surface mesh may hold many
+disconnected mesh components; they should collectively represent a single
+logically cohesive object. Be aware that it is possible to mix logically
+unrelated sub-meshes together in a single mesh. Selection specifiers can be of
+two types: positional or metadata-based key@value regex. Positional specifiers
+can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some
+positive integer N selects the Nth surface mesh (with zero-based indexing).
+Likewise, '#-N' selects the Nth-from-last surface mesh. Positional specifiers
+can be inverted by prefixing with a '!'. Metadata-based key@value expressions
+are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can
+*not* prefix metadata-based selectors with a '!'). Multiple criteria can be
+specified by separating them with a ';' and are applied in the order specified.
+Both positional and metadata-based criteria can be mixed together. Note regexes
+are case insensitive and should use extended POSIX syntax.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+
+#### EdgeCountLimit
+
+##### Description
+
+The maximum number of edges simplified meshes should contain.
+
+##### Default
+
+- ```"250000"```
+
+##### Examples
+
+- ```"20000"```
+- ```"100000"```
+- ```"500000"```
+- ```"5000000"```
+
+
+## SimulateRadiograph
+
+### Description
+
+This routine uses ray marching an volumteric sampling to simulate radiographs
+from a CT image array. Voxels are assumed to have intensities in HU. A
+simplisitic conversion from CT number (in HU) to relative electron density (see
+note below) is performed for marched rays.
+
+### Notes
+
+- Images must be rectilinear.
+
+- This operation currently takes a simplistic approach and should only be used
+  for purposes where the simulated radiograph contrast can be tuned and
+  validated (e.g., in a relative way).
+
+- This operation assumes mass density (in g/cm^3^) and relative electron density
+  (dimensionless; relative to electron density of water, which is $3.343E23$
+  cm^3^) are numerically equivalent. This assumption appears to be reasonable
+  for bulk human tissue (arXiv:1508.00226v1).
+
+### Parameters
+
+- ImageSelection
+- Filename
+- MarchingDistance
+- SourcePosition
+- AttenuationScale
+- Rows
+- Columns
+
+#### ImageSelection
+
+##### Description
+
+Select one or more image arrays. Note that image arrays can hold anything, but
+will typically represent a single contiguous 3D volume (i.e., a volumetric CT
+scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of two types: positional
+or metadata-based key@value regex. Positional specifiers can be 'first', 'last',
+'none', or 'all' literals. Additionally '#N' for some positive integer N selects
+the Nth image array (with zero-based indexing). Likewise, '#-N' selects the
+Nth-from-last image array. Positional specifiers can be inverted by prefixing
+with a '!'. Metadata-based key@value expressions are applied by matching the
+keys verbatim and the values with regex. In order to invert metadata-based
+selectors, the regex logic must be inverted (i.e., you can *not* prefix
+metadata-based selectors with a '!'). Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified. Both
+positional and metadata-based criteria can be mixed together. Note regexes are
+case insensitive and should use extended POSIX syntax.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+
+#### Filename
+
+##### Description
+
+The filename (or full path) to which the simulated image will be saved to. The
+format is FITS. Leaving empty will result in a unique name being generated.
+
+##### Default
+
+- ```""```
+
+##### Examples
+
+- ```""```
+- ```"./img.fits"```
+- ```"sim_radiograph.fits"```
+- ```"/tmp/out.fits"```
+
+#### MarchingDistance
+
+##### Description
+
+The distance (in DICOM units; mm) that rays will incrementally be marched at
+each iteration. This value should be on the order of the smallest image voxel
+size to give the best image quality. Conversely, if a course radiograph is
+needed then larger values can be used. Trilinear interpolation is used to sample
+the CT number at arbitrary points in 3D. Note that the CT numbers between sample
+points are ignored, so tissue heterogeneities and features smaller than the
+marching distance are not likely to show up in the image.
+
+##### Default
+
+- ```"0.5"```
+
+##### Examples
+
+- ```"0.25"```
+- ```"0.5"```
+- ```"1.0"```
+
+#### SourcePosition
+
+##### Description
+
+This parameter controls where the virtual point source is. Both absolute and
+relative positioning are available. A source located at point (1.0, -2.3, 4.5)
+in the DICOM coordinate system of a given image can be specified as
+'absolute(1.0, -2.3, 4.5)'. A source located relative to the image centre by
+offset (10.0, -23.4, 45.6) in the DICOM coordinate system of a given image can
+be specified as 'relative(10.0, -23.4, 45.6)'. Relative offsets must be
+specified relative to the image centre. Note that DICOM units (i.e., mm) are
+used for all coordinates.
+
+##### Default
+
+- ```"relative(0.0, 1000.0, 20.0)"```
+
+##### Examples
+
+- ```"relative(0.0, 1610.0, 20.0)"```
+- ```"absolute(-123.0, 123.0, 1.23)"```
+
+#### AttenuationScale
+
+##### Description
+
+This parameter globally scales all attenuation factors derived via ray marching.
+Adjusting this parameter will alter the radiograph image contrast; numbers
+within (0:1) will result in less attenuation, whereas numbers within (1:inf]
+will result in more attenuation. Thin or low-mass subjects might require
+artifically increased attenuation, whereas thick or high-mass subjects might
+require artifically decreased attenuation. Setting this number to 1 will result
+in no scaling.
+
+##### Default
+
+- ```"1.0"```
+
+##### Examples
+
+- ```"0.01"```
+- ```"0.1"```
+- ```"1.0"```
+- ```"10.0"```
+- ```"1E2"```
+
+#### Rows
+
+##### Description
+
+The number of rows that the simulated radiograph will contain. Note that the
+field of view is determined separately from the number of rows and columns, so
+increasing the row count will only result in increased spatial resolution.
+
+##### Default
+
+- ```"512"```
+
+##### Examples
+
+- ```"100"```
+- ```"500"```
+- ```"2000"```
+
+#### Columns
+
+##### Description
+
+The number of columns that the simulated radiograph will contain. Note that the
+field of view is determined separately from the number of rows and columns, so
+increasing the column count will only result in increased spatial resolution.
+
+##### Default
+
+- ```"512"```
+
+##### Examples
+
+- ```"100"```
+- ```"500"```
+- ```"2000"```
+
+
 ## SpatialBlur
 
 ### Description
@@ -9403,8 +14983,11 @@ specified estimator.
 
 ##### Description
 
-Select image arrays to operate on. Specifiers can be of two types: positional or
-metadata-based key@value regex. Positional specifiers can be 'first', 'last',
+Select one or more image arrays. Note that image arrays can hold anything, but
+will typically represent a single contiguous 3D volume (i.e., a volumetric CT
+scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of two types: positional
+or metadata-based key@value regex. Positional specifiers can be 'first', 'last',
 'none', or 'all' literals. Additionally '#N' for some positive integer N selects
 the Nth image array (with zero-based indexing). Likewise, '#-N' selects the
 Nth-from-last image array. Positional specifiers can be inverted by prefixing
@@ -9413,10 +14996,8 @@ keys verbatim and the values with regex. In order to invert metadata-based
 selectors, the regex logic must be inverted (i.e., you can *not* prefix
 metadata-based selectors with a '!'). Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified. Both
-positional and metadata-based criteria can be mixed together. Note that image
-arrays can hold anything, but will typically represent a single contiguous 3D
-volume (i.e., a volumetric CT scan) or '4D' time-series. Note regexes are case
-insensitive and should use extended POSIX syntax.
+positional and metadata-based criteria can be mixed together. Note regexes are
+case insensitive and should use extended POSIX syntax.
 
 ##### Default
 
@@ -9487,8 +15068,8 @@ the pixel neighbourhoods quickly grow large.
 
 ### Description
 
-This operation estimates various partial derivatives (of pixel values) within an
-image.
+This operation estimates various partial derivatives (of pixel values) within 2D
+images.
 
 ### Parameters
 
@@ -9500,8 +15081,11 @@ image.
 
 ##### Description
 
-Select image arrays to operate on. Specifiers can be of two types: positional or
-metadata-based key@value regex. Positional specifiers can be 'first', 'last',
+Select one or more image arrays. Note that image arrays can hold anything, but
+will typically represent a single contiguous 3D volume (i.e., a volumetric CT
+scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of two types: positional
+or metadata-based key@value regex. Positional specifiers can be 'first', 'last',
 'none', or 'all' literals. Additionally '#N' for some positive integer N selects
 the Nth image array (with zero-based indexing). Likewise, '#-N' selects the
 Nth-from-last image array. Positional specifiers can be inverted by prefixing
@@ -9510,10 +15094,8 @@ keys verbatim and the values with regex. In order to invert metadata-based
 selectors, the regex logic must be inverted (i.e., you can *not* prefix
 metadata-based selectors with a '!'). Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified. Both
-positional and metadata-based criteria can be mixed together. Note that image
-arrays can hold anything, but will typically represent a single contiguous 3D
-volume (i.e., a volumetric CT scan) or '4D' time-series. Note regexes are case
-insensitive and should use extended POSIX syntax.
+positional and metadata-based criteria can be mixed together. Note regexes are
+case insensitive and should use extended POSIX syntax.
 
 ##### Default
 
@@ -9602,8 +15184,11 @@ specified estimator.
 
 ##### Description
 
-Select image arrays to operate on. Specifiers can be of two types: positional or
-metadata-based key@value regex. Positional specifiers can be 'first', 'last',
+Select one or more image arrays. Note that image arrays can hold anything, but
+will typically represent a single contiguous 3D volume (i.e., a volumetric CT
+scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of two types: positional
+or metadata-based key@value regex. Positional specifiers can be 'first', 'last',
 'none', or 'all' literals. Additionally '#N' for some positive integer N selects
 the Nth image array (with zero-based indexing). Likewise, '#-N' selects the
 Nth-from-last image array. Positional specifiers can be inverted by prefixing
@@ -9612,10 +15197,8 @@ keys verbatim and the values with regex. In order to invert metadata-based
 selectors, the regex logic must be inverted (i.e., you can *not* prefix
 metadata-based selectors with a '!'). Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified. Both
-positional and metadata-based criteria can be mixed together. Note that image
-arrays can hold anything, but will typically represent a single contiguous 3D
-volume (i.e., a volumetric CT scan) or '4D' time-series. Note regexes are case
-insensitive and should use extended POSIX syntax.
+positional and metadata-based criteria can be mixed together. Note regexes are
+case insensitive and should use extended POSIX syntax.
 
 ##### Default
 
@@ -9650,6 +15233,76 @@ estimator.
 
 - ```"sharpen_3x3"```
 - ```"unsharp_mask_5x5"```
+
+
+## SubdivideSurfaceMeshes
+
+### Description
+
+This operation subdivides existing surface meshes according to the specified
+criteria, replacing the original meshes with subdivided copies.
+
+### Notes
+
+- Selected surface meshes should represent polyhedra.
+
+### Parameters
+
+- MeshSelection
+- Iterations
+
+#### MeshSelection
+
+##### Description
+
+Select one or more surface meshes. Note that a single surface mesh may hold many
+disconnected mesh components; they should collectively represent a single
+logically cohesive object. Be aware that it is possible to mix logically
+unrelated sub-meshes together in a single mesh. Selection specifiers can be of
+two types: positional or metadata-based key@value regex. Positional specifiers
+can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some
+positive integer N selects the Nth surface mesh (with zero-based indexing).
+Likewise, '#-N' selects the Nth-from-last surface mesh. Positional specifiers
+can be inverted by prefixing with a '!'. Metadata-based key@value expressions
+are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can
+*not* prefix metadata-based selectors with a '!'). Multiple criteria can be
+specified by separating them with a ';' and are applied in the order specified.
+Both positional and metadata-based criteria can be mixed together. Note regexes
+are case insensitive and should use extended POSIX syntax.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+
+#### Iterations
+
+##### Description
+
+The number of times subdivision should be performed.
+
+##### Default
+
+- ```"2"```
+
+##### Examples
+
+- ```"1"```
+- ```"2"```
+- ```"5"```
 
 
 ## Subsegment_ComputeDose_VanLuijk
@@ -9984,33 +15637,93 @@ This routine subtracts images that spatially overlap.
 
 ### Notes
 
-- This operation currently performs a subtraction necessarily using the first
-  image volume.
+- The ReferenceImageSelection is subtracted from the ImageSelection and the
+  result is stored in ImageSelection. So this operation implements $A = A - B$
+  where A is ImageSelection and B is ReferenceImageSelection. The
+  ReferenceImageSelection images are not altered.
 
-- This operation is currently extremely limited in that the selected images must
-  be selected by position. A more flexible approach will be eventually be
-  implemented when the image selection mechanism is overhauled.
+- Multiple image volumes can be selected by both ImageSelection and
+  ReferenceImageSelection. For each ImageSelection volume, each of the
+  ReferenceImageSelection volumes are subtracted sequentially.
 
 ### Parameters
 
 - ImageSelection
+- ReferenceImageSelection
 
 #### ImageSelection
 
 ##### Description
 
-Images to operate on. Either 'none', 'last', 'first', or 'all'.
+Select one or more image arrays. Note that image arrays can hold anything, but
+will typically represent a single contiguous 3D volume (i.e., a volumetric CT
+scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of two types: positional
+or metadata-based key@value regex. Positional specifiers can be 'first', 'last',
+'none', or 'all' literals. Additionally '#N' for some positive integer N selects
+the Nth image array (with zero-based indexing). Likewise, '#-N' selects the
+Nth-from-last image array. Positional specifiers can be inverted by prefixing
+with a '!'. Metadata-based key@value expressions are applied by matching the
+keys verbatim and the values with regex. In order to invert metadata-based
+selectors, the regex logic must be inverted (i.e., you can *not* prefix
+metadata-based selectors with a '!'). Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified. Both
+positional and metadata-based criteria can be mixed together. Note regexes are
+case insensitive and should use extended POSIX syntax.
 
 ##### Default
 
-- ```"all"```
+- ```"last"```
 
 ##### Examples
 
-- ```"none"```
 - ```"last"```
 - ```"first"```
 - ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+
+#### ReferenceImageSelection
+
+##### Description
+
+Select one or more image arrays. Note that image arrays can hold anything, but
+will typically represent a single contiguous 3D volume (i.e., a volumetric CT
+scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of two types: positional
+or metadata-based key@value regex. Positional specifiers can be 'first', 'last',
+'none', or 'all' literals. Additionally '#N' for some positive integer N selects
+the Nth image array (with zero-based indexing). Likewise, '#-N' selects the
+Nth-from-last image array. Positional specifiers can be inverted by prefixing
+with a '!'. Metadata-based key@value expressions are applied by matching the
+keys verbatim and the values with regex. In order to invert metadata-based
+selectors, the regex logic must be inverted (i.e., you can *not* prefix
+metadata-based selectors with a '!'). Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified. Both
+positional and metadata-based criteria can be mixed together. Note regexes are
+case insensitive and should use extended POSIX syntax.
+
+##### Default
+
+- ```"!last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
 
 
 ## SupersampleImageGrid
@@ -10030,53 +15743,21 @@ of voxels are within small contours.
 
 ### Parameters
 
-- ColumnScaleFactor
-- DoseImageSelection
 - ImageSelection
 - RowScaleFactor
+- ColumnScaleFactor
+- SliceScaleFactor
 - SamplingMethod
-
-#### ColumnScaleFactor
-
-##### Description
-
-A positive integer specifying how many columns will be in the new images. The
-number is relative to the incoming image column count. Specifying '1' will
-result in nothing happening. Specifying '8' will result in 8x as many columns.
-
-##### Default
-
-- ```"2"```
-
-##### Examples
-
-- ```"1"```
-- ```"2"```
-- ```"3"```
-- ```"8"```
-
-#### DoseImageSelection
-
-##### Description
-
-Dose images to operate on. Either 'none', 'last', or 'all'.
-
-##### Default
-
-- ```"none"```
-
-##### Examples
-
-- ```"none"```
-- ```"last"```
-- ```"all"```
 
 #### ImageSelection
 
 ##### Description
 
-Select image arrays to operate on. Specifiers can be of two types: positional or
-metadata-based key@value regex. Positional specifiers can be 'first', 'last',
+Select one or more image arrays. Note that image arrays can hold anything, but
+will typically represent a single contiguous 3D volume (i.e., a volumetric CT
+scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of two types: positional
+or metadata-based key@value regex. Positional specifiers can be 'first', 'last',
 'none', or 'all' literals. Additionally '#N' for some positive integer N selects
 the Nth image array (with zero-based indexing). Likewise, '#-N' selects the
 Nth-from-last image array. Positional specifiers can be inverted by prefixing
@@ -10085,10 +15766,8 @@ keys verbatim and the values with regex. In order to invert metadata-based
 selectors, the regex logic must be inverted (i.e., you can *not* prefix
 metadata-based selectors with a '!'). Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified. Both
-positional and metadata-based criteria can be mixed together. Note that image
-arrays can hold anything, but will typically represent a single contiguous 3D
-volume (i.e., a volumetric CT scan) or '4D' time-series. Note regexes are case
-insensitive and should use extended POSIX syntax.
+positional and metadata-based criteria can be mixed together. Note regexes are
+case insensitive and should use extended POSIX syntax.
 
 ##### Default
 
@@ -10126,22 +15805,65 @@ in nothing happening. Specifying '8' will result in 8x as many rows.
 - ```"3"```
 - ```"8"```
 
+#### ColumnScaleFactor
+
+##### Description
+
+A positive integer specifying how many columns will be in the new images. The
+number is relative to the incoming image column count. Specifying '1' will
+result in nothing happening. Specifying '8' will result in 8x as many columns.
+
+##### Default
+
+- ```"2"```
+
+##### Examples
+
+- ```"1"```
+- ```"2"```
+- ```"3"```
+- ```"8"```
+
+#### SliceScaleFactor
+
+##### Description
+
+A positive integer specifying how many image slices will be in the new images.
+The number is relative to the incoming image slice count. Specifying '1' will
+result in nothing happening. Specifying '8' will result in 8x as many slices.
+Note that slice supersampling always happens *after* in-plane supersampling.
+Also note that merely setting this factor will not enable 3D supersampling; you
+also need to specify a 3D-aware SamplingMethod.
+
+##### Default
+
+- ```"2"```
+
+##### Examples
+
+- ```"1"```
+- ```"2"```
+- ```"3"```
+- ```"8"```
+
 #### SamplingMethod
 
 ##### Description
 
 The supersampling method to use. Note: 'inplane-' methods only consider
 neighbours in the plane of a single image -- neighbours in adjacent images are
-not considered.
+not considered and the supersampled image will contain the same number of image
+slices as the inputs.
 
 ##### Default
 
-- ```"inplane-bicubic"```
+- ```"inplane-bilinear"```
 
 ##### Examples
 
 - ```"inplane-bicubic"```
 - ```"inplane-bilinear"```
+- ```"trilinear"```
 
 
 ## SurfaceBasedRayCastDoseAccumulate
@@ -10164,11 +15886,15 @@ through over/through the geometry.
 ### Parameters
 
 - TotalDoseMapFileName
+- RefCroppedTotalDoseMapFileName
 - IntersectionCountMapFileName
 - DepthMapFileName
 - RadialDistMapFileName
+- RefIntersectionCountMapFileName
 - ROISurfaceMeshFileName
 - SubdividedROISurfaceMeshFileName
+- RefSurfaceMeshFileName
+- SubdividedRefSurfaceMeshFileName
 - ROICOMCOMLineFileName
 - NormalizedReferenceROILabelRegex
 - NormalizedROILabelRegex
@@ -10176,9 +15902,6 @@ through over/through the geometry.
 - ROILabelRegex
 - SourceDetectorRows
 - SourceDetectorColumns
-- MeshingAngularBound
-- MeshingFacetSphereRadiusBound
-- MeshingCentreCentreBound
 - MeshingSubdivisionIterations
 - MaxRaySurfaceIntersections
 - OnlyGenerateSurface
@@ -10190,6 +15913,26 @@ through over/through the geometry.
 A filename (or full path) for the total dose image map (at all ray-surface
 intersection points). The dose for each ray is summed over all ray-surface point
 intersections. The format is FITS. This file is always generated. Leave the
+argument empty to generate a unique filename.
+
+##### Default
+
+- ```""```
+
+##### Examples
+
+- ```""```
+- ```"total_dose_map.fits"```
+- ```"/tmp/out.fits"```
+
+#### RefCroppedTotalDoseMapFileName
+
+##### Description
+
+A filename (or full path) for the total dose image map (at all ray-surface
+intersection points). The dose for each ray is summed over all ray-surface point
+intersections. Doses in this map are only registered when the ray intersects the
+reference ROI mesh. The format is FITS. This file is always generated. Leave the
 argument empty to generate a unique filename.
 
 ##### Default
@@ -10266,6 +16009,29 @@ empty will result in no file being written.
 - ```"radial_dist_map.fits"```
 - ```"/tmp/out.fits"```
 
+#### RefIntersectionCountMapFileName
+
+##### Description
+
+A filename (or full path) for the (number of ray-surface intersections) for the
+reference ROIs. Each pixel in this map (and the total dose map) represents a
+single ray; the number of times the ray intersects the surface can be useful for
+various purposes, but most often it will simply be a sanity check for the
+cross-sectional shape or that a specific number of intersections were recorded
+in regions with geometrical folds. Note: currently, the number of intersections
+is limited to 0 or 1! The format is FITS. Leave empty to dump to generate a
+unique filename.
+
+##### Default
+
+- ```""```
+
+##### Examples
+
+- ```""```
+- ```"ref_roi_intersection_count_map.fits"```
+- ```"/tmp/out.fits"```
+
 #### ROISurfaceMeshFileName
 
 ##### Description
@@ -10293,6 +16059,44 @@ A filename (or full path) for the Loop-subdivided surface mesh that is
 contructed from the ROI contours. The format is OFF. This file is mostly useful
 for inspection of the surface or comparison with contours. Leaving empty will
 result in no file being written.
+
+##### Default
+
+- ```""```
+
+##### Examples
+
+- ```""```
+- ```"/tmp/subdivided_roi_surface_mesh.off"```
+- ```"subdivided_roi_surface_mesh.off"```
+
+#### RefSurfaceMeshFileName
+
+##### Description
+
+A filename (or full path) for the (pre-subdivided) surface mesh that is
+contructed from the reference ROI contours. The format is OFF. This file is
+mostly useful for inspection of the surface or comparison with contours. Leaving
+empty will result in no file being written.
+
+##### Default
+
+- ```""```
+
+##### Examples
+
+- ```""```
+- ```"/tmp/roi_surface_mesh.off"```
+- ```"roi_surface_mesh.off"```
+
+#### SubdividedRefSurfaceMeshFileName
+
+##### Description
+
+A filename (or full path) for the Loop-subdivided surface mesh that is
+contructed from the reference ROI contours. The format is OFF. This file is
+mostly useful for inspection of the surface or comparison with contours. Leaving
+empty will result in no file being written.
 
 ##### Default
 
@@ -10447,75 +16251,6 @@ dose grid is futile.
 - ```"1024"```
 - ```"4096"```
 
-#### MeshingAngularBound
-
-##### Description
-
-The minimum internal angle each triangle facet must have in the surface mesh (in
-degrees). The computation may become unstable if an angle larger than 30 degree
-is specified. Note that for intersection purposes triangles with small angles
-isn't a big deal. Rather, having a large minimal angle can constrain the surface
-in strange ways. Consult the CGAL '3D Surface Mesh Generation' package
-documentation for additional info.
-
-##### Default
-
-- ```"1.0"```
-
-##### Examples
-
-- ```"1.0"```
-- ```"10.0"```
-- ```"25.0"```
-- ```"30.0"```
-
-#### MeshingFacetSphereRadiusBound
-
-##### Description
-
-The maximum radius of facet-bounding spheres, which are centred on each facet
-(one per facet) and grown as large as possible without enclosing any facet
-vertices. In a nutshell, this controls the maximum individual facet size. Units
-are in DICOM space. Setting too low will cause triangulation to be slow and many
-facets; it is recommended instead to rely on subdivision to create a smooth
-surface approximation. Consult the CGAL '3D Surface Mesh Generation' package
-documentation for additional info.
-
-##### Default
-
-- ```"5.0"```
-
-##### Examples
-
-- ```"1.0"```
-- ```"2.0"```
-- ```"5.0"```
-
-#### MeshingCentreCentreBound
-
-##### Description
-
-The maximum facet centre-centre distance between facet circumcentres and
-facet-bounding spheres, which are centred on each facet (one per facet) and
-grown as large as possible without enclosing any facet vertices. In a nutshell,
-this controls the trade-off between minimizing deviation from the (implicit) ROI
-contour-derived surface and having smooth connectivity between facets. Units are
-in DICOM space. Setting too low will cause triangulation to be slow and many
-facets; it is recommended instead to rely on subdivision to create a smooth
-surface approximation. Consult the CGAL '3D Surface Mesh Generation' package
-documentation for additional info.
-
-##### Default
-
-- ```"5.0"```
-
-##### Examples
-
-- ```"1.0"```
-- ```"2.0"```
-- ```"5.0"```
-- ```"10.0"```
-
 #### MeshingSubdivisionIterations
 
 ##### Description
@@ -10584,13 +16319,19 @@ option is primarily used for debugging and visualization.
 
 ### Description
 
-This operation applies thresholds to images.
+This operation applies thresholds to images. Both upper and lower thresholds can
+be specified.
 
 ### Notes
 
 - This routine operates on individual images. When thresholds are specified on a
   percentile basis, each image is considered separately and therefore each image
   may be thresholded with different values.
+
+- Both thresholds are inclusive. To binarize an image, use the same threshold
+  for both upper and lower threshold parameters. Voxels that fall on the
+  threshold will currently be treated as if they exclusively satisfy the upper
+  threshold, but this behaviour is not guaranteed.
 
 ### Parameters
 
@@ -10703,8 +16444,11 @@ The image channel to use. Zero-based.
 
 ##### Description
 
-Select image arrays to operate on. Specifiers can be of two types: positional or
-metadata-based key@value regex. Positional specifiers can be 'first', 'last',
+Select one or more image arrays. Note that image arrays can hold anything, but
+will typically represent a single contiguous 3D volume (i.e., a volumetric CT
+scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of two types: positional
+or metadata-based key@value regex. Positional specifiers can be 'first', 'last',
 'none', or 'all' literals. Additionally '#N' for some positive integer N selects
 the Nth image array (with zero-based indexing). Likewise, '#-N' selects the
 Nth-from-last image array. Positional specifiers can be inverted by prefixing
@@ -10713,10 +16457,8 @@ keys verbatim and the values with regex. In order to invert metadata-based
 selectors, the regex logic must be inverted (i.e., you can *not* prefix
 metadata-based selectors with a '!'). Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified. Both
-positional and metadata-based criteria can be mixed together. Note that image
-arrays can hold anything, but will typically represent a single contiguous 3D
-volume (i.e., a volumetric CT scan) or '4D' time-series. Note regexes are case
-insensitive and should use extended POSIX syntax.
+positional and metadata-based criteria can be mixed together. Note regexes are
+case insensitive and should use extended POSIX syntax.
 
 ##### Default
 
@@ -10734,6 +16476,353 @@ insensitive and should use extended POSIX syntax.
 - ```"!#-3"```
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
+
+
+## ThresholdOtsu
+
+### Description
+
+This routine performs Otsu thresholding (i.e., 'binarization') on an image
+volume. The thresholding is limited within ROI(s). Otsu thresholding works best
+on images with a well-defined bimodal voxel intensity histogram. It works by
+finding the threshold that partitions the voxel intensity histogram into two
+parts, essentially so that the sum of each partition's variance is minimal. The
+number of histogram bins (i.e., number of distinct voxel magnitude levels) is
+configurable. Voxels are binarized; the replacement values are also
+configurable.
+
+### Notes
+
+- The Otsu method will not necessarily cleanly separate bimodal peaks in the
+  voxel intensity histogram.
+
+### Parameters
+
+- ImageSelection
+- HistogramBins
+- ReplacementLow
+- ReplacementHigh
+- OverwriteVoxels
+- Channel
+- NormalizedROILabelRegex
+- ROILabelRegex
+- ContourOverlap
+- Inclusivity
+
+#### ImageSelection
+
+##### Description
+
+Select one or more image arrays. Note that image arrays can hold anything, but
+will typically represent a single contiguous 3D volume (i.e., a volumetric CT
+scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of two types: positional
+or metadata-based key@value regex. Positional specifiers can be 'first', 'last',
+'none', or 'all' literals. Additionally '#N' for some positive integer N selects
+the Nth image array (with zero-based indexing). Likewise, '#-N' selects the
+Nth-from-last image array. Positional specifiers can be inverted by prefixing
+with a '!'. Metadata-based key@value expressions are applied by matching the
+keys verbatim and the values with regex. In order to invert metadata-based
+selectors, the regex logic must be inverted (i.e., you can *not* prefix
+metadata-based selectors with a '!'). Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified. Both
+positional and metadata-based criteria can be mixed together. Note regexes are
+case insensitive and should use extended POSIX syntax.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+
+#### HistogramBins
+
+##### Description
+
+The number of equal-width bins the histogram should have. Classically, images
+were 8-bit integer-valued and thus 255 bins were commonly used. However, because
+floating-point numbers are used practically any number of bins are supported.
+What is optimal (or acceptable) depends on the analytical requirements. If the
+threshold does not have to be exact, try use the smallest number of bins you can
+get away with; 50-150 should suffice. This will speed up computation. If the
+threshold is being used for analytical purposes, use as many bins as the data
+can support -- if the voxel values span only 8-bit integers, having more than
+255 bins will not improve the analysis. Likewise if voxels are discretized or
+sparse. Experiment by gradually increasing the number of bins until the
+threshold value converges to a reasonable number, and then use that number of
+bins for future analysis.
+
+##### Default
+
+- ```"255"```
+
+##### Examples
+
+- ```"10"```
+- ```"50"```
+- ```"100"```
+- ```"200"```
+- ```"500"```
+
+#### ReplacementLow
+
+##### Description
+
+The value to give voxels which are below (exclusive) the Otsu threshold value.
+
+##### Default
+
+- ```"0.0"```
+
+##### Examples
+
+- ```"-1.0"```
+- ```"0.0"```
+- ```"1.23"```
+- ```"nan"```
+- ```"inf"```
+
+#### ReplacementHigh
+
+##### Description
+
+The value to give voxels which are above (inclusive) the Otsu threshold value.
+
+##### Default
+
+- ```"1.0"```
+
+##### Examples
+
+- ```"-1.0"```
+- ```"0.0"```
+- ```"1.23"```
+- ```"nan"```
+- ```"inf"```
+
+#### OverwriteVoxels
+
+##### Description
+
+Controls whether voxels should actually be binarized or not. Whether or not
+voxel intensities are overwritten, the Otsu threshold value is written into the
+image metadata as 'OtsuThreshold' in case further processing is needed.
+
+##### Default
+
+- ```"true"```
+
+##### Examples
+
+- ```"true"```
+- ```"false"```
+
+#### Channel
+
+##### Description
+
+The image channel to use. Zero-based.
+
+##### Default
+
+- ```"0"```
+
+##### Examples
+
+- ```"0"```
+- ```"1"```
+- ```"2"```
+
+#### NormalizedROILabelRegex
+
+##### Description
+
+A regex matching ROI labels/names to consider. The default will match all
+available ROIs. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regex to avoid them. All
+ROIs have to match the single regex, so use the 'or' token if needed. Regex is
+case insensitive and uses extended POSIX syntax.
+
+##### Default
+
+- ```".*"```
+
+##### Examples
+
+- ```".*"```
+- ```".*Body.*"```
+- ```"Body"```
+- ```"Gross_Liver"```
+- ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
+- ```"Left Parotid|Right Parotid"```
+
+#### ROILabelRegex
+
+##### Description
+
+A regex matching ROI labels/names to consider. The default will match all
+available ROIs. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regex to avoid them. All
+ROIs have to match the single regex, so use the 'or' token if needed. Regex is
+case insensitive and uses extended POSIX syntax.
+
+##### Default
+
+- ```".*"```
+
+##### Examples
+
+- ```".*"```
+- ```".*body.*"```
+- ```"body"```
+- ```"Gross_Liver"```
+- ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
+- ```"left_parotid|right_parotid"```
+
+#### ContourOverlap
+
+##### Description
+
+Controls overlapping contours are treated. The default 'ignore' treats
+overlapping contours as a single contour, regardless of contour orientation. The
+option 'honour_opposite_orientations' makes overlapping contours with opposite
+orientation cancel. Otherwise, orientation is ignored. The latter is useful for
+Boolean structures where contour orientation is significant for interior
+contours (holes). The option 'overlapping_contours_cancel' ignores orientation
+and cancels all contour overlap.
+
+##### Default
+
+- ```"ignore"```
+
+##### Examples
+
+- ```"ignore"```
+- ```"honour_opposite_orientations"```
+- ```"overlapping_contours_cancel"```
+- ```"honour_opps"```
+- ```"overlap_cancel"```
+
+#### Inclusivity
+
+##### Description
+
+Controls how voxels are deemed to be 'within' the interior of the selected
+ROI(s). The default 'center' considers only the central-most point of each
+voxel. There are two corner options that correspond to a 2D projection of the
+voxel onto the image plane. The first, 'planar_corner_inclusive', considers a
+voxel interior if ANY corner is interior. The second, 'planar_corner_exclusive',
+considers a voxel interior if ALL (four) corners are interior.
+
+##### Default
+
+- ```"center"```
+
+##### Examples
+
+- ```"center"```
+- ```"centre"```
+- ```"planar_corner_inclusive"```
+- ```"planar_inc"```
+- ```"planar_corner_exclusive"```
+- ```"planar_exc"```
+
+
+## TransformMeshes
+
+### Description
+
+This operation transforms meshes by translating, scaling, and rotating vertices.
+
+### Notes
+
+- A single transformation can be specified at a time. Perform this operation
+  sequentially to enforce order.
+
+### Parameters
+
+- MeshSelection
+- Transform
+
+#### MeshSelection
+
+##### Description
+
+Select one or more surface meshes. Note that a single surface mesh may hold many
+disconnected mesh components; they should collectively represent a single
+logically cohesive object. Be aware that it is possible to mix logically
+unrelated sub-meshes together in a single mesh. Selection specifiers can be of
+two types: positional or metadata-based key@value regex. Positional specifiers
+can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some
+positive integer N selects the Nth surface mesh (with zero-based indexing).
+Likewise, '#-N' selects the Nth-from-last surface mesh. Positional specifiers
+can be inverted by prefixing with a '!'. Metadata-based key@value expressions
+are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can
+*not* prefix metadata-based selectors with a '!'). Multiple criteria can be
+specified by separating them with a ';' and are applied in the order specified.
+Both positional and metadata-based criteria can be mixed together. Note regexes
+are case insensitive and should use extended POSIX syntax.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+
+#### Transform
+
+##### Description
+
+This parameter is used to specify the transformation that should be performed. A
+single transformation can be specified for each invocation of this operation.
+Currently translation, scaling, and rotation are available. Translations have
+three configurable scalar parameters denoting the translation along x, y, and z
+in the DICOM coordinate system. Translating $x=1.0$, $y=-2.0$, and $z=0.3$ can
+be specified as 'translate(1.0, -2.0, 0.3)'. The scale transformation has four
+configurable scalar parameters denoting the scale centre 3-vector and the
+magnification factor. Note that the magnification factor can be negative, which
+will cause the mesh to be inverted along x, y, and z axes and magnified. Take
+note that face orientations will also become inverted. Magnifying by 2.7x about
+$(1.23, -2.34, 3.45)$ can be specified as 'scale(1.23, -2.34, 3.45, 2.7)'.
+Rotations around an arbitrary axis line can be accomplished. The rotation
+transformation has seven configurable scalar parameters denoting the rotation
+centre 3-vector, the rotation axis 3-vector, and the rotation angle in radians.
+A rotation of pi radians around the axis line parallel to vector $(1.0, 0.0,
+0.0)$ that intersects the point $(4.0, 5.0, 6.0)$ can be specified as
+'rotate(4.0, 5.0, 6.0, 1.0, 0.0, 0.0, 3.141592653)'.
+
+##### Default
+
+- ```"translate(0.0, 0.0, 0.0)"```
+
+##### Examples
+
+- ```"translate(1.0, -2.0, 0.3)"```
+- ```"scale(1.23, -2.34, 3.45, 2.7)"```
+- ```"rotate(4.0, 5.0, 6.0,  1.0, 0.0, 0.0,  3.141592653)"```
 
 
 ## TrimROIDose
@@ -10793,8 +16882,11 @@ channels.
 
 ##### Description
 
-Select image arrays to operate on. Specifiers can be of two types: positional or
-metadata-based key@value regex. Positional specifiers can be 'first', 'last',
+Select one or more image arrays. Note that image arrays can hold anything, but
+will typically represent a single contiguous 3D volume (i.e., a volumetric CT
+scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of two types: positional
+or metadata-based key@value regex. Positional specifiers can be 'first', 'last',
 'none', or 'all' literals. Additionally '#N' for some positive integer N selects
 the Nth image array (with zero-based indexing). Likewise, '#-N' selects the
 Nth-from-last image array. Positional specifiers can be inverted by prefixing
@@ -10803,10 +16895,8 @@ keys verbatim and the values with regex. In order to invert metadata-based
 selectors, the regex logic must be inverted (i.e., you can *not* prefix
 metadata-based selectors with a '!'). Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified. Both
-positional and metadata-based criteria can be mixed together. Note that image
-arrays can hold anything, but will typically represent a single contiguous 3D
-volume (i.e., a volumetric CT scan) or '4D' time-series. Note regexes are case
-insensitive and should use extended POSIX syntax.
+positional and metadata-based criteria can be mixed together. Note regexes are
+case insensitive and should use extended POSIX syntax.
 
 ##### Default
 
@@ -11074,6 +17164,684 @@ ADC maps.
 ### Parameters
 
 No registered options.
+
+## VolumetricCorrelationDetector
+
+### Description
+
+This operation can assess 3D correlations by sampling the neighbourhood
+surrounding each voxel and assigning a similarity score. This routine is useful
+for detecting repetitive (regular) patterns that are known in advance.
+
+### Notes
+
+- The provided image collection must be rectilinear.
+
+- At the moment this routine can only be modified via recompilation.
+
+### Parameters
+
+- ImageSelection
+- NormalizedROILabelRegex
+- ROILabelRegex
+- Low
+- High
+- Channel
+
+#### ImageSelection
+
+##### Description
+
+Select one or more image arrays. Note that image arrays can hold anything, but
+will typically represent a single contiguous 3D volume (i.e., a volumetric CT
+scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of two types: positional
+or metadata-based key@value regex. Positional specifiers can be 'first', 'last',
+'none', or 'all' literals. Additionally '#N' for some positive integer N selects
+the Nth image array (with zero-based indexing). Likewise, '#-N' selects the
+Nth-from-last image array. Positional specifiers can be inverted by prefixing
+with a '!'. Metadata-based key@value expressions are applied by matching the
+keys verbatim and the values with regex. In order to invert metadata-based
+selectors, the regex logic must be inverted (i.e., you can *not* prefix
+metadata-based selectors with a '!'). Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified. Both
+positional and metadata-based criteria can be mixed together. Note regexes are
+case insensitive and should use extended POSIX syntax.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+
+#### NormalizedROILabelRegex
+
+##### Description
+
+A regex matching ROI labels/names to consider. The default will match all
+available ROIs. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regex to avoid them. All
+ROIs have to match the single regex, so use the 'or' token if needed. Regex is
+case insensitive and uses extended POSIX syntax.
+
+##### Default
+
+- ```".*"```
+
+##### Examples
+
+- ```".*"```
+- ```".*Body.*"```
+- ```"Body"```
+- ```"Gross_Liver"```
+- ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
+- ```"Left Parotid|Right Parotid"```
+
+#### ROILabelRegex
+
+##### Description
+
+A regex matching ROI labels/names to consider. The default will match all
+available ROIs. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regex to avoid them. All
+ROIs have to match the single regex, so use the 'or' token if needed. Regex is
+case insensitive and uses extended POSIX syntax.
+
+##### Default
+
+- ```".*"```
+
+##### Examples
+
+- ```".*"```
+- ```".*body.*"```
+- ```"body"```
+- ```"Gross_Liver"```
+- ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
+- ```"left_parotid|right_parotid"```
+
+#### Low
+
+##### Description
+
+The low percentile.
+
+##### Default
+
+- ```"0.05"```
+
+##### Examples
+
+- ```"0.05"```
+- ```"0.5"```
+- ```"0.99"```
+
+#### High
+
+##### Description
+
+The high percentile.
+
+##### Default
+
+- ```"0.95"```
+
+##### Examples
+
+- ```"0.95"```
+- ```"0.5"```
+- ```"0.05"```
+
+#### Channel
+
+##### Description
+
+The channel to operated on (zero-based). Negative values will cause all channels
+to be operated on.
+
+##### Default
+
+- ```"-1"```
+
+##### Examples
+
+- ```"-1"```
+- ```"0"```
+- ```"1"```
+
+
+## VolumetricSpatialBlur
+
+### Description
+
+This operation performs blurring of voxel values within 3D rectilinear image
+arrays.
+
+### Notes
+
+- The provided image collection must be rectilinear.
+
+### Parameters
+
+- ImageSelection
+- NormalizedROILabelRegex
+- ROILabelRegex
+- Channel
+- Estimator
+
+#### ImageSelection
+
+##### Description
+
+Select one or more image arrays. Note that image arrays can hold anything, but
+will typically represent a single contiguous 3D volume (i.e., a volumetric CT
+scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of two types: positional
+or metadata-based key@value regex. Positional specifiers can be 'first', 'last',
+'none', or 'all' literals. Additionally '#N' for some positive integer N selects
+the Nth image array (with zero-based indexing). Likewise, '#-N' selects the
+Nth-from-last image array. Positional specifiers can be inverted by prefixing
+with a '!'. Metadata-based key@value expressions are applied by matching the
+keys verbatim and the values with regex. In order to invert metadata-based
+selectors, the regex logic must be inverted (i.e., you can *not* prefix
+metadata-based selectors with a '!'). Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified. Both
+positional and metadata-based criteria can be mixed together. Note regexes are
+case insensitive and should use extended POSIX syntax.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+
+#### NormalizedROILabelRegex
+
+##### Description
+
+A regex matching ROI labels/names to consider. The default will match all
+available ROIs. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regex to avoid them. All
+ROIs have to match the single regex, so use the 'or' token if needed. Regex is
+case insensitive and uses extended POSIX syntax.
+
+##### Default
+
+- ```".*"```
+
+##### Examples
+
+- ```".*"```
+- ```".*Body.*"```
+- ```"Body"```
+- ```"Gross_Liver"```
+- ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
+- ```"Left Parotid|Right Parotid"```
+
+#### ROILabelRegex
+
+##### Description
+
+A regex matching ROI labels/names to consider. The default will match all
+available ROIs. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regex to avoid them. All
+ROIs have to match the single regex, so use the 'or' token if needed. Regex is
+case insensitive and uses extended POSIX syntax.
+
+##### Default
+
+- ```".*"```
+
+##### Examples
+
+- ```".*"```
+- ```".*body.*"```
+- ```"body"```
+- ```"Gross_Liver"```
+- ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
+- ```"left_parotid|right_parotid"```
+
+#### Channel
+
+##### Description
+
+The channel to operated on (zero-based). Negative values will cause all channels
+to be operated on.
+
+##### Default
+
+- ```"-1"```
+
+##### Examples
+
+- ```"-1"```
+- ```"0"```
+- ```"1"```
+
+#### Estimator
+
+##### Description
+
+Controls which type of blur is computed. Currently, 'Gaussian' refers to a fixed
+sigma=1 (in pixel coordinates, not DICOM units) Gaussian blur that extends for
+3*sigma thus providing a 7x7x7 window. Note that applying this kernel N times
+will approximate a Gaussian with sigma=N. Also note that boundary voxels will
+cause accessible voxels within the same window to be more heavily weighted. Try
+avoid boundaries or add extra margins if possible.
+
+##### Default
+
+- ```"Gaussian"```
+
+##### Examples
+
+- ```"Gaussian"```
+
+
+## VolumetricSpatialDerivative
+
+### Description
+
+This operation estimates various spatial partial derivatives (of pixel values)
+within 3D rectilinear image arrays.
+
+### Notes
+
+- The provided image collection must be rectilinear.
+
+### Parameters
+
+- ImageSelection
+- NormalizedROILabelRegex
+- ROILabelRegex
+- Channel
+- Estimator
+- Method
+
+#### ImageSelection
+
+##### Description
+
+Select one or more image arrays. Note that image arrays can hold anything, but
+will typically represent a single contiguous 3D volume (i.e., a volumetric CT
+scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of two types: positional
+or metadata-based key@value regex. Positional specifiers can be 'first', 'last',
+'none', or 'all' literals. Additionally '#N' for some positive integer N selects
+the Nth image array (with zero-based indexing). Likewise, '#-N' selects the
+Nth-from-last image array. Positional specifiers can be inverted by prefixing
+with a '!'. Metadata-based key@value expressions are applied by matching the
+keys verbatim and the values with regex. In order to invert metadata-based
+selectors, the regex logic must be inverted (i.e., you can *not* prefix
+metadata-based selectors with a '!'). Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified. Both
+positional and metadata-based criteria can be mixed together. Note regexes are
+case insensitive and should use extended POSIX syntax.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+
+#### NormalizedROILabelRegex
+
+##### Description
+
+A regex matching ROI labels/names to consider. The default will match all
+available ROIs. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regex to avoid them. All
+ROIs have to match the single regex, so use the 'or' token if needed. Regex is
+case insensitive and uses extended POSIX syntax.
+
+##### Default
+
+- ```".*"```
+
+##### Examples
+
+- ```".*"```
+- ```".*Body.*"```
+- ```"Body"```
+- ```"Gross_Liver"```
+- ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
+- ```"Left Parotid|Right Parotid"```
+
+#### ROILabelRegex
+
+##### Description
+
+A regex matching ROI labels/names to consider. The default will match all
+available ROIs. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regex to avoid them. All
+ROIs have to match the single regex, so use the 'or' token if needed. Regex is
+case insensitive and uses extended POSIX syntax.
+
+##### Default
+
+- ```".*"```
+
+##### Examples
+
+- ```".*"```
+- ```".*body.*"```
+- ```"body"```
+- ```"Gross_Liver"```
+- ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
+- ```"left_parotid|right_parotid"```
+
+#### Channel
+
+##### Description
+
+The channel to operated on (zero-based). Negative values will cause all channels
+to be operated on.
+
+##### Default
+
+- ```"-1"```
+
+##### Examples
+
+- ```"-1"```
+- ```"0"```
+- ```"1"```
+
+#### Estimator
+
+##### Description
+
+Controls the finite-difference partial derivative order or estimator used. All
+estimators are centred and use mirror boundary conditions. First-order
+estimators include the basic nearest-neighbour first derivative and Sobel
+estimators. 'XxYxZ' denotes the size of the convolution kernel (i.e., the number
+of adjacent pixels considered).
+
+##### Default
+
+- ```"Sobel-3x3x3"```
+
+##### Examples
+
+- ```"first"```
+- ```"Sobel-3x3x3"```
+
+#### Method
+
+##### Description
+
+Controls partial derivative method. First-order derivatives can be row-,
+column-, or image-aligned, All methods also support magnitude (addition of
+orthogonal components in quadrature).
+
+##### Default
+
+- ```"magnitude"```
+
+##### Examples
+
+- ```"row-aligned"```
+- ```"column-aligned"```
+- ```"image-aligned"```
+- ```"magnitude"```
+- ```"non-maximum-suppression"```
+
+
+## VoxelRANSAC
+
+### Description
+
+This routine performs RANSAC fitting using voxel positions as inputs. The search
+can be confined within ROIs and a range of voxel intensities.
+
+### Notes
+
+- This operation does not make use of voxel intensities during the RANSAC
+  procedure. Voxel intensities are only used to identify which voxel positions
+  are considered.
+
+### Parameters
+
+- ImageSelection
+- NormalizedROILabelRegex
+- ROILabelRegex
+- ContourOverlap
+- Inclusivity
+- Channel
+- Lower
+- Upper
+- GridSeparation
+
+#### ImageSelection
+
+##### Description
+
+Select one or more image arrays. Note that image arrays can hold anything, but
+will typically represent a single contiguous 3D volume (i.e., a volumetric CT
+scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of two types: positional
+or metadata-based key@value regex. Positional specifiers can be 'first', 'last',
+'none', or 'all' literals. Additionally '#N' for some positive integer N selects
+the Nth image array (with zero-based indexing). Likewise, '#-N' selects the
+Nth-from-last image array. Positional specifiers can be inverted by prefixing
+with a '!'. Metadata-based key@value expressions are applied by matching the
+keys verbatim and the values with regex. In order to invert metadata-based
+selectors, the regex logic must be inverted (i.e., you can *not* prefix
+metadata-based selectors with a '!'). Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified. Both
+positional and metadata-based criteria can be mixed together. Note regexes are
+case insensitive and should use extended POSIX syntax.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+
+#### NormalizedROILabelRegex
+
+##### Description
+
+A regex matching ROI labels/names to consider. The default will match all
+available ROIs. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regex to avoid them. All
+ROIs have to match the single regex, so use the 'or' token if needed. Regex is
+case insensitive and uses extended POSIX syntax.
+
+##### Default
+
+- ```".*"```
+
+##### Examples
+
+- ```".*"```
+- ```".*Body.*"```
+- ```"Body"```
+- ```"Gross_Liver"```
+- ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
+- ```"Left Parotid|Right Parotid"```
+
+#### ROILabelRegex
+
+##### Description
+
+A regex matching ROI labels/names to consider. The default will match all
+available ROIs. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regex to avoid them. All
+ROIs have to match the single regex, so use the 'or' token if needed. Regex is
+case insensitive and uses extended POSIX syntax.
+
+##### Default
+
+- ```".*"```
+
+##### Examples
+
+- ```".*"```
+- ```".*body.*"```
+- ```"body"```
+- ```"Gross_Liver"```
+- ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
+- ```"left_parotid|right_parotid"```
+
+#### ContourOverlap
+
+##### Description
+
+Controls overlapping contours are treated. The default 'ignore' treats
+overlapping contours as a single contour, regardless of contour orientation. The
+option 'honour_opposite_orientations' makes overlapping contours with opposite
+orientation cancel. Otherwise, orientation is ignored. The latter is useful for
+Boolean structures where contour orientation is significant for interior
+contours (holes). The option 'overlapping_contours_cancel' ignores orientation
+and cancels all contour overlap.
+
+##### Default
+
+- ```"ignore"```
+
+##### Examples
+
+- ```"ignore"```
+- ```"honour_opposite_orientations"```
+- ```"overlapping_contours_cancel"```
+- ```"honour_opps"```
+- ```"overlap_cancel"```
+
+#### Inclusivity
+
+##### Description
+
+Controls how voxels are deemed to be 'within' the interior of the selected
+ROI(s). The default 'center' considers only the central-most point of each
+voxel. There are two corner options that correspond to a 2D projection of the
+voxel onto the image plane. The first, 'planar_corner_inclusive', considers a
+voxel interior if ANY corner is interior. The second, 'planar_corner_exclusive',
+considers a voxel interior if ALL (four) corners are interior.
+
+##### Default
+
+- ```"center"```
+
+##### Examples
+
+- ```"center"```
+- ```"centre"```
+- ```"planar_corner_inclusive"```
+- ```"planar_inc"```
+- ```"planar_corner_exclusive"```
+- ```"planar_exc"```
+
+#### Channel
+
+##### Description
+
+The channel to operated on (zero-based). Negative values will cause all channels
+to be operated on.
+
+##### Default
+
+- ```"0"```
+
+##### Examples
+
+- ```"-1"```
+- ```"0"```
+- ```"1"```
+
+#### Lower
+
+##### Description
+
+Lower threshold (inclusive) below which voxels will be ignored by this routine.
+
+##### Default
+
+- ```"-inf"```
+
+##### Examples
+
+- ```"-inf"```
+- ```"0.0"```
+- ```"1024"```
+
+#### Upper
+
+##### Description
+
+Upper threshold (inclusive) above which voxels will be ignored by this routine.
+
+##### Default
+
+- ```"inf"```
+
+##### Examples
+
+- ```"inf"```
+- ```"1.0"```
+- ```"2048"```
+
+#### GridSeparation
+
+##### Description
+
+The known separation of the grid (in DICOM units; mm) being sought.
+
+##### Default
+
+- ```"nan"```
+
+##### Examples
+
+- ```"1.0"```
+- ```"1.5"```
+- ```"10.0"```
+- ```"1.23E4"```
+
 
 # Known Issues and Limitations
 
