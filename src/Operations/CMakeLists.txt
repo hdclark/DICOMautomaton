@@ -96,6 +96,7 @@ add_library(Operations_objs OBJECT
     IsolatedVoxelFilter.cc
     LoadFiles.cc
     LogScale.cc
+    MakeMeshesManifold.cc
     MaxMinPixels.cc
     MeldDose.cc
     MinkowskiSum3D.cc

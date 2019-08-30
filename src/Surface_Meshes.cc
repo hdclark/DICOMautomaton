@@ -1481,6 +1481,80 @@ Polyhedron Estimate_Surface_Mesh_AdvancingFront(
     return Polyhedron();
 }
 
+
+// Convert from fv_surface_mesh to CGAL's Polyhedron class.
+//
+// The former can be non-manifold, but the latter cannot.
+// This routine attempts to correct non-manifoldness. It may not work, but could carry on silently.
+// If it matters, attempt a direct conversion without non-manifold correction.
+Polyhedron
+FVSMeshToPolyhedron(
+        const fv_surface_mesh<double, uint64_t> &in ){
+
+    
+    std::vector<Kernel::Point_3>         triangle_verts;
+    std::vector< std::array<size_t, 3> > triangle_faces;
+
+
+    // Populate the triangle soup.
+    for(const auto &v : in.vertices){
+        triangle_verts.emplace_back( Kernel::Point_3( v.x, v.y, v.z ) );
+    }
+    std::array<size_t, 3> shtl;
+    for(const auto &f : in.faces){
+        if(f.size() == 3){
+            shtl[0] = f[0];
+            shtl[1] = f[1];
+            shtl[2] = f[2];
+            triangle_faces.emplace_back( shtl );
+        }else if(f.size() == 4){
+            shtl[0] = f[0];
+            shtl[1] = f[1];
+            shtl[2] = f[2];
+            triangle_faces.emplace_back( shtl );
+            shtl[0] = f[0];
+            shtl[1] = f[2];
+            shtl[2] = f[3];
+            triangle_faces.emplace_back( shtl );
+        }else{
+            throw std::runtime_error("This routine only supports triangle and quad faces. Cannot continue.");
+        }
+    }
+
+    FUNCINFO("Orienting face normals..");
+    CGAL::Polygon_mesh_processing::orient_polygon_soup(triangle_verts, triangle_faces);
+
+    // Output the mesh for inspection.
+    //std::ofstream off_file("/tmp/out.off");
+    //c3t3.output_boundary_to_off(off_file);
+  
+    // Extract the polyhedral surface.
+    FUNCINFO("Extracting the polyhedral surface..");
+    Polyhedron output_mesh;
+    CGAL::Polygon_mesh_processing::polygon_soup_to_polygon_mesh(triangle_verts, triangle_faces, output_mesh);
+
+//    if(!CGAL::is_closed(output_mesh)){
+//        std::ofstream openmesh("/tmp/open_mesh.off");
+//        openmesh << output_mesh;
+//        throw std::runtime_error("Mesh not closed but should be. Verify vector equality is not too loose. Dumped to /tmp/open_mesh.off.");
+//    }
+    if(!CGAL::Polygon_mesh_processing::is_outward_oriented(output_mesh)){
+        FUNCINFO("Reorienting face orientation so faces face outward..");
+        CGAL::Polygon_mesh_processing::reverse_face_orientations(output_mesh);
+    }
+
+    FUNCINFO("The triangulated surface has " << output_mesh.size_of_vertices() << " vertices"
+             " and " << output_mesh.size_of_facets() << " faces");
+  
+    // Remove disconnected vertices, if there are any.
+    const auto removed_verts = CGAL::Polygon_mesh_processing::remove_isolated_vertices(output_mesh);
+    if(removed_verts != 0){
+        FUNCWARN(removed_verts << " isolated vertices were removed");
+    }
+
+    return output_mesh;
+}
+
 } // namespace dcma_surface_meshes.
 
 
@@ -2066,5 +2140,6 @@ SurfaceArea(const Polyhedron &mesh){
 
 
 } // namespace polyhedron_processing
+
 
 
