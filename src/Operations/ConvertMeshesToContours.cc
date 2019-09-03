@@ -116,6 +116,12 @@ Drover ConvertMeshesToContours(Drover DICOM_data, OperationArgPkg OptArgs, std::
         if(!( ss >> surface_mesh )){
             throw std::runtime_error("Mesh could not be treated as a polyhedron. (Is it manifold?)");
         }
+        
+        // Use a method robust to non-manifold meshes.
+        //
+        // Note: If you need to use this, hide it behind a toggle parameter.
+        //       Proceeding with a manifold mesh can cause lots of issues later.
+        //dcma_surface_meshes::Polyhedron surface_mesh = dcma_surface_meshes::FVSMeshToPolyhedron((*smp_it)->meshes);
 
         auto IAs_all = All_IAs( DICOM_data );
         auto IAs = Whitelist( IAs_all, ImageSelectionStr );

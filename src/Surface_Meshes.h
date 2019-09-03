@@ -122,6 +122,11 @@ Estimate_Surface_Mesh_AdvancingFront(
         Parameters p );
 
 
+Polyhedron
+FVSMeshToPolyhedron(
+        const fv_surface_mesh<double, uint64_t> &mesh );
+
+
 } // namespace dcma_surface_meshes
 
 

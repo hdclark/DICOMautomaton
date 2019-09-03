@@ -115,6 +115,7 @@
 #include "Operations/IsolatedVoxelFilter.h"
 #include "Operations/LoadFiles.h"
 #include "Operations/LogScale.h"
+#include "Operations/MakeMeshesManifold.h"
 #include "Operations/MaxMinPixels.h"
 #include "Operations/MeldDose.h"
 #include "Operations/MinkowskiSum3D.h"
@@ -268,6 +269,7 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["IsolatedVoxelFilter"] = std::make_pair(OpArgDocIsolatedVoxelFilter, IsolatedVoxelFilter);
     out["LoadFiles"] = std::make_pair(OpArgDocLoadFiles, LoadFiles);
     out["LogScale"] = std::make_pair(OpArgDocLogScale, LogScale);
+    out["MakeMeshesManifold"] = std::make_pair(OpArgDocMakeMeshesManifold, MakeMeshesManifold);
     out["MaxMinPixels"] = std::make_pair(OpArgDocMaxMinPixels, MaxMinPixels);
     out["MeldDose"] = std::make_pair(OpArgDocMeldDose, MeldDose);
     out["MinkowskiSum3D"] = std::make_pair(OpArgDocMinkowskiSum3D, MinkowskiSum3D);
