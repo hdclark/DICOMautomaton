@@ -965,7 +965,7 @@ Point_Cloud & Point_Cloud::operator=(const Point_Cloud &rhs){
 }
 
 //---------------------------------------------------------------------------------------------------------------------------
-//-------------------------------------------------------- Static_Machine_State ------------------------------------------------------
+//---------------------------------------------------- Static_Machine_State -------------------------------------------------
 //---------------------------------------------------------------------------------------------------------------------------
 Static_Machine_State::Static_Machine_State(){ }
 
@@ -1013,7 +1013,7 @@ Static_Machine_State & Static_Machine_State::operator=(const Static_Machine_Stat
 }
 
 //---------------------------------------------------------------------------------------------------------------------------
-//-------------------------------------------------------- Dynamic_Machine_State ------------------------------------------------------
+//--------------------------------------------------- Dynamic_Machine_State -------------------------------------------------
 //---------------------------------------------------------------------------------------------------------------------------
 Dynamic_Machine_State::Dynamic_Machine_State(){ }
 
@@ -1254,7 +1254,7 @@ Dynamic_Machine_State::interpolate(double CumulativeMetersetWeight) const {
     return out;
 }
 //---------------------------------------------------------------------------------------------------------------------------
-//-------------------------------------------------------- TPlan_Config ------------------------------------------------------
+//------------------------------------------------------- TPlan_Config ------------------------------------------------------
 //---------------------------------------------------------------------------------------------------------------------------
 TPlan_Config::TPlan_Config(){ }
 
@@ -1272,7 +1272,7 @@ TPlan_Config & TPlan_Config::operator=(const TPlan_Config &rhs){
 }
 
 //---------------------------------------------------------------------------------------------------------------------------
-//-------------------------------------------------------- Surface_Mesh ------------------------------------------------------
+//------------------------------------------------------- Surface_Mesh ------------------------------------------------------
 //---------------------------------------------------------------------------------------------------------------------------
 Surface_Mesh::Surface_Mesh(){ }
 
@@ -1286,6 +1286,23 @@ Surface_Mesh & Surface_Mesh::operator=(const Surface_Mesh &rhs){
         this->meshes            = rhs.meshes;
         this->vertex_attributes = rhs.vertex_attributes;
         this->face_attributes   = rhs.face_attributes;
+    }
+    return *this;
+}
+
+//---------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------- Line_Sample ------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------------
+Line_Sample::Line_Sample(){ }
+
+Line_Sample::Line_Sample(const Line_Sample &rhs){
+    *this = rhs; //Performs a deep copy (unless copying self).
+}
+
+Line_Sample & Line_Sample::operator=(const Line_Sample &rhs){
+    //Performs a deep copy (unless copying self).
+    if(this != &rhs){
+        this->line = rhs.line;
     }
     return *this;
 }
@@ -1340,7 +1357,8 @@ Drover::Drover( const Drover &in ) : contour_data(in.contour_data),
                                      image_data(in.image_data),
                                      point_data(in.point_data),
                                      smesh_data(in.smesh_data),
-                                     tplan_data(in.tplan_data) {};
+                                     tplan_data(in.tplan_data),
+                                     lsamp_data(in.lsamp_data) {};
 
 //Member functions.
 void Drover::operator=(const Drover &rhs){
@@ -1350,6 +1368,7 @@ void Drover::operator=(const Drover &rhs){
         this->point_data      = rhs.point_data;
         this->smesh_data      = rhs.smesh_data;
         this->tplan_data      = rhs.tplan_data;
+        this->lsamp_data      = rhs.lsamp_data;
     }
     return;
 }
@@ -1873,7 +1892,7 @@ bool Drover::Has_Point_Data(void) const {
 }
 
 bool Drover::Has_Mesh_Data(void) const {
-    //Does not verify the point data itself, it merely looks to see if we have any valid Surface_Meshes attached.
+    //Does not verify the mesh data itself, it merely looks to see if we have any valid Surface_Meshes attached.
     if(this->smesh_data.size() == 0) return false;
     for(const auto & sm_it : this->smesh_data){
         if(sm_it != nullptr) return true; 
@@ -1881,12 +1900,20 @@ bool Drover::Has_Mesh_Data(void) const {
     return false;
 }
 
-
 bool Drover::Has_TPlan_Data(void) const {
-    //Does not verify the point data itself, it merely looks to see if we have any valid TPlan_Configs attached.
+    //Does not verify the tplan data itself, it merely looks to see if we have any valid TPlan_Configs attached.
     if(this->tplan_data.size() == 0) return false;
     for(const auto & sm_it : this->tplan_data){
         if(sm_it != nullptr) return true; 
+    }
+    return false;
+}
+
+bool Drover::Has_LSamp_Data(void) const {
+    //Does not verify the point data itself, it merely looks to see if we have any valid Line_Samples attached.
+    if(this->lsamp_data.size() == 0) return false;
+    for(const auto & ls_it : this->lsamp_data){
+        if(ls_it != nullptr) return true; 
     }
     return false;
 }
@@ -1927,12 +1954,18 @@ void Drover::Concatenate(std::list<std::shared_ptr<TPlan_Config>> in){
     return;
 }
 
+void Drover::Concatenate(std::list<std::shared_ptr<Line_Sample>> in){
+    this->lsamp_data.splice( this->lsamp_data.end(), in );
+    return;
+}
+
 void Drover::Concatenate(Drover in){
     this->Concatenate(in.contour_data);
     this->Concatenate(in.image_data);
     this->Concatenate(in.point_data);
     this->Concatenate(in.smesh_data);
     this->Concatenate(in.tplan_data);
+    this->Concatenate(in.lsamp_data);
     return;
 }
 
@@ -1976,12 +2009,18 @@ void Drover::Consume(std::list<std::shared_ptr<TPlan_Config>> in){
     return;
 }
 
+void Drover::Consume(std::list<std::shared_ptr<Line_Sample>> in){
+    this->Concatenate(in);
+    return;
+}
+
 void Drover::Consume(Drover in){
     this->Consume(in.contour_data);
     this->Consume(in.image_data);
     this->Consume(in.point_data);
     this->Consume(in.smesh_data);
     this->Consume(in.tplan_data);
+    this->Consume(in.lsamp_data);
     return;
 }
 

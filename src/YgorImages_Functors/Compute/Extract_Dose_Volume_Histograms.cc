@@ -91,7 +91,10 @@ bool ComputeExtractDoseVolumeHistograms(planar_image_collection<float,double> &i
 
     // ----------------------------------------
 
-    std::map<std::string, std::pair<std::vector<float>,std::vector<float>>> named_distributions; // dose/intensity, volume.
+    std::map<std::string,                       // ROIName
+             std::pair<std::vector<float>,      // Dose/intensity samples.
+                       std::vector<float>>>     // Volume samples.
+                             named_distributions;
 
     { // Scope for thread pool.
         asio_thread_pool tp;
@@ -194,12 +197,20 @@ bool ComputeExtractDoseVolumeHistograms(planar_image_collection<float,double> &i
                 // -dose/contours not being present. Maybe accidentally?
                 user_data_s->dvhs[key][0.0] = std::make_pair(0.0, 0.0); //Nothing over 0Gy is delivered to any voxel (0% of volume).
 
+                user_data_s->min_dose[key]  = std::numeric_limits<double>::quiet_NaN();
+                user_data_s->mean_dose[key] = std::numeric_limits<double>::quiet_NaN();
+                user_data_s->max_dose[key]  = std::numeric_limits<double>::quiet_NaN();
+
             }else{
                 const auto D_min = std::min( 0.0f, Stats::Min(named_dists.second.first) );
                 const auto N_vox = named_dists.second.first.size();
                 const auto N = static_cast<double>(N_vox);
                 const auto V_total = Stats::Sum(named_dists.second.second);
 
+                // Compute DVHs.
+                //
+                // TODO: Compute differential histogram instead, then convert to cumulative via samples_1D integration.
+                //       This should be *much* faster. (Is it possible with varying voxel volumes?) TODO
                 for(size_t i = 0;  ; ++i){
                     const double test_dose = D_min + (user_data_s->dDose * static_cast<double>(i));
                     double cumulative_vol = 0.0; // Volume of voxels.
@@ -220,6 +231,16 @@ bool ComputeExtractDoseVolumeHistograms(planar_image_collection<float,double> &i
                     user_data_s->dvhs[key][dose_abs] = std::make_pair(vol_abs, vol_rel);
                     if(cumulative_cnt < 0.5) break; // Terminate the loop if nothing will change for future iterations.
                 }
+
+                // Compute some basic statistics in case they are needed.
+                user_data_s->min_dose[key] = Stats::Min(named_dists.second.first);
+                user_data_s->max_dose[key] = Stats::Max(named_dists.second.first);
+
+                auto dose_x_vol = named_dists.second.first;
+                for(size_t i = 0; i < N_vox; ++i) dose_x_vol[i] *= named_dists.second.second[i];
+                const auto sum_dose_x_vol = Stats::Sum(dose_x_vol);
+                const auto sum_vol = Stats::Sum(named_dists.second.second);
+                user_data_s->mean_dose[key] = sum_dose_x_vol / sum_vol;
             }
         }
 

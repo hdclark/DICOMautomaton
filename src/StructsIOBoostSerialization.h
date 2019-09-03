@@ -174,6 +174,18 @@ void serialize(Archive &a, TPlan_Config &p, const unsigned int version){
     return;
 }
 
+//Class: Line_Sample.
+template<typename Archive>
+void serialize(Archive &a, Line_Sample &l, const unsigned int version){
+    if(false){
+    }else if(version == 0){
+        a & boost::serialization::make_nvp("line",l.line);
+    }else{
+        FUNCWARN("Line_Sample archives with version " << version << " are not recognized");
+    }
+    return;
+}
+
 //Class: Drover.
 template<typename Archive>
 void serialize(Archive &a, Drover &d, const unsigned int version){
@@ -194,7 +206,8 @@ void serialize(Archive &a, Drover &d, const unsigned int version){
           & boost::serialization::make_nvp("image_data",d.image_data)
           & boost::serialization::make_nvp("point_data",d.point_data)
           & boost::serialization::make_nvp("smesh_data",d.smesh_data)
-          & boost::serialization::make_nvp("tplan_data",d.tplan_data);
+          & boost::serialization::make_nvp("tplan_data",d.tplan_data)
+          & boost::serialization::make_nvp("lsamp_data",d.lsamp_data);
     }else{
         FUNCWARN("Drover archives with version " << version << " are not recognized");
     }
@@ -212,8 +225,14 @@ BOOST_CLASS_VERSION(Point_Cloud, 0); // Initial version number.
 
 BOOST_CLASS_VERSION(Surface_Mesh, 0); // Initial version number, effectively just a fv_surface_mesh wrapper class.
 
+BOOST_CLASS_VERSION(Static_Machine_State, 0); // Initial version number.
+BOOST_CLASS_VERSION(Dynamic_Machine_State, 0); // Initial version number.
+BOOST_CLASS_VERSION(TPlan_Config, 0); // Initial version number.
+
+BOOST_CLASS_VERSION(Line_Sample, 0); // Initial version number.
+
 //BOOST_CLASS_VERSION(Drover, 0); // Initial version number.
 //BOOST_CLASS_VERSION(Drover, 1); // After removing Dose_Arrays and Drover::Has_Been_Melded.
 //BOOST_CLASS_VERSION(Drover, 2); // After adding v0 of the Surface_Mesh member.
-BOOST_CLASS_VERSION(Drover, 3); // After adding v0 of the TPlan_Config member.
+BOOST_CLASS_VERSION(Drover, 3); // After adding v0 of the TPlan_Config member and v0 of the Line_Sample member.
 

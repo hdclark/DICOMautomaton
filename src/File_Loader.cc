@@ -27,6 +27,7 @@
 #include "OFF_Mesh_File_Loader.h"
 #include "OBJ_Mesh_File_Loader.h"
 #include "3ddose_File_Loader.h"
+#include "Line_Sample_File_Loader.h"
 
 
 
@@ -107,6 +108,13 @@ Load_Files( Drover &DICOM_data,
     if(!Paths.empty()
     && !Load_From_XYZ_Files( DICOM_data, InvocationMetadata, FilenameLex, Paths )){
         FUNCWARN("Failed to load XYZ file");
+        return false;
+    }
+
+    //Standalone file loading: line sample files.
+    if(!Paths.empty()
+    && !Load_From_Line_Sample_Files( DICOM_data, InvocationMetadata, FilenameLex, Paths )){
+        FUNCWARN("Failed to load line sample file");
         return false;
     }
 

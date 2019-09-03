@@ -340,6 +340,22 @@ class TPlan_Config {
 };
 
 
+// This class is meant to hold a one-dimensional scalar array of data. For example, it could hold a time
+// course or dose-volume histogram.
+class Line_Sample {
+    public:
+
+        samples_1D<double> line;
+
+        //Constructor/Destructors.
+        Line_Sample();
+        Line_Sample(const Line_Sample &rhs); //Performs a deep copy (unless copying self).
+
+        //Member functions.
+        Line_Sample & operator=(const Line_Sample &rhs); //Performs a deep copy (unless copying self).
+};
+
+
 //---------------------------------------------------------------------------------------------------------------------------
 //------------------------------------------------------------ Drover -------------------------------------------------------
 //---------------------------------------------------------------------------------------------------------------------------
@@ -433,6 +449,7 @@ class Drover {
         std::list<std::shared_ptr<Point_Cloud>>  point_data;
         std::list<std::shared_ptr<Surface_Mesh>> smesh_data;
         std::list<std::shared_ptr<TPlan_Config>> tplan_data;
+        std::list<std::shared_ptr<Line_Sample>>  lsamp_data;
     
         //Constructors.
         Drover();
@@ -470,12 +487,14 @@ class Drover {
         bool Has_Point_Data(void) const;
         bool Has_Mesh_Data(void) const;
         bool Has_TPlan_Data(void) const;
+        bool Has_LSamp_Data(void) const;
 
         void Concatenate(std::shared_ptr<Contour_Data> in);
         void Concatenate(std::list<std::shared_ptr<Image_Array>> in);
         void Concatenate(std::list<std::shared_ptr<Point_Cloud>> in);
         void Concatenate(std::list<std::shared_ptr<Surface_Mesh>> in);
         void Concatenate(std::list<std::shared_ptr<TPlan_Config>> in);
+        void Concatenate(std::list<std::shared_ptr<Line_Sample>> in);
         void Concatenate(Drover in);
 
         void Consume(std::shared_ptr<Contour_Data> in);
@@ -483,6 +502,7 @@ class Drover {
         void Consume(std::list<std::shared_ptr<Point_Cloud>> in);
         void Consume(std::list<std::shared_ptr<Surface_Mesh>> in);
         void Consume(std::list<std::shared_ptr<TPlan_Config>> in);
+        void Consume(std::list<std::shared_ptr<Line_Sample>> in);
         void Consume(Drover in);
     
         void Plot_Dose_And_Contours(void) const;

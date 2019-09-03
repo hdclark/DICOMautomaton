@@ -171,5 +171,23 @@ Drover DroverDebug(Drover DICOM_data,
         }
     }
 
+    //Line sample data.
+    {
+        FUNCINFO("There are " << DICOM_data.lsamp_data.size() << " Line_Samples loaded");
+
+        size_t l_cnt = 0;
+        for(auto &lsp : DICOM_data.lsamp_data){
+            if(lsp == nullptr){
+                FUNCINFO("  Line_Sample " << l_cnt << " is not valid");
+
+            }else{
+                FUNCINFO("  Line_Sample " << l_cnt << " has " << 
+                         lsp->line.samples.size() << " datum and " <<
+                         lsp->line.metadata.size() << " metadata keys");
+            }
+            ++l_cnt;
+        }
+    }
+
     return DICOM_data;
 }

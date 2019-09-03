@@ -763,4 +763,104 @@ OperationArgDoc TPWhitelistOpArgDoc(void){
     return out;
 }
 
+// ----------------------------------- Line Samples ------------------------------------
+
+// Provide pointers for all line samples into a list.
+//
+// Note: The output is meant to be filtered using the selectors below.
+std::list<std::list<std::shared_ptr<Line_Sample>>::iterator>
+All_LSs( Drover &DICOM_data ){
+    std::list<std::list<std::shared_ptr<Line_Sample>>::iterator> ls_all;
+
+    for(auto lsp_it = DICOM_data.lsamp_data.begin(); lsp_it != DICOM_data.lsamp_data.end(); ++lsp_it){
+        if((*lsp_it) == nullptr) continue;
+        ls_all.push_back(lsp_it);
+    }
+    return ls_all;
+}
+
+
+// Whitelist line samples using the provided regex.
+std::list<std::list<std::shared_ptr<Line_Sample>>::iterator>
+Whitelist( std::list<std::list<std::shared_ptr<Line_Sample>>::iterator> lss,
+           std::string MetadataKey,
+           std::string MetadataValueRegex,
+           Regex_Selector_Opts Opts ){
+
+    auto theregex = Compile_Regex(MetadataValueRegex);
+
+    lss.remove_if([&](std::list<std::shared_ptr<Line_Sample>>::iterator lsp_it) -> bool {
+        if((*lsp_it) == nullptr) return true;
+        if((*lsp_it)->line.samples.empty()) return true; // Remove arrays containing no images.
+
+        if(false){
+        }else if( // Note: Line_Samples are dissimilar to Image_Arrays in that individual images can have different
+                  //       metadata, but point clouds cannot. We keep these options for consistency.
+                  (Opts.validation == Regex_Selector_Opts::Validation::Representative)
+              ||  (Opts.validation == Regex_Selector_Opts::Validation::Pedantic)        ){
+
+            std::experimental::optional<std::string> ValueOpt 
+                    = ( (*lsp_it)->line.metadata.count(MetadataKey) != 0 ) ?
+                      (*lsp_it)->line.metadata[MetadataKey] :
+                      std::experimental::optional<std::string>();
+            if(ValueOpt){
+                return !(std::regex_match(ValueOpt.value(),theregex));
+            }else if(Opts.nas == Regex_Selector_Opts::NAs::Include){
+                return false;
+            }else if(Opts.nas == Regex_Selector_Opts::NAs::Exclude){
+                return true;
+            }else if(Opts.nas == Regex_Selector_Opts::NAs::TreatAsEmpty){
+                return !(std::regex_match("",theregex));
+            }
+            throw std::logic_error("NAs option not understood. Cannot continue.");
+        }
+        throw std::logic_error("Regex selector option not understood. Cannot continue.");
+        return true; // Should never get here.
+    });
+    return lss;
+}
+
+
+// Whitelist line samples using a limited vocabulary of specifiers.
+//
+// Note: this routine shares the generic Image_Arrays implementation above.
+std::list<std::list<std::shared_ptr<Line_Sample>>::iterator>
+Whitelist( std::list<std::list<std::shared_ptr<Line_Sample>>::iterator> lss,
+           std::string Specifier,
+           Regex_Selector_Opts Opts ){
+
+    return Whitelist_Core( lss, Specifier, Opts );
+}    
+
+
+// This is a convenience routine to combine multiple filtering passes into a single logical statement.
+//
+// Note: this routine shares the generic Image_Arrays implementation above.
+std::list<std::list<std::shared_ptr<Line_Sample>>::iterator>
+Whitelist( std::list<std::list<std::shared_ptr<Line_Sample>>::iterator> lss,
+           std::initializer_list< std::pair<std::string, 
+                                            std::string> > MetadataKeyValueRegex,
+           Regex_Selector_Opts Opts ){
+
+    return Whitelist_Core( lss, MetadataKeyValueRegex, Opts );
+}
+
+
+// Utility function documenting the point cloud whitelist routines for operations.
+OperationArgDoc LSWhitelistOpArgDoc(void){
+    OperationArgDoc out;
+
+    out.name = "LSampSelection";
+    out.desc = "Select one or more line samples."_s
+               + GenericSelectionInfo("line sample");
+    out.default_val = "all";
+    out.expected = true;
+    out.examples = { "last", "first", "all", "none", 
+                     "#0", "#-0",
+                     "!last", "!#-3",
+                     "key@.*value.*", "key1@.*value1.*;key2@^value2$;first" };
+
+    return out;
+}
+
 

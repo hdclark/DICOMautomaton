@@ -144,20 +144,20 @@ All_SMs( Drover &DICOM_data );
 
 // Whitelist surface meshes using the provided regex.
 std::list<std::list<std::shared_ptr<Surface_Mesh>>::iterator>
-Whitelist( std::list<std::list<std::shared_ptr<Surface_Mesh>>::iterator> pcs,
+Whitelist( std::list<std::list<std::shared_ptr<Surface_Mesh>>::iterator> sms,
            std::string MetadataKey,
            std::string MetadataValueRegex,
            Regex_Selector_Opts Opts = Regex_Selector_Opts() );
 
 // Whitelist surface meshes using a limited vocabulary of specifiers.
 std::list<std::list<std::shared_ptr<Surface_Mesh>>::iterator>
-Whitelist( std::list<std::list<std::shared_ptr<Surface_Mesh>>::iterator> pcs,
+Whitelist( std::list<std::list<std::shared_ptr<Surface_Mesh>>::iterator> sms,
            std::string Specifier,
            Regex_Selector_Opts Opts = Regex_Selector_Opts() );
 
 // This is a convenience routine to combine multiple filtering passes into a single logical statement.
 std::list<std::list<std::shared_ptr<Surface_Mesh>>::iterator>
-Whitelist( std::list<std::list<std::shared_ptr<Surface_Mesh>>::iterator> pcs,
+Whitelist( std::list<std::list<std::shared_ptr<Surface_Mesh>>::iterator> sms,
            std::initializer_list< std::pair<std::string,        // MetadataKey
                                             std::string> > MetadataKeyValueRegex, // MetadataValueRegex
            Regex_Selector_Opts Opts = Regex_Selector_Opts() );
@@ -177,24 +177,57 @@ All_TPs( Drover &DICOM_data );
 
 // Whitelist surface meshes using the provided regex.
 std::list<std::list<std::shared_ptr<TPlan_Config>>::iterator>
-Whitelist( std::list<std::list<std::shared_ptr<TPlan_Config>>::iterator> pcs,
+Whitelist( std::list<std::list<std::shared_ptr<TPlan_Config>>::iterator> tps,
            std::string MetadataKey,
            std::string MetadataValueRegex,
            Regex_Selector_Opts Opts = Regex_Selector_Opts() );
 
 // Whitelist surface meshes using a limited vocabulary of specifiers.
 std::list<std::list<std::shared_ptr<TPlan_Config>>::iterator>
-Whitelist( std::list<std::list<std::shared_ptr<TPlan_Config>>::iterator> pcs,
+Whitelist( std::list<std::list<std::shared_ptr<TPlan_Config>>::iterator> tps,
            std::string Specifier,
            Regex_Selector_Opts Opts = Regex_Selector_Opts() );
 
 // This is a convenience routine to combine multiple filtering passes into a single logical statement.
 std::list<std::list<std::shared_ptr<TPlan_Config>>::iterator>
-Whitelist( std::list<std::list<std::shared_ptr<TPlan_Config>>::iterator> pcs,
+Whitelist( std::list<std::list<std::shared_ptr<TPlan_Config>>::iterator> tps,
            std::initializer_list< std::pair<std::string,        // MetadataKey
                                             std::string> > MetadataKeyValueRegex, // MetadataValueRegex
            Regex_Selector_Opts Opts = Regex_Selector_Opts() );
 
 // Utility function documenting the surface mesh whitelist routines for operations.
 OperationArgDoc TPWhitelistOpArgDoc(void);
+
+// ----------------------------------- Line Samples ------------------------------------
+
+// Provide pointers for all line samples into a list.
+//
+// Note: The output is meant to be filtered using the selectors below.
+std::list<std::list<std::shared_ptr<Line_Sample>>::iterator>
+All_LSs( Drover &DICOM_data );
+
+
+// Whitelist point clouds using the provided regex.
+std::list<std::list<std::shared_ptr<Line_Sample>>::iterator>
+Whitelist( std::list<std::list<std::shared_ptr<Line_Sample>>::iterator> lss,
+           std::string MetadataKey,
+           std::string MetadataValueRegex,
+           Regex_Selector_Opts Opts = Regex_Selector_Opts() );
+
+// Whitelist point clouds using a limited vocabulary of specifiers.
+std::list<std::list<std::shared_ptr<Line_Sample>>::iterator>
+Whitelist( std::list<std::list<std::shared_ptr<Line_Sample>>::iterator> lss,
+           std::string Specifier,
+           Regex_Selector_Opts Opts = Regex_Selector_Opts() );
+
+// This is a convenience routine to combine multiple filtering passes into a single logical statement.
+std::list<std::list<std::shared_ptr<Line_Sample>>::iterator>
+Whitelist( std::list<std::list<std::shared_ptr<Line_Sample>>::iterator> lss,
+           std::initializer_list< std::pair<std::string,        // MetadataKey
+                                            std::string> > MetadataKeyValueRegex, // MetadataValueRegex
+           Regex_Selector_Opts Opts = Regex_Selector_Opts() );
+
+// Utility function documenting the point cloud whitelist routines for operations.
+OperationArgDoc LSWhitelistOpArgDoc(void);
+
 

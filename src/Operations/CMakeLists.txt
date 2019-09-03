@@ -67,12 +67,13 @@ add_library(Operations_objs OBJECT
     DumpTPlanMetadataOccurrencesToFile.cc
     DumpVoxelDoseInfo.cc
     EQD2Convert.cc
-    EvaluateDoseVolumeHistograms.cc
     EvaluateDoseVolumeStats.cc
     EvaluateNTCPModels.cc
     EvaluateTCPModels.cc
+    ExportLineSamples.cc
     ExportSurfaceMeshes.cc
     ExportFITSImages.cc
+    ExtractDoseVolumeHistograms.cc
     ExtractRadiomicFeatures.cc
     FVPicketFence.cc
     GenerateCalibrationCurve.cc
@@ -106,6 +107,7 @@ add_library(Operations_objs OBJECT
     OptimizeStaticBeams.cc
     OrderImages.cc
     PlotPerROITimeCourses.cc
+    PlotLineSamples.cc
     PreFilterEnormousCTValues.cc
     PresentationImage.cc
     PruneEmptyImageDoseArrays.cc

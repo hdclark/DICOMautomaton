@@ -53,6 +53,18 @@ struct ComputeExtractDoseVolumeHistogramsUserData {
                       std::pair<double,           // Cumulative volume (in DICOM units; mm^3).
                                 double> > > dvhs; // Cumulative volume (relative to the ROI's total volume [0,1]).
 
+    // -----------------------------
+    // Outgoing basic dose statistics.
+    //
+    std::map<std::string,                         // ROIName.
+             double> min_dose;                    // Minimum dose (in DICOM units; mm).
+
+    std::map<std::string,                         // ROIName.
+             double> max_dose;                    // Maximum dose (in DICOM units; mm).
+
+    std::map<std::string,                         // ROIName.
+             double> mean_dose;                   // Mean volume dose (weighted by voxel volume, in DICOM units; mm).
+
 };
 
 bool ComputeExtractDoseVolumeHistograms(planar_image_collection<float,double> &,

@@ -1,4 +1,4 @@
-// EvaluateDoseVolumeHistograms.h.
+// ExtractDoseVolumeHistograms.h.
 
 #pragma once
 
@@ -79,8 +79,8 @@
 
 
 
-OperationDoc OpArgDocEvaluateDoseVolumeHistograms(void);
+OperationDoc OpArgDocExtractDoseVolumeHistograms(void);
 
-Drover EvaluateDoseVolumeHistograms(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
+Drover ExtractDoseVolumeHistograms(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                              std::map<std::string, std::string> /*InvocationMetadata*/,
                              std::string /*FilenameLex*/);

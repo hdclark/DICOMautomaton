@@ -68,7 +68,7 @@ Drover ExportFITSImages(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto ImageSelectionStr = OptArgs.getValueStr("ImageSelection").value();
-    auto FilenameBaseStr = OptArgs.getValueStr("FilenameBase").value();
+    const auto FilenameBaseStr = OptArgs.getValueStr("FilenameBase").value();
 
     //-----------------------------------------------------------------------------------------------------------------
 
