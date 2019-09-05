@@ -184,6 +184,8 @@ Drover DroverDebug(Drover DICOM_data,
                 FUNCINFO("  Line_Sample " << l_cnt << " has " << 
                          lsp->line.samples.size() << " datum and " <<
                          lsp->line.metadata.size() << " metadata keys");
+
+                //for(const auto &mp : lsp->line.metadata) std::cout << "    '" << mp.first << "' : '" << mp.second << "'" << std::endl;
             }
             ++l_cnt;
         }

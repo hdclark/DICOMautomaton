@@ -791,7 +791,7 @@ Whitelist( std::list<std::list<std::shared_ptr<Line_Sample>>::iterator> lss,
 
     lss.remove_if([&](std::list<std::shared_ptr<Line_Sample>>::iterator lsp_it) -> bool {
         if((*lsp_it) == nullptr) return true;
-        if((*lsp_it)->line.samples.empty()) return true; // Remove arrays containing no images.
+        if((*lsp_it)->line.samples.empty()) return true; // Remove arrays containing no samples.
 
         if(false){
         }else if( // Note: Line_Samples are dissimilar to Image_Arrays in that individual images can have different

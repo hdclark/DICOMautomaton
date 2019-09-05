@@ -2104,7 +2104,8 @@ OperationArgPkg::OperationArgPkg(std::string unparsed, std::string sepr, std::st
     //   5. "op name:some long key=some long value"
     //   6. "op_name:keyA=:keyB=something"
     //   7. "op_name:keyA=:keyB=something"
-    //   8. "  op  name:"
+    //   8. "op_name:keyA=valA:keyB='x=123.0'"
+    //   9. "  op  name:"
     // etc..
     //
     // Unacceptable:
@@ -2138,10 +2139,40 @@ OperationArgPkg::OperationArgPkg(std::string unparsed, std::string sepr, std::st
         a = boost::algorithm::trim_all_copy(a);
         if(a.empty()) continue;
         if(!boost::algorithm::contains(a, eqls)) throw std::invalid_argument("Argument provided with key but no value");
-
+        
+/*
+        // Split on all eqls characters.
         std::list<std::string> split_on_equals;
         boost::algorithm::split(split_on_equals, a, boost::algorithm::is_any_of(eqls), boost::algorithm::token_compress_off);
         for(auto &b : split_on_equals) b = boost::algorithm::trim_all_copy(b);
+
+        //Re-join all but the first token, reinserting the eqls symbols for operations to re-parse.
+        //
+        // Note: This way is lossy!
+        if(split_on_equals.size() > 2){
+            std::list<std::string> desplit;
+            auto s_it = split_on_equals.begin();
+            desplit.emplace_back( *s_it++ );
+            desplit.emplace_back( *s_it++ );
+            for(size_t i = 2; i < split_on_equals.size(); ++i){
+                desplit.back() += "=" + *s_it++;
+            }
+            split_on_equals = desplit;
+        }
+*/
+        // Split only on the first occurence of an eqls character.
+        //
+        // Note: This way the eqls characters are case-sensitive!
+        std::list<std::string> split_on_equals;
+        const auto pos_eql = a.find_first_of(eqls);
+        if( (pos_eql == std::string::npos)  // Not found.
+        ||  (pos_eql == 0)                  // Found at first character.
+        ||  ((pos_eql+1) == a.length()) ){  // Found at last character.
+            split_on_equals.emplace_back( boost::algorithm::trim_all_copy(a) );
+        }else{
+            split_on_equals.emplace_back( boost::algorithm::trim_all_copy(a.substr(0, pos_eql)) );
+            split_on_equals.emplace_back( boost::algorithm::trim_all_copy(a.substr(pos_eql+1)) );
+        }
 
         if(split_on_equals.size() != 2) throw std::invalid_argument("Missing argument key or value");
         if(0 != this->opts.count(split_on_equals.front())){

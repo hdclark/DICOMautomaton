@@ -20,6 +20,7 @@
 #include "Structs.h"
 
 #include "Operations/AccumulateRowsColumns.h"
+#include "Operations/AnalyzeDoseVolumeHistograms.h"
 #include "Operations/AnalyzeLightRadFieldCoincidence.h"
 #include "Operations/AnalyzePicketFence.h"
 #include "Operations/ApplyCalibrationCurve.h"
@@ -169,6 +170,7 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     std::map<std::string, op_packet_t> out;
 
     out["AccumulateRowsColumns"] = std::make_pair(OpArgDocAccumulateRowsColumns, AccumulateRowsColumns);
+    out["AnalyzeDoseVolumeHistograms"] = std::make_pair(OpArgDocAnalyzeDoseVolumeHistograms, AnalyzeDoseVolumeHistograms);
     out["AnalyzeLightRadFieldCoincidence"] = std::make_pair(OpArgDocAnalyzeLightRadFieldCoincidence, AnalyzeLightRadFieldCoincidence);
     out["AnalyzePicketFence"] = std::make_pair(OpArgDocAnalyzePicketFence, AnalyzePicketFence);
     out["ApplyCalibrationCurve"] = std::make_pair(OpArgDocApplyCalibrationCurve, ApplyCalibrationCurve);

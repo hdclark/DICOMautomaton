@@ -265,13 +265,14 @@ Drover ExtractDoseVolumeHistograms(Drover DICOM_data, OperationArgPkg OptArgs, s
             lsamp_abs_ptr->line.metadata["PatientID"] = patient_ID;
             lsamp_abs_ptr->line.metadata["LineName"] = lROIname;
             lsamp_abs_ptr->line.metadata["Modality"] = "DVH";
+            lsamp_abs_ptr->line.metadata["DVHType"] = "Cumulative";
             lsamp_abs_ptr->line.metadata["DoseScaling"] = "None"; // Absolute values.
             lsamp_abs_ptr->line.metadata["VolumeScaling"] = "None"; // Absolute values.
             lsamp_abs_ptr->line.metadata["ROIName"] = lROIname;
-            lsamp_abs_ptr->line.metadata["NormalizedPatientID"] = X(lROIname);
-            lsamp_abs_ptr->line.metadata["DifferentialDVHMin"]  = std::to_string(ud.min_dose[advh_p.first]);
-            lsamp_abs_ptr->line.metadata["DifferentialDVHMean"] = std::to_string(ud.mean_dose[advh_p.first]);
-            lsamp_abs_ptr->line.metadata["DifferentialDVHMax"]  = std::to_string(ud.max_dose[advh_p.first]);
+            lsamp_abs_ptr->line.metadata["NormalizedROIName"] = X(lROIname);
+            lsamp_abs_ptr->line.metadata["DifferentialDVHMinDose"]  = std::to_string(ud.min_dose[advh_p.first]);
+            lsamp_abs_ptr->line.metadata["DifferentialDVHMeanDose"] = std::to_string(ud.mean_dose[advh_p.first]);
+            lsamp_abs_ptr->line.metadata["DifferentialDVHMaxDose"]  = std::to_string(ud.max_dose[advh_p.first]);
             if(UserComment){
                 lsamp_abs_ptr->line.metadata["UserComment"] = UserComment.value();
             }

@@ -46,23 +46,6 @@ OperationDoc OpArgDocExportLineSamples(void){
    
 
     out.args.emplace_back();
-    out.args.back().name = "Filename";
-    out.args.back().desc = "The filename (or full path name) to which the line sample data should be written."
-                           " If multiple line samples are selected, this filename will be used a base filename with"
-                           " a unique, sequentially-growing number inserted into the name prior to the final '.'"
-                           " symbol automatically. Existing files will not be overwritten or altered."
-                           " If a single line segments is selected, the filename will be altered."
-                           " If multiple line segments are selected, the first filename will contain the lowest"
-                           " number (i.e., multiple selected line samples will always trigger the sequential naming"
-                           " logic, so no files will be numberless).";
-    out.args.back().default_val = "";
-    out.args.back().expected = true;
-    out.args.back().examples = { "line_sample.dat", 
-                                 "../somedir/data.dat", 
-                                 "/path/to/some/columns.dat" };
-    out.args.back().mimetype = "text/plain";
-
-    out.args.emplace_back();
     out.args.back().name = "FilenameBase";
     out.args.back().desc = "The base filename that line samples will be written to."
                            " The file format is a 4-column text file that can be readily plotted."
