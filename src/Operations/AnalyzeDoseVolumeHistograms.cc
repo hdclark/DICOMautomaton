@@ -263,22 +263,8 @@ Drover AnalyzeDoseVolumeHistograms(Drover DICOM_data, OperationArgPkg OptArgs, s
                                                                              (*lsp_it)->line.metadata);
         }
 
-        // Normalize the line sample to support relative constraints.
-        auto DVH_abs_D_abs_V = (*lsp_it)->line;
-        auto DVH_rel_D_abs_V = DVH_abs_D_abs_V;
-        {
-            DVH_rel_D_abs_V = DVH_rel_D_abs_V.Multiply_x_With(1.0 / ReferenceDose);
-        }
-        auto DVH_abs_D_rel_V = DVH_abs_D_abs_V;
-        {
-            const auto y_min_max = DVH_abs_D_rel_V.Get_Extreme_Datum_y();
-            const auto y_max = y_min_max.second[2];
-            DVH_abs_D_rel_V = DVH_abs_D_rel_V.Multiply_With(1.0 / y_max);
-        }
-        auto DVH_rel_D_rel_V = DVH_abs_D_rel_V;
-        {
-            DVH_rel_D_rel_V = DVH_rel_D_rel_V.Multiply_x_With(1.0 / ReferenceDose);
-        }
+        // Grab the line sample more specifically.
+        const auto DVH_abs_D_abs_V = (*lsp_it)->line;
 
         // Evaluate the criteria.
         auto split_constraints = SplitStringToVector(ConstraintsStr, ';', 'd');
@@ -295,7 +281,7 @@ Drover AnalyzeDoseVolumeHistograms(Drover DICOM_data, OperationArgPkg OptArgs, s
             const auto r_comment = lCompile_Regex(R"***(^[ ]*[#].*$)***");
             if( std::regex_match(ac, r_comment ) ) continue;
 
-            const auto emit_boilerplate =[&](){
+            const auto emit_boilerplate = [&](void) -> void {
                 //Reset the header so only one is ever emitted.
                 //
                 // Note: this requires a fixed, consistent report structure!
@@ -407,7 +393,7 @@ Drover AnalyzeDoseVolumeHistograms(Drover DICOM_data, OperationArgPkg OptArgs, s
                 report << "," << D_mmm << " " << out_unit;
 
                 header << ",Passed";
-                report << "," << !!compare_inequality(D_mmm, D_rhs);
+                report << "," << std::boolalpha << compare_inequality(D_mmm, D_rhs);
 
                 header << std::endl;
                 report << std::endl;
@@ -505,7 +491,7 @@ Drover AnalyzeDoseVolumeHistograms(Drover DICOM_data, OperationArgPkg OptArgs, s
                 report << "," << D_eval << " " << out_unit;
 
                 header << ",Passed";
-                report << "," << !!compare_inequality(D_eval, D_rhs);
+                report << "," << std::boolalpha << compare_inequality(D_eval, D_rhs);
 
                 header << std::endl;
                 report << std::endl;
@@ -571,7 +557,7 @@ Drover AnalyzeDoseVolumeHistograms(Drover DICOM_data, OperationArgPkg OptArgs, s
                 report << "," << V_eval << " " << out_unit;
 
                 header << ",Passed";
-                report << "," << !!compare_inequality(V_eval, V_rhs);
+                report << "," << std::boolalpha << compare_inequality(V_eval, V_rhs);
 
                 header << std::endl;
                 report << std::endl;
