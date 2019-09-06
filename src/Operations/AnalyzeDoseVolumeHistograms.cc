@@ -306,11 +306,11 @@ Drover AnalyzeDoseVolumeHistograms(Drover DICOM_data, OperationArgPkg OptArgs, s
 
                     header << ",Description";
                     report << "," << ExpandedDescriptionOpt.value_or("");
-
                 }
+
+                report << std::setprecision(3);
                 return;
             };
-
 
             // Generalize the inequality.
             const auto r_lt  = lCompile_Regex(R"***(^.*[<][^=].*$|^.*lt[^e].*$)***");
@@ -340,14 +340,14 @@ Drover AnalyzeDoseVolumeHistograms(Drover DICOM_data, OperationArgPkg OptArgs, s
                 return false; // Should never get here.
             };
 
-            std::regex q;
-
             /////////////////////////////////////////////////////////////////////////////////
             // D{min,mean,max} {<,<=,>=,>,lt,lte,gt,gte} 123.123 {%,Gy}.
             // For example, 'Dmin < 70 Gy' or 'Dmean <= 105%' or 'Dmax lte 23.2Gy'.
             // Note that a '%' on the RHS is relative to the ReferenceDose.
-            q = lCompile_Regex(R"***([ ]*D(min|max|mean).*(<|<=|>=|>|lte|lt|gte|gt)[^0-9.]*([0-9.]+)[^0-9.]*(Gy|%).*)***"); 
-            if( std::regex_match(ac, q) ){
+            if(false){
+            }else if(auto q = lCompile_Regex(R"***([ ]*D(min|max|mean).*(<|<=|>=|>|lte|lt|gte|gt)[^0-9.]*([0-9.]+)[^0-9.]*(Gy|%).*)***");
+                     std::regex_match(ac, q) ){
+
                 const auto p = Get_All_Regex(ac, q);
                 //for(const auto &x : p) FUNCINFO("    Parsed parameter: '" << x << "'");                
                 if(p.size() != 4) throw std::runtime_error("Unable to parse constraint (C).");
@@ -397,15 +397,14 @@ Drover AnalyzeDoseVolumeHistograms(Drover DICOM_data, OperationArgPkg OptArgs, s
 
                 header << std::endl;
                 report << std::endl;
-            }
-
 
             /////////////////////////////////////////////////////////////////////////////////
             // D( hottest 500 cc) <=> 70 Gy 
             // D( hottest 500 cc) <= 70 Gy 
             // D( coldest 25% ) lte 25 %
-            q = lCompile_Regex(R"***([ ]*D[(][ ]*(hott?e?s?t?|cold?e?s?t?)[ ]*([0-9.]+)[ ]*(cc|cm3|cm\^3|%)[ ]*[)][ ]*(<|<=|>=|>|lte|lt|gte|gt)[^0-9.]*([0-9.]+)[^0-9.]*(Gy|%).*)***");
-            if( std::regex_match(ac, q) ){
+            }else if(auto q = lCompile_Regex(R"***([ ]*D[(][ ]*(hott?e?s?t?|cold?e?s?t?)[ ]*([0-9.]+)[ ]*(cc|cm3|cm\^3|%)[ ]*[)][ ]*(<|<=|>=|>|lte|lt|gte|gt)[^0-9.]*([0-9.]+)[^0-9.]*(Gy|%).*)***");
+                     std::regex_match(ac, q) ){
+
                 const auto p = Get_All_Regex(ac, q);
                 if(p.size() != 6) throw std::runtime_error("Unable to parse constraint (E).");
                 //for(const auto &x : p) FUNCINFO("    Parsed parameter: '" << x << "'");                
@@ -495,16 +494,15 @@ Drover AnalyzeDoseVolumeHistograms(Drover DICOM_data, OperationArgPkg OptArgs, s
 
                 header << std::endl;
                 report << std::endl;
-            }
-
 
             /////////////////////////////////////////////////////////////////////////////////
             // V(24 Gy) < 500 cc
             // V(20%) < 500 cc
             // V(25 Gy) < 25%
             // V(20%) < 25%
-            q = lCompile_Regex(R"***([ ]*V[(][ ]*([0-9.]+)[ ]*(Gy|%)[ ]*[)][ ]*(<|<=|>=|>|lte|lt|gte|gt)[^0-9.]*([0-9.]+)[^0-9.]*(cc|cm3|cm\^3|%).*)***");
-            if( std::regex_match(ac, q) ){
+            }else if(auto q = lCompile_Regex(R"***([ ]*V[(][ ]*([0-9.]+)[ ]*(Gy|%)[ ]*[)][ ]*(<|<=|>=|>|lte|lt|gte|gt)[^0-9.]*([0-9.]+)[^0-9.]*(cc|cm3|cm\^3|%).*)***");
+                     std::regex_match(ac, q) ){
+
                 const auto p = Get_All_Regex(ac, q);
                 if(p.size() != 5) throw std::runtime_error("Unable to parse constraint (E).");
                 //for(const auto &x : p) FUNCINFO("    Parsed parameter: '" << x << "'");                
@@ -558,6 +556,22 @@ Drover AnalyzeDoseVolumeHistograms(Drover DICOM_data, OperationArgPkg OptArgs, s
 
                 header << ",Passed";
                 report << "," << std::boolalpha << compare_inequality(V_eval, V_rhs);
+
+                header << std::endl;
+                report << std::endl;
+
+            // If the constraint did not match any known format.
+            }else{
+                FUNCWARN("Constraint '" << ac << "' did not match any known format");
+             
+                // Also acknowledge in-band that the constraint did not match any implemented form.
+                emit_boilerplate();
+
+                header << ",Actual";
+                report << "," << "no match";
+
+                header << ",Passed";
+                report << "," << "no match";
 
                 header << std::endl;
                 report << std::endl;
