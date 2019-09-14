@@ -284,10 +284,8 @@ Drover ConvertImageToMeshes(Drover DICOM_data, OperationArgPkg OptArgs, std::map
         for(auto &amask : masks){
             mask_imgs.push_back(std::ref(amask));
         }
+        // Note: meshing parameter MutateOpts are irrelevant since we supply our own mask.
         auto meshing_params = dcma_surface_meshes::Parameters();
-        meshing_params.MutateOpts.inclusivity = Mutate_Voxels_Opts::Inclusivity::Centre;
-        meshing_params.MutateOpts.contouroverlap = Mutate_Voxels_Opts::ContourOverlap::Ignore;
-        FUNCWARN("Ignoring contour orientations; assuming ROI polyhderon is simple");
         auto output_mesh = dcma_surface_meshes::Estimate_Surface_Mesh_Marching_Cubes( 
                                                         mask_imgs,
                                                         inclusion_threshold, 
