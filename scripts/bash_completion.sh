@@ -6,6 +6,8 @@
 #  $> source $0
 # or
 #  $> . $0
+#
+# It can also be installed to /usr/share/bash-completion/completions/ (or your distribution's equivalent).
 # 
 # See 'https://debian-administration.org/article/317/An_introduction_to_bash_completion_part_2' (accessed 20190130) for
 # a guide.
@@ -18,9 +20,10 @@ _dicomautomaton_dispatcher () {
   local prev # The previous 'word.'
   cur="${COMP_WORDS[COMP_CWORD]}"
   prev="${COMP_WORDS[COMP_CWORD-1]}"
+  dcma="${COMP_WORDS[0]}" # Can be '{,/path/to/}dicomautomaton_dispatcher' or '{,/path/to/}portable_dcma'.
+  dcma="${dcma/#~/$HOME}" # Iff the first char is a '~', expand it to the user's home directory
 
   COMPREPLY=() # Possible completions passed back.
-
 
   case "${cur}" in
     # List all available options.
@@ -57,7 +60,7 @@ _dicomautomaton_dispatcher () {
         #printf '\n\nFound operation "%s".\n\n' "${most_recent_opname}"
 
         # Isolate the subset of documentation for the operation.
-        local parameters=$( dicomautomaton_dispatcher -u | 
+        local parameters=$( ${dcma} -u | 
                               sed -n '/# Operations/,/# Known Issues and Limitations/p' |
                               sed -n "/^## ${most_recent_opname}/,/^## /p" |
                               sed -n '/^### Parameters/,/^### /p' |
@@ -91,7 +94,7 @@ _dicomautomaton_dispatcher () {
     # Operation names.
     -o | --operation | -x | --disregard)
         # Extract a list of all supported operations.
-        local operations=$( dicomautomaton_dispatcher -u | 
+        local operations=$( ${dcma} -u | 
                               sed -n '/# Operations/,/# Known Issues and Limitations/p' |
                               grep '^## ' |
                               sed -e 's/^## //' )
@@ -102,7 +105,7 @@ _dicomautomaton_dispatcher () {
     # Parameter names.
     -p | --parameter | -z | --ignore)
         # Extract a list of the supported parameters for the previously specified operation.
-        local operations=$( dicomautomaton_dispatcher -u | 
+        local operations=$( ${dcma} -u | 
                               sed -n '/# Operations/,/# Known Issues and Limitations/p' |
                               grep '^## ' |
                               sed -e 's/^## //' )

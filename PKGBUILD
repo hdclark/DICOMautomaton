@@ -33,6 +33,7 @@ optdepends=(
    'dialog'
    'gnuplot'
    'patchelf'
+   'bash-completion'
 )
 makedepends=(
    'cmake'

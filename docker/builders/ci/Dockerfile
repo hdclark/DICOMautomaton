@@ -49,7 +49,7 @@ RUN su - aurbuild -c \
     "yay -S --noconfirm --needed --afterclean --aur htmlcxx ttf-computer-modern-fonts"
 
 
-# Install known official dependencies.
+# Install hard build dependencies.
 RUN pacman -S --noconfirm --needed  \
     gcc-libs \
     gnu-free-fonts \

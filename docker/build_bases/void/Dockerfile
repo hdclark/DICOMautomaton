@@ -19,8 +19,7 @@ RUN xbps-install -y -Su && \
       vim \
       gdb \
       rsync \
-      wget \
-      patchelf
+      wget 
 
 #xbps-install -S -y nlopt nlopt-devel cgal cgal-devel htmlcxx htmlcxx-devel
 
@@ -40,6 +39,7 @@ RUN xbps-install -y -S \
         asio \
         freefont-ttf \
         gnuplot zenity  \
+        patchelf bash-completion \
     ` # Additional dependencies for headless OpenGL rendering with SFML ` \
         xorg-minimal glu-devel \
         xorg-video-drivers xf86-video-dummy xorg-apps

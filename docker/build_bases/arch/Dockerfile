@@ -28,8 +28,7 @@ RUN pacman -Sy --noconfirm archlinux-keyring && \
       sudo \
       pyalpm \
       wget \
-      rsync \
-      patchelf && \
+      rsync && \
     rm -f /var/cache/pacman/pkg/*
 
 
@@ -68,9 +67,16 @@ RUN pacman -S --noconfirm --needed  \
     wt \
     asio \
     nlopt \
-    freeglut libxi libxmu \
+    bash-completion \
+    patchelf \
+    freeglut \
+    libxi \
+    libxmu \
      ` # Additional dependencies for headless OpenGL rendering with SFML ` \
-    xorg-server xorg-apps mesa xf86-video-dummy && \
+    xorg-server \
+    xorg-apps \
+    mesa \
+    xf86-video-dummy && \
     rm -f /var/cache/pacman/pkg/*
 
 

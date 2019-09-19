@@ -21,8 +21,7 @@ RUN apt-get --yes update && \
       vim \
       gdb \
       rsync \
-      wget \
-      patchelf
+      wget
 
 RUN apt-get install --yes \
     ` # Ygor dependencies ` \
@@ -42,6 +41,7 @@ RUN apt-get install --yes \
         fonts-freefont-ttf fonts-cmu \
         freeglut3 freeglut3-dev libxi-dev libxmu-dev \
         gnuplot zenity \
+        patchelf bash-completion \
     ` # Additional dependencies for headless OpenGL rendering with SFML ` \
         x-window-system mesa-utils \
         xserver-xorg-video-dummy x11-apps
