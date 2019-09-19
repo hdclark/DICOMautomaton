@@ -22,14 +22,52 @@ _dicomautomaton_dispatcher () {
   COMPREPLY=() # Possible completions passed back.
 
 
-  # List all options.
   case "${cur}" in
+    # List all available options.
     -*)
-        #~/portable_dcma/portable_dcma -u | grep '^Op' | sed -e "s/[^']*[']\([^']*\)['].*/\1/g"
-        COMPREPLY=( $( compgen -W '-h -u -l -d -f -n -s -v -m -o -x \
+        COMPREPLY=( $( compgen -W '-h -u -l -d -f -n -s -v -m -o -x -p -z \
                                    --help --detailed-usage --lexicon --database-parameters \
                                    --filter-query-file --next-group --standalone \
-                                   --virtual-data --metadata --operation --disregard' -- "${cur}" ) )
+                                   --virtual-data --metadata --operation --disregard \
+                                   --parameter --ignore ' -- "${cur}" ) )
+        return 0
+    ;;
+
+    # Mid-way through specifying an operation using 'Opname:ABC=XYZ' notation.
+    # Note that the ':' is considered a token by itself.
+    # Provide a list of all options available to the operation.
+    :*)
+        # Determine which operation was most recently specified.
+        most_recent_opname=""
+        for i in `seq $COMP_CWORD -1 1` ; do
+            local p="${COMP_WORDS[$(($i-1))]}"  # 'prev'
+            local c="${COMP_WORDS[$i]}"         # 'curr'
+            if [ "${p}" == '-o' ] || 
+               [ "${p}" == '--operation' ] ||
+               [ "${p}" == '-x' ] ||
+               [ "${p}" == '--disregard' ] ; then
+                most_recent_opname="${c}"
+                break
+            fi
+            #printf '\n    "%s" and "%s"\n' "$c" "$p"
+        done
+        if [ -z "${most_recent_opname}" ] ; then
+            return 1
+        fi
+        #printf '\n\nFound operation "%s".\n\n' "${most_recent_opname}"
+
+        # Isolate the subset of documentation for the operation.
+        local parameters=$( dicomautomaton_dispatcher -u | 
+                              sed -n '/# Operations/,/# Known Issues and Limitations/p' |
+                              sed -n "/^## ${most_recent_opname}/,/^## /p" |
+                              sed -n '/^### Parameters/,/^### /p' |
+                              grep '^#### ' |
+                              sed -e 's/^#### //' )
+
+        #COMPREPLY=( $( compgen -W "${parameters}" -- "${cur}" ) )
+        #COMPREPLY=( $( compgen -W "${parameters}" -- "${cur#:}" ) )
+        # Do not bother filtering the output since this will only match on the ':' character.
+        COMPREPLY=( $( compgen -W "${parameters}" ) )
         return 0
     ;;
   esac
@@ -52,112 +90,22 @@ _dicomautomaton_dispatcher () {
 
     # Operation names.
     -o | --operation | -x | --disregard)
-        #~/portable_dcma/portable_dcma -u | grep '^Op' | sed -e "s/[^']*[']\([^']*\)['].*/\1/g"
-        local operations=$( printf '
-                        AccumulateRowsColumns \
-                        AnalyzeLightRadFieldCoincidence \
-                        AnalyzePicketFence \
-                        ApplyCalibrationCurve \
-                        AutoCropImages \
-                        Average \
-                        BCCAExtractRadiomicFeatures \
-                        BoostSerializeDrover \
-                        BuildLexiconInteractively \
-                        CT_Liver_Perfusion \
-                        CT_Liver_Perfusion_First_Run \
-                        CT_Liver_Perfusion_Ortho_Views \
-                        CT_Liver_Perfusion_Pharmaco_1C2I_5Param \
-                        CT_Liver_Perfusion_Pharmaco_1C2I_Reduced3Param \
-                        ComparePixels \
-                        ContourBasedRayCastDoseAccumulate \
-                        ContourBooleanOperations \
-                        ContourSimilarity \
-                        ContourViaThreshold \
-                        ContourVote \
-                        ContourWholeImages \
-                        ContouringAides \
-                        ConvertDoseToImage \
-                        ConvertImageToDose \
-                        ConvertNaNsToAir \
-                        ConvertNaNsToZeros \
-                        CopyImages \
-                        CropImageDoseToROIs \
-                        CropImages \
-                        CropROIDose \
-                        DCEMRI_IAUC \
-                        DCEMRI_Nonparametric_CE \
-                        DICOMExportImagesAsDose \
-                        DecayDoseOverTimeHalve \
-                        DecayDoseOverTimeJones2014 \
-                        DecimatePixels \
-                        DeleteImages \
-                        DetectShapes3D \
-                        DroverDebug \
-                        DumpAllOrderedImageMetadataToFile \
-                        DumpAnEncompassedPoint \
-                        DumpFilesPartitionedByTime \
-                        DumpImageMetadataOccurrencesToFile \
-                        DumpPerROIParams_KineticModel_1C2I_5P \
-                        DumpPixelValuesOverTimeForAnEncompassedPoint \
-                        DumpROIContours \
-                        DumpROIData \
-                        DumpROIDoseInfo \
-                        DumpROISNR \
-                        DumpROISurfaceMeshes \
-                        DumpVoxelDoseInfo \
-                        EQD2Convert \
-                        EvaluateDoseVolumeHistograms \
-                        EvaluateDoseVolumeStats \
-                        EvaluateNTCPModels \
-                        EvaluateTCPModels \
-                        ExtractRadiomicFeatures \
-                        FVPicketFence \
-                        GenerateSurfaceMask \
-                        GenerateVirtualDataContourViaThresholdTestV1 \
-                        GenerateVirtualDataDoseStairsV1 \
-                        GenerateVirtualDataPerfusionV1 \
-                        GiveWholeImageArrayABoneWindowLevel \
-                        GiveWholeImageArrayAHeadAndNeckWindowLevel \
-                        GiveWholeImageArrayAThoraxWindowLevel \
-                        GiveWholeImageArrayAnAbdominalWindowLevel \
-                        GridBasedRayCastDoseAccumulate \
-                        GroupImages \
-                        GrowContours \
-                        HighlightROIs \
-                        ImageRoutineTests \
-                        LogScale \
-                        MaxMinPixels \
-                        MeldDose \
-                        MinkowskiSum3D \
-                        ModifyContourMetadata \
-                        ModifyImageMetadata \
-                        NegatePixels \
-                        OptimizeStaticBeams \
-                        OrderImages \
-                        PlotPerROITimeCourses \
-                        PreFilterEnormousCTValues \
-                        PresentationImage \
-                        PruneEmptyImageDoseArrays \
-                        PurgeContours \
-                        RankPixels \
-                        SFML_Viewer \
-                        SeamContours \
-                        SelectSlicesIntersectingROI \
-                        SimplifyContours \
-                        SpatialBlur \
-                        SpatialDerivative \
-                        SpatialSharpen \
-                        Subsegment_ComputeDose_VanLuijk \
-                        SubtractImages \
-                        SupersampleImageGrid \
-                        SurfaceBasedRayCastDoseAccumulate \
-                        ThresholdImages \
-                        TrimROIDose \
-                        UBC3TMRI_DCE \
-                        UBC3TMRI_DCE_Differences \
-                        UBC3TMRI_DCE_Experimental \
-                        UBC3TMRI_IVIM_ADC \
-                        ')
+        # Extract a list of all supported operations.
+        local operations=$( dicomautomaton_dispatcher -u | 
+                              sed -n '/# Operations/,/# Known Issues and Limitations/p' |
+                              grep '^## ' |
+                              sed -e 's/^## //' )
+        COMPREPLY=( $( compgen -W "${operations}" -- "${cur}" ) )
+        return 0
+    ;;
+
+    # Parameter names.
+    -p | --parameter | -z | --ignore)
+        # Extract a list of the supported parameters for the previously specified operation.
+        local operations=$( dicomautomaton_dispatcher -u | 
+                              sed -n '/# Operations/,/# Known Issues and Limitations/p' |
+                              grep '^## ' |
+                              sed -e 's/^## //' )
         COMPREPLY=( $( compgen -W "${operations}" -- "${cur}" ) )
         return 0
     ;;
