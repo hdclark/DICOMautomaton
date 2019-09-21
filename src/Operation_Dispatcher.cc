@@ -89,9 +89,10 @@
 #include "Operations/EvaluateDoseVolumeStats.h"
 #include "Operations/EvaluateNTCPModels.h"
 #include "Operations/EvaluateTCPModels.h"
+#include "Operations/ExportFITSImages.h"
 #include "Operations/ExportLineSamples.h"
 #include "Operations/ExportSurfaceMeshes.h"
-#include "Operations/ExportFITSImages.h"
+#include "Operations/ExportPointClouds.h"
 #include "Operations/ExtractDoseVolumeHistograms.h"
 #include "Operations/ExtractRadiomicFeatures.h"
 #include "Operations/FVPicketFence.h"
@@ -182,10 +183,8 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["CT_Liver_Perfusion"] = std::make_pair(OpArgDocCT_Liver_Perfusion, CT_Liver_Perfusion);
     out["CT_Liver_Perfusion_First_Run"] = std::make_pair(OpArgDocCT_Liver_Perfusion_First_Run, CT_Liver_Perfusion_First_Run);
     out["CT_Liver_Perfusion_Ortho_Views"] = std::make_pair(OpArgDocCT_Liver_Perfusion_Ortho_Views , CT_Liver_Perfusion_Ortho_Views );
-    out["CT_Liver_Perfusion_Pharmaco_1C2I_5Param"] = std::make_pair(OpArgDocCT_Liver_Perfusion_Pharmaco_1C2I_5Param, 
-                                                                    CT_Liver_Perfusion_Pharmaco_1C2I_5Param);
-    out["CT_Liver_Perfusion_Pharmaco_1C2I_Reduced3Param"] = std::make_pair(OpArgDocCT_Liver_Perfusion_Pharmaco_1C2I_Reduced3Param, 
-                                                                           CT_Liver_Perfusion_Pharmaco_1C2I_Reduced3Param);
+    out["CT_Liver_Perfusion_Pharmaco_1C2I_5Param"] = std::make_pair(OpArgDocCT_Liver_Perfusion_Pharmaco_1C2I_5Param, CT_Liver_Perfusion_Pharmaco_1C2I_5Param);
+    out["CT_Liver_Perfusion_Pharmaco_1C2I_Reduced3Param"] = std::make_pair(OpArgDocCT_Liver_Perfusion_Pharmaco_1C2I_Reduced3Param, CT_Liver_Perfusion_Pharmaco_1C2I_Reduced3Param);
     out["ClusterDBSCAN"] = std::make_pair(OpArgDocClusterDBSCAN, ClusterDBSCAN);
     out["ComparePixels"] = std::make_pair(OpArgDocComparePixels, ComparePixels);
     out["ContourBasedRayCastDoseAccumulate"] = std::make_pair(OpArgDocContourBasedRayCastDoseAccumulate, ContourBasedRayCastDoseAccumulate);
@@ -227,12 +226,8 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["DumpFilesPartitionedByTime"] = std::make_pair(OpArgDocDumpFilesPartitionedByTime, DumpFilesPartitionedByTime);
     out["DumpImageMeshes"] = std::make_pair(OpArgDocDumpImageMeshes, DumpImageMeshes);
     out["DumpImageMetadataOccurrencesToFile"] = std::make_pair(OpArgDocDumpImageMetadataOccurrencesToFile, DumpImageMetadataOccurrencesToFile);
-    out["EQD2Convert"] = std::make_pair(OpArgDocEQD2Convert, EQD2Convert);
-      
-    out["DumpPerROIParams_KineticModel_1C2I_5P"] = std::make_pair(OpArgDocDumpPerROIParams_KineticModel_1Compartment2Input_5Param, 
-                                                                  DumpPerROIParams_KineticModel_1Compartment2Input_5Param);
-    out["DumpPixelValuesOverTimeForAnEncompassedPoint"] = std::make_pair(OpArgDocDumpPixelValuesOverTimeForAnEncompassedPoint,
-                                                                         DumpPixelValuesOverTimeForAnEncompassedPoint);
+    out["DumpPerROIParams_KineticModel_1C2I_5P"] = std::make_pair(OpArgDocDumpPerROIParams_KineticModel_1Compartment2Input_5Param, DumpPerROIParams_KineticModel_1Compartment2Input_5Param);
+    out["DumpPixelValuesOverTimeForAnEncompassedPoint"] = std::make_pair(OpArgDocDumpPixelValuesOverTimeForAnEncompassedPoint, DumpPixelValuesOverTimeForAnEncompassedPoint);
     out["DumpPlanSummary"] = std::make_pair(OpArgDocDumpPlanSummary, DumpPlanSummary);
     out["DumpROIContours"] = std::make_pair(OpArgDocDumpROIContours, DumpROIContours);
     out["DumpROIData"] = std::make_pair(OpArgDocDumpROIData, DumpROIData);
@@ -241,12 +236,14 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["DumpROISurfaceMeshes"] = std::make_pair(OpArgDocDumpROISurfaceMeshes, DumpROISurfaceMeshes);
     out["DumpTPlanMetadataOccurrencesToFile"] = std::make_pair(OpArgDocDumpTPlanMetadataOccurrencesToFile, DumpTPlanMetadataOccurrencesToFile);
     out["DumpVoxelDoseInfo"] = std::make_pair(OpArgDocDumpVoxelDoseInfo, DumpVoxelDoseInfo);
+    out["EQD2Convert"] = std::make_pair(OpArgDocEQD2Convert, EQD2Convert);
     out["EvaluateDoseVolumeStats"] = std::make_pair(OpArgDocEvaluateDoseVolumeStats, EvaluateDoseVolumeStats);
     out["EvaluateNTCPModels"] = std::make_pair(OpArgDocEvaluateNTCPModels, EvaluateNTCPModels);
     out["EvaluateTCPModels"] = std::make_pair(OpArgDocEvaluateTCPModels, EvaluateTCPModels);
-    out["ExportLineSamples"] = std::make_pair(OpArgDocExportLineSamples, ExportLineSamples);
-    out["ExportSurfaceMeshes"] = std::make_pair(OpArgDocExportSurfaceMeshes, ExportSurfaceMeshes);
     out["ExportFITSImages"] = std::make_pair(OpArgDocExportFITSImages, ExportFITSImages);
+    out["ExportLineSamples"] = std::make_pair(OpArgDocExportLineSamples, ExportLineSamples);
+    out["ExportPointClouds"] = std::make_pair(OpArgDocExportPointClouds, ExportPointClouds);
+    out["ExportSurfaceMeshes"] = std::make_pair(OpArgDocExportSurfaceMeshes, ExportSurfaceMeshes);
     out["ExtractDoseVolumeHistograms"] = std::make_pair(OpArgDocExtractDoseVolumeHistograms, ExtractDoseVolumeHistograms);
     out["ExtractRadiomicFeatures"] = std::make_pair(OpArgDocExtractRadiomicFeatures, ExtractRadiomicFeatures);
     out["FVPicketFence"] = std::make_pair(OpArgDocFVPicketFence, FVPicketFence);
@@ -281,8 +278,8 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["NormalizePixels"] = std::make_pair(OpArgDocNormalizePixels, NormalizePixels);
     out["OptimizeStaticBeams"] = std::make_pair(OpArgDocOptimizeStaticBeams, OptimizeStaticBeams);
     out["OrderImages"] = std::make_pair(OpArgDocOrderImages, OrderImages);
-    out["PlotPerROITimeCourses"] = std::make_pair(OpArgDocPlotPerROITimeCourses, PlotPerROITimeCourses);
     out["PlotLineSamples"] = std::make_pair(OpArgDocPlotLineSamples, PlotLineSamples);
+    out["PlotPerROITimeCourses"] = std::make_pair(OpArgDocPlotPerROITimeCourses, PlotPerROITimeCourses);
     out["PreFilterEnormousCTValues"] = std::make_pair(OpArgDocPreFilterEnormousCTValues, PreFilterEnormousCTValues);
     out["PresentationImage"] = std::make_pair(OpArgDocPresentationImage, PresentationImage);
     out["PruneEmptyImageDoseArrays"] = std::make_pair(OpArgDocPruneEmptyImageDoseArrays, PruneEmptyImageDoseArrays);
@@ -290,8 +287,8 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["RankPixels"] = std::make_pair(OpArgDocRankPixels, RankPixels);
     out["ReduceNeighbourhood"] = std::make_pair(OpArgDocReduceNeighbourhood, ReduceNeighbourhood);
     out["RemeshSurfaceMeshes"] = std::make_pair(OpArgDocRemeshSurfaceMeshes, RemeshSurfaceMeshes);
-    out["ScalePixels"] = std::make_pair(OpArgDocScalePixels, ScalePixels);
     out["SFML_Viewer"] = std::make_pair(OpArgDocSFML_Viewer, SFML_Viewer);
+    out["ScalePixels"] = std::make_pair(OpArgDocScalePixels, ScalePixels);
     out["SeamContours"] = std::make_pair(OpArgDocSeamContours, SeamContours);
     out["SelectSlicesIntersectingROI"] = std::make_pair(OpArgDocSelectSlicesIntersectingROI, SelectSlicesIntersectingROI);
     out["SimplifyContours"] = std::make_pair(OpArgDocSimplifyContours, SimplifyContours);

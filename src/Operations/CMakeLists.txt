@@ -71,9 +71,10 @@ add_library(Operations_objs OBJECT
     EvaluateDoseVolumeStats.cc
     EvaluateNTCPModels.cc
     EvaluateTCPModels.cc
-    ExportLineSamples.cc
-    ExportSurfaceMeshes.cc
     ExportFITSImages.cc
+    ExportLineSamples.cc
+    ExportPointClouds.cc
+    ExportSurfaceMeshes.cc
     ExtractDoseVolumeHistograms.cc
     ExtractRadiomicFeatures.cc
     FVPicketFence.cc
@@ -108,8 +109,8 @@ add_library(Operations_objs OBJECT
     NormalizePixels.cc
     OptimizeStaticBeams.cc
     OrderImages.cc
-    PlotPerROITimeCourses.cc
     PlotLineSamples.cc
+    PlotPerROITimeCourses.cc
     PreFilterEnormousCTValues.cc
     PresentationImage.cc
     PruneEmptyImageDoseArrays.cc
@@ -117,8 +118,8 @@ add_library(Operations_objs OBJECT
     RankPixels.cc
     ReduceNeighbourhood.cc
     RemeshSurfaceMeshes.cc
-    ScalePixels.cc
     SFML_Viewer.cc
+    ScalePixels.cc
     SeamContours.cc
     SelectSlicesIntersectingROI.cc
     SimplifyContours.cc
