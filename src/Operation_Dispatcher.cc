@@ -44,6 +44,7 @@
 #include "Operations/ContourVote.h"
 #include "Operations/ContourWholeImages.h"
 #include "Operations/ContouringAides.h"
+#include "Operations/ConvertContoursToPoints.h"
 #include "Operations/ConvertDoseToImage.h"
 #include "Operations/ConvertImageToDose.h"
 #include "Operations/ConvertImageToMeshes.h"
@@ -195,6 +196,7 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["ContourVote"] = std::make_pair(OpArgDocContourVote, ContourVote);
     out["ContourWholeImages"] = std::make_pair(OpArgDocContourWholeImages, ContourWholeImages);
     out["ContouringAides"] = std::make_pair(OpArgDocContouringAides, ContouringAides);
+    out["ConvertContoursToPoints"] = std::make_pair(OpArgDocConvertContoursToPoints, ConvertContoursToPoints);
     out["ConvertDoseToImage"] = std::make_pair(OpArgDocConvertDoseToImage, ConvertDoseToImage);
     out["ConvertImageToDose"] = std::make_pair(OpArgDocConvertImageToDose, ConvertImageToDose);
     out["ConvertImageToMeshes"] = std::make_pair(OpArgDocConvertImageToMeshes, ConvertImageToMeshes);
