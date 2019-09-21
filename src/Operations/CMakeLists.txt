@@ -2,6 +2,7 @@
 
 add_library(Operations_objs OBJECT 
     AccumulateRowsColumns.cc
+    AlignPoints.cc
     AnalyzeDoseVolumeHistograms.cc
     AnalyzeLightRadFieldCoincidence.cc
     AnalyzePicketFence.cc
