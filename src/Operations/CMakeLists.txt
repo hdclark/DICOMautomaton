@@ -38,6 +38,7 @@ add_library(Operations_objs OBJECT
     ConvolveImages.cc
     CopyImages.cc
     CopyMeshes.cc
+    CopyPoints.cc
     CountVoxels.cc
     CropImageDoseToROIs.cc
     CropImages.cc
@@ -50,6 +51,7 @@ add_library(Operations_objs OBJECT
     DecimatePixels.cc
     DeleteImages.cc
     DeleteMeshes.cc
+    DeletePoints.cc
     DetectGrid3D.cc
     DetectShapes3D.cc
     DrawGeometry.cc

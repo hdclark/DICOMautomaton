@@ -56,6 +56,7 @@
 #include "Operations/ConvolveImages.h"
 #include "Operations/CopyImages.h"
 #include "Operations/CopyMeshes.h"
+#include "Operations/CopyPoints.h"
 #include "Operations/CountVoxels.h"
 #include "Operations/CropImageDoseToROIs.h"
 #include "Operations/CropImages.h"
@@ -68,6 +69,7 @@
 #include "Operations/DecimatePixels.h"
 #include "Operations/DeleteImages.h"
 #include "Operations/DeleteMeshes.h"
+#include "Operations/DeletePoints.h"
 #include "Operations/DetectGrid3D.h"
 #include "Operations/DetectShapes3D.h"
 #include "Operations/DrawGeometry.h"
@@ -209,6 +211,7 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["ConvolveImages"] = std::make_pair(OpArgDocConvolveImages, ConvolveImages);
     out["CopyImages"] = std::make_pair(OpArgDocCopyImages, CopyImages);
     out["CopyMeshes"] = std::make_pair(OpArgDocCopyMeshes, CopyMeshes);
+    out["CopyPoints"] = std::make_pair(OpArgDocCopyPoints, CopyPoints);
     out["CountVoxels"] = std::make_pair(OpArgDocCountVoxels, CountVoxels);
     out["CropImageDoseToROIs"] = std::make_pair(OpArgDocCropImageDoseToROIs, CropImageDoseToROIs);
     out["CropImages"] = std::make_pair(OpArgDocCropImages, CropImages);
@@ -221,6 +224,7 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["DecimatePixels"] = std::make_pair(OpArgDocDecimatePixels, DecimatePixels);
     out["DeleteImages"] = std::make_pair(OpArgDocDeleteImages, DeleteImages);
     out["DeleteMeshes"] = std::make_pair(OpArgDocDeleteMeshes, DeleteMeshes);
+    out["DeletePoints"] = std::make_pair(OpArgDocDeletePoints, DeletePoints);
     out["DetectGrid3D"] = std::make_pair(OpArgDocDetectGrid3D, DetectGrid3D);
     out["DetectShapes3D"] = std::make_pair(OpArgDocDetectShapes3D, DetectShapes3D);
     out["DrawGeometry"] = std::make_pair(OpArgDocDrawGeometry, DrawGeometry);
