@@ -210,7 +210,7 @@ Drover ConvertPixelsToPoints(Drover DICOM_data, OperationArgPkg OptArgs, std::ma
     }
 
     DICOM_data.point_data.back()->metadata["Label"] = LabelStr;
-    DICOM_data.point_data.back()->metadata["Description"] = "Point cloud derived from volumteric images.";
+    DICOM_data.point_data.back()->metadata["Description"] = "Point cloud derived from volumetric images.";
 
     return DICOM_data;
 }

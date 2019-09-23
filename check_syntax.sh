@@ -32,7 +32,7 @@ export LC_ALL=""
 #      g++ --std=c++17 -c '{}' -o /dev/null 
 
 # Check only modified and untracked files.
-git ls-files -z -o -m |
+git ls-files -z -o -m "$@" |
   grep -z -E '*[.]h|*[.]cc|*[.]cpp' |
     grep -z -i -v '.*imebra.*' |
   xargs -0 -I '{}' -P $(nproc || echo 2) -n 1 -r \

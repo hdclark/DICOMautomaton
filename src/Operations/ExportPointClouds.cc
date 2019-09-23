@@ -1,0 +1,103 @@
+//ExportPointClouds.cc - A part of DICOMautomaton 2019. Written by hal clark.
+
+#include <algorithm>
+#include <experimental/optional>
+#include <fstream>
+#include <fstream>
+#include <iostream>
+#include <iomanip>
+#include <list>
+#include <map>
+#include <memory>
+#include <mutex>
+#include <regex>
+#include <set> 
+#include <stdexcept>
+#include <string>    
+#include <utility>            //Needed for std::pair.
+#include <vector>
+
+#include "../Structs.h"
+#include "../Regex_Selectors.h"
+#include "../Thread_Pool.h"
+#include "ExportPointClouds.h"
+#include "Explicator.h"       //Needed for Explicator class.
+#include "YgorImages.h"
+#include "YgorMath.h"         //Needed for vec3 class.
+#include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorStats.h"        //Needed for Stats:: namespace.
+#include "YgorString.h"       //Needed for GetFirstRegex(...)
+#include "YgorMathIOOFF.h"
+
+#include "../Surface_Meshes.h"
+
+
+OperationDoc OpArgDocExportPointClouds(void){
+    OperationDoc out;
+    out.name = "ExportPointClouds";
+
+    out.desc = 
+        "This operation writes point clouds to file.";
+
+
+    out.args.emplace_back();
+    out.args.back() = PCWhitelistOpArgDoc();
+    out.args.back().name = "PointSelection";
+    out.args.back().default_val = "last";
+   
+
+    out.args.emplace_back();
+    out.args.back().name = "FilenameBase";
+    out.args.back().desc = "The base filename that line samples will be written to."
+                           " The file format is 'XYZ' -- a 3-column text file containing vector coordinates of the points."
+                           " Metadata is excluded."
+                           //" Metadata is included, but will be base64 encoded if any non-printable"
+                           //" characters are detected. If no name is given, the default will be used."
+                           " A '_', a sequentially-increasing number, and the '.xyz' file suffix are"
+                           " appended after the base filename.";
+    out.args.back().default_val = "/tmp/dcma_exportpointclouds";
+    out.args.back().expected = true;
+    out.args.back().examples = { "point_cloud", 
+                                 "../somedir/data", 
+                                 "/path/to/some/points" };
+    out.args.back().mimetype = "text/plain";
+
+    return out;
+}
+
+
+
+Drover ExportPointClouds(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string> /*InvocationMetadata*/, std::string FilenameLex){
+
+    //---------------------------------------------- User Parameters --------------------------------------------------
+    const auto PointSelectionStr = OptArgs.getValueStr("PointSelection").value();
+    const auto FilenameBaseStr = OptArgs.getValueStr("FilenameBase").value();
+
+    //-----------------------------------------------------------------------------------------------------------------
+
+    auto PCs_all = All_PCs( DICOM_data );
+    const auto PCs = Whitelist( PCs_all, PointSelectionStr );
+    const auto N_PCs = PCs.size();
+    for(auto & pcp_it : PCs){
+
+        // Determine which filename to use.
+        const auto FN = Get_Unique_Sequential_Filename(FilenameBaseStr + "_", 6, ".xyz");
+        std::fstream FO(FN, std::fstream::out);
+        FO.precision(std::numeric_limits<double>::digits10 + 1);
+
+        // Write the data to file.
+        for(const auto &pp : (*pcp_it)->points){
+            FO << pp.first.x << " "
+               << pp.first.y << " "
+               << pp.first.z << "\n";
+        }
+        FO << std::endl;
+        if(!FO){
+            throw std::runtime_error("Unable to write point cloud. Cannot continue.");
+        }
+
+        FUNCINFO("Point cloud written to '" << FN << "'");
+    }
+
+    return DICOM_data;
+}

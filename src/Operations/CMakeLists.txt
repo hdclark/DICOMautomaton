@@ -2,6 +2,7 @@
 
 add_library(Operations_objs OBJECT 
     AccumulateRowsColumns.cc
+    AlignPoints.cc
     AnalyzeDoseVolumeHistograms.cc
     AnalyzeLightRadFieldCoincidence.cc
     AnalyzePicketFence.cc
@@ -26,6 +27,7 @@ add_library(Operations_objs OBJECT
     ContourVote.cc
     ContourWholeImages.cc
     ContouringAides.cc
+    ConvertContoursToPoints.cc
     ConvertDoseToImage.cc
     ConvertImageToDose.cc
     ConvertImageToMeshes.cc
@@ -36,6 +38,7 @@ add_library(Operations_objs OBJECT
     ConvolveImages.cc
     CopyImages.cc
     CopyMeshes.cc
+    CopyPoints.cc
     CountVoxels.cc
     CropImageDoseToROIs.cc
     CropImages.cc
@@ -48,6 +51,7 @@ add_library(Operations_objs OBJECT
     DecimatePixels.cc
     DeleteImages.cc
     DeleteMeshes.cc
+    DeletePoints.cc
     DetectGrid3D.cc
     DetectShapes3D.cc
     DrawGeometry.cc
@@ -71,9 +75,10 @@ add_library(Operations_objs OBJECT
     EvaluateDoseVolumeStats.cc
     EvaluateNTCPModels.cc
     EvaluateTCPModels.cc
-    ExportLineSamples.cc
-    ExportSurfaceMeshes.cc
     ExportFITSImages.cc
+    ExportLineSamples.cc
+    ExportPointClouds.cc
+    ExportSurfaceMeshes.cc
     ExtractDoseVolumeHistograms.cc
     ExtractRadiomicFeatures.cc
     FVPicketFence.cc
@@ -108,8 +113,8 @@ add_library(Operations_objs OBJECT
     NormalizePixels.cc
     OptimizeStaticBeams.cc
     OrderImages.cc
-    PlotPerROITimeCourses.cc
     PlotLineSamples.cc
+    PlotPerROITimeCourses.cc
     PreFilterEnormousCTValues.cc
     PresentationImage.cc
     PruneEmptyImageDoseArrays.cc
@@ -117,8 +122,8 @@ add_library(Operations_objs OBJECT
     RankPixels.cc
     ReduceNeighbourhood.cc
     RemeshSurfaceMeshes.cc
-    ScalePixels.cc
     SFML_Viewer.cc
+    ScalePixels.cc
     SeamContours.cc
     SelectSlicesIntersectingROI.cc
     SimplifyContours.cc

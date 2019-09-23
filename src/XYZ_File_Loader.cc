@@ -59,8 +59,6 @@ bool Load_From_XYZ_Files( Drover &DICOM_data,
     //
     if(Filenames.empty()) return true;
 
-    DICOM_data.point_data.emplace_back( std::make_shared<Point_Cloud>() );
-
     size_t i = 0;
     const size_t N = Filenames.size();
 
@@ -80,6 +78,8 @@ bool Load_From_XYZ_Files( Drover &DICOM_data,
             if(!FI.good()){
                 throw std::runtime_error("Unable to read file.");
             }
+
+            DICOM_data.point_data.emplace_back( std::make_shared<Point_Cloud>() );
 
             std::string aline;
             while(!FI.eof()){
@@ -141,6 +141,7 @@ bool Load_From_XYZ_Files( Drover &DICOM_data,
             continue;
         }catch(const std::exception &e){
             FUNCINFO("Unable to load as XYZ file");
+            DICOM_data.point_data.pop_back();
         };
 
         //Skip the file. It might be destined for some other loader.
@@ -150,7 +151,7 @@ bool Load_From_XYZ_Files( Drover &DICOM_data,
     //If nothing was loaded, do not post-process.
     const size_t N2 = Filenames.size();
     if(N == N2){
-        DICOM_data.point_data.pop_back();
+        //DICOM_data.point_data.pop_back();
         return true;
     }
 
