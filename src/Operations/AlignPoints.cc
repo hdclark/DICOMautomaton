@@ -81,6 +81,44 @@ AffineTransform {
             }
             return;
         }
+
+        // Write the transformation to a stream.
+        bool
+        write_to( std::ostream &os ){
+            // Maximize precision prior to emitting the vertices.
+            const auto original_precision = os.precision();
+            os.precision( std::numeric_limits<double>::digits10 + 1 );
+            os << this->t[0][0] << " " << this->t[1][0] << " " << this->t[2][0] << " " << this->t[3][0] << std::endl;
+            os << this->t[0][1] << " " << this->t[1][1] << " " << this->t[2][1] << " " << this->t[3][1] << std::endl;
+            os << this->t[0][2] << " " << this->t[1][2] << " " << this->t[2][2] << " " << this->t[3][2] << std::endl;
+            os << this->t[0][3] << " " << this->t[1][3] << " " << this->t[2][3] << " " << this->t[3][3] << std::endl;
+
+            // Reset the precision on the stream.
+            os.precision( original_precision );
+            os.flush();
+            return(!os.fail());
+        }
+
+        // Read the transformation from a stream.
+        bool
+        read_from( std::istream &is ){
+            is >> this->t[0][0] >> this->t[1][0] >> this->t[2][0] >> this->t[3][0];
+            is >> this->t[0][1] >> this->t[1][1] >> this->t[2][1] >> this->t[3][1];
+            is >> this->t[0][2] >> this->t[1][2] >> this->t[2][2] >> this->t[3][2];
+            is >> this->t[0][3] >> this->t[1][3] >> this->t[2][3] >> this->t[3][3];
+
+            const auto machine_eps = std::sqrt( std::numeric_limits<double>::epsilon() );
+            if( (std::fabs(this->t[0][3] - 0.0) > machine_eps)
+            ||  (std::fabs(this->t[1][3] - 0.0) > machine_eps)
+            ||  (std::fabs(this->t[2][3] - 0.0) > machine_eps)
+            ||  (std::fabs(this->t[3][3] - 1.0) > machine_eps) ){
+                FUNCWARN("Unable to read transformation; not Affine");
+                return false;
+            }
+
+            return(!is.fail());
+        }
+
 };
 
 
@@ -360,6 +398,19 @@ OperationDoc OpArgDocAlignPoints(void){
     out.args.back().examples = { "centroid", "pca" };
 
 
+    out.args.emplace_back();
+    out.args.back().name = "FilenameBase";
+    out.args.back().desc = "The base filename that the transformation will be written to."
+                           " A '_', a sequentially-increasing number, and the '.trans' file suffix are"
+                           " appended after the base filename.";
+    out.args.back().default_val = "/tmp/dcma_alignpoints";
+    out.args.back().expected = true;
+    out.args.back().examples = { "transformation", 
+                                 "../somedir/trans", 
+                                 "/path/to/some/transform" };
+    out.args.back().mimetype = "text/plain";
+
+
     return out;
 }
 
@@ -374,6 +425,8 @@ Drover AlignPoints(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::str
     const auto ReferencePointSelectionStr = OptArgs.getValueStr("ReferencePointSelection").value();
 
     const auto MethodStr = OptArgs.getValueStr("Method").value();
+
+    const auto FilenameBaseStr = OptArgs.getValueStr("FilenameBase").value();
 
     //-----------------------------------------------------------------------------------------------------------------
     const auto regex_com = Compile_Regex("^ce?n?t?r?o?i?d?$");
@@ -390,6 +443,10 @@ Drover AlignPoints(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::str
     for(auto & pcp_it : moving_PCs){
         FUNCINFO("There are " << (*pcp_it)->pset.points.size() << " points in the moving point cloud");
 
+        // Determine which filename to use.
+        const auto FN = Get_Unique_Sequential_Filename(FilenameBaseStr + "_", 6, ".trans");
+        std::fstream FO(FN, std::fstream::out);
+
         if(false){
         }else if( std::regex_match(MethodStr, regex_com) ){
             auto t_opt = AlignViaCentroid( (*(*pcp_it)),
@@ -398,6 +455,10 @@ Drover AlignPoints(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::str
             if(t_opt){
                 FUNCINFO("Transforming the point cloud using centre-of-mass alignment");
                 t_opt.value().apply_to(*(*pcp_it));
+
+                if(!(t_opt.value().write_to(FO))){
+                    std::runtime_error("Unable to write transformation to file. Cannot continue.");
+                }
             }
         }else if( std::regex_match(MethodStr, regex_pca) ){
             auto t_opt = AlignViaPCA( (*(*pcp_it)),
@@ -406,6 +467,10 @@ Drover AlignPoints(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::str
             if(t_opt){
                 FUNCINFO("Transforming the point cloud using principle component alignment");
                 t_opt.value().apply_to(*(*pcp_it));
+
+                if(!(t_opt.value().write_to(FO))){
+                    std::runtime_error("Unable to write transformation to file. Cannot continue.");
+                }
             }
         }else{
             throw std::invalid_argument("Method not understood. Cannot continue.");
