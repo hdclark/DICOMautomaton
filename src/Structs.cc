@@ -957,9 +957,7 @@ Point_Cloud::Point_Cloud(const Point_Cloud &rhs){
 Point_Cloud & Point_Cloud::operator=(const Point_Cloud &rhs){
     //Performs a deep copy (unless copying self).
     if(this != &rhs){
-        this->points     = rhs.points;
-        this->attributes = rhs.attributes;
-        this->metadata   = rhs.metadata;
+        this->pset = rhs.pset;
     }
     return *this;
 }

@@ -183,27 +183,11 @@ class Image_Array { //: public Base_Array {
 };
 
 
-// This class is meant to hold a point cloud which may be dynamically tagged with attributes.
-// Attributes are flexible, permitting specification of per-point attributes (via this->points index or some other
-// index) or for multiple points.
+// This class is meant to hold a simple 3D point cloud.
 class Point_Cloud {
     public:
 
-        // All points must have a location and can optionally be assigned an integer tag.
-        // The integer is important because it allows implementations without knowledge of the dynamic attributes to
-        // perform some basic operations, such as removing points and keeping the cloud consistent.
-        std::vector< std::pair< vec3<double>, long int > > points;
-
-        //std::map< size_t, vec3<double> > orientation;
-        //std::map< size_t, vec3<double> > colour;
-        //std::map< size_t, double > radius;
-        //std::map< size_t, double > weight;
-
-        // Used for defining attributes at run-time.
-        // The std::any can be replaced by something like std::map<size_t, double> but doesn't have to.
-        std::map< std::string, std::any > attributes; 
-
-        std::map< std::string, std::string > metadata; //User-defined metadata.
+        point_set<double> pset;
 
         //Constructor/Destructors.
         Point_Cloud();

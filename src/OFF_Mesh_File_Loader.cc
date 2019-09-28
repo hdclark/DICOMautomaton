@@ -18,9 +18,9 @@
 
 #include "Structs.h"
 #include "YgorMath.h"         //Needed for vec3 class.
+#include "YgorMathIOOFF.h"
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorString.h"       //Needed for SplitStringToVector, Canonicalize_String2, SplitVector functions.
-#include "YgorMathIOOFF.h"
 
 
 bool Load_Mesh_From_OFF_Files( Drover &DICOM_data,

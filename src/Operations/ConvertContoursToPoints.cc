@@ -106,13 +106,10 @@ Drover ConvertContoursToPoints(Drover DICOM_data, OperationArgPkg OptArgs, std::
     //Construct a destination for the point clouds.
     DICOM_data.point_data.emplace_back( std::make_unique<Point_Cloud>() );
 
-    long int point_number = 0;
-
     for(auto & cc_refw : cc_ROIs){
         for(const auto & c : cc_refw.get().contours){
             for(const auto & v : c.points){
-                DICOM_data.point_data.back()->points.emplace_back( std::make_pair( v, point_number ) );
-                ++point_number;
+                DICOM_data.point_data.back()->pset.points.emplace_back( v );
             }
         }
     }
@@ -122,11 +119,11 @@ Drover ConvertContoursToPoints(Drover DICOM_data, OperationArgPkg OptArgs, std::
     // Determine the common set of contour metadata and assign it to the point data.
     {
         auto cm = contour_collection<double>().get_common_metadata(cc_ROIs, {});
-        DICOM_data.point_data.back()->metadata = cm;
+        DICOM_data.point_data.back()->pset.metadata = cm;
     }
 
-    DICOM_data.point_data.back()->metadata["Label"] = LabelStr;
-    DICOM_data.point_data.back()->metadata["Description"] = "Point cloud derived from planar contours.";
+    DICOM_data.point_data.back()->pset.metadata["Label"] = LabelStr;
+    DICOM_data.point_data.back()->pset.metadata["Description"] = "Point cloud derived from planar contours.";
 
     return DICOM_data;
 }

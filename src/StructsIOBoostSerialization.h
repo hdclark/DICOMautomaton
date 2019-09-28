@@ -74,11 +74,7 @@ template<typename Archive>
 void serialize(Archive &a, Point_Cloud &p, const unsigned int version){
     if(false){
     }else if(version == 0){
-        // Note: No dynamic point_cloud attributes are saved in version 0 due to use of std::any.
-        //       Until a suitable reflection mechanism is located, we are stuck ignoring members
-        //       that make use of std::any.
-        a & boost::serialization::make_nvp("points",p.points)
-          & boost::serialization::make_nvp("metadata",p.metadata);
+        a & boost::serialization::make_nvp("pset",p.pset);
     }else{
         FUNCWARN("Point_Cloud archives with version " << version << " are not recognized");
     }

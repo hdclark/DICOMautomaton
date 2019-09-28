@@ -476,7 +476,7 @@ Whitelist( std::list<std::list<std::shared_ptr<Point_Cloud>>::iterator> pcs,
 
     pcs.remove_if([&](std::list<std::shared_ptr<Point_Cloud>>::iterator pcp_it) -> bool {
         if((*pcp_it) == nullptr) return true;
-        if((*pcp_it)->points.empty()) return true; // Remove arrays containing no images.
+        if((*pcp_it)->pset.points.empty()) return true; // Remove arrays containing no images.
 
         if(false){
         }else if( // Note: Point_Clouds are dissimilar to Image_Arrays in that individual images can have different
@@ -484,10 +484,7 @@ Whitelist( std::list<std::list<std::shared_ptr<Point_Cloud>>::iterator> pcs,
                   (Opts.validation == Regex_Selector_Opts::Validation::Representative)
               ||  (Opts.validation == Regex_Selector_Opts::Validation::Pedantic)        ){
 
-            std::experimental::optional<std::string> ValueOpt 
-                    = ( (*pcp_it)->metadata.count(MetadataKey) != 0 ) ?
-                      (*pcp_it)->metadata[MetadataKey] :
-                      std::experimental::optional<std::string>();
+            auto ValueOpt = (*pcp_it)->pset.GetMetadataValueAs<std::string>(MetadataKey);
             if(ValueOpt){
                 return !(std::regex_match(ValueOpt.value(),theregex));
             }else if(Opts.nas == Regex_Selector_Opts::NAs::Include){

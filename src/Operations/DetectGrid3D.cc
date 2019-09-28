@@ -80,7 +80,7 @@ struct ICP_Context {
     //
     // This list is regenerated for each round of RANSAC. Only some point cloud points within a fixed distance from
     // some randomly-selected point will be retained. The points are not altered, just copied for ease-of-use.
-    using pcp_c_t = decltype(Point_Cloud().points); // Point_Cloud point container type.
+    using pcp_c_t = decltype(Point_Cloud().pset.points); // Point_Cloud point container type.
     pcp_c_t cohort;
 
     // Cohort points projected into a single volumetric proto cell.
@@ -96,15 +96,14 @@ struct ICP_Context {
 static
 void
 Write_XYZ( const std::string &fname,
-           decltype(Point_Cloud().points) points ){
+           decltype(Point_Cloud().pset.points) points ){
 
     // This routine writes or appends to a simple "XYZ"-format file which contains point cloud vertices.
     //
     // Appending to any (valid) XYZ file will create a valid combined point cloud.
     std::ofstream OF(fname, std::ios::out | std::ios::app);
     OF << "# XYZ point cloud file." << std::endl;
-    for(const auto &pp : points){
-        const auto v = pp.first;
+    for(const auto &v : points){
         OF << v.x << " " << v.y << " " << v.z << std::endl;
     }
     OF.close();
@@ -114,7 +113,7 @@ Write_XYZ( const std::string &fname,
 static
 void
 Write_PLY( const std::string &fname,
-           decltype(Point_Cloud().points) points ){
+           decltype(Point_Cloud().pset.points) points ){
 
     // This routine write to a simple "PLY"-format file which contains point cloud vertices.
     //
@@ -129,8 +128,7 @@ Write_PLY( const std::string &fname,
        << "property double y" << "\n"
        << "property double z" << "\n"
        << "end_header" << std::endl;
-    for(const auto &pp : points){
-        const auto v = pp.first;
+    for(const auto &v : points){
         OF << v.x << " " << v.y << " " << v.z << std::endl;
     }
     OF.close();
@@ -220,7 +218,7 @@ static
 void
 Insert_Grid_Contours(Drover &DICOM_data,
                      const std::string &ROILabel,
-                     decltype(Point_Cloud().points) points,
+                     decltype(Point_Cloud().pset.points) points,
                      const vec3<double> &corner,
                      const vec3<double> &edge1,
                      const vec3<double> &edge2,
@@ -234,9 +232,7 @@ Insert_Grid_Contours(Drover &DICOM_data,
     Stats::Running_MinMax<double> mm_x;
     Stats::Running_MinMax<double> mm_y;
     Stats::Running_MinMax<double> mm_z;
-    for(const auto &pp : points){
-        const auto P = pp.first;
-
+    for(const auto &P : points){
         mm_x.Digest(P.x);
         mm_y.Digest(P.y);
         mm_z.Digest(P.z);
@@ -338,8 +334,7 @@ Project_Into_Proto_Cube( Grid_Context &GC,
                         ICP_Context &ICPC ){
     // Using the current grid axes directions and anchor point, project all points into the proto cell.
     auto p_cell_it = std::begin(ICPC.p_cell);
-    for(const auto &pp : ICPC.cohort){
-        const auto P = pp.first;
+    for(const auto &P : ICPC.cohort){
 
         // Vector rel. to grid anchor.
         const auto R = (P - GC.current_grid_anchor);
@@ -387,7 +382,7 @@ Project_Into_Proto_Cube( Grid_Context &GC,
             }
         }
 
-        p_cell_it->first = C;
+        *p_cell_it = C;
         ++p_cell_it;
     }
     return;
@@ -415,8 +410,7 @@ Translate_Grid_Optimally( Grid_Context &GC,
     {
         auto p_cell_it = std::begin(ICPC.p_cell);
         for(const auto &pp : ICPC.cohort){
-            //const auto P = pp.first;
-            const auto C = p_cell_it->first - GC.current_grid_anchor;
+            const auto C = (*p_cell_it) - GC.current_grid_anchor;
 
             const auto proj_x = GC.current_grid_x.Dot(C);
             const auto proj_y = GC.current_grid_y.Dot(C);
@@ -524,8 +518,7 @@ Find_Corresponding_Points( Grid_Context &GC,
     auto closest_dist = std::numeric_limits<double>::quiet_NaN();
     auto closest_proj = NaN_vec3;
     auto c_it = std::begin(ICPC.p_corr);
-    for(const auto &pp : ICPC.p_cell){
-        const auto P = pp.first;
+    for(const auto &P : ICPC.p_cell){
 
         closest_dist = std::numeric_limits<double>::quiet_NaN();
         closest_proj = NaN_vec3;
@@ -569,7 +562,7 @@ Find_Corresponding_Points( Grid_Context &GC,
             throw std::logic_error("Invalid grid sampling method. Cannot continue.");
         }
 
-        c_it->first = closest_proj;
+        (*c_it) = closest_proj;
         ++c_it;
     }
     return;
@@ -597,9 +590,9 @@ Rotate_Grid_Optimally( Grid_Context &GC,
     auto p_it = std::begin(ICPC.p_cell);
     size_t col = 0;
     while(c_it != std::end(ICPC.p_corr)){
-        const auto O = o_it->first; // The original point location.
-        const auto P = p_it->first; // The point projected into the unit cube.
-        const auto C = c_it->first; // The corresponding point somewhere on the unit cube surface.
+        const auto O = (*o_it); // The original point location.
+        const auto P = (*p_it); // The point projected into the unit cube.
+        const auto C = (*c_it); // The corresponding point somewhere on the unit cube surface.
 
         const auto P_B = (O - ICPC.rot_centre); // O from the rotation centre; the actual point location.
         const auto P_A = P_B + (C - P); // O's corresponding point from the rotation centre; the desired point location.
@@ -711,10 +704,8 @@ Score_Fit( Grid_Context &GC,
     std::vector<double> dists;
     dists.reserve(ICPC.p_corr.size());
     auto c_it = std::begin(ICPC.p_corr);
-    for(const auto &pp : ICPC.p_cell){
-        const auto P = pp.first;
-
-        const auto C = c_it->first;
+    for(const auto &P : ICPC.p_cell){
+        const auto C = (*c_it);
         const auto dist = P.distance(C);
         dists.emplace_back(dist);
 
@@ -775,8 +766,8 @@ Write_Everything(const std::string &filename_base,
 return;
 
     {
-        std::vector< std::pair< vec3<double>, long int > > points;
-        points.emplace_back( std::make_pair<vec3<double>, long int >( vec3<double>(ICPC.ransac_centre), 0L ) );
+        std::vector< vec3<double> > points;
+        points.emplace_back( ICPC.ransac_centre );
 
         Write_XYZ(filename_base + "ransac_point.xyz", points);
         Write_PLY(filename_base + "ransac_point.ply", points);
@@ -806,7 +797,7 @@ return;
     {
         // Determine where the average original point is.
         vec3<double> avg(0.0, 0.0, 0.0);
-        for(const auto &vp : ICPC.cohort) avg += vp.first;
+        for(const auto &vp : ICPC.cohort) avg += vp;
         avg *= (1.0 / (1.0 * ICPC.cohort.size()));
 
         const auto proto_mid = GC.current_grid_anchor
@@ -874,8 +865,7 @@ return;
         lines.emplace_back( c_H, c_E );
 
 
-        for(const auto &O : ICPC.cohort){
-            const auto P = O.first;
+        for(const auto &P : ICPC.cohort){
 
             double closest_dist = std::numeric_limits<double>::quiet_NaN();
             vec3<double> closest_proj = NaN_vec3;
@@ -939,7 +929,7 @@ static int icp_invoke = 0;
         // as the rotation centre.
         std::uniform_int_distribution<long int> rd(0, ICPC.cohort.size());
         const auto N_select = rd(re);
-        ICPC.rot_centre = std::next( std::begin(ICPC.cohort), N_select )->first;
+        ICPC.rot_centre = (*std::next( std::begin(ICPC.cohort), N_select ));
 
 Write_Everything("/tmp/ransac"_s + std::to_string(icp_invoke) + "_icp" + std::to_string(loop) + "_01loopbegins_", GC, ICPC);
         Project_Into_Proto_Cube(GC, ICPC);
@@ -1218,7 +1208,7 @@ FUNCINFO("Loading point clouds");
     auto PCs = Whitelist( PCs_all, PointSelectionStr );
     for(auto & pcp_it : PCs){
 
-        if((*pcp_it == nullptr) || ((*pcp_it)->points.size() < 8)){
+        if((*pcp_it == nullptr) || ((*pcp_it)->pset.points.size() < 8)){
             throw std::invalid_argument("This routine will likely fail with fewer than 8 points. Refusing to continue.");
         }
 
@@ -1228,13 +1218,13 @@ if(false){
   long int random_seed = 123456;
   std::mt19937 re( random_seed );
 
-  std::shuffle(std::begin((*pcp_it)->points),
-               std::end((*pcp_it)->points),
+  std::shuffle(std::begin((*pcp_it)->pset.points),
+               std::end((*pcp_it)->pset.points),
                re);
 
-  auto N_retain = static_cast<long int>(std::round(fraction * (*pcp_it)->points.size()));
-  if(N_retain > (*pcp_it)->points.size()) N_retain = (*pcp_it)->points.size();
-  (*pcp_it)->points.resize(N_retain);
+  auto N_retain = static_cast<long int>(std::round(fraction * (*pcp_it)->pset.points.size()));
+  if(N_retain > (*pcp_it)->pset.points.size()) N_retain = (*pcp_it)->pset.points.size();
+  (*pcp_it)->pset.points.resize(N_retain);
 }
 
 
@@ -1248,7 +1238,7 @@ if(false){
         ICP_Context ICPC; // Working ICP context.
 
         ICP_Context whole_ICPC; // Whole (i.e., entire point cloud) context.
-        whole_ICPC.cohort = (*pcp_it)->points;
+        whole_ICPC.cohort = (*pcp_it)->pset.points;
         whole_ICPC.p_cell = whole_ICPC.cohort; // Prime the container with dummy info.
         whole_ICPC.p_corr = whole_ICPC.cohort; // Prime the container with dummy info.
         //whole_ICPC.p_corr.resize(whole_ICPC.cohort.size());
@@ -1262,7 +1252,7 @@ if(false){
         //
         // The routine below can be called only a certain number of times before throwing.
         long int RANSACFails = 0;
-        const long int PermittedRANSACFails = std::max(100L, static_cast<long int>((*pcp_it)->points.size() * 2));
+        const long int PermittedRANSACFails = std::max(100L, static_cast<long int>((*pcp_it)->pset.points.size() * 2));
         auto Handle_RANSAC_Failure = [&](void) -> void {
             ++RANSACFails;
             if(RANSACFails > PermittedRANSACFails){
@@ -1279,18 +1269,18 @@ if(false){
         std::mutex saver_printer;
         while(ransac_loop < RANSACMaxLoops){
             // Randomly select a point from the cloud.
-            std::uniform_int_distribution<long int> rd(0, (*pcp_it)->points.size());
+            std::uniform_int_distribution<long int> rd(0, (*pcp_it)->pset.points.size());
             const auto N = rd(re);
-            ICPC.ransac_centre = std::next( std::begin((*pcp_it)->points), N )->first;
+            ICPC.ransac_centre = (* std::next( std::begin((*pcp_it)->pset.points), N ));
 
             // Retain only the points within a small distance of the RANSAC centre.
-            using pcp_t = decltype((*pcp_it)->points.front());
-            ICPC.cohort = (*pcp_it)->points;
+            using pcp_t = decltype((*pcp_it)->pset.points.front());
+            ICPC.cohort = (*pcp_it)->pset.points;
             ICPC.cohort.erase(
                 std::remove_if(std::begin(ICPC.cohort), 
                                std::end(ICPC.cohort),
                                [&](const pcp_t &pcp) -> bool {
-                                   return (pcp.first.distance(ICPC.ransac_centre) > RANSACDist);
+                                   return (pcp.distance(ICPC.ransac_centre) > RANSACDist);
                                }),
                 std::end(ICPC.cohort) );
 
@@ -1364,8 +1354,8 @@ if(false){
             const auto best_score = Score_Fit(best_GC, whole_ICPC, gen_filename, verbose);
             FUNCINFO("Best score: " << best_score);
 
-            Write_XYZ("/tmp/original_points.xyz", (*pcp_it)->points);
-            Write_PLY("/tmp/original_points.ply", (*pcp_it)->points);
+            Write_XYZ("/tmp/original_points.xyz", (*pcp_it)->pset.points);
+            Write_PLY("/tmp/original_points.ply", (*pcp_it)->pset.points);
 
             // Write the project points to a file for inspection.
             Write_XYZ("/tmp/cube_proj_points.xyz", whole_ICPC.p_cell);
@@ -1408,11 +1398,10 @@ if(false){
 
                 auto o_it = std::begin(whole_ICPC.cohort);
                 auto c_it = std::begin(whole_ICPC.p_corr);
-                for(const auto &pp : whole_ICPC.p_cell){
-                    const auto P = pp.first;
-                    const auto C = c_it->first;
+                for(const auto &P : whole_ICPC.p_cell){
+                    const auto C = (*c_it);
                     const auto R = (C - P);
-                    const auto O = o_it->first;
+                    const auto O = (*o_it);
 
                     const auto dist = R.length();
                     const auto dist_x = R.Dot(best_GC.current_grid_x);
@@ -1494,11 +1483,10 @@ if(false){
 
                 auto o_it = std::begin(whole_ICPC.cohort);
                 auto c_it = std::begin(whole_ICPC.p_corr);
-                for(const auto &pp : whole_ICPC.p_cell){
-                    const auto P = pp.first;     // Proto cell point.
-                    const auto C = c_it->first;  // Corresponding point (in the proto cell).
+                for(const auto &P : whole_ICPC.p_cell){
+                    const auto C = (*c_it);  // Corresponding point (in the proto cell).
                     //const auto R = (C - P);      // Shift from proto cell point to corresponding point.
-                    const auto O = o_it->first;  // Original point.
+                    const auto O = (*o_it);  // Original point.
 
                     // Using the proto cube projection, figure out which corner the point is nearest to.
                     auto closest_dist = std::numeric_limits<double>::quiet_NaN();
@@ -1624,9 +1612,8 @@ FUNCINFO("There are " << partitioned.size() << " involved grid unions");
 
             auto d_it = std::begin(displacement);
             auto c_it = std::begin(whole_ICPC.p_corr);
-            for(const auto &pp : whole_ICPC.p_cell){
-                const auto P = pp.first;
-                const auto C = c_it->first;
+            for(const auto &P : whole_ICPC.p_cell){
+                const auto C = (*c_it);
                 const auto R = (C - P);
 
                 const auto dist = R.length();
@@ -1639,7 +1626,9 @@ FUNCINFO("There are " << partitioned.size() << " involved grid unions");
                 ++c_it;
                 ++d_it;
             }
-            (*pcp_it)->attributes["magnitude"] = displacement;
+
+            // TODO: provide a scalar attribute OR figure out how to otherwise stash this info into the mesh.
+            //(*pcp_it)->attributes["magnitude"] = displacement;
         }
 
     } // Point_Cloud loop.

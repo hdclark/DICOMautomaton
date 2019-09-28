@@ -76,8 +76,8 @@ AffineTransform {
         // Apply the transformation to a point cloud.
         void
         apply_to(Point_Cloud &in){
-            for(auto &p : in.points){
-                p.first = this->apply_to(p.first);
+            for(auto &p : in.pset.points){
+                p = this->apply_to(p);
             }
             return;
         }
@@ -97,22 +97,8 @@ AlignViaCOM(std::reference_wrapper<Point_Cloud> moving,
     AffineTransform t;
 
     // Compute the COM for both point clouds.
-    const auto est_COM = [](const Point_Cloud &pc) -> vec3<double> {
-        const auto N = pc.points.size();
-        Stats::Running_Sum<double> COM_sx;
-        Stats::Running_Sum<double> COM_sy;
-        Stats::Running_Sum<double> COM_sz;
-        for(const auto &p : pc.points){
-            COM_sx.Digest(p.first.x);
-            COM_sy.Digest(p.first.y);
-            COM_sz.Digest(p.first.z);
-        }
-        return vec3<double>(COM_sx.Current_Sum(),
-                            COM_sy.Current_Sum(),
-                            COM_sz.Current_Sum()) / static_cast<double>(N);
-    };
-    const auto COM_s = est_COM(stationary.get());
-    const auto COM_m = est_COM(moving.get());
+    const auto COM_s = stationary.get().pset.Centroid();
+    const auto COM_m = moving.get().pset.Centroid();
 
     const auto dCOM = (COM_s - COM_m);
     t.coeff(3,0) = dCOM.x;
@@ -137,22 +123,8 @@ AlignViaPCA(std::reference_wrapper<Point_Cloud> moving,
     AffineTransform t;
 
     // Compute the COM for both point clouds.
-    const auto est_COM = [](const Point_Cloud &pc) -> vec3<double> {
-        const auto N = pc.points.size();
-        Stats::Running_Sum<double> COM_sx;
-        Stats::Running_Sum<double> COM_sy;
-        Stats::Running_Sum<double> COM_sz;
-        for(const auto &p : pc.points){
-            COM_sx.Digest(p.first.x);
-            COM_sy.Digest(p.first.y);
-            COM_sz.Digest(p.first.z);
-        }
-        return vec3<double>(COM_sx.Current_Sum(),
-                            COM_sy.Current_Sum(),
-                            COM_sz.Current_Sum()) / static_cast<double>(N);
-    };
-    const auto COM_s = est_COM(stationary.get());
-    const auto COM_m = est_COM(moving.get());
+    const auto COM_s = stationary.get().pset.Centroid();
+    const auto COM_m = moving.get().pset.Centroid();
     
     // Compute the PCA for both point clouds.
     struct pcomps {
@@ -163,15 +135,15 @@ AlignViaPCA(std::reference_wrapper<Point_Cloud> moving,
     const auto est_PCA = [](const Point_Cloud &pc) -> pcomps {
         // Determine the three most prominent unit vectors via PCA.
         Eigen::MatrixXd mat;
-        const size_t mat_rows = pc.points.size();
+        const size_t mat_rows = pc.pset.points.size();
         const size_t mat_cols = 3;
         mat.resize(mat_rows, mat_cols);
         {
             size_t i = 0;
-            for(const auto &v : pc.points){
-                mat(i, 0) = static_cast<double>(v.first.x);
-                mat(i, 1) = static_cast<double>(v.first.y);
-                mat(i, 2) = static_cast<double>(v.first.z);
+            for(const auto &v : pc.pset.points){
+                mat(i, 0) = static_cast<double>(v.x);
+                mat(i, 1) = static_cast<double>(v.y);
+                mat(i, 2) = static_cast<double>(v.z);
                 ++i;
             }
         }
@@ -203,8 +175,8 @@ AlignViaPCA(std::reference_wrapper<Point_Cloud> moving,
         Stats::Running_Sum<double> rs_pc1;
         Stats::Running_Sum<double> rs_pc2;
         Stats::Running_Sum<double> rs_pc3;
-        for(const auto &v : pc.points){
-            const auto sv = (v.first - COM);
+        for(const auto &v : pc.pset.points){
+            const auto sv = (v - COM);
 
             const auto proj_pc1 = sv.Dot(comps.pc1);
             rs_pc1.Digest( std::pow(proj_pc1, 3.0) );
@@ -415,7 +387,7 @@ Drover AlignPoints(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::str
     // Iterate over the moving point clouds, aligning each to the reference point cloud.
     auto moving_PCs = Whitelist( PCs_all, MovingPointSelectionStr );
     for(auto & pcp_it : moving_PCs){
-        FUNCINFO("There are " << (*pcp_it)->points.size() << " points in the moving point cloud");
+        FUNCINFO("There are " << (*pcp_it)->pset.points.size() << " points in the moving point cloud");
 
         if(false){
         }else if( std::regex_match(MethodStr, regex_com) ){

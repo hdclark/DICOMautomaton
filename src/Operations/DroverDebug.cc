@@ -122,8 +122,7 @@ Drover DroverDebug(Drover DICOM_data,
 
             }else{
                 FUNCINFO("  Point_Cloud " << p_cnt << " has " <<
-                         pc->points.size() << " points and " <<
-                         pc->attributes.size() << " attributes");
+                         pc->pset.points.size() << " points");
             }
             ++p_cnt;
         }

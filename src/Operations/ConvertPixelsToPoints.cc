@@ -124,7 +124,6 @@ Drover ConvertPixelsToPoints(Drover DICOM_data, OperationArgPkg OptArgs, std::ma
     DICOM_data.point_data.emplace_back( std::make_unique<Point_Cloud>() );
 
     std::mutex point_pusher; // Who gets to save points.
-    long int point_number = 0;
 
     //Iterate over each requested image_array. Each image is processed independently, so a thread pool is used.
     auto IAs_all = All_IAs( DICOM_data );
@@ -184,8 +183,7 @@ Drover ConvertPixelsToPoints(Drover DICOM_data, OperationArgPkg OptArgs, std::ma
                         const auto pos = img_refw.get().position(row, col);
                          
                         std::lock_guard<std::mutex> lock(point_pusher);
-                        DICOM_data.point_data.back()->points.emplace_back( std::make_pair( pos, point_number ) );
-                        ++point_number;
+                        DICOM_data.point_data.back()->pset.points.emplace_back( pos );
                      }
                      return;
                 });
@@ -206,11 +204,11 @@ Drover ConvertPixelsToPoints(Drover DICOM_data, OperationArgPkg OptArgs, std::ma
         }
         std::map<std::string,std::string> cm = dummy.get_common_metadata(all_img_list_iters);
 
-        DICOM_data.point_data.back()->metadata = cm;
+        DICOM_data.point_data.back()->pset.metadata = cm;
     }
 
-    DICOM_data.point_data.back()->metadata["Label"] = LabelStr;
-    DICOM_data.point_data.back()->metadata["Description"] = "Point cloud derived from volumetric images.";
+    DICOM_data.point_data.back()->pset.metadata["Label"] = LabelStr;
+    DICOM_data.point_data.back()->pset.metadata["Description"] = "Point cloud derived from volumetric images.";
 
     return DICOM_data;
 }
