@@ -84,7 +84,7 @@ AffineTransform {
 };
 
 
-// This routine performs a simple COM-based alignment.
+// This routine performs a simple centroid-based alignment.
 //
 // The resultant transformation is a rotation-less shift so the point cloud centres-of-mass overlap.
 //
@@ -92,18 +92,18 @@ AffineTransform {
 //
 static
 std::experimental::optional<AffineTransform>
-AlignViaCOM(std::reference_wrapper<Point_Cloud> moving,
+AlignViaCentroid(std::reference_wrapper<Point_Cloud> moving,
             std::reference_wrapper<Point_Cloud> stationary){
     AffineTransform t;
 
-    // Compute the COM for both point clouds.
-    const auto COM_s = stationary.get().pset.Centroid();
-    const auto COM_m = moving.get().pset.Centroid();
+    // Compute the centroid for both point clouds.
+    const auto centroid_s = stationary.get().pset.Centroid();
+    const auto centroid_m = moving.get().pset.Centroid();
 
-    const auto dCOM = (COM_s - COM_m);
-    t.coeff(3,0) = dCOM.x;
-    t.coeff(3,1) = dCOM.y;
-    t.coeff(3,2) = dCOM.z;
+    const auto dcentroid = (centroid_s - centroid_m);
+    t.coeff(3,0) = dcentroid.x;
+    t.coeff(3,1) = dcentroid.y;
+    t.coeff(3,2) = dcentroid.z;
 
     return t;
 }
@@ -122,9 +122,9 @@ AlignViaPCA(std::reference_wrapper<Point_Cloud> moving,
             std::reference_wrapper<Point_Cloud> stationary){
     AffineTransform t;
 
-    // Compute the COM for both point clouds.
-    const auto COM_s = stationary.get().pset.Centroid();
-    const auto COM_m = moving.get().pset.Centroid();
+    // Compute the centroid for both point clouds.
+    const auto centroid_s = stationary.get().pset.Centroid();
+    const auto centroid_m = moving.get().pset.Centroid();
     
     // Compute the PCA for both point clouds.
     struct pcomps {
@@ -165,10 +165,10 @@ AlignViaPCA(std::reference_wrapper<Point_Cloud> moving,
     const auto pcomps_stationary = est_PCA(stationary);
     const auto pcomps_moving = est_PCA(moving);
 
-    // Compute COM-centered third-order moments (i.e., skew) along each component and use them to reorient the principle components.
-    // The third order is needed since the first-order (mean) is eliminated via COM-shifting, and the second order
+    // Compute centroid-centered third-order moments (i.e., skew) along each component and use them to reorient the principle components.
+    // The third order is needed since the first-order (mean) is eliminated via centroid-shifting, and the second order
     // (variance) cannot differentiate positive and negative directions.
-    const auto reorient_pcomps = [](const vec3<double> &COM,
+    const auto reorient_pcomps = [](const vec3<double> &centroid,
                                     const pcomps &comps,
                                     const Point_Cloud &pc) {
 
@@ -176,7 +176,7 @@ AlignViaPCA(std::reference_wrapper<Point_Cloud> moving,
         Stats::Running_Sum<double> rs_pc2;
         Stats::Running_Sum<double> rs_pc3;
         for(const auto &v : pc.pset.points){
-            const auto sv = (v - COM);
+            const auto sv = (v - centroid);
 
             const auto proj_pc1 = sv.Dot(comps.pc1);
             rs_pc1.Digest( std::pow(proj_pc1, 3.0) );
@@ -193,15 +193,15 @@ AlignViaPCA(std::reference_wrapper<Point_Cloud> moving,
         return out;
     };
 
-    const auto reoriented_pcomps_stationary = reorient_pcomps(COM_s,
+    const auto reoriented_pcomps_stationary = reorient_pcomps(centroid_s,
                                                               pcomps_stationary,
                                                               stationary);
-    const auto reoriented_pcomps_moving = reorient_pcomps(COM_m,
+    const auto reoriented_pcomps_moving = reorient_pcomps(centroid_m,
                                                           pcomps_moving,
                                                           moving);
 
     FUNCINFO("Stationary point cloud:");
-    FUNCINFO("    COM                  : " << COM_s);
+    FUNCINFO("    centroid             : " << centroid_s);
     FUNCINFO("    pcomp_pc1            : " << pcomps_stationary.pc1);
     FUNCINFO("    pcomp_pc2            : " << pcomps_stationary.pc2);
     FUNCINFO("    pcomp_pc3            : " << pcomps_stationary.pc3);
@@ -210,7 +210,7 @@ AlignViaPCA(std::reference_wrapper<Point_Cloud> moving,
     FUNCINFO("    reoriented_pcomp_pc3 : " << reoriented_pcomps_stationary.pc3);
 
     FUNCINFO("Moving point cloud:");
-    FUNCINFO("    COM                  : " << COM_m);
+    FUNCINFO("    centroid             : " << centroid_m);
     FUNCINFO("    pcomp_pc1            : " << pcomps_moving.pc1);
     FUNCINFO("    pcomp_pc2            : " << pcomps_moving.pc2);
     FUNCINFO("    pcomp_pc3            : " << pcomps_moving.pc3);
@@ -272,17 +272,17 @@ AlignViaPCA(std::reference_wrapper<Point_Cloud> moving,
 
         // Work out the translation vector.
         //
-        // Because the COM is not explicitly subtracted, we have to incorporate the subtraction into the translation term.
-        // Ideally we would perform $A * (M - COM_{M}) + COM_{S}$ explicitly; to emulate this, we can rearrange to find
-        // $A * M + \left( COM_{S} - A * COM_{M} \right) \equiv A * M + b$ where $b = COM_{S} - A * COM_{M}$ is the
+        // Because the centroid is not explicitly subtracted, we have to incorporate the subtraction into the translation term.
+        // Ideally we would perform $A * (M - centroid_{M}) + centroid_{S}$ explicitly; to emulate this, we can rearrange to find
+        // $A * M + \left( centroid_{S} - A * centroid_{M} \right) \equiv A * M + b$ where $b = centroid_{S} - A * centroid_{M}$ is the
         // necessary translation term.
         {
-            Eigen::Vector3d e_COM_m(COM_m.x, COM_m.y, COM_m.z);
-            auto A_e_COM_m = A * e_COM_m; 
+            Eigen::Vector3d e_centroid_m(centroid_m.x, centroid_m.y, centroid_m.z);
+            auto A_e_centroid_m = A * e_centroid_m; 
 
-            t.coeff(3,0) = COM_s.x - A_e_COM_m(0);
-            t.coeff(3,1) = COM_s.y - A_e_COM_m(1);
-            t.coeff(3,2) = COM_s.z - A_e_COM_m(2);
+            t.coeff(3,0) = centroid_s.x - A_e_centroid_m(0);
+            t.coeff(3,1) = centroid_s.y - A_e_centroid_m(1);
+            t.coeff(3,2) = centroid_s.z - A_e_centroid_m(2);
         }
     }
 
@@ -333,16 +333,17 @@ OperationDoc OpArgDocAlignPoints(void){
     out.args.emplace_back();
     out.args.back().name = "Method";
     out.args.back().desc = "The alignment algorithm to use."
-                           " Two rigid alignment options are available: 'COM' and 'PCA'."
+                           " Two rigid alignment options are available: 'centroid' and 'PCA'."
                            ""
-                           " The 'COM' option finds a rotationless translation the aligns the centre-of-mass (COM)"
+                           " The 'centroid' option finds a rotationless translation the aligns the centroid"
+                           " (i.e., the centre of mass if every point has the same 'mass')"
                            " of the moving point cloud with that of the stationary point cloud."
                            " It is susceptible to noise and outliers, and can only be reliably used when the point"
-                           " cloud has complete rotational symmetry (i.e., a sphere). On the other hand, 'COM'"
+                           " cloud has complete rotational symmetry (i.e., a sphere). On the other hand, 'centroid'"
                            " alignment should never fail, and can handle a large number of points."
-                           " COM alignment is frequently used as a pre-processing step for more advanced algorithms."
+                           " centroid alignment is frequently used as a pre-processing step for more advanced algorithms."
                            ""
-                           " The 'PCA' option finds an Affine transformation by performing COM alignment,"
+                           " The 'PCA' option finds an Affine transformation by performing centroid alignment,"
                            " performing principle component analysis (PCA) separately on the reference and moving"
                            " point clouds, computing third-order point distribution moments along each principle axis"
                            " to establish a consistent orientation,"
@@ -354,9 +355,9 @@ OperationDoc OpArgDocAlignPoints(void){
                            " components)."
                            " However, note that the 'PCA' method is susceptible to outliers and can not scale"
                            " a point cloud.";
-    out.args.back().default_val = "com";
+    out.args.back().default_val = "centroid";
     out.args.back().expected = true;
-    out.args.back().examples = { "com", "pca" };
+    out.args.back().examples = { "centroid", "pca" };
 
 
     return out;
@@ -375,7 +376,7 @@ Drover AlignPoints(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::str
     const auto MethodStr = OptArgs.getValueStr("Method").value();
 
     //-----------------------------------------------------------------------------------------------------------------
-    const auto regex_com = Compile_Regex("^co?m?$");
+    const auto regex_com = Compile_Regex("^ce?n?t?r?o?i?d?$");
     const auto regex_pca = Compile_Regex("^pc?a?$");
 
     auto PCs_all = All_PCs( DICOM_data );
@@ -391,8 +392,8 @@ Drover AlignPoints(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::str
 
         if(false){
         }else if( std::regex_match(MethodStr, regex_com) ){
-            auto t_opt = AlignViaCOM( (*(*pcp_it)),
-                                      (*(*ref_PCs.front())) );
+            auto t_opt = AlignViaCentroid( (*(*pcp_it)),
+                                           (*(*ref_PCs.front())) );
  
             if(t_opt){
                 FUNCINFO("Transforming the point cloud using centre-of-mass alignment");
