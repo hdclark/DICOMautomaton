@@ -96,8 +96,12 @@ Drover ImprintImages(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::s
         for(auto & iap_it : IAs){
             for(auto &img : (*iap_it)->imagecoll.images){
 
-                // If there is a magnitude attribute, use it.
                 if(false){
+/*
+
+// TODO : updated when attributes are supported.
+
+                // If there is a magnitude attribute, use it.
                 }else if( (*pcp_it)->attributes.count("magnitude") != 0 ){
                     // Verify it is a simple scalar attribute.
                     auto *magn = std::any_cast<std::vector<double>>( &((*pcp_it)->attributes["magnitude"]) );
@@ -118,10 +122,10 @@ Drover ImprintImages(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::s
                     }
 
 
+*/                
                 // If there is no magnitude attribute, simply use the user-provided VoxelValue.
                 }else{
-                    for(const auto &pp : (*pcp_it)->points){
-                        const auto P = pp.first;
+                    for(const auto &P : (*pcp_it)->pset.points){
                         const auto index = img.index( P, Channel );
                         if(0 <= index) img.reference(index) = VoxelValue;
                     }

@@ -87,7 +87,7 @@ OperationDoc OpArgDocConvertContoursToPoints(void){
                            ""
                            " The 'vertices' option extracts all vertices from all selected contours and directly"
                            " inserts them into the new point cloud."
-                           " Point clouds created this way will contain as many points as there are contour vertices.";
+                           " Point clouds created this way will contain as many points as there are contour vertices."
                            ""
                            " The 'centroid' option finds the centroid of all vertices from all selected contours."
                            " Note that the centroid gives every point an equal weighting, so heterogeneous contour"

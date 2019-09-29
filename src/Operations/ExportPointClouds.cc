@@ -27,7 +27,7 @@
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorStats.h"        //Needed for Stats:: namespace.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
-#include "YgorMathIOOFF.h"
+#include "YgorMathIOXYZ.h"
 
 #include "../Surface_Meshes.h"
 
@@ -82,17 +82,9 @@ Drover ExportPointClouds(Drover DICOM_data, OperationArgPkg OptArgs, std::map<st
 
         // Determine which filename to use.
         const auto FN = Get_Unique_Sequential_Filename(FilenameBaseStr + "_", 6, ".xyz");
-        std::fstream FO(FN, std::fstream::out);
-        FO.precision(std::numeric_limits<double>::digits10 + 1);
 
-        // Write the data to file.
-        for(const auto &pp : (*pcp_it)->points){
-            FO << pp.first.x << " "
-               << pp.first.y << " "
-               << pp.first.z << "\n";
-        }
-        FO << std::endl;
-        if(!FO){
+        std::fstream FO(FN, std::fstream::out);
+        if(!WritePointSetToXYZ((*pcp_it)->pset, FO) || !FO){
             throw std::runtime_error("Unable to write point cloud. Cannot continue.");
         }
 
