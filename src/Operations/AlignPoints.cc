@@ -228,6 +228,31 @@ AlignViaPCA(std::reference_wrapper<Point_Cloud> moving,
         out.pc1 = (comps.pc1 * rs_pc1.Current_Sum()).unit(); // Will be either + or - the original pcomps.
         out.pc2 = (comps.pc2 * rs_pc2.Current_Sum()).unit(); // Will be either + or - the original pcomps.
         out.pc3 = (comps.pc3 * rs_pc3.Current_Sum()).unit(); // Will be either + or - the original pcomps.
+
+
+        // Handle 2D degeneracy.
+        //
+        // If the space is degenerate with all points being coplanar, then the first (strongest) principle component
+        // will be orthogonal to the plane and the corresponding moment will be zero. The other two reoriented
+        // components will still be valid, and the underlying principal component is correct; we just don't know the
+        // direction because the moment is zero. However, we can determine it in a consistent way by relying on the
+        // other two (valid) adjusted components.
+        if( !(out.pc1.isfinite())
+        &&  out.pc2.isfinite() 
+        &&  out.pc3.isfinite() ){
+            out.pc1 = out.pc3.Cross( out.pc2 ).unit();
+        }
+
+        // Handle 1D degeneracy (somewhat).
+        //
+        // If the space is degenerate with all points being colinear, then the first two principle components
+        // will be randomly oriented orthgonal to the line and the last component will be tangential to the line
+        // with a direction derived from the moment. We cannot unambiguously recover the first two components, but we
+        // can at least fall back on the original principle components.
+        if( !(out.pc1.isfinite()) ) out.pc1 = comps.pc1;
+        if( !(out.pc2.isfinite()) ) out.pc2 = comps.pc2;
+        //if( !(out.pc3.isfinite()) ) out.pc3 = comps.pc3;
+
         return out;
     };
 
@@ -378,7 +403,8 @@ OperationDoc OpArgDocAlignPoints(void){
                            " of the moving point cloud with that of the stationary point cloud."
                            " It is susceptible to noise and outliers, and can only be reliably used when the point"
                            " cloud has complete rotational symmetry (i.e., a sphere). On the other hand, 'centroid'"
-                           " alignment should never fail, and can handle a large number of points."
+                           " alignment should never fail, can handle a large number of points,"
+                           " and can be used in cases of 2D and 1D degeneracy."
                            " centroid alignment is frequently used as a pre-processing step for more advanced algorithms."
                            ""
                            " The 'PCA' option finds an Affine transformation by performing centroid alignment,"
@@ -392,7 +418,12 @@ OperationDoc OpArgDocAlignPoints(void){
                            " and (2) the clouds are not perfectly spherical (i.e., so they have valid principle"
                            " components)."
                            " However, note that the 'PCA' method is susceptible to outliers and can not scale"
-                           " a point cloud.";
+                           " a point cloud."
+                           " The 'PCA' method will generally fail when the distribution of points shifts across the"
+                           " centroid (i.e., comparing reference and moving point clouds) since the orientation of"
+                           " the components will be inverted, however 2D degeneracy is handled in a 3D-consistent way,"
+                           " and 1D degeneracy is handled in a 1D-consistent way (i.e, the components orthogonal to"
+                           " the common line will be completely ambiguous, so spurious rotations will result).";
     out.args.back().default_val = "centroid";
     out.args.back().expected = true;
     out.args.back().examples = { "centroid", "pca" };
