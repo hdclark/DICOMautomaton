@@ -399,15 +399,16 @@ OperationDoc OpArgDocAlignPoints(void){
 
 
     out.args.emplace_back();
-    out.args.back().name = "FilenameBase";
-    out.args.back().desc = "The base filename that the transformation will be written to."
-                           " A '_', a sequentially-increasing number, and the '.trans' file suffix are"
-                           " appended after the base filename.";
-    out.args.back().default_val = "/tmp/dcma_alignpoints";
+    out.args.back().name = "Filename";
+    out.args.back().desc = "The filename (or full path name) to which the transformation should be written."
+                           " Existing files will be overwritten."
+                           " The file format is a 4x4 Affine matrix."
+                           " If no name is given, a unique name will be chosen automatically.";
+    out.args.back().default_val = "";
     out.args.back().expected = true;
-    out.args.back().examples = { "transformation", 
-                                 "../somedir/trans", 
-                                 "/path/to/some/transform" };
+    out.args.back().examples = { "transformation.trans",
+                                 "trans.txt",
+                                 "/path/to/some/trans.txt" };
     out.args.back().mimetype = "text/plain";
 
 
@@ -426,7 +427,7 @@ Drover AlignPoints(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::str
 
     const auto MethodStr = OptArgs.getValueStr("Method").value();
 
-    const auto FilenameBaseStr = OptArgs.getValueStr("FilenameBase").value();
+    const auto FilenameStr = OptArgs.getValueStr("Filename").value();
 
     //-----------------------------------------------------------------------------------------------------------------
     const auto regex_com = Compile_Regex("^ce?n?t?r?o?i?d?$");
@@ -444,7 +445,10 @@ Drover AlignPoints(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::str
         FUNCINFO("There are " << (*pcp_it)->pset.points.size() << " points in the moving point cloud");
 
         // Determine which filename to use.
-        const auto FN = Get_Unique_Sequential_Filename(FilenameBaseStr + "_", 6, ".trans");
+        auto FN = FilenameStr;
+        if(FN.empty()){
+            FN = Get_Unique_Sequential_Filename("/tmp/dcma_alignpoints_", 6, ".trans");
+        }
         std::fstream FO(FN, std::fstream::out);
 
         if(false){
