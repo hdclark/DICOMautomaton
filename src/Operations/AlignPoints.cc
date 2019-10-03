@@ -41,11 +41,15 @@ AffineTransform {
         //
         //     (0,0)    (1,0)    (2,0)  |  (3,0)                               |                  
         //     (0,1)    (1,1)    (2,1)  |  (3,1)             linear transform  |  translation     
-        //     (0,2)    (1,2)    (2,2)  |  (3,2)     =                         |                  
+        //     (0,2)    (1,2)    (2,2)  |  (3,2)     =        (inc. scaling)   |                  
         //     ---------------------------------           ------------------------------------   
-        //     (0,3)    (1,3)    (2,3)  |  (3,3)                 (zeros)       |    scale        
+        //     (0,3)    (1,3)    (2,3)  |  (3,3)                 (zeros)       |  projection     
         //
         // Note that the bottom row must remain unaltered to be an Affine transform.
+        //
+        // The relative scale of transformed vectors is controlled by the magnitude of the linear transform column
+        // vectors.
+        //
         std::array< std::array<double, 4>, 4> t = {{ std::array<double,4>{{ 1.0, 0.0, 0.0, 0.0 }},
                                                      std::array<double,4>{{ 0.0, 1.0, 0.0, 0.0 }},
                                                      std::array<double,4>{{ 0.0, 0.0, 1.0, 0.0 }},
@@ -75,8 +79,8 @@ AffineTransform {
 
         // Apply the transformation to a point cloud.
         void
-        apply_to(Point_Cloud &in){
-            for(auto &p : in.pset.points){
+        apply_to(point_set<double> &in){
+            for(auto &p : in.points){
                 p = this->apply_to(p);
             }
             return;
@@ -130,13 +134,13 @@ AffineTransform {
 //
 static
 std::experimental::optional<AffineTransform>
-AlignViaCentroid(std::reference_wrapper<Point_Cloud> moving,
-            std::reference_wrapper<Point_Cloud> stationary){
+AlignViaCentroid(const point_set<double> & moving,
+                 const point_set<double> & stationary ){
     AffineTransform t;
 
     // Compute the centroid for both point clouds.
-    const auto centroid_s = stationary.get().pset.Centroid();
-    const auto centroid_m = moving.get().pset.Centroid();
+    const auto centroid_s = stationary.Centroid();
+    const auto centroid_m = moving.Centroid();
 
     const auto dcentroid = (centroid_s - centroid_m);
     t.coeff(3,0) = dcentroid.x;
@@ -156,13 +160,13 @@ AlignViaCentroid(std::reference_wrapper<Point_Cloud> moving,
 //
 static
 std::experimental::optional<AffineTransform>
-AlignViaPCA(std::reference_wrapper<Point_Cloud> moving,
-            std::reference_wrapper<Point_Cloud> stationary){
+AlignViaPCA(const point_set<double> & moving,
+            const point_set<double> & stationary ){
     AffineTransform t;
 
     // Compute the centroid for both point clouds.
-    const auto centroid_s = stationary.get().pset.Centroid();
-    const auto centroid_m = moving.get().pset.Centroid();
+    const auto centroid_s = stationary.Centroid();
+    const auto centroid_m = moving.Centroid();
     
     // Compute the PCA for both point clouds.
     struct pcomps {
@@ -170,15 +174,15 @@ AlignViaPCA(std::reference_wrapper<Point_Cloud> moving,
         vec3<double> pc2;
         vec3<double> pc3;
     };
-    const auto est_PCA = [](const Point_Cloud &pc) -> pcomps {
+    const auto est_PCA = [](const point_set<double> &ps) -> pcomps {
         // Determine the three most prominent unit vectors via PCA.
         Eigen::MatrixXd mat;
-        const size_t mat_rows = pc.pset.points.size();
+        const size_t mat_rows = ps.points.size();
         const size_t mat_cols = 3;
         mat.resize(mat_rows, mat_cols);
         {
             size_t i = 0;
-            for(const auto &v : pc.pset.points){
+            for(const auto &v : ps.points){
                 mat(i, 0) = static_cast<double>(v.x);
                 mat(i, 1) = static_cast<double>(v.y);
                 mat(i, 2) = static_cast<double>(v.z);
@@ -208,12 +212,12 @@ AlignViaPCA(std::reference_wrapper<Point_Cloud> moving,
     // (variance) cannot differentiate positive and negative directions.
     const auto reorient_pcomps = [](const vec3<double> &centroid,
                                     const pcomps &comps,
-                                    const Point_Cloud &pc) {
+                                    const point_set<double> &ps) {
 
         Stats::Running_Sum<double> rs_pc1;
         Stats::Running_Sum<double> rs_pc2;
         Stats::Running_Sum<double> rs_pc3;
-        for(const auto &v : pc.pset.points){
+        for(const auto &v : ps.points){
             const auto sv = (v - centroid);
 
             const auto proj_pc1 = sv.Dot(comps.pc1);
@@ -349,20 +353,224 @@ AlignViaPCA(std::reference_wrapper<Point_Cloud> moving,
         }
     }
 
-    FUNCINFO("Final linear transform:");
-    FUNCINFO("    ( " << t.coeff(0,0) << "  " << t.coeff(1,0) << "  " << t.coeff(2,0) << " )");
-    FUNCINFO("    ( " << t.coeff(0,1) << "  " << t.coeff(1,1) << "  " << t.coeff(2,1) << " )");
-    FUNCINFO("    ( " << t.coeff(0,2) << "  " << t.coeff(1,2) << "  " << t.coeff(2,2) << " )");
-    FUNCINFO("Final translation:");
-    FUNCINFO("    ( " << t.coeff(3,0) << " )");
-    FUNCINFO("    ( " << t.coeff(3,1) << " )");
-    FUNCINFO("    ( " << t.coeff(3,2) << " )");
+    //FUNCINFO("Final linear transform:");
+    //FUNCINFO("    ( " << t.coeff(0,0) << "  " << t.coeff(1,0) << "  " << t.coeff(2,0) << " )");
+    //FUNCINFO("    ( " << t.coeff(0,1) << "  " << t.coeff(1,1) << "  " << t.coeff(2,1) << " )");
+    //FUNCINFO("    ( " << t.coeff(0,2) << "  " << t.coeff(1,2) << "  " << t.coeff(2,2) << " )");
+    //FUNCINFO("Final translation:");
+    //FUNCINFO("    ( " << t.coeff(3,0) << " )");
+    //FUNCINFO("    ( " << t.coeff(3,1) << " )");
+    //FUNCINFO("    ( " << t.coeff(3,2) << " )");
+    //FUNCINFO("Final Affine transformation:");
+    //t.write_to(std::cout);
 
     return t;
 }
 
 
+// This routine performs an exhaustive iterative closest point (ICP) alignment.
+//
+// Note that this routine only identifies a transform, it does not implement it by altering the point clouds.
+//
+static
+std::experimental::optional<AffineTransform>
+AlignViaExhaustiveICP( const point_set<double> & moving,
+                       const point_set<double> & stationary,
+                       long int max_icp_iters = 100,
+                       double f_rel_tol = std::numeric_limits<double>::quiet_NaN() ){
 
+    // The WIP transformation.
+    AffineTransform t;
+
+    // The transformation that resulted in the lowest cost estimate so far.
+    AffineTransform t_best;
+    double f_best = std::numeric_limits<double>::infinity();
+
+    // Compute the centroid for both point clouds.
+    const auto centroid_s = stationary.Centroid();
+    const auto centroid_m = moving.Centroid();
+
+    point_set<double> working(moving);
+    point_set<double> corresp(moving);
+    
+    // Prime the transformation using a simplistic alignment.
+    //
+    // Note: The initial transformation will only be used to establish correspondence in the first iteration, so it
+    // might be tolerable to be somewhat coarse. Note, however, that a bad initial guess (in the sense that the true
+    // optimal alignment is impeded by many local minima) will certainly negatively impact the convergence rate, and may
+    // actually make it impossible to find the true alignment using this alignment method. Therefore, the PCA method is
+    // used by default. If problems are encountered with the PCA method, resorting to the centroid method may be
+    // sufficient.
+    //
+    // Default:
+    t = AlignViaPCA(moving, stationary).value();
+    //
+    // Fallback:
+    //t = AlignViaCentroid(moving, stationary).value();
+
+    double f_prev = std::numeric_limits<double>::quiet_NaN();
+    for(long int icp_iter = 0; icp_iter < max_icp_iters; ++icp_iter){
+        // Copy the original points.
+        working.points = moving.points;
+
+        // Apply the current transformation to the working points.
+        t.apply_to(working);
+        const auto centroid_w = working.Centroid();
+
+        // Exhaustively determine the correspondence between stationary and working points under the current
+        // transformation. Note that multiple working points may correspond to the same stationary point.
+        const auto N_working_points = working.points.size();
+        if(N_working_points != corresp.points.size()) throw std::logic_error("Encountered inconsistent working buffers. Cannot continue.");
+        {
+            asio_thread_pool tp;
+            for(size_t i = 0; i < N_working_points; ++i){
+                tp.submit_task([&,i](void) -> void {
+                    const auto w_p = working.points[i];
+                    double min_sq_dist = std::numeric_limits<double>::infinity();
+                    for(const auto &s_p : stationary.points){
+                        const auto sq_dist = w_p.sq_dist(s_p);
+                        if(sq_dist < min_sq_dist){
+                            min_sq_dist = sq_dist;
+                            corresp.points[i] = s_p;
+                        }
+                    }
+                }); // thread pool task closure.
+            }
+        } // Wait until all threads are done.
+
+
+        ///////////////////////////////////
+
+        // Using the correspondence, estimate the linear transformation that will maximize alignment between
+        // centroid-shifted point clouds.
+        //
+        // Note: the transformation we seek here ignores translations by explicitly subtracting the centroid from each
+        // point cloud. Translations will be added into the full transformation later. 
+        const auto N_rows = 3;
+        const auto N_cols = N_working_points;
+        Eigen::MatrixXd S(N_rows, N_cols);
+        Eigen::MatrixXd M(N_rows, N_cols);
+
+        for(size_t i = 0; i < N_working_points; ++i){
+            // Note: Find the transform using the original point clouds (with a centroid shift) and the updated
+            // correspondence information.
+
+            S(0, i) = corresp.points[i].x - centroid_s.x; // The desired point location.
+            S(1, i) = corresp.points[i].y - centroid_s.y;
+            S(2, i) = corresp.points[i].z - centroid_s.z;
+
+            M(0, i) = moving.points[i].x - centroid_w.x; // The actual point location.
+            M(1, i) = moving.points[i].y - centroid_w.y;
+            M(2, i) = moving.points[i].z - centroid_w.z;
+        }
+        auto ST = S.transpose();
+        auto MST = M * ST;
+
+        //Eigen::JacobiSVD<Eigen::MatrixXd> SVD(MST, Eigen::ComputeThinU | Eigen::ComputeThinV);
+        Eigen::JacobiSVD<Eigen::MatrixXd> SVD(MST, Eigen::ComputeFullU | Eigen::ComputeFullV );
+        auto U = SVD.matrixU();
+        auto V = SVD.matrixV();
+
+        // Use the SVD result directly.
+        //
+        // Note that spatial inversions are permitted this way.
+        //auto A = U * V.transpose();
+
+        // Attempt to restrict to rotations only.    NOTE: Does not appear to work?
+        //Eigen::Matrix3d PI;
+        //PI << 1.0 , 0.0 , 0.0,
+        //      0.0 , 1.0 , 0.0,
+        //      0.0 , 0.0 , ( U * V.transpose() ).determinant();
+        //auto A = U * PI * V.transpose();
+
+        // Restrict the solution to rotations only. (Refer to the 'Kabsch algorithm' for more info.)
+        Eigen::Matrix3d PI;
+        PI << 1.0 , 0.0 , 0.0
+            , 0.0 , 1.0 , 0.0
+            , 0.0 , 0.0 , ( V * U.transpose() ).determinant();
+        auto A = V * PI * U.transpose();
+
+/*
+        // Apply the linear transformation to a point directly.
+        auto Apply_Rotation = [&](const vec3<double> &v) -> vec3<double> {
+            Eigen::Vector3f e_vec3(v.x, v.y, v.z);
+            auto new_v = A * e_vec3;
+            return vec3<double>( new_v(0), new_v(1), new_v(2) );
+        };
+*/
+
+        // Transfer the transformation into a full Affine transformation.
+        t = AffineTransform();
+
+        // Rotation and scaling components.
+        t.coeff(0,0) = A(0,0);
+        t.coeff(0,1) = A(1,0);
+        t.coeff(0,2) = A(2,0);
+
+        t.coeff(1,0) = A(0,1);
+        t.coeff(1,1) = A(1,1);
+        t.coeff(1,2) = A(2,1);
+
+        t.coeff(2,0) = A(0,2);
+        t.coeff(2,1) = A(1,2);
+        t.coeff(2,2) = A(2,2);
+
+        // The complete transformation we have found for bringing the moving points $P_{M}$ into alignment with the
+        // stationary points is:
+        //
+        //   $centroid_{S} + A * \left( P_{M} - centroid_{M} \right)$.
+        //
+        // Rearranging, an Affine transformation of the form $A * P_{M} + b$ can be written as:
+        //
+        //   $A * P_{M} + \left( centroid_{S} - A * centroid_{M} \right)$.
+        // 
+        // Specifically, the transformed moving point cloud centroid component needs to be pre-subtracted for each
+        // vector $P_{M}$ to anticipate not having an explicit centroid subtraction step prior to applying the
+        // scale/rotation matrix.
+        {
+            Eigen::Vector3d e_centroid(centroid_m.x, centroid_m.y, centroid_m.z);
+            auto A_e_centroid = A * e_centroid; 
+
+            t.coeff(3,0) = centroid_s.x - A_e_centroid(0);
+            t.coeff(3,1) = centroid_s.y - A_e_centroid(1);
+            t.coeff(3,2) = centroid_s.z - A_e_centroid(2);
+        }
+
+        // Evaluate whether the current transformation is sufficient. If so, terminate the loop.
+        working.points = moving.points;
+        t.apply_to(working);
+        double f_curr = 0.0;
+        for(size_t i = 0; i < N_working_points; ++i){
+            const auto w_p = working.points[i];
+            const auto s_p = stationary.points[i];
+            const auto dist = s_p.distance(w_p);
+            f_curr += dist;
+        }
+
+        FUNCINFO("Global distance using correspondence estimated during iteration " << icp_iter << " is " << f_curr);
+
+        if(f_curr < f_best){
+            f_best = f_curr;
+            t_best = t;
+        }
+        if( std::isfinite(f_rel_tol) 
+        &&  std::isfinite(f_curr)
+        &&  std::isfinite(f_prev) ){
+            const auto f_rel = std::fabs( (f_prev - f_curr) / f_prev );
+            FUNCINFO("The relative change in global distance compared to the last iteration is " << f_rel);
+            if(f_rel < f_rel_tol) break;
+        }
+        f_prev = f_curr;
+    }
+
+    // Select the best transformation observed so far.
+    t = t_best;
+
+    // Report the transformation and pass it to the user.
+    //FUNCINFO("Final Affine transformation:");
+    //t.write_to(std::cout);
+    return t;
+}
 
 OperationDoc OpArgDocAlignPoints(void){
     OperationDoc out;
@@ -371,9 +579,10 @@ OperationDoc OpArgDocAlignPoints(void){
     out.desc = 
         "This operation aligns (i.e., 'registers') a 'moving' point cloud to a 'stationary' (i.e., 'reference') point cloud.";
         
-    //out.notes.emplace_back(
-    //    "Existing point clouds are ignored and unaltered."
-    //);
+    out.notes.emplace_back(
+        "The 'moving' point cloud is transformed after the final transformation has been estimated."
+        " It should be copied if a pre-transformed copy is required."
+    );
         
 
     out.args.emplace_back();
@@ -396,7 +605,7 @@ OperationDoc OpArgDocAlignPoints(void){
     out.args.emplace_back();
     out.args.back().name = "Method";
     out.args.back().desc = "The alignment algorithm to use."
-                           " Two rigid alignment options are available: 'centroid' and 'PCA'."
+                           " Two rigid alignment options are available: 'centroid', 'PCA', and 'exhaustive_icp'."
                            ""
                            " The 'centroid' option finds a rotationless translation the aligns the centroid"
                            " (i.e., the centre of mass if every point has the same 'mass')"
@@ -423,10 +632,55 @@ OperationDoc OpArgDocAlignPoints(void){
                            " centroid (i.e., comparing reference and moving point clouds) since the orientation of"
                            " the components will be inverted, however 2D degeneracy is handled in a 3D-consistent way,"
                            " and 1D degeneracy is handled in a 1D-consistent way (i.e, the components orthogonal to"
-                           " the common line will be completely ambiguous, so spurious rotations will result).";
+                           " the common line will be completely ambiguous, so spurious rotations will result)."
+                           ""
+                           " The 'exhaustive_icp' option finds an Affine transformation by first performing PCA-based"
+                           " alignment and then iteratively alternating between (1) estimating point-point"
+                           " correspondence and (1) solving for a least-squares optimal transformation given this"
+                           " correspondence estimate. 'ICP' stands for 'iterative closest point.'"
+                           " Each iteration uses the previous transformation *only* to estimate correspondence;"
+                           " a least-squares optimal linear transform is estimated afresh each iteration."
+                           " The 'exhaustive_icp' method is most suitable when both point clouds consist of"
+                           " approximately 50k points or less. Beyond this, ICP will still work but runtime"
+                           " scales badly."
+                           " ICP is susceptible to outliers and will not scale a point cloud."
+                           " It can be used for 2D and 1D degenerate problems, but is not guaranteed to find the"
+                           " 'correct' orientation of degenerate or symmetrical point clouds.";
     out.args.back().default_val = "centroid";
     out.args.back().expected = true;
-    out.args.back().examples = { "centroid", "pca" };
+    out.args.back().examples = { "centroid", "pca", "exhaustive_icp" };
+
+
+    out.args.emplace_back();
+    out.args.back().name = "MaxIterations";
+    out.args.back().desc = "If the method is iterative, only permit this many iterations to occur."
+                           " Note that this parameter will not have any effect on non-iterative methods.";
+    out.args.back().default_val = "100";
+    out.args.back().expected = true;
+    out.args.back().examples = { "5",
+                                 "20",
+                                 "100",
+                                 "1000" };
+
+
+    out.args.emplace_back();
+    out.args.back().name = "RelativeTolerance";
+    out.args.back().desc = "If the method is iterative, terminate the loop when the cost function changes between"
+                           " successive iterations by this amount or less."
+                           " The magnitude of the cost function will generally depend on the number of points"
+                           " (in both point clouds), the scale (i.e., 'width') of the point clouds, the amount"
+                           " of noise and outlier points, and any method-specific"
+                           " parameters that impact the cost function (if applicable);"
+                           " use of this tolerance parameter may be impacted by these characteristics."
+                           " Verifying that a given tolerance is of appropriate magnitude is recommended."
+                           " Relative tolerance checks can be disabled by setting to non-finite or negative value."
+                           " Note that this parameter will not have any effect on non-iterative methods.";
+    out.args.back().default_val = "nan";
+    out.args.back().expected = true;
+    out.args.back().examples = { "-1",
+                                 "1E-2",
+                                 "1E-3",
+                                 "1E-5" };
 
 
     out.args.emplace_back();
@@ -458,11 +712,15 @@ Drover AlignPoints(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::str
 
     const auto MethodStr = OptArgs.getValueStr("Method").value();
 
+    const auto MaxIters = std::stol( OptArgs.getValueStr("MaxIterations").value() );
+    const auto RelativeTol = std::stod( OptArgs.getValueStr("RelativeTolerance").value() );
+
     const auto FilenameStr = OptArgs.getValueStr("Filename").value();
 
     //-----------------------------------------------------------------------------------------------------------------
-    const auto regex_com = Compile_Regex("^ce?n?t?r?o?i?d?$");
-    const auto regex_pca = Compile_Regex("^pc?a?$");
+    const auto regex_com    = Compile_Regex("^ce?n?t?r?o?i?d?$");
+    const auto regex_pca    = Compile_Regex("^pc?a?$");
+    const auto regex_exhicp = Compile_Regex("^ex?h?a?u?s?t?i?v?e?[-_]?i?c?p?$");
 
     auto PCs_all = All_PCs( DICOM_data );
     auto ref_PCs = Whitelist( PCs_all, ReferencePointSelectionStr );
@@ -484,29 +742,46 @@ Drover AlignPoints(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::str
 
         if(false){
         }else if( std::regex_match(MethodStr, regex_com) ){
-            auto t_opt = AlignViaCentroid( (*(*pcp_it)),
-                                           (*(*ref_PCs.front())) );
+            auto t_opt = AlignViaCentroid( (*pcp_it)->pset,
+                                           (*ref_PCs.front())->pset );
  
             if(t_opt){
                 FUNCINFO("Transforming the point cloud using centre-of-mass alignment");
-                t_opt.value().apply_to(*(*pcp_it));
+                t_opt.value().apply_to((*pcp_it)->pset);
 
                 if(!(t_opt.value().write_to(FO))){
                     std::runtime_error("Unable to write transformation to file. Cannot continue.");
                 }
             }
+
         }else if( std::regex_match(MethodStr, regex_pca) ){
-            auto t_opt = AlignViaPCA( (*(*pcp_it)),
-                                      (*(*ref_PCs.front())) );
+            auto t_opt = AlignViaPCA( (*pcp_it)->pset,
+                                      (*ref_PCs.front())->pset );
  
             if(t_opt){
                 FUNCINFO("Transforming the point cloud using principle component alignment");
-                t_opt.value().apply_to(*(*pcp_it));
+                t_opt.value().apply_to((*pcp_it)->pset);
 
                 if(!(t_opt.value().write_to(FO))){
                     std::runtime_error("Unable to write transformation to file. Cannot continue.");
                 }
             }
+
+        }else if( std::regex_match(MethodStr, regex_exhicp) ){
+            auto t_opt = AlignViaExhaustiveICP( (*pcp_it)->pset,
+                                                (*ref_PCs.front())->pset,
+                                                MaxIters,
+                                                RelativeTol );
+ 
+            if(t_opt){
+                FUNCINFO("Transforming the point cloud using exhaustive iterative closes point alignment");
+                t_opt.value().apply_to((*pcp_it)->pset);
+
+                if(!(t_opt.value().write_to(FO))){
+                    std::runtime_error("Unable to write transformation to file. Cannot continue.");
+                }
+            }
+
         }else{
             throw std::invalid_argument("Method not understood. Cannot continue.");
         }
