@@ -89,7 +89,7 @@
 #include "Operations/DumpROISurfaceMeshes.h"
 #include "Operations/DumpTPlanMetadataOccurrencesToFile.h"
 #include "Operations/DumpVoxelDoseInfo.h"
-#include "Operations/EQD2Convert.h"
+#include "Operations/EQDConvert.h"
 #include "Operations/EvaluateDoseVolumeStats.h"
 #include "Operations/EvaluateNTCPModels.h"
 #include "Operations/EvaluateTCPModels.h"
@@ -98,6 +98,7 @@
 #include "Operations/ExportSurfaceMeshes.h"
 #include "Operations/ExportPointClouds.h"
 #include "Operations/ExtractDoseVolumeHistograms.h"
+#include "Operations/ExtractAlphaBeta.h"
 #include "Operations/ExtractRadiomicFeatures.h"
 #include "Operations/FVPicketFence.h"
 #include "Operations/GenerateCalibrationCurve.h"
@@ -244,7 +245,7 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["DumpROISurfaceMeshes"] = std::make_pair(OpArgDocDumpROISurfaceMeshes, DumpROISurfaceMeshes);
     out["DumpTPlanMetadataOccurrencesToFile"] = std::make_pair(OpArgDocDumpTPlanMetadataOccurrencesToFile, DumpTPlanMetadataOccurrencesToFile);
     out["DumpVoxelDoseInfo"] = std::make_pair(OpArgDocDumpVoxelDoseInfo, DumpVoxelDoseInfo);
-    out["EQD2Convert"] = std::make_pair(OpArgDocEQD2Convert, EQD2Convert);
+    out["EQDConvert"] = std::make_pair(OpArgDocEQDConvert, EQDConvert);
     out["EvaluateDoseVolumeStats"] = std::make_pair(OpArgDocEvaluateDoseVolumeStats, EvaluateDoseVolumeStats);
     out["EvaluateNTCPModels"] = std::make_pair(OpArgDocEvaluateNTCPModels, EvaluateNTCPModels);
     out["EvaluateTCPModels"] = std::make_pair(OpArgDocEvaluateTCPModels, EvaluateTCPModels);
@@ -253,6 +254,7 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["ExportPointClouds"] = std::make_pair(OpArgDocExportPointClouds, ExportPointClouds);
     out["ExportSurfaceMeshes"] = std::make_pair(OpArgDocExportSurfaceMeshes, ExportSurfaceMeshes);
     out["ExtractDoseVolumeHistograms"] = std::make_pair(OpArgDocExtractDoseVolumeHistograms, ExtractDoseVolumeHistograms);
+    out["ExtractAlphaBeta"] = std::make_pair(OpArgDocExtractAlphaBeta, ExtractAlphaBeta);
     out["ExtractRadiomicFeatures"] = std::make_pair(OpArgDocExtractRadiomicFeatures, ExtractRadiomicFeatures);
     out["FVPicketFence"] = std::make_pair(OpArgDocFVPicketFence, FVPicketFence);
     out["GenerateCalibrationCurve"] = std::make_pair(OpArgDocGenerateCalibrationCurve, GenerateCalibrationCurve);

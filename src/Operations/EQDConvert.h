@@ -1,4 +1,4 @@
-// EQD2Convert.h.
+// EQDConvert.h.
 
 #pragma once
 
@@ -39,7 +39,7 @@
 #include "../YgorImages_Functors/Processing/DCEMRI_AUC_Map.h"
 #include "../YgorImages_Functors/Processing/DCEMRI_S0_Map.h"
 #include "../YgorImages_Functors/Processing/DCEMRI_T1_Map.h"
-#include "../YgorImages_Functors/Processing/EQD2Conversion.h"
+#include "../YgorImages_Functors/Processing/EQDConversion.h"
 #include "../YgorImages_Functors/Processing/Partitioned_Image_Voxel_Visitor_Mutator.h"
 #include "../YgorImages_Functors/Processing/IVIMMRI_ADC_Map.h"
 #include "../YgorImages_Functors/Processing/ImagePartialDerivative.h"
@@ -80,8 +80,8 @@
 
 
 
-OperationDoc OpArgDocEQD2Convert(void);
+OperationDoc OpArgDocEQDConvert(void);
 
-Drover EQD2Convert(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
+Drover EQDConvert(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                    std::map<std::string, std::string> /*InvocationMetadata*/,
                    std::string /*FilenameLex*/);

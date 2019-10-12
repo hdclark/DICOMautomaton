@@ -71,7 +71,7 @@ add_library(Operations_objs OBJECT
     DumpROISurfaceMeshes.cc
     DumpTPlanMetadataOccurrencesToFile.cc
     DumpVoxelDoseInfo.cc
-    EQD2Convert.cc
+    EQDConvert.cc
     EvaluateDoseVolumeStats.cc
     EvaluateNTCPModels.cc
     EvaluateTCPModels.cc
@@ -80,6 +80,7 @@ add_library(Operations_objs OBJECT
     ExportPointClouds.cc
     ExportSurfaceMeshes.cc
     ExtractDoseVolumeHistograms.cc
+    ExtractAlphaBeta.cc
     ExtractRadiomicFeatures.cc
     FVPicketFence.cc
     GenerateCalibrationCurve.cc

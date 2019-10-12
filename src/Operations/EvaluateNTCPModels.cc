@@ -44,8 +44,8 @@ OperationDoc OpArgDocEvaluateNTCPModels(void){
         //" (3) Forthcoming: modified Equivalent Uniform Dose (mEUD) NTCP model.";
         
     out.notes.emplace_back(
-        "Generally these models require dose in 2Gy/fractions equivalents ('EQD2'). You must pre-convert the data"
-        " if the RT plan is not already 2Gy/fraction. There is no easy way to ensure this conversion has taken place"
+        "Generally these models require dose in 2 Gy per fraction equivalents ('EQD2'). You must pre-convert the data"
+        " if the RT plan is not already 2 Gy per fraction. There is no easy way to ensure this conversion has taken place"
         " or was unnecessary."
     );
         

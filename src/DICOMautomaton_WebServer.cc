@@ -607,6 +607,7 @@ void BaseWebServerApplication::createOperationSelectorGB(void){
                     ||  ( n == "AnalyzeLightRadFieldCoincidence" ) 
                     ||  ( n == "ApplyCalibrationCurve" )
                     ||  ( n == "ConvertDoseToImage" ) 
+                    ||  ( n == "ExtractAlphaBeta" )
                     ||  ( n == "FVPicketFence" )
                     ||  ( n == "HighlightROIs" )
                     ||  ( n == "PresentationImage" )
@@ -622,7 +623,7 @@ void BaseWebServerApplication::createOperationSelectorGB(void){
                     ||  ( n == "DecayDoseOverTimeHalve" ) 
                     ||  ( n == "DecayDoseOverTimeJones2014" ) 
                     ||  ( n == "DICOMExportImagesAsDose" )
-                    ||  ( n == "EQD2Convert" )
+                    ||  ( n == "EQDConvert" )
                     ||  ( n == "OptimizeStaticBeams" )
                     ||  ( n == "TrimROIDose" )
                 ){
@@ -636,7 +637,7 @@ void BaseWebServerApplication::createOperationSelectorGB(void){
                     ||  ( n == "DecayDoseOverTimeHalve" ) 
                     ||  ( n == "DecayDoseOverTimeJones2014" ) 
                     ||  ( n == "DICOMExportImagesAsDose" )
-                    ||  ( n == "EQD2Convert" )
+                    ||  ( n == "EQDConvert" )
                     ||  ( n == "TrimROIDose" )
                 ){
                     selector->addItem(anop.first);

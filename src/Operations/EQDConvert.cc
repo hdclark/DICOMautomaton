@@ -1,4 +1,4 @@
-//EQD2Convert.cc - A part of DICOMautomaton 2017. Written by hal clark.
+//EQDConvert.cc - A part of DICOMautomaton 2017, 2019. Written by hal clark.
 
 #include <experimental/any>
 #include <experimental/optional>
@@ -14,25 +14,26 @@
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
 #include "../YgorImages_Functors/Grouping/Misc_Functors.h"
-#include "../YgorImages_Functors/Processing/EQD2Conversion.h"
-#include "EQD2Convert.h"
+#include "../YgorImages_Functors/Processing/EQDConversion.h"
+#include "EQDConvert.h"
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 
 
 
-OperationDoc OpArgDocEQD2Convert(void){
+OperationDoc OpArgDocEQDConvert(void){
     OperationDoc out;
-    out.name = "EQD2Convert";
+    out.name = "EQDConvert";
 
     out.desc = 
-        "This operation performs a BED-based conversion to a dose-equivalent that would have 2Gy fractions.";
+        "This operation performs a BED-based conversion to a dose-equivalent that would have 'd' dose per fraction"
+        " (e.g., for 'EQD2' the dose per fraction would be 2 Gy).";
         
     out.notes.emplace_back(
         "This operation treats all tissue as either tumourous or not, and allows specification of a single"
         " alpha/beta for each type (i.e., one for tumourous tissues, one for normal tissues)."
         " Owing to this limitation, use of this operation is generally limited to single-OAR or PTV-only"
-        " EQD2 conversions."
+        " EQD conversions."
     );
     out.notes.emplace_back(
         "This operation requires NumberOfFractions and cannot use DosePerFraction."
@@ -83,8 +84,18 @@ OperationDoc OpArgDocEQD2Convert(void){
 
 
     out.args.emplace_back();
+    out.args.back().name = "TargetDosePerFraction";
+    out.args.back().desc = "The desired dose per fraction. For 'EQD2' this value must be 2 Gy."
+                           " Note that the specific interpretation of this parameter depends on the model.";
+    out.args.back().default_val = "2.0";
+    out.args.back().expected = true;
+    out.args.back().examples = { "1.8", "2.0", "5.0", "8.0" };
+
+
+    out.args.emplace_back();
     out.args.back().name = "PrescriptionDose";
     out.args.back().desc = "The prescription dose that was (or will be) delivered to the PTV."
+                           " This parameter is only used for the 'pinned-lq-simple' model."
                            " Note that this is a theoretical dose since the PTV or CTV will only nominally"
                            " receive this dose. Also note that the specified dose need not exist somewhere"
                            " in the image. It can be purely theoretical to accommodate previous BED"
@@ -92,6 +103,27 @@ OperationDoc OpArgDocEQD2Convert(void){
     out.args.back().default_val = "70";
     out.args.back().expected = true;
     out.args.back().examples = { "15", "22.5", "45.0", "66", "70.001" };
+
+
+    out.args.emplace_back();
+    out.args.back().name = "Model";
+    out.args.back().desc = "The EQD model to use."
+                           " Current options are 'lq-simple' and 'lq-simple-pinned'."
+                           " The 'lq-simple' model uses a simplistic linear-quadratic model."
+                           " This model disregards time delays, including repopulation."
+                           " The 'lq-simple-pinned' model is an **experimental** alternative to the 'lq-simple' model."
+                           " The 'lq-simple-pinned' model implements the 'lq-simple' model, but avoids having to"
+                           " specify d dose per fraction. First the prescription dose is transformed to EQD with d"
+                           " dose per fraction and the effective number of fractions is extracted."
+                           " Then, each voxel is transformed assuming this effective number of fractions"
+                           " rather than a specific dose per fraction."
+                           " This model conveniently avoids having to awkwardly specify d dose per fraction"
+                           " for voxels that receive less than d dose. It is also idempotent."
+                           " Note, however, that the 'lq-simple-pinned' model produces EQD estimates that are"
+                           " **incompatbile** with 'lq-simple' EQD estimates.";
+    out.args.back().default_val = "lq-simple";
+    out.args.back().expected = true;
+    out.args.back().examples = { "lq-simple", "lq-simple-pinned" };
 
 
     out.args.emplace_back();
@@ -124,12 +156,12 @@ OperationDoc OpArgDocEQD2Convert(void){
 
 
 
-Drover EQD2Convert(Drover DICOM_data, 
+Drover EQDConvert(Drover DICOM_data, 
                            OperationArgPkg OptArgs, 
                            std::map<std::string,std::string> /*InvocationMetadata*/, 
                            std::string /*FilenameLex*/ ){
 
-    EQD2ConversionUserData ud;
+    EQDConversionUserData ud;
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     ud.AlphaBetaRatioNormal = std::stod(OptArgs.getValueStr("AlphaBetaRatioNormal").value());
@@ -137,11 +169,18 @@ Drover EQD2Convert(Drover DICOM_data,
 
     ud.NumberOfFractions = std::stod(OptArgs.getValueStr("NumberOfFractions").value());
     ud.PrescriptionDose = std::stod(OptArgs.getValueStr("PrescriptionDose").value());
+    ud.TargetDosePerFraction = std::stod(OptArgs.getValueStr("TargetDosePerFraction").value());
+
+    const auto ModelStr = OptArgs.getValueStr("Model").value();
 
     const auto NormalizedROILabelRegex = OptArgs.getValueStr("NormalizedROILabelRegex").value();
     const auto ROILabelRegex = OptArgs.getValueStr("ROILabelRegex").value();
 
     const auto ImageSelectionStr = OptArgs.getValueStr("ImageSelection").value();
+
+    //-----------------------------------------------------------------------------------------------------------------
+    const auto regex_model_lqs  = Compile_Regex("^linear-quadratic-simple$");
+    const auto regex_model_lqsp = Compile_Regex("^linear-quadratic-simple$");
 
     //-----------------------------------------------------------------------------------------------------------------
 
@@ -150,6 +189,15 @@ Drover EQD2Convert(Drover DICOM_data,
     }
     if( ud.NumberOfFractions <= 0.0 ){
         throw std::invalid_argument("NumberOfFractions must be specified (>0.0)");
+    }
+
+    if(false){
+    }else if( std::regex_match(ModelStr, regex_model_lqs) ){
+        ud.model == EQDConversionUserData::Model::SimpleLinearQuadratic;
+    }else if( std::regex_match(ModelStr, regex_model_lqsp) ){
+        ud.model == EQDConversionUserData::Model::PinnedLinearQuadratic;
+    }else{
+        throw std::invalid_argument("Model not understood. Cannot continue.");
     }
 
     //Stuff references to all contours into a list. Remember that you can still address specific contours through
@@ -167,9 +215,9 @@ Drover EQD2Convert(Drover DICOM_data,
     IAs = Whitelist(IAs, "Modality", "RTDOSE");
     for(auto & iap_it : IAs){
         if(!(*iap_it)->imagecoll.Process_Images_Parallel( GroupIndividualImages,
-                                                          EQD2Conversion,
+                                                          EQDConversion,
                                                           {}, cc_ROIs, &ud )){
-            throw std::runtime_error("Unable to convert image_array voxels to EQD2 using the specified ROI(s).");
+            throw std::runtime_error("Unable to convert image_array voxels to EQD using the specified ROI(s).");
         }
     }
 
