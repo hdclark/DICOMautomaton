@@ -21,6 +21,12 @@ export LC_IDENTIFICATION="$locale"
 export LC_ALL=""
 
 
+check_syntax () {
+    local f="$@"
+    [ -f "$f" ] && g++ --std=c++17 -fsyntax-only "$f"
+}
+export -f check_syntax
+
 # Check all files in the project.
 #find ./src/ -type f -print0 |
 #    grep -z -E '*[.]cc|*[.]cpp' |
@@ -36,5 +42,6 @@ git ls-files -z -o -m "$@" |
   grep -z -E '*[.]h|*[.]cc|*[.]cpp' |
     grep -z -i -v '.*imebra.*' |
   xargs -0 -I '{}' -P $(nproc || echo 2) -n 1 -r \
-    g++ --std=c++17 -fsyntax-only '{}'
+    bash -c "check_syntax '{}'"
+
 
