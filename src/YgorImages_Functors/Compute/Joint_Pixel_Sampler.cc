@@ -139,8 +139,14 @@ bool ComputeJointPixelSampler(planar_image_collection<float,double> &imagecoll,
                     exact_overlap = false;
                 }
             }
-            if(!envel_overlap) FUNCWARN("Reference images do not all envelop-overlap; using slow per-voxel sampling");
-            if(envel_overlap && !exact_overlap) FUNCWARN("Reference images do not all exact-overlap; using per-image sampling");
+            if(!envel_overlap){
+                std::lock_guard<std::mutex> lock(saver_printer);
+                FUNCWARN("Reference images do not all envelop-overlap; using slow per-voxel sampling");
+            }
+            if(envel_overlap && !exact_overlap){
+                std::lock_guard<std::mutex> lock(saver_printer);
+                FUNCWARN("Reference images do not all exact-overlap; using per-image sampling");
+            }
 
             auto f_bounded = [&,img_refw](long int E_row,  // "edit-image" row.
                                           long int E_col,  // "edit-image" column.
