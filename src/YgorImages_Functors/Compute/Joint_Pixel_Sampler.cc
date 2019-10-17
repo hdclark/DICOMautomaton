@@ -148,11 +148,11 @@ bool ComputeJointPixelSampler(planar_image_collection<float,double> &imagecoll,
                 FUNCWARN("Reference images do not all exact-overlap; using per-image sampling");
             }
 
-            auto f_bounded = [&,img_refw](long int E_row,  // "edit-image" row.
-                                          long int E_col,  // "edit-image" column.
-                                          long int channel, 
-                                          std::reference_wrapper<planar_image<float,double>> /*img_refw*/, 
-                                          float &voxel_val) {
+            auto f_bounded = [&](long int E_row,  // "edit-image" row.
+                                 long int E_col,  // "edit-image" column.
+                                 long int channel, 
+                                 std::reference_wrapper<planar_image<float,double>> img_refw, 
+                                 float &voxel_val) {
                 if( !isininc( user_data_s->inc_lower_threshold, voxel_val, user_data_s->inc_upper_threshold) ){
                     return; // No-op if outside of the thresholds.
                 }
@@ -171,10 +171,6 @@ bool ComputeJointPixelSampler(planar_image_collection<float,double> &imagecoll,
                 const auto pos = img_refw.get().position(E_row, E_col);
 
                 // Sample each external image volume.
-//                auto int_img_it = std::begin(int_img_ptr_l);
-//                auto img_adj_it = std::begin(img_adj_l);
-//                for( ;    (int_img_it != std::end(int_img_ptr_l)) 
-//                       && (img_adj_it != std::end(img_adj_l))  ; ++int_img_it, ++img_adj_it ){
                 const size_t N_ext_img_arrs = int_img_ptr_l.size();
                 for(size_t i = 0; i < N_ext_img_arrs; ++i){                               // TODO: replace this dual iteration with iteration over a list of a class that combines both items (paired).
                     auto int_img_it = std::next( std::begin(int_img_ptr_l), i );
@@ -182,8 +178,14 @@ bool ComputeJointPixelSampler(planar_image_collection<float,double> &imagecoll,
 
                     // Sample the image.
                     if(false){
+
                     }else if(exact_overlap){
-                        vals.emplace_back( (*(int_img_it))->value(E_row, E_col, channel) );
+                        try{
+                            vals.emplace_back( (*(int_img_it))->value(E_row, E_col, channel) );
+                        }catch(const std::exception &){
+                            vals.emplace_back(inaccessible_val); // Cannot access this voxel.
+                            continue;
+                        }
 
                     }else if(user_data_s->sampling_method == ComputeJointPixelSamplerUserData::SamplingMethod::NearestVoxel){
                         // If no wholly overlapping image was previously identified, perform a lookup for this specific voxel.
