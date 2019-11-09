@@ -19,7 +19,9 @@
 #include <vector>
 #include <utility>
 
+#ifdef DCMA_USE_NLOPT
 #include <nlopt.hpp>
+#endif // DCMA_USE_NLOPT
 
 #include "../Insert_Contours.h"
 #include "../Structs.h"
@@ -433,6 +435,7 @@ Drover OptimizeStaticBeams(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
     std::vector<double> working(N_voxels, 0.0);
     global_working = working;
 
+#ifdef DCMA_USE_NLOPT
     //nlopt::opt optimizer(nlopt::LN_NELDERMEAD, N_beams);
     nlopt::opt optimizer(nlopt::GN_DIRECT_L, N_beams);
     //nlopt::opt optimizer(nlopt::GN_ISRES, N_beams);
@@ -455,6 +458,9 @@ Drover OptimizeStaticBeams(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
     FUNCINFO("Beginning optimization now..")
     nlopt::result nlopt_result = optimizer.optimize(open_weights, minf); // open_weights will contain the current-best weights on success.
     FUNCINFO("Optimizer result: " << nlopt_result);
+#else // DCMA_USE_NLOPT
+    FUNCERR("Unable to optimize -- nlopt was not used");
+#endif // DCMA_USE_NLOPT
 
     std::vector<double> weights(open_weights);
     const auto sum = std::accumulate(weights.begin(), weights.end(), 0.0);

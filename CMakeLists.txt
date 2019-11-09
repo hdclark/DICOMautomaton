@@ -5,43 +5,50 @@ project(DICOMautomaton LANGUAGES CXX)
 #set(DICOMautomaton_VERSION_MINOR 0)
 #set(DICOMautomaton_VERSION_PATCH 0)
 
+####################################################################################
+#                                  User Options
+####################################################################################
+
+option(MEMORY_CONSTRAINED_BUILD "Compile slowly, with minimal memory usage." OFF)
+
+option(WITH_EIGEN     "Compile assuming Eigen is available." ON)
+option(WITH_CGAL      "Compile assuming CGAL is available." ON)
+option(WITH_NLOPT     "Compile assuming nlopt is available." ON)
+option(WITH_SFML      "Compile assuming SFML is available." ON)
+option(WITH_WT        "Compile assuming Wt is available." ON)
+option(WITH_POSTGRES  "Compile assuming PostgreSQL client libraries are available." ON)
+option(WITH_GNU_GSL   "Compile assuming the GNU GSL is available." ON)
+
 
 ####################################################################################
 #                                  Dependencies 
 ####################################################################################
-# Note: See CPACK list below too.
+# Note: Dependencies are listed in CPACK list below.
 
 find_package(Threads REQUIRED)
 
-#find_package(Eigen3 3.1.0)
-#include(${EIGEN3_USE_FILE})
-#
-# or via pkg-config method:
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(EIGEN3 REQUIRED eigen3)
-include_directories( ${EIGEN3_INCLUDE_DIRS} )
-#
-# Fallback if the above methods fail:
-#include_directories("/usr/include/eigen3/")
+if(WITH_EIGEN)
+    #find_package(Eigen3 3.1.0)
+    #include(${EIGEN3_USE_FILE})
+    #
+    # or via pkg-config method:
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(EIGEN3 REQUIRED eigen3)
+    include_directories( ${EIGEN3_INCLUDE_DIRS} )
+    #
+    # Fallback if the above methods fail:
+    #include_directories("/usr/include/eigen3/")
+endif()
 
-find_package(CGAL REQUIRED COMPONENTS Core)
-include(${CGAL_USE_FILE})
+if(WITH_CGAL)
+    find_package(CGAL REQUIRED COMPONENTS Core)
+    include(${CGAL_USE_FILE})
+endif()
 
 
 ####################################################################################
 #                                  Configuration
 ####################################################################################
-
-option(MEMORY_CONSTRAINED_BUILD "Compile with minimal memory usage." OFF)
-
-
-# Provide a default build type if none were specified.
-#
-# Note: This is not necessary -- a 
-#if(NOT CMAKE_BUILD_TYPE)
-#    set(CMAKE_BUILD_TYPE Release CACHE STRING "default to release" FORCE)
-#endif()
-
 
 # Override the default CXX flags, which are controlled by the release type.
 #
@@ -95,12 +102,40 @@ endif()
 
     
 # Add definitions.
-if("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
-    add_definitions(-DCGAL_DISABLE_ROUNDING_MATH_CHECK=1) # May be needed for Valgrind debugging.
-    message(WARNING "If profiling/debugging on Arch Linux, disable binary stripping in PKGBUILD.")
-endif()
 add_definitions(-DUSTREAM_H) # -DUSE_ICU_STRINGS
-add_definitions(-DCGAL_EIGEN3_ENABLED=1) # Explicitly instruct CGAL to use Eigen.
+if(WITH_EIGEN)
+    message(STATUS "Assuming Eigen is available.")
+    add_definitions(-DDCMA_USE_EIGEN=1)
+endif()
+if(WITH_CGAL)
+    message(STATUS "Assuming CGAL is available.")
+    add_definitions(-DDCMA_USE_CGAL=1)
+    if("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
+        add_definitions(-DCGAL_DISABLE_ROUNDING_MATH_CHECK=1) # May be needed for Valgrind debugging.
+        message(WARNING "If profiling/debugging on Arch Linux, disable binary stripping in PKGBUILD.")
+    endif()
+    add_definitions(-DCGAL_EIGEN3_ENABLED=1) # Explicitly instruct CGAL to use Eigen.
+endif()
+if(WITH_NLOPT)
+    message(STATUS "Assuming NLOPT is available.")
+    add_definitions(-DDCMA_USE_NLOPT=1)
+endif()
+if(WITH_SFML)
+    message(STATUS "Assuming SFML is available.")
+    add_definitions(-DDCMA_USE_SFML=1)
+endif()
+if(WITH_WT)
+    message(STATUS "Assuming Wt is available.")
+    add_definitions(-DDCMA_USE_WT=1)
+endif()
+if(WITH_POSTGRES)
+    message(STATUS "Assuming PostgreSQL client libraries are available.")
+    add_definitions(-DDCMA_USE_POSTGRES=1)
+endif()
+if(WITH_GNU_GSL)
+    message(STATUS "Assuming the GNU GSL is available.")
+    add_definitions(-DDCMA_USE_GNU_GSL=1)
+endif()
 
 
 # Add other compiler options.
@@ -137,48 +172,68 @@ add_subdirectory(scripts)
 ####################################################################################
 
 set(CPACK_GENERATOR "DEB")
-#set(CPACK_PACKAGE_NAME "dicomautomaton")
+#SET(CPACK_PACKAGE_NAME "dicomautomaton")
 
 string(TIMESTAMP INVOCATION_TIMESTAMP "%Y%m%d.%H%M%S") # For a time-based version number.
 set(CPACK_PACKAGE_VERSION "${INVOCATION_TIMESTAMP}")
 set(CPACK_STRIP_FILES TRUE)
 
-# Dependencies, e.g., "libc6 (>= 2.3.1-6), libgcc1 (>= 1:3.4.2-12)"
-set(CPACK_DEBIAN_PACKAGE_DEPENDS 
-   "ygor,
-    explicator,
-    libboost-dev,
-    libboost-filesystem-dev,
-    libboost-iostreams-dev,
-    libboost-program-options-dev,
-    libboost-thread-dev,
-    libz-dev,
-    libsfml-dev,
-    libjansson-dev,
-    libpqxx-dev,
-    postgresql-client,
-    libeigen3-dev,
-    libcgal-dev,
-    libnlopt-dev,
-    libnlopt-cxx-dev,
-    libasio-dev,
-    libwt-dev,
-    libwthttp-dev,
-    fonts-freefont-ttf,
-    fonts-cmu")
-
-# Recommended or optional packages, e.g., "liboptional-dev (>= 1.2.3-1), libmaybe-dev (>= 1:1.3.2-10)"
-set(CPACK_DEBIAN_PACKAGE_RECOMMENDS 
-   "zenity, 
-    gnuplot,
-    ygorclustering,
-    libboost-all-dev,
-    patchelf")
 set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "amd64") # i386, amd64, armel, armhf, ...
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Various tools for medical physics applications.")
 set(CPACK_PACKAGE_CONTACT "hdeanclark@gmail.com")
 set(CPACK_PACKAGE_MAINTAINER "Haley Clark <hdeanclark@gmail.com>")
 set(CPACK_DEBIAN_PACKAGE_SECTION "Science")
 
+
+# Ygor build dependencies, e.g., "libc6 (>= 2.3.1-6), libgcc1 (>= 1:3.4.2-12)"
+set(BUILD_DEPENDENCY_PACKAGES "")
+list(APPEND BUILD_DEPENDENCY_PACKAGES "ygor")
+list(APPEND BUILD_DEPENDENCY_PACKAGES "explicator")
+list(APPEND BUILD_DEPENDENCY_PACKAGES "libz-dev")
+list(APPEND BUILD_DEPENDENCY_PACKAGES "libjansson-dev")
+list(APPEND BUILD_DEPENDENCY_PACKAGES "libboost-dev")
+list(APPEND BUILD_DEPENDENCY_PACKAGES "libboost-filesystem-dev")
+list(APPEND BUILD_DEPENDENCY_PACKAGES "libboost-iostreams-dev")
+list(APPEND BUILD_DEPENDENCY_PACKAGES "libboost-program-options-dev")
+list(APPEND BUILD_DEPENDENCY_PACKAGES "libboost-thread-dev")
+list(APPEND BUILD_DEPENDENCY_PACKAGES "libasio-dev")
+if(WITH_EIGEN)
+    list(APPEND BUILD_DEPENDENCY_PACKAGES "libeigen3-dev")
+endif()
+if(WITH_SFML)
+    list(APPEND BUILD_DEPENDENCY_PACKAGES "libsfml-dev")
+    list(APPEND BUILD_DEPENDENCY_PACKAGES "fonts-freefont-ttf")
+    list(APPEND BUILD_DEPENDENCY_PACKAGES "fonts-cmu")
+endif()
+if(WITH_CGAL)
+    list(APPEND BUILD_DEPENDENCY_PACKAGES "libcgal-dev")
+endif()
+if(WITH_WT)
+    list(APPEND BUILD_DEPENDENCY_PACKAGES "libwt-dev")
+    list(APPEND BUILD_DEPENDENCY_PACKAGES "libwthttp-dev")
+endif()
+if(WITH_NLOPT)
+    list(APPEND BUILD_DEPENDENCY_PACKAGES "libnlopt-dev")
+    list(APPEND BUILD_DEPENDENCY_PACKAGES "libnlopt-cxx-dev")
+endif()
+if(WITH_GNU_GSL)
+    list(APPEND BUILD_DEPENDENCY_PACKAGES "libgsl-dev")
+endif()
+if(WITH_POSTGRES)
+    list(APPEND BUILD_DEPENDENCY_PACKAGES "libpqxx-dev")
+    list(APPEND BUILD_DEPENDENCY_PACKAGES "postgresql-dev")
+endif()
+list(JOIN BUILD_DEPENDENCY_PACKAGES ", " CPACK_DEBIAN_PACKAGE_DEPENDS)
+
+# Recommended or optional packages, e.g., "liboptional-dev (>= 1.2.3-1), libmaybe-dev (>= 1:1.3.2-10)"
+set(RECOMMENDED_PACKAGES "")
+list(APPEND RECOMMENDED_PACKAGES "gnuplot")
+list(APPEND RECOMMENDED_PACKAGES "zenity")
+list(APPEND RECOMMENDED_PACKAGES "ygorclustering")
+list(APPEND RECOMMENDED_PACKAGES "libboost-all-dev")
+list(APPEND RECOMMENDED_PACKAGES "patchelf")
+list(JOIN RECOMMENDED_PACKAGES ", " CPACK_DEBIAN_PACKAGE_RECOMMENDS)
+
 include(CPack)
+
 

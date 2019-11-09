@@ -161,7 +161,8 @@ void Emit_Documentation(std::ostream &os){
         " conventions) bundled with the source code. See"
         " <https://github.com/hdclark/DICOMautomaton>."
         " Broadly, DICOMautomaton depends on Boost, CGAL, SFML, Eigen, Asio, Wt,"
-        " and PostgreSQL."
+        " NLopt, and PostgreSQL. Disabling some functionality at compile time can"
+        " eliminate some dependencies."
     );
     reflow_and_emit_paragraph(os, max_width, nobullet, nobullet, nolinebreak,
         "Notably, DICOMautomaton depends on the author's 'Ygor,' 'Explicator,'" 

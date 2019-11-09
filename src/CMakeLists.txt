@@ -353,7 +353,6 @@ target_link_libraries (dicomautomaton_dispatcher
     explicator 
     ygor 
     CGAL
-    nlopt 
     gsl
     gslcblas
     sfml-graphics 
@@ -373,6 +372,9 @@ target_link_libraries (dicomautomaton_dispatcher
     m
     Threads::Threads
 )
+if(WITH_NLOPT)
+    target_link_libraries (dicomautomaton_dispatcher nlopt)
+endif()
 
 # Executable.
 add_executable(dicomautomaton_webserver
@@ -418,7 +420,6 @@ target_link_libraries(dicomautomaton_webserver
     explicator 
     ygor 
     CGAL
-    nlopt 
     gsl
     gslcblas
     sfml-graphics 
@@ -440,6 +441,9 @@ target_link_libraries(dicomautomaton_webserver
     m
     Threads::Threads
 )
+if(WITH_NLOPT)
+    target_link_libraries (dicomautomaton_webserver nlopt)
+endif()
 
 # Executable.
 add_executable(dicomautomaton_bsarchive_convert

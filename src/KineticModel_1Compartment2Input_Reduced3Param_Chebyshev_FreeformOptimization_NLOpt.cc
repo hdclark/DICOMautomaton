@@ -9,7 +9,9 @@
 #include <limits>
 #include <cmath>
 
+#ifdef DCMA_USE_NLOPT
 #include <nlopt.h>
+#endif // DCMA_USE_NLOPT
 
 #include <boost/date_time/posix_time/posix_time.hpp>
 
@@ -322,6 +324,7 @@ Optimize_FreeformOptimization_Reduced3Param(KineticModel_1Compartment2Input_Redu
                                           std::numeric_limits<double>::denorm_min(),
                                           std::numeric_limits<double>::denorm_min() };
 
+#ifdef DCMA_USE_NLOPT
 
     //First-pass fit.
     {
@@ -487,6 +490,8 @@ Optimize_FreeformOptimization_Reduced3Param(KineticModel_1Compartment2Input_Redu
 // ... compute k1A and k1V here ...
 //    state.k1A  = params[0];
 //    state.k1V  = params[2];
+
+#endif // DCMA_USE_NLOPT
 
     return std::move(state);
 }

@@ -3,11 +3,14 @@
 // than L2 can be used. Note that if using the L2 norm it seems most useful to use the Levenberg-Marquardt algorithm
 // instead.
 
-#include <nlopt.h>
 #include <array>
 #include <cmath>
 #include <limits>
 #include <memory>
+
+#ifdef DCMA_USE_NLOPT
+#include <nlopt.h>
+#endif // DCMA_USE_NLOPT
 
 #include "KineticModel_1Compartment2Input_5Param_Chebyshev_Common.h"
 #include "KineticModel_1Compartment2Input_5Param_Chebyshev_FreeformOptimization.h"
@@ -92,6 +95,7 @@ Optimize_FreeformOptimization_5Param(KineticModel_1Compartment2Input_5Param_Cheb
     //Absolute parameter change thresholds:   k1A,    tauA,     k1V,    tauV,     k2.
     double xtol_abs_thresholds[dimen] = { 0.00005, 0.00010, 0.00005, 0.00010, 0.00005 };
 
+#ifdef DCMA_USE_NLOPT
 
     //First-pass fit.
     {
@@ -254,6 +258,8 @@ Optimize_FreeformOptimization_5Param(KineticModel_1Compartment2Input_5Param_Cheb
     state.tauV = params[3];
     state.k2   = params[4];
 
+#endif // DCMA_USE_NLOPT
+
     return state;
 }
 
@@ -330,6 +336,8 @@ Optimize_FreeformOptimization_3Param(KineticModel_1Compartment2Input_5Param_Cheb
 
     //Absolute parameter change thresholds:   k1A,  k1V,  k2.
     double xtol_abs_thresholds[dimen] = { 0.00005, 0.00005, 0.00005 };
+
+#ifdef DCMA_USE_NLOPT
 
     //First-pass fit.
     {
@@ -493,6 +501,8 @@ Optimize_FreeformOptimization_3Param(KineticModel_1Compartment2Input_5Param_Cheb
     state.k1V  = params[1];
     state.tauV = 0.0;
     state.k2   = params[2];
+
+#endif // DCMA_USE_NLOPT
 
     return state;
 }

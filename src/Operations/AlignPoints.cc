@@ -572,6 +572,194 @@ AlignViaExhaustiveICP( const point_set<double> & moving,
     return t;
 }
 
+// This routine finds a non-rigid alignment using the 'robust point matching: thin plate spline' algorithm.
+//
+static
+std::experimental::optional<AffineTransform>
+AlignViaTPSRPM(const point_set<double> & moving,
+               const point_set<double> & stationary ){
+    AffineTransform t;
+
+    // Compute the centroid for both point clouds.
+    const auto centroid_s = stationary.Centroid();
+    const auto centroid_m = moving.Centroid();
+    
+    const double T_step = 0.93; // Should be [0.9:0.99] or so.
+
+    // Find the largest 'square distance' between (all) points and the average separation of nearest-neighbour points
+    // (in the moving cloud). This info is needed to tune the annealing energy to ensure (1) deformations can initially
+    // 'reach' across the point cloud, and (2) deformations are not considered much below the nearest-neighbour spacing
+    // (i.e., overfitting).
+
+    const auto N_moving_points = moving.points.size();
+    const auto N_stationary_points = stationary.points.size();
+    double mean_nn_sq_dist = std::numeric_limits<double>::quiet_NaN();
+    double max_sq_dist = 0.0;
+    {
+        FUNCINFO("Locating mean nearest-neighbour separation in moving point cloud");
+        Stats::Running_Sum<double> rs;
+        long int count = 0;
+        {
+            //asio_thread_pool tp;
+            for(size_t i = 0; i < N_moving_points; ++i){
+                //tp.submit_task([&,i](void) -> void {
+                for(size_t j = 0; j < i; ++j){
+                    const auto dist = (moving.points[i]).sq_dist( moving.points[j] );
+                    rs.Digest(dist);
+                    ++count;
+                }
+                //}); // thread pool task closure.
+            }
+        }
+        mean_nn_sq_dist = rs.Current_Sum() / static_cast<double>( count );
+
+        FUNCINFO("Locating max square-distance between all points");
+        {
+            asio_thread_pool tp;
+            std::mutex saver_printer;
+            for(size_t i = 0; i < (N_moving_points + N_stationary_points); ++i){
+                tp.submit_task([&,i](void) -> void {
+                    for(size_t j = 0; j < i; ++j){
+                        const auto A = (i < N_moving_points) ? moving.points[i] : stationary.points[i - N_moving_points];
+                        const auto B = (j < N_moving_points) ? moving.points[j] : stationary.points[j - N_moving_points];
+                        const auto sq_dist = A.sq_dist(B);
+                        if(max_sq_dist < sq_dist){
+                            std::lock_guard<std::mutex> lock(saver_printer);
+                            max_sq_dist = sq_dist;
+                        }
+                    }
+                }); // thread pool task closure.
+            }
+        } // Wait until all threads are done.
+    }
+
+    double T_start = max_sq_dist;
+    double T_end = mean_nn_sq_dist;
+    double L_1_start = 1.0;
+    double L_2_start = 0.01 * L_1_start;
+
+
+    // Prepare the transformation and initial correspondence.
+    const auto f_tps = [&](const vec3<double> &v) -> vec3<double> {
+        
+        // TODO: implement TPS transformation class as a REPLACEMENT for this closure.
+
+        return v;
+    };
+
+    // Prime the transformation with a rigid registration.
+
+    // TODO -- is this step necessary?
+
+
+    // TODO: VERIFY THE DIMENSION ARE NOT BACKWARD!
+
+    const auto M_N_rows = N_moving_points + 1;
+    const auto M_N_cols = N_stationary_points + 1;
+    Eigen::MatrixXd M(M_N_rows, M_N_cols);
+
+    // Update the correspondence.
+    const auto update_correspondence = [&](const double T_now) -> void {
+        // Non-outlier coefficients.
+        for(size_t i = 0; i < N_moving_points; ++i){ // row
+            const auto P_moving = moving.points[i];
+            const auto P_moved = f_tps(P_moving); // Transform the point.
+            for(size_t j = 0; j < N_stationary_points; ++j){ // column
+                const auto P_stationary = stationary.points[j];
+                const auto dP = P_stationary - P_moved;
+                M(i, j) = std::exp(-dP.Dot(dP) / (2.0 * T_now)) / T_now;
+            }
+        }
+
+        // Moving outlier coefficients.
+        {
+            const auto i = N_moving_points; // row
+            const auto P_moving = moving.points[i];
+            for(size_t j = 0; j < N_stationary_points; ++j){ // column
+                const auto P_stationary = stationary.points[j];
+                const auto dP = P_stationary - P_moving; // Note: intentionally not transformed.
+                M(i, j) = std::exp(-dP.Dot(dP) / (2.0 * T_start)) / T_start; // Note: always use initial start temperature.
+            }
+        }
+
+        // Stationary outlier coefficients.
+        for(size_t i = 0; i < N_moving_points; ++i){ // row
+            const auto P_moving = moving.points[i];
+            const auto P_moved = f_tps(P_moving); // Transform the point.
+            const auto j = N_stationary_points; // column
+            const auto P_stationary = stationary.points[j];
+            const auto dP = P_stationary - P_moved;
+            M(i, j) = std::exp(-dP.Dot(dP) / (2.0 * T_start)) / T_start; // Note: always use initial start temperature.
+        }
+
+        // Normalize the rows and columns iteratively.
+        {
+            std::vector<double> row_sums(N_moving_points+1, 0.0);
+            std::vector<double> col_sums(N_stationary_points+1, 0.0);
+            for(size_t norm_iter = 0; norm_iter < 10; ++norm_iter){
+
+                // Tally the current column sums and re-scale the corespondence coefficients.
+                //for(auto &x : col_sums) x = 0.0;
+                for(size_t j = 0; j < (N_stationary_points+1); ++j){ // column
+                    col_sums[j] = 0.0;
+                    for(size_t i = 0; i < (N_moving_points+1); ++i){ // row
+                        col_sums[j] += M(i,j);
+                    }
+                }
+                for(size_t j = 0; j < (N_stationary_points+1); ++j){ // column
+                    for(size_t i = 0; i < (N_moving_points+1); ++i){ // row
+                        M(i,j) = M(i,j) / col_sums[j];
+                    }
+                }
+                
+                // Tally the current row sums and re-scale the corespondence coefficients.
+                //for(auto &x : row_sums) x = 0.0;
+                for(size_t i = 0; i < (N_moving_points+1); ++i){ // row
+                    row_sums[i] = 0.0;
+                    for(size_t j = 0; j < (N_stationary_points+1); ++j){ // column
+                        row_sums[i] += M(i,j);
+                    }
+                }
+                for(size_t i = 0; i < (N_moving_points+1); ++i){ // row
+                    for(size_t j = 0; j < (N_stationary_points+1); ++j){ // column
+                        M(i,j) = M(i,j) / row_sums[i];
+                    }
+                }
+
+                FUNCINFO("On normalization iteration " << norm_iter << " the mean col sum was " << Stats::Mean(col_sums));
+                FUNCINFO("On normalization iteration " << norm_iter << " the mean row sum was " << Stats::Mean(row_sums));
+            }
+        }
+
+        return;
+    };
+
+    // Update the transformation.
+    const auto update_transformation = [&](const double T_now) -> void {
+
+        // TODO.
+
+        return;
+    };
+
+    // Anneal deterministically.
+    for(double T_now = T_start; T_now >= T_end; T_now *= T_step){
+        const double L_1 = T_now * L_1_start;
+        const double L_2 = T_now * L_2_start;
+
+        for(size_t iter_at_fixed_T = 0; iter_at_fixed_T < 5; ++iter_at_fixed_T){
+            // Update correspondence matrix.
+            update_correspondence(T_now);
+
+            // Update transformation.
+            update_transformation(T_now);
+        }
+    }
+
+    return t;
+}
+
+
 OperationDoc OpArgDocAlignPoints(void){
     OperationDoc out;
     out.name = "AlignPoints";
