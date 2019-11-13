@@ -70,7 +70,6 @@
 #include "Operations/DeleteImages.h"
 #include "Operations/DeleteMeshes.h"
 #include "Operations/DeletePoints.h"
-#include "Operations/DetectGrid3D.h"
 #include "Operations/DetectShapes3D.h"
 #include "Operations/DrawGeometry.h"
 #include "Operations/DroverDebug.h"
@@ -165,11 +164,15 @@
 #include "Operations/VolumetricCorrelationDetector.h"
 #include "Operations/VolumetricSpatialBlur.h"
 #include "Operations/VolumetricSpatialDerivative.h"
-#include "Operations/VoxelRANSAC.h"
 
 #ifdef DCMA_USE_SFML
-#include "Operations/PresentationImage.h"
-#include "Operations/SFML_Viewer.h"
+    #include "Operations/PresentationImage.h"
+    #include "Operations/SFML_Viewer.h"
+#endif
+
+#ifdef DCMA_USE_EIGEN
+    #include "Operations/DetectGrid3D.h"
+    #include "Operations/VoxelRANSAC.h"
 #endif
 
 #include "Operation_Dispatcher.h"
@@ -229,7 +232,6 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["DeleteImages"] = std::make_pair(OpArgDocDeleteImages, DeleteImages);
     out["DeleteMeshes"] = std::make_pair(OpArgDocDeleteMeshes, DeleteMeshes);
     out["DeletePoints"] = std::make_pair(OpArgDocDeletePoints, DeletePoints);
-    out["DetectGrid3D"] = std::make_pair(OpArgDocDetectGrid3D, DetectGrid3D);
     out["DetectShapes3D"] = std::make_pair(OpArgDocDetectShapes3D, DetectShapes3D);
     out["DrawGeometry"] = std::make_pair(OpArgDocDrawGeometry, DrawGeometry);
     out["DroverDebug"] = std::make_pair(OpArgDocDroverDebug, DroverDebug);
@@ -324,11 +326,15 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["VolumetricCorrelationDetector"] = std::make_pair(OpArgDocVolumetricCorrelationDetector, VolumetricCorrelationDetector);
     out["VolumetricSpatialBlur"] = std::make_pair(OpArgDocVolumetricSpatialBlur, VolumetricSpatialBlur);
     out["VolumetricSpatialDerivative"] = std::make_pair(OpArgDocVolumetricSpatialDerivative, VolumetricSpatialDerivative);
-    out["VoxelRANSAC"] = std::make_pair(OpArgDocVoxelRANSAC, VoxelRANSAC);
 
 #ifdef DCMA_USE_SFML
     out["PresentationImage"] = std::make_pair(OpArgDocPresentationImage, PresentationImage);
     out["SFML_Viewer"] = std::make_pair(OpArgDocSFML_Viewer, SFML_Viewer);
+#endif
+
+#ifdef DCMA_USE_EIGEN
+    out["DetectGrid3D"] = std::make_pair(OpArgDocDetectGrid3D, DetectGrid3D);
+    out["VoxelRANSAC"] = std::make_pair(OpArgDocVoxelRANSAC, VoxelRANSAC);
 #endif
 
     return out;

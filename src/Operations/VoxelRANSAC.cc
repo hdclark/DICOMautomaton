@@ -32,6 +32,11 @@
 #include <boost/geometry/algorithms/within.hpp>
 */
 
+#ifdef DCMA_USE_EIGEN    
+#else
+    #error "Attempting to compile this operation without Eigen, which is required."
+#endif
+
 #include <eigen3/Eigen/Dense>
 #include <eigen3/Eigen/Eigenvalues>
 

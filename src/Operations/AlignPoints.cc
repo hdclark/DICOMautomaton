@@ -16,9 +16,11 @@
 #include <utility>            //Needed for std::pair.
 #include <vector>
 
-#include <eigen3/Eigen/Dense>
-#include <eigen3/Eigen/Eigenvalues>
-#include <eigen3/Eigen/SVD>
+#ifdef DCMA_USE_EIGEN    
+    #include <eigen3/Eigen/Dense>
+    #include <eigen3/Eigen/Eigenvalues>
+    #include <eigen3/Eigen/SVD>
+#endif
 
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
@@ -150,6 +152,7 @@ AlignViaCentroid(const point_set<double> & moving,
     return t;
 }
     
+#ifdef DCMA_USE_EIGEN
 // This routine performs a PCA-based alignment.
 //
 // First, the moving point cloud is translated the moving point cloud so the centre of mass aligns to the reference
@@ -366,8 +369,10 @@ AlignViaPCA(const point_set<double> & moving,
 
     return t;
 }
+#endif // DCMA_USE_EIGEN
 
 
+#ifdef DCMA_USE_EIGEN
 // This routine performs an exhaustive iterative closest point (ICP) alignment.
 //
 // Note that this routine only identifies a transform, it does not implement it by altering the point clouds.
@@ -571,7 +576,9 @@ AlignViaExhaustiveICP( const point_set<double> & moving,
     //t.write_to(std::cout);
     return t;
 }
+#endif // DCMA_USE_EIGEN
 
+#ifdef DCMA_USE_EIGEN
 // This routine finds a non-rigid alignment using the 'robust point matching: thin plate spline' algorithm.
 //
 static
@@ -758,6 +765,7 @@ AlignViaTPSRPM(const point_set<double> & moving,
 
     return t;
 }
+#endif // DCMA_USE_EIGEN
 
 
 OperationDoc OpArgDocAlignPoints(void){
@@ -772,6 +780,12 @@ OperationDoc OpArgDocAlignPoints(void){
         " It should be copied if a pre-transformed copy is required."
     );
         
+#ifdef DCMA_USE_EIGEN
+#else
+    out.notes.emplace_back(
+        "Functionality provided by Eigen has been disabled. The available transformation methods have been reduced."
+    );
+#endif
 
     out.args.emplace_back();
     out.args.back() = PCWhitelistOpArgDoc();
@@ -793,8 +807,11 @@ OperationDoc OpArgDocAlignPoints(void){
     out.args.emplace_back();
     out.args.back().name = "Method";
     out.args.back().desc = "The alignment algorithm to use."
-                           " Two rigid alignment options are available: 'centroid', 'PCA', and 'exhaustive_icp'."
-                           ""
+                           " The following alignment options are available: 'centroid'"
+#ifdef DCMA_USE_EIGEN
+                           ", 'PCA', and 'exhaustive_icp'"
+#endif
+                           "."
                            " The 'centroid' option finds a rotationless translation the aligns the centroid"
                            " (i.e., the centre of mass if every point has the same 'mass')"
                            " of the moving point cloud with that of the stationary point cloud."
@@ -804,6 +821,7 @@ OperationDoc OpArgDocAlignPoints(void){
                            " and can be used in cases of 2D and 1D degeneracy."
                            " centroid alignment is frequently used as a pre-processing step for more advanced algorithms."
                            ""
+#ifdef DCMA_USE_EIGEN
                            " The 'PCA' option finds an Affine transformation by performing centroid alignment,"
                            " performing principle component analysis (PCA) separately on the reference and moving"
                            " point clouds, computing third-order point distribution moments along each principle axis"
@@ -833,10 +851,16 @@ OperationDoc OpArgDocAlignPoints(void){
                            " scales badly."
                            " ICP is susceptible to outliers and will not scale a point cloud."
                            " It can be used for 2D and 1D degenerate problems, but is not guaranteed to find the"
-                           " 'correct' orientation of degenerate or symmetrical point clouds.";
+                           " 'correct' orientation of degenerate or symmetrical point clouds."
+#endif
+                           "";
     out.args.back().default_val = "centroid";
     out.args.back().expected = true;
+#ifdef DCMA_USE_EIGEN
     out.args.back().examples = { "centroid", "pca", "exhaustive_icp" };
+#else
+    out.args.back().examples = { "centroid" };
+#endif
 
 
     out.args.emplace_back();
@@ -907,8 +931,10 @@ Drover AlignPoints(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::str
 
     //-----------------------------------------------------------------------------------------------------------------
     const auto regex_com    = Compile_Regex("^ce?n?t?r?o?i?d?$");
+#ifdef DCMA_USE_EIGEN    
     const auto regex_pca    = Compile_Regex("^pc?a?$");
     const auto regex_exhicp = Compile_Regex("^ex?h?a?u?s?t?i?v?e?[-_]?i?c?p?$");
+#endif // DCMA_USE_EIGEN
 
     auto PCs_all = All_PCs( DICOM_data );
     auto ref_PCs = Whitelist( PCs_all, ReferencePointSelectionStr );
@@ -942,6 +968,7 @@ Drover AlignPoints(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::str
                 }
             }
 
+#ifdef DCMA_USE_EIGEN    
         }else if( std::regex_match(MethodStr, regex_pca) ){
             auto t_opt = AlignViaPCA( (*pcp_it)->pset,
                                       (*ref_PCs.front())->pset );
@@ -969,6 +996,7 @@ Drover AlignPoints(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::str
                     std::runtime_error("Unable to write transformation to file. Cannot continue.");
                 }
             }
+#endif // DCMA_USE_EIGEN
 
         }else{
             throw std::invalid_argument("Method not understood. Cannot continue.");

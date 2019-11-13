@@ -52,7 +52,6 @@ add_library(Operations_objs OBJECT
     DeleteImages.cc
     DeleteMeshes.cc
     DeletePoints.cc
-    DetectGrid3D.cc
     DetectShapes3D.cc
     DrawGeometry.cc
     DroverDebug.cc
@@ -147,14 +146,22 @@ add_library(Operations_objs OBJECT
     VolumetricCorrelationDetector.cc
     VolumetricSpatialBlur.cc
     VolumetricSpatialDerivative.cc
-    VoxelRANSAC.cc
 )
+
 if(WITH_SFML)
     add_library(Operations_objs OBJECT 
         PresentationImage.cc
         SFML_Viewer.cc
     )
 endif()
+
+if(WITH_EIGEN)
+    add_library(Operations_objs OBJECT 
+        DetectGrid3D.cc
+        VoxelRANSAC.cc
+    )
+endif()
+
 set_target_properties(Operations_objs
     PROPERTIES POSITION_INDEPENDENT_CODE TRUE
 )

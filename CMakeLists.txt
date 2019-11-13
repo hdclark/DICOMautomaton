@@ -110,7 +110,6 @@ if(WITH_EIGEN)
 else()
     message(STATUS "Assuming Eigen is not available.")
     add_definitions(-UDCMA_USE_EIGEN)
-                                        message(FATAL_ERROR "This option is not yet supported.")
 endif()
 
 if(WITH_CGAL)
