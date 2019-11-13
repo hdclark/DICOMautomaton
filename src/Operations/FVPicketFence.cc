@@ -13,7 +13,10 @@
 #include "CropImages.h"
 #include "AutoCropImages.h"
 #include "AnalyzePicketFence.h"
+
+#ifdef DCMA_USE_SFML
 #include "PresentationImage.h"
+#endif
 
 #include "FVPicketFence.h"
 
@@ -28,6 +31,13 @@ OperationDoc OpArgDocFVPicketFence(void){
         " that are expected to be reasonable across a wide range of scenarios." 
     );
 
+#ifdef DCMA_USE_SFML    
+#else
+    out.notes.emplace_back(
+        "This version of DICOMautomaton has been compiled without SFML support."
+        " The post-analysis PresentationImage operation will be omitted."
+    );
+#endif
 
     out.args.splice( out.args.end(), OpArgDocContourWholeImages().args );
     out.args.splice( out.args.end(), OpArgDocIsolatedVoxelFilter().args );
@@ -37,7 +47,9 @@ OperationDoc OpArgDocFVPicketFence(void){
 
     out.args.splice( out.args.end(), OpArgDocAnalyzePicketFence().args );
 
+#ifdef DCMA_USE_SFML    
     out.args.splice( out.args.end(), OpArgDocPresentationImage().args );
+#endif
 
     // Adjust the defaults to suit this particular workflow.
     for(auto &oparg : out.args){
@@ -104,6 +116,7 @@ OperationDoc OpArgDocFVPicketFence(void){
         }else if(oparg.name == "MinimumJunctionSeparation"){
             oparg.visibility  = OpArgVisibility::Show;
 
+#ifdef DCMA_USE_SFML    
         // PresentationImage
         //}else if(oparg.name == "ImageSelection"){
         //    oparg.default_val = "last";
@@ -111,6 +124,7 @@ OperationDoc OpArgDocFVPicketFence(void){
         }else if(oparg.name == "ScaleFactor"){
             oparg.default_val = "1.5";
             oparg.visibility  = OpArgVisibility::Show;
+#endif
         }
     }
 
@@ -132,7 +146,9 @@ FVPicketFence(Drover DICOM_data,
 
     DICOM_data = AnalyzePicketFence(std::move(DICOM_data), OptArgs, InvocationMetadata, FilenameLex);
 
+#ifdef DCMA_USE_SFML    
     DICOM_data = PresentationImage(std::move(DICOM_data), OptArgs, InvocationMetadata, FilenameLex);
+#endif
 
     return DICOM_data;
 }

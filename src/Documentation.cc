@@ -166,58 +166,51 @@ void Emit_Documentation(std::ostream &os){
         " functionality."
     );
 
-    // Interpret macros containing numerical values for truthiness.
-    const auto macro_to_bool_alpha = [](const long int m) -> std::string {
-        return ( m != 0 ) ? "true" : "false";
-    };
-
-    // Interpret empty macros as explicit falses.
-    const auto macro_to_bool_alpha = [](void) -> std::string {
-        return "false";
-    };
-
     os << std::endl
-       << "Dependency       Functionality Enabled?"                       << std::endl
-       << "-------------    ---------------------------------------"      << std::endl
-       << "Imebra           true (required)"                              << std::endl
-       << "Boost            true (required)"                              << std::endl
+       << "  Dependency       Functionality Enabled?"                       << std::endl
+       << "  ---------------  ---------------------------------------"      << std::endl
+       << "  Ygor             true (required)"                              << std::endl
+       << "  YgorClustering   true (required; header-only)"                 << std::endl
+       << "  Explicator       true (required)"                              << std::endl
+       << "  Imebra           true (required; bundled)"                     << std::endl
+       << "  Boost            true (required)"                              << std::endl
 #ifdef DCMA_USE_EIGEN
-       << "Eigen            true"                                         << std::endl
+       << "  Eigen            true"                                         << std::endl
 #else       
-       << "Eigen            false"                                        << std::endl
+       << "  Eigen            false"                                        << std::endl
 #endif       
 #ifdef DCMA_USE_CGAL
-       << "CGAL             true"                                         << std::endl
+       << "  CGAL             true"                                         << std::endl
 #else       
-       << "CGAL             false"                                        << std::endl
+       << "  CGAL             false"                                        << std::endl
 #endif       
 #ifdef DCMA_USE_NLOPT
-       << "NLOpt            true"                                         << std::endl
+       << "  NLOpt            true"                                         << std::endl
 #else       
-       << "NLOpt            false"                                        << std::endl
+       << "  NLOpt            false"                                        << std::endl
 #endif       
 #ifdef DCMA_USE_SFML
-       << "SFML             true"                                         << std::endl
+       << "  SFML             true"                                         << std::endl
 #else       
-       << "SFML             false"                                        << std::endl
+       << "  SFML             false"                                        << std::endl
 #endif       
 #ifdef DCMA_USE_WT
-       << "Wt               true"                                         << std::endl
+       << "  Wt               true"                                         << std::endl
 #else       
-       << "Wt               false"                                        << std::endl
+       << "  Wt               false"                                        << std::endl
 #endif       
 #ifdef DCMA_USE_POSTGRES
-       << "PostgreSQL       true"                                         << std::endl
+       << "  PostgreSQL       true"                                         << std::endl
 #else       
-       << "PostgreSQL       false"                                        << std::endl
+       << "  PostgreSQL       false"                                        << std::endl
 #endif       
 #ifdef DCMA_USE_GNU_GSL
-       << "GNU GSL          true"                                         << std::endl
+       << "  GNU GSL          true"                                         << std::endl
 #else       
-       << "GNU GSL          false"                                        << std::endl
+       << "  GNU GSL          false"                                        << std::endl
 #endif       
        << std::endl
-       << "Table: Dependencies enabled for this instance." << std::endl
+       << "  Table: Dependencies enabled for this instance." << std::endl
        << std::endl;
 
     reflow_and_emit_paragraph(os, max_width, nobullet, nobullet, nolinebreak,

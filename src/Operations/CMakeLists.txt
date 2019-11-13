@@ -117,7 +117,6 @@ add_library(Operations_objs OBJECT
     PlotLineSamples.cc
     PlotPerROITimeCourses.cc
     PreFilterEnormousCTValues.cc
-    PresentationImage.cc
     PruneEmptyImageDoseArrays.cc
     PurgeContours.cc
     RankPixels.cc
@@ -152,6 +151,7 @@ add_library(Operations_objs OBJECT
 )
 if(WITH_SFML)
     add_library(Operations_objs OBJECT 
+        PresentationImage.cc
         SFML_Viewer.cc
     )
 endif()

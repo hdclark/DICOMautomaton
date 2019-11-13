@@ -59,6 +59,13 @@ build() {
     -DMEMORY_CONSTRAINED_BUILD=OFF \
     -DCMAKE_INSTALL_PREFIX=/usr \
     -DCMAKE_BUILD_TYPE=Release \
+    -DWITH_EIGEN=ON \
+    -DWITH_CGAL=ON \
+    -DWITH_NLOPT=ON \
+    -DWITH_SFML=ON \
+    -DWITH_WT=ON \
+    -DWITH_POSTGRES=ON \
+    -DWITH_GNU_GSL=ON \
     ../
 
   ## Debug build with default compiler flags.

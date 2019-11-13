@@ -135,7 +135,6 @@
 #include "Operations/PlotPerROITimeCourses.h"
 #include "Operations/PlotLineSamples.h"
 #include "Operations/PreFilterEnormousCTValues.h"
-#include "Operations/PresentationImage.h"
 #include "Operations/PruneEmptyImageDoseArrays.h"
 #include "Operations/PurgeContours.h"
 #include "Operations/RankPixels.h"
@@ -169,6 +168,7 @@
 #include "Operations/VoxelRANSAC.h"
 
 #ifdef DCMA_USE_SFML
+#include "Operations/PresentationImage.h"
 #include "Operations/SFML_Viewer.h"
 #endif
 
@@ -294,7 +294,6 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["PlotLineSamples"] = std::make_pair(OpArgDocPlotLineSamples, PlotLineSamples);
     out["PlotPerROITimeCourses"] = std::make_pair(OpArgDocPlotPerROITimeCourses, PlotPerROITimeCourses);
     out["PreFilterEnormousCTValues"] = std::make_pair(OpArgDocPreFilterEnormousCTValues, PreFilterEnormousCTValues);
-    out["PresentationImage"] = std::make_pair(OpArgDocPresentationImage, PresentationImage);
     out["PruneEmptyImageDoseArrays"] = std::make_pair(OpArgDocPruneEmptyImageDoseArrays, PruneEmptyImageDoseArrays);
     out["PurgeContours"] = std::make_pair(OpArgDocPurgeContours, PurgeContours);
     out["RankPixels"] = std::make_pair(OpArgDocRankPixels, RankPixels);
@@ -328,6 +327,7 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["VoxelRANSAC"] = std::make_pair(OpArgDocVoxelRANSAC, VoxelRANSAC);
 
 #ifdef DCMA_USE_SFML
+    out["PresentationImage"] = std::make_pair(OpArgDocPresentationImage, PresentationImage);
     out["SFML_Viewer"] = std::make_pair(OpArgDocSFML_Viewer, SFML_Viewer);
 #endif
 

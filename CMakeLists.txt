@@ -143,7 +143,6 @@ if(WITH_SFML)
 else()
     message(STATUS "Assuming SFML is not available.")
     add_definitions(-UDCMA_USE_SFML)
-                                        message(FATAL_ERROR "This option is not yet supported.")
 endif()
 
 if(WITH_WT)
