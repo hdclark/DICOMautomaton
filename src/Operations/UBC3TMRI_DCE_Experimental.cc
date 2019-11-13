@@ -16,7 +16,6 @@
 #include "../YgorImages_Functors/Grouping/Misc_Functors.h"
 #include "../YgorImages_Functors/Processing/DCEMRI_AUC_Map.h"
 #include "../YgorImages_Functors/Processing/Partitioned_Image_Voxel_Visitor_Mutator.h"
-#include "../YgorImages_Functors/Processing/Kitchen_Sink_Analysis.h"
 #include "../YgorImages_Functors/Transform/DCEMRI_C_Map.h"
 #include "../YgorImages_Functors/Transform/DCEMRI_S0_Map_v2.h"
 #include "../YgorImages_Functors/Transform/DCEMRI_Signal_Difference_C.h"

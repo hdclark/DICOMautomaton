@@ -356,8 +356,6 @@ target_link_libraries (dicomautomaton_dispatcher
     gsl
     gslcblas
     jansson 
-    pqxx 
-    pq
     boost_filesystem 
     boost_serialization
     boost_iostreams
@@ -376,6 +374,10 @@ if(WITH_SFML)
     target_link_libraries (dicomautomaton_dispatcher sfml-graphics)
     target_link_libraries (dicomautomaton_dispatcher sfml-window)
     target_link_libraries (dicomautomaton_dispatcher sfml-system)
+endif()
+if(WITH_POSTGRES)
+    target_link_libraries (dicomautomaton_dispatcher pqxx)
+    target_link_libraries (dicomautomaton_dispatcher pq)
 endif()
 
 if(WITH_WT)
@@ -426,8 +428,6 @@ if(WITH_WT)
         gsl
         gslcblas
         jansson 
-        pqxx 
-        pq
         wt
         wthttp
         boost_filesystem 
@@ -448,6 +448,10 @@ if(WITH_WT)
         target_link_libraries (dicomautomaton_webserver sfml-graphics)
         target_link_libraries (dicomautomaton_webserver sfml-window)
         target_link_libraries (dicomautomaton_webserver sfml-system)
+    endif()
+    if(WITH_SFML)
+        target_link_libraries (dicomautomaton_webserver pqxx)
+        target_link_libraries (dicomautomaton_webserver pq)
     endif()
 endif()
 
@@ -474,56 +478,62 @@ target_link_libraries(dicomautomaton_bsarchive_convert
     Threads::Threads
 )
 
-# Executable.
-add_executable(pacs_ingress
-    PACS_Ingress.cc
-    $<TARGET_OBJECTS:Structs_obj>
-    $<TARGET_OBJECTS:Dose_Meld_obj>
-    $<TARGET_OBJECTS:Regex_Selectors_obj>
-)
-target_link_libraries(pacs_ingress
-    imebrashim
-    explicator 
-    ygor 
-    pqxx 
-    pq
-    m
-    Threads::Threads
-)
+if(WITH_POSTGRES)
+    # Executable.
+    add_executable(pacs_ingress
+        PACS_Ingress.cc
+        $<TARGET_OBJECTS:Structs_obj>
+        $<TARGET_OBJECTS:Dose_Meld_obj>
+        $<TARGET_OBJECTS:Regex_Selectors_obj>
+    )
+    target_link_libraries(pacs_ingress
+        imebrashim
+        explicator 
+        ygor 
+        pqxx 
+        pq
+        m
+        Threads::Threads
+    )
+endif()
 
-# Executable.
-add_executable(pacs_duplicate_cleaner
-    PACS_Duplicate_Cleaner.cc
-    $<TARGET_OBJECTS:Structs_obj>
-    $<TARGET_OBJECTS:Dose_Meld_obj>
-    $<TARGET_OBJECTS:Regex_Selectors_obj>
-)
-target_link_libraries(pacs_duplicate_cleaner
-    imebrashim
-    explicator 
-    ygor 
-    pqxx 
-    pq
-    m
-    Threads::Threads
-)
+if(WITH_POSTGRES)
+    # Executable.
+    add_executable(pacs_duplicate_cleaner
+        PACS_Duplicate_Cleaner.cc
+        $<TARGET_OBJECTS:Structs_obj>
+        $<TARGET_OBJECTS:Dose_Meld_obj>
+        $<TARGET_OBJECTS:Regex_Selectors_obj>
+    )
+    target_link_libraries(pacs_duplicate_cleaner
+        imebrashim
+        explicator 
+        ygor 
+        pqxx 
+        pq
+        m
+        Threads::Threads
+    )
+endif()
 
-# Executable.
-add_executable(pacs_refresh
-    PACS_Refresh.cc
-    $<TARGET_OBJECTS:Structs_obj>
-    $<TARGET_OBJECTS:Dose_Meld_obj>
-    $<TARGET_OBJECTS:Regex_Selectors_obj>
-)
-target_link_libraries(pacs_refresh
-    imebrashim
-    explicator 
-    ygor 
-    pqxx 
-    pq
-    m
-    Threads::Threads
-)
+if(WITH_POSTGRES)
+    # Executable.
+    add_executable(pacs_refresh
+        PACS_Refresh.cc
+        $<TARGET_OBJECTS:Structs_obj>
+        $<TARGET_OBJECTS:Dose_Meld_obj>
+        $<TARGET_OBJECTS:Regex_Selectors_obj>
+    )
+    target_link_libraries(pacs_refresh
+        imebrashim
+        explicator 
+        ygor 
+        pqxx 
+        pq
+        m
+        Threads::Threads
+    )
+endif()
 
 
 # Executable.
@@ -543,9 +553,6 @@ target_link_libraries(dicomautomaton_dump
 install(TARGETS 
     dicomautomaton_dispatcher
     dicomautomaton_bsarchive_convert
-    pacs_ingress
-    pacs_duplicate_cleaner
-    pacs_refresh
     dicomautomaton_dump
     imebrashim
     kineticmodel_1c2i_5param_linearinterp_levenbergmarquardt
@@ -556,10 +563,19 @@ install(TARGETS
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib
 )
-
 if(USE_WT)
     install(TARGETS 
         dicomautomaton_webserver
+      RUNTIME DESTINATION bin
+      LIBRARY DESTINATION lib
+      ARCHIVE DESTINATION lib
+    )
+endif()
+if(USE_POSTGRES)
+    install(TARGETS 
+        pacs_ingress
+        pacs_duplicate_cleaner
+        pacs_refresh
       RUNTIME DESTINATION bin
       LIBRARY DESTINATION lib
       ARCHIVE DESTINATION lib

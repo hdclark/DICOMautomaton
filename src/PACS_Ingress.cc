@@ -8,6 +8,11 @@
 // DICOM key-values, routines are tightly coupled with the DICOM parser. 
 //
 
+#ifdef DCMA_USE_POSTGRES
+#else
+    #error "Attempted to compile without PostgreSQL support, which is required."
+#endif
+
 #include <exception>
 #include <functional>
 #include <iostream>

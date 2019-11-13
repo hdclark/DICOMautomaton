@@ -18,7 +18,6 @@
 #include <list>
 #include <map>
 #include <memory>
-#include <pqxx/pqxx>          //PostgreSQL C++ interface.
 #include <regex>
 #include <stdexcept>
 #include <string>    

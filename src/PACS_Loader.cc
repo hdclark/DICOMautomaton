@@ -3,6 +3,11 @@
 // This program loads DICOM files from a (custom DICOMautomaton) PACS database.
 //
 
+#ifdef DCMA_USE_POSTGRES
+#else
+    #error "Attempted to compile without PostgreSQL support, which is required."
+#endif
+
 #include <boost/algorithm/string/predicate.hpp>
 #include <exception>
 #include <fstream>

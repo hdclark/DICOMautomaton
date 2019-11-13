@@ -43,7 +43,6 @@
 #include "../YgorImages_Functors/Processing/In_Image_Plane_Bicubic_Supersample.h"
 #include "../YgorImages_Functors/Processing/In_Image_Plane_Bilinear_Supersample.h"
 #include "../YgorImages_Functors/Processing/In_Image_Plane_Pixel_Decimate.h"
-#include "../YgorImages_Functors/Processing/Kitchen_Sink_Analysis.h"
 #include "../YgorImages_Functors/Processing/Liver_Kinetic_1Compartment2Input_5Param_Chebyshev_Common.h"
 #include "../YgorImages_Functors/Processing/Liver_Kinetic_1Compartment2Input_5Param_Chebyshev_FreeformOptimization.h"
 #include "../YgorImages_Functors/Processing/Liver_Kinetic_1Compartment2Input_5Param_Chebyshev_LevenbergMarquardt.h"

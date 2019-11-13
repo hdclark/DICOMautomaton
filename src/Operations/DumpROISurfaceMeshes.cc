@@ -83,7 +83,6 @@
 #include "../YgorImages_Functors/Processing/DCEMRI_S0_Map.h"
 #include "../YgorImages_Functors/Processing/DCEMRI_T1_Map.h"
 #include "../YgorImages_Functors/Processing/Partitioned_Image_Voxel_Visitor_Mutator.h"
-#include "../YgorImages_Functors/Processing/Kitchen_Sink_Analysis.h"
 #include "../YgorImages_Functors/Processing/IVIMMRI_ADC_Map.h"
 #include "../YgorImages_Functors/Processing/Time_Course_Slope_Map.h"
 #include "../YgorImages_Functors/Processing/CT_Perfusion_Clip_Search.h"

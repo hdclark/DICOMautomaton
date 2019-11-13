@@ -4,6 +4,11 @@
 // been tweaked.
 //
 
+#ifdef DCMA_USE_POSTGRES
+#else
+    #error "Attempted to compile without PostgreSQL support, which is required."
+#endif
+
 #include <math.h>
 #include <exception>
 #include <fstream>

@@ -11,6 +11,11 @@
 // Note: The file is NOT ingressed if it is not yet in the PACS DB.
 //
 
+#ifdef DCMA_USE_POSTGRES
+#else
+    #error "Attempted to compile without PostgreSQL support, which is required."
+#endif
+
 #include <exception>
 #include <functional>
 #include <iostream>

@@ -45,7 +45,6 @@
 #include "../YgorImages_Functors/Processing/In_Image_Plane_Bicubic_Supersample.h"
 #include "../YgorImages_Functors/Processing/In_Image_Plane_Bilinear_Supersample.h"
 #include "../YgorImages_Functors/Processing/In_Image_Plane_Pixel_Decimate.h"
-#include "../YgorImages_Functors/Processing/Kitchen_Sink_Analysis.h"
 #include "../YgorImages_Functors/Processing/Logarithmic_Pixel_Scale.h"
 #include "../YgorImages_Functors/Processing/Max_Pixel_Value.h"
 #include "../YgorImages_Functors/Processing/Min_Pixel_Value.h"

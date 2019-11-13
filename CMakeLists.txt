@@ -158,7 +158,6 @@ if(WITH_POSTGRES)
 else()
     message(STATUS "Assuming PostgreSQL client libraries are not available.")
     add_definitions(-UDCMA_USE_POSTGRES)
-                                        message(FATAL_ERROR "This option is not yet supported.")
 endif()
 
 if(WITH_GNU_GSL)

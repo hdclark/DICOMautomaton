@@ -9,7 +9,11 @@
 #include <list>
 #include <map>
 #include <ostream>
-#include <pqxx/pqxx>         //PostgreSQL C++ interface.
+
+#ifdef DCMA_USE_POSTGRES
+    #include <pqxx/pqxx>         //PostgreSQL C++ interface.
+#endif // DCMA_USE_POSTGRES
+
 #include <string>
 #include <utility>
 
@@ -196,7 +200,7 @@ bool ComputeCentralizedMoments(planar_image_collection<float,double>::images_lis
     return true;
 }
 
-
+#ifdef DCMA_USE_POSTGRES
 static bool Push_Moment_to_Database(analysis_key_t thekey, double themoment){
     // ---------------------------------- Convert key to JSON ---------------------------------------
     json_t *obj = json_object();
@@ -240,7 +244,7 @@ static bool Push_Moment_to_Database(analysis_key_t thekey, double themoment){
     }
     return false;
 }
-
+#endif // DCMA_USE_POSTGRES
 
 void DumpCentralizedMoments(std::map<std::string,std::string> InvocationMetadata){
     if(!ComputeCentralizedMomentsWasRun){
@@ -252,10 +256,14 @@ void DumpCentralizedMoments(std::map<std::string,std::string> InvocationMetadata
         auto thekey = apair.first;
         auto themoment = apair.second;
       
+#ifdef DCMA_USE_POSTGRES
         thekey.insert(InvocationMetadata.begin(),InvocationMetadata.end());
         if(!Push_Moment_to_Database(thekey, themoment)){
             FUNCWARN("Unable to push analysis result to database. Ignoring and continuing");
         }
+#else
+        FUNCWARN("This program was not compiled with PostgreSQL support -- unable to write moment to DB");
+#endif // DCMA_USE_POSTGRES
     } 
 
     //Purge global state and clear the indicator for a fresh run.
