@@ -4,15 +4,21 @@
 #include <boost/filesystem/fstream.hpp>
 #include <string>    
 
-#include "KineticModel_1Compartment2Input_5Param_Chebyshev_Common.h"
-#include "KineticModel_1Compartment2Input_5Param_LinearInterp_Common.h"
-#include "KineticModel_1Compartment2Input_Reduced3Param_Chebyshev_Common.h"
+#ifdef DCMA_USE_GNU_GSL
+    #include "KineticModel_1Compartment2Input_5Param_Chebyshev_Common.h"
+    #include "KineticModel_1Compartment2Input_5Param_LinearInterp_Common.h"
+    #include "KineticModel_1Compartment2Input_Reduced3Param_Chebyshev_Common.h"
+#endif // DCMA_USE_GNU_GSL
+
 #include "Structs.h"
 
 class Drover;
-struct KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters;
-struct KineticModel_1Compartment2Input_5Param_LinearInterp_Parameters;
-struct KineticModel_1Compartment2Input_Reduced3Param_Chebyshev_Parameters;
+
+#ifdef DCMA_USE_GNU_GSL
+    struct KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters;
+    struct KineticModel_1Compartment2Input_5Param_LinearInterp_Parameters;
+    struct KineticModel_1Compartment2Input_Reduced3Param_Chebyshev_Parameters;
+#endif // DCMA_USE_GNU_GSL
 
 
 // --- Default Serialization routines.
@@ -43,6 +49,7 @@ Common_Boost_Serialize_Drover_to_XML(const Drover &in, boost::filesystem::path F
 
 
 
+#ifdef DCMA_USE_GNU_GSL
 // --- Pharmacokinetic model state ---
 
 // Single-compartment, dual-input, 5-parameter model with direct linear interpolation approach.
@@ -67,6 +74,6 @@ Serialize(const KineticModel_1Compartment2Input_Reduced3Param_Chebyshev_Paramete
 
 bool 
 Deserialize(const std::string &s, KineticModel_1Compartment2Input_Reduced3Param_Chebyshev_Parameters &state);
-
+#endif // DCMA_USE_GNU_GSL
 
 

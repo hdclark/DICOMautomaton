@@ -1,6 +1,8 @@
 //Liver_Kinetic_1Compartment2Input_5Param_LinearInterp_Common.h.
 #pragma once
 
+#ifdef DCMA_USE_GNU_GSL
+
 #include <list>
 #include <functional>
 #include <limits>
@@ -18,4 +20,6 @@ struct KineticModel_Liver_1C2I_5Param_LinearInterp_UserData {
 
     std::regex TargetROIs;
 };
+
+#endif // DCMA_USE_GNU_GSL
 

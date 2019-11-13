@@ -30,11 +30,6 @@
 #include "Operations/BCCAExtractRadiomicFeatures.h"
 #include "Operations/BoostSerializeDrover.h"
 #include "Operations/BuildLexiconInteractively.h"
-#include "Operations/CT_Liver_Perfusion.h"
-#include "Operations/CT_Liver_Perfusion_First_Run.h"
-#include "Operations/CT_Liver_Perfusion_Ortho_Views.h"
-#include "Operations/CT_Liver_Perfusion_Pharmaco_1Compartment2Input_5Param.h"
-#include "Operations/CT_Liver_Perfusion_Pharmaco_1Compartment2Input_Reduced3Param.h"
 #include "Operations/ClusterDBSCAN.h"
 #include "Operations/ComparePixels.h"
 #include "Operations/ContourBasedRayCastDoseAccumulate.h"
@@ -78,7 +73,6 @@
 #include "Operations/DumpFilesPartitionedByTime.h"
 #include "Operations/DumpImageMeshes.h"
 #include "Operations/DumpImageMetadataOccurrencesToFile.h"
-#include "Operations/DumpPerROIParams_KineticModel_1Compartment2Input_5Param.h"
 #include "Operations/DumpPixelValuesOverTimeForAnEncompassedPoint.h"
 #include "Operations/DumpPlanSummary.h"
 #include "Operations/DumpROIContours.h"
@@ -168,12 +162,21 @@
 #ifdef DCMA_USE_SFML
     #include "Operations/PresentationImage.h"
     #include "Operations/SFML_Viewer.h"
-#endif
+#endif // DCMA_USE_SFML
 
 #ifdef DCMA_USE_EIGEN
     #include "Operations/DetectGrid3D.h"
     #include "Operations/VoxelRANSAC.h"
-#endif
+#endif // DCMA_USE_EIGEN
+
+#ifdef DCMA_USE_GNU_GSL
+    #include "Operations/CT_Liver_Perfusion.h"
+    #include "Operations/CT_Liver_Perfusion_First_Run.h"
+    #include "Operations/CT_Liver_Perfusion_Ortho_Views.h"
+    #include "Operations/CT_Liver_Perfusion_Pharmaco_1Compartment2Input_5Param.h"
+    #include "Operations/CT_Liver_Perfusion_Pharmaco_1Compartment2Input_Reduced3Param.h"
+    #include "Operations/DumpPerROIParams_KineticModel_1Compartment2Input_5Param.h"
+#endif // DCMA_USE_GNU_GSL
 
 #include "Operation_Dispatcher.h"
 
@@ -192,11 +195,6 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["BCCAExtractRadiomicFeatures"] = std::make_pair(OpArgDocBCCAExtractRadiomicFeatures, BCCAExtractRadiomicFeatures);
     out["BoostSerializeDrover"] = std::make_pair(OpArgDocBoost_Serialize_Drover, Boost_Serialize_Drover);
     out["BuildLexiconInteractively"] = std::make_pair(OpArgDocBuildLexiconInteractively, BuildLexiconInteractively);
-    out["CT_Liver_Perfusion"] = std::make_pair(OpArgDocCT_Liver_Perfusion, CT_Liver_Perfusion);
-    out["CT_Liver_Perfusion_First_Run"] = std::make_pair(OpArgDocCT_Liver_Perfusion_First_Run, CT_Liver_Perfusion_First_Run);
-    out["CT_Liver_Perfusion_Ortho_Views"] = std::make_pair(OpArgDocCT_Liver_Perfusion_Ortho_Views , CT_Liver_Perfusion_Ortho_Views );
-    out["CT_Liver_Perfusion_Pharmaco_1C2I_5Param"] = std::make_pair(OpArgDocCT_Liver_Perfusion_Pharmaco_1C2I_5Param, CT_Liver_Perfusion_Pharmaco_1C2I_5Param);
-    out["CT_Liver_Perfusion_Pharmaco_1C2I_Reduced3Param"] = std::make_pair(OpArgDocCT_Liver_Perfusion_Pharmaco_1C2I_Reduced3Param, CT_Liver_Perfusion_Pharmaco_1C2I_Reduced3Param);
     out["ClusterDBSCAN"] = std::make_pair(OpArgDocClusterDBSCAN, ClusterDBSCAN);
     out["ComparePixels"] = std::make_pair(OpArgDocComparePixels, ComparePixels);
     out["ContourBasedRayCastDoseAccumulate"] = std::make_pair(OpArgDocContourBasedRayCastDoseAccumulate, ContourBasedRayCastDoseAccumulate);
@@ -240,7 +238,6 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["DumpFilesPartitionedByTime"] = std::make_pair(OpArgDocDumpFilesPartitionedByTime, DumpFilesPartitionedByTime);
     out["DumpImageMeshes"] = std::make_pair(OpArgDocDumpImageMeshes, DumpImageMeshes);
     out["DumpImageMetadataOccurrencesToFile"] = std::make_pair(OpArgDocDumpImageMetadataOccurrencesToFile, DumpImageMetadataOccurrencesToFile);
-    out["DumpPerROIParams_KineticModel_1C2I_5P"] = std::make_pair(OpArgDocDumpPerROIParams_KineticModel_1Compartment2Input_5Param, DumpPerROIParams_KineticModel_1Compartment2Input_5Param);
     out["DumpPixelValuesOverTimeForAnEncompassedPoint"] = std::make_pair(OpArgDocDumpPixelValuesOverTimeForAnEncompassedPoint, DumpPixelValuesOverTimeForAnEncompassedPoint);
     out["DumpPlanSummary"] = std::make_pair(OpArgDocDumpPlanSummary, DumpPlanSummary);
     out["DumpROIContours"] = std::make_pair(OpArgDocDumpROIContours, DumpROIContours);
@@ -330,12 +327,21 @@ std::map<std::string, op_packet_t> Known_Operations(void){
 #ifdef DCMA_USE_SFML
     out["PresentationImage"] = std::make_pair(OpArgDocPresentationImage, PresentationImage);
     out["SFML_Viewer"] = std::make_pair(OpArgDocSFML_Viewer, SFML_Viewer);
-#endif
+#endif // DCMA_USE_SFML
 
 #ifdef DCMA_USE_EIGEN
     out["DetectGrid3D"] = std::make_pair(OpArgDocDetectGrid3D, DetectGrid3D);
     out["VoxelRANSAC"] = std::make_pair(OpArgDocVoxelRANSAC, VoxelRANSAC);
-#endif
+#endif // DCMA_USE_EIGEN
+
+#ifdef DCMA_USE_GNU_GSL
+    out["CT_Liver_Perfusion"] = std::make_pair(OpArgDocCT_Liver_Perfusion, CT_Liver_Perfusion);
+    out["CT_Liver_Perfusion_First_Run"] = std::make_pair(OpArgDocCT_Liver_Perfusion_First_Run, CT_Liver_Perfusion_First_Run);
+    out["CT_Liver_Perfusion_Ortho_Views"] = std::make_pair(OpArgDocCT_Liver_Perfusion_Ortho_Views , CT_Liver_Perfusion_Ortho_Views );
+    out["CT_Liver_Perfusion_Pharmaco_1C2I_5Param"] = std::make_pair(OpArgDocCT_Liver_Perfusion_Pharmaco_1C2I_5Param, CT_Liver_Perfusion_Pharmaco_1C2I_5Param);
+    out["CT_Liver_Perfusion_Pharmaco_1C2I_Reduced3Param"] = std::make_pair(OpArgDocCT_Liver_Perfusion_Pharmaco_1C2I_Reduced3Param, CT_Liver_Perfusion_Pharmaco_1C2I_Reduced3Param);
+    out["DumpPerROIParams_KineticModel_1C2I_5P"] = std::make_pair(OpArgDocDumpPerROIParams_KineticModel_1Compartment2Input_5Param, DumpPerROIParams_KineticModel_1Compartment2Input_5Param);
+#endif // DCMA_USE_GNU_GSL
 
     return out;
 }

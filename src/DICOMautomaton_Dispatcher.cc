@@ -67,6 +67,7 @@ int main(int argc, char* argv[]){
     //A Boolean guard variable to ensure loose parameters are only added to valid, active operations.
     bool MostRecentOperationActive = false;
 
+
     //------------------------------------------------- Data: Database -----------------------------------------------
     // The following objects are only relevant for the PACS database loader.
 
@@ -142,6 +143,7 @@ int main(int argc, char* argv[]){
       })
     );
  
+#ifdef DCMA_USE_POSTGRES
     arger.push_back( ygor_arg_handlr_t(210, 'd', "database-parameters", true, db_connection_params,
       "PostgreSQL database connection settings to use for PACS database.",
       [&](const std::string &optarg) -> void {
@@ -166,6 +168,7 @@ int main(int argc, char* argv[]){
         return;
       })
     );
+#endif // DCMA_USE_POSTGRES
 
     arger.push_back( ygor_arg_handlr_t(220, 's', "standalone", true, "/path/to/dir/or/file",
       "Specify stand-alone files or directories to load. (This is the default for argument-less"
@@ -248,6 +251,7 @@ int main(int argc, char* argv[]){
 
     //============================================== Input Verification ==============================================
 
+#ifdef DCMA_USE_POSTGRES
     //Remove empty groups of query files. Probably not needed, as it ought to get caught at the DB query stage.
     for(auto l_it = GroupedFilterQueryFiles.begin(); l_it != GroupedFilterQueryFiles.end();  ){
         if(l_it->empty()){
@@ -256,6 +260,8 @@ int main(int argc, char* argv[]){
             ++l_it;
         }
     }
+#endif // DCMA_USE_POSTGRES
+
 
     //Convert directories to filenames.
 // TODO.
@@ -319,6 +325,7 @@ int main(int argc, char* argv[]){
 
     //================================================= Data Loading =================================================
 
+#ifdef DCMA_USE_POSTGRES
     //PACS db loading.
     if(!GroupedFilterQueryFiles.empty()){
         if(!Load_From_PACS_DB( DICOM_data, InvocationMetadata, FilenameLex, 
@@ -326,6 +333,7 @@ int main(int argc, char* argv[]){
             FUNCERR("Unable to load files from the PACS db. Cannot continue");
         }
     }
+#endif // DCMA_USE_POSTGRES
 
     //Standalone file loading.
     if(!Load_Files(DICOM_data, InvocationMetadata, FilenameLex, StandaloneFilesDirsReachable)){

@@ -1,6 +1,8 @@
 //Liver_Kinetic_Common.h.
 #pragma once
 
+#ifdef DCMA_USE_GNU_GSL
+
 #include <map>
 #include <cmath>
 
@@ -11,4 +13,6 @@ struct KineticModel_PixelSelectionCriteria {
     long int column = -1;
 
 };
+
+#endif // DCMA_USE_GNU_GSL
 

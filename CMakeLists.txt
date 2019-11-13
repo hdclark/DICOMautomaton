@@ -100,8 +100,16 @@ elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wextra")
 endif()
 
-    
-# Add definitions.
+# Set the release type. 
+if(NOT CMAKE_BUILD_TYPE)
+    # Default to debug builds.
+    set(CMAKE_BUILD_TYPE Debug CACHE STRING "default to debug" FORCE)
+endif()
+
+
+####################################################################################
+#                                    Definitions
+####################################################################################
 add_definitions(-DUSTREAM_H) # -DUSE_ICU_STRINGS
 
 if(WITH_EIGEN)
@@ -166,7 +174,6 @@ if(WITH_GNU_GSL)
 else()
     message(STATUS "Assuming the GNU GSL is not available.")
     add_definitions(-UDCMA_USE_GNU_GSL)
-                                        message(FATAL_ERROR "This option is not yet supported.")
 endif()
 
 
@@ -204,7 +211,7 @@ add_subdirectory(scripts)
 ####################################################################################
 
 set(CPACK_GENERATOR "DEB")
-#SET(CPACK_PACKAGE_NAME "dicomautomaton")
+#set(CPACK_PACKAGE_NAME "dicomautomaton")
 
 string(TIMESTAMP INVOCATION_TIMESTAMP "%Y%m%d.%H%M%S") # For a time-based version number.
 set(CPACK_PACKAGE_VERSION "${INVOCATION_TIMESTAMP}")

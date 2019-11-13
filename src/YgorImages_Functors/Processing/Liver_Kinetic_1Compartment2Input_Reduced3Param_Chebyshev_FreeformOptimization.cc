@@ -1,5 +1,7 @@
 //Liver_Kinetic_1Compartment2Input_Reduced3Param_Chebyshev_FreeformOptimization.cc.
 
+#ifdef DCMA_USE_GNU_GSL
+
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/iterator/iterator_traits.hpp>
 #include <stddef.h>
@@ -501,4 +503,6 @@ KineticModel_Liver_1C2I_Reduced3Param_Chebyshev_FreeformOptimization(planar_imag
 
     return true;
 }
+
+#endif // DCMA_USE_GNU_GSL
 

@@ -189,22 +189,6 @@ Drover UBC3TMRI_DCE_Experimental(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
     }
 
 
-    //Perform a "kitchen sink" analysis on the C(t) map.
-    if(false){
-        DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( *img_arr_C_map ) ); 
-        std::shared_ptr<Image_Array> img_arr_kitchen_sink_map( DICOM_data.image_data.back() );
-
-        if(!img_arr_kitchen_sink_map->imagecoll.Process_Images( GroupSpatiallyOverlappingImages, 
-                                                                KitchenSinkAnalysis, {},
-                                                                { cc_all } )){
-                                                                //{ cc_r_parotid_int, cc_l_parotid_int } )){
-                                                                //{ cc_r_parotid_int, cc_l_parotid_int, cc_r_masseter_int, cc_pharynx_int } )){
-            FUNCERR("Unable to process image array to perform kitchen sink analysis");
-        }else{
-            DumpKitchenSinkResults(InvocationMetadata);
-        }
-    }
- 
     //Compute a histogram over pixel value intensities for each ROI using the original long time series.
     if(false){
         if(!img_arr_orig_long_scan->imagecoll.Transform_Images( PixelHistogramAnalysis,

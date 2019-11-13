@@ -1,6 +1,8 @@
 //Liver_Kinetic_1Compartment2Input_Reduced3Param_Chebyshev_FreeformOptimization.h.
 #pragma once
 
+#ifdef DCMA_USE_GNU_GSL
+
 #include <cmath>
 #include <experimental/any>
 #include <functional>
@@ -24,4 +26,6 @@ KineticModel_Liver_1C2I_Reduced3Param_Chebyshev_FreeformOptimization(planar_imag
                         std::list<std::reference_wrapper<planar_image_collection<float,double>>> outgoing_maps,
                         std::list<std::reference_wrapper<contour_collection<double>>> ccsl, 
                         std::experimental::any ud);
+
+#endif // DCMA_USE_GNU_GSL
 

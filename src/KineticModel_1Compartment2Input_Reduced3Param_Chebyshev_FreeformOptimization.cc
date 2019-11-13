@@ -4,6 +4,11 @@
 // objective function gradient -- i.e., the Jacobian of the objective function $F$ -- cancel out, but wouldn't if a
 // Jacobian of the *model*  -- $I$ -- was used.)
 
+#ifdef DCMA_USE_GNU_GSL
+#else
+    #error "Attempting to compile this operation without GNU GSL, which is required."
+#endif
+
 #include <gsl/gsl_errno.h>
 #include <gsl/gsl_multimin.h>
 #include <gsl/gsl_vector_double.h>

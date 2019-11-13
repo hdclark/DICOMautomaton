@@ -41,9 +41,13 @@
 #include "../Colour_Maps.h"
 #include "../Common_Boost_Serialization.h"
 #include "../Common_Plotting.h"
-#include "../KineticModel_1Compartment2Input_5Param_Chebyshev_Common.h"
-#include "../KineticModel_1Compartment2Input_5Param_LinearInterp_Common.h"
-#include "../KineticModel_1Compartment2Input_Reduced3Param_Chebyshev_Common.h"
+
+#ifdef DCMA_USE_GNU_GSL
+    #include "../KineticModel_1Compartment2Input_5Param_Chebyshev_Common.h"
+    #include "../KineticModel_1Compartment2Input_5Param_LinearInterp_Common.h"
+    #include "../KineticModel_1Compartment2Input_Reduced3Param_Chebyshev_Common.h"
+#endif
+
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
 #include "../YgorImages_Functors/Compute/AccumulatePixelDistributions.h"
@@ -586,7 +590,9 @@ Drover SFML_Viewer( Drover DICOM_data,
                     "\\t\\t t \\t\\t Plot a time course at the mouse\\'s current row and column.\\n"
                     "\\t\\t T \\t\\t Open a realtime plotting window.\\n"
                     "\\t\\t a,A \\t\\t Plot or dump the pixel values for [a]ll image sets which spatially overlap.\\n"
+#ifdef DCMA_USE_GNU_GSL
                     "\\t\\t M \\t\\t Try plot a pharmacokinetic [M]odel using image map parameters and ROI time courses.\\n"
+#endif
                     "\\t\\t N,P \\t\\t Advance to the next/previous image series.\\n"
                     "\\t\\t n,p \\t\\t Advance to the next/previous image in this series.\\n"
                     "\\t\\t -,+ \\t\\t Advance to the next/previous image that spatially overlaps this image.\\n"
@@ -856,6 +862,7 @@ Drover SFML_Viewer( Drover DICOM_data,
             return;
     };
 
+#ifdef DCMA_USE_GNU_GSL
     //Given the current mouse coordinates, try to show a perfusion model using model parameters from
     // other images. Also show a time course of the raw data for comparison with the model fit.
     const auto show_perfusion_model = [&](void){
@@ -1036,6 +1043,7 @@ Drover SFML_Viewer( Drover DICOM_data,
 
             return;
     };
+#endif // DCMA_USE_GNU_GSL
 
     //Given the current mouse coordinates, dump the pixel value for [A]ll image sets which spatially overlap.
     // This routine is useful for debugging problematic pixels, or trying to follow per-pixel calculations.

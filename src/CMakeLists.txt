@@ -28,8 +28,10 @@ set_target_properties(  Contour_Boolean_Operations_obj PROPERTIES POSITION_INDEP
 add_library(            Dose_Meld_obj OBJECT Dose_Meld.cc )
 set_target_properties(  Dose_Meld_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
-add_library(            PACS_Loader_obj OBJECT PACS_Loader.cc )
-set_target_properties(  PACS_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+if(WITH_POSTGRES)
+    add_library(            PACS_Loader_obj OBJECT PACS_Loader.cc )
+    set_target_properties(  PACS_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+endif()
 
 add_library(            DICOM_File_Loader_obj OBJECT DICOM_File_Loader.cc )
 set_target_properties(  DICOM_File_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
@@ -58,7 +60,7 @@ set_target_properties(  OBJ_Mesh_File_Loader_obj PROPERTIES POSITION_INDEPENDENT
 add_library(            Line_Sample_File_Loader_obj OBJECT Line_Sample_File_Loader.cc )
 set_target_properties(  Line_Sample_File_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
-add_library(            Boost_Serialization_File_Loader_obj OBJECT Boost_Serialization_File_Loader.cc
+add_library(            Boost_Serialization_File_Loader_obj OBJECT Boost_Serialization_File_Loader.cc 
                                                                    StructsIOBoostSerialization.h )
 set_target_properties(  Boost_Serialization_File_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
@@ -166,30 +168,34 @@ target_compile_options(imebrashim PUBLIC -w) # Inhibit imebra-related warnings.
 
 # Pharmacokinetic modeling libraries (built separately for easier reuse).
 
-add_library (kineticmodel_1c2i_5param_linearinterp_levenbergmarquardt
-    KineticModel_1Compartment2Input_5Param_LinearInterp_Common.cc
-    KineticModel_1Compartment2Input_5Param_LinearInterp_LevenbergMarquardt.cc
-)
-target_include_directories(kineticmodel_1c2i_5param_linearinterp_levenbergmarquardt SYSTEM PUBLIC ./ )
+if(WITH_GNU_GSL)
+    add_library (kineticmodel_1c2i_5param_linearinterp_levenbergmarquardt
+        KineticModel_1Compartment2Input_5Param_LinearInterp_Common.cc
+        KineticModel_1Compartment2Input_5Param_LinearInterp_LevenbergMarquardt.cc
+    )
+    target_include_directories(kineticmodel_1c2i_5param_linearinterp_levenbergmarquardt SYSTEM PUBLIC ./ )
 
-add_library (kineticmodel_1c2i_5param_chebyshev_freeformoptimization
-    KineticModel_1Compartment2Input_5Param_Chebyshev_Common.cc
-    KineticModel_1Compartment2Input_5Param_Chebyshev_FreeformOptimization.cc
-)
-target_include_directories(kineticmodel_1c2i_5param_chebyshev_freeformoptimization SYSTEM PUBLIC ./ )
+    add_library (kineticmodel_1c2i_5param_chebyshev_levenbergmarquardt
+        KineticModel_1Compartment2Input_5Param_Chebyshev_Common.cc
+        KineticModel_1Compartment2Input_5Param_Chebyshev_LevenbergMarquardt.cc
+    )
+    target_include_directories(kineticmodel_1c2i_5param_chebyshev_levenbergmarquardt SYSTEM PUBLIC ./ )
 
-add_library (kineticmodel_1c2i_5param_chebyshev_levenbergmarquardt
-    KineticModel_1Compartment2Input_5Param_Chebyshev_Common.cc
-    KineticModel_1Compartment2Input_5Param_Chebyshev_LevenbergMarquardt.cc
-)
-target_include_directories(kineticmodel_1c2i_5param_chebyshev_levenbergmarquardt SYSTEM PUBLIC ./ )
+    add_library (kineticmodel_1c2i_reduced3param_chebyshev_freeformoptimization
+        KineticModel_1Compartment2Input_Reduced3Param_Chebyshev_Common.cc
+        KineticModel_1Compartment2Input_Reduced3Param_Chebyshev_FreeformOptimization.cc
+    )
+    target_include_directories(kineticmodel_1c2i_reduced3param_chebyshev_freeformoptimization SYSTEM PUBLIC ./ )
 
-add_library (kineticmodel_1c2i_reduced3param_chebyshev_freeformoptimization
-    KineticModel_1Compartment2Input_Reduced3Param_Chebyshev_Common.cc
-    KineticModel_1Compartment2Input_Reduced3Param_Chebyshev_FreeformOptimization.cc
-)
-target_include_directories(kineticmodel_1c2i_reduced3param_chebyshev_freeformoptimization SYSTEM PUBLIC ./ )
+    # Note: GSL is not actually needed for this routine, but it doesn't make much sense to try separate the
+    # functionality.
+    add_library (kineticmodel_1c2i_5param_chebyshev_freeformoptimization
+        KineticModel_1Compartment2Input_5Param_Chebyshev_Common.cc
+        KineticModel_1Compartment2Input_5Param_Chebyshev_FreeformOptimization.cc
+    )
+    target_include_directories(kineticmodel_1c2i_5param_chebyshev_freeformoptimization SYSTEM PUBLIC ./ )
 
+endif()
 
 # Executable.
 add_executable (dicomautomaton_dispatcher
@@ -207,7 +213,7 @@ add_executable (dicomautomaton_dispatcher
     $<TARGET_OBJECTS:Surface_Meshes_obj>
     $<TARGET_OBJECTS:Regex_Selectors_obj>
 
-    $<TARGET_OBJECTS:PACS_Loader_obj>
+    $<$<BOOL:${WITH_POSTGRES}>:$<TARGET_OBJECTS:PACS_Loader_obj>>
     $<TARGET_OBJECTS:File_Loader_obj>
     $<TARGET_OBJECTS:Boost_Serialization_File_Loader_obj>
     $<TARGET_OBJECTS:DICOM_File_Loader_obj>
@@ -228,15 +234,15 @@ add_executable (dicomautomaton_dispatcher
 )
 target_link_libraries (dicomautomaton_dispatcher
     imebrashim
-    kineticmodel_1c2i_5param_linearinterp_levenbergmarquardt
-    kineticmodel_1c2i_5param_chebyshev_freeformoptimization
-    kineticmodel_1c2i_5param_chebyshev_levenbergmarquardt
-    kineticmodel_1c2i_reduced3param_chebyshev_freeformoptimization
+    $<$<BOOL:${WITH_GNU_GSL}>:kineticmodel_1c2i_5param_linearinterp_levenbergmarquardt>
+    $<$<BOOL:${WITH_GNU_GSL}>:kineticmodel_1c2i_5param_chebyshev_levenbergmarquardt>
+    $<$<BOOL:${WITH_GNU_GSL}>:kineticmodel_1c2i_reduced3param_chebyshev_freeformoptimization>
+    $<$<BOOL:${WITH_GNU_GSL}>:kineticmodel_1c2i_5param_chebyshev_freeformoptimization>
     explicator 
     ygor 
     CGAL
-    gsl
-    gslcblas
+    $<$<BOOL:${WITH_GNU_GSL}>:gsl>
+    $<$<BOOL:${WITH_GNU_GSL}>:gslcblas>
     jansson 
     $<$<BOOL:${WITH_NLOPT}>:nlopt>
     $<$<BOOL:${WITH_SFML}>:sfml-graphics>
@@ -273,7 +279,7 @@ if(WITH_WT)
         $<TARGET_OBJECTS:Surface_Meshes_obj>
         $<TARGET_OBJECTS:Regex_Selectors_obj>
 
-        $<TARGET_OBJECTS:PACS_Loader_obj>
+        $<$<BOOL:${WITH_POSTGRES}>:$<TARGET_OBJECTS:PACS_Loader_obj>>
         $<TARGET_OBJECTS:File_Loader_obj>
         $<TARGET_OBJECTS:Boost_Serialization_File_Loader_obj>
         $<TARGET_OBJECTS:DICOM_File_Loader_obj>
@@ -294,15 +300,15 @@ if(WITH_WT)
     )
     target_link_libraries(dicomautomaton_webserver
         imebrashim
-        kineticmodel_1c2i_5param_linearinterp_levenbergmarquardt
-        kineticmodel_1c2i_5param_chebyshev_freeformoptimization
-        kineticmodel_1c2i_5param_chebyshev_levenbergmarquardt
-        kineticmodel_1c2i_reduced3param_chebyshev_freeformoptimization
+        $<$<BOOL:${WITH_GNU_GSL}>:kineticmodel_1c2i_5param_linearinterp_levenbergmarquardt>
+        $<$<BOOL:${WITH_GNU_GSL}>:kineticmodel_1c2i_5param_chebyshev_levenbergmarquardt>
+        $<$<BOOL:${WITH_GNU_GSL}>:kineticmodel_1c2i_reduced3param_chebyshev_freeformoptimization>
+        $<$<BOOL:${WITH_GNU_GSL}>:kineticmodel_1c2i_5param_chebyshev_freeformoptimization>
         explicator 
         ygor 
         CGAL
-        gsl
-        gslcblas
+        $<$<BOOL:${WITH_GNU_GSL}>:gsl>
+        $<$<BOOL:${WITH_GNU_GSL}>:gslcblas>
         jansson 
         $<$<BOOL:${WITH_NLOPT}>:nlopt>
         $<$<BOOL:${WITH_SFML}>:sfml-graphics>
@@ -329,12 +335,10 @@ endif()
 # Executable.
 add_executable(dicomautomaton_bsarchive_convert
     Boost_Serialization_Archive_Converter.cc
-
     $<TARGET_OBJECTS:Structs_obj>
     $<TARGET_OBJECTS:Dose_Meld_obj>
     $<TARGET_OBJECTS:Common_Boost_Serialization_obj>
     $<TARGET_OBJECTS:Regex_Selectors_obj>
-
     $<TARGET_OBJECTS:Boost_Serialization_File_Loader_obj>
 )
 target_link_libraries(dicomautomaton_bsarchive_convert
@@ -422,10 +426,6 @@ install(TARGETS
     dicomautomaton_bsarchive_convert
     dicomautomaton_dump
     imebrashim
-    kineticmodel_1c2i_5param_linearinterp_levenbergmarquardt
-    kineticmodel_1c2i_5param_chebyshev_freeformoptimization
-    kineticmodel_1c2i_5param_chebyshev_levenbergmarquardt
-    kineticmodel_1c2i_reduced3param_chebyshev_freeformoptimization
     RUNTIME DESTINATION bin
     LIBRARY DESTINATION lib
     ARCHIVE DESTINATION lib
@@ -443,6 +443,17 @@ if(WITH_POSTGRES)
         pacs_ingress
         pacs_duplicate_cleaner
         pacs_refresh
+        RUNTIME DESTINATION bin
+        LIBRARY DESTINATION lib
+        ARCHIVE DESTINATION lib
+    )
+endif()
+if(WITH_GNU_GSL)
+    install(TARGETS
+        kineticmodel_1c2i_5param_linearinterp_levenbergmarquardt
+        kineticmodel_1c2i_5param_chebyshev_levenbergmarquardt
+        kineticmodel_1c2i_reduced3param_chebyshev_freeformoptimization
+        kineticmodel_1c2i_5param_chebyshev_freeformoptimization
         RUNTIME DESTINATION bin
         LIBRARY DESTINATION lib
         ARCHIVE DESTINATION lib

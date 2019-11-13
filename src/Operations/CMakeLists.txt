@@ -12,11 +12,6 @@ add_library(Operations_objs OBJECT
     BCCAExtractRadiomicFeatures.cc
     BoostSerializeDrover.cc
     BuildLexiconInteractively.cc
-    CT_Liver_Perfusion.cc
-    CT_Liver_Perfusion_First_Run.cc
-    CT_Liver_Perfusion_Ortho_Views.cc
-    CT_Liver_Perfusion_Pharmaco_1Compartment2Input_5Param.cc
-    CT_Liver_Perfusion_Pharmaco_1Compartment2Input_Reduced3Param.cc
     ClusterDBSCAN.cc
     ComparePixels.cc
     ContourBasedRayCastDoseAccumulate.cc
@@ -60,7 +55,6 @@ add_library(Operations_objs OBJECT
     DumpFilesPartitionedByTime.cc
     DumpImageMeshes.cc
     DumpImageMetadataOccurrencesToFile.cc
-    DumpPerROIParams_KineticModel_1Compartment2Input_5Param.cc
     DumpPixelValuesOverTimeForAnEncompassedPoint.cc
     DumpPlanSummary.cc
     DumpROIContours.cc
@@ -152,6 +146,13 @@ add_library(Operations_objs OBJECT
 
     $<$<BOOL:${WITH_EIGEN}>:DetectGrid3D.cc>
     $<$<BOOL:${WITH_EIGEN}>:VoxelRANSAC.cc>
+
+    $<$<BOOL:${WITH_GNU_GSL}>:CT_Liver_Perfusion.cc>
+    $<$<BOOL:${WITH_GNU_GSL}>:CT_Liver_Perfusion_First_Run.cc>
+    $<$<BOOL:${WITH_GNU_GSL}>:CT_Liver_Perfusion_Ortho_Views.cc>
+    $<$<BOOL:${WITH_GNU_GSL}>:CT_Liver_Perfusion_Pharmaco_1Compartment2Input_5Param.cc>
+    $<$<BOOL:${WITH_GNU_GSL}>:CT_Liver_Perfusion_Pharmaco_1Compartment2Input_Reduced3Param.cc>
+    $<$<BOOL:${WITH_GNU_GSL}>:DumpPerROIParams_KineticModel_1Compartment2Input_5Param.cc>
 )
 
 set_target_properties( Operations_objs PROPERTIES POSITION_INDEPENDENT_CODE TRUE )

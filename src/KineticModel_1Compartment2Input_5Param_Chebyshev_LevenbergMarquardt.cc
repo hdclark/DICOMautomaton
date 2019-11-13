@@ -2,6 +2,11 @@
 // This file holds an isolated driver for fitting a pharmacokinetic model. It uses an algorithm, the
 // Levenberg-Marquardt, that is specific to least-squares and therefore cannot be used for norms other than L2.
 
+#ifdef DCMA_USE_GNU_GSL
+#else
+    #error "Attempting to compile this operation without GNU GSL, which is required."
+#endif
+
 #include <gsl/gsl_blas.h>
 #include <gsl/gsl_errno.h>
 #include <gsl/gsl_matrix_double.h>

@@ -25,9 +25,13 @@
 
 #include "Common_Boost_Serialization.h"
 //#include "YgorMathChebyshevIOBoostSerialization.h"
-#include "KineticModel_1Compartment2Input_5Param_Chebyshev_Common.h"
-#include "KineticModel_1Compartment2Input_5Param_LinearInterp_Common.h"
-#include "KineticModel_1Compartment2Input_Reduced3Param_Chebyshev_Common.h"
+
+#ifdef DCMA_USE_GNU_GSL
+    #include "KineticModel_1Compartment2Input_5Param_Chebyshev_Common.h"
+    #include "KineticModel_1Compartment2Input_5Param_LinearInterp_Common.h"
+    #include "KineticModel_1Compartment2Input_Reduced3Param_Chebyshev_Common.h"
+#endif
+
 #include "Structs.h"
 #include "StructsIOBoostSerialization.h"
 
@@ -312,6 +316,8 @@ Common_Boost_Serialize_Drover_to_XML(const Drover &in,
 
 //=====================================================================================================================
 
+#ifdef DCMA_USE_GNU_GSL
+
 std::string 
 Serialize(const KineticModel_1Compartment2Input_5Param_LinearInterp_Parameters &state){
     //Will throw if serialization fails.
@@ -418,4 +424,6 @@ Deserialize(const std::string &s,
 
     return false;
 }                                                                            
+
+#endif // DCMA_USE_GNU_GSL
 

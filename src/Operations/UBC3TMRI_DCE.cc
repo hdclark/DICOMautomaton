@@ -150,27 +150,5 @@ Drover UBC3TMRI_DCE(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std
         }
     }
 
-    //Deep-copy the poor-man's C(t) map and use the images to perform a "kitchen sink" analysis.
-    if(false){
-        std::vector<std::shared_ptr<Image_Array>> kitchen_sink_map_img_arrays;
-        if(poormans_C_map_img_arrays.size() == 1){
-            for(auto & img_arr : poormans_C_map_img_arrays){
-                DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( *img_arr ) );
-                kitchen_sink_map_img_arrays.emplace_back( DICOM_data.image_data.back() );
-                
-                if(!kitchen_sink_map_img_arrays.back()->imagecoll.Process_Images( GroupSpatiallyOverlappingImages,
-                                                                                  KitchenSinkAnalysis,
-                                                                                  {}, cc_all )){
-                    FUNCERR("Unable to process image array to perform kitchen sink analysis");
-                }else{
-                    DumpKitchenSinkResults(InvocationMetadata);
-                }
-            }
-        }else{
-            FUNCWARN("Skipping kitchen sink analysis. This routine uses static storage and assumes it will "
-                     "be run over a single image array.");
-        }
-    }
-    
     return DICOM_data;
 }

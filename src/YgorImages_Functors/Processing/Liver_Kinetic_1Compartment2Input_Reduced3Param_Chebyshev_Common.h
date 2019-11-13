@@ -1,6 +1,8 @@
 //Liver_Kinetic_1Compartment2Input_Reduced3Param_Chebyshev_Common.h.
 #pragma once
 
+#ifdef DCMA_USE_GNU_GSL
+
 #include <list>
 #include <functional>
 #include <limits>
@@ -25,4 +27,6 @@ struct KineticModel_Liver_1C2I_Reduced3Param_Chebyshev_UserData {
     double MultiplicationCoeffTrunc;
 };
 
+
+#endif // DCMA_USE_GNU_GSL
 

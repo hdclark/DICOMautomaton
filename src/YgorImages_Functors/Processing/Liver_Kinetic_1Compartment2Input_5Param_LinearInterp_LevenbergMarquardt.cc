@@ -1,5 +1,7 @@
 //Liver_Kinetic_1Compartment2Input_5Param_LinearInterp_LevenbergMarquardt.cc.
 
+#ifdef DCMA_USE_GNU_GSL
+
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/iterator/iterator_traits.hpp>
 #include <stddef.h>
@@ -496,4 +498,6 @@ KineticModel_Liver_1C2I_5Param_LinearInterp(planar_image_collection<float,double
 
     return true;
 }
+
+#endif // DCMA_USE_GNU_GSL
 

@@ -1,6 +1,8 @@
 //Liver_Kinetic_1Compartment2Input_5Param_LinearInterp_LevenbergMarquardt.h.
 #pragma once
 
+#ifdef DCMA_USE_GNU_GSL
+
 #include <cmath>
 #include <experimental/any>
 #include <functional>
@@ -23,4 +25,6 @@ KineticModel_Liver_1C2I_5Param_LinearInterp(planar_image_collection<float,double
                          std::list<std::reference_wrapper<planar_image_collection<float,double>>> outgoing_maps,
                          std::list<std::reference_wrapper<contour_collection<double>>> ccsl, 
                          std::experimental::any ud);
+
+#endif // DCMA_USE_GNU_GSL
 
