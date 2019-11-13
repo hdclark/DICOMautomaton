@@ -25,8 +25,6 @@
 #include <algorithm>
 #include <experimental/optional>
 
-#include <SFML/Graphics.hpp>
-#include <SFML/Audio.hpp>
 
 #include "YgorMisc.h"                //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorMath.h"                //Needed for vec3 class.

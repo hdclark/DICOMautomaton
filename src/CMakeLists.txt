@@ -355,9 +355,6 @@ target_link_libraries (dicomautomaton_dispatcher
     CGAL
     gsl
     gslcblas
-    sfml-graphics 
-    sfml-window 
-    sfml-system
     jansson 
     pqxx 
     pq
@@ -375,74 +372,83 @@ target_link_libraries (dicomautomaton_dispatcher
 if(WITH_NLOPT)
     target_link_libraries (dicomautomaton_dispatcher nlopt)
 endif()
+if(WITH_SFML)
+    target_link_libraries (dicomautomaton_dispatcher sfml-graphics)
+    target_link_libraries (dicomautomaton_dispatcher sfml-window)
+    target_link_libraries (dicomautomaton_dispatcher sfml-system)
+endif()
 
-# Executable.
-add_executable(dicomautomaton_webserver
-    DICOMautomaton_WebServer.cc
+if(WITH_WT)
+    # Executable.
+    add_executable(dicomautomaton_webserver
+        DICOMautomaton_WebServer.cc
 
-    $<TARGET_OBJECTS:Structs_obj>
-    $<TARGET_OBJECTS:Dose_Meld_obj>
-    $<TARGET_OBJECTS:BED_Conversion_obj>
-    $<TARGET_OBJECTS:Colour_Maps_obj>
-    $<TARGET_OBJECTS:Common_Boost_Serialization_obj>
-    $<TARGET_OBJECTS:Common_Plotting_obj>
-    $<TARGET_OBJECTS:Contour_Boolean_Operations_obj>
-    $<TARGET_OBJECTS:Contour_Collection_Estimates_obj>
-    $<TARGET_OBJECTS:Insert_Contours_obj>
-    $<TARGET_OBJECTS:Surface_Meshes_obj>
-    $<TARGET_OBJECTS:Regex_Selectors_obj>
+        $<TARGET_OBJECTS:Structs_obj>
+        $<TARGET_OBJECTS:Dose_Meld_obj>
+        $<TARGET_OBJECTS:BED_Conversion_obj>
+        $<TARGET_OBJECTS:Colour_Maps_obj>
+        $<TARGET_OBJECTS:Common_Boost_Serialization_obj>
+        $<TARGET_OBJECTS:Common_Plotting_obj>
+        $<TARGET_OBJECTS:Contour_Boolean_Operations_obj>
+        $<TARGET_OBJECTS:Contour_Collection_Estimates_obj>
+        $<TARGET_OBJECTS:Insert_Contours_obj>
+        $<TARGET_OBJECTS:Surface_Meshes_obj>
+        $<TARGET_OBJECTS:Regex_Selectors_obj>
 
-    $<TARGET_OBJECTS:PACS_Loader_obj>
-    $<TARGET_OBJECTS:File_Loader_obj>
-    $<TARGET_OBJECTS:Boost_Serialization_File_Loader_obj>
-    $<TARGET_OBJECTS:DICOM_File_Loader_obj>
-    $<TARGET_OBJECTS:FITS_File_Loader_obj>
-    $<TARGET_OBJECTS:XYZ_File_Loader_obj>
-    $<TARGET_OBJECTS:3ddose_File_Loader_obj>
-    $<TARGET_OBJECTS:OFF_Mesh_File_Loader_obj>
-    $<TARGET_OBJECTS:OBJ_Mesh_File_Loader_obj>
-    $<TARGET_OBJECTS:Line_Sample_File_Loader_obj>
-    $<TARGET_OBJECTS:Write_File_obj>
-    $<TARGET_OBJECTS:Operation_Dispatcher_obj>
-    $<TARGET_OBJECTS:Documentation_obj>
+        $<TARGET_OBJECTS:PACS_Loader_obj>
+        $<TARGET_OBJECTS:File_Loader_obj>
+        $<TARGET_OBJECTS:Boost_Serialization_File_Loader_obj>
+        $<TARGET_OBJECTS:DICOM_File_Loader_obj>
+        $<TARGET_OBJECTS:FITS_File_Loader_obj>
+        $<TARGET_OBJECTS:XYZ_File_Loader_obj>
+        $<TARGET_OBJECTS:3ddose_File_Loader_obj>
+        $<TARGET_OBJECTS:OFF_Mesh_File_Loader_obj>
+        $<TARGET_OBJECTS:OBJ_Mesh_File_Loader_obj>
+        $<TARGET_OBJECTS:Line_Sample_File_Loader_obj>
+        $<TARGET_OBJECTS:Write_File_obj>
+        $<TARGET_OBJECTS:Operation_Dispatcher_obj>
+        $<TARGET_OBJECTS:Documentation_obj>
 
-    $<TARGET_OBJECTS:YgorImaging_Functor_objs>
-    $<TARGET_OBJECTS:YgorImaging_Helper_objs>
+        $<TARGET_OBJECTS:YgorImaging_Functor_objs>
+        $<TARGET_OBJECTS:YgorImaging_Helper_objs>
 
-    $<TARGET_OBJECTS:Operations_objs>
-)
-target_link_libraries(dicomautomaton_webserver
-    imebrashim
-    kineticmodel_1c2i_5param_linearinterp_levenbergmarquardt
-    kineticmodel_1c2i_5param_chebyshev_freeformoptimization
-    kineticmodel_1c2i_5param_chebyshev_levenbergmarquardt
-    kineticmodel_1c2i_reduced3param_chebyshev_freeformoptimization
-    explicator 
-    ygor 
-    CGAL
-    gsl
-    gslcblas
-    sfml-graphics 
-    sfml-window 
-    sfml-system
-    jansson 
-    pqxx 
-    pq
-    wt
-    wthttp
-    boost_filesystem 
-    boost_serialization
-    boost_iostreams
-    boost_thread
-    boost_system 
-    z
-    mpfr
-    gmp
-    m
-    Threads::Threads
-)
-if(WITH_NLOPT)
-    target_link_libraries (dicomautomaton_webserver nlopt)
+        $<TARGET_OBJECTS:Operations_objs>
+    )
+    target_link_libraries(dicomautomaton_webserver
+        imebrashim
+        kineticmodel_1c2i_5param_linearinterp_levenbergmarquardt
+        kineticmodel_1c2i_5param_chebyshev_freeformoptimization
+        kineticmodel_1c2i_5param_chebyshev_levenbergmarquardt
+        kineticmodel_1c2i_reduced3param_chebyshev_freeformoptimization
+        explicator 
+        ygor 
+        CGAL
+        gsl
+        gslcblas
+        jansson 
+        pqxx 
+        pq
+        wt
+        wthttp
+        boost_filesystem 
+        boost_serialization
+        boost_iostreams
+        boost_thread
+        boost_system 
+        z
+        mpfr
+        gmp
+        m
+        Threads::Threads
+    )
+    if(WITH_NLOPT)
+        target_link_libraries (dicomautomaton_webserver nlopt)
+    endif()
+    if(WITH_SFML)
+        target_link_libraries (dicomautomaton_webserver sfml-graphics)
+        target_link_libraries (dicomautomaton_webserver sfml-window)
+        target_link_libraries (dicomautomaton_webserver sfml-system)
+    endif()
 endif()
 
 # Executable.
@@ -536,7 +542,6 @@ target_link_libraries(dicomautomaton_dump
 # Installation info.
 install(TARGETS 
     dicomautomaton_dispatcher
-    dicomautomaton_webserver
     dicomautomaton_bsarchive_convert
     pacs_ingress
     pacs_duplicate_cleaner
@@ -551,4 +556,13 @@ install(TARGETS
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib
 )
+
+if(USE_WT)
+    install(TARGETS 
+        dicomautomaton_webserver
+      RUNTIME DESTINATION bin
+      LIBRARY DESTINATION lib
+      ARCHIVE DESTINATION lib
+    )
+endif()
 

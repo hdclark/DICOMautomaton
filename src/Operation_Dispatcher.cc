@@ -142,7 +142,6 @@
 #include "Operations/ReduceNeighbourhood.h"
 #include "Operations/RemeshSurfaceMeshes.h"
 #include "Operations/ScalePixels.h"
-#include "Operations/SFML_Viewer.h"
 #include "Operations/SeamContours.h"
 #include "Operations/SelectSlicesIntersectingROI.h"
 #include "Operations/SimplifyContours.h"
@@ -168,6 +167,10 @@
 #include "Operations/VolumetricSpatialBlur.h"
 #include "Operations/VolumetricSpatialDerivative.h"
 #include "Operations/VoxelRANSAC.h"
+
+#ifdef DCMA_USE_SFML
+#include "Operations/SFML_Viewer.h"
+#endif
 
 #include "Operation_Dispatcher.h"
 
@@ -297,7 +300,6 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["RankPixels"] = std::make_pair(OpArgDocRankPixels, RankPixels);
     out["ReduceNeighbourhood"] = std::make_pair(OpArgDocReduceNeighbourhood, ReduceNeighbourhood);
     out["RemeshSurfaceMeshes"] = std::make_pair(OpArgDocRemeshSurfaceMeshes, RemeshSurfaceMeshes);
-    out["SFML_Viewer"] = std::make_pair(OpArgDocSFML_Viewer, SFML_Viewer);
     out["ScalePixels"] = std::make_pair(OpArgDocScalePixels, ScalePixels);
     out["SeamContours"] = std::make_pair(OpArgDocSeamContours, SeamContours);
     out["SelectSlicesIntersectingROI"] = std::make_pair(OpArgDocSelectSlicesIntersectingROI, SelectSlicesIntersectingROI);
@@ -324,6 +326,10 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["VolumetricSpatialBlur"] = std::make_pair(OpArgDocVolumetricSpatialBlur, VolumetricSpatialBlur);
     out["VolumetricSpatialDerivative"] = std::make_pair(OpArgDocVolumetricSpatialDerivative, VolumetricSpatialDerivative);
     out["VoxelRANSAC"] = std::make_pair(OpArgDocVoxelRANSAC, VoxelRANSAC);
+
+#ifdef DCMA_USE_SFML
+    out["SFML_Viewer"] = std::make_pair(OpArgDocSFML_Viewer, SFML_Viewer);
+#endif
 
     return out;
 }

@@ -2,8 +2,6 @@
 
 #pragma once
 
-#include <SFML/Audio.hpp>
-#include <SFML/Graphics.hpp>
 #include <getopt.h> //Needed for 'getopts' argument parsing.
 #include <algorithm>
 #include <array>

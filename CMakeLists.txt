@@ -9,15 +9,15 @@ project(DICOMautomaton LANGUAGES CXX)
 #                                  User Options
 ####################################################################################
 
-option(MEMORY_CONSTRAINED_BUILD "Compile slowly, with minimal memory usage." OFF)
+option(MEMORY_CONSTRAINED_BUILD "Compile slowly, with minimal memory usage."    OFF)
 
-option(WITH_EIGEN     "Compile assuming Eigen is available." ON)
-option(WITH_CGAL      "Compile assuming CGAL is available." ON)
-option(WITH_NLOPT     "Compile assuming nlopt is available." ON)
-option(WITH_SFML      "Compile assuming SFML is available." ON)
-option(WITH_WT        "Compile assuming Wt is available." ON)
-option(WITH_POSTGRES  "Compile assuming PostgreSQL client libraries are available." ON)
-option(WITH_GNU_GSL   "Compile assuming the GNU GSL is available." ON)
+option(WITH_EIGEN     "Compile assuming Eigen is available."                    ON)
+option(WITH_CGAL      "Compile assuming CGAL is available."                     ON)
+option(WITH_NLOPT     "Compile assuming nlopt is available."                    ON)
+option(WITH_SFML      "Compile assuming SFML is available."                     ON)
+option(WITH_WT        "Compile assuming Wt is available."                       ON)
+option(WITH_POSTGRES  "Compile assuming PostgreSQL libraries are available."    ON)
+option(WITH_GNU_GSL   "Compile assuming the GNU GSL is available."              ON)
 
 
 ####################################################################################
@@ -103,10 +103,16 @@ endif()
     
 # Add definitions.
 add_definitions(-DUSTREAM_H) # -DUSE_ICU_STRINGS
+
 if(WITH_EIGEN)
     message(STATUS "Assuming Eigen is available.")
     add_definitions(-DDCMA_USE_EIGEN=1)
+else()
+    message(STATUS "Assuming Eigen is not available.")
+    add_definitions(-UDCMA_USE_EIGEN)
+                                        message(FATAL_ERROR "This option is not yet supported.")
 endif()
+
 if(WITH_CGAL)
     message(STATUS "Assuming CGAL is available.")
     add_definitions(-DDCMA_USE_CGAL=1)
@@ -114,27 +120,56 @@ if(WITH_CGAL)
         add_definitions(-DCGAL_DISABLE_ROUNDING_MATH_CHECK=1) # May be needed for Valgrind debugging.
         message(WARNING "If profiling/debugging on Arch Linux, disable binary stripping in PKGBUILD.")
     endif()
-    add_definitions(-DCGAL_EIGEN3_ENABLED=1) # Explicitly instruct CGAL to use Eigen.
+    if(WITH_EIGEN)
+        add_definitions(-DCGAL_EIGEN3_ENABLED=1) # Explicitly instruct CGAL to use Eigen.
+    endif()
+else()
+    message(STATUS "Assuming CGAL is not available.")
+    add_definitions(-UDCMA_USE_CGAL)
+                                        message(FATAL_ERROR "This option is not yet supported.")
 endif()
+
 if(WITH_NLOPT)
     message(STATUS "Assuming NLOPT is available.")
     add_definitions(-DDCMA_USE_NLOPT=1)
+else()
+    message(STATUS "Assuming NLOPT is not available.")
+    add_definitions(-UDCMA_USE_NLOPT)
 endif()
+
 if(WITH_SFML)
     message(STATUS "Assuming SFML is available.")
     add_definitions(-DDCMA_USE_SFML=1)
+else()
+    message(STATUS "Assuming SFML is not available.")
+    add_definitions(-UDCMA_USE_SFML)
+                                        message(FATAL_ERROR "This option is not yet supported.")
 endif()
+
 if(WITH_WT)
     message(STATUS "Assuming Wt is available.")
     add_definitions(-DDCMA_USE_WT=1)
+else()
+    message(STATUS "Assuming Wt is not available.")
+    add_definitions(-UDCMA_USE_WT)
 endif()
+
 if(WITH_POSTGRES)
     message(STATUS "Assuming PostgreSQL client libraries are available.")
     add_definitions(-DDCMA_USE_POSTGRES=1)
+else()
+    message(STATUS "Assuming PostgreSQL client libraries are not available.")
+    add_definitions(-UDCMA_USE_POSTGRES)
+                                        message(FATAL_ERROR "This option is not yet supported.")
 endif()
+
 if(WITH_GNU_GSL)
     message(STATUS "Assuming the GNU GSL is available.")
     add_definitions(-DDCMA_USE_GNU_GSL=1)
+else()
+    message(STATUS "Assuming the GNU GSL is not available.")
+    add_definitions(-UDCMA_USE_GNU_GSL)
+                                        message(FATAL_ERROR "This option is not yet supported.")
 endif()
 
 

@@ -123,7 +123,6 @@ add_library(Operations_objs OBJECT
     RankPixels.cc
     ReduceNeighbourhood.cc
     RemeshSurfaceMeshes.cc
-    SFML_Viewer.cc
     ScalePixels.cc
     SeamContours.cc
     SelectSlicesIntersectingROI.cc
@@ -151,6 +150,11 @@ add_library(Operations_objs OBJECT
     VolumetricSpatialDerivative.cc
     VoxelRANSAC.cc
 )
+if(WITH_SFML)
+    add_library(Operations_objs OBJECT 
+        SFML_Viewer.cc
+    )
+endif()
 set_target_properties(Operations_objs
     PROPERTIES POSITION_INDEPENDENT_CODE TRUE
 )
