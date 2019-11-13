@@ -581,6 +581,7 @@ AlignViaExhaustiveICP( const point_set<double> & moving,
 #ifdef DCMA_USE_EIGEN
 // This routine finds a non-rigid alignment using the 'robust point matching: thin plate spline' algorithm.
 //
+// TODO: This algorithm is a WIP!
 static
 std::experimental::optional<AffineTransform>
 AlignViaTPSRPM(const point_set<double> & moving,
