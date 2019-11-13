@@ -174,6 +174,10 @@ void Emit_Documentation(std::ostream &os){
        << "  Explicator       true (required)"                              << std::endl
        << "  Imebra           true (required; bundled)"                     << std::endl
        << "  Boost            true (required)"                              << std::endl
+       << "  Jansson          true (required)"                              << std::endl
+       << "  zlib             true (required)"                              << std::endl
+       << "  MPFR             true (required)"                              << std::endl
+       << "  GNU GMP          true (required)"                              << std::endl
 #ifdef DCMA_USE_EIGEN
        << "  Eigen            true"                                         << std::endl
 #else       

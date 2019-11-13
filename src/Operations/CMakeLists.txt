@@ -146,27 +146,14 @@ add_library(Operations_objs OBJECT
     VolumetricCorrelationDetector.cc
     VolumetricSpatialBlur.cc
     VolumetricSpatialDerivative.cc
+
+    $<$<BOOL:${WITH_SFML}>:PresentationImage.cc>
+    $<$<BOOL:${WITH_SFML}>:SFML_Viewer.cc>
+
+    $<$<BOOL:${WITH_EIGEN}>:DetectGrid3D.cc>
+    $<$<BOOL:${WITH_EIGEN}>:VoxelRANSAC.cc>
 )
 
-if(WITH_SFML)
-    add_library(Operations_objs OBJECT 
-        PresentationImage.cc
-        SFML_Viewer.cc
-    )
-endif()
-
-if(WITH_EIGEN)
-    add_library(Operations_objs OBJECT 
-        DetectGrid3D.cc
-        VoxelRANSAC.cc
-    )
-endif()
-
-set_target_properties(Operations_objs
-    PROPERTIES POSITION_INDEPENDENT_CODE TRUE
-)
-#target_include_directories(Operations_obj
-#    PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}
-#)
-
+set_target_properties( Operations_objs PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+#target_include_directories( Operations_obj PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} )
 

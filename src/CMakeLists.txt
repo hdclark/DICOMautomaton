@@ -1,196 +1,87 @@
 
-
-
 add_subdirectory(Operations)
 
+add_library(            Structs_obj OBJECT Structs.cc)
+set_target_properties(  Structs_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
-add_library(Structs_obj OBJECT
-    Structs.cc     
-)
-set_target_properties(Structs_obj PROPERTIES
-    POSITION_INDEPENDENT_CODE TRUE
-)
+add_library(            BED_Conversion_obj OBJECT BED_Conversion.cc )
+set_target_properties(  BED_Conversion_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
-add_library(BED_Conversion_obj OBJECT
-    BED_Conversion.cc
-)
-set_target_properties(BED_Conversion_obj PROPERTIES
-    POSITION_INDEPENDENT_CODE TRUE
-)
+add_library(            Colour_Maps_obj OBJECT Colour_Maps.cc )
+set_target_properties(  Colour_Maps_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
-add_library(Colour_Maps_obj OBJECT
-    Colour_Maps.cc     
-)
-set_target_properties(Colour_Maps_obj PROPERTIES
-    POSITION_INDEPENDENT_CODE TRUE
-)
+add_library(            Common_Plotting_obj OBJECT Common_Plotting.cc )
+set_target_properties(  Common_Plotting_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
-add_library(Common_Plotting_obj OBJECT
-    Common_Plotting.cc     
-)
-set_target_properties(Common_Plotting_obj PROPERTIES
-    POSITION_INDEPENDENT_CODE TRUE
-)
+add_library(            Insert_Contours_obj OBJECT Insert_Contours.cc )
+set_target_properties(  Insert_Contours_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
-add_library(Insert_Contours_obj OBJECT
-    Insert_Contours.cc
-)
-set_target_properties(Insert_Contours_obj PROPERTIES
-    POSITION_INDEPENDENT_CODE TRUE
-)
+add_library(            Regex_Selectors_obj OBJECT Regex_Selectors.cc )
+set_target_properties(  Regex_Selectors_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
-add_library(Regex_Selectors_obj OBJECT
-    Regex_Selectors.cc
-)
-set_target_properties(Regex_Selectors_obj PROPERTIES
-    POSITION_INDEPENDENT_CODE TRUE
-)
+add_library(            Common_Boost_Serialization_obj OBJECT Common_Boost_Serialization.cc )
+set_target_properties(  Common_Boost_Serialization_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
-add_library(Common_Boost_Serialization_obj OBJECT
-    Common_Boost_Serialization.cc     
-)
-set_target_properties(Common_Boost_Serialization_obj PROPERTIES
-    POSITION_INDEPENDENT_CODE TRUE
-)
+add_library(            Contour_Boolean_Operations_obj OBJECT Contour_Boolean_Operations.cc )
+set_target_properties(  Contour_Boolean_Operations_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
-add_library(Contour_Boolean_Operations_obj OBJECT
-    Contour_Boolean_Operations.cc     
-)
-set_target_properties(Contour_Boolean_Operations_obj PROPERTIES
-    POSITION_INDEPENDENT_CODE TRUE
-)
+add_library(            Dose_Meld_obj OBJECT Dose_Meld.cc )
+set_target_properties(  Dose_Meld_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
-add_library(Dose_Meld_obj OBJECT 
-    Dose_Meld.cc    
-)
-set_target_properties(Dose_Meld_obj PROPERTIES
-    POSITION_INDEPENDENT_CODE TRUE
-)
+add_library(            PACS_Loader_obj OBJECT PACS_Loader.cc )
+set_target_properties(  PACS_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
-add_library(PACS_Loader_obj OBJECT
-    PACS_Loader.cc  
-)
-set_target_properties(PACS_Loader_obj PROPERTIES
-    POSITION_INDEPENDENT_CODE TRUE
-)
+add_library(            DICOM_File_Loader_obj OBJECT DICOM_File_Loader.cc )
+set_target_properties(  DICOM_File_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
-add_library(DICOM_File_Loader_obj OBJECT
-    DICOM_File_Loader.cc  
-)
-set_target_properties(DICOM_File_Loader_obj PROPERTIES
-    POSITION_INDEPENDENT_CODE TRUE
-)
+add_library(            Contour_Collection_Estimates_obj OBJECT Contour_Collection_Estimates.cc )
+set_target_properties(  Contour_Collection_Estimates_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
-add_library(Contour_Collection_Estimates_obj OBJECT
-    Contour_Collection_Estimates.cc
-)
-set_target_properties(Contour_Collection_Estimates_obj PROPERTIES
-    POSITION_INDEPENDENT_CODE TRUE
-)
+add_library(            File_Loader_obj OBJECT File_Loader.cc )
+set_target_properties(  File_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
-add_library(File_Loader_obj OBJECT
-    File_Loader.cc  
-)
-set_target_properties(File_Loader_obj PROPERTIES
-    POSITION_INDEPENDENT_CODE TRUE
-)
+add_library(            FITS_File_Loader_obj OBJECT FITS_File_Loader.cc )
+set_target_properties(  FITS_File_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
-add_library(FITS_File_Loader_obj OBJECT
-    FITS_File_Loader.cc  
-)
-set_target_properties(FITS_File_Loader_obj PROPERTIES
-    POSITION_INDEPENDENT_CODE TRUE
-)
+add_library(            XYZ_File_Loader_obj OBJECT XYZ_File_Loader.cc )
+set_target_properties(  XYZ_File_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
-add_library(XYZ_File_Loader_obj OBJECT
-    XYZ_File_Loader.cc  
-)
-set_target_properties(XYZ_File_Loader_obj PROPERTIES
-    POSITION_INDEPENDENT_CODE TRUE
-)
+add_library(            3ddose_File_Loader_obj OBJECT 3ddose_File_Loader.cc )
+set_target_properties(  3ddose_File_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
-add_library(3ddose_File_Loader_obj OBJECT
-    3ddose_File_Loader.cc  
-)
-set_target_properties(3ddose_File_Loader_obj PROPERTIES
-    POSITION_INDEPENDENT_CODE TRUE
-)
+add_library(            OFF_Mesh_File_Loader_obj OBJECT OFF_Mesh_File_Loader.cc )
+set_target_properties(  OFF_Mesh_File_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
-add_library(OFF_Mesh_File_Loader_obj OBJECT
-    OFF_Mesh_File_Loader.cc  
-)
-set_target_properties(OFF_Mesh_File_Loader_obj PROPERTIES
-    POSITION_INDEPENDENT_CODE TRUE
-)
+add_library(            OBJ_Mesh_File_Loader_obj OBJECT OBJ_Mesh_File_Loader.cc )
+set_target_properties(  OBJ_Mesh_File_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
-add_library(OBJ_Mesh_File_Loader_obj OBJECT
-    OBJ_Mesh_File_Loader.cc  
-)
-set_target_properties(OBJ_Mesh_File_Loader_obj PROPERTIES
-    POSITION_INDEPENDENT_CODE TRUE
-)
+add_library(            Line_Sample_File_Loader_obj OBJECT Line_Sample_File_Loader.cc )
+set_target_properties(  Line_Sample_File_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
-add_library(Line_Sample_File_Loader_obj OBJECT
-    Line_Sample_File_Loader.cc
-)
-set_target_properties(Line_Sample_File_Loader_obj PROPERTIES
-    POSITION_INDEPENDENT_CODE TRUE
-)
+add_library(            Boost_Serialization_File_Loader_obj OBJECT Boost_Serialization_File_Loader.cc
+                                                                   StructsIOBoostSerialization.h )
+set_target_properties(  Boost_Serialization_File_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
-add_library(Boost_Serialization_File_Loader_obj OBJECT
-    Boost_Serialization_File_Loader.cc  
-    StructsIOBoostSerialization.h
-)
-set_target_properties(Boost_Serialization_File_Loader_obj PROPERTIES
-    POSITION_INDEPENDENT_CODE TRUE
-)
+add_library(            Surface_Meshes_obj OBJECT Surface_Meshes.cc )
+set_target_properties(  Surface_Meshes_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
-add_library(Surface_Meshes_obj OBJECT
-    Surface_Meshes.cc     
-)
-set_target_properties(Surface_Meshes_obj PROPERTIES
-    POSITION_INDEPENDENT_CODE TRUE
-)
+add_library(            Write_File_obj OBJECT Write_File.cc)
+set_target_properties(  Write_File_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
-add_library(Write_File_obj OBJECT
-    Write_File.cc  
-)
-set_target_properties(Write_File_obj PROPERTIES
-    POSITION_INDEPENDENT_CODE TRUE
-)
+add_library(            Operation_Dispatcher_obj OBJECT Operation_Dispatcher.cc )
+set_target_properties(  Operation_Dispatcher_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
-add_library(Operation_Dispatcher_obj OBJECT
-    Operation_Dispatcher.cc
-)
-set_target_properties(Operation_Dispatcher_obj PROPERTIES
-    POSITION_INDEPENDENT_CODE TRUE
-)
-
-add_library(Documentation_obj OBJECT
-    Documentation.cc
-)
-set_target_properties(Documentation_obj PROPERTIES
-    POSITION_INDEPENDENT_CODE TRUE
-)
+add_library(            Documentation_obj OBJECT Documentation.cc )
+set_target_properties(  Documentation_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
 
 FILE(GLOB ygorimaging_functors "./YgorImages_Functors/*/*cc")
-add_library(YgorImaging_Functor_objs OBJECT
-    ${ygorimaging_functors}
-)
-set_target_properties(YgorImaging_Functor_objs PROPERTIES
-    POSITION_INDEPENDENT_CODE TRUE
-)
+add_library( YgorImaging_Functor_objs OBJECT ${ygorimaging_functors} )
+set_target_properties( YgorImaging_Functor_objs PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
 FILE(GLOB ygorimaging_helpers  "./YgorImages_Functors/*cc")
-add_library(YgorImaging_Helper_objs OBJECT
-    ${ygorimaging_helpers}
-)
-set_target_properties(YgorImaging_Helper_objs PROPERTIES
-    POSITION_INDEPENDENT_CODE TRUE
-)
-
-
+add_library( YgorImaging_Helper_objs OBJECT ${ygorimaging_helpers} )
+set_target_properties( YgorImaging_Helper_objs PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
 
 
@@ -270,8 +161,7 @@ add_library (imebrashim
 target_include_directories(imebrashim SYSTEM PUBLIC 
     ./imebra20121219/library/imebra/include/ 
 )
-target_compile_options(imebrashim
-    PUBLIC -w ) # Inhibit all imebra-related warnings.
+target_compile_options(imebrashim PUBLIC -w) # Inhibit imebra-related warnings.
 
 
 # Pharmacokinetic modeling libraries (built separately for easier reuse).
@@ -280,33 +170,25 @@ add_library (kineticmodel_1c2i_5param_linearinterp_levenbergmarquardt
     KineticModel_1Compartment2Input_5Param_LinearInterp_Common.cc
     KineticModel_1Compartment2Input_5Param_LinearInterp_LevenbergMarquardt.cc
 )
-target_include_directories(kineticmodel_1c2i_5param_linearinterp_levenbergmarquardt SYSTEM PUBLIC 
-    ./
-)
+target_include_directories(kineticmodel_1c2i_5param_linearinterp_levenbergmarquardt SYSTEM PUBLIC ./ )
 
 add_library (kineticmodel_1c2i_5param_chebyshev_freeformoptimization
     KineticModel_1Compartment2Input_5Param_Chebyshev_Common.cc
     KineticModel_1Compartment2Input_5Param_Chebyshev_FreeformOptimization.cc
 )
-target_include_directories(kineticmodel_1c2i_5param_chebyshev_freeformoptimization SYSTEM PUBLIC 
-    ./
-)
+target_include_directories(kineticmodel_1c2i_5param_chebyshev_freeformoptimization SYSTEM PUBLIC ./ )
 
 add_library (kineticmodel_1c2i_5param_chebyshev_levenbergmarquardt
     KineticModel_1Compartment2Input_5Param_Chebyshev_Common.cc
     KineticModel_1Compartment2Input_5Param_Chebyshev_LevenbergMarquardt.cc
 )
-target_include_directories(kineticmodel_1c2i_5param_chebyshev_levenbergmarquardt SYSTEM PUBLIC 
-    ./
-)
+target_include_directories(kineticmodel_1c2i_5param_chebyshev_levenbergmarquardt SYSTEM PUBLIC ./ )
 
 add_library (kineticmodel_1c2i_reduced3param_chebyshev_freeformoptimization
     KineticModel_1Compartment2Input_Reduced3Param_Chebyshev_Common.cc
     KineticModel_1Compartment2Input_Reduced3Param_Chebyshev_FreeformOptimization.cc
 )
-target_include_directories(kineticmodel_1c2i_reduced3param_chebyshev_freeformoptimization SYSTEM PUBLIC 
-    ./
-)
+target_include_directories(kineticmodel_1c2i_reduced3param_chebyshev_freeformoptimization SYSTEM PUBLIC ./ )
 
 
 # Executable.
@@ -356,6 +238,12 @@ target_link_libraries (dicomautomaton_dispatcher
     gsl
     gslcblas
     jansson 
+    $<$<BOOL:${WITH_NLOPT}>:nlopt>
+    $<$<BOOL:${WITH_SFML}>:sfml-graphics>
+    $<$<BOOL:${WITH_SFML}>:sfml-window>
+    $<$<BOOL:${WITH_SFML}>:sfml-system>
+    $<$<BOOL:${WITH_POSTGRES}>:pqxx>
+    $<$<BOOL:${WITH_POSTGRES}>:pq>
     boost_filesystem 
     boost_serialization
     boost_iostreams
@@ -367,18 +255,6 @@ target_link_libraries (dicomautomaton_dispatcher
     m
     Threads::Threads
 )
-if(WITH_NLOPT)
-    target_link_libraries (dicomautomaton_dispatcher nlopt)
-endif()
-if(WITH_SFML)
-    target_link_libraries (dicomautomaton_dispatcher sfml-graphics)
-    target_link_libraries (dicomautomaton_dispatcher sfml-window)
-    target_link_libraries (dicomautomaton_dispatcher sfml-system)
-endif()
-if(WITH_POSTGRES)
-    target_link_libraries (dicomautomaton_dispatcher pqxx)
-    target_link_libraries (dicomautomaton_dispatcher pq)
-endif()
 
 if(WITH_WT)
     # Executable.
@@ -428,6 +304,12 @@ if(WITH_WT)
         gsl
         gslcblas
         jansson 
+        $<$<BOOL:${WITH_NLOPT}>:nlopt>
+        $<$<BOOL:${WITH_SFML}>:sfml-graphics>
+        $<$<BOOL:${WITH_SFML}>:sfml-window>
+        $<$<BOOL:${WITH_SFML}>:sfml-system>
+        $<$<BOOL:${WITH_POSTGRES}>:pqxx>
+        $<$<BOOL:${WITH_POSTGRES}>:pq>
         wt
         wthttp
         boost_filesystem 
@@ -441,19 +323,8 @@ if(WITH_WT)
         m
         Threads::Threads
     )
-    if(WITH_NLOPT)
-        target_link_libraries (dicomautomaton_webserver nlopt)
-    endif()
-    if(WITH_SFML)
-        target_link_libraries (dicomautomaton_webserver sfml-graphics)
-        target_link_libraries (dicomautomaton_webserver sfml-window)
-        target_link_libraries (dicomautomaton_webserver sfml-system)
-    endif()
-    if(WITH_SFML)
-        target_link_libraries (dicomautomaton_webserver pqxx)
-        target_link_libraries (dicomautomaton_webserver pq)
-    endif()
 endif()
+
 
 # Executable.
 add_executable(dicomautomaton_bsarchive_convert
@@ -495,9 +366,7 @@ if(WITH_POSTGRES)
         m
         Threads::Threads
     )
-endif()
 
-if(WITH_POSTGRES)
     # Executable.
     add_executable(pacs_duplicate_cleaner
         PACS_Duplicate_Cleaner.cc
@@ -514,9 +383,7 @@ if(WITH_POSTGRES)
         m
         Threads::Threads
     )
-endif()
 
-if(WITH_POSTGRES)
     # Executable.
     add_executable(pacs_refresh
         PACS_Refresh.cc
@@ -559,26 +426,26 @@ install(TARGETS
     kineticmodel_1c2i_5param_chebyshev_freeformoptimization
     kineticmodel_1c2i_5param_chebyshev_levenbergmarquardt
     kineticmodel_1c2i_reduced3param_chebyshev_freeformoptimization
-  RUNTIME DESTINATION bin
-  LIBRARY DESTINATION lib
-  ARCHIVE DESTINATION lib
+    RUNTIME DESTINATION bin
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
 )
-if(USE_WT)
-    install(TARGETS 
+if(WITH_WT)
+    install(TARGETS
         dicomautomaton_webserver
-      RUNTIME DESTINATION bin
-      LIBRARY DESTINATION lib
-      ARCHIVE DESTINATION lib
+        RUNTIME DESTINATION bin
+        LIBRARY DESTINATION lib
+        ARCHIVE DESTINATION lib
     )
 endif()
-if(USE_POSTGRES)
-    install(TARGETS 
+if(WITH_POSTGRES)
+    install(TARGETS
         pacs_ingress
         pacs_duplicate_cleaner
         pacs_refresh
-      RUNTIME DESTINATION bin
-      LIBRARY DESTINATION lib
-      ARCHIVE DESTINATION lib
+        RUNTIME DESTINATION bin
+        LIBRARY DESTINATION lib
+        ARCHIVE DESTINATION lib
     )
 endif()
 
