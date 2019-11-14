@@ -30,7 +30,9 @@
 #include "YgorFilesDirs.h"    //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
-#include "YgorMathBSpline.h" //Needed for basis_spline class.
+#if defined(YGOR_USE_GNU_GSL) && defined(DCMA_USE_GNU_GSL)
+    #include "YgorMathBSpline.h" //Needed for basis_spline class.
+#endif
 #include "YgorMathPlottingGnuplot.h" //Needed for YgorMathPlottingGnuplot::*.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
@@ -428,22 +430,9 @@ Drover AnalyzeLightRadFieldCoincidence(Drover DICOM_data, OperationArgPkg OptArg
             auto Find_Peak_Nearest = [](samples_1D<double> &s, double target_x) -> double {
                 double peak_x = std::numeric_limits<double>::quiet_NaN();
 
-                //Peak-based. No functions are fit here -- the field edge peak locations are directly used.
-                if(false){
-                    const auto peaks = s.Peaks();
-                    auto min_dist = std::numeric_limits<double>::infinity();
-                    for(const auto &samp : peaks.samples){
-                        const auto x = samp[0];
-                        const auto dist = std::abs(target_x - x);
-                        if(dist < min_dist){
-                            min_dist = dist;
-                            peak_x = x;
-                        }
-                    }
-                }
-
+#if defined(YGOR_USE_GNU_GSL) && defined(DCMA_USE_GNU_GSL)
                 // Estimate the (highest) peak location by scanning through a basis spline approximation.
-                if(true){
+                {
                     basis_spline bs(s);
                     const auto dx = 0.001;
                     const auto min_x = s.Get_Extreme_Datum_x().first[0] + dx;
@@ -458,6 +447,22 @@ Drover AnalyzeLightRadFieldCoincidence(Drover DICOM_data, OperationArgPkg OptArg
                         }
                     }
                 }
+#else
+                //Peak-based. No functions are fit here -- the field edge peak locations are directly used.
+                {
+                    FUNCWARN("Using inferior peak detection routine due to inaccessible GNU GSL functionality");
+                    const auto peaks = s.Peaks();
+                    auto min_dist = std::numeric_limits<double>::infinity();
+                    for(const auto &samp : peaks.samples){
+                        const auto x = samp[0];
+                        const auto dist = std::abs(target_x - x);
+                        if(dist < min_dist){
+                            min_dist = dist;
+                            peak_x = x;
+                        }
+                    }
+                }
+#endif
 
                 return peak_x;
             };
