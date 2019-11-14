@@ -27,6 +27,11 @@
 #include "YgorStats.h"        //Needed for Stats:: namespace.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
+#ifdef DCMA_USE_CGAL
+#else
+    #error "Attempted to compile without CGAL support, which is required."
+#endif
+
 #include "../Surface_Meshes.h"
 
 

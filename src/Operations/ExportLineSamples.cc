@@ -28,8 +28,6 @@
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 #include "YgorMathIOOFF.h"
 
-#include "../Surface_Meshes.h"
-
 
 OperationDoc OpArgDocExportLineSamples(void){
     OperationDoc out;

@@ -28,8 +28,6 @@
 #include "../Thread_Pool.h"
 #include "../YgorImages_Functors/ConvenienceRoutines.h"
 
-#include "../Surface_Meshes.h"
-
 #include "ImprintImages.h"
 
 

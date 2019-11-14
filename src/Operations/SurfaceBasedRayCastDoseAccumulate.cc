@@ -24,6 +24,10 @@
 #include <algorithm>
 #include <experimental/optional>
 
+#ifdef DCMA_USE_CGAL
+#else
+    #error "Attempted to compile without CGAL support, which is required."
+#endif
 
 #include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
 //#include <CGAL/Exact_predicates_exact_constructions_kernel.h>

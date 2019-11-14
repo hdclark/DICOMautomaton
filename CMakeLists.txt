@@ -133,7 +133,6 @@ if(WITH_CGAL)
 else()
     message(STATUS "Assuming CGAL is not available.")
     add_definitions(-UDCMA_USE_CGAL)
-                                        message(FATAL_ERROR "This option is not yet supported.")
 endif()
 
 if(WITH_NLOPT)

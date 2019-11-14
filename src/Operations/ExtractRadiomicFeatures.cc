@@ -19,6 +19,11 @@
 #include <vector>
 #include <utility>
 
+#ifdef DCMA_USE_CGAL
+#else
+    #error "Attempted to compile without CGAL support, which is required."
+#endif
+
 #include "../Insert_Contours.h"
 #include "../Structs.h"
 #include "../Regex_Selectors.h"

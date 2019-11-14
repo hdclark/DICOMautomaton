@@ -29,8 +29,6 @@
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 #include "YgorMathIOXYZ.h"
 
-#include "../Surface_Meshes.h"
-
 
 OperationDoc OpArgDocExportPointClouds(void){
     OperationDoc out;

@@ -21,6 +21,10 @@
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 
+#ifdef DCMA_USE_CGAL
+#else
+    #error "Attempted to compile without CGAL support, which is required."
+#endif
 
 
 OperationDoc OpArgDocContourBooleanOperations(void){

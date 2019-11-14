@@ -22,8 +22,10 @@ set_target_properties(  Regex_Selectors_obj PROPERTIES POSITION_INDEPENDENT_CODE
 add_library(            Common_Boost_Serialization_obj OBJECT Common_Boost_Serialization.cc )
 set_target_properties(  Common_Boost_Serialization_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
-add_library(            Contour_Boolean_Operations_obj OBJECT Contour_Boolean_Operations.cc )
-set_target_properties(  Contour_Boolean_Operations_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+if(WITH_CGAL)
+    add_library(            Contour_Boolean_Operations_obj OBJECT Contour_Boolean_Operations.cc )
+    set_target_properties(  Contour_Boolean_Operations_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+endif()
 
 add_library(            Dose_Meld_obj OBJECT Dose_Meld.cc )
 set_target_properties(  Dose_Meld_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
@@ -64,8 +66,10 @@ add_library(            Boost_Serialization_File_Loader_obj OBJECT Boost_Seriali
                                                                    StructsIOBoostSerialization.h )
 set_target_properties(  Boost_Serialization_File_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
-add_library(            Surface_Meshes_obj OBJECT Surface_Meshes.cc )
-set_target_properties(  Surface_Meshes_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+if(WITH_CGAL)
+    add_library(            Surface_Meshes_obj OBJECT Surface_Meshes.cc )
+    set_target_properties(  Surface_Meshes_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+endif()
 
 add_library(            Write_File_obj OBJECT Write_File.cc)
 set_target_properties(  Write_File_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
@@ -207,10 +211,10 @@ add_executable (dicomautomaton_dispatcher
     $<TARGET_OBJECTS:Colour_Maps_obj>
     $<TARGET_OBJECTS:Common_Boost_Serialization_obj>
     $<TARGET_OBJECTS:Common_Plotting_obj>
-    $<TARGET_OBJECTS:Contour_Boolean_Operations_obj>
+    $<$<BOOL:${WITH_CGAL}>:$<TARGET_OBJECTS:Contour_Boolean_Operations_obj>>
     $<TARGET_OBJECTS:Contour_Collection_Estimates_obj>
     $<TARGET_OBJECTS:Insert_Contours_obj>
-    $<TARGET_OBJECTS:Surface_Meshes_obj>
+    $<$<BOOL:${WITH_CGAL}>:$<TARGET_OBJECTS:Surface_Meshes_obj>>
     $<TARGET_OBJECTS:Regex_Selectors_obj>
 
     $<$<BOOL:${WITH_POSTGRES}>:$<TARGET_OBJECTS:PACS_Loader_obj>>
@@ -240,7 +244,7 @@ target_link_libraries (dicomautomaton_dispatcher
     $<$<BOOL:${WITH_GNU_GSL}>:kineticmodel_1c2i_5param_chebyshev_freeformoptimization>
     explicator 
     ygor 
-    CGAL
+    $<$<BOOL:${WITH_CGAL}>:CGAL>
     $<$<BOOL:${WITH_GNU_GSL}>:gsl>
     $<$<BOOL:${WITH_GNU_GSL}>:gslcblas>
     jansson 
@@ -273,10 +277,10 @@ if(WITH_WT)
         $<TARGET_OBJECTS:Colour_Maps_obj>
         $<TARGET_OBJECTS:Common_Boost_Serialization_obj>
         $<TARGET_OBJECTS:Common_Plotting_obj>
-        $<TARGET_OBJECTS:Contour_Boolean_Operations_obj>
+        $<$<BOOL:${WITH_CGAL}>:$<TARGET_OBJECTS:Contour_Boolean_Operations_obj>>
         $<TARGET_OBJECTS:Contour_Collection_Estimates_obj>
         $<TARGET_OBJECTS:Insert_Contours_obj>
-        $<TARGET_OBJECTS:Surface_Meshes_obj>
+        $<$<BOOL:${WITH_CGAL}>:$<TARGET_OBJECTS:Surface_Meshes_obj>>
         $<TARGET_OBJECTS:Regex_Selectors_obj>
 
         $<$<BOOL:${WITH_POSTGRES}>:$<TARGET_OBJECTS:PACS_Loader_obj>>
@@ -306,7 +310,7 @@ if(WITH_WT)
         $<$<BOOL:${WITH_GNU_GSL}>:kineticmodel_1c2i_5param_chebyshev_freeformoptimization>
         explicator 
         ygor 
-        CGAL
+        $<$<BOOL:${WITH_CGAL}>:CGAL>
         $<$<BOOL:${WITH_GNU_GSL}>:gsl>
         $<$<BOOL:${WITH_GNU_GSL}>:gslcblas>
         jansson 

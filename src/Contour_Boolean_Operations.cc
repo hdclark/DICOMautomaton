@@ -9,6 +9,11 @@
 #include <cmath>
 #include <experimental/any>
 
+#ifdef DCMA_USE_CGAL
+#else
+    #error "Attempted to compile without CGAL support, which is required."
+#endif
+
 //#include <CGAL/Exact_predicates_exact_constructions_kernel.h>
 #include <CGAL/Cartesian.h>
 #include <CGAL/Polygon_2.h>

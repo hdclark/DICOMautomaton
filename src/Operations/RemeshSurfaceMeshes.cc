@@ -1,5 +1,10 @@
 //RemeshSurfaceMeshes.cc - A part of DICOMautomaton 2019. Written by hal clark.
 
+#ifdef DCMA_USE_CGAL
+#else
+    #error "Attempted to compile without CGAL support, which is required."
+#endif
+
 #include <asio.hpp>
 #include <algorithm>
 #include <experimental/optional>

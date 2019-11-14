@@ -28,6 +28,11 @@
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 #include "YgorMathIOOFF.h"
 
+#ifdef DCMA_USE_CGAL
+#else
+    #error "Attempted to compile without CGAL support, which is required."
+#endif
+
 #include "../Surface_Meshes.h"
 
 

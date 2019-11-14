@@ -27,7 +27,6 @@
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
 #include "../Thread_Pool.h"
-#include "../Surface_Meshes.h"
 #include "../Insert_Contours.h"
 
 #include "ContourViaGeometry.h"

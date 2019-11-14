@@ -24,6 +24,11 @@
 //#include <execution>
 #include <experimental/optional>
 
+#ifdef DCMA_USE_CGAL
+#else
+    #error "Attempted to compile without CGAL support, which is required."
+#endif
+
 #define BOOST_PARAMETER_MAX_ARITY 12
 
 #include <CGAL/trace.h>
@@ -101,7 +106,6 @@
 #include <CGAL/make_mesh_3.h>
 
 #include <CGAL/IO/facets_in_complex_3_to_triangle_mesh.h>
-
 
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorMath.h"         //Needed for vec3 class.

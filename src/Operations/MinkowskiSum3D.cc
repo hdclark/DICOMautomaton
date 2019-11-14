@@ -40,6 +40,11 @@
 
 #include "Explicator.h"       //Needed for Explicator class.
 
+#ifdef DCMA_USE_CGAL
+#else
+    #error "Attempted to compile without CGAL support, which is required."
+#endif
+
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
 #include "../Surface_Meshes.h"

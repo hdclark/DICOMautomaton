@@ -9,24 +9,19 @@ add_library(Operations_objs OBJECT
     ApplyCalibrationCurve.cc
     AutoCropImages.cc
     Average.cc
-    BCCAExtractRadiomicFeatures.cc
     BoostSerializeDrover.cc
     BuildLexiconInteractively.cc
     ClusterDBSCAN.cc
     ComparePixels.cc
     ContourBasedRayCastDoseAccumulate.cc
-    ContourBooleanOperations.cc
     ContourSimilarity.cc
     ContourViaGeometry.cc
-    ContourViaThreshold.cc
     ContourVote.cc
     ContourWholeImages.cc
     ContouringAides.cc
     ConvertContoursToPoints.cc
     ConvertDoseToImage.cc
     ConvertImageToDose.cc
-    ConvertImageToMeshes.cc
-    ConvertMeshesToContours.cc
     ConvertNaNsToAir.cc
     ConvertNaNsToZeros.cc
     ConvertPixelsToPoints.cc
@@ -61,7 +56,6 @@ add_library(Operations_objs OBJECT
     DumpROIData.cc
     DumpROIDoseInfo.cc
     DumpROISNR.cc
-    DumpROISurfaceMeshes.cc
     DumpTPlanMetadataOccurrencesToFile.cc
     DumpVoxelDoseInfo.cc
     EQDConvert.cc
@@ -74,7 +68,6 @@ add_library(Operations_objs OBJECT
     ExportSurfaceMeshes.cc
     ExtractDoseVolumeHistograms.cc
     ExtractAlphaBeta.cc
-    ExtractRadiomicFeatures.cc
     FVPicketFence.cc
     GenerateCalibrationCurve.cc
     GenerateSurfaceMask.cc
@@ -97,10 +90,8 @@ add_library(Operations_objs OBJECT
     IsolatedVoxelFilter.cc
     LoadFiles.cc
     LogScale.cc
-    MakeMeshesManifold.cc
     MaxMinPixels.cc
     MeldDose.cc
-    MinkowskiSum3D.cc
     ModifyContourMetadata.cc
     ModifyImageMetadata.cc
     NegatePixels.cc
@@ -114,21 +105,16 @@ add_library(Operations_objs OBJECT
     PurgeContours.cc
     RankPixels.cc
     ReduceNeighbourhood.cc
-    RemeshSurfaceMeshes.cc
     ScalePixels.cc
-    SeamContours.cc
     SelectSlicesIntersectingROI.cc
     SimplifyContours.cc
-    SimplifySurfaceMeshes.cc
     SimulateRadiograph.cc
     SpatialBlur.cc
     SpatialDerivative.cc
     SpatialSharpen.cc
-    SubdivideSurfaceMeshes.cc
     Subsegment_ComputeDose_VanLuijk.cc
     SubtractImages.cc
     SupersampleImageGrid.cc
-    SurfaceBasedRayCastDoseAccumulate.cc
     ThresholdImages.cc
     ThresholdOtsu.cc
     TransformMeshes.cc
@@ -153,6 +139,21 @@ add_library(Operations_objs OBJECT
     $<$<BOOL:${WITH_GNU_GSL}>:CT_Liver_Perfusion_Pharmaco_1Compartment2Input_5Param.cc>
     $<$<BOOL:${WITH_GNU_GSL}>:CT_Liver_Perfusion_Pharmaco_1Compartment2Input_Reduced3Param.cc>
     $<$<BOOL:${WITH_GNU_GSL}>:DumpPerROIParams_KineticModel_1Compartment2Input_5Param.cc>
+
+    $<$<BOOL:${WITH_CGAL}>:BCCAExtractRadiomicFeatures.cc>
+    $<$<BOOL:${WITH_CGAL}>:ContourBooleanOperations.cc>
+    $<$<BOOL:${WITH_CGAL}>:ContourViaThreshold.cc>
+    $<$<BOOL:${WITH_CGAL}>:ConvertImageToMeshes.cc>
+    $<$<BOOL:${WITH_CGAL}>:ConvertMeshesToContours.cc>
+    $<$<BOOL:${WITH_CGAL}>:DumpROISurfaceMeshes.cc>
+    $<$<BOOL:${WITH_CGAL}>:ExtractRadiomicFeatures.cc>
+    $<$<BOOL:${WITH_CGAL}>:MakeMeshesManifold.cc>
+    $<$<BOOL:${WITH_CGAL}>:MinkowskiSum3D.cc>
+    $<$<BOOL:${WITH_CGAL}>:RemeshSurfaceMeshes.cc>
+    $<$<BOOL:${WITH_CGAL}>:SeamContours.cc>
+    $<$<BOOL:${WITH_CGAL}>:SimplifySurfaceMeshes.cc>
+    $<$<BOOL:${WITH_CGAL}>:SubdivideSurfaceMeshes.cc>
+    $<$<BOOL:${WITH_CGAL}>:SurfaceBasedRayCastDoseAccumulate.cc>
 )
 
 set_target_properties( Operations_objs PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
