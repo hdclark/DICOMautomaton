@@ -103,8 +103,9 @@ if [[ "${BUILDER}" =~ .*native.* ]] ; then
         -DWITH_NLOPT=ON \
         -DWITH_SFML=ON \
         -DWITH_WT=ON \
-        -DWITH_POSTGRES=ON \
         -DWITH_GNU_GSL=ON \
+        -DWITH_POSTGRES=ON \
+        -DWITH_JANSSON=ON \
         ../ && "'
       JOBS=$(nproc)
       JOBS=$(( $JOBS < 8 ? $JOBS : 8 )) # Limit to reduce memory use.

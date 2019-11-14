@@ -64,8 +64,9 @@ build() {
     -DWITH_NLOPT=ON \
     -DWITH_SFML=ON \
     -DWITH_WT=ON \
-    -DWITH_POSTGRES=ON \
     -DWITH_GNU_GSL=ON \
+    -DWITH_POSTGRES=ON \
+    -DWITH_JANSSON=ON \
     ../
 
   ## Debug build with default compiler flags.

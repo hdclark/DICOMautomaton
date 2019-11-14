@@ -247,7 +247,7 @@ target_link_libraries (dicomautomaton_dispatcher
     $<$<BOOL:${WITH_CGAL}>:CGAL>
     $<$<BOOL:${WITH_GNU_GSL}>:gsl>
     $<$<BOOL:${WITH_GNU_GSL}>:gslcblas>
-    jansson 
+    $<$<BOOL:${WITH_JANSSON}>:jansson>
     $<$<BOOL:${WITH_NLOPT}>:nlopt>
     $<$<BOOL:${WITH_SFML}>:sfml-graphics>
     $<$<BOOL:${WITH_SFML}>:sfml-window>
@@ -313,7 +313,7 @@ if(WITH_WT)
         $<$<BOOL:${WITH_CGAL}>:CGAL>
         $<$<BOOL:${WITH_GNU_GSL}>:gsl>
         $<$<BOOL:${WITH_GNU_GSL}>:gslcblas>
-        jansson 
+        $<$<BOOL:${WITH_JANSSON}>:jansson>
         $<$<BOOL:${WITH_NLOPT}>:nlopt>
         $<$<BOOL:${WITH_SFML}>:sfml-graphics>
         $<$<BOOL:${WITH_SFML}>:sfml-window>

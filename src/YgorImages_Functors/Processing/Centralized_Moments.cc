@@ -1,5 +1,4 @@
 
-#include <jansson.h>         //For JSON handling.
 #include <cmath>
 #include <exception>
 #include <experimental/any>
@@ -10,9 +9,10 @@
 #include <map>
 #include <ostream>
 
-#ifdef DCMA_USE_POSTGRES
+#if defined(DCMA_USE_POSTGRES) && defined(DCMA_USE_JANSSON)
+    #include <jansson.h>         //For JSON handling.
     #include <pqxx/pqxx>         //PostgreSQL C++ interface.
-#endif // DCMA_USE_POSTGRES
+#endif
 
 #include <string>
 #include <utility>
@@ -200,7 +200,7 @@ bool ComputeCentralizedMoments(planar_image_collection<float,double>::images_lis
     return true;
 }
 
-#ifdef DCMA_USE_POSTGRES
+#if defined(DCMA_USE_POSTGRES) && defined(DCMA_USE_JANSSON)
 static bool Push_Moment_to_Database(analysis_key_t thekey, double themoment){
     // ---------------------------------- Convert key to JSON ---------------------------------------
     json_t *obj = json_object();
@@ -256,13 +256,13 @@ void DumpCentralizedMoments(std::map<std::string,std::string> InvocationMetadata
         auto thekey = apair.first;
         auto themoment = apair.second;
       
-#ifdef DCMA_USE_POSTGRES
+#if defined(DCMA_USE_POSTGRES) && defined(DCMA_USE_JANSSON)
         thekey.insert(InvocationMetadata.begin(),InvocationMetadata.end());
         if(!Push_Moment_to_Database(thekey, themoment)){
             FUNCWARN("Unable to push analysis result to database. Ignoring and continuing");
         }
 #else
-        FUNCWARN("This program was not compiled with PostgreSQL support -- unable to write moment to DB");
+        FUNCWARN("This program was not compiled with PostgreSQL+Jansson support -- unable to write moment to DB");
 #endif // DCMA_USE_POSTGRES
     } 
 

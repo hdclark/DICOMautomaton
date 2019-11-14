@@ -174,7 +174,6 @@ void Emit_Documentation(std::ostream &os){
        << "  Explicator       true (required)"                              << std::endl
        << "  Imebra           true (required; bundled)"                     << std::endl
        << "  Boost            true (required)"                              << std::endl
-       << "  Jansson          true (required)"                              << std::endl
        << "  zlib             true (required)"                              << std::endl
        << "  MPFR             true (required)"                              << std::endl
        << "  GNU GMP          true (required)"                              << std::endl
@@ -203,15 +202,20 @@ void Emit_Documentation(std::ostream &os){
 #else       
        << "  Wt               false"                                        << std::endl
 #endif       
+#ifdef DCMA_USE_GNU_GSL
+       << "  GNU GSL          true"                                         << std::endl
+#else       
+       << "  GNU GSL          false"                                        << std::endl
+#endif       
 #ifdef DCMA_USE_POSTGRES
        << "  PostgreSQL       true"                                         << std::endl
 #else       
        << "  PostgreSQL       false"                                        << std::endl
 #endif       
-#ifdef DCMA_USE_GNU_GSL
-       << "  GNU GSL          true"                                         << std::endl
+#ifdef DCMA_USE_JANSSON
+       << "  Jansson          true"                                         << std::endl
 #else       
-       << "  GNU GSL          false"                                        << std::endl
+       << "  Jansson          false"                                        << std::endl
 #endif       
        << std::endl
        << "  Table: Dependencies enabled for this instance." << std::endl
