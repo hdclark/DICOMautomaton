@@ -1730,10 +1730,12 @@ Drover SFML_Viewer( Drover DICOM_data,
                 }else if( thechar == 't' ){
                     dump_voxel_time_series();
 
+#ifdef DCMA_USE_GNU_GSL
                 //Given the current mouse coordinates, try to show a perfusion model using model parameters from
                 // other images. Also show a time course of the raw data for comparison with the model fit.
                 }else if( (thechar == 'M') ){
                     show_perfusion_model();
+#endif // DCMA_USE_GNU_GSL
 
                 //Given the current mouse coordinates, dump the pixel value for [A]ll image sets which spatially overlap.
                 // This routine is useful for debugging problematic pixels, or trying to follow per-pixel calculations.
