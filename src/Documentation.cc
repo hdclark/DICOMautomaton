@@ -599,10 +599,23 @@ void Emit_Documentation(std::ostream &os){
 
     // -----------------------------------------------------
     reflow_and_emit_paragraph(os, max_width, nobullet, nobullet, nolinebreak,
-        "# Operations"
+        "# List of Available Operations"
     );
 
+    // Print an index of links to each operation.
     auto known_ops = Known_Operations();
+    {
+        for(auto &anop : known_ops){
+            const auto name = anop.first;
+            //os << bulleta << "[" << name << "](#" << name << ")" << std::endl;
+            os << bulleta << name << std::endl;
+        }
+        os << std::endl;
+    }
+
+    reflow_and_emit_paragraph(os, max_width, nobullet, nobullet, nolinebreak,
+        "# Operations Reference"
+    );
     for(auto &anop : known_ops){
         const auto name = anop.first;
 
