@@ -270,6 +270,140 @@ extract_seq_vec_tag_as_string( puntoexe::ptr<puntoexe::imebra::dataSet> base_nod
 }
 
 
+// This routine writes an OB-type DICOM tag to the provided data set.
+static
+void
+ds_OB_insert(puntoexe::ptr<puntoexe::imebra::dataSet> &ds, 
+             uint16_t group, uint16_t tag, 
+             std::string i_val){
+    const uint16_t order = 0;
+    
+    //For OB type, we simply copy the string's buffer as-is. 
+    const auto d_t = ds->getDefaultDataType(group, tag);
+
+    if( d_t == "OB" ){
+        auto tag_ptr = ds->getTag(group, order, tag, true);
+        //const auto next_buff = tag_ptr->getBuffersCount() - 1;
+        //auto rdh_ptr = tag_ptr->getDataHandlerRaw( next_buff, true, d_t );
+        auto rdh_ptr = tag_ptr->getDataHandlerRaw( 0, true, d_t );
+        rdh_ptr->copyFromMemory(reinterpret_cast<const uint8_t *>(i_val.data()),
+                                static_cast<uint32_t>(i_val.size()));
+    }else{
+        throw std::runtime_error("A non-OB VR type was passed to the OB VR type writer.");
+    }
+    return;
+}
+
+// This routine writes a given tag into the given DICOM data set in the default encoding style for the tag.
+static
+void
+ds_insert(puntoexe::ptr<puntoexe::imebra::dataSet> &ds,
+          uint16_t group, uint16_t tag,
+          std::string i_val){
+    const uint16_t order = 0;
+    uint32_t element = 0;
+
+    //Search for '\' characters. If present, split the string up and register each token separately.
+    auto tokens = SplitStringToVector(i_val, '\\', 'd');
+    for(auto &val : tokens){
+        //Attempt to convert to the default DICOM data type.
+        const auto d_t = ds->getDefaultDataType(group, tag);
+
+        //Types not requiring conversion from a string.
+        if( ( d_t == "AE") || ( d_t == "AS") || ( d_t == "AT") ||
+            ( d_t == "CS") || ( d_t == "DS") || ( d_t == "DT") ||
+            ( d_t == "LO") || ( d_t == "LT") || ( d_t == "OW") ||
+            ( d_t == "PN") || ( d_t == "SH") || ( d_t == "ST") ||
+            ( d_t == "UT")   ){
+                ds->setString(group, order, tag, element++, val, d_t);
+
+        //UIDs.
+        }else if( d_t == "UI" ){   //UIDs.
+            //UIDs were being altered in funny ways sometimes. Write raw bytes instead.
+            auto tag_ptr = ds->getTag(group, order, tag, true);
+            auto rdh_ptr = tag_ptr->getDataHandlerRaw( 0, true, d_t );
+            rdh_ptr->copyFromMemory(reinterpret_cast<const uint8_t *>(val.data()),
+                                    static_cast<uint32_t>(val.size()));
+
+        //Time.
+        }else if( ( d_t == "TM" ) ||   //Time.
+                  ( d_t == "DA" )   ){ //Date.
+            //Strip away colons. Also strip away everything after the leading non-numeric char.
+            std::string digits_only(val);
+            digits_only = PurgeCharsFromString(digits_only,":-");
+            auto avec = SplitStringToVector(digits_only,'.','d');
+            avec.resize(1);
+            digits_only = Lineate_Vector(avec, "");
+
+            //The 'easy' way resulted in non-printable garbage fouling the times. Have to write raw ASCII chars manually...
+            auto tag_ptr = ds->getTag(group, order, tag, true);
+            auto rdh_ptr = tag_ptr->getDataHandlerRaw( 0, true, d_t );
+            rdh_ptr->copyFromMemory(reinterpret_cast<const uint8_t *>(digits_only.data()),
+                                    static_cast<uint32_t>(digits_only.size()));
+
+        //Binary types.
+        }else if( d_t == "OB" ){
+            return ds_OB_insert(ds, group, tag, i_val);
+
+        //Numeric types.
+        }else if(
+            ( d_t == "FL") ||   //Floating-point.
+            ( d_t == "FD") ||   //Floating-point double.
+            ( d_t == "OF") ||   //"Other" floating-point.
+            ( d_t == "OD")   ){ //"Other" floating-point double.
+                ds->setString(group, order, tag, element++, val, "DS"); //Try keep it as a string.
+        }else if( ( d_t == "SL" ) ||   //Signed long int (32bit).
+                  ( d_t == "SS" )   ){ //Signed short int (16bit).
+            const auto conv = static_cast<int32_t>(std::stol(val));
+            ds->setSignedLong(group, order, tag, element++, conv, d_t);
+
+        }else if( ( d_t == "UL" ) ||   //Unsigned long int (32bit).
+                  ( d_t == "US" )   ){ //Unsigned short int (16bit).
+            const auto conv = static_cast<uint32_t>(std::stoul(val));
+            ds->setUnsignedLong(group, order, tag, element++, conv, d_t);
+
+        }else if( d_t == "IS" ){ //Integer string.
+                ds->setString(group, order, tag, element++, val, "IS");
+
+        //Types we cannot process because they are special (e.g., sequences) or don't currently support.
+        }else if( d_t == "SQ"){ //Sequence.
+            throw std::runtime_error("Unable to write VR type SQ (sequence) with this routine.");
+        }else if( d_t == "UN"){ //Unknown.
+            throw std::runtime_error("Unable to write VR type UN (unknown) with this routine.");
+        }else{
+            throw std::runtime_error("Unknown VR type. Cannot write to tag.");
+        }
+    }
+
+    return;
+}
+
+// This routine writes a sequence tag into the given DICOM data set in the default encoding style for the tag.
+//
+// Note that an existing sequence will be used if present. If a new sequence should be used, create a new data set,
+// insert the sequence, and then join with the top-level data set (or recursively, as needed).
+static
+void
+ds_seq_insert(puntoexe::ptr<puntoexe::imebra::dataSet> &ds, 
+              uint16_t seq_group, uint16_t seq_tag, 
+              uint16_t tag_group, uint16_t tag_tag,
+              std::string tag_val){
+    const uint32_t first_order = 0; // Always zero for modern DICOM files.
+
+    //Get a reference to an existing sequence item, or create one if needed.
+    const bool create_if_not_found = true;
+    auto tag_ptr = ds->getTag(seq_group, first_order, seq_tag, create_if_not_found);
+    if(tag_ptr == nullptr) return;
+
+    //Prefer to append to an existing dataSet rather than creating an additional one.
+    auto lds = tag_ptr->getDataSet(0);
+    if( lds == nullptr ) lds = puntoexe::ptr<puntoexe::imebra::dataSet>(new puntoexe::imebra::dataSet);
+    ds_insert(lds, tag_group, tag_tag, tag_val);
+    tag_ptr->setDataSet( 0, lds );
+
+    return;
+}
+
 
 
 //------------------ General ----------------------
@@ -2047,7 +2181,7 @@ void Write_Dose_Array(std::shared_ptr<Image_Array> IA, const std::string &Filena
                                     + std::to_string(image_pos.y) + R"***(\)***"_s
                                     + std::to_string(image_pos.z);
 
-    //Assume images abut (i.e., are contiguous) and perfectly parallel.
+    //Assume images abut (i.e., are contiguous) and perfectly parallel (i.e., the voxels form a rectilinear grid).
     const auto pxl_dz = IA->imagecoll.images.front().pxl_dz;
     const auto SliceThickness = std::to_string(pxl_dz);
     std::string GridFrameOffsetVector;
@@ -2060,129 +2194,15 @@ void Write_Dose_Array(std::shared_ptr<Image_Array> IA, const std::string &Filena
         }
     }
 
-    auto ds_OB_insert = [](ptr<imebra::dataSet> &ds, uint16_t group, uint16_t tag, std::string i_val) -> void {
-        const uint16_t order = 0;
-        
-        //For OB type, we simply copy the string's buffer as-is. 
-        const auto d_t = ds->getDefaultDataType(group, tag);
-
-        if( d_t == "OB" ){
-            auto tag_ptr = ds->getTag(group, order, tag, true);
-            //const auto next_buff = tag_ptr->getBuffersCount() - 1;
-            //auto rdh_ptr = tag_ptr->getDataHandlerRaw( next_buff, true, d_t );
-            auto rdh_ptr = tag_ptr->getDataHandlerRaw( 0, true, d_t );
-            rdh_ptr->copyFromMemory(reinterpret_cast<const uint8_t *>(i_val.data()),
-                                    static_cast<uint32_t>(i_val.size()));
-        }else{
-            throw std::runtime_error("A non-OB VR type was passed to the OB VR type writer.");
-        }
-        return;
-    };
-
-    auto ds_insert = [&ds_OB_insert](ptr<imebra::dataSet> &ds, uint16_t group, uint16_t tag, std::string i_val) -> void {
-        const uint16_t order = 0;
-        uint32_t element = 0;
-
-        //Search for '\' characters. If present, split the string up and register each token separately.
-        auto tokens = SplitStringToVector(i_val, '\\', 'd');
-        for(auto &val : tokens){
-            //Attempt to convert to the default DICOM data type.
-            const auto d_t = ds->getDefaultDataType(group, tag);
-
-            //Types not requiring conversion from a string.
-            if( ( d_t == "AE") || ( d_t == "AS") || ( d_t == "AT") ||
-                ( d_t == "CS") || ( d_t == "DS") || ( d_t == "DT") ||
-                ( d_t == "LO") || ( d_t == "LT") || ( d_t == "OW") ||
-                ( d_t == "PN") || ( d_t == "SH") || ( d_t == "ST") ||
-                ( d_t == "UT")   ){
-                    ds->setString(group, order, tag, element++, val, d_t);
- 
-            //UIDs.
-            }else if( d_t == "UI" ){   //UIDs.
-                //UIDs were being altered in funny ways sometimes. Write raw bytes instead.
-                auto tag_ptr = ds->getTag(group, order, tag, true);
-                auto rdh_ptr = tag_ptr->getDataHandlerRaw( 0, true, d_t );
-                rdh_ptr->copyFromMemory(reinterpret_cast<const uint8_t *>(val.data()),
-                                        static_cast<uint32_t>(val.size()));
-
-            //Time.
-            }else if( ( d_t == "TM" ) ||   //Time.
-                      ( d_t == "DA" )   ){ //Date.
-                //Strip away colons. Also strip away everything after the leading non-numeric char.
-                std::string digits_only(val);
-                digits_only = PurgeCharsFromString(digits_only,":-");
-                auto avec = SplitStringToVector(digits_only,'.','d');
-                avec.resize(1);
-                digits_only = Lineate_Vector(avec, "");
-
-                //The 'easy' way resulted in non-printable garbage fouling the times. Have to write raw ASCII chars manually...
-                auto tag_ptr = ds->getTag(group, order, tag, true);
-                auto rdh_ptr = tag_ptr->getDataHandlerRaw( 0, true, d_t );
-                rdh_ptr->copyFromMemory(reinterpret_cast<const uint8_t *>(digits_only.data()),
-                                        static_cast<uint32_t>(digits_only.size()));
-
-            //Binary types.
-            }else if( d_t == "OB" ){
-                return ds_OB_insert(ds, group, tag, i_val);
-
-            //Numeric types.
-            }else if(
-                ( d_t == "FL") ||   //Floating-point.
-                ( d_t == "FD") ||   //Floating-point double.
-                ( d_t == "OF") ||   //"Other" floating-point.
-                ( d_t == "OD")   ){ //"Other" floating-point double.
-                    ds->setString(group, order, tag, element++, val, "DS"); //Try keep it as a string.
-            }else if( ( d_t == "SL" ) ||   //Signed long int (32bit).
-                      ( d_t == "SS" )   ){ //Signed short int (16bit).
-                const auto conv = static_cast<int32_t>(std::stol(val));
-                ds->setSignedLong(group, order, tag, element++, conv, d_t);
-
-            }else if( ( d_t == "UL" ) ||   //Unsigned long int (32bit).
-                      ( d_t == "US" )   ){ //Unsigned short int (16bit).
-                const auto conv = static_cast<uint32_t>(std::stoul(val));
-                ds->setUnsignedLong(group, order, tag, element++, conv, d_t);
-
-            }else if( d_t == "IS" ){ //Integer string.
-                    ds->setString(group, order, tag, element++, val, "IS");
-
-            //Types we cannot process because they are special (e.g., sequences) or don't currently support.
-            }else if( d_t == "SQ"){ //Sequence.
-                throw std::runtime_error("Unable to write VR type SQ (sequence) with this routine.");
-            }else if( d_t == "UN"){ //Unknown.
-                throw std::runtime_error("Unable to write VR type UN (unknown) with this routine.");
-            }else{
-                throw std::runtime_error("Unknown VR type. Cannot write to tag.");
-            }
-        }
-        return;
-    };
-
-    auto ds_seq_insert = [&ds_insert](ptr<imebra::dataSet> &ds, uint16_t seq_group, uint16_t seq_tag, 
-                                                      uint16_t tag_group, uint16_t tag_tag, std::string tag_val) -> void {
-        const uint32_t first_order = 0; // Always zero for modern DICOM files.
-
-        //Get a reference to an existing sequence item, or create one if needed.
-        const bool create_if_not_found = true;
-        auto tag_ptr = ds->getTag(seq_group, first_order, seq_tag, create_if_not_found);
-        if(tag_ptr == nullptr) return;
-
-        //Prefer to append to an existing dataSet rather than creating an additional one.
-        auto lds = tag_ptr->getDataSet(0);
-        if( lds == nullptr ) lds = ptr<imebra::dataSet>(new imebra::dataSet);
-        ds_insert(lds, tag_group, tag_tag, tag_val);
-        tag_ptr->setDataSet( 0, lds );
-        return;
-    };
-
     auto fne = [](std::vector<std::string> l) -> std::string {
-        //fne == "First non-empty".
+        //fne == "First non-empty". Note this routine will throw if all provided strings are empty.
         for(auto &s : l) if(!s.empty()) return s;
         throw std::runtime_error("All inputs were empty -- unable to provide a nonempty string.");
         return std::string();
     };
 
     auto foe = [](std::vector<std::string> l) -> std::string {
-        //foe == "First non-empty Or Rmpty".
+        //foe == "First non-empty Or Empty". (i.e., will not throw if all provided strings are empty.)
         for(auto &s : l) if(!s.empty()) return s;
         return std::string(); 
     };

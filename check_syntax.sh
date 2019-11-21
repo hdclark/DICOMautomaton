@@ -23,7 +23,7 @@ export LC_ALL=""
 
 check_syntax () {
     local f="$@"
-    [ -f "$f" ] && g++ --std=c++17 -fsyntax-only "$f"
+    [ -f "$f" ] && g++ --std=c++17 -fsyntax-only -I'src/imebra20121219/library/imebra/include/' "$f"
 }
 export -f check_syntax
 
@@ -40,7 +40,8 @@ export -f check_syntax
 # Check only modified and untracked files.
 git ls-files -z -o -m "$@" |
   grep -z -E '*[.]h|*[.]cc|*[.]cpp' |
-    grep -z -i -v '.*imebra.*' |
+    `# Ignore imebra headers. Useful for spelunking and testing... ` \
+    `# grep -z -i -v '.*imebra.*' |   ` \
   xargs -0 -I '{}' -P $(nproc || echo 2) -n 1 -r \
     bash -c "check_syntax '{}'"
 
