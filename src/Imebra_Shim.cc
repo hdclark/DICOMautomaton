@@ -36,6 +36,7 @@
 #pragma GCC diagnostic pop
 
 #include "Imebra_Shim.h"
+#include "DCMA_DICOM.h"
 #include "Structs.h"
 #include "YgorContainers.h" //Needed for 'bimap' class.
 #include "YgorMath.h"       //Needed for 'vec3' class.
@@ -274,15 +275,16 @@ extract_seq_vec_tag_as_string( puntoexe::ptr<puntoexe::imebra::dataSet> base_nod
 static
 void
 ds_OB_insert(puntoexe::ptr<puntoexe::imebra::dataSet> &ds, 
-             uint16_t group, uint16_t tag, 
+             path_node pn,
+//             uint16_t group, uint16_t tag, 
              std::string i_val){
-    const uint16_t order = 0;
+//    const uint16_t order = 0;
     
     //For OB type, we simply copy the string's buffer as-is. 
-    const auto d_t = ds->getDefaultDataType(group, tag);
+    const auto d_t = ds->getDefaultDataType(pn.group, pn.tag);
 
     if( d_t == "OB" ){
-        auto tag_ptr = ds->getTag(group, order, tag, true);
+        auto tag_ptr = ds->getTag(pn.group, pn.order, pn.tag, true);
         //const auto next_buff = tag_ptr->getBuffersCount() - 1;
         //auto rdh_ptr = tag_ptr->getDataHandlerRaw( next_buff, true, d_t );
         auto rdh_ptr = tag_ptr->getDataHandlerRaw( 0, true, d_t );
@@ -298,16 +300,20 @@ ds_OB_insert(puntoexe::ptr<puntoexe::imebra::dataSet> &ds,
 static
 void
 ds_insert(puntoexe::ptr<puntoexe::imebra::dataSet> &ds,
-          uint16_t group, uint16_t tag,
+          path_node pn,
+//          uint16_t group, uint16_t tag,
           std::string i_val){
-    const uint16_t order = 0;
-    uint32_t element = 0;
+//    const uint16_t order = 0;
+//    uint32_t element = 0;
+
+//    pn.order = 0;
+//    pn.element = 0;
 
     //Search for '\' characters. If present, split the string up and register each token separately.
     auto tokens = SplitStringToVector(i_val, '\\', 'd');
     for(auto &val : tokens){
         //Attempt to convert to the default DICOM data type.
-        const auto d_t = ds->getDefaultDataType(group, tag);
+        const auto d_t = ds->getDefaultDataType(pn.group, pn.tag);
 
         //Types not requiring conversion from a string.
         if( ( d_t == "AE") || ( d_t == "AS") || ( d_t == "AT") ||
@@ -315,12 +321,12 @@ ds_insert(puntoexe::ptr<puntoexe::imebra::dataSet> &ds,
             ( d_t == "LO") || ( d_t == "LT") || ( d_t == "OW") ||
             ( d_t == "PN") || ( d_t == "SH") || ( d_t == "ST") ||
             ( d_t == "UT")   ){
-                ds->setString(group, order, tag, element++, val, d_t);
+                ds->setString(pn.group, pn.order, pn.tag, pn.element++, val, d_t);
 
         //UIDs.
         }else if( d_t == "UI" ){   //UIDs.
             //UIDs were being altered in funny ways sometimes. Write raw bytes instead.
-            auto tag_ptr = ds->getTag(group, order, tag, true);
+            auto tag_ptr = ds->getTag(pn.group, pn.order, pn.tag, true);
             auto rdh_ptr = tag_ptr->getDataHandlerRaw( 0, true, d_t );
             rdh_ptr->copyFromMemory(reinterpret_cast<const uint8_t *>(val.data()),
                                     static_cast<uint32_t>(val.size()));
@@ -336,14 +342,14 @@ ds_insert(puntoexe::ptr<puntoexe::imebra::dataSet> &ds,
             digits_only = Lineate_Vector(avec, "");
 
             //The 'easy' way resulted in non-printable garbage fouling the times. Have to write raw ASCII chars manually...
-            auto tag_ptr = ds->getTag(group, order, tag, true);
+            auto tag_ptr = ds->getTag(pn.group, pn.order, pn.tag, true);
             auto rdh_ptr = tag_ptr->getDataHandlerRaw( 0, true, d_t );
             rdh_ptr->copyFromMemory(reinterpret_cast<const uint8_t *>(digits_only.data()),
                                     static_cast<uint32_t>(digits_only.size()));
 
         //Binary types.
         }else if( d_t == "OB" ){
-            return ds_OB_insert(ds, group, tag, i_val);
+            return ds_OB_insert(ds, pn, i_val);
 
         //Numeric types.
         }else if(
@@ -351,19 +357,19 @@ ds_insert(puntoexe::ptr<puntoexe::imebra::dataSet> &ds,
             ( d_t == "FD") ||   //Floating-point double.
             ( d_t == "OF") ||   //"Other" floating-point.
             ( d_t == "OD")   ){ //"Other" floating-point double.
-                ds->setString(group, order, tag, element++, val, "DS"); //Try keep it as a string.
+                ds->setString(pn.group, pn.order, pn.tag, pn.element++, val, "DS"); //Try keep it as a string.
         }else if( ( d_t == "SL" ) ||   //Signed long int (32bit).
                   ( d_t == "SS" )   ){ //Signed short int (16bit).
             const auto conv = static_cast<int32_t>(std::stol(val));
-            ds->setSignedLong(group, order, tag, element++, conv, d_t);
+            ds->setSignedLong(pn.group, pn.order, pn.tag, pn.element++, conv, d_t);
 
         }else if( ( d_t == "UL" ) ||   //Unsigned long int (32bit).
                   ( d_t == "US" )   ){ //Unsigned short int (16bit).
             const auto conv = static_cast<uint32_t>(std::stoul(val));
-            ds->setUnsignedLong(group, order, tag, element++, conv, d_t);
+            ds->setUnsignedLong(pn.group, pn.order, pn.tag, pn.element++, conv, d_t);
 
         }else if( d_t == "IS" ){ //Integer string.
-                ds->setString(group, order, tag, element++, val, "IS");
+                ds->setString(pn.group, pn.order, pn.tag, pn.element++, val, "IS");
 
         //Types we cannot process because they are special (e.g., sequences) or don't currently support.
         }else if( d_t == "SQ"){ //Sequence.
@@ -385,24 +391,152 @@ ds_insert(puntoexe::ptr<puntoexe::imebra::dataSet> &ds,
 static
 void
 ds_seq_insert(puntoexe::ptr<puntoexe::imebra::dataSet> &ds, 
-              uint16_t seq_group, uint16_t seq_tag, 
-              uint16_t tag_group, uint16_t tag_tag,
+              path_node seq_pn,
+              path_node tag_pn,
+//              uint16_t seq_group, uint16_t seq_tag, 
+//              uint16_t tag_group, uint16_t tag_tag,
               std::string tag_val){
-    const uint32_t first_order = 0; // Always zero for modern DICOM files.
+//    const uint32_t first_order = 0; // Always zero for modern DICOM files.
+    seq_pn.order = 0; // Always zero for modern DICOM files.
 
     //Get a reference to an existing sequence item, or create one if needed.
     const bool create_if_not_found = true;
-    auto tag_ptr = ds->getTag(seq_group, first_order, seq_tag, create_if_not_found);
+    auto tag_ptr = ds->getTag(seq_pn.group, seq_pn.order, seq_pn.tag, create_if_not_found);
     if(tag_ptr == nullptr) return;
 
     //Prefer to append to an existing dataSet rather than creating an additional one.
     auto lds = tag_ptr->getDataSet(0);
     if( lds == nullptr ) lds = puntoexe::ptr<puntoexe::imebra::dataSet>(new puntoexe::imebra::dataSet);
-    ds_insert(lds, tag_group, tag_tag, tag_val);
+    ds_insert(lds, tag_pn, tag_val);
     tag_ptr->setDataSet( 0, lds );
 
     return;
 }
+
+
+/*
+// This routine writes a sequence tag into the given DICOM data set in the default encoding style for the tag.
+//
+// Note that the element number will be honoured and treated as a sequence item number for each sequence node.
+// If sequence numbers are not continuous, then nullptr sequence items will be allocated. This could be confusing
+// to work with afterward.
+static
+void
+ds_seq_insert(puntoexe::ptr<puntoexe::imebra::dataSet> &ds, 
+              std::deque<path_node> apath,
+              std::string tag_val){
+    //seq_pn.order = 0; // Always zero for modern DICOM files.
+
+    if(ds == nullptr) throw std::logic_error("Passed invalid base node. Cannot continue.");
+    if(apath.empty()) throw std::logic_error("Reached DICOM path terminus node -- verify element group/tag are valid.");
+
+    // Extract info about the current node.
+    const auto this_node = apath.front();
+    apath.pop_front();
+
+FUNCINFO("ds_seq_insert() to " << std::hex << this_node.group   << ", "
+                               << std::hex << this_node.order   << ", "
+                               << std::hex << this_node.tag     << ", "
+                               << std::hex << this_node.element << ", "
+                               << "'" << tag_val << "'");
+
+//    //If this is a sequence, jump to the sequence node as the new base and recurse.
+//    if(!apath.empty()){
+//FUNCINFO("    This node is NOT a leaf node. Creating a sequence tag");
+//
+//        // Request the sequence item with the item number == the element number.
+//        // If it does not exist it will not be created automatically.
+//        auto seq_ptr = ds->getSequenceItem(this_node.group, this_node.order,
+//                                           this_node.tag,   this_node.element);
+//        if(seq_ptr == nullptr){
+//FUNCINFO("        The sequence tag does NOT yet exist. Creating a new sequence tag and data set");
+//            // The sequence tag does not yet exist, so we need to create it.
+//            const bool create_if_not_found = true;
+//            auto tag_ptr = ds->getTag(this_node.group, this_node.order, 
+//                                      this_node.tag, create_if_not_found);
+//            if(tag_ptr == nullptr) throw std::logic_error("Failed to create a sequence tag");
+//
+//            // Associate a data set with the sequence tag, creating a numbered 'item' in the sequence and permitting the
+//            // leaf node to be written.
+//            //
+//            // Note: If data sets with smaller element numbers do not already exist, space for them will be allocated.
+//            //       Avoid supplying excessively large element numbers.
+//            //
+//            // Note: See imebra/library/imebra/src/dataSet.cpp, line 893 (getSequenceItem()) for more info
+//            //
+//            auto lds = puntoexe::ptr<puntoexe::imebra::dataSet>(new puntoexe::imebra::dataSet);
+//
+//            // Ensure the character set matches that of the (soon-to-be) parent node.
+//            //
+//            // Note: If the character sets do not correctly match Imebra will throw 'Different default charsets'.
+//            {
+//                puntoexe::imebra::charsetsList::tCharsetsList csl;
+//                ds->getCharsetsList(&csl);
+//                lds->setCharsetsList(&csl);
+//            }
+//
+//            // Recurse, writing to the pristine data set.
+//            ds_seq_insert(lds, apath, tag_val);
+//
+//            // Attach the data set to the sequence item.
+//            //tag_ptr->appendDataSet( lds );
+//            tag_ptr->setDataSet( this_node.element, lds );
+//            //tag_ptr->setDataSet( 0, lds );
+//            //seq_ptr = lds;
+//        }else{
+//
+//FUNCINFO("        The sequence tag DOES exist. Reusing it directly");
+//            ds_seq_insert(seq_ptr, apath, tag_val);
+//        }
+//
+//    //Otherwise, this is a leaf node. Insert the tag into the current sequence.
+//    }else{
+//FUNCINFO("    This node is a leaf node. Creating a leaf tag");
+//        ds_insert(ds, this_node, tag_val);
+//    }
+
+    //If this is a sequence, jump to the sequence node as the new base and recurse.
+    if(!apath.empty()){
+FUNCINFO("    This node is NOT a leaf node. Creating a sequence tag");
+
+        const bool create_if_not_found = true;
+        auto tag_ptr = ds->getTag(this_node.group, this_node.order, 
+                                  this_node.tag, create_if_not_found);
+        if(tag_ptr == nullptr) throw std::logic_error("Failed to locate or create a sequence tag");
+
+        auto lds = tag_ptr->getDataSet(this_node.element);
+        if(lds == nullptr){
+            // Associate a data set with the sequence tag, creating a numbered 'item' in the sequence and permitting the
+            // leaf node to be written.
+            //
+            // Note: If data sets with smaller element numbers do not already exist, space for them will be allocated.
+            //       Avoid supplying excessively large element numbers.
+            //
+            // Note: See imebra/library/imebra/src/dataSet.cpp, line 893 (getSequenceItem()) for more info
+            //
+            lds = puntoexe::ptr<puntoexe::imebra::dataSet>(new puntoexe::imebra::dataSet);
+
+            // Ensure the character set matches that of the (soon-to-be) parent node.
+            //
+            // Note: If the character sets do not correctly match Imebra will throw 'Different default charsets'.
+            //{
+            //    puntoexe::imebra::charsetsList::tCharsetsList csl;
+            //    ds->getCharsetsList(&csl);
+            //    lds->setCharsetsList(&csl);
+            //}
+            tag_ptr->setDataSet( this_node.element, lds );
+        }
+
+        ds_seq_insert(lds, apath, tag_val);
+
+    //Otherwise, this is a leaf node. Insert the tag into the current sequence.
+    }else{
+FUNCINFO("    This node is a leaf node. Creating a leaf tag");
+        ds_insert(ds, this_node, tag_val);
+    }
+    return;
+}
+*/
 
 
 
@@ -2111,7 +2245,7 @@ static std::string Generate_Random_Int_Str(long int L, long int H){
 // 
 // NOTE: This routine will reorder images.
 //
-// NOTE: Images containin NaN's will probably be rejected by most programs! Filter them out beforehand.
+// NOTE: Images containing NaN's will probably be rejected by most programs! Filter them out beforehand.
 //
 // NOTE: Exported files were tested successfully with Varian Eclipse v11. A valid DICOM file is needed to link
 //       existing UIDs. Images created from scratch and lacking, e.g., a valid FrameOfReferenceUID, have not been
@@ -2296,149 +2430,149 @@ void Write_Dose_Array(std::shared_ptr<Image_Array> IA, const std::string &Filena
         const auto SOPInstanceUID = Generate_Random_UID(60);
 
         //DICOM Header Metadata.
-        ds_OB_insert(tds, 0x0002, 0x0001,  std::string(1,static_cast<char>(0))
-                                         + std::string(1,static_cast<char>(1)) ); //"FileMetaInformationVersion".
-        //ds_insert(tds, 0x0002, 0x0001, R"***(2/0/0/0/0/1)***"); //shtl); //"FileMetaInformationVersion".
-        ds_insert(tds, 0x0002, 0x0002, "1.2.840.10008.5.1.4.1.1.481.2"); //"MediaStorageSOPClassUID" (Radiation Therapy Dose Storage)
-        ds_insert(tds, 0x0002, 0x0003, SOPInstanceUID); //"MediaStorageSOPInstanceUID".
-        ds_insert(tds, 0x0002, 0x0010, "1.2.840.10008.1.2.1"); //"TransferSyntaxUID".
-        ds_insert(tds, 0x0002, 0x0013, "DICOMautomaton"); //"ImplementationVersionName".
-        ds_insert(tds, 0x0002, 0x0012, "1.2.513.264.765.1.1.578"); //"ImplementationClassUID".
+        ds_OB_insert(tds, {0x0002, 0x0001},  std::string(1,static_cast<char>(0))
+                                           + std::string(1,static_cast<char>(1)) ); //"FileMetaInformationVersion".
+        //ds_insert(tds, {0x0002, 0x0001}, R"***(2/0/0/0/0/1)***"); //shtl); //"FileMetaInformationVersion".
+        ds_insert(tds, {0x0002, 0x0002}, "1.2.840.10008.5.1.4.1.1.481.2"); //"MediaStorageSOPClassUID" (Radiation Therapy Dose Storage)
+        ds_insert(tds, {0x0002, 0x0003}, SOPInstanceUID); //"MediaStorageSOPInstanceUID".
+        ds_insert(tds, {0x0002, 0x0010}, "1.2.840.10008.1.2.1"); //"TransferSyntaxUID".
+        ds_insert(tds, {0x0002, 0x0013}, "DICOMautomaton"); //"ImplementationVersionName".
+        ds_insert(tds, {0x0002, 0x0012}, "1.2.513.264.765.1.1.578"); //"ImplementationClassUID".
 
         //SOP Common Module.
-        ds_insert(tds, 0x0008, 0x0016, "1.2.840.10008.5.1.4.1.1.481.2"); // "SOPClassUID"
-        ds_insert(tds, 0x0008, 0x0018, SOPInstanceUID); // "SOPInstanceUID"
-        //ds_insert(tds, 0x0008, 0x0005, "ISO_IR 100"); //fne({ cm["SpecificCharacterSet"], "ISO_IR 100" })); // Set above!
-        ds_insert(tds, 0x0008, 0x0012, fne({ cm["InstanceCreationDate"], "19720101" }));
-        ds_insert(tds, 0x0008, 0x0013, fne({ cm["InstanceCreationTime"], "010101" }));
-        ds_insert(tds, 0x0008, 0x0014, foe({ cm["InstanceCreatorUID"] }));
-        ds_insert(tds, 0x0008, 0x0114, foe({ cm["CodingSchemeExternalUID"] }));
-        ds_insert(tds, 0x0020, 0x0013, foe({ cm["InstanceNumber"] }));
+        ds_insert(tds, {0x0008, 0x0016}, "1.2.840.10008.5.1.4.1.1.481.2"); // "SOPClassUID"
+        ds_insert(tds, {0x0008, 0x0018}, SOPInstanceUID); // "SOPInstanceUID"
+        //ds_insert(tds, {0x0008, 0x0005}, "ISO_IR 100"); //fne({ cm["SpecificCharacterSet"], "ISO_IR 100" })); // Set above!
+        ds_insert(tds, {0x0008, 0x0012}, fne({ cm["InstanceCreationDate"], "19720101" }));
+        ds_insert(tds, {0x0008, 0x0013}, fne({ cm["InstanceCreationTime"], "010101" }));
+        ds_insert(tds, {0x0008, 0x0014}, foe({ cm["InstanceCreatorUID"] }));
+        ds_insert(tds, {0x0008, 0x0114}, foe({ cm["CodingSchemeExternalUID"] }));
+        ds_insert(tds, {0x0020, 0x0013}, foe({ cm["InstanceNumber"] }));
 
         //Patient Module.
-        ds_insert(tds, 0x0010, 0x0010, fne({ cm["PatientsName"], "DICOMautomaton^DICOMautomaton" }));
-        ds_insert(tds, 0x0010, 0x0020, fne({ cm["PatientID"], "DCMA_"_s + Generate_Random_String_of_Length(10) }));
-        ds_insert(tds, 0x0010, 0x0030, fne({ cm["PatientsBirthDate"], "19720101" }));
-        ds_insert(tds, 0x0010, 0x0040, fne({ cm["PatientsGender"], "O" }));
-        ds_insert(tds, 0x0010, 0x0032, fne({ cm["PatientsBirthTime"], "010101" }));
+        ds_insert(tds, {0x0010, 0x0010}, fne({ cm["PatientsName"], "DICOMautomaton^DICOMautomaton" }));
+        ds_insert(tds, {0x0010, 0x0020}, fne({ cm["PatientID"], "DCMA_"_s + Generate_Random_String_of_Length(10) }));
+        ds_insert(tds, {0x0010, 0x0030}, fne({ cm["PatientsBirthDate"], "19720101" }));
+        ds_insert(tds, {0x0010, 0x0040}, fne({ cm["PatientsGender"], "O" }));
+        ds_insert(tds, {0x0010, 0x0032}, fne({ cm["PatientsBirthTime"], "010101" }));
 
         //General Study Module.
-        ds_insert(tds, 0x0020, 0x000D, fne({ cm["StudyInstanceUID"], Generate_Random_UID(31) }));
-        ds_insert(tds, 0x0008, 0x0020, fne({ cm["StudyDate"], "19720101" }));
-        ds_insert(tds, 0x0008, 0x0030, fne({ cm["StudyTime"], "010101" }));
-        ds_insert(tds, 0x0008, 0x0090, fne({ cm["ReferringPhysiciansName"], "UNSPECIFIED^UNSPECIFIED" }));
-        ds_insert(tds, 0x0020, 0x0010, fne({ cm["StudyID"], "DCMA_"_s + Generate_Random_String_of_Length(10) }));
-        ds_insert(tds, 0x0008, 0x0050, fne({ cm["AccessionNumber"], Generate_Random_String_of_Length(14) }));
-        ds_insert(tds, 0x0008, 0x1030, fne({ cm["StudyDescription"], "UNSPECIFIED" }));
+        ds_insert(tds, {0x0020, 0x000D}, fne({ cm["StudyInstanceUID"], Generate_Random_UID(31) }));
+        ds_insert(tds, {0x0008, 0x0020}, fne({ cm["StudyDate"], "19720101" }));
+        ds_insert(tds, {0x0008, 0x0030}, fne({ cm["StudyTime"], "010101" }));
+        ds_insert(tds, {0x0008, 0x0090}, fne({ cm["ReferringPhysiciansName"], "UNSPECIFIED^UNSPECIFIED" }));
+        ds_insert(tds, {0x0020, 0x0010}, fne({ cm["StudyID"], "DCMA_"_s + Generate_Random_String_of_Length(10) }));
+        ds_insert(tds, {0x0008, 0x0050}, fne({ cm["AccessionNumber"], Generate_Random_String_of_Length(14) }));
+        ds_insert(tds, {0x0008, 0x1030}, fne({ cm["StudyDescription"], "UNSPECIFIED" }));
 
         //General Series Module.
-        ds_insert(tds, 0x0008, 0x0060, "RTDOSE");
-        ds_insert(tds, 0x0020, 0x000E, fne({ cm["SeriesInstanceUID"], Generate_Random_UID(31) }));
-        ds_insert(tds, 0x0020, 0x0011, fne({ cm["SeriesNumber"], Generate_Random_Int_Str(5000, 32767) })); // Upper: 2^15 - 1.
-        ds_insert(tds, 0x0008, 0x0021, foe({ cm["SeriesDate"] }));
-        ds_insert(tds, 0x0008, 0x0031, foe({ cm["SeriesTime"] }));
-        ds_insert(tds, 0x0008, 0x103E, fne({ cm["SeriesDescription"], "UNSPECIFIED" }));
-        ds_insert(tds, 0x0018, 0x0015, foe({ cm["BodyPartExamined"] }));
-        ds_insert(tds, 0x0018, 0x5100, foe({ cm["PatientPosition"] }));
-        ds_insert(tds, 0x0040, 0x1001, fne({ cm["RequestedProcedureID"], "UNSPECIFIED" }));
-        ds_insert(tds, 0x0040, 0x0009, fne({ cm["ScheduledProcedureStepID"], "UNSPECIFIED" }));
-        ds_insert(tds, 0x0008, 0x1070, fne({ cm["OperatorsName"], "UNSPECIFIED" }));
+        ds_insert(tds, {0x0008, 0x0060}, "RTDOSE");
+        ds_insert(tds, {0x0020, 0x000E}, fne({ cm["SeriesInstanceUID"], Generate_Random_UID(31) }));
+        ds_insert(tds, {0x0020, 0x0011}, fne({ cm["SeriesNumber"], Generate_Random_Int_Str(5000, 32767) })); // Upper: 2^15 - 1.
+        ds_insert(tds, {0x0008, 0x0021}, foe({ cm["SeriesDate"] }));
+        ds_insert(tds, {0x0008, 0x0031}, foe({ cm["SeriesTime"] }));
+        ds_insert(tds, {0x0008, 0x103E}, fne({ cm["SeriesDescription"], "UNSPECIFIED" }));
+        ds_insert(tds, {0x0018, 0x0015}, foe({ cm["BodyPartExamined"] }));
+        ds_insert(tds, {0x0018, 0x5100}, foe({ cm["PatientPosition"] }));
+        ds_insert(tds, {0x0040, 0x1001}, fne({ cm["RequestedProcedureID"], "UNSPECIFIED" }));
+        ds_insert(tds, {0x0040, 0x0009}, fne({ cm["ScheduledProcedureStepID"], "UNSPECIFIED" }));
+        ds_insert(tds, {0x0008, 0x1070}, fne({ cm["OperatorsName"], "UNSPECIFIED" }));
 
         //Patient Study Module.
-        ds_insert(tds, 0x0010, 0x1030, foe({ cm["PatientsMass"] }));
+        ds_insert(tds, {0x0010, 0x1030}, foe({ cm["PatientsMass"] }));
 
         //Frame of Reference Module.
-        ds_insert(tds, 0x0020, 0x0052, fne({ cm["FrameofReferenceUID"], Generate_Random_UID(32) }));
-        ds_insert(tds, 0x0020, 0x1040, fne({ cm["PositionReferenceIndicator"], "BB" }));
+        ds_insert(tds, {0x0020, 0x0052}, fne({ cm["FrameofReferenceUID"], Generate_Random_UID(32) }));
+        ds_insert(tds, {0x0020, 0x1040}, fne({ cm["PositionReferenceIndicator"], "BB" }));
 
         //General Equipment Module.
-        ds_insert(tds, 0x0008, 0x0070, fne({ cm["Manufacturer"], "UNSPECIFIED" }));
-        ds_insert(tds, 0x0008, 0x0080, fne({ cm["InstitutionName"], "UNSPECIFIED" }));
-        ds_insert(tds, 0x0008, 0x1010, fne({ cm["StationName"], "UNSPECIFIED" }));
-        ds_insert(tds, 0x0008, 0x1040, fne({ cm["InstitutionalDepartmentName"], "UNSPECIFIED" }));
-        ds_insert(tds, 0x0008, 0x1090, fne({ cm["ManufacturersModelName"], "UNSPECIFIED" }));
-        ds_insert(tds, 0x0018, 0x1020, fne({ cm["SoftwareVersions"], "UNSPECIFIED" }));
+        ds_insert(tds, {0x0008, 0x0070}, fne({ cm["Manufacturer"], "UNSPECIFIED" }));
+        ds_insert(tds, {0x0008, 0x0080}, fne({ cm["InstitutionName"], "UNSPECIFIED" }));
+        ds_insert(tds, {0x0008, 0x1010}, fne({ cm["StationName"], "UNSPECIFIED" }));
+        ds_insert(tds, {0x0008, 0x1040}, fne({ cm["InstitutionalDepartmentName"], "UNSPECIFIED" }));
+        ds_insert(tds, {0x0008, 0x1090}, fne({ cm["ManufacturersModelName"], "UNSPECIFIED" }));
+        ds_insert(tds, {0x0018, 0x1020}, fne({ cm["SoftwareVersions"], "UNSPECIFIED" }));
 
         //General Image Module.
-        ds_insert(tds, 0x0020, 0x0013, foe({ cm["InstanceNumber"] }));
-        //ds_insert(tds, 0x0020, 0x0020, fne({ cm["PatientOrientation"], "UNSPECIFIED" }));
-        ds_insert(tds, 0x0008, 0x0023, foe({ cm["ContentDate"] }));
-        ds_insert(tds, 0x0008, 0x0033, foe({ cm["ContentTime"] }));
-        //ds_insert(tds, 0x0008, 0x0008, fne({ cm["ImageType"], "UNSPECIFIED" }));
-        ds_insert(tds, 0x0020, 0x0012, foe({ cm["AcquisitionNumber"] }));
-        ds_insert(tds, 0x0008, 0x0022, foe({ cm["AcquisitionDate"] }));
-        ds_insert(tds, 0x0008, 0x0032, foe({ cm["AcquisitionTime"] }));
-        ds_insert(tds, 0x0008, 0x2111, foe({ cm["DerivationDescription"] }));
-        //insert_as_string_if_nonempty(0x0008, 0x9215, "DerivationCodeSequence"], "" }));
-        ds_insert(tds, 0x0020, 0x1002, foe({ cm["ImagesInAcquisition"] }));
-        ds_insert(tds, 0x0020, 0x4000, "Research image generated by DICOMautomaton. Not for clinical use!" ); //"ImageComments".
-        ds_insert(tds, 0x0028, 0x0300, foe({ cm["QualityControlImage"] }));
+        ds_insert(tds, {0x0020, 0x0013}, foe({ cm["InstanceNumber"] }));
+        //ds_insert(tds, {0x0020, 0x0020}, fne({ cm["PatientOrientation"], "UNSPECIFIED" }));
+        ds_insert(tds, {0x0008, 0x0023}, foe({ cm["ContentDate"] }));
+        ds_insert(tds, {0x0008, 0x0033}, foe({ cm["ContentTime"] }));
+        //ds_insert(tds, {0x0008, 0x0008}, fne({ cm["ImageType"], "UNSPECIFIED" }));
+        ds_insert(tds, {0x0020, 0x0012}, foe({ cm["AcquisitionNumber"] }));
+        ds_insert(tds, {0x0008, 0x0022}, foe({ cm["AcquisitionDate"] }));
+        ds_insert(tds, {0x0008, 0x0032}, foe({ cm["AcquisitionTime"] }));
+        ds_insert(tds, {0x0008, 0x2111}, foe({ cm["DerivationDescription"] }));
+        //insert_as_string_if_nonempty({0x0008, 0x9215}, "DerivationCodeSequence"], "" }));
+        ds_insert(tds, {0x0020, 0x1002}, foe({ cm["ImagesInAcquisition"] }));
+        ds_insert(tds, {0x0020, 0x4000}, "Research image generated by DICOMautomaton. Not for clinical use!" ); //"ImageComments".
+        ds_insert(tds, {0x0028, 0x0300}, foe({ cm["QualityControlImage"] }));
 
         //Image Plane Module.
-        ds_insert(tds, 0x0028, 0x0030, PixelSpacing );
-        ds_insert(tds, 0x0020, 0x0037, ImageOrientationPatient );
-        ds_insert(tds, 0x0020, 0x0032, ImagePositionPatient );
-        ds_insert(tds, 0x0018, 0x0050, SliceThickness );
-        ds_insert(tds, 0x0020, 0x1041, "" ); // foe({ cm["SliceLocation"] }));
+        ds_insert(tds, {0x0028, 0x0030}, PixelSpacing );
+        ds_insert(tds, {0x0020, 0x0037}, ImageOrientationPatient );
+        ds_insert(tds, {0x0020, 0x0032}, ImagePositionPatient );
+        ds_insert(tds, {0x0018, 0x0050}, SliceThickness );
+        ds_insert(tds, {0x0020, 0x1041}, "" ); // foe({ cm["SliceLocation"] }));
 
         //Image Pixel Module.
-        ds_insert(tds, 0x0028, 0x0002, fne({ cm["SamplesPerPixel"], "1" }));
-        ds_insert(tds, 0x0028, 0x0004, fne({ cm["PhotometricInterpretation"], "MONOCHROME2" }));
-        ds_insert(tds, 0x0028, 0x0010, fne({ std::to_string(row_count) })); // "Rows"
-        ds_insert(tds, 0x0028, 0x0011, fne({ std::to_string(col_count) })); // "Columns"
-        ds_insert(tds, 0x0028, 0x0100, "32" ); //fne({ cm["BitsAllocated"], "32" }));
-        ds_insert(tds, 0x0028, 0x0101, "32" ); //fne({ cm["BitsStored"], "32" }));
-        ds_insert(tds, 0x0028, 0x0102, "31" ); //fne({ cm["HighBit"], "31" }));
-        ds_insert(tds, 0x0028, 0x0103, "0" ); // Unsigned.   fne({ cm["PixelRepresentation"], "0" }));
-        ds_insert(tds, 0x0028, 0x0006, foe({ cm["PlanarConfiguration"] }));
-        ds_insert(tds, 0x0028, 0x0034, foe({ cm["PixelAspectRatio"] }));
+        ds_insert(tds, {0x0028, 0x0002}, fne({ cm["SamplesPerPixel"], "1" }));
+        ds_insert(tds, {0x0028, 0x0004}, fne({ cm["PhotometricInterpretation"], "MONOCHROME2" }));
+        ds_insert(tds, {0x0028, 0x0010}, fne({ std::to_string(row_count) })); // "Rows"
+        ds_insert(tds, {0x0028, 0x0011}, fne({ std::to_string(col_count) })); // "Columns"
+        ds_insert(tds, {0x0028, 0x0100}, "32" ); //fne({ cm["BitsAllocated"], "32" }));
+        ds_insert(tds, {0x0028, 0x0101}, "32" ); //fne({ cm["BitsStored"], "32" }));
+        ds_insert(tds, {0x0028, 0x0102}, "31" ); //fne({ cm["HighBit"], "31" }));
+        ds_insert(tds, {0x0028, 0x0103}, "0" ); // Unsigned.   fne({ cm["PixelRepresentation"], "0" }));
+        ds_insert(tds, {0x0028, 0x0006}, foe({ cm["PlanarConfiguration"] }));
+        ds_insert(tds, {0x0028, 0x0034}, foe({ cm["PixelAspectRatio"] }));
 
         //Multi-Frame Module.
-        ds_insert(tds, 0x0028, 0x0008, fne({ std::to_string(num_of_imgs) })); // "NumberOfFrames".
-        ds_insert(tds, 0x0028, 0x0009, fne({ cm["FrameIncrementPointer"], // Default to (3004,000c).
-                                             R"***(12292\12)***" })); // Imebra default deserialization, but is brittle and depends on endianness.
-                                             //"\x04\x30\x0c\x00" })); // Imebra won't accept this...
-        ds_insert(tds, 0x3004, 0x000c, GridFrameOffsetVector );
+        ds_insert(tds, {0x0028, 0x0008}, fne({ std::to_string(num_of_imgs) })); // "NumberOfFrames".
+        ds_insert(tds, {0x0028, 0x0009}, fne({ cm["FrameIncrementPointer"], // Default to (3004,000c).
+                                               R"***(12292\12)***" })); // Imebra default deserialization, but is brittle and depends on endianness.
+                                               //"\x04\x30\x0c\x00" })); // Imebra won't accept this...
+        ds_insert(tds, {0x3004, 0x000c}, GridFrameOffsetVector );
 
         //Modality LUT Module.
         //insert_as_string_if_nonempty(0x0028, 0x3000, "ModalityLUTSequence"], "" }));
-        ds_insert(tds, 0x0028, 0x3002, foe({ cm["LUTDescriptor"] }));
-        ds_insert(tds, 0x0028, 0x3004, foe({ cm["ModalityLUTType"] }));
-        ds_insert(tds, 0x0028, 0x3006, foe({ cm["LUTData"] }));
-        //ds_insert(tds, 0x0028, 0x1052, foe({ cm["RescaleIntercept"] })); // These force interpretation by Imebra
-        //ds_insert(tds, 0x0028, 0x1053, foe({ cm["RescaleSlope"] }));     //  as 8 byte pixel depth, regardless of
-        //ds_insert(tds, 0x0028, 0x1054, foe({ cm["RescaleType"] }));      //  the actual depth (@ current settings).
+        ds_insert(tds, {0x0028, 0x3002}, foe({ cm["LUTDescriptor"] }));
+        ds_insert(tds, {0x0028, 0x3004}, foe({ cm["ModalityLUTType"] }));
+        ds_insert(tds, {0x0028, 0x3006}, foe({ cm["LUTData"] }));
+        //ds_insert(tds, {0x0028, 0x1052}, foe({ cm["RescaleIntercept"] })); // These force interpretation by Imebra
+        //ds_insert(tds, {0x0028, 0x1053}, foe({ cm["RescaleSlope"] }));     //  as 8 byte pixel depth, regardless of
+        //ds_insert(tds, {0x0028, 0x1054}, foe({ cm["RescaleType"] }));      //  the actual depth (@ current settings).
 
         //RT Dose Module.
-        //ds_insert(tds, 0x0028, 0x0002, fne({ cm["SamplesPerPixel"], "1" }));
-        //ds_insert(tds, 0x0028, 0x0004, fne({ cm["PhotometricInterpretation"], "MONOCHROME2" }));
-        //ds_insert(tds, 0x0028, 0x0100, fne({ cm["BitsAllocated"], "32" }));
-        //ds_insert(tds, 0x0028, 0x0101, fne({ cm["BitsStored"], "32" }));
-        //ds_insert(tds, 0x0028, 0x0102, fne({ cm["HighBit"], "31" }));
-        //ds_insert(tds, 0x0028, 0x0103, fne({ cm["PixelRepresentation"], "0" }));
-        ds_insert(tds, 0x3004, 0x0002, fne({ cm["DoseUnits"], "GY" }));
-        ds_insert(tds, 0x3004, 0x0004, fne({ cm["DoseType"], "PHYSICAL" }));
-        ds_insert(tds, 0x3004, 0x000a, fne({ cm["DoseSummationType"], "PLAN" }));
-        ds_insert(tds, 0x3004, 0x000e, std::to_string(dose_scaling) ); //"DoseGridScaling"
+        //ds_insert(tds, {0x0028, 0x0002}, fne({ cm["SamplesPerPixel"], "1" }));
+        //ds_insert(tds, {0x0028, 0x0004}, fne({ cm["PhotometricInterpretation"], "MONOCHROME2" }));
+        //ds_insert(tds, {0x0028, 0x0100}, fne({ cm["BitsAllocated"], "32" }));
+        //ds_insert(tds, {0x0028, 0x0101}, fne({ cm["BitsStored"], "32" }));
+        //ds_insert(tds, {0x0028, 0x0102}, fne({ cm["HighBit"], "31" }));
+        //ds_insert(tds, {0x0028, 0x0103}, fne({ cm["PixelRepresentation"], "0" }));
+        ds_insert(tds, {0x3004, 0x0002}, fne({ cm["DoseUnits"], "GY" }));
+        ds_insert(tds, {0x3004, 0x0004}, fne({ cm["DoseType"], "PHYSICAL" }));
+        ds_insert(tds, {0x3004, 0x000a}, fne({ cm["DoseSummationType"], "PLAN" }));
+        ds_insert(tds, {0x3004, 0x000e}, std::to_string(dose_scaling) ); //"DoseGridScaling"
 
-        ds_seq_insert(tds, 0x300C, 0x0002, // "ReferencedRTPlanSequence" 
-                           0x0008, 0x1150, // "ReferencedSOPClassUID"
+        ds_seq_insert(tds, {0x300C, 0x0002},   // "ReferencedRTPlanSequence" 
+                           {0x0008, 0x1150}, // "ReferencedSOPClassUID"
                            fne({ cm[R"***(ReferencedRTPlanSequence/ReferencedSOPClassUID)***"],
                                  "1.2.840.10008.5.1.4.1.1.481.5" }) ); // "RTPlanStorage". Prefer existing UID.
-        ds_seq_insert(tds, 0x300C, 0x0002, // "ReferencedRTPlanSequence"
-                           0x0008, 0x1155, // "ReferencedSOPInstanceUID"
+        ds_seq_insert(tds, {0x300C, 0x0002},   // "ReferencedRTPlanSequence"
+                           {0x0008, 0x1155}, // "ReferencedSOPInstanceUID"
                            fne({ cm[R"***(ReferencedRTPlanSequence/ReferencedSOPInstanceUID)***"],
                                  Generate_Random_UID(32) }) );
   
         if(0 != cm.count(R"***(ReferencedFractionGroupSequence/ReferencedFractionGroupNumber)***")){
-            ds_seq_insert(tds, 0x300C, 0x0020, // "ReferencedFractionGroupSequence"
-                               0x300C, 0x0022, // "ReferencedFractionGroupNumber"
+            ds_seq_insert(tds, {0x300C, 0x0020},   // "ReferencedFractionGroupSequence"
+                               {0x300C, 0x0022}, // "ReferencedFractionGroupNumber"
                                foe({ cm[R"***(ReferencedFractionGroupSequence/ReferencedFractionGroupNumber)***"] }) );
         }
 
         if(0 != cm.count(R"***(ReferencedBeamSequence/ReferencedBeamNumber)***")){
-            ds_seq_insert(tds, 0x300C, 0x0004, // "ReferencedBeamSequence"
-                               0x300C, 0x0006, // "ReferencedBeamNumber"
+            ds_seq_insert(tds, {0x300C, 0x0004},   // "ReferencedBeamSequence"
+                               {0x300C, 0x0006}, // "ReferencedBeamNumber"
                                foe({ cm[R"***(ReferencedBeamSequence/ReferencedBeamNumber)***"] }) );
         }
     }
@@ -2476,6 +2610,346 @@ void Write_Dose_Array(std::shared_ptr<Image_Array> IA, const std::string &Filena
         ptr<streamWriter> writer(new streamWriter(outputStream));
         ptr<imebra::codecs::dicomCodec> writeCodec(new imebra::codecs::dicomCodec);
         writeCodec->write(writer, tds);
+    }
+
+    return;
+}
+
+//This routine writes a collection of planar contours to a DICOM RTSTRUCT-modality file.
+//
+void Write_Contours(std::list<std::reference_wrapper<contour_collection<double>>> CC,
+                    const std::string &FilenameOut,
+                    ParanoiaLevel Paranoia){
+    if( CC.empty() ){
+        throw std::runtime_error("No contours provided for export. Cannot continue.");
+    }
+
+    auto fne = [](std::vector<std::string> l) -> std::string {
+        //fne == "First non-empty". Note this routine will throw if all provided strings are empty.
+        for(auto &s : l) if(!s.empty()) return s;
+        throw std::runtime_error("All inputs were empty -- unable to provide a nonempty string.");
+        return std::string();
+    };
+
+    auto foe = [](std::vector<std::string> l) -> std::string {
+        //foe == "First non-empty Or Empty". (i.e., will not throw if all provided strings are empty.)
+        for(auto &s : l) if(!s.empty()) return s;
+        return std::string(); 
+    };
+
+    DCMA_DICOM::Encoding enc = DCMA_DICOM::Encoding::ELE;
+    DCMA_DICOM::Node root_node;
+
+    //Generate some UIDs that need to be duplicated.
+    const auto SOPInstanceUID = Generate_Random_UID(60);
+    const auto FrameOfReferenceUID = Generate_Random_UID(60);
+    // TODO: Sample any existing UID (ReferencedFrameOfReferenceUID or FrameofReferenceUID). Probably OK to use only
+    // the first in this case though...
+
+
+    //Top-level stuff: metadata shared by all images.
+    {
+        auto cm = contour_collection<double>().get_common_metadata( CC, {} );
+
+        //Replace any metadata that might be used to underhandedly link patients, if requested.
+        if((Paranoia == ParanoiaLevel::Medium) || (Paranoia == ParanoiaLevel::High)){
+            //SOP Common Module.
+            cm["InstanceCreationDate"] = "";
+            cm["InstanceCreationTime"] = "";
+            cm["InstanceCreatorUID"]   = Generate_Random_UID(60);
+
+            //Patient Module.
+            cm["PatientsBirthDate"] = "";
+            cm["PatientsGender"]    = "";
+            cm["PatientsBirthTime"] = "";
+
+            //General Study Module.
+            cm["StudyInstanceUID"] = "";
+            cm["StudyDate"] = "";
+            cm["StudyTime"] = "";
+            cm["ReferringPhysiciansName"] = "";
+            cm["StudyID"] = "";
+            cm["AccessionNumber"] = "";
+            cm["StudyDescription"] = "";
+
+            //General Series Module.
+            cm["SeriesInstanceUID"] = "";
+            cm["SeriesNumber"] = "";
+            cm["SeriesDate"] = "";
+            cm["SeriesTime"] = "";
+            cm["SeriesDescription"] = "";
+            cm["RequestedProcedureID"] = "";                          // Appropriate?
+            cm["ScheduledProcedureStepID"] = "";                          // Appropriate?
+            cm["OperatorsName"] = "";                          // Appropriate?
+
+            //Patient Study Module.
+            cm["PatientsMass"] = "";                          // Appropriate?
+
+            //Frame of Reference Module.
+            cm["PositionReferenceIndicator"] = "";              // Appropriate?
+
+            //General Equipment Module.
+            cm["Manufacturer"] = "";
+            cm["InstitutionName"] = "";             // Appropriate?
+            cm["StationName"] = "";             // Appropriate?
+            cm["InstitutionalDepartmentName"] = "";             // Appropriate?
+            cm["ManufacturersModelName"] = "";
+            cm["SoftwareVersions"] = "";
+
+            //Structure Set Module.
+            cm["StructureSetDescription"] = "";
+            cm["StructureSetDate"] = "";
+            cm["StructureSetTime"] = "";
+        }
+        if(Paranoia == ParanoiaLevel::High){
+            //Patient Module.
+            cm["PatientsName"]      = "";
+            cm["PatientID"]         = "";
+
+            //Frame of Reference Module.
+            cm["FrameofReferenceUID"] = "";
+
+            //Structure Set Module.
+            cm["StructureSetLabel"] = "UNSPECIFIED";
+            cm["StructureSetName"] = "UNSPECIFIED";
+        }
+
+        //if((Paranoia == ParanoiaLevel::Medium) || (Paranoia == ParanoiaLevel::High)){
+        //    ReferencedFrameOfReferenceUID = Generate_Random_UID(60);
+        //}
+
+        //-------------------------------------------------------------------------------------------------
+        //DICOM Header Metadata.
+        root_node.emplace_child_node({{0x0002, 0x0001}, "OB", std::string("\x0\x1", 2)}); // FileMetaInformationVersion
+        root_node.emplace_child_node({{0x0002, 0x0002}, "UI", "1.2.840.10008.5.1.4.1.1.481.3"}); // MediaStorageSOPClassUID
+        root_node.emplace_child_node({{0x0002, 0x0003}, "UI", SOPInstanceUID}); // MediaStorageSOPInstanceUID
+        std::string TransferSyntaxUID;
+        if(false){
+        }else if(enc == DCMA_DICOM::Encoding::ELE){
+            TransferSyntaxUID = "1.2.840.10008.1.2.1";
+        }else if(enc == DCMA_DICOM::Encoding::ILE){
+            TransferSyntaxUID = "1.2.840.10008.1.2";
+        }else{
+            throw std::runtime_error("Unsupported transfer syntax requested. Cannot continue.");
+        }
+        root_node.emplace_child_node({{0x0002, 0x0010}, "UI", TransferSyntaxUID}); // TransferSyntaxUID
+
+        root_node.emplace_child_node({{0x0002, 0x0012}, "UI", "1.2.513.264.765.1.1.578"}); // ImplementationClassUID
+        root_node.emplace_child_node({{0x0002, 0x0013}, "SH", "DICOMautomaton"}); // ImplementationVersionName
+
+        //-------------------------------------------------------------------------------------------------
+        //SOP Common Module.
+        root_node.emplace_child_node({{0x0008, 0x0016}, "UI", "1.2.840.10008.5.1.4.1.1.481.3"}); // "SOPClassUID" (Radiation Therapy Structure Set Storage)
+        root_node.emplace_child_node({{0x0008, 0x0018}, "UI", SOPInstanceUID}); // SOPInstanceUID
+        root_node.emplace_child_node({{0x0008, 0x0005}, "CS", "ISO_IR 192"}); //fne({ cm["SpecificCharacterSet"], "ISO_IR 192" }));
+        root_node.emplace_child_node({{0x0008, 0x0012}, "DA", fne({ cm["InstanceCreationDate"], "19720101" }) });
+        root_node.emplace_child_node({{0x0008, 0x0013}, "TM", fne({ cm["InstanceCreationTime"], "010101" }) });
+        root_node.emplace_child_node({{0x0008, 0x0014}, "UI", foe({ cm["InstanceCreatorUID"] }) });
+        //root_node.emplace_child_node({{0x0008, 0x0114}, "UI", foe({ cm["CodingSchemeExternalUID"] }) });                 // Appropriate?
+        root_node.emplace_child_node({{0x0020, 0x0013}, "IS", foe({ cm["InstanceNumber"] }) });
+
+        //-------------------------------------------------------------------------------------------------
+        //Patient Module.
+        root_node.emplace_child_node({{0x0010, 0x0010}, "PN", fne({ cm["PatientsName"], "DICOMautomaton^DICOMautomaton" }) });
+        root_node.emplace_child_node({{0x0010, 0x0020}, "LO", fne({ cm["PatientID"], "DCMA_"_s + Generate_Random_String_of_Length(10) }) });
+        root_node.emplace_child_node({{0x0010, 0x0030}, "DA", fne({ cm["PatientsBirthDate"], "19720101" }) });
+        root_node.emplace_child_node({{0x0010, 0x0040}, "CS", foe({ cm["PatientsSex"] }) });
+        //root_node.emplace_child_node({{0x0010, 0x0032}, "TM", fne({ cm["PatientsBirthTime"], "010101" }) });
+
+        //-------------------------------------------------------------------------------------------------
+        //General Study Module.
+        root_node.emplace_child_node({{0x0020, 0x000D}, "UI", fne({ cm["StudyInstanceUID"], Generate_Random_UID(31) }) });
+        root_node.emplace_child_node({{0x0008, 0x0020}, "DA", fne({ cm["StudyDate"], "19720101" }) });
+        root_node.emplace_child_node({{0x0008, 0x0030}, "TM", fne({ cm["StudyTime"], "010101" }) });
+        root_node.emplace_child_node({{0x0008, 0x0090}, "PN", fne({ cm["ReferringPhysiciansName"], "UNSPECIFIED^UNSPECIFIED" }) });
+        root_node.emplace_child_node({{0x0020, 0x0010}, "SH", fne({ cm["StudyID"], "DCMA_"_s + Generate_Random_String_of_Length(10) }) });
+        root_node.emplace_child_node({{0x0008, 0x0050}, "SH", fne({ cm["AccessionNumber"], Generate_Random_String_of_Length(14) }) });
+        root_node.emplace_child_node({{0x0008, 0x1030}, "LO", fne({ cm["StudyDescription"], "UNSPECIFIED" }) });
+
+        //-------------------------------------------------------------------------------------------------
+        //RT Series Module.
+        root_node.emplace_child_node({{0x0008, 0x0060}, "CS", "RTSTRUCT" }); // "Modality"
+        root_node.emplace_child_node({{0x0020, 0x000E}, "UI", fne({ cm["SeriesInstanceUID"], Generate_Random_UID(31) }) });
+        root_node.emplace_child_node({{0x0020, 0x0011}, "IS", fne({ cm["SeriesNumber"], Generate_Random_Int_Str(5000, 32767) }) }); // Upper: 2^15 - 1.
+        root_node.emplace_child_node({{0x0008, 0x0021}, "DA", foe({ cm["SeriesDate"] }) });
+        root_node.emplace_child_node({{0x0008, 0x0031}, "TM", foe({ cm["SeriesTime"] }) });
+        root_node.emplace_child_node({{0x0008, 0x103E}, "LO", fne({ cm["SeriesDescription"], "UNSPECIFIED" }) });
+        root_node.emplace_child_node({{0x0008, 0x1070}, "PN", fne({ cm["OperatorsName"], "UNSPECIFIED" }) });
+
+
+        //-------------------------------------------------------------------------------------------------
+        //General Equipment Module.
+        root_node.emplace_child_node({{0x0008, 0x0070}, "LO", fne({ cm["Manufacturer"], "UNSPECIFIED" }) });
+        //root_node.emplace_child_node({{0x0008, 0x0080}, "LO", fne({ cm["InstitutionName"], "UNSPECIFIED" }) });
+        //root_node.emplace_child_node({{0x0008, 0x1010}, "SH", fne({ cm["StationName"], "UNSPECIFIED" }) });
+        //root_node.emplace_child_node({{0x0008, 0x1040}, "LO", fne({ cm["InstitutionalDepartmentName"], "UNSPECIFIED" }) });
+        //root_node.emplace_child_node({{0x0008, 0x1090}, "LO", fne({ cm["ManufacturersModelName"], "UNSPECIFIED" }) });
+        //root_node.emplace_child_node({{0x0018, 0x1020}, "LO", fne({ cm["SoftwareVersions"], "UNSPECIFIED" }) });
+
+        //-------------------------------------------------------------------------------------------------
+        //Frame of Reference Module.
+        root_node.emplace_child_node({{0x0020, 0x0052}, "UI", FrameOfReferenceUID}); //FrameOfReferenceUID 
+        root_node.emplace_child_node({{0x0020, 0x1040}, "LO", "" }); //PositionReferenceIndicator (TODO).
+
+/*
+        // Emit the Referenced Frame of Reference Sequence.
+        {
+            DCMA_DICOM::Node *seq_node_ptr = root_node.emplace_child_node({{0x3006, 0x0010}, "SQ", ""});  // ReferencedFrameOfReferenceSequence
+            seq_node_ptr->emplace_child_node({{0x0020, 0x0052}, "UI", FrameOfReferenceUID}); //FrameOfReferenceUID 
+        }
+*/
+
+        //-------------------------------------------------------------------------------------------------
+        //Structure Set Module.
+        root_node.emplace_child_node({{0x3006, 0x0002}, "SH", fne({ cm["StructureSetLabel"], "UNSPECIFIED" }) }); // "Structure Set Label"
+        root_node.emplace_child_node({{0x3006, 0x0004}, "LO", fne({ cm["StructureSetName"], "UNSPECIFIED" }) }); // "Structure Set Name"
+        root_node.emplace_child_node({{0x3006, 0x0006}, "ST", fne({ cm["StructureSetDescription"], "UNSPECIFIED" }) });
+        root_node.emplace_child_node({{0x3006, 0x0008}, "DA", foe({ cm["StructureSetDate"] }) });
+        root_node.emplace_child_node({{0x3006, 0x0009}, "TM", foe({ cm["StructureSetTime"] }) });
+
+        // (The following Structure Set ROI Sequence is part of the Structure Set Module.)
+    }
+
+
+    // Emit the Structure Set ROI Sequence, which maps an integer number to names, FrameofReferenceUID, and creation
+    // method.
+    {
+        DCMA_DICOM::Node *ssr_seq_ptr = root_node.emplace_child_node({{0x3006, 0x0020}, "SQ", ""});  // StructureSetROISequence
+        //uint32_t seq_n = 0;
+        uint32_t seq_n = 1;
+        for(const auto cc_refw : CC){
+            auto cm = cc_refw.get().get_common_metadata({}, {});
+
+            DCMA_DICOM::Node *multi_seq_ptr = ssr_seq_ptr->emplace_child_node({{0x0000, 0x0000}, "MULTI", ""});
+
+            multi_seq_ptr->emplace_child_node({{0x3006, 0x0022}, "IS", std::to_string(seq_n) }); // ROINumber (Does this need to be 1-based? TODO)
+            multi_seq_ptr->emplace_child_node({{0x3006, 0x0024}, "UI", fne({ FrameOfReferenceUID }) }); // ReferencedFrameOfReferenceUID
+            multi_seq_ptr->emplace_child_node({{0x3006, 0x0026}, "LO", // ROIName
+                 fne({ cm["ROIName"], 
+                       cm["ROILabel"],
+                       cm["NormalizedROIName"],
+                       "UNSPECIFIED"})   }); 
+            multi_seq_ptr->emplace_child_node({{0x3006, 0x0028}, "ST", // ROIDescription
+                  foe({ cm["ROIDescription"], 
+                        cm["Description"],
+                        "UNSPECIFIED" }) });
+            multi_seq_ptr->emplace_child_node({{0x3006, 0x0036}, "CS", "MANUAL" }); // ROIGenerationAlgorithm (MANUAL, AUTOMATIC, or SEMIAUTOMATIC).
+            multi_seq_ptr->emplace_child_node({{0x3006, 0x0038}, "LO", foe({ cm["GenerationDescription"] }) }); // ROIGenerationDescription
+
+            //ds_seq_insert(tds, {0x3006, 0x0020, 0, seq_n},        // "StructureSetROISequence", item #n
+            //                   {0x0008, 0x9215},                  // "DerivationCodeSequence"
+            //                     { ... } },
+            //                   foe({ cm["GenerationDescription"] }));
+            //  See http://dicom.nema.org/dicom/2013/output/chtml/part03/sect_8.8.html#table_8.8-1 for this sequence.
+
+            ++seq_n;
+        }
+    }
+
+    //-------------------------------------------------------------------------------------------------
+    // ROI Contour Module.
+
+    // Emit the ROI Contour Sequence.
+    {
+        DCMA_DICOM::Node *rc_seq_ptr = root_node.emplace_child_node({{0x3006, 0x0039}, "SQ", ""});  // ROIContourSequence
+        //uint32_t roi_seq_n = 0;
+        uint32_t roi_seq_n = 1;
+        for(const auto cc_refw : CC){
+            //auto cm = cc_refw.get().get_common_metadata({}, {});
+
+            DCMA_DICOM::Node *multi_rc_seq_ptr = rc_seq_ptr->emplace_child_node({{0x0000, 0x0000}, "MULTI", ""});
+
+            multi_rc_seq_ptr->emplace_child_node({{0x3006, 0x0084}, "IS", std::to_string(roi_seq_n) }); // ReferencedROINumber (Does this need to be 1-based? TODO)
+            multi_rc_seq_ptr->emplace_child_node({{0x3006, 0x002A}, "IS", R"***(255\0\0)***" }); // ROIDisplayColor
+            DCMA_DICOM::Node *c_seq_ptr = multi_rc_seq_ptr->emplace_child_node({{0x3006, 0x0040}, "SQ", ""});  // ContourSequence
+
+            //uint32_t contour_seq_n = 0;
+            uint32_t contour_seq_n = 1;
+            for(const auto c : cc_refw.get().contours){
+                DCMA_DICOM::Node *multi_c_seq_ptr = c_seq_ptr->emplace_child_node({{0x0000, 0x0000}, "MULTI", ""});
+
+                multi_c_seq_ptr->emplace_child_node({{0x3006, 0x0048}, "IS", std::to_string(contour_seq_n) }); // ContourNumber
+                multi_c_seq_ptr->emplace_child_node({{0x3006, 0x0042}, "CS", "CLOSED_PLANAR" }); // ContourGeometricType
+                //multi_c_seq_ptr->emplace_child_node({{0x3006, 0x0044}, "DS", "1.0" }); // ContourSlabThickness (in DICOM units; mm)
+                //multi_c_seq_ptr->emplace_child_node({{0x3006, 0x0045}, "DS", R"***(0.0\0.0\1.0)***" }); // ContourOffsetVector
+                multi_c_seq_ptr->emplace_child_node({{0x3006, 0x0046}, "IS", std::to_string(c.points.size()) }); // NumberOfControlPoints
+
+                //DCMA_DICOM::Node *ac_seq_ptr = rc_seq_ptr->emplace_child_node({{0x3006, 0x0049}, "SQ", ""});  // AttachedContours  ???
+                //for(attached_contours ...){
+                //    DCMA_DICOM::Node *multi_ac_seq_ptr = ac_seq_ptr->emplace_child_node({{0x0000, 0x0000}, "MULTI", ""});
+                //    multi_ac_seq_ptr->emplace_child_node({{0x3006, 0x0049}, "???", std::to_string(c.points.size()) }); // AttachedContours
+                //} 
+
+                // Emit the actual contour data.
+                //
+                // Note: If explicit VR transfer syntax is used, each contour should not exceed 65534 bytes!
+                std::stringstream ss;
+                bool isnew = true;
+                for(const auto & p : c.points){
+                    if(!isnew){
+                        ss << R"***(\)***"; // Delimit from the previous coordinates.
+                    }else{
+                        isnew = false;
+                    }
+                    ss << p.x <<  R"***(\)***" << p.y << R"***(\)***" << p.z;
+                }
+                if(65534 < ss.str().size()) throw std::runtime_error("Contour too large, data loss may occur. Refusing to proceed.");
+                multi_c_seq_ptr->emplace_child_node({{0x3006, 0x0050}, "DS", ss.str() }); // ContourData
+
+                //FUNCINFO("Emitted contour " << contour_seq_n << " of " << cc_refw.get().contours.size() 
+                //     << " from ROI " << roi_seq_n << " of " << CC.size() );
+
+                ++contour_seq_n;
+            }
+
+            ++roi_seq_n;
+        }
+    }
+
+    //-------------------------------------------------------------------------------------------------
+    // RT ROI Observations Module.
+
+    // Emit the RT ROI Observations Sequence.
+    {
+        DCMA_DICOM::Node *rro_seq_ptr = root_node.emplace_child_node({{0x3006, 0x0080}, "SQ", ""});  // RTROIObservationsSequence
+        //uint32_t roi_seq_n = 0;
+        uint32_t roi_seq_n = 1;
+        for(const auto cc_refw : CC){
+            //auto cm = cc_refw.get().get_common_metadata({}, {});
+
+            DCMA_DICOM::Node *multi_seq_ptr = rro_seq_ptr->emplace_child_node({{0x0000, 0x0000}, "MULTI", ""});
+
+            multi_seq_ptr->emplace_child_node({{0x3006, 0x0082}, "IS", std::to_string(roi_seq_n) }); // ObservationNumber
+            multi_seq_ptr->emplace_child_node({{0x3006, 0x0084}, "IS", std::to_string(roi_seq_n) }); // ReferencedROINumber
+            multi_seq_ptr->emplace_child_node({{0x3006, 0x00A4}, "CS", "ORGAN" }); // RTROIInterpretedType
+                               // EXTERNAL, PTV, CTV, GTV, BOLUS, AVOIDANCE, ORGAN, MARKER, CONTROL, etc..
+                               // See http://dicom.nema.org/medical/dicom/current/output/chtml/part03/sect_C.8.8.8.html .
+            multi_seq_ptr->emplace_child_node({{0x3006, 0x00A6}, "PN", "UNSPECIFIED" }); // ROIInterpreter
+
+            ++roi_seq_n;
+        }
+    }
+
+    //-------------------------------------------------------------------------------------------------
+    // Approval Module.
+    {
+        root_node.emplace_child_node({{0x300e, 0x0002}, "CS", "UNAPPROVED"  });  // "ApprovalStatus". Can be 'UNAPPROVED', 'APPROVED', or 'REJECTED'.
+        //root_node.emplace_child_node({{0x300e, 0x0004}, "DA", "19720101"  });    // "ReviewDate"
+        //root_node.emplace_child_node({{0x300e, 0x0005}, "TM", "010101"  });      // "ReviewTime"
+        //root_node.emplace_child_node({{0x300e, 0x0008}, "PN", "UNSPECIFIED"  }); // "ReviewerName"
+    }
+
+    // Write the file.
+    {
+        std::ofstream ofs(FilenameOut, std::ios::out | std::ios::binary);
+        if(!ofs) throw std::runtime_error("Unable to open file");
+
+        const auto bytes_written = root_node.emit_DICOM(ofs, enc);
+
+        if(!ofs) throw std::runtime_error("File stream not in good state after emitting DICOM file");
+
+        ofs.close();
+        //FUNCINFO(bytes_written << " bytes have been written");
     }
 
     return;

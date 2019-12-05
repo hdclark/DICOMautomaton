@@ -35,6 +35,7 @@ add_library(Operations_objs OBJECT
     CropROIDose.cc
     DCEMRI_IAUC.cc
     DCEMRI_Nonparametric_CE.cc
+    DICOMExportContours.cc
     DICOMExportImagesAsDose.cc
     DecayDoseOverTimeHalve.cc
     DecayDoseOverTimeJones2014.cc

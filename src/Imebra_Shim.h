@@ -66,4 +66,8 @@ void Write_Dose_Array(std::shared_ptr<Image_Array> IA,
                       const std::string &FilenameOut, 
                       ParanoiaLevel Paranoia = ParanoiaLevel::Low);
 
+void Write_Contours(std::list<std::reference_wrapper<contour_collection<double>>> CC,
+                    const std::string &FilenameOut, 
+                    ParanoiaLevel Paranoia = ParanoiaLevel::Low);
+
 #endif

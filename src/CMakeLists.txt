@@ -4,6 +4,9 @@ add_subdirectory(Operations)
 add_library(            Structs_obj OBJECT Structs.cc)
 set_target_properties(  Structs_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
+add_library(            DCMA_DICOM_obj OBJECT DCMA_DICOM.cc)
+set_target_properties(  DCMA_DICOM_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+
 add_library(            BED_Conversion_obj OBJECT BED_Conversion.cc )
 set_target_properties(  BED_Conversion_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
@@ -96,6 +99,7 @@ set_target_properties( YgorImaging_Helper_objs PROPERTIES POSITION_INDEPENDENT_C
 add_library (imebrashim 
     Imebra_Shim.cc 
     $<TARGET_OBJECTS:Structs_obj>
+    $<TARGET_OBJECTS:DCMA_DICOM_obj>
     imebra20121219/library/imebra/src/dataHandlerStringUT.cpp
     imebra20121219/library/imebra/src/data.cpp
     imebra20121219/library/imebra/src/colorTransformsFactory.cpp
