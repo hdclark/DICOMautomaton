@@ -58,6 +58,7 @@
 #include "Operations/DecayDoseOverTimeHalve.h"
 #include "Operations/DecayDoseOverTimeJones2014.h"
 #include "Operations/DecimatePixels.h"
+#include "Operations/DeDuplicateImages.h"
 #include "Operations/DeleteImages.h"
 #include "Operations/DeleteMeshes.h"
 #include "Operations/DeletePoints.h"
@@ -227,6 +228,7 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["DecayDoseOverTimeHalve"] = std::make_pair(OpArgDocDecayDoseOverTimeHalve, DecayDoseOverTimeHalve);
     out["DecayDoseOverTimeJones2014"] = std::make_pair(OpArgDocDecayDoseOverTimeJones2014, DecayDoseOverTimeJones2014);
     out["DecimatePixels"] = std::make_pair(OpArgDocDecimatePixels, DecimatePixels);
+    out["DeDuplicateImages"] = std::make_pair(OpArgDocDeDuplicateImages, DeDuplicateImages);
     out["DeleteImages"] = std::make_pair(OpArgDocDeleteImages, DeleteImages);
     out["DeleteMeshes"] = std::make_pair(OpArgDocDeleteMeshes, DeleteMeshes);
     out["DeletePoints"] = std::make_pair(OpArgDocDeletePoints, DeletePoints);
