@@ -201,6 +201,13 @@ Drover ContourBooleanOperations(Drover DICOM_data, OperationArgPkg OptArgs, std:
     std::list<std::reference_wrapper<contour_collection<double>>> cc_A_B;
     cc_A_B.insert(cc_A_B.end(), cc_A.begin(), cc_A.end());
     cc_A_B.insert(cc_A_B.end(), cc_B.begin(), cc_B.end());
+    if(cc_A_B.empty()){
+        throw std::invalid_argument("No contours were selected. Cannot continue.");
+        // Note that while zero contours may technically be valid input for some operations (e.g., joins), it will most
+        // likely indicate an error in ROI selection. If truly necessary, this routine can be modified to accept zero
+        // contours OR dummy contour collections (i.e., containing no contours, or extremely small-area contours, or
+        // distant contours, etc.) can be added by the user.
+    }
 
     // Identify the unique planes represented in sets A and B.
     const auto est_cont_normal = cc_A_B.front().get().contours.front().Estimate_Planar_Normal();
@@ -266,6 +273,9 @@ Drover ContourBooleanOperations(Drover DICOM_data, OperationArgPkg OptArgs, std:
     FUNCINFO("Boolean operation created " << cc_new.contours.size() << " contours");
     if(cc_new.contours.empty()){
         FUNCWARN("ROI was not added because it is empty");
+        // Note: While it is valid to have no resulting contours (e.g., the difference operation), having zero contours
+        // in the collection is not well-defined in many situations and will potentially cause issues in other operations.
+        // So the result is not propagated out at this time.
     }else{
         DICOM_data.contour_data->ccs.emplace_back(cc_new);
         DICOM_data.contour_data->ccs.back().ROI_number = 999;
