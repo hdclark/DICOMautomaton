@@ -164,33 +164,6 @@ OperationDoc OpArgDocAnalyzeDoseVolumeHistograms(void){
     return out;
 }
 
-// Look for and replace all alphanumeric parameters (i.e., like '$Modality' or '$Variable123') within the text by
-// matching the parameter to a key in the metadata. The parameter in the text is replaced with the key's corresponding
-// value.
-static
-std::string
-Expand_String_Parameters_Using_Metadata(std::string text,
-                                        std::map<std::string, std::string> metadata){
-    std::string out = text;
-
-    // Detect the parameters.
-    auto variables = GetAllRegex2(out, R"***([$]([a-zA-Z0-9]+)[^a-zA-Z0-9$]*)***");
-    if(variables.empty()) return out; // No parameters detected, so no expansion needed.
-
-    // Lookup the metadata.
-    for(const auto & v : variables){
-        const auto c = metadata.count(v);
-
-        // Perform the replacement if the metadata key-value is present.
-        // Otherwise, ignore it.
-        if(c != 0){
-            out = ReplaceAllInstances(out, "[$]"_s + v, metadata[v]);
-        }
-    }
-    return out;
-};                                        
-
-
 static
 std::vector<std::string>
 Get_All_Regex(const std::string &source, std::regex &regex_the_query){
@@ -254,13 +227,13 @@ Drover AnalyzeDoseVolumeHistograms(Drover DICOM_data, OperationArgPkg OptArgs, s
         // Expand $-variables in the UserComment and Description with metadata.
         auto ExpandedUserCommentOpt = UserCommentOpt;
         if(UserCommentOpt){
-            ExpandedUserCommentOpt = Expand_String_Parameters_Using_Metadata(ExpandedUserCommentOpt.value(),
-                                                                             (*lsp_it)->line.metadata);
+            ExpandedUserCommentOpt = ExpandMacros(ExpandedUserCommentOpt.value(),
+                                                  (*lsp_it)->line.metadata, "$");
         }
         auto ExpandedDescriptionOpt = DescriptionOpt;
         if(DescriptionOpt){
-            ExpandedDescriptionOpt = Expand_String_Parameters_Using_Metadata(ExpandedDescriptionOpt.value(),
-                                                                             (*lsp_it)->line.metadata);
+            ExpandedDescriptionOpt = ExpandMacros(ExpandedDescriptionOpt.value(),
+                                                  (*lsp_it)->line.metadata, "$");
         }
 
         // Grab the line sample more specifically.
