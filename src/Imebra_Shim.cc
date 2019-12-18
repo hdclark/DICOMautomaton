@@ -2746,7 +2746,7 @@ void Write_Contours(std::list<std::reference_wrapper<contour_collection<double>>
         root_node.emplace_child_node({{0x0008, 0x0013}, "TM", fne({ cm["InstanceCreationTime"], "010101" }) });
         root_node.emplace_child_node({{0x0008, 0x0014}, "UI", foe({ cm["InstanceCreatorUID"] }) });
         //root_node.emplace_child_node({{0x0008, 0x0114}, "UI", foe({ cm["CodingSchemeExternalUID"] }) });                 // Appropriate?
-        root_node.emplace_child_node({{0x0020, 0x0013}, "IS", foe({ cm["InstanceNumber"] }) });
+        root_node.emplace_child_node({{0x0020, 0x0013}, "IS", foe({ cm["InstanceNumber"], "0" }) });
 
         //-------------------------------------------------------------------------------------------------
         //Patient Module.
@@ -2860,7 +2860,7 @@ void Write_Contours(std::list<std::reference_wrapper<contour_collection<double>>
             DCMA_DICOM::Node *multi_rc_seq_ptr = rc_seq_ptr->emplace_child_node({{0x0000, 0x0000}, "MULTI", ""});
 
             multi_rc_seq_ptr->emplace_child_node({{0x3006, 0x0084}, "IS", std::to_string(roi_seq_n) }); // ReferencedROINumber (Does this need to be 1-based? TODO)
-            multi_rc_seq_ptr->emplace_child_node({{0x3006, 0x002A}, "IS", R"***(255\0\0)***" }); // ROIDisplayColor
+            //multi_rc_seq_ptr->emplace_child_node({{0x3006, 0x002A}, "IS", R"***(255\0\0)***" }); // ROIDisplayColor
             DCMA_DICOM::Node *c_seq_ptr = multi_rc_seq_ptr->emplace_child_node({{0x3006, 0x0040}, "SQ", ""});  // ContourSequence
 
             //uint32_t contour_seq_n = 0;

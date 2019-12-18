@@ -114,6 +114,7 @@ add_library(Operations_objs OBJECT
     SpatialBlur.cc
     SpatialDerivative.cc
     SpatialSharpen.cc
+    SubsegmentContours.cc
     Subsegment_ComputeDose_VanLuijk.cc
     SubtractImages.cc
     SupersampleImageGrid.cc

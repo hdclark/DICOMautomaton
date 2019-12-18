@@ -496,7 +496,11 @@ uint64_t Node::emit_DICOM(std::ostream &os,
 
     //Numeric types that are written as a string of characters.
     }else if( this->VR == "IS" ){ //Integer string.
-        std::stoll(this->val); // Ensure the string contains a number.
+        try{
+            std::stoll(this->val); // Ensure the string contains a number.
+        }catch(const std::exception &e){
+            throw std::runtime_error("Unable to convert '"_s + this->val + "' to IS. Cannot continue.");
+        }
         if(12 < this->val.length()) throw std::runtime_error("Integer string is too long. Cannot continue.");
         // Does value multiplicity embiggen the maximum permissable length? TODO
         if(this->val.find_first_not_of(number_digits + multiplicity + "+-") != std::string::npos){

@@ -133,6 +133,7 @@
 #include "Operations/SpatialDerivative.h"
 #include "Operations/SpatialSharpen.h"
 #include "Operations/Subsegment_ComputeDose_VanLuijk.h"
+#include "Operations/SubsegmentContours.h"
 #include "Operations/SubtractImages.h"
 #include "Operations/SupersampleImageGrid.h"
 #include "Operations/ThresholdImages.h"
@@ -302,6 +303,7 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["SpatialBlur"] = std::make_pair(OpArgDocSpatialBlur, SpatialBlur);
     out["SpatialDerivative"] = std::make_pair(OpArgDocSpatialDerivative, SpatialDerivative);
     out["SpatialSharpen"] = std::make_pair(OpArgDocSpatialSharpen, SpatialSharpen);
+    out["SubsegmentContours"] = std::make_pair(OpArgDocSubsegmentContours, SubsegmentContours);
     out["Subsegment_ComputeDose_VanLuijk"] = std::make_pair(OpArgDocSubsegment_ComputeDose_VanLuijk, Subsegment_ComputeDose_VanLuijk);
     out["SubtractImages"] = std::make_pair(OpArgDocSubtractImages, SubtractImages);
     out["SupersampleImageGrid"] = std::make_pair(OpArgDocSupersampleImageGrid, SupersampleImageGrid);
