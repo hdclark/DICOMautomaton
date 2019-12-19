@@ -393,13 +393,14 @@ Drover PartitionContours(Drover DICOM_data, OperationArgPkg OptArgs, std::map<st
     if(ReverseZTraversalOrder) std::reverse(std::begin(Z_parts), std::end(Z_parts));
 
     // Loop over all compartments (= # of partitions + 1 along each axis).
-    long int subsegment_count = 0;
+    long int subsegment_count = -1;
     for(const auto &X_part : X_parts){
         for(const auto &Y_part : Y_parts){
             for(const auto &Z_part : Z_parts){
     //for(long int X_part = 0; X_part <= XPartitions; ++X_part){
     //    for(long int Y_part = 0; Y_part <= YPartitions; ++Y_part){
     //        for(long int Z_part = 0; Z_part <= ZPartitions; ++Z_part){
+                ++subsegment_count; // Increment after every partition so contour numbers are always synchronized.
 
                 const double XSelectionThickness        = (XPartitions == 0) ? 1.0 : (1.0 / (1.0 + static_cast<double>(XPartitions)));
                 const double YSelectionThickness        = (YPartitions == 0) ? 1.0 : (1.0 / (1.0 + static_cast<double>(YPartitions)));
@@ -495,8 +496,6 @@ Drover PartitionContours(Drover DICOM_data, OperationArgPkg OptArgs, std::map<st
                 DICOM_data.contour_data->ccs.back().Raw_ROI_name = ROIName;
                 DICOM_data.contour_data->ccs.back().ROI_number = 10000; // TODO: find highest existing and ++ it.
                 DICOM_data.contour_data->ccs.back().Minimum_Separation = MinimumSeparation;
-
-                ++subsegment_count;
             }
         }
     }
