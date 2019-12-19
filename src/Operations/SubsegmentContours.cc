@@ -38,7 +38,7 @@
 OperationDoc OpArgDocSubsegmentContours(void){
     OperationDoc out;
     out.name = "SubsegmentContours";
-    out.desc = "This operation sub-segments the selected ROI(s).";
+    out.desc = "This operation sub-segments the selected contours, resulting in contours with reduced size.";
 
 
     out.args.emplace_back();
@@ -51,8 +51,8 @@ OperationDoc OpArgDocSubsegmentContours(void){
     out.args.back().default_val = ".*";
     out.args.back().expected = true;
     out.args.back().examples = { ".*", ".*body.*", "body", "Gross_Liver",
-                            R"***(.*left.*parotid.*|.*right.*parotid.*|.*eyes.*)***",
-                            R"***(left_parotid|right_parotid)***" };
+                                 R"***(.*left.*parotid.*|.*right.*parotid.*|.*eyes.*)***",
+                                 R"***(left_parotid|right_parotid)***" };
 
     out.args.emplace_back();
     out.args.back().name = "NormalizedROILabelRegex";
@@ -64,18 +64,18 @@ OperationDoc OpArgDocSubsegmentContours(void){
     out.args.back().default_val = ".*";
     out.args.back().expected = true;
     out.args.back().examples = { ".*", ".*Body.*", "Body", "Gross_Liver",
-                            R"***(.*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*)***",
-                            R"***(Left Parotid|Right Parotid)***" };
+                                 R"***(.*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*)***",
+                                 R"***(Left Parotid|Right Parotid)***" };
 
     out.args.emplace_back();
     out.args.back().name = "PlanarOrientation";
     out.args.back().desc = "A string instructing how to orient the cleaving planes."
-                           " Currently supported: (1) 'AxisAligned' (i.e., align with the image/dose grid row and column"
-                           " unit vectors) and (2) 'StaticOblique' (i.e., same as AxisAligned but rotated 22.5 degrees"
+                           " Currently supported: (1) 'axis-aligned' (i.e., align with the image/dose grid row and column"
+                           " unit vectors) and (2) 'static-oblique' (i.e., same as axis-aligned but rotated 22.5 degrees"
                            " to reduce colinearity, which sometimes improves sub-segment area consistency).";
-    out.args.back().default_val = "AxisAligned";
+    out.args.back().default_val = "axis-aligned";
     out.args.back().expected = true;
-    out.args.back().examples = { "AxisAligned", "StaticOblique" };
+    out.args.back().examples = { "axis-aligned", "static-oblique" };
 
 
     out.args.emplace_back();
@@ -108,15 +108,29 @@ OperationDoc OpArgDocSubsegmentContours(void){
                            " always be preferred unless you know what you're doing. It should be faster too."
                            " Compound sub-segmentation is known to cause problems, e.g., with zero-area"
                            " sub-segments and spatial dependence in sub-segment volume.";
-    out.args.back().default_val = "nested";
+    out.args.back().default_val = "nested-cleave";
     out.args.back().expected = true;
-    out.args.back().examples = { "nested", "compound" };
+    out.args.back().examples = { "nested-cleave", "compound-cleave" };
+
+
+    out.args.emplace_back();
+    out.args.back().name = "NestedCleaveOrder";
+    out.args.back().desc = "The order in which to apply nested cleaves. Typically this will be one of 'ZYX', 'ZYX',"
+                           " 'XYZ', 'XZY', 'YZX', or 'YXZ', but any non-empty combination of 'X', 'Y', and 'Z' are"
+                           " possible. Cleaves are implemented from left to right using the specified X, Y, and Z"
+                           " selection criteria. Multiple cleaves along the same axis are possible, but note that"
+                           " currently the same selection criteria are used for each iteration.";
+    out.args.back().default_val = "ZXY";
+    out.args.back().expected = true;
+    out.args.back().examples = { "ZXY", "ZYX", "X", "XYX" };
 
 
     out.args.emplace_back();
     out.args.back().name = "XSelection";
-    out.args.back().desc = "(See ZSelection description.) The \"X\" direction is defined in terms of movement"
-                           " on an image when the row number increases. This is generally VERTICAL and DOWNWARD."
+    out.args.back().desc = "(See ZSelection description.) The 'X' direction is defined in terms of movement"
+                           " on an image when the row number increases. This is generally VERTICAL and DOWNWARD"
+                           " for a patient in head-first supine orientation, but it varies with orientation"
+                           " conventions."
                            " All selections are defined in terms of the original ROIs.";
     out.args.back().default_val = "1.0;0.0";
     out.args.back().expected = true;
@@ -125,8 +139,10 @@ OperationDoc OpArgDocSubsegmentContours(void){
 
     out.args.emplace_back();
     out.args.back().name = "YSelection";
-    out.args.back().desc = "(See ZSelection description.) The \"Y\" direction is defined in terms of movement"
-                           " on an image when the column number increases. This is generally HORIZONTAL and RIGHTWARD."
+    out.args.back().desc = "(See ZSelection description.) The 'Y' direction is defined in terms of movement"
+                           " on an image when the column number increases. This is generally HORIZONTAL and RIGHTWARD"
+                           " for a patient in head-first supine orientation, but it varies with orientation"
+                           " conventions."
                            " All selections are defined in terms of the original ROIs.";
     out.args.back().default_val = "1.0;0.0";
     out.args.back().expected = true;
@@ -141,13 +157,16 @@ OperationDoc OpArgDocSubsegmentContours(void){
                            " The numbers specify the thickness and offset from the bottom of the ROI volume to the bottom"
                            " of the extent. The 'upper' direction is take from the contour plane orientation and assumed to"
                            " be positive if pointing toward the positive-z direction. Only a single 3D selection can be made"
-                           " per operation invocation. Sub-segmentation can be performed in transverse (\"Z\"), row_unit"
-                           " (\"X\"), and column_unit (\"Y\") directions (in that order)."
+                           " per operation invocation. Sub-segmentation can be performed in transverse ('Z'), row_unit"
+                           " ('X'), and column_unit ('Y') directions (in that order)."
                            " All selections are defined in terms of the original ROIs."
+                           " Note that impossible selections will likely result in errors, e.g., specifying a small"
+                           " constraint when the ."
                            " Note that it is possible to perform nested sub-segmentation"
                            " (including passing along the original contours) by opting to"
                            " replace the original ROI contours with this sub-segmentation and invoking this operation"
                            " again with the desired sub-segmentation."
+                           " Examples:"
                            " If you want the middle 50\% of an ROI, specify '0.50;0.25'."
                            " If you want the upper 50\% then specify '0.50;0.50'."
                            " If you want the lower 50\% then specify '0.50;0.0'."
@@ -188,6 +207,7 @@ OperationDoc OpArgDocSubsegmentContours(void){
     out.args.back().expected = true;
     out.args.back().examples = { "10", "20", "30" };
 
+
     return out;
 }
 
@@ -211,15 +231,17 @@ Drover SubsegmentContours(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
     const auto FractionalTolerance = std::stod( OptArgs.getValueStr("FractionalTolerance").value() );
     const auto MaxBisects = std::stol( OptArgs.getValueStr("MaxBisects").value() );
 
+    const auto NestedCleaveOrder = OptArgs.getValueStr("NestedCleaveOrder").value();
+
     //-----------------------------------------------------------------------------------------------------------------
     const auto theregex = Compile_Regex(ROILabelRegex);
     const auto TrueRegex = Compile_Regex("^tr?u?e?$");
     const auto thenormalizedregex = Compile_Regex(NormalizedROILabelRegex);
-    const auto SubsegMethodCompound = Compile_Regex("Compound");
-    const auto SubsegMethodNested = Compile_Regex("Nested");
+    const auto SubsegMethodCompound = Compile_Regex("co?m?p?o?u?n?d?-?c?l?e?a?v?e?");
+    const auto SubsegMethodNested = Compile_Regex("ne?s?t?e?d?-?c?l?e?a?v?e?");
 
-    const auto OrientAxisAligned = Compile_Regex("AxisAligned");
-    const auto OrientStaticObl = Compile_Regex("StaticOblique");
+    const auto OrientAxisAligned = Compile_Regex("ax?i?s?-?a?l?i?g?n?e?d?");
+    const auto OrientStaticObl = Compile_Regex("st?a?t?i?c?-?o?b?l?i?q?u?e?");
 
     const auto ReplaceAllWithSubsegment = std::regex_match(ReplaceAllWithSubsegmentStr, TrueRegex);
 
@@ -236,7 +258,7 @@ Drover SubsegmentContours(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
     const double ZSelectionThickness = std::stod(ZSelectionTokens.front());
     const double ZSelectionOffsetFromBottom = std::stod(ZSelectionTokens.back());
 
-    //The bisection routine requires for input the fractional area above the plane. We convert from (thickness,offset)
+    // The bisection routine requires for input the fractional area above the plane. We convert from (thickness,offset)
     // units to the fractional area above the plane for both upper and lower extents.
     const double XSelectionLower = 1.0 - XSelectionOffsetFromBottom;
     const double XSelectionUpper = 1.0 - XSelectionOffsetFromBottom - XSelectionThickness;
@@ -259,7 +281,7 @@ Drover SubsegmentContours(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
     Explicator X(FilenameLex);
 
 
-    //Stuff references to all contours into a list. Remember that you can still address specific contours through
+    // Stuff references to all contours into a list. Remember that you can still address specific contours through
     // the original holding containers (which are not modified here).
     auto cc_all = All_CCs( DICOM_data );
     auto cc_ROIs = Whitelist( cc_all, { { "ROIName", ROILabelRegex },
@@ -269,16 +291,16 @@ Drover SubsegmentContours(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
         throw std::invalid_argument("No contours selected. Cannot continue.");
     }
 
-    //Identify a set of three orthogonal planes along which the contours should be cleaved.
-
+    // Identify a set of three orthogonal planes along which the contours should be cleaved.
+    //
     // Typical image-axes aligned normals.
     const auto row_normal = vec3<double>(0.0, 1.0, 0.0);
     const auto col_normal = vec3<double>(1.0, 0.0, 0.0);
     const auto ort_normal = col_normal.Cross(row_normal);
 
-    vec3<double> x_normal;
-    vec3<double> y_normal;
-    vec3<double> z_normal;
+    vec3<double> x_normal = row_normal;
+    vec3<double> y_normal = col_normal;
+    vec3<double> z_normal = ort_normal;
 
     // Use the image-axes aligned normals directly. Sub-segmentation might get snagged on voxel rows or columns.
     if(std::regex_match(PlanarOrientation, OrientAxisAligned)){
@@ -301,7 +323,7 @@ Drover SubsegmentContours(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
         throw std::invalid_argument("Planar orientations not understood. Cannot continue.");
     }
 
-    //This routine returns a pair of planes that approximately encompass the desired interior volume. The ROIs are not
+    // This routine returns a pair of planes that approximately encompass the desired interior volume. The ROIs are not
     // altered. The lower plane is the first element of the pair. This routine can be applied to any contour_collection
     // and the planes can also be applied to any contour_collection.
     const auto bisect_ROIs = [FractionalTolerance,MaxBisects](
@@ -373,7 +395,7 @@ Drover SubsegmentContours(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
         return cc_selection;
     };
 
-    //Perform the sub-segmentation.
+    // Perform the sub-segmentation.
     std::list<contour_collection<double>> cc_selection;
     for(const auto &cc_ref : cc_ROIs){
         if(cc_ref.get().contours.empty()) continue;
@@ -405,14 +427,27 @@ Drover SubsegmentContours(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
         }else if( std::regex_match(SubsegMethodReq,SubsegMethodNested) ){
             contour_collection<double> running(cc_ref.get());
 
-            const auto z_planes_pair = bisect_ROIs(running, z_normal, ZSelectionLower, ZSelectionUpper);
-            running = subsegment_interior(running, z_planes_pair);
+            for(const auto &cleave : NestedCleaveOrder){
+                if(false){
+                }else if( (cleave == static_cast<unsigned char>('X'))
+                      ||  (cleave == static_cast<unsigned char>('x')) ){
+                    const auto x_planes_pair = bisect_ROIs(running, x_normal, XSelectionLower, XSelectionUpper);
+                    running = subsegment_interior(running, x_planes_pair);
 
-            const auto x_planes_pair = bisect_ROIs(running, x_normal, XSelectionLower, XSelectionUpper);
-            running = subsegment_interior(running, x_planes_pair);
+                }else if( (cleave == static_cast<unsigned char>('Y'))
+                      ||  (cleave == static_cast<unsigned char>('y')) ){
+                    const auto y_planes_pair = bisect_ROIs(running, y_normal, YSelectionLower, YSelectionUpper);
+                    running = subsegment_interior(running, y_planes_pair);
 
-            const auto y_planes_pair = bisect_ROIs(running, y_normal, YSelectionLower, YSelectionUpper);
-            running = subsegment_interior(running, y_planes_pair);
+                }else if( (cleave == static_cast<unsigned char>('Z'))
+                      ||  (cleave == static_cast<unsigned char>('z')) ){
+                    const auto z_planes_pair = bisect_ROIs(running, z_normal, ZSelectionLower, ZSelectionUpper);
+                    running = subsegment_interior(running, z_planes_pair);
+
+                }else{
+                    throw std::invalid_argument("Cleave axis '"_s + cleave + "' not understood. Cannot continue.");
+                }
+            }
 
             cc_selection.emplace_back(running);
 
