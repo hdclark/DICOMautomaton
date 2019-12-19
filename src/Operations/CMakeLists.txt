@@ -100,6 +100,7 @@ add_library(Operations_objs OBJECT
     NormalizePixels.cc
     OptimizeStaticBeams.cc
     OrderImages.cc
+    PartitionContours.cc
     PlotLineSamples.cc
     PlotPerROITimeCourses.cc
     PreFilterEnormousCTValues.cc

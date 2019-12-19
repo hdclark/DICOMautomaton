@@ -118,6 +118,7 @@
 #include "Operations/NormalizePixels.h"
 #include "Operations/OptimizeStaticBeams.h"
 #include "Operations/OrderImages.h"
+#include "Operations/PartitionContours.h"
 #include "Operations/PlotPerROITimeCourses.h"
 #include "Operations/PlotLineSamples.h"
 #include "Operations/PreFilterEnormousCTValues.h"
@@ -290,6 +291,7 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["OptimizeStaticBeams"] = std::make_pair(OpArgDocOptimizeStaticBeams, OptimizeStaticBeams);
     out["OrderImages"] = std::make_pair(OpArgDocOrderImages, OrderImages);
     out["PlotLineSamples"] = std::make_pair(OpArgDocPlotLineSamples, PlotLineSamples);
+    out["PartitionContours"] = std::make_pair(OpArgDocPartitionContours, PartitionContours);
     out["PlotPerROITimeCourses"] = std::make_pair(OpArgDocPlotPerROITimeCourses, PlotPerROITimeCourses);
     out["PreFilterEnormousCTValues"] = std::make_pair(OpArgDocPreFilterEnormousCTValues, PreFilterEnormousCTValues);
     out["PruneEmptyImageDoseArrays"] = std::make_pair(OpArgDocPruneEmptyImageDoseArrays, PruneEmptyImageDoseArrays);

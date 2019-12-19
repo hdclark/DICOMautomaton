@@ -115,7 +115,7 @@ OperationDoc OpArgDocSubsegmentContours(void){
 
     out.args.emplace_back();
     out.args.back().name = "NestedCleaveOrder";
-    out.args.back().desc = "The order in which to apply nested cleaves. Typically this will be one of 'ZYX', 'ZYX',"
+    out.args.back().desc = "The order in which to apply nested cleaves. Typically this will be one of 'ZXX', 'ZYX',"
                            " 'XYZ', 'XZY', 'YZX', or 'YXZ', but any non-empty combination of 'X', 'Y', and 'Z' are"
                            " possible. Cleaves are implemented from left to right using the specified X, Y, and Z"
                            " selection criteria. Multiple cleaves along the same axis are possible, but note that"
