@@ -1,5 +1,5 @@
 
-cmake_minimum_required(VERSION 3.1.0 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.12.0 FATAL_ERROR)
 project(DICOMautomaton LANGUAGES CXX)
 #set(DICOMautomaton_VERSION_MAJOR 0)
 #set(DICOMautomaton_VERSION_MINOR 0)
