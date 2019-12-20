@@ -13,7 +13,7 @@ PORTABLE_BIN_DIR="/tmp/dcma_portable_build/" # Portable binaries are dumped here
 L_PORTABLE_BIN_DIR="${HOME}/portable_dcma/" # Portable binaries are dumped here locally.
 
 # System to build on. See below for options.
-BUILDER="debian_stable"  # 'arch', 'debian_stable', 'debian_oldstable', or 'native'.
+BUILDER="debian_stable"  # 'arch', 'debian_stable', or 'native'.
 
 # Argument parsing:
 OPTIND=1 # Reset in case getopts has been used previously in the shell.
@@ -46,7 +46,7 @@ while getopts "d:p:l:b:h" opt; do
         printf "\n"
         printf " -b <arg> : Specify which Docker build image to use, if any.\n"
         printf "          : This option controls how the build is performed, packaged, and installed.\n"
-        printf "          : Options are 'arch', 'debian_stable', 'debian_oldstable', and 'native'.\n"
+        printf "          : Options are 'arch', 'debian_stable', and 'native'.\n"
         printf "          : Default: '%s'\n" "${BUILDER}"
         printf "\n"
         exit 0
@@ -138,33 +138,6 @@ EOF
           -v '${PORTABLE_BIN_DIR}':/pbin/:rw \
           -w /start/ \
           dicomautomaton_webserver_debian_stable:latest \
-          /start/docker_run.sh
-      "
-
-elif [[ "${BUILDER}" =~ .*debian.*_oldstable.* ]] ; then
-
-    ssh -t "${USER_AT_REMOTE}" -- "
-        set -eu
-        cd '${BUILD_DIR}'
-        
-        cat > docker_run.sh << 'EOF'
-#!/bin/bash
-set -eu
-./compile_and_install.sh  # Will auto-detect the Debian build process.
-./scripts/dump_portable_dcma_bundle.sh /pbin/
-EOF
-        chmod 777 docker_run.sh
-
-        mkdir -p '${PORTABLE_BIN_DIR}'
-        mkdir -p build
-        
-        sudo docker run \
-          -it --rm \
-          --network=host \
-          -v '${BUILD_DIR}':/start/:rw \
-          -v '${PORTABLE_BIN_DIR}':/pbin/:rw \
-          -w /start/ \
-          dicomautomaton_webserver_debian_oldstable:latest \
           /start/docker_run.sh
       "
 
