@@ -52,6 +52,8 @@
 #include "../Regex_Selectors.h"
 #include "../YgorImages_Functors/Compute/AccumulatePixelDistributions.h"
 
+#include "../Font_DCMA_Minimal.h"
+
 #include "SFML_Viewer.h"
 
 
@@ -179,11 +181,15 @@ Drover SFML_Viewer( Drover DICOM_data,
 
     //Attempt to load fonts. We should try a few different files, and include a back-up somewhere accessible...
     sf::Font afont;
-    if( !afont.loadFromFile("/usr/share/fonts/TTF/cmr10.ttf") // Arch Linux 'ttf-computer-modern-fonts' pkg.
+    if( !afont.loadFromFile("dcma_minimal.otf") // A minimal ASCII-only font.
+    &&  !afont.loadFromFile("/usr/share/fonts/TTF/cmr10.ttf") // Arch Linux 'ttf-computer-modern-fonts' pkg.
     &&  !afont.loadFromFile("/usr/share/fonts/truetype/cmu/cmunrm.ttf") // Debian 'fonts-cmu' pkg.
     &&  !afont.loadFromFile("/usr/share/fonts/gnu-free/FreeMono.otf") // Arch Linux 'gnu-free-fonts' pkg.
     &&  !afont.loadFromFile("/usr/share/fonts/truetype/freefont/FreeMono.ttf") ){ // Debian 'fonts-freefont-ttf' pkg.
-        FUNCERR("Unable to find a suitable font file");
+        FUNCWARN("Unable to find a suitable font file on host system -- loading embedded minimal font");
+        if(!afont.loadFromMemory(static_cast<void*>(dcma_minimal_ttf), static_cast<size_t>(dcma_minimal_ttf_len))){
+            FUNCERR("Unable to load embedded font. Cannot continue");
+        }
     }
 
     //Create some primitive shapes, textures, and text objects for display later.
