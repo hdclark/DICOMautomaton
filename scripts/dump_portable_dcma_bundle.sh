@@ -52,6 +52,15 @@ rsync -L -r --delete \
 # Also grab the dcma binary.
 rsync -L -r --delete "${which_dcma}" "${out_dir}/"
 
+# Also provide a lexicon since Explicator may not be installed.
+# The most recent lexicon will be selected.
+lex_file="$( find /usr/share/explicator/lexicons/ -type f -iname '*SGF*' | LC_ALL=C  sort --numeric-sort | tail -n 1 )"
+if [ -f "${lex_file}" ] ; then
+    rsync -L -r "${lex_file}" "${out_dir}/"portable_default.lex
+else
+    printf 'Unable to find system lexicon. Creating a placeholder.\n'
+    echo "null : null" > "${out_dir}/"portable_default.lex
+fi
 
 # Create a native wrapper script for the portable binary.
 cat > "${out_dir}/portable_dcma" <<'PORTABLE_EOF'
@@ -101,7 +110,7 @@ else
 fi
 
 # Assume that this script, the libraries, and the binary are all bundled together.
-LD_LIBRARY_PATH="${SCRIPT_DIR}" exec "${SCRIPT_DIR}/"dicomautomaton_dispatcher "$@"
+LD_LIBRARY_PATH="${SCRIPT_DIR}" exec "${SCRIPT_DIR}/"dicomautomaton_dispatcher -l portable_default.lex "$@"
 
 ADJUSTING_EOF
 chmod 777 "${out_dir}/adjusting_dcma"
@@ -144,7 +153,7 @@ else
 fi
 
 # Assume that this script, the libraries, and the binary are all bundled together.
-qemu-x86_64 -E LD_LIBRARY_PATH="${SCRIPT_DIR}" -L "${SCRIPT_DIR}" dicomautomaton_dispatcher "$@"
+qemu-x86_64 -E LD_LIBRARY_PATH="${SCRIPT_DIR}" -L "${SCRIPT_DIR}" dicomautomaton_dispatcher -l portable_default.lex "$@"
 
 EMULATE_EOF
 chmod 777 "${out_dir}/emulate_dcma"
