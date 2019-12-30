@@ -83,6 +83,9 @@ set_target_properties(  Operation_Dispatcher_obj PROPERTIES POSITION_INDEPENDENT
 add_library(            Documentation_obj OBJECT Documentation.cc )
 set_target_properties(  Documentation_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
+add_library(            Font_DCMA_Minimal_obj OBJECT Font_DCMA_Minimal.cc )
+set_target_properties(  Font_DCMA_Minimal_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+
 
 FILE(GLOB ygorimaging_functors "./YgorImages_Functors/*/*cc")
 add_library( YgorImaging_Functor_objs OBJECT ${ygorimaging_functors} )
@@ -234,6 +237,7 @@ add_executable (dicomautomaton_dispatcher
     $<TARGET_OBJECTS:Write_File_obj>
     $<TARGET_OBJECTS:Operation_Dispatcher_obj>
     $<TARGET_OBJECTS:Documentation_obj>
+    $<TARGET_OBJECTS:Font_DCMA_Minimal_obj>
 
     $<TARGET_OBJECTS:YgorImaging_Functor_objs>
     $<TARGET_OBJECTS:YgorImaging_Helper_objs>
@@ -300,6 +304,7 @@ if(WITH_WT)
         $<TARGET_OBJECTS:Write_File_obj>
         $<TARGET_OBJECTS:Operation_Dispatcher_obj>
         $<TARGET_OBJECTS:Documentation_obj>
+        $<TARGET_OBJECTS:Font_DCMA_Minimal_obj>
 
         $<TARGET_OBJECTS:YgorImaging_Functor_objs>
         $<TARGET_OBJECTS:YgorImaging_Helper_objs>
