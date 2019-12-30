@@ -72,7 +72,7 @@ set -eu
 export SCRIPT_DIR="$(dirname "$(readlink -f "${BASH_SOURCE[0]}" )" )"
 
 # Assume that this script, the libraries, and the binary are all bundled together.
-LD_LIBRARY_PATH="${SCRIPT_DIR}" exec "${SCRIPT_DIR}/"dicomautomaton_dispatcher "$@"
+LD_LIBRARY_PATH="${SCRIPT_DIR}" exec "${SCRIPT_DIR}/"dicomautomaton_dispatcher -l portable_default.lex "$@"
 
 PORTABLE_EOF
 chmod 777 "${out_dir}/portable_dcma"
