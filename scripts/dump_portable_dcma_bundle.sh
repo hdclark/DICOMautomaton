@@ -72,7 +72,7 @@ set -eu
 export SCRIPT_DIR="$(dirname "$(readlink -f "${BASH_SOURCE[0]}" )" )"
 
 # Assume that this script, the libraries, and the binary are all bundled together.
-LD_LIBRARY_PATH="${SCRIPT_DIR}" exec "${SCRIPT_DIR}/"dicomautomaton_dispatcher -l portable_default.lex "$@"
+LD_LIBRARY_PATH="${SCRIPT_DIR}" exec "${SCRIPT_DIR}/"dicomautomaton_dispatcher -l "${SCRIPT_DIR}/"portable_default.lex "$@"
 
 PORTABLE_EOF
 chmod 777 "${out_dir}/portable_dcma"
@@ -110,7 +110,7 @@ else
 fi
 
 # Assume that this script, the libraries, and the binary are all bundled together.
-LD_LIBRARY_PATH="${SCRIPT_DIR}" exec "${SCRIPT_DIR}/"dicomautomaton_dispatcher -l portable_default.lex "$@"
+LD_LIBRARY_PATH="${SCRIPT_DIR}" exec "${SCRIPT_DIR}/"dicomautomaton_dispatcher -l "${SCRIPT_DIR}/"portable_default.lex "$@"
 
 ADJUSTING_EOF
 chmod 777 "${out_dir}/adjusting_dcma"
@@ -153,7 +153,7 @@ else
 fi
 
 # Assume that this script, the libraries, and the binary are all bundled together.
-qemu-x86_64 -E LD_LIBRARY_PATH="${SCRIPT_DIR}" -L "${SCRIPT_DIR}" dicomautomaton_dispatcher -l portable_default.lex "$@"
+qemu-x86_64 -E LD_LIBRARY_PATH="${SCRIPT_DIR}" -L "${SCRIPT_DIR}" dicomautomaton_dispatcher -l "${SCRIPT_DIR}/"portable_default.lex "$@"
 
 EMULATE_EOF
 chmod 777 "${out_dir}/emulate_dcma"
