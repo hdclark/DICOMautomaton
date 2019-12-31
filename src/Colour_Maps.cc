@@ -16882,6 +16882,76 @@ ClampedColourRGB ColourMap_YgorIncandescent(double y){
 }
 
 
+ClampedColourRGB ColourMap_Composite_50_90_107_110(double y){
+
+    // This colour scheme is a composite that indicates several important isolines and volumes for radiotherapy doses
+    // with conventional therapies.
+    //
+    // - 50% isodose line  -- meant to assess whether unilateral treatments significantly cross the midline.
+    // - 90-107% volume    -- meant to help evaluate conformity to target structures and hot-spots.
+    // - 110% isodose line -- meant to assess where the dose is considered excessive.
+    //
+    // Note: This colour scheme is meant to be centered on a reference intensity and extend down to 0.0. The extra
+    //       'headspace' is required so that values greater than the reference dose can be detected (i.e., so they are
+    //       not clamped to [0, reference intensity]). So for example if the reference intensity is 70, then the window
+    //       and level should have a minimum at 0, a maximum at 140, and be centered on 70.
+
+    ClampedColourRGB low  = { 0.247, 0.004, 0.173 }; // "dark plum"
+    ClampedColourRGB high = { 0.996, 0.004, 0.694 }; // "bright pink"
+    ClampedColourRGB out  = { 0.000, 0.000, 0.000 };
+
+    const auto z = y * 2.0; // Make the reference intensity (assumed to be at the current window's centre) equal to 1.0.
+
+    if(false){
+    }else if( (0.50 <= z) && (z < 0.90) ){ // Show the 50% isoline (bound from above).
+        out = low;
+    }else if( (1.10 < z) ){ // Show the 110% isoline (bound from above).
+        out = high;
+
+    }else if( (0.90 <= z) && (z <= 1.07) ){ // Show a true colour scale across [90,107]%.
+        //out = ColourMap_Viridis((z - 0.90)/(1.07 - 0.90));
+        out = ColourMap_MorelandBlackBody((z - 0.90)/(1.07 - 0.90));
+    }
+
+    return out;
+}
+
+ClampedColourRGB ColourMap_Composite_50_90_100_107_110(double y){
+
+    // This colour scheme is a composite that indicates several important isolines and volumes for radiotherapy doses
+    // with conventional therapies.
+    //
+    // - 50% isodose line  -- meant to assess whether unilateral treatments significantly cross the midline.
+    // - 90-100% volume    -- meant to help evaluate conformity to target structures.
+    // - 100-107% volume   -- meant to help evaluate hot-spots.
+    // - 110% isodose line -- meant to assess where the dose is considered excessive.
+    //
+    // Note: This colour scheme is meant to be centered on a reference intensity and extend down to 0.0. The extra
+    //       'headspace' is required so that values greater than the reference dose can be detected (i.e., so they are
+    //       not clamped to [0, reference intensity]). So for example if the reference intensity is 70, then the window
+    //       and level should have a minimum at 0, a maximum at 140, and be centered on 70.
+
+    ClampedColourRGB low  = { 0.247, 0.004, 0.173 }; // "dark plum"
+    ClampedColourRGB high = { 0.996, 0.004, 0.694 }; // "bright pink"
+    ClampedColourRGB out  = { 0.000, 0.000, 0.000 };
+
+    const auto z = y * 2.0; // Make the reference intensity (assumed to be at the current window's centre) equal to 1.0.
+
+    if(false){
+    }else if( (0.50 <= z) && (z < 0.90) ){ // Show the 50% isoline (bound from above).
+        out = low;
+    }else if( (1.10 < z) ){ // Show the 110% isoline (bound from above).
+        out = high;
+
+    }else if( (0.90 <= z) && (z <= 1.00) ){ // Use differing scales below and above 100%.
+        out = ColourMap_Viridis((z - 0.90)/(1.00 - 0.90));
+    }else if( (1.00 < z) && (z <= 1.07) ){
+        out = ColourMap_MorelandBlackBody((z - 1.00)/(1.07 - 1.00));
+    }
+
+    return out;
+}
+
 /*
 //Note: prototype for above functions:
 

@@ -252,7 +252,10 @@ Drover SFML_Viewer( Drover DICOM_data,
 
         std::make_pair("YgorIncandescent", ColourMap_YgorIncandescent),
 
-        std::make_pair("LinearRamp", ColourMap_Linear)
+        std::make_pair("LinearRamp", ColourMap_Linear),
+
+        std::make_pair("Composite_50_90_107_110", ColourMap_Composite_50_90_107_110),
+        std::make_pair("Composite_50_90_100_107_110", ColourMap_Composite_50_90_100_107_110)
     };
     size_t colour_map = 0;
 
@@ -635,7 +638,6 @@ Drover SFML_Viewer( Drover DICOM_data,
 
             if(load_img_texture_sprite(disp_img_it, disp_img_texture_sprite)){
                 scale_sprite_to_fill_screen(window,disp_img_it,disp_img_texture_sprite);
-                const auto img_number = std::distance(disp_img_beg, disp_img_it);
                 FUNCINFO("Reloaded texture using '" << colour_maps[colour_map].first << "' colour map");
             }else{
                 FUNCERR("Unable to reload texture using selected colour map");
@@ -648,7 +650,6 @@ Drover SFML_Viewer( Drover DICOM_data,
 
             if(load_img_texture_sprite(disp_img_it, disp_img_texture_sprite)){
                 scale_sprite_to_fill_screen(window,disp_img_it,disp_img_texture_sprite);
-                const auto img_number = std::distance(disp_img_beg, disp_img_it);
                 FUNCINFO("Reloaded texture using '" << colour_maps[colour_map].first << "' colour map");
             }else{
                 FUNCERR("Unable to reload texture using selected colour map");
