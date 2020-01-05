@@ -14,7 +14,7 @@
 #include <cstdint>
 #include <deque>
 #include <exception>
-#include <experimental/optional>
+#include <optional>
 #include <functional>
 #include <iostream>
 #include <limits>
@@ -1227,13 +1227,13 @@ std::unique_ptr<Image_Array> Load_Image_Array(const std::string &FilenameIn){
     auto retrieve_as_string = [&TopDataSet](uint16_t group, 
                                             uint16_t tag, 
                                             uint32_t element = 0) 
-                                            -> std::experimental::optional<std::string> {
+                                            -> std::optional<std::string> {
         const uint32_t first_order = 0; // Always zero for modern DICOM files.
 
         //Check if the tag is present in the file. If not, bail.
         const bool create_if_not_found = false;
         const auto ptr = TopDataSet->getTag(group, first_order, tag, create_if_not_found);
-        if(ptr == nullptr) return std::experimental::optional<std::string>();
+        if(ptr == nullptr) return std::optional<std::string>();
 
         //Retrieve the element.
         const auto str = TopDataSet->getString(group, first_order, tag, element);
@@ -1242,18 +1242,18 @@ std::unique_ptr<Image_Array> Load_Image_Array(const std::string &FilenameIn){
     auto retrieve_as_long_int = [&TopDataSet,&retrieve_as_string](uint16_t group, 
                                               uint16_t tag, 
                                               uint32_t element = 0) 
-                                              -> std::experimental::optional<double> {
+                                              -> std::optional<double> {
         auto o = retrieve_as_string(group,tag,element);
-        if(!o) return std::experimental::nullopt;
+        if(!o) return std::nullopt;
         return std::stol(o.value());
     };                                            
     auto retrieve_as_double = [&TopDataSet,&retrieve_as_string](uint16_t group, 
                                             uint16_t tag, 
                                             uint32_t element = 0) 
-                                            -> std::experimental::optional<double> {
+                                            -> std::optional<double> {
         auto o = retrieve_as_string(group,tag,element);
 
-        std::experimental::optional<double> out = std::experimental::nullopt;
+        std::optional<double> out = std::nullopt;
         if(!o) return out;
         try{
             out = std::stod(o.value());
@@ -1261,7 +1261,7 @@ std::unique_ptr<Image_Array> Load_Image_Array(const std::string &FilenameIn){
         return out;
     };                                            
     auto retrieve_coalesce_as_string = [&TopDataSet,&retrieve_as_string](std::list<std::array<uint32_t,3>> qs) 
-                                                    -> std::experimental::optional<std::string> {
+                                                    -> std::optional<std::string> {
         for(const auto &q : qs){
             const auto group = static_cast<uint16_t>(q[0]);
             const auto tag = static_cast<uint16_t>(q[1]);
@@ -1271,13 +1271,13 @@ std::unique_ptr<Image_Array> Load_Image_Array(const std::string &FilenameIn){
         }
 
         //None were available.
-        return std::experimental::nullopt;
+        return std::nullopt;
     };
     auto retrieve_coalesce_as_long_int = [&TopDataSet,&retrieve_coalesce_as_string](std::list<std::array<uint32_t,3>> qs)
-                                                       -> std::experimental::optional<double> {
+                                                       -> std::optional<double> {
         auto o = retrieve_coalesce_as_string(qs);
 
-        std::experimental::optional<double> out = std::experimental::nullopt;
+        std::optional<double> out = std::nullopt;
         if(!o) return out;
         try{
             out = std::stol(o.value());
@@ -1285,10 +1285,10 @@ std::unique_ptr<Image_Array> Load_Image_Array(const std::string &FilenameIn){
         return out;
     };                                            
     auto retrieve_coalesce_as_double = [&TopDataSet,&retrieve_coalesce_as_string](std::list<std::array<uint32_t,3>> qs)
-                                                     -> std::experimental::optional<double> {
+                                                     -> std::optional<double> {
         auto o = retrieve_coalesce_as_string(qs);
 
-        std::experimental::optional<double> out = std::experimental::nullopt;
+        std::optional<double> out = std::nullopt;
         if(!o) return out;
         try{
             out = std::stod(o.value());
@@ -1790,43 +1790,43 @@ Load_TPlan_Config(const std::string &FilenameIn){
     ptr<imebra::dataSet> base_node_ptr = imebra::codecs::codecFactory::getCodecFactory()->load(reader);
 
 
-    const auto convert_first_to_string = [](const std::vector<std::string> &in) -> std::experimental::optional<std::string> {
+    const auto convert_first_to_string = [](const std::vector<std::string> &in) -> std::optional<std::string> {
         if(!in.empty()){
-            return std::experimental::optional<std::string>(in.front());
+            return std::optional<std::string>(in.front());
         }
-        return std::experimental::optional<std::string>();
+        return std::optional<std::string>();
     };
 
-    const auto convert_first_to_long_int = [](const std::vector<std::string> &in) -> std::experimental::optional<long int> {
+    const auto convert_first_to_long_int = [](const std::vector<std::string> &in) -> std::optional<long int> {
         if(!in.empty()){
             try{
                 const auto res = std::stol(in.front());
-                return std::experimental::optional<long int>(res);
+                return std::optional<long int>(res);
             }catch(const std::exception &){}
         }
-        return std::experimental::optional<long int>();
+        return std::optional<long int>();
     };
 
-    const auto convert_first_to_double = [](const std::vector<std::string> &in) -> std::experimental::optional<double> {
+    const auto convert_first_to_double = [](const std::vector<std::string> &in) -> std::optional<double> {
         if(!in.empty()){
             try{
                 const auto res = std::stod(in.front());
-                return std::experimental::optional<double>(res);
+                return std::optional<double>(res);
             }catch(const std::exception &){}
         }
-        return std::experimental::optional<double>();
+        return std::optional<double>();
     };
 
-    const auto convert_to_vec3_double = [](const std::vector<std::string> &in) -> std::experimental::optional<vec3<double>> {
+    const auto convert_to_vec3_double = [](const std::vector<std::string> &in) -> std::optional<vec3<double>> {
         if(in.size() == 3){
             try{
                 const auto x = std::stod(in.at(0));
                 const auto y = std::stod(in.at(1));
                 const auto z = std::stod(in.at(2));
-                return std::experimental::optional<vec3<double>>( vec3<double>(x,y,z) );
+                return std::optional<vec3<double>>( vec3<double>(x,y,z) );
             }catch(const std::exception &){}
         }
-        return std::experimental::optional<vec3<double>>();
+        return std::optional<vec3<double>>();
     };
 
     const auto convert_to_vector_double = [](const std::vector<std::string> &in) -> std::vector<double> {

@@ -7,7 +7,7 @@
 #include <algorithm>
 #include <array>
 #include <cstdint>
-#include <experimental/optional>
+#include <optional>
 #include <functional>
 #include <initializer_list>
 #include <iterator>
@@ -524,7 +524,7 @@ class OperationArgPkg {
         //Checks if the provided keys (and only the provided keys) are present.
         bool containsExactly(std::initializer_list<std::string> l) const;
 
-        std::experimental::optional<std::string> getValueStr(std::string key) const;
+        std::optional<std::string> getValueStr(std::string key) const;
 
         bool insert(std::string key, std::string val); //Will not overwrite.
         bool insert(std::string keyval); //Will not overwrite.

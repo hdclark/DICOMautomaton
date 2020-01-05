@@ -9,7 +9,7 @@
 #include <array>
 #include <cmath>
 #include <cstdint>   //For int64_t.
-#include <experimental/optional>
+#include <optional>
 #include <functional>
 #include <initializer_list>
 #include <map>
@@ -2233,15 +2233,15 @@ OperationArgPkg::containsExactly(std::initializer_list<std::string> l) const {
 
 
 //Returns value corresponding to key. Optional is disengaged if key is missing or cast fails.
-std::experimental::optional<std::string> 
+std::optional<std::string> 
 OperationArgPkg::getValueStr(std::string key) const {
     const auto cit = this->opts.find(key);
-    auto def = std::experimental::optional<std::string>();
+    auto def = std::optional<std::string>();
 
     if(cit == this->opts.end()){
-        return std::experimental::optional<std::string>();
+        return std::optional<std::string>();
     }
-    return std::experimental::make_optional(cit->second);
+    return std::make_optional(cit->second);
 }
 
 

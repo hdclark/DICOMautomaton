@@ -5,7 +5,7 @@
 #include <array>
 #include <cmath>
 #include <cstdlib>            //Needed for exit() calls.
-#include <experimental/optional>
+#include <optional>
 #include <fstream>
 #include <functional>
 #include <iostream>
@@ -268,7 +268,7 @@ Drover OptimizeStaticBeams(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
     for(auto & iap_it : IAs){
         if((*iap_it)->imagecoll.images.empty()) throw std::invalid_argument("Unable to find an image to analyze.");
 
-        std::experimental::optional<std::string> BeamID;
+        std::optional<std::string> BeamID;
         if(false){
         }else if(auto BeamNumber = (*iap_it)->imagecoll.images.front().GetMetadataValueAs<std::string>("ReferencedRTPlanSequence/ReferencedFractionGroupSequence/ReferencedBeamSequence/ReferencedBeamNumber")){
             BeamID = BeamNumber.value();
@@ -276,7 +276,7 @@ Drover OptimizeStaticBeams(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
             BeamID = BeamNumber.value();
         }
 
-        std::experimental::optional<std::string> Fname;
+        std::optional<std::string> Fname;
         if(false){
         }else if(auto Filename = (*iap_it)->imagecoll.images.front().GetMetadataValueAs<std::string>("Filename")){
             Fname = Filename.value();

@@ -1,6 +1,6 @@
 
 #include <algorithm>
-#include <experimental/any>
+#include <any>
 #include <functional>
 #include <list>
 #include <map>
@@ -17,7 +17,7 @@ bool ReasonableHUWindow(planar_image_collection<float,double>::images_list_it_t 
                         std::list<std::reference_wrapper<planar_image_collection<float,double>>>,
                         std::list<std::reference_wrapper<contour_collection<double>>>, 
                         float FullWidth, float Centre,
-                        std::experimental::any ){
+                        std::any ){
 
     //This routine generates a window which covers normal tissue Hounsfield unit range.
     // The image itself is not altered. Nor are the image values taken into account.
@@ -54,7 +54,7 @@ bool StandardGenericHUWindow(planar_image_collection<float,double>::images_list_
                              std::list<planar_image_collection<float,double>::images_list_it_t> selected_img_its,
                              std::list<std::reference_wrapper<planar_image_collection<float,double>>> ext_imgs,
                              std::list<std::reference_wrapper<contour_collection<double>>> ccsl, 
-                             std::experimental::any userdata ){
+                             std::any userdata ){
     return ReasonableHUWindow( std::move(first_img_it),
                                std::move(selected_img_its),
                                std::move(ext_imgs),
@@ -67,7 +67,7 @@ bool StandardHeadAndNeckHUWindow(planar_image_collection<float,double>::images_l
                              std::list<planar_image_collection<float,double>::images_list_it_t> selected_img_its,
                              std::list<std::reference_wrapper<planar_image_collection<float,double>>> ext_imgs,
                              std::list<std::reference_wrapper<contour_collection<double>>> ccsl,
-                             std::experimental::any userdata ){
+                             std::any userdata ){
     return ReasonableHUWindow( std::move(first_img_it),
                                std::move(selected_img_its),
                                std::move(ext_imgs),
@@ -81,7 +81,7 @@ bool StandardAbdominalHUWindow(planar_image_collection<float,double>::images_lis
                                std::list<planar_image_collection<float,double>::images_list_it_t> selected_img_its,
                                std::list<std::reference_wrapper<planar_image_collection<float,double>>> ext_imgs,
                                std::list<std::reference_wrapper<contour_collection<double>>> ccsl,
-                               std::experimental::any userdata ){
+                               std::any userdata ){
     return ReasonableHUWindow( std::move(first_img_it),
                                std::move(selected_img_its),
                                std::move(ext_imgs),
@@ -94,7 +94,7 @@ bool StandardThoraxHUWindow(planar_image_collection<float,double>::images_list_i
                             std::list<planar_image_collection<float,double>::images_list_it_t> selected_img_its,
                             std::list<std::reference_wrapper<planar_image_collection<float,double>>> ext_imgs,
                             std::list<std::reference_wrapper<contour_collection<double>>> ccsl,
-                            std::experimental::any userdata ){
+                            std::any userdata ){
     return ReasonableHUWindow( std::move(first_img_it),
                                std::move(selected_img_its),
                                std::move(ext_imgs),
@@ -107,7 +107,7 @@ bool StandardBoneHUWindow(planar_image_collection<float,double>::images_list_it_
                           std::list<planar_image_collection<float,double>::images_list_it_t> selected_img_its,
                           std::list<std::reference_wrapper<planar_image_collection<float,double>>> ext_imgs,
                           std::list<std::reference_wrapper<contour_collection<double>>> ccsl,
-                          std::experimental::any userdata ){
+                          std::any userdata ){
     return ReasonableHUWindow( std::move(first_img_it),
                                std::move(selected_img_its),
                                std::move(ext_imgs),

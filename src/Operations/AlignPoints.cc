@@ -2,7 +2,7 @@
 
 #include <asio.hpp>
 #include <algorithm>
-#include <experimental/optional>
+#include <optional>
 #include <fstream>
 #include <iterator>
 #include <list>
@@ -134,7 +134,7 @@ AffineTransform {
 // Note that this routine only identifies a transform, it does not implement it by altering the point clouds.
 //
 static
-std::experimental::optional<AffineTransform>
+std::optional<AffineTransform>
 AlignViaCentroid(const point_set<double> & moving,
                  const point_set<double> & stationary ){
     AffineTransform t;
@@ -161,7 +161,7 @@ AlignViaCentroid(const point_set<double> & moving,
 // Note that this routine only identifies a transform, it does not implement it by altering the point clouds.
 //
 static
-std::experimental::optional<AffineTransform>
+std::optional<AffineTransform>
 AlignViaPCA(const point_set<double> & moving,
             const point_set<double> & stationary ){
     AffineTransform t;
@@ -377,7 +377,7 @@ AlignViaPCA(const point_set<double> & moving,
 // Note that this routine only identifies a transform, it does not implement it by altering the point clouds.
 //
 static
-std::experimental::optional<AffineTransform>
+std::optional<AffineTransform>
 AlignViaExhaustiveICP( const point_set<double> & moving,
                        const point_set<double> & stationary,
                        long int max_icp_iters = 100,
@@ -582,7 +582,7 @@ AlignViaExhaustiveICP( const point_set<double> & moving,
 //
 // TODO: This algorithm is a WIP!
 static
-std::experimental::optional<AffineTransform>
+std::optional<AffineTransform>
 AlignViaTPSRPM(const point_set<double> & moving,
                const point_set<double> & stationary ){
     AffineTransform t;

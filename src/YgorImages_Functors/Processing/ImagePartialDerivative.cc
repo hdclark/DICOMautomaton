@@ -20,11 +20,11 @@ bool ImagePartialDerivative(
                     std::list<planar_image_collection<float,double>::images_list_it_t> selected_img_its,
                     std::list<std::reference_wrapper<planar_image_collection<float,double>>>,
                     std::list<std::reference_wrapper<contour_collection<double>>>, 
-                    std::experimental::any user_data){
+                    std::any user_data){
 
     ImagePartialDerivativeUserData *user_data_s;
     try{
-        user_data_s = std::experimental::any_cast<ImagePartialDerivativeUserData *>(user_data);
+        user_data_s = std::any_cast<ImagePartialDerivativeUserData *>(user_data);
     }catch(const std::exception &e){
         FUNCWARN("Unable to cast user_data to appropriate format. Cannot continue with computation");
         return false;

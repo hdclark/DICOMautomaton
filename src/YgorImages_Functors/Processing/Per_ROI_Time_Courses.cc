@@ -1,8 +1,8 @@
 
 #include <cmath>
 #include <exception>
-#include <experimental/any>
-#include <experimental/optional>
+#include <any>
+#include <optional>
 #include <functional>
 #include <list>
 #include <map>
@@ -19,7 +19,7 @@ bool PerROITimeCourses(planar_image_collection<float,double>::images_list_it_t f
                        std::list<planar_image_collection<float,double>::images_list_it_t> selected_img_its,
                        std::list<std::reference_wrapper<planar_image_collection<float,double>>>,
                        std::list<std::reference_wrapper<contour_collection<double>>> ccsl, 
-                       std::experimental::any user_data ){
+                       std::any user_data ){
 
     //This routine computes aggregate courses for the specified ROIs; pixels within a contour are value
     // averaged into a samples_1D. Typically these will be time courses, but can be groupings along any
@@ -30,7 +30,7 @@ bool PerROITimeCourses(planar_image_collection<float,double>::images_list_it_t f
     // if the input is missing or invalid.
     PerROITimeCoursesUserData *user_data_s;
     try{
-        user_data_s = std::experimental::any_cast<PerROITimeCoursesUserData *>(user_data);
+        user_data_s = std::any_cast<PerROITimeCoursesUserData *>(user_data);
     }catch(const std::exception &e){
         FUNCWARN("Unable to cast user_data to appropriate format. Cannot continue with computation");
         return false;

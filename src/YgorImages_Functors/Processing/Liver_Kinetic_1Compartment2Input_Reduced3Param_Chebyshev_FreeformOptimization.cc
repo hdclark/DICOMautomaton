@@ -7,8 +7,8 @@
 #include <stddef.h>
 #include <array>
 #include <exception>
-#include <experimental/any>
-#include <experimental/optional>
+#include <any>
+#include <optional>
 #include <functional>
 #include <iterator>
 #include <limits>
@@ -44,7 +44,7 @@ KineticModel_Liver_1C2I_Reduced3Param_Chebyshev_FreeformOptimization(planar_imag
                         std::list<planar_image_collection<float,double>::images_list_it_t> selected_img_its,
                         std::list<std::reference_wrapper<planar_image_collection<float,double>>> out_imgs,
                         std::list<std::reference_wrapper<contour_collection<double>>> cc_all,
-                        std::experimental::any user_data ){
+                        std::any user_data ){
 
     //This takes aggregate time courses for (1) venous ("VIF") and (2) arterial ("AIF") contrast enhancement
     // time courses and attempts to fit a (pharmaco)kinetic model to each voxel within the provided (liver) 
@@ -63,7 +63,7 @@ KineticModel_Liver_1C2I_Reduced3Param_Chebyshev_FreeformOptimization(planar_imag
     //Ensure we have the needed time course ROIs.
     KineticModel_Liver_1C2I_Reduced3Param_Chebyshev_UserData *user_data_s;
     try{
-        user_data_s = std::experimental::any_cast<KineticModel_Liver_1C2I_Reduced3Param_Chebyshev_UserData *>(user_data);
+        user_data_s = std::any_cast<KineticModel_Liver_1C2I_Reduced3Param_Chebyshev_UserData *>(user_data);
     }catch(const std::exception &e){
         FUNCWARN("Unable to cast user_data to appropriate format. Cannot continue with computation");
         return false;

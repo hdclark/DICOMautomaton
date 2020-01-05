@@ -2,7 +2,7 @@
 
 #include <asio.hpp>
 #include <exception>
-#include <experimental/any>
+#include <any>
 #include <functional>
 #include <limits>
 #include <list>
@@ -23,7 +23,7 @@
 bool ComputeGenerateSurfaceMask(planar_image_collection<float,double> &imagecoll,
                           std::list<std::reference_wrapper<planar_image_collection<float,double>>>,
                           std::list<std::reference_wrapper<contour_collection<double>>> ccsl,
-                          std::experimental::any user_data ){
+                          std::any user_data ){
 
     //This routine takes an image volume (which is assumed to cover the ROI without overlap or gaps) with an arbitrary
     // (cartesian) grid, some ROI(s) of interest, and assigns voxel values to the image based on whether the voxel is
@@ -52,7 +52,7 @@ bool ComputeGenerateSurfaceMask(planar_image_collection<float,double> &imagecoll
     //We require a valid GenerateSurfaceMaskUserData struct packed into the user_data.
     GenerateSurfaceMaskUserData *user_data_s;
     try{
-        user_data_s = std::experimental::any_cast<GenerateSurfaceMaskUserData *>(user_data);
+        user_data_s = std::any_cast<GenerateSurfaceMaskUserData *>(user_data);
     }catch(const std::exception &e){
         FUNCWARN("Unable to cast user_data to appropriate format. Cannot continue with computation");
         return false;

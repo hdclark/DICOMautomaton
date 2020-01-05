@@ -2,8 +2,8 @@
 #include <YgorStats.h>
 #include <array>
 #include <cmath>
-#include <experimental/any>
-#include <experimental/optional>
+#include <any>
+#include <optional>
 #include <functional>
 #include <limits>
 #include <list>
@@ -17,7 +17,7 @@ bool DCEMRIAUCMap(planar_image_collection<float,double>::images_list_it_t first_
                   std::list<planar_image_collection<float,double>::images_list_it_t> selected_img_its,
                   std::list<std::reference_wrapper<planar_image_collection<float,double>>>,
                   std::list<std::reference_wrapper<contour_collection<double>>>, 
-                  std::experimental::any ){
+                  std::any ){
 
     //This routine integrates pixel channel values over time.
     const bool InhibitSort = true; //We will explicitly sort once to speed up data ingress.

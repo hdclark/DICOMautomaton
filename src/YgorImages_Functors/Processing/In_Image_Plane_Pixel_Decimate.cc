@@ -19,7 +19,7 @@ bool InImagePlanePixelDecimate(
                     std::list<std::reference_wrapper<planar_image_collection<float,double>>>,
                     std::list<std::reference_wrapper<contour_collection<double>>>, 
                     long int ScaleFactorR, long int ScaleFactorC,
-                    std::experimental::any ){
+                    std::any ){
 
     //This routine reduces the number of pixels in an image by computing some sort of aggregate of a
     // block of adjacent pixels. 

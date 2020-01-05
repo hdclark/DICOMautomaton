@@ -1,7 +1,7 @@
 //DecimatePixels.cc - A part of DICOMautomaton 2015, 2016. Written by hal clark.
 
-#include <experimental/any>
-#include <experimental/optional>
+#include <any>
+#include <optional>
 #include <functional>
 #include <list>
 #include <map>
@@ -59,8 +59,7 @@ Drover DecimatePixels(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::
                                     std::placeholders::_1, std::placeholders::_2, 
                                     std::placeholders::_3, std::placeholders::_4,
                                     DecimateR, DecimateC,
-                                    std::experimental::any());
-
+                                    std::placeholders::_5);
 
         for(auto & img_arr : DICOM_data.image_data){
             if(!img_arr->imagecoll.Process_Images_Parallel( GroupIndividualImages,

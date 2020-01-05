@@ -7,7 +7,7 @@
 #include <initializer_list>
 #include <functional>
 #include <regex>
-#include <experimental/optional>
+#include <optional>
 
 #include "YgorString.h"
 #include "YgorMath.h"
@@ -587,10 +587,10 @@ Whitelist( std::list<std::list<std::shared_ptr<Surface_Mesh>>::iterator> sms,
                   (Opts.validation == Regex_Selector_Opts::Validation::Representative)
               ||  (Opts.validation == Regex_Selector_Opts::Validation::Pedantic)        ){
 
-            std::experimental::optional<std::string> ValueOpt 
+            std::optional<std::string> ValueOpt 
                     = ( (*smp_it)->meshes.metadata.count(MetadataKey) != 0 ) ?
                       (*smp_it)->meshes.metadata[MetadataKey] :
-                      std::experimental::optional<std::string>();
+                      std::optional<std::string>();
             if(ValueOpt){
                 return !(std::regex_match(ValueOpt.value(),theregex));
             }else if(Opts.nas == Regex_Selector_Opts::NAs::Include){
@@ -691,10 +691,10 @@ Whitelist( std::list<std::list<std::shared_ptr<TPlan_Config>>::iterator> tps,
                   (Opts.validation == Regex_Selector_Opts::Validation::Representative)
               ||  (Opts.validation == Regex_Selector_Opts::Validation::Pedantic)        ){
 
-            std::experimental::optional<std::string> ValueOpt 
+            std::optional<std::string> ValueOpt 
                     = ( (*tpp_it)->metadata.count(MetadataKey) != 0 ) ?
                       (*tpp_it)->metadata[MetadataKey] :
-                      std::experimental::optional<std::string>();
+                      std::optional<std::string>();
 
             // TODO: support selection of Dynamic_Machine_State and Static_Machine_State metadata too.
 
@@ -796,10 +796,10 @@ Whitelist( std::list<std::list<std::shared_ptr<Line_Sample>>::iterator> lss,
                   (Opts.validation == Regex_Selector_Opts::Validation::Representative)
               ||  (Opts.validation == Regex_Selector_Opts::Validation::Pedantic)        ){
 
-            std::experimental::optional<std::string> ValueOpt 
+            std::optional<std::string> ValueOpt 
                     = ( (*lsp_it)->line.metadata.count(MetadataKey) != 0 ) ?
                       (*lsp_it)->line.metadata[MetadataKey] :
-                      std::experimental::optional<std::string>();
+                      std::optional<std::string>();
             if(ValueOpt){
                 return !(std::regex_match(ValueOpt.value(),theregex));
             }else if(Opts.nas == Regex_Selector_Opts::NAs::Include){

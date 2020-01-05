@@ -1,8 +1,8 @@
 
 #include <cmath>
 #include <exception>
-#include <experimental/any>
-#include <experimental/optional>
+#include <any>
+#include <optional>
 #include <functional>
 #include <limits>
 #include <list>
@@ -37,7 +37,7 @@ bool ComputeCentralizedMoments(planar_image_collection<float,double>::images_lis
                          std::list<planar_image_collection<float,double>::images_list_it_t> selected_img_its,
                          std::list<std::reference_wrapper<planar_image_collection<float,double>>>,
                          std::list<std::reference_wrapper<contour_collection<double>>> ccsl,
-                         std::experimental::any ){
+                         std::any ){
     ComputeCentralizedMomentsWasRun = true; //Remember, this routine is called several times: for each image or group.
 
     //This routine computes image moments within the given ROI.

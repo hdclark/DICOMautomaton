@@ -1,6 +1,6 @@
 //ComparePixels.cc - A part of DICOMautomaton 2019. Written by hal clark.
 
-#include <experimental/optional>
+#include <optional>
 #include <iterator>
 #include <list>
 #include <map>

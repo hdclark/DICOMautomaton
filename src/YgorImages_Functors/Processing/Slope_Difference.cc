@@ -1,6 +1,6 @@
 
-#include <experimental/any>
-#include <experimental/optional>
+#include <any>
+#include <optional>
 #include <functional>
 #include <list>
 
@@ -23,7 +23,7 @@ bool TimeCourseSlopeDifference(planar_image_collection<float,double>::images_lis
                                std::list<std::reference_wrapper<contour_collection<double>>> ccsl,
                                double t1min, double t1max,  
                                double t2min, double t2max,
-                               std::experimental::any ){
+                               std::any ){
 
     //This routine computes a map of the difference of slopes fit over two time periods:
     //    (slope over t2range) - (slope over t1range).

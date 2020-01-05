@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <experimental/optional>
+#include <optional>
 #include <string>
 
 
@@ -44,5 +44,5 @@ ClampedColourRGB ColourMap_Composite_50_90_107_110(double y);
 ClampedColourRGB ColourMap_Composite_50_90_100_107_110(double y);
 
 //This function takes a named colour and map it to a colour specified in terms of R,G,B all within [0,1].
-std::experimental::optional<ClampedColourRGB> Colour_from_name(std::string n);
+std::optional<ClampedColourRGB> Colour_from_name(std::string n);
 

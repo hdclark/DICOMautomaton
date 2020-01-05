@@ -1,6 +1,6 @@
 
 #include <cmath>
-#include <experimental/any>
+#include <any>
 #include <functional>
 #include <list>
 
@@ -16,7 +16,7 @@ bool CTNaNsToAir(planar_image_collection<float,double>::images_list_it_t first_i
                  std::list<planar_image_collection<float,double>::images_list_it_t> selected_img_its,
                  std::list<std::reference_wrapper<planar_image_collection<float,double>>>,
                  std::list<std::reference_wrapper<contour_collection<double>>>,
-                 std::experimental::any ){
+                 std::any ){
 
     //This routine filters out infinite and NaN pixel values, replacing them with air in Hounsfield units (-1024).
 

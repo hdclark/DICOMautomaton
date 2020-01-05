@@ -2,7 +2,7 @@
 #pragma once
 
 #include <cmath>
-#include <experimental/any>
+#include <any>
 #include <functional>
 #include <limits>
 #include <list>
@@ -31,5 +31,5 @@ struct CropToROIsUserData {
 bool ComputeCropToROIs(planar_image_collection<float,double> &,
                           std::list<std::reference_wrapper<planar_image_collection<float,double>>>,
                           std::list<std::reference_wrapper<contour_collection<double>>> ccsl,
-                          std::experimental::any ud );
+                          std::any ud );
 

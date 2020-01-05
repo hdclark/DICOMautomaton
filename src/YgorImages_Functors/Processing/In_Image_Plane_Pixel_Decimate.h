@@ -3,7 +3,7 @@
 
 
 #include <cmath>
-#include <experimental/any>
+#include <any>
 #include <functional>
 #include <limits>
 #include <list>
@@ -21,5 +21,5 @@ bool InImagePlanePixelDecimate(planar_image_collection<float,double>::images_lis
                                std::list<std::reference_wrapper<planar_image_collection<float,double>>>,
                                std::list<std::reference_wrapper<contour_collection<double>>>, 
                                long int ScaleFactorRows, long int ScaleFactorColumns,
-                               std::experimental::any );
+                               std::any );
 

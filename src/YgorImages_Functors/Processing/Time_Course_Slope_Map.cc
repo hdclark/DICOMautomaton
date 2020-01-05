@@ -1,8 +1,8 @@
 
 #include <algorithm>
 #include <cmath>
-#include <experimental/any>
-#include <experimental/optional>
+#include <any>
+#include <optional>
 #include <functional>
 #include <list>
 #include <map>
@@ -20,7 +20,7 @@ bool TimeCourseSlopeMap(planar_image_collection<float,double>::images_list_it_t 
                         std::list<std::reference_wrapper<planar_image_collection<float,double>>>,
                         std::list<std::reference_wrapper<contour_collection<double>>>,
                         double tmin, double tmax, 
-                        std::experimental::any ){
+                        std::any ){
 
     //This routine collects voxel time series, fits a line (or computes a Spearman's rank correlation coefficient), and
     // produces a map of the resulting slope over the speecified time.

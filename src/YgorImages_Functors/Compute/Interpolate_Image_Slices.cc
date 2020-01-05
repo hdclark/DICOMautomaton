@@ -1,8 +1,8 @@
 //Interpolate_Image_Slices.cc.
 
 #include <exception>
-#include <experimental/any>
-#include <experimental/optional>
+#include <any>
+#include <optional>
 #include <functional>
 #include <list>
 #include <map>
@@ -26,7 +26,7 @@
 bool ComputeInterpolateImageSlices(planar_image_collection<float,double> &imagecoll,
                           std::list<std::reference_wrapper<planar_image_collection<float,double>>> external_imgs,
                           std::list<std::reference_wrapper<contour_collection<double>>> ccsl,
-                          std::experimental::any user_data ){
+                          std::any user_data ){
 
     // This routine interpolates image slices to match the geometry of a collection of reference images.
     // The purpose of such interpolation will often be to support direct voxel-to-voxel comparisons.
@@ -49,7 +49,7 @@ bool ComputeInterpolateImageSlices(planar_image_collection<float,double> &imagec
     //We require a valid ComputeInterpolateImageSlicesUserData struct packed into the user_data.
     ComputeInterpolateImageSlicesUserData *user_data_s;
     try{
-        user_data_s = std::experimental::any_cast<ComputeInterpolateImageSlicesUserData *>(user_data);
+        user_data_s = std::any_cast<ComputeInterpolateImageSlicesUserData *>(user_data);
     }catch(const std::exception &e){
         FUNCWARN("Unable to cast user_data to appropriate format. Cannot continue with computation");
         return false;
