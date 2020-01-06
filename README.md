@@ -103,6 +103,8 @@ Or, if building for Arch Linux:
 
 Direct installation on non-Linux systems is not officially supported. However, a
 portable Docker image can be built that is portable across non-Linux systems.
+`DICOMautomaton` can be installed on Android inside a termux environment
+(refer to guide in [documentation/]).
 
 
 # Containerization
