@@ -95,13 +95,11 @@ Download and install via:
           cd ~/dcma &&
           git clone https://github.com/hdclark/dicomautomaton dicomautomaton &&
           cd dicomautomaton &&
-          `# Instruct linker to link in 'libiconv'.                         ` \
-          `# Not sure why, but this appears to be needed for clang v9.0.0.  ` \
-          `# Alternatively we could add LDFLAGS='-liconv'.                  ` \
-          sed -i -e 's/Threads::Threads/Threads::Threads\niconv/g' src/CMakeLists.txt &&
+          `#  Ignore bash completions by nullifying the installation script. ` \
+          echo " " > scripts/CMakeLists.txt &&
           mkdir build &&
           cd build &&
-          cmake -E env CXXFLAGS='-march=native' \
+          cmake -E env CXXFLAGS='-march=native' LDFLAGS='-liconv' \
           cmake \
             -DCMAKE_INSTALL_PREFIX="$PREFIX" \
             -DCMAKE_BUILD_TYPE=Release \
