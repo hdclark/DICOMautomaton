@@ -1,6 +1,6 @@
 
 #include <cstdint>
-#include <experimental/any>
+#include <any>
 #include <functional>
 #include <list>
 #include <map>
@@ -24,7 +24,7 @@ static bool PixelHistogramAnalysisWasRun = false;
 bool PixelHistogramAnalysis(planar_image_collection<float,double>::images_list_it_t  local_img_it,
                             std::list<std::reference_wrapper<planar_image_collection<float,double>>> ,
                             std::list<std::reference_wrapper<contour_collection<double>>> ccsl, 
-                            std::experimental::any ){
+                            std::any ){
 
     //This routine computes histograms of pixel values for the given ROIs.
     PixelHistogramAnalysisWasRun = true;

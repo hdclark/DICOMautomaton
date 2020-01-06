@@ -10,7 +10,12 @@ ADD docker/build_bases/void /scratch_base
 
 
 # Install build dependencies.
-RUN xbps-install -y -Su && \
+#
+# Note: The following line installing libressl and libtls19 is required due to an issue with the voidlinux image.
+#       See https://www.reddit.com/r/voidlinux/comments/dyb5rc/cant_update_my_system/ .
+#       This fix should be removed as soon as possible. TODO.
+RUN xbps-install -y -S libressl libtls19 && \
+    xbps-install -y -Su && \
     xbps-install -y -S \
       base-devel \
       bash \

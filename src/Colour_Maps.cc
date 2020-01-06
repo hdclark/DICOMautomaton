@@ -1,7 +1,7 @@
 //Colour_Maps.cc - A part of DICOMautomaton 2017. Written by hal clark.
 
 #include <array>
-#include <experimental/optional>
+#include <optional>
 
 #include "Colour_Maps.h"
 #include "YgorMath.h"
@@ -16973,7 +16973,7 @@ ClampedColourRGB ColourMap_(double y){
 
 
 //This function takes a named colour and map it to a colour specified in terms of R,G,B all within [0,1].
-std::experimental::optional<ClampedColourRGB> Colour_from_name(std::string n){
+std::optional<ClampedColourRGB> Colour_from_name(std::string n){
     const auto cn = Canonicalize_String2(n, CANONICALIZE::TO_LOWER | CANONICALIZE::TRIM_ALL | CANONICALIZE::TO_AZ);
 
     std::map<std::string, ClampedColourRGB> colours {
@@ -17919,7 +17919,7 @@ std::experimental::optional<ClampedColourRGB> Colour_from_name(std::string n){
     };
 
     auto c_it = colours.find(cn);
-    if(c_it != colours.end()) return std::experimental::make_optional(c_it->second);
+    if(c_it != colours.end()) return std::make_optional(c_it->second);
     return {};
 }
 

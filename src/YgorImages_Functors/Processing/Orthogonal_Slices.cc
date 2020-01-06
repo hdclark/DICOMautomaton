@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <algorithm>
 #include <cmath>
-#include <experimental/any>
+#include <any>
 #include <functional>
 #include <iterator>
 #include <limits>
@@ -24,7 +24,7 @@ bool OrthogonalSlices(planar_image_collection<float,double>::images_list_it_t fi
                       std::list<planar_image_collection<float,double>::images_list_it_t> selected_img_its,
                       std::list<std::reference_wrapper<planar_image_collection<float,double>>> out_imgs,
                       std::list<std::reference_wrapper<contour_collection<double>>> ,
-                      std::experimental::any ){
+                      std::any ){
 
     //This routine computes slices that are orthogonal to the current slices (using the row and col units)
     // by explicitly sampling original slice voxels that overlap the new image voxels.

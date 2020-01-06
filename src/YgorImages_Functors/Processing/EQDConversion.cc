@@ -19,7 +19,7 @@ bool EQDConversion(planar_image_collection<float,double>::images_list_it_t first
                        std::list<planar_image_collection<float,double>::images_list_it_t> selected_img_its,
                        std::list<std::reference_wrapper<planar_image_collection<float,double>>>,
                        std::list<std::reference_wrapper<contour_collection<double>>> ccsl, 
-                       std::experimental::any user_data){
+                       std::any user_data){
 
     //This routine converts voxel intensities (dose) into EQD doses -- the dose BED-based dose equivalent if
     // the radiation were delivered in 2Gy fractions. 
@@ -30,7 +30,7 @@ bool EQDConversion(planar_image_collection<float,double>::images_list_it_t first
 
     EQDConversionUserData *user_data_s;
     try{
-        user_data_s = std::experimental::any_cast<EQDConversionUserData *>(user_data);
+        user_data_s = std::any_cast<EQDConversionUserData *>(user_data);
     }catch(const std::exception &e){
         FUNCWARN("Unable to cast user_data to appropriate format. Cannot continue with computation");
         return false;

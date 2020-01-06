@@ -1,8 +1,8 @@
 //Volumetric_Spatial_Derivative.cc.
 
 #include <exception>
-#include <experimental/any>
-#include <experimental/optional>
+#include <any>
+#include <optional>
 #include <functional>
 #include <list>
 #include <map>
@@ -28,7 +28,7 @@
 bool ComputeVolumetricSpatialDerivative(planar_image_collection<float,double> &imagecoll,
                       std::list<std::reference_wrapper<planar_image_collection<float,double>>> /*external_imgs*/,
                       std::list<std::reference_wrapper<contour_collection<double>>> ccsl,
-                      std::experimental::any user_data ){
+                      std::any user_data ){
 
     // This routine computes 3D (spatial) partial derivatives (or the gradient). This routine computes first-order
     // partial derivatives (using centered finite difference estimators) along the row-, column-, and image-aligned
@@ -44,7 +44,7 @@ bool ComputeVolumetricSpatialDerivative(planar_image_collection<float,double> &i
     //We require a valid ComputeVolumetricSpatialDerivativeUserData struct packed into the user_data.
     ComputeVolumetricSpatialDerivativeUserData *user_data_s;
     try{
-        user_data_s = std::experimental::any_cast<ComputeVolumetricSpatialDerivativeUserData *>(user_data);
+        user_data_s = std::any_cast<ComputeVolumetricSpatialDerivativeUserData *>(user_data);
     }catch(const std::exception &e){
         FUNCWARN("Unable to cast user_data to appropriate format. Cannot continue with computation");
         return false;

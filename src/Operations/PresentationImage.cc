@@ -8,8 +8,8 @@
 #include <cstdint>
 #include <cstdlib>            //Needed for exit() calls.
 #include <exception>
-#include <experimental/any>
-#include <experimental/optional>
+#include <any>
+#include <optional>
 #include <fstream>
 #include <functional>
 #include <iostream>
@@ -181,8 +181,8 @@ Drover PresentationImage( Drover DICOM_data,
     disp_img_texture_sprite_t disp_img_texture_sprite;
 
     //Real-time modifiable sticky window and level.
-    std::experimental::optional<double> custom_width;
-    std::experimental::optional<double> custom_centre;
+    std::optional<double> custom_width;
+    std::optional<double> custom_centre;
 
     // Adjust the window and level if the user has specified to do so.
     if(WindowLowOpt && WindowHighOpt){

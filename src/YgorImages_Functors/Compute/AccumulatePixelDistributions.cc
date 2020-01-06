@@ -1,8 +1,8 @@
 //AccumulatePixelDistributions.cc.
 
 #include <exception>
-#include <experimental/any>
-#include <experimental/optional>
+#include <any>
+#include <optional>
 #include <functional>
 #include <list>
 #include <map>
@@ -23,7 +23,7 @@
 bool AccumulatePixelDistributions(planar_image_collection<float,double> &imagecoll,
                           std::list<std::reference_wrapper<planar_image_collection<float,double>>>,
                           std::list<std::reference_wrapper<contour_collection<double>>> ccsl,
-                          std::experimental::any user_data ){
+                          std::any user_data ){
 
     //This routine accumulates pixel/voxel intensities on an individual ROI-basis. The entire distribution is collected
     // so that various quantities can be computed afterward. In particular, direct comparison of distributions. Another
@@ -42,7 +42,7 @@ bool AccumulatePixelDistributions(planar_image_collection<float,double> &imageco
     //We require a valid AccumulatePixelDistributionsUserData struct packed into the user_data.
     AccumulatePixelDistributionsUserData *user_data_s;
     try{
-        user_data_s = std::experimental::any_cast<AccumulatePixelDistributionsUserData *>(user_data);
+        user_data_s = std::any_cast<AccumulatePixelDistributionsUserData *>(user_data);
     }catch(const std::exception &e){
         FUNCWARN("Unable to cast user_data to appropriate format. Cannot continue with computation");
         return false;

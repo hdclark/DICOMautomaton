@@ -6,8 +6,8 @@
 #include <cstdint>
 #include <cstdlib>            //Needed for exit() calls.
 #include <exception>
-#include <experimental/any>
-#include <experimental/optional>
+#include <any>
+#include <optional>
 #include <fstream>
 #include <functional>
 #include <iostream>
@@ -143,11 +143,11 @@ Drover SFML_Viewer( Drover DICOM_data,
     disp_img_texture_sprite_t disp_img_texture_sprite;
 
     //Real-time modifiable sticky window and level.
-    std::experimental::optional<double> custom_width;
-    std::experimental::optional<double> custom_centre;
+    std::optional<double> custom_width;
+    std::optional<double> custom_centre;
 
     //A tagged point for measuring distance.
-    std::experimental::optional<vec3<double>> tagged_pos;
+    std::optional<vec3<double>> tagged_pos;
 
     //Flags for various things.
     bool DumpScreenshot = false; //One-shot instruction to dump a screenshot immediately after rendering.
@@ -1143,8 +1143,8 @@ Drover SFML_Viewer( Drover DICOM_data,
             //Save the current image position. We will attempt to find the same spot after switching arrays.
             const auto disp_img_pos = static_cast<size_t>( std::distance(disp_img_beg, disp_img_it) );
 
-            custom_width  = std::experimental::optional<double>();
-            custom_centre = std::experimental::optional<double>();
+            custom_width  = std::optional<double>();
+            custom_centre = std::optional<double>();
 
             if(n == 0) return;
             const auto n_clamped = (n > 0) ? 1 : -1;

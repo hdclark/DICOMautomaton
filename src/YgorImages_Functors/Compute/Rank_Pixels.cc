@@ -1,8 +1,8 @@
 //Rank_Pixels.cc.
 
 #include <exception>
-#include <experimental/any>
-#include <experimental/optional>
+#include <any>
+#include <optional>
 #include <functional>
 #include <list>
 #include <map>
@@ -26,7 +26,7 @@
 bool ComputeRankPixels(planar_image_collection<float,double> &imagecoll,
                           std::list<std::reference_wrapper<planar_image_collection<float,double>>>,
                           std::list<std::reference_wrapper<contour_collection<double>>>,
-                          std::experimental::any user_data ){
+                          std::any user_data ){
 
     //This routine ranks pixel values throughout all provided images.
     //
@@ -37,7 +37,7 @@ bool ComputeRankPixels(planar_image_collection<float,double> &imagecoll,
     //We require a valid RankPixelsUserData struct packed into the user_data.
     RankPixelsUserData *user_data_s;
     try{
-        user_data_s = std::experimental::any_cast<RankPixelsUserData *>(user_data);
+        user_data_s = std::any_cast<RankPixelsUserData *>(user_data);
     }catch(const std::exception &e){
         FUNCWARN("Unable to cast user_data to appropriate format. Cannot continue with computation");
         return false;

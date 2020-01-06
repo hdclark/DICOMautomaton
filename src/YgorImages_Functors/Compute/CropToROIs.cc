@@ -2,7 +2,7 @@
 
 #include <cmath>
 #include <exception>
-#include <experimental/any>
+#include <any>
 #include <functional>
 #include <limits>
 #include <list>
@@ -19,7 +19,7 @@
 bool ComputeCropToROIs(planar_image_collection<float,double> &imagecoll,
                           std::list<std::reference_wrapper<planar_image_collection<float,double>>>,
                           std::list<std::reference_wrapper<contour_collection<double>>> ccsl,
-                          std::experimental::any user_data ){
+                          std::any user_data ){
 
     //This routine takes an image volume (which does not necessarily have to cover a contiguous volume) and some ROI(s)
     // and crops the images, shrink-wrapping them to the row and column-unit axes-aligned bounding box (+ optional
@@ -42,7 +42,7 @@ bool ComputeCropToROIs(planar_image_collection<float,double> &imagecoll,
     //We require a valid CropToROIsUserData struct packed into the user_data.
     CropToROIsUserData *user_data_s;
     try{
-        user_data_s = std::experimental::any_cast<CropToROIsUserData *>(user_data);
+        user_data_s = std::any_cast<CropToROIsUserData *>(user_data);
     }catch(const std::exception &e){
         FUNCWARN("Unable to cast user_data to appropriate format. Cannot continue with computation");
         return false;

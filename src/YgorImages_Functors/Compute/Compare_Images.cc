@@ -1,8 +1,8 @@
 //Compare_Images.cc.
 
 #include <exception>
-#include <experimental/any>
-#include <experimental/optional>
+#include <any>
+#include <optional>
 #include <functional>
 #include <list>
 #include <map>
@@ -26,7 +26,7 @@
 bool ComputeCompareImages(planar_image_collection<float,double> &imagecoll,
                           std::list<std::reference_wrapper<planar_image_collection<float,double>>> external_imgs,
                           std::list<std::reference_wrapper<contour_collection<double>>> ccsl,
-                          std::experimental::any user_data ){
+                          std::any user_data ){
 
     // This routine compares pixel values between two image arrays in any combination of 2D and 3D. It support multiple
     // comparison types, but all consider **only** voxel-to-voxel comparisons -- interpolation is **not** used.
@@ -51,7 +51,7 @@ bool ComputeCompareImages(planar_image_collection<float,double> &imagecoll,
     //We require a valid ComputeCompareImagesUserData struct packed into the user_data.
     ComputeCompareImagesUserData *user_data_s;
     try{
-        user_data_s = std::experimental::any_cast<ComputeCompareImagesUserData *>(user_data);
+        user_data_s = std::any_cast<ComputeCompareImagesUserData *>(user_data);
     }catch(const std::exception &e){
         FUNCWARN("Unable to cast user_data to appropriate format. Cannot continue with computation");
         return false;

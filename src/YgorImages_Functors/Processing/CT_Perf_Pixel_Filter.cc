@@ -1,6 +1,6 @@
 
 #include <cmath>
-#include <experimental/any>
+#include <any>
 #include <functional>
 #include <limits>
 #include <list>
@@ -17,7 +17,7 @@ bool CTPerfEnormousPixelFilter(planar_image_collection<float,double>::images_lis
                                std::list<planar_image_collection<float,double>::images_list_it_t> selected_img_its,
                                std::list<std::reference_wrapper<planar_image_collection<float,double>>>,
                                std::list<std::reference_wrapper<contour_collection<double>>>,
-                               std::experimental::any ){
+                               std::any ){
 
     //This routine filters out outrageously high-value pixels which are emitted for whatever reason by some CT scanners.
     // There is no way I can see to guarantee that legitimate pixels will not be caught in the cross-fire. You'll have 

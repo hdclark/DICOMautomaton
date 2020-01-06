@@ -1,8 +1,8 @@
 
 #include <YgorStats.h>
 #include <cmath>
-#include <experimental/any>
-#include <experimental/optional>
+#include <any>
+#include <optional>
 #include <functional>
 #include <limits>
 #include <list>
@@ -19,7 +19,7 @@ bool DCEMRIT1Map(planar_image_collection<float,double>::images_list_it_t first_i
                  std::list<planar_image_collection<float,double>::images_list_it_t> selected_img_its,
                  std::list<std::reference_wrapper<planar_image_collection<float,double>>>,
                  std::list<std::reference_wrapper<contour_collection<double>>>, 
-                 std::experimental::any ){
+                 std::any ){
 
     //Verify there are merely two images selected.
     if(selected_img_its.size() != 2){

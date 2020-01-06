@@ -1,6 +1,6 @@
 
 #include <exception>
-#include <experimental/any>
+#include <any>
 #include <functional>
 #include <list>
 #include <ostream>
@@ -18,7 +18,7 @@
 bool ComputeContourSimilarity(planar_image_collection<float,double> &imagecoll,
                               std::list<std::reference_wrapper<planar_image_collection<float,double>>>,
                               std::list<std::reference_wrapper<contour_collection<double>>> ccsl,
-                              std::experimental::any user_data ){
+                              std::any user_data ){
 
     //This routine computes a Dice similarity metric between two (and only two) contour_collections.
     // (You can combine contours into a single contour_collection if you want them to be computed as a
@@ -37,7 +37,7 @@ bool ComputeContourSimilarity(planar_image_collection<float,double> &imagecoll,
     //We require a valid ComputeContourSimilarityUserData struct packed into the user_data.
     ComputeContourSimilarityUserData *user_data_s;
     try{
-        user_data_s = std::experimental::any_cast<ComputeContourSimilarityUserData *>(user_data);
+        user_data_s = std::any_cast<ComputeContourSimilarityUserData *>(user_data);
     }catch(const std::exception &e){
         FUNCWARN("Unable to cast user_data to appropriate format. Cannot continue with computation");
         return false;

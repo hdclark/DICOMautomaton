@@ -17,7 +17,7 @@ bool DecayDoseOverTime(planar_image_collection<float,double>::images_list_it_t f
                        std::list<planar_image_collection<float,double>::images_list_it_t> selected_img_its,
                        std::list<std::reference_wrapper<planar_image_collection<float,double>>>,
                        std::list<std::reference_wrapper<contour_collection<double>>> ccsl, 
-                       std::experimental::any user_data){
+                       std::any user_data){
 
     //This routine walks over all voxels in the first image, overwriting voxel values. The values are treated
     // as dose and decayed over time according to the selected model.
@@ -29,7 +29,7 @@ bool DecayDoseOverTime(planar_image_collection<float,double>::images_list_it_t f
     //This routine requires a valid HighlightROIVoxelsUserData struct packed into the user_data. 
     DecayDoseOverTimeUserData *user_data_s;
     try{
-        user_data_s = std::experimental::any_cast<DecayDoseOverTimeUserData *>(user_data);
+        user_data_s = std::any_cast<DecayDoseOverTimeUserData *>(user_data);
     }catch(const std::exception &e){
         FUNCWARN("Unable to cast user_data to appropriate format. Cannot continue with computation");
         return false;

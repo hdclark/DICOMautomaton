@@ -4,7 +4,7 @@
 
 #include <cmath>
 #include <cstdint>
-#include <experimental/any>
+#include <any>
 #include <functional>
 #include <limits>
 #include <limits>
@@ -63,5 +63,5 @@ struct ComputeContourSimilarityUserData {
 bool ComputeContourSimilarity(planar_image_collection<float,double> &,
                               std::list<std::reference_wrapper<planar_image_collection<float,double>>>,
                               std::list<std::reference_wrapper<contour_collection<double>>>,
-                              std::experimental::any ud );
+                              std::any ud );
 

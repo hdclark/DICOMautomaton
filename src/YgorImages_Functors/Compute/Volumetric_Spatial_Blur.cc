@@ -1,8 +1,8 @@
 //Volumetric_Spatial_Blur.cc.
 
 #include <exception>
-#include <experimental/any>
-#include <experimental/optional>
+#include <any>
+#include <optional>
 #include <functional>
 #include <list>
 #include <map>
@@ -28,7 +28,7 @@
 bool ComputeVolumetricSpatialBlur(planar_image_collection<float,double> &imagecoll,
                       std::list<std::reference_wrapper<planar_image_collection<float,double>>> /*external_imgs*/,
                       std::list<std::reference_wrapper<contour_collection<double>>> ccsl,
-                      std::experimental::any user_data ){
+                      std::any user_data ){
 
     // This routine computes 3D blurs. Currently, only Gaussians are supported. Specifically, a 1-sigma Gaussian (in
     // pixel units, not DICOM units) with a fixed 3*sigma extent. This blur is separable and is thus applied in three
@@ -44,7 +44,7 @@ bool ComputeVolumetricSpatialBlur(planar_image_collection<float,double> &imageco
     //We require a valid ComputeVolumetricSpatialBlurUserData struct packed into the user_data.
     ComputeVolumetricSpatialBlurUserData *user_data_s;
     try{
-        user_data_s = std::experimental::any_cast<ComputeVolumetricSpatialBlurUserData *>(user_data);
+        user_data_s = std::any_cast<ComputeVolumetricSpatialBlurUserData *>(user_data);
     }catch(const std::exception &e){
         FUNCWARN("Unable to cast user_data to appropriate format. Cannot continue with computation");
         return false;

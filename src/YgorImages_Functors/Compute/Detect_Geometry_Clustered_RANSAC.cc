@@ -1,8 +1,8 @@
 //Detect_Geometry_Clustered_RANSAC.cc.
 
 #include <exception>
-#include <experimental/any>
-#include <experimental/optional>
+#include <any>
+#include <optional>
 #include <functional>
 #include <list>
 #include <map>
@@ -25,7 +25,7 @@
 bool ComputeDetectGeometryClusteredRANSAC(planar_image_collection<float,double> &imagecoll,
                           std::list<std::reference_wrapper<planar_image_collection<float,double>>>,
                           std::list<std::reference_wrapper<contour_collection<double>>>,
-                          std::experimental::any user_data ){
+                          std::any user_data ){
 
     //This routine performs shape detection in 3D to identify fixed-radius spheres. 
     //
@@ -44,7 +44,7 @@ bool ComputeDetectGeometryClusteredRANSAC(planar_image_collection<float,double> 
     //We require a valid DetectGeometryClusteredRANSACUserData struct packed into the user_data.
     DetectGeometryClusteredRANSACUserData *user_data_s;
     try{
-        user_data_s = std::experimental::any_cast<DetectGeometryClusteredRANSACUserData *>(user_data);
+        user_data_s = std::any_cast<DetectGeometryClusteredRANSACUserData *>(user_data);
     }catch(const std::exception &e){
         FUNCWARN("Unable to cast user_data to appropriate format. Cannot continue with computation");
         return false;

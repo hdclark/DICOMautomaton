@@ -2,7 +2,7 @@
 #pragma once
 
 #include <cmath>
-#include <experimental/any>
+#include <any>
 #include <functional>
 #include <limits>
 #include <list>
@@ -36,5 +36,5 @@ struct RankPixelsUserData {
 bool ComputeRankPixels(planar_image_collection<float,double> &,
                           std::list<std::reference_wrapper<planar_image_collection<float,double>>>,
                           std::list<std::reference_wrapper<contour_collection<double>>>,
-                          std::experimental::any ud );
+                          std::any ud );
 
