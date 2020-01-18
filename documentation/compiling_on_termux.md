@@ -21,7 +21,7 @@ Install `termux`. Then install the base development meta-package:
 
 Install all required dependencies:
 
-    $>  pkg install eigen ncurses
+    $>  pkg install boost cmake eigen ncurses gsl
 
 Install `asio`, which is header-only:
 
@@ -81,6 +81,9 @@ Download and install via:
           cmake \
             -DCMAKE_INSTALL_PREFIX="$PREFIX" \
             -DCMAKE_BUILD_TYPE=Release \
+            -DWITH_LINUX_SYS=ON \
+            -DWITH_GNU_GSL=ON \
+            -DWITH_EIGEN=ON \
             .. && \
           make VERBOSE=1 &&
           make install )
