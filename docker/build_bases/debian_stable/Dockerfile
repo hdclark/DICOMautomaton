@@ -19,6 +19,7 @@ RUN apt-get --yes update && \
       cmake \
       g++ \
       vim \
+      ncurses-term \
       gdb \
       rsync \
       wget

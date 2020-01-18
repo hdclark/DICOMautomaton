@@ -22,6 +22,7 @@ RUN xbps-install -y -S libressl libtls19 && \
       git \
       cmake \
       vim \
+      ncurses-term \
       gdb \
       rsync \
       wget 
