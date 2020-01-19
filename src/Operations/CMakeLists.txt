@@ -103,6 +103,7 @@ add_library(Operations_objs OBJECT
     PartitionContours.cc
     PlotLineSamples.cc
     PlotPerROITimeCourses.cc
+    PointSeparation.cc
     PreFilterEnormousCTValues.cc
     PruneEmptyImageDoseArrays.cc
     PurgeContours.cc

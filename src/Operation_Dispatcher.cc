@@ -121,6 +121,7 @@
 #include "Operations/PartitionContours.h"
 #include "Operations/PlotPerROITimeCourses.h"
 #include "Operations/PlotLineSamples.h"
+#include "Operations/PointSeparation.h"
 #include "Operations/PreFilterEnormousCTValues.h"
 #include "Operations/PruneEmptyImageDoseArrays.h"
 #include "Operations/PurgeContours.h"
@@ -293,6 +294,7 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["PlotLineSamples"] = std::make_pair(OpArgDocPlotLineSamples, PlotLineSamples);
     out["PartitionContours"] = std::make_pair(OpArgDocPartitionContours, PartitionContours);
     out["PlotPerROITimeCourses"] = std::make_pair(OpArgDocPlotPerROITimeCourses, PlotPerROITimeCourses);
+    out["PointSeparation"] = std::make_pair(OpArgDocPointSeparation, PointSeparation);
     out["PreFilterEnormousCTValues"] = std::make_pair(OpArgDocPreFilterEnormousCTValues, PreFilterEnormousCTValues);
     out["PruneEmptyImageDoseArrays"] = std::make_pair(OpArgDocPruneEmptyImageDoseArrays, PruneEmptyImageDoseArrays);
     out["PurgeContours"] = std::make_pair(OpArgDocPurgeContours, PurgeContours);
