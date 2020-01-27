@@ -29,11 +29,20 @@ OperationDoc OpArgDocPointSeparation(void){
     OperationDoc out;
     out.name = "PointSeparation";
     out.desc = 
-        "This operation estimates the minimum and maximum point-to-point separation between two point clouds.";
+        "This operation estimates the minimum and maximum point-to-point separation between two point clouds."
+        " It also computes the longest-nearest (Hausdorff) separation, i.e., the length of the longest lines from points in"
+        " selection A to the nearest point in selection B. Various percentiles of the nearest separations are"
+        " also returned.";
 
     out.notes.emplace_back(
         "This routine scales like $O(N*M)$ where $N$ and $M$ are the number of points in each point cloud."
         " No indexing or acceleration is used. Beware that large point clouds will result in slow computations."
+    );
+    out.notes.emplace_back(
+        "This operation can be used to compare points clouds that are nearly alike."
+        " Such comparisons are useful for quantifying discrepancies after transformations, reconstructions,"
+        " simplifications, or any other scenarios where a point cloud must be reasonable accurately"
+        " reproduced."
     );
 
     out.args.emplace_back();
@@ -129,15 +138,32 @@ Drover PointSeparation(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std:
         LabelB = "unknown_pcloud";
     }
 
+    size_t N_A = 0; // Total number of points in set A.
+    for(const auto & pcpA_it : PCs_A){
+        N_A += (*pcpA_it)->pset.points.size();
+    }
+    size_t N_B = 0; // Total number of points in set B.
+    for(const auto & pcpB_it : PCs_B){
+        N_B += (*pcpB_it)->pset.points.size();
+    }
+
     // Estimate the separations.
     double sq_separation_min = std::numeric_limits<double>::infinity(); 
     double sq_separation_max = -sq_separation_min;
 
+    std::vector<double> nearest_dists(N_A, std::numeric_limits<double>::quiet_NaN()); // The distance to the nearest B-point for each A-point.
+
+    size_t i_A = 0;
     for(const auto & pcpA_it : PCs_A){
         for(const auto vA : (*pcpA_it)->pset.points){
+
+            double sq_nearest = std::numeric_limits<double>::infinity();
             for(const auto & pcpB_it : PCs_B){
                 for(const auto vB : (*pcpB_it)->pset.points){
                     const auto sq_sep = vA.sq_dist(vB);
+                    if(sq_sep < sq_nearest){
+                        sq_nearest = sq_sep;
+                    }
                     if(sq_sep < sq_separation_min){
                         sq_separation_min = sq_sep;
                     }
@@ -146,11 +172,23 @@ Drover PointSeparation(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std:
                     }
                 }
             }
+            nearest_dists.at(i_A) = std::sqrt(sq_nearest);
+            ++i_A;
         }
     }
 
+    // Summarize the findings.
+    const auto longest_nearest = Stats::Max(nearest_dists); // The longest of line connecting an A-point to the nearest B-point (Hausdorff distance).
+    const auto perc05_nearest = Stats::Percentile(nearest_dists, 0.05);
+    const auto perc25_nearest = Stats::Percentile(nearest_dists, 0.25);
+    const auto perc50_nearest = Stats::Percentile(nearest_dists, 0.50);
+    const auto perc75_nearest = Stats::Percentile(nearest_dists, 0.75);
+    const auto perc95_nearest = Stats::Percentile(nearest_dists, 0.95);
+
+    FUNCINFO("Hausdorff separation: " << Stats::Max(nearest_dists));
     FUNCINFO("Minimum separation: " << std::sqrt(sq_separation_min));
     FUNCINFO("Maximum separation: " << std::sqrt(sq_separation_max));
+    FUNCINFO("Longest-nearest separation: " << longest_nearest);
 
     //Report the findings. 
     FUNCINFO("Attempting to claim a mutex");
@@ -179,7 +217,13 @@ Drover PointSeparation(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std:
                << "LabelB,"
                << "NormalizedLabelB,"
                << "MinimumSeparation,"
-               << "MaximumSeparation"
+               << "MaximumSeparation,"
+               << "HausdorffSeparation,"
+               << "NearestSeparation05thPercentile,"
+               << "NearestSeparation25thPercentile,"
+               << "NearestSeparation50thPercentile,"
+               << "NearestSeparation75thPercentile,"
+               << "NearestSeparation95thPercentile,"
                << std::endl;
         }
         FO << UserComment.value_or("")     << ","
@@ -189,7 +233,13 @@ Drover PointSeparation(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std:
            << LabelB                       << ","
            << X(LabelB)                    << ","
            << std::sqrt(sq_separation_min) << ","
-           << std::sqrt(sq_separation_max)
+           << std::sqrt(sq_separation_max) << ","
+           << longest_nearest              << ","
+           << perc05_nearest               << ","
+           << perc25_nearest               << ","
+           << perc50_nearest               << ","
+           << perc75_nearest               << ","
+           << perc95_nearest               << ","
            << std::endl;
         FO.flush();
         FO.close();
