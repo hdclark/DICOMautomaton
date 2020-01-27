@@ -159,7 +159,7 @@ Drover PointSeparation(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std:
             }
 
             // Identify if the nearest matching point in set B for the current set A point is the A-B Hausdorff distance.
-            if(sq_nearest < sq_hausdorff){
+            if(sq_hausdorff < sq_nearest){
                 sq_hausdorff = sq_nearest;
             }
         }
