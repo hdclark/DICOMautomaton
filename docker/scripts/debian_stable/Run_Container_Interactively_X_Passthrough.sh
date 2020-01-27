@@ -33,7 +33,8 @@ cat > "${internal_run_script}" <<EOF
 #apt-get -y install firefox-esr
 #apt-get -y install mesa-va-drivers mesa-vdpau-drivers va-driver-all vdpau-driver-all libva-drm2 libva-x11-2 libva2 libvdpau-va-gl1 libvdpau1 
 #apt-get -y install va-driver-all vdpau-driver-all libva-drm2 libva-x11-2 libva2 libvdpau-va-gl1 libvdpau1 
-apt-get -y install dcmtk
+apt-get -y update
+apt-get -y install dcmtk dialog ncurses-term zenity
 
 # Copy the portable_dcma binaries into the container.
 rsync -r /root/portable_dcma/ /usr/bin/
@@ -97,6 +98,7 @@ sudo \
     `# Map various locations from host into the container. ` \
     -v /media/:/media/:ro \
     -v /media/sf_U_DRIVE/Profile/Desktop:/home/${uname}/Desktop/:ro \
+    -v /mnt/scratch_A/Research_Archives:/home/${uname}/Research_Archives/:rw \
     -v /:/host_root/:ro \
     \
     -v "$(pwd)":/start/:rw \
