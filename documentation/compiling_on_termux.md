@@ -118,6 +118,20 @@ Download and install via:
           make VERBOSE=1 &&
           make install )
 
+
+# Portable Binaries
+
+Portable binaries require a modification to the relevant script:
+
+    rsync -L -r --delete \
+      $( ldd "${which_dcma}" | 
+    -     grep '=>' | 
+    -     sed -e 's@.*=> @@' -e 's@ (.*@@' 
+    -  ) \
+    + sed -e "s@^@$PREFIX/lib/@g" ) \
+       "${out_dir}/"
+
+
 # Conclusion
 
 Confirm that the installation works by issuing:
@@ -125,4 +139,7 @@ Confirm that the installation works by issuing:
     $>  dicomautomaton_dispatcher -h
 
 Note that the installation will generally **not** be portable due to use of `-march=native`.
+
+Also note that Termux provides static library versions of many of `DICOMautomaton`s dependencies.
+Their use may help to improve portability.
 
