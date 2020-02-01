@@ -50,7 +50,7 @@ bool Load_From_3ddose_Files( Drover &DICOM_data,
     //
     if(Filenames.empty()) return true;
 
-    const auto extract_function_parameters = [](const std::string &in) -> std::vector<double> {
+    const auto extract_separated_numbers = [](const std::string &in) -> std::vector<double> {
             // This rountine extracts numerical function parameters.
             auto split = SplitStringToVector(in, ' ', 'd');
             split = SplitVector(split, '\t', 'd');
@@ -120,29 +120,34 @@ bool Load_From_3ddose_Files( Drover &DICOM_data,
             while(!FI.eof()){
                 std::getline(FI, aline);
 
-                const auto numbers = extract_function_parameters(aline);
+                // Ignore comments.
+                const auto hash_pos = aline.find_first_of("#");
+                if(hash_pos != std::string::npos){
+                    aline = aline.substr(0, hash_pos);
+                }
+
+                // Extract all numbers separated by whitespace.
+                const auto numbers = extract_separated_numbers(aline);
                 if(numbers.empty()) continue;
 
                 // If the matrix dimensions are not yet known, seek this info before reading any other information.
                 //
                 // Dimensional consistency is the only way to validate 3ddose files, so we use the dimensions to ensure
                 // the correct amount of data has been received at the end.
+                //
+                // Since there is no 3ddose file header or magic numbers we have to ruthlessly reject files that do
+                // not immediately present sane dimensions.
                 if(!dims_known){
-                    if(numbers.size() != 3) continue;
+                    if(numbers.size() != 3) throw std::runtime_error("Dimensions not understood.");
 
-                    try{
-                        N_x = static_cast<long int>(numbers.at(0));
-                        N_y = static_cast<long int>(numbers.at(1));
-                        N_z = static_cast<long int>(numbers.at(2));
-                        if((N_x <= 0) || (N_y <= 0) || (N_z <= 0)){
-                            continue;
-                        }
-                        dims_known = true;
-                        continue;
-
-                    }catch(const std::exception &){
-                        continue;
+                    N_x = static_cast<long int>(numbers.at(0));
+                    N_y = static_cast<long int>(numbers.at(1));
+                    N_z = static_cast<long int>(numbers.at(2));
+                    if((N_x <= 0) || (N_y <= 0) || (N_z <= 0)){
+                        throw std::runtime_error("Dimensions invalid.");
                     }
+                    dims_known = true;
+                    continue;
 
                 // Attempt to parse spatial information.
                 }else if( dims_known 
