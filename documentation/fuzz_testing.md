@@ -108,8 +108,63 @@ The running fuzzer shows a test interface so the runtime can be monitored. It lo
     
 Specific inputs that produce crashes will be available in `findings_dir/`.
 
+# Fuzzing `DICOMautomaton`
+
+A `Dockerfile` is provided to simplify fuzz testing core `DICOMautomaton` routines. At the time of writing this the
+`Debian` stable `afl` package failed to link `dicomautomaton_dispatcher` with the message
+
+    TLS transition from R_X86_64_TLSGD to R_X86_64_GOTTPOFF
+
+Switching to the `afl-clang` package addressed the issue.
+
+Fuzzing can be launched by preparing a test suite
+
+    $>  mkdir -p testcase_dir &&
+        mkdir -p findings_dir &&
+        cp test_file_{1,2,3,...}.{dcm,3ddose,xyz,obj,...} testcase_dir
+
+and invoking the `Docker` container
+
+    $>  ./docker/scripts/fuzz_testing/Run_Container_Interactively.sh 
+
+At the time of writing this, launching the fuzz tester required disabling some functionality and growing the total
+memory cap
+
+    $>  export AFL_SKIP_CPUFREQ=1 &&
+        export AFL_I_DONT_CARE_ABOUT_MISSING_CRASHES=1 &&
+        afl-fuzz -i testcase_dir -o findings_dir -m 200M -- dicomautomaton_dispatcher @@ -o DroverDebug
+
+Owing to the large memory footprint, fuzzer testing can be relatively slow. `DICOMautomaton` operations
+should be tailored to exercise real-world use-cases so that crashing test cases identified by the fuzz tester can be
+excluded early on in the file loading and validation process. This will help avoid scenarios where invalid data can
+creep into a workflow.
+
+                  american fuzzy lop 2.52b (dicomautomaton_dispatcher)
+
+    ┌─ process timing ─────────────────────────────────────┬─ overall results ─────┐
+    │        run time : 0 days, 0 hrs, 8 min, 58 sec       │  cycles done : 0      │
+    │   last new path : 0 days, 0 hrs, 0 min, 3 sec        │  total paths : 213    │
+    │ last uniq crash : none seen yet                      │ uniq crashes : 0      │
+    │  last uniq hang : none seen yet                      │   uniq hangs : 0      │
+    ├─ cycle progress ────────────────────┬─ map coverage ─┴───────────────────────┤
+    │  now processing : 0 (0.00%)         │    map density : 12.11% / 14.10%       │
+    │ paths timed out : 0 (0.00%)         │ count coverage : 1.54 bits/tuple       │
+    ├─ stage progress ────────────────────┼─ findings in depth ────────────────────┤
+    │  now trying : bitflip 1/1           │ favored paths : 8 (3.76%)              │
+    │ stage execs : 33.3k/54.0k (61.71%)  │  new edges on : 26 (12.21%)            │
+    │ total execs : 36.7k                 │ total crashes : 0 (0 unique)           │
+    │  exec speed : 66.99/sec (slow!)     │  total tmouts : 0 (0 unique)           │
+    ├─ fuzzing strategy yields ───────────┴───────────────┬─ path geometry ────────┤
+    │   bit flips : 0/0, 0/0, 0/0                         │    levels : 2          │
+    │  byte flips : 0/0, 0/0, 0/0                         │   pending : 213        │
+    │ arithmetics : 0/0, 0/0, 0/0                         │  pend fav : 8          │
+    │  known ints : 0/0, 0/0, 0/0                         │ own finds : 205        │
+    │  dictionary : 0/0, 0/0, 0/0                         │  imported : n/a        │
+    │       havoc : 0/0, 0/0                              │ stability : 100.00%    │
+    │        trim : 0.00%/1670, n/a                       ├────────────────────────┘
+    └─────────────────────────────────────────────────────┘          [cpu000:  8%]
+
 # Conclusion
 
-This example has demonstrated how to run `AFL` on a simple test case. A `Dockerfile` is provided to simplify fuzz
-testing core `DICOMautomaton` routines.
+This example has demonstrated how to run `AFL` on both a simple test case and `DICOMautomaton` for fuzz testing.
 
