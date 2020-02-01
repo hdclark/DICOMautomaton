@@ -110,5 +110,6 @@ Specific inputs that produce crashes will be available in `findings_dir/`.
 
 # Conclusion
 
-This example demonstrates how to run `AFL` on a simple test case.
+This example has demonstrated how to run `AFL` on a simple test case. A `Dockerfile` is provided to simplify fuzz
+testing core `DICOMautomaton` routines.
 
