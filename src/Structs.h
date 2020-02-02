@@ -69,7 +69,7 @@ namespace Segmentations {
     const uint32_t misc_marker       = (uint32_t)(1) << 19; //524288;
     const uint32_t core_peel         = (uint32_t)(1) << 22; //4194304;
     //Note: std::numeric_limits<uint32_t>::max() == 4294967295.
-};
+}
 
 std::string Segmentations_to_Words(const std::vector<uint32_t> &in);
 

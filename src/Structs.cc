@@ -1350,13 +1350,14 @@ drover_bnded_dose_stat_moments_map_t drover_bnded_dose_stat_moments_map_factory(
 
 
 //Constructors.
-Drover::Drover() {};
+Drover::Drover() {}
+
 Drover::Drover( const Drover &in ) : contour_data(in.contour_data), 
                                      image_data(in.image_data),
                                      point_data(in.point_data),
                                      smesh_data(in.smesh_data),
                                      tplan_data(in.tplan_data),
-                                     lsamp_data(in.lsamp_data) {};
+                                     lsamp_data(in.lsamp_data) {}
 
 //Member functions.
 void Drover::operator=(const Drover &rhs){

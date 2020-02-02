@@ -14,7 +14,7 @@ BEDabr
 operator-(BEDabr A){
     A.val *= -1.0;
     return A;
-};
+}
 
 BEDabr
 operator+(BEDabr A, BEDabr B){
@@ -28,12 +28,12 @@ operator+(BEDabr A, BEDabr B){
     }
     A.val += B.val;
     return A;
-};
+}
 
 BEDabr
 operator-(BEDabr A, BEDabr B){
     return (A + (-B));
-};
+}
 
 BEDabr
 operator*(BEDabr A, double B){
@@ -58,7 +58,7 @@ operator/(BEDabr A, BEDabr B){
         throw std::runtime_error("Cannot divide BED's -- they have different alpha/beta.");
     }
     return A.val / B.val;
-};
+}
 
 
 

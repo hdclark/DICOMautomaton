@@ -113,7 +113,7 @@ Write_XYZ( const std::string &fname,
     }
     OF.close();
     return;
-};
+}
 
 static
 void
@@ -138,7 +138,7 @@ Write_PLY( const std::string &fname,
     }
     OF.close();
     return;
-};
+}
 
 static
 void

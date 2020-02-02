@@ -27,7 +27,7 @@ void Inject_Thin_Plane_Contour( const planar_image<float,double> &animg,
         Inject_Thin_Line_Contour( animg, int_line, dest, metadata, c_thickness );
     }
     return;
-};
+}
 
 
 //Injects contours that mimic the provided line projected onto the image plane.
@@ -98,7 +98,7 @@ void Inject_Thin_Line_Contour( const planar_image<float,double> &animg,
     }
 
     return;
-};
+}
 
 //Injects contours that mimic the provided point projected onto the image plane.
 void Inject_Point_Contour( const planar_image<float,double> &animg,
@@ -144,4 +144,4 @@ void Inject_Point_Contour( const planar_image<float,double> &animg,
     }
 
     return;
-};
+}

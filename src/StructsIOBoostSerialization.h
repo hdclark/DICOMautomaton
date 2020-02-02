@@ -215,20 +215,20 @@ void serialize(Archive &a, Drover &d, const unsigned int version){
 
 
 //BOOST_CLASS_VERSION(Image_Array, 0); // Initial version number.
-BOOST_CLASS_VERSION(Image_Array, 1); // After removing the disused 'bits' and 'filename' members.
+BOOST_CLASS_VERSION(Image_Array, 1) // After removing the disused 'bits' and 'filename' members.
 
-BOOST_CLASS_VERSION(Point_Cloud, 0); // Initial version number.
+BOOST_CLASS_VERSION(Point_Cloud, 0) // Initial version number.
 
-BOOST_CLASS_VERSION(Surface_Mesh, 0); // Initial version number, effectively just a fv_surface_mesh wrapper class.
+BOOST_CLASS_VERSION(Surface_Mesh, 0) // Initial version number, effectively just a fv_surface_mesh wrapper class.
 
-BOOST_CLASS_VERSION(Static_Machine_State, 0); // Initial version number.
-BOOST_CLASS_VERSION(Dynamic_Machine_State, 0); // Initial version number.
-BOOST_CLASS_VERSION(TPlan_Config, 0); // Initial version number.
+BOOST_CLASS_VERSION(Static_Machine_State, 0) // Initial version number.
+BOOST_CLASS_VERSION(Dynamic_Machine_State, 0) // Initial version number.
+BOOST_CLASS_VERSION(TPlan_Config, 0) // Initial version number.
 
-BOOST_CLASS_VERSION(Line_Sample, 0); // Initial version number.
+BOOST_CLASS_VERSION(Line_Sample, 0) // Initial version number.
 
 //BOOST_CLASS_VERSION(Drover, 0); // Initial version number.
 //BOOST_CLASS_VERSION(Drover, 1); // After removing Dose_Arrays and Drover::Has_Been_Melded.
 //BOOST_CLASS_VERSION(Drover, 2); // After adding v0 of the Surface_Mesh member.
-BOOST_CLASS_VERSION(Drover, 3); // After adding v0 of the TPlan_Config member and v0 of the Line_Sample member.
+BOOST_CLASS_VERSION(Drover, 3) // After adding v0 of the TPlan_Config member and v0 of the Line_Sample member.
 
