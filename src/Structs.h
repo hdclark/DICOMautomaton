@@ -515,6 +515,7 @@ class OperationArgPkg {
 
     public:
         OperationArgPkg(std::string unparsed, std::string sepr = ":", std::string eqls = "="); // e.g., "SomeOperation:keyA=valueA:keyB=valueB"
+        OperationArgPkg(const OperationArgPkg &) = default;
 
         OperationArgPkg & operator=(const OperationArgPkg &rhs);
 
