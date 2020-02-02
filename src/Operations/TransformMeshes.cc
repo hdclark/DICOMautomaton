@@ -185,7 +185,7 @@ Drover TransformMeshes(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std:
 
         ++completed;
         FUNCINFO("Completed " << completed << " of " << sm_count
-              << " --> " << static_cast<int>(1000.0*(completed)/sm_count)/10.0 << "\% done");
+              << " --> " << static_cast<int>(1000.0*(completed)/sm_count)/10.0 << "% done");
     }
 
     return DICOM_data;

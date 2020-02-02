@@ -277,7 +277,7 @@ bool ComputeInterpolateImageSlices(planar_image_collection<float,double> &imagec
                 std::lock_guard<std::mutex> lock(saver_printer);
                 ++completed;
                 FUNCINFO("Completed " << completed << " of " << img_count
-                      << " --> " << static_cast<int>(1000.0*(completed)/img_count)/10.0 << "\% done");
+                      << " --> " << static_cast<int>(1000.0*(completed)/img_count)/10.0 << "% done");
             }
         }); // thread pool task closure.
 

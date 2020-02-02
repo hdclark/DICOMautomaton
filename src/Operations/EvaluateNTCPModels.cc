@@ -153,8 +153,8 @@ OperationDoc OpArgDocEvaluateNTCPModels(void){
 
     out.args.emplace_back();
     out.args.back().name = "LKB_TD50";
-    out.args.back().desc = "The dose (in Gray) needed to deliver to the selected OAR that will induce the effect in 50\%"
-                      " of cases.";
+    out.args.back().desc = "The dose (in Gray) needed to deliver to the selected OAR that will induce the effect in 50%"
+                           " of cases.";
     out.args.back().default_val = "26.8";
     out.args.back().expected = true;
     out.args.back().examples = { "26.8" };
