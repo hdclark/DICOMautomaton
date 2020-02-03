@@ -53,6 +53,12 @@ RUN apt-get install --yes \
 
 RUN cp /scratch_base/xpra-xorg.conf /etc/X11/xorg.conf
 
+# Tweak the fuzzer settings.
+ENV AFL_HARDEN 1
+#ENV AFL_USE_ASAN 1
+#ENV AFL_USE_MSAN 1
+ENV AFL_QUIET 1
+ENV AFL_SKIP_CPUFREQ 1
 
 # Install Wt from source to get around outdated and buggy Debian package.
 #
