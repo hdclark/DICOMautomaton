@@ -155,7 +155,7 @@ elif [[ "${DISTRIBUTION}" =~ .*arch.*linux.* ]] ; then
         chown -R dummy_build_user .
         runuser dummy_build_user -c "makepkg --syncdeps --needed --noconfirm"
         if [[ "${ALSOINSTALL}" =~ ^y.* ]] ; then
-            pacman --noconfirm -U $( ls -t ./*pkg.tar.xz | head -n 1 )
+            pacman --noconfirm -U $( ls -t ./*pkg.tar* | head -n 1 )
         fi
         userdel dummy_build_user
 
