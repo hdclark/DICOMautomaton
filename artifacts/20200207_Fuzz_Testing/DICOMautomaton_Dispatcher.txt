@@ -1,0 +1,115 @@
+exit
+
+
+Fuzzed `dicomautomaton_dispatcher @@ -o DroverDebug` using fuzz_testing Docker container both with and without
+AFL_HARDEN defined using a test set comprised of the following files:
+
+    [hal@trip testcase_dir]$ ls -lash
+    total 48K
+    4.0K drwxr-xr-x 2 hal users 4.0K Feb  1 13:44 .
+    4.0K drwxr-xr-x 4 hal users 4.0K Feb  2 20:16 ..
+    8.0K -rw-r--r-- 2 hal users 6.6K Feb  1 10:12 gv.xyz
+    4.0K -rw-r--r-- 2 hal users  653 Feb  1 10:05 medium.3ddose
+    8.0K -rw-r--r-- 2 hal users 7.0K Feb  1 10:11 shifted_rotated_gv.xyz
+    4.0K -rw-r--r-- 1 hal users  219 Feb  1 10:05 small.3ddose
+    4.0K -rw-r--r-- 2 hal users  292 Feb  1 10:14 square.obj
+    4.0K -rw-r--r-- 2 hal users   48 Feb  1 10:03 square.xyz
+    4.0K -rw-r--r-- 2 hal users   42 Feb  1 10:05 tiny.3ddose
+    4.0K -rw-r--r-- 1 hal users  296 Feb  1 10:09 warped_square.obj
+    [hal@trip testcase_dir]$ sha256sum *
+    6332af28769d77de0f68bc9182081165c7ffd62a4869dd9e0958afcbadcdc0db  gv.xyz
+    06ba9c3e6e4f94916600fd3cbcc50409cf2d79886844627bb465d1c51d0658e4  medium.3ddose
+    ae2b2afe4de8324ddf412b3f54352670b1643b6d76743f32a5517550fe94d2aa  shifted_rotated_gv.xyz
+    89778df547578075a00e2cb1f01a56941591525ccd7e7e3cf3bc456b44d0b148  small.3ddose
+    2a27041074f063c99e71f578318dd7765bf25a5fdd8fcc3eee4be85e447fbb80  square.obj
+    e40f5e467a23b1ed584087af260caf175f257af99a48bcab0190a8b00df056c5  square.xyz
+    ab09d5551e6ca93db921b9093c3aab40a092c723cdb0010bd3225796b3a5227e  tiny.3ddose
+    7d8cc5308440d3d5bd98806d333bf0da4f331f4a0d64334d260654e182bba505  warped_square.obj
+
+DroverDebug was modified to call std::terminate if any invalid data or unexpected null pointers were encountered, but
+this didn't seem to alter results.
+
+Results:
+
+Invoking like:
+
+    $>  export AFL_SKIP_CPUFREQ=1 && \
+        export AFL_I_DONT_CARE_ABOUT_MISSING_CRASHES=1 && \
+        afl-fuzz -d -i testcase_dir -o findings_dir -m 200M -- dicomautomaton_dispatcher @@ -o DroverDebug
+
+produced
+
+                  american fuzzy lop 2.52b (dicomautomaton_dispatcher)
+
+    ┌─ process timing ─────────────────────────────────────┬─ overall results ─────┐
+    │        run time : 4 days, 13 hrs, 32 min, 3 sec      │  cycles done : 0      │
+    │   last new path : 0 days, 0 hrs, 14 min, 3 sec       │  total paths : 923    │
+    │ last uniq crash : none seen yet                      │ uniq crashes : 0      │
+    │  last uniq hang : none seen yet                      │   uniq hangs : 0      │
+    ├─ cycle progress ────────────────────┬─ map coverage ─┴───────────────────────┤
+    │  now processing : 515 (55.80%)      │    map density : 13.89% / 17.16%       │
+    │ paths timed out : 5 (0.54%)         │ count coverage : 1.85 bits/tuple       │
+    ├─ stage progress ────────────────────┼─ findings in depth ────────────────────┤
+    │  now trying : bitflip 2/1           │ favored paths : 58 (6.28%)             │
+    │ stage execs : 24.5k/53.4k (45.88%)  │  new edges on : 108 (11.70%)           │
+    │ total execs : 12.3M                 │ total crashes : 0 (0 unique)           │
+    │  exec speed : 23.68/sec (slow!)     │  total tmouts : 23.2k (94 unique)      │
+    ├─ fuzzing strategy yields ───────────┴───────────────┬─ path geometry ────────┤
+    │   bit flips : 290/655k, 20/601k, 15/601k            │    levels : 3          │
+    │  byte flips : 0/75.2k, 0/75.1k, 1/75.1k             │   pending : 903        │
+    │ arithmetics : 13/4.18M, 0/263k, 0/2157              │  pend fav : 53         │
+    │  known ints : 0/433k, 4/2.09M, 2/3.01M              │ own finds : 915        │
+    │  dictionary : 0/0, 0/0, 0/0                         │  imported : n/a        │
+    │       havoc : 569/104k, 0/0                         │ stability : 100.00%    │
+    │        trim : 0.22%/27.1k, 0.16%                    ├────────────────────────┘
+    ^C────────────────────────────────────────────────────┘          [cpu000:120%]
+
+    +++ Testing aborted by user +++
+
+    [!] Stopped during the first cycle, results may be incomplete.
+        (For info on resuming, see /usr/share/doc/afl-doc/docs/README.)
+    [+] We're done here. Have a nice day!
+
+Invoking like:
+
+    $>  export AFL_SKIP_CPUFREQ=1 && \
+        export AFL_I_DONT_CARE_ABOUT_MISSING_CRASHES=1 && \
+        afl-fuzz -i testcase_dir -o findings_dir -m 200M -- dicomautomaton_dispatcher @@ -o DroverDebug
+
+produced
+
+                  american fuzzy lop 2.52b (dicomautomaton_dispatcher)
+
+    ┌─ process timing ─────────────────────────────────────┬─ overall results ─────┐
+    │        run time : 5 days, 20 hrs, 3 min, 51 sec      │  cycles done : 0      │
+    │   last new path : 0 days, 3 hrs, 24 min, 38 sec      │  total paths : 990    │
+    │ last uniq crash : none seen yet                      │ uniq crashes : 0      │
+    │  last uniq hang : none seen yet                      │   uniq hangs : 0      │
+    ├─ cycle progress ────────────────────┬─ map coverage ─┴───────────────────────┤
+    │  now processing : 685 (69.19%)      │    map density : 12.27% / 16.00%       │
+    │ paths timed out : 4 (0.40%)         │ count coverage : 1.94 bits/tuple       │
+    ├─ stage progress ────────────────────┼─ findings in depth ────────────────────┤
+    │  now trying : bitflip 1/1           │ favored paths : 55 (5.56%)             │
+    │ stage execs : 2212/3128 (70.72%)    │  new edges on : 119 (12.02%)           │
+    │ total execs : 21.9M                 │ total crashes : 0 (0 unique)           │
+    │  exec speed : 50.24/sec (slow!)     │  total tmouts : 105k (107 unique)      │
+    ├─ fuzzing strategy yields ───────────┴───────────────┬─ path geometry ────────┤
+    │   bit flips : 254/1.13M, 21/1.13M, 15/1.13M         │    levels : 3          │
+    │  byte flips : 0/134k, 0/134k, 1/134k                │   pending : 960        │
+    │ arithmetics : 13/7.12M, 0/475k, 0/12.9k             │  pend fav : 43         │
+    │  known ints : 1/736k, 8/3.54M, 2/5.62M              │ own finds : 982        │
+    │  dictionary : 0/0, 0/0, 0/75.3k                     │  imported : n/a        │
+    │       havoc : 667/345k, 0/0                         │ stability : 100.00%    │
+    │        trim : 0.41%/39.2k, 0.17%                    ├────────────────────────┘
+    ^C────────────────────────────────────────────────────┘          [cpu000:121%]
+
+    +++ Testing aborted by user +++
+
+    [!] Stopped during the first cycle, results may be incomplete.
+        (For info on resuming, see /usr/share/doc/afl-doc/docs/README.)
+    [+] We're done here. Have a nice day!
+
+
+I'm not sure these tests are in any way conclusive. More invasive testing, or the use of specially-designed test cases
+is probably required for conclusive results.
+
