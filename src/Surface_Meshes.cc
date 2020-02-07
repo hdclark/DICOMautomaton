@@ -937,7 +937,9 @@ Marching_Cubes_Implementation(
     const long int img_count = grid_imgs.size();
 
     // Iterate over all voxels, traversing the images in order of adjacency for consistency.
-    //for(auto &img_refw : grid_imgs){
+    //
+    // NOTE: The order of traversal must reflect image adjacency. This requirement could be relaxed if candidate
+    //       vertices (below) were indexed, but even this would involve extra memory usage for little gain.
     for(const auto &apair : img_adj.int_to_img){
         const auto img_refw = std::ref( *apair.second );
 
@@ -1096,14 +1098,26 @@ Marching_Cubes_Implementation(
                     //       the vector. Using reverse iterators for searching rather than forward iterators more than
                     //       halves the time this entire routine takes. 
                     //
-                    // TODO: Use spatial indexing of some kind to speed up dupe vertex searching (or try fully eliminate
-                    //       the need for it via grid indexing).
+                    // TODO: Below we use a generic lookup that considers the last N vertices added where N is selected
+                    //       so that it will include all possibly-adjacent voxels (in the worst case). While this works
+                    //       to limit needless complexity when there are many voxels, it is wasteful and could be
+                    //       improved. For example, spatial indexing of some kind could be used to speed up dupe vertex
+                    //       searching, or this could be fully eliminated by exploiting the grid nature or keeping an
+                    //       explicit list of vertices still reachable.
+                    //
+                    //       Note that the last-N-only lookup below implicitly assumes images are ordered AND traversed
+                    //       in adjacent order. 
+                    const auto min_consider = static_cast<long int>( ( N_rows * N_cols + 1 + std::max(N_rows, N_cols) + 1 ) * 5 * 3 );
+
                     std::array<size_t, 3> vert_indices;
                     std::vector<Kernel::Point_3> new_verts;
                     for(int32_t tri_corner = 0; tri_corner < 3; ++tri_corner){
+                        const auto N_verts = static_cast<long int>( mesh_triangle_verts.size() );
+                        const auto consider = std::min( min_consider, N_verts );
+                        const auto rend = std::next(std::rbegin(mesh_triangle_verts), consider);
                         auto v_it = std::find_if( //std::execution::par_unseq,
                                                   std::rbegin(mesh_triangle_verts),
-                                                  std::rend(mesh_triangle_verts),
+                                                  rend,
                                                   [=]( const Kernel::Point_3 &cv ) -> bool {
                                                       const vec3<double> v( cv[0], cv[1], cv[2] );
                                                       return (tri_verts[tri_corner].sq_dist(v) < (dvec3_tol*dvec3_tol));
