@@ -20,14 +20,14 @@ namespace DCMA_DICOM {
 
 struct Node;
 
-Node::Node() {};
+Node::Node() {}
 
 Node::Node(NodeKey key,
            std::string VR,
            std::string val) 
          : key(key),
            VR(VR),
-           val(val) {};
+           val(val) {}
 
 
 bool Node::operator==(const Node &rhs) const {

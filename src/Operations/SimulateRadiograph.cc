@@ -385,7 +385,7 @@ Drover SimulateRadiograph(Drover DICOM_data,
                     std::lock_guard<std::mutex> lock(printer);
                     ++completed;
                     FUNCINFO("Completed " << completed << " of " << RadiographRows 
-                          << " --> " << static_cast<int>(1000.0*(completed)/RadiographRows)/10.0 << "\% done");
+                          << " --> " << static_cast<int>(1000.0*(completed)/RadiographRows)/10.0 << "% done");
                 }
             });
         }

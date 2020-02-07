@@ -193,9 +193,9 @@ Drover EQDConvert(Drover DICOM_data,
 
     if(false){
     }else if( std::regex_match(ModelStr, regex_model_lqs) ){
-        ud.model == EQDConversionUserData::Model::SimpleLinearQuadratic;
+        ud.model = EQDConversionUserData::Model::SimpleLinearQuadratic;
     }else if( std::regex_match(ModelStr, regex_model_lqsp) ){
-        ud.model == EQDConversionUserData::Model::PinnedLinearQuadratic;
+        ud.model = EQDConversionUserData::Model::PinnedLinearQuadratic;
     }else{
         throw std::invalid_argument("Model not understood. Cannot continue.");
     }

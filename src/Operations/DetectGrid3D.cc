@@ -113,7 +113,7 @@ Write_XYZ( const std::string &fname,
     }
     OF.close();
     return;
-};
+}
 
 static
 void
@@ -138,7 +138,7 @@ Write_PLY( const std::string &fname,
     }
     OF.close();
     return;
-};
+}
 
 static
 void
@@ -1341,7 +1341,7 @@ if(false){
                 std::stringstream ss;
 
                 ss << "Completed RANSAC loop " << ransac_loop << " of " << RANSACMaxLoops
-                   << " --> " << static_cast<int>(1000.0*(ransac_loop)/RANSACMaxLoops)/10.0 << "\%."
+                   << " --> " << static_cast<int>(1000.0*(ransac_loop)/RANSACMaxLoops)/10.0 << "%."
                    << " Best and current scores are " << best_GC.score << " and " << GC.score;
                 FUNCINFO(ss.str());
             }

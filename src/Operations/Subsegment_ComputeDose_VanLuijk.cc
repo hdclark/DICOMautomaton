@@ -184,11 +184,11 @@ OperationDoc OpArgDocSubsegment_ComputeDose_VanLuijk(void){
                       " (including passing along the original contours) by opting to"
                       " replace the original ROI contours with this sub-segmentation and invoking this operation"
                       " again with the desired sub-segmentation."
-                      " If you want the middle 50\% of an ROI, specify '0.50;0.25'."
-                      " If you want the upper 50\% then specify '0.50;0.50'."
-                      " If you want the lower 50\% then specify '0.50;0.0'."
-                      " If you want the upper 30\% then specify '0.30;0.70'."
-                      " If you want the lower 30\% then specify '0.30;0.70'.";
+                      " If you want the middle 50% of an ROI, specify '0.50;0.25'."
+                      " If you want the upper 50% then specify '0.50;0.50'."
+                      " If you want the lower 50% then specify '0.50;0.0'."
+                      " If you want the upper 30% then specify '0.30;0.70'."
+                      " If you want the lower 30% then specify '0.30;0.70'.";
     out.args.back().default_val = "1.0;0.0";
     out.args.back().expected = true;
     out.args.back().examples = { "0.50;0.50", "0.50;0.0", "0.30;0.0", "0.30;0.70" };

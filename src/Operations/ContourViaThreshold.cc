@@ -396,7 +396,7 @@ Drover ContourViaThreshold(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
 
                         ++completed;
                         FUNCINFO("Completed " << completed << " of " << img_count
-                              << " --> " << static_cast<int>(1000.0*(completed)/img_count)/10.0 << "\% done");
+                              << " --> " << static_cast<int>(1000.0*(completed)/img_count)/10.0 << "% done");
                     }
 
                 // ---------------------------------------------------
@@ -514,7 +514,7 @@ Drover ContourViaThreshold(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
 
                         ++completed;
                         FUNCINFO("Completed " << completed << " of " << img_count
-                              << " --> " << static_cast<int>(1000.0*(completed)/img_count)/10.0 << "\% done");
+                              << " --> " << static_cast<int>(1000.0*(completed)/img_count)/10.0 << "% done");
                     }
 
                 }else{

@@ -185,7 +185,7 @@ OperationDoc OpArgDocOptimizeStaticBeams(void){
                            " In other words, this parameter is the 'D' parameter in a DVH constraint"
                            " of the form $V_{D} \\geq V_{min}$. It should be given as a fraction"
                            " within [0:1] relative to the prescription dose."
-                           " For example, 95\% isodose should be provided as '0.95'.";
+                           " For example, 95% isodose should be provided as '0.95'.";
     out.args.back().default_val = "0.95";
     out.args.back().expected = true;
     out.args.back().examples = { "0.90", "0.95", "0.98", "0.99", "1.0" };
@@ -199,7 +199,7 @@ OperationDoc OpArgDocOptimizeStaticBeams(void){
                            " of the form $V_{D} \\geq V_{min}$. It should be given as a fraction"
                            " within [0:1] relative to the volume of the ROI (typically discretized to the number of"
                            " voxels in the ROI)."
-                           " For example, if Vmin = 99\%, provide the value '0.99'.";
+                           " For example, if Vmin = 99%, provide the value '0.99'.";
     out.args.back().default_val = "0.99";
     out.args.back().expected = true;
     out.args.back().examples = { "0.90", "0.95", "0.98", "0.99", "1.0" };

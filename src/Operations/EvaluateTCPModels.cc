@@ -120,7 +120,7 @@ OperationDoc OpArgDocEvaluateTCPModels(void){
     
     out.args.emplace_back();
     out.args.back().name = "Dose50";
-    out.args.back().desc = "The dose (in Gray) needed to achieve 50\% probability of local tumour control according to"
+    out.args.back().desc = "The dose (in Gray) needed to achieve 50% probability of local tumour control according to"
                       " an empirical logistic dose-response model (e.g., D_50). Informally, this"
                       " parameter 'shifts' the model along the dose axis. (For more"
                       " specific information, consult a standard reference such as 'Basic Clinical Radiobiology'"
@@ -155,7 +155,7 @@ OperationDoc OpArgDocEvaluateTCPModels(void){
 
     out.args.emplace_back();
     out.args.back().name = "EUD_TCD50";
-    out.args.back().desc = "The uniform dose (in Gray) needed to deliver to the tumour to achieve 50\% probability of local"
+    out.args.back().desc = "The uniform dose (in Gray) needed to deliver to the tumour to achieve 50% probability of local"
                       " control. It is defined only for the generalized Equivalent Uniform Dose (gEUD) model."
                       " It is a counterpart to the Martel model's 'Dose_50' parameter, but is not quite the same "
                       " (n.b., TCD_50 is a uniform dose whereas D_50 is more like a per voxel TCP-weighted mean.)"

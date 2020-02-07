@@ -337,8 +337,13 @@ int main(int argc, char* argv[]){
 
     //Standalone file loading.
     if(!Load_Files(DICOM_data, InvocationMetadata, FilenameLex, StandaloneFilesDirsReachable)){
+#ifdef DCMA_FUZZ_TESTING
+        // If file loading failed, then the loader successfully rejected bad data. Terminate to indicate this success.
+        return 0;
+#else
         //FUNCERR("Unable to load file " << StandaloneFilesDirsReachable.front() << ". Refusing to continue");
         FUNCERR("File loading unsuccessful. Refusing to continue"); // TODO: provide better diagnostic here.
+#endif // DCMA_FUZZ_TESTING
     }
 
     //============================================= Dispatch to Analyses =============================================

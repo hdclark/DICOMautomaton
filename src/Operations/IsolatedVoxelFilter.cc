@@ -255,7 +255,7 @@ Drover IsolatedVoxelFilter(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
 
         ud.neighbourhood = ComputeVolumetricNeighbourhoodSamplerUserData::Neighbourhood::Selection;
 
-        ud.voxel_triplets.empty();
+        ud.voxel_triplets.clear();
 
         if(false){
             if(replacement_is_conserv){

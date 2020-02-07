@@ -864,7 +864,7 @@ Drover SurfaceBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptA
                     std::lock_guard<std::mutex> lock(printer);
                     ++completed;
                     FUNCINFO("Completed " << completed << " of " << SourceDetectorRows 
-                          << " --> " << static_cast<int>(1000.0*(completed)/SourceDetectorRows)/10.0 << "\% done");
+                          << " --> " << static_cast<int>(1000.0*(completed)/SourceDetectorRows)/10.0 << "% done");
                 }
             });
         }
