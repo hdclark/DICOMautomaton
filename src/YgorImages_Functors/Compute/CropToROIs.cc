@@ -50,7 +50,7 @@ bool ComputeCropToROIs(planar_image_collection<float,double> &imagecoll,
 
     //Check that there are contours to operate on.
     if(ccsl.empty()){
-        FUNCWARN("Missing needed contour information. Cannot continue with computation");
+        FUNCWARN("No contours provided. Cannot continue with computation");
         return false;
     }
 
