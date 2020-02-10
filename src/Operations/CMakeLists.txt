@@ -122,6 +122,7 @@ add_library(Operations_objs OBJECT
     SupersampleImageGrid.cc
     ThresholdImages.cc
     ThresholdOtsu.cc
+    TransformContours.cc
     TransformMeshes.cc
     TrimROIDose.cc
     UBC3TMRI_DCE.cc

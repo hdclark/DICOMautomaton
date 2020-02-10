@@ -140,6 +140,7 @@
 #include "Operations/SupersampleImageGrid.h"
 #include "Operations/ThresholdImages.h"
 #include "Operations/ThresholdOtsu.h"
+#include "Operations/TransformContours.h"
 #include "Operations/TransformMeshes.h"
 #include "Operations/TrimROIDose.h"
 #include "Operations/UBC3TMRI_DCE.h"
@@ -313,6 +314,7 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["SupersampleImageGrid"] = std::make_pair(OpArgDocSupersampleImageGrid, SupersampleImageGrid);
     out["ThresholdImages"] = std::make_pair(OpArgDocThresholdImages, ThresholdImages);
     out["ThresholdOtsu"] = std::make_pair(OpArgDocThresholdOtsu, ThresholdOtsu);
+    out["TransformContours"] = std::make_pair(OpArgDocTransformContours, TransformContours);
     out["TransformMeshes"] = std::make_pair(OpArgDocTransformMeshes, TransformMeshes);
     out["TrimROIDose"] = std::make_pair(OpArgDocTrimROIDose, TrimROIDose);
     out["UBC3TMRI_DCE"] = std::make_pair(OpArgDocUBC3TMRI_DCE, UBC3TMRI_DCE);
