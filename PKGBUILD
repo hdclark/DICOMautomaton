@@ -50,7 +50,7 @@ makedepends=(
 #          '')
 
 #options=(!strip staticlibs)
-#pkgext='.tar' # Disable compression.
+#PKGEXT='.pkg.tar' # Disable compression.
 options=(strip staticlibs)
 
 build() {
