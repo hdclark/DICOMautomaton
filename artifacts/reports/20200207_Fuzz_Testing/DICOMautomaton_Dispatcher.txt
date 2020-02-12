@@ -2,7 +2,7 @@ exit
 
 
 Fuzzed `dicomautomaton_dispatcher @@ -o DroverDebug` using fuzz_testing Docker container both with and without
-AFL_HARDEN defined using a test set comprised of the following files:
+AFL_HARDEN defined using a test set comprised of the following files (now moved to test_files/):
 
     [hal@trip testcase_dir]$ ls -lash
     total 48K
