@@ -25,6 +25,7 @@
 #include "FITS_File_Loader.h"
 #include "XYZ_File_Loader.h"
 #include "OFF_Mesh_File_Loader.h"
+#include "STL_Mesh_File_Loader.h"
 #include "OBJ_Mesh_File_Loader.h"
 #include "3ddose_File_Loader.h"
 #include "Line_Sample_File_Loader.h"
@@ -101,6 +102,13 @@ Load_Files( Drover &DICOM_data,
     if(!Paths.empty()
     && !Load_Mesh_From_OBJ_Files( DICOM_data, InvocationMetadata, FilenameLex, Paths )){
         FUNCWARN("Failed to load OBJ mesh file");
+        return false;
+    }
+
+    //Standalone file loading: STL mesh files (both ASCII and binary).
+    if(!Paths.empty()
+    && !Load_Mesh_From_STL_Files( DICOM_data, InvocationMetadata, FilenameLex, Paths )){
+        FUNCWARN("Failed to load STL mesh file");
         return false;
     }
 

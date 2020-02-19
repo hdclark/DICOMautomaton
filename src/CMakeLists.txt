@@ -59,6 +59,9 @@ set_target_properties(  3ddose_File_Loader_obj PROPERTIES POSITION_INDEPENDENT_C
 add_library(            OFF_Mesh_File_Loader_obj OBJECT OFF_Mesh_File_Loader.cc )
 set_target_properties(  OFF_Mesh_File_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
+add_library(            STL_Mesh_File_Loader_obj OBJECT STL_Mesh_File_Loader.cc )
+set_target_properties(  STL_Mesh_File_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+
 add_library(            OBJ_Mesh_File_Loader_obj OBJECT OBJ_Mesh_File_Loader.cc )
 set_target_properties(  OBJ_Mesh_File_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
@@ -232,6 +235,7 @@ add_executable (dicomautomaton_dispatcher
     $<TARGET_OBJECTS:XYZ_File_Loader_obj>
     $<TARGET_OBJECTS:3ddose_File_Loader_obj>
     $<TARGET_OBJECTS:OFF_Mesh_File_Loader_obj>
+    $<TARGET_OBJECTS:STL_Mesh_File_Loader_obj>
     $<TARGET_OBJECTS:OBJ_Mesh_File_Loader_obj>
     $<TARGET_OBJECTS:Line_Sample_File_Loader_obj>
     $<TARGET_OBJECTS:Write_File_obj>
@@ -299,6 +303,7 @@ if(WITH_WT)
         $<TARGET_OBJECTS:XYZ_File_Loader_obj>
         $<TARGET_OBJECTS:3ddose_File_Loader_obj>
         $<TARGET_OBJECTS:OFF_Mesh_File_Loader_obj>
+        $<TARGET_OBJECTS:STL_Mesh_File_Loader_obj>
         $<TARGET_OBJECTS:OBJ_Mesh_File_Loader_obj>
         $<TARGET_OBJECTS:Line_Sample_File_Loader_obj>
         $<TARGET_OBJECTS:Write_File_obj>
