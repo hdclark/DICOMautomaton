@@ -1,5 +1,5 @@
 
-![DICOMautomaton logo](artifacts/DCMA_cycle_opti.svg)
+![DICOMautomaton logo](artifacts/logos/DCMA_cycle_opti.svg)
 
 [![Build Status](https://travis-ci.com/hdclark/DICOMautomaton.svg?branch=master)](https://travis-ci.com/hdclark/DICOMautomaton)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
