@@ -277,6 +277,7 @@ class Static_Machine_State {
         //Member functions.
         Static_Machine_State & operator=(const Static_Machine_State &rhs); //Performs a deep copy (unless copying self).
 
+        template <class U> std::optional<U> GetMetadataValueAs(std::string key) const;
 };
 
 // The class represents a dynamic configuration of a treatment machine composed of interpolated static states.
@@ -304,6 +305,7 @@ class Dynamic_Machine_State {
         void normalize_states(void); // Replaces NaNs with previously specified static states, where possible.
         Static_Machine_State interpolate(double CumulativeMetersetWeight) const; // Interpolates adjacent states.
 
+        template <class U> std::optional<U> GetMetadataValueAs(std::string key) const;
 };
 
 // This class holds a radiotherapy plan, i.e., an arrangement of multiple dynamic particle beams and treatment
@@ -321,6 +323,8 @@ class TPlan_Config {
 
         //Member functions.
         TPlan_Config & operator=(const TPlan_Config &rhs); //Performs a deep copy (unless copying self).
+
+        template <class U> std::optional<U> GetMetadataValueAs(std::string key) const;
 };
 
 

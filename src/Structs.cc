@@ -28,6 +28,7 @@
 #include "YgorMisc.h"
 #include "YgorPlot.h"
 #include "YgorStats.h"
+#include "YgorString.h"
 
 //This is a mapping from the segmentation history to a human-readable description.
 // Try avoid using commas or tabs to make dumping as csv easier. This should in
@@ -1010,6 +1011,22 @@ Static_Machine_State & Static_Machine_State::operator=(const Static_Machine_Stat
     return *this;
 }
 
+//Attempts to cast the value if present. Optional is disengaged if key is missing or cast fails.
+template <class U>
+std::optional<U>
+Static_Machine_State::GetMetadataValueAs(std::string key) const {
+    const auto metadata_cit = this->metadata.find(key);
+    if( (metadata_cit == this->metadata.end())  || !Is_String_An_X<U>(metadata_cit->second) ){
+        return std::optional<U>();
+    }
+    return std::make_optional(stringtoX<U>(metadata_cit->second));
+}
+template std::optional<uint32_t   > Static_Machine_State::GetMetadataValueAs(std::string key) const;
+template std::optional<long int   > Static_Machine_State::GetMetadataValueAs(std::string key) const;
+template std::optional<float      > Static_Machine_State::GetMetadataValueAs(std::string key) const;
+template std::optional<double     > Static_Machine_State::GetMetadataValueAs(std::string key) const;
+template std::optional<std::string> Static_Machine_State::GetMetadataValueAs(std::string key) const;
+
 //---------------------------------------------------------------------------------------------------------------------------
 //--------------------------------------------------- Dynamic_Machine_State -------------------------------------------------
 //---------------------------------------------------------------------------------------------------------------------------
@@ -1251,6 +1268,23 @@ Dynamic_Machine_State::interpolate(double CumulativeMetersetWeight) const {
 
     return out;
 }
+
+//Attempts to cast the value if present. Optional is disengaged if key is missing or cast fails.
+template <class U>
+std::optional<U>
+Dynamic_Machine_State::GetMetadataValueAs(std::string key) const {
+    const auto metadata_cit = this->metadata.find(key);
+    if( (metadata_cit == this->metadata.end())  || !Is_String_An_X<U>(metadata_cit->second) ){
+        return std::optional<U>();
+    }
+    return std::make_optional(stringtoX<U>(metadata_cit->second));
+}
+template std::optional<uint32_t   > Dynamic_Machine_State::GetMetadataValueAs(std::string key) const;
+template std::optional<long int   > Dynamic_Machine_State::GetMetadataValueAs(std::string key) const;
+template std::optional<float      > Dynamic_Machine_State::GetMetadataValueAs(std::string key) const;
+template std::optional<double     > Dynamic_Machine_State::GetMetadataValueAs(std::string key) const;
+template std::optional<std::string> Dynamic_Machine_State::GetMetadataValueAs(std::string key) const;
+
 //---------------------------------------------------------------------------------------------------------------------------
 //------------------------------------------------------- TPlan_Config ------------------------------------------------------
 //---------------------------------------------------------------------------------------------------------------------------
@@ -1268,6 +1302,22 @@ TPlan_Config & TPlan_Config::operator=(const TPlan_Config &rhs){
     }
     return *this;
 }
+
+//Attempts to cast the value if present. Optional is disengaged if key is missing or cast fails.
+template <class U>
+std::optional<U>
+TPlan_Config::GetMetadataValueAs(std::string key) const {
+    const auto metadata_cit = this->metadata.find(key);
+    if( (metadata_cit == this->metadata.end())  || !Is_String_An_X<U>(metadata_cit->second) ){
+        return std::optional<U>();
+    }
+    return std::make_optional(stringtoX<U>(metadata_cit->second));
+}
+template std::optional<uint32_t   > TPlan_Config::GetMetadataValueAs(std::string key) const;
+template std::optional<long int   > TPlan_Config::GetMetadataValueAs(std::string key) const;
+template std::optional<float      > TPlan_Config::GetMetadataValueAs(std::string key) const;
+template std::optional<double     > TPlan_Config::GetMetadataValueAs(std::string key) const;
+template std::optional<std::string> TPlan_Config::GetMetadataValueAs(std::string key) const;
 
 //---------------------------------------------------------------------------------------------------------------------------
 //------------------------------------------------------- Surface_Mesh ------------------------------------------------------

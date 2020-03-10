@@ -24,6 +24,7 @@
 #include "Operations/AnalyzeDoseVolumeHistograms.h"
 #include "Operations/AnalyzeLightRadFieldCoincidence.h"
 #include "Operations/AnalyzePicketFence.h"
+#include "Operations/AnalyzeTPlan.h"
 #include "Operations/ApplyCalibrationCurve.h"
 #include "Operations/AutoCropImages.h"
 #include "Operations/Average.h"
@@ -198,6 +199,7 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["AnalyzeDoseVolumeHistograms"] = std::make_pair(OpArgDocAnalyzeDoseVolumeHistograms, AnalyzeDoseVolumeHistograms);
     out["AnalyzeLightRadFieldCoincidence"] = std::make_pair(OpArgDocAnalyzeLightRadFieldCoincidence, AnalyzeLightRadFieldCoincidence);
     out["AnalyzePicketFence"] = std::make_pair(OpArgDocAnalyzePicketFence, AnalyzePicketFence);
+    out["AnalyzeTPlan"] = std::make_pair(OpArgDocAnalyzeTPlan, AnalyzeTPlan);
     out["ApplyCalibrationCurve"] = std::make_pair(OpArgDocApplyCalibrationCurve, ApplyCalibrationCurve);
     out["AutoCropImages"] = std::make_pair(OpArgDocAutoCropImages, AutoCropImages);
     out["Average"] = std::make_pair(OpArgDocAverage, Average);

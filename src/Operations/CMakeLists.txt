@@ -6,6 +6,7 @@ add_library(Operations_objs OBJECT
     AnalyzeDoseVolumeHistograms.cc
     AnalyzeLightRadFieldCoincidence.cc
     AnalyzePicketFence.cc
+    AnalyzeTPlan.cc
     ApplyCalibrationCurve.cc
     AutoCropImages.cc
     Average.cc
