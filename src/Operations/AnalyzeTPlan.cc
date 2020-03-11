@@ -102,29 +102,6 @@ OperationDoc OpArgDocAnalyzeTPlan(void){
     return out;
 }
 
-static
-std::vector<std::string>
-Get_All_Regex(const std::string &source, std::regex &regex_the_query){
-    std::vector<std::string> out;
-    std::sregex_iterator it(source.begin(), source.end(), regex_the_query);
-    std::sregex_iterator end;
-    for( ; it != end; ++it){
-        for(decltype((*it).size()) i = 1; i < (*it).size(); ++i){ //The Zeroth contains the entire match (not the matches enclosed in parenthesis!)
-            if((*it)[i].matched) out.push_back( (*it)[i].str());
-        }
-    }
-    return out;
-}
-
-static
-std::regex
-lCompile_Regex(std::string input){
-    return std::regex(input, std::regex::icase | 
-                             //std::regex::nosubs |
-                             std::regex::optimize |
-                             std::regex::extended);
-}
-
 Drover AnalyzeTPlan(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
@@ -196,14 +173,20 @@ Drover AnalyzeTPlan(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
         };
 
         for(const auto &ds : (*tp_it)->dynamic_states){
+            const auto BeamNumberOpt = ds.GetMetadataValueAs<std::string>("BeamNumber");
+            const auto BeamNumber = BeamNumberOpt.value_or("unknown");
+
+            const auto BeamNameOpt = ds.GetMetadataValueAs<std::string>("BeamName");
+            const auto BeamName = BeamNameOpt.value_or("unknown");
+
             long int control_point_num = 0;
             for(const auto &ss : ds.static_states){
                 double total_leaf_opening = 0.0;
 
                 const auto N_leaves = ss.MLCPositionsX.size();
                 if( (N_leaves == 0) || ((N_leaves % 2) != 0)){
-                    FUNCWARN("Invalid leaf count. Skipping beam");
-                    continue;
+                    FUNCWARN("Invalid leaf count for beam " << BeamNumber << " ('" << BeamName << "'). Skipping beam");
+                    break;
                 }
 
                 for(size_t l_A = 0; l_A < (N_leaves / 2); ++l_A){
@@ -220,12 +203,6 @@ Drover AnalyzeTPlan(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
                     }
                     total_leaf_opening += leaf_opening;
                 }
-
-                const auto BeamNumberOpt = ds.GetMetadataValueAs<std::string>("BeamNumber");
-                const auto BeamNumber = BeamNumberOpt.value_or("unknown");
-
-                const auto BeamNameOpt = ds.GetMetadataValueAs<std::string>("BeamName");
-                const auto BeamName = BeamNameOpt.value_or("unknown");
 
                 // Emit the results as a new row.
                 emit_boilerplate();
