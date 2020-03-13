@@ -201,7 +201,7 @@ Drover ConvolveImages(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::
             std::vector<std::array<long int, 3>> triplets;
             std::vector<float> k_values;
 
-            const auto first_img_num = img_adj.int_to_img.begin()->first;
+            const auto first_img_num = 0L;
             const auto first_img_refw = img_adj.index_to_image(first_img_num);
             const long int k_rows = first_img_refw.get().rows;
             const long int k_columns = first_img_refw.get().columns;

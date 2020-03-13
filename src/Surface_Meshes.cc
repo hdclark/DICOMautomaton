@@ -940,8 +940,8 @@ Marching_Cubes_Implementation(
     //
     // NOTE: The order of traversal must reflect image adjacency. This requirement could be relaxed if candidate
     //       vertices (below) were indexed, but even this would involve extra memory usage for little gain.
-    for(const auto &apair : img_adj.int_to_img){
-        const auto img_refw = std::ref( *apair.second );
+    for(const auto &img_ptr : img_adj.int_to_img){
+        const auto img_refw = std::ref( *img_ptr );
 
         const auto pxl_dx = img_refw.get().pxl_dx;
         const auto pxl_dy = img_refw.get().pxl_dy;
