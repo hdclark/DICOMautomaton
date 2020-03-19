@@ -280,7 +280,7 @@ Drover SimulateRadiograph(Drover DICOM_data,
     const auto pxl_dx = img_arr_ptr->imagecoll.images.front().pxl_dx;
     const auto pxl_dy = img_arr_ptr->imagecoll.images.front().pxl_dy;
     const auto pxl_dz = img_arr_ptr->imagecoll.images.front().pxl_dz;
-    const auto pxl_diagonal_length = std::sqrt(pxl_dx*pxl_dx + pxl_dy*pxl_dy + pxl_dz*pxl_dz);
+    const auto pxl_diagonal_sq_length = (pxl_dx*pxl_dx + pxl_dy*pxl_dy + pxl_dz*pxl_dz);
 
     const auto N_rows = static_cast<long int>(img_arr_ptr->imagecoll.images.front().rows);
     const auto N_cols = static_cast<long int>(img_arr_ptr->imagecoll.images.front().columns);
@@ -440,17 +440,17 @@ Drover SimulateRadiograph(Drover DICOM_data,
                         const auto cand_pos_j = blocky_ray_pos + blocky_ray_pos_dR_incr_col;
                         const auto cand_pos_k = blocky_ray_pos + blocky_ray_pos_dR_incr_img;
 
-                        const auto cand_dist_i = ray_line.Distance_To_Point( cand_pos_i );
-                        const auto cand_dist_j = ray_line.Distance_To_Point( cand_pos_j );
-                        const auto cand_dist_k = ray_line.Distance_To_Point( cand_pos_k );
+                        const auto cand_sq_dist_i = ray_line.Sq_Distance_To_Point( cand_pos_i );
+                        const auto cand_sq_dist_j = ray_line.Sq_Distance_To_Point( cand_pos_j );
+                        const auto cand_sq_dist_k = ray_line.Sq_Distance_To_Point( cand_pos_k );
 
                         if(false){
-                        }else if( (cand_dist_i <= cand_dist_j) && (cand_dist_i <= cand_dist_k) ){
+                        }else if( (cand_sq_dist_i <= cand_sq_dist_j) && (cand_sq_dist_i <= cand_sq_dist_k) ){
                             blocky_ray_pos = cand_pos_i;
                             true_ray_pos += true_ray_pos_dR_incr_row;
                             last_move_dist = true_ray_pos_dR_incr_row_length;
                             ray_i += incr_row;
-                        }else if( cand_dist_j <= cand_dist_k ){
+                        }else if( cand_sq_dist_j <= cand_sq_dist_k ){
                             blocky_ray_pos = cand_pos_j;
                             true_ray_pos += true_ray_pos_dR_incr_col;
                             last_move_dist = true_ray_pos_dR_incr_col_length;
@@ -463,7 +463,7 @@ Drover SimulateRadiograph(Drover DICOM_data,
                         }
 
                         // Terminate if the geometry is invalid.
-                        if( pxl_diagonal_length < (true_ray_pos - blocky_ray_pos).length()){
+                        if( pxl_diagonal_sq_length < true_ray_pos.sq_dist(blocky_ray_pos) ){
                             throw std::runtime_error("Real ray position and blocky ray position differ by more than a voxel diagonal");
                         }
 
