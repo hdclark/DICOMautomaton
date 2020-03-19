@@ -58,14 +58,14 @@ OperationDoc OpArgDocSimulateRadiograph(void){
     out.name = "SimulateRadiograph";
 
     out.desc = 
-        "This routine uses ray marching an volumteric sampling to simulate radiographs from a CT image array."
+        "This routine uses ray marching and volumetric sampling to simulate radiographs using a CT image array."
         " Voxels are assumed to have intensities in HU. A simplisitic conversion"
         " from CT number (in HU) to relative electron density (see note below) is performed for marched"
         " rays.";
 
     out.notes.emplace_back(
-        "Images must be rectilinear."
-        // Note: while this operation could be implemented without requiring rectilinearity, it is much faster to
+        "Images must be regular."
+        // Note: while this operation could be implemented without requiring regularity, it is much faster to
         // require it. If this functionality is required then modify this operation.
     );
     out.notes.emplace_back(
@@ -96,19 +96,6 @@ OperationDoc OpArgDocSimulateRadiograph(void){
 
 
     out.args.emplace_back();
-    out.args.back().name = "MarchingDistance";
-    out.args.back().desc = "The distance (in DICOM units; mm) that rays will incrementally be marched at each iteration."
-                           " This value should be on the order of the smallest image voxel size to give the best image"
-                           " quality. Conversely, if a course radiograph is needed then larger values can be used."
-                           " Trilinear interpolation is used to sample the CT number at arbitrary points in 3D."
-                           " Note that the CT numbers between sample points are ignored, so tissue heterogeneities"
-                           " and features smaller than the marching distance are not likely to show up in the image.";
-    out.args.back().default_val = "0.5";
-    out.args.back().expected = true;
-    out.args.back().examples = { "0.25", "0.5", "1.0" };
-
-
-    out.args.emplace_back();
     out.args.back().name = "SourcePosition";
     out.args.back().desc = "This parameter controls where the virtual point source is."
                            " Both absolute and relative positioning are available."
@@ -127,14 +114,43 @@ OperationDoc OpArgDocSimulateRadiograph(void){
     out.args.emplace_back();
     out.args.back().name = "AttenuationScale";
     out.args.back().desc = "This parameter globally scales all attenuation factors derived via ray marching."
-                           " Adjusting this parameter will alter the radiograph image contrast;"
-                           " numbers within (0:1) will result in less attenuation, whereas numbers within (1:inf] will"
+                           " Adjusting this parameter will alter the radiograph image contrast the exponential"
+                           " attenuation model;"
+                           " numbers within (0:1) will result in less attenuation, whereas numbers within (1:inf) will"
                            " result in more attenuation. Thin or low-mass subjects might require artifically increased"
                            " attenuation, whereas thick or high-mass subjects might require artifically decreased"
-                           " attenuation. Setting this number to 1 will result in no scaling.";
-    out.args.back().default_val = "1.0";
+                           " attenuation. Setting this number to 1 will result in no scaling."
+                           " This parameter has units 1/length, and the magnitude should *roughly* correspond with the"
+                           " inverse of about $3\\times$ the length transited by a typical ray (in mm).";
+    out.args.back().default_val = "0.001";
     out.args.back().expected = true;
-    out.args.back().examples = { "0.01", "0.1", "1.0", "10.0", "1E2" };
+    out.args.back().examples = { "1.0E-4", "0.001", "0.01", "0.1", "1.0", "10.0", "1E2" };
+
+
+    out.args.emplace_back();
+    out.args.back().name = "ImageModel";
+    out.args.back().desc = "This parameter adjusts how the final image is constructed."
+                           " As rays transit a voxel, the approximate transit distance is multiplied with the voxel's"
+                           " attenuation coefficient (i.e., $\\mu \\cdot dL$) to give the ray's attenuation."
+                           " The sum of all per-voxel attenuations constitutes the total attenuation."
+                           " There are many ways this information can be converted into an image."
+                           ""
+                           " First, the 'attenuation-length' model directly outputs the total attenuation for each ray."
+                           " The simulated image's pixels will contain the total attenuation for one ray."
+                           " It will almost always provide an image since the attenutation is not performed."
+                           " This can be thought of as a log transform of a standard radiograph."
+                           ""
+                           " Second, the 'exponential' model performs the attenuation assuming the radiation beam is"
+                           " monoenergetic, narrow, and has the same energy spectrum as the original imaging device."
+                           " This model produces a typical radiograph, where each image pixel contains"
+                           " $1 - \\exp{-\\sum \\mu \cdot dL}$. Note that the values will all $\\in [0:1]$"
+                           " (i.e., Hounsfield units are *not* used)."
+                           " The overall contrast can be adjusted using the AttenuationScale parameter, however"
+                           " it is easiest to assess a reasonable tuning factor by inspecting the image produced by"
+                           " the 'attenutation-length' model.";
+    out.args.back().default_val = "attenuation-length";
+    out.args.back().expected = true;
+    out.args.back().examples = { "attenuation-length", "exponential" };
 
 
     out.args.emplace_back();
@@ -171,11 +187,11 @@ Drover SimulateRadiograph(Drover DICOM_data,
 
     auto FilenameStr = OptArgs.getValueStr("Filename").value();
 
-    const auto MarchingDistance = std::stod( OptArgs.getValueStr("MarchingDistance").value() );
-
     const auto SourcePositionStr = OptArgs.getValueStr("SourcePosition").value();
 
     const auto AttenuationScale = std::stod( OptArgs.getValueStr("AttenuationScale").value() );
+
+    const auto ImageModelStr = OptArgs.getValueStr("ImageModel").value();
 
     const auto RadiographRows = std::stol( OptArgs.getValueStr("Rows").value() );
     const auto RadiographColumns = std::stol( OptArgs.getValueStr("Columns").value() );
@@ -186,8 +202,14 @@ Drover SimulateRadiograph(Drover DICOM_data,
     const auto regex_rel = Compile_Regex("^re?l?a?t?i?v?e?.*$");
     const auto regex_abs = Compile_Regex("^ab?s?o?l?u?t?e?.*$");
 
+    const auto regex_mudl = Compile_Regex("^at?t?e?n?u?a?t?i?o?n?[-_]?l?e?n?g?t?h?$");
+    const auto regex_exp = Compile_Regex("^expo?n?e?n?t?i?a?l?$");
+
     const bool spos_is_relative = std::regex_match(SourcePositionStr, regex_rel);
     const bool spos_is_absolute = std::regex_match(SourcePositionStr, regex_abs);
+
+    const bool imgmodel_is_mudl = std::regex_match(ImageModelStr, regex_mudl);
+    const bool imgmodel_is_exp  = std::regex_match(ImageModelStr, regex_exp);
 
     const vec3<double> vec3_nan( std::numeric_limits<double>::quiet_NaN(),
                                  std::numeric_limits<double>::quiet_NaN(),
@@ -233,14 +255,14 @@ Drover SimulateRadiograph(Drover DICOM_data,
     }
 
 
-    // Ensure the image array is rectilinear. (This will allow us to use a faster postion-to-image lookup.)
+    // Ensure the image array is regular. (This will allow us to use a faster postion-to-image lookup.)
     {
         std::list<std::reference_wrapper<planar_image<float,double>>> selected_imgs;
         for(auto &img : img_arr_ptr->imagecoll.images){
             selected_imgs.push_back( std::ref(img) );
         }
 
-        if(!Images_Form_Rectilinear_Grid(selected_imgs)){
+        if(!Images_Form_Regular_Grid(selected_imgs)){
             throw std::invalid_argument("Images do not form a rectilinear grid. Cannot continue");
         }
         //const bool is_regular_grid = Images_Form_Regular_Grid(selected_imgs);
@@ -248,12 +270,21 @@ Drover SimulateRadiograph(Drover DICOM_data,
 
     const auto row_unit = img_arr_ptr->imagecoll.images.front().row_unit.unit();
     const auto col_unit = img_arr_ptr->imagecoll.images.front().col_unit.unit();
-    const auto ortho_unit = col_unit.Cross(row_unit).unit();
+    const auto img_unit = col_unit.Cross(row_unit).unit();
 
-    planar_image_adjacency<float,double> img_adj( {}, { { std::ref(img_arr_ptr->imagecoll) } }, ortho_unit );
+    planar_image_adjacency<float,double> img_adj( {}, { { std::ref(img_arr_ptr->imagecoll) } }, img_unit );
     if(img_adj.int_to_img.empty()){
         throw std::logic_error("Image array contained no images. Cannot continue.");
     }
+
+    const auto pxl_dx = img_arr_ptr->imagecoll.images.front().pxl_dx;
+    const auto pxl_dy = img_arr_ptr->imagecoll.images.front().pxl_dy;
+    const auto pxl_dz = img_arr_ptr->imagecoll.images.front().pxl_dz;
+    const auto pxl_diagonal_length = std::sqrt(pxl_dx*pxl_dx + pxl_dy*pxl_dy + pxl_dz*pxl_dz);
+
+    const auto N_rows = static_cast<long int>(img_arr_ptr->imagecoll.images.front().rows);
+    const auto N_cols = static_cast<long int>(img_arr_ptr->imagecoll.images.front().columns);
+    const auto N_imgs = static_cast<long int>(img_adj.int_to_img.size());
 
     // Determine an appropriate radiograph orientation.
     const auto img_centre = img_arr_ptr->imagecoll.center(); // TODO: For TBI, should be at the t0 point (i.e., at the level of the lung).
@@ -269,7 +300,7 @@ Drover SimulateRadiograph(Drover DICOM_data,
 
     // Determine which way will be 'up' in the radiograph.
     const auto ray_unit = (img_centre - ray_source).unit();
-    auto rg_up = ortho_unit;
+    auto rg_up = img_unit;
     auto rg_left = rg_up.Cross(ray_unit).unit();
     if(!ray_unit.GramSchmidt_orthogonalize(rg_up, rg_left)){
         throw std::invalid_argument("Cannot orthogonalize radiograph orientation unit vectors. Cannot continue.");
@@ -339,9 +370,9 @@ Drover SimulateRadiograph(Drover DICOM_data,
             tp.submit_task([&,row](void) -> void {
                 for(long int col = 0; col < RadiographColumns; ++col){
 
-                    //Construct a line segment between the source and detector. 
+                    // Construct a line segment between the source and detector. 
                     const auto ray_terminus = DetectImg->position(row, col);
-                    const auto ray_line = line<double>(ray_terminus, ray_source);
+                    const auto ray_line = line<double>(ray_source, ray_terminus);
 
                     // Find the intersection of the ray with the near and far bounding planes.
                     vec3<double> near_bp_intersection;
@@ -354,34 +385,119 @@ Drover SimulateRadiograph(Drover DICOM_data,
                     }
                     const vec3<double> ray_start = near_bp_intersection;
                     const vec3<double> ray_end = far_bp_intersection;
+                    const auto ray_direction = (ray_end - ray_start).unit();
+                    const line_segment<double> ray(ray_start, ray_end);
 
-                    const auto travel_dist = ray_end.distance(ray_start);
-                    const auto N_advances = static_cast<long int>(travel_dist/MarchingDistance) + 1L;
-                    const auto actual_ray_march_dist = static_cast<double>(1)/static_cast<double>(N_advances);
+                    // Determine whether moving from tail to head along the ray will increase or decrease the
+                    // row/col/img coordinates.
+                    const long int incr_row = (row_unit.Dot(ray_direction) < 0.0) ? -1L : 1L;
+                    const long int incr_col = (col_unit.Dot(ray_direction) < 0.0) ? -1L : 1L;
+                    const long int incr_img = (img_unit.Dot(ray_direction) < 0.0) ? -1L : 1L;
+
+                    // Determine the amount the ray will traverse due to incrementing i, j, or k individually.
+                    const auto true_ray_pos_dR_incr_row = ray_direction * (std::abs(row_unit.Dot(ray_direction)) * pxl_dx); // * static_cast<double>(incr_row));
+                    const auto true_ray_pos_dR_incr_col = ray_direction * (std::abs(col_unit.Dot(ray_direction)) * pxl_dy); // * static_cast<double>(incr_col));
+                    const auto true_ray_pos_dR_incr_img = ray_direction * (std::abs(img_unit.Dot(ray_direction)) * pxl_dz); // * static_cast<double>(incr_img));
+
+                    const auto true_ray_pos_dR_incr_row_length = true_ray_pos_dR_incr_row.length();
+                    const auto true_ray_pos_dR_incr_col_length = true_ray_pos_dR_incr_col.length();
+                    const auto true_ray_pos_dR_incr_img_length = true_ray_pos_dR_incr_img.length();
+
+                    const auto blocky_ray_pos_dR_incr_row = row_unit * (pxl_dx * static_cast<double>(incr_row));
+                    const auto blocky_ray_pos_dR_incr_col = col_unit * (pxl_dy * static_cast<double>(incr_col));
+                    const auto blocky_ray_pos_dR_incr_img = img_unit * (pxl_dz * static_cast<double>(incr_img));
+
+                    // Determine the pseudo integer coordinates for the starting point.
+                    // Note that these coordinates will not necessarily intersect any real voxels! They are defined only
+                    // by the (infinite) regular grid that coincides with the real voxels.
+                    const auto grid_zero = img_adj.index_to_image(0).get().position(0,0); // Centre of the (0,0,0) voxel.
+                    const auto ray_start_grid_offset = ray_start - grid_zero;
+                    const auto ray_start_row_index = static_cast<long int>( std::round( ray_start_grid_offset.Dot(row_unit)/pxl_dx ) );
+                    const auto ray_start_col_index = static_cast<long int>( std::round( ray_start_grid_offset.Dot(col_unit)/pxl_dy ) );
+                    const auto ray_start_img_index = static_cast<long int>( std::round( ray_start_grid_offset.Dot(img_unit)/pxl_dz ) );
+
+                    long int ray_i = ray_start_row_index;
+                    long int ray_j = ray_start_col_index;
+                    long int ray_k = ray_start_img_index;
+
+                    vec3<double> true_ray_pos = ray_start;
+                    vec3<double> blocky_ray_pos = grid_zero + row_unit * (static_cast<double>(ray_i) * pxl_dx)
+                                                            + col_unit * (static_cast<double>(ray_j) * pxl_dy)
+                                                            + img_unit * (static_cast<double>(ray_k) * pxl_dz);
+
+                    const auto ray_start_side_of_terminus_plane = detector_plane.Is_Point_Above_Plane(ray_start);
 
                     // Each time the ray samples the CT number, the ray is simulated to have interacted with the medium
                     // for the length of the ray advancement. The remaining fractional ray intensity could be
-                    // immediately reduced by multiplying by a factor of exp(-density*dL). However, it is easier to sum
-                    // all the density*dL contributions and apply the reduction factor once at the end.
-                    double accumulated_mass_density_length = 0.0;
-                    for(long int i = 0; i <= N_advances; ++i){
-                        const auto x = static_cast<double>(i)/static_cast<double>(N_advances);
-                        const auto P = (ray_end - ray_start) * x + ray_start;
+                    // immediately reduced by multiplying by a factor of exp(-attenuation_coeff*dL). However, it is easier to sum
+                    // all the attenuation_coeff*dL contributions and apply the reduction factor once at the end.
+                    double accumulated_attenuation_length_product = 0.0;
+                    double last_move_dist = 0.0;
 
-                        const auto interp_val = img_adj.trilinearly_interpolate(P,Channel,-1000.0f);
+                    while(true){
+                        // Test which single increment (i, j, or k) are closest to the ray.
+                        const auto cand_pos_i = blocky_ray_pos + blocky_ray_pos_dR_incr_row;
+                        const auto cand_pos_j = blocky_ray_pos + blocky_ray_pos_dR_incr_col;
+                        const auto cand_pos_k = blocky_ray_pos + blocky_ray_pos_dR_incr_img;
 
-                        // Ficticious mass density encountered by the ray.
-                        const auto intensity = (interp_val < -1000.0f) ? -1000.0f : interp_val; // Enforce physicality.
-                        const auto mass_density = 1.0f + (intensity / 1000.0f); 
+                        const auto cand_dist_i = ray_line.Distance_To_Point( cand_pos_i );
+                        const auto cand_dist_j = ray_line.Distance_To_Point( cand_pos_j );
+                        const auto cand_dist_k = ray_line.Distance_To_Point( cand_pos_k );
 
-                        accumulated_mass_density_length += mass_density * actual_ray_march_dist;
+                        if(false){
+                        }else if( (cand_dist_i <= cand_dist_j) && (cand_dist_i <= cand_dist_k) ){
+                            blocky_ray_pos = cand_pos_i;
+                            true_ray_pos += true_ray_pos_dR_incr_row;
+                            last_move_dist = true_ray_pos_dR_incr_row_length;
+                            ray_i += incr_row;
+                        }else if( cand_dist_j <= cand_dist_k ){
+                            blocky_ray_pos = cand_pos_j;
+                            true_ray_pos += true_ray_pos_dR_incr_col;
+                            last_move_dist = true_ray_pos_dR_incr_col_length;
+                            ray_j += incr_col;
+                        }else{
+                            blocky_ray_pos = cand_pos_k;
+                            true_ray_pos += true_ray_pos_dR_incr_img;
+                            last_move_dist = true_ray_pos_dR_incr_img_length;
+                            ray_k += incr_img;
+                        }
+
+                        // Terminate if the geometry is invalid.
+                        if( pxl_diagonal_length < (true_ray_pos - blocky_ray_pos).length()){
+                            throw std::runtime_error("Real ray position and blocky ray position differ by more than a voxel diagonal");
+                        }
+
+                        // Terminate if the ray has passed beyond the terminus plane.
+                        const auto current_side_of_terminus_plane = detector_plane.Is_Point_Above_Plane(blocky_ray_pos);
+                        if(current_side_of_terminus_plane != ray_start_side_of_terminus_plane){
+                            break;
+                        }
+
+                        // Process the voxel.
+                        if( ( 0 <= ray_i ) && (ray_i < N_rows)
+                        &&  ( 0 <= ray_j ) && (ray_j < N_cols)
+                        &&  ( 0 <= ray_k ) && (ray_k < N_imgs) ){
+                            const auto intersecting_img_refw = img_adj.index_to_image(ray_k);
+                            const auto voxel_val = intersecting_img_refw.get().value(ray_i, ray_j, Channel);
+
+                            // Ficticious mass density encountered by the ray.
+                            const auto intensity = (voxel_val < -1000.0f) ? -1000.0f : voxel_val; // Enforce physicality.
+                            const auto attenuation_coeff = 1.0f + (intensity / 1000.0f); 
+
+                            accumulated_attenuation_length_product += attenuation_coeff * last_move_dist;
+                            
+                            // Could invoke some user function using (i,j,k) and the various ray positions/distances here ... 
+                            //  ... TODO ...
+
+                        }
                     }
 
                     //Record the result in the image.
-                    DetectImg->reference(row, col, 0) = static_cast<float>(accumulated_mass_density_length);
+                    DetectImg->reference(row, col, 0) = static_cast<float>(accumulated_attenuation_length_product);
                 }
 
                 {
+                    // Report progress.
                     std::lock_guard<std::mutex> lock(printer);
                     ++completed;
                     FUNCINFO("Completed " << completed << " of " << RadiographRows 
@@ -389,21 +505,30 @@ Drover SimulateRadiograph(Drover DICOM_data,
                 }
             });
         }
-
-        // Transform the image to the fraction of light that would have made it through.
-        for(long int row = 0; row < RadiographRows; ++row){
-            for(long int col = 0; col < RadiographColumns; ++col){
-                const auto ad = DetectImg->reference(row, col, 0);
-                const auto f = 1.0 - std::exp(-ad * AttenuationScale);
-                DetectImg->reference(row, col, 0) = f;
-            }
-        }
-
     } // Complete tasks and terminate thread pool.
 
     //------------------------
-    // Save image maps to file.
 
+    // Post-process the image according to user criteria.
+    if(false){
+    }else if(imgmodel_is_mudl){
+        // Do nothing -- no need to transform.
+
+    }else if(imgmodel_is_exp){
+        // Implement a generic radiograph image with exponential attenuation.
+        for(long int row = 0; row < RadiographRows; ++row){
+            for(long int col = 0; col < RadiographColumns; ++col){
+                const auto alp = DetectImg->reference(row, col, 0);
+                const auto att = 1.0 - std::exp(-alp * AttenuationScale);
+                DetectImg->reference(row, col, 0) = att;
+            }
+        }
+
+    }else{
+        throw std::invalid_argument("Image model not understood. Unable to continue.");
+    }
+
+    // Save image maps to file.
     if(FilenameStr.empty()){
         FilenameStr = Get_Unique_Sequential_Filename("/tmp/dicomautomaton_simulateradiograph_", 6, ".fits");
     }
@@ -421,3 +546,4 @@ Drover SimulateRadiograph(Drover DICOM_data,
 
     return DICOM_data;
 }
+
