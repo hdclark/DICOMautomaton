@@ -473,6 +473,16 @@ Drover SimulateRadiograph(Drover DICOM_data,
                             break;
                         }
 
+                        // Terminate if the ray cannot possibly intersect any voxels.
+                        if( ( (incr_row < 0) && (ray_i < 0) )
+                        ||  ( (incr_col < 0) && (ray_j < 0) )
+                        ||  ( (incr_img < 0) && (ray_k < 0) )
+                        ||  ( (0 < incr_row) && (N_rows <= ray_i) )
+                        ||  ( (0 < incr_col) && (N_cols <= ray_j) )
+                        ||  ( (0 < incr_img) && (N_imgs <= ray_k) ) ){
+                            break;
+                        }
+
                         // Process the voxel.
                         if( ( 0 <= ray_i ) && (ray_i < N_rows)
                         &&  ( 0 <= ray_j ) && (ray_j < N_cols)
