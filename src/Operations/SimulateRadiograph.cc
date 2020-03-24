@@ -143,7 +143,7 @@ OperationDoc OpArgDocSimulateRadiograph(void){
                            " Second, the 'exponential' model performs the attenuation assuming the radiation beam is"
                            " monoenergetic, narrow, and has the same energy spectrum as the original imaging device."
                            " This model produces a typical radiograph, where each image pixel contains"
-                           " $1 - \\exp{-\\sum \\mu \cdot dL}$. Note that the values will all $\\in [0:1]$"
+                           " $1 - \\exp{-\\sum \\mu \\cdot dL}$. Note that the values will all $\\in [0:1]$"
                            " (i.e., Hounsfield units are *not* used)."
                            " The overall contrast can be adjusted using the AttenuationScale parameter, however"
                            " it is easiest to assess a reasonable tuning factor by inspecting the image produced by"
@@ -215,6 +215,8 @@ Drover SimulateRadiograph(Drover DICOM_data,
                                  std::numeric_limits<double>::quiet_NaN(),
                                  std::numeric_limits<double>::quiet_NaN() );
     //-----------------------------------------------------------------------------------------------------------------
+    const auto machine_eps = std::sqrt( 10.0 * std::numeric_limits<double>::epsilon() );
+
     vec3<double> source_position = vec3_nan;
     {
         auto split = SplitStringToVector(SourcePositionStr, '(', 'd');
@@ -265,7 +267,6 @@ Drover SimulateRadiograph(Drover DICOM_data,
         if(!Images_Form_Regular_Grid(selected_imgs)){
             throw std::invalid_argument("Images do not form a rectilinear grid. Cannot continue");
         }
-        //const bool is_regular_grid = Images_Form_Regular_Grid(selected_imgs);
     }
 
     const auto row_unit = img_arr_ptr->imagecoll.images.front().row_unit.unit();
@@ -282,6 +283,9 @@ Drover SimulateRadiograph(Drover DICOM_data,
     const auto pxl_dz = img_arr_ptr->imagecoll.images.front().pxl_dz;
     const auto pxl_diagonal_sq_length = (pxl_dx*pxl_dx + pxl_dy*pxl_dy + pxl_dz*pxl_dz);
 
+    const auto grid_zero = img_adj.index_to_image(0).get().position(0,0); // Centre of the (0,0,0) voxel.
+    const auto img_bps = img_adj.bounding_volume_planes;
+
     const auto N_rows = static_cast<long int>(img_arr_ptr->imagecoll.images.front().rows);
     const auto N_cols = static_cast<long int>(img_arr_ptr->imagecoll.images.front().columns);
     const auto N_imgs = static_cast<long int>(img_adj.int_to_img.size());
@@ -295,6 +299,9 @@ Drover SimulateRadiograph(Drover DICOM_data,
         ray_source = source_position;
     }else{
         throw std::logic_error("Unknown option. Cannot continue.");
+    }
+    if(ray_source.distance(img_centre) < machine_eps){
+        throw std::invalid_argument("Ray source point cannot coincide with image centre. Refusing to continue.");
     }
     const line<double> source_centre_line(ray_source, img_centre); 
 
@@ -314,6 +321,27 @@ Drover SimulateRadiograph(Drover DICOM_data,
     FUNCINFO("Proceeding with ray source at: " << ray_source);
     FUNCINFO("Proceeding with image centre at: " << img_centre);
     FUNCINFO("Proceeding with ray source - image centre line: " << source_centre_line);
+
+    // Confirm the bounding planes are all correctly oriented.
+    for(const auto & img_bp : img_bps){
+        if(!img_bp.Is_Point_Above_Plane(img_centre)){
+            throw std::logic_error("Bounding planes are not inward oriented. Refusing to continue.");
+            // Note: could just re-orient them here...
+        }
+    }
+    if(img_bps.size() != 6){
+        throw std::logic_error("Incorrect number of bounding planes provided. Cannot continue.");
+    }
+
+    // Pre-compute whether the ray source position is bounded within the image volume.
+    bool ray_source_is_within_image_volume = false;
+    {
+        long int N_bounds = 0;
+        for(const auto & img_bp : img_bps){
+            N_bounds += (img_bp.Is_Point_Above_Plane(ray_source)) ? 1L : 0L;
+        }
+        ray_source_is_within_image_volume = (N_bounds == 6);
+    }
 
     // Encode the image geometry as contours for volumetric bounds determination.
     contour_collection<double> cc;
@@ -340,11 +368,11 @@ Drover SimulateRadiograph(Drover DICOM_data,
 
     //Generate a grid volume bounding the ROI(s). We ask for many images in order to compress the pxl_dz taken by each.
     // Only two are actually allocated.
-    const auto NumberOfImages = 1000L;
+    const auto NumberOfPanelImages = 1000L;
     auto sd_image_collection = Symmetrically_Contiguously_Grid_Volume<float,double>(
              cc_ROIs, 
              grid_x_margin, grid_y_margin, grid_z_margin,
-             RadiographRows, RadiographColumns, /*number_of_channels=*/ 1, NumberOfImages, 
+             RadiographRows, RadiographColumns, /*number_of_channels=*/ 1, NumberOfPanelImages, 
              source_centre_line, (rg_up * -1.0), rg_left,
              /*pixel_fill=*/ 0.0, 
              /*only_top_and_bottom=*/ true);
@@ -353,11 +381,72 @@ Drover SimulateRadiograph(Drover DICOM_data,
     planar_image<float, double> *DetectImg = &(*std::next(sd_image_collection.images.begin(),0));
     planar_image<float, double> *OrthoSrcImg = &(*std::next(sd_image_collection.images.begin(),1));
 
+    // Confirm the detector image is oriented correctly.
+    //
+    // Note: the detector will always be on the opposite side of the image centre compared with the source point
+    // (i.e., the source will always points towards the image centre).
+    {
+        const auto dICSP = img_centre - source_position;
+        const auto dDPIC = DetectImg->center() - img_centre;
+        if(dICSP.Dot(dDPIC) < 0.0){
+            std::swap(DetectImg, OrthoSrcImg);
+        }
+    }
+
     DetectImg->metadata["Description"] = "Virtual radiograph detector";
     OrthoSrcImg->metadata["Description"] = "(unused)";
 
     const auto detector_plane = DetectImg->image_plane();
     const auto orthosrc_plane = OrthoSrcImg->image_plane();
+
+
+fv_surface_mesh<double, uint64_t> geom;
+const auto append_ls_to_geom = [&](line_segment<double> ls) -> void {
+    const auto index_A = static_cast<uint64_t>(geom.vertices.size());
+    const auto V_A = ls.Get_R0();
+    const auto V_B = ls.Get_R1();
+    geom.vertices.emplace_back(V_A);
+    geom.vertices.emplace_back(V_B);
+    geom.vertices.emplace_back((V_A+V_B)*0.5);
+    geom.faces.emplace_back( std::vector<uint64_t>{{ index_A, index_A+1, index_A+2 }} );
+};
+const auto append_vec3_to_geom = [&](vec3<double> P) -> void {
+    const double w = 0.05;
+    append_ls_to_geom(line_segment<double>( P - vec3<double>(0.0, 0.0, w), P + vec3<double>(0.0, 0.0, w) ));
+    append_ls_to_geom(line_segment<double>( P - vec3<double>(0.0, w, 0.0), P + vec3<double>(0.0, w, 0.0) ));
+    append_ls_to_geom(line_segment<double>( P - vec3<double>(w, 0.0, 0.0), P + vec3<double>(w, 0.0, 0.0) ));
+};
+
+
+if(false){
+    const auto V_A1 = img_adj.index_to_image(0).get().position(0,0);
+    const auto V_B1 = img_adj.index_to_image(0).get().position(N_rows-1,0);
+    const auto V_C1 = img_adj.index_to_image(0).get().position(N_rows-1,N_cols-1);
+    const auto V_D1 = img_adj.index_to_image(0).get().position(0,N_cols-1);
+
+    const auto V_A2 = img_adj.index_to_image(N_imgs-1).get().position(0,0);
+    const auto V_B2 = img_adj.index_to_image(N_imgs-1).get().position(N_rows-1,0);
+    const auto V_C2 = img_adj.index_to_image(N_imgs-1).get().position(N_rows-1,N_cols-1);
+    const auto V_D2 = img_adj.index_to_image(N_imgs-1).get().position(0,N_cols-1);
+
+    append_ls_to_geom( line_segment<double>( V_A1, V_B1 ) );
+    append_ls_to_geom( line_segment<double>( V_B1, V_C1 ) );
+    append_ls_to_geom( line_segment<double>( V_C1, V_D1 ) );
+    append_ls_to_geom( line_segment<double>( V_D1, V_A1 ) );
+
+    append_ls_to_geom( line_segment<double>( V_A2, V_B2 ) );
+    append_ls_to_geom( line_segment<double>( V_B2, V_C2 ) );
+    append_ls_to_geom( line_segment<double>( V_C2, V_D2 ) );
+    append_ls_to_geom( line_segment<double>( V_D2, V_A2 ) );
+
+    append_ls_to_geom( line_segment<double>( V_A1, V_A2 ) );
+    append_ls_to_geom( line_segment<double>( V_B1, V_B2 ) );
+    append_ls_to_geom( line_segment<double>( V_C1, V_C2 ) );
+    append_ls_to_geom( line_segment<double>( V_D1, V_D2 ) );
+
+    append_vec3_to_geom(img_centre);
+    append_vec3_to_geom(ray_source);
+}
 
     //------------------------
     // March rays through the image data.
@@ -366,38 +455,83 @@ Drover SimulateRadiograph(Drover DICOM_data,
         std::mutex printer; // Who gets to print to the console and iterate the counter.
         long int completed = 0;
 
-        for(long int row = 0; row < RadiographRows; ++row){
-            tp.submit_task([&,row](void) -> void {
-                for(long int col = 0; col < RadiographColumns; ++col){
+        for(long int RadiographRow = 0; RadiographRow < RadiographRows; ++RadiographRow){
+            tp.submit_task([&,RadiographRow](void) -> void {
+                for(long int RadiographCol = 0; RadiographCol < RadiographColumns; ++RadiographCol){
 
                     // Construct a line segment between the source and detector. 
-                    const auto ray_terminus = DetectImg->position(row, col);
+                    const auto ray_terminus = DetectImg->position(RadiographRow, RadiographCol);
                     const auto ray_line = line<double>(ray_source, ray_terminus);
 
-                    // Find the intersection of the ray with the near and far bounding planes.
-                    vec3<double> near_bp_intersection;
-                    if(!orthosrc_plane.Intersects_With_Line_Once(ray_line, near_bp_intersection)){
-                        throw std::logic_error("Ray line does not intersect near image array bounding plane. Cannot continue.");
-                    }
-                    vec3<double> far_bp_intersection;
-                    if(!detector_plane.Intersects_With_Line_Once(ray_line, far_bp_intersection)){
+                    // Find the intersection of the ray with the detector bounding planes.
+                    vec3<double> detector_panel_bp_intersection;
+                    if(!detector_plane.Intersects_With_Line_Once(ray_line, detector_panel_bp_intersection)){
                         throw std::logic_error("Ray line does not intersect far image array bounding plane. Cannot continue.");
                     }
-                    const vec3<double> ray_start = near_bp_intersection;
-                    const vec3<double> ray_end = far_bp_intersection;
+                    const auto ray_ls = line_segment<double>(ray_source, detector_panel_bp_intersection);
+if(false){
+    std::lock_guard<std::mutex> lock(printer);
+    append_ls_to_geom( ray_ls );
+}
+
+                    // Find the intersections of the ray and the bounding box containing the images.
+                    std::vector<vec3<double>> bp_intersections;
+                    for(const auto & img_bp : img_bps){
+                        vec3<double> P;
+                        //if(img_bp.Intersects_With_Line_Once(ray_line, P)){
+                        if(img_bp.Intersects_With_Line_Segment_Once(ray_ls, P)){
+
+                            // Determine if the intersection point is on a face of the cube.
+                            const auto bp_centre = img_bp.Project_Onto_Plane_Orthogonally(img_centre);
+                            const auto dP = (P - bp_centre);
+                            const auto dP_row = std::abs(dP.Dot(row_unit));
+                            const auto dP_col = std::abs(dP.Dot(col_unit));
+                            const auto dP_img = std::abs(dP.Dot(img_unit));
+
+                            const auto max_row = (static_cast<double>(N_rows) * pxl_dx * 0.5);
+                            const auto max_col = (static_cast<double>(N_cols) * pxl_dy * 0.5);
+                            const auto max_img = (static_cast<double>(N_imgs) * pxl_dz * 0.5);
+
+                            if( (dP_row <= max_row)
+                            &&  (dP_col <= max_col)
+                            &&  (dP_img <= max_img) ){
+                                bp_intersections.emplace_back(P);
+                            }
+                        }
+                    }
+
+                    // Explicitly add the ray source point if it is bounded within the image volume.
+                    if(ray_source_is_within_image_volume){
+                        bp_intersections.emplace_back(ray_source);
+                    }
+
+                    // Skip rays that do not intersect the image volume twice.
+                    if(bp_intersections.size() != 2){
+                        continue;
+                    }
+
+                    // Explicitly state the ray start and end positions using identified bounding-box intersection points.
+                    const vec3<double> ray_start = bp_intersections[0];
+                    const vec3<double> ray_end = bp_intersections[1];
                     const auto ray_direction = (ray_end - ray_start).unit();
-                    const line_segment<double> ray(ray_start, ray_end);
+                    const auto ray_total_sq_dist = ray_end.sq_dist(ray_start);
+if(false){
+    std::lock_guard<std::mutex> lock(printer);
+    append_vec3_to_geom(ray_start);
+    append_vec3_to_geom(ray_end);
+}
+
 
                     // Determine whether moving from tail to head along the ray will increase or decrease the
-                    // row/col/img coordinates.
+                    // row/col/img coordinates. Note that the direction will never change.
                     const long int incr_row = (row_unit.Dot(ray_direction) < 0.0) ? -1L : 1L;
                     const long int incr_col = (col_unit.Dot(ray_direction) < 0.0) ? -1L : 1L;
                     const long int incr_img = (img_unit.Dot(ray_direction) < 0.0) ? -1L : 1L;
 
                     // Determine the amount the ray will traverse due to incrementing i, j, or k individually.
-                    const auto true_ray_pos_dR_incr_row = ray_direction * (std::abs(row_unit.Dot(ray_direction)) * pxl_dx); // * static_cast<double>(incr_row));
-                    const auto true_ray_pos_dR_incr_col = ray_direction * (std::abs(col_unit.Dot(ray_direction)) * pxl_dy); // * static_cast<double>(incr_col));
-                    const auto true_ray_pos_dR_incr_img = ray_direction * (std::abs(img_unit.Dot(ray_direction)) * pxl_dz); // * static_cast<double>(incr_img));
+                    const auto true_ray_pos_dR_incr_row = ray_direction * (std::abs(row_unit.Dot(ray_direction)) * pxl_dx);
+                    const auto true_ray_pos_dR_incr_col = ray_direction * (std::abs(col_unit.Dot(ray_direction)) * pxl_dy);
+                    const auto true_ray_pos_dR_incr_img = ray_direction * (std::abs(img_unit.Dot(ray_direction)) * pxl_dz);
 
                     const auto true_ray_pos_dR_incr_row_length = true_ray_pos_dR_incr_row.length();
                     const auto true_ray_pos_dR_incr_col_length = true_ray_pos_dR_incr_col.length();
@@ -408,9 +542,9 @@ Drover SimulateRadiograph(Drover DICOM_data,
                     const auto blocky_ray_pos_dR_incr_img = img_unit * (pxl_dz * static_cast<double>(incr_img));
 
                     // Determine the pseudo integer coordinates for the starting point.
-                    // Note that these coordinates will not necessarily intersect any real voxels! They are defined only
+                    //
+                    // Note that these coordinates will not necessarily intersect any real voxels. They are defined only
                     // by the (infinite) regular grid that coincides with the real voxels.
-                    const auto grid_zero = img_adj.index_to_image(0).get().position(0,0); // Centre of the (0,0,0) voxel.
                     const auto ray_start_grid_offset = ray_start - grid_zero;
                     const auto ray_start_row_index = static_cast<long int>( std::round( ray_start_grid_offset.Dot(row_unit)/pxl_dx ) );
                     const auto ray_start_col_index = static_cast<long int>( std::round( ray_start_grid_offset.Dot(col_unit)/pxl_dy ) );
@@ -428,14 +562,17 @@ Drover SimulateRadiograph(Drover DICOM_data,
                     const auto ray_start_side_of_terminus_plane = detector_plane.Is_Point_Above_Plane(ray_start);
 
                     // Each time the ray samples the CT number, the ray is simulated to have interacted with the medium
-                    // for the length of the ray advancement. The remaining fractional ray intensity could be
-                    // immediately reduced by multiplying by a factor of exp(-attenuation_coeff*dL). However, it is easier to sum
-                    // all the attenuation_coeff*dL contributions and apply the reduction factor once at the end.
+                    // for the length of the ray advancement.
+                    //
+                    // For purposes of simulating a radiograph, the remaining fractional ray intensity could be
+                    // immediately reduced by multiplying by a factor of exp(-attenuation_coeff*dL). However, it is
+                    // easier to sum all the attenuation_coeff*dL contributions and apply the reduction factor once at
+                    // the end.
                     double accumulated_attenuation_length_product = 0.0;
                     double last_move_dist = 0.0;
 
                     while(true){
-                        // Test which single increment (i, j, or k) are closest to the ray.
+                        // Test which single increment (either i, j, or k) remaing the closest to the ray line.
                         const auto cand_pos_i = blocky_ray_pos + blocky_ray_pos_dR_incr_row;
                         const auto cand_pos_j = blocky_ray_pos + blocky_ray_pos_dR_incr_col;
                         const auto cand_pos_k = blocky_ray_pos + blocky_ray_pos_dR_incr_img;
@@ -467,12 +604,8 @@ Drover SimulateRadiograph(Drover DICOM_data,
                             throw std::runtime_error("Real ray position and blocky ray position differ by more than a voxel diagonal");
                         }
 
-                        // Terminate if the ray has passed beyond the terminus plane.
-                        const auto current_side_of_terminus_plane = detector_plane.Is_Point_Above_Plane(blocky_ray_pos);
-                        if(current_side_of_terminus_plane != ray_start_side_of_terminus_plane){
-                            break;
-                        }
-
+/*
+// No longer necessary, but possibly useful if adapted for another purpose?
                         // Terminate if the ray cannot possibly intersect any voxels.
                         if( ( (incr_row < 0) && (ray_i < 0) )
                         ||  ( (incr_col < 0) && (ray_j < 0) )
@@ -482,6 +615,7 @@ Drover SimulateRadiograph(Drover DICOM_data,
                         ||  ( (0 < incr_img) && (N_imgs <= ray_k) ) ){
                             break;
                         }
+*/
 
                         // Process the voxel.
                         if( ( 0 <= ray_i ) && (ray_i < N_rows)
@@ -496,14 +630,22 @@ Drover SimulateRadiograph(Drover DICOM_data,
 
                             accumulated_attenuation_length_product += attenuation_coeff * last_move_dist;
                             
-                            // Could invoke some user function using (i,j,k) and the various ray positions/distances here ... 
+                            // Could alternately invoke a more generic user function using (i,j,k) and the various ray
+                            // positions/distances here.
+
                             //  ... TODO ...
 
+                        }
+
+                        // Terminate if the ray has traveled far enough.
+                        const auto ray_traveled_sq_dist = ray_start.sq_dist(true_ray_pos);
+                        if(ray_total_sq_dist <= ray_traveled_sq_dist){
+                            break;
                         }
                     }
 
                     //Record the result in the image.
-                    DetectImg->reference(row, col, 0) = static_cast<float>(accumulated_attenuation_length_product);
+                    DetectImg->reference(RadiographRow, RadiographCol, 0) = static_cast<float>(accumulated_attenuation_length_product);
                 }
 
                 {
@@ -514,6 +656,7 @@ Drover SimulateRadiograph(Drover DICOM_data,
                           << " --> " << static_cast<int>(1000.0*(completed)/RadiographRows)/10.0 << "% done");
                 }
             });
+
         }
     } // Complete tasks and terminate thread pool.
 
@@ -548,11 +691,18 @@ Drover SimulateRadiograph(Drover DICOM_data,
     }
 
     // Insert the image maps as images for later processing and/or viewing, if desired.
-    OrthoSrcImg = nullptr;
+    *OrthoSrcImg = *DetectImg;
     sd_image_collection.images.resize(1);
 
     DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>() );
     DICOM_data.image_data.back()->imagecoll = sd_image_collection;
+
+if(false){
+    std::ofstream FS("geom.off");
+    if(!WriteFVSMeshToOFF(geom, FS)){
+        throw std::runtime_error("Unable to write geometry to OFF file. Refusing to continue.");
+    }
+}
 
     return DICOM_data;
 }
