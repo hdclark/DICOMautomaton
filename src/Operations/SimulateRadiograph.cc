@@ -399,55 +399,6 @@ Drover SimulateRadiograph(Drover DICOM_data,
     const auto detector_plane = DetectImg->image_plane();
     const auto orthosrc_plane = OrthoSrcImg->image_plane();
 
-
-fv_surface_mesh<double, uint64_t> geom;
-const auto append_ls_to_geom = [&](line_segment<double> ls) -> void {
-    const auto index_A = static_cast<uint64_t>(geom.vertices.size());
-    const auto V_A = ls.Get_R0();
-    const auto V_B = ls.Get_R1();
-    geom.vertices.emplace_back(V_A);
-    geom.vertices.emplace_back(V_B);
-    geom.vertices.emplace_back((V_A+V_B)*0.5);
-    geom.faces.emplace_back( std::vector<uint64_t>{{ index_A, index_A+1, index_A+2 }} );
-};
-const auto append_vec3_to_geom = [&](vec3<double> P) -> void {
-    const double w = 0.05;
-    append_ls_to_geom(line_segment<double>( P - vec3<double>(0.0, 0.0, w), P + vec3<double>(0.0, 0.0, w) ));
-    append_ls_to_geom(line_segment<double>( P - vec3<double>(0.0, w, 0.0), P + vec3<double>(0.0, w, 0.0) ));
-    append_ls_to_geom(line_segment<double>( P - vec3<double>(w, 0.0, 0.0), P + vec3<double>(w, 0.0, 0.0) ));
-};
-
-
-if(false){
-    const auto V_A1 = img_adj.index_to_image(0).get().position(0,0);
-    const auto V_B1 = img_adj.index_to_image(0).get().position(N_rows-1,0);
-    const auto V_C1 = img_adj.index_to_image(0).get().position(N_rows-1,N_cols-1);
-    const auto V_D1 = img_adj.index_to_image(0).get().position(0,N_cols-1);
-
-    const auto V_A2 = img_adj.index_to_image(N_imgs-1).get().position(0,0);
-    const auto V_B2 = img_adj.index_to_image(N_imgs-1).get().position(N_rows-1,0);
-    const auto V_C2 = img_adj.index_to_image(N_imgs-1).get().position(N_rows-1,N_cols-1);
-    const auto V_D2 = img_adj.index_to_image(N_imgs-1).get().position(0,N_cols-1);
-
-    append_ls_to_geom( line_segment<double>( V_A1, V_B1 ) );
-    append_ls_to_geom( line_segment<double>( V_B1, V_C1 ) );
-    append_ls_to_geom( line_segment<double>( V_C1, V_D1 ) );
-    append_ls_to_geom( line_segment<double>( V_D1, V_A1 ) );
-
-    append_ls_to_geom( line_segment<double>( V_A2, V_B2 ) );
-    append_ls_to_geom( line_segment<double>( V_B2, V_C2 ) );
-    append_ls_to_geom( line_segment<double>( V_C2, V_D2 ) );
-    append_ls_to_geom( line_segment<double>( V_D2, V_A2 ) );
-
-    append_ls_to_geom( line_segment<double>( V_A1, V_A2 ) );
-    append_ls_to_geom( line_segment<double>( V_B1, V_B2 ) );
-    append_ls_to_geom( line_segment<double>( V_C1, V_C2 ) );
-    append_ls_to_geom( line_segment<double>( V_D1, V_D2 ) );
-
-    append_vec3_to_geom(img_centre);
-    append_vec3_to_geom(ray_source);
-}
-
     //------------------------
     // March rays through the image data.
     {
@@ -469,10 +420,6 @@ if(false){
                         throw std::logic_error("Ray line does not intersect far image array bounding plane. Cannot continue.");
                     }
                     const auto ray_ls = line_segment<double>(ray_source, detector_panel_bp_intersection);
-if(false){
-    std::lock_guard<std::mutex> lock(printer);
-    append_ls_to_geom( ray_ls );
-}
 
                     // Find the intersections of the ray and the bounding box containing the images.
                     std::vector<vec3<double>> bp_intersections;
@@ -515,12 +462,6 @@ if(false){
                     const vec3<double> ray_end = bp_intersections[1];
                     const auto ray_direction = (ray_end - ray_start).unit();
                     const auto ray_total_sq_dist = ray_end.sq_dist(ray_start);
-if(false){
-    std::lock_guard<std::mutex> lock(printer);
-    append_vec3_to_geom(ray_start);
-    append_vec3_to_geom(ray_end);
-}
-
 
                     // Determine whether moving from tail to head along the ray will increase or decrease the
                     // row/col/img coordinates. Note that the direction will never change.
@@ -604,19 +545,6 @@ if(false){
                             throw std::runtime_error("Real ray position and blocky ray position differ by more than a voxel diagonal");
                         }
 
-/*
-// No longer necessary, but possibly useful if adapted for another purpose?
-                        // Terminate if the ray cannot possibly intersect any voxels.
-                        if( ( (incr_row < 0) && (ray_i < 0) )
-                        ||  ( (incr_col < 0) && (ray_j < 0) )
-                        ||  ( (incr_img < 0) && (ray_k < 0) )
-                        ||  ( (0 < incr_row) && (N_rows <= ray_i) )
-                        ||  ( (0 < incr_col) && (N_cols <= ray_j) )
-                        ||  ( (0 < incr_img) && (N_imgs <= ray_k) ) ){
-                            break;
-                        }
-*/
-
                         // Process the voxel.
                         if( ( 0 <= ray_i ) && (ray_i < N_rows)
                         &&  ( 0 <= ray_j ) && (ray_j < N_cols)
@@ -696,13 +624,6 @@ if(false){
 
     DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>() );
     DICOM_data.image_data.back()->imagecoll = sd_image_collection;
-
-if(false){
-    std::ofstream FS("geom.off");
-    if(!WriteFVSMeshToOFF(geom, FS)){
-        throw std::runtime_error("Unable to write geometry to OFF file. Refusing to continue.");
-    }
-}
 
     return DICOM_data;
 }
