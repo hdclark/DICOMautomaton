@@ -143,7 +143,7 @@ if [[ "${DISTRIBUTION}" =~ .*debian.* ]] ; then
         $SUDO apt-get install -f ./*deb
     fi
 
-elif [[ "${DISTRIBUTION}" =~ .*arch.*linux.* ]] ; then
+elif [[ "${DISTRIBUTION}" =~ .*arch.* ]] ; then
     printf 'Compiling for Arch Linux...\n'
 
     # Arch's makepkg is picky, disallowing being run as root, but also requiring the non-root user to be a sudoer. What
