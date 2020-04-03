@@ -54,6 +54,7 @@
 #include "Operations/CropROIDose.h"
 #include "Operations/DCEMRI_IAUC.h"
 #include "Operations/DCEMRI_Nonparametric_CE.h"
+#include "Operations/DICOMExportImagesAsCT.h"
 #include "Operations/DICOMExportImagesAsDose.h"
 #include "Operations/DICOMExportContours.h"
 #include "Operations/DecayDoseOverTimeHalve.h"
@@ -229,6 +230,7 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["CropROIDose"] = std::make_pair(OpArgDocCropROIDose, CropROIDose);
     out["DCEMRI_IAUC"] = std::make_pair(OpArgDocDCEMRI_IAUC, DCEMRI_IAUC);
     out["DCEMRI_Nonparametric_CE"] = std::make_pair(OpArgDocDCEMRI_Nonparametric_CE, DCEMRI_Nonparametric_CE);
+    out["DICOMExportImagesAsCT"] = std::make_pair(OpArgDocDICOMExportImagesAsCT, DICOMExportImagesAsCT);
     out["DICOMExportImagesAsDose"] = std::make_pair(OpArgDocDICOMExportImagesAsDose, DICOMExportImagesAsDose);
     out["DICOMExportContours"] = std::make_pair(OpArgDocDICOMExportContours, DICOMExportContours);
     out["DecayDoseOverTimeHalve"] = std::make_pair(OpArgDocDecayDoseOverTimeHalve, DecayDoseOverTimeHalve);

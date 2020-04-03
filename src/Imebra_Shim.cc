@@ -43,6 +43,7 @@
 #include "YgorMisc.h"       //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorString.h"     //Needed for Canonicalize_String2().
 #include "YgorImages.h"
+#include "YgorTAR.h"
 
 //----------------- Accessors ---------------------
 
@@ -931,6 +932,9 @@ std::map<std::string,std::string> get_metadata_top_level_tags(const std::string 
                                                 { 0x300C, 0x0020, "ReferencedFractionGroupSequence" },
                                                 { 0x300C, 0x0004, "ReferencedBeamSequence" },
                                                 { 0x300C, 0x0006, "ReferencedBeamNumber" } }) );
+
+    //CT Image Module.
+    insert_as_string_if_nonempty(0x0018, 0x0060, "KVP");
 
     //RT Image Module.
     insert_as_string_if_nonempty(0x3002, 0x0002, "RTImageLabel");
@@ -2614,6 +2618,326 @@ void Write_Dose_Array(std::shared_ptr<Image_Array> IA, const std::string &Filena
 
     return;
 }
+
+
+//This routine writes an image array to several DICOM CT-modality files.
+//
+// Note: the output file is a TAR archive containing multiple, individual CT-modality DICOM files.
+//
+void Write_CT_Images(std::shared_ptr<Image_Array> IA, 
+                     const std::string &FilenameOut,
+                     ParanoiaLevel Paranoia){
+    if( (IA == nullptr) 
+    ||  IA->imagecoll.images.empty()){
+        throw std::runtime_error("No images provided for export. Cannot continue.");
+    }
+
+    auto fne = [](std::vector<std::string> l) -> std::string {
+        //fne == "First non-empty". Note this routine will throw if all provided strings are empty.
+        for(auto &s : l) if(!s.empty()) return s;
+        throw std::runtime_error("All inputs were empty -- unable to provide a nonempty string.");
+        return std::string();
+    };
+
+    auto foe = [](std::vector<std::string> l) -> std::string {
+        //foe == "First non-empty Or Empty". (i.e., will not throw if all provided strings are empty.)
+        for(auto &s : l) if(!s.empty()) return s;
+        return std::string(); 
+    };
+
+    //Generate UIDs and IDs that need to be duplicated across all images.
+    const auto FrameOfReferenceUID = Generate_Random_UID(60);
+    const auto StudyInstanceUID = Generate_Random_UID(31);
+    const auto SeriesInstanceUID = Generate_Random_UID(31);
+    const auto InstanceCreatorUID = Generate_Random_UID(60);
+
+    const auto PatientID = "DCMA_"_s + Generate_Random_String_of_Length(10);
+    const auto StudyID = "DCMA_"_s + Generate_Random_String_of_Length(10);
+    const auto SeriesNumber = Generate_Random_Int_Str(5000, 32767); // Upper: 2^15 - 1.
+
+    // TODO: Sample any existing UID (ReferencedFrameOfReferenceUID or FrameofReferenceUID). 
+    // Probably OK to use only the first in this case though...
+
+    // Prepare an output stream for a tar archive.
+    std::ofstream ofs(FilenameOut, std::ios::out | std::ios::binary);
+    if(!ofs) throw std::runtime_error("Unable to open TAR file for writing");
+    ustar_archive_writer ustar(ofs);
+
+    const auto pad_left_zeros = [](std::string in, long int desired_length) -> std::string {
+        while(static_cast<long int>(in.length()) < desired_length) in = "0"_s + in;
+        return in;
+    };
+
+    const auto make_filename = [=](long int n) -> std::string {
+        std::string prefix = "CT_";
+        std::string middle = std::to_string(n);
+        std::string suffix = ".dcm";
+        return prefix + pad_left_zeros(middle,6) + suffix;
+    };
+
+    long int InstanceNumber = -1;
+    for(const auto &animg : IA->imagecoll.images){
+        if( (animg.rows <= 0) || (animg.columns <= 0) || (animg.channels <= 0) ){
+            continue;
+        }
+
+        ++InstanceNumber;
+
+        DCMA_DICOM::Encoding enc = DCMA_DICOM::Encoding::ELE;
+        DCMA_DICOM::Node root_node;
+
+        const auto SOPInstanceUID = Generate_Random_UID(60);
+
+        //auto cm = IA->imagecoll.get_common_metadata({});
+        auto cm = animg.metadata;
+
+        //Replace any metadata that might be used to underhandedly link patients, if requested.
+        if((Paranoia == ParanoiaLevel::Medium) || (Paranoia == ParanoiaLevel::High)){
+            //SOP Common Module.
+            cm["InstanceCreationDate"] = "";
+            cm["InstanceCreationTime"] = "";
+            cm["InstanceCreatorUID"] = InstanceCreatorUID;
+
+            //Patient Module.
+            cm["PatientsBirthDate"] = "";
+            cm["PatientsGender"]    = "";
+            cm["PatientsBirthTime"] = "";
+
+            //General Study Module.
+            cm["StudyInstanceUID"] = "";
+            cm["StudyDate"] = "";
+            cm["StudyTime"] = "";
+            cm["ReferringPhysiciansName"] = "";
+            cm["StudyID"] = "";
+            cm["AccessionNumber"] = "";
+            cm["StudyDescription"] = "";
+
+            //General Series Module.
+            cm["SeriesInstanceUID"] = "";
+            cm["SeriesNumber"] = "";
+            cm["SeriesDate"] = "";
+            cm["SeriesTime"] = "";
+            cm["SeriesDescription"] = "";
+            cm["RequestedProcedureID"] = "";                          // Appropriate?
+            cm["ScheduledProcedureStepID"] = "";                          // Appropriate?
+            cm["OperatorsName"] = "";                          // Appropriate?
+
+            //Patient Study Module.
+            cm["PatientsMass"] = "";                          // Appropriate?
+
+            //Frame of Reference Module.
+            cm["PositionReferenceIndicator"] = "";              // Appropriate?
+
+            //General Equipment Module.
+            cm["Manufacturer"] = "";
+            cm["InstitutionName"] = "";             // Appropriate?
+            cm["StationName"] = "";             // Appropriate?
+            cm["InstitutionalDepartmentName"] = "";             // Appropriate?
+            cm["ManufacturersModelName"] = "";
+            cm["SoftwareVersions"] = "";
+
+            //Structure Set Module.
+            cm["StructureSetDescription"] = "";
+            cm["StructureSetDate"] = "";
+            cm["StructureSetTime"] = "";
+        }
+        if(Paranoia == ParanoiaLevel::High){
+            //Patient Module.
+            cm["PatientsName"]      = "";
+            cm["PatientID"]         = "";
+
+            //Frame of Reference Module.
+            cm["FrameofReferenceUID"] = "";
+
+            //Structure Set Module.
+            cm["StructureSetLabel"] = "UNSPECIFIED";
+            cm["StructureSetName"] = "UNSPECIFIED";
+        }
+
+        //if((Paranoia == ParanoiaLevel::Medium) || (Paranoia == ParanoiaLevel::High)){
+        //    ReferencedFrameOfReferenceUID = Generate_Random_UID(60);
+        //}
+
+        //-------------------------------------------------------------------------------------------------
+        //DICOM Header Metadata.
+        root_node.emplace_child_node({{0x0002, 0x0001}, "OB", std::string("\x0\x1", 2)}); // FileMetaInformationVersion
+        root_node.emplace_child_node({{0x0002, 0x0002}, "UI", "1.2.840.10008.5.1.4.1.1.2"}); // MediaStorageSOPClassUID -- CT Image Storage.
+        root_node.emplace_child_node({{0x0002, 0x0003}, "UI", SOPInstanceUID}); // MediaStorageSOPInstanceUID
+        std::string TransferSyntaxUID;
+        if(false){
+        }else if(enc == DCMA_DICOM::Encoding::ELE){
+            TransferSyntaxUID = "1.2.840.10008.1.2.1";
+        }else if(enc == DCMA_DICOM::Encoding::ILE){
+            TransferSyntaxUID = "1.2.840.10008.1.2";
+        }else{
+            throw std::runtime_error("Unsupported transfer syntax requested. Cannot continue.");
+        }
+        root_node.emplace_child_node({{0x0002, 0x0010}, "UI", TransferSyntaxUID}); // TransferSyntaxUID
+
+        root_node.emplace_child_node({{0x0002, 0x0012}, "UI", "1.2.513.264.765.1.1.578"}); // ImplementationClassUID
+        root_node.emplace_child_node({{0x0002, 0x0013}, "SH", "DICOMautomaton"}); // ImplementationVersionName
+
+        //-------------------------------------------------------------------------------------------------
+        //SOP Common Module.
+        root_node.emplace_child_node({{0x0008, 0x0016}, "UI", "1.2.840.10008.5.1.4.1.1.2"}); // SOPClassUID -- CT Image Storage.
+        root_node.emplace_child_node({{0x0008, 0x0018}, "UI", SOPInstanceUID}); // SOPInstanceUID
+        root_node.emplace_child_node({{0x0008, 0x0005}, "CS", "ISO_IR 192"}); // 'ISO_IR 192' = UTF-8.
+        root_node.emplace_child_node({{0x0008, 0x0012}, "DA", fne({ cm["InstanceCreationDate"], "19720101" }) });
+        root_node.emplace_child_node({{0x0008, 0x0013}, "TM", fne({ cm["InstanceCreationTime"], "010101" }) });
+        root_node.emplace_child_node({{0x0008, 0x0014}, "UI", foe({ cm["InstanceCreatorUID"] }) });
+        //root_node.emplace_child_node({{0x0008, 0x0114}, "UI", foe({ cm["CodingSchemeExternalUID"] }) });                 // Appropriate?
+        //root_node.emplace_child_node({{0x0020, 0x0013}, "IS", std::to_string(InstanceNumber) });
+
+        //-------------------------------------------------------------------------------------------------
+        //Patient Module.
+        root_node.emplace_child_node({{0x0010, 0x0010}, "PN", fne({ cm["PatientsName"], "DICOMautomaton^DICOMautomaton" }) });
+        root_node.emplace_child_node({{0x0010, 0x0020}, "LO", fne({ cm["PatientID"], PatientID }) });
+        root_node.emplace_child_node({{0x0010, 0x0030}, "DA", fne({ cm["PatientsBirthDate"], "19720101" }) });
+        root_node.emplace_child_node({{0x0010, 0x0040}, "CS", foe({ cm["PatientsSex"] }) });
+        //root_node.emplace_child_node({{0x0010, 0x0032}, "TM", fne({ cm["PatientsBirthTime"], "010101" }) });
+
+        //-------------------------------------------------------------------------------------------------
+        //General Study Module.
+        root_node.emplace_child_node({{0x0020, 0x000D}, "UI", fne({ cm["StudyInstanceUID"], StudyInstanceUID }) });
+        root_node.emplace_child_node({{0x0008, 0x0020}, "DA", fne({ cm["StudyDate"], "19720101" }) });
+        root_node.emplace_child_node({{0x0008, 0x0030}, "TM", fne({ cm["StudyTime"], "010101" }) });
+        root_node.emplace_child_node({{0x0008, 0x0090}, "PN", fne({ cm["ReferringPhysiciansName"], "UNSPECIFIED^UNSPECIFIED" }) });
+        root_node.emplace_child_node({{0x0020, 0x0010}, "SH", fne({ cm["StudyID"], StudyID }) });
+        //root_node.emplace_child_node({{0x0008, 0x0050}, "SH", fne({ cm["AccessionNumber"], Generate_Random_String_of_Length(14) }) });
+        root_node.emplace_child_node({{0x0008, 0x0050}, "SH", "" });
+        root_node.emplace_child_node({{0x0008, 0x1030}, "LO", fne({ cm["StudyDescription"], "UNSPECIFIED" }) });
+
+        //-------------------------------------------------------------------------------------------------
+        //General Series Module.
+        root_node.emplace_child_node({{0x0008, 0x0060}, "CS", "CT" }); // "Modality"
+        root_node.emplace_child_node({{0x0020, 0x000E}, "UI", fne({ cm["SeriesInstanceUID"], SeriesInstanceUID }) });
+        root_node.emplace_child_node({{0x0020, 0x0011}, "IS", fne({ cm["SeriesNumber"], SeriesNumber }) }); // Upper: 2^15 - 1.
+        root_node.emplace_child_node({{0x0008, 0x0021}, "DA", foe({ cm["SeriesDate"] }) });
+        root_node.emplace_child_node({{0x0008, 0x0031}, "TM", foe({ cm["SeriesTime"] }) });
+        root_node.emplace_child_node({{0x0008, 0x103E}, "LO", fne({ cm["SeriesDescription"], "UNSPECIFIED" }) });
+        //root_node.emplace_child_node({{0x0008, 0x1070}, "PN", fne({ cm["OperatorsName"], "UNSPECIFIED" }) });
+        root_node.emplace_child_node({{0x0020, 0x0060}, "CS", "" }); // Laterality.
+        root_node.emplace_child_node({{0x0018, 0x5100}, "CS", foe({ cm["PatientPosition"] }) });
+
+
+        //-------------------------------------------------------------------------------------------------
+        //General Equipment Module.
+        root_node.emplace_child_node({{0x0008, 0x0070}, "LO", fne({ cm["Manufacturer"], "UNSPECIFIED" }) });
+        //root_node.emplace_child_node({{0x0008, 0x0080}, "LO", fne({ cm["InstitutionName"], "UNSPECIFIED" }) });
+        //root_node.emplace_child_node({{0x0008, 0x1010}, "SH", fne({ cm["StationName"], "UNSPECIFIED" }) });
+        //root_node.emplace_child_node({{0x0008, 0x1040}, "LO", fne({ cm["InstitutionalDepartmentName"], "UNSPECIFIED" }) });
+        //root_node.emplace_child_node({{0x0008, 0x1090}, "LO", fne({ cm["ManufacturersModelName"], "UNSPECIFIED" }) });
+        //root_node.emplace_child_node({{0x0018, 0x1020}, "LO", fne({ cm["SoftwareVersions"], "UNSPECIFIED" }) });
+
+        //-------------------------------------------------------------------------------------------------
+        //Frame of Reference Module.
+        root_node.emplace_child_node({{0x0020, 0x0052}, "UI", fne({ cm["FrameofReferenceUID"], FrameOfReferenceUID }) }); //FrameOfReferenceUID 
+        root_node.emplace_child_node({{0x0020, 0x1040}, "LO", "" }); //PositionReferenceIndicator (TODO).
+
+        //-------------------------------------------------------------------------------------------------
+        //General Image Module.
+        root_node.emplace_child_node({{0x0020, 0x0013}, "IS", std::to_string(InstanceNumber) });
+        root_node.emplace_child_node({{0x0020, 0x0020}, "CS", "" }); // PatientOrientation.
+        root_node.emplace_child_node({{0x0008, 0x0023}, "DA", foe({ cm["ContentDate"] }) });
+        root_node.emplace_child_node({{0x0008, 0x0033}, "TM", foe({ cm["ContentTime"] }) });
+        root_node.emplace_child_node({{0x0008, 0x0008}, "CS", R"***(DERIVED\SECONDARY\AXIAL)***" }); //ImageType, note AXIAL can also mean coronal or transverse.
+        root_node.emplace_child_node({{0x0008, 0x0022}, "DA", foe({ cm["AcquisitionDate"] }) });
+        root_node.emplace_child_node({{0x0008, 0x0032}, "TM", foe({ cm["AcquisitionTime"] }) });
+        root_node.emplace_child_node({{0x0020, 0x0012}, "IS", foe({ cm["AcquisitionNumber"] }) });
+
+        //-------------------------------------------------------------------------------------------------
+        //Image Plane Module.
+        root_node.emplace_child_node({{0x0028, 0x0030}, "DS", std::to_string(animg.pxl_dx)  //PixelSpacing.
+                                             + R"***(\)***" + std::to_string(animg.pxl_dy) });
+        root_node.emplace_child_node({{0x0020, 0x0037}, "DS", std::to_string(animg.col_unit.x) //ImageOrientationPatient.
+                                             + R"***(\)***" + std::to_string(animg.col_unit.y) 
+                                             + R"***(\)***" + std::to_string(animg.col_unit.z) 
+                                             + R"***(\)***" + std::to_string(animg.row_unit.x) 
+                                             + R"***(\)***" + std::to_string(animg.row_unit.y) 
+                                             + R"***(\)***" + std::to_string(animg.row_unit.z) });
+        root_node.emplace_child_node({{0x0020, 0x0032}, "DS", std::to_string(animg.position(0,0).x) //ImagePositionPatient.
+                                             + R"***(\)***" + std::to_string(animg.position(0,0).y) 
+                                             + R"***(\)***" + std::to_string(animg.position(0,0).z) });
+        root_node.emplace_child_node({{0x0018, 0x0050}, "DS", std::to_string(animg.pxl_dz) }); //SliceThickness.
+
+        //-------------------------------------------------------------------------------------------------
+        //Image Pixel Module.
+        root_node.emplace_child_node({{0x0028, 0x0002}, "US", std::to_string(animg.channels) }); //SamplesPerPixel, aka, number of channels.
+
+        std::string PhotometricInterpretation = "OTHER";
+        if(animg.channels == 1){
+            //PhotometricInterpretation = "MONOCHROME1"; // Minimum valued pixel = white.
+            PhotometricInterpretation = "MONOCHROME2"; // Minimum valued pixel = black.
+        }else if(animg.channels == 3){
+            PhotometricInterpretation = "RGB";
+        }else{
+            PhotometricInterpretation = "OTHER"; // Non-standard ... what to do here? TODO.
+        }
+        root_node.emplace_child_node({{0x0028, 0x0004}, "CS", PhotometricInterpretation });
+        root_node.emplace_child_node({{0x0028, 0x0010}, "US", std::to_string(animg.rows) });
+        root_node.emplace_child_node({{0x0028, 0x0011}, "US", std::to_string(animg.columns) });
+
+        root_node.emplace_child_node({{0x0028, 0x0100}, "US", "16" }); // BitsAllocated, per sample (i.e., per channel).
+        root_node.emplace_child_node({{0x0028, 0x0101}, "US", "16" }); // BitsStored.
+        root_node.emplace_child_node({{0x0028, 0x0102}, "US", "15" }); // HighBit, should be BitsStored-1.
+        root_node.emplace_child_node({{0x0028, 0x0103}, "US", "1" }); // PixelRepresentation, 0 for unsigned, 1 for 2's complement.
+        if(animg.channels != 1){
+            root_node.emplace_child_node({{0x0028, 0x0006}, "US", "0" }); // PlanarConfiguration, 0 for R1, G1, B1, R2, G2, ..., and 1 for R1 R2 R3 ....
+        }
+
+        {
+            std::stringstream ss_pixels;
+            for(long int row = 0; row != animg.rows; ++row){
+                for(long int col = 0; col != animg.columns; ++col){
+                    for(long int chnl = 0; chnl != animg.channels; ++chnl){
+                        auto val = static_cast<int16_t>( std::round( animg.value(row, col, chnl ) ) );
+                        ss_pixels.write( reinterpret_cast<const char *>(&val), sizeof(val) );
+                    }
+                }
+            }
+            root_node.emplace_child_node({{0x7FE0, 0x0010}, "OB", ss_pixels.str() }); // PixelData.
+
+            // Note: the standard mentions that:
+            //
+            //   "This Attribute does not apply when Float Pixel Data (7FE0,0008) or Double Float Pixel Data (7FE0,0009) are used
+            //   instead of Pixel Data (7FE0,0010); Float Pixel Padding Value (0028,0122) or Double Float Pixel Padding Value 
+            //   (0028,0123), respectively, are used instead, and defined at the Image, not the Equipment, level."
+            //
+            // Could I use a floating-point pixel data in lieu of compressing into 16 bits? It seems to only apply to parametric images module. TODO.
+        }
+
+        //-------------------------------------------------------------------------------------------------
+        //CT Image Module.
+        //
+        // Note: many elements in this module are duplicated in other modules. Omitted here if they appear above.
+        //
+        root_node.emplace_child_node({{0x0028, 0x1052}, "DS", "0" }); //RescaleIntercept.
+        root_node.emplace_child_node({{0x0028, 0x1053}, "DS", "1" }); //RescaleSlope.
+        root_node.emplace_child_node({{0x0028, 0x1054}, "LO", "HU" }); //RescaleType, 'HU' for Hounsfield units, or 'US' for unspecified.
+        root_node.emplace_child_node({{0x0018, 0x0060}, "DS", foe({ cm["KVP"] }) });
+
+        //-------------------------------------------------------------------------------------------------
+        //VOI LUT Module.
+        //
+        root_node.emplace_child_node({{0x0028, 0x1050}, "DS", "0" }); //WindowCenter.
+        root_node.emplace_child_node({{0x0028, 0x1051}, "DS", "1000" }); //WindowWidth
+
+        // Write the file to the archive.
+        {
+            std::stringstream ss;
+            const auto bytes_reqd = root_node.emit_DICOM(ss, enc);
+            if(!ss) throw std::runtime_error("Stream not in good state after emitting DICOM file");
+            if(bytes_reqd <= 0) throw std::runtime_error("Not enough DICOM data available for valid file");
+
+            const auto fname = make_filename(InstanceNumber);
+            const auto fsize = static_cast<long int>(bytes_reqd);
+            ustar.add_file(ss, fname, fsize);
+        }
+    }
+
+    return;
+}
+
 
 //This routine writes a collection of planar contours to a DICOM RTSTRUCT-modality file.
 //

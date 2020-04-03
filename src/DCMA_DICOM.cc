@@ -370,8 +370,12 @@ uint64_t Node::emit_DICOM(std::ostream &os,
 
     // Text types.
     }else if( this->VR == "CS" ){ //Code strings.
-        if(16 < this->val.length()) throw std::invalid_argument("Code string is too long. Cannot continue.");
-        // Does value multiplicity embiggen the maximum permissable length? TODO
+        // Value multiplicity embiggens the maximum permissable length, but each individual element should be <= 16 chars.
+        auto tokens = SplitStringToVector(this->val,'\\','d');
+        for(const auto &token : tokens){
+            if(16 < token.length()) throw std::invalid_argument("Code string is too long. Cannot continue.");
+        }
+
         if(this->val.find_first_not_of(upper_case + number_digits + multiplicity + "_ ") != std::string::npos){
             throw std::invalid_argument("Invalid character found in code string. Cannot continue.");
         }
@@ -496,26 +500,43 @@ uint64_t Node::emit_DICOM(std::ostream &os,
 
     //Numeric types that are written as a string of characters.
     }else if( this->VR == "IS" ){ //Integer string.
-        try{
-            std::stoll(this->val); // Ensure the string contains a number.
-        }catch(const std::exception &e){
-            throw std::runtime_error("Unable to convert '"_s + this->val + "' to IS. Cannot continue.");
+        // I'm not sure if what the upper limit is for this VR type. Assuming 65534 for consistency with DS. TODO.
+        if(65534 < this->val.length()) throw std::invalid_argument("Decimal string is too long. Cannot continue.");
+
+        auto tokens = SplitStringToVector(this->val,'\\','d');
+        for(const auto &token : tokens){
+            // Maximum length per decimal number: 16 bytes.
+            if(12 < token.length()) throw std::invalid_argument("Integer string element is too long. Cannot continue.");
+
+            // Ensure that, if an element is present it parses as a number.
+            try{
+                if(!token.empty()) std::stoll(token);
+            }catch(const std::exception &e){
+                throw std::runtime_error("Unable to convert '"_s + token + "' to IS. Cannot continue.");
+            }
         }
-        if(12 < this->val.length()) throw std::runtime_error("Integer string is too long. Cannot continue.");
-        // Does value multiplicity embiggen the maximum permissable length? TODO
+
         if(this->val.find_first_not_of(number_digits + multiplicity + "+-") != std::string::npos){
             throw std::invalid_argument("Invalid character found in integer string. Cannot continue.");
         }
         cumulative_length += emit_DICOM_tag(os, enc, *this, this->val);
 
     }else if( this->VR == "DS" ){ //Decimal string.
-        std::stod(this->val); // Ensure the string contains a number.
-
-        // Maximum length per decimal number: 16 bytes.
         // Maximum length for entire string (when multiple values are encoded and each is <= 16 bytes): 65534 bytes
-        // TODO: account for multiplicity in the maximum length.
-        //if(16 < this->val.length()) throw std::runtime_error("Decimal string is too long. Cannot continue.");
-        if(65534 < this->val.length()) throw std::runtime_error("Decimal string is too long. Cannot continue.");
+        if(65534 < this->val.length()) throw std::invalid_argument("Decimal string is too long. Cannot continue.");
+
+        auto tokens = SplitStringToVector(this->val,'\\','d');
+        for(const auto &token : tokens){
+            // Maximum length per decimal number: 16 bytes.
+            if(16 < token.length()) throw std::invalid_argument("Decimal string element is too long. Cannot continue.");
+
+            // Ensure that, if an element is present it parses as a number.
+            try{
+                if(!token.empty()) std::stod(token);
+            }catch(const std::exception &e){
+                throw std::runtime_error("Unable to convert '"_s + token + "' to DS. Cannot continue.");
+            }
+        }
 
         if(this->val.find_first_not_of(number_digits + multiplicity + "+-eE.") != std::string::npos){
             throw std::invalid_argument("Invalid character found in decimal string. Cannot continue.");
