@@ -2622,14 +2622,19 @@ void Write_Dose_Array(std::shared_ptr<Image_Array> IA, const std::string &Filena
 
 //This routine writes an image array to several DICOM CT-modality files.
 //
-// Note: the output file is a TAR archive containing multiple, individual CT-modality DICOM files.
+// Note: the user callback will be called once per file.
 //
 void Write_CT_Images(std::shared_ptr<Image_Array> IA, 
-                     const std::string &FilenameOut,
+                     std::function<void(std::istream &is,
+                                        std::string suggested_filename,
+                                        long int filesize)> file_handler,
                      ParanoiaLevel Paranoia){
     if( (IA == nullptr) 
     ||  IA->imagecoll.images.empty()){
         throw std::runtime_error("No images provided for export. Cannot continue.");
+    }
+    if(!file_handler){
+        throw std::runtime_error("File handler is invalid. Refusing to continue.");
     }
 
     auto fne = [](std::vector<std::string> l) -> std::string {
@@ -2657,11 +2662,6 @@ void Write_CT_Images(std::shared_ptr<Image_Array> IA,
 
     // TODO: Sample any existing UID (ReferencedFrameOfReferenceUID or FrameofReferenceUID). 
     // Probably OK to use only the first in this case though...
-
-    // Prepare an output stream for a tar archive.
-    std::ofstream ofs(FilenameOut, std::ios::out | std::ios::binary);
-    if(!ofs) throw std::runtime_error("Unable to open TAR file for writing");
-    ustar_archive_writer ustar(ofs);
 
     const auto pad_left_zeros = [](std::string in, long int desired_length) -> std::string {
         while(static_cast<long int>(in.length()) < desired_length) in = "0"_s + in;
@@ -2931,7 +2931,7 @@ void Write_CT_Images(std::shared_ptr<Image_Array> IA,
 
             const auto fname = make_filename(InstanceNumber);
             const auto fsize = static_cast<long int>(bytes_reqd);
-            ustar.add_file(ss, fname, fsize);
+            file_handler(ss, fname, fsize);
         }
     }
 

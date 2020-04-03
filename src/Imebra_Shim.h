@@ -66,9 +66,11 @@ void Write_Dose_Array(std::shared_ptr<Image_Array> IA,
                       const std::string &FilenameOut, 
                       ParanoiaLevel Paranoia = ParanoiaLevel::Low);
 
-// Note: output is a TAR file containing multiple, individual CT-modality DICOM files.
+// Note: callback will be called once for each CT-modality DICOM file.
 void Write_CT_Images(std::shared_ptr<Image_Array> IA, 
-                     const std::string &FilenameOut,
+                     std::function<void(std::istream &is,
+                                        std::string suggested_filename,
+                                        long int filesize)> file_handler,
                      ParanoiaLevel Paranoia = ParanoiaLevel::Low);
 
 void Write_Contours(std::list<std::reference_wrapper<contour_collection<double>>> CC,

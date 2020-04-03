@@ -14,6 +14,7 @@
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorTAR.h"
 
 
 OperationDoc OpArgDocDICOMExportImagesAsCT(void){
@@ -88,13 +89,30 @@ DICOMExportImagesAsCT(Drover DICOM_data,
 
     //-----------------------------------------------------------------------------------------------------------------
 
-    if(!DICOM_data.image_data.empty()){
-        try{
-            Write_CT_Images(DICOM_data.image_data.back(), FilenameOut, p);
-        }catch(const std::exception &e){
-            FUNCWARN("Unable to export Image_Array as DICOM CT-modality files: '" << e.what() << "'");
+    // Prepare an output stream for a tar archive.
+    {
+        std::ofstream ofs(FilenameOut, std::ios::out | std::ios::binary);
+        if(!ofs) throw std::runtime_error("Unable to open TAR file for writing");
+        ustar_archive_writer ustar(ofs);
+
+        // This closure is invoked once per CT file. We simply add each to the TAR file.
+        auto file_handler = [&](std::istream &is,
+                                std::string suggested_filename,
+                                long int filesize) -> void {
+            const auto fname = suggested_filename;
+            const auto fsize = static_cast<long int>(filesize);
+            ustar.add_file(is, fname, fsize);
+            return;
+        };
+
+        if(!DICOM_data.image_data.empty()){
+            try{
+                Write_CT_Images(DICOM_data.image_data.back(), file_handler, p);
+            }catch(const std::exception &e){
+                FUNCWARN("Unable to export Image_Array as DICOM CT-modality files: '" << e.what() << "'");
+            }
         }
-    }
+    } // TAR file finalization, stream flush, and file handle close all done automatically.
 
     return DICOM_data;
 }
