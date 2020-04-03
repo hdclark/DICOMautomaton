@@ -74,7 +74,9 @@ void Write_CT_Images(std::shared_ptr<Image_Array> IA,
                      ParanoiaLevel Paranoia = ParanoiaLevel::Low);
 
 void Write_Contours(std::list<std::reference_wrapper<contour_collection<double>>> CC,
-                    const std::string &FilenameOut, 
+                    std::function<void(std::istream &is,
+                                       std::string suggested_filename,
+                                       long int filesize)> file_handler,
                     ParanoiaLevel Paranoia = ParanoiaLevel::Low);
 
 #endif

@@ -5,7 +5,7 @@
 #include <list>
 #include <map>
 #include <memory>
-#include <ostream>
+#include <iosfwd>
 #include <regex>
 #include <stdexcept>
 #include <string>    

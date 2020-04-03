@@ -2631,10 +2631,10 @@ void Write_CT_Images(std::shared_ptr<Image_Array> IA,
                      ParanoiaLevel Paranoia){
     if( (IA == nullptr) 
     ||  IA->imagecoll.images.empty()){
-        throw std::runtime_error("No images provided for export. Cannot continue.");
+        throw std::invalid_argument("No images provided for export. Cannot continue.");
     }
     if(!file_handler){
-        throw std::runtime_error("File handler is invalid. Refusing to continue.");
+        throw std::invalid_argument("File handler is invalid. Refusing to continue.");
     }
 
     auto fne = [](std::vector<std::string> l) -> std::string {
@@ -2704,16 +2704,16 @@ void Write_CT_Images(std::shared_ptr<Image_Array> IA,
             cm["PatientsBirthTime"] = "";
 
             //General Study Module.
-            cm["StudyInstanceUID"] = "";
+            cm["StudyInstanceUID"] = StudyInstanceUID;
             cm["StudyDate"] = "";
             cm["StudyTime"] = "";
             cm["ReferringPhysiciansName"] = "";
-            cm["StudyID"] = "";
+            cm["StudyID"] = StudyID;
             cm["AccessionNumber"] = "";
             cm["StudyDescription"] = "";
 
             //General Series Module.
-            cm["SeriesInstanceUID"] = "";
+            cm["SeriesInstanceUID"] = SeriesInstanceUID;
             cm["SeriesNumber"] = "";
             cm["SeriesDate"] = "";
             cm["SeriesTime"] = "";
@@ -2735,28 +2735,15 @@ void Write_CT_Images(std::shared_ptr<Image_Array> IA,
             cm["InstitutionalDepartmentName"] = "";             // Appropriate?
             cm["ManufacturersModelName"] = "";
             cm["SoftwareVersions"] = "";
-
-            //Structure Set Module.
-            cm["StructureSetDescription"] = "";
-            cm["StructureSetDate"] = "";
-            cm["StructureSetTime"] = "";
         }
         if(Paranoia == ParanoiaLevel::High){
             //Patient Module.
             cm["PatientsName"]      = "";
-            cm["PatientID"]         = "";
+            cm["PatientID"]         = PatientID;
 
             //Frame of Reference Module.
-            cm["FrameofReferenceUID"] = "";
-
-            //Structure Set Module.
-            cm["StructureSetLabel"] = "UNSPECIFIED";
-            cm["StructureSetName"] = "UNSPECIFIED";
+            cm["FrameofReferenceUID"] = FrameOfReferenceUID;
         }
-
-        //if((Paranoia == ParanoiaLevel::Medium) || (Paranoia == ParanoiaLevel::High)){
-        //    ReferencedFrameOfReferenceUID = Generate_Random_UID(60);
-        //}
 
         //-------------------------------------------------------------------------------------------------
         //DICOM Header Metadata.
@@ -2831,7 +2818,7 @@ void Write_CT_Images(std::shared_ptr<Image_Array> IA,
 
         //-------------------------------------------------------------------------------------------------
         //Frame of Reference Module.
-        root_node.emplace_child_node({{0x0020, 0x0052}, "UI", fne({ cm["FrameofReferenceUID"], FrameOfReferenceUID }) }); //FrameOfReferenceUID 
+        root_node.emplace_child_node({{0x0020, 0x0052}, "UI", fne({ cm["FrameofReferenceUID"], FrameOfReferenceUID }) });
         root_node.emplace_child_node({{0x0020, 0x1040}, "LO", "" }); //PositionReferenceIndicator (TODO).
 
         //-------------------------------------------------------------------------------------------------
@@ -2922,7 +2909,7 @@ void Write_CT_Images(std::shared_ptr<Image_Array> IA,
         root_node.emplace_child_node({{0x0028, 0x1050}, "DS", "0" }); //WindowCenter.
         root_node.emplace_child_node({{0x0028, 0x1051}, "DS", "1000" }); //WindowWidth
 
-        // Write the file to the archive.
+        // Send the file to the user's handler.
         {
             std::stringstream ss;
             const auto bytes_reqd = root_node.emit_DICOM(ss, enc);
@@ -2942,10 +2929,15 @@ void Write_CT_Images(std::shared_ptr<Image_Array> IA,
 //This routine writes a collection of planar contours to a DICOM RTSTRUCT-modality file.
 //
 void Write_Contours(std::list<std::reference_wrapper<contour_collection<double>>> CC,
-                    const std::string &FilenameOut,
+                    std::function<void(std::istream &is,
+                                       std::string suggested_filename,
+                                       long int filesize)> file_handler,
                     ParanoiaLevel Paranoia){
     if( CC.empty() ){
-        throw std::runtime_error("No contours provided for export. Cannot continue.");
+        throw std::invalid_argument("No contours provided for export. Cannot continue.");
+    }
+    if(!file_handler){
+        throw std::invalid_argument("File handler is invalid. Refusing to continue.");
     }
 
     auto fne = [](std::vector<std::string> l) -> std::string {
@@ -3263,17 +3255,16 @@ void Write_Contours(std::list<std::reference_wrapper<contour_collection<double>>
         //root_node.emplace_child_node({{0x300e, 0x0008}, "PN", "UNSPECIFIED"  }); // "ReviewerName"
     }
 
-    // Write the file.
+    // Send the file to the user's handler.
     {
-        std::ofstream ofs(FilenameOut, std::ios::out | std::ios::binary);
-        if(!ofs) throw std::runtime_error("Unable to open file");
+        std::stringstream ss;
+        const auto bytes_reqd = root_node.emit_DICOM(ss, enc);
+        if(!ss) throw std::runtime_error("Stream not in good state after emitting DICOM file");
+        if(bytes_reqd <= 0) throw std::runtime_error("Not enough DICOM data available for valid file");
 
-        const auto bytes_written = root_node.emit_DICOM(ofs, enc);
-
-        if(!ofs) throw std::runtime_error("File stream not in good state after emitting DICOM file");
-
-        ofs.close();
-        //FUNCINFO(bytes_written << " bytes have been written");
+        const auto fname = "RTSTRUCT.dcm"_s;
+        const auto fsize = static_cast<long int>(bytes_reqd);
+        file_handler(ss, fname, fsize);
     }
 
     return;

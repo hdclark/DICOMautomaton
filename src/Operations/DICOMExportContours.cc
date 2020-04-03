@@ -5,7 +5,7 @@
 #include <list>
 #include <map>
 #include <memory>
-#include <ostream>
+#include <iosfwd>
 #include <regex>
 #include <stdexcept>
 #include <string>    
@@ -126,7 +126,20 @@ DICOMExportContours(Drover DICOM_data,
     }
 
     try{
-        Write_Contours(cc_ROIs, FilenameOut, p);
+        // This closure is invoked to handle writing the RTSTRUCT file.
+        auto file_handler = [FilenameOut](std::istream &is,
+                                          std::string /*suggested_filename*/,
+                                          long int /*filesize*/) -> void {
+            std::ofstream ofs(FilenameOut, std::ios::out | std::ios::binary);
+            if(!ofs) throw std::runtime_error("Unable to open file for writing.");
+            ofs << is.rdbuf();
+            ofs.flush();
+            if(!ofs) throw std::runtime_error("File stream not in good state after emitting DICOM file.");
+            return;
+        };
+
+        Write_Contours(cc_ROIs, file_handler, p);
+
     }catch(const std::exception &e){
         FUNCWARN("Unable to export contours as DICOM RTSTRUCT file: '" << e.what() << "'");
     }
