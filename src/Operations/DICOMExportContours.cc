@@ -34,9 +34,7 @@ OperationDoc OpArgDocDICOMExportContours(void){
     out.args.back().desc = "The filename (or full path name) to which the DICOM file should be written.";
     out.args.back().default_val = "/tmp/RTSTRUCT.dcm";
     out.args.back().expected = true;
-    out.args.back().examples = { "/tmp/RTSTRUCT.dcm", 
-                            "./RTSTRUCT.dcm",
-                            "RTSTRUCT.dcm" };
+    out.args.back().examples = { "/tmp/RTSTRUCT.dcm", "./RTSTRUCT.dcm", "RTSTRUCT.dcm" };
     out.args.back().mimetype = "application/dicom";
 
     out.args.emplace_back();
@@ -128,7 +126,6 @@ DICOMExportContours(Drover DICOM_data,
     try{
         // This closure is invoked to handle writing the RTSTRUCT file.
         auto file_handler = [FilenameOut](std::istream &is,
-                                          std::string /*suggested_filename*/,
                                           long int /*filesize*/) -> void {
             std::ofstream ofs(FilenameOut, std::ios::out | std::ios::binary);
             if(!ofs) throw std::runtime_error("Unable to open file for writing.");

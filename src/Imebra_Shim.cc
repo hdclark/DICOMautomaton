@@ -2626,7 +2626,6 @@ void Write_Dose_Array(std::shared_ptr<Image_Array> IA, const std::string &Filena
 //
 void Write_CT_Images(std::shared_ptr<Image_Array> IA, 
                      std::function<void(std::istream &is,
-                                        std::string suggested_filename,
                                         long int filesize)> file_handler,
                      ParanoiaLevel Paranoia){
     if( (IA == nullptr) 
@@ -2662,18 +2661,6 @@ void Write_CT_Images(std::shared_ptr<Image_Array> IA,
 
     // TODO: Sample any existing UID (ReferencedFrameOfReferenceUID or FrameofReferenceUID). 
     // Probably OK to use only the first in this case though...
-
-    const auto pad_left_zeros = [](std::string in, long int desired_length) -> std::string {
-        while(static_cast<long int>(in.length()) < desired_length) in = "0"_s + in;
-        return in;
-    };
-
-    const auto make_filename = [=](long int n) -> std::string {
-        std::string prefix = "CT_";
-        std::string middle = std::to_string(n);
-        std::string suffix = ".dcm";
-        return prefix + pad_left_zeros(middle,6) + suffix;
-    };
 
     long int InstanceNumber = -1;
     for(const auto &animg : IA->imagecoll.images){
@@ -2916,9 +2903,8 @@ void Write_CT_Images(std::shared_ptr<Image_Array> IA,
             if(!ss) throw std::runtime_error("Stream not in good state after emitting DICOM file");
             if(bytes_reqd <= 0) throw std::runtime_error("Not enough DICOM data available for valid file");
 
-            const auto fname = make_filename(InstanceNumber);
             const auto fsize = static_cast<long int>(bytes_reqd);
-            file_handler(ss, fname, fsize);
+            file_handler(ss, fsize);
         }
     }
 
@@ -2930,7 +2916,6 @@ void Write_CT_Images(std::shared_ptr<Image_Array> IA,
 //
 void Write_Contours(std::list<std::reference_wrapper<contour_collection<double>>> CC,
                     std::function<void(std::istream &is,
-                                       std::string suggested_filename,
                                        long int filesize)> file_handler,
                     ParanoiaLevel Paranoia){
     if( CC.empty() ){
@@ -3262,9 +3247,8 @@ void Write_Contours(std::list<std::reference_wrapper<contour_collection<double>>
         if(!ss) throw std::runtime_error("Stream not in good state after emitting DICOM file");
         if(bytes_reqd <= 0) throw std::runtime_error("Not enough DICOM data available for valid file");
 
-        const auto fname = "RTSTRUCT.dcm"_s;
         const auto fsize = static_cast<long int>(bytes_reqd);
-        file_handler(ss, fname, fsize);
+        file_handler(ss, fsize);
     }
 
     return;

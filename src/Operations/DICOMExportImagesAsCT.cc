@@ -20,7 +20,7 @@
 OperationDoc OpArgDocDICOMExportImagesAsCT(void){
     OperationDoc out;
     out.name = "DICOMExportImagesAsCT";
-    out.desc = "This operation exports the last Image_Array to DICOM CT-modality files.";
+    out.desc = "This operation exports the selected Image_Array(s) to DICOM CT-modality files.";
 
     out.notes.emplace_back(
         "There are various 'paranoia' levels that can be used to partially anonymize the output."
@@ -29,6 +29,10 @@ OperationDoc OpArgDocDICOMExportImagesAsCT(void){
         " Do NOT rely on this routine to fully anonymize the data!"
     );
 
+    out.args.emplace_back();
+    out.args.back() = IAWhitelistOpArgDoc();
+    out.args.back().name = "ImageSelection";
+    out.args.back().default_val = "last";
 
     out.args.emplace_back();
     out.args.back().name = "Filename";
@@ -36,9 +40,7 @@ OperationDoc OpArgDocDICOMExportImagesAsCT(void){
                            " The file format is a TAR file containing multiple CT-modality files.";
     out.args.back().default_val = "CTs.tar";
     out.args.back().expected = true;
-    out.args.back().examples = { "/tmp/CTs.tar", 
-                            "./CTs.tar",
-                            "CTs.tar" };
+    out.args.back().examples = { "/tmp/CTs.tar", "./CTs.tar", "CTs.tar" };
     out.args.back().mimetype = "application/x-tar";
 
     out.args.emplace_back();
@@ -66,6 +68,7 @@ DICOMExportImagesAsCT(Drover DICOM_data,
                         std::string /*FilenameLex*/){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
+    const auto ImageSelectionStr = OptArgs.getValueStr("ImageSelection").value();
     const auto FilenameOut = OptArgs.getValueStr("Filename").value();    
     const auto ParanoiaStr = OptArgs.getValueStr("ParanoiaLevel").value();
 
@@ -86,33 +89,50 @@ DICOMExportImagesAsCT(Drover DICOM_data,
         throw std::runtime_error("Specified paranoia level is not valid. Cannot continue.");
     }
 
+    auto make_sequential_filename = [=](void) -> std::string {
+        const auto pad_left_zeros = [](std::string in, long int desired_length) -> std::string {
+            while(static_cast<long int>(in.length()) < desired_length) in = "0"_s + in;
+            return in;
+        };
+        static long int n = 0; // Internal counter, incremented once per invocation.
+
+        std::string prefix = "CT_";
+        std::string middle = std::to_string(n);
+        std::string suffix = ".dcm";
+        ++n;
+        return prefix + pad_left_zeros(middle,6) + suffix;
+    };
+
+    const auto IAs_all = All_IAs( DICOM_data );
+    auto IAs = Whitelist( IAs_all, ImageSelectionStr );
 
     //-----------------------------------------------------------------------------------------------------------------
 
-    // Prepare an output stream for a tar archive.
     {
+        // Prepare an output stream for a tar archive.
         std::ofstream ofs(FilenameOut, std::ios::out | std::ios::binary);
         if(!ofs) throw std::runtime_error("Unable to open TAR file for writing");
         ustar_archive_writer ustar(ofs);
 
-        // This closure is invoked once per CT file. We simply add each to the TAR file.
-        auto file_handler = [&](std::istream &is,
-                                std::string suggested_filename,
-                                long int filesize) -> void {
-            const auto fname = suggested_filename;
-            const auto fsize = static_cast<long int>(filesize);
-            ustar.add_file(is, fname, fsize);
-            return;
-        };
+        for(auto & iap_it : IAs){
+ 
+            // This closure is invoked once per CT file. We simply add each to the TAR file.
+            auto file_handler = [&](std::istream &is,
+                                    long int filesize) -> void {
+                const auto fname = make_sequential_filename();
+                const auto fsize = static_cast<long int>(filesize);
+                ustar.add_file(is, fname, fsize);
+                return;
+            };
 
-        if(!DICOM_data.image_data.empty()){
             try{
-                Write_CT_Images(DICOM_data.image_data.back(), file_handler, p);
+                Write_CT_Images(*iap_it, file_handler, p);
             }catch(const std::exception &e){
                 FUNCWARN("Unable to export Image_Array as DICOM CT-modality files: '" << e.what() << "'");
             }
         }
-    } // TAR file finalization, stream flush, and file handle close all done automatically.
+        // TAR file finalization, stream flush, and file handle close all done automatically here.
+    }
 
     return DICOM_data;
 }
