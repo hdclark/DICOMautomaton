@@ -112,7 +112,7 @@ DICOMExportImagesAsCT(Drover DICOM_data,
         // Prepare an output stream for a tar archive.
         std::ofstream ofs(FilenameOut, std::ios::out | std::ios::binary);
         if(!ofs) throw std::runtime_error("Unable to open TAR file for writing");
-        ustar_archive_writer ustar(ofs);
+        ustar_writer ustar(ofs);
 
         for(auto & iap_it : IAs){
  
