@@ -12,7 +12,6 @@ arch=('x86_64' 'i686' 'armv7h')
 license=('unknown')
 depends=(
    'gcc-libs'
-   'ttf-computer-modern-fonts'
    'gnu-free-fonts'
    'zenity'
    'sfml'
@@ -34,6 +33,7 @@ optdepends=(
    'gnuplot'
    'patchelf'
    'bash-completion'
+   'ttf-computer-modern-fonts'
 )
 makedepends=(
    'cmake'

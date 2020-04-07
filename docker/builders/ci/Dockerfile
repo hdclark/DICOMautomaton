@@ -30,23 +30,10 @@ RUN pacman -Sy --noconfirm archlinux-keyring && \
 
 
 # Create a temporary user for building AUR packages.
-RUN useradd -r -d /var/empty aurbuild  && \
+RUN useradd -m -r -d /var/empty aurbuild  && \
     mkdir -p /var/empty/ && \
     chown -R aurbuild:aurbuild /var/empty/ && \
     printf '\n''aurbuild ALL=(ALL) NOPASSWD: ALL''\n' >> /etc/sudoers
-
-
-# Install an AUR helper.
-WORKDIR /yay
-RUN git clone https://aur.archlinux.org/yay.git . && \
-    chown -R aurbuild:aurbuild . && \
-    su - aurbuild -c "cd /yay && makepkg --syncdeps --install --clean --needed --noconfirm --rmdeps" && \
-    rm -rf /yay
-
-
-# Install all AUR dependencies.
-RUN su - aurbuild -c \
-    "yay -S --noconfirm --needed --afterclean --aur htmlcxx ttf-computer-modern-fonts"
 
 
 # Install hard build dependencies.
@@ -124,14 +111,6 @@ RUN chown -R aurbuild:aurbuild . && \
     su - aurbuild -c "cd /dcma && makepkg --syncdeps --install --clean --needed --noconfirm" && \
     git reset --hard && \
     git clean -fxd :/ 
-
-
-# Attempt to shrink the image.
-#RUN pacman -Rsc --nosave --noconfirm git cmake gcc vim gdb screen pyalpm wget rsync && \
-#    ` # Remove unnecessary packages (e.g., make- and optional-dependencies). ` \
-#    pacman -Qdttq | sudo pacman -Rns --noconfirm - && \
-#    rm -rf /yay/ /ygor/ /ygorcluster/ /explicator/ /dcma/ && \
-#    rm -f /var/cache/pacman/pkg/* || true
 
 
 # Default to launching the webserver.
