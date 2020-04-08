@@ -29,6 +29,7 @@
 #include "OBJ_Mesh_File_Loader.h"
 #include "3ddose_File_Loader.h"
 #include "Line_Sample_File_Loader.h"
+#include "TAR_File_Loader.h"
 
 
 
@@ -61,6 +62,13 @@ Load_Files( Drover &DICOM_data,
             }
         }
         Paths = CPaths;
+    }
+
+    //Standalone file loading: TAR files.
+    if(!Paths.empty()
+    && !Load_From_TAR_Files( DICOM_data, InvocationMetadata, FilenameLex, Paths )){
+        FUNCWARN("Failed to load TAR file");
+        return false;
     }
 
     //Standalone file loading: Boost.Serialization archives.
