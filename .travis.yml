@@ -17,3 +17,11 @@ script:
 after_failure:
   - free -h
 
+notifications:
+    webhooks:
+        urls:
+            - "https://scalar.vector.im/api/neb/services/hooks/dHJhdmlzLWNpLyU0MGhjbGFyayUzQW1hdHJpeC5vcmcvJTIxc3pRZGpKU2xuaVpBVHVWU3FwJTNBbWF0cml4Lm9yZw"
+        on_success: always  # always|never|change
+        on_failure: always
+        on_start: never
+
