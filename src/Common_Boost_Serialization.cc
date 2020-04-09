@@ -14,7 +14,7 @@
 #include <boost/archive/xml_oarchive.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/iostreams/filter/gzip.hpp>
-#include <boost/iostreams/filter/zlib.hpp>
+//#include <boost/iostreams/filter/zlib.hpp>
 #include <boost/iostreams/filtering_stream.hpp>
 #include <boost/iostreams/filtering_streambuf.hpp>
 #include <boost/math/special_functions/nonfinite_num_facets.hpp>

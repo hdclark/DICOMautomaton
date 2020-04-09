@@ -10,11 +10,17 @@
 #include <stdexcept>
 #include <string>    
 
+#include <boost/iostreams/filter/gzip.hpp>
+#include <boost/iostreams/filtering_stream.hpp>
+#include <boost/iostreams/filtering_streambuf.hpp>
+
 #include "../Imebra_Shim.h"
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorTAR.h"
+
+#include "DICOMExportImagesAsCT.h"
 
 
 OperationDoc OpArgDocDICOMExportImagesAsCT(void){
@@ -37,11 +43,11 @@ OperationDoc OpArgDocDICOMExportImagesAsCT(void){
     out.args.emplace_back();
     out.args.back().name = "Filename";
     out.args.back().desc = "The filename (or full path name) to which the DICOM files should be written."
-                           " The file format is a TAR file containing multiple CT-modality files.";
-    out.args.back().default_val = "CTs.tar";
+                           " The file format is a gzipped-TAR file containing multiple CT-modality files.";
+    out.args.back().default_val = "CTs.tgz";
     out.args.back().expected = true;
-    out.args.back().examples = { "/tmp/CTs.tar", "./CTs.tar", "CTs.tar" };
-    out.args.back().mimetype = "application/x-tar";
+    out.args.back().examples = { "/tmp/CTs.tgz", "./CTs.tar.gz", "CTs.tgz" };
+    out.args.back().mimetype = "application/gzip";
 
     out.args.emplace_back();
     out.args.back().name = "ParanoiaLevel";
@@ -110,9 +116,21 @@ DICOMExportImagesAsCT(Drover DICOM_data,
 
     {
         // Prepare an output stream for a tar archive.
-        std::ofstream ofs(FilenameOut, std::ios::out | std::ios::binary);
-        if(!ofs) throw std::runtime_error("Unable to open TAR file for writing");
-        ustar_writer ustar(ofs);
+        std::ofstream ofs(FilenameOut, std::ios::out | std::ios::trunc | std::ios::binary);
+        if(!ofs) throw std::runtime_error("Unable to open file for writing");
+
+/*
+        boost::iostreams::filtering_streambuf<boost::iostreams::output> ofsb;
+        boost::iostreams::gzip_params gzparams(boost::iostreams::gzip::best_speed);
+        ofsb.push(boost::iostreams::gzip_compressor(gzparams));
+        ofsb.push(ofs);
+*/
+        boost::iostreams::filtering_ostream ofsb;
+        boost::iostreams::gzip_params gzparams(boost::iostreams::gzip::best_speed);
+        ofsb.push(boost::iostreams::gzip_compressor(gzparams));
+        ofsb.push(ofs);
+
+        ustar_writer ustar(ofsb);
 
         for(auto & iap_it : IAs){
  

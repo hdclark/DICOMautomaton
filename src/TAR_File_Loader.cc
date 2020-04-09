@@ -14,6 +14,11 @@
 #include <string>    
 
 #include <boost/filesystem.hpp>
+#include <boost/iostreams/filter/gzip.hpp>
+//#include <boost/iostreams/filter/zlib.hpp>
+#include <boost/iostreams/filtering_stream.hpp>
+#include <boost/iostreams/filtering_streambuf.hpp>
+
 #include <cstdlib>            //Needed for exit() calls.
 
 #include "Structs.h"
@@ -31,7 +36,7 @@ bool Load_From_TAR_Files( Drover &DICOM_data,
                           std::string &FilenameLex,
                           std::list<boost::filesystem::path> &Filenames ){
 
-    //This routine will attempt to load TAR-format files. Files that are not successfully loaded
+    // This routine will attempt to load TAR-format files. Files that are not successfully loaded
     // are not consumed so that they can be passed on to the next loading stage as needed. 
     //
     if(Filenames.empty()) return true;
@@ -45,68 +50,101 @@ bool Load_From_TAR_Files( Drover &DICOM_data,
         ++i;
         const auto Filename = bfit->string();
 
-        try{
-            //////////////////////////////////////////////////////////////
+        // Encapsulated file handler.
+        //
+        // This routine merely writes the file to a temporary and invokes the generic file loader routine.
+        long int N_encapsulated_files = 0;
+        long int N_successfully_loaded = 0;
+
+        const auto file_handler = [&]( std::istream &is,
+                                       std::string fname,
+                                       long int fsize,
+                                       std::string fmode,
+                                       std::string fuser,
+                                       std::string fgroup,
+                                       long int ftime,
+                                       std::string o_name,
+                                       std::string g_name,
+                                       std::string fprefix) -> void {
+
+            // Indicate that a file was detected.
+            ++N_encapsulated_files;
+
+            // Write the stream to a temporary file.
+            const std::string fname_tmp = Get_Unique_Sequential_Filename("/tmp/dcma_TAR_loading_temporary_");
+            {
+                std::ofstream ofs_tmp(fname_tmp);
+                ofs_tmp << is.rdbuf();
+                ofs_tmp.flush();
+            }
+
             // Attempt to load the file.
-            long int N_encapsulated_files = 0;
-            long int N_successfully_loaded = 0;
+            std::list<boost::filesystem::path> path_tmp;
+            path_tmp.emplace_back(fname_tmp);
+            if(Load_Files(DICOM_data, InvocationMetadata, FilenameLex, path_tmp )){
+                // Iff successful, indicate the success.
+                ++N_successfully_loaded;
+            }
 
-            const auto file_handler = [&]( std::istream &is,
-                                           std::string fname,
-                                           long int fsize,
-                                           std::string fmode,
-                                           std::string fuser,
-                                           std::string fgroup,
-                                           long int ftime,
-                                           std::string o_name,
-                                           std::string g_name,
-                                           std::string fprefix) -> void {
+            // Remove the temporary file.
+            if(!RemoveFile(fname_tmp)){
+                FUNCERR("Unable to remove temporary file '" << fname_tmp << "'. Refusing to continue");
+            }
 
-                // Indicate that a file was detected.
-                ++N_encapsulated_files;
+            return;
+        };
 
-                // Write the stream to a temporary file.
-                const std::string fname_tmp = Get_Unique_Sequential_Filename("/tmp/dcma_TAR_loading_temporary_");
-                {
-                    std::ofstream ofs_tmp(fname_tmp);
-                    ofs_tmp << is.rdbuf();
-                    ofs_tmp.flush();
-                }
+        // un-compressed case.
+        try{
+            std::ifstream ifs(Filename, std::ios::in | std::ios::binary);
 
-                // Attempt to load the file.
-                std::list<boost::filesystem::path> path_tmp;
-                path_tmp.emplace_back(fname_tmp);
-                if(Load_Files(DICOM_data, InvocationMetadata, FilenameLex, path_tmp )){
-                    // Iff successful, indicate the success.
-                    ++N_successfully_loaded;
-                }
+            N_encapsulated_files = 0;
+            N_successfully_loaded = 0;
+            read_ustar(ifs, file_handler); // Will throw if TAR file cannot be processed.
 
-                // Remove the temporary file.
-                if(!RemoveFile(fname_tmp)){
-                    FUNCERR("Unable to remove temporary file '" << fname_tmp << "'. Refusing to continue");
-                }
-
-                return;
-            };
-
-            std::ifstream FI(Filename.c_str(), std::ios::in);
-            read_ustar(FI, file_handler); // Will throw if TAR file cannot be processed.
-            FI.close();
-
-            // If the same number of files detected were also loaded, the TAR file was successfully read.
-            // Otherwise, one or more files could not be processed so indicate failure.
+            if( N_encapsulated_files == 0L ){
+                throw std::runtime_error("Unable to load as a TAR file.");
+            }
             if( N_encapsulated_files != N_successfully_loaded ){
-                throw std::runtime_error("Unable to load all encapsulated files.");
+                throw std::runtime_error("Unable to load all encapsulated files inside TAR file.");
             }
 
             FUNCINFO("Loaded TAR file containing " << N_encapsulated_files << " encapsulated files");
             bfit = Filenames.erase( bfit ); 
             continue;
+
         }catch(const std::exception &e){
-            FUNCINFO("Unable to load as TAR file");
+            FUNCINFO(e.what());
         };
 
-        //Skip the file. It might be destined for some other loader.
+        // gzip-compressed case.
+        try{
+            std::ifstream ifs(Filename, std::ios::in | std::ios::binary);
+
+            boost::iostreams::filtering_istream ifsb;
+            ifsb.push(boost::iostreams::gzip_decompressor());
+            ifsb.push(ifs);
+
+            N_encapsulated_files = 0;
+            N_successfully_loaded = 0;
+            read_ustar(ifsb, file_handler); // Will throw if TAR file cannot be processed.
+
+            if( N_encapsulated_files == 0L ){
+                throw std::runtime_error("Unable to load as a gzipped-TAR file.");
+            }
+            if( N_encapsulated_files != N_successfully_loaded ){
+                throw std::runtime_error("Unable to load all encapsulated files inside gzipped-TAR file.");
+            }
+
+            FUNCINFO("Loaded gzipped TAR file containing " << N_encapsulated_files << " encapsulated files");
+            bfit = Filenames.erase( bfit ); 
+            continue;
+
+        }catch(const std::exception &e){
+            FUNCINFO(e.what());
+        };
+
+        // Skip the file. It might be destined for some other loader.
         ++bfit;
     }
 
