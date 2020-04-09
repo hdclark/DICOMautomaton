@@ -112,6 +112,10 @@ DICOMExportImagesAsCT(Drover DICOM_data,
     const auto IAs_all = All_IAs( DICOM_data );
     auto IAs = Whitelist( IAs_all, ImageSelectionStr );
 
+    if(IAs.empty()){
+        throw std::invalid_argument("No image arrays selected. Cannot continue.");
+    }
+
     //-----------------------------------------------------------------------------------------------------------------
 
     {
@@ -119,12 +123,6 @@ DICOMExportImagesAsCT(Drover DICOM_data,
         std::ofstream ofs(FilenameOut, std::ios::out | std::ios::trunc | std::ios::binary);
         if(!ofs) throw std::runtime_error("Unable to open file for writing");
 
-/*
-        boost::iostreams::filtering_streambuf<boost::iostreams::output> ofsb;
-        boost::iostreams::gzip_params gzparams(boost::iostreams::gzip::best_speed);
-        ofsb.push(boost::iostreams::gzip_compressor(gzparams));
-        ofsb.push(ofs);
-*/
         boost::iostreams::filtering_ostream ofsb;
         boost::iostreams::gzip_params gzparams(boost::iostreams::gzip::best_speed);
         ofsb.push(boost::iostreams::gzip_compressor(gzparams));
