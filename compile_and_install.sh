@@ -74,6 +74,15 @@ done
 #[ "$1" = "--" ] && shift
 #echo "Leftover arguments: $@"
 
+if [ -z "${BUILDROOT}" ] ; then
+    # Proceeding with an empty build root can be dangerous, so refuse to do so.
+    printf 'Empty build root directory. Refusing to continue.\n' 1>&2
+    exit 1
+elif [ "$(readlink -f "${BUILDROOT}")" == "/" ] ; then
+    # Proceeding with build root at '/' will destroy the filesystem if the 'clean' option is used.
+    printf 'Build root resolves to "/". Refusing to continue.\n' 1>&2
+    exit 1
+fi
 
 # Determine which distribution/environment to assume.
 if [[ "${DISTRIBUTION}" =~ .*auto.* ]] ; then
@@ -111,6 +120,9 @@ if [ -d "${BUILDROOT}"/.git ] ; then
     exit 1
 fi
 if [[ "${CLEANBUILD}" =~ ^y.* ]] ; then
+    $SUDO find "${BUILDROOT}/" -type f -exec chmod 644 '{}' \+
+    $SUDO find "${BUILDROOT}/" -type d -exec chmod 755 '{}' \+
+    $SUDO find "${BUILDROOT}/" -exec chown "$( id -n -u ):$( id -n -g )" '{}' \+
     rsync -rptz --delete --no-links --exclude="${BUILDROOT}" --cvs-exclude ./ "${BUILDROOT}/"
 else
     rsync -rptz          --no-links --exclude="${BUILDROOT}" --cvs-exclude ./ "${BUILDROOT}/"
