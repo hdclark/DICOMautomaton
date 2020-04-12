@@ -31,7 +31,9 @@ RUN mkdir -p build && \
     cmake \
       -DCMAKE_INSTALL_PREFIX=/usr \
       ../ && \
-    make -j$(( $(nproc) < 8 ? $(nproc) : 8 )) VERBOSE=1 && \
+    JOBS=$(nproc) && \
+    JOBS=$(( $JOBS < 8 ? $JOBS : 8 )) && \
+    make -j "$JOBS" VERBOSE=1 && \
     make package && \
     apt-get install --yes -f ./*deb && \
     make clean

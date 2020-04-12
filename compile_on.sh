@@ -107,8 +107,8 @@ if [[ "${BUILDER}" =~ .*native.* ]] ; then
         -DWITH_POSTGRES=ON \
         -DWITH_JANSSON=ON \
         ../ && "'
-      JOBS=$(nproc)
-      JOBS=$(( $JOBS < 8 ? $JOBS : 8 )) # Limit to reduce memory use.
+      JOBS=$(nproc) &&
+      JOBS=$(( $JOBS < 8 ? $JOBS : 8 )) &&
       make -j "$JOBS" VERBOSE=1 &&
       cd '${BUILD_DIR}' &&
       ./scripts/dump_portable_dcma_bundle.sh '${PORTABLE_BIN_DIR}'

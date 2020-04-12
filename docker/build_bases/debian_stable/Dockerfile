@@ -59,7 +59,9 @@ WORKDIR /wt
 RUN git clone https://github.com/emweb/wt.git . && \
     mkdir -p build && cd build && \
     cmake -DCMAKE_INSTALL_PREFIX=/usr ../ && \
-    make -j$(nproc) && \
+    JOBS=$(nproc) && \
+    JOBS=$(( $JOBS < 8 ? $JOBS : 8 )) && \
+    make -j "$JOBS" VERBOSE=1 && \
     make install && \
     make clean
 
@@ -78,7 +80,9 @@ WORKDIR /ygor
 RUN git clone https://github.com/hdclark/Ygor . && \
     mkdir -p build && cd build && \
     cmake -DCMAKE_INSTALL_PREFIX=/usr ../ && \
-    make -j$(nproc) && \
+    JOBS=$(nproc) && \
+    JOBS=$(( $JOBS < 8 ? $JOBS : 8 )) && \
+    make -j "$JOBS" VERBOSE=1 && \
     make package && \
     apt-get install --yes -f ./*deb && \
     make clean
@@ -95,7 +99,9 @@ WORKDIR /explicator
 RUN git clone https://github.com/hdclark/explicator . && \
     mkdir -p build && cd build && \
     cmake -DCMAKE_INSTALL_PREFIX=/usr ../ && \
-    make -j$(nproc) && \
+    JOBS=$(nproc) && \
+    JOBS=$(( $JOBS < 8 ? $JOBS : 8 )) && \
+    make -j "$JOBS" VERBOSE=1 && \
     make package && \
     apt-get install --yes -f ./*deb && \
     make clean

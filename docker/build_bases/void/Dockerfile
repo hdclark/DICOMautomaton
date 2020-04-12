@@ -10,11 +10,7 @@ ADD docker/build_bases/void /scratch_base
 
 
 # Install build dependencies.
-#
-# Note: The following line installing libressl and libtls19 is required due to an issue with the voidlinux image.
-#       See https://www.reddit.com/r/voidlinux/comments/dyb5rc/cant_update_my_system/ .
-#       This fix should be removed as soon as possible. TODO.
-RUN xbps-install -y -S libressl libtls19 && \
+RUN xbps-install -y -Su xbps && \
     xbps-install -y -Su && \
     xbps-install -y -S \
       base-devel \
@@ -60,7 +56,9 @@ WORKDIR /wt
 RUN git clone https://github.com/emweb/wt.git . && \
     mkdir -p build && cd build && \
     cmake -DCMAKE_INSTALL_PREFIX=/usr ../ && \
-    make -j$(nproc) && \
+    JOBS=$(nproc) && \
+    JOBS=$(( $JOBS < 8 ? $JOBS : 8 )) && \
+    make -j "$JOBS" VERBOSE=1 && \
     make install && \
     make clean
 
@@ -75,7 +73,9 @@ WORKDIR /ygor
 RUN git clone https://github.com/hdclark/Ygor . && \
     mkdir -p build && cd build && \
     cmake -DCMAKE_INSTALL_PREFIX=/usr ../ && \
-    make -j$(nproc) && \
+    JOBS=$(nproc) && \
+    JOBS=$(( $JOBS < 8 ? $JOBS : 8 )) && \
+    make -j "$JOBS" VERBOSE=1 && \
     make install && \
     make clean
 
@@ -90,7 +90,9 @@ WORKDIR /explicator
 RUN git clone https://github.com/hdclark/explicator . && \
     mkdir -p build && cd build && \
     cmake -DCMAKE_INSTALL_PREFIX=/usr ../ && \
-    make -j$(nproc) && \
+    JOBS=$(nproc) && \
+    JOBS=$(( $JOBS < 8 ? $JOBS : 8 )) && \
+    make -j "$JOBS" VERBOSE=1 && \
     make install && \
     make clean
 

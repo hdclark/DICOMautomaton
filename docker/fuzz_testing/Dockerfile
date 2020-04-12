@@ -70,7 +70,9 @@ RUN git clone https://github.com/emweb/wt.git . && \
     mkdir -p build && cd build && \
     cmake -E env CC=afl-clang CXX=afl-clang++ \
       cmake -DCMAKE_INSTALL_PREFIX=/usr ../ && \
-    make -j$(nproc) && \
+    JOBS=$(nproc) && \
+    JOBS=$(( $JOBS < 8 ? $JOBS : 8 )) && \
+    make -j "$JOBS" VERBOSE=1 && \
     make install && \
     make clean
 
@@ -90,7 +92,9 @@ RUN git clone https://github.com/hdclark/Ygor . && \
     mkdir -p build && cd build && \
     cmake -E env CC=afl-clang CXX=afl-clang++ \
       cmake -DCMAKE_INSTALL_PREFIX=/usr ../ && \
-    make -j$(nproc) && \
+    JOBS=$(nproc) && \
+    JOBS=$(( $JOBS < 8 ? $JOBS : 8 )) && \
+    make -j "$JOBS" VERBOSE=1 && \
     make package && \
     apt-get install --yes -f ./*deb && \
     make clean
@@ -108,7 +112,9 @@ RUN git clone https://github.com/hdclark/explicator . && \
     mkdir -p build && cd build && \
     cmake -E env CC=afl-clang CXX=afl-clang++ \
       cmake -DCMAKE_INSTALL_PREFIX=/usr ../ && \
-    make -j$(nproc) && \
+    JOBS=$(nproc) && \
+    JOBS=$(( $JOBS < 8 ? $JOBS : 8 )) && \
+    make -j "$JOBS" VERBOSE=1 && \
     make package && \
     apt-get install --yes -f ./*deb && \
     make clean
@@ -139,7 +145,9 @@ RUN mkdir -p build && \
       cmake \
         -DCMAKE_INSTALL_PREFIX=/usr \
         ../ && \
-    make -j$(nproc) VERBOSE=1 dicomautomaton_dispatcher && \
+    JOBS=$(nproc) && \
+    JOBS=$(( $JOBS < 8 ? $JOBS : 8 )) && \
+    make -j "$JOBS" VERBOSE=1 dicomautomaton_dispatcher && \
     make package dicomautomaton_dispatcher && \
     apt-get install --yes -f ./*deb && \
     make clean
