@@ -28,7 +28,6 @@ RUN apt-get --yes update && \
 
 RUN apt-get install --yes \
     ` # Ygor dependencies ` \
-        libhtmlcxx-dev \
         libboost-dev \
         libgsl-dev \
         libeigen3-dev \

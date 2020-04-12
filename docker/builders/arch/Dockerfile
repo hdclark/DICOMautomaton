@@ -26,8 +26,8 @@ ADD . /dcma
 #
 # Option 3: use the working directory.
 WORKDIR /dcma
-RUN chown -R aurbuild:aurbuild . && \
-    su - aurbuild -c "cd /dcma && makepkg --syncdeps --install --clean --needed --noconfirm" && \
+RUN chown -R builduser:builduser . && \
+    su - builduser -c "cd /dcma && makepkg --syncdeps --install --clean --needed --noconfirm" && \
     git reset --hard && \
     git clean -fxd :/ 
 

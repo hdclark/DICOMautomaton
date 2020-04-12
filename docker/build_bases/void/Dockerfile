@@ -27,11 +27,8 @@ RUN xbps-install -y -S libressl libtls19 && \
       rsync \
       wget 
 
-#xbps-install -S -y nlopt nlopt-devel cgal cgal-devel htmlcxx htmlcxx-devel
-
 RUN xbps-install -y -S \
     ` # Ygor dependencies ` \
-        htmlcxx-devel \
         boost-devel \
         gsl-devel \
         eigen \
@@ -49,10 +46,6 @@ RUN xbps-install -y -S \
     ` # Additional dependencies for headless OpenGL rendering with SFML ` \
         xorg-minimal glu-devel \
         xorg-video-drivers xf86-video-dummy xorg-apps
-
-#        xorg-fonts \
-#        libfreeglut-devel libXi-devel libXmu-devel \
-#        libboost-filesystem-dev libboost-iostreams-dev libboost-program-options-dev libboost-thread-dev \
 
 RUN cp /scratch_base/xpra-xorg.conf /etc/X11/xorg.conf
 

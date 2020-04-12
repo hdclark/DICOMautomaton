@@ -32,24 +32,11 @@ RUN pacman -Sy --noconfirm archlinux-keyring && \
     rm -f /var/cache/pacman/pkg/*
 
 
-# Create a temporary user for building AUR packages.
-RUN useradd -r -d /var/empty aurbuild  && \
+# Create an unprivileged user for building packages.
+RUN useradd -r -d /var/empty builduser  && \
     mkdir -p /var/empty/ && \
-    chown -R aurbuild:aurbuild /var/empty/ && \
-    printf '\n''aurbuild ALL=(ALL) NOPASSWD: ALL''\n' >> /etc/sudoers
-
-
-# Install an AUR helper.
-WORKDIR /yay
-RUN git clone https://aur.archlinux.org/yay.git . && \
-    chown -R aurbuild:aurbuild . && \
-    su - aurbuild -c "cd /yay && makepkg --syncdeps --install --clean --needed --noconfirm --rmdeps" && \
-    rm -rf /yay
-
-
-# Install all AUR dependencies.
-RUN su - aurbuild -c \
-    "yay -S --noconfirm --needed --afterclean --aur htmlcxx ttf-computer-modern-fonts"
+    chown -R builduser:builduser /var/empty/ && \
+    printf '\n''builduser ALL=(ALL) NOPASSWD: ALL''\n' >> /etc/sudoers
 
 
 # Install known official dependencies.
@@ -92,8 +79,8 @@ RUN cp /scratch_base/xpra-xorg.conf /etc/X11/xorg.conf
 # Option 2: clone the latest upstream commit.
 WORKDIR /ygor
 RUN git clone https://github.com/hdclark/Ygor . && \
-    chown -R aurbuild:aurbuild . && \
-    su - aurbuild -c "cd /ygor && makepkg --syncdeps --install --clean --needed --noconfirm" && \
+    chown -R builduser:builduser . && \
+    su - builduser -c "cd /ygor && makepkg --syncdeps --install --clean --needed --noconfirm" && \
     git reset --hard && \
     git clean -fxd :/ 
 
@@ -107,8 +94,8 @@ RUN git clone https://github.com/hdclark/Ygor . && \
 # Option 2: clone the latest upstream commit.
 WORKDIR /explicator
 RUN git clone https://github.com/hdclark/explicator . && \
-    chown -R aurbuild:aurbuild . && \
-    su - aurbuild -c "cd /explicator && makepkg --syncdeps --install --clean --needed --noconfirm" && \
+    chown -R builduser:builduser . && \
+    su - builduser -c "cd /explicator && makepkg --syncdeps --install --clean --needed --noconfirm" && \
     git reset --hard && \
     git clean -fxd :/ 
 
@@ -116,8 +103,8 @@ RUN git clone https://github.com/hdclark/explicator . && \
 # Install YgorClustering.
 WORKDIR /ygorcluster
 RUN git clone https://github.com/hdclark/YgorClustering . && \
-    chown -R aurbuild:aurbuild . && \
-    su - aurbuild -c "cd /ygorcluster && makepkg --syncdeps --install --clean --needed --noconfirm" && \
+    chown -R builduser:builduser . && \
+    su - builduser -c "cd /ygorcluster && makepkg --syncdeps --install --clean --needed --noconfirm" && \
     git reset --hard && \
     git clean -fxd :/ 
 
