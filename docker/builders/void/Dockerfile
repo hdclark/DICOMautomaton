@@ -26,17 +26,9 @@ ADD . /dcma
 #
 # Option 3: use the working directory.
 WORKDIR /dcma
-RUN mkdir -p build && \
-    cd build && \
-    cmake \
-      -DCMAKE_INSTALL_PREFIX=/usr \
-      ../ && \
-    JOBS=$(nproc) && \
-    JOBS=$(( $JOBS < 8 ? $JOBS : 8 )) && \
-    make -j "$JOBS" VERBOSE=1 && \
-    make install && \
-    make clean
-
+RUN ./compile_and_install.sh -b build && \
+    git reset --hard && \
+    git clean -fxd :/ 
 
 # Default to launching the webserver.
 WORKDIR /scratch

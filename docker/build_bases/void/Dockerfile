@@ -58,7 +58,7 @@ RUN git clone https://github.com/emweb/wt.git . && \
     cmake -DCMAKE_INSTALL_PREFIX=/usr ../ && \
     JOBS=$(nproc) && \
     JOBS=$(( $JOBS < 8 ? $JOBS : 8 )) && \
-    make -j "$JOBS" VERBOSE=1 && \
+    make -j "$JOBS" VERBOSE=0 && \
     make install && \
     make clean
 
@@ -71,14 +71,9 @@ RUN git clone https://github.com/emweb/wt.git . && \
 # Option 2: clone the latest upstream commit.
 WORKDIR /ygor
 RUN git clone https://github.com/hdclark/Ygor . && \
-    mkdir -p build && cd build && \
-    cmake -DCMAKE_INSTALL_PREFIX=/usr ../ && \
-    JOBS=$(nproc) && \
-    JOBS=$(( $JOBS < 8 ? $JOBS : 8 )) && \
-    make -j "$JOBS" VERBOSE=1 && \
-    make install && \
-    make clean
-
+    ./compile_and_install.sh -b build && \
+    git reset --hard && \
+    git clean -fxd :/ 
 
 # Install Explicator.
 #
@@ -88,18 +83,16 @@ RUN git clone https://github.com/hdclark/Ygor . && \
 # Option 2: clone the latest upstream commit.
 WORKDIR /explicator
 RUN git clone https://github.com/hdclark/explicator . && \
-    mkdir -p build && cd build && \
-    cmake -DCMAKE_INSTALL_PREFIX=/usr ../ && \
-    JOBS=$(nproc) && \
-    JOBS=$(( $JOBS < 8 ? $JOBS : 8 )) && \
-    make -j "$JOBS" VERBOSE=1 && \
-    make install && \
-    make clean
+    ./compile_and_install.sh -b build && \
+    git reset --hard && \
+    git clean -fxd :/ 
 
 
 # Install YgorClustering.
 WORKDIR /ygorcluster
 RUN git clone https://github.com/hdclark/YgorClustering . && \
-    ./install_directly.sh
+    ./compile_and_install.sh -b build && \
+    git reset --hard && \
+    git clean -fxd :/ 
 
 

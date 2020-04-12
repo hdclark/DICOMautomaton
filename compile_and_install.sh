@@ -16,7 +16,7 @@ shopt -s nocasematch
 
 # The temporary location in which to build.
 #BUILDROOT="/home/hal/Builds/DICOMautomaton/"
-BUILDROOT="/tmp/build"
+BUILDROOT="/tmp/dcma_build"
 #BUILDROOT="build"
 
 DISTRIBUTION="auto" # used to tailor the build process for specific distributions/environments.
@@ -152,7 +152,7 @@ if [[ "${DISTRIBUTION}" =~ .*debian.* ]] ; then
     make package
 
     if [[ "${ALSOINSTALL}" =~ ^y.* ]] ; then
-        $SUDO apt-get install -f ./*deb
+        $SUDO apt-get --yes install -f ./*deb
     fi
 
 elif [[ "${DISTRIBUTION}" =~ .*arch.* ]] ; then

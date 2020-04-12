@@ -27,7 +27,7 @@ ADD . /dcma
 # Option 3: use the working directory.
 WORKDIR /dcma
 RUN chown -R builduser:builduser . && \
-    su - builduser -c "cd /dcma && makepkg --syncdeps --install --clean --needed --noconfirm" && \
+    su - builduser -c "cd /dcma && ./compile_and_install.sh -b build" && \
     git reset --hard && \
     git clean -fxd :/ 
 

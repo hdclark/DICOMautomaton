@@ -80,7 +80,7 @@ RUN cp /scratch_base/xpra-xorg.conf /etc/X11/xorg.conf
 WORKDIR /ygor
 RUN git clone https://github.com/hdclark/Ygor . && \
     chown -R builduser:builduser . && \
-    su - builduser -c "cd /ygor && makepkg --syncdeps --install --clean --needed --noconfirm" && \
+    su - builduser -c "cd /ygor && ./compile_and_install.sh -b build" && \
     git reset --hard && \
     git clean -fxd :/ 
 
@@ -95,7 +95,7 @@ RUN git clone https://github.com/hdclark/Ygor . && \
 WORKDIR /explicator
 RUN git clone https://github.com/hdclark/explicator . && \
     chown -R builduser:builduser . && \
-    su - builduser -c "cd /explicator && makepkg --syncdeps --install --clean --needed --noconfirm" && \
+    su - builduser -c "cd /explicator && ./compile_and_install.sh -b build" && \
     git reset --hard && \
     git clean -fxd :/ 
 
@@ -104,7 +104,7 @@ RUN git clone https://github.com/hdclark/explicator . && \
 WORKDIR /ygorcluster
 RUN git clone https://github.com/hdclark/YgorClustering . && \
     chown -R builduser:builduser . && \
-    su - builduser -c "cd /ygorcluster && makepkg --syncdeps --install --clean --needed --noconfirm" && \
+    su - builduser -c "cd /ygorcluster && ./compile_and_install.sh -b build" && \
     git reset --hard && \
     git clean -fxd :/ 
 

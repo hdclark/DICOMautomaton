@@ -123,7 +123,7 @@ RUN git clone https://github.com/hdclark/explicator . && \
 # Install YgorClustering.
 WORKDIR /ygorcluster
 RUN git clone https://github.com/hdclark/YgorClustering . && \
-    ./install_directly.sh
+    ./compile_and_install.sh -b build
 
 
 # Install DICOMautomaton.
