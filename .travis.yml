@@ -8,7 +8,7 @@ before_install:
   - free -h
   - |
     ( ( while true ; do sleep 225 ; printf '\n\n' ; free -h ; printf '\n\n' ; done ) &)
-    ./docker/builders/ci/build.sh
+    ./docker/builders/ci/build.sh 
   - sudo docker ps -a
 
 script:
