@@ -444,42 +444,38 @@ target_link_libraries(dicomautomaton_dump
 )
 
 # Installation info.
-install(TARGETS 
-    dicomautomaton_dispatcher
-    dicomautomaton_bsarchive_convert
-    dicomautomaton_dump
-    imebrashim
-    RUNTIME DESTINATION bin
-    LIBRARY DESTINATION lib
-    ARCHIVE DESTINATION lib
+install(TARGETS dicomautomaton_dispatcher
+                dicomautomaton_bsarchive_convert
+                dicomautomaton_dump
+                imebrashim
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
 if(WITH_WT)
-    install(TARGETS
-        dicomautomaton_webserver
-        RUNTIME DESTINATION bin
-        LIBRARY DESTINATION lib
-        ARCHIVE DESTINATION lib
+    install(TARGETS dicomautomaton_webserver
+            ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     )
 endif()
 if(WITH_POSTGRES)
-    install(TARGETS
-        pacs_ingress
-        pacs_duplicate_cleaner
-        pacs_refresh
-        RUNTIME DESTINATION bin
-        LIBRARY DESTINATION lib
-        ARCHIVE DESTINATION lib
+    install(TARGETS pacs_ingress
+                    pacs_duplicate_cleaner
+                    pacs_refresh
+            ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     )
 endif()
 if(WITH_GNU_GSL)
-    install(TARGETS
-        kineticmodel_1c2i_5param_linearinterp_levenbergmarquardt
-        kineticmodel_1c2i_5param_chebyshev_levenbergmarquardt
-        kineticmodel_1c2i_reduced3param_chebyshev_freeformoptimization
-        kineticmodel_1c2i_5param_chebyshev_freeformoptimization
-        RUNTIME DESTINATION bin
-        LIBRARY DESTINATION lib
-        ARCHIVE DESTINATION lib
+    install(TARGETS kineticmodel_1c2i_5param_linearinterp_levenbergmarquardt
+                    kineticmodel_1c2i_5param_chebyshev_levenbergmarquardt
+                    kineticmodel_1c2i_reduced3param_chebyshev_freeformoptimization
+                    kineticmodel_1c2i_5param_chebyshev_freeformoptimization
+            ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     )
 endif()
 

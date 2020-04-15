@@ -123,9 +123,9 @@ if [[ "${CLEANBUILD}" =~ ^y.* ]] ; then
     $SUDO find "${BUILDROOT}/" -type f -exec chmod 644 '{}' \+
     $SUDO find "${BUILDROOT}/" -type d -exec chmod 755 '{}' \+
     $SUDO find "${BUILDROOT}/" -exec chown "$( id -n -u ):$( id -n -g )" '{}' \+
-    rsync -rptz --delete --no-links --exclude="${BUILDROOT}" --cvs-exclude ./ "${BUILDROOT}/"
+    rsync -rpt --delete --no-links --exclude="${BUILDROOT}" --cvs-exclude ./ "${BUILDROOT}/"
 else
-    rsync -rptz          --no-links --exclude="${BUILDROOT}" --cvs-exclude ./ "${BUILDROOT}/"
+    rsync -rpt          --no-links --exclude="${BUILDROOT}" --cvs-exclude ./ "${BUILDROOT}/"
 fi
 cd "${BUILDROOT}"
 

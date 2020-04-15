@@ -1,11 +1,11 @@
 
 # Installation info.
 if(USE_WT)
-    install(FILES
-        webserver.conf DESTINATION /etc/DICOMautomaton
+    install(FILES webserver.conf 
+            DESTINATION "${CMAKE_INSTALL_SYSCONFDIR}/DICOMautomaton"
     )
-    install(DIRECTORY
-        webserver_styles DESTINATION /etc/DICOMautomaton
+    install(DIRECTORY webserver_styles
+            DESTINATION "${CMAKE_INSTALL_SYSCONFDIR}/DICOMautomaton"
     )
 endif()
 

@@ -6,14 +6,12 @@
 # be sourced prospectively, but that would be unfrtunately slow.
 #
 
-install(PROGRAMS
-    bash_completion.sh
+install(PROGRAMS bash_completion.sh
   DESTINATION ${BASH_COMPLETION_INSTALL_DIR}
   RENAME dicomautomaton_dispatcher
 )
 
-install(PROGRAMS
-    bash_completion.sh
+install(PROGRAMS bash_completion.sh
   DESTINATION ${BASH_COMPLETION_INSTALL_DIR}
   RENAME portable_dcma
 )
