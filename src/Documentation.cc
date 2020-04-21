@@ -65,7 +65,7 @@ void Emit_Documentation(std::ostream &os){
     const std::string bulletb("  ");
     const std::string nobullet;
     const std::string nolinebreak;
-    const long int max_width = 80;
+    const long int max_width = 120;
 
     os << "---" << std::endl;
     os << "title: DICOMautomaton Reference Manual" << std::endl;

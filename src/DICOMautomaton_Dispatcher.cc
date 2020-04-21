@@ -82,7 +82,8 @@ int main(int argc, char* argv[]){
     GroupedFilterQueryFiles.emplace_back();
 
     //PostgreSQL db connection settings.
-    std::string db_connection_params("dbname=pacs user=hal host=localhost port=5432");
+    //std::string db_connection_params("dbname=pacs user=hal host=localhost port=5432");
+    std::string db_connection_params("host=localhost ...");
 
     //----------------------------------------------- Data: File Loading ---------------------------------------------
     // The following objects are only relevant for the various file loaders. They will be passed through the loaders
