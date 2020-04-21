@@ -100,6 +100,8 @@ sudo rm -rf rootfs || true
     noto-fonts \
     screen \
     xterm \
+    zenity \
+    dialog \
     pacman
 
     #xorg-apps \
@@ -159,9 +161,8 @@ for f in \
   dicomautomaton_dispatcher \
   dicomautomaton_webserver \
   dicomautomaton_dump \
-  poweroff \
-  zenity \
-  dialog ; do
+  poweroff ; do
+
     d="/bin"
     if   [ -e "/bin/$f" ] ; then   d="/bin"
     elif [ -e "/sbin/$f" ] ; then  d="/sbin"
@@ -194,6 +195,19 @@ sort $unsorted |
       sudo cp -avL "${d}${alib}" ./rootfs"${d}${alib}"
   done
 rm $unsorted
+
+# Query the package database for non-library runtime components that may be missing.
+for pkg in \
+  ygorclustering \
+  explicator \
+  ygor \
+  dicomautomaton ; do
+
+    pacman -Ql "$pkg" |
+      cut -d' ' -f2- |
+      grep -v '.*[/]$' |
+      sudo rsync -avP --no-r -R --files-from=- / ./rootfs/
+done
 
 ##############################################
 # Configure system.
