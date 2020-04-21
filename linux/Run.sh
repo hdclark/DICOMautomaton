@@ -2,26 +2,27 @@
 
 set -eu
 
-pacman -S --needed bc     # Needed for linux kernel.
-pacman -S --needed musl kernel-headers-musl # Needed for statically-linked busybox.
-pacman -S --needed cpio   # Needed to create initramfs.
+sudo pacman -S --needed bc || true    # Needed for linux kernel.
+#sudo pacman -S --needed musl kernel-headers-musl || true # Needed for statically-linked busybox.
+sudo pacman -S --needed cpio || true  # Needed to create initramfs.
 
 ##############################################
 # Linux kernel.
 ##############################################
-if [ ! -f linux.txz ] ; then
+if [ ! -d linux*/ ] || [ ! -f bzImage ] ; then
     wget 'https://mirrors.edge.kernel.org/pub/linux/kernel/v5.x/linux-5.6.5.tar.xz' -O linux.txz
     tar axf linux.txz
-fi
-cd linux*/
+    (
+      cd linux*/
 
-#make help
-make clean || true
-make x86_64_defconfig
-#make menuconfig
-make -j $(nproc)
-cp arch/x86/boot/bzImage ../
-cd ../
+      #make help
+      make clean || true
+      make x86_64_defconfig
+      #make menuconfig
+      make -j $(nproc)
+      cp arch/x86/boot/bzImage ../
+    )
+fi
 
 ###############################################
 ## Busybox.
@@ -56,11 +57,17 @@ cd ../
 ##############################################
 # Root filesystem.
 ##############################################
-rm -rf rootfs || true
-mkdir rootfs
-mkdir rootfs/{bin,sbin,lib,dev,run,etc,mnt,proc,sbin,sys,tmp,usr}
+sudo rm -rf rootfs || true
 #rsync -a ./busybox*/_install/ ./rootfs/
+
+# Rely on system package manager to install a usable base system.
 (
+  mkdir -p ./rootfs/var/lib/pacman/sync/
+  sudo rsync -avP /var/lib/pacman/sync/ ./rootfs/var/lib/pacman/sync/
+  sudo pacman --root=./rootfs/ -S --noconfirm --overwrite='*' filesystem
+)
+(
+  mkdir -pv rootfs/dev
   cd rootfs/dev
   sudo mknod ram0 b 1 0
   sudo mknod ram1 b 1 1
@@ -74,21 +81,55 @@ mkdir rootfs/{bin,sbin,lib,dev,run,etc,mnt,proc,sbin,sys,tmp,usr}
   sudo mknod zero c 1 5
   sudo mknod kmsg c 1 11
   sudo mknod -m 640 console c 5 1
-  sudo mkdir -pv usr/lib
+)
+(
+  sudo pacman --root=./rootfs/ -S --noconfirm --overwrite='*' \
+    util-linux \
+    coreutils \
+    psmisc \
+    bash \
+    grep \
+    sed \
+    vim \
+    xorg-server \
+    xorg-xinit \
+    xf86-video-fbdev \
+    xf86-video-vesa \
+    mesa \
+    awesome \
+    noto-fonts \
+    screen \
+    xterm \
+    pacman
+
+    #xorg-apps \
+    # The following causes installation to hang due to gnupg/dirmngr (?)
+    # It also install a lot of unnecessary stuff.
+    #base \
+
+  #sudo pacman --root=./rootfs/ -U --noconfirm \
+  #  /tmp/dicomautomaton-...-x86_64.pkg.tar.xz \
+  #  /tmp/explicator-...-x86_64.pkg.tar.xz \
+  #  /tmp/ygorclustering-...-x86_64.pkg.tar.xz
+
+  sudo rm -rf ./rootfs/var/lib/pacman || true
 )
 (
   cd rootfs/
-  ln -s lib lib64
-  ln -s ../bin usr/bin
-  #mkdir -p usr/lib
-  ln -s ../lib usr/lib
-  ln -s proc/self/fd dev/fd
-  ln -s proc/self/fd/0 stdin
-  ln -s proc/self/fd/1 stdout
-  ln -s proc/self/fd/2 stderr
-  ln -s proc/kcore kcore
+  #sudo mkdir -pv usr/lib
+  #[ ! -e lib64      ] && sudo ln -s lib lib64
+  #[ ! -e usr/bin    ] && sudo ln -s ../bin usr/bin
+  #[ ! -e usr/lib    ] && sudo ln -s ../lib usr/lib
+  [ ! -e dev/fd     ] && sudo ln -s proc/self/fd dev/fd
+  [ ! -e dev/stdin  ] && sudo ln -s proc/self/fd/0 dev/stdin
+  [ ! -e dev/stdout ] && sudo ln -s proc/self/fd/1 dev/stdout
+  [ ! -e dev/stderr ] && sudo ln -s proc/self/fd/2 dev/stderr
+  [ ! -e dev/kcore  ] && sudo ln -s proc/kcore dev/kcore
 )
 
+#mkdir -pv rootfs/{bin,sbin,lib,dev,run,etc,mnt,proc,sbin,sys,tmp,usr}
+
+# Make a minimal init process.
 (
   echo '#!/bin/bash'
   echo 'mkdir -p /proc /sys /tmp'
@@ -98,37 +139,27 @@ mkdir rootfs/{bin,sbin,lib,dev,run,etc,mnt,proc,sbin,sys,tmp,usr}
 # Busybox fix:
 #  echo '/sbin/mdev -s'
 #  echo '/usr/bin/setsid /bin/cttyhack /bin/sh'
-  echo 'exec /bin/bash'
+
+  # Launch into a shell.
+  #echo 'exec /bin/bash'
+
+  # Defer system init to systemd. This simplifies, e.g., allocating terminals.
+  echo 'exec /usr/lib/systemd/systemd'
 ) > rootfs/init
 chmod 777 rootfs/init
 
-# Copy the host's glibc.
-#(
-#  cd rootfs/
-#  pacman -Ql bash glibc binutils |
-#    sed -e 's/^glibc //g' |
-#    sed -e 's/^bash //g' |
-#    sort |
-#    while read afile ; do
-#        if [ -d "$afile" ] ; then
-#            sudo mkdir -pv ."$afile"
-#        else
-#            sudo cp -av "$afile" ."$afile"
-#            #rsync -av -n /"$afile" ./rootfs/"$afile"
-#        fi
-#    done
-#)
-
-# Copy binaries and all needed libraries.
+# Use ldd to ensure individual binaries are included with all necessary libraries.
+#
 # Note that non-library runtime components may be missing!
 unsorted=$(mktemp /tmp/unsorted.XXXXXXXXXXXXX)
 for f in \
-  sh cat cp ls mkdir mknod mktemp mount sed \
-  sleep ln rm uname readlink basename bash \
-  dirname vi printenv free htop du df \
+  `# sh cat cp ls mkdir mknod mktemp mount sed` \
+  `# sleep ln rm uname readlink basename bash` \
+  `# dirname vi printenv free htop du df` \
   dicomautomaton_dispatcher \
   dicomautomaton_webserver \
   dicomautomaton_dump \
+  poweroff \
   zenity \
   dialog ; do
     d="/bin"
@@ -160,11 +191,59 @@ sort $unsorted |
           exit 1
       fi
       sudo mkdir -p ./rootfs"${d}"
-      echo -- cp -aL "${d}${alib}" ./rootfs"${d}${alib}"
-      sudo cp -aL "${d}${alib}" ./rootfs"${d}${alib}"
+      sudo cp -avL "${d}${alib}" ./rootfs"${d}${alib}"
   done
-
 rm $unsorted
+
+##############################################
+# Configure system.
+##############################################
+## Launch an xterm when X launches.
+#sudo mkdir -pv ./rootfs/root/
+#(
+#  printf -- '#!/bin/bash\n'
+#  printf -- 'while true ; do xterm ; sleep 1 ; done\n'
+#) | sudo tee ./rootfs/root/.xinitrc
+
+#  Autologin.
+sudo mkdir -pv ./rootfs/etc/systemd/system/getty@tty1.service.d/
+#sudo touch ./rootfs/etc/systemd/system/getty@tty1.service.d/override.conf
+(
+  printf -- '[Service]\n'
+  printf -- 'ExecStart=\n'
+  printf -- 'ExecStart=-/usr/bin/agetty --autologin root --noclear %%I $TERM\n'
+) | sudo tee ./rootfs/etc/systemd/system/getty@tty1.service.d/override.conf
+
+# Networking.
+sudo mkdir -pv ./rootfs/etc/systemd/network/
+(
+  printf -- '[Match]\n'
+  printf -- 'Name=en*\n'
+  printf -- '\n'
+  printf -- '[Network]\n'
+  printf -- 'DHCP=ipv4\n'
+) | sudo tee ./rootfs/etc/systemd/network/20-wired.network
+
+# Window management.
+sudo rm ./rootfs/etc/X11/xinit/xinitrc
+(
+  printf -- '#!/bin/bash\n'
+  printf -- 'while true ; do awesome ; sleep 1 ; done\n'
+) | sudo tee ./rootfs/etc/X11/xinit/xinitrc
+#(
+#  cd rootfs
+#  sudo mkdir -pv etc/systemd/system/
+#  sudo ln -s /usr/lib/systemd/system/graphical.target \
+#             etc/systemd/system/default.target
+#)
+sudo mkdir -pv ./rootfs/root/
+(
+  printf -- 'if [ ! $DISPLAY ] ; then startx ; fi\n'
+) | sudo tee ./rootfs/etc/skel/.bash_profile
+sudo cp ./rootfs/etc/skel/.bash_profile ./rootfs/root/
+
+sudo sed -i -e 's/^theme[.]wallpaper.*//g' \
+  ./rootfs/usr/share/awesome/themes/default/theme.lua
 
 ## Test via chroot to ensure all requisite libraries are present.
 #sudo chroot rootfs/ /bin/bash
@@ -172,20 +251,29 @@ rm $unsorted
 ## Copy the portable binary distribution into the image.
 #rsync -a /tmp/portable_dcma/ ./rootfs/portable_dcma/
 
-rm initramfs.cpio.gz || true
+# Prepare the cpio archive.
+sudo rm initramfs.cpio* || true
 cd rootfs
-find . -print0 | cpio -0 -ov --format=newc | gzip -9 > ../initramfs.cpio.gz
+#find . -print0 | sudo cpio -0 -ov --format=newc | gzip -9 > ../initramfs.cpio.gz
+find . -print0 | sudo cpio -0 -ov --format=newc > ../initramfs.cpio
 cd ../
 
-
+# Launch an emulation for testing.
 #qemu-system-x86_64 -kernel bzImage -initrd initramfs.cpio --append "root=/dev/ram init=/init"
 
 # Note: [ctrl]+[a] to access qemu monitor, then type 'quit'<enter> to stop the emulation.
+#qemu-system-x86_64 \
+#  -m 4G \
+#  -smp 2 \
+#  -nographic \
+#  -kernel bzImage \
+#  -initrd initramfs.cpio \
+#  --append "root=/dev/ram0 rootfstype=ramfs init=/init console=ttyS0"
+
 qemu-system-x86_64 \
-  -m 512M \
+  -m 4G \
   -smp 2 \
-  -nographic \
   -kernel bzImage \
-  -initrd initramfs.cpio.gz \
-  --append "root=/dev/ram0 rootfstype=ramfs init=/init console=ttyS0"
+  -initrd initramfs.cpio \
+  --append "root=/dev/ram0 rootfstype=ramfs init=/init"
 
