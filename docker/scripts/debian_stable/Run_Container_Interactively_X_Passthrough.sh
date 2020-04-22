@@ -113,6 +113,7 @@ sudo \
     `# Map the DCMA binary locations into the container prospectively. ` \
     -v "$HOME"/portable_dcma/:/root/portable_dcma/:ro \
     -v "$HOME"/portable_dcma/:/home/${uname}/portable_dcma/:ro \
+    -v "$HOME"/portable_dcma/:/home/container_${uname}/portable_dcma/:ro \
     \
     `# Map various locations from host into the container. ` \
     -v /etc/group:/etc/group_host:ro \
