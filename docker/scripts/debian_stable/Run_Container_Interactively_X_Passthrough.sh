@@ -41,21 +41,31 @@ cat > "${internal_run_script}" <<EOF
 #!/bin/bash
 
 # Copy host files to facilitate easier interoperation.
-#cp /etc/passwd_prototype /etc/passwd
-#cp /etc/group_prototype  /etc/group
-#cp /etc/shadow_prototype /etc/shadow
+#cp /etc/passwd_host /etc/passwd
+#cp /etc/group_host  /etc/group
+#cp /etc/shadow_host /etc/shadow
 
 # Create a user with the same credentials as the host user.
 groupadd -g ${gid} -f ${gname} || true
 useradd -g ${gname} -u ${uid} -G video -m -d '/home/container_${uname}' -s /bin/bash ${uname}
 
+# Merge group files so that any necessary groups (e.g., filesystem access) carry over.
+cp /etc/group /etc/group_container
+awk -F: -vOFS=':' '{ 
+  if( !(\$1 in gname || \$3 in gid) ){
+      print \$1,"x",\$3,\$4
+  };
+  gname[\$1]=1;
+  gid[\$3]=1;
+}' /etc/group_container /etc/group_host > /etc/group
+
 # Copy host Xauth file.
-cp /etc/Xauthority_prototype /home/container_${uname}/.Xauthority || true
+cp /etc/Xauthority_host /home/container_${uname}/.Xauthority || true
 chown ${uname}:${gname} /home/container_${uname}/.Xauthority || true
 
 # Install some convenience packages.
 apt-get -y update
-apt-get -y install vim dcmtk dialog ncurses-term zenity gedit patchelf
+apt-get -y install vim dcmtk dialog ncurses-term zenity gedit patchelf meld
 
 # Copy the portable_dcma binaries into the container.
 rsync -r /root/portable_dcma/ /usr/bin/
@@ -94,7 +104,7 @@ sudo \
     `# Map X-related host locations into the container. ` \
     `# -v /tmp/.X11-unix:/tmp/.X11-unix:rw ` \
     -v /tmp/:/tmp/:rw \
-    -v "$HOME"/.Xauthority:/etc/Xauthority_prototype:ro \
+    -v "$HOME"/.Xauthority:/etc/Xauthority_host:ro \
     -v /dev/null:/dev/input/js0:ro \
     -v /dev/null:/dev/input/js1:ro \
     -v /dev/null:/dev/input/js2:ro \
@@ -105,6 +115,7 @@ sudo \
     -v "$HOME"/portable_dcma/:/home/${uname}/portable_dcma/:ro \
     \
     `# Map various locations from host into the container. ` \
+    -v /etc/group:/etc/group_host:ro \
     -v /:/host_root/:ro \
     -v /media/:/media/:ro \
     -v "$(pwd)":/start/:rw \
@@ -118,6 +129,6 @@ sudo \
     /x11_launch_script.sh
 
 #    debian:stable \
-#    -v /etc/passwd:/etc/passwd_prototype:ro \
-#    -v /etc/group:/etc/group_prototype:ro \
-#    -v /etc/shadow:/etc/shadow_prototype:ro \
+#    -v /etc/passwd:/etc/passwd_host:ro \
+#    -v /etc/group:/etc/group_host:ro \
+#    -v /etc/shadow:/etc/shadow_host:ro \
