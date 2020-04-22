@@ -55,7 +55,7 @@ fi
 #cd ../
 
 ##############################################
-# Root filesystem.
+# Root filesystem: install packages.
 ##############################################
 sudo rm -rf rootfs || true
 #rsync -a ./busybox*/_install/ ./rootfs/
@@ -63,8 +63,10 @@ sudo rm -rf rootfs || true
 # Rely on system package manager to install a usable base system.
 (
   mkdir -p ./rootfs/var/lib/pacman/sync/
+  mkdir -p ./rootfs/var/cache/pacman/pkg/
+  mkdir -p ./rootfs/var/log/
   sudo rsync -avP /var/lib/pacman/sync/ ./rootfs/var/lib/pacman/sync/
-  sudo pacman --root=./rootfs/ -S --noconfirm --overwrite='*' filesystem
+  sudo pacman --root=./rootfs/ --cachedir=./rootfs/var/cache/pacman/pkg/ -S --noconfirm --overwrite='*' filesystem
 )
 (
   mkdir -pv rootfs/dev
@@ -83,7 +85,7 @@ sudo rm -rf rootfs || true
   sudo mknod -m 640 console c 5 1
 )
 (
-  sudo pacman --root=./rootfs/ -S --noconfirm --overwrite='*' \
+  sudo pacman --root=./rootfs/ --cachedir=./rootfs/var/cache/pacman/pkg/ -S --noconfirm --overwrite='*' \
     util-linux \
     coreutils \
     psmisc \
@@ -102,7 +104,11 @@ sudo rm -rf rootfs || true
     xterm \
     zenity \
     dialog \
-    pacman
+    pacman \
+    pacman-mirrorlist \
+    wget
+
+#    lightdm \
 
     #xorg-apps \
     # The following causes installation to hang due to gnupg/dirmngr (?)
@@ -114,7 +120,7 @@ sudo rm -rf rootfs || true
   #  /tmp/explicator-...-x86_64.pkg.tar.xz \
   #  /tmp/ygorclustering-...-x86_64.pkg.tar.xz
 
-  sudo rm -rf ./rootfs/var/lib/pacman || true
+#  sudo rm -rf ./rootfs/var/lib/pacman || true
 )
 (
   cd rootfs/
@@ -209,6 +215,9 @@ for pkg in \
       sudo rsync -avP --no-r -R --files-from=- / ./rootfs/
 done
 
+## Copy the portable binary distribution into the image.
+#rsync -a /tmp/portable_dcma/ ./rootfs/portable_dcma/
+
 ##############################################
 # Configure system.
 ##############################################
@@ -238,6 +247,11 @@ sudo mkdir -pv ./rootfs/etc/systemd/network/
   printf -- 'DHCP=ipv4\n'
 ) | sudo tee ./rootfs/etc/systemd/network/20-wired.network
 
+## Display management.
+#sudo sed -i -e 's/[#]autologin-user.*/autologin-user=root/g' \
+#            -e 's/[#]user-session.*/user-session=awesome.desktop/g' \
+#  ./rootfs/usr/lightdm/lightdm.conf
+
 # Window management.
 sudo rm ./rootfs/etc/X11/xinit/xinitrc
 (
@@ -259,11 +273,18 @@ sudo cp ./rootfs/etc/skel/.bash_profile ./rootfs/root/
 sudo sed -i -e 's/^theme[.]wallpaper.*//g' \
   ./rootfs/usr/share/awesome/themes/default/theme.lua
 
+##############################################
+# Jettison unneeded components.
+##############################################
+#sudo rm -rf ./rootfs/usr/share/* || true
+
+
+##############################################
+# Create disk image.
+##############################################
+
 ## Test via chroot to ensure all requisite libraries are present.
 #sudo chroot rootfs/ /bin/bash
-
-## Copy the portable binary distribution into the image.
-#rsync -a /tmp/portable_dcma/ ./rootfs/portable_dcma/
 
 # Prepare the cpio archive.
 sudo rm initramfs.cpio* || true
@@ -272,7 +293,9 @@ cd rootfs
 find . -print0 | sudo cpio -0 -ov --format=newc > ../initramfs.cpio
 cd ../
 
-# Launch an emulation for testing.
+##############################################
+# Emulate system.
+##############################################
 #qemu-system-x86_64 -kernel bzImage -initrd initramfs.cpio --append "root=/dev/ram init=/init"
 
 # Note: [ctrl]+[a] to access qemu monitor, then type 'quit'<enter> to stop the emulation.
