@@ -85,7 +85,7 @@ if [ ! -d "${reporoot}" ] ; then
     exit 1
 fi
 cd "${reporoot}"
-rsync -rptPz --no-links --cvs-exclude "${reporoot}"/ "${USER_AT_REMOTE}:${BUILD_DIR}"
+rsync -rptP --no-links --cvs-exclude "${reporoot}"/ "${USER_AT_REMOTE}:${BUILD_DIR}"
 
 
 # Initiate the remote build.
@@ -176,7 +176,7 @@ fi
 
 
 # Sync portable binary artifacts back.
-rsync -rptvPz --no-links --delete "${USER_AT_REMOTE}:${PORTABLE_BIN_DIR}/" "${L_PORTABLE_BIN_DIR}/"
+rsync -rptvP --no-links --delete "${USER_AT_REMOTE}:${PORTABLE_BIN_DIR}/" "${L_PORTABLE_BIN_DIR}/"
 
 
 printf ' ====================================================================== \n'
