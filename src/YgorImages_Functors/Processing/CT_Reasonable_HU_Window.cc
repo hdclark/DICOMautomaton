@@ -128,7 +128,7 @@ bool StandardAlphaBetaWindow(planar_image_collection<float,double>::images_list_
                                std::move(selected_img_its),
                                std::move(ext_imgs),
                                std::move(ccsl),
-                               0.0f, 5.0f,  // Units: 1/Gy.
+                               2.5f, 2.5f,  // Units: 1/Gy.
                                std::move(userdata) );
 }
 
