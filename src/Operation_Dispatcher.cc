@@ -102,6 +102,7 @@
 #include "Operations/GiveWholeImageArrayAHeadAndNeckWindowLevel.h"
 #include "Operations/GiveWholeImageArrayAThoraxWindowLevel.h"
 #include "Operations/GiveWholeImageArrayAnAbdominalWindowLevel.h"
+#include "Operations/GiveWholeImageArrayAnAlphaBetaWindowLevel.h"
 #include "Operations/GridBasedRayCastDoseAccumulate.h"
 #include "Operations/GroupImages.h"
 #include "Operations/GrowContours.h"
@@ -278,6 +279,7 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["GiveWholeImageArrayAHeadAndNeckWindowLevel"] = std::make_pair(OpArgDocGiveWholeImageArrayAHeadAndNeckWindowLevel, GiveWholeImageArrayAHeadAndNeckWindowLevel);
     out["GiveWholeImageArrayAThoraxWindowLevel"] = std::make_pair(OpArgDocGiveWholeImageArrayAThoraxWindowLevel, GiveWholeImageArrayAThoraxWindowLevel);
     out["GiveWholeImageArrayAnAbdominalWindowLevel"] = std::make_pair(OpArgDocGiveWholeImageArrayAnAbdominalWindowLevel, GiveWholeImageArrayAnAbdominalWindowLevel);
+    out["GiveWholeImageArrayAnAlphaBetaWindowLevel"] = std::make_pair(OpArgDocGiveWholeImageArrayAnAlphaBetaWindowLevel, GiveWholeImageArrayAnAlphaBetaWindowLevel);
     out["GridBasedRayCastDoseAccumulate"] = std::make_pair(OpArgDocGridBasedRayCastDoseAccumulate, GridBasedRayCastDoseAccumulate);
     out["GroupImages"] = std::make_pair(OpArgDocGroupImages, GroupImages);
     out["GrowContours"] = std::make_pair(OpArgDocGrowContours, GrowContours);

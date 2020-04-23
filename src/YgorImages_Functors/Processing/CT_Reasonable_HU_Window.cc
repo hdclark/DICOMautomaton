@@ -76,7 +76,6 @@ bool StandardHeadAndNeckHUWindow(planar_image_collection<float,double>::images_l
                                std::move(userdata) );
 }
 
-
 bool StandardAbdominalHUWindow(planar_image_collection<float,double>::images_list_it_t first_img_it,
                                std::list<planar_image_collection<float,double>::images_list_it_t> selected_img_its,
                                std::list<std::reference_wrapper<planar_image_collection<float,double>>> ext_imgs,
@@ -88,7 +87,7 @@ bool StandardAbdominalHUWindow(planar_image_collection<float,double>::images_lis
                                std::move(ccsl),
                                static_cast<float>(350), static_cast<float>(50),
                                std::move(userdata) );
-}   
+}
 
 bool StandardThoraxHUWindow(planar_image_collection<float,double>::images_list_it_t first_img_it,
                             std::list<planar_image_collection<float,double>::images_list_it_t> selected_img_its,
@@ -101,7 +100,7 @@ bool StandardThoraxHUWindow(planar_image_collection<float,double>::images_list_i
                                std::move(ccsl),
                                static_cast<float>(1500), static_cast<float>(-500),
                                std::move(userdata) );
-}   
+}
 
 bool StandardBoneHUWindow(planar_image_collection<float,double>::images_list_it_t first_img_it,
                           std::list<planar_image_collection<float,double>::images_list_it_t> selected_img_its,
@@ -114,5 +113,22 @@ bool StandardBoneHUWindow(planar_image_collection<float,double>::images_list_it_
                                std::move(ccsl),
                                static_cast<float>(2000), static_cast<float>(250),
                                std::move(userdata) );
-}   
+}
+
+bool StandardAlphaBetaWindow(planar_image_collection<float,double>::images_list_it_t first_img_it,
+                          std::list<planar_image_collection<float,double>::images_list_it_t> selected_img_its,
+                          std::list<std::reference_wrapper<planar_image_collection<float,double>>> ext_imgs,
+                          std::list<std::reference_wrapper<contour_collection<double>>> ccsl,
+                          std::any userdata ){
+    // This generic estimate covers the majority of alpha/beta ratios reported by van Leeuwen et al., 2018
+    // (doi:10.1186/s13014-018-1040-z) for a variety of tissue types. Note, however, that the complete range appears to
+    // span approximately -15 to 30. However, this would provide very little contrast for the majority of tissues
+    // (0 to 5).
+    return ReasonableHUWindow( std::move(first_img_it),
+                               std::move(selected_img_its),
+                               std::move(ext_imgs),
+                               std::move(ccsl),
+                               0.0f, 5.0f,  // Units: 1/Gy.
+                               std::move(userdata) );
+}
 
