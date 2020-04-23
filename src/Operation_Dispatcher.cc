@@ -76,7 +76,6 @@
 #include "Operations/DumpPlanSummary.h"
 #include "Operations/DumpROIContours.h"
 #include "Operations/DumpROIData.h"
-#include "Operations/DumpROIDoseInfo.h"
 #include "Operations/DumpROISNR.h"
 #include "Operations/DumpTPlanMetadataOccurrencesToFile.h"
 #include "Operations/DumpVoxelDoseInfo.h"
@@ -253,7 +252,6 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["DumpPlanSummary"] = std::make_pair(OpArgDocDumpPlanSummary, DumpPlanSummary);
     out["DumpROIContours"] = std::make_pair(OpArgDocDumpROIContours, DumpROIContours);
     out["DumpROIData"] = std::make_pair(OpArgDocDumpROIData, DumpROIData);
-    out["DumpROIDoseInfo"] = std::make_pair(OpArgDocDumpROIDoseInfo, DumpROIDoseInfo);
     out["DumpROISNR"] = std::make_pair(OpArgDocDumpROISNR, DumpROISNR);
     out["DumpTPlanMetadataOccurrencesToFile"] = std::make_pair(OpArgDocDumpTPlanMetadataOccurrencesToFile, DumpTPlanMetadataOccurrencesToFile);
     out["DumpVoxelDoseInfo"] = std::make_pair(OpArgDocDumpVoxelDoseInfo, DumpVoxelDoseInfo);

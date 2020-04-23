@@ -58,7 +58,6 @@ add_library(Operations_objs OBJECT
     DumpPlanSummary.cc
     DumpROIContours.cc
     DumpROIData.cc
-    DumpROIDoseInfo.cc
     DumpROISNR.cc
     DumpTPlanMetadataOccurrencesToFile.cc
     DumpVoxelDoseInfo.cc
