@@ -21,7 +21,7 @@
 
 #include "Operations/AccumulateRowsColumns.h"
 #include "Operations/AlignPoints.h"
-#include "Operations/AnalyzeDoseVolumeHistograms.h"
+#include "Operations/AnalyzeHistograms.h"
 #include "Operations/AnalyzeLightRadFieldCoincidence.h"
 #include "Operations/AnalyzePicketFence.h"
 #include "Operations/AnalyzeTPlan.h"
@@ -87,7 +87,7 @@
 #include "Operations/ExportLineSamples.h"
 #include "Operations/ExportSurfaceMeshes.h"
 #include "Operations/ExportPointClouds.h"
-#include "Operations/ExtractDoseVolumeHistograms.h"
+#include "Operations/ExtractImageHistograms.h"
 #include "Operations/ExtractAlphaBeta.h"
 #include "Operations/FVPicketFence.h"
 #include "Operations/GenerateCalibrationCurve.h"
@@ -197,7 +197,7 @@ std::map<std::string, op_packet_t> Known_Operations(void){
 
     out["AccumulateRowsColumns"] = std::make_pair(OpArgDocAccumulateRowsColumns, AccumulateRowsColumns);
     out["AlignPoints"] = std::make_pair(OpArgDocAlignPoints, AlignPoints);
-    out["AnalyzeDoseVolumeHistograms"] = std::make_pair(OpArgDocAnalyzeDoseVolumeHistograms, AnalyzeDoseVolumeHistograms);
+    out["AnalyzeHistograms"] = std::make_pair(OpArgDocAnalyzeHistograms, AnalyzeHistograms);
     out["AnalyzeLightRadFieldCoincidence"] = std::make_pair(OpArgDocAnalyzeLightRadFieldCoincidence, AnalyzeLightRadFieldCoincidence);
     out["AnalyzePicketFence"] = std::make_pair(OpArgDocAnalyzePicketFence, AnalyzePicketFence);
     out["AnalyzeTPlan"] = std::make_pair(OpArgDocAnalyzeTPlan, AnalyzeTPlan);
@@ -263,7 +263,7 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["ExportLineSamples"] = std::make_pair(OpArgDocExportLineSamples, ExportLineSamples);
     out["ExportPointClouds"] = std::make_pair(OpArgDocExportPointClouds, ExportPointClouds);
     out["ExportSurfaceMeshes"] = std::make_pair(OpArgDocExportSurfaceMeshes, ExportSurfaceMeshes);
-    out["ExtractDoseVolumeHistograms"] = std::make_pair(OpArgDocExtractDoseVolumeHistograms, ExtractDoseVolumeHistograms);
+    out["ExtractImageHistograms"] = std::make_pair(OpArgDocExtractImageHistograms, ExtractImageHistograms);
     out["ExtractAlphaBeta"] = std::make_pair(OpArgDocExtractAlphaBeta, ExtractAlphaBeta);
     out["FVPicketFence"] = std::make_pair(OpArgDocFVPicketFence, FVPicketFence);
     out["GenerateCalibrationCurve"] = std::make_pair(OpArgDocGenerateCalibrationCurve, GenerateCalibrationCurve);

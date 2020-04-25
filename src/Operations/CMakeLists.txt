@@ -3,7 +3,7 @@
 add_library(Operations_objs OBJECT 
     AccumulateRowsColumns.cc
     AlignPoints.cc
-    AnalyzeDoseVolumeHistograms.cc
+    AnalyzeHistograms.cc
     AnalyzeLightRadFieldCoincidence.cc
     AnalyzePicketFence.cc
     AnalyzeTPlan.cc
@@ -69,7 +69,7 @@ add_library(Operations_objs OBJECT
     ExportLineSamples.cc
     ExportPointClouds.cc
     ExportSurfaceMeshes.cc
-    ExtractDoseVolumeHistograms.cc
+    ExtractImageHistograms.cc
     ExtractAlphaBeta.cc
     FVPicketFence.cc
     GenerateCalibrationCurve.cc

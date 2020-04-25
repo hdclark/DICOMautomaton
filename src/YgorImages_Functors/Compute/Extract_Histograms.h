@@ -1,4 +1,4 @@
-//Extract_Dose_Volume_Histograms.h.
+//Extract_Histograms.h.
 #pragma once
 
 #include <cmath>
@@ -17,7 +17,7 @@
 template <class T, class R> class planar_image_collection;
 template <class T> class contour_collection;
 
-struct ComputeExtractDoseVolumeHistogramsUserData {
+struct ComputeExtractHistogramsUserData {
 
     // -----------------------------
     // Settings that control how contours are interpretted.
@@ -38,6 +38,12 @@ struct ComputeExtractDoseVolumeHistogramsUserData {
     double dDose = 1.0;
 
     // -----------------------------
+    // The (inclusive) range of voxels to consider, in DICOM units (nominally Gy).
+    //
+    double lower_threshold = -(std::numeric_limits<double>::infinity());
+    double upper_threshold =  (std::numeric_limits<double>::infinity());
+
+    // -----------------------------
     // The channel to consider. 
     //
     // Note: Channel numbers in the images that will be edited and reference images must match.
@@ -46,28 +52,27 @@ struct ComputeExtractDoseVolumeHistogramsUserData {
     long int channel = -1;
 
     // -----------------------------
-    // Outgoing cumulative dose-volume histograms, one for each distinct ROI.
-    //
-    std::map<std::string,                         // ROIName.
-             std::map<double,                     // Dose (in DICOM units; mm).
-                      std::pair<double,           // Cumulative volume (in DICOM units; mm^3).
-                                double> > > dvhs; // Cumulative volume (relative to the ROI's total volume [0,1]).
+    // How contours with differing names should be handled.
+    enum class
+    GroupingMethod {
+        Separate,     // Contours with the same ROI label will be treated as part of the same ROI.
+        Combined,     // Contours with different ROI labels will all be treated as a single ROI.
+                      // The label attached to the output is not defined.
+    } grouping = GroupingMethod::Separate;
 
     // -----------------------------
-    // Outgoing basic dose statistics.
+    // Outgoing histograms, one for each distinct group.
     //
-    std::map<std::string,                         // ROIName.
-             double> min_dose;                    // Minimum dose (in DICOM units; mm).
-
-    std::map<std::string,                         // ROIName.
-             double> max_dose;                    // Maximum dose (in DICOM units; mm).
-
-    std::map<std::string,                         // ROIName.
-             double> mean_dose;                   // Mean volume dose (weighted by voxel volume, in DICOM units; mm).
+    std::map<std::string,            // ROIName.
+             samples_1D<double>>     // Volume vs voxel intensity in DICOM units; mm^3 and Gy.
+                 differential_histograms;
+    std::map<std::string,            // ROIName.
+             samples_1D<double>>     // Volume vs voxel intensity in DICOM units; mm^3 and Gy.
+                 cumulative_histograms;
 
 };
 
-bool ComputeExtractDoseVolumeHistograms(planar_image_collection<float,double> &,
+bool ComputeExtractHistograms(planar_image_collection<float,double> &,
                           std::list<std::reference_wrapper<planar_image_collection<float,double>>>,
                           std::list<std::reference_wrapper<contour_collection<double>>>,
                           std::any ud );

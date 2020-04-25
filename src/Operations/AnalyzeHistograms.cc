@@ -1,4 +1,4 @@
-//AnalyzeDoseVolumeHistograms.cc - A part of DICOMautomaton 2018. Written by hal clark.
+//AnalyzeHistograms.cc - A part of DICOMautomaton 2018, 2020. Written by hal clark.
 
 #include <boost/interprocess/creation_tags.hpp>
 #include <boost/interprocess/sync/named_mutex.hpp>
@@ -28,7 +28,7 @@
 #include "../Write_File.h"
 #include "../Regex_Selectors.h"
 
-#include "AnalyzeDoseVolumeHistograms.h"
+#include "AnalyzeHistograms.h"
 
 #include "YgorFilesDirs.h"    //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
 #include "YgorImages.h"
@@ -39,9 +39,9 @@
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
 
-OperationDoc OpArgDocAnalyzeDoseVolumeHistograms(void){
+OperationDoc OpArgDocAnalyzeHistograms(void){
     OperationDoc out;
-    out.name = "AnalyzeDoseVolumeHistograms";
+    out.name = "AnalyzeHistograms";
 
     out.desc = 
         "This operation analyzes the selected line samples as if they were cumulative dose-volume histograms (DVHs)."
@@ -49,9 +49,9 @@ OperationDoc OpArgDocAnalyzeDoseVolumeHistograms(void){
         " output files to provide a summary of multiple criteria.";
 
     out.notes.emplace_back(
-        "This routine will filter out non-matching line samples. Currently required: Modality=DVH; the DVH must be"
-        " explicitly marked as a cumulative, absolute-dose + absolute-volume histogram; and differential histogram"
-        " statistics must be available (e.g., min, mean, and max voxel doses)."
+        "This routine will filter out non-matching line samples. Currently required: Modality=Histogram; each must be"
+        " explicitly marked as a cumulative, unscaled abscissa + unscaled ordinate histogram; and differential"
+        " distribution statistics must be available (e.g., min, mean, and max voxel doses)."
     );
 
     out.args.emplace_back();
@@ -80,7 +80,7 @@ OperationDoc OpArgDocAnalyzeDoseVolumeHistograms(void){
                            " Preceding alphanumeric variables with a '$' will cause them to be treated as metadata"
                            " keys and replaced with the corresponding key's value, if present. For example,"
                            " 'The modality is $Modality' might be (depending on the metadata) expanded to"
-                           " 'The modality is DVH'. If the metadata key is not present, the expression will remain"
+                           " 'The modality is Histogram'. If the metadata key is not present, the expression will remain"
                            " unexpanded (i.e., with a preceeding '$').";
     out.args.back().default_val = "";
     out.args.back().expected = false;
@@ -95,7 +95,7 @@ OperationDoc OpArgDocAnalyzeDoseVolumeHistograms(void){
                            " Preceding alphanumeric variables with a '$' will cause them to be treated as metadata"
                            " keys and replaced with the corresponding key's value, if present. For example,"
                            " 'The modality is $Modality' might be (depending on the metadata) expanded to"
-                           " 'The modality is DVH'. If the metadata key is not present, the expression will remain"
+                           " 'The modality is Histogram'. If the metadata key is not present, the expression will remain"
                            " unexpanded (i.e., with a preceeding '$').";
     out.args.back().default_val = "";
     out.args.back().expected = false;
@@ -186,7 +186,7 @@ lCompile_Regex(std::string input){
                              std::regex::optimize |
                              std::regex::extended);
 }
-Drover AnalyzeDoseVolumeHistograms(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){
+Drover AnalyzeHistograms(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto LineSelectionStr = OptArgs.getValueStr("LineSelection").value();
@@ -206,23 +206,23 @@ Drover AnalyzeDoseVolumeHistograms(Drover DICOM_data, OperationArgPkg OptArgs, s
     // Cycle over the Line_Segments, processing each one-at-a-time.
     auto LSs_all = All_LSs( DICOM_data );
     auto LSs_f = Whitelist( LSs_all, LineSelectionStr );
-    auto LSs = Whitelist( LSs_f, { { "Modality", ".*DVH.*" },
-                                   { "DVHType", ".*Cumulative.*" },
-                                   { "DoseScaling", ".*None.*" },
-                                   { "VolumeScaling", ".*None.*" } } );
+    auto LSs = Whitelist( LSs_f, { { "Modality", ".*Histogram.*" },
+                                   { "HistogramType", ".*Cumulative.*" },
+                                   { "AbscissaScaling", ".*None.*" },
+                                   { "OrdinateScaling", ".*None.*" } } );
 
     for(auto & lsp_it : LSs){
         //const auto Modality = (*lsp_it)->line.metadata["Modality"];
-        if((*lsp_it)->line.samples.empty()) throw std::invalid_argument("Unable to find DVH data to analyze.");
+        if((*lsp_it)->line.samples.empty()) throw std::invalid_argument("Unable to find histogram data to analyze.");
 
         //Determine which PatientID(s) to report.
         const auto PatientIDOpt = (*lsp_it)->line.GetMetadataValueAs<std::string>("PatientID");
         const auto PatientID = PatientIDOpt.value_or("unknown");
 
         const auto LineName = (*lsp_it)->line.GetMetadataValueAs<std::string>("LineName").value_or("unspecified");
-        const auto MinDose  = (*lsp_it)->line.GetMetadataValueAs<double>("DifferentialDVHMinDose").value_or(nan);
-        const auto MeanDose = (*lsp_it)->line.GetMetadataValueAs<double>("DifferentialDVHMeanDose").value_or(nan);
-        const auto MaxDose  = (*lsp_it)->line.GetMetadataValueAs<double>("DifferentialDVHMaxDose").value_or(nan);
+        const auto MinDose  = (*lsp_it)->line.GetMetadataValueAs<double>("DistributionMin").value_or(nan);
+        const auto MeanDose = (*lsp_it)->line.GetMetadataValueAs<double>("DistributionMean").value_or(nan);
+        const auto MaxDose  = (*lsp_it)->line.GetMetadataValueAs<double>("DistributionMax").value_or(nan);
 
         // Expand $-variables in the UserComment and Description with metadata.
         auto ExpandedUserCommentOpt = UserCommentOpt;
