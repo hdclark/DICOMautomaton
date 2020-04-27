@@ -117,6 +117,7 @@
 #include "Operations/ModifyContourMetadata.h"
 #include "Operations/ModifyImageMetadata.h"
 #include "Operations/NegatePixels.h"
+#include "Operations/NormalizeLineSamples.h"
 #include "Operations/NormalizePixels.h"
 #include "Operations/OptimizeStaticBeams.h"
 #include "Operations/OrderImages.h"
@@ -293,6 +294,7 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["ModifyContourMetadata"] = std::make_pair(OpArgDocModifyContourMetadata, ModifyContourMetadata);
     out["ModifyImageMetadata"] = std::make_pair(OpArgDocModifyImageMetadata, ModifyImageMetadata);
     out["NegatePixels"] = std::make_pair(OpArgDocNegatePixels, NegatePixels);
+    out["NormalizeLineSamples"] = std::make_pair(OpArgDocNormalizeLineSamples, NormalizeLineSamples);
     out["NormalizePixels"] = std::make_pair(OpArgDocNormalizePixels, NormalizePixels);
     out["OptimizeStaticBeams"] = std::make_pair(OpArgDocOptimizeStaticBeams, OptimizeStaticBeams);
     out["OrderImages"] = std::make_pair(OpArgDocOrderImages, OrderImages);

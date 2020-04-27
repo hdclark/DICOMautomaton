@@ -341,7 +341,7 @@ bool ComputeExtractHistograms(planar_image_collection<float,double> &imagecoll,
 
         const auto x_eps = std::numeric_limits<double>::infinity();  // Ignore the abscissa.
         //const auto y_eps = 0.0001;
-        const auto y_eps = 10.0 * std::sqrt( std::numeric_limits<double>::infinity() );
+        const auto y_eps = std::sqrt( 10.0 * std::numeric_limits<double>::epsilon() );
         {
             auto purged = user_data_s->differential_histograms[key].Purge_Redundant_Samples(x_eps, y_eps);
             user_data_s->differential_histograms[key].samples.swap(purged.samples);
