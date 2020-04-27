@@ -1,0 +1,102 @@
+#!/bin/bash
+
+exit
+
+# Find the git hash (i.e., 'rev' in a nix derivation) of interest, e.g., via git log.
+git log
+
+# Determine the sha256sum that Nix will expect.
+nix-prefetch-url --unpack 'https://github.com/hdclark/ygor/archive/a0f0c5911b72466b587b312cc1bd0aea6c0a32c2.tar.gz'
+unpacking...
+[0.5 MiB DL]
+path is '/nix/store/6bmpmdjlvlyh0462pl1g8x6rb3fsf0n8-a0f0c5911b72466b587b312cc1bd0aea6c0a32c2.tar.gz'
+0356vg6i7fx2c1iaxa5igij80syclzwnjzn5mscxkbhxnwqi5vky
+
+# Erroneous method:
+#    wget 'https://github.com/hdclark/ygor/archive/a0f0c5911b72466b587b312cc1bd0aea6c0a32c2.tar.gz' -O - | sha256sum -
+#    Connecting to github.com (140.82.112.4:443)
+#    Connecting to codeload.github.com (140.82.113.10:443)
+#    -                    100% |************************************************************************|  519k  0:00:00 ETA
+#    c32a908b232c9603e04ddaa27295eec97f52341e4bfbe23aa8d563a14ed8fe83  -
+
+# Another (apparently?) erroneous method:
+#nix-hash --flat --base32 --type sha256 'https://github.com/hdclark/ygor/archive/a0f0c5911b72466b587b312cc1bd0aea6c0a32c2.tar.gz'
+#    trip:/scratch# nix-hash --flat --base32 --type sha256 'https://github.com/hdclark/ygor/archive/a0f0c5911b72466b587b312cc1bd0aea6c0a32c2.tar.gz'
+#    error: opening file 'https://github.com/hdclark/ygor/archive/a0f0c5911b72466b587b312cc1bd0aea6c0a32c2.tar.gz': No such file or directory
+#    trip:/scratch# wget 'https://github.com/hdclark/ygor/archive/a0f0c5911b72466b587b312cc1bd0aea6c0a32c2.tar.gz'
+#    Connecting to github.com (140.82.113.3:443)
+#    Connecting to codeload.github.com (140.82.114.10:443)
+#    a0f0c5911b72466b587b 100% |*************************************************************************|  519k  0:00:00 ETA
+#    trip:/scratch# nix-hash --flat --base32 --type sha256 'a0f0c5911b72466b587b312cc1bd0aea6c0a32c2.tar.gz'
+#    10zyv17a2qymm0xf5ysb3qs54zy9xsap58ns9ph075ic4f5r0an3
+
+
+# Building a nixpkgs-style derivation directly.
+#
+# Note: this nix file does NOT rely on any special nixpkgs repos. It uses the default.
+#
+# Note: this nix file invokes multiple (local) nix files to provide necessary dependencies.
+nix build -L -f default.nix
+
+# Or, compile a single nixpkgs-style derivation file.
+#
+# Note: custom dependencies likely won't be handled this way.
+nix-build -E 'with import <nixpkgs> {}; callPackage ./ygor_derivation.nix {}'
+
+# Or, compile a nixpkg derivation file directly from the repo.
+cd /path/to/.../nixpkgs/
+nix-build -E 'with import <nixpkgs> {}; callPackage ./pkgs/development/libraries/ygor/default.nix {}'
+
+
+# Building a nixpkgs-style derivation with alternative nixpkgs source and with (possibly) overridden build environment:
+cp ygor_derivation.nix derivation.nix
+nix build -L -f release.nix nix-build-clang
+./result/bin/testcompile
+
+# Add the result to the current environment (note: binaries only).
+nix-env -i ./result
+
+# Launch a shell to test a derivation.
+nix-shell --pure default.nix
+ldd -r $(/usr/bin/which regex_tester)
+ldd -r $(/usr/bin/which fits_replace_nans)
+ldd -r $(/usr/bin/which parse_TAR_files)
+# Ensure the environment is capable of linking Ygor correctly:
+#    echo '#include <YgorMisc.h> ' > /tmp/in.cc
+#    echo 'int main(int argc, char **argv){ FUNCINFO("OK!") ; return 0; }' >> /tmp/in.cc
+#    g++ /tmp/in.cc -o /tmp/test -lygor
+#    /tmp/test
+#    --(I) In function: main: OK!.
+
+
+# Test the built library with a simplistic derivation that merely attempts to include a source and link the built library.
+#
+# Note: if the library has not been built already, it will be build on-demand. If it isn't part of nixpkgs, it won't work.
+cp ygor_derivation.nix derivation.nix
+nix build -L -f release.nix nix-build-clang
+
+
+##########################################################################################
+
+# Misc.
+nix-env -i gcc binutils
+nix-shell -p gcc --run "nix-shell '<nixpkgs>' -A binutils"                            
+nix-env -f. -iA ygor
+
+
+# Add to nixpkgs repo:
+cd nixpkgs
+vi pkgs/top-level/all-packages.nix  # Ensure ygor is added in the appropriate section.
+
+
+Invocations from https://github.com/grahamc/ofborg :
+HOME=/homeless-shelter NIX_PATH=nixpkgs=$(pwd) nix-build ./default.nix --no-out-link --keep-going -A hello --option restrict-eval true --option build-timeout 1800 --argstr system thesystem --show-trace
+HOME=/homeless-shelter NIX_PATH=nixpkgs=$(pwd) nix-instantiate ./pkgs/top-level/release.nix -A manual --option restrict-eval true --option build-timeout 1800 --argstr system thesystem --show-trace
+
+curl -o outpaths.nix https://raw.githubusercontent.com/NixOS/ofborg/released/ofborg/src/outpaths.nix
+$ GC_INITIAL_HEAP_SIZE=4g nix-env -f ./outpaths.nix -qaP --no-name --out-path --arg checkMeta true > out-paths
+
+
+
+
+

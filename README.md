@@ -181,6 +181,15 @@ controlled environment and architecture. This method of distributing
 `DICOMautomaton` is not officially supported, but can simplify distributing
 custom builds in some situations. 
 
+# Other Build Options
+
+A dedicated `Linux` system can be bootstrapped using an up-to-date `Arch Linux`
+system that will package the system-installed `DICOMautomaton` in a truly
+portable virtual machine that can be emulated using `qemu`, including a
+graphical display. See `linux/`. This method is experimental.
+
+`DICOMautomaton` can also be built using the `Nix` package manager. See `nix/`.
+This method is experimental.
 
 # Known Issues
 
