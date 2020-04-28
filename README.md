@@ -183,13 +183,23 @@ custom builds in some situations.
 
 # Other Build Options
 
+A portable `AppImage` can be generated using an existing `Docker` image. This
+method supports graphical operations, but suffers from the same general `glibc`
+incompatibility issues described above. However, it works well if your system
+`glibc` is newer than (or equivalent to) that provided by `Debian` stable.
+External, runtime support programs (e.g., `Zenity`, `Gnuplot`) may be
+incompatible or missing altogether. At the moment no canonical `AppImage`s are
+provided. See `docker/scripts/debian_stable/`.
+
 A dedicated `Linux` system can be bootstrapped using an up-to-date `Arch Linux`
 system that will package the system-installed `DICOMautomaton` in a truly
 portable virtual machine that can be emulated using `qemu`, including a
-graphical display. See `linux/`. This method is experimental.
+graphical display. External, runtime support programs *can* be bundled this way,
+so this method provides the most reliable means of archiving a specific version.
+See `linux/`. Note that this method is experimental.
 
 `DICOMautomaton` can also be built using the `Nix` package manager. See `nix/`.
-This method is experimental.
+Note that this method is experimental.
 
 # Known Issues
 
