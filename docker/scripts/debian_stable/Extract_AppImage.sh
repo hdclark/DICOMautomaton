@@ -16,7 +16,7 @@ printf \
 '#!/bin/bash
 
 set -eu
-mkdir -p /scratch/AppDir/
+mkdir -pv /scratch/AppDir/
 
 cd /scratch/
 wget "https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage"
@@ -26,6 +26,9 @@ chmod 777 ./linuxdeploy-x86_64.AppImage
 
 
 cd /ygorcluster/
+#git clean -fxd
+#git checkout .
+#git pull "https://github.com/hdclark/ygorclustering"
 mkdir build
 cd build
 cmake \
@@ -38,6 +41,9 @@ rm -rf build/
 
 
 cd /explicator/
+#git clean -fxd
+#git checkout .
+#git pull "https://github.com/hdclark/explicator"
 mkdir build
 cd build
 cmake \
@@ -50,6 +56,9 @@ rm -rf build/
 
 
 cd /ygor/
+#git clean -fxd
+#git checkout .
+#git pull "https://github.com/hdclark/ygor"
 mkdir build
 cd build
 cmake \
@@ -66,6 +75,9 @@ rm -rf build/
 
 
 cd /dcma/
+#git clean -fxd
+#git checkout .
+#git pull "https://github.com/hdclark/DICOMautomaton"
 mkdir build
 cd build
 cmake \
@@ -111,14 +123,18 @@ Categories=Science;
   --icon-file /dcma/artifacts/logos/DCMA_cycle_opti.svg \
   --desktop-file dcma.desktop
 
+mv DICOMautomaton*AppImage /passage/
+
 ' > "$create_sh"
 chmod 777 "$create_sh"
 
 sudo docker run -it --rm \
     --network=host \
-    -v "$(pwd)":/scratch/:rw \
+    -v "$(pwd)":/passage/:rw \
     -v "$create_sh":/start/create.sh:ro \
-    -w /scratch/ \
+    -w /passage/ \
     dicomautomaton_webserver_debian_stable:latest \
     /start/create.sh 
+
+sudo chown $(id -u -n):$(id -g -n) *AppImage
 
