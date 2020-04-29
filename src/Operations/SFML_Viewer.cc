@@ -71,8 +71,8 @@ OperationDoc OpArgDocSFML_Viewer(void){
     out.args.emplace_back();
     out.args.back().name = "SingleScreenshot";
     out.args.back().desc = "If 'true', a single screenshot is taken and then the viewer is exited."
-                      " This option works best for quick visual inspections, and should not be"
-                      " used for later processing or analysis.";
+                           " This option works best for quick visual inspections, and should not be"
+                           " used for later processing or analysis.";
     out.args.back().default_val = "false";
     out.args.back().expected = true;
     out.args.back().examples = { "true", "false" };
@@ -80,11 +80,19 @@ OperationDoc OpArgDocSFML_Viewer(void){
     out.args.emplace_back();
     out.args.back().name = "SingleScreenshotFileName";
     out.args.back().desc = "Iff invoking the 'SingleScreenshot' argument, use this string as the screenshot filename."
-                      " If blank, a filename will be generated sequentially.";
+                           " If blank, a filename will be generated sequentially.";
     out.args.back().default_val = "";
     out.args.back().expected = true;
     out.args.back().examples = { "", "/tmp/a_screenshot.png", "afile.png" };
     out.args.back().mimetype = "image/png";
+
+    out.args.emplace_back();
+    out.args.back().name = "FPSLimit";
+    out.args.back().desc = "The upper limit on the frame rate, in seconds as an unsigned integer."
+                           " Note that this value may be treated as a suggestion.";
+    out.args.back().default_val = "60";
+    out.args.back().expected = true;
+    out.args.back().examples = { "60", "30", "10", "1" };
 
     return out;
 }
@@ -97,6 +105,7 @@ Drover SFML_Viewer( Drover DICOM_data,
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto SingleScreenshotStr = OptArgs.getValueStr("SingleScreenshot").value();
     const auto SingleScreenshotFileName = OptArgs.getValueStr("SingleScreenshotFileName").value();
+    const auto FPSLimit = std::stoul( OptArgs.getValueStr("FPSLimit").value() );
 
     //-----------------------------------------------------------------------------------------------------------------
     const auto TrueRegex = Compile_Regex("^tr?u?e?$");
@@ -162,7 +171,7 @@ Drover SFML_Viewer( Drover DICOM_data,
     //Open a window.
     sf::RenderWindow window;
     window.create(sf::VideoMode(640, 480), "DICOMautomaton Image Viewer");
-    window.setFramerateLimit(60);
+    window.setFramerateLimit(FPSLimit);
 
     //Create a secondary plotting window. Gets opened on command.
     sf::RenderWindow plotwindow;
