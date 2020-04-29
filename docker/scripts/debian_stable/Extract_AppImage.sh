@@ -6,7 +6,7 @@
 # Docker image glibc. At the moment, Debian:oldstable is not new enough to
 # compile C++17, so we are stuck with the glibc in Debian:stable.
 
-set -e u
+set -eu
 
 create_sh=$(mktemp '/tmp/dcma_create_appimage_internal_XXXXXXXXX.sh')
 
