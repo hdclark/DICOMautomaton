@@ -53,6 +53,9 @@ set_target_properties(  FITS_File_Loader_obj PROPERTIES POSITION_INDEPENDENT_COD
 add_library(            XYZ_File_Loader_obj OBJECT XYZ_File_Loader.cc )
 set_target_properties(  XYZ_File_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
+add_library(            DVH_File_Loader_obj OBJECT DVH_File_Loader.cc )
+set_target_properties(  DVH_File_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+
 add_library(            TAR_File_Loader_obj OBJECT TAR_File_Loader.cc )
 set_target_properties(  TAR_File_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
@@ -236,6 +239,7 @@ add_executable (dicomautomaton_dispatcher
     $<TARGET_OBJECTS:DICOM_File_Loader_obj>
     $<TARGET_OBJECTS:FITS_File_Loader_obj>
     $<TARGET_OBJECTS:XYZ_File_Loader_obj>
+    $<TARGET_OBJECTS:DVH_File_Loader_obj>
     $<TARGET_OBJECTS:TAR_File_Loader_obj>
     $<TARGET_OBJECTS:3ddose_File_Loader_obj>
     $<TARGET_OBJECTS:OFF_Mesh_File_Loader_obj>
@@ -305,6 +309,7 @@ if(WITH_WT)
         $<TARGET_OBJECTS:DICOM_File_Loader_obj>
         $<TARGET_OBJECTS:FITS_File_Loader_obj>
         $<TARGET_OBJECTS:XYZ_File_Loader_obj>
+        $<TARGET_OBJECTS:DVH_File_Loader_obj>
         $<TARGET_OBJECTS:TAR_File_Loader_obj>
         $<TARGET_OBJECTS:3ddose_File_Loader_obj>
         $<TARGET_OBJECTS:OFF_Mesh_File_Loader_obj>

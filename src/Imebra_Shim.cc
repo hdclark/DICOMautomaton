@@ -817,7 +817,7 @@ std::map<std::string,std::string> get_metadata_top_level_tags(const std::string 
     insert_as_string_if_nonempty(0x0008, 0x0020, "StudyDate");
     insert_as_string_if_nonempty(0x0008, 0x0030, "StudyTime");
     insert_as_string_if_nonempty(0x0008, 0x0090, "ReferringPhysiciansName");
-    insert_as_string_if_nonempty(0x0020, 0x0010, "StudyID");
+    insert_as_string_if_nonempty(0x0020, 0x0010, "StudyID"); // i.e., "Course"
     insert_as_string_if_nonempty(0x0008, 0x0050, "AccessionNumber");
     insert_as_string_if_nonempty(0x0008, 0x1030, "StudyDescription");
 
@@ -2465,7 +2465,7 @@ void Write_Dose_Array(std::shared_ptr<Image_Array> IA, const std::string &Filena
         ds_insert(tds, {0x0008, 0x0020}, fne({ cm["StudyDate"], "19720101" }));
         ds_insert(tds, {0x0008, 0x0030}, fne({ cm["StudyTime"], "010101" }));
         ds_insert(tds, {0x0008, 0x0090}, fne({ cm["ReferringPhysiciansName"], "UNSPECIFIED^UNSPECIFIED" }));
-        ds_insert(tds, {0x0020, 0x0010}, fne({ cm["StudyID"], "DCMA_"_s + Generate_Random_String_of_Length(10) }));
+        ds_insert(tds, {0x0020, 0x0010}, fne({ cm["StudyID"], "DCMA_"_s + Generate_Random_String_of_Length(10) })); // i.e., "Course"
         ds_insert(tds, {0x0008, 0x0050}, fne({ cm["AccessionNumber"], Generate_Random_String_of_Length(14) }));
         ds_insert(tds, {0x0008, 0x1030}, fne({ cm["StudyDescription"], "UNSPECIFIED" }));
 
@@ -2656,7 +2656,7 @@ void Write_CT_Images(std::shared_ptr<Image_Array> IA,
     const auto InstanceCreatorUID = Generate_Random_UID(60);
 
     const auto PatientID = "DCMA_"_s + Generate_Random_String_of_Length(10);
-    const auto StudyID = "DCMA_"_s + Generate_Random_String_of_Length(10);
+    const auto StudyID = "DCMA_"_s + Generate_Random_String_of_Length(10); // i.e., "Course"
     const auto SeriesNumber = Generate_Random_Int_Str(5000, 32767); // Upper: 2^15 - 1.
 
     // TODO: Sample any existing UID (ReferencedFrameOfReferenceUID or FrameofReferenceUID). 

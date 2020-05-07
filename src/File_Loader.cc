@@ -30,6 +30,7 @@
 #include "3ddose_File_Loader.h"
 #include "Line_Sample_File_Loader.h"
 #include "TAR_File_Loader.h"
+#include "DVH_File_Loader.h"
 
 
 
@@ -82,6 +83,13 @@ Load_Files( Drover &DICOM_data,
     if(!Paths.empty()
     && !Load_From_DICOM_Files( DICOM_data, InvocationMetadata, FilenameLex, Paths )){
         FUNCWARN("Failed to load DICOM file");
+        return false;
+    }
+
+    //Standalone file loading: 'tabular DVH' line sample files.
+    if(!Paths.empty()
+    && !Load_From_DVH_Files( DICOM_data, InvocationMetadata, FilenameLex, Paths )){
+        FUNCWARN("Failed to load DVH file");
         return false;
     }
 
