@@ -16,10 +16,18 @@
 class Contour_Data;
 class Image_Array;
 
+
 //------------------ General ----------------------
+//Generic helper functions.
+std::string Generate_Random_UID(long int len);
+
+std::string Generate_Random_Int_Str(long int low, long int high);
+
 //One-offs.
 std::string get_tag_as_string(const std::string &filename, size_t U, size_t L);
+
 std::string get_modality(const std::string &filename);
+
 std::string get_patient_ID(const std::string &filename);
 
 //Mass top-level tag enumeration, for ingress into database.

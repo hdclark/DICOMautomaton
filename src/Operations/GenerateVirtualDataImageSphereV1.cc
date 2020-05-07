@@ -67,15 +67,15 @@ Drover GenerateVirtualDataImageSphereV1(Drover DICOM_data, OperationArgPkg , std
     const double RescaleIntercept = 0.0;
     const std::string OriginFilename = "/dev/null";
     const std::string PatientID = "VirtualDataImageSphereVersion1";
-    const std::string StudyInstanceUID = PatientID + "_Study1";
-    const std::string SeriesInstanceUID = StudyInstanceUID + "_Series1";
-    const std::string FrameofReferenceUID = PatientID;
+    const std::string StudyInstanceUID = Generate_Random_UID(60);
+    const std::string SeriesInstanceUID = Generate_Random_UID(60);
+    const std::string FrameofReferenceUID = Generate_Random_UID(60);
     const std::string Modality = "CT";
 
     // --- The virtual 'signal' image series ---
     loaded_imgs_storage.emplace_back();
     for(long int img_index = 0; img_index < Images; ++img_index){
-        const std::string SOPInstanceUID = Generate_Random_String_of_Length(6);
+        const std::string SOPInstanceUID = Generate_Random_UID(60);
 
         std::unique_ptr<Image_Array> out(new Image_Array());
         out->imagecoll.images.emplace_back();

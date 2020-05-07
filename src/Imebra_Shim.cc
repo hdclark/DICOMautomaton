@@ -45,6 +45,50 @@
 #include "YgorImages.h"
 #include "YgorTAR.h"
 
+
+std::string Generate_Random_UID(long int len){
+    std::string out;
+    const std::string alphanum(R"***(.0123456789)***");
+    std::default_random_engine gen;
+
+    try{
+        std::random_device rd;  //Constructor can fail if many threads create instances (maybe limited fd's?).
+        gen.seed(rd()); //Seed with a true random number.
+    }catch(const std::exception &){
+        const auto timeseed = std::chrono::high_resolution_clock::now().time_since_epoch().count();
+        gen.seed(timeseed); //Seed with time. 
+    }
+
+    std::uniform_int_distribution<int> dist(0,alphanum.length()-1);
+    out = "1.2.840.66.1.";
+    char last = '.';
+    while(static_cast<long int>(out.size()) != len){
+        const auto achar = alphanum[dist(gen)];
+        if((achar == '0') && (last == '.')) continue; // Zeros are not significant.
+        if((achar == '.') && (achar == last)) continue; // Do not double separators.
+        if((achar == '.') && (static_cast<long int>(out.size()+1) == len)) continue; // Do not stop on a separator.
+        out += achar;
+        last = achar;
+    }
+    return out;
+}
+
+std::string Generate_Random_Int_Str(long int L, long int H){
+    std::string out;
+    std::default_random_engine gen;
+
+    try{
+        std::random_device rd;  //Constructor can fail if many threads create instances (maybe limited fd's?).
+        gen.seed(rd()); //Seed with a true random number.
+    }catch(const std::exception &){
+        const auto timeseed = std::chrono::high_resolution_clock::now().time_since_epoch().count();
+        gen.seed(timeseed); //Seed with time. 
+    }
+
+    std::uniform_int_distribution<long int> dist(L,H);
+    return std::to_string(dist(gen));
+}
+
 //----------------- Accessors ---------------------
 
 // seq_group,seq_tag,seq_name or tag_group,tag_tag,tag_name.
@@ -2191,50 +2235,6 @@ Load_TPlan_Config(const std::string &FilenameIn){
     // TODO: verify all states are finite (except for missing components, e.g., MLC positions on a machine not equipped with MLCs.
 
     return std::move(out);
-}
-
-//-------------------- Export -----------------------
-static std::string Generate_Random_UID(long int len){
-    std::string out;
-    static const std::string alphanum(R"***(.0123456789)***");
-    std::default_random_engine gen;
-
-    try{
-        std::random_device rd;  //Constructor can fail if many threads create instances (maybe limited fd's?).
-        gen.seed(rd()); //Seed with a true random number.
-    }catch(const std::exception &){
-        const auto timeseed = std::chrono::high_resolution_clock::now().time_since_epoch().count();
-        gen.seed(timeseed); //Seed with time. 
-    }
-
-    std::uniform_int_distribution<int> dist(0,alphanum.length()-1);
-    out = "1.2.840.66.1.";
-    char last = '.';
-    while(static_cast<long int>(out.size()) != len){
-        const auto achar = alphanum[dist(gen)];
-        if((achar == '0') && (last == '.')) continue; // Zeros are not significant.
-        if((achar == '.') && (achar == last)) continue; // Do not double separators.
-        if((achar == '.') && (static_cast<long int>(out.size()+1) == len)) continue; // Do not stop on a separator.
-        out += achar;
-        last = achar;
-    }
-    return out;
-}
-
-static std::string Generate_Random_Int_Str(long int L, long int H){
-    std::string out;
-    std::default_random_engine gen;
-
-    try{
-        std::random_device rd;  //Constructor can fail if many threads create instances (maybe limited fd's?).
-        gen.seed(rd()); //Seed with a true random number.
-    }catch(const std::exception &){
-        const auto timeseed = std::chrono::high_resolution_clock::now().time_since_epoch().count();
-        gen.seed(timeseed); //Seed with time. 
-    }
-
-    std::uniform_int_distribution<long int> dist(L,H);
-    return std::to_string(dist(gen));
 }
 
 

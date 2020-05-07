@@ -67,10 +67,9 @@ Drover GenerateVirtualDataDoseStairsV1(Drover DICOM_data, OperationArgPkg , std:
     const double RescaleIntercept = 0.0;
     const std::string OriginFilename = "/dev/null";
     const std::string PatientID = "VirtualDataPatientVersion1";
-    const std::string StudyInstanceUID = PatientID + "_Study1";
-    const std::string SeriesInstanceUID = StudyInstanceUID + "_Series1";
-    const std::string SOPInstanceUID = Generate_Random_String_of_Length(6);
-    const std::string FrameofReferenceUID = PatientID;
+    const std::string StudyInstanceUID = Generate_Random_UID(60);
+    const std::string SeriesInstanceUID = Generate_Random_UID(60);
+    const std::string FrameofReferenceUID = Generate_Random_UID(60);
     const std::string Modality = "RTDOSE";
 
 
@@ -78,6 +77,8 @@ Drover GenerateVirtualDataDoseStairsV1(Drover DICOM_data, OperationArgPkg , std:
     loaded_imgs_storage.emplace_back();
     SliceNumber = 1;
     for(long int time_index = 0; time_index < 1; ++time_index, ++SliceNumber){
+        const std::string SOPInstanceUID = Generate_Random_UID(60);
+
         std::unique_ptr<Image_Array> out(new Image_Array());
         out->imagecoll.images.emplace_back();
 

@@ -67,10 +67,9 @@ Drover GenerateVirtualDataContourViaThresholdTestV1(Drover DICOM_data, Operation
     const double RescaleIntercept = 0.0;
     const std::string OriginFilename = "/dev/null";
     const std::string PatientID = "VirtualDataContourViaThresholdTestingVersion1";
-    const std::string StudyInstanceUID = PatientID + "_Study1";
-    const std::string SeriesInstanceUID = StudyInstanceUID + "_Series1";
-    const std::string SOPInstanceUID = Generate_Random_String_of_Length(6);
-    const std::string FrameofReferenceUID = PatientID;
+    const std::string StudyInstanceUID = Generate_Random_UID(60);
+    const std::string SeriesInstanceUID = Generate_Random_UID(60);
+    const std::string FrameofReferenceUID = Generate_Random_UID(60);
     const std::string Modality = "CT";
 
 
@@ -80,6 +79,8 @@ Drover GenerateVirtualDataContourViaThresholdTestV1(Drover DICOM_data, Operation
     for(long int time_index = 0; time_index < NumberOfTemporalPositions; ++time_index, ++SliceNumber){
         const double t = dt * time_index;
         long int FrameReferenceTime = t * 1000.0;
+
+        const std::string SOPInstanceUID = Generate_Random_UID(60);
 
         std::unique_ptr<Image_Array> out(new Image_Array());
         out->imagecoll.images.emplace_back();
