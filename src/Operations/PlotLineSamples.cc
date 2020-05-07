@@ -377,7 +377,8 @@ Drover PlotLineSamples(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std:
         const auto PatientID = (m.count("PatientID") == 0) ? "(no patient ID)" : m["PatientID"];
         const auto ls = (*lsp_it)->line;
 
-        shuttle.emplace_back(ls, PatientID + ": "_s + LineName);
+        shuttle.emplace_back(ls, PatientID + ": "_s + LineName, 
+                             std::vector<std::pair<std::string,std::string>>{{ "1:2", "l"}} );
 
         const auto fn = Get_Unique_Sequential_Filename("/tmp/dcma_line_sample_",4,".txt");
         ls.Write_To_File(fn);
