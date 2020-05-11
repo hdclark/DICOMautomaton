@@ -156,8 +156,6 @@ std::map<std::string, std::string> Read_Header_Block(std::istream &is,
         }else if(key == "Exported by"){         metadata["OperatorsName"] = val;
         }else if(key == "Type"){
             metadata["Modality"] = "Histogram";
-            //metadata["AbscissaScaling"] = "None";
-            //metadata["OrdinateScaling"] = "None";
 
             if(false){
             }else if(val == "Cumulative Dose Volume Histogram"){
@@ -313,6 +311,9 @@ samples_1D<double> Read_Histogram(std::istream &is,
         const double V = std::stod( tokens[i_V] ) * V_scale;
         out.push_back(D, V, inhibit_sort);
     }
+
+    out.metadata["AbscissaScaling"] = "None";
+    out.metadata["OrdinateScaling"] = "None";
 
     if(out.samples.empty()){
         throw std::invalid_argument("Histogram contained no data.");
