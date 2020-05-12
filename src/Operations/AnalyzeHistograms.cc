@@ -283,7 +283,9 @@ Drover AnalyzeHistograms(Drover DICOM_data, OperationArgPkg OptArgs, std::map<st
                     report << "," << ExpandedDescriptionOpt.value_or("");
                 }
 
-                report << std::setprecision(3);
+                // Default to 2 significant digits for reported values.
+                report << std::fixed;
+                report << std::setprecision(2);
                 return;
             };
 
