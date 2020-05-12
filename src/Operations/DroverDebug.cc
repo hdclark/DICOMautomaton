@@ -15,6 +15,14 @@
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 
 
+static void dump_metadata(std::ostream &os,
+                          std::string indent,
+                          const std::map<std::string, std::string> m){
+    for(const auto &p : m){
+        os << indent << "'" << p.first << "' : '" << p.second << "'" << std::endl;
+    }
+    return;
+}
 
 OperationDoc OpArgDocDroverDebug(void){
     OperationDoc out;
@@ -24,15 +32,31 @@ OperationDoc OpArgDocDroverDebug(void){
         "This operation reports basic information on the state of the main Drover class."
         " It can be used to report on the state of the data, which can be useful for debugging.";
 
+    out.args.emplace_back();
+    out.args.back().name = "IncludeMetadata";
+    out.args.back().desc = "Whether to include metadata in the output."
+                           " This data can significantly increase the size of the output.";
+    out.args.back().default_val = "false";
+    out.args.back().expected = true;
+    out.args.back().examples = { "true", "false" };
+
     return out;
 }
 
 
 
 Drover DroverDebug(Drover DICOM_data, 
-                   OperationArgPkg /*OptArgs*/, 
+                   OperationArgPkg OptArgs, 
                    std::map<std::string,std::string> /*InvocationMetadata*/, 
                    std::string /*FilenameLex*/ ){
+
+    //---------------------------------------------- User Parameters --------------------------------------------------
+    const auto IncludeMetadataStr = OptArgs.getValueStr("IncludeMetadata").value();
+
+    //-----------------------------------------------------------------------------------------------------------------
+    const auto regex_true = Compile_Regex("^tr?u?e?$");
+
+    const auto IncludeMetadata = std::regex_match(IncludeMetadataStr, regex_true);
 
     //Image data.
     {
@@ -69,6 +93,10 @@ Drover DroverDebug(Drover DICOM_data,
                              " row_unit, col_unit = " <<
                                  img.row_unit << ", " <<
                                  img.col_unit);
+                    if(IncludeMetadata){
+                        FUNCINFO("    Image " << i_num << " metadata:");
+                        dump_metadata(std::cout, "        ", img.metadata);
+                    }
                     ++i_num;
                 }
                 ++i_arr;
@@ -90,24 +118,30 @@ Drover DroverDebug(Drover DICOM_data,
         size_t c_dat = 0;
         for(auto & cc : DICOM_data.contour_data->ccs){
             FUNCINFO("  contour_collection " <<
-                     c_dat++ <<
+                     c_dat <<
                      " has " <<
                      cc.contours.size() <<
                      " contours");
             size_t c_num = 0;
             for(auto & c : cc.contours){
                 FUNCINFO("    contour " <<
-                         c_num++ <<
+                         c_num <<
                          " has " <<
                          c.points.size() <<
                          " vertices");
                 if(!c.points.empty()){
                     FUNCINFO("      contour " <<
-                         (c_num-1) <<
+                         c_num <<
                          " has average point " <<
                          c.Average_Point());
                 }
+                if(IncludeMetadata){
+                    FUNCINFO("      contour " << c_num << " metadata:");
+                    dump_metadata(std::cout, "          ", c.metadata);
+                }
+                ++c_num;
             }
+            ++c_dat;
         }
     }while(false);
 
@@ -123,6 +157,10 @@ Drover DroverDebug(Drover DICOM_data,
             }else{
                 FUNCINFO("  Point_Cloud " << p_cnt << " has " <<
                          pc->pset.points.size() << " points");
+                if(IncludeMetadata){
+                    FUNCINFO("    Point_Cloud " << p_cnt << " metadata:");
+                    dump_metadata(std::cout, "        ", pc->pset.metadata);
+                }
             }
             ++p_cnt;
         }
@@ -141,6 +179,10 @@ Drover DroverDebug(Drover DICOM_data,
                 FUNCINFO("  Surface_Mesh " << m_cnt << " has " << 
                          sm->meshes.vertices.size() << " vertices and " <<
                          sm->meshes.faces.size() << " faces");
+                if(IncludeMetadata){
+                    FUNCINFO("    Surface_Mesh " << m_cnt << " metadata:");
+                    dump_metadata(std::cout, "        ", sm->meshes.metadata);
+                }
             }
             ++m_cnt;
         }
@@ -158,11 +200,19 @@ Drover DroverDebug(Drover DICOM_data,
             }else{
                 FUNCINFO("  TPlan_Config " << tp_cnt << " has " <<
                          tp->dynamic_states.size() << " beams");
+                if(IncludeMetadata){
+                    FUNCINFO("  TPlan_Config " << tp_cnt << " metadata:");
+                    dump_metadata(std::cout, "      ", tp->metadata);
+                }
 
                 size_t b_cnt = 0;
                 for(const auto &ds : tp->dynamic_states){
                     FUNCINFO("    Beam " << b_cnt << " has " <<
                              ds.static_states.size() << " control points");
+                    if(IncludeMetadata){
+                        FUNCINFO("      Beam " << b_cnt << " metadata:");
+                        dump_metadata(std::cout, "          ", ds.metadata);
+                    }
                     ++b_cnt;
                 }
             }
@@ -183,8 +233,10 @@ Drover DroverDebug(Drover DICOM_data,
                 FUNCINFO("  Line_Sample " << l_cnt << " has " << 
                          lsp->line.samples.size() << " datum and " <<
                          lsp->line.metadata.size() << " metadata keys");
-
-                //for(const auto &mp : lsp->line.metadata) std::cout << "    '" << mp.first << "' : '" << mp.second << "'" << std::endl;
+                if(IncludeMetadata){
+                    FUNCINFO("    Line_Sample " << l_cnt << " metadata:");
+                    dump_metadata(std::cout, "        ", lsp->line.metadata);
+                }
             }
             ++l_cnt;
         }
