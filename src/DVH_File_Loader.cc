@@ -375,6 +375,7 @@ bool Load_From_DVH_Files( Drover &DICOM_data,
                 lsamp_data.emplace_back( std::make_shared<Line_Sample>() );
                 lsamp_data.back()->line.samples.swap( histogram.samples );
                 lsamp_data.back()->line.metadata = roi_level_metadata;
+                lsamp_data.back()->line.metadata.merge( histogram.metadata );
 
                 // Purge unneeded samples.
                 const auto x_eps = std::numeric_limits<double>::infinity();  // Ignore the abscissa.

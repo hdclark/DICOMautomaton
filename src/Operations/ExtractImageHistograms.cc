@@ -365,31 +365,6 @@ Drover ExtractImageHistograms(Drover DICOM_data, OperationArgPkg OptArgs, std::m
             //lsamp_abs_ptr->line.metadata["OrdinateScaling"] = "None"; // Absolute values.
             if(UserComment) lsamp_abs_ptr->line.metadata["UserComment"] = UserComment.value();
         }
-
-/*
-            for(const auto &m_p : advh_p.second){
-                const auto dose = m_p.first;
-                const auto vol_abs = m_p.second.first;
-                lsamp_abs_ptr->line.push_back(dose, vol_abs, inhibit_sort);
-            }
-            lsamp_abs_ptr->line.stable_sort();
-
-
-            // The relative volume variant.
-            DICOM_data.lsamp_data.emplace_back( std::make_shared<Line_Sample>() );
-            auto lsamp_rel_ptr = DICOM_data.lsamp_data.back();
-
-            *lsamp_rel_ptr = *lsamp_abs_ptr;
-            lsamp_rel_ptr->line.metadata["VolumeScaling"] = "Normalized";
-
-            lsamp_rel_ptr->line.samples.clear();
-            for(const auto &m_p : advh_p.second){
-                const auto dose = m_p.first;
-                const auto vol_rel = m_p.second.second;
-                lsamp_rel_ptr->line.push_back(dose, vol_rel, inhibit_sort);
-            }
-            lsamp_rel_ptr->line.stable_sort();
-*/
     }
 
     return DICOM_data;

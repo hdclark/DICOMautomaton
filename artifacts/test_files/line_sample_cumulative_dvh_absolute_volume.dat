@@ -1,15 +1,15 @@
-# metadata: DVHType = Cumulative
-# metadata: DifferentialDVHMaxDose = 0.306269
-# metadata: DifferentialDVHMeanDose = 0.070207
-# metadata: DifferentialDVHMinDose = 0.003774
-# metadata: DoseScaling = None
+# metadata: AbscissaScaling = None
+# metadata: DistributionMax = 0.306269
+# metadata: DistributionMean = 0.070207
+# metadata: DistributionMin = 0.003774
+# metadata: HistogramType = Cumulative
 # metadata: LineName = heart_abs
-# metadata: Modality = DVH
+# metadata: Modality = Histogram
 # metadata: NormalizedROIName = Heart
+# metadata: OrdinateScaling = None
 # metadata: PatientID = na
 # metadata: ROIName = heart
 # metadata: UserComment = heart
-# metadata: VolumeScaling = None
 0 0 766305 0
 0.05 0 389871.25 0
 0.1 0 181033.75 0
