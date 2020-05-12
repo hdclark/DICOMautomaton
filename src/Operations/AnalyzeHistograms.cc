@@ -210,6 +210,8 @@ Drover AnalyzeHistograms(Drover DICOM_data, OperationArgPkg OptArgs, std::map<st
                                    { "HistogramType", ".*Cumulative.*" },
                                    { "AbscissaScaling", ".*None.*" },
                                    { "OrdinateScaling", ".*None.*" } } );
+    
+    FUNCINFO("Selected " << LSs.size() << " line samples for analysis");
 
     for(auto & lsp_it : LSs){
         //const auto Modality = (*lsp_it)->line.metadata["Modality"];
