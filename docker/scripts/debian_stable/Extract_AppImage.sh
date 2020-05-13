@@ -26,9 +26,9 @@ chmod 777 ./linuxdeploy-x86_64.AppImage
 
 
 cd /ygorcluster/
-#git clean -fxd
-#git checkout .
-#git pull "https://github.com/hdclark/ygorclustering"
+git clean -fxd
+git checkout .
+git pull "https://github.com/hdclark/ygorclustering"
 mkdir build
 cd build
 cmake \
@@ -41,9 +41,9 @@ rm -rf build/
 
 
 cd /explicator/
-#git clean -fxd
-#git checkout .
-#git pull "https://github.com/hdclark/explicator"
+git clean -fxd
+git checkout .
+git pull "https://github.com/hdclark/explicator"
 mkdir build
 cd build
 cmake \
@@ -56,9 +56,9 @@ rm -rf build/
 
 
 cd /ygor/
-#git clean -fxd
-#git checkout .
-#git pull "https://github.com/hdclark/ygor"
+git clean -fxd
+git checkout .
+git pull "https://github.com/hdclark/ygor"
 mkdir build
 cd build
 cmake \
@@ -75,9 +75,9 @@ rm -rf build/
 
 
 cd /dcma/
-#git clean -fxd
-#git checkout .
-#git pull "https://github.com/hdclark/DICOMautomaton"
+git clean -fxd
+git checkout .
+git pull "https://github.com/hdclark/DICOMautomaton"
 mkdir build
 cd build
 cmake \
