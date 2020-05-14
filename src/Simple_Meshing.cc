@@ -160,7 +160,7 @@ Estimate_Contour_Correspondence(
         double criteria_w_i_next = std::numeric_limits<double>::infinity();
         double criteria_w_j_next = std::numeric_limits<double>::infinity();
 
-        if(N_edges_consumed_A <= N_A){
+        if(N_edges_consumed_A < N_A){
             // Smallest face area.
             //criteria_w_i_next = 0.5 * ((*p_i_next - *p_i).Cross(*p_j - *p_i) ).length();
 
@@ -218,7 +218,7 @@ Estimate_Contour_Correspondence(
             ////const auto edge_line = (*p_i_next - *p_j).unit();
             //criteria_w_i_next = local_norm.Dot(face_norm) * -1.0;
         }
-        if(N_edges_consumed_B <= N_B){
+        if(N_edges_consumed_B < N_B){
             // Smallest face area.
             //criteria_w_j_next = 0.5 * ((*p_j_next - *p_j).Cross(*p_i - *p_j) ).length();
 
