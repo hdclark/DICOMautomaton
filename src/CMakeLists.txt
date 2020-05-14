@@ -83,6 +83,9 @@ if(WITH_CGAL)
     set_target_properties(  Surface_Meshes_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 endif()
 
+add_library(            Simple_Meshing_obj OBJECT Simple_Meshing.cc )
+set_target_properties(  Simple_Meshing_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+
 add_library(            Write_File_obj OBJECT Write_File.cc)
 set_target_properties(  Write_File_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
@@ -231,6 +234,7 @@ add_executable (dicomautomaton_dispatcher
     $<TARGET_OBJECTS:Contour_Collection_Estimates_obj>
     $<TARGET_OBJECTS:Insert_Contours_obj>
     $<$<BOOL:${WITH_CGAL}>:$<TARGET_OBJECTS:Surface_Meshes_obj>>
+    $<TARGET_OBJECTS:Simple_Meshing_obj>
     $<TARGET_OBJECTS:Regex_Selectors_obj>
 
     $<$<BOOL:${WITH_POSTGRES}>:$<TARGET_OBJECTS:PACS_Loader_obj>>
@@ -301,6 +305,7 @@ if(WITH_WT)
         $<TARGET_OBJECTS:Contour_Collection_Estimates_obj>
         $<TARGET_OBJECTS:Insert_Contours_obj>
         $<$<BOOL:${WITH_CGAL}>:$<TARGET_OBJECTS:Surface_Meshes_obj>>
+        $<TARGET_OBJECTS:Simple_Meshing_obj>
         $<TARGET_OBJECTS:Regex_Selectors_obj>
 
         $<$<BOOL:${WITH_POSTGRES}>:$<TARGET_OBJECTS:PACS_Loader_obj>>
