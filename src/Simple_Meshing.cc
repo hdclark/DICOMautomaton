@@ -157,6 +157,8 @@ Estimate_Contour_Correspondence(
 
     // Estimates the radius of the circumsphere (i.e., the smallest sphere that intersects all vertices) that bounds the
     // embedded triangle ABC.
+    //
+    // Note: see https://en.wikipedia.org/wiki/Circumscribed_circle#Higher_dimensions
     const auto circumsphere_radius = []( const vec3<double> &A,
                                          const vec3<double> &B,
                                          const vec3<double> &C ) -> double {
