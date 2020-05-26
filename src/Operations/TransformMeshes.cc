@@ -184,6 +184,17 @@ Drover TransformMeshes(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std:
             throw std::invalid_argument("Transformation not understood. Cannot continue.");
         }
 
+
+        //// Compute some basic measures for the transformed mesh.
+        //{
+        //    vec3<double> avg_vert(0.0, 0.0, 0.0);
+        //    for(auto &v : (*smp_it)->meshes.vertices){
+        //        avg_vert += v;
+        //    }
+        //    avg_vert /= static_cast<double>((*smp_it)->meshes.vertices.size());
+        //    FUNCINFO("Average mesh vertex position = " << avg_vert);
+        //}
+
         ++completed;
         FUNCINFO("Completed " << completed << " of " << sm_count
               << " --> " << static_cast<int>(1000.0*(completed)/sm_count)/10.0 << "% done");
