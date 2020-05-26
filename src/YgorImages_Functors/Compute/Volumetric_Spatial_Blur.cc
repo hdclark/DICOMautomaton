@@ -107,13 +107,13 @@ bool ComputeVolumetricSpatialBlur(planar_image_collection<float,double> &imageco
             ud.neighbourhood = ComputeVolumetricNeighbourhoodSamplerUserData::Neighbourhood::Selection;
             ud.f_reduce = f_reduce;
 
-            ud.voxel_triplets = {{ { -3,  0,  0 },    // 0
-                                   { -2,  0,  0 },    // 1
-                                   { -1,  0,  0 },    // 2
-                                   {  0,  0,  0 },    // 3
-                                   {  1,  0,  0 },    // 4
-                                   {  2,  0,  0 },    // 5
-                                   {  3,  0,  0 } }}; // 6
+            ud.voxel_triplets = {{ std::array<long int, 3>{ -3,  0,  0 },    // 0
+                                   std::array<long int, 3>{ -2,  0,  0 },    // 1
+                                   std::array<long int, 3>{ -1,  0,  0 },    // 2
+                                   std::array<long int, 3>{  0,  0,  0 },    // 3
+                                   std::array<long int, 3>{  1,  0,  0 },    // 4
+                                   std::array<long int, 3>{  2,  0,  0 },    // 5
+                                   std::array<long int, 3>{  3,  0,  0 } }}; // 6
 
 
             // Invoke the volumetric sampling routine to compute the above functors.
@@ -131,13 +131,13 @@ bool ComputeVolumetricSpatialBlur(planar_image_collection<float,double> &imageco
             ud.neighbourhood = ComputeVolumetricNeighbourhoodSamplerUserData::Neighbourhood::Selection;
             ud.f_reduce = f_reduce;
 
-            ud.voxel_triplets = {{ {  0, -3,  0 },    // 0
-                                   {  0, -2,  0 },    // 1
-                                   {  0, -1,  0 },    // 2
-                                   {  0,  0,  0 },    // 3
-                                   {  0,  1,  0 },    // 4
-                                   {  0,  2,  0 },    // 5
-                                   {  0,  3,  0 } }}; // 6
+            ud.voxel_triplets = {{ std::array<long int, 3>{  0, -3,  0 },    // 0
+                                   std::array<long int, 3>{  0, -2,  0 },    // 1
+                                   std::array<long int, 3>{  0, -1,  0 },    // 2
+                                   std::array<long int, 3>{  0,  0,  0 },    // 3
+                                   std::array<long int, 3>{  0,  1,  0 },    // 4
+                                   std::array<long int, 3>{  0,  2,  0 },    // 5
+                                   std::array<long int, 3>{  0,  3,  0 } }}; // 6
 
             // Invoke the volumetric sampling routine to compute the above functors.
             if(!imagecoll.Compute_Images( ComputeVolumetricNeighbourhoodSampler, 
@@ -154,13 +154,13 @@ bool ComputeVolumetricSpatialBlur(planar_image_collection<float,double> &imageco
             ud.neighbourhood = ComputeVolumetricNeighbourhoodSamplerUserData::Neighbourhood::Selection;
             ud.f_reduce = f_reduce;
 
-            ud.voxel_triplets = {{ {  0,  0, -3 },    // 0
-                                   {  0,  0, -2 },    // 1
-                                   {  0,  0, -1 },    // 2
-                                   {  0,  0,  0 },    // 3
-                                   {  0,  0,  1 },    // 4
-                                   {  0,  0,  2 },    // 5
-                                   {  0,  0,  3 } }}; // 6
+            ud.voxel_triplets = {{ std::array<long int, 3>{  0,  0, -3 },    // 0
+                                   std::array<long int, 3>{  0,  0, -2 },    // 1
+                                   std::array<long int, 3>{  0,  0, -1 },    // 2
+                                   std::array<long int, 3>{  0,  0,  0 },    // 3
+                                   std::array<long int, 3>{  0,  0,  1 },    // 4
+                                   std::array<long int, 3>{  0,  0,  2 },    // 5
+                                   std::array<long int, 3>{  0,  0,  3 } }}; // 6
 
             // Invoke the volumetric sampling routine to compute the above functors.
             if(!imagecoll.Compute_Images( ComputeVolumetricNeighbourhoodSampler, 

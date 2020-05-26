@@ -262,86 +262,86 @@ Drover IsolatedVoxelFilter(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
                 throw std::logic_error("Replacement strategy incompatible with including self voxel. Refusing to continue.");
             }
             ud.voxel_triplets = {{ 
-                  {  0,  0,  0 }
+                  std::array<long int, 3>{  0,  0,  0 }
             }};
         }
 
         if(false){
             ud.voxel_triplets = {{ 
-                  {  0,  0, -1 }, 
-                  { -1,  0,  0 }, 
-                  {  0, -1,  0 }, 
-                  {  0,  1,  0 }, 
-                  {  1,  0,  0 }, 
+                  std::array<long int, 3>{  0,  0, -1 }, 
+                  std::array<long int, 3>{ -1,  0,  0 }, 
+                  std::array<long int, 3>{  0, -1,  0 }, 
+                  std::array<long int, 3>{  0,  1,  0 }, 
+                  std::array<long int, 3>{  1,  0,  0 }, 
                                   
-                  {  0,  0,  1 }
+                  std::array<long int, 3>{  0,  0,  1 }
             }};
         }
 
         if(false){
             ud.voxel_triplets = {{ 
-                  { -1,  0, -1 },
-                  {  0, -1, -1 },
-                  {  0,  1, -1 },
-                  {  1,  0, -1 },
-                                 
-                  { -1, -1,  0 },
-                  { -1,  1,  0 },
-                  {  1, -1,  0 },
-                  {  1,  1,  0 },
-                                 
-                  { -1,  0,  1 },
-                  {  0, -1,  1 },
-                  {  0,  1,  1 },
-                  {  1,  0,  1 }
+                  std::array<long int, 3>{ -1,  0, -1 },
+                  std::array<long int, 3>{  0, -1, -1 },
+                  std::array<long int, 3>{  0,  1, -1 },
+                  std::array<long int, 3>{  1,  0, -1 },
+
+                  std::array<long int, 3>{ -1, -1,  0 },
+                  std::array<long int, 3>{ -1,  1,  0 },
+                  std::array<long int, 3>{  1, -1,  0 },
+                  std::array<long int, 3>{  1,  1,  0 },
+
+                  std::array<long int, 3>{ -1,  0,  1 },
+                  std::array<long int, 3>{  0, -1,  1 },
+                  std::array<long int, 3>{  0,  1,  1 },
+                  std::array<long int, 3>{  1,  0,  1 }
             }};
         }
 
         if(false){
             ud.voxel_triplets = {{ 
-                  { -1, -1, -1 },
-                  { -1,  1, -1 },
-                  {  1, -1, -1 },
-                  {  1,  1, -1 },
-                  { -1, -1,  1 },
-                  { -1,  1,  1 },
-                  {  1, -1,  1 },
-                  {  1,  1,  1 } 
+                  std::array<long int, 3>{ -1, -1, -1 },
+                  std::array<long int, 3>{ -1,  1, -1 },
+                  std::array<long int, 3>{  1, -1, -1 },
+                  std::array<long int, 3>{  1,  1, -1 },
+                  std::array<long int, 3>{ -1, -1,  1 },
+                  std::array<long int, 3>{ -1,  1,  1 },
+                  std::array<long int, 3>{  1, -1,  1 },
+                  std::array<long int, 3>{  1,  1,  1 } 
             }};
         }
 
-        // All of the above combined into one...
+        // All of std::array<long int, 3>the above combined into one...
         if(true){
             ud.voxel_triplets = {{ 
-                  { -1, -1, -1 },
-                  { -1,  0, -1 },
-                  { -1,  1, -1 },
-                  {  0, -1, -1 },
-                  {  0,  0, -1 },
-                  {  0,  1, -1 },
-                  {  1, -1, -1 },
-                  {  1,  0, -1 },
-                  {  1,  1, -1 },
-                                 
-                  { -1, -1,  0 },
-                  { -1,  0,  0 },
-                  { -1,  1,  0 },
-                  {  0, -1,  0 },
-                  //{  0,  0,  0 },
-                  {  0,  1,  0 },
-                  {  1, -1,  0 },
-                  {  1,  0,  0 },
-                  {  1,  1,  0 },
-                                 
-                  { -1, -1,  1 },
-                  { -1,  0,  1 },
-                  { -1,  1,  1 },
-                  {  0, -1,  1 },
-                  {  0,  0,  1 },
-                  {  0,  1,  1 },
-                  {  1, -1,  1 },
-                  {  1,  0,  1 },
-                  {  1,  1,  1 } 
+                  std::array<long int, 3>{ -1, -1, -1 },
+                  std::array<long int, 3>{ -1,  0, -1 },
+                  std::array<long int, 3>{ -1,  1, -1 },
+                  std::array<long int, 3>{  0, -1, -1 },
+                  std::array<long int, 3>{  0,  0, -1 },
+                  std::array<long int, 3>{  0,  1, -1 },
+                  std::array<long int, 3>{  1, -1, -1 },
+                  std::array<long int, 3>{  1,  0, -1 },
+                  std::array<long int, 3>{  1,  1, -1 },
+
+                  std::array<long int, 3>{ -1, -1,  0 },
+                  std::array<long int, 3>{ -1,  0,  0 },
+                  std::array<long int, 3>{ -1,  1,  0 },
+                  std::array<long int, 3>{  0, -1,  0 },
+                  //std::array<long int, 3>{  0,  0,  0 },
+                  std::array<long int, 3>{  0,  1,  0 },
+                  std::array<long int, 3>{  1, -1,  0 },
+                  std::array<long int, 3>{  1,  0,  0 },
+                  std::array<long int, 3>{  1,  1,  0 },
+
+                  std::array<long int, 3>{ -1, -1,  1 },
+                  std::array<long int, 3>{ -1,  0,  1 },
+                  std::array<long int, 3>{ -1,  1,  1 },
+                  std::array<long int, 3>{  0, -1,  1 },
+                  std::array<long int, 3>{  0,  0,  1 },
+                  std::array<long int, 3>{  0,  1,  1 },
+                  std::array<long int, 3>{  1, -1,  1 },
+                  std::array<long int, 3>{  1,  0,  1 },
+                  std::array<long int, 3>{  1,  1,  1 } 
             }};
         }
         //const auto neighbour_count = ud.voxel_triplets.size();
