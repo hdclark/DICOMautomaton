@@ -107,9 +107,15 @@ Drover ConvertMeshesToContours(Drover DICOM_data, OperationArgPkg OptArgs, std::
 
     auto SMs_all = All_SMs( DICOM_data );
     auto SMs = Whitelist( SMs_all, MeshSelectionStr );
+    const auto sm_count = SMs.size();
+    FUNCINFO("Selected " << sm_count << " meshes");
+
+    auto IAs_all = All_IAs( DICOM_data );
+    auto IAs = Whitelist( IAs_all, ImageSelectionStr );
+    FUNCINFO("Selected " << IAs.size() << " images");
 
     long int completed = 0;
-    const auto sm_count = SMs.size();
+    long int N_new_contours = 0;
     for(auto & smp_it : SMs){
         // Convert to a CGAL mesh.
         std::stringstream ss;
@@ -128,13 +134,13 @@ Drover ConvertMeshesToContours(Drover DICOM_data, OperationArgPkg OptArgs, std::
         //       Proceeding with a manifold mesh can cause lots of issues later.
         //dcma_surface_meshes::Polyhedron surface_mesh = dcma_surface_meshes::FVSMeshToPolyhedron((*smp_it)->meshes);
 
-        auto IAs_all = All_IAs( DICOM_data );
-        auto IAs = Whitelist( IAs_all, ImageSelectionStr );
         for(auto & iap_it : IAs){
             for(const auto &animg : (*iap_it)->imagecoll.images){
                 // Slice the mesh along the image plane.
                 auto lcc = polyhedron_processing::Slice_Polyhedron( surface_mesh, 
                                                                     {{ animg.image_plane() }} );
+
+                N_new_contours += lcc.contours.size();
 
                 // Tag the contours with metadata.
                 for(auto &cop : lcc.contours){
@@ -157,6 +163,7 @@ Drover ConvertMeshesToContours(Drover DICOM_data, OperationArgPkg OptArgs, std::
         FUNCINFO("Completed " << completed << " of " << sm_count
               << " --> " << static_cast<int>(1000.0*(completed)/sm_count)/10.0 << "% done");
     }
+    FUNCINFO("Sliced " << N_new_contours << " new contours");
 
     return DICOM_data;
 }

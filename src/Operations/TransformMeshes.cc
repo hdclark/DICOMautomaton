@@ -116,9 +116,10 @@ Drover TransformMeshes(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std:
 
     auto SMs_all = All_SMs( DICOM_data );
     auto SMs = Whitelist( SMs_all, MeshSelectionStr );
+    const auto sm_count = SMs.size();
+    FUNCINFO("Selected " << sm_count << " meshes");
 
     long int completed = 0;
-    const auto sm_count = SMs.size();
     for(auto & smp_it : SMs){
 
         // Translations.

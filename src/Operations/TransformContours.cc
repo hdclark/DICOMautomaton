@@ -144,6 +144,7 @@ Drover TransformContours(Drover DICOM_data, OperationArgPkg OptArgs, std::map<st
     if(cc_ROIs.empty()){
         throw std::invalid_argument("No contours selected. Cannot continue.");
     }
+    FUNCINFO("Selected " << cc_ROIs.size() << " contours");
 
     for(auto & cc_refw : cc_ROIs){
 
