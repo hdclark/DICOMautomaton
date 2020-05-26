@@ -106,13 +106,13 @@ bool ComputeVolumetricSpatialDerivative(planar_image_collection<float,double> &i
 
     if(false){
     }else if(user_data_s->order == VolumetricSpatialDerivativeEstimator::first){
-        ud.voxel_triplets = {{ {  0,  0,  0 },    // 0
-                               { -1,  0,  0 },    // 1
-                               {  1,  0,  0 },    // 2
-                               {  0, -1,  0 },    // 3
-                               {  0,  1,  0 },    // 4
-                               {  0,  0, -1 },    // 5
-                               {  0,  0,  1 } }}; // 6
+        ud.voxel_triplets = {{ std::array<long int, 3>{  0,  0,  0 },    // 0
+                               std::array<long int, 3>{ -1,  0,  0 },    // 1
+                               std::array<long int, 3>{  1,  0,  0 },    // 2
+                               std::array<long int, 3>{  0, -1,  0 },    // 3
+                               std::array<long int, 3>{  0,  1,  0 },    // 4
+                               std::array<long int, 3>{  0,  0, -1 },    // 5
+                               std::array<long int, 3>{  0,  0,  1 } }}; // 6
         if(false){
         }else if(user_data_s->method == VolumetricSpatialDerivativeMethod::row_aligned){
             ud.f_reduce = [](float, std::vector<float> &shtl, vec3<double>) -> float {
@@ -200,35 +200,35 @@ bool ComputeVolumetricSpatialDerivative(planar_image_collection<float,double> &i
         }
 
     }else if(user_data_s->order == VolumetricSpatialDerivativeEstimator::Sobel_3x3x3){
-        ud.voxel_triplets = {{ { -1, -1, -1 },    //  0
-                               { -1,  0, -1 },    //  1
-                               { -1,  1, -1 },    //  2
-                               {  0, -1, -1 },    //  3
-                               {  0,  0, -1 },    //  4
-                               {  0,  1, -1 },    //  5
-                               {  1, -1, -1 },    //  6
-                               {  1,  0, -1 },    //  7
-                               {  1,  1, -1 },    //  8
+        ud.voxel_triplets = {{ std::array<long int, 3>{ -1, -1, -1 },    //  0
+                               std::array<long int, 3>{ -1,  0, -1 },    //  1
+                               std::array<long int, 3>{ -1,  1, -1 },    //  2
+                               std::array<long int, 3>{  0, -1, -1 },    //  3
+                               std::array<long int, 3>{  0,  0, -1 },    //  4
+                               std::array<long int, 3>{  0,  1, -1 },    //  5
+                               std::array<long int, 3>{  1, -1, -1 },    //  6
+                               std::array<long int, 3>{  1,  0, -1 },    //  7
+                               std::array<long int, 3>{  1,  1, -1 },    //  8
 
-                               { -1, -1,  0 },    //  9
-                               { -1,  0,  0 },    // 10
-                               { -1,  1,  0 },    // 11
-                               {  0, -1,  0 },    // 12
-                               {  0,  0,  0 },    // 13
-                               {  0,  1,  0 },    // 14
-                               {  1, -1,  0 },    // 15
-                               {  1,  0,  0 },    // 16
-                               {  1,  1,  0 },    // 17
+                               std::array<long int, 3>{ -1, -1,  0 },    //  9
+                               std::array<long int, 3>{ -1,  0,  0 },    // 10
+                               std::array<long int, 3>{ -1,  1,  0 },    // 11
+                               std::array<long int, 3>{  0, -1,  0 },    // 12
+                               std::array<long int, 3>{  0,  0,  0 },    // 13
+                               std::array<long int, 3>{  0,  1,  0 },    // 14
+                               std::array<long int, 3>{  1, -1,  0 },    // 15
+                               std::array<long int, 3>{  1,  0,  0 },    // 16
+                               std::array<long int, 3>{  1,  1,  0 },    // 17
 
-                               { -1, -1,  1 },    // 18
-                               { -1,  0,  1 },    // 19
-                               { -1,  1,  1 },    // 20
-                               {  0, -1,  1 },    // 21
-                               {  0,  0,  1 },    // 22
-                               {  0,  1,  1 },    // 23
-                               {  1, -1,  1 },    // 24
-                               {  1,  0,  1 },    // 25
-                               {  1,  1,  1 } }}; // 26
+                               std::array<long int, 3>{ -1, -1,  1 },    // 18
+                               std::array<long int, 3>{ -1,  0,  1 },    // 19
+                               std::array<long int, 3>{ -1,  1,  1 },    // 20
+                               std::array<long int, 3>{  0, -1,  1 },    // 21
+                               std::array<long int, 3>{  0,  0,  1 },    // 22
+                               std::array<long int, 3>{  0,  1,  1 },    // 23
+                               std::array<long int, 3>{  1, -1,  1 },    // 24
+                               std::array<long int, 3>{  1,  0,  1 },    // 25
+                               std::array<long int, 3>{  1,  1,  1 } }}; // 26
 
         // Note: The convolution kernel used here was adapted from
         // https://en.wikipedia.org/wiki/Sobel_operator#Extension_to_other_dimensions (accessed 20190226).

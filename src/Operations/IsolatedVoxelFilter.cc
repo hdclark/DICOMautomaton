@@ -273,7 +273,6 @@ Drover IsolatedVoxelFilter(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
                   std::array<long int, 3>{  0, -1,  0 }, 
                   std::array<long int, 3>{  0,  1,  0 }, 
                   std::array<long int, 3>{  1,  0,  0 }, 
-                                  
                   std::array<long int, 3>{  0,  0,  1 }
             }};
         }
