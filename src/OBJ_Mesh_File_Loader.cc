@@ -13,14 +13,17 @@
 #include <stdexcept>
 #include <string>    
 
-#include <boost/filesystem.hpp>
 #include <cstdlib>            //Needed for exit() calls.
 
-#include "Structs.h"
+#include <boost/filesystem.hpp>
+
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMathIOOBJ.h"
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorString.h"       //Needed for SplitStringToVector, Canonicalize_String2, SplitVector functions.
+
+#include "Structs.h"
+#include "Imebra_Shim.h"
 
 
 bool Load_Mesh_From_OBJ_Files( Drover &DICOM_data,
@@ -66,6 +69,25 @@ bool Load_Mesh_From_OBJ_Files( Drover &DICOM_data,
             ||  (N_faces == 0) ){
                 throw std::runtime_error("Unable to read mesh from file.");
             }
+
+            // Supply generic minimal metadata iff it is needed.
+            std::map<std::string, std::string> generic_metadata;
+
+            generic_metadata["Filename"] = Filename; 
+
+            generic_metadata["PatientID"] = "unspecified";
+            generic_metadata["StudyInstanceUID"] = Generate_Random_UID(60);
+            generic_metadata["SeriesInstanceUID"] = Generate_Random_UID(60);
+            generic_metadata["FrameofReferenceUID"] = Generate_Random_UID(60);
+            generic_metadata["SOPInstanceUID"] = Generate_Random_UID(60);
+            generic_metadata["Modality"] = "SurfaceMesh";
+
+            generic_metadata["MeshName"] = "unspecified"; 
+            generic_metadata["NormalizedMeshName"] = "unspecified"; 
+
+            generic_metadata["ROIName"] = "unspecified"; 
+            generic_metadata["NormalizedROIName"] = "unspecified"; 
+            DICOM_data.smesh_data.back()->meshes.metadata.merge(generic_metadata);
 
             FUNCINFO("Loaded surface mesh with " 
                      << N_verts << " vertices and "
