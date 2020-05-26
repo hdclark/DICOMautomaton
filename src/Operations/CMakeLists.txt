@@ -20,6 +20,7 @@ add_library(Operations_objs OBJECT
     ContourVote.cc
     ContourWholeImages.cc
     ContouringAides.cc
+    ConvertContoursToMeshes.cc
     ConvertContoursToPoints.cc
     ConvertDoseToImage.cc
     ConvertImageToDose.cc

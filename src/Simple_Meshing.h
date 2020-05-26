@@ -27,6 +27,12 @@ Estimate_Contour_Correspondence(
         std::reference_wrapper<contour_of_points<double>> A,
         std::reference_wrapper<contour_of_points<double>> B );
 
+contour_of_points<double>
+Minimally_Amalgamate_Contours(
+        const vec3<double> &ortho_unit,
+        const vec3<double> &pseudo_vert_offset,
+        std::list<std::reference_wrapper<contour_of_points<double>>> B );
+
 /*
 Polyhedron
 Estimate_Surface_Mesh(
