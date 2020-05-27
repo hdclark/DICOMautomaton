@@ -25,7 +25,7 @@ The basic workflow is:
   3. Files of various kinds can be written or a viewer can be invoked. Both
      are implemented as operations that can be chained together sequentially.
 
-Some operations are interactive. Others will run on their own (possibly for for
+Some operations are interactive. Others will run on their own (possibly for
 days or even weeks). Each operation provides a description of the parameters
 that can be configured. To see this documentation, invoke:
 
@@ -42,7 +42,7 @@ for research or support tool purposes only.
 # License and Copying
 
 All materials herein which may be copywrited, where applicable, are. Copyright
-2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019 Hal Clark.
+2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020 Hal Clark.
 
 See [LICENSE.txt] for details about the license. Informally, `DICOMautomaton` is
 available under a GPLv3+ license. The Imebra library is bundled for convenience
