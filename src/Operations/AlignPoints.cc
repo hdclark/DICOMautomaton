@@ -36,107 +36,6 @@
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
 
-struct
-AffineTransform {
-
-    private:
-        // The top-left 3x3 sub-matrix is a rotation matrix. The top right-most column 3-vector is a translation vector.
-        //
-        //     (0,0)    (1,0)    (2,0)  |  (3,0)                               |                  
-        //     (0,1)    (1,1)    (2,1)  |  (3,1)             linear transform  |  translation     
-        //     (0,2)    (1,2)    (2,2)  |  (3,2)     =        (inc. scaling)   |                  
-        //     ---------------------------------           ------------------------------------   
-        //     (0,3)    (1,3)    (2,3)  |  (3,3)                 (zeros)       |  projection     
-        //
-        // Note that the bottom row must remain unaltered to be an Affine transform.
-        //
-        // The relative scale of transformed vectors is controlled by the magnitude of the linear transform column
-        // vectors.
-        //
-        // This transformation makes use of 'homogeneous' coordinates, namely vectors are padded with an extra one.
-        // For convenience this padding is handled internally.
-        //
-        std::array< std::array<double, 4>, 4> t = {{ std::array<double,4>{{ 1.0, 0.0, 0.0, 0.0 }},
-                                                     std::array<double,4>{{ 0.0, 1.0, 0.0, 0.0 }},
-                                                     std::array<double,4>{{ 0.0, 0.0, 1.0, 0.0 }},
-                                                     std::array<double,4>{{ 0.0, 0.0, 0.0, 1.0 }} }};
-
-    public:
-        // Accessors.
-        double &
-        coeff(long int i, long int j){
-            if(!isininc(0L,i,3L) || !isininc(0L,j,2L)){
-                throw std::invalid_argument("Tried to access fixed coefficients. Refusing to continue.");
-            }
-            return this->t[i][j];
-        }
-
-        double
-        read_coeff(long int i, long int j){
-            return this->t.at(i).at(j);
-        }
-
-        // Apply the (full) transformation to a vec3.
-        vec3<double> 
-        apply_to(const vec3<double> &in) const {
-            const auto x = (in.x * this->t[0][0]) + (in.y * this->t[1][0]) + (in.z * this->t[2][0]) + (1.0 * this->t[3][0]);
-            const auto y = (in.x * this->t[0][1]) + (in.y * this->t[1][1]) + (in.z * this->t[2][1]) + (1.0 * this->t[3][1]);
-            const auto z = (in.x * this->t[0][2]) + (in.y * this->t[1][2]) + (in.z * this->t[2][2]) + (1.0 * this->t[3][2]);
-            const auto w = (in.x * this->t[0][3]) + (in.y * this->t[1][3]) + (in.z * this->t[2][3]) + (1.0 * this->t[3][3]);
-
-            if(w != 1.0) throw std::runtime_error("Transformation is not Affine. Refusing to continue.");
-
-            return vec3<double>(x, y, z);
-        }
-
-        // Apply the transformation to a point cloud.
-        void
-        apply_to(point_set<double> &in){
-            for(auto &p : in.points){
-                p = this->apply_to(p);
-            }
-            return;
-        }
-
-        // Write the transformation to a stream.
-        bool
-        write_to( std::ostream &os ){
-            // Maximize precision prior to emitting the vertices.
-            const auto original_precision = os.precision();
-            os.precision( std::numeric_limits<double>::digits10 + 1 );
-            os << this->t[0][0] << " " << this->t[1][0] << " " << this->t[2][0] << " " << this->t[3][0] << std::endl;
-            os << this->t[0][1] << " " << this->t[1][1] << " " << this->t[2][1] << " " << this->t[3][1] << std::endl;
-            os << this->t[0][2] << " " << this->t[1][2] << " " << this->t[2][2] << " " << this->t[3][2] << std::endl;
-            os << this->t[0][3] << " " << this->t[1][3] << " " << this->t[2][3] << " " << this->t[3][3] << std::endl;
-
-            // Reset the precision on the stream.
-            os.precision( original_precision );
-            os.flush();
-            return(!os.fail());
-        }
-
-        // Read the transformation from a stream.
-        bool
-        read_from( std::istream &is ){
-            is >> this->t[0][0] >> this->t[1][0] >> this->t[2][0] >> this->t[3][0];
-            is >> this->t[0][1] >> this->t[1][1] >> this->t[2][1] >> this->t[3][1];
-            is >> this->t[0][2] >> this->t[1][2] >> this->t[2][2] >> this->t[3][2];
-            is >> this->t[0][3] >> this->t[1][3] >> this->t[2][3] >> this->t[3][3];
-
-            const auto machine_eps = std::sqrt( std::numeric_limits<double>::epsilon() );
-            if( (std::fabs(this->t[0][3] - 0.0) > machine_eps)
-            ||  (std::fabs(this->t[1][3] - 0.0) > machine_eps)
-            ||  (std::fabs(this->t[2][3] - 0.0) > machine_eps)
-            ||  (std::fabs(this->t[3][3] - 1.0) > machine_eps) ){
-                FUNCWARN("Unable to read transformation; not Affine");
-                return false;
-            }
-
-            return(!is.fail());
-        }
-
-};
-
 
 // This routine performs a simple centroid-based alignment.
 //
@@ -145,10 +44,10 @@ AffineTransform {
 // Note that this routine only identifies a transform, it does not implement it by altering the point clouds.
 //
 static
-std::optional<AffineTransform>
+std::optional<affine_transform<double>>
 AlignViaCentroid(const point_set<double> & moving,
                  const point_set<double> & stationary ){
-    AffineTransform t;
+    affine_transform<double> t;
 
     // Compute the centroid for both point clouds.
     const auto centroid_s = stationary.Centroid();
@@ -172,10 +71,10 @@ AlignViaCentroid(const point_set<double> & moving,
 // Note that this routine only identifies a transform, it does not implement it by altering the point clouds.
 //
 static
-std::optional<AffineTransform>
+std::optional<affine_transform<double>>
 AlignViaPCA(const point_set<double> & moving,
             const point_set<double> & stationary ){
-    AffineTransform t;
+    affine_transform<double> t;
 
     // Compute the centroid for both point clouds.
     const auto centroid_s = stationary.Centroid();
@@ -388,17 +287,17 @@ AlignViaPCA(const point_set<double> & moving,
 // Note that this routine only identifies a transform, it does not implement it by altering the point clouds.
 //
 static
-std::optional<AffineTransform>
+std::optional<affine_transform<double>>
 AlignViaExhaustiveICP( const point_set<double> & moving,
                        const point_set<double> & stationary,
                        long int max_icp_iters = 100,
                        double f_rel_tol = std::numeric_limits<double>::quiet_NaN() ){
 
     // The WIP transformation.
-    AffineTransform t;
+    affine_transform<double> t;
 
     // The transformation that resulted in the lowest cost estimate so far.
-    AffineTransform t_best;
+    affine_transform<double> t_best;
     double f_best = std::numeric_limits<double>::infinity();
 
     // Compute the centroid for both point clouds.
@@ -515,7 +414,7 @@ AlignViaExhaustiveICP( const point_set<double> & moving,
 */
 
         // Transfer the transformation into a full Affine transformation.
-        t = AffineTransform();
+        t = affine_transform<double>();
 
         // Rotation and scaling components.
         t.coeff(0,0) = A(0,0);
@@ -593,10 +492,10 @@ AlignViaExhaustiveICP( const point_set<double> & moving,
 //
 // TODO: This algorithm is a WIP!
 static
-std::optional<AffineTransform>
+std::optional<affine_transform<double>>
 AlignViaTPSRPM(const point_set<double> & moving,
                const point_set<double> & stationary ){
-    AffineTransform t;
+    affine_transform<double> t;
 
     // Compute the centroid for both point clouds.
     const auto centroid_s = stationary.Centroid();
