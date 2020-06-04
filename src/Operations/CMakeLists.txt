@@ -2,7 +2,6 @@
 
 add_library(Operations_objs OBJECT 
     AccumulateRowsColumns.cc
-    AlignPoints.cc
     AnalyzeHistograms.cc
     AnalyzeLightRadFieldCoincidence.cc
     AnalyzePicketFence.cc
@@ -70,8 +69,10 @@ add_library(Operations_objs OBJECT
     ExportLineSamples.cc
     ExportPointClouds.cc
     ExportSurfaceMeshes.cc
+    ExportWarps.cc
     ExtractImageHistograms.cc
     ExtractAlphaBeta.cc
+    ExtractPointsWarp.cc
     FVPicketFence.cc
     GenerateCalibrationCurve.cc
     GenerateSurfaceMask.cc
@@ -136,6 +137,7 @@ add_library(Operations_objs OBJECT
     VolumetricCorrelationDetector.cc
     VolumetricSpatialBlur.cc
     VolumetricSpatialDerivative.cc
+    WarpPoints.cc
 
     $<$<BOOL:${WITH_SFML}>:PresentationImage.cc>
     $<$<BOOL:${WITH_SFML}>:SFML_Viewer.cc>

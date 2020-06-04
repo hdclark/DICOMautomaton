@@ -19,6 +19,7 @@
 #include <tuple>
 #include <utility>   //For std::pair.
 #include <vector>
+#include <variant>
 #include <any>
 
 #include "Dose_Meld.h"
@@ -1356,6 +1357,40 @@ Line_Sample & Line_Sample::operator=(const Line_Sample &rhs){
 }
 
 //---------------------------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------- Transform3 ------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------------
+Transform3::Transform3(){ }
+
+Transform3::Transform3(const Transform3 &rhs){
+    *this = rhs; //Performs a deep copy (unless copying self).
+}
+
+Transform3 & Transform3::operator=(const Transform3 &rhs){
+    //Performs a deep copy (unless copying self).
+    if(this != &rhs){
+        this->transform = rhs.transform;
+        this->metadata  = rhs.metadata;
+    }
+    return *this;
+}
+
+//Attempts to cast the value if present. Optional is disengaged if key is missing or cast fails.
+template <class U>
+std::optional<U>
+Transform3::GetMetadataValueAs(std::string key) const {
+    const auto metadata_cit = this->metadata.find(key);
+    if( (metadata_cit == this->metadata.end())  || !Is_String_An_X<U>(metadata_cit->second) ){
+        return std::optional<U>();
+    }
+    return std::make_optional(stringtoX<U>(metadata_cit->second));
+}
+template std::optional<uint32_t   > Transform3::GetMetadataValueAs(std::string key) const;
+template std::optional<long int   > Transform3::GetMetadataValueAs(std::string key) const;
+template std::optional<float      > Transform3::GetMetadataValueAs(std::string key) const;
+template std::optional<double     > Transform3::GetMetadataValueAs(std::string key) const;
+template std::optional<std::string> Transform3::GetMetadataValueAs(std::string key) const;
+
+//---------------------------------------------------------------------------------------------------------------------------
 //------------------------------------------------------------ Drover -------------------------------------------------------
 //---------------------------------------------------------------------------------------------------------------------------
 
@@ -1407,7 +1442,8 @@ Drover::Drover( const Drover &in ) : contour_data(in.contour_data),
                                      point_data(in.point_data),
                                      smesh_data(in.smesh_data),
                                      tplan_data(in.tplan_data),
-                                     lsamp_data(in.lsamp_data) {}
+                                     lsamp_data(in.lsamp_data),
+                                     trans_data(in.trans_data) {}
 
 //Member functions.
 void Drover::operator=(const Drover &rhs){
@@ -1418,6 +1454,7 @@ void Drover::operator=(const Drover &rhs){
         this->smesh_data      = rhs.smesh_data;
         this->tplan_data      = rhs.tplan_data;
         this->lsamp_data      = rhs.lsamp_data;
+        this->trans_data      = rhs.trans_data;
     }
     return;
 }
@@ -1959,10 +1996,19 @@ bool Drover::Has_TPlan_Data(void) const {
 }
 
 bool Drover::Has_LSamp_Data(void) const {
-    //Does not verify the point data itself, it merely looks to see if we have any valid Line_Samples attached.
+    //Does not verify the line sample data itself, it merely looks to see if we have any valid Line_Samples attached.
     if(this->lsamp_data.size() == 0) return false;
     for(const auto & ls_it : this->lsamp_data){
         if(ls_it != nullptr) return true; 
+    }
+    return false;
+}
+
+bool Drover::Has_Tran3_Data(void) const {
+    //Does not verify the transforms themselves, it merely looks to see if we have any valid Line_Samples attached.
+    if(this->trans_data.size() == 0) return false;
+    for(const auto & t_it : this->trans_data){
+        if(t_it != nullptr) return true; 
     }
     return false;
 }
@@ -2008,6 +2054,11 @@ void Drover::Concatenate(std::list<std::shared_ptr<Line_Sample>> in){
     return;
 }
 
+void Drover::Concatenate(std::list<std::shared_ptr<Transform3>> in){
+    this->trans_data.splice( this->trans_data.end(), in );
+    return;
+}
+
 void Drover::Concatenate(Drover in){
     this->Concatenate(in.contour_data);
     this->Concatenate(in.image_data);
@@ -2015,6 +2066,7 @@ void Drover::Concatenate(Drover in){
     this->Concatenate(in.smesh_data);
     this->Concatenate(in.tplan_data);
     this->Concatenate(in.lsamp_data);
+    this->Concatenate(in.trans_data);
     return;
 }
 
@@ -2063,6 +2115,11 @@ void Drover::Consume(std::list<std::shared_ptr<Line_Sample>> in){
     return;
 }
 
+void Drover::Consume(std::list<std::shared_ptr<Transform3>> in){
+    this->Concatenate(in);
+    return;
+}
+
 void Drover::Consume(Drover in){
     this->Consume(in.contour_data);
     this->Consume(in.image_data);
@@ -2070,6 +2127,7 @@ void Drover::Consume(Drover in){
     this->Consume(in.smesh_data);
     this->Consume(in.tplan_data);
     this->Consume(in.lsamp_data);
+    this->Consume(in.trans_data);
     return;
 }
 

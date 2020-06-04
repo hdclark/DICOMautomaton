@@ -1,4 +1,4 @@
-// AlignPoints.h.
+// WarpPoints.h.
 
 #pragma once
 
@@ -76,8 +76,8 @@
 
 
 
-OperationDoc OpArgDocAlignPoints(void);
+OperationDoc OpArgDocWarpPoints(void);
 
-Drover AlignPoints(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
+Drover WarpPoints(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                              std::map<std::string, std::string> /*InvocationMetadata*/,
                              std::string /*FilenameLex*/);

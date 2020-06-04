@@ -207,14 +207,14 @@ std::list<std::list<std::shared_ptr<Line_Sample>>::iterator>
 All_LSs( Drover &DICOM_data );
 
 
-// Whitelist point clouds using the provided regex.
+// Whitelist line samples using the provided regex.
 std::list<std::list<std::shared_ptr<Line_Sample>>::iterator>
 Whitelist( std::list<std::list<std::shared_ptr<Line_Sample>>::iterator> lss,
            std::string MetadataKey,
            std::string MetadataValueRegex,
            Regex_Selector_Opts Opts = Regex_Selector_Opts() );
 
-// Whitelist point clouds using a limited vocabulary of specifiers.
+// Whitelist line samples using a limited vocabulary of specifiers.
 std::list<std::list<std::shared_ptr<Line_Sample>>::iterator>
 Whitelist( std::list<std::list<std::shared_ptr<Line_Sample>>::iterator> lss,
            std::string Specifier,
@@ -227,7 +227,39 @@ Whitelist( std::list<std::list<std::shared_ptr<Line_Sample>>::iterator> lss,
                                             std::string> > MetadataKeyValueRegex, // MetadataValueRegex
            Regex_Selector_Opts Opts = Regex_Selector_Opts() );
 
-// Utility function documenting the point cloud whitelist routines for operations.
+// Utility function documenting the line sample whitelist routines for operations.
 OperationArgDoc LSWhitelistOpArgDoc(void);
+
+// ------------------------------------ Transform3 -------------------------------------
+
+// Provide pointers for all transformations into a list.
+//
+// Note: The output is meant to be filtered using the selectors below.
+std::list<std::list<std::shared_ptr<Transform3>>::iterator>
+All_T3s( Drover &DICOM_data );
+
+
+// Whitelist transforms using the provided regex.
+std::list<std::list<std::shared_ptr<Transform3>>::iterator>
+Whitelist( std::list<std::list<std::shared_ptr<Transform3>>::iterator> lss,
+           std::string MetadataKey,
+           std::string MetadataValueRegex,
+           Regex_Selector_Opts Opts = Regex_Selector_Opts() );
+
+// Whitelist transforms using a limited vocabulary of specifiers.
+std::list<std::list<std::shared_ptr<Transform3>>::iterator>
+Whitelist( std::list<std::list<std::shared_ptr<Transform3>>::iterator> lss,
+           std::string Specifier,
+           Regex_Selector_Opts Opts = Regex_Selector_Opts() );
+
+// This is a convenience routine to combine multiple filtering passes into a single logical statement.
+std::list<std::list<std::shared_ptr<Transform3>>::iterator>
+Whitelist( std::list<std::list<std::shared_ptr<Transform3>>::iterator> lss,
+           std::initializer_list< std::pair<std::string,        // MetadataKey
+                                            std::string> > MetadataKeyValueRegex, // MetadataValueRegex
+           Regex_Selector_Opts Opts = Regex_Selector_Opts() );
+
+// Utility function documenting the transform whitelist routines for operations.
+OperationArgDoc T3WhitelistOpArgDoc(void);
 
 

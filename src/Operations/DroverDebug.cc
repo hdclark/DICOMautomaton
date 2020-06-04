@@ -5,7 +5,8 @@
 #include <list>
 #include <map>
 #include <memory>
-#include <string>    
+#include <string>
+#include <variant>
 
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
@@ -239,6 +240,43 @@ Drover DroverDebug(Drover DICOM_data,
                 }
             }
             ++l_cnt;
+        }
+    }
+
+    //Transformation data.
+    {
+        FUNCINFO("There are " << DICOM_data.trans_data.size() << " Transform3s loaded");
+
+        size_t t_cnt = 0;
+        for(auto &t3p : DICOM_data.trans_data){
+
+            if( (t3p == nullptr)
+            ||  std::holds_alternative<std::monostate>(t3p->transform) ){
+                FUNCINFO("  Transform3 " << t_cnt << " is not valid");
+
+            }else{
+                const std::string desc = std::visit([&](auto &&t) -> std::string {
+                    using V = std::decay_t<decltype(t)>;
+                    if constexpr (std::is_same_v<V, std::monostate>){
+                        throw std::logic_error("Transformation is invalid. Unable to continue.");
+                    }else if constexpr (std::is_same_v<V, affine_transform<double>>){
+                        return "an Affine transformation";
+                    }else{
+                        static_assert(std::is_same_v<V,void>, "Transformation not understood.");
+                    }
+                    return "";
+                }, t3p->transform);
+
+                FUNCINFO("  Transform3 " << t_cnt << " holds " << desc);
+                FUNCINFO("  Transform3 " << t_cnt << " has " << 
+                         t3p->metadata.size() << " metadata keys");
+
+                if(IncludeMetadata){
+                    FUNCINFO("    Transform3 " << t_cnt << " metadata:");
+                    dump_metadata(std::cout, "        ", t3p->metadata);
+                }
+            }
+            ++t_cnt;
         }
     }
 

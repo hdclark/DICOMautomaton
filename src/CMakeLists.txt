@@ -10,6 +10,12 @@ set_target_properties(  DCMA_DICOM_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE
 add_library(            BED_Conversion_obj OBJECT BED_Conversion.cc )
 set_target_properties(  BED_Conversion_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
+add_library(            Alignment_Rigid_obj OBJECT Alignment_Rigid.cc )
+set_target_properties(  Alignment_Rigid_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+
+add_library(            Alignment_TPSRPM_obj OBJECT Alignment_TPSRPM.cc )
+set_target_properties(  Alignment_TPSRPM_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+
 add_library(            Colour_Maps_obj OBJECT Colour_Maps.cc )
 set_target_properties(  Colour_Maps_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
@@ -227,6 +233,8 @@ add_executable (dicomautomaton_dispatcher
     $<TARGET_OBJECTS:Structs_obj>
     $<TARGET_OBJECTS:Dose_Meld_obj>
     $<TARGET_OBJECTS:BED_Conversion_obj>
+    $<TARGET_OBJECTS:Alignment_Rigid_obj>
+    $<TARGET_OBJECTS:Alignment_TPSRPM_obj>
     $<TARGET_OBJECTS:Colour_Maps_obj>
     $<TARGET_OBJECTS:Common_Boost_Serialization_obj>
     $<TARGET_OBJECTS:Common_Plotting_obj>
@@ -298,6 +306,8 @@ if(WITH_WT)
         $<TARGET_OBJECTS:Structs_obj>
         $<TARGET_OBJECTS:Dose_Meld_obj>
         $<TARGET_OBJECTS:BED_Conversion_obj>
+        $<TARGET_OBJECTS:Alignment_Rigid_obj>
+        $<TARGET_OBJECTS:Alignment_TPSRPM_obj>
         $<TARGET_OBJECTS:Colour_Maps_obj>
         $<TARGET_OBJECTS:Common_Boost_Serialization_obj>
         $<TARGET_OBJECTS:Common_Plotting_obj>

@@ -860,4 +860,102 @@ OperationArgDoc LSWhitelistOpArgDoc(void){
     return out;
 }
 
+// ------------------------------------ Transform3 -------------------------------------
+
+// Provide pointers for all transforms into a list.
+//
+// Note: The output is meant to be filtered using the selectors below.
+std::list<std::list<std::shared_ptr<Transform3>>::iterator>
+All_T3s( Drover &DICOM_data ){
+    std::list<std::list<std::shared_ptr<Transform3>>::iterator> t3_all;
+
+    for(auto t3p_it = DICOM_data.trans_data.begin(); t3p_it != DICOM_data.trans_data.end(); ++t3p_it){
+        if((*t3p_it) == nullptr) continue;
+        t3_all.push_back(t3p_it);
+    }
+    return t3_all;
+}
+
+
+// Whitelist transforms using the provided regex.
+std::list<std::list<std::shared_ptr<Transform3>>::iterator>
+Whitelist( std::list<std::list<std::shared_ptr<Transform3>>::iterator> t3s,
+           std::string MetadataKey,
+           std::string MetadataValueRegex,
+           Regex_Selector_Opts Opts ){
+
+    auto theregex = Compile_Regex(MetadataValueRegex);
+
+    t3s.remove_if([&](std::list<std::shared_ptr<Transform3>>::iterator t3p_it) -> bool {
+        if((*t3p_it) == nullptr) return true;
+        if(std::holds_alternative<std::monostate>( (*t3p_it)->transform )) return true; // Remove empty transforms.
+
+        if(false){
+        }else if( (Opts.validation == Regex_Selector_Opts::Validation::Representative)
+              ||  (Opts.validation == Regex_Selector_Opts::Validation::Pedantic)        ){
+
+            std::optional<std::string> ValueOpt 
+                    = ( (*t3p_it)->metadata.count(MetadataKey) != 0 ) ?
+                      (*t3p_it)->metadata[MetadataKey] :
+                      std::optional<std::string>();
+            if(ValueOpt){
+                return !(std::regex_match(ValueOpt.value(),theregex));
+            }else if(Opts.nas == Regex_Selector_Opts::NAs::Include){
+                return false;
+            }else if(Opts.nas == Regex_Selector_Opts::NAs::Exclude){
+                return true;
+            }else if(Opts.nas == Regex_Selector_Opts::NAs::TreatAsEmpty){
+                return !(std::regex_match("",theregex));
+            }
+            throw std::logic_error("NAs option not understood. Cannot continue.");
+        }
+        throw std::logic_error("Regex selector option not understood. Cannot continue.");
+        return true; // Should never get here.
+    });
+    return t3s;
+}
+
+
+// Whitelist transforms using a limited vocabulary of specifiers.
+//
+// Note: this routine shares the generic Image_Arrays implementation above.
+std::list<std::list<std::shared_ptr<Transform3>>::iterator>
+Whitelist( std::list<std::list<std::shared_ptr<Transform3>>::iterator> t3s,
+           std::string Specifier,
+           Regex_Selector_Opts Opts ){
+
+    return Whitelist_Core( t3s, Specifier, Opts );
+}    
+
+
+// This is a convenience routine to combine multiple filtering passes into a single logical statement.
+//
+// Note: this routine shares the generic Image_Arrays implementation above.
+std::list<std::list<std::shared_ptr<Transform3>>::iterator>
+Whitelist( std::list<std::list<std::shared_ptr<Transform3>>::iterator> t3s,
+           std::initializer_list< std::pair<std::string, 
+                                            std::string> > MetadataKeyValueRegex,
+           Regex_Selector_Opts Opts ){
+
+    return Whitelist_Core( t3s, MetadataKeyValueRegex, Opts );
+}
+
+
+// Utility function documenting the transform whitelist routines for operations.
+OperationArgDoc T3WhitelistOpArgDoc(void){
+    OperationArgDoc out;
+
+    out.name = "TransformSelection";
+    out.desc = "Select one or more transforms."_s
+               + GenericSelectionInfo("transformation");
+    out.default_val = "all";
+    out.expected = true;
+    out.examples = { "last", "first", "all", "none", 
+                     "#0", "#-0",
+                     "!last", "!#-3",
+                     "key@.*value.*", "key1@.*value1.*;key2@^value2$;first" };
+
+    return out;
+}
+
 

@@ -20,6 +20,7 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+#include <variant>
 #include <any>
 
 #include "YgorFilesDirs.h"
@@ -344,6 +345,27 @@ class Line_Sample {
 };
 
 
+// This class holds a generic vector transformation in $R^3$. It is designed to hold a variety of transformations,
+// ranging in complexity from simple Affine transformations to full-blown deformable registrations.
+class Transform3 {
+    public:
+
+        std::variant< std::monostate,
+                      affine_transform<double> > transform;
+
+        std::map< std::string, std::string > metadata; //User-defined metadata.
+
+        //Constructor/Destructors.
+        Transform3();
+        Transform3(const Transform3 &rhs); //Performs a deep copy (unless copying self).
+
+        //Member functions.
+        Transform3 & operator=(const Transform3 &rhs); //Performs a deep copy (unless copying self).
+
+        template <class U> std::optional<U> GetMetadataValueAs(std::string key) const;
+};
+
+
 //---------------------------------------------------------------------------------------------------------------------------
 //------------------------------------------------------------ Drover -------------------------------------------------------
 //---------------------------------------------------------------------------------------------------------------------------
@@ -438,6 +460,7 @@ class Drover {
         std::list<std::shared_ptr<Surface_Mesh>> smesh_data;
         std::list<std::shared_ptr<TPlan_Config>> tplan_data;
         std::list<std::shared_ptr<Line_Sample>>  lsamp_data;
+        std::list<std::shared_ptr<Transform3>>   trans_data;
     
         //Constructors.
         Drover();
@@ -476,6 +499,7 @@ class Drover {
         bool Has_Mesh_Data(void) const;
         bool Has_TPlan_Data(void) const;
         bool Has_LSamp_Data(void) const;
+        bool Has_Tran3_Data(void) const;
 
         void Concatenate(std::shared_ptr<Contour_Data> in);
         void Concatenate(std::list<std::shared_ptr<Image_Array>> in);
@@ -483,6 +507,7 @@ class Drover {
         void Concatenate(std::list<std::shared_ptr<Surface_Mesh>> in);
         void Concatenate(std::list<std::shared_ptr<TPlan_Config>> in);
         void Concatenate(std::list<std::shared_ptr<Line_Sample>> in);
+        void Concatenate(std::list<std::shared_ptr<Transform3>> in);
         void Concatenate(Drover in);
 
         void Consume(std::shared_ptr<Contour_Data> in);
@@ -491,6 +516,7 @@ class Drover {
         void Consume(std::list<std::shared_ptr<Surface_Mesh>> in);
         void Consume(std::list<std::shared_ptr<TPlan_Config>> in);
         void Consume(std::list<std::shared_ptr<Line_Sample>> in);
+        void Consume(std::list<std::shared_ptr<Transform3>> in);
         void Consume(Drover in);
     
         void Plot_Dose_And_Contours(void) const;

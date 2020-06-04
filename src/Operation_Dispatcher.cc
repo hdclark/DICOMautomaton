@@ -20,7 +20,6 @@
 #include "Structs.h"
 
 #include "Operations/AccumulateRowsColumns.h"
-#include "Operations/AlignPoints.h"
 #include "Operations/AnalyzeHistograms.h"
 #include "Operations/AnalyzeLightRadFieldCoincidence.h"
 #include "Operations/AnalyzePicketFence.h"
@@ -87,9 +86,11 @@
 #include "Operations/ExportFITSImages.h"
 #include "Operations/ExportLineSamples.h"
 #include "Operations/ExportSurfaceMeshes.h"
+#include "Operations/ExportWarps.h"
 #include "Operations/ExportPointClouds.h"
-#include "Operations/ExtractImageHistograms.h"
 #include "Operations/ExtractAlphaBeta.h"
+#include "Operations/ExtractImageHistograms.h"
+#include "Operations/ExtractPointsWarp.h"
 #include "Operations/FVPicketFence.h"
 #include "Operations/GenerateCalibrationCurve.h"
 #include "Operations/GenerateSurfaceMask.h"
@@ -154,6 +155,7 @@
 #include "Operations/VolumetricCorrelationDetector.h"
 #include "Operations/VolumetricSpatialBlur.h"
 #include "Operations/VolumetricSpatialDerivative.h"
+#include "Operations/WarpPoints.h"
 
 #ifdef DCMA_USE_SFML
     #include "Operations/PresentationImage.h"
@@ -198,7 +200,6 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     std::map<std::string, op_packet_t> out;
 
     out["AccumulateRowsColumns"] = std::make_pair(OpArgDocAccumulateRowsColumns, AccumulateRowsColumns);
-    out["AlignPoints"] = std::make_pair(OpArgDocAlignPoints, AlignPoints);
     out["AnalyzeHistograms"] = std::make_pair(OpArgDocAnalyzeHistograms, AnalyzeHistograms);
     out["AnalyzeLightRadFieldCoincidence"] = std::make_pair(OpArgDocAnalyzeLightRadFieldCoincidence, AnalyzeLightRadFieldCoincidence);
     out["AnalyzePicketFence"] = std::make_pair(OpArgDocAnalyzePicketFence, AnalyzePicketFence);
@@ -266,8 +267,10 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["ExportLineSamples"] = std::make_pair(OpArgDocExportLineSamples, ExportLineSamples);
     out["ExportPointClouds"] = std::make_pair(OpArgDocExportPointClouds, ExportPointClouds);
     out["ExportSurfaceMeshes"] = std::make_pair(OpArgDocExportSurfaceMeshes, ExportSurfaceMeshes);
-    out["ExtractImageHistograms"] = std::make_pair(OpArgDocExtractImageHistograms, ExtractImageHistograms);
+    out["ExportWarps"] = std::make_pair(OpArgDocExportWarps, ExportWarps);
     out["ExtractAlphaBeta"] = std::make_pair(OpArgDocExtractAlphaBeta, ExtractAlphaBeta);
+    out["ExtractImageHistograms"] = std::make_pair(OpArgDocExtractImageHistograms, ExtractImageHistograms);
+    out["ExtractPointsWarp"] = std::make_pair(OpArgDocExtractPointsWarp, ExtractPointsWarp);
     out["FVPicketFence"] = std::make_pair(OpArgDocFVPicketFence, FVPicketFence);
     out["GenerateCalibrationCurve"] = std::make_pair(OpArgDocGenerateCalibrationCurve, GenerateCalibrationCurve);
     out["GenerateSurfaceMask"] = std::make_pair(OpArgDocGenerateSurfaceMask, GenerateSurfaceMask);
@@ -332,6 +335,7 @@ std::map<std::string, op_packet_t> Known_Operations(void){
     out["VolumetricCorrelationDetector"] = std::make_pair(OpArgDocVolumetricCorrelationDetector, VolumetricCorrelationDetector);
     out["VolumetricSpatialBlur"] = std::make_pair(OpArgDocVolumetricSpatialBlur, VolumetricSpatialBlur);
     out["VolumetricSpatialDerivative"] = std::make_pair(OpArgDocVolumetricSpatialDerivative, VolumetricSpatialDerivative);
+    out["WarpPoints"] = std::make_pair(OpArgDocWarpPoints, WarpPoints);
 
 #ifdef DCMA_USE_SFML
     out["PresentationImage"] = std::make_pair(OpArgDocPresentationImage, PresentationImage);
