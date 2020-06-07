@@ -66,8 +66,8 @@ AlignViaTPSRPM(const point_set<double> & moving,
     // 'reach' across the point cloud, and (2) deformations are not considered much below the nearest-neighbour spacing
     // (i.e., overfitting).
 
-    const auto N_moving_points = moving.points.size();
-    const auto N_stationary_points = stationary.points.size();
+    const auto N_moving_points = static_cast<long int>(moving.points.size());
+    const auto N_stationary_points = static_cast<long int>(stationary.points.size());
     double mean_nn_sq_dist = std::numeric_limits<double>::quiet_NaN();
     double max_sq_dist = 0.0;
     {
@@ -114,18 +114,16 @@ AlignViaTPSRPM(const point_set<double> & moving,
 
     // Estimate determinstic annealing parameters.
     const double T_step = 0.93; // Should be [0.9:0.99] or so.
-    const double T_start = 1.05 * max_sq_dist; // Slightly larger than all possible to allow any pairing.
-    const double T_end = 0.01 * mean_nn_sq_dist;
-    const double L_1_start = 1.0;
+    const double T_start = 1.05 * std::sqrt(max_sq_dist); // Slightly larger than all possible to allow any pairing.
+    const double T_end = 0.1 * mean_nn_sq_dist;
+    const double L_1_start = 1.0; // * N_moving_points;
     const double L_2_start = 0.01 * L_1_start;
+    const bool use_regularization = true;
 
     FUNCINFO("T_start, T_step, and T_end are " << T_start << ", " << T_step << ", " << T_end);
 
     // Prepare working buffers.
-    const auto M_N_rows = N_moving_points + 1;
-    const auto M_N_cols = N_stationary_points + 1;
-    Eigen::MatrixXd M(M_N_rows, M_N_cols); // The correspondence matrix.
-
+    Eigen::MatrixXd M(N_moving_points + 1, N_stationary_points + 1); // The correspondence matrix.
     Eigen::MatrixXd X(N_moving_points, 4); // Stacked matrix of homogeneous moving set points.
     Eigen::MatrixXd Z(N_moving_points, 4); // Stacked matrix of corresponding homogeneous fixed set points.
     Eigen::MatrixXd k(1, N_moving_points); // TPS kernel vector.
@@ -134,10 +132,10 @@ AlignViaTPSRPM(const point_set<double> & moving,
     // Populate static elements.
     for(size_t i = 0; i < N_moving_points; ++i){
         const auto P_moving = moving.points[i];
-        X(i, 0) = P_moving.x;
-        X(i, 1) = P_moving.y;
-        X(i, 2) = P_moving.z;
-        X(i, 3) = 1.0;
+        X(i, 0) = 1.0;
+        X(i, 1) = P_moving.x;
+        X(i, 2) = P_moving.y;
+        X(i, 3) = P_moving.z;
     }
     for(size_t i = 0; i < N_moving_points; ++i) K(i, i) = 0.0;
     for(size_t i = 0; i < N_moving_points; ++i){
@@ -176,6 +174,53 @@ AlignViaTPSRPM(const point_set<double> & moving,
     a_0 = Eigen::MatrixXd::Identity(4, 4);
     w_0 = Eigen::MatrixXd::Zero(N_moving_points, 4);
 
+// Bookstein TPS formulation.
+Eigen::MatrixXd L = Eigen::MatrixXd::Zero(N_moving_points+4, N_moving_points+4);
+Eigen::MatrixXd Y = Eigen::MatrixXd::Zero(N_moving_points+4, 3);
+Eigen::MatrixXd W_A = Eigen::MatrixXd::Zero(N_moving_points+4, 3);
+const Eigen::MatrixXd I_N4 = Eigen::MatrixXd::Identity(N_moving_points + 4,N_moving_points + 4);
+
+
+// ---- Fill L with static data ----
+
+// "K" kernel part.
+for(size_t i = 0; i < N_moving_points; ++i) L(i, i) = 0.0;
+for(size_t i = 0; i < N_moving_points; ++i){
+    const auto P_i = moving.points[i];
+    for(size_t j = i + 1; j < N_moving_points; ++j){
+        const auto P_j = moving.points[j];
+        const auto dist = P_i.distance(P_j);
+        const auto kij = tps_kernel(dist);
+        L(i, j) = kij;
+        L(j, i) = kij;
+    }
+}
+
+// "P" and "PT" parts.
+for(size_t i = 0; i < N_moving_points; ++i){
+    const auto P_moving = moving.points[i];
+    L(i, N_moving_points + 0) = 1.0;
+    L(i, N_moving_points + 1) = P_moving.x;
+    L(i, N_moving_points + 2) = P_moving.y;
+    L(i, N_moving_points + 3) = P_moving.z;
+
+    L(N_moving_points + 0, i) = 1.0;
+    L(N_moving_points + 1, i) = P_moving.x;
+    L(N_moving_points + 2, i) = P_moving.y;
+    L(N_moving_points + 3, i) = P_moving.z;
+}
+
+// Invert L.
+for(size_t i = 0; i < N_moving_points; ++i) L(i, i) = 0.0;
+Eigen::MatrixXd L_inv = L.completeOrthogonalDecomposition().pseudoInverse();
+
+// Prime the W and A transformation components for the first correspondence update.
+// ---> no initial warp, and identity Affine component.
+W_A(N_moving_points + 1, 0) = 1.0; // x-component.
+W_A(N_moving_points + 2, 1) = 1.0; // y-component.
+W_A(N_moving_points + 3, 2) = 1.0; // z-component.
+
+
     // Prime the correspondence matrix with uniform correspondence terms.
     for(size_t i = 0; i < N_moving_points; ++i){ // row
         for(size_t j = 0; j < N_stationary_points; ++j){ // column
@@ -194,35 +239,44 @@ AlignViaTPSRPM(const point_set<double> & moving,
     }
     M(N_moving_points, N_stationary_points) = 0.0;
 
+
     // Implement the thin-plate spline (TPS) warping function.
     const auto f_tps = [&](const vec3<double> &v) -> vec3<double> {
-        // Update kernel vector.
-        for(size_t i = 0; i < N_moving_points; ++i){
+        // Affine component.
+        Stats::Running_Sum<double> x;
+        Stats::Running_Sum<double> y;
+        Stats::Running_Sum<double> z;
+        x.Digest(W_A(N_moving_points + 0, 0));
+        x.Digest(W_A(N_moving_points + 1, 0) * v.x);
+        x.Digest(W_A(N_moving_points + 2, 0) * v.y);
+        x.Digest(W_A(N_moving_points + 3, 0) * v.z);
+
+        y.Digest(W_A(N_moving_points + 0, 1));
+        y.Digest(W_A(N_moving_points + 1, 1) * v.x);
+        y.Digest(W_A(N_moving_points + 2, 1) * v.y);
+        y.Digest(W_A(N_moving_points + 3, 1) * v.z);
+
+        z.Digest(W_A(N_moving_points + 0, 2));
+        z.Digest(W_A(N_moving_points + 1, 2) * v.x);
+        z.Digest(W_A(N_moving_points + 2, 2) * v.y);
+        z.Digest(W_A(N_moving_points + 3, 2) * v.z);
+
+        for(long int i = 0; i < N_moving_points; ++i){
             const auto P_i = moving.points[i];
             const auto dist = P_i.distance(v);
             const auto ki = tps_kernel(dist);
-            k(0, i) = ki;
+            x.Digest(W_A(i, 0) * ki);
+            y.Digest(W_A(i, 1) * ki);
+            z.Digest(W_A(i, 2) * ki);
         }
-        
-        Eigen::MatrixXd x(1,4);
-        x(0,0) = v.x;
-        x(0,1) = v.y;
-        x(0,2) = v.z;
-        x(0,3) = 1.0;
-
-        Eigen::MatrixXd f = (x * a_0) + (k * w_0);
-
-        //if(v == moving.points[0]){
-        //    FUNCINFO("For " << v << " predicted f is " << f);
-        //}
-
-        // Convert back from homogeneous coordinates.
-        return vec3<double>( f(0,0) / f(0,3),
-                             f(0,1) / f(0,3),
-                             f(0,2) / f(0,3) );
+        const vec3<double> f_v( x.Current_Sum(),
+                                y.Current_Sum(),
+                                z.Current_Sum() );
+        if(!f_v.isfinite()){
+            throw std::runtime_error("Failed to evaluate TPS mapping function. Cannot continue.");
+        }
+        return f_v;
     };
-
-
 
     // Update the correspondence.
     //
@@ -232,25 +286,33 @@ AlignViaTPSRPM(const point_set<double> & moving,
     //       It supports outliers in either point cloud set.
     const auto update_correspondence = [&](double T_now, double s_reg) -> void {
         // Non-outlier coefficients.
+        vec3<double> com_moved(0.0, 0.0, 0.0);
         for(size_t i = 0; i < N_moving_points; ++i){ // row
             const auto P_moving = moving.points[i];
             const auto P_moved = f_tps(P_moving); // Transform the point.
+            com_moved += P_moved; // Numerically unstable. TODO.
             for(size_t j = 0; j < N_stationary_points; ++j){ // column
                 const auto P_stationary = stationary.points[j];
                 const auto dP = P_stationary - P_moved;
-                //M(i, j) = std::exp(-dP.Dot(dP) / (2.0 * T_now)) / T_now;
                 M(i, j) = std::sqrt( 1.0 / T_now ) * std::exp( (s_reg / T_now) - dP.Dot(dP) / (2.0 * T_now ) );
             }
         }
+        com_moved /= static_cast<double>(N_moving_points);
+
+        vec3<double> com_stationary(0.0, 0.0, 0.0);
+        for(size_t j = 0; j < N_stationary_points; ++j){ // column
+            const auto P_stationary = stationary.points[j];
+            com_stationary += P_stationary;
+        }
+        com_stationary /= static_cast<double>(N_stationary_points);
 
         // Moving outlier coefficients.
         {
             const auto i = N_moving_points; // row
-            const auto P_moving = moving.points[i];
+            const auto P_moving = com_moved;
             for(size_t j = 0; j < N_stationary_points; ++j){ // column
                 const auto P_stationary = stationary.points[j];
                 const auto dP = P_stationary - P_moving; // Note: intentionally not transformed.
-                //M(i, j) = std::exp(-dP.Dot(dP) / T_start) / T_start; // Note: always use initial start temperature.
                 M(i, j) = std::sqrt( 1.0 / T_start ) * std::exp( - dP.Dot(dP) / (2.0 * T_start ) );
             }
         }
@@ -260,9 +322,8 @@ AlignViaTPSRPM(const point_set<double> & moving,
             const auto P_moving = moving.points[i];
             const auto P_moved = f_tps(P_moving); // Transform the point.
             const auto j = N_stationary_points; // column
-            const auto P_stationary = stationary.points[j];
+            const auto P_stationary = com_stationary;;
             const auto dP = P_stationary - P_moved;
-            //M(i, j) = std::exp(-dP.Dot(dP) / T_start) / T_start; // Note: always use initial start temperature.
             M(i, j) = std::sqrt( 1.0 / T_start ) * std::exp( - dP.Dot(dP) / (2.0 * T_start ) );
         }
 
@@ -270,7 +331,7 @@ AlignViaTPSRPM(const point_set<double> & moving,
         {
             std::vector<double> row_sums(N_moving_points+1, 0.0);
             std::vector<double> col_sums(N_stationary_points+1, 0.0);
-            for(size_t norm_iter = 0; norm_iter < 10; ++norm_iter){
+            for(size_t norm_iter = 0; norm_iter < 5; ++norm_iter){
 
                 // Tally the current column sums and re-scale the corespondence coefficients.
                 for(size_t j = 0; j < (N_stationary_points+1); ++j){ // column
@@ -281,10 +342,11 @@ AlignViaTPSRPM(const point_set<double> & moving,
                 }
                 for(size_t j = 0; j < (N_stationary_points+1); ++j){ // column
                     if(col_sums[j] < 1.0E-5){ // If too far away, nominate this point as an outlier.
-                        col_sums[j] += 1.0;
-                        M(N_moving_points,j) += 1.0;
+                        continue;
+                        //col_sums[j] += 1.0;
+                        //M(N_moving_points,j) += 1.0;
                     }
-                    for(size_t i = 0; i < (N_moving_points+1); ++i){ // row
+                    for(size_t i = 0; i < N_moving_points; ++i){ // row, intentionally ignoring the outlier coeff.
                         M(i,j) = M(i,j) / col_sums[j];
                     }
                 }
@@ -298,10 +360,11 @@ AlignViaTPSRPM(const point_set<double> & moving,
                 }
                 for(size_t i = 0; i < (N_moving_points+1); ++i){ // row
                     if(row_sums[i] < 1.0E-5){ // If too far away, nominate this point as an outlier.
-                        row_sums[i] += 1.0;
-                        M(i,N_stationary_points) += 1.0;
+                        continue;
+                        //row_sums[i] += 1.0;
+                        //M(i,N_stationary_points) += 1.0;
                     }
-                    for(size_t j = 0; j < (N_stationary_points+1); ++j){ // column
+                    for(size_t j = 0; j < N_stationary_points; ++j){ // column, intentionally ignoring the outlier coeff.
                         M(i,j) = M(i,j) / row_sums[i];
                     }
                 }
@@ -314,7 +377,6 @@ AlignViaTPSRPM(const point_set<double> & moving,
         if(!M.allFinite()){
             throw std::runtime_error("Failed to compute coefficient matrix.");
         }
-
         return;
     };
 
@@ -322,37 +384,66 @@ AlignViaTPSRPM(const point_set<double> & moving,
     //
     // Note: This sub-routine solves for the TPS solution using the current correspondence.
     const auto update_transformation = [&](double T_now, double lambda) -> void {
+
+        // Update the L matrix inverse using current regularization lambda.
+        if(use_regularization){
+            L_inv = (L - I_N4*lambda).completeOrthogonalDecomposition().pseudoInverse();
+        }
+
+        // Fill the Y vector with the corresponding points.
         const auto softassign_outlier_min = 1.0E-4;
-
-        // Update the elements that depend on the correspondence.
-        for(size_t i = 0; i < N_moving_points; ++i){
+        for(long int i = 0; i < N_moving_points; ++i){
             // Only needed for 'Double-sided outlier handling' approach from Yang et al (2011).
-            //const auto col_sum = std::max(M.row(i).sum(), softassign_outlier_min);
+            const auto col_sum = std::max(M.row(i).sum(), softassign_outlier_min);
 
-            vec3<double> z(0.0, 0.0, 0.0);
+            Stats::Running_Sum<double> c_x;
+            Stats::Running_Sum<double> c_y;
+            Stats::Running_Sum<double> c_z;
             for(size_t j = 0; j < N_stationary_points; ++j){ // column
                 const auto P_stationary = stationary.points[j];
 
                 // Original formulation from Chui and Rangaran.
-                const auto weight = M(i,j);
+                //const auto weight = M(i,j);
 
                 // 'Double-sided outlier handling' approach from Yang et al (2011).
-                //const auto weight = M(i,j) / col_sum;
+                const auto weight = M(i,j) / col_sum;
 
-                z += P_stationary * weight;
+                const auto weighted_P = P_stationary * weight;
+                c_x.Digest(weighted_P.x);
+                c_y.Digest(weighted_P.y);
+                c_z.Digest(weighted_P.z);
             }
-            Z(i, 0) = z.x;
-            Z(i, 1) = z.y;
-            Z(i, 2) = z.z;
-            Z(i, 3) = 1.0;
+            Y(i, 0) = c_x.Current_Sum();
+            Y(i, 1) = c_y.Current_Sum();
+            Y(i, 2) = c_z.Current_Sum();
         }
 
+        // Update W_A.
+        W_A = L_inv * Y;
+
+        if(!W_A.allFinite()){
+            throw std::runtime_error("Failed to update transformation.");
+        }
+
+/*
         // Original paper and Chui's thesis version as written.
         //
         // Note: this implementation is numerically unstable!
         //Eigen::MatrixXd inner_prod = (Q2.transpose() * K * Q2 + I * lambda).inverse();
         //w_0 = Q2 * inner_prod * Q2.transpose() * Z;
         //a_0 = R.inverse() * Q1.transpose() * (Z - K * w_0);
+
+        // Same as Chui's original version, but using the Moore-Penrose pseudo-inverse.
+        //
+        // This method seems to work OK, but is slower than the LDLT decomposition approach below and also does not
+        // explicitly suppress mirroring.
+if(true){
+        Eigen::MatrixXd inner_prod = (Q2.transpose() * K * Q2 + I * lambda);
+        Eigen::MatrixXd inner_prod_inv = inner_prod.completeOrthogonalDecomposition().pseudoInverse();
+        Eigen::MatrixXd R_inv = R.completeOrthogonalDecomposition().pseudoInverse();
+        w_0 = Q2 * inner_prod_inv * Q2.transpose() * Z;
+        a_0 = R_inv * Q1.transpose() * (Z - K * w_0);
+}
 
 //        // Same as Chui's original version, but using more numerically stable LDLT decomposition approach.
 //        const auto N_pts = static_cast<double>(N_moving_points);
@@ -382,6 +473,7 @@ AlignViaTPSRPM(const point_set<double> & moving,
 //            throw std::runtime_error("Unable to update transformation: Cholesky solve B failed.");
 //        }
 
+if(false){
         // More stable LDLT decomposition approach where the Affine component is also regularized to suppress mirroring.
         const auto N_pts = static_cast<double>(N_moving_points);
         {
@@ -420,6 +512,7 @@ AlignViaTPSRPM(const point_set<double> & moving,
                 throw std::runtime_error("Unable to update transformation: Cholesky solve B failed.");
             }
         }
+}
 
 //        // 'Double-sided outlier handling' as outlined by Yang et al in 2011.
 //        // It seems to be even less stable than the above, but perhaps I've implemented it wrong?
@@ -472,6 +565,7 @@ AlignViaTPSRPM(const point_set<double> & moving,
         //FUNCINFO("x   = " << x);
         //FUNCINFO("w_0 = " << w_0);
         //FUNCINFO("a_0 = " << a_0);
+*/
         return;
     };
 
@@ -486,11 +580,13 @@ AlignViaTPSRPM(const point_set<double> & moving,
         const auto mean_row_min_coeff = M.rowwise().minCoeff().sum() / static_cast<double>( M.rows() );
         const auto mean_row_max_coeff = M.rowwise().maxCoeff().sum() / static_cast<double>( M.rows() );
 
+/*
         // Warp component bending energy.
         const auto E_bending = std::abs( (w_0 * Z.transpose()).trace() * lambda );
 
         // Mean error, assuming the current correspondence is both binary and optimal (neither are likely to be true!).
         const auto mean_error = (X - Z).rowwise().norm().sum() / static_cast<double>(X.rows());
+FUNCINFO("Current a_0 = " << std::endl << a_0);
 
         FUNCINFO("Optimizer state: T = " << std::setw(12) << T_now 
                    << ", E_bending = " << std::setw(12) << E_bending 
@@ -500,6 +596,20 @@ AlignViaTPSRPM(const point_set<double> & moving,
         //FUNCINFO("x   = " << x);
         //FUNCINFO("w_0 = " << w_0);
         //FUNCINFO("a_0 = " << a_0);
+*/
+        // Compute the integral bending norm.
+        // V * ( L_inv_n * K * L_inv_n) * V^T
+
+
+       // Eigen::MatrixXd V = Y.block(0, 0, N_moving_points, 3);
+       // Eigen::MatrixXd L_inv_n = L_inv.block(0, 0, N_moving_points, N_moving_points);
+       // Eigen::MatrixXd K = L.block(0, 0, N_moving_points, N_moving_points);
+       // Eigen::MatrixXd norms = V * ( L_inv_n * K * L_inv_n) * V.transpose();
+
+        FUNCINFO("Optimizer state: T = " << std::setw(12) << T_now 
+                   << ", mean min,max corr coeffs = " << std::setw(12) << mean_row_min_coeff
+                   << ", " << std::setw(12) << mean_row_max_coeff );
+                   //<< " bending norm: " << norms);
         return;
     };
 
@@ -521,7 +631,7 @@ AlignViaTPSRPM(const point_set<double> & moving,
         const double L_1 = T_now * L_1_start;
 
         const double L_2 = T_now * L_2_start;
-        const size_t N_iters_at_fixed_T = 5;
+        const size_t N_iters_at_fixed_T = 50;
 
         // Regularization parameter: controls bias toward declaring a point an outlier. Chui and Rangarajan recommend
         // setting it "close to zero."
