@@ -129,9 +129,18 @@ affine_transform<double> t; // Not needed, remove. TODO
     const double T_start = 1.05 * std::sqrt(max_sq_dist); // Slightly larger than all possible to allow any pairing.
                                                           // NOTE: should lose the sqrt for large-scale deformations...
     const double T_end = 0.1 * mean_nn_sq_dist;
-    const double L_1_start = 1.0; // * N_move_points;
-    const double L_2_start = 0.01 * L_1_start;
+    const long int N_iters_at_fixed_T = 50;
     const bool use_regularization = true;
+
+    const double L_1_start = 0.1 * std::sqrt( mean_nn_sq_dist );
+    const double L_2_start = 1.0 * L_1_start;
+
+    enum class SolutionMethod {
+        PseudoInverse,
+        LDLT
+    };
+    SolutionMethod solution_method = SolutionMethod::LDLT;
+
 
     FUNCINFO("T_start, T_step, and T_end are " << T_start << ", " << T_step << ", " << T_end);
 
@@ -200,7 +209,11 @@ affine_transform<double> t; // Not needed, remove. TODO
     // Invert the system matrix.
     //
     // Note: only necessary when regularization is disabled.
-    Eigen::MatrixXd L_inv = L.completeOrthogonalDecomposition().pseudoInverse();
+    Eigen::MatrixXd L_pinv;
+    if( use_regularization 
+    &&  (solution_method == SolutionMethod::PseudoInverse) ){
+        L_pinv = L.completeOrthogonalDecomposition().pseudoInverse();
+    }
 
     // Prime the correspondence matrix with uniform correspondence terms.
     for(long int i = 0; i < N_move_points; ++i){ // row
@@ -376,11 +389,6 @@ affine_transform<double> t; // Not needed, remove. TODO
     // Note: This sub-routine solves for the TPS solution using the current correspondence.
     const auto update_transformation = [&](double T_now, double lambda) -> void {
 
-        // Update the L matrix inverse using current regularization lambda.
-        if(use_regularization){
-            L_inv = (L - I_N4*lambda).completeOrthogonalDecomposition().pseudoInverse();
-        }
-
         // Fill the Y vector with the corresponding points.
         const auto softassign_outlier_min = 1.0E-4;
         for(long int i = 0; i < N_move_points; ++i){
@@ -409,154 +417,44 @@ affine_transform<double> t; // Not needed, remove. TODO
             Y(i, 2) = c_z.Current_Sum();
         }
 
-        // Update W_A.
-        W_A = L_inv * Y;
+        // Use pseudo-inverse method.
+        if(false){
+        }else if(solution_method == SolutionMethod::PseudoInverse){
+            // Update the L matrix inverse using current regularization lambda.
+            if(use_regularization){
+                L_pinv = (L - I_N4 * lambda).completeOrthogonalDecomposition().pseudoInverse();
+            }
+
+            // Update W_A.
+            W_A = L_pinv * Y;
+
+        // Use LDLT method.
+        }else if(solution_method == SolutionMethod::LDLT){
+            Eigen::MatrixXd LHS;
+            if(use_regularization){
+                LHS = (L - I_N4 * lambda);
+            }else{
+                LHS = L;
+            }
+            
+            Eigen::LDLT<Eigen::MatrixXd> LDLT;
+            LDLT.compute(LHS.transpose() * LHS);
+            if(LDLT.info() != Eigen::Success){
+                throw std::runtime_error("Unable to update transformation: LDLT decomposition failed.");
+            }
+            
+            W_A = LDLT.solve(LHS.transpose() * Y);
+            if(LDLT.info() != Eigen::Success){
+                throw std::runtime_error("Unable to update transformation: LDLT solve failed.");
+            }
+        }else{
+            throw std::logic_error("Solution method not understood. Cannot continue.");
+        }
 
         if(!W_A.allFinite()){
             throw std::runtime_error("Failed to update transformation.");
         }
 
-/*
-        // Original paper and Chui's thesis version as written.
-        //
-        // Note: this implementation is numerically unstable!
-        //Eigen::MatrixXd inner_prod = (Q2.transpose() * K * Q2 + I * lambda).inverse();
-        //w_0 = Q2 * inner_prod * Q2.transpose() * Z;
-        //a_0 = R.inverse() * Q1.transpose() * (Z - K * w_0);
-
-        // Same as Chui's original version, but using the Moore-Penrose pseudo-inverse.
-        //
-        // This method seems to work OK, but is slower than the LDLT decomposition approach below and also does not
-        // explicitly suppress mirroring.
-if(true){
-        Eigen::MatrixXd inner_prod = (Q2.transpose() * K * Q2 + I * lambda);
-        Eigen::MatrixXd inner_prod_inv = inner_prod.completeOrthogonalDecomposition().pseudoInverse();
-        Eigen::MatrixXd R_inv = R.completeOrthogonalDecomposition().pseudoInverse();
-        w_0 = Q2 * inner_prod_inv * Q2.transpose() * Z;
-        a_0 = R_inv * Q1.transpose() * (Z - K * w_0);
-}
-
-//        // Same as Chui's original version, but using more numerically stable LDLT decomposition approach.
-//        const auto N_pts = static_cast<double>(N_move_points);
-//        
-//        Eigen::MatrixXd LHS = (Q2.transpose() * K * Q2 + I * lambda * N_pts);
-//        //Eigen::MatrixXd LHS = (Q2.transpose() * K * Q2 + I * lambda);
-//        
-//        Eigen::LDLT<Eigen::MatrixXd> s;
-//        s.compute(LHS.transpose() * LHS);
-//        if(s.info() != Eigen::Success){
-//            throw std::runtime_error("Unable to update transformation: Cholesky decomposition A failed.");
-//        }
-//        
-//        Eigen::MatrixXd g = s.solve(LHS.transpose() * Q2.transpose() * Z);
-//        if(s.info() != Eigen::Success){
-//            throw std::runtime_error("Unable to update transformation: Cholesky solve A failed.");
-//        }
-//        w_0 = Q2 * g;
-//        
-//        s.compute(R.transpose() * R);
-//        if(s.info() != Eigen::Success){
-//            throw std::runtime_error("Unable to update transformation: Cholesky decomposition B failed.");
-//        }
-//        
-//        a_0 = s.solve(LHS.transpose() * Q1.transpose() * (Z - K * w_0));
-//        if(s.info() != Eigen::Success){
-//            throw std::runtime_error("Unable to update transformation: Cholesky solve B failed.");
-//        }
-
-if(false){
-        // More stable LDLT decomposition approach where the Affine component is also regularized to suppress mirroring.
-        const auto N_pts = static_cast<double>(N_move_points);
-        {
-            Eigen::MatrixXd LHS = (Q2.transpose() * K * Q2 + I * lambda);
-        
-            Eigen::LDLT<Eigen::MatrixXd> s;
-            s.compute(LHS.transpose() * LHS);
-            if(s.info() != Eigen::Success){
-                throw std::runtime_error("Unable to update transformation: Cholesky decomposition A failed.");
-            }
-        
-            w_0 = Q2 * s.solve(LHS.transpose() * Q2.transpose() * Z);
-            if(s.info() != Eigen::Success){
-                throw std::runtime_error("Unable to update transformation: Cholesky solve A failed.");
-            }
-        }
-        
-        {
-            const double lambda_d = N_pts * lambda * 1E-4; // <--- Magic factor! Tweaking may be necessary...
-            Eigen::MatrixXd LHS(4 * 2, 4);
-            LHS << R,
-                   ( Eigen::MatrixXd::Identity(4, 4) * lambda_d );
-        
-            Eigen::LDLT<Eigen::MatrixXd> s;
-            s.compute(LHS.transpose() * LHS);
-            if(s.info() != Eigen::Success){
-                throw std::runtime_error("Unable to update transformation: Cholesky decomposition B failed.");
-            }
-        
-            Eigen::MatrixXd RHS(4 * 2, 4);
-            RHS << Q1.transpose() * (Z - K * w_0),
-                   ( Eigen::MatrixXd::Identity(4, 4) * lambda_d );
-        
-            a_0 = s.solve(LHS.transpose() * RHS);
-            if(s.info() != Eigen::Success){
-                throw std::runtime_error("Unable to update transformation: Cholesky solve B failed.");
-            }
-        }
-}
-
-//        // 'Double-sided outlier handling' as outlined by Yang et al in 2011.
-//        // It seems to be even less stable than the above, but perhaps I've implemented it wrong?
-//        const auto N_stat_pts = static_cast<double>(N_stat_points);
-//
-//        {
-//            Eigen::MatrixXd W = Eigen::MatrixXd::Zero(N_move_points, N_move_points);
-//            for(size_t i = 0; i < N_move_points; ++i){
-//                W(i, i) = 1.0 / std::max(M.row(i).sum(), softassign_outlier_min);
-//            }
-//
-//            Eigen::MatrixXd inner = K + (W * lambda * N_stat_pts);
-//            Eigen::MatrixXd LHS = Q2.transpose() * inner * Q2;
-//
-//            Eigen::LDLT<Eigen::MatrixXd> s;
-//            s.compute(LHS.transpose() * LHS);
-//            if(s.info() != Eigen::Success){
-//                throw std::runtime_error("Unable to update transformation: Cholesky decomposition A failed.");
-//            }
-//
-//            w_0 = Q2 * s.solve(LHS.transpose() * Q2.transpose() * Z);
-//            if(s.info() != Eigen::Success){
-//                throw std::runtime_error("Unable to update transformation: Cholesky solve A failed.");
-//            }
-//
-//            const double lambda_d = N_stat_pts * lambda * 1E-4; // <--- Magic factor! Tweaking may be necessary...
-//            Eigen::MatrixXd LHS2(4 * 2, 4);
-//            LHS2 << R,
-//                    ( Eigen::MatrixXd::Identity(4, 4) * lambda_d );
-//
-//            s.compute(LHS2.transpose() * LHS2);
-//            if(s.info() != Eigen::Success){
-//                throw std::runtime_error("Unable to update transformation: Cholesky decomposition B failed.");
-//            }
-//
-//            Eigen::MatrixXd RHS(4 * 2, 4);
-//            RHS << Q1.transpose() * (Z - inner * w_0),
-//                   ( Eigen::MatrixXd::Identity(4, 4) * lambda_d );
-//
-//            a_0 = s.solve(LHS2.transpose() * RHS);
-//            if(s.info() != Eigen::Success){
-//                throw std::runtime_error("Unable to update transformation: Cholesky solve B failed.");
-//            }
-//        }
-
-        if(!w_0.allFinite() || !a_0.allFinite()){
-            throw std::runtime_error("Failed to compute transformation.");
-        }
-
-        //FUNCINFO("x   = " << x);
-        //FUNCINFO("w_0 = " << w_0);
-        //FUNCINFO("a_0 = " << a_0);
-*/
         return;
     };
 
@@ -571,36 +469,9 @@ if(false){
         const auto mean_row_min_coeff = M.rowwise().minCoeff().sum() / static_cast<double>( M.rows() );
         const auto mean_row_max_coeff = M.rowwise().maxCoeff().sum() / static_cast<double>( M.rows() );
 
-/*
-        // Warp component bending energy.
-        const auto E_bending = std::abs( (w_0 * Z.transpose()).trace() * lambda );
-
-        // Mean error, assuming the current correspondence is both binary and optimal (neither are likely to be true!).
-        const auto mean_error = (X - Z).rowwise().norm().sum() / static_cast<double>(X.rows());
-FUNCINFO("Current a_0 = " << std::endl << a_0);
-
-        FUNCINFO("Optimizer state: T = " << std::setw(12) << T_now 
-                   << ", E_bending = " << std::setw(12) << E_bending 
-                   << ", mean err = " << std::setw(12) << mean_error
-                   << ", mean min,max corr coeffs = " << std::setw(12) << mean_row_min_coeff
-                   << ", " << std::setw(12) << mean_row_max_coeff );
-        //FUNCINFO("x   = " << x);
-        //FUNCINFO("w_0 = " << w_0);
-        //FUNCINFO("a_0 = " << a_0);
-*/
-        // Compute the integral bending norm.
-        // V * ( L_inv_n * K * L_inv_n) * V^T
-
-
-       // Eigen::MatrixXd V = Y.block(0, 0, N_move_points, 3);
-       // Eigen::MatrixXd L_inv_n = L_inv.block(0, 0, N_move_points, N_move_points);
-       // Eigen::MatrixXd K = L.block(0, 0, N_move_points, N_move_points);
-       // Eigen::MatrixXd norms = V * ( L_inv_n * K * L_inv_n) * V.transpose();
-
         FUNCINFO("Optimizer state: T = " << std::setw(12) << T_now 
                    << ", mean min,max corr coeffs = " << std::setw(12) << mean_row_min_coeff
                    << ", " << std::setw(12) << mean_row_max_coeff );
-                   //<< " bending norm: " << norms);
         return;
     };
 
@@ -621,18 +492,14 @@ FUNCINFO("Current a_0 = " << std::endl << a_0);
         // Regularization parameter: controls how smooth the TPS interpolation is.
         const double L_1 = T_now * L_1_start;
 
-        const double L_2 = T_now * L_2_start;
-        const long int N_iters_at_fixed_T = 5;
-
         // Regularization parameter: controls bias toward declaring a point an outlier. Chui and Rangarajan recommend
         // setting it "close to zero."
-        const double smoothness_regularization = 0.1 * T_now;
-        //const double smoothness_regularization = L_2;
+        const double L_2 = T_now * L_2_start;
 
         for(long int iter_at_fixed_T = 0; iter_at_fixed_T < N_iters_at_fixed_T; ++iter_at_fixed_T){
 
             // Update correspondence matrix.
-            update_correspondence(T_now, smoothness_regularization);
+            update_correspondence(T_now, L_2);
 
             // Update transformation.
             update_transformation(T_now, L_1);
