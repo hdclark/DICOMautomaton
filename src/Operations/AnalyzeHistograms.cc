@@ -404,8 +404,8 @@ Drover AnalyzeHistograms(Drover DICOM_data, OperationArgPkg OptArgs, std::map<st
                 double V_abs = nan; // in mm^3.
                 if(false){
                 }else if( std::regex_match(LHS_unit, r_cc ) ){
-                    // Convert mm^3 to cm^3.
-                    V_abs = V_lhs / 1000.0;
+                    // Convert cm^3 to mm^3.
+                    V_abs = V_lhs * 1000.0;
                 }else if( std::regex_match(LHS_unit, r_pcnt) ){
                     // Convert from % to mm^3 by taking the highest bin (which should contain all voxels) scaling the entire volume.
                     const auto V_total = DVH_abs_D_abs_V.Get_Extreme_Datum_y().second[2];
