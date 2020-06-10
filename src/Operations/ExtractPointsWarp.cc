@@ -85,7 +85,7 @@ OperationDoc OpArgDocExtractPointsWarp(void){
     out.args.back().desc = "The alignment algorithm to use."
                            " The following alignment options are available: 'centroid'"
 #ifdef DCMA_USE_EIGEN
-                           ", 'PCA', 'exhaustive_icp', and 'TPS-RPM'"
+                           ", 'PCA', 'exhaustive_icp', 'TPS', and 'TPS-RPM'"
 #endif
                            "."
                            " The 'centroid' option finds a rotationless translation the aligns the centroid"
@@ -128,7 +128,19 @@ OperationDoc OpArgDocExtractPointsWarp(void){
                            " ICP is susceptible to outliers and will not scale a point cloud."
                            " It can be used for 2D and 1D degenerate problems, but is not guaranteed to find the"
                            " 'correct' orientation of degenerate or symmetrical point clouds."
-// Undocument this option for now ... still a WIP. TODO
+// Undocument these options for now ... still a WIP. TODO
+//                           ""
+//                           " The 'TPS' or Thin-Plate Spline algorithm provides non-rigid"
+//                           " (i.e., 'deformable') registration between corresponding point sets."
+//                           " The moving and stationary point sets must have the same number of points, and"
+//                           " the $n$^th^ moving point is taken to correspond to the $n$^th^ stationary point."
+//                           " The 'TPS' method does not scale well due in part to inversion of a large (NxN) matrix"
+//                           " and is therefore most suitable when both point clouds"
+//                           " consist of approximately 10-20k points or less. Beyond this, expect slow calculations."
+//                           " This method is not robust to outliers, however a regularization parameter can be used"
+//                           " to control the smoothness of the warp. (Setting to zero will cause the warp function to"
+//                           " exactly interpolate every pair, except due to floating point inaccuracies.)"
+//                           " Consult Bookstein 1989 (doi:10.1109/34.24792) for an overview."
 //                           ""
 //                           " The 'TPS-RPM' or Thin-Plate Spline Robust Point-Matching algorithm provides non-rigid"
 //                           " (i.e., 'deformable') registration."
@@ -150,7 +162,7 @@ OperationDoc OpArgDocExtractPointsWarp(void){
     out.args.back().expected = true;
 #ifdef DCMA_USE_EIGEN
 // Undocument this option for now ... still a WIP. TODO
-//    out.args.back().examples = { "centroid", "pca", "exhaustive_icp", "tps_rpm" };
+//    out.args.back().examples = { "centroid", "pca", "exhaustive_icp", "tps", "tps_rpm" };
     out.args.back().examples = { "centroid", "pca", "exhaustive_icp" };
 #else
     out.args.back().examples = { "centroid" };
@@ -211,7 +223,8 @@ Drover ExtractPointsWarp(Drover DICOM_data, OperationArgPkg OptArgs, std::map<st
 #ifdef DCMA_USE_EIGEN    
     const auto regex_pca    = Compile_Regex("^pc?a?$");
     const auto regex_exhicp = Compile_Regex("^ex?h?a?u?s?t?i?v?e?[-_]?i?c?p?$");
-    const auto regex_tpsrpm = Compile_Regex("^tp?s?[-_]?r?p?m?$");
+    const auto regex_tps    = Compile_Regex("^tp?s?$");
+    const auto regex_tpsrpm = Compile_Regex("^tp?s?[-_]?rp?m?$");
 #endif // DCMA_USE_EIGEN
 
     auto PCs_all = All_PCs( DICOM_data );
@@ -268,6 +281,19 @@ Drover ExtractPointsWarp(Drover DICOM_data, OperationArgPkg OptArgs, std::map<st
                 DICOM_data.trans_data.back()->metadata["WarpType"] = "ExhaustiveICP";
             }else{
                 throw std::runtime_error("Failed to warp using exhaustive ICP.");
+            }
+
+        }else if( std::regex_match(MethodStr, regex_tps) ){
+            auto t_opt = AlignViaTPS( (*pcp_it)->pset,
+                                         (*ref_PCs.front())->pset );
+            if(t_opt){
+                FUNCINFO("Successfully found warp using TPS");
+                DICOM_data.trans_data.emplace_back( std::make_shared<Transform3>( ) );
+                DICOM_data.trans_data.back()->transform = t_opt.value();
+                DICOM_data.trans_data.back()->metadata["Name"] = "unspecified";
+                DICOM_data.trans_data.back()->metadata["WarpType"] = "TPS";
+            }else{
+                throw std::runtime_error("Failed to warp using TPS-RPM.");
             }
 
         }else if( std::regex_match(MethodStr, regex_tpsrpm) ){

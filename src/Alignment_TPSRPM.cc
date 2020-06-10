@@ -38,6 +38,212 @@
 
 
 #ifdef DCMA_USE_EIGEN
+// This routine finds a non-rigid alignment using thin plate splines.
+//
+// Note that the point sets must be ordered and have the same number of points, and each pair (i.e., the nth moving
+// point and the nth stationary point) correspond.
+//
+// Note that this routine only identifies a transform, it does not implement it by altering the inputs.
+//
+std::optional<affine_transform<double>>
+AlignViaTPS(const point_set<double> & moving,
+            const point_set<double> & stationary ){
+
+affine_transform<double> t; // Not needed, remove. TODO
+
+    const auto N_move_points = static_cast<long int>(moving.points.size());
+    const auto N_stat_points = static_cast<long int>(stationary.points.size());
+    if(N_move_points != N_stat_points){
+        FUNCWARN("Unable to perform TPS alignment: point sets have different number of points");
+        return std::nullopt;
+    }
+
+    // Compute the centroid for the stationary point cloud.
+    Stats::Running_Sum<double> com_stat_x;
+    Stats::Running_Sum<double> com_stat_y;
+    Stats::Running_Sum<double> com_stat_z;
+    for(long int j = 0; j < N_stat_points; ++j){
+        const auto P = stationary.points[j];
+        com_stat_x.Digest(P.x);
+        com_stat_y.Digest(P.y);
+        com_stat_z.Digest(P.z);
+    }
+    const vec3<double> com_stat( com_stat_x.Current_Sum() / static_cast<double>(N_stat_points), 
+                                 com_stat_y.Current_Sum() / static_cast<double>(N_stat_points), 
+                                 com_stat_z.Current_Sum() / static_cast<double>(N_stat_points) );
+
+
+    const auto tps_kernel = [](double dist) -> double {
+        // 3D case.
+        //return dist;   // Seems to work much better, but is not valid.
+        //return dist * dist; // Correct, but seems to work poorly.
+
+        // 2D case.
+        //
+        // Note: this also seems to work well for the 3D case. Not sure why...
+        const auto log_d2 = std::log(dist * dist);
+        const auto u = log_d2 * dist * dist;
+        // Note: If points overlap exactly, this assumes they are actually infinitesimally separated.
+        return std::isfinite(u) ? u : 0.0;
+    };
+
+    // Free parameters.
+    //const bool kernel_dimension = 3;  // Necessary? Probably worthwhile... TODO
+    const double lambda = 0.1; // Set to 0 to altogether disable regularization.
+
+    enum class SolutionMethod {
+        PseudoInverse,
+        LDLT
+    };
+    SolutionMethod solution_method = SolutionMethod::LDLT;
+
+
+    // Prepare working buffers.
+    //
+    // Main system matrix.
+    Eigen::MatrixXd L = Eigen::MatrixXd::Zero(N_move_points + 4, N_move_points + 4);
+    // Corresponding points working buffer.
+    Eigen::MatrixXd Y = Eigen::MatrixXd::Zero(N_move_points + 4, 3); 
+
+    // TPS model parameters.
+    //
+    // Contains a 'warp' component (W) and an Affine component (A).
+    Eigen::MatrixXd W_A = Eigen::MatrixXd::Zero(N_move_points + 4, 3);
+
+    // Populate static elements.
+    //
+    // L matrix: "K" kernel part.
+    //
+    // Note: "K"s diagonals are later adjusted using the regularization parameter. They are set to zero initially.
+    //for(long int i = 0; i < N_move_points; ++i) L(i, i) = lambda;
+    for(long int i = 0; i < (N_move_points + 4); ++i) L(i, i) = lambda;
+    for(long int i = 0; i < N_move_points; ++i){
+        const auto P_i = moving.points[i];
+        for(long int j = i + 1; j < N_move_points; ++j){
+            const auto P_j = moving.points[j];
+            const auto dist = P_i.distance(P_j);
+            const auto kij = tps_kernel(dist);
+            L(i, j) = kij;
+            L(j, i) = kij;
+        }
+    }
+
+    // L matrix: "P" and "PT" parts.
+    for(long int i = 0; i < N_move_points; ++i){
+        const auto P_moving = moving.points[i];
+        L(i, N_move_points + 0) = 1.0;
+        L(i, N_move_points + 1) = P_moving.x;
+        L(i, N_move_points + 2) = P_moving.y;
+        L(i, N_move_points + 3) = P_moving.z;
+
+        L(N_move_points + 0, i) = 1.0;
+        L(N_move_points + 1, i) = P_moving.x;
+        L(N_move_points + 2, i) = P_moving.y;
+        L(N_move_points + 3, i) = P_moving.z;
+    }
+
+    // Implement the thin-plate spline (TPS) warping function.
+    const auto f_tps = [&W_A,
+                        &tps_kernel,
+                        &moving,
+                        &N_move_points](const vec3<double> &v) -> vec3<double> {
+        Stats::Running_Sum<double> x;
+        Stats::Running_Sum<double> y;
+        Stats::Running_Sum<double> z;
+
+        // Affine component.
+        x.Digest(W_A(N_move_points + 0, 0));
+        x.Digest(W_A(N_move_points + 1, 0) * v.x);
+        x.Digest(W_A(N_move_points + 2, 0) * v.y);
+        x.Digest(W_A(N_move_points + 3, 0) * v.z);
+
+        y.Digest(W_A(N_move_points + 0, 1));
+        y.Digest(W_A(N_move_points + 1, 1) * v.x);
+        y.Digest(W_A(N_move_points + 2, 1) * v.y);
+        y.Digest(W_A(N_move_points + 3, 1) * v.z);
+
+        z.Digest(W_A(N_move_points + 0, 2));
+        z.Digest(W_A(N_move_points + 1, 2) * v.x);
+        z.Digest(W_A(N_move_points + 2, 2) * v.y);
+        z.Digest(W_A(N_move_points + 3, 2) * v.z);
+
+        // Warp component.
+        for(long int i = 0; i < N_move_points; ++i){
+            const auto P_i = moving.points[i];
+            const auto dist = P_i.distance(v);
+            const auto ki = tps_kernel(dist);
+            x.Digest(W_A(i, 0) * ki);
+            y.Digest(W_A(i, 1) * ki);
+            z.Digest(W_A(i, 2) * ki);
+        }
+
+        const vec3<double> f_v( x.Current_Sum(),
+                                y.Current_Sum(),
+                                z.Current_Sum() );
+        if(!f_v.isfinite()){
+            throw std::runtime_error("Failed to evaluate TPS mapping function. Cannot continue.");
+        }
+        return f_v;
+    };
+
+    // Fill the Y vector with the corresponding points.
+    for(long int j = 0; j < N_stat_points; ++j){ // column
+        const auto P_stationary = stationary.points[j];
+        Y(j, 0) = P_stationary.x;
+        Y(j, 1) = P_stationary.y;
+        Y(j, 2) = P_stationary.z;
+    }
+
+    // Use pseudo-inverse method.
+    if(false){
+    }else if(solution_method == SolutionMethod::PseudoInverse){
+        Eigen::MatrixXd L_pinv = L.completeOrthogonalDecomposition().pseudoInverse();
+
+        // Update W_A.
+        W_A = L_pinv * Y;
+
+    // Use LDLT method.
+    }else if(solution_method == SolutionMethod::LDLT){
+        Eigen::LDLT<Eigen::MatrixXd> LDLT;
+        LDLT.compute(L.transpose() * L);
+        if(LDLT.info() != Eigen::Success){
+            throw std::runtime_error("Unable to update transformation: LDLT decomposition failed.");
+        }
+        
+        W_A = LDLT.solve(L.transpose() * Y);
+        if(LDLT.info() != Eigen::Success){
+            throw std::runtime_error("Unable to update transformation: LDLT solve failed.");
+        }
+    }else{
+        throw std::logic_error("Solution method not understood. Cannot continue.");
+    }
+
+    if(!W_A.allFinite()){
+        FUNCWARN("Failed to solve for a finite-valued transform");
+        return std::nullopt;
+    }
+
+
+    const auto write_to_xyz_file = [&](const std::string &base){
+        const auto fname = Get_Unique_Sequential_Filename(base, 6, ".xyz");
+
+        std::ofstream of(fname);
+        for(long int i = 0; i < N_move_points; ++i){
+            const auto P_moving = moving.points[i];
+            const auto P_moved = f_tps(P_moving);
+            of << P_moved.x << " " << P_moved.y << " " << P_moved.z << std::endl;
+        }
+        return;
+    };
+    write_to_xyz_file("warped_tps_");
+
+    return t;
+}
+#endif // DCMA_USE_EIGEN
+
+
+
+#ifdef DCMA_USE_EIGEN
 // This routine finds a non-rigid alignment using the 'robust point matching: thin plate spline' algorithm.
 //
 // Note that this routine only identifies a transform, it does not implement it by altering the inputs.
@@ -66,14 +272,18 @@ affine_transform<double> t; // Not needed, remove. TODO
                                  com_stat_z.Current_Sum() / static_cast<double>(N_stat_points) );
 
 
-    const auto tps_kernel = [](double dR) -> double {
+    const auto tps_kernel = [](double dist) -> double {
         // 3D case.
-        return dR;
+        //return dist;   // Seems to work much better, but is not valid.
+        //return dist * dist; // Correct, but seems to work poorly.
 
-        //// 2D case.
-        //const auto log_dist = std::log(dist);
-        //// Note: If points overlap exactly, this assumes they are actually infinitesimally separated.
-        //return std::isfinite(log_dist) ? log_dist * dist * dist : 0.0;
+        // 2D case.
+        //
+        // Note: this also seems to work well for the 3D case. Not sure why...
+        const auto log_d2 = std::log(dist * dist);
+        const auto u = log_d2 * dist * dist;
+        // Note: If points overlap exactly, this assumes they are actually infinitesimally separated.
+        return std::isfinite(u) ? u : 0.0;
     };
 
     // Find the largest 'square distance' between (all) points and the average separation of nearest-neighbour points
@@ -126,14 +336,15 @@ affine_transform<double> t; // Not needed, remove. TODO
 
     // Estimate determinstic annealing parameters.
     const double T_step = 0.93; // Should be [0.9:0.99] or so.
-    const double T_start = 1.05 * std::sqrt(max_sq_dist); // Slightly larger than all possible to allow any pairing.
-                                                          // NOTE: should lose the sqrt for large-scale deformations...
-    const double T_end = 0.1 * mean_nn_sq_dist;
-    const long int N_iters_at_fixed_T = 50;
+    const double T_start = 1.05 * max_sq_dist; // Slightly larger than all possible to allow any pairing.
+                                               // NOTE: should lose the sqrt for large-scale deformations...
+    const double T_end = 0.01 * mean_nn_sq_dist;
+    const long int N_iters_at_fixed_T = 5;
     const bool use_regularization = true;
+    const bool seed_with_COM_shift = true;
 
     const double L_1_start = 0.1 * std::sqrt( mean_nn_sq_dist );
-    const double L_2_start = 1.0 * L_1_start;
+    const double L_2_start = 0.1 * L_1_start;
 
     enum class SolutionMethod {
         PseudoInverse,
@@ -203,8 +414,13 @@ affine_transform<double> t; // Not needed, remove. TODO
     W_A(N_move_points + 1, 0) = 1.0; // x-component.
     W_A(N_move_points + 2, 1) = 1.0; // y-component.
     W_A(N_move_points + 3, 2) = 1.0; // z-component.
-    // TODO: should the centroid shift be applied here, or should we let the user explicitly control the starting positions?
 
+    if(seed_with_COM_shift){
+        // Seed the Affine transformation with the output from a simpler rigid registration.
+
+        // ... TODO ...
+
+    }
 
     // Invert the system matrix.
     //
@@ -393,6 +609,10 @@ affine_transform<double> t; // Not needed, remove. TODO
         const auto softassign_outlier_min = 1.0E-4;
         for(long int i = 0; i < N_move_points; ++i){
             // Only needed for 'Double-sided outlier handling' approach from Yang et al (2011).
+            //
+            // TODO: Confirm if this row sum should include the gutter coefficient or not.
+            //
+            // TODO: Also determine if it is even appropriate to keep this term without adding the 'W' matrix that Yang describes.
             const auto col_sum = std::max(M.row(i).sum(), softassign_outlier_min);
 
             Stats::Running_Sum<double> c_x;
@@ -422,7 +642,14 @@ affine_transform<double> t; // Not needed, remove. TODO
         }else if(solution_method == SolutionMethod::PseudoInverse){
             // Update the L matrix inverse using current regularization lambda.
             if(use_regularization){
-                L_pinv = (L - I_N4 * lambda).completeOrthogonalDecomposition().pseudoInverse();
+                // TODO: Would it be easier to just add to the diagonal directly rather than allocate a temp R?
+                Eigen::MatrixXd R = L + I_N4 * lambda; // Regularized version of L.
+                R(N_move_points + 0, N_move_points + 0) = 0.0;
+                R(N_move_points + 1, N_move_points + 1) = 0.0;
+                R(N_move_points + 2, N_move_points + 2) = 0.0;
+                R(N_move_points + 3, N_move_points + 3) = 0.0;
+
+                L_pinv = R.completeOrthogonalDecomposition().pseudoInverse();
             }
 
             // Update W_A.
@@ -432,7 +659,13 @@ affine_transform<double> t; // Not needed, remove. TODO
         }else if(solution_method == SolutionMethod::LDLT){
             Eigen::MatrixXd LHS;
             if(use_regularization){
-                LHS = (L - I_N4 * lambda);
+                // TODO: Would it be easier to just explicitly set the diagonal here?
+                LHS = L + I_N4 * lambda; // Regularized version of L.
+                LHS(N_move_points + 0, N_move_points + 0) = 0.0;
+                LHS(N_move_points + 1, N_move_points + 1) = 0.0;
+                LHS(N_move_points + 2, N_move_points + 2) = 0.0;
+                LHS(N_move_points + 3, N_move_points + 3) = 0.0;
+
             }else{
                 LHS = L;
             }
