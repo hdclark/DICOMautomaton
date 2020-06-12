@@ -238,7 +238,7 @@ Drover DumpImageMeshes(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std:
 
                 const auto emit_vert = [&](vec3<double> pos){
                     const auto defaultprecision = FO.precision();
-                    FO << std::setprecision(std::numeric_limits<long double>::digits10 + 1); 
+                    FO << std::setprecision(std::numeric_limits<long double>::max_digits10); 
                     FO << "v " << pos.x << " " << pos.y << " " << pos.z << std::endl;
                     FO << std::setprecision(defaultprecision);
                     return;

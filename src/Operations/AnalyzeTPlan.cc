@@ -167,7 +167,7 @@ Drover AnalyzeTPlan(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
                 report << "," << ExpandedDescriptionOpt.value_or("");
             }
 
-            report.precision(std::numeric_limits<double>::digits10 + 1);
+            report.precision(std::numeric_limits<double>::max_digits10);
 
             return;
         };

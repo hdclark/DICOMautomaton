@@ -213,7 +213,7 @@ Drover DumpROIContours(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std:
 
                 //Print the vertices.
                 const auto defaultprecision = FO.precision();
-                FO << std::setprecision(std::numeric_limits<long double>::digits10 + 1); 
+                FO << std::setprecision(std::numeric_limits<long double>::max_digits10); 
                 for(const auto &p : c.points){
                     FO << "v " << p.x << " " << p.y << " " << p.z << std::endl;
                 }
