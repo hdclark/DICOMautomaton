@@ -17,16 +17,18 @@
 #include <vector>
 #include <variant>
 
-#include "../Structs.h"
-#include "../Regex_Selectors.h"
-#include "../Thread_Pool.h"
-
 #include "Explicator.h"       //Needed for Explicator class.
+
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorStats.h"        //Needed for Stats:: namespace.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
+
+#include "../Structs.h"
+#include "../Alignment_TPSRPM.h"
+#include "../Regex_Selectors.h"
+#include "../Thread_Pool.h"
 
 #include "ExportWarps.h"
 
@@ -95,7 +97,14 @@ Drover ExportWarps(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::str
 
             // Affine transformations.
             }else if constexpr (std::is_same_v<V, affine_transform<double>>){
-                FUNCINFO("Exporting Affine transformation now");
+                FUNCINFO("Exporting affine transformation now");
+                if(!(t.write_to(FO))){
+                    std::runtime_error("Unable to write to file. Cannot continue.");
+                }
+
+            // Thin-plate spline transformations.
+            }else if constexpr (std::is_same_v<V, thin_plate_spline>){
+                FUNCINFO("Exporting thin-plate spline transformation now");
                 if(!(t.write_to(FO))){
                     std::runtime_error("Unable to write to file. Cannot continue.");
                 }

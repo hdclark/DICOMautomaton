@@ -41,16 +41,17 @@ OperationDoc OpArgDocExtractPointsWarp(void){
         "This operation uses two point clouds (one 'moving' and the other 'stationary' or 'reference') to find a"
         " transformation ('warp') that will map the moving point set to the stationary point set."
         " The resulting transformation encapsulates a 'registration' between the two point sets -- however the"
-        " transformation is generic and can be later be used to move (i.e., 'warp', or 'deform') other objects.";
+        " transformation is generic and can be later be used to move (i.e., 'warp', 'deform') other objects,"
+        " including the 'moving' point set.";
         
-    out.notes.emplace_back(
-        "The output of this operation is a transformation that can later be applied, in principle, to point clouds,"
-        " surface meshes, images, arbitrary vector fields, and any other objects in $R^{3}$."
-    );
     out.notes.emplace_back(
         "The 'moving' point cloud is *not* warped by this operation -- this operation merely identifies a suitable"
         " transformation. Separation of the identification and application of a warp allows the warp to more easily"
         " re-used and applied to multiple objects."
+    );
+    out.notes.emplace_back(
+        "The output of this operation is a transformation that can later be applied, in principle, to point clouds,"
+        " surface meshes, images, arbitrary vector fields, and any other objects in $R^{3}$."
     );
     out.notes.emplace_back(
         "There are multiple algorithms implemented. Some do *not* provide bijective mappings, meaning that swapping"
@@ -128,46 +129,92 @@ OperationDoc OpArgDocExtractPointsWarp(void){
                            " ICP is susceptible to outliers and will not scale a point cloud."
                            " It can be used for 2D and 1D degenerate problems, but is not guaranteed to find the"
                            " 'correct' orientation of degenerate or symmetrical point clouds."
-// Undocument these options for now ... still a WIP. TODO
-//                           ""
-//                           " The 'TPS' or Thin-Plate Spline algorithm provides non-rigid"
-//                           " (i.e., 'deformable') registration between corresponding point sets."
-//                           " The moving and stationary point sets must have the same number of points, and"
-//                           " the $n$^th^ moving point is taken to correspond to the $n$^th^ stationary point."
-//                           " The 'TPS' method does not scale well due in part to inversion of a large (NxN) matrix"
-//                           " and is therefore most suitable when both point clouds"
-//                           " consist of approximately 10-20k points or less. Beyond this, expect slow calculations."
-//                           " This method is not robust to outliers, however a regularization parameter can be used"
-//                           " to control the smoothness of the warp. (Setting to zero will cause the warp function to"
-//                           " exactly interpolate every pair, except due to floating point inaccuracies.)"
-//                           " Consult Bookstein 1989 (doi:10.1109/34.24792) for an overview."
-//                           ""
-//                           " The 'TPS-RPM' or Thin-Plate Spline Robust Point-Matching algorithm provides non-rigid"
-//                           " (i.e., 'deformable') registration."
-//                           " It combines a soft-assign technique, deterministic annealing, and"
-//                           " thin-plate splines to iteratively solve for correspondence and spatial warp."
-//                           " The 'TPS-RPM' method is (somewhat) robust to outliers in both moving and stationary point"
-//                           " sets, but it suffers from numerical instabilities when one or more inputs are degenerate"
-//                           " or symmetric in such a way that many potential solutions have the same least-square cost."
-//                           " The 'TPS-RPM' method does not scale well due in part to inversion of a large (NxM) matrix"
-//                           " and is therefore most suitable when both point clouds"
-//                           " consist of approximately 1-5k points or less. Beyond this, expect slow calculations."
-//                           " Consult Chui and Rangarajan 2000 (original algorithm; doi:10.1109/CVPR.2000.854733)"
-//                           " and Yang 2011 (clarification and more robust solution; doi:10.1016/j.patrec.2011.01.015)"
-//                           " for more details."
+                           ""
+                           " The 'TPS' or Thin-Plate Spline algorithm provides non-rigid"
+                           " (i.e., 'deformable') registration between corresponding point sets."
+                           " The moving and stationary point sets must have the same number of points, and"
+                           " the $n$^th^ moving point is taken to correspond to the $n$^th^ stationary point."
+                           " The 'TPS' method does not scale well due in part to inversion of a large (NxN) matrix"
+                           " and is therefore most suitable when both point clouds"
+                           " consist of approximately 10-20k points or less. Beyond this, expect slow calculations."
+                           " The TPS method is not robust to outliers, however a regularization parameter can be used"
+                           " to control the smoothness of the warp. (Setting to zero will cause the warp function to"
+                           " exactly interpolate every pair, except due to floating point inaccuracies.)"
+                           " Also note that the TPS method can only, in general, be used for interpolation."
+                           " Extrapolation beyond the points clouds will"
+                           " almost certainly result in wildly inconsistent and unstable transformations."
+                           " Consult Bookstein 1989 (doi:10.1109/34.24792) for an overview."
+                           ""
+                           " The 'TPS-RPM' or Thin-Plate Spline Robust Point-Matching algorithm provides non-rigid"
+                           " (i.e., 'deformable') registration."
+                           " It combines a soft-assign technique, deterministic annealing, and"
+                           " thin-plate splines to iteratively solve for correspondence and spatial warp."
+                           " The 'TPS-RPM' method is (somewhat) robust to outliers in both moving and stationary point"
+                           " sets, but it suffers from numerical instabilities when one or more inputs are degenerate"
+                           " or symmetric in such a way that many potential solutions have the same least-square cost."
+                           " The 'TPS-RPM' method does not scale well due in part to inversion of a large (NxM) matrix"
+                           " and is therefore most suitable when both point clouds"
+                           " consist of approximately 1-5k points or less. Beyond this, expect slow calculations."
+                           " Also note that the underlying TPS method can only, in general, be used for interpolation."
+                           " Extrapolation beyond the extent of the corresponding parts of the points clouds will"
+                           " almost certainly result in wildly inconsistent and unstable transformations."
+                           " Consult Chui and Rangarajan 2000 (original algorithm; doi:10.1109/CVPR.2000.854733)"
+                           " and Yang 2011 (clarification and more robust solution; doi:10.1016/j.patrec.2011.01.015)"
+                           " for more details."
                            ""
 #endif
                            "";
     out.args.back().default_val = "centroid";
     out.args.back().expected = true;
 #ifdef DCMA_USE_EIGEN
-// Undocument this option for now ... still a WIP. TODO
-//    out.args.back().examples = { "centroid", "pca", "exhaustive_icp", "tps", "tps_rpm" };
-    out.args.back().examples = { "centroid", "pca", "exhaustive_icp" };
+    out.args.back().examples = { "centroid", "pca", "exhaustive_icp", "tps", "tps_rpm" };
 #else
     out.args.back().examples = { "centroid" };
 #endif
 
+#ifdef DCMA_USE_EIGEN
+    out.args.emplace_back();
+    out.args.back().name = "TPSLambda";
+    out.args.back().desc = "Regularization parameter for the TPS method."
+                           " Controls the smoothness of the fitted thin plate spline function."
+                           " Setting to zero will ensure that all points are interpolated exactly (barring numerical"
+                           " imprecision). Setting higher will allow the spline to 'relax' and smooth out."
+                           " The specific value to use is heavily dependent on the problem domain and the amount"
+                           " of noise and outliers in the data. It relates to the spacing between points."
+                           " Note that this parameter is used with the TPS method, but *not* in the TPS-RPM method.";
+    out.args.back().default_val = "0.0";
+    out.args.back().expected = true;
+    out.args.back().examples = { "1E-4",
+                                 "0.1",
+                                 "10.0", };
+#endif
+
+#ifdef DCMA_USE_EIGEN
+    out.args.emplace_back();
+    out.args.back().name = "TPSKernelDimension";
+    out.args.back().desc = "Dimensionality of the spline function kernel."
+                           " The kernel dimensionality *should* match the dimensionality of the points (i.e., 3),"
+                           " but doesn't need to."
+                           " 2 seems to work best, even with points in 3D."
+                           " Note that this parameter may affect how the transformation extrapolates.";
+    out.args.back().default_val = "2";
+    out.args.back().expected = true;
+    out.args.back().examples = { "2",
+                                 "3", };
+#endif
+
+#ifdef DCMA_USE_EIGEN
+    out.args.emplace_back();
+    out.args.back().name = "TPSSolver";
+    out.args.back().desc = "The method used to solve the system of linear equtions that defines the thin plate spline"
+                           " solution. The pseudoinverse will likely be able to provide a solution when the system is"
+                           " degenerate, but it might not be reasonable or even sensible. The LDLT method scales"
+                           " better.";
+    out.args.back().default_val = "LDLT";
+    out.args.back().expected = true;
+    out.args.back().examples = { "LDLT",
+                                 "PseudoInverse", };
+#endif
 
     out.args.emplace_back();
     out.args.back().name = "MaxIterations";
@@ -192,7 +239,8 @@ OperationDoc OpArgDocExtractPointsWarp(void){
                            " use of this tolerance parameter may be impacted by these characteristics."
                            " Verifying that a given tolerance is of appropriate magnitude is recommended."
                            " Relative tolerance checks can be disabled by setting to non-finite or negative value."
-                           " Note that this parameter will not have any effect on non-iterative methods.";
+                           " Note that this parameter will only have effect on iterative methods that are not"
+                           " controlled by, e.g., an annealing schedule.";
     out.args.back().default_val = "nan";
     out.args.back().expected = true;
     out.args.back().examples = { "-1",
@@ -215,6 +263,12 @@ Drover ExtractPointsWarp(Drover DICOM_data, OperationArgPkg OptArgs, std::map<st
 
     const auto MethodStr = OptArgs.getValueStr("Method").value();
 
+#ifdef DCMA_USE_EIGEN
+    const auto TPSLambda = std::stod( OptArgs.getValueStr("TPSLambda").value() );
+    const auto TPSKDim = std::stol( OptArgs.getValueStr("TPSKernelDimension").value() );
+    const auto TPSSolverStr = OptArgs.getValueStr("TPSSolver").value();
+#endif // DCMA_USE_EIGEN
+
     const auto MaxIters = std::stol( OptArgs.getValueStr("MaxIterations").value() );
     const auto RelativeTol = std::stod( OptArgs.getValueStr("RelativeTolerance").value() );
 
@@ -225,6 +279,9 @@ Drover ExtractPointsWarp(Drover DICOM_data, OperationArgPkg OptArgs, std::map<st
     const auto regex_exhicp = Compile_Regex("^ex?h?a?u?s?t?i?v?e?[-_]?i?c?p?$");
     const auto regex_tps    = Compile_Regex("^tp?s?$");
     const auto regex_tpsrpm = Compile_Regex("^tp?s?[-_]?rp?m?$");
+
+    const auto regex_ldlt = Compile_Regex("^LD?L?T?$");
+    const auto regex_pinv = Compile_Regex("^ps?e?u?d?o?[-_]?i?n?v?e?r?s?e?$");
 #endif // DCMA_USE_EIGEN
 
     auto PCs_all = All_PCs( DICOM_data );
@@ -284,8 +341,23 @@ Drover ExtractPointsWarp(Drover DICOM_data, OperationArgPkg OptArgs, std::map<st
             }
 
         }else if( std::regex_match(MethodStr, regex_tps) ){
-            auto t_opt = AlignViaTPS( (*pcp_it)->pset,
-                                         (*ref_PCs.front())->pset );
+            AlignViaTPSParams params;
+            params.lambda = TPSLambda;
+            params.kernel_dimension = TPSKDim;
+            FUNCINFO("Performing TPS alignment using lambda = " << TPSLambda << " and kdim = " << TPSKDim);
+
+            if(false){
+            }else if( std::regex_match(TPSSolverStr, regex_ldlt) ){
+                params.solution_method = AlignViaTPSParams::SolutionMethod::LDLT;
+            }else if( std::regex_match(TPSSolverStr, regex_pinv) ){
+                params.solution_method = AlignViaTPSParams::SolutionMethod::PseudoInverse;
+            }else{
+                throw std::runtime_error("Solver not understood. Unable to continue.");
+            }
+
+            auto t_opt = AlignViaTPS( params,
+                                      (*pcp_it)->pset,
+                                      (*ref_PCs.front())->pset );
             if(t_opt){
                 FUNCINFO("Successfully found warp using TPS");
                 DICOM_data.trans_data.emplace_back( std::make_shared<Transform3>( ) );

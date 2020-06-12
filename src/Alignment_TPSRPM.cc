@@ -37,6 +37,157 @@
 #include "Alignment_TPSRPM.h"
 
 
+thin_plate_spline::thin_plate_spline(const point_set<double> &ps,
+                                     long int k_dim){
+    const auto N = ps.points.size();
+    this->control_points = ps;
+    this->kernel_dimension = k_dim;
+    this->W_A = num_array<double>(N + 3 + 1, 3, 0.0); // Initialize to all zeros.
+
+    // Default to an identity affine transform without any warp components.
+    this->W_A.coeff(N + 1, 0) = 1.0; // x-component.
+    this->W_A.coeff(N + 2, 1) = 1.0; // y-component.
+    this->W_A.coeff(N + 3, 2) = 1.0; // z-component.
+}
+
+double
+thin_plate_spline::eval_kernel(const double &dist) const {
+    double out = std::numeric_limits<double>::quiet_NaN();
+    if(false){
+    }else if(this->kernel_dimension == 2){
+        // 2D case.
+        //
+        // Note: this is the 2D fundamental sol'n to biharmonic equation. It seems to also work well for the 3D case,
+        // even better than the actual solution in 3D. Not sure why...
+        const auto log_d2 = std::log(dist * dist);
+        const auto u = log_d2 * dist * dist;
+        // Note: If points overlap exactly, this assumes they are actually infinitesimally separated.
+        out = std::isfinite(u) ? u : 0.0;
+    }else if(this->kernel_dimension == 3){
+        // 3D case.
+        //
+        // Note: this is the 3D fundamental sol'n to biharmonic equation. It doesn't work well in practice though.
+        out = dist;
+    }else{
+        throw std::invalid_argument("Kernel dimension not currently supported. Cannot continue.");
+        // Note: if this is truly desired, the kernel for arbitrary dimensions is available. But often for $3 < D$ the
+        // $D = 3$ case is used since evaluation is problematic at the control points.
+    }
+    return out;
+}
+
+vec3<double> 
+thin_plate_spline::transform(const vec3<double> &v) const {
+    const auto N = static_cast<long int>(this->control_points.points.size());
+    Stats::Running_Sum<double> x;
+    Stats::Running_Sum<double> y;
+    Stats::Running_Sum<double> z;
+
+    // Affine component.
+    x.Digest(W_A.read_coeff(N + 0, 0));
+    x.Digest(W_A.read_coeff(N + 1, 0) * v.x);
+    x.Digest(W_A.read_coeff(N + 2, 0) * v.y);
+    x.Digest(W_A.read_coeff(N + 3, 0) * v.z);
+
+    y.Digest(W_A.read_coeff(N + 0, 1));
+    y.Digest(W_A.read_coeff(N + 1, 1) * v.x);
+    y.Digest(W_A.read_coeff(N + 2, 1) * v.y);
+    y.Digest(W_A.read_coeff(N + 3, 1) * v.z);
+
+    z.Digest(W_A.read_coeff(N + 0, 2));
+    z.Digest(W_A.read_coeff(N + 1, 2) * v.x);
+    z.Digest(W_A.read_coeff(N + 2, 2) * v.y);
+    z.Digest(W_A.read_coeff(N + 3, 2) * v.z);
+
+    // Warp component.
+    for(long int i = 0; i < N; ++i){
+        const auto P_i = this->control_points.points[i];
+        const auto dist = P_i.distance(v);
+        const auto ki = this->eval_kernel(dist);
+
+        x.Digest(W_A.read_coeff(i, 0) * ki);
+        y.Digest(W_A.read_coeff(i, 1) * ki);
+        z.Digest(W_A.read_coeff(i, 2) * ki);
+    }
+
+    const vec3<double> f_v( x.Current_Sum(),
+                            y.Current_Sum(),
+                            z.Current_Sum() );
+    if(!f_v.isfinite()){
+        throw std::runtime_error("Failed to evaluate TPS mapping function. Cannot continue.");
+    }
+    return f_v;
+}
+
+void
+thin_plate_spline::apply_to(point_set<double> &ps) const {
+    for(auto &p : ps.points){
+        p = this->transform(p);
+    }
+    return;
+}
+
+bool
+thin_plate_spline::write_to( std::ostream &os ) const {
+    // Maximize precision prior to emitting any floating-point numbers.
+    const auto original_precision = os.precision();
+    os.precision( std::numeric_limits<double>::max_digits10 );
+
+    os << this->control_points.points.size() << std::endl; 
+    for(const auto &p : this->control_points.points){
+        os << p << std::endl;
+    }
+    
+    os << this->kernel_dimension << std::endl; 
+
+    this->W_A.write_to(os);
+
+    os.precision( original_precision );
+    os.flush();
+    return (!os.fail());
+}
+
+bool
+thin_plate_spline::read_from( std::istream &is ){
+    long int N_control_points = 0;
+    is >> N_control_points;
+    if( is.fail()
+    ||  !isininc(1,N_control_points,1'000'000'000) ){
+        FUNCWARN("Number of control points could not be read, or is invalid.");
+        return false;
+    }
+    this->control_points.points.resize(N_control_points);
+
+    try{
+        for(long int i = 0; i < N_control_points; ++i){
+            is >> this->control_points.points[i];
+        }
+    }catch(const std::exception &e){
+        FUNCWARN("Failed to read control points: " << e.what());
+        return false;
+    }
+
+    is >> this->kernel_dimension;
+    if( is.fail()
+    ||  !isininc(2,this->kernel_dimension,3) ){
+        FUNCWARN("Kernel dimension could not be read, or is invalid.");
+        return false;
+    }
+
+    if(!(this->W_A.read_from(is))){
+        FUNCWARN("Transformation coefficients could not be read or are invalid.");
+        return false;
+    }
+
+    if( (this->W_A.num_rows() != (N_control_points + 3 + 1))
+    ||  (this->W_A.num_cols() != 3) ){
+        FUNCWARN("Transformation coefficient matrix has invalid dimensions.");
+        return false;
+    }
+
+    return (!is.fail());
+}
+
 #ifdef DCMA_USE_EIGEN
 // This routine finds a non-rigid alignment using thin plate splines.
 //
@@ -45,11 +196,10 @@
 //
 // Note that this routine only identifies a transform, it does not implement it by altering the inputs.
 //
-std::optional<affine_transform<double>>
-AlignViaTPS(const point_set<double> & moving,
+std::optional<thin_plate_spline>
+AlignViaTPS(AlignViaTPSParams &params,
+            const point_set<double> & moving,
             const point_set<double> & stationary ){
-
-affine_transform<double> t; // Not needed, remove. TODO
 
     const auto N_move_points = static_cast<long int>(moving.points.size());
     const auto N_stat_points = static_cast<long int>(stationary.points.size());
@@ -58,45 +208,7 @@ affine_transform<double> t; // Not needed, remove. TODO
         return std::nullopt;
     }
 
-    // Compute the centroid for the stationary point cloud.
-    Stats::Running_Sum<double> com_stat_x;
-    Stats::Running_Sum<double> com_stat_y;
-    Stats::Running_Sum<double> com_stat_z;
-    for(long int j = 0; j < N_stat_points; ++j){
-        const auto P = stationary.points[j];
-        com_stat_x.Digest(P.x);
-        com_stat_y.Digest(P.y);
-        com_stat_z.Digest(P.z);
-    }
-    const vec3<double> com_stat( com_stat_x.Current_Sum() / static_cast<double>(N_stat_points), 
-                                 com_stat_y.Current_Sum() / static_cast<double>(N_stat_points), 
-                                 com_stat_z.Current_Sum() / static_cast<double>(N_stat_points) );
-
-
-    const auto tps_kernel = [](double dist) -> double {
-        // 3D case.
-        //return dist;   // Seems to work much better, but is not valid.
-        //return dist * dist; // Correct, but seems to work poorly.
-
-        // 2D case.
-        //
-        // Note: this also seems to work well for the 3D case. Not sure why...
-        const auto log_d2 = std::log(dist * dist);
-        const auto u = log_d2 * dist * dist;
-        // Note: If points overlap exactly, this assumes they are actually infinitesimally separated.
-        return std::isfinite(u) ? u : 0.0;
-    };
-
-    // Free parameters.
-    //const bool kernel_dimension = 3;  // Necessary? Probably worthwhile... TODO
-    const double lambda = 0.1; // Set to 0 to altogether disable regularization.
-
-    enum class SolutionMethod {
-        PseudoInverse,
-        LDLT
-    };
-    SolutionMethod solution_method = SolutionMethod::LDLT;
-
+    thin_plate_spline t(moving, params.kernel_dimension);
 
     // Prepare working buffers.
     //
@@ -107,22 +219,34 @@ affine_transform<double> t; // Not needed, remove. TODO
 
     // TPS model parameters.
     //
-    // Contains a 'warp' component (W) and an Affine component (A).
-    Eigen::MatrixXd W_A = Eigen::MatrixXd::Zero(N_move_points + 4, 3);
+    // Will contain the 'warp' component (W) and an Affine component (A) coefficients.
+    // Note that, to avoid a later copy, these coefficients are directly mapped to the transform buffer.
+    if(static_cast<long int>(t.W_A.size()) != (N_move_points + 4) * 3){
+        throw std::logic_error("TPS coefficients allocated with incorrect size. Refusing to continue.");
+    }
+    Eigen::Map<Eigen::Matrix< double,
+                              Eigen::Dynamic,
+                              Eigen::Dynamic,
+                              Eigen::ColMajor >> W_A(&(*(t.W_A.begin())),
+                                                     N_move_points + 4,  3);
+    if( (t.W_A.num_rows() != W_A.rows())
+    ||  (t.W_A.num_cols() != W_A.cols()) ){
+        throw std::logic_error("TPS coefficient matrix dimesions do not match. Refusing to continue.");
+    }
 
     // Populate static elements.
     //
     // L matrix: "K" kernel part.
     //
     // Note: "K"s diagonals are later adjusted using the regularization parameter. They are set to zero initially.
-    //for(long int i = 0; i < N_move_points; ++i) L(i, i) = lambda;
-    for(long int i = 0; i < (N_move_points + 4); ++i) L(i, i) = lambda;
+    //for(long int i = 0; i < N_move_points; ++i) L(i, i) = params.lambda;
+    for(long int i = 0; i < (N_move_points + 4); ++i) L(i, i) = params.lambda;
     for(long int i = 0; i < N_move_points; ++i){
         const auto P_i = moving.points[i];
         for(long int j = i + 1; j < N_move_points; ++j){
             const auto P_j = moving.points[j];
             const auto dist = P_i.distance(P_j);
-            const auto kij = tps_kernel(dist);
+            const auto kij = t.eval_kernel(dist);
             L(i, j) = kij;
             L(j, i) = kij;
         }
@@ -142,50 +266,6 @@ affine_transform<double> t; // Not needed, remove. TODO
         L(N_move_points + 3, i) = P_moving.z;
     }
 
-    // Implement the thin-plate spline (TPS) warping function.
-    const auto f_tps = [&W_A,
-                        &tps_kernel,
-                        &moving,
-                        &N_move_points](const vec3<double> &v) -> vec3<double> {
-        Stats::Running_Sum<double> x;
-        Stats::Running_Sum<double> y;
-        Stats::Running_Sum<double> z;
-
-        // Affine component.
-        x.Digest(W_A(N_move_points + 0, 0));
-        x.Digest(W_A(N_move_points + 1, 0) * v.x);
-        x.Digest(W_A(N_move_points + 2, 0) * v.y);
-        x.Digest(W_A(N_move_points + 3, 0) * v.z);
-
-        y.Digest(W_A(N_move_points + 0, 1));
-        y.Digest(W_A(N_move_points + 1, 1) * v.x);
-        y.Digest(W_A(N_move_points + 2, 1) * v.y);
-        y.Digest(W_A(N_move_points + 3, 1) * v.z);
-
-        z.Digest(W_A(N_move_points + 0, 2));
-        z.Digest(W_A(N_move_points + 1, 2) * v.x);
-        z.Digest(W_A(N_move_points + 2, 2) * v.y);
-        z.Digest(W_A(N_move_points + 3, 2) * v.z);
-
-        // Warp component.
-        for(long int i = 0; i < N_move_points; ++i){
-            const auto P_i = moving.points[i];
-            const auto dist = P_i.distance(v);
-            const auto ki = tps_kernel(dist);
-            x.Digest(W_A(i, 0) * ki);
-            y.Digest(W_A(i, 1) * ki);
-            z.Digest(W_A(i, 2) * ki);
-        }
-
-        const vec3<double> f_v( x.Current_Sum(),
-                                y.Current_Sum(),
-                                z.Current_Sum() );
-        if(!f_v.isfinite()){
-            throw std::runtime_error("Failed to evaluate TPS mapping function. Cannot continue.");
-        }
-        return f_v;
-    };
-
     // Fill the Y vector with the corresponding points.
     for(long int j = 0; j < N_stat_points; ++j){ // column
         const auto P_stationary = stationary.points[j];
@@ -196,14 +276,14 @@ affine_transform<double> t; // Not needed, remove. TODO
 
     // Use pseudo-inverse method.
     if(false){
-    }else if(solution_method == SolutionMethod::PseudoInverse){
+    }else if(params.solution_method == AlignViaTPSParams::SolutionMethod::PseudoInverse){
         Eigen::MatrixXd L_pinv = L.completeOrthogonalDecomposition().pseudoInverse();
 
         // Update W_A.
         W_A = L_pinv * Y;
 
     // Use LDLT method.
-    }else if(solution_method == SolutionMethod::LDLT){
+    }else if(params.solution_method == AlignViaTPSParams::SolutionMethod::LDLT){
         Eigen::LDLT<Eigen::MatrixXd> LDLT;
         LDLT.compute(L.transpose() * L);
         if(LDLT.info() != Eigen::Success){
@@ -223,20 +303,6 @@ affine_transform<double> t; // Not needed, remove. TODO
         return std::nullopt;
     }
 
-
-    const auto write_to_xyz_file = [&](const std::string &base){
-        const auto fname = Get_Unique_Sequential_Filename(base, 6, ".xyz");
-
-        std::ofstream of(fname);
-        for(long int i = 0; i < N_move_points; ++i){
-            const auto P_moving = moving.points[i];
-            const auto P_moved = f_tps(P_moving);
-            of << P_moved.x << " " << P_moved.y << " " << P_moved.z << std::endl;
-        }
-        return;
-    };
-    write_to_xyz_file("warped_tps_");
-
     return t;
 }
 #endif // DCMA_USE_EIGEN
@@ -248,43 +314,19 @@ affine_transform<double> t; // Not needed, remove. TODO
 //
 // Note that this routine only identifies a transform, it does not implement it by altering the inputs.
 //
-std::optional<affine_transform<double>>
+std::optional<thin_plate_spline>
 AlignViaTPSRPM(const point_set<double> & moving,
                const point_set<double> & stationary ){
-
-affine_transform<double> t; // Not needed, remove. TODO
 
     const auto N_move_points = static_cast<long int>(moving.points.size());
     const auto N_stat_points = static_cast<long int>(stationary.points.size());
 
+    const long int kernel_dimension = 2;
+    thin_plate_spline t(moving, kernel_dimension);
+
     // Compute the centroid for the stationary point cloud.
-    Stats::Running_Sum<double> com_stat_x;
-    Stats::Running_Sum<double> com_stat_y;
-    Stats::Running_Sum<double> com_stat_z;
-    for(long int j = 0; j < N_stat_points; ++j){
-        const auto P = stationary.points[j];
-        com_stat_x.Digest(P.x);
-        com_stat_y.Digest(P.y);
-        com_stat_z.Digest(P.z);
-    }
-    const vec3<double> com_stat( com_stat_x.Current_Sum() / static_cast<double>(N_stat_points), 
-                                 com_stat_y.Current_Sum() / static_cast<double>(N_stat_points), 
-                                 com_stat_z.Current_Sum() / static_cast<double>(N_stat_points) );
-
-
-    const auto tps_kernel = [](double dist) -> double {
-        // 3D case.
-        //return dist;   // Seems to work much better, but is not valid.
-        //return dist * dist; // Correct, but seems to work poorly.
-
-        // 2D case.
-        //
-        // Note: this also seems to work well for the 3D case. Not sure why...
-        const auto log_d2 = std::log(dist * dist);
-        const auto u = log_d2 * dist * dist;
-        // Note: If points overlap exactly, this assumes they are actually infinitesimally separated.
-        return std::isfinite(u) ? u : 0.0;
-    };
+    // Stationary point outliers will be assumed to have this location.
+    const auto com_stat = stationary.Centroid();
 
     // Find the largest 'square distance' between (all) points and the average separation of nearest-neighbour points
     // (in the moving cloud). This info is needed to tune the annealing energy to ensure (1) deformations can initially
@@ -369,10 +411,23 @@ affine_transform<double> t; // Not needed, remove. TODO
 
     // TPS model parameters.
     //
-    // Contains a 'warp' component (W) and an Affine component (A).
+    // Will contain the 'warp' component (W) and an Affine component (A) coefficients.
+    //
+    // Note: To avoid a later copy, these coefficients are directly mapped to the transform buffer.
     //
     // Note: These are the parameters that get updated during the transformation update phase.
-    Eigen::MatrixXd W_A = Eigen::MatrixXd::Zero(N_move_points + 4, 3);
+    if(static_cast<long int>(t.W_A.size()) != (N_move_points + 4) * 3){
+        throw std::logic_error("TPS coefficients allocated with incorrect size. Refusing to continue.");
+    }
+    Eigen::Map<Eigen::Matrix< double,
+                              Eigen::Dynamic,
+                              Eigen::Dynamic,
+                              Eigen::ColMajor >> W_A(&(*(t.W_A.begin())),
+                                                     N_move_points + 4,  3);
+    if( (t.W_A.num_rows() != W_A.rows())
+    ||  (t.W_A.num_cols() != W_A.cols()) ){
+        throw std::logic_error("TPS coefficient matrix dimesions do not match. Refusing to continue.");
+    }
 
     // Populate static elements.
     //
@@ -385,7 +440,7 @@ affine_transform<double> t; // Not needed, remove. TODO
         for(long int j = i + 1; j < N_move_points; ++j){
             const auto P_j = moving.points[j];
             const auto dist = P_i.distance(P_j);
-            const auto kij = tps_kernel(dist);
+            const auto kij = t.eval_kernel(dist);
             L(i, j) = kij;
             L(j, i) = kij;
         }
@@ -450,51 +505,6 @@ affine_transform<double> t; // Not needed, remove. TODO
     M(N_move_points, N_stat_points) = 0.0;
 
 
-    // Implement the thin-plate spline (TPS) warping function.
-    const auto f_tps = [&W_A,
-                        &tps_kernel,
-                        &moving,
-                        &N_move_points](const vec3<double> &v) -> vec3<double> {
-        Stats::Running_Sum<double> x;
-        Stats::Running_Sum<double> y;
-        Stats::Running_Sum<double> z;
-
-        // Affine component.
-        x.Digest(W_A(N_move_points + 0, 0));
-        x.Digest(W_A(N_move_points + 1, 0) * v.x);
-        x.Digest(W_A(N_move_points + 2, 0) * v.y);
-        x.Digest(W_A(N_move_points + 3, 0) * v.z);
-
-        y.Digest(W_A(N_move_points + 0, 1));
-        y.Digest(W_A(N_move_points + 1, 1) * v.x);
-        y.Digest(W_A(N_move_points + 2, 1) * v.y);
-        y.Digest(W_A(N_move_points + 3, 1) * v.z);
-
-        z.Digest(W_A(N_move_points + 0, 2));
-        z.Digest(W_A(N_move_points + 1, 2) * v.x);
-        z.Digest(W_A(N_move_points + 2, 2) * v.y);
-        z.Digest(W_A(N_move_points + 3, 2) * v.z);
-
-        // Warp component.
-        for(long int i = 0; i < N_move_points; ++i){
-            const auto P_i = moving.points[i];
-            const auto dist = P_i.distance(v);
-            const auto ki = tps_kernel(dist);
-            x.Digest(W_A(i, 0) * ki);
-            y.Digest(W_A(i, 1) * ki);
-            z.Digest(W_A(i, 2) * ki);
-        }
-
-        const vec3<double> f_v( x.Current_Sum(),
-                                y.Current_Sum(),
-                                z.Current_Sum() );
-        if(!f_v.isfinite()){
-            throw std::runtime_error("Failed to evaluate TPS mapping function. Cannot continue.");
-        }
-        return f_v;
-    };
-
-
     // Update the correspondence.
     //
     // Note: This sub-routine solves for the point cloud correspondence using the current TPS transformation.
@@ -508,7 +518,7 @@ affine_transform<double> t; // Not needed, remove. TODO
         Stats::Running_Sum<double> com_moved_z;
         for(long int i = 0; i < N_move_points; ++i){ // row
             const auto P_moving = moving.points[i];
-            const auto P_moved = f_tps(P_moving); // Transform the point.
+            const auto P_moved = t.transform(P_moving); // Transform the point.
             com_moved_x.Digest(P_moved.x);
             com_moved_y.Digest(P_moved.y);
             com_moved_z.Digest(P_moved.z);
@@ -536,7 +546,7 @@ affine_transform<double> t; // Not needed, remove. TODO
         // Stationary outlier coefficients.
         for(long int i = 0; i < N_move_points; ++i){ // row
             const auto P_moving = moving.points[i];
-            const auto P_moved = f_tps(P_moving); // Transform the point.
+            const auto P_moved = t.transform(P_moving); // Transform the point.
             const auto j = N_stat_points; // column
             const auto P_stationary = com_stat;
             const auto dP = P_stationary - P_moved;
@@ -708,17 +718,19 @@ affine_transform<double> t; // Not needed, remove. TODO
         return;
     };
 
+/*
     const auto write_to_xyz_file = [&](const std::string &base){
         const auto fname = Get_Unique_Sequential_Filename(base, 6, ".xyz");
 
         std::ofstream of(fname);
         for(long int i = 0; i < N_move_points; ++i){
             const auto P_moving = moving.points[i];
-            const auto P_moved = f_tps(P_moving);
+            const auto P_moved = t.transform(P_moving);
             of << P_moved.x << " " << P_moved.y << " " << P_moved.z << std::endl;
         }
         return;
     };
+*/
 
     // Anneal deterministically.
     for(double T_now = T_start; T_now >= T_end; T_now *= T_step){
@@ -740,9 +752,9 @@ affine_transform<double> t; // Not needed, remove. TODO
 
         print_optimizer_progress(T_now, L_1);
 
-        write_to_xyz_file("warped_tps-rpm_");
+//        write_to_xyz_file("warped_tps-rpm_");
     }
-    write_to_xyz_file("warped_tps-rpm_");
+//    write_to_xyz_file("warped_tps-rpm_");
 
     return t;
 }

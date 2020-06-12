@@ -8,12 +8,15 @@
 #include <string>
 #include <variant>
 
-#include "../Structs.h"
-#include "../Regex_Selectors.h"
-#include "DroverDebug.h"
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+
+#include "../Structs.h"
+#include "../Alignment_TPSRPM.h"
+#include "../Regex_Selectors.h"
+
+#include "DroverDebug.h"
 
 
 static void dump_metadata(std::ostream &os,
@@ -246,6 +249,7 @@ Drover DroverDebug(Drover DICOM_data,
     //Transformation data.
     {
         FUNCINFO("There are " << DICOM_data.trans_data.size() << " Transform3s loaded");
+        FUNCINFO("  The Transform3 class is " << sizeof(Transform3) << " bytes");
 
         size_t t_cnt = 0;
         for(auto &t3p : DICOM_data.trans_data){
@@ -260,7 +264,9 @@ Drover DroverDebug(Drover DICOM_data,
                     if constexpr (std::is_same_v<V, std::monostate>){
                         throw std::logic_error("Transformation is invalid. Unable to continue.");
                     }else if constexpr (std::is_same_v<V, affine_transform<double>>){
-                        return "an Affine transformation";
+                        return "an affine transformation";
+                    }else if constexpr (std::is_same_v<V, thin_plate_spline>){
+                        return "a thin-plate spline transformation";
                     }else{
                         static_assert(std::is_same_v<V,void>, "Transformation not understood.");
                     }

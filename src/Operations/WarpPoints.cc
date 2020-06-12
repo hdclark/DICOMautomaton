@@ -17,10 +17,6 @@
 #include <vector>
 #include <variant>
 
-#include "../Structs.h"
-#include "../Regex_Selectors.h"
-#include "../Thread_Pool.h"
-#include "WarpPoints.h"
 #include "Explicator.h"       //Needed for Explicator class.
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
@@ -28,6 +24,12 @@
 #include "YgorStats.h"        //Needed for Stats:: namespace.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
+#include "../Structs.h"
+#include "../Alignment_TPSRPM.h"
+#include "../Regex_Selectors.h"
+#include "../Thread_Pool.h"
+
+#include "WarpPoints.h"
 
 OperationDoc OpArgDocWarpPoints(void){
     OperationDoc out;
@@ -92,9 +94,15 @@ Drover WarpPoints(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::stri
 
                 // Affine transformations.
                 }else if constexpr (std::is_same_v<V, affine_transform<double>>){
-                    FUNCINFO("Applying Affine transformation now");
+                    FUNCINFO("Applying affine transformation now");
                     t.apply_to((*pcp_it)->pset);
-                    (*pcp_it)->pset.metadata["Description"] = "Warped via Affine transform";
+                    (*pcp_it)->pset.metadata["Description"] = "Warped via affine transform";
+
+                // Affine transformations.
+                }else if constexpr (std::is_same_v<V, thin_plate_spline>){
+                    FUNCINFO("Applying thin plate spline transformation now");
+                    t.apply_to((*pcp_it)->pset);
+                    (*pcp_it)->pset.metadata["Description"] = "Warped via thin-plate spline transform";
 
                 }else{
                     static_assert(std::is_same_v<V,void>, "Transformation not understood.");
