@@ -34,6 +34,7 @@
 #include "YgorStats.h"        //Needed for Stats:: namespace.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
+#include "Alignment_Rigid.h"
 #include "Alignment_TPSRPM.h"
 
 
@@ -83,7 +84,7 @@ thin_plate_spline::transform(const vec3<double> &v) const {
     Stats::Running_Sum<double> y;
     Stats::Running_Sum<double> z;
 
-    // Affine component.
+    // affine component.
     x.Digest(W_A.read_coeff(N + 0, 0));
     x.Digest(W_A.read_coeff(N + 1, 0) * v.x);
     x.Digest(W_A.read_coeff(N + 2, 0) * v.y);
@@ -197,7 +198,7 @@ thin_plate_spline::read_from( std::istream &is ){
 // Note that this routine only identifies a transform, it does not implement it by altering the inputs.
 //
 std::optional<thin_plate_spline>
-AlignViaTPS(AlignViaTPSParams &params,
+AlignViaTPS(AlignViaTPSParams & params,
             const point_set<double> & moving,
             const point_set<double> & stationary ){
 
@@ -219,7 +220,7 @@ AlignViaTPS(AlignViaTPSParams &params,
 
     // TPS model parameters.
     //
-    // Will contain the 'warp' component (W) and an Affine component (A) coefficients.
+    // Will contain the 'warp' component (W) and an affine component (A) coefficients.
     // Note that, to avoid a later copy, these coefficients are directly mapped to the transform buffer.
     if(static_cast<long int>(t.W_A.size()) != (N_move_points + 4) * 3){
         throw std::logic_error("TPS coefficients allocated with incorrect size. Refusing to continue.");
@@ -315,19 +316,21 @@ AlignViaTPS(AlignViaTPSParams &params,
 // Note that this routine only identifies a transform, it does not implement it by altering the inputs.
 //
 std::optional<thin_plate_spline>
-AlignViaTPSRPM(const point_set<double> & moving,
+AlignViaTPSRPM(AlignViaTPSRPMParams & params,
+               const point_set<double> & moving,
                const point_set<double> & stationary ){
 
     const auto N_move_points = static_cast<long int>(moving.points.size());
     const auto N_stat_points = static_cast<long int>(stationary.points.size());
 
-    const long int kernel_dimension = 2;
-    thin_plate_spline t(moving, kernel_dimension);
+    thin_plate_spline t(moving, params.kernel_dimension);
 
     // Compute the centroid for the stationary point cloud.
     // Stationary point outliers will be assumed to have this location.
     const auto com_stat = stationary.Centroid();
 
+    // Estimate determinstic annealing parameters.
+    //
     // Find the largest 'square distance' between (all) points and the average separation of nearest-neighbour points
     // (in the moving cloud). This info is needed to tune the annealing energy to ensure (1) deformations can initially
     // 'reach' across the point cloud, and (2) deformations are not considered much below the nearest-neighbour spacing
@@ -376,26 +379,24 @@ AlignViaTPSRPM(const point_set<double> & moving,
         } // Wait until all threads are done.
     }
 
-    // Estimate determinstic annealing parameters.
-    const double T_step = 0.93; // Should be [0.9:0.99] or so.
-    const double T_start = 1.05 * max_sq_dist; // Slightly larger than all possible to allow any pairing.
-                                               // NOTE: should lose the sqrt for large-scale deformations...
-    const double T_end = 0.01 * mean_nn_sq_dist;
-    const long int N_iters_at_fixed_T = 5;
-    const bool use_regularization = true;
-    const bool seed_with_COM_shift = true;
+    const double T_start = params.T_start_scale * max_sq_dist;
+    const double T_end = params.T_end_scale * mean_nn_sq_dist;
+    const double L_1_start = params.lambda_start * std::sqrt( mean_nn_sq_dist );
+    const double L_2_start = params.zeta_start * L_1_start;
 
-    const double L_1_start = 0.1 * std::sqrt( mean_nn_sq_dist );
-    const double L_2_start = 0.1 * L_1_start;
-
-    enum class SolutionMethod {
-        PseudoInverse,
-        LDLT
-    };
-    SolutionMethod solution_method = SolutionMethod::LDLT;
-
-
-    FUNCINFO("T_start, T_step, and T_end are " << T_start << ", " << T_step << ", " << T_end);
+    if(!isininc(0.00001, params.T_step, 0.99999)){
+        throw std::invalid_argument("Temperature step parameter is invalid. Cannot continue.");
+    }
+    if( (std::abs(T_start) == 0.0)
+    ||  (std::abs(T_end) == 0.0)
+    ||  (T_start <= T_end) ){
+        throw std::invalid_argument("Start or end temperatures are invalid. Cannot continue.");
+    }
+    if( (L_1_start < 0.0)
+    ||  (L_2_start < 0.0) ){
+        throw std::invalid_argument("Regularization parameters are invalid. Cannot continue.");
+    }
+    FUNCINFO("T_start, T_step, and T_end are " << T_start << ", " << params.T_step << ", " << T_end);
 
     // Prepare working buffers.
     //
@@ -411,7 +412,7 @@ AlignViaTPSRPM(const point_set<double> & moving,
 
     // TPS model parameters.
     //
-    // Will contain the 'warp' component (W) and an Affine component (A) coefficients.
+    // Will contain the 'warp' component (W) and an affine component (A) coefficients.
     //
     // Note: To avoid a later copy, these coefficients are directly mapped to the transform buffer.
     //
@@ -460,7 +461,7 @@ AlignViaTPSRPM(const point_set<double> & moving,
         L(N_move_points + 3, i) = P_moving.z;
     }
 
-    // Prime the transformation with an identity Affine component and no warp component.
+    // Prime the transformation with an identity affine component and no warp component.
     //
     // Note that the RPM-TPS method gradually progresses from global to local transformations, so if the initial
     // temperature is sufficiently high then something like centroid-matching and PCA-alignment will naturally occur.
@@ -470,19 +471,25 @@ AlignViaTPSRPM(const point_set<double> & moving,
     W_A(N_move_points + 2, 1) = 1.0; // y-component.
     W_A(N_move_points + 3, 2) = 1.0; // z-component.
 
-    if(seed_with_COM_shift){
-        // Seed the Affine transformation with the output from a simpler rigid registration.
+    if(params.seed_with_centroid_shift){
+        // Seed the affine transformation with the output from a simpler rigid registration.
+        auto t_com = AlignViaCentroid(moving, stationary);
+        if(!t_com){
+            FUNCWARN("Unable to compute centroid seed transformation");
+            return std::nullopt;
+        }
 
-        // ... TODO ...
-
+        W_A(N_move_points + 0, 0) = t_com.value().read_coeff(3,0);
+        W_A(N_move_points + 0, 1) = t_com.value().read_coeff(3,1);
+        W_A(N_move_points + 0, 2) = t_com.value().read_coeff(3,2);
     }
 
     // Invert the system matrix.
     //
     // Note: only necessary when regularization is disabled.
     Eigen::MatrixXd L_pinv;
-    if( use_regularization 
-    &&  (solution_method == SolutionMethod::PseudoInverse) ){
+    if( (std::abs(L_1_start) != 0.0)
+    &&  (params.solution_method == AlignViaTPSRPMParams::SolutionMethod::PseudoInverse) ){
         L_pinv = L.completeOrthogonalDecomposition().pseudoInverse();
     }
 
@@ -613,7 +620,7 @@ AlignViaTPSRPM(const point_set<double> & moving,
     // Update the transformation.
     //
     // Note: This sub-routine solves for the TPS solution using the current correspondence.
-    const auto update_transformation = [&](double T_now, double lambda) -> void {
+    const auto update_transformation = [&](double lambda) -> void {
 
         // Fill the Y vector with the corresponding points.
         const auto softassign_outlier_min = 1.0E-4;
@@ -649,9 +656,9 @@ AlignViaTPSRPM(const point_set<double> & moving,
 
         // Use pseudo-inverse method.
         if(false){
-        }else if(solution_method == SolutionMethod::PseudoInverse){
+        }else if(params.solution_method == AlignViaTPSRPMParams::SolutionMethod::PseudoInverse){
             // Update the L matrix inverse using current regularization lambda.
-            if(use_regularization){
+            if(std::abs(L_1_start) != 0.0){
                 // TODO: Would it be easier to just add to the diagonal directly rather than allocate a temp R?
                 Eigen::MatrixXd R = L + I_N4 * lambda; // Regularized version of L.
                 R(N_move_points + 0, N_move_points + 0) = 0.0;
@@ -666,9 +673,9 @@ AlignViaTPSRPM(const point_set<double> & moving,
             W_A = L_pinv * Y;
 
         // Use LDLT method.
-        }else if(solution_method == SolutionMethod::LDLT){
+        }else if(params.solution_method == AlignViaTPSRPMParams::SolutionMethod::LDLT){
             Eigen::MatrixXd LHS;
-            if(use_regularization){
+            if(std::abs(L_1_start) != 0.0){
                 // TODO: Would it be easier to just explicitly set the diagonal here?
                 LHS = L + I_N4 * lambda; // Regularized version of L.
                 LHS(N_move_points + 0, N_move_points + 0) = 0.0;
@@ -702,7 +709,7 @@ AlignViaTPSRPM(const point_set<double> & moving,
     };
 
     // Print information about the optimization.
-    const auto print_optimizer_progress = [&](double T_now, double lambda) -> void {
+    const auto print_optimizer_progress = [&](double T_now, double /*lambda*/) -> void {
 
         // Correspondence coefficients.
         //
@@ -733,7 +740,7 @@ AlignViaTPSRPM(const point_set<double> & moving,
 */
 
     // Anneal deterministically.
-    for(double T_now = T_start; T_now >= T_end; T_now *= T_step){
+    for(double T_now = T_start; T_now >= T_end; T_now *= params.T_step){
         // Regularization parameter: controls how smooth the TPS interpolation is.
         const double L_1 = T_now * L_1_start;
 
@@ -741,13 +748,13 @@ AlignViaTPSRPM(const point_set<double> & moving,
         // setting it "close to zero."
         const double L_2 = T_now * L_2_start;
 
-        for(long int iter_at_fixed_T = 0; iter_at_fixed_T < N_iters_at_fixed_T; ++iter_at_fixed_T){
+        for(long int iter_at_fixed_T = 0; iter_at_fixed_T < params.N_iters_at_fixed_T; ++iter_at_fixed_T){
 
             // Update correspondence matrix.
             update_correspondence(T_now, L_2);
 
             // Update transformation.
-            update_transformation(T_now, L_1);
+            update_transformation(L_1);
         }
 
         print_optimizer_progress(T_now, L_1);

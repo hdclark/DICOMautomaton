@@ -61,6 +61,72 @@ struct AlignViaTPSParams {
         LDLT
     };
     SolutionMethod solution_method = SolutionMethod::LDLT;
+};
+
+std::optional<thin_plate_spline>
+AlignViaTPS(AlignViaTPSParams & params,
+            const point_set<double> & moving,
+            const point_set<double> & stationary );
+#endif // DCMA_USE_EIGEN
+
+
+#ifdef DCMA_USE_EIGEN
+// This routine finds a non-rigid alignment using the 'robust point matching: thin plate spline' algorithm.
+//
+// Both the alignment and correspondence are determined using an iterative approach. This routine may require tweaking
+// in order to suit the problem domain.
+//
+// Note that this routine only identifies a transform, it does not implement it by altering the inputs.
+//
+struct AlignViaTPSRPMParams {
+    // TPS parameters.
+    //
+    // Dimensionality of the kernel. It *should* match the dimensionality of the points (i.e., 3), but doesn't need to.
+    // 2 seems to work best.
+    long int kernel_dimension = 2;
+
+    // Annealing parameters.
+    //
+    // Temperature parameters. Starting and end parameters are relative to the max square-distance between points and
+    // the mean nearest-neighbour square-distance, respectively. The temperature step is a multiplicative factor, so
+    // setting to 0.95 would reduce the temperature to 95% of the current temperature each iteration.
+    double T_start_scale = 1.05; // Slightly larger than all possible to allow any pairing.
+    double T_end_scale   = 0.01; // Default to precise registration. Higher numbers = coarser registration.
+    double T_step        = 0.93; // Should be [0.9:0.99] or so. Larger number = slower annealing.
+
+    // The number of iterations (i.e., update correspondence, update TPS function cycles) to perform at each T.
+    long int N_iters_at_fixed_T = 5; // Lower = faster, but possibly less accurate.
+
+    // Regularization parameters.
+    //
+    // Controls the smoothness of the fitted thin plate spline function.
+    // Setting to zero will ensure that all points are interpolated exactly (up to numerical imprecision). Setting
+    // higher will allow the spline to 'relax' and smooth out.
+    double lambda_start = 0.0;
+
+    // Controls the balance of how points are considered to be outliers.
+    // Setting to zero will disable this bias. Setting higher will cause more points to be considered outliers.
+    double zeta_start = 0.0;
+
+    // Solver parameters.
+    //
+    // The method used to solve the system of linear equtions that defines the thin plate spline solution.
+    // The pseudoinverse will likely be able to provide a solution when the system is degenerate, but it might not be
+    // reasonable.
+    enum class SolutionMethod {
+        PseudoInverse,
+        LDLT
+    };
+    SolutionMethod solution_method = SolutionMethod::LDLT;
+
+    // Misc parameters.
+    //
+    // Seed the initial transformation with the result of a rigid centroid-to-centroid shift transformation. The default
+    // initial transformation is an identity transform; if the point sets have a deliberate relative position, then a
+    // centroid shift may be detrimental. Alternatively, if the point clouds have a similar shape then seeding the
+    // transformation might facilitate fewer annealing steps and/or a cooler starting temperature, speeding up the
+    // computation.
+    bool seed_with_centroid_shift = false;
 
     // Should forced correspondences go here too?? TODO.
 
@@ -74,19 +140,8 @@ struct AlignViaTPSParams {
 };
 
 std::optional<thin_plate_spline>
-AlignViaTPS(AlignViaTPSParams &params,
-            const point_set<double> & moving,
-            const point_set<double> & stationary );
-#endif // DCMA_USE_EIGEN
-
-
-#ifdef DCMA_USE_EIGEN
-// This routine finds a non-rigid alignment using the 'robust point matching: thin plate spline' algorithm.
-//
-// Note that this routine only identifies a transform, it does not implement it by altering the inputs.
-//
-std::optional<thin_plate_spline>
-AlignViaTPSRPM(const point_set<double> & moving,
+AlignViaTPSRPM(AlignViaTPSRPMParams & params,
+               const point_set<double> & moving,
                const point_set<double> & stationary );
 #endif // DCMA_USE_EIGEN
 

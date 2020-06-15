@@ -184,9 +184,7 @@ OperationDoc OpArgDocExtractPointsWarp(void){
                            " Note that this parameter is used with the TPS method, but *not* in the TPS-RPM method.";
     out.args.back().default_val = "0.0";
     out.args.back().expected = true;
-    out.args.back().examples = { "1E-4",
-                                 "0.1",
-                                 "10.0", };
+    out.args.back().examples = { "1E-4", "0.1", "10.0", };
 #endif
 
 #ifdef DCMA_USE_EIGEN
@@ -199,8 +197,7 @@ OperationDoc OpArgDocExtractPointsWarp(void){
                            " Note that this parameter may affect how the transformation extrapolates.";
     out.args.back().default_val = "2";
     out.args.back().expected = true;
-    out.args.back().examples = { "2",
-                                 "3", };
+    out.args.back().examples = { "2", "3", };
 #endif
 
 #ifdef DCMA_USE_EIGEN
@@ -212,8 +209,132 @@ OperationDoc OpArgDocExtractPointsWarp(void){
                            " better.";
     out.args.back().default_val = "LDLT";
     out.args.back().expected = true;
-    out.args.back().examples = { "LDLT",
-                                 "PseudoInverse", };
+    out.args.back().examples = { "LDLT", "PseudoInverse", };
+#endif
+
+#ifdef DCMA_USE_EIGEN
+    out.args.emplace_back();
+    out.args.back().name = "TPSRPMLambdaStart";
+    out.args.back().desc = "Regularization parameter for the TPS-RPM method."
+                           " Controls the smoothness of the fitted thin plate spline function."
+                           " Setting to zero will ensure that all points are interpolated exactly (barring numerical"
+                           " imprecision). Setting higher will allow the spline to 'relax' and smooth out."
+                           " The specific value to use is heavily dependent on the problem domain and the amount"
+                           " of noise and outliers in the data. It relates to the spacing between points."
+                           " It follows the same annealing schedule as the system temperature does."
+                           " Note that this parameter is used with the TPS-RPM method, but *not* in the TPS method.";
+    out.args.back().default_val = "0.0";
+    out.args.back().expected = true;
+    out.args.back().examples = { "0.0", "1E-4", "0.1", "10.0" };
+#endif
+
+#ifdef DCMA_USE_EIGEN
+    out.args.emplace_back();
+    out.args.back().name = "TPSRPMZetaStart";
+    out.args.back().desc = "Regularization parameter for the TPS-RPM method."
+                           " Controls the likelihood of points being treated as outliers."
+                           " Higher values will bias points towards *not* being considered outliers."
+                           " The specific value to use is heavily dependent on the problem domain and the amount"
+                           " of noise and outliers in the data. It relates to the spacing between points."
+                           " It follows the same annealing schedule as the system temperature does."
+                           " Note that this parameter is used with the TPS-RPM method, but *not* in the TPS method.";
+    out.args.back().default_val = "0.0";
+    out.args.back().expected = true;
+    out.args.back().examples = { "0.0", "1E-4", "0.1", "10.0" };
+#endif
+
+#ifdef DCMA_USE_EIGEN
+    out.args.emplace_back();
+    out.args.back().name = "TPSRPMKernelDimension";
+    out.args.back().desc = "Dimensionality of the spline function kernel."
+                           " The kernel dimensionality *should* match the dimensionality of the points (i.e., 3),"
+                           " but doesn't need to."
+                           " 2 seems to work best, even with points in 3D."
+                           " Note that this parameter may affect how the transformation extrapolates."
+                           " Note that this parameter is used with the TPS-RPM method, but *not* in the TPS method.";
+    out.args.back().default_val = "2";
+    out.args.back().expected = true;
+    out.args.back().examples = { "2", "3", };
+#endif
+
+#ifdef DCMA_USE_EIGEN
+    out.args.emplace_back();
+    out.args.back().name = "TPSRPMTStart";
+    out.args.back().desc = "The deterministic annealing starting temperature."
+                           " This parameter is a scaling factor that modifies the temperature determined via an"
+                           " automatic method. Larger numbers grant the system more freedom to find large-scale"
+                           " deformation; small values *limit* the freedom to find large-scale deformations."
+                           " Note that this parameter is used with the TPS-RPM method, but *not* in the TPS method.";
+    out.args.back().default_val = "1.05";
+    out.args.back().expected = true;
+    out.args.back().examples = { "1.5", "1.05", "0.8", "0.5" };
+#endif
+
+#ifdef DCMA_USE_EIGEN
+    out.args.emplace_back();
+    out.args.back().name = "TPSRPMTEnd";
+    out.args.back().desc = "The deterministic annealing ending temperature."
+                           " Higher numbers will result in a coarser, but faster registration."
+                           " This parameter is a scaling factor that modifies the temperature determined via an"
+                           " automatic method. Larger numbers limit the freedom of the system to find fine-detail"
+                           " deformations; small values may result in overfitting and folding deformations."
+                           " Note that this parameter is used with the TPS-RPM method, but *not* in the TPS method.";
+    out.args.back().default_val = "0.01";
+    out.args.back().expected = true;
+    out.args.back().examples = { "1.0", "0.1", "0.01" };
+#endif
+
+#ifdef DCMA_USE_EIGEN
+    out.args.emplace_back();
+    out.args.back().name = "TPSRPMTStep";
+    out.args.back().desc = "The deterministic annealing ending temperature."
+                           " Higher numbers will result in slower annealing."
+                           " This parameter is a multiplicative factor, so if set to 0.95 temperature adjustments"
+                           " will be $T^{\\prime} = 0.95 T$."
+                           " Note that this parameter is used with the TPS-RPM method, but *not* in the TPS method.";
+    out.args.back().default_val = "0.93";
+    out.args.back().expected = true;
+    out.args.back().examples = { "0.99", "0.93", "0.9" };
+#endif
+
+#ifdef DCMA_USE_EIGEN
+    out.args.emplace_back();
+    out.args.back().name = "TPSRPMStepsPerT";
+    out.args.back().desc = "Deterministic annealing parameter controlling the number of correspondence-transformation"
+                           " update iterations performed at each temperature."
+                           " Lower numbers will result in faster, but possibly less accurate registrations."
+                           " Note that this parameter is used with the TPS-RPM method, but *not* in the TPS method.";
+    out.args.back().default_val = "5";
+    out.args.back().expected = true;
+    out.args.back().examples = { "1", "5", "10" };
+#endif
+
+#ifdef DCMA_USE_EIGEN
+    out.args.emplace_back();
+    out.args.back().name = "TPSRPMSeedWithCentroidShift";
+    out.args.back().desc = "Controls whether a centroid-based registration is used to seed the registration."
+                           " Typically this is not needed, since high temperatures give the system enough freedom"
+                           " to find large-scale deformations (include centroid alignment). However, if the initial"
+                           " alignment is intentional, and point cloud centroids do not align, then seeding the"
+                           " registration will be detrimental. Seeding might be useful if the starting temperature"
+                           " is set low (which will limit large-scale deformations like centroid alignment)."
+                           " Note that this parameter is used with the TPS-RPM method, but *not* in the TPS method.";
+    out.args.back().default_val = "false";
+    out.args.back().expected = true;
+    out.args.back().examples = { "true", "false" };
+#endif
+
+#ifdef DCMA_USE_EIGEN
+    out.args.emplace_back();
+    out.args.back().name = "TPSRPMSolver";
+    out.args.back().desc = "The method used to solve the system of linear equtions that defines the thin plate spline"
+                           " solution. The pseudoinverse will likely be able to provide a solution when the system is"
+                           " degenerate, but it might not be reasonable or even sensible. The LDLT method scales"
+                           " better."
+                           " Note that this parameter is used with the TPS-RPM method, but *not* in the TPS method.";
+    out.args.back().default_val = "LDLT";
+    out.args.back().expected = true;
+    out.args.back().examples = { "LDLT", "PseudoInverse", };
 #endif
 
     out.args.emplace_back();
@@ -222,10 +343,7 @@ OperationDoc OpArgDocExtractPointsWarp(void){
                            " Note that this parameter will not have any effect on non-iterative methods.";
     out.args.back().default_val = "100";
     out.args.back().expected = true;
-    out.args.back().examples = { "5",
-                                 "20",
-                                 "100",
-                                 "1000" };
+    out.args.back().examples = { "5", "20", "100", "1000" };
 
 
     out.args.emplace_back();
@@ -243,10 +361,7 @@ OperationDoc OpArgDocExtractPointsWarp(void){
                            " controlled by, e.g., an annealing schedule.";
     out.args.back().default_val = "nan";
     out.args.back().expected = true;
-    out.args.back().examples = { "-1",
-                                 "1E-2",
-                                 "1E-3",
-                                 "1E-5" };
+    out.args.back().examples = { "-1", "1E-2", "1E-3", "1E-5" };
 
     return out;
 }
@@ -264,9 +379,21 @@ Drover ExtractPointsWarp(Drover DICOM_data, OperationArgPkg OptArgs, std::map<st
     const auto MethodStr = OptArgs.getValueStr("Method").value();
 
 #ifdef DCMA_USE_EIGEN
+    // TPS params.
     const auto TPSLambda = std::stod( OptArgs.getValueStr("TPSLambda").value() );
     const auto TPSKDim = std::stol( OptArgs.getValueStr("TPSKernelDimension").value() );
     const auto TPSSolverStr = OptArgs.getValueStr("TPSSolver").value();
+
+    // TPS-RPM params.
+    const auto TPSRPMLambdaStart = std::stod( OptArgs.getValueStr("TPSRPMLambdaStart").value() );
+    const auto TPSRPMZetaStart = std::stod( OptArgs.getValueStr("TPSRPMZetaStart").value() );
+    const auto TPSRPMKDim = std::stol( OptArgs.getValueStr("TPSRPMKernelDimension").value() );
+    const auto TPSRPMSolverStr = OptArgs.getValueStr("TPSRPMSolver").value();
+    const auto TPSRPMTStart = std::stod( OptArgs.getValueStr("TPSRPMTStart").value() );
+    const auto TPSRPMTEnd = std::stod( OptArgs.getValueStr("TPSRPMTEnd").value() );
+    const auto TPSRPMTStep = std::stod( OptArgs.getValueStr("TPSRPMTStep").value() );
+    const auto TPSRPMStepsPerT = std::stol( OptArgs.getValueStr("TPSRPMStepsPerT").value() );
+    const auto TPSRPMSeedWithCentroidShiftStr = OptArgs.getValueStr("TPSRPMSeedWithCentroidShift").value();
 #endif // DCMA_USE_EIGEN
 
     const auto MaxIters = std::stol( OptArgs.getValueStr("MaxIterations").value() );
@@ -274,6 +401,7 @@ Drover ExtractPointsWarp(Drover DICOM_data, OperationArgPkg OptArgs, std::map<st
 
     //-----------------------------------------------------------------------------------------------------------------
     const auto regex_com    = Compile_Regex("^ce?n?t?r?o?i?d?$");
+    const auto regex_true   = Compile_Regex("^tr?u?e?$");
 #ifdef DCMA_USE_EIGEN    
     const auto regex_pca    = Compile_Regex("^pc?a?$");
     const auto regex_exhicp = Compile_Regex("^ex?h?a?u?s?t?i?v?e?[-_]?i?c?p?$");
@@ -282,6 +410,9 @@ Drover ExtractPointsWarp(Drover DICOM_data, OperationArgPkg OptArgs, std::map<st
 
     const auto regex_ldlt = Compile_Regex("^LD?L?T?$");
     const auto regex_pinv = Compile_Regex("^ps?e?u?d?o?[-_]?i?n?v?e?r?s?e?$");
+
+    const auto TPSRPMSeedWithCentroidShift = std::regex_match(TPSRPMSeedWithCentroidShiftStr, regex_true);
+
 #endif // DCMA_USE_EIGEN
 
     auto PCs_all = All_PCs( DICOM_data );
@@ -369,7 +500,31 @@ Drover ExtractPointsWarp(Drover DICOM_data, OperationArgPkg OptArgs, std::map<st
             }
 
         }else if( std::regex_match(MethodStr, regex_tpsrpm) ){
-            auto t_opt = AlignViaTPSRPM( (*pcp_it)->pset,
+            AlignViaTPSRPMParams params;
+            params.lambda_start             = TPSRPMLambdaStart; // 0.0;
+            params.zeta_start               = TPSRPMZetaStart; // 0.0;
+            params.kernel_dimension         = TPSRPMKDim; // = 2;
+            params.T_start_scale            = TPSRPMTStart; // 1.05; // Slightly larger than all possible to allow any pairing.
+            params.T_end_scale              = TPSRPMTEnd;   // 0.01; // Default to precise registration. Higher numbers = coarser registration.
+            params.T_step                   = TPSRPMTStep;  // 0.93; // Should be [0.9:0.99] or so. Larger number = slower annealing.
+            params.N_iters_at_fixed_T       = TPSRPMStepsPerT; // 5  // Lower = faster, but possibly less accurate.
+            params.seed_with_centroid_shift = TPSRPMSeedWithCentroidShift; // false;
+
+            if(false){
+            }else if( std::regex_match(TPSRPMSolverStr, regex_ldlt) ){
+                params.solution_method = AlignViaTPSRPMParams::SolutionMethod::LDLT;
+            }else if( std::regex_match(TPSRPMSolverStr, regex_pinv) ){
+                params.solution_method = AlignViaTPSRPMParams::SolutionMethod::PseudoInverse;
+            }else{
+                throw std::runtime_error("Solver not understood. Unable to continue.");
+            }
+
+            FUNCINFO("Performing TPS alignment using lambda = " << TPSRPMLambdaStart << ","
+                     << " zeta = " << TPSRPMLambdaStart << ","
+                     << " and kdim = " << TPSRPMKDim);
+
+            auto t_opt = AlignViaTPSRPM( params,
+                                         (*pcp_it)->pset,
                                          (*ref_PCs.front())->pset );
             if(t_opt){
                 FUNCINFO("Successfully found warp using TPS-RPM");

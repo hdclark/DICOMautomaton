@@ -5,8 +5,6 @@
 #include <optional>
 #include <limits>
 
-#include "Structs.h"
-
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorMath.h"         //Needed for vec3 class.
 
