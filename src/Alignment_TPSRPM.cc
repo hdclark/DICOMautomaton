@@ -398,6 +398,26 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
     }
     FUNCINFO("T_start, T_step, and T_end are " << T_start << ", " << params.T_step << ", " << T_end);
 
+    // Ensure any forced correpondences are valid and unique.
+    {
+        std::set<long int> s_m;
+        std::set<long int> s_s;
+        for(const auto &apair : params.forced_correspondence){
+            const auto i_m = apair.first;
+            const auto j_s = apair.second;
+            if( !isininc(0, i_m, N_move_points - 1)
+            ||  !isininc(0, j_s, N_stat_points - 1) ){
+                throw std::invalid_argument("Forced correspondence refers to an invalid point. Cannot continue.");
+            }
+            const auto ret_pair_m = s_m.insert(i_m);
+            const auto ret_pair_s = s_s.insert(j_s);
+            if( !ret_pair_m.second 
+            ||  !ret_pair_s.second ){
+                throw std::invalid_argument("Forced correspondence contains same point multiple times. Cannot continue.");
+            }
+        }
+    }
+
     // Prepare working buffers.
     //
     // Main system matrix.
@@ -511,6 +531,26 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
     }
     M(N_move_points, N_stat_points) = 0.0;
 
+    // Implement the user-provided forced correspondences, if any exist, by overwriting the correspondence matrix.
+    //
+    // Note: As far as I can tell, this approach ruins any convergence guarantees the TPS-RPM algorithm would otherwise
+    //       provide. Use of correspondence may require fine-tuning of the TPM-RPM algorithm parameters, especially the
+    //       number of softassign iterations required.
+    const auto implement_forced_correspondence = [&]() -> void {
+        for(const auto &apair : params.forced_correspondence){
+            const auto i_m = apair.first;
+            const auto j_s = apair.second;
+
+            for(long int i = 0; i < (N_move_points + 1); ++i){ // row
+                M(i, j_s) = 0.0;
+            }
+            for(long int j = 0; j < (N_stat_points + 1); ++j){ // column
+                M(i_m, j) = 0.0;
+            }
+            M(i_m, j_s) = 1.0;
+        }
+        return;
+    };
 
     // Update the correspondence.
     //
@@ -564,9 +604,10 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
         {
             std::vector<double> row_sums(N_move_points + 1, 0.0);
             std::vector<double> col_sums(N_stat_points + 1, 0.0);
-            for(long int norm_iter = 0; norm_iter < 5; ++norm_iter){
+            for(long int norm_iter = 0; norm_iter < params.N_Sinkhorn_iters; ++norm_iter){
 
                 // Tally the current column sums and re-scale the corespondence coefficients.
+                implement_forced_correspondence();
                 for(long int j = 0; j < (N_stat_points+1); ++j){ // column
                     col_sums[j] = 0.0;
                     for(long int i = 0; i < (N_move_points+1); ++i){ // row
@@ -587,6 +628,7 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
                 }
                 
                 // Tally the current row sums and re-scale the corespondence coefficients.
+                implement_forced_correspondence();
                 for(long int i = 0; i < (N_move_points+1); ++i){ // row
                     row_sums[i] = 0.0;
                     for(long int j = 0; j < (N_stat_points+1); ++j){ // column
@@ -611,9 +653,49 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
             }
         }
 
+        // Guarantee that the correspodence is forced before finalizing the update.
+        implement_forced_correspondence();
+
         if(!M.allFinite()){
             throw std::runtime_error("Failed to compute coefficient matrix.");
         }
+        return;
+    };
+
+    // Estimates how the correspondence matrix will binarize when T -> 0.
+    const auto update_final_correspondence = [&]() -> void {
+        for(long int i = 0; i < N_move_points; ++i){ // row
+            double max_coeff = -(std::numeric_limits<double>::infinity());
+            long int max_j = -1;
+            for(long int j = 0; j < (N_stat_points + 1); ++j){ // column
+                const auto m = M(i,j);
+                if(max_coeff < m){
+                    max_coeff = m;
+                    max_j = j;
+                }
+            }
+            if(!std::isfinite(max_coeff)){
+                throw std::logic_error("Unable to estimate binary correspondence.");
+            }
+            params.final_move_correspondence.emplace_back( std::make_pair(i, max_j) );
+        }
+
+        for(long int j = 0; j < N_stat_points; ++j){ // column
+            double max_coeff = -(std::numeric_limits<double>::infinity());
+            long int max_i = -1;
+            for(long int i = 0; i < (N_move_points + 1); ++i){ // row
+                const auto m = M(i,j);
+                if(max_coeff < m){
+                    max_coeff = m;
+                    max_i = i;
+                }
+            }
+            if(!std::isfinite(max_coeff)){
+                throw std::logic_error("Unable to estimate binary correspondence.");
+            }
+            params.final_stat_correspondence.emplace_back( std::make_pair(max_i, j) );
+        }
+
         return;
     };
 
@@ -762,6 +844,10 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
 //        write_to_xyz_file("warped_tps-rpm_");
     }
 //    write_to_xyz_file("warped_tps-rpm_");
+
+    if(params.report_final_correspondence){
+        update_final_correspondence();
+    }
 
     return t;
 }

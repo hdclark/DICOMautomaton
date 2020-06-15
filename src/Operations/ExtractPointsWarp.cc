@@ -311,6 +311,18 @@ OperationDoc OpArgDocExtractPointsWarp(void){
 
 #ifdef DCMA_USE_EIGEN
     out.args.emplace_back();
+    out.args.back().name = "TPSRPMSinkhornSteps";
+    out.args.back().desc = "Parameter controlling the number of iterations performed during the Sinkhorn softassign"
+                           " correspondence estimation procedure. Typically 5-10 will suffice, but if any points are"
+                           " forced to correspond then a higher number *may* be required."
+                           " Note that this parameter is used with the TPS-RPM method, but *not* in the TPS method.";
+    out.args.back().default_val = "10";
+    out.args.back().expected = true;
+    out.args.back().examples = { "5", "10", "20" };
+#endif
+
+#ifdef DCMA_USE_EIGEN
+    out.args.emplace_back();
     out.args.back().name = "TPSRPMSeedWithCentroidShift";
     out.args.back().desc = "Controls whether a centroid-based registration is used to seed the registration."
                            " Typically this is not needed, since high temperatures give the system enough freedom"
@@ -335,6 +347,22 @@ OperationDoc OpArgDocExtractPointsWarp(void){
     out.args.back().default_val = "LDLT";
     out.args.back().expected = true;
     out.args.back().examples = { "LDLT", "PseudoInverse", };
+#endif
+
+#ifdef DCMA_USE_EIGEN
+    out.args.emplace_back();
+    out.args.back().name = "TPSRPMHardConstraints";
+    out.args.back().desc = "Forced correspondence between pairs of points (one in the moving set, one in the stationary"
+                           " set) specified as comma-separated pairs of indices into the moving and stationary point"
+                           " sets. Indices are zero-based. Forced correspondences are taken to be exclusive, meaning"
+                           " that no other points will correspond with either points. Forced correspondence also begets"
+                           " outlier rejection, so ensure the points are not tainted by noise or are outliers."
+                           " Use of forced correspondence may cause the Sinkhorn method to converge slowly or possibly"
+                           " fail to converge at all. Increasing the number of Sinkhorn iterations may be required."
+                           " Note that this parameter is used with the TPS-RPM method, but *not* in the TPS method.";
+    out.args.back().default_val = "";
+    out.args.back().expected = true;
+    out.args.back().examples = { "0,10", "23,45, 24,46, 0,100", };
 #endif
 
     out.args.emplace_back();
@@ -393,7 +421,9 @@ Drover ExtractPointsWarp(Drover DICOM_data, OperationArgPkg OptArgs, std::map<st
     const auto TPSRPMTEnd = std::stod( OptArgs.getValueStr("TPSRPMTEnd").value() );
     const auto TPSRPMTStep = std::stod( OptArgs.getValueStr("TPSRPMTStep").value() );
     const auto TPSRPMStepsPerT = std::stol( OptArgs.getValueStr("TPSRPMStepsPerT").value() );
+    const auto TPSRPMSinkhornSteps = std::stol( OptArgs.getValueStr("TPSRPMSinkhornSteps").value() );
     const auto TPSRPMSeedWithCentroidShiftStr = OptArgs.getValueStr("TPSRPMSeedWithCentroidShift").value();
+    const auto TPSRPMHardContraintsStr = OptArgs.getValueStr("TPSRPMHardConstraints").value();
 #endif // DCMA_USE_EIGEN
 
     const auto MaxIters = std::stol( OptArgs.getValueStr("MaxIterations").value() );
@@ -413,6 +443,28 @@ Drover ExtractPointsWarp(Drover DICOM_data, OperationArgPkg OptArgs, std::map<st
 
     const auto TPSRPMSeedWithCentroidShift = std::regex_match(TPSRPMSeedWithCentroidShiftStr, regex_true);
 
+    std::vector<std::pair<long int, long int>> TPSRPMHardContraints;
+    {
+        auto split = SplitStringToVector(TPSRPMHardContraintsStr, ',', 'd');
+        split = SplitVector(split, ';', 'd');
+
+        std::vector<long int> numbers;
+        for(const auto &w : split){
+           try{
+               const auto x = std::stol(w);
+               numbers.emplace_back(x);
+           }catch(const std::exception &){
+               throw std::logic_error("Unable to understand forced correspondence index. Cannot continue.");
+           }
+        }
+        if((numbers.size() % 2) != 0){
+            throw std::invalid_argument("Unmatched forced correspondence index detected. Cannot continue.");
+        }
+        for(size_t i = 0; i < numbers.size(); ){
+            TPSRPMHardContraints.emplace_back( std::make_pair( numbers.at(i++), numbers.at(i++) ) );
+        }
+    }
+    FUNCINFO("Implemented " << TPSRPMHardContraints.size() << " hard constraints");
 #endif // DCMA_USE_EIGEN
 
     auto PCs_all = All_PCs( DICOM_data );
@@ -501,15 +553,23 @@ Drover ExtractPointsWarp(Drover DICOM_data, OperationArgPkg OptArgs, std::map<st
 
         }else if( std::regex_match(MethodStr, regex_tpsrpm) ){
             AlignViaTPSRPMParams params;
-            params.lambda_start             = TPSRPMLambdaStart; // 0.0;
-            params.zeta_start               = TPSRPMZetaStart; // 0.0;
-            params.kernel_dimension         = TPSRPMKDim; // = 2;
-            params.T_start_scale            = TPSRPMTStart; // 1.05; // Slightly larger than all possible to allow any pairing.
-            params.T_end_scale              = TPSRPMTEnd;   // 0.01; // Default to precise registration. Higher numbers = coarser registration.
-            params.T_step                   = TPSRPMTStep;  // 0.93; // Should be [0.9:0.99] or so. Larger number = slower annealing.
-            params.N_iters_at_fixed_T       = TPSRPMStepsPerT; // 5  // Lower = faster, but possibly less accurate.
-            params.seed_with_centroid_shift = TPSRPMSeedWithCentroidShift; // false;
+            params.lambda_start             = TPSRPMLambdaStart;
+            params.zeta_start               = TPSRPMZetaStart;
+            params.kernel_dimension         = TPSRPMKDim;
+            params.T_start_scale            = TPSRPMTStart;
+            params.T_end_scale              = TPSRPMTEnd;
+            params.T_step                   = TPSRPMTStep;
+            params.N_iters_at_fixed_T       = TPSRPMStepsPerT;
+            params.N_Sinkhorn_iters         = TPSRPMSinkhornSteps;
+            params.seed_with_centroid_shift = TPSRPMSeedWithCentroidShift;
+            params.forced_correspondence    = TPSRPMHardContraints;
 
+/*
+
+// Debugging...
+
+params.report_final_correspondence = true;
+*/
             if(false){
             }else if( std::regex_match(TPSRPMSolverStr, regex_ldlt) ){
                 params.solution_method = AlignViaTPSRPMParams::SolutionMethod::LDLT;
@@ -520,7 +580,7 @@ Drover ExtractPointsWarp(Drover DICOM_data, OperationArgPkg OptArgs, std::map<st
             }
 
             FUNCINFO("Performing TPS alignment using lambda = " << TPSRPMLambdaStart << ","
-                     << " zeta = " << TPSRPMLambdaStart << ","
+                     << " zeta = " << TPSRPMZetaStart << ","
                      << " and kdim = " << TPSRPMKDim);
 
             auto t_opt = AlignViaTPSRPM( params,
@@ -532,6 +592,109 @@ Drover ExtractPointsWarp(Drover DICOM_data, OperationArgPkg OptArgs, std::map<st
                 DICOM_data.trans_data.back()->transform = t_opt.value();
                 DICOM_data.trans_data.back()->metadata["Name"] = "unspecified";
                 DICOM_data.trans_data.back()->metadata["WarpType"] = "TPS-RPM";
+
+/*
+
+// Debugging...
+
+std::cout << "Final moving set correspondence:" << std::endl;
+for(const auto &apair : params.final_move_correspondence){
+    std::cout << apair.first << " " << apair.second << std::endl;
+}
+
+// Write an OFF file showing how points correspond using straight lines.
+{
+    std::ofstream FO("final_correspondence.off");
+
+    FO << "OFF" << std::endl;
+    FO << std::endl;
+    FO << "# Note: this file represents line segments as zero-area triangles." << std::endl;
+    //FO << "#" << comment << std::endl;
+    FO << std::endl;
+
+    FO << params.final_move_correspondence.size() * 3 // Number of vertices.
+       << " " << params.final_move_correspondence.size() // Number of faces.
+       << " 0" // Number of edges (edges are ignorable).
+       << std::endl;
+
+    // Maximize precision of the vertices.
+    const auto original_precision = FO.precision();
+    FO.precision( std::numeric_limits<double>::max_digits10 );
+
+    // Vertices.
+    const auto com_move = (*pcp_it)->pset.Centroid();
+    const auto com_stat = (*ref_PCs.front())->pset.Centroid();
+    for(const auto &apair : params.final_move_correspondence){
+        const auto i = apair.first;
+        const auto j = apair.second;
+
+        const auto R0 = (i < (*pcp_it)->pset.points.size()) ? (*pcp_it)->pset.points.at(i) : com_move;
+        const auto R1 = (j < (*ref_PCs.front())->pset.points.size()) ? (*ref_PCs.front())->pset.points.at(j) : com_stat;
+        const auto R2 = (R0 + R1)*static_cast<double>(0.5); //The midpoint, to complete the triangle.
+        FO << R0.x << " " << R0.y << " " << R0.z << std::endl; // "v0".
+        FO << R1.x << " " << R1.y << " " << R1.z << std::endl; // "v1".
+        FO << R2.x << " " << R2.y << " " << R2.z << std::endl; // "v2".
+    }
+    FO << std::endl;
+
+    // Reset the precision of the stream.
+    FO.precision( original_precision );
+
+    //Faces.
+    size_t i = 0;
+    for(const auto & : params.final_move_correspondence){
+        FO << "3 ";
+        FO << i++ << " ";
+        FO << i++ << " ";
+        FO << i++ << std::endl;
+    }
+    FO << std::endl;
+
+    //Check if it was successful, clean up, and carry on.
+    FO.flush();
+    //if(!FO.good()) return false;
+    FO.close();
+}
+
+
+// Write a series of XYZ files animating how points move along straight correspondence lines.
+long int num_steps = 100;
+std::string base = "correspondence_interpolation_";
+for(long int step = 0; step <= num_steps; ++step){
+
+    const auto fname = Get_Unique_Sequential_Filename(base, 6, ".xyz");
+    std::ofstream FO(fname);
+
+    // Maximize precision of the vertices.
+    const auto original_precision = FO.precision();
+    FO.precision( std::numeric_limits<double>::max_digits10 );
+
+    // Vertices.
+    const auto com_move = (*pcp_it)->pset.Centroid();
+    const auto com_stat = (*ref_PCs.front())->pset.Centroid();
+    for(const auto &apair : params.final_move_correspondence){
+        const auto i = apair.first;
+        const auto j = apair.second;
+
+        const auto R0 = (i < (*pcp_it)->pset.points.size()) ? (*pcp_it)->pset.points.at(i) : com_move;
+        const auto R1 = (j < (*ref_PCs.front())->pset.points.size()) ? (*ref_PCs.front())->pset.points.at(j) : com_stat;
+        const auto t = static_cast<double>(step) / static_cast<double>(num_steps);
+        const auto P = R0 + (R1 - R0) * t;
+        FO << P.x << " " << P.y << " " << P.z << std::endl;
+    }
+    FO << std::endl;
+
+    // Reset the precision of the stream.
+    FO.precision( original_precision );
+
+    //Check if it was successful, clean up, and carry on.
+    FO.flush();
+    //if(!FO.good()) return false;
+    FO.close();
+}
+
+*/
+
             }else{
                 throw std::runtime_error("Failed to warp using TPS-RPM.");
             }

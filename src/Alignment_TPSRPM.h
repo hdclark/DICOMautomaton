@@ -97,6 +97,10 @@ struct AlignViaTPSRPMParams {
     // The number of iterations (i.e., update correspondence, update TPS function cycles) to perform at each T.
     long int N_iters_at_fixed_T = 5; // Lower = faster, but possibly less accurate.
 
+    // The number of iterations to perform in the softassign correspondence update step. May need to be higher is forced
+    // correspondence is used.
+    long int N_Sinkhorn_iters = 10; // Lower = faster, but possibly less accurate.
+
     // Regularization parameters.
     //
     // Controls the smoothness of the fitted thin plate spline function.
@@ -105,7 +109,7 @@ struct AlignViaTPSRPMParams {
     double lambda_start = 0.0;
 
     // Controls the balance of how points are considered to be outliers.
-    // Setting to zero will disable this bias. Setting higher will cause more points to be considered outliers.
+    // Setting to zero will disable this bias. Setting higher will cause fewer points to be considered outliers.
     double zeta_start = 0.0;
 
     // Solver parameters.
@@ -119,7 +123,7 @@ struct AlignViaTPSRPMParams {
     };
     SolutionMethod solution_method = SolutionMethod::LDLT;
 
-    // Misc parameters.
+    // Algorithm-altering parameters.
     //
     // Seed the initial transformation with the result of a rigid centroid-to-centroid shift transformation. The default
     // initial transformation is an identity transform; if the point sets have a deliberate relative position, then a
@@ -128,15 +132,28 @@ struct AlignViaTPSRPMParams {
     // computation.
     bool seed_with_centroid_shift = false;
 
-    // Should forced correspondences go here too?? TODO.
+    // Correspondence parameters.
+    //
+    // Point-pairs that are forced to correspond. Indices are zero-based. The first index refers to the moving set, and
+    // the second refers to the stationary set. Note that forced correspondences cause the two named points to
+    // *exclusively* correspond. So a single point cannot be named twice.
+    //
+    // Note that use of forced correspondence may cause the softassign procedure to fail to converge, or converge
+    // slowly. Adjusting the number of iterations used in the Sinkhorn procedure may be required.
+    std::vector< std::pair<long int, long int> > forced_correspondence;
 
-    // ... TODO ...
+    // The final correspondence, interpretted as a binary correspondence by (effectively) taking T -> 0. These
+    // correspondences refer to the mapping from a moving set point index (the first index) to a stationary set point
+    // index (the second index) for **both** outputs. Indices are zero-based and legitmate correspondences
+    // span [0, num_points_in_other_set - 1]. Outliers will have the index *just after* the maximum (i.e., equal to the
+    // total number of points in the corresponding set). Note that the correspondence will not always be symmetric! For
+    // most use-cases, the moving set correspondence is probably all that the user will want. However, the full set of
+    // information can be useful for double-sided outlier detection, evaluating the registration, evaluating whether the
+    // softassign procedure has appropriately coalesced, predicting how the inverse transformation will behave, etc.
+    bool report_final_correspondence = false;
+    std::vector< std::pair<long int, long int> > final_move_correspondence; // moving point index -> stat point index.
+    std::vector< std::pair<long int, long int> > final_stat_correspondence; // ALSO moving point index -> stat point index.
 
-    // Should we report final correspondence in some way?
-    // Yes! -- it probably makes sense to provide them back to the caller, since they will also have the original points
-    // sets handy. TODO.
-
-    // ... TODO ...
 };
 
 std::optional<thin_plate_spline>
