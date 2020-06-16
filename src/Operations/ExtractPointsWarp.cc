@@ -461,7 +461,9 @@ Drover ExtractPointsWarp(Drover DICOM_data, OperationArgPkg OptArgs, std::map<st
             throw std::invalid_argument("Unmatched forced correspondence index detected. Cannot continue.");
         }
         for(size_t i = 0; i < numbers.size(); ){
-            TPSRPMHardContraints.emplace_back( std::make_pair( numbers.at(i++), numbers.at(i++) ) );
+            const auto m_p_i = numbers.at(i++);
+            const auto s_p_i = numbers.at(i++);
+            TPSRPMHardContraints.emplace_back( std::make_pair( m_p_i, s_p_i ) );
         }
     }
     FUNCINFO("Implemented " << TPSRPMHardContraints.size() << " hard constraints");
@@ -564,11 +566,13 @@ Drover ExtractPointsWarp(Drover DICOM_data, OperationArgPkg OptArgs, std::map<st
             params.seed_with_centroid_shift = TPSRPMSeedWithCentroidShift;
             params.forced_correspondence    = TPSRPMHardContraints;
 
+
 /*
 
 // Debugging...
 
 params.report_final_correspondence = true;
+
 */
             if(false){
             }else if( std::regex_match(TPSRPMSolverStr, regex_ldlt) ){
@@ -593,8 +597,8 @@ params.report_final_correspondence = true;
                 DICOM_data.trans_data.back()->metadata["Name"] = "unspecified";
                 DICOM_data.trans_data.back()->metadata["WarpType"] = "TPS-RPM";
 
-/*
 
+/*
 // Debugging...
 
 std::cout << "Final moving set correspondence:" << std::endl;
@@ -642,7 +646,7 @@ for(const auto &apair : params.final_move_correspondence){
 
     //Faces.
     size_t i = 0;
-    for(const auto & : params.final_move_correspondence){
+    for(const auto &p : params.final_move_correspondence){
         FO << "3 ";
         FO << i++ << " ";
         FO << i++ << " ";
@@ -692,7 +696,6 @@ for(long int step = 0; step <= num_steps; ++step){
     //if(!FO.good()) return false;
     FO.close();
 }
-
 */
 
             }else{
