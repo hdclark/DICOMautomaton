@@ -97,9 +97,15 @@ struct AlignViaTPSRPMParams {
     // The number of iterations (i.e., update correspondence, update TPS function cycles) to perform at each T.
     long int N_iters_at_fixed_T = 5; // Lower = faster, but possibly less accurate.
 
-    // The number of iterations to perform in the softassign correspondence update step. May need to be higher is forced
-    // correspondence is used.
-    long int N_Sinkhorn_iters = 10; // Lower = faster, but possibly less accurate.
+    // The number of iterations to perform in the softassign correspondence update step. May need to be higher if any
+    // forced correspondences are used. Note that this number is worst-case; if tolerance is reached earlier then the
+    // Sinkhorn procedure completes early.
+    long int N_Sinkhorn_iters = 5000; // Lower = faster, but possibly less accurate.
+
+    // The tolerable worst deviation from row- and column-sum normalization conditions. If this tolerance is reached,
+    // the Sinkhorn procedure is completed early. Conversely, if this tolerance is NOT reached after the allowed
+    // iterations, then the algorithm terminates due to failure.
+    double Sinkhorn_tolerance = 0.01;
 
     // Regularization parameters.
     //

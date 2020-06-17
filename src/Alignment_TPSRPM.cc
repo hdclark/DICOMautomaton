@@ -559,6 +559,22 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
         return;
     };
 
+    // Report the row- or column-sum (including outlier gutters, but only in the sum part) that deviates the most from
+    // the normalization (i.e., every row and every column sums to one, except the rows including the bottom-right
+    // coefficient).
+    const auto worst_row_col_sum_deviation = [&]() -> double {
+        double w = 0.0;
+        for(size_t i = 0; i < N_move_points; ++i){
+            const auto ds = std::abs(M.row(i).sum() - 1.0);
+            if( w < ds ) w = ds;
+        }
+        for(size_t j = 0; j < N_stat_points; ++j){
+            const auto ds = std::abs(M.col(j).sum() - 1.0);
+            if( w < ds ) w = ds;
+        }
+        return w;
+    };
+
     // Update the correspondence.
     //
     // Note: This sub-routine solves for the point cloud correspondence using the current TPS transformation.
@@ -616,7 +632,6 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
 
         // Normalize the rows and columns iteratively using the Sinkhorn procedure.
         {
-
             std::vector<double> row_sums(N_move_points, 0.0);
             std::vector<double> col_sums(N_stat_points, 0.0);
             for(long int norm_iter = 0; norm_iter < params.N_Sinkhorn_iters; ++norm_iter){
@@ -669,6 +684,12 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
                     }
                 }
 
+                // Determine whether convergence has been reached and we can break early.
+                const auto w = worst_row_col_sum_deviation();
+                if(w < params.Sinkhorn_tolerance){
+                    break;
+                }
+
                 //FUNCINFO("On normalization iteration " << norm_iter << " the mean col sum was " << Stats::Mean(col_sums));
                 //FUNCINFO("On normalization iteration " << norm_iter << " the mean row sum was " << Stats::Mean(row_sums));
             }
@@ -680,17 +701,9 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
         // that M successfully normalizes. If it fails, and using more Sinkhorn iterations doesn't work, consider
         // overriding the spline evaluation function to ensure the W_A spline coefficients sum to zero.
         {
-            for(size_t i = 0; i < N_move_points; ++i){
-                const auto s = M.row(i).sum();
-                if(!isininc(0.99, s, 1.01)){
-                    throw std::runtime_error("Row sum ("_s + std::to_string(s) + ") could not be normalized. Consider more Sinkhorn iterations.");
-                }
-            }
-            for(size_t j = 0; j < N_stat_points; ++j){
-                const auto s = M.col(j).sum();
-                if(!isininc(0.99, s, 1.01)){
-                    throw std::runtime_error("Col sum ("_s + std::to_string(s) + ") could not be normalized. Consider more Sinkhorn iterations.");
-                }
+            const auto w = worst_row_col_sum_deviation();
+            if(params.Sinkhorn_tolerance < w){
+                throw std::runtime_error("Sinkhorn technique failed to normalize correspondence matrix. Consider more Sinkhorn iterations.");
             }
         }
 

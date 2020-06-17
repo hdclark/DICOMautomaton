@@ -311,14 +311,33 @@ OperationDoc OpArgDocExtractPointsWarp(void){
 
 #ifdef DCMA_USE_EIGEN
     out.args.emplace_back();
-    out.args.back().name = "TPSRPMSinkhornSteps";
+    out.args.back().name = "TPSRPMSinkhornMaxSteps";
     out.args.back().desc = "Parameter controlling the number of iterations performed during the Sinkhorn softassign"
-                           " correspondence estimation procedure. Typically 5-10 will suffice, but if any points are"
-                           " forced to correspond then a higher number *may* be required."
+                           " correspondence estimation procedure. Note that this is the worst-case number of"
+                           " iterations since the Sinkhorn procedure completes when tolerance is reached."
+                           " Setting this number to the maximum number of iterations acceptable given your speed"
+                           " requirements should result in satisfactory results."
+                           " Note that use of forced correspondence *may* require a higher number of steps."
                            " Note that this parameter is used with the TPS-RPM method, but *not* in the TPS method.";
-    out.args.back().default_val = "10";
+    out.args.back().default_val = "5000";
     out.args.back().expected = true;
-    out.args.back().examples = { "5", "10", "20" };
+    out.args.back().examples = { "500", "5000", "50000", "500000" };
+#endif
+
+#ifdef DCMA_USE_EIGEN
+    out.args.emplace_back();
+    out.args.back().name = "TPSRPMSinkhornTolerance";
+    out.args.back().desc = "Parameter controlling the permissable deviation from the ideal softassign correspondence"
+                           " normalization conditions (i.e., that each row and each column sum to one)."
+                           " If tolerance is reached then the Sinkhorn procedure is completed early."
+                           " However, if the maximum number of iterations is reached and the tolerance has not been"
+                           " achieved then the algorithm terminates due to failure."
+                           " If registration quality is flexible, setting a higher number can significantly"
+                           " speed up the computation."
+                           " Note that this parameter is used with the TPS-RPM method, but *not* in the TPS method.";
+    out.args.back().default_val = "0.01";
+    out.args.back().expected = true;
+    out.args.back().examples = { "1E-4", "0.001", "0.01" };
 #endif
 
 #ifdef DCMA_USE_EIGEN
@@ -421,7 +440,8 @@ Drover ExtractPointsWarp(Drover DICOM_data, OperationArgPkg OptArgs, std::map<st
     const auto TPSRPMTEnd = std::stod( OptArgs.getValueStr("TPSRPMTEnd").value() );
     const auto TPSRPMTStep = std::stod( OptArgs.getValueStr("TPSRPMTStep").value() );
     const auto TPSRPMStepsPerT = std::stol( OptArgs.getValueStr("TPSRPMStepsPerT").value() );
-    const auto TPSRPMSinkhornSteps = std::stol( OptArgs.getValueStr("TPSRPMSinkhornSteps").value() );
+    const auto TPSRPMSinkhornMaxSteps = std::stol( OptArgs.getValueStr("TPSRPMSinkhornMaxSteps").value() );
+    const auto TPSRPMSinkhornTolerance = std::stod( OptArgs.getValueStr("TPSRPMSinkhornTolerance").value() );
     const auto TPSRPMSeedWithCentroidShiftStr = OptArgs.getValueStr("TPSRPMSeedWithCentroidShift").value();
     const auto TPSRPMHardContraintsStr = OptArgs.getValueStr("TPSRPMHardConstraints").value();
 #endif // DCMA_USE_EIGEN
@@ -562,17 +582,15 @@ Drover ExtractPointsWarp(Drover DICOM_data, OperationArgPkg OptArgs, std::map<st
             params.T_end_scale              = TPSRPMTEnd;
             params.T_step                   = TPSRPMTStep;
             params.N_iters_at_fixed_T       = TPSRPMStepsPerT;
-            params.N_Sinkhorn_iters         = TPSRPMSinkhornSteps;
+            params.N_Sinkhorn_iters         = TPSRPMSinkhornMaxSteps;
+            params.Sinkhorn_tolerance       = TPSRPMSinkhornTolerance;
             params.seed_with_centroid_shift = TPSRPMSeedWithCentroidShift;
             params.forced_correspondence    = TPSRPMHardContraints;
 
-
 /*
-
 // Debugging...
 
 params.report_final_correspondence = true;
-
 */
             if(false){
             }else if( std::regex_match(TPSRPMSolverStr, regex_ldlt) ){
@@ -596,7 +614,6 @@ params.report_final_correspondence = true;
                 DICOM_data.trans_data.back()->transform = t_opt.value();
                 DICOM_data.trans_data.back()->metadata["Name"] = "unspecified";
                 DICOM_data.trans_data.back()->metadata["WarpType"] = "TPS-RPM";
-
 
 /*
 // Debugging...
