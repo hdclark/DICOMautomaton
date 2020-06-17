@@ -245,6 +245,25 @@ OperationDoc OpArgDocExtractPointsWarp(void){
 
 #ifdef DCMA_USE_EIGEN
     out.args.emplace_back();
+    out.args.back().name = "TPSRPMDoubleSidedOutliers";
+    out.args.back().desc = "Controls whether the extensions for 'double sided outlier handling' as described by"
+                           " Yang et al. (2011; doi:10.1016/j.patrec.2011.01.015) are used."
+                           " These extensions can improve resilience to outliers, especially in the moving set."
+                           " Yang et al. also mention that the inclusion of an extra entropy term in the cost"
+                           " function can help reduce jitter during the annealing process, which may result in"
+                           " fewer folds or twists for narrow point clouds."
+                           " However, the resulting algorithm is overall less numerically stable and has a strong"
+                           " dependence on the kernel dimension."
+                           " Enabling this parameter adjusts the interpretation of the lambda"
+                           " regularization parameter, so some fine-tuning may be required."
+                           " Note that this parameter is used with the TPS-RPM method, but *not* in the TPS method.";
+    out.args.back().default_val = "false";
+    out.args.back().expected = true;
+    out.args.back().examples = { "true", "false" };
+#endif
+
+#ifdef DCMA_USE_EIGEN
+    out.args.emplace_back();
     out.args.back().name = "TPSRPMKernelDimension";
     out.args.back().desc = "Dimensionality of the spline function kernel."
                            " The kernel dimensionality *should* match the dimensionality of the points (i.e., 3),"
@@ -376,12 +395,17 @@ OperationDoc OpArgDocExtractPointsWarp(void){
                            " sets. Indices are zero-based. Forced correspondences are taken to be exclusive, meaning"
                            " that no other points will correspond with either points. Forced correspondence also begets"
                            " outlier rejection, so ensure the points are not tainted by noise or are outliers."
+                           " Note that points can be forced to be treated as outliers by indicating a non-existent"
+                           " index in the opposite set, such as -1."
                            " Use of forced correspondence may cause the Sinkhorn method to converge slowly or possibly"
                            " fail to converge at all. Increasing the number of Sinkhorn iterations may be required."
+                           " Marking points as outliers has ramifications within the algorithm that can lead to"
+                           " numerical instabilities (especially in the moving point set). If possible, it is best to"
+                           " remove known outliers prior to attempting registration."
                            " Note that this parameter is used with the TPS-RPM method, but *not* in the TPS method.";
     out.args.back().default_val = "";
     out.args.back().expected = true;
-    out.args.back().examples = { "0,10", "23,45, 24,46, 0,100", };
+    out.args.back().examples = { "0,10", "23,45, 24,46, 0,100, -1,50, 20,-1", };
 #endif
 
     out.args.emplace_back();
@@ -434,6 +458,7 @@ Drover ExtractPointsWarp(Drover DICOM_data, OperationArgPkg OptArgs, std::map<st
     // TPS-RPM params.
     const auto TPSRPMLambdaStart = std::stod( OptArgs.getValueStr("TPSRPMLambdaStart").value() );
     const auto TPSRPMZetaStart = std::stod( OptArgs.getValueStr("TPSRPMZetaStart").value() );
+    const auto TPSRPMDoubleSidedOutliersStr = OptArgs.getValueStr("TPSRPMDoubleSidedOutliers").value();
     const auto TPSRPMKDim = std::stol( OptArgs.getValueStr("TPSRPMKernelDimension").value() );
     const auto TPSRPMSolverStr = OptArgs.getValueStr("TPSRPMSolver").value();
     const auto TPSRPMTStart = std::stod( OptArgs.getValueStr("TPSRPMTStart").value() );
@@ -462,6 +487,7 @@ Drover ExtractPointsWarp(Drover DICOM_data, OperationArgPkg OptArgs, std::map<st
     const auto regex_pinv = Compile_Regex("^ps?e?u?d?o?[-_]?i?n?v?e?r?s?e?$");
 
     const auto TPSRPMSeedWithCentroidShift = std::regex_match(TPSRPMSeedWithCentroidShiftStr, regex_true);
+    const auto TPSRPMDoubleSidedOutliers = std::regex_match(TPSRPMDoubleSidedOutliersStr, regex_true);
 
     std::vector<std::pair<long int, long int>> TPSRPMHardContraints;
     {
@@ -577,6 +603,7 @@ Drover ExtractPointsWarp(Drover DICOM_data, OperationArgPkg OptArgs, std::map<st
             AlignViaTPSRPMParams params;
             params.lambda_start             = TPSRPMLambdaStart;
             params.zeta_start               = TPSRPMZetaStart;
+            params.double_sided_outliers    = TPSRPMDoubleSidedOutliers;
             params.kernel_dimension         = TPSRPMKDim;
             params.T_start_scale            = TPSRPMTStart;
             params.T_end_scale              = TPSRPMTEnd;
@@ -589,7 +616,6 @@ Drover ExtractPointsWarp(Drover DICOM_data, OperationArgPkg OptArgs, std::map<st
 
 /*
 // Debugging...
-
 params.report_final_correspondence = true;
 */
             if(false){
@@ -714,7 +740,6 @@ for(long int step = 0; step <= num_steps; ++step){
     FO.close();
 }
 */
-
             }else{
                 throw std::runtime_error("Failed to warp using TPS-RPM.");
             }

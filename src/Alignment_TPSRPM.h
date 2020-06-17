@@ -118,6 +118,13 @@ struct AlignViaTPSRPMParams {
     // Setting to zero will disable this bias. Setting higher will cause fewer points to be considered outliers.
     double zeta_start = 0.0;
 
+    // Whether to use a modified version of the 'double-sided outlier handling' approach described by Yang et al.
+    // (2011; doi:10.1016/j.patrec.2011.01.015). Enabling this parameter adjusts the interpretation of the lambda
+    // regularization parameter, and can also result in reduced numerical stability.
+    //
+    // Note: The double-sided error handling algorithm also seems to be more sensitive to kernel dimension.
+    bool double_sided_outliers = false;
+
     // Solver parameters.
     //
     // The method used to solve the system of linear equtions that defines the thin plate spline solution.

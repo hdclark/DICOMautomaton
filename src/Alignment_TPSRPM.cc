@@ -405,15 +405,24 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
         for(const auto &apair : params.forced_correspondence){
             const auto i_m = apair.first;
             const auto j_s = apair.second;
-            if( !isininc(0, i_m, N_move_points - 1)
-            ||  !isininc(0, j_s, N_stat_points - 1) ){
-                throw std::invalid_argument("Forced correspondence refers to an invalid point. Cannot continue.");
+ 
+            const auto i_is_outlier = !isininc(0, j_s, N_stat_points - 1);
+            const auto j_is_outlier = !isininc(0, i_m, N_move_points - 1);
+
+            if( j_is_outlier && i_is_outlier ){
+                throw std::invalid_argument("Forced contains a double-outlier constraint. Cannot continue.");
             }
-            const auto ret_pair_m = s_m.insert(i_m);
-            const auto ret_pair_s = s_s.insert(j_s);
-            if( !ret_pair_m.second 
-            ||  !ret_pair_s.second ){
-                throw std::invalid_argument("Forced correspondence contains same point multiple times. Cannot continue.");
+            if( !j_is_outlier ){
+                const auto ret_pair_m = s_m.insert(i_m);
+                if( !ret_pair_m.second ){
+                    throw std::invalid_argument("Forced correspondence contains same moving set point multiple times. Cannot continue.");
+                }
+            }
+            if( !i_is_outlier ){
+                const auto ret_pair_s = s_s.insert(j_s);
+                if( !ret_pair_s.second ){
+                    throw std::invalid_argument("Forced correspondence contains same stationary set point multiple times. Cannot continue.");
+                }
             }
         }
     }
@@ -425,7 +434,12 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
     // Corresponding points working buffer.
     Eigen::MatrixXd Y = Eigen::MatrixXd::Zero(N_move_points + 4, 3); 
     // Identity matrix used for regularization.
-    const Eigen::MatrixXd I_N4 = Eigen::MatrixXd::Identity(N_move_points + 4, N_move_points + 4);
+    Eigen::MatrixXd I_N4 = Eigen::MatrixXd::Identity(N_move_points + 4, N_move_points + 4);
+    // Weighting matrix needed for 'double-sided outlier handling' -- Yang et al. (2011).
+    Eigen::MatrixXd W;
+    if(params.double_sided_outliers){
+        W = Eigen::MatrixXd::Zero(N_move_points + 4, N_move_points + 4);
+    }
 
     // Corresponence matrix.
     Eigen::MatrixXd M = Eigen::MatrixXd::Zero(N_move_points + 1, N_stat_points + 1);
@@ -455,7 +469,6 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
     Eigen::MatrixXd Z(N_move_points, 4); // Stacked matrix of corresponding homogeneous fixed set points.
     Eigen::MatrixXd k(1, N_move_points); // TPS kernel vector.
     Eigen::MatrixXd K(N_move_points, N_move_points); // TPS kernel matrix.
-
 
     // Populate static elements.
     //
@@ -487,6 +500,12 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
         L(N_move_points + 2, i) = P_moving.y;
         L(N_move_points + 3, i) = P_moving.z;
     }
+ 
+    // Index matrix that only alters the "K" kernel part of L.
+    I_N4(N_move_points + 0, N_move_points + 0) = 0.0;
+    I_N4(N_move_points + 1, N_move_points + 1) = 0.0;
+    I_N4(N_move_points + 2, N_move_points + 2) = 0.0;
+    I_N4(N_move_points + 3, N_move_points + 3) = 0.0;
 
     // Prime the transformation with an identity affine component and no warp component.
     //
@@ -548,13 +567,24 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
             const auto i_m = apair.first;
             const auto j_s = apair.second;
 
-            for(long int i = 0; i < (N_move_points + 1); ++i){ // row
-                M(i, j_s) = 0.0;
+            // Invalid indices indicate the valid point is an outlier.
+            const auto i_is_outlier = !isininc(0, j_s, N_stat_points - 1);
+            const auto j_is_outlier = !isininc(0, i_m, N_move_points - 1);
+
+            if( !i_is_outlier ){
+                for(long int i = 0; i < (N_move_points + 1); ++i){ // row
+                    M(i, j_s) = 0.0;
+                }
+                M(N_move_points, j_s) = 1.0;
+
             }
-            for(long int j = 0; j < (N_stat_points + 1); ++j){ // column
-                M(i_m, j) = 0.0;
+            if( !j_is_outlier ){
+                for(long int j = 0; j < (N_stat_points + 1); ++j){ // column
+                    M(i_m, j) = 0.0;
+                }
+                M(i_m, N_stat_points) = 1.0;
+
             }
-            M(i_m, j_s) = 1.0;
         }
         return;
     };
@@ -564,11 +594,11 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
     // coefficient).
     const auto worst_row_col_sum_deviation = [&]() -> double {
         double w = 0.0;
-        for(size_t i = 0; i < N_move_points; ++i){
+        for(long int i = 0; i < N_move_points; ++i){
             const auto ds = std::abs(M.row(i).sum() - 1.0);
             if( w < ds ) w = ds;
         }
-        for(size_t j = 0; j < N_stat_points; ++j){
+        for(long int j = 0; j < N_stat_points; ++j){
             const auto ds = std::abs(M.col(j).sum() - 1.0);
             if( w < ds ) w = ds;
         }
@@ -595,7 +625,9 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
             for(long int j = 0; j < N_stat_points; ++j){ // column
                 const auto P_stationary = stationary.points[j];
                 const auto dP = P_stationary - P_moved;
-                M(i, j) = std::sqrt( 1.0 / T_now ) * std::exp( (s_reg / T_now) - dP.Dot(dP) / (2.0 * T_now ) );
+                M(i, j) = (1.0 / T_now)
+                        * std::exp(s_reg / T_now)
+                        * std::exp( -dP.Dot(dP) / T_now);
             }
         }
         const vec3<double> com_moved( com_moved_x.Current_Sum() / static_cast<double>(N_move_points), 
@@ -609,7 +641,8 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
             for(long int j = 0; j < N_stat_points; ++j){ // column
                 const auto P_stationary = stationary.points[j];
                 const auto dP = P_stationary - P_moving; // Note: intentionally not transformed.
-                M(i, j) = std::sqrt( 1.0 / T_start ) * std::exp( - dP.Dot(dP) / (2.0 * T_start ) );
+                M(i, j) = (1.0 / T_start)
+                        * std::exp( -dP.Dot(dP) / T_start);
             }
         }
 
@@ -620,7 +653,8 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
             const auto j = N_stat_points; // column
             const auto P_stationary = com_stat;
             const auto dP = P_stationary - P_moved;
-            M(i, j) = std::sqrt( 1.0 / T_start ) * std::exp( - dP.Dot(dP) / (2.0 * T_start ) );
+            M(i, j) = (1.0 / T_start)
+                    * std::exp( -dP.Dot(dP) / T_start);
         }
 
         // Override forced correspondences.
@@ -634,6 +668,7 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
         {
             std::vector<double> row_sums(N_move_points, 0.0);
             std::vector<double> col_sums(N_stat_points, 0.0);
+            const auto machine_eps = 100.0 * std::sqrt( std::numeric_limits<double>::epsilon() );
             for(long int norm_iter = 0; norm_iter < params.N_Sinkhorn_iters; ++norm_iter){
 
                 // Tally the current column sums and re-scale the correspondence coefficients.
@@ -644,12 +679,12 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
                     }
                 }
                 for(long int j = 0; j < N_stat_points; ++j){ // column
-                    if(col_sums[j] < 1.0E-5){
+                    if(col_sums[j] < machine_eps){
                         // Option A: error.
-                        throw std::runtime_error("Unable to normalize row");
+                        //throw std::runtime_error("Unable to normalize row");
                         // Option B: forgo normalization.
-                        // This will probably ruin the transform scaling.
-                        //continue;
+                        // This might ruin the transform scaling, but it might also self-correct (n.b. verified below!).
+                        continue;
                         // Option C: nominate this point as an outlier.
                         // This may work, but I can't say for sure...
                         //col_sums[j] += 1.0;
@@ -668,12 +703,12 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
                     }
                 }
                 for(long int i = 0; i < N_move_points; ++i){ // row
-                    if(row_sums[i] < 1.0E-5){
+                    if(row_sums[i] < machine_eps){
                         // Option A: error.
-                        throw std::runtime_error("Unable to normalize column");
+                        //throw std::runtime_error("Unable to normalize column");
                         // Option B: forgo normalization.
-                        // This will probably ruin the transform scaling.
-                        //continue;
+                        // This might ruin the transform scaling, but it might also self-correct (n.b. verified below!).
+                        continue;
                         // Option C: nominate this point as an outlier.
                         // This may work, but I can't say for sure...
                         //row_sums[i] += 1.0;
@@ -756,14 +791,25 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
     const auto update_transformation = [&](double lambda) -> void {
 
         // Fill the Y vector with the corresponding points.
-        const auto softassign_outlier_min = 1.0E-4;
         for(long int i = 0; i < N_move_points; ++i){
-            // Only needed for 'Double-sided outlier handling' approach from Yang et al (2011).
-            //
-            // TODO: Confirm if this row sum should include the gutter coefficient or not.
-            //
-            // TODO: Also determine if it is even appropriate to keep this term without adding the 'W' matrix that Yang describes.
-            //const auto col_sum = std::max(M.row(i).sum(), softassign_outlier_min);
+            double col_sum_inv = std::numeric_limits<double>::quiet_NaN();
+            if(params.double_sided_outliers){
+                // This column sum is only needed for the 'double-sided outlier handling' approach described by Yang et al (2011).
+                //
+                // Note: The 'gutter' term is intentionally omitted here.
+                Stats::Running_Sum<double> col_sum_rs;
+                for(long int j = 0; j < N_stat_points; ++j){ // column
+                    col_sum_rs.Digest( M(i,j) );
+                }
+                col_sum_inv = 1.0 / col_sum_rs.Current_Sum();
+                if(!std::isfinite(col_sum_inv)){
+                    // Kludge factor here. Change from inf to 'some big number'.
+                    //
+                    // TODO: Come up with better way to deal with perfect outliers.
+                    col_sum_inv = std::sqrt( std::numeric_limits<double>::max() );
+                }
+                W(i,i) = col_sum_inv;
+            }
 
             Stats::Running_Sum<double> c_x;
             Stats::Running_Sum<double> c_y;
@@ -771,11 +817,21 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
             for(long int j = 0; j < N_stat_points; ++j){ // column
                 const auto P_stationary = stationary.points[j];
 
-                // Original formulation from Chui and Rangaran.
-                const auto weight = M(i,j);
+                double weight = std::numeric_limits<double>::quiet_NaN();
+                if(params.double_sided_outliers){
+                    // 'Double-sided outlier handling' approach from Yang et al (2011).
+                    weight = M(i,j) * col_sum_inv;
+                    if( !std::isfinite(weight)
+                    ||  !isininc(0.0, weight, 1.0) ){
+                        throw std::runtime_error("Encountered invalid weight. Is the point cloud degenerate? Refusing to continue.");
+                        // Note: this could happen if all points in the cloud occupy the same location (or are sufficiently
+                        // close together to allow floating-point imprecision to ruin the computation).
+                    }
 
-                // 'Double-sided outlier handling' approach from Yang et al (2011).
-                //const auto weight = M(i,j) / col_sum;
+                }else{
+                    // Original formulation from Chui and Rangaran.
+                    weight = M(i,j);
+                }
 
                 const auto weighted_P = P_stationary * weight;
                 c_x.Digest(weighted_P.x);
@@ -792,12 +848,15 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
         }else if(params.solution_method == AlignViaTPSRPMParams::SolutionMethod::PseudoInverse){
             // Update the L matrix inverse using current regularization lambda.
             if(std::abs(L_1_start) != 0.0){
-                // TODO: Would it be easier to just add to the diagonal directly rather than allocate a temp R?
-                Eigen::MatrixXd R = L + I_N4 * lambda; // Regularized version of L.
-                R(N_move_points + 0, N_move_points + 0) = 0.0;
-                R(N_move_points + 1, N_move_points + 1) = 0.0;
-                R(N_move_points + 2, N_move_points + 2) = 0.0;
-                R(N_move_points + 3, N_move_points + 3) = 0.0;
+                Eigen::MatrixXd R;
+                if(params.double_sided_outliers){
+                    R = L + W * lambda; // * static_cast<double>(N_stat_points);
+                    // Note: Yang et al. (2011) suggest scaling lambda by N_stat_points, but this is not done here for
+                    // reasons of parity; the scale of the lambda regularization parameter seems to remain more
+                    // comparable with the original algorithm.
+                }else{
+                    R = L + I_N4 * lambda;
+                }
 
                 L_pinv = R.completeOrthogonalDecomposition().pseudoInverse();
             }
@@ -814,13 +873,14 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
         }else if(params.solution_method == AlignViaTPSRPMParams::SolutionMethod::LDLT){
             Eigen::MatrixXd LHS;
             if(std::abs(L_1_start) != 0.0){
-                // TODO: Would it be easier to just explicitly set the diagonal here?
-                LHS = L + I_N4 * lambda; // Regularized version of L.
-                LHS(N_move_points + 0, N_move_points + 0) = 0.0;
-                LHS(N_move_points + 1, N_move_points + 1) = 0.0;
-                LHS(N_move_points + 2, N_move_points + 2) = 0.0;
-                LHS(N_move_points + 3, N_move_points + 3) = 0.0;
-
+                if(params.double_sided_outliers){
+                    LHS = L + W * lambda; // * static_cast<double>(N_stat_points);
+                    // Note: Yang et al. (2011) suggest scaling lambda by N_stat_points, but this is not done here for
+                    // reasons of parity; the scale of the lambda regularization parameter seems to remain more
+                    // comparable with the original algorithm.
+                }else{
+                    LHS = L + I_N4 * lambda; // Regularized version of L.
+                }
             }else{
                 LHS = L;
             }
@@ -890,6 +950,8 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
         for(long int iter_at_fixed_T = 0; iter_at_fixed_T < params.N_iters_at_fixed_T; ++iter_at_fixed_T){
 
             // Update correspondence matrix.
+            //
+            // Note: When using double-sided outlier handling, the correspondence update should occur first.
             update_correspondence(T_now, L_2);
 
             // Update transformation.
