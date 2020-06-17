@@ -488,42 +488,6 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
         L(N_move_points + 3, i) = P_moving.z;
     }
 
-
-    for(long int i = 0; i < N_move_points; ++i){
-        const auto P_moving = moving.points[i];
-        X(i, 0) = 1.0;
-        X(i, 1) = P_moving.x;
-        X(i, 2) = P_moving.y;
-        X(i, 3) = P_moving.z;
-    }
-    for(long int i = 0; i < N_move_points; ++i) K(i, i) = 0.0;
-    for(long int i = 0; i < N_move_points; ++i){
-        const auto P_i = moving.points[i];
-        for(long int j = i + 1; j < N_move_points; ++j){
-            const auto P_j = moving.points[j];
-            const auto dist = P_i.distance(P_j);
-            const auto kij = t.eval_kernel(dist);
-            K(i, j) = kij;
-            K(j, i) = kij;
-        }
-    }
-
-    // QR decompose X.
-    Eigen::HouseholderQR<Eigen::MatrixXd> QR(X);
-    Eigen::MatrixXd Q = QR.householderQ();
-    Eigen::MatrixXd R_whole = QR.matrixQR().triangularView<Eigen::Upper>();
-    Eigen::MatrixXd R = R_whole.block(0, 0, 4, 4);
-
-    Eigen::MatrixXd Q1 = Q.block(0, 0, N_move_points, 4);
-    Eigen::MatrixXd Q2 = Q.block(0, 4, N_move_points, N_move_points - 4);
-    Eigen::MatrixXd I  = Eigen::MatrixXd::Identity(N_move_points - 4, N_move_points - 4);
-
-    // TPS model parameters.
-    //
-    // Note: These get updated during the transformation update phase.
-    Eigen::MatrixXd a_0(4, 4); // Affine transformation component.
-    Eigen::MatrixXd w_0(N_move_points, 4); // Non-Affine warping component.
-
     // Prime the transformation with an identity affine component and no warp component.
     //
     // Note that the RPM-TPS method gradually progresses from global to local transformations, so if the initial
@@ -533,9 +497,6 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
     W_A(N_move_points + 1, 0) = 1.0; // x-component.
     W_A(N_move_points + 2, 1) = 1.0; // y-component.
     W_A(N_move_points + 3, 2) = 1.0; // z-component.
-
-    a_0 = Eigen::MatrixXd::Identity(4, 4);
-    w_0 = Eigen::MatrixXd::Zero(N_move_points, 4);
 
     if(params.seed_with_centroid_shift){
         // Seed the affine transformation with the output from a simpler rigid registration.
@@ -577,31 +538,6 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
     }
     M(N_move_points, N_stat_points) = 0.0;
 
-
-    // Implement the thin-plate spline (TPS) warping function.
-    const auto tps_func = [&](const vec3<double> &v) -> vec3<double> {
-        // Update kernel vector.
-        for(size_t i = 0; i < N_move_points; ++i){
-            const auto P_i = moving.points[i];
-            const auto dist = P_i.distance(v);
-            const auto ki = t.eval_kernel(dist);
-            k(0, i) = ki;
-        }
-        
-        Eigen::MatrixXd x(1,4);
-        x(0,0) = 1.0;
-        x(0,1) = v.x;
-        x(0,2) = v.y;
-        x(0,3) = v.z;
-
-        Eigen::MatrixXd f = (x * a_0) + (k * w_0);
-
-        // Convert back from homogeneous coordinates.
-        return vec3<double>( f(0,1) / f(0,0),
-                             f(0,2) / f(0,0),
-                             f(0,3) / f(0,0) );
-    };
-
     // Implement the user-provided forced correspondences, if any exist, by overwriting the correspondence matrix.
     //
     // Note: As far as I can tell, this approach ruins any convergence guarantees the TPS-RPM algorithm would otherwise
@@ -637,7 +573,6 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
         for(long int i = 0; i < N_move_points; ++i){ // row
             const auto P_moving = moving.points[i];
             const auto P_moved = t.transform(P_moving); // Transform the point.
-//            const auto P_moved = tps_func(P_moving); // Transform the point.
             com_moved_x.Digest(P_moved.x);
             com_moved_y.Digest(P_moved.y);
             com_moved_z.Digest(P_moved.z);
@@ -666,7 +601,6 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
         for(long int i = 0; i < N_move_points; ++i){ // row
             const auto P_moving = moving.points[i];
             const auto P_moved = t.transform(P_moving); // Transform the point.
-//            const auto P_moved = tps_func(P_moving); // Transform the point.
             const auto j = N_stat_points; // column
             const auto P_stationary = com_stat;
             const auto dP = P_stationary - P_moved;
@@ -696,9 +630,13 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
                 }
                 for(long int j = 0; j < N_stat_points; ++j){ // column
                     if(col_sums[j] < 1.0E-5){
-                        // Forgo normalization.
-//                        continue;
-                        // If too far away, nominate this point as an outlier.
+                        // Option A: error.
+                        throw std::runtime_error("Unable to normalize row");
+                        // Option B: forgo normalization.
+                        // This will probably ruin the transform scaling.
+                        //continue;
+                        // Option C: nominate this point as an outlier.
+                        // This may work, but I can't say for sure...
                         //col_sums[j] += 1.0;
                         //M(N_move_points,j) += 1.0;
                     }
@@ -716,9 +654,13 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
                 }
                 for(long int i = 0; i < N_move_points; ++i){ // row
                     if(row_sums[i] < 1.0E-5){
-                        // Forgo normalization.
-//                        continue;
-                        // If too far away, nominate this point as an outlier.
+                        // Option A: error.
+                        throw std::runtime_error("Unable to normalize column");
+                        // Option B: forgo normalization.
+                        // This will probably ruin the transform scaling.
+                        //continue;
+                        // Option C: nominate this point as an outlier.
+                        // This may work, but I can't say for sure...
                         //row_sums[i] += 1.0;
                         //M(i,N_stat_points) += 1.0;
                     }
@@ -808,7 +750,7 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
             // TODO: Confirm if this row sum should include the gutter coefficient or not.
             //
             // TODO: Also determine if it is even appropriate to keep this term without adding the 'W' matrix that Yang describes.
-            const auto col_sum = std::max(M.row(i).sum(), softassign_outlier_min);
+            //const auto col_sum = std::max(M.row(i).sum(), softassign_outlier_min);
 
             Stats::Running_Sum<double> c_x;
             Stats::Running_Sum<double> c_y;
@@ -830,16 +772,11 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
             Y(i, 0) = c_x.Current_Sum();
             Y(i, 1) = c_y.Current_Sum();
             Y(i, 2) = c_z.Current_Sum();
-
-            Z(i, 0) = 1.0;
-            Z(i, 1) = c_x.Current_Sum();
-            Z(i, 2) = c_y.Current_Sum();
-            Z(i, 3) = c_z.Current_Sum();
         }
 
         // Use pseudo-inverse method.
         if(false){
-        }else if( params.solution_method == AlignViaTPSRPMParams::SolutionMethod::PseudoInverse){
+        }else if(params.solution_method == AlignViaTPSRPMParams::SolutionMethod::PseudoInverse){
             // Update the L matrix inverse using current regularization lambda.
             if(std::abs(L_1_start) != 0.0){
                 // TODO: Would it be easier to just add to the diagonal directly rather than allocate a temp R?
@@ -861,7 +798,7 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
             W_A = L_pinv * Y;
 
         // Use LDLT method.
-        }else if( params.solution_method == AlignViaTPSRPMParams::SolutionMethod::LDLT){
+        }else if(params.solution_method == AlignViaTPSRPMParams::SolutionMethod::LDLT){
             Eigen::MatrixXd LHS;
             if(std::abs(L_1_start) != 0.0){
                 // TODO: Would it be easier to just explicitly set the diagonal here?
@@ -885,138 +822,6 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
             if(LDLT.info() != Eigen::Success){
                 throw std::runtime_error("Unable to update transformation: LDLT solve failed.");
             }
-
-        // Use QR method.
-        }else if(false){
-
-            // Original paper and Chui's thesis version as written.
-            //
-            // Note: this implementation is numerically unstable!
-    //        Eigen::MatrixXd inner_prod = (Q2.transpose() * K * Q2 + I * lambda).inverse();
-    //        w_0 = Q2 * inner_prod * Q2.transpose() * Z;
-    //        a_0 = R.inverse() * Q1.transpose() * (Z - K * w_0);
-
-            Eigen::MatrixXd inner_prod = (Q2.transpose() * K * Q2 + I * lambda).completeOrthogonalDecomposition().pseudoInverse();
-            w_0 = Q2 * inner_prod * Q2.transpose() * Z;
-            a_0 = R.completeOrthogonalDecomposition().pseudoInverse() * Q1.transpose() * (Z - K * w_0);
-
-    //        // Same as Chui's original version, but using more numerically stable LDLT decomposition approach.
-    //        const auto N_pts = static_cast<double>(N_move_points);
-    //        
-    //        Eigen::MatrixXd LHS = (Q2.transpose() * K * Q2 + I * lambda * N_pts);
-    //        //Eigen::MatrixXd LHS = (Q2.transpose() * K * Q2 + I * lambda);
-    //        
-    //        Eigen::LDLT<Eigen::MatrixXd> s;
-    //        s.compute(LHS.transpose() * LHS);
-    //        if(s.info() != Eigen::Success){
-    //            throw std::runtime_error("Unable to update transformation: Cholesky decomposition A failed.");
-    //        }
-    //        
-    //        Eigen::MatrixXd g = s.solve(LHS.transpose() * Q2.transpose() * Z);
-    //        if(s.info() != Eigen::Success){
-    //            throw std::runtime_error("Unable to update transformation: Cholesky solve A failed.");
-    //        }
-    //        w_0 = Q2 * g;
-    //        
-    //        s.compute(R.transpose() * R);
-    //        if(s.info() != Eigen::Success){
-    //            throw std::runtime_error("Unable to update transformation: Cholesky decomposition B failed.");
-    //        }
-    //        
-    //        a_0 = s.solve(LHS.transpose() * Q1.transpose() * (Z - K * w_0));
-    //        if(s.info() != Eigen::Success){
-    //            throw std::runtime_error("Unable to update transformation: Cholesky solve B failed.");
-    //        }
-    //
-    ////////////////////////
-    //        // More stable LDLT decomposition approach where the Affine component is also regularized to suppress mirroring.
-    //        const auto N_pts = static_cast<double>(N_move_points);
-    //        {
-    //            Eigen::MatrixXd LHS = (Q2.transpose() * K * Q2 + I * lambda);
-    //        
-    //            Eigen::LDLT<Eigen::MatrixXd> s;
-    //            s.compute(LHS.transpose() * LHS);
-    //            if(s.info() != Eigen::Success){
-    //                throw std::runtime_error("Unable to update transformation: Cholesky decomposition A failed.");
-    //            }
-    //        
-    //            w_0 = Q2 * s.solve(LHS.transpose() * Q2.transpose() * Z);
-    //            if(s.info() != Eigen::Success){
-    //                throw std::runtime_error("Unable to update transformation: Cholesky solve A failed.");
-    //            }
-    //        }
-    //        
-    //        {
-    //            const double lambda_d = N_pts * lambda * 1E-4; // <--- Magic factor! Tweaking may be necessary...
-    //            Eigen::MatrixXd LHS(4 * 2, 4);
-    //            LHS << R,
-    //                   ( Eigen::MatrixXd::Identity(4, 4) * lambda_d );
-    //        
-    //            Eigen::LDLT<Eigen::MatrixXd> s;
-    //            s.compute(LHS.transpose() * LHS);
-    //            if(s.info() != Eigen::Success){
-    //                throw std::runtime_error("Unable to update transformation: Cholesky decomposition B failed.");
-    //            }
-    //        
-    //            Eigen::MatrixXd RHS(4 * 2, 4);
-    //            RHS << Q1.transpose() * (Z - K * w_0),
-    //                   ( Eigen::MatrixXd::Identity(4, 4) * lambda_d );
-    //        
-    //            a_0 = s.solve(LHS.transpose() * RHS);
-    //            if(s.info() != Eigen::Success){
-    //                throw std::runtime_error("Unable to update transformation: Cholesky solve B failed.");
-    //            }
-    //        }
-    ////////////////////////
-    //  
-    //        // 'Double-sided outlier handling' as outlined by Yang et al in 2011.
-    //        // It seems to be even less stable than the above, but perhaps I've implemented it wrong?
-    //        const auto N_stat_pts = static_cast<double>(N_stationary_points);
-    //
-    //        {
-    //            Eigen::MatrixXd W = Eigen::MatrixXd::Zero(N_move_points, N_move_points);
-    //            for(size_t i = 0; i < N_move_points; ++i){
-    //                W(i, i) = 1.0 / std::max(M.row(i).sum(), softassign_outlier_min);
-    //            }
-    //
-    //            Eigen::MatrixXd inner = K + (W * lambda * N_stat_pts);
-    //            Eigen::MatrixXd LHS = Q2.transpose() * inner * Q2;
-    //
-    //            Eigen::LDLT<Eigen::MatrixXd> s;
-    //            s.compute(LHS.transpose() * LHS);
-    //            if(s.info() != Eigen::Success){
-    //                throw std::runtime_error("Unable to update transformation: Cholesky decomposition A failed.");
-    //            }
-    //
-    //            w_0 = Q2 * s.solve(LHS.transpose() * Q2.transpose() * Z);
-    //            if(s.info() != Eigen::Success){
-    //                throw std::runtime_error("Unable to update transformation: Cholesky solve A failed.");
-    //            }
-    //
-    //            const double lambda_d = N_stat_pts * lambda * 1E-4; // <--- Magic factor! Tweaking may be necessary...
-    //            Eigen::MatrixXd LHS2(4 * 2, 4);
-    //            LHS2 << R,
-    //                    ( Eigen::MatrixXd::Identity(4, 4) * lambda_d );
-    //
-    //            s.compute(LHS2.transpose() * LHS2);
-    //            if(s.info() != Eigen::Success){
-    //                throw std::runtime_error("Unable to update transformation: Cholesky decomposition B failed.");
-    //            }
-    //
-    //            Eigen::MatrixXd RHS(4 * 2, 4);
-    //            RHS << Q1.transpose() * (Z - inner * w_0),
-    //                   ( Eigen::MatrixXd::Identity(4, 4) * lambda_d );
-    //
-    //            a_0 = s.solve(LHS2.transpose() * RHS);
-    //            if(s.info() != Eigen::Success){
-    //                throw std::runtime_error("Unable to update transformation: Cholesky solve B failed.");
-    //            }
-    //        }
-
-            if(!w_0.allFinite() || !a_0.allFinite()){
-                throw std::runtime_error("Failed to compute transformation.");
-            }
-
         }else{
             throw std::logic_error("Solution method not understood. Cannot continue.");
         }
