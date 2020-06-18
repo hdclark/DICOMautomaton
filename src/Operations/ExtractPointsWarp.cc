@@ -401,11 +401,47 @@ OperationDoc OpArgDocExtractPointsWarp(void){
                            " fail to converge at all. Increasing the number of Sinkhorn iterations may be required."
                            " Marking points as outliers has ramifications within the algorithm that can lead to"
                            " numerical instabilities (especially in the moving point set). If possible, it is best to"
-                           " remove known outliers prior to attempting registration."
+                           " remove known outlier points *prior* to attempting registration."
                            " Note that this parameter is used with the TPS-RPM method, but *not* in the TPS method.";
     out.args.back().default_val = "";
     out.args.back().expected = true;
     out.args.back().examples = { "0,10", "23,45, 24,46, 0,100, -1,50, 20,-1", };
+#endif
+
+#ifdef DCMA_USE_EIGEN
+    out.args.emplace_back();
+    out.args.back().name = "TPSRPMPermitMovingOutliers";
+    out.args.back().desc = "If enabled, this option permits the TPS-RPM algorithm to automatically detect and eschew"
+                           " outliers in the moving point set. A major strength of the TPS-RPM algorithm is that it"
+                           " can handle outliers, however there are legitimate cases where outliers are known *not*"
+                           " to be present, but the point-to-point correspondence is *not* known."
+                           " Note that outlier detection cannot be used when one or more points are forced to be"
+                           " outliers. Similar to forced correspondence (i.e., hard constraints), disabling outlier"
+                           " detection can modify the Sinkhorn algorithm convergence."
+                           " Additionally, Sinkhorn normalization is likely to fail when outliers in the larger point"
+                           " cloud are disallowed."
+                           " Note that this parameter is used with the TPS-RPM method, but *not* in the TPS method.";
+    out.args.back().default_val = "true";
+    out.args.back().expected = true;
+    out.args.back().examples = { "true", "false" };
+#endif
+
+#ifdef DCMA_USE_EIGEN
+    out.args.emplace_back();
+    out.args.back().name = "TPSRPMPermitStationaryOutliers";
+    out.args.back().desc = "If enabled, this option permits the TPS-RPM algorithm to automatically detect and eschew"
+                           " outliers in the stationary point set. A major strength of the TPS-RPM algorithm is that"
+                           " it can handle outliers, however there are legitimate cases where outliers are known *not*"
+                           " to be present, but the point-to-point correspondence is *not* known."
+                           " Note that outlier detection cannot be used when one or more points are forced to be"
+                           " outliers. Similar to forced correspondence (i.e., hard constraints), disabling outlier"
+                           " detection can modify the Sinkhorn algorithm convergence."
+                           " Additionally, Sinkhorn normalization is likely to fail when outliers in the larger point"
+                           " cloud are disallowed."
+                           " Note that this parameter is used with the TPS-RPM method, but *not* in the TPS method.";
+    out.args.back().default_val = "true";
+    out.args.back().expected = true;
+    out.args.back().examples = { "true", "false" };
 #endif
 
     out.args.emplace_back();
@@ -469,6 +505,8 @@ Drover ExtractPointsWarp(Drover DICOM_data, OperationArgPkg OptArgs, std::map<st
     const auto TPSRPMSinkhornTolerance = std::stod( OptArgs.getValueStr("TPSRPMSinkhornTolerance").value() );
     const auto TPSRPMSeedWithCentroidShiftStr = OptArgs.getValueStr("TPSRPMSeedWithCentroidShift").value();
     const auto TPSRPMHardContraintsStr = OptArgs.getValueStr("TPSRPMHardConstraints").value();
+    const auto TPSRPMPermitMovingOutliersStr = OptArgs.getValueStr("TPSRPMPermitMovingOutliers").value();
+    const auto TPSRPMPermitStationaryOutliersStr = OptArgs.getValueStr("TPSRPMPermitStationaryOutliers").value();
 #endif // DCMA_USE_EIGEN
 
     const auto MaxIters = std::stol( OptArgs.getValueStr("MaxIterations").value() );
@@ -488,6 +526,8 @@ Drover ExtractPointsWarp(Drover DICOM_data, OperationArgPkg OptArgs, std::map<st
 
     const auto TPSRPMSeedWithCentroidShift = std::regex_match(TPSRPMSeedWithCentroidShiftStr, regex_true);
     const auto TPSRPMDoubleSidedOutliers = std::regex_match(TPSRPMDoubleSidedOutliersStr, regex_true);
+    const auto TPSRPMPermitMovingOutliers = std::regex_match(TPSRPMPermitMovingOutliersStr, regex_true);
+    const auto TPSRPMPermitStationaryOutliers = std::regex_match(TPSRPMPermitStationaryOutliersStr, regex_true);
 
     std::vector<std::pair<long int, long int>> TPSRPMHardContraints;
     {
@@ -613,6 +653,8 @@ Drover ExtractPointsWarp(Drover DICOM_data, OperationArgPkg OptArgs, std::map<st
             params.Sinkhorn_tolerance       = TPSRPMSinkhornTolerance;
             params.seed_with_centroid_shift = TPSRPMSeedWithCentroidShift;
             params.forced_correspondence    = TPSRPMHardContraints;
+            params.permit_move_outliers     = TPSRPMPermitMovingOutliers;
+            params.permit_stat_outliers     = TPSRPMPermitStationaryOutliers;
 
 /*
 // Debugging...

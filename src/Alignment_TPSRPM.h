@@ -125,6 +125,18 @@ struct AlignViaTPSRPMParams {
     // Note: The double-sided error handling algorithm also seems to be more sensitive to kernel dimension.
     bool double_sided_outliers = false;
 
+    // Whether to permit outlier detection. A major strength of the TPS-RPM algorithm is semi-automatic outlier
+    // detection and handling. Disabling outlier detection keeps the correspondence determination aspect of the TPS-RPM
+    // algorithm. These parameters control whether correspondence matrix elements used to indicate a point is an outlier
+    // (i.e., the 'gutter' coefficients) are overridden. Disabling outlier detection may cause the Sinkhorn procedure to
+    // fail to converge.
+    //
+    // Note: Outlier detection should not be disabled when forced correspondence is used to force points to be outliers.
+    //
+    // Note: The Sinkhorn normalization method will likely fail when outliers in the larger point cloud are disallowed.
+    bool permit_move_outliers = true;
+    bool permit_stat_outliers = true;
+
     // Solver parameters.
     //
     // The method used to solve the system of linear equtions that defines the thin plate spline solution.

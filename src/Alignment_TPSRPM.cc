@@ -406,24 +406,44 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
             const auto i_m = apair.first;
             const auto j_s = apair.second;
  
-            const auto i_is_outlier = !isininc(0, j_s, N_stat_points - 1);
-            const auto j_is_outlier = !isininc(0, i_m, N_move_points - 1);
+            const auto i_is_valid = isininc(0, i_m, N_move_points - 1);
+            const auto j_is_valid = isininc(0, j_s, N_stat_points - 1);
 
-            if( j_is_outlier && i_is_outlier ){
+            if( !i_is_valid && !j_is_valid ){
                 throw std::invalid_argument("Forced contains a double-outlier constraint. Cannot continue.");
             }
-            if( !j_is_outlier ){
+            if( i_is_valid ){
                 const auto ret_pair_m = s_m.insert(i_m);
                 if( !ret_pair_m.second ){
                     throw std::invalid_argument("Forced correspondence contains same moving set point multiple times. Cannot continue.");
                 }
             }
-            if( !i_is_outlier ){
+            if( j_is_valid ){
                 const auto ret_pair_s = s_s.insert(j_s);
                 if( !ret_pair_s.second ){
                     throw std::invalid_argument("Forced correspondence contains same stationary set point multiple times. Cannot continue.");
                 }
             }
+            if( !j_is_valid
+            &&  !params.permit_move_outliers ){
+                throw std::invalid_argument("Cannot force moving point outlier and also disable moving set outliers. Cannot continue.");
+            }
+            if( !i_is_valid
+            &&  !params.permit_stat_outliers ){
+                throw std::invalid_argument("Cannot force stationary point outliers and also disable stationary set outliers. Cannot continue.");
+            }
+        }
+    }
+    
+    // Warn when the Sinkhorn procedure is likely to fail.
+    {
+        if( (N_stat_points < N_move_points)
+        &&  (params.permit_move_outliers == false) ){
+            FUNCWARN("Sinkhorn normalization is likely to fail since outliers in the larger point cloud are disallowed");
+        }
+        if( (N_move_points < N_stat_points)
+        &&  (params.permit_stat_outliers == false) ){
+            FUNCWARN("Sinkhorn normalization is likely to fail since outliers in the larger point cloud are disallowed");
         }
     }
 
@@ -568,30 +588,57 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
             const auto j_s = apair.second;
 
             // Invalid indices indicate the valid point is an outlier.
-            const auto i_is_outlier = !isininc(0, j_s, N_stat_points - 1);
-            const auto j_is_outlier = !isininc(0, i_m, N_move_points - 1);
+            const auto i_is_valid = isininc(0, i_m, N_move_points - 1);
+            const auto j_is_valid = isininc(0, j_s, N_stat_points - 1);
 
-            if( !i_is_outlier ){
-                for(long int i = 0; i < (N_move_points + 1); ++i){ // row
-                    M(i, j_s) = 0.0;
-                }
-                M(N_move_points, j_s) = 1.0;
-
-            }
-            if( !j_is_outlier ){
+            // Zero-out rows and columns.
+            if( i_is_valid ){
                 for(long int j = 0; j < (N_stat_points + 1); ++j){ // column
                     M(i_m, j) = 0.0;
                 }
-                M(i_m, N_stat_points) = 1.0;
-
             }
+            if( j_is_valid ){
+                for(long int i = 0; i < (N_move_points + 1); ++i){ // row
+                    M(i, j_s) = 0.0;
+                }
+            }
+
+            // Place the correspondence coefficient.
+            if( i_is_valid && j_is_valid )   M(i_m, j_s) = 1.0;
+            if( !i_is_valid && j_is_valid )  M(N_move_points, j_s) = 1.0;
+            if( i_is_valid && !j_is_valid )  M(i_m, N_stat_points) = 1.0;
         }
         return;
     };
 
+    // Disable the outlier detection aspect of the Sinkhorn procedure.
+    //
+    // Note: As far as I can tell, this approach ruins any convergence guarantees the TPS-RPM algorithm would otherwise
+    //       provide. Use of correspondence may require fine-tuning of the TPM-RPM algorithm parameters, especially the
+    //       number of softassign iterations required.
+    const auto disable_outlier_detection = [&]() -> void {
+
+        // Full disallow non-zero outlier coefficients.
+        //
+        // Note: In some cases this causes the Sinkhorn tehnique to fail. Suppressing, but not altogether disallowing
+        //       outlier coefficients does *not* seem to salvage the Sinkhorn method in these cases.
+        if(!params.permit_move_outliers){
+            for(long int i = 0; i < N_move_points; ++i){ // row
+                M(i, N_stat_points) = 0.0;
+            }
+        }
+        if(!params.permit_stat_outliers){
+            for(long int j = 0; j < N_stat_points; ++j){ // column
+                M(N_move_points, j) = 0.0;
+            }
+        }
+
+        return;
+    };
+
     // Report the row- or column-sum (including outlier gutters, but only in the sum part) that deviates the most from
-    // the normalization (i.e., every row and every column sums to one, except the rows including the bottom-right
-    // coefficient).
+    // the normalization (i.e., every row and every column sums to one, except the row and column including the
+    // bottom-right coefficient).
     const auto worst_row_col_sum_deviation = [&]() -> double {
         double w = 0.0;
         for(long int i = 0; i < N_move_points; ++i){
@@ -657,53 +704,29 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
                     * std::exp( -dP.Dot(dP) / T_start);
         }
 
-        // Override forced correspondences.
+        // Override forced correspondences and disable outlier detection (iff user specifies to do so).
         //
         // Note: Since the Skinhorn normalization procedure only modifies the coefficients via scaling (i.e.,
         // multiplication), hard constraints won't be able to 'un-zero' the zeroed-out coefficients. So updating the
         // hard constraints just prior to normalization is sufficient for achieving forced correspondence.
         implement_forced_correspondence();
+        disable_outlier_detection();
 
-        // Normalize the rows and columns iteratively using the Sinkhorn procedure.
+        // Normalize the rows and columns iteratively using the Sinkhorn procedure so that the non-outlier part of M
+        // becomes doubly-stochastic.
         {
-            std::vector<double> row_sums(N_move_points, 0.0);
-            std::vector<double> col_sums(N_stat_points, 0.0);
+            double w_last = -1.0; // Used to detect if the method stalls.
             const auto machine_eps = 100.0 * std::sqrt( std::numeric_limits<double>::epsilon() );
             for(long int norm_iter = 0; norm_iter < params.N_Sinkhorn_iters; ++norm_iter){
 
-                // Tally the current column sums and re-scale the correspondence coefficients.
-                for(long int j = 0; j < N_stat_points; ++j){ // column
-                    col_sums[j] = 0.0;
-                    for(long int i = 0; i < (N_move_points+1); ++i){ // row
-                        col_sums[j] += M(i,j);
-                    }
-                }
-                for(long int j = 0; j < N_stat_points; ++j){ // column
-                    if(col_sums[j] < machine_eps){
-                        // Option A: error.
-                        //throw std::runtime_error("Unable to normalize row");
-                        // Option B: forgo normalization.
-                        // This might ruin the transform scaling, but it might also self-correct (n.b. verified below!).
-                        continue;
-                        // Option C: nominate this point as an outlier.
-                        // This may work, but I can't say for sure...
-                        //col_sums[j] += 1.0;
-                        //M(N_move_points,j) += 1.0;
-                    }
-                    for(long int i = 0; i < (N_move_points+1); ++i){ // row, intentionally ignoring the outlier coeff.
-                        M(i,j) /= col_sums[j];
-                    }
-                }
-                
                 // Tally the current row sums and re-scale the correspondence coefficients.
                 for(long int i = 0; i < N_move_points; ++i){ // row
-                    row_sums[i] = 0.0;
+                    Stats::Running_Sum<double> rs;
                     for(long int j = 0; j < (N_stat_points+1); ++j){ // column
-                        row_sums[i] += M(i,j);
+                        rs.Digest( M(i,j) );
                     }
-                }
-                for(long int i = 0; i < N_move_points; ++i){ // row
-                    if(row_sums[i] < machine_eps){
+                    const auto s = rs.Current_Sum();
+                    if(s < machine_eps){
                         // Option A: error.
                         //throw std::runtime_error("Unable to normalize column");
                         // Option B: forgo normalization.
@@ -715,15 +738,46 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
                         //M(i,N_stat_points) += 1.0;
                     }
                     for(long int j = 0; j < (N_stat_points+1); ++j){ // column, intentionally ignoring the outlier coeff.
-                        M(i,j) /= row_sums[i];
+                        M(i,j) /= s;
                     }
                 }
 
+                // Tally the current column sums and re-scale the correspondence coefficients.
+                for(long int j = 0; j < N_stat_points; ++j){ // column
+                    Stats::Running_Sum<double> rs;
+                    for(long int i = 0; i < (N_move_points+1); ++i){ // row
+                        rs.Digest( M(i,j) );
+                    }
+                    const auto s = rs.Current_Sum();
+                    if(s < machine_eps){
+                        // Option A: error.
+                        //throw std::runtime_error("Unable to normalize row");
+                        // Option B: forgo normalization.
+                        // This might ruin the transform scaling, but it might also self-correct (n.b. verified below!).
+                        continue;
+                        // Option C: nominate this point as an outlier.
+                        // This may work, but I can't say for sure...
+                        //col_sums[j] += 1.0;
+                        //M(N_move_points,j) += 1.0;
+                    }
+                    for(long int i = 0; i < (N_move_points+1); ++i){ // row, intentionally ignoring the outlier coeff.
+                        M(i,j) /= s;
+                    }
+                }
+                
                 // Determine whether convergence has been reached and we can break early.
                 const auto w = worst_row_col_sum_deviation();
-                if(w < params.Sinkhorn_tolerance){
+                if(w < params.Sinkhorn_tolerance){ 
                     break;
                 }
+
+                // Determine if the Sinkhorn technique has stalled.
+                //
+                // Note: Uses *exact* floating-point equality for the most stringent stall check.
+                if(w == w_last){
+                    throw std::runtime_error("Sinkhorn technique stalled. Unable to normalize correspondence matrix. Cannot continue.");
+                }
+                w_last = w;
 
                 //FUNCINFO("On normalization iteration " << norm_iter << " the mean col sum was " << Stats::Mean(col_sums));
                 //FUNCINFO("On normalization iteration " << norm_iter << " the mean row sum was " << Stats::Mean(row_sums));
