@@ -7,7 +7,7 @@
 
 set -e
 
-for i in ./*.md ; do 
+for i in ./reference_guide*.md ; do 
 
     file_in="$i"
 
