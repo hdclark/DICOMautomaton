@@ -977,6 +977,32 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
         return;
     };
 
+    // Estimate the current bending energy. Each dimension contributes a separate energy, and in-plane deformations are
+    // not accounted for.
+    //
+    // Note: This estimate comes from Bookstein. It is NOT the full energy, which would also include the square
+    //       differences and possibily additional terms (e.g., when double-sided outlier handling is being used).
+    //       It is also claimed to merely be *proportional* to the bending energy, so may be off by a constant factor.
+    struct bending_energies {
+        double x = 0.0;
+        double y = 0.0;
+        double z = 0.0;
+    };
+    const auto estimate_bending_energies = [&]() -> bending_energies {
+
+        // Compute (approximate) bending energy.
+        const auto E_x = (  W_A.block(0,0, N_move_points,1).transpose()
+                            * L.block(0,0, N_move_points,N_move_points) 
+                            * W_A.block(0,0, N_move_points,1) ).sum();
+        const auto E_y = (  W_A.block(0,1, N_move_points,1).transpose()
+                            * L.block(0,0, N_move_points,N_move_points) 
+                            * W_A.block(0,1, N_move_points,1) ).sum();
+        const auto E_z = (  W_A.block(0,2, N_move_points,1).transpose()
+                            * L.block(0,0, N_move_points,N_move_points) 
+                            * W_A.block(0,2, N_move_points,1) ).sum();
+        return bending_energies{ E_x, E_y, E_z };
+    };
+
 /*
     // Debugging routine....
     const auto write_to_xyz_file = [&](const std::string &base){
@@ -1017,8 +1043,16 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
         //write_to_xyz_file("warped_tps-rpm_");
     }
 
+    // Imbue the outgoing structs with information from the registration.
     if(params.report_final_correspondence){
         update_final_correspondence();
+    }
+
+    // Report final fit parameters to the user.
+    {
+        const auto E = estimate_bending_energies();
+        const double E_sum = E.x + E.y + E.z;
+        FUNCINFO("Final bending energy is propto " << E_sum << " with " << E.x << " from x, " << E.y << " from y, and " << E.z << " from z");
     }
 
 /*
