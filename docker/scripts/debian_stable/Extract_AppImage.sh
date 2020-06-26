@@ -82,6 +82,9 @@ mkdir build
 cd build
 cmake \
   -DMEMORY_CONSTRAINED_BUILD=OFF \
+  -DWITH_ASAN=OFF \
+  -DWITH_TSAN=OFF \
+  -DWITH_MSAN=OFF \
   -DCMAKE_INSTALL_PREFIX=/usr \
   -DCMAKE_BUILD_TYPE=Release \
   -DWITH_EIGEN=ON \

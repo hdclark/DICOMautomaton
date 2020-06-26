@@ -17,9 +17,12 @@ fi
 
 # Common setup.
 export DCMA_BIN="dicomautomaton_dispatcher"
+export TESTING_ROOT="/tmp/dcma_integration_testing"
+mkdir -v -p "${TESTING_ROOT}"
 export DCMA_REPO_ROOT="${REPO_ROOT}"
-export TEST_FAILURES="$(mktemp /tmp/dcma_integration_test_XXXXXXXXXX)" 
-export TEST_SUCCESSES="$(mktemp /tmp/dcma_integration_test_XXXXXXXXXX)" 
+export TEST_FAILURES="$(mktemp "${TESTING_ROOT}"/failures_XXXXXXXXXX)" 
+export TEST_SUCCESSES="$(mktemp "${TESTING_ROOT}"/successes_XXXXXXXXXX)" 
+export KEEP_ALL_OUTPUTS="1" # Successes are only purged when != "1".
 
 function perform_test {
     local s_f_name="$@"
@@ -30,7 +33,7 @@ function perform_test {
     fi
 
     # Create a working space for the test.
-    local tmp_dir="$(mktemp -d /tmp/dcma_integration_test_XXXXXXXXXX)" || true
+    local tmp_dir="$(mktemp -d "${TESTING_ROOT}"/test_XXXXXXXXXX)" || true
     local found_dir="$(find "${tmp_dir}" -maxdepth 0 -type d -empty)"
     if [ ! -d "${tmp_dir}" ] || [ "${tmp_dir}" != "${found_dir}" ] ; then
         printf 'Unable to create temporary directory.\n' 2>&1
@@ -46,6 +49,10 @@ function perform_test {
     fi
 
     # Execute the script.
+    export ASAN_OPTIONS='verbosity=0 coverage=1 coverage_dir="." html_cov_report=1 detect_leaks=1 detect_invalid_pointer_pairs=2'
+    export TSAN_OPTIONS='verbosity=0 coverage=1 coverage_dir="." html_cov_report=1 history_size=5'
+    export MSAN_OPTIONS='verbosity=0 coverage=1 coverage_dir="." html_cov_report=1'
+    export UBSAN_OPTIONS='verbosity=0 coverage=1 coverage_dir="." html_cov_report=1'
     bash "${s_f_base}" >stdout 2>stderr
     local ret_val=$?
 
@@ -53,14 +60,17 @@ function perform_test {
     popd &>/dev/null
     if [ "${ret_val}" != "0" ] ; then
         # Notify the user about the failure and leave the directory for user inspection.
-        printf -- "  '%s' --> see '%s'.\n" "${s_f_base}" "${tmp_dir}" >> "${TEST_FAILURES}"
+        printf -- "'%s' --> see '%s'.\n" "${s_f_base}" "${tmp_dir}" >> "${TEST_FAILURES}"
         printf "Test '%s' failed. See '%s'.\n" "${s_f_base}" "${tmp_dir}" 1>&2
         return 1
 
     else
+        printf -- "'%s' --> see '%s'.\n" "${s_f_base}" "${tmp_dir}" >> "${TEST_SUCCESSES}"
+
         # Clean up.
-        rm -rf "${tmp_dir}"
-        printf "  Test '%s' succeeded.\n" "${s_f_base}" >> "${TEST_SUCCESSES}"
+        if [ "${KEEP_ALL_OUTPUTS}" != "1" ] ; then
+            rm -rf "${tmp_dir}"
+        fi
         return 0
 
     fi
@@ -86,6 +96,7 @@ printf -- '---------------------------------------------------------------------
 printf 'Number of tests performed: \t%s\n' "$(($N_successes + $N_failures))" 
 printf '       ... that succeeded: \t%s\n' "$N_successes"
 printf '          ... that failed: \t%s\n' "$N_failures" 
+printf 'All outputs are in: %s\n' "${TESTING_ROOT}"
 printf -- '---------------------------------------------------------------------------------------\n'
 
 if [ -s "${TEST_FAILURES}" ] ; then
@@ -95,8 +106,10 @@ else
     printf 'All tests passed.\n'
 fi
 
-rm "${TEST_FAILURES}" 
-rm "${TEST_SUCCESSES}" 
+if [ "${KEEP_ALL_OUTPUTS}" != "1" ] ; then
+    rm "${TEST_FAILURES}" 
+    rm "${TEST_SUCCESSES}" 
+fi
 
 if [ "${N_failures}" == "0" ] ; then
     exit 0

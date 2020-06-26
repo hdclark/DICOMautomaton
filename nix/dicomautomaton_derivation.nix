@@ -94,6 +94,9 @@ stdenv.mkDerivation rec {
   cmakeFlags = [
     "-DCMAKE_BUILD_TYPE=Release"
     "-DMEMORY_CONSTRAINED_BUILD=OFF"
+    "-DWITH_ASAN=OFF"
+    "-DWITH_TSAN=OFF"
+    "-DWITH_MSAN=OFF"
     "-DWITH_EIGEN=ON"
   "-DWITH_CGAL=OFF"
     "-DWITH_NLOPT=ON"

@@ -10,6 +10,9 @@ project(DICOMautomaton LANGUAGES CXX)
 ####################################################################################
 
 option(MEMORY_CONSTRAINED_BUILD "Compile slowly, with minimal memory usage."    OFF)
+option(WITH_ASAN                "Compile using ASan, LSan, & UBSan."            OFF)
+option(WITH_TSAN                "Compile using ThreadSanitizer."                OFF)
+option(WITH_MSAN                "Compile using MemorySanitizer."                OFF)
 
 option(WITH_EIGEN     "Compile assuming Eigen is available."                    ON)
 option(WITH_CGAL      "Compile assuming CGAL is available."                     ON)
@@ -85,7 +88,8 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
 
     if("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
         # Add gprof profiling flag.
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pg -fno-omit-frame-pointer")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pg")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-omit-frame-pointer")
     endif()
 
     if(MEMORY_CONSTRAINED_BUILD)
@@ -100,6 +104,50 @@ elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wextra")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wpedantic")
+endif()
+
+# Sanitizers.
+if(WITH_ASAN  OR  WITH_TSAN  OR  WITH_MSAN)
+    #set(CMAKE_CXX_FLAGS " ")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-omit-frame-pointer")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-common")
+
+    # Also enable coverage instrumentation, since sanitizers will typically be used for testing.
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --coverage")
+    # Clang only? Need to confirm ... TODO
+    #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize-coverage=trace-pc-guard")
+    #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fprofile-instr-generate")
+    #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fcoverage-mapping")
+
+    add_definitions(-U_FORTIFY_SOURCE)
+endif()
+if(WITH_ASAN)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address") #  <-- includes LSan.
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize-address-use-after-scope")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=pointer-compare")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=pointer-subtract")
+
+    # Add UBSan checks too, since ASan, LSan, and UBSan are all compatible.
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=undefined")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-sanitize-recover=undefined")
+    # Clang only? Need to confirm ... TODO
+    #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=implicit-conversion")
+    #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=local-bounds")
+    #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=nullability-arg")
+    #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=nullability-assign")
+    #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=nullability-return")
+    #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=unsigned-integer-overflow")
+elseif(WITH_TSAN)
+    message(WARNING "TSan may not support exceptions (depends on the compiler version and platform).")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=thread")
+elseif(WITH_MSAN)
+    message(WARNING "MSan may not be available on your system.")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=memory")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIE")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pie")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize-memory-track-origins")
 endif()
 
 
