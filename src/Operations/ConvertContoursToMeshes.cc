@@ -1,10 +1,5 @@
 //ConvertContoursToMeshes.cc - A part of DICOMautomaton 2020. Written by hal clark.
 
-#ifdef DCMA_USE_CGAL
-#else
-    #error "Attempted to compile without CGAL support, which is required."
-#endif
-
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>            //Needed for exit() calls.
