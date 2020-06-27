@@ -20,9 +20,10 @@ export DCMA_BIN="dicomautomaton_dispatcher"
 export TESTING_ROOT="/tmp/dcma_integration_testing"
 mkdir -v -p "${TESTING_ROOT}"
 export DCMA_REPO_ROOT="${REPO_ROOT}"
+export TEST_FILES_ROOT="${REPO_ROOT}/artifacts/test_files/"
 export TEST_FAILURES="$(mktemp "${TESTING_ROOT}"/failures_XXXXXXXXXX)" 
 export TEST_SUCCESSES="$(mktemp "${TESTING_ROOT}"/successes_XXXXXXXXXX)" 
-export KEEP_ALL_OUTPUTS="1" # Successes are only purged when != "1".
+export KEEP_ALL_OUTPUTS="0" # Successes are only purged when != "1".
 
 function perform_test {
     local s_f_name="$@"
@@ -109,6 +110,7 @@ fi
 if [ "${KEEP_ALL_OUTPUTS}" != "1" ] ; then
     rm "${TEST_FAILURES}" 
     rm "${TEST_SUCCESSES}" 
+    rmdir "${TESTING_ROOT}" &>/dev/null || true
 fi
 
 if [ "${N_failures}" == "0" ] ; then

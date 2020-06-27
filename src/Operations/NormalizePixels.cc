@@ -34,6 +34,11 @@ OperationDoc OpArgDocNormalizePixels(void){
     out.notes.emplace_back(
          "This operation considers entire image arrays, not just single images."
     );
+    out.notes.emplace_back(
+         "This operation does not *reduce* voxels (i.e., the neighbourhood surrounding is voxel is"
+         " ignored). This operation effectively applies a linear mapping to every scalar voxel value"
+         " independently. Neighbourhood-based reductions are implemented in another operation."
+    );
     
     out.args.emplace_back();
     out.args.back() = IAWhitelistOpArgDoc();

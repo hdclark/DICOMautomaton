@@ -121,8 +121,12 @@ OperationDoc OpArgDocReduceNeighbourhood(void){
     out.args.back().name = "Reduction";
     out.args.back().desc = "Controls how the distribution of voxel values from neighbouring voxels is reduced."
                            " Statistical distribution reducers 'min', 'mean', 'median', and 'max' are defined."
-                           " 'Min' is also known as the 'erosion' operation. Likewise, 'max' is also known as"
+                           " 'min' is also known as the 'erosion' operation. Likewise, 'max' is also known as"
                            " the 'dilation' operation."
+                           " 'percentile01' evaluates which percentile the central voxel occupies in the neighbourhood."
+                           " The percentile is reported within $[0,1]$. This reduction strategy can be used to"
+                           " implement non-parametric adaptive scaling since only the local neighbourhood is"
+                           " examined. (Duplicate values assume the percentile of the middle of the range.)"
                            " Note that the morphological 'opening' operation can be accomplished by sequentially"
                            " performing an erosion and then a dilation using the same neighbourhood."
                            " Logical reducers 'is_min' and 'is_max' are also available -- is_min (is_max)"
@@ -136,6 +140,7 @@ OperationDoc OpArgDocReduceNeighbourhood(void){
                                  "erode",
                                  "mean", 
                                  "median",
+                                 "percentile01",
                                  "max",
                                  "dilate",
                                  "is_min",
@@ -192,12 +197,13 @@ Drover ReduceNeighbourhood(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
     const auto regex_sp13 = Compile_Regex("^13sphe?r?e?$");
     const auto regex_sp15 = Compile_Regex("^15sphe?r?e?$");
 
-    const auto regex_min    = Compile_Regex("^mini?m?u?m?$");
-    const auto regex_erode  = Compile_Regex("^er?o?.*"); // 'erode' and 'erosion'.
-    const auto regex_median = Compile_Regex("^medi?a?n?$");
-    const auto regex_mean   = Compile_Regex("^mean?$");
-    const auto regex_max    = Compile_Regex("^maxi?m?u?m?$");
-    const auto regex_dilate = Compile_Regex("^di?l?a?t?.*"); // 'dilate' and 'dilation'.
+    const auto regex_min     = Compile_Regex("^mini?m?u?m?$");
+    const auto regex_erode   = Compile_Regex("^er?o?.*"); // 'erode' and 'erosion'.
+    const auto regex_median  = Compile_Regex("^medi?a?n?$");
+    const auto regex_mean    = Compile_Regex("^mean?$");
+    const auto regex_max     = Compile_Regex("^maxi?m?u?m?$");
+    const auto regex_ptile01 = Compile_Regex("^pe?r?c?e?n?[_-]?t?i?l?e?0?1?$");
+    const auto regex_dilate  = Compile_Regex("^di?l?a?t?.*"); // 'dilate' and 'dilation'.
 
     const auto regex_is_min = Compile_Regex("^is?_?m?ini?m?u?m?$");
     const auto regex_is_max = Compile_Regex("^is?_?m?axi?m?u?m?$");
@@ -519,6 +525,36 @@ Drover ReduceNeighbourhood(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
               ||  std::regex_match(ReductionStr, regex_dilate) ){
             ud.f_reduce = [](float, std::vector<float> &shtl, vec3<double>) -> float {
                               return Stats::Max(shtl);
+                          };
+
+        }else if( std::regex_match(ReductionStr, regex_ptile01) ){
+            const auto nan = std::numeric_limits<double>::quiet_NaN();
+            ud.f_reduce = [nan](float f, std::vector<float> &shtl, vec3<double>) -> float {
+                              if( !std::isnan(f) ){
+                                  // Purge NaNs.
+                                  auto f_beg = shtl.begin();
+                                  auto f_end = std::remove_if(f_beg, shtl.end(),
+                                      [](const float &x) -> bool { return std::isnan(x); });
+                                  const auto N_remain = static_cast<long int>( std::distance(f_beg, f_end) );
+                                  if( N_remain == 0 ){
+                                      f = nan;
+                                  }else{
+                                      // Determine the percentile where duplicates use the middle position.
+                                      std::sort(f_beg, f_end);
+                                      const auto bounds = std::equal_range(f_beg, f_end, f);
+                                      const auto lhs_it = bounds.first;
+                                      const auto rhs_it = bounds.second;
+                                      if(lhs_it == rhs_it){
+                                          f = nan;
+                                      }else{
+                                          const auto N_lhs = static_cast<long int>( std::distance(f_beg, lhs_it) );
+                                          // Correct for rhs being +1 past the RHS.
+                                          const auto N_rhs = static_cast<long int>( std::distance(f_beg, rhs_it) ) - 1;
+                                          f = 0.5 * static_cast<float>(N_rhs + N_lhs) / (static_cast<float>(N_remain) - 1.0);
+                                      }
+                                  }
+                              } 
+                              return f;
                           };
 
         }else if( std::regex_match(ReductionStr, regex_is_min_nan) ){
