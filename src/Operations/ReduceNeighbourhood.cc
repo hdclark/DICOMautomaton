@@ -123,12 +123,24 @@ OperationDoc OpArgDocReduceNeighbourhood(void){
                            " Statistical distribution reducers 'min', 'mean', 'median', and 'max' are defined."
                            " 'min' is also known as the 'erosion' operation. Likewise, 'max' is also known as"
                            " the 'dilation' operation."
-                           " 'percentile01' evaluates which percentile the central voxel occupies in the neighbourhood."
-                           " The percentile is reported within $[0,1]$. This reduction strategy can be used to"
-                           " implement non-parametric adaptive scaling since only the local neighbourhood is"
-                           " examined. (Duplicate values assume the percentile of the middle of the range.)"
                            " Note that the morphological 'opening' operation can be accomplished by sequentially"
                            " performing an erosion and then a dilation using the same neighbourhood."
+                           " The 'standardize' reduction method can be used for adaptive rescaling by"
+                           " subtracting the local neighbourhood mean and dividing the local neighbourhood"
+                           " standard deviation."
+                           " The 'standardize' reduction method is a way to (locally) transform variables on"
+                           " different scales so they can more easily be compared. Note that standardization can"
+                           " result in undefined voxel values when the local neighbourhood is perfectly uniform."
+                           " Also, since only the local neighbourhood is considered, voxels will in general have"
+                           " *neither* zero mean *nor* a  unit standard deviation (growing the neighbourhood"
+                           " extremely large *will* accomplish this, but the calculation will be inefficient)."
+                           " The 'percentile01' reduction method evaluates which percentile the central voxel"
+                           " occupies within the local neighbourhood."
+                           " It is reported scaled to $[0,1]$. 'percentile01' can be used to"
+                           " implement non-parametric adaptive scaling since only the local neighbourhood is"
+                           " examined. (Duplicate values assume the percentile of the middle of the range.)"
+                           " In contrast to 'standardize', the 'percentile01' reduction should remain valid"
+                           " anywhere the local neighbourhood has a non-zero number of finite voxels."
                            " Logical reducers 'is_min' and 'is_max' are also available -- is_min (is_max)"
                            " replace the voxel value with 1.0 if it was the min (max) in the neighbourhood and"
                            " 0.0 otherwise. Logical reducers 'is_min_nan' and 'is_max_nan' are variants that"
@@ -140,9 +152,10 @@ OperationDoc OpArgDocReduceNeighbourhood(void){
                                  "erode",
                                  "mean", 
                                  "median",
-                                 "percentile01",
                                  "max",
                                  "dilate",
+                                 "standardize",
+                                 "percentile01",
                                  "is_min",
                                  "is_max",
                                  "is_min_nan",
@@ -202,8 +215,10 @@ Drover ReduceNeighbourhood(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
     const auto regex_median  = Compile_Regex("^medi?a?n?$");
     const auto regex_mean    = Compile_Regex("^mean?$");
     const auto regex_max     = Compile_Regex("^maxi?m?u?m?$");
-    const auto regex_ptile01 = Compile_Regex("^pe?r?c?e?n?[_-]?t?i?l?e?0?1?$");
     const auto regex_dilate  = Compile_Regex("^di?l?a?t?.*"); // 'dilate' and 'dilation'.
+
+    const auto regex_stdize  = Compile_Regex("^st?a?n?d?a?r?d?i?z?e?d?$");
+    const auto regex_ptile01 = Compile_Regex("^pe?r?c?e?n?[_-]?t?i?l?e?0?1?$");
 
     const auto regex_is_min = Compile_Regex("^is?_?m?ini?m?u?m?$");
     const auto regex_is_max = Compile_Regex("^is?_?m?axi?m?u?m?$");
@@ -525,6 +540,21 @@ Drover ReduceNeighbourhood(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
               ||  std::regex_match(ReductionStr, regex_dilate) ){
             ud.f_reduce = [](float, std::vector<float> &shtl, vec3<double>) -> float {
                               return Stats::Max(shtl);
+                          };
+
+        }else if( std::regex_match(ReductionStr, regex_stdize) ){
+            const auto nan = std::numeric_limits<double>::quiet_NaN();
+            ud.f_reduce = [nan](float f, std::vector<float> &shtl, vec3<double>) -> float {
+                              if( std::isfinite(f) ){
+                                  const auto mean = Stats::Mean(shtl);
+                                  const auto var = Stats::Unbiased_Var_Est(shtl);
+                                  const auto std_dev = std::sqrt( var );
+                                  f = (f - mean) / std_dev;
+                                  if(!std::isfinite(f)){
+                                      f = nan;
+                                  }
+                              } 
+                              return f;
                           };
 
         }else if( std::regex_match(ReductionStr, regex_ptile01) ){
