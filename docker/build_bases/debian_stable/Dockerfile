@@ -13,18 +13,20 @@ ADD docker/build_bases/debian_stable /scratch_base
 # Install build dependencies.
 ENV DEBIAN_FRONTEND noninteractive
 
-RUN apt-get --yes update && \
-    apt-get --yes install \
+RUN apt-get update --yes && \
+    apt-get install --yes --no-install-recommends \
       git \
       cmake \
+      make \
       g++ \
       vim \
       ncurses-term \
       gdb \
       rsync \
-      wget
+      wget \
+      ca-certificates
 
-RUN apt-get install --yes \
+RUN apt-get install --yes --no-install-recommends \
     ` # Ygor dependencies ` \
         libboost-dev \
         libgsl-dev \
@@ -66,7 +68,8 @@ RUN git clone https://github.com/emweb/wt.git . && \
     make clean
 
 WORKDIR /scratch_base
-RUN apt-get install --yes -f ./libwt-dev_10.0_all.deb ./libwthttp-dev_10.0_all.deb
+RUN apt-get install --yes \
+    -f ./libwt-dev_10.0_all.deb ./libwthttp-dev_10.0_all.deb
 
 
 # Install Ygor.
