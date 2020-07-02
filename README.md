@@ -47,7 +47,7 @@ All materials herein which may be copywrited, where applicable, are. Copyright
 See [LICENSE.txt] for details about the license. Informally, `DICOMautomaton` is
 available under a GPLv3+ license. The Imebra library is bundled for convenience
 and was not written by the author; consult the Imebra license file
-[src/imebra/license.txt].
+[src/imebra/license.txt] which informally is a simplified BSD-like license.
 
 All liability is herefore disclaimed. The person(s) who use this source and/or
 software do so strictly under their own volition. They assume all associated
