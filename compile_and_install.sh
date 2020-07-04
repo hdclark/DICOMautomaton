@@ -206,5 +206,7 @@ else  # Generic build and install.
 
 fi
 
+compile_ret_val=$?
 printf 'Done.\n'
+exit $compile_ret_val
 

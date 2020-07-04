@@ -2,28 +2,8 @@
 
 #pragma once
 
-#include <iostream>
-#include <sstream>
-#include <fstream>
-#include <iomanip>
-#include <string>    
-#include <vector>
-#include <set> 
-#include <map>
-#include <unordered_map>
-#include <list>
-#include <functional>
-#include <thread>
-#include <array>
-#include <mutex>
-#include <limits>
-#include <cmath>
-
-#include <getopt.h>           //Needed for 'getopts' argument parsing.
-#include <cstdlib>            //Needed for exit() calls.
-#include <utility>            //Needed for std::pair.
-#include <algorithm>
-#include <optional>
+#include <string>
+#include <utility>
 
 #ifdef DCMA_USE_CGAL
 #else
@@ -32,33 +12,8 @@
 
 #include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
 #include <CGAL/Polyhedron_3.h>
-#include <CGAL/IO/Polyhedron_iostream.h>
 #include <CGAL/Surface_mesh_default_triangulation_3.h>
-#include <CGAL/make_surface_mesh.h>
-#include <CGAL/Implicit_surface_3.h>
-#include <CGAL/IO/output_surface_facets_to_polyhedron.h>
-#include <CGAL/Poisson_reconstruction_function.h>
-#include <CGAL/Point_with_normal_3.h>
-#include <CGAL/property_map.h>
-#include <CGAL/IO/read_xyz_points.h>
-#include <CGAL/compute_average_spacing.h>
-#include <CGAL/edge_aware_upsample_point_set.h>
-
-#include <CGAL/pca_estimate_normals.h>
-#include <CGAL/jet_estimate_normals.h>
-#include <CGAL/mst_orient_normals.h>
-
-//#include <CGAL/IO/write_xyz_points.h>
-
-#include <CGAL/subdivision_method_3.h>
-#include <CGAL/centroid.h>
-
-#include <CGAL/Min_sphere_of_spheres_d.h>
-
 #include <CGAL/boost/graph/graph_traits_Polyhedron_3.h>
-#include <CGAL/mesh_segmentation.h>
-
-#include "YgorImages_Functors/Processing/Partitioned_Image_Voxel_Visitor_Mutator.h"
 
 namespace dcma_surface_meshes {
 

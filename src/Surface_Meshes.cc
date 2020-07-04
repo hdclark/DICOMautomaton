@@ -6,23 +6,16 @@
 #include <iomanip>
 #include <string>    
 #include <vector>
-#include <set> 
 #include <map>
-#include <unordered_map>
 #include <list>
 #include <functional>
-#include <thread>
 #include <array>
 #include <mutex>
 #include <limits>
 #include <cmath>
 
-#include <getopt.h>           //Needed for 'getopts' argument parsing.
-#include <cstdlib>            //Needed for exit() calls.
 #include <utility>            //Needed for std::pair.
 #include <algorithm>
-//#include <execution>
-#include <optional>
 
 #ifdef DCMA_USE_CGAL
 #else
@@ -31,52 +24,11 @@
 
 #define BOOST_PARAMETER_MAX_ARITY 12
 
-#include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
-#include <CGAL/Exact_predicates_exact_constructions_kernel.h> // For nef polyhedra.
-#include <CGAL/Cartesian.h>
-
-#include <CGAL/Polyhedron_3.h>
-
-#include <CGAL/Surface_mesh_default_criteria_3.h>
-#include <CGAL/Complex_2_in_triangulation_3.h>
-#include <CGAL/Surface_mesh_default_triangulation_3.h>
-#include <CGAL/make_surface_mesh.h>
-#include <CGAL/Implicit_surface_3.h>
-
-#include <CGAL/Poisson_reconstruction_function.h>
-#include <CGAL/Point_with_normal_3.h>
-#include <CGAL/property_map.h>
-#include <CGAL/compute_average_spacing.h>
-#include <CGAL/edge_aware_upsample_point_set.h>
-
-#include <CGAL/pca_estimate_normals.h>
-#include <CGAL/jet_estimate_normals.h>
-#include <CGAL/mst_orient_normals.h>
-
-#include <CGAL/IO/read_xyz_points.h>
-#include <CGAL/IO/write_xyz_points.h>
-#include <CGAL/IO/Complex_2_in_triangulation_3_file_writer.h>
-#include <CGAL/IO/facets_in_complex_2_to_triangle_mesh.h>
-#include <CGAL/IO/Polyhedron_iostream.h>
-
 #include <CGAL/subdivision_method_3.h>
-#include <CGAL/centroid.h>
-
-#include <CGAL/Nef_polyhedron_3.h>
-#include <CGAL/IO/Nef_polyhedron_iostream_3.h>
-#include <CGAL/Aff_transformation_3.h>
 #include <CGAL/OFF_to_nef_3.h>
-
 #include <CGAL/Min_sphere_of_spheres_d.h>
 
-#include <CGAL/boost/graph/graph_traits_Polyhedron_3.h>
-#include <CGAL/mesh_segmentation.h>
-
-#include <CGAL/Polygon_mesh_processing/repair.h>
 #include <CGAL/Polygon_mesh_slicer.h>
-#include <CGAL/Polygon_mesh_processing/measure.h>
-#include <CGAL/Polygon_mesh_processing/orient_polygon_soup.h>
-#include <CGAL/Polygon_mesh_processing/polygon_soup_to_polygon_mesh.h>
 #include <CGAL/Polygon_mesh_processing/orientation.h>
 #include <CGAL/Polygon_mesh_processing/remesh.h>
 
@@ -89,8 +41,6 @@
 #include <CGAL/Surface_mesh.h>
 //#include <CGAL/disable_warnings.h>
 
-//#include <CGAL/Nef_polyhedron_3.h>
-//#include <CGAL/IO/Nef_polyhedron_iostream_3.h>
 #include <CGAL/minkowski_sum_3.h>
 
 #include <CGAL/boost/graph/convert_nef_polyhedron_to_polygon_mesh.h>
@@ -103,24 +53,11 @@
 #include <CGAL/Mesh_domain_with_polyline_features_3.h>
 #include <CGAL/make_mesh_3.h>
 
-#include <CGAL/IO/facets_in_complex_3_to_triangle_mesh.h>
 
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorMath.h"         //Needed for vec3 class.
-#include "YgorMathPlottingGnuplot.h" //Needed for YgorMathPlottingGnuplot::*.
-#include "YgorMathChebyshev.h" //Needed for cheby_approx class.
 #include "YgorStats.h"        //Needed for Stats:: namespace.
-#include "YgorFilesDirs.h"    //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
-#include "YgorContainers.h"   //Needed for bimap class.
-#include "YgorPerformance.h"  //Needed for YgorPerformance_dt_from_last().
-#include "YgorAlgorithms.h"   //Needed for For_Each_In_Parallel<..>(...)
-#include "YgorArguments.h"    //Needed for ArgumentHandler class.
-#include "YgorString.h"       //Needed for GetFirstRegex(...)
 #include "YgorImages.h"
-#include "YgorImagesIO.h"
-#include "YgorImagesPlotting.h"
-
-#include "Explicator.h"       //Needed for Explicator class.
 
 #include "Structs.h"
 
@@ -128,12 +65,6 @@
 #include "YgorImages_Functors/Processing/Partitioned_Image_Voxel_Visitor_Mutator.h"
 
 #include "Surface_Meshes.h"
-
-
-
-
-
-
 
 // ----------------------------------------------- Pure contour meshing -----------------------------------------------
 namespace dcma_surface_meshes {
