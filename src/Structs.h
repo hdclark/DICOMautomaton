@@ -2,31 +2,23 @@
 
 #pragma once
 
-#include <YgorMisc.h>
-#include <stddef.h>
-#include <algorithm>
 #include <array>
-#include <cstdint>
 #include <optional>
-#include <functional>
 #include <initializer_list>
-#include <iterator>
 #include <list>
 #include <map>
 #include <memory>
 #include <set>
 #include <string>
 #include <tuple>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 #include <variant>
 #include <any>
 
-#include "YgorFilesDirs.h"
+#include <YgorMisc.h>
 #include "YgorImages.h"
 #include "YgorMath.h"
-#include "YgorPlot.h"
 
 #include "Alignment_TPSRPM.h"
 

@@ -27,6 +27,7 @@
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorString.h"       //Needed for SplitStringToVector, Canonicalize_String2, SplitVector functions.
+#include "YgorFilesDirs.h"
 #include "YgorTAR.h"
 
 

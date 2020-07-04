@@ -1,10 +1,5 @@
 //Structs.cc.
 
-#include <boost/algorithm/string/classification.hpp>
-#include <boost/algorithm/string/constants.hpp>
-#include <boost/algorithm/string/predicate.hpp>
-#include <boost/algorithm/string/split.hpp>
-#include <boost/algorithm/string/trim_all.hpp>
 #include <algorithm> //std::min_element/max_element, std::stable_sort.
 #include <array>
 #include <cmath>
@@ -22,14 +17,19 @@
 #include <variant>
 #include <any>
 
-#include "Dose_Meld.h"
-#include "Structs.h"
+#include <boost/algorithm/string/predicate.hpp>
+#include <boost/algorithm/string/split.hpp>
+#include <boost/algorithm/string/trim_all.hpp>
+
 #include "YgorImages.h"
 #include "YgorMath.h"
 #include "YgorMisc.h"
 #include "YgorPlot.h"
 #include "YgorStats.h"
 #include "YgorString.h"
+
+#include "Structs.h"
+#include "Dose_Meld.h"
 
 //This is a mapping from the segmentation history to a human-readable description.
 // Try avoid using commas or tabs to make dumping as csv easier. This should in
