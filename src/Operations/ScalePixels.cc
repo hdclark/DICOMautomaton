@@ -18,13 +18,16 @@
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
 #include "../YgorImages_Functors/ConvenienceRoutines.h"
-#include "ScalePixels.h"
+#include "../YgorImages_Functors/Grouping/Misc_Functors.h"
+#include "../YgorImages_Functors/Processing/Partitioned_Image_Voxel_Visitor_Mutator.h"
+
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMathPlottingGnuplot.h" //Needed for YgorMathPlottingGnuplot::*.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorStats.h"        //Needed for Stats:: namespace.
 
+#include "ScalePixels.h"
 
 OperationDoc OpArgDocScalePixels(void){
     OperationDoc out;

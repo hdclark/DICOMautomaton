@@ -11,16 +11,18 @@
 #include <stdexcept>
 #include <string>    
 
+#include "YgorImages.h"
+#include "YgorString.h"       //Needed for GetFirstRegex(...)
+#include "YgorStats.h"       //Needed for Stats:: namespace.
+
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
 #include "../YgorImages_Functors/ConvenienceRoutines.h"
 #include "../YgorImages_Functors/Grouping/Misc_Functors.h"
 #include "../YgorImages_Functors/Compute/Volumetric_Neighbourhood_Sampler.h"
-#include "NormalizePixels.h"
-#include "YgorImages.h"
-#include "YgorString.h"       //Needed for GetFirstRegex(...)
-#include "YgorStats.h"       //Needed for Stats:: namespace.
+#include "../YgorImages_Functors/Processing/Partitioned_Image_Voxel_Visitor_Mutator.h"
 
+#include "NormalizePixels.h"
 
 OperationDoc OpArgDocNormalizePixels(void){
     OperationDoc out;

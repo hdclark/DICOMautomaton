@@ -17,18 +17,21 @@
 #include <utility>            //Needed for std::pair.
 #include <vector>
 
-#include "../Structs.h"
-#include "../Regex_Selectors.h"
-#include "../Thread_Pool.h"
-#include "ExportPointClouds.h"
-#include "Explicator.h"       //Needed for Explicator class.
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorStats.h"        //Needed for Stats:: namespace.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 #include "YgorMathIOXYZ.h"
+#include "YgorFilesDirs.h"
 
+#include "Explicator.h"       //Needed for Explicator class.
+
+#include "../Structs.h"
+#include "../Regex_Selectors.h"
+#include "../Thread_Pool.h"
+
+#include "ExportPointClouds.h"
 
 OperationDoc OpArgDocExportPointClouds(void){
     OperationDoc out;

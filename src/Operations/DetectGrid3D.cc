@@ -37,6 +37,7 @@
 #include "YgorImages.h"
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 #include "YgorStats.h"       //Needed for Stats:: namespace.
+#include "YgorFilesDirs.h"
 
 #include "../Structs.h"
 #include "../Regex_Selectors.h"

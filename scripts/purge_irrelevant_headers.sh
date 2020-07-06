@@ -16,14 +16,13 @@ if [ ! -d "${SCRIPT_DIR}" ] ; then
 fi
 
 # The file that will be edited.
-#edit_file="src/Surface_Meshes.h"
-#edit_file="src/Surface_Meshes.cc"
 declare -a edit_files
-#edit_files+=( "src/Surface_Meshes.h" )
-edit_files+=( "src/Surface_Meshes.cc" )
+#edit_files+=( "src/Structs.h" )
+#edit_files+=( "src/Structs.cc" )
+edit_files+=( src/Operations/*h )
 
 # The files that will be compiled.
-comp_file="src/Surface_Meshes.cc"
+comp_file="/dev/null"
 
 set +e
 
@@ -59,10 +58,10 @@ function compile_func {
     #  -std=c++17 \
     #  -o /dev/null \
     #  -c $@ &>/dev/null  && \
-    CC=gcc CXX=g++ ./compile_and_install.sh </dev/null &>/dev/null && \
+    CC=gcc CXX=g++ ./compile_and_install.sh -c </dev/null &>/dev/null && \
     dicomautomaton_dispatcher -h </dev/null &>/dev/null
 
-    #CC=clang CXX=clang++ ./compile_and_install.sh </dev/null &>/dev/null && \
+    #CC=clang CXX=clang++ ./compile_and_install.sh -c </dev/null &>/dev/null && \
 }
 export -f compile_func
 
@@ -74,6 +73,7 @@ for edit_file in ${edit_files[@]}; do
     mapfile -t includes < <( 
         cat "${edit_file}" |
           grep -- '^#include ' |
+          grep -i 'cgal\|boost\|eigen\|nlopt\|_functors' |
           sort -u )
 
     # Remove each to see if the compilation succeeds.

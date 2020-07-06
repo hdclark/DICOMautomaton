@@ -9,6 +9,7 @@
 #include <memory>
 #include <regex>
 #include <stdexcept>
+#include <numeric>        //Needed for std::inner_product().
 #include <string>    
 
 #include "../Structs.h"
@@ -16,10 +17,12 @@
 #include "../YgorImages_Functors/ConvenienceRoutines.h"
 #include "../YgorImages_Functors/Grouping/Misc_Functors.h"
 #include "../YgorImages_Functors/Compute/Volumetric_Neighbourhood_Sampler.h"
-#include "ConvolveImages.h"
+
 #include "YgorImages.h"
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 #include "YgorStats.h"       //Needed for Stats:: namespace.
+
+#include "ConvolveImages.h"
 
 
 OperationDoc OpArgDocConvolveImages(void){

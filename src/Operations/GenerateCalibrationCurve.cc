@@ -11,15 +11,17 @@
 #include <stdexcept>
 #include <string>    
 
+#include "YgorImages.h"
+#include "YgorMath.h"         //Needed for vec3 class.
+#include "YgorString.h"       //Needed for GetFirstRegex(...)
+#include "YgorStats.h"
+
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
 #include "../YgorImages_Functors/Grouping/Misc_Functors.h"
 #include "../YgorImages_Functors/Processing/Partitioned_Image_Voxel_Visitor_Mutator.h"
-#include "GenerateCalibrationCurve.h"
-#include "YgorImages.h"
-#include "YgorMath.h"         //Needed for vec3 class.
-#include "YgorString.h"       //Needed for GetFirstRegex(...)
 
+#include "GenerateCalibrationCurve.h"
 
 
 OperationDoc OpArgDocGenerateCalibrationCurve(void){

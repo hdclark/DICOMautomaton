@@ -17,6 +17,8 @@
 #include "YgorMathIOOBJ.h"
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 
+#include "Explicator.h"
+
 #include "../Contour_Boolean_Operations.h"
 #include "../Structs.h"
 #include "../Regex_Selectors.h"

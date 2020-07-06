@@ -38,6 +38,8 @@
 #include "YgorStats.h"        //Needed for Stats:: namespace.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
+#include "Explicator.h"
+
 #include "../Colour_Maps.h"
 #include "../Common_Boost_Serialization.h"
 #include "../Common_Plotting.h"

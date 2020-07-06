@@ -24,13 +24,15 @@
 #include "../Regex_Selectors.h"
 #include "../Thread_Pool.h"
 
-#include "SimplifyContours.h"
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMathPlottingGnuplot.h" //Needed for YgorMathPlottingGnuplot::*.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorStats.h"        //Needed for Stats:: namespace.
 
+#include "Explicator.h"
+
+#include "SimplifyContours.h"
 
 OperationDoc OpArgDocSimplifyContours(void){
     OperationDoc out;

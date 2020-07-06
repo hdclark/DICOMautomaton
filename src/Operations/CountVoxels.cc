@@ -21,6 +21,7 @@
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorStats.h"        //Needed for Stats:: namespace.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
+#include "YgorFilesDirs.h"
 
 #include "Explicator.h"       //Needed for Explicator class.
 
@@ -28,6 +29,8 @@
 #include "../Regex_Selectors.h"
 #include "../Thread_Pool.h"
 #include "../Write_File.h"
+#include "../YgorImages_Functors/Grouping/Misc_Functors.h"
+#include "../YgorImages_Functors/Processing/Partitioned_Image_Voxel_Visitor_Mutator.h"
 
 #include "CountVoxels.h"
 

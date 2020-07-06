@@ -11,16 +11,6 @@
 #include <stdexcept>
 #include <string>    
 
-#include "../Structs.h"
-#include "../Regex_Selectors.h"
-#include "../YgorImages_Functors/ConvenienceRoutines.h"
-#include "../YgorImages_Functors/Grouping/Misc_Functors.h"
-#include "../YgorImages_Functors/Compute/Volumetric_Neighbourhood_Sampler.h"
-#include "VoxelRANSAC.h"
-#include "YgorImages.h"
-#include "YgorString.h"       //Needed for GetFirstRegex(...)
-#include "YgorStats.h"       //Needed for Stats:: namespace.
-
 /*
 #include <boost/geometry.hpp>
 #include <boost/geometry/geometries/point.hpp>
@@ -42,6 +32,19 @@
 
 #include "YgorClustering.hpp"
 
+#include "YgorImages.h"
+#include "YgorString.h"       //Needed for GetFirstRegex(...)
+#include "YgorStats.h"       //Needed for Stats:: namespace.
+
+#include "../Structs.h"
+#include "../Regex_Selectors.h"
+#include "../YgorImages_Functors/ConvenienceRoutines.h"
+#include "../YgorImages_Functors/Grouping/Misc_Functors.h"
+#include "../YgorImages_Functors/Compute/Volumetric_Neighbourhood_Sampler.h"
+#include "../YgorImages_Functors/Grouping/Misc_Functors.h"
+#include "../YgorImages_Functors/Processing/Partitioned_Image_Voxel_Visitor_Mutator.h"
+
+#include "VoxelRANSAC.h"
 
 OperationDoc OpArgDocVoxelRANSAC(void){
     OperationDoc out;

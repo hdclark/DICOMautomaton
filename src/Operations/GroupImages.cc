@@ -11,11 +11,14 @@
 #include <utility>            //Needed for std::pair.
 #include <vector>
 
-#include "../Structs.h"
-#include "../Regex_Selectors.h"
-#include "GroupImages.h"
 #include "YgorImages.h"
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
+
+#include "../Structs.h"
+#include "../Regex_Selectors.h"
+#include "../YgorImages_Functors/Grouping/Misc_Functors.h"
+
+#include "GroupImages.h"
 
 
 

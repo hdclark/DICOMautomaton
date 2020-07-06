@@ -2,6 +2,7 @@
 
 #include <limits>
 #include <algorithm>
+#include <numeric>            //Needed for std::adjacent_difference().
 #include <array>
 #include <cmath>
 #include <cstdlib>            //Needed for exit() calls.
@@ -23,13 +24,17 @@
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
 #include "../Write_File.h"
-#include "AnalyzePicketFence.h"
+
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMathPlottingGnuplot.h" //Needed for YgorMathPlottingGnuplot::*.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorStats.h"        //Needed for Stats:: namespace.
+#include "YgorFilesDirs.h"
 
+#include "Explicator.h"
+
+#include "AnalyzePicketFence.h"
 
 OperationDoc OpArgDocAnalyzePicketFence(void){
     OperationDoc out;

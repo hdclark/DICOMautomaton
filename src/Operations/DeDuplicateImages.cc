@@ -10,8 +10,12 @@
 #include <stdexcept>
 #include <string>    
 
+#include "YgorMisc.h"
+#include "YgorStats.h"
+
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
+
 #include "DeDuplicateImages.h"
 
 OperationDoc OpArgDocDeDuplicateImages(void){

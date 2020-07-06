@@ -1,8 +1,5 @@
 //DumpPlanSummary.cc - A part of DICOMautomaton 2019. Written by hal clark.
 
-#include <boost/interprocess/creation_tags.hpp>
-#include <boost/interprocess/sync/named_mutex.hpp>
-#include <boost/interprocess/sync/scoped_lock.hpp>
 #include <cmath>
 #include <exception>
 #include <any>
@@ -10,6 +7,7 @@
 #include <fstream>
 #include <functional>
 #include <iostream>
+#include <iomanip>
 #include <list>
 #include <map>
 #include <memory>
@@ -19,16 +17,22 @@
 #include <utility>            //Needed for std::pair.
 #include <vector>
 
-#include "../Structs.h"
-#include "../Regex_Selectors.h"
-#include "DumpPlanSummary.h"
-#include "Explicator.h"       //Needed for Explicator class.
+#include <boost/interprocess/creation_tags.hpp>
+#include <boost/interprocess/sync/named_mutex.hpp>
+#include <boost/interprocess/sync/scoped_lock.hpp>
+
 #include "YgorFilesDirs.h"    //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorStats.h"        //Needed for Stats:: namespace.
 
+#include "Explicator.h"       //Needed for Explicator class.
+
+#include "../Structs.h"
+#include "../Regex_Selectors.h"
+
+#include "DumpPlanSummary.h"
 
 
 OperationDoc OpArgDocDumpPlanSummary(void){

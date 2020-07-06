@@ -16,18 +16,21 @@
 #include <utility>            //Needed for std::pair.
 #include <vector>
 
-#include "../Structs.h"
-#include "../Regex_Selectors.h"
-#include "../Thread_Pool.h"
-
-#include "ExportFITSImages.h"
-#include "Explicator.h"       //Needed for Explicator class.
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorStats.h"        //Needed for Stats:: namespace.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 #include "YgorImagesIO.h"
+#include "YgorFilesDirs.h"
+
+#include "Explicator.h"       //Needed for Explicator class.
+
+#include "../Structs.h"
+#include "../Regex_Selectors.h"
+#include "../Thread_Pool.h"
+
+#include "ExportFITSImages.h"
 
 
 OperationDoc OpArgDocExportFITSImages(void){

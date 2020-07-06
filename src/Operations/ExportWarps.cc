@@ -24,6 +24,7 @@
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorStats.h"        //Needed for Stats:: namespace.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
+#include "YgorFilesDirs.h"
 
 #include "../Structs.h"
 #include "../Alignment_TPSRPM.h"

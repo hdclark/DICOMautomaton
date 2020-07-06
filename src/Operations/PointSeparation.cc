@@ -15,15 +15,19 @@
 #include <boost/interprocess/sync/named_mutex.hpp>
 #include <boost/interprocess/sync/scoped_lock.hpp>
 
-#include "../Structs.h"
-#include "../Regex_Selectors.h"
-#include "../YgorImages_Functors/Compute/Contour_Similarity.h"
-#include "PointSeparation.h"
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
+#include "YgorFilesDirs.h"
 
+#include "Explicator.h"
+
+#include "../Structs.h"
+#include "../Regex_Selectors.h"
+#include "../YgorImages_Functors/Compute/Contour_Similarity.h"
+
+#include "PointSeparation.h"
 
 OperationDoc OpArgDocPointSeparation(void){
     OperationDoc out;

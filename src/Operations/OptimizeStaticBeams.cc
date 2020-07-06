@@ -18,23 +18,30 @@
 #include <string>    
 #include <vector>
 #include <utility>
+#include <random>
 
 #ifdef DCMA_USE_NLOPT
 #include <nlopt.hpp>
 #endif // DCMA_USE_NLOPT
+
+#include "YgorImages.h"
+#include "YgorMath.h"         //Needed for vec3 class.
+#include "YgorMathPlottingGnuplot.h" //Needed for YgorMathPlottingGnuplot::*.
+#include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorStats.h"        //Needed for Stats:: namespace.
+#include "YgorFilesDirs.h"
+
+#include "Explicator.h"
 
 #include "../Insert_Contours.h"
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
 #include "../Write_File.h"
 #include "../Thread_Pool.h"
+#include "../YgorImages_Functors/Grouping/Misc_Functors.h"
+#include "../YgorImages_Functors/Processing/Partitioned_Image_Voxel_Visitor_Mutator.h"
 
 #include "OptimizeStaticBeams.h"
-#include "YgorImages.h"
-#include "YgorMath.h"         //Needed for vec3 class.
-#include "YgorMathPlottingGnuplot.h" //Needed for YgorMathPlottingGnuplot::*.
-#include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
-#include "YgorStats.h"        //Needed for Stats:: namespace.
 
 // This struct is used for evaluating a given beam weight configuration in terms of the dose to a target ROI.
 struct dose_dist_stats {
