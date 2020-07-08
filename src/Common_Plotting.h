@@ -5,8 +5,6 @@
 #include <map>
 #include <string>
 
-#include "YgorMath.h"                //Needed for samples_1D class.
-#include "YgorMathChebyshev.h"       //Needed for cheby_approx class.
 
 template <class T> class cheby_approx;
 template <class T> class samples_1D;

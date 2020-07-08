@@ -11,7 +11,6 @@
 #include <cmath>
 #include <any>
 
-#include "YgorMisc.h"
 #include "YgorMath.h"
 
 

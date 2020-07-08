@@ -10,9 +10,7 @@
 #include <string>
 #include <vector>
 
-#include "YgorImages.h"
 #include "YgorMath.h"
-#include "YgorMisc.h"
 
 template <class T, class R> class planar_image_collection;
 template <class T> class contour_collection;

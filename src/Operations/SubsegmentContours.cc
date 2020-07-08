@@ -23,14 +23,10 @@
 #include "../Dose_Meld.h"
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
-#include "../YgorImages_Functors/Compute/AccumulatePixelDistributions.h"
 #include "Explicator.h"       //Needed for Explicator class.
 #include "SubsegmentContours.h"
-#include "YgorFilesDirs.h"    //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
-#include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
-#include "YgorStats.h"        //Needed for Stats:: namespace.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
 

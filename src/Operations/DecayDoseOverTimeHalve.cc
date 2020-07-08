@@ -17,7 +17,6 @@
 #include "DecayDoseOverTimeHalve.h"
 #include "Explicator.h"       //Needed for Explicator class.
 #include "YgorImages.h"
-#include "YgorMath.h"         //Needed for vec3 class.
 
 
 

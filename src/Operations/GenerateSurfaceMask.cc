@@ -15,7 +15,6 @@
 #include "../YgorImages_Functors/Compute/GenerateSurfaceMask.h"
 #include "GenerateSurfaceMask.h"
 #include "YgorImages.h"
-#include "YgorMath.h"         //Needed for vec3 class.
 
 
 

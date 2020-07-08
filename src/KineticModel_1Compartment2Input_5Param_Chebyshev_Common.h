@@ -9,8 +9,6 @@
 #include <limits>
 #include <memory>
 
-#include "YgorMath.h"
-#include "YgorMathChebyshev.h"
 #include "YgorMathChebyshevIOBoostSerialization.h"
 #include "YgorMathIOBoostSerialization.h"
 

@@ -10,8 +10,6 @@
 #include <map>
 
 #include "YgorImages.h"
-#include "YgorMath.h"
-#include "YgorMisc.h"
 
 template <class T> class contour_collection;
 

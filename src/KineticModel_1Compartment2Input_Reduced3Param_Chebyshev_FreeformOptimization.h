@@ -6,8 +6,6 @@
 #include <memory>
 
 #include "KineticModel_1Compartment2Input_Reduced3Param_Chebyshev_Common.h"
-#include "YgorMath.h"
-#include "YgorMathChebyshev.h"
 
 
 // This routine fits a pharmacokinetic model to the observed liver perfusion data using a Chebyshev polynomial

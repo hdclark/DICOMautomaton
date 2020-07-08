@@ -7,7 +7,6 @@
 #include <limits>
 #include <memory>
 
-#include "YgorMath.h"
 #include "YgorMathIOBoostSerialization.h"
 
 template <class T> class samples_1D;

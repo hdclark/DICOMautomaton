@@ -6,7 +6,6 @@
 #include <string>
 
 #include "YgorImages.h"
-#include "YgorStats.h"       //Needed for Stats:: namespace.
 
 namespace Stats {
 template <class C> class Running_MinMax;

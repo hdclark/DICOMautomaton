@@ -6,7 +6,6 @@
 #include <memory>
 
 #include "KineticModel_1Compartment2Input_5Param_LinearInterp_Common.h"
-#include "YgorMath.h"
 
 
 // This routine fits a pharmacokinetic model to the observed liver perfusion data using a 
