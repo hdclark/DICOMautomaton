@@ -3,7 +3,6 @@
 #pragma once
 
 #include <boost/serialization/nvp.hpp>
-#include <boost/serialization/shared_ptr.hpp>
 #include <boost/serialization/version.hpp>
 #include <stddef.h>
 #include <limits>

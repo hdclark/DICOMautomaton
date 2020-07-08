@@ -54,12 +54,12 @@ for f in file_* ; do
     mapfile -t removals < <(
         cat "${f}" |
           grep -- '^- ' |
-          grep -i 'any\|optional\|limits\|cmath\|cstdlib\|string\|array\|stdexcept\|regex\|set\|list\|vector\|map\|functional\|algorithm\|utility\|tuple\|stream\|iomanip\|iosfwd\|memory\|exception\|iterator' |
+          grep 'any\|optional\|limits\|cmath\|cstdlib\|string\|array\|stdexcept\|regex\|set\|list\|vector\|map\|functional\|algorithm\|utility\|tuple\|stream\|iomanip\|iosfwd\|memory\|exception\|iterator' |
+          grep -i 'cgal\|boost\|eigen\|nlopt\|_functors' |
+          grep -i 'ygor\|explicator' |
+          `# The Ygor Boost serialization headers are falsely removed, so ignore them.` \
+          grep -i -v 'BoostSerialization' |
           sed -e 's/^- //' )
-          #grep -i 'cgal\|boost\|eigen\|nlopt\|_functors' |
-          #grep -i 'ygor\|explicator' |
-          #`# The Ygor Boost serialization headers are falsely removed, so ignore them.` \
-          #grep -i -v 'BoostSerialization' |
 
     # Remove each to see if the compilation succeeds.
     for r in "${removals[@]}" ; do

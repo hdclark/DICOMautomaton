@@ -1,8 +1,5 @@
 //SubsegmentContours.cc - A part of DICOMautomaton 2019. Written by hal clark.
 
-#include <boost/interprocess/creation_tags.hpp>
-#include <boost/interprocess/sync/named_mutex.hpp>
-#include <boost/interprocess/sync/scoped_lock.hpp>
 #include <cstdlib>            //Needed for exit() calls.
 #include <optional>
 #include <fstream>
