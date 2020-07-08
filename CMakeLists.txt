@@ -10,6 +10,8 @@ project(DICOMautomaton LANGUAGES CXX)
 ####################################################################################
 
 option(MEMORY_CONSTRAINED_BUILD "Compile slowly, with minimal memory usage."    OFF)
+option(WITH_IWYU                "Compile using clang include-what-you-use."     OFF)
+
 option(WITH_ASAN                "Compile using ASan, LSan, & UBSan."            OFF)
 option(WITH_TSAN                "Compile using ThreadSanitizer."                OFF)
 option(WITH_MSAN                "Compile using MemorySanitizer."                OFF)
@@ -104,7 +106,15 @@ elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wextra")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wpedantic")
+    #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-ignored-optimization-argument")
+
+    if(WITH_IWYU)
+        set(IWYU_INVOCATION iwyu) # Location of the iwyu binary.
+        list(APPEND IWYU_INVOCATION "-Xiwyu;--no_comments")
+        set(CMAKE_CXX_INCLUDE_WHAT_YOU_USE ${IWYU_INVOCATION})
+    endif()
 endif()
+
 
 # Sanitizers.
 if(WITH_ASAN  OR  WITH_TSAN  OR  WITH_MSAN)
