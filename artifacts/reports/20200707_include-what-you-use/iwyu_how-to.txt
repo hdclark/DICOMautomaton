@@ -1,0 +1,22 @@
+exit
+
+IWYU is now supported natively by CMake, so it is less tedious to invoke as part of the build process.
+
+Instructions (Debian):
+
+0. Install the 'clang' and 'include-what-you-use' packages.
+
+1. Ensure the include-what-you-use binary is called 'iwyu' and is in $PATH.
+
+2. Compile like:
+   $>  CC="clang" CXX="clang++" ./compile_and_install.sh -c 2>/tmp/iwyu.txt
+
+
+The file /tmp/iwyu.txt contains the report. Significant post-processing is likely required. Compiler warnings and errors
+may need to be filtered out. Due to lots of private / implementation headers being suggested, gratuitous disordering of
+the includes, and disregard for ifdef includes, it seems best to manually implement the suggested fixes. Simply removing
+all the suggested removals won't work because the removals include replacements (which sometimes recommend
+implementation headers). Keeping an up-to-date mapping file (as described in the previous IWYU how-to) does not seem
+reasonable.
+
+
