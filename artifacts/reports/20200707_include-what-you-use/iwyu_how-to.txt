@@ -8,7 +8,8 @@ Instructions (Debian):
 
 1. Ensure the include-what-you-use binary is called 'iwyu' and is in $PATH.
 
-2. Compile like:
+2. Compile like
+
    $>  CC="clang" CXX="clang++" ./compile_and_install.sh -c 2>/tmp/iwyu.txt
 
 
@@ -19,4 +20,5 @@ all the suggested removals won't work because the removals include replacements 
 implementation headers). Keeping an up-to-date mapping file (as described in the previous IWYU how-to) does not seem
 reasonable.
 
+A script that implements a subset of the recommendations is provided.
 
