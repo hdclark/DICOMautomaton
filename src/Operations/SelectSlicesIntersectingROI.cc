@@ -5,7 +5,6 @@
 #include <list>
 #include <map>
 #include <memory>
-#include <regex>
 #include <string>    
 
 #include "../Structs.h"

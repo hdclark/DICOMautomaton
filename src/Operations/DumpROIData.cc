@@ -1,10 +1,7 @@
 //DumpROIData.cc - A part of DICOMautomaton 2015, 2016. Written by hal clark.
 
 #include <algorithm>
-#include <cmath>
-#include <cstdlib>            //Needed for exit() calls.
 #include <optional>
-#include <fstream>
 #include <iostream>
 #include <iterator>
 #include <limits>
@@ -17,7 +14,6 @@
 #include <vector>
 
 #include "../Structs.h"
-#include "../Regex_Selectors.h"
 #include "DumpROIData.h"
 #include "Explicator.h"       //Needed for Explicator class.
 #include "YgorMath.h"         //Needed for vec3 class.

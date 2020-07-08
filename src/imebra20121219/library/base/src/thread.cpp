@@ -41,8 +41,6 @@ Imebra is available at http://imebra.com
 
 #include "../include/thread.h"
 #include "../include/exception.h"
-#include <map>
-#include <memory>
 
 #ifdef PUNTOEXE_WINDOWS
 #include <process.h>

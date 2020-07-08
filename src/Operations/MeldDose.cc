@@ -1,12 +1,10 @@
 //MeldDose.cc - A part of DICOMautomaton 2017. Written by hal clark.
 
-#include <list>
 #include <map>
 #include <string>    
 
 #include "../Dose_Meld.h"
 #include "../Structs.h"
-#include "../Regex_Selectors.h"
 #include "MeldDose.h"
 
 

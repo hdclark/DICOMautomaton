@@ -6,10 +6,6 @@
 
 #include <list>
 #include <functional>
-#include <limits>
-#include <map>
-#include <cmath>
-#include <any>
 
 #include "YgorMath.h"
 

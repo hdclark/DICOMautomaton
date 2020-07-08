@@ -1,15 +1,8 @@
 //SimplifyContours.cc - A part of DICOMautomaton 2018. Written by hal clark.
 
-#include <limits>
-#include <algorithm>
-#include <array>
-#include <cmath>
 #include <cstdlib>            //Needed for exit() calls.
 #include <optional>
-#include <fstream>
 #include <functional>
-#include <iostream>
-#include <iterator>
 #include <list>
 #include <map>
 #include <memory>
@@ -17,7 +10,6 @@
 #include <stdexcept>
 #include <string>    
 #include <vector>
-#include <utility>
 
 #include "../Insert_Contours.h"
 #include "../Structs.h"

@@ -3,14 +3,9 @@
 
 #ifdef DCMA_USE_GNU_GSL
 
-#include <cmath>
 #include <any>
 #include <functional>
-#include <limits>
 #include <list>
-#include <map>
-#include <regex>
-#include <tuple>
 
 #include "YgorImages.h"
 

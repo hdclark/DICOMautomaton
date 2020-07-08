@@ -1,6 +1,5 @@
 //DumpFilesPartitionedByTime.cc - A part of DICOMautomaton 2015, 2016. Written by hal clark.
 
-#include <fstream>
 #include <iostream>
 #include <list>
 #include <map>
@@ -9,7 +8,6 @@
 #include <utility>            //Needed for std::pair.
 
 #include "../Structs.h"
-#include "../Regex_Selectors.h"
 #include "DumpFilesPartitionedByTime.h"
 #include "YgorImages.h"
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.

@@ -8,7 +8,6 @@
 
 #include "Structs.h"
 
-class Image_Array;
 class Drover;
 
 //Filter out all non-dose images, presenting a Drover with only dose image_data.

@@ -1,10 +1,8 @@
 //AccumulatePixelDistributions.h.
 #pragma once
 
-#include <cmath>
 #include <any>
 #include <functional>
-#include <limits>
 #include <list>
 #include <map>
 #include <string>

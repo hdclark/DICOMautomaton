@@ -2,8 +2,6 @@
 
 #pragma once
 
-#include <limits>
-#include <memory>
 
 #include "KineticModel_1Compartment2Input_5Param_Chebyshev_Common.h"
 

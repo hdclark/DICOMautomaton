@@ -1,14 +1,12 @@
 //Extract_Histograms.h.
 #pragma once
 
-#include <cmath>
 #include <any>
 #include <functional>
 #include <limits>
 #include <list>
 #include <map>
 #include <string>
-#include <vector>
 
 #include "YgorImages.h"
 #include "YgorMath.h"

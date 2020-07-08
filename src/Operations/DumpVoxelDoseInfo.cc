@@ -1,6 +1,5 @@
 //DumpVoxelDoseInfo.cc - A part of DICOMautomaton 2016. Written by hal clark.
 
-#include <fstream>
 #include <iostream>
 #include <limits>
 #include <list>
@@ -10,7 +9,6 @@
 
 #include "../Dose_Meld.h"
 #include "../Structs.h"
-#include "../Regex_Selectors.h"
 #include "DumpVoxelDoseInfo.h"
 #include "YgorImages.h"
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.

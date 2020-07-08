@@ -3,14 +3,10 @@
 #include <boost/interprocess/creation_tags.hpp>
 #include <boost/interprocess/sync/named_mutex.hpp>
 #include <boost/interprocess/sync/scoped_lock.hpp>
-#include <cmath>
 #include <cstdlib>            //Needed for exit() calls.
-#include <exception>
-#include <any>
 #include <optional>
 #include <fstream>
 #include <functional>
-#include <iostream>
 #include <list>
 #include <map>
 #include <memory>

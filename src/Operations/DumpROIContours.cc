@@ -8,7 +8,6 @@
 #include <list>
 #include <map>
 #include <memory>
-#include <regex>
 #include <stdexcept>
 #include <string>    
 #include <vector>

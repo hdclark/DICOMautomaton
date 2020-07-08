@@ -40,7 +40,6 @@ Imebra is available at http://imebra.com
 */
 
 #include "../include/baseStream.h"
-#include <list>
 
 namespace puntoexe
 {

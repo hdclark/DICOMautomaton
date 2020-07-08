@@ -5,7 +5,6 @@
 #include <boost/interprocess/sync/scoped_lock.hpp>
 
 #include <fstream>
-#include <iostream>
 #include <stdexcept>
 #include <string>    
 

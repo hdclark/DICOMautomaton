@@ -8,7 +8,6 @@
 #include <string>    
 
 #include "../Structs.h"
-#include "../Regex_Selectors.h"
 #include "../YgorImages_Functors/Grouping/Misc_Functors.h"
 #include "../YgorImages_Functors/Processing/CT_Reasonable_HU_Window.h"
 #include "GiveWholeImageArrayAnAlphaBetaWindowLevel.h"

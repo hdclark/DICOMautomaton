@@ -1,14 +1,9 @@
 //Volumetric_Correlation_Detector.h.
 #pragma once
 
-#include <cmath>
 #include <any>
 #include <functional>
-#include <limits>
 #include <list>
-#include <map>
-#include <string>
-#include <vector>
 
 
 template <class T, class R> class planar_image_collection;
