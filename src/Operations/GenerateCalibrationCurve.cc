@@ -10,6 +10,7 @@
 #include <regex>
 #include <stdexcept>
 #include <string>    
+#include <mutex>
 
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.

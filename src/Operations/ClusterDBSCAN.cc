@@ -6,6 +6,7 @@
 #include <iterator>
 #include <list>
 #include <map>
+#include <mutex>
 #include <memory>
 #include <regex>
 #include <stdexcept>
