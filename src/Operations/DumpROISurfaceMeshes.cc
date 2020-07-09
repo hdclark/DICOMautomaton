@@ -121,7 +121,7 @@
 #include "DumpROISurfaceMeshes.h"
 
 
-OperationDoc OpArgDocDumpROISurfaceMeshes(void){
+OperationDoc OpArgDocDumpROISurfaceMeshes(){
     OperationDoc out;
     out.name = "DumpROISurfaceMeshes";
 

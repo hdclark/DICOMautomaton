@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocDumpPixelValuesOverTimeForAnEncompassedPoint(void);
+OperationDoc OpArgDocDumpPixelValuesOverTimeForAnEncompassedPoint();
 
 Drover DumpPixelValuesOverTimeForAnEncompassedPoint(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                                                     std::map<std::string, std::string> /*InvocationMetadata*/,

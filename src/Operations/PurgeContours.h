@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocPurgeContours(void);
+OperationDoc OpArgDocPurgeContours();
 
 Drover PurgeContours(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                              std::map<std::string, std::string> /*InvocationMetadata*/,

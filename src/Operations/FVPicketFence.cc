@@ -21,7 +21,7 @@
 #include "FVPicketFence.h"
 
 
-OperationDoc OpArgDocFVPicketFence(void){
+OperationDoc OpArgDocFVPicketFence(){
     OperationDoc out;
     out.name = "FVPicketFence";
     out.desc = "This operation performs a picket fence QA test using an RTIMAGE file.";

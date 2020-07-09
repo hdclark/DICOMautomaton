@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocDrawGeometry(void);
+OperationDoc OpArgDocDrawGeometry();
 
 Drover DrawGeometry(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                              std::map<std::string, std::string> /*InvocationMetadata*/,

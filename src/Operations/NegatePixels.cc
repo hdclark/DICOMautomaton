@@ -19,7 +19,7 @@
 #include "YgorImages.h"
 
 
-OperationDoc OpArgDocNegatePixels(void){
+OperationDoc OpArgDocNegatePixels(){
     OperationDoc out;
     out.name = "NegatePixels";
 

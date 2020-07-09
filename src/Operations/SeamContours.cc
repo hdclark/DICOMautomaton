@@ -27,7 +27,7 @@
 
 
 
-OperationDoc OpArgDocSeamContours(void){
+OperationDoc OpArgDocSeamContours(){
     OperationDoc out;
     out.name = "SeamContours";
 

@@ -21,7 +21,7 @@
 
 
 
-OperationDoc OpArgDocDumpROIContours(void){
+OperationDoc OpArgDocDumpROIContours(){
     OperationDoc out;
     out.name = "DumpROIContours";
 

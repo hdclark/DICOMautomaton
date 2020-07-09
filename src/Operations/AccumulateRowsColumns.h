@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocAccumulateRowsColumns(void);
+OperationDoc OpArgDocAccumulateRowsColumns();
 
 Drover AccumulateRowsColumns(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                          std::map<std::string, std::string> /*InvocationMetadata*/,

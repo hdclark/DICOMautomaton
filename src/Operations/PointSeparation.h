@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocPointSeparation(void);
+OperationDoc OpArgDocPointSeparation();
 
 Drover PointSeparation(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                          std::map<std::string, std::string> /*InvocationMetadata*/,

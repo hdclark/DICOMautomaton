@@ -98,7 +98,7 @@ bool ComputeJointPixelSampler(planar_image_collection<float,double> &imagecoll,
     for(auto &img : imagecoll.images){
         std::reference_wrapper< planar_image<float, double>> img_refw( std::ref(img) );
 
-        tp.submit_task([&,img_refw](void) -> void {
+        tp.submit_task([&,img_refw]() -> void {
             const auto orientation_normal = img_refw.get().image_plane().N_0.unit();
 
             // Prepare adjacency lists for each external image array.

@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocDecayDoseOverTimeHalve(void);
+OperationDoc OpArgDocDecayDoseOverTimeHalve();
 
 Drover DecayDoseOverTimeHalve(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                              std::map<std::string, std::string> /*InvocationMetadata*/,

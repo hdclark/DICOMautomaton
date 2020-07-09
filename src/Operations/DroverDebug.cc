@@ -28,7 +28,7 @@ static void dump_metadata(std::ostream &os,
     return;
 }
 
-OperationDoc OpArgDocDroverDebug(void){
+OperationDoc OpArgDocDroverDebug(){
     OperationDoc out;
     out.name = "DroverDebug";
 

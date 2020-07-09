@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocThresholdOtsu(void);
+OperationDoc OpArgDocThresholdOtsu();
 
 Drover ThresholdOtsu(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                              std::map<std::string, std::string> /*InvocationMetadata*/,

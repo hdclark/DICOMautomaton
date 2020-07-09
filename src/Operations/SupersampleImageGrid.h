@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocSupersampleImageGrid(void);
+OperationDoc OpArgDocSupersampleImageGrid();
 
 Drover SupersampleImageGrid(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                             std::map<std::string, std::string> /*InvocationMetadata*/,

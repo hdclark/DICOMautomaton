@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocConvertContoursToMeshes(void);
+OperationDoc OpArgDocConvertContoursToMeshes();
 
 Drover ConvertContoursToMeshes(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                              std::map<std::string, std::string> /*InvocationMetadata*/,

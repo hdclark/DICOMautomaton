@@ -96,7 +96,7 @@ bool ComputeVolumetricNeighbourhoodSampler(planar_image_collection<float,double>
 
     for(auto &img : imagecoll.images){
         std::reference_wrapper< planar_image<float, double>> img_refw( std::ref(img) );
-        tp.submit_task([&,img_refw](void) -> void {
+        tp.submit_task([&,img_refw]() -> void {
 
             // Identify the reference image which overlaps the whole image, if any.
             //

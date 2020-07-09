@@ -29,7 +29,7 @@
 
 
 
-OperationDoc OpArgDocConvertPixelsToPoints(void){
+OperationDoc OpArgDocConvertPixelsToPoints(){
     OperationDoc out;
     out.name = "ConvertPixelsToPoints";
 
@@ -140,7 +140,7 @@ Drover ConvertPixelsToPoints(Drover DICOM_data, OperationArgPkg OptArgs, std::ma
 
             std::reference_wrapper< const planar_image<float, double>> img_refw( std::ref(img) );
 
-            tp.submit_task([&,img_refw](void) -> void {
+            tp.submit_task([&,img_refw]() -> void {
 
                 //Determine the bounds in terms of pixel-value thresholds.
                 auto cl = Lower; // Will be replaced if percentages/percentiles requested.

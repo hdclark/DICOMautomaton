@@ -115,7 +115,7 @@ bool ComputeExtractHistograms(planar_image_collection<float,double> &imagecoll,
 
         for(auto &img : imagecoll.images){
             std::reference_wrapper< planar_image<float, double>> img_refw( std::ref(img) );
-            tp.submit_task([&,img_refw](void) -> void {
+            tp.submit_task([&,img_refw]() -> void {
 
                 // Cycle over all the alike-named contour collections.
                 for(auto & named_ccsl : named_ccsls){
@@ -222,7 +222,7 @@ bool ComputeExtractHistograms(planar_image_collection<float,double> &imagecoll,
 
         for(auto &img : imagecoll.images){
             std::reference_wrapper< planar_image<float, double>> img_refw( std::ref(img) );
-            tp.submit_task([&,img_refw](void) -> void {
+            tp.submit_task([&,img_refw]() -> void {
 
                 const auto pxl_dx = img_refw.get().pxl_dx;
                 const auto pxl_dy = img_refw.get().pxl_dy;
@@ -244,7 +244,7 @@ bool ComputeExtractHistograms(planar_image_collection<float,double> &imagecoll,
                     std::vector<std::array<double,4>> &raw_diff_hist(raw_diff_histograms.at(key));
 
                     // Sub-routine to add all counts from the buffer and then reset the buffer.
-                    const auto add_counts = [&](void) -> void {
+                    const auto add_counts = [&]() -> void {
                         std::lock_guard<std::mutex> lock(saver);
                         for(const auto &bin_N : shuttle) raw_diff_hist[bin_N][2] += pxl_vol;
                         shuttle.clear();

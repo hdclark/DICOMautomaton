@@ -12,7 +12,7 @@
 #include <gsl/gsl_matrix_double.h>
 #include <gsl/gsl_multifit_nlin.h>
 #include <gsl/gsl_vector_double.h>
-#include <stddef.h>
+#include <cstddef>
 #include <array>
 #include <cmath>
 #include <exception>
@@ -188,7 +188,7 @@ Optimize_LevenbergMarquardt_5Param(KineticModel_1Compartment2Input_5Param_Chebys
         gsl_vector *res_f = gsl_multifit_fdfsolver_residual(solver);
         const double chi = gsl_blas_dnrm2(res_f);
         const double chisq = chi * chi;
-        const double dof = static_cast<double>(datum - dimen);
+        const auto dof = static_cast<double>(datum - dimen);
         const double red_chisq = chisq/dof;
 
         state.RSS  = chisq;
@@ -372,7 +372,7 @@ Optimize_LevenbergMarquardt_3Param(KineticModel_1Compartment2Input_5Param_Chebys
     state.FittingSuccess = false;
 
     const int dimen = 3;
-    double func_min;
+    double func_min = 0.0;
 
     //Fitting parameters:      k1A,  k1V,  k2.
     // The following are arbitrarily chosen. They should be seeded from previous computations, or
@@ -442,7 +442,6 @@ Optimize_LevenbergMarquardt_3Param(KineticModel_1Compartment2Input_5Param_Chebys
             FUNCERR("NLOpt unable to tell NLOpt to use more scratch space");
         }
 
-        double func_min;
         const auto opt_status = nlopt_optimize(opt, params, &func_min);
 
         if(opt_status < 0){
@@ -518,7 +517,6 @@ Optimize_LevenbergMarquardt_3Param(KineticModel_1Compartment2Input_5Param_Chebys
             FUNCERR("NLOpt unable to tell NLOpt to use more scratch space");
         }
 
-        double func_min;
         const auto opt_status = nlopt_optimize(opt, params, &func_min);
 
         if(opt_status < 0){

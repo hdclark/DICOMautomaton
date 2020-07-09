@@ -18,7 +18,7 @@
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
 
-OperationDoc OpArgDocGenerateSyntheticImages(void){
+OperationDoc OpArgDocGenerateSyntheticImages(){
     OperationDoc out;
     out.name = "GenerateSyntheticImages";
     out.desc = 

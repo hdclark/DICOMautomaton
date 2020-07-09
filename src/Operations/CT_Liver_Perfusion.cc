@@ -33,7 +33,7 @@
 
 template <class T> class contour_collection;
 
-OperationDoc OpArgDocCT_Liver_Perfusion(void){
+OperationDoc OpArgDocCT_Liver_Perfusion(){
     OperationDoc out;
     out.name = "CT_Liver_Perfusion";
     out.desc = 

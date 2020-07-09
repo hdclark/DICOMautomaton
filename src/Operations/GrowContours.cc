@@ -14,7 +14,7 @@
 
 
 
-OperationDoc OpArgDocGrowContours(void){
+OperationDoc OpArgDocGrowContours(){
     OperationDoc out;
     out.name = "GrowContours";
 

@@ -19,7 +19,7 @@
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 
 
-OperationDoc OpArgDocCT_Liver_Perfusion_First_Run(void){
+OperationDoc OpArgDocCT_Liver_Perfusion_First_Run(){
     OperationDoc out;
     out.name = "CT_Liver_Perfusion_First_Run";
     out.desc = 

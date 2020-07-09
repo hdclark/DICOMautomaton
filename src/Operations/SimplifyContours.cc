@@ -22,7 +22,7 @@
 
 #include "SimplifyContours.h"
 
-OperationDoc OpArgDocSimplifyContours(void){
+OperationDoc OpArgDocSimplifyContours(){
     OperationDoc out;
     out.name = "SimplifyContours";
 

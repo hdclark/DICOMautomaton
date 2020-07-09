@@ -4,7 +4,7 @@
 
 #include <boost/serialization/nvp.hpp>
 #include <boost/serialization/version.hpp>
-#include <stddef.h>
+#include <cstddef>
 #include <limits>
 #include <memory>
 

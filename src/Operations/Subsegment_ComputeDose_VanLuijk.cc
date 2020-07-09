@@ -35,7 +35,7 @@
 
 
 
-OperationDoc OpArgDocSubsegment_ComputeDose_VanLuijk(void){
+OperationDoc OpArgDocSubsegment_ComputeDose_VanLuijk(){
     OperationDoc out;
     out.name = "Subsegment_ComputeDose_VanLuijk";
     out.desc = "This operation sub-segments the selected ROI(s) and computes dose within the resulting sub-segments.";

@@ -1174,7 +1174,7 @@ std::unique_ptr<Contour_Data> get_Contour_Data(const std::string &filename){
     for(size_t i=0; (SecondDataSet = TopDataSet->getSequenceItem(0x3006, 0, 0x0039, i)) != nullptr; ++i){
         long int Last_ROI_Numb = 0;
         for(size_t j=0; (ThirdDataSet = SecondDataSet->getSequenceItem(0x3006, 0, 0x0040, j)) != nullptr; ++j){
-            long int ROI_number = static_cast<long int>(SecondDataSet->getSignedLong(0x3006, 0, 0x0084, j));
+            auto ROI_number = static_cast<long int>(SecondDataSet->getSignedLong(0x3006, 0, 0x0084, j));
             if(ROI_number == 0){
                 ROI_number = Last_ROI_Numb;
             }else{
@@ -1599,7 +1599,7 @@ std::unique_ptr<Image_Array> Load_Image_Array(const std::string &FilenameIn){
                 for(long int chnl = 0; chnl < img_chnls; ++chnl){
                     //Let Imebra work out the conversion by asking for a double. Hope it can be narrowed if necessary!
                     const auto DoubleChannelValue = myHandler->getDouble(data_index);
-                    const float OutgoingPixelValue = static_cast<float>(DoubleChannelValue);
+                    const auto OutgoingPixelValue = static_cast<float>(DoubleChannelValue);
 
                     out->imagecoll.images.back().reference(row,col,chnl) = OutgoingPixelValue;
                     ++data_index;

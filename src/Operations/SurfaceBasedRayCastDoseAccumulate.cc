@@ -123,7 +123,7 @@
 
 
 
-OperationDoc OpArgDocSurfaceBasedRayCastDoseAccumulate(void){
+OperationDoc OpArgDocSurfaceBasedRayCastDoseAccumulate(){
     OperationDoc out;
     out.name = "SurfaceBasedRayCastDoseAccumulate";
 
@@ -769,7 +769,7 @@ Drover SurfaceBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptA
         long int completed = 0;
 
         for(long int row = 0; row < SourceDetectorRows; ++row){
-            tp.submit_task([&,row](void) -> void {
+            tp.submit_task([&,row]() -> void {
                 for(long int col = 0; col < SourceDetectorColumns; ++col){
 
                     //Construct a line segment between the source and detector. 

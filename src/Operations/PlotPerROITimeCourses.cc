@@ -27,7 +27,7 @@
 
 
 
-OperationDoc OpArgDocPlotPerROITimeCourses(void){
+OperationDoc OpArgDocPlotPerROITimeCourses(){
     OperationDoc out;
     out.name = "PlotPerROITimeCourses";
     out.desc = "Interactively plot time courses for the specified ROI(s).";

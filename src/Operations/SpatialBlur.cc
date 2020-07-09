@@ -20,7 +20,7 @@
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
 
-OperationDoc OpArgDocSpatialBlur(void){
+OperationDoc OpArgDocSpatialBlur(){
     OperationDoc out;
     out.name = "SpatialBlur";
 

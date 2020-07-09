@@ -22,7 +22,7 @@
 
 
 
-OperationDoc OpArgDocHighlightROIs(void){
+OperationDoc OpArgDocHighlightROIs(){
     OperationDoc out;
     out.name = "HighlightROIs";
 

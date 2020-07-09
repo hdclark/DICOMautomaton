@@ -19,7 +19,7 @@
 
 
 
-OperationDoc OpArgDocOrderImages(void){
+OperationDoc OpArgDocOrderImages(){
     OperationDoc out;
     out.name = "OrderImages";
     out.desc = 
@@ -95,17 +95,17 @@ Drover OrderImages(Drover DICOM_data,
                 std::vector<std::string> out;
                 std::string shtl;
                 bool last_was_num = false;
-                for(size_t i = 0; i < in.size(); ++i){
-                    const auto as_int = static_cast<int>(in[i]);
+                for(char i : in){
+                    const auto as_int = static_cast<int>(i);
                     const auto is_num = ( isdigit(as_int) != 0 ) 
-                                        || (!last_was_num && (in[i] == '-'))
-                                        || ( last_was_num && (in[i] == '.')) ;  // TODO: Support exponential notation.
+                                        || (!last_was_num && (i == '-'))
+                                        || ( last_was_num && (i == '.')) ;  // TODO: Support exponential notation.
 
                     if( is_num == !last_was_num ){  // Iff there is a transition.
                         if(!shtl.empty()) out.emplace_back(shtl);
                         shtl.clear();
                     }
-                    shtl += in[i];
+                    shtl += i;
 
                     last_was_num = is_num;
                 }

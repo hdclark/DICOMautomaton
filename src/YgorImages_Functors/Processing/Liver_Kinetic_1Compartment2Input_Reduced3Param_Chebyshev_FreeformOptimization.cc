@@ -4,7 +4,7 @@
 
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/iterator/iterator_traits.hpp>
-#include <stddef.h>
+#include <cstddef>
 #include <array>
 #include <exception>
 #include <any>

@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocPlotPerROITimeCourses(void);
+OperationDoc OpArgDocPlotPerROITimeCourses();
 
 Drover PlotPerROITimeCourses(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                              std::map<std::string, std::string> /*InvocationMetadata*/,

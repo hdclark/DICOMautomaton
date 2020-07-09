@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocPlotLineSamples(void);
+OperationDoc OpArgDocPlotLineSamples();
 
 Drover PlotLineSamples(Drover DICOM_data, OperationArgPkg OptArgs,
                        std::map<std::string, std::string> /*InvocationMetadata*/,

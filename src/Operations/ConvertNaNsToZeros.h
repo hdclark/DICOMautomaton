@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocConvertNaNsToZeros(void);
+OperationDoc OpArgDocConvertNaNsToZeros();
 
 Drover ConvertNaNsToZeros(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                         std::map<std::string, std::string> /*InvocationMetadata*/,

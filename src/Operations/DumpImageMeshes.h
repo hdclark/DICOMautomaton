@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocDumpImageMeshes(void);
+OperationDoc OpArgDocDumpImageMeshes();
 
 Drover DumpImageMeshes(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                              std::map<std::string, std::string> /*InvocationMetadata*/,

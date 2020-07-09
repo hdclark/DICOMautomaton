@@ -36,7 +36,7 @@
 #include "../Surface_Meshes.h"
 
 
-OperationDoc OpArgDocConvertMeshesToContours(void){
+OperationDoc OpArgDocConvertMeshesToContours(){
     OperationDoc out;
     out.name = "ConvertMeshesToContours";
 

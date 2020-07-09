@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocBCCAExtractRadiomicFeatures(void);
+OperationDoc OpArgDocBCCAExtractRadiomicFeatures();
 
 Drover
 BCCAExtractRadiomicFeatures(

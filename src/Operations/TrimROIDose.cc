@@ -13,7 +13,7 @@
 #include "HighlightROIs.h"
 
 
-OperationDoc OpArgDocTrimROIDose(void){
+OperationDoc OpArgDocTrimROIDose(){
     OperationDoc out;
     out.name = "TrimROIDose";
     out.desc = 

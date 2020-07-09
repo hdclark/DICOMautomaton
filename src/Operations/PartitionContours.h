@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocPartitionContours(void);
+OperationDoc OpArgDocPartitionContours();
 
 Drover PartitionContours(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                           std::map<std::string, std::string> /*InvocationMetadata*/,

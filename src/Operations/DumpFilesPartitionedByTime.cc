@@ -13,7 +13,7 @@
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 
 
-OperationDoc OpArgDocDumpFilesPartitionedByTime(void){
+OperationDoc OpArgDocDumpFilesPartitionedByTime(){
     OperationDoc out;
     out.name = "DumpFilesPartitionedByTime";
        

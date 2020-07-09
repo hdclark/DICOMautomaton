@@ -201,12 +201,12 @@ class BaseWebServerApplication : public Wt::WApplication {
     // --------------------- Web widget shared functors ---------------------
 
     //void createInvocationMetadataGB(void);
-    void createFileUploadGB(void);
-    void filesUploaded(void); //Post file upload event.
-    void createOperationSelectorGB(void);
-    void createOperationParamSelectorGB(void);
-    void appendOperationParamsColumn(void);
-    void createComputeGB(void);
+    void createFileUploadGB();
+    void filesUploaded(); //Post file upload event.
+    void createOperationSelectorGB();
+    void createOperationParamSelectorGB();
+    void appendOperationParamsColumn();
+    void createComputeGB();
 
 };
 
@@ -262,7 +262,7 @@ BaseWebServerApplication::BaseWebServerApplication(const Wt::WEnvironment &env) 
 }
 
 
-void BaseWebServerApplication::createFileUploadGB(void){
+void BaseWebServerApplication::createFileUploadGB(){
     // This routine creates a file upload box.
 
     auto gb = root()->addWidget(std::make_unique<Wt::WGroupBox>("File Upload"));
@@ -345,7 +345,7 @@ void BaseWebServerApplication::createFileUploadGB(void){
 }
 
 
-void BaseWebServerApplication::filesUploaded(void){
+void BaseWebServerApplication::filesUploaded(){
     // This routine gets called after all files have been uploaded.
     //
     // It must corral, validate, load them into the DICOM_data member, and initiate the next interactive widget(s).
@@ -479,7 +479,7 @@ void BaseWebServerApplication::filesUploaded(void){
 }
 
 
-void BaseWebServerApplication::createOperationSelectorGB(void){
+void BaseWebServerApplication::createOperationSelectorGB(){
     //This routine creates a selector box populated with the available operations.
 
     (void*) root()->addWidget(std::make_unique<Wt::WBreak>());
@@ -768,7 +768,7 @@ void BaseWebServerApplication::createOperationSelectorGB(void){
     return;
 }
 
-void BaseWebServerApplication::appendOperationParamsColumn(void){
+void BaseWebServerApplication::appendOperationParamsColumn(){
     //This routine appends a parameter input column to the operation parameter selection table. 
     // The selected operation will be run once for each additional column.
     // 
@@ -908,7 +908,7 @@ void BaseWebServerApplication::appendOperationParamsColumn(void){
 }
 
 
-void BaseWebServerApplication::createOperationParamSelectorGB(void){
+void BaseWebServerApplication::createOperationParamSelectorGB(){
     //This routine creates a manipulation table populated with tweakable parameters from the specified operation.
 
     (void*) root()->addWidget(std::make_unique<Wt::WBreak>());
@@ -971,7 +971,7 @@ void BaseWebServerApplication::createOperationParamSelectorGB(void){
     return;
 }
 
-void BaseWebServerApplication::createComputeGB(void){
+void BaseWebServerApplication::createComputeGB(){
     // This routine creates a panel to both launch an operation and pass the output to the client.
     //
     // The actual computation is performed elsewhere -- this routine merely creates the widgets.

@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocGenerateSurfaceMask(void);
+OperationDoc OpArgDocGenerateSurfaceMask();
 
 Drover GenerateSurfaceMask(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                              std::map<std::string, std::string> /*InvocationMetadata*/,

@@ -15,7 +15,7 @@
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 
 
-OperationDoc OpArgDocConvertNaNsToAir(void){
+OperationDoc OpArgDocConvertNaNsToAir(){
     OperationDoc out;
     out.name = "ConvertNaNsToAir";
     out.desc = 

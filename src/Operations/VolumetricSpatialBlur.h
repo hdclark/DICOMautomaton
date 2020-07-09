@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocVolumetricSpatialBlur(void);
+OperationDoc OpArgDocVolumetricSpatialBlur();
 
 Drover VolumetricSpatialBlur(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                          std::map<std::string, std::string> /*InvocationMetadata*/,

@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocExportFITSImages(void);
+OperationDoc OpArgDocExportFITSImages();
 
 Drover ExportFITSImages(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                              std::map<std::string, std::string> /*InvocationMetadata*/,

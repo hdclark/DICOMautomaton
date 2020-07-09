@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocDetectShapes3D(void);
+OperationDoc OpArgDocDetectShapes3D();
 
 Drover DetectShapes3D(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                                    std::map<std::string, std::string> /*InvocationMetadata*/,

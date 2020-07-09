@@ -20,7 +20,7 @@
 
 
 
-OperationDoc OpArgDocContourWholeImages(void){
+OperationDoc OpArgDocContourWholeImages(){
     OperationDoc out;
     out.name = "ContourWholeImages";
 

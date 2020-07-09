@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocBoost_Serialize_Drover(void);
+OperationDoc OpArgDocBoost_Serialize_Drover();
 
 Drover
 Boost_Serialize_Drover(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string, std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/);

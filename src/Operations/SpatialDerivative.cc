@@ -21,7 +21,7 @@
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
 
-OperationDoc OpArgDocSpatialDerivative(void){
+OperationDoc OpArgDocSpatialDerivative(){
     OperationDoc out;
     out.name = "SpatialDerivative";
 

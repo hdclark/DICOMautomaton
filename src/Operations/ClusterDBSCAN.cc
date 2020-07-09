@@ -26,7 +26,7 @@
 #include "YgorClustering.hpp"
 
 
-OperationDoc OpArgDocClusterDBSCAN(void){
+OperationDoc OpArgDocClusterDBSCAN(){
     OperationDoc out;
     out.name = "ClusterDBSCAN";
 

@@ -39,19 +39,19 @@ struct ComputeContourSimilarityUserData {
     uint64_t overlap_voxels   = 0; // Number of voxels present in both contours. (Surrogate for overlap.)
 
     // Compute the Dice similarity coefficient with current voxel counts.
-    double Dice_Coefficient(void) const {
+    double Dice_Coefficient() const {
         if( (contour_L_voxels == 0) && (contour_R_voxels == 0) ) return std::numeric_limits<double>::quiet_NaN();
         return (2.0*overlap_voxels) / ( (1.0*contour_L_voxels) + (1.0*contour_R_voxels) );
     };
   
     // Compute the Jaccard similarity coefficient with current voxel counts.
-    double Jaccard_Coefficient(void) const {
+    double Jaccard_Coefficient() const {
         if( (contour_L_voxels == 0) && (contour_R_voxels == 0) ) return std::numeric_limits<double>::quiet_NaN();
         return (1.0*overlap_voxels) / ( (1.0*contour_L_voxels) + (1.0*contour_R_voxels) - (1.0*overlap_voxels) );
     };
   
 
-    void Clear(void) {
+    void Clear() {
         contour_L_voxels = 0;
         contour_R_voxels = 0;
         overlap_voxels   = 0;

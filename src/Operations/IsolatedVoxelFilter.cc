@@ -22,7 +22,7 @@
 #include "YgorStats.h"       //Needed for Stats:: namespace.
 
 
-OperationDoc OpArgDocIsolatedVoxelFilter(void){
+OperationDoc OpArgDocIsolatedVoxelFilter(){
     OperationDoc out;
     out.name = "IsolatedVoxelFilter";
 

@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocDeleteMeshes(void);
+OperationDoc OpArgDocDeleteMeshes();
 
 Drover DeleteMeshes(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                              std::map<std::string, std::string> /*InvocationMetadata*/,

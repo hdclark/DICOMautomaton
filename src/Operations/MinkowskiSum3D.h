@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocMinkowskiSum3D(void);
+OperationDoc OpArgDocMinkowskiSum3D();
 
 Drover
 MinkowskiSum3D(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string, std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/);

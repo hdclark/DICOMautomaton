@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocTransformMeshes(void);
+OperationDoc OpArgDocTransformMeshes();
 
 Drover TransformMeshes(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                          std::map<std::string, std::string> /*InvocationMetadata*/,

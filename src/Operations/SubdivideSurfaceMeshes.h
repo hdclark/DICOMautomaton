@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocSubdivideSurfaceMeshes(void);
+OperationDoc OpArgDocSubdivideSurfaceMeshes();
 
 Drover SubdivideSurfaceMeshes(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                          std::map<std::string, std::string> /*InvocationMetadata*/,

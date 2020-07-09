@@ -196,7 +196,7 @@
 #include "Operation_Dispatcher.h"
 
 
-std::map<std::string, op_packet_t> Known_Operations(void){
+std::map<std::string, op_packet_t> Known_Operations(){
     std::map<std::string, op_packet_t> out;
 
     out["AccumulateRowsColumns"] = std::make_pair(OpArgDocAccumulateRowsColumns, AccumulateRowsColumns);

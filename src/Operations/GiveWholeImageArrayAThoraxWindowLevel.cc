@@ -15,7 +15,7 @@
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 
 
-OperationDoc OpArgDocGiveWholeImageArrayAThoraxWindowLevel(void){
+OperationDoc OpArgDocGiveWholeImageArrayAThoraxWindowLevel(){
     OperationDoc out;
     out.name = "GiveWholeImageArrayAThoraxWindowLevel";
 

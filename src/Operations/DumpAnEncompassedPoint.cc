@@ -14,7 +14,7 @@
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 
 
-OperationDoc OpArgDocDumpAnEncompassedPoint(void){
+OperationDoc OpArgDocDumpAnEncompassedPoint(){
     OperationDoc out;
     out.name = "DumpAnEncompassedPoint";
     out.desc = 

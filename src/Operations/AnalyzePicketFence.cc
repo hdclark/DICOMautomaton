@@ -36,7 +36,7 @@
 
 #include "AnalyzePicketFence.h"
 
-OperationDoc OpArgDocAnalyzePicketFence(void){
+OperationDoc OpArgDocAnalyzePicketFence(){
     OperationDoc out;
     out.name = "AnalyzePicketFence";
 
@@ -355,7 +355,7 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
 
         // This is the core routine for extracting the position of MLC leaves along junctions.
         // Analysis gets restarted if a collimator rotation is detected at the end, so it is wrapped in a function.
-        auto Extract_Leaf_Positions = [&](void) -> void {
+        auto Extract_Leaf_Positions = [&]() -> void {
             //---------------------------------------------------------------------------
             // Extract the junction and leaf pair travel axes.
             auto BeamLimitingDeviceAngle = animg->GetMetadataValueAs<std::string>("BeamLimitingDeviceAngle");
@@ -1008,7 +1008,7 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
                 //Report findings about this leaf-pair.
                 FUNCINFO("Attempting to claim a mutex");
                 try{
-                    auto gen_filename = [&](void) -> std::string {
+                    auto gen_filename = [&]() -> std::string {
                         if(LeafGapsFileName.empty()){
                             LeafGapsFileName = Get_Unique_Sequential_Filename("/tmp/dicomautomaton_evaluatepf_", 6, ".csv");
                         }
@@ -1076,7 +1076,7 @@ Drover AnalyzePicketFence(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
         //Report a summary.
         FUNCINFO("Attempting to claim a mutex");
         try{
-            auto gen_filename = [&](void) -> std::string {
+            auto gen_filename = [&]() -> std::string {
                 if(ResultsSummaryFileName.empty()){
                     ResultsSummaryFileName = Get_Unique_Sequential_Filename("/tmp/dicomautomaton_pfsummary_", 6, ".csv");
                 }

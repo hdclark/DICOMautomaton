@@ -33,7 +33,7 @@
 
 
 
-OperationDoc OpArgDocExtractImageHistograms(void){
+OperationDoc OpArgDocExtractImageHistograms(){
     OperationDoc out;
     out.name = "ExtractImageHistograms";
 

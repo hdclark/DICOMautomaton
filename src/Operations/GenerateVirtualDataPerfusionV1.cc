@@ -20,7 +20,7 @@
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
 
-OperationDoc OpArgDocGenerateVirtualDataPerfusionV1(void){
+OperationDoc OpArgDocGenerateVirtualDataPerfusionV1(){
     OperationDoc out;
     out.name = "GenerateVirtualDataPerfusionV1";
 

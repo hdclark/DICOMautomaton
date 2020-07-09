@@ -29,7 +29,7 @@
 
 #include "PointSeparation.h"
 
-OperationDoc OpArgDocPointSeparation(void){
+OperationDoc OpArgDocPointSeparation(){
     OperationDoc out;
     out.name = "PointSeparation";
     out.desc = 

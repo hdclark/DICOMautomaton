@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocExtractPointsWarp(void);
+OperationDoc OpArgDocExtractPointsWarp();
 
 Drover ExtractPointsWarp(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                              std::map<std::string, std::string> /*InvocationMetadata*/,

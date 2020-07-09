@@ -21,7 +21,7 @@
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 
 
-OperationDoc OpArgDocDCEMRI_Nonparametric_CE(void){
+OperationDoc OpArgDocDCEMRI_Nonparametric_CE(){
     OperationDoc out;
     out.name = "DCEMRI_Nonparametric_CE";
 

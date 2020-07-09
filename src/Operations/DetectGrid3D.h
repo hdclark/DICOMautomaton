@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocDetectGrid3D(void);
+OperationDoc OpArgDocDetectGrid3D();
 
 Drover DetectGrid3D(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                          std::map<std::string, std::string> /*InvocationMetadata*/,

@@ -31,7 +31,7 @@
 
 
 
-OperationDoc OpArgDocDumpPerROIParams_KineticModel_1Compartment2Input_5Param(void){
+OperationDoc OpArgDocDumpPerROIParams_KineticModel_1Compartment2Input_5Param(){
     OperationDoc out;
     out.name = "DumpPerROIParams_KineticModel_1Compartment2Input_5Param";
     out.desc = "Given a perfusion model, this routine computes parameter estimates for ROIs.";

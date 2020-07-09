@@ -151,7 +151,7 @@ bool ComputeCompareImages(planar_image_collection<float,double> &imagecoll,
     for(auto &img : imagecoll.images){
         std::reference_wrapper< planar_image<float, double>> img_refw( std::ref(img) );
 
-        tp.submit_task([&,img_refw](void) -> void {
+        tp.submit_task([&,img_refw]() -> void {
             const auto orientation_normal = img_refw.get().image_plane().N_0.unit();
 
             planar_image_adjacency<float,double> img_adj( {}, external_imgs, orientation_normal );

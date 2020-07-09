@@ -20,7 +20,7 @@
 
 
 
-OperationDoc OpArgDocDetectShapes3D(void){
+OperationDoc OpArgDocDetectShapes3D(){
     OperationDoc out;
     out.name = "DetectShapes3D";
     out.desc = "This operation attempts to detect shapes in image volumes.";

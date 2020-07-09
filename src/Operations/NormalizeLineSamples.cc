@@ -40,7 +40,7 @@
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
 
-OperationDoc OpArgDocNormalizeLineSamples(void){
+OperationDoc OpArgDocNormalizeLineSamples(){
     OperationDoc out;
     out.name = "NormalizeLineSamples";
 

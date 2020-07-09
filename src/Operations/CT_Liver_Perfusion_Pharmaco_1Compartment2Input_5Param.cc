@@ -41,7 +41,7 @@
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
 
-OperationDoc OpArgDocCT_Liver_Perfusion_Pharmaco_1C2I_5Param(void){
+OperationDoc OpArgDocCT_Liver_Perfusion_Pharmaco_1C2I_5Param(){
     OperationDoc out;
     out.name = "CT_Liver_Perfusion_Pharmaco_1C2I_5Param";
     out.desc = 

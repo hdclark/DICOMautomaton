@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocDumpROISurfaceMeshes(void);
+OperationDoc OpArgDocDumpROISurfaceMeshes();
 
 Drover
 DumpROISurfaceMeshes(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string, std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/);

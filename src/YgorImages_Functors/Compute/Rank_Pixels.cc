@@ -81,7 +81,7 @@ bool ComputeRankPixels(planar_image_collection<float,double> &imagecoll,
         for(auto & img_it : all_imgs){
             std::reference_wrapper< planar_image<float, double>> img_refw( std::ref(*img_it) );
 
-            tp.submit_task([&,img_refw](void) -> void {
+            tp.submit_task([&,img_refw]() -> void {
                 //Record the min and max actual pixel values for windowing purposes.
                 Stats::Running_MinMax<float> minmax_pixel;
 

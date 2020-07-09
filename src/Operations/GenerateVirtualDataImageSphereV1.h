@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocGenerateVirtualDataImageSphereV1(void);
+OperationDoc OpArgDocGenerateVirtualDataImageSphereV1();
 
 Drover GenerateVirtualDataImageSphereV1(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                       std::map<std::string, std::string> /*InvocationMetadata*/,

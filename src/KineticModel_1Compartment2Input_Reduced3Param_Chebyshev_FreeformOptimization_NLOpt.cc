@@ -297,7 +297,7 @@ Optimize_FreeformOptimization_Reduced3Param(KineticModel_1Compartment2Input_Redu
     state.FittingSuccess = false;
 
     const int dimen = 3;
-    double func_min;
+    double func_min = 0.0;
 
     //Fitting parameters: tauA, tauV, k2.
     // The following are arbitrarily chosen. They should be seeded from previous computations, or

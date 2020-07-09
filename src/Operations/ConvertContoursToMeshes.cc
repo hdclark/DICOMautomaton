@@ -27,7 +27,7 @@
 #include "ConvertContoursToMeshes.h"
 
 
-OperationDoc OpArgDocConvertContoursToMeshes(void){
+OperationDoc OpArgDocConvertContoursToMeshes(){
     OperationDoc out;
     out.name = "ConvertContoursToMeshes";
 

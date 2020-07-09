@@ -20,7 +20,7 @@
 
 
 
-OperationDoc OpArgDocContourVote(void){
+OperationDoc OpArgDocContourVote(){
     OperationDoc out;
     out.name = "ContourVote";
 

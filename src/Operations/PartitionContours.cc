@@ -36,7 +36,7 @@
 
 
 
-OperationDoc OpArgDocPartitionContours(void){
+OperationDoc OpArgDocPartitionContours(){
     OperationDoc out;
     out.name = "PartitionContours";
     out.desc = "This operation partitions the selected contours, producing a number of sub-segments that"

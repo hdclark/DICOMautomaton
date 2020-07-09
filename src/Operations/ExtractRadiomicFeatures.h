@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocExtractRadiomicFeatures(void);
+OperationDoc OpArgDocExtractRadiomicFeatures();
 
 Drover ExtractRadiomicFeatures(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                                std::map<std::string, std::string> /*InvocationMetadata*/,

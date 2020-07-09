@@ -22,7 +22,7 @@
 
 
 
-OperationDoc OpArgDocSupersampleImageGrid(void){
+OperationDoc OpArgDocSupersampleImageGrid(){
     OperationDoc out;
     out.name = "SupersampleImageGrid";
 

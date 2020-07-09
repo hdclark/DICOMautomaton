@@ -36,7 +36,7 @@
 #include "../Surface_Meshes.h"
 
 
-OperationDoc OpArgDocSubdivideSurfaceMeshes(void){
+OperationDoc OpArgDocSubdivideSurfaceMeshes(){
     OperationDoc out;
     out.name = "SubdivideSurfaceMeshes";
 

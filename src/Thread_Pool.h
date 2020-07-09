@@ -34,7 +34,7 @@ class asio_thread_pool {
             );
         }
     }
-    ~asio_thread_pool(void){
+    ~asio_thread_pool(){
         this->_work.reset();
         this->_thread_pool.join_all();
         this->_io_service.stop();

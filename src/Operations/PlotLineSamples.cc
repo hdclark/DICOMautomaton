@@ -306,7 +306,7 @@ void Plot(const std::vector<Shuttle<samples_1D<T>>> &Shuttles,
 
 
 
-OperationDoc OpArgDocPlotLineSamples(void){
+OperationDoc OpArgDocPlotLineSamples(){
     OperationDoc out;
     out.name = "PlotLineSamples";
 

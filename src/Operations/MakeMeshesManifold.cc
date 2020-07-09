@@ -36,7 +36,7 @@
 #include "../Surface_Meshes.h"
 
 
-OperationDoc OpArgDocMakeMeshesManifold(void){
+OperationDoc OpArgDocMakeMeshesManifold(){
     OperationDoc out;
     out.name = "MakeMeshesManifold";
 

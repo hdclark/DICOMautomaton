@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocEQDConvert(void);
+OperationDoc OpArgDocEQDConvert();
 
 Drover EQDConvert(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                    std::map<std::string, std::string> /*InvocationMetadata*/,

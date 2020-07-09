@@ -16,7 +16,7 @@
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 
 
-OperationDoc OpArgDocDumpAllOrderedImageMetadataToFile(void){
+OperationDoc OpArgDocDumpAllOrderedImageMetadataToFile(){
     OperationDoc out;
     out.name = "DumpAllOrderedImageMetadataToFile";
     out.desc = 

@@ -25,7 +25,7 @@
 #include "ConvolveImages.h"
 
 
-OperationDoc OpArgDocConvolveImages(void){
+OperationDoc OpArgDocConvolveImages(){
     OperationDoc out;
     out.name = "ConvolveImages";
 
@@ -208,7 +208,7 @@ Drover ConvolveImages(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::
             const auto first_img_refw = img_adj.index_to_image(first_img_num);
             const long int k_rows = first_img_refw.get().rows;
             const long int k_columns = first_img_refw.get().columns;
-            const long int k_imgs = static_cast<long int>(img_adj.int_to_img.size());
+            const auto k_imgs = static_cast<long int>(img_adj.int_to_img.size());
             //std::map<long int, img_ptr_t> int_to_img;
 
             const auto d_r = k_rows / 2;   // Offsets to (approximately) centre the kernel.

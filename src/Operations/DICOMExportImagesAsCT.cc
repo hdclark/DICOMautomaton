@@ -23,7 +23,7 @@
 #include "DICOMExportImagesAsCT.h"
 
 
-OperationDoc OpArgDocDICOMExportImagesAsCT(void){
+OperationDoc OpArgDocDICOMExportImagesAsCT(){
     OperationDoc out;
     out.name = "DICOMExportImagesAsCT";
     out.desc = "This operation exports the selected Image_Array(s) to DICOM CT-modality files.";
@@ -95,7 +95,7 @@ DICOMExportImagesAsCT(Drover DICOM_data,
         throw std::runtime_error("Specified paranoia level is not valid. Cannot continue.");
     }
 
-    auto make_sequential_filename = [=](void) -> std::string {
+    auto make_sequential_filename = [=]() -> std::string {
         const auto pad_left_zeros = [](std::string in, long int desired_length) -> std::string {
             while(static_cast<long int>(in.length()) < desired_length) in = "0"_s + in;
             return in;

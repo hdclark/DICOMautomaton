@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocModifyContourMetadata(void);
+OperationDoc OpArgDocModifyContourMetadata();
 
 Drover ModifyContourMetadata(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                      std::map<std::string, std::string> /*InvocationMetadata*/,

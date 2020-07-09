@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocDumpVoxelDoseInfo(void);
+OperationDoc OpArgDocDumpVoxelDoseInfo();
 
 Drover
 DumpVoxelDoseInfo(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string, std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/);

@@ -32,7 +32,7 @@
 
 #include "ExportLineSamples.h"
 
-OperationDoc OpArgDocExportLineSamples(void){
+OperationDoc OpArgDocExportLineSamples(){
     OperationDoc out;
     out.name = "ExportLineSamples";
 

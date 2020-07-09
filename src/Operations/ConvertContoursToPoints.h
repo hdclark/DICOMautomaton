@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocConvertContoursToPoints(void);
+OperationDoc OpArgDocConvertContoursToPoints();
 
 Drover ConvertContoursToPoints(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                              std::map<std::string, std::string> /*InvocationMetadata*/,

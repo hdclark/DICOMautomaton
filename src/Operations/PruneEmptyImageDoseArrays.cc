@@ -11,7 +11,7 @@
 #include "PruneEmptyImageDoseArrays.h"
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 
-OperationDoc OpArgDocPruneEmptyImageDoseArrays(void){
+OperationDoc OpArgDocPruneEmptyImageDoseArrays(){
     OperationDoc out;
     out.name = "PruneEmptyImageDoseArrays";
     out.desc = "This operation deletes Image_Arrays that do not contain any images.";

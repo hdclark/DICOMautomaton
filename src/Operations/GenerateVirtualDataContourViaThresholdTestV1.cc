@@ -17,7 +17,7 @@
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
 
-OperationDoc OpArgDocGenerateVirtualDataContourViaThresholdTestV1(void){
+OperationDoc OpArgDocGenerateVirtualDataContourViaThresholdTestV1(){
     OperationDoc out;
     out.name = "GenerateVirtualDataContourViaThresholdTestV1";
 

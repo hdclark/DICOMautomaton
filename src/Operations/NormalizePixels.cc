@@ -24,7 +24,7 @@
 
 #include "NormalizePixels.h"
 
-OperationDoc OpArgDocNormalizePixels(void){
+OperationDoc OpArgDocNormalizePixels(){
     OperationDoc out;
     out.name = "NormalizePixels";
 

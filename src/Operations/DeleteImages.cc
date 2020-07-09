@@ -16,7 +16,7 @@
 
 
 
-OperationDoc OpArgDocDeleteImages(void){
+OperationDoc OpArgDocDeleteImages(){
     OperationDoc out;
     out.name = "DeleteImages";
     out.desc = 

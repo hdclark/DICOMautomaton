@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocExportLineSamples(void);
+OperationDoc OpArgDocExportLineSamples();
 
 Drover ExportLineSamples(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                              std::map<std::string, std::string> /*InvocationMetadata*/,

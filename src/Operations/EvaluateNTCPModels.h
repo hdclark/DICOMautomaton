@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocEvaluateNTCPModels(void);
+OperationDoc OpArgDocEvaluateNTCPModels();
 
 Drover EvaluateNTCPModels(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                              std::map<std::string, std::string> /*InvocationMetadata*/,

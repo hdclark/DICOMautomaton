@@ -31,7 +31,7 @@
 
 #include "WarpPoints.h"
 
-OperationDoc OpArgDocWarpPoints(void){
+OperationDoc OpArgDocWarpPoints(){
     OperationDoc out;
     out.name = "WarpPoints";
 

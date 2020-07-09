@@ -36,7 +36,7 @@
 #include "../Surface_Meshes.h"
 
 
-OperationDoc OpArgDocConvertImageToMeshes(void){
+OperationDoc OpArgDocConvertImageToMeshes(){
     OperationDoc out;
     out.name = "ConvertImageToMeshes";
 

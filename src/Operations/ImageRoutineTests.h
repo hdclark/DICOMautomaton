@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocImageRoutineTests(void);
+OperationDoc OpArgDocImageRoutineTests();
 
 Drover ImageRoutineTests(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                          std::map<std::string, std::string> /*InvocationMetadata*/,

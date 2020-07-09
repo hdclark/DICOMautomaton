@@ -44,7 +44,7 @@
 
 #include "ExtractRadiomicFeatures.h"
 
-OperationDoc OpArgDocExtractRadiomicFeatures(void){
+OperationDoc OpArgDocExtractRadiomicFeatures(){
     OperationDoc out;
     out.name = "ExtractRadiomicFeatures";
 
@@ -541,7 +541,7 @@ Drover ExtractRadiomicFeatures(Drover DICOM_data, OperationArgPkg OptArgs, std::
 
     //Write the report to file.
     try{
-        auto gen_filename = [&](void) -> std::string {
+        auto gen_filename = [&]() -> std::string {
             if(FeaturesFileName.empty()){
                 FeaturesFileName = Get_Unique_Sequential_Filename("/tmp/dicomautomaton_extractradiomicfeatures_", 6, ".csv");
             }

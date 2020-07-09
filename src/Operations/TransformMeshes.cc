@@ -29,7 +29,7 @@
 #include "YgorMathIOOFF.h"
 
 
-OperationDoc OpArgDocTransformMeshes(void){
+OperationDoc OpArgDocTransformMeshes(){
     OperationDoc out;
     out.name = "TransformMeshes";
 

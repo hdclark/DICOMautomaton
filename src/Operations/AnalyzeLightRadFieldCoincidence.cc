@@ -38,7 +38,7 @@
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
 
-OperationDoc OpArgDocAnalyzeLightRadFieldCoincidence(void){
+OperationDoc OpArgDocAnalyzeLightRadFieldCoincidence(){
     OperationDoc out;
     out.name = "AnalyzeLightRadFieldCoincidence";
 

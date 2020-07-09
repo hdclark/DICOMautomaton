@@ -32,7 +32,7 @@
 
 #include "ExportSurfaceMeshes.h"
 
-OperationDoc OpArgDocExportSurfaceMeshes(void){
+OperationDoc OpArgDocExportSurfaceMeshes(){
     OperationDoc out;
     out.name = "ExportSurfaceMeshes";
 

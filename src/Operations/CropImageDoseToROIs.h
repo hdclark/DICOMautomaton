@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocCropImageDoseToROIs(void);
+OperationDoc OpArgDocCropImageDoseToROIs();
 
 Drover CropImageDoseToROIs(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                                    std::map<std::string, std::string> /*InvocationMetadata*/,

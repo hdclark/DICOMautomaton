@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocDumpAnEncompassedPoint(void);
+OperationDoc OpArgDocDumpAnEncompassedPoint();
 
 Drover DumpAnEncompassedPoint(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                               std::map<std::string, std::string> /*InvocationMetadata*/,

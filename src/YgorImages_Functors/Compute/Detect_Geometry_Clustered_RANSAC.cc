@@ -93,7 +93,7 @@ bool ComputeDetectGeometryClusteredRANSAC(planar_image_collection<float,double> 
         // ----- Perform DBSCAN clustering -----
 
         constexpr size_t MaxElementsInANode = 6; // 16, 32, 128, 256, ... ?
-        typedef boost::geometry::index::rstar<MaxElementsInANode> RTreeParameter_t;
+        using RTreeParameter_t = boost::geometry::index::rstar<MaxElementsInANode>;
 
         typedef std::pair< planar_image<float,double>*, long int > UserData_t;
         typedef ClusteringDatum<3, double, // Spatial dimensions.

@@ -22,7 +22,7 @@
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
 
-OperationDoc OpArgDocDumpImageMetadataOccurrencesToFile(void){
+OperationDoc OpArgDocDumpImageMetadataOccurrencesToFile(){
     OperationDoc out;
     out.name = "DumpImageMetadataOccurrencesToFile";
 

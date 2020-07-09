@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocInterpolateSlices(void);
+OperationDoc OpArgDocInterpolateSlices();
 
 Drover InterpolateSlices(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                      std::map<std::string, std::string> /*InvocationMetadata*/,

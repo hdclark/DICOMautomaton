@@ -59,7 +59,7 @@
 #include "SFML_Viewer.h"
 
 
-OperationDoc OpArgDocSFML_Viewer(void){
+OperationDoc OpArgDocSFML_Viewer(){
     OperationDoc out;
     out.name = "SFML_Viewer";
     out.desc = 
@@ -134,18 +134,18 @@ Drover SFML_Viewer( Drover DICOM_data,
     // NOTE: The reasoning for having several image arrays is not clear cut. If the timestamps are known exactly, it
     //       might make sense to split in this way. In general, it is up to the user to make this call. 
     using img_data_ptr_it_t = decltype(DICOM_data.image_data.begin());
-    img_data_ptr_it_t img_array_ptr_beg  = DICOM_data.image_data.begin();
-    img_data_ptr_it_t img_array_ptr_end  = DICOM_data.image_data.end();
-    img_data_ptr_it_t img_array_ptr_last = std::prev(DICOM_data.image_data.end());
-    img_data_ptr_it_t img_array_ptr_it   = img_array_ptr_beg;
+    auto img_array_ptr_beg  = DICOM_data.image_data.begin();
+    auto img_array_ptr_end  = DICOM_data.image_data.end();
+    auto img_array_ptr_last = std::prev(DICOM_data.image_data.end());
+    auto img_array_ptr_it   = img_array_ptr_beg;
 
     //At the moment, we keep a single 'display' image active at a time. To help walk through the neighbouring images
     // (and the rest of the images, for that matter) we keep a container iterator to the image.
     using disp_img_it_t = decltype(DICOM_data.image_data.front()->imagecoll.images.begin());
-    disp_img_it_t disp_img_beg  = (*img_array_ptr_it)->imagecoll.images.begin();
+    auto disp_img_beg  = (*img_array_ptr_it)->imagecoll.images.begin();
     //disp_img_it_t disp_img_end  = (*img_array_ptr_it)->imagecoll.images.end();  // Not used atm.
-    disp_img_it_t disp_img_last = std::prev((*img_array_ptr_it)->imagecoll.images.end());
-    disp_img_it_t disp_img_it   = disp_img_beg;
+    auto disp_img_last = std::prev((*img_array_ptr_it)->imagecoll.images.end());
+    auto disp_img_it   = disp_img_beg;
 
     //Because SFML requires us to keep a sf::Texture alive for the duration of a sf::Sprite, we simply package them
     // together into a texture-sprite bundle. This means a single sf::Sprite must be accompanied by a sf::Texture, 
@@ -239,7 +239,7 @@ Drover SFML_Viewer( Drover DICOM_data,
     const sf::Color Editing_Contour_Color(255,121,0); //"Vivid Orange."
 
     //Load available colour maps.
-    std::vector< std::pair<std::string, std::function<class ClampedColourRGB(double)>>> colour_maps = {
+    std::vector< std::pair<std::string, std::function<struct ClampedColourRGB(double)>>> colour_maps = {
         std::make_pair("Viridis", ColourMap_Viridis),
         std::make_pair("Magma", ColourMap_Magma),
         std::make_pair("Plasma", ColourMap_Plasma),
@@ -313,8 +313,8 @@ Drover SFML_Viewer( Drover DICOM_data,
                                               : img_win_fw.value();
 
             //The output range we are targeting. In this case, a commodity 8 bit (2^8 = 256 intensities) display.
-            const double destmin = static_cast<double>( 0 );
-            const double destmax = static_cast<double>( std::numeric_limits<uint8_t>::max() );
+            const auto destmin = static_cast<double>( 0 );
+            const auto destmax = static_cast<double>( std::numeric_limits<uint8_t>::max() );
     
             for(auto i = 0; i < img_cols; ++i){
                 for(auto j = 0; j < img_rows; ++j){
@@ -500,7 +500,7 @@ Drover SFML_Viewer( Drover DICOM_data,
     //
     // Note: This routine assumes the image is neither rotated nor skewed. It will handle scaled and offset (i.e.,
     // translated) images though.
-    const auto Convert_Mouse_Coords = [&](void) -> Mouse_Positions {
+    const auto Convert_Mouse_Coords = [&]() -> Mouse_Positions {
         Mouse_Positions out;
 
         // Get the *realtime* current mouse coordinates.
@@ -562,7 +562,7 @@ Drover SFML_Viewer( Drover DICOM_data,
 
     // Routine for printing current mouse pixel and DICOM coordinates.
     // Also samples the voxel value underneath the mouse, if applicable.
-    const auto Update_Mouse_Coords_Voxel_Sample = [&](void) -> void {                
+    const auto Update_Mouse_Coords_Voxel_Sample = [&]() -> void {
         auto mc = Convert_Mouse_Coords();
 
         // Position the text elements.
@@ -591,7 +591,7 @@ Drover SFML_Viewer( Drover DICOM_data,
     // Event handlers.
 
     //Show a simple help dialog with some keyboard commands.
-    const auto show_help = [&](void){
+    const auto show_help = [&](){
             // Easy way to get list of commands:
             // `grep -C 3 'thechar == ' src/PETCT_Perfusion_Analysis.cc | grep '//\|thechar'`
             Execute_Command_In_Pipe(
@@ -632,7 +632,7 @@ Drover SFML_Viewer( Drover DICOM_data,
     };
 
     //Dump a serialization of the current (*entire*) Drover class.
-    const auto dump_serialized_drover = [&](void){
+    const auto dump_serialized_drover = [&](){
             const boost::filesystem::path out_fname("/tmp/boost_serialized_drover.xml.gz");
             const bool res = Common_Boost_Serialize_Drover(DICOM_data, out_fname);
             if(res){
@@ -644,7 +644,7 @@ Drover SFML_Viewer( Drover DICOM_data,
     };
 
     //Cycle through the available colour maps/transformations.
-    const auto cycle_colour_maps_next = [&](void){
+    const auto cycle_colour_maps_next = [&](){
             colour_map = (colour_map + 1) % colour_maps.size();
 
             if(load_img_texture_sprite(disp_img_it, disp_img_texture_sprite)){
@@ -656,7 +656,7 @@ Drover SFML_Viewer( Drover DICOM_data,
             return;
     };
 
-    const auto cycle_colour_maps_prev = [&](void){
+    const auto cycle_colour_maps_prev = [&](){
             colour_map = (colour_map + colour_maps.size() - 1) % colour_maps.size();
 
             if(load_img_texture_sprite(disp_img_it, disp_img_texture_sprite)){
@@ -669,13 +669,13 @@ Drover SFML_Viewer( Drover DICOM_data,
     };
 
     //Toggle whether existing contours should be displayed.
-    const auto toggle_showing_existing_contours = [&](void){
+    const auto toggle_showing_existing_contours = [&](){
             ShowExistingContours = !ShowExistingContours;
             return;
     };
 
     //Place or remove an invisible marker for measurement in the DICOM coordinate system.
-    const auto toggle_measurement_mode = [&](void){
+    const auto toggle_measurement_mode = [&](){
             // If a valid point exists, clear it.
             if(tagged_pos){
                 tagged_pos = {}; // Reset the optional.
@@ -694,14 +694,14 @@ Drover SFML_Viewer( Drover DICOM_data,
     };
 
     //Set the flag for dumping the window contents as an image after the next render.
-    const auto initiate_screenshot = [&](void){
+    const auto initiate_screenshot = [&](){
             DumpScreenshot = true;
             return;
     };
 
     //Dump raw pixels for all spatially overlapping images from the current array.
     // (Useful for dumping time courses.)
-    const auto dump_raw_pixels_for_overlapping_images = [&](void){
+    const auto dump_raw_pixels_for_overlapping_images = [&](){
             //Get a list of images which spatially overlap this point. Order should be maintained.
             const auto pix_pos = disp_img_it->position(0,0);
             const auto ortho = disp_img_it->row_unit.Cross( disp_img_it->col_unit ).unit();
@@ -723,7 +723,7 @@ Drover SFML_Viewer( Drover DICOM_data,
     };
 
     //Dump the current image to file.
-    const auto dump_current_image_to_file = [&](void){
+    const auto dump_current_image_to_file = [&](){
             const auto pixel_dump_filename_out = Get_Unique_Sequential_Filename("/tmp/display_image_dump_",6,".fits");
             if(WriteToFITS(*disp_img_it,pixel_dump_filename_out)){
                 FUNCINFO("Dumped pixel data for this image to file '" << pixel_dump_filename_out << "'");
@@ -734,7 +734,7 @@ Drover SFML_Viewer( Drover DICOM_data,
     };
 
     //Dump all images in the current array to file.
-    const auto dump_current_image_array_to_files = [&](void){
+    const auto dump_current_image_array_to_files = [&](){
             long int count = 0;
             for(auto &pimg : (*img_array_ptr_it)->imagecoll.images){
                 const auto pixel_dump_filename_out = Get_Unique_Sequential_Filename("/tmp/image_dump_",6,".fits");
@@ -795,21 +795,21 @@ Drover SFML_Viewer( Drover DICOM_data,
     };
 
     //Launch/open a realtime plotting window.
-    const auto launch_time_plot_window = [&](void){
+    const auto launch_time_plot_window = [&](){
             plotwindow.create(sf::VideoMode(640, 480), "DICOMautomaton Time Courses");
             plotwindow.setFramerateLimit(30);
             plotwindowtype = SecondaryPlot::TimeCourse;
             return;
     };
 
-    const auto launch_row_plot_window = [&](void){
+    const auto launch_row_plot_window = [&](){
             plotwindow.create(sf::VideoMode(640, 480), "DICOMautomaton Row Profile Inspector");
             plotwindow.setFramerateLimit(30);
             plotwindowtype = SecondaryPlot::RowProfile;
             return;
     };
 
-    const auto launch_column_plot_window = [&](void){
+    const auto launch_column_plot_window = [&](){
             plotwindow.create(sf::VideoMode(640, 480), "DICOMautomaton Column Profile Inspector");
             plotwindow.setFramerateLimit(30);
             plotwindowtype = SecondaryPlot::ColumnProfile;
@@ -821,7 +821,7 @@ Drover SFML_Viewer( Drover DICOM_data,
     //
     // So this routine dumps a time course at the mouse pixel.
     //
-    const auto dump_voxel_time_series = [&](void){
+    const auto dump_voxel_time_series = [&](){
             auto mc = Convert_Mouse_Coords();
             if(!mc.voxel_DICOM_pos_valid){
                 FUNCWARN("The mouse is not currently hovering over the image. Cannot dump time course");
@@ -883,7 +883,7 @@ Drover SFML_Viewer( Drover DICOM_data,
 #ifdef DCMA_USE_GNU_GSL
     //Given the current mouse coordinates, try to show a perfusion model using model parameters from
     // other images. Also show a time course of the raw data for comparison with the model fit.
-    const auto show_perfusion_model = [&](void){
+    const auto show_perfusion_model = [&](){
             auto mc = Convert_Mouse_Coords();
             if(!mc.voxel_DICOM_pos_valid){
                 FUNCWARN("The mouse is not currently hovering over the image. Cannot compute perfusion model");
@@ -1071,7 +1071,7 @@ Drover SFML_Viewer( Drover DICOM_data,
     //       pixels should be tracked, the row and column numbers are spit out; so just filter out pixel
     //       coordinates you don't want.
     //
-    const auto dump_overlapping_voxels = [&](void){
+    const auto dump_overlapping_voxels = [&](){
             auto mc = Convert_Mouse_Coords();
             if(!mc.voxel_DICOM_pos_valid){
                 FUNCWARN("The mouse is not currently hovering over the image. Cannot dump overlapping pixel values");
@@ -1269,7 +1269,7 @@ Drover SFML_Viewer( Drover DICOM_data,
     };
 
     //Sample pixels from an external image into the current frame.
-    const auto overwrite_current_frame = [&](void){
+    const auto overwrite_current_frame = [&](){
             do{ // Does not loop, just lets us break out.
                 //std::string fname;
                 //std::cout << std::endl;
@@ -1339,7 +1339,7 @@ Drover SFML_Viewer( Drover DICOM_data,
     };
 
     //Flood the current image with a uniform pixel intensity.
-    const auto flood_current_pixels = [&](void){
+    const auto flood_current_pixels = [&](){
             float intensity;
             std::cout << std::endl;
             std::cout << "Please enter the intensity to flood with: " << std::endl;
@@ -1438,7 +1438,7 @@ Drover SFML_Viewer( Drover DICOM_data,
 
     //Reset the image scale to be pixel-for-pixel what is seen on screen. (Unless there is a view
     // that has some transformation over on-screen objects.)
-    const auto reset_image_scale = [&](void){
+    const auto reset_image_scale = [&](){
             disp_img_texture_sprite.second.setScale(1.0f,1.0f);
 
             Update_Mouse_Coords_Voxel_Sample();
@@ -1446,13 +1446,13 @@ Drover SFML_Viewer( Drover DICOM_data,
     };
 
     //Toggle showing metadata tags that are identical to the neighbouring image's metadata tags.
-    const auto toggle_showing_adjacently_different_metadata = [&](void){
+    const auto toggle_showing_adjacently_different_metadata = [&](){
             OnlyShowTagsDifferentToNeighbours = !OnlyShowTagsDifferentToNeighbours;
             return;
     };
 
     //Dump to file and show a pop-up window with the full metadata of the present image.
-    const auto dump_and_expand_image_metadata = [&](void){
+    const auto dump_and_expand_image_metadata = [&](){
             const auto FOname = Get_Unique_Sequential_Filename("/tmp/image_metadata_dump_", 6, ".txt");
             try{
                 //Dump the metadata to a file.
@@ -1480,7 +1480,7 @@ Drover SFML_Viewer( Drover DICOM_data,
     };
 
     //Erase the present contour, or, if empty, the previous non-empty contour. (Not the whole organ.)
-    const auto erase_most_recently_drawn_contour = [&](void){
+    const auto erase_most_recently_drawn_contour = [&](){
             try{
                 const std::string erase_roi = Detox_String(Execute_Command_In_Pipe(
                         "zenity --question --text='Erase current or previous non-empty contour?' 2>/dev/null && echo 1"));
@@ -1508,7 +1508,7 @@ Drover SFML_Viewer( Drover DICOM_data,
     };
 
     //Erase or Empty the current working contour buffer. 
-    const auto purge_whole_contour_buffer = [&](void){
+    const auto purge_whole_contour_buffer = [&](){
             try{
                 const std::string erase_roi = Detox_String(Execute_Command_In_Pipe(
                         "zenity --question --text='Erase whole working ROI?' 2>/dev/null && echo 1"));
@@ -1528,7 +1528,7 @@ Drover SFML_Viewer( Drover DICOM_data,
     };
 
     //Save the current contour collection.
-    const auto save_contour_buffer = [&](void){
+    const auto save_contour_buffer = [&](){
             try{
                 // Ask the user for additional information.
                 const std::string save_roi = Detox_String(Execute_Command_In_Pipe("zenity --question --text='Save ROI?' 2>/dev/null && echo 1"));
@@ -1588,7 +1588,7 @@ Drover SFML_Viewer( Drover DICOM_data,
     };
 
     //Compute some stats for the working, unsaved contour collection.
-    const auto compute_stats_for_contour_buffer = [&](void){
+    const auto compute_stats_for_contour_buffer = [&](){
             try{
                 //Trim empty contours from the shuttle.
                 auto cccopy = contour_coll_shtl;
@@ -1630,7 +1630,7 @@ Drover SFML_Viewer( Drover DICOM_data,
     };
 
     //Query the user to provide a window and level explicitly.
-    const auto query_for_window_and_level = [&](void){
+    const auto query_for_window_and_level = [&](){
             try{
                 const std::string low_str = Detox_String(Execute_Command_In_Pipe(
                     "zenity --entry --text='What is the new window low?' --entry-text='100.0' 2>/dev/null"));
@@ -1932,7 +1932,7 @@ Drover SFML_Viewer( Drover DICOM_data,
         // ------------------------------ Plotting Window Events ----------------------------------------
 
         if(plotwindow.isOpen()){
-            const auto close_plotwindow = [&](void) -> void {
+            const auto close_plotwindow = [&]() -> void {
                 plotwindow.close();
                 plotwindowtype = SecondaryPlot::None;
             };

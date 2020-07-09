@@ -90,7 +90,7 @@ double DVH_Normalize(std::vector<double> in,
 }
 
 
-OperationDoc OpArgDocOptimizeStaticBeams(void){
+OperationDoc OpArgDocOptimizeStaticBeams(){
     OperationDoc out;
     out.name = "OptimizeStaticBeams";
 
@@ -453,7 +453,7 @@ Drover OptimizeStaticBeams(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
 
     optimizer.set_lower_bounds(lower_bounds);
     optimizer.set_upper_bounds(upper_bounds);
-    optimizer.set_min_objective(f_to_optimize, NULL);
+    optimizer.set_min_objective(f_to_optimize, nullptr);
     optimizer.set_ftol_abs(-HUGE_VAL);
     optimizer.set_ftol_rel(1.0E-8);
     optimizer.set_xtol_abs(-HUGE_VAL);
@@ -513,7 +513,7 @@ Drover OptimizeStaticBeams(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
 
     //Write the summary to file.
     try{
-        auto gen_filename = [&](void) -> std::string {
+        auto gen_filename = [&]() -> std::string {
             if(ResultsSummaryFileName.empty()){
                 ResultsSummaryFileName = Get_Unique_Sequential_Filename("/tmp/dicomautomaton_staticbeamoptisummary_", 6, ".csv");
             }

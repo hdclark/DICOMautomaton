@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocReduceNeighbourhood(void);
+OperationDoc OpArgDocReduceNeighbourhood();
 
 Drover ReduceNeighbourhood(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                          std::map<std::string, std::string> /*InvocationMetadata*/,

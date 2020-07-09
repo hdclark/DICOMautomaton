@@ -33,7 +33,7 @@
 
 #include "ExtractPointsWarp.h"
 
-OperationDoc OpArgDocExtractPointsWarp(void){
+OperationDoc OpArgDocExtractPointsWarp(){
     OperationDoc out;
     out.name = "ExtractPointsWarp";
 

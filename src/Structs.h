@@ -75,10 +75,10 @@ class contours_with_meta : public contour_collection<double> {
     public:
         //This is the ROI number as it is defined in the DICOM file. There is no importance to this number. It just 
         // allows us to conveniently differentiate contours with a number.
-        long int      ROI_number;
+        long int      ROI_number{0};
 
         //This is the minimum distance between adjacent contours. One should be ready to handle 0.0 or negatives! 
-        double        Minimum_Separation; 
+        double        Minimum_Separation{-1.0};
 
         //These are the raw names read out of the DICOM file. There is no danger having them as std::string, because
         // we can cast to a unicode-friendly format as needed (treating them as binary data).
@@ -112,7 +112,7 @@ class Contour_Data {
         //Member functions.
         void operator = (const Contour_Data &rhs);
 
-        void Plot(void) const;     //Spits out a default plot of the (entirety) of the data. Use the contour_of_points::Plot() method for individual contours.
+        void Plot() const;     //Spits out a default plot of the (entirety) of the data. Use the contour_of_points::Plot() method for individual contours.
     
         //Unique duplication (aka 'copy factory').
         std::unique_ptr<Contour_Data> Duplicate() const; 
@@ -120,10 +120,10 @@ class Contour_Data {
         //--- Geometeric splitting. ---
         //For each distinct ROI number, we specify a single plane to split on.
         std::unique_ptr<Contour_Data> Split_Per_Volume_Along_Given_Plane_Unit_Normal(const vec3<double> &N) const; 
-        std::unique_ptr<Contour_Data> Split_Per_Volume_Along_Coronal_Plane(void) const; 
-        std::unique_ptr<Contour_Data> Split_Per_Volume_Along_Sagittal_Plane(void) const;
+        std::unique_ptr<Contour_Data> Split_Per_Volume_Along_Coronal_Plane() const; 
+        std::unique_ptr<Contour_Data> Split_Per_Volume_Along_Sagittal_Plane() const;
 
-std::unique_ptr<Contour_Data> Split_Per_Volume_Along_Transverse_Plane(void) const;
+std::unique_ptr<Contour_Data> Split_Per_Volume_Along_Transverse_Plane() const;
 
         //For each distinct ROI number, distinct height, we specify a plane to split on.
 //        std::unique_ptr<Contour_Data> Split_Per_Height_Along_Given_Plane_Unit_Normal(const vec3<double> &N) const;
@@ -132,19 +132,19 @@ std::unique_ptr<Contour_Data> Split_Per_Volume_Along_Transverse_Plane(void) cons
 
         //For each distinct contour, we specify a plane to split on.
         std::unique_ptr<Contour_Data> Split_Per_Contour_Along_Given_Plane_Unit_Normal(const vec3<double> &N) const;
-        std::unique_ptr<Contour_Data> Split_Per_Contour_Along_Coronal_Plane(void) const; 
-        std::unique_ptr<Contour_Data> Split_Per_Contour_Along_Sagittal_Plane(void) const;
+        std::unique_ptr<Contour_Data> Split_Per_Contour_Along_Coronal_Plane() const; 
+        std::unique_ptr<Contour_Data> Split_Per_Contour_Along_Sagittal_Plane() const;
  
         //--- Ray-casting splitting. ---
         std::unique_ptr<Contour_Data> Raycast_Split_Per_Contour_Against_Given_Direction(const vec3<double> &U) const;
-        std::unique_ptr<Contour_Data> Raycast_Split_Per_Contour_Into_ANT_POST(void) const;
-        std::unique_ptr<Contour_Data> Raycast_Split_Per_Contour_Into_Lateral(void) const;
+        std::unique_ptr<Contour_Data> Raycast_Split_Per_Contour_Into_ANT_POST() const;
+        std::unique_ptr<Contour_Data> Raycast_Split_Per_Contour_Into_Lateral() const;
 
         //--- Core-Peel splitting. ---
         std::unique_ptr<Contour_Data> Split_Core_and_Peel(double frac_dist) const;
 
         //--- Geometric ordering. ---
-        std::unique_ptr<Contour_Data> Reorder_LR_to_ML(void) const;
+        std::unique_ptr<Contour_Data> Reorder_LR_to_ML() const;
 
         //Contour selector factories.
         std::unique_ptr<Contour_Data> Get_Contours_Number(long int N) const; //Extracts a single contours_with_meta at list position N.
@@ -294,9 +294,9 @@ class Dynamic_Machine_State {
         //Member functions.
         Dynamic_Machine_State & operator=(const Dynamic_Machine_State &rhs); //Performs a deep copy (unless copying self).
 
-        void sort_states(void); // Sorts static states so that CumulativeMetersetWeight monotonically increases.
-        bool verify_states_are_ordered(void) const; // Ensures the static states are ordered and none are missing.
-        void normalize_states(void); // Replaces NaNs with previously specified static states, where possible.
+        void sort_states(); // Sorts static states so that CumulativeMetersetWeight monotonically increases.
+        bool verify_states_are_ordered() const; // Ensures the static states are ordered and none are missing.
+        void normalize_states(); // Replaces NaNs with previously specified static states, where possible.
         Static_Machine_State interpolate(double CumulativeMetersetWeight) const; // Interpolates adjacent states.
 
         template <class U> std::optional<U> GetMetadataValueAs(std::string key) const;
@@ -435,15 +435,15 @@ typedef std::tuple<vec3<double>,vec3<double>,vec3<double>,double,long int,long i
 typedef std::map<bnded_dose_map_key_t,std::list<bnded_dose_pos_dose_tup_t>,         bnded_dose_map_cmp_func_t>  drover_bnded_dose_pos_dose_map_t; 
 typedef std::map<bnded_dose_map_key_t,std::map<std::array<int,3>,double>,           bnded_dose_map_cmp_func_t>  drover_bnded_dose_stat_moments_map_t;
 
-drover_bnded_dose_mean_dose_map_t                drover_bnded_dose_mean_dose_map_factory(void);
-drover_bnded_dose_centroid_map_t                 drover_bnded_dose_centroid_map_factory(void);
-drover_bnded_dose_bulk_doses_map_t               drover_bnded_dose_bulk_doses_map_factory(void);
-drover_bnded_dose_accm_dose_map_t                drover_bnded_dose_accm_dose_map_factory(void);
-drover_bnded_dose_min_max_dose_map_t             drover_bnded_dose_min_max_dose_map_factory(void);
-drover_bnded_dose_min_mean_max_dose_map_t        drover_bnded_dose_min_mean_max_dose_map_factory(void);
-drover_bnded_dose_min_mean_median_max_dose_map_t drover_bnded_dose_min_mean_median_max_dose_map_factory(void);
-drover_bnded_dose_pos_dose_map_t                 drover_bnded_dose_pos_dose_map_factory(void);
-drover_bnded_dose_stat_moments_map_t             drover_bnded_dose_stat_moments_map_factory(void);
+drover_bnded_dose_mean_dose_map_t                drover_bnded_dose_mean_dose_map_factory();
+drover_bnded_dose_centroid_map_t                 drover_bnded_dose_centroid_map_factory();
+drover_bnded_dose_bulk_doses_map_t               drover_bnded_dose_bulk_doses_map_factory();
+drover_bnded_dose_accm_dose_map_t                drover_bnded_dose_accm_dose_map_factory();
+drover_bnded_dose_min_max_dose_map_t             drover_bnded_dose_min_max_dose_map_factory();
+drover_bnded_dose_min_mean_max_dose_map_t        drover_bnded_dose_min_mean_max_dose_map_factory();
+drover_bnded_dose_min_mean_median_max_dose_map_t drover_bnded_dose_min_mean_median_max_dose_map_factory();
+drover_bnded_dose_pos_dose_map_t                 drover_bnded_dose_pos_dose_map_factory();
+drover_bnded_dose_stat_moments_map_t             drover_bnded_dose_stat_moments_map_factory();
 
 class Drover {
     public:
@@ -470,30 +470,30 @@ class Drover {
                                    std::function<bool(bnded_dose_pos_dose_tup_t)> Fselection,
                                    drover_bnded_dose_stat_moments_map_t *centralized_moments ) const;
     
-        std::list<double> Bounded_Dose_Bulk_Values(void) const;                 //If the contours contain multiple organs, we get TOTAL bulk pixel values (Gy or cGy?)
-        drover_bnded_dose_mean_dose_map_t Bounded_Dose_Means(void) const;       //Get mean dose for each contour collection. See note in source.
-        drover_bnded_dose_min_max_dose_map_t Bounded_Dose_Min_Max(void) const;  //Get the min & max dose for each contour collection. See note in source.
-        drover_bnded_dose_min_mean_max_dose_map_t Bounded_Dose_Min_Mean_Max(void) const;  // " " " " ...
-        drover_bnded_dose_min_mean_median_max_dose_map_t Bounded_Dose_Min_Mean_Median_Max(void) const; // " " " " ...
-        drover_bnded_dose_stat_moments_map_t Bounded_Dose_Centralized_Moments(void) const;
-        drover_bnded_dose_stat_moments_map_t Bounded_Dose_Normalized_Cent_Moments(void) const;
+        std::list<double> Bounded_Dose_Bulk_Values() const;                 //If the contours contain multiple organs, we get TOTAL bulk pixel values (Gy or cGy?)
+        drover_bnded_dose_mean_dose_map_t Bounded_Dose_Means() const;       //Get mean dose for each contour collection. See note in source.
+        drover_bnded_dose_min_max_dose_map_t Bounded_Dose_Min_Max() const;  //Get the min & max dose for each contour collection. See note in source.
+        drover_bnded_dose_min_mean_max_dose_map_t Bounded_Dose_Min_Mean_Max() const;  // " " " " ...
+        drover_bnded_dose_min_mean_median_max_dose_map_t Bounded_Dose_Min_Mean_Median_Max() const; // " " " " ...
+        drover_bnded_dose_stat_moments_map_t Bounded_Dose_Centralized_Moments() const;
+        drover_bnded_dose_stat_moments_map_t Bounded_Dose_Normalized_Cent_Moments() const;
     
         Drover Segment_Contours_Heuristically(std::function<bool(bnded_dose_pos_dose_tup_t)> heur) const;
     
-        std::pair<double,double> Bounded_Dose_Limits(void) const;  //Returns the min and max voxel doses (in cGy or Gy?) amongst ALL contour-enclosed voxels.
-        std::map<double,double>  Get_DVH(void) const;              //If the contours contain multiple organs, we get TOTAL (cumulative) DVH (in Gy or cGy?)
+        std::pair<double,double> Bounded_Dose_Limits() const;  //Returns the min and max voxel doses (in cGy or Gy?) amongst ALL contour-enclosed voxels.
+        std::map<double,double>  Get_DVH() const;              //If the contours contain multiple organs, we get TOTAL (cumulative) DVH (in Gy or cGy?)
     
         Drover Duplicate(std::shared_ptr<Contour_Data> in) const; //Duplicates all but our the contours. Inserts those passed in instead.
         Drover Duplicate(const Contour_Data &in) const; 
         Drover Duplicate(const Drover &in) const;
     
-        bool Has_Contour_Data(void) const;
-        bool Has_Image_Data(void) const;
-        bool Has_Point_Data(void) const;
-        bool Has_Mesh_Data(void) const;
-        bool Has_TPlan_Data(void) const;
-        bool Has_LSamp_Data(void) const;
-        bool Has_Tran3_Data(void) const;
+        bool Has_Contour_Data() const;
+        bool Has_Image_Data() const;
+        bool Has_Point_Data() const;
+        bool Has_Mesh_Data() const;
+        bool Has_TPlan_Data() const;
+        bool Has_LSamp_Data() const;
+        bool Has_Tran3_Data() const;
 
         void Concatenate(std::shared_ptr<Contour_Data> in);
         void Concatenate(std::list<std::shared_ptr<Image_Array>> in);
@@ -513,8 +513,8 @@ class Drover {
         void Consume(std::list<std::shared_ptr<Transform3>> in);
         void Consume(Drover in);
     
-        void Plot_Dose_And_Contours(void) const;
-        void Plot_Image_Outlines(void) const;
+        void Plot_Dose_And_Contours() const;
+        void Plot_Image_Outlines() const;
 };
 
 
@@ -544,7 +544,7 @@ class OperationArgPkg {
         OperationArgPkg & operator=(const OperationArgPkg &rhs);
 
         //Accessor.
-        std::string getName(void) const;
+        std::string getName() const;
 
         //Checks if the provided keys (and only the provided keys) are present.
         bool containsExactly(std::initializer_list<std::string> l) const;

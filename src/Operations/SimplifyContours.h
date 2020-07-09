@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocSimplifyContours(void);
+OperationDoc OpArgDocSimplifyContours();
 
 Drover SimplifyContours(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                                std::map<std::string, std::string> /*InvocationMetadata*/,

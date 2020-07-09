@@ -14,7 +14,7 @@
 #include "../Regex_Selectors.h"
 #include "CopyPoints.h"
 
-OperationDoc OpArgDocCopyPoints(void){
+OperationDoc OpArgDocCopyPoints(){
     OperationDoc out;
     out.name = "CopyPoints";
 

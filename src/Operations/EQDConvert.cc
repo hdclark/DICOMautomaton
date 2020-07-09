@@ -21,7 +21,7 @@
 
 
 
-OperationDoc OpArgDocEQDConvert(void){
+OperationDoc OpArgDocEQDConvert(){
     OperationDoc out;
     out.name = "EQDConvert";
 

@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocDumpPlanSummary(void);
+OperationDoc OpArgDocDumpPlanSummary();
 
 Drover DumpPlanSummary(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                              std::map<std::string, std::string> /*InvocationMetadata*/,

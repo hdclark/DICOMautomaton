@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocAutoCropImages(void);
+OperationDoc OpArgDocAutoCropImages();
 
 Drover AutoCropImages(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                                    std::map<std::string, std::string> /*InvocationMetadata*/,

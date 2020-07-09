@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocCountVoxels(void);
+OperationDoc OpArgDocCountVoxels();
 
 Drover CountVoxels(Drover DICOM_data, 
                    OperationArgPkg /*OptArgs*/,

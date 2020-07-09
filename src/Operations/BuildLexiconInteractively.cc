@@ -22,7 +22,7 @@
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
 
-OperationDoc OpArgDocBuildLexiconInteractively(void){
+OperationDoc OpArgDocBuildLexiconInteractively(){
     OperationDoc out;
     out.name = "BuildLexiconInteractively";
     out.desc = 

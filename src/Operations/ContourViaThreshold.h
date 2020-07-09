@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocContourViaThreshold(void);
+OperationDoc OpArgDocContourViaThreshold();
 
 Drover ContourViaThreshold(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                              std::map<std::string, std::string> /*InvocationMetadata*/,

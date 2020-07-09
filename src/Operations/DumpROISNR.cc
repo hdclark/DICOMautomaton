@@ -32,7 +32,7 @@
 
 
 
-OperationDoc OpArgDocDumpROISNR(void){
+OperationDoc OpArgDocDumpROISNR(){
     OperationDoc out;
     out.name = "DumpROISNR";
 

@@ -29,7 +29,7 @@
 
 #include "ScalePixels.h"
 
-OperationDoc OpArgDocScalePixels(void){
+OperationDoc OpArgDocScalePixels(){
     OperationDoc out;
     out.name = "ScalePixels";
 

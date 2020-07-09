@@ -19,7 +19,7 @@
 
 
 
-OperationDoc OpArgDocDecayDoseOverTimeHalve(void){
+OperationDoc OpArgDocDecayDoseOverTimeHalve(){
     OperationDoc out;
     out.name = "DecayDoseOverTimeHalve";
 

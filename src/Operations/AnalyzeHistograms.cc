@@ -39,7 +39,7 @@
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
 
-OperationDoc OpArgDocAnalyzeHistograms(void){
+OperationDoc OpArgDocAnalyzeHistograms(){
     OperationDoc out;
     out.name = "AnalyzeHistograms";
 
@@ -256,7 +256,7 @@ Drover AnalyzeHistograms(Drover DICOM_data, OperationArgPkg OptArgs, std::map<st
             const auto r_comment = lCompile_Regex(R"***(^[ ]*[#].*$)***");
             if( std::regex_match(ac, r_comment ) ) continue;
 
-            const auto emit_boilerplate = [&](void) -> void {
+            const auto emit_boilerplate = [&]() -> void {
                 //Reset the header so only one is ever emitted.
                 //
                 // Note: this requires a fixed, consistent report structure!
@@ -564,7 +564,7 @@ Drover AnalyzeHistograms(Drover DICOM_data, OperationArgPkg OptArgs, std::map<st
     //Write the report to file.
     if(!LSs.empty()){
         try{
-            auto gen_filename = [&](void) -> std::string {
+            auto gen_filename = [&]() -> std::string {
                 if(!SummaryFilename.empty()){
                     return SummaryFilename;
                 }

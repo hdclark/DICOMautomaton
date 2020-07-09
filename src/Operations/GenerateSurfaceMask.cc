@@ -17,7 +17,7 @@
 
 
 
-OperationDoc OpArgDocGenerateSurfaceMask(void){
+OperationDoc OpArgDocGenerateSurfaceMask(){
     OperationDoc out;
     out.name = "GenerateSurfaceMask";
     out.desc = 

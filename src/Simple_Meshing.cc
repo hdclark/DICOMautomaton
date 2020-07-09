@@ -471,7 +471,7 @@ Estimate_Contour_Correspondence(
             //criteria_w_j_next = d_wperimeter;
         }
 
-        const auto accept_i_next = [&](void){
+        const auto accept_i_next = [&](){
             // Accept the i-next move.
             if(N_A < N_edges_consumed_A) throw std::logic_error("Looped contour A");
 
@@ -490,7 +490,7 @@ Estimate_Contour_Correspondence(
             N_edges_consumed_A += 1;
             if(N_edges_consumed_A <= N_A) p_i = p_i_next;
         };
-        const auto accept_j_next = [&](void){
+        const auto accept_j_next = [&](){
             // Accept the j-next move.
             if(N_B < N_edges_consumed_B) throw std::logic_error("Looped contour B");
 

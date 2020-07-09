@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocUBC3TMRI_DCE_Experimental(void);
+OperationDoc OpArgDocUBC3TMRI_DCE_Experimental();
 
 Drover UBC3TMRI_DCE_Experimental(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                                  std::map<std::string, std::string> /*InvocationMetadata*/,

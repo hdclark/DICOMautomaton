@@ -39,7 +39,7 @@
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
 
-OperationDoc OpArgDocAnalyzeTPlan(void){
+OperationDoc OpArgDocAnalyzeTPlan(){
     OperationDoc out;
     out.name = "AnalyzeTPlan";
 
@@ -143,7 +143,7 @@ Drover AnalyzeTPlan(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
                                                   (*tp_it)->metadata, "$");
         }
 
-        const auto emit_boilerplate = [&](void) -> void {
+        const auto emit_boilerplate = [&]() -> void {
             //Reset the header so only one is ever emitted.
             //
             // Note: this requires a fixed, consistent report structure!
@@ -239,7 +239,7 @@ Drover AnalyzeTPlan(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
     //Write the report to file.
     if(!TPs.empty()){
         try{
-            auto gen_filename = [&](void) -> std::string {
+            auto gen_filename = [&]() -> std::string {
                 if(!SummaryFilename.empty()){
                     return SummaryFilename;
                 }

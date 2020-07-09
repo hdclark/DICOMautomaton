@@ -19,7 +19,7 @@
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 
 
-OperationDoc OpArgDocImageRoutineTests(void){
+OperationDoc OpArgDocImageRoutineTests(){
     OperationDoc out;
     out.name = "ImageRoutineTests";
     out.desc = "This operation performs a series of sub-operations that are generally useful when inspecting an image.";

@@ -35,7 +35,7 @@
 #include "LoadFiles.h"
 
 
-OperationDoc OpArgDocLoadFiles(void){
+OperationDoc OpArgDocLoadFiles(){
     OperationDoc out;
     out.name = "LoadFiles";
 

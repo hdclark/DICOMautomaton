@@ -53,7 +53,7 @@
 
 
 
-OperationDoc OpArgDocSimulateRadiograph(void){
+OperationDoc OpArgDocSimulateRadiograph(){
     OperationDoc out;
     out.name = "SimulateRadiograph";
 
@@ -407,7 +407,7 @@ Drover SimulateRadiograph(Drover DICOM_data,
         long int completed = 0;
 
         for(long int RadiographRow = 0; RadiographRow < RadiographRows; ++RadiographRow){
-            tp.submit_task([&,RadiographRow](void) -> void {
+            tp.submit_task([&,RadiographRow]() -> void {
                 for(long int RadiographCol = 0; RadiographCol < RadiographColumns; ++RadiographCol){
 
                     // Construct a line segment between the source and detector. 

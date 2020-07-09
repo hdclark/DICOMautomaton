@@ -25,7 +25,7 @@
 
 
 
-OperationDoc OpArgDocDecayDoseOverTimeJones2014(void){
+OperationDoc OpArgDocDecayDoseOverTimeJones2014(){
     OperationDoc out;
     out.name = "DecayDoseOverTimeJones2014";
 

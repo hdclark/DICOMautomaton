@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocContourViaGeometry(void);
+OperationDoc OpArgDocContourViaGeometry();
 
 Drover ContourViaGeometry(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                              std::map<std::string, std::string> /*InvocationMetadata*/,

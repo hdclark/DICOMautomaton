@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocCopyMeshes(void);
+OperationDoc OpArgDocCopyMeshes();
 
 Drover CopyMeshes(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                      std::map<std::string, std::string> /*InvocationMetadata*/,

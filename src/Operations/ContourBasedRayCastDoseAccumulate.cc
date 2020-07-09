@@ -27,7 +27,7 @@
 
 
 
-OperationDoc OpArgDocContourBasedRayCastDoseAccumulate(void){
+OperationDoc OpArgDocContourBasedRayCastDoseAccumulate(){
     OperationDoc out;
     out.name = "ContourBasedRayCastDoseAccumulate";
     out.desc = 

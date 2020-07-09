@@ -22,7 +22,7 @@
 #include "YgorStats.h"       //Needed for Stats:: namespace.
 
 
-OperationDoc OpArgDocReduceNeighbourhood(void){
+OperationDoc OpArgDocReduceNeighbourhood(){
     OperationDoc out;
     out.name = "ReduceNeighbourhood";
 

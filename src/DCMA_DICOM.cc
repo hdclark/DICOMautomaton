@@ -10,6 +10,7 @@
 //#include <utility>
 #include <tuple>
 #include <functional>
+#include <utility>
 
 #include <YgorMisc.h>
 #include <YgorString.h>
@@ -20,14 +21,14 @@ namespace DCMA_DICOM {
 
 struct Node;
 
-Node::Node() {}
+Node::Node() = default;
 
 Node::Node(NodeKey key,
            std::string VR,
            std::string val) 
          : key(key),
-           VR(VR),
-           val(val) {}
+           VR(std::move(VR)),
+           val(std::move(val)) {}
 
 
 bool Node::operator==(const Node &rhs) const {
@@ -99,7 +100,7 @@ write_to_stream( std::ostream &os,
     //       simplicity this is not currently done.
     {
         uint16_t test { 0x01 };
-        unsigned char * first_byte = reinterpret_cast<unsigned char *>(&test);
+        auto * first_byte = reinterpret_cast<unsigned char *>(&test);
         //static_assert((static_cast<uint16_t>(*first_byte) == test), "This computer is not little-endian. This is not supported.");
         if(static_cast<uint16_t>(*first_byte) != test){
             throw std::runtime_error("This computer is not little-endian. This is not supported.");
@@ -492,7 +493,7 @@ uint64_t Node::emit_DICOM(std::ostream &os,
         auto tokens = SplitStringToVector(this->val, '\\', 'd');
         if(tokens.empty()) throw std::runtime_error("No values found for encoding OW tag. Cannot continue.");
         for(auto &token_val : tokens){
-            const uint16_t val_u = static_cast<uint16_t>(std::stoul(token_val));
+            const auto val_u = static_cast<uint16_t>(std::stoul(token_val));
             write_to_stream(ss, val_u, 2, enc);
         }
         cumulative_length += emit_DICOM_tag(os, enc, *this, ss.str());
@@ -591,7 +592,7 @@ uint64_t Node::emit_DICOM(std::ostream &os,
 
     }else if( this->VR == "US" ){ //Unsigned short (16bit).
         std::ostringstream ss(std::ios_base::ate | std::ios_base::binary);
-        const uint16_t val_u = static_cast<uint16_t>(std::stoul(this->val));
+        const auto val_u = static_cast<uint16_t>(std::stoul(this->val));
         write_to_stream(ss, val_u, 2, enc);
         cumulative_length += emit_DICOM_tag(os, enc, *this, ss.str());
 
@@ -613,7 +614,7 @@ uint64_t Node::emit_DICOM(std::ostream &os,
         auto tokens = SplitStringToVector(this->val, '\\', 'd');
         if(tokens.size() != 2) throw std::runtime_error("Invalid number of integers for AT type tag; exactly 2 are needed.");
         for(auto &token_val : tokens){
-            const uint16_t val_u = static_cast<uint16_t>(std::stoul(token_val));
+            const auto val_u = static_cast<uint16_t>(std::stoul(token_val));
             write_to_stream(ss, val_u, 2, enc);
         }
         cumulative_length += emit_DICOM_tag(os, enc, *this, ss.str());

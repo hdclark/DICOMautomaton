@@ -35,7 +35,7 @@
 #include "../Surface_Meshes.h"
 
 
-OperationDoc OpArgDocContourViaThreshold(void){
+OperationDoc OpArgDocContourViaThreshold(){
     OperationDoc out;
     out.name = "ContourViaThreshold";
 
@@ -249,7 +249,7 @@ Drover ContourViaThreshold(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
             if( (animg.rows < 1) || (animg.columns < 1) || (Channel >= animg.channels) ){
                 throw std::runtime_error("Image or channel is empty -- cannot contour via thresholds.");
             }
-            tp.submit_task([&](void) -> void {
+            tp.submit_task([&]() -> void {
 
                 // ---------------------------------------------------
                 // The binary inclusivity method.
@@ -266,10 +266,10 @@ Drover ContourViaThreshold(Drover DICOM_data, OperationArgPkg OptArgs, std::map<
                     enum row_modif { r_neg = 0, r_pos = 1 }; // Modifiers which translate (in the img plane) +-1/2 of pxl_dx.
                     enum col_modif { c_neg = 0, c_pos = 1 }; // Modifiers which translate (in the img plane) +-1/2 of pxl_dy.
 
-                    const auto vert_index = [R,C](long int vert_row, long int vert_col) -> long int {
+                    const auto vert_index = [C](long int vert_row, long int vert_col) -> long int {
                         return (C+1)*vert_row + vert_col;
                     };
-                    const auto vert_mapping = [vert_index,R,C](long int r, long int c, row_modif rm, col_modif cm ) -> long int {
+                    const auto vert_mapping = [vert_index](long int r, long int c, row_modif rm, col_modif cm ) -> long int {
                         const auto vert_row = r + rm;
                         const auto vert_col = c + cm;
                         return vert_index(vert_row,vert_col);

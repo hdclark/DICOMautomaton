@@ -19,7 +19,7 @@
 #include "YgorImages.h"
 
 
-OperationDoc OpArgDocLogScale(void){
+OperationDoc OpArgDocLogScale(){
     OperationDoc out;
     out.name = "LogScale";
 

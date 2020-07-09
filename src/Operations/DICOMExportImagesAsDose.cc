@@ -16,7 +16,7 @@
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 
 
-OperationDoc OpArgDocDICOMExportImagesAsDose(void){
+OperationDoc OpArgDocDICOMExportImagesAsDose(){
     OperationDoc out;
     out.name = "DICOMExportImagesAsDose";
     out.desc = "This operation exports the selected Image_Array to a DICOM dose file.";

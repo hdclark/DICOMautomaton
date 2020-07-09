@@ -15,7 +15,7 @@
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 
 
-OperationDoc OpArgDocDecimatePixels(void){
+OperationDoc OpArgDocDecimatePixels(){
     OperationDoc out;
     out.name = "DecimatePixels";
 

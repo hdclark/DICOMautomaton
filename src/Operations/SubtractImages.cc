@@ -17,7 +17,7 @@
 
 
 
-OperationDoc OpArgDocSubtractImages(void){
+OperationDoc OpArgDocSubtractImages(){
     OperationDoc out;
     out.name = "SubtractImages";
     out.desc = 

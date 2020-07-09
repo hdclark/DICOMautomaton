@@ -52,7 +52,7 @@
 #include "MinkowskiSum3D.h"
 
 
-OperationDoc OpArgDocMinkowskiSum3D(void){
+OperationDoc OpArgDocMinkowskiSum3D(){
     OperationDoc out;
     out.name = "MinkowskiSum3D";
 

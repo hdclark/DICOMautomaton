@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocPruneEmptyImageDoseArrays(void);
+OperationDoc OpArgDocPruneEmptyImageDoseArrays();
 
 Drover PruneEmptyImageDoseArrays(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                      std::map<std::string, std::string> /*InvocationMetadata*/,

@@ -108,7 +108,7 @@ bool PixelHistogramAnalysis(planar_image_collection<float,double>::images_list_i
 
 
 //Dump lots of files and records.
-void DumpPixelHistogramResults(void){
+void DumpPixelHistogramResults(){
     if(!PixelHistogramAnalysisWasRun){
         FUNCWARN("Forgoing dumping the pixel histogram analysis results; the analysis was not run");
         return;

@@ -33,7 +33,7 @@
 
 #include "ExportPointClouds.h"
 
-OperationDoc OpArgDocExportPointClouds(void){
+OperationDoc OpArgDocExportPointClouds(){
     OperationDoc out;
     out.name = "ExportPointClouds";
 

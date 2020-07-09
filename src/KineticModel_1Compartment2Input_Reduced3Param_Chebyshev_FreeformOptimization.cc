@@ -12,7 +12,7 @@
 #include <gsl/gsl_errno.h>
 #include <gsl/gsl_multimin.h>
 #include <gsl/gsl_vector_double.h>
-#include <stddef.h>
+#include <cstddef>
 #include <array>
 #include <cmath>
 #include <exception>
@@ -37,7 +37,7 @@ ComputeIntegralSummations(KineticModel_1Compartment2Input_Reduced3Param_Chebyshe
     // quantities. They are also used to compute $F$ (= the RSS) and optimal estimates for k1A and k1V, and the state is
     // updated with these quantities.
 
-    const auto IndicateFailure = [&](void) -> void {
+    const auto IndicateFailure = [&]() -> void {
             //This closure attempts to signal that the current parameters are no good.
             state->RSS = std::numeric_limits<double>::infinity();
             state->k1A = std::numeric_limits<double>::quiet_NaN();

@@ -29,7 +29,7 @@
 #include "YgorMathIOOFF.h"
 
 
-OperationDoc OpArgDocTransformContours(void){
+OperationDoc OpArgDocTransformContours(){
     OperationDoc out;
     out.name = "TransformContours";
 

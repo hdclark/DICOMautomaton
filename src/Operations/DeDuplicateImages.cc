@@ -18,7 +18,7 @@
 
 #include "DeDuplicateImages.h"
 
-OperationDoc OpArgDocDeDuplicateImages(void){
+OperationDoc OpArgDocDeDuplicateImages(){
     OperationDoc out;
     out.name = "DeDuplicateImages";
 

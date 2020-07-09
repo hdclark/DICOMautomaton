@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocSubsegmentContours(void);
+OperationDoc OpArgDocSubsegmentContours();
 
 Drover SubsegmentContours(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                           std::map<std::string, std::string> /*InvocationMetadata*/,

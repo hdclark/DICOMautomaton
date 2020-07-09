@@ -13,7 +13,7 @@
 #include "HighlightROIs.h"
 
 
-OperationDoc OpArgDocCropROIDose(void){
+OperationDoc OpArgDocCropROIDose(){
     OperationDoc out;
     out.name = "CropROIDose";
     out.desc = 

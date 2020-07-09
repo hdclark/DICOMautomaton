@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocGenerateVirtualDataContourViaThresholdTestV1(void);
+OperationDoc OpArgDocGenerateVirtualDataContourViaThresholdTestV1();
 
 Drover GenerateVirtualDataContourViaThresholdTestV1(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                       std::map<std::string, std::string> /*InvocationMetadata*/,

@@ -36,7 +36,7 @@
 #include "../Surface_Meshes.h"
 
 
-OperationDoc OpArgDocRemeshSurfaceMeshes(void){
+OperationDoc OpArgDocRemeshSurfaceMeshes(){
     OperationDoc out;
     out.name = "RemeshSurfaceMeshes";
 

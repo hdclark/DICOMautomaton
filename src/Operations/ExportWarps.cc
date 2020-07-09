@@ -33,7 +33,7 @@
 
 #include "ExportWarps.h"
 
-OperationDoc OpArgDocExportWarps(void){
+OperationDoc OpArgDocExportWarps(){
     OperationDoc out;
     out.name = "ExportWarps";
 

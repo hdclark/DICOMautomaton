@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocDumpTPlanMetadataOccurrencesToFile(void);
+OperationDoc OpArgDocDumpTPlanMetadataOccurrencesToFile();
 
 Drover DumpTPlanMetadataOccurrencesToFile(Drover DICOM_data, OperationArgPkg OptArgs,
                                           std::map<std::string, std::string> /*InvocationMetadata*/,

@@ -32,7 +32,7 @@
 
 
 
-OperationDoc OpArgDocEvaluateNTCPModels(void){
+OperationDoc OpArgDocEvaluateNTCPModels(){
     OperationDoc out;
     out.name = "EvaluateNTCPModels";
 

@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocGridBasedRayCastDoseAccumulate(void);
+OperationDoc OpArgDocGridBasedRayCastDoseAccumulate();
 
 Drover GridBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                              std::map<std::string, std::string> /*InvocationMetadata*/,

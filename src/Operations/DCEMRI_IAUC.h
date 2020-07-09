@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocDCEMRI_IAUC(void);
+OperationDoc OpArgDocDCEMRI_IAUC();
 
 Drover
 DCEMRI_IAUC(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string, std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/);

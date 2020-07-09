@@ -16,7 +16,7 @@
 #include "YgorImages.h"
 
 
-OperationDoc OpArgDocDCEMRI_IAUC(void){
+OperationDoc OpArgDocDCEMRI_IAUC(){
     OperationDoc out;
     out.name = "DCEMRI_IAUC";
 

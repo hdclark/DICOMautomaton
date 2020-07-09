@@ -33,7 +33,7 @@
 #include "ExportFITSImages.h"
 
 
-OperationDoc OpArgDocExportFITSImages(void){
+OperationDoc OpArgDocExportFITSImages(){
     OperationDoc out;
     out.name = "ExportFITSImages";
 

@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocExtractImageHistograms(void);
+OperationDoc OpArgDocExtractImageHistograms();
 
 Drover ExtractImageHistograms(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                              std::map<std::string, std::string> /*InvocationMetadata*/,

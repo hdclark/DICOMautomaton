@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocExportSurfaceMeshes(void);
+OperationDoc OpArgDocExportSurfaceMeshes();
 
 Drover ExportSurfaceMeshes(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                              std::map<std::string, std::string> /*InvocationMetadata*/,

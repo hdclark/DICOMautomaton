@@ -35,7 +35,7 @@
 #include "CountVoxels.h"
 
 
-OperationDoc OpArgDocCountVoxels(void){
+OperationDoc OpArgDocCountVoxels(){
     OperationDoc out;
     out.name = "CountVoxels";
 
@@ -283,7 +283,7 @@ Drover CountVoxels(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::str
     //Report a summary.
     FUNCINFO("Attempting to claim a mutex");
     try{
-        auto gen_filename = [&](void) -> std::string {
+        auto gen_filename = [&]() -> std::string {
             if(ResultsSummaryFileName.empty()){
                 ResultsSummaryFileName = Get_Unique_Sequential_Filename("/tmp/dicomautomaton_countvoxels_", 6, ".csv");
             }

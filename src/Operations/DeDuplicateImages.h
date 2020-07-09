@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocDeDuplicateImages(void);
+OperationDoc OpArgDocDeDuplicateImages();
 
 Drover DeDuplicateImages(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                      std::map<std::string, std::string> /*InvocationMetadata*/,

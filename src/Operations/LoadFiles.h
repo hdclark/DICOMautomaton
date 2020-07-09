@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocLoadFiles(void);
+OperationDoc OpArgDocLoadFiles();
 
 Drover LoadFiles(Drover DICOM_data, 
                  OperationArgPkg /*OptArgs*/,

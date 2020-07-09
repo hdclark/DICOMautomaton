@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocIsolatedVoxelFilter(void);
+OperationDoc OpArgDocIsolatedVoxelFilter();
 
 Drover IsolatedVoxelFilter(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                          std::map<std::string, std::string> /*InvocationMetadata*/,

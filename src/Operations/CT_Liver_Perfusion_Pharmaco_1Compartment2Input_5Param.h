@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocCT_Liver_Perfusion_Pharmaco_1C2I_5Param(void);
+OperationDoc OpArgDocCT_Liver_Perfusion_Pharmaco_1C2I_5Param();
 
 Drover CT_Liver_Perfusion_Pharmaco_1C2I_5Param(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                                    std::map<std::string, std::string> /*InvocationMetadata*/,

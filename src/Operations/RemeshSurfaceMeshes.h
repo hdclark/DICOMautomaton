@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocRemeshSurfaceMeshes(void);
+OperationDoc OpArgDocRemeshSurfaceMeshes();
 
 Drover RemeshSurfaceMeshes(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                          std::map<std::string, std::string> /*InvocationMetadata*/,

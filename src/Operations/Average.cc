@@ -20,7 +20,7 @@
 
 
 
-OperationDoc OpArgDocAverage(void){
+OperationDoc OpArgDocAverage(){
     OperationDoc out;
     out.name = "Average";
 

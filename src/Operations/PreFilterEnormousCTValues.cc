@@ -15,7 +15,7 @@
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 
 
-OperationDoc OpArgDocPreFilterEnormousCTValues(void){
+OperationDoc OpArgDocPreFilterEnormousCTValues(){
     OperationDoc out;
     out.name = "PreFilterEnormousCTValues";
     out.desc = 

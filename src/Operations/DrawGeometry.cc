@@ -34,7 +34,7 @@
 
 
 
-OperationDoc OpArgDocDrawGeometry(void){
+OperationDoc OpArgDocDrawGeometry(){
     OperationDoc out;
     out.name = "DrawGeometry";
 
@@ -318,7 +318,7 @@ Drover DrawGeometry(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
             // Ensure the image will be tiled with grid lines by ensuring the maximum spatial extent will be covered no
             // matter how the grid is oriented.
             const auto img_halfspan = (img_centre - img_origin).length();
-            const long int N_lines = static_cast<long int>(std::ceil(img_halfspan / grid_sep));
+            const auto N_lines = static_cast<long int>(std::ceil(img_halfspan / grid_sep));
 
             // Create the grid lines.
             for(long int y = -N_lines; y <= N_lines; ++y){

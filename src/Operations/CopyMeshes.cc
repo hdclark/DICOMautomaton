@@ -14,7 +14,7 @@
 #include "../Regex_Selectors.h"
 #include "CopyMeshes.h"
 
-OperationDoc OpArgDocCopyMeshes(void){
+OperationDoc OpArgDocCopyMeshes(){
     OperationDoc out;
     out.name = "CopyMeshes";
 

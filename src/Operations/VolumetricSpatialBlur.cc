@@ -22,7 +22,7 @@
 #include "VolumetricSpatialBlur.h"
 
 
-OperationDoc OpArgDocVolumetricSpatialBlur(void){
+OperationDoc OpArgDocVolumetricSpatialBlur(){
     OperationDoc out;
     out.name = "VolumetricSpatialBlur";
 

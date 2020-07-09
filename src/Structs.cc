@@ -123,7 +123,7 @@ std::string Segmentations_to_Words(const std::vector<uint32_t> &in){
 //---------------------------------------- contours_with_meta -----------------------------------------
 //-----------------------------------------------------------------------------------------------------
 //Constructors.
-contours_with_meta::contours_with_meta() : ROI_number(0), Minimum_Separation(-1.0), Segmentation_History( {0} ){ }
+contours_with_meta::contours_with_meta() :  Segmentation_History( {0} ){ }
 
 contours_with_meta::contours_with_meta(const contour_collection<double> &in){
     this->contours             = in.contours;
@@ -150,8 +150,8 @@ contours_with_meta & contours_with_meta::operator=(const contours_with_meta &rhs
 //-------------------------------------------- Contour_Data -------------------------------------------
 //-----------------------------------------------------------------------------------------------------
 //Constructors.
-Contour_Data::Contour_Data() { }
-Contour_Data::Contour_Data(const Contour_Data &in) : ccs(in.ccs) { }
+Contour_Data::Contour_Data() = default;
+Contour_Data::Contour_Data(const Contour_Data &in) = default;
 
 //Member functions.
 void Contour_Data::operator=(const Contour_Data &rhs){
@@ -161,12 +161,12 @@ void Contour_Data::operator=(const Contour_Data &rhs){
 
 //This routine produces a very simple, default plot of the entirety of the data. 
 // If individual contour plots are required, use the contour_of_points::Plot() method instead.
-void Contour_Data::Plot(void) const {
+void Contour_Data::Plot() const {
     Plotter a_plot;
     for(const auto & cc : this->ccs){
         a_plot.ss << "# Default, simple plot for Contour with name '" << cc.Raw_ROI_name << "'" << std::endl;
-        for(auto c_it=cc.contours.begin(); c_it != cc.contours.end(); ++c_it){
-            for(const auto & point : c_it->points){
+        for(const auto & contour : cc.contours){
+            for(const auto & point : contour.points){
                 a_plot.ss << point.x << " ";
                 a_plot.ss << point.y << " ";
                 //a_plot.ss << (*p_it).z << " ";
@@ -180,7 +180,7 @@ void Contour_Data::Plot(void) const {
 }
 
 
-std::unique_ptr<Contour_Data> Contour_Data::Duplicate(void) const {
+std::unique_ptr<Contour_Data> Contour_Data::Duplicate() const {
     std::unique_ptr<Contour_Data> output (new Contour_Data);
     *output = *this;
     return output;
@@ -214,8 +214,8 @@ std::unique_ptr<Contour_Data>  Contour_Data::Split_Per_Volume_Along_Given_Plane_
         const plane<double> theplane(N,r);
 
         //Split each contour and push it into the proper buffer.
-        for(auto c_it = cc.contours.begin(); c_it != cc.contours.end(); ++c_it){
-            std::list<contour_of_points<double>> nclist = c_it->Split_Along_Plane(theplane);
+        for(const auto & contour : cc.contours){
+            std::list<contour_of_points<double>> nclist = contour.Split_Along_Plane(theplane);
             for(auto & nc_it : nclist){
                 const auto rough_center = nc_it.First_N_Point_Avg(3); //Average_Point(); //Just need a point above or below.
                 if(theplane.Is_Point_Above_Plane(rough_center)){
@@ -231,7 +231,7 @@ std::unique_ptr<Contour_Data>  Contour_Data::Split_Per_Volume_Along_Given_Plane_
     return output;
 }
 
-std::unique_ptr<Contour_Data>  Contour_Data::Split_Per_Volume_Along_Coronal_Plane(void) const {
+std::unique_ptr<Contour_Data>  Contour_Data::Split_Per_Volume_Along_Coronal_Plane() const {
     auto out(this->Split_Per_Volume_Along_Given_Plane_Unit_Normal(vec3<double>(0.0,1.0,0.0))); //Coronal plane.       ---- TODO: is this the correct plane, considering the patient DICOM orientation? (Check all files as test)
 
     //Update the segmentation history of the new contour. We augment the generic one with additional information.
@@ -247,7 +247,7 @@ std::unique_ptr<Contour_Data>  Contour_Data::Split_Per_Volume_Along_Coronal_Plan
     return out ;
 }
 
-std::unique_ptr<Contour_Data>  Contour_Data::Split_Per_Volume_Along_Sagittal_Plane(void) const {
+std::unique_ptr<Contour_Data>  Contour_Data::Split_Per_Volume_Along_Sagittal_Plane() const {
     auto out(this->Split_Per_Volume_Along_Given_Plane_Unit_Normal(vec3<double>(1.0,0.0,0.0))); //Sagittal plane.        ---- TODO: is this the correct plane, considering the patient DICOM orientation? (Check all files as test)
 
     //Update the segmentation history of the new contour. We augment the generic one with additional information.
@@ -263,7 +263,7 @@ std::unique_ptr<Contour_Data>  Contour_Data::Split_Per_Volume_Along_Sagittal_Pla
     return out ;
 }
 
-std::unique_ptr<Contour_Data>  Contour_Data::Split_Per_Volume_Along_Transverse_Plane(void) const {
+std::unique_ptr<Contour_Data>  Contour_Data::Split_Per_Volume_Along_Transverse_Plane() const {
     auto out(this->Split_Per_Volume_Along_Given_Plane_Unit_Normal(vec3<double>(0.0,0.0,1.0))); //Transverse plane.       ---- TODO: is this the correct plane, considering the patient DICOM orientation? (Check all files as test)
 
     //Update the segmentation history of the new contour. We augment the generic one with additional information.
@@ -470,12 +470,12 @@ std::unique_ptr<Contour_Data>  Contour_Data::Split_Per_Contour_Along_Given_Plane
         below.Segmentation_History  = cc.Segmentation_History;
         below.Segmentation_History.push_back(segmentation | Segmentations::negative);
 
-        for(auto c_it = cc.contours.begin(); c_it != cc.contours.end(); ++c_it){
-            const vec3<double> r = c_it->Centroid(); //Average_Point();
+        for(const auto & contour : cc.contours){
+            const vec3<double> r = contour.Centroid(); //Average_Point();
             const plane<double> theplane(N,r);
 
             //Split each contour and push it into the proper buffer.
-            std::list<contour_of_points<double>> nclist = c_it->Split_Along_Plane(theplane);
+            std::list<contour_of_points<double>> nclist = contour.Split_Along_Plane(theplane);
             for(auto & nc_it : nclist){
                 const auto rough_center = nc_it.First_N_Point_Avg(3); //Average_Point(); //Just need a point above or below.
                 if(theplane.Is_Point_Above_Plane(rough_center)){
@@ -491,7 +491,7 @@ std::unique_ptr<Contour_Data>  Contour_Data::Split_Per_Contour_Along_Given_Plane
     return output;
 }
 
-std::unique_ptr<Contour_Data>  Contour_Data::Split_Per_Contour_Along_Coronal_Plane(void) const {
+std::unique_ptr<Contour_Data>  Contour_Data::Split_Per_Contour_Along_Coronal_Plane() const {
     auto out(this->Split_Per_Contour_Along_Given_Plane_Unit_Normal(vec3<double>(0.0,1.0,0.0))); //Coronal plane.
 
     //Update the segmentation history of the new contour. We augment the generic one with additional information.
@@ -507,7 +507,7 @@ std::unique_ptr<Contour_Data>  Contour_Data::Split_Per_Contour_Along_Coronal_Pla
     return out ;
 }
 
-std::unique_ptr<Contour_Data>  Contour_Data::Split_Per_Contour_Along_Sagittal_Plane(void) const {
+std::unique_ptr<Contour_Data>  Contour_Data::Split_Per_Contour_Along_Sagittal_Plane() const {
     auto out(this->Split_Per_Contour_Along_Given_Plane_Unit_Normal(vec3<double>(1.0,0.0,0.0))); //Sagittal plane.
 
     //Update the segmentation history of the new contour. We augment the generic one with additional information.
@@ -551,11 +551,11 @@ std::unique_ptr<Contour_Data>  Contour_Data::Raycast_Split_Per_Contour_Against_G
         below.Segmentation_History  = cc.Segmentation_History;
         below.Segmentation_History.push_back(segmentation | Segmentations::negative);
 
-        for(auto c_it = cc.contours.begin(); c_it != cc.contours.end(); ++c_it){
-            const auto r = c_it->Centroid(); //Average_Point();
+        for(const auto & contour : cc.contours){
+            const auto r = contour.Centroid(); //Average_Point();
             const plane<double> theplane(U.unit(),r);
             //Split each contour and push it into the proper buffer.
-            std::list<contour_of_points<double>> nclist = c_it->Split_Against_Ray(U.unit());
+            std::list<contour_of_points<double>> nclist = contour.Split_Against_Ray(U.unit());
             for(auto & nc_it : nclist){
                 const auto rough_center = nc_it.First_N_Point_Avg(3); //Average_Point(); //Just need a point above or below.
                 if(theplane.Is_Point_Above_Plane(rough_center)){
@@ -571,7 +571,7 @@ std::unique_ptr<Contour_Data>  Contour_Data::Raycast_Split_Per_Contour_Against_G
     return output;
 }
 
-std::unique_ptr<Contour_Data>  Contour_Data::Raycast_Split_Per_Contour_Into_ANT_POST(void) const {
+std::unique_ptr<Contour_Data>  Contour_Data::Raycast_Split_Per_Contour_Into_ANT_POST() const {
     auto out(this->Raycast_Split_Per_Contour_Against_Given_Direction(vec3<double>(1.0,0.0,0.0)));
 
     //Update the segmentation history of the new contour. We augment the generic one with additional information.
@@ -588,7 +588,7 @@ std::unique_ptr<Contour_Data>  Contour_Data::Raycast_Split_Per_Contour_Into_ANT_
 }
 
 
-std::unique_ptr<Contour_Data>  Contour_Data::Raycast_Split_Per_Contour_Into_Lateral(void) const {
+std::unique_ptr<Contour_Data>  Contour_Data::Raycast_Split_Per_Contour_Into_Lateral() const {
     auto out(this->Raycast_Split_Per_Contour_Against_Given_Direction(vec3<double>(0.0,1.0,0.0)));
 
     //Update the segmentation history of the new contour. We augment the generic one with additional information.
@@ -687,7 +687,7 @@ std::unique_ptr<Contour_Data> Contour_Data::Split_Core_and_Peel(double frac_dist
 //      (where either left or right may occur first).
 //
 //NOTE: This routine will put the LATERAL subsegment first in memory.
-std::unique_ptr<Contour_Data> Contour_Data::Reorder_LR_to_ML(void) const {
+std::unique_ptr<Contour_Data> Contour_Data::Reorder_LR_to_ML() const {
     std::unique_ptr<Contour_Data> output (new Contour_Data);
     if(this->ccs.empty()) return output;
 
@@ -913,11 +913,11 @@ std::unique_ptr<Contour_Data> Contour_Data::Get_Contours_With_Segmentation(const
         size_t counter = 0;
 
         //Cycle over the contours' segmentation history.
-        for(auto sh_it = cc.Segmentation_History.begin(); sh_it != cc.Segmentation_History.end(); ++sh_it){
+        for(const auto& s : cc.Segmentation_History){
             //Cycle over the criteria.
             for(unsigned int cr_it : in){
                 //Check if the criteria and the segmentation history match. If so, increment the counter.
-                if( (cr_it & (*sh_it)) == cr_it ){
+                if( (cr_it & s) == cr_it ){
                     ++counter;
                 }
             }
@@ -934,7 +934,7 @@ std::unique_ptr<Contour_Data> Contour_Data::Get_Contours_With_Segmentation(const
 //---------------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------- Image_Array ------------------------------------------------------
 //---------------------------------------------------------------------------------------------------------------------------
-Image_Array::Image_Array() {}
+Image_Array::Image_Array() = default;
 
 Image_Array::Image_Array(const Image_Array &rhs){
     *this = rhs; //Performs a deep copy (unless copying self).
@@ -950,7 +950,7 @@ Image_Array & Image_Array::operator=(const Image_Array &rhs){
 //---------------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------- Point_Cloud ------------------------------------------------------
 //---------------------------------------------------------------------------------------------------------------------------
-Point_Cloud::Point_Cloud(){ }
+Point_Cloud::Point_Cloud()= default;
 
 Point_Cloud::Point_Cloud(const Point_Cloud &rhs){
     *this = rhs; //Performs a deep copy (unless copying self).
@@ -967,7 +967,7 @@ Point_Cloud & Point_Cloud::operator=(const Point_Cloud &rhs){
 //---------------------------------------------------------------------------------------------------------------------------
 //---------------------------------------------------- Static_Machine_State -------------------------------------------------
 //---------------------------------------------------------------------------------------------------------------------------
-Static_Machine_State::Static_Machine_State(){ }
+Static_Machine_State::Static_Machine_State()= default;
 
 Static_Machine_State::Static_Machine_State(const Static_Machine_State &rhs){
     *this = rhs; //Performs a deep copy (unless copying self).
@@ -1031,7 +1031,7 @@ template std::optional<std::string> Static_Machine_State::GetMetadataValueAs(std
 //---------------------------------------------------------------------------------------------------------------------------
 //--------------------------------------------------- Dynamic_Machine_State -------------------------------------------------
 //---------------------------------------------------------------------------------------------------------------------------
-Dynamic_Machine_State::Dynamic_Machine_State(){ }
+Dynamic_Machine_State::Dynamic_Machine_State()= default;
 
 Dynamic_Machine_State::Dynamic_Machine_State(const Dynamic_Machine_State &rhs){
     *this = rhs; //Performs a deep copy (unless copying self).
@@ -1049,7 +1049,7 @@ Dynamic_Machine_State & Dynamic_Machine_State::operator=(const Dynamic_Machine_S
 }
 
 void
-Dynamic_Machine_State::sort_states(void){
+Dynamic_Machine_State::sort_states(){
     // Sorts static states so that CumulativeMetersetWeight monotonically increase.
     std::sort( std::begin(this->static_states),
                std::end(this->static_states),
@@ -1060,7 +1060,7 @@ Dynamic_Machine_State::sort_states(void){
 }
 
 bool
-Dynamic_Machine_State::verify_states_are_ordered(void) const {
+Dynamic_Machine_State::verify_states_are_ordered() const {
     // Ensures the static states are ordered and none are missing.
     //
     // Returns true iff states are ordered, none are missing, and there are sufficient static states to interpolate
@@ -1081,7 +1081,7 @@ Dynamic_Machine_State::verify_states_are_ordered(void) const {
 }
 
 void
-Dynamic_Machine_State::normalize_states(void){
+Dynamic_Machine_State::normalize_states(){
     // This routine 'normalizes' in the sense that it replaces NaNs with previously specified static states, where possible.
     // 
     // Note that additional types of normalization *may* be added in the future. TODO.
@@ -1289,7 +1289,7 @@ template std::optional<std::string> Dynamic_Machine_State::GetMetadataValueAs(st
 //---------------------------------------------------------------------------------------------------------------------------
 //------------------------------------------------------- TPlan_Config ------------------------------------------------------
 //---------------------------------------------------------------------------------------------------------------------------
-TPlan_Config::TPlan_Config(){ }
+TPlan_Config::TPlan_Config()= default;
 
 TPlan_Config::TPlan_Config(const TPlan_Config &rhs){
     *this = rhs; //Performs a deep copy (unless copying self).
@@ -1323,7 +1323,7 @@ template std::optional<std::string> TPlan_Config::GetMetadataValueAs(std::string
 //---------------------------------------------------------------------------------------------------------------------------
 //------------------------------------------------------- Surface_Mesh ------------------------------------------------------
 //---------------------------------------------------------------------------------------------------------------------------
-Surface_Mesh::Surface_Mesh(){ }
+Surface_Mesh::Surface_Mesh()= default;
 
 Surface_Mesh::Surface_Mesh(const Surface_Mesh &rhs){
     *this = rhs; //Performs a deep copy (unless copying self).
@@ -1342,7 +1342,7 @@ Surface_Mesh & Surface_Mesh::operator=(const Surface_Mesh &rhs){
 //---------------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------- Line_Sample ------------------------------------------------------
 //---------------------------------------------------------------------------------------------------------------------------
-Line_Sample::Line_Sample(){ }
+Line_Sample::Line_Sample()= default;
 
 Line_Sample::Line_Sample(const Line_Sample &rhs){
     *this = rhs; //Performs a deep copy (unless copying self).
@@ -1359,7 +1359,7 @@ Line_Sample & Line_Sample::operator=(const Line_Sample &rhs){
 //---------------------------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------- Transform3 ------------------------------------------------------
 //---------------------------------------------------------------------------------------------------------------------------
-Transform3::Transform3(){ }
+Transform3::Transform3()= default;
 
 Transform3::Transform3(const Transform3 &rhs){
     *this = rhs; //Performs a deep copy (unless copying self).
@@ -1395,39 +1395,39 @@ template std::optional<std::string> Transform3::GetMetadataValueAs(std::string k
 //---------------------------------------------------------------------------------------------------------------------------
 
 //Helper functions.
-drover_bnded_dose_mean_dose_map_t drover_bnded_dose_mean_dose_map_factory(void){
+drover_bnded_dose_mean_dose_map_t drover_bnded_dose_mean_dose_map_factory(){
     drover_bnded_dose_mean_dose_map_t out(/*25,*/ bnded_dose_map_cmp_lambda);
     return out;
 }
-drover_bnded_dose_centroid_map_t drover_bnded_dose_centroid_map_factory(void){
+drover_bnded_dose_centroid_map_t drover_bnded_dose_centroid_map_factory(){
     drover_bnded_dose_centroid_map_t out(/*25,*/ bnded_dose_map_cmp_lambda);
     return out;
 }
-drover_bnded_dose_bulk_doses_map_t drover_bnded_dose_bulk_doses_map_factory(void){
+drover_bnded_dose_bulk_doses_map_t drover_bnded_dose_bulk_doses_map_factory(){
     drover_bnded_dose_bulk_doses_map_t out(/*25,*/ bnded_dose_map_cmp_lambda);
     return out;
 }
-drover_bnded_dose_accm_dose_map_t drover_bnded_dose_accm_dose_map_factory(void){
+drover_bnded_dose_accm_dose_map_t drover_bnded_dose_accm_dose_map_factory(){
     drover_bnded_dose_accm_dose_map_t out(/*25, */bnded_dose_map_cmp_lambda);
     return out;
 }
-drover_bnded_dose_min_max_dose_map_t drover_bnded_dose_min_max_dose_map_factory(void){
+drover_bnded_dose_min_max_dose_map_t drover_bnded_dose_min_max_dose_map_factory(){
     drover_bnded_dose_min_max_dose_map_t out(/*25, */bnded_dose_map_cmp_lambda);
     return out;
 }
-drover_bnded_dose_min_mean_max_dose_map_t drover_bnded_dose_min_mean_max_dose_map_factory(void){
+drover_bnded_dose_min_mean_max_dose_map_t drover_bnded_dose_min_mean_max_dose_map_factory(){
     drover_bnded_dose_min_mean_max_dose_map_t out(/*25, */bnded_dose_map_cmp_lambda);
     return out;
 }
-drover_bnded_dose_min_mean_median_max_dose_map_t drover_bnded_dose_min_mean_median_max_dose_map_factory(void){
+drover_bnded_dose_min_mean_median_max_dose_map_t drover_bnded_dose_min_mean_median_max_dose_map_factory(){
     drover_bnded_dose_min_mean_median_max_dose_map_t out(/*25, */bnded_dose_map_cmp_lambda);
     return out;
 }
-drover_bnded_dose_pos_dose_map_t drover_bnded_dose_pos_dose_map_factory(void){
+drover_bnded_dose_pos_dose_map_t drover_bnded_dose_pos_dose_map_factory(){
     drover_bnded_dose_pos_dose_map_t out(/*25, */bnded_dose_map_cmp_lambda);
     return out;
 }
-drover_bnded_dose_stat_moments_map_t drover_bnded_dose_stat_moments_map_factory(void){
+drover_bnded_dose_stat_moments_map_t drover_bnded_dose_stat_moments_map_factory(){
     drover_bnded_dose_stat_moments_map_t out(/*25, */bnded_dose_map_cmp_lambda);
     return out;
 }
@@ -1435,15 +1435,9 @@ drover_bnded_dose_stat_moments_map_t drover_bnded_dose_stat_moments_map_factory(
 
 
 //Constructors.
-Drover::Drover() {}
+Drover::Drover() = default;
 
-Drover::Drover( const Drover &in ) : contour_data(in.contour_data), 
-                                     image_data(in.image_data),
-                                     point_data(in.point_data),
-                                     smesh_data(in.smesh_data),
-                                     tplan_data(in.tplan_data),
-                                     lsamp_data(in.lsamp_data),
-                                     trans_data(in.trans_data) {}
+Drover::Drover( const Drover &in ) = default;
 
 //Member functions.
 void Drover::operator=(const Drover &rhs){
@@ -1559,7 +1553,7 @@ void Drover::Bounded_Dose_General( std::list<double> *pixel_doses,
         }
 
         //We now loop through all dose frames (slices) and accumulate dose within the contour bounds.
-        for(auto i_it = dd_it->imagecoll.images.begin(); i_it != dd_it->imagecoll.images.end(); ++i_it){
+        for(auto & image : dd_it->imagecoll.images){
             //Note: i_it is something like std::list<planar_image<T,R>>::iterator.
     
             for(auto cc_it = this->contour_data->ccs.begin(); cc_it != this->contour_data->ccs.end(); ++cc_it){
@@ -1568,7 +1562,7 @@ void Drover::Bounded_Dose_General( std::list<double> *pixel_doses,
                     if(c_it->points.size() < 3) continue;
 
                     const auto filtering_avg_point = c_it->First_N_Point_Avg(3); //Average_Point(); //Just need a point at the correct height, somewhere inside contour.
-                    if(!i_it->sandwiches_point_within_top_bottom_planes(filtering_avg_point)) continue;
+                    if(!image.sandwiches_point_within_top_bottom_planes(filtering_avg_point)) continue;
  
                     //Now we have a contour of points and pixel data (note: we can ignore the z components for both) 
                     // which may or may not lie within the contour. This is called the 'Point-in-polygon' problem and is
@@ -1612,8 +1606,8 @@ void Drover::Bounded_Dose_General( std::list<double> *pixel_doses,
     
                     //Now cycle through every pixel in the plane. This is kind of a shit way to do this, but then again this entire program is basically
                     // a shit way to do it. I would like to have had more time to properly fix/plan/think about what I've got here...  -h
-                    for(long int i=0; i<i_it->rows; ++i)  for(long int j=0; j<i_it->columns; ++j){
-                        const auto pos = i_it->position(i,j);
+                    for(long int i=0; i<image.rows; ++i)  for(long int j=0; j<image.columns; ++j){
+                        const auto pos = image.position(i,j);
                         const float X = pos.x, Y = pos.y;
     
                         //Check if it is outside the bounding box.
@@ -1638,7 +1632,7 @@ void Drover::Bounded_Dose_General( std::list<double> *pixel_doses,
 
                             //NOTE: Remember: this is some integer representing dose. If we want a clamped [0:1] 
                             // value, we would use the clamped_channel(...) member instead!
-                            const auto pointval = static_cast<int64_t>(i_it->value(i,j,0)); //Greyscale or R channel. We assume the channels satisfy: R = G = B.
+                            const auto pointval = static_cast<int64_t>(image.value(i,j,0)); //Greyscale or R channel. We assume the channels satisfy: R = G = B.
                             const auto pointdose = static_cast<double>(pointval); 
 
                             if(mean_doses != nullptr){
@@ -1659,8 +1653,8 @@ void Drover::Bounded_Dose_General( std::list<double> *pixel_doses,
                             }
 
                             if(pos_doses != nullptr){
-                                const vec3<double> r_dx = i_it->row_unit*i_it->pxl_dx*0.5;
-                                const vec3<double> r_dy = i_it->col_unit*i_it->pxl_dy*0.5;
+                                const vec3<double> r_dx = image.row_unit*image.pxl_dx*0.5;
+                                const vec3<double> r_dy = image.col_unit*image.pxl_dy*0.5;
                                 const auto tup = std::make_tuple(pos, r_dx, r_dy, pointdose, i, j);
 
                                 if(Fselection(tup)) (*pos_doses)[cc_it].push_back(std::move(tup));
@@ -1670,7 +1664,7 @@ void Drover::Bounded_Dose_General( std::list<double> *pixel_doses,
                                 for(int p = 0; p < 5; ++p) for(int q = 0; q < 5; ++q) for(int r = 0; r < 5; ++r){
                                     //const std::array<int,3> triplet = {p,q,r};
                                     const auto spatial = pow(pos.x-cc_centroid.x,p)*pow(pos.y-cc_centroid.y,q)*pow(pos.z-cc_centroid.z,r);
-                                    const auto grid_factor = i_it->pxl_dx * i_it->pxl_dy * i_it->pxl_dz;
+                                    const auto grid_factor = image.pxl_dx * image.pxl_dy * image.pxl_dz;
                                     (*cent_moms)[cc_it][{p,q,r}] += spatial*pointdose*grid_factor;
                                 }
                             }
@@ -1723,13 +1717,13 @@ void Drover::Bounded_Dose_General( std::list<double> *pixel_doses,
     return;
 }
 
-std::list<double> Drover::Bounded_Dose_Bulk_Values(void) const {
+std::list<double> Drover::Bounded_Dose_Bulk_Values() const {
     std::list<double> outgoing;
     this->Bounded_Dose_General(&outgoing,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr);
     return outgoing;
 }
 
-drover_bnded_dose_mean_dose_map_t Drover::Bounded_Dose_Means(void) const {
+drover_bnded_dose_mean_dose_map_t Drover::Bounded_Dose_Means() const {
     //NOTE: This function returns a map from list<contours_with_meta>::iterators to doubles representing the mean doses.
     //      Please be careful to ensure that the iterators are not invalidated between calling this and reading the values.
     //      
@@ -1741,7 +1735,7 @@ drover_bnded_dose_mean_dose_map_t Drover::Bounded_Dose_Means(void) const {
     return outgoing;
 }
 
-drover_bnded_dose_min_max_dose_map_t Drover::Bounded_Dose_Min_Max(void) const {
+drover_bnded_dose_min_max_dose_map_t Drover::Bounded_Dose_Min_Max() const {
     //NOTE: See note in Drover::Bounded_Dose_Means() regarding invalidation of this map.
     //
     //NOTE: The map returns a pair. The first is min, the second is max.
@@ -1750,7 +1744,7 @@ drover_bnded_dose_min_max_dose_map_t Drover::Bounded_Dose_Min_Max(void) const {
     return outgoing;
 }
 
-drover_bnded_dose_min_mean_max_dose_map_t Drover::Bounded_Dose_Min_Mean_Max(void) const {
+drover_bnded_dose_min_mean_max_dose_map_t Drover::Bounded_Dose_Min_Mean_Max() const {
     //NOTE: See note in Drover::Bounded_Dose_Means() regarding invalidation of this map.
     auto outgoing = drover_bnded_dose_min_mean_max_dose_map_factory();
 
@@ -1772,7 +1766,7 @@ drover_bnded_dose_min_mean_max_dose_map_t Drover::Bounded_Dose_Min_Mean_Max(void
     return outgoing;
 }
 
-drover_bnded_dose_min_mean_median_max_dose_map_t Drover::Bounded_Dose_Min_Mean_Median_Max(void) const {
+drover_bnded_dose_min_mean_median_max_dose_map_t Drover::Bounded_Dose_Min_Mean_Median_Max() const {
     //NOTE: See note in Drover::Bounded_Dose_Means() regarding invalidation of this map.
     auto outgoing = drover_bnded_dose_min_mean_median_max_dose_map_factory();
 
@@ -1796,13 +1790,13 @@ drover_bnded_dose_min_mean_median_max_dose_map_t Drover::Bounded_Dose_Min_Mean_M
     return outgoing;
 }
 
-drover_bnded_dose_stat_moments_map_t Drover::Bounded_Dose_Centralized_Moments(void) const {
+drover_bnded_dose_stat_moments_map_t Drover::Bounded_Dose_Centralized_Moments() const {
     auto outgoing = drover_bnded_dose_stat_moments_map_factory();
     this->Bounded_Dose_General(nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,&outgoing);
     return outgoing;
 }
 
-drover_bnded_dose_stat_moments_map_t Drover::Bounded_Dose_Normalized_Cent_Moments(void) const {
+drover_bnded_dose_stat_moments_map_t Drover::Bounded_Dose_Normalized_Cent_Moments() const {
     auto outgoing = this->Bounded_Dose_Centralized_Moments();
  
     //We normalize moments with respect to the p,q,r=0,0,0 moment for the given cc.
@@ -1905,7 +1899,7 @@ Drover Drover::Segment_Contours_Heuristically(std::function<bool(bnded_dose_pos_
     return out;
 }
 
-std::pair<double,double> Drover::Bounded_Dose_Limits(void) const {
+std::pair<double,double> Drover::Bounded_Dose_Limits() const {
     std::list<double> doses;
     this->Bounded_Dose_General(&doses,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr);
     if(doses.empty()) return std::pair<double,double>(-1.0,-1.0);
@@ -1913,7 +1907,7 @@ std::pair<double,double> Drover::Bounded_Dose_Limits(void) const {
     return std::pair<double,double>(*std::min_element(doses.begin(),doses.end()), *std::max_element(doses.begin(),doses.end()));
 }
 
-std::map<double,double>  Drover::Get_DVH(void) const {
+std::map<double,double>  Drover::Get_DVH() const {
     std::map<double,double> output;
 
     std::list<double> pixel_doses = this->Bounded_Dose_Bulk_Values();
@@ -1955,11 +1949,11 @@ Drover Drover::Duplicate(const Drover &in) const {
 }
 
 
-bool Drover::Has_Contour_Data(void) const {
+bool Drover::Has_Contour_Data() const {
     return (this->contour_data != nullptr);
 }
 
-bool Drover::Has_Image_Data(void) const {
+bool Drover::Has_Image_Data() const {
     //Does not verify the image data itself, it merely looks to see if we have any valid Image_Arrays attached.
     if(this->image_data.size() == 0) return false;
     for(const auto & id_it : this->image_data){
@@ -1968,7 +1962,7 @@ bool Drover::Has_Image_Data(void) const {
     return false;
 }
 
-bool Drover::Has_Point_Data(void) const {
+bool Drover::Has_Point_Data() const {
     //Does not verify the point data itself, it merely looks to see if we have any valid Point_Clouds attached.
     if(this->point_data.size() == 0) return false;
     for(const auto & pd_it : this->point_data){
@@ -1977,7 +1971,7 @@ bool Drover::Has_Point_Data(void) const {
     return false;
 }
 
-bool Drover::Has_Mesh_Data(void) const {
+bool Drover::Has_Mesh_Data() const {
     //Does not verify the mesh data itself, it merely looks to see if we have any valid Surface_Meshes attached.
     if(this->smesh_data.size() == 0) return false;
     for(const auto & sm_it : this->smesh_data){
@@ -1986,7 +1980,7 @@ bool Drover::Has_Mesh_Data(void) const {
     return false;
 }
 
-bool Drover::Has_TPlan_Data(void) const {
+bool Drover::Has_TPlan_Data() const {
     //Does not verify the tplan data itself, it merely looks to see if we have any valid TPlan_Configs attached.
     if(this->tplan_data.size() == 0) return false;
     for(const auto & sm_it : this->tplan_data){
@@ -1995,7 +1989,7 @@ bool Drover::Has_TPlan_Data(void) const {
     return false;
 }
 
-bool Drover::Has_LSamp_Data(void) const {
+bool Drover::Has_LSamp_Data() const {
     //Does not verify the line sample data itself, it merely looks to see if we have any valid Line_Samples attached.
     if(this->lsamp_data.size() == 0) return false;
     for(const auto & ls_it : this->lsamp_data){
@@ -2004,7 +1998,7 @@ bool Drover::Has_LSamp_Data(void) const {
     return false;
 }
 
-bool Drover::Has_Tran3_Data(void) const {
+bool Drover::Has_Tran3_Data() const {
     //Does not verify the transforms themselves, it merely looks to see if we have any valid Line_Samples attached.
     if(this->trans_data.size() == 0) return false;
     for(const auto & t_it : this->trans_data){
@@ -2133,7 +2127,7 @@ void Drover::Consume(Drover in){
 
 
 
-void Drover::Plot_Dose_And_Contours(void) const {
+void Drover::Plot_Dose_And_Contours() const {
     //The aim of this program is to plot contours and dose in the same display. It is probably best
     // for debugging. Use the overlaydosedata program to display data using OpenGL.
     Plotter3 a_plot;
@@ -2143,13 +2137,13 @@ void Drover::Plot_Dose_And_Contours(void) const {
     auto d = Isolate_Dose_Data(*this);
     if(d.Has_Image_Data()){
         for(const auto & l_it : d.image_data){  //std::list<std::shared_ptr<Image_Array>>.
-            for(auto pi_it = l_it->imagecoll.images.begin(); pi_it != l_it->imagecoll.images.end(); ++pi_it){ //std::list<planar_image<T,R>> images.
+            for(auto & image : l_it->imagecoll.images){ //std::list<planar_image<T,R>> images.
                 //Plot the corners in a closed contour to show the outline.
-                r = pi_it->position(             0,                0);    a_plot.Insert(r.x,r.y,r.z);
-                r = pi_it->position( pi_it->rows-1,                0);    a_plot.Insert(r.x,r.y,r.z);
-                r = pi_it->position( pi_it->rows-1, pi_it->columns-1);    a_plot.Insert(r.x,r.y,r.z);
-                r = pi_it->position(             0, pi_it->columns-1);    a_plot.Insert(r.x,r.y,r.z);
-                r = pi_it->position(             0,                0);    a_plot.Insert(r.x,r.y,r.z); //Close the outline.
+                r = image.position(            0,               0);    a_plot.Insert(r.x,r.y,r.z);
+                r = image.position( image.rows-1,               0);    a_plot.Insert(r.x,r.y,r.z);
+                r = image.position( image.rows-1, image.columns-1);    a_plot.Insert(r.x,r.y,r.z);
+                r = image.position(            0, image.columns-1);    a_plot.Insert(r.x,r.y,r.z);
+                r = image.position(            0,               0);    a_plot.Insert(r.x,r.y,r.z); //Close the outline.
                 a_plot.Next_Line_Same_Style();
             }
         }
@@ -2171,7 +2165,7 @@ void Drover::Plot_Dose_And_Contours(void) const {
     return;
 }
 
-void Drover::Plot_Image_Outlines(void) const {
+void Drover::Plot_Image_Outlines() const {
     Plotter3 a_plot;
     a_plot.Set_Global_Title("Dose and Contours.");//: Object with address " + Xtostring<long int>((size_t)((void *)(this))));
     vec3<double> r;
@@ -2304,7 +2298,7 @@ OperationArgPkg::operator=(const OperationArgPkg &rhs){
 }
 
 std::string
-OperationArgPkg::getName(void) const {
+OperationArgPkg::getName() const {
     return this->name;
 }
 

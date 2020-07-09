@@ -22,7 +22,7 @@
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
 
-OperationDoc OpArgDocDumpTPlanMetadataOccurrencesToFile(void){
+OperationDoc OpArgDocDumpTPlanMetadataOccurrencesToFile(){
     OperationDoc out;
     out.name = "DumpTPlanMetadataOccurrencesToFile";
 

@@ -22,7 +22,7 @@
 #include "VolumetricCorrelationDetector.h"
 
 
-OperationDoc OpArgDocVolumetricCorrelationDetector(void){
+OperationDoc OpArgDocVolumetricCorrelationDetector(){
     OperationDoc out;
     out.name = "VolumetricCorrelationDetector";
 

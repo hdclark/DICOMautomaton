@@ -16,7 +16,7 @@
 
 
 
-OperationDoc OpArgDocPurgeContours(void){
+OperationDoc OpArgDocPurgeContours(){
     OperationDoc out;
     out.name = "PurgeContours";
     out.desc = 

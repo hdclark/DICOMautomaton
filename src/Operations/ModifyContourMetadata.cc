@@ -19,7 +19,7 @@
 
 
 
-OperationDoc OpArgDocModifyContourMetadata(void){
+OperationDoc OpArgDocModifyContourMetadata(){
     OperationDoc out;
     out.name = "ModifyContourMetadata";
     out.desc = 

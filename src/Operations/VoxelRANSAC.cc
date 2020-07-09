@@ -47,7 +47,7 @@
 
 #include "VoxelRANSAC.h"
 
-OperationDoc OpArgDocVoxelRANSAC(void){
+OperationDoc OpArgDocVoxelRANSAC(){
     OperationDoc out;
     out.name = "VoxelRANSAC";
 

@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocOptimizeStaticBeams(void);
+OperationDoc OpArgDocOptimizeStaticBeams();
 
 Drover OptimizeStaticBeams(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                          std::map<std::string, std::string> /*InvocationMetadata*/,

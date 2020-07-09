@@ -133,7 +133,7 @@ bool ComputeInterpolateImageSlices(planar_image_collection<float,double> &imagec
     for(auto &img : imagecoll.images){
         std::reference_wrapper< planar_image<float, double>> img_refw( std::ref(img) );
 
-        tp.submit_task([&,img_refw](void) -> void {
+        tp.submit_task([&,img_refw]() -> void {
 
             const auto N_rows = img_refw.get().rows;
             const auto N_columns = img_refw.get().columns;

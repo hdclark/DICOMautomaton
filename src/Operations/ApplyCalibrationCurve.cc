@@ -22,7 +22,7 @@
 
 
 
-OperationDoc OpArgDocApplyCalibrationCurve(void){
+OperationDoc OpArgDocApplyCalibrationCurve(){
     OperationDoc out;
     out.name = "ApplyCalibrationCurve";
 

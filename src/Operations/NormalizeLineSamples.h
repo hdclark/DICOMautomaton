@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocNormalizeLineSamples(void);
+OperationDoc OpArgDocNormalizeLineSamples();
 
 Drover NormalizeLineSamples(Drover DICOM_data, OperationArgPkg OptArgs,
                        std::map<std::string, std::string> /*InvocationMetadata*/,

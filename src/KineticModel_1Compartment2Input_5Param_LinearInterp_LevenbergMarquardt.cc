@@ -12,7 +12,7 @@
 #include <gsl/gsl_matrix_double.h>
 #include <gsl/gsl_multifit_nlin.h>
 #include <gsl/gsl_vector_double.h>
-#include <stddef.h>
+#include <cstddef>
 #include <array>
 #include <cmath>
 #include <exception>
@@ -139,7 +139,7 @@ Optimize_LevenbergMarquardt_5Param(KineticModel_1Compartment2Input_5Param_Linear
         gsl_vector *res_f = gsl_multifit_fdfsolver_residual(solver);
         const double chi = gsl_blas_dnrm2(res_f);
         const double chisq = chi * chi;
-        const double dof = static_cast<double>(datum - dimen);
+        const auto dof = static_cast<double>(datum - dimen);
         const double red_chisq = chisq/dof;
 
         state.RSS  = chisq;

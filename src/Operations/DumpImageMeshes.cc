@@ -23,7 +23,7 @@
 
 
 
-OperationDoc OpArgDocDumpImageMeshes(void){
+OperationDoc OpArgDocDumpImageMeshes(){
     OperationDoc out;
     out.name = "DumpImageMeshes";
 

@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocExtractAlphaBeta(void);
+OperationDoc OpArgDocExtractAlphaBeta();
 
 Drover ExtractAlphaBeta(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                      std::map<std::string, std::string> /*InvocationMetadata*/,

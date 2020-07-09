@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocSurfaceBasedRayCastDoseAccumulate(void);
+OperationDoc OpArgDocSurfaceBasedRayCastDoseAccumulate();
 
 Drover SurfaceBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                              std::map<std::string, std::string> /*InvocationMetadata*/,

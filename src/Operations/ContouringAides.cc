@@ -17,7 +17,7 @@
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 
 
-OperationDoc OpArgDocContouringAides(void){
+OperationDoc OpArgDocContouringAides(){
     OperationDoc out;
     out.name = "ContouringAides";
     out.desc = "This operation attempts to prepare an image for easier contouring.";

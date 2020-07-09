@@ -15,7 +15,7 @@
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 
 
-OperationDoc OpArgDocGiveWholeImageArrayAHeadAndNeckWindowLevel(void){
+OperationDoc OpArgDocGiveWholeImageArrayAHeadAndNeckWindowLevel(){
     OperationDoc out;
     out.name = "GiveWholeImageArrayAHeadAndNeckWindowLevel";
 

@@ -15,7 +15,7 @@
 #include "YgorMath.h"         //Needed for vec3 class.
 
 
-OperationDoc OpArgDocDumpPixelValuesOverTimeForAnEncompassedPoint(void){
+OperationDoc OpArgDocDumpPixelValuesOverTimeForAnEncompassedPoint(){
     OperationDoc out;
     out.name = "DumpPixelValuesOverTimeForAnEncompassedPoint";
 

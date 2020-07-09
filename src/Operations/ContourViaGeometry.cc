@@ -32,7 +32,7 @@
 #include "ContourViaGeometry.h"
 
 
-OperationDoc OpArgDocContourViaGeometry(void){
+OperationDoc OpArgDocContourViaGeometry(){
     OperationDoc out;
     out.name = "ContourViaGeometry";
 
@@ -179,7 +179,7 @@ Drover ContourViaGeometry(Drover DICOM_data, OperationArgPkg OptArgs, std::map<s
                 // ensure vertex sampling is sufficient.
                 const auto min_vert_sep = 1.0; // DICOM units (mm).
                 const auto arc_length = 2.0 * M_PI * rho;
-                long int num_verts = static_cast<long int>( std::ceil(arc_length / min_vert_sep) );
+                auto num_verts = static_cast<long int>( std::ceil(arc_length / min_vert_sep) );
                 num_verts = (num_verts < 3) ? 3 : num_verts; 
 
                 try{

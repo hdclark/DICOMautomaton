@@ -22,7 +22,7 @@
 
 
 
-OperationDoc OpArgDocGroupImages(void){
+OperationDoc OpArgDocGroupImages(){
     OperationDoc out;
     out.name = "GroupImages";
     out.desc = 

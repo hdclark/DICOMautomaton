@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocBuildLexiconInteractively(void);
+OperationDoc OpArgDocBuildLexiconInteractively();
 
 Drover
 BuildLexiconInteractively(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string, std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/);

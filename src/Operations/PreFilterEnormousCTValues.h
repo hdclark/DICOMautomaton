@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocPreFilterEnormousCTValues(void);
+OperationDoc OpArgDocPreFilterEnormousCTValues();
 
 Drover PreFilterEnormousCTValues(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                                  std::map<std::string, std::string> /*InvocationMetadata*/,

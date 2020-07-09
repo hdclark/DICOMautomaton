@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocFVPicketFence(void);
+OperationDoc OpArgDocFVPicketFence();
 
 Drover
 FVPicketFence(Drover DICOM_data, 

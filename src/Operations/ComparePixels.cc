@@ -20,7 +20,7 @@
 
 
 
-OperationDoc OpArgDocComparePixels(void){
+OperationDoc OpArgDocComparePixels(){
     OperationDoc out;
     out.name = "ComparePixels";
     out.desc = 

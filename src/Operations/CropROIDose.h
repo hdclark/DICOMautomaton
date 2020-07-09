@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocCropROIDose(void);
+OperationDoc OpArgDocCropROIDose();
 
 Drover
 CropROIDose(Drover DICOM_data, 

@@ -32,7 +32,7 @@
 
 
 
-OperationDoc OpArgDocImprintImages(void){
+OperationDoc OpArgDocImprintImages(){
     OperationDoc out;
     out.name = "ImprintImages";
 

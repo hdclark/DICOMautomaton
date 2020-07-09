@@ -16,7 +16,7 @@
 
 
 
-OperationDoc OpArgDocDeleteMeshes(void){
+OperationDoc OpArgDocDeleteMeshes(){
     OperationDoc out;
     out.name = "DeleteMeshes";
     out.desc = 

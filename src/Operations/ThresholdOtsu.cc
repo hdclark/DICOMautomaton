@@ -34,7 +34,7 @@
 
 
 
-OperationDoc OpArgDocThresholdOtsu(void){
+OperationDoc OpArgDocThresholdOtsu(){
     OperationDoc out;
     out.name = "ThresholdOtsu";
 

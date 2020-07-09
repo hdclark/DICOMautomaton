@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocMaxMinPixels(void);
+OperationDoc OpArgDocMaxMinPixels();
 
 Drover MaxMinPixels(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                       std::map<std::string, std::string> /*InvocationMetadata*/,

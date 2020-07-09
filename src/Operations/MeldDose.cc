@@ -9,7 +9,7 @@
 
 
 
-OperationDoc OpArgDocMeldDose(void){
+OperationDoc OpArgDocMeldDose(){
     OperationDoc out;
     out.name = "MeldDose";
 

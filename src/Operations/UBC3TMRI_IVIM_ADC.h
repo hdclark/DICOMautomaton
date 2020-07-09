@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocUBC3TMRI_IVIM_ADC(void);
+OperationDoc OpArgDocUBC3TMRI_IVIM_ADC();
 
 Drover UBC3TMRI_IVIM_ADC(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                          std::map<std::string, std::string> /*InvocationMetadata*/,

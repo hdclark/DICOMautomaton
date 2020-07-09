@@ -347,7 +347,7 @@ AlignViaExhaustiveICP( const point_set<double> & moving,
         {
             asio_thread_pool tp;
             for(size_t i = 0; i < N_working_points; ++i){
-                tp.submit_task([&,i](void) -> void {
+                tp.submit_task([&,i]() -> void {
                     const auto w_p = working.points[i];
                     double min_sq_dist = std::numeric_limits<double>::infinity();
                     for(const auto &s_p : stationary.points){

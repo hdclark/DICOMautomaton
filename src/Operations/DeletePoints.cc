@@ -16,7 +16,7 @@
 
 
 
-OperationDoc OpArgDocDeletePoints(void){
+OperationDoc OpArgDocDeletePoints(){
     OperationDoc out;
     out.name = "DeletePoints";
     out.desc = 

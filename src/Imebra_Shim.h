@@ -3,7 +3,7 @@
 #ifndef _IMEBRA_SHIM_H_DICOMAUTOMATON
 #define _IMEBRA_SHIM_H_DICOMAUTOMATON
 
-#include <stddef.h>
+#include <cstddef>
 #include <list>
 #include <map>
 #include <memory>

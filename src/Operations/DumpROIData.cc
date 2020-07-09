@@ -19,7 +19,7 @@
 #include "YgorMath.h"         //Needed for vec3 class.
 
 
-OperationDoc OpArgDocDumpROIData(void){
+OperationDoc OpArgDocDumpROIData(){
     OperationDoc out;
     out.name = "DumpROIData";
 

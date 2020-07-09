@@ -60,7 +60,7 @@ bool CTPerfusionSearchForLiverClips(planar_image_collection<float,double>::image
                 //const auto RawNewVal = std::sqrt(Stats::Unbiased_Var_Est(in_pixs));
                 const auto RawNewVal = *std::max_element(in_pixs.begin(), in_pixs.end());
 
-                const float newval = static_cast<float>(RawNewVal);
+                const auto newval = static_cast<float>(RawNewVal);
                 working.reference(row, col, chan) = newval;
                 minmax_pixel.Digest(newval);
 

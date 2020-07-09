@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocCT_Liver_Perfusion_Ortho_Views(void);
+OperationDoc OpArgDocCT_Liver_Perfusion_Ortho_Views();
 
 Drover CT_Liver_Perfusion_Ortho_Views(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                                       std::map<std::string, std::string> /*InvocationMetadata*/,

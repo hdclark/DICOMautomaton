@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocTrimROIDose(void);
+OperationDoc OpArgDocTrimROIDose();
 
 Drover
 TrimROIDose(Drover DICOM_data, 

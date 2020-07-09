@@ -71,7 +71,7 @@ Optimize_FreeformOptimization_5Param(KineticModel_1Compartment2Input_5Param_Cheb
     state.FittingSuccess = false;
 
     const int dimen = 5;
-    double func_min;
+    double func_min = 0.0;
 
     //Fitting parameters:      k1A,  tauA,   k1V,  tauV,  k2.
     // The following are arbitrarily chosen. They should be seeded from previous computations, or
@@ -315,7 +315,7 @@ Optimize_FreeformOptimization_3Param(KineticModel_1Compartment2Input_5Param_Cheb
     state.FittingSuccess = false;
 
     const int dimen = 3;
-    double func_min;
+    double func_min = 0.0;
 
     //Fitting parameters:      k1A,  k1V,  k2.
     // The following are arbitrarily chosen. They should be seeded from previous computations, or
@@ -387,7 +387,6 @@ Optimize_FreeformOptimization_3Param(KineticModel_1Compartment2Input_5Param_Cheb
             FUNCERR("NLOpt unable to tell NLOpt to use more scratch space");
         }
 
-        double func_min;
         const auto opt_status = nlopt_optimize(opt, params, &func_min);
 
         if(opt_status < 0){
@@ -463,7 +462,6 @@ Optimize_FreeformOptimization_3Param(KineticModel_1Compartment2Input_5Param_Cheb
             FUNCERR("NLOpt unable to tell NLOpt to use more scratch space");
         }
 
-        double func_min;
         const auto opt_status = nlopt_optimize(opt, params, &func_min);
 
         if(opt_status < 0){

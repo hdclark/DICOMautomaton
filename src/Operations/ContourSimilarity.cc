@@ -29,7 +29,7 @@
 
 #include "ContourSimilarity.h"
 
-OperationDoc OpArgDocContourSimilarity(void){
+OperationDoc OpArgDocContourSimilarity(){
     OperationDoc out;
     out.name = "ContourSimilarity";
     out.desc = 

@@ -16,7 +16,7 @@
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 
 
-OperationDoc OpArgDocDICOMExportContours(void){
+OperationDoc OpArgDocDICOMExportContours(){
     OperationDoc out;
     out.name = "DICOMExportContours";
     out.desc = "This operation exports the selected contours to a DICOM RTSTRUCT-modality file.";

@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocConvertPixelsToPoints(void);
+OperationDoc OpArgDocConvertPixelsToPoints();
 
 Drover ConvertPixelsToPoints(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                              std::map<std::string, std::string> /*InvocationMetadata*/,

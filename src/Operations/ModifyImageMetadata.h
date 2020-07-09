@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocModifyImageMetadata(void);
+OperationDoc OpArgDocModifyImageMetadata();
 
 Drover ModifyImageMetadata(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                      std::map<std::string, std::string> /*InvocationMetadata*/,

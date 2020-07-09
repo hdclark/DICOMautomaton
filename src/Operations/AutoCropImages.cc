@@ -24,7 +24,7 @@
 
 
 
-OperationDoc OpArgDocAutoCropImages(void){
+OperationDoc OpArgDocAutoCropImages(){
     OperationDoc out;
     out.name = "AutoCropImages";
 

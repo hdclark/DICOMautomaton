@@ -15,7 +15,7 @@
 
 
 
-OperationDoc OpArgDocSelectSlicesIntersectingROI(void){
+OperationDoc OpArgDocSelectSlicesIntersectingROI(){
     OperationDoc out;
     out.name = "SelectSlicesIntersectingROI";
 

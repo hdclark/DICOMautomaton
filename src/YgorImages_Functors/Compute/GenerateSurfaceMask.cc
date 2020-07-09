@@ -128,7 +128,7 @@ bool ComputeGenerateSurfaceMask(planar_image_collection<float,double> &imagecoll
             asio_thread_pool tp;
 
             for(auto row = 0; row < img.rows; ++row){
-                tp.submit_task([&,row](void) -> void {
+                tp.submit_task([&,row]() -> void {
                     for(auto col = 0; col < img.columns; ++col){
                         const auto point = img.position(row,col);
 

@@ -20,6 +20,6 @@ bool PixelHistogramAnalysis(planar_image_collection<float,double>::images_list_i
                             std::list<std::reference_wrapper<contour_collection<double>>> ccsl, 
                             std::any );
 
-void DumpPixelHistogramResults(void);
+void DumpPixelHistogramResults();
 
 

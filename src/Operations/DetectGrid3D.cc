@@ -972,7 +972,7 @@ Write_Everything("/tmp/ransac"_s + std::to_string(icp_invoke) + "_icp" + std::to
     return;
 }
 
-OperationDoc OpArgDocDetectGrid3D(void){
+OperationDoc OpArgDocDetectGrid3D(){
     OperationDoc out;
     out.name = "DetectGrid3D";
 
@@ -1200,7 +1200,7 @@ Drover DetectGrid3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
         throw std::invalid_argument("Line thickness is impossible with given grid spacing. Refusing to continue.");
     }
 
-    auto gen_filename = [&](void) -> std::string {
+    auto gen_filename = [&]() -> std::string {
         if(ResultsSummaryFileName.empty()){
             ResultsSummaryFileName = Get_Unique_Sequential_Filename("/tmp/dicomautomaton_detectgrid3d_", 6, ".csv");
         }
@@ -1260,7 +1260,7 @@ if(false){
         // The routine below can be called only a certain number of times before throwing.
         long int RANSACFails = 0;
         const long int PermittedRANSACFails = std::max(100L, static_cast<long int>((*pcp_it)->pset.points.size() * 2));
-        auto Handle_RANSAC_Failure = [&](void) -> void {
+        auto Handle_RANSAC_Failure = [&]() -> void {
             ++RANSACFails;
             if(RANSACFails > PermittedRANSACFails){
                 std::stringstream ss;
@@ -1286,7 +1286,7 @@ if(false){
             ICPC.cohort.erase(
                 std::remove_if(std::begin(ICPC.cohort), 
                                std::end(ICPC.cohort),
-                               [&](const pcp_t &pcp) -> bool {
+                               [&](pcp_t &pcp) -> bool {
                                    return (pcp.distance(ICPC.ransac_centre) > RANSACDist);
                                }),
                 std::end(ICPC.cohort) );

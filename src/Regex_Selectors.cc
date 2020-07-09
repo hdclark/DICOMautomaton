@@ -429,7 +429,7 @@ Whitelist( std::list<std::list<std::shared_ptr<Image_Array>>::iterator> ias,
 
 
 // Utility function documenting the image array whitelist routines for operations.
-OperationArgDoc IAWhitelistOpArgDoc(void){
+OperationArgDoc IAWhitelistOpArgDoc(){
     OperationArgDoc out;
 
     out.name = "ImageSelection";
@@ -529,7 +529,7 @@ Whitelist( std::list<std::list<std::shared_ptr<Point_Cloud>>::iterator> pcs,
 
 
 // Utility function documenting the point cloud whitelist routines for operations.
-OperationArgDoc PCWhitelistOpArgDoc(void){
+OperationArgDoc PCWhitelistOpArgDoc(){
     OperationArgDoc out;
 
     out.name = "PointSelection";
@@ -635,7 +635,7 @@ Whitelist( std::list<std::list<std::shared_ptr<Surface_Mesh>>::iterator> sms,
 
 
 // Utility function documenting the surface mesh whitelist routines for operations.
-OperationArgDoc SMWhitelistOpArgDoc(void){
+OperationArgDoc SMWhitelistOpArgDoc(){
     OperationArgDoc out;
 
     out.name = "MeshSelection";
@@ -742,7 +742,7 @@ Whitelist( std::list<std::list<std::shared_ptr<TPlan_Config>>::iterator> tps,
 
 
 // Utility function documenting the treatment plan whitelist routines for operations.
-OperationArgDoc TPWhitelistOpArgDoc(void){
+OperationArgDoc TPWhitelistOpArgDoc(){
     OperationArgDoc out;
 
     out.name = "TPlanSelection";
@@ -844,7 +844,7 @@ Whitelist( std::list<std::list<std::shared_ptr<Line_Sample>>::iterator> lss,
 
 
 // Utility function documenting the point cloud whitelist routines for operations.
-OperationArgDoc LSWhitelistOpArgDoc(void){
+OperationArgDoc LSWhitelistOpArgDoc(){
     OperationArgDoc out;
 
     out.name = "LSampSelection";
@@ -942,7 +942,7 @@ Whitelist( std::list<std::list<std::shared_ptr<Transform3>>::iterator> t3s,
 
 
 // Utility function documenting the transform whitelist routines for operations.
-OperationArgDoc T3WhitelistOpArgDoc(void){
+OperationArgDoc T3WhitelistOpArgDoc(){
     OperationArgDoc out;
 
     out.name = "TransformSelection";

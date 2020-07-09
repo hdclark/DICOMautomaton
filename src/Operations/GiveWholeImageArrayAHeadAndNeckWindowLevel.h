@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocGiveWholeImageArrayAHeadAndNeckWindowLevel(void);
+OperationDoc OpArgDocGiveWholeImageArrayAHeadAndNeckWindowLevel();
 
 Drover GiveWholeImageArrayAHeadAndNeckWindowLevel(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                                                   std::map<std::string, std::string> /*InvocationMetadata*/,

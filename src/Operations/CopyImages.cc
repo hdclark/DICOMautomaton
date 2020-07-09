@@ -14,7 +14,7 @@
 #include "../Regex_Selectors.h"
 #include "CopyImages.h"
 
-OperationDoc OpArgDocCopyImages(void){
+OperationDoc OpArgDocCopyImages(){
     OperationDoc out;
     out.name = "CopyImages";
 

@@ -18,7 +18,7 @@
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
 
-OperationDoc OpArgDocGenerateVirtualDataDoseStairsV1(void){
+OperationDoc OpArgDocGenerateVirtualDataDoseStairsV1(){
     OperationDoc out;
     out.name = "GenerateVirtualDataDoseStairsV1";
     out.desc = 

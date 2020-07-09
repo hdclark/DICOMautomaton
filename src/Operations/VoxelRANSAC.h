@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocVoxelRANSAC(void);
+OperationDoc OpArgDocVoxelRANSAC();
 
 Drover VoxelRANSAC(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                          std::map<std::string, std::string> /*InvocationMetadata*/,

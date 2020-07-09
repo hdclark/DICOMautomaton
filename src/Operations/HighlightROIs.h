@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocHighlightROIs(void);
+OperationDoc OpArgDocHighlightROIs();
 
 Drover HighlightROIs(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                      std::map<std::string, std::string> /*InvocationMetadata*/,

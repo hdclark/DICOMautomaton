@@ -20,7 +20,7 @@
 
 
 
-OperationDoc OpArgDocInterpolateSlices(void){
+OperationDoc OpArgDocInterpolateSlices(){
     OperationDoc out;
     out.name = "InterpolateSlices";
     out.desc = 

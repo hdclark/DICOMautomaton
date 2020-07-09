@@ -97,7 +97,7 @@ Whitelist( std::list<std::list<std::shared_ptr<Image_Array>>::iterator> ias,
            Regex_Selector_Opts Opts = Regex_Selector_Opts() );
 
 // Utility function documenting the image array whitelist routines for operations.
-OperationArgDoc IAWhitelistOpArgDoc(void);
+OperationArgDoc IAWhitelistOpArgDoc();
 
 
 // ----------------------------------- Point Clouds ------------------------------------
@@ -130,7 +130,7 @@ Whitelist( std::list<std::list<std::shared_ptr<Point_Cloud>>::iterator> pcs,
            Regex_Selector_Opts Opts = Regex_Selector_Opts() );
 
 // Utility function documenting the point cloud whitelist routines for operations.
-OperationArgDoc PCWhitelistOpArgDoc(void);
+OperationArgDoc PCWhitelistOpArgDoc();
 
 
 // ----------------------------------- Surface Meshes ------------------------------------
@@ -163,7 +163,7 @@ Whitelist( std::list<std::list<std::shared_ptr<Surface_Mesh>>::iterator> sms,
            Regex_Selector_Opts Opts = Regex_Selector_Opts() );
 
 // Utility function documenting the surface mesh whitelist routines for operations.
-OperationArgDoc SMWhitelistOpArgDoc(void);
+OperationArgDoc SMWhitelistOpArgDoc();
 
 
 // ------------------------------------ TPlan_Config -------------------------------------
@@ -196,7 +196,7 @@ Whitelist( std::list<std::list<std::shared_ptr<TPlan_Config>>::iterator> tps,
            Regex_Selector_Opts Opts = Regex_Selector_Opts() );
 
 // Utility function documenting the surface mesh whitelist routines for operations.
-OperationArgDoc TPWhitelistOpArgDoc(void);
+OperationArgDoc TPWhitelistOpArgDoc();
 
 // ----------------------------------- Line Samples ------------------------------------
 
@@ -228,7 +228,7 @@ Whitelist( std::list<std::list<std::shared_ptr<Line_Sample>>::iterator> lss,
            Regex_Selector_Opts Opts = Regex_Selector_Opts() );
 
 // Utility function documenting the line sample whitelist routines for operations.
-OperationArgDoc LSWhitelistOpArgDoc(void);
+OperationArgDoc LSWhitelistOpArgDoc();
 
 // ------------------------------------ Transform3 -------------------------------------
 
@@ -260,6 +260,6 @@ Whitelist( std::list<std::list<std::shared_ptr<Transform3>>::iterator> lss,
            Regex_Selector_Opts Opts = Regex_Selector_Opts() );
 
 // Utility function documenting the transform whitelist routines for operations.
-OperationArgDoc T3WhitelistOpArgDoc(void);
+OperationArgDoc T3WhitelistOpArgDoc();
 
 

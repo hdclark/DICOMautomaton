@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocSimulateRadiograph(void);
+OperationDoc OpArgDocSimulateRadiograph();
 
 Drover SimulateRadiograph(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                              std::map<std::string, std::string> /*InvocationMetadata*/,

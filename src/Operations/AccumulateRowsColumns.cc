@@ -26,7 +26,7 @@
 #include "YgorStats.h"        //Needed for Stats:: namespace.
 
 
-OperationDoc OpArgDocAccumulateRowsColumns(void){
+OperationDoc OpArgDocAccumulateRowsColumns(){
     OperationDoc out;
     out.name = "AccumulateRowsColumns";
 

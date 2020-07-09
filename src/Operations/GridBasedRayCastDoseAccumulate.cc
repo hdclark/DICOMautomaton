@@ -33,7 +33,7 @@
 
 
 
-OperationDoc OpArgDocGridBasedRayCastDoseAccumulate(void){
+OperationDoc OpArgDocGridBasedRayCastDoseAccumulate(){
     OperationDoc out;
     out.name = "GridBasedRayCastDoseAccumulate";
     out.desc = 
@@ -469,7 +469,7 @@ Drover GridBasedRayCastDoseAccumulate(Drover DICOM_data, OperationArgPkg OptArgs
         const double cleaved_gap_dist = std::abs(ROICleaving.Get_Signed_Distance_To_Point(ROI_centroid));
 
         for(long int row = 0; row < SourceDetectorRows; ++row){
-            tp.submit_task([&,row](void) -> void {
+            tp.submit_task([&,row]() -> void {
                 for(long int col = 0; col < SourceDetectorColumns; ++col){
                     double accumulated_length = 0.0;      //Length of ray travel within the 'surface'.
                     double accumulated_doselength = 0.0;

@@ -36,7 +36,7 @@
 #include "../Surface_Meshes.h"
 
 
-OperationDoc OpArgDocSimplifySurfaceMeshes(void){
+OperationDoc OpArgDocSimplifySurfaceMeshes(){
     OperationDoc out;
     out.name = "SimplifySurfaceMeshes";
 

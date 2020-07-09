@@ -20,7 +20,7 @@
 
 
 
-OperationDoc OpArgDocCropImages(void){
+OperationDoc OpArgDocCropImages(){
     OperationDoc out;
     out.name = "CropImages";
     out.desc = "This operation crops image slices in either pixel or DICOM coordinate spaces.";

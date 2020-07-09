@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocDICOMExportContours(void);
+OperationDoc OpArgDocDICOMExportContours();
 
 Drover
 DICOMExportContours(Drover DICOM_data, 

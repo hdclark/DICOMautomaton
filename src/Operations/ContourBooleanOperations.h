@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocContourBooleanOperations(void);
+OperationDoc OpArgDocContourBooleanOperations();
 
 Drover ContourBooleanOperations(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                              std::map<std::string, std::string> /*InvocationMetadata*/,

@@ -25,7 +25,7 @@
 #include "GenerateCalibrationCurve.h"
 
 
-OperationDoc OpArgDocGenerateCalibrationCurve(void){
+OperationDoc OpArgDocGenerateCalibrationCurve(){
     OperationDoc out;
     out.name = "GenerateCalibrationCurve";
 

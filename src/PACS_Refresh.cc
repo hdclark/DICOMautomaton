@@ -9,7 +9,7 @@
     #error "Attempted to compile without PostgreSQL support, which is required."
 #endif
 
-#include <math.h>
+#include <cmath>
 #include <exception>
 #include <fstream>
 #include <functional>

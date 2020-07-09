@@ -21,7 +21,7 @@
 
 
 
-OperationDoc OpArgDocExtractAlphaBeta(void){
+OperationDoc OpArgDocExtractAlphaBeta(){
     OperationDoc out;
     out.name = "ExtractAlphaBeta";
     out.desc = 

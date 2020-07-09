@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocAnalyzeLightRadFieldCoincidence(void);
+OperationDoc OpArgDocAnalyzeLightRadFieldCoincidence();
 
 Drover AnalyzeLightRadFieldCoincidence(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                          std::map<std::string, std::string> /*InvocationMetadata*/,

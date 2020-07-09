@@ -20,7 +20,7 @@
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
 
-OperationDoc OpArgDocSpatialSharpen(void){
+OperationDoc OpArgDocSpatialSharpen(){
     OperationDoc out;
     out.name = "SpatialSharpen";
 

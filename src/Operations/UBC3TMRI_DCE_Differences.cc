@@ -23,7 +23,7 @@
 template <class T> class contour_collection;
 
 
-OperationDoc OpArgDocUBC3TMRI_DCE_Differences(void){
+OperationDoc OpArgDocUBC3TMRI_DCE_Differences(){
     OperationDoc out;
     out.name = "UBC3TMRI_DCE_Differences";
     out.desc = 

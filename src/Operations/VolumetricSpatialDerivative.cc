@@ -22,7 +22,7 @@
 #include "VolumetricSpatialDerivative.h"
 
 
-OperationDoc OpArgDocVolumetricSpatialDerivative(void){
+OperationDoc OpArgDocVolumetricSpatialDerivative(){
     OperationDoc out;
     out.name = "VolumetricSpatialDerivative";
 

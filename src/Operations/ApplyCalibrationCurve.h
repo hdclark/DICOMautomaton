@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocApplyCalibrationCurve(void);
+OperationDoc OpArgDocApplyCalibrationCurve();
 
 Drover ApplyCalibrationCurve(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                      std::map<std::string, std::string> /*InvocationMetadata*/,

@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocAnalyzeTPlan(void);
+OperationDoc OpArgDocAnalyzeTPlan();
 
 Drover AnalyzeTPlan(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                          std::map<std::string, std::string> /*InvocationMetadata*/,

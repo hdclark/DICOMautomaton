@@ -27,7 +27,7 @@
 #endif
 
 
-OperationDoc OpArgDocContourBooleanOperations(void){
+OperationDoc OpArgDocContourBooleanOperations(){
     OperationDoc out;
     out.name = "ContourBooleanOperations";
 

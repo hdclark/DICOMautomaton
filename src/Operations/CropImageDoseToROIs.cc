@@ -20,7 +20,7 @@
 
 
 
-OperationDoc OpArgDocCropImageDoseToROIs(void){
+OperationDoc OpArgDocCropImageDoseToROIs(){
     OperationDoc out;
     out.name = "CropImageDoseToROIs";
 

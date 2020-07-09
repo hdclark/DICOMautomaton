@@ -20,7 +20,7 @@
 
 
 
-OperationDoc OpArgDocRankPixels(void){
+OperationDoc OpArgDocRankPixels(){
     OperationDoc out;
     out.name = "RankPixels";
     out.desc = "This operation ranks pixels throughout an image array.";

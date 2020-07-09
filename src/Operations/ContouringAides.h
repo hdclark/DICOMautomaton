@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocContouringAides(void);
+OperationDoc OpArgDocContouringAides();
 
 Drover ContouringAides(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                        std::map<std::string, std::string> /*InvocationMetadata*/,

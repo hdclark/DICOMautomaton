@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocSelectSlicesIntersectingROI(void);
+OperationDoc OpArgDocSelectSlicesIntersectingROI();
 
 Drover SelectSlicesIntersectingROI(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                                    std::map<std::string, std::string> /*InvocationMetadata*/,

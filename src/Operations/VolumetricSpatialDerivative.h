@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocVolumetricSpatialDerivative(void);
+OperationDoc OpArgDocVolumetricSpatialDerivative();
 
 Drover VolumetricSpatialDerivative(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                          std::map<std::string, std::string> /*InvocationMetadata*/,

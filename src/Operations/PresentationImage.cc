@@ -44,7 +44,7 @@
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
 
-OperationDoc OpArgDocPresentationImage(void){
+OperationDoc OpArgDocPresentationImage(){
     OperationDoc out;
     out.name = "PresentationImage";
     out.desc = "This operation renders an image with any contours in-place and colour mapping using an SFML backend.";
@@ -154,22 +154,22 @@ Drover PresentationImage( Drover DICOM_data,
     // NOTE: The reasoning for having several image arrays is not clear cut. If the timestamps are known exactly, it
     //       might make sense to split in this way. In general, it is up to the user to make this call. 
     using img_data_ptr_it_t = decltype(DICOM_data.image_data.begin());
-    img_data_ptr_it_t img_array_ptr_beg  = DICOM_data.image_data.begin();
-    img_data_ptr_it_t img_array_ptr_end  = DICOM_data.image_data.end();
-    img_data_ptr_it_t img_array_ptr_last = std::prev(DICOM_data.image_data.end());
-    img_data_ptr_it_t img_array_ptr_it   = img_array_ptr_last;
+    auto img_array_ptr_beg  = DICOM_data.image_data.begin();
+    auto img_array_ptr_end  = DICOM_data.image_data.end();
+    auto img_array_ptr_last = std::prev(DICOM_data.image_data.end());
+    auto img_array_ptr_it   = img_array_ptr_last;
 
     //At the moment, we keep a single 'display' image active at a time. To help walk through the neighbouring images
     // (and the rest of the images, for that matter) we keep a container iterator to the image.
     using disp_img_it_t = decltype(DICOM_data.image_data.front()->imagecoll.images.begin());
-    disp_img_it_t disp_img_beg  = (*img_array_ptr_it)->imagecoll.images.begin();
-    disp_img_it_t disp_img_end  = (*img_array_ptr_it)->imagecoll.images.end();
-    disp_img_it_t disp_img_last = std::prev((*img_array_ptr_it)->imagecoll.images.end());
+    auto disp_img_beg  = (*img_array_ptr_it)->imagecoll.images.begin();
+    auto disp_img_end  = (*img_array_ptr_it)->imagecoll.images.end();
+    auto disp_img_last = std::prev((*img_array_ptr_it)->imagecoll.images.end());
 
     //Find the image closest to (0,0,0), which is frequently the portion of interest.
     using disp_img_t = decltype(*disp_img_beg);
     auto disp_img_it = std::min_element(disp_img_beg, disp_img_end, 
-                    [](const disp_img_t &L, const disp_img_t &R) -> bool {
+                    [](disp_img_t &L, disp_img_t &R) -> bool {
                         const auto zero = vec3<double>().zero();
                         return (L.center().sq_dist(zero) < R.center().sq_dist(zero));
                     });
@@ -219,7 +219,7 @@ Drover PresentationImage( Drover DICOM_data,
     const sf::Color Editing_Contour_Color(255,121,0); //"Vivid Orange."
 
     //Load available colour maps.
-    std::vector< std::pair<std::string, std::function<class ClampedColourRGB(double)>>> colour_maps = {
+    std::vector< std::pair<std::string, std::function<struct ClampedColourRGB(double)>>> colour_maps = {
         std::make_pair("Viridis", ColourMap_Viridis),
         std::make_pair("Magma", ColourMap_Magma),
         std::make_pair("Plasma", ColourMap_Plasma),
@@ -298,8 +298,8 @@ Drover PresentationImage( Drover DICOM_data,
                                               : img_win_fw.value();
 
             //The output range we are targeting. In this case, a commodity 8 bit (2^8 = 256 intensities) display.
-            const double destmin = static_cast<double>( 0 );
-            const double destmax = static_cast<double>( std::numeric_limits<uint8_t>::max() );
+            const auto destmin = static_cast<double>( 0 );
+            const auto destmax = static_cast<double>( std::numeric_limits<uint8_t>::max() );
     
             for(auto i = 0; i < img_cols; ++i){
                 for(auto j = 0; j < img_rows; ++j){

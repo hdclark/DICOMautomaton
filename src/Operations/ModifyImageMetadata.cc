@@ -19,7 +19,7 @@
 
 
 
-OperationDoc OpArgDocModifyImageMetadata(void){
+OperationDoc OpArgDocModifyImageMetadata(){
     OperationDoc out;
     out.name = "ModifyImageMetadata";
     out.desc = 

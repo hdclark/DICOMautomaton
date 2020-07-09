@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocMakeMeshesManifold(void);
+OperationDoc OpArgDocMakeMeshesManifold();
 
 Drover MakeMeshesManifold(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                              std::map<std::string, std::string> /*InvocationMetadata*/,

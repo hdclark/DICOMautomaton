@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocClusterDBSCAN(void);
+OperationDoc OpArgDocClusterDBSCAN();
 
 Drover ClusterDBSCAN(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                          std::map<std::string, std::string> /*InvocationMetadata*/,

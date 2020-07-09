@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocConvertNaNsToAir(void);
+OperationDoc OpArgDocConvertNaNsToAir();
 
 Drover ConvertNaNsToAir(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                         std::map<std::string, std::string> /*InvocationMetadata*/,

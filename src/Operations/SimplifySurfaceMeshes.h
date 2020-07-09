@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocSimplifySurfaceMeshes(void);
+OperationDoc OpArgDocSimplifySurfaceMeshes();
 
 Drover SimplifySurfaceMeshes(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                          std::map<std::string, std::string> /*InvocationMetadata*/,

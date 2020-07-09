@@ -14,7 +14,7 @@
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 
 
-OperationDoc OpArgDocDumpVoxelDoseInfo(void){
+OperationDoc OpArgDocDumpVoxelDoseInfo(){
     OperationDoc out;
     out.name = "DumpVoxelDoseInfo";
 
@@ -49,16 +49,14 @@ Drover DumpVoxelDoseInfo(Drover DICOM_data, OperationArgPkg , std::map<std::stri
         //
         //NOTE: Should I get rid of the idea of cycling through multiple dose data? The only way we get here is if the data
         // cannot be melded... This is probably not a worthwhile feature to keep in this code.
-        for(auto & dd_it : dose_data_to_use){
+        for(auto & dd : dose_data_to_use){
 
             //Loop through all dose frames (slices).
-            for(auto i_it = dd_it->imagecoll.images.begin(); i_it != dd_it->imagecoll.images.end(); ++i_it){
-                //Note: i_it is something like std::list<planar_image<T,R>>::iterator.
-                //  
+            for(auto & image : dd->imagecoll.images){
                 //Now cycle through every pixel in the plane.
-                for(long int i=0; i<i_it->rows; ++i)  for(long int j=0; j<i_it->columns; ++j){
+                for(long int i=0; i<image.rows; ++i)  for(long int j=0; j<image.columns; ++j){
                     //Greyscale or R channel. We assume the channels satisfy: R = G = B.
-                    const auto pointval = i_it->value(i,j,0); 
+                    const auto pointval = image.value(i,j,0); 
                     const auto pointdose = static_cast<double>(pointval); 
 
                     if(pointdose < themin) themin = pointdose;

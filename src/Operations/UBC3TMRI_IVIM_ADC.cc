@@ -19,7 +19,7 @@
 #include "YgorImages.h"
 
 
-OperationDoc OpArgDocUBC3TMRI_IVIM_ADC(void){
+OperationDoc OpArgDocUBC3TMRI_IVIM_ADC(){
     OperationDoc out;
     out.name = "UBC3TMRI_IVIM_ADC";
     out.desc = 

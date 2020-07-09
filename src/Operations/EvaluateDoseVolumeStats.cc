@@ -32,7 +32,7 @@
 
 
 
-OperationDoc OpArgDocEvaluateDoseVolumeStats(void){
+OperationDoc OpArgDocEvaluateDoseVolumeStats(){
     OperationDoc out;
     out.name = "EvaluateDoseVolumeStats";
 

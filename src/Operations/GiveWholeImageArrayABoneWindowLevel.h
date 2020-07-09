@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocGiveWholeImageArrayABoneWindowLevel(void);
+OperationDoc OpArgDocGiveWholeImageArrayABoneWindowLevel();
 
 Drover GiveWholeImageArrayABoneWindowLevel(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                                            std::map<std::string, std::string> /*InvocationMetadata*/,

@@ -10,7 +10,7 @@
 #include "ConvertDoseToImage.h"
 
 
-OperationDoc OpArgDocConvertDoseToImage(void){
+OperationDoc OpArgDocConvertDoseToImage(){
     OperationDoc out;
     out.name = "ConvertDoseToImage";
 

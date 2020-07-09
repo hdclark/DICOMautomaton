@@ -29,7 +29,7 @@
 
 
 
-OperationDoc OpArgDocConvertContoursToPoints(void){
+OperationDoc OpArgDocConvertContoursToPoints(){
     OperationDoc out;
     out.name = "ConvertContoursToPoints";
 

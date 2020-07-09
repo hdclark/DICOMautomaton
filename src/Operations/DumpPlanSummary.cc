@@ -35,7 +35,7 @@
 #include "DumpPlanSummary.h"
 
 
-OperationDoc OpArgDocDumpPlanSummary(void){
+OperationDoc OpArgDocDumpPlanSummary(){
     OperationDoc out;
     out.name = "DumpPlanSummary";
 

@@ -31,7 +31,7 @@
 
 
 
-OperationDoc OpArgDocThresholdImages(void){
+OperationDoc OpArgDocThresholdImages(){
     OperationDoc out;
     out.name = "ThresholdImages";
 
@@ -157,7 +157,7 @@ Drover ThresholdImages(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std:
             }
             std::reference_wrapper<planar_image<float,double>> img_refw( std::ref(animg) );
 
-            tp.submit_task([&,img_refw](void) -> void {
+            tp.submit_task([&,img_refw]() -> void {
                 const auto R = img_refw.get().rows;
                 const auto C = img_refw.get().columns;
 
@@ -192,10 +192,10 @@ Drover ThresholdImages(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std:
 
                 //Construct pixel 'oracle' closures using the user-specified threshold criteria. 
                 // These functions identify whether pixels are within the threshold values.
-                auto lower_pixel_oracle = [cu,cl](float p) -> bool {
+                auto lower_pixel_oracle = [cl](float p) -> bool {
                     return (cl < p);
                 };
-                auto upper_pixel_oracle = [cu,cl](float p) -> bool {
+                auto upper_pixel_oracle = [cu](float p) -> bool {
                     return (p < cu);
                 };
 

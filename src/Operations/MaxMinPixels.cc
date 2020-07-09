@@ -15,7 +15,7 @@
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 
 
-OperationDoc OpArgDocMaxMinPixels(void){
+OperationDoc OpArgDocMaxMinPixels(){
     OperationDoc out;
     out.name = "MaxMinPixels";
     out.desc = 

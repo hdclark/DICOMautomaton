@@ -8,7 +8,7 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocGenerateSyntheticImages(void);
+OperationDoc OpArgDocGenerateSyntheticImages();
 
 Drover GenerateSyntheticImages(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
                       std::map<std::string, std::string> /*InvocationMetadata*/,

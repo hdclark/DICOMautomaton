@@ -1,5 +1,5 @@
 
-#include <stdlib.h>
+#include <cstdlib>
 #include <algorithm>
 #include <cmath>
 #include <any>
@@ -74,8 +74,8 @@ bool OrthogonalSlices(planar_image_collection<float,double>::images_list_it_t fi
     //Figure out the spatial extent of the images along the ortho_unit direction.
     const auto mm = std::minmax_element( std::begin(selected_img_its), 
                                          std::end(selected_img_its),
-                    [=]( const decltype(selected_img_its.front()) &A, 
-                         const decltype(selected_img_its.front()) &B ) -> bool {
+                    [=]( decltype(selected_img_its.front()) &A, 
+                         decltype(selected_img_its.front()) &B ) -> bool {
                         //Work out the distance from an arbitrary slice.
                         //const auto A_dist = (A->offset - first_img_it->offset).Dot(old_orto_unit);
                         //const auto B_dist = (B->offset - first_img_it->offset).Dot(old_orto_unit);
