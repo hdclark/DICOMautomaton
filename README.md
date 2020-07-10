@@ -60,18 +60,18 @@ Dependencies are listed in [PKGBUILD](PKGBUILD), using Arch Linux package naming
 conventions, and in [CMakeLists.txt](CMakeLists.txt) using Debian package naming
 conventions.
 
-Notably, `DICOMautomaton` depends on the author's "Ygor", "Explicator", 
-and "YgorClustering" projects which are hosted at:
+Notably, `DICOMautomaton` depends on the author's `Ygor`, `Explicator`, and
+`YgorClustering` projects which are hosted at:
 
-- Ygor: https://gitlab.com/hdeanclark/Ygor and
-  https://github.com/hdclark/Ygor.
-
-- Explicator: https://gitlab.com/hdeanclark/Explicator and
-  https://github.com/hdclark/Explicator.
-
-- YgorClustering (needed only for compilation):
-  https://gitlab.com/hdeanclark/YgorClustering and
-  https://github.com/hdclark/YgorClustering.
+  - Ygor: <https://gitlab.com/hdeanclark/Ygor> and
+    <https://github.com/hdclark/Ygor>.
+  
+  - Explicator: <https://gitlab.com/hdeanclark/Explicator> and
+    <https://github.com/hdclark/Explicator>.
+  
+  - YgorClustering (needed only for compilation):
+    <https://gitlab.com/hdeanclark/YgorClustering> and
+    <https://github.com/hdclark/YgorClustering>.
   
 # Installation
 
@@ -198,16 +198,15 @@ Note that this method is experimental.
 
 # Known Issues
 
-- The `SFML_Viewer` operation hangs on some systems after viewing a plot with
-  Gnuplot. This stems from a known issue in Ygor. 
-
-- Building with `musl` may cause character conversion to fail for some DICOM
-  files in some circumstances.
+  - The `SFML_Viewer` operation hangs on some systems after viewing a plot with
+    Gnuplot. This stems from a known issue in Ygor. 
+  
+  - Building with `musl` may cause character conversion to fail for some DICOM
+    files in some circumstances.
 
 # Project Home
 
-The `DICOMautomaton` homepage can be found at http://www.halclark.ca/. Source
-code is available at https://gitlab.com/hdeanclark/DICOMautomaton/ and
-https://github.com/hdclark/DICOMautomaton/.
-
+The `DICOMautomaton` homepage can be found at <http://www.halclark.ca/>. Source
+code is available at <https://gitlab.com/hdeanclark/DICOMautomaton/> and
+<https://github.com/hdclark/DICOMautomaton/>.
 

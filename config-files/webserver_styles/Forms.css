@@ -61,7 +61,8 @@ button {
   width: auto;
   font-size: 0.85em;
   flex-grow: 100;
-  /* border: 0px solid black; */
+
+  /* border: 0 solid black; */
 }
 
 .OperationGrouper {
@@ -73,18 +74,20 @@ button {
   width: auto;
   font-size: 0.85em;
   flex-grow: 100;
-  /* border: 0px solid black; */
+
+  /* border: 0 solid black; */
 }
 
 .OperationSelectorDescriptionPanel {
   display: block;
   margin-left: 2em;
-  /* margin-right: 2em; */
   height: auto;
   width: 100%;
   font-size: 0.7em;
   background-color: rgba(255, 255, 100, 0.25);
   flex-shrink: 100;
+
+  /* margin-right: 2em; */
 }
 
 .InstructionText {
@@ -107,25 +110,28 @@ button {
 
 .OutputParameterName {
   display: block;
+
   /* color: Indigo; */
 }
 
 .DownloadLink {
-  /* float: right; */
   text-align: right;
   font-size: 0.8em;
+
+  /* float: right; */
   /* color: DarkGreen; */
 }
 
 .FeedbackText {
   display: block;
-  color: LightGray; 
+  color: LightGray;
   margin-top: -0.5em;
   margin-bottom: -0.5em;
   margin-left: 2em;
   font-size: 0.85em;
-  /* float: right; */
   text-align: right;
+
+  /* float: right; */
 }
 
 .ClearFix {
@@ -136,7 +142,7 @@ button {
 
 .DataEntryGroupBlock {
   display: block;
-  animation: inplace-fade 1.0s ease-in-out;
+  animation: inplace-fade 1s ease-in-out;
 }
 
 .DataEntryGroupBlock legend {
@@ -147,26 +153,16 @@ button {
 
 .DataEntryGroupBlock form {
   display: block;
+
   /* color: DarkGreen; */
-}
-
-
-tr:hover {
-  background-color: rgba(210,105,100,0.15);
 }
 
 tr {
   border-top: 0.1px solid moccasin;
 }
 
-tbody td:nth-of-type(even),
-thead th:nth-of-type(even) {
-  background: rgba(100,200,255,0.15);
-}
-
-tbody td:nth-of-type(odd),
-thead th:nth-of-type(odd) {
-  background: rgba(255,255,100,0.25);
+tr:hover {
+  background-color: rgba(210, 105, 100, 0.15);
 }
 
 thead {
@@ -178,14 +174,25 @@ tbody {
   font-size: 0.8em;
 }
 
-th, td {
+th,
+td {
   padding: 5px;
+}
+
+tbody td:nth-of-type(even),
+thead th:nth-of-type(even) {
+  background: rgba(100, 200, 255, 0.15);
+}
+
+tbody td:nth-of-type(odd),
+thead th:nth-of-type(odd) {
+  background: rgba(255, 255, 100, 0.25);
 }
 
 table {
   margin-top: 1em;
   margin-bottom: 1em;
-  animation: inplace-fade 1.0s ease-in-out;
+  animation: inplace-fade 1s ease-in-out;
 }
 
 img {
@@ -196,12 +203,12 @@ img {
   margin-bottom: 1em;
   max-width: 100%;
   height: auto;
-  animation: inplace-fade 1.0s ease-in-out;
-
-  /* For hover animations. */
+  animation: inplace-fade 1s ease-in-out;
   z-index: 2;
   position: relative;
   transition: transform 0.25s ease;
+
+  /* For hover animations. */
 }
 
 img:hover {
@@ -213,9 +220,9 @@ img:hover {
 
 .ImageHoverOverlay { /* This class obscures the background when hovering over images. */
   display: block;
-  background-color: rgba(0,0,0,0);
-  width: 0px;
-  min-height: 0px;
+  background-color: rgba(0, 0, 0, 0);
+  width: 0;
+  min-height: 0;
   position: fixed;
   top: 0;
   left: 0;
@@ -226,19 +233,20 @@ img:hover {
 img:hover ~ .ImageHoverOverlay {
   width: 100%;
   min-height: 100%;
-  background-color: rgba(0,0,0,0.9);
+  background-color: rgba(0, 0, 0, 0.9);
 }
 
 input {
   width: 100%;
   box-sizing: border-box;
-  border: 0px solid black;
+  border: 0 solid black;
 }
 
 @keyframes inplace-fade {
   0% {
     opacity: 0;
   }
+
   100% {
     opacity: 1;
   }
