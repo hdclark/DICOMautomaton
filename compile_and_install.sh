@@ -150,7 +150,7 @@ if [[ "${DISTRIBUTION}" =~ .*debian.* ]] ; then
           ../
     fi
     JOBS=$(nproc)
-    JOBS=$(( $JOBS < 8 ? $JOBS : 8 )) # Limit to reduce memory use.
+    JOBS=$(( JOBS < 8 ? JOBS : 8 )) # Limit to reduce memory use.
     make -j "$JOBS" VERBOSE=1
     make package
 

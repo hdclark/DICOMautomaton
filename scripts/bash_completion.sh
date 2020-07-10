@@ -42,8 +42,8 @@ _dicomautomaton_dispatcher () {
     :*)
         # Determine which operation was most recently specified.
         most_recent_opname=""
-        for i in `seq $COMP_CWORD -1 1` ; do
-            local p="${COMP_WORDS[$(($i-1))]}"  # 'prev'
+        for i in $(seq $COMP_CWORD -1 1) ; do
+            local p="${COMP_WORDS[$((i-1))]}"  # 'prev'
             local c="${COMP_WORDS[$i]}"         # 'curr'
             if [ "${p}" == '-o' ] || 
                [ "${p}" == '--operation' ] ||

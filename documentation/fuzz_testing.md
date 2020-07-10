@@ -54,9 +54,11 @@ However, these programs will generally **intentionally** throw exceptions when t
 treats these as crashes equivalent to situations where an **unintentional** crash occurs. So it's best to write a
 separate, minimal test program that:
 
-  1. Directly exercises the code to be fuzzed, and
-  2. Reads all inputs from a file, and
-  3. Catches all anticipated exceptions and exits the program normally.
+ 1. Directly exercises the code to be fuzzed, and
+
+ 2. Reads all inputs from a file, and
+
+ 3. Catches all anticipated exceptions and exits the program normally.
 
 ## Preparing Test Files
 

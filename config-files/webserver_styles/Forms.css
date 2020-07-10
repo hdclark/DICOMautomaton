@@ -1,246 +1,245 @@
 
 body {
-    display: block;
-    width: 60%;
-    min-width: 30em;
-    margin-left: auto;
-    margin-right: auto;
+  display: block;
+  width: 60%;
+  min-width: 30em;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 button {
-    display: block;
-    margin-right: 5%;
-    margin-left: auto;
+  display: block;
+  margin-right: 5%;
+  margin-left: auto;
 }
 
 .Title {
-    display: flex;
-    font-size: 1.75em;
-    margin-top: 1em;
-    margin-bottom: 1em;
-    margin-left: 0;
-    margin-right: 0;
-    font-weight: bold;
+  display: flex;
+  font-size: 1.75em;
+  margin-top: 1em;
+  margin-bottom: 1em;
+  margin-left: 0;
+  margin-right: 0;
+  font-weight: bold;
 }
 
 .Homepage {
-    display: flex;
-    font-size: 0.8em;
-    text-decoration: italic;
+  display: flex;
+  font-size: 0.8em;
+  text-decoration: italic;
 }
 
 .HeaderCont {
-    display: flex;
-    flex-direction: row;
-    flex-wrap: nowrap;
-    justify-content: space-around;
-    align-items: baseline;
-    align-content: center;
-    margin-left: 0.5em;
-    margin-right: 0.5em;
-    margin-bottom: 0em;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  justify-content: space-around;
+  align-items: baseline;
+  align-content: center;
+  margin-left: 0.5em;
+  margin-right: 0.5em;
+  margin-bottom: 0;
 }
 
 .SelectorCont {
-    display: flex;
-    flex-direction: row;
-    flex-wrap: nowrap;
-    justify-content: flex-start;
-    align-items: flex-start;
-    align-content: center;
-    margin-left: 0.5em;
-    margin-right: 0.5em;
-    margin-bottom: 2em;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+  align-items: flex-start;
+  align-content: center;
+  margin-left: 0.5em;
+  margin-right: 0.5em;
+  margin-bottom: 2em;
 }
 
 .OperationSelector {
-    display: block;
-    margin-left: 0em;
-    margin-right: 0.1em;
-    font-size: 0.8em;
-    height: auto;
-    width: auto;
-    font-size: 0.85em;
-    flex-grow: 100;
-    /*border: 0px solid black;*/
+  display: block;
+  margin-left: 0;
+  margin-right: 0.1em;
+  height: auto;
+  width: auto;
+  font-size: 0.85em;
+  flex-grow: 100;
+  /* border: 0px solid black; */
 }
 
 .OperationGrouper {
-    display: block;
-    margin-left: 0em;
-    margin-right: 0.5em;
-    font-size: 0.8em;
-    height: auto;
-    width: auto;
-    font-size: 0.85em;
-    flex-grow: 100;
-    /*border: 0px solid black;*/
+  display: block;
+  margin-left: 0;
+  margin-right: 0.5em;
+  font-size: 0.8em;
+  height: auto;
+  width: auto;
+  font-size: 0.85em;
+  flex-grow: 100;
+  /* border: 0px solid black; */
 }
 
 .OperationSelectorDescriptionPanel {
-    display: block;
-    margin-left: 2em;
-    /*margin-right: 2em;*/
-    height: auto;
-    width: 100%;
-    font-size: 0.7em;
-    background-color: rgba(255,255,100,0.25);
-    flex-shrink: 100;
+  display: block;
+  margin-left: 2em;
+  /* margin-right: 2em; */
+  height: auto;
+  width: 100%;
+  font-size: 0.7em;
+  background-color: rgba(255, 255, 100, 0.25);
+  flex-shrink: 100;
 }
 
 .InstructionText {
-    display: block;
-    color: DarkGreen; 
+  display: block;
+  color: DarkGreen;
 }
 
 .ParameterNameCont {
-    display: flex;
-    flex-direction: row;
-    flex-wrap: nowrap;
-    justify-content: space-between;
-    align-items: baseline;
-    align-content: center;
-    font-size: 0.9em;
-    background: moccasin;
-    margin-top: 1em;
-    margin-bottom: 1em;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  justify-content: space-between;
+  align-items: baseline;
+  align-content: center;
+  font-size: 0.9em;
+  background: moccasin;
+  margin-top: 1em;
+  margin-bottom: 1em;
 }
 
 .OutputParameterName {
-    display: block;
-    /* color: Indigo; */
+  display: block;
+  /* color: Indigo; */
 }
 
 .DownloadLink {
-    /* float: right; */
-    text-align: right;
-    font-size: 0.8em;
-    /* color: DarkGreen; */
+  /* float: right; */
+  text-align: right;
+  font-size: 0.8em;
+  /* color: DarkGreen; */
 }
 
 .FeedbackText {
-    display: block;
-    color: LightGray; 
-    margin-top: -0.5em;
-    margin-bottom: -0.5em;
-    margin-left: 2em;
-    font-size: 0.85em;
-    /* float: right; */
-    text-align: right;
+  display: block;
+  color: LightGray; 
+  margin-top: -0.5em;
+  margin-bottom: -0.5em;
+  margin-left: 2em;
+  font-size: 0.85em;
+  /* float: right; */
+  text-align: right;
 }
 
 .ClearFix {
-    content: "";
-    clear: both;
-    display: table;
+  content: "";
+  clear: both;
+  display: table;
 }
 
 .DataEntryGroupBlock {
-    display: block;
-    animation: inplace-fade 1.0s ease-in-out;
+  display: block;
+  animation: inplace-fade 1.0s ease-in-out;
 }
 
 .DataEntryGroupBlock legend {
-    display: block;
-    font-weight: bold;
-    color: Chocolate;
+  display: block;
+  font-weight: bold;
+  color: Chocolate;
 }
 
 .DataEntryGroupBlock form {
-    display: block;
-    /* color: DarkGreen; */
+  display: block;
+  /* color: DarkGreen; */
 }
 
 
 tr:hover {
-    background-color: rgba(210,105,100,0.15);
+  background-color: rgba(210,105,100,0.15);
 }
 
 tr {
-    border-top: 0.1px solid moccasin;
+  border-top: 0.1px solid moccasin;
 }
 
 tbody td:nth-of-type(even),
 thead th:nth-of-type(even) {
-    background: rgba(100,200,255,0.15);
+  background: rgba(100,200,255,0.15);
 }
 
 tbody td:nth-of-type(odd),
 thead th:nth-of-type(odd) {
-    background: rgba(255,255,100,0.25);
+  background: rgba(255,255,100,0.25);
 }
 
 thead {
-    font-size: 0.9em;
-    background-color: papayawhip;
+  font-size: 0.9em;
+  background-color: papayawhip;
 }
 
 tbody {
-    font-size: 0.8em;
+  font-size: 0.8em;
 }
 
 th, td {
-    padding: 5px;
+  padding: 5px;
 }
 
 table {
-    margin-top: 1em;
-    margin-bottom: 1em;
-    animation: inplace-fade 1.0s ease-in-out;
+  margin-top: 1em;
+  margin-bottom: 1em;
+  animation: inplace-fade 1.0s ease-in-out;
 }
 
 img {
-    display: block;
-    margin-left: auto;
-    margin-right: auto;
-    margin-top: 1em;
-    margin-bottom: 1em;
-    max-width: 100%;
-    height: auto;
-    animation: inplace-fade 1.0s ease-in-out;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  margin-top: 1em;
+  margin-bottom: 1em;
+  max-width: 100%;
+  height: auto;
+  animation: inplace-fade 1.0s ease-in-out;
 
-    /* For hover animations. */
-    z-index: 2;
-    position: relative;
-    transition: transform 0.25s ease;
+  /* For hover animations. */
+  z-index: 2;
+  position: relative;
+  transition: transform 0.25s ease;
 }
 
 img:hover {
-    -ms-transform: scale(1.5);
-    -webkit-transform: scale(1.5);
-    -moz-transform: scale(1.5);
-    transform: scale(1.5);
+  -ms-transform: scale(1.5);
+  -webkit-transform: scale(1.5);
+  -moz-transform: scale(1.5);
+  transform: scale(1.5);
 }
 
 .ImageHoverOverlay { /* This class obscures the background when hovering over images. */
-    display: block;
-    background-color: rgba(0,0,0,0);
-    width: 0px;
-    min-height: 0px;
-    position: fixed;
-    top: 0;
-    left: 0;
-    z-index: 1;
-    transition: height 0s, width 0s, background-color 0.25s ease;
+  display: block;
+  background-color: rgba(0,0,0,0);
+  width: 0px;
+  min-height: 0px;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1;
+  transition: height 0s, width 0s, background-color 0.25s ease;
 }
 
 img:hover ~ .ImageHoverOverlay {
-    width: 100%;
-    min-height: 100%;
-    background-color: rgba(0,0,0,0.9);
+  width: 100%;
+  min-height: 100%;
+  background-color: rgba(0,0,0,0.9);
 }
 
 input {
-    width: 100%;
-    box-sizing: border-box;
-    border: 0px solid black;
+  width: 100%;
+  box-sizing: border-box;
+  border: 0px solid black;
 }
 
 @keyframes inplace-fade {
-    0% {
-        opacity: 0;
-    }
-    100% {
-        opacity: 1;
-    }
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
 }

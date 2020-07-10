@@ -94,7 +94,7 @@ N_failures="$(wc -l < "${TEST_FAILURES}")"
 
 printf '\n'
 printf -- '---------------------------------------------------------------------------------------\n'
-printf 'Number of tests performed: \t%s\n' "$(($N_successes + $N_failures))" 
+printf 'Number of tests performed: \t%s\n' "$((N_successes + N_failures))" 
 printf '       ... that succeeded: \t%s\n' "$N_successes"
 printf '          ... that failed: \t%s\n' "$N_failures" 
 printf 'All outputs are in: %s\n' "${TESTING_ROOT}"
