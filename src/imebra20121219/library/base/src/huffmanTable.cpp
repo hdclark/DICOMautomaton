@@ -73,12 +73,9 @@ namespace puntoexe
 //
 ///////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////
-huffmanTable::huffmanTable(imbxUint32 maxValueLength)
+huffmanTable::huffmanTable(imbxUint32 maxValueLength) : m_maxValuePerLength{0}, m_minValuePerLength{0} // NOTE: initialization added to suppress non-initialization warning.
 {
 	m_numValues=(1L<<(maxValueLength))+1L;
-
-    // NOTE: initialization added to suppress non-initialization warning.
-	::memset(m_maxValuePerLength, 0xFF, sizeof(m_maxValuePerLength));
 
 	reset();
 }
