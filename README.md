@@ -63,13 +63,13 @@ conventions.
 Notably, `DICOMautomaton` depends on the author's `Ygor`, `Explicator`, and
 `YgorClustering` projects which are hosted at:
 
-  - Ygor: <https://gitlab.com/hdeanclark/Ygor> and
+  - `Ygor`: <https://gitlab.com/hdeanclark/Ygor> and
     <https://github.com/hdclark/Ygor>.
   
-  - Explicator: <https://gitlab.com/hdeanclark/Explicator> and
+  - `Explicator`: <https://gitlab.com/hdeanclark/Explicator> and
     <https://github.com/hdclark/Explicator>.
   
-  - YgorClustering (needed only for compilation):
+  - `YgorClustering` (needed only for compilation):
     <https://gitlab.com/hdeanclark/YgorClustering> and
     <https://github.com/hdclark/YgorClustering>.
   

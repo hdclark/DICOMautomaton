@@ -69,7 +69,6 @@ button {
   display: block;
   margin-left: 0;
   margin-right: 0.5em;
-  font-size: 0.8em;
   height: auto;
   width: auto;
   font-size: 0.85em;
@@ -118,8 +117,8 @@ button {
   text-align: right;
   font-size: 0.8em;
 
-  /* float: right; */
-  /* color: DarkGreen; */
+  /* float: right;
+     color: DarkGreen; */
 }
 
 .FeedbackText {
