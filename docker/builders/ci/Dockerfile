@@ -6,8 +6,8 @@ LABEL maintainer="http://www.halclark.ca" \
 
 
 WORKDIR /scratch
-ADD docker/builders/ci /scratch
-ADD . /dcma
+COPY docker/builders/ci /scratch
+COPY . /dcma
 
 
 # Prepare alternative mirrors.

@@ -77,6 +77,9 @@ huffmanTable::huffmanTable(imbxUint32 maxValueLength)
 {
 	m_numValues=(1L<<(maxValueLength))+1L;
 
+    // NOTE: initialization added to suppress non-initialization warning.
+	::memset(m_maxValuePerLength, 0xFF, sizeof(m_maxValuePerLength));
+
 	reset();
 }
 
@@ -281,8 +284,8 @@ void huffmanTable::calcHuffmanTables()
 
 	imbxUint32 valueIndex = 0;
 
-	::memset(m_minValuePerLength, 0xffffffff, sizeof(m_minValuePerLength));
-	::memset(m_maxValuePerLength, 0xffffffff, sizeof(m_maxValuePerLength));
+	::memset(m_minValuePerLength, 0xFF, sizeof(m_minValuePerLength));
+	::memset(m_maxValuePerLength, 0xFF, sizeof(m_maxValuePerLength));
 
 	m_firstValidLength = 0;
 	for(imbxUint32 codeLength=1L; codeLength != sizeof(m_valuesPerLength)/sizeof(imbxUint32); ++codeLength)

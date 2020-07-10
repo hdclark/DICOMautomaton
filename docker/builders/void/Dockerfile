@@ -8,8 +8,8 @@ EXPOSE 80
 EXPOSE 443
 
 WORKDIR /scratch
-ADD ./docker/builders/void /scratch
-ADD . /dcma
+COPY ./docker/builders/void /scratch
+COPY . /dcma
 
 
 

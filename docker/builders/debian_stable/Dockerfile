@@ -8,8 +8,8 @@ EXPOSE 80
 EXPOSE 443
 
 WORKDIR /scratch
-ADD ./docker/builders/debian_stable /scratch
-ADD . /dcma
+COPY ./docker/builders/debian_stable /scratch
+COPY . /dcma
 
 
 

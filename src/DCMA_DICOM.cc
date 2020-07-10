@@ -511,7 +511,7 @@ uint64_t Node::emit_DICOM(std::ostream &os,
 
             // Ensure that, if an element is present it parses as a number.
             try{
-                if(!token.empty()) std::stoll(token);
+                if(!token.empty()) [[maybe_unused]] auto r = std::stoll(token);
             }catch(const std::exception &e){
                 throw std::runtime_error("Unable to convert '"_s + token + "' to IS. Cannot continue.");
             }
@@ -533,7 +533,7 @@ uint64_t Node::emit_DICOM(std::ostream &os,
 
             // Ensure that, if an element is present it parses as a number.
             try{
-                if(!token.empty()) std::stod(token);
+                if(!token.empty()) [[maybe_unused]] auto r = std::stod(token);
             }catch(const std::exception &e){
                 throw std::runtime_error("Unable to convert '"_s + token + "' to DS. Cannot continue.");
             }

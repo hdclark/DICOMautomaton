@@ -6,7 +6,7 @@ LABEL maintainer="http://www.halclark.ca" \
 
 
 WORKDIR /scratch_base
-ADD docker/build_bases/void /scratch_base
+COPY docker/build_bases/void /scratch_base
 
 
 # Install build dependencies.

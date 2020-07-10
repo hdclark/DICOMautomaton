@@ -6,7 +6,7 @@ LABEL maintainer="http://www.halclark.ca" \
 
 
 WORKDIR /scratch_base
-ADD docker/build_bases/arch /scratch_base
+COPY docker/build_bases/arch /scratch_base
 
 
 # Prepare alternative mirrors.
