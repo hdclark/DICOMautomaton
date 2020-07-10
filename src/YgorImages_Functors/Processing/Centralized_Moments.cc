@@ -204,7 +204,7 @@ bool ComputeCentralizedMoments(planar_image_collection<float,double>::images_lis
 static bool Push_Moment_to_Database(analysis_key_t thekey, double themoment){
     // ---------------------------------- Convert key to JSON ---------------------------------------
     json_t *obj = json_object();
-    for(auto apair : thekey){
+    for(const auto& apair : thekey){
         if(0 != json_object_set(obj, apair.first.c_str(), json_string(apair.second.c_str())) ){
             FUNCERR("Unable to generate JSON from analysis key");
         }
@@ -252,7 +252,7 @@ void DumpCentralizedMoments(std::map<std::string,std::string> InvocationMetadata
         return;
     }
 
-    for(auto apair : moments){
+    for(const auto& apair : moments){
         auto thekey = apair.first;
         auto themoment = apair.second;
       

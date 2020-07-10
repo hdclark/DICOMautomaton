@@ -25,7 +25,7 @@ template <class T> class line;
 // Note: This routine can handle large contour thicknesses, which generate rectangular contours.
 //
 void Inject_Thin_Plane_Contour( const planar_image<float,double> &animg,
-                                plane<double> aplane, // The plane to mimic.
+                                const plane<double>& aplane, // The plane to mimic.
                                 contour_collection<double> &dest, // Where to put the contours.
                                 std::map<std::string, std::string> metadata,
                                 double c_thickness = std::numeric_limits<double>::quiet_NaN() );
@@ -40,7 +40,7 @@ void Inject_Thin_Plane_Contour( const planar_image<float,double> &animg,
 void Inject_Thin_Line_Contour( const planar_image<float,double> &animg,
                                line<double> aline, // The line to insert.
                                contour_collection<double> &dest, // Where to put the contours.
-                               std::map<std::string, std::string> metadata,
+                               const std::map<std::string, std::string>& metadata,
                                double c_thickness = std::numeric_limits<double>::quiet_NaN() );
 
 //Injects contours that mimic the provided point.
@@ -54,8 +54,8 @@ void Inject_Thin_Line_Contour( const planar_image<float,double> &animg,
 // Note: >=3 vertices must be used in this routine.
 //
 void Inject_Point_Contour( const planar_image<float,double> &animg,
-                           vec3<double> apoint,
+                           const vec3<double>& apoint,
                            contour_collection<double> &dest, // Where to put the contours.
-                           std::map<std::string, std::string> metadata,
+                           const std::map<std::string, std::string>& metadata,
                            double radius = std::numeric_limits<double>::quiet_NaN(),
                            long int num_verts = 5);

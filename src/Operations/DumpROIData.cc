@@ -28,7 +28,7 @@ OperationDoc OpArgDocDumpROIData(){
     return out;
 }
 
-Drover DumpROIData(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string,std::string> /*InvocationMetadata*/, std::string FilenameLex){
+Drover DumpROIData(Drover DICOM_data, const OperationArgPkg& /*OptArgs*/, const std::map<std::string,std::string>& /*InvocationMetadata*/, const std::string& FilenameLex){
 
     typedef std::tuple<std::string,std::string,std::string> key_t; //PatientID, ROIName, NormalizedROIName.
 
@@ -171,7 +171,7 @@ Drover DumpROIData(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std:
         //          << std::endl;
 
         //Print out the best few guesses for each raw contour name.
-        const auto ROIName = std::get<1>(ContourCount.first);
+        const auto& ROIName = std::get<1>(ContourCount.first);
         X(ROIName);
         std::unique_ptr<std::map<std::string,float>> res(X.Get_Last_Results());
         std::vector<std::pair<std::string,float>> ordered_res(res->begin(), res->end());

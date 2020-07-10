@@ -71,10 +71,10 @@ OperationDoc OpArgDocModifyContourMetadata(){
 
 
 
-Drover ModifyContourMetadata(Drover DICOM_data, 
-                           OperationArgPkg OptArgs, 
-                           std::map<std::string,std::string> /*InvocationMetadata*/, 
-                           std::string /*FilenameLex*/ ){
+Drover ModifyContourMetadata(const Drover& DICOM_data, 
+                           const OperationArgPkg& OptArgs, 
+                           const std::map<std::string,std::string>& /*InvocationMetadata*/, 
+                           const std::string& /*FilenameLex*/ ){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto NormalizedROILabelRegex = OptArgs.getValueStr("NormalizedROILabelRegex").value();
@@ -95,7 +95,7 @@ Drover ModifyContourMetadata(Drover DICOM_data,
 
 
     std::map<std::string,std::string> key_values;
-    for(auto a : SplitStringToVector(KeyValues, ';', 'd')){
+    for(const auto& a : SplitStringToVector(KeyValues, ';', 'd')){
         auto b = SplitStringToVector(a, '@', 'd');
         if(b.size() != 2) throw std::runtime_error("Cannot parse subexpression: "_s + a);
 

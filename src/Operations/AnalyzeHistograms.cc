@@ -180,13 +180,13 @@ Get_All_Regex(const std::string &source, std::regex &regex_the_query){
 
 static
 std::regex
-lCompile_Regex(std::string input){
+lCompile_Regex(const std::string& input){
     return std::regex(input, std::regex::icase | 
                              //std::regex::nosubs |
                              std::regex::optimize |
                              std::regex::extended);
 }
-Drover AnalyzeHistograms(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){
+Drover AnalyzeHistograms(Drover DICOM_data, const OperationArgPkg& OptArgs, const std::map<std::string,std::string>& /*InvocationMetadata*/, const std::string& /*FilenameLex*/){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto LineSelectionStr = OptArgs.getValueStr("LineSelection").value();

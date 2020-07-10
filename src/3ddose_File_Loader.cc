@@ -28,7 +28,7 @@
 
 bool Load_From_3ddose_Files( Drover &DICOM_data,
                           std::map<std::string,std::string> & /* InvocationMetadata */,
-                          std::string &,
+                          const std::string &,
                           std::list<boost::filesystem::path> &Filenames ){
 
     //This routine will attempt to load 3ddose-format files. Files that are not successfully loaded
@@ -121,7 +121,7 @@ bool Load_From_3ddose_Files( Drover &DICOM_data,
                 std::getline(FI, aline);
 
                 // Ignore comments.
-                const auto hash_pos = aline.find_first_of("#");
+                const auto hash_pos = aline.find_first_of('#');
                 if(hash_pos != std::string::npos){
                     aline = aline.substr(0, hash_pos);
                 }

@@ -23,7 +23,6 @@ exit
          -p compile_commands.json \
          --fix --fix-errors \
          --header-filter='.*h' \
-         --checks='-*,clang-analyzer-*,clang-diagnostic*,modernize*' \
+         --checks='-*,clang-analyzer-*,clang-diagnostic*,modernize*,misc*,performance*,boost*' \
          '{}' \;  2>&1 | tee -a /tmp/clang_tidy_output.txt # src/*.cc src/Ygor*/*/*cc Operations/*.cc 
 
-         #--checks='-*,clang-analyzer-*,clang-diagnostic*,boost*,misc*,modernize*,performance*' \

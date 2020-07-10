@@ -40,7 +40,7 @@ struct Regex_Selector_Opts {
 
 // Compile and return a regex using the application-wide default settings.
 std::regex
-Compile_Regex(std::string input);
+Compile_Regex(const std::string& input);
 
 
 // ---------------------------------- Contours / ROIs ----------------------------------

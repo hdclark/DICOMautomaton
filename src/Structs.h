@@ -271,7 +271,7 @@ class Static_Machine_State {
         //Member functions.
         Static_Machine_State & operator=(const Static_Machine_State &rhs); //Performs a deep copy (unless copying self).
 
-        template <class U> std::optional<U> GetMetadataValueAs(std::string key) const;
+        template <class U> std::optional<U> GetMetadataValueAs(const std::string& key) const;
 };
 
 // The class represents a dynamic configuration of a treatment machine composed of interpolated static states.
@@ -299,7 +299,7 @@ class Dynamic_Machine_State {
         void normalize_states(); // Replaces NaNs with previously specified static states, where possible.
         Static_Machine_State interpolate(double CumulativeMetersetWeight) const; // Interpolates adjacent states.
 
-        template <class U> std::optional<U> GetMetadataValueAs(std::string key) const;
+        template <class U> std::optional<U> GetMetadataValueAs(const std::string& key) const;
 };
 
 // This class holds a radiotherapy plan, i.e., an arrangement of multiple dynamic particle beams and treatment
@@ -318,7 +318,7 @@ class TPlan_Config {
         //Member functions.
         TPlan_Config & operator=(const TPlan_Config &rhs); //Performs a deep copy (unless copying self).
 
-        template <class U> std::optional<U> GetMetadataValueAs(std::string key) const;
+        template <class U> std::optional<U> GetMetadataValueAs(const std::string& key) const;
 };
 
 
@@ -356,7 +356,7 @@ class Transform3 {
         //Member functions.
         Transform3 & operator=(const Transform3 &rhs); //Performs a deep copy (unless copying self).
 
-        template <class U> std::optional<U> GetMetadataValueAs(std::string key) const;
+        template <class U> std::optional<U> GetMetadataValueAs(const std::string& key) const;
 };
 
 
@@ -467,7 +467,7 @@ class Drover {
                                    drover_bnded_dose_mean_dose_map_t *mean_doses, 
                                    drover_bnded_dose_min_max_dose_map_t *min_max_doses,
                                    drover_bnded_dose_pos_dose_map_t *pos_doses,
-                                   std::function<bool(bnded_dose_pos_dose_tup_t)> Fselection,
+                                   const std::function<bool(bnded_dose_pos_dose_tup_t)>& Fselection,
                                    drover_bnded_dose_stat_moments_map_t *centralized_moments ) const;
     
         std::list<double> Bounded_Dose_Bulk_Values() const;                 //If the contours contain multiple organs, we get TOTAL bulk pixel values (Gy or cGy?)
@@ -478,7 +478,7 @@ class Drover {
         drover_bnded_dose_stat_moments_map_t Bounded_Dose_Centralized_Moments() const;
         drover_bnded_dose_stat_moments_map_t Bounded_Dose_Normalized_Cent_Moments() const;
     
-        Drover Segment_Contours_Heuristically(std::function<bool(bnded_dose_pos_dose_tup_t)> heur) const;
+        Drover Segment_Contours_Heuristically(const std::function<bool(bnded_dose_pos_dose_tup_t)>& heur) const;
     
         std::pair<double,double> Bounded_Dose_Limits() const;  //Returns the min and max voxel doses (in cGy or Gy?) amongst ALL contour-enclosed voxels.
         std::map<double,double>  Get_DVH() const;              //If the contours contain multiple organs, we get TOTAL (cumulative) DVH (in Gy or cGy?)
@@ -495,7 +495,7 @@ class Drover {
         bool Has_LSamp_Data() const;
         bool Has_Tran3_Data() const;
 
-        void Concatenate(std::shared_ptr<Contour_Data> in);
+        void Concatenate(const std::shared_ptr<Contour_Data>& in);
         void Concatenate(std::list<std::shared_ptr<Image_Array>> in);
         void Concatenate(std::list<std::shared_ptr<Point_Cloud>> in);
         void Concatenate(std::list<std::shared_ptr<Surface_Mesh>> in);
@@ -504,7 +504,7 @@ class Drover {
         void Concatenate(std::list<std::shared_ptr<Transform3>> in);
         void Concatenate(Drover in);
 
-        void Consume(std::shared_ptr<Contour_Data> in);
+        void Consume(const std::shared_ptr<Contour_Data>& in);
         void Consume(std::list<std::shared_ptr<Image_Array>> in);
         void Consume(std::list<std::shared_ptr<Point_Cloud>> in);
         void Consume(std::list<std::shared_ptr<Surface_Mesh>> in);
@@ -538,7 +538,7 @@ class OperationArgPkg {
         icase_map_t opts; // Arguments to pass to the operation.
 
     public:
-        OperationArgPkg(std::string unparsed, std::string sepr = ":", std::string eqls = "="); // e.g., "SomeOperation:keyA=valueA:keyB=valueB"
+        OperationArgPkg(std::string unparsed, const std::string& sepr = ":", const std::string& eqls = "="); // e.g., "SomeOperation:keyA=valueA:keyB=valueB"
         OperationArgPkg(const OperationArgPkg &) = default;
 
         OperationArgPkg & operator=(const OperationArgPkg &rhs);
@@ -549,10 +549,10 @@ class OperationArgPkg {
         //Checks if the provided keys (and only the provided keys) are present.
         bool containsExactly(std::initializer_list<std::string> l) const;
 
-        std::optional<std::string> getValueStr(std::string key) const;
+        std::optional<std::string> getValueStr(const std::string& key) const;
 
-        bool insert(std::string key, std::string val); //Will not overwrite.
-        bool insert(std::string keyval); //Will not overwrite.
+        bool insert(const std::string& key, std::string val); //Will not overwrite.
+        bool insert(const std::string& keyval); //Will not overwrite.
 
 };
 

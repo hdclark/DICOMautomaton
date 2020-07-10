@@ -25,7 +25,7 @@
 
 bool Load_From_XYZ_Files( Drover &DICOM_data,
                           std::map<std::string,std::string> & /* InvocationMetadata */,
-                          std::string &,
+                          const std::string &,
                           std::list<boost::filesystem::path> &Filenames ){
 
     //This routine will attempt to load XYZ-format files. Files that are not successfully loaded

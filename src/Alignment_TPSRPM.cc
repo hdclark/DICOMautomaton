@@ -684,7 +684,7 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
         // Moving outlier coefficients.
         {
             const auto i = N_move_points; // row
-            const auto P_moving = com_moved;
+            const auto& P_moving = com_moved;
             for(long int j = 0; j < N_stat_points; ++j){ // column
                 const auto P_stationary = stationary.points[j];
                 const auto dP = P_stationary - P_moving; // Note: intentionally not transformed.
@@ -698,7 +698,7 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
             const auto P_moving = moving.points[i];
             const auto P_moved = t.transform(P_moving); // Transform the point.
             const auto j = N_stat_points; // column
-            const auto P_stationary = com_stat;
+            const auto& P_stationary = com_stat;
             const auto dP = P_stationary - P_moved;
             M(i, j) = (1.0 / T_start)
                     * std::exp( -dP.Dot(dP) / T_start);

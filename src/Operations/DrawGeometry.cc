@@ -150,7 +150,7 @@ OperationDoc OpArgDocDrawGeometry(){
 
 
 
-Drover DrawGeometry(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string> /*InvocationMetadata*/, std::string FilenameLex){
+Drover DrawGeometry(Drover DICOM_data, const OperationArgPkg& OptArgs, const std::map<std::string,std::string>& /*InvocationMetadata*/, const std::string& FilenameLex){
 
     Explicator X(FilenameLex);
 
@@ -300,7 +300,7 @@ Drover DrawGeometry(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::st
             const auto img_origin = img_refw.get().anchor + img_refw.get().offset;
             const auto img_centre = (*iap_it)->imagecoll.center();
 
-            const auto grid_origin = img_centre; // Note: changing this will require changing N_lines below!
+            const auto& grid_origin = img_centre; // Note: changing this will require changing N_lines below!
 
             unit_z = unit_x.Cross(unit_y).unit();
             if(!unit_x.GramSchmidt_orthogonalize(unit_y, unit_z)){

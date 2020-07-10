@@ -104,7 +104,7 @@ struct path_node {
 
 static
 std::vector<std::string>
-extract_tag_as_string( puntoexe::ptr<puntoexe::imebra::dataSet> base_node_ptr,
+extract_tag_as_string( const puntoexe::ptr<puntoexe::imebra::dataSet>& base_node_ptr,
                        path_node path ){
 
     // This routine extracts DICOM tags (multiple, if multiple exist at the level of the pointed-to data frame) as
@@ -156,7 +156,7 @@ extract_tag_as_string( puntoexe::ptr<puntoexe::imebra::dataSet> base_node_ptr,
 
 static
 std::vector<std::string>
-extract_seq_tag_as_string( puntoexe::ptr<puntoexe::imebra::dataSet> base_node_ptr,
+extract_seq_tag_as_string( const puntoexe::ptr<puntoexe::imebra::dataSet>& base_node_ptr,
                            std::deque<path_node> apath ){
                            //uint16_t seq_group, uint16_t seq_tag,
                            //uint16_t tag_group, uint16_t tag_tag ){
@@ -237,7 +237,7 @@ extract_seq_tag_as_string( puntoexe::ptr<puntoexe::imebra::dataSet> base_node_pt
 
 static
 std::vector<std::string>
-extract_seq_vec_tag_as_string( puntoexe::ptr<puntoexe::imebra::dataSet> base_node_ptr,
+extract_seq_vec_tag_as_string( const puntoexe::ptr<puntoexe::imebra::dataSet>& base_node_ptr,
                                //Remaining path elements (relative to base_node_ptr).
                                std::deque<path_node> apath ){
 
@@ -347,7 +347,7 @@ void
 ds_insert(puntoexe::ptr<puntoexe::imebra::dataSet> &ds,
           path_node pn,
 //          uint16_t group, uint16_t tag,
-          std::string i_val){
+          const std::string& i_val){
 //    const uint16_t order = 0;
 //    uint32_t element = 0;
 
@@ -452,7 +452,7 @@ ds_seq_insert(puntoexe::ptr<puntoexe::imebra::dataSet> &ds,
     //Prefer to append to an existing dataSet rather than creating an additional one.
     auto lds = tag_ptr->getDataSet(0);
     if( lds == nullptr ) lds = puntoexe::ptr<puntoexe::imebra::dataSet>(new puntoexe::imebra::dataSet);
-    ds_insert(lds, tag_pn, tag_val);
+    ds_insert(lds, tag_pn, std::move(tag_val));
     tag_ptr->setDataSet( 0, lds );
 
     return;
@@ -2259,7 +2259,7 @@ Load_TPlan_Config(const std::string &FilenameIn){
 //       intensities which are scaled by a floating-point number to get the final dose. There are facilities for
 //       exchanging floating-point-valued images in DICOM, but portability would be suspect.
 //
-void Write_Dose_Array(std::shared_ptr<Image_Array> IA, const std::string &FilenameOut, ParanoiaLevel Paranoia){
+void Write_Dose_Array(const std::shared_ptr<Image_Array>& IA, const std::string &FilenameOut, ParanoiaLevel Paranoia){
     if( (IA == nullptr) 
     ||  IA->imagecoll.images.empty()){
         throw std::runtime_error("No images provided for export. Cannot continue.");
@@ -2624,9 +2624,9 @@ void Write_Dose_Array(std::shared_ptr<Image_Array> IA, const std::string &Filena
 //
 // Note: the user callback will be called once per file.
 //
-void Write_CT_Images(std::shared_ptr<Image_Array> IA, 
-                     std::function<void(std::istream &is,
-                                        long int filesize)> file_handler,
+void Write_CT_Images(const std::shared_ptr<Image_Array>& IA, 
+                     const std::function<void(std::istream &is,
+                                        long int filesize)>& file_handler,
                      ParanoiaLevel Paranoia){
     if( (IA == nullptr) 
     ||  IA->imagecoll.images.empty()){
@@ -2915,8 +2915,8 @@ void Write_CT_Images(std::shared_ptr<Image_Array> IA,
 //This routine writes a collection of planar contours to a DICOM RTSTRUCT-modality file.
 //
 void Write_Contours(std::list<std::reference_wrapper<contour_collection<double>>> CC,
-                    std::function<void(std::istream &is,
-                                       long int filesize)> file_handler,
+                    const std::function<void(std::istream &is,
+                                       long int filesize)>& file_handler,
                     ParanoiaLevel Paranoia){
     if( CC.empty() ){
         throw std::invalid_argument("No contours provided for export. Cannot continue.");
@@ -3166,7 +3166,7 @@ void Write_Contours(std::list<std::reference_wrapper<contour_collection<double>>
 
             //uint32_t contour_seq_n = 0;
             uint32_t contour_seq_n = 1;
-            for(const auto c : cc_refw.get().contours){
+            for(const auto& c : cc_refw.get().contours){
                 DCMA_DICOM::Node *multi_c_seq_ptr = c_seq_ptr->emplace_child_node({{0x0000, 0x0000}, "MULTI", ""});
 
                 multi_c_seq_ptr->emplace_child_node({{0x3006, 0x0048}, "IS", std::to_string(contour_seq_n) }); // ContourNumber

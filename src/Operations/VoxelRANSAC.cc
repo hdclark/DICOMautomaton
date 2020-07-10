@@ -167,7 +167,7 @@ OperationDoc OpArgDocVoxelRANSAC(){
     return out;
 }
 
-Drover VoxelRANSAC(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){
+Drover VoxelRANSAC(Drover DICOM_data, const OperationArgPkg& OptArgs, const std::map<std::string,std::string>& /*InvocationMetadata*/, const std::string& /*FilenameLex*/){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto ImageSelectionStr = OptArgs.getValueStr("ImageSelection").value();
@@ -557,7 +557,7 @@ std::array<SpatialType, SpatialDimensionCount> Coordinates;
         Eigen::MatrixXd cov = centered.adjoint() * centered;
         Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> eig(cov);
         
-        Eigen::VectorXd evals = eig.eigenvalues();
+        const Eigen::VectorXd& evals = eig.eigenvalues();
         Eigen::MatrixXd evecs = eig.eigenvectors().real();
 
         const vec3<double> grid_u_a( evecs(0,0), evecs(1,0), evecs(2,0) );

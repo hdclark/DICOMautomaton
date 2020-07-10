@@ -140,7 +140,7 @@ OperationDoc OpArgDocMinkowskiSum3D(){
     return out;
 }
 
-Drover MinkowskiSum3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string>, std::string ){
+Drover MinkowskiSum3D(Drover DICOM_data, const OperationArgPkg& OptArgs, const std::map<std::string,std::string>&, const std::string& ){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto NormalizedROILabelRegex = OptArgs.getValueStr("NormalizedROILabelRegex").value();

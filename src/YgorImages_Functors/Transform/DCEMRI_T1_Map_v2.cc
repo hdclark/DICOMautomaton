@@ -117,6 +117,7 @@ bool DCEMRIT1MapV2(planar_image_collection<float,double>::images_list_it_t  loca
                 double T1val(0.0), S0val(0.0);
 
                 std::vector<double> S; //Pixel intensity. Could also be 'M' for magnetization.
+                S.reserve(overlapping_imgs.size());
                 for(auto img_it : overlapping_imgs){
                     S.push_back( static_cast<double>( img_it->value(row, col, chan) ) );
                 }

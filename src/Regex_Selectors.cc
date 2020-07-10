@@ -8,6 +8,7 @@
 #include <functional>
 #include <regex>
 #include <optional>
+#include <utility>
 
 #include "YgorString.h"
 #include "YgorMath.h"
@@ -23,7 +24,7 @@
 template <class L> // L is a list of list::iterators of shared_ptr<Image_Array or Point_Cloud>.
 L
 Whitelist_Core( L lops,
-           std::string Specifier,
+           const std::string& Specifier,
            Regex_Selector_Opts Opts ){
 
     // Multiple key-value specifications stringified together.
@@ -210,7 +211,7 @@ Whitelist_Core( L lops,
                                             std::string> > MetadataKeyValueRegex,
            Regex_Selector_Opts Opts ){
 
-    for(auto kv_pair : MetadataKeyValueRegex){
+    for(const auto& kv_pair : MetadataKeyValueRegex){
         lops = Whitelist(lops, kv_pair.first, kv_pair.second, Opts);
     }
     return lops;
@@ -221,7 +222,7 @@ Whitelist_Core( L lops,
 
 // Compile and return a regex using the application-wide default settings.
 std::regex
-Compile_Regex(std::string input){
+Compile_Regex(const std::string& input){
     return std::regex(input, std::regex::icase | 
                              std::regex::nosubs |
                              std::regex::optimize |
@@ -273,7 +274,7 @@ Whitelist( std::list<std::reference_wrapper<contour_collection<double>>> ccs,
            std::string MetadataValueRegex,
            Regex_Selector_Opts Opts ){
 
-    auto theregex = Compile_Regex(MetadataValueRegex);
+    auto theregex = Compile_Regex(std::move(MetadataValueRegex));
 
     ccs.remove_if([&](std::reference_wrapper<contour_collection<double>> cc) -> bool {
         if(cc.get().contours.empty()) return true; // Remove collections containing no contours.
@@ -326,7 +327,7 @@ Whitelist( std::list<std::reference_wrapper<contour_collection<double>>> ccs,
                                             std::string> > MetadataKeyValueRegex,
            Regex_Selector_Opts Opts ){
 
-    for(auto kv_pair : MetadataKeyValueRegex){
+    for(const auto& kv_pair : MetadataKeyValueRegex){
         ccs = Whitelist(ccs, kv_pair.first, kv_pair.second, Opts);
     }
     return ccs;
@@ -360,7 +361,7 @@ Whitelist( std::list<std::list<std::shared_ptr<Image_Array>>::iterator> ias,
            std::string MetadataValueRegex,
            Regex_Selector_Opts Opts ){
 
-    auto theregex = Compile_Regex(MetadataValueRegex);
+    auto theregex = Compile_Regex(std::move(MetadataValueRegex));
 
     ias.remove_if([&](std::list<std::shared_ptr<Image_Array>>::iterator iap_it) -> bool {
         if((*iap_it) == nullptr) return true;
@@ -413,7 +414,7 @@ Whitelist( std::list<std::list<std::shared_ptr<Image_Array>>::iterator> ias,
            std::string Specifier,
            Regex_Selector_Opts Opts ){
 
-    return Whitelist_Core( ias, Specifier, Opts );
+    return Whitelist_Core( std::move(ias), std::move(Specifier), Opts );
 }
 
 
@@ -424,7 +425,7 @@ Whitelist( std::list<std::list<std::shared_ptr<Image_Array>>::iterator> ias,
                                             std::string> > MetadataKeyValueRegex,
            Regex_Selector_Opts Opts ){
 
-    return Whitelist_Core( ias, MetadataKeyValueRegex, Opts );
+    return Whitelist_Core( std::move(ias), MetadataKeyValueRegex, Opts );
 }
 
 
@@ -472,7 +473,7 @@ Whitelist( std::list<std::list<std::shared_ptr<Point_Cloud>>::iterator> pcs,
            std::string MetadataValueRegex,
            Regex_Selector_Opts Opts ){
 
-    auto theregex = Compile_Regex(MetadataValueRegex);
+    auto theregex = Compile_Regex(std::move(MetadataValueRegex));
 
     pcs.remove_if([&](std::list<std::shared_ptr<Point_Cloud>>::iterator pcp_it) -> bool {
         if((*pcp_it) == nullptr) return true;
@@ -511,7 +512,7 @@ Whitelist( std::list<std::list<std::shared_ptr<Point_Cloud>>::iterator> pcs,
            std::string Specifier,
            Regex_Selector_Opts Opts ){
 
-    return Whitelist_Core( pcs, Specifier, Opts );
+    return Whitelist_Core( std::move(pcs), std::move(Specifier), Opts );
 }    
 
 
@@ -524,7 +525,7 @@ Whitelist( std::list<std::list<std::shared_ptr<Point_Cloud>>::iterator> pcs,
                                             std::string> > MetadataKeyValueRegex,
            Regex_Selector_Opts Opts ){
 
-    return Whitelist_Core( pcs, MetadataKeyValueRegex, Opts );
+    return Whitelist_Core( std::move(pcs), MetadataKeyValueRegex, Opts );
 }
 
 
@@ -572,7 +573,7 @@ Whitelist( std::list<std::list<std::shared_ptr<Surface_Mesh>>::iterator> sms,
            std::string MetadataValueRegex,
            Regex_Selector_Opts Opts ){
 
-    auto theregex = Compile_Regex(MetadataValueRegex);
+    auto theregex = Compile_Regex(std::move(MetadataValueRegex));
 
     sms.remove_if([&](std::list<std::shared_ptr<Surface_Mesh>>::iterator smp_it) -> bool {
         if((*smp_it) == nullptr) return true;
@@ -617,7 +618,7 @@ Whitelist( std::list<std::list<std::shared_ptr<Surface_Mesh>>::iterator> sms,
            std::string Specifier,
            Regex_Selector_Opts Opts ){
 
-    return Whitelist_Core( sms, Specifier, Opts );
+    return Whitelist_Core( std::move(sms), std::move(Specifier), Opts );
 }    
 
 
@@ -630,7 +631,7 @@ Whitelist( std::list<std::list<std::shared_ptr<Surface_Mesh>>::iterator> sms,
                                             std::string> > MetadataKeyValueRegex,
            Regex_Selector_Opts Opts ){
 
-    return Whitelist_Core( sms, MetadataKeyValueRegex, Opts );
+    return Whitelist_Core( std::move(sms), MetadataKeyValueRegex, Opts );
 }
 
 
@@ -678,7 +679,7 @@ Whitelist( std::list<std::list<std::shared_ptr<TPlan_Config>>::iterator> tps,
            std::string MetadataValueRegex,
            Regex_Selector_Opts Opts ){
 
-    auto theregex = Compile_Regex(MetadataValueRegex);
+    auto theregex = Compile_Regex(std::move(MetadataValueRegex));
 
     tps.remove_if([&](std::list<std::shared_ptr<TPlan_Config>>::iterator tpp_it) -> bool {
         if((*tpp_it) == nullptr) return true;
@@ -724,7 +725,7 @@ Whitelist( std::list<std::list<std::shared_ptr<TPlan_Config>>::iterator> tps,
            std::string Specifier,
            Regex_Selector_Opts Opts ){
 
-    return Whitelist_Core( tps, Specifier, Opts );
+    return Whitelist_Core( std::move(tps), std::move(Specifier), Opts );
 }    
 
 
@@ -737,7 +738,7 @@ Whitelist( std::list<std::list<std::shared_ptr<TPlan_Config>>::iterator> tps,
                                             std::string> > MetadataKeyValueRegex,
            Regex_Selector_Opts Opts ){
 
-    return Whitelist_Core( tps, MetadataKeyValueRegex, Opts );
+    return Whitelist_Core( std::move(tps), MetadataKeyValueRegex, Opts );
 }
 
 
@@ -784,7 +785,7 @@ Whitelist( std::list<std::list<std::shared_ptr<Line_Sample>>::iterator> lss,
            std::string MetadataValueRegex,
            Regex_Selector_Opts Opts ){
 
-    auto theregex = Compile_Regex(MetadataValueRegex);
+    auto theregex = Compile_Regex(std::move(MetadataValueRegex));
 
     lss.remove_if([&](std::list<std::shared_ptr<Line_Sample>>::iterator lsp_it) -> bool {
         if((*lsp_it) == nullptr) return true;
@@ -826,7 +827,7 @@ Whitelist( std::list<std::list<std::shared_ptr<Line_Sample>>::iterator> lss,
            std::string Specifier,
            Regex_Selector_Opts Opts ){
 
-    return Whitelist_Core( lss, Specifier, Opts );
+    return Whitelist_Core( std::move(lss), std::move(Specifier), Opts );
 }    
 
 
@@ -839,7 +840,7 @@ Whitelist( std::list<std::list<std::shared_ptr<Line_Sample>>::iterator> lss,
                                             std::string> > MetadataKeyValueRegex,
            Regex_Selector_Opts Opts ){
 
-    return Whitelist_Core( lss, MetadataKeyValueRegex, Opts );
+    return Whitelist_Core( std::move(lss), MetadataKeyValueRegex, Opts );
 }
 
 
@@ -884,7 +885,7 @@ Whitelist( std::list<std::list<std::shared_ptr<Transform3>>::iterator> t3s,
            std::string MetadataValueRegex,
            Regex_Selector_Opts Opts ){
 
-    auto theregex = Compile_Regex(MetadataValueRegex);
+    auto theregex = Compile_Regex(std::move(MetadataValueRegex));
 
     t3s.remove_if([&](std::list<std::shared_ptr<Transform3>>::iterator t3p_it) -> bool {
         if((*t3p_it) == nullptr) return true;
@@ -924,7 +925,7 @@ Whitelist( std::list<std::list<std::shared_ptr<Transform3>>::iterator> t3s,
            std::string Specifier,
            Regex_Selector_Opts Opts ){
 
-    return Whitelist_Core( t3s, Specifier, Opts );
+    return Whitelist_Core( std::move(t3s), std::move(Specifier), Opts );
 }    
 
 
@@ -937,7 +938,7 @@ Whitelist( std::list<std::list<std::shared_ptr<Transform3>>::iterator> t3s,
                                             std::string> > MetadataKeyValueRegex,
            Regex_Selector_Opts Opts ){
 
-    return Whitelist_Core( t3s, MetadataKeyValueRegex, Opts );
+    return Whitelist_Core( std::move(t3s), MetadataKeyValueRegex, Opts );
 }
 
 

@@ -75,9 +75,9 @@ OperationDoc OpArgDocDumpPerROIParams_KineticModel_1Compartment2Input_5Param(){
 
 Drover 
 DumpPerROIParams_KineticModel_1Compartment2Input_5Param(Drover DICOM_data, 
-                                                        OperationArgPkg OptArgs, 
-                                                        std::map<std::string,std::string> /*InvocationMetadata*/, 
-                                                        std::string /*FilenameLex*/){
+                                                        const OperationArgPkg& OptArgs, 
+                                                        const std::map<std::string,std::string>& /*InvocationMetadata*/, 
+                                                        const std::string& /*FilenameLex*/){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto ROILabelRegex = OptArgs.getValueStr("ROILabelRegex").value();
@@ -112,7 +112,7 @@ DumpPerROIParams_KineticModel_1Compartment2Input_5Param(Drover DICOM_data,
     auto cc_ROIs = cc_all;
     cc_ROIs.remove_if([=](std::reference_wrapper<contour_collection<double>> cc) -> bool {
                    const auto ROINameOpt = cc.get().contours.front().GetMetadataValueAs<std::string>("ROIName");
-                   const auto ROIName = ROINameOpt.value();
+                   const auto& ROIName = ROINameOpt.value();
                    return !(std::regex_match(ROIName,theregex));
     });
     if(cc_ROIs.empty()){
@@ -416,7 +416,7 @@ DumpPerROIParams_KineticModel_1Compartment2Input_5Param(Drover DICOM_data,
 
 
                                 // --------------- Append the data into the user_data struct -----------------
-                                const auto RName = ROIName.value();
+                                const auto& RName = ROIName.value();
 
                                 params[RName].emplace_back();
                                 if(HaveModel == Have_1Compartment2Input_5Param_LinearInterp_Model){

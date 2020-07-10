@@ -230,7 +230,7 @@ OperationDoc OpArgDocSubsegment_ComputeDose_VanLuijk(){
 
 
 
-Drover Subsegment_ComputeDose_VanLuijk(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string> /*InvocationMetadata*/, std::string FilenameLex){
+Drover Subsegment_ComputeDose_VanLuijk(Drover DICOM_data, const OperationArgPkg& OptArgs, const std::map<std::string,std::string>& /*InvocationMetadata*/, const std::string& FilenameLex){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     auto AreaDataFileName = OptArgs.getValueStr("AreaDataFileName").value();
@@ -546,7 +546,7 @@ Drover Subsegment_ComputeDose_VanLuijk(Drover DICOM_data, OperationArgPkg OptArg
                 }
             }
 
-            for(auto apair : Area){
+            for(const auto& apair : Area){
                 FO_area << "PatientID='" << patient_ID << "',"
                         << "NormalizedROIname='" << apair.first << "',"
                         << "Area='" << apair.second << "'" << std::endl;

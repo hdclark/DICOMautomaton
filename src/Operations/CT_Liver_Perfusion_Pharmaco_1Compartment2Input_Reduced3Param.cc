@@ -258,7 +258,7 @@ OperationDoc OpArgDocCT_Liver_Perfusion_Pharmaco_1C2I_Reduced3Param(){
 
 
 
-Drover CT_Liver_Perfusion_Pharmaco_1C2I_Reduced3Param(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string> InvocationMetadata, std::string /*FilenameLex*/){
+Drover CT_Liver_Perfusion_Pharmaco_1C2I_Reduced3Param(Drover DICOM_data, const OperationArgPkg& OptArgs, const std::map<std::string,std::string>& InvocationMetadata, const std::string& /*FilenameLex*/){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto AIFROIName = OptArgs.getValueStr("AIFROINameRegex").value();
@@ -335,11 +335,11 @@ Drover CT_Liver_Perfusion_Pharmaco_1C2I_Reduced3Param(Drover DICOM_data, Operati
     std::list<KineticModel_PixelSelectionCriteria> pixels_to_plot;
     const auto RowRegex = Compile_Regex("row");
     const auto ColRegex = Compile_Regex("column");
-    for(auto a : SplitStringToVector(PlotPixelModel, '#', 'd')){
+    for(const auto& a : SplitStringToVector(PlotPixelModel, '#', 'd')){
         pixels_to_plot.emplace_back();
         pixels_to_plot.back().row = -1;
         pixels_to_plot.back().column = -1;
-        for(auto b : SplitStringToVector(a, ';', 'd')){
+        for(const auto& b : SplitStringToVector(a, ';', 'd')){
             auto c = SplitStringToVector(b, '@', 'd');
             if(c.size() != 2) throw std::runtime_error("Cannot parse subexpression: "_s + b);
 
@@ -379,23 +379,25 @@ Drover CT_Liver_Perfusion_Pharmaco_1C2I_Reduced3Param(Drover DICOM_data, Operati
         }
     }
 
+    std::map<std::string,std::string> l_InvocationMetadata(InvocationMetadata);
+    
     //Look for relevant invocation metadata.
     double ContrastInjectionLeadTime = 6.0; //Seconds. 
-    if(InvocationMetadata.count("ContrastInjectionLeadTime") == 0){
+    if(l_InvocationMetadata.count("ContrastInjectionLeadTime") == 0){
         FUNCWARN("Unable to locate 'ContrastInjectionLeadTime' invocation metadata key. Assuming the default lead time "
                  << ContrastInjectionLeadTime << "s is appropriate");
     }else{
-        ContrastInjectionLeadTime = std::stod( InvocationMetadata["ContrastInjectionLeadTime"] );
+        ContrastInjectionLeadTime = std::stod( l_InvocationMetadata["ContrastInjectionLeadTime"] );
         if(ContrastInjectionLeadTime < 0.0) throw std::runtime_error("Non-sensical 'ContrastInjectionLeadTime' found.");
         FUNCINFO("Found 'ContrastInjectionLeadTime' invocation metadata key. Using value " << ContrastInjectionLeadTime << "s");
     }
 
     double ContrastInjectionWashoutTime = 60.0; //Seconds.
-    if(InvocationMetadata.count("ContrastInjectionWashoutTime") == 0){
+    if(l_InvocationMetadata.count("ContrastInjectionWashoutTime") == 0){
         FUNCWARN("Unable to locate 'ContrastInjectionWashoutTime' invocation metadata key. Assuming the default lead time "
                  << ContrastInjectionWashoutTime << "s is appropriate");
     }else{
-        ContrastInjectionWashoutTime = std::stod( InvocationMetadata["ContrastInjectionWashoutTime"] );
+        ContrastInjectionWashoutTime = std::stod( l_InvocationMetadata["ContrastInjectionWashoutTime"] );
         if(ContrastInjectionWashoutTime < 0.0) throw std::runtime_error("Non-sensical 'ContrastInjectionWashoutTime' found.");
         FUNCINFO("Found 'ContrastInjectionWashoutTime' invocation metadata key. Using value " << ContrastInjectionWashoutTime << "s");
     }
@@ -405,7 +407,7 @@ Drover CT_Liver_Perfusion_Pharmaco_1C2I_Reduced3Param(Drover DICOM_data, Operati
     cc_AIF_VIF.remove_if([=](std::reference_wrapper<contour_collection<double>> cc) -> bool {
                    const auto ROINameOpt = cc.get().contours.front().GetMetadataValueAs<std::string>("ROIName");
                    if(!ROINameOpt) return true; //Remove those without names.
-                   const auto ROIName = ROINameOpt.value();
+                   const auto& ROIName = ROINameOpt.value();
                    const auto MatchesAIF = std::regex_match(ROIName,AIFROINameRegex);
                    const auto MatchesVIF = std::regex_match(ROIName,VIFROINameRegex);
                    if(!MatchesAIF && !MatchesVIF) return true;

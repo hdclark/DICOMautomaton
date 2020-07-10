@@ -109,7 +109,7 @@ AlignViaPCA(const point_set<double> & moving,
         Eigen::MatrixXd cov = centered.adjoint() * centered;
         Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> eig(cov);
         
-        Eigen::VectorXd evals = eig.eigenvalues();
+        const Eigen::VectorXd& evals = eig.eigenvalues();
         Eigen::MatrixXd evecs = eig.eigenvectors().real();
 
         pcomps out;
@@ -392,7 +392,7 @@ AlignViaExhaustiveICP( const point_set<double> & moving,
         //Eigen::JacobiSVD<Eigen::MatrixXd> SVD(MST, Eigen::ComputeThinU | Eigen::ComputeThinV);
         Eigen::JacobiSVD<Eigen::MatrixXd> SVD(MST, Eigen::ComputeFullU | Eigen::ComputeFullV );
         auto U = SVD.matrixU();
-        auto V = SVD.matrixV();
+        const auto& V = SVD.matrixV();
 
         // Use the SVD result directly.
         //

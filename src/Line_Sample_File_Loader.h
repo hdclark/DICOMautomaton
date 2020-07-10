@@ -12,5 +12,5 @@
 
 bool Load_From_Line_Sample_Files( Drover &DICOM_data,
                                   std::map<std::string,std::string> &InvocationMetadata,
-                                  std::string &FilenameLex,
+                                  const std::string &FilenameLex,
                                   std::list<boost::filesystem::path> &Filenames );

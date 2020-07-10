@@ -1015,18 +1015,18 @@ Static_Machine_State & Static_Machine_State::operator=(const Static_Machine_Stat
 //Attempts to cast the value if present. Optional is disengaged if key is missing or cast fails.
 template <class U>
 std::optional<U>
-Static_Machine_State::GetMetadataValueAs(std::string key) const {
+Static_Machine_State::GetMetadataValueAs(const std::string& key) const {
     const auto metadata_cit = this->metadata.find(key);
     if( (metadata_cit == this->metadata.end())  || !Is_String_An_X<U>(metadata_cit->second) ){
         return std::optional<U>();
     }
     return std::make_optional(stringtoX<U>(metadata_cit->second));
 }
-template std::optional<uint32_t   > Static_Machine_State::GetMetadataValueAs(std::string key) const;
-template std::optional<long int   > Static_Machine_State::GetMetadataValueAs(std::string key) const;
-template std::optional<float      > Static_Machine_State::GetMetadataValueAs(std::string key) const;
-template std::optional<double     > Static_Machine_State::GetMetadataValueAs(std::string key) const;
-template std::optional<std::string> Static_Machine_State::GetMetadataValueAs(std::string key) const;
+template std::optional<uint32_t   > Static_Machine_State::GetMetadataValueAs(const std::string &) const;
+template std::optional<long int   > Static_Machine_State::GetMetadataValueAs(const std::string &) const;
+template std::optional<float      > Static_Machine_State::GetMetadataValueAs(const std::string &) const;
+template std::optional<double     > Static_Machine_State::GetMetadataValueAs(const std::string &) const;
+template std::optional<std::string> Static_Machine_State::GetMetadataValueAs(const std::string &) const;
 
 //---------------------------------------------------------------------------------------------------------------------------
 //--------------------------------------------------- Dynamic_Machine_State -------------------------------------------------
@@ -1273,18 +1273,18 @@ Dynamic_Machine_State::interpolate(double CumulativeMetersetWeight) const {
 //Attempts to cast the value if present. Optional is disengaged if key is missing or cast fails.
 template <class U>
 std::optional<U>
-Dynamic_Machine_State::GetMetadataValueAs(std::string key) const {
+Dynamic_Machine_State::GetMetadataValueAs(const std::string& key) const {
     const auto metadata_cit = this->metadata.find(key);
     if( (metadata_cit == this->metadata.end())  || !Is_String_An_X<U>(metadata_cit->second) ){
         return std::optional<U>();
     }
     return std::make_optional(stringtoX<U>(metadata_cit->second));
 }
-template std::optional<uint32_t   > Dynamic_Machine_State::GetMetadataValueAs(std::string key) const;
-template std::optional<long int   > Dynamic_Machine_State::GetMetadataValueAs(std::string key) const;
-template std::optional<float      > Dynamic_Machine_State::GetMetadataValueAs(std::string key) const;
-template std::optional<double     > Dynamic_Machine_State::GetMetadataValueAs(std::string key) const;
-template std::optional<std::string> Dynamic_Machine_State::GetMetadataValueAs(std::string key) const;
+template std::optional<uint32_t   > Dynamic_Machine_State::GetMetadataValueAs(const std::string &) const;
+template std::optional<long int   > Dynamic_Machine_State::GetMetadataValueAs(const std::string &) const;
+template std::optional<float      > Dynamic_Machine_State::GetMetadataValueAs(const std::string &) const;
+template std::optional<double     > Dynamic_Machine_State::GetMetadataValueAs(const std::string &) const;
+template std::optional<std::string> Dynamic_Machine_State::GetMetadataValueAs(const std::string &) const;
 
 //---------------------------------------------------------------------------------------------------------------------------
 //------------------------------------------------------- TPlan_Config ------------------------------------------------------
@@ -1307,18 +1307,18 @@ TPlan_Config & TPlan_Config::operator=(const TPlan_Config &rhs){
 //Attempts to cast the value if present. Optional is disengaged if key is missing or cast fails.
 template <class U>
 std::optional<U>
-TPlan_Config::GetMetadataValueAs(std::string key) const {
+TPlan_Config::GetMetadataValueAs(const std::string& key) const {
     const auto metadata_cit = this->metadata.find(key);
     if( (metadata_cit == this->metadata.end())  || !Is_String_An_X<U>(metadata_cit->second) ){
         return std::optional<U>();
     }
     return std::make_optional(stringtoX<U>(metadata_cit->second));
 }
-template std::optional<uint32_t   > TPlan_Config::GetMetadataValueAs(std::string key) const;
-template std::optional<long int   > TPlan_Config::GetMetadataValueAs(std::string key) const;
-template std::optional<float      > TPlan_Config::GetMetadataValueAs(std::string key) const;
-template std::optional<double     > TPlan_Config::GetMetadataValueAs(std::string key) const;
-template std::optional<std::string> TPlan_Config::GetMetadataValueAs(std::string key) const;
+template std::optional<uint32_t   > TPlan_Config::GetMetadataValueAs(const std::string &) const;
+template std::optional<long int   > TPlan_Config::GetMetadataValueAs(const std::string &) const;
+template std::optional<float      > TPlan_Config::GetMetadataValueAs(const std::string &) const;
+template std::optional<double     > TPlan_Config::GetMetadataValueAs(const std::string &) const;
+template std::optional<std::string> TPlan_Config::GetMetadataValueAs(const std::string &) const;
 
 //---------------------------------------------------------------------------------------------------------------------------
 //------------------------------------------------------- Surface_Mesh ------------------------------------------------------
@@ -1377,18 +1377,18 @@ Transform3 & Transform3::operator=(const Transform3 &rhs){
 //Attempts to cast the value if present. Optional is disengaged if key is missing or cast fails.
 template <class U>
 std::optional<U>
-Transform3::GetMetadataValueAs(std::string key) const {
+Transform3::GetMetadataValueAs(const std::string& key) const {
     const auto metadata_cit = this->metadata.find(key);
     if( (metadata_cit == this->metadata.end())  || !Is_String_An_X<U>(metadata_cit->second) ){
         return std::optional<U>();
     }
     return std::make_optional(stringtoX<U>(metadata_cit->second));
 }
-template std::optional<uint32_t   > Transform3::GetMetadataValueAs(std::string key) const;
-template std::optional<long int   > Transform3::GetMetadataValueAs(std::string key) const;
-template std::optional<float      > Transform3::GetMetadataValueAs(std::string key) const;
-template std::optional<double     > Transform3::GetMetadataValueAs(std::string key) const;
-template std::optional<std::string> Transform3::GetMetadataValueAs(std::string key) const;
+template std::optional<uint32_t   > Transform3::GetMetadataValueAs(const std::string &) const;
+template std::optional<long int   > Transform3::GetMetadataValueAs(const std::string &) const;
+template std::optional<float      > Transform3::GetMetadataValueAs(const std::string &) const;
+template std::optional<double     > Transform3::GetMetadataValueAs(const std::string &) const;
+template std::optional<std::string> Transform3::GetMetadataValueAs(const std::string &) const;
 
 //---------------------------------------------------------------------------------------------------------------------------
 //------------------------------------------------------------ Drover -------------------------------------------------------
@@ -1458,7 +1458,7 @@ void Drover::Bounded_Dose_General( std::list<double> *pixel_doses,
                                    drover_bnded_dose_mean_dose_map_t *mean_doses, 
                                    drover_bnded_dose_min_max_dose_map_t *min_max_doses,
                                    drover_bnded_dose_pos_dose_map_t *pos_doses,
-                                   std::function<bool(bnded_dose_pos_dose_tup_t)> Fselection,
+                                   const std::function<bool(bnded_dose_pos_dose_tup_t)>& Fselection,
                                    drover_bnded_dose_stat_moments_map_t *cent_moms ) const {
     //This function is a general routine for working with pixels bounded by contour data. It *might* be better to stick it in 
     // the contour or pixel classes, but it seems better (at the moment) to place it in the Drover class, where we have clearly
@@ -1657,7 +1657,7 @@ void Drover::Bounded_Dose_General( std::list<double> *pixel_doses,
                                 const vec3<double> r_dy = image.col_unit*image.pxl_dy*0.5;
                                 const auto tup = std::make_tuple(pos, r_dx, r_dy, pointdose, i, j);
 
-                                if(Fselection(tup)) (*pos_doses)[cc_it].push_back(std::move(tup));
+                                if(Fselection(tup)) (*pos_doses)[cc_it].push_back(tup);
                             }
                             if(cent_moms != nullptr){ //Centralized moments. This routine requires a centroid for each cc.
                                 const auto cc_centroid = cc_centroids[cc_it];
@@ -1823,7 +1823,7 @@ drover_bnded_dose_stat_moments_map_t Drover::Bounded_Dose_Normalized_Cent_Moment
 }
 
 
-Drover Drover::Segment_Contours_Heuristically(std::function<bool(bnded_dose_pos_dose_tup_t)> Fselection) const {
+Drover Drover::Segment_Contours_Heuristically(const std::function<bool(bnded_dose_pos_dose_tup_t)>& Fselection) const {
     Drover out(*this);
  
     if(!Fselection) FUNCERR("Passed an unaccessible heuristic function. Unable to continue");
@@ -1940,7 +1940,7 @@ std::map<double,double>  Drover::Get_DVH() const {
 
 Drover Drover::Duplicate(std::shared_ptr<Contour_Data> in) const {
     Drover output(*this);     //Copy self.
-    output.contour_data = in; //Place the new contour data in the clone.
+    output.contour_data = std::move(in); //Place the new contour data in the clone.
     return output;
 }
 
@@ -2008,7 +2008,7 @@ bool Drover::Has_Tran3_Data() const {
 }
 
 
-void Drover::Concatenate(std::shared_ptr<Contour_Data> in){
+void Drover::Concatenate(const std::shared_ptr<Contour_Data>& in){
     //If there are no existing contours, incoming contours are shared instead of copied.
     // Otherwise, incoming contours are copied and concatenated into *this' contour_data.
     if(in == nullptr) return;
@@ -2064,7 +2064,7 @@ void Drover::Concatenate(Drover in){
     return;
 }
 
-void Drover::Consume(std::shared_ptr<Contour_Data> in){
+void Drover::Consume(const std::shared_ptr<Contour_Data>& in){
     //Consumes incoming contours, moving them from the input (which might be shared) and concatenates
     // them into *this' contour_data. (Ignore the shared_ptr -- contours are consumed!)
     //
@@ -2085,32 +2085,32 @@ void Drover::Consume(std::shared_ptr<Contour_Data> in){
 }
 
 void Drover::Consume(std::list<std::shared_ptr<Image_Array>> in){
-    this->Concatenate(in);
+    this->Concatenate(std::move(in));
     return;
 }
 
 void Drover::Consume(std::list<std::shared_ptr<Point_Cloud>> in){
-    this->Concatenate(in);
+    this->Concatenate(std::move(in));
     return;
 }
 
 void Drover::Consume(std::list<std::shared_ptr<Surface_Mesh>> in){
-    this->Concatenate(in);
+    this->Concatenate(std::move(in));
     return;
 }
 
 void Drover::Consume(std::list<std::shared_ptr<TPlan_Config>> in){
-    this->Concatenate(in);
+    this->Concatenate(std::move(in));
     return;
 }
 
 void Drover::Consume(std::list<std::shared_ptr<Line_Sample>> in){
-    this->Concatenate(in);
+    this->Concatenate(std::move(in));
     return;
 }
 
 void Drover::Consume(std::list<std::shared_ptr<Transform3>> in){
-    this->Concatenate(in);
+    this->Concatenate(std::move(in));
     return;
 }
 
@@ -2192,7 +2192,7 @@ void Drover::Plot_Image_Outlines() const {
 //------------------------------------------------------ OperationArgPkg ----------------------------------------------------
 //---------------------------------------------------------------------------------------------------------------------------
 
-OperationArgPkg::OperationArgPkg(std::string unparsed, std::string sepr, std::string eqls) : opts(icase_str_lt_lambda) {
+OperationArgPkg::OperationArgPkg(std::string unparsed, const std::string& sepr, const std::string& eqls) : opts(icase_str_lt_lambda) {
     //Parse the string. Throws if an error is detected.
     //
     // Note: for the following examples 'sepr' is ":" and 'eqls' is "=".
@@ -2337,7 +2337,7 @@ OperationArgPkg::containsExactly(std::initializer_list<std::string> l) const {
 
 //Returns value corresponding to key. Optional is disengaged if key is missing or cast fails.
 std::optional<std::string> 
-OperationArgPkg::getValueStr(std::string key) const {
+OperationArgPkg::getValueStr(const std::string& key) const {
     const auto cit = this->opts.find(key);
     auto def = std::optional<std::string>();
 
@@ -2350,16 +2350,16 @@ OperationArgPkg::getValueStr(std::string key) const {
 
 //Will not overwrite.
 bool
-OperationArgPkg::insert(std::string key, std::string val){
+OperationArgPkg::insert(const std::string& key, std::string val){
     if(0 != this->opts.count(key)){
         return false;
     }
-    this->opts[key] = val;
+    this->opts[key] = std::move(val);
     return true;
 }
 
 bool
-OperationArgPkg::insert(std::string keyval){
+OperationArgPkg::insert(const std::string& keyval){
     std::string name("_placeholder_:");
     OperationArgPkg shtl(name + keyval);
 

@@ -74,17 +74,17 @@ OperationDoc OpArgDocBCCAExtractRadiomicFeatures(){
 
 Drover
 BCCAExtractRadiomicFeatures(Drover DICOM_data, 
-              OperationArgPkg OptArgs,
-              std::map<std::string, std::string> InvocationMetadata,
-              std::string FilenameLex){
+              const OperationArgPkg& OptArgs,
+              const std::map<std::string, std::string>& InvocationMetadata,
+              const std::string& FilenameLex){
 
     DICOM_data = SimplifyContours(
-                     std::move(DICOM_data), OptArgs, InvocationMetadata, FilenameLex);
+                     DICOM_data, OptArgs, InvocationMetadata, FilenameLex);
     DICOM_data = ExtractRadiomicFeatures(
-                     std::move(DICOM_data), OptArgs, InvocationMetadata, FilenameLex);
+                     DICOM_data, OptArgs, InvocationMetadata, FilenameLex);
 #ifdef DCMA_USE_SFML
     DICOM_data = PresentationImage(
-                     std::move(DICOM_data), OptArgs, InvocationMetadata, FilenameLex);
+                     DICOM_data, OptArgs, InvocationMetadata, FilenameLex);
 #endif
 
     return DICOM_data;

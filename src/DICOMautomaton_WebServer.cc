@@ -69,7 +69,7 @@ class WEnvironment;
 }  // namespace Wt
 
 static
-std::string CreateUniqueDirectoryTimestamped(std::string prefix, std::string postfix){
+std::string CreateUniqueDirectoryTimestamped(const std::string& prefix, const std::string& postfix){
     std::string out;
 
     // Create a private working directory somewhere.

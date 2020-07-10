@@ -61,13 +61,13 @@ Estimate_Surface_Mesh(
 
 Polyhedron
 Estimate_Surface_Mesh_Marching_Cubes(
-        std::list<std::reference_wrapper<contour_collection<double>>> cc_ROIs,
+        const std::list<std::reference_wrapper<contour_collection<double>>>& cc_ROIs,
         Parameters p );
 
 
 Polyhedron
 Estimate_Surface_Mesh_Marching_Cubes(
-        std::list<std::reference_wrapper<planar_image<float,double>>> grid_imgs,
+        const std::list<std::reference_wrapper<planar_image<float,double>>>& grid_imgs,
         double inclusion_threshold, // The voxel value threshold demarcating surface 'interior' and 'exterior.'
         bool below_is_interior,  // Controls how the inclusion_threshold is interpretted.
                                  // If true, anything <= is considered to be interior to the surface.
@@ -115,19 +115,19 @@ Simplify(Polyhedron &mesh,
 
 bool
 SaveAsOFF(Polyhedron &mesh,
-          std::string filename);
+          const std::string& filename);
 
 
 // Exact Minkowski dilation for meshes.
 void
 Dilate(Polyhedron &mesh,
-       Polyhedron sphere);
+       const Polyhedron& sphere);
 
 // Exact Minkowski dilation for contour vertex point clouds.
 void
 Dilate( Polyhedron &output_mesh, 
         std::list<std::reference_wrapper<contour_collection<double>>> cc_ROIs,
-        Polyhedron sphere );
+        const Polyhedron& sphere );
 
 // Approximate dilation, erosion, or core/peel using approximate Minkowski sums/differences with a sphere-like shape.
 enum class TransformOp {

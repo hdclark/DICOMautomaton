@@ -20,7 +20,7 @@
 
 
 static void dump_metadata(std::ostream &os,
-                          std::string indent,
+                          const std::string& indent,
                           const std::map<std::string, std::string> m){
     for(const auto &p : m){
         os << indent << "'" << p.first << "' : '" << p.second << "'" << std::endl;
@@ -50,9 +50,9 @@ OperationDoc OpArgDocDroverDebug(){
 
 
 Drover DroverDebug(Drover DICOM_data, 
-                   OperationArgPkg OptArgs, 
-                   std::map<std::string,std::string> /*InvocationMetadata*/, 
-                   std::string /*FilenameLex*/ ){
+                   const OperationArgPkg& OptArgs, 
+                   const std::map<std::string,std::string>& /*InvocationMetadata*/, 
+                   const std::string& /*FilenameLex*/ ){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto IncludeMetadataStr = OptArgs.getValueStr("IncludeMetadata").value();

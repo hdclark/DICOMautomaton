@@ -11,6 +11,6 @@
 OperationDoc OpArgDocBuildLexiconInteractively();
 
 Drover
-BuildLexiconInteractively(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string, std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/);
+BuildLexiconInteractively(Drover DICOM_data, const OperationArgPkg& /*OptArgs*/, const std::map<std::string, std::string>& /*InvocationMetadata*/, const std::string& /*FilenameLex*/);
 
 

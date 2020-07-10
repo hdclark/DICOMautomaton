@@ -12,7 +12,7 @@ OperationDoc OpArgDocDICOMExportContours();
 
 Drover
 DICOMExportContours(Drover DICOM_data, 
-                    OperationArgPkg /*OptArgs*/,
-                    std::map<std::string, std::string> /*InvocationMetadata*/,
-                    std::string /*FilenameLex*/);
+                    const OperationArgPkg& /*OptArgs*/,
+                    const std::map<std::string, std::string>& /*InvocationMetadata*/,
+                    const std::string& /*FilenameLex*/);
 

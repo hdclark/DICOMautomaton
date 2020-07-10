@@ -28,7 +28,7 @@ OperationDoc OpArgDocUBC3TMRI_IVIM_ADC(){
     return out;
 }
 
-Drover UBC3TMRI_IVIM_ADC(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string,std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){
+Drover UBC3TMRI_IVIM_ADC(Drover DICOM_data, const OperationArgPkg& /*OptArgs*/, const std::map<std::string,std::string>& /*InvocationMetadata*/, const std::string& /*FilenameLex*/){
 
     //Get handles for each of the original image arrays so we can easily refer to them later.
     std::vector<std::shared_ptr<Image_Array>> orig_img_arrays;

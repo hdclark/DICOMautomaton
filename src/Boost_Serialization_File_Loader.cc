@@ -14,7 +14,7 @@
 
 bool Load_From_Boost_Serialization_Files( Drover &DICOM_data,
                                           std::map<std::string,std::string> & /* InvocationMetadata */,
-                                          std::string & /* FilenameLex */,
+                                          const std::string & /* FilenameLex */,
                                           std::list<boost::filesystem::path> &Filenames ){
 
     //This routine will attempt to load boost.serialized files. Files that are not successfully loaded are not consumed

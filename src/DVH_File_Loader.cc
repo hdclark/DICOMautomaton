@@ -108,8 +108,8 @@ std::map<std::string, std::string> Read_Header_Block(std::istream &is,
         // Determine if this line is a continuation.
         // If the first character is NOT whitespace AND there is a ':', it is a new key.
         // If the first character is whitespace, it is a continuation.
-        const auto first_not_whitespace = l.find_first_not_of(" ");
-        const auto first_semicolon = l.find_first_of(":");
+        const auto first_not_whitespace = l.find_first_not_of(' ');
+        const auto first_semicolon = l.find_first_of(':');
         if(false){
         }else if( (first_not_whitespace == 0 ) 
               &&  (first_semicolon != std::string::npos) ){
@@ -324,7 +324,7 @@ samples_1D<double> Read_Histogram(std::istream &is,
 
 bool Load_From_DVH_Files( Drover &DICOM_data,
                           std::map<std::string,std::string> & /* InvocationMetadata */,
-                          std::string &FilenameLex,
+                          const std::string &FilenameLex,
                           std::list<boost::filesystem::path> &Filenames ){
 
     //This routine will attempt to load DVH-format files. Files that are not successfully loaded

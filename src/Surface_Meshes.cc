@@ -1135,7 +1135,7 @@ Marching_Cubes_Implementation(
 //       will be lumped together into a single polyhedron.
 //
 Polyhedron Estimate_Surface_Mesh_Marching_Cubes(
-        std::list<std::reference_wrapper<contour_collection<double>>> cc_ROIs,
+        const std::list<std::reference_wrapper<contour_collection<double>>>& cc_ROIs,
         Parameters params ){
 
     // Define the convention we will use in our mask.
@@ -1312,7 +1312,7 @@ Polyhedron Estimate_Surface_Mesh_Marching_Cubes(
 //
 Polyhedron
 Estimate_Surface_Mesh_Marching_Cubes(
-        std::list<std::reference_wrapper<planar_image<float,double>>> grid_imgs,
+        const std::list<std::reference_wrapper<planar_image<float,double>>>& grid_imgs,
         double inclusion_threshold, // The voxel value threshold demarcating surface 'interior' and 'exterior.'
         bool below_is_interior,  // Controls how the inclusion_threshold is interpretted.
                                  // If true, anything <= is considered to be interior to the surface.
@@ -1658,7 +1658,7 @@ Simplify(Polyhedron &mesh,
 
 bool
 SaveAsOFF(Polyhedron &mesh,
-          std::string filename){
+          const std::string& filename){
     
     if(!filename.empty()){
         std::ofstream out(filename);
@@ -1677,7 +1677,7 @@ SaveAsOFF(Polyhedron &mesh,
 // have around 750 faces or less. The 'sphere' mesh should also be small, probably 50 faces or less for a reasonable
 // runtime. Refer to the CGAL user guide for timing information.
 void Dilate( Polyhedron &mesh, 
-             Polyhedron sphere ){
+             const Polyhedron& sphere ){
 
     if(!mesh.is_closed()){
         throw std::invalid_argument("Mesh is not closed. Unable to handle meshes with boundaries. Cannot continue.");
@@ -1724,7 +1724,7 @@ void Dilate( Polyhedron &mesh,
 // have holes.
 void Dilate( Polyhedron &output_mesh, 
              std::list<std::reference_wrapper<contour_collection<double>>> cc_ROIs,
-             Polyhedron sphere ){
+             const Polyhedron& sphere ){
 
     if(!sphere.is_closed()){
         throw std::invalid_argument("Sphere mesh is not closed. Unable to handle meshes with boundaries. Cannot continue.");
@@ -1966,7 +1966,7 @@ Transform( Polyhedron &output_mesh,
         vec3<double>( 0.0,-1.0,-1.0 ).unit(),
         vec3<double>(-1.0, 0.0,-1.0 ).unit() };
 
-    for(const auto dU : dUs){
+    for(const auto& dU : dUs){
         auto u = dU * std::abs(distance);
         
         auto cgal_u = Vector_3(u.x, u.y, u.z);

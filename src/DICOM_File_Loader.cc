@@ -37,7 +37,7 @@ Concatenate_Contour_Data(std::unique_ptr<Contour_Data> A,
 
 bool Load_From_DICOM_Files( Drover &DICOM_data,
                             std::map<std::string,std::string> & /* InvocationMetadata */,
-                            std::string &FilenameLex,
+                            const std::string &FilenameLex,
                             std::list<boost::filesystem::path> &Filenames ){
 
     //This routine will attempt to load DICOM files on an individual file basis. Files that are not successfully loaded

@@ -137,9 +137,9 @@ OperationDoc OpArgDocModifyImageMetadata(){
 
 
 Drover ModifyImageMetadata(Drover DICOM_data, 
-                           OperationArgPkg OptArgs, 
-                           std::map<std::string,std::string> /*InvocationMetadata*/, 
-                           std::string /*FilenameLex*/ ){
+                           const OperationArgPkg& OptArgs, 
+                           const std::map<std::string,std::string>& /*InvocationMetadata*/, 
+                           const std::string& /*FilenameLex*/ ){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto ImageSelectionStr = OptArgs.getValueStr("ImageSelection").value();
@@ -186,7 +186,7 @@ Drover ModifyImageMetadata(Drover DICOM_data,
     // Parse metadata, if any has been provided.
     std::map<std::string,std::string> key_values;
     if(KeyValuesOpt){
-        for(auto a : SplitStringToVector(KeyValuesOpt.value(), ';', 'd')){
+        for(const auto& a : SplitStringToVector(KeyValuesOpt.value(), ';', 'd')){
             auto b = SplitStringToVector(a, '@', 'd');
             if(b.size() != 2) throw std::runtime_error("Cannot parse subexpression: "_s + a);
 

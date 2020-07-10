@@ -6,6 +6,7 @@
 #include <list>
 #include <memory>
 #include <stdexcept>
+#include <utility>
 #include <vector>
 
 #include "Insert_Contours.h"
@@ -16,7 +17,7 @@
 
 //Injects contours that mimic the image plane intersection with the provided plane.
 void Inject_Thin_Plane_Contour( const planar_image<float,double> &animg,
-                                plane<double> aplane, // The line to insert.
+                                const plane<double>& aplane, // The line to insert.
                                 contour_collection<double> &dest, // Where to put the contours.
                                 std::map<std::string, std::string> metadata,
                                 double c_thickness ){ // The contour thickness.
@@ -24,7 +25,7 @@ void Inject_Thin_Plane_Contour( const planar_image<float,double> &animg,
     const auto img_plane = animg.image_plane();
     line<double> int_line; // The intersection line, if one exists.
     if(img_plane.Intersects_With_Plane_Along_Line(aplane, int_line)){
-        Inject_Thin_Line_Contour( animg, int_line, dest, metadata, c_thickness );
+        Inject_Thin_Line_Contour( animg, int_line, dest, std::move(metadata), c_thickness );
     }
     return;
 }
@@ -34,7 +35,7 @@ void Inject_Thin_Plane_Contour( const planar_image<float,double> &animg,
 void Inject_Thin_Line_Contour( const planar_image<float,double> &animg,
                                line<double> aline, // The line to insert.
                                contour_collection<double> &dest, // Where to put the contours.
-                               std::map<std::string, std::string> metadata,
+                               const std::map<std::string, std::string>& metadata,
                                double c_thickness ){ // The contour thickness.
 
     if(!std::isfinite(c_thickness)){
@@ -102,9 +103,9 @@ void Inject_Thin_Line_Contour( const planar_image<float,double> &animg,
 
 //Injects contours that mimic the provided point projected onto the image plane.
 void Inject_Point_Contour( const planar_image<float,double> &animg,
-                           vec3<double> apoint, // The point to insert.
+                           const vec3<double>& apoint, // The point to insert.
                            contour_collection<double> &dest, // Where to put the contours.
-                           std::map<std::string, std::string> metadata,
+                           const std::map<std::string, std::string>& metadata,
                            double radius,
                            long int num_verts){
 

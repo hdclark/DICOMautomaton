@@ -167,7 +167,7 @@ uint64_t
 emit_DICOM_tag(std::ostream &os,
                Encoding enc,
                const Node &node,   // Does not use the node's val member, to allow pre-processing.
-               std::string val){
+               const std::string& val){
 
     uint64_t written_length = 0;
 

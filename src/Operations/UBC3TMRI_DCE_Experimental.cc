@@ -37,7 +37,7 @@ OperationDoc OpArgDocUBC3TMRI_DCE_Experimental(){
     return out;
 }
 
-Drover UBC3TMRI_DCE_Experimental(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string,std::string> InvocationMetadata, std::string /*FilenameLex*/){
+Drover UBC3TMRI_DCE_Experimental(Drover DICOM_data, const OperationArgPkg& /*OptArgs*/, const std::map<std::string,std::string>& InvocationMetadata, const std::string& /*FilenameLex*/){
 
     //Stuff references to all contours into a list. Remember that you can still address specific contours through
     // the original holding containers (which are not modified here).
@@ -56,17 +56,18 @@ Drover UBC3TMRI_DCE_Experimental(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
              it != DICOM_data.image_data.end(); ++it) short_scans.push_back( *it );
 //        std::shared_ptr<Image_Array> img_arr_orig_short_scan = *std::next(DICOM_data.image_data.begin(),1); //SeriesNumber 801.
 
+    std::map<std::string,std::string> l_InvocationMetadata(InvocationMetadata);
 
     //Temporally average the long array for later S0 and T1 map creation.
     DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( *img_arr_orig_long_scan ) );
     std::shared_ptr<Image_Array> img_arr_copy_long_temporally_avgd( DICOM_data.image_data.back() );
 
     double ContrastInjectionLeadTime = 35.0; //Seconds. 
-    if(InvocationMetadata.count("ContrastInjectionLeadTime") == 0){
+    if(l_InvocationMetadata.count("ContrastInjectionLeadTime") == 0){
         FUNCWARN("Unable to locate 'ContrastInjectionLeadTime' invocation metadata key. Assuming the default lead time "
                  << ContrastInjectionLeadTime << "s is appropriate");
     }else{
-        ContrastInjectionLeadTime = std::stod( InvocationMetadata["ContrastInjectionLeadTime"] );
+        ContrastInjectionLeadTime = std::stod( l_InvocationMetadata["ContrastInjectionLeadTime"] );
         if(ContrastInjectionLeadTime < 0.0) throw std::runtime_error("Non-sensical 'ContrastInjectionLeadTime' found.");
         FUNCINFO("Found 'ContrastInjectionLeadTime' invocation metadata key. Using value " << ContrastInjectionLeadTime << "s");
     }
@@ -78,7 +79,7 @@ Drover UBC3TMRI_DCE_Experimental(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
  
     //Temporally average the short arrays for later S0 and T1 map creation.
     std::vector<std::shared_ptr<Image_Array>> short_tavgd;
-    for(auto img_ptr : short_scans){
+    for(const auto& img_ptr : short_scans){
         DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( *img_ptr ) );
         short_tavgd.push_back( DICOM_data.image_data.back() );
 
@@ -99,7 +100,7 @@ Drover UBC3TMRI_DCE_Experimental(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
 
     std::vector<std::shared_ptr<Image_Array>> short_tavgd_blurred;
     if(false){
-        for(auto img_ptr : short_tavgd){
+        for(const auto& img_ptr : short_tavgd){
             DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( *img_ptr ) );
             short_tavgd_blurred.push_back( DICOM_data.image_data.back() );
 
@@ -108,13 +109,13 @@ Drover UBC3TMRI_DCE_Experimental(Drover DICOM_data, OperationArgPkg /*OptArgs*/,
             }
         }
     }else{
-        for(auto img_ptr : short_tavgd) short_tavgd_blurred.push_back( img_ptr );
+        for(const auto& img_ptr : short_tavgd) short_tavgd_blurred.push_back( img_ptr );
     }
 
     //Package the short and long images together as needed for the S0 and T1 calculations.
     std::list<std::reference_wrapper<planar_image_collection<float,double>>> tavgd_blurred;
     tavgd_blurred.emplace_back(img_arr_long_tavgd_blurred->imagecoll);
-    for(auto img_ptr : short_tavgd_blurred) tavgd_blurred.emplace_back(img_ptr->imagecoll);
+    for(const auto& img_ptr : short_tavgd_blurred) tavgd_blurred.emplace_back(img_ptr->imagecoll);
 
     //Deep-copy and process the (possibly blurred) collated image array, generating a T1 map in-situ.
     DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( *img_arr_long_tavgd_blurred ) );

@@ -34,7 +34,7 @@
 
 bool Load_From_TAR_Files( Drover &DICOM_data,
                           std::map<std::string,std::string> &InvocationMetadata,
-                          std::string &FilenameLex,
+                          const std::string &FilenameLex,
                           std::list<boost::filesystem::path> &Filenames ){
 
     // This routine will attempt to load TAR-format files. Files that are not successfully loaded

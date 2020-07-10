@@ -120,7 +120,7 @@ OperationDoc OpArgDocExtractRadiomicFeatures(){
     return out;
 }
 
-Drover ExtractRadiomicFeatures(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string> /*InvocationMetadata*/, std::string FilenameLex){
+Drover ExtractRadiomicFeatures(Drover DICOM_data, const OperationArgPkg& OptArgs, const std::map<std::string,std::string>& /*InvocationMetadata*/, const std::string& FilenameLex){
 
     Explicator X(FilenameLex);
 
@@ -150,7 +150,7 @@ Drover ExtractRadiomicFeatures(Drover DICOM_data, OperationArgPkg OptArgs, std::
     // too.
     // std::list<std::string> get_unique_values_for_key(const std::string &akey) const;
     const auto ROINameOpt = cc_ROIs.front().get().contours.front().GetMetadataValueAs<std::string>("ROIName");  // HACK! FIXME. TODO.
-    const auto ROIName = ROINameOpt.value();
+    const auto& ROIName = ROINameOpt.value();
 
 
     // Contour-based features.

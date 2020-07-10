@@ -51,7 +51,7 @@ OperationDoc OpArgDocPlotPerROITimeCourses(){
 
 
 
-Drover PlotPerROITimeCourses(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){
+Drover PlotPerROITimeCourses(Drover DICOM_data, const OperationArgPkg& OptArgs, const std::map<std::string,std::string>& /*InvocationMetadata*/, const std::string& /*FilenameLex*/){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto ROILabelRegex = OptArgs.getValueStr("ROILabelRegex").value();
@@ -73,7 +73,7 @@ Drover PlotPerROITimeCourses(Drover DICOM_data, OperationArgPkg OptArgs, std::ma
     auto cc_ROIs = cc_all;
     cc_ROIs.remove_if([=](std::reference_wrapper<contour_collection<double>> cc) -> bool {
                    const auto ROINameOpt = cc.get().contours.front().GetMetadataValueAs<std::string>("ROIName");
-                   const auto ROIName = ROINameOpt.value();
+                   const auto& ROIName = ROINameOpt.value();
                    return !(std::regex_match(ROIName,theregex));
     });
 

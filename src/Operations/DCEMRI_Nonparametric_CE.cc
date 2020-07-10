@@ -45,12 +45,14 @@ OperationDoc OpArgDocDCEMRI_Nonparametric_CE(){
     return out;
 }
 
-Drover DCEMRI_Nonparametric_CE(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string,std::string> InvocationMetadata, std::string /*FilenameLex*/){
+Drover DCEMRI_Nonparametric_CE(Drover DICOM_data, const OperationArgPkg& /*OptArgs*/, const std::map<std::string,std::string> & InvocationMetadata, const std::string& /*FilenameLex*/){
 
     //Verify there is data to work on.
     if( DICOM_data.image_data.empty() ){
         throw std::invalid_argument("No data to work on. Unable to estimate contrast enhancement.");
     }
+
+    std::map<std::string,std::string> l_InvocationMetadata(InvocationMetadata);
 
     //Get handles for each of the original image arrays so we can easily refer to them later.
     std::vector<std::shared_ptr<Image_Array>> orig_img_arrays;
@@ -65,11 +67,11 @@ Drover DCEMRI_Nonparametric_CE(Drover DICOM_data, OperationArgPkg /*OptArgs*/, s
 
     //Figure out how much time elapsed before contrast injection began.
     double ContrastInjectionLeadTime = 35.0; //Seconds. 
-    if(InvocationMetadata.count("ContrastInjectionLeadTime") == 0){
+    if(l_InvocationMetadata.count("ContrastInjectionLeadTime") == 0){
         FUNCWARN("Unable to locate 'ContrastInjectionLeadTime' invocation metadata key. Assuming the default lead time " 
                  << ContrastInjectionLeadTime << "s is appropriate");
     }else{
-        ContrastInjectionLeadTime = std::stod( InvocationMetadata["ContrastInjectionLeadTime"] );
+        ContrastInjectionLeadTime = std::stod( l_InvocationMetadata["ContrastInjectionLeadTime"] );
         if(ContrastInjectionLeadTime < 0.0) throw std::runtime_error("Non-sensical 'ContrastInjectionLeadTime' found.");
         FUNCINFO("Found 'ContrastInjectionLeadTime' invocation metadata key. Using value " << ContrastInjectionLeadTime << "s"); 
     }
@@ -79,7 +81,7 @@ Drover DCEMRI_Nonparametric_CE(Drover DICOM_data, OperationArgPkg /*OptArgs*/, s
     // NOTE: Blurring the baseline but not the rest of the data can result in odd results. It's best to uniformly blur
     //       all images before trying to derive contrast enhancement (i.e., low-pass filtering).
     if(false){
-        for(auto img_ptr : orig_img_arrays){
+        for(const auto& img_ptr : orig_img_arrays){
             if(!img_ptr->imagecoll.Gaussian_Pixel_Blur({ }, 1.5)){
                 FUNCERR("Unable to blur temporally averaged images");
             }

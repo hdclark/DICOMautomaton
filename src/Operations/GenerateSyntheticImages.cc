@@ -188,7 +188,7 @@ OperationDoc OpArgDocGenerateSyntheticImages(){
     return out;
 }
 
-Drover GenerateSyntheticImages(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string>, std::string FilenameLex){
+Drover GenerateSyntheticImages(Drover DICOM_data, const OperationArgPkg& OptArgs, const std::map<std::string,std::string>&, const std::string& FilenameLex){
 
     Explicator X(FilenameLex);
 
@@ -294,7 +294,7 @@ Drover GenerateSyntheticImages(Drover DICOM_data, OperationArgPkg OptArgs, std::
     const std::string PatientID = "SyntheticImage";
     const std::string StudyInstanceUID = PatientID + "_Study1";
     const std::string SeriesInstanceUID = StudyInstanceUID + "_Series1";
-    const std::string FrameofReferenceUID = PatientID;
+    const std::string& FrameofReferenceUID = PatientID;
     const std::string Modality = "CT";
 
     // --- The virtual 'signal' image series ---

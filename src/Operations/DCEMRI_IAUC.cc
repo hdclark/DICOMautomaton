@@ -31,7 +31,7 @@ OperationDoc OpArgDocDCEMRI_IAUC(){
     return out;
 }
 
-Drover DCEMRI_IAUC(Drover DICOM_data, OperationArgPkg, std::map<std::string,std::string> , std::string){
+Drover DCEMRI_IAUC(Drover DICOM_data, const OperationArgPkg&, const std::map<std::string,std::string>& , const std::string&){
 
     std::vector<std::shared_ptr<Image_Array>> orig_img_arrays;
     for(auto & img_arr : DICOM_data.image_data) orig_img_arrays.push_back(img_arr);

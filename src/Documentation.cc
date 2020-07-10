@@ -19,10 +19,10 @@
 static
 void reflow_and_emit_paragraph(std::ostream &os, 
                                long int width, 
-                               std::string prefix_first_line,      // for lists: "  - ".
-                               std::string prefix_remaining_lines, // for lists: "    ".
-                               std::string first_line,             // break the line early after this text.
-                               std::string text){                  // for everything.
+                               const std::string& prefix_first_line,      // for lists: "  - ".
+                               const std::string& prefix_remaining_lines, // for lists: "    ".
+                               const std::string& first_line,             // break the line early after this text.
+                               const std::string& text){                  // for everything.
     if(prefix_first_line.size() != prefix_remaining_lines.size()){
         throw std::logic_error("Prefixes differ in size. Refusing to continue.");
     }

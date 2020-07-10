@@ -44,7 +44,7 @@ OperationDoc OpArgDocCT_Liver_Perfusion(){
     return out;
 }
 
-Drover CT_Liver_Perfusion(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string,std::string> InvocationMetadata, std::string /*FilenameLex*/){
+Drover CT_Liver_Perfusion(Drover DICOM_data, const OperationArgPkg& /*OptArgs*/, const std::map<std::string,std::string> &InvocationMetadata, const std::string& /*FilenameLex*/){
 
     //Stuff references to all contours into a list. Remember that you can still address specific contours through
     // the original holding containers (which are not modified here).
@@ -72,15 +72,17 @@ Drover CT_Liver_Perfusion(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::m
     //Compute a baseline with which we can use later to compute signal enhancement.
     std::vector<std::shared_ptr<Image_Array>> baseline_img_arrays;
 
+    std::map<std::string,std::string> l_InvocationMetadata(InvocationMetadata);
+
     if(false){
         //Baseline = temporally averaged pre-contrast-injection signal.
 
         double ContrastInjectionLeadTime = 10.0; //Seconds. 
-        if(InvocationMetadata.count("ContrastInjectionLeadTime") == 0){
+        if(l_InvocationMetadata.count("ContrastInjectionLeadTime") == 0){
             FUNCWARN("Unable to locate 'ContrastInjectionLeadTime' invocation metadata key. Assuming the default lead time "
                      << ContrastInjectionLeadTime << "s is appropriate");
         }else{
-            ContrastInjectionLeadTime = std::stod( InvocationMetadata["ContrastInjectionLeadTime"] );
+            ContrastInjectionLeadTime = std::stod( l_InvocationMetadata["ContrastInjectionLeadTime"] );
             if(ContrastInjectionLeadTime < 0.0) throw std::runtime_error("Non-sensical 'ContrastInjectionLeadTime' found.");
             FUNCINFO("Found 'ContrastInjectionLeadTime' invocation metadata key. Using value " << ContrastInjectionLeadTime << "s");
         }
@@ -203,7 +205,8 @@ Drover CT_Liver_Perfusion(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::m
 
         std::vector<std::shared_ptr<Image_Array>> temp_img_arrays;
         //for(auto & img_arr : orig_img_arrays){
-        for(auto & img_arr : C_enhancement_img_arrays){
+        temp_img_arrays.reserve(C_enhancement_img_arrays.size());
+for(auto & img_arr : C_enhancement_img_arrays){
             temp_img_arrays.emplace_back( std::make_shared<Image_Array>( *img_arr ) );
         }
 

@@ -66,7 +66,7 @@ OperationDoc OpArgDocSpatialBlur(){
     return out;
 }
 
-Drover SpatialBlur(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string> , std::string){
+Drover SpatialBlur(Drover DICOM_data, const OperationArgPkg& OptArgs, const std::map<std::string,std::string>& , const std::string&){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto ImageSelectionStr = OptArgs.getValueStr("ImageSelection").value();

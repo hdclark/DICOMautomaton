@@ -16,6 +16,7 @@
 #include <regex>
 #include <stdexcept>
 #include <string>    
+#include <utility>
 #include <vector>
 #include <utility>
 #include <random>
@@ -83,7 +84,7 @@ double DVH_Normalize(std::vector<double> in,
                      double Vmin){
 
     // Compute the current dose that corresponds to Vmin.
-    const auto D_current = Stats::Percentile(in, (1.0 - Vmin));
+    const auto D_current = Stats::Percentile(std::move(in), (1.0 - Vmin));
 
     // Scale needed to make it coincide with desired dose.
     return D / D_current;
@@ -223,7 +224,7 @@ OperationDoc OpArgDocOptimizeStaticBeams(){
     return out;
 }
 
-Drover OptimizeStaticBeams(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string> /*InvocationMetadata*/, std::string FilenameLex){
+Drover OptimizeStaticBeams(Drover DICOM_data, const OperationArgPkg& OptArgs, const std::map<std::string,std::string>& /*InvocationMetadata*/, const std::string& FilenameLex){
 
     Explicator X(FilenameLex);
 

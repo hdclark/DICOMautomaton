@@ -26,7 +26,7 @@ bool
 Common_Boost_Serialize_Drover(const Drover &in, boost::filesystem::path Filename);
 
 bool
-Common_Boost_Deserialize_Drover(Drover &out, boost::filesystem::path Filename);
+Common_Boost_Deserialize_Drover(Drover &out, const boost::filesystem::path& Filename);
 
 
 
@@ -34,18 +34,18 @@ Common_Boost_Deserialize_Drover(Drover &out, boost::filesystem::path Filename);
 // Prefer the 'default' serialization routine above.
 
 bool
-Common_Boost_Serialize_Drover_to_Gzip_Binary(const Drover &in, boost::filesystem::path Filename);
+Common_Boost_Serialize_Drover_to_Gzip_Binary(const Drover &in, const boost::filesystem::path& Filename);
 bool
-Common_Boost_Serialize_Drover_to_Gzip_Simple_Text(const Drover &in, boost::filesystem::path Filename);
+Common_Boost_Serialize_Drover_to_Gzip_Simple_Text(const Drover &in, const boost::filesystem::path& Filename);
 bool
-Common_Boost_Serialize_Drover_to_Gzip_XML(const Drover &in, boost::filesystem::path Filename);
+Common_Boost_Serialize_Drover_to_Gzip_XML(const Drover &in, const boost::filesystem::path& Filename);
 
 bool
-Common_Boost_Serialize_Drover_to_Binary(const Drover &in, boost::filesystem::path Filename);
+Common_Boost_Serialize_Drover_to_Binary(const Drover &in, const boost::filesystem::path& Filename);
 bool
-Common_Boost_Serialize_Drover_to_Simple_Text(const Drover &in, boost::filesystem::path Filename);
+Common_Boost_Serialize_Drover_to_Simple_Text(const Drover &in, const boost::filesystem::path& Filename);
 bool
-Common_Boost_Serialize_Drover_to_XML(const Drover &in, boost::filesystem::path Filename);
+Common_Boost_Serialize_Drover_to_XML(const Drover &in, const boost::filesystem::path& Filename);
 
 
 

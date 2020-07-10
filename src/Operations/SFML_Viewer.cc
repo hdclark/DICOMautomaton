@@ -100,9 +100,9 @@ OperationDoc OpArgDocSFML_Viewer(){
 }
 
 Drover SFML_Viewer( Drover DICOM_data, 
-                    OperationArgPkg OptArgs, 
-                    std::map<std::string,std::string> /*InvocationMetadata*/, 
-                    std::string FilenameLex ){
+                    const OperationArgPkg& OptArgs, 
+                    const std::map<std::string,std::string>& /*InvocationMetadata*/, 
+                    const std::string& FilenameLex ){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto SingleScreenshotStr = OptArgs.getValueStr("SingleScreenshot").value();
@@ -520,8 +520,8 @@ Drover SFML_Viewer( Drover DICOM_data,
         if(!ImgBBox.contains(MousePosWorld)) return out;
 
         // Determine which image pixel we are hovering over.
-        const auto clamped_row_as_f = fabs(ImgBBox.top - MousePosWorld.y )/ImgBBox.height;
-        const auto clamped_col_as_f = fabs(MousePosWorld.x - ImgBBox.left)/ImgBBox.width;
+        const auto clamped_row_as_f = std::fabs(ImgBBox.top - MousePosWorld.y )/ImgBBox.height;
+        const auto clamped_col_as_f = std::fabs(MousePosWorld.x - ImgBBox.left)/ImgBBox.width;
         out.clamped_image_pos.x = clamped_row_as_f;
         out.clamped_image_pos.y = clamped_col_as_f;
         out.clamped_image_pos_valid = true;
@@ -1094,8 +1094,8 @@ Drover SFML_Viewer( Drover DICOM_data,
             std::vector<std::string> quantities_s = { "Description" };
 
             FO << "# Image Array Number, Row, Column, Channel, Pixel Value, ";
-            for(auto quantity : quantities_d) FO << quantity << ", ";
-            for(auto quantity : quantities_s) FO << quantity << ", ";
+            for(const auto& quantity : quantities_d) FO << quantity << ", ";
+            for(const auto& quantity : quantities_s) FO << quantity << ", ";
             FO << std::endl;
 
             //Get a list of images which spatially overlap this point. Order should be maintained.
@@ -1125,12 +1125,12 @@ Drover SFML_Viewer( Drover DICOM_data,
                         FO << l_row << ", " << l_col << ", " << l_chnl << ", ";
                         FO << pix_val << ", ";
 
-                        for(auto quantity : quantities_d){
+                        for(const auto& quantity : quantities_d){
                             if(auto q = enc_img_it->GetMetadataValueAs<double>(quantity)){
                                 FO << q.value() << ", ";
                             }
                         }
-                        for(auto quantity : quantities_s){
+                        for(const auto& quantity : quantities_s){
                             if(auto q = enc_img_it->GetMetadataValueAs<std::string>(quantity)){
                                 FO << Quote_Static_for_Bash(q.value()) << ", ";
                             }
@@ -2191,8 +2191,8 @@ Drover SFML_Viewer( Drover DICOM_data,
                             const auto img_top_right = img_top_left + disp_img_it->row_unit * img_dicom_width;
                             const auto img_bottom_left = img_top_left + disp_img_it->col_unit * img_dicom_height;
 
-                            const auto clamped_col_as_f = fabs(mouse_world_pos.x - DispImgBBox.left)/(DispImgBBox.width);
-                            const auto clamped_row_as_f = fabs(DispImgBBox.top - mouse_world_pos.y)/(DispImgBBox.height);
+                            const auto clamped_col_as_f = std::fabs(mouse_world_pos.x - DispImgBBox.left)/(DispImgBBox.width);
+                            const auto clamped_row_as_f = std::fabs(DispImgBBox.top - mouse_world_pos.y)/(DispImgBBox.height);
 
                             const auto dicom_pos = img_top_left 
                                                  + disp_img_it->row_unit * img_dicom_width  * clamped_row_as_f

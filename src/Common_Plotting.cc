@@ -19,11 +19,11 @@
 
 
 void 
-PlotTimeCourses(std::string title,
+PlotTimeCourses(const std::string& title,
                          const std::map<std::string, samples_1D<double>> &s1D_time_courses,
                          const std::map<std::string, cheby_approx<double>> &cheby_time_courses,
-                         std::string xlabel,
-                         std::string ylabel,
+                         const std::string& xlabel,
+                         const std::string& ylabel,
                          long int cheby_samples){
     // NOTE: This routine is spotty. It doesn't always work, and seems to have a hard time opening a display window when a
     //       large data set is loaded. Files therefore get written for backup access.

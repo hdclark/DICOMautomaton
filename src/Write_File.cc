@@ -12,10 +12,10 @@
 
 #include "Write_File.h"
 
-void Append_File( std::function<std::string(void)> gen_file_name,
-                  std::string mutex_name,
-                  std::string iff_newfile,
-                  std::string body ){
+void Append_File( const std::function<std::string(void)>& gen_file_name,
+                  const std::string& mutex_name,
+                  const std::string& iff_newfile,
+                  const std::string& body ){
                  
     //File-based locking is used so this program can be run over many patients concurrently.
     // Try open a named mutex. Probably created in /dev/shm/ if you need to clear it manually...

@@ -55,7 +55,7 @@ bool StandardGenericHUWindow(planar_image_collection<float,double>::images_list_
                              std::list<std::reference_wrapper<planar_image_collection<float,double>>> ext_imgs,
                              std::list<std::reference_wrapper<contour_collection<double>>> ccsl, 
                              std::any userdata ){
-    return ReasonableHUWindow( std::move(first_img_it),
+    return ReasonableHUWindow( first_img_it,
                                std::move(selected_img_its),
                                std::move(ext_imgs),
                                std::move(ccsl),
@@ -68,7 +68,7 @@ bool StandardHeadAndNeckHUWindow(planar_image_collection<float,double>::images_l
                              std::list<std::reference_wrapper<planar_image_collection<float,double>>> ext_imgs,
                              std::list<std::reference_wrapper<contour_collection<double>>> ccsl,
                              std::any userdata ){
-    return ReasonableHUWindow( std::move(first_img_it),
+    return ReasonableHUWindow( first_img_it,
                                std::move(selected_img_its),
                                std::move(ext_imgs),
                                std::move(ccsl),
@@ -81,7 +81,7 @@ bool StandardAbdominalHUWindow(planar_image_collection<float,double>::images_lis
                                std::list<std::reference_wrapper<planar_image_collection<float,double>>> ext_imgs,
                                std::list<std::reference_wrapper<contour_collection<double>>> ccsl,
                                std::any userdata ){
-    return ReasonableHUWindow( std::move(first_img_it),
+    return ReasonableHUWindow( first_img_it,
                                std::move(selected_img_its),
                                std::move(ext_imgs),
                                std::move(ccsl),
@@ -94,7 +94,7 @@ bool StandardThoraxHUWindow(planar_image_collection<float,double>::images_list_i
                             std::list<std::reference_wrapper<planar_image_collection<float,double>>> ext_imgs,
                             std::list<std::reference_wrapper<contour_collection<double>>> ccsl,
                             std::any userdata ){
-    return ReasonableHUWindow( std::move(first_img_it),
+    return ReasonableHUWindow( first_img_it,
                                std::move(selected_img_its),
                                std::move(ext_imgs),
                                std::move(ccsl),
@@ -107,7 +107,7 @@ bool StandardBoneHUWindow(planar_image_collection<float,double>::images_list_it_
                           std::list<std::reference_wrapper<planar_image_collection<float,double>>> ext_imgs,
                           std::list<std::reference_wrapper<contour_collection<double>>> ccsl,
                           std::any userdata ){
-    return ReasonableHUWindow( std::move(first_img_it),
+    return ReasonableHUWindow( first_img_it,
                                std::move(selected_img_its),
                                std::move(ext_imgs),
                                std::move(ccsl),
@@ -124,7 +124,7 @@ bool StandardAlphaBetaWindow(planar_image_collection<float,double>::images_list_
     // (doi:10.1186/s13014-018-1040-z) for a variety of tissue types. Note, however, that the complete range appears to
     // span approximately -15 to 30. However, this would provide very little contrast for the majority of tissues
     // (0 to 5).
-    return ReasonableHUWindow( std::move(first_img_it),
+    return ReasonableHUWindow( first_img_it,
                                std::move(selected_img_its),
                                std::move(ext_imgs),
                                std::move(ccsl),

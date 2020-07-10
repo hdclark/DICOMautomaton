@@ -32,7 +32,7 @@ OperationDoc OpArgDocUBC3TMRI_DCE(){
     return out;
 }
 
-Drover UBC3TMRI_DCE(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string,std::string> InvocationMetadata, std::string /*FilenameLex*/){
+Drover UBC3TMRI_DCE(Drover DICOM_data, const OperationArgPkg& /*OptArgs*/, const std::map<std::string,std::string>& InvocationMetadata, const std::string& /*FilenameLex*/){
 
     //============================================= UBC3TMRI Vol01 DCE ================================================
     //Stuff references to all contours into a list. Remember that you can still address specific contours through
@@ -52,13 +52,15 @@ Drover UBC3TMRI_DCE(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std
     //std::shared_ptr<Image_Array> img_arr_orig_long_scan = *std::next(DICOM_data.image_data.begin(),0);
     //std::shared_ptr<Image_Array> img_arr_orig_short_scan = *std::next(DICOM_data.image_data.begin(),1);
 
+    std::map<std::string,std::string> l_InvocationMetadata(InvocationMetadata);
+
     //Figure out how much time elapsed before contrast injection began.
     double ContrastInjectionLeadTime = 35.0; //Seconds. 
-    if(InvocationMetadata.count("ContrastInjectionLeadTime") == 0){
+    if(l_InvocationMetadata.count("ContrastInjectionLeadTime") == 0){
         FUNCWARN("Unable to locate 'ContrastInjectionLeadTime' invocation metadata key. Assuming the default lead time " 
                  << ContrastInjectionLeadTime << "s is appropriate");
     }else{
-        ContrastInjectionLeadTime = std::stod( InvocationMetadata["ContrastInjectionLeadTime"] );
+        ContrastInjectionLeadTime = std::stod( l_InvocationMetadata["ContrastInjectionLeadTime"] );
         if(ContrastInjectionLeadTime < 0.0) throw std::runtime_error("Non-sensical 'ContrastInjectionLeadTime' found.");
         FUNCINFO("Found 'ContrastInjectionLeadTime' invocation metadata key. Using value " << ContrastInjectionLeadTime << "s"); 
     }
@@ -103,7 +105,7 @@ Drover UBC3TMRI_DCE(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std
     //Deep-copy temporally-averaged images and blur them.
     std::vector<std::shared_ptr<Image_Array>> tavgd_blurred;
     if(false){
-        for(auto img_ptr : temporal_avg_img_arrays){
+        for(const auto& img_ptr : temporal_avg_img_arrays){
             DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( *img_ptr ) );
             tavgd_blurred.push_back( DICOM_data.image_data.back() );
 
@@ -112,7 +114,7 @@ Drover UBC3TMRI_DCE(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std
             }
         }
     }else{
-        for(auto img_ptr : temporal_avg_img_arrays) tavgd_blurred.push_back( img_ptr );
+        for(const auto& img_ptr : temporal_avg_img_arrays) tavgd_blurred.push_back( img_ptr );
     }
 
 

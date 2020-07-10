@@ -16973,7 +16973,7 @@ ClampedColourRGB ColourMap_(double y){
 
 
 //This function takes a named colour and map it to a colour specified in terms of R,G,B all within [0,1].
-std::optional<ClampedColourRGB> Colour_from_name(std::string n){
+std::optional<ClampedColourRGB> Colour_from_name(const std::string& n){
     const auto cn = Canonicalize_String2(n, CANONICALIZE::TO_LOWER | CANONICALIZE::TRIM_ALL | CANONICALIZE::TO_AZ);
 
     std::map<std::string, ClampedColourRGB> colours {

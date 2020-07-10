@@ -33,7 +33,7 @@ OperationDoc OpArgDocDeletePoints(){
 
 
 
-Drover DeletePoints(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string>, std::string ){
+Drover DeletePoints(Drover DICOM_data, const OperationArgPkg& OptArgs, const std::map<std::string,std::string>&, const std::string& ){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto PointSelectionStr = OptArgs.getValueStr("PointSelection").value();

@@ -289,7 +289,7 @@ Insert_Grid_Contours(Drover &DICOM_data,
     // Save the planes as contours on an image.
     {
         const std::string ImageSelectionStr = "last";
-        const std::string NormalizedROILabel = ROILabel;
+        const std::string& NormalizedROILabel = ROILabel;
         const auto contour_thickness = 0.001; // in DICOM units (i.e., mm).
 
         std::list<contours_with_meta> new_contours;
@@ -474,7 +474,7 @@ Find_Corresponding_Points( Grid_Context &GC,
     const auto edge_z = GC.current_grid_z * GC.grid_sep;
 
     // Corners of the proto cube.
-    const auto c_A = anchor;
+    const auto& c_A = anchor;
     const auto c_B = anchor + edge_x;
     const auto c_C = anchor + edge_x + edge_z;
     const auto c_D = anchor + edge_z;
@@ -622,7 +622,7 @@ Rotate_Grid_Optimally( Grid_Context &GC,
 
     //Eigen::JacobiSVD<Eigen::MatrixXf> SVD(BAT, Eigen::ComputeThinU | Eigen::ComputeThinV);
     Eigen::JacobiSVD<Eigen::MatrixXf> SVD(BAT, Eigen::ComputeFullU | Eigen::ComputeFullV );
-    auto U = SVD.matrixU();
+    const auto& U = SVD.matrixU();
     auto V = SVD.matrixV();
     
     // Use the SVD result directly.
@@ -702,9 +702,8 @@ Rotate_Grid_Optimally( Grid_Context &GC,
 
 static
 double
-Score_Fit( Grid_Context &GC,
-           ICP_Context &ICPC, 
-           std::function<std::string(void)> gen_filename = {}, // For optionally reporting to a CSV file.
+Score_Fit( ICP_Context &ICPC, 
+           const std::function<std::string(void)>& gen_filename = {}, // For optionally reporting to a CSV file.
            bool verbose = false){
 
     // Evaluate the fit using the corresponding points.
@@ -838,13 +837,13 @@ return;
                                      std::numeric_limits<double>::quiet_NaN(),
                                      std::numeric_limits<double>::quiet_NaN() );
 
-        const auto anchor = shifted_proto_cube;
+        const auto& anchor = shifted_proto_cube;
         const auto edge_x = GC.current_grid_x * GC.grid_sep;
         const auto edge_y = GC.current_grid_y * GC.grid_sep;
         const auto edge_z = GC.current_grid_z * GC.grid_sep;
 
         // Corners of the proto cube.
-        const auto c_A = anchor;
+        const auto& c_A = anchor;
         const auto c_B = anchor + edge_x;
         const auto c_C = anchor + edge_x + edge_z;
         const auto c_D = anchor + edge_z;
@@ -911,8 +910,7 @@ return;
 
 static
 void
-ICP_Fit_Grid( Drover &DICOM_data,
-              std::mt19937 re, 
+ICP_Fit_Grid( std::mt19937 re, 
               long int icp_max_loops,
               Grid_Context &GC,
               ICP_Context &ICPC ){
@@ -920,7 +918,7 @@ ICP_Fit_Grid( Drover &DICOM_data,
     // Re-score the existing grid arrangment since the cohort has most likely changed.
     Project_Into_Proto_Cube(GC, ICPC);
     Find_Corresponding_Points(GC, ICPC);
-    GC.score = Score_Fit(GC, ICPC);
+    GC.score = Score_Fit(ICPC);
 
     Grid_Context best_GC = GC;
 
@@ -958,7 +956,7 @@ Write_Everything("/tmp/ransac"_s + std::to_string(icp_invoke) + "_icp" + std::to
         Find_Corresponding_Points(GC, ICPC);
 Write_Everything("/tmp/ransac"_s + std::to_string(icp_invoke) + "_icp" + std::to_string(loop) + "_08corresfound_", GC, ICPC);
 
-        GC.score = Score_Fit(GC, ICPC);
+        GC.score = Score_Fit(ICPC);
         if(!std::isfinite(best_GC.score) || (GC.score < best_GC.score)){
             best_GC = GC;
         }else{                           // NOTE: Not sure about this one ... will it confine to local minima only?   TODO
@@ -1165,7 +1163,7 @@ OperationDoc OpArgDocDetectGrid3D(){
     return out;
 }
 
-Drover DetectGrid3D(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){
+Drover DetectGrid3D(Drover DICOM_data, const OperationArgPkg& OptArgs, const std::map<std::string,std::string>& /*InvocationMetadata*/, const std::string& /*FilenameLex*/){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto PointSelectionStr = OptArgs.getValueStr("PointSelection").value();
@@ -1309,7 +1307,7 @@ if(false){
 
             // Perform ICP on the sub-set cohort.
             try{
-                ICP_Fit_Grid(DICOM_data, re, CoarseICPMaxLoops, GC, ICPC);
+                ICP_Fit_Grid(re, CoarseICPMaxLoops, GC, ICPC);
             }catch(const std::exception &e){
                 FUNCWARN("Error encountered during coarse ICP (" << e.what() << "), rebooting RANSAC loop.");
                 Handle_RANSAC_Failure(); // Will throw if too many failures encountered.
@@ -1325,7 +1323,7 @@ if(false){
             whole_ICPC.ransac_centre = ICPC.ransac_centre;
 
             try{
-                ICP_Fit_Grid(DICOM_data, re, FineICPMaxLoops, GC, whole_ICPC);
+                ICP_Fit_Grid(re, FineICPMaxLoops, GC, whole_ICPC);
             }catch(const std::exception &e){
                 FUNCWARN("Error encountered during fine ICP (" << e.what() << "), rebooting RANSAC loop.");
                 Handle_RANSAC_Failure(); // Will throw if too many failures encountered.
@@ -1333,7 +1331,7 @@ if(false){
             }
 
             // Evaluate over the entire point cloud, retaining the global best.
-            GC.score = Score_Fit(GC, whole_ICPC);
+            GC.score = Score_Fit(whole_ICPC);
             if(!std::isfinite(best_GC.score) || (GC.score < best_GC.score)){
                 best_GC = GC;
             }
@@ -1358,7 +1356,7 @@ if(false){
 
 
             const bool verbose = true;
-            const auto best_score = Score_Fit(best_GC, whole_ICPC, gen_filename, verbose);
+            const auto best_score = Score_Fit(whole_ICPC, gen_filename, verbose);
             FUNCINFO("Best score: " << best_score);
 
             Write_XYZ("/tmp/original_points.xyz", (*pcp_it)->pset.points);
@@ -1468,7 +1466,7 @@ if(false){
                 const auto edge_x = best_GC.current_grid_x * best_GC.grid_sep;
                 const auto edge_y = best_GC.current_grid_y * best_GC.grid_sep;
                 const auto edge_z = best_GC.current_grid_z * best_GC.grid_sep;
-                const auto c_A = anchor;
+                const auto& c_A = anchor;
                 const auto c_B = anchor + edge_x;
                 const auto c_C = anchor + edge_x + edge_z;
                 const auto c_D = anchor + edge_z;
@@ -1539,7 +1537,8 @@ FUNCINFO("There are " << partitioned.size() << " involved grid unions");
                 // We assume that intact catchment areas will tend to have a similar number of points, so catchment
                 // areas with fewer points are suspect.
                 std::vector<double> partition_counts;
-                for(const auto &apair : partitioned){
+                partition_counts.reserve(partitioned.size());
+for(const auto &apair : partitioned){
                     partition_counts.push_back( static_cast<double>( apair.second.size() ) );
                 }
 

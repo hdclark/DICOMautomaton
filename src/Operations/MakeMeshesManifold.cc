@@ -73,7 +73,7 @@ OperationDoc OpArgDocMakeMeshesManifold(){
 
 
 
-Drover MakeMeshesManifold(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string> /*InvocationMetadata*/, std::string FilenameLex){
+Drover MakeMeshesManifold(Drover DICOM_data, const OperationArgPkg& OptArgs, const std::map<std::string,std::string>& /*InvocationMetadata*/, const std::string&  /*FilenameLex*/){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto MeshLabel = OptArgs.getValueStr("MeshLabel").value();

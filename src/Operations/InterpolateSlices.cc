@@ -72,9 +72,9 @@ OperationDoc OpArgDocInterpolateSlices(){
 
 
 Drover InterpolateSlices(Drover DICOM_data, 
-                           OperationArgPkg OptArgs, 
-                           std::map<std::string,std::string> /*InvocationMetadata*/, 
-                           std::string /*FilenameLex*/ ){
+                           const OperationArgPkg& OptArgs, 
+                           const std::map<std::string,std::string>& /*InvocationMetadata*/, 
+                           const std::string& /*FilenameLex*/ ){
 
 
     //---------------------------------------------- User Parameters --------------------------------------------------

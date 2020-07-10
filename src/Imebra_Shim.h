@@ -70,19 +70,19 @@ enum ParanoiaLevel {
     High      // Forgo all non-critical metadata tags. Note this should not be used for anonymization.
 };
 
-void Write_Dose_Array(std::shared_ptr<Image_Array> IA, 
+void Write_Dose_Array(const std::shared_ptr<Image_Array>& IA, 
                       const std::string &FilenameOut, 
                       ParanoiaLevel Paranoia = ParanoiaLevel::Low);
 
 // Note: callback will be called once for each CT-modality DICOM file.
-void Write_CT_Images(std::shared_ptr<Image_Array> IA, 
-                     std::function<void(std::istream &is,
-                                        long int filesize)> file_handler,
+void Write_CT_Images(const std::shared_ptr<Image_Array>& IA, 
+                     const std::function<void(std::istream &is,
+                                        long int filesize)>& file_handler,
                      ParanoiaLevel Paranoia = ParanoiaLevel::Low);
 
 void Write_Contours(std::list<std::reference_wrapper<contour_collection<double>>> CC,
-                    std::function<void(std::istream &is,
-                                       long int filesize)> file_handler,
+                    const std::function<void(std::istream &is,
+                                       long int filesize)>& file_handler,
                     ParanoiaLevel Paranoia = ParanoiaLevel::Low);
 
 #endif

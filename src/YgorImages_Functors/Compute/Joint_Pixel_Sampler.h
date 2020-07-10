@@ -38,7 +38,7 @@ struct ComputeJointPixelSamplerUserData {
     // interpolated if the images do not align exactly. The position of the first image's voxel (which is also the point
     // in space the other intensities are sampled) is also provided.
     std::function<float(std::vector<float> &, vec3<double>)> 
-    f_reduce = [](std::vector<float> &, vec3<double>) -> float {
+    f_reduce = [](std::vector<float> &, const vec3<double>&) -> float {
         return std::numeric_limits<float>::quiet_NaN();
     };
 

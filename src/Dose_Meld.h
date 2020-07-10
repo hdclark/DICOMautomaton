@@ -24,11 +24,11 @@ Meld_Image_Data(const std::list<std::shared_ptr<Image_Array>> &dalist);
 
 //Resamples dose data to ensure no overflow occurs. Is a lossy operation.
 std::unique_ptr<Image_Array>
-Meld_Equal_Geom_Image_Data(std::shared_ptr<Image_Array> A, std::shared_ptr<Image_Array> B);
+Meld_Equal_Geom_Image_Data(const std::shared_ptr<Image_Array>& A, const std::shared_ptr<Image_Array>& B);
 
 //Resamples dose data AND the smaller of the dose data grids onto the larger. Is a lossy operation.
 std::unique_ptr<Image_Array>
-Meld_Unequal_Geom_Image_Data(std::shared_ptr<Image_Array> A, std::shared_ptr<Image_Array> B);
+Meld_Unequal_Geom_Image_Data(std::shared_ptr<Image_Array> A, const std::shared_ptr<Image_Array>& B);
 
 #endif
 

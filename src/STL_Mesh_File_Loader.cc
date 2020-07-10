@@ -25,7 +25,7 @@
 
 bool Load_Mesh_From_STL_Files( Drover &DICOM_data,
                                std::map<std::string,std::string> & /* InvocationMetadata */,
-                               std::string &,
+                               const std::string &,
                                std::list<boost::filesystem::path> &Filenames ){
 
     // This routine will attempt to load STL-format files as surface meshes. Note that support for STL files is limited

@@ -81,7 +81,7 @@ OperationDoc OpArgDocPointSeparation(){
     return out;
 }
 
-Drover PointSeparation(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string> /*InvocationMetadata*/, std::string FilenameLex){
+Drover PointSeparation(Drover DICOM_data, const OperationArgPkg& OptArgs, const std::map<std::string,std::string>& /*InvocationMetadata*/, const std::string& FilenameLex){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto PointSelectionAStr = OptArgs.getValueStr("PointSelectionA").value();
@@ -141,11 +141,11 @@ Drover PointSeparation(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std:
     double sq_hausdorff = -std::numeric_limits<double>::infinity();
 
     for(const auto & pcpA_it : PCs_A){
-        for(const auto vA : (*pcpA_it)->pset.points){
+        for(const auto& vA : (*pcpA_it)->pset.points){
 
             double sq_nearest = std::numeric_limits<double>::infinity();
             for(const auto & pcpB_it : PCs_B){
-                for(const auto vB : (*pcpB_it)->pset.points){
+                for(const auto& vB : (*pcpB_it)->pset.points){
                     const auto sq_sep = vA.sq_dist(vB);
                     // Identify the nearest point in set B for the current set A point.
                     if(sq_sep < sq_nearest){

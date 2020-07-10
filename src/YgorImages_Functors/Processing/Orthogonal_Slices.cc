@@ -95,7 +95,7 @@ bool OrthogonalSlices(planar_image_collection<float,double>::images_list_it_t fi
     const auto anchor = (*(std::get<0>(mm)))->anchor;
     const auto offset = (*(std::get<0>(mm)))->offset;
 
-    const auto new_row_unit = old_orto_unit;
+    const auto& new_row_unit = old_orto_unit;
     const auto new_pxl_dx = first_img_it->pxl_dz;
     const auto numb_of_rows = static_cast<long int>( std::ceil(N) );
     const auto numb_of_chns = first_img_it->channels;
@@ -103,8 +103,8 @@ bool OrthogonalSlices(planar_image_collection<float,double>::images_list_it_t fi
 
     // ---- First set: 'row' aligned orthogonal images ----
     {
-        const auto new_col_unit = old_row_unit; //Chosen to new_row x new_col = old_col
-        const auto new_ortho_unit = old_col_unit;
+        const auto& new_col_unit = old_row_unit; //Chosen to new_row x new_col = old_col
+        const auto& new_ortho_unit = old_col_unit;
 
         const auto new_pxl_dy = first_img_it->pxl_dx;
         const auto new_pxl_dz = first_img_it->pxl_dy;
@@ -139,8 +139,8 @@ bool OrthogonalSlices(planar_image_collection<float,double>::images_list_it_t fi
 
     // ---- Second set: 'col' aligned orthogonal images ----
     {
-        const auto new_col_unit = old_col_unit; //Chosen to new_row x new_col = old_col
-        const auto new_ortho_unit = old_row_unit;
+        const auto& new_col_unit = old_col_unit; //Chosen to new_row x new_col = old_col
+        const auto& new_ortho_unit = old_row_unit;
 
         const auto new_pxl_dy = first_img_it->pxl_dy;
         const auto new_pxl_dz = first_img_it->pxl_dx;

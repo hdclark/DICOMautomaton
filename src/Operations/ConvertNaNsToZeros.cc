@@ -25,7 +25,7 @@ OperationDoc OpArgDocConvertNaNsToZeros(){
     return out;
 }
 
-Drover ConvertNaNsToZeros(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string,std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){
+Drover ConvertNaNsToZeros(Drover DICOM_data, const OperationArgPkg& /*OptArgs*/, const std::map<std::string,std::string>& /*InvocationMetadata*/, const std::string& /*FilenameLex*/){
 
     for(auto & img_arr : DICOM_data.image_data){
         if(!img_arr->imagecoll.Process_Images_Parallel( GroupIndividualImages,

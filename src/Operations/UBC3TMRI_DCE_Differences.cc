@@ -37,7 +37,7 @@ OperationDoc OpArgDocUBC3TMRI_DCE_Differences(){
     return out;
 }
 
-Drover UBC3TMRI_DCE_Differences(Drover DICOM_data, OperationArgPkg /*OptArgs*/, std::map<std::string,std::string> /*InvocationMetadata*/, std::string /*FilenameLex*/){
+Drover UBC3TMRI_DCE_Differences(Drover DICOM_data, const OperationArgPkg& /*OptArgs*/, const std::map<std::string,std::string>& /*InvocationMetadata*/, const std::string& /*FilenameLex*/){
 
     //Stuff references to all contours into a list. Remember that you can still address specific contours through
     // the original holding containers (which are not modified here).

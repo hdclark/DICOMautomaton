@@ -83,7 +83,7 @@ OperationDoc OpArgDocBuildLexiconInteractively(){
     return out;
 }
 
-Drover BuildLexiconInteractively(Drover DICOM_data, OperationArgPkg OptArgs, std::map<std::string,std::string>, std::string){
+Drover BuildLexiconInteractively(Drover DICOM_data, const OperationArgPkg& OptArgs, const std::map<std::string,std::string>&, const std::string&){
 
         
 

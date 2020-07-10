@@ -86,15 +86,15 @@ OperationDoc OpArgDocTrimROIDose(){
 
 Drover
 TrimROIDose(Drover DICOM_data, 
-            OperationArgPkg OptArgs,
-            std::map<std::string, std::string> InvocationMetadata,
-            std::string FilenameLex){
+            const OperationArgPkg& OptArgs,
+            const std::map<std::string, std::string>& InvocationMetadata,
+            const std::string& FilenameLex){
 
     DICOM_data = Meld_Only_Dose_Data(DICOM_data);
 
-    DICOM_data = HighlightROIs(std::move(DICOM_data), OptArgs, InvocationMetadata, FilenameLex);
+    DICOM_data = HighlightROIs(DICOM_data, OptArgs, InvocationMetadata, FilenameLex);
 
-    DICOM_data = DICOMExportImagesAsDose(std::move(DICOM_data), OptArgs, InvocationMetadata, FilenameLex);
+    DICOM_data = DICOMExportImagesAsDose(DICOM_data, OptArgs, InvocationMetadata, FilenameLex);
 
     return DICOM_data;
 }
