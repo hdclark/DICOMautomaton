@@ -132,7 +132,7 @@ contours_with_meta::contours_with_meta(const contour_collection<double> &in){
     this->Segmentation_History.push_back(0); //0 marks an original contour and may or may not be honored.
 }
 
-contours_with_meta::contours_with_meta(const contours_with_meta &rhs) : contour_collection<double>() {
+contours_with_meta::contours_with_meta(const contours_with_meta &rhs) : contour_collection<double>(rhs) {
     *this = rhs;
 }
 
