@@ -94,9 +94,7 @@ Drover PointSeparation(Drover DICOM_data, const OperationArgPkg& OptArgs, const 
 
     auto PCs_all = All_PCs( DICOM_data );
     const auto PCs_A = Whitelist( PCs_all, PointSelectionAStr );
-    const auto N_PCs_A = PCs_A.size();
     const auto PCs_B = Whitelist( PCs_all, PointSelectionBStr );
-    const auto N_PCs_B = PCs_B.size();
 
     // Attempt to identify the patient for reporting purposes.
     std::string patient_ID;
@@ -124,15 +122,6 @@ Drover PointSeparation(Drover DICOM_data, const OperationArgPkg& OptArgs, const 
         LabelB = o.value();
     }else{
         LabelB = "unknown_pcloud";
-    }
-
-    size_t N_A = 0; // Total number of points in set A.
-    for(const auto & pcpA_it : PCs_A){
-        N_A += (*pcpA_it)->pset.points.size();
-    }
-    size_t N_B = 0; // Total number of points in set B.
-    for(const auto & pcpB_it : PCs_B){
-        N_B += (*pcpB_it)->pset.points.size();
     }
 
     // Estimate the separations.

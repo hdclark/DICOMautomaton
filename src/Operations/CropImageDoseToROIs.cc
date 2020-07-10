@@ -79,10 +79,6 @@ Drover CropImageDoseToROIs(Drover DICOM_data, const OperationArgPkg& OptArgs, co
     const auto NormalizedROILabelRegex = OptArgs.getValueStr("NormalizedROILabelRegex").value();
     //-----------------------------------------------------------------------------------------------------------------
 
-    const auto regex_none = Compile_Regex("no?n?e?$");
-    const auto regex_last = Compile_Regex("la?s?t?$");
-    const auto regex_all  = Compile_Regex("al?l?$");
-
     // Stuff references to all contours into a list. Remember that you can still address specific contours through
     // the original holding containers (which are not modified here).
     auto cc_all = All_CCs( DICOM_data );

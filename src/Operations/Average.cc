@@ -55,10 +55,6 @@ Drover Average(Drover DICOM_data, const OperationArgPkg& OptArgs, const std::map
     const auto ImageSelectionStr = OptArgs.getValueStr("ImageSelection").value();
     const auto AveragingMethodStr = OptArgs.getValueStr("AveragingMethod").value();
     //-----------------------------------------------------------------------------------------------------------------
-    const auto regex_none = Compile_Regex("no?n?e?$");
-    const auto regex_last = Compile_Regex("la?s?t?$");
-    const auto regex_all  = Compile_Regex("al?l?$");
-
     const auto overlap_spat = Compile_Regex("ov?e?r?l?a?p?p?i?n?g?-?sp?a?t?i?a?l?l?y?");
     const auto overlap_temp = Compile_Regex("ov?e?r?l?a?p?p?i?n?g?-?te?m?p?o?r?a?l?l?y?");
 

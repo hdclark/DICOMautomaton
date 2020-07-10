@@ -1282,9 +1282,9 @@ Drover SFML_Viewer( Drover DICOM_data,
                 const std::string fname = fname_vec.front();
 
                 planar_image<float,double> casted_img; // External image with casted pixel values.
-                bool loaded = false;
 
-                if(!loaded){
+                bool loaded = false;
+                {
                     try{
                         auto animg = ReadFromFITS<uint8_t,double>(fname);
                         casted_img.cast_from(animg);

@@ -2339,7 +2339,6 @@ OperationArgPkg::containsExactly(std::initializer_list<std::string> l) const {
 std::optional<std::string> 
 OperationArgPkg::getValueStr(const std::string& key) const {
     const auto cit = this->opts.find(key);
-    auto def = std::optional<std::string>();
 
     if(cit == this->opts.end()){
         return std::optional<std::string>();
@@ -2361,7 +2360,7 @@ OperationArgPkg::insert(const std::string& key, std::string val){
 bool
 OperationArgPkg::insert(const std::string& keyval){
     std::string name("_placeholder_:");
-    OperationArgPkg shtl(name + keyval);
+    [[maybe_unused]] OperationArgPkg shtl(name + keyval);
 
     for(const auto &p : shtl.opts){
         if(!this->insert(p.first, p.second)){

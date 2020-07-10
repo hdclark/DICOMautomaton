@@ -154,20 +154,12 @@ Drover ConvertImageToMeshes(Drover DICOM_data, const OperationArgPkg& OptArgs, c
     const auto binary_regex = Compile_Regex("^bi?n?a?r?y?$");
     const auto marching_regex = Compile_Regex("^ma?r?c?h?i?n?g?$");
 
-    const auto TrueRegex = Compile_Regex("^tr?u?e?$");
-
     //Iterate over each requested image_array. Each image is processed independently, so a thread pool is used.
     auto IAs_all = All_IAs( DICOM_data );
     auto IAs = Whitelist( IAs_all, ImageSelectionStr );
     for(auto & iap_it : IAs){
-        const long int img_count = (*iap_it)->imagecoll.images.size();
-
         // The mesh will inheret image metadata.
         auto ia_metadata = (*iap_it)->imagecoll.get_common_metadata({});
-
-        asio_thread_pool tp;
-        std::mutex saver_printer; // Who gets to save generated contours, print to the console, and iterate the counter.
-        long int completed = 0;
 
         //Determine the bounds in terms of pixel-value thresholds.
         auto cl = Lower; // Will be replaced if percentages/percentiles requested.
