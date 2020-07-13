@@ -39,7 +39,7 @@ extraction:
     after_prepare:
     # Create an accessible installation root directory.
     - "cd $LGTM_WORKSPACE"
-    - "mkdir -pv placeholder_root"
+    - "mkdir -pv placeholder_root/{include,lib,bin,share}"
     # Ygor.
     - "cd $LGTM_WORKSPACE"
     - "mkdir -pv ygor"
@@ -58,8 +58,8 @@ extraction:
     - "cd ygorclustering"
     - "git clone https://github.com/hdclark/ygorclustering ."
     - "CXXFLAGS=-I$LGTM_WORKSPACE/placeholder_root/include LDFLAGS=-L$LGTM_WORKSPACE/placeholder_root/lib ./compile_and_install.sh -u -i $LGTM_WORKSPACE/placeholder_root -b build"
-    - "cd $LGTM_WORKSPACE"
     # Wt.
+    - "cd $LGTM_WORKSPACE"
     - "mkdir -pv wt"
     - "cd wt"
     - "git clone https://github.com/emweb/wt.git ."
