@@ -99,7 +99,8 @@ elif [ "$(readlink -f "${BUILDROOT}")" == "/" ] ; then
 fi
 
 # Determine which distribution/environment to assume.
-if [[ "${DISTRIBUTION}" =~ .*auto.* ]] ; then
+if [[ "${DISTRIBUTION}" =~ .*auto.* ]] &&
+   [ -e /etc/os-release ] ; then
     DISTRIBUTION=$( bash -c '. /etc/os-release && printf "${NAME}"' )
 fi
 
