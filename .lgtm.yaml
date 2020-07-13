@@ -1,0 +1,71 @@
+
+# This config file facilitates automated static analysis on lgtm.com.
+extraction:
+  cpp:
+    prepare:
+      packages:
+      # Explicitly install known packages.
+      - "git"
+      - "cmake"
+      - "make"
+      - "g++"
+      - "vim"
+      - "ncurses-term"
+      - "gdb"
+      - "rsync"
+      - "wget"
+      - "ca-certificates"
+      - "libgsl-dev"
+      - "libeigen3-dev"
+      - "libboost-dev"
+      - "libboost-filesystem-dev"
+      - "libboost-iostreams-dev"
+      - "libboost-program-options-dev"
+      - "libboost-thread-dev"
+      - "libz-dev"
+      - "libsfml-dev"
+      - "libjansson-dev"
+      - "libpqxx-dev"
+      - "libcgal-dev"
+      - "libnlopt-dev"
+      - "libnlopt-cxx0"
+      - "libasio-dev"
+      - "freeglut3-dev"
+      - "libxi-dev"
+      - "libxmu-dev"
+      - "xorg-dev"
+      - "xserver-xorg-dev"
+      - "mesa-common-dev"
+    after_prepare:
+    # Create an accessible installation root directory.
+    - "cd $LGTM_WORKSPACE"
+    - "mkdir -pv placeholder_root"
+    # Ygor.
+    - "cd $LGTM_WORKSPACE"
+    - "mkdir -pv ygor"
+    - "cd ygor"
+    - "git clone https://github.com/hdclark/ygor ."
+    - "CXXFLAGS=-I$LGTM_WORKSPACE/placeholder_root/include LDFLAGS=-L$LGTM_WORKSPACE/placeholder_root/lib ./compile_and_install.sh -u -i $LGTM_WORKSPACE/placeholder_root -b build"
+    # Explicator.
+    - "cd $LGTM_WORKSPACE"
+    - "mkdir -pv explicator"
+    - "cd explicator"
+    - "git clone https://github.com/hdclark/explicator ."
+    - "CXXFLAGS=-I$LGTM_WORKSPACE/placeholder_root/include LDFLAGS=-L$LGTM_WORKSPACE/placeholder_root/lib ./compile_and_install.sh -u -i $LGTM_WORKSPACE/placeholder_root -b build"
+    # YgorClustering.
+    - "cd $LGTM_WORKSPACE"
+    - "mkdir -pv ygorclustering"
+    - "cd ygorclustering"
+    - "git clone https://github.com/hdclark/ygorclustering ."
+    - "CXXFLAGS=-I$LGTM_WORKSPACE/placeholder_root/include LDFLAGS=-L$LGTM_WORKSPACE/placeholder_root/lib ./compile_and_install.sh -u -i $LGTM_WORKSPACE/placeholder_root -b build"
+    - "cd $LGTM_WORKSPACE"
+    # Wt.
+    - "mkdir -pv wt"
+    - "cd wt"
+    - "git clone https://github.com/emweb/wt.git ."
+    - "mkdir -p build && cd build"
+    - "cmake -DCMAKE_INSTALL_PREFIX='' ../"
+    - "make -j 2 VERBOSE=1 DESTDIR=$LGTM_WORKSPACE/placeholder_root install"
+    index:
+      build_command: "CXXFLAGS=-I$LGTM_WORKSPACE/placeholder_root/include LDFLAGS=-L$LGTM_WORKSPACE/placeholder_root/lib ./compile_and_install.sh -u -i $LGTM_WORKSPACE/placeholder_root -b build"
+
