@@ -9,24 +9,155 @@
 
 # About
 
-`DICOMautomaton` is a collection of tools for analyzing *medical physics* data,
-specifically dosimetric and medical imaging data in the DICOM format. It has
-become something of a platform that provides a variety of functionality.
-`DICOMautomaton` is designed for easily developing customized workflows.
+`DICOMautomaton` is a multipurpose tool for analyzing *medical physics* data
+with a focus on automation. It runs on Linux. It has first-class support for:
+
+  - images (2D and 3D; CT, MRI, PET, RT dose),
+  - surface meshes (2D surfaces embedded in 3D),
+  - 2D planar contours embedded in 3D,
+  - point clouds (3D),
+  - registrations (rigid and deformable in 3D),
+  - radiotherapy plans, and
+  - line samples (i.e., discretized scalar functions in one dimension).
+
+There are four ways of operating `DICOMautomaton`:
+
+  - command-line interface
+    - most flexible, best for automation
+    - not interactive, not a repl
+  - a minimal graphical interface
+    - best for contouring and simple evaluations
+    - can be mixed with the command-line interface
+  - a terminal graphical interface
+    - extremely simplisitic, meant for question-answer interactions
+    - can be mixed with the command-line interface
+  - web interface
+    - supports modal workflow interactions
+    - not all operations are supported (e.g., contouring is not currently
+      supported)
+    - server-client model for off-site installation, can provide access to
+      non-Linux systems and low-powered client computers
+
+`DICOMautomaton` provides a diverse array of functionality, including
+implementations of the following well-known algorithms and analytical
+techniques:
+
+  - contouring
+    - interactive contouring
+    - threshold-based contouring (2D or 3D)
+    - contour erosion/dilation (2D or 3D)
+    - sub-segmentation (i.e., splitting contour collections into 2D/3D compartments)
+    - confined region-of-interest (ROI) image processing/analysis (2D or 3D)
+    - 2D boolean operations
+  - surface reconstruction and processing
+    - Marching Cubes
+    - restricted Delauney reconstruction
+    - contours-to-contours interpolation (i.e., keyhole surface meshing)
+    - mesh subdivision
+    - mesh simplification
+    - 3D boolean operations, erosion, and dilation/margins (exact for small
+      vertex counts, and via image representation for large vertex counts)
+  - point cloud registration
+    - Iterative Closest Point (ICP)
+    - Procrustes algorithm
+    - Affine registration
+    - Principal Component Analysis (PCA) rigid registration
+    - This Plate Spline (TPS) deformable registration
+    - Thin Plate Spline Robust Point Matching (TPS-RPM) deformable registration
+    - warping (i.e., applying transformations to generic objects)
+  - detection of shapes within point clouds
+    - Random sample concensus (RANSAC) for primitive shapes
+    - MR distortion quantification for lattice grids
+  - rudimentary image processing techniques
+    - morphological operations (e.g., open/close, erode/dilate)
+    - normalization, standardization, and locally adaptive techniques (2D or 3D)
+    - convolution (2D or 3D)
+    - sub-image search (2D or 3D)
+    - median filtering, min/max filtering, percentile transformation (2D or 3D)
+    - Otsu thresholding, simplistic thresholding
+    - image gradients (e.g., Sobel, Scharr; first-order, second-order)
+    - edge detection, non-maximum edge suppression
+  - quantitative medical image analysis
+    - gamma analysis, distance to agreement analysis (2D/3D to 2D or 3D)
+    - Response Evaluation Criteria in Solid Tumours (RECIST) features
+    - pharmacokinetic modeling for Dynamic Contrast-Enhanced (DCE) imaging (CT
+      or MR)
+    - Intravoxel Incoherent Motion (IVIM) modeling
+    - novel time series analysis (i.e., '4D' analysis)
+  - radiobiology
+    - Biologically Effective Dose (BED) transformations
+    - Equivalent Dose in 2 Gy Fractions (EQD2) transformations
+    - extraction of alpha/beta from EQD2 images
+    - tissue recovery models, including the Jones et al 2014 model
+    - standard Tissue Control Probability (TCP) models
+    - standard Normal Tissue Control Probability (NTCP) models
+  - radiotherapy planning
+    - rudimentary optimization for fixed-field plans
+    - clinical protocol evaluation
+    - rudimentary automated plan checking support
+  - routine quality assurance
+    - fully nonparametric multileaf collimator (MLC) picket fence leaf
+      displacement quantification
+    - light-radiation correspodence using edge-finding
+    - basic image quality measures
+  - clustering
+    - Density-Based Spatial Clustering of Applications with Noise (DBSCAN)
+    - k-means
+    - connected components
+  - miscellaneous
+    - transformations between data types (e.g., images to surface meshes,
+      surface meshes to point clouds, point clouds to images)
+    - radiomic signatures (a subset of the IBSI-defined biomarkers)
+    - A\* pathfinding (partial)
+    - R\*-trees
+    - 2D contouring via mapping to a 'voxel world game' (not maintained)
+
+Interchange is important. `DICOMautomaton` supports the following standard file
+formats:
+
+  - images/dose
+    - DICOM CT (read and write)
+    - DICOM MR (read)
+    - FITS (read and write)
+    - DICOM RTDOSE (read and write)
+    - 3ddose (read)
+  - contours
+    - DICOM RTSTRUCT (read and write)
+  - surface meshes
+    - OFF (read and write; partial)
+    - OBJ (read and write; partial)
+    - STL (read and write)
+  - point clouds
+    - OFF (read and write; partial)
+  - registrations
+    - 16 parameter Affine or rigid transformation text files
+    - Thin Plate Spline transformation text files (read and write)
+  - radiotherapy plans
+    - DICOM RTPLAN (read)
+  - line samples
+    - CSV (read and write)
+  - reporting
+    - CSV (write)
+    - TSV (write)
+  - direct database query (e.g., to interface directly with a PACs)
+
+Customized file formats are provided for snapshotting internal state.
 
 The basic workflow is:
 
- 1. Files are loaded (from a DB or various types of files).
+ 1. Files are loaded (from a DB or files).
 
- 2. A list of operations are provided and sequentially performed, mutating the
-    data state.
+ 2. A list of operations are sequentially performed, mutating the data state.
 
  3. Files of various kinds can be written or a viewer can be invoked. Both
     are implemented as operations that can be chained together sequentially.
 
-Some operations are interactive. Others will run on their own (possibly for
-days or even weeks). Each operation provides a description of the parameters
-that can be configured. To see this documentation, invoke:
+Some operations are interactive. Others will run on their own (possibly for days
+or even weeks). See [integration\_tests/tests/](integration_tests/tests/) for
+specific examples.
+
+Each operation provides a description of the parameters that can be configured.
+To see the exact, up-to-date documentation, invoke:
 
     $>  dicomautomaton_dispatcher -u
 
@@ -34,8 +165,19 @@ and for general information invoke:
 
     $>  dicomautomaton_dispatcher -h
 
-NOTE: `DICOMautomaton` should NOT be used for clinical purposes. It is suitable
-for research or support tool purposes only.
+Alternatively, see [documentation/](documentation/) for documentation snapshots.
+
+# Clinical Use
+
+`DICOMautomaton` should **NOT** be used for clinical purposes. It is suitable
+*only* for research purposes or in a non-critical supporting role where outputs
+can be easily validated.
+
+While efforts have been made to verify integrity and validity of the code, no
+independent audit or review has been performed. The breadth functionality would
+make it difficult to test all operations combinations. We therefore rely on
+static analysis, code quality metrics, and a limited amount of integration
+testing for specific workflows. 
 
 # License and Copying
 
