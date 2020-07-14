@@ -6,6 +6,7 @@
 [![LOC](https://tokei.rs/b1/gitlab/hdeanclark/DICOMautomaton)](https://gitlab.com/hdeanclark/DICOMautomaton)
 [![Language](https://img.shields.io/github/languages/top/hdclark/DICOMautomaton.svg)](https://gitlab.com/hdeanclark/DICOMautomaton)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/1ac93861be524c7f9f18324b64960f28)](https://www.codacy.com/app/hdclark/DICOMautomaton?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=hdclark/DICOMautomaton&amp;utm_campaign=Badge_Grade)
+[![Language grade: C/C++](https://img.shields.io/lgtm/grade/cpp/g/hdclark/DICOMautomaton.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/hdclark/DICOMautomaton/context:cpp)
 
 # About
 
@@ -16,7 +17,7 @@ with a focus on automation. It runs on Linux. It has first-class support for:
   - surface meshes (2D surfaces embedded in 3D),
   - 2D planar contours embedded in 3D,
   - point clouds (3D),
-  - registrations (rigid and deformable in 3D),
+  - registration (rigid and deformable in 3D),
   - radiotherapy plans, and
   - line samples (i.e., discretized scalar functions in one dimension).
 
@@ -64,7 +65,9 @@ techniques:
     - Principal Component Analysis (PCA) rigid registration
     - This Plate Spline (TPS) deformable registration
     - Thin Plate Spline Robust Point Matching (TPS-RPM) deformable registration
-    - warping (i.e., applying transformations to generic objects)
+      - exensions: double-sided outlier handling, hard constraints, and multiple
+        solver methods for improved robustness in degenerate situations
+    - warping (i.e., applying registration transformations to generic objects)
   - detection of shapes within point clouds
     - Random sample concensus (RANSAC) for primitive shapes
     - MR distortion quantification for lattice grids
@@ -98,7 +101,7 @@ techniques:
   - routine quality assurance
     - fully nonparametric multileaf collimator (MLC) picket fence leaf
       displacement quantification
-    - light-radiation correspodence using edge-finding
+    - light-radiation correspondence using edge-finding
     - basic image quality measures
   - clustering
     - Density-Based Spatial Clustering of Applications with Noise (DBSCAN)
@@ -129,7 +132,7 @@ formats:
     - STL (read and write)
   - point clouds
     - OFF (read and write; partial)
-  - registrations
+  - registration
     - 16 parameter Affine or rigid transformation text files
     - Thin Plate Spline transformation text files (read and write)
   - radiotherapy plans
@@ -174,10 +177,10 @@ Alternatively, see [documentation/](documentation/) for documentation snapshots.
 can be easily validated.
 
 While efforts have been made to verify integrity and validity of the code, no
-independent audit or review has been performed. The breadth functionality would
-make it difficult to test all operations combinations. We therefore rely on
-static analysis, code quality metrics, and a limited amount of integration
-testing for specific workflows. 
+independent audit or review has been performed. The breadth of functionality
+would make it difficult to test all operations combinations. We therefore rely
+on static analysis, code quality metrics, and a limited amount of integration
+testing for specific workflows.
 
 # License and Copying
 
