@@ -1,5 +1,12 @@
 
 # This config file facilitates automated static analysis on lgtm.com.
+path_classifiers:
+  test:
+    - exclude: /
+    # Note: the following require a preceeding `shopt -s dotglob`.
+    - "src/**/*.cc"
+    - "src/**/*.h"
+
 extraction:
   cpp:
     prepare:
