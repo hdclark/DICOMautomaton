@@ -96,13 +96,14 @@ techniques:
     - standard Normal Tissue Control Probability (NTCP) models
   - radiotherapy planning
     - rudimentary optimization for fixed-field plans
+    - Dose Volume Histogram (DVH) extraction
     - clinical protocol evaluation
     - rudimentary automated plan checking support
   - routine quality assurance
     - fully nonparametric multileaf collimator (MLC) picket fence leaf
       displacement quantification
     - light-radiation correspondence using edge-finding
-    - basic image quality measures
+    - basic image quality measures (e.g., mean, standard deviation)
   - clustering
     - Density-Based Spatial Clustering of Applications with Noise (DBSCAN)
     - k-means
