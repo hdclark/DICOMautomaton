@@ -63,8 +63,11 @@ techniques:
     - Affine registration
     - Principal Component Analysis (PCA) rigid registration
     - This Plate Spline (TPS) deformable registration
+      - when correspondence is known a priori, e.g., fiducial or feature matching
     - Thin Plate Spline Robust Point Matching (TPS-RPM) deformable registration
-      - exensions: double-sided outlier handling, hard constraints, and multiple
+      - for when correspondence is unknown and must also be estimated
+      - includes soft-assign and simulated annealing algorithm implementations
+      - extensions: double-sided outlier handling, hard constraints, and multiple
         solver methods for improved robustness in degenerate situations
     - warping (i.e., applying registration transformations to generic objects)
   - detection of shapes within point clouds
@@ -94,6 +97,7 @@ techniques:
     - tissue recovery, including the Jones et al 2014 model
     - standard Tissue Control Probability (TCP) models
     - standard Normal Tissue Control Probability (NTCP) models
+    - conformity and heterogeneity index estimation
   - radiotherapy planning
     - rudimentary optimization for fixed-field plans
     - Dose Volume Histogram (DVH) extraction
@@ -109,13 +113,39 @@ techniques:
     - Density-Based Spatial Clustering of Applications with Noise (DBSCAN)
     - k-means
     - connected components
+  - geometry
+    - 3D geometric primitives (vectors, lines, planes, spheres)
+    - distance, closest points, and intersection point estimation
+    - Hausdorff distance for point clouds
+    - 'point-in-polygon' routines based on winding number and ray intersection
+    - ray tracing / path sampling through voxelated geometries or surface point
+      sampling
+  - numerics
+    - Kahan summation routines (i.e., 'compensated' summation)
+    - Chebyshev polynomial approximations
+    - Wasserman's 'local linear nonparametric regression' (NPRLL) algorithms
+    - numerical optimization (Nelder-Mead simplex and more modern algorithms)
+    - robust weighted least squares
+    - descriptive statistics (min/mean/median/max/percentiles, correlation
+      coefficients, and simple test statistics)
   - miscellaneous
     - transformations between data types (e.g., images to surface meshes,
       surface meshes to point clouds, point clouds to images)
+    - fuzzy string matching (including Levenshtein, Jaro-Winkler, n-grams,
+      Soundex, and Metaphone algorithms)
     - radiomic signatures (a subset of the IBSI-defined biomarkers)
     - A\* pathfinding (partial)
     - R\*-trees
     - 2D contouring via mapping to a 'voxel world game' (not maintained)
+    - many operations support concurrent computation via threading (currently
+      CPU only)
+
+Notably absent and (eventually) planned features:
+
+  - radiotherapy dose calculation
+  - direct image registration (compared with indirect registration via feature
+    extraction and point-cloud registration)
+  - SURF/SIFT/KAZE feature extraction
 
 Interchange is important. `DICOMautomaton` supports the following standard file
 formats:
