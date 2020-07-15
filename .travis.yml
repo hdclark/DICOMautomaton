@@ -16,8 +16,8 @@ script:
   - ./docker/scripts/ci/Run_Container.sh
   # Extract an AppImage from the container.
   - ./docker/scripts/ci/Extract_AppImage.sh
-  - mkdir artifacts
-  - "mv DICOMautomaton*AppImage artifacts/"
+  - mkdir -pv ci_artifacts
+  - "mv DICOMautomaton*AppImage ci_artifacts/"
 
 after_failure:
   - free -h
@@ -49,5 +49,5 @@ deploy:
     repo: hdclark/hdclark.github.io
     target_branch: master
     keep_history: false
-    local_dir: artifacts
+    local_dir: ci_artifacts
     cleanup: false
