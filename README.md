@@ -1,5 +1,5 @@
 
-![DICOMautomaton logo](artifacts/logos/DCMA_cycle_opti.svg)
+# ![DICOMautomaton logo](artifacts/logos/DCMA_cycle_opti.svg)
 
 [![Build Status](https://travis-ci.com/hdclark/DICOMautomaton.svg?branch=master)](https://travis-ci.com/hdclark/DICOMautomaton)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
@@ -8,7 +8,7 @@
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/1ac93861be524c7f9f18324b64960f28)](https://www.codacy.com/app/hdclark/DICOMautomaton?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=hdclark/DICOMautomaton&amp;utm_campaign=Badge_Grade)
 [![Language grade: C/C++](https://img.shields.io/lgtm/grade/cpp/g/hdclark/DICOMautomaton.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/hdclark/DICOMautomaton/context:cpp)
 
-# About
+## About
 
 `DICOMautomaton` is a multipurpose tool for analyzing *medical physics* data
 with a focus on automation. It runs on Linux. It has first-class support for:
@@ -17,9 +17,9 @@ with a focus on automation. It runs on Linux. It has first-class support for:
   - surface meshes (2D surfaces embedded in 3D),
   - 2D planar contours embedded in 3D,
   - point clouds (3D),
-  - registration (rigid and deformable in 3D),
+  - registration and warp transformations (rigid and deformable in 3D),
   - radiotherapy plans, and
-  - line samples (i.e., discretized scalar functions in one dimension).
+  - line samples (i.e., discretized 1D to 1D mappings).
 
 There are four ways of operating `DICOMautomaton`:
 
@@ -83,15 +83,16 @@ techniques:
   - quantitative medical image analysis
     - gamma analysis, distance to agreement analysis (2D/3D to 2D or 3D)
     - Response Evaluation Criteria in Solid Tumours (RECIST) features
-    - pharmacokinetic modeling for Dynamic Contrast-Enhanced (DCE) imaging (CT
-      or MR)
-    - Intravoxel Incoherent Motion (IVIM) modeling
-    - novel time series analysis (i.e., '4D' analysis)
+    - perfusion imaging quantfication: pharmacokinetic modeling for Dynamic
+      Contrast-Enhanced (DCE) imaging (CT or MR)
+    - diffusion imaging quantification: Intravoxel Incoherent Motion (IVIM)
+      modeling and Apparent Diffusion Coefficient (ADC) estimation
+    - time series analysis (i.e., '4D' analysis)
   - radiobiology
     - Biologically Effective Dose (BED) transformations
     - Equivalent Dose in 2 Gy Fractions (EQD2) transformations
     - extraction of alpha/beta from EQD2 images
-    - tissue recovery models, including the Jones et al 2014 model
+    - tissue recovery, including the Jones et al 2014 model
     - standard Tissue Control Probability (TCP) models
     - standard Normal Tissue Control Probability (NTCP) models
   - radiotherapy planning
@@ -99,6 +100,7 @@ techniques:
     - Dose Volume Histogram (DVH) extraction
     - clinical protocol evaluation
     - rudimentary automated plan checking support
+    - re-treatment dose sculpting/cropping/trimming for base-planning
   - routine quality assurance
     - fully nonparametric multileaf collimator (MLC) picket fence leaf
       displacement quantification
@@ -171,7 +173,7 @@ and for general information invoke:
 
 Alternatively, see [documentation/](documentation/) for documentation snapshots.
 
-# Clinical Use
+## Clinical Use
 
 `DICOMautomaton` should **NOT** be used for clinical purposes. It is suitable
 *only* for research purposes or in a non-critical supporting role where outputs
@@ -183,7 +185,7 @@ would make it difficult to test all operations combinations. We therefore rely
 on static analysis, code quality metrics, and a limited amount of integration
 testing for specific workflows.
 
-# License and Copying
+## License and Copying
 
 All materials herein which may be copywrited, where applicable, are. Copyright
 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020 Hal Clark.
@@ -200,7 +202,7 @@ liability for use and misuse, including but not limited to damages, harm,
 injury, and death which may result, including but not limited to that arising
 from unforeseen or unanticipated implementation defects.
 
-# Dependencies
+## Dependencies
 
 Dependencies are listed in [PKGBUILD](PKGBUILD), using Arch Linux package naming
 conventions, and in [CMakeLists.txt](CMakeLists.txt) using Debian package naming
@@ -211,15 +213,15 @@ Notably, `DICOMautomaton` depends on the author's `Ygor`, `Explicator`, and
 
   - `Ygor`: <https://gitlab.com/hdeanclark/Ygor> and
     <https://github.com/hdclark/Ygor>.
-  
+
   - `Explicator`: <https://gitlab.com/hdeanclark/Explicator> and
     <https://github.com/hdclark/Explicator>.
-  
+
   - `YgorClustering` (needed only for compilation):
     <https://gitlab.com/hdeanclark/YgorClustering> and
     <https://github.com/hdclark/YgorClustering>.
-  
-# Installation
+
+## Installation
 
 This project uses CMake. Use the usual commands to compile on Linux:
 
@@ -249,7 +251,7 @@ portable Docker image can be built that is portable across non-Linux systems.
 `DICOMautomaton` can be installed on Android inside a termux environment
 (refer to guide in [documentation/](documentation/)).
 
-# Containerization
+## Containerization
 
 `DICOMautomaton` can be built as a Docker image. This method automatically
 handles installation of all dependencies. The resulting image can be run
@@ -281,7 +283,7 @@ Linux bases; Arch Linux and Void Linux provide the latest upstream packages,
 whereas Debian provides greater portability since an older `glibc` is used. Arch
 Linux builds use `glibc`, Void Linux builds use `musl`.
 
-# Portable Binaries
+## Portable Binaries
 
 The well-known `LD_PRELOAD` trick can be used to provide somewhat portable
 `DICOMautomaton` binaries for Linux systems. Binaries from the system-installed
@@ -307,7 +309,7 @@ and `libc` from the bundle and rely fully on the target `glibc`. Mixing and
 matching bits of different `glibc` installations will almost certainly result in
 segmentation faults or silent failures so it is not recommended in any
 circumstances. Also note that compilation arguments and architecture-specific
-tunings will likely ruin portability. 
+tunings will likely ruin portability.
 
 Alternatively, a third wrapper script (`emulate_dcma`) uses `qemu-x86_64` to
 emulate a 64 bit x86 system and preload bundled libraries. This script may work
@@ -320,9 +322,9 @@ guaranteed using either script! They should all be considered experimental. The
 preload trick is best run in a controlled environment, and targetting the same
 controlled environment and architecture. This method of distributing
 `DICOMautomaton` is not officially supported, but can simplify distributing
-custom builds in some situations. 
+custom builds in some situations.
 
-# Other Build Options
+## Other Build Options
 
 A portable `AppImage` can be generated using an existing `Docker` image. This
 method supports graphical operations, but suffers from the same general `glibc`
@@ -342,17 +344,16 @@ See `linux/`. Note that this method is experimental.
 `DICOMautomaton` can also be built using the `Nix` package manager. See `nix/`.
 Note that this method is experimental.
 
-# Known Issues
+## Known Issues
 
   - The `SFML_Viewer` operation hangs on some systems after viewing a plot with
-    Gnuplot. This stems from a known issue in Ygor. 
-  
+    Gnuplot. This stems from a known issue in Ygor.
+
   - Building with `musl` may cause character conversion to fail for some DICOM
     files in some circumstances.
 
-# Project Home
+## Project Home
 
 The `DICOMautomaton` homepage can be found at <http://www.halclark.ca/>. Source
 code is available at <https://gitlab.com/hdeanclark/DICOMautomaton/> and
 <https://github.com/hdclark/DICOMautomaton/>.
-
