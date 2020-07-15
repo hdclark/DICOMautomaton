@@ -252,19 +252,25 @@ Notably, `DICOMautomaton` depends on the author's `Ygor`, `Explicator`, and
 
 ## Installation
 
-Quick solution: (download the latest AppImage artifact from the continuous
-integration server
+### Quick solution
+
+[Download the latest AppImage artifact from the continuous integration server
 here](https://hdclark.github.io/DICOMautomaton-x86_64.AppImage). Installation is
 not necessary, but some functionality may be missing.
 
-     $>  curl https://hdclark.github.io/DICOMautomaton-x86_64.AppImage
-     $>  bash DICOMautomaton-x86_64.AppImage -h
+     $>  curl https://hdclark.github.io/DICOMautomaton-x86_64.AppImage > dicomautomaton_dispatcher
+     $>  chmod 777 dicomautomaton_dispatcher
+     $>  ./dicomautomaton_dispatcher -h
 
-More comprehensive solution: compile from source. This project uses CMake. Use
-the usual commands to compile on Linux:
+### Comprehensive solution
+
+Compile from source to get all functionality and ensure compatibility with your
+system.
+
+This project uses CMake. Use the usual commands to compile on Linux:
 
      $>  git clone https://gitlab.com/hdeanclark/DICOMautomaton/ && cd DICOMautomaton/ # or
-     $>  git clone https://github.com/hdclark/DICOMautomaton/ && cd DICOMautomaton/ # or
+     $>  git clone https://github.com/hdclark/DICOMautomaton/ && cd DICOMautomaton/
      $>  cd /path/to/source/directory
      $>  mkdir build && cd build/
 
