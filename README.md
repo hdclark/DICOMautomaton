@@ -312,7 +312,7 @@ Linux bases; Arch Linux and Void Linux provide the latest upstream packages,
 whereas Debian provides greater portability since an older `glibc` is used. Arch
 Linux builds use `glibc`, Void Linux builds use `musl`.
 
-## Portable Binaries
+## Building Portable Binaries
 
 The well-known `LD_PRELOAD` trick can be used to provide somewhat portable
 `DICOMautomaton` binaries for Linux systems. Binaries from the system-installed
@@ -380,6 +380,11 @@ Note that this method is experimental.
 
   - Building with `musl` may cause character conversion to fail for some DICOM
     files in some circumstances.
+
+  - Some operations make use of threading and create filesystem mutexes to avoid
+    race conditions. If execution is unexpectedly terminated a mutex may remain
+    and stall/hang future operations. This can be resolved by manually removing
+    the mutex.
 
 ## Project Home
 
