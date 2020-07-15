@@ -6,6 +6,7 @@ path_classifiers:
     # Note: the following require a preceeding `shopt -s dotglob`.
     - "src/**/*.cc"
     - "src/**/*.h"
+    - exclude: /src/imebra20121219
 
 extraction:
   cpp:
