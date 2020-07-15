@@ -70,6 +70,19 @@ RUN pacman -S --noconfirm --needed  \
 RUN cp /scratch_base/xpra-xorg.conf /etc/X11/xorg.conf
 
 
+# Download an AUR helper in case it is needed later.
+#
+# Note: `su - builduser -c "yay -S --noconfirm packageA packageB ..."`
+WORKDIR /tmp
+RUN wget 'https://github.com/Jguer/yay/releases/download/v10.0.2/yay_10.0.2_x86_64.tar.gz' && \
+    tar -axf yay_*tar.gz && \
+    mv yay_*/yay /tmp/ && \
+    rm -rf yay_* && \
+    chmod 777 yay && \
+    su - builduser -c "cd /tmp && ./yay -S --noconfirm yay-bin" && \
+    rm /tmp/yay || true
+
+
 # Install Ygor.
 #
 # Option 1: install a binary package.
