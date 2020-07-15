@@ -140,7 +140,7 @@ techniques:
     - many operations support concurrent computation via threading (currently
       CPU only)
 
-Notably absent and (eventually) planned features:
+Notably absent but (eventually) planned features:
 
   - radiotherapy dose calculation
   - direct image registration (compared with indirect registration via feature
