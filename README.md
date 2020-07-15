@@ -252,7 +252,16 @@ Notably, `DICOMautomaton` depends on the author's `Ygor`, `Explicator`, and
 
 ## Installation
 
-This project uses CMake. Use the usual commands to compile on Linux:
+Quick solution: (download the latest AppImage artifact from the continuous
+integration server
+here](https://hdclark.github.io/DICOMautomaton-x86_64.AppImage). Installation is
+not necessary, but some functionality may be missing.
+
+     $>  curl https://hdclark.github.io/DICOMautomaton-x86_64.AppImage
+     $>  bash DICOMautomaton-x86_64.AppImage -h
+
+More comprehensive solution: compile from source. This project uses CMake. Use
+the usual commands to compile on Linux:
 
      $>  git clone https://gitlab.com/hdeanclark/DICOMautomaton/ && cd DICOMautomaton/ # or
      $>  git clone https://github.com/hdclark/DICOMautomaton/ && cd DICOMautomaton/ # or
@@ -361,7 +370,10 @@ incompatibility issues described above. However, it works well if your system
 `glibc` is newer than (or equivalent to) that provided by `Debian` stable.
 External, runtime support programs (e.g., `Zenity`, `Gnuplot`) may be
 incompatible or missing altogether. At the moment no canonical `AppImage`s are
-provided. See `docker/scripts/debian_stable/`.
+provided, though [continuous integration artifacts *are* available
+here](https://hdclark.github.io/DICOMautomaton-x86_64.AppImage). See
+`docker/scripts/debian_stable/` for instructions showing how to generate your
+own `AppImage`.
 
 A dedicated `Linux` system can be bootstrapped using an up-to-date `Arch Linux`
 system that will package the system-installed `DICOMautomaton` in a truly
