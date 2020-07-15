@@ -12,7 +12,10 @@ before_install:
   - sudo docker ps -a
 
 script:
+  # Ensure the default run script works correctly.
   - ./docker/scripts/ci/Run_Container.sh
+  # Extract an AppImage from the container.
+  - ./docker/scripts/ci/Extract_AppImage.sh
 
 after_failure:
   - free -h
