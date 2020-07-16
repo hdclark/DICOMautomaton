@@ -323,7 +323,7 @@ std::string dataHandlerStringUnicode::convertFromUnicode(const std::wstring& val
 					break;
 				}
 			}
-			catch(charsetConversionExceptionNoSupportedTable)
+			catch(const charsetConversionExceptionNoSupportedTable &)
 			{
 				continue;
 			}

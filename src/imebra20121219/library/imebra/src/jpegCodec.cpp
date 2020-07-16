@@ -1560,7 +1560,7 @@ void jpegCodec::copyImageToJpegChannels(
 	imbxUint32 rowSize, channelSize, channelsNumber;
 	ptr<handlers::dataHandlerNumericBase>imageDataHandler = sourceImage->getDataHandler(false, &rowSize, &channelSize, &channelsNumber);
 
-	for(imbxUint8 channelId = 0; channelId < (imbxUint8)channelsNumber; ++channelId)
+	for(imbxUint8 channelId = 0; channelId < static_cast<imbxUint8>(channelsNumber); ++channelId)
 	{
 		ptr<jpeg::jpegChannel> pChannel(new jpeg::jpegChannel);
 		m_channelsMap[channelId] = pChannel;

@@ -63,7 +63,7 @@ lut::~lut()
 {
 	if(m_pMappedValues)
 	{
-		delete m_pMappedValues;
+		delete[] m_pMappedValues;
 	}
 }
 
@@ -126,7 +126,7 @@ void lut::create(imbxUint32 size, imbxInt32 firstMapped, imbxUint8 bits, std::ws
 	///////////////////////////////////////////////////////////
 	if(m_pMappedValues)
 	{
-		delete m_pMappedValues;
+		delete[] m_pMappedValues;
 		m_pMappedValues= nullptr;
 	}
 	m_mappedValuesRev.clear();
@@ -142,7 +142,7 @@ void lut::create(imbxUint32 size, imbxInt32 firstMapped, imbxUint8 bits, std::ws
 		m_size=size;
 		m_firstMapped=firstMapped;
 		m_bits=bits;
-		m_pMappedValues=new imbxInt32[m_size];
+		m_pMappedValues= new imbxInt32[m_size];
 	}
 
 	PUNTOEXE_FUNCTION_END();

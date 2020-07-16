@@ -154,10 +154,13 @@ void dataHandlerDateTimeBase::setSignedLong(const imbxUint32 index, const imbxIn
 	PUNTOEXE_FUNCTION_START(L"dataHandlerDateTimeBase::setSignedLong");
 
 #ifdef PUNTOEXE_WINDOWS
-	std::auto_ptr<tm> timeStructure(new tm);
+	std::unique_ptr<tm> timeStructure(new tm);
 	localtime_s(timeStructure.get(), ((time_t*)&value));
 #else
-	tm* timeStructure = localtime((time_t*)&value);
+	//tm* timeStructure = localtime((time_t*)&value);
+	std::unique_ptr<tm> timeStructure(new tm);
+	//localtime_r(timeStructure.get(), ((time_t*)&value));
+	localtime_r(((time_t*)&value), timeStructure.get());
 #endif
 	imbxInt32 year = timeStructure->tm_year;
 	imbxInt32 month = timeStructure->tm_mon + 1;

@@ -284,8 +284,11 @@ std::wstring charsetConversion::toUnicode(const std::string& asciiString) const
 		return std::wstring();
 	}
 #if defined(PUNTOEXE_USEICONV)
-	std::string convertedString(myIconv(m_iconvToUnicode, (char*)asciiString.c_str(), asciiString.length()));
-	std::wstring returnString((wchar_t*)convertedString.c_str(), convertedString.size() / sizeof(wchar_t));
+	std::string convertedString(myIconv(m_iconvToUnicode, 
+                                        const_cast<char *>(asciiString.c_str()),
+                                        asciiString.length()));
+	std::wstring returnString(reinterpret_cast<const wchar_t *>(convertedString.c_str()),
+                              convertedString.size() / sizeof(wchar_t));
 #else
 	int requiredWChars = ::MultiByteToWideChar(m_codePage, 0, asciiString.c_str(), (int)(asciiString.length()), 0, 0);
 	std::auto_ptr<wchar_t> convertedString(new wchar_t[requiredWChars]);

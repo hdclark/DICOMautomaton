@@ -38,7 +38,7 @@ Imebra is available at http://imebra.com
     \brief Implementation of the class transaction.
 
 */
-
+#include <iostream>
 #include "../include/transaction.h"
 
 namespace puntoexe
@@ -94,7 +94,7 @@ transaction::transaction(bool bCommitTransaction)
 ///////////////////////////////////////////////////////////
 transaction::~transaction()
 {
-	PUNTOEXE_FUNCTION_START(L"transaction::~transaction");
+//	PUNTOEXE_FUNCTION_START(L"transaction::~transaction");
 
 	if(m_bCommit)
 	{
@@ -136,13 +136,15 @@ transaction::~transaction()
 			///////////////////////////////////////////////////////////
 			abort();
 			transactionsManager::removeTransaction(m_threadId);
-			PUNTOEXE_RETHROW("Commit failed");
+			//PUNTOEXE_RETHROW("Commit failed");
+            std::cerr << "Commit failed." << std::endl;
+            std::terminate();
 		}
 	}
 
 	transactionsManager::removeTransaction(m_threadId);
 
-	PUNTOEXE_FUNCTION_END();
+//	PUNTOEXE_FUNCTION_END();
 }
 
 

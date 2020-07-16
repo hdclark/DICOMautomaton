@@ -477,13 +477,13 @@ dicomDir::dicomDir(ptr<dataSet> pDataSet):
 	tOffsetsToRecords offsetsToRecords;
 	for(imbxUint32 scanItems(0); ; ++scanItems)
 	{
-		ptr<dataSet> pDataSet(m_pDataSet->getSequenceItem(0x0004, 0, 0x1220, scanItems));
-		if(pDataSet == nullptr)
+		ptr<dataSet> l_pDataSet(m_pDataSet->getSequenceItem(0x0004, 0, 0x1220, scanItems));
+		if(l_pDataSet == nullptr)
 		{
 			break;
 		}
-		ptr<directoryRecord> newRecord(new directoryRecord(pDataSet));
-		offsetsToRecords[pDataSet->getItemOffset()] = newRecord;
+		ptr<directoryRecord> newRecord(new directoryRecord(l_pDataSet));
+		offsetsToRecords[l_pDataSet->getItemOffset()] = newRecord;
 		m_recordsList.push_back(newRecord);
 	}
 
