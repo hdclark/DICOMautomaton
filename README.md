@@ -252,17 +252,42 @@ Notably, `DICOMautomaton` depends on the author's `Ygor`, `Explicator`, and
 
 ## Installation
 
-### Quick solution
+### Quick start
 
-[Download the latest AppImage artifact from the continuous integration server
-here](https://hdclark.github.io/DICOMautomaton-x86_64.AppImage). Installation is
-not necessary, but functionality may be missing and optimization may be limited.
+**[Download the latest AppImage artifact from the continuous integration server
+here](https://hdclark.github.io/DICOMautomaton-x86_64.AppImage)** or via:
 
      $>  curl https://hdclark.github.io/DICOMautomaton-x86_64.AppImage > dicomautomaton_dispatcher
      $>  chmod 777 dicomautomaton_dispatcher
      $>  ./dicomautomaton_dispatcher -h
 
-### Comprehensive solution
+This artifact corresponds to the latest successful build on
+<https://travis-ci.com/github/hdclark/DICOMautomaton/builds>. Installation is
+not necessary, but the file can be renamed and installed in a standard location
+for convenience (e.g., `/usr/bin/`).
+
+#### Notes and caveats:
+
+- This is **not** an official release. It may be lacking functionality, and is
+  almost certainly *not* optimized.
+
+- The CI build environment is currently based on `Debian` stable. Attempting to
+  run on systems with older `glibc`s will likely fail.
+
+- `AppImage`s require `FUSE` support, so running in Docker will not work.
+  However, `AppImages` can be extracted and run *without* `FUSE` via:
+
+     $>  ./DICOMautomaton-x86_64.AppImage --appimage-extract
+     $>  ./squashfs-root/usr/bin/dicomautomaton_dispatcher -h
+
+- The CI `AppImage` currently expects graphical components to be available on
+  the host system. It will fail if `libGL` or `X` libraries are incompatible or
+  missing.
+
+- See <https://gitlab.com/hdeanclark/DICOMautomaton/> or
+  <https://github.com/hdclark/DICOMautomaton> for sources and build scripts.
+
+### Compiling
 
 Compile from source to get all functionality and ensure compatibility with your
 system.
