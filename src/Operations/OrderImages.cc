@@ -81,8 +81,7 @@ Drover OrderImages(Drover DICOM_data,
         const auto A_opt = A.GetMetadataValueAs<std::string>(KeyStr);
         const auto B_opt = B.GetMetadataValueAs<std::string>(KeyStr);
 
-        if(false){
-        }else if(  A_opt && !B_opt ){
+        if(  A_opt && !B_opt ){
             return true;
         }else if( !A_opt &&  B_opt ){
             return false;
@@ -119,8 +118,7 @@ Drover OrderImages(Drover DICOM_data,
             size_t i = 0;
             while(true){
                 // Check if either vectors have run out of tokens.
-                if(false){
-                }else if( (A_vec.size() <= i) && (B_vec.size() <= i)){
+                if( (A_vec.size() <= i) && (B_vec.size() <= i)){
                     return true; // Strings were (effectively) identical.
                 }else if(A_vec.size() <= i){
                     return true;
@@ -131,8 +129,7 @@ Drover OrderImages(Drover DICOM_data,
                 // Check if either vectors can employ numeric sorting.
                 const bool A_is_num = Is_String_An_X<double>(A_vec[i]);
                 const bool B_is_num = Is_String_An_X<double>(B_vec[i]);
-                if(false){
-                }else if( !A_is_num && !B_is_num ){
+                if( !A_is_num && !B_is_num ){
                     if( A_vec[i] == B_vec[i] ){
                         ++i;
                         continue;

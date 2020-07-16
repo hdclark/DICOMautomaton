@@ -277,8 +277,7 @@ Drover ReduceNeighbourhood(Drover DICOM_data, const OperationArgPkg& OptArgs, co
         ud.maximum_distance = MaxDistance;
         ud.description = "Neighbourhood-reduced";
 
-        if(false){
-        }else if( std::regex_match(NeighbourhoodStr, regex_sph) ){
+        if( std::regex_match(NeighbourhoodStr, regex_sph) ){
             ud.neighbourhood = ComputeVolumetricNeighbourhoodSamplerUserData::Neighbourhood::Spherical;
             ud.description += " (spherical, max-radius=" + std::to_string(ud.maximum_distance) + ")";
 
@@ -522,8 +521,7 @@ Drover ReduceNeighbourhood(Drover DICOM_data, const OperationArgPkg& OptArgs, co
             throw std::invalid_argument("Neighbourhood argument '"_s + NeighbourhoodStr + "' is not valid");
         }
 
-        if(false){
-        }else if( std::regex_match(ReductionStr, regex_min)
+        if( std::regex_match(ReductionStr, regex_min)
               ||  std::regex_match(ReductionStr, regex_erode) ){
             ud.f_reduce = [](float, std::vector<float> &shtl, vec3<double>) -> float {
                               return Stats::Min(shtl);

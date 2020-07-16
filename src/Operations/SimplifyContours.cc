@@ -138,8 +138,7 @@ Drover SimplifyContours(const Drover& DICOM_data, const OperationArgPkg& OptArgs
             const auto A_orig = std::abs( c.Get_Signed_Area(AssumePlanar) );
             const auto A_tol = FractionalAreaTolerance * A_orig;
 
-            if(false){
-            }else if( std::regex_match(SimplificationMethod, regex_vert_col) ){
+            if( std::regex_match(SimplificationMethod, regex_vert_col) ){
                 // Vertex collapse. Adjacent vertices are merged together.
                 c = c.Collapse_Vertices(A_tol);
 

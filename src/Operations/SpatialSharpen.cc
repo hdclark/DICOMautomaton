@@ -60,8 +60,7 @@ Drover SpatialSharpen(Drover DICOM_data, const OperationArgPkg& OptArgs, const s
     for(auto & iap_it : IAs){
         InPlaneImageSharpenUserData ud;
 
-        if(false){
-        }else if( std::regex_match(EstimatorStr, regex_shrp3x3) ){
+        if( std::regex_match(EstimatorStr, regex_shrp3x3) ){
             ud.estimator = SharpenEstimator::sharpen_3x3;
         }else if( std::regex_match(EstimatorStr, regex_unsp5x5) ){
             ud.estimator = SharpenEstimator::unsharp_mask_5x5;

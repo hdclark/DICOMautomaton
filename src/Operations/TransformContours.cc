@@ -149,8 +149,7 @@ Drover TransformContours(Drover DICOM_data, const OperationArgPkg& OptArgs, cons
     for(auto & cc_refw : cc_ROIs){
 
         // Translations.
-        if(false){
-        }else if(std::regex_match(TransformStr, regex_trn)){
+        if(std::regex_match(TransformStr, regex_trn)){
             auto numbers = extract_function_parameters(TransformStr);
             if(numbers.size() != 3){
                 throw std::invalid_argument("Unable to parse translation parameters. Cannot continue.");

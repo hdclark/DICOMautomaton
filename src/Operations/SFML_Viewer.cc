@@ -382,8 +382,7 @@ Drover SFML_Viewer( Drover DICOM_data,
                     }else{
                         const double clamped_value = (static_cast<double>(val) - pixel_type_min)/(pixel_type_max - pixel_type_min);
                         auto rescaled_value = (clamped_value - clamped_low)/(clamped_high - clamped_low);
-                        if(false){
-                        }else if( rescaled_value < 0.0 ){
+                        if( rescaled_value < 0.0 ){
                             rescaled_value = 0.0;
                         }else if( rescaled_value > 1.0 ){
                             rescaled_value = 1.0;
@@ -974,8 +973,7 @@ Drover SFML_Viewer( Drover DICOM_data,
                             //Now have pixel value. Figure out what to do with it.
                             if(auto desc = enc_img_it->GetMetadataValueAs<std::string>("Description")){
 
-                                if(false){
-                                }else if(std::regex_match(desc.value(), k1A_regex)){
+                                if(std::regex_match(desc.value(), k1A_regex)){
                                     model_5params_linear.k1A = pix_val;
                                     model_5params_cheby.k1A  = pix_val;
                                     model_3params_cheby.k1A  = pix_val;
@@ -1160,8 +1158,7 @@ Drover SFML_Viewer( Drover DICOM_data,
             if(n == 0) return;
             const auto n_clamped = (n > 0) ? 1 : -1;
 
-            if(false){
-            }else if(n_clamped == 1){
+            if(n_clamped == 1){
                 if(img_array_ptr_it == img_array_ptr_last){ //Wrap around forwards.
                     img_array_ptr_it = img_array_ptr_beg;
                 }else{
@@ -1220,8 +1217,7 @@ Drover SFML_Viewer( Drover DICOM_data,
             if(n == 0) return;
             const auto n_clamped = (n > 0) ? 1 : -1;
 
-            if(false){
-            }else if(n_clamped == 1){
+            if(n_clamped == 1){
                 if(disp_img_it == disp_img_last){
                     disp_img_it = disp_img_beg;
                 }else{
@@ -1391,8 +1387,7 @@ Drover SFML_Viewer( Drover DICOM_data,
                 if(n == 0) return;
                 const auto n_clamped = (n > 0) ? 1 : -1;
 
-                if(false){
-                }else if(n_clamped == 1){
+                if(n_clamped == 1){
                     ++enc_img_it;
                     if(enc_img_it == encompassing_images.end()){
                         disp_img_it = encompassing_images.front();
@@ -2340,8 +2335,7 @@ Drover SFML_Viewer( Drover DICOM_data,
             samples_1D<double> shtl;
             const bool sort_on_append = false;
             
-            if(false){
-            }else if(plotwindowtype == SecondaryPlot::TimeCourse){
+            if(plotwindowtype == SecondaryPlot::TimeCourse){
                 const std::string quantity("dt"); //As it appears in the metadata. Must convert to a double!
 
                 for(const auto &enc_img_it : encompassing_images){

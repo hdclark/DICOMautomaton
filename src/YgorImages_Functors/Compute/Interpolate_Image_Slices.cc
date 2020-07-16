@@ -196,8 +196,7 @@ bool ComputeInterpolateImageSlices(planar_image_collection<float,double> &imagec
                     throw std::logic_error("Non-rectilinear images found after rectilinearity check. Verify implementation.");
                 }
 
-                if(false){
-                }else if( (nearest_above != nullptr) && (nearest_below != nullptr) ){
+                if( (nearest_above != nullptr) && (nearest_below != nullptr) ){
                     const auto N_elem = img_refw.get().data.size();
                     for(size_t i = 0; i < N_elem; ++i){
                         img_refw.get().data[i] = ( nearest_above->data[i] * below_dist
@@ -246,8 +245,7 @@ bool ComputeInterpolateImageSlices(planar_image_collection<float,double> &imagec
                                     return interp_val;
                             };
 
-                            if(false){
-                            }else if( (nearest_above != nullptr) && (nearest_below != nullptr) ){
+                            if( (nearest_above != nullptr) && (nearest_below != nullptr) ){
                                 const auto val_a = project_and_interpolate(nearest_above,v_pos);
                                 const auto val_b = project_and_interpolate(nearest_above,v_pos);
                                 newval = ( val_a * below_dist

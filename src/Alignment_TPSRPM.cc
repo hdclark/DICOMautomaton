@@ -54,8 +54,7 @@ thin_plate_spline::thin_plate_spline(const point_set<double> &ps,
 double
 thin_plate_spline::eval_kernel(const double &dist) const {
     double out = std::numeric_limits<double>::quiet_NaN();
-    if(false){
-    }else if(this->kernel_dimension == 2){
+    if(this->kernel_dimension == 2){
         // 2D case.
         //
         // Note: this is the 2D fundamental sol'n to biharmonic equation. It seems to also work well for the 3D case,
@@ -276,8 +275,7 @@ AlignViaTPS(AlignViaTPSParams & params,
     }
 
     // Use pseudo-inverse method.
-    if(false){
-    }else if(params.solution_method == AlignViaTPSParams::SolutionMethod::PseudoInverse){
+    if(params.solution_method == AlignViaTPSParams::SolutionMethod::PseudoInverse){
         Eigen::MatrixXd L_pinv = L.completeOrthogonalDecomposition().pseudoInverse();
 
         // Update W_A.
@@ -898,8 +896,7 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
         }
 
         // Use pseudo-inverse method.
-        if(false){
-        }else if(params.solution_method == AlignViaTPSRPMParams::SolutionMethod::PseudoInverse){
+        if(params.solution_method == AlignViaTPSRPMParams::SolutionMethod::PseudoInverse){
             // Update the L matrix inverse using current regularization lambda.
             if(std::abs(L_1_start) != 0.0){
                 Eigen::MatrixXd R;

@@ -127,8 +127,7 @@ Drover SeamContours(Drover DICOM_data, const OperationArgPkg&, const std::map<st
                 ROINames.insert( cop.metadata["ROIName"] );
             }
 
-            if(false){
-            }else if(copl.empty()){
+            if(copl.empty()){
                 throw std::logic_error("Found no contours incident on plane previously found to house contours.");
             }else if(copl.size() == 1){ // No Boolean operation needed. Copy as-is.
                 cc_new.contours.emplace_back( copl.front().get() );

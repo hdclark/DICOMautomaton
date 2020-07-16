@@ -85,8 +85,7 @@ bool DecayDoseOverTime(planar_image_collection<float,double>::images_list_it_t f
         if(channel == 1) return;
 
         // Otherwise, perform the decay and then mark the mask.
-        if(false){
-        }else if(user_data_s->model == DecayDoseOverTimeMethod::Halve){
+        if(user_data_s->model == DecayDoseOverTimeMethod::Halve){
             voxel_val *= 0.5;
 
         }else if(user_data_s->model == DecayDoseOverTimeMethod::Jones_and_Grant_2014){

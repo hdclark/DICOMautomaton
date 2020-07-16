@@ -167,16 +167,14 @@ Drover VolumetricSpatialDerivative(Drover DICOM_data, const OperationArgPkg& Opt
         ud.order = VolumetricSpatialDerivativeEstimator::first;
         ud.method = VolumetricSpatialDerivativeMethod::row_aligned;
 
-        if(false){
-        }else if( std::regex_match(EstimatorStr, regex_1st) ){
+        if( std::regex_match(EstimatorStr, regex_1st) ){
             ud.order = VolumetricSpatialDerivativeEstimator::first;
         }else if( std::regex_match(EstimatorStr, regex_sob3x3x3) ){
             ud.order = VolumetricSpatialDerivativeEstimator::Sobel_3x3x3;
         }else{
             throw std::invalid_argument("Estimator argument '"_s + EstimatorStr + "' is not valid");
         }
-        if(false){
-        }else if( std::regex_match(MethodStr, regex_row) ){
+        if( std::regex_match(MethodStr, regex_row) ){
             ud.method = VolumetricSpatialDerivativeMethod::row_aligned;
         }else if( std::regex_match(MethodStr, regex_col) ){
             ud.method = VolumetricSpatialDerivativeMethod::column_aligned;

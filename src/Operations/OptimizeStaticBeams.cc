@@ -277,16 +277,14 @@ Drover OptimizeStaticBeams(Drover DICOM_data, const OperationArgPkg& OptArgs, co
         if((*iap_it)->imagecoll.images.empty()) throw std::invalid_argument("Unable to find an image to analyze.");
 
         std::optional<std::string> BeamID;
-        if(false){
-        }else if(auto BeamNumber = (*iap_it)->imagecoll.images.front().GetMetadataValueAs<std::string>("ReferencedRTPlanSequence/ReferencedFractionGroupSequence/ReferencedBeamSequence/ReferencedBeamNumber")){
+        if(auto BeamNumber = (*iap_it)->imagecoll.images.front().GetMetadataValueAs<std::string>("ReferencedRTPlanSequence/ReferencedFractionGroupSequence/ReferencedBeamSequence/ReferencedBeamNumber")){
             BeamID = BeamNumber.value();
         }else if(auto BeamNumber = (*iap_it)->imagecoll.images.front().GetMetadataValueAs<std::string>("ReferencedBeamNumber")){
             BeamID = BeamNumber.value();
         }
 
         std::optional<std::string> Fname;
-        if(false){
-        }else if(auto Filename = (*iap_it)->imagecoll.images.front().GetMetadataValueAs<std::string>("Filename")){
+        if(auto Filename = (*iap_it)->imagecoll.images.front().GetMetadataValueAs<std::string>("Filename")){
             Fname = Filename.value();
         }
 

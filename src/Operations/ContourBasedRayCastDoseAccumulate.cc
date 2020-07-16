@@ -323,8 +323,7 @@ Drover ContourBasedRayCastDoseAccumulate(Drover DICOM_data, const OperationArgPk
         const auto distZ = GridZZeroPlane.Get_Signed_Distance_To_Point(asphere);
 
         //Score the minimum and maximum distances.
-        if(false){
-        }else if(!std::isfinite(grid_x_min) || (distX < grid_x_min)){  grid_x_min = distX;
+        if(!std::isfinite(grid_x_min) || (distX < grid_x_min)){  grid_x_min = distX;
         }else if(!std::isfinite(grid_x_max) || (distX > grid_x_max)){  grid_x_max = distX;
         }else if(!std::isfinite(grid_y_min) || (distY < grid_y_min)){  grid_y_min = distY;
         }else if(!std::isfinite(grid_y_max) || (distY > grid_y_max)){  grid_y_max = distY;
@@ -340,8 +339,7 @@ Drover ContourBasedRayCastDoseAccumulate(Drover DICOM_data, const OperationArgPk
             const auto distY = GridYZeroPlane.Get_Signed_Distance_To_Point(v);
             const auto distZ = GridZZeroPlane.Get_Signed_Distance_To_Point(v);
 
-            if(false){
-            }else if(!std::isfinite(grid_x_min) || (distX < grid_x_min)){  grid_x_min = distX;
+            if(!std::isfinite(grid_x_min) || (distX < grid_x_min)){  grid_x_min = distX;
             }else if(!std::isfinite(grid_x_min) || (distX > grid_x_max)){  grid_x_max = distX;
             }else if(!std::isfinite(grid_y_min) || (distY < grid_y_min)){  grid_y_min = distY;
             }else if(!std::isfinite(grid_y_min) || (distY > grid_y_max)){  grid_y_max = distY;

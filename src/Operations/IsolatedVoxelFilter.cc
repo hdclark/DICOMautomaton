@@ -218,8 +218,7 @@ Drover IsolatedVoxelFilter(Drover DICOM_data, const OperationArgPkg& OptArgs, co
     bool replace_is_iso = false;
     bool replace_is_well = false;
 
-    if(false){
-    }else if( std::regex_match(ReplaceStr, regex_iso) ){
+    if( std::regex_match(ReplaceStr, regex_iso) ){
         replace_is_iso = true;
     }else if( std::regex_match(ReplaceStr, regex_well) ){
         replace_is_well = true;
@@ -367,8 +366,7 @@ Drover IsolatedVoxelFilter(Drover DICOM_data, const OperationArgPkg& OptArgs, co
                     float new_val = v;
 
 
-                    if(false){
-                    }else if( connected  && replace_is_iso  && replacement_is_mean    ){
+                    if( connected  && replace_is_iso  && replacement_is_mean    ){
                         new_val = v; // Existing value, a no-op.
 
                     }else if( connected  && replace_is_iso  && replacement_is_median  ){
@@ -453,8 +451,7 @@ Drover IsolatedVoxelFilter(Drover DICOM_data, const OperationArgPkg& OptArgs, co
                     const bool isolated = !connected;
 
                     float new_val = v;
-                    if(false){
-                    }else if( connected  && replace_is_well && replacement_is_conserv ){
+                    if( connected  && replace_is_well && replacement_is_conserv ){
                         // I'm not exactly sure what a sensible action is in this case.
                         // Presumably the user wants to find isolated points, so suppress
                         // well-connected voxels to make isolated voxels more apparent.

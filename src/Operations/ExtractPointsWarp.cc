@@ -567,8 +567,7 @@ Drover ExtractPointsWarp(Drover DICOM_data, const OperationArgPkg& OptArgs, cons
         FUNCINFO("There are " << (*ref_PCs.front())->pset.points.size() << " points in the reference point cloud");
         FUNCINFO("There are " << (*pcp_it)->pset.points.size() << " points in the moving point cloud");
 
-        if(false){
-        }else if( std::regex_match(MethodStr, regex_com) ){
+        if( std::regex_match(MethodStr, regex_com) ){
             auto t_opt = AlignViaCentroid( (*pcp_it)->pset,
                                            (*ref_PCs.front())->pset );
             if(t_opt){
@@ -617,8 +616,7 @@ Drover ExtractPointsWarp(Drover DICOM_data, const OperationArgPkg& OptArgs, cons
             params.kernel_dimension = TPSKDim;
             FUNCINFO("Performing TPS alignment using lambda = " << TPSLambda << " and kdim = " << TPSKDim);
 
-            if(false){
-            }else if( std::regex_match(TPSSolverStr, regex_ldlt) ){
+            if( std::regex_match(TPSSolverStr, regex_ldlt) ){
                 params.solution_method = AlignViaTPSParams::SolutionMethod::LDLT;
             }else if( std::regex_match(TPSSolverStr, regex_pinv) ){
                 params.solution_method = AlignViaTPSParams::SolutionMethod::PseudoInverse;
@@ -660,8 +658,7 @@ Drover ExtractPointsWarp(Drover DICOM_data, const OperationArgPkg& OptArgs, cons
 // Debugging...
 params.report_final_correspondence = true;
 */
-            if(false){
-            }else if( std::regex_match(TPSRPMSolverStr, regex_ldlt) ){
+            if( std::regex_match(TPSRPMSolverStr, regex_ldlt) ){
                 params.solution_method = AlignViaTPSRPMParams::SolutionMethod::LDLT;
             }else if( std::regex_match(TPSRPMSolverStr, regex_pinv) ){
                 params.solution_method = AlignViaTPSRPMParams::SolutionMethod::PseudoInverse;

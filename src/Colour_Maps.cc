@@ -16902,8 +16902,7 @@ ClampedColourRGB ColourMap_Composite_50_90_107_110(double y){
 
     const auto z = y * 2.0; // Make the reference intensity (assumed to be at the current window's centre) equal to 1.0.
 
-    if(false){
-    }else if( (0.50 <= z) && (z < 0.90) ){ // Show the 50% isoline (bound from above).
+    if( (0.50 <= z) && (z < 0.90) ){ // Show the 50% isoline (bound from above).
         out = low;
     }else if( (1.10 < z) ){ // Show the 110% isoline (bound from above).
         out = high;
@@ -16937,8 +16936,7 @@ ClampedColourRGB ColourMap_Composite_50_90_100_107_110(double y){
 
     const auto z = y * 2.0; // Make the reference intensity (assumed to be at the current window's centre) equal to 1.0.
 
-    if(false){
-    }else if( (0.50 <= z) && (z < 0.90) ){ // Show the 50% isoline (bound from above).
+    if( (0.50 <= z) && (z < 0.90) ){ // Show the 50% isoline (bound from above).
         out = low;
     }else if( (1.10 < z) ){ // Show the 110% isoline (bound from above).
         out = high;

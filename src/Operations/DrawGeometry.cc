@@ -216,8 +216,7 @@ Drover DrawGeometry(Drover DICOM_data, const OperationArgPkg& OptArgs, const std
     vec3<double> ssph_centre = vec3_nan;
     double ssph_radius = std::numeric_limits<double>::quiet_NaN();
 
-    if(false){
-    }else if(shape_is_grid || shape_is_wcube){
+    if(shape_is_grid || shape_is_wcube){
         auto split = SplitStringToVector(ShapesStr, '(', 'd');
         split = SplitVector(split, ')', 'd');
         split = SplitVector(split, ',', 'd');
@@ -417,8 +416,7 @@ Drover DrawGeometry(Drover DICOM_data, const OperationArgPkg& OptArgs, const std
         ud.mutation_opts.maskmod   = Mutate_Voxels_Opts::MaskMod::Noop;
         ud.description = "Drawn geometry";
 
-        if(false){
-        }else if(shape_is_wcube){
+        if(shape_is_wcube){
             ud.description += ": wireframe cube";
         }else if(shape_is_grid){
             ud.description += ": grid";
@@ -428,8 +426,7 @@ Drover DrawGeometry(Drover DICOM_data, const OperationArgPkg& OptArgs, const std
             throw std::invalid_argument("Shape not understood. Refusing to continue.");
         }
 
-        if(false){
-        }else if( std::regex_match(ContourOverlapStr, regex_ignore) ){
+        if( std::regex_match(ContourOverlapStr, regex_ignore) ){
             ud.mutation_opts.contouroverlap = Mutate_Voxels_Opts::ContourOverlap::Ignore;
         }else if( std::regex_match(ContourOverlapStr, regex_honopps) ){
             ud.mutation_opts.contouroverlap = Mutate_Voxels_Opts::ContourOverlap::HonourOppositeOrientations;
@@ -438,8 +435,7 @@ Drover DrawGeometry(Drover DICOM_data, const OperationArgPkg& OptArgs, const std
         }else{
             throw std::invalid_argument("ContourOverlap argument '"_s + ContourOverlapStr + "' is not valid");
         }
-        if(false){
-        }else if( std::regex_match(InclusivityStr, regex_centre) ){
+        if( std::regex_match(InclusivityStr, regex_centre) ){
             ud.mutation_opts.inclusivity = Mutate_Voxels_Opts::Inclusivity::Centre;
         }else if( std::regex_match(InclusivityStr, regex_pci) ){
             ud.mutation_opts.inclusivity = Mutate_Voxels_Opts::Inclusivity::Inclusive;

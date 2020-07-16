@@ -129,8 +129,7 @@ Drover AutoCropImages(Drover DICOM_data, const OperationArgPkg& OptArgs, const s
                 decltype(LeafJawPositions0) x_jaws;
                 decltype(LeafJawPositions1) y_jaws;
 
-                if(false){
-                }else if( std::regex_match(RTBeamLimitingDeviceType0.value(), regex_x)
+                if( std::regex_match(RTBeamLimitingDeviceType0.value(), regex_x)
                        && std::regex_match(RTBeamLimitingDeviceType1.value(), regex_y) ){
                     x_jaws = LeafJawPositions0;
                     y_jaws = LeafJawPositions1;

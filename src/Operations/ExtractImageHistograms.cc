@@ -289,8 +289,7 @@ Drover ExtractImageHistograms(Drover DICOM_data, const OperationArgPkg& OptArgs,
         ud.lower_threshold = Lower;
         ud.upper_threshold = Upper;
 
-        if(false){
-        }else if( std::regex_match(GroupingStr, regex_separate) ){
+        if( std::regex_match(GroupingStr, regex_separate) ){
             ud.grouping = ComputeExtractHistogramsUserData::GroupingMethod::Separate;
         }else if( std::regex_match(GroupingStr, regex_combined) ){
             ud.grouping = ComputeExtractHistogramsUserData::GroupingMethod::Combined;
@@ -301,8 +300,7 @@ Drover ExtractImageHistograms(Drover DICOM_data, const OperationArgPkg& OptArgs,
         ud.mutation_opts.adjacency = Mutate_Voxels_Opts::Adjacency::SingleVoxel;
         ud.mutation_opts.maskmod   = Mutate_Voxels_Opts::MaskMod::Noop;
 
-        if(false){
-        }else if( std::regex_match(ContourOverlapStr, regex_ignore) ){
+        if( std::regex_match(ContourOverlapStr, regex_ignore) ){
             ud.mutation_opts.contouroverlap = Mutate_Voxels_Opts::ContourOverlap::Ignore;
         }else if( std::regex_match(ContourOverlapStr, regex_honopps) ){
             ud.mutation_opts.contouroverlap = Mutate_Voxels_Opts::ContourOverlap::HonourOppositeOrientations;
@@ -311,8 +309,7 @@ Drover ExtractImageHistograms(Drover DICOM_data, const OperationArgPkg& OptArgs,
         }else{
             throw std::invalid_argument("ContourOverlap argument '"_s + ContourOverlapStr + "' is not valid");
         }
-        if(false){
-        }else if( std::regex_match(InclusivityStr, regex_centre) ){
+        if( std::regex_match(InclusivityStr, regex_centre) ){
             ud.mutation_opts.inclusivity = Mutate_Voxels_Opts::Inclusivity::Centre;
         }else if( std::regex_match(InclusivityStr, regex_pci) ){
             ud.mutation_opts.inclusivity = Mutate_Voxels_Opts::Inclusivity::Inclusive;

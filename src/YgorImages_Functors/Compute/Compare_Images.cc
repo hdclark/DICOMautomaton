@@ -101,8 +101,7 @@ bool ComputeCompareImages(planar_image_collection<float,double> &imagecoll,
 
     // Determine how discrepancy should be estimated.
     std::function< double (const double &, const double &) > estimate_discrepancy;
-    if(false){
-    }else if(user_data_s->discrepancy_type == ComputeCompareImagesUserData::DiscrepancyType::Relative){
+    if(user_data_s->discrepancy_type == ComputeCompareImagesUserData::DiscrepancyType::Relative){
         estimate_discrepancy = relative_diff;
 
     }else if(user_data_s->discrepancy_type == ComputeCompareImagesUserData::DiscrepancyType::Difference){
@@ -580,8 +579,7 @@ bool ComputeCompareImages(planar_image_collection<float,double> &imagecoll,
                     }
 
                     // Assign the voxel a value.
-                    if(false){
-                    }else if(user_data_s->comparison_method == ComputeCompareImagesUserData::ComparisonMethod::Discrepancy){
+                    if(user_data_s->comparison_method == ComputeCompareImagesUserData::ComparisonMethod::Discrepancy){
                         voxel_val = Disc;
 
                     }else if(user_data_s->comparison_method == ComputeCompareImagesUserData::ComparisonMethod::DTA){
@@ -618,8 +616,7 @@ bool ComputeCompareImages(planar_image_collection<float,double> &imagecoll,
                                          mv_opts, 
                                          f_bounded );
 
-            if(false){
-            }else if(user_data_s->comparison_method == ComputeCompareImagesUserData::ComparisonMethod::Discrepancy){
+            if(user_data_s->comparison_method == ComputeCompareImagesUserData::ComparisonMethod::Discrepancy){
                 UpdateImageDescription( img_refw, "Compared (discrepancy)" );
             }else if(user_data_s->comparison_method == ComputeCompareImagesUserData::ComparisonMethod::DTA){
                 UpdateImageDescription( img_refw, "Compared (DTA)" );

@@ -2118,8 +2118,7 @@ Load_TPlan_Config(const std::string &FilenameIn){
                 const auto ctrim = CANONICALIZE::TRIM_ENDS | CANONICALIZE::TO_UPPER;
                 const auto trimmed = Canonicalize_String2(s, ctrim);
                 double out = std::numeric_limits<double>::quiet_NaN();
-                if(false){
-                }else if(trimmed == "NONE"){
+                if(trimmed == "NONE"){
                     out = 0.0;
                 }else if(trimmed == "CCW"){
                     out = 1.0;
@@ -2173,8 +2172,7 @@ Load_TPlan_Config(const std::string &FilenameIn){
                 const auto ctrim = CANONICALIZE::TRIM_ENDS | CANONICALIZE::TO_UPPER;
                 const auto trimmed = Canonicalize_String2(RTBeamLimitingDeviceTypeOpt.value(), ctrim);
 
-                if(false){
-                }else if((trimmed == "ASYMX") || (trimmed == "X")){
+                if((trimmed == "ASYMX") || (trimmed == "X")){
                     sms->JawPositionsX = LeafJawPositionsVec;
 
                 }else if((trimmed == "ASYMY") || (trimmed == "Y")){
@@ -2738,8 +2736,7 @@ void Write_CT_Images(const std::shared_ptr<Image_Array>& IA,
         root_node.emplace_child_node({{0x0002, 0x0002}, "UI", "1.2.840.10008.5.1.4.1.1.2"}); // MediaStorageSOPClassUID -- CT Image Storage.
         root_node.emplace_child_node({{0x0002, 0x0003}, "UI", SOPInstanceUID}); // MediaStorageSOPInstanceUID
         std::string TransferSyntaxUID;
-        if(false){
-        }else if(enc == DCMA_DICOM::Encoding::ELE){
+        if(enc == DCMA_DICOM::Encoding::ELE){
             TransferSyntaxUID = "1.2.840.10008.1.2.1";
         }else if(enc == DCMA_DICOM::Encoding::ILE){
             TransferSyntaxUID = "1.2.840.10008.1.2";
@@ -3025,8 +3022,7 @@ void Write_Contours(std::list<std::reference_wrapper<contour_collection<double>>
         root_node.emplace_child_node({{0x0002, 0x0002}, "UI", "1.2.840.10008.5.1.4.1.1.481.3"}); // MediaStorageSOPClassUID
         root_node.emplace_child_node({{0x0002, 0x0003}, "UI", SOPInstanceUID}); // MediaStorageSOPInstanceUID
         std::string TransferSyntaxUID;
-        if(false){
-        }else if(enc == DCMA_DICOM::Encoding::ELE){
+        if(enc == DCMA_DICOM::Encoding::ELE){
             TransferSyntaxUID = "1.2.840.10008.1.2.1";
         }else if(enc == DCMA_DICOM::Encoding::ILE){
             TransferSyntaxUID = "1.2.840.10008.1.2";

@@ -109,8 +109,7 @@ Drover ContourViaGeometry(Drover DICOM_data, const OperationArgPkg& OptArgs, con
 
     std::list<sphere<double>> spheres;
 
-    if(false){
-    }else if(std::regex_match(ShapesStr, sphere_regex)){
+    if(std::regex_match(ShapesStr, sphere_regex)){
         auto split = SplitStringToVector(ShapesStr, '(', 'd');
         split = SplitVector(split, ')', 'd');
         split = SplitVector(split, ',', 'd');

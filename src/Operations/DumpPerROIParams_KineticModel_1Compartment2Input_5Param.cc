@@ -142,8 +142,7 @@ DumpPerROIParams_KineticModel_1Compartment2Input_5Param(Drover DICOM_data,
         if(desc.empty()) continue;
         if(img_coll->images.empty()) continue;
 
-        if(false){
-        }else if(std::regex_match(desc, k1A_regex  )){ imgcoll_k1A  = img_coll;
+        if(std::regex_match(desc, k1A_regex  )){ imgcoll_k1A  = img_coll;
         }else if(std::regex_match(desc, tauA_regex )){ imgcoll_tauA = img_coll;
         }else if(std::regex_match(desc, k1V_regex  )){ imgcoll_k1V  = img_coll;
         }else if(std::regex_match(desc, tauV_regex )){ imgcoll_tauV = img_coll;
@@ -208,8 +207,7 @@ DumpPerROIParams_KineticModel_1Compartment2Input_5Param(Drover DICOM_data,
                                    " image (the 'seed' image) which should match. Verify the spatial" 
                                    " overlap grouping routine.");
         }
-        if(false){
-        }else if( selected_tauA_imgs.empty() ){
+        if( selected_tauA_imgs.empty() ){
             throw std::runtime_error("Missing spatially overlapping image in tauA map.");
         }else if( selected_k1V_imgs.empty() ){
             throw std::runtime_error("Missing spatially overlapping image in k1V map.");
@@ -361,8 +359,7 @@ DumpPerROIParams_KineticModel_1Compartment2Input_5Param(Drover DICOM_data,
                                     //Now have pixel value. Figure out what to do with it.
                                     if(auto desc = img_it->GetMetadataValueAs<std::string>("Description")){
 
-                                        if(false){
-                                        }else if(std::regex_match(desc.value(), k1A_regex)){
+                                        if(std::regex_match(desc.value(), k1A_regex)){
                                             model_5params_linear.k1A = pxl_val;
                                             model_5params_cheby.k1A  = pxl_val;
                                             model_3params_cheby.k1A  = pxl_val;

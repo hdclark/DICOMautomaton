@@ -75,8 +75,7 @@ bool Load_From_DICOM_Files( Drover &DICOM_data,
             Modality = "";
         };
 
-        if(false){
-        }else if(boost::iequals(Modality,"RTRECORD")){
+        if(boost::iequals(Modality,"RTRECORD")){
             FUNCWARN("RTRECORD file encountered. "
                      "DICOMautomaton currently is not equipped to read RTRECORD-modality DICOM files. "
                      "Disregarding it");

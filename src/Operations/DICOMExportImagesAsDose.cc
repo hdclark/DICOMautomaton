@@ -77,8 +77,7 @@ DICOMExportImagesAsDose(Drover DICOM_data,
     const auto HighRegex = Compile_Regex("^hi?g?h?$");
 
     ParanoiaLevel p;
-    if(false){
-    }else if(std::regex_match(ParanoiaStr,LowRegex)){
+    if(std::regex_match(ParanoiaStr,LowRegex)){
         p = ParanoiaLevel::Low;
     }else if(std::regex_match(ParanoiaStr,MedRegex)){
         p = ParanoiaLevel::Medium;

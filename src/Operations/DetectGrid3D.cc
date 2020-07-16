@@ -530,8 +530,7 @@ Find_Corresponding_Points( Grid_Context &GC,
         closest_dist = std::numeric_limits<double>::quiet_NaN();
         closest_proj = NaN_vec3;
 
-        if(false){
-        }else if(GC.grid_sampling == 1){ // Grid cell corners (i.e., "0D" grid intersections) are sampled.
+        if(GC.grid_sampling == 1){ // Grid cell corners (i.e., "0D" grid intersections) are sampled.
             for(const auto &c : corners){
                 const auto dist = c.distance(P);
                 if(!std::isfinite(closest_dist) || (dist < closest_dist)){
@@ -1418,8 +1417,7 @@ if(false){
 
                     // Only consider the two largest projections since the third will be close to zero due to the
                     // projection.
-                    if(false){
-                    }else if( (std::abs(dist_y) > std::abs(dist_x))
+                    if( (std::abs(dist_y) > std::abs(dist_x))
                           &&  (std::abs(dist_z) > std::abs(dist_x)) ){
                         dists_y.emplace_back(dist_y);
                         dists_z.emplace_back(dist_z);

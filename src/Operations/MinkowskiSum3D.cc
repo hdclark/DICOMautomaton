@@ -187,8 +187,7 @@ Drover MinkowskiSum3D(Drover DICOM_data, const OperationArgPkg& OptArgs, const s
 
     // Generate a polyhedron surface mesh iff necessary.
     dcma_surface_meshes::Polyhedron output_mesh;
-    if(false){
-    }else if( (std::regex_match(OpSelectionStr, regex_dilate_exact_vertex)) ){
+    if( (std::regex_match(OpSelectionStr, regex_dilate_exact_vertex)) ){
         // Do nothing -- no surface is needed.
 
     }else if( (std::regex_match(OpSelectionStr, regex_dilate_exact_surface))
@@ -210,8 +209,7 @@ Drover MinkowskiSum3D(Drover DICOM_data, const OperationArgPkg& OptArgs, const s
 
 
     // Operate on the mesh.
-    if(false){
-    }else if(std::regex_match(OpSelectionStr, regex_dilate_exact_surface)){
+    if(std::regex_match(OpSelectionStr, regex_dilate_exact_surface)){
         const auto sphere_mesh = polyhedron_processing::Regular_Icosahedron(Distance);
         polyhedron_processing::Dilate(output_mesh,
                                       sphere_mesh); // Full 3D dilation/"offset."

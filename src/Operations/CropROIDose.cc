@@ -36,10 +36,9 @@ OperationDoc OpArgDocCropROIDose(){
 
     // Adjust the defaults to suit this particular workflow.
     for(auto &oparg : out.args){
-        if(false){
 
         // HighlightROIs options.
-        }else if(oparg.name == "Channel"){
+        if(oparg.name == "Channel"){
             oparg.default_val = "-1";
             oparg.visibility  = OpArgVisibility::Hide;
 

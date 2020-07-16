@@ -276,8 +276,7 @@ Drover DumpROISurfaceMeshes(const Drover& DICOM_data, const OperationArgPkg& Opt
         meshing_params.GridRows = GridRows;
         meshing_params.GridColumns = GridColumns;
 
-        if(false){
-        }else if( std::regex_match(ContourOverlapStr, regex_ignore) ){
+        if( std::regex_match(ContourOverlapStr, regex_ignore) ){
             meshing_params.MutateOpts.contouroverlap = Mutate_Voxels_Opts::ContourOverlap::Ignore;
         }else if( std::regex_match(ContourOverlapStr, regex_honopps) ){
             meshing_params.MutateOpts.contouroverlap = Mutate_Voxels_Opts::ContourOverlap::HonourOppositeOrientations;
@@ -286,8 +285,7 @@ Drover DumpROISurfaceMeshes(const Drover& DICOM_data, const OperationArgPkg& Opt
         }else{
             throw std::invalid_argument("ContourOverlap argument '"_s + ContourOverlapStr + "' is not valid");
         }
-        if(false){
-        }else if( std::regex_match(InclusivityStr, regex_centre) ){
+        if( std::regex_match(InclusivityStr, regex_centre) ){
             meshing_params.MutateOpts.inclusivity = Mutate_Voxels_Opts::Inclusivity::Centre;
         }else if( std::regex_match(InclusivityStr, regex_pci) ){
             meshing_params.MutateOpts.inclusivity = Mutate_Voxels_Opts::Inclusivity::Inclusive;

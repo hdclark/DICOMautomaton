@@ -99,8 +99,7 @@ Drover RankPixels(Drover DICOM_data, const OperationArgPkg& OptArgs, const std::
             ud.inc_lower_threshold = LowerThreshold;
             ud.inc_upper_threshold = UpperThreshold;
 
-            if(false){
-            }else if( std::regex_match(MethodStr, method_rank) ){
+            if( std::regex_match(MethodStr, method_rank) ){
                 ud.replacement_method = RankPixelsUserData::ReplacementMethod::Rank;
             }else if( std::regex_match(MethodStr, method_tile) ){
                 ud.replacement_method = RankPixelsUserData::ReplacementMethod::Percentile;

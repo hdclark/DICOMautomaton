@@ -213,8 +213,7 @@ Drover ExtractAlphaBeta(Drover DICOM_data,
         ud.inc_lower_threshold = TestImgLowerThreshold;
         ud.inc_upper_threshold = TestImgUpperThreshold;
 
-        if(false){
-        }else if(std::regex_match(ModelStr, model_simple_lq)){
+        if(std::regex_match(ModelStr, model_simple_lq)){
             ud.f_reduce = [NumberOfFractions,
                            NominalDosePerFraction]( std::vector<float> &vals, 
                                                     vec3<double>                ) -> float {

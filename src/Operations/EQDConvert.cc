@@ -191,8 +191,7 @@ Drover EQDConvert(Drover DICOM_data,
         throw std::invalid_argument("NumberOfFractions must be specified (>0.0)");
     }
 
-    if(false){
-    }else if( std::regex_match(ModelStr, regex_model_lqs) ){
+    if( std::regex_match(ModelStr, regex_model_lqs) ){
         ud.model = EQDConversionUserData::Model::SimpleLinearQuadratic;
     }else if( std::regex_match(ModelStr, regex_model_lqsp) ){
         ud.model = EQDConversionUserData::Model::PinnedLinearQuadratic;

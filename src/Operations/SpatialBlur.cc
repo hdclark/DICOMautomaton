@@ -87,8 +87,7 @@ Drover SpatialBlur(Drover DICOM_data, const OperationArgPkg& OptArgs, const std:
         InPlaneImageBlurUserData ud;
         ud.gaussian_sigma = GaussianOpenSigma;
 
-        if(false){
-        }else if( std::regex_match(EstimatorStr, regex_box3x3) ){
+        if( std::regex_match(EstimatorStr, regex_box3x3) ){
             ud.estimator = BlurEstimator::box_3x3;
         }else if( std::regex_match(EstimatorStr, regex_box5x5) ){
             ud.estimator = BlurEstimator::box_5x5;

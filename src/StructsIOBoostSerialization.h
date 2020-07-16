@@ -54,8 +54,7 @@ void serialize(Archive &a, Contour_Data &c, const unsigned int /*version*/){
 //Class: Image_Array.
 template<typename Archive>
 void serialize(Archive &a, Image_Array &i, const unsigned int version){
-    if(false){
-    }else if(version == 0){
+    if(version == 0){
         std::string dummy_filename;
         unsigned int dummy_bits;
         a & boost::serialization::make_nvp("imagecoll",i.imagecoll)
@@ -72,8 +71,7 @@ void serialize(Archive &a, Image_Array &i, const unsigned int version){
 //Class: Point_Cloud.
 template<typename Archive>
 void serialize(Archive &a, Point_Cloud &p, const unsigned int version){
-    if(false){
-    }else if(version == 0){
+    if(version == 0){
         a & boost::serialization::make_nvp("pset",p.pset);
     }else{
         FUNCWARN("Point_Cloud archives with version " << version << " are not recognized");
@@ -84,8 +82,7 @@ void serialize(Archive &a, Point_Cloud &p, const unsigned int version){
 //Class: Surface_Mesh.
 template<typename Archive>
 void serialize(Archive &a, Surface_Mesh &p, const unsigned int version){
-    if(false){
-    }else if(version == 0){
+    if(version == 0){
         // Note: No dynamic surface_mesh attributes are saved in version 0 due to use of std::any.
         //       Until a suitable reflection mechanism is located, we are stuck ignoring members
         //       that make use of std::any.
@@ -99,8 +96,7 @@ void serialize(Archive &a, Surface_Mesh &p, const unsigned int version){
 //Class: Static_Machine_State.
 template<typename Archive>
 void serialize(Archive &a, Static_Machine_State &p, const unsigned int version){
-    if(false){
-    }else if(version == 0){
+    if(version == 0){
         a & boost::serialization::make_nvp("CumulativeMetersetWeight",p.CumulativeMetersetWeight)
           & boost::serialization::make_nvp("ControlPointIndex",p.ControlPointIndex)
 
@@ -142,8 +138,7 @@ void serialize(Archive &a, Static_Machine_State &p, const unsigned int version){
 //Class: Dynamic_Machine_State.
 template<typename Archive>
 void serialize(Archive &a, Dynamic_Machine_State &p, const unsigned int version){
-    if(false){
-    }else if(version == 0){
+    if(version == 0){
         a & boost::serialization::make_nvp("BeamNumber",p.BeamNumber)
           & boost::serialization::make_nvp("FinalCumulativeMetersetWeight",p.FinalCumulativeMetersetWeight)
 
@@ -159,8 +154,7 @@ void serialize(Archive &a, Dynamic_Machine_State &p, const unsigned int version)
 //Class: TPlan_Config.
 template<typename Archive>
 void serialize(Archive &a, TPlan_Config &p, const unsigned int version){
-    if(false){
-    }else if(version == 0){
+    if(version == 0){
         a & boost::serialization::make_nvp("dynamic_states",p.dynamic_states)
 
           & boost::serialization::make_nvp("metadata",p.metadata);
@@ -173,8 +167,7 @@ void serialize(Archive &a, TPlan_Config &p, const unsigned int version){
 //Class: Line_Sample.
 template<typename Archive>
 void serialize(Archive &a, Line_Sample &l, const unsigned int version){
-    if(false){
-    }else if(version == 0){
+    if(version == 0){
         a & boost::serialization::make_nvp("line",l.line);
     }else{
         FUNCWARN("Line_Sample archives with version " << version << " are not recognized");
@@ -185,8 +178,7 @@ void serialize(Archive &a, Line_Sample &l, const unsigned int version){
 //Class: Drover.
 template<typename Archive>
 void serialize(Archive &a, Drover &d, const unsigned int version){
-    if(false){
-    }else if(version == 0){
+    if(version == 0){
         FUNCERR("Archives with version 0 are no longer supported. Cannot continue");
     }else if(version == 1){
         a & boost::serialization::make_nvp("contour_data",d.contour_data)

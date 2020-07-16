@@ -104,8 +104,7 @@ bool ComputeVolumetricSpatialDerivative(planar_image_collection<float,double> &i
     ud.channel = user_data_s->channel;
     ud.neighbourhood = ComputeVolumetricNeighbourhoodSamplerUserData::Neighbourhood::Selection;
 
-    if(false){
-    }else if(user_data_s->order == VolumetricSpatialDerivativeEstimator::first){
+    if(user_data_s->order == VolumetricSpatialDerivativeEstimator::first){
         ud.voxel_triplets = {{ std::array<long int, 3>{  0,  0,  0 },    // 0
                                std::array<long int, 3>{ -1,  0,  0 },    // 1
                                std::array<long int, 3>{  1,  0,  0 },    // 2
@@ -113,8 +112,7 @@ bool ComputeVolumetricSpatialDerivative(planar_image_collection<float,double> &i
                                std::array<long int, 3>{  0,  1,  0 },    // 4
                                std::array<long int, 3>{  0,  0, -1 },    // 5
                                std::array<long int, 3>{  0,  0,  1 } }}; // 6
-        if(false){
-        }else if(user_data_s->method == VolumetricSpatialDerivativeMethod::row_aligned){
+        if(user_data_s->method == VolumetricSpatialDerivativeMethod::row_aligned){
             ud.f_reduce = [](float, std::vector<float> &shtl, vec3<double>) -> float {
                               const auto col_m = std::isfinite(shtl[3]) ? shtl[3] : shtl[0];
                               const auto col_p = std::isfinite(shtl[4]) ? shtl[4] : shtl[0];
@@ -424,8 +422,7 @@ bool ComputeVolumetricSpatialDerivative(planar_image_collection<float,double> &i
                                        / 32.0 );
         };
 
-        if(false){
-        }else if(user_data_s->method == VolumetricSpatialDerivativeMethod::row_aligned){
+        if(user_data_s->method == VolumetricSpatialDerivativeMethod::row_aligned){
             ud.f_reduce = row_aligned;
 
         }else if(user_data_s->method == VolumetricSpatialDerivativeMethod::column_aligned){
@@ -496,8 +493,7 @@ bool ComputeVolumetricSpatialDerivative(planar_image_collection<float,double> &i
 
     //Update the image metadata. 
     std::string img_desc;
-    if(false){
-    }else if(user_data_s->order == VolumetricSpatialDerivativeEstimator::first){
+    if(user_data_s->order == VolumetricSpatialDerivativeEstimator::first){
         img_desc += "First-order spatial deriv.,";
 
     }else if(user_data_s->order == VolumetricSpatialDerivativeEstimator::Sobel_3x3x3){
@@ -507,8 +503,7 @@ bool ComputeVolumetricSpatialDerivative(planar_image_collection<float,double> &i
         throw std::invalid_argument("Unrecognized user-provided derivative order.");
     }
 
-    if(false){
-    }else if(user_data_s->method == VolumetricSpatialDerivativeMethod::row_aligned){
+    if(user_data_s->method == VolumetricSpatialDerivativeMethod::row_aligned){
         img_desc += " row-aligned";
 
     }else if(user_data_s->method == VolumetricSpatialDerivativeMethod::column_aligned){

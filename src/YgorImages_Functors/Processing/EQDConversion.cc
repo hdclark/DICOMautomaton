@@ -54,10 +54,8 @@ bool EQDConversion(planar_image_collection<float,double>::images_list_it_t first
     std::function< void(long int, long int, long int, std::reference_wrapper<planar_image<float,double>>, float &) > f_bounded;
     std::function< void(long int, long int, long int, std::reference_wrapper<planar_image<float,double>>, float &) > f_unbounded;
 
-    if(false){
-    }else if(user_data_s->model == EQDConversionUserData::Model::SimpleLinearQuadratic){
-        if(false){
-        }else if(user_data_s->NumberOfFractions <= 0){
+    if(user_data_s->model == EQDConversionUserData::Model::SimpleLinearQuadratic){
+        if(user_data_s->NumberOfFractions <= 0){
             throw std::invalid_argument("NumberOfFractions not specified or invalid.");
         }else if(user_data_s->AlphaBetaRatioTumour <= 0){
             throw std::invalid_argument("AlphaBetaRatioTumour not specified or invalid.");
@@ -97,8 +95,7 @@ bool EQDConversion(planar_image_collection<float,double>::images_list_it_t first
 
     }else if(user_data_s->model == EQDConversionUserData::Model::PinnedLinearQuadratic){
 
-        if(false){
-        }else if(user_data_s->NumberOfFractions <= 0){
+        if(user_data_s->NumberOfFractions <= 0){
             throw std::invalid_argument("NumberOfFractions not specified or invalid.");
         }else if(user_data_s->PrescriptionDose <= 0){
             throw std::invalid_argument("PrescriptionDose not specified or invalid.");

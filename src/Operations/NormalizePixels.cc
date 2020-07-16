@@ -193,8 +193,7 @@ Drover NormalizePixels(Drover DICOM_data, const OperationArgPkg& OptArgs, const 
         ud.mutation_opts.maskmod   = Mutate_Voxels_Opts::MaskMod::Noop;
         ud.description = "Normalized";
 
-        if(false){
-        }else if( std::regex_match(ContourOverlapStr, regex_ignore) ){
+        if( std::regex_match(ContourOverlapStr, regex_ignore) ){
             ud.mutation_opts.contouroverlap = Mutate_Voxels_Opts::ContourOverlap::Ignore;
         }else if( std::regex_match(ContourOverlapStr, regex_honopps) ){
             ud.mutation_opts.contouroverlap = Mutate_Voxels_Opts::ContourOverlap::HonourOppositeOrientations;
@@ -203,8 +202,7 @@ Drover NormalizePixels(Drover DICOM_data, const OperationArgPkg& OptArgs, const 
         }else{
             throw std::invalid_argument("ContourOverlap argument '"_s + ContourOverlapStr + "' is not valid");
         }
-        if(false){
-        }else if( std::regex_match(InclusivityStr, regex_centre) ){
+        if( std::regex_match(InclusivityStr, regex_centre) ){
             ud.mutation_opts.inclusivity = Mutate_Voxels_Opts::Inclusivity::Centre;
         }else if( std::regex_match(InclusivityStr, regex_pci) ){
             ud.mutation_opts.inclusivity = Mutate_Voxels_Opts::Inclusivity::Inclusive;
@@ -214,8 +212,7 @@ Drover NormalizePixels(Drover DICOM_data, const OperationArgPkg& OptArgs, const 
             throw std::invalid_argument("Inclusivity argument '"_s + InclusivityStr + "' is not valid");
         }
 
-        if(false){
-        }else if(op_is_clmp){
+        if(op_is_clmp){
             ud.f_bounded = [Channel](long int, long int, long int chan, std::reference_wrapper<planar_image<float,double>>, float &val) {
                 if( (Channel < 0) || (Channel == chan) ){
                     if(val < 0.0) val = 0.0;
@@ -248,8 +245,7 @@ Drover NormalizePixels(Drover DICOM_data, const OperationArgPkg& OptArgs, const 
             ud.f_bounded = [Channel,min,max,op_is_st01,op_is_st11](long int, long int, long int chan, std::reference_wrapper<planar_image<float,double>>, float &val) {
                 if( (Channel < 0) || (Channel == chan) ){
 
-                    if(false){
-                    }else if(op_is_st01){
+                    if(op_is_st01){
                         val = ((max - val)/(max - min));
 
                     }else if(op_is_st11){

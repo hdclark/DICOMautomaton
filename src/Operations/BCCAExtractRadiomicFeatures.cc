@@ -44,8 +44,7 @@ OperationDoc OpArgDocBCCAExtractRadiomicFeatures(){
     for(auto &oparg : out.args){
 
         // SimplifyContours
-        if(false){
-        }else if(oparg.name == "FractionalAreaTolerance"){
+        if(oparg.name == "FractionalAreaTolerance"){
             oparg.default_val = "0.05";
 
         }else if(oparg.name == "SimplificationMethod"){

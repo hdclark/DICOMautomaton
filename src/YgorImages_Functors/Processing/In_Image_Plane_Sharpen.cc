@@ -45,8 +45,7 @@ bool InPlaneImageSharpen(
             for(auto chan = 0; chan < working.channels; ++chan){
                 auto newval = std::numeric_limits<float>::quiet_NaN();
 
-                if(false){
-                }else if(user_data_s->estimator == SharpenEstimator::sharpen_3x3){
+                if(user_data_s->estimator == SharpenEstimator::sharpen_3x3){
                     newval = first_img_it->fixed_sharpen_3x3(row, col, chan);
 
                 }else if(user_data_s->estimator == SharpenEstimator::unsharp_mask_5x5){
@@ -68,8 +67,7 @@ bool InPlaneImageSharpen(
 
     //Update the image metadata. 
     std::string img_desc;
-    if(false){
-    }else if(user_data_s->estimator == SharpenEstimator::sharpen_3x3){
+    if(user_data_s->estimator == SharpenEstimator::sharpen_3x3){
         img_desc += "Box sharpen (fixed; 3x3)";
 
     }else if(user_data_s->estimator == SharpenEstimator::unsharp_mask_5x5){

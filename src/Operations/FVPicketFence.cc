@@ -59,8 +59,7 @@ OperationDoc OpArgDocFVPicketFence(){
         oparg.visibility  = OpArgVisibility::Hide;
 
         // ContourWholeImages
-        if(false){
-        }else if(oparg.name == "ImageSelection"){
+        if(oparg.name == "ImageSelection"){
             oparg.default_val = "last";
 
         }else if(oparg.name == "ROILabel"){

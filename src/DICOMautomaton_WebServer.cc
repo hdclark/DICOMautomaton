@@ -844,8 +844,7 @@ void BaseWebServerApplication::appendOperationParamsColumn(){
             }
 
             //ROI selection parameters.
-            if(false){
-            }else if(std::regex_match(a.name,roiregex)){
+            if(std::regex_match(a.name,roiregex)){
                 // Instead of a freeform lineedit widget, provide a spinner.
                 auto spinner = table->elementAt(table_row,cols)->addWidget(std::make_unique<Wt::WSelectionBox>());
                 spinner->setSelectionMode(Wt::SelectionMode::Extended);
@@ -1036,8 +1035,7 @@ void BaseWebServerApplication::createComputeGB(){
             auto w = table->elementAt(row,col)->children().back();
             if(w == nullptr) throw std::logic_error("Table element's child widget not found. Cannot continue.");
 
-            if(false){
-            }else if(auto *lineedit = dynamic_cast<Wt::WLineEdit *>(w)){
+            if(auto *lineedit = dynamic_cast<Wt::WLineEdit *>(w)){
                 param_val = lineedit->text().toUTF8();
             }else if(auto *selector = dynamic_cast<Wt::WSelectionBox *>(w)){
                 //Must convert from selected ROI labels to regex.
@@ -1084,8 +1082,7 @@ void BaseWebServerApplication::createComputeGB(){
                 std::string personal_fname;
                 if(OutputFilenames.count(param_name) == 0){
                     std::string suffix;
-                    if(false){
-                    }else if(op_doc.mimetype == "application/dicom"){
+                    if(op_doc.mimetype == "application/dicom"){
                          suffix = ".dcm";
                     }else if(op_doc.mimetype == "text/plain"){
                          suffix = ".txt";
@@ -1113,8 +1110,7 @@ void BaseWebServerApplication::createComputeGB(){
                     fr->setFileName(personal_fname);
                     fr->setMimeType(op_doc.mimetype);
 
-                    if(false){
-                    }else if(op_doc.mimetype == "application/dicom"){
+                    if(op_doc.mimetype == "application/dicom"){
                         fr->suggestFileName("output.dcm");
                     }else if(op_doc.mimetype == "text/plain"){
                         fr->suggestFileName("output.txt");

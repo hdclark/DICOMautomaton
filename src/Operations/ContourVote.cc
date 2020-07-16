@@ -192,8 +192,7 @@ Drover ContourVote(Drover DICOM_data, const OperationArgPkg& OptArgs, const std:
         FUNCWARN("No contours participated, so no contours won");
     }
         
-    if(false){
-    }else if(!std::isnan( Area )){
+    if(!std::isnan( Area )){
         cop_ROIs.sort( [&](const std::reference_wrapper<contour_of_points<double>> A,
                            const std::reference_wrapper<contour_of_points<double>> B ){
                                const auto AA = std::abs(A.get().Get_Signed_Area());

@@ -59,8 +59,7 @@ Drover Average(Drover DICOM_data, const OperationArgPkg& OptArgs, const std::map
     const auto overlap_temp = Compile_Regex("ov?e?r?l?a?p?p?i?n?g?-?te?m?p?o?r?a?l?l?y?");
 
 
-    if(false){
-    }else if(std::regex_match(AveragingMethodStr, overlap_spat)){
+    if(std::regex_match(AveragingMethodStr, overlap_spat)){
         auto IAs_all = All_IAs( DICOM_data );
         auto IAs = Whitelist( IAs_all, ImageSelectionStr );
         for(auto & iap_it : IAs){

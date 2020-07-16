@@ -232,8 +232,7 @@ Drover ConvolveImages(Drover DICOM_data, const OperationArgPkg& OptArgs, const s
             }
             
             // Perform any necessary post-processing.
-            if(false){
-            }else if(op_is_conv){
+            if(op_is_conv){
                 // Spatially flip the kernel. This can be accomplished by negating since the kernel is (approximately)
                 // centred.
                 for(auto &t : triplets){
@@ -251,8 +250,7 @@ Drover ConvolveImages(Drover DICOM_data, const OperationArgPkg& OptArgs, const s
             }
             ud.voxel_triplets = triplets;
 
-            if(false){
-            }else if( op_is_conv
+            if( op_is_conv
                   ||  op_is_corr ){
                 ud.f_reduce = [=](float v, std::vector<float> &shtl, vec3<double>) -> float {
                                   // Multiply the kernel and image samples together and sum them up.

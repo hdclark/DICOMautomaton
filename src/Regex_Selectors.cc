@@ -97,8 +97,7 @@ Whitelist_Core( L lops,
         ||  std::regex_match(Specifier, regex_i_2nd) 
         ||  std::regex_match(Specifier, regex_i_3rd)  ){
             size_t N = 0; // Target.
-            if(false){
-            }else if( std::regex_match(Specifier, regex_i_1st) ){ N = 1;
+            if( std::regex_match(Specifier, regex_i_1st) ){ N = 1;
             }else if( std::regex_match(Specifier, regex_i_2nd) ){ N = 2;
             }else if( std::regex_match(Specifier, regex_i_3rd) ){ N = 3;
             }else{
@@ -115,8 +114,7 @@ Whitelist_Core( L lops,
         ||  std::regex_match(Specifier, regex_2nd) 
         ||  std::regex_match(Specifier, regex_3rd)  ){
             size_t N = 0; // Target.
-            if(false){
-            }else if( std::regex_match(Specifier, regex_1st) ){ N = 1;
+            if( std::regex_match(Specifier, regex_1st) ){ N = 1;
             }else if( std::regex_match(Specifier, regex_2nd) ){ N = 2;
             }else if( std::regex_match(Specifier, regex_3rd) ){ N = 3;
             }else{
@@ -279,8 +277,7 @@ Whitelist( std::list<std::reference_wrapper<contour_collection<double>>> ccs,
     ccs.remove_if([&](std::reference_wrapper<contour_collection<double>> cc) -> bool {
         if(cc.get().contours.empty()) return true; // Remove collections containing no contours.
 
-        if(false){
-        }else if(Opts.validation == Regex_Selector_Opts::Validation::Representative){
+        if(Opts.validation == Regex_Selector_Opts::Validation::Representative){
             auto ValueOpt = cc.get().contours.front().GetMetadataValueAs<std::string>(MetadataKey);
             if(ValueOpt){
                 return !(std::regex_match(ValueOpt.value(),theregex));
@@ -297,8 +294,7 @@ Whitelist( std::list<std::reference_wrapper<contour_collection<double>>> ccs,
             const auto Values = cc.get().get_unique_values_for_key(MetadataKey);
 
             if(Values.empty()){
-                if(false){
-                }else if(Opts.nas == Regex_Selector_Opts::NAs::Include){
+                if(Opts.nas == Regex_Selector_Opts::NAs::Include){
                     return false;
                 }else if(Opts.nas == Regex_Selector_Opts::NAs::Exclude){
                     return true;
@@ -367,8 +363,7 @@ Whitelist( std::list<std::list<std::shared_ptr<Image_Array>>::iterator> ias,
         if((*iap_it) == nullptr) return true;
         if((*iap_it)->imagecoll.images.empty()) return true; // Remove arrays containing no images.
 
-        if(false){
-        }else if(Opts.validation == Regex_Selector_Opts::Validation::Representative){
+        if(Opts.validation == Regex_Selector_Opts::Validation::Representative){
             auto ValueOpt = (*iap_it)->imagecoll.images.front().GetMetadataValueAs<std::string>(MetadataKey);
             if(ValueOpt){
                 return !(std::regex_match(ValueOpt.value(),theregex));
@@ -385,8 +380,7 @@ Whitelist( std::list<std::list<std::shared_ptr<Image_Array>>::iterator> ias,
             const auto Values = (*iap_it)->imagecoll.get_unique_values_for_key(MetadataKey);
 
             if(Values.empty()){
-                if(false){
-                }else if(Opts.nas == Regex_Selector_Opts::NAs::Include){
+                if(Opts.nas == Regex_Selector_Opts::NAs::Include){
                     return false;
                 }else if(Opts.nas == Regex_Selector_Opts::NAs::Exclude){
                     return true;
@@ -479,8 +473,7 @@ Whitelist( std::list<std::list<std::shared_ptr<Point_Cloud>>::iterator> pcs,
         if((*pcp_it) == nullptr) return true;
         if((*pcp_it)->pset.points.empty()) return true; // Remove arrays containing no images.
 
-        if(false){
-        }else if( // Note: Point_Clouds are dissimilar to Image_Arrays in that individual images can have different
+        if( // Note: Point_Clouds are dissimilar to Image_Arrays in that individual images can have different
                   //       metadata, but point clouds cannot. We keep these options for consistency.
                   (Opts.validation == Regex_Selector_Opts::Validation::Representative)
               ||  (Opts.validation == Regex_Selector_Opts::Validation::Pedantic)        ){
@@ -580,8 +573,7 @@ Whitelist( std::list<std::list<std::shared_ptr<Surface_Mesh>>::iterator> sms,
         if((*smp_it)->meshes.vertices.empty()) return true; // Remove meshes containing no vertices.
         if((*smp_it)->meshes.faces.empty()) return true; // Remove meshes containing no faces.
 
-        if(false){
-        }else if( // Note: A single Surface_Mesh corresponds to one individual metadata store. While a single
+        if( // Note: A single Surface_Mesh corresponds to one individual metadata store. While a single
                   //       Surface_Mesh can be comprised of multiple disconnected meshes, they are herein considered
                   //       to be part of the same logical group. As for Point_Clouds, we keep the following options for
                   //       consistency.
@@ -685,8 +677,7 @@ Whitelist( std::list<std::list<std::shared_ptr<TPlan_Config>>::iterator> tps,
         if((*tpp_it) == nullptr) return true;
         if((*tpp_it)->dynamic_states.empty()) return true; // Remove plans containing no beams.
 
-        if(false){
-        }else if( // Note: A TPlan_Config corresponds to one individual metadata store. While a single
+        if( // Note: A TPlan_Config corresponds to one individual metadata store. While a single
                   //       TPlan_Config can be comprised of multiple disconnected beams, they are 
                   //       herein considered to be part of the same logical group.
                   (Opts.validation == Regex_Selector_Opts::Validation::Representative)
@@ -791,8 +782,7 @@ Whitelist( std::list<std::list<std::shared_ptr<Line_Sample>>::iterator> lss,
         if((*lsp_it) == nullptr) return true;
         if((*lsp_it)->line.samples.empty()) return true; // Remove arrays containing no samples.
 
-        if(false){
-        }else if( // Note: Line_Samples are dissimilar to Image_Arrays in that individual images can have different
+        if( // Note: Line_Samples are dissimilar to Image_Arrays in that individual images can have different
                   //       metadata, but point clouds cannot. We keep these options for consistency.
                   (Opts.validation == Regex_Selector_Opts::Validation::Representative)
               ||  (Opts.validation == Regex_Selector_Opts::Validation::Pedantic)        ){
@@ -891,8 +881,7 @@ Whitelist( std::list<std::list<std::shared_ptr<Transform3>>::iterator> t3s,
         if((*t3p_it) == nullptr) return true;
         if(std::holds_alternative<std::monostate>( (*t3p_it)->transform )) return true; // Remove empty transforms.
 
-        if(false){
-        }else if( (Opts.validation == Regex_Selector_Opts::Validation::Representative)
+        if( (Opts.validation == Regex_Selector_Opts::Validation::Representative)
               ||  (Opts.validation == Regex_Selector_Opts::Validation::Pedantic)        ){
 
             std::optional<std::string> ValueOpt 

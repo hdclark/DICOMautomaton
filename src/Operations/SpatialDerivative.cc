@@ -111,8 +111,7 @@ Drover SpatialDerivative(Drover DICOM_data, const OperationArgPkg& OptArgs, cons
         ud.order = PartialDerivativeEstimator::first;
         ud.method = PartialDerivativeMethod::row_aligned;
 
-        if(false){
-        }else if( std::regex_match(EstimatorStr, regex_1st) ){
+        if( std::regex_match(EstimatorStr, regex_1st) ){
             ud.order = PartialDerivativeEstimator::first;
         }else if( std::regex_match(EstimatorStr, regex_rcr3x3) ){
             ud.order = PartialDerivativeEstimator::Roberts_cross_3x3;
@@ -131,8 +130,7 @@ Drover SpatialDerivative(Drover DICOM_data, const OperationArgPkg& OptArgs, cons
         }else{
             throw std::invalid_argument("Estimator argument '"_s + EstimatorStr + "' is not valid");
         }
-        if(false){
-        }else if( std::regex_match(MethodStr, regex_row) ){
+        if( std::regex_match(MethodStr, regex_row) ){
             ud.method = PartialDerivativeMethod::row_aligned;
         }else if( std::regex_match(MethodStr, regex_col) ){
             ud.method = PartialDerivativeMethod::column_aligned;

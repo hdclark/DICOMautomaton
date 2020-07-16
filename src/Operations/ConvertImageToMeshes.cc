@@ -215,8 +215,7 @@ Drover ConvertImageToMeshes(Drover DICOM_data, const OperationArgPkg& OptArgs, c
             //Prepare a mask image for contouring.
             masks.push_back(animg);
             
-            if(false){
-            }else if(std::regex_match(MethodStr, binary_regex)){
+            if(std::regex_match(MethodStr, binary_regex)){
                 inclusion_threshold = 0.0;
                 below_is_interior = true;
                 exterior_value = 1.0;
@@ -235,8 +234,7 @@ Drover ConvertImageToMeshes(Drover DICOM_data, const OperationArgPkg& OptArgs, c
                     });
 
             }else if(std::regex_match(MethodStr, marching_regex)){
-                if(false){
-                }else if(std::isfinite(cl) && std::isfinite(cu)){
+                if(std::isfinite(cl) && std::isfinite(cu)){
                     // Transform voxels by their |distance| from the midpoint. Only interior voxels will be within
                     // [0,width*0.5], and all others will be (width*0.5,inf).
                     const double midpoint = (cl + cu) * 0.5;

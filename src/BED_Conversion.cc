@@ -18,8 +18,7 @@ operator-(BEDabr A){
 
 BEDabr
 operator+(BEDabr A, BEDabr B){
-    if(false){
-    }else if( !std::isfinite(A.abr) ){ //|| (A.abr < 0) ){
+    if( !std::isfinite(A.abr) ){ //|| (A.abr < 0) ){
         throw std::runtime_error("Cannot sum BED's -- LHS has invalid alpha/beta.");
     }else if( !std::isfinite(B.abr) ){ //|| (B.abr < 0) ){
         throw std::runtime_error("Cannot sum BED's -- LHS has invalid alpha/beta.");
@@ -49,8 +48,7 @@ operator/(BEDabr A, double B){
 
 double
 operator/(BEDabr A, BEDabr B){
-    if(false){
-    }else if( !std::isfinite(A.abr) ){ //|| (A.abr < 0) ){
+    if( !std::isfinite(A.abr) ){ //|| (A.abr < 0) ){
         throw std::runtime_error("Cannot divide BED's -- LHS has invalid alpha/beta.");
     }else if( !std::isfinite(B.abr) ){ //|| (B.abr < 0) ){
         throw std::runtime_error("Cannot divide BED's -- LHS has invalid alpha/beta.");

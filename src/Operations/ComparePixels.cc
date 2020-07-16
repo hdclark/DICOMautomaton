@@ -384,8 +384,7 @@ Drover ComparePixels(Drover DICOM_data,
 
         ComputeCompareImagesUserData ud;
 
-        if(false){
-        }else if(std::regex_match(MethodStr, method_gam)){
+        if(std::regex_match(MethodStr, method_gam)){
             ud.comparison_method = ComputeCompareImagesUserData::ComparisonMethod::GammaIndex;
         }else if(std::regex_match(MethodStr, method_dta)){
             ud.comparison_method = ComputeCompareImagesUserData::ComparisonMethod::DTA;
@@ -395,8 +394,7 @@ Drover ComparePixels(Drover DICOM_data,
             throw std::invalid_argument("Method not understood. Cannot continue.");
         }
 
-        if(false){
-        }else if(std::regex_match(DiscTypeStr, disctype_rel)){
+        if(std::regex_match(DiscTypeStr, disctype_rel)){
             ud.discrepancy_type = ComputeCompareImagesUserData::DiscrepancyType::Relative;
             ud.gamma_Dis_threshold = GammaDiscThreshold / 100.0;
 
@@ -412,8 +410,7 @@ Drover ComparePixels(Drover DICOM_data,
             throw std::invalid_argument("Discrepancy type not understood. Cannot continue.");
         }
 
-        if(false){
-        }else if(std::regex_match(DTAInterpolationMethodStr, interp_none)){
+        if(std::regex_match(DTAInterpolationMethodStr, interp_none)){
             ud.interpolation_method = ComputeCompareImagesUserData::InterpolationMethod::None;
 
         }else if(std::regex_match(DTAInterpolationMethodStr, interp_nnn)){

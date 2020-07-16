@@ -60,10 +60,8 @@ bool ImagePartialDerivative(
                 auto newval = std::numeric_limits<float>::quiet_NaN();
                 auto nms_newval = std::numeric_limits<float>::quiet_NaN();
 
-                if(false){
-                }else if(user_data_s->order == PartialDerivativeEstimator::first){
-                    if(false){
-                    }else if(user_data_s->method == PartialDerivativeMethod::row_aligned){
+                if(user_data_s->order == PartialDerivativeEstimator::first){
+                    if(user_data_s->method == PartialDerivativeMethod::row_aligned){
                         newval = first_img_it->row_aligned_derivative_centered_finite_difference(row, col, chan);
 
                     }else if(user_data_s->method == PartialDerivativeMethod::column_aligned){
@@ -90,8 +88,7 @@ bool ImagePartialDerivative(
                     }
 
                 }else if(user_data_s->order == PartialDerivativeEstimator::Roberts_cross_3x3){
-                    if(false){
-                    }else if(user_data_s->method == PartialDerivativeMethod::prow_pcol_aligned){
+                    if(user_data_s->method == PartialDerivativeMethod::prow_pcol_aligned){
                         newval = first_img_it->prow_pcol_aligned_Roberts_cross_3x3(row, col, chan);
 
                     }else if(user_data_s->method == PartialDerivativeMethod::nrow_pcol_aligned){
@@ -120,8 +117,7 @@ bool ImagePartialDerivative(
                     }
 
                 }else if(user_data_s->order == PartialDerivativeEstimator::Prewitt_3x3){
-                    if(false){
-                    }else if(user_data_s->method == PartialDerivativeMethod::row_aligned){
+                    if(user_data_s->method == PartialDerivativeMethod::row_aligned){
                         newval = first_img_it->row_aligned_Prewitt_derivative_3x3(row, col, chan);
 
                     }else if(user_data_s->method == PartialDerivativeMethod::column_aligned){
@@ -148,8 +144,7 @@ bool ImagePartialDerivative(
                     }
 
                 }else if(user_data_s->order == PartialDerivativeEstimator::Sobel_3x3){
-                    if(false){
-                    }else if(user_data_s->method == PartialDerivativeMethod::row_aligned){
+                    if(user_data_s->method == PartialDerivativeMethod::row_aligned){
                         newval = first_img_it->row_aligned_Sobel_derivative_3x3(row, col, chan);
 
                     }else if(user_data_s->method == PartialDerivativeMethod::column_aligned){
@@ -176,8 +171,7 @@ bool ImagePartialDerivative(
                     }
 
                 }else if(user_data_s->order == PartialDerivativeEstimator::Sobel_5x5){
-                    if(false){
-                    }else if(user_data_s->method == PartialDerivativeMethod::row_aligned){
+                    if(user_data_s->method == PartialDerivativeMethod::row_aligned){
                         newval = first_img_it->row_aligned_Sobel_derivative_5x5(row, col, chan);
 
                     }else if(user_data_s->method == PartialDerivativeMethod::column_aligned){
@@ -204,8 +198,7 @@ bool ImagePartialDerivative(
                     }
 
                 }else if(user_data_s->order == PartialDerivativeEstimator::Scharr_3x3){
-                    if(false){
-                    }else if(user_data_s->method == PartialDerivativeMethod::row_aligned){
+                    if(user_data_s->method == PartialDerivativeMethod::row_aligned){
                         newval = first_img_it->row_aligned_Scharr_derivative_3x3(row, col, chan);
 
                     }else if(user_data_s->method == PartialDerivativeMethod::column_aligned){
@@ -232,8 +225,7 @@ bool ImagePartialDerivative(
                     }
 
                 }else if(user_data_s->order == PartialDerivativeEstimator::Scharr_5x5){
-                    if(false){
-                    }else if(user_data_s->method == PartialDerivativeMethod::row_aligned){
+                    if(user_data_s->method == PartialDerivativeMethod::row_aligned){
                         newval = first_img_it->row_aligned_Scharr_derivative_5x5(row, col, chan);
 
                     }else if(user_data_s->method == PartialDerivativeMethod::column_aligned){
@@ -260,8 +252,7 @@ bool ImagePartialDerivative(
                     }
 
                 }else if(user_data_s->order == PartialDerivativeEstimator::second){
-                    if(false){
-                    }else if(user_data_s->method == PartialDerivativeMethod::row_aligned){
+                    if(user_data_s->method == PartialDerivativeMethod::row_aligned){
                         newval = first_img_it->row_aligned_second_derivative_centered_finite_difference(row, col, chan);
 
                     }else if(user_data_s->method == PartialDerivativeMethod::column_aligned){
@@ -365,8 +356,7 @@ bool ImagePartialDerivative(
 
     //Update the image metadata. 
     std::string img_desc;
-    if(false){
-    }else if(user_data_s->order == PartialDerivativeEstimator::first){
+    if(user_data_s->order == PartialDerivativeEstimator::first){
         img_desc += "First-order partial deriv.,";
 
     }else if(user_data_s->order == PartialDerivativeEstimator::Roberts_cross_3x3){
@@ -394,8 +384,7 @@ bool ImagePartialDerivative(
         throw std::invalid_argument("Unrecognized user-provided derivative order.");
     }
 
-    if(false){
-    }else if(user_data_s->method == PartialDerivativeMethod::row_aligned){
+    if(user_data_s->method == PartialDerivativeMethod::row_aligned){
         img_desc += " row-aligned";
 
     }else if(user_data_s->method == PartialDerivativeMethod::column_aligned){

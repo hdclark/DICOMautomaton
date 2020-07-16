@@ -110,8 +110,7 @@ std::map<std::string, std::string> Read_Header_Block(std::istream &is,
         // If the first character is whitespace, it is a continuation.
         const auto first_not_whitespace = l.find_first_not_of(' ');
         const auto first_semicolon = l.find_first_of(':');
-        if(false){
-        }else if( (first_not_whitespace == 0 ) 
+        if( (first_not_whitespace == 0 ) 
               &&  (first_semicolon != std::string::npos) ){
             // Not a continuation.
             const auto key = Canonicalize_String2( l.substr(0, first_semicolon), CANONICALIZE::TRIM_ENDS);
@@ -148,8 +147,7 @@ std::map<std::string, std::string> Read_Header_Block(std::istream &is,
         const auto val = lkv.second;
 
         // Top-level header block (patient-wide).
-        if(false){
-        }else if(key == "Patient Name"){        metadata["PatientsName"] = val;
+        if(key == "Patient Name"){        metadata["PatientsName"] = val;
         }else if(key == "Patient ID"){          metadata["PatientID"] = val;
         }else if(key == "Comment"){             metadata["TabularDVHComment"] = val;
         }else if(key == "Date"){                metadata["InstanceCreationDateTime"] = val;
@@ -157,8 +155,7 @@ std::map<std::string, std::string> Read_Header_Block(std::istream &is,
         }else if(key == "Type"){
             metadata["Modality"] = "Histogram";
 
-            if(false){
-            }else if(val == "Cumulative Dose Volume Histogram"){
+            if(val == "Cumulative Dose Volume Histogram"){
                 metadata["HistogramType"] = "Cumulative";
             }else if(val == "Differential Dose Volume Histogram"){
                 metadata["HistogramType"] = "Differential";
@@ -257,8 +254,7 @@ samples_1D<double> Read_Histogram(std::istream &is,
 
         for(size_t i = 0; i < tokens.size(); ++i){
             tokens[i] = Canonicalize_String2(tokens[i], CANONICALIZE::TRIM);
-            if(false){
-            }else if(tokens[i] == "Dose [cGy]"){
+            if(tokens[i] == "Dose [cGy]"){
                 i_D_abs = i;
             }else if(tokens[i] == "Ratio of Total Structure Volume [%]"){
                 i_V = i;

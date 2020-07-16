@@ -290,8 +290,7 @@ Drover AnalyzePicketFence(Drover DICOM_data, const OperationArgPkg& OptArgs, con
             const auto regex_FVAREA5TB = Compile_Regex(".*FVAREA5TB.*");
             const auto regex_FVAREA6TB = Compile_Regex(".*FVAREA6TB.*");
 
-            if(false){
-            }else if( std::regex_match(StationName, regex_FVAREA2TB)
+            if( std::regex_match(StationName, regex_FVAREA2TB)
                   ||  std::regex_match(StationName, regex_FVAREA4TB)
                   ||  std::regex_match(StationName, regex_FVAREA6TB) ){
                 MLCModel = "VarianMillenniumMLC120";
@@ -389,8 +388,7 @@ Drover AnalyzePicketFence(Drover DICOM_data, const OperationArgPkg& OptArgs, con
                     return CAX_offset * (RTImageSID / SAD);
                 };
 
-                if(false){
-                }else if( std::regex_match(MLCModel, regex_VHD120) ){
+                if( std::regex_match(MLCModel, regex_VHD120) ){
                     for(long int i = 0; i < 16; ++i){ // The middle 32 leaves.
                         const double x = (2.5 * i + 1.25);
                         const double X = magnify(x);

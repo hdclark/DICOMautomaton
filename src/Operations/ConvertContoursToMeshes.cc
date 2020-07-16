@@ -439,8 +439,7 @@ Drover ConvertContoursToMeshes(Drover DICOM_data, const OperationArgPkg& OptArgs
             const auto N_lower = pcs.lower.size();
             //FUNCINFO("Processing contour map from " << N_upper << " to " << N_lower);
 
-            if(false){
-            }else if( (N_upper != 0) && (N_lower == 0) ){
+            if( (N_upper != 0) && (N_lower == 0) ){
                 for(const auto &cop_refw : pcs.upper) close_hole_in_floor(cop_refw);
 
             }else if( (N_upper == 0) && (N_lower == 1) ){

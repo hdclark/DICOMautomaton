@@ -148,8 +148,7 @@ Drover ContourBooleanOperations(Drover DICOM_data, const OperationArgPkg& OptArg
 
     //Figure out which operation is desired.
     ContourBooleanMethod op = ContourBooleanMethod::join;
-    if(false){
-    }else if(std::regex_match(Operation_str,regex_join)){
+    if(std::regex_match(Operation_str,regex_join)){
         op = ContourBooleanMethod::join;
     }else if(std::regex_match(Operation_str,regex_intersection)){
         op = ContourBooleanMethod::intersection;

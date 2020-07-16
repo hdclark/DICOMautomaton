@@ -108,8 +108,7 @@ Drover SupersampleImageGrid(Drover DICOM_data, const OperationArgPkg& OptArgs, c
     auto IAs_all = All_IAs( DICOM_data );
     auto IAs = Whitelist( IAs_all, ImageSelectionStr );
     
-    if(false){
-    }else if( std::regex_match(SamplingMethodStr, inplane_bilin)
+    if( std::regex_match(SamplingMethodStr, inplane_bilin)
           ||  std::regex_match(SamplingMethodStr, trilin) ){
         for(auto & iap_it : IAs){
             InImagePlaneBilinearSupersampleUserData bilin_ud;
@@ -138,8 +137,7 @@ Drover SupersampleImageGrid(Drover DICOM_data, const OperationArgPkg& OptArgs, c
         throw std::invalid_argument("Invalid sampling method specified. Cannot continue");
     }
 
-    if(false){
-    }else if( std::regex_match(SamplingMethodStr, trilin) ){
+    if( std::regex_match(SamplingMethodStr, trilin) ){
 
         for(auto & iap_it : IAs){
             if((*iap_it)->imagecoll.images.empty()){

@@ -67,8 +67,7 @@ Estimate_Contour_Correspondence(
     // Ensure the contours have the same orientation.
     if(ortho_unit_A.Dot(ortho_unit_B) <= 0.0){
         // Handle special cases
-        if(false){
-        }else if( (N_A == 1) && (N_B != 1) ){
+        if( (N_A == 1) && (N_B != 1) ){
             ortho_unit_A = ortho_unit_B;
         }else if( (N_A != 1) && (N_B == 1) ){
             ortho_unit_B = ortho_unit_A;

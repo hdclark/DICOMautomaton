@@ -97,8 +97,7 @@ bool ComputeRankPixels(planar_image_collection<float,double> &imagecoll,
                                 double newval = std::numeric_limits<double>::quiet_NaN();
                                 const auto l_rank = std::distance(std::begin(samples), l_it);
 
-                                if(false){
-                                }else if(user_data_s->replacement_method == RankPixelsUserData::ReplacementMethod::Rank){
+                                if(user_data_s->replacement_method == RankPixelsUserData::ReplacementMethod::Rank){
                                     newval = l_rank;
                                 }else if(user_data_s->replacement_method == RankPixelsUserData::ReplacementMethod::Percentile){
                                     const auto u_rank = std::distance(std::begin(samples), u_it) - 1;

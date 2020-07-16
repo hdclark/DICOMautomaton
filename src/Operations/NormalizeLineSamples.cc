@@ -89,8 +89,7 @@ Drover NormalizeLineSamples(Drover DICOM_data, const OperationArgPkg& OptArgs, c
     for(auto & lsp_it : LSs){
         auto &ls = (*lsp_it)->line;
 
-        if(false){
-        }else if( std::regex_match(MethodStr, regex_area)){
+        if( std::regex_match(MethodStr, regex_area)){
             const auto I_max = ls.Integrate_Over_Kernel_unit()[0];
             const auto s = 1.0 / I_max;
             if(!std::isfinite(s)){

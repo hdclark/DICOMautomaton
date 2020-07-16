@@ -246,8 +246,7 @@ Polyhedron Estimate_Surface_Mesh(
         ud.description = "ROI Inclusivity";
 
         /*
-        if(false){
-        }else if( std::regex_match(ContourOverlapStr, regex_ignore) ){
+        if( std::regex_match(ContourOverlapStr, regex_ignore) ){
             ud.mutation_opts.contouroverlap = Mutate_Voxels_Opts::ContourOverlap::Ignore;
         }else if( std::regex_match(ContourOverlapStr, regex_honopps) ){
             ud.mutation_opts.contouroverlap = Mutate_Voxels_Opts::ContourOverlap::HonourOppositeOrientations;
@@ -362,8 +361,7 @@ Polyhedron Estimate_Surface_Mesh(
     // For high-quality meshing, all contours are protected and smoothing is protected against by extruding the contours.
   
     std::vector<double> dUs; // Extrusion distances along the contour normal.
-    if(false){
-    }else if(params.RQ == ReproductionQuality::Fast){
+    if(params.RQ == ReproductionQuality::Fast){
         dUs.push_back(0.0);
     }else if(params.RQ == ReproductionQuality::Medium){
         dUs.push_back(0.0);
@@ -406,8 +404,7 @@ Polyhedron Estimate_Surface_Mesh(
     //
     // NOTE: Should rather purge unique contour planes, because this approach can lead to pathologically missing whole
     //       subvolumes when there are %2=0 contours on each plane.
-    if(false){
-    }else if(params.RQ == ReproductionQuality::Fast){
+    if(params.RQ == ReproductionQuality::Fast){
         size_t count = 0;
         polylines.remove_if( [&](const Polyline_3 &) -> bool {
             return ( (++count % 2) == 0 );
@@ -417,8 +414,7 @@ Polyhedron Estimate_Surface_Mesh(
   
     // Create the meshing domain using a bounding sphere.
     double err_bound;
-    if(false){
-    }else if(params.RQ == ReproductionQuality::Fast){
+    if(params.RQ == ReproductionQuality::Fast){
         err_bound = 0.50 / bounding_sphere_radius;
     }else if(params.RQ == ReproductionQuality::Medium){
         err_bound = 0.15 / bounding_sphere_radius;
@@ -478,8 +474,7 @@ Polyhedron Estimate_Surface_Mesh(
     //
     // NOTE: This optimization might not be appropriate for our use-cases. In particular the refine may invalidate
     //       meshing criteria by optimizing connectivity.
-    if(false){
-    }else if(params.RQ == ReproductionQuality::High){
+    if(params.RQ == ReproductionQuality::High){
         FUNCINFO("Refining mesh. This may take a while");
         CGAL::refine_mesh_3(c3t3, 
                             domain, 
@@ -1976,8 +1971,7 @@ Transform( Polyhedron &output_mesh,
         shifted.transform(trans);
         
         FUNCINFO("Performing Boolean operation round now");
-        if(false){
-        }else if(op == TransformOp::Dilate){
+        if(op == TransformOp::Dilate){
             amal += shifted;
         }else if(op == TransformOp::Erode){
             amal ^= shifted;  // Symmetric difference.

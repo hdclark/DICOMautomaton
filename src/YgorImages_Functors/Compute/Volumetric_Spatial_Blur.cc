@@ -55,8 +55,7 @@ bool ComputeVolumetricSpatialBlur(planar_image_collection<float,double> &imageco
         return false;
     }
 
-    if(false){
-    }else if(user_data_s->estimator == VolumetricSpatialBlurEstimator::Gaussian){
+    if(user_data_s->estimator == VolumetricSpatialBlurEstimator::Gaussian){
         auto f_reduce = [](float, std::vector<float> &shtl, vec3<double>) -> float {
                           double f = 0.0;
                           double w = 0.0;
@@ -176,8 +175,7 @@ bool ComputeVolumetricSpatialBlur(planar_image_collection<float,double> &imageco
 
     //Update the image metadata. 
     std::string img_desc;
-    if(false){
-    }else if(user_data_s->estimator == VolumetricSpatialBlurEstimator::Gaussian){
+    if(user_data_s->estimator == VolumetricSpatialBlurEstimator::Gaussian){
         img_desc += "volumetric Gaussian blurred";
 
     }else{

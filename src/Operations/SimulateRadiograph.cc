@@ -522,8 +522,7 @@ Drover SimulateRadiograph(Drover DICOM_data,
                         const auto cand_sq_dist_j = ray_line.Sq_Distance_To_Point( cand_pos_j );
                         const auto cand_sq_dist_k = ray_line.Sq_Distance_To_Point( cand_pos_k );
 
-                        if(false){
-                        }else if( (cand_sq_dist_i <= cand_sq_dist_j) && (cand_sq_dist_i <= cand_sq_dist_k) ){
+                        if( (cand_sq_dist_i <= cand_sq_dist_j) && (cand_sq_dist_i <= cand_sq_dist_k) ){
                             blocky_ray_pos = cand_pos_i;
                             true_ray_pos += true_ray_pos_dR_incr_row;
                             last_move_dist = true_ray_pos_dR_incr_row_length;
@@ -591,8 +590,7 @@ Drover SimulateRadiograph(Drover DICOM_data,
     //------------------------
 
     // Post-process the image according to user criteria.
-    if(false){
-    }else if(imgmodel_is_mudl){
+    if(imgmodel_is_mudl){
         // Do nothing -- no need to transform.
 
     }else if(imgmodel_is_exp){

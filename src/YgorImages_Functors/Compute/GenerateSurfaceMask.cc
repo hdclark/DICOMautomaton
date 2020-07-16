@@ -197,8 +197,7 @@ bool ComputeGenerateSurfaceMask(planar_image_collection<float,double> &imagecoll
                         };
 
 
-                        if(false){
-                        }else if(check_inclusion(img, 1)){
+                        if(check_inclusion(img, 1)){
                             img.reference(row, col, 0) = user_data_s->surface_val;
 
                         //Apply the check to the nearest neighbouring image slices.

@@ -123,8 +123,7 @@ Drover TransformMeshes(Drover DICOM_data, const OperationArgPkg& OptArgs, const 
     for(auto & smp_it : SMs){
 
         // Translations.
-        if(false){
-        }else if(std::regex_match(TransformStr, regex_trn)){
+        if(std::regex_match(TransformStr, regex_trn)){
             auto numbers = extract_function_parameters(TransformStr);
             if(numbers.size() != 3){
                 throw std::invalid_argument("Unable to parse translation parameters. Cannot continue.");

@@ -175,11 +175,9 @@ emit_DICOM_tag(std::ostream &os,
     written_length += write_to_stream(os, node.key.tag, 2, enc);
 
     // With implicit encoding all tags are written in the same way.
-    if(false){
-    }else if(enc == Encoding::ILE){
+    if(enc == Encoding::ILE){
         // Deal with sequences separately.
-        if(false){
-        }else if( node.VR == "SQ" ){
+        if( node.VR == "SQ" ){
             if(!val.empty()){
                 throw std::logic_error("'SQ' VR node passed data, but they can not have any data associated with them. (Is it intentional?)");
             }
@@ -221,8 +219,7 @@ emit_DICOM_tag(std::ostream &os,
     }else if(enc == Encoding::ELE){
 
         // Deal with sequences separately.
-        if(false){
-        }else if( node.VR == "SQ" ){
+        if( node.VR == "SQ" ){
             if(!val.empty()){
                 throw std::logic_error("'SQ' VR node passed data, but they can not have any data associated with them. (Is it intentional?)");
             }
@@ -307,8 +304,7 @@ uint64_t Node::emit_DICOM(std::ostream &os,
     uint64_t cumulative_length = 0;
 
     // If this is the root node, ignore the VR and treat it as a simple container of children.
-    if(false){
-    }else if(is_root_node){
+    if(is_root_node){
         // Verify the node does not have any data associated with it. If it does, it probably indicates a logic
         // error since only children nodes should contain data.
         if(!this->val.empty()){

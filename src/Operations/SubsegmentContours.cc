@@ -417,8 +417,7 @@ Drover SubsegmentContours(Drover DICOM_data, const OperationArgPkg& OptArgs, con
             contour_collection<double> running(cc_ref.get());
 
             for(const auto &cleave : NestedCleaveOrder){
-                if(false){
-                }else if( (cleave == static_cast<unsigned char>('X'))
+                if( (cleave == static_cast<unsigned char>('X'))
                       ||  (cleave == static_cast<unsigned char>('x')) ){
                     const auto x_planes_pair = bisect_ROIs(running, x_normal, XSelectionLower, XSelectionUpper);
                     running = subsegment_interior(running, x_planes_pair);

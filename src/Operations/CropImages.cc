@@ -139,26 +139,22 @@ Drover CropImages(Drover DICOM_data, const OperationArgPkg& OptArgs, const std::
                 vec3<double> dColL;
                 vec3<double> dColH;
 
-                if(false){
-                }else if(RowsL_is_pixel  ){  dRowL = Urow * Drow * RowsL;
+                if(RowsL_is_pixel  ){  dRowL = Urow * Drow * RowsL;
                 }else if(RowsL_is_percent){  dRowL = Urow * Drow * (rows-1) * RowsL / 100.0;
                 }else{                       dRowL = Urow * RowsL;
                 }
 
-                if(false){
-                }else if(ColsL_is_pixel  ){  dColL = Ucol * Dcol * ColsL; 
+                if(ColsL_is_pixel  ){  dColL = Ucol * Dcol * ColsL; 
                 }else if(ColsL_is_percent){  dColL = Ucol * Dcol * (cols-1) * ColsL / 100.0;
                 }else{                       dColL = Ucol * ColsL; 
                 }
 
-                if(false){
-                }else if(RowsH_is_pixel  ){  dRowH = Urow * -Drow * RowsH;
+                if(RowsH_is_pixel  ){  dRowH = Urow * -Drow * RowsH;
                 }else if(RowsH_is_percent){  dRowH = Urow * -Drow * (rows-1) * RowsH / 100.0;
                 }else{                       dRowH = Urow * -RowsH;
                 }
 
-                if(false){
-                }else if(ColsH_is_pixel  ){  dColH = Ucol * -Dcol * ColsH;
+                if(ColsH_is_pixel  ){  dColH = Ucol * -Dcol * ColsH;
                 }else if(ColsH_is_percent){  dColH = Ucol * -Dcol * (cols-1) * ColsH / 100.0;
                 }else{                       dColH = Ucol * -ColsH;
                 }

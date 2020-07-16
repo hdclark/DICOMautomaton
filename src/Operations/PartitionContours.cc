@@ -250,8 +250,7 @@ Drover PartitionContours(Drover DICOM_data, const OperationArgPkg& OptArgs, cons
     const auto ReverseYTraversalOrder = std::regex_match(ReverseYTraversalOrderStr, TrueRegex);
     const auto ReverseZTraversalOrder = std::regex_match(ReverseZTraversalOrderStr, TrueRegex);
 
-    if(false){
-    }else if(!isininc(0, XPartitions, 5000)){
+    if(!isininc(0, XPartitions, 5000)){
         throw std::invalid_argument("Requested number of partitions along 'X' axis is not valid. Refusing to continue.");
     }else if(!isininc(0, YPartitions, 5000)){
         throw std::invalid_argument("Requested number of partitions along 'Y' axis is not valid. Refusing to continue.");
@@ -451,8 +450,7 @@ Drover PartitionContours(Drover DICOM_data, const OperationArgPkg& OptArgs, cons
                         contour_collection<double> running(cc_ref.get());
 
                         for(const auto &cleave : NestedCleaveOrder){
-                            if(false){
-                            }else if( (cleave == static_cast<unsigned char>('X'))
+                            if( (cleave == static_cast<unsigned char>('X'))
                                   ||  (cleave == static_cast<unsigned char>('x')) ){
                                 const auto x_planes_pair = bisect_ROIs(running, x_normal, XSelectionLower, XSelectionUpper);
                                 running = subsegment_interior(running, x_planes_pair);

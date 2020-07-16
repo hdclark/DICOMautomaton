@@ -130,8 +130,7 @@ Drover ConvertContoursToPoints(Drover DICOM_data, const OperationArgPkg& OptArgs
     //Construct a destination for the point clouds.
     DICOM_data.point_data.emplace_back( std::make_unique<Point_Cloud>() );
 
-    if(false){
-    }else if( std::regex_match(MethodStr, regex_vertices) ){
+    if( std::regex_match(MethodStr, regex_vertices) ){
         // Insert all vertices into the point cloud.
         for(auto & cc_refw : cc_ROIs){
             for(const auto & c : cc_refw.get().contours){

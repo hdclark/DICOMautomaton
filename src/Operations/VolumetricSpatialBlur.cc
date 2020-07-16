@@ -122,8 +122,7 @@ Drover VolumetricSpatialBlur(Drover DICOM_data, const OperationArgPkg& OptArgs, 
         // Planar derivatives.
         ComputeVolumetricSpatialBlurUserData ud;
         ud.channel = Channel;
-        if(false){
-        }else if(std::regex_match(EstimatorStr, regex_gauss)){
+        if(std::regex_match(EstimatorStr, regex_gauss)){
             ud.estimator = VolumetricSpatialBlurEstimator::Gaussian;
         }else{
             throw std::invalid_argument("Estimator not understood. Refusing to continue.");

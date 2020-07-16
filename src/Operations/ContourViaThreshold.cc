@@ -253,8 +253,7 @@ Drover ContourViaThreshold(Drover DICOM_data, const OperationArgPkg& OptArgs, co
 
                 // ---------------------------------------------------
                 // The binary inclusivity method.
-                if(false){
-                }else if(std::regex_match(MethodStr, binary_regex)){
+                if(std::regex_match(MethodStr, binary_regex)){
 
                     const auto R = animg.rows;
                     const auto C = animg.columns;
@@ -409,8 +408,7 @@ Drover ContourViaThreshold(Drover DICOM_data, const OperationArgPkg& OptArgs, co
                     double exterior_value = std::numeric_limits<double>::quiet_NaN();
                     bool below_is_interior = false;
 
-                    if(false){
-                    }else if(std::isfinite(cl) && std::isfinite(cu)){
+                    if(std::isfinite(cl) && std::isfinite(cu)){
                         // Transform voxels by their |distance| from the midpoint. Only interior voxels will be within
                         // [0,width*0.5], and all others will be (width*0.5,inf).
                         const double midpoint = (cl + cu) * 0.5;

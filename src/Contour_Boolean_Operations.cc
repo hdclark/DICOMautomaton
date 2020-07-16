@@ -128,8 +128,7 @@ ContourBoolean(plane<double> p,
         for(auto &v : projected.points){
             A_cgal.push_back(Point_2(v.x,v.y));
         }
-        if(false){
-        }else if(first_contour){
+        if(first_contour){
             first_contour = false;
             A_set.join(A_cgal);
         }else if(construction_op == ContourBooleanMethod::join){
@@ -164,8 +163,7 @@ ContourBoolean(plane<double> p,
         for(auto &v : projected.points){
             B_cgal.push_back(Point_2(v.x,v.y));
         }
-        if(false){
-        }else if(first_contour){
+        if(first_contour){
             first_contour = false;
             B_set.join(B_cgal);
         }else if(construction_op == ContourBooleanMethod::join){
@@ -185,8 +183,7 @@ ContourBoolean(plane<double> p,
     // Perform the selected Boolean operation.
     Polygon_set_2 C_set;
     C_set.join(A_set);
-    if(false){
-    }else if(op == ContourBooleanMethod::noop){
+    if(op == ContourBooleanMethod::noop){
         //Intentionally do nothing here.
     }else if(op == ContourBooleanMethod::join){
         C_set.join(B_set);

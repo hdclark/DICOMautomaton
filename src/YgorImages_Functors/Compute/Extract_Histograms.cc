@@ -77,8 +77,7 @@ bool ComputeExtractHistograms(planar_image_collection<float,double> &imagecoll,
             if(contour.points.empty()) continue;
 
             std::string key;
-            if(false){
-            }else if(user_data_s->grouping == ComputeExtractHistogramsUserData::GroupingMethod::Separate){
+            if(user_data_s->grouping == ComputeExtractHistogramsUserData::GroupingMethod::Separate){
                 const auto ROIName = contour.GetMetadataValueAs<std::string>("ROIName");
                 if(!ROIName){
                     FUNCWARN("Found contour missing ROIName metadata element. Using placeholder name");

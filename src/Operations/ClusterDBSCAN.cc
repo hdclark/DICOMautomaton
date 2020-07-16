@@ -275,8 +275,7 @@ Drover ClusterDBSCAN(Drover DICOM_data, const OperationArgPkg& OptArgs, const st
         ud.mutation_opts.maskmod   = Mutate_Voxels_Opts::MaskMod::Noop;
         ud.description = "Clustered (DBSCAN)";
 
-        if(false){
-        }else if( std::regex_match(ContourOverlapStr, regex_ignore) ){
+        if( std::regex_match(ContourOverlapStr, regex_ignore) ){
             ud.mutation_opts.contouroverlap = Mutate_Voxels_Opts::ContourOverlap::Ignore;
         }else if( std::regex_match(ContourOverlapStr, regex_honopps) ){
             ud.mutation_opts.contouroverlap = Mutate_Voxels_Opts::ContourOverlap::HonourOppositeOrientations;
@@ -285,8 +284,7 @@ Drover ClusterDBSCAN(Drover DICOM_data, const OperationArgPkg& OptArgs, const st
         }else{
             throw std::invalid_argument("ContourOverlap argument '"_s + ContourOverlapStr + "' is not valid");
         }
-        if(false){
-        }else if( std::regex_match(InclusivityStr, regex_centre) ){
+        if( std::regex_match(InclusivityStr, regex_centre) ){
             ud.mutation_opts.inclusivity = Mutate_Voxels_Opts::Inclusivity::Centre;
         }else if( std::regex_match(InclusivityStr, regex_pci) ){
             ud.mutation_opts.inclusivity = Mutate_Voxels_Opts::Inclusivity::Inclusive;
@@ -347,8 +345,7 @@ Drover ClusterDBSCAN(Drover DICOM_data, const OperationArgPkg& OptArgs, const st
 
         // --------------------------------
         // Overwrite voxel values for clustered voxels.
-        if(false){
-        }else if( std::regex_match(ReductionStr, regex_none) ){
+        if( std::regex_match(ReductionStr, regex_none) ){
             long int AfterCount = 0;
             {
                 constexpr auto RTreeSpatialQueryGetAll = [](const CDat_t &) -> bool { return true; };

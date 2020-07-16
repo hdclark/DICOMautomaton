@@ -298,8 +298,7 @@ Drover AnalyzeHistograms(Drover DICOM_data, const OperationArgPkg& OptArgs, cons
             enum class equality_t   { na, lt, lte, gt, gte };   // inequality type.
             equality_t eq = equality_t::na;
 
-            if(false){
-            }else if( std::regex_match(ac, r_lt ) ){    eq = equality_t::lt;
+            if( std::regex_match(ac, r_lt ) ){    eq = equality_t::lt;
             }else if( std::regex_match(ac, r_gt ) ){    eq = equality_t::gt;
             }else if( std::regex_match(ac, r_lte) ){    eq = equality_t::lte;
             }else if( std::regex_match(ac, r_gte) ){    eq = equality_t::gte;
@@ -307,8 +306,7 @@ Drover AnalyzeHistograms(Drover DICOM_data, const OperationArgPkg& OptArgs, cons
             }
 
             const auto compare_inequality = [&](double L, double R) -> bool {
-                if(false){
-                }else if(eq == equality_t::lt ){   return (L < R);
+                if(eq == equality_t::lt ){   return (L < R);
                 }else if(eq == equality_t::gt ){   return (L > R);
                 }else if(eq == equality_t::lte){   return (L <= R);
                 }else if(eq == equality_t::gte){   return (L >= R);
@@ -321,8 +319,7 @@ Drover AnalyzeHistograms(Drover DICOM_data, const OperationArgPkg& OptArgs, cons
             // D{min,mean,max} {<,<=,>=,>,lt,lte,gt,gte} 123.123 {%,Gy}.
             // For example, 'Dmin < 70 Gy' or 'Dmean <= 105%' or 'Dmax lte 23.2Gy'.
             // Note that a '%' on the RHS is relative to the ReferenceDose.
-            if(false){
-            }else if(auto q = lCompile_Regex(R"***([ ]*D(min|max|mean).*(<|<=|>=|>|lte|lt|gte|gt)[^0-9.]*([0-9.]+)[^0-9.]*(Gy|%).*)***");
+            if(auto q = lCompile_Regex(R"***([ ]*D(min|max|mean).*(<|<=|>=|>|lte|lt|gte|gt)[^0-9.]*([0-9.]+)[^0-9.]*(Gy|%).*)***");
                      std::regex_match(ac, q) ){
 
                 const auto p = Get_All_Regex(ac, q);
@@ -342,8 +339,7 @@ Drover AnalyzeHistograms(Drover DICOM_data, const OperationArgPkg& OptArgs, cons
 
                 // Determine which statistic is needed.
                 double D_mmm = nan;
-                if(false){
-                }else if( std::regex_match(mmm, r_min ) ){    D_mmm = MinDose;
+                if( std::regex_match(mmm, r_min ) ){    D_mmm = MinDose;
                 }else if( std::regex_match(mmm, r_mean) ){    D_mmm = MeanDose;
                 }else if( std::regex_match(mmm, r_max ) ){    D_mmm = MaxDose;
                 }else{  throw std::runtime_error("Unable to parse constraint (D).");
@@ -352,8 +348,7 @@ Drover AnalyzeHistograms(Drover DICOM_data, const OperationArgPkg& OptArgs, cons
                 // Scale the LHS statistic to match the units of the RHS so we can compare them and report the actual
                 // LHS value (which makes it easier for the user to compare).
                 std::string out_unit;
-                if(false){
-                }else if( std::regex_match(unit, r_gy ) ){
+                if( std::regex_match(unit, r_gy ) ){
                     D_mmm *= 1.0; // a no-op.
                     out_unit = "Gy";
                 }else if( std::regex_match(unit, r_pcnt ) ){
@@ -402,8 +397,7 @@ Drover AnalyzeHistograms(Drover DICOM_data, const OperationArgPkg& OptArgs, cons
                 
                 // Determine the equivalent absolute volume from the inner LHS.
                 double V_abs = nan; // in mm^3.
-                if(false){
-                }else if( std::regex_match(LHS_unit, r_cc ) ){
+                if( std::regex_match(LHS_unit, r_cc ) ){
                     // Convert cm^3 to mm^3.
                     V_abs = V_lhs * 1000.0;
                 }else if( std::regex_match(LHS_unit, r_pcnt) ){
@@ -416,8 +410,7 @@ Drover AnalyzeHistograms(Drover DICOM_data, const OperationArgPkg& OptArgs, cons
 
                 // Find the corresponding D from the LHS.
                 double D_eval = nan;
-                if(false){
-                }else if( std::regex_match(HC, r_hot ) ){
+                if( std::regex_match(HC, r_hot ) ){
                     // For a cumulative DVH, we merely have to find the right-most crossing point of the volume
                     // threshold and the DVH curve.
                     const auto crossings = DVH_abs_D_abs_V.Crossings(V_abs);
@@ -449,8 +442,7 @@ Drover AnalyzeHistograms(Drover DICOM_data, const OperationArgPkg& OptArgs, cons
 
                 // Express the LHS evaluated dose in the same units that the RHS has been stated.
                 std::string out_unit;
-                if(false){
-                }else if( std::regex_match(RHS_unit, r_gy ) ){
+                if( std::regex_match(RHS_unit, r_gy ) ){
                     D_eval *= 1.0; // A no-op.
                     out_unit = "Gy";
                 }else if( std::regex_match(RHS_unit, r_pcnt ) ){
@@ -498,8 +490,7 @@ Drover AnalyzeHistograms(Drover DICOM_data, const OperationArgPkg& OptArgs, cons
                 
                 // Determine the equivalent absolute dose from the inner LHS.
                 double D_abs = nan; // in Gy.
-                if(false){
-                }else if( std::regex_match(LHS_unit, r_gy ) ){
+                if( std::regex_match(LHS_unit, r_gy ) ){
                     D_abs = D_lhs; // A no-op.
                 }else if( std::regex_match(LHS_unit, r_pcnt) ){
                     D_abs = D_lhs * ReferenceDose / 100.0; // Convert from % to abs.
@@ -512,8 +503,7 @@ Drover AnalyzeHistograms(Drover DICOM_data, const OperationArgPkg& OptArgs, cons
 
                 // Express the LHS evaluated volume in the same units that the RHS has been stated.
                 std::string out_unit;
-                if(false){
-                }else if( std::regex_match(RHS_unit, r_cc ) ){
+                if( std::regex_match(RHS_unit, r_cc ) ){
                     // Convert mm^3 to cm^3.
                     V_eval /= 1000.0;
                     out_unit = "cm^3";

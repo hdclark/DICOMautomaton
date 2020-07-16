@@ -177,9 +177,7 @@ bool ComputeJointPixelSampler(planar_image_collection<float,double> &imagecoll,
                     auto img_adj_it = std::next( std::begin(img_adj_l), i );
 
                     // Sample the image.
-                    if(false){
-
-                    }else if(exact_overlap){
+                    if(exact_overlap){
                         try{
                             vals.emplace_back( (*(int_img_it))->value(E_row, E_col, channel) );
                         }catch(const std::exception &){
