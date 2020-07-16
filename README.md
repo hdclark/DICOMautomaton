@@ -256,7 +256,7 @@ Notably, `DICOMautomaton` depends on the author's `Ygor`, `Explicator`, and
 
 [Download the latest AppImage artifact from the continuous integration server
 here](https://hdclark.github.io/DICOMautomaton-x86_64.AppImage). Installation is
-not necessary, but some functionality may be missing.
+not necessary, but functionality may be missing and optimization may be limited.
 
      $>  curl https://hdclark.github.io/DICOMautomaton-x86_64.AppImage > dicomautomaton_dispatcher
      $>  chmod 777 dicomautomaton_dispatcher

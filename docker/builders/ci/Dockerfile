@@ -1,70 +1,86 @@
 
-FROM archlinux/base
+#FROM debian:testing
+FROM debian:stable
 
 LABEL maintainer="http://www.halclark.ca" \
       description="DICOMautomaton minimal CI build."
-
 
 WORKDIR /scratch
 COPY docker/builders/ci /scratch
 COPY . /dcma
 
-
-# Prepare alternative mirrors.
-RUN curl -o /etc/pacman.d/mirrorlist "https://www.archlinux.org/mirrorlist/?country=all&protocol=http&ip_version=4&use_mirror_status=on" && \
-    sed -i 's/^#Server/Server/' /etc/pacman.d/mirrorlist
-
 # Install build dependencies.
-RUN pacman -Sy --noconfirm archlinux-keyring && \
-    pacman -Syu --noconfirm --needed \
-      base-devel \
+ENV DEBIAN_FRONTEND noninteractive
+
+RUN apt-get update --yes && \
+    apt-get install --yes --no-install-recommends \
       git \
       cmake \
-      gcc \
-    ` # Needed for an AUR helper ` \
-      sudo \
-      pyalpm \
+      make \
+      g++ \
+      vim \
+      ncurses-term \
+      gdb \
+      rsync \
       wget \
-      rsync && \
-    rm -f /var/cache/pacman/pkg/*
+      ca-certificates
+
+RUN apt-get install --yes --no-install-recommends \
+    ` # Ygor dependencies ` \
+        libboost-dev \
+        libgsl-dev \
+        libeigen3-dev \
+    ` # DICOMautomaton dependencies ` \
+        libeigen3-dev \
+        libboost-dev libboost-filesystem-dev libboost-iostreams-dev libboost-program-options-dev libboost-thread-dev \
+        libz-dev libsfml-dev libjansson-dev \
+        libpqxx-dev postgresql-client \
+        libcgal-dev \
+        libnlopt-dev \
+        libnlopt-cxx-dev \
+        libasio-dev \
+        fonts-freefont-ttf fonts-cmu \
+        freeglut3 freeglut3-dev libxi-dev libxmu-dev \
+        gnuplot zenity \
+        patchelf bash-completion \
+    ` # Additional dependencies for headless OpenGL rendering with SFML ` \
+        x-window-system mesa-utils \
+        xserver-xorg-video-dummy x11-apps
+
+RUN cp /scratch/xpra-xorg.conf /etc/X11/xorg.conf
 
 
-# Create a temporary user for building AUR packages.
-RUN useradd -m -r -d /var/empty builduser  && \
-    mkdir -p /var/empty/ && \
-    chown -R builduser:builduser /var/empty/ && \
-    printf '\n''builduser ALL=(ALL) NOPASSWD: ALL''\n' >> /etc/sudoers
+# Install Wt from source to get around outdated and buggy Debian package.
+#
+# Note: Add additional dependencies if functionality is needed -- this is a basic install.
+#
+# Note: Could also install build-deps for the distribution packages, but the dependencies are not
+#       guaranteed to be stable (e.g., major version bumps).
+WORKDIR /wt
+RUN git clone https://github.com/emweb/wt.git . && \
+    mkdir -p build && cd build && \
+    cmake -DCMAKE_INSTALL_PREFIX=/usr ../ && \
+    JOBS=$(nproc) && \
+    JOBS=$(( $JOBS < 8 ? $JOBS : 8 )) && \
+    make -j "$JOBS" VERBOSE=1 && \
+    make install && \
+    make clean
 
-
-# Install hard build dependencies.
-RUN pacman -S --noconfirm --needed  \
-    gcc-libs \
-    gnu-free-fonts \
-    sfml \
-    jansson \
-    libpqxx \
-    postgresql \
-    gsl \
-    boost-libs \
-    zlib \
-    cgal \
-    wt \
-    asio \
-    nlopt && \
-    rm -f /var/cache/pacman/pkg/*
+WORKDIR /scratch
+RUN apt-get install --yes \
+    -f ./libwt-dev_10.0_all.deb ./libwthttp-dev_10.0_all.deb
 
 
 # Install Ygor.
 #
 # Option 1: install a binary package.
 #WORKDIR /scratch
-#RUN pacman -U ./Ygor*deb
+#RUN apt-get install --yes -f ./Ygor*deb
 #
 # Option 2: clone the latest upstream commit.
 WORKDIR /ygor
 RUN git clone https://github.com/hdclark/Ygor . && \
-    chown -R builduser:builduser . && \
-    su - builduser -c "cd /ygor && ./compile_and_install.sh -b build" && \
+    ./compile_and_install.sh -b build && \
     git reset --hard && \
     git clean -fxd :/ 
 
@@ -73,13 +89,12 @@ RUN git clone https://github.com/hdclark/Ygor . && \
 #
 # Option 1: install a binary package.
 #WORKDIR /scratch
-#RUN pacman -U ./Explicator*deb
+#RUN apt-get install --yes -f ./Explicator*deb
 #
 # Option 2: clone the latest upstream commit.
 WORKDIR /explicator
 RUN git clone https://github.com/hdclark/explicator . && \
-    chown -R builduser:builduser . && \
-    su - builduser -c "cd /explicator && ./compile_and_install.sh -b build" && \
+    ./compile_and_install.sh -b build && \
     git reset --hard && \
     git clean -fxd :/ 
 
@@ -87,8 +102,7 @@ RUN git clone https://github.com/hdclark/explicator . && \
 # Install YgorClustering.
 WORKDIR /ygorcluster
 RUN git clone https://github.com/hdclark/YgorClustering . && \
-    chown -R builduser:builduser . && \
-    su - builduser -c "cd /ygorcluster && ./compile_and_install.sh -b build" && \
+    ./compile_and_install.sh -b build && \
     git reset --hard && \
     git clean -fxd :/ 
 
@@ -106,15 +120,12 @@ RUN git clone https://github.com/hdclark/YgorClustering . && \
 #
 # Option 3: use the working directory.
 WORKDIR /dcma
-RUN chown -R builduser:builduser . && \
-    sed -i -e 's@MEMORY_CONSTRAINED_BUILD=OFF@MEMORY_CONSTRAINED_BUILD=ON@' /dcma/PKGBUILD && \
-    su - builduser -c "cd /dcma && makepkg --syncdeps --install --clean --needed --noconfirm" && \
+RUN sed -i -e 's@MEMORY_CONSTRAINED_BUILD=OFF@MEMORY_CONSTRAINED_BUILD=ON@' /dcma/compile_and_install.sh && \
+    ./compile_and_install.sh -b build && \
     git reset --hard && \
     git clean -fxd :/ 
 
-
-# Default to launching the webserver.
+# Default to a no-op.
 WORKDIR /scratch
 CMD ["/bin/false"]
-
 
