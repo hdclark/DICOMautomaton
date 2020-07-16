@@ -16,7 +16,11 @@ script:
   - ./docker/scripts/ci/Run_Container.sh
   # Extract an AppImage from the container.
   - ./docker/scripts/ci/Extract_AppImage.sh
+  # Workaround for CI push action obliterating the entire repository; fill it with the current contents.
+  - rm -rf ci_artifacts
   - mkdir -pv ci_artifacts
+  - git clone 'https://github.com/hdclark/hdclark.github.io.git' ci_artifacts
+  - rm -rf ci_artifacts/.git
   - "mv DICOMautomaton*AppImage ci_artifacts/"
 
 after_failure:
@@ -33,7 +37,7 @@ notifications:
 
 ## Upload the AppImage to GitHub Releases with tag 'continuous'.
 ##
-## NOTE: deletes and re-creates the 'continuous' tag, which wreaks havoc for mirrors. :(
+## Note: deletes and re-creates the 'continuous' tag, which wreaks havoc for mirrors. :(
 #after_success:
 #  - wget -c https://github.com/probonopd/uploadtool/raw/master/upload.sh
 #  - bash upload.sh artifacts/DICOMautomaton*AppImage
@@ -48,6 +52,6 @@ deploy:
     edge: true
     repo: hdclark/hdclark.github.io
     target_branch: master
-    keep_history: true
+    keep_history: false
     local_dir: ci_artifacts
     cleanup: false
