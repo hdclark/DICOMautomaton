@@ -48,6 +48,6 @@ deploy:
     edge: true
     repo: hdclark/hdclark.github.io
     target_branch: master
-    keep_history: false
+    keep_history: true
     local_dir: ci_artifacts
     cleanup: false
