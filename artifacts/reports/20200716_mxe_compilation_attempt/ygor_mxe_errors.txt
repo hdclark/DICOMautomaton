@@ -1,0 +1,134 @@
+[01m[K/ygor/src/YgorFilesDirs.cc:[m[K In function '[01m[Kstd::string Fully_Expand_Filename(const string&)[m[K':
+[01m[K/ygor/src/YgorFilesDirs.cc:225:47:[m[K [01;31m[Kerror: [m[K'[01m[Krealpath[m[K' was not declared in this scope
+  225 |     char *expanded = reinterpret_cast<char *>([01;31m[Krealpath[m[K(filename.c_str(), nullptr));
+      |                                               [01;31m[K^~~~~~~~[m[K
+[01m[K/ygor/src/YgorFilesDirs.cc:[m[K In function '[01m[Kbool CreateFIFOFile(const string&)[m[K':
+[01m[K/ygor/src/YgorFilesDirs.cc:474:24:[m[K [01;31m[Kerror: [m[K'[01m[Kmknod[m[K' was not declared in this scope
+  474 |     const int result = [01;31m[Kmknod[m[K( filename_in.c_str(), S_IRUSR | S_IWUSR | S_IFIFO, 0);
+      |                        [01;31m[K^~~~~[m[K
+[01m[K/ygor/src/YgorFilesDirs.cc:[m[K In function '[01m[Kbool Does_Dir_Exist_And_Can_Be_Read(const string&)[m[K':
+[01m[K/ygor/src/YgorFilesDirs.cc:543:45:[m[K [01;31m[Kerror: [m[K'[01m[Kalphasort[m[K' was not declared in this scope
+  543 |     int n = scandir(dir.c_str(), &eps, one, [01;31m[Kalphasort[m[K);
+      |                                             [01;31m[K^~~~~~~~~[m[K
+[01m[K/ygor/src/YgorFilesDirs.cc:543:13:[m[K [01;31m[Kerror: [m[K'[01m[Kscandir[m[K' was not declared in this scope; did you mean '[01m[Kscanf[m[K'?
+  543 |     int n = [01;31m[Kscandir[m[K(dir.c_str(), &eps, one, alphasort);
+      |             [01;31m[K^~~~~~~[m[K
+      |             [32m[Kscanf[m[K
+[01m[K/ygor/src/YgorFilesDirs.cc:[m[K In function '[01m[Kbool Create_Dir_and_Necessary_Parents(const string&)[m[K':
+[01m[K/ygor/src/YgorFilesDirs.cc:566:78:[m[K [01;31m[Kerror: [m[Ktoo many arguments to function '[01m[Kint mkdir(const char*)[m[K'
+  566 |     const auto res = mkdir(dir.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH[01;31m[K)[m[K;
+      |                                                                              [01;31m[K^[m[K
+In file included from [01m[K/mxe/usr/x86_64-w64-mingw32.static.gcc9/include/dirent.h:15[m[K,
+                 from [01m[K/ygor/src/YgorFilesDirs.cc:4[m[K:
+[01m[K/mxe/usr/x86_64-w64-mingw32.static.gcc9/include/io.h:280:15:[m[K [01;36m[Knote: [m[Kdeclared here
+  280 |   int __cdecl [01;36m[Kmkdir[m[K (const char *) __MINGW_ATTRIB_DEPRECATED_MSVC2005;
+      |               [01;36m[K^~~~~[m[K
+[01m[K/ygor/src/YgorFilesDirs.cc:[m[K In function '[01m[Kbool Append_List_of_File_and_Dir_Names_in_Dir(std::__cxx11::list<std::__cxx11::basic_string<char> >&, const string&)[m[K':
+[01m[K/ygor/src/YgorFilesDirs.cc:581:45:[m[K [01;31m[Kerror: [m[K'[01m[Kalphasort[m[K' was not declared in this scope
+  581 |     int n = scandir(dir.c_str(), &eps, one, [01;31m[Kalphasort[m[K);
+      |                                             [01;31m[K^~~~~~~~~[m[K
+[01m[K/ygor/src/YgorFilesDirs.cc:581:13:[m[K [01;31m[Kerror: [m[K'[01m[Kscandir[m[K' was not declared in this scope; did you mean '[01m[Kscanf[m[K'?
+  581 |     int n = [01;31m[Kscandir[m[K(dir.c_str(), &eps, one, alphasort);
+      |             [01;31m[K^~~~~~~[m[K
+      |             [32m[Kscanf[m[K
+[01m[K/ygor/src/YgorFilesDirs.cc:[m[K In lambda function:
+[01m[K/ygor/src/YgorFilesDirs.cc:664:15:[m[K [01;31m[Kerror: [m[K'[01m[Kconst struct dirent[m[K' has no member named '[01m[Kd_type[m[K'
+  664 |         if(s->[01;31m[Kd_type[m[K == DT_REG) return 1;
+      |               [01;31m[K^~~~~~[m[K
+[01m[K/ygor/src/YgorFilesDirs.cc:664:25:[m[K [01;31m[Kerror: [m[K'[01m[KDT_REG[m[K' was not declared in this scope
+  664 |         if(s->d_type == [01;31m[KDT_REG[m[K) return 1;
+      |                         [01;31m[K^~~~~~[m[K
+[01m[K/ygor/src/YgorFilesDirs.cc:[m[K In function '[01m[Kbool Append_List_of_File_Names_in_Dir(std::__cxx11::list<std::__cxx11::basic_string<char> >&, const string&)[m[K':
+[01m[K/ygor/src/YgorFilesDirs.cc:667:45:[m[K [01;31m[Kerror: [m[K'[01m[Kalphasort[m[K' was not declared in this scope
+  667 |     int n = scandir(dir.c_str(), &eps, one, [01;31m[Kalphasort[m[K);
+      |                                             [01;31m[K^~~~~~~~~[m[K
+[01m[K/ygor/src/YgorFilesDirs.cc:667:13:[m[K [01;31m[Kerror: [m[K'[01m[Kscandir[m[K' was not declared in this scope; did you mean '[01m[Kscanf[m[K'?
+  667 |     int n = [01;31m[Kscandir[m[K(dir.c_str(), &eps, one, alphasort);
+      |             [01;31m[K^~~~~~~[m[K
+      |             [32m[Kscanf[m[K
+[01m[K/ygor/src/YgorMath.cc:[m[K In function '[01m[Kvec3<double> rotate_unit_vector_in_plane(const vec3<double>&, const double&, const double&)[m[K':
+[01m[K/ygor/src/YgorMath.cc:697:33:[m[K [01;31m[Kerror: [m[K'[01m[KM_E[m[K' was not declared in this scope
+  697 |     t  = -i*log(-1.0*pow(a2*pow([01;31m[KM_E[m[K,2.0*i*p)+i*a1*pow(M_E,2.0*i*p)-1.0*a2-1.0*i*a1,-1.0)*pow(pow(a3,2.0)*pow(M_E,4.0*i*p)+pow(a2,2.0)*pow(M_E,4.0*i*p)+pow(a1,2.0)*pow(M_E,4.0*i*p)+2.0*pow(a3,2.0)*pow(M_E,2.0*i*p)-2.0*pow(a2,2.0)*pow(M_E,2.0*i*p)-2.0*pow(a1,2.0)*pow(M_E,2.0*i*p)+pow(a3,2.0)+pow(a2,2.0)+pow(a1,2.0),0.5)+a3*pow(M_E,2.0*i*p)*pow(a2*pow(M_E,2.0*i*p)+i*a1*pow(M_E,2.0*i*p)-1.0*a2-1.0*i*a1,-1.0)+a3*pow(a2*pow(M_E,2.0*i*p)+i*a1*pow(M_E,2.0*i*p)-1.0*a2-1.0*i*a1,-1.0));
+      |                                 [01;31m[K^~~[m[K
+[01m[K/ygor/src/YgorMath.cc:719:40:[m[K [01;31m[Kerror: [m[K'[01m[KM_E[m[K' was not declared in this scope
+  719 |             p = -i*log(-1.0*pow(a2*pow([01;31m[KM_E[m[K,2.0*i*t)*pow(a2*pow(M_E,2.0*i*t)+i*a1*pow(M_E,2.0*i*t)-2.0*a3*pow(M_E,i*t)-1.0*a2+i*a1,-1.0)+i*a1*pow(M_E,2.0*i*t)*pow(a2*pow(M_E,2.0*i*t)+i*a1*pow(M_E,2.0*i*t)-2.0*a3*pow(M_E,i*t)-1.0*a2+i*a1,-1.0)+2.0*a3*pow(M_E,i*t)*pow(a2*pow(M_E,2.0*i*t)+i*a1*pow(M_E,2.0*i*t)-2.0*a3*pow(M_E,i*t)-1.0*a2+i*a1,-1.0)-1.0*a2*pow(a2*pow(M_E,2.0*i*t)+i*a1*pow(M_E,2.0*i*t)-2.0*a3*pow(M_E,i*t)-1.0*a2+i*a1,-1.0)+i*a1*pow(a2*pow(M_E,2.0*i*t)+i*a1*pow(M_E,2.0*i*t)-2.0*a3*pow(M_E,i*t)-1.0*a2+i*a1,-1.0),0.5));
+      |                                        [01;31m[K^~~[m[K
+[01m[K/ygor/src/YgorMath.cc:721:35:[m[K [01;31m[Kerror: [m[K'[01m[KM_E[m[K' was not declared in this scope
+  721 |             p = -0.5*i*log(a2*pow([01;31m[KM_E[m[K,2.0*i*t)*pow(a2*pow(M_E,2.0*i*t)+i*a1*pow(M_E,2.0*i*t)-2.0*a3*pow(M_E,i*t)-1.0*a2+i*a1,-1.0)+i*a1*pow(M_E,2.0*i*t)*pow(a2*pow(M_E,2.0*i*t)+i*a1*pow(M_E,2.0*i*t)-2.0*a3*pow(M_E,i*t)-1.0*a2+i*a1,-1.0)+2.0*a3*pow(M_E,i*t)*pow(a2*pow(M_E,2.0*i*t)+i*a1*pow(M_E,2.0*i*t)-2.0*a3*pow(M_E,i*t)-1.0*a2+i*a1,-1.0)-1.0*a2*pow(a2*pow(M_E,2.0*i*t)+i*a1*pow(M_E,2.0*i*t)-2.0*a3*pow(M_E,i*t)-1.0*a2+i*a1,-1.0)+i*a1*pow(a2*pow(M_E,2.0*i*t)+i*a1*pow(M_E,2.0*i*t)-2.0*a3*pow(M_E,i*t)-1.0*a2+i*a1,-1.0));
+      |                                   [01;31m[K^~~[m[K
+[01m[K/ygor/src/YgorMath.cc:[m[K In member function '[01m[KT contour_of_points<T>::Get_Signed_Area(bool) const[m[K':
+[01m[K/ygor/src/YgorMath.cc:2232:17:[m[K [01;36m[Knote: [m[K#pragma message: Warning - This routine assumes all contours are planar. This assumption should be enforced or validated.
+ 2232 | #pragma message [01;36m[K"Warning - This routine assumes all contours are planar. This assumption should be enforced or validated."[m[K
+      |                 [01;36m[K^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[m[K
+[01m[K/ygor/src/YgorMath.cc:[m[K In member function '[01m[Ksamples_1D<T> samples_1D<T>::Derivative_Forward_Finite_Differences() const[m[K':
+[01m[K/ygor/src/YgorMath.cc:9744:21:[m[K [01;36m[Knote: [m[K#pragma message: Warning - This finite difference routine lacks uncertainty propagation.
+ 9744 |     #pragma message [01;36m[K"Warning - This finite difference routine lacks uncertainty propagation."[m[K
+      |                     [01;36m[K^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[m[K
+[01m[K/ygor/src/YgorMath.cc:[m[K In member function '[01m[Ksamples_1D<T> samples_1D<T>::Derivative_Backward_Finite_Differences() const[m[K':
+[01m[K/ygor/src/YgorMath.cc:9803:21:[m[K [01;36m[Knote: [m[K#pragma message: Warning - This finite difference routine lacks uncertainty propagation.
+ 9803 |     #pragma message [01;36m[K"Warning - This finite difference routine lacks uncertainty propagation."[m[K
+      |                     [01;36m[K^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[m[K
+[01m[K/ygor/src/YgorMath.cc:[m[K In member function '[01m[Ksamples_1D<T> samples_1D<T>::Derivative_Centered_Finite_Differences() const[m[K':
+[01m[K/ygor/src/YgorMath.cc:9862:21:[m[K [01;36m[Knote: [m[K#pragma message: Warning - This finite difference routine lacks uncertainty propagation.
+ 9862 |     #pragma message [01;36m[K"Warning - This finite difference routine lacks uncertainty propagation."[m[K
+      |                     [01;36m[K^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[m[K
+[01m[K/ygor/src/YgorNetworking.cc:84:10:[m[K [01;31m[Kfatal error: [m[Karpa/inet.h: No such file or directory
+   84 | #include [01;31m[K<arpa/inet.h>[m[K
+      |          [01;31m[K^~~~~~~~~~~~~[m[K
+compilation terminated.
+[01m[K/ygor/src/YgorNoise.cc:[m[K In function '[01m[Kvoid PERLIN_INIT()[m[K':
+[01m[K/ygor/src/YgorNoise.cc:57:5:[m[K [01;31m[Kerror: [m[K'[01m[Ksrandom[m[K' was not declared in this scope; did you mean '[01m[Ksrand[m[K'?
+   57 |     [01;31m[Ksrandom[m[K(1);
+      |     [01;31m[K^~~~~~~[m[K
+      |     [32m[Ksrand[m[K
+[01m[K/ygor/src/YgorNoise.cc:61:51:[m[K [01;31m[Kerror: [m[K'[01m[Krandom[m[K' was not declared in this scope; did you mean '[01m[Krand[m[K'?
+   61 |             for(j=0 ; j<3 ; j++)  v[j] = (float)(([01;31m[Krandom[m[K() % (PERLIN_B + PERLIN_B)) - PERLIN_B)/PERLIN_B;
+      |                                                   [01;31m[K^~~~~~[m[K
+      |                                                   [32m[Krand[m[K
+[01m[K/ygor/src/YgorNoise.cc:74:53:[m[K [01;31m[Kerror: [m[K'[01m[Krandom[m[K' was not declared in this scope; did you mean '[01m[Krand[m[K'?
+   74 |         PERLIN_P[i] = PERLIN_P[j = static_cast<int>([01;31m[Krandom[m[K() % PERLIN_B)];
+      |                                                     [01;31m[K^~~~~~[m[K
+      |                                                     [32m[Krand[m[K
+[01m[K/ygor/src/YgorTime.cc:[m[K In member function '[01m[Kstd::string time_mark::Dump_as_string() const[m[K':
+[01m[K/ygor/src/YgorTime.cc:38:8:[m[K [01;31m[Kerror: [m[K'[01m[Klocaltime_r[m[K' was not declared in this scope; did you mean '[01m[Klocaltime_s[m[K'?
+   38 |     if([01;31m[Klocaltime_r[m[K(&this->When, &lt) == nullptr) FUNCERR("localtime_r produced an error - unable to continue");
+      |        [01;31m[K^~~~~~~~~~~[m[K
+      |        [32m[Klocaltime_s[m[K
+[01m[K/ygor/src/YgorTime.cc:[m[K In member function '[01m[Kstd::string time_mark::Dump_as_postgres_string() const[m[K':
+[01m[K/ygor/src/YgorTime.cc:66:8:[m[K [01;31m[Kerror: [m[K'[01m[Klocaltime_r[m[K' was not declared in this scope; did you mean '[01m[Klocaltime_s[m[K'?
+   66 |     if([01;31m[Klocaltime_r[m[K(&this->When, &lt) == nullptr) FUNCERR("localtime_r produced an error - unable to continue");
+      |        [01;31m[K^~~~~~~~~~~[m[K
+      |        [32m[Klocaltime_s[m[K
+[01m[K/ygor/src/YgorTime.cc:[m[K In member function '[01m[Kbool time_mark::Read_from_string(const string&)[m[K':
+[01m[K/ygor/src/YgorTime.cc:155:14:[m[K [01;31m[Kerror: [m[K'[01m[Kstrptime[m[K' was not declared in this scope; did you mean '[01m[Kstrftime[m[K'?
+  155 |     }else if([01;31m[Kstrptime[m[K(in.c_str(), "%Y%m%d-%H%M%S", &lt) != nullptr){
+      |              [01;31m[K^~~~~~~~[m[K
+      |              [32m[Kstrftime[m[K
+[01m[K/ygor/src/YgorTime.cc:[m[K In member function '[01m[Ktime_mark time_mark::Same_Day_Earliest() const[m[K':
+[01m[K/ygor/src/YgorTime.cc:248:8:[m[K [01;31m[Kerror: [m[K'[01m[Klocaltime_r[m[K' was not declared in this scope; did you mean '[01m[Klocaltime_s[m[K'?
+  248 |     if([01;31m[Klocaltime_r[m[K(&out.When, &A) == nullptr){
+      |        [01;31m[K^~~~~~~~~~~[m[K
+      |        [32m[Klocaltime_s[m[K
+[01m[K/ygor/src/YgorTime.cc:[m[K In member function '[01m[Kbool time_mark::Have_same_day(const time_mark&) const[m[K':
+[01m[K/ygor/src/YgorTime.cc:323:8:[m[K [01;31m[Kerror: [m[K'[01m[Klocaltime_r[m[K' was not declared in this scope; did you mean '[01m[Klocaltime_s[m[K'?
+  323 |     if([01;31m[Klocaltime_r[m[K(&this->When, &A) == nullptr) FUNCERR("localtime_r produced an error - unable to continue")
+      |        [01;31m[K^~~~~~~~~~~[m[K
+      |        [32m[Klocaltime_s[m[K
+[01m[K/ygor/src/YgorTime.cc:324:8:[m[K [01;31m[Kerror: [m[K'[01m[Klocaltime_r[m[K' was not declared in this scope; did you mean '[01m[Klocaltime_s[m[K'?
+  324 |     if([01;31m[Klocaltime_r[m[K(&in.When, &B)    == nullptr) FUNCERR("localtime_r produced an error - unable to continue")
+      |        [01;31m[K^~~~~~~~~~~[m[K
+      |        [32m[Klocaltime_s[m[K
+[01m[K/ygor/src/YgorTime.cc:[m[K In member function '[01m[Kbool time_mark::Occur_on_same_day(const time_mark&) const[m[K':
+[01m[K/ygor/src/YgorTime.cc:331:8:[m[K [01;31m[Kerror: [m[K'[01m[Klocaltime_r[m[K' was not declared in this scope; did you mean '[01m[Klocaltime_s[m[K'?
+  331 |     if([01;31m[Klocaltime_r[m[K(&this->When, &A) == nullptr) FUNCERR("localtime_r produced an error - unable to continue")
+      |        [01;31m[K^~~~~~~~~~~[m[K
+      |        [32m[Klocaltime_s[m[K
+[01m[K/ygor/src/YgorTime.cc:332:8:[m[K [01;31m[Kerror: [m[K'[01m[Klocaltime_r[m[K' was not declared in this scope; did you mean '[01m[Klocaltime_s[m[K'?
+  332 |     if([01;31m[Klocaltime_r[m[K(&in.When, &B)    == nullptr) FUNCERR("localtime_r produced an error - unable to continue")
+      |        [01;31m[K^~~~~~~~~~~[m[K
+      |        [32m[Klocaltime_s[m[K
+/mxe/usr/bin/x86_64-w64-mingw32.static.gcc9-ar: CMakeFiles/ygor.dir/YgorFilesDirs.cc.obj: No such file or directory
+make[2]: *** No rule to make target 'lib/libygor.dll.a', needed by 'bin/fits_replace_nans.exe'.  Stop.
+make[2]: *** No rule to make target 'lib/libygor.dll.a', needed by 'bin/regex_tester.exe'.  Stop.
+make[2]: *** No rule to make target 'lib/libygor.dll.a', needed by 'bin/parse_TAR_files.exe'.  Stop.
+make[2]: *** No rule to make target 'lib/libygor.dll.a', needed by 'bin/twot_pvalue.exe'.  Stop.
