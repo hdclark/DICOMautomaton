@@ -18,14 +18,11 @@ RUN apt-get update --yes && \
       cmake \
       make \
       g++ \
-      vim \
       ncurses-term \
       gdb \
       rsync \
       wget \
-      ca-certificates
-
-RUN apt-get install --yes --no-install-recommends \
+      ca-certificates \
     ` # Ygor dependencies ` \
         libboost-dev \
         libgsl-dev \
@@ -41,11 +38,11 @@ RUN apt-get install --yes --no-install-recommends \
         libasio-dev \
         fonts-freefont-ttf fonts-cmu \
         freeglut3 freeglut3-dev libxi-dev libxmu-dev \
-        gnuplot zenity \
-        patchelf bash-completion \
-    ` # Additional dependencies for headless OpenGL rendering with SFML ` \
-        x-window-system mesa-utils \
-        xserver-xorg-video-dummy x11-apps
+        patchelf && \
+        rm -rf /var/lib/apt/lists/*
+#    ` # Additional dependencies for headless OpenGL rendering with SFML ` \
+#        x-window-system mesa-utils \
+#        xserver-xorg-video-dummy x11-apps && \
 
 RUN cp /scratch/xpra-xorg.conf /etc/X11/xorg.conf
 
