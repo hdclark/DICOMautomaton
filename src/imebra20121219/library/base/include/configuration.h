@@ -40,6 +40,9 @@ Imebra is available at http://imebra.com
 
 */
 
+#pragma once
+
+
 /// \addtogroup group_baseclasses
 ///
 /// @{

@@ -327,20 +327,20 @@ Drover EvaluateNTCPModels(Drover DICOM_data, const OperationArgPkg& OptArgs, con
                 FenwickModel[lROIname] = NTCP_Fenwick;
             }
             {
-                const long double LKB_gEUD = std::pow( Stats::Sum(LKB_gEUD_elements), static_cast<long double>(1) / LKB_Alpha );
+                const auto LKB_gEUD = std::pow( Stats::Sum(LKB_gEUD_elements), 1.0 / LKB_Alpha );
 
-                const long double numer = LKB_gEUD - LKB_TD50;
-                const long double denom = LKB_M * LKB_TD50 * std::sqrt(2.0);
-                const long double t = numer/denom;
-                const long double NTCP_LKB = 0.5*(1.0 + std::erf(t));
+                const auto numer = LKB_gEUD - LKB_TD50;
+                const auto denom = LKB_M * LKB_TD50 * std::sqrt(2.0);
+                const auto t = numer/denom;
+                const auto NTCP_LKB = 0.5*(1.0 + std::erf(t));
                 LKBModel[lROIname] = NTCP_LKB;
             }
             {
 /*
-                const long double mEUD = std::pow( Stats::Sum(mEUD_elements), static_cast<long double>(1) / EUD_Alpha );
+                const double mEUD = std::pow( Stats::Sum(mEUD_elements), 1.0 / EUD_Alpha );
 
-                const long double numer = std::pow(mEUD, EUD_Gamma50*4);
-                const long double denom = numer + std::pow(EUD_TCD50, EUD_Gamma50*4);
+                const double numer = std::pow(mEUD, EUD_Gamma50*4);
+                const double denom = numer + std::pow(EUD_TCD50, EUD_Gamma50*4);
                 double NTCP_mEUD = numer/denom; // This is a sigmoid curve.
 
                 mEUDModel[lROIname] = NTCP_mEUD; 

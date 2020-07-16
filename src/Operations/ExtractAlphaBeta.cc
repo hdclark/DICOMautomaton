@@ -175,8 +175,8 @@ Drover ExtractAlphaBeta(Drover DICOM_data,
     const auto TestImgLowerThreshold = std::stod( OptArgs.getValueStr("TestImgLowerThreshold").value() );
     const auto TestImgUpperThreshold = std::stod( OptArgs.getValueStr("TestImgUpperThreshold").value() );
 
-    const auto NumberOfFractions = std::stod( OptArgs.getValueStr("NumberOfFractions").value() );
-    const auto NominalDosePerFraction = std::stod( OptArgs.getValueStr("NominalDosePerFraction").value() );
+    const auto NumberOfFractions = std::stof( OptArgs.getValueStr("NumberOfFractions").value() );
+    const auto NominalDosePerFraction = std::stof( OptArgs.getValueStr("NominalDosePerFraction").value() );
 
     //-----------------------------------------------------------------------------------------------------------------
     const auto model_simple_lq = Compile_Regex("^si?m?p?l?e?[-_]?l?q?[-_]?e?q?d?2?$");

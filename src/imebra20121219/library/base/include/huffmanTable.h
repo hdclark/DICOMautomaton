@@ -220,6 +220,7 @@ protected:
 	public:
 		valueObject():m_freq(0), m_codeLength(0), m_nextCode(-1){}
 		valueObject(const valueObject& right):m_freq(right.m_freq), m_codeLength(right.m_codeLength), m_nextCode(right.m_nextCode){}
+        valueObject & operator=(const valueObject &) = default;
 		imbxUint32 m_freq;
 		imbxUint32 m_codeLength;
 		imbxInt32 m_nextCode;
@@ -230,6 +231,7 @@ protected:
 	public:
 		freqValue(imbxUint32 freq = 0, imbxUint32 value = 0):m_freq(freq), m_value(value){}
 		freqValue(const freqValue& right):m_freq(right.m_freq), m_value(right.m_value){}
+        freqValue & operator=(const freqValue &) = default;
 
 		imbxUint32 m_freq;
 		imbxUint32 m_value;
@@ -247,6 +249,7 @@ protected:
 	public:
 		lengthValue(imbxUint32 length = 0, imbxUint32 value = 0):m_length(length), m_value(value){}
 		lengthValue(const lengthValue& right):m_length(right.m_length), m_value(right.m_value){}
+        lengthValue & operator=(const lengthValue &) = default;
 
 		imbxUint32 m_length;
 		imbxUint32 m_value;

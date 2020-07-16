@@ -325,19 +325,19 @@ Drover EvaluateTCPModels(Drover DICOM_data, const OperationArgPkg& OptArgs, cons
             const auto lROIname = av.first;
 
             const auto N = av.second.size();
-            const long double V_frac = static_cast<long double>(1) / N; // Fractional volume of a single voxel compared to whole ROI.
+            const double V_frac = 1.0 / N; // Fractional volume of a single voxel compared to whole ROI.
 
-            double TCP_Martel = static_cast<long double>(1);
-            double TCP_Fenwick = static_cast<long double>(1);
+            double TCP_Martel = 1.0;
+            double TCP_Fenwick = 1.0;
 
             std::vector<double> gEUD_elements;
             gEUD_elements.reserve(N);
             for(const auto &D_voxel : av.second){
                 // Martel model.
                 {
-                    const long double numer = std::pow(D_voxel, Gamma50*4);
-                    const long double denom = std::pow(Dose50, Gamma50*4) + numer;
-                    const long double TCP_voxel = numer/denom; // This is a sigmoid curve.
+                    const auto numer = std::pow(D_voxel, Gamma50*4);
+                    const auto denom = std::pow(Dose50, Gamma50*4) + numer;
+                    const auto TCP_voxel = numer/denom; // This is a sigmoid curve.
                     TCP_Martel *= std::pow(TCP_voxel, V_frac);
                 }
                 
@@ -348,11 +348,11 @@ Drover EvaluateTCPModels(Drover DICOM_data, const OperationArgPkg& OptArgs, cons
 
                 // Fenwick model.
                 {
-                    const long double numer = (D_voxel - Fenwick_D50 - Fenwick_C * std::log(ROI_V/Fenwick_Vref));
-                    const long double denom = Fenwick_M * D_voxel * std::sqrt(2.0);
+                    const auto numer = (D_voxel - Fenwick_D50 - Fenwick_C * std::log(ROI_V/Fenwick_Vref));
+                    const auto denom = Fenwick_M * D_voxel * std::sqrt(2.0);
                     //Note: the 'normal distribution function Phi(z)' referred to in Fenwick's paper is
                     // (1/sqrt(2pi))*integral(exp(-x*x/2)dx, -inf, z) == 0.5*(1+erf(z/sqrt(2))).
-                    const long double TCP_voxel = 0.5*(1.0 + std::erf(numer/denom)); // This is a sigmoid curve.
+                    const auto TCP_voxel = 0.5*(1.0 + std::erf(numer/denom)); // This is a sigmoid curve.
                     TCP_Fenwick *= std::pow(TCP_voxel, V_frac);
                 }
 
@@ -366,10 +366,10 @@ Drover EvaluateTCPModels(Drover DICOM_data, const OperationArgPkg& OptArgs, cons
             FenwickModel[lROIname] = TCP_Fenwick;
 
             {
-                const long double gEUD = std::pow( Stats::Sum(gEUD_elements), static_cast<long double>(1) / EUD_Alpha );
+                const auto gEUD = std::pow( Stats::Sum(gEUD_elements), 1.0 / EUD_Alpha );
 
-                const long double numer = std::pow(gEUD, EUD_Gamma50*4);
-                const long double denom = numer + std::pow(EUD_TCD50, EUD_Gamma50*4);
+                const auto numer = std::pow(gEUD, EUD_Gamma50*4);
+                const auto denom = numer + std::pow(EUD_TCD50, EUD_Gamma50*4);
                 double TCP_gEUD = numer/denom; // This is a sigmoid curve.
 
                 gEUDModel[lROIname] = TCP_gEUD; 

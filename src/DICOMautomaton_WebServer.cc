@@ -81,7 +81,8 @@ std::string CreateUniqueDirectoryTimestamped(const std::string& prefix, const st
         auto t_now_coarse = std::chrono::system_clock::to_time_t( t_now );
 
         char t_now_str[100];
-        if(!std::strftime(t_now_str, sizeof(t_now_str), "%Y%m%d-%H%M%S", std::localtime(&t_now_coarse))){
+        tm working; // Working space for thread-safe localtime_r() variant of std::localtime().
+        if(!std::strftime(t_now_str, sizeof(t_now_str), "%Y%m%d-%H%M%S", ::localtime_r(&t_now_coarse, &working))){
             throw std::runtime_error("Unable to get current time.");
         }
 

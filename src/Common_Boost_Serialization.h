@@ -1,5 +1,7 @@
 //Common_Boost_Serialization.h - A part of DICOMautomaton 2016. Written by hal clark.
 
+#pragma once
+
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
 #include <string>    
