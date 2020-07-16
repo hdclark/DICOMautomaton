@@ -23,6 +23,7 @@ RUN apt-get update --yes && \
       rsync \
       wget \
       ca-certificates \
+      file \
     ` # Ygor dependencies ` \
         libboost-dev \
         libgsl-dev \
