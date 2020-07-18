@@ -1672,6 +1672,7 @@ Drover SFML_Viewer( Drover DICOM_data,
                 }
 
             }else if(window.hasFocus() && (event.type == sf::Event::KeyReleased)){
+                // Currently a no-op.
 
             }else if(window.hasFocus() && (event.type == sf::Event::TextEntered) 
                                        && (event.text.unicode < 128)){
@@ -1897,6 +1898,7 @@ Drover SFML_Viewer( Drover DICOM_data,
                 }
 
             }else if(window.hasFocus() && (event.type == sf::Event::MouseButtonReleased)){
+                // Currently a no-op.
 
             }else if(window.hasFocus() && (event.type == sf::Event::MouseMoved)){
                 Update_Mouse_Coords_Voxel_Sample();
@@ -1914,10 +1916,15 @@ Drover SFML_Viewer( Drover DICOM_data,
                 scale_sprite_to_fill_screen(window,disp_img_it,disp_img_texture_sprite);
 
             }else if(window.hasFocus() && (event.type == sf::Event::MouseMoved)){
+                // Currently a no-op.
             }else if(event.type == sf::Event::LostFocus){
+                // Currently a no-op.
             }else if(event.type == sf::Event::GainedFocus){
+                // Currently a no-op.
             }else if(event.type == sf::Event::MouseEntered){
+                // Currently a no-op.
             }else if(event.type == sf::Event::MouseLeft){
+                // Currently a no-op.
             }else{
                 FUNCINFO("Ignored event!");
             }
@@ -1959,9 +1966,13 @@ Drover SFML_Viewer( Drover DICOM_data,
                     view.reset(sf::FloatRect(0, 0, event.size.width, event.size.height));
                     plotwindow.setView(view);
                 }else if(event.type == sf::Event::LostFocus){
+                    // Currently a no-op.
                 }else if(event.type == sf::Event::GainedFocus){
+                    // Currently a no-op.
                 }else if(event.type == sf::Event::MouseEntered){
+                    // Currently a no-op.
                 }else if(event.type == sf::Event::MouseLeft){
+                    // Currently a no-op.
                 }else{
                     FUNCINFO("Ignored event!");
                 }

@@ -11,9 +11,9 @@
 #include "Structs.h"
 
 using op_func_t = std::function<Drover (Drover, 
-                                        const OperationArgPkg &,
-                                        const std::map<std::string, std::string> &,
-                                        const std::string & )>;
+                                const OperationArgPkg &,
+                                const std::map<std::string, std::string> &,
+                                const std::string & )>;
 using op_doc_func_t = std::function<OperationDoc ()>;
 typedef std::pair<op_doc_func_t,op_func_t> op_packet_t;
 
