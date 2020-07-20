@@ -184,6 +184,7 @@ Drover IsolatedVoxelFilter(Drover DICOM_data, const OperationArgPkg& OptArgs, co
         replacement_is_value = true;
     }catch(const std::exception &){ }
     if(replacement_is_value){
+        // No-op that blocks the alternative cases.
     }else if( std::regex_match(ReplacementStr, regex_mean) ){
         replacement_is_mean = true;
     }else if( std::regex_match(ReplacementStr, regex_median) ){

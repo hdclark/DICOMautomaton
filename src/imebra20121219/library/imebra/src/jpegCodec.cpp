@@ -1560,7 +1560,7 @@ void jpegCodec::copyImageToJpegChannels(
 	imbxUint32 rowSize, channelSize, channelsNumber;
 	ptr<handlers::dataHandlerNumericBase>imageDataHandler = sourceImage->getDataHandler(false, &rowSize, &channelSize, &channelsNumber);
 
-	for(imbxUint8 channelId = 0; channelId < static_cast<imbxUint8>(channelsNumber); ++channelId)
+	for(auto channelId = static_cast<imbxUint32>(0); channelId < channelsNumber; ++channelId)
 	{
 		ptr<jpeg::jpegChannel> pChannel(new jpeg::jpegChannel);
 		m_channelsMap[channelId] = pChannel;
@@ -3243,10 +3243,11 @@ void tagDHT::readTag(streamReader* pStream, jpegCodec* pCodec, imbxUint8 /* tagE
 		PUNTOEXE_THROW(codecExceptionCorruptedFile, "Corrputed tag DHT found");
 	}
 
-	// Move to the end of the tag
-	/////////////////////////////////////////////////////////////////
-	if(tagLength > 0)
-		pStream->seek(tagLength, true);
+// NOTE: the following will never happen. Is this a bug?
+//	// Move to the end of the tag
+// 	/////////////////////////////////////////////////////////////////
+//	if(tagLength > 0)
+//		pStream->seek(tagLength, true);
 
 	PUNTOEXE_FUNCTION_END();
 }
@@ -3592,10 +3593,11 @@ void tagDQT::readTag(streamReader* pStream, jpegCodec* pCodec, imbxUint8 /* tagE
 		PUNTOEXE_THROW(codecExceptionCorruptedFile, "Corrupted tag DQT found");
 	}
 
-	// Move to the end of the tag
-	/////////////////////////////////////////////////////////////////
-	if(tagLength > 0)
-		pStream->seek(tagLength, true);
+// NOTE: the following will never happen. Is this a bug?
+//	// Move to the end of the tag
+//	/////////////////////////////////////////////////////////////////
+//	if(tagLength > 0)
+//		pStream->seek(tagLength, true);
 
 	PUNTOEXE_FUNCTION_END();
 }
