@@ -42,6 +42,7 @@ Imebra is available at http://imebra.com
 #include "../include/exception.h"
 #include "../include/charsetConversion.h"
 #include <memory>
+#include <cstring>
 
 namespace puntoexe
 {
@@ -287,8 +288,11 @@ std::wstring charsetConversion::toUnicode(const std::string& asciiString) const
 	std::string convertedString(myIconv(m_iconvToUnicode, 
                                         const_cast<char *>(asciiString.c_str()),
                                         asciiString.length()));
-	std::wstring returnString(reinterpret_cast<const wchar_t *>(convertedString.c_str()),
-                              convertedString.size() / sizeof(wchar_t));
+    std::wstring returnString;
+    if(!convertedString.empty()){
+        returnString.resize( convertedString.size() / sizeof(wchar_t) );
+        std::memcpy( &returnString[0], &convertedString[0], convertedString.size() );
+    }
 #else
 	int requiredWChars = ::MultiByteToWideChar(m_codePage, 0, asciiString.c_str(), (int)(asciiString.length()), 0, 0);
 	std::auto_ptr<wchar_t> convertedString(new wchar_t[requiredWChars]);
