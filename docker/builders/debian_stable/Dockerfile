@@ -1,5 +1,6 @@
 
-FROM dcma_build_base_debian_stable:latest
+ARG CONTAINER_NAMESPACE=""
+FROM "${CONTAINER_NAMESPACE}"dcma_build_base_debian_stable:latest
 
 LABEL maintainer="http://www.halclark.ca" \
       description="DICOMautomaton Web Server built from Debian Stable."

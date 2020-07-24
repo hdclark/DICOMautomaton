@@ -21,6 +21,7 @@ time sudo docker build \
     --network=host \
     --no-cache=true \
     -t "${base_name}":"built_${build_datetime}" \
+    --build-arg "CONTAINER_NAMESPACE=" \
     -t "${base_name}":"commit_${commit_id}_${clean_dirty}" \
     -t "${base_name}":latest \
     -f docker/builders/debian_stable/Dockerfile \

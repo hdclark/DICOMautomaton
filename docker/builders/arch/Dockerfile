@@ -1,5 +1,6 @@
 
-FROM dcma_build_base_arch:latest
+ARG CONTAINER_NAMESPACE=""
+FROM "${CONTAINER_NAMESPACE}"dcma_build_base_arch:latest
 
 LABEL maintainer="http://www.halclark.ca" \
       description="DICOMautomaton Web Server built from Arch Linux."
@@ -10,7 +11,6 @@ EXPOSE 443
 WORKDIR /scratch
 COPY ./docker/builders/arch /scratch
 COPY . /dcma
-
 
 
 # Install DICOMautomaton.

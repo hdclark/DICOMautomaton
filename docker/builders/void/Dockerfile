@@ -1,5 +1,6 @@
 
-FROM dcma_build_base_void:latest
+ARG CONTAINER_NAMESPACE=""
+FROM "${CONTAINER_NAMESPACE}"dcma_build_base_void:latest
 
 LABEL maintainer="http://www.halclark.ca" \
       description="DICOMautomaton Web Server built from Void Linux."
