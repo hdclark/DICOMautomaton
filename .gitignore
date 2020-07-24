@@ -19,6 +19,6 @@ pacs_verify_filesystem_store
 petct_perfusion_analysis*
 
 # Typical build directory and artifacts.
-build
+build/
 compile_commands.json
 

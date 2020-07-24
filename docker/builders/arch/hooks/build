@@ -1,0 +1,11 @@
+#!/bin/bash
+
+# NOTE: this file is used to pass a build argument from the Docker Hub website onto the build process.
+
+docker build \
+  --network=host \
+  --no-cache=true \
+  -t "${IMAGE_NAME}":latest \
+  --build-arg "BASE_CONTAINER_NAME=${BASE_CONTAINER_NAME}" \
+  .
+
