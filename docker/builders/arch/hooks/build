@@ -1,11 +1,15 @@
 #!/bin/bash
 
-# NOTE: this file is used to pass a build argument from the Docker Hub website onto the build process.
+# NOTE: this file is used to pass a build argument from the Docker Hub website through to the build process.
+
+if [ -z "${BASE_CONTAINER_NAME}" ] ; then
+    printf 'BASE_CONTAINER_NAME variable not available. Please set it in Docker Hub.\n'
+    exit 1
+fi
 
 docker build \
-  --network=host \
-  --no-cache=true \
-  -t "${IMAGE_NAME}":latest \
+  --tag "${IMAGE_NAME}" \
   --build-arg "BASE_CONTAINER_NAME=${BASE_CONTAINER_NAME}" \
+  --file "${DOCKERFILE_PATH}" \
   .
 
