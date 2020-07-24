@@ -2,7 +2,8 @@
 
 set -e 
 
-base_name="dicomautomaton_webserver_arch"
+base_name="dcma_build_base_arch"
+image_name="dicomautomaton_webserver_arch"
 
 commit_id=$(git rev-parse HEAD)
 
@@ -20,10 +21,10 @@ cd "${reporoot}"
 time sudo docker build \
     --network=host \
     --no-cache=true \
-    --build-arg "BASE_CONTAINER_NAMESPACE=" \
-    -t "${base_name}":"built_${build_datetime}" \
-    -t "${base_name}":"commit_${commit_id}_${clean_dirty}" \
-    -t "${base_name}":latest \
+    --build-arg "BASE_CONTAINER_NAME=${base_name}" \
+    -t "${image_name}":"built_${build_datetime}" \
+    -t "${image_name}":"commit_${commit_id}_${clean_dirty}" \
+    -t "${image_name}":latest \
     -f docker/builders/arch/Dockerfile \
     .
 
