@@ -20,7 +20,7 @@ cd "${reporoot}"
 time sudo docker build \
     --network=host \
     --no-cache=true \
-    --build-arg "CONTAINER_NAMESPACE=" \
+    --build-arg "BASE_CONTAINER_NAMESPACE=" \
     -t "${base_name}":"built_${build_datetime}" \
     -t "${base_name}":"commit_${commit_id}_${clean_dirty}" \
     -t "${base_name}":latest \
