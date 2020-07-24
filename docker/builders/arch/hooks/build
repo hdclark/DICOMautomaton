@@ -10,6 +10,6 @@ fi
 docker build \
   --tag "${IMAGE_NAME}" \
   --build-arg "BASE_CONTAINER_NAME=${BASE_CONTAINER_NAME}" \
-  --file "${DOCKERFILE_PATH}" \
   .
 
+  #--file "${DOCKERFILE_PATH}" \
