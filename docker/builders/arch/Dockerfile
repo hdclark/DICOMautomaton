@@ -1,5 +1,6 @@
 
-ARG BASE_CONTAINER_NAME="dcma_build_base_arch"
+#ARG BASE_CONTAINER_NAME="dcma_build_base_arch"
+ARG BASE_CONTAINER_NAME
 FROM $BASE_CONTAINER_NAME
 
 LABEL maintainer="http://www.halclark.ca" \
