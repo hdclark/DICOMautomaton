@@ -1,5 +1,5 @@
 
-ARG BASE_CONTAINER_NAMESPACE=""
+#ARG BASE_CONTAINER_NAMESPACE=""
 FROM "$BASE_CONTAINER_NAMESPACE"dcma_build_base_arch:latest
 
 LABEL maintainer="http://www.halclark.ca" \
