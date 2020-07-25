@@ -2,14 +2,33 @@
 
 # NOTE: this file is used to pass a build argument from the Docker Hub website through to the build process.
 
+set -eu
+
 if [ -z "${BASE_CONTAINER_NAME}" ] ; then
     printf 'BASE_CONTAINER_NAME variable not available. Please set it in Docker Hub.\n'
     exit 1
 fi
 
+#commit_id=$(git rev-parse HEAD)
+#clean_dirty="clean"
+#sstat="$(git diff --shortstat)"
+#if [ ! -z "${sstat}" ] ; then
+#    clean_dirty="dirty"
+#fi
+#
+#build_datetime=$(date '+%Y%m%_0d-%_0H%_0M%_0S')
+
+reporoot=$(git rev-parse --show-toplevel)
+cd "${reporoot}"
+
 docker build \
-  --tag "${IMAGE_NAME}" \
   --build-arg "BASE_CONTAINER_NAME=${BASE_CONTAINER_NAME}" \
+  --tag "${IMAGE_NAME}" \
+  --file docker/builders/arch/Dockerfile \
   .
 
-  #--file "${DOCKERFILE_PATH}" \
+#  --file "${DOCKERFILE_PATH}" \
+#  --tag "${image_name}":"built_${build_datetime}" \
+#  --tag "${image_name}":"commit_${commit_id}_${clean_dirty}" \
+#  --tag "${image_name}":latest \
+
