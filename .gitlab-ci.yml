@@ -1,0 +1,31 @@
+
+# This is a definition file for GitLab CI.
+
+default:
+  image: "archlinux/base"
+  timeout: 180m
+  use-docker-in-docker: true
+
+build_A:
+  stage: build
+  before_script:
+    - "curl -o /etc/pacman.d/mirrorlist 'https://www.archlinux.org/mirrorlist/?country=all&protocol=http&ip_version=4&use_mirror_status=on' && sed -i 's/^#Server/Server/' /etc/pacman.d/mirrorlist"
+    - "pacman -Sy  --noconfirm archlinux-keyring"
+    - "pacman -Syu --noconfirm --needed base-devel docker"
+
+  script:
+    - "echo 'Script worked OK'"
+#  artifacts:
+#    paths:
+#      - mybinary
+#      # depending on your build setup it's most likely a good idea to cache outputs to reduce the build time
+#      # cache:
+#      #   paths:
+#      #     - "*.o"
+
+## run tests using the binary built before
+#test:
+#  stage: test
+#  script:
+#    - ./runmytests.sh
+
