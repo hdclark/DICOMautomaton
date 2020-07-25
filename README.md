@@ -277,9 +277,11 @@ for convenience (e.g., `/usr/bin/`).
   - `AppImage`s require `FUSE` support, so running in Docker will not work.
     However, `AppImages` can be extracted and run *without* `FUSE` via:
   
-       $>  ./DICOMautomaton-x86_64.AppImage --appimage-extract
-       $>  ./squashfs-root/usr/bin/dicomautomaton_dispatcher -h
+
+     $> ./DICOMautomaton-x86_64.AppImage --appimage-extract
+     $> ./squashfs-root/usr/bin/dicomautomaton_dispatcher -h
   
+
   - The CI `AppImage` currently expects graphical components to be available on
     the host system. It will fail if `libGL` or `X` libraries are incompatible or
     missing.
