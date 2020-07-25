@@ -268,66 +268,66 @@ for convenience (e.g., `/usr/bin/`).
 
 #### Notes and caveats:
 
-- This is **not** an official release. It may be lacking functionality, and is
-  almost certainly *not* optimized.
-
-- The CI build environment is currently based on `Debian` stable. Attempting to
-  run on systems with older `glibc`s will likely fail.
-
-- `AppImage`s require `FUSE` support, so running in Docker will not work.
-  However, `AppImages` can be extracted and run *without* `FUSE` via:
-
-     $>  ./DICOMautomaton-x86_64.AppImage --appimage-extract
-     $>  ./squashfs-root/usr/bin/dicomautomaton_dispatcher -h
-
-- The CI `AppImage` currently expects graphical components to be available on
-  the host system. It will fail if `libGL` or `X` libraries are incompatible or
-  missing.
-
-- See <https://gitlab.com/hdeanclark/DICOMautomaton/> or
-  <https://github.com/hdclark/DICOMautomaton> for sources and build scripts.
+  - This is **not** an official release. It may be lacking functionality, and is
+    almost certainly *not* optimized.
+  
+  - The CI build environment is currently based on `Debian` stable. Attempting to
+    run on systems with older `glibc`s will likely fail.
+  
+  - `AppImage`s require `FUSE` support, so running in Docker will not work.
+    However, `AppImages` can be extracted and run *without* `FUSE` via:
+  
+       $>  ./DICOMautomaton-x86_64.AppImage --appimage-extract
+       $>  ./squashfs-root/usr/bin/dicomautomaton_dispatcher -h
+  
+  - The CI `AppImage` currently expects graphical components to be available on
+    the host system. It will fail if `libGL` or `X` libraries are incompatible or
+    missing.
+  
+  - See <https://gitlab.com/hdeanclark/DICOMautomaton/> or
+    <https://github.com/hdclark/DICOMautomaton> for sources and build scripts.
 
 ### Compiling
 
 Compile from source to get all functionality and ensure compatibility with your
 system.
 
-This project uses CMake. Use the usual commands to compile on Linux:
+This project uses `CMake`. Use the usual commands to compile on `Linux`:
 
      $>  git clone https://gitlab.com/hdeanclark/DICOMautomaton/ && cd DICOMautomaton/ # or
      $>  git clone https://github.com/hdclark/DICOMautomaton/ && cd DICOMautomaton/
      $>  cd /path/to/source/directory
      $>  mkdir build && cd build/
 
-Then, iff by-passing your package manager:
-
-     $>  cmake ../ -DCMAKE_INSTALL_PREFIX=/usr
-     $>  make && sudo make install
-
-Or, if building for Debian:
+Then, if building for `Debian`:
 
      $>  cmake ../ -DCMAKE_INSTALL_PREFIX=/usr
      $>  make && make package
      $>  sudo apt install -f ./*.deb
 
-Or, if building for Arch Linux:
+Or, if building for `Arch Linux`:
 
      $>  rsync -aC --exclude build ../ ./
      $>  makepkg --syncdeps --noconfirm # Optionally also [--install].
 
-Direct installation on non-Linux systems is not officially supported. However, a
-portable Docker image can be built that is portable across non-Linux systems.
-`DICOMautomaton` can be installed on Android inside a termux environment
-(refer to guide in [documentation/](documentation/)).
+Otherwise, if installing directly (i.e., by-passing your package manager):
+
+     $>  cmake ../ -DCMAKE_INSTALL_PREFIX=/usr
+     $>  make && sudo make install
+
+Direct installation on non-`Linux` systems is not officially supported. However,
+`Docker` images can be built that are portable across non-`Linux` systems (see
+below). 
 
 ## Containerization
 
-`DICOMautomaton` can be built as a Docker image. This method automatically
+`DICOMautomaton` can be built as a `Docker` image. This method automatically
 handles installation of all dependencies. The resulting image can be run
-interactively, or accessed through a web server.
+interactively or accessed through a web server.
 
-In order to build the Docker image, you will need `git`, `Docker`, and a `bash`
-shell. On `Windows` systems the `git` shell should be used. To build the image:
+In order to build the `Docker` image, you will need `git`, `Docker`, and a
+`bash` shell. On `Windows` systems the `git` shell should be used. To build the
+image:
 
      $>  git clone https://gitlab.com/hdeanclark/DICOMautomaton/ && cd DICOMautomaton/ # or
      $>  git clone https://github.com/hdclark/DICOMautomaton/ && cd DICOMautomaton/ # or
@@ -335,7 +335,7 @@ shell. On `Windows` systems the `git` shell should be used. To build the image:
      $>  ./docker/build_bases/arch/build.sh
      $>  ./docker/builder/arch/build.sh
 
-After building, the default webserver can be launched using the convenience
+After building, the default web server can be launched using the convenience
 script:
 
      $>  ./docker/scripts/arch/Run_Container.sh
@@ -344,13 +344,27 @@ and a container can be run interactively with the convenience script:
 
      $>  ./docker/scripts/arch/Run_Container_Interactively.sh
 
+### Pre-Built `Docker` Images
+
+Docker containers are available in three variants: using `Arch Linux`, `Debian`,
+or `Void Linux` base images. `Arch Linux` and `Void Linux` provide the latest
+upstream packages, whereas `Debian` provides greater portability since an older
+`glibc` is used. `Arch Linux` builds use `glibc` whereas `Void Linux` builds use
+`musl`.
+
+Build base images contain all dependencies and requirements necessary to compile
+`DICOMautomaton`, but do not themselves contain `DICOMautomaton`. The latest
+successfully-built base images are available here:
+
+  - [![Arch Linux](https://img.shields.io/badge/Latest_Docker_Build_Base-Arch_Linux-brightgreen)](https://hub.docker.com/r/hdclark/dcma_build_base_arch)
+
+  - [![Debian Stable](https://img.shields.io/badge/Latest_Docker_Build_Base-Debian_stable-brightgreen)](https://hub.docker.com/r/hdclark/dcma_build_base_debian_stable)
+
+  - [![Void Linux](https://img.shields.io/badge/Latest_Docker_Build_Base-Void_Linux-brightgreen)](https://hub.docker.com/r/hdclark/dcma_build_base_void)
+
 [Continuous integration](https://travis-ci.com/hdclark/DICOMautomaton) is used
 to build Docker images for all commits using `Travis-CI`. Build artifacts may be
-available [here](https://travis-ci.com/hdclark/DICOMautomaton), but are
-unofficial. Docker containers can be built using Arch Linux, Debian, or Void
-Linux bases; Arch Linux and Void Linux provide the latest upstream packages,
-whereas Debian provides greater portability since an older `glibc` is used. Arch
-Linux builds use `glibc`, Void Linux builds use `musl`.
+available [here](https://travis-ci.com/hdclark/DICOMautomaton).
 
 ## Building Portable Binaries
 
@@ -415,6 +429,9 @@ See `linux/`. Note that this method is experimental.
 
 `DICOMautomaton` can also be built using the `Nix` package manager. See `nix/`.
 Note that this method is experimental.
+
+`DICOMautomaton` can be installed on `Android` inside a `Termux` environment
+(refer to guide in [documentation/](documentation/)).
 
 ## Known Issues
 
