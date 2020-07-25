@@ -270,22 +270,20 @@ for convenience (e.g., `/usr/bin/`).
 
   - This is **not** an official release. It may be lacking functionality, and is
     almost certainly *not* optimized.
-  
+
   - The CI build environment is currently based on `Debian` stable. Attempting to
     run on systems with older `glibc`s will likely fail.
-  
+
   - `AppImage`s require `FUSE` support, so running in Docker will not work.
     However, `AppImages` can be extracted and run *without* `FUSE` via:
-  
 
-     $> ./DICOMautomaton-x86_64.AppImage --appimage-extract
-     $> ./squashfs-root/usr/bin/dicomautomaton_dispatcher -h
-  
+        $> ./DICOMautomaton-x86_64.AppImage --appimage-extract
+        $> ./squashfs-root/usr/bin/dicomautomaton_dispatcher -h
 
   - The CI `AppImage` currently expects graphical components to be available on
     the host system. It will fail if `libGL` or `X` libraries are incompatible or
     missing.
-  
+
   - See <https://gitlab.com/hdeanclark/DICOMautomaton/> or
     <https://github.com/hdclark/DICOMautomaton> for sources and build scripts.
 
