@@ -1,4 +1,5 @@
 
+# Note: the following can be overridden using `docker build --build-arg BASE_CONTAINER_NAME=xyz`.
 ARG BASE_CONTAINER_NAME="dcma_build_base_arch"
 FROM "$BASE_CONTAINER_NAME"
 
@@ -11,7 +12,6 @@ EXPOSE 443
 WORKDIR /scratch
 COPY ./docker/builders/arch /scratch
 COPY . /dcma
-
 
 # Install DICOMautomaton.
 #
@@ -31,9 +31,7 @@ RUN chown -R builduser:builduser . && \
     git reset --hard && \
     git clean -fxd :/ 
 
-
 # Default to launching the webserver.
 WORKDIR /scratch
 CMD ["/bin/bash", "/scratch/Run_WebServer.sh"]
-
 

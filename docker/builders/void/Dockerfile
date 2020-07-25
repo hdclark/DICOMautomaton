@@ -1,6 +1,7 @@
 
-ARG CONTAINER_NAMESPACE=""
-FROM "${CONTAINER_NAMESPACE}"dcma_build_base_void:latest
+# Note: the following can be overridden using `docker build --build-arg BASE_CONTAINER_NAME=xyz`.
+ARG BASE_CONTAINER_NAME="dcma_build_base_void"
+FROM "$BASE_CONTAINER_NAME"
 
 LABEL maintainer="http://www.halclark.ca" \
       description="DICOMautomaton Web Server built from Void Linux."
@@ -11,8 +12,6 @@ EXPOSE 443
 WORKDIR /scratch
 COPY ./docker/builders/void /scratch
 COPY . /dcma
-
-
 
 # Install DICOMautomaton.
 #
