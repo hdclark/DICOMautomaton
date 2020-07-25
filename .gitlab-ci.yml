@@ -4,7 +4,7 @@
 default:
   image: "archlinux/base"
   timeout: 180m
-  use-docker-in-docker: true
+  #use-docker-in-docker: true
 
 build_A:
   stage: build
