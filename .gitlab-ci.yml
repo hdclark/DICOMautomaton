@@ -9,19 +9,21 @@ build_A:
   stage: build
   needs: []
   before_script:
-    - "curl -o /etc/pacman.d/mirrorlist 'https://www.archlinux.org/mirrorlist/?country=all&protocol=http&ip_version=4&use_mirror_status=on'"
-    - "sed -i 's/^#Server/Server/' /etc/pacman.d/mirrorlist"
-    - "pacman -Sy  --noconfirm archlinux-keyring"
-    - "pacman -Syu --noconfirm --needed base-devel base coreutils git rsync buildah podman iptables"
-    - "printf 'Number of CPU cores = '"
-    - "nproc"
-    - "free -h"
-    # Provide a placeholder `docker build` program that passes arguments on to buildah.
-    - "printf '#!/bin/bash\nexec podman --storage-driver=vfs --cgroup-manager=cgroupfs $@\n' | sudo tee -a /usr/bin/docker"
-    - "chmod 777 /usr/bin/docker"
+    - "./docker/build_bases/arch/implementation_arch.sh"
+#    - "curl -o /etc/pacman.d/mirrorlist 'https://www.archlinux.org/mirrorlist/?country=all&protocol=http&ip_version=4&use_mirror_status=on'"
+#    - "sed -i 's/^#Server/Server/' /etc/pacman.d/mirrorlist"
+#    - "pacman -Sy  --noconfirm archlinux-keyring"
+#    - "pacman -Syu --noconfirm --needed base-devel base coreutils git rsync buildah podman iptables"
+#    - "printf 'Number of CPU cores = '"
+#    - "nproc"
+#    - "free -h"
+#    # Provide a placeholder `docker build` program that passes arguments on to buildah.
+#    - "printf '#!/bin/bash\nexec podman --storage-driver=vfs --cgroup-manager=cgroupfs $@\n' | sudo tee -a /usr/bin/docker"
+#    - "chmod 777 /usr/bin/docker"
 
   script:
-    - "./docker/builders/ci/build.sh"
+    - "./docker/builders/arch/implementation_arch.sh"
+#    - "./docker/builders/ci/build.sh"
 
 #  artifacts:
 #    paths:
@@ -36,14 +38,16 @@ test_A:
   needs: ["build_A"]
   script:
     # Ensure the default run script works correctly.
-    - "./docker/scripts/ci/Run_Container.sh"
+    - "./integration_tests/Run.sh"
+#    - "./docker/scripts/ci/Run_Container.sh"
 
 deploy_A:
   stage: deploy
   needs: ["test_A"]
   script:
+    - "echo 'Deployment placeholder successful'"
     # Extract an AppImage from the container.
-    - "./docker/scripts/ci/Extract_AppImage.sh"
+    #- "./docker/scripts/ci/Extract_AppImage.sh"
 
 # WIP notes...
 #
