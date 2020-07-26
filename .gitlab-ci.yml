@@ -1,4 +1,3 @@
-
 # This is a definition file for GitLab CI.
 
 default:
@@ -8,13 +7,22 @@ default:
 
 build_A:
   stage: build
+  needs: []
   before_script:
-    - "curl -o /etc/pacman.d/mirrorlist 'https://www.archlinux.org/mirrorlist/?country=all&protocol=http&ip_version=4&use_mirror_status=on' && sed -i 's/^#Server/Server/' /etc/pacman.d/mirrorlist"
+    - "curl -o /etc/pacman.d/mirrorlist 'https://www.archlinux.org/mirrorlist/?country=all&protocol=http&ip_version=4&use_mirror_status=on'"
+    - "sed -i 's/^#Server/Server/' /etc/pacman.d/mirrorlist"
     - "pacman -Sy  --noconfirm archlinux-keyring"
-    - "pacman -Syu --noconfirm --needed base-devel docker"
+    - "pacman -Syu --noconfirm --needed base-devel base coreutils git rsync buildah podman iptables"
+    - "printf 'Number of CPU cores = '"
+    - "nproc"
+    - "free -h"
+    # Provide a placeholder `docker build` program that passes arguments on to buildah.
+    - "printf '#!/bin/bash\nexec podman --storage-driver=vfs --cgroup-manager=cgroupfs $@\n' | sudo tee -a /usr/bin/docker"
+    - "chmod 777 /usr/bin/docker"
 
   script:
-    - "echo 'Script worked OK'"
+    - "./docker/builders/ci/build.sh"
+
 #  artifacts:
 #    paths:
 #      - mybinary
@@ -23,6 +31,29 @@ build_A:
 #      #   paths:
 #      #     - "*.o"
 
+test_A:
+  stage: test
+  needs: ["build_A"]
+  script:
+    # Ensure the default run script works correctly.
+    - "./docker/scripts/ci/Run_Container.sh"
+
+deploy_A:
+  stage: deploy
+  needs: ["test_A"]
+  script:
+    # Extract an AppImage from the container.
+    - "./docker/scripts/ci/Extract_AppImage.sh"
+
+# WIP notes...
+#
+#    # Workaround for CI push action obliterating the entire repository; fill it with the current contents.
+#    - rm -rf ci_artifacts
+#    - mkdir -pv ci_artifacts
+#    - git clone 'https://github.com/hdclark/hdclark.github.io.git' ci_artifacts
+#    - rm -rf ci_artifacts/.git
+#    - "mv DICOMautomaton*AppImage ci_artifacts/"
+#
 ## run tests using the binary built before
 #test:
 #  stage: test
