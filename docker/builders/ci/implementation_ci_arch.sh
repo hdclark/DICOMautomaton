@@ -1,31 +1,21 @@
 #!/bin/bash
 
-# This script installs all dependencies needed to build DICOMautomaton starting with a minimal Arch Linux system.
+# This script installs dependencies and then builds and installs DICOMautomaton.
+# It can be used for continuous integration (CI), development, and deployment (CD).
 
 set -eux
-
-mkdir -pv /scratch_base
-cd /scratch_base
 
 # Prepare alternative mirrors.
 curl -o /etc/pacman.d/mirrorlist "https://www.archlinux.org/mirrorlist/?country=all&protocol=http&ip_version=4&use_mirror_status=on"
 sed -i 's/^#Server/Server/' /etc/pacman.d/mirrorlist
 
-
 # Install build dependencies.
-#pacman-key --init
-#pacman-key --populate archlinux
-#pacman -Sy --noconfirm archlinux-keyring
-sed -i -e 's/SigLevel[ ]*=.*/SigLevel = Never/g' \
-       -e 's/.*IgnorePkg[ ]*=.*/IgnorePkg = archlinux-keyring/g' /etc/pacman.conf
+pacman -Sy --noconfirm archlinux-keyring
 pacman -Syu --noconfirm --needed \
   base-devel \
   git \
   cmake \
   gcc \
-  vim \
-  gdb \
-  screen \
   ` # Needed for an AUR helper ` \
   sudo \
   pyalpm \
@@ -34,15 +24,15 @@ pacman -Syu --noconfirm --needed \
 rm -f /var/cache/pacman/pkg/*
 
 
-# Create an unprivileged user for building packages.
-useradd -r -d /var/empty builduser
+# Create a temporary user for building AUR packages.
+useradd -m -r -d /var/empty builduser
 mkdir -p /var/empty/
 chown -R builduser:builduser /var/empty/
 printf '\n''builduser ALL=(ALL) NOPASSWD: ALL''\n' >> /etc/sudoers
 
 
-# Install known official dependencies.
-pacman -S --noconfirm --needed  \
+# Install hard build dependencies.
+pacman -S --noconfirm --needed \
   gcc-libs \
   gnu-free-fonts \
   sfml \
@@ -55,40 +45,15 @@ pacman -S --noconfirm --needed  \
   cgal \
   wt \
   asio \
-  nlopt \
-  bash-completion \
-  patchelf \
-  freeglut \
-  libxi \
-  libxmu \
-  ` # Additional dependencies for headless OpenGL rendering with SFML ` \
-  xorg-server \
-  xorg-apps \
-  mesa \
-  xf86-video-dummy
+  nlopt
 rm -f /var/cache/pacman/pkg/*
-
-cp /scratch_base/xpra-xorg.conf /etc/X11/xorg.conf
-
-
-# Download an AUR helper in case it is needed later.
-#
-# Note: `su - builduser -c "yay -S --noconfirm packageA packageB ..."`
-cd /tmp
-wget 'https://github.com/Jguer/yay/releases/download/v10.0.2/yay_10.0.2_x86_64.tar.gz'
-tar -axf yay_*tar.gz
-mv yay_*/yay /tmp/
-rm -rf yay_*
-chmod 777 yay
-su - builduser -c "cd /tmp && ./yay -S --noconfirm yay-bin"
-rm -rf /tmp/yay
 
 
 # Install Ygor.
 #
 # Option 1: install a binary package.
-#mkdir -pv /scratch
-#cd /scratch
+#mkdir -pv /ygor
+#cd /ygor
 #pacman -U ./Ygor*deb
 #
 # Option 2: clone the latest upstream commit.
@@ -104,8 +69,8 @@ git clean -fxd :/
 # Install Explicator.
 #
 # Option 1: install a binary package.
-#mkdir -pv /scratch
-#cd /scratch
+#mkdir -pv /explicator
+#cd /explicator
 #pacman -U ./Explicator*deb
 #
 # Option 2: clone the latest upstream commit.
@@ -124,6 +89,29 @@ cd /ygorcluster
 git clone https://github.com/hdclark/YgorClustering .
 chown -R builduser:builduser .
 su - builduser -c "cd /ygorcluster && ./compile_and_install.sh -b build"
+git reset --hard
+git clean -fxd :/ 
+
+
+# Install DICOMautomaton.
+#
+# Option 1: install a binary package.
+#mkdir -pv /dcma
+#cd /dcma
+#apt-get install --yes -f ./DICOMautomaton*deb 
+#
+# Option 2: clone the latest upstream commit.
+#mkdir -pv /dcma
+#cd /dcma
+#git clone https://github.com/hdclark/DICOMautomaton .
+#   ...
+#
+# Option 3: use the working directory.
+mkdir -pv /dcma
+cd /dcma
+chown -R builduser:builduser .
+sed -i -e 's@MEMORY_CONSTRAINED_BUILD=OFF@MEMORY_CONSTRAINED_BUILD=ON@' /dcma/PKGBUILD
+su - builduser -c "cd /dcma && makepkg --syncdeps --install --clean --needed --noconfirm"
 git reset --hard
 git clean -fxd :/ 
 

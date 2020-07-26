@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# This script installs all dependencies needed to build DICOMautomaton on Debian's stable distribution.
+# This script installs all dependencies needed to build DICOMautomaton starting with a minimal Debian stable system.
 
 set -eux
 

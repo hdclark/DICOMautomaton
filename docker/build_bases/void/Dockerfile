@@ -1,4 +1,6 @@
 
+# NOTE: This Dockerfile should be interepretted relative to the DICOMautomaton repo root.
+
 FROM voidlinux/voidlinux-musl
 
 LABEL maintainer="http://www.halclark.ca" \

@@ -1,5 +1,7 @@
 
-# Note: the following can be overridden using `docker build --build-arg BASE_CONTAINER_NAME=xyz`.
+# NOTE: This Dockerfile should be interepretted relative to the DICOMautomaton repo root.
+
+# NOTE: The following can be overridden using `docker build --build-arg BASE_CONTAINER_NAME=xyz`.
 ARG BASE_CONTAINER_NAME="dcma_build_base_void"
 FROM "$BASE_CONTAINER_NAME"
 
@@ -13,22 +15,7 @@ WORKDIR /scratch
 COPY ./docker/builders/void /scratch
 COPY . /dcma
 
-# Install DICOMautomaton.
-#
-# Option 1: install a binary package.
-#WORKDIR /scratch
-#RUN apt-get install --yes -f ./DICOMautomaton*deb 
-#
-# Option 2: clone the latest upstream commit.
-#WORKDIR /dcma
-#RUN git clone https://github.com/hdclark/DICOMautomaton . && \
-#   ...
-#
-# Option 3: use the working directory.
-WORKDIR /dcma
-RUN ./compile_and_install.sh -b build && \
-    git reset --hard && \
-    git clean -fxd :/ 
+RUN /scratch/implementation_void.sh
 
 # Default to launching the webserver.
 WORKDIR /scratch
