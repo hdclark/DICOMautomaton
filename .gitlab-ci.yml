@@ -9,7 +9,9 @@ build_A:
   stage: build
   needs: []
   before_script:
-    - "./docker/build_bases/arch/implementation_arch.sh"
+    - "cp -R ./docker/build_bases/arch /scratch_base"
+    - "cp -R ./docker/builders/arch /scratch"
+    - "cp -R . /dcma"
 #    - "curl -o /etc/pacman.d/mirrorlist 'https://www.archlinux.org/mirrorlist/?country=all&protocol=http&ip_version=4&use_mirror_status=on'"
 #    - "sed -i 's/^#Server/Server/' /etc/pacman.d/mirrorlist"
 #    - "pacman -Sy  --noconfirm archlinux-keyring"
@@ -22,7 +24,8 @@ build_A:
 #    - "chmod 777 /usr/bin/docker"
 
   script:
-    - "./docker/builders/arch/implementation_arch.sh"
+    - "/scratch_base/implementation_arch.sh"
+    - "/scratch/implementation_arch.sh"
 #    - "./docker/builders/ci/build.sh"
 
 #  artifacts:
