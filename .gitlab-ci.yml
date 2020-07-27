@@ -23,7 +23,7 @@ build_A:
     #- "/scratch/implementation_arch.sh"
     # CI.
     - |
-      ( ( while true ; do sleep 225 ; printf '\n\n' ; df -h ; printf '\n' ; free -h ; printf '\n\n' ; done ) &)
+      ( ( while true ; do sleep 225 ; printf '\n\n' ; df -h ; printf '\n\n' ; free -h ; printf '\n\n' ; done ) &)
       "/scratch/implementation_ci_debian_stable.sh"
 
 #  artifacts:
@@ -39,12 +39,20 @@ test_A:
   needs: ["build_A"]
   script:
     # Ensure the default run script works correctly.
-    - "./integration_tests/Run.sh"
+    - "pwd"
+    - "ls -lash"
+    - "free -h"
+    - "df -h"
+    - "/dcma/integration_tests/Run.sh"
 
 deploy_A:
   stage: deploy
   needs: ["test_A"]
   script:
+    - "pwd"
+    - "ls -lash"
+    - "free -h"
+    - "df -h"
     - "echo 'Deployment placeholder successful'"
     # Extract an AppImage from the container.
     #- "./docker/scripts/ci/Extract_AppImage.sh"
