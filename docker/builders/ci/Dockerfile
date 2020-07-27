@@ -1,5 +1,5 @@
 
-#FROM archlinux/base
+#FROM archlinux:latest
 FROM debian:stable
 
 LABEL maintainer="http://www.halclark.ca" \

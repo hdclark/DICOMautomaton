@@ -9,8 +9,14 @@ set -eux
 curl -o /etc/pacman.d/mirrorlist "https://www.archlinux.org/mirrorlist/?country=all&protocol=http&ip_version=4&use_mirror_status=on"
 sed -i 's/^#Server/Server/' /etc/pacman.d/mirrorlist
 
+# Disable signature checking.
+#
+# Note: This may not be needed -- it is only sometimes needed for very old base images.
+sed -i -e 's/SigLevel[ ]*=.*/SigLevel = Never/g' \
+       -e 's/.*IgnorePkg[ ]*=.*/IgnorePkg = archlinux-keyring/g' /etc/pacman.conf
+
 # Install build dependencies.
-pacman -Sy --noconfirm archlinux-keyring
+#pacman -Sy --noconfirm archlinux-keyring
 pacman -Syu --noconfirm --needed \
   base-devel \
   git \

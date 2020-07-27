@@ -1,7 +1,7 @@
 
 # NOTE: This Dockerfile should be interepretted relative to the DICOMautomaton repo root.
 
-FROM archlinux/base
+FROM archlinux:latest
 
 LABEL maintainer="http://www.halclark.ca" \
       description="DICOMautomaton build base for Arch Linux."
