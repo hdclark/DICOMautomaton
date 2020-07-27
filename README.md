@@ -1,11 +1,14 @@
-
 # ![DICOMautomaton logo](artifacts/logos/DCMA_cycle_opti.svg)
 
-[![Build Status](https://travis-ci.com/hdclark/DICOMautomaton.svg?branch=master)](https://travis-ci.com/hdclark/DICOMautomaton)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
-[![LOC](https://tokei.rs/b1/gitlab/hdeanclark/DICOMautomaton)](https://gitlab.com/hdeanclark/DICOMautomaton)
 [![Language](https://img.shields.io/github/languages/top/hdclark/DICOMautomaton.svg)](https://gitlab.com/hdeanclark/DICOMautomaton)
+[![LOC](https://tokei.rs/b1/gitlab/hdeanclark/DICOMautomaton)](https://gitlab.com/hdeanclark/DICOMautomaton)
+
+[![Language Grade: C/C++](https://img.shields.io/lgtm/grade/cpp/g/hdclark/DICOMautomaton.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/hdclark/DICOMautomaton/context:cpp)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/1ac93861be524c7f9f18324b64960f28)](https://www.codacy.com/app/hdclark/DICOMautomaton?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=hdclark/DICOMautomaton&amp;utm_campaign=Badge_Grade)
+
+[![Travis CI Build Status](https://travis-ci.com/hdclark/DICOMautomaton.svg?branch=master)](https://travis-ci.com/hdclark/DICOMautomaton)
+[![GitLab CI Pipeline Status](https://gitlab.com/hdeanclark/DICOMautomaton/badges/master/pipeline.svg)](https://gitlab.com/hdeanclark/DICOMautomaton/-/commits/master)
 
 ## About
 
@@ -281,10 +284,10 @@ for convenience (e.g., `/usr/bin/`).
         $> ./squashfs-root/usr/bin/dicomautomaton_dispatcher -h
 
   - The CI `AppImage` currently expects graphical components to be available on
-    the host system. It will fail if `libGL` or `X` libraries are incompatible or
-    missing.
+    the host system. It will fail if `libGL`, `freetype`, or `libstdc++` libraries
+    are either incompatible or missing.
 
-  - See <https://gitlab.com/hdeanclark/DICOMautomaton/> or
+  - See <https://gitlab.com/hdeanclark/DICOMautomaton> or
     <https://github.com/hdclark/DICOMautomaton> for sources and build scripts.
 
 ### Compiling
@@ -362,9 +365,13 @@ successfully-built base images are available here:
 
   - [![Void Linux](https://img.shields.io/badge/Latest_Docker_Build_Base-Void_Linux-brightgreen)](https://hub.docker.com/r/hdclark/dcma_build_base_void)
 
-[Continuous integration](https://travis-ci.com/hdclark/DICOMautomaton) is used
-to build Docker images for all commits using `Travis-CI`. Build artifacts may be
-available [here](https://travis-ci.com/hdclark/DICOMautomaton).
+Continuous integration is used to build `Docker` images, `AppImage`s, and
+perform tests for all commits. `Docker` build artifacts from `Travis-CI` may
+be available [here](https://travis-ci.com/hdclark/DICOMautomaton).
+Additional build environments and `AppImage` portability are tested with
+`GitLab` CI pipelines; build artifacts are available
+[here](https://gitlab.com/hdeanclark/DICOMautomaton/-/pipelines).
+Note that CI artifacts are not optimized and functionality may be missing.
 
 ## Building Portable Binaries
 
@@ -436,7 +443,7 @@ Note that this method is experimental.
 ## Known Issues
 
   - The `SFML_Viewer` operation hangs on some systems after viewing a plot with
-    Gnuplot. This stems from a known issue in Ygor.
+    `Gnuplot`. This stems from a known issue in `Ygor`.
 
   - Building with `musl` may cause character conversion to fail for some DICOM
     files in some circumstances.
