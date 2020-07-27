@@ -1,42 +1,69 @@
 # This is a definition file for GitLab CI.
 
 default:
-  #image: "archlinux/base"
-  image: "debian:stable"
-  timeout: 300m
+  timeout: 360m
 
-build_A:
+#######################################################################################################################
+### Building stages.
+#######################################################################################################################
+
+# CI build on Debian stable.
+# Notes: reduced (or missing) optimization, some components may be missing.
+build_ci_debian_stable:
   stage: build
   needs: []
+  image: "debian:stable"
   before_script:
-    # Arch Linux.
-    #- "cp -R ./docker/build_bases/arch /scratch_base"
-    #- "cp -R ./docker/builders/arch /scratch"
-    #- "cp -R . /dcma"
-    # CI.
     - "cp -R ./docker/builders/ci /scratch"
     - "cp -R . /dcma"
-
   script:
-    # Arch Linux.
-    #- "/scratch_base/implementation_arch.sh"
-    #- "/scratch/implementation_arch.sh"
-    # CI.
     - |
       ( ( while true ; do sleep 225 ; printf '\n\n' ; df -h ; printf '\n\n' ; free -h ; printf '\n\n' ; done ) &)
       "/scratch/implementation_ci_debian_stable.sh"
 
-#  artifacts:
-#    paths:
-#      - mybinary
-#      # depending on your build setup it's most likely a good idea to cache outputs to reduce the build time
-#      # cache:
-#      #   paths:
-#      #     - "*.o"
+# CI build on Arch Linux.
+# Notes: reduced (or missing) optimization, some components may be missing.
+build_ci_arch:
+  stage: build
+  needs: []
+  image: "archlinux/base"
+  before_script:
+    - "cp -R ./docker/builders/ci /scratch"
+    - "cp -R . /dcma"
+  script:
+    - |
+      ( ( while true ; do sleep 225 ; printf '\n\n' ; df -h ; printf '\n\n' ; free -h ; printf '\n\n' ; done ) &)
+      "/scratch/implementation_ci_arch.sh"
 
-test_A:
+## Full Arch Linux build.
+#build_arch:
+#  stage: build
+#  needs: []
+#  image: "archlinux/base"
+#  before_script:
+#    - "cp -R ./docker/build_bases/arch /scratch_base"
+#    - "cp -R ./docker/builders/arch /scratch"
+#    - "cp -R . /dcma"
+#  script:
+#    - |
+#      ( ( while true ; do sleep 225 ; printf '\n\n' ; df -h ; printf '\n\n' ; free -h ; printf '\n\n' ; done ) &)
+#      "/scratch_base/implementation_arch.sh"
+#      "/scratch/implementation_arch.sh"
+##  artifacts:
+##    paths:
+##      - mybinary
+##      # depending on your build setup it's most likely a good idea to cache outputs to reduce the build time
+##      # cache:
+##      #   paths:
+##      #     - "*.o"
+
+#######################################################################################################################
+### Testing stages.
+#######################################################################################################################
+
+test_ci_debian_stable:
   stage: test
-  needs: ["build_A"]
+  needs: ["build_ci_debian_stable"]
   script:
     # Ensure the default run script works correctly.
     - "pwd"
@@ -45,9 +72,24 @@ test_A:
     - "df -h"
     - "/dcma/integration_tests/Run.sh"
 
-deploy_A:
+test_ci_arch:
+  stage: test
+  needs: ["build_ci_arch"]
+  script:
+    # Ensure the default run script works correctly.
+    - "pwd"
+    - "ls -lash"
+    - "free -h"
+    - "df -h"
+    - "/dcma/integration_tests/Run.sh"
+
+#######################################################################################################################
+### Deployment stages.
+#######################################################################################################################
+
+deploy_ci_debian_stable:
   stage: deploy
-  needs: ["test_A"]
+  needs: ["test_ci_debian_stable"]
   script:
     - "pwd"
     - "ls -lash"
