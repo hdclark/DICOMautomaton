@@ -70,9 +70,8 @@ test_ci_debian_stable:
     - "ls -lash"
     - "free -h"
     - "df -h"
-    - "ls -lash /dcma"
-    - "ls -lash /dcma/integration_tests/"
-    - "/dcma/integration_tests/Run.sh"
+    - "ls -lash /"
+    - "./integration_tests/Run.sh"
 
 test_ci_arch:
   stage: test
@@ -83,9 +82,8 @@ test_ci_arch:
     - "ls -lash"
     - "free -h"
     - "df -h"
-    - "ls -lash /dcma"
-    - "ls -lash /dcma/integration_tests/"
-    - "/dcma/integration_tests/Run.sh"
+    - "ls -lash /"
+    - "./integration_tests/Run.sh"
 
 #######################################################################################################################
 ### Deployment stages.
