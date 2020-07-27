@@ -3,6 +3,11 @@
 default:
   timeout: 360m
 
+stages:
+  - build
+  - test
+  - deploy
+
 #######################################################################################################################
 ### Building stages.
 #######################################################################################################################
@@ -74,24 +79,32 @@ build_ci_arch:
 test_ci_debian_stable:
   stage: test
   needs: ["build_ci_debian_stable"]
+  image: "debian:stable"
   script:
     # Ensure the default run script works correctly.
-    - "pwd"
-    - "ls -lash"
-    - "free -h"
-    - "df -h"
+    - "chmod 777 DICOMautomaton*AppImage"
+    - "./DICOMautomaton*AppImage --appimage-extract"
+    - "./squashfs-root/usr/bin/dicomautomaton_dispatcher -h"
     #- "./integration_tests/Run.sh"
+    #- "pwd"
+    #- "ls -lash"
+    #- "free -h"
+    #- "df -h"
 
 test_ci_arch:
   stage: test
   needs: ["build_ci_arch"]
+  image: "archlinux/base"
   script:
     # Ensure the default run script works correctly.
-    - "pwd"
-    - "ls -lash"
-    - "free -h"
-    - "df -h"
+    - "chmod 777 DICOMautomaton*AppImage"
+    - "./DICOMautomaton*AppImage --appimage-extract"
+    - "./squashfs-root/usr/bin/dicomautomaton_dispatcher -h"
     #- "./integration_tests/Run.sh"
+    #- "pwd"
+    #- "ls -lash"
+    #- "free -h"
+    #- "df -h"
 
 #######################################################################################################################
 ### Deployment stages.
@@ -106,6 +119,4 @@ deploy_ci_debian_stable:
     - "free -h"
     - "df -h"
     - "echo 'Deployment placeholder successful'"
-    # Extract an AppImage from the container.
-    #- "./docker/scripts/ci/Extract_AppImage.sh"
 
