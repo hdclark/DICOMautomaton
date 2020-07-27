@@ -1,32 +1,30 @@
 # This is a definition file for GitLab CI.
 
 default:
-  image: "archlinux/base"
-  timeout: 180m
-  #use-docker-in-docker: true
+  #image: "archlinux/base"
+  image: "debian:stable"
+  timeout: 300m
 
 build_A:
   stage: build
   needs: []
   before_script:
-    - "cp -R ./docker/build_bases/arch /scratch_base"
-    - "cp -R ./docker/builders/arch /scratch"
+    # Arch Linux.
+    #- "cp -R ./docker/build_bases/arch /scratch_base"
+    #- "cp -R ./docker/builders/arch /scratch"
+    #- "cp -R . /dcma"
+    # CI.
+    - "cp -R ./docker/builders/ci /scratch"
     - "cp -R . /dcma"
-#    - "curl -o /etc/pacman.d/mirrorlist 'https://www.archlinux.org/mirrorlist/?country=all&protocol=http&ip_version=4&use_mirror_status=on'"
-#    - "sed -i 's/^#Server/Server/' /etc/pacman.d/mirrorlist"
-#    - "pacman -Sy  --noconfirm archlinux-keyring"
-#    - "pacman -Syu --noconfirm --needed base-devel base coreutils git rsync buildah podman iptables"
-#    - "printf 'Number of CPU cores = '"
-#    - "nproc"
-#    - "free -h"
-#    # Provide a placeholder `docker build` program that passes arguments on to buildah.
-#    - "printf '#!/bin/bash\nexec podman --storage-driver=vfs --cgroup-manager=cgroupfs $@\n' | sudo tee -a /usr/bin/docker"
-#    - "chmod 777 /usr/bin/docker"
 
   script:
-    - "/scratch_base/implementation_arch.sh"
-    - "/scratch/implementation_arch.sh"
-#    - "./docker/builders/ci/build.sh"
+    # Arch Linux.
+    #- "/scratch_base/implementation_arch.sh"
+    #- "/scratch/implementation_arch.sh"
+    # CI.
+    - |
+      ( ( while true ; do sleep 225 ; printf '\n\n' ; df -h ; printf '\n' ; free -h ; printf '\n\n' ; done ) &)
+      "/scratch/implementation_ci_debian_stable.sh"
 
 #  artifacts:
 #    paths:
@@ -42,7 +40,6 @@ test_A:
   script:
     # Ensure the default run script works correctly.
     - "./integration_tests/Run.sh"
-#    - "./docker/scripts/ci/Run_Container.sh"
 
 deploy_A:
   stage: deploy
@@ -51,19 +48,4 @@ deploy_A:
     - "echo 'Deployment placeholder successful'"
     # Extract an AppImage from the container.
     #- "./docker/scripts/ci/Extract_AppImage.sh"
-
-# WIP notes...
-#
-#    # Workaround for CI push action obliterating the entire repository; fill it with the current contents.
-#    - rm -rf ci_artifacts
-#    - mkdir -pv ci_artifacts
-#    - git clone 'https://github.com/hdclark/hdclark.github.io.git' ci_artifacts
-#    - rm -rf ci_artifacts/.git
-#    - "mv DICOMautomaton*AppImage ci_artifacts/"
-#
-## run tests using the binary built before
-#test:
-#  stage: test
-#  script:
-#    - ./runmytests.sh
 
