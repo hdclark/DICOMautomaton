@@ -21,7 +21,7 @@ with a focus on automation. It runs on Linux. It has first-class support for:
   - point clouds (3D),
   - registration and warp transformations (rigid and deformable in 3D),
   - radiotherapy plans, and
-  - line samples (i.e., discretized 1D to 1D mappings).
+  - line samples (i.e., discretized scalar-valued functions over $`\mathbb{R}^1`$).
 
 There are four ways of operating `DICOMautomaton`:
 
