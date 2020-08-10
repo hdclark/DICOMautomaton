@@ -25,7 +25,7 @@ build_ci_debian_stable:
     - "cp -R . /dcma"
   script:
     - |
-      ( ( while true ; do sleep 225 ; printf '\n\n' ; df -h ; printf '\n\n' ; free -h ; printf '\n\n' ; done ) &)
+      #( ( while true ; do sleep 225 ; printf '\n\n' ; df -h ; printf '\n\n' ; free -h ; printf '\n\n' ; done ) &)
       "./docker/builders/ci/implementation_ci_debian_stable.sh"
       "./integration_tests/Run.sh"
       "./scripts/extract_system_appimage.sh"
@@ -45,7 +45,7 @@ build_ci_arch:
     - "cp -R . /dcma"
   script:
     - |
-      ( ( while true ; do sleep 225 ; printf '\n\n' ; df -h ; printf '\n\n' ; free -h ; printf '\n\n' ; done ) &)
+      #( ( while true ; do sleep 225 ; printf '\n\n' ; df -h ; printf '\n\n' ; free -h ; printf '\n\n' ; done ) &)
       "./docker/builders/ci/implementation_ci_arch.sh"
       "./integration_tests/Run.sh"
       "./scripts/extract_system_appimage.sh"
