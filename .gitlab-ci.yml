@@ -140,6 +140,48 @@ test_ci_debian_stable_on_arch:
     - "dicomautomaton_dispatcher -h"
     - "./integration_tests/Run.sh"
 
+test_ci_debian_stable_on_ubuntu_latest:
+  stage: test
+  needs: ["build_ci_debian_stable"]
+  image: "ubuntu:latest"
+  script:
+    # Provide minimal system libraries.
+    - "export DEBIAN_FRONTEND='noninteractive'"
+    - "apt-get update --yes"
+    #- "apt-get install --yes --no-install-recommends git rsync mesa-utils libfreetype6 libstdc++6"
+    - "apt-get install --yes --no-install-recommends git rsync mesa-utils libfreetype6 g++"
+    # Unpack the AppImage and overlay it in the containers root filesystem.
+    #- "apt-get install --yes --no-install-recommends wget ca-certificates"
+    #- "wget --no-check-certificate 'https://hdclark.github.io/DICOMautomaton-x86_64.AppImage'"
+    - "chmod 777 DICOMautomaton*AppImage"
+    - "./DICOMautomaton*AppImage --appimage-extract"
+    - "rsync -a ./squashfs-root/usr/ /usr/"
+    # Ensure it can be run and then run tests.
+    - "dicomautomaton_dispatcher -h"
+    #- git clone 'https://github.com/hdclark/DICOMautomaton'
+    #- cd DICOMautomaton
+    - "./integration_tests/Run.sh"
+
+test_ci_debian_stable_on_fedora_latest:
+  stage: test
+  needs: ["build_ci_debian_stable"]
+  image: "fedora:latest"
+  script:
+    # Provide minimal system libraries.
+    - "dnf -y upgrade"
+    - "dnf -y install bash findutils git rsync mesa-libGL freetype libgcc libstdc++"
+    # Unpack the AppImage and overlay it in the containers root filesystem.
+    #- "dnf -y install wget ca-certificates"
+    #- "wget --no-check-certificate 'https://hdclark.github.io/DICOMautomaton-x86_64.AppImage'"
+    - "chmod 777 DICOMautomaton*AppImage"
+    - "./DICOMautomaton*AppImage --appimage-extract"
+    - "rsync -a ./squashfs-root/usr/ /usr/"
+    # Ensure it can be run and then run tests.
+    - "dicomautomaton_dispatcher -h"
+    #- "git clone 'https://github.com/hdclark/DICOMautomaton'"
+    #- "cd DICOMautomaton"
+    - "./integration_tests/Run.sh"
+
 #######################################################################################################################
 ### Deployment stages.
 #######################################################################################################################
