@@ -36,6 +36,9 @@ rm -f /var/cache/pacman/pkg/*
 
 
 # Create an unprivileged user for building packages.
+# 
+# Note: The 'archlinux' Docker container currently contains user 'aurbuild' and has yay installed already.
+#       It won't hurt to add a new build user in case it is missing.
 useradd -r -d /var/empty builduser
 mkdir -p /var/empty/
 chown -R builduser:builduser /var/empty/
@@ -75,14 +78,16 @@ cp /scratch_base/xpra-xorg.conf /etc/X11/xorg.conf
 # Download an AUR helper in case it is needed later.
 #
 # Note: `su - builduser -c "yay -S --noconfirm packageA packageB ..."`
-cd /tmp
-wget 'https://github.com/Jguer/yay/releases/download/v10.0.2/yay_10.0.2_x86_64.tar.gz'
-tar -axf yay_*tar.gz
-mv yay_*/yay /tmp/
-rm -rf yay_*
-chmod 777 yay
-su - builduser -c "cd /tmp && ./yay -S --noconfirm yay-bin"
-rm -rf /tmp/yay
+if ! command -v yay &>/dev/null ; then
+    cd /tmp
+    wget 'https://github.com/Jguer/yay/releases/download/v10.0.2/yay_10.0.2_x86_64.tar.gz'
+    tar -axf yay_*tar.gz
+    mv yay_*/yay /tmp/
+    rm -rf yay_*
+    chmod 777 yay
+    su - builduser -c "cd /tmp && ./yay -S --noconfirm yay-bin"
+    rm -rf /tmp/yay
+fi
 
 
 # Install Ygor.
