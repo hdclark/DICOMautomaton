@@ -48,13 +48,14 @@ printf '\n''builduser ALL=(ALL) NOPASSWD: ALL''\n' >> /etc/sudoers
 # Install known official dependencies.
 pacman -S --noconfirm --needed  \
   gcc-libs \
+  gsl \
+  eigen \
+  boost-libs \
   gnu-free-fonts \
   sfml \
   jansson \
   libpqxx \
   postgresql \
-  gsl \
-  boost-libs \
   zlib \
   cgal \
   wt \
