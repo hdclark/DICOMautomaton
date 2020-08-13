@@ -230,11 +230,12 @@ Drover ExtractRadiomicFeatures(Drover DICOM_data, const OperationArgPkg& OptArgs
         smesh_header << ",MeshSurfaceAreaVolumeRatio";
         smesh_report << "," << SA_V;
 
-        const auto Sph = std::pow(36.0 * M_PI * V * V, 1.0/3.0)/A;
+        const auto pi = std::acos(-1.0);
+        const auto Sph = std::pow(36.0 * pi * V * V, 1.0/3.0)/A;
         smesh_header << ",MeshSphericity";
         smesh_report << "," << Sph;
 
-        const auto C = V/std::sqrt( M_PI * std::pow(A, 3.0) );
+        const auto C = V/std::sqrt( pi * std::pow(A, 3.0) );
         smesh_header << ",MeshCompactness";
         smesh_report << "," << C;
     }

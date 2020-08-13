@@ -123,10 +123,11 @@ void Inject_Point_Contour( const planar_image<float,double> &animg,
     if(num_verts < 3) throw std::logic_error("This routine requires >=3 vertices for approximations."); 
 
     // Add the vertices and metadata to a new contour.
+    const auto pi = std::acos(-1.0);
     contour_of_points<double> c;
     c.closed = true;
     for(long int n = 0; n < num_verts; ++n){
-        const auto angle = 2.0 * M_PI * static_cast<double>(n) / static_cast<double>(num_verts);
+        const auto angle = 2.0 * pi * static_cast<double>(n) / static_cast<double>(num_verts);
         c.points.emplace_back( proj + row_unit * std::cos(angle) * radius
                                     + col_unit * std::sin(angle) * radius );
     }

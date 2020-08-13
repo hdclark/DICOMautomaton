@@ -673,6 +673,7 @@ Rotate_Grid_Optimally( Grid_Context &GC,
     GC.current_grid_anchor = (ICPC.rot_centre + Rtn_cntr_to_new_Anchor);
 
     if(false){ // Debugging.
+        const auto pi = std::acos(-1.0);
         std::cout << " Rotations: " << std::endl;
         std::cout << "    Rotating about point at " << ICPC.rot_centre << std::endl;
         std::cout << "    Dot product of new grid axes vectors: " 
@@ -691,9 +692,9 @@ Rotate_Grid_Optimally( Grid_Context &GC,
         std::cout << "  " << GC.current_grid_y;
         std::cout << "  " << GC.current_grid_z << std::endl;
         std::cout << "      angle changes: " << std::endl;
-        std::cout << "        " << GC.current_grid_x.angle(previous_grid_x)*180.0/M_PI << " deg.";
-        std::cout << "  " << GC.current_grid_y.angle(previous_grid_y)*180.0/M_PI << " deg.";
-        std::cout << "  " << GC.current_grid_z.angle(previous_grid_z)*180.0/M_PI << " deg." << std::endl;
+        std::cout << "        " << GC.current_grid_x.angle(previous_grid_x)*180.0/pi << " deg.";
+        std::cout << "  " << GC.current_grid_y.angle(previous_grid_y)*180.0/pi << " deg.";
+        std::cout << "  " << GC.current_grid_z.angle(previous_grid_z)*180.0/pi << " deg." << std::endl;
         std::cout << " " << std::endl;
      }
      return;
@@ -888,8 +889,9 @@ return;
             const auto z_dist = P.distance(C);
             const auto z_unit = (P-C).unit();
 
-            auto x_unit = z_unit.rotate_around_x(90.0 * M_PI / 180.0).rotate_around_y(45.0 * M_PI / 180.0);
-            auto y_unit = x_unit.rotate_around_z(15.0 * M_PI / 180.0).rotate_around_y(-15.0 * M_PI / 180.0);
+            const auto pi = std::acos(-1.0);
+            auto x_unit = z_unit.rotate_around_x(90.0 * pi / 180.0).rotate_around_y(45.0 * pi / 180.0);
+            auto y_unit = x_unit.rotate_around_z(15.0 * pi / 180.0).rotate_around_y(-15.0 * pi / 180.0);
             z_unit.GramSchmidt_orthogonalize(x_unit, y_unit);
             x_unit = x_unit.unit();
             y_unit = y_unit.unit();

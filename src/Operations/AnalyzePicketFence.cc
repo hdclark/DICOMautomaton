@@ -196,6 +196,7 @@ Drover AnalyzePicketFence(Drover DICOM_data, const OperationArgPkg& OptArgs, con
     const auto InteractivePlotsStr = OptArgs.getValueStr("InteractivePlots").value();
 
     //-----------------------------------------------------------------------------------------------------------------
+    const auto pi = std::acos(-1.0);
     const auto regex_true = Compile_Regex("^tr?u?e?$");
 
     const auto regex_VMLC80  = Compile_Regex("^va?r?i?a?n?m?i?l?l?e?n?n?i?u?m?m?l?c?80$");
@@ -358,9 +359,9 @@ Drover AnalyzePicketFence(Drover DICOM_data, const OperationArgPkg& OptArgs, con
             //---------------------------------------------------------------------------
             // Extract the junction and leaf pair travel axes.
             auto BeamLimitingDeviceAngle = animg->GetMetadataValueAs<std::string>("BeamLimitingDeviceAngle");
-            auto rot_ang = std::stod( BeamLimitingDeviceAngle.value() ) * M_PI/180.0; // in radians.
+            auto rot_ang = std::stod( BeamLimitingDeviceAngle.value() ) * pi/180.0; // in radians.
             if(std::isfinite(PFC.CollimatorCompensation)){
-                rot_ang -= PFC.CollimatorCompensation * M_PI/180.0;
+                rot_ang -= PFC.CollimatorCompensation * pi/180.0;
             }
 
             // We now assume that at 0 deg the leaves are aligned with row_unit ( hopefully [1,0,0] ).
@@ -370,7 +371,7 @@ Drover AnalyzePicketFence(Drover DICOM_data, const OperationArgPkg& OptArgs, con
             // This transformation is WRONG, but should work in normal situations (gantry ~0, coll 0 or 90, image panel
             // is parallel to the isocentric plane (i.e., orthogonal to the CAX).
             PFC.leaf_axis     = col_unit.rotate_around_z(rot_ang);
-            PFC.junction_axis = col_unit.rotate_around_z(rot_ang + 0.5*M_PI);
+            PFC.junction_axis = col_unit.rotate_around_z(rot_ang + 0.5*pi);
 
             //---------------------------------------------------------------------------
             //Create lines for leaf pairs computed from knowledge about each machine's MLC geometry.
@@ -937,7 +938,7 @@ Drover AnalyzePicketFence(Drover DICOM_data, const OperationArgPkg& OptArgs, con
                 const auto eff_rtn = std::atan(res.slope);
                 j_rot.emplace_back(eff_rtn);
             }
-            PFC.CollimatorCompensation = Stats::Median(j_rot) * 180 / M_PI;
+            PFC.CollimatorCompensation = Stats::Median(j_rot) * 180 / pi;
 
             FUNCINFO("Detected an uncompensated collimator rotation of " << PFC.CollimatorCompensation << " deg");
             FUNCINFO("Restarting analysis to incorporate the extra collimator rotation");

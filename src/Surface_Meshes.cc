@@ -171,9 +171,10 @@ Polyhedron Estimate_Surface_Mesh(
     //       generating two orthogonal directions involving the cardinal directions and Gram-Schmidt
     //       orthogonalization.
     const auto GridZ = est_cont_normal.unit();
-    vec3<double> GridX = GridZ.rotate_around_z(M_PI * 0.5); // Try Z. Will often be idempotent.
+    const auto pi = std::acos(-1.0);
+    vec3<double> GridX = GridZ.rotate_around_z(pi * 0.5); // Try Z. Will often be idempotent.
     if(GridX.Dot(GridZ) > 0.25){
-        GridX = GridZ.rotate_around_y(M_PI * 0.5);  //Should always work since GridZ is parallel to Z.
+        GridX = GridZ.rotate_around_y(pi * 0.5);  //Should always work since GridZ is parallel to Z.
     }
     vec3<double> GridY = GridZ.Cross(GridX);
     if(!GridZ.GramSchmidt_orthogonalize(GridX, GridY)){
@@ -1175,10 +1176,11 @@ Polyhedron Estimate_Surface_Mesh_Marching_Cubes(
     FUNCINFO("Number of images: " << params.NumberOfImages);
 
     // Find grid alignment vectors.
+    const auto pi = std::acos(-1.0);
     const auto GridZ = est_cont_normal.unit();
-    vec3<double> GridX = GridZ.rotate_around_z(M_PI * 0.5); // Try Z. Will often be idempotent.
+    vec3<double> GridX = GridZ.rotate_around_z(pi * 0.5); // Try Z. Will often be idempotent.
     if(GridX.Dot(GridZ) > 0.25){
-        GridX = GridZ.rotate_around_y(M_PI * 0.5);  //Should always work since GridZ is parallel to Z.
+        GridX = GridZ.rotate_around_y(pi * 0.5);  //Should always work since GridZ is parallel to Z.
     }
     vec3<double> GridY = GridZ.Cross(GridX);
     if(!GridZ.GramSchmidt_orthogonalize(GridX, GridY)){
@@ -1399,7 +1401,8 @@ Polyhedron Estimate_Surface_Mesh_AdvancingFront(
 */
 
     const double radius_ratio_bound = 0.1;
-    const double beta = M_PI*0.05/6.0;
+    const auto pi = std::acos(-1.0);
+    const double beta = pi*0.05/6.0;
 
     Mesh output_mesh;
     Construct construct(output_mesh, points.begin(), points.end());

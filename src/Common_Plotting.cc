@@ -32,9 +32,10 @@ PlotTimeCourses(const std::string& title,
     //       A better approach would be sending data to a dedicated server over the net. Better for headless operations,
     //       better for managing the plots and data, better for archiving, etc..
 
+#if !defined(_WIN32) && !defined(_WIN64)
     auto pid = fork();
     if(pid == 0){ //Child process.
-
+#endif
         //Package the data into a shuttle and write the to file.
         std::vector<YgorMathPlottingGnuplot::Shuttle<samples_1D<double>>> shuttle;
         for(auto & tcs : s1D_time_courses){
@@ -78,8 +79,10 @@ PlotTimeCourses(const std::string& title,
             }
         }
 
-        quick_exit(EXIT_SUCCESS);
+#if !defined(_WIN32) && !defined(_WIN64)
+        std::quick_exit(EXIT_SUCCESS);
     }
+#endif
     return;
 }
 

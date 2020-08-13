@@ -42,6 +42,8 @@ Estimate_Contour_Correspondence(
         std::reference_wrapper<contour_of_points<double>> A,
         std::reference_wrapper<contour_of_points<double>> B ){
 
+    [[maybe_unused]] const auto pi = std::acos(-1.0);
+
     contour_of_points<double> contour_A = A.get();
     contour_of_points<double> contour_B = B.get();
 
@@ -187,8 +189,8 @@ Estimate_Contour_Correspondence(
         const auto b = B - C;
         bool OK;
         auto angle = a.angle(b, &OK);
-        if(!OK) angle = M_PI; // Maybe not the best choice???
-        const auto curvature = std::abs( angle / M_PI );
+        if(!OK) angle = pi; // Maybe not the best choice???
+        const auto curvature = std::abs( angle / pi );
         return curvature;
     };
 */
@@ -343,7 +345,7 @@ Estimate_Contour_Correspondence(
             //    criteria_w_i_next = 0.0; // Acceptable, but won't beat any legitimate candidates.
             //}else{
             //    const auto circum_r = (a.length() * b.length() * (a-b).length()) / (4.0 * face_area );
-            //    const auto circum_a = M_PI * circum_r * circum_r;
+            //    const auto circum_a = pi * circum_r * circum_r;
             //    criteria_w_i_next = - face_area / circum_a;
             //}
 
@@ -452,7 +454,7 @@ Estimate_Contour_Correspondence(
             //    criteria_w_j_next = 0.0; // Acceptable, but won't beat any legitimate candidates.
             //}else{
             //    const auto circum_r = (a.length() * b.length() * (a-b).length()) / (4.0 * face_area );
-            //    const auto circum_a = M_PI * circum_r * circum_r;
+            //    const auto circum_a = pi * circum_r * circum_r;
             //    criteria_w_j_next = - face_area / circum_a;
             //}
 

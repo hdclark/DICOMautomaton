@@ -697,11 +697,12 @@ Drover SurfaceBasedRayCastDoseAccumulate(Drover DICOM_data, const OperationArgPk
     // NOTE: They do not need to be aligned with the geometry, contours, or grid. But leave a big margin so you
     //       can ensure you're getting all the surface available.
 
+    const auto pi = std::acos(-1.0);
     //const auto SDGridZ = vec3<double>(0.0, 1.0, 1.0).unit();
     const auto SDGridZ = ROICleaving.N_0.unit();
     vec3<double> SDGridY = vec3<double>(1.0, 0.0, 0.0);
     if(SDGridY.Dot(SDGridZ) > 0.25){
-        SDGridY = SDGridZ.rotate_around_x(M_PI * 0.5);
+        SDGridY = SDGridZ.rotate_around_x(pi * 0.5);
     }
     vec3<double> SDGridX = SDGridZ.Cross(SDGridY);
     if(!SDGridZ.GramSchmidt_orthogonalize(SDGridY, SDGridX)){

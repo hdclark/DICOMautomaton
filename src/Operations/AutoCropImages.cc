@@ -69,6 +69,7 @@ Drover AutoCropImages(Drover DICOM_data, const OperationArgPkg& OptArgs, const s
     const auto RTIMAGE_str = OptArgs.getValueStr("RTIMAGE").value();
 
     //-----------------------------------------------------------------------------------------------------------------
+    [[maybe_unused]] const auto pi = std::acos(-1.0);
     const auto regex_true = Compile_Regex("^tr?u?e?$");
 
     const auto RTIMAGE = std::regex_match(RTIMAGE_str, regex_true);
@@ -145,7 +146,7 @@ Drover AutoCropImages(Drover DICOM_data, const OperationArgPkg& OptArgs, const s
                     auto x_coords = SplitStringToVector(x_jaws.value(), R"***(\\)***"_s, 'd');
                     auto y_coords = SplitStringToVector(y_jaws.value(), R"***(\\)***"_s, 'd');
 
-                    auto rot_ang = std::stod( BeamLimitingDeviceAngle.value() ) * M_PI/180.0; // in radians.
+                    auto rot_ang = std::stod( BeamLimitingDeviceAngle.value() ) * pi/180.0; // in radians.
 
                     
                     const auto x_lower = std::stod(x_coords.at(0)) * SADToSID;

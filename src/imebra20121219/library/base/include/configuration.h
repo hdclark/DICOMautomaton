@@ -69,7 +69,7 @@ using imbxInt32 = int;
 
 #if !defined(PUNTOEXE_WINDOWS) && !defined(PUNTOEXE_POSIX)
 
-#if defined(WIN32) || defined(WIN64)
+#if defined(_WIN32) || defined(_WIN64)
 #define PUNTOEXE_WINDOWS 1
 #endif
 

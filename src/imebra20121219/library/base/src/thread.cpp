@@ -197,7 +197,11 @@ void* thread::privateThreadFunction(void* pParameter)
 		exceptionsManager::getMessage();
 	}
 
+#ifdef PUNTOEXE_WINDOWS
+    return 0u;
+#else
 	return nullptr;
+#endif
 
 }
 

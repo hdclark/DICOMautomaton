@@ -74,6 +74,7 @@ Drover GrowContours(const Drover &DICOM_data, const OperationArgPkg& OptArgs, co
     const auto dR = std::stod( OptArgs.getValueStr("Distance").value() );
 
     //-----------------------------------------------------------------------------------------------------------------
+    [[maybe_unused]] const auto pi = std::acos(-1.0);
 
     const auto theregex = Compile_Regex(ROILabelRegex);
     const auto thenormalizedregex = Compile_Regex(NormalizedROILabelRegex);
@@ -123,8 +124,8 @@ Drover GrowContours(const Drover &DICOM_data, const OperationArgPkg& OptArgs, co
                 { // Edge case: straight lines...
                     //Figure out which side is inside the contour and which side is outside. Move away from the inside.
 
-                    const auto R_l = R_fwd.unit().rotate_around_z( M_PI)*0.05;
-                    const auto R_r = R_fwd.unit().rotate_around_z(-M_PI)*0.05;
+                    const auto R_l = R_fwd.unit().rotate_around_z( pi)*0.05;
+                    const auto R_r = R_fwd.unit().rotate_around_z(-pi)*0.05;
                     const auto PA = *itB + R_l;
                     const auto PB = *itB + R_r;
                     if(cop_orig.Is_Point_In_Polygon_Projected_Orthogonally(aplane, PA)){

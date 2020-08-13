@@ -52,10 +52,11 @@ bool DCEMRICMap(planar_image_collection<float,double>::images_list_it_t  local_i
     auto FlipAngleOpt = local_img_it->GetMetadataValueAs<double>("FlipAngle"); //Units: degrees.
     auto RepTimeOpt   = local_img_it->GetMetadataValueAs<double>("RepetitionTime"); //Units: msec.
     if(!FlipAngleOpt || !RepTimeOpt) FUNCERR("Missing needed info for C map computation. Cannot continue");
+    const auto pi = std::acos(-1.0);
     const auto RepTime = RepTimeOpt.value();
     const auto FlipAngle = FlipAngleOpt.value();
-    const auto sinFA = std::sin(FlipAngle*M_PI/180.0);
-    const auto cosFA = std::cos(FlipAngle*M_PI/180.0);
+    const auto sinFA = std::sin(FlipAngle*pi/180.0);
+    const auto cosFA = std::cos(FlipAngle*pi/180.0);
 
     //Record the min and max actual pixel values for windowing purposes.
     Stats::Running_MinMax<float> minmax_pixel;

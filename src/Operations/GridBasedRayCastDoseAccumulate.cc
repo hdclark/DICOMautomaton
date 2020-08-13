@@ -285,10 +285,11 @@ Drover GridBasedRayCastDoseAccumulate(Drover DICOM_data, const OperationArgPkg& 
     // Note: Because we want to be able to compare images from different scans, we use a deterministic technique for
     //       generating two orthogonal directions involving the cardinal directions and Gram-Schmidt
     //       orthogonalization.
+    const auto pi = std::acos(-1.0);
     const auto GridZ = est_cont_normal.unit();
-    vec3<double> GridX = GridZ.rotate_around_z(M_PI * 0.5); // Try Z. Will often be idempotent.
+    vec3<double> GridX = GridZ.rotate_around_z(pi * 0.5); // Try Z. Will often be idempotent.
     if(GridX.Dot(GridZ) > 0.25){
-        GridX = GridZ.rotate_around_y(M_PI * 0.5);  //Should always work since GridZ is parallel to Z.
+        GridX = GridZ.rotate_around_y(pi * 0.5);  //Should always work since GridZ is parallel to Z.
     }
     vec3<double> GridY = GridZ.Cross(GridX);
     if(!GridZ.GramSchmidt_orthogonalize(GridX, GridY)){
@@ -422,7 +423,7 @@ Drover GridBasedRayCastDoseAccumulate(Drover DICOM_data, const OperationArgPkg& 
     const auto SDGridZ = ROICleaving.N_0.unit();
     vec3<double> SDGridY = vec3<double>(1.0, 0.0, 0.0);
     if(SDGridY.Dot(SDGridZ) > 0.25){
-        SDGridY = SDGridZ.rotate_around_x(M_PI * 0.5);
+        SDGridY = SDGridZ.rotate_around_x(pi * 0.5);
     }
     vec3<double> SDGridX = SDGridZ.Cross(SDGridY);
     if(!SDGridZ.GramSchmidt_orthogonalize(SDGridY, SDGridX)){

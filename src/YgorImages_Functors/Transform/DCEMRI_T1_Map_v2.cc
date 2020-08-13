@@ -71,6 +71,7 @@ bool DCEMRIT1MapV2(planar_image_collection<float,double>::images_list_it_t  loca
     }
 
     //Verify that flip angle and repetition time data are present.
+    const auto pi = std::acos(-1.0);
     std::vector<double> FlipAngle; //Stored in radians, not degrees.
     std::vector<double> sinFA;
     std::vector<double> cosFA;
@@ -78,9 +79,9 @@ bool DCEMRIT1MapV2(planar_image_collection<float,double>::images_list_it_t  loca
     for(auto img_it : overlapping_imgs){
         auto FA = img_it->GetMetadataValueAs<double>("FlipAngle"); //Units: degrees.
         if(!FA) FUNCERR("Image is missing 'FlipAngle', which is needed to compute T1. Cannot continue");
-        auto l_FA = FA.value() * M_PI/180.0;
+        auto l_FA = FA.value() * pi/180.0;
         for(auto PrevFlipAngle : FlipAngle){
-            if(RELATIVE_DIFF(PrevFlipAngle, l_FA) <= (1.0*M_PI/180.0)){
+            if(RELATIVE_DIFF(PrevFlipAngle, l_FA) <= (1.0*pi/180.0)){
                 FUNCERR("Encountered 'FlipAngle's that differ by less than one degree. "
                         " The computation will most likely be invalid due to numerical issues.");
                 // NOTE: It is actually OK to continue if you need to, but be aware that numerical issues are likely

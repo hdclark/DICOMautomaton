@@ -76,6 +76,7 @@ bool ComputeVolumetricCorrelationDetector(planar_image_collection<float,double> 
     long int random_seed = 123456;
     std::mt19937 re( random_seed );
     std::uniform_real_distribution<> rd(0.0, 1.0);
+    const auto pi = std::acos(-1.0);
 
     const auto sample_at_radius = [&](double radius, // In DICOM coordinates (mm).
                                       long int count ) -> void {
@@ -85,7 +86,7 @@ bool ComputeVolumetricCorrelationDetector(planar_image_collection<float,double> 
         const vec3<double> N_z(0.0, 0.0, 1.0);
         for(long int i = 0; i < count; ++i){
             const auto theta = std::acos(2.0 * rd(re) - 1.0);
-            const auto phi = 2.0 * M_PI * rd(re);
+            const auto phi = 2.0 * pi * rd(re);
 
             const auto rot_A = N_z.rotate_around_y(phi);
             const auto rot_B = rot_A.rotate_around_z(theta);
@@ -105,7 +106,7 @@ bool ComputeVolumetricCorrelationDetector(planar_image_collection<float,double> 
 
     const auto samples_needed_for_areal_density = [&](double radius, double sa) -> long int {
         // Estimates the number of samples needed to maintain the given level of surface area density (approximately).
-        return static_cast<long int>( std::round( 4.0*M_PI*std::pow(radius,2.0) / sa ) );
+        return static_cast<long int>( std::round( 4.0*pi*std::pow(radius,2.0) / sa ) );
     };
 
     // Large sampling radii.

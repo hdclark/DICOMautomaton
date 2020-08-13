@@ -177,7 +177,8 @@ Drover ContourViaGeometry(Drover DICOM_data, const OperationArgPkg& OptArgs, con
 
                 // ensure vertex sampling is sufficient.
                 const auto min_vert_sep = 1.0; // DICOM units (mm).
-                const auto arc_length = 2.0 * M_PI * rho;
+                const auto pi = std::acos(-1.0);
+                const auto arc_length = 2.0 * pi * rho;
                 auto num_verts = static_cast<long int>( std::ceil(arc_length / min_vert_sep) );
                 num_verts = (num_verts < 3) ? 3 : num_verts; 
 

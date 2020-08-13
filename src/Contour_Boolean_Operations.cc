@@ -56,10 +56,11 @@ ContourBoolean(plane<double> p,
                ContourBooleanMethod construction_op){
 
     // Identify an orthonormal set that spans the 2D plane. Store them for later projection.
+    const auto pi = std::acos(-1.0);
     const auto U_z = p.N_0.unit();
     vec3<double> U_y = vec3<double>(1.0, 0.0, 0.0); //Candidate vector.
     if(U_y.Dot(U_z) > 0.25){
-        U_y = U_z.rotate_around_x(M_PI * 0.5);
+        U_y = U_z.rotate_around_x(pi * 0.5);
     }
     vec3<double> U_x = U_z.Cross(U_y);
     if(!U_z.GramSchmidt_orthogonalize(U_y, U_x)){

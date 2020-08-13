@@ -39,11 +39,12 @@ bool DCEMRIT1Map(planar_image_collection<float,double>::images_list_it_t first_i
     if(!L_FlipAngle || !R_FlipAngle || !L_RepTime || !R_RepTime) FUNCERR("Missing needed info for T1 map. Cannot continue");
     if(RELATIVE_DIFF(L_RepTime.value(), R_RepTime.value()) > 1E-3) FUNCERR("Encountered differing Repitition Times. Cannot continue");
 
+    const auto pi = std::acos(-1.0);
     const auto RepTime = L_RepTime.value(); // or R_RepTime. They are ~equivalent.
-    const auto sinFAL = std::sin(L_FlipAngle.value()*M_PI/180.0);
-    const auto sinFAR = std::sin(R_FlipAngle.value()*M_PI/180.0);
-    const auto cosFAL = std::cos(L_FlipAngle.value()*M_PI/180.0);
-    const auto cosFAR = std::cos(R_FlipAngle.value()*M_PI/180.0);
+    const auto sinFAL = std::sin(L_FlipAngle.value()*pi/180.0);
+    const auto sinFAR = std::sin(R_FlipAngle.value()*pi/180.0);
+    const auto cosFAL = std::cos(L_FlipAngle.value()*pi/180.0);
+    const auto cosFAR = std::cos(R_FlipAngle.value()*pi/180.0);
 
     //Record the min and max actual pixel values for windowing purposes.
     Stats::Running_MinMax<float> minmax_pixel;
@@ -106,7 +107,7 @@ bool DCEMRIT1Map(planar_image_collection<float,double>::images_list_it_t first_i
                     auto min_func = [=](const std::list<double> &X, const std::list<double> &Vars) -> double {
                         const auto l_S0 = std::abs( Vars.front() );
                         const auto l_T1 = std::abs( Vars.back() );
-                        const auto l_theta = X.front()*M_PI/180.0;
+                        const auto l_theta = X.front()*pi/180.0;
                         const auto out =  l_S0 * (1.0 - std::exp(-RepTime/l_T1))*std::sin(l_theta)
                                                / (1.0 - std::exp(-RepTime/l_T1)*std::cos(l_theta));
 
