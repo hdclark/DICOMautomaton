@@ -169,5 +169,4 @@ add_library(Operations_objs OBJECT
 )
 
 set_target_properties( Operations_objs PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
-#target_include_directories( Operations_obj PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} )
 

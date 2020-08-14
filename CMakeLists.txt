@@ -25,6 +25,34 @@ option(WITH_GNU_GSL   "Compile assuming the GNU GSL is available."              
 option(WITH_POSTGRES  "Compile assuming PostgreSQL libraries are available."    ON)
 option(WITH_JANSSON   "Compile assuming Jansson is available."                  ON)
 
+option(BUILD_SHARED_LIBS "Build shared-object/dynamicly-loaded binaries."       ON)
+
+
+####################################################################################
+#                                  Configuration
+####################################################################################
+
+# High-level configuration.
+if(NOT BUILD_SHARED_LIBS)
+    #set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
+    link_libraries("-static")
+    set(CMAKE_EXE_LINKER_FLAGS "-static")
+endif()
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_EXTENSIONS OFF) # Disable GNU extensions (e.g., std=gnu++14).
+
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON) # For use with clang-tidy et al.
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+set(POSITION_INDEPENDENT_CODE TRUE)
+
+# Set the release type. 
+if(NOT CMAKE_BUILD_TYPE)
+    # Default to debug builds.
+    set(CMAKE_BUILD_TYPE Debug CACHE STRING "default to debug" FORCE)
+endif()
+
 
 ####################################################################################
 #                                  Dependencies 
@@ -33,17 +61,17 @@ option(WITH_JANSSON   "Compile assuming Jansson is available."                  
 
 find_package(Threads REQUIRED)
 
+if(NOT BUILD_SHARED_LIBS)
+    set(Boost_USE_STATIC_RUNTIME ON)
+    set(Boost_USE_STATIC_LIBS ON)
+endif()
+find_package(Boost REQUIRED COMPONENTS filesystem serialization iostreams thread system)
+include_directories(${Boost_INCLUDE_DIRS})
+
 if(WITH_EIGEN)
-    #find_package(Eigen3 3.1.0)
-    #include(${EIGEN3_USE_FILE})
-    #
-    # or via pkg-config method:
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(EIGEN3 REQUIRED eigen3)
     include_directories( ${EIGEN3_INCLUDE_DIRS} )
-    #
-    # Fallback if the above methods fail:
-    #include_directories("/usr/include/eigen3/")
 endif()
 
 if(WITH_CGAL)
@@ -51,9 +79,38 @@ if(WITH_CGAL)
     include(${CGAL_USE_FILE})
 endif()
 
+if(WITH_NLOPT)
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(NLOPT REQUIRED nlopt)
+    include_directories( ${NLOPT_INCLUDE_DIRS} )
+endif()
+
+if(WITH_SFML)
+    #find_package(SFML COMPONENTS graphics window system main REQUIRED)
+    find_package(PkgConfig REQUIRED)
+    if(NOT BUILD_SHARED_LIBS)
+        set(SFML_STATIC_LIBRARIES TRUE)
+        add_definitions(SFML_STATIC=1)
+    endif()
+    pkg_check_modules(SFML REQUIRED sfml-graphics sfml-window sfml-system)
+    include_directories( ${SFML_INCLUDE_DIRS} )
+endif()
+
+if(WITH_GNU_GSL)
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(GNU_GSL REQUIRED gsl)
+    include_directories( ${GNU_GSL_INCLUDE_DIRS} )
+endif()
+
+if(WITH_POSTGRES)
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(POSTGRES REQUIRED libpq libpqxx)
+    include_directories( ${POSTGRES_INCLUDE_DIRS} )
+endif()
+
 
 ####################################################################################
-#                                  Configuration
+#                                  Compiler Flags
 ####################################################################################
 
 # Override the default CXX flags, which are controlled by the release type.
@@ -173,13 +230,6 @@ if(ARCH_IS_ARM OR ARCH_IS_ARM64)
 endif()
 
 
-# Set the release type. 
-if(NOT CMAKE_BUILD_TYPE)
-    # Default to debug builds.
-    set(CMAKE_BUILD_TYPE Debug CACHE STRING "default to debug" FORCE)
-endif()
-
-
 ####################################################################################
 #                                    Definitions
 ####################################################################################
@@ -255,16 +305,6 @@ else()
     message(STATUS "Assuming the GNU GSL is not available.")
     add_definitions(-UDCMA_USE_GNU_GSL)
 endif()
-
-
-# Add other compiler options.
-set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
-set(BUILD_SHARED_LIBS TRUE)
-set(POSITION_INDEPENDENT_CODE TRUE)
-set(THREADS_PREFER_PTHREAD_FLAG ON)
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_EXTENSIONS OFF) # Disable GNU extensions (e.g., std=gnu++14).
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON) # For use with clang-tidy et al.
 
 
 # Use the directory where CMakeLists.txt is for inclusions.

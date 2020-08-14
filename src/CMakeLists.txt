@@ -277,20 +277,16 @@ target_link_libraries (dicomautomaton_dispatcher
     explicator 
     ygor 
     $<$<BOOL:${WITH_CGAL}>:CGAL>
-    $<$<BOOL:${WITH_GNU_GSL}>:gsl>
-    $<$<BOOL:${WITH_GNU_GSL}>:gslcblas>
+    "$<$<BOOL:${WITH_GNU_GSL}>:${GNU_GSL_LIBRARIES}>"
     $<$<BOOL:${WITH_JANSSON}>:jansson>
-    $<$<BOOL:${WITH_NLOPT}>:nlopt>
-    $<$<BOOL:${WITH_SFML}>:sfml-graphics>
-    $<$<BOOL:${WITH_SFML}>:sfml-window>
-    $<$<BOOL:${WITH_SFML}>:sfml-system>
-    $<$<BOOL:${WITH_POSTGRES}>:pqxx>
-    $<$<BOOL:${WITH_POSTGRES}>:pq>
-    boost_filesystem 
-    boost_serialization
-    boost_iostreams
-    boost_thread
-    boost_system 
+    "$<$<BOOL:${WITH_NLOPT}>:${NLOPT_LIBRARIES}>"
+    "$<$<BOOL:${WITH_SFML}>:${SFML_LIBRARIES}>"
+    "$<$<BOOL:${WITH_POSTGRES}>:${POSTGRES_LIBRARIES}>"
+    Boost::filesystem
+    Boost::serialization
+    Boost::iostreams
+    Boost::thread
+    Boost::system
     z
     mpfr
     gmp
@@ -350,22 +346,18 @@ if(WITH_WT)
         explicator 
         ygor 
         $<$<BOOL:${WITH_CGAL}>:CGAL>
-        $<$<BOOL:${WITH_GNU_GSL}>:gsl>
-        $<$<BOOL:${WITH_GNU_GSL}>:gslcblas>
+        "$<$<BOOL:${WITH_GNU_GSL}>:${GNU_GSL_LIBRARIES}>"
         $<$<BOOL:${WITH_JANSSON}>:jansson>
-        $<$<BOOL:${WITH_NLOPT}>:nlopt>
-        $<$<BOOL:${WITH_SFML}>:sfml-graphics>
-        $<$<BOOL:${WITH_SFML}>:sfml-window>
-        $<$<BOOL:${WITH_SFML}>:sfml-system>
-        $<$<BOOL:${WITH_POSTGRES}>:pqxx>
-        $<$<BOOL:${WITH_POSTGRES}>:pq>
+        "$<$<BOOL:${WITH_NLOPT}>:${NLOPT_LIBRARIES}>"
+        "$<$<BOOL:${WITH_SFML}>:${SFML_LIBRARIES}>"
+        "$<$<BOOL:${WITH_POSTGRES}>:${POSTGRES_LIBRARIES}>"
         wt
         wthttp
-        boost_filesystem 
-        boost_serialization
-        boost_iostreams
-        boost_thread
-        boost_system 
+        Boost::filesystem
+        Boost::serialization
+        Boost::iostreams
+        Boost::thread
+        Boost::system
         z
         mpfr
         gmp
@@ -373,7 +365,6 @@ if(WITH_WT)
         Threads::Threads
     )
 endif()
-
 
 # Executable.
 add_executable(dicomautomaton_bsarchive_convert
@@ -387,10 +378,11 @@ add_executable(dicomautomaton_bsarchive_convert
 target_link_libraries(dicomautomaton_bsarchive_convert
     explicator 
     ygor 
-    boost_filesystem 
-    boost_serialization
-    boost_iostreams
-    boost_system 
+    Boost::filesystem
+    Boost::serialization
+    Boost::iostreams
+    Boost::thread
+    Boost::system
     z
     m
     Threads::Threads
@@ -408,8 +400,7 @@ if(WITH_POSTGRES)
         imebrashim
         explicator 
         ygor 
-        pqxx 
-        pq
+        "${POSTGRES_LIBRARIES}"
         m
         Threads::Threads
     )
@@ -425,8 +416,7 @@ if(WITH_POSTGRES)
         imebrashim
         explicator 
         ygor 
-        pqxx 
-        pq
+        "${POSTGRES_LIBRARIES}"
         m
         Threads::Threads
     )
@@ -442,8 +432,7 @@ if(WITH_POSTGRES)
         imebrashim
         explicator 
         ygor 
-        pqxx 
-        pq
+        "${POSTGRES_LIBRARIES}"
         m
         Threads::Threads
     )
