@@ -82,7 +82,12 @@ std::string CreateUniqueDirectoryTimestamped(const std::string& prefix, const st
 
         char t_now_str[100];
         tm working; // Working space for thread-safe localtime_r() variant of std::localtime().
+#if !defined(_WIN32) && !defined(_WIN64)
         if(!std::strftime(t_now_str, sizeof(t_now_str), "%Y%m%d-%H%M%S", ::localtime_r(&t_now_coarse, &working))){
+#else
+        if( (::localtime_s(&working, &t_now_coarse) != 0)
+        ||  (!std::strftime(t_now_str, sizeof(t_now_str), "%Y%m%d-%H%M%S", &working)) ){
+#endif
             throw std::runtime_error("Unable to get current time.");
         }
 

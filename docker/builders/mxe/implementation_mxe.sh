@@ -65,7 +65,15 @@ export TOOLCHAIN="x86_64-w64-mingw32.static"
 #make -j4 --keep-going MXE_TARGETS="${TOOLCHAIN}.gcc9" || true
 # Works, but was purportedly deprecated in 2018.
 #echo 'override MXE_PLUGIN_DIRS += plugins/gcc9' >> settings.mk  # Update compiler version.
-make -j4 --keep-going MXE_TARGETS="${TOOLCHAIN}" MXE_PLUGIN_DIRS=plugins/gcc9 || true
+
+# Make everything.
+#make -j4 --keep-going MXE_TARGETS="${TOOLCHAIN}" MXE_PLUGIN_DIRS=plugins/gcc9 || true
+
+# Make a specific subset.
+make -j4 --keep-going \
+  MXE_TARGETS="${TOOLCHAIN}" \
+  MXE_PLUGIN_DIRS=plugins/gcc9 \
+  gmp mpfr boost eigen sfml nlopt #wt
 
 export PATH="/mxe/usr/bin:$PATH"
 
@@ -161,7 +169,7 @@ for repo_dir in /ygor /ygorclustering /explicator /dcma ; do
       -DWITH_JANSSON=OFF \
       -DBUILD_SHARED_LIBS=OFF \
       ../
-    make --ignore-errors VERBOSE=1 2>&1 | tee ../build_log 
+    make -j2 --ignore-errors VERBOSE=1 2>&1 | tee ../build_log 
     make install DESTDIR="/mxe/usr/${TOOLCHAIN}/"
 
     # Make the artifacts available elsewhere for easier access.
