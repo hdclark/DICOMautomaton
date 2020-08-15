@@ -42,7 +42,9 @@ apt-get -y install \
   wget \
   ca-certificates \
   rsync \
-  xz-utils
+  xz-utils \
+  sudo \
+  gnupg
 
 
 # See <https://mxe.cc/#tutorial> and <https://mxe.cc/#requirements-debian> for more information. Perform the following
@@ -70,10 +72,40 @@ export TOOLCHAIN="x86_64-w64-mingw32.static"
 #make -j4 --keep-going MXE_TARGETS="${TOOLCHAIN}" MXE_PLUGIN_DIRS=plugins/gcc9 || true
 
 # Make a specific subset.
+#
+# Note: ideally we would download pre-compiled binaries, but not everything we need is available (see below).
 make -j4 --keep-going \
   MXE_TARGETS="${TOOLCHAIN}" \
   MXE_PLUGIN_DIRS=plugins/gcc9 \
   gmp mpfr boost eigen sfml nlopt #wt
+
+## Download pre-compiled binaries to speed up toolchain prep.
+##
+## Note: sadly, gcc9 is not available this way -- only the default (gcc5.5) is available.
+##
+## Note: files are installed with root /usr/lib/mxe/usr/"${TOOLCHAIN}"/ so that
+##   root@trip:/mxe# dpkg-query -L mxe-x86-64-w64-mingw32.static-sfml
+##   ...
+##   /usr/lib/mxe/usr/x86-64-w64-mingw32.static/lib/libsfml-window-s.a
+##   /usr/lib/mxe/usr/x86-64-w64-mingw32.static/lib/pkgconfig
+##   /usr/lib/mxe/usr/x86-64-w64-mingw32.static/lib/pkgconfig/sfml.pc
+#echo "deb http://mirror.mxe.cc/repos/apt stretch main" \
+#    | tee /etc/apt/sources.list.d/mxeapt.list
+#apt-key adv \
+#  --keyserver keyserver.ubuntu.com \
+#  --recv-keys C6BF758A33A3A276
+#apt-get -y update
+#apt-get -y install \
+#  mxe-"${TOOLCHAIN}"-boost \
+#  mxe-"${TOOLCHAIN}"-cgal \
+#  mxe-"${TOOLCHAIN}"-eigen \
+#  mxe-"${TOOLCHAIN}"-gmp \
+#  mxe-"${TOOLCHAIN}"-mpfr \
+#  mxe-"${TOOLCHAIN}"-nlopt \
+#  mxe-"${TOOLCHAIN}"-sfml \
+#  mxe-"${TOOLCHAIN}"-wt
+# Note: trying to mix these files will fail:
+#rsync -avP /usr/lib/mxe/usr/"${TOOLCHAIN}"/ /mxe/usr/"${TOOLCHAIN}"/ # <-- Will fail!
 
 export PATH="/mxe/usr/bin:$PATH"
 
@@ -121,19 +153,6 @@ fi
   ( tar -axf asio.tgz || unzip asio.tgz ) &&
   cd asio-*/ &&
   cp -v -R include/asio/ include/asio.hpp /mxe/usr/"${TOOLCHAIN}"/include/  )
-
-# Wt. (TODO.)
-#mkdir -pv /wt
-#cd /wt
-#git clone https://github.com/emweb/wt.git .
-#mkdir -p build
-#cd build
-#cmake -DCMAKE_INSTALL_PREFIX=/usr ../
-#JOBS=$(nproc)
-#JOBS=$(( $JOBS < 8 ? $JOBS : 8 ))
-#make -j "$JOBS" VERBOSE=1
-#make install
-#make clean
 
 # Workaround for MXE's SFML pkg-config files missing the standard modules.
 cp "/mxe/usr/${TOOLCHAIN}/lib/pkgconfig/"sfml{,-graphics}.pc
