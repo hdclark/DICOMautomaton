@@ -54,6 +54,23 @@ build_ci_arch:
       - "AppDir"
       - "DICOMautomaton*AppImage"
 
+# Perform a cross-compile with MXE.
+# Notes: reduced (or missing) optimization, some components may be missing.
+cross_compile_mxe:
+  stage: build
+  needs: []
+  image: "debian:stable"
+  before_script:
+    - "cp -R ./docker/builders/mxe /scratch"
+    - "cp -R . /dcma"
+  script:
+    - |
+      ( ( while true ; do sleep 225 ; printf '\n\n' ; df -h ; printf '\n\n' ; free -h ; printf '\n\n' ; done ) &)
+      "./docker/builders/mxe/implementation_mxe.sh"
+  artifacts:
+    paths:
+      - "/out"
+
 ## Full Arch Linux build.
 #build_arch:
 #  stage: build
