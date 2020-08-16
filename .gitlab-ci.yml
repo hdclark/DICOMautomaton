@@ -59,9 +59,8 @@ build_ci_arch:
 cross_compile_mxe:
   stage: build
   needs: []
-  image: "debian:stable"
+  image: "hdclark/dcma_build_base_mxe:latest"
   before_script:
-    - "cp -R ./docker/builders/mxe /scratch"
     - "cp -R . /dcma"
   script:
     - |

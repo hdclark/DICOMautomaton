@@ -17,6 +17,9 @@ cd "${REPOROOT}"
 ( ./docker/build_bases/void/build.sh          2>&1 &&
   ./docker/builders/void/build.sh             2>&1 ) | tee /tmp/dcma_docker_void.log
 
+( ./docker/build_bases/mxe/build.sh           2>&1 &&
+  ./docker/builders/mxe/build.sh              2>&1 ) | tee /tmp/dcma_docker_mxe.log
+
 ./docker/builders/ci/build.sh  2>&1 | tee /tmp/dcma_docker_ci.log
 
 ./docker/fuzz_testing/build.sh 2>&1 | tee /tmp/dcma_docker_fuzz_testing.log
@@ -25,6 +28,7 @@ grep '^Successfully built' \
   /tmp/dcma_docker_debian_stable.log \
   /tmp/dcma_docker_arch.log \
   /tmp/dcma_docker_void.log \
+  /tmp/dcma_docker_mxe.log \
   /tmp/dcma_docker_ci.log \
   /tmp/dcma_docker_fuzz_testing.log
 
