@@ -66,9 +66,10 @@ cross_compile_mxe:
     - |
       ( ( while true ; do sleep 225 ; printf '\n\n' ; df -h ; printf '\n\n' ; free -h ; printf '\n\n' ; done ) &)
       "./docker/builders/mxe/implementation_mxe.sh"
+      "rsync -avP /out/ ./Windows/"
   artifacts:
     paths:
-      - "/out"
+      - "Windows"
 
 ## Full Arch Linux build.
 #build_arch:
