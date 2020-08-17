@@ -199,6 +199,29 @@ test_ci_debian_stable_on_fedora_latest:
     #- "cd DICOMautomaton"
     - "./integration_tests/Run.sh"
 
+# Cross-compilation testing.
+test_cross_compile_mxe_on_debian_stable:
+  stage: test
+  needs: ["cross_compile_mxe"]
+  image: "debian:stable"
+  script:
+    # Provide minimal system libraries.
+    - "export DEBIAN_FRONTEND='noninteractive'"
+    - "apt-get update --yes"
+    - "apt-get install --yes --no-install-recommends git ca-certificates rsync mesa-utils"
+    - "dpkg --add-architecture i386"
+    - "apt-get update"
+    - "apt-get install --yes wine32 wine64"
+    # Wrap the Windows binary with wine calls so it is transparent to the caller.
+    - "chmod 777 Windows/usr/bin/*"
+    - "rsync -a ./Windows/usr/ /usr/"
+    - "echo '#!/bin/bash' > /usr/bin/dicomautomaton_dispatcher"
+    - "echo 'exec wine /usr/bin/dicomautomaton_dispatcher.exe \"$@\"' >> /usr/bin/dicomautomaton_dispatcher"
+    - "chmod 777 /usr/bin/dicomautomaton_dispatcher"
+    # Ensure it can be run and then run tests.
+    - "dicomautomaton_dispatcher -h"
+    - "./integration_tests/Run.sh"
+
 #######################################################################################################################
 ### Deployment stages.
 #######################################################################################################################
