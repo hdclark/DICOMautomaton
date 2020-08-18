@@ -11,9 +11,8 @@ reporoot=$(git rev-parse --show-toplevel)
 cd "${reporoot}"
 
 # Continuous artifacts.
-#wget "https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage"
-# Snapshot artifacts.
-wget "https://artifacts.assassinate-you.net/artifactory/list/linuxdeploy/travis-456/linuxdeploy-x86_64.AppImage"
+wget "https://artifacts.assassinate-you.net/artifactory/list/linuxdeploy/travis-456/linuxdeploy-x86_64.AppImage" ||
+  wget "https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage"
 
 chmod 777 ./linuxdeploy-x86_64.AppImage
 # Unpack because FUSE cannot be used in Docker.
