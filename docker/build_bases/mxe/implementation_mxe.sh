@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # This script prepares a build environment using MXE and then cross-compiles DICOMautomaton dependencies.
 

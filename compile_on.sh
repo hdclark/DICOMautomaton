@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -eu
 shopt -s nocasematch
 
@@ -124,7 +124,7 @@ elif [[ "${BUILDER}" =~ .*debian.*_stable.* ]] ; then
         cd '${BUILD_DIR}'
         
         cat > docker_run.sh << 'EOF'
-#!/bin/bash
+#!/usr/bin/env bash
 set -eu
 ./compile_and_install.sh  # Will auto-detect the Debian build process.
 ./scripts/dump_portable_dcma_bundle.sh /pbin/
@@ -151,7 +151,7 @@ elif [[ "${BUILDER}" =~ .*arch.* ]] ; then
         cd '${BUILD_DIR}'
         
         cat > docker_run.sh << 'EOF'
-#!/bin/bash
+#!/usr/bin/env bash
 set -eu
 ./compile_and_install.sh  # Will auto-detect the Arch Linux build process.
 ./scripts/dump_portable_dcma_bundle.sh /pbin/

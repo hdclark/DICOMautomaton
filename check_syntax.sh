@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # This script can be used to verify the syntax of all files without actually compiling anything.
 

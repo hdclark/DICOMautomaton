@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # This script invokes the DICOMautomaton Web Server. It is meant to be called inside a container or
 # VM. Since headless SFML rendering depends on an OpenGL context, a dummy X instance that supports 

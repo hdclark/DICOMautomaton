@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # This script packages DCMA into an AppImage sourcing the pieces from the system installation. It then gathers all
 # dependencies using linuxdeploy and creates an AppImage.

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # This script dumps the system-installed dicomautomaton_dispatcher and all shared libraries needed to run it.
 # It can be used to provide a minimally (somewhat) portable binary for linux machines.
@@ -64,7 +64,7 @@ fi
 
 # Create a native wrapper script for the portable binary.
 cat > "${out_dir}/portable_dcma" <<'PORTABLE_EOF'
-#!/bin/bash
+#!/usr/bin/env bash
 
 set -eu
 
@@ -80,7 +80,7 @@ chmod 777 "${out_dir}/portable_dcma"
 
 # Create a native wrapper script for the self-adjusting binary.
 cat > "${out_dir}/adjusting_dcma" <<'ADJUSTING_EOF'
-#!/bin/bash
+#!/usr/bin/env bash
 
 set -eu
 
@@ -118,7 +118,7 @@ chmod 777 "${out_dir}/adjusting_dcma"
 
 # Create an emulation wrapper script for the portable binary.
 cat > "${out_dir}/emulate_dcma" <<'EMULATE_EOF'
-#!/bin/bash
+#!/usr/bin/env bash
 
 set -e
 

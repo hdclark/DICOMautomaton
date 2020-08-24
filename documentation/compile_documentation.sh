@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # This script compiles pdf and html documents from Markdown source files.
 # Note that the Markdown sources are NOT automatically updated prior to compilation.

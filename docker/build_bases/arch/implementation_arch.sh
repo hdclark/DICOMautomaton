@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # This script installs all dependencies needed to build DICOMautomaton starting with a minimal Arch Linux system.
 

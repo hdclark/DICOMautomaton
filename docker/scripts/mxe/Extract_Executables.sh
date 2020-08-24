@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # This script rebuilds DCMA inside the Debian:stable-based DCMA Docker image.
 # It then gathers all dependencies using linuxdeploy and creates an AppImage.

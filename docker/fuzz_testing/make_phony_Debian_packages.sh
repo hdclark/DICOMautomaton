@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # This script creates phony/placeholder Debian packages. They are installed in the Docker image so that apt won't
 # overwrite a custom upstream package installation with the distribution version.

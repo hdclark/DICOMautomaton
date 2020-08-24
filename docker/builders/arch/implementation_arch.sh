@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # This script installs DICOMautomaton. It assumes dependencies have been installed (i.e., the corresponding build_bases
 # script was completed successfully).

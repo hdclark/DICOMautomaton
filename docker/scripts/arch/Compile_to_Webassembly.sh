@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # This is a WIP script to attempt compilation of DICOMautomaton into Web Assembly via the Emscripten SDK.
 

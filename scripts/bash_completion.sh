@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # This script is used to inject tab completion into bash for DICOMautomaton.
 #

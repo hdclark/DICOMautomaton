@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # This script installs dependencies and then builds and installs DICOMautomaton.
 # It can be used for continuous integration (CI), development, and deployment (CD).

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Move to the repository root.
 REPOROOT=$(git rev-parse --show-toplevel || true)

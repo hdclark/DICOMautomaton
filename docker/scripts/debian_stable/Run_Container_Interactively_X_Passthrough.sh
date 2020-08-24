@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # This script launches a Docker image that can pass-through X11 and OpenGL windows.
 #
@@ -38,7 +38,7 @@ uid=$(id -u)
 gid=$(id -g)
 
 cat > "${internal_run_script}" <<EOF
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Copy host files to facilitate easier interoperation.
 #cp /etc/passwd_host /etc/passwd

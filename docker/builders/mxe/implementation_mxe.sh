@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # This script cross-compiles DICOMautomaton. It assumes dependencies have been pre-compiled (i.e., the corresponding build_bases
 # script was completed successfully).
