@@ -356,7 +356,7 @@ upstream packages, whereas `Debian` provides greater portability since an older
 `musl`.
 
 Build base images contain all dependencies and requirements necessary to compile
-`DICOMautomaton`, but do not themselves contain `DICOMautomaton`. The latest
+`DICOMautomaton`, but may not themselves contain `DICOMautomaton`. The latest
 successfully-built base images are available here:
 
   - [![Arch Linux](https://img.shields.io/badge/Latest_Docker_Build_Base-Arch_Linux-brightgreen)](https://hub.docker.com/r/hdclark/dcma_build_base_arch)
@@ -365,13 +365,24 @@ successfully-built base images are available here:
 
   - [![Void Linux](https://img.shields.io/badge/Latest_Docker_Build_Base-Void_Linux-brightgreen)](https://hub.docker.com/r/hdclark/dcma_build_base_void)
 
-Continuous integration is used to build `Docker` images, `AppImage`s, and
-perform tests for all commits. `Docker` build artifacts from `Travis-CI` may
-be available [here](https://travis-ci.com/hdclark/DICOMautomaton).
+  - [![MXE](https://img.shields.io/badge/Latest_Docker_Build_Base-MXE-brightgreen)](https://hub.docker.com/r/hdclark/dcma_build_base_mxe)
+
+### Continuous Integration
+
+Continuous integration is used to build `Docker` images, `AppImage`s,
+cross-compile and perform tests for all commits. `Docker` build
+artifacts from `Travis-CI` may be available
+[here](https://travis-ci.com/hdclark/DICOMautomaton).
 Additional build environments and `AppImage` portability are tested with
 `GitLab` CI pipelines; build artifacts are available
 [here](https://gitlab.com/hdeanclark/DICOMautomaton/-/pipelines).
-Note that CI artifacts are not optimized and functionality may be missing.
+Direct links for the latest build artifacts:
+
+  - [`Arch Linux`](https://gitlab.com/hdeanclark/DICOMautomaton/builds/artifacts/master/download?job=build_ci_arch)
+  - [`Debian Stable`](https://gitlab.com/hdeanclark/DICOMautomaton/builds/artifacts/master/download?job=build_ci_debian_stable)
+  - [`MXE` (i.e., `Windows` executables)](https://gitlab.com/hdeanclark/DICOMautomaton/builds/artifacts/master/download?job=cross_compile_mxe)
+
+**Note that all CI artifacts are not optimized and core functionality may be missing.**
 
 ## Building Portable Binaries
 
@@ -433,6 +444,7 @@ portable virtual machine that can be emulated using `qemu`, including a
 graphical display. External, runtime support programs *can* be bundled this way,
 so this method provides the most reliable means of archiving a specific version.
 See `linux/`. Note that this method is experimental.
+
 
 `DICOMautomaton` can also be built using the `Nix` package manager. See `nix/`.
 Note that this method is experimental.
