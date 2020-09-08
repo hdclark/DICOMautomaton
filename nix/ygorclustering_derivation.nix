@@ -10,15 +10,18 @@ stdenv.mkDerivation rec {
   pname   = "ygorclustering";
   version = "20200415.1";
 
-  src = fetchFromGitHub {
-    # Reminder: the sha256 hash can be computed via:
-    #  nix-prefetch-url --unpack "https://github.com/hdclark/ygorclustering/archive/${rev}.tar.gz"
-    #
-    owner  = "hdclark";
-    repo   = "ygorclustering";
-    rev    = "0af477560917aff71a3965d87816a3883db12a8a";
-    sha256 = "0fqjmjvwv9r0d876ahfrgfd5q2dx217azgwiph4i89kwzr7zm2pi";
+  src = fetchGit {
+      url = "https://github.com/hdclark/ygorclustering";
   };
+#  src = fetchFromGitHub {
+#    # Reminder: the sha256 hash can be computed via:
+#    #  nix-prefetch-url --unpack "https://github.com/hdclark/ygorclustering/archive/${rev}.tar.gz"
+#    #
+#    owner  = "hdclark";
+#    repo   = "ygorclustering";
+#    rev    = "0af477560917aff71a3965d87816a3883db12a8a";
+#    sha256 = "0fqjmjvwv9r0d876ahfrgfd5q2dx217azgwiph4i89kwzr7zm2pi";
+#  };
 
   nativeBuildInputs = [ 
     cmake 

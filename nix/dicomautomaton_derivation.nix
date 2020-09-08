@@ -36,15 +36,18 @@ stdenv.mkDerivation rec {
   pname   = "dicomautomaton";
   version = "20200415.1";
 
-  src = fetchFromGitHub {
-    # Reminder: the sha256 hash can be computed via:
-    #  nix-prefetch-url --unpack "https://github.com/hdclark/dicomautomaton/archive/${rev}.tar.gz"
-    #
-    owner  = "hdclark";
-    repo   = "dicomautomaton";
-    rev    = "6b5fc3445a99c79f83842228f81e0b9a680bfe96";
-    sha256 = "1ac8n8hqby2pkl5a7j2gxxlpn57xcvp3288lk3kh9hngyxrgpz1j";
+  src = fetchGit {
+      url = "https://github.com/hdclark/dicomautomaton";
   };
+#  src = fetchFromGitHub {
+#    # Reminder: the sha256 hash can be computed via:
+#    #  nix-prefetch-url --unpack "https://github.com/hdclark/dicomautomaton/archive/${rev}.tar.gz"
+#    #
+#    owner  = "hdclark";
+#    repo   = "dicomautomaton";
+#    rev    = "6b5fc3445a99c79f83842228f81e0b9a680bfe96";
+#    sha256 = "1ac8n8hqby2pkl5a7j2gxxlpn57xcvp3288lk3kh9hngyxrgpz1j";
+#  };
 
   nativeBuildInputs = [ 
     cmake 

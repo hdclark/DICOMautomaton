@@ -21,15 +21,18 @@ stdenv.mkDerivation rec {
   pname   = "ygor";
   version = "20200415.1";
 
-  src = fetchFromGitHub {
-    # Reminder: the sha256 hash can be computed via:
-    #  nix-prefetch-url --unpack "https://github.com/hdclark/ygor/archive/${rev}.tar.gz"
-    #
-    owner  = "hdclark";
-    repo   = "ygor";
-    rev    = "eeedfb6a8ac4092f7391f1f7530b72ff5cf3c1e9";
-    sha256 = "1x0mcamy74bk4fbv27ainxar0wwx6k57i0x7vy0m4dcx56j0rl8j";
+  src = fetchGit {
+    url = "https://github.com/hdclark/ygor";
   };
+#  src = fetchFromGitHub {
+#    # Reminder: the sha256 hash can be computed via:
+#    #  nix-prefetch-url --unpack "https://github.com/hdclark/ygor/archive/${rev}.tar.gz"
+#    #
+#    owner  = "hdclark";
+#    repo   = "ygor";
+#    rev    = "7ff09b7ea7c193b29b1e24542babe3c6b40e369d";
+#    sha256 = "14fljbzgh7zkviz16xdjfkm8jm0qf60sy03d91pfhwil3p1l60lp";
+#  };
 
   nativeBuildInputs = [ 
     cmake 
