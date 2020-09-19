@@ -25,7 +25,9 @@ OperationDoc OpArgDocDumpFilesPartitionedByTime(){
     return out;
 }
 
-Drover DumpFilesPartitionedByTime(Drover DICOM_data, const OperationArgPkg& /*OptArgs*/, const std::map<std::string,std::string>& /*InvocationMetadata*/, const std::string& /*FilenameLex*/){
+Drover DumpFilesPartitionedByTime(Drover DICOM_data, const OperationArgPkg& /*OptArgs*/, const
+std::map<std::string,std::string>& /*InvocationMetadata*/, const std::string& /*FilenameLex*/, const
+std::list<OperationArgPkg>& /*Children*/){
 
     std::multimap<std::string,std::string> partitions;
     for(auto &img_arr : DICOM_data.image_data){

@@ -106,7 +106,9 @@ OperationDoc OpArgDocVolumetricSpatialDerivative(){
     return out;
 }
 
-Drover VolumetricSpatialDerivative(Drover DICOM_data, const OperationArgPkg& OptArgs, const std::map<std::string,std::string>& /*InvocationMetadata*/, const std::string& /*FilenameLex*/){
+Drover VolumetricSpatialDerivative(Drover DICOM_data, const OperationArgPkg& OptArgs, const
+std::map<std::string,std::string>& /*InvocationMetadata*/, const std::string& /*FilenameLex*/, const
+std::list<OperationArgPkg>& /*Children*/){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto ImageSelectionStr = OptArgs.getValueStr("ImageSelection").value();

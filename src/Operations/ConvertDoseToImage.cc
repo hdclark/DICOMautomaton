@@ -30,7 +30,8 @@ OperationDoc OpArgDocConvertDoseToImage(){
     return out;
 }
 
-Drover ConvertDoseToImage(Drover DICOM_data, const OperationArgPkg& OptArgs, const std::map<std::string,std::string>&, const std::string& ){
+Drover ConvertDoseToImage(Drover DICOM_data, const OperationArgPkg& OptArgs, const std::map<std::string,std::string>&,
+const std::string& , const std::list<OperationArgPkg>& /*Children*/){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto ModalityStr = OptArgs.getValueStr("Modality").value();

@@ -27,7 +27,8 @@ OperationDoc OpArgDocGenerateVirtualDataDoseStairsV1(){
     return out;
 }
 
-Drover GenerateVirtualDataDoseStairsV1(Drover DICOM_data, const OperationArgPkg& , const std::map<std::string,std::string>&, const std::string& FilenameLex){
+Drover GenerateVirtualDataDoseStairsV1(Drover DICOM_data, const OperationArgPkg& , const
+std::map<std::string,std::string>&, const std::string& FilenameLex, const std::list<OperationArgPkg>& /*Children*/){
 
     Explicator X(FilenameLex);
 

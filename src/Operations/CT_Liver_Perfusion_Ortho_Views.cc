@@ -31,7 +31,9 @@ OperationDoc OpArgDocCT_Liver_Perfusion_Ortho_Views (){
     return out;
 }
 
-Drover CT_Liver_Perfusion_Ortho_Views (Drover DICOM_data, const OperationArgPkg& /*OptArgs*/, const std::map<std::string,std::string>& /*InvocationMetadata*/, const std::string& /*FilenameLex*/){
+Drover CT_Liver_Perfusion_Ortho_Views (Drover DICOM_data, const OperationArgPkg& /*OptArgs*/, const
+std::map<std::string,std::string>& /*InvocationMetadata*/, const std::string& /*FilenameLex*/, const
+std::list<OperationArgPkg>& /*Children*/){
 
     //Get handles for each of the original image arrays so we can easily refer to them later.
     std::vector<std::shared_ptr<Image_Array>> orig_img_arrays;

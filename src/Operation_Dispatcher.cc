@@ -399,7 +399,11 @@ bool Operation_Dispatcher( Drover &DICOM_data,
                     }
 
                     FUNCINFO("Performing operation '" << op_func.first << "' now..");
-                    DICOM_data = op_func.second.second(DICOM_data, optargs, InvocationMetadata, FilenameLex);
+                    DICOM_data = op_func.second.second(DICOM_data,
+                                                       optargs,
+                                                       InvocationMetadata,
+                                                       FilenameLex,
+                                                       optargs.getChildren());
                 }
             }
             if(!WasFound) throw std::invalid_argument("No operation matched '" + optargs.getName() + "'");

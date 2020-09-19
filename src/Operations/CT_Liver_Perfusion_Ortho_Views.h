@@ -2,14 +2,16 @@
 
 #pragma once
 
-#include <string>
 #include <map>
+#include <string>
 
 #include "../Structs.h"
 
 
 OperationDoc OpArgDocCT_Liver_Perfusion_Ortho_Views();
 
-Drover CT_Liver_Perfusion_Ortho_Views(Drover DICOM_data, const OperationArgPkg& /*OptArgs*/,
+Drover CT_Liver_Perfusion_Ortho_Views(Drover DICOM_data,
+                                      const OperationArgPkg& /*OptArgs*/,
                                       const std::map<std::string, std::string>& /*InvocationMetadata*/,
-                                      const std::string& /*FilenameLex*/);
+                                      const std::string& /*FilenameLex*/,
+                                      const std::list<OperationArgPkg>& /*Children*/);

@@ -108,7 +108,8 @@ OperationDoc OpArgDocPurgeContours(){
 
 
 
-Drover PurgeContours(const Drover &DICOM_data, const OperationArgPkg& OptArgs, const std::map<std::string,std::string>&, const std::string& ){
+Drover PurgeContours(const Drover &DICOM_data, const OperationArgPkg& OptArgs, const std::map<std::string,std::string>&,
+const std::string& , const std::list<OperationArgPkg>& /*Children*/){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto ROILabelRegex = OptArgs.getValueStr("ROILabelRegex").value();

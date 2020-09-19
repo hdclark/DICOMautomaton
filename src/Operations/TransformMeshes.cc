@@ -78,7 +78,8 @@ OperationDoc OpArgDocTransformMeshes(){
 
 
 
-Drover TransformMeshes(Drover DICOM_data, const OperationArgPkg& OptArgs, const std::map<std::string,std::string>& /*InvocationMetadata*/, const std::string&  /*FilenameLex*/){
+Drover TransformMeshes(Drover DICOM_data, const OperationArgPkg& OptArgs, const std::map<std::string,std::string>&
+/*InvocationMetadata*/, const std::string&  /*FilenameLex*/, const std::list<OperationArgPkg>& /*Children*/){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto MeshSelectionStr = OptArgs.getValueStr("MeshSelection").value();

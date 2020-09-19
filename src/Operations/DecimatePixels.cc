@@ -44,7 +44,8 @@ OperationDoc OpArgDocDecimatePixels(){
     return out;
 }
 
-Drover DecimatePixels(Drover DICOM_data, const OperationArgPkg& OptArgs, const std::map<std::string,std::string>& /*InvocationMetadata*/, const std::string& /*FilenameLex*/){
+Drover DecimatePixels(Drover DICOM_data, const OperationArgPkg& OptArgs, const std::map<std::string,std::string>&
+/*InvocationMetadata*/, const std::string& /*FilenameLex*/, const std::list<OperationArgPkg>& /*Children*/){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const long int DecimateR = std::stol( OptArgs.getValueStr("OutSizeR").value() );

@@ -62,7 +62,8 @@ OperationDoc OpArgDocContourWholeImages(){
 
 
 
-Drover ContourWholeImages(Drover DICOM_data, const OperationArgPkg& OptArgs, const std::map<std::string,std::string>& /*InvocationMetadata*/, const std::string& FilenameLex){
+Drover ContourWholeImages(Drover DICOM_data, const OperationArgPkg& OptArgs, const std::map<std::string,std::string>&
+/*InvocationMetadata*/, const std::string& FilenameLex, const std::list<OperationArgPkg>& /*Children*/){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto ROILabel = OptArgs.getValueStr("ROILabel").value();

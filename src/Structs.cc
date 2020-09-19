@@ -2302,7 +2302,6 @@ OperationArgPkg::getName() const {
     return this->name;
 }
 
-
 bool 
 OperationArgPkg::containsExactly(std::initializer_list<std::string> l) const {
    //We compare the number of elements, scan elements of setA to see if they're in setB, and then vice-versa.
@@ -2370,4 +2369,19 @@ OperationArgPkg::insert(const std::string& keyval){
     return true;
 }
 
+// Children.
+void
+OperationArgPkg::makeChild(std::string unparsed, const std::string& sepr, const std::string& eqls){
+    this->children.emplace_back(unparsed, sepr, eqls);
+}
+
+void
+OperationArgPkg::makeChild(const OperationArgPkg &rhs){
+    this->children.emplace_back(rhs);
+}
+
+std::list<OperationArgPkg>
+OperationArgPkg::getChildren() const {
+    return this->children;
+}
 

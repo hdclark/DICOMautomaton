@@ -25,7 +25,9 @@ OperationDoc OpArgDocDumpAllOrderedImageMetadataToFile(){
     return out;
 }
 
-Drover DumpAllOrderedImageMetadataToFile(Drover DICOM_data, const OperationArgPkg& /*OptArgs*/, const std::map<std::string,std::string>& /*InvocationMetadata*/, const std::string& /*FilenameLex*/){
+Drover DumpAllOrderedImageMetadataToFile(Drover DICOM_data, const OperationArgPkg& /*OptArgs*/, const
+std::map<std::string,std::string>& /*InvocationMetadata*/, const std::string& /*FilenameLex*/, const
+std::list<OperationArgPkg>& /*Children*/){
 
     const auto Dump_All_Ordered_Image_Metadata_To_File = 
         [](const decltype(DICOM_data.image_data.front()->imagecoll.images) &images, const std::string &dumpfile) -> void {

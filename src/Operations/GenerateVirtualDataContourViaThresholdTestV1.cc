@@ -27,7 +27,8 @@ OperationDoc OpArgDocGenerateVirtualDataContourViaThresholdTestV1(){
     return out;
 }
 
-Drover GenerateVirtualDataContourViaThresholdTestV1(Drover DICOM_data, const OperationArgPkg& , const std::map<std::string,std::string>&, const std::string&){
+Drover GenerateVirtualDataContourViaThresholdTestV1(Drover DICOM_data, const OperationArgPkg& , const
+std::map<std::string,std::string>&, const std::string&, const std::list<OperationArgPkg>& /*Children*/){
 
     using loaded_imgs_storage_t = decltype(DICOM_data.image_data);
     std::list<loaded_imgs_storage_t> loaded_imgs_storage;

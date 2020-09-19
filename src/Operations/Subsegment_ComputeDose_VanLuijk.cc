@@ -230,7 +230,9 @@ OperationDoc OpArgDocSubsegment_ComputeDose_VanLuijk(){
 
 
 
-Drover Subsegment_ComputeDose_VanLuijk(Drover DICOM_data, const OperationArgPkg& OptArgs, const std::map<std::string,std::string>& /*InvocationMetadata*/, const std::string& FilenameLex){
+Drover Subsegment_ComputeDose_VanLuijk(Drover DICOM_data, const OperationArgPkg& OptArgs, const
+std::map<std::string,std::string>& /*InvocationMetadata*/, const std::string& FilenameLex, const
+std::list<OperationArgPkg>& /*Children*/){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     auto AreaDataFileName = OptArgs.getValueStr("AreaDataFileName").value();

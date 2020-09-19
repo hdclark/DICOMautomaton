@@ -21,7 +21,8 @@ OperationDoc OpArgDocConvertImageToDose(){
     return out;
 }
 
-Drover ConvertImageToDose(Drover DICOM_data, const OperationArgPkg&, const std::map<std::string,std::string>&, const std::string& ){
+Drover ConvertImageToDose(Drover DICOM_data, const OperationArgPkg&, const std::map<std::string,std::string>&, const
+std::string& , const std::list<OperationArgPkg>& /*Children*/){
 
     for(auto &ia_ptr : DICOM_data.image_data){
         for(auto &img : ia_ptr->imagecoll.images){

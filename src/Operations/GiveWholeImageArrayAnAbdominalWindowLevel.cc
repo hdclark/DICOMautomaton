@@ -26,7 +26,9 @@ OperationDoc OpArgDocGiveWholeImageArrayAnAbdominalWindowLevel(){
     return out;
 }
 
-Drover GiveWholeImageArrayAnAbdominalWindowLevel(Drover DICOM_data, const OperationArgPkg& /*OptArgs*/, const std::map<std::string,std::string>& /*InvocationMetadata*/, const std::string& /*FilenameLex*/){
+Drover GiveWholeImageArrayAnAbdominalWindowLevel(Drover DICOM_data, const OperationArgPkg& /*OptArgs*/, const
+std::map<std::string,std::string>& /*InvocationMetadata*/, const std::string& /*FilenameLex*/, const
+std::list<OperationArgPkg>& /*Children*/){
     for(auto & img_arr : DICOM_data.image_data){
         if(!img_arr->imagecoll.Process_Images_Parallel( GroupIndividualImages,
                                                StandardAbdominalHUWindow,

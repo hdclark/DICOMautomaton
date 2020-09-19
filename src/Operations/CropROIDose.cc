@@ -83,13 +83,14 @@ Drover
 CropROIDose(Drover DICOM_data, 
             const OperationArgPkg& OptArgs,
             const std::map<std::string, std::string>& InvocationMetadata,
-            const std::string& FilenameLex){
+            const std::string& FilenameLex,
+            const std::list<OperationArgPkg>& /*Children*/){
 
     DICOM_data = Meld_Only_Dose_Data(DICOM_data);
 
-    DICOM_data = HighlightROIs(DICOM_data, OptArgs, InvocationMetadata, FilenameLex);
+    DICOM_data = HighlightROIs(DICOM_data, OptArgs, InvocationMetadata, FilenameLex, {});
 
-    DICOM_data = DICOMExportImagesAsDose(DICOM_data, OptArgs, InvocationMetadata, FilenameLex);
+    DICOM_data = DICOMExportImagesAsDose(DICOM_data, OptArgs, InvocationMetadata, FilenameLex, {});
 
     return DICOM_data;
 }

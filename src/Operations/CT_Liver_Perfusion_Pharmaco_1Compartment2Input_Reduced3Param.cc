@@ -258,7 +258,9 @@ OperationDoc OpArgDocCT_Liver_Perfusion_Pharmaco_1C2I_Reduced3Param(){
 
 
 
-Drover CT_Liver_Perfusion_Pharmaco_1C2I_Reduced3Param(Drover DICOM_data, const OperationArgPkg& OptArgs, const std::map<std::string,std::string>& InvocationMetadata, const std::string& /*FilenameLex*/){
+Drover CT_Liver_Perfusion_Pharmaco_1C2I_Reduced3Param(Drover DICOM_data, const OperationArgPkg& OptArgs, const
+std::map<std::string,std::string>& InvocationMetadata, const std::string& /*FilenameLex*/, const
+std::list<OperationArgPkg>& /*Children*/){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto AIFROIName = OptArgs.getValueStr("AIFROINameRegex").value();

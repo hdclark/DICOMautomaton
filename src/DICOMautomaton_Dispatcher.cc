@@ -60,6 +60,7 @@ int main(int argc, char* argv[]){
 
     //Operations to perform on the data.
     std::list<OperationArgPkg> Operations;
+    long int OperationDepth = 0;
 
     //A explicit declaration that the user will generate data in an operation.
     bool GeneratingVirtualData = false;
@@ -205,7 +206,17 @@ int main(int argc, char* argv[]){
       " may necessarily terminate computation. See '-u' for detailed operation information.",
       [&](const std::string &optarg) -> void {
         try{
-          Operations.emplace_back(optarg);
+          if(OperationDepth == 0){
+            Operations.emplace_back(optarg);
+          }else{
+            if(Operations.empty()) throw std::invalid_argument("No parent node found");
+            OperationArgPkg *o = &( Operations.back() );
+            for(long int i = 1; i < OperationDepth; ++i){
+              if(o->children.empty()) throw std::invalid_argument("No child node found");
+              o = &( o->children.back() );
+            }
+            o->makeChild(optarg);
+          }
           MostRecentOperationActive = true;
         }catch(const std::exception &e){
           FUNCERR("Unable to parse operation: " << e.what());
@@ -229,9 +240,17 @@ int main(int argc, char* argv[]){
       [&](const std::string &optarg) -> void {
         try{
           if(MostRecentOperationActive){
-              if(!Operations.back().insert(optarg)){
-                  throw std::invalid_argument("Parameter insertion failed (is it duplicated?");
-              }
+            if(Operations.empty()) throw std::invalid_argument("No parent node found");
+            OperationArgPkg *o = &( Operations.back() );
+
+            for(long int i = 0; i < OperationDepth; ++i){
+              if(o->children.empty()) throw std::invalid_argument("No child node found");
+              o = &( o->children.back() );
+            }
+
+            if(!(o->insert(optarg))){
+              throw std::invalid_argument("Parameter insertion failed (is it duplicated?");
+            }
           }
         }catch(const std::exception &e){
           FUNCERR("Unable to append parameter: " << e.what());
@@ -248,9 +267,40 @@ int main(int argc, char* argv[]){
       })
     );
 
+    arger.push_back( ygor_arg_handlr_t(600, '(', "start-children", false, "",
+      "Descend scope by one level. Operations in this scope will be appended as children to the previous operation."
+      " A valid node must preceed this option."
+      " Note that this option may require escaping like '-\\('.",
+      [&](const std::string &) -> void {
+        if(Operations.empty()){
+            FUNCERR("This option can only be specified after a valid operation");
+        }
+        ++OperationDepth;
+        MostRecentOperationActive = false;
+        return;
+      })
+    );
+
+    arger.push_back( ygor_arg_handlr_t(600, ')', "stop-children", false, "",
+      "Ascend scope by one level."
+      " Note that this option may require escaping like '-\\)'.",
+      [&](const std::string &) -> void {
+        --OperationDepth;
+        MostRecentOperationActive = false;
+        if(OperationDepth < 0){
+            FUNCERR("Mismatched scope modifiers '(' or ')' detected");
+        }
+        return;
+      })
+    );
+
     arger.Launch(argc, argv);
 
     //============================================== Input Verification ==============================================
+
+    if(OperationDepth != 0){
+        FUNCERR("Mismatched scope modifiers '(' or ')' detected");
+    }
 
 #ifdef DCMA_USE_POSTGRES
     //Remove empty groups of query files. Probably not needed, as it ought to get caught at the DB query stage.

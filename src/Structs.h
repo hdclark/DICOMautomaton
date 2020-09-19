@@ -554,6 +554,11 @@ class OperationArgPkg {
         bool insert(const std::string& key, std::string val); //Will not overwrite.
         bool insert(const std::string& keyval); //Will not overwrite.
 
+        //Children.
+        std::list<OperationArgPkg> children; // Child nodes that can be interpretted in different ways.
+        void makeChild(std::string unparsed, const std::string& sepr = ":", const std::string& eqls = "=");
+        void makeChild(const OperationArgPkg &);
+        std::list<OperationArgPkg> getChildren() const;
 };
 
 

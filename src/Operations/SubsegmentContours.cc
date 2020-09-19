@@ -202,7 +202,9 @@ OperationDoc OpArgDocSubsegmentContours(){
 
 
 
-Drover SubsegmentContours(const Drover &DICOM_data, const OperationArgPkg& OptArgs, const std::map<std::string,std::string>& /*InvocationMetadata*/, const std::string& FilenameLex){
+Drover SubsegmentContours(const Drover &DICOM_data, const OperationArgPkg& OptArgs, const
+std::map<std::string,std::string>& /*InvocationMetadata*/, const std::string& FilenameLex, const
+std::list<OperationArgPkg>& /*Children*/){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto ROILabelRegex = OptArgs.getValueStr("ROILabelRegex").value();

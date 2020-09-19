@@ -28,7 +28,9 @@ OperationDoc OpArgDocDumpROIData(){
     return out;
 }
 
-Drover DumpROIData(const Drover &DICOM_data, const OperationArgPkg& /*OptArgs*/, const std::map<std::string,std::string>& /*InvocationMetadata*/, const std::string& FilenameLex){
+Drover DumpROIData(const Drover &DICOM_data, const OperationArgPkg& /*OptArgs*/, const
+std::map<std::string,std::string>& /*InvocationMetadata*/, const std::string& FilenameLex, const
+std::list<OperationArgPkg>& /*Children*/){
 
     typedef std::tuple<std::string,std::string,std::string> key_t; //PatientID, ROIName, NormalizedROIName.
 
