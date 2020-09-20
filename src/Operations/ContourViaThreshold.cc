@@ -147,8 +147,11 @@ OperationDoc OpArgDocContourViaThreshold(){
 
 
 
-Drover ContourViaThreshold(Drover DICOM_data, const OperationArgPkg& OptArgs, const std::map<std::string,std::string>&
-/*InvocationMetadata*/, const std::string& FilenameLex, const std::list<OperationArgPkg>& /*Children*/){
+Drover ContourViaThreshold(Drover DICOM_data,
+                           const OperationArgPkg& OptArgs,
+                           const std::map<std::string, std::string>&
+                           /*InvocationMetadata*/,
+                           const std::string& FilenameLex){
 
     Explicator X(FilenameLex);
 

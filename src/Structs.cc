@@ -2294,6 +2294,7 @@ OperationArgPkg::operator=(const OperationArgPkg &rhs){
     if(this == &rhs) return *this;
     this->name = rhs.name;
     this->opts = rhs.opts;
+    this->children = rhs.children;
     return *this;
 }
 
@@ -2383,5 +2384,14 @@ OperationArgPkg::makeChild(const OperationArgPkg &rhs){
 std::list<OperationArgPkg>
 OperationArgPkg::getChildren() const {
     return this->children;
+}
+
+OperationArgPkg*
+OperationArgPkg::lastChild(){
+    OperationArgPkg* oap = nullptr;
+    if(!(this->children.empty())){
+        oap = &( this->children.back() );
+    }
+    return oap;
 }
 

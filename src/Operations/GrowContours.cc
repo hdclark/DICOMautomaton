@@ -64,8 +64,10 @@ OperationDoc OpArgDocGrowContours(){
 
 
 
-Drover GrowContours(const Drover &DICOM_data, const OperationArgPkg& OptArgs, const std::map<std::string,std::string>&,
-const std::string& , const std::list<OperationArgPkg>& /*Children*/){
+Drover GrowContours(const Drover& DICOM_data,
+                    const OperationArgPkg& OptArgs,
+                    const std::map<std::string, std::string>&,
+                    const std::string&){
     if(DICOM_data.contour_data == nullptr) return DICOM_data;
 
     //---------------------------------------------- User Parameters --------------------------------------------------

@@ -75,8 +75,10 @@ OperationDoc OpArgDocSeamContours(){
 
 
 
-Drover SeamContours(Drover DICOM_data, const OperationArgPkg&, const std::map<std::string,std::string>&, const
-std::string& , const std::list<OperationArgPkg>& /*Children*/){
+Drover SeamContours(Drover DICOM_data,
+                    const OperationArgPkg&,
+                    const std::map<std::string, std::string>&,
+                    const std::string&){
 
     if(DICOM_data.contour_data == nullptr) return DICOM_data;
 

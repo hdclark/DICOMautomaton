@@ -1164,8 +1164,11 @@ OperationDoc OpArgDocDetectGrid3D(){
     return out;
 }
 
-Drover DetectGrid3D(Drover DICOM_data, const OperationArgPkg& OptArgs, const std::map<std::string,std::string>&
-/*InvocationMetadata*/, const std::string& /*FilenameLex*/, const std::list<OperationArgPkg>& /*Children*/){
+Drover DetectGrid3D(Drover DICOM_data,
+                    const OperationArgPkg& OptArgs,
+                    const std::map<std::string, std::string>&
+                    /*InvocationMetadata*/,
+                    const std::string& /*FilenameLex*/){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto PointSelectionStr = OptArgs.getValueStr("PointSelection").value();

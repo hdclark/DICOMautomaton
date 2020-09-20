@@ -221,8 +221,10 @@ OperationDoc OpArgDocDumpROISurfaceMeshes(){
     return out;
 }
 
-Drover DumpROISurfaceMeshes(const Drover& DICOM_data, const OperationArgPkg& OptArgs, const
-std::map<std::string,std::string>&, const std::string& , const std::list<OperationArgPkg>& /*Children*/){
+Drover DumpROISurfaceMeshes(const Drover& DICOM_data,
+                            const OperationArgPkg& OptArgs,
+                            const std::map<std::string, std::string>&,
+                            const std::string&){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     auto OutBase = OptArgs.getValueStr("OutBase").value();

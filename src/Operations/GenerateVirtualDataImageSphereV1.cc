@@ -28,8 +28,10 @@ OperationDoc OpArgDocGenerateVirtualDataImageSphereV1(){
     return out;
 }
 
-Drover GenerateVirtualDataImageSphereV1(Drover DICOM_data, const OperationArgPkg& , const
-std::map<std::string,std::string>&, const std::string& FilenameLex, const std::list<OperationArgPkg>& /*Children*/){
+Drover GenerateVirtualDataImageSphereV1(Drover DICOM_data,
+                                        const OperationArgPkg&,
+                                        const std::map<std::string, std::string>&,
+                                        const std::string& FilenameLex){
 
     Explicator X(FilenameLex);
 

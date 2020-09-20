@@ -88,8 +88,10 @@ OperationDoc OpArgDocDumpROIContours(){
 
 
 
-Drover DumpROIContours(const Drover& DICOM_data, const OperationArgPkg& OptArgs, const
-std::map<std::string,std::string>&, const std::string& , const std::list<OperationArgPkg>& /*Children*/){
+Drover DumpROIContours(const Drover& DICOM_data,
+                       const OperationArgPkg& OptArgs,
+                       const std::map<std::string, std::string>&,
+                       const std::string&){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     auto DumpFileName = OptArgs.getValueStr("DumpFileName").value();

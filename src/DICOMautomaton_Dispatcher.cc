@@ -212,8 +212,8 @@ int main(int argc, char* argv[]){
             if(Operations.empty()) throw std::invalid_argument("No parent node found");
             OperationArgPkg *o = &( Operations.back() );
             for(long int i = 1; i < OperationDepth; ++i){
-              if(o->children.empty()) throw std::invalid_argument("No child node found");
-              o = &( o->children.back() );
+              o = o->lastChild();
+              if(o == nullptr) throw std::invalid_argument("No child node found");
             }
             o->makeChild(optarg);
           }
@@ -244,8 +244,8 @@ int main(int argc, char* argv[]){
             OperationArgPkg *o = &( Operations.back() );
 
             for(long int i = 0; i < OperationDepth; ++i){
-              if(o->children.empty()) throw std::invalid_argument("No child node found");
-              o = &( o->children.back() );
+              o = o->lastChild();
+              if(o == nullptr) throw std::invalid_argument("No child node found");
             }
 
             if(!(o->insert(optarg))){
@@ -399,8 +399,7 @@ int main(int argc, char* argv[]){
 
     //============================================= Dispatch to Analyses =============================================
 
-    if(!Operation_Dispatcher( DICOM_data, InvocationMetadata, FilenameLex,
-                              Operations )){
+    if(!Operation_Dispatcher(DICOM_data, InvocationMetadata, FilenameLex, Operations)){
         FUNCERR("Analysis failed. Cannot continue");
     }
 

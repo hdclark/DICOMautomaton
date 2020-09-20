@@ -99,10 +99,10 @@ OperationDoc OpArgDocSFML_Viewer(){
     return out;
 }
 
-Drover SFML_Viewer( Drover DICOM_data, 
-                    const OperationArgPkg& OptArgs, 
-                    const std::map<std::string,std::string>& /*InvocationMetadata*/, 
-                    const std::string& FilenameLex , const std::list<OperationArgPkg>& /*Children*/){
+Drover SFML_Viewer(Drover DICOM_data,
+                   const OperationArgPkg& OptArgs,
+                   const std::map<std::string, std::string>& /*InvocationMetadata*/,
+                   const std::string& FilenameLex){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto SingleScreenshotStr = OptArgs.getValueStr("SingleScreenshot").value();

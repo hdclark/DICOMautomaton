@@ -132,6 +132,7 @@
 #include "Operations/PurgeContours.h"
 #include "Operations/RankPixels.h"
 #include "Operations/ReduceNeighbourhood.h"
+#include "Operations/Repeat.h"
 #include "Operations/ScalePixels.h"
 #include "Operations/SelectSlicesIntersectingROI.h"
 #include "Operations/SimplifyContours.h"
@@ -312,6 +313,7 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["PurgeContours"] = std::make_pair(OpArgDocPurgeContours, PurgeContours);
     out["RankPixels"] = std::make_pair(OpArgDocRankPixels, RankPixels);
     out["ReduceNeighbourhood"] = std::make_pair(OpArgDocReduceNeighbourhood, ReduceNeighbourhood);
+    out["Repeat"] = std::make_pair(OpArgDocReduceNeighbourhood, Repeat);
     out["ScalePixels"] = std::make_pair(OpArgDocScalePixels, ScalePixels);
     out["SelectSlicesIntersectingROI"] = std::make_pair(OpArgDocSelectSlicesIntersectingROI, SelectSlicesIntersectingROI);
     out["SimplifyContours"] = std::make_pair(OpArgDocSimplifyContours, SimplifyContours);
@@ -402,8 +404,7 @@ bool Operation_Dispatcher( Drover &DICOM_data,
                     DICOM_data = op_func.second.second(DICOM_data,
                                                        optargs,
                                                        InvocationMetadata,
-                                                       FilenameLex,
-                                                       optargs.getChildren());
+                                                       FilenameLex);
                 }
             }
             if(!WasFound) throw std::invalid_argument("No operation matched '" + optargs.getName() + "'");

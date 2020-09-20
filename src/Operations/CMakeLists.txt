@@ -114,6 +114,7 @@ add_library(Operations_objs OBJECT
     PurgeContours.cc
     RankPixels.cc
     ReduceNeighbourhood.cc
+    Repeat.cc
     ScalePixels.cc
     SelectSlicesIntersectingROI.cc
     SimplifyContours.cc

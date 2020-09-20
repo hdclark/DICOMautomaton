@@ -76,9 +76,10 @@ OperationDoc OpArgDocDecayDoseOverTimeHalve(){
 
 
 
-Drover DecayDoseOverTimeHalve(Drover DICOM_data, const OperationArgPkg& OptArgs, const
-std::map<std::string,std::string>& /*InvocationMetadata*/, const std::string& FilenameLex, const
-std::list<OperationArgPkg>& /*Children*/){
+Drover DecayDoseOverTimeHalve(Drover DICOM_data,
+                              const OperationArgPkg& OptArgs,
+                              const std::map<std::string, std::string>& /*InvocationMetadata*/,
+                              const std::string& FilenameLex){
 
     DecayDoseOverTimeUserData ud;
     ud.model = DecayDoseOverTimeMethod::Halve;

@@ -53,10 +53,10 @@ OperationDoc OpArgDocBoost_Serialize_Drover(){
     return out;
 }
 
-Drover
-Boost_Serialize_Drover(const Drover &DICOM_data, const OperationArgPkg& OptArgs, const std::map<std::string,
-std::string>& /*InvocationMetadata*/, const std::string& /*FilenameLex*/, const std::list<OperationArgPkg>&
-/*Children*/){
+Drover Boost_Serialize_Drover(const Drover& DICOM_data,
+                              const OperationArgPkg& OptArgs,
+                              const std::map<std::string, std::string>& /*InvocationMetadata*/,
+                              const std::string& /*FilenameLex*/){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     auto FilenameStr = OptArgs.getValueStr("Filename").value();

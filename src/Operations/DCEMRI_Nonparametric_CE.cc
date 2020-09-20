@@ -45,9 +45,10 @@ OperationDoc OpArgDocDCEMRI_Nonparametric_CE(){
     return out;
 }
 
-Drover DCEMRI_Nonparametric_CE(Drover DICOM_data, const OperationArgPkg& /*OptArgs*/, const
-std::map<std::string,std::string> & InvocationMetadata, const std::string& /*FilenameLex*/, const
-std::list<OperationArgPkg>& /*Children*/){
+Drover DCEMRI_Nonparametric_CE(Drover DICOM_data,
+                               const OperationArgPkg& /*OptArgs*/,
+                               const std::map<std::string, std::string>& InvocationMetadata,
+                               const std::string& /*FilenameLex*/){
 
     //Verify there is data to work on.
     if( DICOM_data.image_data.empty() ){

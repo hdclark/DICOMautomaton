@@ -19,8 +19,10 @@ OperationDoc OpArgDocPruneEmptyImageDoseArrays(){
     return out;
 }
 
-Drover PruneEmptyImageDoseArrays(Drover DICOM_data, const OperationArgPkg&, const std::map<std::string,std::string>& ,
-const std::string&, const std::list<OperationArgPkg>& /*Children*/){
+Drover PruneEmptyImageDoseArrays(Drover DICOM_data,
+                                 const OperationArgPkg&,
+                                 const std::map<std::string, std::string>&,
+                                 const std::string&){
 
     FUNCINFO("Pre-prune: there are " << DICOM_data.image_data.size() << " image_arrays");
 

@@ -44,8 +44,10 @@ OperationDoc OpArgDocCT_Liver_Perfusion(){
     return out;
 }
 
-Drover CT_Liver_Perfusion(Drover DICOM_data, const OperationArgPkg& /*OptArgs*/, const std::map<std::string,std::string>
-&InvocationMetadata, const std::string& /*FilenameLex*/, const std::list<OperationArgPkg>& /*Children*/){
+Drover CT_Liver_Perfusion(Drover DICOM_data,
+                          const OperationArgPkg& /*OptArgs*/,
+                          const std::map<std::string, std::string>& InvocationMetadata,
+                          const std::string& /*FilenameLex*/){
 
     //Stuff references to all contours into a list. Remember that you can still address specific contours through
     // the original holding containers (which are not modified here).

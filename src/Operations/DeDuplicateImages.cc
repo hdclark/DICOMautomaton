@@ -38,8 +38,10 @@ OperationDoc OpArgDocDeDuplicateImages(){
     return out;
 }
 
-Drover DeDuplicateImages(Drover DICOM_data, const OperationArgPkg& OptArgs, const std::map<std::string,std::string>& ,
-const std::string&, const std::list<OperationArgPkg>& /*Children*/){
+Drover DeDuplicateImages(Drover DICOM_data,
+                         const OperationArgPkg& OptArgs,
+                         const std::map<std::string, std::string>&,
+                         const std::string&){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto ImageSelectionStr = OptArgs.getValueStr("ImageSelection").value();

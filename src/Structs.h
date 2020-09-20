@@ -537,6 +537,8 @@ class OperationArgPkg {
         std::string name; // The operation name.
         icase_map_t opts; // Arguments to pass to the operation.
 
+        std::list<OperationArgPkg> children; // Child nodes that can be interpretted in different ways.
+
     public:
         OperationArgPkg(std::string unparsed, const std::string& sepr = ":", const std::string& eqls = "="); // e.g., "SomeOperation:keyA=valueA:keyB=valueB"
         OperationArgPkg(const OperationArgPkg &) = default;
@@ -555,10 +557,11 @@ class OperationArgPkg {
         bool insert(const std::string& keyval); //Will not overwrite.
 
         //Children.
-        std::list<OperationArgPkg> children; // Child nodes that can be interpretted in different ways.
         void makeChild(std::string unparsed, const std::string& sepr = ":", const std::string& eqls = "=");
         void makeChild(const OperationArgPkg &);
+
         std::list<OperationArgPkg> getChildren() const;
+        OperationArgPkg* lastChild(); //Non-owning pointer, mostly useful for adding arguments during command line parsing.
 };
 
 

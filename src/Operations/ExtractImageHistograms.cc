@@ -216,9 +216,10 @@ OperationDoc OpArgDocExtractImageHistograms(){
 
 
 
-Drover ExtractImageHistograms(Drover DICOM_data, const OperationArgPkg& OptArgs, const
-std::map<std::string,std::string>& /*InvocationMetadata*/, const std::string& FilenameLex, const
-std::list<OperationArgPkg>& /*Children*/){
+Drover ExtractImageHistograms(Drover DICOM_data,
+                              const OperationArgPkg& OptArgs,
+                              const std::map<std::string, std::string>& /*InvocationMetadata*/,
+                              const std::string& FilenameLex){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto ImageSelectionStr = OptArgs.getValueStr("ImageSelection").value();
