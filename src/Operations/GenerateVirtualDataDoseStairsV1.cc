@@ -162,7 +162,7 @@ Drover GenerateVirtualDataDoseStairsV1(Drover DICOM_data,
         const std::string ROIName = "Body";
         const long int ROINumber = ROINumberNidus++;
 
-        std::unique_ptr<Contour_Data> output(new Contour_Data());
+        auto output = std::make_unique<Contour_Data>();
 
         std::list<std::reference_wrapper<planar_image<float,double>>> imgs;
         for(auto &animg : DICOM_data.image_data.back()->imagecoll.images){

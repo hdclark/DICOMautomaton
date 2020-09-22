@@ -211,7 +211,7 @@ Drover GenerateVirtualDataPerfusionV1(Drover DICOM_data,
 
     //Create contours.
     {
-        std::unique_ptr<Contour_Data> output (new Contour_Data());
+        auto output = std::make_unique<Contour_Data>();
 
         //Get an image to base contours on. (This just make it slightly easier to specify contours.)
         auto animgcoll = std::ref(DICOM_data.image_data.back()->imagecoll);

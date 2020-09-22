@@ -141,10 +141,7 @@ Drover ContourViaGeometry(Drover DICOM_data,
 
 
     //Construct a destination for the ROI contours.
-    if(DICOM_data.contour_data == nullptr){
-        std::unique_ptr<Contour_Data> output (new Contour_Data());
-        DICOM_data.contour_data = std::move(output);
-    }
+    DICOM_data.Ensure_Contour_Data_Allocated();
     DICOM_data.contour_data->ccs.emplace_back();
 
     const double MinimumSeparation = 1.0; // TODO: is there a routine to do this? (YES: Unique_Contour_Planes()...)

@@ -1165,7 +1165,7 @@ bimap<std::string,long int> get_ROI_tags_and_numbers(const std::string &Filename
 
 //Returns contour data from a DICOM RTSTRUCT file sorted into ROI-specific collections.
 std::unique_ptr<Contour_Data> get_Contour_Data(const std::string &filename){
-    std::unique_ptr<Contour_Data> output (new Contour_Data());
+    auto output = std::make_unique<Contour_Data>();
     bimap<std::string,long int> tags_names_and_numbers = get_ROI_tags_and_numbers(filename);
 
     auto FileMetadata = get_metadata_top_level_tags(filename);

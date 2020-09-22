@@ -181,14 +181,14 @@ void Contour_Data::Plot() const {
 
 
 std::unique_ptr<Contour_Data> Contour_Data::Duplicate() const {
-    std::unique_ptr<Contour_Data> output (new Contour_Data);
+    auto output = std::make_unique<Contour_Data>();
     *output = *this;
     return output;
 }
 
 //This function will split contour_collection units. It does not care about ROI number, ROI name, or height.
 std::unique_ptr<Contour_Data>  Contour_Data::Split_Per_Volume_Along_Given_Plane_Unit_Normal(const vec3<double> &N) const {           //---- TODO: is this the correct plane, considering the patient DICOM orientation? (Check all files as test) 
-    std::unique_ptr<Contour_Data> output (new Contour_Data);
+    auto output = std::make_unique<Contour_Data>();
     const uint32_t segmentation = ( Segmentations::other_orientation | Segmentations::volume );
 
     for(const auto & cc : this->ccs){
@@ -286,7 +286,7 @@ std::unique_ptr<Contour_Data>  Contour_Data::Split_Per_Height_Along_Given_Plane_
     // needs to sub-segment a sub-segment, it cannot treat the various pieces as a single volume.
     //
     //NOTE: A plane itself is not passed in because the point of plane intersection is taken as the average point.
-    std::unique_ptr<Contour_Data> output (new Contour_Data);
+    auto output = std::make_unique<Contour_Data>();
 
     //Check if we have any contour numbers which are duplicated. This routine requires each contour_collection have
     // a distinct number.
@@ -449,7 +449,7 @@ std::unique_ptr<Contour_Data>  Contour_Data::Split_Per_Height_Along_Sagittal_Pla
 
 
 std::unique_ptr<Contour_Data>  Contour_Data::Split_Per_Contour_Along_Given_Plane_Unit_Normal(const vec3<double> &N) const {
-    std::unique_ptr<Contour_Data> output (new Contour_Data);
+    auto output = std::make_unique<Contour_Data>();
     const uint32_t segmentation = ( Segmentations::other_orientation | Segmentations::contour );
 
     for(const auto & cc : this->ccs){
@@ -530,7 +530,7 @@ std::unique_ptr<Contour_Data>  Contour_Data::Split_Per_Contour_Along_Sagittal_Pl
 //This will split contours AGAINST the given U. In other words, the ray cast happens along U. The "top" is the portion
 // which is between the beginning and middle of the ray (from contour's edge to edge).
 std::unique_ptr<Contour_Data>  Contour_Data::Raycast_Split_Per_Contour_Against_Given_Direction(const vec3<double> &U) const {
-    std::unique_ptr<Contour_Data> output (new Contour_Data);
+    auto output = std::make_unique<Contour_Data>();
     const uint32_t segmentation = ( Segmentations::other_orientation | Segmentations::contour | Segmentations::ray_cast );
 
     for(const auto & cc : this->ccs){
@@ -607,7 +607,7 @@ std::unique_ptr<Contour_Data>  Contour_Data::Raycast_Split_Per_Contour_Into_Late
 
 //Core and Peel splitting. Uses the cc centroid.
 std::unique_ptr<Contour_Data> Contour_Data::Split_Core_and_Peel(double frac_dist) const {
-    std::unique_ptr<Contour_Data> output (new Contour_Data);
+    auto output = std::make_unique<Contour_Data>();
     const uint32_t segmentation = ( Segmentations::other_orientation | Segmentations::contour | Segmentations::core_peel );
 
     for(const auto & cc : this->ccs){
@@ -688,7 +688,7 @@ std::unique_ptr<Contour_Data> Contour_Data::Split_Core_and_Peel(double frac_dist
 //
 //NOTE: This routine will put the LATERAL subsegment first in memory.
 std::unique_ptr<Contour_Data> Contour_Data::Reorder_LR_to_ML() const {
-    std::unique_ptr<Contour_Data> output (new Contour_Data);
+    auto output = std::make_unique<Contour_Data>();
     if(this->ccs.empty()) return output;
 
     //To simplify the tediousness a bit, we will assume a sagittal plane.
@@ -839,7 +839,7 @@ std::unique_ptr<Contour_Data> Contour_Data::Reorder_LR_to_ML() const {
 //
 //NOTE: Returns a nullptr if the designated contours_with_meta doesn't exist.
 std::unique_ptr<Contour_Data> Contour_Data::Get_Contours_Number(long int N) const {
-    std::unique_ptr<Contour_Data> output (new Contour_Data);
+    auto output = std::make_unique<Contour_Data>();
     if((N < 0) || (N >= static_cast<long int>(this->ccs.size()))) return nullptr;
 
     auto cc_it = std::next(this->ccs.begin(), N);
@@ -873,7 +873,7 @@ std::unique_ptr<Contour_Data> Contour_Data::Get_Single_Contour_Number(long int N
 
 
 std::unique_ptr<Contour_Data> Contour_Data::Get_Contours_With_Numbers(const std::set<long int> &in) const {
-    std::unique_ptr<Contour_Data> output (new Contour_Data);
+    auto output = std::make_unique<Contour_Data>();
 
     for(long n_it : in){
         //Cycle over the contours, checking each against the input.
@@ -892,7 +892,7 @@ std::unique_ptr<Contour_Data> Contour_Data::Get_Contours_With_Number(long int in
 }
 
 std::unique_ptr<Contour_Data> Contour_Data::Get_Contours_With_Last_Segmentation(const uint32_t &in) const {
-    std::unique_ptr<Contour_Data> output (new Contour_Data);
+    auto output = std::make_unique<Contour_Data>();
 
     for(const auto & cc : this->ccs){
         if(cc.Segmentation_History.empty()) continue;
@@ -907,7 +907,7 @@ std::unique_ptr<Contour_Data> Contour_Data::Get_Contours_With_Last_Segmentation(
 
 
 std::unique_ptr<Contour_Data> Contour_Data::Get_Contours_With_Segmentation(const std::set<uint32_t> &in) const {
-    std::unique_ptr<Contour_Data> output (new Contour_Data);
+    auto output = std::make_unique<Contour_Data>();
 
     for(const auto & cc : this->ccs){
         size_t counter = 0;

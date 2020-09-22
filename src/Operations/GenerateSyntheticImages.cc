@@ -395,10 +395,7 @@ Drover GenerateSyntheticImages(Drover DICOM_data,
     }
 
     //Create an empty contour set iff one does not exist.
-    if(DICOM_data.contour_data == nullptr){
-        std::unique_ptr<Contour_Data> output (new Contour_Data());
-        DICOM_data.contour_data = std::move(output);
-    }
+    DICOM_data.Ensure_Contour_Data_Allocated();
 
     return DICOM_data;
 }
