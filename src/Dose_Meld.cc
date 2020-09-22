@@ -140,7 +140,7 @@ std::list<std::shared_ptr<Image_Array>>  Meld_Image_Data(const std::list<std::sh
 }
 
 std::unique_ptr<Image_Array> Meld_Equal_Geom_Image_Data(const std::shared_ptr<Image_Array>& A, const std::shared_ptr<Image_Array>& B){
-    std::unique_ptr<Image_Array> out(new Image_Array());
+    auto out = std::make_unique<Image_Array>();
     *out = *A; //Performs a deep copy.
 
     //Now cycle through the voxel data, adjusting the integer dose. We can run through all data 
@@ -199,7 +199,7 @@ std::unique_ptr<Image_Array> Meld_Equal_Geom_Image_Data(const std::shared_ptr<Im
 //Returns a nullptr on failure to meld. This is a fairly risky operation, so be weary of the data coming
 // from this function.
 std::unique_ptr<Image_Array> Meld_Unequal_Geom_Image_Data(std::shared_ptr<Image_Array> A, const std::shared_ptr<Image_Array>& B){
-    std::unique_ptr<Image_Array> out(new Image_Array());
+    auto out = std::make_unique<Image_Array>();
 
     //Determine whether or not we can meld the data. Currently we can only handle the case where
     // a) all images in each set are same # of rows and columns as the others of the (same) set,

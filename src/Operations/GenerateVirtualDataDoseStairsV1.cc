@@ -82,7 +82,7 @@ Drover GenerateVirtualDataDoseStairsV1(Drover DICOM_data,
     for(long int time_index = 0; time_index < 1; ++time_index, ++SliceNumber){
         const std::string SOPInstanceUID = Generate_Random_UID(60);
 
-        std::unique_ptr<Image_Array> out(new Image_Array());
+        auto out = std::make_unique<Image_Array>();
         out->imagecoll.images.emplace_back();
 
         out->imagecoll.images.back().metadata["Filename"] = OriginFilename;

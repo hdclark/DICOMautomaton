@@ -1266,7 +1266,7 @@ std::unique_ptr<Contour_Data> get_Contour_Data(const std::string &filename){
 //       handles multi-frame images (and thus might be adaptable for other non-RTDOSE multi-frame 
 //       images).
 std::unique_ptr<Image_Array> Load_Image_Array(const std::string &FilenameIn){
-    std::unique_ptr<Image_Array> out(new Image_Array());
+    auto out = std::make_unique<Image_Array>();
 
     using namespace puntoexe;
     ptr<puntoexe::stream> readStream(new puntoexe::stream);
@@ -1663,7 +1663,7 @@ std::unique_ptr<Image_Array>  Load_Dose_Array(const std::string &FilenameIn){
     auto metadata = get_metadata_top_level_tags(FilenameIn);
     metadata["Modality"] = "RTDOSE";
 
-    std::unique_ptr<Image_Array> out(new Image_Array());
+    auto out = std::make_unique<Image_Array>();
 
     using namespace puntoexe;
     ptr<puntoexe::stream> readStream(new puntoexe::stream);

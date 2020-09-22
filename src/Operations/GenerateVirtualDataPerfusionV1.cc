@@ -93,7 +93,7 @@ Drover GenerateVirtualDataPerfusionV1(Drover DICOM_data,
 
         const std::string SOPInstanceUID = Generate_Random_UID(60);
 
-        std::unique_ptr<Image_Array> out(new Image_Array());
+        auto out = std::make_unique<Image_Array>();
         out->imagecoll.images.emplace_back();
 
         out->imagecoll.images.back().metadata["Filename"] = OriginFilename;

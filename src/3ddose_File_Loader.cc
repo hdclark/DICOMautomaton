@@ -299,7 +299,7 @@ bool Load_From_3ddose_Files( Drover &DICOM_data,
             for(long int img_index = 0; img_index < NumberOfImages; ++img_index){
                 const std::string SOPInstanceUID = Generate_Random_String_of_Length(6);
 
-                std::unique_ptr<Image_Array> out(new Image_Array());
+                auto out = std::make_unique<Image_Array>();
                 out->imagecoll.images.emplace_back();
 
                 out->imagecoll.images.back().metadata["Filename"] = Filename;
