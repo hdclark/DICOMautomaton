@@ -152,7 +152,7 @@ Drover ConvertMeshesToContours(Drover DICOM_data,
                     cop.metadata["NormalizedROIName"] = NormalizedROILabel;
                     cop.metadata["Description"] = "Sliced surface mesh";
                     cop.metadata["MinimumSeparation"] = std::to_string(MinimumSeparation);
-                    for(const auto &key : { "StudyInstanceUID", "FrameofReferenceUID" }){
+                    for(const auto &key : { "StudyInstanceUID", "FrameOfReferenceUID" }){
                         if(animg.metadata.count(key) != 0) cop.metadata[key] = animg.metadata.at(key);
                     }
                 }

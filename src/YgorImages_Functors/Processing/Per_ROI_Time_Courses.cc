@@ -96,14 +96,14 @@ bool PerROITimeCourses(planar_image_collection<float,double>::images_list_it_t f
             //Try figure out the contour's name.
             const auto StudyInstanceUID = roi_it->GetMetadataValueAs<std::string>("StudyInstanceUID");
             const auto ROIName =  roi_it->GetMetadataValueAs<std::string>("ROIName");
-            const auto FrameofReferenceUID = roi_it->GetMetadataValueAs<std::string>("FrameofReferenceUID");
-            if(!StudyInstanceUID || !ROIName || !FrameofReferenceUID){
+            const auto FrameOfReferenceUID = roi_it->GetMetadataValueAs<std::string>("FrameOfReferenceUID");
+            if(!StudyInstanceUID || !ROIName || !FrameOfReferenceUID){
                 FUNCWARN("Missing necessary tags for reporting analysis results. Cannot continue");
                 return false;
             }
             const analysis_key_t BaseAnalysisKey = { {"StudyInstanceUID", StudyInstanceUID.value()},
                                                      {"ROIName", ROIName.value()},
-                                                     {"FrameofReferenceUID", FrameofReferenceUID.value()},
+                                                     {"FrameOfReferenceUID", FrameOfReferenceUID.value()},
                                                      {"SpatialBoxr", Xtostring(boxr)},
                                                      {"MinimumDatum", Xtostring(min_datum)} };
             //const auto ROIName = ReplaceAllInstances(roi_it->metadata["ROIName"], "[_]", " ");

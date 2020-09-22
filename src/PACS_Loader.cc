@@ -48,7 +48,7 @@ bool Load_From_PACS_DB( Drover &DICOM_data,
                         std::string &db_connection_params,
                         std::list<std::list<std::string>> &GroupedFilterQueryFiles ){
 
-    std::set<std::string> FrameofReferenceUIDs;
+    std::set<std::string> FrameOfReferenceUIDs;
 
     FUNCINFO("Executing database queries...");
 
@@ -176,8 +176,8 @@ bool Load_From_PACS_DB( Drover &DICOM_data,
                 }
 
                 //Whatever file type, 
-                if(!r1[i]["FrameofReferenceUID"].is_null()){
-                    FrameofReferenceUIDs.insert(r1[i]["FrameofReferenceUID"].as<std::string>());
+                if(!r1[i]["FrameOfReferenceUID"].is_null()){
+                    FrameOfReferenceUIDs.insert(r1[i]["FrameOfReferenceUID"].as<std::string>());
                 }
 
             }
@@ -194,22 +194,22 @@ bool Load_From_PACS_DB( Drover &DICOM_data,
     }
 
     //Custom contour loading from an auxiliary database.
-    if(!FrameofReferenceUIDs.empty()){
+    if(!FrameOfReferenceUIDs.empty()){
         try{
             pqxx::connection c(db_connection_params);
             pqxx::work txn(c);
 
-            //Query for any contours matching the specific FrameofReferenceUID.
+            //Query for any contours matching the specific FrameOfReferenceUID.
             std::stringstream ss;
             ss << "SELECT * FROM contours WHERE ";
             {
                 bool first = true;
-                for(const auto &FrameofReferenceUID : FrameofReferenceUIDs){
+                for(const auto &FrameOfReferenceUID : FrameOfReferenceUIDs){
                     if(first){
                         first = false;
-                        ss << "(FrameofReferenceUID = " << txn.quote(FrameofReferenceUID) << ") ";
+                        ss << "(FrameOfReferenceUID = " << txn.quote(FrameOfReferenceUID) << ") ";
                     }else{
-                        ss << "OR (FrameofReferenceUID = " << txn.quote(FrameofReferenceUID) << ") ";
+                        ss << "OR (FrameOfReferenceUID = " << txn.quote(FrameOfReferenceUID) << ") ";
                     }
                 }
             }
@@ -221,10 +221,10 @@ bool Load_From_PACS_DB( Drover &DICOM_data,
                 const auto ROIName                 = res[i]["ROIName"].as<std::string>();
                 const auto ContourCollectionString = res[i]["ContourCollectionString"].as<std::string>();
                 const auto StudyInstanceUID        = res[i]["StudyInstanceUID"].as<std::string>();
-                const auto FrameofReferenceUID     = res[i]["FrameofReferenceUID"].as<std::string>();
+                const auto FrameOfReferenceUID     = res[i]["FrameOfReferenceUID"].as<std::string>();
        
                  
-                const auto keyA = std::make_pair(FrameofReferenceUID,StudyInstanceUID);
+                const auto keyA = std::make_pair(FrameOfReferenceUID,StudyInstanceUID);
                 contours_with_meta cc;
                 if(!cc.load_from_string(ContourCollectionString)){
                     FUNCWARN("Unable to parse contour collection with ROIName '" << ROIName <<
@@ -237,7 +237,7 @@ bool Load_From_PACS_DB( Drover &DICOM_data,
                     for(auto & contour : cc.contours){
                         contour.metadata["ROIName"] = ROIName;
                         contour.metadata["StudyInstanceUID"] = StudyInstanceUID;
-                        contour.metadata["FrameofReferenceUID"] = FrameofReferenceUID;
+                        contour.metadata["FrameOfReferenceUID"] = FrameOfReferenceUID;
                         // ...
                     }
 

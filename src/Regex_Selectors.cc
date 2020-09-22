@@ -291,7 +291,7 @@ Whitelist( std::list<std::reference_wrapper<contour_collection<double>>> ccs,
             throw std::logic_error("Regex selector representative->NAs option not understood. Cannot continue.");
 
         }else if(Opts.validation == Regex_Selector_Opts::Validation::Pedantic){
-            const auto Values = cc.get().get_unique_values_for_key(MetadataKey);
+            const auto Values = cc.get().get_distinct_values_for_key(MetadataKey);
 
             if(Values.empty()){
                 if(Opts.nas == Regex_Selector_Opts::NAs::Include){
@@ -377,7 +377,7 @@ Whitelist( std::list<std::list<std::shared_ptr<Image_Array>>::iterator> ias,
             throw std::logic_error("Regex selector representative->NAs option not understood. Cannot continue.");
 
         }else if(Opts.validation == Regex_Selector_Opts::Validation::Pedantic){
-            const auto Values = (*iap_it)->imagecoll.get_unique_values_for_key(MetadataKey);
+            const auto Values = (*iap_it)->imagecoll.get_distinct_values_for_key(MetadataKey);
 
             if(Values.empty()){
                 if(Opts.nas == Regex_Selector_Opts::NAs::Include){

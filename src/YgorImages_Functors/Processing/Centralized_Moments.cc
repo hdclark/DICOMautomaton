@@ -85,14 +85,14 @@ bool ComputeCentralizedMoments(planar_image_collection<float,double>::images_lis
             //Try figure out the contour's name.
             const auto StudyInstanceUID = roi.GetMetadataValueAs<std::string>("StudyInstanceUID");
             const auto ROIName =  roi.GetMetadataValueAs<std::string>("ROIName");
-            const auto FrameofReferenceUID = roi.GetMetadataValueAs<std::string>("FrameofReferenceUID");
-            if(!StudyInstanceUID || !ROIName || !FrameofReferenceUID){
+            const auto FrameOfReferenceUID = roi.GetMetadataValueAs<std::string>("FrameOfReferenceUID");
+            if(!StudyInstanceUID || !ROIName || !FrameOfReferenceUID){
                 FUNCWARN("Missing necessary tags for reporting analysis results. Cannot continue");
                 return false;
             }
             const analysis_key_t BaseAnalysisKey = { {"StudyInstanceUID", StudyInstanceUID.value()},
                                                      {"ROIName", ROIName.value()},
-                                                     {"FrameofReferenceUID", FrameofReferenceUID.value()},
+                                                     {"FrameOfReferenceUID", FrameOfReferenceUID.value()},
                                                      {"SpatialBoxr", Xtostring(boxr)},
                                                      {"Description", "Centralized moments over entire ROI"} };
 

@@ -1,4 +1,4 @@
-//Repeat.cc - A part of DICOMautomaton 2019. Written by hal clark.
+//Repeat.cc - A part of DICOMautomaton 2020. Written by hal clark.
 
 #include <asio.hpp>
 #include <algorithm>
@@ -40,17 +40,23 @@ OperationDoc OpArgDocRepeat() {
     OperationDoc out;
     out.name = "Repeat";
 
-    out.desc = "This operation repeats all child operations the given number of times.";
+    out.desc = "This operation is a control flow meta-operation that repeatedly and sequentially invokes all child"
+               " operations the given number of times.";
 
+    out.notes.emplace_back(
+        "If this operation has no children, this operation will evaluate to a no-op."
+    );
     out.notes.emplace_back(
         "Each repeat is performed sequentially, and all side-effects are carried forward for each iteration."
         " In particular, all selectors in child operations are evaluated lazily, at the moment when the child"
-        " operation is invoked.");
+        " operation is invoked."
+    );
     out.notes.emplace_back(
         " This operation will most often be used to repeat operations that compose naturally, such as"
         " repeatedly applying a small Gaussian filter to simulate a single Gaussian filter with a large"
         " kernel, iteratively refining a calculation, loading multiple copies of the same file, or"
-        " attempting a given analysis while waiting for data from a remote server.");
+        " attempting a given analysis while waiting for data from a remote server."
+    );
 
     out.args.emplace_back();
     out.args.back().name        = "N";
@@ -66,21 +72,16 @@ Drover Repeat(Drover DICOM_data,
               const OperationArgPkg& OptArgs,
               const std::map<std::string, std::string>& InvocationMetadata,
               const std::string& FilenameLex){
-
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto N = std::stol( OptArgs.getValueStr("N").value() );
 
     //-----------------------------------------------------------------------------------------------------------------
     if(N < 0) throw std::invalid_argument("N must be positive");
 
-    FUNCINFO("OptArgs contains " << OptArgs.getChildren().size() << " immediate children operations");
+    FUNCINFO("Repeating " << OptArgs.getChildren().size() << " immediate children operations " << N << " times");
 
-    std::map<std::string,std::string> l_InvocationMetadata(InvocationMetadata);
-    std::string l_FilenameLex(FilenameLex);
-    OperationArgPkg l_OptArgs(OptArgs);
-    auto Children = l_OptArgs.getChildren();
     for(long int i = 0; i < N; ++i){
-        if(!Operation_Dispatcher(DICOM_data, l_InvocationMetadata, l_FilenameLex, Children)){
+        if(!Operation_Dispatcher(DICOM_data, InvocationMetadata, FilenameLex, OptArgs.getChildren())){
             FUNCERR("Analysis failed. Cannot continue");
         }
     }

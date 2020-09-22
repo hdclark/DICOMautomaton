@@ -80,7 +80,7 @@ Drover GenerateVirtualDataPerfusionV1(Drover DICOM_data,
     const std::string PatientID = "VirtualDataPatientVersion1";
     const std::string StudyInstanceUID = Generate_Random_UID(60);
     const std::string SeriesInstanceUID = Generate_Random_UID(60);
-    const std::string FrameofReferenceUID = Generate_Random_UID(60);
+    const std::string FrameOfReferenceUID = Generate_Random_UID(60);
     const std::string Modality = "CT";
 
 
@@ -121,7 +121,7 @@ Drover GenerateVirtualDataPerfusionV1(Drover DICOM_data,
                                                                          + std::to_string(ImageOrientationColumn.y) + "\\"
                                                                          + std::to_string(ImageOrientationColumn.z);
         out->imagecoll.images.back().metadata["PixelSpacing"] = std::to_string(ImagePixeldx) + "\\" + std::to_string(ImagePixeldy);
-        out->imagecoll.images.back().metadata["FrameofReferenceUID"] = FrameofReferenceUID;
+        out->imagecoll.images.back().metadata["FrameOfReferenceUID"] = FrameOfReferenceUID;
 
         out->imagecoll.images.back().metadata["StudyTime"] = ContentTime;
         out->imagecoll.images.back().metadata["SeriesTime"] = ContentTime;

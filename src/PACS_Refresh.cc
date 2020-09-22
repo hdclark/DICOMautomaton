@@ -350,7 +350,7 @@ int main(int argc, char* argv[]){
             value   = dicom_string_to_real_array( mmap[colname] );
             r3 = txn.exec(update_boilerplate(colname, value));            check_update_ok(colname);
 
-            colname = "FrameofReferenceUID";
+            colname = "FrameOfReferenceUID";
             value   = null_if_empty_str( txn.quote(mmap[colname]) );
             r3 = txn.exec(update_boilerplate(colname, value));            check_update_ok(colname);
 

@@ -1542,11 +1542,11 @@ Drover SFML_Viewer(Drover DICOM_data,
                 const std::string cc_as_str( contour_coll_shtl.write_to_string() );                             
 
                 //Add metadata.
-                auto FrameofReferenceUID = disp_img_it->GetMetadataValueAs<std::string>("FrameofReferenceUID");
-                if(FrameofReferenceUID){
-                    contour_coll_shtl.Insert_Metadata("FrameofReferenceUID", FrameofReferenceUID.value());
+                auto FrameOfReferenceUID = disp_img_it->GetMetadataValueAs<std::string>("FrameOfReferenceUID");
+                if(FrameOfReferenceUID){
+                    contour_coll_shtl.Insert_Metadata("FrameOfReferenceUID", FrameOfReferenceUID.value());
                 }else{
-                    throw std::runtime_error("Missing 'FrameofReferenceUID' metadata element. Cannot continue.");
+                    throw std::runtime_error("Missing 'FrameOfReferenceUID' metadata element. Cannot continue.");
                 }
 
                 auto StudyInstanceUID = disp_img_it->GetMetadataValueAs<std::string>("StudyInstanceUID");
@@ -1885,14 +1885,14 @@ Drover SFML_Viewer(Drover DICOM_data,
                     disp_img_texture_sprite.first.update(newpixvals,1,1,col_as_u,row_as_u);
                     disp_img_texture_sprite.second.setTexture(disp_img_texture_sprite.first);
 
-                    auto FrameofReferenceUID = disp_img_it->GetMetadataValueAs<std::string>("FrameofReferenceUID");
-                    if(FrameofReferenceUID){
+                    auto FrameOfReferenceUID = disp_img_it->GetMetadataValueAs<std::string>("FrameOfReferenceUID");
+                    if(FrameOfReferenceUID){
                         //Record the point in the working contour buffer.
                         contour_coll_shtl.contours.back().closed = true;
                         contour_coll_shtl.contours.back().points.push_back( mouse_pos );
-                        contour_coll_shtl.contours.back().metadata["FrameofReferenceUID"] = FrameofReferenceUID.value();
+                        contour_coll_shtl.contours.back().metadata["FrameOfReferenceUID"] = FrameOfReferenceUID.value();
                     }else{
-                        FUNCWARN("Unable to find display image's FrameofReferenceUID. Cannot insert point in contour");
+                        FUNCWARN("Unable to find display image's FrameOfReferenceUID. Cannot insert point in contour");
 
                     }
                 }

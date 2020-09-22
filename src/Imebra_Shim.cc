@@ -883,8 +883,16 @@ std::map<std::string,std::string> get_metadata_top_level_tags(const std::string 
     insert_as_string_if_nonempty(0x0010, 0x1030, "PatientsMass");
 
     //Frame of Reference Module.
-    insert_as_string_if_nonempty(0x0020, 0x0052, "FrameofReferenceUID");
+    insert_as_string_if_nonempty(0x0020, 0x0052, "FrameOfReferenceUID");
     insert_as_string_if_nonempty(0x0020, 0x1040, "PositionReferenceIndicator");
+    insert_seq_tag_as_string_if_nonempty( 0x3006, 0x0010, "ReferencedFrameOfReferenceSequence",
+                                          0x0020, 0x0052, "FrameOfReferenceUID");
+    if(out.count("ReferencedFrameOfReferenceSequence/FrameOfReferenceUID") != 0){
+        // Allow a newer-style FrameOfReferenceUID tag to supercede an earlier-style tag, if present.
+        //
+        // Note that each contour can have a separate FrameOfReferenceUID. This simple mapping won't work in those cases.
+        out["FrameOfReferenceUID"] = out["ReferencedFrameOfReferenceSequence/FrameOfReferenceUID"];
+    }
 
     //General Equipment Module.
     insert_as_string_if_nonempty(0x0008, 0x0070, "Manufacturer");
@@ -1653,6 +1661,7 @@ std::unique_ptr<Image_Array> Collate_Image_Arrays(std::list<std::shared_ptr<Imag
 //This routine reads a single DICOM dose file.
 std::unique_ptr<Image_Array>  Load_Dose_Array(const std::string &FilenameIn){
     auto metadata = get_metadata_top_level_tags(FilenameIn);
+    metadata["Modality"] = "RTDOSE";
 
     std::unique_ptr<Image_Array> out(new Image_Array());
 
@@ -1909,6 +1918,7 @@ Load_TPlan_Config(const std::string &FilenameIn){
 
     // ------------------------------------------- General --------------------------------------------------
     out->metadata = get_metadata_top_level_tags(FilenameIn);
+    out->metadata["Modality"] = "RTPLAN";
 
     // DoseReferenceSequence
     for(uint32_t i = 0; i < 100000; ++i){
@@ -2424,7 +2434,7 @@ void Write_Dose_Array(const std::shared_ptr<Image_Array>& IA, const std::string 
             cm["PatientID"]         = "";
 
             //Frame of Reference Module.
-            cm["FrameofReferenceUID"] = "";
+            cm["FrameOfReferenceUID"] = "";
         }
 
 
@@ -2484,7 +2494,7 @@ void Write_Dose_Array(const std::shared_ptr<Image_Array>& IA, const std::string 
         ds_insert(tds, {0x0010, 0x1030}, foe({ cm["PatientsMass"] }));
 
         //Frame of Reference Module.
-        ds_insert(tds, {0x0020, 0x0052}, fne({ cm["FrameofReferenceUID"], Generate_Random_UID(32) }));
+        ds_insert(tds, {0x0020, 0x0052}, fne({ cm["FrameOfReferenceUID"], Generate_Random_UID(32) }));
         ds_insert(tds, {0x0020, 0x1040}, fne({ cm["PositionReferenceIndicator"], "BB" }));
 
         //General Equipment Module.
@@ -2657,7 +2667,7 @@ void Write_CT_Images(const std::shared_ptr<Image_Array>& IA,
     const auto StudyID = "DCMA_"_s + Generate_Random_String_of_Length(10); // i.e., "Course"
     const auto SeriesNumber = Generate_Random_Int_Str(5000, 32767); // Upper: 2^15 - 1.
 
-    // TODO: Sample any existing UID (ReferencedFrameOfReferenceUID or FrameofReferenceUID). 
+    // TODO: Sample any existing UID (ReferencedFrameOfReferenceUID or FrameOfReferenceUID). 
     // Probably OK to use only the first in this case though...
 
     long int InstanceNumber = -1;
@@ -2727,7 +2737,7 @@ void Write_CT_Images(const std::shared_ptr<Image_Array>& IA,
             cm["PatientID"]         = PatientID;
 
             //Frame of Reference Module.
-            cm["FrameofReferenceUID"] = FrameOfReferenceUID;
+            cm["FrameOfReferenceUID"] = FrameOfReferenceUID;
         }
 
         //-------------------------------------------------------------------------------------------------
@@ -2802,7 +2812,7 @@ void Write_CT_Images(const std::shared_ptr<Image_Array>& IA,
 
         //-------------------------------------------------------------------------------------------------
         //Frame of Reference Module.
-        root_node.emplace_child_node({{0x0020, 0x0052}, "UI", fne({ cm["FrameofReferenceUID"], FrameOfReferenceUID }) });
+        root_node.emplace_child_node({{0x0020, 0x0052}, "UI", fne({ cm["FrameOfReferenceUID"], FrameOfReferenceUID }) });
         root_node.emplace_child_node({{0x0020, 0x1040}, "LO", "" }); //PositionReferenceIndicator (TODO).
 
         //-------------------------------------------------------------------------------------------------
@@ -2941,7 +2951,7 @@ void Write_Contours(std::list<std::reference_wrapper<contour_collection<double>>
     //Generate some UIDs that need to be duplicated.
     const auto SOPInstanceUID = Generate_Random_UID(60);
     const auto FrameOfReferenceUID = Generate_Random_UID(60);
-    // TODO: Sample any existing UID (ReferencedFrameOfReferenceUID or FrameofReferenceUID). Probably OK to use only
+    // TODO: Sample any existing UID (ReferencedFrameOfReferenceUID or FrameOfReferenceUID). Probably OK to use only
     // the first in this case though...
 
 
@@ -3005,7 +3015,7 @@ void Write_Contours(std::list<std::reference_wrapper<contour_collection<double>>
             cm["PatientID"]         = "";
 
             //Frame of Reference Module.
-            cm["FrameofReferenceUID"] = "";
+            cm["FrameOfReferenceUID"] = "";
 
             //Structure Set Module.
             cm["StructureSetLabel"] = "UNSPECIFIED";
@@ -3108,7 +3118,7 @@ void Write_Contours(std::list<std::reference_wrapper<contour_collection<double>>
     }
 
 
-    // Emit the Structure Set ROI Sequence, which maps an integer number to names, FrameofReferenceUID, and creation
+    // Emit the Structure Set ROI Sequence, which maps an integer number to names, FrameOfReferenceUID, and creation
     // method.
     {
         DCMA_DICOM::Node *ssr_seq_ptr = root_node.emplace_child_node({{0x3006, 0x0020}, "SQ", ""});  // StructureSetROISequence

@@ -297,7 +297,7 @@ Drover GenerateSyntheticImages(Drover DICOM_data,
     const std::string PatientID = "SyntheticImage";
     const std::string StudyInstanceUID = PatientID + "_Study1";
     const std::string SeriesInstanceUID = StudyInstanceUID + "_Series1";
-    const std::string& FrameofReferenceUID = PatientID;
+    const std::string& FrameOfReferenceUID = PatientID;
     const std::string Modality = "CT";
 
     // --- The virtual 'signal' image series ---
@@ -329,7 +329,7 @@ Drover GenerateSyntheticImages(Drover DICOM_data,
                                                                          + std::to_string(ImageOrientationColumn.y) + "\\"
                                                                          + std::to_string(ImageOrientationColumn.z);
         out->imagecoll.images.back().metadata["PixelSpacing"] = std::to_string(VoxelWidth) + "\\" + std::to_string(VoxelHeight);
-        out->imagecoll.images.back().metadata["FrameofReferenceUID"] = FrameofReferenceUID;
+        out->imagecoll.images.back().metadata["FrameOfReferenceUID"] = FrameOfReferenceUID;
 
         out->imagecoll.images.back().metadata["StudyTime"] = ContentTime;
         out->imagecoll.images.back().metadata["SeriesTime"] = ContentTime;

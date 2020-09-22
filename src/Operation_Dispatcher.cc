@@ -91,6 +91,7 @@
 #include "Operations/ExtractAlphaBeta.h"
 #include "Operations/ExtractImageHistograms.h"
 #include "Operations/ExtractPointsWarp.h"
+#include "Operations/ForEachDistinct.h"
 #include "Operations/FVPicketFence.h"
 #include "Operations/GenerateCalibrationCurve.h"
 #include "Operations/GenerateSurfaceMask.h"
@@ -272,6 +273,7 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["ExtractAlphaBeta"] = std::make_pair(OpArgDocExtractAlphaBeta, ExtractAlphaBeta);
     out["ExtractImageHistograms"] = std::make_pair(OpArgDocExtractImageHistograms, ExtractImageHistograms);
     out["ExtractPointsWarp"] = std::make_pair(OpArgDocExtractPointsWarp, ExtractPointsWarp);
+    out["ForEachDistinct"] = std::make_pair(OpArgDocForEachDistinct, ForEachDistinct);
     out["FVPicketFence"] = std::make_pair(OpArgDocFVPicketFence, FVPicketFence);
     out["GenerateCalibrationCurve"] = std::make_pair(OpArgDocGenerateCalibrationCurve, GenerateCalibrationCurve);
     out["GenerateSurfaceMask"] = std::make_pair(OpArgDocGenerateSurfaceMask, GenerateSurfaceMask);
@@ -380,9 +382,9 @@ std::map<std::string, op_packet_t> Known_Operations(){
 
 
 bool Operation_Dispatcher( Drover &DICOM_data,
-                           std::map<std::string,std::string> &InvocationMetadata,
-                           std::string &FilenameLex,
-                           std::list<OperationArgPkg> &Operations ){
+                           const std::map<std::string,std::string> &InvocationMetadata,
+                           const std::string &FilenameLex,
+                           const std::list<OperationArgPkg> &Operations ){
 
     auto op_name_mapping = Known_Operations();
 

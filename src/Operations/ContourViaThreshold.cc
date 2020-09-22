@@ -355,7 +355,7 @@ Drover ContourViaThreshold(Drover DICOM_data,
                             copl.back().metadata["Description"] = "Contoured via threshold ("_s + std::to_string(Lower)
                                                                  + " <= pixel_val <= " + std::to_string(Upper) + ")";
                             copl.back().metadata["MinimumSeparation"] = std::to_string(MinimumSeparation);
-                            for(const auto &key : { "StudyInstanceUID", "FrameofReferenceUID" }){
+                            for(const auto &key : { "StudyInstanceUID", "FrameOfReferenceUID" }){
                                 if(animg.metadata.count(key) != 0) copl.back().metadata[key] = animg.metadata.at(key);
                             }
 
@@ -485,7 +485,7 @@ Drover ContourViaThreshold(Drover DICOM_data,
                         cop.metadata["Description"] = "Contoured via threshold ("_s + LowerStr
                                                      + " <= pixel_val <= " + UpperStr + ")";
                         cop.metadata["MinimumSeparation"] = std::to_string(MinimumSeparation);
-                        for(const auto &key : { "StudyInstanceUID", "FrameofReferenceUID" }){
+                        for(const auto &key : { "StudyInstanceUID", "FrameOfReferenceUID" }){
                             if(animg.metadata.count(key) != 0) cop.metadata[key] = animg.metadata.at(key);
                         }
                     }

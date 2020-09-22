@@ -78,7 +78,7 @@ bool Load_Mesh_From_OBJ_Files( Drover &DICOM_data,
             generic_metadata["PatientID"] = "unspecified";
             generic_metadata["StudyInstanceUID"] = Generate_Random_UID(60);
             generic_metadata["SeriesInstanceUID"] = Generate_Random_UID(60);
-            generic_metadata["FrameofReferenceUID"] = Generate_Random_UID(60);
+            generic_metadata["FrameOfReferenceUID"] = Generate_Random_UID(60);
             generic_metadata["SOPInstanceUID"] = Generate_Random_UID(60);
             generic_metadata["Modality"] = "SurfaceMesh";
 

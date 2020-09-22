@@ -73,6 +73,7 @@ add_library(Operations_objs OBJECT
     ExtractImageHistograms.cc
     ExtractAlphaBeta.cc
     ExtractPointsWarp.cc
+    ForEachDistinct.cc
     FVPicketFence.cc
     GenerateCalibrationCurve.cc
     GenerateSurfaceMask.cc

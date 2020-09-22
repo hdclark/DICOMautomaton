@@ -2007,6 +2007,11 @@ bool Drover::Has_Tran3_Data() const {
     return false;
 }
 
+void Drover::Ensure_Contour_Data_Allocated(){
+     if(this->contour_data == nullptr){
+         this->contour_data = std::make_unique<Contour_Data>();
+     } 
+}
 
 void Drover::Concatenate(const std::shared_ptr<Contour_Data>& in){
     //If there are no existing contours, incoming contours are shared instead of copied.

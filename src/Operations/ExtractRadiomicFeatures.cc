@@ -151,7 +151,7 @@ Drover ExtractRadiomicFeatures(Drover DICOM_data,
 
     // TODO: extract all ROI names and append them together. Best to put it in a top-level file for access elsehwere
     // too.
-    // std::list<std::string> get_unique_values_for_key(const std::string &akey) const;
+    // std::list<std::string> get_distinct_values_for_key(const std::string &akey) const;
     const auto ROINameOpt = cc_ROIs.front().get().contours.front().GetMetadataValueAs<std::string>("ROIName");  // HACK! FIXME. TODO.
     const auto& ROIName = ROINameOpt.value();
 
@@ -255,7 +255,7 @@ Drover ExtractRadiomicFeatures(Drover DICOM_data,
         if((*iap_it)->imagecoll.images.empty()) throw std::invalid_argument("Unable to find an image to analyze.");
 
         //Determine which PatientID(s) to report.
-        const auto PatientIDs = (*iap_it)->imagecoll.get_unique_values_for_key("PatientID");
+        const auto PatientIDs = (*iap_it)->imagecoll.get_distinct_values_for_key("PatientID");
         std::string PatientID;
         if(PatientIDs.empty()){
             PatientID = "Unknown";

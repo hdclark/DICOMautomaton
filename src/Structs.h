@@ -495,6 +495,8 @@ class Drover {
         bool Has_LSamp_Data() const;
         bool Has_Tran3_Data() const;
 
+        void Ensure_Contour_Data_Allocated();
+
         void Concatenate(const std::shared_ptr<Contour_Data>& in);
         void Concatenate(std::list<std::shared_ptr<Image_Array>> in);
         void Concatenate(std::list<std::shared_ptr<Point_Cloud>> in);
