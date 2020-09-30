@@ -92,7 +92,7 @@ fi
 
 # Download a SYCL toolchain.
 su - builduser -c "cd /tmp && yay -S --mflags --skipinteg --nopgpfetch --noconfirm hipsycl-cpu"
-su - builduser -c "cd /tmp && yay -S --mflags --skipinteg --nopgpfetch --noconfirm computecpp"
+#su - builduser -c "cd /tmp && yay -S --mflags --skipinteg --nopgpfetch --noconfirm computecpp"
 
 # Install Ygor.
 #
