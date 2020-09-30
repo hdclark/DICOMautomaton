@@ -137,3 +137,9 @@ su - builduser -c "cd /ygorcluster && ./compile_and_install.sh -b build"
 git reset --hard
 git clean -fxd :/ 
 
+
+# Perform a test compile to validate the SYCL compiler works.
+cd /scratch_base/test_program/
+./compile.sh
+./test
+
