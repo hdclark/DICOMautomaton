@@ -35,16 +35,6 @@ pacman -Syu --noconfirm --needed \
 rm -f /var/cache/pacman/pkg/*
 
 
-# Create an unprivileged user for building packages.
-# 
-# Note: The 'archlinux' Docker container currently contains user 'aurbuild' and has yay installed already.
-#       It won't hurt to add a new build user in case it is missing.
-useradd -r -d /var/empty builduser
-mkdir -p /var/empty/
-chown -R builduser:builduser /var/empty/
-printf '\n''builduser ALL=(ALL) NOPASSWD: ALL''\n' >> /etc/sudoers
-
-
 # Install known official dependencies.
 pacman -S --noconfirm --needed  \
   gcc-libs \
@@ -76,6 +66,16 @@ rm -f /var/cache/pacman/pkg/*
 cp /scratch_base/xpra-xorg.conf /etc/X11/xorg.conf
 
 
+# Create an unprivileged user for building packages.
+# 
+# Note: The 'archlinux' Docker container currently contains user 'aurbuild' and has yay installed already.
+#       It won't hurt to add a new build user in case it is missing.
+useradd -r -d /var/empty builduser
+mkdir -p /var/empty/.config/yay
+chown -R builduser:builduser /var/empty
+printf '\n''builduser ALL=(ALL) NOPASSWD: ALL''\n' >> /etc/sudoers
+
+
 # Download an AUR helper in case it is needed later.
 #
 # Note: `su - builduser -c "yay -S --noconfirm packageA packageB ..."`
@@ -86,9 +86,13 @@ if ! command -v yay &>/dev/null ; then
     mv yay_*/yay /tmp/
     rm -rf yay_*
     chmod 777 yay
-    su - builduser -c "cd /tmp && ./yay -S --noconfirm yay-bin"
+    su - builduser -c "cd /tmp && ./yay -S --mflags --skipinteg --nopgpfetch --noconfirm yay-bin"
     rm -rf /tmp/yay
 fi
+
+
+# Build something from the AUR.
+#su - builduser -c "cd /tmp && yay -S --mflags --skipinteg --nopgpfetch --noconfirm example-git"
 
 
 # Install Ygor.
