@@ -1,5 +1,5 @@
 
-language = "cpp17"
+language = "cpp"
 
 onBoot = '''
     # Install some typical development packages.
@@ -20,6 +20,7 @@ onBoot = '''
     JOBS=$(( $JOBS < 4 ? $JOBS : 4 )) # Limit to reduce memory use.
     make -j "$JOBS" #VERBOSE=1
     make install DESTDIR=$HOME/usr/
+    popd
 '''
 
 run = '''
