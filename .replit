@@ -3,30 +3,44 @@ language = "cpp"
 
 onBoot = '''
     # Install some typical development packages.
-    install-pkg libeigen3-dev libnlopt-dev libboost-dev libcgal-dev libgsl-dev libsfml-dev
+    #install-pkg libeigen3-dev libnlopt-dev libboost-dev libcgal-dev libgsl-dev libsfml-dev
+    install-pkg libeigen3-dev libnlopt-dev libboost-dev
+
+    # Update CMake
+    pushd $HOME
+    wget "https://github.com/Kitware/CMake/releases/download/v3.17.5/cmake-3.17.5-Linux-x86_64.sh"
+    chmod 777 ./cmake*.sh
+    echo 'yyyyy' | ./cmake*.sh | cat
+    export PATH="$HOME/cmake-3.17.5-Linux-x86_64/bin:$PATH"
+    rm -rf ./cmake*.sh
+    popd
+
+    ## Provide a newer clang.
+    #pushd $HOME
+    #wget 'https://github.com/llvm/llvm-project/releases/download/llvmorg-10.0.0/clang+llvm-10.0.0-x86_64-linux-gnu-ubuntu-18.04.tar.xz'
+    #tar -axf clang*tar.xz
+    #export PATH="$HOME/clang+llvm-10.0.0-x86_64-linux-gnu-ubuntu-18.04/bin:$PATH"
+    #rm -rf clang*tar.xz
+    #popd
 
     # Compile Ygor and install locally to support using Ygor classes.
-    mkdir -pv $HOME/usr/
     git clone 'https://github.com/hdclark/Ygor' $HOME/ygor
     pushd $HOME/ygor
-
     mkdir -pv build
     cd build
-    cmake \
-      -DCMAKE_INSTALL_PREFIX="${INSTALLPREFIX}" \
-      -DCMAKE_BUILD_TYPE=Release \
-      ../
+    CC="clang" CXX="clang++" cmake -DCMAKE_INSTALL_PREFIX="usr" -DCMAKE_BUILD_TYPE=Release -DWITH_EIGEN=0 -DWITH_GNU_GSL=0 ../
     JOBS=$(nproc)
-    JOBS=$(( $JOBS < 4 ? $JOBS : 4 )) # Limit to reduce memory use.
+    JOBS=$(( $JOBS < 2 ? $JOBS : 2 )) # Limit to reduce memory use.
     make -j "$JOBS" #VERBOSE=1
-    make install DESTDIR=$HOME/usr/
+    make install DESTDIR=$HOME/.apt/
     popd
+
 '''
 
 run = '''
     # Debugging...
     ls $HOME/usr/
-    g++ -version || clang++ --version
+    g++ --version || clang++ --version
 
 '''
 
