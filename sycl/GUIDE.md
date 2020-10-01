@@ -44,6 +44,9 @@ Note that when you exit the container, any changes you've made will be destroyed
 container, save your changes either by regularly commiting and pushing to `GitHub` or by sharing a directory to save
 files on the host computer (see the `docker run` `--volume` parameter).
 
+The `Docker` image also contains `Boost`, `Eigen`, and `NLopt` libraries pre-configured, in case you want to use them.
+They may not be necessary though!
+
 ### Compiling
 
 `CMake` scripts are provided to simplify compiling, but the `SYCL` compiler is hard-coded. If new files are added, you
@@ -51,6 +54,9 @@ will have to add them to `src/CMakeLists.txt`. A helper script is provided to co
 
     ./compile_and_install.sh
     run_model -h
+
+In order to test your code, you will need time course data (i.e., an AIF, a VIF, and at least one tissue time course). I
+can provide these -- please let me know when you're ready.
 
 ### Questions?
 

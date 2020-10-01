@@ -46,7 +46,7 @@ cmake \
   ../
 JOBS=$(nproc)
 JOBS=$(( $JOBS < 4 ? $JOBS : 4 )) # Limit to reduce memory use.
-make -j "$JOBS" VERBOSE=1
+make -j "$JOBS" #VERBOSE=1
 
 if [[ "${ALSOINSTALL}" =~ ^y.* ]] ; then
     printf 'Warning! Bypassing system package management and installing directly!\n'
