@@ -1,0 +1,31 @@
+
+language = "cpp17"
+
+onBoot = '''
+    # Install some typical development packages.
+    install-pkg libeigen3-dev libnlopt-dev libboost-dev libcgal-dev libgsl-dev libsfml-dev
+
+    # Compile Ygor and install locally to support using Ygor classes.
+    mkdir -pv $HOME/usr/
+    git clone 'https://github.com/hdclark/Ygor' $HOME/ygor
+    pushd $HOME/ygor
+
+    mkdir -pv build
+    cd build
+    cmake \
+      -DCMAKE_INSTALL_PREFIX="${INSTALLPREFIX}" \
+      -DCMAKE_BUILD_TYPE=Release \
+      ../
+    JOBS=$(nproc)
+    JOBS=$(( $JOBS < 4 ? $JOBS : 4 )) # Limit to reduce memory use.
+    make -j "$JOBS" #VERBOSE=1
+    make install DESTDIR=$HOME/usr/
+'''
+
+run = '''
+    # Debugging...
+    ls $HOME/usr/
+    g++ -version || clang++ --version
+
+'''
+
