@@ -14,6 +14,7 @@ if [ -f "${lock_file}" ] ; then
     exit 1
 fi
 trap "{ rm -f '${lock_file}' ; }" EXIT # Clean-up the lock file when we exit.
+mkdir -pv $HOME/.apt/
 touch "${lock_file}"
 
 # Install some typical development packages.
