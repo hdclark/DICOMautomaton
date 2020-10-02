@@ -2,46 +2,21 @@
 language = "cpp"
 
 onBoot = '''
-    # Install some typical development packages.
-    #install-pkg libeigen3-dev libnlopt-dev libboost-dev libcgal-dev libgsl-dev libsfml-dev
-    install-pkg libeigen3-dev libnlopt-dev libboost-dev
-    touch $HOME/completed_stage_1_pkg_installation
-
-    # Provide a more recent CMake binary.
-    wget "https://github.com/Kitware/CMake/releases/download/v3.17.5/cmake-3.17.5-Linux-x86_64.sh" -O $HOME/cmake.sh
-    mkdir -pv $HOME/cmake
-    bash $HOME/cmake.sh --skip-license --prefix=$HOME/cmake
-    rm -rf $HOME/cmake.sh
-    export PATH="$HOME/cmake/bin:$PATH"
-    touch $HOME/completed_stage_2_cmake_installation
-
-    ## Provide a newer clang.
-    #wget 'https://github.com/llvm/llvm-project/releases/download/llvmorg-10.0.0/clang+llvm-10.0.0-x86_64-linux-gnu-ubuntu-18.04.tar.xz' -O $HOME/clang.tar.xz
-    #tar -C $HOME -axf $HOME/clang.tar.xz
-    #rm -rf $HOME/clang.tar.xz
-    #export PATH="$HOME/clang+llvm-10.0.0-x86_64-linux-gnu-ubuntu-18.04/bin:$PATH"
-    touch $HOME/completed_stage_3_clang_installation
-
-    # Compile Ygor and install locally to support using Ygor classes.
-    rm -rf $HOME/ygor
-    git clone 'https://github.com/hdclark/Ygor' $HOME/ygor
-    mkdir -pv $HOME/ygor/build
-    # -DCMAKE_FIND_ROOT_PATH=$HOME/.apt/include 
-    cd $HOME/ygor/build && CC="clang" CXX="clang++" CXXFLAGS="-I$HOME/.apt/usr/include" PKG_CONFIG_PATH="$HOME/.apt/usr/share/pkgconfig/:$HOME/.apt/usr/lib/x86_64-linux-gnu/pkgconfig/" cmake -DCMAKE_INSTALL_PREFIX="$HOME/.apt/usr" -DCMAKE_BUILD_TYPE=Release -DWITH_EIGEN=1 -DWITH_GNU_GSL=0 $HOME/ygor
-    cd $HOME/ygor/build && make VERBOSE=1
-    cd $HOME/ygor/build && make install #DESTDIR=$HOME/.apt/
-    touch $HOME/completed_stage_4_ygor_installation
-
-    touch $HOME/setup_complete
+    # Launch the setup script as soon as possible.
+    sleep 1
+    nohup bash .setup_replit &
 '''
 
 run = '''
+
     # Confirm all required setup is complete. If not, do not attempt to compile.
-    if [ ! -f $HOME/setup_complete ] ; then printf 'Setup not yet complete. Cannot compile code.\n' 1>&2 ; exit 1 ; fi
+    if [ ! -f $HOME/setup_complete ] ; then printf 'Setup not yet complete. Attempting setup now...\n\n' 1>&2 ; nohup bash .setup_replit ; exit 1 ; fi
     
-    # 
     # Debugging...
-    ls $HOME
+    ls -lash $HOME
+
+    # compile some code here ...
+
 
 '''
 
