@@ -15,7 +15,8 @@ run = '''
     # Debugging...
     ls -lasht $HOME $HOME/.apt
 
-    # compile some code here ...
+    # Compile perfusion development code.
+    bash ./.compile_replit
 
 
 '''
