@@ -5,6 +5,8 @@
 # compiling test programs. After running this script, which could take a long time to complete, standalone
 # development files should be able to be compiled using repl.it.
 
+set -eu
+
 # Try ensure only a single script runs at a time.
 lock_file="$HOME/setup_script_running.lock"
 if [ -f "${lock_file}" ] ; then
@@ -27,8 +29,8 @@ touch $HOME/completed_stage_1_pkg_installation
     mkdir -pv $HOME/cmake
     bash $HOME/cmake.sh --skip-license --prefix=$HOME/cmake
     rm -rf $HOME/cmake.sh
-    export PATH="$HOME/cmake/bin:$PATH"
 ) | tee -a $HOME/stage_2_cmake_installation.log
+export PATH="$HOME/cmake/bin:$PATH"
 touch $HOME/completed_stage_2_cmake_installation
 
 ## Provide a newer clang.
@@ -36,8 +38,8 @@ touch $HOME/completed_stage_2_cmake_installation
 #    wget 'https://github.com/llvm/llvm-project/releases/download/llvmorg-10.0.0/clang+llvm-10.0.0-x86_64-linux-gnu-ubuntu-18.04.tar.xz' -O $HOME/clang.tar.xz
 #    tar -C $HOME -axf $HOME/clang.tar.xz
 #    rm -rf $HOME/clang.tar.xz
-#    export PATH="$HOME/clang+llvm-10.0.0-x86_64-linux-gnu-ubuntu-18.04/bin:$PATH"
 #) | tee -a $HOME/stage_3_clang_installation.log
+#export PATH="$HOME/clang+llvm-10.0.0-x86_64-linux-gnu-ubuntu-18.04/bin:$PATH"
 touch $HOME/completed_stage_3_clang_installation
 
 # Compile Ygor and install locally to support using Ygor classes.

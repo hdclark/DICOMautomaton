@@ -9,11 +9,11 @@ onBoot = '''
 
 run = '''
 
-    # Confirm all required setup is complete. If not, do not attempt to compile.
-    if [ ! -f $HOME/setup_complete ] ; then printf 'Setup not yet complete. Attempting setup now...\n\n' 1>&2 ; nohup bash .setup_replit ; exit 1 ; fi
+    # Confirm all required setup is complete. If not, re-launch the setup script before proceeding.
+    if [ ! -f $HOME/setup_complete ] ; then printf 'Setup not yet complete. Please try again in a minute or two...\n\n' 1>&2 ; nohup bash .setup_replit ; exit 1 ; fi
     
     # Debugging...
-    ls -lash $HOME
+    ls -lasht $HOME
 
     # compile some code here ...
 
