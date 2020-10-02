@@ -10,10 +10,10 @@ onBoot = '''
 run = '''
 
     # Confirm all required setup is complete. If not, re-launch the setup script before proceeding.
-    if [ ! -f $HOME/setup_complete ] ; then printf 'Setup not yet complete. Please try again in a minute or two...\n\n' 1>&2 ; nohup bash .setup_replit ; exit 1 ; fi
+    if [ ! -f $HOME/.apt/setup_complete ] ; then printf 'Setup not yet complete. Please try again in a minute or two...\n\n' 1>&2 ; nohup bash .setup_replit ; exit 1 ; fi
     
     # Debugging...
-    ls -lasht $HOME
+    ls -lasht $HOME $HOME/.apt
 
     # compile some code here ...
 
