@@ -5,6 +5,7 @@
 set -eu
 
 # Perform the build.
+export PATH="$HOME/.apt/cmake/bin:$PATH"
 (
     rm -rf perfusion/build
     mkdir -pv perfusion/build
