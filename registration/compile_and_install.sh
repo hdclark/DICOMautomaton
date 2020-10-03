@@ -21,8 +21,8 @@ if [ ! -d "${REPOROOT}" ] ; then
 fi
 cd "${REPOROOT}"
 
-# Move to the perfusion directory.
-cd perfusion/
+# Move to the registration directory.
+cd registration/
 
 # Determine how we will escalate privileges.
 SUDO="sudo"

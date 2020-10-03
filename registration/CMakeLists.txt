@@ -7,7 +7,7 @@ cmake_minimum_required(VERSION 3.12.0 FATAL_ERROR)
 #set(CMAKE_C_COMPILER   "syclcc")
 #set(CMAKE_CXX_COMPILER "syclcc")
 
-project(DICOMautomaton_Perfusion LANGUAGES CXX)
+project(DICOMautomaton_Registration LANGUAGES CXX)
 #set(DICOMautomaton_VERSION_MAJOR 0)
 #set(DICOMautomaton_VERSION_MINOR 0)
 #set(DICOMautomaton_VERSION_PATCH 0)
