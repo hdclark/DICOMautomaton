@@ -35,7 +35,7 @@ The easiest workflow will be to:
 Note that `DICOMautomaton` development is relatively active, so you may have to rebase when you make a pull request.
 `GitHub` will let you know if this is needed.
 
-Absolutely feel free to figure out a workflow that works best for you! In particular
+Absolutely feel free to figure out a workflow that works best for you!
 
 ### Writing Code
 
@@ -69,11 +69,12 @@ you're ready.
 
 A set of scripts were written to support using <https://repl.it> as a web-based development tool. Supplying the `GitHub`
 address <https://github.com.hdclark/DICOMautomaton> will load a bare-bones development environment. The 'Run' button
-will execute `registration/compile_and_install.sh`.
+will compile the sources in `registration/`.
 
-Please note that there are several caveats! The setup script takes around 10 minutes to complete, the installation
+Please note that there are several caveats. The setup script takes around 10 minutes(!!) to complete, the installation
 sometimes disconnects and needs to be re-generated, and the allocated resources are probably insufficient to load
-anything but tiny point clouds. Using <https://repl.it> is, at best, only expected to be useful for quick tweaks.
+anything but tiny point clouds. Using <https://repl.it> is, at best, only expected to be useful for discussion or
+light development work.
 
 ### Questions?
 
