@@ -1,10 +1,9 @@
----
-Language:        Cpp
+BasedOnStyle: LLVM
 AccessModifierOffset: -2
 AlignAfterOpenBracket: true
 AlignConsecutiveAssignments: true
 AlignEscapedNewlinesLeft: true
-AlignOperands:   true
+AlignOperands: true
 AlignTrailingComments: true
 AllowAllParametersOfDeclarationOnNextLine: true
 AllowShortBlocksOnASingleLine: true
@@ -21,22 +20,20 @@ BreakBeforeBinaryOperators: All
 BreakBeforeBraces: Attach
 BreakBeforeTernaryOperators: true
 BreakConstructorInitializersBeforeComma: true
-ColumnLimit:     120
-CommentPragmas:  '^ IWYU pragma:'
+BreakStringLiterals: false
+ColumnLimit: 120
 ConstructorInitializerAllOnOneLineOrOnePerLine: true
 ConstructorInitializerIndentWidth: 4
 ContinuationIndentWidth: 4
 Cpp11BracedListStyle: true
 DerivePointerAlignment: true
-DisableFormat:   false
+DisableFormat: false
 ExperimentalAutoDetectBinPacking: false
-ForEachMacros:   [ foreach, Q_FOREACH, BOOST_FOREACH ]
 IndentCaseLabels: true
-IndentWidth:     4
+IndentWidth: 4
 IndentWrappedFunctionNames: false
 KeepEmptyLinesAtTheStartOfBlocks: false
-MacroBlockBegin: ''
-MacroBlockEnd:   ''
+Language: Cpp
 MaxEmptyLinesToKeep: 4
 NamespaceIndentation: All
 ObjCBlockIndentWidth: 2
@@ -49,18 +46,18 @@ PenaltyBreakString: 1000
 PenaltyExcessCharacter: 1000000
 PenaltyReturnTypeOnItsOwnLine: 0
 PointerAlignment: Right
+ReflowComments: false
+SortIncludes: false
 SpaceAfterCStyleCast: false
 SpaceBeforeAssignmentOperators: true
 SpaceBeforeParens: Never
 SpaceInEmptyParentheses: false
 SpacesBeforeTrailingComments: 1
-SpacesInAngles:  false
-SpacesInContainerLiterals: true
+SpacesInAngles: false
 SpacesInCStyleCastParentheses: false
+SpacesInContainerLiterals: true
 SpacesInParentheses: false
 SpacesInSquareBrackets: false
-Standard:        Auto
-TabWidth:        4
-UseTab:          Never
-...
-
+Standard: Auto
+TabWidth: 4
+UseTab: Never
