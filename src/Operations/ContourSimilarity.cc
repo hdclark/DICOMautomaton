@@ -34,7 +34,8 @@ OperationDoc OpArgDocContourSimilarity(){
     out.name = "ContourSimilarity";
     out.desc = 
         "This operation estimates the similarity or overlap between two sets of contours."
-        " The comparison is based on point samples. It is useful for comparing contouring styles.";
+        " The comparison is based on point samples. It is useful for comparing contouring styles."
+        " This operation currently reports Dice and Jaccard similarity metrics.";
 
     out.notes.emplace_back(
         "This routine requires an image grid, which is used to control where the contours are sampled."
@@ -170,7 +171,7 @@ Drover ContourSimilarity(Drover DICOM_data,
     ud.Clear();
     if(!(*iap_it)->imagecoll.Compute_Images( ComputeContourSimilarity, { },
                                            { cc_A.front(), cc_B.front() }, &ud )){
-        throw std::runtime_error("Unable to compute Dice similarity. Cannot continue.");
+        throw std::runtime_error("Unable to compute contour similarity metrics. Cannot continue.");
     }
     FUNCINFO("Dice coefficient(A,B) = " << ud.Dice_Coefficient());
     FUNCINFO("Jaccard coefficient(A,B) = " << ud.Jaccard_Coefficient());
@@ -229,7 +230,7 @@ Drover ContourSimilarity(Drover DICOM_data,
                << "NormalizedROInameA,"
                << "ROInameB,"
                << "NormalizedROInameB,"
-               << "CosineSimilarity,"
+               << "DiceSimilarity,"
                << "JaccardSimilarity"
                << std::endl;
         }
