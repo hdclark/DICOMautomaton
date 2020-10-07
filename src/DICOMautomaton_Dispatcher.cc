@@ -339,9 +339,22 @@ int main(int argc, char* argv[]){
     //Try find a lexicon file if none were provided.
     if(FilenameLex.empty()){
         std::list<std::string> trial = { 
+                // General, all-purpose lexicon suitable for 'standard' photon external beam therapy.
+                "20201007_standard_sites.lexicon",
+                "Lexicons/20201007_standard_sites.lexicon",
+                "/usr/share/explicator/lexicons/20201007_standard_sites.lexicon",
+
+                // Updated H&N-specific lexicon derived from a large cohort of study patients.
+                "20191212_SGF_and_SGFQ_tags.lexicon",
+                "Lexicons/20191212_SGF_and_SGFQ_tags.lexicon",
+                "/usr/share/explicator/lexicons/20191212_SGF_and_SGFQ_tags.lexicon",
+
+                // Classic H&N-specific lexicons derived from a large cohort of study patients.
                 "20150925_SGF_and_SGFQ_tags.lexicon",
                 "Lexicons/20150925_SGF_and_SGFQ_tags.lexicon",
                 "/usr/share/explicator/lexicons/20150925_20150925_SGF_and_SGFQ_tags.lexicon",
+
+                // Older fallbacks.
                 "/usr/share/explicator/lexicons/20130319_SGF_filter_data_deciphered5.lexicon",
                 "/usr/share/explicator/lexicons/20121030_SGF_filter_data_deciphered4.lexicon" };
         for(const auto & f : trial) if(Does_File_Exist_And_Can_Be_Read(f)){
