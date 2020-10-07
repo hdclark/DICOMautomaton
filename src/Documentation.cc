@@ -137,8 +137,8 @@ void Emit_Documentation(std::ostream &os){
     );
     reflow_and_emit_paragraph(os, max_width, nobullet, nobullet, nolinebreak,
         "All materials herein which may be copywrited, where applicable, are."
-        " Copyright 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019"
-        " hal clark. See the ```LICENSE``` file for details about the license."
+        " Copyright 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019,"
+        " 2020 hal clark. See the ```LICENSE``` file for details about the license."
         " Informally, DICOMautomaton is available under a GPLv3+ license."
         " The Imebra library is bundled for convenience and was not written"
         " by hal clark; consult its license file in ```src/imebra/license.txt```."

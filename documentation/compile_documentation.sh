@@ -3,16 +3,19 @@
 # This script compiles pdf and html documents from Markdown source files.
 # Note that the Markdown sources are NOT automatically updated prior to compilation.
 #
-# Written by hal clark in 2019.
+# Written by hal clark in 2020.
 
-set -e
+set -eu
 
 # Prepare a YAML metadata file.
-metadata_tmp="$(mktemp)"
-trap "{ rm '${metadata_tmp}' ; }" EXIT # Clean-up the temp file when we exit.
-printf 'date: %s\n' "$(date +%Y-%b-%d)" >> "${metadata_tmp}"
+current_commit="$(git rev-parse --short HEAD)"
+current_date="$(date +%Y-%b-%d)"
 
-# Process all matching md sources.
+metadata_tmp="$(mktemp ./dcma_metadata_XXXXXXXXXX.yaml)"
+trap "{ rm '${metadata_tmp}' ; }" EXIT # Clean-up the temp file when we exit.
+printf 'date: %s\n' "${current_date}, commit ${current_commit}" >> "${metadata_tmp}"
+
+# Process all available sources.
 for i in ./reference_guide*.md ; do 
 
     file_in="$i"
@@ -31,7 +34,6 @@ for i in ./reference_guide*.md ; do
     pdf_compiler_inv+=(--resource-path=./images/)
     pdf_compiler_inv+=(--toc)
     pdf_compiler_inv+=(--metadata-file="${metadata_tmp}")
-    #pdf_compiler_inv+=(--metadata=date:"$(date +%Y-%b-%d)")
     pdf_compiler_inv+=(--number-sections)
     pdf_compiler_inv+=(--pdf-engine=pdflatex)
     pdf_compiler_inv+=(--output="${pdf_file_out}")
@@ -45,8 +47,6 @@ for i in ./reference_guide*.md ; do
     htm_compiler_inv+=(--self-contained)
     htm_compiler_inv+=(--toc)
     htm_compiler_inv+=(--metadata-file="${metadata_tmp}")
-    #htm_compiler_inv+=(--metadata=date:"$(date +%Y-%b-%d)")
-    #htm_compiler_inv+=(--variable=toc-title:\"Table of Contents\") # Note: cannot specify this way...
     htm_compiler_inv+=(--toc-depth=2)
     htm_compiler_inv+=(--number-sections)
     htm_compiler_inv+=(--output="${htm_file_out}")
@@ -59,7 +59,6 @@ for i in ./reference_guide*.md ; do
     #man_compiler_inv+=(--standalone)
     man_compiler_inv+=(--self-contained)
     man_compiler_inv+=(--metadata-file="${metadata_tmp}")
-    #man_compiler_inv+=(--metadata=date:"$(date +%Y-%b-%d)")
     man_compiler_inv+=(--output="${man_file_out}")
 
     if false ; then
