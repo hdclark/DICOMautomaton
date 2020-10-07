@@ -394,6 +394,7 @@ will work.
 - ExtractPointsWarp
 - ExtractRadiomicFeatures
 - FVPicketFence
+- ForEachDistinct
 - GenerateCalibrationCurve
 - GenerateSurfaceMask
 - GenerateSyntheticImages
@@ -438,6 +439,7 @@ will work.
 - RankPixels
 - ReduceNeighbourhood
 - RemeshSurfaceMeshes
+- Repeat
 - SFML_Viewer
 - ScalePixels
 - SeamContours
@@ -3756,7 +3758,8 @@ The label to attach to the ROI contour product of f(A,B).
 ### Description
 
 This operation estimates the similarity or overlap between two sets of contours. The comparison is based on point
-samples. It is useful for comparing contouring styles.
+samples. It is useful for comparing contouring styles. This operation currently reports Dice and Jaccard similarity
+metrics.
 
 ### Notes
 
@@ -11608,6 +11611,49 @@ window overrides.
 - ```"10.3E4"```
 
 
+## ForEachDistinct
+
+### Description
+
+This operation is a control flow meta-operation that partitions all available data and invokes all child operations once
+for each distinct partition.
+
+### Notes
+
+- If this operation has no children, this operation will evaluate to a no-op.
+
+- Each invocation is performed sequentially, and all side-effects are carried forward for each iteration. However,
+  partitions are generated before any child operations are invoked, so newly-added elements (e.g., new Image_Arrays)
+  created by one invocation will not participate in subsequent invocations. The final order of the partitions is
+  arbitrary.
+
+- This operation will most often be used to process data group-wise rather than as a whole.
+
+### Parameters
+
+- KeysCommon
+
+#### KeysCommon
+
+##### Description
+
+Metadata keys to use for exact-match groupings on all data types. For each partition that is produced, every element
+will share the same key-value pair. This is generally useful for non-numeric (or integer, date, etc.) key-values. A
+';'-delimited list can be specified to group on multiple criteria simultaneously. An empty string disables
+metadata-based grouping.
+
+##### Default
+
+- ```""```
+
+##### Examples
+
+- ```"FrameOfReferenceUID"```
+- ```"BodyPartExamined;StudyDate"```
+- ```"SeriesInstanceUID"```
+- ```"StationName"```
+
+
 ## GenerateCalibrationCurve
 
 ### Description
@@ -14174,6 +14220,10 @@ is useful as a pre-processing step when performing convolution or thresholding w
 
 - This operation considers entire image arrays, not just single images.
 
+- This operation does not *reduce* voxels (i.e., the neighbourhood surrounding is voxel is ignored). This operation
+  effectively applies a linear mapping to every scalar voxel value independently. Neighbourhood-based reductions are
+  implemented in another operation.
+
 ### Parameters
 
 - ImageSelection
@@ -15725,12 +15775,22 @@ concept is the convolutional 'kernel.'
 ##### Description
 
 Controls how the distribution of voxel values from neighbouring voxels is reduced. Statistical distribution reducers
-'min', 'mean', 'median', and 'max' are defined. 'Min' is also known as the 'erosion' operation. Likewise, 'max' is also
+'min', 'mean', 'median', and 'max' are defined. 'min' is also known as the 'erosion' operation. Likewise, 'max' is also
 known as the 'dilation' operation. Note that the morphological 'opening' operation can be accomplished by sequentially
-performing an erosion and then a dilation using the same neighbourhood. Logical reducers 'is_min' and 'is_max' are also
-available -- is_min (is_max) replace the voxel value with 1.0 if it was the min (max) in the neighbourhood and 0.0
-otherwise. Logical reducers 'is_min_nan' and 'is_max_nan' are variants that replace the voxel with a NaN instead of 1.0
-and otherwise do not overwrite the original voxel value.
+performing an erosion and then a dilation using the same neighbourhood. The 'standardize' reduction method can be used
+for adaptive rescaling by subtracting the local neighbourhood mean and dividing the local neighbourhood standard
+deviation. The 'standardize' reduction method is a way to (locally) transform variables on different scales so they can
+more easily be compared. Note that standardization can result in undefined voxel values when the local neighbourhood is
+perfectly uniform. Also, since only the local neighbourhood is considered, voxels will in general have *neither* zero
+mean *nor* a unit standard deviation (growing the neighbourhood extremely large *will* accomplish this, but the
+calculation will be inefficient). The 'percentile01' reduction method evaluates which percentile the central voxel
+occupies within the local neighbourhood. It is reported scaled to $[0,1]$. 'percentile01' can be used to implement
+non-parametric adaptive scaling since only the local neighbourhood is examined. (Duplicate values assume the percentile
+of the middle of the range.) In contrast to 'standardize', the 'percentile01' reduction should remain valid anywhere the
+local neighbourhood has a non-zero number of finite voxels. Logical reducers 'is_min' and 'is_max' are also available --
+is_min (is_max) replace the voxel value with 1.0 if it was the min (max) in the neighbourhood and 0.0 otherwise. Logical
+reducers 'is_min_nan' and 'is_max_nan' are variants that replace the voxel with a NaN instead of 1.0 and otherwise do
+not overwrite the original voxel value.
 
 ##### Default
 
@@ -15744,6 +15804,8 @@ and otherwise do not overwrite the original voxel value.
 - ```"median"```
 - ```"max"```
 - ```"dilate"```
+- ```"standardize"```
+- ```"percentile01"```
 - ```"is_min"```
 - ```"is_max"```
 - ```"is_min_nan"```
@@ -15853,6 +15915,216 @@ The desired length of all edges in the remeshed mesh in DICOM units (mm).
 - ```"1.0"```
 - ```"1.5"```
 - ```"2.015"```
+
+
+## Repeat
+
+### Description
+
+This routine walks the voxels of a 3D rectilinear image collection, reducing the distribution of voxels within the local
+volumetric neighbourhood to a scalar value, and updating the voxel value with this scalar. This routine can be used to
+implement mean and median filters (amongst others) that operate over a variety of 3D neighbourhoods. Besides purely
+statistical reductions, logical reductions can be applied.
+
+### Notes
+
+- The provided image collection must be rectilinear.
+
+- This operation can be used to compute core 3D morphology operations (erosion and dilation) as well as composite
+  operations like opening (i.e., erosion followed by dilation), closing (i.e., dilation followed by erosion), 'gradient'
+  (i.e., the difference between dilation and erosion, which produces an outline), and various other combinations of core
+  and composite operations.
+
+### Parameters
+
+- ImageSelection
+- NormalizedROILabelRegex
+- ROILabelRegex
+- Channel
+- Neighbourhood
+- Reduction
+- MaxDistance
+
+#### ImageSelection
+
+##### Description
+
+Select one or more image arrays. Note that image arrays can hold anything, but will typically represent a single
+contiguous 3D volume (i.e., a volumetric CT scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of two types: positional or metadata-based key@value regex.
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth image array (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last image array.
+Positional specifiers can be inverted by prefixing with a '!'. Metadata-based key@value expressions are applied by
+matching the keys verbatim and the values with regex. In order to invert metadata-based selectors, the regex logic must
+be inverted (i.e., you can *not* prefix metadata-based selectors with a '!'). Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified. Both positional and metadata-based criteria can be
+mixed together. Note regexes are case insensitive and should use extended POSIX syntax.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+
+#### NormalizedROILabelRegex
+
+##### Description
+
+A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
+trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
+to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+
+##### Default
+
+- ```".*"```
+
+##### Examples
+
+- ```".*"```
+- ```".*Body.*"```
+- ```"Body"```
+- ```"Gross_Liver"```
+- ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
+- ```"Left Parotid|Right Parotid"```
+
+#### ROILabelRegex
+
+##### Description
+
+A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
+trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
+to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+
+##### Default
+
+- ```".*"```
+
+##### Examples
+
+- ```".*"```
+- ```".*body.*"```
+- ```"body"```
+- ```"Gross_Liver"```
+- ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
+- ```"left_parotid|right_parotid"```
+
+#### Channel
+
+##### Description
+
+The channel to operated on (zero-based). Negative values will cause all channels to be operated on.
+
+##### Default
+
+- ```"0"```
+
+##### Examples
+
+- ```"-1"```
+- ```"0"```
+- ```"1"```
+
+#### Neighbourhood
+
+##### Description
+
+Controls how the neighbourhood surrounding a voxel is defined. Variable-size neighbourhoods 'spherical' and 'cubic' are
+defined. An appropriate isotropic extent must be provided for these neighbourhoods. (See below; extents must be provided
+in DICOM units, i.e., mm.) Fixed-size neighbourhoods specify a fixed number of adjacent voxels. Fixed rectagular
+neighbourhoods are specified like 'RxCxI' for row, column, and image slice extents (as integer number of rows, columns,
+and slices). Fixed spherical neighbourhoods are specified like 'Wsphere' where W is the width (i.e., the number of
+voxels wide). In morphological terminology, the neighbourhood is referred to as a 'structuring element.' A similar
+concept is the convolutional 'kernel.'
+
+##### Default
+
+- ```"spherical"```
+
+##### Examples
+
+- ```"spherical"```
+- ```"cubic"```
+- ```"3x3x3"```
+- ```"5x5x5"```
+- ```"3sphere"```
+- ```"5sphere"```
+- ```"7sphere"```
+- ```"9sphere"```
+- ```"11sphere"```
+- ```"13sphere"```
+- ```"15sphere"```
+
+#### Reduction
+
+##### Description
+
+Controls how the distribution of voxel values from neighbouring voxels is reduced. Statistical distribution reducers
+'min', 'mean', 'median', and 'max' are defined. 'min' is also known as the 'erosion' operation. Likewise, 'max' is also
+known as the 'dilation' operation. Note that the morphological 'opening' operation can be accomplished by sequentially
+performing an erosion and then a dilation using the same neighbourhood. The 'standardize' reduction method can be used
+for adaptive rescaling by subtracting the local neighbourhood mean and dividing the local neighbourhood standard
+deviation. The 'standardize' reduction method is a way to (locally) transform variables on different scales so they can
+more easily be compared. Note that standardization can result in undefined voxel values when the local neighbourhood is
+perfectly uniform. Also, since only the local neighbourhood is considered, voxels will in general have *neither* zero
+mean *nor* a unit standard deviation (growing the neighbourhood extremely large *will* accomplish this, but the
+calculation will be inefficient). The 'percentile01' reduction method evaluates which percentile the central voxel
+occupies within the local neighbourhood. It is reported scaled to $[0,1]$. 'percentile01' can be used to implement
+non-parametric adaptive scaling since only the local neighbourhood is examined. (Duplicate values assume the percentile
+of the middle of the range.) In contrast to 'standardize', the 'percentile01' reduction should remain valid anywhere the
+local neighbourhood has a non-zero number of finite voxels. Logical reducers 'is_min' and 'is_max' are also available --
+is_min (is_max) replace the voxel value with 1.0 if it was the min (max) in the neighbourhood and 0.0 otherwise. Logical
+reducers 'is_min_nan' and 'is_max_nan' are variants that replace the voxel with a NaN instead of 1.0 and otherwise do
+not overwrite the original voxel value.
+
+##### Default
+
+- ```"median"```
+
+##### Examples
+
+- ```"min"```
+- ```"erode"```
+- ```"mean"```
+- ```"median"```
+- ```"max"```
+- ```"dilate"```
+- ```"standardize"```
+- ```"percentile01"```
+- ```"is_min"```
+- ```"is_max"```
+- ```"is_min_nan"```
+- ```"is_max_nan"```
+
+#### MaxDistance
+
+##### Description
+
+The maximum distance (inclusive, in DICOM units: mm) within which neighbouring voxels will be evaluated for
+variable-size neighbourhoods. Note that this parameter will be ignored if a fixed-size neighbourhood has been specified.
+For spherical neighbourhoods, this distance refers to the radius. For cubic neighbourhoods, this distance refers to 'box
+radius' or the distance from the cube centre to the nearest point on each bounding face. Voxels separated by more than
+this distance will not be evaluated together.
+
+##### Default
+
+- ```"2.0"```
+
+##### Examples
+
+- ```"0.5"```
+- ```"2.0"```
+- ```"15.0"```
 
 
 ## SFML_Viewer
