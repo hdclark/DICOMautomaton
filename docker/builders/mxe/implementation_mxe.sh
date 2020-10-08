@@ -40,6 +40,8 @@ for repo_dir in /ygor /ygorclustering /explicator /dcma ; do
     cd build 
 
     "${TOOLCHAIN}-cmake" \
+      `# ASIO: target Windows 7 features. ` \
+      -D_WIN32_WINNT=0x0601 \
       -DCMAKE_INSTALL_PREFIX=/usr/ \
       -DCMAKE_BUILD_TYPE=Release \
       -DWITH_LINUX_SYS=OFF \
