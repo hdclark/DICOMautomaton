@@ -49,7 +49,8 @@
 #include <CGAL/Mesh_complex_3_in_triangulation_3.h>
 #include <CGAL/Mesh_criteria_3.h>
 
-#include <CGAL/Implicit_mesh_domain_3.h>
+#include <CGAL/Implicit_mesh_domain_3.h> // Deprecation handling: for CGAL v4.13 and earlier.
+//#include <CGAL/Labeled_mesh_domain_3.h>  // Deprecation handling: for CGAL v4.13 and later.
 #include <CGAL/Mesh_domain_with_polyline_features_3.h>
 #include <CGAL/make_mesh_3.h>
 
@@ -337,9 +338,13 @@ Polyhedron Estimate_Surface_Mesh(
     const Sphere_3 cgal_bounding_sphere( cgal_bounding_sphere_center, std::pow(bounding_sphere_radius,2.0) );
 
     // Define some CGAL types for meshing purposes.
-    using Implicit_Function = decltype(surface_oracle);
 
+    // Deprecation handling: for CGAL v4.13 and earlier.
+    using Implicit_Function = decltype(surface_oracle);
     using Mesh_domain = CGAL::Mesh_domain_with_polyline_features_3< CGAL::Implicit_mesh_domain_3<Implicit_Function,Kernel> >;
+
+    // Deprecation handling: for CGAL v4.13 and later.
+    //using Mesh_domain = CGAL::Mesh_domain_with_polyline_features_3< CGAL::Labeled_mesh_domain_3<Kernel> >;
 
     using Polyline_3 = std::vector<Point_3>;
 
@@ -350,9 +355,6 @@ Polyhedron Estimate_Surface_Mesh(
     using C3t3 = CGAL::Mesh_complex_3_in_triangulation_3<Tr,Mesh_domain::Corner_index,Mesh_domain::Curve_index>;
 
     using Mesh_criteria = CGAL::Mesh_criteria_3<Tr>;
-
-//using namespace CGAL::parameters;
-
 
 
     // --- Request that the input contours be protected in the final mesh. ---
@@ -422,9 +424,18 @@ Polyhedron Estimate_Surface_Mesh(
     }else if(params.RQ == ReproductionQuality::High){
         err_bound = 0.05 / bounding_sphere_radius;
     }
+
+    // Deprecation handling: for CGAL v4.13 and earlier.
     Mesh_domain domain(surface_oracle,
                        cgal_bounding_sphere, 
                        err_bound);
+
+    // Deprecation handling: for CGAL v4.13 and later.
+    //Mesh_domain domain = Mesh_domain::create_implicit_mesh_domain(
+    //                       CGAL::parameters::function = surface_oracle,
+    //                       CGAL::parameters::bounding_object = cgal_bounding_sphere,
+    //                       CGAL::parameters::relative_error_bound = err_bound);
+
     domain.add_features(polylines.begin(), polylines.end());
   
   
