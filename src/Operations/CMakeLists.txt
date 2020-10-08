@@ -9,6 +9,7 @@ add_library(Operations_objs OBJECT
     ApplyCalibrationCurve.cc
     AutoCropImages.cc
     Average.cc
+    BEDConvert.cc
     BoostSerializeDrover.cc
     BuildLexiconInteractively.cc
     ClusterDBSCAN.cc
@@ -61,7 +62,6 @@ add_library(Operations_objs OBJECT
     DumpROISNR.cc
     DumpTPlanMetadataOccurrencesToFile.cc
     DumpVoxelDoseInfo.cc
-    EQDConvert.cc
     EvaluateDoseVolumeStats.cc
     EvaluateNTCPModels.cc
     EvaluateTCPModels.cc

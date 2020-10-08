@@ -1,4 +1,4 @@
-// EQDConvert.h.
+// BEDConvert.h.
 
 #pragma once
 
@@ -8,9 +8,9 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocEQDConvert();
+OperationDoc OpArgDocBEDConvert();
 
-Drover EQDConvert(Drover DICOM_data,
+Drover BEDConvert(Drover DICOM_data,
                   const OperationArgPkg& /*OptArgs*/,
                   const std::map<std::string, std::string>& /*InvocationMetadata*/,
                   const std::string& /*FilenameLex*/);

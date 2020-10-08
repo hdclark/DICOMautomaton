@@ -643,7 +643,7 @@ void BaseWebServerApplication::createOperationSelectorGB(){
                     ||  ( n == "DecayDoseOverTimeHalve" ) 
                     ||  ( n == "DecayDoseOverTimeJones2014" ) 
                     ||  ( n == "DICOMExportImagesAsDose" )
-                    ||  ( n == "EQDConvert" )
+                    ||  ( n == "BEDConvert" )
                     ||  ( n == "ExtractImageHistograms" )
                     ||  ( n == "OptimizeStaticBeams" )
                     ||  ( n == "TrimROIDose" )
@@ -658,7 +658,7 @@ void BaseWebServerApplication::createOperationSelectorGB(){
                     ||  ( n == "DecayDoseOverTimeHalve" ) 
                     ||  ( n == "DecayDoseOverTimeJones2014" ) 
                     ||  ( n == "DICOMExportImagesAsDose" )
-                    ||  ( n == "EQDConvert" )
+                    ||  ( n == "BEDConvert" )
                     ||  ( n == "TrimROIDose" )
                 ){
                     selector->addItem(anop.first);
