@@ -1,6 +1,6 @@
 
 # Installation info.
-if(USE_WT)
+if(WITH_WT)
     install(FILES webserver.conf 
             DESTINATION "${CMAKE_INSTALL_SYSCONFDIR}/DICOMautomaton"
     )

@@ -146,12 +146,13 @@ emcmake \
     CXXFLAGS="-s USE_ZLIB=1 -I/wip_all/usr/include" \
     LDFLAGS="-s USE_ZLIB=1 -L/wip_all/usr/lib" \
   cmake \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DCMAKE_INSTALL_SYSCONFDIR=/etc \
+    -DCMAKE_BUILD_TYPE=Release \
     -DMEMORY_CONSTRAINED_BUILD=OFF \
     -DWITH_ASAN=OFF \
     -DWITH_TSAN=OFF \
     -DWITH_MSAN=OFF \
-    -DCMAKE_INSTALL_PREFIX=/usr \
-    -DCMAKE_BUILD_TYPE=Release \
     -DWITH_EIGEN=OFF \
     -DWITH_CGAL=OFF \
     -DWITH_NLOPT=OFF \

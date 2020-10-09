@@ -147,6 +147,7 @@ RUN mkdir -p build && \
     cmake -E env CC=afl-clang CXX=afl-clang++ CXXFLAGS=" -DDCMA_FUZZ_TESTING " \
       cmake \
         -DCMAKE_INSTALL_PREFIX=/usr \
+        -DCMAKE_INSTALL_SYSCONFDIR=/etc \
         ../ && \
     JOBS=$(nproc) && \
     JOBS=$(( $JOBS < 8 ? $JOBS : 8 )) && \

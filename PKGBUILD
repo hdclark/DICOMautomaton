@@ -60,12 +60,13 @@ build() {
 
   # Default build with default compiler flags.
   cmake \
+    -DCMAKE_INSTALL_PREFIX="${install_prefix}" \
+    -DCMAKE_INSTALL_SYSCONFDIR=/etc \
+    -DCMAKE_BUILD_TYPE=Release \
     -DMEMORY_CONSTRAINED_BUILD=OFF \
     -DWITH_ASAN=OFF \
     -DWITH_TSAN=OFF \
     -DWITH_MSAN=OFF \
-    -DCMAKE_INSTALL_PREFIX="${install_prefix}" \
-    -DCMAKE_BUILD_TYPE=Release \
     -DWITH_EIGEN=ON \
     -DWITH_CGAL=ON \
     -DWITH_NLOPT=ON \

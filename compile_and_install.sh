@@ -158,12 +158,13 @@ if [[ "${DISTRIBUTION}" =~ .*debian.* ]] ; then
         touch CMakeCache.txt  # To bump CMake-defined compilation time.
     else
         cmake \
+          -DCMAKE_INSTALL_PREFIX="${INSTALLPREFIX}" \
+          -DCMAKE_INSTALL_SYSCONFDIR="/etc" \
+          -DCMAKE_BUILD_TYPE=Release \
           -DMEMORY_CONSTRAINED_BUILD=OFF \
           -DWITH_ASAN=OFF \
           -DWITH_TSAN=OFF \
           -DWITH_MSAN=OFF \
-          -DCMAKE_INSTALL_PREFIX="${INSTALLPREFIX}" \
-          -DCMAKE_BUILD_TYPE=Release \
           ../
     fi
     JOBS=$(nproc)
@@ -205,12 +206,13 @@ else  # Generic build and install.
     mkdir -p build
     cd build
     cmake \
+      -DCMAKE_INSTALL_PREFIX="${INSTALLPREFIX}" \
+      -DCMAKE_INSTALL_SYSCONFDIR="/etc" \
+      -DCMAKE_BUILD_TYPE=Release \
       -DMEMORY_CONSTRAINED_BUILD=OFF \
       -DWITH_ASAN=OFF \
       -DWITH_TSAN=OFF \
       -DWITH_MSAN=OFF \
-      -DCMAKE_INSTALL_PREFIX="${INSTALLPREFIX}" \
-      -DCMAKE_BUILD_TYPE=Release \
       ../
     JOBS=$(nproc)
     JOBS=$(( $JOBS < 8 ? $JOBS : 8 )) # Limit to reduce memory use.

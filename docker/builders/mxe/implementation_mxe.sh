@@ -43,6 +43,7 @@ for repo_dir in /ygor /ygorclustering /explicator /dcma ; do
       `# ASIO: target Windows 7 features. ` \
       -D_WIN32_WINNT=0x0601 \
       -DCMAKE_INSTALL_PREFIX=/usr/ \
+      -DCMAKE_INSTALL_SYSCONFDIR=/etc \
       -DCMAKE_BUILD_TYPE=Release \
       -DWITH_LINUX_SYS=OFF \
       -DWITH_EIGEN=ON \
