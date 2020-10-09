@@ -65,6 +65,9 @@ Whitelist( std::list<std::reference_wrapper<contour_collection<double>>> ccs,
                                             std::string> > MetadataKeyValueRegex, // MetadataValueRegex
            Regex_Selector_Opts Opts = Regex_Selector_Opts() );
 
+// Utility functions documenting the contour whitelist routines for operations.
+OperationArgDoc RCWhitelistOpArgDoc();
+OperationArgDoc NCWhitelistOpArgDoc();
 
 // ----------------------------------- Image Arrays ------------------------------------
 

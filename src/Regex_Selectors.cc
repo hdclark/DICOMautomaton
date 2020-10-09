@@ -329,6 +329,51 @@ Whitelist( std::list<std::reference_wrapper<contour_collection<double>>> ccs,
     return ccs;
 }
 
+// Utility functions documenting the contour whitelist routines for operations.
+OperationArgDoc RCWhitelistOpArgDoc(){
+    OperationArgDoc out;
+
+    out.name = "ROILabelRegex";
+    out.desc = "A regular expression (regex) matching *raw* ROI contour labels/names to consider."
+               " Selection is performed on a whole-ROI basis; individual contours cannot be selected."
+               " Be aware that input spaces are trimmed to a single space."
+               " If your ROI name has more than two sequential spaces, use regular expressions or escaping to avoid them."
+               " All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed."
+               " The regular expression engine is extended POSIX and is case insensitive."
+               " '.*' will match all available ROIs."
+               " Note that this parameter will match 'raw' contour labels.";
+    out.examples = { ".*", ".*body.*", "body", "^body$", "Liver",
+                     R"***(.*left.*parotid.*|.*right.*parotid.*|.*eyes.*)***",
+                     R"***(left_parotid|right_parotid)***" };
+    out.default_val = ".*";
+    out.expected = true;
+
+    return out;
+}
+
+OperationArgDoc NCWhitelistOpArgDoc(){
+    OperationArgDoc out;
+
+    out.name = "NormalizedROILabelRegex";
+    out.desc = "A regular expression (regex) matching *normalized* ROI contour labels/names to consider."
+               " Selection is performed on a whole-ROI basis; individual contours cannot be selected."
+               " Be aware that input spaces are trimmed to a single space."
+               " If your ROI name has more than two sequential spaces, use regular expressions or escaping to avoid them."
+               " All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed."
+               " The regular expression engine is extended POSIX and is case insensitive."
+               " '.*' will match all available ROIs."
+               " Note that this parameter will match contour labels that have been"
+               " *normalized* (i.e., mapped, translated) using the user-provided provided lexicon."
+               " This is useful for handling data with heterogeneous naming conventions where fuzzy matching is required."
+               " Refer to the lexicon for available labels.";
+    out.examples = { ".*", ".*Body.*", "Body", "liver",
+                     R"***(.*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*)***",
+                     R"***(Left Parotid|Right Parotid)***" };
+    out.default_val = ".*";
+    out.expected = true;
+
+    return out;
+}
 
 // ----------------------------------- Image Arrays ------------------------------------
 

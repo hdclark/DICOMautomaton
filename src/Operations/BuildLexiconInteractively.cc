@@ -30,16 +30,22 @@ OperationDoc OpArgDocBuildLexiconInteractively(){
         " It is useful for constructing a domain-specific lexicon from a set of representative data.";
 
 
+    out.notes.emplace_back(
+        "An exclusive approach is taken for ROI selection rather than an inclusive approach because "
+        " regex negations are not easily supported in the POSIX syntax."
+    );
+
+
     out.args.emplace_back();
     out.args.back().name = "CleanLabels";
     out.args.back().desc = "A listing of the labels of interest. These will be (some of) the 'clean' entries in the"
-                      " finished lexicon. You should only name ROIs you specifically care about and which have"
-                      " a single, unambiguous occurence in the data set (e.g., 'Left_Parotid' is good, but"
-                      " 'JUNK' and 'Parotids' are bad -- you won't be able to select the single 'JUNK' label"
-                      " if all you care about are parotids.";
+                           " finished lexicon. You should only name ROIs you specifically care about and which have"
+                           " a single, unambiguous occurence in the data set (e.g., 'Left_Parotid' is good, but"
+                           " 'JUNK' and 'Parotids' are bad -- you won't be able to select the single 'JUNK' label"
+                           " if all you care about are parotids.";
     out.args.back().default_val = "Body,Brainstem,Chiasm,Cord,Larynx Pharynx,Left Eye,Left Optic Nerve"
-                             ",Left Parotid,Left Submand,Left Temp Lobe,Oral Cavity,Right Eye,Right Optic Nerve"
-                             ",Right Parotid,Right Submand,Right Temp Lobe";
+                                  ",Left Parotid,Left Submand,Left Temp Lobe,Oral Cavity,Right Eye,Right Optic Nerve"
+                                  ",Right Parotid,Right Submand,Right Temp Lobe";
     out.args.back().expected = true;
     out.args.back().examples = { "Left Parotid,Right Parotid,Left Submand,Right Submand", 
                             "Left Submand,Right Submand" };
@@ -47,9 +53,9 @@ OperationDoc OpArgDocBuildLexiconInteractively(){
     out.args.emplace_back();
     out.args.back().name = "JunkLabel";
     out.args.back().desc = "A label to apply to the un-matched labels. This helps prevent false positives by"
-                      " excluding names which are close to a desired clean label. For example, if you"
-                      " are looking for 'Left_Parotid' you will want to mark 'left-parotid_opti' and"
-                      " 'OLDLeftParotid' as junk. Passing an empty string disables junk labeling.";
+                           " excluding names which are close to a desired clean label. For example, if you"
+                           " are looking for 'Left_Parotid' you will want to mark 'left-parotid_opti' and"
+                           " 'OLDLeftParotid' as junk. Passing an empty string disables junk labeling.";
     out.args.back().default_val = "JUNK";
     out.args.back().expected = true;
     out.args.back().examples = { "",
@@ -58,24 +64,20 @@ OperationDoc OpArgDocBuildLexiconInteractively(){
                             "NA_Organ" };
 
     out.args.emplace_back();
+    out.args.back() = RCWhitelistOpArgDoc();
     out.args.back().name = "OmitROILabelRegex";
-    out.args.back().desc = "A regex matching ROI labels/names to prune. Only matching ROIs will be pruned."
-                      " The default will match no ROIs. "
-                      " Be aware that input spaces are trimmed to a single space."
-                      " If your ROI name has more than two sequential spaces, use regex to avoid them."
-                      " All ROIs have to match the single regex, so use the 'or' token if needed."
-                      " Regex is case insensitive and uses extended POSIX syntax. "
-                      " (Note: an exclusive approach is taken rather than an inclusive approach because "
-                      " regex negations are not easily supported in the POSIX syntax.)";
+    out.args.back().desc = "This parameter selects ROI labels/names to prune. Only matching ROIs will be pruned."_s
+                         + " The default will match no ROIs. " + out.args.back().desc;
     out.args.back().default_val = "";
     out.args.back().expected = false;
     out.args.back().examples = { R"***(.*left.*|.*right.*|.*eyes.*)***",
-                            R"***(.*PTV.*|.*CTV.*|.*GTV.*)***" };
+                                 R"***(.*PTV.*|.*CTV.*|.*GTV.*)***" };
+
 
     out.args.emplace_back();
     out.args.back().name = "LexiconSeedFile";
     out.args.back().desc = "A file containing a 'seed' lexicon to use and add to. This is the lexicon that"
-                      " is being built. It will be modified.";
+                           " is being built. It will be modified.";
     out.args.back().default_val = "";
     out.args.back().expected = true;
     out.args.back().examples = { "./some_lexicon", "/tmp/temp_lexicon" };

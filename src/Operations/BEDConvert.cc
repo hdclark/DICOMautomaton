@@ -143,29 +143,21 @@ OperationDoc OpArgDocBEDConvert(){
 
 
     out.args.emplace_back();
-    out.args.back().name = "EarlyNormalizedROILabelRegex";
-    out.args.back().desc = "A regex matching ROI labels/names to consider as bounding early-responding tissues."
-                           " The default will match"
-                           " all available ROIs. Be aware that input spaces are trimmed to a single space."
-                           " If your ROI name has more than two sequential spaces, use regex to avoid them."
-                           " All ROIs have to match the single regex, so use the 'or' token if needed."
-                           " Regex is case insensitive and uses extended POSIX syntax.";
-    out.args.back().default_val = ".*";
-    out.args.back().expected = true;
+    out.args.back() = RCWhitelistOpArgDoc();
+    out.args.back().name = "EarlyROILabelRegex";
+    out.args.back().desc = "This parameter selects ROI labels/names to consider as bounding early-responding tissues. "_s
+                         + out.args.back().desc;
     out.args.back().examples = { ".*", ".*GTV.*", "PTV66", R"***(.*PTV.*|.*GTV.**)***" };
+    out.args.back().default_val = ".*";
 
 
     out.args.emplace_back();
-    out.args.back().name = "EarlyROILabelRegex";
-    out.args.back().desc = "A regex matching ROI labels/names to consider as bounding early-responding tissues."
-                           " The default will match"
-                           " all available ROIs. Be aware that input spaces are trimmed to a single space."
-                           " If your ROI name has more than two sequential spaces, use regex to avoid them."
-                           " All ROIs have to match the single regex, so use the 'or' token if needed."
-                           " Regex is case insensitive and uses extended POSIX syntax.";
-    out.args.back().default_val = ".*";
-    out.args.back().expected = true;
+    out.args.back() = NCWhitelistOpArgDoc();
+    out.args.back().name = "EarlyNormalizedROILabelRegex";
+    out.args.back().desc = "This parameter selects ROI labels/names to consider as bounding early-responding tissues. "_s
+                         + out.args.back().desc;
     out.args.back().examples = { ".*", ".*GTV.*", "PTV66", R"***(.*PTV.*|.*GTV.**)***" };
+    out.args.back().default_val = ".*";
 
     return out;
 }
