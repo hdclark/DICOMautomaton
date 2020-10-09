@@ -151,6 +151,7 @@ OperationDoc OpArgDocSimulateRadiograph(){
     out.args.back().default_val = "attenuation-length";
     out.args.back().expected = true;
     out.args.back().examples = { "attenuation-length", "exponential" };
+    out.args.back().samples = OpArgSamples::Exhaustive;
 
 
     out.args.emplace_back();

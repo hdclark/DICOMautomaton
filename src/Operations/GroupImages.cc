@@ -95,6 +95,7 @@ OperationDoc OpArgDocGroupImages(){
     out.args.back().expected = true;
     out.args.back().examples = { "no-overlap-as-is",
                                  "no-overlap-adjust" };
+    out.args.back().samples = OpArgSamples::Exhaustive;
 
     return out;
 }

@@ -89,6 +89,7 @@ OperationDoc OpArgDocVolumetricSpatialDerivative(){
     out.args.back().expected = true;
     out.args.back().examples = { "first",
                                  "Sobel-3x3x3" };
+    out.args.back().samples = OpArgSamples::Exhaustive;
 
 
     out.args.emplace_back();
@@ -102,6 +103,7 @@ OperationDoc OpArgDocVolumetricSpatialDerivative(){
                                  "image-aligned",
                                  "magnitude",
                                  "non-maximum-suppression" };
+    out.args.back().samples = OpArgSamples::Exhaustive;
 
     return out;
 }

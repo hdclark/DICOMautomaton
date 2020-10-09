@@ -51,6 +51,7 @@ OperationDoc OpArgDocSpatialDerivative(){
                                  "Scharr-3x3",
                                  "Scharr-5x5",
                                  "second" };
+    out.args.back().samples = OpArgSamples::Exhaustive;
 
     out.args.emplace_back();
     out.args.back().name = "Method";
@@ -72,6 +73,7 @@ OperationDoc OpArgDocSpatialDerivative(){
                                  "orientation",
                                  "non-maximum-suppression",
                                  "cross" };
+    out.args.back().samples = OpArgSamples::Exhaustive;
 
     return out;
 }

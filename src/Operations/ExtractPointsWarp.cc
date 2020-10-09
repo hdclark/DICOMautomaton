@@ -171,6 +171,7 @@ OperationDoc OpArgDocExtractPointsWarp(){
 #else
     out.args.back().examples = { "centroid" };
 #endif
+    out.args.back().samples = OpArgSamples::Exhaustive;
 
 #ifdef DCMA_USE_EIGEN
     out.args.emplace_back();
@@ -210,6 +211,7 @@ OperationDoc OpArgDocExtractPointsWarp(){
     out.args.back().default_val = "LDLT";
     out.args.back().expected = true;
     out.args.back().examples = { "LDLT", "PseudoInverse", };
+    out.args.back().samples = OpArgSamples::Exhaustive;
 #endif
 
 #ifdef DCMA_USE_EIGEN
@@ -274,6 +276,7 @@ OperationDoc OpArgDocExtractPointsWarp(){
     out.args.back().default_val = "2";
     out.args.back().expected = true;
     out.args.back().examples = { "2", "3", };
+    out.args.back().samples = OpArgSamples::Exhaustive;
 #endif
 
 #ifdef DCMA_USE_EIGEN
@@ -385,6 +388,7 @@ OperationDoc OpArgDocExtractPointsWarp(){
     out.args.back().default_val = "LDLT";
     out.args.back().expected = true;
     out.args.back().examples = { "LDLT", "PseudoInverse", };
+    out.args.back().samples = OpArgSamples::Exhaustive;
 #endif
 
 #ifdef DCMA_USE_EIGEN

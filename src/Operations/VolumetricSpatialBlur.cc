@@ -89,6 +89,7 @@ OperationDoc OpArgDocVolumetricSpatialBlur(){
     out.args.back().default_val = "Gaussian";
     out.args.back().expected = true;
     out.args.back().examples = { "Gaussian" };
+    out.args.back().samples = OpArgSamples::Exhaustive;
 
     return out;
 }

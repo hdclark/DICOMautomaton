@@ -97,6 +97,7 @@ OperationDoc OpArgDocConvertContoursToPoints(){
     out.args.back().default_val = "vertices";
     out.args.back().expected = true;
     out.args.back().examples = { "vertices", "centroid" };
+    out.args.back().samples = OpArgSamples::Exhaustive;
 
     return out;
 }

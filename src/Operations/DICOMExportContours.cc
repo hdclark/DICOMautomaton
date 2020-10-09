@@ -51,6 +51,7 @@ OperationDoc OpArgDocDICOMExportContours(){
     out.args.back().default_val = "medium";
     out.args.back().expected = true;
     out.args.back().examples = { "low", "medium", "high" };
+    out.args.back().samples = OpArgSamples::Exhaustive;
 
     out.args.emplace_back();
     out.args.back().name = "NormalizedROILabelRegex";

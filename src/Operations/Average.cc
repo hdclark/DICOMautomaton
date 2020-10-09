@@ -44,6 +44,7 @@ OperationDoc OpArgDocAverage(){
     out.args.back().default_val = "";
     out.args.back().expected = true;
     out.args.back().examples = { "overlapping-spatially", "overlapping-temporally" };
+    out.args.back().samples = OpArgSamples::Exhaustive;
 
     return out;
 }

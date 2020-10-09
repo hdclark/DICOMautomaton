@@ -110,6 +110,7 @@ OperationDoc OpArgDocConvertImageToMeshes(){
     out.args.back().expected = true;
     out.args.back().examples = { "binary",
                                  "marching" };
+    out.args.back().samples = OpArgSamples::Exhaustive;
 
     
     out.args.emplace_back();

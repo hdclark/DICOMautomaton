@@ -79,6 +79,7 @@ OperationDoc OpArgDocAnalyzePicketFence(){
     out.args.back().examples = { "VarianMillenniumMLC80",
                             "VarianMillenniumMLC120",
                             "VarianHD120" };  // It would be nice to try auto-detect this...
+    out.args.back().samples = OpArgSamples::Exhaustive;
 
     out.args.emplace_back();
     out.args.back().name = "MLCROILabel";

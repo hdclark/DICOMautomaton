@@ -67,6 +67,7 @@ OperationDoc OpArgDocNormalizeLineSamples(){
     out.args.back().default_val = "area";
     out.args.back().expected = true;
     out.args.back().examples = { "area", "peak" };
+    out.args.back().samples = OpArgSamples::Exhaustive;
 
     return out;
 }

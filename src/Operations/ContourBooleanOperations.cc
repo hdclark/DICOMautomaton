@@ -110,6 +110,7 @@ OperationDoc OpArgDocContourBooleanOperations(){
     out.args.back().default_val = "join";
     out.args.back().expected = true;
     out.args.back().examples = { "intersection", "join", "difference", "symmetric_difference" };
+    out.args.back().samples = OpArgSamples::Exhaustive;
 
     out.args.emplace_back();
     out.args.back().name = "OutputROILabel";

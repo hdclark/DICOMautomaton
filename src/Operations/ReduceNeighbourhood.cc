@@ -160,6 +160,7 @@ OperationDoc OpArgDocReduceNeighbourhood(){
                                  "is_max",
                                  "is_min_nan",
                                  "is_max_nan" };
+    out.args.back().samples = OpArgSamples::Exhaustive;
 
 
     out.args.emplace_back();

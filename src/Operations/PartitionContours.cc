@@ -78,6 +78,7 @@ OperationDoc OpArgDocPartitionContours(){
     out.args.back().default_val = "axis-aligned";
     out.args.back().expected = true;
     out.args.back().examples = { "axis-aligned", "static-oblique" };
+    out.args.back().samples = OpArgSamples::Exhaustive;
 
 
     out.args.emplace_back();
@@ -100,6 +101,7 @@ OperationDoc OpArgDocPartitionContours(){
     out.args.back().default_val = "nested-cleave";
     out.args.back().expected = true;
     out.args.back().examples = { "nested-cleave", "compound-cleave" };
+    out.args.back().samples = OpArgSamples::Exhaustive;
 
 
     out.args.emplace_back();
@@ -111,6 +113,7 @@ OperationDoc OpArgDocPartitionContours(){
     out.args.back().default_val = "ZXY";
     out.args.back().expected = true;
     out.args.back().examples = { "ZXY", "ZYX", "XYZ", "XZY", "YZX", "YXZ" };
+    out.args.back().samples = OpArgSamples::Exhaustive;
 
 
     out.args.emplace_back();

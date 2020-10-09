@@ -41,6 +41,7 @@ OperationDoc OpArgDocSpatialSharpen(){
     out.args.back().expected = true;
     out.args.back().examples = { "sharpen_3x3",
                             "unsharp_mask_5x5" };
+    out.args.back().samples = OpArgSamples::Exhaustive;
 
     return out;
 }

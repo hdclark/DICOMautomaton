@@ -82,6 +82,7 @@ OperationDoc OpArgDocSupersampleImageGrid(){
     out.args.back().examples = { "inplane-bicubic",
                                  "inplane-bilinear",
                                  "trilinear" };
+    out.args.back().samples = OpArgSamples::Exhaustive;
 
     return out;
 }

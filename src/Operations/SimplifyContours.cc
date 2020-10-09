@@ -101,6 +101,7 @@ OperationDoc OpArgDocSimplifyContours(){
     out.args.back().default_val = "vert-collapse";
     out.args.back().expected = true;
     out.args.back().examples = { "vertex-collapse", "vertex-removal" };
+    out.args.back().samples = OpArgSamples::Exhaustive;
 
 
     return out;

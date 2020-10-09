@@ -29,6 +29,7 @@
 #include <Wt/WTextArea.h>
 #include <Wt/WWidget.h>
 #include <Wt/WAnimation.h>
+#include <Wt/WComboBox.h>
 
 #include <boost/filesystem.hpp>
 
@@ -117,21 +118,25 @@ std::string CamelToHuman(std::string in){
     //   MinimumJunctionSeparation  --> Minimum Junction Separation
     //   MLCModel                   --> MLC Model
     //   CSVFileName                --> CSV Output File
+    //   ROILabelRegexA             --> ROI Label Selector A
+    //   EarlyROILabelRegex         --> Early ROI Label Selector
+    //
 
     // We have to preserve case sensitivity for filename-related parameters because they are mapped by name.
     // TODO: support case insensitivity for filename parameters?
     std::regex FName = Compile_Regex("FileName");
     in = std::regex_replace(in, FName, "OutputFile");
-/*    
-    std::regex fname = std::regex("filename", std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    in = std::regex_replace(in, fname, " output file");
-    std::regex Fname = std::regex("Filename", std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    in = std::regex_replace(in, Fname, "Output file");
-    std::regex fName = std::regex("fileName", std::regex::nosubs | std::regex::optimize | std::regex::extended);
-    in = std::regex_replace(in, fName, " output File");
-*/
 
-    std::regex rgx = std::regex("Regex$", std::regex::optimize | std::regex::extended);
+    // Ensure there are no existing occurences of 'Selector', which will confound this scheme (i.e., make it
+    // non-bidirectional).
+    {
+        std::regex rgx = std::regex("Selector", std::regex::optimize | std::regex::extended);
+        if( std::regex_match(in, rgx) ){
+            throw std::logic_error("Term 'Selector' present in input.");
+        }
+    }
+
+    std::regex rgx = std::regex("Regex", std::regex::optimize | std::regex::extended);
     in = std::regex_replace(in, rgx, R"***(Selector)***");
 
     std::regex dblcaps = std::regex("([A-Z])([A-Z][a-z])", std::regex::optimize | std::regex::extended);
@@ -139,6 +144,12 @@ std::string CamelToHuman(std::string in){
 
     std::regex acap = std::regex("([^A-Z ])([A-Z][a-z])", std::regex::optimize | std::regex::extended);
     in = std::regex_replace(in, acap, R"***($1 $2)***");
+
+    std::regex abut = std::regex("([a-z])([A-Z])", std::regex::optimize | std::regex::extended);
+    in = std::regex_replace(in, abut, R"***($1 $2)***");
+
+    std::regex lastcap = std::regex("([^A-Z ])([A-Z])$", std::regex::optimize | std::regex::extended);
+    in = std::regex_replace(in, lastcap, R"***($1 $2)***");
 
     std::regex of = std::regex("(Of)([A-Z])", std::regex::optimize | std::regex::extended);
     in = std::regex_replace(in, of, R"***($1 $2)***");
@@ -148,11 +159,13 @@ std::string CamelToHuman(std::string in){
 static
 std::string HumanToCamel(std::string in){
     // This routine is the opposite of CamelToHuman(), and should round-trip endeavours to convert as follows:
-    //   ROILabelRegex              --> ROI Label Selector
-    //   MinimumJunctionSeparation  --> Minimum Junction Separation
-    //   MLCModel                   --> MLC Model
-    //   CSVFileName                --> CSV Output File
-    std::regex rgx = std::regex("Selector$", std::regex::optimize | std::regex::extended);
+    //   ROILabelRegex              <-- ROI Label Selector
+    //   MinimumJunctionSeparation  <-- Minimum Junction Separation
+    //   MLCModel                   <-- MLC Model
+    //   CSVFileName                <-- CSV Output File
+    //   ROILabelRegexA             <-- ROI Label Selector A
+    //   EarlyROILabelRegex         <-- Early ROI Label Selector
+    std::regex rgx = std::regex("Selector", std::regex::optimize | std::regex::extended);
     in = std::regex_replace(in, rgx, R"***(Regex)***");
 
     std::regex spaces = std::regex("[ ]*", std::regex::optimize | std::regex::extended);
@@ -160,14 +173,7 @@ std::string HumanToCamel(std::string in){
 
     std::regex FName = std::regex("OutputFile", std::regex::icase | std::regex::optimize | std::regex::extended);
     in = std::regex_replace(in, FName, "FileName");
-/*    
-    std::regex fname = std::regex("outputfile", std::regex::optimize | std::regex::extended);
-    in = std::regex_replace(in, fname, "filename");
-    std::regex Fname = std::regex("Outputfile", std::regex::optimize | std::regex::extended);
-    in = std::regex_replace(in, Fname, "Filename");
-    std::regex fName = std::regex("outputFile", std::regex::optimize | std::regex::extended);
-    in = std::regex_replace(in, fName, "fileName");
-*/    
+
     return in;
 }
 
@@ -872,6 +878,28 @@ void BaseWebServerApplication::appendOperationParamsColumn(){
                 for(const auto &l : ROI_labels) spinner->addItem(l);
                 if(!ROI_labels.empty()) spinner->enable();
 
+            //Boolean parameters.
+            }else if( (a.examples.size() == 2)
+                  && ( ( 
+                         std::regex_match(a.examples.front(),trueregex)
+                         && std::regex_match(a.examples.back(),falseregex) 
+                       ) || (
+                         std::regex_match(a.examples.front(),falseregex)
+                         && std::regex_match(a.examples.back(),trueregex)
+                       ) ) ){
+                auto cb = table->elementAt(table_row,cols)->addWidget(std::make_unique<Wt::WCheckBox>(""));
+                cb->setChecked( std::regex_match(a.default_val,trueregex) );
+
+            //Parameters with exhaustive examples, which are best shown with combo boxes.
+            }else if(a.samples == OpArgSamples::Exhaustive){
+                auto combo = table->elementAt(table_row,cols)->addWidget(std::make_unique<Wt::WComboBox>());
+                combo->disable();
+                for(const auto &e : a.examples){
+                    combo->addItem(e);
+                    if(e == a.default_val) combo->setCurrentIndex( combo->count() - 1 );
+                }
+                if(!a.examples.empty()) combo->enable();
+
             //Filename parameters are not exposed to the user, but we encode them with a non-visible element.
             }else if(std::regex_match(a.name,fnameregex)){
                  //Hide the parameter name from the user.
@@ -890,18 +918,6 @@ void BaseWebServerApplication::appendOperationParamsColumn(){
 
                  auto tr = table->rowAt(table_row);
                  tr->hide();
-
-            //Boolean parameters.
-            }else if( (a.examples.size() == 2)
-                  && ( ( 
-                         std::regex_match(a.examples.front(),trueregex)
-                         && std::regex_match(a.examples.back(),falseregex) 
-                       ) || (
-                         std::regex_match(a.examples.front(),falseregex)
-                         && std::regex_match(a.examples.back(),trueregex)
-                       ) ) ){
-                auto cb = table->elementAt(table_row,cols)->addWidget(std::make_unique<Wt::WCheckBox>(""));
-                cb->setChecked( std::regex_match(a.default_val,trueregex) );
 
             //All other parameters get exposed as free-form text entry boxes.
             }else{
@@ -1089,6 +1105,15 @@ void BaseWebServerApplication::createComputeGB(){
                     param_val += (param_val.empty()) ? shtl 
                                                      : ("|"_s + shtl);
                 }
+            }else if(auto *combo = dynamic_cast<Wt::WComboBox *>(w)){
+                //Validate that the string is one of the possible options.
+                const std::string web_str = combo->currentText().toUTF8();
+                {
+                    bool is_valid = false;
+                    for(const auto &e : op_doc.examples) if(e == web_str) is_valid = true;
+                    if(!is_valid) throw std::invalid_argument("Combo box received invalid argument");
+                }
+                param_val = web_str;
 
             }else if(dynamic_cast<Wt::WProgressBar *>(w)){ //Dummy encoding for generated files.
                 OutputMimetype[param_name] = op_doc.mimetype;
@@ -1156,7 +1181,12 @@ void BaseWebServerApplication::createComputeGB(){
             }else{
                 throw std::logic_error("Table element's child widget type cannot be identified. Please propagate changes.");
             }
-            op_args.insert(param_name, param_val);
+
+            // Only add the parameter if it is expected, or if not expected then non-empty.
+            if( (op_doc.expected == true)
+            ||  ( (op_doc.expected == false) && !param_val.empty() ) ){
+                op_args.insert(param_name, param_val);
+            }
         }
 
         // ---

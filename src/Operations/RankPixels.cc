@@ -54,6 +54,7 @@ OperationDoc OpArgDocRankPixels(){
     out.args.back().expected = true;
     out.args.back().examples = { "Rank",
                                  "Percentile" };
+    out.args.back().samples = OpArgSamples::Exhaustive;
 
     out.args.emplace_back();
     out.args.back().name = "LowerThreshold";

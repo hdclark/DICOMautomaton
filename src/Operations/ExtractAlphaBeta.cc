@@ -27,7 +27,7 @@ OperationDoc OpArgDocExtractAlphaBeta(){
     out.desc = 
         "This operation compares two images arrays: either a biologically-equivalent dose"
         " ($BED_{\\alpha/\\beta}$) transformed array"
-        " or an equivalent dose in $d$ dose per fraction ($EQD_{d}$) array and a 'reference' untransformed array."
+        " or an equivalent dose in $d$ dose per fraction ($EQD_{x}$) array and a 'reference' untransformed array."
         " The $\\alpha/\\beta$ used for each voxel are extracted by comparing corresponding voxels."
         " Each voxel is overwritten with the value of $\\alpha/\\beta$ needed to accomplish the given transform."
         " This routine is best used to inspect a given transformation (e.g., for QA purposes).";
@@ -93,12 +93,13 @@ OperationDoc OpArgDocExtractAlphaBeta(){
 
     out.args.emplace_back();
     out.args.back().name = "Model";
-    out.args.back().desc = "The model of BED or EQD transformation to assume."
-                           " Currently, only 'simple-lq-eqd' is available."
-                           " The 'simple-lq-eqd' model does not take into account elapsed time or any cell repopulation effects.";
-    out.args.back().default_val = "simple-lq-eqd";
+    out.args.back().desc = "The model of BED or EQDx transformation to assume."
+                           " Currently, only 'eqdx-lq-simple' is available."
+                           " The 'eqdx-lq-simple' model does not take into account elapsed time or any cell repopulation effects.";
+    out.args.back().default_val = "eqdx-lq-simple";
     out.args.back().expected = true;
-    out.args.back().examples = { "simple-lq-eqd" };
+    out.args.back().examples = { "eqdx-lq-simple" };
+    out.args.back().samples = OpArgSamples::Exhaustive;
 
     out.args.emplace_back();
     out.args.back().name = "Channel";
@@ -143,8 +144,8 @@ OperationDoc OpArgDocExtractAlphaBeta(){
 
     out.args.emplace_back();
     out.args.back().name = "NominalDosePerFraction";
-    out.args.back().desc = "The nominal dose per fraction (in DICOM units; Gy) assumed by an EQDd transformation."
-                           " This parameter is the 'd' in 'EQDd';"
+    out.args.back().desc = "The nominal dose per fraction (in DICOM units; Gy) assumed by an EQDx transformation."
+                           " This parameter is the 'x' in 'EQDx';"
                            " for EQD2 transformations, this parameter must be 2 Gy.";
     out.args.back().default_val = "2.0";
     out.args.back().expected = true;
@@ -179,7 +180,7 @@ Drover ExtractAlphaBeta(Drover DICOM_data,
     const auto NominalDosePerFraction = std::stof( OptArgs.getValueStr("NominalDosePerFraction").value() );
 
     //-----------------------------------------------------------------------------------------------------------------
-    const auto model_simple_lq = Compile_Regex("^si?m?p?l?e?[-_]?l?q?[-_]?e?q?d?2?$");
+    const auto model_simple_lq = Compile_Regex("^eq?d?x?[-_]?l?q?[-_]?s?i?m?p?l?e?$");
 
     //-----------------------------------------------------------------------------------------------------------------
 

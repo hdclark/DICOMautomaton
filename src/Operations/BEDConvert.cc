@@ -139,6 +139,7 @@ OperationDoc OpArgDocBEDConvert(){
     out.args.back().default_val = "eqdx-lq-simple";
     out.args.back().expected = true;
     out.args.back().examples = { "bed-lq-simple", "eqdx-lq-simple", "eqdx-lq-simple-pinned" };
+    out.args.back().samples = OpArgSamples::Exhaustive;
 
 
     out.args.emplace_back();

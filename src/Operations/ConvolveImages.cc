@@ -125,6 +125,7 @@ OperationDoc OpArgDocConvolveImages(){
     out.args.back().examples = { "convolution",
                                  "correlation",
                                  "pattern-match" };
+    out.args.back().samples = OpArgSamples::Exhaustive;
 
     return out;
 }

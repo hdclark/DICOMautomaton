@@ -673,9 +673,15 @@ void Emit_Documentation(std::ostream &os){
                 os << std::endl;
 
                 if(!a.examples.empty()){
-                    reflow_and_emit_paragraph(os, max_width, nobullet, nobullet, nolinebreak,
-                        "##### Examples"
-                    );
+                    if(a.samples == OpArgSamples::Exhaustive){
+                        reflow_and_emit_paragraph(os, max_width, nobullet, nobullet, nolinebreak,
+                            "##### Supported Options"
+                        );
+                    }else{ // if(a.samples == OpArgSamples::Examples){
+                        reflow_and_emit_paragraph(os, max_width, nobullet, nobullet, nolinebreak,
+                            "##### Examples"
+                        );
+                    }
                     for(auto &e : a.examples){
                         os << bulleta << "```\"" << e << "\"```" << std::endl;
                     }

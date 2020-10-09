@@ -97,6 +97,7 @@ OperationDoc OpArgDocPresentationImage(){
                                  "LANLOliveGreentoBlue",
                                  "YgorIncandescent",
                                  "LinearRamp" };
+    out.args.back().samples = OpArgSamples::Exhaustive;
 
     out.args.emplace_back();
     out.args.back().name = "WindowLow";

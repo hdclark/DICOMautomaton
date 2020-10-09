@@ -122,6 +122,7 @@ OperationDoc OpArgDocComparePixels(){
     out.args.back().examples = { "gamma-index",
                                  "DTA",
                                  "discrepancy" };
+    out.args.back().samples = OpArgSamples::Exhaustive;
 
     out.args.emplace_back();
     out.args.back().name = "Channel";
@@ -188,6 +189,7 @@ OperationDoc OpArgDocComparePixels(){
     out.args.back().examples = { "relative",
                                  "difference",
                                  "pinned-to-max" };
+    out.args.back().samples = OpArgSamples::Exhaustive;
 
     out.args.emplace_back();
     out.args.back().name = "DTAVoxValEqAbs";
@@ -266,6 +268,7 @@ OperationDoc OpArgDocComparePixels(){
     out.args.back().examples = { "None",
                                  "NN",
                                  "NNN" };
+    out.args.back().samples = OpArgSamples::Exhaustive;
 
     out.args.emplace_back();
     out.args.back().name = "GammaDTAThreshold";

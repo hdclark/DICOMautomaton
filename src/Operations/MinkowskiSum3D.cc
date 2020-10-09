@@ -111,6 +111,7 @@ OperationDoc OpArgDocMinkowskiSum3D(){
                                  "dilate_inexact_isotropic",
                                  "erode_inexact_isotropic", 
                                  "shell_inexact_isotropic" };
+    out.args.back().samples = OpArgSamples::Exhaustive;
 
     out.args.emplace_back();
     out.args.back().name = "Distance";

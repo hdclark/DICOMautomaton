@@ -99,6 +99,7 @@ OperationDoc OpArgDocSubsegment_ComputeDose_VanLuijk(){
     out.args.back().default_val = "AxisAligned";
     out.args.back().expected = true;
     out.args.back().examples = { "AxisAligned", "StaticOblique" };
+    out.args.back().samples = OpArgSamples::Exhaustive;
 
 
     out.args.emplace_back();
@@ -147,6 +148,7 @@ OperationDoc OpArgDocSubsegment_ComputeDose_VanLuijk(){
     out.args.back().default_val = "nested";
     out.args.back().expected = true;
     out.args.back().examples = { "nested", "compound" };
+    out.args.back().samples = OpArgSamples::Exhaustive;
 
 
     out.args.emplace_back();

@@ -583,6 +583,12 @@ enum class OpArgFlow {
     Unknown,
 };
 
+enum class OpArgSamples {
+    // This class is used to denote whether the provided samples are examples or are an exhaustive list of all options.
+    Examples,
+    Exhaustive,
+};
+
 // Class for documenting commandline argument operation options.
 struct OperationArgDoc {
     std::string name;
@@ -596,6 +602,7 @@ struct OperationArgDoc {
 
     OpArgVisibility visibility = OpArgVisibility::Show;
     OpArgFlow flow = OpArgFlow::Unknown;
+    OpArgSamples samples = OpArgSamples::Examples;
 
 };
 

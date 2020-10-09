@@ -55,6 +55,7 @@ OperationDoc OpArgDocHighlightROIs(){
     out.args.back().expected = true;
     out.args.back().examples = { "ignore", "honour_opposite_orientations", 
                             "overlapping_contours_cancel", "honour_opps", "overlap_cancel" }; 
+    out.args.back().samples = OpArgSamples::Exhaustive;
 
     out.args.emplace_back();
     out.args.back().name = "Inclusivity";
@@ -68,6 +69,7 @@ OperationDoc OpArgDocHighlightROIs(){
     out.args.back().examples = { "center", "centre", 
                                  "planar_corner_inclusive", "planar_inc",
                                  "planar_corner_exclusive", "planar_exc" };
+    out.args.back().samples = OpArgSamples::Exhaustive;
 
     out.args.emplace_back();
     out.args.back().name = "ExteriorVal";

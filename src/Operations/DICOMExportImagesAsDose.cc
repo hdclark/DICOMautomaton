@@ -56,6 +56,7 @@ OperationDoc OpArgDocDICOMExportImagesAsDose(){
     out.args.back().default_val = "medium";
     out.args.back().expected = true;
     out.args.back().examples = { "low", "medium", "high" };
+    out.args.back().samples = OpArgSamples::Exhaustive;
 
     return out;
 }
