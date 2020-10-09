@@ -39,8 +39,8 @@ most ARM systems. To maintain flexibility, DICOMautomaton is generally not ABI o
 ## License and Copying
 
 All materials herein which may be copywrited, where applicable, are. Copyright 2010, 2011, 2012, 2013, 2014, 2015, 2016,
-2017, 2018, 2019 hal clark. See the ```LICENSE``` file for details about the license. Informally, DICOMautomaton is
-available under a GPLv3+ license. The Imebra library is bundled for convenience and was not written by hal clark;
+2017, 2018, 2019, 2020 hal clark. See the ```LICENSE``` file for details about the license. Informally, DICOMautomaton
+is available under a GPLv3+ license. The Imebra library is bundled for convenience and was not written by hal clark;
 consult its license file in ```src/imebra/license.txt```.
 
 All liability is herefore disclaimed. The person(s) who use this source and/or software do so strictly under their own
@@ -316,6 +316,7 @@ will work.
 - AutoCropImages
 - Average
 - BCCAExtractRadiomicFeatures
+- BEDConvert
 - BoostSerializeDrover
 - BuildLexiconInteractively
 - CT_Liver_Perfusion
@@ -380,7 +381,6 @@ will work.
 - DumpROISurfaceMeshes
 - DumpTPlanMetadataOccurrencesToFile
 - DumpVoxelDoseInfo
-- EQDConvert
 - EvaluateDoseVolumeStats
 - EvaluateNTCPModels
 - EvaluateTCPModels
@@ -962,7 +962,7 @@ leaves are 5mm wide; and the maximum static field size is 40cm x 22cm.
 
 - ```"VarianMillenniumMLC120"```
 
-##### Examples
+##### Supported Options
 
 - ```"VarianMillenniumMLC80"```
 - ```"VarianMillenniumMLC120"```
@@ -1317,7 +1317,7 @@ and cancels all contour overlap.
 
 - ```"ignore"```
 
-##### Examples
+##### Supported Options
 
 - ```"ignore"```
 - ```"honour_opposite_orientations"```
@@ -1338,7 +1338,7 @@ the image plane. The first, 'planar_corner_inclusive', considers a voxel interio
 
 - ```"center"```
 
-##### Examples
+##### Supported Options
 
 - ```"center"```
 - ```"centre"```
@@ -1370,9 +1370,14 @@ depending on the specifics of the calibration.
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *normalized* ROI contour labels/names to consider. Selection is performed on a
+whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want
+to select must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is
+extended POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match contour
+labels that have been *normalized* (i.e., mapped, translated) using the user-provided provided lexicon. This is useful
+for handling data with heterogeneous naming conventions where fuzzy matching is required. Refer to the lexicon for
+available labels.
 
 ##### Default
 
@@ -1383,7 +1388,7 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*Body.*"```
 - ```"Body"```
-- ```"Gross_Liver"```
+- ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
 
@@ -1391,9 +1396,12 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *raw* ROI contour labels/names to consider. Selection is performed on a whole-ROI
+basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If your ROI
+name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want to select
+must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is extended
+POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match 'raw' contour
+labels.
 
 ##### Default
 
@@ -1404,7 +1412,8 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*body.*"```
 - ```"body"```
-- ```"Gross_Liver"```
+- ```"^body$"```
+- ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
 
@@ -1546,7 +1555,7 @@ The averaging method to use. Valid methods are 'overlapping-spatially' and 'over
 
 - ```""```
 
-##### Examples
+##### Supported Options
 
 - ```"overlapping-spatially"```
 - ```"overlapping-temporally"```
@@ -1584,9 +1593,14 @@ This operation extracts radiomic features from an image and one or more ROIs.
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *normalized* ROI contour labels/names to consider. Selection is performed on a
+whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want
+to select must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is
+extended POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match contour
+labels that have been *normalized* (i.e., mapped, translated) using the user-provided provided lexicon. This is useful
+for handling data with heterogeneous naming conventions where fuzzy matching is required. Refer to the lexicon for
+available labels.
 
 ##### Default
 
@@ -1597,7 +1611,7 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*Body.*"```
 - ```"Body"```
-- ```"Gross_Liver"```
+- ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
 
@@ -1605,9 +1619,12 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *raw* ROI contour labels/names to consider. Selection is performed on a whole-ROI
+basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If your ROI
+name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want to select
+must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is extended
+POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match 'raw' contour
+labels.
 
 ##### Default
 
@@ -1618,7 +1635,8 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*body.*"```
 - ```"body"```
-- ```"Gross_Liver"```
+- ```"^body$"```
+- ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
 
@@ -1660,7 +1678,7 @@ averaging that may result in numerical imprecision.
 
 - ```"vert-rem"```
 
-##### Examples
+##### Supported Options
 
 - ```"vertex-collapse"```
 - ```"vertex-removal"```
@@ -1736,9 +1754,14 @@ mixed together. Note regexes are case insensitive and should use extended POSIX 
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *normalized* ROI contour labels/names to consider. Selection is performed on a
+whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want
+to select must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is
+extended POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match contour
+labels that have been *normalized* (i.e., mapped, translated) using the user-provided provided lexicon. This is useful
+for handling data with heterogeneous naming conventions where fuzzy matching is required. Refer to the lexicon for
+available labels.
 
 ##### Default
 
@@ -1749,7 +1772,7 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*Body.*"```
 - ```"Body"```
-- ```"Gross_Liver"```
+- ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
 
@@ -1757,9 +1780,12 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *raw* ROI contour labels/names to consider. Selection is performed on a whole-ROI
+basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If your ROI
+name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want to select
+must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is extended
+POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match 'raw' contour
+labels.
 
 ##### Default
 
@@ -1770,7 +1796,8 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*body.*"```
 - ```"body"```
-- ```"Gross_Liver"```
+- ```"^body$"```
+- ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
 
@@ -1820,7 +1847,7 @@ if there is no matching map found, the first available will be selected.
 
 - ```".*"```
 
-##### Examples
+##### Supported Options
 
 - ```"Viridis"```
 - ```"Magma"```
@@ -1876,6 +1903,240 @@ window overrides.
 - ```"1.23"```
 - ```"0"```
 - ```"10.3E4"```
+
+
+## BEDConvert
+
+### Description
+
+This operation performs Biologically Effective Dose (BED) and Equivalent Dose with 'x'-dose per fraction (EQDx)
+conversions. Currently, only photon external beam therapy conversions are supported.
+
+### Notes
+
+- For an 'EQD2' transformation, select an EQDx conversion model with 2 Gy per fraction (i.e., $x=2$).
+
+- This operation treats all tissue as either early-responding (e.g., tumour) or late-responding (e.g., some normal
+  tissues). A single alpha/beta estimate for each type (early or late) can be provided. Currently, only two tissue types
+  can be specified.
+
+- This operation requires specification of the initial number of fractions and cannot use dose per fraction. The
+  rationale is that for some models, the dose per fraction would need to be specified for *each individual voxel* since
+  the prescription dose per fraction is **not** the same for voxels outside the PTV.
+
+- Be careful in handling the output of a BED calculation. In particular, BED doses with a given $\alpha/\beta$ should
+  **only** be summed with BED doses that have the same $\alpha/\beta$.
+
+### Parameters
+
+- ImageSelection
+- AlphaBetaRatioLate
+- AlphaBetaRatioEarly
+- PriorNumberOfFractions
+- PriorPrescriptionDose
+- TargetDosePerFraction
+- Model
+- EarlyROILabelRegex
+- EarlyNormalizedROILabelRegex
+
+#### ImageSelection
+
+##### Description
+
+Select one or more image arrays. Note that image arrays can hold anything, but will typically represent a single
+contiguous 3D volume (i.e., a volumetric CT scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of two types: positional or metadata-based key@value regex.
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth image array (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last image array.
+Positional specifiers can be inverted by prefixing with a '!'. Metadata-based key@value expressions are applied by
+matching the keys verbatim and the values with regex. In order to invert metadata-based selectors, the regex logic must
+be inverted (i.e., you can *not* prefix metadata-based selectors with a '!'). Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified. Both positional and metadata-based criteria can be
+mixed together. Note regexes are case insensitive and should use extended POSIX syntax.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+
+#### AlphaBetaRatioLate
+
+##### Description
+
+The value to use for alpha/beta in late-responding (i.e., 'normal', non-cancerous) tissues. Generally a value of 3.0 Gy
+is used. Tissues that are sensitive to fractionation may warrant smaller ratios, such as 1.5-3 Gy for cervical central
+nervous tissues and 2.3-4.9 for lumbar central nervous tissues (consult table 8.1, page 107 in: Joiner et al.,
+'Fractionation: the linear-quadratic approach', 4th Ed., 2009, in the book 'Basic Clinical Radiobiology', ISBN:
+0340929669). Note that the selected ROIs denote early-responding tissues; all remaining tissues are considered
+late-responding.
+
+##### Default
+
+- ```"3.0"```
+
+##### Examples
+
+- ```"2.0"```
+- ```"3.0"```
+
+#### AlphaBetaRatioEarly
+
+##### Description
+
+The value to use for alpha/beta in early-responding tissues (i.e., tumourous and some normal tissues). Generally a value
+of 10.0 Gy is used. Note that the selected ROIs denote early-responding tissues; all remaining tissues are considered
+late-responding.
+
+##### Default
+
+- ```"10.0"```
+
+##### Examples
+
+- ```"10.0"```
+
+#### PriorNumberOfFractions
+
+##### Description
+
+The number of fractions over which the dose distribution was (or will be) delivered. This parameter is required for both
+BED and EQDx conversions. Decimal fractions are supported to accommodate multi-pass BED conversions.
+
+##### Default
+
+- ```"35"```
+
+##### Examples
+
+- ```"10"```
+- ```"20.5"```
+- ```"35"```
+- ```"40.123"```
+
+#### PriorPrescriptionDose
+
+##### Description
+
+The prescription dose that was (or will be) delivered to the PTV. This parameter is only used for the
+'eqdx-lq-simple-pinned' model. Note that this is a theoretical dose since the PTV or CTV will only nominally receive
+this dose. Also note that the specified dose need not exist somewhere in the image. It can be purely theoretical to
+accommodate previous BED conversions.
+
+##### Default
+
+- ```"70"```
+
+##### Examples
+
+- ```"15"```
+- ```"22.5"```
+- ```"45.0"```
+- ```"66"```
+- ```"70.001"```
+
+#### TargetDosePerFraction
+
+##### Description
+
+The desired dose per fraction 'x' for an EQDx conversion. For an 'EQD2' conversion, this value *must* be 2 Gy. For an
+'EQD3.5' conversion, this value should be 3.5 Gy. Note that the specific interpretation of this parameter depends on the
+model.
+
+##### Default
+
+- ```"2.0"```
+
+##### Examples
+
+- ```"1.8"```
+- ```"2.0"```
+- ```"5.0"```
+- ```"8.0"```
+
+#### Model
+
+##### Description
+
+The BED or EQDx model to use. All assume e was delivered using photon external beam therapy. Current options are
+'bed-lq-simple', 'eqdx-lq-simple', and 'eqdx-lq-simple-pinned'. The 'bed-lq-simple' model uses a standard
+linear-quadratic model that disregards time delays, including repopulation ($BED = (1 + \alpha/\beta)nd$). The
+'eqdx-lq-simple' model uses the widely-known, standard formula $EQD_{x} = nd(d + \alpha/\beta)/(x + \alpha/\beta)$ which
+is dervied from the linear-quadratic radiobiological model and is also known as the 'Withers' formula. This model
+disregards time delays, including repopulation. The 'eqdx-lq-simple-pinned' model is an **experimental** alternative to
+the 'eqdx-lq-simple' model. The 'eqdx-lq-simple-pinned' model implements the 'eqdx-lq-simple' model, but avoids having
+to specify *x* dose per fraction. First the prescription dose is transformed to EQDx with *x* dose per fraction and the
+effective number of fractions is extracted. Then, each voxel is transformed assuming this effective number of fractions
+rather than a specific dose per fraction. This model conveniently avoids having to awkwardly specify *x* dose per
+fraction for voxels that receive less than *x* dose. It is also idempotent. Note, however, that the
+'eqdx-lq-simple-pinned' model produces EQDx estimates that are **incompatbile** with 'eqdx-lq-simple' EQDx estimates.
+
+##### Default
+
+- ```"eqdx-lq-simple"```
+
+##### Supported Options
+
+- ```"bed-lq-simple"```
+- ```"eqdx-lq-simple"```
+- ```"eqdx-lq-simple-pinned"```
+
+#### EarlyROILabelRegex
+
+##### Description
+
+This parameter selects ROI labels/names to consider as bounding early-responding tissues. A regular expression (regex)
+matching *raw* ROI contour labels/names to consider. Selection is performed on a whole-ROI basis; individual contours
+cannot be selected. Be aware that input spaces are trimmed to a single space. If your ROI name has more than two
+sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want to select must match the
+provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is extended POSIX and is case
+insensitive. '.*' will match all available ROIs. Note that this parameter will match 'raw' contour labels.
+
+##### Default
+
+- ```".*"```
+
+##### Examples
+
+- ```".*"```
+- ```".*GTV.*"```
+- ```"PTV66"```
+- ```".*PTV.*|.*GTV.**"```
+
+#### EarlyNormalizedROILabelRegex
+
+##### Description
+
+This parameter selects ROI labels/names to consider as bounding early-responding tissues. A regular expression (regex)
+matching *normalized* ROI contour labels/names to consider. Selection is performed on a whole-ROI basis; individual
+contours cannot be selected. Be aware that input spaces are trimmed to a single space. If your ROI name has more than
+two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want to select must match the
+provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is extended POSIX and is case
+insensitive. '.*' will match all available ROIs. Note that this parameter will match contour labels that have been
+*normalized* (i.e., mapped, translated) using the user-provided provided lexicon. This is useful for handling data with
+heterogeneous naming conventions where fuzzy matching is required. Refer to the lexicon for available labels.
+
+##### Default
+
+- ```".*"```
+
+##### Examples
+
+- ```".*"```
+- ```".*GTV.*"```
+- ```"PTV66"```
+- ```".*PTV.*|.*GTV.**"```
 
 
 ## BoostSerializeDrover
@@ -1935,6 +2196,11 @@ clouds), (all surface meshes), and (all treatment plans) can be selected. Note t
 This operation interactively builds a lexicon using the currently loaded contour labels. It is useful for constructing a
 domain-specific lexicon from a set of representative data.
 
+### Notes
+
+- An exclusive approach is taken for ROI selection rather than an inclusive approach because regex negations are not
+  easily supported in the POSIX syntax.
+
 ### Parameters
 
 - CleanLabels
@@ -1983,11 +2249,13 @@ desired clean label. For example, if you are looking for 'Left_Parotid' you will
 
 ##### Description
 
-A regex matching ROI labels/names to prune. Only matching ROIs will be pruned. The default will match no ROIs. Be aware
-that input spaces are trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to
-avoid them. All ROIs have to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses
-extended POSIX syntax. (Note: an exclusive approach is taken rather than an inclusive approach because regex negations
-are not easily supported in the POSIX syntax.)
+This parameter selects ROI labels/names to prune. Only matching ROIs will be pruned. The default will match no ROIs. A
+regular expression (regex) matching *raw* ROI contour labels/names to consider. Selection is performed on a whole-ROI
+basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If your ROI
+name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want to select
+must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is extended
+POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match 'raw' contour
+labels.
 
 ##### Default
 
@@ -2763,9 +3031,14 @@ mixed together. Note regexes are case insensitive and should use extended POSIX 
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *normalized* ROI contour labels/names to consider. Selection is performed on a
+whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want
+to select must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is
+extended POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match contour
+labels that have been *normalized* (i.e., mapped, translated) using the user-provided provided lexicon. This is useful
+for handling data with heterogeneous naming conventions where fuzzy matching is required. Refer to the lexicon for
+available labels.
 
 ##### Default
 
@@ -2776,7 +3049,7 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*Body.*"```
 - ```"Body"```
-- ```"Gross_Liver"```
+- ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
 
@@ -2784,9 +3057,12 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *raw* ROI contour labels/names to consider. Selection is performed on a whole-ROI
+basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If your ROI
+name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want to select
+must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is extended
+POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match 'raw' contour
+labels.
 
 ##### Default
 
@@ -2797,7 +3073,8 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*body.*"```
 - ```"body"```
-- ```"Gross_Liver"```
+- ```"^body$"```
+- ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
 
@@ -2815,7 +3092,7 @@ and cancels all contour overlap.
 
 - ```"ignore"```
 
-##### Examples
+##### Supported Options
 
 - ```"ignore"```
 - ```"honour_opposite_orientations"```
@@ -2836,7 +3113,7 @@ the image plane. The first, 'planar_corner_inclusive', considers a voxel interio
 
 - ```"center"```
 
-##### Examples
+##### Supported Options
 
 - ```"center"```
 - ```"centre"```
@@ -2985,7 +3262,7 @@ cluster will be reduced to the median coordinate.
 
 - ```"none"```
 
-##### Examples
+##### Supported Options
 
 - ```"none"```
 - ```"median"```
@@ -3110,9 +3387,14 @@ mixed together. Note regexes are case insensitive and should use extended POSIX 
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *normalized* ROI contour labels/names to consider. Selection is performed on a
+whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want
+to select must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is
+extended POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match contour
+labels that have been *normalized* (i.e., mapped, translated) using the user-provided provided lexicon. This is useful
+for handling data with heterogeneous naming conventions where fuzzy matching is required. Refer to the lexicon for
+available labels.
 
 ##### Default
 
@@ -3123,7 +3405,7 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*Body.*"```
 - ```"Body"```
-- ```"Gross_Liver"```
+- ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
 
@@ -3131,9 +3413,12 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *raw* ROI contour labels/names to consider. Selection is performed on a whole-ROI
+basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If your ROI
+name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want to select
+must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is extended
+POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match 'raw' contour
+labels.
 
 ##### Default
 
@@ -3144,7 +3429,8 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*body.*"```
 - ```"body"```
-- ```"Gross_Liver"```
+- ```"^body$"```
+- ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
 
@@ -3168,7 +3454,7 @@ when the image arrays slightly differ in alignment or pixel values.
 
 - ```"gamma-index"```
 
-##### Examples
+##### Supported Options
 
 - ```"gamma-index"```
 - ```"DTA"```
@@ -3269,7 +3555,7 @@ voxel values divided by the largest voxel value in the selected images.
 
 - ```"relative"```
 
-##### Examples
+##### Supported Options
 
 - ```"relative"```
 - ```"difference"```
@@ -3366,7 +3652,7 @@ interpolation also makes use of the nearest-neighbour and 'no interpolation' met
 
 - ```"NN"```
 
-##### Examples
+##### Supported Options
 
 - ```"None"```
 - ```"NN"```
@@ -3487,9 +3773,14 @@ dump to generate a unique temporary file.
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *normalized* ROI contour labels/names to consider. Selection is performed on a
+whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want
+to select must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is
+extended POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match contour
+labels that have been *normalized* (i.e., mapped, translated) using the user-provided provided lexicon. This is useful
+for handling data with heterogeneous naming conventions where fuzzy matching is required. Refer to the lexicon for
+available labels.
 
 ##### Default
 
@@ -3500,7 +3791,7 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*Body.*"```
 - ```"Body"```
-- ```"Gross_Liver"```
+- ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
 
@@ -3508,9 +3799,12 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *raw* ROI contour labels/names to consider. Selection is performed on a whole-ROI
+basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If your ROI
+name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want to select
+must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is extended
+POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match 'raw' contour
+labels.
 
 ##### Default
 
@@ -3521,7 +3815,8 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*body.*"```
 - ```"body"```
-- ```"Gross_Liver"```
+- ```"^body$"```
+- ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
 
@@ -3722,7 +4017,7 @@ difference' is also known as 'XOR'.
 
 - ```"join"```
 
-##### Examples
+##### Supported Options
 
 - ```"intersection"```
 - ```"join"```
@@ -3768,10 +4063,10 @@ metrics.
 ### Parameters
 
 - ImageSelection
-- NormalizedROILabelRegexA
 - ROILabelRegexA
-- NormalizedROILabelRegexB
+- NormalizedROILabelRegexA
 - ROILabelRegexB
+- NormalizedROILabelRegexB
 - FileName
 - UserComment
 
@@ -3807,34 +4102,16 @@ mixed together. Note regexes are case insensitive and should use extended POSIX 
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 
-#### NormalizedROILabelRegexA
-
-##### Description
-
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
-
-##### Default
-
-- ```".*"```
-
-##### Examples
-
-- ```".*"```
-- ```".*Body.*"```
-- ```"Body"```
-- ```"Gross_Liver"```
-- ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
-- ```"Left Parotid|Right Parotid"```
-
 #### ROILabelRegexA
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *raw* ROI contour labels/names to consider. Selection is performed on a whole-ROI
+basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If your ROI
+name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want to select
+must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is extended
+POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match 'raw' contour
+labels.
 
 ##### Default
 
@@ -3845,17 +4122,23 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*body.*"```
 - ```"body"```
-- ```"Gross_Liver"```
+- ```"^body$"```
+- ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
 
-#### NormalizedROILabelRegexB
+#### NormalizedROILabelRegexA
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *normalized* ROI contour labels/names to consider. Selection is performed on a
+whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want
+to select must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is
+extended POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match contour
+labels that have been *normalized* (i.e., mapped, translated) using the user-provided provided lexicon. This is useful
+for handling data with heterogeneous naming conventions where fuzzy matching is required. Refer to the lexicon for
+available labels.
 
 ##### Default
 
@@ -3866,7 +4149,7 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*Body.*"```
 - ```"Body"```
-- ```"Gross_Liver"```
+- ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
 
@@ -3874,9 +4157,12 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *raw* ROI contour labels/names to consider. Selection is performed on a whole-ROI
+basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If your ROI
+name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want to select
+must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is extended
+POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match 'raw' contour
+labels.
 
 ##### Default
 
@@ -3887,9 +4173,36 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*body.*"```
 - ```"body"```
-- ```"Gross_Liver"```
+- ```"^body$"```
+- ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
+
+#### NormalizedROILabelRegexB
+
+##### Description
+
+A regular expression (regex) matching *normalized* ROI contour labels/names to consider. Selection is performed on a
+whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want
+to select must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is
+extended POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match contour
+labels that have been *normalized* (i.e., mapped, translated) using the user-provided provided lexicon. This is useful
+for handling data with heterogeneous naming conventions where fuzzy matching is required. Refer to the lexicon for
+available labels.
+
+##### Default
+
+- ```".*"```
+
+##### Examples
+
+- ```".*"```
+- ```".*Body.*"```
+- ```"Body"```
+- ```"liver"```
+- ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
+- ```"Left Parotid|Right Parotid"```
 
 #### FileName
 
@@ -4178,7 +4491,7 @@ contours for even the most complicated topologies, but is considerably slower th
 
 - ```"binary"```
 
-##### Examples
+##### Supported Options
 
 - ```"binary"```
 - ```"marching"```
@@ -4253,9 +4566,12 @@ The ROI label to attach to the winning contour(s). All other metadata remains th
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *raw* ROI contour labels/names to consider. Selection is performed on a whole-ROI
+basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If your ROI
+name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want to select
+must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is extended
+POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match 'raw' contour
+labels.
 
 ##### Default
 
@@ -4266,7 +4582,8 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*body.*"```
 - ```"body"```
-- ```"Gross_Liver"```
+- ```"^body$"```
+- ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
 
@@ -4274,9 +4591,14 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *normalized* ROI contour labels/names to consider. Selection is performed on a
+whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want
+to select must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is
+extended POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match contour
+labels that have been *normalized* (i.e., mapped, translated) using the user-provided provided lexicon. This is useful
+for handling data with heterogeneous naming conventions where fuzzy matching is required. Refer to the lexicon for
+available labels.
 
 ##### Default
 
@@ -4287,7 +4609,7 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*Body.*"```
 - ```"Body"```
-- ```"Gross_Liver"```
+- ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
 
@@ -4535,9 +4857,14 @@ voxelization (e.g., marching cubes). It will also insert no additional vertices 
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *normalized* ROI contour labels/names to consider. Selection is performed on a
+whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want
+to select must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is
+extended POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match contour
+labels that have been *normalized* (i.e., mapped, translated) using the user-provided provided lexicon. This is useful
+for handling data with heterogeneous naming conventions where fuzzy matching is required. Refer to the lexicon for
+available labels.
 
 ##### Default
 
@@ -4548,7 +4875,7 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*Body.*"```
 - ```"Body"```
-- ```"Gross_Liver"```
+- ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
 
@@ -4556,9 +4883,12 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *raw* ROI contour labels/names to consider. Selection is performed on a whole-ROI
+basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If your ROI
+name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want to select
+must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is extended
+POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match 'raw' contour
+labels.
 
 ##### Default
 
@@ -4569,7 +4899,8 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*body.*"```
 - ```"body"```
-- ```"Gross_Liver"```
+- ```"^body$"```
+- ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
 
@@ -4616,9 +4947,14 @@ modified.
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *normalized* ROI contour labels/names to consider. Selection is performed on a
+whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want
+to select must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is
+extended POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match contour
+labels that have been *normalized* (i.e., mapped, translated) using the user-provided provided lexicon. This is useful
+for handling data with heterogeneous naming conventions where fuzzy matching is required. Refer to the lexicon for
+available labels.
 
 ##### Default
 
@@ -4629,7 +4965,7 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*Body.*"```
 - ```"Body"```
-- ```"Gross_Liver"```
+- ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
 
@@ -4637,9 +4973,12 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *raw* ROI contour labels/names to consider. Selection is performed on a whole-ROI
+basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If your ROI
+name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want to select
+must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is extended
+POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match 'raw' contour
+labels.
 
 ##### Default
 
@@ -4650,7 +4989,8 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*body.*"```
 - ```"body"```
-- ```"Gross_Liver"```
+- ```"^body$"```
+- ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
 
@@ -4687,7 +5027,7 @@ roughly be the case for spherical contour collections). Point clouds created thi
 
 - ```"vertices"```
 
-##### Examples
+##### Supported Options
 
 - ```"vertices"```
 - ```"centroid"```
@@ -4862,7 +5202,7 @@ contours for even the most complicated topologies, but is considerably slower th
 
 - ```"marching"```
 
-##### Examples
+##### Supported Options
 
 - ```"binary"```
 - ```"marching"```
@@ -5242,9 +5582,14 @@ mixed together. Note regexes are case insensitive and should use extended POSIX 
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *normalized* ROI contour labels/names to consider. Selection is performed on a
+whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want
+to select must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is
+extended POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match contour
+labels that have been *normalized* (i.e., mapped, translated) using the user-provided provided lexicon. This is useful
+for handling data with heterogeneous naming conventions where fuzzy matching is required. Refer to the lexicon for
+available labels.
 
 ##### Default
 
@@ -5255,7 +5600,7 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*Body.*"```
 - ```"Body"```
-- ```"Gross_Liver"```
+- ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
 
@@ -5263,9 +5608,12 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *raw* ROI contour labels/names to consider. Selection is performed on a whole-ROI
+basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If your ROI
+name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want to select
+must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is extended
+POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match 'raw' contour
+labels.
 
 ##### Default
 
@@ -5276,7 +5624,8 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*body.*"```
 - ```"body"```
-- ```"Gross_Liver"```
+- ```"^body$"```
+- ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
 
@@ -5315,7 +5664,7 @@ convolution). In all cases the kernel is (approximately) centred.
 
 - ```"convolution"```
 
-##### Examples
+##### Supported Options
 
 - ```"convolution"```
 - ```"correlation"```
@@ -5510,9 +5859,14 @@ mixed together. Note regexes are case insensitive and should use extended POSIX 
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *normalized* ROI contour labels/names to consider. Selection is performed on a
+whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want
+to select must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is
+extended POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match contour
+labels that have been *normalized* (i.e., mapped, translated) using the user-provided provided lexicon. This is useful
+for handling data with heterogeneous naming conventions where fuzzy matching is required. Refer to the lexicon for
+available labels.
 
 ##### Default
 
@@ -5523,7 +5877,7 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*Body.*"```
 - ```"Body"```
-- ```"Gross_Liver"```
+- ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
 
@@ -5531,9 +5885,12 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *raw* ROI contour labels/names to consider. Selection is performed on a whole-ROI
+basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If your ROI
+name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want to select
+must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is extended
+POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match 'raw' contour
+labels.
 
 ##### Default
 
@@ -5544,7 +5901,8 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*body.*"```
 - ```"body"```
-- ```"Gross_Liver"```
+- ```"^body$"```
+- ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
 
@@ -5561,7 +5919,7 @@ the image plane. The first, 'planar_corner_inclusive', considers a voxel interio
 
 - ```"center"```
 
-##### Examples
+##### Supported Options
 
 - ```"center"```
 - ```"centre"```
@@ -5584,7 +5942,7 @@ and cancels all contour overlap.
 
 - ```"ignore"```
 
-##### Examples
+##### Supported Options
 
 - ```"ignore"```
 - ```"honour_opposite_orientations"```
@@ -5754,9 +6112,14 @@ mixed together. Note regexes are case insensitive and should use extended POSIX 
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *normalized* ROI contour labels/names to consider. Selection is performed on a
+whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want
+to select must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is
+extended POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match contour
+labels that have been *normalized* (i.e., mapped, translated) using the user-provided provided lexicon. This is useful
+for handling data with heterogeneous naming conventions where fuzzy matching is required. Refer to the lexicon for
+available labels.
 
 ##### Default
 
@@ -5767,7 +6130,7 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*Body.*"```
 - ```"Body"```
-- ```"Gross_Liver"```
+- ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
 
@@ -5775,9 +6138,12 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *raw* ROI contour labels/names to consider. Selection is performed on a whole-ROI
+basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If your ROI
+name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want to select
+must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is extended
+POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match 'raw' contour
+labels.
 
 ##### Default
 
@@ -5788,7 +6154,8 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*body.*"```
 - ```"body"```
-- ```"Gross_Liver"```
+- ```"^body$"```
+- ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
 
@@ -6035,7 +6402,7 @@ and cancels all contour overlap.
 
 - ```"ignore"```
 
-##### Examples
+##### Supported Options
 
 - ```"ignore"```
 - ```"honour_opposite_orientations"```
@@ -6056,7 +6423,7 @@ the image plane. The first, 'planar_corner_inclusive', considers a voxel interio
 
 - ```"planar_inc"```
 
-##### Examples
+##### Supported Options
 
 - ```"center"```
 - ```"centre"```
@@ -6135,9 +6502,14 @@ Whether to overwrite voxels interior to the specified ROI(s).
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *normalized* ROI contour labels/names to consider. Selection is performed on a
+whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want
+to select must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is
+extended POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match contour
+labels that have been *normalized* (i.e., mapped, translated) using the user-provided provided lexicon. This is useful
+for handling data with heterogeneous naming conventions where fuzzy matching is required. Refer to the lexicon for
+available labels.
 
 ##### Default
 
@@ -6148,7 +6520,7 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*Body.*"```
 - ```"Body"```
-- ```"Gross_Liver"```
+- ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
 
@@ -6156,9 +6528,12 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *raw* ROI contour labels/names to consider. Selection is performed on a whole-ROI
+basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If your ROI
+name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want to select
+must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is extended
+POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match 'raw' contour
+labels.
 
 ##### Default
 
@@ -6169,7 +6544,8 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*body.*"```
 - ```"body"```
-- ```"Gross_Liver"```
+- ```"^body$"```
+- ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
 
@@ -6235,7 +6611,7 @@ you don't. Use the high setting if your TPS goes overboard linking data sets by 
 
 - ```"medium"```
 
-##### Examples
+##### Supported Options
 
 - ```"low"```
 - ```"medium"```
@@ -6328,7 +6704,7 @@ you don't. Use the high setting if your TPS goes overboard linking data sets by 
 
 - ```"medium"```
 
-##### Examples
+##### Supported Options
 
 - ```"low"```
 - ```"medium"```
@@ -6338,9 +6714,14 @@ you don't. Use the high setting if your TPS goes overboard linking data sets by 
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *normalized* ROI contour labels/names to consider. Selection is performed on a
+whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want
+to select must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is
+extended POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match contour
+labels that have been *normalized* (i.e., mapped, translated) using the user-provided provided lexicon. This is useful
+for handling data with heterogeneous naming conventions where fuzzy matching is required. Refer to the lexicon for
+available labels.
 
 ##### Default
 
@@ -6351,7 +6732,7 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*Body.*"```
 - ```"Body"```
-- ```"Gross_Liver"```
+- ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
 
@@ -6359,9 +6740,12 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *raw* ROI contour labels/names to consider. Selection is performed on a whole-ROI
+basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If your ROI
+name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want to select
+must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is extended
+POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match 'raw' contour
+labels.
 
 ##### Default
 
@@ -6372,7 +6756,8 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*body.*"```
 - ```"body"```
-- ```"Gross_Liver"```
+- ```"^body$"```
+- ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
 
@@ -6458,7 +6843,7 @@ you don't. Use the high setting if your TPS goes overboard linking data sets by 
 
 - ```"medium"```
 
-##### Examples
+##### Supported Options
 
 - ```"low"```
 - ```"medium"```
@@ -6545,7 +6930,7 @@ you don't. Use the high setting if your TPS goes overboard linking data sets by 
 
 - ```"medium"```
 
-##### Examples
+##### Supported Options
 
 - ```"low"```
 - ```"medium"```
@@ -6628,9 +7013,14 @@ rule of thumb, do not use this routine if fewer than 2-3y have elapsed.
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *normalized* ROI contour labels/names to consider. Selection is performed on a
+whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want
+to select must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is
+extended POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match contour
+labels that have been *normalized* (i.e., mapped, translated) using the user-provided provided lexicon. This is useful
+for handling data with heterogeneous naming conventions where fuzzy matching is required. Refer to the lexicon for
+available labels.
 
 ##### Default
 
@@ -6641,7 +7031,7 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*Body.*"```
 - ```"Body"```
-- ```"Gross_Liver"```
+- ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
 
@@ -6649,9 +7039,12 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *raw* ROI contour labels/names to consider. Selection is performed on a whole-ROI
+basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If your ROI
+name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want to select
+must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is extended
+POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match 'raw' contour
+labels.
 
 ##### Default
 
@@ -6662,7 +7055,8 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*body.*"```
 - ```"body"```
-- ```"Gross_Liver"```
+- ```"^body$"```
+- ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
 
@@ -6701,9 +7095,14 @@ Grant paper or 'Nasopharyngeal Carcinoma' by Wai Tong Ng et al. (2016; doi:10.10
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *normalized* ROI contour labels/names to consider. Selection is performed on a
+whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want
+to select must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is
+extended POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match contour
+labels that have been *normalized* (i.e., mapped, translated) using the user-provided provided lexicon. This is useful
+for handling data with heterogeneous naming conventions where fuzzy matching is required. Refer to the lexicon for
+available labels.
 
 ##### Default
 
@@ -6714,7 +7113,7 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*Body.*"```
 - ```"Body"```
-- ```"Gross_Liver"```
+- ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
 
@@ -6722,9 +7121,12 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *raw* ROI contour labels/names to consider. Selection is performed on a whole-ROI
+basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If your ROI
+name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want to select
+must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is extended
+POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match 'raw' contour
+labels.
 
 ##### Default
 
@@ -6735,7 +7137,8 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*body.*"```
 - ```"body"```
-- ```"Gross_Liver"```
+- ```"^body$"```
+- ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
 
@@ -7441,7 +7844,7 @@ Whether to overwrite voxels interior or exterior to the specified ROI(s).
 
 - ```"interior"```
 
-##### Examples
+##### Supported Options
 
 - ```"interior"```
 - ```"exterior"```
@@ -7466,9 +7869,14 @@ The image channel to use. Zero-based.
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *normalized* ROI contour labels/names to consider. Selection is performed on a
+whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want
+to select must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is
+extended POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match contour
+labels that have been *normalized* (i.e., mapped, translated) using the user-provided provided lexicon. This is useful
+for handling data with heterogeneous naming conventions where fuzzy matching is required. Refer to the lexicon for
+available labels.
 
 ##### Default
 
@@ -7479,7 +7887,7 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*Body.*"```
 - ```"Body"```
-- ```"Gross_Liver"```
+- ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
 
@@ -7487,9 +7895,12 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *raw* ROI contour labels/names to consider. Selection is performed on a whole-ROI
+basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If your ROI
+name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want to select
+must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is extended
+POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match 'raw' contour
+labels.
 
 ##### Default
 
@@ -7500,7 +7911,8 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*body.*"```
 - ```"body"```
-- ```"Gross_Liver"```
+- ```"^body$"```
+- ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
 
@@ -7518,7 +7930,7 @@ and cancels all contour overlap.
 
 - ```"ignore"```
 
-##### Examples
+##### Supported Options
 
 - ```"ignore"```
 - ```"honour_opposite_orientations"```
@@ -7539,7 +7951,7 @@ the image plane. The first, 'planar_corner_inclusive', considers a voxel interio
 
 - ```"center"```
 
-##### Examples
+##### Supported Options
 
 - ```"center"```
 - ```"centre"```
@@ -7867,9 +8279,12 @@ Given a perfusion model, this routine computes parameter estimates for ROIs.
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *raw* ROI contour labels/names to consider. Selection is performed on a whole-ROI
+basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If your ROI
+name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want to select
+must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is extended
+POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match 'raw' contour
+labels.
 
 ##### Default
 
@@ -7880,7 +8295,8 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*body.*"```
 - ```"body"```
-- ```"Gross_Liver"```
+- ```"^body$"```
+- ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
 
@@ -8039,9 +8455,14 @@ contours to help differentiate them. Leave empty to dump to generate a unique te
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *normalized* ROI contour labels/names to consider. Selection is performed on a
+whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want
+to select must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is
+extended POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match contour
+labels that have been *normalized* (i.e., mapped, translated) using the user-provided provided lexicon. This is useful
+for handling data with heterogeneous naming conventions where fuzzy matching is required. Refer to the lexicon for
+available labels.
 
 ##### Default
 
@@ -8052,7 +8473,7 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*Body.*"```
 - ```"Body"```
-- ```"Gross_Liver"```
+- ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
 
@@ -8060,9 +8481,12 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *raw* ROI contour labels/names to consider. Selection is performed on a whole-ROI
+basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If your ROI
+name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want to select
+must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is extended
+POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match 'raw' contour
+labels.
 
 ##### Default
 
@@ -8073,7 +8497,8 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*body.*"```
 - ```"body"```
-- ```"Gross_Liver"```
+- ```"^body$"```
+- ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
 
@@ -8128,9 +8553,14 @@ to generate a unique temporary file.
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *normalized* ROI contour labels/names to consider. Selection is performed on a
+whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want
+to select must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is
+extended POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match contour
+labels that have been *normalized* (i.e., mapped, translated) using the user-provided provided lexicon. This is useful
+for handling data with heterogeneous naming conventions where fuzzy matching is required. Refer to the lexicon for
+available labels.
 
 ##### Default
 
@@ -8141,7 +8571,7 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*Body.*"```
 - ```"Body"```
-- ```"Gross_Liver"```
+- ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
 
@@ -8149,9 +8579,12 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *raw* ROI contour labels/names to consider. Selection is performed on a whole-ROI
+basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If your ROI
+name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want to select
+must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is extended
+POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match 'raw' contour
+labels.
 
 ##### Default
 
@@ -8162,7 +8595,8 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*body.*"```
 - ```"body"```
-- ```"Gross_Liver"```
+- ```"^body$"```
+- ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
 
@@ -8210,9 +8644,14 @@ automatically.
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *normalized* ROI contour labels/names to consider. Selection is performed on a
+whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want
+to select must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is
+extended POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match contour
+labels that have been *normalized* (i.e., mapped, translated) using the user-provided provided lexicon. This is useful
+for handling data with heterogeneous naming conventions where fuzzy matching is required. Refer to the lexicon for
+available labels.
 
 ##### Default
 
@@ -8223,7 +8662,7 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*Body.*"```
 - ```"Body"```
-- ```"Gross_Liver"```
+- ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
 
@@ -8301,7 +8740,7 @@ and cancels all contour overlap.
 
 - ```"ignore"```
 
-##### Examples
+##### Supported Options
 
 - ```"ignore"```
 - ```"honour_opposite_orientations"```
@@ -8322,7 +8761,7 @@ the image plane. The first, 'planar_corner_inclusive', considers a voxel interio
 
 - ```"center"```
 
-##### Examples
+##### Supported Options
 
 - ```"center"```
 - ```"centre"```
@@ -8427,221 +8866,6 @@ This operation locates the minimum and maximum dose voxel values. It is useful f
 
 No registered options.
 
-## EQDConvert
-
-### Description
-
-This operation performs a BED-based conversion to a dose-equivalent that would have 'd' dose per fraction (e.g., for
-'EQD2' the dose per fraction would be 2 Gy).
-
-### Notes
-
-- This operation treats all tissue as either tumourous or not, and allows specification of a single alpha/beta for each
-  type (i.e., one for tumourous tissues, one for normal tissues). Owing to this limitation, use of this operation is
-  generally limited to single-OAR or PTV-only EQD conversions.
-
-- This operation requires NumberOfFractions and cannot use DosePerFraction. The reasoning is that the DosePerFraction
-  would need to be specified for each individual voxel; the prescription DosePerFraction is NOT the same as voxels
-  outside the PTV.
-
-### Parameters
-
-- ImageSelection
-- AlphaBetaRatioNormal
-- AlphaBetaRatioTumour
-- NumberOfFractions
-- TargetDosePerFraction
-- PrescriptionDose
-- Model
-- NormalizedROILabelRegex
-- ROILabelRegex
-
-#### ImageSelection
-
-##### Description
-
-Select one or more image arrays. Note that image arrays can hold anything, but will typically represent a single
-contiguous 3D volume (i.e., a volumetric CT scan) or '4D' time-series. Be aware that it is possible to mix logically
-unrelated images together. Selection specifiers can be of two types: positional or metadata-based key@value regex.
-Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
-selects the Nth image array (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last image array.
-Positional specifiers can be inverted by prefixing with a '!'. Metadata-based key@value expressions are applied by
-matching the keys verbatim and the values with regex. In order to invert metadata-based selectors, the regex logic must
-be inverted (i.e., you can *not* prefix metadata-based selectors with a '!'). Multiple criteria can be specified by
-separating them with a ';' and are applied in the order specified. Both positional and metadata-based criteria can be
-mixed together. Note regexes are case insensitive and should use extended POSIX syntax.
-
-##### Default
-
-- ```"last"```
-
-##### Examples
-
-- ```"last"```
-- ```"first"```
-- ```"all"```
-- ```"none"```
-- ```"#0"```
-- ```"#-0"```
-- ```"!last"```
-- ```"!#-3"```
-- ```"key@.*value.*"```
-- ```"key1@.*value1.*;key2@^value2$;first"```
-
-#### AlphaBetaRatioNormal
-
-##### Description
-
-The value to use for alpha/beta in normal (non-cancerous) tissues. Generally a value of 3.0 Gy is used. Tissues that are
-sensitive to fractionation may warrant smaller ratios, such as 1.5-3 Gy for cervical central nervous tissues and 2.3-4.9
-for lumbar central nervous tissues (consult table 8.1, page 107 in: Joiner et al., 'Fractionation: the linear-quadratic
-approach', 4th Ed., 2009, in the book 'Basic Clinical Radiobiology', ISBN: 0340929669). Note that the selected ROIs
-denote which tissues are diseased. The remaining tissues are considered to be normal.
-
-##### Default
-
-- ```"3.0"```
-
-##### Examples
-
-- ```"2.0"```
-- ```"3.0"```
-
-#### AlphaBetaRatioTumour
-
-##### Description
-
-The value to use for alpha/beta in diseased (tumourous) tissues. Generally a value of 10.0 is used. Note that the
-selected ROIs denote which tissues are diseased. The remaining tissues are considered to be normal.
-
-##### Default
-
-- ```"10.0"```
-
-##### Examples
-
-- ```"10.0"```
-
-#### NumberOfFractions
-
-##### Description
-
-The number of fractions in which a plan was (or will be) delivered. Decimal fractions are supported to accommodate
-previous BED conversions.
-
-##### Default
-
-- ```"35"```
-
-##### Examples
-
-- ```"10"```
-- ```"20.5"```
-- ```"35"```
-- ```"40.123"```
-
-#### TargetDosePerFraction
-
-##### Description
-
-The desired dose per fraction. For 'EQD2' this value must be 2 Gy. Note that the specific interpretation of this
-parameter depends on the model.
-
-##### Default
-
-- ```"2.0"```
-
-##### Examples
-
-- ```"1.8"```
-- ```"2.0"```
-- ```"5.0"```
-- ```"8.0"```
-
-#### PrescriptionDose
-
-##### Description
-
-The prescription dose that was (or will be) delivered to the PTV. This parameter is only used for the 'pinned-lq-simple'
-model. Note that this is a theoretical dose since the PTV or CTV will only nominally receive this dose. Also note that
-the specified dose need not exist somewhere in the image. It can be purely theoretical to accommodate previous BED
-conversions.
-
-##### Default
-
-- ```"70"```
-
-##### Examples
-
-- ```"15"```
-- ```"22.5"```
-- ```"45.0"```
-- ```"66"```
-- ```"70.001"```
-
-#### Model
-
-##### Description
-
-The EQD model to use. Current options are 'lq-simple' and 'lq-simple-pinned'. The 'lq-simple' model uses a simplistic
-linear-quadratic model. This model disregards time delays, including repopulation. The 'lq-simple-pinned' model is an
-**experimental** alternative to the 'lq-simple' model. The 'lq-simple-pinned' model implements the 'lq-simple' model,
-but avoids having to specify d dose per fraction. First the prescription dose is transformed to EQD with d dose per
-fraction and the effective number of fractions is extracted. Then, each voxel is transformed assuming this effective
-number of fractions rather than a specific dose per fraction. This model conveniently avoids having to awkwardly specify
-d dose per fraction for voxels that receive less than d dose. It is also idempotent. Note, however, that the
-'lq-simple-pinned' model produces EQD estimates that are **incompatbile** with 'lq-simple' EQD estimates.
-
-##### Default
-
-- ```"lq-simple"```
-
-##### Examples
-
-- ```"lq-simple"```
-- ```"lq-simple-pinned"```
-
-#### NormalizedROILabelRegex
-
-##### Description
-
-A regex matching ROI labels/names to consider as bounding tumourous tissues. The default will match all available ROIs.
-Be aware that input spaces are trimmed to a single space. If your ROI name has more than two sequential spaces, use
-regex to avoid them. All ROIs have to match the single regex, so use the 'or' token if needed. Regex is case insensitive
-and uses extended POSIX syntax.
-
-##### Default
-
-- ```".*"```
-
-##### Examples
-
-- ```".*"```
-- ```".*GTV.*"```
-- ```"PTV66"```
-- ```".*PTV.*|.*GTV.**"```
-
-#### ROILabelRegex
-
-##### Description
-
-A regex matching ROI labels/names to consider as bounding tumourous tissues. The default will match all available ROIs.
-Be aware that input spaces are trimmed to a single space. If your ROI name has more than two sequential spaces, use
-regex to avoid them. All ROIs have to match the single regex, so use the 'or' token if needed. Regex is case insensitive
-and uses extended POSIX syntax.
-
-##### Default
-
-- ```".*"```
-
-##### Examples
-
-- ```".*"```
-- ```".*GTV.*"```
-- ```"PTV66"```
-- ```".*PTV.*|.*GTV.**"```
-
-
 ## EvaluateDoseVolumeStats
 
 ### Description
@@ -8662,10 +8886,10 @@ receiving at least 95% of the PTV prescription dose.
 
 - OutFileName
 - PTVPrescriptionDose
-- PTVNormalizedROILabelRegex
 - PTVROILabelRegex
-- BodyNormalizedROILabelRegex
+- PTVNormalizedROILabelRegex
 - BodyROILabelRegex
+- BodyNormalizedROILabelRegex
 - UserComment
 
 #### OutFileName
@@ -8703,58 +8927,43 @@ The dose prescribed to the PTV of interest (in Gy).
 - ```"70"```
 - ```"82.5"```
 
-#### PTVNormalizedROILabelRegex
-
-##### Description
-
-A regex matching PTV ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces
-are trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs
-have to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX
-syntax.
-
-##### Default
-
-- ```".*"```
-
-##### Examples
-
-- ```".*"```
-- ```".*Body.*"```
-- ```"Body"```
-- ```"Gross_Liver"```
-- ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
-- ```"Left Parotid|Right Parotid"```
-
 #### PTVROILabelRegex
 
 ##### Description
 
-A regex matching PTV ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces
-are trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs
-have to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX
-syntax.
+A regular expression (regex) matching *raw* ROI contour labels/names to consider. Selection is performed on a whole-ROI
+basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If your ROI
+name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want to select
+must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is extended
+POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match 'raw' contour
+labels.
 
 ##### Default
 
-- ```".*PTV.*"```
+- ```".*"```
 
 ##### Examples
 
 - ```".*"```
 - ```".*body.*"```
 - ```"body"```
-- ```"Gross_Liver"```
+- ```"^body$"```
+- ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
 
-#### BodyNormalizedROILabelRegex
+#### PTVNormalizedROILabelRegex
 
 ##### Description
 
-A regex matching body ROI labels/names to consider. The default will match all available ROIs. Be aware that input
-spaces are trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All
-ROIs have to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX
-syntax.
+A regular expression (regex) matching *normalized* ROI contour labels/names to consider. Selection is performed on a
+whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want
+to select must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is
+extended POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match contour
+labels that have been *normalized* (i.e., mapped, translated) using the user-provided provided lexicon. This is useful
+for handling data with heterogeneous naming conventions where fuzzy matching is required. Refer to the lexicon for
+available labels.
 
 ##### Default
 
@@ -8765,7 +8974,7 @@ syntax.
 - ```".*"```
 - ```".*Body.*"```
 - ```"Body"```
-- ```"Gross_Liver"```
+- ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
 
@@ -8773,23 +8982,52 @@ syntax.
 
 ##### Description
 
-A regex matching PTV ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces
-are trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs
-have to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX
-syntax.
+A regular expression (regex) matching *raw* ROI contour labels/names to consider. Selection is performed on a whole-ROI
+basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If your ROI
+name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want to select
+must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is extended
+POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match 'raw' contour
+labels.
 
 ##### Default
 
-- ```".*body.*"```
+- ```".*"```
 
 ##### Examples
 
 - ```".*"```
 - ```".*body.*"```
 - ```"body"```
-- ```"Gross_Liver"```
+- ```"^body$"```
+- ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
+
+#### BodyNormalizedROILabelRegex
+
+##### Description
+
+A regular expression (regex) matching *normalized* ROI contour labels/names to consider. Selection is performed on a
+whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want
+to select must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is
+extended POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match contour
+labels that have been *normalized* (i.e., mapped, translated) using the user-provided provided lexicon. This is useful
+for handling data with heterogeneous naming conventions where fuzzy matching is required. Refer to the lexicon for
+available labels.
+
+##### Default
+
+- ```".*"```
+
+##### Examples
+
+- ```".*"```
+- ```".*Body.*"```
+- ```"Body"```
+- ```"liver"```
+- ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
+- ```"Left Parotid|Right Parotid"```
 
 #### UserComment
 
@@ -8861,9 +9099,14 @@ to generate a unique temporary file.
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *normalized* ROI contour labels/names to consider. Selection is performed on a
+whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want
+to select must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is
+extended POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match contour
+labels that have been *normalized* (i.e., mapped, translated) using the user-provided provided lexicon. This is useful
+for handling data with heterogeneous naming conventions where fuzzy matching is required. Refer to the lexicon for
+available labels.
 
 ##### Default
 
@@ -8874,7 +9117,7 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*Body.*"```
 - ```"Body"```
-- ```"Gross_Liver"```
+- ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
 
@@ -8882,9 +9125,12 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *raw* ROI contour labels/names to consider. Selection is performed on a whole-ROI
+basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If your ROI
+name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want to select
+must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is extended
+POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match 'raw' contour
+labels.
 
 ##### Default
 
@@ -8895,7 +9141,8 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*body.*"```
 - ```"body"```
-- ```"Gross_Liver"```
+- ```"^body$"```
+- ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
 
@@ -9035,9 +9282,14 @@ to generate a unique temporary file.
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *normalized* ROI contour labels/names to consider. Selection is performed on a
+whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want
+to select must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is
+extended POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match contour
+labels that have been *normalized* (i.e., mapped, translated) using the user-provided provided lexicon. This is useful
+for handling data with heterogeneous naming conventions where fuzzy matching is required. Refer to the lexicon for
+available labels.
 
 ##### Default
 
@@ -9048,7 +9300,7 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*Body.*"```
 - ```"Body"```
-- ```"Gross_Liver"```
+- ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
 
@@ -9056,9 +9308,12 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *raw* ROI contour labels/names to consider. Selection is performed on a whole-ROI
+basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If your ROI
+name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want to select
+must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is extended
+POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match 'raw' contour
+labels.
 
 ##### Default
 
@@ -9069,7 +9324,8 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*body.*"```
 - ```"body"```
-- ```"Gross_Liver"```
+- ```"^body$"```
+- ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
 
@@ -9585,7 +9841,7 @@ file format is a 4x4 Affine matrix. If no name is given, a unique name will be c
 ### Description
 
 This operation compares two images arrays: either a biologically-equivalent dose ($BED_{\alpha/\beta}$) transformed
-array or an equivalent dose in $d$ dose per fraction ($EQD_{d}$) array and a 'reference' untransformed array. The
+array or an equivalent dose in $d$ dose per fraction ($EQD_{x}$) array and a 'reference' untransformed array. The
 $\alpha/\beta$ used for each voxel are extracted by comparing corresponding voxels. Each voxel is overwritten with the
 value of $\alpha/\beta$ needed to accomplish the given transform. This routine is best used to inspect a given
 transformation (e.g., for QA purposes).
@@ -9688,9 +9944,14 @@ extended POSIX syntax.
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *normalized* ROI contour labels/names to consider. Selection is performed on a
+whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want
+to select must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is
+extended POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match contour
+labels that have been *normalized* (i.e., mapped, translated) using the user-provided provided lexicon. This is useful
+for handling data with heterogeneous naming conventions where fuzzy matching is required. Refer to the lexicon for
+available labels.
 
 ##### Default
 
@@ -9701,7 +9962,7 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*Body.*"```
 - ```"Body"```
-- ```"Gross_Liver"```
+- ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
 
@@ -9709,9 +9970,12 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *raw* ROI contour labels/names to consider. Selection is performed on a whole-ROI
+basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If your ROI
+name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want to select
+must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is extended
+POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match 'raw' contour
+labels.
 
 ##### Default
 
@@ -9722,7 +9986,8 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*body.*"```
 - ```"body"```
-- ```"Gross_Liver"```
+- ```"^body$"```
+- ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
 
@@ -9730,16 +9995,16 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 
 ##### Description
 
-The model of BED or EQD transformation to assume. Currently, only 'simple-lq-eqd' is available. The 'simple-lq-eqd'
+The model of BED or EQDx transformation to assume. Currently, only 'eqdx-lq-simple' is available. The 'eqdx-lq-simple'
 model does not take into account elapsed time or any cell repopulation effects.
 
 ##### Default
 
-- ```"simple-lq-eqd"```
+- ```"eqdx-lq-simple"```
 
-##### Examples
+##### Supported Options
 
-- ```"simple-lq-eqd"```
+- ```"eqdx-lq-simple"```
 
 #### Channel
 
@@ -9811,8 +10076,8 @@ Number of fractions assumed in the BED or EQDd transformation.
 
 ##### Description
 
-The nominal dose per fraction (in DICOM units; Gy) assumed by an EQDd transformation. This parameter is the 'd' in
-'EQDd'; for EQD2 transformations, this parameter must be 2 Gy.
+The nominal dose per fraction (in DICOM units; Gy) assumed by an EQDx transformation. This parameter is the 'x' in
+'EQDx'; for EQD2 transformations, this parameter must be 2 Gy.
 
 ##### Default
 
@@ -9853,8 +10118,8 @@ ROI(s). Results are stored as line samples for later analysis or export.
 
 - ImageSelection
 - Channel
-- NormalizedROILabelRegex
 - ROILabelRegex
+- NormalizedROILabelRegex
 - ContourOverlap
 - Inclusivity
 - Grouping
@@ -9913,36 +10178,16 @@ The image channel to use. Zero-based. Use '-1' to operate on all available chann
 - ```"1"```
 - ```"2"```
 
-#### NormalizedROILabelRegex
-
-##### Description
-
-A regex matching the ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces
-are trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs
-have to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX
-syntax.
-
-##### Default
-
-- ```".*"```
-
-##### Examples
-
-- ```".*"```
-- ```".*Body.*"```
-- ```"Body"```
-- ```"Gross_Liver"```
-- ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
-- ```"Left Parotid|Right Parotid"```
-
 #### ROILabelRegex
 
 ##### Description
 
-A regex matching the ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces
-are trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs
-have to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX
-syntax.
+A regular expression (regex) matching *raw* ROI contour labels/names to consider. Selection is performed on a whole-ROI
+basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If your ROI
+name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want to select
+must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is extended
+POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match 'raw' contour
+labels.
 
 ##### Default
 
@@ -9953,9 +10198,36 @@ syntax.
 - ```".*"```
 - ```".*body.*"```
 - ```"body"```
-- ```"Gross_Liver"```
+- ```"^body$"```
+- ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
+
+#### NormalizedROILabelRegex
+
+##### Description
+
+A regular expression (regex) matching *normalized* ROI contour labels/names to consider. Selection is performed on a
+whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want
+to select must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is
+extended POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match contour
+labels that have been *normalized* (i.e., mapped, translated) using the user-provided provided lexicon. This is useful
+for handling data with heterogeneous naming conventions where fuzzy matching is required. Refer to the lexicon for
+available labels.
+
+##### Default
+
+- ```".*"```
+
+##### Examples
+
+- ```".*"```
+- ```".*Body.*"```
+- ```"Body"```
+- ```"liver"```
+- ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
+- ```"Left Parotid|Right Parotid"```
 
 #### ContourOverlap
 
@@ -9971,7 +10243,7 @@ and cancels all contour overlap.
 
 - ```"ignore"```
 
-##### Examples
+##### Supported Options
 
 - ```"ignore"```
 - ```"honour_opposite_orientations"```
@@ -9992,7 +10264,7 @@ the image plane. The first, 'planar_corner_inclusive', considers a voxel interio
 
 - ```"center"```
 
-##### Examples
+##### Supported Options
 
 - ```"center"```
 - ```"centre"```
@@ -10019,7 +10291,7 @@ be provided.
 
 - ```"separate"```
 
-##### Examples
+##### Supported Options
 
 - ```"separate"```
 - ```"grouped"```
@@ -10286,7 +10558,7 @@ for more details.
 
 - ```"centroid"```
 
-##### Examples
+##### Supported Options
 
 - ```"centroid"```
 - ```"pca"```
@@ -10343,7 +10615,7 @@ sensible. The LDLT method scales better.
 
 - ```"LDLT"```
 
-##### Examples
+##### Supported Options
 
 - ```"LDLT"```
 - ```"PseudoInverse"```
@@ -10424,7 +10696,7 @@ the transformation extrapolates. Note that this parameter is used with the TPS-R
 
 - ```"2"```
 
-##### Examples
+##### Supported Options
 
 - ```"2"```
 - ```"3"```
@@ -10577,7 +10849,7 @@ method.
 
 - ```"LDLT"```
 
-##### Examples
+##### Supported Options
 
 - ```"LDLT"```
 - ```"PseudoInverse"```
@@ -10784,9 +11056,14 @@ mixed together. Note regexes are case insensitive and should use extended POSIX 
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *normalized* ROI contour labels/names to consider. Selection is performed on a
+whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want
+to select must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is
+extended POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match contour
+labels that have been *normalized* (i.e., mapped, translated) using the user-provided provided lexicon. This is useful
+for handling data with heterogeneous naming conventions where fuzzy matching is required. Refer to the lexicon for
+available labels.
 
 ##### Default
 
@@ -10797,7 +11074,7 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*Body.*"```
 - ```"Body"```
-- ```"Gross_Liver"```
+- ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
 
@@ -10805,9 +11082,12 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *raw* ROI contour labels/names to consider. Selection is performed on a whole-ROI
+basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If your ROI
+name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want to select
+must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is extended
+POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match 'raw' contour
+labels.
 
 ##### Default
 
@@ -10818,7 +11098,8 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*body.*"```
 - ```"body"```
-- ```"Gross_Liver"```
+- ```"^body$"```
+- ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
 
@@ -10957,9 +11238,14 @@ mixed together. Note regexes are case insensitive and should use extended POSIX 
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *normalized* ROI contour labels/names to consider. Selection is performed on a
+whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want
+to select must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is
+extended POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match contour
+labels that have been *normalized* (i.e., mapped, translated) using the user-provided provided lexicon. This is useful
+for handling data with heterogeneous naming conventions where fuzzy matching is required. Refer to the lexicon for
+available labels.
 
 ##### Default
 
@@ -10970,7 +11256,7 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*Body.*"```
 - ```"Body"```
-- ```"Gross_Liver"```
+- ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
 
@@ -10978,9 +11264,12 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *raw* ROI contour labels/names to consider. Selection is performed on a whole-ROI
+basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If your ROI
+name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want to select
+must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is extended
+POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match 'raw' contour
+labels.
 
 ##### Default
 
@@ -10991,7 +11280,8 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*body.*"```
 - ```"body"```
-- ```"Gross_Liver"```
+- ```"^body$"```
+- ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
 
@@ -11045,7 +11335,7 @@ Controls whether isolated or well-connected voxels are retained.
 
 - ```"isolated"```
 
-##### Examples
+##### Supported Options
 
 - ```"isolated"```
 - ```"well-connected"```
@@ -11346,7 +11636,7 @@ leaves are 5mm wide; and the maximum static field size is 40cm x 22cm.
 
 - ```"VarianMillenniumMLC120"```
 
-##### Examples
+##### Supported Options
 
 - ```"VarianMillenniumMLC80"```
 - ```"VarianMillenniumMLC120"```
@@ -11553,7 +11843,7 @@ if there is no matching map found, the first available will be selected.
 
 - ```".*"```
 
-##### Examples
+##### Supported Options
 
 - ```"Viridis"```
 - ```"Magma"```
@@ -11777,7 +12067,7 @@ and cancels all contour overlap.
 
 - ```"ignore"```
 
-##### Examples
+##### Supported Options
 
 - ```"ignore"```
 - ```"honour_opposite_orientations"```
@@ -11798,7 +12088,7 @@ the image plane. The first, 'planar_corner_inclusive', considers a voxel interio
 
 - ```"center"```
 
-##### Examples
+##### Supported Options
 
 - ```"center"```
 - ```"centre"```
@@ -11828,9 +12118,14 @@ extrapolate may result in failure.)
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *normalized* ROI contour labels/names to consider. Selection is performed on a
+whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want
+to select must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is
+extended POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match contour
+labels that have been *normalized* (i.e., mapped, translated) using the user-provided provided lexicon. This is useful
+for handling data with heterogeneous naming conventions where fuzzy matching is required. Refer to the lexicon for
+available labels.
 
 ##### Default
 
@@ -11841,7 +12136,7 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*Body.*"```
 - ```"Body"```
-- ```"Gross_Liver"```
+- ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
 
@@ -11849,9 +12144,12 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *raw* ROI contour labels/names to consider. Selection is performed on a whole-ROI
+basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If your ROI
+name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want to select
+must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is extended
+POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match 'raw' contour
+labels.
 
 ##### Default
 
@@ -11862,7 +12160,8 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*body.*"```
 - ```"body"```
-- ```"Gross_Liver"```
+- ```"^body$"```
+- ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
 
@@ -11937,9 +12236,14 @@ The value to give to voxels on the surface/boundary of ROI(s).
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *normalized* ROI contour labels/names to consider. Selection is performed on a
+whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want
+to select must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is
+extended POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match contour
+labels that have been *normalized* (i.e., mapped, translated) using the user-provided provided lexicon. This is useful
+for handling data with heterogeneous naming conventions where fuzzy matching is required. Refer to the lexicon for
+available labels.
 
 ##### Default
 
@@ -11950,7 +12254,7 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*Body.*"```
 - ```"Body"```
-- ```"Gross_Liver"```
+- ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
 
@@ -11958,9 +12262,12 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *raw* ROI contour labels/names to consider. Selection is performed on a whole-ROI
+basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If your ROI
+name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want to select
+must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is extended
+POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match 'raw' contour
+labels.
 
 ##### Default
 
@@ -11971,7 +12278,8 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*body.*"```
 - ```"body"```
-- ```"Gross_Liver"```
+- ```"^body$"```
+- ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
 
@@ -12496,9 +12804,14 @@ non-sensical. The reference ROI is used to orient the cleaving plane to trim the
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *normalized* ROI contour labels/names to consider. Selection is performed on a
+whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want
+to select must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is
+extended POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match contour
+labels that have been *normalized* (i.e., mapped, translated) using the user-provided provided lexicon. This is useful
+for handling data with heterogeneous naming conventions where fuzzy matching is required. Refer to the lexicon for
+available labels.
 
 ##### Default
 
@@ -12509,7 +12822,7 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*Body.*"```
 - ```"Body"```
-- ```"Gross_Liver"```
+- ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
 
@@ -12537,9 +12850,12 @@ non-sensical. The reference ROI is used to orient the cleaving plane to trim the
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *raw* ROI contour labels/names to consider. Selection is performed on a whole-ROI
+basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If your ROI
+name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want to select
+must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is extended
+POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match 'raw' contour
+labels.
 
 ##### Default
 
@@ -12550,7 +12866,8 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*body.*"```
 - ```"body"```
-- ```"Gross_Liver"```
+- ```"^body$"```
+- ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
 
@@ -12778,7 +13095,7 @@ logic-based grouping.
 
 - ```""```
 
-##### Examples
+##### Supported Options
 
 - ```"no-overlap-as-is"```
 - ```"no-overlap-adjust"```
@@ -12802,9 +13119,14 @@ opposite of the in-plane normal produced by averaging the line segments connecti
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *normalized* ROI contour labels/names to consider. Selection is performed on a
+whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want
+to select must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is
+extended POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match contour
+labels that have been *normalized* (i.e., mapped, translated) using the user-provided provided lexicon. This is useful
+for handling data with heterogeneous naming conventions where fuzzy matching is required. Refer to the lexicon for
+available labels.
 
 ##### Default
 
@@ -12815,7 +13137,7 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*Body.*"```
 - ```"Body"```
-- ```"Gross_Liver"```
+- ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
 
@@ -12823,9 +13145,12 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *raw* ROI contour labels/names to consider. Selection is performed on a whole-ROI
+basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If your ROI
+name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want to select
+must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is extended
+POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match 'raw' contour
+labels.
 
 ##### Default
 
@@ -12836,7 +13161,8 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*body.*"```
 - ```"body"```
-- ```"Gross_Liver"```
+- ```"^body$"```
+- ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
 
@@ -12941,7 +13267,7 @@ and cancels all contour overlap.
 
 - ```"ignore"```
 
-##### Examples
+##### Supported Options
 
 - ```"ignore"```
 - ```"honour_opposite_orientations"```
@@ -12962,7 +13288,7 @@ the image plane. The first, 'planar_corner_inclusive', considers a voxel interio
 
 - ```"center"```
 
-##### Examples
+##### Supported Options
 
 - ```"center"```
 - ```"centre"```
@@ -13041,9 +13367,14 @@ Whether to overwrite voxels interior to the specified ROI(s).
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *normalized* ROI contour labels/names to consider. Selection is performed on a
+whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want
+to select must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is
+extended POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match contour
+labels that have been *normalized* (i.e., mapped, translated) using the user-provided provided lexicon. This is useful
+for handling data with heterogeneous naming conventions where fuzzy matching is required. Refer to the lexicon for
+available labels.
 
 ##### Default
 
@@ -13054,7 +13385,7 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*Body.*"```
 - ```"Body"```
-- ```"Gross_Liver"```
+- ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
 
@@ -13062,9 +13393,12 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *raw* ROI contour labels/names to consider. Selection is performed on a whole-ROI
+basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If your ROI
+name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want to select
+must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is extended
+POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match 'raw' contour
+labels.
 
 ##### Default
 
@@ -13075,7 +13409,8 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*body.*"```
 - ```"body"```
-- ```"Gross_Liver"```
+- ```"^body$"```
+- ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
 
@@ -13374,9 +13709,14 @@ mixed together. Note regexes are case insensitive and should use extended POSIX 
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *normalized* ROI contour labels/names to consider. Selection is performed on a
+whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want
+to select must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is
+extended POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match contour
+labels that have been *normalized* (i.e., mapped, translated) using the user-provided provided lexicon. This is useful
+for handling data with heterogeneous naming conventions where fuzzy matching is required. Refer to the lexicon for
+available labels.
 
 ##### Default
 
@@ -13387,7 +13727,7 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*Body.*"```
 - ```"Body"```
-- ```"Gross_Liver"```
+- ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
 
@@ -13395,9 +13735,12 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *raw* ROI contour labels/names to consider. Selection is performed on a whole-ROI
+basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If your ROI
+name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want to select
+must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is extended
+POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match 'raw' contour
+labels.
 
 ##### Default
 
@@ -13408,7 +13751,8 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*body.*"```
 - ```"body"```
-- ```"Gross_Liver"```
+- ```"^body$"```
+- ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
 
@@ -13462,7 +13806,7 @@ Controls whether isolated or well-connected voxels are retained.
 
 - ```"isolated"```
 
-##### Examples
+##### Supported Options
 
 - ```"isolated"```
 - ```"well-connected"```
@@ -13713,9 +14057,14 @@ with a sphere. The effect is that a margin is added or subtracted to the ROIs, c
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *normalized* ROI contour labels/names to consider. Selection is performed on a
+whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want
+to select must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is
+extended POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match contour
+labels that have been *normalized* (i.e., mapped, translated) using the user-provided provided lexicon. This is useful
+for handling data with heterogeneous naming conventions where fuzzy matching is required. Refer to the lexicon for
+available labels.
 
 ##### Default
 
@@ -13726,7 +14075,7 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*Body.*"```
 - ```"Body"```
-- ```"Gross_Liver"```
+- ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
 
@@ -13796,7 +14145,7 @@ The specific operation to perform. Available options are: 'dilate_exact_surface'
 
 - ```"dilate_inexact_isotropic"```
 
-##### Examples
+##### Supported Options
 
 - ```"dilate_exact_surface"```
 - ```"dilate_exact_vertex"```
@@ -13840,9 +14189,14 @@ This operation injects metadata into contours.
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *normalized* ROI contour labels/names to consider. Selection is performed on a
+whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want
+to select must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is
+extended POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match contour
+labels that have been *normalized* (i.e., mapped, translated) using the user-provided provided lexicon. This is useful
+for handling data with heterogeneous naming conventions where fuzzy matching is required. Refer to the lexicon for
+available labels.
 
 ##### Default
 
@@ -13853,7 +14207,7 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*Body.*"```
 - ```"Body"```
-- ```"Gross_Liver"```
+- ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
 
@@ -13861,9 +14215,12 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *raw* ROI contour labels/names to consider. Selection is performed on a whole-ROI
+basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If your ROI
+name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want to select
+must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is extended
+POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match 'raw' contour
+labels.
 
 ##### Default
 
@@ -13874,7 +14231,8 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*body.*"```
 - ```"body"```
-- ```"Gross_Liver"```
+- ```"^body$"```
+- ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
 
@@ -14203,7 +14561,7 @@ ordinate is zero.
 
 - ```"area"```
 
-##### Examples
+##### Supported Options
 
 - ```"area"```
 - ```"peak"```
@@ -14270,9 +14628,14 @@ mixed together. Note regexes are case insensitive and should use extended POSIX 
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *normalized* ROI contour labels/names to consider. Selection is performed on a
+whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want
+to select must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is
+extended POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match contour
+labels that have been *normalized* (i.e., mapped, translated) using the user-provided provided lexicon. This is useful
+for handling data with heterogeneous naming conventions where fuzzy matching is required. Refer to the lexicon for
+available labels.
 
 ##### Default
 
@@ -14283,7 +14646,7 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*Body.*"```
 - ```"Body"```
-- ```"Gross_Liver"```
+- ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
 
@@ -14291,9 +14654,12 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *raw* ROI contour labels/names to consider. Selection is performed on a whole-ROI
+basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If your ROI
+name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want to select
+must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is extended
+POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match 'raw' contour
+labels.
 
 ##### Default
 
@@ -14304,7 +14670,8 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*body.*"```
 - ```"body"```
-- ```"Gross_Liver"```
+- ```"^body$"```
+- ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
 
@@ -14321,7 +14688,7 @@ the image plane. The first, 'planar_corner_inclusive', considers a voxel interio
 
 - ```"center"```
 
-##### Examples
+##### Supported Options
 
 - ```"center"```
 - ```"centre"```
@@ -14344,7 +14711,7 @@ and cancels all contour overlap.
 
 - ```"ignore"```
 
-##### Examples
+##### Supported Options
 
 - ```"ignore"```
 - ```"honour_opposite_orientations"```
@@ -14382,7 +14749,7 @@ intensities is zero. (This is useful for convolution kernels.)
 
 - ```"stretch11"```
 
-##### Examples
+##### Supported Options
 
 - ```"clamp"```
 - ```"stretch01"```
@@ -14495,9 +14862,14 @@ different sources, or using sub-selections of the data.
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *normalized* ROI contour labels/names to consider. Selection is performed on a
+whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want
+to select must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is
+extended POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match contour
+labels that have been *normalized* (i.e., mapped, translated) using the user-provided provided lexicon. This is useful
+for handling data with heterogeneous naming conventions where fuzzy matching is required. Refer to the lexicon for
+available labels.
 
 ##### Default
 
@@ -14508,7 +14880,7 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*Body.*"```
 - ```"Body"```
-- ```"Gross_Liver"```
+- ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
 
@@ -14516,9 +14888,12 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *raw* ROI contour labels/names to consider. Selection is performed on a whole-ROI
+basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If your ROI
+name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want to select
+must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is extended
+POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match 'raw' contour
+labels.
 
 ##### Default
 
@@ -14529,7 +14904,8 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*body.*"```
 - ```"body"```
-- ```"Gross_Liver"```
+- ```"^body$"```
+- ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
 
@@ -14713,9 +15089,12 @@ re-create the original contours.
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *raw* ROI contour labels/names to consider. Selection is performed on a whole-ROI
+basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If your ROI
+name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want to select
+must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is extended
+POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match 'raw' contour
+labels.
 
 ##### Default
 
@@ -14726,7 +15105,8 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*body.*"```
 - ```"body"```
-- ```"Gross_Liver"```
+- ```"^body$"```
+- ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
 
@@ -14734,9 +15114,14 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *normalized* ROI contour labels/names to consider. Selection is performed on a
+whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want
+to select must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is
+extended POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match contour
+labels that have been *normalized* (i.e., mapped, translated) using the user-provided provided lexicon. This is useful
+for handling data with heterogeneous naming conventions where fuzzy matching is required. Refer to the lexicon for
+available labels.
 
 ##### Default
 
@@ -14747,7 +15132,7 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*Body.*"```
 - ```"Body"```
-- ```"Gross_Liver"```
+- ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
 
@@ -14763,7 +15148,7 @@ degrees to reduce colinearity, which sometimes improves sub-segment area consist
 
 - ```"axis-aligned"```
 
-##### Examples
+##### Supported Options
 
 - ```"axis-aligned"```
 - ```"static-oblique"```
@@ -14798,7 +15183,7 @@ sub-segments and spatial dependence in sub-segment volume. Nested cleaving will 
 
 - ```"nested-cleave"```
 
-##### Examples
+##### Supported Options
 
 - ```"nested-cleave"```
 - ```"compound-cleave"```
@@ -14814,7 +15199,7 @@ Cleaves are implemented from left to right using the specified X, Y, and Z selec
 
 - ```"ZXY"```
 
-##### Examples
+##### Supported Options
 
 - ```"ZXY"```
 - ```"ZYX"```
@@ -15078,9 +15463,12 @@ Interactively plot time courses for the specified ROI(s).
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *raw* ROI contour labels/names to consider. Selection is performed on a whole-ROI
+basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If your ROI
+name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want to select
+must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is extended
+POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match 'raw' contour
+labels.
 
 ##### Default
 
@@ -15091,7 +15479,8 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*body.*"```
 - ```"body"```
-- ```"Gross_Liver"```
+- ```"^body$"```
+- ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
 
@@ -15296,7 +15685,7 @@ if there is no matching map found, the first available will be selected.
 
 - ```".*"```
 
-##### Examples
+##### Supported Options
 
 - ```"Viridis"```
 - ```"Magma"```
@@ -15390,9 +15779,12 @@ This routine purges contours if they satisfy various criteria.
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *raw* ROI contour labels/names to consider. Selection is performed on a whole-ROI
+basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If your ROI
+name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want to select
+must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is extended
+POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match 'raw' contour
+labels.
 
 ##### Default
 
@@ -15403,7 +15795,8 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*body.*"```
 - ```"body"```
-- ```"Gross_Liver"```
+- ```"^body$"```
+- ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
 
@@ -15411,9 +15804,14 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *normalized* ROI contour labels/names to consider. Selection is performed on a
+whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want
+to select must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is
+extended POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match contour
+labels that have been *normalized* (i.e., mapped, translated) using the user-provided provided lexicon. This is useful
+for handling data with heterogeneous naming conventions where fuzzy matching is required. Refer to the lexicon for
+available labels.
 
 ##### Default
 
@@ -15424,7 +15822,7 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*Body.*"```
 - ```"Body"```
-- ```"Gross_Liver"```
+- ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
 
@@ -15584,7 +15982,7 @@ rank or the corresponding percentile. Ranks start at zero and percentiles are ce
 
 - ```"Percentile"```
 
-##### Examples
+##### Supported Options
 
 - ```"Rank"```
 - ```"Percentile"```
@@ -15686,9 +16084,14 @@ mixed together. Note regexes are case insensitive and should use extended POSIX 
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *normalized* ROI contour labels/names to consider. Selection is performed on a
+whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want
+to select must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is
+extended POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match contour
+labels that have been *normalized* (i.e., mapped, translated) using the user-provided provided lexicon. This is useful
+for handling data with heterogeneous naming conventions where fuzzy matching is required. Refer to the lexicon for
+available labels.
 
 ##### Default
 
@@ -15699,7 +16102,7 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*Body.*"```
 - ```"Body"```
-- ```"Gross_Liver"```
+- ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
 
@@ -15707,9 +16110,12 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *raw* ROI contour labels/names to consider. Selection is performed on a whole-ROI
+basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If your ROI
+name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want to select
+must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is extended
+POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match 'raw' contour
+labels.
 
 ##### Default
 
@@ -15720,7 +16126,8 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*body.*"```
 - ```"body"```
-- ```"Gross_Liver"```
+- ```"^body$"```
+- ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
 
@@ -15796,7 +16203,7 @@ not overwrite the original voxel value.
 
 - ```"median"```
 
-##### Examples
+##### Supported Options
 
 - ```"min"```
 - ```"erode"```
@@ -15981,9 +16388,14 @@ mixed together. Note regexes are case insensitive and should use extended POSIX 
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *normalized* ROI contour labels/names to consider. Selection is performed on a
+whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want
+to select must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is
+extended POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match contour
+labels that have been *normalized* (i.e., mapped, translated) using the user-provided provided lexicon. This is useful
+for handling data with heterogeneous naming conventions where fuzzy matching is required. Refer to the lexicon for
+available labels.
 
 ##### Default
 
@@ -15994,7 +16406,7 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*Body.*"```
 - ```"Body"```
-- ```"Gross_Liver"```
+- ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
 
@@ -16002,9 +16414,12 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *raw* ROI contour labels/names to consider. Selection is performed on a whole-ROI
+basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If your ROI
+name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want to select
+must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is extended
+POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match 'raw' contour
+labels.
 
 ##### Default
 
@@ -16015,7 +16430,8 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*body.*"```
 - ```"body"```
-- ```"Gross_Liver"```
+- ```"^body$"```
+- ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
 
@@ -16091,7 +16507,7 @@ not overwrite the original voxel value.
 
 - ```"median"```
 
-##### Examples
+##### Supported Options
 
 - ```"min"```
 - ```"erode"```
@@ -16248,9 +16664,14 @@ mixed together. Note regexes are case insensitive and should use extended POSIX 
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *normalized* ROI contour labels/names to consider. Selection is performed on a
+whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want
+to select must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is
+extended POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match contour
+labels that have been *normalized* (i.e., mapped, translated) using the user-provided provided lexicon. This is useful
+for handling data with heterogeneous naming conventions where fuzzy matching is required. Refer to the lexicon for
+available labels.
 
 ##### Default
 
@@ -16261,7 +16682,7 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*Body.*"```
 - ```"Body"```
-- ```"Gross_Liver"```
+- ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
 
@@ -16269,9 +16690,12 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *raw* ROI contour labels/names to consider. Selection is performed on a whole-ROI
+basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If your ROI
+name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want to select
+must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is extended
+POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match 'raw' contour
+labels.
 
 ##### Default
 
@@ -16282,7 +16706,8 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*body.*"```
 - ```"body"```
-- ```"Gross_Liver"```
+- ```"^body$"```
+- ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
 
@@ -16299,7 +16724,7 @@ the image plane. The first, 'planar_corner_inclusive', considers a voxel interio
 
 - ```"center"```
 
-##### Examples
+##### Supported Options
 
 - ```"center"```
 - ```"centre"```
@@ -16322,7 +16747,7 @@ and cancels all contour overlap.
 
 - ```"ignore"```
 
-##### Examples
+##### Supported Options
 
 - ```"ignore"```
 - ```"honour_opposite_orientations"```
@@ -16413,9 +16838,14 @@ of view of extraneous image slices.
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *normalized* ROI contour labels/names to consider. Selection is performed on a
+whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want
+to select must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is
+extended POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match contour
+labels that have been *normalized* (i.e., mapped, translated) using the user-provided provided lexicon. This is useful
+for handling data with heterogeneous naming conventions where fuzzy matching is required. Refer to the lexicon for
+available labels.
 
 ##### Default
 
@@ -16426,7 +16856,7 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*Body.*"```
 - ```"Body"```
-- ```"Gross_Liver"```
+- ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
 
@@ -16434,9 +16864,12 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *raw* ROI contour labels/names to consider. Selection is performed on a whole-ROI
+basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If your ROI
+name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want to select
+must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is extended
+POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match 'raw' contour
+labels.
 
 ##### Default
 
@@ -16447,7 +16880,8 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*body.*"```
 - ```"body"```
-- ```"Gross_Liver"```
+- ```"^body$"```
+- ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
 
@@ -16477,9 +16911,14 @@ reduce the computational complexity of other operations.
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *normalized* ROI contour labels/names to consider. Selection is performed on a
+whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want
+to select must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is
+extended POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match contour
+labels that have been *normalized* (i.e., mapped, translated) using the user-provided provided lexicon. This is useful
+for handling data with heterogeneous naming conventions where fuzzy matching is required. Refer to the lexicon for
+available labels.
 
 ##### Default
 
@@ -16490,7 +16929,7 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*Body.*"```
 - ```"Body"```
-- ```"Gross_Liver"```
+- ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
 
@@ -16498,9 +16937,12 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *raw* ROI contour labels/names to consider. Selection is performed on a whole-ROI
+basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If your ROI
+name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want to select
+must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is extended
+POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match 'raw' contour
+labels.
 
 ##### Default
 
@@ -16511,7 +16953,8 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*body.*"```
 - ```"body"```
-- ```"Gross_Liver"```
+- ```"^body$"```
+- ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
 
@@ -16553,7 +16996,7 @@ averaging that may result in numerical imprecision.
 
 - ```"vert-collapse"```
 
-##### Examples
+##### Supported Options
 
 - ```"vertex-collapse"```
 - ```"vertex-removal"```
@@ -16768,7 +17211,7 @@ inspecting the image produced by the 'attenutation-length' model.
 
 - ```"attenuation-length"```
 
-##### Examples
+##### Supported Options
 
 - ```"attenuation-length"```
 - ```"exponential"```
@@ -16952,7 +17395,7 @@ considered). The only second-order estimator is the basic nearest-neighbour seco
 
 - ```"Scharr-3x3"```
 
-##### Examples
+##### Supported Options
 
 - ```"first"```
 - ```"Roberts-cross-3x3"```
@@ -16977,7 +17420,7 @@ orientation (in radians; [0,2pi) ).
 
 - ```"magnitude"```
 
-##### Examples
+##### Supported Options
 
 - ```"row-aligned"```
 - ```"column-aligned"```
@@ -17043,7 +17486,7 @@ is based on a 5x5 Gaussian blur estimator.
 
 - ```"unsharp_mask_5x5"```
 
-##### Examples
+##### Supported Options
 
 - ```"sharpen_3x3"```
 - ```"unsharp_mask_5x5"```
@@ -17139,9 +17582,12 @@ This operation sub-segments the selected contours, resulting in contours with re
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *raw* ROI contour labels/names to consider. Selection is performed on a whole-ROI
+basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If your ROI
+name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want to select
+must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is extended
+POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match 'raw' contour
+labels.
 
 ##### Default
 
@@ -17152,7 +17598,8 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*body.*"```
 - ```"body"```
-- ```"Gross_Liver"```
+- ```"^body$"```
+- ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
 
@@ -17160,9 +17607,14 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *normalized* ROI contour labels/names to consider. Selection is performed on a
+whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want
+to select must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is
+extended POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match contour
+labels that have been *normalized* (i.e., mapped, translated) using the user-provided provided lexicon. This is useful
+for handling data with heterogeneous naming conventions where fuzzy matching is required. Refer to the lexicon for
+available labels.
 
 ##### Default
 
@@ -17173,7 +17625,7 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*Body.*"```
 - ```"Body"```
-- ```"Gross_Liver"```
+- ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
 
@@ -17189,7 +17641,7 @@ degrees to reduce colinearity, which sometimes improves sub-segment area consist
 
 - ```"axis-aligned"```
 
-##### Examples
+##### Supported Options
 
 - ```"axis-aligned"```
 - ```"static-oblique"```
@@ -17242,7 +17694,7 @@ sub-segments and spatial dependence in sub-segment volume.
 
 - ```"nested-cleave"```
 
-##### Examples
+##### Supported Options
 
 - ```"nested-cleave"```
 - ```"compound-cleave"```
@@ -17460,9 +17912,14 @@ other data afterward. Leave empty to NOT dump anything.
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *normalized* ROI contour labels/names to consider. Selection is performed on a
+whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want
+to select must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is
+extended POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match contour
+labels that have been *normalized* (i.e., mapped, translated) using the user-provided provided lexicon. This is useful
+for handling data with heterogeneous naming conventions where fuzzy matching is required. Refer to the lexicon for
+available labels.
 
 ##### Default
 
@@ -17473,7 +17930,7 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*Body.*"```
 - ```"Body"```
-- ```"Gross_Liver"```
+- ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
 
@@ -17489,7 +17946,7 @@ colinearity, which sometimes improves sub-segment area consistency).
 
 - ```"AxisAligned"```
 
-##### Examples
+##### Supported Options
 
 - ```"AxisAligned"```
 - ```"StaticOblique"```
@@ -17534,9 +17991,12 @@ metadata to their parent contours, except they are renamed accordingly.
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *raw* ROI contour labels/names to consider. Selection is performed on a whole-ROI
+basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If your ROI
+name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want to select
+must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is extended
+POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match 'raw' contour
+labels.
 
 ##### Default
 
@@ -17547,7 +18007,8 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*body.*"```
 - ```"body"```
-- ```"Gross_Liver"```
+- ```"^body$"```
+- ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
 
@@ -17563,7 +18024,7 @@ serious problems.
 
 - ```"nested"```
 
-##### Examples
+##### Supported Options
 
 - ```"nested"```
 - ```"compound"```
@@ -17879,7 +18340,7 @@ as the inputs.
 
 - ```"inplane-bilinear"```
 
-##### Examples
+##### Supported Options
 
 - ```"inplane-bicubic"```
 - ```"inplane-bilinear"```
@@ -18149,9 +18610,14 @@ non-sensical. The reference ROI is used to orient the cleaving plane to trim the
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *normalized* ROI contour labels/names to consider. Selection is performed on a
+whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want
+to select must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is
+extended POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match contour
+labels that have been *normalized* (i.e., mapped, translated) using the user-provided provided lexicon. This is useful
+for handling data with heterogeneous naming conventions where fuzzy matching is required. Refer to the lexicon for
+available labels.
 
 ##### Default
 
@@ -18162,7 +18628,7 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*Body.*"```
 - ```"Body"```
-- ```"Gross_Liver"```
+- ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
 
@@ -18190,9 +18656,12 @@ non-sensical. The reference ROI is used to orient the cleaving plane to trim the
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *raw* ROI contour labels/names to consider. Selection is performed on a whole-ROI
+basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If your ROI
+name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want to select
+must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is extended
+POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match 'raw' contour
+labels.
 
 ##### Default
 
@@ -18203,7 +18672,8 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*body.*"```
 - ```"body"```
-- ```"Gross_Liver"```
+- ```"^body$"```
+- ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
 
@@ -18609,9 +19079,14 @@ The image channel to use. Zero-based.
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *normalized* ROI contour labels/names to consider. Selection is performed on a
+whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want
+to select must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is
+extended POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match contour
+labels that have been *normalized* (i.e., mapped, translated) using the user-provided provided lexicon. This is useful
+for handling data with heterogeneous naming conventions where fuzzy matching is required. Refer to the lexicon for
+available labels.
 
 ##### Default
 
@@ -18622,7 +19097,7 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*Body.*"```
 - ```"Body"```
-- ```"Gross_Liver"```
+- ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
 
@@ -18630,9 +19105,12 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *raw* ROI contour labels/names to consider. Selection is performed on a whole-ROI
+basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If your ROI
+name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want to select
+must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is extended
+POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match 'raw' contour
+labels.
 
 ##### Default
 
@@ -18643,7 +19121,8 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*body.*"```
 - ```"body"```
-- ```"Gross_Liver"```
+- ```"^body$"```
+- ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
 
@@ -18661,7 +19140,7 @@ and cancels all contour overlap.
 
 - ```"ignore"```
 
-##### Examples
+##### Supported Options
 
 - ```"ignore"```
 - ```"honour_opposite_orientations"```
@@ -18682,7 +19161,7 @@ the image plane. The first, 'planar_corner_inclusive', considers a voxel interio
 
 - ```"center"```
 
-##### Examples
+##### Supported Options
 
 - ```"center"```
 - ```"centre"```
@@ -18712,9 +19191,12 @@ This operation transforms contours by translating, scaling, and rotating vertice
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *raw* ROI contour labels/names to consider. Selection is performed on a whole-ROI
+basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If your ROI
+name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want to select
+must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is extended
+POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match 'raw' contour
+labels.
 
 ##### Default
 
@@ -18725,7 +19207,8 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*body.*"```
 - ```"body"```
-- ```"Gross_Liver"```
+- ```"^body$"```
+- ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
 
@@ -18733,9 +19216,14 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *normalized* ROI contour labels/names to consider. Selection is performed on a
+whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want
+to select must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is
+extended POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match contour
+labels that have been *normalized* (i.e., mapped, translated) using the user-provided provided lexicon. This is useful
+for handling data with heterogeneous naming conventions where fuzzy matching is required. Refer to the lexicon for
+available labels.
 
 ##### Default
 
@@ -18746,7 +19234,7 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*Body.*"```
 - ```"Body"```
-- ```"Gross_Liver"```
+- ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
 
@@ -18949,7 +19437,7 @@ and cancels all contour overlap.
 
 - ```"ignore"```
 
-##### Examples
+##### Supported Options
 
 - ```"ignore"```
 - ```"honour_opposite_orientations"```
@@ -18970,7 +19458,7 @@ the image plane. The first, 'planar_corner_inclusive', considers a voxel interio
 
 - ```"planar_inc"```
 
-##### Examples
+##### Supported Options
 
 - ```"center"```
 - ```"centre"```
@@ -19049,9 +19537,14 @@ Whether to overwrite voxels interior to the specified ROI(s).
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *normalized* ROI contour labels/names to consider. Selection is performed on a
+whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want
+to select must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is
+extended POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match contour
+labels that have been *normalized* (i.e., mapped, translated) using the user-provided provided lexicon. This is useful
+for handling data with heterogeneous naming conventions where fuzzy matching is required. Refer to the lexicon for
+available labels.
 
 ##### Default
 
@@ -19062,7 +19555,7 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*Body.*"```
 - ```"Body"```
-- ```"Gross_Liver"```
+- ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
 
@@ -19070,9 +19563,12 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *raw* ROI contour labels/names to consider. Selection is performed on a whole-ROI
+basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If your ROI
+name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want to select
+must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is extended
+POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match 'raw' contour
+labels.
 
 ##### Default
 
@@ -19083,7 +19579,8 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*body.*"```
 - ```"body"```
-- ```"Gross_Liver"```
+- ```"^body$"```
+- ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
 
@@ -19149,7 +19646,7 @@ you don't. Use the high setting if your TPS goes overboard linking data sets by 
 
 - ```"medium"```
 
-##### Examples
+##### Supported Options
 
 - ```"low"```
 - ```"medium"```
@@ -19259,9 +19756,14 @@ mixed together. Note regexes are case insensitive and should use extended POSIX 
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *normalized* ROI contour labels/names to consider. Selection is performed on a
+whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want
+to select must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is
+extended POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match contour
+labels that have been *normalized* (i.e., mapped, translated) using the user-provided provided lexicon. This is useful
+for handling data with heterogeneous naming conventions where fuzzy matching is required. Refer to the lexicon for
+available labels.
 
 ##### Default
 
@@ -19272,7 +19774,7 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*Body.*"```
 - ```"Body"```
-- ```"Gross_Liver"```
+- ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
 
@@ -19280,9 +19782,12 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *raw* ROI contour labels/names to consider. Selection is performed on a whole-ROI
+basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If your ROI
+name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want to select
+must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is extended
+POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match 'raw' contour
+labels.
 
 ##### Default
 
@@ -19293,7 +19798,8 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*body.*"```
 - ```"body"```
-- ```"Gross_Liver"```
+- ```"^body$"```
+- ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
 
@@ -19400,9 +19906,14 @@ mixed together. Note regexes are case insensitive and should use extended POSIX 
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *normalized* ROI contour labels/names to consider. Selection is performed on a
+whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want
+to select must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is
+extended POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match contour
+labels that have been *normalized* (i.e., mapped, translated) using the user-provided provided lexicon. This is useful
+for handling data with heterogeneous naming conventions where fuzzy matching is required. Refer to the lexicon for
+available labels.
 
 ##### Default
 
@@ -19413,7 +19924,7 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*Body.*"```
 - ```"Body"```
-- ```"Gross_Liver"```
+- ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
 
@@ -19421,9 +19932,12 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *raw* ROI contour labels/names to consider. Selection is performed on a whole-ROI
+basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If your ROI
+name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want to select
+must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is extended
+POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match 'raw' contour
+labels.
 
 ##### Default
 
@@ -19434,7 +19948,8 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*body.*"```
 - ```"body"```
-- ```"Gross_Liver"```
+- ```"^body$"```
+- ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
 
@@ -19467,7 +19982,7 @@ same window to be more heavily weighted. Try avoid boundaries or add extra margi
 
 - ```"Gaussian"```
 
-##### Examples
+##### Supported Options
 
 - ```"Gaussian"```
 
@@ -19527,9 +20042,14 @@ mixed together. Note regexes are case insensitive and should use extended POSIX 
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *normalized* ROI contour labels/names to consider. Selection is performed on a
+whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want
+to select must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is
+extended POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match contour
+labels that have been *normalized* (i.e., mapped, translated) using the user-provided provided lexicon. This is useful
+for handling data with heterogeneous naming conventions where fuzzy matching is required. Refer to the lexicon for
+available labels.
 
 ##### Default
 
@@ -19540,7 +20060,7 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*Body.*"```
 - ```"Body"```
-- ```"Gross_Liver"```
+- ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
 
@@ -19548,9 +20068,12 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *raw* ROI contour labels/names to consider. Selection is performed on a whole-ROI
+basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If your ROI
+name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want to select
+must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is extended
+POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match 'raw' contour
+labels.
 
 ##### Default
 
@@ -19561,7 +20084,8 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*body.*"```
 - ```"body"```
-- ```"Gross_Liver"```
+- ```"^body$"```
+- ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
 
@@ -19593,7 +20117,7 @@ boundary conditions. First-order estimators include the basic nearest-neighbour 
 
 - ```"Sobel-3x3x3"```
 
-##### Examples
+##### Supported Options
 
 - ```"first"```
 - ```"Sobel-3x3x3"```
@@ -19609,7 +20133,7 @@ support magnitude (addition of orthogonal components in quadrature).
 
 - ```"magnitude"```
 
-##### Examples
+##### Supported Options
 
 - ```"row-aligned"```
 - ```"column-aligned"```
@@ -19678,9 +20202,14 @@ mixed together. Note regexes are case insensitive and should use extended POSIX 
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *normalized* ROI contour labels/names to consider. Selection is performed on a
+whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want
+to select must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is
+extended POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match contour
+labels that have been *normalized* (i.e., mapped, translated) using the user-provided provided lexicon. This is useful
+for handling data with heterogeneous naming conventions where fuzzy matching is required. Refer to the lexicon for
+available labels.
 
 ##### Default
 
@@ -19691,7 +20220,7 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*Body.*"```
 - ```"Body"```
-- ```"Gross_Liver"```
+- ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
 
@@ -19699,9 +20228,12 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 
 ##### Description
 
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses extended POSIX syntax.
+A regular expression (regex) matching *raw* ROI contour labels/names to consider. Selection is performed on a whole-ROI
+basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If your ROI
+name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want to select
+must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is extended
+POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match 'raw' contour
+labels.
 
 ##### Default
 
@@ -19712,7 +20244,8 @@ to match the single regex, so use the 'or' token if needed. Regex is case insens
 - ```".*"```
 - ```".*body.*"```
 - ```"body"```
-- ```"Gross_Liver"```
+- ```"^body$"```
+- ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
 
@@ -19730,7 +20263,7 @@ and cancels all contour overlap.
 
 - ```"ignore"```
 
-##### Examples
+##### Supported Options
 
 - ```"ignore"```
 - ```"honour_opposite_orientations"```
@@ -19751,7 +20284,7 @@ the image plane. The first, 'planar_corner_inclusive', considers a voxel interio
 
 - ```"center"```
 
-##### Examples
+##### Supported Options
 
 - ```"center"```
 - ```"centre"```
