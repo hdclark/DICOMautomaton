@@ -47,6 +47,9 @@ endif()
 add_library(            DICOM_File_Loader_obj OBJECT DICOM_File_Loader.cc )
 set_target_properties(  DICOM_File_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
+add_library(            Lexicon_Loader_obj OBJECT Lexicon_Loader.cc )
+set_target_properties(  Lexicon_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+
 add_library(            Contour_Collection_Estimates_obj OBJECT Contour_Collection_Estimates.cc )
 set_target_properties(  Contour_Collection_Estimates_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
@@ -249,6 +252,7 @@ add_executable (dicomautomaton_dispatcher
     $<TARGET_OBJECTS:File_Loader_obj>
     $<TARGET_OBJECTS:Boost_Serialization_File_Loader_obj>
     $<TARGET_OBJECTS:DICOM_File_Loader_obj>
+    $<TARGET_OBJECTS:Lexicon_Loader_obj>
     $<TARGET_OBJECTS:FITS_File_Loader_obj>
     $<TARGET_OBJECTS:XYZ_File_Loader_obj>
     $<TARGET_OBJECTS:DVH_File_Loader_obj>
@@ -318,6 +322,7 @@ if(WITH_WT)
         $<TARGET_OBJECTS:File_Loader_obj>
         $<TARGET_OBJECTS:Boost_Serialization_File_Loader_obj>
         $<TARGET_OBJECTS:DICOM_File_Loader_obj>
+        $<TARGET_OBJECTS:Lexicon_Loader_obj>
         $<TARGET_OBJECTS:FITS_File_Loader_obj>
         $<TARGET_OBJECTS:XYZ_File_Loader_obj>
         $<TARGET_OBJECTS:DVH_File_Loader_obj>

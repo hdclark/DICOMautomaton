@@ -57,6 +57,7 @@
 #include "DICOM_File_Loader.h"
 #include "FITS_File_Loader.h"
 #include "XYZ_File_Loader.h"
+#include "Lexicon_Loader.h"
 #include "Operation_Dispatcher.h"
 #include "Structs.h"
 #include "Regex_Selectors.h"
@@ -231,34 +232,16 @@ BaseWebServerApplication::BaseWebServerApplication(const Wt::WEnvironment &env) 
     FUNCINFO("The unique directory for this session is '" << this->InstancePrivateDirectory << "'");
 
     //Try find a lexicon file if none were provided.
-    {
-        if(this->FilenameLex.empty()){
-            std::list<std::string> trial = { 
-                // General, all-purpose lexicon suitable for 'standard' photon external beam therapy.
-                "20201007_standard_sites.lexicon",
-                "Lexicons/20201007_standard_sites.lexicon",
-                "/usr/share/explicator/lexicons/20201007_standard_sites.lexicon",
-
-                // Updated H&N-specific lexicon derived from a large cohort of study patients.
-                "20191212_SGF_and_SGFQ_tags.lexicon",
-                "Lexicons/20191212_SGF_and_SGFQ_tags.lexicon",
-                "/usr/share/explicator/lexicons/20191212_SGF_and_SGFQ_tags.lexicon",
-
-                // Classic H&N-specific lexicons derived from a large cohort of study patients.
-                "20150925_SGF_and_SGFQ_tags.lexicon",
-                "Lexicons/20150925_SGF_and_SGFQ_tags.lexicon",
-                "/usr/share/explicator/lexicons/20150925_20150925_SGF_and_SGFQ_tags.lexicon",
-
-                // Older fallbacks.
-                "/usr/share/explicator/lexicons/20130319_SGF_filter_data_deciphered5.lexicon",
-                "/usr/share/explicator/lexicons/20121030_SGF_filter_data_deciphered4.lexicon" };
-            for(const auto & f : trial) if(Does_File_Exist_And_Can_Be_Read(f)){
-                this->FilenameLex = f;
-                FUNCINFO("No lexicon was explicitly provided. Using file '" << FilenameLex << "' as lexicon");
-                break;
-            }
+    if(FilenameLex.empty()){
+        FilenameLex = Locate_Lexicon_File();
+        if(FilenameLex.empty()){
+            FUNCINFO("No lexicon was explicitly provided. Using located file '" << FilenameLex << "' as lexicon");
         }
-        if(this->FilenameLex.empty()) throw std::runtime_error("Lexicon file not found. Please provide one or see program help for more info");
+    }
+    if(FilenameLex.empty()){
+        FUNCINFO("No lexicon provided or located. Attempting to write a default lexicon");
+        FilenameLex = Create_Default_Lexicon_File();
+        FUNCINFO("Using file '" << FilenameLex << "' as lexicon");
     }
 
     // -----------------------------------------------------------------------------------
