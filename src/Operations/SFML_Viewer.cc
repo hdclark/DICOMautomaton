@@ -4,6 +4,7 @@
 #include <array>
 #include <cmath>
 #include <cstdint>
+#include <cctype>
 #include <cstdlib>            //Needed for exit() calls.
 #include <exception>
 #include <any>
@@ -23,6 +24,7 @@
 #include <type_traits>
 #include <utility>            //Needed for std::pair.
 #include <vector>
+#include <chrono>
 
 #include <boost/filesystem.hpp>
 
@@ -58,6 +60,114 @@
 
 #include "SFML_Viewer.h"
 
+static
+std::string Dialog_Input(std::string msg, std::string primer){
+    uint32_t FPSLimit = 30;
+
+    std::string out;
+
+    //Open a window.
+    sf::RenderWindow window;
+    window.create(sf::VideoMode(640, 480), "Input dialog");
+    window.setFramerateLimit(FPSLimit);
+
+    //Attempt to load fonts. We should try a few different files, and include a back-up somewhere accessible...
+    sf::Font afont;
+    if( !afont.loadFromFile("dcma_minimal.otf") // A minimal ASCII-only font.
+    &&  !afont.loadFromFile("/usr/share/fonts/TTF/cmr10.ttf") // Arch Linux 'ttf-computer-modern-fonts' pkg.
+    &&  !afont.loadFromFile("/usr/share/fonts/truetype/cmu/cmunrm.ttf") // Debian 'fonts-cmu' pkg.
+    &&  !afont.loadFromFile("/usr/share/fonts/gnu-free/FreeMono.otf") // Arch Linux 'gnu-free-fonts' pkg.
+    &&  !afont.loadFromFile("/usr/share/fonts/truetype/freefont/FreeMono.ttf") ){ // Debian 'fonts-freefont-ttf' pkg.
+        FUNCWARN("Unable to find a suitable font file on host system -- loading embedded minimal font");
+        if(!afont.loadFromMemory(static_cast<void*>(dcma_minimal_ttf), static_cast<size_t>(dcma_minimal_ttf_len))){
+            FUNCERR("Unable to load embedded font. Cannot continue");
+        }
+    }
+
+    sf::Text msgtext;
+    msgtext.setFont(afont);
+    msgtext.setString("");
+    msgtext.setCharacterSize(15); //Size in pixels, not in points.
+    msgtext.setFillColor(sf::Color::White);
+    msgtext.setOutlineColor(sf::Color::White);
+
+    //Run until the window is closed or the user wishes to exit.
+    auto t_start = std::chrono::steady_clock::now();
+    std::stringstream inss;
+    inss << primer;
+    while(window.isOpen()){
+
+        //Check if any events have accumulated since the last poll. If so, deal with them.
+        sf::Event event;
+        while(window.pollEvent(event)){
+            if(event.type == sf::Event::Closed){
+                window.close();
+                break;
+            }else if(window.hasFocus() && (event.type == sf::Event::KeyPressed)){
+                if(event.key.code == sf::Keyboard::Escape){
+                    window.close();
+                    break;
+
+                }else if(event.key.code == sf::Keyboard::Enter){
+                    out = inss.str();
+                    window.close();
+                    break;
+
+                }else if((event.key.code == sf::Keyboard::Backspace) && !inss.str().empty()){
+                    std::string shtl(inss.str());
+                    shtl.pop_back();
+                    inss.str(shtl);
+                    inss.seekp(0, inss.end);
+                }
+
+            }else if(window.hasFocus() && (event.type == sf::Event::TextEntered)){
+                //Not the same as KeyPressed + KeyReleased. Think unicode characters, or control keys.
+                if((event.text.unicode < 128) && std::isprint(event.text.unicode)){
+                    const auto thechar = static_cast<char>(event.text.unicode);
+                    inss << thechar;
+                }
+
+            }else if(event.type == sf::Event::Resized){
+                sf::View view;
+
+                //Shrink the image depending on the amount of window space available. The image might disappear off the
+                // screen if the window is too small, but nothing gets squished.
+                view.reset(sf::FloatRect(0, 0, event.size.width, event.size.height));
+                window.setView(view);
+            }
+        }
+
+        //Begin drawing the window contents.
+        window.clear(sf::Color::Black);
+
+        auto t_current = std::chrono::steady_clock::now();
+        auto dt = std::chrono::duration_cast< std::chrono::milliseconds >(t_current - t_start).count();
+        const auto cursor = ((dt/500) % 2 == 0) ? '_' : ' ';
+
+        std::stringstream msgtextss(msg + "\n\n" + "Press enter when done." + "\n\n $> " + inss.str() + cursor);
+        msgtext.setString(msgtextss.str());
+        {
+            const auto item_bbox = msgtext.getGlobalBounds();
+            const auto item_blc  = sf::Vector2f( item_bbox.left, item_bbox.top + item_bbox.height );
+
+            const auto wndw_view = window.getView();
+            const auto view_cntr = wndw_view.getCenter();
+            const auto view_size = wndw_view.getSize();
+            const auto view_blc  = sf::Vector2f( view_cntr.x - 0.48f*view_size.x, view_cntr.y + 0.48f*view_size.y );
+
+            //We should have that the item's bottom right corner coincides with the window's bottom right corner.
+            const sf::Vector2f offset = view_blc - item_blc;
+
+            //Now move the text over.
+//            msgtext.move(offset);
+        }
+
+        window.draw(msgtext);
+        window.display();
+    }
+
+    return out;
+}
 
 OperationDoc OpArgDocSFML_Viewer(){
     OperationDoc out;
@@ -1624,10 +1734,13 @@ Drover SFML_Viewer(Drover DICOM_data,
     //Query the user to provide a window and level explicitly.
     const auto query_for_window_and_level = [&](){
             try{
-                const std::string low_str = Detox_String(Execute_Command_In_Pipe(
-                    "zenity --entry --text='What is the new window low?' --entry-text='100.0' 2>/dev/null"));
-                const std::string high_str = Detox_String(Execute_Command_In_Pipe(
-                    "zenity --entry --text='What is the new window high?' --entry-text='500.0' 2>/dev/null"));
+//                const std::string low_str = Detox_String(Execute_Command_In_Pipe(
+//                    "zenity --entry --text='What is the new window low?' --entry-text='100.0' 2>/dev/null"));
+//                const std::string high_str = Detox_String(Execute_Command_In_Pipe(
+//                    "zenity --entry --text='What is the new window high?' --entry-text='500.0' 2>/dev/null"));
+
+                const std::string low_str  = Dialog_Input("What is the new window low?",  "100.0");
+                const std::string high_str = Dialog_Input("What is the new window high?", "500.0");
 
                 // Parse the values and protect against mixing low and high values.
                 const auto new_low  = std::stod(low_str);
