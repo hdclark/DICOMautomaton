@@ -264,6 +264,11 @@ void Emit_Documentation(std::ostream &os){
         "## Citing"
     );
     reflow_and_emit_paragraph(os, max_width, nobullet, nobullet, nolinebreak,
+        "A citeable DOI is assigned to all releases; the current DOI can be found via"
+        " [![DOI](https://zenodo.org/badge/89630691.svg)](https://zenodo.org/badge/latestdoi/89630691)"
+        " or by clicking [here](https://zenodo.org/badge/latestdoi/89630691)."
+    );
+    reflow_and_emit_paragraph(os, max_width, nobullet, nobullet, nolinebreak,
         "Several publications and presentations refer to DICOMautomaton or describe some aspect of it."
         " Here are a few:"
     );
@@ -289,11 +294,11 @@ void Emit_Documentation(std::ostream &os){
         "H. Clark, J. Wu, V. Moiseenko, and S. Thomas."
         " Distributed, asynchronous, reactive dosimetric and outcomes analysis using DICOMautomaton."
         " Poster presentation at the COMP Annual Scientific Meeting, Banff, Canada."
-        " July 9--12, 2014."
+        " July 9-12, 2014."
     );
     reflow_and_emit_paragraph(os, max_width, nobullet, nobullet, nolinebreak,
         "If you use DICOMautomaton in an academic work, we ask that you please cite the"
-        " most relevant publication for that work, if possible."
+        " most relevant publication for that work or the most relevant release DOI, if possible."
     );
  
     //----------------
