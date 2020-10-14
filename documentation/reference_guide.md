@@ -101,6 +101,10 @@ interface works well for specific installations.
 
 ## Citing
 
+DICOMautomaton can be cited as a whole using [doi:10.5281/zenodo.4088796](https://doi.org/10.5281/zenodo.4088796).
+Individual releases are assigned a DOI too; the latest release DOI can be found
+[here](https://zenodo.org/badge/latestdoi/89630691).
+
 Several publications and presentations refer to DICOMautomaton or describe some aspect of it. Here are a few:
 
 - H. Clark, J. Beaudry, J. Wu, and S. Thomas. Making use of virtual dimensions for visualization and contouring. Poster
@@ -115,10 +119,10 @@ Several publications and presentations refer to DICOMautomaton or describe some 
   DICOMautomaton. In the Journal of Physics: Conference Series, vol. 489, no. 1, p. 012088. IOP Publishing, 2014.
 
 - H. Clark, J. Wu, V. Moiseenko, and S. Thomas. Distributed, asynchronous, reactive dosimetric and outcomes analysis
-  using DICOMautomaton. Poster presentation at the COMP Annual Scientific Meeting, Banff, Canada. July 9--12, 2014.
+  using DICOMautomaton. Poster presentation at the COMP Annual Scientific Meeting, Banff, Canada. July 9-12, 2014.
 
-If you use DICOMautomaton in an academic work, we ask that you please cite the most relevant publication for that work,
-if possible.
+If you use DICOMautomaton in an academic work, we ask that you please cite the most relevant publication for that work
+or the most relevant release DOI, if possible.
 
 ## Components
 

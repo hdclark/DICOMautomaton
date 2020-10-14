@@ -264,9 +264,10 @@ void Emit_Documentation(std::ostream &os){
         "## Citing"
     );
     reflow_and_emit_paragraph(os, max_width, nobullet, nobullet, nolinebreak,
-        "A citeable DOI is assigned to all releases; the current DOI can be found via"
-        " [![DOI](https://zenodo.org/badge/89630691.svg)](https://zenodo.org/badge/latestdoi/89630691)"
-        " or by clicking [here](https://zenodo.org/badge/latestdoi/89630691)."
+        "DICOMautomaton can be cited as a whole using"
+        " [doi:10.5281/zenodo.4088796](https://doi.org/10.5281/zenodo.4088796)."
+        " Individual releases are assigned a DOI too; the latest release DOI can be found"
+        " [here](https://zenodo.org/badge/latestdoi/89630691)."
     );
     reflow_and_emit_paragraph(os, max_width, nobullet, nobullet, nolinebreak,
         "Several publications and presentations refer to DICOMautomaton or describe some aspect of it."

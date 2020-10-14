@@ -454,6 +454,21 @@ Note that this method is experimental.
 `DICOMautomaton` can be installed on `Android` inside a `Termux` environment
 (refer to guide in [documentation/](documentation/)).
 
+## Citing
+
+If you use `DICOMautomaton` in an academic work, we ask that you please cite the
+most relevant publication for that work or the most relevant release DOI, if possible.
+
+`DICOMautomaton` can be cited **as a whole** using
+[doi:10.5281/zenodo.4088796](https://doi.org/10.5281/zenodo.4088796).
+
+Individual releases are assigned a DOI too; the latest release DOI can be found via
+[![DOI](https://zenodo.org/badge/89630691.svg)](https://zenodo.org/badge/latestdoi/89630691)
+or by clicking [here](https://zenodo.org/badge/latestdoi/89630691).
+
+Finally, several publications describe core functionality of `DICOMautomaton`
+and may be more appropriate to cite.
+
 ## Known Issues
 
   - The `SFML_Viewer` operation hangs on some systems after viewing a plot with
