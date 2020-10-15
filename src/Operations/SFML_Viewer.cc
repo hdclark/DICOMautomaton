@@ -60,114 +60,6 @@
 
 #include "SFML_Viewer.h"
 
-static
-std::string Dialog_Input(std::string msg, std::string primer){
-    uint32_t FPSLimit = 30;
-
-    std::string out;
-
-    //Open a window.
-    sf::RenderWindow window;
-    window.create(sf::VideoMode(640, 480), "Input dialog");
-    window.setFramerateLimit(FPSLimit);
-
-    //Attempt to load fonts. We should try a few different files, and include a back-up somewhere accessible...
-    sf::Font afont;
-    if( !afont.loadFromFile("dcma_minimal.otf") // A minimal ASCII-only font.
-    &&  !afont.loadFromFile("/usr/share/fonts/TTF/cmr10.ttf") // Arch Linux 'ttf-computer-modern-fonts' pkg.
-    &&  !afont.loadFromFile("/usr/share/fonts/truetype/cmu/cmunrm.ttf") // Debian 'fonts-cmu' pkg.
-    &&  !afont.loadFromFile("/usr/share/fonts/gnu-free/FreeMono.otf") // Arch Linux 'gnu-free-fonts' pkg.
-    &&  !afont.loadFromFile("/usr/share/fonts/truetype/freefont/FreeMono.ttf") ){ // Debian 'fonts-freefont-ttf' pkg.
-        FUNCWARN("Unable to find a suitable font file on host system -- loading embedded minimal font");
-        if(!afont.loadFromMemory(static_cast<void*>(dcma_minimal_ttf), static_cast<size_t>(dcma_minimal_ttf_len))){
-            FUNCERR("Unable to load embedded font. Cannot continue");
-        }
-    }
-
-    sf::Text msgtext;
-    msgtext.setFont(afont);
-    msgtext.setString("");
-    msgtext.setCharacterSize(15); //Size in pixels, not in points.
-    msgtext.setFillColor(sf::Color::White);
-    msgtext.setOutlineColor(sf::Color::White);
-
-    //Run until the window is closed or the user wishes to exit.
-    auto t_start = std::chrono::steady_clock::now();
-    std::stringstream inss;
-    inss << primer;
-    while(window.isOpen()){
-
-        //Check if any events have accumulated since the last poll. If so, deal with them.
-        sf::Event event;
-        while(window.pollEvent(event)){
-            if(event.type == sf::Event::Closed){
-                window.close();
-                break;
-            }else if(window.hasFocus() && (event.type == sf::Event::KeyPressed)){
-                if(event.key.code == sf::Keyboard::Escape){
-                    window.close();
-                    break;
-
-                }else if(event.key.code == sf::Keyboard::Enter){
-                    out = inss.str();
-                    window.close();
-                    break;
-
-                }else if((event.key.code == sf::Keyboard::Backspace) && !inss.str().empty()){
-                    std::string shtl(inss.str());
-                    shtl.pop_back();
-                    inss.str(shtl);
-                    inss.seekp(0, inss.end);
-                }
-
-            }else if(window.hasFocus() && (event.type == sf::Event::TextEntered)){
-                //Not the same as KeyPressed + KeyReleased. Think unicode characters, or control keys.
-                if((event.text.unicode < 128) && std::isprint(event.text.unicode)){
-                    const auto thechar = static_cast<char>(event.text.unicode);
-                    inss << thechar;
-                }
-
-            }else if(event.type == sf::Event::Resized){
-                sf::View view;
-
-                //Shrink the image depending on the amount of window space available. The image might disappear off the
-                // screen if the window is too small, but nothing gets squished.
-                view.reset(sf::FloatRect(0, 0, event.size.width, event.size.height));
-                window.setView(view);
-            }
-        }
-
-        //Begin drawing the window contents.
-        window.clear(sf::Color::Black);
-
-        auto t_current = std::chrono::steady_clock::now();
-        auto dt = std::chrono::duration_cast< std::chrono::milliseconds >(t_current - t_start).count();
-        const auto cursor = ((dt/500) % 2 == 0) ? '_' : ' ';
-
-        std::stringstream msgtextss(msg + "\n\n" + "Press enter when done." + "\n\n $> " + inss.str() + cursor);
-        msgtext.setString(msgtextss.str());
-        {
-            const auto item_bbox = msgtext.getGlobalBounds();
-            const auto item_blc  = sf::Vector2f( item_bbox.left, item_bbox.top + item_bbox.height );
-
-            const auto wndw_view = window.getView();
-            const auto view_cntr = wndw_view.getCenter();
-            const auto view_size = wndw_view.getSize();
-            const auto view_blc  = sf::Vector2f( view_cntr.x - 0.48f*view_size.x, view_cntr.y + 0.48f*view_size.y );
-
-            //We should have that the item's bottom right corner coincides with the window's bottom right corner.
-            const sf::Vector2f offset = view_blc - item_blc;
-
-            //Now move the text over.
-//            msgtext.move(offset);
-        }
-
-        window.draw(msgtext);
-        window.display();
-    }
-
-    return out;
-}
 
 OperationDoc OpArgDocSFML_Viewer(){
     OperationDoc out;
@@ -227,7 +119,6 @@ Drover SFML_Viewer(Drover DICOM_data,
 
     Explicator X(FilenameLex);
 
-
     //Trim any empty image sets.
     for(auto it = DICOM_data.image_data.begin(); it != DICOM_data.image_data.end();  ){
         if((*it)->imagecoll.images.empty()){
@@ -280,26 +171,6 @@ Drover SFML_Viewer(Drover DICOM_data,
     contour_coll_shtl.contours.emplace_back();    //Prime the shuttle with an empty contour.
     contour_coll_shtl.contours.back().closed = true;
 
-    //Open a window.
-    sf::RenderWindow window;
-    window.create(sf::VideoMode(640, 480), "DICOMautomaton Image Viewer");
-    window.setFramerateLimit(FPSLimit);
-
-    //Create a secondary plotting window. Gets opened on command.
-    sf::RenderWindow plotwindow;
-    typedef enum {
-        None,
-        TimeCourse,
-        RowProfile,
-        ColumnProfile,
-    } SecondaryPlot;
-    auto plotwindowtype = SecondaryPlot::None;
-    if(auto ImageDesc = disp_img_it->GetMetadataValueAs<std::string>("Description")){
-        window.setTitle("DICOMautomaton IV: '"_s + ImageDesc.value() + "'");
-    }else{
-        window.setTitle("DICOMautomaton IV: <no description available>");
-    }
-
     //Attempt to load fonts. We should try a few different files, and include a back-up somewhere accessible...
     sf::Font afont;
     if( !afont.loadFromFile("dcma_minimal.otf") // A minimal ASCII-only font.
@@ -312,6 +183,52 @@ Drover SFML_Viewer(Drover DICOM_data,
             FUNCERR("Unable to load embedded font. Cannot continue");
         }
     }
+
+    //Open a window.
+    sf::RenderWindow window;
+    window.create(sf::VideoMode(1024, 768), "DICOMautomaton Image Viewer");
+    window.setFramerateLimit(FPSLimit);
+
+    if(auto ImageDesc = disp_img_it->GetMetadataValueAs<std::string>("Description")){
+        window.setTitle("DICOMautomaton IV: '"_s + ImageDesc.value() + "'");
+    }else{
+        window.setTitle("DICOMautomaton IV: <no description available>");
+    }
+
+    //Create a secondary plotting window. Gets opened on command.
+    sf::RenderWindow plotwindow;
+    enum class SecondaryPlot {
+        None,
+        TimeCourse,
+        RowProfile,
+        ColumnProfile,
+    };
+    SecondaryPlot plotwindowtype = SecondaryPlot::None;
+
+    //Create an auxiliary window for dialogs and extra displays. Gets opened on command.
+    sf::RenderWindow auxwindow;
+    enum class SecondaryAux {
+        None,
+        Input,
+    };
+    SecondaryAux auxwindowtype = SecondaryAux::None;
+
+    // Data and 'callback' for processing user input in aux window.
+    std::string user_input;
+    std::function<bool(const std::string &)> user_input_processor;
+
+    // The instructional message for the user in a dialog box.
+    std::string aux_dialog_msg;
+
+    sf::Text aux_msg_text;
+    aux_msg_text.setFont(afont);
+    aux_msg_text.setString("");
+    aux_msg_text.setCharacterSize(15); //Size in pixels, not in points.
+    aux_msg_text.setFillColor(sf::Color::White);
+    aux_msg_text.setOutlineColor(sf::Color::White);
+
+    //Timer used to create a blinking cursor effect for input dialogs.
+    auto t_start = std::chrono::steady_clock::now();
 
     //Create some primitive shapes, textures, and text objects for display later.
     sf::CircleShape smallcirc(10.0f);
@@ -906,22 +823,30 @@ Drover SFML_Viewer(Drover DICOM_data,
     //Launch/open a realtime plotting window.
     const auto launch_time_plot_window = [&](){
             plotwindow.create(sf::VideoMode(640, 480), "DICOMautomaton Time Courses");
-            plotwindow.setFramerateLimit(30);
+            plotwindow.setFramerateLimit(FPSLimit);
             plotwindowtype = SecondaryPlot::TimeCourse;
             return;
     };
 
     const auto launch_row_plot_window = [&](){
             plotwindow.create(sf::VideoMode(640, 480), "DICOMautomaton Row Profile Inspector");
-            plotwindow.setFramerateLimit(30);
+            plotwindow.setFramerateLimit(FPSLimit);
             plotwindowtype = SecondaryPlot::RowProfile;
             return;
     };
 
     const auto launch_column_plot_window = [&](){
             plotwindow.create(sf::VideoMode(640, 480), "DICOMautomaton Column Profile Inspector");
-            plotwindow.setFramerateLimit(30);
+            plotwindow.setFramerateLimit(FPSLimit);
             plotwindowtype = SecondaryPlot::ColumnProfile;
+            return;
+    };
+
+    //Launch/open an auxiliary window.
+    const auto launch_input_aux_window = [&](){
+            auxwindow.create(sf::VideoMode(640, 480), "DICOMautomaton Input Dialog");
+            auxwindow.setFramerateLimit(FPSLimit);
+            auxwindowtype = SecondaryAux::Input;
             return;
     };
 
@@ -1732,19 +1657,16 @@ Drover SFML_Viewer(Drover DICOM_data,
     };
 
     //Query the user to provide a window and level explicitly.
-    const auto query_for_window_and_level = [&](){
+    const auto implement_custom_window_and_level = [&](const std::string &input) -> bool {
             try{
-//                const std::string low_str = Detox_String(Execute_Command_In_Pipe(
-//                    "zenity --entry --text='What is the new window low?' --entry-text='100.0' 2>/dev/null"));
-//                const std::string high_str = Detox_String(Execute_Command_In_Pipe(
-//                    "zenity --entry --text='What is the new window high?' --entry-text='500.0' 2>/dev/null"));
-
-                const std::string low_str  = Dialog_Input("What is the new window low?",  "100.0");
-                const std::string high_str = Dialog_Input("What is the new window high?", "500.0");
-
-                // Parse the values and protect against mixing low and high values.
-                const auto new_low  = std::stod(low_str);
-                const auto new_high = std::stod(high_str);
+                //Parse the new low and high window values from the user's input string.
+                const auto tokens = SplitStringToVector(input, ' ', 'd');
+                if(tokens.size() != 2){
+                    FUNCWARN("Invalid window and level provided");
+                    return false;
+                }
+                const auto new_low = std::stod(tokens.front());
+                const auto new_high = std::stod(tokens.back());
                 const auto new_fullwidth = std::abs(new_high - new_low);
                 const auto new_centre = std::min(new_low, new_high) + 0.5 * new_fullwidth;
                 custom_width.emplace(new_fullwidth);
@@ -1757,8 +1679,9 @@ Drover SFML_Viewer(Drover DICOM_data,
                 }
             }catch(const std::exception &e){
                 FUNCWARN("Unable to parse window and level: '" << e.what() << "'");
+                return false;
             }
-            return;
+            return true;
     };
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1923,7 +1846,10 @@ Drover SFML_Viewer(Drover DICOM_data,
 
                 //Query the user to provide a window and level explicitly.
                 }else if( thechar == '%' ){
-                    query_for_window_and_level();
+                    user_input = "-200 1000"; // Default.
+                    aux_dialog_msg = "Please provide new low and high values (i.e., extrema) for the window and level.";
+                    user_input_processor = implement_custom_window_and_level;
+                    launch_input_aux_window();
 
                 }else{
                     FUNCINFO("Character '" << thechar << "' is not yet bound to any action");
@@ -2035,8 +1961,6 @@ Drover SFML_Viewer(Drover DICOM_data,
                 // Currently a no-op.
             }else if(event.type == sf::Event::MouseLeft){
                 // Currently a no-op.
-            }else{
-                FUNCINFO("Ignored event!");
             }
 
         }
@@ -2054,8 +1978,8 @@ Drover SFML_Viewer(Drover DICOM_data,
                 if(event.type == sf::Event::Closed){
                     close_plotwindow();
                     break;
-                }else if(window.hasFocus() && (event.type == sf::Event::TextEntered) 
-                                           && (event.text.unicode < 128)){
+                }else if(plotwindow.hasFocus() && (event.type == sf::Event::TextEntered) 
+                                               && (event.text.unicode < 128)){
                     const auto thechar = static_cast<char>(event.text.unicode);
                     if(thechar == 'q'){
                         close_plotwindow();
@@ -2083,12 +2007,63 @@ Drover SFML_Viewer(Drover DICOM_data,
                     // Currently a no-op.
                 }else if(event.type == sf::Event::MouseLeft){
                     // Currently a no-op.
-                }else{
-                    FUNCINFO("Ignored event!");
                 }
             }
         }
 
+        // ------------------------------ Auxillary Window Events ----------------------------------------
+
+        if(auxwindow.isOpen()){
+            const auto close_auxwindow = [&]() -> void {
+                auxwindow.close();
+                auxwindowtype = SecondaryAux::None;
+            };
+
+            //Check if any events have accumulated since the last poll. If so, deal with them.
+            sf::Event event;
+            while(auxwindow.pollEvent(event)){
+                if(event.type == sf::Event::Closed){
+                    close_auxwindow();
+                    break;
+                }else if(auxwindow.hasFocus() && (event.type == sf::Event::KeyPressed)){
+                    if(event.key.code == sf::Keyboard::Escape){
+                        close_auxwindow();
+                        break;
+
+                    }else if(event.key.code == sf::Keyboard::Enter){
+                        if(!user_input_processor){
+                            throw std::logic_error("No user-input processor registered. Cannot continue");
+                        }
+                        // Only close the window if the handler function is successful.
+                        if(user_input_processor(user_input)){
+                            user_input.clear();
+                            aux_dialog_msg.clear();
+                            user_input_processor = decltype(user_input_processor)();
+                            close_auxwindow();
+                        }
+                        break;
+
+                    }else if((event.key.code == sf::Keyboard::Backspace) && !user_input.empty()){
+                        user_input.pop_back();
+                    }
+
+                }else if(auxwindow.hasFocus() && (event.type == sf::Event::TextEntered)){
+                    //Not the same as KeyPressed + KeyReleased. Think unicode characters, or control keys.
+                    if((event.text.unicode < 128) && std::isprint(event.text.unicode)){
+                        const auto thechar = static_cast<char>(event.text.unicode);
+                        user_input += thechar;
+                    }
+
+                }else if(event.type == sf::Event::Resized){
+                    sf::View view;
+
+                    //Shrink the image depending on the amount of window space available. The image might disappear off the
+                    // screen if the window is too small, but nothing gets squished.
+                    view.reset(sf::FloatRect(0, 0, event.size.width, event.size.height));
+                    auxwindow.setView(view);
+                }
+            }
+        }
 
         // -------------------------------------- Rendering ----------------------------------------
 
@@ -2607,7 +2582,37 @@ Drover SFML_Viewer(Drover DICOM_data,
             }
 
             plotwindow.display();
+        }while(false);
 
+        // -------------------------------- Aux Window Rendering ----------------------------------------
+
+        do{
+            if(!auxwindow.isOpen()) break;
+
+            auxwindow.clear(sf::Color::Black);
+
+            auto t_current = std::chrono::steady_clock::now();
+            auto dt = std::chrono::duration_cast< std::chrono::milliseconds >(t_current - t_start).count();
+            const auto cursor = ((dt/500) % 2 == 0) ? '_' : ' ';
+
+            std::stringstream aux_msg_textss(aux_dialog_msg + "\n\n" + "Press [enter] when done or [escape] to cancel." + "\n\n $> " + user_input + cursor);
+            aux_msg_text.setString(aux_msg_textss.str());
+            {
+                const auto item_bbox = aux_msg_text.getGlobalBounds();
+                const auto item_blc  = sf::Vector2f( item_bbox.left, item_bbox.top + item_bbox.height );
+
+                const auto wndw_view = window.getView();
+                const auto view_cntr = wndw_view.getCenter();
+                const auto view_size = wndw_view.getSize();
+                const auto view_blc  = sf::Vector2f( view_cntr.x - 0.48f*view_size.x, view_cntr.y + 0.48f*view_size.y );
+
+                //We should have that the item's bottom right corner coincides with the window's bottom right corner.
+                const sf::Vector2f offset = view_blc - item_blc;
+    //            aux_msg_text.move(offset);
+            }
+
+            auxwindow.draw(aux_msg_text);
+            auxwindow.display();
         }while(false);
 
     }
