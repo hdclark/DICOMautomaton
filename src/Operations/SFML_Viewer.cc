@@ -209,7 +209,8 @@ Drover SFML_Viewer(Drover DICOM_data,
     sf::RenderWindow auxwindow;
     enum class SecondaryAux {
         None,
-        Input,
+        Input,   // User is asked to provide text input.
+        Static,  // Static text is displayed until the user closes the window.
     };
     SecondaryAux auxwindowtype = SecondaryAux::None;
 
@@ -613,47 +614,83 @@ Drover SFML_Viewer(Drover DICOM_data,
         return;
     };
 
+    //Sub-window launcher helpers.
+    const auto launch_time_plot_window = [&](){
+            plotwindow.create(sf::VideoMode(640, 480), "DICOMautomaton Time Courses");
+            plotwindow.setFramerateLimit(FPSLimit);
+            plotwindowtype = SecondaryPlot::TimeCourse;
+            return;
+    };
+
+    const auto launch_row_plot_window = [&](){
+            plotwindow.create(sf::VideoMode(640, 480), "DICOMautomaton Row Profile Inspector");
+            plotwindow.setFramerateLimit(FPSLimit);
+            plotwindowtype = SecondaryPlot::RowProfile;
+            return;
+    };
+
+    const auto launch_column_plot_window = [&](){
+            plotwindow.create(sf::VideoMode(640, 480), "DICOMautomaton Column Profile Inspector");
+            plotwindow.setFramerateLimit(FPSLimit);
+            plotwindowtype = SecondaryPlot::ColumnProfile;
+            return;
+    };
+
+    //Launch/open an auxiliary window.
+    const auto launch_input_aux_window = [&](){
+            auxwindow.create(sf::VideoMode(640, 480), "DICOMautomaton Input Dialog");
+            auxwindow.setFramerateLimit(FPSLimit);
+            auxwindowtype = SecondaryAux::Input;
+            return;
+    };
+
+    const auto launch_static_aux_window = [&](){
+            auxwindow.create(sf::VideoMode(640, 480), "DICOMautomaton Display Dialog");
+            auxwindow.setFramerateLimit(FPSLimit);
+            auxwindowtype = SecondaryAux::Static;
+            return;
+    };
+
     // --------------------------------------------------------------------------------------
     // Event handlers.
 
     //Show a simple help dialog with some keyboard commands.
     const auto show_help = [&](){
-            // Easy way to get list of commands:
-            // `grep -C 3 'thechar == ' src/PETCT_Perfusion_Analysis.cc | grep '//\|thechar'`
-            Execute_Command_In_Pipe(
-                    "zenity --info --no-wrap --text=\""
-                    "DICOMautomaton Image Viewer\\n\\n"
-                    "\\t Commands: \\n"
-                    "\\t\\t h,H \\t Display this help.\\n"
-                    "\\t\\t x \\t\\t Toggle whether existing contours should be displayed.\\n"
-                    "\\t\\t m \\t\\t Place or remove an invisible marker at the current mouse position for distance measurement.\\n"
-                    "\\t\\t d \\t\\t Dump the window contents as an image after the next render.\\n"
-                    "\\t\\t D \\t\\t Dump raw pixels for all spatially overlapping images from the current array (e.g., time courses).\\n"
-                    "\\t\\t i \\t\\t Dump the current image to file.\\n"
-                    "\\t\\t I \\t\\t Dump all images in the current array to file.\\n"
-                    "\\t\\t r,c \\t\\t Plot pixel intensity profiles along the mouse\\'s current row and column with Gnuplot.\\n"
-                    "\\t\\t R,C \\t\\t Plot realtime pixel intensity profiles along the mouse\\'s current row and column.\\n"
-                    "\\t\\t t \\t\\t Plot a time course at the mouse\\'s current row and column.\\n"
-                    "\\t\\t T \\t\\t Open a realtime plotting window.\\n"
-                    "\\t\\t a,A \\t\\t Plot or dump the pixel values for [a]ll image sets which spatially overlap.\\n"
-#ifdef DCMA_USE_GNU_GSL
-                    "\\t\\t M \\t\\t Try plot a pharmacokinetic [M]odel using image map parameters and ROI time courses.\\n"
-#endif
-                    "\\t\\t N,P \\t\\t Advance to the next/previous image series.\\n"
-                    "\\t\\t n,p \\t\\t Advance to the next/previous image in this series.\\n"
-                    "\\t\\t -,+ \\t\\t Advance to the next/previous image that spatially overlaps this image.\\n"
-                    "\\t\\t (,) \\t\\t Cycle through the available colour maps/transformations.\\n"
-                    "\\t\\t l,L \\t\\t Reset the image scale to be pixel-for-pixel what is seen on screen.\\n"
-                    "\\t\\t u \\t\\t Toggle showing metadata tags that are identical to the neighbouring image\\'s metadata tags.\\n"
-                    "\\t\\t U \\t\\t Dump and show the current image\\'s metadata.\\n"
-                    "\\t\\t e \\t\\t Erase latest non-empty contour. (A single contour.)\\n"
-                    "\\t\\t E \\t\\t Empty the current working ROI buffer. (The entire buffer; all contours.)\\n"
-                    "\\t\\t s,S \\t\\t Save the current contour collection.\\n"
-                    "\\t\\t # \\t\\t Compute stats for the working, unsaved contour collection.\\n"
-                    "\\t\\t % \\t\\t Open a dialog box to select an explicit window and level.\\n"
-                    "\\t\\t b \\t\\t Serialize Drover instance (all data) to file.\\n"
-                    "\\n\""
-            );
+            aux_dialog_msg =
+                "DICOMautomaton viewer usage\n\n"
+                "Core:\n"
+                "\t h,H \t Display this help.\n"
+                "\t esc \t Close the window currently in focus.\n"
+                "\t n,p \t Advance to the next/previous image in this series.\n"
+                "\t N,P \t Advance to the next/previous image series.\n"
+                "\t -,+ \t Advance to the next/previous image that spatially overlaps this image.\n"
+                "\t % \t Open a dialog box to select an explicit window and level.\n"
+                "\t (,) \t Cycle through the available colour maps/transformations.\n"
+                "\t m \t Place or remove an invisible marker at the current mouse position for distance measurement.\n"
+                "\t l,L \t Reset the image scale to be pixel-for-pixel what is seen on screen.\n"
+                "\t u \t Toggle showing metadata tags that are identical to the neighbouring image's metadata tags.\n"
+                "Contouring:\n"
+                "\t x \t Toggle whether existing contours should be displayed.\n"
+                "\t e \t Erase latest non-empty contour. (A single contour.)\n"
+                "\t E \t Empty the current working ROI buffer. (The entire buffer; all contours.)\n"
+                "\t s,S \t Save the current contour collection.\n"
+                "\t # \t Compute stats for the working, unsaved contour collection.\n"
+                "Plotting:\n"
+                "\t T \t Open a realtime plotting window.\n"
+                "\t r,c \t Plot pixel intensity profiles along the mouse's current row and column with Gnuplot.\n"
+                "\t R,C \t Plot realtime pixel intensity profiles along the mouse's current row and column.\n"
+                "\t t \t Plot a time course at the mouse's current row and column.\n"
+                "\t a,A \t Plot or dump the pixel values for all image sets which spatially overlap.\n"
+                "Research and debugging:\n"
+                "\t b \t Serialize Drover instance (all data) to file.\n"
+                "\t M \t Try plot a pharmacokinetic model using image map parameters and ROI time courses.\n"
+                "\t U \t Dump and show the current image's metadata.\n"
+                "\t d \t Dump the window contents as an image after the next render.\n"
+                "\t D \t Dump raw pixels for all spatially overlapping images from the current array (e.g., time courses).\n"
+                "\t i \t Dump the current image to file.\n"
+                "\t I \t Dump all images in the current array to file.\n";
+
+            launch_static_aux_window();
             return;
     };
 
@@ -817,36 +854,6 @@ Drover SFML_Viewer(Drover DICOM_data,
             }catch(const std::exception &e){
                 FUNCWARN("Failed to plot: " << e.what());
             }
-            return;
-    };
-
-    //Launch/open a realtime plotting window.
-    const auto launch_time_plot_window = [&](){
-            plotwindow.create(sf::VideoMode(640, 480), "DICOMautomaton Time Courses");
-            plotwindow.setFramerateLimit(FPSLimit);
-            plotwindowtype = SecondaryPlot::TimeCourse;
-            return;
-    };
-
-    const auto launch_row_plot_window = [&](){
-            plotwindow.create(sf::VideoMode(640, 480), "DICOMautomaton Row Profile Inspector");
-            plotwindow.setFramerateLimit(FPSLimit);
-            plotwindowtype = SecondaryPlot::RowProfile;
-            return;
-    };
-
-    const auto launch_column_plot_window = [&](){
-            plotwindow.create(sf::VideoMode(640, 480), "DICOMautomaton Column Profile Inspector");
-            plotwindow.setFramerateLimit(FPSLimit);
-            plotwindowtype = SecondaryPlot::ColumnProfile;
-            return;
-    };
-
-    //Launch/open an auxiliary window.
-    const auto launch_input_aux_window = [&](){
-            auxwindow.create(sf::VideoMode(640, 480), "DICOMautomaton Input Dialog");
-            auxwindow.setFramerateLimit(FPSLimit);
-            auxwindowtype = SecondaryAux::Input;
             return;
     };
 
@@ -2031,27 +2038,33 @@ Drover SFML_Viewer(Drover DICOM_data,
                         break;
 
                     }else if(event.key.code == sf::Keyboard::Enter){
-                        if(!user_input_processor){
-                            throw std::logic_error("No user-input processor registered. Cannot continue");
-                        }
-                        // Only close the window if the handler function is successful.
-                        if(user_input_processor(user_input)){
-                            user_input.clear();
-                            aux_dialog_msg.clear();
-                            user_input_processor = decltype(user_input_processor)();
-                            close_auxwindow();
+                        if(auxwindowtype == SecondaryAux::Input){
+                            if(!user_input_processor){
+                                throw std::logic_error("No user-input processor registered. Cannot continue");
+                            }
+                            // Only close the window if the handler function is successful.
+                            if(user_input_processor(user_input)){
+                                user_input.clear();
+                                aux_dialog_msg.clear();
+                                user_input_processor = decltype(user_input_processor)();
+                                close_auxwindow();
+                            }
                         }
                         break;
 
                     }else if((event.key.code == sf::Keyboard::Backspace) && !user_input.empty()){
-                        user_input.pop_back();
+                        if(auxwindowtype == SecondaryAux::Input){
+                            user_input.pop_back();
+                        }
                     }
 
                 }else if(auxwindow.hasFocus() && (event.type == sf::Event::TextEntered)){
                     //Not the same as KeyPressed + KeyReleased. Think unicode characters, or control keys.
                     if((event.text.unicode < 128) && std::isprint(event.text.unicode)){
-                        const auto thechar = static_cast<char>(event.text.unicode);
-                        user_input += thechar;
+                        if(auxwindowtype == SecondaryAux::Input){
+                            const auto thechar = static_cast<char>(event.text.unicode);
+                            user_input += thechar;
+                        }
                     }
 
                 }else if(event.type == sf::Event::Resized){
@@ -2595,8 +2608,13 @@ Drover SFML_Viewer(Drover DICOM_data,
             auto dt = std::chrono::duration_cast< std::chrono::milliseconds >(t_current - t_start).count();
             const auto cursor = ((dt/500) % 2 == 0) ? '_' : ' ';
 
-            std::stringstream aux_msg_textss(aux_dialog_msg + "\n\n" + "Press [enter] when done or [escape] to cancel." + "\n\n $> " + user_input + cursor);
-            aux_msg_text.setString(aux_msg_textss.str());
+            std::stringstream ss;
+            if(auxwindowtype == SecondaryAux::Input){
+                ss << aux_dialog_msg << "\n\nPress [enter] when done or [escape] to cancel.\n\n $> " << user_input << cursor;
+            }else if(auxwindowtype == SecondaryAux::Static){
+                ss << aux_dialog_msg << "\n\nPress [escape] to close this window.";
+            }
+            aux_msg_text.setString(ss.str());
             {
                 const auto item_bbox = aux_msg_text.getGlobalBounds();
                 const auto item_blc  = sf::Vector2f( item_bbox.left, item_bbox.top + item_bbox.height );
