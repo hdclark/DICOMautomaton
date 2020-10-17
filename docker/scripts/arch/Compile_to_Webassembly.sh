@@ -157,6 +157,7 @@ emcmake \
     -DWITH_CGAL=OFF \
     -DWITH_NLOPT=OFF \
     -DWITH_SFML=OFF \
+    -DWITH_SDL=OFF \
     -DWITH_WT=OFF \
     -DWITH_GNU_GSL=OFF \
     -DWITH_POSTGRES=OFF \

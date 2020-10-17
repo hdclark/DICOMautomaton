@@ -285,6 +285,8 @@ target_link_libraries (dicomautomaton_dispatcher
     $<$<BOOL:${WITH_JANSSON}>:jansson>
     "$<$<BOOL:${WITH_NLOPT}>:${NLOPT_LIBRARIES}>"
     "$<$<BOOL:${WITH_SFML}>:${SFML_LIBRARIES}>"
+    "$<$<BOOL:${WITH_SDL}>:${SDL_LIBRARIES}>"
+    "$<$<BOOL:${WITH_SDL}>:${GLEW_LIBRARIES}>"
     "$<$<BOOL:${WITH_POSTGRES}>:${POSTGRES_LIBRARIES}>"
     Boost::filesystem
     Boost::serialization
@@ -355,6 +357,8 @@ if(WITH_WT)
         $<$<BOOL:${WITH_JANSSON}>:jansson>
         "$<$<BOOL:${WITH_NLOPT}>:${NLOPT_LIBRARIES}>"
         "$<$<BOOL:${WITH_SFML}>:${SFML_LIBRARIES}>"
+        "$<$<BOOL:${WITH_SDL}>:${SDL_LIBRARIES}>"
+        "$<$<BOOL:${WITH_SDL}>:${GLEW_LIBRARIES}>"
         "$<$<BOOL:${WITH_POSTGRES}>:${POSTGRES_LIBRARIES}>"
         wt
         wthttp

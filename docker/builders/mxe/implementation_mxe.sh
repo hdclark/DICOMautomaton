@@ -50,6 +50,7 @@ for repo_dir in /ygor /ygorclustering /explicator /dcma ; do
       -DWITH_CGAL=OFF \
       -DWITH_NLOPT=ON \
       -DWITH_SFML=ON \
+      -DWITH_SDL=ON \
       -DWITH_WT=OFF \
       -DWITH_GNU_GSL=OFF \
       -DWITH_POSTGRES=OFF \

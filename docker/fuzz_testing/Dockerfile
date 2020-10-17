@@ -36,7 +36,9 @@ RUN apt-get install --yes --no-install-recommends \
     ` # DICOMautomaton dependencies ` \
         libeigen3-dev \
         libboost-dev libboost-filesystem-dev libboost-iostreams-dev libboost-program-options-dev libboost-thread-dev \
-        libz-dev libsfml-dev libjansson-dev \
+        libz-dev libsfml-dev \
+        libsdl2-dev libglew-dev \
+        libjansson-dev \
         libpqxx-dev postgresql-client \
         libcgal-dev \
         libnlopt-dev \

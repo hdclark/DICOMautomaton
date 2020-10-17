@@ -33,6 +33,8 @@ apt-get install --yes --no-install-recommends \
   libboost-thread-dev \
   libz-dev \
   libsfml-dev \
+  libsdl2-dev \
+  libglew-dev \
   libjansson-dev \
   libpqxx-dev \
   postgresql-client \

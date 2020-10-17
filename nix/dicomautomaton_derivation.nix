@@ -9,6 +9,8 @@
 , ygorclustering
 # Runtime inputs.
 , sfml
+, SDL2
+, glew
 , xorg
 , jansson
 , libpqxx
@@ -60,6 +62,7 @@ stdenv.mkDerivation rec {
   buildInputs = [
     # Runtime inputs.
     sfml
+    SDL2
 #    xorg
 #    xorg.libX11
 #    xorg.xcbutilkeysyms
@@ -104,6 +107,7 @@ stdenv.mkDerivation rec {
   "-DWITH_CGAL=OFF"
     "-DWITH_NLOPT=ON"
     "-DWITH_SFML=ON"
+    "-DWITH_SDL=ON"
   "-DWITH_WT=OFF"
     "-DWITH_GNU_GSL=ON"
     "-DWITH_POSTGRES=ON"

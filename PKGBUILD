@@ -15,6 +15,8 @@ depends=(
    'gnu-free-fonts'
    'zenity'
    'sfml'
+   'sdl2'
+   'glew'
    'jansson'
    'libpqxx'
    'postgresql'

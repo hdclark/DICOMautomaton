@@ -42,6 +42,8 @@ pacman -S --noconfirm --needed \
   gcc-libs \
   gnu-free-fonts \
   sfml \
+  sdl2 \
+  glew \
   jansson \
   libpqxx \
   postgresql \

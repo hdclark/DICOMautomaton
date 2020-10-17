@@ -43,6 +43,8 @@ pacman -S --noconfirm --needed  \
   boost-libs \
   gnu-free-fonts \
   sfml \
+  sdl2 \
+  glew \
   jansson \
   libpqxx \
   postgresql \

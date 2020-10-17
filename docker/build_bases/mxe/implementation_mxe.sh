@@ -54,7 +54,7 @@ git clone https://github.com/mxe/mxe.git /mxe
 cd /mxe
 
 # Remove components we won't need to reduce setup time.
-rm -rf src/qt* src/ocaml* src/sdl* || true
+rm -rf src/qt* src/ocaml* src/sdl2_* || true
 
 #export TOOLCHAIN="x86_64-w64-mingw32.shared"
 export TOOLCHAIN="x86_64-w64-mingw32.static"
@@ -76,7 +76,7 @@ export TOOLCHAIN="x86_64-w64-mingw32.static"
 make -j"$(nproc)" --keep-going \
   MXE_TARGETS="${TOOLCHAIN}" \
   MXE_PLUGIN_DIRS=plugins/gcc9 \
-  gmp mpfr boost eigen sfml nlopt #wt
+  gmp mpfr boost eigen sfml sdl2 glew nlopt #wt
 
 ## Download pre-compiled binaries to speed up toolchain prep.
 ##

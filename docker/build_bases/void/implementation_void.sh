@@ -31,6 +31,8 @@ xbps-install -y -S \
     boost-devel \
     zlib-devel \
     SFML-devel \
+    SDL2-devel \
+    glew-devel \
     jansson-devel \
     libpqxx-devel \
     postgresql-client \
