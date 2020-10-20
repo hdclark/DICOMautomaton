@@ -351,7 +351,7 @@ and a container can be run interactively with the convenience script:
 
 ### Pre-Built `Docker` Images
 
-Docker containers are available in three variants: using `Arch Linux`, `Debian`,
+`Docker` containers are available in three variants: using `Arch Linux`, `Debian`,
 or `Void Linux` base images. `Arch Linux` and `Void Linux` provide the latest
 upstream packages, whereas `Debian` provides greater portability since an older
 `glibc` is used. `Arch Linux` builds use `glibc` whereas `Void Linux` builds use
@@ -359,7 +359,7 @@ upstream packages, whereas `Debian` provides greater portability since an older
 
 Build base images contain all dependencies and requirements necessary to compile
 `DICOMautomaton`, but may not themselves contain `DICOMautomaton`. The latest
-successfully-built base images are available here:
+successfully-built base images are available from `Docker Hub`:
 
   - [![Arch Linux](https://img.shields.io/badge/Latest_Docker_Build_Base-Arch_Linux-brightgreen)](https://hub.docker.com/r/hdclark/dcma_build_base_arch)
 
@@ -389,9 +389,9 @@ Direct links for the latest build artifacts:
 ## Building Portable Binaries
 
 The well-known `LD_PRELOAD` trick can be used to provide somewhat portable
-`DICOMautomaton` binaries for Linux systems. Binaries from the system-installed
-or locally-built `DICOMautomaton` will be automatically gathered by building and
-then invoking:
+`DICOMautomaton` binaries for `Linux` systems. Binaries from the
+system-installed or locally-built `DICOMautomaton` will be automatically
+gathered by building and then invoking:
 
      $>  ./scripts/dump_portable_dcma_bundle.sh /tmp/portable_dcma/
 
@@ -399,9 +399,9 @@ If successful, the portable outputs will be dumped to `/tmp/portable_dcma/`. A
 convenience script that performs the preload trick and forwards all user
 arguments is `portable_dcma`.
 
-Note that this trick works *only* on Linux systems, and a similar Linux system
-must be used to generate the binaries. The interactive Debian Docker container
-will likely suffice. Additionally this technique only provides the
+Note that this trick works *only* on `Linux` systems, and a similar `Linux`
+system must be used to generate the binaries. The interactive `Debian` `Docker`
+container will likely suffice. Additionally this technique only provides the
 `dicomautomaton_dispatcher` binary. All shared libraries needed to run it are
 bundled, including `glibc` and some other intrinsic libraries in case the host
 and target `glibc` differ. If the `patchelf` program is available, the binary
