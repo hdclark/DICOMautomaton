@@ -17,7 +17,8 @@ fi
 
 # Common setup.
 export DCMA_BIN="dicomautomaton_dispatcher"
-export TESTING_ROOT="/tmp/dcma_integration_testing"
+#export TESTING_ROOT="/tmp/dcma_integration_testing"
+export TESTING_ROOT="${REPO_ROOT}/dcma_integration_testing"
 mkdir -v -p "${TESTING_ROOT}"
 export DCMA_REPO_ROOT="${REPO_ROOT}"
 export TEST_FILES_ROOT="${REPO_ROOT}/artifacts/test_files/"
