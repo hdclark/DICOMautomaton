@@ -3,6 +3,18 @@
 
 Below is a simplified timeline of `DICOMautomaton` development, broken down by month.
 
+## 202010
+
+- Reworked EQDx operation to also provide BED conversion, added tests.
+- Simplified very old code (contours\_with\_meta class).
+- Simplified ROI operation parameter selectors and documentation.
+- Webserver: relocate config directory, simplify parameter selection when exmaples are exhaustive.
+- Add SDL2 and Glew dependencies on all platforms.
+- SFML\_Viewer: provide cross-platform partial replacements for Zenity dialogs.
+- Explicator: provide built-in lexicon, default to most generic lexicon provided by Explicator (if available).
+- ContourSimilarity: sync documentation with current implementation.
+- Documentation: indicate version in online documentation.
+- Added mock-up starting point for deformable registration algorithm development.
 
 ## 202009
 
