@@ -27,7 +27,7 @@ build_ci_debian_stable:
     - |
       ( ( while true ; do sleep 225 ; printf '\n\n' ; df -h ; printf '\n\n' ; free -h ; printf '\n\n' ; done ) &)
       "./docker/builders/ci/implementation_ci_debian_stable.sh"
-      "./integration_tests/Run.sh"
+      "./integration_tests/Run.sh || find dcma_integration_testing/ -type f -print -exec cat '{}' \+"
       "./scripts/extract_system_appimage.sh"
   artifacts:
     paths:
@@ -47,7 +47,7 @@ build_ci_arch:
     - |
       ( ( while true ; do sleep 225 ; printf '\n\n' ; df -h ; printf '\n\n' ; free -h ; printf '\n\n' ; done ) &)
       "./docker/builders/ci/implementation_ci_arch.sh"
-      "./integration_tests/Run.sh"
+      "./integration_tests/Run.sh || find dcma_integration_testing/ -type f -print -exec cat '{}' \+"
       "./scripts/extract_system_appimage.sh"
   artifacts:
     paths:
@@ -116,7 +116,7 @@ test_ci_debian_stable_on_debian_stable:
     - "rsync -a ./squashfs-root/usr/ /usr/"
     # Ensure it can be run and then run tests.
     - "dicomautomaton_dispatcher -h"
-    - "./integration_tests/Run.sh"
+    - "./integration_tests/Run.sh || find dcma_integration_testing/ -type f -print -exec cat '{}' \+"
 
 test_ci_arch_on_arch:
   stage: test
@@ -135,7 +135,7 @@ test_ci_arch_on_arch:
     - "rsync -a ./squashfs-root/usr/ /usr/"
     # Ensure it can be run and then run tests.
     - "dicomautomaton_dispatcher -h"
-    - "./integration_tests/Run.sh"
+    - "./integration_tests/Run.sh || find dcma_integration_testing/ -type f -print -exec cat '{}' \+"
 
 # Cross-system testing.
 test_ci_debian_stable_on_arch:
@@ -155,7 +155,7 @@ test_ci_debian_stable_on_arch:
     - "rsync -a ./squashfs-root/usr/ /usr/"
     # Ensure it can be run and then run tests.
     - "dicomautomaton_dispatcher -h"
-    - "./integration_tests/Run.sh"
+    - "./integration_tests/Run.sh || find dcma_integration_testing/ -type f -print -exec cat '{}' \+"
 
 test_ci_debian_stable_on_ubuntu_latest:
   stage: test
@@ -177,7 +177,7 @@ test_ci_debian_stable_on_ubuntu_latest:
     - "dicomautomaton_dispatcher -h"
     #- git clone 'https://github.com/hdclark/DICOMautomaton'
     #- cd DICOMautomaton
-    - "./integration_tests/Run.sh"
+    - "./integration_tests/Run.sh || find dcma_integration_testing/ -type f -print -exec cat '{}' \+"
 
 test_ci_debian_stable_on_fedora_latest:
   stage: test
@@ -197,7 +197,7 @@ test_ci_debian_stable_on_fedora_latest:
     - "dicomautomaton_dispatcher -h"
     #- "git clone 'https://github.com/hdclark/DICOMautomaton'"
     #- "cd DICOMautomaton"
-    - "./integration_tests/Run.sh"
+    - "./integration_tests/Run.sh || find dcma_integration_testing/ -type f -print -exec cat '{}' \+"
 
 # Cross-compilation testing.
 test_cross_compile_mxe_on_debian_stable:
@@ -220,7 +220,7 @@ test_cross_compile_mxe_on_debian_stable:
     - "chmod 777 /usr/bin/dicomautomaton_dispatcher"
     # Ensure it can be run and then run tests.
     - "dicomautomaton_dispatcher -h"
-    - "./integration_tests/Run.sh"
+    - "./integration_tests/Run.sh || find dcma_integration_testing/ -type f -print -exec cat '{}' \+"
 
 #######################################################################################################################
 ### Deployment stages.
