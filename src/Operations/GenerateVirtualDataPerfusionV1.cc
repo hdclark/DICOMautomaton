@@ -10,15 +10,17 @@
 #include <stdexcept>
 #include <string>    
 
-#include "../Imebra_Shim.h"
-#include "../Structs.h"
-#include "../Regex_Selectors.h"
-#include "GenerateVirtualDataPerfusionV1.h"
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
+#include "Explicator.h"
+
+#include "../Imebra_Shim.h"
+#include "../Structs.h"
+#include "../Regex_Selectors.h"
+#include "GenerateVirtualDataPerfusionV1.h"
 
 OperationDoc OpArgDocGenerateVirtualDataPerfusionV1(){
     OperationDoc out;
@@ -35,7 +37,9 @@ OperationDoc OpArgDocGenerateVirtualDataPerfusionV1(){
 Drover GenerateVirtualDataPerfusionV1(Drover DICOM_data,
                                       const OperationArgPkg&,
                                       const std::map<std::string, std::string>&,
-                                      const std::string&){
+                                      const std::string& FilenameLex){
+
+    Explicator X(FilenameLex);
 
     using loaded_imgs_storage_t = decltype(DICOM_data.image_data);
     std::list<loaded_imgs_storage_t> loaded_imgs_storage;
@@ -234,15 +238,14 @@ Drover GenerateVirtualDataPerfusionV1(Drover DICOM_data,
                 shtl.points.push_back(animg.get().position(/*row=*/16, /*column=*/9 ));
                 shtl.Reorient_Counter_Clockwise();
                 shtl.metadata = animgcoll.get().get_common_metadata({});
-                shtl.metadata["ROINumber"] = std::to_string(ROINumber);
                 shtl.metadata["ROIName"] = ROIName;
+                shtl.metadata["NormalizedROIName"] = X(ROIName);
                 shtl.metadata["MinimumSeparation"] = animg.get().metadata["ImageThickness"];
+                shtl.metadata["ROINumber"] = std::to_string(ROINumber);
                 cc.contours.push_back(std::move(shtl));
             }
             output->ccs.emplace_back( );
             output->ccs.back() = cc;
-            output->ccs.back().Raw_ROI_name = ROIName; 
-            output->ccs.back().ROI_number = ROINumber;
         }
 
 
@@ -261,15 +264,14 @@ Drover GenerateVirtualDataPerfusionV1(Drover DICOM_data,
                 shtl.points.push_back(animg.get().position(/*row=*/16, /*column=*/19 ));
                 shtl.Reorient_Counter_Clockwise();
                 shtl.metadata = animgcoll.get().get_common_metadata({});
-                shtl.metadata["ROINumber"] = std::to_string(ROINumber);
                 shtl.metadata["ROIName"] = ROIName;
+                shtl.metadata["NormalizedROIName"] = X(ROIName);
                 shtl.metadata["MinimumSeparation"] = animg.get().metadata["ImageThickness"];
+                shtl.metadata["ROINumber"] = std::to_string(ROINumber);
                 cc.contours.push_back(std::move(shtl));
             }
             output->ccs.emplace_back( );
             output->ccs.back() = cc;
-            output->ccs.back().Raw_ROI_name = ROIName; 
-            output->ccs.back().ROI_number = ROINumber;
         }
 
 
@@ -288,15 +290,14 @@ Drover GenerateVirtualDataPerfusionV1(Drover DICOM_data,
                 shtl.points.push_back(animg.get().position(/*row=*/ 0, /*column=*/19 ));
                 shtl.Reorient_Counter_Clockwise();
                 shtl.metadata = animgcoll.get().get_common_metadata({});
-                shtl.metadata["ROINumber"] = std::to_string(ROINumber);
                 shtl.metadata["ROIName"] = ROIName;
+                shtl.metadata["NormalizedROIName"] = X(ROIName);
                 shtl.metadata["MinimumSeparation"] = animg.get().metadata["ImageThickness"];
+                shtl.metadata["ROINumber"] = std::to_string(ROINumber);
                 cc.contours.push_back(std::move(shtl));
             }
             output->ccs.emplace_back( );
             output->ccs.back() = cc;
-            output->ccs.back().Raw_ROI_name = ROIName; 
-            output->ccs.back().ROI_number = ROINumber;
         }
 
 

@@ -82,10 +82,6 @@ Drover ContourWholeImages(Drover DICOM_data,
     DICOM_data.Ensure_Contour_Data_Allocated();
     DICOM_data.contour_data->ccs.emplace_back();
 
-    DICOM_data.contour_data->ccs.back().Raw_ROI_name = ROILabel;
-    DICOM_data.contour_data->ccs.back().ROI_number = ROINumber;
-    DICOM_data.contour_data->ccs.back().Minimum_Separation = 1.0; // TODO: is there a routine to do this? (YES: Unique_Contour_Planes()...)
-
     //Iterate over each requested image_array. Each image is processed independently, so a thread pool is used.
     auto IAs_all = All_IAs( DICOM_data );
     auto IAs = Whitelist( IAs_all, ImageSelectionStr );
@@ -104,10 +100,10 @@ Drover ContourWholeImages(Drover DICOM_data,
         //Note: We currently attach *all* common image data to each contour. Should we filter some (most) out?
         std::map<std::string,std::string> metadata;
         metadata = DICOM_data.image_data.back()->imagecoll.get_common_metadata({});
-        metadata["ROINumber"] = std::to_string(ROINumber);
         metadata["ROIName"] = ROILabel;
         metadata["NormalizedROIName"] = NormalizedROILabel;
-        metadata["MinimumSeparation"] = metadata["SliceThickness"];
+        metadata["MinimumSeparation"] = metadata["SliceThickness"]; // TODO: is there a routine to do this? (YES: Unique_Contour_Planes()...)
+        metadata["ROINumber"] = std::to_string(ROINumber);
         metadata["Description"] = "Whole-Image Contour";
 
         auto cc = Encircle_Images_with_Contours(imgs, opts, metadata);

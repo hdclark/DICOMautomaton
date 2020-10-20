@@ -466,10 +466,13 @@ Drover PartitionContours(Drover DICOM_data,
                 }
 
                 //Store the sub-segments.
+                const double MinimumSeparation = 1.0; // TODO: is there a routine to do this? (YES: Unique_Contour_Planes()...)
                 const auto ROIName = SubsegmentRootROILabel + "_" + std::to_string(subsegment_count);
                 for(auto &cc : cc_selection){
                     cc.Insert_Metadata("ROIName", ROIName);
                     cc.Insert_Metadata("NormalizedROIName", X(ROIName));
+                    cc.Insert_Metadata("ROINumber", "10000"); // TODO: find highest existing and ++ it.
+                    cc.Insert_Metadata("MinimumSeparation", std::to_string(MinimumSeparation));
                     DICOM_data.contour_data->ccs.emplace_back( cc );  // TODO -- place all subsegment contours inside cc_selection into the same cc.
                 }
 
@@ -477,11 +480,6 @@ Drover PartitionContours(Drover DICOM_data,
 
                 // ... TODO ...
 
-                // (Is the following necessary?)
-                const double MinimumSeparation = 1.0; // TODO: is there a routine to do this? (YES: Unique_Contour_Planes()...)
-                DICOM_data.contour_data->ccs.back().Raw_ROI_name = ROIName;
-                DICOM_data.contour_data->ccs.back().ROI_number = 10000; // TODO: find highest existing and ++ it.
-                DICOM_data.contour_data->ccs.back().Minimum_Separation = MinimumSeparation;
             }
         }
     }

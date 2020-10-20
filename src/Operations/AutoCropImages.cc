@@ -172,16 +172,6 @@ Drover AutoCropImages(Drover DICOM_data,
                     cc.contours.back().points.emplace_back( Ucol * D.x + Urow * D.y );
                     cc.contours.back() = cc.contours.back().Project_Onto_Plane_Orthogonally(img_plane); //Ensure orthogonal positioning.
 
-/*
-                    // Save the contour for later viewing.
-                    DICOM_data.Ensure_Contour_Data_Allocated();
-                    DICOM_data.contour_data->ccs.emplace_back();
-                    DICOM_data.contour_data->ccs.back().Raw_ROI_name = "AutoCrop";
-                    DICOM_data.contour_data->ccs.back().ROI_number = 10000; // TODO: find highest existing and ++ it.
-                    DICOM_data.contour_data->ccs.back().Minimum_Separation = 1.0;
-                    DICOM_data.contour_data->ccs.back().contours.emplace_back( cc.contours.back() );
-*/
-
                 }catch(const std::exception &e){
                     throw std::domain_error("Unable to perform RTIMAGE auto-crop: coordinate transforms: "_s + e.what());
                 }

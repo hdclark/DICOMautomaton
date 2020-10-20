@@ -281,9 +281,6 @@ Drover ContourBooleanOperations(const Drover& DICOM_data,
         // So the result is not propagated out at this time.
     }else{
         DICOM_data.contour_data->ccs.emplace_back(cc_new);
-        DICOM_data.contour_data->ccs.back().ROI_number = 999;
-        DICOM_data.contour_data->ccs.back().Minimum_Separation = est_cont_spacing;
-        DICOM_data.contour_data->ccs.back().Raw_ROI_name = OutputROILabel;
     }
 
     return DICOM_data;

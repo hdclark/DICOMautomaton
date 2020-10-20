@@ -145,10 +145,6 @@ Drover ContourViaGeometry(Drover DICOM_data,
     DICOM_data.contour_data->ccs.emplace_back();
 
     const double MinimumSeparation = 1.0; // TODO: is there a routine to do this? (YES: Unique_Contour_Planes()...)
-    DICOM_data.contour_data->ccs.back().Raw_ROI_name = ROILabel;
-    DICOM_data.contour_data->ccs.back().ROI_number = 10000; // TODO: find highest existing and ++ it.
-    DICOM_data.contour_data->ccs.back().Minimum_Separation = MinimumSeparation;
-
     std::list<contour_of_points<double>> copl;
 
     //Iterate over each requested image_array. Each image is processed independently, so a thread pool is used.
@@ -160,6 +156,8 @@ Drover ContourViaGeometry(Drover DICOM_data,
             auto contour_metadata = animg.metadata;
             contour_metadata["ROIName"] = ROILabel;
             contour_metadata["NormalizedROIName"] = NormalizedROILabel;
+            contour_metadata["ROINumber"] = std::to_string(10000); // TODO: find highest existing and ++ it.
+            contour_metadata["MinimumSeparation"] = std::to_string(MinimumSeparation);
             contour_metadata["OutlineColour"] = ROIColour;
 
             const auto img_plane = animg.image_plane();

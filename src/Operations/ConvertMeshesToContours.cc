@@ -101,9 +101,7 @@ Drover ConvertMeshesToContours(Drover DICOM_data,
     DICOM_data.contour_data->ccs.emplace_back();
 
     const double MinimumSeparation = 1.0; // TODO: is there a routine to do this? (YES: Unique_Contour_Planes()...)
-    DICOM_data.contour_data->ccs.back().Raw_ROI_name = ROILabel;
-    DICOM_data.contour_data->ccs.back().ROI_number = 10000; // TODO: find highest existing and ++ it.
-    DICOM_data.contour_data->ccs.back().Minimum_Separation = MinimumSeparation;
+    const long int ROINumber = 10000; // TODO: fix this.
 
     auto SMs_all = All_SMs( DICOM_data );
     auto SMs = Whitelist( SMs_all, MeshSelectionStr );
@@ -148,7 +146,8 @@ Drover ConvertMeshesToContours(Drover DICOM_data,
                     cop.metadata["ROIName"] = ROILabel;
                     cop.metadata["NormalizedROIName"] = NormalizedROILabel;
                     cop.metadata["Description"] = "Sliced surface mesh";
-                    cop.metadata["MinimumSeparation"] = std::to_string(MinimumSeparation);
+                    cop.metadata["MinimumSeparation"] = std::to_string(MinimumSeparation); // TODO: is there a routine to do this? (YES: Unique_Contour_Planes()...)
+                    cop.metadata["ROINumber"] = std::to_string(ROINumber); // TODO: fix this.
                     for(const auto &key : { "StudyInstanceUID", "FrameOfReferenceUID" }){
                         if(animg.metadata.count(key) != 0) cop.metadata[key] = animg.metadata.at(key);
                     }

@@ -1598,12 +1598,11 @@ Drover SFML_Viewer(Drover DICOM_data,
                     throw std::runtime_error("Missing 'StudyInstanceUID' metadata element. Cannot continue.");
                 }
 
+                const double MinimumSeparation = disp_img_it->pxl_dz; // TODO: use more robust method here.
                 contour_coll_shtl.Insert_Metadata("ROIName", roi_name);
                 contour_coll_shtl.Insert_Metadata("NormalizedROIName", X(roi_name));
-                contour_coll_shtl.Raw_ROI_name = roi_name;
-                contour_coll_shtl.ROI_number = 1000;
-                contour_coll_shtl.Minimum_Separation = disp_img_it->pxl_dz;
-
+                contour_coll_shtl.Insert_Metadata("ROINumber", "10000"); // TODO: find highest existing and ++ it.
+                contour_coll_shtl.Insert_Metadata("MinimumSeparation", std::to_string(MinimumSeparation));
 
                 //Insert the contours into the Drover object.
                 DICOM_data.Ensure_Contour_Data_Allocated();

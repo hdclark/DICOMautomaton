@@ -227,13 +227,11 @@ Drover ContourVote(const Drover& DICOM_data,
     //Attach the requested metadata.
     cc_new.Insert_Metadata("ROIName", WinnerROILabel);
     cc_new.Insert_Metadata("NormalizedROIName", X(WinnerROILabel));
-    cc_new.Insert_Metadata("ROINumber", "999");
+    cc_new.Insert_Metadata("ROINumber", "999"); // TODO: fix this.
+    cc_new.Insert_Metadata("MinimumSeparation", "1.0"); // TODO: fix this.
 
     if(!cc_new.contours.empty()){
         DICOM_data.contour_data->ccs.emplace_back(cc_new);
-        DICOM_data.contour_data->ccs.back().ROI_number = 999;
-        DICOM_data.contour_data->ccs.back().Minimum_Separation = 1.0;
-        DICOM_data.contour_data->ccs.back().Raw_ROI_name = WinnerROILabel;
     }
 
     return DICOM_data;

@@ -192,9 +192,6 @@ Drover ContourViaThreshold(Drover DICOM_data,
     DICOM_data.contour_data->ccs.emplace_back();
 
     const double MinimumSeparation = 1.0; // TODO: is there a routine to do this? (YES: Unique_Contour_Planes()...)
-    DICOM_data.contour_data->ccs.back().Raw_ROI_name = ROILabel;
-    DICOM_data.contour_data->ccs.back().ROI_number = 10000; // TODO: find highest existing and ++ it.
-    DICOM_data.contour_data->ccs.back().Minimum_Separation = MinimumSeparation;
 
     //Iterate over each requested image_array. Each image is processed independently, so a thread pool is used.
     auto IAs_all = All_IAs( DICOM_data );
@@ -352,6 +349,7 @@ Drover ContourViaThreshold(Drover DICOM_data,
                             copl.back().metadata["NormalizedROIName"] = NormalizedROILabel;
                             copl.back().metadata["Description"] = "Contoured via threshold ("_s + std::to_string(Lower)
                                                                  + " <= pixel_val <= " + std::to_string(Upper) + ")";
+                            copl.back().metadata["ROINumber"] = std::to_string(10000); // TODO: find highest existing and ++ it.
                             copl.back().metadata["MinimumSeparation"] = std::to_string(MinimumSeparation);
                             for(const auto &key : { "StudyInstanceUID", "FrameOfReferenceUID" }){
                                 if(animg.metadata.count(key) != 0) copl.back().metadata[key] = animg.metadata.at(key);
@@ -483,6 +481,7 @@ Drover ContourViaThreshold(Drover DICOM_data,
                         cop.metadata["Description"] = "Contoured via threshold ("_s + LowerStr
                                                      + " <= pixel_val <= " + UpperStr + ")";
                         cop.metadata["MinimumSeparation"] = std::to_string(MinimumSeparation);
+                        cop.metadata["ROINumber"] = std::to_string(10000); // TODO: find highest existing and ++ it.
                         for(const auto &key : { "StudyInstanceUID", "FrameOfReferenceUID" }){
                             if(animg.metadata.count(key) != 0) cop.metadata[key] = animg.metadata.at(key);
                         }
@@ -525,6 +524,5 @@ Drover ContourViaThreshold(Drover DICOM_data,
         }
     }
 
-    DICOM_data.contour_data->ccs.back().Raw_ROI_name = ROILabel;
     return DICOM_data;
 }

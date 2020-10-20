@@ -1224,10 +1224,6 @@ std::unique_ptr<Contour_Data> get_Contour_Data(const std::string &filename){
     for(auto & m_it : mapcache){
         output->ccs.emplace_back( ); //std::move(m_it->second) ) );
         output->ccs.back() = m_it.second; 
-
-        output->ccs.back().Raw_ROI_name       = std::get<0>(m_it.first);
-        output->ccs.back().ROI_number         = std::get<1>(m_it.first);
-        output->ccs.back().Minimum_Separation = -1.0; //min_spacing;
         //output->ccs.back().Segmentation_History = ...empty...;
     }
 
@@ -1249,7 +1245,6 @@ std::unique_ptr<Contour_Data> get_Contour_Data(const std::string &filename){
     }
     //FUNCINFO("The minimum spacing found was " << min_spacing);
     for(auto & cc_it : output->ccs){
-        cc_it.Minimum_Separation = min_spacing;
         for(auto & cc : cc_it.contours) cc.metadata["MinimumSeparation"] = std::to_string(min_spacing);
 //        output->ccs.back().metadata["MinimumSeparation"] = std::to_string(min_spacing);
     }

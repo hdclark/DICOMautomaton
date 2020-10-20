@@ -127,8 +127,6 @@ contours_with_meta::contours_with_meta() :  Segmentation_History( {0} ){ }
 
 contours_with_meta::contours_with_meta(const contour_collection<double> &in){
     this->contours             = in.contours;
-    this->ROI_number           = 0; //-1 instead?
-    this->Minimum_Separation   = -1.0;
     this->Segmentation_History.push_back(0); //0 marks an original contour and may or may not be honored.
 }
 
@@ -139,9 +137,6 @@ contours_with_meta::contours_with_meta(const contours_with_meta &rhs) : contour_
 contours_with_meta & contours_with_meta::operator=(const contours_with_meta &rhs){
     if(this == &rhs) return *this;
     this->contours             = rhs.contours;
-    this->ROI_number           = rhs.ROI_number;
-    this->Raw_ROI_name         = rhs.Raw_ROI_name;
-    this->Minimum_Separation   = rhs.Minimum_Separation;
     this->Segmentation_History = rhs.Segmentation_History;
     return *this;
 }
@@ -164,7 +159,7 @@ void Contour_Data::operator=(const Contour_Data &rhs){
 void Contour_Data::Plot() const {
     Plotter a_plot;
     for(const auto & cc : this->ccs){
-        a_plot.ss << "# Default, simple plot for Contour with name '" << cc.Raw_ROI_name << "'" << std::endl;
+        a_plot.ss << "# Default, simple plot for contour with name '" << cc.get_dominant_value_for_key("ROIName").value_or("(unknown)") << "'" << std::endl;
         for(const auto & contour : cc.contours){
             for(const auto & point : contour.points){
                 a_plot.ss << point.x << " ";
@@ -197,15 +192,9 @@ std::unique_ptr<Contour_Data>  Contour_Data::Split_Per_Volume_Along_Given_Plane_
         // contour_collection in the output. 
         contours_with_meta above, below;
 
-        above.ROI_number            = cc.ROI_number;
-        above.Minimum_Separation    = cc.Minimum_Separation;
-        above.Raw_ROI_name          = cc.Raw_ROI_name;
         above.Segmentation_History  = cc.Segmentation_History;
         above.Segmentation_History.push_back(segmentation | Segmentations::positive); 
 
-        below.ROI_number            = cc.ROI_number;
-        below.Minimum_Separation    = cc.Minimum_Separation;
-        below.Raw_ROI_name          = cc.Raw_ROI_name;
         below.Segmentation_History  = cc.Segmentation_History;
         below.Segmentation_History.push_back(segmentation | Segmentations::negative);
 
@@ -348,9 +337,7 @@ std::unique_ptr<Contour_Data>  Contour_Data::Split_Per_Height_Along_Given_Plane_
                     contours_with_meta shtl(*ncc_it);
     
                     //Metadata inherited directly from the mother.
-                    shtl.ROI_number           = cc_it->ROI_number;
-                    shtl.Minimum_Separation   = cc_it->Minimum_Separation;
-                    shtl.Raw_ROI_name         = cc_it->Raw_ROI_name;
+                    shtl.metadata             = cc_it->metadata;
                     shtl.Segmentation_History = cc_it->Segmentation_History;
     
                     //Now we add a generic history element.
@@ -387,9 +374,7 @@ std::unique_ptr<Contour_Data>  Contour_Data::Split_Per_Height_Along_Given_Plane_
                     contour_with_meta temp3( (*nc_it) );
 
                     //This is inherited directly from the mother contour.
-                    temp3.ROI_number           = (*c_it).ROI_number;
-                shtl.Minimum_Separation   = cc_it->Minimum_Separation;
-                    temp3.Raw_ROI_name         = (*c_it).Raw_ROI_name;
+                    temp3.metadata             = (*c_it).metadata;
                     temp3.Segmentation_History = (*c_it).Segmentation_History;  //This is the mother's segmentation history. We append to it shortly.
 
                     //Now we add a generic segmentation history step. We add simple orientation info which may be supplemented by more 
@@ -458,15 +443,9 @@ std::unique_ptr<Contour_Data>  Contour_Data::Split_Per_Contour_Along_Given_Plane
         // contour_collection in the output. 
         contours_with_meta above, below;
 
-        above.ROI_number            = cc.ROI_number;
-        above.Minimum_Separation    = cc.Minimum_Separation;
-        above.Raw_ROI_name          = cc.Raw_ROI_name;
         above.Segmentation_History  = cc.Segmentation_History;
         above.Segmentation_History.push_back(segmentation | Segmentations::positive); 
 
-        below.ROI_number            = cc.ROI_number;
-        below.Minimum_Separation    = cc.Minimum_Separation;
-        below.Raw_ROI_name          = cc.Raw_ROI_name;
         below.Segmentation_History  = cc.Segmentation_History;
         below.Segmentation_History.push_back(segmentation | Segmentations::negative);
 
@@ -539,15 +518,9 @@ std::unique_ptr<Contour_Data>  Contour_Data::Raycast_Split_Per_Contour_Against_G
         // contour_collection in the output. 
         contours_with_meta above, below;
 
-        above.ROI_number            = cc.ROI_number;
-        above.Minimum_Separation    = cc.Minimum_Separation;
-        above.Raw_ROI_name          = cc.Raw_ROI_name;
         above.Segmentation_History  = cc.Segmentation_History;
         above.Segmentation_History.push_back(segmentation | Segmentations::positive);
 
-        below.ROI_number            = cc.ROI_number;
-        below.Minimum_Separation    = cc.Minimum_Separation;
-        below.Raw_ROI_name          = cc.Raw_ROI_name;
         below.Segmentation_History  = cc.Segmentation_History;
         below.Segmentation_History.push_back(segmentation | Segmentations::negative);
 
@@ -616,15 +589,9 @@ std::unique_ptr<Contour_Data> Contour_Data::Split_Core_and_Peel(double frac_dist
         // contour_collection in the output. 
         contours_with_meta core, peel;
 
-        core.ROI_number            = cc.ROI_number;
-        core.Minimum_Separation    = cc.Minimum_Separation;
-        core.Raw_ROI_name          = cc.Raw_ROI_name;
         core.Segmentation_History  = cc.Segmentation_History;
         core.Segmentation_History.push_back(segmentation | Segmentations::inner);
 
-        peel.ROI_number            = cc.ROI_number;
-        peel.Minimum_Separation    = cc.Minimum_Separation;
-        peel.Raw_ROI_name          = cc.Raw_ROI_name;
         peel.Segmentation_History  = cc.Segmentation_History;
         peel.Segmentation_History.push_back(segmentation | Segmentations::outer);
 
@@ -878,7 +845,8 @@ std::unique_ptr<Contour_Data> Contour_Data::Get_Contours_With_Numbers(const std:
     for(long n_it : in){
         //Cycle over the contours, checking each against the input.
         for(const auto & cc : this->ccs){
-            if(cc.ROI_number == n_it) output->ccs.push_back( cc );
+            const auto ccn = std::stol( cc.get_dominant_value_for_key("ROINumber").value_or("0") );
+            if(ccn == n_it) output->ccs.push_back( cc );
         }
     }
 
@@ -1861,7 +1829,8 @@ Drover Drover::Segment_Contours_Heuristically(const std::function<bool(bnded_dos
         // This should be fairly easy because everything is on a grid (from the dose grid).
         const double dx_sep_thres = 0.4*r_dx.length();
         const double dy_sep_thres = 0.4*r_dy.length();
-        const double dz_sep_thres = 0.4*(( cc_it->Minimum_Separation <= 0.0 ) ? r_dx.length() : cc_it->Minimum_Separation);
+        const auto MinimumSeparation = std::stod( cc_it->get_dominant_value_for_key("MinimumSeparation").value_or("1.0") );
+        const double dz_sep_thres = 0.4*(( MinimumSeparation <= 0.0 ) ? r_dx.length() : MinimumSeparation);
         const auto points_are_equal = [=](const vec3<double> &A, const vec3<double> &B) -> bool {
             const auto C = A-B;
             return (YGORABS(C.x) < dx_sep_thres) && (YGORABS(C.y) < dy_sep_thres) && (YGORABS(C.z) < dz_sep_thres);

@@ -174,17 +174,15 @@ Drover GenerateVirtualDataDoseStairsV1(Drover DICOM_data,
         
         std::map<std::string,std::string> metadata;
         metadata = DICOM_data.image_data.back()->imagecoll.get_common_metadata({});
-        metadata["ROINumber"] = std::to_string(ROINumber);
         metadata["ROIName"] = ROIName;
         metadata["NormalizedROIName"] = X(ROIName);
         metadata["MinimumSeparation"] = metadata["SliceThickness"];
+        metadata["ROINumber"] = std::to_string(ROINumber);
 
         auto cc = Encircle_Images_with_Contours(imgs, opts, metadata);
 
         output->ccs.emplace_back( );
         output->ccs.back() = cc;
-        output->ccs.back().Raw_ROI_name = ROIName; 
-        output->ccs.back().ROI_number = ROINumber;
 
         DICOM_data.contour_data = std::move(output);
     }

@@ -34,12 +34,28 @@ namespace serialization {
 
 //Class: contours_with_meta.
 template<typename Archive>
-void serialize(Archive &a, contours_with_meta &c, const unsigned int /*version*/){
-    a & boost::serialization::make_nvp("base_cc", boost::serialization::base_object<contour_collection<double>>(c))
-      & boost::serialization::make_nvp("roi_number",c.ROI_number)
-      & boost::serialization::make_nvp("minimum_separation",c.Minimum_Separation)
-      & boost::serialization::make_nvp("raw_roi_name",c.Raw_ROI_name)
-      & boost::serialization::make_nvp("segmentation_history",c.Segmentation_History);
+void serialize(Archive &a, contours_with_meta &c, const unsigned int version){
+    if(version == 0){
+        // Emulate the old-style contours_with_meta data members by reading, reading/writing, and writing.
+        std::string MinimumSeparation = c.get_dominant_value_for_key("MinimumSeparation").value_or("");
+        std::string ROINumber = c.get_dominant_value_for_key("ROINumber").value_or("");
+        std::string RawROIName = c.get_dominant_value_for_key("ROIName").value_or("");
+
+        a & boost::serialization::make_nvp("base_cc", boost::serialization::base_object<contour_collection<double>>(c))
+          & boost::serialization::make_nvp("roi_number",ROINumber)
+          & boost::serialization::make_nvp("minimum_separation",MinimumSeparation)
+          & boost::serialization::make_nvp("raw_roi_name",RawROIName)
+          & boost::serialization::make_nvp("segmentation_history",c.Segmentation_History);
+
+        c.Insert_Metadata("MinimumSeparation", MinimumSeparation);
+        c.Insert_Metadata("ROINumber", ROINumber);
+        c.Insert_Metadata("ROIName", RawROIName);
+    }else if(version == 1){
+        a & boost::serialization::make_nvp("base_cc", boost::serialization::base_object<contour_collection<double>>(c))
+          & boost::serialization::make_nvp("segmentation_history",c.Segmentation_History);
+    }else{
+        FUNCWARN("contours_with_meta archives with version " << version << " are not recognized");
+    }
     return;
 }
 
@@ -205,6 +221,8 @@ void serialize(Archive &a, Drover &d, const unsigned int version){
 } // namespace serialization
 } // namespace boost
 
+//BOOST_CLASS_VERSION(contours_with_meta, 0); // Initial version number.
+BOOST_CLASS_VERSION(contours_with_meta, 1); // After moving Raw_ROI_Name, Minimum_Separation, and ROI_Number to metadata.
 
 //BOOST_CLASS_VERSION(Image_Array, 0); // Initial version number.
 BOOST_CLASS_VERSION(Image_Array, 1) // After removing the disused 'bits' and 'filename' members.

@@ -73,17 +73,6 @@ std::string Segmentations_to_Words(const std::vector<uint32_t> &in);
 class contours_with_meta : public contour_collection<double> {
 //class contour_with_meta : public contour_of_points<double> {
     public:
-        //This is the ROI number as it is defined in the DICOM file. There is no importance to this number. It just 
-        // allows us to conveniently differentiate contours with a number.
-        long int      ROI_number{0};
-
-        //This is the minimum distance between adjacent contours. One should be ready to handle 0.0 or negatives! 
-        double        Minimum_Separation{-1.0};
-
-        //These are the raw names read out of the DICOM file. There is no danger having them as std::string, because
-        // we can cast to a unicode-friendly format as needed (treating them as binary data).
-        std::string   Raw_ROI_name;
-
         //Used to keep track of the various ways the data in this contour has been segmented. (Might tell us it is 
         // the medial, posterior portion of the original contour.)
         std::vector<uint32_t> Segmentation_History;
@@ -97,10 +86,7 @@ class contours_with_meta : public contour_collection<double> {
 
 };
 
-//This class is used to hold a collection of contour_with_meta instances. It basically is used to replace using a std::vector<contour_with_meta>. This is done
-// because using std::vector's was leaking the storage format throughout the code. Everytime I wanted to iterate over the contours, I was required to break into
-// a for loop and iterate over the contours until I found the particular ROI numbers (etc..) I was looking for. This class basically just tries to contain the 
-// excessive amounts of duplicated code that were floating around prior to it existing.
+//This class is used to hold a collection of contours.
 class Contour_Data {
     public:
         std::list<contours_with_meta> ccs; //Contour collections.
@@ -398,8 +384,10 @@ const auto bnded_dose_map_cmp_lambda = [](const bnded_dose_map_key_t &A, const b
 
     //It is desirable to order the same on every machine so that output data can be more easily compared.
  
-    //First, we check the structure name.
-    if(A->Raw_ROI_name != B->Raw_ROI_name) return (A->Raw_ROI_name < B->Raw_ROI_name);
+    //First, we check the structure name(s).
+    const auto A_names = A->get_distinct_values_for_key("ROIName");
+    const auto B_names = B->get_distinct_values_for_key("ROIName");
+    if(A_names != B_names) return A_names < B_names;
     
     //Next we check the segmentation history.
     if(A->Segmentation_History != B->Segmentation_History) return (A->Segmentation_History < B->Segmentation_History);
