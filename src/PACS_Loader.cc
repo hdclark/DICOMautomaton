@@ -225,7 +225,7 @@ bool Load_From_PACS_DB( Drover &DICOM_data,
        
                  
                 const auto keyA = std::make_pair(FrameOfReferenceUID,StudyInstanceUID);
-                contours_with_meta cc;
+                contour_collection<double> cc;
                 if(!cc.load_from_string(ContourCollectionString)){
                     FUNCWARN("Unable to parse contour collection with ROIName '" << ROIName <<
                              "' and StudyInstanceUID '" << StudyInstanceUID << "'. Continuing");

@@ -167,7 +167,7 @@ Drover SFML_Viewer(Drover DICOM_data,
     bool ShowExistingContours = true; //Can be disabled/toggled for, e.g., blind re-contouring.
 
     //Accumulation-type storage.
-    contours_with_meta contour_coll_shtl; //Stores contours in the DICOM coordinate system.
+    contour_collection<double> contour_coll_shtl; //Stores contours in the DICOM coordinate system.
     contour_coll_shtl.contours.emplace_back();    //Prime the shuttle with an empty contour.
     contour_coll_shtl.contours.back().closed = true;
 

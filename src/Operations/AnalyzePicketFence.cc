@@ -348,9 +348,9 @@ Drover AnalyzePicketFence(Drover DICOM_data,
             std::map<l_num, std::map<j_num, vec3<double>>> actual_jl_int;
 
             // Shuttles for various contours.
-            std::list<contours_with_meta> peak_contours;
-            std::list<contours_with_meta> leaf_pair_contours;
-            std::list<contours_with_meta> junction_contours;
+            std::list<contour_collection<double>> peak_contours;
+            std::list<contour_collection<double>> leaf_pair_contours;
+            std::list<contour_collection<double>> junction_contours;
 
         };
 

@@ -50,10 +50,10 @@ std::list<std::string> Extract_Unique_Metadata_Values(ptr p, const std::string &
         const auto uniq_vals = p->imagecoll.get_distinct_values_for_key(key);
         return uniq_vals;
     
-    // Contour_Data (actually contours_with_meta).
+    // Contour_Data (actually contour_collection<double>).
     //
     // NOTE: accessing Contour_Data elements is different from other Drover elements!
-    }else if constexpr (std::is_same_v< obj_t, contours_with_meta >){
+    }else if constexpr (std::is_same_v< obj_t, contour_collection<double> >){
         const auto uniq_vals = p->get_distinct_values_for_key(key);
         return uniq_vals;
 
@@ -187,7 +187,7 @@ Drover ForEachDistinct(Drover DICOM_data,
         if(DICOM_data.Has_Contour_Data()){
             while(!DICOM_data.contour_data->ccs.empty()){
                 auto it = DICOM_data.contour_data->ccs.begin();
-                auto ptr = &( *it ); // Pointer to contours_with_meta rather than whole Contour_Data.
+                auto ptr = &( *it ); // Pointer to contour_collection<double> rather than whole Contour_Data.
 
                 std::list<std::string> value_signature;
                 for(const auto &key : KeysCommon){

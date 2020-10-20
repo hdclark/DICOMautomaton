@@ -68,28 +68,10 @@ namespace Segmentations {
 std::string Segmentations_to_Words(const std::vector<uint32_t> &in);
 
 
-
-
-class contours_with_meta : public contour_collection<double> {
-//class contour_with_meta : public contour_of_points<double> {
-    public:
-        //Used to keep track of the various ways the data in this contour has been segmented. (Might tell us it is 
-        // the medial, posterior portion of the original contour.)
-        std::vector<uint32_t> Segmentation_History;
-
-        //Constructors.
-        contours_with_meta();
-        contours_with_meta(const contours_with_meta &);
-        contours_with_meta(const contour_collection<double> &);
-
-        contours_with_meta & operator=(const contours_with_meta &rhs);
-
-};
-
 //This class is used to hold a collection of contours.
 class Contour_Data {
     public:
-        std::list<contours_with_meta> ccs; //Contour collections.
+        std::list<contour_collection<double>> ccs; //Contour collections.
 
         //Constructors.
         Contour_Data();
@@ -128,21 +110,6 @@ std::unique_ptr<Contour_Data> Split_Per_Volume_Along_Transverse_Plane() const;
 
         //--- Core-Peel splitting. ---
         std::unique_ptr<Contour_Data> Split_Core_and_Peel(double frac_dist) const;
-
-        //--- Geometric ordering. ---
-        std::unique_ptr<Contour_Data> Reorder_LR_to_ML() const;
-
-        //Contour selector factories.
-        std::unique_ptr<Contour_Data> Get_Contours_Number(long int N) const; //Extracts a single contours_with_meta at list position N.
-        std::unique_ptr<Contour_Data> Get_Single_Contour_Number(long int N, long int M) const; //Extracts contour M from contours_with_meta at list position N.
-
-        std::unique_ptr<Contour_Data> Get_Contours_With_Number(long int in) const;
-        std::unique_ptr<Contour_Data> Get_Contours_With_Numbers(const std::set<long int> &in) const;
-        std::unique_ptr<Contour_Data> Get_Contours_With_Last_Segmentation(const uint32_t &in) const;
-        std::unique_ptr<Contour_Data> Get_Contours_With_Segmentation(const std::set<uint32_t> &in) const;
-//        std::unique_ptr<Contour_Data> Get_Contours_With_Name(std::string in) const;
-//        std::unique_ptr<Contour_Data> Get_Contours_With_Names(set of std::string &in) const;
-//        std::unique_ptr<Contour_Data> Get_Contours_On_Side_..... ?
 
 };
 
@@ -372,8 +339,7 @@ class Transform3 {
 
 //Helper functions - unordered_map with iterator or pointer key types. Sorting/hashing is performed using the address of the object 
 // being pointed to. This is extremely convenient, but quite unsafe. Do not use if you do not understand how to avoid segfaults!
-//typedef std::list<contours_with_meta>::const_iterator  bnded_dose_map_key_t; //Required be an iterator or pointer.
-using bnded_dose_map_key_t = std::list<contours_with_meta>::iterator; //Required be an iterator or pointer.
+using bnded_dose_map_key_t = std::list<contour_collection<double>>::iterator; //Required be an iterator or pointer.
 
 using bnded_dose_map_cmp_func_t = std::function<bool (const bnded_dose_map_key_t &, const bnded_dose_map_key_t &)>;
 
@@ -385,12 +351,18 @@ const auto bnded_dose_map_cmp_lambda = [](const bnded_dose_map_key_t &A, const b
     //It is desirable to order the same on every machine so that output data can be more easily compared.
  
     //First, we check the structure name(s).
-    const auto A_names = A->get_distinct_values_for_key("ROIName");
-    const auto B_names = B->get_distinct_values_for_key("ROIName");
-    if(A_names != B_names) return A_names < B_names;
+    {
+        const auto A_names = A->get_distinct_values_for_key("ROIName");
+        const auto B_names = B->get_distinct_values_for_key("ROIName");
+        if(A_names != B_names) return A_names < B_names;
+    }
     
     //Next we check the segmentation history.
-    if(A->Segmentation_History != B->Segmentation_History) return (A->Segmentation_History < B->Segmentation_History);
+    {
+        const auto A_seghist = A->get_distinct_values_for_key("SegmentationHistory");
+        const auto B_seghist = B->get_distinct_values_for_key("SegmentationHistory");
+        if(A_seghist != B_seghist) return A_seghist < B_seghist;
+    }
 
     //Next check the number of contours.
 

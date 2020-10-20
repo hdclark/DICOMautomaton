@@ -292,7 +292,7 @@ Insert_Grid_Contours(Drover &DICOM_data,
         const std::string& NormalizedROILabel = ROILabel;
         const auto contour_thickness = 0.001; // in DICOM units (i.e., mm).
 
-        std::list<contours_with_meta> new_contours;
+        std::list<contour_collection<double>> new_contours;
 
         auto IAs_all = All_IAs( DICOM_data );
         auto IAs = Whitelist( IAs_all, ImageSelectionStr );

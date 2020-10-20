@@ -1224,7 +1224,6 @@ std::unique_ptr<Contour_Data> get_Contour_Data(const std::string &filename){
     for(auto & m_it : mapcache){
         output->ccs.emplace_back( ); //std::move(m_it->second) ) );
         output->ccs.back() = m_it.second; 
-        //output->ccs.back().Segmentation_History = ...empty...;
     }
 
     //Find the minimum separation between contours (which isn't zero).
