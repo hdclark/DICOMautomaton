@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -eu
+set -eux
 
 "${DCMA_BIN}" \
   "${TEST_FILES_ROOT}"/3x3x3_random_positive.3ddose \

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -eu
+set -eux
 
 
 # Test that BED conversion is valid when irrelevant data is provided.

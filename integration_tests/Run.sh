@@ -2,6 +2,42 @@
 
 set -eu
 
+VERBOSE_FAILURE_OUTPUT="0" # Whether to print all test results on failure.
+
+###########################################################################################
+# Argument parsing
+###########################################################################################
+OPTIND=1 # Reset in case getopts has been used previously in the shell.
+while getopts "huv" opt; do
+    case "$opt" in
+    u)  true
+        ;&
+    h)
+        printf -- '\n'
+        printf -- '===============================================================================\n'
+        printf -- 'This script performs integration tests for DICOMautomaton.\n'
+        printf -- '\n'
+        printf -- 'Usage: \n'
+        printf -- '\t '"$0"' -h -u -v\n'
+        printf -- '\n'
+        printf -- 'Options: \n'
+        printf -- '\t -h  Print this help/usage information and quit.\n'
+        printf -- '\t -u  Print this help/usage information and quit.\n'
+        printf -- '\t -v  Verbosely print reports if any tests fail.\n'
+        printf -- '\n'
+        printf -- 'Note: \n'
+        printf -- ' - If the "-v" option is specified, all test results are verbosely reported if\n'
+        printf -- '   any tests fail. This is useful in continuous integration, or for inspecting\n'
+        printf -- '   logs, but is not recommended for interactive use.\n'
+        printf -- '===============================================================================\n'
+        exit 1
+        ;;
+    v)  VERBOSE_FAILURE_OUTPUT="1"
+        ;;
+    esac
+done
+shift $(( OPTIND - 1 ))  # Purge all consumed options to the left of the first non-option token.
+
 # Move to a standard location.
 export REPO_ROOT=$(git rev-parse --show-toplevel || true)
 if [ ! -d "${REPO_ROOT}" ] ; then
@@ -105,7 +141,9 @@ if [ -s "${TEST_FAILURES}" ] ; then
     printf 'The following tests failed:\n'
     cat "${TEST_FAILURES}"
 
-    find "${TESTING_ROOT}" -type f -print -exec cat '{}' \+
+    if [ "${VERBOSE_FAILURE_OUTPUT}" == "1" ] ; then
+        find "${TESTING_ROOT}" -type f -printf '=== %p ===\n' -exec cat '{}' \;
+    fi
 else
     printf 'All tests passed.\n'
 fi
