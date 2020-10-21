@@ -21,4 +21,5 @@ petct_perfusion_analysis*
 # Typical build directory and artifacts.
 build/
 compile_commands.json
+dcma_integration_testing/
 
