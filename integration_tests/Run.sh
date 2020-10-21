@@ -104,6 +104,8 @@ printf -- '---------------------------------------------------------------------
 if [ -s "${TEST_FAILURES}" ] ; then
     printf 'The following tests failed:\n'
     cat "${TEST_FAILURES}"
+
+    find "${TESTING_ROOT}" -type f -print -exec cat '{}' \+
 else
     printf 'All tests passed.\n'
 fi
