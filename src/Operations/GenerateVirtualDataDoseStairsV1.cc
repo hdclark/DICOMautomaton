@@ -171,6 +171,7 @@ Drover GenerateVirtualDataDoseStairsV1(Drover DICOM_data,
 
         Encircle_Images_with_Contours_Opts opts;
         opts.inclusivity = Encircle_Images_with_Contours_Opts::Inclusivity::Centre;
+        opts.contouroverlap = Encircle_Images_with_Contours_Opts::ContourOverlap::Allow;
         
         std::map<std::string,std::string> metadata;
         metadata = DICOM_data.image_data.back()->imagecoll.get_common_metadata({});
