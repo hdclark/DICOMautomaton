@@ -131,6 +131,7 @@ add_library(Operations_objs OBJECT
     ThresholdOtsu.cc
     TransformContours.cc
     TransformMeshes.cc
+    TransformImages.cc
     TrimROIDose.cc
     UBC3TMRI_DCE.cc
     UBC3TMRI_DCE_Differences.cc

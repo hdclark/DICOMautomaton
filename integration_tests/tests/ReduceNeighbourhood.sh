@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 set -eux
+set -o pipefail
 
 "${DCMA_BIN}" \
   "${TEST_FILES_ROOT}"/MR_continents.dcm \

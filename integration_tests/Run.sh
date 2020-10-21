@@ -91,7 +91,7 @@ function perform_test {
     export TSAN_OPTIONS='verbosity=0 coverage=1 coverage_dir="." html_cov_report=1 history_size=5'
     export MSAN_OPTIONS='verbosity=0 coverage=1 coverage_dir="." html_cov_report=1'
     export UBSAN_OPTIONS='verbosity=0 coverage=1 coverage_dir="." html_cov_report=1'
-    bash "${s_f_base}" >stdout 2>stderr
+    bash "${s_f_base}" 1>stdout 2>stderr
     local ret_val=$?
 
     # Notify results of the test.
