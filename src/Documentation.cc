@@ -141,7 +141,11 @@ void Emit_Documentation(std::ostream &os){
         " 2020 hal clark. See the ```LICENSE``` file for details about the license."
         " Informally, DICOMautomaton is available under a GPLv3+ license."
         " The Imebra library is bundled for convenience and was not written"
-        " by hal clark; consult its license file in ```src/imebra/license.txt```."
+        " by hal clark; consult its license file in"
+        " ```src/imebra20121219/license.txt```."
+        " The ImGui toolkit is bundled for convenience and was not written"
+        " by hal clark; consult its license file in"
+        " ```src/imgui20201021/license.txt```."
     );
     reflow_and_emit_paragraph(os, max_width, nobullet, nobullet, nolinebreak,
         "All liability is herefore disclaimed. The person(s) who use this source"

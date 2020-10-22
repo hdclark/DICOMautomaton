@@ -116,6 +116,15 @@ FILE(GLOB ygorimaging_helpers  "./YgorImages_Functors/*cc")
 add_library( YgorImaging_Helper_objs OBJECT ${ygorimaging_helpers} )
 set_target_properties( YgorImaging_Helper_objs PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
+if(WITH_SDL)
+    add_library( IMGui_objs OBJECT imgui20201021/imgui_impl_opengl3.cpp
+                                   imgui20201021/imgui_impl_sdl.cpp
+                                   imgui20201021/imgui.cpp
+                                   imgui20201021/imgui_demo.cpp
+                                   imgui20201021/imgui_draw.cpp
+                                   imgui20201021/imgui_widgets.cpp )
+    set_target_properties( IMGui_objs PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+endif()
 
 
 
@@ -247,7 +256,7 @@ add_executable (dicomautomaton_dispatcher
     $<$<BOOL:${WITH_CGAL}>:$<TARGET_OBJECTS:Surface_Meshes_obj>>
     $<TARGET_OBJECTS:Simple_Meshing_obj>
     $<TARGET_OBJECTS:Regex_Selectors_obj>
-
+    $<$<BOOL:${WITH_SDL}>:$<TARGET_OBJECTS:IMGui_objs>>
     $<$<BOOL:${WITH_POSTGRES}>:$<TARGET_OBJECTS:PACS_Loader_obj>>
     $<TARGET_OBJECTS:File_Loader_obj>
     $<TARGET_OBJECTS:Boost_Serialization_File_Loader_obj>
@@ -285,7 +294,7 @@ target_link_libraries (dicomautomaton_dispatcher
     $<$<BOOL:${WITH_JANSSON}>:jansson>
     "$<$<BOOL:${WITH_NLOPT}>:${NLOPT_LIBRARIES}>"
     "$<$<BOOL:${WITH_SFML}>:${SFML_LIBRARIES}>"
-    "$<$<BOOL:${WITH_SDL}>:${SDL_LIBRARIES}>"
+    "$<$<BOOL:${WITH_SDL}>:${SDL2_LIBRARIES}>"
     "$<$<BOOL:${WITH_SDL}>:${GLEW_LIBRARIES}>"
     "$<$<BOOL:${WITH_POSTGRES}>:${POSTGRES_LIBRARIES}>"
     Boost::filesystem
@@ -319,7 +328,7 @@ if(WITH_WT)
         $<$<BOOL:${WITH_CGAL}>:$<TARGET_OBJECTS:Surface_Meshes_obj>>
         $<TARGET_OBJECTS:Simple_Meshing_obj>
         $<TARGET_OBJECTS:Regex_Selectors_obj>
-
+        $<$<BOOL:${WITH_SDL}>:$<TARGET_OBJECTS:IMGui_objs>>
         $<$<BOOL:${WITH_POSTGRES}>:$<TARGET_OBJECTS:PACS_Loader_obj>>
         $<TARGET_OBJECTS:File_Loader_obj>
         $<TARGET_OBJECTS:Boost_Serialization_File_Loader_obj>
@@ -357,7 +366,7 @@ if(WITH_WT)
         $<$<BOOL:${WITH_JANSSON}>:jansson>
         "$<$<BOOL:${WITH_NLOPT}>:${NLOPT_LIBRARIES}>"
         "$<$<BOOL:${WITH_SFML}>:${SFML_LIBRARIES}>"
-        "$<$<BOOL:${WITH_SDL}>:${SDL_LIBRARIES}>"
+        "$<$<BOOL:${WITH_SDL}>:${SDL2_LIBRARIES}>"
         "$<$<BOOL:${WITH_SDL}>:${GLEW_LIBRARIES}>"
         "$<$<BOOL:${WITH_POSTGRES}>:${POSTGRES_LIBRARIES}>"
         wt

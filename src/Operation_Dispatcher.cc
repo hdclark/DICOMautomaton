@@ -160,6 +160,10 @@
 #include "Operations/VolumetricSpatialDerivative.h"
 #include "Operations/WarpPoints.h"
 
+#ifdef DCMA_USE_SDL
+    #include "Operations/SDL_Viewer.h"
+#endif // DCMA_USE_SDL
+
 #ifdef DCMA_USE_SFML
     #include "Operations/PresentationImage.h"
     #include "Operations/SFML_Viewer.h"
@@ -342,6 +346,10 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["VolumetricSpatialBlur"] = std::make_pair(OpArgDocVolumetricSpatialBlur, VolumetricSpatialBlur);
     out["VolumetricSpatialDerivative"] = std::make_pair(OpArgDocVolumetricSpatialDerivative, VolumetricSpatialDerivative);
     out["WarpPoints"] = std::make_pair(OpArgDocWarpPoints, WarpPoints);
+
+//#ifdef DCMA_USE_SDL
+//    out["SDL_Viewer"] = std::make_pair(OpArgDocSDL_Viewer, SDL_Viewer);
+//#endif // DCMA_USE_SDL
 
 #ifdef DCMA_USE_SFML
     out["PresentationImage"] = std::make_pair(OpArgDocPresentationImage, PresentationImage);
