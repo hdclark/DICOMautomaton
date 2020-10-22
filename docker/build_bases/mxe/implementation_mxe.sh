@@ -154,6 +154,8 @@ cp "/mxe/usr/${TOOLCHAIN}/lib/pkgconfig/"sfml{,-graphics}.pc
 cp "/mxe/usr/${TOOLCHAIN}/lib/pkgconfig/"sfml{,-window}.pc
 cp "/mxe/usr/${TOOLCHAIN}/lib/pkgconfig/"sfml{,-system}.pc
 
+"${TOOLCHAIN}-pkg-config" --cflags --libs sfml-graphics sfml-window sfml-system sdl2 glew
+
 # Compile the portable pieces.
 for repo_dir in /ygor /ygorclustering /explicator ; do
     cd "$repo_dir"

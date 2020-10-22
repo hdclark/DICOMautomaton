@@ -101,6 +101,10 @@ if(WITH_SDL)
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(SDL2 REQUIRED sdl2)
     include_directories( ${SDL2_INCLUDE_DIRS} )
+
+    if(NOT BUILD_SHARED_LIBS)
+        add_definitions(-DGLEW_STATIC=1)
+    endif()
     pkg_check_modules(GLEW REQUIRED glew)
     include_directories( ${GLEW_INCLUDE_DIRS} )
 endif()
@@ -116,7 +120,6 @@ if(WITH_POSTGRES)
     pkg_check_modules(POSTGRES REQUIRED libpq libpqxx)
     include_directories( ${POSTGRES_INCLUDE_DIRS} )
 endif()
-
 
 ####################################################################################
 #                                  Compiler Flags
@@ -325,6 +328,8 @@ else()
     add_definitions(-UDCMA_USE_GNU_GSL)
 endif()
 
+# ASIO: target Windows 7 features.
+add_definitions(-D_WIN32_WINNT=0x0601)
 
 # Use the directory where CMakeLists.txt is for inclusions.
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
