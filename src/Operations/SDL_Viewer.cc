@@ -555,6 +555,8 @@ Drover SDL_Viewer(Drover DICOM_data,
                 current_texture = Load_OpenGL_Texture(disp_img_it);
             }
 
+            // Note: unhappy with this. Can cause feedback loop and flicker/jumpiness when resizing. Works OK for now
+            // though. TODO.
             ImVec2 window_size = ImGui::GetContentRegionAvail();
             window_size.x = std::max(512.0f, window_size.x);
             // Ensure images have the same aspect ratio as the true image.
@@ -573,6 +575,53 @@ Drover SDL_Viewer(Drover DICOM_data,
                      background_colour.z,
                      background_colour.w);
         glClear(GL_COLOR_BUFFER_BIT);
+
+// Tinkering with rendering surface meshes.
+if(DICOM_data.Has_Mesh_Data()){
+    //auto smesh_ptr = DICOM_data.smesh_data.front();
+    //const auto N_verts = smesh_ptr->meshes.vertices.size();
+    //
+    //long int N_faces = 0;
+    //for(const auto& f : smesh_ptr->meshes.faces) N_faces += f.size();
+
+    const GLfloat diamond[4][2] = {
+      {  0.0,  1.0 },
+      { 1.0, 0.0 },
+      { 0.0, -1.0 },
+      { -1.0, 0.0 } };
+
+//    const GLfloat colors[4][3] = {
+//      {  1.0, 0.0, 0.0 }, // red
+//      {  0.0, 1.0, 0.0 }, // green
+//      {  0.0, 0.0, 1.0 }, // blue
+//      {  1.0, 1.0, 1.0 } }; // white
+
+    
+    GLuint vao = 0;
+    GLuint vbo[2];
+
+    glGenVertexArrays(1, &vao); // Create a VAO inside the OpenGL context.
+    glBindVertexArray(vao); // Bind = make it the currently-used object.
+
+    glGenBuffers(2, vbo); // Create 2 VBO inside the OpenGL context.
+
+    glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
+    glBufferData(GL_ARRAY_BUFFER, 8 * sizeof(GLfloat), diamond, GL_STATIC_DRAW); // Copy vertex data.
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0); // 2 floats per vertex, attrib index 0.
+    glEnableVertexAttribArray(0); // enable attribute with index 0.
+
+    glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
+    glBufferData(GL_ARRAY_BUFFER, 12 * sizeof(GLfloat), colors, GL_STATIC_DRAW); // Copy color data.
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0); // 3 floats per vertex, attrib index 1.
+    glEnableVertexAttribArray(1); // enable attribute with index 1.
+
+    glDrawArrays(GL_LINE_LOOP, 0, 4); // Draw using the current shader setup.
+
+    glDisableVertexAttribArray(0); // Free OpenGL resources.
+    glDisableVertexAttribArray(1);
+    glDeleteBuffers(2, vbo);
+    glDeleteVertexArrays(1, &vao);
+}
 
         // Render the ImGui components and swap OpenGL buffers.
         ImGui::Render();
