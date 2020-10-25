@@ -495,6 +495,29 @@ Drover SDL_Viewer(Drover DICOM_data,
         ImGui::NewFrame();
 
         {
+            if(ImGui::BeginMainMenuBar()){
+                if(ImGui::BeginMenu("File")){
+                    ImGui::EndMenu();
+                }
+                if(ImGui::BeginMenu("Edit")){
+                    if(ImGui::MenuItem("Undo", "CTRL+Z")){}
+                    if(ImGui::MenuItem("Redo", "CTRL+Y", false, false)){}  // Disabled item
+                    ImGui::Separator();
+                    if(ImGui::MenuItem("Cut", "CTRL+X")){}
+                    if(ImGui::MenuItem("Copy", "CTRL+C")){}
+                    if(ImGui::MenuItem("Paste", "CTRL+V")){}
+                    ImGui::EndMenu();
+                }
+                ImGui::Separator();
+                if(ImGui::BeginMenu("Exit", "CTRL+Q")){
+                    ImGui::EndMenu();
+                    break;
+                }
+                ImGui::EndMainMenuBar();
+            }
+        }
+
+        {
             ImGui::Begin("Main");
 
             ImGui::Text("This is the main menu window.");
@@ -532,7 +555,13 @@ Drover SDL_Viewer(Drover DICOM_data,
                 current_texture = Load_OpenGL_Texture(disp_img_it);
             }
 
-            ImGui::Image(reinterpret_cast<void*>(static_cast<intptr_t>(current_texture.texture_number)), ImVec2(1.5f*current_texture.col_count, 1.5f*current_texture.row_count));
+            ImVec2 window_size = ImGui::GetContentRegionAvail();
+            window_size.x = std::max(512.0f, window_size.x);
+            // Ensure images have the same aspect ratio as the true image.
+            window_size.y = window_size.x * static_cast<float>(disp_img_it->rows) / static_cast<float>(disp_img_it->columns);
+            window_size.y = std::isfinite(window_size.y) ? window_size.y : window_size.x;
+            auto gl_tex_ptr = reinterpret_cast<void*>(static_cast<intptr_t>(current_texture.texture_number));
+            ImGui::Image(gl_tex_ptr, window_size);
 
             ImGui::End();
         }
