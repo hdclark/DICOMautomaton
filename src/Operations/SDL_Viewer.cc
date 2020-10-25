@@ -590,11 +590,11 @@ if(DICOM_data.Has_Mesh_Data()){
       { 0.0, -1.0 },
       { -1.0, 0.0 } };
 
-//    const GLfloat colors[4][3] = {
-//      {  1.0, 0.0, 0.0 }, // red
-//      {  0.0, 1.0, 0.0 }, // green
-//      {  0.0, 0.0, 1.0 }, // blue
-//      {  1.0, 1.0, 1.0 } }; // white
+    const GLfloat colors[4][3] = {
+      {  1.0, 0.0, 0.0 }, // red
+      {  0.0, 1.0, 0.0 }, // green
+      {  0.0, 0.0, 1.0 }, // blue
+      {  1.0, 1.0, 1.0 } }; // white
 
     
     GLuint vao = 0;
