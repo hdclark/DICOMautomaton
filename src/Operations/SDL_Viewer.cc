@@ -176,19 +176,33 @@ Drover SDL_Viewer(Drover DICOM_data,
 
     // --------------------------------------------- Setup ------------------------------------------------
     if(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER) != 0){
-        throw std::invalid_argument("Unable to initialize SDL: "_s + SDL_GetError());
+        throw std::runtime_error("Unable to initialize SDL: "_s + SDL_GetError());
     }
 
     // Configure the desired OpenGL version (v3.0).
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+    if(0 != SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0)){
+        throw std::runtime_error("Unable to set SDL_GL_CONTEXT_FLAGS: "_s + SDL_GetError());
+    }
+    if(0 != SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE)){
+        throw std::runtime_error("Unable to set SDL_GL_CONTEXT_PROFILE_MASK: "_s + SDL_GetError());
+    }
+    if(0 != SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3)){
+        throw std::runtime_error("Unable to set SDL_GL_CONTEXT_MAJOR_VERSION: "_s + SDL_GetError());
+    }
+    if(0 != SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0)){
+        throw std::runtime_error("Unable to set SDL_GL_CONTEXT_MINOR_VERSION: "_s + SDL_GetError());
+    }
 
     // Create an SDL window and provide a context we can refer to.
-    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
-    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-    SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
+    if(0 != SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24)){
+        throw std::runtime_error("Unable to set SDL_GL_DEPTH_SIZE: "_s + SDL_GetError());
+    }
+    if(0 != SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1)){
+        throw std::runtime_error("Unable to set SDL_GL_DOUBLEBUFFER: "_s + SDL_GetError());
+    }
+    if(0 != SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8)){
+        throw std::runtime_error("Unable to set SDL_GL_STENCIL_SIZE: "_s + SDL_GetError());
+    }
     SDL_Window* window = SDL_CreateWindow("DICOMautomaton Interactive Workspace",
                                            SDL_WINDOWPOS_CENTERED,
                                            SDL_WINDOWPOS_CENTERED,
@@ -198,11 +212,20 @@ Drover SDL_Viewer(Drover DICOM_data,
         throw std::runtime_error("Unable to create an SDL window: "_s + SDL_GetError());
     }
     SDL_GLContext gl_context = SDL_GL_CreateContext(window);
-    SDL_GL_MakeCurrent(window, gl_context);
-    SDL_GL_SetSwapInterval(1); // Enable vsync to limit the frame rate.
+    if(gl_context == nullptr){
+        throw std::runtime_error("Unable to create an OpenGL context for SDL: "_s + SDL_GetError());
+    }
+    if(0 != SDL_GL_MakeCurrent(window, gl_context)){
+        throw std::runtime_error("Unable to associate OpenGL context with SDL window: "_s + SDL_GetError());
+    }
+    if(SDL_GL_SetSwapInterval(-1) != 0){ // Enable adaptive vsync to limit the frame rate.
+        if(SDL_GL_SetSwapInterval(1) != 0){ // Enable vsync (non-adaptive).
+            FUNCWARN("Unable to enable vsync. Continuing without it");
+        }
+    }
 
     if(glewInit() != GLEW_OK){
-        throw std::invalid_argument("Glew was unable to initialize OpenGL");
+        throw std::runtime_error("Glew was unable to initialize OpenGL");
     }
 
     // Create an ImGui context we can use and associate it with the OpenGL context.
@@ -216,19 +239,28 @@ Drover SDL_Viewer(Drover DICOM_data,
 
     // Setup Platform/Renderer backends
     const std::string gl_shader_version = "#version 130";
-    ImGui_ImplSDL2_InitForOpenGL(window, gl_context);
-    ImGui_ImplOpenGL3_Init(gl_shader_version.c_str());
+    if(!ImGui_ImplSDL2_InitForOpenGL(window, gl_context)){
+        throw std::runtime_error("ImGui unable to associate SDL window with OpenGL context.");
+    }
+    if(!ImGui_ImplOpenGL3_Init(gl_shader_version.c_str())){
+        throw std::runtime_error("ImGui unable to initialize OpenGL with given shader.");
+    }
 
     // -------------------------------- Functors for various things ---------------------------------------
 
-    const auto Check_For_OpenGL_Errors = [](void){
-        GLenum err = glGetError();
-        if(err != GL_NO_ERROR){
-            throw std::runtime_error("Unexpected OpenGL error ("_s + std::to_string(err) + "). Cannot continue");
-        }
-    };
-    Check_For_OpenGL_Errors();
-
+    #define CHECK_FOR_GL_ERRORS() { \
+        while(true){ \
+            GLenum err = glGetError(); \
+            if(err == GL_NO_ERROR) break; \
+            std::cout << "--(W) In function: " << __PRETTY_FUNCTION__; \
+            std::cout << " (line " << __LINE__ << ")"; \
+            std::cout << " : " << glewGetErrorString(err); \
+            std::cout << "(" << std::to_string(err) << ")." << std::endl; \
+            std::cout.flush(); \
+            throw std::runtime_error("OpenGL error detected. Refusing to continue"); \
+        } \
+    }
+    CHECK_FOR_GL_ERRORS();
 
     // Create an OpenGL texture from an image.
     struct opengl_texture_handle_t {
@@ -236,8 +268,7 @@ Drover SDL_Viewer(Drover DICOM_data,
         int col_count = 0;
         int row_count = 0;
     };
-    const auto Load_OpenGL_Texture = [&Check_For_OpenGL_Errors,
-                                      &custom_centre,
+    const auto Load_OpenGL_Texture = [&custom_centre,
                                       &custom_width,
                                       &colour_maps,
                                       &colour_map,
@@ -381,25 +412,28 @@ Drover SDL_Viewer(Drover DICOM_data,
                 }
             }
         
-            Check_For_OpenGL_Errors();
 
             opengl_texture_handle_t out;
             out.col_count = img_cols;
             out.row_count = img_rows;
+
+            CHECK_FOR_GL_ERRORS();
+
             glGenTextures(1, &out.texture_number);
             glBindTexture(GL_TEXTURE_2D, out.texture_number);
-
             if(out.texture_number == 0){
                 throw std::runtime_error("Unable to assign OpenGL texture");
             }
+            CHECK_FOR_GL_ERRORS();
+
 
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+            CHECK_FOR_GL_ERRORS();
 
             glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
             glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, out.col_count, out.row_count, 0, GL_RGB, GL_UNSIGNED_BYTE, static_cast<void*>(animage.data()));
-
-            Check_For_OpenGL_Errors();
+            CHECK_FOR_GL_ERRORS();
 
             return out;
     };
@@ -468,6 +502,7 @@ Drover SDL_Viewer(Drover DICOM_data,
 long int frame_count = 0;
     while(true){
 ++frame_count;
+
         // Poll and handle events (inputs, window resize, etc.)
         // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
         // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application.
@@ -571,12 +606,14 @@ long int frame_count = 0;
         }
 
         // Clear the current OpenGL frame.
+        CHECK_FOR_GL_ERRORS();
         glViewport(0, 0, static_cast<int>(io.DisplaySize.x), static_cast<int>(io.DisplaySize.y));
         glClearColor(background_colour.x,
                      background_colour.y,
                      background_colour.z,
                      background_colour.w);
         glClear(GL_COLOR_BUFFER_BIT);
+        CHECK_FOR_GL_ERRORS();
 
 // Tinkering with rendering surface meshes.
 if(DICOM_data.Has_Mesh_Data()){
@@ -647,11 +684,11 @@ if(DICOM_data.Has_Mesh_Data()){
         }
     }
 
-    Check_For_OpenGL_Errors();
-
     GLuint vao = 0;
     GLuint vbo = 0;
     GLuint ebo = 0;
+
+    CHECK_FOR_GL_ERRORS();
 
     glGenVertexArrays(1, &vao); // Create a VAO inside the OpenGL context.
     glGenBuffers(1, &vbo); // Create a VBO inside the OpenGL context.
@@ -660,35 +697,41 @@ if(DICOM_data.Has_Mesh_Data()){
     glBindVertexArray(vao); // Bind = make it the currently-used object.
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
 
+    CHECK_FOR_GL_ERRORS();
+
     glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(GLfloat), static_cast<void*>(vertices.data()), GL_STATIC_DRAW); // Copy vertex data.
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), static_cast<void*>(indices.data()), GL_STATIC_DRAW); // Copy index data.
 
+    CHECK_FOR_GL_ERRORS();
+
     glEnableVertexAttribArray(0); // enable attribute with index 0.
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0); // Vertex positions, 3 floats per vertex, attrib index 0.
 
     glBindVertexArray(0);
-    Check_For_OpenGL_Errors();
+    CHECK_FOR_GL_ERRORS();
 
 
     // Draw the mesh.
-    Check_For_OpenGL_Errors();
+    CHECK_FOR_GL_ERRORS();
     glBindVertexArray(vao); // Bind = make it the currently-used object.
 
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); // Enable wireframe mode.
+    CHECK_FOR_GL_ERRORS();
     glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(indices.size()), GL_UNSIGNED_INT, 0); // Draw using the current shader setup.
+    CHECK_FOR_GL_ERRORS();
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); // Disable wireframe mode.
 
     glBindVertexArray(0);
-    Check_For_OpenGL_Errors();
+    CHECK_FOR_GL_ERRORS();
 
     glDisableVertexAttribArray(0); // Free OpenGL resources.
     glDisableVertexAttribArray(1);
     glDeleteBuffers(1, &ebo);
     glDeleteBuffers(1, &vbo);
     glDeleteVertexArrays(1, &vao);
-    Check_For_OpenGL_Errors();
+    CHECK_FOR_GL_ERRORS();
 }
 
         // Render the ImGui components and swap OpenGL buffers.
