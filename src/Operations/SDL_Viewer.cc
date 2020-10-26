@@ -465,7 +465,9 @@ Drover SDL_Viewer(Drover DICOM_data,
     opengl_texture_handle_t current_texture;
     current_texture = Load_OpenGL_Texture(disp_img_it);
 
+long int frame_count = 0;
     while(true){
+++frame_count;
         // Poll and handle events (inputs, window resize, etc.)
         // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
         // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application.
@@ -578,49 +580,115 @@ Drover SDL_Viewer(Drover DICOM_data,
 
 // Tinkering with rendering surface meshes.
 if(DICOM_data.Has_Mesh_Data()){
-    //auto smesh_ptr = DICOM_data.smesh_data.front();
-    //const auto N_verts = smesh_ptr->meshes.vertices.size();
-    //
-    //long int N_faces = 0;
-    //for(const auto& f : smesh_ptr->meshes.faces) N_faces += f.size();
+    auto smesh_ptr = DICOM_data.smesh_data.front();
 
-    const GLfloat diamond[4][2] = {
-      {  0.0,  1.0 },
-      { 1.0, 0.0 },
-      { 0.0, -1.0 },
-      { -1.0, 0.0 } };
+    const auto N_verts = smesh_ptr->meshes.vertices.size();
 
-    const GLfloat colors[4][3] = {
-      {  1.0, 0.0, 0.0 }, // red
-      {  0.0, 1.0, 0.0 }, // green
-      {  0.0, 0.0, 1.0 }, // blue
-      {  1.0, 1.0, 1.0 } }; // white
+    long int N_triangles = 0;
+    for(const auto& f : smesh_ptr->meshes.faces){
+        long int l_N_indices = f.size();
+        if(l_N_indices < 3) continue; // Ignore faces that cannot be broken into triangles.
+        N_triangles += (l_N_indices - 2);
+    }
 
+    const auto inf = std::numeric_limits<double>::infinity();
+    auto x_min = inf;
+    auto y_min = inf;
+    auto z_min = inf;
+    auto x_max = -inf;
+    auto y_max = -inf;
+    auto z_max = -inf;
+    for(const auto& v : smesh_ptr->meshes.vertices){
+        if(v.x < x_min) x_min = v.x;
+        if(v.y < y_min) y_min = v.y;
+        if(v.z < z_min) z_min = v.z;
+        if(x_max < v.x) x_max = v.x;
+        if(y_max < v.y) y_max = v.y;
+        if(z_max < v.z) z_max = v.z;
+    }
+
+    {
+        ImGui::Begin("Meshes");
+        std::string msg = "Drawing "_s + std::to_string(N_verts) + " verts and "_s + std::to_string(N_triangles) + " triangles.";
+        ImGui::Text(msg.c_str());
+        ImGui::End();
+    }
+
+    std::vector<float> vertices;
+    vertices.reserve(3 * N_verts);
+    for(const auto& v : smesh_ptr->meshes.vertices){
+        // Scale each of x, y, and z to [-1,+1], but shrink to [-1/sqrt(2),+1/sqrt(2)] to account for rotation.
+        // Scaling down will ensure the corners are not clipped when the cube is rotated.
+        vec3<double> w( 0.707 * (2.0 * (v.x - x_min) / (x_max - x_min) - 1.0),
+                        0.707 * (2.0 * (v.y - y_min) / (y_max - y_min) - 1.0),
+                        0.707 * (2.0 * (v.z - z_min) / (z_max - z_min) - 1.0) );
+
+        w = w.rotate_around_z(3.14159265 * static_cast<double>(frame_count / 59900.0));
+        w = w.rotate_around_y(3.14159265 * static_cast<double>(frame_count / 11000.0));
+        w = w.rotate_around_x(3.14159265 * static_cast<double>(frame_count / 26000.0));
+        vertices.push_back(static_cast<float>(w.x));
+        vertices.push_back(static_cast<float>(w.y));
+        vertices.push_back(static_cast<float>(w.z));
+    }
     
+    std::vector<unsigned int> indices;
+    indices.reserve(3 * N_triangles);
+    for(const auto& f : smesh_ptr->meshes.faces){
+        long int l_N_indices = f.size();
+        if(l_N_indices < 3) continue; // Ignore faces that cannot be broken into triangles.
+
+        const auto it_1 = std::cbegin(f);
+        const auto it_2 = std::next(it_1);
+        const auto end = std::end(f);
+        for(auto it_3 = std::next(it_2); it_3 != end; ++it_3){
+            indices.push_back(static_cast<unsigned int>(*it_1));
+            indices.push_back(static_cast<unsigned int>(*it_2));
+            indices.push_back(static_cast<unsigned int>(*it_3));
+        }
+    }
+
+    Check_For_OpenGL_Errors();
+
     GLuint vao = 0;
-    GLuint vbo[2];
+    GLuint vbo = 0;
+    GLuint ebo = 0;
 
     glGenVertexArrays(1, &vao); // Create a VAO inside the OpenGL context.
+    glGenBuffers(1, &vbo); // Create a VBO inside the OpenGL context.
+    glGenBuffers(1, &ebo); // Create a EBO inside the OpenGL context.
+
+    glBindVertexArray(vao); // Bind = make it the currently-used object.
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+
+    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(GLfloat), static_cast<void*>(vertices.data()), GL_STATIC_DRAW); // Copy vertex data.
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), static_cast<void*>(indices.data()), GL_STATIC_DRAW); // Copy index data.
+
+    glEnableVertexAttribArray(0); // enable attribute with index 0.
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0); // Vertex positions, 3 floats per vertex, attrib index 0.
+
+    glBindVertexArray(0);
+    Check_For_OpenGL_Errors();
+
+
+    // Draw the mesh.
+    Check_For_OpenGL_Errors();
     glBindVertexArray(vao); // Bind = make it the currently-used object.
 
-    glGenBuffers(2, vbo); // Create 2 VBO inside the OpenGL context.
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); // Enable wireframe mode.
+    glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(indices.size()), GL_UNSIGNED_INT, 0); // Draw using the current shader setup.
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); // Disable wireframe mode.
 
-    glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
-    glBufferData(GL_ARRAY_BUFFER, 8 * sizeof(GLfloat), diamond, GL_STATIC_DRAW); // Copy vertex data.
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0); // 2 floats per vertex, attrib index 0.
-    glEnableVertexAttribArray(0); // enable attribute with index 0.
-
-    glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
-    glBufferData(GL_ARRAY_BUFFER, 12 * sizeof(GLfloat), colors, GL_STATIC_DRAW); // Copy color data.
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0); // 3 floats per vertex, attrib index 1.
-    glEnableVertexAttribArray(1); // enable attribute with index 1.
-
-    glDrawArrays(GL_LINE_LOOP, 0, 4); // Draw using the current shader setup.
+    glBindVertexArray(0);
+    Check_For_OpenGL_Errors();
 
     glDisableVertexAttribArray(0); // Free OpenGL resources.
     glDisableVertexAttribArray(1);
-    glDeleteBuffers(2, vbo);
+    glDeleteBuffers(1, &ebo);
+    glDeleteBuffers(1, &vbo);
     glDeleteVertexArrays(1, &vao);
+    Check_For_OpenGL_Errors();
 }
 
         // Render the ImGui components and swap OpenGL buffers.
