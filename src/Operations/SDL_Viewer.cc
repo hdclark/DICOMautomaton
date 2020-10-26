@@ -175,6 +175,21 @@ Drover SDL_Viewer(Drover DICOM_data,
 
 
     // --------------------------------------------- Setup ------------------------------------------------
+#ifndef CHECK_FOR_GL_ERRORS
+    #define CHECK_FOR_GL_ERRORS() { \
+        while(true){ \
+            GLenum err = glGetError(); \
+            if(err == GL_NO_ERROR) break; \
+            std::cout << "--(W) In function: " << __PRETTY_FUNCTION__; \
+            std::cout << " (line " << __LINE__ << ")"; \
+            std::cout << " : " << glewGetErrorString(err); \
+            std::cout << "(" << std::to_string(err) << ")." << std::endl; \
+            std::cout.flush(); \
+            throw std::runtime_error("OpenGL error detected. Refusing to continue"); \
+        } \
+    }
+#endif
+
     if(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER) != 0){
         throw std::runtime_error("Unable to initialize SDL: "_s + SDL_GetError());
     }
@@ -224,8 +239,14 @@ Drover SDL_Viewer(Drover DICOM_data,
         }
     }
 
+    glewExperimental = true; // Bug fix for glew v1.13.0 and earlier.
     if(glewInit() != GLEW_OK){
         throw std::runtime_error("Glew was unable to initialize OpenGL");
+    }
+    try{
+        CHECK_FOR_GL_ERRORS(); // Clear any errors encountered during glewInit.
+    }catch(const std::exception &e){
+        FUNCINFO("Ignoring glew-related error: " << e.what());
     }
 
     // Create an ImGui context we can use and associate it with the OpenGL context.
@@ -238,29 +259,27 @@ Drover SDL_Viewer(Drover DICOM_data,
     ImGui::StyleColorsDark();
 
     // Setup Platform/Renderer backends
-    const std::string gl_shader_version = "#version 130";
+    CHECK_FOR_GL_ERRORS();
     if(!ImGui_ImplSDL2_InitForOpenGL(window, gl_context)){
         throw std::runtime_error("ImGui unable to associate SDL window with OpenGL context.");
     }
-    if(!ImGui_ImplOpenGL3_Init(gl_shader_version.c_str())){
+    CHECK_FOR_GL_ERRORS();
+    if(!ImGui_ImplOpenGL3_Init()){
         throw std::runtime_error("ImGui unable to initialize OpenGL with given shader.");
+    }
+    CHECK_FOR_GL_ERRORS();
+    try{
+        auto gl_version = reinterpret_cast<const char *>(glGetString(GL_VERSION));
+        auto glsl_version = reinterpret_cast<const char *>(glGetString(GL_SHADING_LANGUAGE_VERSION));
+        if(gl_version == nullptr) throw std::runtime_error("OpenGL version not accessible.");
+        if(glsl_version == nullptr) throw std::runtime_error("GLSL version not accessible.");
+
+        FUNCINFO("Initialized OpenGL '" << std::string(gl_version) << "' with GLSL '" << std::string(glsl_version) << "'");
+    }catch(const std::exception &e){
+        FUNCWARN("Unable to detect OpenGL/GLSL version");
     }
 
     // -------------------------------- Functors for various things ---------------------------------------
-
-    #define CHECK_FOR_GL_ERRORS() { \
-        while(true){ \
-            GLenum err = glGetError(); \
-            if(err == GL_NO_ERROR) break; \
-            std::cout << "--(W) In function: " << __PRETTY_FUNCTION__; \
-            std::cout << " (line " << __LINE__ << ")"; \
-            std::cout << " : " << glewGetErrorString(err); \
-            std::cout << "(" << std::to_string(err) << ")." << std::endl; \
-            std::cout.flush(); \
-            throw std::runtime_error("OpenGL error detected. Refusing to continue"); \
-        } \
-    }
-    CHECK_FOR_GL_ERRORS();
 
     // Create an OpenGL texture from an image.
     struct opengl_texture_handle_t {
