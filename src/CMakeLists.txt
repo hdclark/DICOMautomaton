@@ -296,6 +296,7 @@ target_link_libraries (dicomautomaton_dispatcher
     "$<$<BOOL:${WITH_SFML}>:${SFML_LIBRARIES}>"
     "$<$<BOOL:${WITH_SDL}>:${SDL2_LIBRARIES}>"
     "$<$<BOOL:${WITH_SDL}>:${GLEW_LIBRARIES}>"
+    "$<$<BOOL:${WITH_SDL}>:${OPENGL_LIBRARIES}>"
     "$<$<BOOL:${WITH_POSTGRES}>:${POSTGRES_LIBRARIES}>"
     Boost::filesystem
     Boost::serialization
@@ -368,6 +369,7 @@ if(WITH_WT)
         "$<$<BOOL:${WITH_SFML}>:${SFML_LIBRARIES}>"
         "$<$<BOOL:${WITH_SDL}>:${SDL2_LIBRARIES}>"
         "$<$<BOOL:${WITH_SDL}>:${GLEW_LIBRARIES}>"
+        "$<$<BOOL:${WITH_SDL}>:${OPENGL_LIBRARIES}>"
         "$<$<BOOL:${WITH_POSTGRES}>:${POSTGRES_LIBRARIES}>"
         wt
         wthttp

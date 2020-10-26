@@ -98,6 +98,12 @@ if(WITH_SFML)
 endif()
 
 if(WITH_SDL)
+    set(OpenGL_GL_PREFERENCE GLVND)
+    find_package(OpenGL REQUIRED COMPONENTS OpenGL) # Will help pick-up opengl32.a with MXE toolchain.
+    message(STATUS "Proceeding with OPENGL_LIBRARIES = ${OPENGL_LIBRARIES}")
+    message(STATUS "Proceeding with OPENGL_INCLUDE_DIR = ${OPENGL_INCLUDE_DIR}")
+    include_directories( ${OPENGL_INCLUDE_DIR} )
+
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(SDL2 REQUIRED sdl2)
     include_directories( ${SDL2_INCLUDE_DIRS} )

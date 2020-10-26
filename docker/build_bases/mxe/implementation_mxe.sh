@@ -43,6 +43,7 @@ apt-get -y install \
   rsync \
   xz-utils \
   sudo \
+  python-mako `# <-- needed for mesa (scons) ` \
   gnupg
 
 
@@ -76,7 +77,7 @@ export TOOLCHAIN="x86_64-w64-mingw32.static"
 make -j"$(nproc)" --keep-going \
   MXE_TARGETS="${TOOLCHAIN}" \
   MXE_PLUGIN_DIRS=plugins/gcc9 \
-  gmp mpfr boost eigen sfml sdl2 glew nlopt #wt
+  gmp mpfr boost eigen sfml sdl2 glew nlopt mesa #wt
 
 ## Download pre-compiled binaries to speed up toolchain prep.
 ##
