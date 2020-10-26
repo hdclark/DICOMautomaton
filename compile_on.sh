@@ -13,7 +13,7 @@ PORTABLE_BIN_DIR="/tmp/dcma_portable_build/" # Portable binaries are dumped here
 L_PORTABLE_BIN_DIR="${HOME}/portable_dcma/" # Portable binaries are dumped here locally.
 
 # System to build on. See below for options.
-BUILDER="debian_stable"  # 'arch', 'debian_stable', or 'native'.
+BUILDER="debian_stable"  # 'arch', 'debian_stable', 'mxe', or 'native'.
 
 # Argument parsing:
 OPTIND=1 # Reset in case getopts has been used previously in the shell.
@@ -46,7 +46,7 @@ while getopts "d:p:l:b:h" opt; do
         printf "\n"
         printf " -b <arg> : Specify which Docker build image to use, if any.\n"
         printf "          : This option controls how the build is performed, packaged, and installed.\n"
-        printf "          : Options are 'arch', 'debian_stable', and 'native'.\n"
+        printf "          : Options are 'arch', 'debian_stable', 'mxe', and 'native'.\n"
         printf "          : Default: '%s'\n" "${BUILDER}"
         printf "\n"
         exit 0
@@ -85,7 +85,7 @@ if [ ! -d "${reporoot}" ] ; then
     exit 1
 fi
 cd "${reporoot}"
-rsync -rptP --no-links --cvs-exclude "${reporoot}"/ "${USER_AT_REMOTE}:${BUILD_DIR}"
+rsync -rptPzz --no-links --cvs-exclude "${reporoot}"/ "${USER_AT_REMOTE}:${BUILD_DIR}"
 
 
 # Initiate the remote build.
@@ -172,6 +172,33 @@ EOF
           /start/docker_run.sh
       "
 
+elif [[ "${BUILDER}" =~ .*mxe.* ]] ; then
+
+    ssh -t "${USER_AT_REMOTE}" -- "
+        set -eu
+        cd '${BUILD_DIR}'
+
+        cat > docker_run.sh << 'EOF'
+#!/usr/bin/env bash
+set -eu
+./compile_and_install.sh  # Will auto-detect the MXE build process.
+rsync -avPzz /out/ /pbin/
+EOF
+        chmod 777 docker_run.sh
+
+        mkdir -p '${PORTABLE_BIN_DIR}'
+        mkdir -p build
+
+        sudo docker run \
+          -it --rm \
+          --network=host \
+          -v '${BUILD_DIR}':/start/:rw \
+          -v '${PORTABLE_BIN_DIR}':/pbin/:rw \
+          -w /start/ \
+          dcma_build_base_mxe:latest \
+          /start/docker_run.sh
+      "
+
 else
     printf "Builder '%s' not understood. Cannot continue.\n" "${BUILDER}" 1>&2
     exit 1
@@ -180,7 +207,7 @@ fi
 
 
 # Sync portable binary artifacts back.
-rsync -rptvP --no-links --delete "${USER_AT_REMOTE}:${PORTABLE_BIN_DIR}/" "${L_PORTABLE_BIN_DIR}/"
+rsync -rptvPzz --no-links --delete "${USER_AT_REMOTE}:${PORTABLE_BIN_DIR}/" "${L_PORTABLE_BIN_DIR}/"
 
 
 printf ' ====================================================================== \n'

@@ -50,7 +50,7 @@ while getopts "b:d:i:unch" opt; do
         printf "\n"
         printf " -d <arg> : The distribution/environment to assume for building.\n"
         printf "          : This option controls how the build is controlled, packaged, and installed.\n"
-        printf "          : Options are 'auto' (i.e., automatic detection), 'debian', 'arch', and 'generic'.\n"
+        printf "          : Options are 'auto' (i.e., automatic detection), 'debian', 'arch', 'mxe', and 'generic'.\n"
         printf "          : Default: '%s'\n" "${DISTRIBUTION}"
         printf "\n"
         printf " -u       : Attempt unprivileged installation (i.e., without using sudo).\n"
@@ -100,10 +100,13 @@ fi
 
 # Determine which distribution/environment to assume.
 if [[ "${DISTRIBUTION}" =~ .*auto.* ]] &&
+   [ -d /mxe ] ; then # Assumes MXE distribution is at /mxe, like in the docker/build_bases/mxe container.
+    DISTRIBUTION=mxe
+fi
+if [[ "${DISTRIBUTION}" =~ .*auto.* ]] &&
    [ -e /etc/os-release ] ; then
     DISTRIBUTION=$( bash -c '. /etc/os-release && printf "${NAME}"' )
 fi
-
 
 # Move to the repository root.
 REPOROOT=$(git rev-parse --show-toplevel || true) 
@@ -148,7 +151,20 @@ cd "${BUILDROOT}"
 
 
 # Perform the build (+ optional install) for each distribution type.
-if [[ "${DISTRIBUTION}" =~ .*debian.* ]] ; then
+if [[ "${DISTRIBUTION}" =~ .*mxe.* ]] ; then
+    printf 'Compiling with MXE...\n'
+    # NOTE: This build is assumed to be inside a Docker image or VM since MXE is used for cross-compilation.
+    #       Building outside of Docker or a VM is not supported to reduce likelihood of overwriting data.
+    if [ ! -f /.dockerenv ] ; then
+        printf 'Building with MXE outside of a VM/Docker is not supported. Refusing to continue.\n' 1>&2
+        exit 1
+    fi
+    
+    $SUDO rsync -rpt --no-links --cvs-exclude "${BUILDROOT}/" /dcma/
+    ./docker/builders/mxe/implementation_mxe.sh
+
+
+elif [[ "${DISTRIBUTION}" =~ .*debian.* ]] ; then
     printf 'Compiling for Debian...\n'
 
     mkdir -p build
