@@ -128,6 +128,11 @@ git clone 'https://github.com/hdclark/Explicator' /explicator
 
 mkdir -pv /out/usr/{bin,lib,include,share}
 
+# Provide a copy of mesa's opengl32.dll. Note that it should stay in same directory the exe files (bin).
+cp "/mxe/usr/${TOOLCHAIN}/bin/opengl32.dll" "/out/bin"
+cp "/out/usr/bin/opengl32.dll" "/out/usr/bin/full_opengl32.dll"
+"${TOOLCHAIN}-strip" "/out/usr/bin/opengl32.dll"
+
 # Provide harmless duplicates if the std::filesystem bug is present.
 #
 # Note: this can be removed when libstdc++fs.a no longer needs to be linked explicitly. TODO.
