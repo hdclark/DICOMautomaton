@@ -108,7 +108,7 @@ test_ci_debian_stable_on_debian_stable:
     # Provide minimal system libraries.
     - "export DEBIAN_FRONTEND='noninteractive'"
     - "apt-get update --yes"
-    - "apt-get install --yes --no-install-recommends git rsync mesa-utils libfreetype6 libsdl2-dev libice-dev libsm-dev g++"
+    - "apt-get install --yes --no-install-recommends git rsync mesa-utils libfreetype6 libsdl2-dev libice-dev libsm-dev libopengl0 g++"
     # Unpack the AppImage and overlay it in the containers root filesystem.
     - "chmod 777 DICOMautomaton*AppImage"
     - "./DICOMautomaton*AppImage --appimage-extract"
@@ -127,7 +127,7 @@ test_ci_arch_on_arch:
     #- "curl -o /etc/pacman.d/mirrorlist 'https://www.archlinux.org/mirrorlist/?country=all&protocol=http&ip_version=4&use_mirror_status=on'"
     #- "sed -i 's/^#Server/Server/' /etc/pacman.d/mirrorlist"
     #- "sed -i -e 's/SigLevel[ ]*=.*/SigLevel = Never/g' -e 's/.*IgnorePkg[ ]*=.*/IgnorePkg = archlinux-keyring/g' /etc/pacman.conf"
-    - "pacman -Syu --noconfirm --needed git rsync mesa freetype2 sdl2 alsa-lib libice libsm gcc-libs"
+    - "pacman -Syu --noconfirm --needed git rsync mesa freetype2 sdl2 alsa-lib libice libsm libglvnd gcc-libs"
     # Unpack the AppImage and overlay it in the containers root filesystem.
     - "chmod 777 DICOMautomaton*AppImage"
     - "./DICOMautomaton*AppImage --appimage-extract"
@@ -147,7 +147,7 @@ test_ci_debian_stable_on_arch:
     #- "curl -o /etc/pacman.d/mirrorlist 'https://www.archlinux.org/mirrorlist/?country=all&protocol=http&ip_version=4&use_mirror_status=on'"
     #- "sed -i 's/^#Server/Server/' /etc/pacman.d/mirrorlist"
     #- "sed -i -e 's/SigLevel[ ]*=.*/SigLevel = Never/g' -e 's/.*IgnorePkg[ ]*=.*/IgnorePkg = archlinux-keyring/g' /etc/pacman.conf"
-    - "pacman -Syu --noconfirm --needed git rsync mesa freetype2 sdl2 alsa-lib libice libsm gcc-libs"
+    - "pacman -Syu --noconfirm --needed git rsync mesa freetype2 sdl2 alsa-lib libice libsm libglvnd gcc-libs"
     # Unpack the AppImage and overlay it in the containers root filesystem.
     - "chmod 777 DICOMautomaton*AppImage"
     - "./DICOMautomaton*AppImage --appimage-extract"
@@ -164,7 +164,7 @@ test_ci_debian_stable_on_ubuntu_latest:
     # Provide minimal system libraries.
     - "export DEBIAN_FRONTEND='noninteractive'"
     - "apt-get update --yes"
-    - "apt-get install --yes --no-install-recommends git rsync mesa-utils libfreetype6 libsdl2-dev libice-dev libsm-dev g++"
+    - "apt-get install --yes --no-install-recommends git rsync mesa-utils libfreetype6 libsdl2-dev libice-dev libsm-dev libopengl0 g++"
     # Unpack the AppImage and overlay it in the containers root filesystem.
     #- "apt-get install --yes --no-install-recommends wget ca-certificates"
     #- "wget --no-check-certificate 'https://hdclark.github.io/DICOMautomaton-x86_64.AppImage'"
@@ -184,7 +184,7 @@ test_ci_debian_stable_on_fedora_latest:
   script:
     # Provide minimal system libraries.
     - "dnf -y upgrade"
-    - "dnf -y install bash findutils git rsync mesa-libGL freetype SDL2 alsa-lib libICE libSM libgcc libstdc++"
+    - "dnf -y install bash findutils git rsync mesa-libGL freetype SDL2 alsa-lib libICE libSM libgcc libglvnd-opengl libstdc++"
     # Unpack the AppImage and overlay it in the containers root filesystem.
     #- "dnf -y install wget ca-certificates"
     #- "wget --no-check-certificate 'https://hdclark.github.io/DICOMautomaton-x86_64.AppImage'"
