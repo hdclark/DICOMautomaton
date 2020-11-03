@@ -40,6 +40,9 @@ int main(int argc, char* argv[]){
     // the stationary set.
     point_set<double> stationary;
 
+    // The Coherent Point Drift Algorithm to use. Options are rigid, affine, and nonrigid
+    std::string cpd_type;
+
     // This structure is described in Alignment_ABC.h.
     AlignViaABCParams params;
     //params.xyz = 1.23; // Override the default.
@@ -94,7 +97,13 @@ int main(int argc, char* argv[]){
         return;
       })
     );
- 
+    arger.push_back( ygor_arg_handlr_t(1, 't', "type", true, "nonrigid",
+      "Use this coherent point drift algorithm. Options: rigid, affine, nonrigid",
+      [&](const std::string &optarg) -> void {
+        cpd_type = optarg;
+        return;
+      })
+    );
     arger.push_back( ygor_arg_handlr_t(3, 'b', "placeholder-boolean", false, "",
       "Placeholder for a boolean option.",
       [&](const std::string &) -> void {
