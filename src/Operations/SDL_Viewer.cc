@@ -89,7 +89,10 @@ Drover SDL_Viewer(Drover DICOM_data,
     // --------------------------------------- Operational State ------------------------------------------
     Explicator X(FilenameLex);
 
-    //Trim any empty image sets.
+    // Image viewer state.
+    long int img_array_num = -1; // The image array currently displayed.
+    long int img_num = -1; // The image currently displayed.
+    //Trim any empty image arrays.
     for(auto it = DICOM_data.image_data.begin(); it != DICOM_data.image_data.end();  ){
         if((*it)->imagecoll.images.empty()){
             it = DICOM_data.image_data.erase(it);
@@ -97,26 +100,10 @@ Drover SDL_Viewer(Drover DICOM_data,
             ++it;
         }
     }
-    if(DICOM_data.image_data.empty()) throw std::invalid_argument("No image data available to view. Cannot continue");
-
-    //If, for some reason, several image arrays are available for viewing, we need to provide a means for stepping
-    // through the arrays. 
-    //
-    // NOTE: The reasoning for having several image arrays is not clear cut. If the timestamps are known exactly, it
-    //       might make sense to split in this way. In general, it is up to the user to make this call. 
-    using img_data_ptr_it_t = decltype(DICOM_data.image_data.begin());
-    auto img_array_ptr_beg  = DICOM_data.image_data.begin();
-    auto img_array_ptr_end  = DICOM_data.image_data.end();
-    auto img_array_ptr_last = std::prev(DICOM_data.image_data.end());
-    auto img_array_ptr_it   = img_array_ptr_beg;
-
-    //At the moment, we keep a single 'display' image active at a time. To help walk through the neighbouring images
-    // (and the rest of the images, for that matter) we keep a container iterator to the image.
-    using disp_img_it_t = decltype(DICOM_data.image_data.front()->imagecoll.images.begin());
-    auto disp_img_beg  = (*img_array_ptr_it)->imagecoll.images.begin();
-    auto disp_img_end  = (*img_array_ptr_it)->imagecoll.images.end();
-    auto disp_img_last = std::prev((*img_array_ptr_it)->imagecoll.images.end());
-    auto disp_img_it   = disp_img_beg;
+    if(DICOM_data.Has_Image_Data()){
+        img_array_num = 0;
+        img_num = 0;
+    }
 
     //Real-time modifiable sticky window and level.
     std::optional<double> custom_width;
@@ -291,9 +278,9 @@ Drover SDL_Viewer(Drover DICOM_data,
                                       &custom_width,
                                       &colour_maps,
                                       &colour_map,
-                                      &nan_colour]( const disp_img_it_t &img_it ) -> opengl_texture_handle_t {
-            const auto img_cols = img_it->columns;
-            const auto img_rows = img_it->rows;
+                                      &nan_colour]( const planar_image<float,double>& img ) -> opengl_texture_handle_t {
+            const auto img_cols = img.columns;
+            const auto img_rows = img.rows;
 
             if(!isininc(1,img_rows,10000) || !isininc(1,img_cols,10000)){
                 FUNCERR("Image dimensions are not reasonable. Is this a mistake? Refusing to continue");
@@ -306,10 +293,10 @@ Drover SDL_Viewer(Drover DICOM_data,
             //Apply a window to the data if it seems like the WindowCenter or WindowWidth specified in the image metadata
             // are applicable. Note that it is likely that pixels will be clipped or truncated. This is intentional.
             
-            auto img_win_valid = img_it->GetMetadataValueAs<std::string>("WindowValidFor");
-            auto img_desc      = img_it->GetMetadataValueAs<std::string>("Description");
-            auto img_win_c     = img_it->GetMetadataValueAs<double>("WindowCenter");
-            auto img_win_fw    = img_it->GetMetadataValueAs<double>("WindowWidth"); //Full width or range. (Diameter, not radius.)
+            auto img_win_valid = img.GetMetadataValueAs<std::string>("WindowValidFor");
+            auto img_desc      = img.GetMetadataValueAs<std::string>("Description");
+            auto img_win_c     = img.GetMetadataValueAs<double>("WindowCenter");
+            auto img_win_fw    = img.GetMetadataValueAs<double>("WindowWidth"); //Full width or range. (Diameter, not radius.)
 
             auto custom_win_c  = custom_centre; 
             auto custom_win_fw = custom_width; 
@@ -337,7 +324,7 @@ Drover SDL_Viewer(Drover DICOM_data,
 
                 for(auto j = 0; j < img_rows; ++j){
                     for(auto i = 0; i < img_cols; ++i){
-                        const auto val = static_cast<double>( img_it->value(j,i,0) ); //The first (R or gray) channel.
+                        const auto val = static_cast<double>( img.value(j,i,0) ); //The first (R or gray) channel.
                         if(!std::isfinite(val)){
                             animage.push_back( nan_colour[0] );
                             animage.push_back( nan_colour[1] );
@@ -383,13 +370,13 @@ Drover SDL_Viewer(Drover DICOM_data,
                 // NOTE: This routine could definitely use a re-working, especially to make it safe for all
                 //       arithmetical types (i.e., handling negatives, ensuring there is no overflow or wrap-
                 //       around, ensuring there is minimal precision loss).
-                using pixel_value_t = decltype(img_it->value(0, 0, 0));
-                const auto pixel_minmax_allchnls = img_it->minmax();
+                using pixel_value_t = decltype(img.value(0, 0, 0));
+                const auto pixel_minmax_allchnls = img.minmax();
                 const auto lowest = std::get<0>(pixel_minmax_allchnls);
                 const auto highest = std::get<1>(pixel_minmax_allchnls);
 
-                //const auto lowest = Stats::Percentile(img_it->data, 0.01);
-                //const auto highest = Stats::Percentile(img_it->data, 0.99);
+                //const auto lowest = Stats::Percentile(img.data, 0.01);
+                //const auto highest = Stats::Percentile(img.data, 0.99);
 
                 const auto pixel_type_max = static_cast<double>(std::numeric_limits<pixel_value_t>::max());
                 const auto pixel_type_min = static_cast<double>(std::numeric_limits<pixel_value_t>::min());
@@ -400,7 +387,7 @@ Drover SDL_Viewer(Drover DICOM_data,
 
                 for(auto j = 0; j < img_rows; ++j){ 
                     for(auto i = 0; i < img_cols; ++i){ 
-                        const auto val = img_it->value(j,i,0);
+                        const auto val = img.value(j,i,0);
                         if(!std::isfinite(val)){
                             animage.push_back( nan_colour[0] );
                             animage.push_back( nan_colour[1] );
@@ -458,56 +445,46 @@ Drover SDL_Viewer(Drover DICOM_data,
     };
 
     // Advance to the specified Image_Array. Also resets necessary display image iterators.
-    const auto advance_to_image_array = [&](const int64_t n){
-            const int64_t N_arrays = DICOM_data.image_data.size();
-            const int64_t N_images = (*img_array_ptr_it)->imagecoll.images.size();
-
-            const int64_t index_arrays = std::distance(img_array_ptr_beg, img_array_ptr_it);
-            const int64_t index_images = std::distance(disp_img_beg, disp_img_it);
-
-            if(n == index_arrays){
-                return; // Already at desired position.
-            }
+    const auto advance_to_image_array = [&](const long int n){
+            const long int N_arrays = DICOM_data.image_data.size();
             if((n < 0) || (N_arrays <= n)){
-                throw std::logic_error("Unwilling to move to specified Image_Array. It does not exist.");
+                throw std::invalid_argument("Unwilling to move to specified Image_Array. It does not exist.");
             }
+            if(n == img_array_num){
+                return; // Already at desired position, so no-op.
+            }
+            img_array_num = n;
 
-            custom_width  = std::optional<double>();
-            custom_centre = std::optional<double>();
-
-            img_array_ptr_it = std::next(img_array_ptr_beg, n);
-            FUNCINFO("There are " << (*img_array_ptr_it)->imagecoll.images.size() << " images in this Image_Array");
-
-            disp_img_beg  = (*img_array_ptr_it)->imagecoll.images.begin();
-            disp_img_last = std::prev((*img_array_ptr_it)->imagecoll.images.end());
-            disp_img_it   = disp_img_beg;
-
-            // Attempt to move to the Nth image, like we previously had.
+            // Attempt to move to the Nth image, like in the previous array.
             //
             // TODO: It's debatable whether this is even useful. Better to move to same DICOM position, I think.
-            if(index_images < (*img_array_ptr_it)->imagecoll.images.size()){
-                std::advance(disp_img_it, index_images);
+            auto img_array_ptr_it = std::next(DICOM_data.image_data.begin(), img_array_num);
+            const long int N_images = (*img_array_ptr_it)->imagecoll.images.size();
+            if(N_images == 0){
+                throw std::invalid_argument("Image_Array contains no images. Refusing to continue");
             }
+            img_num = (img_num < 0) ? 0 : img_num; // Clamp below.
+            img_num = (N_images <= img_num) ? N_images - 1 : img_num; // Clamp above.
+
+            // Invalidate any custom window and level.
+            custom_width  = std::optional<double>();
+            custom_centre = std::optional<double>();
 
             return;
     };
 
     // Advance to the specified image in the current Image_Array.
-    const auto advance_to_image = [&](const int64_t n){
-            const int64_t N_arrays = DICOM_data.image_data.size();
-            const int64_t N_images = (*img_array_ptr_it)->imagecoll.images.size();
+    const auto advance_to_image = [&](const long int n){
+            auto img_array_ptr_it = std::next(DICOM_data.image_data.begin(), img_array_num);
+            const long int N_images = (*img_array_ptr_it)->imagecoll.images.size();
 
-            const int64_t index_arrays = std::distance(img_array_ptr_beg, img_array_ptr_it);
-            const int64_t index_images = std::distance(disp_img_beg, disp_img_it);
-
-            if(n == index_images){
-                return; // Already at desired position.
-            }
             if((n < 0) || (N_images <= n)){
-                throw std::logic_error("Unwilling to move to specified image. It does not exist.");
+                throw std::invalid_argument("Unwilling to move to specified image. It does not exist.");
             }
-
-            disp_img_it = std::next(disp_img_beg, n);
+            if(n == img_num){
+                return; // Already at desired position, so no-op.
+            }
+            img_num = n;
 
             return;
     };
@@ -516,7 +493,13 @@ Drover SDL_Viewer(Drover DICOM_data,
 
     // Pre-load the first image.
     opengl_texture_handle_t current_texture;
-    current_texture = Load_OpenGL_Texture(disp_img_it);
+    if( DICOM_data.Has_Image_Data()
+    &&  (0 <= img_array_num)
+    &&  (0 <= img_num) ){
+        auto img_array_ptr_it = std::next(DICOM_data.image_data.begin(), img_array_num);
+        auto disp_img_it = std::next((*img_array_ptr_it)->imagecoll.images.begin(), img_num);
+        current_texture = Load_OpenGL_Texture(*disp_img_it);
+    }
 
 long int frame_count = 0;
     while(true){
@@ -586,29 +569,35 @@ long int frame_count = 0;
             ImGui::End();
         }
 
-        {
+        if( DICOM_data.Has_Image_Data()
+        &&  (0 <= img_array_num)
+        &&  (0 <= img_num) ){
             ImGui::Begin("Images");
 
-            const int64_t N_arrays = DICOM_data.image_data.size();
-            const int64_t N_images = (*img_array_ptr_it)->imagecoll.images.size();
+            auto img_array_ptr_it = std::next(DICOM_data.image_data.begin(), img_array_num);
+            auto disp_img_it = std::next((*img_array_ptr_it)->imagecoll.images.begin(), img_num);
 
-            const int64_t index_arrays = std::distance(img_array_ptr_beg, img_array_ptr_it);
-            const int64_t index_images = std::distance(disp_img_beg, disp_img_it);
+            int scroll_arrays = img_array_num;
+            int scroll_images = img_num;
+            {
+                const int N_arrays = DICOM_data.image_data.size();
+                const int N_images = (*img_array_ptr_it)->imagecoll.images.size();
+                ImGui::SliderInt("Array", &scroll_arrays, 0, N_arrays - 1);
+                ImGui::SliderInt("Image", &scroll_images, 0, N_images - 1);
+            }
+            long int new_img_array_num = scroll_arrays;
+            long int new_img_num = scroll_images;
 
-            int scroll_arrays = index_arrays;
-            int scroll_images = index_images;
-            ImGui::SliderInt("Array", &scroll_arrays, 0, N_arrays - 1);
-            ImGui::SliderInt("Image", &scroll_images, 0, N_images - 1);
+            if( new_img_array_num != img_array_num ){
+                advance_to_image_array(new_img_array_num);
+                img_array_ptr_it = std::next(DICOM_data.image_data.begin(), img_array_num);
+                disp_img_it = std::next((*img_array_ptr_it)->imagecoll.images.begin(), img_num);
+                current_texture = Load_OpenGL_Texture(*disp_img_it);
 
-            if( static_cast<int64_t>(scroll_arrays) != index_arrays ){
-                advance_to_image_array(static_cast<int64_t>(scroll_arrays));
-                current_texture = Load_OpenGL_Texture(disp_img_it);
-                FUNCINFO("Loaded Image_Array " << std::distance(img_array_ptr_beg,img_array_ptr_it) << ". "
-                         "There are " << (*img_array_ptr_it)->imagecoll.images.size() << " images in this Image_Array");
-
-            }else if( static_cast<int64_t>(scroll_images) != index_images ){
-                advance_to_image(static_cast<int64_t>(scroll_images));
-                current_texture = Load_OpenGL_Texture(disp_img_it);
+            }else if( new_img_num != img_num ){
+                advance_to_image(new_img_num);
+                disp_img_it = std::next((*img_array_ptr_it)->imagecoll.images.begin(), img_num);
+                current_texture = Load_OpenGL_Texture(*disp_img_it);
             }
 
             // Note: unhappy with this. Can cause feedback loop and flicker/jumpiness when resizing. Works OK for now
