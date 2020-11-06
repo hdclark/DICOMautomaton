@@ -41,7 +41,8 @@ most ARM systems. To maintain flexibility, DICOMautomaton is generally not ABI o
 All materials herein which may be copywrited, where applicable, are. Copyright 2010, 2011, 2012, 2013, 2014, 2015, 2016,
 2017, 2018, 2019, 2020 hal clark. See the ```LICENSE``` file for details about the license. Informally, DICOMautomaton
 is available under a GPLv3+ license. The Imebra library is bundled for convenience and was not written by hal clark;
-consult its license file in ```src/imebra/license.txt```.
+consult its license file in ```src/imebra20121219/license.txt```. The ImGui toolkit is bundled for convenience and was
+not written by hal clark; consult its license file in ```src/imgui20201021/license.txt```.
 
 All liability is herefore disclaimed. The person(s) who use this source and/or software do so strictly under their own
 volition. They assume all associated liability for use and misuse, including but not limited to damages, harm, injury,
@@ -52,9 +53,9 @@ defects.
 
 Dependencies are listed in the ```PKGBUILD``` file (using Arch Linux package naming conventions) and in the
 ```CMakeLists.txt``` file (Debian package naming conventions) bundled with the source code. See
-<https://github.com/hdclark/DICOMautomaton>. Broadly, DICOMautomaton depends on Boost, CGAL, SFML, Eigen, Asio, Wt,
-NLopt, and PostgreSQL. Disabling some functionality at compile time can eliminate some dependencies. This instance has
-been compiled with the following functionality.
+<https://github.com/hdclark/DICOMautomaton>. Broadly, DICOMautomaton depends on Boost, CGAL, SFML, SDL2, glew, Eigen,
+Asio, Wt, NLopt, and PostgreSQL. Disabling some functionality at compile time can eliminate some dependencies. This
+instance has been compiled with the following functionality.
 
 
   Dependency       Functionality Enabled?
@@ -72,6 +73,8 @@ been compiled with the following functionality.
   CGAL             true
   NLOpt            true
   SFML             true
+  SDL2             true
+  glew             true
   Wt               true
   GNU GSL          true
   pqxx             true
@@ -444,6 +447,7 @@ will work.
 - ReduceNeighbourhood
 - RemeshSurfaceMeshes
 - Repeat
+- SDL_Viewer
 - SFML_Viewer
 - ScalePixels
 - SeamContours
@@ -463,6 +467,7 @@ will work.
 - ThresholdImages
 - ThresholdOtsu
 - TransformContours
+- TransformImages
 - TransformMeshes
 - TrimROIDose
 - UBC3TMRI_DCE
@@ -525,6 +530,8 @@ mixed together. Note regexes are case insensitive and should use extended POSIX 
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 
+
+----------------------------------------------------
 
 ## AnalyzeHistograms
 
@@ -695,6 +702,8 @@ the constraint should be supplied, or relative dose constraints should not be us
 - ```"70.0"```
 - ```"42.5"```
 
+
+----------------------------------------------------
 
 ## AnalyzeLightRadFieldCoincidence
 
@@ -888,6 +897,8 @@ Whether to interactively show plots showing detected edges.
 - ```"true"```
 - ```"false"```
 
+
+----------------------------------------------------
 
 ## AnalyzePicketFence
 
@@ -1128,6 +1139,8 @@ Whether to interactively show plots showing detected edges.
 - ```"false"```
 
 
+----------------------------------------------------
+
 ## AnalyzeTPlan
 
 ### Description
@@ -1236,6 +1249,8 @@ will remain unexpanded (i.e., with a preceeding '$').
 - ```"1 Arc"```
 - ```"IMRT"```
 
+
+----------------------------------------------------
 
 ## ApplyCalibrationCurve
 
@@ -1422,6 +1437,8 @@ labels.
 - ```"left_parotid|right_parotid"```
 
 
+----------------------------------------------------
+
 ## AutoCropImages
 
 ### Description
@@ -1500,6 +1517,8 @@ options.
 - ```"false"```
 
 
+----------------------------------------------------
+
 ## Average
 
 ### Description
@@ -1564,6 +1583,8 @@ The averaging method to use. Valid methods are 'overlapping-spatially' and 'over
 - ```"overlapping-spatially"```
 - ```"overlapping-temporally"```
 
+
+----------------------------------------------------
 
 ## BCCAExtractRadiomicFeatures
 
@@ -1909,6 +1930,8 @@ window overrides.
 - ```"10.3E4"```
 
 
+----------------------------------------------------
+
 ## BEDConvert
 
 ### Description
@@ -2143,6 +2166,8 @@ heterogeneous naming conventions where fuzzy matching is required. Refer to the 
 - ```".*PTV.*|.*GTV.**"```
 
 
+----------------------------------------------------
+
 ## BoostSerializeDrover
 
 ### Description
@@ -2192,6 +2217,8 @@ clouds), (all surface meshes), and (all treatment plans) can be selected. Note t
 - ```"tplans+images+contours"```
 - ```"contours+images+pointclouds"```
 
+
+----------------------------------------------------
 
 ## BuildLexiconInteractively
 
@@ -2286,6 +2313,8 @@ A file containing a 'seed' lexicon to use and add to. This is the lexicon that i
 - ```"/tmp/temp_lexicon"```
 
 
+----------------------------------------------------
+
 ## CT_Liver_Perfusion
 
 ### Description
@@ -2299,6 +2328,8 @@ This operation performed dynamic contrast-enhanced CT perfusion image modeling o
 ### Parameters
 
 No registered options.
+
+----------------------------------------------------
 
 ## CT_Liver_Perfusion_First_Run
 
@@ -2315,6 +2346,8 @@ This operation performed dynamic contrast-enhanced CT perfusion image modeling o
 
 No registered options.
 
+----------------------------------------------------
+
 ## CT_Liver_Perfusion_Ortho_Views
 
 ### Description
@@ -2329,6 +2362,8 @@ This operation performed dynamic contrast-enhanced CT perfusion image modeling o
 ### Parameters
 
 No registered options.
+
+----------------------------------------------------
 
 ## CT_Liver_Perfusion_Pharmaco_1C2I_5Param
 
@@ -2659,6 +2694,8 @@ of interest.
 - ```"Major_Vein"```
 
 
+----------------------------------------------------
+
 ## CT_Liver_Perfusion_Pharmaco_1C2I_Reduced3Param
 
 ### Description
@@ -2971,6 +3008,8 @@ of interest.
 - ```"Major_Vein"```
 
 
+----------------------------------------------------
+
 ## ClusterDBSCAN
 
 ### Description
@@ -3271,6 +3310,8 @@ cluster will be reduced to the median coordinate.
 - ```"none"```
 - ```"median"```
 
+
+----------------------------------------------------
 
 ## ComparePixels
 
@@ -3719,6 +3760,8 @@ only matters when it is <1. In lieu of the true gamma-index, a value slightly >1
 - ```"false"```
 
 
+----------------------------------------------------
+
 ## ContourBasedRayCastDoseAccumulate
 
 ### Description
@@ -3897,6 +3940,8 @@ The number of columns in the resulting images.
 - ```"1024"```
 
 
+----------------------------------------------------
+
 ## ContourBooleanOperations
 
 ### Description
@@ -4051,6 +4096,8 @@ The label to attach to the ROI contour product of f(A,B).
 - ```"combined"```
 - ```"body_without_spinal_cord"```
 
+
+----------------------------------------------------
 
 ## ContourSimilarity
 
@@ -4244,6 +4291,8 @@ different sources, or using sub-selections of the data.
 - ```"Patient treatment plan C"```
 
 
+----------------------------------------------------
+
 ## ContourViaGeometry
 
 ### Description
@@ -4337,6 +4386,8 @@ radius. A sphere with centre (1.0,2.0,3.0) and radius 12.3 can be specified as '
 
 - ```"sphere(-1.0, 2.0, 3.0,  12.3)"```
 
+
+----------------------------------------------------
 
 ## ContourViaThreshold
 
@@ -4519,6 +4570,8 @@ images. Furthermore, if you know the ROI does not have holes (or if you don't ca
 - ```"true"```
 - ```"false"```
 
+
+----------------------------------------------------
 
 ## ContourVote
 
@@ -4730,6 +4783,8 @@ Retain this number of 'best' or 'winning' contours.
 - ```"10000"```
 
 
+----------------------------------------------------
+
 ## ContourWholeImages
 
 ### Description
@@ -4802,6 +4857,8 @@ mixed together. Note regexes are case insensitive and should use extended POSIX 
 - ```"key1@.*value1.*;key2@^value2$;first"```
 
 
+----------------------------------------------------
+
 ## ContouringAides
 
 ### Description
@@ -4815,6 +4872,8 @@ This operation attempts to prepare an image for easier contouring.
 ### Parameters
 
 No registered options.
+
+----------------------------------------------------
 
 ## ConvertContoursToMeshes
 
@@ -4929,6 +4988,8 @@ A label to attach to the surface mesh.
 - ```"below_5.3"```
 
 
+----------------------------------------------------
+
 ## ConvertContoursToPoints
 
 ### Description
@@ -5037,6 +5098,8 @@ roughly be the case for spherical contour collections). Point clouds created thi
 - ```"centroid"```
 
 
+----------------------------------------------------
+
 ## ConvertDoseToImage
 
 ### Description
@@ -5065,6 +5128,8 @@ The modality that will replace 'RTDOSE'.
 - ```"UNKNOWN"```
 
 
+----------------------------------------------------
+
 ## ConvertImageToDose
 
 ### Description
@@ -5075,6 +5140,8 @@ as an image or dose matrix will of course change.
 ### Parameters
 
 No registered options.
+
+----------------------------------------------------
 
 ## ConvertImageToMeshes
 
@@ -5232,6 +5299,8 @@ A label to attach to the surface mesh.
 - ```"below_5.3"```
 
 
+----------------------------------------------------
+
 ## ConvertMeshesToContours
 
 ### Description
@@ -5339,6 +5408,8 @@ mixed together. Note regexes are case insensitive and should use extended POSIX 
 - ```"key1@.*value1.*;key2@^value2$;first"```
 
 
+----------------------------------------------------
+
 ## ConvertNaNsToAir
 
 ### Description
@@ -5349,6 +5420,8 @@ This operation runs the data through a per-pixel filter, converting NaN's to air
 
 No registered options.
 
+----------------------------------------------------
+
 ## ConvertNaNsToZeros
 
 ### Description
@@ -5358,6 +5431,8 @@ This operation runs the data through a per-pixel filter, converting NaN's to zer
 ### Parameters
 
 No registered options.
+
+----------------------------------------------------
 
 ## ConvertPixelsToPoints
 
@@ -5487,6 +5562,8 @@ mixed together. Note regexes are case insensitive and should use extended POSIX 
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 
+
+----------------------------------------------------
 
 ## ConvolveImages
 
@@ -5675,6 +5752,8 @@ convolution). In all cases the kernel is (approximately) centred.
 - ```"pattern-match"```
 
 
+----------------------------------------------------
+
 ## CopyImages
 
 ### Description
@@ -5717,6 +5796,8 @@ mixed together. Note regexes are case insensitive and should use extended POSIX 
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 
+
+----------------------------------------------------
 
 ## CopyMeshes
 
@@ -5761,6 +5842,8 @@ criteria can be mixed together. Note regexes are case insensitive and should use
 - ```"key1@.*value1.*;key2@^value2$;first"```
 
 
+----------------------------------------------------
+
 ## CopyPoints
 
 ### Description
@@ -5803,6 +5886,8 @@ mixed together. Note regexes are case insensitive and should use extended POSIX 
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 
+
+----------------------------------------------------
 
 ## CountVoxels
 
@@ -6050,6 +6135,8 @@ different sources, or using sub-selections of the data.
 - ```"Patient treatment plan C"```
 
 
+----------------------------------------------------
+
 ## CropImageDoseToROIs
 
 ### Description
@@ -6163,6 +6250,8 @@ labels.
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
 
+
+----------------------------------------------------
 
 ## CropImages
 
@@ -6312,6 +6401,8 @@ The amount of margin (in the DICOM coordinate system) to spare from cropping.
 - ```"-0.5"```
 - ```"20.0"```
 
+
+----------------------------------------------------
 
 ## CropROIDose
 
@@ -6622,6 +6713,8 @@ you don't. Use the high setting if your TPS goes overboard linking data sets by 
 - ```"high"```
 
 
+----------------------------------------------------
+
 ## DCEMRI_IAUC
 
 ### Description
@@ -6636,6 +6729,8 @@ This operation will compute the Integrated Area Under the Curve (IAUC) for any i
 ### Parameters
 
 No registered options.
+
+----------------------------------------------------
 
 ## DCEMRI_Nonparametric_CE
 
@@ -6658,6 +6753,8 @@ possibly/optionally averaging relative to the baseline).
 ### Parameters
 
 No registered options.
+
+----------------------------------------------------
 
 ## DICOMExportContours
 
@@ -6766,6 +6863,8 @@ labels.
 - ```"left_parotid|right_parotid"```
 
 
+----------------------------------------------------
+
 ## DICOMExportImagesAsCT
 
 ### Description
@@ -6854,6 +6953,8 @@ you don't. Use the high setting if your TPS goes overboard linking data sets by 
 - ```"high"```
 
 
+----------------------------------------------------
+
 ## DICOMExportImagesAsDose
 
 ### Description
@@ -6941,6 +7042,8 @@ you don't. Use the high setting if your TPS goes overboard linking data sets by 
 - ```"high"```
 
 
+----------------------------------------------------
+
 ## DeDuplicateImages
 
 ### Description
@@ -6988,6 +7091,8 @@ mixed together. Note regexes are case insensitive and should use extended POSIX 
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 
+
+----------------------------------------------------
 
 ## DecayDoseOverTimeHalve
 
@@ -7064,6 +7169,8 @@ labels.
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
 
+
+----------------------------------------------------
 
 ## DecayDoseOverTimeJones2014
 
@@ -7262,6 +7369,8 @@ is used.
 - ```"false"```
 
 
+----------------------------------------------------
+
 ## DecimatePixels
 
 ### Description
@@ -7323,6 +7432,8 @@ the incoming image's column count. No decimation occurs if either this or 'OutSi
 - ```"512"```
 
 
+----------------------------------------------------
+
 ## DeleteImages
 
 ### Description
@@ -7365,6 +7476,8 @@ mixed together. Note regexes are case insensitive and should use extended POSIX 
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 
+
+----------------------------------------------------
 
 ## DeleteMeshes
 
@@ -7409,6 +7522,8 @@ criteria can be mixed together. Note regexes are case insensitive and should use
 - ```"key1@.*value1.*;key2@^value2$;first"```
 
 
+----------------------------------------------------
+
 ## DeletePoints
 
 ### Description
@@ -7451,6 +7566,8 @@ mixed together. Note regexes are case insensitive and should use extended POSIX 
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 
+
+----------------------------------------------------
 
 ## DetectGrid3D
 
@@ -7727,6 +7844,8 @@ different sources, or using sub-selections of the data.
 - ```"Patient treatment plan C"```
 
 
+----------------------------------------------------
+
 ## DetectShapes3D
 
 ### Description
@@ -7769,6 +7888,8 @@ mixed together. Note regexes are case insensitive and should use extended POSIX 
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 
+
+----------------------------------------------------
 
 ## DrawGeometry
 
@@ -7991,6 +8112,8 @@ easier composition of multiple shapes or custom backgrounds.
 - ```"solidsphere(0.0,0.0,0.0, 15.0)"```
 
 
+----------------------------------------------------
+
 ## DroverDebug
 
 ### Description
@@ -8018,6 +8141,8 @@ Whether to include metadata in the output. This data can significantly increase 
 - ```"false"```
 
 
+----------------------------------------------------
+
 ## DumpAllOrderedImageMetadataToFile
 
 ### Description
@@ -8027,6 +8152,8 @@ Dump exactly what order the data will be in for the following analysis.
 ### Parameters
 
 No registered options.
+
+----------------------------------------------------
 
 ## DumpAnEncompassedPoint
 
@@ -8039,6 +8166,8 @@ image, and then finds all other images which encompass the point.
 
 No registered options.
 
+----------------------------------------------------
+
 ## DumpFilesPartitionedByTime
 
 ### Description
@@ -8050,6 +8179,8 @@ time series data.
 ### Parameters
 
 No registered options.
+
+----------------------------------------------------
 
 ## DumpImageMeshes
 
@@ -8187,6 +8318,8 @@ of the image it is derived from.
 - ```"false"```
 
 
+----------------------------------------------------
+
 ## DumpImageMetadataOccurrencesToFile
 
 ### Description
@@ -8267,6 +8400,8 @@ different sources, or using sub-selections of the data. If left empty, the colum
 - ```"Patient treatment plan C"```
 
 
+----------------------------------------------------
+
 ## DumpPerROIParams_KineticModel_1C2I_5P
 
 ### Description
@@ -8339,6 +8474,8 @@ currently supported.
 - ```"_a_long_separator_"```
 
 
+----------------------------------------------------
+
 ## DumpPixelValuesOverTimeForAnEncompassedPoint
 
 ### Description
@@ -8350,6 +8487,8 @@ for interactive exploration.
 ### Parameters
 
 No registered options.
+
+----------------------------------------------------
 
 ## DumpPlanSummary
 
@@ -8398,6 +8537,8 @@ different sources, or using sub-selections of the data. If left empty, the colum
 - ```"Using XYZ"```
 - ```"Patient treatment plan C"```
 
+
+----------------------------------------------------
 
 ## DumpROIContours
 
@@ -8507,6 +8648,8 @@ labels.
 - ```"left_parotid|right_parotid"```
 
 
+----------------------------------------------------
+
 ## DumpROIData
 
 ### Description
@@ -8516,6 +8659,8 @@ This operation dumps ROI contour information for debugging and quick inspection 
 ### Parameters
 
 No registered options.
+
+----------------------------------------------------
 
 ## DumpROISNR
 
@@ -8604,6 +8749,8 @@ labels.
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
 
+
+----------------------------------------------------
 
 ## DumpROISurfaceMeshes
 
@@ -8775,6 +8922,8 @@ the image plane. The first, 'planar_corner_inclusive', considers a voxel interio
 - ```"planar_exc"```
 
 
+----------------------------------------------------
+
 ## DumpTPlanMetadataOccurrencesToFile
 
 ### Description
@@ -8855,6 +9004,8 @@ different sources, or using sub-selections of the data. If left empty, the colum
 - ```"Patient treatment plan C"```
 
 
+----------------------------------------------------
+
 ## DumpVoxelDoseInfo
 
 ### Description
@@ -8869,6 +9020,8 @@ This operation locates the minimum and maximum dose voxel values. It is useful f
 ### Parameters
 
 No registered options.
+
+----------------------------------------------------
 
 ## EvaluateDoseVolumeStats
 
@@ -9051,6 +9204,8 @@ different sources, or using sub-selections of the data. If left empty, the colum
 - ```"Patient treatment plan C"```
 
 
+----------------------------------------------------
+
 ## EvaluateNTCPModels
 
 ### Description
@@ -9226,6 +9381,8 @@ different sources, or using sub-selections of the data. If left empty, the colum
 - ```"Using XYZ"```
 - ```"Patient treatment plan C"```
 
+
+----------------------------------------------------
 
 ## EvaluateTCPModels
 
@@ -9530,6 +9687,8 @@ different sources, or using sub-selections of the data. If left empty, the colum
 - ```"Patient treatment plan C"```
 
 
+----------------------------------------------------
+
 ## ExportFITSImages
 
 ### Description
@@ -9596,6 +9755,8 @@ the base filename. Note that the file type is FITS.
 - ```"/path/to/some/dir/file_prefix"```
 
 
+----------------------------------------------------
+
 ## ExportLineSamples
 
 ### Description
@@ -9656,6 +9817,8 @@ be used. A '_', a sequentially-increasing number, and the '.dat' file suffix are
 - ```"../somedir/data"```
 - ```"/path/to/some/line_sample_to_plot"```
 
+
+----------------------------------------------------
 
 ## ExportPointClouds
 
@@ -9719,6 +9882,8 @@ suffix are appended after the base filename.
 - ```"/path/to/some/points"```
 
 
+----------------------------------------------------
+
 ## ExportSurfaceMeshes
 
 ### Description
@@ -9780,6 +9945,8 @@ model. If no name is given, unique names will be chosen automatically.
 - ```"/path/to/some/surface_mesh.off"```
 
 
+----------------------------------------------------
+
 ## ExportWarps
 
 ### Description
@@ -9839,6 +10006,8 @@ file format is a 4x4 Affine matrix. If no name is given, a unique name will be c
 - ```"trans.txt"```
 - ```"/path/to/some/trans.txt"```
 
+
+----------------------------------------------------
 
 ## ExtractAlphaBeta
 
@@ -10093,6 +10262,8 @@ The nominal dose per fraction (in DICOM units; Gy) assumed by an EQDx transforma
 - ```"2.0"```
 - ```"8.0"```
 
+
+----------------------------------------------------
 
 ## ExtractImageHistograms
 
@@ -10395,6 +10566,8 @@ different sources, or using sub-selections of the data. If left empty, the colum
 - ```"Using XYZ"```
 - ```"Patient treatment plan C"```
 
+
+----------------------------------------------------
 
 ## ExtractPointsWarp
 
@@ -10966,6 +11139,8 @@ methods that are not controlled by, e.g., an annealing schedule.
 - ```"1E-5"```
 
 
+----------------------------------------------------
+
 ## ExtractRadiomicFeatures
 
 ### Description
@@ -11107,6 +11282,8 @@ labels.
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
 
+
+----------------------------------------------------
 
 ## FVPicketFence
 
@@ -11905,6 +12082,8 @@ window overrides.
 - ```"10.3E4"```
 
 
+----------------------------------------------------
+
 ## ForEachDistinct
 
 ### Description
@@ -11947,6 +12126,8 @@ metadata-based grouping.
 - ```"SeriesInstanceUID"```
 - ```"StationName"```
 
+
+----------------------------------------------------
 
 ## GenerateCalibrationCurve
 
@@ -12170,6 +12351,8 @@ labels.
 - ```"left_parotid|right_parotid"```
 
 
+----------------------------------------------------
+
 ## GenerateSurfaceMask
 
 ### Description
@@ -12287,6 +12470,8 @@ labels.
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
 
+
+----------------------------------------------------
 
 ## GenerateSyntheticImages
 
@@ -12610,6 +12795,8 @@ keys with the provided values.
 - ```"keyA@valueA;keyB@valueB"```
 
 
+----------------------------------------------------
+
 ## GenerateVirtualDataContourViaThresholdTestV1
 
 ### Description
@@ -12619,6 +12806,8 @@ This operation generates data suitable for testing the ContourViaThreshold opera
 ### Parameters
 
 No registered options.
+
+----------------------------------------------------
 
 ## GenerateVirtualDataDoseStairsV1
 
@@ -12630,6 +12819,8 @@ This operation generates a dosimetric stairway. It can be used for testing how d
 
 No registered options.
 
+----------------------------------------------------
+
 ## GenerateVirtualDataImageSphereV1
 
 ### Description
@@ -12640,6 +12831,8 @@ transformed.
 ### Parameters
 
 No registered options.
+
+----------------------------------------------------
 
 ## GenerateVirtualDataPerfusionV1
 
@@ -12653,6 +12846,8 @@ admits a simple solution.
 
 No registered options.
 
+----------------------------------------------------
+
 ## GiveWholeImageArrayABoneWindowLevel
 
 ### Description
@@ -12663,6 +12858,8 @@ window-and-level or no window-and-level at all. Data is modified and no copy is 
 ### Parameters
 
 No registered options.
+
+----------------------------------------------------
 
 ## GiveWholeImageArrayAHeadAndNeckWindowLevel
 
@@ -12675,6 +12872,8 @@ window-and-level or no window-and-level at all. Data is modified and no copy is 
 
 No registered options.
 
+----------------------------------------------------
+
 ## GiveWholeImageArrayAThoraxWindowLevel
 
 ### Description
@@ -12685,6 +12884,8 @@ window-and-level or no window-and-level at all. Data is modified and no copy is 
 ### Parameters
 
 No registered options.
+
+----------------------------------------------------
 
 ## GiveWholeImageArrayAnAbdominalWindowLevel
 
@@ -12697,6 +12898,8 @@ window-and-level or no window-and-level at all. Data is modified and no copy is 
 
 No registered options.
 
+----------------------------------------------------
+
 ## GiveWholeImageArrayAnAlphaBetaWindowLevel
 
 ### Description
@@ -12707,6 +12910,8 @@ window-and-level or no window-and-level at all. Data is modified and no copy is 
 ### Parameters
 
 No registered options.
+
+----------------------------------------------------
 
 ## GridBasedRayCastDoseAccumulate
 
@@ -13000,6 +13205,8 @@ something specific to force an override.
 - ```"100"```
 
 
+----------------------------------------------------
+
 ## GroupImages
 
 ### Description
@@ -13105,6 +13312,8 @@ logic-based grouping.
 - ```"no-overlap-adjust"```
 
 
+----------------------------------------------------
+
 ## GrowContours
 
 ### Description
@@ -13187,6 +13396,8 @@ The distance to translate contour vertices. (The direction is outward.)
 - ```"1.1"```
 - ```"15.3"```
 
+
+----------------------------------------------------
 
 ## HighlightROIs
 
@@ -13419,6 +13630,8 @@ labels.
 - ```"left_parotid|right_parotid"```
 
 
+----------------------------------------------------
+
 ## ImageRoutineTests
 
 ### Description
@@ -13428,6 +13641,8 @@ This operation performs a series of sub-operations that are generally useful whe
 ### Parameters
 
 No registered options.
+
+----------------------------------------------------
 
 ## ImprintImages
 
@@ -13543,6 +13758,8 @@ The image channel to use. Zero-based.
 - ```"2"```
 
 
+----------------------------------------------------
+
 ## InterpolateSlices
 
 ### Description
@@ -13650,6 +13867,8 @@ specifier.
 - ```"1"```
 - ```"2"```
 
+
+----------------------------------------------------
 
 ## IsolatedVoxelFilter
 
@@ -13868,6 +14087,8 @@ distance will not be evaluated together.
 - ```"15.0"```
 
 
+----------------------------------------------------
+
 ## LoadFiles
 
 ### Description
@@ -13902,6 +14123,8 @@ Currently this includes serialized Drover class files, DICOM files, FITS image f
 - ```"image.fits"```
 - ```"point_cloud.xyz"```
 
+
+----------------------------------------------------
 
 ## LogScale
 
@@ -13946,6 +14169,8 @@ mixed together. Note regexes are case insensitive and should use extended POSIX 
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 
+
+----------------------------------------------------
 
 ## MakeMeshesManifold
 
@@ -14020,6 +14245,8 @@ criteria can be mixed together. Note regexes are case insensitive and should use
 - ```"key1@.*value1.*;key2@^value2$;first"```
 
 
+----------------------------------------------------
+
 ## MaxMinPixels
 
 ### Description
@@ -14029,6 +14256,8 @@ This operation replaces pixels with the pixel-wise difference (max)-(min).
 ### Parameters
 
 No registered options.
+
+----------------------------------------------------
 
 ## MeldDose
 
@@ -14040,6 +14269,8 @@ multi-part dose arrays. For more information about what this specifically entail
 ### Parameters
 
 No registered options.
+
+----------------------------------------------------
 
 ## MinkowskiSum3D
 
@@ -14177,6 +14408,8 @@ operations, this parameter controls the resultant thickness of the shell. In all
 - ```"5.0"```
 
 
+----------------------------------------------------
+
 ## ModifyContourMetadata
 
 ### Description
@@ -14260,6 +14493,8 @@ properly interpret the argument.
 - ```"MinimumSeparation@1.23"```
 - ```"'Description@some description;MinimumSeparation@1.23'"```
 
+
+----------------------------------------------------
 
 ## ModifyImageMetadata
 
@@ -14464,6 +14699,8 @@ convenience. Specify coordinates separated by commas.
 - ```"-1.0, 0.0, 0.0"```
 
 
+----------------------------------------------------
+
 ## NegatePixels
 
 ### Description
@@ -14507,6 +14744,8 @@ mixed together. Note regexes are case insensitive and should use extended POSIX 
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 
+
+----------------------------------------------------
 
 ## NormalizeLineSamples
 
@@ -14570,6 +14809,8 @@ ordinate is zero.
 - ```"area"```
 - ```"peak"```
 
+
+----------------------------------------------------
 
 ## NormalizePixels
 
@@ -14760,6 +15001,8 @@ intensities is zero. (This is useful for convolution kernels.)
 - ```"stretch11"```
 - ```"sum-to-zero"```
 
+
+----------------------------------------------------
 
 ## OptimizeStaticBeams
 
@@ -14993,6 +15236,8 @@ The dose prescribed to the ROI that will be optimized. The units depend on the D
 - ```"100.0"```
 
 
+----------------------------------------------------
+
 ## OrderImages
 
 ### Description
@@ -15064,6 +15309,8 @@ not always be on some systems.
 - ```"SeriesNumber"```
 - ```"SeriesDescription"```
 
+
+----------------------------------------------------
 
 ## PartitionContours
 
@@ -15359,6 +15606,8 @@ the fractional tolerance to be excessively small.
 - ```"30"```
 
 
+----------------------------------------------------
+
 ## PlotLineSamples
 
 ### Description
@@ -15453,6 +15702,8 @@ The label to attach to the ordinate (i.e., the 'y' or vertical coordinate). Leav
 - ```"Fraction (arb.)"```
 
 
+----------------------------------------------------
+
 ## PlotPerROITimeCourses
 
 ### Description
@@ -15488,6 +15739,8 @@ labels.
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
 
+
+----------------------------------------------------
 
 ## PointSeparation
 
@@ -15613,6 +15866,8 @@ different sources, or using sub-selections of the data.
 - ```"Patient treatment plan C"```
 
 
+----------------------------------------------------
+
 ## PreFilterEnormousCTValues
 
 ### Description
@@ -15623,6 +15878,8 @@ a clinical CT. Censored pixels are set to NaN. Data is modified and no copy is m
 ### Parameters
 
 No registered options.
+
+----------------------------------------------------
 
 ## PresentationImage
 
@@ -15747,6 +16004,8 @@ window overrides.
 - ```"10.3E4"```
 
 
+----------------------------------------------------
+
 ## PruneEmptyImageDoseArrays
 
 ### Description
@@ -15756,6 +16015,8 @@ This operation deletes Image_Arrays that do not contain any images.
 ### Parameters
 
 No registered options.
+
+----------------------------------------------------
 
 ## PurgeContours
 
@@ -15919,6 +16180,8 @@ purged. Note that the DICOM coordinate space is used. (Supplying the default, -i
 - ```"10.23E4"```
 
 
+----------------------------------------------------
+
 ## RankPixels
 
 ### Description
@@ -16023,6 +16286,8 @@ The (inclusive) threshold below which pixel values must be in order to participa
 - ```"0.0"```
 - ```"1500"```
 
+
+----------------------------------------------------
 
 ## ReduceNeighbourhood
 
@@ -16243,6 +16508,8 @@ this distance will not be evaluated together.
 - ```"15.0"```
 
 
+----------------------------------------------------
+
 ## RemeshSurfaceMeshes
 
 ### Description
@@ -16327,6 +16594,8 @@ The desired length of all edges in the remeshed mesh in DICOM units (mm).
 - ```"1.5"```
 - ```"2.015"```
 
+
+----------------------------------------------------
 
 ## Repeat
 
@@ -16547,6 +16816,39 @@ this distance will not be evaluated together.
 - ```"15.0"```
 
 
+----------------------------------------------------
+
+## SDL_Viewer
+
+### Description
+
+Launch an interactive viewer based on SDL.
+
+### Parameters
+
+- FPSLimit
+
+#### FPSLimit
+
+##### Description
+
+The upper limit on the frame rate, in seconds as an unsigned integer. Note that this value may be treated as a
+suggestion.
+
+##### Default
+
+- ```"60"```
+
+##### Examples
+
+- ```"60"```
+- ```"30"```
+- ```"10"```
+- ```"1"```
+
+
+----------------------------------------------------
+
 ## SFML_Viewer
 
 ### Description
@@ -16611,6 +16913,8 @@ suggestion.
 - ```"10"```
 - ```"1"```
 
+
+----------------------------------------------------
 
 ## ScalePixels
 
@@ -16792,6 +17096,8 @@ The image channel to use. Zero-based.
 - ```"2"```
 
 
+----------------------------------------------------
+
 ## SeamContours
 
 ### Description
@@ -16824,6 +17130,8 @@ uniformly outer but have a zero-area seam connecting the inner and outer portion
 ### Parameters
 
 No registered options.
+
+----------------------------------------------------
 
 ## SelectSlicesIntersectingROI
 
@@ -16889,6 +17197,8 @@ labels.
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
 
+
+----------------------------------------------------
 
 ## SimplifyContours
 
@@ -17006,6 +17316,8 @@ averaging that may result in numerical imprecision.
 - ```"vertex-removal"```
 
 
+----------------------------------------------------
+
 ## SimplifySurfaceMeshes
 
 ### Description
@@ -17071,6 +17383,8 @@ The maximum number of edges simplified meshes should contain.
 - ```"500000"```
 - ```"5000000"```
 
+
+----------------------------------------------------
 
 ## SimulateRadiograph
 
@@ -17255,6 +17569,8 @@ from the number of rows and columns, so increasing the column count will only re
 - ```"2000"```
 
 
+----------------------------------------------------
+
 ## SpatialBlur
 
 ### Description
@@ -17341,6 +17657,8 @@ aware this operation can take an enormous amount of time, since the pixel neighb
 - ```"2.5"```
 - ```"5.0"```
 
+
+----------------------------------------------------
 
 ## SpatialDerivative
 
@@ -17436,6 +17754,8 @@ orientation (in radians; [0,2pi) ).
 - ```"cross"```
 
 
+----------------------------------------------------
+
 ## SpatialSharpen
 
 ### Description
@@ -17495,6 +17815,8 @@ is based on a 5x5 Gaussian blur estimator.
 - ```"sharpen_3x3"```
 - ```"unsharp_mask_5x5"```
 
+
+----------------------------------------------------
 
 ## SubdivideSurfaceMeshes
 
@@ -17560,6 +17882,8 @@ The number of times subdivision should be performed.
 - ```"2"```
 - ```"5"```
 
+
+----------------------------------------------------
 
 ## SubsegmentContours
 
@@ -17830,6 +18154,8 @@ the fractional tolerance to be excessively small.
 - ```"20"```
 - ```"30"```
 
+
+----------------------------------------------------
 
 ## Subsegment_ComputeDose_VanLuijk
 
@@ -18138,6 +18464,8 @@ the fractional tolerance to be excessively small.
 - ```"30"```
 
 
+----------------------------------------------------
+
 ## SubtractImages
 
 ### Description
@@ -18222,6 +18550,8 @@ mixed together. Note regexes are case insensitive and should use extended POSIX 
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 
+
+----------------------------------------------------
 
 ## SupersampleImageGrid
 
@@ -18350,6 +18680,8 @@ as the inputs.
 - ```"inplane-bilinear"```
 - ```"trilinear"```
 
+
+----------------------------------------------------
 
 ## SurfaceBasedRayCastDoseAccumulate
 
@@ -18776,6 +19108,8 @@ visualization.
 - ```"false"```
 
 
+----------------------------------------------------
+
 ## ThresholdImages
 
 ### Description
@@ -18926,6 +19260,8 @@ mixed together. Note regexes are case insensitive and should use extended POSIX 
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 
+
+----------------------------------------------------
 
 ## ThresholdOtsu
 
@@ -19175,6 +19511,8 @@ the image plane. The first, 'planar_corner_inclusive', considers a voxel interio
 - ```"planar_exc"```
 
 
+----------------------------------------------------
+
 ## TransformContours
 
 ### Description
@@ -19270,6 +19608,85 @@ transformation has seven configurable scalar parameters denoting the rotation ce
 - ```"rotate(4.0, 5.0, 6.0,  1.0, 0.0, 0.0,  3.141592653)"```
 
 
+----------------------------------------------------
+
+## TransformImages
+
+### Description
+
+This operation transforms images by translating, scaling, and rotating the positions of voxels.
+
+### Notes
+
+- A single transformation can be specified at a time. Perform this operation sequentially to enforce order.
+
+### Parameters
+
+- ImageSelection
+- Transform
+
+#### ImageSelection
+
+##### Description
+
+Select one or more image arrays. Note that image arrays can hold anything, but will typically represent a single
+contiguous 3D volume (i.e., a volumetric CT scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of two types: positional or metadata-based key@value regex.
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth image array (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last image array.
+Positional specifiers can be inverted by prefixing with a '!'. Metadata-based key@value expressions are applied by
+matching the keys verbatim and the values with regex. In order to invert metadata-based selectors, the regex logic must
+be inverted (i.e., you can *not* prefix metadata-based selectors with a '!'). Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified. Both positional and metadata-based criteria can be
+mixed together. Note regexes are case insensitive and should use extended POSIX syntax.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+
+#### Transform
+
+##### Description
+
+This parameter is used to specify the transformation that should be performed. A single transformation can be specified
+for each invocation of this operation. Currently translation, scaling, and rotation are available. Translations have
+three configurable scalar parameters denoting the translation along x, y, and z in the DICOM coordinate system.
+Translating $x=1.0$, $y=-2.0$, and $z=0.3$ can be specified as 'translate(1.0, -2.0, 0.3)'. The scale transformation has
+four configurable scalar parameters denoting the scale centre 3-vector and the magnification factor. Note that the
+magnification factor can be negative, which will cause the mesh to be inverted along x, y, and z axes and magnified.
+Take note that face orientations will also become inverted. Magnifying by 2.7x about $(1.23, -2.34, 3.45)$ can be
+specified as 'scale(1.23, -2.34, 3.45, 2.7)'. Rotations around an arbitrary axis line can be accomplished. The rotation
+transformation has seven configurable scalar parameters denoting the rotation centre 3-vector, the rotation axis
+3-vector, and the rotation angle in radians. A rotation of pi radians around the axis line parallel to vector $(1.0,
+0.0, 0.0)$ that intersects the point $(4.0, 5.0, 6.0)$ can be specified as 'rotate(4.0, 5.0, 6.0, 1.0, 0.0, 0.0,
+3.141592653)'.
+
+##### Default
+
+- ```"translate(0.0, 0.0, 0.0)"```
+
+##### Examples
+
+- ```"translate(1.0, -2.0, 0.3)"```
+- ```"scale(1.23, -2.34, 3.45, 2.7)"```
+- ```"rotate(4.0, 5.0, 6.0,  1.0, 0.0, 0.0,  3.141592653)"```
+
+
+----------------------------------------------------
+
 ## TransformMeshes
 
 ### Description
@@ -19344,6 +19761,8 @@ transformation has seven configurable scalar parameters denoting the rotation ce
 - ```"scale(1.23, -2.34, 3.45, 2.7)"```
 - ```"rotate(4.0, 5.0, 6.0,  1.0, 0.0, 0.0,  3.141592653)"```
 
+
+----------------------------------------------------
 
 ## TrimROIDose
 
@@ -19657,6 +20076,8 @@ you don't. Use the high setting if your TPS goes overboard linking data sets by 
 - ```"high"```
 
 
+----------------------------------------------------
+
 ## UBC3TMRI_DCE
 
 ### Description
@@ -19666,6 +20087,8 @@ This operation is used to generate dynamic contrast-enhanced MRI contrast enhanc
 ### Parameters
 
 No registered options.
+
+----------------------------------------------------
 
 ## UBC3TMRI_DCE_Differences
 
@@ -19682,6 +20105,8 @@ This operation is used to generate dynamic contrast-enhanced MRI contrast enhanc
 
 No registered options.
 
+----------------------------------------------------
+
 ## UBC3TMRI_DCE_Experimental
 
 ### Description
@@ -19692,6 +20117,8 @@ This operation is an experimental operation for processing dynamic contrast-enha
 
 No registered options.
 
+----------------------------------------------------
+
 ## UBC3TMRI_IVIM_ADC
 
 ### Description
@@ -19701,6 +20128,8 @@ This operation is an experimental operation for processing IVIM MR images into A
 ### Parameters
 
 No registered options.
+
+----------------------------------------------------
 
 ## VolumetricCorrelationDetector
 
@@ -19856,6 +20285,8 @@ The channel to operated on (zero-based). Negative values will cause all channels
 - ```"1"```
 
 
+----------------------------------------------------
+
 ## VolumetricSpatialBlur
 
 ### Description
@@ -19990,6 +20421,8 @@ same window to be more heavily weighted. Try avoid boundaries or add extra margi
 
 - ```"Gaussian"```
 
+
+----------------------------------------------------
 
 ## VolumetricSpatialDerivative
 
@@ -20145,6 +20578,8 @@ support magnitude (addition of orthogonal components in quadrature).
 - ```"magnitude"```
 - ```"non-maximum-suppression"```
 
+
+----------------------------------------------------
 
 ## VoxelRANSAC
 
@@ -20362,6 +20797,8 @@ The known separation of the grid (in DICOM units; mm) being sought.
 - ```"10.0"```
 - ```"1.23E4"```
 
+
+----------------------------------------------------
 
 ## WarpPoints
 

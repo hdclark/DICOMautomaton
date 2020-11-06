@@ -634,7 +634,16 @@ void Emit_Documentation(std::ostream &os){
     reflow_and_emit_paragraph(os, max_width, nobullet, nobullet, nolinebreak,
         "# Operations Reference"
     );
+
+    bool printed_first = false;
     for(auto &anop : known_ops){
+        if(!printed_first){
+            printed_first = true;
+        }else{
+            os << "----------------------------------------------------" << std::endl;
+            os << std::endl;
+        }
+
         const auto name = anop.first;
 
         reflow_and_emit_paragraph(os, max_width, nobullet, nobullet, nolinebreak,
