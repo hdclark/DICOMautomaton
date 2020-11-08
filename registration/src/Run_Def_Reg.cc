@@ -42,9 +42,6 @@ int main(int argc, char* argv[]){
     // the stationary set.
     point_set<double> stationary;
 
-    // The Coherent Point Drift Algorithm to use. Options are rigid, affine, and nonrigid
-    std::string cpd_type;
-
     // This structure is described in Alignment_ABC.h.
     CPDParams params;
     
@@ -96,29 +93,6 @@ int main(int argc, char* argv[]){
     );
     arger.push_back( ygor_arg_handlr_t(1, 't', "type", true, "nonrigid",
       "Use this coherent point drift algorithm. Options: rigid, affine, nonrigid",
-      [&](const std::string &optarg) -> void {
-        cpd_type = optarg;
-        return;
-      })
-    );
-    arger.push_back( ygor_arg_handlr_t(3, 'b', "placeholder-boolean", false, "",
-      "Placeholder for a boolean option.",
-      [&](const std::string &) -> void {
-        PlaceholderBoolean = true;
-        return;
-      })
-    );
- 
-    arger.push_back( ygor_arg_handlr_t(3, 'f', "placeholder-float", true, "1.23",
-      "Placeholder for a float option.",
-      [&](const std::string &optarg) -> void {
-        PlaceholderFloat = std::stof(optarg);
-        return;
-      })
-    );
- 
-    arger.push_back( ygor_arg_handlr_t(3, 's', "placeholder-string", true, "placeholder",
-      "Placeholder for a string option.",
       [&](const std::string &optarg) -> void {
         type = optarg;
         return;
