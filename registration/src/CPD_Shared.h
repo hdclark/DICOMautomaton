@@ -1,6 +1,3 @@
-
-#pragma once
-
 #include <exception>
 #include <functional>
 #include <optional>
@@ -16,12 +13,11 @@
 
 #include "YgorMath.h"         //Needed for samples_1D.
 
-
 // A copy of this structure will be passed to the algorithm. It should be used to set parameters, if there are any, that affect
 // how the algorithm is performed. It generally should not be used to pass information back to the caller.
-struct AlignViaABCParams {
-    std::string type;
+struct CPDParams {
 };
+
 
 // The aim of the algorithm is to extract a transformation. Since we might want to apply this transformation to
 // other objects (e.g., other point clouds, or images) we need to somehow return this transformation as a function
@@ -33,15 +29,6 @@ struct AlignViaABCParams {
 //
 // However, actually extracting the algorithm may be an implementation detail. You should focus first on getting the
 // deformable registration algorithm working first before worrying about how to extract the transformation.
-struct AlignViaABCTransform {
-
-    // A placeholder parameter.
-    double xyz = 1.0;
+struct CPDTransform {
 
 };
-
-std::optional<AlignViaABCTransform>
-AlignViaABC(AlignViaABCParams & params,
-            const point_set<double> & moving,
-            const point_set<double> & stationary );
-
