@@ -22,7 +22,9 @@
 #include "YgorMathIOXYZ.h"    //Needed for ReadPointSetFromXYZ.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
-#include "Alignment_ABC.h"
+#include "CPD_Shared.h"
+#include "CPD_Rigid.h"
+#include "CPD_Affine.h"
 
 
 int main(int argc, char* argv[]){
@@ -40,18 +42,10 @@ int main(int argc, char* argv[]){
     // the stationary set.
     point_set<double> stationary;
 
-    // The Coherent Point Drift Algorithm to use. Options are rigid, affine, and nonrigid
-    std::string cpd_type;
-
     // This structure is described in Alignment_ABC.h.
-    AlignViaABCParams params;
-    //params.xyz = 1.23; // Override the default.
-
-    // Placeholder parameters, in case you need to add any of these.
-    bool PlaceholderBoolean = false;
-    double PlaceholderDouble = 1.0;
-    float PlaceholderFloat = -1.0;
-    std::string PlaceholderString = "placeholder";
+    CPDParams params;
+    
+    std::string type;
 
     //================================================ Argument Parsing ==============================================
 
@@ -100,30 +94,7 @@ int main(int argc, char* argv[]){
     arger.push_back( ygor_arg_handlr_t(1, 't', "type", true, "nonrigid",
       "Use this coherent point drift algorithm. Options: rigid, affine, nonrigid",
       [&](const std::string &optarg) -> void {
-        cpd_type = optarg;
-        return;
-      })
-    );
-    arger.push_back( ygor_arg_handlr_t(3, 'b', "placeholder-boolean", false, "",
-      "Placeholder for a boolean option.",
-      [&](const std::string &) -> void {
-        PlaceholderBoolean = true;
-        return;
-      })
-    );
- 
-    arger.push_back( ygor_arg_handlr_t(3, 'f', "placeholder-float", true, "1.23",
-      "Placeholder for a float option.",
-      [&](const std::string &optarg) -> void {
-        PlaceholderFloat = std::stof(optarg);
-        return;
-      })
-    );
- 
-    arger.push_back( ygor_arg_handlr_t(3, 's', "placeholder-string", true, "placeholder",
-      "Placeholder for a string option.",
-      [&](const std::string &optarg) -> void {
-        PlaceholderString = optarg;
+        type = optarg;
         return;
       })
     );
@@ -140,13 +111,14 @@ int main(int argc, char* argv[]){
 
     //========================================== Launch Perfusion Model =============================================
 
-    auto trans_opt = AlignViaABC(params, moving, stationary);
-
-    if(trans_opt){
-        // Do something with the transformation, e.g., compute some metric, or apply it to another object.
-        //trans_obt.value().do_something(...);
-    }else{
-        // If the transformation object is not valid, consider the run a failure.
+    if(type == "rigid") {
+        auto trans_opt = AlignViaRigidCPD(params, moving, stationary);
+    } else if(type == "affine") {
+        auto trans_opt = AlignViaAffineCPD(params, moving, stationary);
+    } else if(type == "nonrigid") {
+        FUNCERR("This option has not been implemented yet.");
+    } else {
+        FUNCERR("The CPD algorithm specified was invalid. Options are rigid, affine, nonrigid");
         return 1;
     }
 

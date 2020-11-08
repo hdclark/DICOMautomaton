@@ -1,21 +1,9 @@
-//Alignment_ABC.cc -- A part of DICOMautomaton 2020. Written by hal clark, ...
-//
-// This file is meant to contain an implementation of the deformable registration algorithm ABC.
-
-#include <boost/filesystem.hpp> // Needed for Boost filesystem access.
-
-#include <eigen3/Eigen/Dense> //Needed for Eigen library dense matrices.
-
-#include "YgorFilesDirs.h"    //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
-#include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
-#include "YgorString.h"       //Needed for GetFirstRegex(...)
-
-#include "Alignment_ABC.h"
-
+#include "CPD_Affine.h"
+#include "CPD_Shared.h"
 
 // This function is where the deformable registration algorithm should be implemented.
-std::optional<AlignViaABCTransform>
-AlignViaABC(AlignViaABCParams & params,
+std::optional<CPDTransform>
+AlignViaAffineCPD(CPDParams & params,
             const point_set<double> & moving,
             const point_set<double> & stationary ){
 
@@ -83,7 +71,7 @@ AlignViaABC(AlignViaABCParams & params,
     // This structure is described in Alignment_ABC.h. Finding this transform is the ultimate goal of this algorithm.
     // For now, we'll leave it undefined. But a valid AlignViaABCTransform should be created and returned if the algorithm
     // successfully completes.
-    AlignViaABCTransform transform;
+    CPDTransform transform;
     return transform;
 }
 
