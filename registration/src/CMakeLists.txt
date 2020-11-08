@@ -2,6 +2,15 @@
 add_library(            Alignment_ABC_obj OBJECT Alignment_ABC.cc)
 set_target_properties(  Alignment_ABC_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
+add_library(            CPD_Affine_obj OBJECT CPD_Affine.cc)
+set_target_properties(  CPD_Affine_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+
+add_library(            CPD_Rigid_obj OBJECT CPD_Rigid.cc)
+set_target_properties(  CPD_Rigid_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+
+add_library(            CPD_Shared_obj OBJECT CPD_Shared.cc)
+set_target_properties(  CPD_Shared_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+
 add_executable (run_def_reg
     Run_Def_Reg.cc
     $<TARGET_OBJECTS:Alignment_ABC_obj>
