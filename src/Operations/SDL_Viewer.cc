@@ -559,7 +559,7 @@ long int frame_count = 0;
         {
             ImGui::Begin("Main");
 
-            ImGui::Text("This is the main menu window.");
+            ImGui::Text("%s", "This is the main menu window.");
 
             if(ImGui::Button("Exit Viewer")){
                 FUNCINFO("Pressed the [exit] button");
@@ -655,7 +655,7 @@ if(DICOM_data.Has_Mesh_Data()){
     {
         ImGui::Begin("Meshes");
         std::string msg = "Drawing "_s + std::to_string(N_verts) + " verts and "_s + std::to_string(N_triangles) + " triangles.";
-        ImGui::Text(msg.c_str());
+        ImGui::Text("%s", msg.c_str());
         ImGui::End();
     }
 
