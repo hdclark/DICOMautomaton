@@ -63,6 +63,7 @@ stdenv.mkDerivation rec {
     # Runtime inputs.
     sfml
     SDL2
+    glew
 #    xorg
 #    xorg.libX11
 #    xorg.xcbutilkeysyms
