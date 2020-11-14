@@ -32,3 +32,8 @@ struct CPDParams {
 struct CPDTransform {
 
 };
+
+Eigen::MatrixXd E_Step {
+
+};
+
