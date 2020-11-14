@@ -7,6 +7,9 @@ Eigen::MatrixXd E_Step(CPDParams & params
 
     Eigen::MatrixXd P_Matrix(len(moving), len(stationary))
     
+    
+    // Pseudo-code for calculating the matrix P in the E-step
+    
     for n in range(0, len(stationary)):
         for m in range(0, len(moving)):
             exp_arg = -1 / (2*sigma**2) * (stationary(n) BR_Matrix * moving(m) + t)**2 
