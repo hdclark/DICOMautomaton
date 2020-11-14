@@ -30,6 +30,7 @@ AlignViaAffineCPD(CPDParams & params,
             const point_set<double> & moving,
             const point_set<double> & stationary );
 
+<<<<<<< 9bc73d4eff9fb1cc10dd15e17bbb430712d199df
 Eigen::MatrixXd calculate_B(const Eigen::MatrixXd & xHat,
             const Eigen::MatrixXd & yHat,
             const Eigen::MatrixXd & postProb );
@@ -41,3 +42,16 @@ double sigma_squared(CPDParams & params,
             const Eigen::MatrixXd & xHat,
             const Eigen::MatrixXd & yHat,
             const Eigen::MatrixXd & postProb );
+=======
+Eigen::MatrixXd calculate_B(CPDParams & params,
+            const point_set<double> & x_hat,
+            const point_set<double> & y_hat,
+            const Eigen::MatrixXd & post_prob;
+
+double sigma_squared(CPDParams & params,
+            float & Np,
+            float & dimensionality,
+            const Eigen::MatrixXd & B,
+            const point_set<double> & x_hat,
+            const point_set<double> & y_hat);
+>>>>>>> Added some function headers for affine and E-step
