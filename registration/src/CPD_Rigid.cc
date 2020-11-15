@@ -1,8 +1,4 @@
 #include "CPD_Rigid.h"
-#include "CPD_Shared.h"
-
-#include "CPD_Affine.h"
-#include "CPD_Shared.h"
 
 // This function is where the deformable registration algorithm should be implemented.
 std::optional<CPDTransform>
