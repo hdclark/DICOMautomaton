@@ -1,3 +1,6 @@
+#ifndef CPDAFFINE_H_
+#define CPDAFFINE_H_
+
 #include <exception>
 #include <functional>
 #include <optional>
@@ -15,54 +18,32 @@
 
 #include <eigen3/Eigen/Dense> //Needed for Eigen library dense matrices.
 
-#include "YgorFilesDirs.h"    //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
-#include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
-#include "YgorMath.h"         //Needed for samples_1D.
-#include "YgorString.h"       //Needed for GetFirstRegex(...)
-// CPD_Shared.h file
-#ifndef CPDSHARED_H_
-#define CPDSHARED_H_
 #include "CPD_Shared.h"
-#endif
 
-std::optional<CPDTransform>
+class AffineCPDTransform {
+    public:
+        Eigen::MatrixXd B;
+        Eigen::VectorXd t;
+        int dim;
+        AffineCPDTransform(int dimensionality);
+        void apply_to(point_set<double> & ps);
+        // Serialize and deserialize to a human- and machine-readable format.
+        bool write_to( std::ostream & os );
+        bool read_from( std::istream & is );
+};
+
+AffineCPDTransform
 AlignViaAffineCPD(CPDParams & params,
             const point_set<double> & moving,
             const point_set<double> & stationary );
 
-<<<<<<< 4d81bf673c3ddb7ca78e56d5c05445f3dea19b30
-<<<<<<< 9bc73d4eff9fb1cc10dd15e17bbb430712d199df
-Eigen::MatrixXd calculate_B(const Eigen::MatrixXd & xHat,
+Eigen::MatrixXd CalculateB(const Eigen::MatrixXd & xHat,
             const Eigen::MatrixXd & yHat,
             const Eigen::MatrixXd & postProb );
 
-double sigma_squared(CPDParams & params,
-            double Np,
-            double dimensionality,
-            const Eigen::MatrixXd & B,
+double SigmaSquared(const Eigen::MatrixXd & B,
             const Eigen::MatrixXd & xHat,
             const Eigen::MatrixXd & yHat,
-            const Eigen::MatrixXd & postProb );
-=======
-Eigen::MatrixXd calculate_B(CPDParams & params,
-            const point_set<double> & x_hat,
-            const point_set<double> & y_hat,
-            const Eigen::MatrixXd & post_prob;
-=======
-Eigen::MatrixXd calculate_B(const Eigen::MatrixXd & xHat,
-            const Eigen::MatrixXd & yHat,
-            const Eigen::MatrixXd & postProb;
->>>>>>> Wrote preliminary E-Step function
+            const Eigen::MatrixXd & postProb);
 
-double sigma_squared(CPDParams & params,
-            float Np,
-            float dimensionality,
-            const Eigen::MatrixXd & B,
-<<<<<<< 4d81bf673c3ddb7ca78e56d5c05445f3dea19b30
-            const point_set<double> & x_hat,
-            const point_set<double> & y_hat);
->>>>>>> Added some function headers for affine and E-step
-=======
-            const Eigen::MatrixXd & xHat,
-            const Eigen::MatrixXd & yHat);
->>>>>>> Wrote preliminary E-Step function
+#endif
