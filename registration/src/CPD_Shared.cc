@@ -4,7 +4,7 @@ Eigen::MatrixXd E_Step(const Eigen::MatrixXd & xPoints
             const Eigen::MatrixXd & yPoints
             const Eigen::MatrixXd & BRMatrix) {
 
-    Eigen::MatrixXd PMatrix(yPoints.rows(), xPoints.rows());
+    Eigen::MatrixXd postProb(yPoints.rows(), xPoints.rows()) = Eigen::MatrixXd::Zero(yPoints.rows(),xPoints.rows());
     int dimensionality = xPoints.cols();
     int nRowsX = (int)xPoints.rows();
     int mRowsY = (int)yPoints.rows();
@@ -38,6 +38,6 @@ Eigen::MatrixXd E_Step(const Eigen::MatrixXd & xPoints
         }
     }
 
-    return PMatrix;
+    return postProb;
 
 }

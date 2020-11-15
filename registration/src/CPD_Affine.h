@@ -21,11 +21,12 @@ AlignViaAffineCPD(CPDParams & params,
 
 Eigen::MatrixXd calculate_B(const Eigen::MatrixXd & xHat,
             const Eigen::MatrixXd & yHat,
-            const Eigen::MatrixXd & postProb;
+            const Eigen::MatrixXd & postProb );
 
 double sigma_squared(CPDParams & params,
-            float Np,
-            float dimensionality,
+            double Np,
+            double dimensionality,
             const Eigen::MatrixXd & B,
             const Eigen::MatrixXd & xHat,
-            const Eigen::MatrixXd & yHat);
+            const Eigen::MatrixXd & yHat,
+            const Eigen::MatrixXd & postProb );
