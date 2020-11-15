@@ -398,6 +398,8 @@ add_executable(dicomautomaton_bsarchive_convert
 target_link_libraries(dicomautomaton_bsarchive_convert
     explicator 
     ygor 
+    "$<$<BOOL:${WITH_GNU_GSL}>:${GNU_GSL_LIBRARIES}>"
+    "$<$<BOOL:${WITH_NLOPT}>:${NLOPT_LIBRARIES}>"
     Boost::filesystem
     Boost::serialization
     Boost::iostreams
