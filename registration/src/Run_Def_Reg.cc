@@ -22,7 +22,12 @@
 #include "YgorMathIOXYZ.h"    //Needed for ReadPointSetFromXYZ.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
+// CPD_Shared.h file
+#ifndef CPDSHARED_H_
+#define CPDSHARED_H_
 #include "CPD_Shared.h"
+#endif
+
 #include "CPD_Rigid.h"
 #include "CPD_Affine.h"
 
@@ -112,9 +117,9 @@ int main(int argc, char* argv[]){
     //========================================== Launch Perfusion Model =============================================
 
     if(type == "rigid") {
-        auto trans_opt = AlignViaRigidCPD(params, moving, stationary);
+        // auto trans_opt = AlignViaRigidCPD(params, moving, stationary);
     } else if(type == "affine") {
-        auto trans_opt = AlignViaAffineCPD(params, moving, stationary);
+        // auto trans_opt = AlignViaAffineCPD(params, moving, stationary);
     } else if(type == "nonrigid") {
         FUNCERR("This option has not been implemented yet.");
     } else {

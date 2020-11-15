@@ -1,5 +1,4 @@
 #include "CPD_Affine.h"
-#include "CPD_Shared.h"
 
 
 Eigen::MatrixXd calculate_B(const Eigen::MatrixXd & xHat,
