@@ -24,15 +24,14 @@ class AffineCPDTransform {
     public:
         Eigen::MatrixXd B;
         Eigen::VectorXd t;
-        int dim;
-        AffineCPDTransform(int dimensionality);
-        void apply_to(point_set<double> & ps);
+        AffineCPDTransform(int dimensionality = 3);
+        void apply_to(point_set<double> &ps);
         // Serialize and deserialize to a human- and machine-readable format.
-        bool write_to( std::ostream & os );
-        bool read_from( std::istream & is );
+        bool write_to( std::ostream &os );
+        bool read_from( std::istream &is );
 };
 
-AffineCPDTransform
+std::optional<AffineCPDTransform>
 AlignViaAffineCPD(CPDParams & params,
             const point_set<double> & moving,
             const point_set<double> & stationary );

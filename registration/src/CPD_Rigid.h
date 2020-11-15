@@ -28,7 +28,19 @@
 #include "CPD_Shared.h"
 #endif
 
-std::optional<CPDTransform>
+class RigidCPDTransform {
+    public:
+        Eigen::MatrixXd R;
+        Eigen::VectorXd t;
+        float s;
+        RigidCPDTransform(int dimensionality = 3);
+        void apply_to(point_set<double> &ps);
+        // Serialize and deserialize to a human- and machine-readable format.
+        bool write_to( std::ostream &os );
+        bool read_from( std::istream &is );
+};
+
+std::optional<RigidCPDTransform>
 AlignViaRigidCPD(CPDParams & params,
             const point_set<double> & moving,
             const point_set<double> & stationary );
