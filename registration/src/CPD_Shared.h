@@ -41,8 +41,10 @@ struct CPDTransform {
 
 Eigen::MatrixXd E_Step(const Eigen::MatrixXd & xPoints,
             const Eigen::MatrixXd & yPoints,
-            const Eigen::MatrixXd & BR_Matrix,
+            const Eigen::MatrixXd & BRMatrix,
             const Eigen::MatrixXd & t,
             double sigma,
-            double w);
-
+            double w,
+            double mRowsY,
+            double nRowsX,
+            double dimensionality)

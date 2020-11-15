@@ -1,6 +1,13 @@
 #include <utility>
 #include <iostream>
 #include "doctest/doctest.h"
+#include "CPD_Rigid.h"
+#include "CPD_Affine.h"
+#ifndef CPDSHARED_H_
+#define CPDSHARED_H_
+#include "CPD_Shared.h"
+#endif
+
 
 /*
 This unit testing uses the DocTest framework. This is the framework
