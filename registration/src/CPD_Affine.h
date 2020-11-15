@@ -30,14 +30,14 @@ AlignViaAffineCPD(CPDParams & params,
             const point_set<double> & moving,
             const point_set<double> & stationary );
 
-Eigen::MatrixXd calculate_B(CPDParams & params,
-            const point_set<double> & x_hat,
-            const point_set<double> & y_hat,
-            const Eigen::MatrixXd & post_prob;
+Eigen::MatrixXd calculate_B(const Eigen::MatrixXd & xHat,
+            const Eigen::MatrixXd & yHat,
+            const Eigen::MatrixXd & postProb );
 
 double sigma_squared(CPDParams & params,
-            float & Np,
-            float & dimensionality,
+            double Np,
+            double dimensionality,
             const Eigen::MatrixXd & B,
-            const point_set<double> & x_hat,
-            const point_set<double> & y_hat);
+            const Eigen::MatrixXd & xHat,
+            const Eigen::MatrixXd & yHat,
+            const Eigen::MatrixXd & postProb );

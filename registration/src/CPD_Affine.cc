@@ -1,5 +1,32 @@
 #include "CPD_Affine.h"
 
+
+Eigen::MatrixXd calculate_B(const Eigen::MatrixXd & xHat,
+            const Eigen::MatrixXd & yHat,
+            const Eigen::MatrixXd & postProb) {
+    
+    Eigen::MatrixXd oneVec = Eigen::MatrixXd::Ones(postProb.cols(),1);
+    Eigen::MatrixXd left = xHat.transpose() * postProb.transpose() * yHat;
+    Eigen::MatrixXd right = (yHat.transpose() * (postProb * oneVec).asDiagonal() * yHat).inverse();
+    return left * right;
+}
+
+double sigma_squared(CPDParams & params,
+            double Np,
+            double dimensionality,
+            const Eigen::MatrixXd & B,
+            const Eigen::MatrixXd & xHat,
+            const Eigen::MatrixXd & yHat,
+            const Eigen::MatrixXd & postProb) {
+    
+    Eigen::MatrixXd oneVec = Eigen::MatrixXd::Ones(postProb.rows(),1);
+    double left = (double)(xHat.transpose() * (postProb.transpose() * oneVec).asDiagonal() * xHat).trace();
+    double right = (double)(xHat.transpose() * postProb.transpose() * yHat * B.transpose()).trace();
+    return (left - right) / (Np * dimensionality);
+    
+}
+
+
 // This function is where the deformable registration algorithm should be implemented.
 std::optional<CPDTransform>
 AlignViaAffineCPD(CPDParams & params,

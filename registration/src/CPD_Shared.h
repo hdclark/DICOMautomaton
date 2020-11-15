@@ -13,6 +13,9 @@
 
 #include "YgorMath.h"         //Needed for samples_1D.
 
+#include <math.h>
+#include <Eigen/Dense>
+
 // A copy of this structure will be passed to the algorithm. It should be used to set parameters, if there are any, that affect
 // how the algorithm is performed. It generally should not be used to pass information back to the caller.
 struct CPDParams {
@@ -33,8 +36,16 @@ struct CPDTransform {
 
 };
 
-Eigen::MatrixXd E_Step(CPDParams & params
-            const point_set<double> & moving
-            const point_set<double> & stationary
-            Eigen::MatrixXd & BR_Matrix);
+<<<<<<< HEAD
+Eigen::MatrixXd E_Step(const Eigen::MatrixXd & xPoints,
+            const Eigen::MatrixXd & yPoints,
+            const Eigen::MatrixXd & BR_Matrix,
+            const Eigen::MatrixXd & t,
+            double sigma,
+            double w);
+=======
+Eigen::MatrixXd E_Step(const Eigen::MatrixXd & xPoints
+            const Eigen::MatrixXd & yPoints
+            const Eigen::MatrixXd & BR_Matrix);
+>>>>>>> 724daac72e5169ab75d1e287142b8d061b873b17
 
