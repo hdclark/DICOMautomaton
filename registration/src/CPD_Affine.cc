@@ -13,12 +13,11 @@ Eigen::MatrixXd calculate_B(const Eigen::MatrixXd & xHat,
 
 double sigma_squared(CPDParams & params,
             double Np,
+            double dimensionality,
             const Eigen::MatrixXd & B,
             const Eigen::MatrixXd & xHat,
             const Eigen::MatrixXd & yHat,
             const Eigen::MatrixXd & postProb) {
-    
-    int dimensionality = (int)xHat.cols();
     
     Eigen::MatrixXd oneVec = Eigen::MatrixXd::Ones(postProb.rows(),1);
     double left = (double)(xHat.transpose() * (postProb.transpose() * oneVec).asDiagonal() * xHat).trace();
