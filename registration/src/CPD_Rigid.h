@@ -32,6 +32,7 @@ class RigidCPDTransform {
     public:
         Eigen::MatrixXd R;
         Eigen::VectorXd t;
+        int dim;
         float s;
         RigidCPDTransform(int dimensionality = 3);
         void apply_to(point_set<double> &ps);
