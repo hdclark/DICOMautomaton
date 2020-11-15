@@ -7,11 +7,12 @@
 #include <memory>
 #include <string>    
 #include <vector>
+#include <Eigen/Dense>
 
 #include <cstdlib>            //Needed for exit() calls.
 #include <utility>            //Needed for std::pair.
 
-#include "YgorMath.h"         //Needed for samples_1D.
+// #include "YgorMath.h"         //Needed for samples_1D.
 
 #include <math.h>
 #include <Eigen/Dense>
@@ -36,8 +37,7 @@ struct CPDTransform {
 
 };
 
-Eigen::MatrixXd E_Step(CPDParams & params
-            const point_set<double> & moving
-            const point_set<double> & stationary
-            Eigen::MatrixXd & BR_Matrix);
+Eigen::MatrixXd E_Step(const Eigen::MatrixXd & xPoints
+            const Eigen::MatrixXd & yPoints
+            const Eigen::MatrixXd & BR_Matrix);
 
