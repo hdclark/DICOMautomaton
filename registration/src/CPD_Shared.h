@@ -32,3 +32,9 @@ struct CPDParams {
 struct CPDTransform {
 
 };
+
+Eigen::MatrixXd E_Step(CPDParams & params
+            const point_set<double> & moving
+            const point_set<double> & stationary
+            Eigen::MatrixXd & BR_Matrix);
+
