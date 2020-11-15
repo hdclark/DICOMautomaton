@@ -7,12 +7,14 @@
 #include <memory>
 #include <string>    
 #include <vector>
-#include <Eigen/Dense>
 
 #include <cstdlib>            //Needed for exit() calls.
 #include <utility>            //Needed for std::pair.
 
-// #include "YgorMath.h"         //Needed for samples_1D.
+#include "YgorMath.h"         //Needed for samples_1D.
+
+#include <math.h>
+#include <Eigen/Dense>
 
 #include <math.h>
 #include <Eigen/Dense>
