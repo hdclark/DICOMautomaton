@@ -422,6 +422,7 @@ if(WITH_POSTGRES)
         imebrashim
         explicator 
         ygor 
+        "$<$<BOOL:${WITH_GNU_GSL}>:${GNU_GSL_LIBRARIES}>"
         "${POSTGRES_LIBRARIES}"
         m
         Threads::Threads
@@ -438,6 +439,7 @@ if(WITH_POSTGRES)
         imebrashim
         explicator 
         ygor 
+        "$<$<BOOL:${WITH_GNU_GSL}>:${GNU_GSL_LIBRARIES}>"
         "${POSTGRES_LIBRARIES}"
         m
         Threads::Threads
@@ -454,6 +456,7 @@ if(WITH_POSTGRES)
         imebrashim
         explicator 
         ygor 
+        "$<$<BOOL:${WITH_GNU_GSL}>:${GNU_GSL_LIBRARIES}>"
         "${POSTGRES_LIBRARIES}"
         m
         Threads::Threads
@@ -471,6 +474,7 @@ add_executable(dicomautomaton_dump
 target_link_libraries(dicomautomaton_dump
     imebrashim
     ygor 
+    "$<$<BOOL:${WITH_GNU_GSL}>:${GNU_GSL_LIBRARIES}>"
     m
 )
 
