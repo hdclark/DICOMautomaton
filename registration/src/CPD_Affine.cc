@@ -7,22 +7,23 @@ Eigen::MatrixXd calculate_B(const Eigen::MatrixXd & xHat,
     
     Eigen::MatrixXd oneVec = Eigen::MatrixXd::Ones(postProb.cols(),1);
     Eigen::MatrixXd left = xHat.transpose() * postProb.transpose() * yHat;
-    Eigen::MatrixXd right = (yHat.transpose() * (postProb * oneVec).asDiagonal() * yHat).inverse()
-    return left * right
+    Eigen::MatrixXd right = (yHat.transpose() * (postProb * oneVec).asDiagonal() * yHat).inverse();
+    return left * right;
 }
 
 double sigma_squared(CPDParams & params,
             double Np,
-            double dimensionality,
             const Eigen::MatrixXd & B,
             const Eigen::MatrixXd & xHat,
             const Eigen::MatrixXd & yHat,
-            const Eigne::MatrixXd & postProb) {
+            const Eigen::MatrixXd & postProb) {
+    
+    int dimensionality = (int)xHat.cols();
     
     Eigen::MatrixXd oneVec = Eigen::MatrixXd::Ones(postProb.rows(),1);
     double left = (double)(xHat.transpose() * (postProb.transpose() * oneVec).asDiagonal() * xHat).trace();
     double right = (double)(xHat.transpose() * postProb.transpose() * yHat * B.transpose()).trace();
-    return (left - right) / (Np * dimensionality)
+    return (left - right) / (Np * dimensionality);
     
 }
 
