@@ -1,6 +1,9 @@
 
 { stdenv
 , fetchFromGitHub
+, buildStatic ? false
+, pkgs
+
 , cmake
 , pkg-config
 , boost
@@ -11,7 +14,7 @@ stdenv.mkDerivation rec {
   version = "20200415.1";
 
   src = fetchGit {
-      url = "https://github.com/hdclark/ygorclustering";
+    url = "https://github.com/hdclark/ygorclustering";
   };
 #  src = fetchFromGitHub {
 #    # Reminder: the sha256 hash can be computed via:
@@ -23,16 +26,18 @@ stdenv.mkDerivation rec {
 #    sha256 = "0fqjmjvwv9r0d876ahfrgfd5q2dx217azgwiph4i89kwzr7zm2pi";
 #  };
 
-  nativeBuildInputs = [ 
-    cmake 
-    pkg-config 
-  ];
+  nativeBuildInputs = []
+    ++ [ cmake ]
+    ++ [ pkg-config ]
+    ++ pkgs.lib.optionals (buildStatic && pkgs.glibc != null) [ pkgs.glibc.static ] ;
 
-  buildInputs = [ 
-    boost
-  ];
+  buildInputs = []
+    ++ pkgs.lib.optionals (boost != null) [ boost ] ;
 
-  cmakeFlags = [ "-DCMAKE_BUILD_TYPE=Release" ];
+  cmakeFlags = []
+    ++ [ "-DCMAKE_BUILD_TYPE=Release" ]
+    ++ [( if (buildStatic)   then "-DBUILD_SHARED_LIBS=OFF"
+                             else "-DBUILD_SHARED_LIBS=ON" )] ;
 
   enableParallelBuilding = true;
 

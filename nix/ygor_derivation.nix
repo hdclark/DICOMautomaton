@@ -1,21 +1,16 @@
 
 { stdenv
 , fetchFromGitHub
+, buildStatic ? false
+, pkgs
+
 , cmake
 , pkg-config
 , boost
 , gsl
 , eigen
-, gnuplot
+#, gnuplot
 , ... }:
-
-#{ stdenv, lib, fetchFromGitHub, cmake, pkgconfig
-#, boost, eigen, expat, glew, 
-#, nlopt, xorg,
-#, cgal_5, gmp, mpfr
-#}:
-
-#with import <nixpkgs> {};
 
 stdenv.mkDerivation rec {
   pname   = "ygor";
@@ -34,23 +29,31 @@ stdenv.mkDerivation rec {
 #    sha256 = "14fljbzgh7zkviz16xdjfkm8jm0qf60sy03d91pfhwil3p1l60lp";
 #  };
 
-  nativeBuildInputs = [ 
-    cmake 
-    pkg-config 
-  ];
+  nativeBuildInputs = []
+    ++ [ cmake ]
+    ++ [ pkg-config ]
+    ++ pkgs.lib.optionals (buildStatic && pkgs.glibc != null) [ pkgs.glibc.static ] ;
 
-  buildInputs = [ 
-    boost
-    gsl
-    eigen
-    gnuplot
-  ];
+  buildInputs = []
+    ++ pkgs.lib.optionals (eigen != null) [ eigen ]
+    ++ pkgs.lib.optionals (boost != null) [ boost ]
+#    ++ gnuplot  # Runtime dependency that makes exotic compilation significantly harder.
+    ++ pkgs.lib.optionals (gsl != null) 
+           [( if (buildStatic) then pkgs.pkgsStatic.gsl
+                               else gsl )] ;
 
-  cmakeFlags = [ "-DCMAKE_BUILD_TYPE=Release"
-                 "-DWITH_LINUX_SYS=ON"
-                 "-DWITH_EIGEN=ON"
-                 "-DWITH_GNU_GSL=ON"
-                 "-DWITH_BOOST=ON" ];
+  cmakeFlags = []
+    ++ [ "-DCMAKE_BUILD_TYPE=Release" ]
+    ++ [( if (eigen == null) then "-DWITH_EIGEN=OFF"
+                             else "-DWITH_EIGEN=ON" )]
+    ++ [( if (boost == null) then "-DWITH_BOOST=OFF"
+                             else "-DWITH_BOOST=ON" )]
+    ++ [( if (gsl   == null) then "-DWITH_GNU_GSL=OFF"
+                             else "-DWITH_GNU_GSL=ON" )]
+    ++ [( if (buildStatic)   then "-DBUILD_SHARED_LIBS=OFF"
+                             else "-DBUILD_SHARED_LIBS=ON" )]
+    ++ [( if (buildStatic || !stdenv.hostPlatform.isLinux) then "-DWITH_LINUX_SYS=OFF"
+                                                           else "-DWITH_LINUX_SYS=ON" )] ;
 
   enableParallelBuilding = true;
 

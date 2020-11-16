@@ -2,6 +2,7 @@
 { nixpkgs ? (import <nixpkgs> {})
 
 # Note: see nixpkgs/lib/systems/examples for standard cross-compiler definitions.
+, buildStatic      ? false
 , toolchainStatic  ? false
 , toolchainMusl    ? false
 , toolchainMingw64 ? false
@@ -9,7 +10,8 @@
 #, toolchainClang   ? false
 }:
 
-let pkgs = # Compile with musl-based toolchain.
+let
+  pkgs = # Compile with musl-based toolchain.
            if toolchainMusl then 
                nixpkgs.pkgsMusl
                #nixpkgs.pkgsCross.musl64
@@ -35,12 +37,12 @@ let pkgs = # Compile with musl-based toolchain.
 #           else
 #               pkgs.stdenv ;
 
-#in pkgs.callPackage( (import ./testcompile_derivation.nix) ){ 
 in pkgs.callPackage( (import ./dicomautomaton_derivation.nix) ){ 
-  explicator     = pkgs.callPackage ./explicator_derivation.nix { };
-  ygorclustering = pkgs.callPackage ./ygorclustering_derivation.nix { };
-  ygor           = pkgs.callPackage ./ygor_derivation.nix { };
-  #dicomautomaton = pkgs.callPackage ./dicomautomaton_derivation.nix { };
+  buildStatic     = buildStatic;
+  explicator      = pkgs.callPackage ./explicator_derivation.nix { buildStatic = buildStatic; };
+  ygorclustering  = pkgs.callPackage ./ygorclustering_derivation.nix { buildStatic = buildStatic; };
+  ygor            = pkgs.callPackage ./ygor_derivation.nix { buildStatic = buildStatic; };
+  #dicomautomaton  = pkgs.callPackage ./dicomautomaton_derivation.nix { buildStatic = buildStatic; };
 }
 
 
