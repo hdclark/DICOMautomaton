@@ -1,5 +1,10 @@
 
 {
+  allowUnfree = true;
+  allowUnsupportedSystem = true;
+  allowInsecure = true;
+  allowBroken = true;
+
   packageOverrides = pkgs: {
 
       # Not all functionality of SDL2 is needed, so disable some.
@@ -48,5 +53,6 @@
       #};
 
   };
+
 }
 
