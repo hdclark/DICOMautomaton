@@ -20,7 +20,7 @@ nix-env -i git
 nix-build \
   --show-trace \
   -j 8 \
-  --option sandbox true \
+  --option sandbox false \
   \
   ./nixpkgs.nix \
   -A ygor \
