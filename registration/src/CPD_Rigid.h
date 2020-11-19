@@ -32,3 +32,15 @@ std::optional<CPDTransform>
 AlignViaRigidCPD(CPDParams & params,
             const point_set<double> & moving,
             const point_set<double> & stationary );
+
+double CalculateS(const Eigen::MatrixXd & A,
+            const Eigen::MatrixXd & R,
+            const Eigen::MatrixXd & yHat,
+            const Eigen::MatrixXd & postProb );
+
+double SigmaSquared(double Np,
+            double s,
+            const Eigen::MatrixXd & A,
+            const Eigen::MatrixXd & R,
+            const Eigen::MatrixXd & xHat,
+            const Eigen::MatrixXd & postProb);
