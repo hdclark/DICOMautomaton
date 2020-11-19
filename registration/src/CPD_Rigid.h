@@ -46,15 +46,15 @@ AlignViaRigidCPD(CPDParams & params,
             const point_set<double> & moving,
             const point_set<double> & stationary );
 
-Eigen::MatrixXd Get_Rotation_Matrix(const Eigen::MatrixXd & X_hat,
-            const Eigen::MatrixXd & Y_hat,
+Eigen::MatrixXd GetA(const Eigen::MatrixXd & xHat,
+            const Eigen::MatrixXd & yHat,
             const Eigen::MatrixXd & P);
 
 // Please calculate C inside this function
-Eigen::MatrixXd Get_Rotation_Matrix(const Eigen::MatrixXd & U,
+Eigen::MatrixXd GetRotationMatrix(const Eigen::MatrixXd & U,
             const Eigen::MatrixXd & V);
 
-double CalculateS(const Eigen::MatrixXd & A,
+double GetS(const Eigen::MatrixXd & A,
             const Eigen::MatrixXd & R,
             const Eigen::MatrixXd & yHat,
             const Eigen::MatrixXd & postProb );

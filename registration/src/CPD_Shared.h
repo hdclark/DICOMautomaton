@@ -52,12 +52,21 @@ Eigen::MatrixXd E_Step(const Eigen::MatrixXd & xPoints,
             double sigmaSquared,
             double w);
 
-Eigen::MatrixXd Center_Matrix(const Eigen::MatrixXd & points,
+Eigen::MatrixXd CenterMatrix(const Eigen::MatrixXd & points,
             const Eigen::MatrixXd & meanVector);
 
-Eigen::MatrixXd Get_Translation_Vector(const Eigen::MatrixXd & rotationMatrix,
+Eigen::MatrixXd GetTranslationVector(const Eigen::MatrixXd & rotationMatrix,
             const Eigen::MatrixXd & xMeanVector,
             const Eigen::MatrixXd & yMeanVector,
             float scale);
 
+double CalculateNp(const Eigen::MatrixXd & postProb);
+
+Eigen::MatrixXd CalculateUx(double Np, 
+            const Eigen::MatrixXd & xPoints, 
+            const Eigen::MatrixXd & postProb);
+
+Eigen::MatrixXd CalculateUy(double Np, 
+            const Eigen::MatrixXd & yPoints, 
+            const Eigen::MatrixXd & postProb);
  
