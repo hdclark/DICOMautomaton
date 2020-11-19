@@ -19,8 +19,17 @@
 // A copy of this structure will be passed to the algorithm. It should be used to set parameters, if there are any, that affect
 // how the algorithm is performed. It generally should not be used to pass information back to the caller.
 struct CPDParams {
+    // Poiunt cloud dimesionality
+    int dimensionality = 3;
+    // Weight of the uniform distribution for the GMM
+    // Must be between 0 and 1
+    double distribution_weight = 0.5;
+    // Max iterations for algorithm
+    int iterations = 50;
 };
 
+float Init_Sigma_Squared(const Eigen::MatrixXd & xPoints,
+            const Eigen::MatrixXd & yPoints);
 
 // The aim of the algorithm is to extract a transformation. Since we might want to apply this transformation to
 // other objects (e.g., other point clouds, or images) we need to somehow return this transformation as a function
@@ -38,9 +47,17 @@ struct CPDTransform {
 
 Eigen::MatrixXd E_Step(const Eigen::MatrixXd & xPoints,
             const Eigen::MatrixXd & yPoints,
-            const Eigen::MatrixXd & BR_Matrix,
+            const Eigen::MatrixXd & BRMatrix,
             const Eigen::MatrixXd & t,
             double sigmaSquared,
             double w);
+
+Eigen::MatrixXd Center_Matrix(const Eigen::MatrixXd & points,
+            const Eigen::MatrixXd & meanVector);
+
+Eigen::MatrixXd Get_Translation_Vector(const Eigen::MatrixXd & rotationMatrix,
+            const Eigen::MatrixXd & xMeanVector,
+            const Eigen::MatrixXd & yMeanVector,
+            float scale);
 
  
