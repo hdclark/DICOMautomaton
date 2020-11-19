@@ -46,7 +46,6 @@ AlignViaRigidCPD(CPDParams & params,
             const point_set<double> & moving,
             const point_set<double> & stationary );
 
-<<<<<<< 95d34c915b56af925543d3814067d445958dde4e
 Eigen::MatrixXd Get_Rotation_Matrix(const Eigen::MatrixXd & X_hat,
             const Eigen::MatrixXd & Y_hat,
             const Eigen::MatrixXd & P);
@@ -55,7 +54,6 @@ Eigen::MatrixXd Get_Rotation_Matrix(const Eigen::MatrixXd & X_hat,
 Eigen::MatrixXd Get_Rotation_Matrix(const Eigen::MatrixXd & U,
             const Eigen::MatrixXd & V);
 
-=======
 double CalculateS(const Eigen::MatrixXd & A,
             const Eigen::MatrixXd & R,
             const Eigen::MatrixXd & yHat,
@@ -67,4 +65,3 @@ double SigmaSquared(double Np,
             const Eigen::MatrixXd & R,
             const Eigen::MatrixXd & xHat,
             const Eigen::MatrixXd & postProb);
->>>>>>> Added unit tests and header functions in Rigid

@@ -74,4 +74,12 @@ Eigen::MatrixXd Get_Translation_Vector(const Eigen::MatrixXd & rotationMatrix,
             double w);
 >>>>>>> Added unit tests and header functions in Rigid
 
+Eigen::MatrixXd Center_Matrix(const Eigen::MatrixXd & points,
+            const Eigen::MatrixXd & meanVector);
+
+Eigen::MatrixXd Get_Translation_Vector(const Eigen::MatrixXd & rotationMatrix,
+            const Eigen::MatrixXd & xMeanVector,
+            const Eigen::MatrixXd & yMeanVector,
+            float scale);
+
  
