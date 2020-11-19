@@ -1,5 +1,22 @@
 #include "CPD_Shared.h"
 
+float Init_Sigma_Squared(const Eigen::MatrixXd & xPoints,
+            const Eigen::MatrixXd & yPoints) {
+    float normSum = 0;
+    int nRowsX = xPoints.rows();
+    int nRowsY =  yPoints.rows();
+    int dim = xPoints.cols();
+    for (int i = 0; i < nRowsX; i++) {
+        const auto xRow = xPoints.row(i);
+        for (int j = 0; i < nRowsY; j++) {
+            const auto yRow = yPoints.row(j);
+            auto rowDiff = xRow - yRow;
+            normSum += rowDiff.squaredNorm();
+        }
+    }
+    return 1 / (nRowsX * nRowsY * dim) * normSum;
+}
+
 Eigen::MatrixXd E_Step(const Eigen::MatrixXd & xPoints,
             const Eigen::MatrixXd & yPoints,
             const Eigen::MatrixXd & BRMatrix,

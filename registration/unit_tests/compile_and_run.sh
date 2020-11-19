@@ -22,7 +22,7 @@ if [ ! -f doctest/doctest.h ] ; then
     wget -q 'https://raw.githubusercontent.com/onqtam/doctest/master/doctest/doctest.h' -O doctest/doctest.h
 fi
 
-g++ -std=c++17 -Wall -I. -I"${REPOROOT}/src" \
+g++ -std=c++17 -Wall -I"/usr/include/eigen3" -I. -I"${REPOROOT}/registration/src" \
   Main.cc \
   {,"${REPOROOT}/registration/unit_tests/"}CPD_Tests.cc \
   -o run_tests \

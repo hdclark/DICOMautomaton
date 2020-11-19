@@ -1,7 +1,45 @@
 #include "CPD_Rigid.h"
 
+RigidCPDTransform::RigidCPDTransform(int dimensionality) {
+    this->dim = dimensionality;
+    this->R = Eigen::MatrixXd::Identity(dimensionality, dimensionality);
+    this->t = Eigen::MatrixXd::Zero(dimensionality, 1);
+    this->s = 1;
+}
+
+void RigidCPDTransform::apply_to(point_set<double> &ps) {
+    const auto N_points = static_cast<long int>(ps.points.size());
+
+    Eigen::MatrixXd Y = Eigen::MatrixXd::Zero(N_points, this->dim); 
+
+    // Fill the X vector with the corresponding points.
+    for(long int j = 0; j < N_points; ++j) { // column
+        const auto P = ps.points[j];
+        Y(j, 0) = P.x;
+        Y(j, 1) = P.y;
+        Y(j, 2) = P.z;
+    }
+
+    auto Y_hat = this->s*Y*this->R.transpose() + \
+        Eigen::MatrixXd::Constant(N_points, 1, 1)*this->t.transpose();
+    
+    for(long int j = 0; j < N_points; ++j) { // column
+        ps.points[j].x = Y_hat(j, 0);
+        ps.points[j].y = Y_hat(j, 1);
+        ps.points[j].z = Y_hat(j, 2);
+    }
+}
+
+bool RigidCPDTransform::write_to( std::ostream &os ) {
+
+}
+
+bool RigidCPDTransform::read_from( std::istream &is ) {
+
+}
+
 // This function is where the deformable registration algorithm should be implemented.
-std::optional<CPDTransform>
+std::optional<RigidCPDTransform>
 AlignViaRigidCPD(CPDParams & params,
             const point_set<double> & moving,
             const point_set<double> & stationary ){
@@ -14,63 +52,35 @@ AlignViaRigidCPD(CPDParams & params,
     const auto N_move_points = static_cast<long int>(moving.points.size());
     const auto N_stat_points = static_cast<long int>(stationary.points.size());
 
-    // The point_set class is documented at
-    // https://github.com/hdclark/Ygor/blob/5cffc24f3c662db116cc132da033bbc279e19d56/src/YgorMath.h#L575 but it is
-    // effectively a very simple wrapper around a std::vector of vec3's, which are documented at
-    // https://github.com/hdclark/Ygor/blob/5cffc24f3c662db116cc132da033bbc279e19d56/src/YgorMath.h#L28 .
-    // At their core, vec3's are made of three numbers: x, y, and z coordinates.
+    // Prepare working buffers.
     //
-    // As an example, print out all point coordinates:
-    std::cout << "Moving point set:" << std::endl;
-    for(const auto & r : moving.points){
-        std::cout << "    (" << r.x << ", " << r.y << ", " << r.z << ")" << std::endl;
+    // Stationary point matrix
+    Eigen::MatrixXd X = Eigen::MatrixXd::Zero(N_move_points, params.dimensionality);
+    // Moving point matrix
+    Eigen::MatrixXd Y = Eigen::MatrixXd::Zero(N_stat_points, params.dimensionality); 
+
+    // Fill the X vector with the corresponding points.
+    for(long int j = 0; j < N_stat_points; ++j){ // column
+        const auto P_stationary = stationary.points[j];
+        X(j, 0) = P_stationary.x;
+        X(j, 1) = P_stationary.y;
+        X(j, 2) = P_stationary.z;
     }
 
-    // The following is an example of using Eigen for matrices, in case it is needed.
-    {
-        Eigen::Matrix4d A;
-        A <<  1.0,  0.0,  0.0,  0.0,
-              0.0,  0.0,  1.0,  0.0,
-             -3.0,  3.0, -2.0, -1.0,
-              2.0, -2.0,  1.0,  1.0;
-        auto AT = A.transpose();
+    // Fill the Y vector with the corresponding points.
+    for(long int j = 0; j < N_move_points; ++j){ // column
+        const auto P_moving = moving.points[j];
+        Y(j, 0) = P_moving.x;
+        Y(j, 1) = P_moving.y;
+        Y(j, 2) = P_moving.z;
+    }
+    RigidCPDTransform transform(params.dimensionality);
+    float sigma_squared = Init_Sigma_Squared(X, Y);
 
-        auto C = A * AT;
-
-        double coeff_sum = 0.0;
-        for(int i = 0; i < 4; ++i){
-            for(int j = 0; j < 4; ++j){
-                coeff_sum += C(i,j) * 1.23;
-            }
-        }
-
-        FUNCINFO("The Eigen example coefficient sum is " << coeff_sum);
+    for (int i = 0; i < params.iterations; i++) {
+        
     }
 
-
-    // -----------------------------------------------
-    // Implement algorithm here.
-    //
-    // Note that the moving point set should not be modified! A temporary should be made if this is needed, but often it
-    // won't be because the transformation can create a temporary copy on-the-fly. Here is how to make a mutable copy in
-    // case it is needed:
-    point_set<double> mutable_moving = moving;
-
-    // ...
-    // ...
-    // ...
-    //    Note: if the algorithm fails at some point, emit a warning using FUNCWARN() (see above) and return std::nullopt .
-    // ...
-    // ...
-    // ...
-
-    // -----------------------------------------------
-
-
-    // This structure is described in Alignment_ABC.h. Finding this transform is the ultimate goal of this algorithm.
-    // For now, we'll leave it undefined. But a valid AlignViaABCTransform should be created and returned if the algorithm
-    // successfully completes.
-    CPDTransform transform;
     return transform;
 }
 
