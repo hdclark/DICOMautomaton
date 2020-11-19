@@ -42,6 +42,7 @@
 #include "Operations/ConvertContoursToPoints.h"
 #include "Operations/ConvertDoseToImage.h"
 #include "Operations/ConvertImageToDose.h"
+#include "Operations/ConvertMeshesToPoints.h"
 #include "Operations/ConvertNaNsToAir.h"
 #include "Operations/ConvertNaNsToZeros.h"
 #include "Operations/ConvertPixelsToPoints.h"
@@ -229,6 +230,7 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["ConvertContoursToPoints"] = std::make_pair(OpArgDocConvertContoursToPoints, ConvertContoursToPoints);
     out["ConvertDoseToImage"] = std::make_pair(OpArgDocConvertDoseToImage, ConvertDoseToImage);
     out["ConvertImageToDose"] = std::make_pair(OpArgDocConvertImageToDose, ConvertImageToDose);
+    out["ConvertMeshesToPoints"] = std::make_pair(OpArgDocConvertMeshesToPoints, ConvertMeshesToPoints);
     out["ConvertNaNsToAir"] = std::make_pair(OpArgDocConvertNaNsToAir, ConvertNaNsToAir);
     out["ConvertNaNsToZeros"] = std::make_pair(OpArgDocConvertNaNsToZeros, ConvertNaNsToZeros);
     out["ConvertPixelsToPoints"] = std::make_pair(OpArgDocConvertPixelsToPoints, ConvertPixelsToPoints);

@@ -24,6 +24,7 @@ add_library(Operations_objs OBJECT
     ConvertContoursToPoints.cc
     ConvertDoseToImage.cc
     ConvertImageToDose.cc
+    ConvertMeshesToPoints.cc
     ConvertNaNsToAir.cc
     ConvertNaNsToZeros.cc
     ConvertPixelsToPoints.cc
