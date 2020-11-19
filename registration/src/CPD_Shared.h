@@ -40,3 +40,12 @@ Eigen::MatrixXd E_Step(const Eigen::MatrixXd & xPoints,
             double mRowsY,
             double nRowsX,
             double dimensionality);
+
+Eigen::MatrixXd Center_Matrix(const Eigen::MatrixXd & points,
+            const Eigen::MatrixXd & meanVector);
+
+Eigen::MatrixXd Get_Translation_Vector(const Eigen::MatrixXd & rotationMatrix,
+            const Eigen::MatrixXd & xMeanVector,
+            const Eigen::MatrixXd & yMeanVector,
+            float scale);
+
