@@ -45,3 +45,12 @@ std::optional<RigidCPDTransform>
 AlignViaRigidCPD(CPDParams & params,
             const point_set<double> & moving,
             const point_set<double> & stationary );
+
+Eigen::MatrixXd Get_Rotation_Matrix(const Eigen::MatrixXd & X_hat,
+            const Eigen::MatrixXd & Y_hat,
+            const Eigen::MatrixXd & P);
+
+// Please calculate C inside this function
+Eigen::MatrixXd Get_Rotation_Matrix(const Eigen::MatrixXd & U,
+            const Eigen::MatrixXd & V);
+
