@@ -41,7 +41,8 @@ Eigen::MatrixXd CalculateB(const Eigen::MatrixXd & xHat,
             const Eigen::MatrixXd & yHat,
             const Eigen::MatrixXd & postProb );
 
-double SigmaSquared(const Eigen::MatrixXd & B,
+double SigmaSquared(double Np,
+            const Eigen::MatrixXd & B,
             const Eigen::MatrixXd & xHat,
             const Eigen::MatrixXd & yHat,
             const Eigen::MatrixXd & postProb);

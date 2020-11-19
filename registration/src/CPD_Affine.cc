@@ -36,7 +36,7 @@ bool AffineCPDTransform::read_from( std::istream &is ) {
 
 }
 
-Eigen::MatrixXd calculate_B(const Eigen::MatrixXd & xHat,
+Eigen::MatrixXd CalculateB(const Eigen::MatrixXd & xHat,
             const Eigen::MatrixXd & yHat,
             const Eigen::MatrixXd & postProb) {
     
@@ -46,13 +46,13 @@ Eigen::MatrixXd calculate_B(const Eigen::MatrixXd & xHat,
     return left * right;
 }
 
-double sigma_squared(CPDParams & params,
-            double Np,
-            double dimensionality,
+double SigmaSquared(double Np,
             const Eigen::MatrixXd & B,
             const Eigen::MatrixXd & xHat,
             const Eigen::MatrixXd & yHat,
             const Eigen::MatrixXd & postProb) {
+    
+    double dimensionality = yHat.cols();
     
     Eigen::MatrixXd oneVec = Eigen::MatrixXd::Ones(postProb.rows(),1);
     double left = (double)(xHat.transpose() * (postProb.transpose() * oneVec).asDiagonal() * xHat).trace();
