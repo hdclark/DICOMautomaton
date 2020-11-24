@@ -61,15 +61,48 @@ OperationDoc OpArgDocConvertMeshesToPoints(){
     out.args.emplace_back();
     out.args.back().name = "Method";
     out.args.back().desc = "The conversion method to use."
-                           " One option is currently available: 'vertices'."
+                           " Two options are currently available: 'vertices' and 'random'."
                            ""
                            " The 'vertices' option extracts all vertices from all selected meshes and directly"
                            " inserts them into the new point cloud."
-                           " Point clouds created this way will contain as many points as there are mesh vertices.";
+                           " Point clouds created this way will contain as many points as there are mesh vertices."
+                           ""
+                           " The 'random' option samples the surface mesh uniformly."
+                           " The likelihood of specific a face being sampled is proportional to its area."
+                           " This method requires a target sample density, which determines the number of samples"
+                           " taken; this density is an average over the entire mesh surface area, and individual"
+                           " samples may have less or more separation from neighbouring samples."
+                           " Note that the 'random' method will tend to result in clusters of samples and pockets"
+                           " without samples. This is unavoidable when sampling randomly."
+                           " The 'random' method accepts two parameters: a pseudo-random number generator seed and"
+                           " the desired sample density."
+                           "";
     out.args.back().default_val = "vertices";
     out.args.back().expected = true;
     out.args.back().examples = { "vertices" };
     out.args.back().samples = OpArgSamples::Exhaustive;
+
+
+    out.args.emplace_back();
+    out.args.back().name = "RandomSeed";
+    out.args.back().desc = "A parameter for the 'random' method:"
+                           " the seed used for the random surface sampling method.";
+    out.args.back().default_val = "1595813";
+    out.args.back().expected = true;
+    out.args.back().examples = { "25633", "20771", "271", "1006003", "11", "3511" };
+
+
+    out.args.emplace_back();
+    out.args.back().name = "RandomSampleDensity";
+    out.args.back().desc = "A parameter for the 'random' method:"
+                           " the target sample density (as samples/area where area is in DICOM units,"
+                           " nominally $mm^{-2}$))."
+                           " This parameter effectively controls the total number of samples."
+                           " Note that the sample density is averaged over the entire surface, so individual"
+                           " samples may cluster or spread out and develop pockets.";
+    out.args.back().default_val = "1.0";
+    out.args.back().expected = true;
+    out.args.back().examples = { "0.1", "0.5", "1.0", "5.0", "10.0" };
 
     return out;
 }
@@ -89,8 +122,11 @@ Drover ConvertMeshesToPoints(Drover DICOM_data,
     const auto LabelStr = OptArgs.getValueStr("Label").value();
 
     const auto MethodStr = OptArgs.getValueStr("Method").value();
+    const auto RandomSeed = std::stol( OptArgs.getValueStr("RandomSeed").value() );
+    const auto RandomSampleDensity = std::stod( OptArgs.getValueStr("RandomSampleDensity").value() );
     //-----------------------------------------------------------------------------------------------------------------
     const auto regex_vertices = Compile_Regex("^ve?r?t?i?c?e?s?$");
+    const auto regex_random = Compile_Regex("^ra?n?d?o?m?$");
 
     auto SMs_all = All_SMs( DICOM_data );
     auto SMs = Whitelist( SMs_all, MeshSelectionStr );
@@ -108,6 +144,14 @@ Drover ConvertMeshesToPoints(Drover DICOM_data,
             for(auto &v : (*smp_it)->meshes.vertices){
                 DICOM_data.point_data.back()->pset.points.emplace_back( v );
             }
+
+        }else if( std::regex_match(MethodStr, regex_random) ){
+            // Sample the surface and combine into the point cloud.
+            auto ps = (*smp_it)->meshes.sample_surface_randomly(RandomSampleDensity, RandomSeed);
+            DICOM_data.point_data.back()->pset.points.insert(
+                std::end(DICOM_data.point_data.back()->pset.points),
+                std::begin(ps.points),
+                std::end(ps.points) );
 
         }else{
             throw std::invalid_argument("Method not understood. Cannot continue.");
