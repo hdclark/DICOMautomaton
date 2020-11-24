@@ -43,6 +43,7 @@ Eigen::MatrixXd CalculateB(const Eigen::MatrixXd & xHat,
     Eigen::MatrixXd oneVec = Eigen::MatrixXd::Ones(postProb.cols(),1);
     Eigen::MatrixXd left = xHat.transpose() * postProb.transpose() * yHat;
     Eigen::MatrixXd right = (yHat.transpose() * (postProb * oneVec).asDiagonal() * yHat).inverse();
+
     return left * right;
 }
 
@@ -57,6 +58,15 @@ double SigmaSquared(double Np,
     Eigen::MatrixXd oneVec = Eigen::MatrixXd::Ones(postProb.rows(),1);
     double left = (double)(xHat.transpose() * (postProb.transpose() * oneVec).asDiagonal() * xHat).trace();
     double right = (double)(xHat.transpose() * postProb.transpose() * yHat * B.transpose()).trace();
+
+    std::cout << "\n diff";
+    std::cout << (left - right);
+    std::cout << "\n Np: ";
+    std::cout << Np; 
+    std::cout << "\n dims: ";
+    std::cout << dimensionality; 
+
+
     return (left - right) / (Np * dimensionality);
     
 }
