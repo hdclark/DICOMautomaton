@@ -49,7 +49,7 @@ TEST_CASE("B") {
 	postProb << (20./9), (-5./9),
 				(28./9), (-7./9);
 	Eigen::MatrixXd B;
-	B = CPD_Affine::CalculateB(xHat, yHat, postProb);
+	B = CalculateB(xHat, yHat, postProb);
 
 	double threshold = 0.01;
 	REQUIRE(((answerB - B).norm() < threshold));
@@ -72,7 +72,7 @@ TEST_CASE("sigma squared") {
 	postProb << (20./9), (-5./9),
 				(28./9), (-7./9);
 	double Np = 9.;
-	double sigmaSquared = CPD_Affine::SigmaSquared(Np, B, xHat, yHat, postProb);
+	double sigmaSquared = SigmaSquared(Np, B, xHat, yHat, postProb);
 
 	double sigmaSquaredAnswer = 257./243;
 	double threshold = 0.01;
