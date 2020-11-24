@@ -20,6 +20,10 @@
 
 #include "CPD_Shared.h"
 
+#ifndef CPDAFFINE_H_
+#define CPDAFFINE_H_
+#endif
+
 class AffineCPDTransform {
     public:
         Eigen::MatrixXd B;
@@ -37,11 +41,13 @@ AlignViaAffineCPD(CPDParams & params,
             const point_set<double> & moving,
             const point_set<double> & stationary );
 
-Eigen::MatrixXd CalculateB(const Eigen::MatrixXd & xHat,
+Eigen::MatrixXd calculate_B(const Eigen::MatrixXd & xHat,
             const Eigen::MatrixXd & yHat,
             const Eigen::MatrixXd & postProb );
 
-double SigmaSquared(double Np,
+double sigma_squared(CPDParams & params,
+            double Np,
+            double dimensionality,
             const Eigen::MatrixXd & B,
             const Eigen::MatrixXd & xHat,
             const Eigen::MatrixXd & yHat,
