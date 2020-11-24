@@ -79,7 +79,7 @@ OperationDoc OpArgDocConvertMeshesToPoints(){
                            "";
     out.args.back().default_val = "vertices";
     out.args.back().expected = true;
-    out.args.back().examples = { "vertices" };
+    out.args.back().examples = { "vertices", "random" };
     out.args.back().samples = OpArgSamples::Exhaustive;
 
 
