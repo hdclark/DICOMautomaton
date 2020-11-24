@@ -20,23 +20,19 @@
 
 #include "CPD_Shared.h"
 
-#ifndef CPDAFFINE_H_
-#define CPDAFFINE_H_
-#endif
-
 class AffineCPDTransform {
     public:
         Eigen::MatrixXd B;
         Eigen::VectorXd t;
         int dim;
-        AffineCPDTransform(int dimensionality = 3);
-        void apply_to(point_set<double> &ps);
+        AffineCPDTransform(int dimensionality);
+        void apply_to(point_set<double> & ps);
         // Serialize and deserialize to a human- and machine-readable format.
-        bool write_to( std::ostream &os );
-        bool read_from( std::istream &is );
+        bool write_to( std::ostream & os );
+        bool read_from( std::istream & is );
 };
 
-std::optional<AffineCPDTransform>
+AffineCPDTransform
 AlignViaAffineCPD(CPDParams & params,
             const point_set<double> & moving,
             const point_set<double> & stationary );
@@ -45,14 +41,9 @@ Eigen::MatrixXd CalculateB(const Eigen::MatrixXd & xHat,
             const Eigen::MatrixXd & yHat,
             const Eigen::MatrixXd & postProb );
 
-double SigmaSquared(double Np,
-            const Eigen::MatrixXd & B,
+double SigmaSquared(const Eigen::MatrixXd & B,
             const Eigen::MatrixXd & xHat,
             const Eigen::MatrixXd & yHat,
-<<<<<<< 08b22f853d820a2c95c02388e4635435c8067514
             const Eigen::MatrixXd & postProb);
 
 #endif
-=======
-            const Eigen::MatrixXd & postProb);
->>>>>>> Fixed unit test compilation

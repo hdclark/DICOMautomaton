@@ -1,3 +1,6 @@
+#ifndef CPDSHARED_H_
+#define CPDSHARED_H_
+
 #include <exception>
 #include <functional>
 #include <optional>
@@ -92,3 +95,4 @@ Eigen::MatrixXd CalculateUy(double Np,
             const Eigen::MatrixXd & yPoints, 
             const Eigen::MatrixXd & postProb);
  
+ #endif
