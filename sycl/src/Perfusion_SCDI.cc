@@ -100,7 +100,8 @@ Launch_SCDI( samples_1D<double> &AIF,
                 throw std::runtime_error("Excessive number of samples detected. Is this intended?");
             }
             
-            resampled.emplace_back( cropped.Interpolate_Linearly(t)[3] );
+            resampled.emplace_back( cropped.Interpolate_Linearly(t)[2] );
+            ++N;
         }
         return resampled;
     };
