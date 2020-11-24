@@ -42,11 +42,11 @@ TEST_CASE("B") {
 			2, 4,
 			1, 1;
 	Eigen::MatrixXd postProb(3, 3);
-	postProb << 1, 2, 1,
-				0, 1, 1,
+	postProb << 1, 0, 1,
+				2, 1, 1,
 				1, 1, 1;
 	Eigen::MatrixXd answerB(2, 2);
-	postProb << (20./9), (-5./9),
+	answerB << (20./9), (-5./9),
 				(28./9), (-7./9);
 	Eigen::MatrixXd B;
 	B = CalculateB(xHat, yHat, postProb);
@@ -69,12 +69,18 @@ TEST_CASE("sigma squared") {
 				2, 1, 1,
 				1, 1, 1;
 	Eigen::MatrixXd B(2, 2);
-	postProb << (20./9), (-5./9),
-				(28./9), (-7./9);
+	B << 	(20./9), (-5./9),
+			(28./9), (-7./9);
 	double Np = 9.;
 	double sigmaSquared = SigmaSquared(Np, B, xHat, yHat, postProb);
 
-	double sigmaSquaredAnswer = 257./243;
+	double sigmaSquaredAnswer = 257./162;
 	double threshold = 0.01;
+
+	std::cout << "\n answer Sigma squared: ";
+	std::cout << sigmaSquaredAnswer;
+	std::cout << "\n calculated Sigma squared: ";
+	std::cout << sigmaSquared;
+
 	REQUIRE(sigmaSquared == doctest::Approx(sigmaSquaredAnswer).epsilon(threshold));
 }
