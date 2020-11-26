@@ -56,8 +56,7 @@ double GetS(const Eigen::MatrixXd & A,
             const Eigen::MatrixXd & yHat,
             const Eigen::MatrixXd & postProb );
 
-double SigmaSquared(double Np,
-            double s,
+double SigmaSquared(double s,
             const Eigen::MatrixXd & A,
             const Eigen::MatrixXd & R,
             const Eigen::MatrixXd & xHat,

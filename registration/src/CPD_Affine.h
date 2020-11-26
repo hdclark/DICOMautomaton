@@ -31,10 +31,10 @@ class AffineCPDTransform {
         Eigen::VectorXd t;
         int dim;
         AffineCPDTransform(int dimensionality = 3);
-        void apply_to(point_set<double> &ps);
+        void apply_to(point_set<double> & ps);
         // Serialize and deserialize to a human- and machine-readable format.
-        bool write_to( std::ostream &os );
-        bool read_from( std::istream &is );
+        bool write_to( std::ostream & os );
+        bool read_from( std::istream & is );
 };
 
 std::optional<AffineCPDTransform>
@@ -46,8 +46,7 @@ Eigen::MatrixXd CalculateB(const Eigen::MatrixXd & xHat,
             const Eigen::MatrixXd & yHat,
             const Eigen::MatrixXd & postProb );
 
-double SigmaSquared(double Np,
-            const Eigen::MatrixXd & B,
+double SigmaSquared(const Eigen::MatrixXd & B,
             const Eigen::MatrixXd & xHat,
             const Eigen::MatrixXd & yHat,
             const Eigen::MatrixXd & postProb);
