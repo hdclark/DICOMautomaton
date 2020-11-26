@@ -1,15 +1,38 @@
 #include "CPD_Shared.h"
 
-float Init_Sigma_Squared(const Eigen::MatrixXd & xPoints,
+Eigen::MatrixXd CenterMatrix(const Eigen::MatrixXd & points,
+            const Eigen::MatrixXd & meanVector) {
+    Eigen::MatrixXd oneVec = Eigen::MatrixXd::Ones(points.rows(),1);
+    return points - oneVec * meanVector.transpose();
+}
+
+Eigen::MatrixXd GetTranslationVector(const Eigen::MatrixXd & rotationMatrix,
+            const Eigen::MatrixXd & xMeanVector,
+            const Eigen::MatrixXd & yMeanVector,
+            double scale) {
+    return xMeanVector - scale * rotationMatrix * yMeanVector;
+}
+
+Eigen::MatrixXd AlignedPointSet(const Eigen::MatrixXd & yPoints,
+            const Eigen::MatrixXd & rotationMatrix,
+            const Eigen::MatrixXd & translation,
+            double scale) {
+    
+    Eigen::MatrixXd OneVec = Eigen::MatrixXd::Ones(yPoints.rows(),1);
+    return scale * yPoints * rotationMatrix.transpose() + oneVec * translation.transpose();
+}
+
+
+double Init_Sigma_Squared(const Eigen::MatrixXd & xPoints,
             const Eigen::MatrixXd & yPoints) {
-    float normSum = 0;
+    double normSum = 0;
     int nRowsX = xPoints.rows();
     int nRowsY =  yPoints.rows();
     int dim = xPoints.cols();
     for (int i = 0; i < nRowsX; i++) {
-        const auto xRow = xPoints.row(i);
+        const auto xRow = xPoints.row(i).transpose();
         for (int j = 0; i < nRowsY; j++) {
-            const auto yRow = yPoints.row(j);
+            const auto yRow = yPoints.row(j).transpose();
             auto rowDiff = xRow - yRow;
             normSum += rowDiff.squaredNorm();
         }
@@ -39,14 +62,14 @@ Eigen::MatrixXd E_Step(const Eigen::MatrixXd & xPoints,
     for (size_t m = 0; m < mRowsY; ++m) {
         for (size_t n = 0; n < nRowsX; ++n) {
 
-            tempVector = xPoints.row(n) - (BRMatrix * yPoints.row(m) + t);
+            tempVector = xPoints.row(n).transpose() - (BRMatrix * yPoints.row(m).transpose() + t);
             expArg = - 1 / (2 * sigmaSquared) * pow(tempVector.norm(),2);
             numerator = exp(expArg);
             
             denomSum = 0;
             
             for (size_t k = 0; k < mRowsY; ++k) {
-                tempVector = xPoints.row(n) - (BRMatrix * yPoints.row(k) + t);
+                tempVector = xPoints.row(n).transpose() - (BRMatrix * yPoints.row(k).transpose() + t);
                 expArg = - 1 / (2 * sigmaSquared) * pow(tempVector.norm(),2);
                 denomSum += exp(expArg);
             }
@@ -55,7 +78,6 @@ Eigen::MatrixXd E_Step(const Eigen::MatrixXd & xPoints,
             denominator = denomSum + pow(2 * M_PI * sigmaSquared,((double)(dimensionality/2))) * (w/(1-w)) * (double)(mRowsY / nRowsX);
 
             postProb(m,n) = numerator / denominator;
-
         }
     }
 
