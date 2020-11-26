@@ -34,11 +34,9 @@ struct CPDParams {
     int iterations = 50;
 };
 
-float Init_Sigma_Squared(const Eigen::MatrixXd & xPoints,
+double Init_Sigma_Squared(const Eigen::MatrixXd & xPoints,
             const Eigen::MatrixXd & yPoints);
 
-<<<<<<< 95d34c915b56af925543d3814067d445958dde4e
-=======
 // The aim of the algorithm is to extract a transformation. Since we might want to apply this transformation to
 // other objects (e.g., other point clouds, or images) we need to somehow return this transformation as a function
 // that can be evaluated and passed around. A good way to do this is to split the transformation into a set of
@@ -53,29 +51,12 @@ struct CPDTransform {
 
 };
 
->>>>>>> Added unit tests and header functions in Rigid
 Eigen::MatrixXd E_Step(const Eigen::MatrixXd & xPoints,
             const Eigen::MatrixXd & yPoints,
             const Eigen::MatrixXd & BRMatrix,
             const Eigen::MatrixXd & t,
-<<<<<<< 95d34c915b56af925543d3814067d445958dde4e
-            double sigma,
-            double w,
-            double mRowsY,
-            double nRowsX,
-            double dimensionality);
-
-Eigen::MatrixXd Center_Matrix(const Eigen::MatrixXd & points,
-            const Eigen::MatrixXd & meanVector);
-
-Eigen::MatrixXd Get_Translation_Vector(const Eigen::MatrixXd & rotationMatrix,
-            const Eigen::MatrixXd & xMeanVector,
-            const Eigen::MatrixXd & yMeanVector,
-            float scale);
-=======
             double sigmaSquared,
             double w);
->>>>>>> Added unit tests and header functions in Rigid
 
 Eigen::MatrixXd CenterMatrix(const Eigen::MatrixXd & points,
             const Eigen::MatrixXd & meanVector);
@@ -83,9 +64,7 @@ Eigen::MatrixXd CenterMatrix(const Eigen::MatrixXd & points,
 Eigen::MatrixXd GetTranslationVector(const Eigen::MatrixXd & rotationMatrix,
             const Eigen::MatrixXd & xMeanVector,
             const Eigen::MatrixXd & yMeanVector,
-            float scale);
-
-double CalculateNp(const Eigen::MatrixXd & postProb);
+            double scale);
 
 Eigen::MatrixXd CalculateUx(double Np, 
             const Eigen::MatrixXd & xPoints, 
@@ -94,5 +73,8 @@ Eigen::MatrixXd CalculateUx(double Np,
 Eigen::MatrixXd CalculateUy(double Np, 
             const Eigen::MatrixXd & yPoints, 
             const Eigen::MatrixXd & postProb);
- 
- #endif
+
+Eigen::MatrixXd AlignedPointSet(const Eigen::MatrixXd & yPoints,
+            const Eigen::MatrixXd & rotationMatrix,
+            const Eigen::MatrixXd & translation,
+            double scale);
