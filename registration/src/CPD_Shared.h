@@ -1,3 +1,6 @@
+#ifndef CPDSHARED_H_
+#define CPDSHARED_H_
+
 #include <exception>
 #include <functional>
 #include <optional>
@@ -72,3 +75,5 @@ Eigen::MatrixXd AlignedPointSet(const Eigen::MatrixXd & yPoints,
             const Eigen::MatrixXd & rotationMatrix,
             const Eigen::MatrixXd & translation,
             double scale);
+ 
+ #endif

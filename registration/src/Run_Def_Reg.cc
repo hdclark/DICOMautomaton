@@ -23,11 +23,7 @@
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
 // CPD_Shared.h file
-#ifndef CPDSHARED_H_
-#define CPDSHARED_H_
 #include "CPD_Shared.h"
-#endif
-
 #include "CPD_Rigid.h"
 #include "CPD_Affine.h"
 
