@@ -11,6 +11,7 @@
 #include <memory>
 #include <string>    
 #include <vector>
+#include <numeric>
 
 #include <cstdlib>            //Needed for exit() calls.
 #include <utility>            //Needed for std::pair.
@@ -117,7 +118,32 @@ Launch_SCDI( samples_1D<double> &AIF,
 
     // Perfusion model implementation should be placed here using resampled time courses.
 
-    // ...
+    // Calculate the DC gain, first equation
+    int sum_of_aif, sum_of_vif, sum_of_c;
+    sum_of_aif = std::accumulate(resampled_aif.begin(), resampled_aif.end(),
+                               decltype(resampled_aif)::value_type(0));
+    sum_of_vif = std::accumulate(resampled_vif.begin(), resampled_vif.end(),
+                               decltype(resampled_vif)::value_type(0));
+    sum_of_c = std::accumulate(resampled_c.front().begin(), resampled_c.front().end(),
+                                decltype(resampled_c.front().begin())::value_type(0));
+    FUNCINFO("sum of aif " << sum_of_aif << "sum of vif " << sum_of_vif << "sum of c " << sum_of_c);
+
+    // Linear approximation at large T
+
+    // Construct AIF(t-dt), VIF(t-dt), C(t-dt)
+    // std::vector<float> shifted_aif = resampled_aif;
+    // std::vector<float> shifted_vif = resampled_vif;
+    // std::vector<float> shifted_c = resampled_c.front();
+    // // Shift shifted vectors, remove 
+    // shifted_aif.erase(shifted_aif.front());
+    // resampled_aif.erase(resampled_aif.back());
+
+
+
+    // Calculate E(t) and D(t)
+
+    // Inner product calculation
+
 
 
 
