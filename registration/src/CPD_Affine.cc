@@ -47,13 +47,13 @@ Eigen::MatrixXd CalculateB(const Eigen::MatrixXd & xHat,
     return left * right;
 }
 
-double SigmaSquared(double Np,
-            const Eigen::MatrixXd & B,
+double SigmaSquared(const Eigen::MatrixXd & B,
             const Eigen::MatrixXd & xHat,
             const Eigen::MatrixXd & yHat,
             const Eigen::MatrixXd & postProb) {
     
     double dimensionality = yHat.cols();
+    double Np = postProb.sum();
     
     Eigen::MatrixXd oneVec = Eigen::MatrixXd::Ones(postProb.rows(),1);
     double left = (double)(xHat.transpose() * (postProb.transpose() * oneVec).asDiagonal() * xHat).trace();

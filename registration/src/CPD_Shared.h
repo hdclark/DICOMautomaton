@@ -66,12 +66,10 @@ Eigen::MatrixXd GetTranslationVector(const Eigen::MatrixXd & rotationMatrix,
             const Eigen::MatrixXd & yMeanVector,
             double scale);
 
-Eigen::MatrixXd CalculateUx(double Np, 
-            const Eigen::MatrixXd & xPoints, 
+Eigen::MatrixXd CalculateUx(const Eigen::MatrixXd & xPoints, 
             const Eigen::MatrixXd & postProb);
 
-Eigen::MatrixXd CalculateUy(double Np, 
-            const Eigen::MatrixXd & yPoints, 
+Eigen::MatrixXd CalculateUy(const Eigen::MatrixXd & yPoints, 
             const Eigen::MatrixXd & postProb);
 
 Eigen::MatrixXd AlignedPointSet(const Eigen::MatrixXd & yPoints,

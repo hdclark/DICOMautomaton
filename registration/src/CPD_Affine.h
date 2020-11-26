@@ -25,7 +25,7 @@ class AffineCPDTransform {
         Eigen::MatrixXd B;
         Eigen::VectorXd t;
         int dim;
-        AffineCPDTransform(int dimensionality);
+        AffineCPDTransform(int dimensionality = 3);
         void apply_to(point_set<double> & ps);
         // Serialize and deserialize to a human- and machine-readable format.
         bool write_to( std::ostream & os );

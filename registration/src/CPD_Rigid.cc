@@ -40,9 +40,9 @@ bool RigidCPDTransform::read_from( std::istream &is ) {
 
 Eigen::MatrixXd GetA(const Eigen::MatrixXd & xHat,
             const Eigen::MatrixXd & yHat,
-            const Eigen::MatrixXd & P){
+            const Eigen::MatrixXd & postProb){
     
-    return xHat.transpose() * P.transpose() * yHat; 
+    return xHat.transpose() * postProb.transpose() * yHat; 
 }
 
 // Please calculate C inside this function
@@ -69,14 +69,14 @@ double GetS(const Eigen::MatrixXd & A,
     return numer / denom;
 }
 
-double SigmaSquared(double Np,
-            double s,
+double SigmaSquared(double s,
             const Eigen::MatrixXd & A,
             const Eigen::MatrixXd & R,
             const Eigen::MatrixXd & xHat,
             const Eigen::MatrixXd & postProb){
 
-    double dimensionality = yHat.cols();
+    double dimensionality = xHat.cols();
+    double Np = postProb.sum();
     
     Eigen::MatrixXd oneVec = Eigen::MatrixXd::Ones(postProb.rows(),1);
     double left = (double)(xHat.transpose() * (postProb.transpose() * oneVec).asDiagonal() * xHat).trace();
