@@ -1,3 +1,6 @@
+#ifndef CPDAFFINE_H_
+#define CPDAFFINE_H_
+
 #include <exception>
 #include <functional>
 #include <optional>
@@ -19,11 +22,8 @@
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorMath.h"         //Needed for samples_1D.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
-// CPD_Shared.h file
-#ifndef CPDSHARED_H_
-#define CPDSHARED_H_
+
 #include "CPD_Shared.h"
-#endif
 
 class AffineCPDTransform {
     public:
@@ -50,4 +50,6 @@ double SigmaSquared(double Np,
             const Eigen::MatrixXd & B,
             const Eigen::MatrixXd & xHat,
             const Eigen::MatrixXd & yHat,
-            const Eigen::MatrixXd & postProb );
+            const Eigen::MatrixXd & postProb);
+
+#endif

@@ -76,9 +76,9 @@ double SigmaSquared(double Np,
             const Eigen::MatrixXd & xHat,
             const Eigen::MatrixXd & postProb){
 
-    double dimensionality = yHat.cols();
+    double dimensionality = xHat.cols();
     
-    Eigen::MatrixXd oneVec = Eigen::MatrixXd::Ones(postProb.rows(),1);
+    Eigen::MatrixXd oneVec = Eigen::MatrixXd::Ones(postProb.cols(),1);
     double left = (double)(xHat.transpose() * (postProb.transpose() * oneVec).asDiagonal() * xHat).trace();
     double right = s * (A.transpose() * R).trace();
 
