@@ -38,6 +38,53 @@ bool RigidCPDTransform::read_from( std::istream &is ) {
 
 }
 
+Eigen::MatrixXd GetA(const Eigen::MatrixXd & xHat,
+            const Eigen::MatrixXd & yHat,
+            const Eigen::MatrixXd & postProb){
+    
+    return xHat.transpose() * postProb.transpose() * yHat; 
+}
+
+// Please calculate C inside this function
+Eigen::MatrixXd GetRotationMatrix(const Eigen::MatrixXd & U,
+            const Eigen::MatrixXd & V){
+     
+    Eigen::MatrixXd C_vec = Eigen::MatrixXd::Ones(U.cols(),1);
+    C_vec(Eigen::last) = (U * V.transpose).transpose(); 
+
+    Eigen::MatrixXd C = C_vec.asDiagonal();
+
+    return U * C * V.transpose();
+}
+
+double GetS(const Eigen::MatrixXd & A,
+            const Eigen::MatrixXd & R,
+            const Eigen::MatrixXd & yHat,
+            const Eigen::MatrixXd & postProb ){
+
+    Eigen::MatrixXd oneVec = Eigen::MatrixXd::Ones(postProb.cols(),1);
+    double numer = (A.transpose() * R).trace();
+    double denom = (yHat.transpose() * (postProb * oneVec).transpose() * yHat).trace();
+
+    return numer / denom;
+}
+
+double SigmaSquared(double s,
+            const Eigen::MatrixXd & A,
+            const Eigen::MatrixXd & R,
+            const Eigen::MatrixXd & xHat,
+            const Eigen::MatrixXd & postProb){
+
+    double dimensionality = xHat.cols();
+    double Np = postProb.sum();
+    
+    Eigen::MatrixXd oneVec = Eigen::MatrixXd::Ones(postProb.rows(),1);
+    double left = (double)(xHat.transpose() * (postProb.transpose() * oneVec).asDiagonal() * xHat).trace();
+    double right = s * (A.transpose() * R).trace();
+
+    return (left - right) / (Np * dimensionality);
+}
+
 // This function is where the deformable registration algorithm should be implemented.
 std::optional<RigidCPDTransform>
 AlignViaRigidCPD(CPDParams & params,

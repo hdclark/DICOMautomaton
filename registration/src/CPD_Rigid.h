@@ -1,4 +1,5 @@
-#pragma once
+#ifndef CPDRIGID_H_
+#define CPDRIGID_H_
 
 #include <exception>
 #include <functional>
@@ -22,11 +23,7 @@
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorMath.h"         //Needed for samples_1D.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
-// CPD_Shared.h file
-#ifndef CPDSHARED_H_
-#define CPDSHARED_H_
 #include "CPD_Shared.h"
-#endif
 
 class RigidCPDTransform {
     public:
@@ -48,7 +45,7 @@ AlignViaRigidCPD(CPDParams & params,
 
 Eigen::MatrixXd GetA(const Eigen::MatrixXd & xHat,
             const Eigen::MatrixXd & yHat,
-            const Eigen::MatrixXd & P);
+            const Eigen::MatrixXd & postProb);
 
 // Please calculate C inside this function
 Eigen::MatrixXd GetRotationMatrix(const Eigen::MatrixXd & U,
@@ -59,9 +56,10 @@ double GetS(const Eigen::MatrixXd & A,
             const Eigen::MatrixXd & yHat,
             const Eigen::MatrixXd & postProb );
 
-double SigmaSquared(double Np,
-            double s,
+double SigmaSquared(double s,
             const Eigen::MatrixXd & A,
             const Eigen::MatrixXd & R,
             const Eigen::MatrixXd & xHat,
             const Eigen::MatrixXd & postProb);
+
+#endif
