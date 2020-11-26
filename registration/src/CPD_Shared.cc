@@ -62,3 +62,19 @@ Eigen::MatrixXd E_Step(const Eigen::MatrixXd & xPoints,
     return postProb;
 
 }
+
+Eigen::MatrixXd CalculateUx(double Np, 
+            const Eigen::MatrixXd & xPoints, 
+            const Eigen::MatrixXd & postProb){
+    Eigen::MatrixXd oneVec = Eigen::MatrixXd::Ones(postProb.rows(),1);
+    double oneOverNp = 1/(postProb.sum());
+    return oneOverNp * (xPoints.transpose()) * (postProb.transpose()) * oneVec;
+}
+
+Eigen::MatrixXd CalculateUy(double Np, 
+            const Eigen::MatrixXd & yPoints, 
+            const Eigen::MatrixXd & postProb){
+    Eigen::MatrixXd oneVec = Eigen::MatrixXd::Ones(postProb.cols(),1);
+    double oneOverNp = 1/(postProb.sum());
+    return oneOverNp * (yPoints.transpose()) * postProb * oneVec;
+}
