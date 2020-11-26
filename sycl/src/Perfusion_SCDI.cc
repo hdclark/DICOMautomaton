@@ -126,19 +126,22 @@ Launch_SCDI( samples_1D<double> &AIF,
                                decltype(resampled_vif)::value_type(0));
     sum_of_c = std::accumulate(resampled_c.front().begin(), resampled_c.front().end(),
                                 decltype(resampled_c.front().begin())::value_type(0));
-    FUNCINFO("sum of aif " << sum_of_aif << "sum of vif " << sum_of_vif << "sum of c " << sum_of_c);
+    FUNCINFO("sum of aif " << sum_of_aif << " sum of vif " << sum_of_vif << " sum of c " << sum_of_c);
 
     // Linear approximation at large T
 
     // Construct AIF(t-dt), VIF(t-dt), C(t-dt)
-    // std::vector<float> shifted_aif = resampled_aif;
-    // std::vector<float> shifted_vif = resampled_vif;
-    // std::vector<float> shifted_c = resampled_c.front();
-    // // Shift shifted vectors, remove 
-    // shifted_aif.erase(shifted_aif.front());
-    // resampled_aif.erase(resampled_aif.back());
+    std::vector<float> shifted_aif = resampled_aif;
+    std::vector<float> shifted_vif = resampled_vif;
+    std::vector<float> shifted_c = resampled_c.front();
 
-
+    // Shift shifted vectors, remove 
+    shifted_aif.erase(shifted_aif.begin());
+    resampled_aif.pop_back();
+    shifted_vif.erase(shifted_vif.begin());
+    resampled_vif.pop_back();
+    shifted_c.erase(shifted_c.begin());
+    resampled_c.front().pop_back();
 
     // Calculate E(t) and D(t)
 
