@@ -90,7 +90,7 @@ Eigen::MatrixXd CalculateUx(double Np,
             const Eigen::MatrixXd & postProb){
     Eigen::MatrixXd oneVec = Eigen::MatrixXd::Ones(postProb.rows(),1);
     double oneOverNp = 1/(postProb.sum());
-    return oneOverNp * (xPoints.transpose()) * (postProb.transpose()) * oneVec;
+    return oneOverNp * (xPoints.transpose()) * postProb.transpose() * oneVec;
 }
 
 Eigen::MatrixXd CalculateUy(double Np, 
