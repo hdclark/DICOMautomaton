@@ -62,7 +62,7 @@ double GetS(const Eigen::MatrixXd & A,
             const Eigen::MatrixXd & yHat,
             const Eigen::MatrixXd & postProb ){
 
-    Eigen::MatrixXd oneVec = Eigen::MatrixXd::Ones(postProb.rows(),1);
+    Eigen::MatrixXd oneVec = Eigen::MatrixXd::Ones(postProb.cols(),1);
     double numer = (A.transpose() * R).trace();
     double denom = (yHat.transpose() * (postProb * oneVec).transpose() * yHat).trace();
 
@@ -78,7 +78,7 @@ double SigmaSquared(double Np,
 
     double dimensionality = xHat.cols();
     
-    Eigen::MatrixXd oneVec = Eigen::MatrixXd::Ones(postProb.cols(),1);
+    Eigen::MatrixXd oneVec = Eigen::MatrixXd::Ones(postProb.rows(),1);
     double left = (double)(xHat.transpose() * (postProb.transpose() * oneVec).asDiagonal() * xHat).trace();
     double right = s * (A.transpose() * R).trace();
 
