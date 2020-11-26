@@ -18,7 +18,7 @@ Eigen::MatrixXd AlignedPointSet(const Eigen::MatrixXd & yPoints,
             const Eigen::MatrixXd & translation,
             double scale) {
     
-    Eigen::MatrixXd OneVec = Eigen::MatrixXd::Ones(yPoints.rows(),1);
+    Eigen::MatrixXd oneVec = Eigen::MatrixXd::Ones(yPoints.rows(),1);
     return scale * yPoints * rotationMatrix.transpose() + oneVec * translation.transpose();
 }
 
