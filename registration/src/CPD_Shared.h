@@ -31,7 +31,7 @@ struct CPDParams {
     int iterations = 50;
 };
 
-float Init_Sigma_Squared(const Eigen::MatrixXd & xPoints,
+double Init_Sigma_Squared(const Eigen::MatrixXd & xPoints,
             const Eigen::MatrixXd & yPoints);
 
 // The aim of the algorithm is to extract a transformation. Since we might want to apply this transformation to
@@ -61,16 +61,17 @@ Eigen::MatrixXd CenterMatrix(const Eigen::MatrixXd & points,
 Eigen::MatrixXd GetTranslationVector(const Eigen::MatrixXd & rotationMatrix,
             const Eigen::MatrixXd & xMeanVector,
             const Eigen::MatrixXd & yMeanVector,
-            float scale);
+            double scale);
 
-double CalculateNp(const Eigen::MatrixXd & postProb);
-
-Eigen::MatrixXd CalculateUx(double Np, 
-            const Eigen::MatrixXd & xPoints, 
+Eigen::MatrixXd CalculateUx(const Eigen::MatrixXd & xPoints, 
             const Eigen::MatrixXd & postProb);
 
-Eigen::MatrixXd CalculateUy(double Np, 
-            const Eigen::MatrixXd & yPoints, 
+Eigen::MatrixXd CalculateUy(const Eigen::MatrixXd & yPoints, 
             const Eigen::MatrixXd & postProb);
+
+Eigen::MatrixXd AlignedPointSet(const Eigen::MatrixXd & yPoints,
+            const Eigen::MatrixXd & rotationMatrix,
+            const Eigen::MatrixXd & translation,
+            double scale);
  
  #endif

@@ -31,7 +31,6 @@ TEST_CASE("example test"){
 	}
 }
 
-
 TEST_CASE("B") {
 	Eigen::MatrixXd xHat(3, 2);
 	xHat << 3, 4,
@@ -71,16 +70,44 @@ TEST_CASE("sigma squared") {
 	Eigen::MatrixXd B(2, 2);
 	B << 	(20./9), (-5./9),
 			(28./9), (-7./9);
-	double Np = 9.;
-	double sigmaSquared = SigmaSquared(Np, B, xHat, yHat, postProb);
+	
+	double sigmaSquared = SigmaSquared(B, xHat, yHat, postProb);
 
 	double sigmaSquaredAnswer = 257./162;
 	double threshold = 0.01;
 
-	std::cout << "\n answer Sigma squared: ";
-	std::cout << sigmaSquaredAnswer;
-	std::cout << "\n calculated Sigma squared: ";
-	std::cout << sigmaSquared;
-
 	REQUIRE(sigmaSquared == doctest::Approx(sigmaSquaredAnswer).epsilon(threshold));
+}
+
+TEST_CASE("E Step") {
+	Eigen::MatrixXd xPoints(3, 2);
+	xPoints  << 3, 4,
+				1, 1,
+				1, 2;
+	Eigen::MatrixXd yPoints(3, 2);
+	yPoints  << 1, 2,
+				2, 4,
+				1, 1;
+	Eigen::MatrixXd B(2, 2);
+	B    << 5, 2,
+		 	1, 1;
+	Eigen::MatrixXd t(2, 1);
+	t << 	2,
+			3;
+	double w = 2./3;
+	double sigmaSquared = 1.5;
+
+	Eigen::MatrixXd postProbAnswer(3,3);
+	postProbAnswer << 7.59784657e-12, 4.25691976e-20, 8.5502519e-19,
+					  1.85585056e-47, 1.58360649e-63, 2.35028043e-61,
+				      2.33560914e-07, 1.39159447e-13, 1.435048e-12;
+
+	Eigen::MatrixXd postProb;
+	postProb = E_Step(xPoints, yPoints, B, t, sigmaSquared, w);
+	
+	for (size_t i = 0; i < 3; ++i) {
+        for (size_t j = 0; j < 3; ++j) {
+			REQUIRE(postProb(i,j) == doctest::Approx(postProbAnswer(i,j)));
+        }
+    }
 }

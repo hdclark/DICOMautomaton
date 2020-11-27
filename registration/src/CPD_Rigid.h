@@ -46,7 +46,7 @@ AlignViaRigidCPD(CPDParams & params,
 
 Eigen::MatrixXd GetA(const Eigen::MatrixXd & xHat,
             const Eigen::MatrixXd & yHat,
-            const Eigen::MatrixXd & P);
+            const Eigen::MatrixXd & postProb);
 
 // Please calculate C inside this function
 Eigen::MatrixXd GetRotationMatrix(const Eigen::MatrixXd & U,
@@ -57,8 +57,7 @@ double GetS(const Eigen::MatrixXd & A,
             const Eigen::MatrixXd & yHat,
             const Eigen::MatrixXd & postProb );
 
-double SigmaSquared(double Np,
-            double s,
+double SigmaSquared(double s,
             const Eigen::MatrixXd & A,
             const Eigen::MatrixXd & R,
             const Eigen::MatrixXd & xHat,
