@@ -63,14 +63,16 @@ Eigen::MatrixXd E_Step(const Eigen::MatrixXd & xPoints,
         for (size_t n = 0; n < nRowsX; ++n) {
 
             tempVector = xPoints.row(n).transpose() - (BRMatrix * yPoints.row(m).transpose() + t);
-            expArg = - 1 / (2 * sigmaSquared) * pow(tempVector.norm(),2);
+            expArg = - 1 / (2 * sigmaSquared) * tempVector.squaredNorm();
+            // pow(tempVector.norm(),2);
             numerator = exp(expArg);
             
             denomSum = 0;
             
             for (size_t k = 0; k < mRowsY; ++k) {
                 tempVector = xPoints.row(n).transpose() - (BRMatrix * yPoints.row(k).transpose() + t);
-                expArg = - 1 / (2 * sigmaSquared) * pow(tempVector.norm(),2);
+                expArg = - 1 / (2 * sigmaSquared) * tempVector.squaredNorm();
+                // pow(tempVector.norm(),2);
                 denomSum += exp(expArg);
             }
 
