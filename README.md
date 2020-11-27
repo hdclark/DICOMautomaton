@@ -166,9 +166,11 @@ formats:
   - surface meshes
     - OFF (read and write; partial)
     - OBJ (read and write; partial)
-    - STL (read and write)
+    - STL (read and write; ASCII and binary)
   - point clouds
+    - XYZ (read and write)
     - OFF (read and write; partial)
+    - OBJ (read and write; partial)
   - registration
     - 16 parameter Affine or rigid transformation text files
     - Thin Plate Spline transformation text files (read and write)

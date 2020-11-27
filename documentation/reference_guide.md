@@ -347,6 +347,7 @@ will work.
 - ConvertImageToDose
 - ConvertImageToMeshes
 - ConvertMeshesToContours
+- ConvertMeshesToPoints
 - ConvertNaNsToAir
 - ConvertNaNsToZeros
 - ConvertPixelsToPoints
@@ -5406,6 +5407,138 @@ mixed together. Note regexes are case insensitive and should use extended POSIX 
 - ```"!#-3"```
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
+
+
+----------------------------------------------------
+
+## ConvertMeshesToPoints
+
+### Description
+
+This operation converts meshes to point clouds.
+
+### Notes
+
+- Meshes are unaltered. Existing point clouds are ignored and unaltered.
+
+### Parameters
+
+- MeshSelection
+- Label
+- Method
+- RandomSeed
+- RandomSampleDensity
+
+#### MeshSelection
+
+##### Description
+
+Select one or more surface meshes. Note that a single surface mesh may hold many disconnected mesh components; they
+should collectively represent a single logically cohesive object. Be aware that it is possible to mix logically
+unrelated sub-meshes together in a single mesh. Selection specifiers can be of two types: positional or metadata-based
+key@value regex. Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some
+positive integer N selects the Nth surface mesh (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last
+surface mesh. Positional specifiers can be inverted by prefixing with a '!'. Metadata-based key@value expressions are
+applied by matching the keys verbatim and the values with regex. In order to invert metadata-based selectors, the regex
+logic must be inverted (i.e., you can *not* prefix metadata-based selectors with a '!'). Multiple criteria can be
+specified by separating them with a ';' and are applied in the order specified. Both positional and metadata-based
+criteria can be mixed together. Note regexes are case insensitive and should use extended POSIX syntax.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+
+#### Label
+
+##### Description
+
+A label to attach to the point cloud.
+
+##### Default
+
+- ```"unspecified"```
+
+##### Examples
+
+- ```"unspecified"```
+- ```"POIs"```
+- ```"peaks"```
+- ```"above_zero"```
+- ```"below_5.3"```
+
+#### Method
+
+##### Description
+
+The conversion method to use. Two options are currently available: 'vertices' and 'random'. The 'vertices' option
+extracts all vertices from all selected meshes and directly inserts them into the new point cloud. Point clouds created
+this way will contain as many points as there are mesh vertices. The 'random' option samples the surface mesh uniformly.
+The likelihood of specific a face being sampled is proportional to its area. This method requires a target sample
+density, which determines the number of samples taken; this density is an average over the entire mesh surface area, and
+individual samples may have less or more separation from neighbouring samples. Note that the 'random' method will tend
+to result in clusters of samples and pockets without samples. This is unavoidable when sampling randomly. The 'random'
+method accepts two parameters: a pseudo-random number generator seed and the desired sample density.
+
+##### Default
+
+- ```"vertices"```
+
+##### Supported Options
+
+- ```"vertices"```
+- ```"random"```
+
+#### RandomSeed
+
+##### Description
+
+A parameter for the 'random' method: the seed used for the random surface sampling method.
+
+##### Default
+
+- ```"1595813"```
+
+##### Examples
+
+- ```"25633"```
+- ```"20771"```
+- ```"271"```
+- ```"1006003"```
+- ```"11"```
+- ```"3511"```
+
+#### RandomSampleDensity
+
+##### Description
+
+A parameter for the 'random' method: the target sample density (as samples/area where area is in DICOM units, nominally
+$mm^{-2}$)). This parameter effectively controls the total number of samples. Note that the sample density is averaged
+over the entire surface, so individual samples may cluster or spread out and develop pockets.
+
+##### Default
+
+- ```"1.0"```
+
+##### Examples
+
+- ```"0.1"```
+- ```"0.5"```
+- ```"1.0"```
+- ```"5.0"```
+- ```"10.0"```
 
 
 ----------------------------------------------------

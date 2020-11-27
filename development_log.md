@@ -3,6 +3,16 @@
 
 Below is a simplified timeline of `DICOMautomaton` development, broken down by month.
 
+## 202011
+
+- Support loading point clouds from OBJ and OFF files.
+- Added ConvertMeshesToPoints operation with vertex extraction and random surface sampling.
+- SYCL: added test file generation program, SCDI perfusion model minor bug fixes.
+- Nix: overhaul of all nix files, slightly more idiomatic file hierarchy.
+- SDL\_Viewer: make image array viewing optional, but still a WIP.
+- CI: ensure all systems provide libOpenGL.so.
+- Docker: added WIP debian:oldstable support. Might have to wait for next oldstable.
+
 ## 202010
 
 - Reworked EQDx operation to also provide BED conversion, added tests.
