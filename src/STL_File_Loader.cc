@@ -16,12 +16,13 @@
 #include <boost/filesystem.hpp>
 #include <cstdlib>            //Needed for exit() calls.
 
-#include "Structs.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMathIOSTL.h"
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorString.h"       //Needed for SplitStringToVector, Canonicalize_String2, SplitVector functions.
 
+#include "Structs.h"
+#include "Imebra_Shim.h"
 
 bool Load_Mesh_From_ASCII_STL_Files( Drover &DICOM_data,
                                      std::map<std::string,std::string> & /* InvocationMetadata */,
