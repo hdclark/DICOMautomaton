@@ -71,14 +71,14 @@ set_target_properties(  TAR_File_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE
 add_library(            3ddose_File_Loader_obj OBJECT 3ddose_File_Loader.cc )
 set_target_properties(  3ddose_File_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
-add_library(            OFF_Mesh_File_Loader_obj OBJECT OFF_Mesh_File_Loader.cc )
-set_target_properties(  OFF_Mesh_File_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+add_library(            OFF_File_Loader_obj OBJECT OFF_File_Loader.cc )
+set_target_properties(  OFF_File_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
-add_library(            STL_Mesh_File_Loader_obj OBJECT STL_Mesh_File_Loader.cc )
-set_target_properties(  STL_Mesh_File_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+add_library(            STL_File_Loader_obj OBJECT STL_File_Loader.cc )
+set_target_properties(  STL_File_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
-add_library(            OBJ_Mesh_File_Loader_obj OBJECT OBJ_Mesh_File_Loader.cc )
-set_target_properties(  OBJ_Mesh_File_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+add_library(            OBJ_File_Loader_obj OBJECT OBJ_File_Loader.cc )
+set_target_properties(  OBJ_File_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
 add_library(            Line_Sample_File_Loader_obj OBJECT Line_Sample_File_Loader.cc )
 set_target_properties(  Line_Sample_File_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
@@ -267,9 +267,9 @@ add_executable (dicomautomaton_dispatcher
     $<TARGET_OBJECTS:DVH_File_Loader_obj>
     $<TARGET_OBJECTS:TAR_File_Loader_obj>
     $<TARGET_OBJECTS:3ddose_File_Loader_obj>
-    $<TARGET_OBJECTS:OFF_Mesh_File_Loader_obj>
-    $<TARGET_OBJECTS:STL_Mesh_File_Loader_obj>
-    $<TARGET_OBJECTS:OBJ_Mesh_File_Loader_obj>
+    $<TARGET_OBJECTS:OFF_File_Loader_obj>
+    $<TARGET_OBJECTS:STL_File_Loader_obj>
+    $<TARGET_OBJECTS:OBJ_File_Loader_obj>
     $<TARGET_OBJECTS:Line_Sample_File_Loader_obj>
     $<TARGET_OBJECTS:Write_File_obj>
     $<TARGET_OBJECTS:Operation_Dispatcher_obj>
@@ -340,9 +340,9 @@ if(WITH_WT)
         $<TARGET_OBJECTS:DVH_File_Loader_obj>
         $<TARGET_OBJECTS:TAR_File_Loader_obj>
         $<TARGET_OBJECTS:3ddose_File_Loader_obj>
-        $<TARGET_OBJECTS:OFF_Mesh_File_Loader_obj>
-        $<TARGET_OBJECTS:STL_Mesh_File_Loader_obj>
-        $<TARGET_OBJECTS:OBJ_Mesh_File_Loader_obj>
+        $<TARGET_OBJECTS:OFF_File_Loader_obj>
+        $<TARGET_OBJECTS:STL_File_Loader_obj>
+        $<TARGET_OBJECTS:OBJ_File_Loader_obj>
         $<TARGET_OBJECTS:Line_Sample_File_Loader_obj>
         $<TARGET_OBJECTS:Write_File_obj>
         $<TARGET_OBJECTS:Operation_Dispatcher_obj>

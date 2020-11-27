@@ -1,4 +1,4 @@
-//STL_Mesh_File_Loader.cc - A part of DICOMautomaton 2020. Written by hal clark.
+//STL_File_Loader.cc - A part of DICOMautomaton 2020. Written by hal clark.
 //
 // This program loads surface meshes from both ASCII and binary STL files.
 //
@@ -23,10 +23,10 @@
 #include "YgorString.h"       //Needed for SplitStringToVector, Canonicalize_String2, SplitVector functions.
 
 
-bool Load_Mesh_From_STL_Files( Drover &DICOM_data,
-                               std::map<std::string,std::string> & /* InvocationMetadata */,
-                               const std::string &,
-                               std::list<boost::filesystem::path> &Filenames ){
+bool Load_Mesh_From_ASCII_STL_Files( Drover &DICOM_data,
+                                     std::map<std::string,std::string> & /* InvocationMetadata */,
+                                     const std::string &,
+                                     std::list<boost::filesystem::path> &Filenames ){
 
     // This routine will attempt to load STL-format files as surface meshes. Note that support for STL files is limited
     // to a simplified (but typical) subset. Note that a non-STL file that is passed to this routine will be fully parsed
@@ -71,6 +71,25 @@ bool Load_Mesh_From_STL_Files( Drover &DICOM_data,
                     throw std::runtime_error("Unable to read mesh from file.");
                 }
 
+                // Supply generic minimal metadata iff it is needed.
+                std::map<std::string, std::string> generic_metadata;
+
+                generic_metadata["Filename"] = Filename; 
+
+                generic_metadata["PatientID"] = "unspecified";
+                generic_metadata["StudyInstanceUID"] = Generate_Random_UID(60);
+                generic_metadata["SeriesInstanceUID"] = Generate_Random_UID(60);
+                generic_metadata["FrameOfReferenceUID"] = Generate_Random_UID(60);
+                generic_metadata["SOPInstanceUID"] = Generate_Random_UID(60);
+                generic_metadata["Modality"] = "SurfaceMesh";
+
+                generic_metadata["MeshName"] = "unspecified"; 
+                generic_metadata["NormalizedMeshName"] = "unspecified"; 
+
+                generic_metadata["ROIName"] = "unspecified"; 
+                generic_metadata["NormalizedROIName"] = "unspecified"; 
+                DICOM_data.smesh_data.back()->meshes.metadata.merge(generic_metadata);
+
                 FUNCINFO("Loaded surface mesh with " 
                          << N_verts << " vertices and "
                          << N_faces << " faces");
@@ -85,6 +104,24 @@ bool Load_Mesh_From_STL_Files( Drover &DICOM_data,
             ++bfit;
         }
     }
+
+    return true;
+}
+
+bool Load_Mesh_From_Binary_STL_Files( Drover &DICOM_data,
+                                      std::map<std::string,std::string> & /* InvocationMetadata */,
+                                      const std::string &,
+                                      std::list<boost::filesystem::path> &Filenames ){
+
+    // This routine will attempt to load STL-format files as surface meshes. Note that support for STL files is limited
+    // to a simplified (but typical) subset. Note that a non-STL file that is passed to this routine will be fully parsed
+    // as an STL file in order to assess validity. This can be problematic for multiple reasons, but mostly because it
+    // can be slow.
+    //
+    // Note: This routine returns false only iff a file is suspected of being suited for this loader, but could not be
+    //       loaded (e.g., the file seems appropriate, but a parsing failure was encountered).
+    //
+    if(Filenames.empty()) return true;
 
     // Attempt to read as a binary file.
     {
@@ -116,6 +153,25 @@ bool Load_Mesh_From_STL_Files( Drover &DICOM_data,
                 ||  (N_faces == 0) ){
                     throw std::runtime_error("Unable to read mesh from file.");
                 }
+
+                // Supply generic minimal metadata iff it is needed.
+                std::map<std::string, std::string> generic_metadata;
+
+                generic_metadata["Filename"] = Filename; 
+
+                generic_metadata["PatientID"] = "unspecified";
+                generic_metadata["StudyInstanceUID"] = Generate_Random_UID(60);
+                generic_metadata["SeriesInstanceUID"] = Generate_Random_UID(60);
+                generic_metadata["FrameOfReferenceUID"] = Generate_Random_UID(60);
+                generic_metadata["SOPInstanceUID"] = Generate_Random_UID(60);
+                generic_metadata["Modality"] = "SurfaceMesh";
+
+                generic_metadata["MeshName"] = "unspecified"; 
+                generic_metadata["NormalizedMeshName"] = "unspecified"; 
+
+                generic_metadata["ROIName"] = "unspecified"; 
+                generic_metadata["NormalizedROIName"] = "unspecified"; 
+                DICOM_data.smesh_data.back()->meshes.metadata.merge(generic_metadata);
 
                 FUNCINFO("Loaded surface mesh with " 
                          << N_verts << " vertices and "

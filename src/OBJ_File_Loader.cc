@@ -1,4 +1,4 @@
-//OBJ_Mesh_File_Loader.cc - A part of DICOMautomaton 2019. Written by hal clark.
+//OBJ_File_Loader.cc - A part of DICOMautomaton 2019. Written by hal clark.
 //
 // This program loads surface meshes from OBJ files.
 //
@@ -25,6 +25,82 @@
 #include "Structs.h"
 #include "Imebra_Shim.h"
 
+
+bool Load_Points_From_OBJ_Files( Drover &DICOM_data,
+                                 std::map<std::string,std::string> & /* InvocationMetadata */,
+                                 const std::string &,
+                                 std::list<boost::filesystem::path> &Filenames ){
+
+    //This routine will attempt to load OBJ-format files as point clouds. Note that not all OBJ files contain point
+    // clouds, and support for OBJ files is limited to a simplified subset. Note that a non-OBJ file that is passed
+    // to this routine will be fully parsed as an OBJ file in order to assess validity. This can be problematic for
+    // multiple reasons.
+    //
+    // Note: This routine returns false only iff a file is suspected of being suited for this loader, but could not be
+    //       loaded (e.g., the file seems appropriate, but a parsing failure was encountered).
+    //
+    if(Filenames.empty()) return true;
+
+    size_t i = 0;
+    const size_t N = Filenames.size();
+
+    auto bfit = Filenames.begin();
+    while(bfit != Filenames.end()){
+        FUNCINFO("Parsing file #" << i+1 << "/" << N << " = " << 100*(i+1)/N << "%");
+        ++i;
+        const auto Filename = bfit->string();
+
+        DICOM_data.point_data.emplace_back( std::make_shared<Point_Cloud>() );
+
+        try{
+            //////////////////////////////////////////////////////////////
+            // Attempt to load the file.
+            std::ifstream FI(Filename.c_str(), std::ios::in);
+            if(!ReadPointSetFromOBJ(DICOM_data.point_data.back()->pset, FI)){
+                throw std::runtime_error("Unable to read mesh from file.");
+            }
+            FI.close();
+            //////////////////////////////////////////////////////////////
+
+            // Reject the file if the point cloud is not valid.
+            const auto N_points = DICOM_data.point_data.back()->pset.points.size();
+            if( N_points == 0 ){
+                throw std::runtime_error("Unable to read point cloud from file.");
+            }
+
+            // Supply generic minimal metadata iff it is needed.
+            std::map<std::string, std::string> generic_metadata;
+
+            generic_metadata["Filename"] = Filename; 
+
+            generic_metadata["PatientID"] = "unspecified";
+            generic_metadata["StudyInstanceUID"] = Generate_Random_UID(60);
+            generic_metadata["SeriesInstanceUID"] = Generate_Random_UID(60);
+            generic_metadata["FrameOfReferenceUID"] = Generate_Random_UID(60);
+            generic_metadata["SOPInstanceUID"] = Generate_Random_UID(60);
+            generic_metadata["Modality"] = "SurfaceMesh";
+
+            generic_metadata["PointName"] = "unspecified"; 
+            generic_metadata["NormalizedPointName"] = "unspecified"; 
+
+            generic_metadata["ROIName"] = "unspecified"; 
+            generic_metadata["NormalizedROIName"] = "unspecified"; 
+            DICOM_data.point_data.back()->pset.metadata.merge(generic_metadata);
+
+            FUNCINFO("Loaded point cloud with " << N_points << " points");
+            bfit = Filenames.erase( bfit ); 
+            continue;
+        }catch(const std::exception &e){
+            FUNCINFO("Unable to load as OBJ point cloud file");
+            DICOM_data.point_data.pop_back();
+        };
+
+        //Skip the file. It might be destined for some other loader.
+        ++bfit;
+    }
+
+    return true;
+}
 
 bool Load_Mesh_From_OBJ_Files( Drover &DICOM_data,
                                std::map<std::string,std::string> & /* InvocationMetadata */,

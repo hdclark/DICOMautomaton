@@ -24,9 +24,9 @@
 #include "DICOM_File_Loader.h"
 #include "FITS_File_Loader.h"
 #include "XYZ_File_Loader.h"
-#include "OFF_Mesh_File_Loader.h"
-#include "STL_Mesh_File_Loader.h"
-#include "OBJ_Mesh_File_Loader.h"
+#include "OFF_File_Loader.h"
+#include "STL_File_Loader.h"
+#include "OBJ_File_Loader.h"
 #include "3ddose_File_Loader.h"
 #include "Line_Sample_File_Loader.h"
 #include "TAR_File_Loader.h"
@@ -86,6 +86,22 @@ Load_Files( Drover &DICOM_data,
         return false;
     }
 
+    //Standalone file loading: ASCII STL mesh files.
+    //
+    // Note: should preceed 'tabular DVH' line sample files.
+    if(!Paths.empty()
+    && !Load_Mesh_From_ASCII_STL_Files( DICOM_data, InvocationMetadata, FilenameLex, Paths )){
+        FUNCWARN("Failed to load ASCII STL mesh file");
+        return false;
+    }
+
+    //Standalone file loading: binary STL mesh files.
+    if(!Paths.empty()
+    && !Load_Mesh_From_Binary_STL_Files( DICOM_data, InvocationMetadata, FilenameLex, Paths )){
+        FUNCWARN("Failed to load binary STL mesh file");
+        return false;
+    }
+
     //Standalone file loading: 'tabular DVH' line sample files.
     if(!Paths.empty()
     && !Load_From_DVH_Files( DICOM_data, InvocationMetadata, FilenameLex, Paths )){
@@ -107,6 +123,15 @@ Load_Files( Drover &DICOM_data,
         return false;
     }
 
+    //Standalone file loading: OFF point cloud files.
+    //
+    // Note: should preceed the OFF mesh loader.
+    if(!Paths.empty()
+    && !Load_Points_From_OFF_Files( DICOM_data, InvocationMetadata, FilenameLex, Paths )){
+        FUNCWARN("Failed to load OFF point cloud file");
+        return false;
+    }
+
     //Standalone file loading: OFF mesh files.
     if(!Paths.empty()
     && !Load_Mesh_From_OFF_Files( DICOM_data, InvocationMetadata, FilenameLex, Paths )){
@@ -114,21 +139,25 @@ Load_Files( Drover &DICOM_data,
         return false;
     }
 
-    //Standalone file loading: OBJ files.
+    //Standalone file loading: OBJ point cloud files.
+    //
+    // Note: should preceed the OBJ mesh loader.
+    if(!Paths.empty()
+    && !Load_Points_From_OBJ_Files( DICOM_data, InvocationMetadata, FilenameLex, Paths )){
+        FUNCWARN("Failed to load OBJ point cloud file");
+        return false;
+    }
+
+    //Standalone file loading: OBJ mesh files.
     if(!Paths.empty()
     && !Load_Mesh_From_OBJ_Files( DICOM_data, InvocationMetadata, FilenameLex, Paths )){
         FUNCWARN("Failed to load OBJ mesh file");
         return false;
     }
 
-    //Standalone file loading: STL mesh files (both ASCII and binary).
-    if(!Paths.empty()
-    && !Load_Mesh_From_STL_Files( DICOM_data, InvocationMetadata, FilenameLex, Paths )){
-        FUNCWARN("Failed to load STL mesh file");
-        return false;
-    }
-
     //Standalone file loading: XYZ point cloud files.
+    //
+    // Note: XYZ can be confused with many other formats, so it should be near the end.
     if(!Paths.empty()
     && !Load_From_XYZ_Files( DICOM_data, InvocationMetadata, FilenameLex, Paths )){
         FUNCWARN("Failed to load XYZ file");
@@ -136,6 +165,8 @@ Load_Files( Drover &DICOM_data,
     }
 
     //Standalone file loading: line sample files.
+    //
+    // Note: this file can be confused with many other formats, so it should be near the end.
     if(!Paths.empty()
     && !Load_From_Line_Sample_Files( DICOM_data, InvocationMetadata, FilenameLex, Paths )){
         FUNCWARN("Failed to load line sample file");
