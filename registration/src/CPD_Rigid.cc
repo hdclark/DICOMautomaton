@@ -30,6 +30,10 @@ void RigidCPDTransform::apply_to(point_set<double> &ps) {
     }
 }
 
+Eigen::MatrixXd RigidCPDTransform::get_sR() {
+    return this->s * this->R;
+}
+
 bool RigidCPDTransform::write_to( std::ostream &os ) {
 
 }
@@ -122,10 +126,24 @@ AlignViaRigidCPD(CPDParams & params,
         Y(j, 2) = P_moving.z;
     }
     RigidCPDTransform transform(params.dimensionality);
-    float sigma_squared = Init_Sigma_Squared(X, Y);
-
+    double sigma_squared = Init_Sigma_Squared(X, Y);
+    double Np;
+    double Ux;
+    double Uy;
     for (int i = 0; i < params.iterations; i++) {
-        
+        Eigen::MatrixXd P = E_Step(X, Y, transform.get_sR(), \
+            transform.t, sigma_squared, params.distribution_weight);
+        Np = CalculateNp(P);
+        Eigen::MatrixXd Ux = CalculateUx(Np, X, P);
+        Eigen::MatrixXd Uy = CalculateUy(Np, Y, P);
+        Eigen::MatrixXd X_hat = CenterMatrix(X, Ux);
+        Eigen::MatrixXd Y_hat = CenterMatrix(X, Uy);
+        Eigen::MatrixXd A = GetA(X_hat, Y_hat, P);
+        Eigen::JacobiSVD<Eigen::MatrixXd> svd( A, Eigen::ComputeFullV | Eigen::ComputeFullU );
+        transform.R = GetRotationMatrix(svd.matrixU(), svd.matrixV());
+        transform.s = GetS(A, transform.R, Y_hat, P);
+        transform.t = GetTranslationVector(transform.R, Ux, Uy, transform.s);
+        sigma_squared = SigmaSquared(Np, transform.s, A, transform.R, X_hat, P);
     }
 
     return transform;
