@@ -45,17 +45,15 @@ Eigen::MatrixXd GetA(const Eigen::MatrixXd & xHat,
     return xHat.transpose() * postProb.transpose() * yHat; 
 }
 
-// Please calculate C inside this function
-// Eigen::MatrixXd GetRotationMatrix(const Eigen::MatrixXd & U,
-//             const Eigen::MatrixXd & V){
+// R is a square D x D matrix, so U and V will both be square
+Eigen::MatrixXd GetRotationMatrix(const Eigen::MatrixXd & U,
+            const Eigen::MatrixXd & V){
      
-//     Eigen::MatrixXd C_vec = Eigen::MatrixXd::Ones(U.cols(),1);
-//     C_vec(Eigen::last) = (U * V.transpose()).determinant(); 
+    Eigen::MatrixXd C = Eigen::MatrixXd::Identity(U.cols(), V.cols());
+    C(C.rows()-1, C.cols()-1) = (U * V.transpose()).determinant();
 
-//     Eigen::MatrixXd C = C_vec.asDiagonal();
-
-//     return U * C * V.transpose();
-// }
+    return U * C * V.transpose();
+}
 
 double GetS(const Eigen::MatrixXd & A,
             const Eigen::MatrixXd & R,
