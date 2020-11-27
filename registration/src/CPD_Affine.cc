@@ -108,10 +108,19 @@ AlignViaAffineCPD(CPDParams & params,
         Y(j, 2) = P_moving.z;
     }
     AffineCPDTransform transform(params.dimensionality);
-    float sigma_squared = Init_Sigma_Squared(X, Y);
-
+    double sigma_squared = Init_Sigma_Squared(X, Y);
+    double Np;
     for (int i = 0; i < params.iterations; i++) {
-
+        Eigen::MatrixXd P = E_Step(X, Y, transform.B, \
+            transform.t, sigma_squared, params.distribution_weight);
+        Np = CalculateNp(P);
+        Eigen::MatrixXd Ux = CalculateUx(Np, X, P);
+        Eigen::MatrixXd Uy = CalculateUy(Np, Y, P);
+        Eigen::MatrixXd X_hat = CenterMatrix(X, Ux);
+        Eigen::MatrixXd Y_hat = CenterMatrix(X, Uy);
+        transform.B = CalculateB(X_hat, Y_hat, P);
+        transform.t = GetTranslationVector(transform.B, Ux, Uy, 1);
+        sigma_squared = SigmaSquared(Np, transform.B, X_hat, Y_hat, P);
     }
 
     point_set<double> mutable_moving = moving;

@@ -32,6 +32,7 @@ class RigidCPDTransform {
         int dim;
         float s;
         RigidCPDTransform(int dimensionality = 3);
+        Eigen::MatrixXd get_sR();
         void apply_to(point_set<double> &ps);
         // Serialize and deserialize to a human- and machine-readable format.
         bool write_to( std::ostream &os );
