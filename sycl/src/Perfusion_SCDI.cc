@@ -4,6 +4,7 @@
 
 #include <exception>
 #include <functional>
+#include <algorithm>
 #include <iostream>
 #include <list>
 #include <limits>
@@ -111,6 +112,8 @@ Launch_SCDI( samples_1D<double> &AIF,
     // regularly sampled. They might be easier to work with.
     std::vector<float> resampled_aif = resample(AIF);
     std::vector<float> resampled_vif = resample(VIF);
+
+    // TODO: Re-evaluate vector of a vector
     std::vector<std::vector<float>> resampled_c;
     for(const auto &c : C) resampled_c.emplace_back( resample(c) );
     
@@ -143,7 +146,8 @@ Launch_SCDI( samples_1D<double> &AIF,
     std::vector<float> shifted_vif = resampled_vif;
     std::vector<float> shifted_c = resampled_c.front();
 
-    // Shift shifted vectors, remove 
+    // Create the shifted vectors by removing the first element
+    // Remove the last element of the resampled vectors to ensure same size for inner products
     shifted_aif.erase(shifted_aif.begin());
     resampled_aif.pop_back();
     shifted_vif.erase(shifted_vif.begin());
@@ -151,12 +155,63 @@ Launch_SCDI( samples_1D<double> &AIF,
     shifted_c.erase(shifted_c.begin());
     resampled_c.front().pop_back();
 
-    // Calculate E(t) and D(t)
+    // TODO: Move this constant to a better place for code cleanliness/clarity
+    const float sample_rate = 0.1; // Seconds
+
+    // Get the variables R and N (see readme)
+    // TODO: Add description of variables + their meaning to Readme
+    float R = 7.7;
+    float N = (sum_of_c - R * sum_of_aif) / sum_of_vif;
+
+    // std::cout << "shifted aif size: " << shifted_aif.size() << '\n';
+    // std::cout << "resampled aif size: " << resampled_aif.size() << '\n';
+    // std::cout << "shifted vif size: " << shifted_vif.size() << '\n';
+    // std::cout << "resampled vif size: " << resampled_vif.size() << '\n';
+    // std::cout << "shifted c size: " << shifted_c.size() << '\n';
+    // std::cout << "resampled c size: " << resampled_c.front().size() << '\n';
+
+    std::vector<float> vif_sum;
+    std::vector<float> aif_sum;
+    std::vector<float> c_diff;
+    std::vector<float> D;
+    std::vector<float> E;
+    
+    //adds the following vectors
+    std::transform(resampled_vif.begin(), resampled_vif.end(), shifted_vif.begin(), vif_sum.begin( ), std::plus<float>( ));
+    std::transform(resampled_aif.begin(), resampled_aif.end(), shifted_aif.begin(), aif_sum.begin( ), std::plus<float>( ));
+    std::transform(resampled_c.front().begin(), resampled_c.front().end(), shifted_c.begin(), c_diff.begin(), std::minus<float>( ));
+
+    // Define E(t) and D(t)
+    // std::vector<float> D = 2 * (resampled_c.front() - shifted_c);
+    MultiplyVectorByScalar(c_diff, 2.0); // D
+    D = c_diff;
+    //The following lines are the calculation of E. Below is the "simple code" that does not work for vectors
+    ////std::vector<float> E = sample_rate * ( MultiplyVectorByScalar(vif_sum, N) + MultiplyVectorByScalar(aif_sum, R) +  MultiplyVectorByScalar(D, 0.5));
+
+    MultiplyVectorByScalar(vif_sum, N); // E_vif
+    MultiplyVectorByScalar(aif_sum, R); // E_aif
+    MultiplyVectorByScalar(c_diff, 0.5); //E_c
+
+    std::transform(vif_sum.begin(), vif_sum.end(), aif_sum.begin(), E.begin( ), std::plus<float>( ));
+    std::transform(E.begin(), E.end(), c_diff.begin(), E.begin( ), std::plus<float>( ));
+    MultiplyVectorByScalar(E, sample_rate);
 
     // Inner product calculation
+    double DE_inner_product = std::inner_product(D.begin(), D.end(), E.begin(), 0);
+    double EE_inner_product = std::inner_product(E.begin(), E.end(), E.begin(), 0);
 
-
-
+    // Get the kinetic parameters from the calculated inner products
+    double k2 = DE_inner_product / EE_inner_product;
+    double k1_A = R * DE_inner_product / EE_inner_product;
+    double k1_B = N * DE_inner_product / EE_inner_product;
+    
+    // TODO: Output parameters to file
+    // TODO: Remove FUNCINFO if necessary?
+    //FUNCINFO("k2 parameter: " + k2 + " | k1A: " + k1_A + " | k1B: " + k1_B);
+    std::cout << "k2 parameter " << k2 << '\n';
+    std::cout << "k1A parameter " << k1_A << '\n';
+    std::cout << "k1B parameter " << k1_B << '\n';
+    FUNCINFO("K2 " << k2 << " k1A " << k1_A << " k1B " << k1_B);
 
     // The following is an example of using Eigen for matrices.
     {
@@ -199,3 +254,31 @@ Launch_SCDI( samples_1D<double> &AIF,
     return;
 }
 
+void MultiplyVectorByScalar(std::vector<float> &v, float k){
+    transform(v.begin(), v.end(), v.begin(), [k](float &c){ return c*k; });
+}
+// Taken from https://stackoverflow.com/questions/3376124/how-to-add-element-by-element-of-two-stl-vectors
+// template <typename T>
+// std::vector<T> operator+(const std::vector<T>& a, const std::vector<T>& b)
+// {
+//     assert(a.size() == b.size());
+
+//     std::vector<T> result;
+//     result.reserve(a.size());
+
+//     std::transform(a.begin(), a.end(), b.begin(), 
+//                    std::back_inserter(result), std::plus<T>());
+//     return result;
+// }
+
+// std::vector<T> operator-(const std::vector<T>& a, const std::vector<T>& b)
+// {
+//     assert(a.size() == b.size());
+
+//     std::vector<T> result;
+//     result.reserve(a.size());
+
+//     std::transform(a.begin(), a.end(), b.begin(), 
+//                    std::back_inserter(result), std::minus<T>());
+//     return result;
+// }
