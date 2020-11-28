@@ -79,7 +79,7 @@ Eigen::MatrixXd E_Step(const Eigen::MatrixXd & xPoints,
             }
             auto stop = high_resolution_clock::now();
             auto duration = duration_cast<microseconds>(stop - start); 
-            std::cout << duration.count() << endl; 
+            std::cout << duration.count() << std::endl; 
             // Check if there is an issue with pi using math.h
             denominator = denomSum + pow(2 * M_PI * sigmaSquared,((double)(dimensionality/2))) * (w/(1-w)) * (double)(mRowsY / nRowsX);
 
