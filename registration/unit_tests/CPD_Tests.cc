@@ -88,7 +88,7 @@ TEST_CASE("init sigma squared") {
 	yPoints << 1, 2,
 			2, 4,
 			1, 1;
-	double initSigmaSquared = Init_Sigma_Squared(xPoints, yPoints);
+	// double initSigmaSquared = Init_Sigma_Squared(xPoints, yPoints);
 	double initSigmaSquaredAnswer = 39./18;
 	double threshold = 0.01;
 

@@ -1,4 +1,6 @@
 #include "CPD_Shared.h"
+#include <chrono>
+using namespace std::chrono;
 
 Eigen::MatrixXd CenterMatrix(const Eigen::MatrixXd & points,
             const Eigen::MatrixXd & meanVector) {
@@ -68,14 +70,16 @@ Eigen::MatrixXd E_Step(const Eigen::MatrixXd & xPoints,
             numerator = exp(expArg);
             
             denomSum = 0;
-            
+            auto start = high_resolution_clock::now();
             for (size_t k = 0; k < mRowsY; ++k) {
                 tempVector = xPoints.row(n).transpose() - (BRMatrix * yPoints.row(k).transpose() + t);
                 expArg = - 1 / (2 * sigmaSquared) * tempVector.squaredNorm();
                 // pow(tempVector.norm(),2);
                 denomSum += exp(expArg);
             }
-
+            auto stop = high_resolution_clock::now();
+            auto duration = duration_cast<microseconds>(stop - start); 
+            std::cout << duration.count() << endl; 
             // Check if there is an issue with pi using math.h
             denominator = denomSum + pow(2 * M_PI * sigmaSquared,((double)(dimensionality/2))) * (w/(1-w)) * (double)(mRowsY / nRowsX);
 
