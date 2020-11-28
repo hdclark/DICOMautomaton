@@ -12,6 +12,8 @@
 #include <memory>
 #include <stdexcept>
 #include <string>    
+#include <filesystem>
+
 
 #include <boost/filesystem.hpp>
 #include <boost/iostreams/filter/gzip.hpp>
@@ -72,9 +74,10 @@ bool Load_From_TAR_Files( Drover &DICOM_data,
             ++N_encapsulated_files;
 
             // Write the stream to a temporary file.
-            const std::string fname_tmp = Get_Unique_Sequential_Filename("/tmp/dcma_TAR_loading_temporary_");
+            const auto dir = (std::filesystem::temp_directory_path() / "dcma_TAR_temp_file").string();
+            const auto fname_tmp = Get_Unique_Filename(dir, 6, "");
             {
-                std::ofstream ofs_tmp(fname_tmp);
+                std::ofstream ofs_tmp(fname_tmp, std::ios::out | std::ios::binary);
                 ofs_tmp << is.rdbuf();
                 ofs_tmp.flush();
             }
