@@ -128,7 +128,15 @@ Launch_SCDI( samples_1D<double> &AIF,
                                 decltype(resampled_c.front().begin())::value_type(0));
     FUNCINFO("sum of aif " << sum_of_aif << " sum of vif " << sum_of_vif << " sum of c " << sum_of_c);
 
-    // Linear approximation at large T
+    // Linear approximation at large t
+    // samples_1D<float> linear_c_vals = new samples_1D();
+    // std::vector<float> resampled_c_copy = resampled_c.front();
+
+    // for (int i=0; i<10; i++) {
+    //     float c = resampled_c_copy.pop_back();
+    //     FUNCINFO("resampled_c_copy" << c);
+    //     // linear_c_vals.push_back(resampled_c_copy.pop_back());
+    // }
 
     // Construct AIF(t-dt), VIF(t-dt), C(t-dt)
     std::vector<float> shifted_aif = resampled_aif;
