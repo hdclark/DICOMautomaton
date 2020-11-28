@@ -29,6 +29,8 @@
 
 #include "Perfusion_SCDI.h"
 
+#define TIME_INTERVAL 0.1   //In units of seconds
+
 // This SYCL-powered function performs vector summation. It can run on CPU, GPU, FPGA, etc.
 // It is only here to demonstrate roughly how SYCL is used.
 static
@@ -84,7 +86,7 @@ Launch_SCDI( samples_1D<double> &AIF,
     // The following will re-sample all time courses using a fixed step size 'dt' using linear interpolation.
     // I think it will suffice for this project, but we might have to adjust it later.
     const auto resample = [](const samples_1D<double> &s) -> std::vector<float> {
-        const double dt = 0.1; // units of seconds.
+        const double dt = TIME_INTERVAL; // units of seconds.
         const auto cropped = s.Select_Those_Within_Inc(0.0, std::numeric_limits<double>::infinity());
         const auto extrema_x = cropped.Get_Extreme_Datum_x();
 
@@ -129,15 +131,47 @@ Launch_SCDI( samples_1D<double> &AIF,
     FUNCINFO("sum of aif " << sum_of_aif << " sum of vif " << sum_of_vif << " sum of c " << sum_of_c);
 
     // Linear approximation at large t
-    // samples_1D<float> linear_c_vals = new samples_1D();
-    // std::vector<float> resampled_c_copy = resampled_c.front();
+    samples_1D<float> linear_c_vals;
+    samples_1D<float> linear_aif_vals;
+    samples_1D<float> linear_vif_vals;
 
-    // for (int i=0; i<10; i++) {
-    //     float c = resampled_c_copy.pop_back();
-    //     FUNCINFO("resampled_c_copy" << c);
-    //     // linear_c_vals.push_back(resampled_c_copy.pop_back());
-    // }
 
+    const int size = resampled_c.front().size();
+    const int slope_window = 100;
+
+    for (int i=size-slope_window; i<size; i++) {
+        float t = TIME_INTERVAL*i;
+        linear_c_vals.push_back(t, resampled_c.front()[i]);
+        linear_aif_vals.push_back(t, resampled_aif[i]);
+        linear_vif_vals.push_back(t, resampled_vif[i]);
+    }
+    FUNCINFO("Length of linear_c_vals: " << linear_c_vals.size());
+
+    // Approximate region by a line
+    auto c_res = linear_c_vals.Linear_Least_Squares_Regression();
+    float c_slope = c_res.slope;
+    float c_intercept = c_res.intercept;
+    auto aif_res = linear_aif_vals.Linear_Least_Squares_Regression();
+    float aif_slope = aif_res.slope;
+    float aif_intercept = aif_res.intercept;
+    auto vif_res = linear_vif_vals.Linear_Least_Squares_Regression();
+    float vif_slope = vif_res.slope;
+    float vif_intercept = vif_res.intercept;
+    
+    FUNCINFO("The slope is " << c_slope);
+
+    // Find eqn 2
+    const int time_midpoint = (size-slope_window/2)*TIME_INTERVAL;
+    float C_pt = time_midpoint*c_slope + c_intercept;
+    float VIF_pt = time_midpoint*vif_slope + vif_intercept; 
+    float AIF_pt = time_midpoint*aif_slope + aif_intercept;
+
+    FUNCINFO("C point is " << C_pt << " VIF point is " << VIF_pt << " AIF point is " << AIF_pt);
+
+    // Find R
+    float R = (C_pt - (sum_of_c / sum_of_vif)*VIF_pt + c_slope) / (AIF_pt - (sum_of_aif / sum_of_vif)*VIF_pt);
+    FUNCINFO("R is " << R);
+    
     // Construct AIF(t-dt), VIF(t-dt), C(t-dt)
     std::vector<float> shifted_aif = resampled_aif;
     std::vector<float> shifted_vif = resampled_vif;
