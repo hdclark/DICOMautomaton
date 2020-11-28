@@ -79,6 +79,22 @@ TEST_CASE("sigma squared") {
 	REQUIRE(sigmaSquared == doctest::Approx(sigmaSquaredAnswer).epsilon(threshold));
 }
 
+TEST_CASE("init sigma squared") {
+	Eigen::MatrixXd xPoints(3, 2);
+	xPoints << 3, 4,
+			1, 1,
+			1, 2;
+	Eigen::MatrixXd yPoints(3, 2);
+	yPoints << 1, 2,
+			2, 4,
+			1, 1;
+	double initSigmaSquared = Init_Sigma_Squared(xPoints, yPoints);
+	double initSigmaSquaredAnswer = 39./18;
+	double threshold = 0.01;
+
+	// REQUIRE(initSigmaSquared == doctest::Approx(initSigmaSquaredAnswer).epsilon(threshold));
+}
+
 TEST_CASE("E Step") {
 	Eigen::MatrixXd xPoints(3, 2);
 	xPoints  << 3, 4,
@@ -104,7 +120,7 @@ TEST_CASE("E Step") {
 
 	Eigen::MatrixXd postProb;
 	postProb = E_Step(xPoints, yPoints, B, t, sigmaSquared, w);
-	
+
 	for (size_t i = 0; i < 3; ++i) {
         for (size_t j = 0; j < 3; ++j) {
 			REQUIRE(postProb(i,j) == doctest::Approx(postProbAnswer(i,j)));
