@@ -62,7 +62,7 @@ double GetS(const Eigen::MatrixXd & A,
 
     Eigen::MatrixXd oneVec = Eigen::MatrixXd::Ones(postProb.cols(),1);
     double numer = (A.transpose() * R).trace();
-    double denom = (yHat.transpose() * (postProb * oneVec).transpose() * yHat).trace();
+    double denom = (yHat.transpose() * (postProb * oneVec).asDiagonal() * yHat).trace();
 
     return numer / denom;
 }
