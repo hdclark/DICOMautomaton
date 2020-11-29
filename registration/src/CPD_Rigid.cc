@@ -63,11 +63,9 @@ double GetS(const Eigen::MatrixXd & A,
             const Eigen::MatrixXd & R,
             const Eigen::MatrixXd & yHat,
             const Eigen::MatrixXd & postProb ){
-
     Eigen::MatrixXd oneVec = Eigen::MatrixXd::Ones(postProb.cols(),1);
     double numer = (A.transpose() * R).trace();
-    double denom = (yHat.transpose() * (postProb * oneVec).transpose() * yHat).trace();
-
+    double denom = (yHat.transpose() * (postProb * oneVec).asDiagonal() * yHat).trace();
     return numer / denom;
 }
 
@@ -92,7 +90,7 @@ std::optional<RigidCPDTransform>
 AlignViaRigidCPD(CPDParams & params,
             const point_set<double> & moving,
             const point_set<double> & stationary ){
-
+    FUNCINFO("Performing rigid CPD")
     if(moving.points.empty() || stationary.points.empty()){
         FUNCWARN("Unable to perform ABC alignment: a point set is empty");
         return std::nullopt;
@@ -107,7 +105,9 @@ AlignViaRigidCPD(CPDParams & params,
     Eigen::MatrixXd X = Eigen::MatrixXd::Zero(N_move_points, params.dimensionality);
     // Moving point matrix
     Eigen::MatrixXd Y = Eigen::MatrixXd::Zero(N_stat_points, params.dimensionality); 
-
+    FUNCINFO("Number of moving points: " << N_move_points);
+    FUNCINFO("Number of stationary pointsL  " << N_stat_points);
+    FUNCINFO("Initializing...")
     // Fill the X vector with the corresponding points.
     for(long int j = 0; j < N_stat_points; ++j){ // column
         const auto P_stationary = stationary.points[j];
@@ -123,27 +123,48 @@ AlignViaRigidCPD(CPDParams & params,
         Y(j, 1) = P_moving.y;
         Y(j, 2) = P_moving.z;
     }
+    FUNCINFO(X)
+    FUNCINFO(Y)
     RigidCPDTransform transform(params.dimensionality);
     double sigma_squared = Init_Sigma_Squared(X, Y);
-    double Np;
-    double Ux;
-    double Uy;
+    FUNCINFO(sigma_squared)
+
+    FUNCINFO("Starting loop. Iterations: " << params.iterations)
     for (int i = 0; i < params.iterations; i++) {
+        FUNCINFO(i)
+        FUNCINFO("E step")
         Eigen::MatrixXd P = E_Step(X, Y, transform.get_sR(), \
             transform.t, sigma_squared, params.distribution_weight);
-        Np = CalculateNp(P);
-        Eigen::MatrixXd Ux = CalculateUx(Np, X, P);
-        Eigen::MatrixXd Uy = CalculateUy(Np, Y, P);
+        FUNCINFO("Calculate Ux")
+        Eigen::MatrixXd Ux = CalculateUx(X, P);
+        FUNCINFO("Calculate Uy")
+        Eigen::MatrixXd Uy = CalculateUy(Y, P);
+        FUNCINFO("Calculate hats")
         Eigen::MatrixXd X_hat = CenterMatrix(X, Ux);
         Eigen::MatrixXd Y_hat = CenterMatrix(X, Uy);
+        FUNCINFO("Calculate A")
         Eigen::MatrixXd A = GetA(X_hat, Y_hat, P);
+        FUNCINFO("Jacobi")
         Eigen::JacobiSVD<Eigen::MatrixXd> svd( A, Eigen::ComputeFullV | Eigen::ComputeFullU );
+        FUNCINFO("Rotation")
         transform.R = GetRotationMatrix(svd.matrixU(), svd.matrixV());
+        FUNCINFO("Scale")
         transform.s = GetS(A, transform.R, Y_hat, P);
+        FUNCINFO(transform.s)
+        FUNCINFO("Translation")
         transform.t = GetTranslationVector(transform.R, Ux, Uy, transform.s);
-        sigma_squared = SigmaSquared(Np, transform.s, A, transform.R, X_hat, P);
+        FUNCINFO("Getting sigma")
+        sigma_squared = SigmaSquared(transform.s, A, transform.R, X_hat, P);
+        FUNCINFO(sigma_squared)
+        if(sigma_squared == 0)
+            break;
     }
-
+    FUNCINFO(X)
+    FUNCINFO(Y)
+    FUNCINFO(transform.s)
+    FUNCINFO(transform.R)
+    FUNCINFO(transform.t)
+    FUNCINFO(transform.s * Y * transform.R.transpose() + Eigen::MatrixXd::Constant(N_move_points, 1, 1)*transform.t.transpose())
     return transform;
 }
 

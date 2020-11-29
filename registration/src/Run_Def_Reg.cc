@@ -99,9 +99,9 @@ int main(int argc, char* argv[]){
         return;
       })
     );
-
+    FUNCINFO("Hello3")
     arger.Launch(argc, argv);
-
+    FUNCINFO("Hello")
     //============================================= Input Validation ================================================
     if(moving.points.empty()){
         FUNCERR("Moving point set contains no points. Unable to continue.");
@@ -111,11 +111,11 @@ int main(int argc, char* argv[]){
     }
 
     //========================================== Launch Perfusion Model =============================================
-
+    FUNCINFO(type)
     if(type == "rigid") {
-        // auto trans_opt = AlignViaRigidCPD(params, moving, stationary);
+        AlignViaRigidCPD(params, moving, stationary);
     } else if(type == "affine") {
-        // auto trans_opt = AlignViaAffineCPD(params, moving, stationary);
+        AlignViaAffineCPD(params, moving, stationary);
     } else if(type == "nonrigid") {
         FUNCERR("This option has not been implemented yet.");
     } else {

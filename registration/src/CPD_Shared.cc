@@ -1,3 +1,7 @@
+#include "YgorFilesDirs.h"    //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
+#include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorMath.h"         //Needed for samples_1D.
+#include "YgorString.h"       //Needed for GetFirstRegex(...)
 #include "CPD_Shared.h"
 
 Eigen::MatrixXd CenterMatrix(const Eigen::MatrixXd & points,
@@ -22,22 +26,22 @@ Eigen::MatrixXd AlignedPointSet(const Eigen::MatrixXd & yPoints,
     return scale * yPoints * rotationMatrix.transpose() + oneVec * translation.transpose();
 }
 
-
 double Init_Sigma_Squared(const Eigen::MatrixXd & xPoints,
             const Eigen::MatrixXd & yPoints) {
     double normSum = 0;
     int nRowsX = xPoints.rows();
-    int nRowsY =  yPoints.rows();
+    int mRowsY =  yPoints.rows();
     int dim = xPoints.cols();
     for (int i = 0; i < nRowsX; i++) {
         const auto xRow = xPoints.row(i).transpose();
-        for (int j = 0; i < nRowsY; j++) {
+        for (int j = 0; j < mRowsY; j++) {
             const auto yRow = yPoints.row(j).transpose();
             auto rowDiff = xRow - yRow;
+            FUNCINFO(normSum)
             normSum += rowDiff.squaredNorm();
         }
     }
-    return 1 / (nRowsX * nRowsY * dim) * normSum;
+    return 1.0 / (nRowsX * mRowsY * dim) * normSum;
 }
 
 Eigen::MatrixXd E_Step(const Eigen::MatrixXd & xPoints,
@@ -58,7 +62,6 @@ Eigen::MatrixXd E_Step(const Eigen::MatrixXd & xPoints,
     double mRowsY = yPoints.rows();
     double nRowsX = xPoints.rows();
     double dimensionality = yPoints.cols();
-    
     for (size_t m = 0; m < mRowsY; ++m) {
         for (size_t n = 0; n < nRowsX; ++n) {
 
@@ -87,7 +90,7 @@ Eigen::MatrixXd E_Step(const Eigen::MatrixXd & xPoints,
 
 }
 
-Eigen::MatrixXd CalculateUx(double Np, 
+Eigen::MatrixXd CalculateUx(
             const Eigen::MatrixXd & xPoints, 
             const Eigen::MatrixXd & postProb){
     Eigen::MatrixXd oneVec = Eigen::MatrixXd::Ones(postProb.rows(),1);
@@ -95,7 +98,7 @@ Eigen::MatrixXd CalculateUx(double Np,
     return oneOverNp * (xPoints.transpose()) * postProb.transpose() * oneVec;
 }
 
-Eigen::MatrixXd CalculateUy(double Np, 
+Eigen::MatrixXd CalculateUy( 
             const Eigen::MatrixXd & yPoints, 
             const Eigen::MatrixXd & postProb){
     Eigen::MatrixXd oneVec = Eigen::MatrixXd::Ones(postProb.cols(),1);
