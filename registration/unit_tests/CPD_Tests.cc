@@ -31,6 +31,121 @@ TEST_CASE("example test"){
 	}
 }
 
+// rigid test
+TEST_CASE("GetA"){
+	Eigen::MatrixXd xHat(4, 3);
+	xHat << 4, 5, 6,
+			7, 8, 9,
+			1, 1, 1,
+			2, 2, 2;
+
+	Eigen::MatrixXd yHat(4, 3);
+	yHat << 4, 5, 1,
+			2, 4, 1,
+			8, 8, 8,
+			1, 4, 2;
+
+	Eigen::MatrixXd postProb(4, 4);
+	postProb << 1, 4, 1, 6,
+				0, 1, 2, 1,
+				1, 0, 2, 3,
+				1, 8, 3, 0;
+
+	Eigen::MatrixXd answerA(3,3);
+	answerA << 	361, 617, 278,
+				400, 690, 310,
+				439, 763, 342;
+
+	Eigen::MatrixXd A(3,3);
+	A = GetA(xHat, yHat, postProb);
+
+	REQUIRE(A.isApprox(answerA));
+}
+// rigid test
+TEST_CASE("GetRotationMatrix"){
+	Eigen::MatrixXd U(3, 3);
+	U <<	1, 0, 1,
+			1, 5, 1,
+			2, 1, 3;
+
+	Eigen::MatrixXd V(3, 3);
+	V << 	2, 8, 1,
+			3, 2, 1,
+			1, 5, 6;
+
+	Eigen::MatrixXd answerR(3,3);
+	answerR << 	-543, -542, -3269,
+				-503, -532, -3244,
+				-1623, -1627, -9803;
+
+	Eigen::MatrixXd R(3,3);
+	R = GetRotationMatrix(U, V);
+
+	REQUIRE(R.isApprox(answerR));
+}
+// rigid test
+TEST_CASE("GetS"){
+	Eigen::MatrixXd yHat(4, 3);
+	yHat << 4, 5, 1,
+			2, 4, 1,
+			8, 8, 8,
+			1, 4, 2;
+
+	Eigen::MatrixXd postProb(4, 4);
+	postProb << 1, 4, 1, 6,
+				0, 1, 2, 1,
+				1, 0, 2, 3,
+				1, 8, 3, 0;
+
+	Eigen::MatrixXd A(3,3);
+	A << 	361, 617, 278,
+			400, 690, 310,
+			439, 763, 342;
+
+	Eigen::MatrixXd R(3,3);
+	R << 	-543, -542, -3269,
+			-503, -532, -3244,
+			-1623, -1627, -9803;
+
+	double answerS = -4176.53765060241;
+	double s = GetS(A, R, yHat, postProb);
+	double threshold = 0.001;
+
+	REQUIRE(answerS == doctest::Approx(s).epsilon(threshold));
+}
+
+// rigid test
+TEST_CASE("SigmaSquared"){
+	Eigen::MatrixXd xHat(4, 3);
+	xHat << 4, 5, 6,
+			7, 8, 9,
+			1, 1, 1,
+			2, 2, 2;
+
+	Eigen::MatrixXd postProb(4, 4);
+	postProb << 1, 4, 1, 6,
+				0, 1, 2, 1,
+				1, 0, 2, 3,
+				1, 8, 3, 0;
+
+	Eigen::MatrixXd A(3,3);
+	A << 	361, 617, 278,
+			400, 690, 310,
+			439, 763, 342;
+
+	Eigen::MatrixXd R(3,3);
+	R << 	-543, -542, -3269,
+			-503, -532, -3244,
+			-1623, -1627, -9803;
+
+	double s = -4176.53765060241;
+	double answerSigmaSquared = -340660616.302194;
+	double sigmasquared = SigmaSquared(s, A, R, xHat, postProb);
+	double threshold = 0.001;
+
+	REQUIRE(answerSigmaSquared == doctest::Approx(sigmasquared).epsilon(threshold));
+}
+
 TEST_CASE("B") {
 	Eigen::MatrixXd xHat(3, 2);
 	xHat << 3, 4,
