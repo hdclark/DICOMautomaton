@@ -53,10 +53,11 @@ struct CPDTransform {
 
 Eigen::MatrixXd E_Step(const Eigen::MatrixXd & xPoints,
             const Eigen::MatrixXd & yPoints,
-            const Eigen::MatrixXd & BRMatrix,
+            const Eigen::MatrixXd & rotationMatrix,
             const Eigen::MatrixXd & t,
             double sigmaSquared,
-            double w);
+            double w,
+            double scale);
 
 Eigen::MatrixXd CenterMatrix(const Eigen::MatrixXd & points,
             const Eigen::MatrixXd & meanVector);
