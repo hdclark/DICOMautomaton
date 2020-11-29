@@ -37,7 +37,7 @@ class AffineCPDTransform {
         bool read_from( std::istream & is );
 };
 
-std::optional<AffineCPDTransform>
+AffineCPDTransform
 AlignViaAffineCPD(CPDParams & params,
             const point_set<double> & moving,
             const point_set<double> & stationary );

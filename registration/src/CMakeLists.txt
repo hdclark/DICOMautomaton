@@ -7,6 +7,9 @@ set_target_properties(  CPD_Affine_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE
 add_library(            CPD_Rigid_obj OBJECT CPD_Rigid.cc)
 set_target_properties(  CPD_Rigid_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
+add_library(            CPD_Nonrigid_obj OBJECT CPD_Nonrigid.cc)
+set_target_properties(  CPD_Nonrigid_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+
 add_library(            Alignment_ABC_obj OBJECT Alignment_ABC.cc)
 set_target_properties(  Alignment_ABC_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
@@ -16,6 +19,7 @@ add_executable (run_def_reg
     $<TARGET_OBJECTS:CPD_Shared_obj>
     $<TARGET_OBJECTS:CPD_Rigid_obj>
     $<TARGET_OBJECTS:CPD_Affine_obj>
+    $<TARGET_OBJECTS:CPD_Nonrigid_obj>
 )
 target_link_libraries (run_def_reg
     "$<$<BOOL:${WITH_NLOPT}>:${NLOPT_LIBRARIES}>"

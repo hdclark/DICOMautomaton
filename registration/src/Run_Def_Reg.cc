@@ -47,6 +47,7 @@ int main(int argc, char* argv[]){
     CPDParams params;
     
     std::string type;
+    std::string outfile;
 
     //================================================ Argument Parsing ==============================================
 
@@ -99,9 +100,14 @@ int main(int argc, char* argv[]){
         return;
       })
     );
-    FUNCINFO("Hello3")
+    arger.push_back( ygor_arg_handlr_t(1, 'o', "outfile", true, "transformed.txt",
+      "Write transformed point set to given file.",
+      [&](const std::string &optarg) -> void {
+        outfile = optarg;
+        return;
+      })
+    );
     arger.Launch(argc, argv);
-    FUNCINFO("Hello")
     //============================================= Input Validation ================================================
     if(moving.points.empty()){
         FUNCERR("Moving point set contains no points. Unable to continue.");
@@ -112,10 +118,21 @@ int main(int argc, char* argv[]){
 
     //========================================== Launch Perfusion Model =============================================
     FUNCINFO(type)
+    point_set<double> mutable_moving = moving;
     if(type == "rigid") {
-        AlignViaRigidCPD(params, moving, stationary);
+        RigidCPDTransform transform = AlignViaRigidCPD(params, moving, stationary);
+        transform.apply_to(mutable_moving);
+        std::ofstream FO(outfile);
+        FUNCINFO("Writing to " << outfile)
+        if(!WritePointSetToXYZ(mutable_moving, FO))
+          FUNCERR("Error writing point set to " << outfile)
     } else if(type == "affine") {
-        AlignViaAffineCPD(params, moving, stationary);
+        AffineCPDTransform transform = AlignViaAffineCPD(params, moving, stationary);
+        transform.apply_to(mutable_moving);
+        std::ofstream FO(outfile);
+        FUNCINFO("Writing to " << outfile)
+        if(!WritePointSetToXYZ(mutable_moving, FO))
+          FUNCERR("Error writing point set to " << outfile)
     } else if(type == "nonrigid") {
         FUNCERR("This option has not been implemented yet.");
     } else {
