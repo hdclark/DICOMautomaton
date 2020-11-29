@@ -39,7 +39,7 @@ double Init_Sigma_Squared(const Eigen::MatrixXd & xPoints,
         for (int j = 0; j < mRowsY; j++) {
             const auto yRow = yPoints.row(j).transpose();
             auto rowDiff = xRow - yRow;
-            FUNCINFO(normSum)
+            // FUNCINFO(normSum)
             normSum += rowDiff.squaredNorm();
         }
     }
@@ -61,9 +61,9 @@ Eigen::MatrixXd E_Step(const Eigen::MatrixXd & xPoints,
     double numerator;
     double denominator;
 
-    double mRowsY = yPoints.rows();
-    double nRowsX = xPoints.rows();
-    double dimensionality = yPoints.cols();
+    int mRowsY = yPoints.rows();
+    int nRowsX = xPoints.rows();
+    int dimensionality = yPoints.cols();
 
     // std::cout << "\n";
     // std::cout << "\n";    

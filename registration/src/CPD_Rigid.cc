@@ -55,7 +55,6 @@ Eigen::MatrixXd GetRotationMatrix(const Eigen::MatrixXd & U,
      
     Eigen::MatrixXd C = Eigen::MatrixXd::Identity(U.cols(), V.cols());
     C(C.rows()-1, C.cols()-1) = (U * V.transpose()).determinant();
-
     return U * C * V.transpose();
 }
 
