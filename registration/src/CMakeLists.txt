@@ -13,6 +13,9 @@ set_target_properties(  Alignment_ABC_obj PROPERTIES POSITION_INDEPENDENT_CODE T
 add_executable (run_def_reg
     Run_Def_Reg.cc
     $<TARGET_OBJECTS:Alignment_ABC_obj>
+    $<TARGET_OBJECTS:CPD_Shared_obj>
+    $<TARGET_OBJECTS:CPD_Rigid_obj>
+    $<TARGET_OBJECTS:CPD_Affine_obj>
 )
 target_link_libraries (run_def_reg
     "$<$<BOOL:${WITH_NLOPT}>:${NLOPT_LIBRARIES}>"
