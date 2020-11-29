@@ -119,7 +119,7 @@ TEST_CASE("E Step") {
 				      2.33560914e-07, 1.39159447e-13, 1.435048e-12;
 
 	Eigen::MatrixXd postProb;
-	postProb = E_Step(xPoints, yPoints, B, t, sigmaSquared, w);
+	postProb = E_Step(xPoints, yPoints, B, t, sigmaSquared, w, 1.0);
 
 	for (size_t i = 0; i < 3; ++i) {
         for (size_t j = 0; j < 3; ++j) {
