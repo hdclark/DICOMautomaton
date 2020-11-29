@@ -3,24 +3,26 @@
 AffineCPDTransform::AffineCPDTransform(int dimensionality) {
     this->B = Eigen::MatrixXd::Identity(dimensionality, dimensionality);
     this->t = Eigen::VectorXd::Zero(dimensionality);
+    this->dim = dimensionality;
 }
 
 void AffineCPDTransform::apply_to(point_set<double> &ps) {
-    const auto N_points = static_cast<long int>(ps.points.size());
-
+    FUNCINFO("Applying transform to point set")
+    auto N_points = static_cast<long int>(ps.points.size());
+    FUNCINFO("num points")
     Eigen::MatrixXd Y = Eigen::MatrixXd::Zero(N_points, this->dim); 
-
+    FUNCINFO("making matrix")
     // Fill the X vector with the corresponding points.
     for(long int j = 0; j < N_points; ++j) { // column
-        const auto P = ps.points[j];
+        auto P = ps.points[j];
         Y(j, 0) = P.x;
         Y(j, 1) = P.y;
         Y(j, 2) = P.z;
     }
-
+    FUNCINFO("trasnform")
     auto Y_hat = Y*this->B.transpose() + \
         Eigen::MatrixXd::Constant(N_points, 1, 1)*this->t.transpose();
-    
+    FUNCINFO("redoing points")
     for(long int j = 0; j < N_points; ++j) { // column
         ps.points[j].x = Y_hat(j, 0);
         ps.points[j].y = Y_hat(j, 1);
@@ -72,15 +74,15 @@ double SigmaSquared(const Eigen::MatrixXd & B,
 }
 
 // This function is where the deformable registration algorithm should be implemented.
-std::optional<AffineCPDTransform>
+AffineCPDTransform
 AlignViaAffineCPD(CPDParams & params,
             const point_set<double> & moving,
             const point_set<double> & stationary ){
 
-    if(moving.points.empty() || stationary.points.empty()){
-        FUNCWARN("Unable to perform ABC alignment: a point set is empty");
-        return std::nullopt;
-    }
+    // if(moving.points.empty() || stationary.points.empty()){
+    //     FUNCWARN("Unable to perform ABC alignment: a point set is empty");
+    //     return std::nullopt;
+    // }
 
     const auto N_move_points = static_cast<long int>(moving.points.size());
     const auto N_stat_points = static_cast<long int>(stationary.points.size());
@@ -150,7 +152,6 @@ AlignViaAffineCPD(CPDParams & params,
     FUNCINFO(transform.B)
     FUNCINFO(transform.t)
     FUNCINFO(Y * transform.B.transpose() + Eigen::MatrixXd::Constant(N_move_points, 1, 1)*transform.t.transpose())
-    point_set<double> mutable_moving = moving;
     return transform;
 }
 

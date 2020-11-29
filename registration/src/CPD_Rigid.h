@@ -39,7 +39,7 @@ class RigidCPDTransform {
         bool read_from( std::istream &is );
 };
 
-std::optional<RigidCPDTransform>
+RigidCPDTransform
 AlignViaRigidCPD(CPDParams & params,
             const point_set<double> & moving,
             const point_set<double> & stationary );
