@@ -118,7 +118,7 @@ AlignViaAffineCPD(CPDParams & params,
     for (int i = 0; i < params.iterations; i++) {
         FUNCINFO(i)
         Eigen::MatrixXd P = E_Step(X, Y, transform.B, \
-            transform.t, sigma_squared, params.distribution_weight);
+            transform.t, sigma_squared, params.distribution_weight, 1);
         FUNCINFO("P")
         FUNCINFO(P)
         Eigen::MatrixXd Ux = CalculateUx(X, P);

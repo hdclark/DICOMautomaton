@@ -133,8 +133,8 @@ AlignViaRigidCPD(CPDParams & params,
     for (int i = 0; i < params.iterations; i++) {
         FUNCINFO(i)
         FUNCINFO("E step")
-        Eigen::MatrixXd P = E_Step(X, Y, transform.get_sR(), \
-            transform.t, sigma_squared, params.distribution_weight);
+        Eigen::MatrixXd P = E_Step(X, Y, transform.R, \
+            transform.t, sigma_squared, params.distribution_weight, transform.s);
         FUNCINFO("Calculate Ux")
         Eigen::MatrixXd Ux = CalculateUx(X, P);
         FUNCINFO("Calculate Uy")
