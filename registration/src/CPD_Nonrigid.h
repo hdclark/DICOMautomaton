@@ -24,5 +24,51 @@
 #include "YgorMath.h"         //Needed for samples_1D.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
+#include <math.h>
+
+class NonRigidCPDTransform {
+    public:
+        Eigen::MatrixXd G;
+        Eigen::VectorXd W;
+        int dim;
+        NonRigidCPDTransform(int dimensionality = 3);
+        void apply_to(point_set<double> &ps);
+        // Serialize and deserialize to a human- and machine-readable format.
+        bool write_to( std::ostream &os );
+        bool read_from( std::istream &is );
+};
+
+std::optional<NonRigidCPDTransform>
+AlignViaNonRigidCPD(CPDParams & params,
+            const point_set<double> & moving,
+            const point_set<double> & stationary );
+
+double Init_Sigma_Squared(const Eigen::MatrixXd & xPoints,
+            const Eigen::MatrixXd & yPoints);
+
+Eigen::MatrixXd GetGramMatrix(const Eigen::MatrixXd & yPoints, double beta);
+
+Eigen::MatrixXd E_Step(const Eigen::MatrixXd & xPoints,
+            const Eigen::MatrixXd & yPoints,
+            const Eigen::MatrixXd & gramMatrix,
+            const Eigen::MatrixXd & W,
+            double sigmaSquared,
+            double w);
+
+Eigen::MatrixXd GetW(const Eigen::MatrixXd & xPoints,
+            const Eigen::MatrixXd & yPoints,
+            const Eigen::MatrixXd & gramMatrix,
+            const Eigen::MatrixXd & postProb,
+            double sigmaSquared,
+            double lambda);
+
+Eigen::MatrixXd TransformedPoints(const Eigen::MatrixXd & yPoints,
+            const Eigen::MatrixXd & gramMatrix,
+            const Eigen::MatrixXd & W);
+
+double SigmaSquared(const Eigen::MatrixXd & xPoints,
+            const Eigen::MatrixXd & postProb,
+            const Eigen::MatrixXd & transformedPoints);
 
 #endif
+
