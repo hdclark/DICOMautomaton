@@ -38,10 +38,10 @@ class NonRigidCPDTransform {
         bool read_from( std::istream &is );
 };
 
-std::optional<NonRigidCPDTransform>
-AlignViaNonRigidCPD(CPDParams & params,
-            const point_set<double> & moving,
-            const point_set<double> & stationary );
+// std::optional<NonRigidCPDTransform>
+// AlignViaNonRigidCPD(CPDParams & params,
+//             const point_set<double> & moving,
+//             const point_set<double> & stationary );
 
 double Init_Sigma_Squared(const Eigen::MatrixXd & xPoints,
             const Eigen::MatrixXd & yPoints);

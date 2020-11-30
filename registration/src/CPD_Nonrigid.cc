@@ -1,33 +1,16 @@
 #include "CPD_NonRigid.h"
+#include <chrono>
+using namespace std::chrono;
 
 NonRigidCPDTransform::NonRigidCPDTransform(int dimensionality) {
     this->dim = dimensionality;
-    this->R = Eigen::MatrixXd::Identity(dimensionality, dimensionality);
-    this->t = Eigen::MatrixXd::Zero(dimensionality, 1);
-    this->s = 1;
 }
 
-void RigidCPDTransform::apply_to(point_set<double> &ps) {
+void NonRigidCPDTransform::apply_to(point_set<double> &ps) {
     const auto N_points = static_cast<long int>(ps.points.size());
 
     Eigen::MatrixXd Y = Eigen::MatrixXd::Zero(N_points, this->dim); 
 
-    // Fill the X vector with the corresponding points.
-    for(long int j = 0; j < N_points; ++j) { // column
-        const auto P = ps.points[j];
-        Y(j, 0) = P.x;
-        Y(j, 1) = P.y;
-        Y(j, 2) = P.z;
-    }
-
-    auto Y_hat = this->s*Y*this->R.transpose() + \
-        Eigen::MatrixXd::Constant(N_points, 1, 1)*this->t.transpose();
-    
-    for(long int j = 0; j < N_points; ++j) { // column
-        ps.points[j].x = Y_hat(j, 0);
-        ps.points[j].y = Y_hat(j, 1);
-        ps.points[j].z = Y_hat(j, 2);
-    }
 }
 
 double Init_Sigma_Squared(const Eigen::MatrixXd & xPoints,
@@ -132,10 +115,9 @@ double SigmaSquared(const Eigen::MatrixXd & xPoints,
             const Eigen::MatrixXd & postProb,
             const Eigen::MatrixXd & transformedPoints){}
 
-std::optional<RigidCPDTransform>
-AlignViaNonRigidCPD(CPDParams & params,
-            const point_set<double> & moving,
-            const point_set<double> & stationary ) {
-        
-}
+// std::optional<NonRigidCPDTransform>
+// AlignViaNonRigidCPD(CPDParams & params,
+//             const point_set<double> & moving,
+//             const point_set<double> & stationary ) {       
+// }
 
