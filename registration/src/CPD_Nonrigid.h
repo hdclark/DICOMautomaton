@@ -24,6 +24,8 @@
 #include "YgorMath.h"         //Needed for samples_1D.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
+#include "CPD_Shared.h"
+
 #include <math.h>
 
 class NonRigidCPDTransform {
@@ -38,12 +40,12 @@ class NonRigidCPDTransform {
         bool read_from( std::istream &is );
 };
 
-// std::optional<NonRigidCPDTransform>
-// AlignViaNonRigidCPD(CPDParams & params,
-//             const point_set<double> & moving,
-//             const point_set<double> & stationary );
+std::optional<NonRigidCPDTransform>
+AlignViaNonRigidCPD(CPDParams & params,
+            const point_set<double> & moving,
+            const point_set<double> & stationary );
 
-double Init_Sigma_Squared(const Eigen::MatrixXd & xPoints,
+double NR_Init_Sigma_Squared(const Eigen::MatrixXd & xPoints,
             const Eigen::MatrixXd & yPoints);
 
 Eigen::MatrixXd GetGramMatrix(const Eigen::MatrixXd & yPoints, double beta);

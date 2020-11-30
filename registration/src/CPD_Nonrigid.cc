@@ -13,7 +13,7 @@ void NonRigidCPDTransform::apply_to(point_set<double> &ps) {
 
 }
 
-double Init_Sigma_Squared(const Eigen::MatrixXd & xPoints,
+double NR_Init_Sigma_Squared(const Eigen::MatrixXd & xPoints,
             const Eigen::MatrixXd & yPoints) {
 
     double normSum = 0;
@@ -115,9 +115,9 @@ double SigmaSquared(const Eigen::MatrixXd & xPoints,
             const Eigen::MatrixXd & postProb,
             const Eigen::MatrixXd & transformedPoints){}
 
-// std::optional<NonRigidCPDTransform>
-// AlignViaNonRigidCPD(CPDParams & params,
-//             const point_set<double> & moving,
-//             const point_set<double> & stationary ) {       
-// }
+std::optional<NonRigidCPDTransform>
+AlignViaNonRigidCPD(CPDParams & params,
+            const point_set<double> & moving,
+            const point_set<double> & stationary ) {       
+}
 
