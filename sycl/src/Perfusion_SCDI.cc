@@ -171,9 +171,13 @@ Launch_SCDI( samples_1D<double> &AIF,
     FUNCINFO("C point is " << C_pt << " VIF point is " << VIF_pt << " AIF point is " << AIF_pt);
 
     // Find R
-    float R = (C_pt - (sum_of_c / sum_of_vif)*VIF_pt + c_slope) / (AIF_pt - (sum_of_aif / sum_of_vif)*VIF_pt);
+    float R = (C_pt - (sum_of_c / sum_of_vif)*VIF_pt) / (AIF_pt - (sum_of_aif / sum_of_vif)*VIF_pt);
     FUNCINFO("R is " << R);
-    
+    float Q = c_slope / (AIF_pt - (sum_of_aif/sum_of_vif) * VIF_pt);
+    FUNCINFO("Q is " << Q);
+    float N = (sum_of_c - R * sum_of_aif) / sum_of_vif;
+    FUNCINFO("N is " << N);
+
     // Construct AIF(t-dt), VIF(t-dt), C(t-dt)
     std::vector<float> shifted_aif = resampled_aif;
     std::vector<float> shifted_vif = resampled_vif;
@@ -188,16 +192,6 @@ Launch_SCDI( samples_1D<double> &AIF,
     shifted_c.erase(shifted_c.begin());
     resampled_c.front().pop_back();
 
-    // TODO: Move this constant to a better place for code cleanliness/clarity
-    const float sample_rate = 0.1; // Seconds
-
-    // Get the variables R and N (see readme)
-    // TODO: Add description of variables + their meaning to Readme
-    float Q = 200.0; //FIX
-    float R = 71.7; //FIX
-    float N = (sum_of_c - R * sum_of_aif) / sum_of_vif;
-
-    //Tianna's Code starts now //////////////////////////////////////////////////////////////////////////////////////////////////////
     std::vector<float> D; //see math for definition
     std::vector<float> E; //see math for definition
     std::vector<float> F; //see math for definition
@@ -226,7 +220,7 @@ Launch_SCDI( samples_1D<double> &AIF,
 
     std::transform(vif_sum_temp.begin(), vif_sum_temp.end(), aif_sum_temp.begin(), back_inserter(F), std::plus<float>()); //adds the two above and saves them to F
     
-    MultiplyVectorByScalar(F, sample_rate); //Gives us the final version of F as in the mathematical Model
+    MultiplyVectorByScalar(F, TIME_INTERVAL); //Gives us the final version of F as in the mathematical Model
 
     //Computation of E
     vif_sum_temp = vif_sum;
@@ -237,7 +231,7 @@ Launch_SCDI( samples_1D<double> &AIF,
 
     std::transform(vif_sum_temp.begin(), vif_sum_temp.end(), aif_sum_temp.begin(), back_inserter(E), std::plus<float>());
     std::transform(E.begin(), E.end(), c_sum.begin(), E.begin(), std::minus<float>());
-    MultiplyVectorByScalar(E, sample_rate);
+    MultiplyVectorByScalar(E, TIME_INTERVAL);
     
     //Computation of G
     std::transform(D.begin(), D.end(), F.begin(), back_inserter(G), std::minus<float>());
@@ -251,64 +245,6 @@ Launch_SCDI( samples_1D<double> &AIF,
     double k1_A = R * k2 + Q;
     double k1_B = N * k2 - Q*sum_of_aif/sum_of_vif;
     FUNCINFO("K2: " << k2 << " k1A: " << k1_A << " k1B: " << k1_B);
-
-
-    // Tianna's code ends here //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-    //THE FOLLOWING IS TIANNA AND JACKSONS ORIGINAL CODE/////////////////////////////////////////////////////////////////////////////////////////////////////
-    /*
-
-    // std::cout << "shifted aif size: " << shifted_aif.size() << '\n';
-    // std::cout << "resampled aif size: " << resampled_aif.size() << '\n';
-    // std::cout << "shifted vif size: " << shifted_vif.size() << '\n';
-    // std::cout << "resampled vif size: " << resampled_vif.size() << '\n';
-    // std::cout << "shifted c size: " << shifted_c.size() << '\n';
-    // std::cout << "resampled c size: " << resampled_c.front().size() << '\n';
-
-    std::vector<float> vif_sum; //this is defined as vif(t)+vif(t-T)
-    std::vector<float> aif_sum; //this is defined as aif(t)+aif(t-T)
-    std::vector<float> c_diff; //this is defined as c(t)-c(t-T)
-    std::vector<float> D;
-    std::vector<float> E;
-    
-    //adds the following vectors
-    std::transform(resampled_vif.begin(), resampled_vif.end(), shifted_vif.begin(), vif_sum.begin( ), std::plus<float>( ));
-    std::transform(resampled_aif.begin(), resampled_aif.end(), shifted_aif.begin(), aif_sum.begin( ), std::plus<float>( ));
-    std::transform(resampled_c.front().begin(), resampled_c.front().end(), shifted_c.begin(), c_diff.begin(), std::minus<float>( ));
-
-    // Define E(t) and D(t)
-    // std::vector<float> D = 2 * (resampled_c.front() - shifted_c);
-    MultiplyVectorByScalar(c_diff, 2.0); // D
-    D = c_diff;
-    //The following lines are the calculation of E. Below is the "simple code" that does not work for vectors
-    ////std::vector<float> E = sample_rate * ( MultiplyVectorByScalar(vif_sum, N) + MultiplyVectorByScalar(aif_sum, R) +  MultiplyVectorByScalar(D, 0.5));
-
-    MultiplyVectorByScalar(vif_sum, N); // E_vif
-    MultiplyVectorByScalar(aif_sum, R); // E_aif
-    MultiplyVectorByScalar(c_diff, 0.5); //E_c
-
-    std::transform(vif_sum.begin(), vif_sum.end(), aif_sum.begin(), E.begin( ), std::plus<float>( ));
-    std::transform(E.begin(), E.end(), c_diff.begin(), E.begin( ), std::plus<float>( ));
-    MultiplyVectorByScalar(E, sample_rate);
-
-    // Inner product calculation
-    double DE_inner_product = std::inner_product(D.begin(), D.end(), E.begin(), 0);
-    double EE_inner_product = std::inner_product(E.begin(), E.end(), E.begin(), 0);
-
-    // Get the kinetic parameters from the calculated inner products
-    double k2 = DE_inner_product / EE_inner_product;
-    double k1_A = R * DE_inner_product / EE_inner_product;
-    double k1_B = N * DE_inner_product / EE_inner_product;
-    
-    // TODO: Output parameters to file
-    // TODO: Remove FUNCINFO if necessary?
-    //FUNCINFO("k2 parameter: " + k2 + " | k1A: " + k1_A + " | k1B: " + k1_B);
-    std::cout << "k2 parameter " << k2 << '\n';
-    std::cout << "k1A parameter " << k1_A << '\n';
-    std::cout << "k1B parameter " << k1_B << '\n';
-    FUNCINFO("K2 " << k2 << " k1A " << k1_A << " k1B " << k1_B);
-
-    */////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     // The following is an example of using Eigen for matrices.
     {
