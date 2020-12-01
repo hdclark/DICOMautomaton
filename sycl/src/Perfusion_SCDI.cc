@@ -116,7 +116,6 @@ Launch_SCDI( samples_1D<double> &AIF,
     // TODO: Re-evaluate vector of a vector
     std::vector<std::vector<float>> resampled_c;
     for(const auto &c : C) resampled_c.emplace_back( resample(c) );
-    
 
 
     // Perfusion model implementation should be placed here using resampled time courses.
@@ -160,8 +159,70 @@ Launch_SCDI( samples_1D<double> &AIF,
 
     // Get the variables R and N (see readme)
     // TODO: Add description of variables + their meaning to Readme
-    float R = 7.7;
+    float Q = 200.0; //FIX
+    float R = 71.7; //FIX
     float N = (sum_of_c - R * sum_of_aif) / sum_of_vif;
+
+    //Tianna's Code starts now //////////////////////////////////////////////////////////////////////////////////////////////////////
+    std::vector<float> D; //see math for definition
+    std::vector<float> E; //see math for definition
+    std::vector<float> F; //see math for definition
+    std::vector<float> G; //see math for definition
+    std::vector<float> vif_sum;  //this is defined as vif(t)+vif(t-T)
+    std::vector<float> aif_sum; //this is defined as aif(t)+aif(t-T)
+    std::vector<float> c_sum; //this is defined as c(t)+c(t-T)
+    std::vector<float> c_diff; //this is defined as c(t)-c(t-T)
+
+    std::transform(resampled_vif.begin(), resampled_vif.end(), shifted_vif.begin(), back_inserter(vif_sum), std::plus<float>( )); //vif_sum = resampled_vif + shifted_vif
+    std::transform(resampled_aif.begin(), resampled_aif.end(), shifted_aif.begin(), back_inserter(aif_sum), std::plus<float>( )); //aif_sum = resampled_aif + shifted_aif
+    std::transform(resampled_c.front().begin(), resampled_c.front().end(), shifted_c.begin(), back_inserter(c_diff), std::minus<float>( )); //c_diff = resampled_c - shifted_c
+    std::transform(resampled_c.front().begin(), resampled_c.front().end(), shifted_c.begin(), back_inserter(c_sum), std::plus<float>( )); //c_sum = resampled_c + shifted_c
+
+    //Computation of D
+    D = c_diff;
+    MultiplyVectorByScalar(D, 2.0); // gives us D(t)=2(c(t)-c(t-T))
+    
+    //Use these to be able to multiply by scalars/add them without changing the orginal values
+    std::vector<float> vif_sum_temp = vif_sum;
+    std::vector<float> aif_sum_temp = aif_sum;
+
+    //Computation of F
+    MultiplyVectorByScalar(vif_sum_temp, (-Q*sum_of_aif/sum_of_vif));
+    MultiplyVectorByScalar(aif_sum_temp, Q);
+
+    std::transform(vif_sum_temp.begin(), vif_sum_temp.end(), aif_sum_temp.begin(), back_inserter(F), std::plus<float>()); //adds the two above and saves them to F
+    
+    MultiplyVectorByScalar(F, sample_rate); //Gives us the final version of F as in the mathematical Model
+
+    //Computation of E
+    vif_sum_temp = vif_sum;
+    aif_sum_temp = aif_sum;
+
+    MultiplyVectorByScalar(vif_sum_temp, N);
+    MultiplyVectorByScalar(aif_sum_temp, R);
+
+    std::transform(vif_sum_temp.begin(), vif_sum_temp.end(), aif_sum_temp.begin(), back_inserter(E), std::plus<float>());
+    std::transform(E.begin(), E.end(), c_sum.begin(), E.begin(), std::minus<float>());
+    MultiplyVectorByScalar(E, sample_rate);
+    
+    //Computation of G
+    std::transform(D.begin(), D.end(), F.begin(), back_inserter(G), std::minus<float>());
+
+    // Inner product calculation
+    double GE_inner_product = std::inner_product(G.begin(), G.end(), E.begin(), 0);
+    double EE_inner_product = std::inner_product(E.begin(), E.end(), E.begin(), 0);
+
+     // Get the kinetic parameters from the calculated inner products
+    double k2 = GE_inner_product / EE_inner_product;
+    double k1_A = R * k2 + Q;
+    double k1_B = N * k2 - Q*sum_of_aif/sum_of_vif;
+    FUNCINFO("K2: " << k2 << " k1A: " << k1_A << " k1B: " << k1_B);
+
+
+    // Tianna's code ends here //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    //THE FOLLOWING IS TIANNA AND JACKSONS ORIGINAL CODE/////////////////////////////////////////////////////////////////////////////////////////////////////
+    /*
 
     // std::cout << "shifted aif size: " << shifted_aif.size() << '\n';
     // std::cout << "resampled aif size: " << resampled_aif.size() << '\n';
@@ -170,9 +231,9 @@ Launch_SCDI( samples_1D<double> &AIF,
     // std::cout << "shifted c size: " << shifted_c.size() << '\n';
     // std::cout << "resampled c size: " << resampled_c.front().size() << '\n';
 
-    std::vector<float> vif_sum;
-    std::vector<float> aif_sum;
-    std::vector<float> c_diff;
+    std::vector<float> vif_sum; //this is defined as vif(t)+vif(t-T)
+    std::vector<float> aif_sum; //this is defined as aif(t)+aif(t-T)
+    std::vector<float> c_diff; //this is defined as c(t)-c(t-T)
     std::vector<float> D;
     std::vector<float> E;
     
@@ -212,6 +273,8 @@ Launch_SCDI( samples_1D<double> &AIF,
     std::cout << "k1A parameter " << k1_A << '\n';
     std::cout << "k1B parameter " << k1_B << '\n';
     FUNCINFO("K2 " << k2 << " k1A " << k1_A << " k1B " << k1_B);
+
+    */////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     // The following is an example of using Eigen for matrices.
     {
