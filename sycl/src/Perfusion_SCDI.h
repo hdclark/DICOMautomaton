@@ -20,3 +20,6 @@ Launch_SCDI( samples_1D<double> &,
              samples_1D<double> &, 
              std::vector<samples_1D<double>> & );
 
+void
+MultiplyVectorByScalar(std::vector<float> &v, float k);
+
