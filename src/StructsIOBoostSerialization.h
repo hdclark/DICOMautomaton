@@ -11,6 +11,8 @@
 
 #pragma once
 
+#include <boost/serialization/version.hpp>
+#include <boost/serialization/library_version_type.hpp>
 #include <boost/serialization/nvp.hpp> 
 
 #include <boost/serialization/string.hpp>
@@ -18,7 +20,6 @@
 //#include <boost/serialization/vector.hpp>
 //#include <boost/serialization/map.hpp>
 #include <boost/serialization/shared_ptr.hpp>
-#include <boost/serialization/version.hpp>
 
 #include "Structs.h"
 

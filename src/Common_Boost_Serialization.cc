@@ -1,5 +1,6 @@
 //Common_Boost_Serialization.cc - A part of DICOMautomaton 2016. Written by hal clark.
 
+#include <boost/serialization/version.hpp>
 #include <boost/archive/basic_archive.hpp>
 //For binary archives.
 #include <boost/archive/binary_iarchive.hpp>
