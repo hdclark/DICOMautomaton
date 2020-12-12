@@ -9,9 +9,7 @@ AffineCPDTransform::AffineCPDTransform(int dimensionality) {
 void AffineCPDTransform::apply_to(point_set<double> &ps) {
     FUNCINFO("Applying transform to point set")
     auto N_points = static_cast<long int>(ps.points.size());
-    FUNCINFO("num points")
     Eigen::MatrixXd Y = Eigen::MatrixXd::Zero(N_points, this->dim); 
-    FUNCINFO("making matrix")
     // Fill the X vector with the corresponding points.
     for(long int j = 0; j < N_points; ++j) { // column
         auto P = ps.points[j];
@@ -19,10 +17,8 @@ void AffineCPDTransform::apply_to(point_set<double> &ps) {
         Y(j, 1) = P.y;
         Y(j, 2) = P.z;
     }
-    FUNCINFO("trasnform")
     auto Y_hat = Y*this->B.transpose() + \
         Eigen::MatrixXd::Constant(N_points, 1, 1)*this->t.transpose();
-    FUNCINFO("redoing points")
     for(long int j = 0; j < N_points; ++j) { // column
         ps.points[j].x = Y_hat(j, 0);
         ps.points[j].y = Y_hat(j, 1);
@@ -109,49 +105,23 @@ AlignViaAffineCPD(CPDParams & params,
         Y(j, 1) = P_moving.y;
         Y(j, 2) = P_moving.z;
     }
-    FUNCINFO("x")
-    FUNCINFO(X)
-    FUNCINFO("Y")
-    FUNCINFO(Y)
     AffineCPDTransform transform(params.dimensionality);
+    double prev_sigma_squared;
     double sigma_squared = Init_Sigma_Squared(X, Y);
-    FUNCINFO("SIGMA")
-    FUNCINFO(sigma_squared)
     for (int i = 0; i < params.iterations; i++) {
-        FUNCINFO(i)
+        FUNCINFO("Iteration: " << i)
         Eigen::MatrixXd P = E_Step(X, Y, transform.B, \
-            transform.t, sigma_squared, params.distribution_weight);
-        FUNCINFO("P")
-        FUNCINFO(P)
+            transform.t, sigma_squared, params.distribution_weight, 1);
         Eigen::MatrixXd Ux = CalculateUx(X, P);
-        FUNCINFO("ux")
-        FUNCINFO(Ux)
         Eigen::MatrixXd Uy = CalculateUy(Y, P);
-        FUNCINFO("uy")
-        FUNCINFO(Uy)
         Eigen::MatrixXd X_hat = CenterMatrix(X, Ux);
-        FUNCINFO("X_hat")
-        FUNCINFO(X_hat)
-        Eigen::MatrixXd Y_hat = CenterMatrix(X, Uy);
-        FUNCINFO("Y_hat")
-        FUNCINFO(Y_hat)
+        Eigen::MatrixXd Y_hat = CenterMatrix(Y, Uy);
         transform.B = CalculateB(X_hat, Y_hat, P);
-        FUNCINFO("b")
-        FUNCINFO(transform.B)
         transform.t = GetTranslationVector(transform.B, Ux, Uy, 1);
-        FUNCINFO("t")
-        FUNCINFO(transform.t)
         sigma_squared = SigmaSquared(transform.B, X_hat, Y_hat, P);
-        FUNCINFO("SIGMA")
-        FUNCINFO(sigma_squared)
         if (sigma_squared < 0.00001)
             break;
     }
-    FUNCINFO(X)
-    FUNCINFO(Y)
-    FUNCINFO(transform.B)
-    FUNCINFO(transform.t)
-    FUNCINFO(Y * transform.B.transpose() + Eigen::MatrixXd::Constant(N_move_points, 1, 1)*transform.t.transpose())
     return transform;
 }
 
