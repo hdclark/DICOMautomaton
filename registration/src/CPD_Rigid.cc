@@ -124,32 +124,30 @@ AlignViaRigidCPD(CPDParams & params,
         Y(j, 2) = P_moving.z;
     }
     RigidCPDTransform transform(params.dimensionality);
+    double prev_sigma_squared;
     double sigma_squared = Init_Sigma_Squared(X, Y);
-    FUNCINFO(sigma_squared)
 
     FUNCINFO("Starting loop. Iterations: " << params.iterations)
     for (int i = 0; i < params.iterations; i++) {
-        if(sigma_squared == 0)
+        FUNCINFO("Starting Iteration: " << i) 
+        if(sigma_squared < 0.00001)
             break;
+        prev_sigma_squared = sigma_squared;
         Eigen::MatrixXd P = E_Step(X, Y, transform.R, \
             transform.t, sigma_squared, params.distribution_weight, transform.s);
         Eigen::MatrixXd Ux = CalculateUx(X, P);
         Eigen::MatrixXd Uy = CalculateUy(Y, P);
         Eigen::MatrixXd X_hat = CenterMatrix(X, Ux);
-        Eigen::MatrixXd Y_hat = CenterMatrix(X, Uy);
+        Eigen::MatrixXd Y_hat = CenterMatrix(Y, Uy);
         Eigen::MatrixXd A = GetA(X_hat, Y_hat, P);
         Eigen::JacobiSVD<Eigen::MatrixXd> svd( A, Eigen::ComputeFullV | Eigen::ComputeFullU );
         transform.R = GetRotationMatrix(svd.matrixU(), svd.matrixV());
         transform.s = GetS(A, transform.R, Y_hat, P);
         transform.t = GetTranslationVector(transform.R, Ux, Uy, transform.s);
         sigma_squared = SigmaSquared(transform.s, A, transform.R, X_hat, P);
+        if(sigma_squared > prev_sigma_squared)
+            break;
     }
-    FUNCINFO(X)
-    FUNCINFO(Y)
-    FUNCINFO(transform.s)
-    FUNCINFO(transform.R)
-    FUNCINFO(transform.t)
-    FUNCINFO(transform.s * Y * transform.R.transpose() + Eigen::MatrixXd::Constant(N_move_points, 1, 1)*transform.t.transpose())
     return transform;
 }
 

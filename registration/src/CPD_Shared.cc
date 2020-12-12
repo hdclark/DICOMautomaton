@@ -65,17 +65,14 @@ Eigen::MatrixXd E_Step(const Eigen::MatrixXd & xPoints,
     int nRowsX = xPoints.rows();
     int dimensionality = yPoints.cols();
 
-    // std::cout << "\n";
-    // std::cout << "\n";    
     auto start = high_resolution_clock::now();
     for (size_t m = 0; m < mRowsY; ++m) {
         for (size_t n = 0; n < nRowsX; ++n) {
-            tempVector = xPoints.row(n).transpose() - (rotationMatrix * yPoints.row(m).transpose() + t);
-            expArg = - 1 / (2 * sigmaSquared) * tempVector.squaredNorm();
+            tempVector = xPoints.row(n).transpose() - (scale * rotationMatrix * yPoints.row(m).transpose() + t);
+            expArg = - 1.0 / (2 * sigmaSquared) * tempVector.squaredNorm();
             expMat(m,n) = exp(expArg);
         }
     }
-
     auto stop = high_resolution_clock::now();
     auto duration = duration_cast<microseconds>(stop - start); 
     // std::cout << duration.count() << std::endl; 
@@ -84,15 +81,12 @@ Eigen::MatrixXd E_Step(const Eigen::MatrixXd & xPoints,
         for (size_t n = 0; n < nRowsX; ++n) {
             numerator = expMat(m,n);
             denominator = expMat.col(n).sum() + 
-                          pow(2 * M_PI * sigmaSquared,((double)(dimensionality/2))) * (w/(1-w)) * (double)(mRowsY / nRowsX);
+                          pow(2 * M_PI * sigmaSquared,((double)(dimensionality/2.0))) * (w/(1-w)) * ((double) mRowsY / nRowsX);
             postProb(m,n) = numerator / denominator;
         }
     }
     stop = high_resolution_clock::now();
     duration = duration_cast<microseconds>(stop - start); 
-    // std::cout << duration.count() << std::endl; 
-    // std::cout << "\n";
-    // std::cout << "\n";
     
     return postProb;
 }

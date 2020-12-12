@@ -1,4 +1,4 @@
-#include "CPD_NonRigid.h"
+#include "CPD_Nonrigid.h"
 #include <chrono>
 using namespace std::chrono;
 
