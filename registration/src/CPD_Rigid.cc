@@ -155,6 +155,7 @@ AlignViaRigidCPD(CPDParams & params,
     double prev_sigma_squared;
     double sigma_squared = Init_Sigma_Squared(X, Y);
 
+    Eigen::MatrixXd P;
     Eigen::MatrixXd Ux;
     Eigen::MatrixXd Uy;
     Eigen::MatrixXd X_hat;
@@ -167,7 +168,7 @@ AlignViaRigidCPD(CPDParams & params,
         if(sigma_squared < 0.00001)
             break;
         prev_sigma_squared = sigma_squared;
-        Eigen::MatrixXd P = E_Step(X, Y, transform.R, \
+        P = E_Step(X, Y, transform.R, \
             transform.t, sigma_squared, params.distribution_weight, transform.s);
         Ux = CalculateUx(X, P);
         Uy = CalculateUy(Y, P);
