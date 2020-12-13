@@ -155,6 +155,12 @@ AlignViaRigidCPD(CPDParams & params,
     double prev_sigma_squared;
     double sigma_squared = Init_Sigma_Squared(X, Y);
 
+    Eigen::MatrixXd Ux;
+    Eigen::MatrixXd Uy;
+    Eigen::MatrixXd X_hat;
+    Eigen::MatrixXd Y_hat;
+    Eigen::MatrixXd A;
+
     FUNCINFO("Starting loop. Iterations: " << params.iterations)
     for (int i = 0; i < params.iterations; i++) {
         FUNCINFO("Starting Iteration: " << i) 
@@ -163,11 +169,11 @@ AlignViaRigidCPD(CPDParams & params,
         prev_sigma_squared = sigma_squared;
         Eigen::MatrixXd P = E_Step(X, Y, transform.R, \
             transform.t, sigma_squared, params.distribution_weight, transform.s);
-        Eigen::MatrixXd Ux = CalculateUx(X, P);
-        Eigen::MatrixXd Uy = CalculateUy(Y, P);
-        Eigen::MatrixXd X_hat = CenterMatrix(X, Ux);
-        Eigen::MatrixXd Y_hat = CenterMatrix(Y, Uy);
-        Eigen::MatrixXd A = GetA(X_hat, Y_hat, P);
+        Ux = CalculateUx(X, P);
+        Uy = CalculateUy(Y, P);
+        X_hat = CenterMatrix(X, Ux);
+        Y_hat = CenterMatrix(Y, Uy);
+        A = GetA(X_hat, Y_hat, P);
         Eigen::JacobiSVD<Eigen::MatrixXd> svd( A, Eigen::ComputeFullV | Eigen::ComputeFullU );
         transform.R = GetRotationMatrix(svd.matrixU(), svd.matrixV());
         transform.s = GetS(A, transform.R, Y_hat, P);
