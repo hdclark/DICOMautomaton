@@ -36,11 +36,34 @@ Eigen::MatrixXd RigidCPDTransform::get_sR() {
 }
 
 bool RigidCPDTransform::write_to( std::ostream &os ) {
-
+    affine_transform<double> tf;
+    Eigen::MatrixXd sR = get_sR();
+    for(int i = 0; i < this->dim; i++) {
+        for(int j = 0; j < this->dim; j++) {
+            tf.coeff(i, j) = sR(i, j);
+        }
+    }
+    for(int j = 0; j < this->dim; j++) {
+        tf.coeff(3, j) = this->t(j);
+    }
+    return tf.write_to(os);
 }
 
 bool RigidCPDTransform::read_from( std::istream &is ) {
-
+    affine_transform<double> tf;
+    bool success = tf.read_from(is);
+    if (!success)
+        return success;
+    this->s = 1;
+    for(int i = 0; i < this->dim; i++) {
+        for(int j = 0; j < this->dim; j++) {
+            this->R(i,j) = tf.coeff(i, j);
+        }
+    }
+    for(int j = 0; j < this->dim; j++) {
+        tf.coeff(3, j) = this->t(j);
+    }
+    return success;
 }
 
 Eigen::MatrixXd GetA(const Eigen::MatrixXd & xHat,
@@ -127,6 +150,7 @@ AlignViaRigidCPD(CPDParams & params,
     double prev_sigma_squared;
     double sigma_squared = Init_Sigma_Squared(X, Y);
 
+    Eigen::MatrixXd P;
     Eigen::MatrixXd Ux;
     Eigen::MatrixXd Uy;
     Eigen::MatrixXd X_hat;
@@ -139,7 +163,7 @@ AlignViaRigidCPD(CPDParams & params,
         if(sigma_squared < 0.00001)
             break;
         prev_sigma_squared = sigma_squared;
-        Eigen::MatrixXd P = E_Step(X, Y, transform.R, \
+        P = E_Step(X, Y, transform.R, \
             transform.t, sigma_squared, params.distribution_weight, transform.s);
         Ux = CalculateUx(X, P);
         Uy = CalculateUy(Y, P);

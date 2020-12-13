@@ -47,7 +47,8 @@ int main(int argc, char* argv[]){
     CPDParams params;
     
     std::string type;
-    std::string outfile;
+    std::string xyz_outfile;
+    std::string tf_outfile;
 
     //================================================ Argument Parsing ==============================================
 
@@ -100,10 +101,17 @@ int main(int argc, char* argv[]){
         return;
       })
     );
-    arger.push_back( ygor_arg_handlr_t(1, 'o', "outfile", true, "transformed.txt",
+    arger.push_back( ygor_arg_handlr_t(1, 'p', "ps", true, "transformed_pont_set.txt",
       "Write transformed point set to given file.",
       [&](const std::string &optarg) -> void {
-        outfile = optarg;
+        xyz_outfile = optarg;
+        return;
+      })
+    );
+    arger.push_back( ygor_arg_handlr_t(1, 'o', "matrix", true, "transform.txt",
+      "Write transform matrix to given file.",
+      [&](const std::string &optarg) -> void {
+        tf_outfile = optarg;
         return;
       })
     );
@@ -122,17 +130,25 @@ int main(int argc, char* argv[]){
     if(type == "rigid") {
         RigidCPDTransform transform = AlignViaRigidCPD(params, moving, stationary);
         transform.apply_to(mutable_moving);
-        std::ofstream FO(outfile);
-        FUNCINFO("Writing to " << outfile)
-        if(!WritePointSetToXYZ(mutable_moving, FO))
-          FUNCERR("Error writing point set to " << outfile)
+        std::ofstream PFO(xyz_outfile);
+        FUNCINFO("Writing to " << xyz_outfile)
+        if(!WritePointSetToXYZ(mutable_moving, PFO))
+          FUNCERR("Error writing point set to " << xyz_outfile)
+        std::ofstream TFO(tf_outfile);
+        FUNCINFO("Writing to " << tf_outfile)
+        if(!transform.write_to(TFO))
+          FUNCERR("Error writing transform to " << tf_outfile)
     } else if(type == "affine") {
         AffineCPDTransform transform = AlignViaAffineCPD(params, moving, stationary);
         transform.apply_to(mutable_moving);
-        std::ofstream FO(outfile);
-        FUNCINFO("Writing to " << outfile)
-        if(!WritePointSetToXYZ(mutable_moving, FO))
-          FUNCERR("Error writing point set to " << outfile)
+        std::ofstream PFO(xyz_outfile);
+        FUNCINFO("Writing to " << xyz_outfile)
+        if(!WritePointSetToXYZ(mutable_moving, PFO))
+          FUNCERR("Error writing point set to " << xyz_outfile)
+        std::ofstream TFO(tf_outfile);
+        FUNCINFO("Writing to " << tf_outfile)
+        if(!transform.write_to(TFO))
+          FUNCERR("Error writing transform to " << tf_outfile)
     } else if(type == "nonrigid") {
         FUNCERR("This option has not been implemented yet.");
     } else {

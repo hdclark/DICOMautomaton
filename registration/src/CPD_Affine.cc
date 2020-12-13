@@ -27,11 +27,32 @@ void AffineCPDTransform::apply_to(point_set<double> &ps) {
 }
 
 bool AffineCPDTransform::write_to( std::ostream &os ) {
-
+    affine_transform<double> tf;
+    for(int i = 0; i < this->dim; i++) {
+        for(int j = 0; j < this->dim; j++) {
+            tf.coeff(i, j) = this->B(i, j);
+        }
+    }
+    for(int j = 0; j < this->dim; j++) {
+        tf.coeff(3, j) = this->t(j);
+    }
+    return tf.write_to(os);
 }
 
 bool AffineCPDTransform::read_from( std::istream &is ) {
-
+    affine_transform<double> tf;
+    bool success = tf.read_from(is);
+    if (!success)
+        return success;
+    for(int i = 0; i < this->dim; i++) {
+        for(int j = 0; j < this->dim; j++) {
+            this->B(i,j) = tf.coeff(i, j);
+        }
+    }
+    for(int j = 0; j < this->dim; j++) {
+        tf.coeff(3, j) = this->t(j);
+    }
+    return success;
 }
 
 Eigen::MatrixXd CalculateB(const Eigen::MatrixXd & xHat,
