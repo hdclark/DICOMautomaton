@@ -108,14 +108,19 @@ AlignViaAffineCPD(CPDParams & params,
     AffineCPDTransform transform(params.dimensionality);
     double prev_sigma_squared;
     double sigma_squared = Init_Sigma_Squared(X, Y);
+    Eigen::MatrixXd P;
+    Eigen::MatrixXd Ux;
+    Eigen::MatrixXd Uy;
+    Eigen::MatrixXd X_hat;
+    Eigen::MatrixXd Y_hat;
     for (int i = 0; i < params.iterations; i++) {
         FUNCINFO("Iteration: " << i)
-        Eigen::MatrixXd P = E_Step(X, Y, transform.B, \
+        P = E_Step(X, Y, transform.B, \
             transform.t, sigma_squared, params.distribution_weight, 1);
-        Eigen::MatrixXd Ux = CalculateUx(X, P);
-        Eigen::MatrixXd Uy = CalculateUy(Y, P);
-        Eigen::MatrixXd X_hat = CenterMatrix(X, Ux);
-        Eigen::MatrixXd Y_hat = CenterMatrix(Y, Uy);
+        Ux = CalculateUx(X, P);
+        Uy = CalculateUy(Y, P);
+        X_hat = CenterMatrix(X, Ux);
+        Y_hat = CenterMatrix(Y, Uy);
         transform.B = CalculateB(X_hat, Y_hat, P);
         transform.t = GetTranslationVector(transform.B, Ux, Uy, 1);
         sigma_squared = SigmaSquared(transform.B, X_hat, Y_hat, P);
