@@ -30,6 +30,12 @@ struct CPDParams {
     // Weight of the uniform distribution for the GMM
     // Must be between 0 and 1
     double distribution_weight = 0.2;
+    // Smoothness regulation
+    // Represents trade-off between goodness of fit and regularization
+    double lambda = 5;
+    // Smoothness regulation
+    // 
+    double beta = 5;
     // Max iterations for algorithm
     int iterations = 50;
 };
