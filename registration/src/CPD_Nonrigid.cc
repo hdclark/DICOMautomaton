@@ -2,15 +2,33 @@
 #include <chrono>
 using namespace std::chrono;
 
-NonRigidCPDTransform::NonRigidCPDTransform(int dimensionality) {
+NonRigidCPDTransform::NonRigidCPDTransform(int N_move_points, int dimensionality) {
     this->dim = dimensionality;
+    this->W = Eigen::MatrixXd::Zero(N_move_points, this->dim); 
 }
 
 void NonRigidCPDTransform::apply_to(point_set<double> &ps) {
-    const auto N_points = static_cast<long int>(ps.points.size());
-
+    FUNCINFO("Applying transform to point set")
+    auto N_points = static_cast<long int>(ps.points.size());
     Eigen::MatrixXd Y = Eigen::MatrixXd::Zero(N_points, this->dim); 
+    // Fill the X vector with the corresponding points.
+    for(long int j = 0; j < N_points; ++j) { // column
+        auto P = ps.points[j];
+        Y(j, 0) = P.x;
+        Y(j, 1) = P.y;
+        Y(j, 2) = P.z;
+    }
+    auto Y_hat = apply_to(Y);
+    for(long int j = 0; j < N_points; ++j) { // column
+        ps.points[j].x = Y_hat(j, 0);
+        ps.points[j].y = Y_hat(j, 1);
+        ps.points[j].z = Y_hat(j, 2);
+    }
 
+}
+
+Eigen::MatrixXd NonRigidCPDTransform::apply_to(const Eigen::MatrixXd &ps) {
+    return ps + this->G + this->W;
 }
 
 double NR_Init_Sigma_Squared(const Eigen::MatrixXd & xPoints,
@@ -107,10 +125,6 @@ Eigen::MatrixXd GetW(const Eigen::MatrixXd & xPoints,
             double sigmaSquared,
             double lambda){}
 
-Eigen::MatrixXd TransformedPoints(const Eigen::MatrixXd & yPoints,
-            const Eigen::MatrixXd & gramMatrix,
-            const Eigen::MatrixXd & W){}
-
 double SigmaSquared(const Eigen::MatrixXd & xPoints,
             const Eigen::MatrixXd & postProb,
             const Eigen::MatrixXd & transformedPoints){}
@@ -118,5 +132,43 @@ double SigmaSquared(const Eigen::MatrixXd & xPoints,
 std::optional<NonRigidCPDTransform>
 AlignViaNonRigidCPD(CPDParams & params,
             const point_set<double> & moving,
-            const point_set<double> & stationary ) {       
+            const point_set<double> & stationary ) { 
+    Eigen::MatrixXd GetGramMatrix(const Eigen::MatrixXd & yPoints, double betaSquared);
+    const auto N_move_points = static_cast<long int>(moving.points.size());
+    const auto N_stat_points = static_cast<long int>(stationary.points.size());
+
+    // Prepare working buffers.
+    //
+    // Stationary point matrix
+    Eigen::MatrixXd X = Eigen::MatrixXd::Zero(N_move_points, params.dimensionality);
+    // Moving point matrix
+    Eigen::MatrixXd Y = Eigen::MatrixXd::Zero(N_stat_points, params.dimensionality); 
+
+    // Fill the X vector with the corresponding points.
+    for(long int j = 0; j < N_stat_points; ++j){ // column
+        const auto P_stationary = stationary.points[j];
+        X(j, 0) = P_stationary.x;
+        X(j, 1) = P_stationary.y;
+        X(j, 2) = P_stationary.z;
+    }
+
+    // Fill the Y vector with the corresponding points.
+    for(long int j = 0; j < N_move_points; ++j){ // column
+        const auto P_moving = moving.points[j];
+        Y(j, 0) = P_moving.x;
+        Y(j, 1) = P_moving.y;
+        Y(j, 2) = P_moving.z;
+    }
+    NonRigidCPDTransform transform(N_move_points, params.dimensionality);
+    double sigma_squared = NR_Init_Sigma_Squared(X, Y);
+    transform.G = GetGramMatrix(Y, params.beta * params.beta);
+    Eigen::MatrixXd P;
+    Eigen::MatrixXd T;
+
+    for (int i = 0; i < params.iterations; i++) {
+        P = E_Step(X, Y, transform.G, transform.W, sigma_squared, params.distribution_weight);
+        transform.W = GetW(X, Y, transform.G, P, sigma_squared, params.lambda);
+        T = transform.apply_to(Y);
+        SigmaSquared(X, P, T);
+    }
 }
