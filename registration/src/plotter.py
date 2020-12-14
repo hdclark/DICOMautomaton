@@ -28,8 +28,8 @@ def plot_points(x1,y1,z1,x2,y2,z2):
     plt.show()
 
 def main():
-    file_name_1 = "data_files/reg_phant_v0_original.xyz"
-    file_name_2 = "data_files/reg_phant_v0_rotated.xyz"
+    file_name_1 = "/Users/carlosjdoebeli/DICOMautomaton/3D_Printing/20201119_Registration_Phantom/reg_phant_v0_original.xyz"
+    file_name_2 = "/Users/carlosjdoebeli/DICOMautomaton/3D_Printing/20201119_Registration_Phantom/reg_phant_v0_scaled.xyz"
     x1,y1,z1 = read_file(file_name_1)
     x2,y2,z2 = read_file(file_name_2)
     plot_points(x1,y1,z1,x2,y2,z2)
