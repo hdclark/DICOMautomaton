@@ -1,4 +1,5 @@
 #include "CPD_Nonrigid.h"
+#include "CPD_NonRigid.h"
 #include <chrono>
 using namespace std::chrono;
 
@@ -13,7 +14,7 @@ void NonRigidCPDTransform::apply_to(point_set<double> &ps) {
 
 }
 
-double NR_Init_Sigma_Squared(const Eigen::MatrixXd & xPoints,
+double Init_Sigma_Squared_NR(const Eigen::MatrixXd & xPoints,
             const Eigen::MatrixXd & yPoints) {
 
     double normSum = 0;
@@ -50,7 +51,32 @@ Eigen::MatrixXd GetGramMatrix(const Eigen::MatrixXd & yPoints, double betaSquare
     return gramMatrix;
 }
 
-Eigen::MatrixXd E_Step(const Eigen::MatrixXd & xPoints,
+double GetSimilarity_NR(const Eigen::MatrixXd & xPoints,
+            const Eigen::MatrixXd & yPoints,
+            const Eigen::MatrixXd & postProb,
+            const Eigen::MatrixXd & gramMatrix,
+            const Eigen::MatrixXd & W,
+            double sigmaSquared) {
+    
+    int mRowsY = yPoints.rows();
+    int nRowsX = xPoints.rows(); 
+    double dimensionality = xPoints.cols();
+    double Np = postProb.sum();
+    Eigen::MatrixXd tempVector;
+
+    double leftSum = 0;
+    for (size_t m = 0; m < mRowsY; ++m) {
+        for (size_t n = 0; n < nRowsX; ++n) {
+            tempVector = xPoints.row(n) - AlignedPointSet_NR(yPoints, gramMatrix, W).row(m);
+            leftSum += postProb(m,n) * tempVector.squaredNorm();
+        }
+    }
+    leftSum = leftSum / (2.0 * sigmaSquared);
+    double rightSum = Np * dimensionality / 2.0 * log(sigmaSquared);
+    return leftSum + rightSum;
+}
+
+Eigen::MatrixXd E_Step_NR(const Eigen::MatrixXd & xPoints,
             const Eigen::MatrixXd & yPoints,
             const Eigen::MatrixXd & gramMatrix,
             const Eigen::MatrixXd & W,
@@ -87,10 +113,11 @@ Eigen::MatrixXd E_Step(const Eigen::MatrixXd & xPoints,
         for (size_t n = 0; n < nRowsX; ++n) {
             numerator = expMat(m,n);
             denominator = expMat.col(n).sum() + 
-                          pow(2 * M_PI * sigmaSquared,((double)(dimensionality/2))) * (w/(1-w)) * (double)(mRowsY / nRowsX);
+                          pow((2 * M_PI * sigmaSquared),((double)(dimensionality/2.0))) * (w/(1-w)) * (double)(mRowsY / nRowsX);
             postProb(m,n) = numerator / denominator;
         }
     }
+
     stop = high_resolution_clock::now();
     duration = duration_cast<microseconds>(stop - start); 
     // std::cout << duration.count() << std::endl; 
@@ -107,7 +134,7 @@ Eigen::MatrixXd GetW(const Eigen::MatrixXd & xPoints,
             double sigmaSquared,
             double lambda){}
 
-Eigen::MatrixXd TransformedPoints(const Eigen::MatrixXd & yPoints,
+Eigen::MatrixXd AlignedPointSet_NR(const Eigen::MatrixXd & yPoints,
             const Eigen::MatrixXd & gramMatrix,
             const Eigen::MatrixXd & W){}
 

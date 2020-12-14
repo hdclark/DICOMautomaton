@@ -77,3 +77,13 @@ Eigen::MatrixXd AlignedPointSet(const Eigen::MatrixXd & yPoints,
             const Eigen::MatrixXd & rotationMatrix,
             const Eigen::MatrixXd & translation,
             double scale);
+
+double GetSimilarity(const Eigen::MatrixXd & xPoints,
+            const Eigen::MatrixXd & yPoints,
+            const Eigen::MatrixXd & postProb,
+            const Eigen::MatrixXd & rotationMatrix,
+            const Eigen::MatrixXd & translation,
+            double scale, 
+            double sigmaSquared);
+ 
+ #endif

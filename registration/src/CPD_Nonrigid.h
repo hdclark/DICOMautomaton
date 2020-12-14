@@ -45,17 +45,24 @@ AlignViaNonRigidCPD(CPDParams & params,
             const point_set<double> & moving,
             const point_set<double> & stationary );
 
-double NR_Init_Sigma_Squared(const Eigen::MatrixXd & xPoints,
+double Init_Sigma_Squared_NR(const Eigen::MatrixXd & xPoints,
             const Eigen::MatrixXd & yPoints);
 
-Eigen::MatrixXd GetGramMatrix(const Eigen::MatrixXd & yPoints, double beta);
+Eigen::MatrixXd GetGramMatrix(const Eigen::MatrixXd & yPoints, double betaSquared);
 
-Eigen::MatrixXd E_Step(const Eigen::MatrixXd & xPoints,
+Eigen::MatrixXd E_Step_NR(const Eigen::MatrixXd & xPoints,
             const Eigen::MatrixXd & yPoints,
             const Eigen::MatrixXd & gramMatrix,
             const Eigen::MatrixXd & W,
             double sigmaSquared,
             double w);
+
+double GetSimilarity_NR(const Eigen::MatrixXd & xPoints,
+            const Eigen::MatrixXd & yPoints,
+            const Eigen::MatrixXd & postProb,
+            const Eigen::MatrixXd & gramMatrix,
+            const Eigen::MatrixXd & W,
+            double sigmaSquared);
 
 Eigen::MatrixXd GetW(const Eigen::MatrixXd & xPoints,
             const Eigen::MatrixXd & yPoints,
@@ -64,7 +71,7 @@ Eigen::MatrixXd GetW(const Eigen::MatrixXd & xPoints,
             double sigmaSquared,
             double lambda);
 
-Eigen::MatrixXd TransformedPoints(const Eigen::MatrixXd & yPoints,
+Eigen::MatrixXd AlignedPointSet_NR(const Eigen::MatrixXd & yPoints,
             const Eigen::MatrixXd & gramMatrix,
             const Eigen::MatrixXd & W);
 
