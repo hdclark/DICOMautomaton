@@ -27,11 +27,32 @@ void AffineCPDTransform::apply_to(point_set<double> &ps) {
 }
 
 bool AffineCPDTransform::write_to( std::ostream &os ) {
-
+    affine_transform<double> tf;
+    for(int i = 0; i < this->dim; i++) {
+        for(int j = 0; j < this->dim; j++) {
+            tf.coeff(i, j) = this->B(i, j);
+        }
+    }
+    for(int j = 0; j < this->dim; j++) {
+        tf.coeff(3, j) = this->t(j);
+    }
+    return tf.write_to(os);
 }
 
 bool AffineCPDTransform::read_from( std::istream &is ) {
-
+    affine_transform<double> tf;
+    bool success = tf.read_from(is);
+    if (!success)
+        return success;
+    for(int i = 0; i < this->dim; i++) {
+        for(int j = 0; j < this->dim; j++) {
+            this->B(i,j) = tf.coeff(i, j);
+        }
+    }
+    for(int j = 0; j < this->dim; j++) {
+        tf.coeff(3, j) = this->t(j);
+    }
+    return success;
 }
 
 Eigen::MatrixXd CalculateB(const Eigen::MatrixXd & xHat,
@@ -108,14 +129,19 @@ AlignViaAffineCPD(CPDParams & params,
     AffineCPDTransform transform(params.dimensionality);
     double prev_sigma_squared;
     double sigma_squared = Init_Sigma_Squared(X, Y);
+    Eigen::MatrixXd P;
+    Eigen::MatrixXd Ux;
+    Eigen::MatrixXd Uy;
+    Eigen::MatrixXd X_hat;
+    Eigen::MatrixXd Y_hat;
     for (int i = 0; i < params.iterations; i++) {
         FUNCINFO("Iteration: " << i)
-        Eigen::MatrixXd P = E_Step(X, Y, transform.B, \
+        P = E_Step(X, Y, transform.B, \
             transform.t, sigma_squared, params.distribution_weight, 1);
-        Eigen::MatrixXd Ux = CalculateUx(X, P);
-        Eigen::MatrixXd Uy = CalculateUy(Y, P);
-        Eigen::MatrixXd X_hat = CenterMatrix(X, Ux);
-        Eigen::MatrixXd Y_hat = CenterMatrix(Y, Uy);
+        Ux = CalculateUx(X, P);
+        Uy = CalculateUy(Y, P);
+        X_hat = CenterMatrix(X, Ux);
+        Y_hat = CenterMatrix(Y, Uy);
         transform.B = CalculateB(X_hat, Y_hat, P);
         transform.t = GetTranslationVector(transform.B, Ux, Uy, 1);
         sigma_squared = SigmaSquared(transform.B, X_hat, Y_hat, P);

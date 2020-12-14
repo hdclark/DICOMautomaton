@@ -36,11 +36,34 @@ Eigen::MatrixXd RigidCPDTransform::get_sR() {
 }
 
 bool RigidCPDTransform::write_to( std::ostream &os ) {
-
+    affine_transform<double> tf;
+    Eigen::MatrixXd sR = get_sR();
+    for(int i = 0; i < this->dim; i++) {
+        for(int j = 0; j < this->dim; j++) {
+            tf.coeff(i, j) = sR(i, j);
+        }
+    }
+    for(int j = 0; j < this->dim; j++) {
+        tf.coeff(3, j) = this->t(j);
+    }
+    return tf.write_to(os);
 }
 
 bool RigidCPDTransform::read_from( std::istream &is ) {
-
+    affine_transform<double> tf;
+    bool success = tf.read_from(is);
+    if (!success)
+        return success;
+    this->s = 1;
+    for(int i = 0; i < this->dim; i++) {
+        for(int j = 0; j < this->dim; j++) {
+            this->R(i,j) = tf.coeff(i, j);
+        }
+    }
+    for(int j = 0; j < this->dim; j++) {
+        tf.coeff(3, j) = this->t(j);
+    }
+    return success;
 }
 
 Eigen::MatrixXd GetA(const Eigen::MatrixXd & xHat,
@@ -127,19 +150,26 @@ AlignViaRigidCPD(CPDParams & params,
     double prev_sigma_squared;
     double sigma_squared = Init_Sigma_Squared(X, Y);
 
+    Eigen::MatrixXd P;
+    Eigen::MatrixXd Ux;
+    Eigen::MatrixXd Uy;
+    Eigen::MatrixXd X_hat;
+    Eigen::MatrixXd Y_hat;
+    Eigen::MatrixXd A;
+
     FUNCINFO("Starting loop. Iterations: " << params.iterations)
     for (int i = 0; i < params.iterations; i++) {
         FUNCINFO("Starting Iteration: " << i) 
         if(sigma_squared < 0.00001)
             break;
         prev_sigma_squared = sigma_squared;
-        Eigen::MatrixXd P = E_Step(X, Y, transform.R, \
+        P = E_Step(X, Y, transform.R, \
             transform.t, sigma_squared, params.distribution_weight, transform.s);
-        Eigen::MatrixXd Ux = CalculateUx(X, P);
-        Eigen::MatrixXd Uy = CalculateUy(Y, P);
-        Eigen::MatrixXd X_hat = CenterMatrix(X, Ux);
-        Eigen::MatrixXd Y_hat = CenterMatrix(Y, Uy);
-        Eigen::MatrixXd A = GetA(X_hat, Y_hat, P);
+        Ux = CalculateUx(X, P);
+        Uy = CalculateUy(Y, P);
+        X_hat = CenterMatrix(X, Ux);
+        Y_hat = CenterMatrix(Y, Uy);
+        A = GetA(X_hat, Y_hat, P);
         Eigen::JacobiSVD<Eigen::MatrixXd> svd( A, Eigen::ComputeFullV | Eigen::ComputeFullU );
         transform.R = GetRotationMatrix(svd.matrixU(), svd.matrixV());
         transform.s = GetS(A, transform.R, Y_hat, P);

@@ -22,14 +22,14 @@ def read_file(file_name):
 def plot_points(x1,y1,z1,x2,y2,z2):
     fig = plt.figure()
     ax1 = fig.add_subplot(111, projection = '3d')
-    ax1.scatter(x1, y1, z1, s=10, c='b', marker="s", label='first')
-    ax1.scatter(x2, y2, z2, s=10, c='r', marker="o", label='second')
+    ax1.scatter(x1, y1, z1, s=10, c='b', marker="s", label='Original')
+    ax1.scatter(x2, y2, z2, s=10, c='r', marker="o", label='Translated')
     plt.legend(loc='upper left')
     plt.show()
 
 def main():
-    file_name_1 = "/Users/carlosjdoebeli/DICOMautomaton/3D_Printing/20201119_Registration_Phantom/reg_phant_v0_original.xyz"
-    file_name_2 = "/Users/carlosjdoebeli/DICOMautomaton/3D_Printing/20201119_Registration_Phantom/reg_phant_v0_scaled.xyz"
+    file_name_1 = "../data/bunny_out2.xyz"
+    file_name_2 = "../data/bunny_target.txt"
     x1,y1,z1 = read_file(file_name_1)
     x2,y2,z2 = read_file(file_name_2)
     plot_points(x1,y1,z1,x2,y2,z2)
