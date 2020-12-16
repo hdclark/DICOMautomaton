@@ -8,7 +8,8 @@ on:
 
 jobs:
   build_debian_stable: 
-    runs-on: docker/debian:stable
+    container:
+      image: debian:stable
     steps:
     - name: prep
       run: |
