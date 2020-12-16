@@ -1,0 +1,25 @@
+# This is a definition file for GitHub CI.
+
+name: GitHub CI
+
+on:
+  push:
+    branches: [ master ]
+
+jobs:
+  build_debian_stable: 
+    runs-on: debian:stable
+    steps:
+    - name: prep
+      run: |
+           cp -R ./docker/builders/ci /scratch
+           cp -R . /dcma
+    - name: build
+      run: |
+           ( ( while true ; do sleep 225 ; printf '\n\n' ; df -h ; printf '\n\n' ; free -h ; printf '\n\n' ; done ) &)
+           ./docker/builders/ci/implementation_ci_debian_stable.sh
+    - name: test
+      run: |
+           ./integration_tests/Run.sh
+           ./scripts/extract_system_appimage.sh
+
