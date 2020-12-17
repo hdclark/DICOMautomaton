@@ -27,6 +27,7 @@
 #include "OFF_File_Loader.h"
 #include "STL_File_Loader.h"
 #include "OBJ_File_Loader.h"
+#include "PLY_File_Loader.h"
 #include "3ddose_File_Loader.h"
 #include "Line_Sample_File_Loader.h"
 #include "TAR_File_Loader.h"
@@ -83,6 +84,13 @@ Load_Files( Drover &DICOM_data,
     if(!Paths.empty()
     && !Load_From_DICOM_Files( DICOM_data, InvocationMetadata, FilenameLex, Paths )){
         FUNCWARN("Failed to load DICOM file");
+        return false;
+    }
+
+    //Standalone file loading: (ASCII or binary) PLY (mesh or point cloud) files.
+    if(!Paths.empty()
+    && !Load_From_PLY_Files( DICOM_data, InvocationMetadata, FilenameLex, Paths )){
+        FUNCWARN("Failed to load ASCII/binary PLY mesh or point cloud file");
         return false;
     }
 

@@ -164,13 +164,15 @@ formats:
   - contours
     - DICOM RTSTRUCT (read and write)
   - surface meshes
-    - OFF (read and write; partial)
+    - PLY (read and write; ASCII and binary; partial)
     - OBJ (read and write; partial)
+    - OFF (read and write; partial)
     - STL (read and write; ASCII and binary)
   - point clouds
-    - XYZ (read and write)
-    - OFF (read and write; partial)
+    - PLY (read and write; ASCII and binary; partial)
     - OBJ (read and write; partial)
+    - OFF (read and write; partial)
+    - XYZ (read and write)
   - registration
     - 16 parameter Affine or rigid transformation text files
     - Thin Plate Spline transformation text files (read and write)

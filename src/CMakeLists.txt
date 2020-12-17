@@ -80,6 +80,9 @@ set_target_properties(  STL_File_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE
 add_library(            OBJ_File_Loader_obj OBJECT OBJ_File_Loader.cc )
 set_target_properties(  OBJ_File_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
+add_library(            PLY_File_Loader_obj OBJECT PLY_File_Loader.cc )
+set_target_properties(  PLY_File_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+
 add_library(            Line_Sample_File_Loader_obj OBJECT Line_Sample_File_Loader.cc )
 set_target_properties(  Line_Sample_File_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
@@ -270,6 +273,7 @@ add_executable (dicomautomaton_dispatcher
     $<TARGET_OBJECTS:OFF_File_Loader_obj>
     $<TARGET_OBJECTS:STL_File_Loader_obj>
     $<TARGET_OBJECTS:OBJ_File_Loader_obj>
+    $<TARGET_OBJECTS:PLY_File_Loader_obj>
     $<TARGET_OBJECTS:Line_Sample_File_Loader_obj>
     $<TARGET_OBJECTS:Write_File_obj>
     $<TARGET_OBJECTS:Operation_Dispatcher_obj>
@@ -343,6 +347,7 @@ if(WITH_WT)
         $<TARGET_OBJECTS:OFF_File_Loader_obj>
         $<TARGET_OBJECTS:STL_File_Loader_obj>
         $<TARGET_OBJECTS:OBJ_File_Loader_obj>
+        $<TARGET_OBJECTS:PLY_File_Loader_obj>
         $<TARGET_OBJECTS:Line_Sample_File_Loader_obj>
         $<TARGET_OBJECTS:Write_File_obj>
         $<TARGET_OBJECTS:Operation_Dispatcher_obj>

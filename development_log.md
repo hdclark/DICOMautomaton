@@ -3,6 +3,13 @@
 
 Below is a simplified timeline of `DICOMautomaton` development, broken down by month.
 
+## 202012
+
+- Support loading point clouds and surface meshes from both ASCII and binary PLY files.
+- Added support for vertex normals (surface meshes, point clouds).
+- Added basic support for vertex colours ((surface meshes, point clouds).
+- Partial migration from Travis CI to GitHub actions.
+
 ## 202011
 
 - Support loading point clouds from OBJ and OFF files.

@@ -78,7 +78,7 @@ bool Load_Points_From_OBJ_Files( Drover &DICOM_data,
             generic_metadata["SeriesInstanceUID"] = Generate_Random_UID(60);
             generic_metadata["FrameOfReferenceUID"] = Generate_Random_UID(60);
             generic_metadata["SOPInstanceUID"] = Generate_Random_UID(60);
-            generic_metadata["Modality"] = "SurfaceMesh";
+            generic_metadata["Modality"] = "PointCloud";
 
             generic_metadata["PointName"] = "unspecified"; 
             generic_metadata["NormalizedPointName"] = "unspecified"; 
