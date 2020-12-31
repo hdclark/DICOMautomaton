@@ -70,6 +70,10 @@ add_library(Operations_objs OBJECT
     ExportLineSamples.cc
     ExportPointClouds.cc
     ExportSurfaceMeshes.cc
+    ExportSurfaceMeshesOBJ.cc
+    ExportSurfaceMeshesPLY.cc
+    ExportSurfaceMeshesSTL.cc
+    ExportSurfaceMeshesOFF.cc
     ExportWarps.cc
     ExtractImageHistograms.cc
     ExtractAlphaBeta.cc
