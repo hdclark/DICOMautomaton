@@ -9,6 +9,7 @@ Below is a simplified timeline of `DICOMautomaton` development, broken down by m
 - Added support for vertex normals (surface meshes, point clouds).
 - Added basic support for vertex colours ((surface meshes, point clouds).
 - Partial migration from Travis CI to GitHub actions.
+- Added explicit support surface mesh export in (ASCII+binary) PLY, OBJ, OFF, and (ASCII+binary) STL formats.
 
 ## 202011
 

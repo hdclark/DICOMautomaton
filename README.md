@@ -226,7 +226,8 @@ testing for specific workflows.
 ## License and Copying
 
 All materials herein which may be copywrited, where applicable, are. Copyright
-2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020 Hal Clark.
+2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021 Hal
+Clark.
 
 See [LICENSE.txt](LICENSE.txt) for details about the license. Informally,
 `DICOMautomaton` is available under a GPLv3+ license. The Imebra library is

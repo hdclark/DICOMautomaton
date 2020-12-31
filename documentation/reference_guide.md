@@ -396,6 +396,10 @@ will work.
 - ExportLineSamples
 - ExportPointClouds
 - ExportSurfaceMeshes
+- ExportSurfaceMeshesOBJ
+- ExportSurfaceMeshesOFF
+- ExportSurfaceMeshesPLY
+- ExportSurfaceMeshesSTL
 - ExportWarps
 - ExtractAlphaBeta
 - ExtractImageHistograms
@@ -10021,7 +10025,105 @@ suffix are appended after the base filename.
 
 ### Description
 
-This operation writes a surface mesh to a file.
+This operation writes one or more surface meshs to file in the 'Stanford' Polygon File format.
+
+### Notes
+
+- Support for metadata in OBJ files is fully supported. Surface mesh metadata will be encoded in specially-marked
+  comments and base64 encoded if non-printable characters are present. Metadata will be recovered when PLY files are
+  loaded in DICOMautomaton. Note that other software may disregard these comments.
+
+### Parameters
+
+- MeshSelection
+- Filename
+- Variant
+
+#### MeshSelection
+
+##### Description
+
+Select one or more surface meshes. Note that a single surface mesh may hold many disconnected mesh components; they
+should collectively represent a single logically cohesive object. Be aware that it is possible to mix logically
+unrelated sub-meshes together in a single mesh. Selection specifiers can be of two types: positional or metadata-based
+key@value regex. Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some
+positive integer N selects the Nth surface mesh (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last
+surface mesh. Positional specifiers can be inverted by prefixing with a '!'. Metadata-based key@value expressions are
+applied by matching the keys verbatim and the values with regex. In order to invert metadata-based selectors, the regex
+logic must be inverted (i.e., you can *not* prefix metadata-based selectors with a '!'). Multiple criteria can be
+specified by separating them with a ';' and are applied in the order specified. Both positional and metadata-based
+criteria can be mixed together. Note regexes are case insensitive and should use extended POSIX syntax.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+
+#### Filename
+
+##### Description
+
+The filename (or full path name) to which the surface mesh data should be written. Existing files will not be
+overwritten. If an invalid or missing file extension is provided, one will automatically be added. If an empty filename
+is given, a unique name will be chosen automatically. If multiple meshes are selected, each will be written to a
+separate file; the name of each will be derived from the user-provided filename (or default) by appending a sequentially
+increasing counter between the file's stem name and extension. Files will be formatted in Stanford Polygon File ('PLY')
+format.
+
+##### Default
+
+- ```""```
+
+##### Examples
+
+- ```"surface_mesh.ply"```
+- ```"../somedir/mesh.ply"```
+- ```"/path/to/some/surface_mesh.ply"```
+
+#### Variant
+
+##### Description
+
+Controls whether files are written in the binary or ASCII PLY file format variants. Binary files will generally be
+smaller, and therefore faster to write, but may be less portable. ASCII format is better suited for archival purposes,
+and may be more widely supported. ASCII is generally recommended unless performance or storage will be problematic.
+
+##### Default
+
+- ```"ascii"```
+
+##### Supported Options
+
+- ```"ascii"```
+- ```"binary"```
+
+
+----------------------------------------------------
+
+## ExportSurfaceMeshesOBJ
+
+### Description
+
+This operation writes one or more surface meshes to file in Wavefront Object ('OBJ') format.
+
+### Notes
+
+- Support for metadata in OBJ files is currently limited. Metadata will generally be lost.
+
+- OBJ files can refer to MTL 'sidecar' files for information about materials and various properties. MTL files are not
+  supported at this time.
 
 ### Parameters
 
@@ -10064,8 +10166,12 @@ criteria can be mixed together. Note regexes are case insensitive and should use
 
 ##### Description
 
-The filename (or full path name) to which the surface mesh data should be written. The file format is an ASCII OFF
-model. If no name is given, unique names will be chosen automatically.
+The filename (or full path name) to which the surface mesh data should be written. Existing files will not be
+overwritten. If an invalid or missing file extension is provided, one will automatically be added. If an empty filename
+is given, a unique name will be chosen automatically. If multiple meshes are selected, each will be written to a
+separate file; the name of each will be derived from the user-provided filename (or default) by appending a sequentially
+increasing counter between the file's stem name and extension. Files will be formatted in ASCII Wavefront Object ('OBJ')
+format.
 
 ##### Default
 
@@ -10073,9 +10179,269 @@ model. If no name is given, unique names will be chosen automatically.
 
 ##### Examples
 
-- ```"smesh.off"```
+- ```"surface_mesh.obj"```
+- ```"../somedir/mesh.obj"```
+- ```"/path/to/some/surface_mesh.obj"```
+
+
+----------------------------------------------------
+
+## ExportSurfaceMeshesOFF
+
+### Description
+
+This operation writes one or more surface meshes to file in Object File Format ('OFF').
+
+### Notes
+
+- Support for metadata in OFF files is currently limited. Metadata will generally be lost.
+
+- OFF files can contain many different types of geometry, and some software may not support the specific subset used by
+  DICOMautomaton. For example, vertex normals may not be supported, and their presence can cause some OFF file loaders
+  to reject valid OFF files. For the best portability, consider more common formats like PLY or OBJ.
+
+### Parameters
+
+- MeshSelection
+- Filename
+
+#### MeshSelection
+
+##### Description
+
+Select one or more surface meshes. Note that a single surface mesh may hold many disconnected mesh components; they
+should collectively represent a single logically cohesive object. Be aware that it is possible to mix logically
+unrelated sub-meshes together in a single mesh. Selection specifiers can be of two types: positional or metadata-based
+key@value regex. Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some
+positive integer N selects the Nth surface mesh (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last
+surface mesh. Positional specifiers can be inverted by prefixing with a '!'. Metadata-based key@value expressions are
+applied by matching the keys verbatim and the values with regex. In order to invert metadata-based selectors, the regex
+logic must be inverted (i.e., you can *not* prefix metadata-based selectors with a '!'). Multiple criteria can be
+specified by separating them with a ';' and are applied in the order specified. Both positional and metadata-based
+criteria can be mixed together. Note regexes are case insensitive and should use extended POSIX syntax.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+
+#### Filename
+
+##### Description
+
+The filename (or full path name) to which the surface mesh data should be written. Existing files will not be
+overwritten. If an invalid or missing file extension is provided, one will automatically be added. If an empty filename
+is given, a unique name will be chosen automatically. If multiple meshes are selected, each will be written to a
+separate file; the name of each will be derived from the user-provided filename (or default) by appending a sequentially
+increasing counter between the file's stem name and extension. Files will be formatted in Object File Format ('OFF').
+
+##### Default
+
+- ```""```
+
+##### Examples
+
+- ```"surface_mesh.off"```
 - ```"../somedir/mesh.off"```
 - ```"/path/to/some/surface_mesh.off"```
+
+
+----------------------------------------------------
+
+## ExportSurfaceMeshesPLY
+
+### Description
+
+This operation writes one or more surface meshs to file in the 'Stanford' Polygon File format.
+
+### Notes
+
+- Support for metadata in OBJ files is fully supported. Surface mesh metadata will be encoded in specially-marked
+  comments and base64 encoded if non-printable characters are present. Metadata will be recovered when PLY files are
+  loaded in DICOMautomaton. Note that other software may disregard these comments.
+
+### Parameters
+
+- MeshSelection
+- Filename
+- Variant
+
+#### MeshSelection
+
+##### Description
+
+Select one or more surface meshes. Note that a single surface mesh may hold many disconnected mesh components; they
+should collectively represent a single logically cohesive object. Be aware that it is possible to mix logically
+unrelated sub-meshes together in a single mesh. Selection specifiers can be of two types: positional or metadata-based
+key@value regex. Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some
+positive integer N selects the Nth surface mesh (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last
+surface mesh. Positional specifiers can be inverted by prefixing with a '!'. Metadata-based key@value expressions are
+applied by matching the keys verbatim and the values with regex. In order to invert metadata-based selectors, the regex
+logic must be inverted (i.e., you can *not* prefix metadata-based selectors with a '!'). Multiple criteria can be
+specified by separating them with a ';' and are applied in the order specified. Both positional and metadata-based
+criteria can be mixed together. Note regexes are case insensitive and should use extended POSIX syntax.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+
+#### Filename
+
+##### Description
+
+The filename (or full path name) to which the surface mesh data should be written. Existing files will not be
+overwritten. If an invalid or missing file extension is provided, one will automatically be added. If an empty filename
+is given, a unique name will be chosen automatically. If multiple meshes are selected, each will be written to a
+separate file; the name of each will be derived from the user-provided filename (or default) by appending a sequentially
+increasing counter between the file's stem name and extension. Files will be formatted in Stanford Polygon File ('PLY')
+format.
+
+##### Default
+
+- ```""```
+
+##### Examples
+
+- ```"surface_mesh.ply"```
+- ```"../somedir/mesh.ply"```
+- ```"/path/to/some/surface_mesh.ply"```
+
+#### Variant
+
+##### Description
+
+Controls whether files are written in the binary or ASCII PLY file format variants. Binary files will generally be
+smaller, and therefore faster to write, but may be less portable. ASCII format is better suited for archival purposes,
+and may be more widely supported. ASCII is generally recommended unless performance or storage will be problematic.
+
+##### Default
+
+- ```"ascii"```
+
+##### Supported Options
+
+- ```"ascii"```
+- ```"binary"```
+
+
+----------------------------------------------------
+
+## ExportSurfaceMeshesSTL
+
+### Description
+
+This operation writes one or more surface meshes to file in the (3D Systems) Stereolithography format.
+
+### Notes
+
+- Support for metadata in STL files is currently limited. Metadata will generally be lost.
+
+- The STL format is generally meant to be sent to hardware with limited processing power or memory, and is pre-processed
+  so that individual faces can be easily streamed. This pre-processing destroys information about the mesh, for example
+  face adjacency. This information can be hard or impossible to fully recover. If you need to later process, or
+  re-process a surface mesh, avoid the STL file format if possible. Alternatives supported by DICOMautomaton include
+  PLY, OBJ, and OFF formats.
+
+### Parameters
+
+- MeshSelection
+- Filename
+- Variant
+
+#### MeshSelection
+
+##### Description
+
+Select one or more surface meshes. Note that a single surface mesh may hold many disconnected mesh components; they
+should collectively represent a single logically cohesive object. Be aware that it is possible to mix logically
+unrelated sub-meshes together in a single mesh. Selection specifiers can be of two types: positional or metadata-based
+key@value regex. Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some
+positive integer N selects the Nth surface mesh (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last
+surface mesh. Positional specifiers can be inverted by prefixing with a '!'. Metadata-based key@value expressions are
+applied by matching the keys verbatim and the values with regex. In order to invert metadata-based selectors, the regex
+logic must be inverted (i.e., you can *not* prefix metadata-based selectors with a '!'). Multiple criteria can be
+specified by separating them with a ';' and are applied in the order specified. Both positional and metadata-based
+criteria can be mixed together. Note regexes are case insensitive and should use extended POSIX syntax.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+
+#### Filename
+
+##### Description
+
+The filename (or full path name) to which the surface mesh data should be written. Existing files will not be
+overwritten. If an invalid or missing file extension is provided, one will automatically be added. If an empty filename
+is given, a unique name will be chosen automatically. If multiple meshes are selected, each will be written to a
+separate file; the name of each will be derived from the user-provided filename (or default) by appending a sequentially
+increasing counter between the file's stem name and extension. Files will be formatted in Stereolithography ('STL')
+format.
+
+##### Default
+
+- ```""```
+
+##### Examples
+
+- ```"surface_mesh.stl"```
+- ```"../somedir/mesh.stl"```
+- ```"/path/to/some/surface_mesh.stl"```
+
+#### Variant
+
+##### Description
+
+Controls whether files are written in the binary or ASCII STL file format variants. Binary files will generally be
+smaller, and therefore faster to write, but may be less portable. ASCII format is better suited for archival purposes,
+and may be more widely supported. ASCII is generally recommended unless performance or storage will be problematic.
+
+##### Default
+
+- ```"ascii"```
+
+##### Supported Options
+
+- ```"ascii"```
+- ```"binary"```
 
 
 ----------------------------------------------------
