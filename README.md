@@ -67,7 +67,7 @@ techniques:
     - Procrustes algorithm
     - Affine registration
     - Principal Component Analysis (PCA) rigid registration
-    - This Plate Spline (TPS) deformable registration
+    - Thin Plate Spline (TPS) deformable registration
       - when correspondence is known a priori, e.g., fiducial or feature matching
     - Thin Plate Spline Robust Point Matching (TPS-RPM) deformable registration
       - for when correspondence is unknown and must also be estimated
