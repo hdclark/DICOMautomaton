@@ -138,7 +138,7 @@ Drover ExportSurfaceMeshesSTL(Drover DICOM_data,
             FN = Get_Unique_Sequential_Filename(suffixless_fullpath + "_", n_of_digit_pads, required_file_extension);
         }
 
-        std::fstream FO(FN, std::fstream::out);
+        std::fstream FO(FN, std::fstream::out | std::ios::binary);
         if(as_binary){
             if(!WriteFVSMeshToBinarySTL( (*smp_it)->meshes, FO )){
                 throw std::runtime_error("Unable to write surface mesh in STL format. Cannot continue.");

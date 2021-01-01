@@ -133,7 +133,7 @@ Drover ExportSurfaceMeshesPLY(Drover DICOM_data,
             FN = Get_Unique_Sequential_Filename(suffixless_fullpath + "_", n_of_digit_pads, required_file_extension);
         }
 
-        std::fstream FO(FN, std::fstream::out);
+        std::fstream FO(FN, std::fstream::out | std::ios::binary );
         if(!WriteFVSMeshToPLY( (*smp_it)->meshes, FO, as_binary )){
             throw std::runtime_error("Unable to write surface mesh in PLY format. Cannot continue.");
         }
