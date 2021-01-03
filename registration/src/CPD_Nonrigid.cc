@@ -136,11 +136,25 @@ Eigen::MatrixXd GetW(const Eigen::MatrixXd & xPoints,
 
 Eigen::MatrixXd AlignedPointSet_NR(const Eigen::MatrixXd & yPoints,
             const Eigen::MatrixXd & gramMatrix,
-            const Eigen::MatrixXd & W){}
+            const Eigen::MatrixXd & W){
+
+    return yPoints + (gramMatrix * W);
+}
 
 double SigmaSquared(const Eigen::MatrixXd & xPoints,
             const Eigen::MatrixXd & postProb,
-            const Eigen::MatrixXd & transformedPoints){}
+            const Eigen::MatrixXd & transformedPoints){
+
+    int dim = xPoints.cols();
+    double Np = postProb.sum();
+
+    Eigen::MatrixXd oneVec = Eigen::MatrixXd::Ones(postProb.rows(),1);
+    double firstTerm = (double)(xPoints.transpose() * (postProb.transpose() * oneVec).asDiagonal() * xPoints).trace();
+    double secondTerm = (double)(2 * ((postProb * xPoints).transpose() * transformedPoints).trace());
+    double thirdTerm = (double)(transformedPoints.transpose() * (postProb * oneVec).asDiagonal() * transformedPoints).trace();
+
+    return (firstTerm - secondTerm + thirdTerm) / (Np * dim);
+}
 
 std::optional<NonRigidCPDTransform>
 AlignViaNonRigidCPD(CPDParams & params,
