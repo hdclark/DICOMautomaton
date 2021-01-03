@@ -448,7 +448,7 @@ TEST_CASE("CalculateUy") {
 	postProb << 1, 0, 1,
 				2, 1, 1,
 				1, 1, 1;
-	Eigen::MatrixXd answerUy(2, 2);
+	Eigen::MatrixXd answerUy(2, 1);
 	answerUy << (13./9),
 				(18./9);
 
@@ -495,5 +495,4 @@ TEST_CASE("AlignedPointSet NONRIGID") {
 			REQUIRE(AlignedPS(i,j) == doctest::Approx(answerAligned(i,j)).epsilon(threshold));
         }
     }
-
 }
