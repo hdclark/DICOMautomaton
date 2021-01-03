@@ -403,10 +403,10 @@ TEST_CASE("Update SS non-rigid") {
 				1, 1, 1, 1,
 				2, 2, 2, 2;
 	Eigen::MatrixXd transformedPoints(4, 3);
-	transformedPoints <<1, 1, 1,
-						2, 2, 2;
-						1, 2, 3,
-						3, 2, 1;
+	transformedPoints << 1, 1, 1,
+						 2, 2, 2;
+						 1, 2, 3,
+						 3, 2, 1;
 	double sigmaSquared = SigmaSquared(xPoints, postProb, transformedPoints);
 
 	double sigmaSquaredAnswer = 1412./108;
