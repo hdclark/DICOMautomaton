@@ -414,3 +414,86 @@ TEST_CASE("Update SS non-rigid") {
 
 	REQUIRE(sigmaSquared == doctest::Approx(sigmaSquaredAnswer).epsilon(threshold));
 }
+
+TEST_CASE("CalculateUx") {
+	Eigen::MatrixXd xPoints(3, 2);
+	xPoints <<  3, 4,
+				1, 1,
+				1, 2;
+	Eigen::MatrixXd postProb(3, 3);
+	postProb << 1, 0, 1,
+				2, 1, 1,
+				1, 1, 1;
+	Eigen::MatrixXd answerUx(2, 1);
+	answerUx << (17./9),
+				(24./9);
+
+	Eigen::MatrixXd Ux;
+	Ux = CalculateUx(xPoints, postProb);
+
+	double threshold = 0.01;
+	for (size_t i = 0; i < 2; ++i) {
+        for (size_t j = 0; j < 1; ++j) {
+			REQUIRE(Ux(i,j) == doctest::Approx(answerUx(i,j)).epsilon(threshold));
+        }
+    }
+}
+
+TEST_CASE("CalculateUy") {
+	Eigen::MatrixXd yPoints(3, 2);
+	yPoints <<  3, 4,
+				1, 1,
+				1, 2;
+	Eigen::MatrixXd postProb(3, 3);
+	postProb << 1, 0, 1,
+				2, 1, 1,
+				1, 1, 1;
+	Eigen::MatrixXd answerUy(2, 2);
+	answerUy << (13./9),
+				(18./9);
+
+	Eigen::MatrixXd Uy;
+	Uy = CalculateUy(yPoints, postProb);
+
+	double threshold = 0.01;
+	for (size_t i = 0; i < 2; ++i) {
+        for (size_t j = 0; j < 1; ++j) {
+			REQUIRE(Uy(i,j) == doctest::Approx(answerUy(i,j)).epsilon(threshold));
+        }
+    }
+}
+
+TEST_CASE("AlignedPointSet NONRIGID") {
+	Eigen::MatrixXd yPoints(4, 3);
+	yPoints  << 4, 5, 1,
+				2, 4, 1,
+				8, 8, 8,
+				1, 4, 2;
+	Eigen::MatrixXd gramMat(4, 4);
+	gramMat <<  0, 4, 3, 1,
+				3, 3, 4, 1,
+				0, 5, 3, 5,
+				5, 3, 2, 4;
+	Eigen::MatrixXd W(4, 3);
+	W << 	2, 2, 4,
+			4, 5, 4,
+			4, 3, 5,
+			3, 1, 5;
+
+	Eigen::MatrixXd answerAligned(4, 3);
+	answerAligned << 	35, 35, 37,
+						39, 38, 50,
+						55, 47, 68,
+						43, 39, 64;
+
+	Eigen::MatrixXd AlignedPS;
+	AlignedPS = AlignedPointSet_NR(yPoints, gramMat, W);
+
+	double threshold = 0.001;
+	for (size_t i = 0; i < 4; ++i) {
+        for (size_t j = 0; j < 3; ++j) {
+			REQUIRE(AlignedPS(i,j) == doctest::Approx(answerAligned(i,j)).epsilon(threshold));
+        }
+    }
+
+}
