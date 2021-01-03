@@ -389,3 +389,28 @@ TEST_CASE("Similarity NONRIGID") {
 	REQUIRE(similarity == doctest::Approx(similarityAns).epsilon(threshold));
 
 }
+
+
+TEST_CASE("Update SS non-rigid") {
+	Eigen::MatrixXd xPoints(4, 3);
+	xPoints  << 4, 5, 6,
+				7, 8, 9,
+				1, 1, 1,
+				2, 2, 2;
+	Eigen::MatrixXd postProb(4, 4);
+	postProb << 1, 2, 3, 4,
+				5, 4, 3, 2,
+				1, 1, 1, 1,
+				2, 2, 2, 2;
+	Eigen::MatrixXd transformedPoints(4, 3);
+	transformedPoints <<1, 1, 1,
+						2, 2, 2;
+						1, 2, 3,
+						3, 2, 1;
+	double sigmaSquared = SigmaSquared(xPoints, postProb, transformedPoints);
+
+	double sigmaSquaredAnswer = 1412./108;
+	double threshold = 0.001;
+
+	REQUIRE(sigmaSquared == doctest::Approx(sigmaSquaredAnswer).epsilon(threshold));
+}
