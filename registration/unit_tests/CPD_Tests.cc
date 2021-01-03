@@ -318,40 +318,40 @@ TEST_CASE("E Step NONRIGID") {
     }
 }
 
-TEST_CASE("Similarity rigid/affine") {
-	Eigen::MatrixXd xPoints(4, 3);
-	xPoints  << 4, 5, 6,
-				7, 8, 9,
-				1, 1, 1,
-				2, 2, 2;
-	Eigen::MatrixXd yPoints(4, 3);
-	yPoints  << 4, 5, 1,
-				2, 4, 1,
-				8, 8, 8,
-				1, 4, 2;
-	Eigen::MatrixXd postProb(4, 4);
-	postProb << 1, 4, 1, 6,
-				2, 1, 2, 1,
-				1, 0, 2, 3,
-				1, 8, 3, 2;
-	Eigen::MatrixXd rotationMat(3, 3);
-	rotationMat <<  1, 4, 1,
-					0, 2, 4,
-					1, 3, 3;
-	Eigen::MatrixXd translationVec(3, 1);
-	translationVec << 	1, 
-						2, 
-						3;
-	double sigmaSquared = 1.5;
-	double scale = 2;
+// TEST_CASE("Similarity rigid/affine") {
+// 	Eigen::MatrixXd xPoints(4, 3);
+// 	xPoints  << 4, 5, 6,
+// 				7, 8, 9,
+// 				1, 1, 1,
+// 				2, 2, 2;
+// 	Eigen::MatrixXd yPoints(4, 3);
+// 	yPoints  << 4, 5, 1,
+// 				2, 4, 1,
+// 				8, 8, 8,
+// 				1, 4, 2;
+// 	Eigen::MatrixXd postProb(4, 4);
+// 	postProb << 1, 4, 1, 6,
+// 				2, 1, 2, 1,
+// 				1, 0, 2, 3,
+// 				1, 8, 3, 2;
+// 	Eigen::MatrixXd rotationMat(3, 3);
+// 	rotationMat <<  1, 4, 1,
+// 					0, 2, 4,
+// 					1, 3, 3;
+// 	Eigen::MatrixXd translationVec(3, 1);
+// 	translationVec << 	1, 
+// 						2, 
+// 						3;
+// 	double sigmaSquared = 1.5;
+// 	double scale = 2;
 
-	double similarity = CalculateAlignment(xPoints, yPoints, postProb, rotationMat, translationVec, scale, sigmaSquared);
-	double similarityAns = 101601.445;
+// 	double similarity = CalculateAlignment(xPoints, yPoints, postProb, rotationMat, translationVec, scale, sigmaSquared);
+// 	double similarityAns = 101601.445;
 
-	double threshold = 0.001;
-	REQUIRE(similarity == doctest::Approx(similarityAns).epsilon(threshold));
+// 	double threshold = 0.001;
+// 	REQUIRE(similarity == doctest::Approx(similarityAns).epsilon(threshold));
 
-}
+// }
 
 TEST_CASE("Similarity NONRIGID") {
 	Eigen::MatrixXd xPoints(4, 3);
