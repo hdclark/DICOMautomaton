@@ -190,15 +190,10 @@ Drover GenerateTransform(Drover DICOM_data,
             const auto Tr = vec3<double>( numbers.at(0),
                                           numbers.at(1),
                                           numbers.at(2) );
-            if(!Tr.isfinite()) throw std::invalid_argument("Translation vector invalid. Cannot continue.");
 
-            affine_transform<double> l_affine;
-            l_affine.coeff(0,3) = Tr.x;
-            l_affine.coeff(1,3) = Tr.y;
-            l_affine.coeff(2,3) = Tr.z;
             final_affine = static_cast<affine_transform<double>>(
                                static_cast<num_array<double>>(final_affine)
-                             * static_cast<num_array<double>>(l_affine) );
+                             * static_cast<num_array<double>>(affine_translate(Tr)) );
 
         // Scaling.
         }else if(std::regex_match(trans_str, regex_scl)){
@@ -210,29 +205,10 @@ Drover GenerateTransform(Drover DICOM_data,
                                               numbers.at(1),
                                               numbers.at(2) );
             const auto factor = numbers.at(3);
-            if(!centre.isfinite()) throw std::invalid_argument("Scale centre invalid. Cannot continue.");
-            if(!std::isfinite(factor)) throw std::invalid_argument("Scale factor invalid. Cannot continue.");
-
-            affine_transform<double> shift;
-            shift.coeff(0,3) = centre.x * -1.0;
-            shift.coeff(1,3) = centre.y * -1.0;
-            shift.coeff(2,3) = centre.z * -1.0;
-
-            affine_transform<double> scale;
-            scale.coeff(0,0) = factor;
-            scale.coeff(1,1) = factor;
-            scale.coeff(2,2) = factor;
-
-            affine_transform<double> shift_back;
-            shift_back.coeff(0,3) = centre.x;
-            shift_back.coeff(1,3) = centre.y;
-            shift_back.coeff(2,3) = centre.z;
 
             final_affine = static_cast<affine_transform<double>>(
                                static_cast<num_array<double>>(final_affine)
-                             * static_cast<num_array<double>>(shift_back)
-                             * static_cast<num_array<double>>(scale)
-                             * static_cast<num_array<double>>(shift) );
+                             * static_cast<num_array<double>>(affine_scale(centre, factor)) );
 
         // Mirroring.
         }else if(std::regex_match(trans_str, regex_mir)){
@@ -246,38 +222,11 @@ Drover GenerateTransform(Drover DICOM_data,
             const auto normal = vec3<double>( numbers.at(3),
                                               numbers.at(4),
                                               numbers.at(5) ).unit();
-            if(!centre.isfinite()) throw std::invalid_argument("Mirror centre invalid. Cannot continue.");
-            if(!normal.isfinite()) throw std::invalid_argument("Mirror normal invalid. Cannot continue.");
-
-            affine_transform<double> shift;
-            shift.coeff(0,3) = centre.x * -1.0;
-            shift.coeff(1,3) = centre.y * -1.0;
-            shift.coeff(2,3) = centre.z * -1.0;
-
-            // This is the Householder transformation.
-            affine_transform<double> mirror;
-            mirror.coeff(0,0) = 1.0 - 2.0 * normal.x * normal.x;
-            mirror.coeff(1,0) = 0.0 - 2.0 * normal.x * normal.y;
-            mirror.coeff(2,0) = 0.0 - 2.0 * normal.x * normal.z;
-
-            mirror.coeff(0,1) = 0.0 - 2.0 * normal.y * normal.x;
-            mirror.coeff(1,1) = 1.0 - 2.0 * normal.y * normal.y;
-            mirror.coeff(2,1) = 0.0 - 2.0 * normal.y * normal.z;
-
-            mirror.coeff(0,2) = 0.0 - 2.0 * normal.z * normal.x;
-            mirror.coeff(1,2) = 0.0 - 2.0 * normal.z * normal.y;
-            mirror.coeff(2,2) = 1.0 - 2.0 * normal.z * normal.z;
-
-            affine_transform<double> shift_back;
-            shift_back.coeff(0,3) = centre.x;
-            shift_back.coeff(1,3) = centre.y;
-            shift_back.coeff(2,3) = centre.z;
+            plane<double> p(normal, centre);
 
             final_affine = static_cast<affine_transform<double>>(
                                static_cast<num_array<double>>(final_affine)
-                             * static_cast<num_array<double>>(shift_back)
-                             * static_cast<num_array<double>>(mirror)
-                             * static_cast<num_array<double>>(shift) );
+                             * static_cast<num_array<double>>(affine_mirror(p)) );
 
         // Rotations.
         }else if(std::regex_match(trans_str, regex_rot)){
@@ -292,40 +241,10 @@ Drover GenerateTransform(Drover DICOM_data,
                                             numbers.at(4),
                                             numbers.at(5) ).unit();
             const auto angle = numbers.at(6);
-            if(!centre.isfinite()) throw std::invalid_argument("Rotation centre invalid. Cannot continue.");
-            if(!axis.isfinite()) throw std::invalid_argument("Rotation axis invalid. Cannot continue.");
-            if(!std::isfinite(angle)) throw std::invalid_argument("Rotation angle invalid. Cannot continue.");
-
-            affine_transform<double> shift;
-            shift.coeff(0,3) = centre.x * -1.0;
-            shift.coeff(1,3) = centre.y * -1.0;
-            shift.coeff(2,3) = centre.z * -1.0;
-
-            // Rotation matrix for an arbitrary rotation around unit vector at origin.
-            const auto s = std::sin(angle);
-            const auto c = std::cos(angle);
-            affine_transform<double> rotate;
-            rotate.coeff(0,0) = ((1.0 - c) * axis.x * axis.x) + c;
-            rotate.coeff(1,0) = ((1.0 - c) * axis.y * axis.x) + (s * axis.z);
-            rotate.coeff(2,0) = ((1.0 - c) * axis.z * axis.x) - (s * axis.y);
-            rotate.coeff(0,1) = ((1.0 - c) * axis.x * axis.y) - (s * axis.z);
-            rotate.coeff(1,1) = ((1.0 - c) * axis.y * axis.y) + c;
-            rotate.coeff(2,1) = ((1.0 - c) * axis.z * axis.y) + (s * axis.x);
-            rotate.coeff(0,2) = ((1.0 - c) * axis.x * axis.z) + (s * axis.y);
-            rotate.coeff(1,2) = ((1.0 - c) * axis.y * axis.z) - (s * axis.x);
-            rotate.coeff(2,2) = ((1.0 - c) * axis.z * axis.z) + c;
-
-            affine_transform<double> shift_back;
-            shift_back.coeff(0,3) = centre.x;
-            shift_back.coeff(1,3) = centre.y;
-            shift_back.coeff(2,3) = centre.z;
 
             final_affine = static_cast<affine_transform<double>>(
                                static_cast<num_array<double>>(final_affine)
-                             * static_cast<num_array<double>>(shift_back)
-                             * static_cast<num_array<double>>(rotate)
-                             * static_cast<num_array<double>>(shift) );
-
+                             * static_cast<num_array<double>>(affine_rotate(centre, axis, angle)) );
         }else{
             throw std::invalid_argument("Transformation '"_s + trans_str + "' not understood. Cannot continue.");
         }
