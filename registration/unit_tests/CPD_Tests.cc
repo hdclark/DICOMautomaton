@@ -496,3 +496,47 @@ TEST_CASE("AlignedPointSet NONRIGID") {
         }
     }
 }
+// non rigid test
+TEST_CASE("GetW") {
+	Eigen::MatrixXd yPoints(4, 3);
+	yPoints <<   3, 32, 10,
+    		    10,  6,  2,
+    			10, 10, 43,
+     			 1,  2, 21;
+
+	Eigen::MatrixXd xPoints(4, 3);
+	xPoints <<   4,  5,  7,
+    			10, 23,  4,
+     			 6,  7, 20,
+    			34, 10,  2;
+
+	Eigen::MatrixXd postProb(4, 4);
+	postProb << 0.1, 0.4, 0.4, 0.7, 
+				0.5, 0.7, 0.8, 0.8, 
+				0.2, 0.2, 0.5, 0.2, 
+				0.9, 0.2, 0.7, 0.7;
+
+	Eigen::MatrixXd gramMatrix(4, 4);
+	gramMatrix <<   1, 0.5, 0.8, 0.2, 
+				0.5,   1, 0.1, 0.6, 
+				0.8, 0.1,   1, 0.3, 
+				0.2, 0.6, 0.3,   1;
+
+	double sigmaSquared = 2;
+	double lambda = 0.5;
+
+	Eigen::MatrixXd answerW(4, 3);
+	answerW << 13.4915220591003, -18.973075298976, 5.86045059959459, 
+				-5.87043357937814, 9.84038392458258, 7.94248048306686, 
+				-6.28462294910371, 7.2451892612769, -17.9879677078044,
+				10.8209590146699, 1.51201994761614, -8.9579914981555;
+
+	Eigen::MatrixXd W = GetW(xPoints, yPoints, gramMatrix, postProb, sigmaSquared, lambda);
+
+	double threshold = 0.01;
+	for (size_t i = 0; i < 4; ++i) {
+        for (size_t j = 0; j < 3; ++j) {
+			REQUIRE(W(i,j) == doctest::Approx(answerW(i,j)).epsilon(threshold));
+        }
+    }
+}
