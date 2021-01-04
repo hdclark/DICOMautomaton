@@ -36,7 +36,7 @@ OperationDoc OpArgDocWarpPoints(){
     out.name = "WarpPoints";
 
     out.desc = 
-        "This operation applies a vector-valued transformation (e.g., a deformation) to a point cloud.";
+        "This operation applies a spatial transformation (e.g., a deformation) to a point cloud.";
         
     out.notes.emplace_back(
         "Transformations are not (generally) restricted to the coordinate frame of reference that they were"
@@ -102,7 +102,7 @@ Drover WarpPoints(Drover DICOM_data,
                     t.apply_to((*pcp_it)->pset);
                     (*pcp_it)->pset.metadata["Description"] = "Warped via affine transform";
 
-                // Affine transformations.
+                // TPS transformations.
                 }else if constexpr (std::is_same_v<V, thin_plate_spline>){
                     FUNCINFO("Applying thin plate spline transformation now");
                     t.apply_to((*pcp_it)->pset);

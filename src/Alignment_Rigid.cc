@@ -52,9 +52,9 @@ AlignViaCentroid(const point_set<double> & moving,
     const auto centroid_m = moving.Centroid();
 
     const auto dcentroid = (centroid_s - centroid_m);
-    t.coeff(3,0) = dcentroid.x;
-    t.coeff(3,1) = dcentroid.y;
-    t.coeff(3,2) = dcentroid.z;
+    t.coeff(0,3) = dcentroid.x;
+    t.coeff(1,3) = dcentroid.y;
+    t.coeff(2,3) = dcentroid.z;
 
     // Test if the transformation is valid.
     vec3<double> v_test(1.0, 1.0, 1.0);
@@ -241,15 +241,15 @@ AlignViaPCA(const point_set<double> & moving,
         //     0.0, 0.0, 1.0;
 
         t.coeff(0,0) = A(0,0);
-        t.coeff(0,1) = A(1,0);
-        t.coeff(0,2) = A(2,0);
-
-        t.coeff(1,0) = A(0,1);
+        t.coeff(1,0) = A(1,0);
+        t.coeff(2,0) = A(2,0);
+                   
+        t.coeff(0,1) = A(0,1);
         t.coeff(1,1) = A(1,1);
-        t.coeff(1,2) = A(2,1);
-
-        t.coeff(2,0) = A(0,2);
-        t.coeff(2,1) = A(1,2);
+        t.coeff(2,1) = A(2,1);
+                   
+        t.coeff(0,2) = A(0,2);
+        t.coeff(1,2) = A(1,2);
         t.coeff(2,2) = A(2,2);
 
         // Work out the translation vector.
@@ -262,20 +262,20 @@ AlignViaPCA(const point_set<double> & moving,
             Eigen::Vector3d e_centroid_m(centroid_m.x, centroid_m.y, centroid_m.z);
             auto A_e_centroid_m = A * e_centroid_m; 
 
-            t.coeff(3,0) = centroid_s.x - A_e_centroid_m(0);
-            t.coeff(3,1) = centroid_s.y - A_e_centroid_m(1);
-            t.coeff(3,2) = centroid_s.z - A_e_centroid_m(2);
+            t.coeff(0,3) = centroid_s.x - A_e_centroid_m(0);
+            t.coeff(1,3) = centroid_s.y - A_e_centroid_m(1);
+            t.coeff(2,3) = centroid_s.z - A_e_centroid_m(2);
         }
     }
 
     //FUNCINFO("Final linear transform:");
-    //FUNCINFO("    ( " << t.coeff(0,0) << "  " << t.coeff(1,0) << "  " << t.coeff(2,0) << " )");
-    //FUNCINFO("    ( " << t.coeff(0,1) << "  " << t.coeff(1,1) << "  " << t.coeff(2,1) << " )");
-    //FUNCINFO("    ( " << t.coeff(0,2) << "  " << t.coeff(1,2) << "  " << t.coeff(2,2) << " )");
+    //FUNCINFO("    ( " << t.coeff(0,0) << "  " << t.coeff(0,1) << "  " << t.coeff(0,2) << " )");
+    //FUNCINFO("    ( " << t.coeff(1,0) << "  " << t.coeff(1,1) << "  " << t.coeff(1,2) << " )");
+    //FUNCINFO("    ( " << t.coeff(2,0) << "  " << t.coeff(2,1) << "  " << t.coeff(2,2) << " )");
     //FUNCINFO("Final translation:");
-    //FUNCINFO("    ( " << t.coeff(3,0) << " )");
-    //FUNCINFO("    ( " << t.coeff(3,1) << " )");
-    //FUNCINFO("    ( " << t.coeff(3,2) << " )");
+    //FUNCINFO("    ( " << t.coeff(0,3) << " )");
+    //FUNCINFO("    ( " << t.coeff(1,3) << " )");
+    //FUNCINFO("    ( " << t.coeff(2,3) << " )");
     //FUNCINFO("Final Affine transformation:");
     //t.write_to(std::cout);
 
@@ -427,15 +427,15 @@ AlignViaExhaustiveICP( const point_set<double> & moving,
 
         // Rotation and scaling components.
         t.coeff(0,0) = A(0,0);
-        t.coeff(0,1) = A(1,0);
-        t.coeff(0,2) = A(2,0);
-
-        t.coeff(1,0) = A(0,1);
+        t.coeff(1,0) = A(1,0);
+        t.coeff(2,0) = A(2,0);
+                   
+        t.coeff(0,1) = A(0,1);
         t.coeff(1,1) = A(1,1);
-        t.coeff(1,2) = A(2,1);
-
-        t.coeff(2,0) = A(0,2);
-        t.coeff(2,1) = A(1,2);
+        t.coeff(2,1) = A(2,1);
+                   
+        t.coeff(0,2) = A(0,2);
+        t.coeff(1,2) = A(1,2);
         t.coeff(2,2) = A(2,2);
 
         // The complete transformation we have found for bringing the moving points $P_{M}$ into alignment with the
@@ -454,9 +454,9 @@ AlignViaExhaustiveICP( const point_set<double> & moving,
             Eigen::Vector3d e_centroid(centroid_m.x, centroid_m.y, centroid_m.z);
             auto A_e_centroid = A * e_centroid; 
 
-            t.coeff(3,0) = centroid_s.x - A_e_centroid(0);
-            t.coeff(3,1) = centroid_s.y - A_e_centroid(1);
-            t.coeff(3,2) = centroid_s.z - A_e_centroid(2);
+            t.coeff(0,3) = centroid_s.x - A_e_centroid(0);
+            t.coeff(1,3) = centroid_s.y - A_e_centroid(1);
+            t.coeff(2,3) = centroid_s.z - A_e_centroid(2);
         }
 
         // Evaluate whether the current transformation is sufficient. If so, terminate the loop.

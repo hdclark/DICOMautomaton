@@ -83,6 +83,7 @@ add_library(Operations_objs OBJECT
     GenerateCalibrationCurve.cc
     GenerateSurfaceMask.cc
     GenerateSyntheticImages.cc
+    GenerateTransform.cc
     GenerateVirtualDataContourViaThresholdTestV1.cc
     GenerateVirtualDataDoseStairsV1.cc
     GenerateVirtualDataImageSphereV1.cc
