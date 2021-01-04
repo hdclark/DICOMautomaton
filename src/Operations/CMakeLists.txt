@@ -83,11 +83,11 @@ add_library(Operations_objs OBJECT
     GenerateCalibrationCurve.cc
     GenerateSurfaceMask.cc
     GenerateSyntheticImages.cc
-    GenerateTransform.cc
     GenerateVirtualDataContourViaThresholdTestV1.cc
     GenerateVirtualDataDoseStairsV1.cc
     GenerateVirtualDataImageSphereV1.cc
     GenerateVirtualDataPerfusionV1.cc
+    GenerateWarp.cc
     GiveWholeImageArrayABoneWindowLevel.cc
     GiveWholeImageArrayAHeadAndNeckWindowLevel.cc
     GiveWholeImageArrayAThoraxWindowLevel.cc
@@ -135,9 +135,6 @@ add_library(Operations_objs OBJECT
     SupersampleImageGrid.cc
     ThresholdImages.cc
     ThresholdOtsu.cc
-    TransformContours.cc
-    TransformMeshes.cc
-    TransformImages.cc
     TrimROIDose.cc
     UBC3TMRI_DCE.cc
     UBC3TMRI_DCE_Differences.cc
@@ -146,6 +143,9 @@ add_library(Operations_objs OBJECT
     VolumetricCorrelationDetector.cc
     VolumetricSpatialBlur.cc
     VolumetricSpatialDerivative.cc
+    WarpContours.cc
+    WarpMeshes.cc
+    WarpImages.cc
     WarpPoints.cc
 
     $<$<BOOL:${WITH_SFML}>:PresentationImage.cc>

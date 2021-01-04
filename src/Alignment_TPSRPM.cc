@@ -127,6 +127,12 @@ thin_plate_spline::apply_to(point_set<double> &ps) const {
     return;
 }
 
+void
+thin_plate_spline::apply_to(vec3<double> &v) const {
+    v = this->transform(v);
+    return;
+}
+
 bool
 thin_plate_spline::write_to( std::ostream &os ) const {
     // Maximize precision prior to emitting any floating-point numbers.

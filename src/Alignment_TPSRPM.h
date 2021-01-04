@@ -27,7 +27,8 @@ class thin_plate_spline {
         double eval_kernel(const double &dist) const;
 
         vec3<double> transform(const vec3<double> &v) const;
-        void apply_to(point_set<double> &ps) const;
+        void apply_to(point_set<double> &ps) const; // Included for parity with affine_transform class.
+        void apply_to(vec3<double> &v) const;       // Included for parity with affine_transform class.
 
         // Serialize and deserialize to a human- and machine-readable format.
         bool write_to( std::ostream &os ) const;

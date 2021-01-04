@@ -13,15 +13,11 @@ printf 'Test 1\n' |
   -v \
   -o GenerateVirtualDataDoseStairsV1 \
   -o GenerateVirtualDataDoseStairsV1 \
-  -o TransformImages \
+  -o GenerateWarp \
+     -p Transforms='translate(0.0, 0.0, 0.0) ; rotate(109.5, 109.5, 100.0,  0.0, 0.0, 1.0,  0.0) ; scale(109.5, 109.5, 100.0,  1.0)' \
+  -o WarpImages \
      -p ImageSelection=last \
-     -p Transform='translate(0.0, 0.0, 0.0)' \
-  -o TransformImages \
-     -p ImageSelection=last \
-     -p Transform='rotate(109.5, 109.5, 100.0,  0.0, 0.0, 1.0,  0.0)' \
-  -o TransformImages \
-     -p ImageSelection=last \
-     -p Transform='scale(109.5, 109.5, 100.0,  1.0)' \
+     -p TransformSelection=last \
   -o MeldDose \
   -o DroverDebug |
   tee -a fullstdout |
@@ -40,21 +36,11 @@ printf 'Test 2\n' |
   -v \
   -o GenerateVirtualDataDoseStairsV1 \
   -o GenerateVirtualDataDoseStairsV1 \
-  -o TransformImages \
+  -o GenerateWarp \
+     -p Transforms='translate( 10.0, 0.0, 0.0 ); translate( 5.0, 10.0, 0.0 ); translate( 0.0, 5.0, 10.0 ); translate( 0.0, 0.0, 5.0 ); translate( -15.0, -15.0, -15.0 )' \
+  -o WarpImages \
      -p ImageSelection=last \
-     -p Transform='translate( 10.0, 0.0, 0.0 )' \
-  -o TransformImages \
-     -p ImageSelection=last \
-     -p Transform='translate( 5.0, 10.0, 0.0 )' \
-  -o TransformImages \
-     -p ImageSelection=last \
-     -p Transform='translate( 0.0, 5.0, 10.0 )' \
-  -o TransformImages \
-     -p ImageSelection=last \
-     -p Transform='translate( 0.0, 0.0, 5.0 )' \
-  -o TransformImages \
-     -p ImageSelection=last \
-     -p Transform='translate( -15.0, -15.0, -15.0 )' \
+     -p TransformSelection=last \
   -o MeldDose \
   -o DroverDebug |
   tee -a fullstdout |
@@ -74,9 +60,11 @@ printf 'Test 3\n' |
   -v \
   -o GenerateVirtualDataDoseStairsV1 \
   -o GenerateVirtualDataDoseStairsV1 \
-  -o TransformImages \
+  -o GenerateWarp \
+     -p Transforms='rotate(109.5, 109.5, 100.0,  0.0, 0.0, 1.0,  3.14159265)' \
+  -o WarpImages \
      -p ImageSelection=last \
-     -p Transform='rotate(109.5, 109.5, 100.0,  0.0, 0.0, 1.0,  3.14159265)' \
+     -p TransformSelection=last \
   -o MeldDose \
   -o DroverDebug |
   tee -a fullstdout |
@@ -96,9 +84,11 @@ printf 'Test 4\n' |
   -v \
   -o GenerateVirtualDataDoseStairsV1 \
   -o GenerateVirtualDataDoseStairsV1 \
-  -o TransformImages \
+  -o GenerateWarp \
+     -p Transforms='rotate(109.5, 109.5, 100.0,  0.0, 0.0, 1.0,  6.2831853)' \
+  -o WarpImages \
      -p ImageSelection=last \
-     -p Transform='rotate(109.5, 109.5, 100.0,  0.0, 0.0, 1.0,  6.2831853)' \
+     -p TransformSelection=last \
   -o MeldDose \
   -o DroverDebug |
   tee -a fullstdout |
@@ -113,12 +103,11 @@ printf 'Test 5\n' |
   -v \
   -o GenerateVirtualDataDoseStairsV1 \
   -o GenerateVirtualDataDoseStairsV1 \
-  -o TransformImages \
+  -o GenerateWarp \
+     -p Transforms='rotate(109.5, 109.5, 100.0,  0.0, 0.0, 1.0,  3.14159265); rotate(109.5, 109.5, 100.0,  0.0, 0.0, -1.0,  -3.14159265)' \
+  -o WarpImages \
      -p ImageSelection=last \
-     -p Transform='rotate(109.5, 109.5, 100.0,  0.0, 0.0, 1.0,  3.14159265)' \
-  -o TransformImages \
-     -p ImageSelection=last \
-     -p Transform='rotate(109.5, 109.5, 100.0,  0.0, 0.0, -1.0,  -3.14159265)' \
+     -p TransformSelection=last \
   -o MeldDose \
   -o DroverDebug |
   tee -a fullstdout |
@@ -138,12 +127,11 @@ printf 'Test 6\n' |
   -v \
   -o GenerateVirtualDataDoseStairsV1 \
   -o GenerateVirtualDataDoseStairsV1 \
-  -o TransformImages \
+  -o GenerateWarp \
+     -p Transforms='scale(0.0, 0.0, 0.0, 2.0) ; scale(0.0, 0.0, 0.0, 0.5)' \
+  -o WarpImages \
      -p ImageSelection=last \
-     -p Transform='scale(0.0, 0.0, 0.0, 2.0)' \
-  -o TransformImages \
-     -p ImageSelection=last \
-     -p Transform='scale(0.0, 0.0, 0.0, 0.5)' \
+     -p TransformSelection=last \
   -o MeldDose \
   -o DroverDebug |
   tee -a fullstdout |

@@ -47,9 +47,11 @@ printf 'Test 3\n' |
   -v \
   -o GenerateVirtualDataDoseStairsV1 \
   -o GenerateVirtualDataDoseStairsV1 \
-  -o TransformImages \
+  -o GenerateWarp \
+     -p Transforms='translate(0.001, 0.001, 0.001)' \
+  -o WarpImages \
      -p ImageSelection=last \
-     -p Transform='translate(0.001, 0.001, 0.001)' \
+     -p TransformSelection=last \
   -o MeldDose \
   -o DroverDebug |
   tee -a fullstdout |

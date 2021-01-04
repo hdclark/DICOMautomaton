@@ -1,4 +1,4 @@
-// TransformMeshes.h.
+// WarpImages.h.
 
 #pragma once
 
@@ -8,9 +8,9 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocTransformMeshes();
+OperationDoc OpArgDocWarpImages();
 
-Drover TransformMeshes(Drover DICOM_data,
+Drover WarpImages(Drover DICOM_data,
                        const OperationArgPkg& /*OptArgs*/,
                        const std::map<std::string, std::string>& /*InvocationMetadata*/,
                        const std::string& /*FilenameLex*/);

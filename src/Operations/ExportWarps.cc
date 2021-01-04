@@ -38,13 +38,13 @@ OperationDoc OpArgDocExportWarps(){
     out.name = "ExportWarps";
 
     out.desc = 
-        "This operation exports a vector-valued transformation (e.g., a deformation) to a file.";
+        "This operation exports a transform object (e.g., affine matrix, vector deformation field) to file.";
         
     out.args.emplace_back();
     out.args.back() = T3WhitelistOpArgDoc();
     out.args.back().name = "TransformSelection";
     out.args.back().default_val = "last";
-    out.args.back().desc = "The transformation that will be applied. "_s
+    out.args.back().desc = "The transformation that will be exported. "_s
                          + out.args.back().desc;
 
 

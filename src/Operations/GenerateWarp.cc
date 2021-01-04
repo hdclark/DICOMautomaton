@@ -1,4 +1,4 @@
-//GenerateTransform.cc - A part of DICOMautomaton 2021. Written by hal clark.
+//GenerateWarp.cc - A part of DICOMautomaton 2021. Written by hal clark.
 
 #include <asio.hpp>
 #include <algorithm>
@@ -27,12 +27,12 @@
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
 #include "../Thread_Pool.h"
-#include "GenerateTransform.h"
+#include "GenerateWarp.h"
 
 
-OperationDoc OpArgDocGenerateTransform(){
+OperationDoc OpArgDocGenerateWarp(){
     OperationDoc out;
-    out.name = "GenerateTransform";
+    out.name = "GenerateWarp";
 
     out.desc = 
         "This operation can be used to create a transformation object. The transformation object can later"
@@ -42,28 +42,29 @@ OperationDoc OpArgDocGenerateTransform(){
     out.args.back().name = "Transforms";
     out.args.back().desc = "This parameter is used to specify one or more transformations."
                            " Current primitives include translation, scaling, mirroring, and rotation."
-                           " Translations have three configurable scalar parameters denoting the translation along"
+                           " • Translations have three configurable scalar parameters denoting the translation along"
                            " x, y, and z in the DICOM coordinate system."
                            " Translating $x=1.0$, $y=-2.0$, and $z=0.3$ can be specified as"
                            " 'translate(1.0, -2.0, 0.3)'."
-                           " The scale transformation has four configurable scalar parameters denoting the scale"
-                           " centre 3-vector and the magnification factor. Note that the magnification factor can"
+                           " • The scale (actually 'homothetic') transformation has four configurable scalar"
+                           " parameters denoting the scale centre 3-vector and the magnification factor."
+                           " Note that the magnification factor can"
                            " be negative, which will cause the mesh to be inverted along x, y, and z axes and"
                            " magnified. Take note that face orientations will also become inverted."
                            " Magnifying by 2.7x about $(1.23, -2.34, 3.45)$ can be specified as"
                            " 'scale(1.23, -2.34, 3.45, 2.7)'."
-                           " The mirror transformation has six configurable scalar parameters denoting an oriented"
+                           " A standard scale transformation can be achieved by taking the centre to be the origin."
+                           " • The mirror transformation has six configurable scalar parameters denoting an oriented"
                            " plane about which a mirror is performed."
                            " Mirroring in the plane that intersects $(1,2,3)$ and has a normal toward $(1,0,0)$"
-                           " can be specified as"
-                           " 'mirror(1,2,3, 1,0,0)'."
-                           " Rotations around an arbitrary axis line can be accomplished."
+                           " can be specified as 'mirror(1,2,3, 1,0,0)'."
+                           " • Rotations around an arbitrary axis line can be accomplished."
                            " The rotation transformation has seven configurable scalar parameters denoting"
                            " the rotation centre 3-vector, the rotation axis 3-vector, and the rotation angle"
                            " in radians. A rotation of pi radians around the axis line parallel to vector"
                            " $(1.0, 0.0, 0.0)$ that intersects the point $(4.0, 5.0, 6.0)$ can be specified"
                            " as 'rotate(4.0, 5.0, 6.0,  1.0, 0.0, 0.0,  3.141592653)'."
-                           " A transformation can be composed of one or more primitive transformations"
+                           " • A transformation can be composed of one or more primitive transformations"
                            " applied sequentially."
                            " Primitives can be separated by a ';' and are evaluated from left to right.";
     out.args.back().default_val = "translate(0.0, 0.0, 0.0)";
@@ -73,7 +74,6 @@ OperationDoc OpArgDocGenerateTransform(){
                                  "mirror(0,0,0, 1,0,0)",
                                  "rotate(4.0, 5.0, 6.0,  1.0, 0.0, 0.0,  3.141592653)",
                                  "translate(1,0,0) ; scale(0,0,0, 5) ; translate(-1,0,0)" };
-
 
     out.args.emplace_back();
     out.args.back().name = "TransformLabel";
@@ -95,12 +95,10 @@ OperationDoc OpArgDocGenerateTransform(){
     return out;
 }
 
-
-
-Drover GenerateTransform(Drover DICOM_data,
-                         const OperationArgPkg& OptArgs,
-                         const std::map<std::string, std::string>& /*InvocationMetadata*/,
-                         const std::string& /*FilenameLex*/){
+Drover GenerateWarp(Drover DICOM_data,
+                    const OperationArgPkg& OptArgs,
+                    const std::map<std::string, std::string>& /*InvocationMetadata*/,
+                    const std::string& /*FilenameLex*/){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto TransformsStr = OptArgs.getValueStr("Transforms").value();

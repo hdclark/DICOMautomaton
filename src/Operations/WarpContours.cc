@@ -1,4 +1,4 @@
-//WarpPoints.cc - A part of DICOMautomaton 2021. Written by hal clark.
+//WarpContours.cc - A part of DICOMautomaton 2021. Written by hal clark.
 
 #include <asio.hpp>
 #include <algorithm>
@@ -15,35 +15,34 @@
 #include <string>    
 #include <utility>            //Needed for std::pair.
 #include <vector>
-#include <variant>
 
 #include "Explicator.h"       //Needed for Explicator class.
+
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorStats.h"        //Needed for Stats:: namespace.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
+#include "YgorMathIOOFF.h"
 
 #include "../Structs.h"
-#include "../Alignment_TPSRPM.h"
 #include "../Regex_Selectors.h"
 #include "../Thread_Pool.h"
+#include "WarpContours.h"
 
-#include "WarpPoints.h"
-
-OperationDoc OpArgDocWarpPoints(){
+OperationDoc OpArgDocWarpContours(){
     OperationDoc out;
-    out.name = "WarpPoints";
+    out.name = "WarpContours";
 
     out.desc = 
-        "This operation applies a transform object to the specified point clouds, warping them spatially.";
+        "This operation applies a transform object to the specified contours, warping them spatially.";
         
     out.notes.emplace_back(
         "A transform object must be selected; this operation cannot create transforms."
         " Transforms can be generated via registration or by parsing user-provided functions."
     );
     out.notes.emplace_back(
-        "Point clouds are transformed in-place. Metadata may become invalid by this operation."
+        "Contours are transformed in-place. Metadata may become invalid by this operation."
     );
     out.notes.emplace_back(
         "This operation can only handle individual transforms. If multiple, sequential transforms"
@@ -57,52 +56,59 @@ OperationDoc OpArgDocWarpPoints(){
     );
 
     out.args.emplace_back();
-    out.args.back() = PCWhitelistOpArgDoc();
-    out.args.back().name = "PointSelection";
-    out.args.back().default_val = "last";
-    out.args.back().desc = "The point cloud that will be transformed. "_s
-                         + out.args.back().desc;
+    out.args.back() = RCWhitelistOpArgDoc();
+    out.args.back().name = "ROILabelRegex";
+    out.args.back().default_val = ".*";
+
+    out.args.emplace_back();
+    out.args.back() = NCWhitelistOpArgDoc();
+    out.args.back().name = "NormalizedROILabelRegex";
+    out.args.back().default_val = ".*";
 
     out.args.emplace_back();
     out.args.back() = T3WhitelistOpArgDoc();
     out.args.back().name = "TransformSelection";
     out.args.back().default_val = "last";
-    out.args.back().desc = "The transformation that will be applied. "_s
-                         + out.args.back().desc;
-
+ 
     return out;
 }
 
-
-
-Drover WarpPoints(Drover DICOM_data,
-                  const OperationArgPkg& OptArgs,
-                  const std::map<std::string, std::string>&
-                  /*InvocationMetadata*/,
-                  const std::string& /*FilenameLex*/){
+Drover WarpContours(Drover DICOM_data,
+                    const OperationArgPkg& OptArgs,
+                    const std::map<std::string, std::string>& /*InvocationMetadata*/,
+                    const std::string& /*FilenameLex*/){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
-    const auto PointSelectionStr = OptArgs.getValueStr("PointSelection").value();
+    const auto ROILabelRegex = OptArgs.getValueStr("ROILabelRegex").value();
+    const auto NormalizedROILabelRegex = OptArgs.getValueStr("NormalizedROILabelRegex").value();
+
     const auto TFormSelectionStr = OptArgs.getValueStr("TransformSelection").value();
 
     //-----------------------------------------------------------------------------------------------------------------
 
-    auto PCs_all = All_PCs( DICOM_data );
-    auto PCs = Whitelist( PCs_all, PointSelectionStr );
-    FUNCINFO("Selected " << PCs.size() << " point clouds");
+    //Stuff references to all contours into a list. Remember that you can still address specific contours through
+    // the original holding containers (which are not modified here).
+    auto cc_all = All_CCs( DICOM_data );
+    auto cc_ROIs = Whitelist( cc_all, { { "ROIName", ROILabelRegex },
+                                        { "NormalizedROIName", NormalizedROILabelRegex } } );
+    if(cc_ROIs.empty()){
+        throw std::invalid_argument("No contours selected. Cannot continue.");
+    }
+    FUNCINFO("Selected " << cc_ROIs.size() << " contours");
+
 
     auto T3s_all = All_T3s( DICOM_data );
     auto T3s = Whitelist( T3s_all, TFormSelectionStr );
     FUNCINFO("Selected " << T3s.size() << " transformation objects");
     if(T3s.size() != 1){
-        throw std::invalid_argument("Only a single transformation must be selected to guarantee ordering. Cannot continue.");
+        // I can't think of a better way to handle the ordering of multiple transforms right now. Disallowing for now...
+        throw std::invalid_argument("Selection of only a single transformation is currently supported. Refusing to continue.");
     }
 
-    for(auto & pcp_it : PCs){
-        FUNCINFO("Processing a point cloud with " << (*pcp_it)->pset.points.size() << " points");
+
+    for(auto & cc_refw : cc_ROIs){
         for(auto & t3p_it : T3s){
 
-            // Apply transformation.
             std::visit([&](auto && t){
                 using V = std::decay_t<decltype(t)>;
                 if constexpr (std::is_same_v<V, std::monostate>){
@@ -111,14 +117,20 @@ Drover WarpPoints(Drover DICOM_data,
                 // Affine transformations.
                 }else if constexpr (std::is_same_v<V, affine_transform<double>>){
                     FUNCINFO("Applying affine transformation now");
-                    t.apply_to((*pcp_it)->pset);
-                    (*pcp_it)->pset.metadata["Description"] = "Warped via affine transform";
+                    for(auto &c : cc_refw.get().contours){
+                        for(auto &v : c.points){
+                            t.apply_to(v);
+                        }
+                    }
 
-                // TPS transformations.
+                // Thin-plate spline transformations.
                 }else if constexpr (std::is_same_v<V, thin_plate_spline>){
-                    FUNCINFO("Applying thin plate spline transformation now");
-                    t.apply_to((*pcp_it)->pset);
-                    (*pcp_it)->pset.metadata["Description"] = "Warped via thin-plate spline transform";
+                    FUNCINFO("Applying thin-plate spline transformation now");
+                    for(auto &c : cc_refw.get().contours){
+                        for(auto &v : c.points){
+                            t.apply_to(v);
+                        }
+                    }
 
                 }else{
                     static_assert(std::is_same_v<V,void>, "Transformation not understood.");
@@ -127,6 +139,6 @@ Drover WarpPoints(Drover DICOM_data,
             }, (*t3p_it)->transform);
         }
     }
- 
+
     return DICOM_data;
 }

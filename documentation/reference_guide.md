@@ -414,6 +414,7 @@ will work.
 - GenerateVirtualDataDoseStairsV1
 - GenerateVirtualDataImageSphereV1
 - GenerateVirtualDataPerfusionV1
+- GenerateWarp
 - GiveWholeImageArrayABoneWindowLevel
 - GiveWholeImageArrayAHeadAndNeckWindowLevel
 - GiveWholeImageArrayAThoraxWindowLevel
@@ -471,9 +472,6 @@ will work.
 - SurfaceBasedRayCastDoseAccumulate
 - ThresholdImages
 - ThresholdOtsu
-- TransformContours
-- TransformImages
-- TransformMeshes
 - TrimROIDose
 - UBC3TMRI_DCE
 - UBC3TMRI_DCE_Differences
@@ -483,6 +481,9 @@ will work.
 - VolumetricSpatialBlur
 - VolumetricSpatialDerivative
 - VoxelRANSAC
+- WarpContours
+- WarpImages
+- WarpMeshes
 - WarpPoints
 
 # Operations Reference
@@ -10450,7 +10451,7 @@ and may be more widely supported. ASCII is generally recommended unless performa
 
 ### Description
 
-This operation exports a vector-valued transformation (e.g., a deformation) to a file.
+This operation exports a transform object (e.g., affine matrix, vector deformation field) to file.
 
 ### Parameters
 
@@ -10461,15 +10462,15 @@ This operation exports a vector-valued transformation (e.g., a deformation) to a
 
 ##### Description
 
-The transformation that will be applied. Select one or more transforms. Selection specifiers can be of two types:
-positional or metadata-based key@value regex. Positional specifiers can be 'first', 'last', 'none', or 'all' literals.
-Additionally '#N' for some positive integer N selects the Nth transformation (with zero-based indexing). Likewise, '#-N'
-selects the Nth-from-last transformation. Positional specifiers can be inverted by prefixing with a '!'. Metadata-based
-key@value expressions are applied by matching the keys verbatim and the values with regex. In order to invert
-metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors with a
-'!'). Multiple criteria can be specified by separating them with a ';' and are applied in the order specified. Both
-positional and metadata-based criteria can be mixed together. Note regexes are case insensitive and should use extended
-POSIX syntax.
+The transformation that will be exported. Select one or more transform objects (aka 'warp' objects). Selection
+specifiers can be of two types: positional or metadata-based key@value regex. Positional specifiers can be 'first',
+'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N selects the Nth transformation (with
+zero-based indexing). Likewise, '#-N' selects the Nth-from-last transformation. Positional specifiers can be inverted by
+prefixing with a '!'. Metadata-based key@value expressions are applied by matching the keys verbatim and the values with
+regex. In order to invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix
+metadata-based selectors with a '!'). Multiple criteria can be specified by separating them with a ';' and are applied
+in the order specified. Both positional and metadata-based criteria can be mixed together. Note regexes are case
+insensitive and should use extended POSIX syntax.
 
 ##### Default
 
@@ -13344,6 +13345,88 @@ admits a simple solution.
 ### Parameters
 
 No registered options.
+
+----------------------------------------------------
+
+## GenerateWarp
+
+### Description
+
+This operation can be used to create a transformation object. The transformation object can later be applied to objects
+with spatial extent.
+
+### Parameters
+
+- Transforms
+- TransformLabel
+- Metadata
+
+#### Transforms
+
+##### Description
+
+This parameter is used to specify one or more transformations. Current primitives include translation, scaling,
+mirroring, and rotation. • Translations have three configurable scalar parameters denoting the translation along x, y,
+and z in the DICOM coordinate system. Translating $x=1.0$, $y=-2.0$, and $z=0.3$ can be specified as 'translate(1.0,
+-2.0, 0.3)'. • The scale (actually 'homothetic') transformation has four configurable scalar parameters denoting the
+scale centre 3-vector and the magnification factor. Note that the magnification factor can be negative, which will cause
+the mesh to be inverted along x, y, and z axes and magnified. Take note that face orientations will also become
+inverted. Magnifying by 2.7x about $(1.23, -2.34, 3.45)$ can be specified as 'scale(1.23, -2.34, 3.45, 2.7)'. A standard
+scale transformation can be achieved by taking the centre to be the origin. • The mirror transformation has six
+configurable scalar parameters denoting an oriented plane about which a mirror is performed. Mirroring in the plane that
+intersects $(1,2,3)$ and has a normal toward $(1,0,0)$ can be specified as 'mirror(1,2,3, 1,0,0)'. • Rotations around
+an arbitrary axis line can be accomplished. The rotation transformation has seven configurable scalar parameters
+denoting the rotation centre 3-vector, the rotation axis 3-vector, and the rotation angle in radians. A rotation of pi
+radians around the axis line parallel to vector $(1.0, 0.0, 0.0)$ that intersects the point $(4.0, 5.0, 6.0)$ can be
+specified as 'rotate(4.0, 5.0, 6.0, 1.0, 0.0, 0.0, 3.141592653)'. • A transformation can be composed of one or more
+primitive transformations applied sequentially. Primitives can be separated by a ';' and are evaluated from left to
+right.
+
+##### Default
+
+- ```"translate(0.0, 0.0, 0.0)"```
+
+##### Examples
+
+- ```"translate(1.0, -2.0, 0.3)"```
+- ```"scale(1.23, -2.34, 3.45, 2.7)"```
+- ```"mirror(0,0,0, 1,0,0)"```
+- ```"rotate(4.0, 5.0, 6.0,  1.0, 0.0, 0.0,  3.141592653)"```
+- ```"translate(1,0,0) ; scale(0,0,0, 5) ; translate(-1,0,0)"```
+
+#### TransformLabel
+
+##### Description
+
+A label to attach to the transformation.
+
+##### Default
+
+- ```"unspecified"```
+
+##### Examples
+
+- ```"unspecified"```
+- ```"offset"```
+- ```"expansion"```
+- ```"rotation_around_xyz"```
+- ```"move_to_origin"```
+
+#### Metadata
+
+##### Description
+
+A semicolon-separated list of 'key@value' metadata to imbue into the transform. This metadata will overwrite any
+existing keys with the provided values.
+
+##### Default
+
+- ```""```
+
+##### Examples
+
+- ```"keyA@valueA;keyB@valueB"```
+
 
 ----------------------------------------------------
 
@@ -20012,257 +20095,6 @@ the image plane. The first, 'planar_corner_inclusive', considers a voxel interio
 
 ----------------------------------------------------
 
-## TransformContours
-
-### Description
-
-This operation transforms contours by translating, scaling, and rotating vertices.
-
-### Notes
-
-- A single transformation can be specified at a time. Perform this operation sequentially to enforce order.
-
-### Parameters
-
-- ROILabelRegex
-- NormalizedROILabelRegex
-- Transform
-
-#### ROILabelRegex
-
-##### Description
-
-A regular expression (regex) matching *raw* ROI contour labels/names to consider. Selection is performed on a whole-ROI
-basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If your ROI
-name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want to select
-must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is extended
-POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match 'raw' contour
-labels.
-
-##### Default
-
-- ```".*"```
-
-##### Examples
-
-- ```".*"```
-- ```".*body.*"```
-- ```"body"```
-- ```"^body$"```
-- ```"Liver"```
-- ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
-- ```"left_parotid|right_parotid"```
-
-#### NormalizedROILabelRegex
-
-##### Description
-
-A regular expression (regex) matching *normalized* ROI contour labels/names to consider. Selection is performed on a
-whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If
-your ROI name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want
-to select must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is
-extended POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match contour
-labels that have been *normalized* (i.e., mapped, translated) using the user-provided provided lexicon. This is useful
-for handling data with heterogeneous naming conventions where fuzzy matching is required. Refer to the lexicon for
-available labels.
-
-##### Default
-
-- ```".*"```
-
-##### Examples
-
-- ```".*"```
-- ```".*Body.*"```
-- ```"Body"```
-- ```"liver"```
-- ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
-- ```"Left Parotid|Right Parotid"```
-
-#### Transform
-
-##### Description
-
-This parameter is used to specify the transformation that should be performed. A single transformation can be specified
-for each invocation of this operation. Currently translation, scaling, and rotation are available. Translations have
-three configurable scalar parameters denoting the translation along x, y, and z in the DICOM coordinate system.
-Translating $x=1.0$, $y=-2.0$, and $z=0.3$ can be specified as 'translate(1.0, -2.0, 0.3)'. The scale transformation has
-four configurable scalar parameters denoting the scale centre 3-vector and the magnification factor. Note that the
-magnification factor can be negative, which will cause the mesh to be inverted along x, y, and z axes and magnified.
-Take note that face orientations will also become inverted. Magnifying by 2.7x about $(1.23, -2.34, 3.45)$ can be
-specified as 'scale(1.23, -2.34, 3.45, 2.7)'. Rotations around an arbitrary axis line can be accomplished. The rotation
-transformation has seven configurable scalar parameters denoting the rotation centre 3-vector, the rotation axis
-3-vector, and the rotation angle in radians. A rotation of pi radians around the axis line parallel to vector $(1.0,
-0.0, 0.0)$ that intersects the point $(4.0, 5.0, 6.0)$ can be specified as 'rotate(4.0, 5.0, 6.0, 1.0, 0.0, 0.0,
-3.141592653)'.
-
-##### Default
-
-- ```"translate(0.0, 0.0, 0.0)"```
-
-##### Examples
-
-- ```"translate(1.0, -2.0, 0.3)"```
-- ```"scale(1.23, -2.34, 3.45, 2.7)"```
-- ```"rotate(4.0, 5.0, 6.0,  1.0, 0.0, 0.0,  3.141592653)"```
-
-
-----------------------------------------------------
-
-## TransformImages
-
-### Description
-
-This operation transforms images by translating, scaling, and rotating the positions of voxels.
-
-### Notes
-
-- A single transformation can be specified at a time. Perform this operation sequentially to enforce order.
-
-### Parameters
-
-- ImageSelection
-- Transform
-
-#### ImageSelection
-
-##### Description
-
-Select one or more image arrays. Note that image arrays can hold anything, but will typically represent a single
-contiguous 3D volume (i.e., a volumetric CT scan) or '4D' time-series. Be aware that it is possible to mix logically
-unrelated images together. Selection specifiers can be of two types: positional or metadata-based key@value regex.
-Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
-selects the Nth image array (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last image array.
-Positional specifiers can be inverted by prefixing with a '!'. Metadata-based key@value expressions are applied by
-matching the keys verbatim and the values with regex. In order to invert metadata-based selectors, the regex logic must
-be inverted (i.e., you can *not* prefix metadata-based selectors with a '!'). Multiple criteria can be specified by
-separating them with a ';' and are applied in the order specified. Both positional and metadata-based criteria can be
-mixed together. Note regexes are case insensitive and should use extended POSIX syntax.
-
-##### Default
-
-- ```"last"```
-
-##### Examples
-
-- ```"last"```
-- ```"first"```
-- ```"all"```
-- ```"none"```
-- ```"#0"```
-- ```"#-0"```
-- ```"!last"```
-- ```"!#-3"```
-- ```"key@.*value.*"```
-- ```"key1@.*value1.*;key2@^value2$;first"```
-
-#### Transform
-
-##### Description
-
-This parameter is used to specify the transformation that should be performed. A single transformation can be specified
-for each invocation of this operation. Currently translation, scaling, and rotation are available. Translations have
-three configurable scalar parameters denoting the translation along x, y, and z in the DICOM coordinate system.
-Translating $x=1.0$, $y=-2.0$, and $z=0.3$ can be specified as 'translate(1.0, -2.0, 0.3)'. The scale transformation has
-four configurable scalar parameters denoting the scale centre 3-vector and the magnification factor. Note that the
-magnification factor can be negative, which will cause the mesh to be inverted along x, y, and z axes and magnified.
-Take note that face orientations will also become inverted. Magnifying by 2.7x about $(1.23, -2.34, 3.45)$ can be
-specified as 'scale(1.23, -2.34, 3.45, 2.7)'. Rotations around an arbitrary axis line can be accomplished. The rotation
-transformation has seven configurable scalar parameters denoting the rotation centre 3-vector, the rotation axis
-3-vector, and the rotation angle in radians. A rotation of pi radians around the axis line parallel to vector $(1.0,
-0.0, 0.0)$ that intersects the point $(4.0, 5.0, 6.0)$ can be specified as 'rotate(4.0, 5.0, 6.0, 1.0, 0.0, 0.0,
-3.141592653)'.
-
-##### Default
-
-- ```"translate(0.0, 0.0, 0.0)"```
-
-##### Examples
-
-- ```"translate(1.0, -2.0, 0.3)"```
-- ```"scale(1.23, -2.34, 3.45, 2.7)"```
-- ```"rotate(4.0, 5.0, 6.0,  1.0, 0.0, 0.0,  3.141592653)"```
-
-
-----------------------------------------------------
-
-## TransformMeshes
-
-### Description
-
-This operation transforms meshes by translating, scaling, and rotating vertices.
-
-### Notes
-
-- A single transformation can be specified at a time. Perform this operation sequentially to enforce order.
-
-### Parameters
-
-- MeshSelection
-- Transform
-
-#### MeshSelection
-
-##### Description
-
-Select one or more surface meshes. Note that a single surface mesh may hold many disconnected mesh components; they
-should collectively represent a single logically cohesive object. Be aware that it is possible to mix logically
-unrelated sub-meshes together in a single mesh. Selection specifiers can be of two types: positional or metadata-based
-key@value regex. Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some
-positive integer N selects the Nth surface mesh (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last
-surface mesh. Positional specifiers can be inverted by prefixing with a '!'. Metadata-based key@value expressions are
-applied by matching the keys verbatim and the values with regex. In order to invert metadata-based selectors, the regex
-logic must be inverted (i.e., you can *not* prefix metadata-based selectors with a '!'). Multiple criteria can be
-specified by separating them with a ';' and are applied in the order specified. Both positional and metadata-based
-criteria can be mixed together. Note regexes are case insensitive and should use extended POSIX syntax.
-
-##### Default
-
-- ```"last"```
-
-##### Examples
-
-- ```"last"```
-- ```"first"```
-- ```"all"```
-- ```"none"```
-- ```"#0"```
-- ```"#-0"```
-- ```"!last"```
-- ```"!#-3"```
-- ```"key@.*value.*"```
-- ```"key1@.*value1.*;key2@^value2$;first"```
-
-#### Transform
-
-##### Description
-
-This parameter is used to specify the transformation that should be performed. A single transformation can be specified
-for each invocation of this operation. Currently translation, scaling, and rotation are available. Translations have
-three configurable scalar parameters denoting the translation along x, y, and z in the DICOM coordinate system.
-Translating $x=1.0$, $y=-2.0$, and $z=0.3$ can be specified as 'translate(1.0, -2.0, 0.3)'. The scale transformation has
-four configurable scalar parameters denoting the scale centre 3-vector and the magnification factor. Note that the
-magnification factor can be negative, which will cause the mesh to be inverted along x, y, and z axes and magnified.
-Take note that face orientations will also become inverted. Magnifying by 2.7x about $(1.23, -2.34, 3.45)$ can be
-specified as 'scale(1.23, -2.34, 3.45, 2.7)'. Rotations around an arbitrary axis line can be accomplished. The rotation
-transformation has seven configurable scalar parameters denoting the rotation centre 3-vector, the rotation axis
-3-vector, and the rotation angle in radians. A rotation of pi radians around the axis line parallel to vector $(1.0,
-0.0, 0.0)$ that intersects the point $(4.0, 5.0, 6.0)$ can be specified as 'rotate(4.0, 5.0, 6.0, 1.0, 0.0, 0.0,
-3.141592653)'.
-
-##### Default
-
-- ```"translate(0.0, 0.0, 0.0)"```
-
-##### Examples
-
-- ```"translate(1.0, -2.0, 0.3)"```
-- ```"scale(1.23, -2.34, 3.45, 2.7)"```
-- ```"rotate(4.0, 5.0, 6.0,  1.0, 0.0, 0.0,  3.141592653)"```
-
-
-----------------------------------------------------
-
 ## TrimROIDose
 
 ### Description
@@ -21299,13 +21131,311 @@ The known separation of the grid (in DICOM units; mm) being sought.
 
 ----------------------------------------------------
 
+## WarpContours
+
+### Description
+
+This operation applies a transform object to the specified contours, warping them spatially.
+
+### Notes
+
+- A transform object must be selected; this operation cannot create transforms. Transforms can be generated via
+  registration or by parsing user-provided functions.
+
+- Contours are transformed in-place. Metadata may become invalid by this operation.
+
+- This operation can only handle individual transforms. If multiple, sequential transforms are required, this operation
+  must be invoked multiple time. This will guarantee the ordering of the transforms.
+
+- Transformations are not (generally) restricted to the coordinate frame of reference that they were derived from. This
+  permits a single transformation to be applicable to point clouds, surface meshes, images, and contours.
+
+### Parameters
+
+- ROILabelRegex
+- NormalizedROILabelRegex
+- TransformSelection
+
+#### ROILabelRegex
+
+##### Description
+
+A regular expression (regex) matching *raw* ROI contour labels/names to consider. Selection is performed on a whole-ROI
+basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If your ROI
+name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want to select
+must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is extended
+POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match 'raw' contour
+labels.
+
+##### Default
+
+- ```".*"```
+
+##### Examples
+
+- ```".*"```
+- ```".*body.*"```
+- ```"body"```
+- ```"^body$"```
+- ```"Liver"```
+- ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
+- ```"left_parotid|right_parotid"```
+
+#### NormalizedROILabelRegex
+
+##### Description
+
+A regular expression (regex) matching *normalized* ROI contour labels/names to consider. Selection is performed on a
+whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are trimmed to a single space. If
+your ROI name has more than two sequential spaces, use regular expressions or escaping to avoid them. All ROIs you want
+to select must match the provided (single) regex, so use boolean or ('|') if needed. The regular expression engine is
+extended POSIX and is case insensitive. '.*' will match all available ROIs. Note that this parameter will match contour
+labels that have been *normalized* (i.e., mapped, translated) using the user-provided provided lexicon. This is useful
+for handling data with heterogeneous naming conventions where fuzzy matching is required. Refer to the lexicon for
+available labels.
+
+##### Default
+
+- ```".*"```
+
+##### Examples
+
+- ```".*"```
+- ```".*Body.*"```
+- ```"Body"```
+- ```"liver"```
+- ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
+- ```"Left Parotid|Right Parotid"```
+
+#### TransformSelection
+
+##### Description
+
+Select one or more transform objects (aka 'warp' objects). Selection specifiers can be of two types: positional or
+metadata-based key@value regex. Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally
+'#N' for some positive integer N selects the Nth transformation (with zero-based indexing). Likewise, '#-N' selects the
+Nth-from-last transformation. Positional specifiers can be inverted by prefixing with a '!'. Metadata-based key@value
+expressions are applied by matching the keys verbatim and the values with regex. In order to invert metadata-based
+selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors with a '!'). Multiple
+criteria can be specified by separating them with a ';' and are applied in the order specified. Both positional and
+metadata-based criteria can be mixed together. Note regexes are case insensitive and should use extended POSIX syntax.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+
+
+----------------------------------------------------
+
+## WarpImages
+
+### Description
+
+This operation applies a transform object to the specified image arrays, warping them spatially.
+
+### Notes
+
+- A transform object must be selected; this operation cannot create transforms. Transforms can be generated via
+  registration or by parsing user-provided functions.
+
+- Images are transformed in-place. Metadata may become invalid by this operation.
+
+- This operation can only handle individual transforms. If multiple, sequential transforms are required, this operation
+  must be invoked multiple time. This will guarantee the ordering of the transforms.
+
+- This operation currently supports only affine transformations. Local transformations require special handling and
+  voxel resampling that is not yet implemented.
+
+- Transformations are not (generally) restricted to the coordinate frame of reference that they were derived from. This
+  permits a single transformation to be applicable to point clouds, surface meshes, images, and contours.
+
+### Parameters
+
+- ImageSelection
+- TransformSelection
+
+#### ImageSelection
+
+##### Description
+
+Select one or more image arrays. Note that image arrays can hold anything, but will typically represent a single
+contiguous 3D volume (i.e., a volumetric CT scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of two types: positional or metadata-based key@value regex.
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth image array (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last image array.
+Positional specifiers can be inverted by prefixing with a '!'. Metadata-based key@value expressions are applied by
+matching the keys verbatim and the values with regex. In order to invert metadata-based selectors, the regex logic must
+be inverted (i.e., you can *not* prefix metadata-based selectors with a '!'). Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified. Both positional and metadata-based criteria can be
+mixed together. Note regexes are case insensitive and should use extended POSIX syntax.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+
+#### TransformSelection
+
+##### Description
+
+Select one or more transform objects (aka 'warp' objects). Selection specifiers can be of two types: positional or
+metadata-based key@value regex. Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally
+'#N' for some positive integer N selects the Nth transformation (with zero-based indexing). Likewise, '#-N' selects the
+Nth-from-last transformation. Positional specifiers can be inverted by prefixing with a '!'. Metadata-based key@value
+expressions are applied by matching the keys verbatim and the values with regex. In order to invert metadata-based
+selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors with a '!'). Multiple
+criteria can be specified by separating them with a ';' and are applied in the order specified. Both positional and
+metadata-based criteria can be mixed together. Note regexes are case insensitive and should use extended POSIX syntax.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+
+
+----------------------------------------------------
+
+## WarpMeshes
+
+### Description
+
+This operation applies a transform object to the specified surface meshes, warping them spatially.
+
+### Notes
+
+- A transform object must be selected; this operation cannot create transforms. Transforms can be generated via
+  registration or by parsing user-provided functions.
+
+- Meshes are transformed in-place. Metadata may become invalid by this operation.
+
+- This operation can only handle individual transforms. If multiple, sequential transforms are required, this operation
+  must be invoked multiple time. This will guarantee the ordering of the transforms.
+
+- Transformations are not (generally) restricted to the coordinate frame of reference that they were derived from. This
+  permits a single transformation to be applicable to point clouds, surface meshes, images, and contours.
+
+### Parameters
+
+- MeshSelection
+- TransformSelection
+
+#### MeshSelection
+
+##### Description
+
+Select one or more surface meshes. Note that a single surface mesh may hold many disconnected mesh components; they
+should collectively represent a single logically cohesive object. Be aware that it is possible to mix logically
+unrelated sub-meshes together in a single mesh. Selection specifiers can be of two types: positional or metadata-based
+key@value regex. Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some
+positive integer N selects the Nth surface mesh (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last
+surface mesh. Positional specifiers can be inverted by prefixing with a '!'. Metadata-based key@value expressions are
+applied by matching the keys verbatim and the values with regex. In order to invert metadata-based selectors, the regex
+logic must be inverted (i.e., you can *not* prefix metadata-based selectors with a '!'). Multiple criteria can be
+specified by separating them with a ';' and are applied in the order specified. Both positional and metadata-based
+criteria can be mixed together. Note regexes are case insensitive and should use extended POSIX syntax.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+
+#### TransformSelection
+
+##### Description
+
+Select one or more transform objects (aka 'warp' objects). Selection specifiers can be of two types: positional or
+metadata-based key@value regex. Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally
+'#N' for some positive integer N selects the Nth transformation (with zero-based indexing). Likewise, '#-N' selects the
+Nth-from-last transformation. Positional specifiers can be inverted by prefixing with a '!'. Metadata-based key@value
+expressions are applied by matching the keys verbatim and the values with regex. In order to invert metadata-based
+selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors with a '!'). Multiple
+criteria can be specified by separating them with a ';' and are applied in the order specified. Both positional and
+metadata-based criteria can be mixed together. Note regexes are case insensitive and should use extended POSIX syntax.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+
+
+----------------------------------------------------
+
 ## WarpPoints
 
 ### Description
 
-This operation applies a vector-valued transformation (e.g., a deformation) to a point cloud.
+This operation applies a transform object to the specified point clouds, warping them spatially.
 
 ### Notes
+
+- A transform object must be selected; this operation cannot create transforms. Transforms can be generated via
+  registration or by parsing user-provided functions.
+
+- Point clouds are transformed in-place. Metadata may become invalid by this operation.
+
+- This operation can only handle individual transforms. If multiple, sequential transforms are required, this operation
+  must be invoked multiple time. This will guarantee the ordering of the transforms.
 
 - Transformations are not (generally) restricted to the coordinate frame of reference that they were derived from. This
   permits a single transformation to be applicable to point clouds, surface meshes, images, and contours.
@@ -21352,15 +21482,15 @@ extended POSIX syntax.
 
 ##### Description
 
-The transformation that will be applied. Select one or more transforms. Selection specifiers can be of two types:
-positional or metadata-based key@value regex. Positional specifiers can be 'first', 'last', 'none', or 'all' literals.
-Additionally '#N' for some positive integer N selects the Nth transformation (with zero-based indexing). Likewise, '#-N'
-selects the Nth-from-last transformation. Positional specifiers can be inverted by prefixing with a '!'. Metadata-based
-key@value expressions are applied by matching the keys verbatim and the values with regex. In order to invert
-metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors with a
-'!'). Multiple criteria can be specified by separating them with a ';' and are applied in the order specified. Both
-positional and metadata-based criteria can be mixed together. Note regexes are case insensitive and should use extended
-POSIX syntax.
+The transformation that will be applied. Select one or more transform objects (aka 'warp' objects). Selection specifiers
+can be of two types: positional or metadata-based key@value regex. Positional specifiers can be 'first', 'last', 'none',
+or 'all' literals. Additionally '#N' for some positive integer N selects the Nth transformation (with zero-based
+indexing). Likewise, '#-N' selects the Nth-from-last transformation. Positional specifiers can be inverted by prefixing
+with a '!'. Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In
+order to invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based
+selectors with a '!'). Multiple criteria can be specified by separating them with a ';' and are applied in the order
+specified. Both positional and metadata-based criteria can be mixed together. Note regexes are case insensitive and
+should use extended POSIX syntax.
 
 ##### Default
 

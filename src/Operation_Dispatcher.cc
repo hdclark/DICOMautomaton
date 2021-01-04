@@ -101,11 +101,12 @@
 #include "Operations/GenerateCalibrationCurve.h"
 #include "Operations/GenerateSurfaceMask.h"
 #include "Operations/GenerateSyntheticImages.h"
-#include "Operations/GenerateTransform.h"
+#include "Operations/GenerateWarp.h"
 #include "Operations/GenerateVirtualDataContourViaThresholdTestV1.h"
 #include "Operations/GenerateVirtualDataDoseStairsV1.h"
 #include "Operations/GenerateVirtualDataImageSphereV1.h"
 #include "Operations/GenerateVirtualDataPerfusionV1.h"
+#include "Operations/GenerateWarp.h"
 #include "Operations/GiveWholeImageArrayABoneWindowLevel.h"
 #include "Operations/GiveWholeImageArrayAHeadAndNeckWindowLevel.h"
 #include "Operations/GiveWholeImageArrayAThoraxWindowLevel.h"
@@ -153,9 +154,6 @@
 #include "Operations/SupersampleImageGrid.h"
 #include "Operations/ThresholdImages.h"
 #include "Operations/ThresholdOtsu.h"
-#include "Operations/TransformContours.h"
-#include "Operations/TransformMeshes.h"
-#include "Operations/TransformImages.h"
 #include "Operations/TrimROIDose.h"
 #include "Operations/UBC3TMRI_DCE.h"
 #include "Operations/UBC3TMRI_DCE_Differences.h"
@@ -164,6 +162,9 @@
 #include "Operations/VolumetricCorrelationDetector.h"
 #include "Operations/VolumetricSpatialBlur.h"
 #include "Operations/VolumetricSpatialDerivative.h"
+#include "Operations/WarpContours.h"
+#include "Operations/WarpMeshes.h"
+#include "Operations/WarpImages.h"
 #include "Operations/WarpPoints.h"
 
 #ifdef DCMA_USE_SDL
@@ -294,11 +295,11 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["GenerateCalibrationCurve"] = std::make_pair(OpArgDocGenerateCalibrationCurve, GenerateCalibrationCurve);
     out["GenerateSurfaceMask"] = std::make_pair(OpArgDocGenerateSurfaceMask, GenerateSurfaceMask);
     out["GenerateSyntheticImages"] = std::make_pair(OpArgDocGenerateSyntheticImages, GenerateSyntheticImages);
-    out["GenerateTransform"] = std::make_pair(OpArgDocGenerateTransform, GenerateTransform);
     out["GenerateVirtualDataContourViaThresholdTestV1"] = std::make_pair(OpArgDocGenerateVirtualDataContourViaThresholdTestV1, GenerateVirtualDataContourViaThresholdTestV1);
     out["GenerateVirtualDataDoseStairsV1"] = std::make_pair(OpArgDocGenerateVirtualDataDoseStairsV1, GenerateVirtualDataDoseStairsV1);
     out["GenerateVirtualDataImageSphereV1"] = std::make_pair(OpArgDocGenerateVirtualDataImageSphereV1, GenerateVirtualDataImageSphereV1);
     out["GenerateVirtualDataPerfusionV1"] = std::make_pair(OpArgDocGenerateVirtualDataPerfusionV1, GenerateVirtualDataPerfusionV1);
+    out["GenerateWarp"] = std::make_pair(OpArgDocGenerateWarp, GenerateWarp);
     out["GiveWholeImageArrayABoneWindowLevel"] = std::make_pair(OpArgDocGiveWholeImageArrayABoneWindowLevel, GiveWholeImageArrayABoneWindowLevel);
     out["GiveWholeImageArrayAHeadAndNeckWindowLevel"] = std::make_pair(OpArgDocGiveWholeImageArrayAHeadAndNeckWindowLevel, GiveWholeImageArrayAHeadAndNeckWindowLevel);
     out["GiveWholeImageArrayAThoraxWindowLevel"] = std::make_pair(OpArgDocGiveWholeImageArrayAThoraxWindowLevel, GiveWholeImageArrayAThoraxWindowLevel);
@@ -346,9 +347,6 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["SupersampleImageGrid"] = std::make_pair(OpArgDocSupersampleImageGrid, SupersampleImageGrid);
     out["ThresholdImages"] = std::make_pair(OpArgDocThresholdImages, ThresholdImages);
     out["ThresholdOtsu"] = std::make_pair(OpArgDocThresholdOtsu, ThresholdOtsu);
-    out["TransformContours"] = std::make_pair(OpArgDocTransformContours, TransformContours);
-    out["TransformMeshes"] = std::make_pair(OpArgDocTransformMeshes, TransformMeshes);
-    out["TransformImages"] = std::make_pair(OpArgDocTransformImages, TransformImages);
     out["TrimROIDose"] = std::make_pair(OpArgDocTrimROIDose, TrimROIDose);
     out["UBC3TMRI_DCE"] = std::make_pair(OpArgDocUBC3TMRI_DCE, UBC3TMRI_DCE);
     out["UBC3TMRI_DCE_Differences"] = std::make_pair(OpArgDocUBC3TMRI_DCE_Differences, UBC3TMRI_DCE_Differences);
@@ -357,6 +355,9 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["VolumetricCorrelationDetector"] = std::make_pair(OpArgDocVolumetricCorrelationDetector, VolumetricCorrelationDetector);
     out["VolumetricSpatialBlur"] = std::make_pair(OpArgDocVolumetricSpatialBlur, VolumetricSpatialBlur);
     out["VolumetricSpatialDerivative"] = std::make_pair(OpArgDocVolumetricSpatialDerivative, VolumetricSpatialDerivative);
+    out["WarpContours"] = std::make_pair(OpArgDocWarpContours, WarpContours);
+    out["WarpMeshes"] = std::make_pair(OpArgDocWarpMeshes, WarpMeshes);
+    out["WarpImages"] = std::make_pair(OpArgDocWarpImages, WarpImages);
     out["WarpPoints"] = std::make_pair(OpArgDocWarpPoints, WarpPoints);
 
 #ifdef DCMA_USE_SDL

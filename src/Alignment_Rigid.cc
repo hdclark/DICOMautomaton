@@ -45,16 +45,13 @@
 std::optional<affine_transform<double>>
 AlignViaCentroid(const point_set<double> & moving,
                  const point_set<double> & stationary ){
-    affine_transform<double> t;
 
     // Compute the centroid for both point clouds.
     const auto centroid_s = stationary.Centroid();
     const auto centroid_m = moving.Centroid();
 
     const auto dcentroid = (centroid_s - centroid_m);
-    t.coeff(0,3) = dcentroid.x;
-    t.coeff(1,3) = dcentroid.y;
-    t.coeff(2,3) = dcentroid.z;
+    affine_transform<double> t = affine_translate<double>(dcentroid);
 
     // Test if the transformation is valid.
     vec3<double> v_test(1.0, 1.0, 1.0);
