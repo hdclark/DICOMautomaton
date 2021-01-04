@@ -132,7 +132,15 @@ Eigen::MatrixXd GetW(const Eigen::MatrixXd & xPoints,
             const Eigen::MatrixXd & gramMatrix,
             const Eigen::MatrixXd & postProb,
             double sigmaSquared,
-            double lambda){}
+            double lambda){
+    
+    Eigen::MatrixXd oneVec = Eigen::MatrixXd::Ones(postProb.rows(),1);
+    Eigen::MatrixXd postProbInvDiag = ((postProb * oneVec).asDiagonal()).inverse(); // d(P1)^-1
+    Eigen::MatrixXd A = gramMatrix + lambda * sigmaSquared * postProbInvDiag;
+    Eigen::MatrixXd b = postProbInvDiag * postProb * xPoints - yPoints;
+
+    return A.llt().solve(b); // assumes A is positive definite, uses llt decomposition
+}
 
 Eigen::MatrixXd AlignedPointSet_NR(const Eigen::MatrixXd & yPoints,
             const Eigen::MatrixXd & gramMatrix,
