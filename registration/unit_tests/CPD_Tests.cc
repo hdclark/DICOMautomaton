@@ -318,74 +318,225 @@ TEST_CASE("E Step NONRIGID") {
     }
 }
 
-TEST_CASE("Similarity rigid/affine") {
+// TEST_CASE("Similarity rigid/affine") {
+// 	Eigen::MatrixXd xPoints(4, 3);
+// 	xPoints  << 4, 5, 6,
+// 				7, 8, 9,
+// 				1, 1, 1,
+// 				2, 2, 2;
+// 	Eigen::MatrixXd yPoints(4, 3);
+// 	yPoints  << 4, 5, 1,
+// 				2, 4, 1,
+// 				8, 8, 8,
+// 				1, 4, 2;
+// 	Eigen::MatrixXd postProb(4, 4);
+// 	postProb << 1, 4, 1, 6,
+// 				2, 1, 2, 1,
+// 				1, 0, 2, 3,
+// 				1, 8, 3, 2;
+// 	Eigen::MatrixXd rotationMat(3, 3);
+// 	rotationMat <<  1, 4, 1,
+// 					0, 2, 4,
+// 					1, 3, 3;
+// 	Eigen::MatrixXd translationVec(3, 1);
+// 	translationVec << 	1, 
+// 						2, 
+// 						3;
+// 	double sigmaSquared = 1.5;
+// 	double scale = 2;
+
+// 	double similarity = CalculateAlignment(xPoints, yPoints, postProb, rotationMat, translationVec, scale, sigmaSquared);
+// 	double similarityAns = 101601.445;
+
+// 	double threshold = 0.001;
+// 	REQUIRE(similarity == doctest::Approx(similarityAns).epsilon(threshold));
+
+// }
+
+// TEST_CASE("Similarity NONRIGID") {
+// 	Eigen::MatrixXd xPoints(4, 3);
+// 	xPoints  << 4, 5, 6,
+// 				7, 8, 9,
+// 				1, 1, 1,
+// 				2, 2, 2;
+// 	Eigen::MatrixXd yPoints(4, 3);
+// 	yPoints  << 4, 5, 1,
+// 				2, 4, 1,
+// 				8, 8, 8,
+// 				1, 4, 2;
+// 	Eigen::MatrixXd postProb(4, 4);
+// 	postProb << 1, 4, 1, 6,
+// 				2, 1, 2, 1,
+// 				1, 0, 2, 3,
+// 				1, 8, 3, 2;
+// 	Eigen::MatrixXd gramMat(3, 3);
+// 	gramMat <<  0, 4, 3, 1,
+// 				3, 3, 4, 1,
+// 				0, 5, 3, 5,
+// 				5, 3, 2, 4;
+// 	Eigen::MatrixXd W(3, 1);
+// 	W << 	2, 2, 4,
+// 			4, 5, 4,
+// 			4, 3, 5,
+// 			3, 1, 5;
+
+// 	double sigmaSquared = 1.5;
+
+// 	double similarity = CalculateAlignment(xPoints, yPoints, postProb, gramMat, W, sigmaSquared);
+// 	double similarityAns = 67348.1115;
+
+// 	double threshold = 0.001;
+// 	REQUIRE(similarity == doctest::Approx(similarityAns).epsilon(threshold));
+
+// }
+
+
+TEST_CASE("Update SS non-rigid") {
 	Eigen::MatrixXd xPoints(4, 3);
 	xPoints  << 4, 5, 6,
 				7, 8, 9,
 				1, 1, 1,
 				2, 2, 2;
-	Eigen::MatrixXd yPoints(4, 3);
-	yPoints  << 4, 5, 1,
-				2, 4, 1,
-				8, 8, 8,
-				1, 4, 2;
 	Eigen::MatrixXd postProb(4, 4);
-	postProb << 1, 4, 1, 6,
-				2, 1, 2, 1,
-				1, 0, 2, 3,
-				1, 8, 3, 2;
-	Eigen::MatrixXd rotationMat(3, 3);
-	rotationMat <<  1, 4, 1,
-					0, 2, 4,
-					1, 3, 3;
-	Eigen::MatrixXd translationVec(3, 1);
-	translationVec << 	1, 
-						2, 
-						3;
-	double sigmaSquared = 1.5;
-	double scale = 2;
+	postProb << 1, 2, 3, 4,
+				5, 4, 3, 2,
+				1, 1, 1, 1,
+				2, 2, 2, 2;
+	Eigen::MatrixXd transformedPoints(4, 3);
+	transformedPoints << 1, 1, 1,
+						 2, 2, 2,
+						 1, 2, 3,
+						 3, 2, 1;
+	double sigmaSquared = SigmaSquared(xPoints, postProb, transformedPoints);
 
-	double similarity = CalculateAlignment(xPoints, yPoints, postProb, rotationMat, translationVec, scale, sigmaSquared);
-	double similarityAns = 101601.445;
-
+	double sigmaSquaredAnswer = 1412./108;
 	double threshold = 0.001;
-	REQUIRE(similarity == doctest::Approx(similarityAns).epsilon(threshold));
 
+	REQUIRE(sigmaSquared == doctest::Approx(sigmaSquaredAnswer).epsilon(threshold));
 }
 
-TEST_CASE("Similarity NONRIGID") {
-	Eigen::MatrixXd xPoints(4, 3);
-	xPoints  << 4, 5, 6,
-				7, 8, 9,
-				1, 1, 1,
-				2, 2, 2;
+TEST_CASE("CalculateUx") {
+	Eigen::MatrixXd xPoints(3, 2);
+	xPoints <<  3, 4,
+				1, 1,
+				1, 2;
+	Eigen::MatrixXd postProb(3, 3);
+	postProb << 1, 0, 1,
+				2, 1, 1,
+				1, 1, 1;
+	Eigen::MatrixXd answerUx(2, 1);
+	answerUx << (17./9),
+				(24./9);
+
+	Eigen::MatrixXd Ux;
+	Ux = CalculateUx(xPoints, postProb);
+
+	double threshold = 0.01;
+	for (size_t i = 0; i < 2; ++i) {
+        for (size_t j = 0; j < 1; ++j) {
+			REQUIRE(Ux(i,j) == doctest::Approx(answerUx(i,j)).epsilon(threshold));
+        }
+    }
+}
+
+TEST_CASE("CalculateUy") {
+	Eigen::MatrixXd yPoints(3, 2);
+	yPoints <<  3, 4,
+				1, 1,
+				1, 2;
+	Eigen::MatrixXd postProb(3, 3);
+	postProb << 1, 0, 1,
+				2, 1, 1,
+				1, 1, 1;
+	Eigen::MatrixXd answerUy(2, 1);
+	answerUy << (13./9),
+				(18./9);
+
+	Eigen::MatrixXd Uy;
+	Uy = CalculateUy(yPoints, postProb);
+
+	double threshold = 0.01;
+	for (size_t i = 0; i < 2; ++i) {
+        for (size_t j = 0; j < 1; ++j) {
+			REQUIRE(Uy(i,j) == doctest::Approx(answerUy(i,j)).epsilon(threshold));
+        }
+    }
+}
+
+TEST_CASE("AlignedPointSet NONRIGID") {
 	Eigen::MatrixXd yPoints(4, 3);
 	yPoints  << 4, 5, 1,
 				2, 4, 1,
 				8, 8, 8,
 				1, 4, 2;
-	Eigen::MatrixXd postProb(4, 4);
-	postProb << 1, 4, 1, 6,
-				2, 1, 2, 1,
-				1, 0, 2, 3,
-				1, 8, 3, 2;
-	Eigen::MatrixXd gramMat(3, 3);
+	Eigen::MatrixXd gramMat(4, 4);
 	gramMat <<  0, 4, 3, 1,
 				3, 3, 4, 1,
 				0, 5, 3, 5,
 				5, 3, 2, 4;
-	Eigen::MatrixXd W(3, 1);
+	Eigen::MatrixXd W(4, 3);
 	W << 	2, 2, 4,
 			4, 5, 4,
 			4, 3, 5,
 			3, 1, 5;
 
-	double sigmaSquared = 1.5;
+	Eigen::MatrixXd answerAligned(4, 3);
+	answerAligned << 	35, 35, 37,
+						39, 38, 50,
+						55, 47, 68,
+						43, 39, 64;
 
-	double similarity = CalculateAlignment(xPoints, yPoints, postProb, gramMat, W, sigmaSquared);
-	double similarityAns = 67348.1115;
+	Eigen::MatrixXd AlignedPS;
+	AlignedPS = AlignedPointSet_NR(yPoints, gramMat, W);
 
 	double threshold = 0.001;
-	REQUIRE(similarity == doctest::Approx(similarityAns).epsilon(threshold));
+	for (size_t i = 0; i < 4; ++i) {
+        for (size_t j = 0; j < 3; ++j) {
+			REQUIRE(AlignedPS(i,j) == doctest::Approx(answerAligned(i,j)).epsilon(threshold));
+        }
+    }
+}
+// non rigid test
+TEST_CASE("GetW") {
+	Eigen::MatrixXd yPoints(4, 3);
+	yPoints <<   3, 32, 10,
+    		    10,  6,  2,
+    			10, 10, 43,
+     			 1,  2, 21;
 
+	Eigen::MatrixXd xPoints(4, 3);
+	xPoints <<   4,  5,  7,
+    			10, 23,  4,
+     			 6,  7, 20,
+    			34, 10,  2;
+
+	Eigen::MatrixXd postProb(4, 4);
+	postProb << 0.1, 0.4, 0.4, 0.7, 
+				0.5, 0.7, 0.8, 0.8, 
+				0.2, 0.2, 0.5, 0.2, 
+				0.9, 0.2, 0.7, 0.7;
+
+	Eigen::MatrixXd gramMatrix(4, 4);
+	gramMatrix <<   1, 0.5, 0.8, 0.2, 
+				0.5,   1, 0.1, 0.6, 
+				0.8, 0.1,   1, 0.3, 
+				0.2, 0.6, 0.3,   1;
+
+	double sigmaSquared = 2;
+	double lambda = 0.5;
+
+	Eigen::MatrixXd answerW(4, 3);
+	answerW << 13.4915220591003, -18.973075298976, 5.86045059959459, 
+				-5.87043357937814, 9.84038392458258, 7.94248048306686, 
+				-6.28462294910371, 7.2451892612769, -17.9879677078044,
+				10.8209590146699, 1.51201994761614, -8.9579914981555;
+
+	Eigen::MatrixXd W = GetW(xPoints, yPoints, gramMatrix, postProb, sigmaSquared, lambda);
+
+	double threshold = 0.01;
+	for (size_t i = 0; i < 4; ++i) {
+        for (size_t j = 0; j < 3; ++j) {
+			REQUIRE(W(i,j) == doctest::Approx(answerW(i,j)).epsilon(threshold));
+        }
+    }
 }
