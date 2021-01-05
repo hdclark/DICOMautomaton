@@ -46,6 +46,32 @@ double Init_Sigma_Squared(const Eigen::MatrixXd & xPoints,
     return 1.0 / (nRowsX * mRowsY * dim) * normSum;
 }
 
+double GetSimilarity(const Eigen::MatrixXd & xPoints,
+            const Eigen::MatrixXd & yPoints,
+            const Eigen::MatrixXd & postProb,
+            const Eigen::MatrixXd & rotationMatrix,
+            const Eigen::MatrixXd & translation,
+            double scale, 
+            double sigmaSquared) {
+    
+    int mRowsY = yPoints.rows();
+    int nRowsX = xPoints.rows(); 
+    double dimensionality = xPoints.cols();
+    double Np = postProb.sum();
+    Eigen::MatrixXd tempVector;
+
+    double leftSum = 0;
+    for (size_t m = 0; m < mRowsY; ++m) {
+        for (size_t n = 0; n < nRowsX; ++n) {
+            tempVector = xPoints.row(n) - AlignedPointSet(yPoints.row(m), rotationMatrix, translation, scale);
+            leftSum += postProb(m,n) * tempVector.squaredNorm();
+        }
+    }
+    leftSum = leftSum / (2.0 * sigmaSquared);
+    double rightSum = Np * dimensionality / 2.0 * log(sigmaSquared);
+    return leftSum + rightSum;
+}
+
 Eigen::MatrixXd E_Step(const Eigen::MatrixXd & xPoints,
             const Eigen::MatrixXd & yPoints,
             const Eigen::MatrixXd & rotationMatrix,

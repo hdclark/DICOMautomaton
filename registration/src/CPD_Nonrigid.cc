@@ -68,7 +68,32 @@ Eigen::MatrixXd GetGramMatrix(const Eigen::MatrixXd & yPoints, double betaSquare
     return gramMatrix;
 }
 
-Eigen::MatrixXd E_Step(const Eigen::MatrixXd & xPoints,
+double GetSimilarity_NR(const Eigen::MatrixXd & xPoints,
+            const Eigen::MatrixXd & yPoints,
+            const Eigen::MatrixXd & postProb,
+            const Eigen::MatrixXd & gramMatrix,
+            const Eigen::MatrixXd & W,
+            double sigmaSquared) {
+    
+    int mRowsY = yPoints.rows();
+    int nRowsX = xPoints.rows(); 
+    double dimensionality = xPoints.cols();
+    double Np = postProb.sum();
+    Eigen::MatrixXd tempVector;
+
+    double leftSum = 0;
+    for (size_t m = 0; m < mRowsY; ++m) {
+        for (size_t n = 0; n < nRowsX; ++n) {
+            tempVector = xPoints.row(n) - AlignedPointSet_NR(yPoints, gramMatrix, W).row(m);
+            leftSum += postProb(m,n) * tempVector.squaredNorm();
+        }
+    }
+    leftSum = leftSum / (2.0 * sigmaSquared);
+    double rightSum = Np * dimensionality / 2.0 * log(sigmaSquared);
+    return leftSum + rightSum;
+}
+
+Eigen::MatrixXd E_Step_NR(const Eigen::MatrixXd & xPoints,
             const Eigen::MatrixXd & yPoints,
             const Eigen::MatrixXd & gramMatrix,
             const Eigen::MatrixXd & W,
@@ -105,10 +130,11 @@ Eigen::MatrixXd E_Step(const Eigen::MatrixXd & xPoints,
         for (size_t n = 0; n < nRowsX; ++n) {
             numerator = expMat(m,n);
             denominator = expMat.col(n).sum() + 
-                          pow(2 * M_PI * sigmaSquared,((double)(dimensionality/2))) * (w/(1-w)) * (double)(mRowsY / nRowsX);
+                          pow((2 * M_PI * sigmaSquared),((double)(dimensionality/2.0))) * (w/(1-w)) * (double)(mRowsY / nRowsX);
             postProb(m,n) = numerator / denominator;
         }
     }
+
     stop = high_resolution_clock::now();
     duration = duration_cast<microseconds>(stop - start); 
     // std::cout << duration.count() << std::endl; 
@@ -166,7 +192,7 @@ AlignViaNonRigidCPD(CPDParams & params,
     Eigen::MatrixXd T;
 
     for (int i = 0; i < params.iterations; i++) {
-        P = E_Step(X, Y, transform.G, transform.W, sigma_squared, params.distribution_weight);
+        P = E_Step_NR(X, Y, transform.G, transform.W, sigma_squared, params.distribution_weight);
         transform.W = GetW(X, Y, transform.G, P, sigma_squared, params.lambda);
         T = transform.apply_to(Y);
         SigmaSquared(X, P, T);
