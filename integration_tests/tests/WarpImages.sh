@@ -50,11 +50,35 @@ printf 'Test 2\n' |
   grep . 
 
 
-# Test that rotational transforms are accurate by flipping 180 deg so the inputs interlock and compensate each other.
+# Test that multiple mirror transforms can be combined to create a perfect complement of an image.
 #
 # Note: assumes GenerateVirtualDataDoseStairsV1 output range is [0,70] Gy.
 # Note: assumes GenerateVirtualDataDoseStairsV1 output image is centred at (109.5, 109.5, 100.0).
 printf 'Test 3\n' |
+  tee -a fullstdout
+"${DCMA_BIN}" \
+  -v \
+  -o GenerateVirtualDataDoseStairsV1 \
+  -o GenerateVirtualDataDoseStairsV1 \
+  -o GenerateWarp \
+     -p Transforms='mirror(109.5,109.5,100, 1,0,0); mirror(109.5,109.5,100, 0,1,0)' \
+  -o WarpImages \
+     -p ImageSelection=last \
+     -p TransformSelection=last \
+  -o MeldDose \
+  -o DroverDebug |
+  tee -a fullstdout |
+  grep 'pixel value range' |
+  grep '70,70' |
+  `# Note: ensures the output stream is not empty. ` \
+  grep . 
+
+
+# Test that rotational transforms are accurate by flipping 180 deg so the inputs interlock and compensate each other.
+#
+# Note: assumes GenerateVirtualDataDoseStairsV1 output range is [0,70] Gy.
+# Note: assumes GenerateVirtualDataDoseStairsV1 output image is centred at (109.5, 109.5, 100.0).
+printf 'Test 4\n' |
   tee -a fullstdout
 "${DCMA_BIN}" \
   -v \
@@ -78,7 +102,7 @@ printf 'Test 3\n' |
 #
 # Note: assumes GenerateVirtualDataDoseStairsV1 output range is [0,70] Gy.
 # Note: assumes GenerateVirtualDataDoseStairsV1 output image is centred at (109.5, 109.5, 100.0).
-printf 'Test 4\n' |
+printf 'Test 5\n' |
   tee -a fullstdout
 "${DCMA_BIN}" \
   -v \
@@ -97,7 +121,7 @@ printf 'Test 4\n' |
   `# Note: ensures the output stream is not empty. ` \
   grep . 
 
-printf 'Test 5\n' |
+printf 'Test 6\n' |
   tee -a fullstdout
 "${DCMA_BIN}" \
   -v \
@@ -121,7 +145,7 @@ printf 'Test 5\n' |
 #
 # Note: assumes GenerateVirtualDataDoseStairsV1 output range is [0,70] Gy.
 # Note: assumes GenerateVirtualDataDoseStairsV1 output image is centred at (109.5, 109.5, 100.0).
-printf 'Test 6\n' |
+printf 'Test 7\n' |
   tee -a fullstdout
 "${DCMA_BIN}" \
   -v \
