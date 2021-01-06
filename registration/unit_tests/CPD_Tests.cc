@@ -318,77 +318,77 @@ TEST_CASE("E Step NONRIGID") {
     }
 }
 
-// TEST_CASE("Similarity rigid/affine") {
-// 	Eigen::MatrixXd xPoints(4, 3);
-// 	xPoints  << 4, 5, 6,
-// 				7, 8, 9,
-// 				1, 1, 1,
-// 				2, 2, 2;
-// 	Eigen::MatrixXd yPoints(4, 3);
-// 	yPoints  << 4, 5, 1,
-// 				2, 4, 1,
-// 				8, 8, 8,
-// 				1, 4, 2;
-// 	Eigen::MatrixXd postProb(4, 4);
-// 	postProb << 1, 4, 1, 6,
-// 				2, 1, 2, 1,
-// 				1, 0, 2, 3,
-// 				1, 8, 3, 2;
-// 	Eigen::MatrixXd rotationMat(3, 3);
-// 	rotationMat <<  1, 4, 1,
-// 					0, 2, 4,
-// 					1, 3, 3;
-// 	Eigen::MatrixXd translationVec(3, 1);
-// 	translationVec << 	1, 
-// 						2, 
-// 						3;
-// 	double sigmaSquared = 1.5;
-// 	double scale = 2;
+TEST_CASE("Similarity rigid/affine") {
+	Eigen::MatrixXd xPoints(4, 3);
+	xPoints  << 4, 5, 6,
+				7, 8, 9,
+				1, 1, 1,
+				2, 2, 2;
+	Eigen::MatrixXd yPoints(4, 3);
+	yPoints  << 4, 5, 1,
+				2, 4, 1,
+				8, 8, 8,
+				1, 4, 2;
+	Eigen::MatrixXd postProb(4, 4);
+	postProb << 1, 4, 1, 6,
+				2, 1, 2, 1,
+				1, 0, 2, 3,
+				1, 8, 3, 2;
+	Eigen::MatrixXd rotationMat(3, 3);
+	rotationMat <<  1, 4, 1,
+					0, 2, 4,
+					1, 3, 3;
+	Eigen::MatrixXd translationVec(3, 1);
+	translationVec << 	1, 
+						2, 
+						3;
+	double sigmaSquared = 1.5;
+	double scale = 2;
 
-// 	double similarity = CalculateAlignment(xPoints, yPoints, postProb, rotationMat, translationVec, scale, sigmaSquared);
-// 	double similarityAns = 101601.445;
+	double similarity = GetSimilarity(xPoints, yPoints, postProb, rotationMat, translationVec, scale, sigmaSquared);
+	double similarityAns = 101601.445;
 
-// 	double threshold = 0.001;
-// 	REQUIRE(similarity == doctest::Approx(similarityAns).epsilon(threshold));
+	double threshold = 0.001;
+	REQUIRE(similarity == doctest::Approx(similarityAns).epsilon(threshold));
 
-// }
+}
 
-// TEST_CASE("Similarity NONRIGID") {
-// 	Eigen::MatrixXd xPoints(4, 3);
-// 	xPoints  << 4, 5, 6,
-// 				7, 8, 9,
-// 				1, 1, 1,
-// 				2, 2, 2;
-// 	Eigen::MatrixXd yPoints(4, 3);
-// 	yPoints  << 4, 5, 1,
-// 				2, 4, 1,
-// 				8, 8, 8,
-// 				1, 4, 2;
-// 	Eigen::MatrixXd postProb(4, 4);
-// 	postProb << 1, 4, 1, 6,
-// 				2, 1, 2, 1,
-// 				1, 0, 2, 3,
-// 				1, 8, 3, 2;
-// 	Eigen::MatrixXd gramMat(3, 3);
-// 	gramMat <<  0, 4, 3, 1,
-// 				3, 3, 4, 1,
-// 				0, 5, 3, 5,
-// 				5, 3, 2, 4;
-// 	Eigen::MatrixXd W(3, 1);
-// 	W << 	2, 2, 4,
-// 			4, 5, 4,
-// 			4, 3, 5,
-// 			3, 1, 5;
+TEST_CASE("Similarity NONRIGID") {
+	Eigen::MatrixXd xPoints(4, 3);
+	xPoints  << 4, 5, 6,
+				7, 8, 9,
+				1, 1, 1,
+				2, 2, 2;
+	Eigen::MatrixXd yPoints(4, 3);
+	yPoints  << 4, 5, 1,
+				2, 4, 1,
+				8, 8, 8,
+				1, 4, 2;
+	Eigen::MatrixXd postProb(4, 4);
+	postProb << 1, 4, 1, 6,
+				2, 1, 2, 1,
+				1, 0, 2, 3,
+				1, 8, 3, 2;
+	Eigen::MatrixXd gramMat(4, 4);
+	gramMat <<  0, 4, 3, 1,
+				3, 3, 4, 1,
+				0, 5, 3, 5,
+				5, 3, 2, 4;
+	Eigen::MatrixXd W(4, 3);
+	W << 	2, 2, 4,
+			4, 5, 4,
+			4, 3, 5,
+			3, 1, 5;
 
-// 	double sigmaSquared = 1.5;
+	double sigmaSquared = 1.5;
 
-// 	double similarity = CalculateAlignment(xPoints, yPoints, postProb, gramMat, W, sigmaSquared);
-// 	double similarityAns = 67348.1115;
+	double similarity = GetSimilarity_NR(xPoints, yPoints, postProb, gramMat, W, sigmaSquared);
+	double similarityAns = 67348.1115;
 
-// 	double threshold = 0.001;
-// 	REQUIRE(similarity == doctest::Approx(similarityAns).epsilon(threshold));
+	double threshold = 0.001;
+	REQUIRE(similarity == doctest::Approx(similarityAns).epsilon(threshold));
 
-// }
+}
 
 
 TEST_CASE("Update SS non-rigid") {
