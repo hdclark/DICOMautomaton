@@ -1,5 +1,6 @@
 #include "CPD_Nonrigid.h"
 #include <chrono>
+#include "YgorMathIOXYZ.h"    //Needed for ReadPointSetFromXYZ.
 using namespace std::chrono;
 
 NonRigidCPDTransform::NonRigidCPDTransform(int N_move_points, int dimensionality) {
@@ -181,7 +182,16 @@ double SigmaSquared(const Eigen::MatrixXd & xPoints,
 NonRigidCPDTransform
 AlignViaNonRigidCPD(CPDParams & params,
             const point_set<double> & moving,
-            const point_set<double> & stationary ) { 
+            const point_set<double> & stationary,
+            int iter_interval /*= 0*/,
+            std::string video /*= "False"*/,
+            std::string xyz_outfile /*= "output"*/ ) { 
+    
+    FUNCINFO("Performing nonrigid CPD");
+
+    std::string temp_xyz_outfile;
+    point_set<double> mutable_moving = moving;
+    
     Eigen::MatrixXd GetGramMatrix(const Eigen::MatrixXd & yPoints, double betaSquared);
     const auto N_move_points = static_cast<long int>(moving.points.size());
     const auto N_stat_points = static_cast<long int>(stationary.points.size());
@@ -214,12 +224,27 @@ AlignViaNonRigidCPD(CPDParams & params,
     Eigen::MatrixXd P;
     Eigen::MatrixXd T;
 
+    params.iterations = 50;
+
     for (int i = 0; i < params.iterations; i++) {
         FUNCINFO("Iteration: " << i)
         P = E_Step_NR(X, Y, transform.G, transform.W, sigma_squared, params.distribution_weight);
         transform.W = GetW(X, Y, transform.G, P, sigma_squared, params.lambda);
         T = transform.apply_to(Y);
         sigma_squared = SigmaSquared(X, P, T);
+
+        mutable_moving = moving;
+        transform.apply_to(mutable_moving);
+        
+        if (video == "True") {
+            if (iter_interval > 0 && i % iter_interval == 0) {
+                temp_xyz_outfile = xyz_outfile + "_iter" + std::to_string(i) + ".xyz";
+                std::ofstream PFO(temp_xyz_outfile);
+                if(!WritePointSetToXYZ(mutable_moving, PFO))
+                    FUNCERR("Error writing point set to " << xyz_outfile);
+            }
+        }
+
         if (sigma_squared < 1e-14)
             break;
     }

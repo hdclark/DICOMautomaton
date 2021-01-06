@@ -1,4 +1,5 @@
 #include "CPD_Affine.h"
+#include "YgorMathIOXYZ.h"    //Needed for ReadPointSetFromXYZ.
 
 AffineCPDTransform::AffineCPDTransform(int dimensionality) {
     this->B = Eigen::MatrixXd::Identity(dimensionality, dimensionality);
@@ -94,8 +95,16 @@ double SigmaSquared(const Eigen::MatrixXd & B,
 AffineCPDTransform
 AlignViaAffineCPD(CPDParams & params,
             const point_set<double> & moving,
-            const point_set<double> & stationary ){
+            const point_set<double> & stationary, 
+            int iter_interval /*= 0*/,
+            std::string video /*= "False"*/,
+            std::string xyz_outfile /*= "output"*/){
 
+    FUNCINFO("Performing Affine CPD");
+    
+    std::string temp_xyz_outfile;
+    point_set<double> mutable_moving = moving;
+    
     // if(moving.points.empty() || stationary.points.empty()){
     //     FUNCWARN("Unable to perform ABC alignment: a point set is empty");
     //     return std::nullopt;
@@ -134,6 +143,7 @@ AlignViaAffineCPD(CPDParams & params,
     Eigen::MatrixXd Uy;
     Eigen::MatrixXd X_hat;
     Eigen::MatrixXd Y_hat;
+    params.iterations = 50;
     for (int i = 0; i < params.iterations; i++) {
         FUNCINFO("Iteration: " << i)
         P = E_Step(X, Y, transform.B, \
@@ -145,6 +155,19 @@ AlignViaAffineCPD(CPDParams & params,
         transform.B = CalculateB(X_hat, Y_hat, P);
         transform.t = GetTranslationVector(transform.B, Ux, Uy, 1);
         sigma_squared = SigmaSquared(transform.B, X_hat, Y_hat, P);
+
+        mutable_moving = moving;
+        transform.apply_to(mutable_moving);
+        
+        if (video == "True") {
+            if (iter_interval > 0 && i % iter_interval == 0) {
+                temp_xyz_outfile = xyz_outfile + "_iter" + std::to_string(i) + ".xyz";
+                std::ofstream PFO(temp_xyz_outfile);
+                if(!WritePointSetToXYZ(mutable_moving, PFO))
+                    FUNCERR("Error writing point set to " << xyz_outfile);
+            }
+        }
+
         if (sigma_squared < 0.00001)
             break;
     }

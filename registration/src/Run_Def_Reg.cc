@@ -49,7 +49,10 @@ int main(int argc, char* argv[]){
     
     std::string type;
     std::string xyz_outfile;
+    std::string temp_xyz_outfile;
     std::string tf_outfile;
+    int iter_interval;
+    std::string video;
 
     //================================================ Argument Parsing ==============================================
 
@@ -116,7 +119,23 @@ int main(int argc, char* argv[]){
         return;
       })
     );
+    arger.push_back( ygor_arg_handlr_t(1, 'i', "iterations", true, "0",
+      "Number of iterations between writing",
+      [&](const std::string &optarg) -> void {
+        iter_interval = std::stoi(optarg);
+        return;
+      })
+    );
+    arger.push_back( ygor_arg_handlr_t(1, 'v', "video", true, "False",
+      "Boolean to represent whether to plot for a video",
+      [&](const std::string &optarg) -> void {
+        video = optarg;
+        return;
+      })
+    );
+
     arger.Launch(argc, argv);
+
     //============================================= Input Validation ================================================
     if(moving.points.empty()){
         FUNCERR("Moving point set contains no points. Unable to continue.");
@@ -129,34 +148,61 @@ int main(int argc, char* argv[]){
     FUNCINFO(type)
     point_set<double> mutable_moving = moving;
     if(type == "rigid") {
-        RigidCPDTransform transform = AlignViaRigidCPD(params, moving, stationary);
+        if(video == "True") {
+          temp_xyz_outfile = xyz_outfile + "_iter0.xyz";
+          std::ofstream PFO(temp_xyz_outfile);
+          if(!WritePointSetToXYZ(mutable_moving, PFO))
+            FUNCERR("Error writing point set to " << temp_xyz_outfile);
+        }
+        
+        RigidCPDTransform transform = AlignViaRigidCPD(params, moving, stationary, iter_interval, video, xyz_outfile);
         transform.apply_to(mutable_moving);
-        std::ofstream PFO(xyz_outfile);
-        FUNCINFO("Writing to " << xyz_outfile)
+
+        temp_xyz_outfile = xyz_outfile + "_last.xyz";
+        std::ofstream PFO(temp_xyz_outfile);
+        FUNCINFO("Writing to " << (temp_xyz_outfile))
         if(!WritePointSetToXYZ(mutable_moving, PFO))
-          FUNCERR("Error writing point set to " << xyz_outfile)
+          FUNCERR("Error writing point set to " << temp_xyz_outfile);
         std::ofstream TFO(tf_outfile);
         FUNCINFO("Writing to " << tf_outfile)
         if(!transform.write_to(TFO))
-          FUNCERR("Error writing transform to " << tf_outfile)
+          FUNCERR("Error writing transform to " << tf_outfile);
     } else if(type == "affine") {
-        AffineCPDTransform transform = AlignViaAffineCPD(params, moving, stationary);
+        if(video == "True") {
+          temp_xyz_outfile = xyz_outfile + "_iter0.xyz";
+          std::ofstream PFO(temp_xyz_outfile);
+          if(!WritePointSetToXYZ(mutable_moving, PFO))
+            FUNCERR("Error writing point set to " << temp_xyz_outfile);
+        }
+        
+        AffineCPDTransform transform = AlignViaAffineCPD(params, moving, stationary, iter_interval, video, xyz_outfile);
         transform.apply_to(mutable_moving);
-        std::ofstream PFO(xyz_outfile);
-        FUNCINFO("Writing to " << xyz_outfile)
+
+        temp_xyz_outfile = xyz_outfile + "_last.xyz";
+        std::ofstream PFO(temp_xyz_outfile);
+        FUNCINFO("Writing to " << (temp_xyz_outfile))
         if(!WritePointSetToXYZ(mutable_moving, PFO))
-          FUNCERR("Error writing point set to " << xyz_outfile)
+          FUNCERR("Error writing point set to " << temp_xyz_outfile);
         std::ofstream TFO(tf_outfile);
         FUNCINFO("Writing to " << tf_outfile)
         if(!transform.write_to(TFO))
-          FUNCERR("Error writing transform to " << tf_outfile)
+          FUNCERR("Error writing transform to " << tf_outfile);
     } else if(type == "nonrigid") {
-        NonRigidCPDTransform transform = AlignViaNonRigidCPD(params, moving, stationary);
+        if(video == "True") {
+          temp_xyz_outfile = xyz_outfile + "_iter0.xyz";
+          std::ofstream PFO(temp_xyz_outfile);
+          if(!WritePointSetToXYZ(mutable_moving, PFO))
+            FUNCERR("Error writing point set to " << temp_xyz_outfile);
+        }
+        
+        NonRigidCPDTransform transform = AlignViaNonRigidCPD(params, moving, stationary, iter_interval, video, xyz_outfile);
         transform.apply_to(mutable_moving);
-        std::ofstream PFO(xyz_outfile);
-        FUNCINFO("Writing to " << xyz_outfile)
+        
+        temp_xyz_outfile = xyz_outfile + "_last.xyz";
+        std::ofstream PFO(temp_xyz_outfile);
+        FUNCINFO("Writing to " << (temp_xyz_outfile))
         if(!WritePointSetToXYZ(mutable_moving, PFO))
-          FUNCERR("Error writing point set to " << xyz_outfile)
+          FUNCERR("Error writing point set to " << temp_xyz_outfile);
         // TODO: Add in writing transform to file
     } else {
         FUNCERR("The CPD algorithm specified was invalid. Options are rigid, affine, nonrigid");

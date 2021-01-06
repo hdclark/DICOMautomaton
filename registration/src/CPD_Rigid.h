@@ -42,7 +42,10 @@ class RigidCPDTransform {
 RigidCPDTransform
 AlignViaRigidCPD(CPDParams & params,
             const point_set<double> & moving,
-            const point_set<double> & stationary );
+            const point_set<double> & stationary,
+            int iter_interval = 0,
+            std::string video = "False",
+            std::string xyz_outfile = "output" );
 
 Eigen::MatrixXd GetA(const Eigen::MatrixXd & xHat,
             const Eigen::MatrixXd & yHat,

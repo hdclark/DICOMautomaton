@@ -1,4 +1,5 @@
 #include "CPD_Rigid.h"
+#include "YgorMathIOXYZ.h"    //Needed for ReadPointSetFromXYZ.
 
 RigidCPDTransform::RigidCPDTransform(int dimensionality) {
     this->dim = dimensionality;
@@ -112,8 +113,15 @@ double SigmaSquared(double s,
 RigidCPDTransform
 AlignViaRigidCPD(CPDParams & params,
             const point_set<double> & moving,
-            const point_set<double> & stationary ){
+            const point_set<double> & stationary,
+            int iter_interval /*= 0*/,
+            std::string video /*= "False"*/,
+            std::string xyz_outfile /*= "output"*/ ){
     FUNCINFO("Performing rigid CPD")
+
+    std::string temp_xyz_outfile;
+    point_set<double> mutable_moving = moving;
+
     // if(moving.points.empty() || stationary.points.empty()){
     //     FUNCWARN("Unable to perform ABC alignment: a point set is empty");
     //     return std::nullopt;
@@ -156,6 +164,8 @@ AlignViaRigidCPD(CPDParams & params,
     Eigen::MatrixXd X_hat;
     Eigen::MatrixXd Y_hat;
     Eigen::MatrixXd A;
+    
+    params.iterations = 50;
 
     FUNCINFO("Starting loop. Iterations: " << params.iterations)
     for (int i = 0; i < params.iterations; i++) {
@@ -175,6 +185,19 @@ AlignViaRigidCPD(CPDParams & params,
         transform.s = GetS(A, transform.R, Y_hat, P);
         transform.t = GetTranslationVector(transform.R, Ux, Uy, transform.s);
         sigma_squared = SigmaSquared(transform.s, A, transform.R, X_hat, P);
+
+        mutable_moving = moving;
+        transform.apply_to(mutable_moving);
+        
+        if (video == "True") {
+            if (iter_interval > 0 && i % iter_interval == 0) {
+                temp_xyz_outfile = xyz_outfile + "_iter" + std::to_string(i) + ".xyz";
+                std::ofstream PFO(temp_xyz_outfile);
+                if(!WritePointSetToXYZ(mutable_moving, PFO))
+                    FUNCERR("Error writing point set to " << xyz_outfile);
+            }
+        }
+
         if(sigma_squared > prev_sigma_squared)
             break;
     }

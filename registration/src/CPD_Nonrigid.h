@@ -44,7 +44,10 @@ class NonRigidCPDTransform {
 NonRigidCPDTransform
 AlignViaNonRigidCPD(CPDParams & params,
             const point_set<double> & moving,
-            const point_set<double> & stationary );
+            const point_set<double> & stationary,
+            int iter_interval = 0,
+            std::string video = "False",
+            std::string xyz_outfile = "output" );
 
 double Init_Sigma_Squared_NR(const Eigen::MatrixXd & xPoints,
             const Eigen::MatrixXd & yPoints);
