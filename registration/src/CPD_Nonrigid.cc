@@ -29,7 +29,7 @@ void NonRigidCPDTransform::apply_to(point_set<double> &ps) {
 }
 
 Eigen::MatrixXd NonRigidCPDTransform::apply_to(const Eigen::MatrixXd &ps) {
-    return ps + this->G + this->W;
+    return ps + this->G * this->W;
 }
 
 double NR_Init_Sigma_Squared(const Eigen::MatrixXd & xPoints,
@@ -111,7 +111,6 @@ Eigen::MatrixXd E_Step_NR(const Eigen::MatrixXd & xPoints,
     int mRowsY = yPoints.rows();
     int nRowsX = xPoints.rows();
     int dimensionality = yPoints.cols();
-
     // std::cout << "\n";
     // std::cout << "\n";    
     auto start = high_resolution_clock::now();
@@ -160,7 +159,6 @@ Eigen::MatrixXd GetW(const Eigen::MatrixXd & xPoints,
     return A.llt().solve(b); // assumes A is positive definite, uses llt decomposition
 }
 
-<<<<<<< 3f70dd0a8e98ef304983740276b2660dcbcb0241
 Eigen::MatrixXd AlignedPointSet_NR(const Eigen::MatrixXd & yPoints,
             const Eigen::MatrixXd & gramMatrix,
             const Eigen::MatrixXd & W){
@@ -168,24 +166,20 @@ Eigen::MatrixXd AlignedPointSet_NR(const Eigen::MatrixXd & yPoints,
     return yPoints + (gramMatrix * W);
 }
 
-=======
->>>>>>> Initial work for non rigid main loop
 double SigmaSquared(const Eigen::MatrixXd & xPoints,
             const Eigen::MatrixXd & postProb,
             const Eigen::MatrixXd & transformedPoints){
 
     int dim = xPoints.cols();
     double Np = postProb.sum();
-
     Eigen::MatrixXd oneVec = Eigen::MatrixXd::Ones(postProb.rows(),1);
     double firstTerm = (double)(xPoints.transpose() * (postProb.transpose() * oneVec).asDiagonal() * xPoints).trace();
     double secondTerm = (double)(2 * ((postProb * xPoints).transpose() * transformedPoints).trace());
     double thirdTerm = (double)(transformedPoints.transpose() * (postProb * oneVec).asDiagonal() * transformedPoints).trace();
-
     return (firstTerm - secondTerm + thirdTerm) / (Np * dim);
 }
 
-std::optional<NonRigidCPDTransform>
+NonRigidCPDTransform
 AlignViaNonRigidCPD(CPDParams & params,
             const point_set<double> & moving,
             const point_set<double> & stationary ) { 
@@ -222,9 +216,13 @@ AlignViaNonRigidCPD(CPDParams & params,
     Eigen::MatrixXd T;
 
     for (int i = 0; i < params.iterations; i++) {
-        P = E_Step(X, Y, transform.G, transform.W, sigma_squared, params.distribution_weight);
+        FUNCINFO("Iteration: " << i)
+        P = E_Step_NR(X, Y, transform.G, transform.W, sigma_squared, params.distribution_weight);
         transform.W = GetW(X, Y, transform.G, P, sigma_squared, params.lambda);
         T = transform.apply_to(Y);
-        SigmaSquared(X, P, T);
+        sigma_squared = SigmaSquared(X, P, T);
+        if (sigma_squared < 1e-14)
+            break;
     }
+    return transform;
 }

@@ -26,6 +26,7 @@
 #include "CPD_Shared.h"
 #include "CPD_Rigid.h"
 #include "CPD_Affine.h"
+#include "CPD_Nonrigid.h"
 
 
 int main(int argc, char* argv[]){
@@ -150,7 +151,13 @@ int main(int argc, char* argv[]){
         if(!transform.write_to(TFO))
           FUNCERR("Error writing transform to " << tf_outfile)
     } else if(type == "nonrigid") {
-        FUNCERR("This option has not been implemented yet.");
+        NonRigidCPDTransform transform = AlignViaNonRigidCPD(params, moving, stationary);
+        transform.apply_to(mutable_moving);
+        std::ofstream PFO(xyz_outfile);
+        FUNCINFO("Writing to " << xyz_outfile)
+        if(!WritePointSetToXYZ(mutable_moving, PFO))
+          FUNCERR("Error writing point set to " << xyz_outfile)
+        // TODO: Add in writing transform to file
     } else {
         FUNCERR("The CPD algorithm specified was invalid. Options are rigid, affine, nonrigid");
         return 1;

@@ -32,12 +32,12 @@ struct CPDParams {
     double distribution_weight = 0.2;
     // Smoothness regulation
     // Represents trade-off between goodness of fit and regularization
-    double lambda = 5;
+    double lambda = 2;
     // Smoothness regulation
     // 
-    double beta = 5;
+    double beta = 2;
     // Max iterations for algorithm
-    int iterations = 50;
+    int iterations = 25;
 };
 
 double Init_Sigma_Squared(const Eigen::MatrixXd & xPoints,

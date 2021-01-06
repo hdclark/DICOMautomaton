@@ -31,7 +31,7 @@
 class NonRigidCPDTransform {
     public:
         Eigen::MatrixXd G;
-        Eigen::VectorXd W;
+        Eigen::MatrixXd W;
         int dim;
         NonRigidCPDTransform(int N_move_points, int dimensionality = 3);
         void apply_to(point_set<double> &ps);
@@ -41,7 +41,7 @@ class NonRigidCPDTransform {
         bool read_from( std::istream &is );
 };
 
-std::optional<NonRigidCPDTransform>
+NonRigidCPDTransform
 AlignViaNonRigidCPD(CPDParams & params,
             const point_set<double> & moving,
             const point_set<double> & stationary );
