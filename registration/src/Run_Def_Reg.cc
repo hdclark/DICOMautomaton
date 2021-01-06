@@ -102,7 +102,7 @@ int main(int argc, char* argv[]){
         return;
       })
     );
-    arger.push_back( ygor_arg_handlr_t(1, 'p', "ps", true, "transformed_pont_set.txt",
+    arger.push_back( ygor_arg_handlr_t(1, 'p', "ps", true, "transformed_point_set.txt",
       "Write transformed point set to given file.",
       [&](const std::string &optarg) -> void {
         xyz_outfile = optarg;

@@ -81,7 +81,7 @@ double GetSimilarity_NR(const Eigen::MatrixXd & xPoints,
     double dimensionality = xPoints.cols();
     double Np = postProb.sum();
     Eigen::MatrixXd tempVector;
-
+    std::cout << "HELLO";
     double leftSum = 0;
     for (size_t m = 0; m < mRowsY; ++m) {
         for (size_t n = 0; n < nRowsX; ++n) {
