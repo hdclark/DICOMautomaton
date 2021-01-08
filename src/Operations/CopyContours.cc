@@ -73,11 +73,10 @@ Drover CopyContours(Drover DICOM_data,
     for(const auto &cc_refw : cc_ROIs){
         contour_storage->ccs.emplace_back( cc_refw );
     }
+
     for(auto& cc : contour_storage->ccs){
-        for(auto &cop : cc.contours){
-            cop.metadata["ROIName"] = ROILabel;
-            cop.metadata["NormalizedROIName"] = NormalizedROILabel;
-        }
+        cc.Insert_Metadata("ROIName", ROILabel);
+        cc.Insert_Metadata("NormalizedROIName", NormalizedROILabel);
     }
     DICOM_data.Consume(contour_storage);
 
