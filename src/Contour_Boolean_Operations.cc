@@ -14,8 +14,8 @@
     #error "Attempted to compile without CGAL support, which is required."
 #endif
 
-//#include <CGAL/Exact_predicates_exact_constructions_kernel.h>
-#include <CGAL/Cartesian.h>
+#include <CGAL/Exact_predicates_exact_constructions_kernel.h>
+//#include <CGAL/Cartesian.h>
 #include <CGAL/Polygon_2.h>
 #include <CGAL/Polygon_with_holes_2.h>
 #include <CGAL/Polygon_set_2.h>
@@ -102,7 +102,8 @@ ContourBoolean(plane<double> p,
     auto common_metadata = contour_collection<double>().get_common_metadata( { }, { std::ref(all) } );
 
 
-    using Kernel = CGAL::Simple_cartesian<double>;
+    //using Kernel = CGAL::Simple_cartesian<double>;
+    using Kernel = CGAL::Exact_predicates_exact_constructions_kernel;
     using Point_2 = Kernel::Point_2;
     using Polygon_2 = CGAL::Polygon_2<Kernel>;
     using Polygon_with_holes_2 = CGAL::Polygon_with_holes_2<Kernel>;
@@ -216,7 +217,8 @@ ContourBoolean(plane<double> p,
             if(p2l.empty()) continue;
             out.contours.emplace_back();
             for(auto &p2 : p2l){
-                const vec3<double> proj(p2.x(), p2.y(), 0.0);
+                const vec3<double> proj(CGAL::to_double(p2.x()),
+                                        CGAL::to_double(p2.y()), 0.0);
                 const auto v = R2_P_basis_to_R3_v(proj);
                 out.contours.back().points.emplace_back(v);
             }
