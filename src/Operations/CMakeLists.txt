@@ -17,6 +17,7 @@ add_library(Operations_objs OBJECT
     ContourBasedRayCastDoseAccumulate.cc
     ContourSimilarity.cc
     ContourViaGeometry.cc
+    ContourViaThreshold.cc
     ContourVote.cc
     ContourWholeImages.cc
     ContouringAides.cc
@@ -166,7 +167,6 @@ add_library(Operations_objs OBJECT
 
     $<$<BOOL:${WITH_CGAL}>:BCCAExtractRadiomicFeatures.cc>
     $<$<BOOL:${WITH_CGAL}>:ContourBooleanOperations.cc>
-    $<$<BOOL:${WITH_CGAL}>:ContourViaThreshold.cc>
     $<$<BOOL:${WITH_CGAL}>:ConvertImageToMeshes.cc>
     $<$<BOOL:${WITH_CGAL}>:ConvertMeshesToContours.cc>
     $<$<BOOL:${WITH_CGAL}>:DumpROISurfaceMeshes.cc>

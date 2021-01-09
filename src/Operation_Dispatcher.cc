@@ -35,6 +35,7 @@
 #include "Operations/ContourBasedRayCastDoseAccumulate.h"
 #include "Operations/ContourSimilarity.h"
 #include "Operations/ContourViaGeometry.h"
+#include "Operations/ContourViaThreshold.h"
 #include "Operations/ContourVote.h"
 #include "Operations/ContourWholeImages.h"
 #include "Operations/ContouringAides.h"
@@ -195,7 +196,6 @@
 #ifdef DCMA_USE_CGAL
     #include "Operations/BCCAExtractRadiomicFeatures.h"
     #include "Operations/ContourBooleanOperations.h"
-    #include "Operations/ContourViaThreshold.h"
     #include "Operations/ConvertImageToMeshes.h"
     #include "Operations/ConvertMeshesToContours.h"
     #include "Operations/DumpROISurfaceMeshes.h"
@@ -231,6 +231,7 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["ContourBasedRayCastDoseAccumulate"] = std::make_pair(OpArgDocContourBasedRayCastDoseAccumulate, ContourBasedRayCastDoseAccumulate);
     out["ContourSimilarity"] = std::make_pair(OpArgDocContourSimilarity, ContourSimilarity);
     out["ContourViaGeometry"] = std::make_pair(OpArgDocContourViaGeometry, ContourViaGeometry);
+    out["ContourViaThreshold"] = std::make_pair(OpArgDocContourViaThreshold, ContourViaThreshold);
     out["ContourVote"] = std::make_pair(OpArgDocContourVote, ContourVote);
     out["ContourWholeImages"] = std::make_pair(OpArgDocContourWholeImages, ContourWholeImages);
     out["ContouringAides"] = std::make_pair(OpArgDocContouringAides, ContouringAides);
@@ -390,7 +391,6 @@ std::map<std::string, op_packet_t> Known_Operations(){
 #ifdef DCMA_USE_CGAL
     out["BCCAExtractRadiomicFeatures"] = std::make_pair(OpArgDocBCCAExtractRadiomicFeatures, BCCAExtractRadiomicFeatures);
     out["ContourBooleanOperations"] = std::make_pair(OpArgDocContourBooleanOperations, ContourBooleanOperations);
-    out["ContourViaThreshold"] = std::make_pair(OpArgDocContourViaThreshold, ContourViaThreshold);
     out["ConvertImageToMeshes"] = std::make_pair(OpArgDocConvertImageToMeshes, ConvertImageToMeshes);
     out["ConvertMeshesToContours"] = std::make_pair(OpArgDocConvertMeshesToContours, ConvertMeshesToContours);
     out["DumpROISurfaceMeshes"] = std::make_pair(OpArgDocDumpROISurfaceMeshes, DumpROISurfaceMeshes);
