@@ -210,6 +210,11 @@ test_cross_compile_mxe_on_debian_stable:
     - "dpkg --add-architecture i386"
     - "apt-get update"
     - "apt-get install --yes wine32 wine64"
+    # Debugging note: to download the latest sources and Windows CI binaries:
+    #- "apt-get install --yes wget unzip vim"
+    #- "git clone https://github.com/hdclark/DICOMautomaton && cd DICOMautomaton"
+    #- "wget 'https://gitlab.com/hdeanclark/DICOMautomaton/builds/artifacts/master/download?job=cross_compile_mxe' -O dcma.zip"
+    #- "unzip dcma.zip"
     # Wrap the Windows binary with wine calls so it is transparent to the caller.
     - "chmod 777 Windows/usr/bin/*"
     - "rsync -a ./Windows/usr/ /usr/"

@@ -36,6 +36,16 @@
 set -eux
 set -o pipefail
 
+# First check if CGAL support is enabled. It is needed for this example.
+function skip_example {
+    echo "CGAL is not available. Skipping example..."
+    exit 0
+}
+"${DCMA_BIN}" -u | \
+  grep 'CGAL[ ]*true' | \
+  grep . || skip_example
+
+
 "${DCMA_BIN}" \
   "${TEST_FILES_ROOT}"/M6x20_screw_nonmanifold_binary.ply.tgz \
   `# ` \
