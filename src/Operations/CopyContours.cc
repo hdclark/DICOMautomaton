@@ -22,7 +22,7 @@ OperationDoc OpArgDocCopyContours(){
     out.name = "CopyContours";
 
     out.desc = 
-        " This operation deep-copies the selected contours.";
+        "This operation deep-copies the selected contours.";
 
     out.args.emplace_back();
     out.args.back() = NCWhitelistOpArgDoc();

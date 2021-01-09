@@ -46,6 +46,7 @@ add_library(Operations_objs OBJECT
     DecayDoseOverTimeJones2014.cc
     DecimatePixels.cc
     DeDuplicateImages.cc
+    DeleteContours.cc
     DeleteImages.cc
     DeleteMeshes.cc
     DeletePoints.cc
