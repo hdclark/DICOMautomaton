@@ -116,6 +116,10 @@ test_ci_debian_stable_on_debian_stable:
     # Ensure it can be run and then run tests.
     - "dicomautomaton_dispatcher -h"
     - "./integration_tests/Run.sh"
+  artifacts:
+    paths:
+      - "dcma_integration_testing"
+    expire_in: 1 week
 
 test_ci_arch_on_arch:
   stage: test
@@ -135,6 +139,10 @@ test_ci_arch_on_arch:
     # Ensure it can be run and then run tests.
     - "dicomautomaton_dispatcher -h"
     - "./integration_tests/Run.sh"
+  artifacts:
+    paths:
+      - "dcma_integration_testing"
+    expire_in: 1 week
 
 # Cross-system testing.
 test_ci_debian_stable_on_arch:
@@ -155,6 +163,10 @@ test_ci_debian_stable_on_arch:
     # Ensure it can be run and then run tests.
     - "dicomautomaton_dispatcher -h"
     - "./integration_tests/Run.sh"
+  artifacts:
+    paths:
+      - "dcma_integration_testing"
+    expire_in: 1 week
 
 test_ci_debian_stable_on_ubuntu_latest:
   stage: test
@@ -176,6 +188,10 @@ test_ci_debian_stable_on_ubuntu_latest:
     #- git clone 'https://github.com/hdclark/DICOMautomaton'
     #- cd DICOMautomaton
     - "./integration_tests/Run.sh"
+  artifacts:
+    paths:
+      - "dcma_integration_testing"
+    expire_in: 1 week
 
 test_ci_debian_stable_on_fedora_latest:
   stage: test
@@ -196,6 +212,10 @@ test_ci_debian_stable_on_fedora_latest:
     #- "git clone 'https://github.com/hdclark/DICOMautomaton'"
     #- "cd DICOMautomaton"
     - "./integration_tests/Run.sh"
+  artifacts:
+    paths:
+      - "dcma_integration_testing"
+    expire_in: 1 week
 
 # Cross-compilation testing.
 test_cross_compile_mxe_on_debian_stable:
@@ -208,7 +228,7 @@ test_cross_compile_mxe_on_debian_stable:
     - "apt-get update --yes"
     - "apt-get install --yes --no-install-recommends git ca-certificates rsync mesa-utils"
     - "dpkg --add-architecture i386"
-    - "apt-get update"
+    - "apt-get update --yes"
     - "apt-get install --yes wine32 wine64"
     # Debugging note: to download the latest sources and Windows CI binaries:
     #- "apt-get install --yes wget unzip vim"
@@ -224,6 +244,10 @@ test_cross_compile_mxe_on_debian_stable:
     # Ensure it can be run and then run tests.
     - "dicomautomaton_dispatcher -h"
     - "./integration_tests/Run.sh"
+  artifacts:
+    paths:
+      - "dcma_integration_testing"
+    expire_in: 1 week
 
 #######################################################################################################################
 ### Deployment stages.
