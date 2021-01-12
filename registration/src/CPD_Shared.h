@@ -1,22 +1,6 @@
 #ifndef CPDSHARED_H_
 #define CPDSHARED_H_
 
-#include <exception>
-#include <functional>
-#include <optional>
-#include <iostream>
-#include <list>
-#include <map>
-#include <memory>
-#include <string>    
-#include <vector>
-
-#include <cstdlib>            //Needed for exit() calls.
-#include <utility>            //Needed for std::pair.
-
-#include "YgorMath.h"         //Needed for samples_1D.
-
-#include <math.h>
 #include <Eigen/Dense>
 
 // A copy of this structure will be passed to the algorithm. It should be used to set parameters, if there are any, that affect

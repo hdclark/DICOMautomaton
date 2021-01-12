@@ -1,3 +1,8 @@
+#include "YgorFilesDirs.h"    //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
+#include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorMath.h"         //Needed for samples_1D.
+#include "YgorString.h"       //Needed for GetFirstRegex(...)
+
 #include "CPD_Affine.h"
 
 AffineCPDTransform::AffineCPDTransform(int dimensionality) {
@@ -7,7 +12,6 @@ AffineCPDTransform::AffineCPDTransform(int dimensionality) {
 }
 
 void AffineCPDTransform::apply_to(point_set<double> &ps) {
-    FUNCINFO("Applying transform to point set")
     auto N_points = static_cast<long int>(ps.points.size());
     Eigen::MatrixXd Y = Eigen::MatrixXd::Zero(N_points, this->dim); 
     // Fill the X vector with the corresponding points.
@@ -78,14 +82,6 @@ double SigmaSquared(const Eigen::MatrixXd & B,
     double left = (double)(xHat.transpose() * (postProb.transpose() * oneVec).asDiagonal() * xHat).trace();
     double right = (double)(xHat.transpose() * postProb.transpose() * yHat * B.transpose()).trace();
 
-    std::cout << "\n diff";
-    std::cout << (left - right);
-    std::cout << "\n Np: ";
-    std::cout << Np; 
-    std::cout << "\n dims: ";
-    std::cout << dimensionality; 
-
-
     return (left - right) / (Np * dimensionality);
     
 }
@@ -96,10 +92,10 @@ AlignViaAffineCPD(CPDParams & params,
             const point_set<double> & moving,
             const point_set<double> & stationary ){
 
-    // if(moving.points.empty() || stationary.points.empty()){
-    //     FUNCWARN("Unable to perform ABC alignment: a point set is empty");
-    //     return std::nullopt;
-    // }
+    if(moving.points.empty() || stationary.points.empty()){
+        FUNCWARN("Unable to perform ABC alignment: a point set is empty");
+        return NULL;
+    }
 
     const auto N_move_points = static_cast<long int>(moving.points.size());
     const auto N_stat_points = static_cast<long int>(stationary.points.size());
@@ -127,7 +123,6 @@ AlignViaAffineCPD(CPDParams & params,
         Y(j, 2) = P_moving.z;
     }
     AffineCPDTransform transform(params.dimensionality);
-    double prev_sigma_squared;
     double sigma_squared = Init_Sigma_Squared(X, Y);
     Eigen::MatrixXd P;
     Eigen::MatrixXd Ux;
