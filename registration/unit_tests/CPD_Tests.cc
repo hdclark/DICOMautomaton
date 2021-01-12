@@ -1,21 +1,16 @@
 #include <utility>
 #include <iostream>
+
+#include "YgorFilesDirs.h"    //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
+#include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorMath.h"         //Needed for samples_1D.
+#include "YgorString.h"       //Needed for GetFirstRegex(...)
+
 #include "doctest/doctest.h"
 #include "CPD_Rigid.h"
-#ifndef CPDAFFINE_H_
 #include "CPD_Affine.h"
-#define CPDAFFINE_H_
-#endif
-#ifndef CPDSHARED_H_
-#define CPDSHARED_H_
 #include "CPD_Shared.h"
-#endif
-// #ifndef CPDNONRIGID_H_
-// #define CPDNONRIGID_H_
 #include "CPD_Nonrigid.h"
-// #include "CPD_NonRigid.h"
-// #endif
-
 
 /*
 This unit testing uses the DocTest framework. This is the framework
@@ -27,14 +22,6 @@ of the tests passed and failed will be printed on the terminal.
 For information on how to use this testing framework see:
 https://github.com/onqtam/doctest
 */
-
-TEST_CASE("example test"){
-	REQUIRE(1==1);
-
-	SUBCASE("example subcase"){
-		REQUIRE(2==2);
-	}
-}
 
 // rigid test
 TEST_CASE("GetA"){

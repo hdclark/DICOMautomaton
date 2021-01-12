@@ -1,8 +1,12 @@
+#include <math.h>
+
 #include "YgorFilesDirs.h"    //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorMath.h"         //Needed for samples_1D.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
+
 #include "CPD_Shared.h"
+
 #include <chrono>
 using namespace std::chrono;
 
@@ -61,8 +65,8 @@ double GetSimilarity(const Eigen::MatrixXd & xPoints,
     Eigen::MatrixXd tempVector;
 
     double leftSum = 0;
-    for (size_t m = 0; m < mRowsY; ++m) {
-        for (size_t n = 0; n < nRowsX; ++n) {
+    for (int m = 0; m < mRowsY; ++m) {
+        for (int n = 0; n < nRowsX; ++n) {
             tempVector = xPoints.row(n) - AlignedPointSet(yPoints.row(m), rotationMatrix, translation, scale);
             leftSum += postProb(m,n) * tempVector.squaredNorm();
         }
@@ -92,8 +96,8 @@ Eigen::MatrixXd E_Step(const Eigen::MatrixXd & xPoints,
     int dimensionality = yPoints.cols();
 
     auto start = high_resolution_clock::now();
-    for (size_t m = 0; m < mRowsY; ++m) {
-        for (size_t n = 0; n < nRowsX; ++n) {
+    for (int m = 0; m < mRowsY; ++m) {
+        for (int n = 0; n < nRowsX; ++n) {
             tempVector = xPoints.row(n).transpose() - (scale * rotationMatrix * yPoints.row(m).transpose() + t);
             expArg = - 1.0 / (2 * sigmaSquared) * tempVector.squaredNorm();
             expMat(m,n) = exp(expArg);
@@ -101,10 +105,9 @@ Eigen::MatrixXd E_Step(const Eigen::MatrixXd & xPoints,
     }
     auto stop = high_resolution_clock::now();
     auto duration = duration_cast<microseconds>(stop - start); 
-    // std::cout << duration.count() << std::endl; 
 
-    for (size_t m = 0; m < mRowsY; ++m) {
-        for (size_t n = 0; n < nRowsX; ++n) {
+    for (int m = 0; m < mRowsY; ++m) {
+        for (int n = 0; n < nRowsX; ++n) {
             numerator = expMat(m,n);
             denominator = expMat.col(n).sum() + 
                           pow(2 * M_PI * sigmaSquared,((double)(dimensionality/2.0))) * (w/(1-w)) * ((double) mRowsY / nRowsX);

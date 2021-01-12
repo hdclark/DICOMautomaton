@@ -19,11 +19,6 @@
 
 #include <eigen3/Eigen/Dense> //Needed for Eigen library dense matrices.
 
-#include "YgorFilesDirs.h"    //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
-#include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
-#include "YgorMath.h"         //Needed for samples_1D.
-#include "YgorString.h"       //Needed for GetFirstRegex(...)
-
 #include "CPD_Shared.h"
 
 #include <math.h>
