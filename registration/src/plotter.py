@@ -28,7 +28,7 @@ def plot_points(x1,y1,z1,x2,y2,z2):
     plt.show()
 
 def main():
-    file_name_1 = "../data/bunny_out2.xyz"
+    file_name_1 = "../abc"
     file_name_2 = "../data/bunny_target.txt"
     x1,y1,z1 = read_file(file_name_1)
     x2,y2,z2 = read_file(file_name_2)

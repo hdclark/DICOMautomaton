@@ -95,7 +95,6 @@ Eigen::MatrixXd E_Step(const Eigen::MatrixXd & xPoints,
     int nRowsX = xPoints.rows();
     int dimensionality = yPoints.cols();
 
-    auto start = high_resolution_clock::now();
     for (int m = 0; m < mRowsY; ++m) {
         for (int n = 0; n < nRowsX; ++n) {
             tempVector = xPoints.row(n).transpose() - (scale * rotationMatrix * yPoints.row(m).transpose() + t);
@@ -103,8 +102,6 @@ Eigen::MatrixXd E_Step(const Eigen::MatrixXd & xPoints,
             expMat(m,n) = exp(expArg);
         }
     }
-    auto stop = high_resolution_clock::now();
-    auto duration = duration_cast<microseconds>(stop - start); 
 
     for (int m = 0; m < mRowsY; ++m) {
         for (int n = 0; n < nRowsX; ++n) {
@@ -114,8 +111,6 @@ Eigen::MatrixXd E_Step(const Eigen::MatrixXd & xPoints,
             postProb(m,n) = numerator / denominator;
         }
     }
-    stop = high_resolution_clock::now();
-    duration = duration_cast<microseconds>(stop - start); 
     
     return postProb;
 }

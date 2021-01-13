@@ -118,11 +118,6 @@ RigidCPDTransform
 AlignViaRigidCPD(CPDParams & params,
             const point_set<double> & moving,
             const point_set<double> & stationary ){
-    FUNCINFO("Performing rigid CPD")
-    // if(moving.points.empty() || stationary.points.empty()){
-    //     FUNCWARN("Unable to perform ABC alignment: a point set is empty");
-    //     return std::nullopt;
-    // }
 
     const auto N_move_points = static_cast<long int>(moving.points.size());
     const auto N_stat_points = static_cast<long int>(stationary.points.size());
@@ -151,9 +146,10 @@ AlignViaRigidCPD(CPDParams & params,
         Y(j, 1) = P_moving.y;
         Y(j, 2) = P_moving.z;
     }
+
     RigidCPDTransform transform(params.dimensionality);
-    double prev_sigma_squared;
     double sigma_squared = Init_Sigma_Squared(X, Y);
+    double similarity;
 
     Eigen::MatrixXd P;
     Eigen::MatrixXd Ux;
@@ -164,10 +160,7 @@ AlignViaRigidCPD(CPDParams & params,
 
     FUNCINFO("Starting loop. Iterations: " << params.iterations)
     for (int i = 0; i < params.iterations; i++) {
-        FUNCINFO("Starting Iteration: " << i) 
-        if(sigma_squared < 0.00001)
-            break;
-        prev_sigma_squared = sigma_squared;
+        FUNCINFO("Starting Iteration: " << i)
         P = E_Step(X, Y, transform.R, \
             transform.t, sigma_squared, params.distribution_weight, transform.s);
         Ux = CalculateUx(X, P);
@@ -180,8 +173,11 @@ AlignViaRigidCPD(CPDParams & params,
         transform.s = GetS(A, transform.R, Y_hat, P);
         transform.t = GetTranslationVector(transform.R, Ux, Uy, transform.s);
         sigma_squared = SigmaSquared(transform.s, A, transform.R, X_hat, P);
-        if(sigma_squared > prev_sigma_squared)
-            break;
+        similarity = GetSimilarity(X, Y, P, transform.R, transform.t, transform.s, sigma_squared);
+        FUNCINFO(similarity)
+        // if(similarity < params.similarity_threshold)
+        //     break;
+
     }
     return transform;
 }
