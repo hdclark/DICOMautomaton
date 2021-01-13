@@ -40,18 +40,21 @@ Eigen::MatrixXd RigidCPDTransform::get_sR() {
     return this->s * this->R;
 }
 
-bool RigidCPDTransform::write_to( std::ostream &os ) {
+void RigidCPDTransform::write_to( std::ostream &os ) {
     affine_transform<double> tf;
     Eigen::MatrixXd sR = get_sR();
     for(int i = 0; i < this->dim; i++) {
         for(int j = 0; j < this->dim; j++) {
-            tf.coeff(i, j) = sR(i, j);
+            os << sR(i, j);
+            os << " ";
         }
+        os << "0\n";
     }
     for(int j = 0; j < this->dim; j++) {
-        tf.coeff(3, j) = this->t(j);
+        os << this->t(j);
+        os << " ";
     }
-    return tf.write_to(os);
+    os << "0\n";
 }
 
 bool RigidCPDTransform::read_from( std::istream &is ) {
@@ -158,7 +161,7 @@ AlignViaRigidCPD(CPDParams & params,
     Eigen::MatrixXd Y_hat;
     Eigen::MatrixXd A;
 
-    FUNCINFO("Starting loop. Iterations: " << params.iterations)
+    FUNCINFO("Starting loop. Max Iterations: " << params.iterations)
     for (int i = 0; i < params.iterations; i++) {
         FUNCINFO("Starting Iteration: " << i)
         P = E_Step(X, Y, transform.R, \
@@ -174,9 +177,8 @@ AlignViaRigidCPD(CPDParams & params,
         transform.t = GetTranslationVector(transform.R, Ux, Uy, transform.s);
         sigma_squared = SigmaSquared(transform.s, A, transform.R, X_hat, P);
         similarity = GetSimilarity(X, Y, P, transform.R, transform.t, transform.s, sigma_squared);
-        FUNCINFO(similarity)
-        // if(similarity < params.similarity_threshold)
-        //     break;
+        if(similarity < params.similarity_threshold)
+            break;
 
     }
     return transform;

@@ -30,17 +30,19 @@ void AffineCPDTransform::apply_to(point_set<double> &ps) {
     }
 }
 
-bool AffineCPDTransform::write_to( std::ostream &os ) {
-    affine_transform<double> tf;
+void AffineCPDTransform::write_to( std::ostream &os ) {
     for(int i = 0; i < this->dim; i++) {
         for(int j = 0; j < this->dim; j++) {
-            tf.coeff(i, j) = this->B(i, j);
+            os << this->B(i, j);
+            os << " ";
         }
+        os << "0\n";
     }
     for(int j = 0; j < this->dim; j++) {
-        tf.coeff(3, j) = this->t(j);
+        os << this->t(j);
+        os << " ";
     }
-    return tf.write_to(os);
+    os << "0\n";
 }
 
 bool AffineCPDTransform::read_from( std::istream &is ) {
@@ -119,11 +121,13 @@ AlignViaAffineCPD(CPDParams & params,
     }
     AffineCPDTransform transform(params.dimensionality);
     double sigma_squared = Init_Sigma_Squared(X, Y);
+    double similarity;
     Eigen::MatrixXd P;
     Eigen::MatrixXd Ux;
     Eigen::MatrixXd Uy;
     Eigen::MatrixXd X_hat;
     Eigen::MatrixXd Y_hat;
+    FUNCINFO("Starting loop. Max Iterations: " << params.iterations)
     for (int i = 0; i < params.iterations; i++) {
         FUNCINFO("Iteration: " << i)
         P = E_Step(X, Y, transform.B, \
@@ -135,7 +139,8 @@ AlignViaAffineCPD(CPDParams & params,
         transform.B = CalculateB(X_hat, Y_hat, P);
         transform.t = GetTranslationVector(transform.B, Ux, Uy, 1);
         sigma_squared = SigmaSquared(transform.B, X_hat, Y_hat, P);
-        if (sigma_squared < 0.00001)
+        similarity = GetSimilarity(X, Y, P, transform.B, transform.t, 1, sigma_squared);
+        if(similarity < params.similarity_threshold)
             break;
     }
     return transform;

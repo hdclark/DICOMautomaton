@@ -17,9 +17,9 @@ struct CPDParams {
     // Smoothness regulation
     double beta = 2;
     // Max iterations for algorithm
-    int iterations = 25;
+    int iterations = 100;
     // Similarity termination threshold for algorithm
-    double similarity_threshold = 1e-6;
+    double similarity_threshold = -15000;
 };
 
 double Init_Sigma_Squared(const Eigen::MatrixXd & xPoints,

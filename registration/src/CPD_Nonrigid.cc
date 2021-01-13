@@ -29,6 +29,18 @@ void NonRigidCPDTransform::apply_to(point_set<double> &ps) {
     }
 }
 
+void NonRigidCPDTransform::write_to( std::ostream &os ) {
+    Eigen::MatrixXd m = this->G * this->W;
+    int rows = m.rows();
+    for(int i = 0; i < rows; i++) {
+        for(int j = 0; j < this->dim; j++) {
+            os << m(i, j);
+            os << " ";
+        }
+        os << "\n";
+    }
+}
+
 Eigen::MatrixXd NonRigidCPDTransform::apply_to(const Eigen::MatrixXd &ps) {
     return ps + this->G * this->W;
 }
@@ -199,6 +211,7 @@ AlignViaNonRigidCPD(CPDParams & params,
     }
     NonRigidCPDTransform transform(N_move_points, params.dimensionality);
     double sigma_squared = NR_Init_Sigma_Squared(X, Y);
+    // double similarity;
     transform.G = GetGramMatrix(Y, params.beta * params.beta);
     Eigen::MatrixXd P;
     Eigen::MatrixXd T;
@@ -209,8 +222,10 @@ AlignViaNonRigidCPD(CPDParams & params,
         transform.W = GetW(X, Y, transform.G, P, sigma_squared, params.lambda);
         T = transform.apply_to(Y);
         sigma_squared = SigmaSquared(X, P, T);
-        if (sigma_squared < 1e-14)
-            break;
+        // TODO: Use similarity once function is sped up
+        // similarity = GetSimilarity_NR(X, Y, P, transform.G, transform.W, sigma_squared);
+        // if(similarity < params.similarity_threshold)
+        //     break;
     }
     return transform;
 }

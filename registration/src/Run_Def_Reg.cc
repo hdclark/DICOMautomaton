@@ -148,6 +148,25 @@ int main(int argc, char* argv[]){
         return;
       })
     );
+    arger.push_back( ygor_arg_handlr_t(1, 'i', "iterations", true, "100",
+      "Maximum number of iterations for algorithm.",
+      [&](const std::string &optarg) -> void {
+        if (optarg.empty()) {
+          params.iterations = std::stoi(optarg);
+        }
+        return;
+      })
+    );
+    arger.push_back( ygor_arg_handlr_t(1, 'r', "threshold", true, "-15000",
+      "Similarity threshold to terminate iteratiosn at.",
+      [&](const std::string &optarg) -> void {
+        if (optarg.empty()) {
+          std::string::size_type sz;
+          params.similarity_threshold = std::stof(optarg, &sz);
+        }
+        return;
+      })
+    );
     arger.Launch(argc, argv);
     //============================================= Input Validation ================================================
     if(moving.points.empty()){
@@ -164,32 +183,32 @@ int main(int argc, char* argv[]){
         RigidCPDTransform transform = AlignViaRigidCPD(params, moving, stationary);
         transform.apply_to(mutable_moving);
         std::ofstream PFO(xyz_outfile);
-        FUNCINFO("Writing to " << xyz_outfile)
+        FUNCINFO("Writing transformed point set to " << xyz_outfile)
         if(!WritePointSetToXYZ(mutable_moving, PFO))
           FUNCERR("Error writing point set to " << xyz_outfile)
         std::ofstream TFO(tf_outfile);
-        FUNCINFO("Writing to " << tf_outfile)
-        if(!transform.write_to(TFO))
-          FUNCERR("Error writing transform to " << tf_outfile)
+        FUNCINFO("Writing transform to " << tf_outfile)
+        transform.write_to(TFO);
     } else if(type == "affine") {
         AffineCPDTransform transform = AlignViaAffineCPD(params, moving, stationary);
         transform.apply_to(mutable_moving);
         std::ofstream PFO(xyz_outfile);
-        FUNCINFO("Writing to " << xyz_outfile)
+        FUNCINFO("Writing transformed point set to " << xyz_outfile)
         if(!WritePointSetToXYZ(mutable_moving, PFO))
           FUNCERR("Error writing point set to " << xyz_outfile)
         std::ofstream TFO(tf_outfile);
-        FUNCINFO("Writing to " << tf_outfile)
-        if(!transform.write_to(TFO))
-          FUNCERR("Error writing transform to " << tf_outfile)
+        FUNCINFO("Writing transform to " << tf_outfile)
+        transform.write_to(TFO);
     } else if(type == "nonrigid") {
         NonRigidCPDTransform transform = AlignViaNonRigidCPD(params, moving, stationary);
         transform.apply_to(mutable_moving);
         std::ofstream PFO(xyz_outfile);
-        FUNCINFO("Writing to " << xyz_outfile)
+        FUNCINFO("Writing trasnformed point set to " << xyz_outfile)
         if(!WritePointSetToXYZ(mutable_moving, PFO))
           FUNCERR("Error writing point set to " << xyz_outfile)
-        // TODO: Add in writing transform to file
+        std::ofstream TFO(tf_outfile);
+        FUNCINFO("Writing transform to " << tf_outfile)
+        transform.write_to(TFO);
     } else {
         FUNCERR("The CPD algorithm specified was invalid. Options are rigid, affine, nonrigid");
         return 1;
