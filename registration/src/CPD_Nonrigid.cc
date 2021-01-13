@@ -3,7 +3,6 @@
 #include "YgorMath.h"         //Needed for samples_1D.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 #include "CPD_Nonrigid.h"
-//#include "CPD_NonRigid.h"
 #include <chrono>
 using namespace std::chrono;
 
@@ -28,7 +27,6 @@ void NonRigidCPDTransform::apply_to(point_set<double> &ps) {
         ps.points[j].y = Y_hat(j, 1);
         ps.points[j].z = Y_hat(j, 2);
     }
-
 }
 
 Eigen::MatrixXd NonRigidCPDTransform::apply_to(const Eigen::MatrixXd &ps) {

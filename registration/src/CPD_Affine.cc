@@ -91,12 +91,7 @@ AffineCPDTransform
 AlignViaAffineCPD(CPDParams & params,
             const point_set<double> & moving,
             const point_set<double> & stationary ){
-
-    if(moving.points.empty() || stationary.points.empty()){
-        FUNCWARN("Unable to perform ABC alignment: a point set is empty");
-        return NULL;
-    }
-
+                
     const auto N_move_points = static_cast<long int>(moving.points.size());
     const auto N_stat_points = static_cast<long int>(stationary.points.size());
 

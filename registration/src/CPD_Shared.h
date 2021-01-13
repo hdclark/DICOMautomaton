@@ -3,9 +3,6 @@
 
 #include <Eigen/Dense>
 
-#include <math.h>
-#include <Eigen/Dense>
-
 // A copy of this structure will be passed to the algorithm. It should be used to set parameters, if there are any, that affect
 // how the algorithm is performed. It generally should not be used to pass information back to the caller.
 struct CPDParams {
