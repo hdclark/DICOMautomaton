@@ -339,7 +339,7 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["PurgeContours"] = std::make_pair(OpArgDocPurgeContours, PurgeContours);
     out["RankPixels"] = std::make_pair(OpArgDocRankPixels, RankPixels);
     out["ReduceNeighbourhood"] = std::make_pair(OpArgDocReduceNeighbourhood, ReduceNeighbourhood);
-    out["Repeat"] = std::make_pair(OpArgDocReduceNeighbourhood, Repeat);
+    out["Repeat"] = std::make_pair(OpArgDocRepeat, Repeat);
     out["ScalePixels"] = std::make_pair(OpArgDocScalePixels, ScalePixels);
     out["SelectSlicesIntersectingROI"] = std::make_pair(OpArgDocSelectSlicesIntersectingROI, SelectSlicesIntersectingROI);
     out["SimplifyContours"] = std::make_pair(OpArgDocSimplifyContours, SimplifyContours);
