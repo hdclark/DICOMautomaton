@@ -572,6 +572,7 @@ struct OperationDoc {
     std::list<OperationArgDoc> args; // Documentation for the arguments. 
 
     std::string name; // Documentation for the operation itself.
+    std::list<std::string> aliases; // Other names for the operation itself.
     std::string desc; // Documentation for the operation itself.
     std::list<std::string> notes; // Special notes concerning the operation, usually caveats or notices.
 

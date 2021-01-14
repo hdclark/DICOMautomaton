@@ -37,6 +37,7 @@
 OperationDoc OpArgDocContourViaThreshold(){
     OperationDoc out;
     out.name = "ContourViaThreshold";
+    out.aliases.emplace_back("ConvertImagesToContours");
 
     out.desc = 
         "This operation constructs ROI contours using images and pixel/voxel value thresholds."

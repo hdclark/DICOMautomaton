@@ -25,6 +25,7 @@
 OperationDoc OpArgDocHighlightROIs(){
     OperationDoc out;
     out.name = "HighlightROIs";
+    out.aliases.emplace_back("ConvertContoursToImages");
 
     out.desc = 
         "This operation overwrites voxel data inside and/or outside of ROI(s) to 'highlight' them."
