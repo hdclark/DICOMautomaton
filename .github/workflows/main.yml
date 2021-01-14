@@ -26,4 +26,18 @@ jobs:
         run: |
              ./integration_tests/Run.sh
              ./scripts/extract_system_appimage.sh
+      - name: prep_for_deploy
+        run: |
+             rm -rf ci_artifacts
+             mkdir -pv ci_artifacts
+             git clone 'https://github.com/hdclark/hdclark.github.io.git' ci_artifacts
+             rm -rf ci_artifacts/.git
+             "mv DICOMautomaton*AppImage ci_artifacts/"
+      - name: deploy_to_github_pages
+        uses: JamesIves/github-pages-deploy-action@3.7.1
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH: master
+          FOLDER: ci_artifacts
+          CLEAN: false
 
