@@ -111,6 +111,7 @@ add_library(Operations_objs OBJECT
     ModifyContourMetadata.cc
     ModifyImageMetadata.cc
     NegatePixels.cc
+    NoOp.cc
     NormalizeLineSamples.cc
     NormalizePixels.cc
     OptimizeStaticBeams.cc
