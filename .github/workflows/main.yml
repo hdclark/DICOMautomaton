@@ -31,10 +31,9 @@ jobs:
              rm -rf ci_artifacts
              mkdir -pv ci_artifacts
              git clone 'https://github.com/hdclark/hdclark.github.io.git' ci_artifacts
-             rm -rf ci_artifacts/.git
-             ls
-             pwd
-             mv DICOMautomaton*AppImage ci_artifacts/
+             rm -rf ci_artifacts/.git ci_artifacts/*AppImage
+             mv DICOMautomaton*AppImage DICOMautomaton-x86_64.AppImage
+             mv DICOMautomaton-x86_64.AppImage ci_artifacts/
       - name: deploy_to_github_pages
         uses: JamesIves/github-pages-deploy-action@3.7.1
         with:
