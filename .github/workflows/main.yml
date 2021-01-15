@@ -26,19 +26,14 @@ jobs:
         run: |
              ./integration_tests/Run.sh
              ./scripts/extract_system_appimage.sh
-      - name: prep_for_deploy
+      - name: deploy_to_halclark
         run: |
              rm -rf ci_artifacts
              mkdir -pv ci_artifacts
-             git clone 'https://github.com/hdclark/hdclark.github.io.git' ci_artifacts
-             rm -rf ci_artifacts/.git ci_artifacts/*AppImage
-             mv DICOMautomaton*AppImage DICOMautomaton-x86_64.AppImage
-             mv DICOMautomaton-x86_64.AppImage ci_artifacts/
-      - name: deploy_to_github_pages
-        uses: JamesIves/github-pages-deploy-action@3.7.1
-        with:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          BRANCH: master
-          FOLDER: ci_artifacts
-          CLEAN: false
+             cp DICOMautomaton*AppImage DICOMautomaton-latest-x86_64.AppImage
+             mv DICOMautomaton*AppImage ci_artifacts/
+             find ci_artifacts/ -iname '*AppImage' -exec sha256sum '{}' > '{}'.sha256sum \;
+             echo "${{secrets.HALCLARKCA_DEPLOY_KEY}}" > deploy_key
+             chmod 600 deploy_key
+             rsync -avP -e 'ssh -i deploy_key -o StrictHostKeyChecking=no' ci_artifacts/ root@halclark.ca:/var/www/html/ci/
 
