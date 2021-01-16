@@ -121,7 +121,7 @@ if [ ! -d "${REPOROOT}" ] ; then
     REPOROOT="${SCRIPT_DIR}"
 fi
 cd "${REPOROOT}"
-
+export DCMA_VERSION="$(./scripts/extract_dcma_version.sh)"
 
 # Determine how we will escalate privileges.
 SUDO="sudo"
@@ -174,6 +174,7 @@ elif [[ "${DISTRIBUTION}" =~ .*debian.* ]] ; then
         touch CMakeCache.txt  # To bump CMake-defined compilation time.
     else
         cmake \
+          -DDCMA_VERSION="${DCMA_VERSION}" \
           -DCMAKE_INSTALL_PREFIX="${INSTALLPREFIX}" \
           -DCMAKE_INSTALL_SYSCONFDIR="/etc" \
           -DCMAKE_BUILD_TYPE=Release \
@@ -222,6 +223,7 @@ else  # Generic build and install.
     mkdir -p build
     cd build
     cmake \
+      -DDCMA_VERSION="${DCMA_VERSION}" \
       -DCMAKE_INSTALL_PREFIX="${INSTALLPREFIX}" \
       -DCMAKE_INSTALL_SYSCONFDIR="/etc" \
       -DCMAKE_BUILD_TYPE=Release \

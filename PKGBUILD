@@ -39,6 +39,7 @@ optdepends=(
 )
 makedepends=(
    'cmake'
+   'git'
    'asio'
    'ygorclustering'
 )
@@ -60,8 +61,15 @@ build() {
   # Try use environment variable, but fallback to standard. 
   install_prefix=${INSTALL_PREFIX:-/usr}
 
+  # If the version is not supplied as an environment variable, attempt to provide it.
+  # (If this is being built it an intact git repo, it should pick up the git hash.)
+  if [ -z "${DCMA_VERSION}" ] ; then
+      DCMA_VERSION="$(../scripts/extract_dcma_version.sh)"
+  fi
+
   # Default build with default compiler flags.
   cmake \
+    -DDCMA_VERSION="${DCMA_VERSION}" \
     -DCMAKE_INSTALL_PREFIX="${install_prefix}" \
     -DCMAKE_INSTALL_SYSCONFDIR=/etc \
     -DCMAKE_BUILD_TYPE=Release \

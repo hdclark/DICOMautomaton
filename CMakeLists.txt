@@ -253,6 +253,20 @@ endif()
 ####################################################################################
 add_definitions(-DUSTREAM_H) # -DUSE_ICU_STRINGS
 
+if( (NOT DEFINED DCMA_VERSION) OR ("${DCMA_VERSION}" MATCHES "^$") )
+    execute_process( COMMAND
+        ./scripts/extract_dcma_version.sh
+        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+        OUTPUT_VARIABLE DCMA_VERSION
+        ERROR_QUIET
+        OUTPUT_STRIP_TRAILING_WHITESPACE)
+endif()
+if( "${DCMA_VERSION}" MATCHES "^$" )
+    message(WARNING "Please supply a meaningful DCMA_VERSION when invoking CMake.")
+    set(DCMA_VERSION "unknown")
+endif()
+add_definitions(-DDCMA_VERSION=${DCMA_VERSION})
+
 if(WITH_EIGEN)
     message(STATUS "Assuming Eigen is available.")
     add_definitions(-DDCMA_USE_EIGEN=1)
