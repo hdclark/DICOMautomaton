@@ -216,8 +216,7 @@ int main(int argc, char* argv[]){
           FUNCERR("Error writing point set to " << temp_xyz_outfile);
         std::ofstream TFO(tf_outfile);
         FUNCINFO("Writing transform to " << tf_outfile)
-        if(!transform.write_to(TFO))
-          FUNCERR("Error writing transform to " << tf_outfile);
+        transform.write_to(TFO);
     } else if(type == "affine") {
         if(video == "True") {
           temp_xyz_outfile = xyz_outfile + "_iter0.xyz";
@@ -236,8 +235,7 @@ int main(int argc, char* argv[]){
           FUNCERR("Error writing point set to " << temp_xyz_outfile);
         std::ofstream TFO(tf_outfile);
         FUNCINFO("Writing transform to " << tf_outfile)
-        if(!transform.write_to(TFO))
-          FUNCERR("Error writing transform to " << tf_outfile);
+        transform.write_to(TFO);
     } else if(type == "nonrigid") {
         if(video == "True") {
           temp_xyz_outfile = xyz_outfile + "_iter0.xyz";
