@@ -67,7 +67,7 @@ techniques:
     - Procrustes algorithm
     - Affine registration
     - Principal Component Analysis (PCA) rigid registration
-    - This Plate Spline (TPS) deformable registration
+    - Thin Plate Spline (TPS) deformable registration
       - when correspondence is known a priori, e.g., fiducial or feature matching
     - Thin Plate Spline Robust Point Matching (TPS-RPM) deformable registration
       - for when correspondence is unknown and must also be estimated
@@ -164,11 +164,15 @@ formats:
   - contours
     - DICOM RTSTRUCT (read and write)
   - surface meshes
-    - OFF (read and write; partial)
+    - PLY (read and write; ASCII and binary; partial)
     - OBJ (read and write; partial)
-    - STL (read and write)
-  - point clouds
     - OFF (read and write; partial)
+    - STL (read and write; ASCII and binary)
+  - point clouds
+    - PLY (read and write; ASCII and binary; partial)
+    - OBJ (read and write; partial)
+    - OFF (read and write; partial)
+    - XYZ (read and write)
   - registration
     - 16 parameter Affine or rigid transformation text files
     - Thin Plate Spline transformation text files (read and write)
@@ -222,7 +226,8 @@ testing for specific workflows.
 ## License and Copying
 
 All materials herein which may be copywrited, where applicable, are. Copyright
-2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020 Hal Clark.
+2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021 Hal
+Clark.
 
 See [LICENSE.txt](LICENSE.txt) for details about the license. Informally,
 `DICOMautomaton` is available under a GPLv3+ license. The Imebra library is

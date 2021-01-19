@@ -981,7 +981,7 @@ OperationArgDoc T3WhitelistOpArgDoc(){
     OperationArgDoc out;
 
     out.name = "TransformSelection";
-    out.desc = "Select one or more transforms."_s
+    out.desc = "Select one or more transform objects (aka 'warp' objects)."_s
                + GenericSelectionInfo("transformation");
     out.default_val = "all";
     out.expected = true;

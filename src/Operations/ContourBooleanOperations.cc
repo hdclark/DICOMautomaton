@@ -39,69 +39,43 @@ OperationDoc OpArgDocContourBooleanOperations(){
         " contour to select.";
         
     out.notes.emplace_back(
+        "Contour ROI regex matches comprise the sets 'A' and 'B',"
+        " as in f(A,B) where f is the Boolean operation."
+    );
+    out.notes.emplace_back(
         "This routine DOES support disconnected ROIs, such as left- and right-parotid contours that have been"
         " joined into a single 'parotids' ROI."
     );
-        
     out.notes.emplace_back(
         "Many Boolean operations can produce contours with holes. This operation currently connects the interior"
         " and exterior with a seam so that holes can be represented by a single polygon (rather than a separate hole"
         " polygon). It *is* possible to export holes as contours with a negative orientation, but this was not needed when"
         " writing."
     );
-        
     out.notes.emplace_back(
         "Only the common metadata between contours is propagated to the product contours."
     );
         
 
     out.args.emplace_back();
-    out.args.back().name = "ROILabelRegexA";
-    out.args.back().desc = "A regex matching ROI labels/names that comprise the set of contour polygons 'A'"
-                      " as in f(A,B) where f is some Boolean operation." 
-                      " The default with match all available ROIs, which is probably not what you want.";
-    out.args.back().default_val = ".*";
-    out.args.back().expected = true;
-    out.args.back().examples = { ".*", ".*[pP]rostate.*", "body", "Gross_Liver",
-                            R"***(.*left.*parotid.*|.*right.*parotid.*|.*eyes.*)***",
-                            R"***(left_parotid|right_parotid)***" };
-
-    out.args.emplace_back();
-    out.args.back().name = "ROILabelRegexB";
-    out.args.back().desc = "A regex matching ROI labels/names that comprise the set of contour polygons 'B'"
-                      " as in f(A,B) where f is some Boolean operation." 
-                      " The default with match all available ROIs, which is probably not what you want.";
-    out.args.back().default_val = ".*";
-    out.args.back().expected = true;
-    out.args.back().examples = { ".*", ".*body.*", "body", "Gross_Liver",
-                            R"***(.*left.*parotid.*|.*right.*parotid.*|.*eyes.*)***",
-                            R"***(left_parotid|right_parotid)***" };
-
-    out.args.emplace_back();
+    out.args.back() = NCWhitelistOpArgDoc();
     out.args.back().name = "NormalizedROILabelRegexA";
-    out.args.back().desc = "A regex matching ROI labels/names that comprise the set of contour polygons 'A'"
-                      " as in f(A,B) where f is some Boolean operation. "
-                      " The regex is applied to normalized ROI labels/names, which are translated using"
-                      " a user-provided lexicon (i.e., a dictionary that supports fuzzy matching)."
-                      " The default with match all available ROIs, which is probably not what you want.";
     out.args.back().default_val = ".*";
-    out.args.back().expected = true;
-    out.args.back().examples = { ".*", ".*Body.*", "Body", "Gross_Liver",
-                            R"***(.*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*)***",
-                            R"***(Left Parotid|Right Parotid)***" };
 
     out.args.emplace_back();
-    out.args.back().name = "NormalizedROILabelRegexB";
-    out.args.back().desc = "A regex matching ROI labels/names that comprise the set of contour polygons 'B'"
-                      " as in f(A,B) where f is some Boolean operation. "
-                      " The regex is applied to normalized ROI labels/names, which are translated using"
-                      " a user-provided lexicon (i.e., a dictionary that supports fuzzy matching)."
-                      " The default with match all available ROIs, which is probably not what you want.";
+    out.args.back() = RCWhitelistOpArgDoc();
+    out.args.back().name = "ROILabelRegexA";
     out.args.back().default_val = ".*";
-    out.args.back().expected = true;
-    out.args.back().examples = { ".*", ".*Body.*", "Body", "Gross_Liver",
-                            R"***(.*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*)***",
-                            R"***(Left Parotid|Right Parotid)***" };
+
+    out.args.emplace_back();
+    out.args.back() = NCWhitelistOpArgDoc();
+    out.args.back().name = "NormalizedROILabelRegexB";
+    out.args.back().default_val = ".*";
+
+    out.args.emplace_back();
+    out.args.back() = RCWhitelistOpArgDoc();
+    out.args.back().name = "ROILabelRegexB";
+    out.args.back().default_val = ".*";
 
     out.args.emplace_back();
     out.args.back().name = "Operation";
@@ -166,39 +140,14 @@ Drover ContourBooleanOperations(const Drover& DICOM_data,
 
     Explicator X(FilenameLex);
 
-
     //Stuff references to all contours into a list. Remember that you can still address specific contours through
     // the original holding containers (which are not modified here).
-    std::list<std::reference_wrapper<contour_collection<double>>> cc_all;
-    for(auto & cc : DICOM_data.contour_data->ccs){
-        auto base_ptr = reinterpret_cast<contour_collection<double> *>(&cc);
-        cc_all.push_back( std::ref(*base_ptr) );
-    }
+    auto cc_all = All_CCs( DICOM_data );
+    auto cc_A = Whitelist( cc_all, { { "ROIName", ROILabelRegexA },
+                                     { "NormalizedROIName", NormalizedROILabelRegexA } } );
+    auto cc_B = Whitelist( cc_all, { { "ROIName", ROILabelRegexB },
+                                     { "NormalizedROIName", NormalizedROILabelRegexB } } );
 
-    //Whitelist contours using the provided regex.
-    auto cc_A = cc_all;
-    cc_A.remove_if([=](std::reference_wrapper<contour_collection<double>> cc) -> bool {
-                   const auto ROINameOpt = cc.get().contours.front().GetMetadataValueAs<std::string>("ROIName");
-                   const auto ROIName = ROINameOpt.value_or("");
-                   return !(std::regex_match(ROIName,roiregexA));
-    });
-    cc_A.remove_if([=](std::reference_wrapper<contour_collection<double>> cc) -> bool {
-                   const auto ROINameOpt = cc.get().contours.front().GetMetadataValueAs<std::string>("NormalizedROIName");
-                   const auto ROIName = ROINameOpt.value_or("");
-                   return !(std::regex_match(ROIName,roinormalizedregexA));
-    });
-
-    auto cc_B = cc_all;
-    cc_B.remove_if([=](std::reference_wrapper<contour_collection<double>> cc) -> bool {
-                   const auto ROINameOpt = cc.get().contours.front().GetMetadataValueAs<std::string>("ROIName");
-                   const auto ROIName = ROINameOpt.value_or("");
-                   return !(std::regex_match(ROIName,roiregexB));
-    });
-    cc_B.remove_if([=](std::reference_wrapper<contour_collection<double>> cc) -> bool {
-                   const auto ROINameOpt = cc.get().contours.front().GetMetadataValueAs<std::string>("NormalizedROIName");
-                   const auto ROIName = ROINameOpt.value_or("");
-                   return !(std::regex_match(ROIName,roinormalizedregexB));
-    });
 
     //Make a copy of all contours for assessing some information later.
     std::list<std::reference_wrapper<contour_collection<double>>> cc_A_B;

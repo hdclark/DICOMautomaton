@@ -1,11 +1,12 @@
 
 { stdenv
 , fetchFromGitHub
+, buildStatic ? false
+, pkgs
+
 , cmake
 , ... }:
 
-
-#with import <nixpkgs> {};
 
 stdenv.mkDerivation rec {
   pname   = "explicator";
@@ -24,11 +25,14 @@ stdenv.mkDerivation rec {
 #    sha256 = "0a8p0hc07bw1ihk6bd4ymaj2m377982nrydxk40ynl3kx3zdnkmm";
 #  };
 
-  nativeBuildInputs = [ 
-    cmake 
-  ];
+  nativeBuildInputs = []
+    ++ [ cmake ]
+    ++ pkgs.lib.optionals (buildStatic && pkgs.glibc != null) [ pkgs.glibc.static ] ;
 
-  cmakeFlags = [ "-DCMAKE_BUILD_TYPE=Release" ];
+  cmakeFlags = []
+    ++ [ "-DCMAKE_BUILD_TYPE=Release" ]
+    ++ [( if (buildStatic)   then "-DBUILD_SHARED_LIBS=OFF"
+                             else "-DBUILD_SHARED_LIBS=ON" )] ;
 
   enableParallelBuilding = true;
 

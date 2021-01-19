@@ -17,6 +17,7 @@ add_library(Operations_objs OBJECT
     ContourBasedRayCastDoseAccumulate.cc
     ContourSimilarity.cc
     ContourViaGeometry.cc
+    ContourViaThreshold.cc
     ContourVote.cc
     ContourWholeImages.cc
     ContouringAides.cc
@@ -24,10 +25,12 @@ add_library(Operations_objs OBJECT
     ConvertContoursToPoints.cc
     ConvertDoseToImage.cc
     ConvertImageToDose.cc
+    ConvertMeshesToPoints.cc
     ConvertNaNsToAir.cc
     ConvertNaNsToZeros.cc
     ConvertPixelsToPoints.cc
     ConvolveImages.cc
+    CopyContours.cc
     CopyImages.cc
     CopyMeshes.cc
     CopyPoints.cc
@@ -44,6 +47,7 @@ add_library(Operations_objs OBJECT
     DecayDoseOverTimeJones2014.cc
     DecimatePixels.cc
     DeDuplicateImages.cc
+    DeleteContours.cc
     DeleteImages.cc
     DeleteMeshes.cc
     DeletePoints.cc
@@ -69,6 +73,10 @@ add_library(Operations_objs OBJECT
     ExportLineSamples.cc
     ExportPointClouds.cc
     ExportSurfaceMeshes.cc
+    ExportSurfaceMeshesOBJ.cc
+    ExportSurfaceMeshesPLY.cc
+    ExportSurfaceMeshesSTL.cc
+    ExportSurfaceMeshesOFF.cc
     ExportWarps.cc
     ExtractImageHistograms.cc
     ExtractAlphaBeta.cc
@@ -82,6 +90,7 @@ add_library(Operations_objs OBJECT
     GenerateVirtualDataDoseStairsV1.cc
     GenerateVirtualDataImageSphereV1.cc
     GenerateVirtualDataPerfusionV1.cc
+    GenerateWarp.cc
     GiveWholeImageArrayABoneWindowLevel.cc
     GiveWholeImageArrayAHeadAndNeckWindowLevel.cc
     GiveWholeImageArrayAThoraxWindowLevel.cc
@@ -129,9 +138,6 @@ add_library(Operations_objs OBJECT
     SupersampleImageGrid.cc
     ThresholdImages.cc
     ThresholdOtsu.cc
-    TransformContours.cc
-    TransformMeshes.cc
-    TransformImages.cc
     TrimROIDose.cc
     UBC3TMRI_DCE.cc
     UBC3TMRI_DCE_Differences.cc
@@ -140,6 +146,9 @@ add_library(Operations_objs OBJECT
     VolumetricCorrelationDetector.cc
     VolumetricSpatialBlur.cc
     VolumetricSpatialDerivative.cc
+    WarpContours.cc
+    WarpMeshes.cc
+    WarpImages.cc
     WarpPoints.cc
 
     $<$<BOOL:${WITH_SFML}>:PresentationImage.cc>
@@ -158,7 +167,6 @@ add_library(Operations_objs OBJECT
 
     $<$<BOOL:${WITH_CGAL}>:BCCAExtractRadiomicFeatures.cc>
     $<$<BOOL:${WITH_CGAL}>:ContourBooleanOperations.cc>
-    $<$<BOOL:${WITH_CGAL}>:ContourViaThreshold.cc>
     $<$<BOOL:${WITH_CGAL}>:ConvertImageToMeshes.cc>
     $<$<BOOL:${WITH_CGAL}>:ConvertMeshesToContours.cc>
     $<$<BOOL:${WITH_CGAL}>:DumpROISurfaceMeshes.cc>

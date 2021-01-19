@@ -16,23 +16,22 @@
 #include <utility>            //Needed for std::pair.
 #include <vector>
 
-#include "../Structs.h"
-#include "../Regex_Selectors.h"
-#include "../Thread_Pool.h"
-#include "ContourViaThreshold.h"
 #include "Explicator.h"       //Needed for Explicator class.
+
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorStats.h"        //Needed for Stats:: namespace.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
+#include "../Structs.h"
+#include "../Regex_Selectors.h"
+#include "../Thread_Pool.h"
 #ifdef DCMA_USE_CGAL
-#else
-    #error "Attempted to compile without CGAL support, which is required."
-#endif
+    #include "../Surface_Meshes.h"
+#endif // DCMA_USE_CGAL
 
-#include "../Surface_Meshes.h"
+#include "ContourViaThreshold.h"
 
 
 OperationDoc OpArgDocContourViaThreshold(){
@@ -122,10 +121,16 @@ OperationDoc OpArgDocContourViaThreshold(){
                            " It may also have problems with 'pinches' and topological consistency."
                            " The marching method is more robust and should reliably produce contours for even"
                            " the most complicated topologies, but is considerably slower than the binary method.";
-    out.args.back().default_val = "binary";
-    out.args.back().expected = true;
+#ifdef DCMA_USE_CGAL
     out.args.back().examples = { "binary",
                                  "marching" };
+#else
+    out.args.back().desc += " Note that the 'marching' option is only available when CGAL support is enabled."
+                            " This instance does not have CGAL support.";
+    out.args.back().examples = { "binary" };
+#endif // DCMA_USE_CGAL
+    out.args.back().default_val = "binary";
+    out.args.back().expected = true;
     out.args.back().samples = OpArgSamples::Exhaustive;
 
     
@@ -146,12 +151,9 @@ OperationDoc OpArgDocContourViaThreshold(){
     return out;
 }
 
-
-
 Drover ContourViaThreshold(Drover DICOM_data,
                            const OperationArgPkg& OptArgs,
-                           const std::map<std::string, std::string>&
-                           /*InvocationMetadata*/,
+                           const std::map<std::string, std::string>& /*InvocationMetadata*/,
                            const std::string& FilenameLex){
 
     Explicator X(FilenameLex);
@@ -398,6 +400,7 @@ Drover ContourViaThreshold(Drover DICOM_data,
                               << " --> " << static_cast<int>(1000.0*(completed)/img_count)/10.0 << "% done");
                     }
 
+#ifdef DCMA_USE_CGAL
                 // ---------------------------------------------------
                 // The marching cubes method.
                 }else if(std::regex_match(MethodStr, marching_regex)){
@@ -515,6 +518,7 @@ Drover ContourViaThreshold(Drover DICOM_data,
                         FUNCINFO("Completed " << completed << " of " << img_count
                               << " --> " << static_cast<int>(1000.0*(completed)/img_count)/10.0 << "% done");
                     }
+#endif //DCMA_USE_CGAL
 
                 }else{
                     throw std::invalid_argument("The contouring method is not understood. Cannot continue.");

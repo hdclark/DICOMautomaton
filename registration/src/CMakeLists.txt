@@ -10,12 +10,8 @@ set_target_properties(  CPD_Rigid_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE 
 add_library(            CPD_Nonrigid_obj OBJECT CPD_Nonrigid.cc)
 set_target_properties(  CPD_Nonrigid_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
-add_library(            Alignment_ABC_obj OBJECT Alignment_ABC.cc)
-set_target_properties(  Alignment_ABC_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
-
 add_executable (run_def_reg
     Run_Def_Reg.cc
-    $<TARGET_OBJECTS:Alignment_ABC_obj>
     $<TARGET_OBJECTS:CPD_Shared_obj>
     $<TARGET_OBJECTS:CPD_Rigid_obj>
     $<TARGET_OBJECTS:CPD_Affine_obj>

@@ -18,11 +18,6 @@
 
 #include <eigen3/Eigen/Dense> //Needed for Eigen library dense matrices.
 
-#include "YgorFilesDirs.h"    //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
-#include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
-#include "YgorMath.h"         //Needed for samples_1D.
-#include "YgorString.h"       //Needed for GetFirstRegex(...)
-
 #include "CPD_Shared.h"
 
 class AffineCPDTransform {
@@ -30,10 +25,10 @@ class AffineCPDTransform {
         Eigen::MatrixXd B;
         Eigen::VectorXd t;
         int dim;
-        AffineCPDTransform(int dimensionality = 3);
+        AffineCPDTransform(int dimensionality);
         void apply_to(point_set<double> & ps);
         // Serialize and deserialize to a human- and machine-readable format.
-        bool write_to( std::ostream & os );
+        void write_to( std::ostream & os );
         bool read_from( std::istream & is );
 };
 

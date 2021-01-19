@@ -3,6 +3,24 @@
 
 Below is a simplified timeline of `DICOMautomaton` development, broken down by month.
 
+## 202012
+
+- Support loading point clouds and surface meshes from both ASCII and binary PLY files.
+- Added support for vertex normals (surface meshes, point clouds).
+- Added basic support for vertex colours ((surface meshes, point clouds).
+- Partial migration from Travis CI to GitHub actions.
+- Added explicit support surface mesh export in (ASCII+binary) PLY, OBJ, OFF, and (ASCII+binary) STL formats.
+
+## 202011
+
+- Support loading point clouds from OBJ and OFF files.
+- Added ConvertMeshesToPoints operation with vertex extraction and random surface sampling.
+- SYCL: added test file generation program, SCDI perfusion model minor bug fixes.
+- Nix: overhaul of all nix files, slightly more idiomatic file hierarchy.
+- SDL\_Viewer: make image array viewing optional, but still a WIP.
+- CI: ensure all systems provide libOpenGL.so.
+- Docker: added WIP debian:oldstable support. Might have to wait for next oldstable.
+
 ## 202010
 
 - Reworked EQDx operation to also provide BED conversion, added tests.

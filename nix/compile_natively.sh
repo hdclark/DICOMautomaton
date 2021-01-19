@@ -6,10 +6,10 @@ set -eux
 nix-env -i git
 
 # Attempt to build all necessary packages.
-export NIXPKGS_ALLOW_UNSUPPORTED_SYSTEM=1
-export NIXPKGS_ALLOW_BROKEN=1
-export NIXPKGS_ALLOW_INSECURE=1
-export NIXPKGS_ALLOW_UNFREE=1
+#export NIXPKGS_ALLOW_UNSUPPORTED_SYSTEM=1
+#export NIXPKGS_ALLOW_BROKEN=1
+#export NIXPKGS_ALLOW_INSECURE=1
+#export NIXPKGS_ALLOW_UNFREE=1
 
 #mkdir -pv /etc/nixos/
 #echo '{ nixpkgs.config.allowUnsupportedSystem = true; }' >> /etc/nixos/configuration.nix
@@ -17,17 +17,19 @@ export NIXPKGS_ALLOW_UNFREE=1
 #echo '{ allowUnsupportedSystem = true; }' >> ~/.config/nixpkgs/config.nix
 
 # Attempt the build.
-nix build \
-  -L \
+nix-build \
   --show-trace \
   -j 8 \
-  -f default.nix \
-  --arg toolchainStatic   false \
-  --arg toolchainMusl     false \
-  --arg toolchainMingw64  false \
-  --arg toolchainWasi     false \
-#  --arg toolchainClang    true
+  --option sandbox false \
+  \
+  ./nixpkgs.nix \
+  -A ygor \
+  -A ygorclustering \
+  -A explicator \
+  -A dicomautomaton
 
-# Install the result into the current environment.
-nix-env -i ./result
+#  ./nixpkgs.nix \
+
+# Install the result(s) into the current environment.
+nix-env -i ./result*
 

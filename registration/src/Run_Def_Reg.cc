@@ -119,7 +119,7 @@ int main(int argc, char* argv[]){
         return;
       })
     );
-    arger.push_back( ygor_arg_handlr_t(1, 'i', "iterations", true, "0",
+    arger.push_back( ygor_arg_handlr_t(1, 'd', "iteration_interval", true, "0",
       "Number of iterations between writing",
       [&](const std::string &optarg) -> void {
         iter_interval = std::stoi(optarg);
@@ -134,6 +134,57 @@ int main(int argc, char* argv[]){
       })
     );
 
+        arger.push_back( ygor_arg_handlr_t(1, 'w', "wd", true, "0.2",
+      "Weight of the uniform distribution. 0 <= w <= 1",
+      [&](const std::string &optarg) -> void {
+        if (optarg.empty()) {
+          std::string::size_type sz;
+          params.distribution_weight = std::stof(optarg, &sz);
+        }
+        return;
+      })
+    );
+    arger.push_back( ygor_arg_handlr_t(1, 'l', "lambda", true, "0.0",
+      "Trade-off between the goodness of maximum likelihood "
+      "fit and regularization. lambda > 0",
+      [&](const std::string &optarg) -> void {
+        if (optarg.empty()) {
+          std::string::size_type sz;
+          params.lambda = std::stof(optarg, &sz);
+        }
+        return;
+      })
+    );
+    arger.push_back( ygor_arg_handlr_t(1, 'b', "beta", true, "0.0",
+      "defines the model of the smoothness regularizer (width" 
+      "of smoothing Gaussian filter. b>0",
+      [&](const std::string &optarg) -> void {
+        if (optarg.empty()) {
+          std::string::size_type sz;
+          params.beta = std::stof(optarg, &sz);
+        }
+        return;
+      })
+    );
+    arger.push_back( ygor_arg_handlr_t(1, 'i', "iterations", true, "100",
+      "Maximum number of iterations for algorithm.",
+      [&](const std::string &optarg) -> void {
+        if (optarg.empty()) {
+          params.iterations = std::stoi(optarg);
+        }
+        return;
+      })
+    );
+    arger.push_back( ygor_arg_handlr_t(1, 'r', "threshold", true, "-15000",
+      "Similarity threshold to terminate iteratiosn at.",
+      [&](const std::string &optarg) -> void {
+        if (optarg.empty()) {
+          std::string::size_type sz;
+          params.similarity_threshold = std::stof(optarg, &sz);
+        }
+        return;
+      })
+    );
     arger.Launch(argc, argv);
 
     //============================================= Input Validation ================================================
@@ -160,11 +211,11 @@ int main(int argc, char* argv[]){
 
         temp_xyz_outfile = xyz_outfile + "_last.xyz";
         std::ofstream PFO(temp_xyz_outfile);
-        FUNCINFO("Writing to " << (temp_xyz_outfile))
+        FUNCINFO("Writing transformed point set to " << (temp_xyz_outfile))
         if(!WritePointSetToXYZ(mutable_moving, PFO))
           FUNCERR("Error writing point set to " << temp_xyz_outfile);
         std::ofstream TFO(tf_outfile);
-        FUNCINFO("Writing to " << tf_outfile)
+        FUNCINFO("Writing transform to " << tf_outfile)
         if(!transform.write_to(TFO))
           FUNCERR("Error writing transform to " << tf_outfile);
     } else if(type == "affine") {
@@ -180,11 +231,11 @@ int main(int argc, char* argv[]){
 
         temp_xyz_outfile = xyz_outfile + "_last.xyz";
         std::ofstream PFO(temp_xyz_outfile);
-        FUNCINFO("Writing to " << (temp_xyz_outfile))
+        FUNCINFO("Writing transformed point set to " << (temp_xyz_outfile))
         if(!WritePointSetToXYZ(mutable_moving, PFO))
           FUNCERR("Error writing point set to " << temp_xyz_outfile);
         std::ofstream TFO(tf_outfile);
-        FUNCINFO("Writing to " << tf_outfile)
+        FUNCINFO("Writing transform to " << tf_outfile)
         if(!transform.write_to(TFO))
           FUNCERR("Error writing transform to " << tf_outfile);
     } else if(type == "nonrigid") {
@@ -200,10 +251,13 @@ int main(int argc, char* argv[]){
         
         temp_xyz_outfile = xyz_outfile + "_last.xyz";
         std::ofstream PFO(temp_xyz_outfile);
-        FUNCINFO("Writing to " << (temp_xyz_outfile))
+        FUNCINFO("Writing transformed point set to to " << (temp_xyz_outfile))
         if(!WritePointSetToXYZ(mutable_moving, PFO))
           FUNCERR("Error writing point set to " << temp_xyz_outfile);
         // TODO: Add in writing transform to file
+        std::ofstream TFO(tf_outfile);
+        FUNCINFO("Writing transform to " << tf_outfile)
+        transform.write_to(TFO);
     } else {
         FUNCERR("The CPD algorithm specified was invalid. Options are rigid, affine, nonrigid");
         return 1;

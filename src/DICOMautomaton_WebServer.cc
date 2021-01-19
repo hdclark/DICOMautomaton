@@ -458,9 +458,9 @@ void BaseWebServerApplication::filesUploaded(){
         //Uploaded file loading: XYZ files.
         if(!UploadedFilesDirsReachable.empty()
         && !Load_From_XYZ_Files( this->DICOM_data, 
-                                  this->InvocationMetadata, 
-                                  this->FilenameLex,
-                                  UploadedFilesDirsReachable )){
+                                 this->InvocationMetadata, 
+                                 this->FilenameLex,
+                                 UploadedFilesDirsReachable )){
             feedback->setText("<p>Failed to load client-provided XYZ file. Instance terminated.</p>");
             return;
         }

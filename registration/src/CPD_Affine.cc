@@ -1,3 +1,8 @@
+#include "YgorFilesDirs.h"    //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
+#include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorMath.h"         //Needed for samples_1D.
+#include "YgorString.h"       //Needed for GetFirstRegex(...)
+
 #include "CPD_Affine.h"
 #include "YgorMathIOXYZ.h"    //Needed for ReadPointSetFromXYZ.
 
@@ -8,7 +13,6 @@ AffineCPDTransform::AffineCPDTransform(int dimensionality) {
 }
 
 void AffineCPDTransform::apply_to(point_set<double> &ps) {
-    FUNCINFO("Applying transform to point set")
     auto N_points = static_cast<long int>(ps.points.size());
     Eigen::MatrixXd Y = Eigen::MatrixXd::Zero(N_points, this->dim); 
     // Fill the X vector with the corresponding points.
@@ -27,17 +31,19 @@ void AffineCPDTransform::apply_to(point_set<double> &ps) {
     }
 }
 
-bool AffineCPDTransform::write_to( std::ostream &os ) {
-    affine_transform<double> tf;
+void AffineCPDTransform::write_to( std::ostream &os ) {
     for(int i = 0; i < this->dim; i++) {
         for(int j = 0; j < this->dim; j++) {
-            tf.coeff(i, j) = this->B(i, j);
+            os << this->B(i, j);
+            os << " ";
         }
+        os << "0\n";
     }
     for(int j = 0; j < this->dim; j++) {
-        tf.coeff(3, j) = this->t(j);
+        os << this->t(j);
+        os << " ";
     }
-    return tf.write_to(os);
+    os << "0\n";
 }
 
 bool AffineCPDTransform::read_from( std::istream &is ) {
@@ -78,14 +84,6 @@ double SigmaSquared(const Eigen::MatrixXd & B,
     Eigen::MatrixXd oneVec = Eigen::MatrixXd::Ones(postProb.rows(),1);
     double left = (double)(xHat.transpose() * (postProb.transpose() * oneVec).asDiagonal() * xHat).trace();
     double right = (double)(xHat.transpose() * postProb.transpose() * yHat * B.transpose()).trace();
-
-    std::cout << "\n diff";
-    std::cout << (left - right);
-    std::cout << "\n Np: ";
-    std::cout << Np; 
-    std::cout << "\n dims: ";
-    std::cout << dimensionality; 
-
 
     return (left - right) / (Np * dimensionality);
     
@@ -136,14 +134,14 @@ AlignViaAffineCPD(CPDParams & params,
         Y(j, 2) = P_moving.z;
     }
     AffineCPDTransform transform(params.dimensionality);
-    double prev_sigma_squared;
     double sigma_squared = Init_Sigma_Squared(X, Y);
+    double similarity;
     Eigen::MatrixXd P;
     Eigen::MatrixXd Ux;
     Eigen::MatrixXd Uy;
     Eigen::MatrixXd X_hat;
     Eigen::MatrixXd Y_hat;
-    params.iterations = 50;
+    // params.iterations = 50;
     for (int i = 0; i < params.iterations; i++) {
         FUNCINFO("Iteration: " << i)
         P = E_Step(X, Y, transform.B, \
@@ -168,7 +166,9 @@ AlignViaAffineCPD(CPDParams & params,
             }
         }
 
-        if (sigma_squared < 0.00001)
+        // if (sigma_squared < 0.00001)
+        similarity = GetSimilarity(X, Y, P, transform.B, transform.t, 1, sigma_squared);
+        if(similarity < params.similarity_threshold)
             break;
     }
     return transform;

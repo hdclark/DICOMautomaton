@@ -1,3 +1,8 @@
+#include "YgorFilesDirs.h"    //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
+#include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorMath.h"         //Needed for samples_1D.
+#include "YgorString.h"       //Needed for GetFirstRegex(...)
+
 #include "CPD_Rigid.h"
 #include "YgorMathIOXYZ.h"    //Needed for ReadPointSetFromXYZ.
 
@@ -36,18 +41,21 @@ Eigen::MatrixXd RigidCPDTransform::get_sR() {
     return this->s * this->R;
 }
 
-bool RigidCPDTransform::write_to( std::ostream &os ) {
+void RigidCPDTransform::write_to( std::ostream &os ) {
     affine_transform<double> tf;
     Eigen::MatrixXd sR = get_sR();
     for(int i = 0; i < this->dim; i++) {
         for(int j = 0; j < this->dim; j++) {
-            tf.coeff(i, j) = sR(i, j);
+            os << sR(i, j);
+            os << " ";
         }
+        os << "0\n";
     }
     for(int j = 0; j < this->dim; j++) {
-        tf.coeff(3, j) = this->t(j);
+        os << this->t(j);
+        os << " ";
     }
-    return tf.write_to(os);
+    os << "0\n";
 }
 
 bool RigidCPDTransform::read_from( std::istream &is ) {
@@ -154,9 +162,10 @@ AlignViaRigidCPD(CPDParams & params,
         Y(j, 1) = P_moving.y;
         Y(j, 2) = P_moving.z;
     }
+
     RigidCPDTransform transform(params.dimensionality);
-    double prev_sigma_squared;
     double sigma_squared = Init_Sigma_Squared(X, Y);
+    double similarity;
 
     Eigen::MatrixXd P;
     Eigen::MatrixXd Ux;
@@ -167,12 +176,9 @@ AlignViaRigidCPD(CPDParams & params,
     
     params.iterations = 50;
 
-    FUNCINFO("Starting loop. Iterations: " << params.iterations)
+    FUNCINFO("Starting loop. Max Iterations: " << params.iterations)
     for (int i = 0; i < params.iterations; i++) {
-        FUNCINFO("Starting Iteration: " << i) 
-        if(sigma_squared < 0.00001)
-            break;
-        prev_sigma_squared = sigma_squared;
+        FUNCINFO("Starting Iteration: " << i)
         P = E_Step(X, Y, transform.R, \
             transform.t, sigma_squared, params.distribution_weight, transform.s);
         Ux = CalculateUx(X, P);
@@ -198,9 +204,11 @@ AlignViaRigidCPD(CPDParams & params,
             }
         }
 
-        if(sigma_squared > prev_sigma_squared)
+        // if(sigma_squared > prev_sigma_squared)
+        similarity = GetSimilarity(X, Y, P, transform.R, transform.t, transform.s, sigma_squared);
+        if(similarity < params.similarity_threshold)
             break;
+
     }
     return transform;
 }
-

@@ -16,12 +16,13 @@
 #include <boost/filesystem.hpp>
 #include <cstdlib>            //Needed for exit() calls.
 
-#include "Structs.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMathIOXYZ.h"
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorString.h"       //Needed for SplitStringToVector, Canonicalize_String2, SplitVector functions.
 
+#include "Structs.h"
+#include "Imebra_Shim.h"
 
 bool Load_From_XYZ_Files( Drover &DICOM_data,
                           std::map<std::string,std::string> & /* InvocationMetadata */,
@@ -76,7 +77,7 @@ bool Load_From_XYZ_Files( Drover &DICOM_data,
             // Attempt to load the file.
             std::ifstream FI(Filename.c_str(), std::ios::in);
             if(!ReadPointSetFromXYZ(DICOM_data.point_data.back()->pset, FI)){
-                throw std::runtime_error("Unable to read mesh from file.");
+                throw std::runtime_error("Unable to read point cloud from file.");
             }
             FI.close();
             //////////////////////////////////////////////////////////////
@@ -86,6 +87,25 @@ bool Load_From_XYZ_Files( Drover &DICOM_data,
             if( N_points == 0 ){
                 throw std::runtime_error("Unable to read point cloud from file.");
             }
+
+            // Supply generic minimal metadata iff it is needed.
+            std::map<std::string, std::string> generic_metadata;
+
+            generic_metadata["Filename"] = Filename; 
+
+            generic_metadata["PatientID"] = "unspecified";
+            generic_metadata["StudyInstanceUID"] = Generate_Random_UID(60);
+            generic_metadata["SeriesInstanceUID"] = Generate_Random_UID(60);
+            generic_metadata["FrameOfReferenceUID"] = Generate_Random_UID(60);
+            generic_metadata["SOPInstanceUID"] = Generate_Random_UID(60);
+            generic_metadata["Modality"] = "PointCloud";
+
+            generic_metadata["PointName"] = "unspecified"; 
+            generic_metadata["NormalizedPointName"] = "unspecified"; 
+
+            generic_metadata["ROIName"] = "unspecified"; 
+            generic_metadata["NormalizedROIName"] = "unspecified"; 
+            DICOM_data.point_data.back()->pset.metadata.merge(generic_metadata);
 
             FUNCINFO("Loaded point cloud with " << N_points << " points");
             bfit = Filenames.erase( bfit ); 

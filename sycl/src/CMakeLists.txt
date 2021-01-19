@@ -18,7 +18,17 @@ target_link_libraries (run_model
     Threads::Threads
 )
 
+add_executable (gen_test_inputs
+    Generate_Test_Inputs.cc
+)
+target_link_libraries (gen_test_inputs
+    ygor 
+    m
+    Threads::Threads
+)
+
 install(TARGETS run_model
+                gen_test_inputs
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}

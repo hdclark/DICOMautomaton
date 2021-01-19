@@ -1,5 +1,10 @@
 //Common_Boost_Serialization.cc - A part of DICOMautomaton 2016. Written by hal clark.
 
+#include <boost/serialization/version.hpp>
+#if __has_include(<boost/serialization/library_version_type.hpp>)
+    // Required for Boost 1.74.
+    #include <boost/serialization/library_version_type.hpp> 
+#endif
 #include <boost/archive/basic_archive.hpp>
 //For binary archives.
 #include <boost/archive/binary_iarchive.hpp>

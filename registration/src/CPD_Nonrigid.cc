@@ -1,3 +1,7 @@
+#include "YgorFilesDirs.h"    //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
+#include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorMath.h"         //Needed for samples_1D.
+#include "YgorString.h"       //Needed for GetFirstRegex(...)
 #include "CPD_Nonrigid.h"
 #include <chrono>
 #include "YgorMathIOXYZ.h"    //Needed for ReadPointSetFromXYZ.
@@ -9,7 +13,6 @@ NonRigidCPDTransform::NonRigidCPDTransform(int N_move_points, int dimensionality
 }
 
 void NonRigidCPDTransform::apply_to(point_set<double> &ps) {
-    FUNCINFO("Applying transform to point set")
     auto N_points = static_cast<long int>(ps.points.size());
     Eigen::MatrixXd Y = Eigen::MatrixXd::Zero(N_points, this->dim); 
     // Fill the X vector with the corresponding points.
@@ -25,7 +28,18 @@ void NonRigidCPDTransform::apply_to(point_set<double> &ps) {
         ps.points[j].y = Y_hat(j, 1);
         ps.points[j].z = Y_hat(j, 2);
     }
+}
 
+void NonRigidCPDTransform::write_to( std::ostream &os ) {
+    Eigen::MatrixXd m = this->G * this->W;
+    int rows = m.rows();
+    for(int i = 0; i < rows; i++) {
+        for(int j = 0; j < this->dim; j++) {
+            os << m(i, j);
+            os << " ";
+        }
+        os << "\n";
+    }
 }
 
 Eigen::MatrixXd NonRigidCPDTransform::apply_to(const Eigen::MatrixXd &ps) {
@@ -58,8 +72,8 @@ Eigen::MatrixXd GetGramMatrix(const Eigen::MatrixXd & yPoints, double betaSquare
     Eigen::MatrixXd gramMatrix = Eigen::MatrixXd::Zero(mRowsY,mRowsY);
     Eigen::MatrixXd tempVector;
     
-    for (size_t i = 0; i < mRowsY; ++i) {
-        for (size_t j = 0; j < mRowsY; ++j) {
+    for (int i = 0; i < mRowsY; ++i) {
+        for (int j = 0; j < mRowsY; ++j) {
             tempVector = yPoints.row(i) - yPoints.row(j);
             expArg = - 1 / (2 * betaSquared) * tempVector.squaredNorm();
             gramMatrix(i,j) = exp(expArg);
@@ -81,10 +95,9 @@ double GetSimilarity_NR(const Eigen::MatrixXd & xPoints,
     double dimensionality = xPoints.cols();
     double Np = postProb.sum();
     Eigen::MatrixXd tempVector;
-    std::cout << "HELLO";
     double leftSum = 0;
-    for (size_t m = 0; m < mRowsY; ++m) {
-        for (size_t n = 0; n < nRowsX; ++n) {
+    for (int m = 0; m < mRowsY; ++m) {
+        for (int n = 0; n < nRowsX; ++n) {
             tempVector = xPoints.row(n) - AlignedPointSet_NR(yPoints, gramMatrix, W).row(m);
             leftSum += postProb(m,n) * tempVector.squaredNorm();
         }
@@ -111,23 +124,17 @@ Eigen::MatrixXd E_Step_NR(const Eigen::MatrixXd & xPoints,
     int mRowsY = yPoints.rows();
     int nRowsX = xPoints.rows();
     int dimensionality = yPoints.cols();
-    // std::cout << "\n";
-    // std::cout << "\n";    
-    auto start = high_resolution_clock::now();
-    for (size_t m = 0; m < mRowsY; ++m) {
-        for (size_t n = 0; n < nRowsX; ++n) {
+
+    for (int m = 0; m < mRowsY; ++m) {
+        for (int n = 0; n < nRowsX; ++n) {
             tempVector = xPoints.row(n) - (yPoints.row(m) + gramMatrix.row(m) * W);
             expArg = - 1 / (2 * sigmaSquared) * tempVector.squaredNorm();
             expMat(m,n) = exp(expArg);
         }
     }
 
-    auto stop = high_resolution_clock::now();
-    auto duration = duration_cast<microseconds>(stop - start); 
-    // std::cout << duration.count() << std::endl; 
-
-    for (size_t m = 0; m < mRowsY; ++m) {
-        for (size_t n = 0; n < nRowsX; ++n) {
+    for (int m = 0; m < mRowsY; ++m) {
+        for (int n = 0; n < nRowsX; ++n) {
             numerator = expMat(m,n);
             denominator = expMat.col(n).sum() + 
                           pow((2 * M_PI * sigmaSquared),((double)(dimensionality/2.0))) * (w/(1-w)) * (double)(mRowsY / nRowsX);
@@ -135,12 +142,6 @@ Eigen::MatrixXd E_Step_NR(const Eigen::MatrixXd & xPoints,
         }
     }
 
-    stop = high_resolution_clock::now();
-    duration = duration_cast<microseconds>(stop - start); 
-    // std::cout << duration.count() << std::endl; 
-    // std::cout << "\n";
-    // std::cout << "\n";
-    
     return postProb;
 }
 
@@ -220,6 +221,7 @@ AlignViaNonRigidCPD(CPDParams & params,
     }
     NonRigidCPDTransform transform(N_move_points, params.dimensionality);
     double sigma_squared = NR_Init_Sigma_Squared(X, Y);
+    // double similarity;
     transform.G = GetGramMatrix(Y, params.beta * params.beta);
     Eigen::MatrixXd P;
     Eigen::MatrixXd T;
@@ -247,6 +249,10 @@ AlignViaNonRigidCPD(CPDParams & params,
 
         if (sigma_squared < 1e-14)
             break;
+        // TODO: Use similarity once function is sped up
+        // similarity = GetSimilarity_NR(X, Y, P, transform.G, transform.W, sigma_squared);
+        // if(similarity < params.similarity_threshold)
+        //     break;
     }
     return transform;
 }

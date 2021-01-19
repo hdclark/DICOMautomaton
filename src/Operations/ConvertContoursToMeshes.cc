@@ -127,14 +127,15 @@ Drover ConvertContoursToMeshes(Drover DICOM_data,
     // Identify the unique planes.
     std::list<std::reference_wrapper<contour_collection<double>>> cc_ref;
     std::list<std::reference_wrapper<contour_of_points<double>>> cops;
-    for(auto &cc : DICOM_data.contour_data->ccs){
+ //   for(auto &cc : DICOM_data.contour_data->ccs){
+    for(auto &cc_refw : cc_ROIs){
         // Contour collections.
-        if(cc.contours.empty()) continue;
-        auto cc_base_ptr = reinterpret_cast<contour_collection<double> *>(&cc);
+        if(cc_refw.get().contours.empty()) continue;
+        auto cc_base_ptr = reinterpret_cast<contour_collection<double> *>(&cc_refw.get());
         cc_ref.push_back( std::ref(*cc_base_ptr) );
 
         // Contours.
-        for(auto &c : cc.contours){
+        for(auto &c : cc_refw.get().contours){
             if(c.points.empty()) continue;
             auto cop_base_ptr = reinterpret_cast<contour_of_points<double> *>(&c);
             cops.push_back( std::ref(*cop_base_ptr) );

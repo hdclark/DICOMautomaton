@@ -33,8 +33,6 @@
 #include "YgorFilesDirs.h"    //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
-#include "YgorMathBSpline.h" //Needed for basis_spline class.
-#include "YgorMathPlottingGnuplot.h" //Needed for YgorMathPlottingGnuplot::*.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 

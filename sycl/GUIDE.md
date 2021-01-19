@@ -58,6 +58,11 @@ will have to add them to `src/CMakeLists.txt`. A helper script is provided to co
 In order to test your code, you will need time course data (i.e., an AIF, a VIF, and at least one tissue time course). I
 can provide these -- please let me know when you're ready.
 
+A program that generates test files is also compiled. Running like so will create files `aif.txt`, `vif.txt`, and
+`c.txt`. Feel free to modify it as necessary.
+
+    gen_test_inputs
+
 ### Questions?
 
 Please contact hal if you have questions, suggestions, or get stuck!

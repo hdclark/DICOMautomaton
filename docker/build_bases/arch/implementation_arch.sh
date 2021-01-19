@@ -8,7 +8,7 @@ mkdir -pv /scratch_base
 cd /scratch_base
 
 # Prepare alternative mirrors.
-curl -o /etc/pacman.d/mirrorlist "https://www.archlinux.org/mirrorlist/?country=all&protocol=http&ip_version=4&use_mirror_status=on"
+curl -o /etc/pacman.d/mirrorlist "https://archlinux.org/mirrorlist/?country=all&protocol=http&ip_version=4&use_mirror_status=on"
 sed -i 's/^#Server/Server/' /etc/pacman.d/mirrorlist
 
 # Disable signature checking.

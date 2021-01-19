@@ -1,4 +1,4 @@
-//WarpPoints.cc - A part of DICOMautomaton 2020. Written by hal clark.
+//WarpPoints.cc - A part of DICOMautomaton 2021. Written by hal clark.
 
 #include <asio.hpp>
 #include <algorithm>
@@ -36,8 +36,20 @@ OperationDoc OpArgDocWarpPoints(){
     out.name = "WarpPoints";
 
     out.desc = 
-        "This operation applies a vector-valued transformation (e.g., a deformation) to a point cloud.";
+        "This operation applies a transform object to the specified point clouds, warping them spatially.";
         
+    out.notes.emplace_back(
+        "A transform object must be selected; this operation cannot create transforms."
+        " Transforms can be generated via registration or by parsing user-provided functions."
+    );
+    out.notes.emplace_back(
+        "Point clouds are transformed in-place. Metadata may become invalid by this operation."
+    );
+    out.notes.emplace_back(
+        "This operation can only handle individual transforms. If multiple, sequential transforms"
+        " are required, this operation must be invoked multiple time. This will guarantee the"
+        " ordering of the transforms."
+    );
     out.notes.emplace_back(
         "Transformations are not (generally) restricted to the coordinate frame of reference that they were"
         " derived from. This permits a single transformation to be applicable to point clouds, surface meshes,"
@@ -77,11 +89,11 @@ Drover WarpPoints(Drover DICOM_data,
 
     auto PCs_all = All_PCs( DICOM_data );
     auto PCs = Whitelist( PCs_all, PointSelectionStr );
-    FUNCINFO(PCs.size() << " point clouds selected");
+    FUNCINFO("Selected " << PCs.size() << " point clouds");
 
     auto T3s_all = All_T3s( DICOM_data );
     auto T3s = Whitelist( T3s_all, TFormSelectionStr );
-    FUNCINFO(T3s.size() << " transformations selected");
+    FUNCINFO("Selected " << T3s.size() << " transformation objects");
     if(T3s.size() != 1){
         throw std::invalid_argument("Only a single transformation must be selected to guarantee ordering. Cannot continue.");
     }
@@ -102,7 +114,7 @@ Drover WarpPoints(Drover DICOM_data,
                     t.apply_to((*pcp_it)->pset);
                     (*pcp_it)->pset.metadata["Description"] = "Warped via affine transform";
 
-                // Affine transformations.
+                // TPS transformations.
                 }else if constexpr (std::is_same_v<V, thin_plate_spline>){
                     FUNCINFO("Applying thin plate spline transformation now");
                     t.apply_to((*pcp_it)->pset);

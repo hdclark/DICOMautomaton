@@ -35,6 +35,7 @@
 #include "Operations/ContourBasedRayCastDoseAccumulate.h"
 #include "Operations/ContourSimilarity.h"
 #include "Operations/ContourViaGeometry.h"
+#include "Operations/ContourViaThreshold.h"
 #include "Operations/ContourVote.h"
 #include "Operations/ContourWholeImages.h"
 #include "Operations/ContouringAides.h"
@@ -42,10 +43,12 @@
 #include "Operations/ConvertContoursToPoints.h"
 #include "Operations/ConvertDoseToImage.h"
 #include "Operations/ConvertImageToDose.h"
+#include "Operations/ConvertMeshesToPoints.h"
 #include "Operations/ConvertNaNsToAir.h"
 #include "Operations/ConvertNaNsToZeros.h"
 #include "Operations/ConvertPixelsToPoints.h"
 #include "Operations/ConvolveImages.h"
+#include "Operations/CopyContours.h"
 #include "Operations/CopyImages.h"
 #include "Operations/CopyMeshes.h"
 #include "Operations/CopyPoints.h"
@@ -62,6 +65,7 @@
 #include "Operations/DecayDoseOverTimeJones2014.h"
 #include "Operations/DecimatePixels.h"
 #include "Operations/DeDuplicateImages.h"
+#include "Operations/DeleteContours.h"
 #include "Operations/DeleteImages.h"
 #include "Operations/DeleteMeshes.h"
 #include "Operations/DeletePoints.h"
@@ -86,6 +90,10 @@
 #include "Operations/ExportFITSImages.h"
 #include "Operations/ExportLineSamples.h"
 #include "Operations/ExportSurfaceMeshes.h"
+#include "Operations/ExportSurfaceMeshesOBJ.h"
+#include "Operations/ExportSurfaceMeshesPLY.h"
+#include "Operations/ExportSurfaceMeshesSTL.h"
+#include "Operations/ExportSurfaceMeshesOFF.h"
 #include "Operations/ExportWarps.h"
 #include "Operations/ExportPointClouds.h"
 #include "Operations/ExtractAlphaBeta.h"
@@ -96,10 +104,12 @@
 #include "Operations/GenerateCalibrationCurve.h"
 #include "Operations/GenerateSurfaceMask.h"
 #include "Operations/GenerateSyntheticImages.h"
+#include "Operations/GenerateWarp.h"
 #include "Operations/GenerateVirtualDataContourViaThresholdTestV1.h"
 #include "Operations/GenerateVirtualDataDoseStairsV1.h"
 #include "Operations/GenerateVirtualDataImageSphereV1.h"
 #include "Operations/GenerateVirtualDataPerfusionV1.h"
+#include "Operations/GenerateWarp.h"
 #include "Operations/GiveWholeImageArrayABoneWindowLevel.h"
 #include "Operations/GiveWholeImageArrayAHeadAndNeckWindowLevel.h"
 #include "Operations/GiveWholeImageArrayAThoraxWindowLevel.h"
@@ -147,9 +157,6 @@
 #include "Operations/SupersampleImageGrid.h"
 #include "Operations/ThresholdImages.h"
 #include "Operations/ThresholdOtsu.h"
-#include "Operations/TransformContours.h"
-#include "Operations/TransformMeshes.h"
-#include "Operations/TransformImages.h"
 #include "Operations/TrimROIDose.h"
 #include "Operations/UBC3TMRI_DCE.h"
 #include "Operations/UBC3TMRI_DCE_Differences.h"
@@ -158,6 +165,9 @@
 #include "Operations/VolumetricCorrelationDetector.h"
 #include "Operations/VolumetricSpatialBlur.h"
 #include "Operations/VolumetricSpatialDerivative.h"
+#include "Operations/WarpContours.h"
+#include "Operations/WarpMeshes.h"
+#include "Operations/WarpImages.h"
 #include "Operations/WarpPoints.h"
 
 #ifdef DCMA_USE_SDL
@@ -186,7 +196,6 @@
 #ifdef DCMA_USE_CGAL
     #include "Operations/BCCAExtractRadiomicFeatures.h"
     #include "Operations/ContourBooleanOperations.h"
-    #include "Operations/ContourViaThreshold.h"
     #include "Operations/ConvertImageToMeshes.h"
     #include "Operations/ConvertMeshesToContours.h"
     #include "Operations/DumpROISurfaceMeshes.h"
@@ -222,6 +231,7 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["ContourBasedRayCastDoseAccumulate"] = std::make_pair(OpArgDocContourBasedRayCastDoseAccumulate, ContourBasedRayCastDoseAccumulate);
     out["ContourSimilarity"] = std::make_pair(OpArgDocContourSimilarity, ContourSimilarity);
     out["ContourViaGeometry"] = std::make_pair(OpArgDocContourViaGeometry, ContourViaGeometry);
+    out["ContourViaThreshold"] = std::make_pair(OpArgDocContourViaThreshold, ContourViaThreshold);
     out["ContourVote"] = std::make_pair(OpArgDocContourVote, ContourVote);
     out["ContourWholeImages"] = std::make_pair(OpArgDocContourWholeImages, ContourWholeImages);
     out["ContouringAides"] = std::make_pair(OpArgDocContouringAides, ContouringAides);
@@ -229,10 +239,12 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["ConvertContoursToPoints"] = std::make_pair(OpArgDocConvertContoursToPoints, ConvertContoursToPoints);
     out["ConvertDoseToImage"] = std::make_pair(OpArgDocConvertDoseToImage, ConvertDoseToImage);
     out["ConvertImageToDose"] = std::make_pair(OpArgDocConvertImageToDose, ConvertImageToDose);
+    out["ConvertMeshesToPoints"] = std::make_pair(OpArgDocConvertMeshesToPoints, ConvertMeshesToPoints);
     out["ConvertNaNsToAir"] = std::make_pair(OpArgDocConvertNaNsToAir, ConvertNaNsToAir);
     out["ConvertNaNsToZeros"] = std::make_pair(OpArgDocConvertNaNsToZeros, ConvertNaNsToZeros);
     out["ConvertPixelsToPoints"] = std::make_pair(OpArgDocConvertPixelsToPoints, ConvertPixelsToPoints);
     out["ConvolveImages"] = std::make_pair(OpArgDocConvolveImages, ConvolveImages);
+    out["CopyContours"] = std::make_pair(OpArgDocCopyContours, CopyContours);
     out["CopyImages"] = std::make_pair(OpArgDocCopyImages, CopyImages);
     out["CopyMeshes"] = std::make_pair(OpArgDocCopyMeshes, CopyMeshes);
     out["CopyPoints"] = std::make_pair(OpArgDocCopyPoints, CopyPoints);
@@ -249,6 +261,7 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["DecayDoseOverTimeJones2014"] = std::make_pair(OpArgDocDecayDoseOverTimeJones2014, DecayDoseOverTimeJones2014);
     out["DecimatePixels"] = std::make_pair(OpArgDocDecimatePixels, DecimatePixels);
     out["DeDuplicateImages"] = std::make_pair(OpArgDocDeDuplicateImages, DeDuplicateImages);
+    out["DeleteContours"] = std::make_pair(OpArgDocDeleteContours, DeleteContours);
     out["DeleteImages"] = std::make_pair(OpArgDocDeleteImages, DeleteImages);
     out["DeleteMeshes"] = std::make_pair(OpArgDocDeleteMeshes, DeleteMeshes);
     out["DeletePoints"] = std::make_pair(OpArgDocDeletePoints, DeletePoints);
@@ -274,6 +287,10 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["ExportLineSamples"] = std::make_pair(OpArgDocExportLineSamples, ExportLineSamples);
     out["ExportPointClouds"] = std::make_pair(OpArgDocExportPointClouds, ExportPointClouds);
     out["ExportSurfaceMeshes"] = std::make_pair(OpArgDocExportSurfaceMeshes, ExportSurfaceMeshes);
+    out["ExportSurfaceMeshesOBJ"] = std::make_pair(OpArgDocExportSurfaceMeshesOBJ, ExportSurfaceMeshesOBJ);
+    out["ExportSurfaceMeshesPLY"] = std::make_pair(OpArgDocExportSurfaceMeshesPLY, ExportSurfaceMeshesPLY);
+    out["ExportSurfaceMeshesSTL"] = std::make_pair(OpArgDocExportSurfaceMeshesSTL, ExportSurfaceMeshesSTL);
+    out["ExportSurfaceMeshesOFF"] = std::make_pair(OpArgDocExportSurfaceMeshesOFF, ExportSurfaceMeshesOFF);
     out["ExportWarps"] = std::make_pair(OpArgDocExportWarps, ExportWarps);
     out["ExtractAlphaBeta"] = std::make_pair(OpArgDocExtractAlphaBeta, ExtractAlphaBeta);
     out["ExtractImageHistograms"] = std::make_pair(OpArgDocExtractImageHistograms, ExtractImageHistograms);
@@ -287,6 +304,7 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["GenerateVirtualDataDoseStairsV1"] = std::make_pair(OpArgDocGenerateVirtualDataDoseStairsV1, GenerateVirtualDataDoseStairsV1);
     out["GenerateVirtualDataImageSphereV1"] = std::make_pair(OpArgDocGenerateVirtualDataImageSphereV1, GenerateVirtualDataImageSphereV1);
     out["GenerateVirtualDataPerfusionV1"] = std::make_pair(OpArgDocGenerateVirtualDataPerfusionV1, GenerateVirtualDataPerfusionV1);
+    out["GenerateWarp"] = std::make_pair(OpArgDocGenerateWarp, GenerateWarp);
     out["GiveWholeImageArrayABoneWindowLevel"] = std::make_pair(OpArgDocGiveWholeImageArrayABoneWindowLevel, GiveWholeImageArrayABoneWindowLevel);
     out["GiveWholeImageArrayAHeadAndNeckWindowLevel"] = std::make_pair(OpArgDocGiveWholeImageArrayAHeadAndNeckWindowLevel, GiveWholeImageArrayAHeadAndNeckWindowLevel);
     out["GiveWholeImageArrayAThoraxWindowLevel"] = std::make_pair(OpArgDocGiveWholeImageArrayAThoraxWindowLevel, GiveWholeImageArrayAThoraxWindowLevel);
@@ -334,9 +352,6 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["SupersampleImageGrid"] = std::make_pair(OpArgDocSupersampleImageGrid, SupersampleImageGrid);
     out["ThresholdImages"] = std::make_pair(OpArgDocThresholdImages, ThresholdImages);
     out["ThresholdOtsu"] = std::make_pair(OpArgDocThresholdOtsu, ThresholdOtsu);
-    out["TransformContours"] = std::make_pair(OpArgDocTransformContours, TransformContours);
-    out["TransformMeshes"] = std::make_pair(OpArgDocTransformMeshes, TransformMeshes);
-    out["TransformImages"] = std::make_pair(OpArgDocTransformImages, TransformImages);
     out["TrimROIDose"] = std::make_pair(OpArgDocTrimROIDose, TrimROIDose);
     out["UBC3TMRI_DCE"] = std::make_pair(OpArgDocUBC3TMRI_DCE, UBC3TMRI_DCE);
     out["UBC3TMRI_DCE_Differences"] = std::make_pair(OpArgDocUBC3TMRI_DCE_Differences, UBC3TMRI_DCE_Differences);
@@ -345,6 +360,9 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["VolumetricCorrelationDetector"] = std::make_pair(OpArgDocVolumetricCorrelationDetector, VolumetricCorrelationDetector);
     out["VolumetricSpatialBlur"] = std::make_pair(OpArgDocVolumetricSpatialBlur, VolumetricSpatialBlur);
     out["VolumetricSpatialDerivative"] = std::make_pair(OpArgDocVolumetricSpatialDerivative, VolumetricSpatialDerivative);
+    out["WarpContours"] = std::make_pair(OpArgDocWarpContours, WarpContours);
+    out["WarpMeshes"] = std::make_pair(OpArgDocWarpMeshes, WarpMeshes);
+    out["WarpImages"] = std::make_pair(OpArgDocWarpImages, WarpImages);
     out["WarpPoints"] = std::make_pair(OpArgDocWarpPoints, WarpPoints);
 
 #ifdef DCMA_USE_SDL
@@ -373,7 +391,6 @@ std::map<std::string, op_packet_t> Known_Operations(){
 #ifdef DCMA_USE_CGAL
     out["BCCAExtractRadiomicFeatures"] = std::make_pair(OpArgDocBCCAExtractRadiomicFeatures, BCCAExtractRadiomicFeatures);
     out["ContourBooleanOperations"] = std::make_pair(OpArgDocContourBooleanOperations, ContourBooleanOperations);
-    out["ContourViaThreshold"] = std::make_pair(OpArgDocContourViaThreshold, ContourViaThreshold);
     out["ConvertImageToMeshes"] = std::make_pair(OpArgDocConvertImageToMeshes, ConvertImageToMeshes);
     out["ConvertMeshesToContours"] = std::make_pair(OpArgDocConvertMeshesToContours, ConvertMeshesToContours);
     out["DumpROISurfaceMeshes"] = std::make_pair(OpArgDocDumpROISurfaceMeshes, DumpROISurfaceMeshes);
