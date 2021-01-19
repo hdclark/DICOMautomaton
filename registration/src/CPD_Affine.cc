@@ -102,11 +102,6 @@ AlignViaAffineCPD(CPDParams & params,
     
     std::string temp_xyz_outfile;
     point_set<double> mutable_moving = moving;
-    
-    // if(moving.points.empty() || stationary.points.empty()){
-    //     FUNCWARN("Unable to perform ABC alignment: a point set is empty");
-    //     return std::nullopt;
-    // }
 
     const auto N_move_points = static_cast<long int>(moving.points.size());
     const auto N_stat_points = static_cast<long int>(stationary.points.size());
@@ -166,7 +161,6 @@ AlignViaAffineCPD(CPDParams & params,
             }
         }
 
-        // if (sigma_squared < 0.00001)
         similarity = GetSimilarity(X, Y, P, transform.B, transform.t, 1, sigma_squared);
         if(similarity < params.similarity_threshold)
             break;
