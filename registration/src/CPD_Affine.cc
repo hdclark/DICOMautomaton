@@ -154,7 +154,7 @@ AlignViaAffineCPD(CPDParams & params,
         
         if (video == "True") {
             if (iter_interval > 0 && i % iter_interval == 0) {
-                temp_xyz_outfile = xyz_outfile + "_iter" + std::to_string(i) + ".xyz";
+                temp_xyz_outfile = xyz_outfile + "_iter" + std::to_string(i+1) + ".xyz";
                 std::ofstream PFO(temp_xyz_outfile);
                 if(!WritePointSetToXYZ(mutable_moving, PFO))
                     FUNCERR("Error writing point set to " << xyz_outfile);
