@@ -22,7 +22,11 @@
 #include "YgorMathIOXYZ.h"    //Needed for ReadPointSetFromXYZ.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
-#include "Alignment_ABC.h"
+// CPD_Shared.h file
+#include "CPD_Shared.h"
+#include "CPD_Rigid.h"
+#include "CPD_Affine.h"
+#include "CPD_Nonrigid.h"
 
 
 int main(int argc, char* argv[]){
@@ -41,14 +45,14 @@ int main(int argc, char* argv[]){
     point_set<double> stationary;
 
     // This structure is described in Alignment_ABC.h.
-    AlignViaABCParams params;
-    //params.xyz = 1.23; // Override the default.
-
-    // Placeholder parameters, in case you need to add any of these.
-    bool PlaceholderBoolean = false;
-    double PlaceholderDouble = 1.0;
-    float PlaceholderFloat = -1.0;
-    std::string PlaceholderString = "placeholder";
+    CPDParams params;
+    
+    std::string type;
+    std::string xyz_outfile;
+    std::string temp_xyz_outfile;
+    std::string tf_outfile;
+    int iter_interval;
+    std::string video;
 
     //================================================ Argument Parsing ==============================================
 
@@ -94,31 +98,93 @@ int main(int argc, char* argv[]){
         return;
       })
     );
- 
-    arger.push_back( ygor_arg_handlr_t(3, 'b', "placeholder-boolean", false, "",
-      "Placeholder for a boolean option.",
-      [&](const std::string &) -> void {
-        PlaceholderBoolean = true;
+    arger.push_back( ygor_arg_handlr_t(1, 't', "type", true, "nonrigid",
+      "Use this coherent point drift algorithm. Options: rigid, affine, nonrigid",
+      [&](const std::string &optarg) -> void {
+        type = optarg;
         return;
       })
     );
- 
-    arger.push_back( ygor_arg_handlr_t(3, 'f', "placeholder-float", true, "1.23",
-      "Placeholder for a float option.",
+    arger.push_back( ygor_arg_handlr_t(1, 'p', "ps", true, "transformed_point_set.txt",
+      "Write transformed point set to given file.",
       [&](const std::string &optarg) -> void {
-        PlaceholderFloat = std::stof(optarg);
+        xyz_outfile = optarg;
         return;
       })
     );
- 
-    arger.push_back( ygor_arg_handlr_t(3, 's', "placeholder-string", true, "placeholder",
-      "Placeholder for a string option.",
+    arger.push_back( ygor_arg_handlr_t(1, 'o', "matrix", true, "transform.txt",
+      "Write transform matrix to given file.",
       [&](const std::string &optarg) -> void {
-        PlaceholderString = optarg;
+        tf_outfile = optarg;
+        return;
+      })
+    );
+    arger.push_back( ygor_arg_handlr_t(1, 'd', "iteration_interval", true, "0",
+      "Number of iterations between writing",
+      [&](const std::string &optarg) -> void {
+        iter_interval = std::stoi(optarg);
+        return;
+      })
+    );
+    arger.push_back( ygor_arg_handlr_t(1, 'v', "video", true, "False",
+      "Boolean to represent whether to plot for a video",
+      [&](const std::string &optarg) -> void {
+        video = optarg;
         return;
       })
     );
 
+        arger.push_back( ygor_arg_handlr_t(1, 'w', "wd", true, "0.2",
+      "Weight of the uniform distribution. 0 <= w <= 1",
+      [&](const std::string &optarg) -> void {
+        if (optarg.empty()) {
+          std::string::size_type sz;
+          params.distribution_weight = std::stof(optarg, &sz);
+        }
+        return;
+      })
+    );
+    arger.push_back( ygor_arg_handlr_t(1, 'l', "lambda", true, "0.0",
+      "Trade-off between the goodness of maximum likelihood "
+      "fit and regularization. lambda > 0",
+      [&](const std::string &optarg) -> void {
+        if (optarg.empty()) {
+          std::string::size_type sz;
+          params.lambda = std::stof(optarg, &sz);
+        }
+        return;
+      })
+    );
+    arger.push_back( ygor_arg_handlr_t(1, 'b', "beta", true, "0.0",
+      "defines the model of the smoothness regularizer (width" 
+      "of smoothing Gaussian filter. b>0",
+      [&](const std::string &optarg) -> void {
+        if (optarg.empty()) {
+          std::string::size_type sz;
+          params.beta = std::stof(optarg, &sz);
+        }
+        return;
+      })
+    );
+    arger.push_back( ygor_arg_handlr_t(1, 'i', "iterations", true, "100",
+      "Maximum number of iterations for algorithm.",
+      [&](const std::string &optarg) -> void {
+        if (optarg.empty()) {
+          params.iterations = std::stoi(optarg);
+        }
+        return;
+      })
+    );
+    arger.push_back( ygor_arg_handlr_t(1, 'r', "threshold", true, "-15000",
+      "Similarity threshold to terminate iteratiosn at.",
+      [&](const std::string &optarg) -> void {
+        if (optarg.empty()) {
+          std::string::size_type sz;
+          params.similarity_threshold = std::stof(optarg, &sz);
+        }
+        return;
+      })
+    );
     arger.Launch(argc, argv);
 
     //============================================= Input Validation ================================================
@@ -130,14 +196,70 @@ int main(int argc, char* argv[]){
     }
 
     //========================================== Launch Perfusion Model =============================================
+    FUNCINFO(type)
+    point_set<double> mutable_moving = moving;
+    if(type == "rigid") {
+        if(video == "True") {
+          temp_xyz_outfile = xyz_outfile + "_iter0.xyz";
+          std::ofstream PFO(temp_xyz_outfile);
+          if(!WritePointSetToXYZ(mutable_moving, PFO))
+            FUNCERR("Error writing point set to " << temp_xyz_outfile);
+        }
+        
+        RigidCPDTransform transform = AlignViaRigidCPD(params, moving, stationary, iter_interval, video, xyz_outfile);
+        transform.apply_to(mutable_moving);
 
-    auto trans_opt = AlignViaABC(params, moving, stationary);
+        temp_xyz_outfile = xyz_outfile + "_last.xyz";
+        std::ofstream PFO(temp_xyz_outfile);
+        FUNCINFO("Writing transformed point set to " << (temp_xyz_outfile))
+        if(!WritePointSetToXYZ(mutable_moving, PFO))
+          FUNCERR("Error writing point set to " << temp_xyz_outfile);
+        std::ofstream TFO(tf_outfile);
+        FUNCINFO("Writing transform to " << tf_outfile)
+        if(!transform.write_to(TFO))
+          FUNCERR("Error writing transform to " << tf_outfile);
+    } else if(type == "affine") {
+        if(video == "True") {
+          temp_xyz_outfile = xyz_outfile + "_iter0.xyz";
+          std::ofstream PFO(temp_xyz_outfile);
+          if(!WritePointSetToXYZ(mutable_moving, PFO))
+            FUNCERR("Error writing point set to " << temp_xyz_outfile);
+        }
+        
+        AffineCPDTransform transform = AlignViaAffineCPD(params, moving, stationary, iter_interval, video, xyz_outfile);
+        transform.apply_to(mutable_moving);
 
-    if(trans_opt){
-        // Do something with the transformation, e.g., compute some metric, or apply it to another object.
-        //trans_obt.value().do_something(...);
-    }else{
-        // If the transformation object is not valid, consider the run a failure.
+        temp_xyz_outfile = xyz_outfile + "_last.xyz";
+        std::ofstream PFO(temp_xyz_outfile);
+        FUNCINFO("Writing transformed point set to " << (temp_xyz_outfile))
+        if(!WritePointSetToXYZ(mutable_moving, PFO))
+          FUNCERR("Error writing point set to " << temp_xyz_outfile);
+        std::ofstream TFO(tf_outfile);
+        FUNCINFO("Writing transform to " << tf_outfile)
+        if(!transform.write_to(TFO))
+          FUNCERR("Error writing transform to " << tf_outfile);
+    } else if(type == "nonrigid") {
+        if(video == "True") {
+          temp_xyz_outfile = xyz_outfile + "_iter0.xyz";
+          std::ofstream PFO(temp_xyz_outfile);
+          if(!WritePointSetToXYZ(mutable_moving, PFO))
+            FUNCERR("Error writing point set to " << temp_xyz_outfile);
+        }
+        
+        NonRigidCPDTransform transform = AlignViaNonRigidCPD(params, moving, stationary, iter_interval, video, xyz_outfile);
+        transform.apply_to(mutable_moving);
+        
+        temp_xyz_outfile = xyz_outfile + "_last.xyz";
+        std::ofstream PFO(temp_xyz_outfile);
+        FUNCINFO("Writing transformed point set to to " << (temp_xyz_outfile))
+        if(!WritePointSetToXYZ(mutable_moving, PFO))
+          FUNCERR("Error writing point set to " << temp_xyz_outfile);
+        // TODO: Add in writing transform to file
+        std::ofstream TFO(tf_outfile);
+        FUNCINFO("Writing transform to " << tf_outfile)
+        transform.write_to(TFO);
+    } else {
+        FUNCERR("The CPD algorithm specified was invalid. Options are rigid, affine, nonrigid");
         return 1;
     }
 
