@@ -135,9 +135,9 @@ int main(int argc, char* argv[]){
     );
 
         arger.push_back( ygor_arg_handlr_t(1, 'w', "wd", true, "0.2",
-      "Weight of the uniform distribution. 0 <= w <= 1",
+      "Weight of the uniform distribution. 0 <= w <= 1 (Optional, default w=0.2)",
       [&](const std::string &optarg) -> void {
-        if (optarg.empty()) {
+        if (!optarg.empty()) {
           std::string::size_type sz;
           params.distribution_weight = std::stof(optarg, &sz);
         }
@@ -146,9 +146,9 @@ int main(int argc, char* argv[]){
     );
     arger.push_back( ygor_arg_handlr_t(1, 'l', "lambda", true, "0.0",
       "Trade-off between the goodness of maximum likelihood "
-      "fit and regularization. lambda > 0",
+      "fit and regularization. l > 0 (Optional, default l=2)",
       [&](const std::string &optarg) -> void {
-        if (optarg.empty()) {
+        if (!optarg.empty()) {
           std::string::size_type sz;
           params.lambda = std::stof(optarg, &sz);
         }
@@ -156,10 +156,10 @@ int main(int argc, char* argv[]){
       })
     );
     arger.push_back( ygor_arg_handlr_t(1, 'b', "beta", true, "0.0",
-      "defines the model of the smoothness regularizer (width" 
-      "of smoothing Gaussian filter. b>0",
+      "Defines the model of the smoothness regularizer - width" 
+      "of smoothing Gaussian filter. b>0 (Optional, default b=2)",
       [&](const std::string &optarg) -> void {
-        if (optarg.empty()) {
+        if (!optarg.empty()) {
           std::string::size_type sz;
           params.beta = std::stof(optarg, &sz);
         }
@@ -167,18 +167,18 @@ int main(int argc, char* argv[]){
       })
     );
     arger.push_back( ygor_arg_handlr_t(1, 'i', "iterations", true, "100",
-      "Maximum number of iterations for algorithm.",
+      "Maximum number of iterations for algorithm. (Optional, default i=100)",
       [&](const std::string &optarg) -> void {
-        if (optarg.empty()) {
+        if (!optarg.empty()) {
           params.iterations = std::stoi(optarg);
         }
         return;
       })
     );
     arger.push_back( ygor_arg_handlr_t(1, 'r', "threshold", true, "-15000",
-      "Similarity threshold to terminate iteratiosn at.",
+      "Similarity threshold to terminate iteratiosn at.(Optional, default r=-15000)",
       [&](const std::string &optarg) -> void {
-        if (optarg.empty()) {
+        if (!optarg.empty()) {
           std::string::size_type sz;
           params.similarity_threshold = std::stof(optarg, &sz);
         }
@@ -186,6 +186,9 @@ int main(int argc, char* argv[]){
       })
     );
     arger.Launch(argc, argv);
+
+    FUNCINFO(iter_interval);
+    FUNCINFO(params.distribution_weight)
 
     //============================================= Input Validation ================================================
     if(moving.points.empty()){
@@ -216,12 +219,12 @@ int main(int argc, char* argv[]){
           FUNCERR("Error writing point set to " << temp_xyz_outfile);
         std::ofstream TFO(tf_outfile);
         FUNCINFO("Writing transform to " << tf_outfile)
-        if(!transform.write_to(TFO))
-          FUNCERR("Error writing transform to " << tf_outfile);
+        transform.write_to(TFO);
     } else if(type == "affine") {
         if(video == "True") {
           temp_xyz_outfile = xyz_outfile + "_iter0.xyz";
           std::ofstream PFO(temp_xyz_outfile);
+          FUNCINFO(params.similarity_threshold)
           if(!WritePointSetToXYZ(mutable_moving, PFO))
             FUNCERR("Error writing point set to " << temp_xyz_outfile);
         }
@@ -236,8 +239,7 @@ int main(int argc, char* argv[]){
           FUNCERR("Error writing point set to " << temp_xyz_outfile);
         std::ofstream TFO(tf_outfile);
         FUNCINFO("Writing transform to " << tf_outfile)
-        if(!transform.write_to(TFO))
-          FUNCERR("Error writing transform to " << tf_outfile);
+        transform.write_to(TFO);
     } else if(type == "nonrigid") {
         if(video == "True") {
           temp_xyz_outfile = xyz_outfile + "_iter0.xyz";

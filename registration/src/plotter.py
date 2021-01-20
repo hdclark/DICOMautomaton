@@ -48,8 +48,8 @@ def write_vid_frame(stationary_file, moving_file, ax, writer):
 
 def main():
     stationary_file = "../../3D_Printing/20201119_Registration_Phantom/reg_phant_v0_original.xyz"
-    moving_folder = "../../Output/Phantom_Nonrigid_Rot"
-    file_output = "../../Output/phantom_nonrigid_rot.mp4"
+    moving_folder = "../../Output/PL/Phantom/Phantom_Rigid_Rot"
+    file_output = "../../Output/PL/Phantom/phantom_nonrigid_rot.mp4"
 
     FFMpegWriter = manimation.writers['ffmpeg']
     metadata = dict(title='Movie Test', artist='Matplotlib',
