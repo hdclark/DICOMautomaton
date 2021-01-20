@@ -25,6 +25,8 @@
 OperationDoc OpArgDocGroupImages(){
     OperationDoc out;
     out.name = "GroupImages";
+    out.aliases.emplace_back("PartitionImages");
+
     out.desc = 
         "This operation will group individual image slices into partitions (Image_Arrays) based on the values"
         " of the specified metadata tags. DICOMautomaton operations are usually performed on containers rather"

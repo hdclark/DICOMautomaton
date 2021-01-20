@@ -4,6 +4,9 @@ add_subdirectory(Operations)
 add_library(            Structs_obj OBJECT Structs.cc)
 set_target_properties(  Structs_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
+add_library(            Partition_Drover_obj OBJECT Partition_Drover.cc)
+set_target_properties(  Partition_Drover_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+
 add_library(            DCMA_DICOM_obj OBJECT DCMA_DICOM.cc)
 set_target_properties(  DCMA_DICOM_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
@@ -246,6 +249,7 @@ add_executable (dicomautomaton_dispatcher
     DICOMautomaton_Dispatcher.cc
 
     $<TARGET_OBJECTS:Structs_obj>
+    $<TARGET_OBJECTS:Partition_Drover_obj>
     $<TARGET_OBJECTS:Dose_Meld_obj>
     $<TARGET_OBJECTS:BED_Conversion_obj>
     $<TARGET_OBJECTS:Alignment_Rigid_obj>
@@ -320,6 +324,7 @@ if(WITH_WT)
         DICOMautomaton_WebServer.cc
 
         $<TARGET_OBJECTS:Structs_obj>
+        $<TARGET_OBJECTS:Partition_Drover_obj>
         $<TARGET_OBJECTS:Dose_Meld_obj>
         $<TARGET_OBJECTS:BED_Conversion_obj>
         $<TARGET_OBJECTS:Alignment_Rigid_obj>
