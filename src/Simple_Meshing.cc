@@ -514,7 +514,8 @@ Estimate_Contour_Correspondence(
         const bool A_is_valid = std::isfinite(criteria_w_i_next);
         const bool B_is_valid = std::isfinite(criteria_w_j_next);
         if(!A_is_valid && !B_is_valid){
-            throw std::logic_error("Terminated meshing early. Cannot continue.");
+FUNCWARN("Terminated meshing early. Mesh may be incomplete.");
+//            throw std::logic_error("Terminated meshing early. Cannot continue.");
             // Note: Could be due to:
             //       - Non-finite vertex in input.
             //       - Invalid number of loops in the implementation above.
@@ -566,6 +567,9 @@ Minimally_Amalgamate_Contours(
         const vec3<double> &pseudo_vert_offset,
         std::list<std::reference_wrapper<contour_of_points<double>>> B ){
 
+    if(B.empty()){
+        throw std::invalid_argument("No contours supplied in B. Cannot continue.");
+    }
 /*
     contour_of_points<double> contour_A = A.get();
     const auto N_A = contour_A.points.size();
@@ -592,13 +596,15 @@ Minimally_Amalgamate_Contours(
     };
 
     // Confirm all contour orientations are consistent.
+    std::list< contour_of_points<double> > reversed_cops_storage;
     for(auto crw_it = std::begin(B); crw_it != std::end(B); ){
         if(!has_consistent_orientation(*crw_it)){
-            FUNCWARN("Found contour with inconsistent orientation. Ignoring it");
-            crw_it = B.erase(crw_it);
-        }else{
-            ++crw_it;
+            FUNCWARN("Found contour with inconsistent orientation. Making a reversed copy. This may discard information");
+            reversed_cops_storage.emplace_back( crw_it->get() );
+            reversed_cops_storage.back().points.reverse();
+            (*crw_it) = std::ref(reversed_cops_storage.back());
         }
+        ++crw_it;
     }
     for(const auto &cop_refw : B){
         if(cop_refw.get().closed == false){
@@ -608,7 +614,7 @@ Minimally_Amalgamate_Contours(
 
     // Seed the first contour into the amalgamated contour.
     if(B.empty()){
-        throw std::invalid_argument("No contours supplied in B. Cannot continue.");
+        throw std::invalid_argument("No contours remaining in B. Cannot continue.");
     }
     contour_of_points<double> amal = B.front().get();
     B.pop_front();
