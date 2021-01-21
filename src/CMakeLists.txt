@@ -317,6 +317,9 @@ target_link_libraries (dicomautomaton_dispatcher
     m
     Threads::Threads
 )
+target_compile_definitions(dicomautomaton_dispatcher
+    PUBLIC -DDCMA_VERSION=${DCMA_VERSION}
+)
 
 if(WITH_WT)
     # Executable.

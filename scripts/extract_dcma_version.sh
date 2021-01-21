@@ -5,7 +5,7 @@ if [ -z "${GIT_HASH}" ] ; then
     GIT_HASH="unknown"
 fi
 
-TIMESTAMP="$(date '+%Y%m%_0d-%_0H%_0M%_0S')"
+TIMESTAMP="$(date '+%Y%m%_0d')"
 if [ -z "${TIMESTAMP}" ] ; then
     TIMESTAMP="unknown"
 fi

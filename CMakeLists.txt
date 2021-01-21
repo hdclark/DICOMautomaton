@@ -265,7 +265,6 @@ if( "${DCMA_VERSION}" MATCHES "^$" )
     message(WARNING "Please supply a meaningful DCMA_VERSION when invoking CMake.")
     set(DCMA_VERSION "unknown")
 endif()
-add_definitions(-DDCMA_VERSION=${DCMA_VERSION})
 
 if(WITH_EIGEN)
     message(STATUS "Assuming Eigen is available.")
