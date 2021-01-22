@@ -1,6 +1,6 @@
 #!/bin/bash
 
-read -p "Running this script will replace all files in DICOMautomaton/sycl/data are you sure you want to continue? " -n 1 -r
+read -p "Running this script will replace all files in DICOMautomaton/sycl/data are you sure you want to continue? ([Y/y] or ^C)" -n 1 -r
 echo
 if [[ $REPLY =~ ^[Yy]$ ]]
 then
