@@ -152,9 +152,10 @@ Launch_SCDI(samples_1D<double> &AIF, samples_1D<double> &VIF, std::vector<sample
     const auto vif_intercept = static_cast<float>(vif_res.intercept);
 
     FUNCINFO("The slope is " << c_slope);
+    FUNCINFO("The amount of data points in C is " << c_size);
 
     // Find eqn 2
-    const float time_midpoint = static_cast<float>(c_size - slope_window) * 0.5 * TIME_INTERVAL;
+    const float time_midpoint = static_cast<float>(c_size -  (slope_window) * 0.5 )* TIME_INTERVAL;
     const float C_pt          = time_midpoint * c_slope + c_intercept;
     const float VIF_pt        = time_midpoint * vif_slope + vif_intercept;
     const float AIF_pt        = time_midpoint * aif_slope + aif_intercept;
