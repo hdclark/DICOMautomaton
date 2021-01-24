@@ -73,9 +73,9 @@ samples_1D<double> make_test_SCDI_C( const samples_1D<double>& AIF,
 int main(int, char**){
 
     // SCDI model parameters.
-    const double k1A = 0.75; // Mostly arterial supply.
-    const double k1V = 0.25;
-    const double k2 = 0.15;  // Slow outflow.
+    const double k1A = 0.729907; // Mostly arterial supply.
+    const double k1V = 0.500683;
+    const double k2 = 0.201236;  // Slow outflow.
 
     // Sampling parameters.
     const double dt = 1.2; // seconds.
