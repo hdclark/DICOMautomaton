@@ -5,6 +5,10 @@
 # Compiled Dynamic libraries
 *.so
 
+# Data files
+aif.txt
+vif.txt
+c.txt
 
 # Compiled Static libraries
 *.la
@@ -23,3 +27,5 @@ build/
 compile_commands.json
 dcma_integration_testing/
 
+# Other
+settings.json
