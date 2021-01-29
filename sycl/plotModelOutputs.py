@@ -15,7 +15,6 @@ with open('data/c.txt') as f: #grab expected data
     cET = [float(line.split()[0]) for line in lines]
     cEVal = [float(line.split()[2]) for line in lines]
 
-print("Type of data: ", type(cET[0]))
 
 # #Extract AIF values
 # with open('aif.txt') as f: #grab our data
@@ -38,6 +37,19 @@ print("Type of data: ", type(cET[0]))
 #     lines = f.readlines()
 #     vifET = [line.split()[0] for line in lines]
 #     vifEVal = [line.split()[2] for line in lines]
+
+chi = 0.0
+
+#Find chi^2 value for c values
+for i in range(len(cVal)):
+#chi = chi + Decimal pow((Decimal(cVal[i])-Decimal(cEVal[i])),2)/Decimal(cEVal[i])
+    O = cVal[i]
+    E = cEVal[i]
+    if(E!= 0):
+        chi = chi + float (pow((O-E), 2.0)/E)
+
+print('Chi-squared Value:', chi)
+
 
 
 fig = plt.figure()
