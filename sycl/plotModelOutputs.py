@@ -1,18 +1,21 @@
 import matplotlib.pyplot as plt
 import numpy as np
+from decimal import Decimal
 #TODO: Check if dependancies have to be recorded
 #For now, run this script outside of the docker image to resolve python dependancies
 
 #Extract C values
 with open('c.txt') as f: #grab our data
     lines = f.readlines()
-    cT = [line.split()[0] for line in lines]
-    cVal = [line.split()[2] for line in lines]
+    cT = [float(line.split()[0]) for line in lines]
+    cVal = [float(line.split()[2]) for line in lines]
     
 with open('data/c.txt') as f: #grab expected data
     lines = f.readlines()
-    cET = [line.split()[0] for line in lines]
-    cEVal = [line.split()[2] for line in lines]
+    cET = [float(line.split()[0]) for line in lines]
+    cEVal = [float(line.split()[2]) for line in lines]
+
+print("Type of data: ", type(cET[0]))
 
 # #Extract AIF values
 # with open('aif.txt') as f: #grab our data
