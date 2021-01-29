@@ -10,6 +10,7 @@
 #include <memory>
 #include <string>    
 #include <vector>
+#include <random>
 
 #include <cstdlib>            //Needed for exit() calls.
 #include <utility>            //Needed for std::pair.
@@ -82,6 +83,13 @@ int main(int, char**){
     const double t_start = 0.0; // seconds.
     const long int N_samples = 100; // number of CT/MR images taken serially.
 
+    std::random_device rdev;
+    std::mt19937 re( rdev() );
+    std::uniform_real_distribution<> ud(0.0, 1.0);
+    double mean = 0.0;
+    double std_dev = 0.5;
+    std::normal_distribution<> nd(mean, std_dev);
+
     // Make an Arterial input function (AIF) and Venous input function (VIF).
     samples_1D<double> AIF;
     samples_1D<double> VIF;
@@ -96,10 +104,10 @@ int main(int, char**){
             const double A = std::exp(-std::pow(t-15.0,2.0)/15.0) 
                            + 0.2 * std::exp(-std::pow(t-30.0, 2.0)/15.0)
                            + 0.25 * (10.0 + std::tanh(t-15.0)/0.1) * std::exp(-std::sqrt(t)/1.75);
-            AIF.push_back(t, A, inhibit_sort);
+            AIF.push_back(t, A + nd(re), inhibit_sort);
 
             const double V = t * (10.0 + std::tanh(t-13.0)/0.1) * std::exp(-std::sqrt(t)/1.75) / 55.0;
-            VIF.push_back(t, V, inhibit_sort);
+            VIF.push_back(t, V + nd(re), inhibit_sort);
         }
     }
 
