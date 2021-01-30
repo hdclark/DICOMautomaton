@@ -14,7 +14,6 @@ RigidCPDTransform::RigidCPDTransform(int dimensionality) {
 }
 
 void RigidCPDTransform::apply_to(point_set<double> &ps) {
-    FUNCINFO("Applying transform to point set")
     const auto N_points = static_cast<long int>(ps.points.size());
 
     Eigen::MatrixXd Y = Eigen::MatrixXd::Zero(N_points, this->dim); 
