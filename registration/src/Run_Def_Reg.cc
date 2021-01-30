@@ -187,6 +187,9 @@ int main(int argc, char* argv[]){
     );
     arger.Launch(argc, argv);
 
+    FUNCINFO(iter_interval);
+    FUNCINFO(params.distribution_weight)
+
     //============================================= Input Validation ================================================
     if(moving.points.empty()){
         FUNCERR("Moving point set contains no points. Unable to continue.");

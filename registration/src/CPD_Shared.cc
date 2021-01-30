@@ -52,6 +52,35 @@ double Init_Sigma_Squared(const Eigen::MatrixXd & xPoints,
 
 double GetSimilarity(const Eigen::MatrixXd & xPoints,
             const Eigen::MatrixXd & yPoints,
+            const Eigen::MatrixXd & rotationMatrix,
+            const Eigen::MatrixXd & translation,
+            double scale) {
+    
+    int mRowsY = yPoints.rows();
+    int nRowsX = xPoints.rows(); 
+    Eigen::MatrixXd tempVector;
+
+    double sum = 0;
+    double min_distance = -1;
+    for (int m = 0; m < mRowsY; ++m) {
+        min_distance = -1;
+        for (int n = 0; n < nRowsX; ++n) {
+            tempVector = xPoints.row(n) - AlignedPointSet(yPoints.row(m), rotationMatrix, translation, scale);
+            if (min_distance < 0 ||  tempVector.norm() < min_distance) {
+                min_distance = tempVector.norm();
+            }
+        }
+        sum += min_distance;
+    }
+    sum = sum / (mRowsY * 1.00);
+
+    FUNCINFO(sum);
+    FUNCINFO(mRowsY);
+    return sum;
+}
+
+double GetObjective(const Eigen::MatrixXd & xPoints,
+            const Eigen::MatrixXd & yPoints,
             const Eigen::MatrixXd & postProb,
             const Eigen::MatrixXd & rotationMatrix,
             const Eigen::MatrixXd & translation,

@@ -85,6 +85,35 @@ Eigen::MatrixXd GetGramMatrix(const Eigen::MatrixXd & yPoints, double betaSquare
 
 double GetSimilarity_NR(const Eigen::MatrixXd & xPoints,
             const Eigen::MatrixXd & yPoints,
+            const Eigen::MatrixXd & gramMatrix,
+            const Eigen::MatrixXd & W) {
+    
+    int mRowsY = yPoints.rows();
+    int nRowsX = xPoints.rows(); 
+    Eigen::MatrixXd tempVector;
+
+    double sum = 0;
+    double min_distance = -1;
+    for (int m = 0; m < mRowsY; ++m) {
+        min_distance = -1;
+        for (int n = 0; n < nRowsX; ++n) {
+            tempVector = xPoints.row(n) - AlignedPointSet_NR(yPoints, gramMatrix, W).row(m);
+            if (min_distance < 0 || tempVector.norm() < min_distance) {
+                min_distance = tempVector.norm();
+            }
+        }
+        sum += min_distance;
+    }
+
+    sum = sum / (mRowsY * 1.00);
+
+    FUNCINFO(sum);
+    FUNCINFO(mRowsY);
+    return sum;
+}
+
+double GetObjective_NR(const Eigen::MatrixXd & xPoints,
+            const Eigen::MatrixXd & yPoints,
             const Eigen::MatrixXd & postProb,
             const Eigen::MatrixXd & gramMatrix,
             const Eigen::MatrixXd & W,
@@ -221,7 +250,8 @@ AlignViaNonRigidCPD(CPDParams & params,
     }
     NonRigidCPDTransform transform(N_move_points, params.dimensionality);
     double sigma_squared = NR_Init_Sigma_Squared(X, Y);
-    // double similarity;
+    double similarity;
+    double objective;
     transform.G = GetGramMatrix(Y, params.beta * params.beta);
     Eigen::MatrixXd P;
     Eigen::MatrixXd T;
@@ -235,12 +265,19 @@ AlignViaNonRigidCPD(CPDParams & params,
         T = transform.apply_to(Y);
         sigma_squared = SigmaSquared(X, P, T);
 
+        FUNCINFO(sigma_squared);
+
         mutable_moving = moving;
         transform.apply_to(mutable_moving);
         
+        similarity = GetSimilarity_NR(X, Y, transform.G, transform.W);
+        objective = GetObjective_NR(X, Y, P, transform.G, transform.W, sigma_squared);
+        FUNCINFO(similarity);
+        FUNCINFO(objective);
+
         if (video == "True") {
             if (iter_interval > 0 && i % iter_interval == 0) {
-                temp_xyz_outfile = xyz_outfile + "_iter" + std::to_string(i+1) + ".xyz";
+                temp_xyz_outfile = xyz_outfile + "_iter" + std::to_string(i+1) + "_sim" + std::to_string(similarity) + ".xyz";
                 std::ofstream PFO(temp_xyz_outfile);
                 if(!WritePointSetToXYZ(mutable_moving, PFO))
                     FUNCERR("Error writing point set to " << xyz_outfile);
