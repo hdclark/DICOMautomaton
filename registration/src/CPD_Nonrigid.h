@@ -58,6 +58,11 @@ Eigen::MatrixXd E_Step_NR(const Eigen::MatrixXd & xPoints,
 
 double GetSimilarity_NR(const Eigen::MatrixXd & xPoints,
             const Eigen::MatrixXd & yPoints,
+            const Eigen::MatrixXd & gramMatrix,
+            const Eigen::MatrixXd & W);
+
+double GetObjective_NR(const Eigen::MatrixXd & xPoints,
+            const Eigen::MatrixXd & yPoints,
             const Eigen::MatrixXd & postProb,
             const Eigen::MatrixXd & gramMatrix,
             const Eigen::MatrixXd & W,

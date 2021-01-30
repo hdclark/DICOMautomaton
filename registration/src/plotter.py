@@ -32,24 +32,37 @@ def write_vid_frame(stationary_file, moving_file, ax, writer):
     x1,y1,z1 = read_file(stationary_file)
     x2,y2,z2 = read_file(moving_file)
 
-    iteration = re.findall(r'\d+', moving_file)
+    moving_split = moving_file.split("_")
+    iteration = []
+    similarity = []
+    for item in moving_split:
+        if "iter" in item:
+            iteration = re.findall(r"[-+]?\d*\.\d+|\d+", item)
+        if "sim" in item:
+            similarity = re.findall(r"[-+]?\d*\.\d+|\d+", item)
 
     ax.cla()
-    ax.scatter(x1, y1, z1, s=10, c='b', marker="s", label='Original')
-    ax.scatter(x2, y2, z2, s=10, c='r', marker="o", label='Translated')
+    ax.scatter(x1, y1, z1, s=10, c='b', marker="s", label='Stationary Point Set')
+    ax.scatter(x2, y2, z2, s=10, c='r', marker="o", label='Moving Point Set')
     plt.legend(loc='upper left')
 
+    
+    title = ""
     if len(iteration) > 0:
-        ax.set_title("Iteration " + iteration[0])
-    else: 
-        ax.set_title("Final alignment")
+        title += "Iteration " + iteration[len(iteration)-1]
+    else: title += "Final alignment"
+    if len(similarity) > 0:
+        title += ", Error: " + similarity[len(similarity)-1]
+    
+    ax.set_title(title)
+    plt.tight_layout()
     # plt.show()
     writer.grab_frame()
 
 def main():
     stationary_file = "../../3D_Printing/20201119_Registration_Phantom/reg_phant_v0_original.xyz"
-    moving_folder = "../../Output/PL/Phantom/Phantom_Rigid_Rot"
-    file_output = "../../Output/PL/Phantom/phantom_nonrigid_rot.mp4"
+    moving_folder = "../../Output/Testing/Phantom_Set"
+    file_output = "../../Output/Testing/phantom_set.mp4"
 
     FFMpegWriter = manimation.writers['ffmpeg']
     metadata = dict(title='Movie Test', artist='Matplotlib',

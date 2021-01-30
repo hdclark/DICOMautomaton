@@ -131,6 +131,7 @@ AlignViaAffineCPD(CPDParams & params,
     AffineCPDTransform transform(params.dimensionality);
     double sigma_squared = Init_Sigma_Squared(X, Y);
     double similarity;
+    double objective;
     Eigen::MatrixXd P;
     Eigen::MatrixXd Ux;
     Eigen::MatrixXd Uy;
@@ -151,17 +152,21 @@ AlignViaAffineCPD(CPDParams & params,
 
         mutable_moving = moving;
         transform.apply_to(mutable_moving);
+
+        similarity = GetSimilarity(X, Y, transform.B, transform.t, 1);
+        objective = GetObjective(X, Y, P, transform.B, transform.t, 1, sigma_squared);
+        FUNCINFO(similarity);
+        FUNCINFO(objective);
         
         if (video == "True") {
             if (iter_interval > 0 && i % iter_interval == 0) {
-                temp_xyz_outfile = xyz_outfile + "_iter" + std::to_string(i+1) + ".xyz";
+                temp_xyz_outfile = xyz_outfile + "_iter" + std::to_string(i+1) + "_sim" + std::to_string(similarity) + ".xyz";
                 std::ofstream PFO(temp_xyz_outfile);
                 if(!WritePointSetToXYZ(mutable_moving, PFO))
                     FUNCERR("Error writing point set to " << xyz_outfile);
             }
         }
-
-        similarity = GetSimilarity(X, Y, P, transform.B, transform.t, 1, sigma_squared);
+        
         if(similarity < params.similarity_threshold)
             break;
     }
