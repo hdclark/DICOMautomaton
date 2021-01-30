@@ -1,10 +1,12 @@
 import matplotlib.pyplot as plt
 import mpl_toolkits.mplot3d.axes3d as p3
 import matplotlib.animation as manimation
+import argparse
 import os
 import re
 
 def read_file(file_name):
+    print(file_name)
     xyz = open(file_name, "r")
 
     x_points = []
@@ -46,38 +48,43 @@ def write_vid_frame(stationary_file, moving_file, ax, writer):
     ax.scatter(x2, y2, z2, s=10, c='r', marker="o", label='Moving Point Set')
     plt.legend(loc='upper left')
 
-    
+
     title = ""
     if len(iteration) > 0:
         title += "Iteration " + iteration[len(iteration)-1]
     else: title += "Final alignment"
     if len(similarity) > 0:
         title += ", Error: " + similarity[len(similarity)-1]
-    
+
     ax.set_title(title)
     plt.tight_layout()
     # plt.show()
     writer.grab_frame()
 
 def main():
-    stationary_file = "../../3D_Printing/20201119_Registration_Phantom/reg_phant_v0_original.xyz"
-    moving_folder = "../../Output/Testing/Phantom_Set"
-    file_output = "../../Output/Testing/phantom_set.mp4"
+    parser = argparse.ArgumentParser(
+        description="File I/O specification for plotter")
+    parser.add_argument("stationary", help="Path to stationary point cloud")
+    parser.add_argument("moving", help="Path to moving point cloud files")
+    parser.add_argument("output", help="Path to save file")
+
+    args = parser.parse_args()
 
     FFMpegWriter = manimation.writers['ffmpeg']
     metadata = dict(title='Movie Test', artist='Matplotlib',
             comment='Movie support!')
     writer = FFMpegWriter(fps=8, metadata=metadata)
 
-    for root, dirs, files in os.walk(moving_folder):
+    for root, dirs, files in os.walk(args.moving):
         file_list = natural_sort(files)
 
     fig = plt.figure()
     ax = p3.Axes3D(fig)
 
-    with writer.saving(fig, file_output, 100):
+    with writer.saving(fig, args.output, 100):
         for moving_file in file_list:
-            write_vid_frame(stationary_file, os.path.join(root,moving_file), ax, writer)
+            write_vid_frame(
+                args.stationary, os.path.join(root, moving_file), ax, writer)
 
 if __name__ == '__main__':
     main()
