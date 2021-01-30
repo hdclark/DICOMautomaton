@@ -26,8 +26,6 @@ def write_file(file_name, point_set):
             line = "%s %s %s\n" % (point[0], point[1], point[2])
             fp.write(line)
 
-
-
 def main():
     parser = argparse.ArgumentParser(
         description="File I/O specification for plotter")
