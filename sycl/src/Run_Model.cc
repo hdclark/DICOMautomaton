@@ -68,7 +68,11 @@ main(int argc, char *argv[]) {
         return;
     };
     arger.optionless_callback = [&](const std::string &optarg) -> void {
-        FUNCERR("Unrecognized option with argument: '" << optarg << "'");
+        C.emplace_back();
+        if(!C.back().Read_From_File(optarg) || C.back().samples.empty()) {
+            FUNCERR("Unable to parse C file: '" << optarg << "'");
+            exit(1);
+        }
         return;
     };
 
