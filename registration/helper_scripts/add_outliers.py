@@ -12,13 +12,17 @@ def read_file(file_name):
 
     return np.array(points)
 
-def random_downsample(full_point_set, percentage):
+def add_outliers(full_point_set, val_range, percentage):
     num_points = full_point_set.shape[0]
-    num_points_to_keep = int((1-percentage) * num_points)
-    indices = np.arange(num_points)
-    indices_to_keep = np.random.choice(
-        indices, size=num_points_to_keep, replace=False)
-    return full_point_set[indices_to_keep]
+    num_points_to_add = int(percentage * num_points)
+    max_val = np.amax(full_point_set)
+    min_val = np.amin(full_point_set)
+    outliers = np.random.normal(scale=val_range,
+                                size=(num_points_to_add, 3))
+    new_updated_point_set = np.concatenate((full_point_set, outliers), axis=0)
+    np.random.shuffle(new_updated_point_set)
+    return new_updated_point_set
+
 
 def write_file(file_name, point_set):
     with open(file_name, "w") as fp:
@@ -31,13 +35,16 @@ def main():
         description="File I/O specification for plotter")
     parser.add_argument("infile", help="Path to moving point cloud files")
     parser.add_argument(
-        "ds_rate", help="Percentage of points to remove", type=float)
+        "range", help="Range of outliers", type=float)
+    parser.add_argument(
+        "percentage", help="Ratio of outliers to valid points", type=float)
     parser.add_argument("outfile", help="Path to save file")
 
     args = parser.parse_args()
     full_point_set = read_file(args.infile)
-    downsampled_point_set = random_downsample(full_point_set, args.ds_rate)
-    write_file(args.outfile, downsampled_point_set)
+    outlier_point_set = add_outliers(
+        full_point_set.astype(np.float), args.range, args.percentage)
+    write_file(args.outfile, outlier_point_set)
 
 if __name__ == '__main__':
     main()
