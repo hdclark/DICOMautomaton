@@ -91,6 +91,7 @@ double GetSimilarity_NR(const Eigen::MatrixXd & xPoints,
     
     int mRowsY = yPoints.rows();
     int nRowsX = xPoints.rows(); 
+    Eigen::MatrixXd alignedYPoints = AlignedPointSet_NR(yPoints, gramMatrix, W);
     Eigen::MatrixXd tempVector;
 
     double sum = 0;
@@ -98,7 +99,7 @@ double GetSimilarity_NR(const Eigen::MatrixXd & xPoints,
     for (int m = 0; m < mRowsY; ++m) {
         min_distance = -1;
         for (int n = 0; n < nRowsX; ++n) {
-            tempVector = xPoints.row(n) - AlignedPointSet_NR(yPoints, gramMatrix, W).row(m);
+            tempVector = xPoints.row(n) - alignedYPoints.row(m);
             if (min_distance < 0 || tempVector.norm() < min_distance) {
                 min_distance = tempVector.norm();
             }
@@ -124,11 +125,12 @@ double GetObjective_NR(const Eigen::MatrixXd & xPoints,
     int nRowsX = xPoints.rows(); 
     double dimensionality = xPoints.cols();
     double Np = postProb.sum();
+    Eigen::MatrixXd alignedYPoints = AlignedPointSet_NR(yPoints, gramMatrix, W);
     Eigen::MatrixXd tempVector;
     double leftSum = 0;
     for (int m = 0; m < mRowsY; ++m) {
         for (int n = 0; n < nRowsX; ++n) {
-            tempVector = xPoints.row(n) - AlignedPointSet_NR(yPoints, gramMatrix, W).row(m);
+            tempVector = xPoints.row(n) - alignedYPoints.row(m);
             leftSum += postProb(m,n) * tempVector.squaredNorm();
         }
     }
