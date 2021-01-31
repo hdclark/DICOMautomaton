@@ -10,7 +10,7 @@
 *.la
 *.a
 
-*.vscode
+
 
 # Executables
 automaton
@@ -24,4 +24,5 @@ petct_perfusion_analysis*
 build/
 compile_commands.json
 dcma_integration_testing/
+.vscode/
 
