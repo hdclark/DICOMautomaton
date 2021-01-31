@@ -10,6 +10,8 @@
 *.la
 *.a
 
+*.vscode
+
 # Executables
 automaton
 overlaydosedata
