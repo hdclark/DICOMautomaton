@@ -2,9 +2,9 @@
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorMath.h"         //Needed for samples_1D.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
-
 #include "CPD_Affine.h"
 #include "YgorMathIOXYZ.h"    //Needed for ReadPointSetFromXYZ.
+#include <cmath>
 
 AffineCPDTransform::AffineCPDTransform(int dimensionality) {
     this->B = Eigen::MatrixXd::Identity(dimensionality, dimensionality);
@@ -132,6 +132,7 @@ AlignViaAffineCPD(CPDParams & params,
     double sigma_squared = Init_Sigma_Squared(X, Y);
     double similarity;
     double objective;
+    double prev_objective = 0;
     Eigen::MatrixXd P;
     Eigen::MatrixXd Ux;
     Eigen::MatrixXd Uy;
@@ -167,7 +168,7 @@ AlignViaAffineCPD(CPDParams & params,
             }
         }
         
-        if(similarity < params.similarity_threshold)
+        if(abs(prev_objective-objective) < params.similarity_threshold)
             break;
     }
     return transform;

@@ -14,6 +14,7 @@
 #include <boost/filesystem.hpp>
 #include <cstdlib>            //Needed for exit() calls.
 #include <utility>            //Needed for std::pair.
+#include <chrono>
 
 #include "YgorArguments.h"    //Needed for ArgumentHandler class.
 #include "YgorFilesDirs.h"    //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
@@ -28,6 +29,7 @@
 #include "CPD_Affine.h"
 #include "CPD_Nonrigid.h"
 
+using namespace std::chrono;
 
 int main(int argc, char* argv[]){
     //This is the main entry-point for an experimental implementation of the ABC deformable registration algorithm. This
@@ -175,8 +177,8 @@ int main(int argc, char* argv[]){
         return;
       })
     );
-    arger.push_back( ygor_arg_handlr_t(1, 'r', "threshold", true, "-15000",
-      "Similarity threshold to terminate iteratiosn at.(Optional, default r=-15000)",
+    arger.push_back( ygor_arg_handlr_t(1, 'r', "threshold", true, "0.00001",
+      "Similarity threshold to terminate iteratiosn at.(Optional, default r=0.00001)",
       [&](const std::string &optarg) -> void {
         if (!optarg.empty()) {
           std::string::size_type sz;
@@ -201,6 +203,7 @@ int main(int argc, char* argv[]){
     //========================================== Launch Perfusion Model =============================================
     FUNCINFO(type)
     point_set<double> mutable_moving = moving;
+    high_resolution_clock::time_point start = high_resolution_clock::now();
     if(type == "rigid") {
         if(video == "True") {
           temp_xyz_outfile = xyz_outfile + "_iter0.xyz";
@@ -264,6 +267,8 @@ int main(int argc, char* argv[]){
         FUNCERR("The CPD algorithm specified was invalid. Options are rigid, affine, nonrigid");
         return 1;
     }
-
+    high_resolution_clock::time_point stop = high_resolution_clock::now();
+    duration<double> time_span = duration_cast<duration<double>>(stop - start);
+    FUNCINFO("Excecution took time: " << time_span.count())
     return 0;
 }

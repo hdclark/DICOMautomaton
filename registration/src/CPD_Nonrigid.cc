@@ -4,6 +4,7 @@
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 #include "CPD_Nonrigid.h"
 #include <chrono>
+#include <cmath>
 #include "YgorMathIOXYZ.h"    //Needed for ReadPointSetFromXYZ.
 using namespace std::chrono;
 
@@ -252,6 +253,7 @@ AlignViaNonRigidCPD(CPDParams & params,
     double sigma_squared = NR_Init_Sigma_Squared(X, Y);
     double similarity;
     double objective;
+    double prev_objective = 0;
     transform.G = GetGramMatrix(Y, params.beta * params.beta);
     Eigen::MatrixXd P;
     Eigen::MatrixXd T;
@@ -265,15 +267,15 @@ AlignViaNonRigidCPD(CPDParams & params,
         T = transform.apply_to(Y);
         sigma_squared = SigmaSquared(X, P, T);
 
-        FUNCINFO(sigma_squared);
+        FUNCINFO("Sigma Squared: " << sigma_squared);
 
         mutable_moving = moving;
         transform.apply_to(mutable_moving);
         
         similarity = GetSimilarity_NR(X, Y, transform.G, transform.W);
+        FUNCINFO("Similarity: " << similarity);
         objective = GetObjective_NR(X, Y, P, transform.G, transform.W, sigma_squared);
-        FUNCINFO(similarity);
-        FUNCINFO(objective);
+        FUNCINFO("Objective: " << objective);
 
         if (video == "True") {
             if (iter_interval > 0 && i % iter_interval == 0) {
@@ -284,12 +286,8 @@ AlignViaNonRigidCPD(CPDParams & params,
             }
         }
 
-        if (sigma_squared < 1e-14)
+        if (abs(objective-prev_objective) < params.similarity_threshold)
             break;
-        // TODO: Use similarity once function is sped up
-        // similarity = GetSimilarity_NR(X, Y, P, transform.G, transform.W, sigma_squared);
-        // if(similarity < params.similarity_threshold)
-        //     break;
     }
     return transform;
 }

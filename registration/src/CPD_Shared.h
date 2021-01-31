@@ -19,7 +19,7 @@ struct CPDParams {
     // Max iterations for algorithm
     int iterations = 100;
     // Similarity termination threshold for algorithm
-    double similarity_threshold = -15000;
+    double similarity_threshold = 0.00001;
 };
 
 double Init_Sigma_Squared(const Eigen::MatrixXd & xPoints,
