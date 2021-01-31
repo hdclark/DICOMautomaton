@@ -9,6 +9,7 @@
 # Compiled Static libraries
 *.la
 *.a
+*.vscode/
 
 
 
@@ -24,5 +25,5 @@ petct_perfusion_analysis*
 build/
 compile_commands.json
 dcma_integration_testing/
-.vscode/
+
 
