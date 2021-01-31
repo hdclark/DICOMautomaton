@@ -5,6 +5,11 @@
 # Compiled Dynamic libraries
 *.so
 
+# Data files
+aif.txt
+vif.txt
+c.txt
+sycl/data
 
 # Compiled Static libraries
 *.la
@@ -12,6 +17,11 @@
 settings.json
 
 
+
+#Data files
+aif.txt
+vif.txt
+c.txt
 
 # Executables
 automaton
