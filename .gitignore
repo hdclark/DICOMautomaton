@@ -9,7 +9,7 @@
 # Compiled Static libraries
 *.la
 *.a
-*.vscode/
+.vscode
 
 
 
