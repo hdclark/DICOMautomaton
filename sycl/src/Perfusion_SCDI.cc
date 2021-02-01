@@ -53,6 +53,10 @@ vec_add(cl::sycl::queue &q, const std::vector<double> &lhs, const std::vector<do
         cl::sycl::buffer<double> buff_rhs(rhs.data(), N);
         cl::sycl::buffer<double> buff_dst(dst.data(), N);
 
+        std::cout << "Running on "
+            << q.get_device().get_info<cl::sycl::info::device::name>()
+            << "\n";
+
         q.submit([&](cl::sycl::handler &cgh) {
             auto access_lhs = buff_lhs.get_access<cl::sycl::access::mode::read>(cgh);
             auto access_rhs = buff_rhs.get_access<cl::sycl::access::mode::read>(cgh);
@@ -291,7 +295,7 @@ Launch_SCDI(samples_1D<double> &AIF, samples_1D<double> &VIF, std::vector<sample
     std::vector<double> lhs = { 1.0, -2.0, 0.0, -2.5, 10.0 };
     std::vector<double> rhs = { -1.0, 2.0, -0.0, 2.5, -10.0 };
 
-    cl::sycl::queue q;
+    cl::sycl::queue q(cl::sycl::gpu_selector{});
     auto result = vec_add(q, lhs, rhs); // Performs vector summation using SYCL on CPU, GPU, FPGA, ...
 
     double sum = 0.0;
