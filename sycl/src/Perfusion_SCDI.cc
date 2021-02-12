@@ -295,7 +295,7 @@ Launch_SCDI(samples_1D<double> &AIF, samples_1D<double> &VIF, std::vector<sample
     std::vector<double> lhs = { 1.0, -2.0, 0.0, -2.5, 10.0 };
     std::vector<double> rhs = { -1.0, 2.0, -0.0, 2.5, -10.0 };
 
-    cl::sycl::queue q(cl::sycl::gpu_selector{});
+    cl::sycl::queue q(cl::sycl::cpu_selector{});
     auto result = vec_add(q, lhs, rhs); // Performs vector summation using SYCL on CPU, GPU, FPGA, ...
 
     double sum = 0.0;
