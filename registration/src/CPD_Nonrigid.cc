@@ -254,7 +254,88 @@ AlignViaNonRigidCPD(CPDParams & params,
     NonRigidCPDTransform transform(N_move_points, params.dimensionality);
     double sigma_squared = NR_Init_Sigma_Squared(X, Y);
     double similarity;
-    double objective;
+    double objective = 0;
+    double prev_objective = 0;
+    transform.G = GetGramMatrix(Y, params.beta * params.beta);
+    Eigen::MatrixXd P;
+    Eigen::MatrixXd T;
+
+    for (int i = 0; i < params.iterations; i++) {
+        FUNCINFO("Iteration: " << i)
+        P = E_Step_NR(X, Y, transform.G, transform.W, sigma_squared, params.distribution_weight);
+        transform.W = GetW(X, Y, transform.G, P, sigma_squared, params.lambda);
+        T = transform.apply_to(Y);
+        sigma_squared = SigmaSquared(X, P, T);
+
+        FUNCINFO("Sigma Squared: " << sigma_squared);
+
+        mutable_moving = moving;
+        transform.apply_to(mutable_moving);
+        
+        similarity = GetSimilarity_NR(X, Y, transform.G, transform.W);
+        FUNCINFO("Similarity: " << similarity);
+        prev_objective = objective;
+        objective = GetObjective_NR(X, Y, P, transform.G, transform.W, sigma_squared);
+        FUNCINFO("Objective: " << objective);
+
+        if (video == "True") {
+            if (iter_interval > 0 && i % iter_interval == 0) {
+                temp_xyz_outfile = xyz_outfile + "_iter" + std::to_string(i+1) + "_sim" + std::to_string(similarity) + ".xyz";
+                std::ofstream PFO(temp_xyz_outfile);
+                if(!WritePointSetToXYZ(mutable_moving, PFO))
+                    FUNCERR("Error writing point set to " << xyz_outfile);
+            }
+        }
+
+        if (abs(objective-prev_objective) < params.similarity_threshold)
+            break;
+    }
+    return transform;
+}
+
+NonRigidCPDTransform
+AlignViaNonRigidCPDFGT(CPDParams & params,
+            const point_set<double> & moving,
+            const point_set<double> & stationary,
+            int iter_interval /*= 0*/,
+            std::string video /*= "False"*/,
+            std::string xyz_outfile /*= "output"*/ ) { 
+    
+    FUNCINFO("Performing nonrigid CPD with Fast Gauss Tranform");
+
+    std::string temp_xyz_outfile;
+    point_set<double> mutable_moving = moving;
+    
+    Eigen::MatrixXd GetGramMatrix(const Eigen::MatrixXd & yPoints, double betaSquared);
+    const auto N_move_points = static_cast<long int>(moving.points.size());
+    const auto N_stat_points = static_cast<long int>(stationary.points.size());
+
+    // Prepare working buffers.
+    //
+    // Stationary point matrix
+    Eigen::MatrixXd X = Eigen::MatrixXd::Zero(N_move_points, params.dimensionality);
+    // Moving point matrix
+    Eigen::MatrixXd Y = Eigen::MatrixXd::Zero(N_stat_points, params.dimensionality); 
+
+    // Fill the X vector with the corresponding points.
+    for(long int j = 0; j < N_stat_points; ++j){ // column
+        const auto P_stationary = stationary.points[j];
+        X(j, 0) = P_stationary.x;
+        X(j, 1) = P_stationary.y;
+        X(j, 2) = P_stationary.z;
+    }
+
+    // Fill the Y vector with the corresponding points.
+    for(long int j = 0; j < N_move_points; ++j){ // column
+        const auto P_moving = moving.points[j];
+        Y(j, 0) = P_moving.x;
+        Y(j, 1) = P_moving.y;
+        Y(j, 2) = P_moving.z;
+    }
+    NonRigidCPDTransform transform(N_move_points, params.dimensionality);
+    double sigma_squared = NR_Init_Sigma_Squared(X, Y);
+    double similarity;
+    double objective = 0;
     double prev_objective = 0;
     transform.G = GetGramMatrix(Y, params.beta * params.beta);
     Eigen::MatrixXd P;

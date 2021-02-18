@@ -55,6 +55,7 @@ int main(int argc, char* argv[]){
     std::string tf_outfile;
     int iter_interval;
     std::string video;
+    std::string fgt;
 
     //================================================ Argument Parsing ==============================================
 
@@ -76,7 +77,6 @@ int main(int argc, char* argv[]){
       FUNCERR("Unrecognized option with argument: '" << optarg << "'");
       return; 
     };
-
     arger.push_back( ygor_arg_handlr_t(1, 'm', "moving", true, "moving.txt",
       "Load a moving point cloud from the given file.",
       [&](const std::string &optarg) -> void {
@@ -88,7 +88,6 @@ int main(int argc, char* argv[]){
         return;
       })
     );
- 
     arger.push_back( ygor_arg_handlr_t(1, 's', "stationary", true, "stationary.txt",
       "Load a stationary point cloud from the given file.",
       [&](const std::string &optarg) -> void {
@@ -135,8 +134,7 @@ int main(int argc, char* argv[]){
         return;
       })
     );
-
-        arger.push_back( ygor_arg_handlr_t(1, 'w', "wd", true, "0.2",
+    arger.push_back( ygor_arg_handlr_t(1, 'w', "wd", true, "0.2",
       "Weight of the uniform distribution. 0 <= w <= 1 (Optional, default w=0.2)",
       [&](const std::string &optarg) -> void {
         if (!optarg.empty()) {
@@ -177,12 +175,22 @@ int main(int argc, char* argv[]){
         return;
       })
     );
-    arger.push_back( ygor_arg_handlr_t(1, 'r', "threshold", true, "0.00001",
-      "Similarity threshold to terminate iteratiosn at.(Optional, default r=0.00001)",
+    arger.push_back( ygor_arg_handlr_t(1, 'r', "threshold", true, "1",
+      "Similarity threshold to terminate iteratiosn at.(Optional, default r=1)",
       [&](const std::string &optarg) -> void {
         if (!optarg.empty()) {
           std::string::size_type sz;
           params.similarity_threshold = std::stof(optarg, &sz);
+        }
+        return;
+      })
+    );
+    arger.push_back( ygor_arg_handlr_t(1, 'f', "fast gauss transform", true, "False",
+      "Use fast gauss tranform for Nonrigid CPD, will have no effect for other algorithms.(Optional, default False)",
+      [&](const std::string &optarg) -> void {
+        if (!optarg.empty()) {
+          std::string::size_type sz;
+          fgt = std::stof(optarg, &sz);
         }
         return;
       })
@@ -250,19 +258,25 @@ int main(int argc, char* argv[]){
           if(!WritePointSetToXYZ(mutable_moving, PFO))
             FUNCERR("Error writing point set to " << temp_xyz_outfile);
         }
-        
-        NonRigidCPDTransform transform = AlignViaNonRigidCPD(params, moving, stationary, iter_interval, video, xyz_outfile);
-        transform.apply_to(mutable_moving);
-        
+        if(fgt == "True") {
+          NonRigidCPDTransform transform = AlignViaNonRigidCPDFGT(params, moving, stationary, iter_interval, video, xyz_outfile);
+          transform.apply_to(mutable_moving);
+          std::ofstream TFO(tf_outfile);
+          FUNCINFO("Writing transform to " << tf_outfile)
+          transform.write_to(TFO);
+        } else {
+          NonRigidCPDTransform transform = AlignViaNonRigidCPD(params, moving, stationary, iter_interval, video, xyz_outfile);
+          transform.apply_to(mutable_moving);
+          std::ofstream TFO(tf_outfile);
+          FUNCINFO("Writing transform to " << tf_outfile)
+          transform.write_to(TFO);
+        }
         temp_xyz_outfile = xyz_outfile + "_last.xyz";
         std::ofstream PFO(temp_xyz_outfile);
         FUNCINFO("Writing transformed point set to to " << (temp_xyz_outfile))
         if(!WritePointSetToXYZ(mutable_moving, PFO))
           FUNCERR("Error writing point set to " << temp_xyz_outfile);
         // TODO: Add in writing transform to file
-        std::ofstream TFO(tf_outfile);
-        FUNCINFO("Writing transform to " << tf_outfile)
-        transform.write_to(TFO);
     } else {
         FUNCERR("The CPD algorithm specified was invalid. Options are rigid, affine, nonrigid");
         return 1;
