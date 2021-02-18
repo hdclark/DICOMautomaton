@@ -260,8 +260,6 @@ AlignViaNonRigidCPD(CPDParams & params,
     Eigen::MatrixXd P;
     Eigen::MatrixXd T;
 
-    params.iterations = 50;
-
     for (int i = 0; i < params.iterations; i++) {
         FUNCINFO("Iteration: " << i)
         P = E_Step_NR(X, Y, transform.G, transform.W, sigma_squared, params.distribution_weight);
@@ -276,6 +274,7 @@ AlignViaNonRigidCPD(CPDParams & params,
         
         similarity = GetSimilarity_NR(X, Y, transform.G, transform.W);
         FUNCINFO("Similarity: " << similarity);
+        prev_objective = objective;
         objective = GetObjective_NR(X, Y, P, transform.G, transform.W, sigma_squared);
         FUNCINFO("Objective: " << objective);
 

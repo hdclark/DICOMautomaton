@@ -58,7 +58,7 @@ double GetSimilarity(const Eigen::MatrixXd & xPoints,
     
     int mRowsY = yPoints.rows();
     int nRowsX = xPoints.rows(); 
-    Eigen::MatrixXd alignedYPoints = AlignedPointSet(yPoints, rotationMatrix, translation, scale)
+    Eigen::MatrixXd alignedYPoints = AlignedPointSet(yPoints, rotationMatrix, translation, scale);
     Eigen::MatrixXd tempVector;
 
     double sum = 0;
@@ -92,7 +92,7 @@ double GetObjective(const Eigen::MatrixXd & xPoints,
     int nRowsX = xPoints.rows(); 
     double dimensionality = xPoints.cols();
     double Np = postProb.sum();
-    Eigen::MatrixXd alignedYPoints = AlignedPointSet(yPoints, rotationMatrix, translation, scale)
+    Eigen::MatrixXd alignedYPoints = AlignedPointSet(yPoints, rotationMatrix, translation, scale);
     Eigen::MatrixXd tempVector;
 
     double leftSum = 0;
