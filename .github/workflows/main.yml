@@ -5,6 +5,7 @@ name: GitHub CI
 on:
   push:
     branches: [ master ]
+  workflow_dispatch:
 
 jobs:
   build_debian_stable:
