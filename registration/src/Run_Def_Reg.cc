@@ -14,6 +14,7 @@
 #include <boost/filesystem.hpp>
 #include <cstdlib>            //Needed for exit() calls.
 #include <utility>            //Needed for std::pair.
+#include <chrono>
 
 #include "YgorArguments.h"    //Needed for ArgumentHandler class.
 #include "YgorFilesDirs.h"    //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
@@ -28,6 +29,7 @@
 #include "CPD_Affine.h"
 #include "CPD_Nonrigid.h"
 
+using namespace std::chrono;
 
 int main(int argc, char* argv[]){
     //This is the main entry-point for an experimental implementation of the ABC deformable registration algorithm. This
@@ -53,6 +55,7 @@ int main(int argc, char* argv[]){
     std::string tf_outfile;
     int iter_interval;
     std::string video;
+    std::string fgt;
 
     //================================================ Argument Parsing ==============================================
 
@@ -74,7 +77,6 @@ int main(int argc, char* argv[]){
       FUNCERR("Unrecognized option with argument: '" << optarg << "'");
       return; 
     };
-
     arger.push_back( ygor_arg_handlr_t(1, 'm', "moving", true, "moving.txt",
       "Load a moving point cloud from the given file.",
       [&](const std::string &optarg) -> void {
@@ -86,7 +88,6 @@ int main(int argc, char* argv[]){
         return;
       })
     );
- 
     arger.push_back( ygor_arg_handlr_t(1, 's', "stationary", true, "stationary.txt",
       "Load a stationary point cloud from the given file.",
       [&](const std::string &optarg) -> void {
@@ -133,8 +134,7 @@ int main(int argc, char* argv[]){
         return;
       })
     );
-
-        arger.push_back( ygor_arg_handlr_t(1, 'w', "wd", true, "0.2",
+    arger.push_back( ygor_arg_handlr_t(1, 'w', "wd", true, "0.2",
       "Weight of the uniform distribution. 0 <= w <= 1 (Optional, default w=0.2)",
       [&](const std::string &optarg) -> void {
         if (!optarg.empty()) {
@@ -175,12 +175,22 @@ int main(int argc, char* argv[]){
         return;
       })
     );
-    arger.push_back( ygor_arg_handlr_t(1, 'r', "threshold", true, "-15000",
-      "Similarity threshold to terminate iteratiosn at.(Optional, default r=-15000)",
+    arger.push_back( ygor_arg_handlr_t(1, 'r', "threshold", true, "1",
+      "Similarity threshold to terminate iteratiosn at.(Optional, default r=1)",
       [&](const std::string &optarg) -> void {
         if (!optarg.empty()) {
           std::string::size_type sz;
           params.similarity_threshold = std::stof(optarg, &sz);
+        }
+        return;
+      })
+    );
+    arger.push_back( ygor_arg_handlr_t(1, 'f', "fast gauss transform", true, "False",
+      "Use fast gauss tranform for Nonrigid CPD, will have no effect for other algorithms.(Optional, default False)",
+      [&](const std::string &optarg) -> void {
+        if (!optarg.empty()) {
+          std::string::size_type sz;
+          fgt = std::stof(optarg, &sz);
         }
         return;
       })
@@ -201,6 +211,7 @@ int main(int argc, char* argv[]){
     //========================================== Launch Perfusion Model =============================================
     FUNCINFO(type)
     point_set<double> mutable_moving = moving;
+    high_resolution_clock::time_point start = high_resolution_clock::now();
     if(type == "rigid") {
         if(video == "True") {
           temp_xyz_outfile = xyz_outfile + "_iter0.xyz";
@@ -247,23 +258,31 @@ int main(int argc, char* argv[]){
           if(!WritePointSetToXYZ(mutable_moving, PFO))
             FUNCERR("Error writing point set to " << temp_xyz_outfile);
         }
-        
-        NonRigidCPDTransform transform = AlignViaNonRigidCPD(params, moving, stationary, iter_interval, video, xyz_outfile);
-        transform.apply_to(mutable_moving);
-        
+        if(fgt == "True") {
+          NonRigidCPDTransform transform = AlignViaNonRigidCPDFGT(params, moving, stationary, iter_interval, video, xyz_outfile);
+          transform.apply_to(mutable_moving);
+          std::ofstream TFO(tf_outfile);
+          FUNCINFO("Writing transform to " << tf_outfile)
+          transform.write_to(TFO);
+        } else {
+          NonRigidCPDTransform transform = AlignViaNonRigidCPD(params, moving, stationary, iter_interval, video, xyz_outfile);
+          transform.apply_to(mutable_moving);
+          std::ofstream TFO(tf_outfile);
+          FUNCINFO("Writing transform to " << tf_outfile)
+          transform.write_to(TFO);
+        }
         temp_xyz_outfile = xyz_outfile + "_last.xyz";
         std::ofstream PFO(temp_xyz_outfile);
         FUNCINFO("Writing transformed point set to to " << (temp_xyz_outfile))
         if(!WritePointSetToXYZ(mutable_moving, PFO))
           FUNCERR("Error writing point set to " << temp_xyz_outfile);
         // TODO: Add in writing transform to file
-        std::ofstream TFO(tf_outfile);
-        FUNCINFO("Writing transform to " << tf_outfile)
-        transform.write_to(TFO);
     } else {
         FUNCERR("The CPD algorithm specified was invalid. Options are rigid, affine, nonrigid");
         return 1;
     }
-
+    high_resolution_clock::time_point stop = high_resolution_clock::now();
+    duration<double> time_span = duration_cast<duration<double>>(stop - start);
+    FUNCINFO("Excecution took time: " << time_span.count())
     return 0;
 }
