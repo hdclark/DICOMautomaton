@@ -91,4 +91,17 @@ double SigmaSquared(const Eigen::MatrixXd & xPoints,
             const Eigen::MatrixXd & postProb,
             const Eigen::MatrixXd & transformedPoints);
 
+void GetNLargestEigenvalues(const Eigen::MatrixXd & m,
+            Eigen::MatrixXd & vector_matrix,
+            Eigen::MatrixXd & value_matrix,
+            int num_eig,
+            int size,
+            int power_iter,
+            double power_tol);
+
+double PowerIteration(const Eigen::MatrixXd & m,
+            Eigen::VectorXd & v, 
+            int num_iter,
+            double tolerance);
+
 #endif

@@ -212,6 +212,63 @@ double SigmaSquared(const Eigen::MatrixXd & xPoints,
     return (firstTerm - secondTerm + thirdTerm) / (Np * dim);
 }
 
+void GetNLargestEigenvalues(const Eigen::MatrixXd & m,
+            Eigen::MatrixXd & vector_matrix,
+            Eigen::MatrixXd & value_matrix,
+            int num_eig,
+            int size,
+            int power_iter,
+            double power_tol) {
+    double ev;
+    FUNCINFO("HERE")
+    Eigen::MatrixXd working_m = m.replicate(1, 1);
+    Eigen::VectorXd prev_working_v ;
+    Eigen::VectorXd working_v = Eigen::VectorXd::Random(size);;
+    for(int i = 0; i < num_eig; i++) {
+        prev_working_v = working_v;
+        working_v = Eigen::VectorXd::Random(size);
+        ev = PowerIteration(working_m, working_v, power_iter, power_tol);
+        value_matrix(i, i) = ev; 
+        Eigen::VectorXd v;
+        FUNCINFO(ev)
+        if(i > 0) {
+            Eigen::VectorXd v1 = (ev - value_matrix(i-1, i-1))*working_v;
+            FUNCINFO("MIDDLE")
+            Eigen::VectorXd v2 = value_matrix(i-1, i-1) * (prev_working_v.dot(working_v)) * prev_working_v;
+            FUNCINFO("MIDDLE2")
+            v = v1+v2;
+        } else {
+            v = working_v;
+        }
+        FUNCINFO(v[0])
+        FUNCINFO(v[1])
+        FUNCINFO(v[2])
+        vector_matrix.col(i) = v;
+        working_m = working_m-ev * working_v * working_v.transpose();
+    }
+}
+
+double PowerIteration(const Eigen::MatrixXd & m,
+            Eigen::VectorXd & v, 
+            int num_iter,
+            double tolerance) {
+    double norm;
+    double prev_ev = 0;
+    double ev = 0;
+    Eigen::VectorXd new_v;
+    v.normalize();
+    for (int i =0; i < num_iter; i++) {
+        prev_ev = ev;
+        new_v = m * v;
+        ev = v.dot(new_v);
+        norm = new_v.norm();
+        v = new_v / norm;
+        if(abs(ev - prev_ev) < tolerance)
+            break;
+    }
+    return ev;
+}
+
 NonRigidCPDTransform
 AlignViaNonRigidCPD(CPDParams & params,
             const point_set<double> & moving,
