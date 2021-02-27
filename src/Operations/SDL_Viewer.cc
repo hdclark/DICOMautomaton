@@ -48,6 +48,8 @@
 
 #include "Explicator.h"
 
+#include "../Operation_Dispatcher.h"
+
 #include "../Colour_Maps.h"
 #include "../Common_Boost_Serialization.h"
 #include "../Common_Plotting.h"
@@ -57,9 +59,11 @@
 #include "../YgorImages_Functors/Compute/AccumulatePixelDistributions.h"
 
 #include "../Font_DCMA_Minimal.h"
+#include "../DCMA_Version.h"
 
 #include "SDL_Viewer.h"
 
+//extern const std::string DCMA_VERSION_STR;
 
 OperationDoc OpArgDocSDL_Viewer(){
     OperationDoc out;
@@ -511,6 +515,7 @@ long int frame_count = 0;
         // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application.
         // Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
         SDL_Event event;
+        bool set_about_popup = false;
         bool close_window = false;
         while(SDL_PollEvent(&event)){
             ImGui_ImplSDL2_ProcessEvent(&event);
@@ -533,40 +538,58 @@ long int frame_count = 0;
         ImGui_ImplSDL2_NewFrame(window);
         ImGui::NewFrame();
 
-        {
-            if(ImGui::BeginMainMenuBar()){
-                if(ImGui::BeginMenu("File")){
-                    ImGui::EndMenu();
-                }
-                if(ImGui::BeginMenu("Edit")){
-                    if(ImGui::MenuItem("Undo", "CTRL+Z")){}
-                    if(ImGui::MenuItem("Redo", "CTRL+Y", false, false)){}  // Disabled item
-                    ImGui::Separator();
-                    if(ImGui::MenuItem("Cut", "CTRL+X")){}
-                    if(ImGui::MenuItem("Copy", "CTRL+C")){}
-                    if(ImGui::MenuItem("Paste", "CTRL+V")){}
-                    ImGui::EndMenu();
-                }
-                ImGui::Separator();
-                if(ImGui::BeginMenu("Exit", "CTRL+Q")){
+        if(ImGui::BeginMainMenuBar()){
+            if(ImGui::BeginMenu("File")){
+                if(ImGui::MenuItem("Exit", "CTRL+Q")){
                     ImGui::EndMenu();
                     break;
                 }
-                ImGui::EndMainMenuBar();
+                ImGui::EndMenu();
             }
-        }
+            //if(ImGui::BeginMenu("Edit")){
+            //    if(ImGui::MenuItem("Undo", "CTRL+Z")){}
+            //    if(ImGui::MenuItem("Redo", "CTRL+Y", false, false)){}  // Disabled item
+            //    ImGui::Separator();
+            //    if(ImGui::MenuItem("Cut", "CTRL+X")){}
+            //    if(ImGui::MenuItem("Copy", "CTRL+C")){}
+            //    if(ImGui::MenuItem("Paste", "CTRL+V")){}
+            //    ImGui::EndMenu();
+            //}
+            ImGui::Separator();
+            if(ImGui::BeginMenu("Help", "CTRL+H")){
+                if(ImGui::MenuItem("About")){
+                    set_about_popup = true;
+                }
+                ImGui::Separator();
 
-        {
-            ImGui::Begin("Main");
+                if(ImGui::BeginMenu("Operations", "CTRL+O")){
+                    auto known_ops = Known_Operations();
+                    for(auto &anop : known_ops){
+                        const auto op_name = anop.first;
+                        std::stringstream ss;
 
-            ImGui::Text("%s", "This is the main menu window.");
+                        auto op_docs = (anop.second.first)();
+                        ss << op_docs.desc << "\n\n";
+                        if(!op_docs.notes.empty()){
+                            ss << "Notes:" << std::endl;
+                            for(auto &note : op_docs.notes){
+                                ss << "\n" << "- " << note << std::endl;
+                            }
+                        }
 
-            if(ImGui::Button("Exit Viewer")){
-                FUNCINFO("Pressed the [exit] button");
-                break;
+                        if(ImGui::MenuItem(op_name.c_str())){}
+                        if(ImGui::IsItemHovered()){
+                            ImGui::SetNextWindowSizeConstraints(ImVec2(400.0, -1), ImVec2(500.0, -1));
+                            ImGui::BeginTooltip();
+                            ImGui::TextWrapped(ss.str().c_str());
+                            ImGui::EndTooltip();
+                        }
+                    }
+                    ImGui::EndMenu();
+                }
+                ImGui::EndMenu();
             }
-
-            ImGui::End();
+            ImGui::EndMainMenuBar();
         }
 
         if( DICOM_data.Has_Image_Data()
@@ -612,6 +635,22 @@ long int frame_count = 0;
 
             ImGui::End();
         }
+
+        // Show a pop-up with information about DICOMautomaton.
+        if(set_about_popup){
+            set_about_popup = false;
+            ImGui::OpenPopup("AboutPopup");
+        }
+        if(ImGui::BeginPopupModal("AboutPopup")){
+            const std::string version = "DICOMautomaton SDL_Viewer version "_s + DCMA_VERSION_STR;
+            ImGui::Text(version.c_str());
+
+            if(ImGui::Button("Close")){
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::EndPopup();
+        }
+
 
         // Clear the current OpenGL frame.
         CHECK_FOR_GL_ERRORS();
