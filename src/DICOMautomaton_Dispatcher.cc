@@ -30,12 +30,9 @@
 #include "Lexicon_Loader.h"
 
 #include "Operation_Dispatcher.h"
+#include "DCMA_Version.h"
 
-#ifndef DCMA_VERSION
-    #define DCMA_VERSION unknown
-#endif
-#define DCMA_xSTR(x) DCMA_STR(x)
-#define DCMA_STR(x) #x
+//extern const std::string DCMA_VERSION_STR;
 
 int main(int argc, char* argv[]){
     //This is the main entry-point into various routines. All major options are set here, via command line arguments.
@@ -119,7 +116,7 @@ int main(int argc, char* argv[]){
                          "Load file 'file.dcm', perform 'ComputeX' using abc=123, do *not* perform"
                          " 'ComputeY', and perform 'ComputeZ' using ghi=678 (not ghi=789)." }
                      };
-    arger.description = "A program for launching DICOMautomaton analyses. Version:"_s + DCMA_xSTR(DCMA_VERSION);
+    arger.description = "A program for launching DICOMautomaton analyses. Version:"_s + DCMA_VERSION_STR;
 
     arger.default_callback = [](int, const std::string &optarg) -> void {
       FUNCERR("Unrecognized option with argument: '" << optarg << "'");
@@ -142,7 +139,7 @@ int main(int argc, char* argv[]){
     arger.push_back( ygor_arg_handlr_t(0, 'r', "version", false, "",
       "Print the version and quit.",
       [&](const std::string &) -> void {
-        std::cout << "DICOMautomaton version: " << DCMA_xSTR(DCMA_VERSION) << std::endl;
+        std::cout << "DICOMautomaton version: " << DCMA_VERSION_STR << std::endl;
         std::exit(0);
         return;
       })

@@ -1,6 +1,10 @@
 
 add_subdirectory(Operations)
 
+add_library(            DCMA_Version_obj OBJECT DCMA_Version.cc)
+set_target_properties(  DCMA_Version_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+target_compile_definitions( DCMA_Version_obj PUBLIC -DDCMA_VERSION=${DCMA_VERSION} )
+
 add_library(            Structs_obj OBJECT Structs.cc)
 set_target_properties(  Structs_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
@@ -288,6 +292,7 @@ add_executable (dicomautomaton_dispatcher
     $<TARGET_OBJECTS:YgorImaging_Helper_objs>
 
     $<TARGET_OBJECTS:Operations_objs>
+    $<TARGET_OBJECTS:DCMA_Version_obj>
 )
 target_link_libraries (dicomautomaton_dispatcher
     imebrashim
@@ -316,9 +321,6 @@ target_link_libraries (dicomautomaton_dispatcher
     gmp
     m
     Threads::Threads
-)
-target_compile_definitions(dicomautomaton_dispatcher
-    PUBLIC -DDCMA_VERSION=${DCMA_VERSION}
 )
 
 if(WITH_WT)
@@ -366,6 +368,7 @@ if(WITH_WT)
         $<TARGET_OBJECTS:YgorImaging_Helper_objs>
 
         $<TARGET_OBJECTS:Operations_objs>
+        $<TARGET_OBJECTS:DCMA_Version_obj>
     )
     target_link_libraries(dicomautomaton_webserver
         imebrashim
