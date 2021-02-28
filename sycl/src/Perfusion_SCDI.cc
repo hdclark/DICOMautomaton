@@ -271,6 +271,13 @@ Launch_SCDI(samples_1D<double> &AIF, samples_1D<double> &VIF, std::vector<sample
         const float k1_A = R * k2 + Q;
         const float k1_B = N * k2 - Q * sum_of_aif / sum_of_vif;
         FUNCINFO("K2: " << k2 << " k1A: " << k1_A << " k1B: " << k1_B);
+
+        std::ofstream kParamsFile("kParams.txt");
+    //kParamsFile.open("kParams.txt");
+        if (kParamsFile.is_open()) {
+            kParamsFile << k1_A << " " << k1_B << " " << k2 << "\n";
+            kParamsFile.close();
+        }
     }
 
 
