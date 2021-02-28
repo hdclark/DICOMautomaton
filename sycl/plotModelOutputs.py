@@ -61,6 +61,19 @@ print('Chi-squared Value:', chi)
 #     vifET = [line.split()[0] for line in lines]
 #     vifEVal = [line.split()[2] for line in lines]
 
+chi = 0.0
+
+#Find chi^2 value for c values
+for i in range(len(cVal)):
+#chi = chi + Decimal pow((Decimal(cVal[i])-Decimal(cEVal[i])),2)/Decimal(cEVal[i])
+    O = cVal[i]
+    E = cEVal[i]
+    if(E!= 0):
+        chi = chi + float (pow((O-E), 2.0)/E)
+
+print('Chi-squared Value:', chi)
+
+
 
 fig = plt.figure()
 

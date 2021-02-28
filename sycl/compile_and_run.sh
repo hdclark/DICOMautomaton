@@ -5,10 +5,10 @@ echo
 if [[ $REPLY =~ ^[Yy]$ ]]
 then
     cd /DICOMautomaton/sycl/
-    #bash ./compile_and_install.sh 
+    bash ./compile_and_install.sh 
     cd data/input/
-    #rm -r *
-    #gen_test_inputs
+    rm -r *
+    gen_test_inputs
 
     text1=$(cat inputkParams.txt)
     IFS=' '
