@@ -121,7 +121,7 @@ Launch_SCDI(samples_1D<double> &AIF, samples_1D<double> &VIF, std::vector<sample
     const float sum_of_aif = std::accumulate(resampled_aif.begin(), resampled_aif.end(), 0.0f);
     const float sum_of_vif = std::accumulate(resampled_vif.begin(), resampled_vif.end(), 0.0f);
     const float sum_of_c   = std::accumulate(resampled_c.front().begin(), resampled_c.front().end(), 0.0f);
-    FUNCINFO("sum of aif " << sum_of_aif << " sum of vif " << sum_of_vif << " sum of c " << sum_of_c);
+    //FUNCINFO("sum of aif " << sum_of_aif << " sum of vif " << sum_of_vif << " sum of c " << sum_of_c);
 
     // Linear approximation at large t
     samples_1D<float> linear_c_vals;
@@ -137,7 +137,7 @@ Launch_SCDI(samples_1D<double> &AIF, samples_1D<double> &VIF, std::vector<sample
         linear_aif_vals.push_back(t, resampled_aif.at(i));
         linear_vif_vals.push_back(t, resampled_vif.at(i));
     }
-    FUNCINFO("Length of linear_c_vals: " << linear_c_vals.size());
+    //FUNCINFO("Length of linear_c_vals: " << linear_c_vals.size());
 
     // Approximate region by a line
     const auto c_res   = linear_c_vals.Linear_Least_Squares_Regression();
@@ -151,8 +151,8 @@ Launch_SCDI(samples_1D<double> &AIF, samples_1D<double> &VIF, std::vector<sample
     const auto vif_slope     = static_cast<float>(vif_res.slope);
     const auto vif_intercept = static_cast<float>(vif_res.intercept);
 
-    FUNCINFO("The slope is " << c_slope);
-    FUNCINFO("The amount of data points in C is " << c_size);
+    //FUNCINFO("The slope is " << c_slope);
+    //FUNCINFO("The amount of data points in C is " << c_size);
 
     // Find eqn 2
     const float time_midpoint = static_cast<float>(c_size -  (slope_window) * 0.5 )* TIME_INTERVAL;
@@ -160,15 +160,15 @@ Launch_SCDI(samples_1D<double> &AIF, samples_1D<double> &VIF, std::vector<sample
     const float VIF_pt        = time_midpoint * vif_slope + vif_intercept;
     const float AIF_pt        = time_midpoint * aif_slope + aif_intercept;
 
-    FUNCINFO("C point is " << C_pt << " VIF point is " << VIF_pt << " AIF point is " << AIF_pt);
+    //FUNCINFO("C point is " << C_pt << " VIF point is " << VIF_pt << " AIF point is " << AIF_pt);
 
     // Find R
     const float R = (C_pt - (sum_of_c / sum_of_vif) * VIF_pt) / (AIF_pt - (sum_of_aif / sum_of_vif) * VIF_pt);
-    FUNCINFO("R is " << R);
+    //FUNCINFO("R is " << R);
     const float Q = c_slope / (AIF_pt - (sum_of_aif / sum_of_vif) * VIF_pt);
-    FUNCINFO("Q is " << Q);
+    //FUNCINFO("Q is " << Q);
     const float N = (sum_of_c - R * sum_of_aif) / sum_of_vif;
-    FUNCINFO("N is " << N);
+    //FUNCINFO("N is " << N);
 
     // Construct AIF(t-dt), VIF(t-dt), C(t-dt)
     std::vector<float> shifted_aif = resampled_aif;
@@ -244,14 +244,21 @@ Launch_SCDI(samples_1D<double> &AIF, samples_1D<double> &VIF, std::vector<sample
     //const auto test = G[ G.size() + 1 ];
     //FUNCINFO("Avoiding optimizing away by printing " << test);
 
-    FUNCINFO("G.E = " << GE_inner_product);
-    FUNCINFO("E.E = " << EE_inner_product);
+    //FUNCINFO("G.E = " << GE_inner_product);
+    //FUNCINFO("E.E = " << EE_inner_product);
 
     // Get the kinetic parameters from the calculated inner products
     const float k2   = GE_inner_product / EE_inner_product;
     const float k1_A = R * k2 + Q;
     const float k1_B = N * k2 - Q * sum_of_aif / sum_of_vif;
-    FUNCINFO("K2: " << k2 << " k1A: " << k1_A << " k1B: " << k1_B);
+    //FUNCINFO("K2: " << k2 << " k1A: " << k1_A << " k1B: " << k1_B);
+
+    std::ofstream kParamsFile("kParams.txt");
+    //kParamsFile.open("kParams.txt");
+    if (kParamsFile.is_open()) {
+        kParamsFile << k1_A << " " << k1_B << " " << k2 << "\n";
+        kParamsFile.close();
+    }
 
     // The following is an example of using Eigen for matrices.
     {
