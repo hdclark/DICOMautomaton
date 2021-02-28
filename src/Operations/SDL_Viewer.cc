@@ -505,6 +505,10 @@ Drover SDL_Viewer(Drover DICOM_data,
         current_texture = Load_OpenGL_Texture(*disp_img_it);
     }
 
+    bool set_about_popup = false;
+    bool view_images_enabled = true;
+    bool view_meshes_enabled = true;
+
 long int frame_count = 0;
     while(true){
 ++frame_count;
@@ -515,7 +519,6 @@ long int frame_count = 0;
         // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application.
         // Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
         SDL_Event event;
-        bool set_about_popup = false;
         bool close_window = false;
         while(SDL_PollEvent(&event)){
             ImGui_ImplSDL2_ProcessEvent(&event);
@@ -546,15 +549,11 @@ long int frame_count = 0;
                 }
                 ImGui::EndMenu();
             }
-            //if(ImGui::BeginMenu("Edit")){
-            //    if(ImGui::MenuItem("Undo", "CTRL+Z")){}
-            //    if(ImGui::MenuItem("Redo", "CTRL+Y", false, false)){}  // Disabled item
-            //    ImGui::Separator();
-            //    if(ImGui::MenuItem("Cut", "CTRL+X")){}
-            //    if(ImGui::MenuItem("Copy", "CTRL+C")){}
-            //    if(ImGui::MenuItem("Paste", "CTRL+V")){}
-            //    ImGui::EndMenu();
-            //}
+            if(ImGui::BeginMenu("View")){
+                ImGui::MenuItem("Images", nullptr, &view_images_enabled);
+                ImGui::MenuItem("Meshes", nullptr, &view_meshes_enabled);
+                ImGui::EndMenu();
+            }
             ImGui::Separator();
             if(ImGui::BeginMenu("Help", "CTRL+H")){
                 if(ImGui::MenuItem("About")){
@@ -592,10 +591,11 @@ long int frame_count = 0;
             ImGui::EndMainMenuBar();
         }
 
-        if( DICOM_data.Has_Image_Data()
+        if( view_images_enabled
+        &&  DICOM_data.Has_Image_Data()
         &&  (0 <= img_array_num)
         &&  (0 <= img_num) ){
-            ImGui::Begin("Images");
+            ImGui::Begin("Images", &view_images_enabled);
 
             auto img_array_ptr_it = std::next(DICOM_data.image_data.begin(), img_array_num);
             auto disp_img_it = std::next((*img_array_ptr_it)->imagecoll.images.begin(), img_num);
@@ -636,22 +636,6 @@ long int frame_count = 0;
             ImGui::End();
         }
 
-        // Show a pop-up with information about DICOMautomaton.
-        if(set_about_popup){
-            set_about_popup = false;
-            ImGui::OpenPopup("AboutPopup");
-        }
-        if(ImGui::BeginPopupModal("AboutPopup")){
-            const std::string version = "DICOMautomaton SDL_Viewer version "_s + DCMA_VERSION_STR;
-            ImGui::Text(version.c_str());
-
-            if(ImGui::Button("Close")){
-                ImGui::CloseCurrentPopup();
-            }
-            ImGui::EndPopup();
-        }
-
-
         // Clear the current OpenGL frame.
         CHECK_FOR_GL_ERRORS();
         glViewport(0, 0, static_cast<int>(io.DisplaySize.x), static_cast<int>(io.DisplaySize.y));
@@ -663,7 +647,8 @@ long int frame_count = 0;
         CHECK_FOR_GL_ERRORS();
 
 // Tinkering with rendering surface meshes.
-if(DICOM_data.Has_Mesh_Data()){
+        if( view_meshes_enabled
+        && DICOM_data.Has_Mesh_Data() ){
     auto smesh_ptr = DICOM_data.smesh_data.front();
 
     const auto N_verts = smesh_ptr->meshes.vertices.size();
@@ -701,11 +686,11 @@ if(DICOM_data.Has_Mesh_Data()){
     std::vector<float> vertices;
     vertices.reserve(3 * N_verts);
     for(const auto& v : smesh_ptr->meshes.vertices){
-        // Scale each of x, y, and z to [-1,+1], but shrink to [-1/sqrt(2),+1/sqrt(2)] to account for rotation.
+        // Scale each of x, y, and z to [-1,+1], but shrink to [-1/sqrt(3),+1/sqrt(3)] to account for rotation.
         // Scaling down will ensure the corners are not clipped when the cube is rotated.
-        vec3<double> w( 0.707 * (2.0 * (v.x - x_min) / (x_max - x_min) - 1.0),
-                        0.707 * (2.0 * (v.y - y_min) / (y_max - y_min) - 1.0),
-                        0.707 * (2.0 * (v.z - z_min) / (z_max - z_min) - 1.0) );
+        vec3<double> w( 0.577 * (2.0 * (v.x - x_min) / (x_max - x_min) - 1.0),
+                        0.577 * (2.0 * (v.y - y_min) / (y_max - y_min) - 1.0),
+                        0.577 * (2.0 * (v.z - z_min) / (z_max - z_min) - 1.0) );
 
         w = w.rotate_around_z(3.14159265 * static_cast<double>(frame_count / 59900.0));
         w = w.rotate_around_y(3.14159265 * static_cast<double>(frame_count / 11000.0));
@@ -780,6 +765,23 @@ if(DICOM_data.Has_Mesh_Data()){
     glDeleteVertexArrays(1, &vao);
     CHECK_FOR_GL_ERRORS();
 }
+
+        // Show a pop-up with information about DICOMautomaton.
+        if(set_about_popup){
+            set_about_popup = false;
+            ImGui::OpenPopup("AboutPopup");
+        }
+        if(ImGui::BeginPopupModal("AboutPopup")){
+            const std::string version = "DICOMautomaton SDL_Viewer version "_s + DCMA_VERSION_STR;
+            ImGui::Text(version.c_str());
+
+            if(ImGui::Button("Close")){
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::EndPopup();
+        }
+
+
 
         // Render the ImGui components and swap OpenGL buffers.
         ImGui::Render();
