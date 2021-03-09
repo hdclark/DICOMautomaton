@@ -79,7 +79,9 @@ def main():
         file_list = natural_sort(files)
 
     fig = plt.figure()
+    # ax = fig.add_subplot(111)
     ax = p3.Axes3D(fig)
+    # ax.view_init(90, 270)
 
     with writer.saving(fig, args.output, 100):
         for moving_file in file_list:
