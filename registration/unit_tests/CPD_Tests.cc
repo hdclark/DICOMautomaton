@@ -541,28 +541,60 @@ TEST_CASE("PowerIteration") {
 	double threshold = 0.01;
 
 	REQUIRE((ev) == doctest::Approx(16.234).epsilon(threshold));
-	REQUIRE((v[0]) == doctest::Approx(0.245).epsilon(threshold));
-	REQUIRE((v[1]) == doctest::Approx(0.523).epsilon(threshold));
-	REQUIRE((v[2]) == doctest::Approx(0.816).epsilon(threshold));
+	REQUIRE(abs(v[0]) == doctest::Approx(0.245).epsilon(threshold));
+	REQUIRE(abs(v[1]) == doctest::Approx(0.523).epsilon(threshold));
+	REQUIRE(abs(v[2]) == doctest::Approx(0.816).epsilon(threshold));
 }
 
 // eigen decomposition test
 TEST_CASE("NLargestEigenvalues") {
-	Eigen::MatrixXd m(3, 3);
-	m <<   -4, 14, 0,
-		   -5, 13, 0,
-		   -1,  0, 2;
+	Eigen::MatrixXd m(4, 4);
+	m <<   4, 1, 9, 7, 
+		   1, 3, 5, 3,
+		   9, 5, 2, 3,
+		   7, 3, 3, 9;
 
 	FUNCINFO("HELLO")
-	Eigen::MatrixXd vector_matrix = Eigen::MatrixXd::Zero(3, 2);
-	Eigen::MatrixXd value_matrix = Eigen::MatrixXd::Zero(2, 2);
+	Eigen::MatrixXd vector_matrix = Eigen::MatrixXd::Zero(4, 3);
+	Eigen::VectorXd value_matrix = Eigen::VectorXd::Zero(3);
 
-	GetNLargestEigenvalues(m, vector_matrix, value_matrix, 2, 3, 20, 0.01);
+	GetNLargestEigenvalues(m, vector_matrix, value_matrix, 3, 4, 50, 0.00001);
 
 	double threshold = 0.01;
 
-	// REQUIRE((ev) == doctest::Approx(16.234).epsilon(threshold));
-	// REQUIRE((v[0]) == doctest::Approx(0.245).epsilon(threshold));
-	// REQUIRE((v[1]) == doctest::Approx(0.523).epsilon(threshold));
-	// REQUIRE((v[2]) == doctest::Approx(0.816).epsilon(threshold));
+	REQUIRE((value_matrix(0)) == doctest::Approx(19.47).epsilon(threshold));
+	REQUIRE((value_matrix(1)) == doctest::Approx(-7.62).epsilon(threshold));
+	REQUIRE((value_matrix(2)) == doctest::Approx(4.02).epsilon(threshold));
+	REQUIRE(abs(vector_matrix(0, 0)) == doctest::Approx(0.57).epsilon(threshold));
+	REQUIRE(abs(vector_matrix(0, 2)) == doctest::Approx(0.09).epsilon(threshold));
+	REQUIRE(abs(vector_matrix(1, 2)) == doctest::Approx(0.47).epsilon(threshold));
+	REQUIRE(abs(vector_matrix(2, 2)) == doctest::Approx(0.51).epsilon(threshold));
+	REQUIRE(abs(vector_matrix(3, 2)) == doctest::Approx(0.72).epsilon(threshold));
+}
+
+TEST_CASE("LowRankGetW") {
+
+	Eigen::MatrixXd yPoints(3, 3);
+	yPoints <<   3, 32, 10,
+    		    10,  6,  2,
+    			10, 10, 43;
+
+	Eigen::MatrixXd xPoints(3, 3);
+	xPoints <<   4,  5,  7,
+    			10, 23,  4,
+     			 6,  7, 20;
+
+	Eigen::MatrixXd postProb(3, 3);
+	postProb << 0.1, 0.4, 0.4, 
+				0.5, 0.7, 0.8,
+				0.2, 0.2, 0.5; 
+
+	Eigen::VectorXd gramValues(2);
+	gramValues <<   1, 2;
+
+	Eigen::MatrixXd gramVectors(3, 2);
+	gramVectors << 0.2, 0.5, 0.1, 
+				   0.3, 0.1, 0.8;
+
+	LowRankGetW(xPoints, yPoints, gramValues, gramVectors, postProb, 2, 3);
 }

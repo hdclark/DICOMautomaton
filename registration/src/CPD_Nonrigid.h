@@ -83,6 +83,14 @@ Eigen::MatrixXd GetW(const Eigen::MatrixXd & xPoints,
             double sigmaSquared,
             double lambda);
 
+Eigen::MatrixXd LowRankGetW(const Eigen::MatrixXd & xPoints,
+            const Eigen::MatrixXd & yPoints,
+            const Eigen::VectorXd & gramValues,
+            const Eigen::MatrixXd & gramVectors,
+            const Eigen::MatrixXd & postProb,
+            double sigmaSquared,
+            double lambda);
+
 Eigen::MatrixXd AlignedPointSet_NR(const Eigen::MatrixXd & yPoints,
             const Eigen::MatrixXd & gramMatrix,
             const Eigen::MatrixXd & W);
@@ -93,7 +101,7 @@ double SigmaSquared(const Eigen::MatrixXd & xPoints,
 
 void GetNLargestEigenvalues(const Eigen::MatrixXd & m,
             Eigen::MatrixXd & vector_matrix,
-            Eigen::MatrixXd & value_matrix,
+            Eigen::VectorXd & value_matrix,
             int num_eig,
             int size,
             int power_iter,

@@ -195,7 +195,20 @@ int main(int argc, char* argv[]){
         return;
       })
     );
+    arger.push_back( ygor_arg_handlr_t(1, 'a', "low rank matrix approximation", true, "0.5",
+      "Portion of eigenvalues to use for low rank matrix approximation for Nonrigid CPD. (Optional, default not used)",
+      [&](const std::string &optarg) -> void {
+        if (!optarg.empty()) {
+          std::string::size_type sz;
+          params.ev_ratio = std::stof(optarg, &sz);
+          FUNCINFO(params.ev_ratio)
+          params.use_low_rank = true;
+        }
+        return;
+      })
+    );
     arger.Launch(argc, argv);
+
 
     FUNCINFO(iter_interval);
     FUNCINFO(params.distribution_weight)
