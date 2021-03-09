@@ -2,9 +2,9 @@
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorMath.h"         //Needed for samples_1D.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
-
 #include "CPD_Rigid.h"
 #include "YgorMathIOXYZ.h"    //Needed for ReadPointSetFromXYZ.
+#include <cmath>
 
 RigidCPDTransform::RigidCPDTransform(int dimensionality) {
     this->dim = dimensionality;
@@ -165,6 +165,7 @@ AlignViaRigidCPD(CPDParams & params,
     double sigma_squared = Init_Sigma_Squared(X, Y);
     double similarity;
     double objective;
+    double prev_objective = 0;
 
     Eigen::MatrixXd P;
     Eigen::MatrixXd Ux;
@@ -196,8 +197,8 @@ AlignViaRigidCPD(CPDParams & params,
 
         similarity = GetSimilarity(X, Y, transform.R, transform.t, transform.s);
         objective = GetObjective(X, Y, P, transform.R, transform.t, transform.s, sigma_squared);
-        FUNCINFO(similarity);
-        FUNCINFO(objective);
+        FUNCINFO("Similarity: " << similarity);
+        FUNCINFO("Objective: " << objective);
         FUNCINFO(sigma_squared);
         
         if (video == "True") {
@@ -209,10 +210,7 @@ AlignViaRigidCPD(CPDParams & params,
             }
         }
 
-        if(sigma_squared < 1e-14) {
-            break;
-        }
-        if(similarity < params.similarity_threshold)
+        if(abs(prev_objective-objective) < params.similarity_threshold)
             break;
 
     }

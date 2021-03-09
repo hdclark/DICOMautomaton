@@ -44,8 +44,8 @@ def write_vid_frame(stationary_file, moving_file, ax, writer):
             similarity = re.findall(r"[-+]?\d*\.\d+|\d+", item)
 
     ax.cla()
-    ax.scatter(x1, y1, z1, s=10, c='b', marker="s", label='Stationary Point Set')
-    ax.scatter(x2, y2, z2, s=10, c='r', marker="o", label='Moving Point Set')
+    ax.scatter(x1, y1, z1, s=1, c='b', marker="s", label='Stationary Point Set')
+    ax.scatter(x2, y2, z2, s=1, c='r', marker="o", label='Moving Point Set')
     plt.legend(loc='upper left')
 
 
@@ -56,7 +56,7 @@ def write_vid_frame(stationary_file, moving_file, ax, writer):
     if len(similarity) > 0:
         title += ", Error: " + similarity[len(similarity)-1]
 
-    ax.set_title(title)
+    ax.set_title(title, y=-0.01)
     plt.tight_layout()
     # plt.show()
     writer.grab_frame()
@@ -73,7 +73,7 @@ def main():
     FFMpegWriter = manimation.writers['ffmpeg']
     metadata = dict(title='Movie Test', artist='Matplotlib',
             comment='Movie support!')
-    writer = FFMpegWriter(fps=8, metadata=metadata)
+    writer = FFMpegWriter(fps=4, metadata=metadata)
 
     for root, dirs, files in os.walk(args.moving):
         file_list = natural_sort(files)
@@ -84,7 +84,15 @@ def main():
     # ax.view_init(90, 270)
 
     with writer.saving(fig, args.output, 100):
+        for i in range(5):
+            moving_file = file_list[0]
+            write_vid_frame(
+                args.stationary, os.path.join(root, moving_file), ax, writer)
         for moving_file in file_list:
+            write_vid_frame(
+                args.stationary, os.path.join(root, moving_file), ax, writer)
+        for i in range(5):
+            moving_file = file_list[-1]
             write_vid_frame(
                 args.stationary, os.path.join(root, moving_file), ax, writer)
 
