@@ -15,57 +15,55 @@
 #include <utility>            //Needed for std::pair.
 
 
-// #include <boost/filesystem.hpp> // Needed for Boost filesystem access.
+#include <boost/filesystem.hpp> // Needed for Boost filesystem access.
 
-// #include <eigen3/Eigen/Dense> //Needed for Eigen library dense matrices.
+#include <eigen3/Eigen/Dense> //Needed for Eigen library dense matrices.
+
+class IFGT {
+    public:
+        // constructor
+        IFGT(const Eigen::MatrixXd & source_points,
+            double bandwidth, 
+            double epsilon);
+
+        Eigen::MatrixXd run_ifgt(const Eigen::MatrixXd & source_points,
+                                const Eigen::MatrixXd & target_points);
+        
+    private: 
+        int dim;
+        int max_truncation; // max truncation number (p)
+        int p_max_total; // length of monomials after multi index expansion
+        std::unique_ptr<Cluster> cluster; 
+        double bandwidth; 
+        double epsilon;
+        int n_clusters;
+        Eigen::MatrixXd constant_series;
+        double cutoff_radius;
 
 
-struct Ifgt_params { 
-    int nclusters; // number of clusters 
-    int p_max; // max truncation 
+        // autotuning of ifgt parameters
+        void ifgt_choose_parameters();
+
+        // after clustering, reupdate the truncation based on actual max 
+        void ifgt_update_max_truncation(double rx_max); 
+
+        // computes 2^alpha/alpha!
+        void compute_constant_series(); 
+
+        // computes [(y_j-c_k)/h]^{alpha} or [(x_i-c_k)/h]^{alpha}
+        // where y_j is target point, x_i is point inside cluster
+        Eigen::MatrixXd compute_monomials(const Eigen::MatrixXd & delta);
+
+        // computes constant ck for each cluster 
+        Eigen::MatrixXd compute_ck(const Eigen::MatrixXd & source_points);
+
+        // computes G(yj) - the actual gaussian
+        Eigen::MatrixXd IFGT::compute_gaussian(const Eigen::MatrixXd & target_points,
+                                            const Eigen::MatrixXd & C_k);
+
 };
 
-// autotuning of ifgt parameters
-Ifgt_params ifgt_choose_parameters(int dimensionality, 
-                        double bandwidth, 
-                        double epsilon);
-/*
-Eigen::MatrixXd run_ifgt(Ifgt_params parameters, 
-                        const Eigen::MatrixXd & points, 
-                        double bandwidth, 
-                        double epsilon);
-*/
-// after clustering, reupdate the truncation based on actual max 
-int ifgt_update_max_truncation(int dimensionality, 
-                            double bandwidth, 
-                            double epsilon,
-                            double rx_max); 
-/*
-// computes 2^alpha/alpha!
-Eigen::MatrixXd compute_constant_series(int dimensionality, 
-                                        int pmax_total); 
 
-// computes [(y_j-c_k)/h]^{alpha} or [(x_i-c_k)/h]^{alpha}
-// where y_j is target point, x_i is point inside cluster
-Eigen::MatrixXd compute_monomials(int dimensionality,
-                                        double bandwidth,
-                                        const Eigen::MatrixXd & delta); // d is either (y_j-c_k) or (x_i-c_k)
-
-
-// computes (y_j-c_k) or (x_i-c_k)
-Eigen::MatrixXd compute_d(int dimensionality,
-                        const Eigen::MatrixXd & cluster_centre,
-                        const Eigen::MatrixXd & point);
-
-// computes constant ck for each cluster 
-Eigen::MatrixXd compute_ck(int dimensionality,
-                        double bandwidth
-                        int pmax_total,
-                        int p_max
-                        int n_clusters,
-                        Cluster * clusters,
-                        const Eigen::MatrixXd & points);
-*/
 int nchoosek(int n, int k);
 
 
