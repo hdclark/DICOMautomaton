@@ -1,3 +1,10 @@
+
+/* 
+ * Improved Fast Gauss Transform implementation based on FIGTREE 
+ * implementation by Vlad Morariu, the IFGT source code by Vikas Raykar
+ * and Changjiang Yang, as well as fgt library by Pete Gadomski
+ */
+
 #ifndef IFGT_H_
 #define IFGT_H_
 
@@ -19,26 +26,45 @@
 
 #include <eigen3/Eigen/Dense> //Needed for Eigen library dense matrices.
 
+// matrix vector products P1, Pt1, PX
+struct CPD_MatrixVector_Products {
+    Eigen::MatrixXd P1; 
+    Eigen::MatrixXd Pt1; 
+    Eigen::MatrixXd PX; 
+}
+
+CPD_MatrixVector_Products compute_cpd_products(const Eigen::MatrixXd & source_pts,
+                                            const Eigen::MatrixXd & target_pts,
+                                            double bandwidth, 
+                                            double epsilon
+                                            double w);
+
 class IFGT {
     public:
         // constructor
-        IFGT(const Eigen::MatrixXd & source_points,
+        IFGT(const Eigen::MatrixXd & source_pts,
             double bandwidth, 
             double epsilon);
 
-        Eigen::MatrixXd run_ifgt(const Eigen::MatrixXd & source_points,
-                                const Eigen::MatrixXd & target_points);
+        // computes ifgt with constant weight of 1
+        Eigen::MatrixXd compute_ifgt(const Eigen::MatrixXd & target_pts);
+        // computes ifgt with given weights 
+        Eigen::MatrixXd IFGT::compute_ifgt(const Eigen::MatrixXd & target_pts, 
+                                const Eigen::ArrayXd & weights);
         
+        int get_nclusters() const { return n_clusters; }
+
     private: 
         int dim;
         int max_truncation; // max truncation number (p)
         int p_max_total; // length of monomials after multi index expansion
-        std::unique_ptr<Cluster> cluster; 
         double bandwidth; 
         double epsilon;
         int n_clusters;
-        Eigen::MatrixXd constant_series;
         double cutoff_radius;
+        Eigen::MatrixXd source_pts;
+        Eigen::MatrixXd constant_series;
+        std::unique_ptr<Cluster> cluster; 
 
 
         // autotuning of ifgt parameters
@@ -54,11 +80,11 @@ class IFGT {
         // where y_j is target point, x_i is point inside cluster
         Eigen::MatrixXd compute_monomials(const Eigen::MatrixXd & delta);
 
-        // computes constant ck for each cluster 
-        Eigen::MatrixXd compute_ck(const Eigen::MatrixXd & source_points);
+        // computes constant ck for each cluster with constant weights
+        Eigen::MatrixXd compute_ck(const Eigen::ArrayXd & weights);
 
         // computes G(yj) - the actual gaussian
-        Eigen::MatrixXd IFGT::compute_gaussian(const Eigen::MatrixXd & target_points,
+        Eigen::MatrixXd IFGT::compute_gaussian(const Eigen::MatrixXd & target_pts,
                                             const Eigen::MatrixXd & C_k);
 
 };
