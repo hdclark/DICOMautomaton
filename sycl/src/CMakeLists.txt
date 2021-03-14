@@ -2,9 +2,17 @@
 add_library(            Perfusion_SCDI_obj OBJECT Perfusion_SCDI.cc)
 set_target_properties(  Perfusion_SCDI_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
+add_library(            Perfusion_SCSI_obj OBJECT Perfusion_SCSI.cc)
+set_target_properties(  Perfusion_SCSI_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+
+add_library(            Common_obj OBJECT Common.cc)
+set_target_properties(  Common_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+
 add_executable (run_model
     Run_Model.cc
     $<TARGET_OBJECTS:Perfusion_SCDI_obj>
+    $<TARGET_OBJECTS:Perfusion_SCSI_obj>
+    $<TARGET_OBJECTS:Common_obj>
 )
 target_link_libraries (run_model
     "$<$<BOOL:${WITH_NLOPT}>:${NLOPT_LIBRARIES}>"
