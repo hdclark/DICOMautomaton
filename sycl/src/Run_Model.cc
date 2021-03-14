@@ -22,6 +22,7 @@
 #include "YgorString.h"    //Needed for GetFirstRegex(...)
 
 #include "Perfusion_SCDI.h"
+#include "Perfusion_SCSI.h"
 
 
 int
@@ -48,7 +49,7 @@ main(int argc, char *argv[]) {
     std::vector<samples_1D<double>> C;
 
     // Placeholder parameters, in case you need to add any of these.
-    bool PlaceholderBoolean       = false;
+    bool SCSIRunBool       = false;
     double PlaceholderDouble      = 1.0;
     float PlaceholderFloat        = -1.0;
     std::string PlaceholderString = "placeholder";
@@ -107,21 +108,15 @@ main(int argc, char *argv[]) {
                                           return;
                                       }));
 
-    arger.push_back(ygor_arg_handlr_t(3, 'b', "placeholder-boolean", false, "", "Placeholder for a boolean option.",
+    arger.push_back(ygor_arg_handlr_t(3, 'b', "SCSIRunBool", false, "", "Boolean to run single input model.",
                                       [&](const std::string &) -> void {
-                                          PlaceholderBoolean = true;
+                                          SCSIRunBool = true;
                                           return;
                                       }));
 
     arger.push_back(ygor_arg_handlr_t(3, 'f', "placeholder-float", true, "1.23", "Placeholder for a float option.",
                                       [&](const std::string &optarg) -> void {
                                           PlaceholderFloat = std::stof(optarg);
-                                          return;
-                                      }));
-
-    arger.push_back(ygor_arg_handlr_t(3, 's', "placeholder-string", true, "placeholder",
-                                      "Placeholder for a string option.", [&](const std::string &optarg) -> void {
-                                          PlaceholderString = optarg;
                                           return;
                                       }));
 
@@ -145,7 +140,11 @@ main(int argc, char *argv[]) {
 
     //========================================== Launch Perfusion Model =============================================
     timestamp_t t0 = get_timestamp();
-    Launch_SCDI(AIF, VIF, C);
+    if(SCSIRunBool) {
+        Launch_SCSI(AIF, C);
+    } else {
+        Launch_SCDI(AIF, VIF, C);   
+    }
     timestamp_t t1 = get_timestamp();
     double secs    = (t1 - t0) / 1000000.0L;
     FUNCINFO("Runtime:" << secs);
