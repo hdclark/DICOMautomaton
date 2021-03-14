@@ -147,4 +147,6 @@ Launch_SCSI(samples_1D<double> &AIF, std::vector<samples_1D<double>> &C) {
             kParamsFile.close();
         }
     }
+
+    return;
 }
