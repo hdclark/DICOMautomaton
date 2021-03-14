@@ -29,6 +29,7 @@
 #include "YgorString.h"    //Needed for GetFirstRegex(...)
 
 #include "Perfusion_SCDI.h"
+#include "Common.h"
 
 #define TIME_INTERVAL 0.1 //In units of seconds
 
@@ -315,13 +316,6 @@ Launch_SCDI(samples_1D<double> &AIF, samples_1D<double> &VIF, std::vector<sample
     }
 
     return;
-}
-
-void
-MultiplyVectorByScalar(std::vector<float> &v, float k) {
-    transform(v.begin(), v.end(), v.begin(), [k](float &c) {
-        return c * k;
-    });
 }
 // Taken from https://stackoverflow.com/questions/3376124/how-to-add-element-by-element-of-two-stl-vectors
 // template <typename T>
