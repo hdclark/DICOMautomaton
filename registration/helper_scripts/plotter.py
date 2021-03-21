@@ -56,7 +56,8 @@ def write_vid_frame(stationary_file, moving_file, ax, writer):
     if len(similarity) > 0:
         title += ", Error: " + similarity[len(similarity)-1]
 
-    ax.set_title(title, y=-0.01)
+    # ax.set_title(title, y=-0.01)
+    ax.set_title(title)
     plt.tight_layout()
     # plt.show()
     writer.grab_frame()

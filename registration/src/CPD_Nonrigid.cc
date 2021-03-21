@@ -17,6 +17,7 @@ void NonRigidCPDTransform::apply_to(point_set<double> &ps) {
     auto N_points = static_cast<long int>(ps.points.size());
     Eigen::MatrixXd Y = Eigen::MatrixXd::Zero(N_points, this->dim); 
     // Fill the X vector with the corresponding points.
+    
     for(long int j = 0; j < N_points; ++j) { // column
         auto P = ps.points[j];
         Y(j, 0) = P.x;
@@ -43,7 +44,7 @@ void NonRigidCPDTransform::write_to( std::ostream &os ) {
     }
 }
 
-Eigen::MatrixXd NonRigidCPDTransform::apply_to(const Eigen::MatrixXd &ps) {
+Eigen::MatrixXd NonRigidCPDTransform::apply_to(const Eigen::MatrixXd & ps) {
     return ps + this->G * this->W;
 }
 
@@ -80,7 +81,8 @@ Eigen::MatrixXd GetGramMatrix(const Eigen::MatrixXd & yPoints, double betaSquare
             gramMatrix(i,j) = exp(expArg);
         }
     }
-
+    FUNCINFO(gramMatrix.rows())
+    FUNCINFO(gramMatrix.cols())
     return gramMatrix;
 }
 
@@ -184,7 +186,7 @@ Eigen::MatrixXd GetW(const Eigen::MatrixXd & xPoints,
             double sigmaSquared,
             double lambda){
     
-    Eigen::MatrixXd oneVec = Eigen::MatrixXd::Ones(postProb.rows(),1);
+    Eigen::MatrixXd oneVec = Eigen::MatrixXd::Ones(postProb.cols(),1);
     Eigen::MatrixXd postProbInvDiag = ((postProb * oneVec).asDiagonal()).inverse(); // d(P1)^-1
     Eigen::MatrixXd A = gramMatrix + lambda * sigmaSquared * postProbInvDiag;
     Eigen::MatrixXd b = postProbInvDiag * postProb * xPoints - yPoints;
@@ -203,12 +205,16 @@ double SigmaSquared(const Eigen::MatrixXd & xPoints,
             const Eigen::MatrixXd & postProb,
             const Eigen::MatrixXd & transformedPoints){
 
+    FUNCINFO(postProb.rows())
+    FUNCINFO(postProb.cols())
+    
     int dim = xPoints.cols();
     double Np = postProb.sum();
-    Eigen::MatrixXd oneVec = Eigen::MatrixXd::Ones(postProb.rows(),1);
-    double firstTerm = (double)(xPoints.transpose() * (postProb.transpose() * oneVec).asDiagonal() * xPoints).trace();
+    Eigen::MatrixXd oneVecRow = Eigen::MatrixXd::Ones(postProb.rows(),1);
+    Eigen::MatrixXd oneVecCol = Eigen::MatrixXd::Ones(postProb.cols(),1);
+    double firstTerm = (double)(xPoints.transpose() * (postProb.transpose() * oneVecRow).asDiagonal() * xPoints).trace();
     double secondTerm = (double)(2 * ((postProb * xPoints).transpose() * transformedPoints).trace());
-    double thirdTerm = (double)(transformedPoints.transpose() * (postProb * oneVec).asDiagonal() * transformedPoints).trace();
+    double thirdTerm = (double)(transformedPoints.transpose() * (postProb * oneVecCol).asDiagonal() * transformedPoints).trace();
     return (firstTerm - secondTerm + thirdTerm) / (Np * dim);
 }
 
@@ -232,9 +238,9 @@ AlignViaNonRigidCPD(CPDParams & params,
     // Prepare working buffers.
     //
     // Stationary point matrix
-    Eigen::MatrixXd X = Eigen::MatrixXd::Zero(N_move_points, params.dimensionality);
+    Eigen::MatrixXd Y = Eigen::MatrixXd::Zero(N_move_points, params.dimensionality);
     // Moving point matrix
-    Eigen::MatrixXd Y = Eigen::MatrixXd::Zero(N_stat_points, params.dimensionality); 
+    Eigen::MatrixXd X = Eigen::MatrixXd::Zero(N_stat_points, params.dimensionality); 
 
     // Fill the X vector with the corresponding points.
     for(long int j = 0; j < N_stat_points; ++j){ // column
@@ -269,9 +275,15 @@ AlignViaNonRigidCPD(CPDParams & params,
 
         FUNCINFO("Sigma Squared: " << sigma_squared);
 
+        if (isnan(sigma_squared)) {
+            FUNCINFO("FINAL SIMILARITY: " << similarity);
+            break;
+        }
+
         mutable_moving = moving;
+
         transform.apply_to(mutable_moving);
-        
+
         similarity = GetSimilarity_NR(X, Y, transform.G, transform.W);
         FUNCINFO("Similarity: " << similarity);
         prev_objective = objective;
@@ -287,8 +299,10 @@ AlignViaNonRigidCPD(CPDParams & params,
             }
         }
 
-        if (abs(objective-prev_objective) < params.similarity_threshold)
+        if (abs(objective-prev_objective) < params.similarity_threshold || isnan(objective) || isnan(sigma_squared)) {
+            FUNCINFO("FINAL SIMILARITY: " << similarity);
             break;
+        }
     }
     return transform;
 }
