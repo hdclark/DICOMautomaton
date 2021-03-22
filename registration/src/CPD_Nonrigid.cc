@@ -5,6 +5,7 @@
 #include "CPD_Nonrigid.h"
 #include <chrono>
 #include <cmath>
+#include <eigen3/Eigen/Core>
 #include "YgorMathIOXYZ.h"    //Needed for ReadPointSetFromXYZ.
 using namespace std::chrono;
 
@@ -109,8 +110,6 @@ double GetSimilarity_NR(const Eigen::MatrixXd & xPoints,
 
     sum = sum / (mRowsY * 1.00);
 
-    FUNCINFO(sum);
-    FUNCINFO(mRowsY);
     return sum;
 }
 
@@ -270,6 +269,20 @@ double SigmaSquared(const Eigen::MatrixXd & xPoints,
     return (firstTerm - secondTerm + thirdTerm) / (Np * dim);
 }
 
+void GetNLargestEigenvalues_V2(const Eigen::MatrixXd & m,
+            Eigen::MatrixXd & vector_matrix,
+            Eigen::VectorXd & value_matrix,
+            int num_eig,
+            int size) {
+    Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> solver(m);
+    Eigen::VectorXd values = solver.eigenvalues();
+    Eigen::MatrixXd vectors = solver.eigenvectors();
+    value_matrix = values.tail(num_eig);
+    vector_matrix = vectors.block(0, size - num_eig, size, num_eig);
+    FUNCINFO("COLS " << vector_matrix.cols())
+    FUNCINFO("rows " << vector_matrix.rows())
+}
+
 void GetNLargestEigenvalues(const Eigen::MatrixXd & m,
             Eigen::MatrixXd & vector_matrix,
             Eigen::VectorXd & value_matrix,
@@ -286,10 +299,7 @@ void GetNLargestEigenvalues(const Eigen::MatrixXd & m,
         ev = PowerIteration(working_m, working_v, power_iter, power_tol);
         value_matrix(i) = ev; 
         Eigen::VectorXd v = working_v;
-        // FUNCINFO(ev)
-        // FUNCINFO(v[0])
-        // FUNCINFO(v[1])
-        // FUNCINFO(v[2])
+
         vector_matrix.col(i) = v;
         working_m = working_m-ev * working_v * working_v.transpose();
     }
@@ -364,15 +374,13 @@ AlignViaNonRigidCPD(CPDParams & params,
     double objective = 0;
     double prev_objective = 0;
     int num_eig = params.ev_ratio * N_stat_points;
-    FUNCINFO(params.ev_ratio)
-    FUNCINFO(N_stat_points)
+
     Eigen::MatrixXd vector_matrix = Eigen::MatrixXd::Zero(num_eig, num_eig);
     Eigen::VectorXd value_matrix = Eigen::VectorXd::Zero(num_eig);
     transform.G = GetGramMatrix(Y, params.beta * params.beta);
 
     if(params.use_low_rank) {
-        FUNCINFO("USING LOW RANK")
-        GetNLargestEigenvalues(transform.G, vector_matrix, value_matrix, num_eig, N_stat_points, params.power_iter, params.power_tol);
+        GetNLargestEigenvalues_V2(transform.G, vector_matrix, value_matrix, num_eig, N_stat_points);
     }
 
     Eigen::MatrixXd P;
@@ -383,7 +391,6 @@ AlignViaNonRigidCPD(CPDParams & params,
         P = E_Step_NR(X, Y, transform.G, transform.W, sigma_squared, params.distribution_weight);
         high_resolution_clock::time_point start = high_resolution_clock::now();
         if(params.use_low_rank) {
-            FUNCINFO("APPROXINMATING")
             transform.W = LowRankGetW(X, Y, value_matrix, vector_matrix, P, sigma_squared, params.lambda);
 
         } else {
