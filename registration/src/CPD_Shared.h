@@ -20,6 +20,11 @@ struct CPDParams {
     int iterations = 50;
     // Similarity termination threshold for algorithm
     double similarity_threshold = 1;
+    // Use low-rank approximation
+    bool use_low_rank = false;
+    double ev_ratio = 0;
+    int power_iter = 100000;
+    double power_tol = 0.000001;
 };
 
 double Init_Sigma_Squared(const Eigen::MatrixXd & xPoints,

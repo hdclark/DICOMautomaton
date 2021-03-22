@@ -22,7 +22,7 @@ def main():
     point_set_1 = read_file(args.file1)
     point_set_2 = read_file(args.file2)
 
-    error = np.square(point_set_1 - point_set_2).sum()
+    error = np.square(point_set_1 - point_set_2).sum()/point_set_1.shape[0]
     print("Error: " + str(error))
 
 if __name__ == '__main__':
