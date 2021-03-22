@@ -1,4 +1,5 @@
 #include <math.h>
+#include <stdlib.h>
 
 // #include "YgorFilesDirs.h"    //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
 // #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
@@ -287,6 +288,48 @@ CPD_MatrixVector_Products compute_cpd_products(const Eigen::MatrixXd & fixed_pts
     return { P1, Pt1, PX };
     
 
+}
+
+std::tuple<Eigen::MatrixXd, Eigen::MatrixXd, double> k_center_clustering(const Eigen::MatrixXd & points, int num_clusters) {
+
+    Eigen::MatrixXd k_centers = Eigen::MatrixXd::Zero(num_clusters, points.cols());
+    Eigen::MatrixXd assigned_points = points.conservativeResize(points.rows(), points.cols() + 2);
+
+    Eigen::MatrixXd assignments = Eigen::MatrixXd::Zero(points.rows(),1);
+    Eigen::MatrixXd distances = -1*Eigen::MatrixXd::Ones(points.rows(),1);
+
+    int seed = rand() % points.rows() + 1;
+    double largest_distance = 0;
+    int index_of_largest = seed;
+    double dist = 0;
+
+    k_centers.row(0) = points.row(seed);
+
+    for(long int i = 0; i < num_clusters; ++i) { 
+
+        k_centers.row(i) = points.row(index_of_largest);
+
+        largest_distance = 0;
+        index_of_largest = 0;
+
+        for(long int j = 0; j < points.rows(); ++j) {
+            dist = (points.row(j) - k_centers.row(i)).norm();
+            if (dist < distances(j,0)) {
+                distances(j,0) = dist;
+                assignments(j,0) = i;
+            }
+
+            if (distances(j,0) > largest_distance) {
+                largest_distance = distances(j,0);
+                index_of_largest = j
+            }
+        }
+    }
+
+    assigned_points.col(points.cols()) = assignments;
+    assigned_points.col(points.cols()+1) = distances;
+
+    return std::make_tuple(k_centers, assigned_points, largest_distane);
 }
 
 
