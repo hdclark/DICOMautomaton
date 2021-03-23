@@ -10,34 +10,39 @@ from decimal import Decimal
 #     cT = [float(line.split()[0]) for line in lines]
 #     cVal = [float(line.split()[2]) for line in lines]
     
-with open('data/c.txt') as f: #grab expected data
+with open('data/input/C_000011.txt') as f: #grab expected data # ACTUAL DATA 
     lines = f.readlines()
     cET = [float(line.split()[0]) for line in lines]
     cEVal = [float(line.split()[2]) for line in lines]
 
-with open('data/c_noise.txt') as f: # grab our data generated with presence of noise
+with open('data/input/sanitized_c.txt') as f: # grab our data generated with presence of noise #SANITIZED
     lines = f.readlines()
     cNT = [float(line.split()[0]) for line in lines]
     cNVal = [float(line.split()[2]) for line in lines]
 
-with open('data/sanitized_c.txt') as f: # grab our data generated with presence of noise
+with open('data/input/cDI.txt') as f: # grab our data generated with presence of noise #MODEL
     lines = f.readlines()
     cST = [float(line.split()[0]) for line in lines]
     cSVal = [float(line.split()[2]) for line in lines]
+
+with open('data/input/cSI.txt') as f: # grab our data generated with presence of noise #MODEL
+    lines = f.readlines()
+    cSIT = [float(line.split()[0]) for line in lines]
+    cSIVal = [float(line.split()[2]) for line in lines]
 
 print("Type of data: ", type(cET[0]))
 
 chi = 0.0
 
 #Find chi^2 value for c values
-for i in range(len(cNVal)):
-#chi = chi + Decimal pow((Decimal(cVal[i])-Decimal(cEVal[i])),2)/Decimal(cEVal[i])
-    O = cNVal[i]
-    E = cEVal[i]
-    if(E!= 0):
-        chi = chi + float (pow((O-E), 2.0)/E)
+# for i in range(len(cNVal)):
+# #chi = chi + Decimal pow((Decimal(cVal[i])-Decimal(cEVal[i])),2)/Decimal(cEVal[i])
+#     O = cNVal[i]
+#     E = cEVal[i]
+#     if(E!= 0):
+#         chi = chi + float (pow((O-E), 2.0)/E)
 
-print('Chi-squared Value:', chi)
+# print('Chi-squared Value:', chi)
 
 # #Extract AIF values
 # with open('aif.txt') as f: #grab our data
@@ -64,14 +69,14 @@ print('Chi-squared Value:', chi)
 chi = 0.0
 
 #Find chi^2 value for c values
-for i in range(len(cVal)):
-#chi = chi + Decimal pow((Decimal(cVal[i])-Decimal(cEVal[i])),2)/Decimal(cEVal[i])
-    O = cVal[i]
-    E = cEVal[i]
-    if(E!= 0):
-        chi = chi + float (pow((O-E), 2.0)/E)
+# for i in range(len(cVal)):
+# #chi = chi + Decimal pow((Decimal(cVal[i])-Decimal(cEVal[i])),2)/Decimal(cEVal[i])
+#     O = cVal[i]
+#     E = cEVal[i]
+#     if(E!= 0):
+#         chi = chi + float (pow((O-E), 2.0)/E)
 
-print('Chi-squared Value:', chi)
+# print('Chi-squared Value:', chi)
 
 
 
@@ -82,9 +87,10 @@ ax1.set_title("C")
 ax1.set_xlabel('Time (s)')
 ax1.set_ylabel('Intensity')
 # ax1.plot(cT,cVal, c='r', label='Our output')
-ax1.plot(cET,cEVal, c='b', label='Expected output')
-ax1.plot(cNT,cNVal, c='g', label='Our output (with Gaussian Noise)')
-ax1.plot(cST,cSVal, c='r', label='Our sanitized output')
+ax1.plot(cET,cEVal, c='b', label='Mock Patient Data Input')
+ax1.plot(cNT,cNVal, c='g', label='Filtered Mock Patient Data Input')
+ax1.plot(cST,cSVal, c='r', label='Model output (SCDI)')
+ax1.plot(cSIT,cSIVal, c='purple', label='Model output (SCSI)')
 
 # ax1 = fig.add_subplot(1,3,2)
 # ax1.set_title("AIF")    
