@@ -13,13 +13,15 @@
 
 /*
     int dim;
-    int max_truncation_p; // max truncation number (p)
+    int max_truncation; // max truncation number (p)
     int p_max_total; // length of monomials after multi index expansion
-    std::unique_ptr<Cluster> cluster; 
     double bandwidth; 
     double epsilon;
     int n_clusters;
     double cutoff_radius;
+    Eigen::MatrixXd source_pts;
+    Eigen::MatrixXd constant_series;
+    std::unique_ptr<Cluster> cluster; 
 
 */
 
@@ -31,17 +33,17 @@ IFGT::IFGT(const Eigen::MatrixXd & source_pts,
     
     this->bandwidth = bandwidth;
     this->epsilon = epsilon;
-    dim = source_pts.cols();
     this->source_pts = source_pts;
-
+    dim = source_pts.cols();
+    
     ifgt_choose_parameters();
     // clustering goes here
-    Cluster cluster;
-    cluster.num_clusters = this->n_clusters;
-    k_center_clustering(source_pts, cluster);
+    //Cluster cluster;
+    cluster = std::make_unique<Cluster>(k_center_clustering(source_pts, n_clusters));
+    //cluster = k_center_clustering(source_pts, n_clusters);
 
-    double rx_max = cluster.rx_max;
-    ifgt_update_max_truncation(double rx_max); // update max truncation
+    cutoff_radius = cluster->rx_max;
+    ifgt_update_max_truncation(cutoff_radius); // update max truncation
     p_max_total = nchoosek(max_truncation_p-1+dim,dim); 
     compute_constant_series();
 }
@@ -52,12 +54,11 @@ void IFGT::ifgt_choose_parameters() {
     double h_square = bandwidth * bandwidth;
     double min_complexity = std::numeric_limits<double>::max(); 
     int n_clusters = 0; 
-    int max_clusters = std::round(0.2 * 100 / bandwidth); // dont know where this comes from lol
-    int p_ul = 200; // estimate 
+    int max_clusters = std::round(0.2 * 100 / bandwidth); // an estimate of typical upper bound 
+    int p_ul = 200; // estimate                           // from papers authors
     int max_truncation = 0;
-    double R = sqrt(dim);
 
-    double radius = std::min(R, bandwidth * std::sqrt(std::log(1 / epsilon)));
+    double radius = bandwidth * std::sqrt(std::log(1 / epsilon));
 
     for(int i = 0; i < max_clusters; i++) {
         double rx = std::pow((double)i + 1, -1.0 / (double) dim); // rx ~ K^{-1/dim} estimate for uniform datasets
@@ -84,8 +85,8 @@ void IFGT::ifgt_choose_parameters() {
 		}
 	}
     this->n_clusters = n_clusters; // class variables
-    max_truncation_p = max_truncation; 
-    cutoff_radius = radius;
+    this->max_truncation_p = max_truncation; 
+    this->cutoff_radius = radius;
 }
 
 
@@ -122,7 +123,7 @@ void IFGT::compute_constant_series() {
     } 
     heads[dim] = std::numeric_limits<int>::max();
 
-    Eigen::MatrixXd constant_series = MatrixXd::Ones(p_max_total,1);
+    Eigen::MatrixXd constant_series = Eigen::MatrixXd::Ones(p_max_total,1);
 
     for (int k = 1, t = 1, tail = 1; k < max_truncation_p; k++, tail = t) {
         for (int i = 0; i < dim; ++i) {
@@ -131,7 +132,7 @@ void IFGT::compute_constant_series() {
             for (int j = head; j < tail; j++, t++) {
                 cinds[t] = (j < heads[i + 1]) ? cinds[j] + 1 : 1;
                 constant_series(t) = 2.0 * constant_series(j);
-                constant_series(t) = constant_series(t) / double(cinds[t]));
+                constant_series(t) = constant_series(t) / double(cinds[t]);
             }
         }
     }
@@ -143,10 +144,10 @@ void IFGT::compute_constant_series() {
 
 // computes [(y_j-c_k)/h]^{alpha} or [(x_i-c_k)/h]^{alpha}
 // where y_j is target point, x_i is point inside cluster
-Eigen::MatrixXd IFGT::compute_monomials(const Eigen::MatrixXd & delta) {
+Eigen::VectorXd IFGT::compute_monomials(const Eigen::MatrixXd & delta) {
     int *heads = new int[dim];
 
-    Eigen::MatrixXd monomials = Eigen::MatrixXd::Ones(p_max_total,1);
+    Eigen::VectorXd monomials = Eigen::VectorXd::Ones(p_max_total);
     for (int i = 0; i < dim; i++){
         heads[i] = 0;
     }
@@ -174,47 +175,49 @@ Eigen::MatrixXd IFGT::compute_ck(const Eigen::ArrayXd & weights){
     int N_source_pts = source_pts.rows();
     double h_square = bandwidth * bandwidth;
 
-    Eigen::MatrixXd C_k = Eigen::Matrix::Zero(n_clusters, p_max_total);
+    Eigen::MatrixXd C_k = Eigen::MatrixXd::Zero(n_clusters, p_max_total);
     for (int i = 0; i < N_source_pts; ++i) {
         double distance = 0.0;
         Eigen::MatrixXd dx = Eigen::MatrixXd::Zero(dim,1);
-        int cluster_index = cluster.assignments(i);
+        int cluster_index = cluster->assignments(i);
 
         for (int k = 0; k < dim; ++k) {
-            double delta = source_pts(i, k) -  cluster.k_centres(cluster_index, k);
+            double delta = source_pts(i, k) -  cluster->k_centers(cluster_index, k);
             distance += delta * delta;
             dx(k) = delta / bandwidth;
         }
         Eigen::MatrixXd monomials = compute_monomials(dx);
-        double f = weightst(i) * std::exp(-distance / h_square); // multiply by vector of weights if needed
-                                                   // cpd has all weights of 1, so it was omitted
+        double f = weights(i) * std::exp(-distance / h_square); // multiply by vector of weights if needed
+                                                                
         for (int alpha = 0; alpha < p_max_total; ++alpha) {
             C_k(cluster_index, alpha) += f * monomials(alpha);
         }
     }
 
-    Eigen::MatrixXd constant_series = compute_constant_series(dim, p_max_total, max_truncation_p);
     for (int j = 0; j < n_clusters; j++) {
         for (int alpha = 0; alpha < p_max_total; alpha++) {
-            C_k(j, alpha) *= constant_series(alpha);
+            C_k(j, alpha) *= constant_series(alpha); // computed in constructor
         }
     }
 
     return C_k;
 } 
 
-Eigen::MatrixXd IFGT::compute_gaussian(const Eigen::MatrixXd & target_pts
-                                       const Eigen::MatrixXd & C_k){
+Eigen::MatrixXd IFGT::compute_gaussian(const Eigen::MatrixXd & target_pts,
+                                       const Eigen::MatrixXd & C_k) {
 
     int M_target_pts = target_pts.rows();
     double h_square = bandwidth * bandwidth;
 
     Eigen::MatrixXd G_y = Eigen::MatrixXd::Zero(M_target_pts,1);
 
-    double m_ry_square[n_clusters];
+     double radius = bandwidth * std::sqrt(std::log(1 / epsilon));
+
+    Eigen::VectorXd m_ry_square(n_clusters);
+
     for (int j = 0; j < n_clusters; ++j) {
-        double ry = radius + cluster.radii(j); //UPDATE WITH CLUSTERS
-        m_ry_square[j] = ry * ry;
+        double ry = radius + cluster->radii(j); //UPDATE WITH CLUSTERS
+        m_ry_square(j) = ry * ry;
     }
 
     for (int i = 0; i < M_target_pts; ++i) {
@@ -223,25 +226,25 @@ Eigen::MatrixXd IFGT::compute_gaussian(const Eigen::MatrixXd & target_pts
             Eigen::MatrixXd dy = Eigen::MatrixXd::Zero(dim,1);
 
             for (int k = 0; k < dim; ++k) {
-                double delta = target_pts(i, k) - cluster.k_centers(j, k); // struct names tbd 
+                double delta = target_pts(i, k) - cluster->k_centers(j, k); // struct names tbd 
                 distance += delta * delta;
-                if (distance > m_ry_square[j]) { // need to decide whereto get ry_square
+                if (distance > m_ry_square(j)) { // need to decide whereto get ry_square
                     break;
                 }
                 dy(k) = delta / bandwidth;
             }
-            if (distance <= m_ry_square[j]) {
-                Eigen::MatrixXd monomials = compute_monomials(dy);
+            if (distance <= m_ry_square(j)) {
+                Eigen::VectorXd monomials = compute_monomials(dy);
                 double g = std::exp(-distance / h_square);
-                G_y(i) += C.row(j) * g * monomials; // row vector * column vector
-            }
+                G_y(i) += g * C_k.row(j).dot(monomials); // row vector * column vector = number
+            }                                         // G_y(i) += g * C_k.row(j) * monomials; 
         }
     }
 
     return G_y;
 
-
 }
+
 // ttwo different computes for weights and no weights 
 Eigen::MatrixXd IFGT::compute_ifgt(const Eigen::MatrixXd & target_pts) {
     Eigen::ArrayXd ones_array = Eigen::ArrayXd::Ones(target_pts.rows(),1);
@@ -262,30 +265,33 @@ Eigen::MatrixXd IFGT::compute_ifgt(const Eigen::MatrixXd & target_pts, const Eig
 CPD_MatrixVector_Products compute_cpd_products(const Eigen::MatrixXd & fixed_pts,
                                             const Eigen::MatrixXd & moving_pts,
                                             double sigmaSquared, 
-                                            double epsilon
+                                            double epsilon,
                                             double w) {
-    Eigen::MatrixXd P1; 
-    Eigen::MatrixXd Pt1; 
-
+    
     int N_fixed_pts = fixed_pts.rows();
     int M_moving_pts = moving_pts.rows();
     int dim = fixed_pts.cols();
+    
+    Eigen::MatrixXd P1; 
+    Eigen::MatrixXd Pt1; 
+    Eigen::MatrixXd Kt1;
+    Eigen::MatrixXd PX(M_moving_pts, dim);
 
 
     double bandwidth = std::sqrt(2.0 * sigmaSquared);
     auto ifgt_transform = std::make_unique<IFGT>(moving_pts, bandwidth, epsilon); // in this case, moving_pts = source_pts
                                                                                   // because we take the transpose of K(M x N)                                                 
-    Eigen::MatrixXd Kt1 = ifgt_transform->compute_ifgt(fixed_pts);                // so we'll get an N x 1 vector for Kt1       
+    Kt1 = ifgt_transform->compute_ifgt(fixed_pts);                // so we'll get an N x 1 vector for Kt1       
 
     double c = w / (1.0 - w) * (double) M_moving_pts / N_fixed_pts * 
                                 std::pow(2.0 * M_PI * sigmaSquared, 0.5 * dim);
 
     Eigen::ArrayXd denom_a = Kt1.array() + c; 
-    Eigen::MatrixXd Pt1 = (1 - c / denom_a).matrix(); // Pt1 = 1-c*a
+    Pt1 = (1 - c / denom_a).matrix(); // Pt1 = 1-c*a
 
     ifgt_transform = std::make_unique<IFGT>(fixed_pts, bandwidth, epsilon); 
-    Eigen::MatrixXd P1 = ifgt_transform->compute_ifgt(moving_pts, 1 / denom_a); // P1 = Ka 
-    Eigen::MatrixXd PX(M_moving_pts, dim);
+    P1 = ifgt_transform->compute_ifgt(moving_pts, 1 / denom_a); // P1 = Ka 
+    
     for (int i = 0; i < dim; ++i) {
         PX.col(i) = ifgt_transform->compute_ifgt(moving_pts, fixed_pts.col(i).array() / denom_a); // PX = K(a.*X)
     }
@@ -294,12 +300,12 @@ CPD_MatrixVector_Products compute_cpd_products(const Eigen::MatrixXd & fixed_pts
 
 }
 
-void k_center_clustering(const Eigen::MatrixXd & points, Cluster cluster) {
+Cluster k_center_clustering(const Eigen::MatrixXd & points, int num_clusters) {
 
-    Eigen::MatrixXd k_centers = Eigen::MatrixXd::Zero(cluster.num_clusters, points.cols());
-    Eigen::VectorXs assignments = Eigen::VectorXs::Zero(points.rows());
+    Eigen::MatrixXd k_centers = Eigen::MatrixXd::Zero(num_clusters, points.cols());
+    Eigen::VectorXd assignments = Eigen::VectorXd::Zero(points.rows());
     Eigen::VectorXd distances = -1*Eigen::VectorXd::Ones(points.rows());
-    Eigen::VectorXd radii = Eigen::VectorXd::Zero(cluster.num_clusters);
+    Eigen::VectorXd radii = Eigen::VectorXd::Zero(num_clusters);
 
     int seed = rand() % points.rows() + 1;
     double largest_distance = 0;
@@ -308,7 +314,7 @@ void k_center_clustering(const Eigen::MatrixXd & points, Cluster cluster) {
 
     k_centers.row(0) = points.row(seed);
 
-    for(long int i = 0; i < cluster.num_clusters; ++i) { 
+    for(long int i = 0; i < num_clusters; ++i) { 
 
         k_centers.row(i) = points.row(index_of_largest);
 
@@ -324,27 +330,34 @@ void k_center_clustering(const Eigen::MatrixXd & points, Cluster cluster) {
 
             if (distances(j) > largest_distance) {
                 largest_distance = distances(j);
-                index_of_largest = j
+                index_of_largest = j;
             }
         }
-    
+    }
     for(long int i = 0; i < points.rows(); ++i) {
-        if(distances(i) > radii(assignments(i)) {
+        if(distances(i) > radii(assignments(i))) {
             radii(assignments(i)) = distances(i);
         }
     }
+ 
+    /*
+    Eigen::MatrixXd k_centers;
+    Eigen::VectorXd radii;
+    Eigen::VectorXd assignments;
+    Eigen::VectorXd distances;
+    double rx_max;
     
     cluster.k_centers = k_centers;
     cluster.assignments = assignments;
     cluster.distances = distances;
     cluster.radii = radii;
     cluster.rx_max = largest_distance;
-
-    return;
+    */
+   return {k_centers, radii, assignments, distances, largest_distance};
 }
 
 
-int nchoosek(int n, int k){
+int nchoosek(int n, int k) {
 	int n_k = n - k;
 	
 	if (k < n_k) {
@@ -358,8 +371,3 @@ int nchoosek(int n, int k){
 	}
 	return nchsk;
 }
-
-int main (int argc, char *argv[]) {
-
-    return 0;
- }

@@ -11,6 +11,7 @@
 #include "CPD_Affine.h"
 #include "CPD_Shared.h"
 #include "CPD_Nonrigid.h"
+#include "IFGT.h"
 
 /*
 This unit testing uses the DocTest framework. This is the framework
@@ -623,4 +624,35 @@ TEST_CASE("LowRankGetW") {
 				   0.3, 0.1, 0.8;
 
 	LowRankGetW(xPoints, yPoints, gramValues, gramVectors, postProb, 2, 3);
+}
+
+TEST_CASE("IFGT Test") {
+	int N_points = 100;
+	int dim = 3;
+	double sigmaSquared = 15.2; // random
+	double bandwidth = std::sqrt(2 + sigmaSquared);
+	double epsilon = 0.1;
+
+	// xPoints = fixed points = source points 
+	// yPoints = moving points = target points
+	Eigen::MatrixXd yPoints = 40*Eigen::MatrixXd::Random(N_points, dim);
+	Eigen::MatrixXd xPoints = 40*Eigen::MatrixXd::Random(N_points, dim);
+
+	auto ifgt_transform = std::make_unique<IFGT>(xPoints, bandwidth, epsilon);
+	Eigen::MatrixXd G_y = ifgt_transform->compute_ifgt(yPoints); 
+
+	Eigen::MatrixXd G_naive(100,1);
+
+    for (int m = 0; m < N_points; ++m) {
+        for (int n = 0; n < N_points; ++n) {
+            expArg = - 1 / (2 * sigmaSquared) * (yPoints.row(n) - xPoints.row(n)).squaredNorm();
+            G_naive(m) += std::exp(expArg);
+        }
+    }
+	double threshold = 0.1;
+	for(int i = 0; i < N_points; ++i) {
+		REQUIRE(G(i) == doctest::Approx(G_naive(i)).epsilon(threshold));
+	}
+
+
 }

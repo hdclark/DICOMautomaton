@@ -31,24 +31,24 @@ struct CPD_MatrixVector_Products {
     Eigen::MatrixXd P1; 
     Eigen::MatrixXd Pt1; 
     Eigen::MatrixXd PX; 
-}
+};
 
 CPD_MatrixVector_Products compute_cpd_products(const Eigen::MatrixXd & source_pts,
                                             const Eigen::MatrixXd & target_pts,
                                             double bandwidth, 
-                                            double epsilon
+                                            double epsilon,
                                             double w);
 
 struct Cluster {
-    int num_clusters;
+   // int num_clusters;
     Eigen::MatrixXd k_centers;
     Eigen::VectorXd radii;
-    Eigen::VectorXs assignments;
+    Eigen::VectorXd assignments;
     Eigen::VectorXd distances;
     double rx_max;
-}
+};
 
-void k_center_clustering(const Eigen::MatrixXd & points, Cluster cluster);
+Cluster k_center_clustering(const Eigen::MatrixXd & points, int num_clusters);
 
 class IFGT {
     public:
@@ -60,14 +60,14 @@ class IFGT {
         // computes ifgt with constant weight of 1
         Eigen::MatrixXd compute_ifgt(const Eigen::MatrixXd & target_pts);
         // computes ifgt with given weights 
-        Eigen::MatrixXd IFGT::compute_ifgt(const Eigen::MatrixXd & target_pts, 
+        Eigen::MatrixXd compute_ifgt(const Eigen::MatrixXd & target_pts, 
                                 const Eigen::ArrayXd & weights);
         
         int get_nclusters() const { return n_clusters; }
 
     private: 
         int dim;
-        int max_truncation; // max truncation number (p)
+        int max_truncation_p; // max truncation number (p)
         int p_max_total; // length of monomials after multi index expansion
         double bandwidth; 
         double epsilon;
@@ -89,13 +89,13 @@ class IFGT {
 
         // computes [(y_j-c_k)/h]^{alpha} or [(x_i-c_k)/h]^{alpha}
         // where y_j is target point, x_i is point inside cluster
-        Eigen::MatrixXd compute_monomials(const Eigen::MatrixXd & delta);
+        Eigen::VectorXd compute_monomials(const Eigen::MatrixXd & delta);
 
         // computes constant ck for each cluster with constant weights
         Eigen::MatrixXd compute_ck(const Eigen::ArrayXd & weights);
 
         // computes G(yj) - the actual gaussian
-        Eigen::MatrixXd IFGT::compute_gaussian(const Eigen::MatrixXd & target_pts,
+        Eigen::MatrixXd compute_gaussian(const Eigen::MatrixXd & target_pts,
                                             const Eigen::MatrixXd & C_k);
 
 };
