@@ -28,6 +28,7 @@ g++ -std=c++17 -Wall -I"/usr/include/eigen3" -I. -I"${REPOROOT}/registration/src
   {,"${REPOROOT}/registration/src/CPD_Rigid.cc"} \
   {,"${REPOROOT}/registration/src/CPD_Nonrigid.cc"} \
   {,"${REPOROOT}/registration/src/CPD_Shared.cc"} \
+  {,"${REPOROOT}/registration/src/IFGT.cc"} \
   {,"${REPOROOT}/registration/unit_tests/"}CPD_Tests.cc \
   -o run_tests \
   -pthread \
