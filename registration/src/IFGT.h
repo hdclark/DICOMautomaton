@@ -39,6 +39,17 @@ CPD_MatrixVector_Products compute_cpd_products(const Eigen::MatrixXd & source_pt
                                             double epsilon
                                             double w);
 
+struct Cluster {
+    int num_clusters;
+    Eigen::MatrixXd k_centers;
+    Eigen::VectorXd radii;
+    Eigen::VectorXs assignments;
+    Eigen::VectorXd distances;
+    double rx_max;
+}
+
+void k_center_clustering(const Eigen::MatrixXd & points, Cluster cluster);
+
 class IFGT {
     public:
         // constructor

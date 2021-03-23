@@ -36,6 +36,10 @@ IFGT::IFGT(const Eigen::MatrixXd & source_pts,
 
     ifgt_choose_parameters();
     // clustering goes here
+    Cluster cluster;
+    cluster.num_clusters = this->n_clusters;
+    k_center_clustering(source_pts, cluster);
+
     double rx_max = cluster.rx_max;
     ifgt_update_max_truncation(double rx_max); // update max truncation
     p_max_total = nchoosek(max_truncation_p-1+dim,dim); 
@@ -170,14 +174,14 @@ Eigen::MatrixXd IFGT::compute_ck(const Eigen::ArrayXd & weights){
     int N_source_pts = source_pts.rows();
     double h_square = bandwidth * bandwidth;
 
-    Eigen::MatrixXd C = Eigen::Matrix::Zero(n_clusters, p_max_total);
+    Eigen::MatrixXd C_k = Eigen::Matrix::Zero(n_clusters, p_max_total);
     for (int i = 0; i < N_source_pts; ++i) {
         double distance = 0.0;
         Eigen::MatrixXd dx = Eigen::MatrixXd::Zero(dim,1);
-        int cluster_index = clusters.indices[i];
+        int cluster_index = cluster.assignments(i);
 
         for (int k = 0; k < dim; ++k) {
-            double delta = source_pts(i, k) -  clusters.centres(cluster_index, k);
+            double delta = source_pts(i, k) -  cluster.k_centres(cluster_index, k);
             distance += delta * delta;
             dx(k) = delta / bandwidth;
         }
@@ -209,7 +213,7 @@ Eigen::MatrixXd IFGT::compute_gaussian(const Eigen::MatrixXd & target_pts
 
     double m_ry_square[n_clusters];
     for (int j = 0; j < n_clusters; ++j) {
-        double ry = radius + clusters.radii[j]; //UPDATE WITH CLUSTERS
+        double ry = radius + cluster.radii(j); //UPDATE WITH CLUSTERS
         m_ry_square[j] = ry * ry;
     }
 
@@ -219,7 +223,7 @@ Eigen::MatrixXd IFGT::compute_gaussian(const Eigen::MatrixXd & target_pts
             Eigen::MatrixXd dy = Eigen::MatrixXd::Zero(dim,1);
 
             for (int k = 0; k < dim; ++k) {
-                double delta = target_pts(i, k) - clusters.cluster_centres(j, k); // struct names tbd 
+                double delta = target_pts(i, k) - cluster.k_centers(j, k); // struct names tbd 
                 distance += delta * delta;
                 if (distance > m_ry_square[j]) { // need to decide whereto get ry_square
                     break;
@@ -280,7 +284,7 @@ CPD_MatrixVector_Products compute_cpd_products(const Eigen::MatrixXd & fixed_pts
     Eigen::MatrixXd Pt1 = (1 - c / denom_a).matrix(); // Pt1 = 1-c*a
 
     ifgt_transform = std::make_unique<IFGT>(fixed_pts, bandwidth, epsilon); 
-    Eigen::MatrixXd P1 = ifgt_transform->compute(moving_pts, 1 / denom_a); // P1 = Ka 
+    Eigen::MatrixXd P1 = ifgt_transform->compute_ifgt(moving_pts, 1 / denom_a); // P1 = Ka 
     Eigen::MatrixXd PX(M_moving_pts, dim);
     for (int i = 0; i < dim; ++i) {
         PX.col(i) = ifgt_transform->compute_ifgt(moving_pts, fixed_pts.col(i).array() / denom_a); // PX = K(a.*X)
@@ -290,13 +294,12 @@ CPD_MatrixVector_Products compute_cpd_products(const Eigen::MatrixXd & fixed_pts
 
 }
 
-std::tuple<Eigen::MatrixXd, Eigen::MatrixXd, double> k_center_clustering(const Eigen::MatrixXd & points, int num_clusters) {
+void k_center_clustering(const Eigen::MatrixXd & points, Cluster cluster) {
 
-    Eigen::MatrixXd k_centers = Eigen::MatrixXd::Zero(num_clusters, points.cols());
-    Eigen::MatrixXd assigned_points = points.conservativeResize(points.rows(), points.cols() + 2);
-
-    Eigen::MatrixXd assignments = Eigen::MatrixXd::Zero(points.rows(),1);
-    Eigen::MatrixXd distances = -1*Eigen::MatrixXd::Ones(points.rows(),1);
+    Eigen::MatrixXd k_centers = Eigen::MatrixXd::Zero(cluster.num_clusters, points.cols());
+    Eigen::VectorXs assignments = Eigen::VectorXs::Zero(points.rows());
+    Eigen::VectorXd distances = -1*Eigen::VectorXd::Ones(points.rows());
+    Eigen::VectorXd radii = Eigen::VectorXd::Zero(cluster.num_clusters);
 
     int seed = rand() % points.rows() + 1;
     double largest_distance = 0;
@@ -305,7 +308,7 @@ std::tuple<Eigen::MatrixXd, Eigen::MatrixXd, double> k_center_clustering(const E
 
     k_centers.row(0) = points.row(seed);
 
-    for(long int i = 0; i < num_clusters; ++i) { 
+    for(long int i = 0; i < cluster.num_clusters; ++i) { 
 
         k_centers.row(i) = points.row(index_of_largest);
 
@@ -314,22 +317,30 @@ std::tuple<Eigen::MatrixXd, Eigen::MatrixXd, double> k_center_clustering(const E
 
         for(long int j = 0; j < points.rows(); ++j) {
             dist = (points.row(j) - k_centers.row(i)).norm();
-            if (dist < distances(j,0)) {
-                distances(j,0) = dist;
-                assignments(j,0) = i;
+            if (dist < distances(j) || distances(j) == -1) {
+                distances(j) = dist;
+                assignments(j) = i;
             }
 
-            if (distances(j,0) > largest_distance) {
-                largest_distance = distances(j,0);
+            if (distances(j) > largest_distance) {
+                largest_distance = distances(j);
                 index_of_largest = j
             }
         }
+    
+    for(long int i = 0; i < points.rows(); ++i) {
+        if(distances(i) > radii(assignments(i)) {
+            radii(assignments(i)) = distances(i);
+        }
     }
+    
+    cluster.k_centers = k_centers;
+    cluster.assignments = assignments;
+    cluster.distances = distances;
+    cluster.radii = radii;
+    cluster.rx_max = largest_distance;
 
-    assigned_points.col(points.cols()) = assignments;
-    assigned_points.col(points.cols()+1) = distances;
-
-    return std::make_tuple(k_centers, assigned_points, largest_distane);
+    return;
 }
 
 
