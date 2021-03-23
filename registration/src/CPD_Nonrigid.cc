@@ -82,8 +82,7 @@ Eigen::MatrixXd GetGramMatrix(const Eigen::MatrixXd & yPoints, double betaSquare
             gramMatrix(i,j) = exp(expArg);
         }
     }
-    FUNCINFO(gramMatrix.rows())
-    FUNCINFO(gramMatrix.cols())
+
     return gramMatrix;
 }
 
@@ -159,18 +158,18 @@ Eigen::MatrixXd E_Step_NR(const Eigen::MatrixXd & xPoints,
     int dimensionality = yPoints.cols();
 
     for (int m = 0; m < mRowsY; ++m) {
+        tempVector = yPoints.row(m) + gramMatrix.row(m) * W;
         for (int n = 0; n < nRowsX; ++n) {
-            tempVector = xPoints.row(n) - (yPoints.row(m) + gramMatrix.row(m) * W);
-            expArg = - 1 / (2 * sigmaSquared) * tempVector.squaredNorm();
+            expArg = - 1 / (2 * sigmaSquared) * (xPoints.row(n) - tempVector).squaredNorm();
             expMat(m,n) = exp(expArg);
         }
     }
 
-    for (int m = 0; m < mRowsY; ++m) {
-        for (int n = 0; n < nRowsX; ++n) {
-            numerator = expMat(m,n);
-            denominator = expMat.col(n).sum() + 
+    for (int n = 0; n < nRowsX; ++n) {
+        denominator = expMat.col(n).sum() + 
                           pow((2 * M_PI * sigmaSquared),((double)(dimensionality/2.0))) * (w/(1-w)) * (double)(mRowsY / nRowsX);
+        for (int m = 0; m < mRowsY; ++m) {
+            numerator = expMat(m,n);
             postProb(m,n) = numerator / denominator;
         }
     }
@@ -214,41 +213,32 @@ Eigen::MatrixXd LowRankGetW(const Eigen::MatrixXd & xPoints,
     high_resolution_clock::time_point stop;
     duration<double> time_span;
     double coef = 1/(lambda * sigmaSquared);
-    // FUNCINFO(coef);
     Eigen::MatrixXd oneVec = Eigen::MatrixXd::Ones(postProb.cols(),1);
-    // FUNCINFO(oneVec);
     stop = high_resolution_clock::now();
     time_span = duration_cast<duration<double>>(stop - start);
     FUNCINFO("4 Excecution took time: " << time_span.count())
     Eigen::MatrixXd postProbDiag = (postProb * oneVec).asDiagonal();
-    // FUNCINFO(postProbDiag);
     Eigen::MatrixXd postProbInvDiag = ((postProb * oneVec).asDiagonal()).inverse(); // d(P1)^-1
     stop = high_resolution_clock::now();
     time_span = duration_cast<duration<double>>(stop - start);
     FUNCINFO("3 Excecution took time: " << time_span.count())
-    // FUNCINFO(postProbInvDiag);
     Eigen::MatrixXd first = coef * postProbDiag;
     stop = high_resolution_clock::now();
     time_span = duration_cast<duration<double>>(stop - start);
     FUNCINFO("1 Excecution took time: " << time_span.count())
-    // FUNCINFO(first);
     Eigen::MatrixXd invertedValues = gramValues.asDiagonal().inverse();
-    // FUNCINFO(invertedValues);
     stop = high_resolution_clock::now();
     time_span = duration_cast<duration<double>>(stop - start);
     FUNCINFO("2 Excecution took time: " << time_span.count())
     Eigen::MatrixXd toInvert = invertedValues + coef * gramVectors.transpose()*postProbDiag*gramVectors;
-    // FUNCINFO(toInvert);
     stop = high_resolution_clock::now();
     time_span = duration_cast<duration<double>>(stop - start);
     FUNCINFO("6 Excecution took time: " << time_span.count())
     Eigen::MatrixXd inverted = toInvert.llt().solve(Eigen::MatrixXd::Identity(gramValues.size(), gramValues.size()));
-    // FUNCINFO(inverted);
     Eigen::MatrixXd b = postProbInvDiag * postProb * xPoints - yPoints;
     stop = high_resolution_clock::now();
     time_span = duration_cast<duration<double>>(stop - start);
     FUNCINFO("2 Excecution took time: " << time_span.count())
-    // FUNCINFO(b);
     return (first - pow(coef, 2) * postProbDiag * gramVectors * inverted * gramVectors.transpose() * postProbDiag) * b;
 }
 
@@ -286,8 +276,6 @@ void GetNLargestEigenvalues_V2(const Eigen::MatrixXd & m,
     Eigen::MatrixXd vectors = solver.eigenvectors();
     value_matrix = values.tail(num_eig);
     vector_matrix = vectors.block(0, size - num_eig, size, num_eig);
-    FUNCINFO("COLS " << vector_matrix.cols())
-    FUNCINFO("rows " << vector_matrix.rows())
 }
 
 void GetNLargestEigenvalues(const Eigen::MatrixXd & m,
@@ -395,17 +383,16 @@ AlignViaNonRigidCPD(CPDParams & params,
 
     for (int i = 0; i < params.iterations; i++) {
         FUNCINFO("Iteration: " << i)
-        P = E_Step_NR(X, Y, transform.G, transform.W, sigma_squared, params.distribution_weight);
         high_resolution_clock::time_point start = high_resolution_clock::now();
+        P = E_Step_NR(X, Y, transform.G, transform.W, sigma_squared, params.distribution_weight);
+        
         if(params.use_low_rank) {
             transform.W = LowRankGetW(X, Y, value_matrix, vector_matrix, P, sigma_squared, params.lambda);
 
         } else {
             transform.W = GetW(X, Y, transform.G, P, sigma_squared, params.lambda);
         }
-        high_resolution_clock::time_point stop = high_resolution_clock::now();
-        duration<double> time_span = duration_cast<duration<double>>(stop - start);
-        FUNCINFO("Excecution took time: " << time_span.count())
+
         T = transform.apply_to(Y);
         sigma_squared = SigmaSquared(X, P, T);
 
@@ -416,12 +403,9 @@ AlignViaNonRigidCPD(CPDParams & params,
             break;
         }
 
-        mutable_moving = moving;
-
-        transform.apply_to(mutable_moving);
-
         similarity = GetSimilarity_NR(X, Y, transform.G, transform.W);
         FUNCINFO("Similarity: " << similarity);
+
         prev_objective = objective;
         objective = GetObjective_NR(X, Y, P, transform.G, transform.W, sigma_squared);
         FUNCINFO("Objective: " << objective);
@@ -430,6 +414,8 @@ AlignViaNonRigidCPD(CPDParams & params,
             if (iter_interval > 0 && i % iter_interval == 0) {
                 temp_xyz_outfile = xyz_outfile + "_iter" + std::to_string(i+1) + "_sim" + std::to_string(similarity) + ".xyz";
                 std::ofstream PFO(temp_xyz_outfile);
+                mutable_moving = moving;
+                transform.apply_to(mutable_moving);
                 if(!WritePointSetToXYZ(mutable_moving, PFO))
                     FUNCERR("Error writing point set to " << xyz_outfile);
             }
@@ -439,6 +425,11 @@ AlignViaNonRigidCPD(CPDParams & params,
             FUNCINFO("FINAL SIMILARITY: " << similarity);
             break;
         }
+
+        high_resolution_clock::time_point stop = high_resolution_clock::now();
+        duration<double>  time_span = duration_cast<duration<double>>(stop - start);
+        FUNCINFO("Excecution took time: " << time_span.count())
+        start = stop;
     }
     return transform;
 }
@@ -499,9 +490,6 @@ AlignViaNonRigidCPDFGT(CPDParams & params,
         sigma_squared = SigmaSquared(X, P, T);
 
         FUNCINFO("Sigma Squared: " << sigma_squared);
-
-        mutable_moving = moving;
-        transform.apply_to(mutable_moving);
         
         similarity = GetSimilarity_NR(X, Y, transform.G, transform.W);
         FUNCINFO("Similarity: " << similarity);
