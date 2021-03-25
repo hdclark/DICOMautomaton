@@ -1,6 +1,6 @@
 //Perfusion_Model.cc -- A part of DICOMautomaton 2020. Written by hal clark, ...
 //
-// This file is meant to contain an implementation of the SCDI blood perfusion kinetic model.
+// This file is meant to contain an implementation of the SCSI blood perfusion kinetic model.
 
 #include <exception>
 #include <functional>
@@ -33,8 +33,7 @@
 
 #define TIME_INTERVAL 0.1 //In units of seconds
 
-// This function should be where the blood perfusion model is implemented.
-void
+// Closed form single compartment single input model based on https://escholarship.org/uc/item/8145r963
 Launch_SCSI(samples_1D<double> &AIF, std::vector<samples_1D<double>> &C) {
     // Prepare the AIF, VIF, and time courses in C for modeling.
     // Keep in mind that they are all irregularly sampled, so might need to be re-sampled.
@@ -76,7 +75,6 @@ Launch_SCSI(samples_1D<double> &AIF, std::vector<samples_1D<double>> &C) {
     // regularly sampled. They might be easier to work with.
     std::vector<float> resampled_aif = resample(AIF);
 
-    // TODO: Re-evaluate vector of a vector
     std::vector<std::vector<float>> resampled_c;
     for(const auto &c : C) resampled_c.emplace_back(resample(c));
 
@@ -132,45 +130,14 @@ Launch_SCSI(samples_1D<double> &AIF, std::vector<samples_1D<double>> &C) {
         const float DE_inner_product = std::inner_product(D.begin(), D.end(), E.begin(), 0.0f);
         const float EE_inner_product = std::inner_product(E.begin(), E.end(), E.begin(), 0.0f);
 
-        FUNCINFO("D.E = " << DE_inner_product);
-        FUNCINFO("E.E = " << EE_inner_product);
-
         // Get the kinetic parameters from the calculated inner products
         const float k2   = DE_inner_product / EE_inner_product;
         const float k1_A = dc_gain * k2;
-
-        FUNCINFO("K2: " << k2 << " k1A: " << k1_A);
-
+        // TODO: change this to append instead of overwrite when dealing with more than one c file
         std::ofstream kParamsFile("kParams.txt");
-    //kParamsFile.open("kParams.txt");
         if (kParamsFile.is_open()) {
             kParamsFile << k1_A << " " << k2 << "\n";
             kParamsFile.close();
         }
     }
 }
-// Taken from https://stackoverflow.com/questions/3376124/how-to-add-element-by-element-of-two-stl-vectors
-// template <typename T>
-// std::vector<T> operator+(const std::vector<T>& a, const std::vector<T>& b)
-// {
-//     assert(a.size() == b.size());
-
-//     std::vector<T> result;
-//     result.reserve(a.size());
-
-//     std::transform(a.begin(), a.end(), b.begin(),
-//                    std::back_inserter(result), std::plus<T>());
-//     return result;
-// }
-
-// std::vector<T> operator-(const std::vector<T>& a, const std::vector<T>& b)
-// {
-//     assert(a.size() == b.size());
-
-//     std::vector<T> result;
-//     result.reserve(a.size());
-
-//     std::transform(a.begin(), a.end(), b.begin(),
-//                    std::back_inserter(result), std::minus<T>());
-//     return result;
-// }
