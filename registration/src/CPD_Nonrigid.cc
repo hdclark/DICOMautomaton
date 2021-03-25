@@ -202,6 +202,31 @@ Eigen::MatrixXd GetW(const Eigen::MatrixXd & xPoints,
     return A.llt().solve(b); // assumes A is positive definite, uses llt decomposition
 }
 
+Eigen::MatrixXd GetW(const Eigen::MatrixXd & xPoints,
+            const Eigen::MatrixXd & yPoints,
+            const Eigen::MatrixXd & gramMatrix,
+            const Eigen::MatrixXd & postProbOne,
+            const Eigen::MatrixXd & postProbX,
+            double sigmaSquared,
+            double lambda){
+    
+    high_resolution_clock::time_point start = high_resolution_clock::now();
+    high_resolution_clock::time_point stop;
+    duration<double> time_span;
+
+    stop = high_resolution_clock::now();
+    time_span = duration_cast<duration<double>>(stop - start);
+    FUNCINFO("4 Excecution took time: " << time_span.count())
+    Eigen::MatrixXd postProbInvDiag = ((postProbOne).asDiagonal()).inverse(); // d(P1)^-1
+    stop = high_resolution_clock::now();
+    time_span = duration_cast<duration<double>>(stop - start);
+    FUNCINFO("4 Excecution took time: " << time_span.count())
+    Eigen::MatrixXd A = gramMatrix + lambda * sigmaSquared * postProbInvDiag;
+    Eigen::MatrixXd b = postProbInvDiag * postProbX - yPoints;
+
+    return A.llt().solve(b); // assumes A is positive definite, uses llt decomposition
+}
+
 Eigen::MatrixXd LowRankGetW(const Eigen::MatrixXd & xPoints,
             const Eigen::MatrixXd & yPoints,
             const Eigen::VectorXd & gramValues,
@@ -263,6 +288,23 @@ double SigmaSquared(const Eigen::MatrixXd & xPoints,
     double firstTerm = (double)(xPoints.transpose() * (postProb.transpose() * oneVecRow).asDiagonal() * xPoints).trace();
     double secondTerm = (double)(2 * ((postProb * xPoints).transpose() * transformedPoints).trace());
     double thirdTerm = (double)(transformedPoints.transpose() * (postProb * oneVecCol).asDiagonal() * transformedPoints).trace();
+    return (firstTerm - secondTerm + thirdTerm) / (Np * dim);
+}
+
+double SigmaSquared(const Eigen::MatrixXd & xPoints,
+            const Eigen::MatrixXd & postProbOne,
+            const Eigen::MatrixXd & postProbTransOne,
+            const Eigen::MatrixXd & postProbX,
+            const Eigen::MatrixXd & transformedPoints){
+
+    FUNCINFO(postProb.rows())
+    FUNCINFO(postProb.cols())
+    
+    int dim = xPoints.cols();
+    double Np = postProb.sum();
+    double firstTerm = (double)(xPoints.transpose() * (postProbTransOne).asDiagonal() * xPoints).trace();
+    double secondTerm = (double)(2 * ((postProbX).transpose() * transformedPoints).trace());
+    double thirdTerm = (double)(transformedPoints.transpose() * (postProbOne).asDiagonal() * transformedPoints).trace();
     return (firstTerm - secondTerm + thirdTerm) / (Np * dim);
 }
 

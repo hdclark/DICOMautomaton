@@ -320,6 +320,31 @@ Eigen::MatrixXd IFGT::compute_ifgt(const Eigen::MatrixXd & target_pts, const Eig
 
     return G_y;
 }
+
+double IFGT::calc_max_range(const Eigen::MatrixXd & points) {
+    double range = 0;
+    double min;
+    double max;
+    
+    for(long int i = 0; i < points.cols(); ++i) {
+        min = points(0,i);
+        max = points(0,i);
+        for(long int j = 0; j < points.rows(); ++j) {
+            if(points(j,i) < min) {
+                min = points(j,i);
+            }
+            if(points(j,i) > max) {
+                max = points(j,i);
+            }
+        }
+        if(max - min > range) {
+            range = max - min;
+        }
+    }
+    return range;
+}
+
+
 // Y = target_pts = fixed_pts
 // X = source_pts = moving_pts (in general)
 // epsilon is error, w is a parameter from cpd

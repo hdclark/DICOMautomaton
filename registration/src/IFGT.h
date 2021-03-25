@@ -98,6 +98,8 @@ class IFGT {
         // computes G(yj) - the actual gaussian
         Eigen::MatrixXd compute_gaussian(const Eigen::MatrixXd & target_pts,
                                             const Eigen::MatrixXd & C_k);
+                                        
+        double calc_max_range(const Eigen::MatrixXd & points);
 
 };
 
