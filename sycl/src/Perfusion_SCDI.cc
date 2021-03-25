@@ -211,11 +211,11 @@ Launch_SCDI(samples_1D<double> &AIF, samples_1D<double> &VIF, std::vector<sample
         // Get the kinetic parameters from the calculated inner products
         const float k2   = GE_inner_product / EE_inner_product;
         const float k1_A = R * k2 + Q;
-        const float k1_B = N * k2 - Q * sum_of_aif / sum_of_vif;
+        const float k1_V = N * k2 - Q * sum_of_aif / sum_of_vif;
         // TODO: Change this to append instead of overwrite when dealing with more than one text file. 
         std::ofstream kParamsFile("kParams.txt");
         if (kParamsFile.is_open()) {
-            kParamsFile << k1_A << " " << k1_B << " " << k2 << "\n";
+            kParamsFile << k1_A << " " << k1_V << " " << k2 << "\n";
             kParamsFile.close();
         }
     }
