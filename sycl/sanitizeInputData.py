@@ -1,79 +1,104 @@
-import numpy as np #importing numpy module for efficiently executing numerical operations
-import matplotlib.pyplot as plt #importing the pyplot from the matplotlib library
+import numpy as np  # importing numpy module for efficiently executing numerical operations
+import matplotlib.pyplot as plt  # importing the pyplot from the matplotlib library
 from scipy import signal
+import sys, getopt
 
-with open('data/input/c_noise.txt') as f:
-    lines = f.readlines()
-    c_t = [float(line.split()[0]) for line in lines]
-    c_i = [float(line.split()[2]) for line in lines]
+def main(argv):
+    cfreqPercent = 0.18
+    try:
+        opts, args = getopt.getopt(argv,"h:c:",["cfreq="])
+    except getopt.GetoptError:
+        print('sanitizeInputData.py -h <help> -c <cutoff percentage (decimagl value from 0 to 1)>')
+        sys.exit(2)
 
-with open('data/input/aif_noise.txt') as f:
-    lines = f.readlines()
-    a_t = [float(line.split()[0]) for line in lines]
-    a_i = [float(line.split()[2]) for line in lines]
+    for opt, arg in opts:
+        if opt == '-h':
+            print('sanitizeInputData.py -h <help> -c <cutoff percentage (decimagl value from 0 to 1)>')
+            sys.exit()
+        elif opt in ("-c", "--cfreq"):
+            cfreqPercent = arg
+    print ('Percentage cutoff of Nyquist frequency: ', cfreqPercent)
+    sanitizeData(cfreqPercent)
 
-with open('data/input/vif_noise.txt') as f:
-    lines = f.readlines()
-    v_t = [float(line.split()[0]) for line in lines]
-    v_i = [float(line.split()[2]) for line in lines]
+def sanitizeData(cfreqPercent):
+    with open('data/input/c_000011.txt') as f:
+        lines = f.readlines()
+        c_t = [float(line.split()[0]) for line in lines]
+        c_i = [float(line.split()[2]) for line in lines]
 
-# - - - # We load the data in the mat format but this code will work for any sort of time series.# - - - #
-cT = np.array(c_t)
-cI = np.array(c_i)
-aT = np.array(a_t)
-aI = np.array(a_i)
-vT = np.array(v_t)
-vI = np.array(v_i)
+    with open('data/input/AIF_real.txt') as f:
+        lines = f.readlines()
+        a_t = [float(line.split()[0]) for line in lines]
+        a_i = [float(line.split()[2]) for line in lines]
 
-# Visualizing the original and the Filtered Time Series
-fig = plt.figure()
-ax = fig.add_subplot(1, 1, 1)
-ax.plot(aT,aI,'k-',lw=0.5)
+    with open('data/input/VIF_real.txt') as f:
+        lines = f.readlines()
+        v_t = [float(line.split()[0]) for line in lines]
+        v_i = [float(line.split()[2]) for line in lines]
 
-## Filtering of the time series
-fs=1/1.2 #Sampling period is 1.2s so f = 1/T
+    # - - - # We load the data in the mat format but this code will work for any sort of time series.# - - - #
+    cT = np.array(c_t)
+    cI = np.array(c_i)
+    aT = np.array(a_t)
+    aI = np.array(a_i)
+    vT = np.array(v_t)
+    vI = np.array(v_i)
 
-nyquist = fs / 2 # 0.5 times the sampling frequency
-cutoff=0.25 # fraction of nyquist frequency
-b, a = signal.butter(5, cutoff, btype='lowpass') #low pass filter
+    #  Visualizing the original and the Filtered Time Series
+    fig = plt.figure()
+    ax = fig.add_subplot(1, 1, 1)
+    ax.plot(c_t, c_i, 'k-', lw=0.5)
 
-cIfilt = signal.filtfilt(b, a, cI)
-cIfilt=np.array(cIfilt)
-cIfilt=cIfilt.transpose()
+    # Filtering of the time series
+    fs = 1/1.2  # Sampling period is 1.2s so f = 1/T
 
-aIfilt = signal.filtfilt(b, a, aI)
-aIfilt=np.array(aIfilt)
-aIfilt=aIfilt.transpose()
+    nyquist = fs / 2  # 0.5 times the sampling frequency
+    cutoff = 0.18  # fraction of nyquist frequency
+    b, a = signal.butter(5, cutoff, btype='lowpass')  # low pass filter
 
-vIfilt = signal.filtfilt(b, a, vI)
-vIfilt=np.array(vIfilt)
-vIfilt=vIfilt.transpose()
+    cIfilt = signal.filtfilt(b, a, cI)
+    cIfilt = np.array(cIfilt)
+    cIfilt = cIfilt.transpose()
 
-# write filtered data back into a txt file
-zeroArr = np.zeros((cT.shape[0],), dtype=int)
-Cdata = np.column_stack((cT,zeroArr, cIfilt, zeroArr))
-Adata = np.column_stack((aT,zeroArr, aIfilt, zeroArr))
-Vdata = np.column_stack((vT,zeroArr, vIfilt, zeroArr))
+    aIfilt = signal.filtfilt(b, a, aI)
+    aIfilt = np.array(aIfilt)
+    aIfilt = aIfilt.transpose()
 
-with open('data/input/sanitized_c.txt', 'w') as txt_file:
-    txt_file.write('0.0 0 0.0 0\n')
-    for row in Cdata:
-        line = ' '.join(str(v) for v in row)
-        txt_file.write(line + "\n") # works with any number of elements in a line
+    vIfilt = signal.filtfilt(b, a, vI)
+    vIfilt = np.array(vIfilt)
+    vIfilt = vIfilt.transpose()
 
-with open('data/input/sanitized_aif.txt', 'w') as txt_file:
-    txt_file.write('0.0 0 0.0 0\n')
-    for row in Adata:
-        line = ' '.join(str(v) for v in row)
-        txt_file.write(line + "\n") # works with any number of elements in a line
+    # write filtered data back into a txt file
+    zeroArr = np.zeros((cT.shape[0],), dtype=int)
+    Cdata = np.column_stack((cT, zeroArr, cIfilt, zeroArr))
+    Adata = np.column_stack((aT, zeroArr, aIfilt, zeroArr))
+    Vdata = np.column_stack((vT, zeroArr, vIfilt, zeroArr))
 
-with open('data/input/sanitized_vif.txt', 'w') as txt_file:
-    txt_file.write('0.0 0 0.0 0\n')
-    for row in Vdata:
-        line = ' '.join(str(v) for v in row)
-        txt_file.write(line + "\n") # works with any number of elements in a line
+    with open('data/input/sanitized_c.txt', 'w') as txt_file:
+        txt_file.write('0.0 0 0.0 0\n')
+        for row in Cdata:
+            line = ' '.join(str(v) for v in row)
+            # works with any number of elements in a line
+            txt_file.write(line + "\n")
 
-ax.plot(aT, aIfilt, 'b', linewidth=1)
-ax.set_xlabel('Time (s)',fontsize=18)
-ax.set_ylabel('Contrast Enhancement Intensity',fontsize=18)
-plt.show()
+    with open('data/input/sanitized_aif.txt', 'w') as txt_file:
+        txt_file.write('0.0 0 0.0 0\n')
+        for row in Adata:
+            line = ' '.join(str(v) for v in row)
+            # works with any number of elements in a line
+            txt_file.write(line + "\n")
+
+    with open('data/input/sanitized_vif.txt', 'w') as txt_file:
+        txt_file.write('0.0 0 0.0 0\n')
+        for row in Vdata:
+            line = ' '.join(str(v) for v in row)
+            # works with any number of elements in a line
+            txt_file.write(line + "\n")
+
+    ax.plot(cT, cIfilt, 'b', linewidth=1)
+    ax.set_xlabel('Time (s)', fontsize=18)
+    ax.set_ylabel('Contrast Enhancement Intensity', fontsize=18)
+    plt.show()
+
+if __name__ == "__main__":
+    main(sys.argv[1:])
