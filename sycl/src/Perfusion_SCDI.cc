@@ -13,6 +13,7 @@
 #include <string>
 #include <vector>
 #include <numeric>
+#include <ctime>
 
 #include <cstdlib> //Needed for exit() calls.
 #include <utility> //Needed for std::pair.
@@ -142,6 +143,13 @@ Launch_SCDI(samples_1D<double> &AIF, samples_1D<double> &VIF, std::vector<sample
     std::transform(resampled_aif.begin(), resampled_aif.end(), shifted_aif.begin(), back_inserter(aif_sum),
                    std::plus<float>()); //aif_sum = resampled_aif + shifted_aif
 
+    // Generate filename in the format kParams_SCDI_timestamp.txt
+    auto timestamp = std::time(nullptr);
+    std::stringstream strm;
+    strm << timestamp;
+    auto kParamsFileName = "kParams_SCDI_" + strm.str() + ".txt";
+
+    // All calculations that are needed per C file are included in this loop
     for(unsigned long i = 0; i < linear_c_vals.size(); i++) {
         const auto c_res       = linear_c_vals.at(i).Linear_Least_Squares_Regression();
         const auto c_slope     = static_cast<float>(c_res.slope);
@@ -212,8 +220,9 @@ Launch_SCDI(samples_1D<double> &AIF, samples_1D<double> &VIF, std::vector<sample
         const float k2   = GE_inner_product / EE_inner_product;
         const float k1_A = R * k2 + Q;
         const float k1_V = N * k2 - Q * sum_of_aif / sum_of_vif;
-        // TODO: Change this to append instead of overwrite when dealing with more than one text file. 
-        std::ofstream kParamsFile("kParams.txt");
+
+        std::ofstream kParamsFile;
+        kParamsFile.open(kParamsFileName , std::ofstream::out | std::ofstream::app);
         if (kParamsFile.is_open()) {
             kParamsFile << k1_A << " " << k1_V << " " << k2 << "\n";
             kParamsFile.close();

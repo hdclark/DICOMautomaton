@@ -34,6 +34,7 @@
 #define TIME_INTERVAL 0.1 //In units of seconds
 
 // Closed form single compartment single input model based on https://escholarship.org/uc/item/8145r963
+void
 Launch_SCSI(samples_1D<double> &AIF, std::vector<samples_1D<double>> &C) {
     // Prepare the AIF, VIF, and time courses in C for modeling.
     // Keep in mind that they are all irregularly sampled, so might need to be re-sampled.
@@ -96,10 +97,15 @@ Launch_SCSI(samples_1D<double> &AIF, std::vector<samples_1D<double>> &C) {
     std::transform(resampled_aif.begin(), resampled_aif.end(), shifted_aif.begin(), back_inserter(aif_sum),
                    std::plus<float>()); //aif_sum = resampled_aif + shifted_aif
 
+    // Generate filename in the format kParams_SCDI_timestamp.txt
+    auto timestamp = std::time(nullptr);
+    std::stringstream strm;
+    strm << timestamp;
+    auto kParamsFileName = "kParams_SCSI_" + strm.str() + ".txt";
+
     for(unsigned long i = 0; i < resampled_c.size(); i++) {
         // DC gain
         const float dc_gain = sum_of_c.at(i) / sum_of_aif;
-        FUNCINFO("DC gain:" << dc_gain);
         // Construct C(t-dt)
         std::vector<float> shifted_c = resampled_c.at(i);
 
@@ -133,8 +139,9 @@ Launch_SCSI(samples_1D<double> &AIF, std::vector<samples_1D<double>> &C) {
         // Get the kinetic parameters from the calculated inner products
         const float k2   = DE_inner_product / EE_inner_product;
         const float k1_A = dc_gain * k2;
-        // TODO: change this to append instead of overwrite when dealing with more than one c file
-        std::ofstream kParamsFile("kParams.txt");
+
+        std::ofstream kParamsFile;
+        kParamsFile.open(kParamsFileName , std::ofstream::out | std::ofstream::app);
         if (kParamsFile.is_open()) {
             kParamsFile << k1_A << " " << k2 << "\n";
             kParamsFile.close();
