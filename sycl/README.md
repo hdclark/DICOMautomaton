@@ -1,0 +1,3 @@
+This folder includes two closed-form perfusion models: single compartment single input(SCSI) and single compartment dual input(SCDI). The SCSI model is an implementation of the work of Zeng et al: https://escholarship.org/uc/item/8145r96 and the SCDI model is inspired by the same paper but uses an extra equation to solve for the extra kinetic parameter (K1V). The link to the paper explaining this model in detail will be added. 
+
+The sanitization code is also include (sanitizeInputData.py) is also included that takes in the files needed to be sanitized and saves them in the data folder. The path to the input files and for the output files should be changed before running the script.
