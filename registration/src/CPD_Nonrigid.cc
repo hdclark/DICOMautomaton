@@ -297,11 +297,11 @@ double SigmaSquared(const Eigen::MatrixXd & xPoints,
             const Eigen::MatrixXd & postProbX,
             const Eigen::MatrixXd & transformedPoints){
 
-    FUNCINFO(postProb.rows())
-    FUNCINFO(postProb.cols())
+    // FUNCINFO(postProb.rows())
+    // FUNCINFO(postProb.cols())
     
     int dim = xPoints.cols();
-    double Np = postProb.sum();
+    double Np = postProbOne.sum();
     double firstTerm = (double)(xPoints.transpose() * (postProbTransOne).asDiagonal() * xPoints).trace();
     double secondTerm = (double)(2 * ((postProbX).transpose() * transformedPoints).trace());
     double thirdTerm = (double)(transformedPoints.transpose() * (postProbOne).asDiagonal() * transformedPoints).trace();
