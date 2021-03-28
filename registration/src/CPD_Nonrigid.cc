@@ -177,33 +177,7 @@ Eigen::MatrixXd E_Step_NR(const Eigen::MatrixXd & xPoints,
     return postProb;
 }
 
-Eigen::MatrixXd GetW(const Eigen::MatrixXd & xPoints,
-            const Eigen::MatrixXd & yPoints,
-            const Eigen::MatrixXd & gramMatrix,
-            const Eigen::MatrixXd & postProb,
-            double sigmaSquared,
-            double lambda){
-    
-    high_resolution_clock::time_point start = high_resolution_clock::now();
-    high_resolution_clock::time_point stop;
-    duration<double> time_span;
-
-    Eigen::MatrixXd oneVec = Eigen::MatrixXd::Ones(postProb.cols(),1);
-    stop = high_resolution_clock::now();
-    time_span = duration_cast<duration<double>>(stop - start);
-    FUNCINFO("4 Excecution took time: " << time_span.count())
-    Eigen::MatrixXd postProbInvDiag = ((postProb * oneVec).asDiagonal()).inverse(); // d(P1)^-1
-    stop = high_resolution_clock::now();
-    time_span = duration_cast<duration<double>>(stop - start);
-    FUNCINFO("4 Excecution took time: " << time_span.count())
-    Eigen::MatrixXd A = gramMatrix + lambda * sigmaSquared * postProbInvDiag;
-    Eigen::MatrixXd b = postProbInvDiag * postProb * xPoints - yPoints;
-
-    return A.llt().solve(b); // assumes A is positive definite, uses llt decomposition
-}
-
-Eigen::MatrixXd GetW(const Eigen::MatrixXd & xPoints,
-            const Eigen::MatrixXd & yPoints,
+Eigen::MatrixXd GetW(const Eigen::MatrixXd & yPoints,
             const Eigen::MatrixXd & gramMatrix,
             const Eigen::MatrixXd & postProbOne,
             const Eigen::MatrixXd & postProbX,
@@ -275,31 +249,11 @@ Eigen::MatrixXd AlignedPointSet_NR(const Eigen::MatrixXd & yPoints,
 }
 
 double SigmaSquared(const Eigen::MatrixXd & xPoints,
-            const Eigen::MatrixXd & postProb,
-            const Eigen::MatrixXd & transformedPoints){
-
-    FUNCINFO(postProb.rows())
-    FUNCINFO(postProb.cols())
-    
-    int dim = xPoints.cols();
-    double Np = postProb.sum();
-    Eigen::MatrixXd oneVecRow = Eigen::MatrixXd::Ones(postProb.rows(),1);
-    Eigen::MatrixXd oneVecCol = Eigen::MatrixXd::Ones(postProb.cols(),1);
-    double firstTerm = (double)(xPoints.transpose() * (postProb.transpose() * oneVecRow).asDiagonal() * xPoints).trace();
-    double secondTerm = (double)(2 * ((postProb * xPoints).transpose() * transformedPoints).trace());
-    double thirdTerm = (double)(transformedPoints.transpose() * (postProb * oneVecCol).asDiagonal() * transformedPoints).trace();
-    return (firstTerm - secondTerm + thirdTerm) / (Np * dim);
-}
-
-double SigmaSquared(const Eigen::MatrixXd & xPoints,
             const Eigen::MatrixXd & postProbOne,
             const Eigen::MatrixXd & postProbTransOne,
             const Eigen::MatrixXd & postProbX,
             const Eigen::MatrixXd & transformedPoints){
 
-    // FUNCINFO(postProb.rows())
-    // FUNCINFO(postProb.cols())
-    
     int dim = xPoints.cols();
     double Np = postProbOne.sum();
     double firstTerm = (double)(xPoints.transpose() * (postProbTransOne).asDiagonal() * xPoints).trace();
@@ -420,23 +374,34 @@ AlignViaNonRigidCPD(CPDParams & params,
         GetNLargestEigenvalues_V2(transform.G, vector_matrix, value_matrix, num_eig, N_stat_points);
     }
 
-    Eigen::MatrixXd P;
+    Eigen::MatrixXd P, postProbOne, postProbTransOne, postProbX;
     Eigen::MatrixXd T;
+
+    Eigen::MatrixXd oneVecRow = Eigen::MatrixXd::Ones(Y.rows(), 1);
+    Eigen::MatrixXd oneVecCol = Eigen::MatrixXd::Ones(X.rows(),1);
 
     for (int i = 0; i < params.iterations; i++) {
         FUNCINFO("Iteration: " << i)
         high_resolution_clock::time_point start = high_resolution_clock::now();
         P = E_Step_NR(X, Y, transform.G, transform.W, sigma_squared, params.distribution_weight);
         
+        if(params.use_fgt) {
+            //ADD FGT STUFF HERE
+        } else {
+            postProbX = P * X;
+	        postProbTransOne = P.transpose() * oneVecRow;
+	        postProbOne = P * oneVecCol;
+        }
+
         if(params.use_low_rank) {
             transform.W = LowRankGetW(X, Y, value_matrix, vector_matrix, P, sigma_squared, params.lambda);
 
         } else {
-            transform.W = GetW(X, Y, transform.G, P, sigma_squared, params.lambda);
+            transform.W = GetW(Y, transform.G, postProbOne, postProbX, sigma_squared, params.lambda);
         }
 
         T = transform.apply_to(Y);
-        sigma_squared = SigmaSquared(X, P, T);
+        sigma_squared = SigmaSquared(X, postProbOne, postProbTransOne, postProbX, T);
 
         FUNCINFO("Sigma Squared: " << sigma_squared);
 
@@ -472,84 +437,6 @@ AlignViaNonRigidCPD(CPDParams & params,
         duration<double>  time_span = duration_cast<duration<double>>(stop - start);
         FUNCINFO("Excecution took time: " << time_span.count())
         start = stop;
-    }
-    return transform;
-}
-
-NonRigidCPDTransform
-AlignViaNonRigidCPDFGT(CPDParams & params,
-            const point_set<double> & moving,
-            const point_set<double> & stationary,
-            int iter_interval /*= 0*/,
-            std::string video /*= "False"*/,
-            std::string xyz_outfile /*= "output"*/ ) { 
-    
-    FUNCINFO("Performing nonrigid CPD with Fast Gauss Tranform");
-
-    std::string temp_xyz_outfile;
-    point_set<double> mutable_moving = moving;
-    
-    Eigen::MatrixXd GetGramMatrix(const Eigen::MatrixXd & yPoints, double betaSquared);
-    const auto N_move_points = static_cast<long int>(moving.points.size());
-    const auto N_stat_points = static_cast<long int>(stationary.points.size());
-
-    // Prepare working buffers.
-    //
-    // Stationary point matrix
-    Eigen::MatrixXd X = Eigen::MatrixXd::Zero(N_move_points, params.dimensionality);
-    // Moving point matrix
-    Eigen::MatrixXd Y = Eigen::MatrixXd::Zero(N_stat_points, params.dimensionality); 
-
-    // Fill the X vector with the corresponding points.
-    for(long int j = 0; j < N_stat_points; ++j){ // column
-        const auto P_stationary = stationary.points[j];
-        X(j, 0) = P_stationary.x;
-        X(j, 1) = P_stationary.y;
-        X(j, 2) = P_stationary.z;
-    }
-
-    // Fill the Y vector with the corresponding points.
-    for(long int j = 0; j < N_move_points; ++j){ // column
-        const auto P_moving = moving.points[j];
-        Y(j, 0) = P_moving.x;
-        Y(j, 1) = P_moving.y;
-        Y(j, 2) = P_moving.z;
-    }
-    NonRigidCPDTransform transform(N_move_points, params.dimensionality);
-    double sigma_squared = NR_Init_Sigma_Squared(X, Y);
-    double similarity;
-    double objective = 0;
-    double prev_objective = 0;
-    transform.G = GetGramMatrix(Y, params.beta * params.beta);
-    Eigen::MatrixXd P;
-    Eigen::MatrixXd T;
-
-    for (int i = 0; i < params.iterations; i++) {
-        FUNCINFO("Iteration: " << i)
-        P = E_Step_NR(X, Y, transform.G, transform.W, sigma_squared, params.distribution_weight);
-        transform.W = GetW(X, Y, transform.G, P, sigma_squared, params.lambda);
-        T = transform.apply_to(Y);
-        sigma_squared = SigmaSquared(X, P, T);
-
-        FUNCINFO("Sigma Squared: " << sigma_squared);
-        
-        similarity = GetSimilarity_NR(X, Y, transform.G, transform.W);
-        FUNCINFO("Similarity: " << similarity);
-        prev_objective = objective;
-        objective = GetObjective_NR(X, Y, P, transform.G, transform.W, sigma_squared);
-        FUNCINFO("Objective: " << objective);
-
-        if (video == "True") {
-            if (iter_interval > 0 && i % iter_interval == 0) {
-                temp_xyz_outfile = xyz_outfile + "_iter" + std::to_string(i+1) + "_sim" + std::to_string(similarity) + ".xyz";
-                std::ofstream PFO(temp_xyz_outfile);
-                if(!WritePointSetToXYZ(mutable_moving, PFO))
-                    FUNCERR("Error writing point set to " << xyz_outfile);
-            }
-        }
-
-        if (abs(objective-prev_objective) < params.similarity_threshold)
-            break;
     }
     return transform;
 }
