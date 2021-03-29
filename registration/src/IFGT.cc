@@ -73,7 +73,7 @@ void IFGT::ifgt_choose_parameters() {
     double h_square = bandwidth * bandwidth;
     double min_complexity = std::numeric_limits<double>::max(); 
     int n_clusters = 0; 
-    int max_clusters = std::round(40.0 / bandwidth); // an estimate of typical upper bound 
+    int max_clusters = std::round(0.2 * std::sqrt(dim) * 100 / bandwidth); // an estimate of typical upper bound 
     std::cout << "MAX clusters: " << max_clusters << std::endl;
     int p_ul = 200; // estimate                           // from papers authors
     int max_truncation = 0;
@@ -365,8 +365,7 @@ Eigen::MatrixXd IFGT::compute_ifgt(const Eigen::MatrixXd & target_pts, const Eig
 }
 double IFGT::compute_complexity(int M_target_pts) {
     int N_source_pts = source_pts.rows();
-    return double(dim) * N_source_pts * std::log(double(n_clusters)) + 
-                (double(N_source_pts) + M_target_pts * double(n_clusters)) * p_max_total
+    return (double(N_source_pts) + M_target_pts * double(n_clusters)) * p_max_total
                 + double(dim) * N_source_pts * n_clusters;
 }
 
@@ -380,6 +379,8 @@ double rescale_points(const Eigen::MatrixXd & fixed_pts,
     double min = min_max.first;
     double max = min_max.second;
 
+    
+
     double max_range = max - min;
     if (max_range <= 1.0) {
         max_range = 1.0;
@@ -387,7 +388,7 @@ double rescale_points(const Eigen::MatrixXd & fixed_pts,
     fixed_pts_scaled = ((fixed_pts.array() - min) / max_range).matrix();
     moving_pts_scaled = ((moving_pts.array() - min) / max_range).matrix();
 
-    std::cout << "max_range: " << max_range << std::endl;
+    std::cout << "max_range: " << max_range << " // min: " << min << " // max: " << max << std::endl;
     return bandwidth / max_range; // scale bandwidth
 
 }

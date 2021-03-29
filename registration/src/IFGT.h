@@ -109,7 +109,8 @@ class IFGT {
         // computes G(yj) - the actual gaussian
         Eigen::MatrixXd compute_gaussian(const Eigen::MatrixXd & target_pts,
                                             const Eigen::MatrixXd & C_k);
-
+        // computes gauss transform naively if the estimated computational complexity
+        // is lower than IFGT
         Eigen::MatrixXd compute_naive(const Eigen::MatrixXd & target_pts, 
                                             const Eigen::ArrayXd & weights);
 
