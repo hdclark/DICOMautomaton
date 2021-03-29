@@ -641,45 +641,124 @@ TEST_CASE("LowRankGetW") {
 	LowRankGetW(xPoints, yPoints, gramValues, gramVectors, postProb, 2, 3);
 }
 
+/* 
 TEST_CASE("IFGT Test") {
-	int N_points = 120;
+	int N_points = 1000;
 	int dim = 3;
-	double sigmaSquared = 15.2; // random
-	double bandwidth = std::sqrt(2 + sigmaSquared);
-	double epsilon = 0.1;
+	double sigmaSquared = 20; // random
+	double bandwidth = std::sqrt(2.0 * sigmaSquared);
+	double epsilon = 0.000001;
 
 	// xPoints = fixed points = source points 
 	// yPoints = moving points = target points
-	Eigen::MatrixXd yPoints = 40*Eigen::MatrixXd::Random(N_points, dim);
-	Eigen::MatrixXd xPoints = 40*Eigen::MatrixXd::Random(N_points, dim);
+	std::cout << "working here " << std::endl;
+	Eigen::MatrixXd yPoints = 3*Eigen::MatrixXd::Random(N_points, dim);
+	Eigen::MatrixXd xPoints = 7*(Eigen::MatrixXd::Random(N_points, dim).array() - 5.3).matrix();
 
 	auto start = std::chrono::high_resolution_clock::now();
 
-	auto ifgt_transform = std::make_unique<IFGT>(xPoints, bandwidth, epsilon);
-	Eigen::MatrixXd G_y = ifgt_transform->compute_ifgt(yPoints);
+    Eigen::MatrixXd xPoints_scaled;
+   	Eigen::MatrixXd yPoints_scaled;
+
+    double bandwidth_scaled = rescale_points(xPoints, yPoints, xPoints_scaled, 
+                                       		yPoints_scaled, bandwidth);
+
+	std::cout << "bandwidth: " << bandwidth << std::endl;
+	std::cout << "bandwidth scaled: " << bandwidth_scaled << std::endl;
+
+	// START TRANSFORM
+	auto scaling_end = std::chrono::high_resolution_clock::now();
+	auto time_span = std::chrono::duration_cast<std::chrono::duration<double>>(scaling_end - start);
+    std::cout << "Scaling took time: " << time_span.count() << std::endl;
+
+
+	auto ifgt_transform = std::make_unique<IFGT>(xPoints_scaled, bandwidth_scaled, epsilon);
+	Eigen::MatrixXd G_y = ifgt_transform->compute_ifgt(yPoints_scaled);
 
 	auto stop = std::chrono::high_resolution_clock::now();
-	auto time_span = std::chrono::duration_cast<std::chrono::duration<double>>(stop - start);
-    FUNCINFO("IFGT Excecution took time: " << time_span.count());
+	time_span = std::chrono::duration_cast<std::chrono::duration<double>>(stop - scaling_end);
+    std::cout << "IFGT Excecution took time: " << time_span.count() << std::endl;
 
-	Eigen::MatrixXd G_naive(120,1);
+	Eigen::MatrixXd G_naive(N_points,1);
 
 	start = std::chrono::high_resolution_clock::now();
     for (int m = 0; m < N_points; ++m) {
         for (int n = 0; n < N_points; ++n) {
-            double expArg = - 1 / (2 * sigmaSquared) * (yPoints.row(m) - xPoints.row(n)).squaredNorm();
+            double expArg = - 1.0 / (2.0 * sigmaSquared) * (yPoints.row(m) - xPoints.row(n)).squaredNorm();
             G_naive(m) += std::exp(expArg);
         }
     }
 
 	stop = std::chrono::high_resolution_clock::now();
 	time_span = std::chrono::duration_cast<std::chrono::duration<double>>(stop - start);
-    FUNCINFO("Naive Excecution took time: " << time_span.count());
-	double threshold = 0.1;
+    std::cout << "Naive Excecution took time: " << time_span.count() << std::endl;
+	//double threshold = 0.1;
 	for(int i = 0; i < N_points; ++i) {
 		//REQUIRE(G_y(i) == doctest::Approx(G_naive(i)).epsilon(threshold));
-		std::cout << "IFGT: " << G_y(i) << " // Naive: " << G_naive(i) << std::endl;
+		if (i % 100 == 0)
+			std::cout << "IFGT: " << G_y(i) << " // Naive: " << G_naive(i) << " // % error: " 
+		 	<< std::abs(G_y(i) - G_naive(i))/G_naive(i)*100 << " %" << std::endl;
 	}
 
+} *//*
+TEST_CASE("rescale points") {
+	Eigen::MatrixXd xPoints_scaled;
+	Eigen::MatrixXd yPoints_scaled;
+	Eigen::IOFormat CleanFmt(4, 0, " ", "\n", "", ";","[", "]\n");
 
-}
+	std::cout << "before xpoints"  << std::endl;
+	Eigen::MatrixXd xPoints(15,2);
+	xPoints << 	-10.0,	-10.0,
+				-10.0, 	-8.0,
+				-10.0, 	-6.0,
+				-10.0, 	-4.0,
+				-10.0, 	-2.0,
+				-10.0, 	-0.0,
+				-8.0, 	-8.0,
+				-6.0, 	-8.0,
+				-4.0, 	-8.0,
+				-2.0, 	-8.0,
+				0.0, 	-8.0,
+				10.0, 	-8.0,
+				10.0, 	4.0,
+				10.0, 	8.0,
+				10.0, 	6.0;
+	double bandwidth = 10.0;
+	Eigen::MatrixXd yPoints = -1.5 * xPoints;
+    // double bandwidth = std::sqrt(2.0 * sigmaSquared) / max_range; // scale bandwidth
+
+    double bandwidth_scaled = rescale_points(xPoints, yPoints, xPoints_scaled, 
+                                        yPoints_scaled, bandwidth);
+
+	std::cout << xPoints.format(CleanFmt) << "\n" << std::endl;									
+	std::cout << xPoints_scaled.format(CleanFmt) << "\n" << std::endl;
+	std::cout << yPoints.format(CleanFmt) << "\n" << std::endl;
+	std::cout << yPoints_scaled.format(CleanFmt) << std::endl; 
+	std::cout << "bandwidth scaled: " << bandwidth_scaled << std::endl;
+	
+}*/
+/* clustering works - verified in matlab
+TEST_CASE("Clustering Test") {
+	int N_points = 500;
+	int dim = 2;
+	int num_clusters = 10;
+	// xPoints = fixed points = source points 
+	// yPoints = moving points =5target points
+	Eigen::MatrixXd xPoints = 50*Eigen::MatrixXd::Random(N_points, dim);
+
+	Cluster cluster = k_center_clustering(xPoints, num_clusters);
+	Eigen::IOFormat CleanFmt(4, 0, " ", "\n", "", ";","[", "]\n");
+	
+	std::ofstream outputfile;
+	outputfile.open("clustering_test.txt"); // create new file manually
+
+	outputfile << xPoints.format(CleanFmt);
+
+	outputfile << cluster.assignments.format(CleanFmt);
+
+	outputfile << cluster.k_centers.format(CleanFmt);
+
+	std::cout << cluster.rx_max; 
+	
+	outputfile.close();
+}*/
