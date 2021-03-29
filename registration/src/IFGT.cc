@@ -30,7 +30,7 @@
 IFGT::IFGT(const Eigen::MatrixXd & source_pts,
             double bandwidth, 
             double epsilon) {
-    
+
     this->bandwidth = bandwidth;
     this->epsilon = epsilon;
     this->source_pts = source_pts;
@@ -45,8 +45,8 @@ IFGT::IFGT(const Eigen::MatrixXd & source_pts,
     std::cout << "ifgt_choose_parameters: " << time_span.count() << " s" << std::endl;
     // clustering goes here
     //Cluster cluster;
+
     cluster = std::make_unique<Cluster>(k_center_clustering(source_pts, n_clusters));
-    //cluster = k_center_clustering(source_pts, n_clusters);
 
     std::cout << "Number of clusters: " << n_clusters << std::endl;
 
@@ -62,7 +62,6 @@ IFGT::IFGT(const Eigen::MatrixXd & source_pts,
     std::cout << "max_truncation_p: " << max_truncation_p << std::endl;
     std::cout << "p_max_total: " << p_max_total << std::endl;
 
-
     auto time4 = std::chrono::high_resolution_clock::now();
     time_span = std::chrono::duration_cast<std::chrono::duration<double>>(time4 - time3);
     std::cout << "compute_constant_series: " << time_span.count() << " s" << std::endl;
@@ -74,11 +73,13 @@ void IFGT::ifgt_choose_parameters() {
     double h_square = bandwidth * bandwidth;
     double min_complexity = std::numeric_limits<double>::max(); 
     int n_clusters = 0; 
-    int max_clusters = std::round(0.2 * 100 / bandwidth); // an estimate of typical upper bound 
+    int max_clusters = std::round(40.0 / bandwidth); // an estimate of typical upper bound 
+    std::cout << "MAX clusters: " << max_clusters << std::endl;
     int p_ul = 200; // estimate                           // from papers authors
     int max_truncation = 0;
 
-    double radius = bandwidth * std::sqrt(std::log(1 / epsilon));
+    double R = std::sqrt((double) dim);
+    double radius = std::min(R, bandwidth * std::sqrt(std::log(1.0 / epsilon)));
 
     for(int i = 0; i < max_clusters; i++) {
         double rx = std::pow((double)i + 1, -1.0 / (double) dim); // rx ~ K^{-1/dim} estimate for uniform datasets
@@ -89,21 +90,29 @@ void IFGT::ifgt_choose_parameters() {
 	    double temp = 1;
 		int p = 0;
 
+        // std::cout << "IFGT_CHOOSE_PARAMETERS, clusters: " << i+1 << "\n" << std::endl;
+
 		while((error > epsilon) && (p <= p_ul)){
 			p++;
 			double b = std::min((rx + std::sqrt(rx_square + 2.0 * p * h_square)) / 2.0, rx + radius);
 			double c = rx - b;
 			temp *= 2 * rx * b / h_square / (double)p;
-			error = temp * (std::exp(-(c*c)/h_square));			
+			error = temp * (std::exp(-(c*c)/h_square));
+
+            // std::cout << "c: " << c << " // b: " << b  << " // temp: " << temp << " // rx: " << rx << std::endl;
+            // std::cout << "p: " << p << " // error: " << error << "\n" << std::endl;			
 		}	
 		double complexity = (i + 1) + std::log((double)i + 1) + ((1 + n) * nchoosek(p - 1 + dim, dim));
 
-		if (complexity < min_complexity ){
+        // std::cout << "complexity: " << complexity << "\n" << std::endl;	
+
+		if ((complexity < min_complexity) && (error < epsilon)){
 			min_complexity = complexity;
 			n_clusters = i+1;
 			max_truncation = p;		
 		}
 	}
+    std::cout << " max_truncation initial: " << max_truncation << std::endl;
     this->n_clusters = n_clusters; // class variables
     this->max_truncation_p = max_truncation; 
     this->cutoff_radius = radius;
@@ -113,25 +122,26 @@ void IFGT::ifgt_choose_parameters() {
 // after clustering, reupdate the truncation based on actual max 
 void IFGT::ifgt_update_max_truncation(double rx_max) {
 
-    int truncation_number_ul = 100; // j
+    int truncation_number_ul = 200; // j
     double R = std::sqrt(dim);                            
     double h_square = bandwidth * bandwidth;
     double rx2 = rx_max * rx_max;
-    double r = std::min(R, bandwidth * sqrt(log(1.0 / epsilon)));
+    double radius = std::min(R, bandwidth * sqrt(log(1.0 / epsilon)));
     double error = std::numeric_limits<double>::max();
 
-    std::cout << "r: " << r << " // h_square: " << h_square << std::endl;
+    std::cout << "r: " << radius << " // h_square: " << h_square << std::endl;
     int p = 0;
     double temp = 1.0;
     while ((error > epsilon) && (p <= truncation_number_ul)) {
         ++p;
-        double b = std::min((rx_max + std::sqrt(rx2 + 2 * double(p) * h_square)) / 2.0, rx_max + r);
+        double b = std::min((rx_max + std::sqrt(rx2 + 2.0 * p * h_square)) / 2.0, rx_max + radius);
         double c = rx_max - b;
+        
         temp *= 2 * rx_max * b / h_square / double(p);
         error = temp * std::exp(-(c * c) / h_square);
 
-        std::cout << "c: " << c << " // b: " << b  << " // temp: " << temp << " // rx_max: " << rx_max << std::endl;
-        std::cout << "p: " << p << " // error: " << error << "\n" << std::endl;
+        // std::cout << "c: " << c << " // b: " << b  << " // temp: " << temp << " // rx_max: " << rx_max << std::endl;
+        // std::cout << "p: " << p << " // error: " << error << "\n" << std::endl;
     }
     max_truncation_p = p;
 }
@@ -293,81 +303,122 @@ Eigen::MatrixXd IFGT::compute_gaussian(const Eigen::MatrixXd & target_pts,
     return G_y;
 
 }
+Eigen::MatrixXd IFGT::compute_naive(const Eigen::MatrixXd & target_pts, const Eigen::ArrayXd & weights) {
+    Eigen::MatrixXd G_naive = Eigen::MatrixXd::Zero(target_pts.rows(),1);
+    double h2 = bandwidth * bandwidth;
+
+    for (int m = 0; m < target_pts.rows(); ++m) {
+        for (int n = 0; n < source_pts.rows(); ++n) {
+            double expArg = - 1.0 / h2 * (target_pts.row(m) - source_pts.row(n)).squaredNorm();
+            G_naive(m) += weights(m) * std::exp(expArg);
+        }
+    }
+    return G_naive;
+}
 
 // ttwo different computes for weights and no weights 
 Eigen::MatrixXd IFGT::compute_ifgt(const Eigen::MatrixXd & target_pts) {
     Eigen::ArrayXd ones_array = Eigen::ArrayXd::Ones(target_pts.rows(),1);
 
+    double ifgt_complexity = compute_complexity(target_pts.rows());
+    double naive_complexity = dim * target_pts.rows() * source_pts.rows();
+
+    std::cout << "ifgt complexity: " << ifgt_complexity << " // naive_complexity: " << naive_complexity << std::endl;
+    Eigen::MatrixXd G_y;
+
     auto time1 = std::chrono::high_resolution_clock::now();
 
-    Eigen::MatrixXd C_k = compute_ck(ones_array);
+    if (ifgt_complexity < naive_complexity) {
+        Eigen::MatrixXd C_k = compute_ck(ones_array);
+        auto time2 = std::chrono::high_resolution_clock::now();
+        auto time_span = std::chrono::duration_cast<std::chrono::duration<double>>(time2 - time1);
+        std::cout << "compute_ck: " << time_span.count() << " s" << std::endl;
 
-    auto time2 = std::chrono::high_resolution_clock::now();
-    auto time_span = std::chrono::duration_cast<std::chrono::duration<double>>(time2 - time1);
-    std::cout << "compute_ck: " << time_span.count() << " s" << std::endl;
-
-    Eigen::MatrixXd G_y = compute_gaussian(target_pts, C_k);
-
-    auto time3 = std::chrono::high_resolution_clock::now();
-    time_span = std::chrono::duration_cast<std::chrono::duration<double>>(time3 - time2);
-    std::cout << "compute_gaussian: " << time_span.count() << " s" << std::endl;
+        G_y = compute_gaussian(target_pts, C_k);
+        auto time3 = std::chrono::high_resolution_clock::now();
+        time_span = std::chrono::duration_cast<std::chrono::duration<double>>(time3 - time2);
+        std::cout << "compute_gaussian: " << time_span.count() << " s" << std::endl;
+    } 
+    else {
+        G_y = compute_naive(target_pts, ones_array);
+        auto time4 = std::chrono::high_resolution_clock::now();
+        auto time_span = std::chrono::duration_cast<std::chrono::duration<double>>(time4 - time1);
+        std::cout << "naive computation: " << time_span.count() << " s" << std::endl;
+    }
 
     return G_y;
 }
 Eigen::MatrixXd IFGT::compute_ifgt(const Eigen::MatrixXd & target_pts, const Eigen::ArrayXd & weights) {
-    Eigen::MatrixXd C_k = compute_ck(weights);
-    Eigen::MatrixXd G_y = compute_gaussian(target_pts, C_k);
+    double ifgt_complexity = compute_complexity(target_pts.rows());
+    double naive_complexity = dim * target_pts.rows() * source_pts.rows();
 
+    Eigen::MatrixXd G_y;
+
+    if (ifgt_complexity < naive_complexity) {
+        Eigen::MatrixXd C_k = compute_ck(weights);
+        G_y = compute_gaussian(target_pts, C_k);
+    } 
+    else {
+        G_y = compute_naive(target_pts, weights);
+    }
     return G_y;
 }
-
-double IFGT::calc_max_range(const Eigen::MatrixXd & points) {
-    double range = 0;
-    double min;
-    double max;
-    
-    for(long int i = 0; i < points.cols(); ++i) {
-        min = points(0,i);
-        max = points(0,i);
-        for(long int j = 0; j < points.rows(); ++j) {
-            if(points(j,i) < min) {
-                min = points(j,i);
-            }
-            if(points(j,i) > max) {
-                max = points(j,i);
-            }
-        }
-        if(max - min > range) {
-            range = max - min;
-        }
-    }
-    return range;
+double IFGT::compute_complexity(int M_target_pts) {
+    int N_source_pts = source_pts.rows();
+    return double(dim) * N_source_pts * std::log(double(n_clusters)) + 
+                (double(N_source_pts) + M_target_pts * double(n_clusters)) * p_max_total
+                + double(dim) * N_source_pts * n_clusters;
 }
 
+double rescale_points(const Eigen::MatrixXd & fixed_pts,
+                        const Eigen::MatrixXd & moving_pts,
+                        Eigen::MatrixXd & fixed_pts_scaled,
+                        Eigen::MatrixXd & moving_pts_scaled,
+                        double bandwidth) {
+    
+    auto min_max = calc_max_range(fixed_pts, moving_pts);
+    double min = min_max.first;
+    double max = min_max.second;
 
+    double max_range = max - min;
+    if (max_range <= 1.0) {
+        max_range = 1.0;
+    }
+    fixed_pts_scaled = ((fixed_pts.array() - min) / max_range).matrix();
+    moving_pts_scaled = ((moving_pts.array() - min) / max_range).matrix();
+
+    std::cout << "max_range: " << max_range << std::endl;
+    return bandwidth / max_range; // scale bandwidth
+
+}
 // Y = target_pts = fixed_pts
 // X = source_pts = moving_pts (in general)
 // epsilon is error, w is a parameter from cpd
 CPD_MatrixVector_Products compute_cpd_products(const Eigen::MatrixXd & fixed_pts,
-                                            const Eigen::MatrixXd & moving_pts,
-                                            double sigmaSquared, 
-                                            double epsilon,
-                                            double w) {
+                                                const Eigen::MatrixXd & moving_pts,
+                                                double sigmaSquared, 
+                                                double epsilon,
+                                                double w) {
     
     int N_fixed_pts = fixed_pts.rows();
     int M_moving_pts = moving_pts.rows();
     int dim = fixed_pts.cols();
+    double bandwidth = std::sqrt(2.0 * sigmaSquared);
     
     Eigen::MatrixXd P1; 
     Eigen::MatrixXd Pt1; 
     Eigen::MatrixXd Kt1;
     Eigen::MatrixXd PX(M_moving_pts, dim);
 
+    Eigen::MatrixXd fixed_pts_scaled;
+    Eigen::MatrixXd moving_pts_scaled;
 
-    double bandwidth = std::sqrt(2.0 * sigmaSquared);
-    auto ifgt_transform = std::make_unique<IFGT>(moving_pts, bandwidth, epsilon); // in this case, moving_pts = source_pts
+    double bandwidth_scaled = rescale_points(fixed_pts, moving_pts, fixed_pts_scaled, 
+                                        moving_pts_scaled, bandwidth);
+
+    auto ifgt_transform = std::make_unique<IFGT>(moving_pts_scaled, bandwidth_scaled, epsilon); // in this case, moving_pts = source_pts
                                                                                   // because we take the transpose of K(M x N)                                                 
-    Kt1 = ifgt_transform->compute_ifgt(fixed_pts);                // so we'll get an N x 1 vector for Kt1       
+    Kt1 = ifgt_transform->compute_ifgt(fixed_pts_scaled);                // so we'll get an N x 1 vector for Kt1       
 
     double c = w / (1.0 - w) * (double) M_moving_pts / N_fixed_pts * 
                                 std::pow(2.0 * M_PI * sigmaSquared, 0.5 * dim);
@@ -375,11 +426,11 @@ CPD_MatrixVector_Products compute_cpd_products(const Eigen::MatrixXd & fixed_pts
     Eigen::ArrayXd denom_a = Kt1.array() + c; 
     Pt1 = (1 - c / denom_a).matrix(); // Pt1 = 1-c*a
 
-    ifgt_transform = std::make_unique<IFGT>(fixed_pts, bandwidth, epsilon); 
-    P1 = ifgt_transform->compute_ifgt(moving_pts, 1 / denom_a); // P1 = Ka 
+    ifgt_transform = std::make_unique<IFGT>(fixed_pts_scaled, bandwidth_scaled, epsilon); 
+    P1 = ifgt_transform->compute_ifgt(moving_pts_scaled, 1 / denom_a); // P1 = Ka 
     
     for (int i = 0; i < dim; ++i) {
-        PX.col(i) = ifgt_transform->compute_ifgt(moving_pts, fixed_pts.col(i).array() / denom_a); // PX = K(a.*X)
+        PX.col(i) = ifgt_transform->compute_ifgt(moving_pts_scaled, fixed_pts.col(i).array() / denom_a); // PX = K(a.*X)
     }
     return { P1, Pt1, PX };
     
@@ -393,15 +444,13 @@ Cluster k_center_clustering(const Eigen::MatrixXd & points, int num_clusters) {
     Eigen::VectorXd distances = -1*Eigen::VectorXd::Ones(points.rows());
     Eigen::VectorXd radii = Eigen::VectorXd::Zero(num_clusters);
 
-    int seed = rand() % points.rows() + 1;
     double largest_distance = 0;
-    int index_of_largest = seed;
+    int index_of_largest = 0;
     double dist = 0;
-
-    k_centers.row(0) = points.row(seed);
+    k_centers.row(0) = points.row(0);
 
     for(long int i = 0; i < num_clusters; ++i) { 
-
+        
         k_centers.row(i) = points.row(index_of_largest);
 
         largest_distance = 0;
@@ -440,6 +489,37 @@ Cluster k_center_clustering(const Eigen::MatrixXd & points, int num_clusters) {
     cluster.rx_max = largest_distance;
     */
    return {k_centers, radii, assignments, distances, largest_distance};
+}
+
+std::pair<double, double> calc_max_range(const Eigen::MatrixXd & target_pts,
+                                                const Eigen::MatrixXd & source_pts) {
+
+    double min = std::numeric_limits<double>::max();
+    double max = std::numeric_limits<double>::min();
+    
+    // target points
+    for(long int i = 0; i < target_pts.rows(); ++i) {
+        for(long int j = 0; j < target_pts.cols(); ++j) {
+            if(target_pts(i,j) < min) {
+                min = target_pts(i,j);
+            }
+            else if(target_pts(i,j) > max) {
+                max = target_pts(i,j);
+            }
+        }
+    }
+    // source points
+    for(long int i = 0; i < source_pts.rows(); ++i) {
+        for(long int j = 0; j < source_pts.cols(); ++j) {
+            if(source_pts(i,j) < min) {
+                min = source_pts(i,j);
+            }
+            else if(source_pts(i,j) > max) {
+                max = source_pts(i,j);
+            }
+        }
+    }
+    return std::make_pair(min, max);
 }
 
 

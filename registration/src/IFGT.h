@@ -51,6 +51,17 @@ struct Cluster {
 
 Cluster k_center_clustering(const Eigen::MatrixXd & points, int num_clusters);
 
+std::pair<double, double> calc_max_range(const Eigen::MatrixXd & target_pts,
+                                            const Eigen::MatrixXd & source_pts);
+
+double rescale_points(const Eigen::MatrixXd & fixed_pts,
+                        const Eigen::MatrixXd & moving_pts,
+                        Eigen::MatrixXd & fixed_pts_scaled,
+                        Eigen::MatrixXd & moving_pts_scaled,
+                        double bandwidth);
+
+//void cluster_increment(const Eigen::MatrixXd & points, std::unique_ptr<Cluster> & );
+
 class IFGT {
     public:
         // constructor
@@ -98,8 +109,11 @@ class IFGT {
         // computes G(yj) - the actual gaussian
         Eigen::MatrixXd compute_gaussian(const Eigen::MatrixXd & target_pts,
                                             const Eigen::MatrixXd & C_k);
-                                        
-        double calc_max_range(const Eigen::MatrixXd & points);
+
+        Eigen::MatrixXd compute_naive(const Eigen::MatrixXd & target_pts, 
+                                            const Eigen::ArrayXd & weights);
+
+        double compute_complexity(int M_target_pts);
 
 };
 
