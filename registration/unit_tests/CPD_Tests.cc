@@ -396,7 +396,15 @@ TEST_CASE("Update SS non-rigid") {
 						 2, 2, 2,
 						 1, 2, 3,
 						 3, 2, 1;
-	double sigmaSquared = SigmaSquared(xPoints, postProb, transformedPoints);
+
+	Eigen::MatrixXd oneVecRow = Eigen::MatrixXd::Ones(postProb.rows(),1);
+    Eigen::MatrixXd oneVecCol = Eigen::MatrixXd::Ones(postProb.cols(),1);
+
+	Eigen::MatrixXd postProbX = postProb * xPoints;
+	Eigen::MatrixXd postProbTransOne = postProb.transpose() * oneVecRow;
+	Eigen::MatrixXd postProbOne = postProb * oneVecCol;
+
+	double sigmaSquared = SigmaSquared(xPoints, postProbOne, postProbTransOne, postProbX, transformedPoints);
 
 	double sigmaSquaredAnswer = 1412./108;
 	double threshold = 0.001;
@@ -520,7 +528,13 @@ TEST_CASE("GetW") {
 				-6.28462294910371, 7.2451892612769, -17.9879677078044,
 				10.8209590146699, 1.51201994761614, -8.9579914981555;
 
-	Eigen::MatrixXd W = GetW(xPoints, yPoints, gramMatrix, postProb, sigmaSquared, lambda);
+	Eigen::MatrixXd oneVecRow = Eigen::MatrixXd::Ones(postProb.rows(),1);
+    Eigen::MatrixXd oneVecCol = Eigen::MatrixXd::Ones(postProb.cols(),1);
+
+	Eigen::MatrixXd postProbX = postProb * xPoints;
+	Eigen::MatrixXd postProbOne = postProb * oneVecCol;
+	
+	Eigen::MatrixXd W = GetW(yPoints, gramMatrix, postProbOne, postProbX, sigmaSquared, lambda);
 
 	double threshold = 0.01;
 	for (size_t i = 0; i < 4; ++i) {

@@ -55,7 +55,6 @@ int main(int argc, char* argv[]){
     std::string tf_outfile;
     int iter_interval;
     std::string video;
-    std::string fgt;
 
     //================================================ Argument Parsing ==============================================
 
@@ -106,7 +105,7 @@ int main(int argc, char* argv[]){
         return;
       })
     );
-    arger.push_back( ygor_arg_handlr_t(1, 'p', "ps", true, "transformed_point_set.txt",
+    arger.push_back( ygor_arg_handlr_t(1, 'p', "ps", true, "tf_points.txt",
       "Write transformed point set to given file.",
       [&](const std::string &optarg) -> void {
         xyz_outfile = optarg;
@@ -189,29 +188,23 @@ int main(int argc, char* argv[]){
       "Use fast gauss tranform for Nonrigid CPD, will have no effect for other algorithms.(Optional, default False)",
       [&](const std::string &optarg) -> void {
         if (!optarg.empty()) {
-          std::string::size_type sz;
-          fgt = std::stof(optarg, &sz);
+          params.use_fgt =  optarg.compare("True");
         }
         return;
       })
     );
-    arger.push_back( ygor_arg_handlr_t(1, 'a', "low rank matrix approximation", true, "0.5",
+    arger.push_back( ygor_arg_handlr_t(1, 'a', "low rank approx", true, "0.5",
       "Portion of eigenvalues to use for low rank matrix approximation for Nonrigid CPD. (Optional, default not used)",
       [&](const std::string &optarg) -> void {
         if (!optarg.empty()) {
           std::string::size_type sz;
           params.ev_ratio = std::stof(optarg, &sz);
-          FUNCINFO(params.ev_ratio)
           params.use_low_rank = true;
         }
         return;
       })
     );
     arger.Launch(argc, argv);
-
-
-    FUNCINFO(iter_interval);
-    FUNCINFO(params.distribution_weight)
 
     //============================================= Input Validation ================================================
     if(moving.points.empty()){
@@ -271,19 +264,13 @@ int main(int argc, char* argv[]){
           if(!WritePointSetToXYZ(mutable_moving, PFO))
             FUNCERR("Error writing point set to " << temp_xyz_outfile);
         }
-        if(fgt == "True") {
-          NonRigidCPDTransform transform = AlignViaNonRigidCPDFGT(params, moving, stationary, iter_interval, video, xyz_outfile);
-          transform.apply_to(mutable_moving);
-          std::ofstream TFO(tf_outfile);
-          FUNCINFO("Writing transform to " << tf_outfile)
-          transform.write_to(TFO);
-        } else {
-          NonRigidCPDTransform transform = AlignViaNonRigidCPD(params, moving, stationary, iter_interval, video, xyz_outfile);
-          transform.apply_to(mutable_moving);
-          std::ofstream TFO(tf_outfile);
-          FUNCINFO("Writing transform to " << tf_outfile)
-          transform.write_to(TFO);
-        }
+
+        NonRigidCPDTransform transform = AlignViaNonRigidCPD(params, moving, stationary, iter_interval, video, xyz_outfile);
+        transform.apply_to(mutable_moving);
+        std::ofstream TFO(tf_outfile);
+        FUNCINFO("Writing transform to " << tf_outfile)
+        transform.write_to(TFO);
+        
         temp_xyz_outfile = xyz_outfile + "_last.xyz";
         std::ofstream PFO(temp_xyz_outfile);
         FUNCINFO("Writing transformed point set to to " << (temp_xyz_outfile))

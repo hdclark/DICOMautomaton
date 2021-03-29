@@ -44,14 +44,6 @@ AlignViaNonRigidCPD(CPDParams & params,
             std::string video = "False",
             std::string xyz_outfile = "output" );
 
-NonRigidCPDTransform
-AlignViaNonRigidCPDFGT(CPDParams & params,
-            const point_set<double> & moving,
-            const point_set<double> & stationary,
-            int iter_interval = 0,
-            std::string video = "False",
-            std::string xyz_outfile = "output" );
-
 double Init_Sigma_Squared_NR(const Eigen::MatrixXd & xPoints,
             const Eigen::MatrixXd & yPoints);
 
@@ -76,10 +68,10 @@ double GetObjective_NR(const Eigen::MatrixXd & xPoints,
             const Eigen::MatrixXd & W,
             double sigmaSquared);
 
-Eigen::MatrixXd GetW(const Eigen::MatrixXd & xPoints,
-            const Eigen::MatrixXd & yPoints,
+Eigen::MatrixXd GetW(const Eigen::MatrixXd & yPoints,
             const Eigen::MatrixXd & gramMatrix,
-            const Eigen::MatrixXd & postProb,
+            const Eigen::MatrixXd & postProbOne,
+            const Eigen::MatrixXd & postProbX,
             double sigmaSquared,
             double lambda);
 
@@ -96,7 +88,9 @@ Eigen::MatrixXd AlignedPointSet_NR(const Eigen::MatrixXd & yPoints,
             const Eigen::MatrixXd & W);
 
 double SigmaSquared(const Eigen::MatrixXd & xPoints,
-            const Eigen::MatrixXd & postProb,
+            const Eigen::MatrixXd & postProbOne,
+            const Eigen::MatrixXd & postProbTransOne,
+            const Eigen::MatrixXd & postProbX,
             const Eigen::MatrixXd & transformedPoints);
 
 void GetNLargestEigenvalues_V2(const Eigen::MatrixXd & m,
