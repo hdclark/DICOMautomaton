@@ -23,7 +23,7 @@ struct CPDParams {
     // Use low-rank approximation
     bool use_low_rank = false;
     double ev_ratio = 0;
-    int power_iter = 100000;
+    int power_iter = 1000;
     double power_tol = 0.000001;
     //FGT
     bool use_fgt = false;

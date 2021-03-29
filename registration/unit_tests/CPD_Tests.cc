@@ -544,49 +544,49 @@ TEST_CASE("GetW") {
     }
 }
 
-// power iteration test
-// TEST_CASE("PowerIteration") {
-// 	Eigen::MatrixXd m(3, 3);
-// 	m <<   2, 2, 3,
-//     		     4, 5, 6,
-//     			 7, 8, 9;
+//power iteration test
+TEST_CASE("PowerIteration") {
+	Eigen::MatrixXd m(3, 3);
+	m <<   2, 2, 3,
+    		     4, 5, 6,
+    			 7, 8, 9;
 
-// 	Eigen::VectorXd v = Eigen::VectorXd::Random(3);
+	Eigen::VectorXd v = Eigen::VectorXd::Random(3);
 
-// 	double ev = PowerIteration(m, v, 20, 0.01);
-// 	double threshold = 0.01;
+	double ev = PowerIteration(m, v, 20, 0.01);
+	double threshold = 0.01;
 
-// 	REQUIRE((ev) == doctest::Approx(16.234).epsilon(threshold));
-// 	REQUIRE(abs(v[0]) == doctest::Approx(0.245).epsilon(threshold));
-// 	REQUIRE(abs(v[1]) == doctest::Approx(0.523).epsilon(threshold));
-// 	REQUIRE(abs(v[2]) == doctest::Approx(0.816).epsilon(threshold));
-// }
+	REQUIRE((ev) == doctest::Approx(16.234).epsilon(threshold));
+	REQUIRE(abs(v[0]) == doctest::Approx(0.245).epsilon(threshold));
+	REQUIRE(abs(v[1]) == doctest::Approx(0.523).epsilon(threshold));
+	REQUIRE(abs(v[2]) == doctest::Approx(0.816).epsilon(threshold));
+}
 
 // // eigen decomposition test
-// TEST_CASE("NLargestEigenvalues") {
-// 	Eigen::MatrixXd m(4, 4);
-// 	m <<   4, 1, 9, 7, 
-// 		   1, 3, 5, 3,
-// 		   9, 5, 2, 3,
-// 		   7, 3, 3, 9;
+TEST_CASE("NLargestEigenvalues") {
+	Eigen::MatrixXd m(4, 4);
+	m <<   4, 1, 9, 7, 
+		   1, 3, 5, 3,
+		   9, 5, 2, 3,
+		   7, 3, 3, 9;
 
-// 	FUNCINFO("HELLO")
-// 	Eigen::MatrixXd vector_matrix = Eigen::MatrixXd::Zero(4, 3);
-// 	Eigen::VectorXd value_matrix = Eigen::VectorXd::Zero(3);
+	FUNCINFO("HELLO")
+	Eigen::MatrixXd vector_matrix = Eigen::MatrixXd::Zero(4, 3);
+	Eigen::VectorXd value_matrix = Eigen::VectorXd::Zero(3);
 
-// 	GetNLargestEigenvalues(m, vector_matrix, value_matrix, 3, 4, 50, 0.00001);
+	GetNLargestEigenvalues(m, vector_matrix, value_matrix, 3, 4, 50, 0.00001);
 
-// 	double threshold = 0.01;
+	double threshold = 0.01;
 
-// 	REQUIRE((value_matrix(0)) == doctest::Approx(19.47).epsilon(threshold));
-// 	REQUIRE((value_matrix(1)) == doctest::Approx(-7.62).epsilon(threshold));
-// 	REQUIRE((value_matrix(2)) == doctest::Approx(4.02).epsilon(threshold));
-// 	REQUIRE(abs(vector_matrix(0, 0)) == doctest::Approx(0.57).epsilon(threshold));
-// 	REQUIRE(abs(vector_matrix(0, 2)) == doctest::Approx(0.09).epsilon(threshold));
-// 	REQUIRE(abs(vector_matrix(1, 2)) == doctest::Approx(0.47).epsilon(threshold));
-// 	REQUIRE(abs(vector_matrix(2, 2)) == doctest::Approx(0.51).epsilon(threshold));
-// 	REQUIRE(abs(vector_matrix(3, 2)) == doctest::Approx(0.72).epsilon(threshold));
-// }
+	REQUIRE((value_matrix(0)) == doctest::Approx(19.47).epsilon(threshold));
+	REQUIRE((value_matrix(1)) == doctest::Approx(-7.62).epsilon(threshold));
+	REQUIRE((value_matrix(2)) == doctest::Approx(4.02).epsilon(threshold));
+	REQUIRE(abs(vector_matrix(0, 0)) == doctest::Approx(0.57).epsilon(threshold));
+	REQUIRE(abs(vector_matrix(0, 2)) == doctest::Approx(0.09).epsilon(threshold));
+	REQUIRE(abs(vector_matrix(1, 2)) == doctest::Approx(0.47).epsilon(threshold));
+	REQUIRE(abs(vector_matrix(2, 2)) == doctest::Approx(0.51).epsilon(threshold));
+	REQUIRE(abs(vector_matrix(3, 2)) == doctest::Approx(0.72).epsilon(threshold));
+}
 
 // eigen decomposition test
 TEST_CASE("NLargestEigenvalues_V2") {

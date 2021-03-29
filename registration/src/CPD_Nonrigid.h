@@ -75,11 +75,11 @@ Eigen::MatrixXd GetW(const Eigen::MatrixXd & yPoints,
             double sigmaSquared,
             double lambda);
 
-Eigen::MatrixXd LowRankGetW(const Eigen::MatrixXd & xPoints,
-            const Eigen::MatrixXd & yPoints,
+Eigen::MatrixXd LowRankGetW(const Eigen::MatrixXd & yPoints,
             const Eigen::VectorXd & gramValues,
             const Eigen::MatrixXd & gramVectors,
-            const Eigen::MatrixXd & postProb,
+            const Eigen::MatrixXd & postProbOne,
+            const Eigen::MatrixXd & postProbX,
             double sigmaSquared,
             double lambda);
 
