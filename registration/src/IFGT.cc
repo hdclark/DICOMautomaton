@@ -29,11 +29,14 @@
 
 IFGT::IFGT(const Eigen::MatrixXd & source_pts,
             double bandwidth, 
-            double epsilon) {
+            double epsilon) :
+            source_pts  (source_pts) ,
+            bandwidth   (bandwidth),
+            epsilon     (epsilon) {
 
-    this->bandwidth = bandwidth;
-    this->epsilon = epsilon;
-    this->source_pts = source_pts;
+    // this->bandwidth = bandwidth;
+    // this->epsilon = epsilon;
+    //this->source_pts = source_pts;
     dim = source_pts.cols();
 
     auto time1 = std::chrono::high_resolution_clock::now();
@@ -43,12 +46,10 @@ IFGT::IFGT(const Eigen::MatrixXd & source_pts,
     auto time2 = std::chrono::high_resolution_clock::now();
     auto time_span = std::chrono::duration_cast<std::chrono::duration<double>>(time2 - time1);
     std::cout << "ifgt_choose_parameters: " << time_span.count() << " s" << std::endl;
-    // clustering goes here
-    //Cluster cluster;
-
-    cluster = std::make_unique<Cluster>(k_center_clustering(source_pts, n_clusters));
 
     std::cout << "Number of clusters: " << n_clusters << std::endl;
+
+    this->cluster = std::make_unique<Cluster>(k_center_clustering(source_pts, n_clusters));
 
     auto time3 = std::chrono::high_resolution_clock::now();
     time_span = std::chrono::duration_cast<std::chrono::duration<double>>(time3 - time2);
@@ -72,11 +73,14 @@ void IFGT::ifgt_choose_parameters() {
 
     double h_square = bandwidth * bandwidth;
     double min_complexity = std::numeric_limits<double>::max(); 
-    int n_clusters = 0; 
-    int max_clusters = std::round(0.2 * std::sqrt(dim) * 100 / bandwidth); // an estimate of typical upper bound 
+    int n_clusters = 1; 
+    int max_clusters = std::round(0.2 * 100 * std::sqrt(dim) / bandwidth); // an estimate of typical upper bound 
+    if (max_clusters > source_pts.rows()) {
+        max_clusters = source_pts.rows() / 2; //  just a guess
+    }
     std::cout << "MAX clusters: " << max_clusters << std::endl;
     int p_ul = 200; // estimate                           // from papers authors
-    int max_truncation = 0;
+    int max_truncation = 1;
 
     double R = std::sqrt((double) dim);
     double radius = std::min(R, bandwidth * std::sqrt(std::log(1.0 / epsilon)));
@@ -143,7 +147,7 @@ void IFGT::ifgt_update_max_truncation(double rx_max) {
         // std::cout << "c: " << c << " // b: " << b  << " // temp: " << temp << " // rx_max: " << rx_max << std::endl;
         // std::cout << "p: " << p << " // error: " << error << "\n" << std::endl;
     }
-    max_truncation_p = p;
+    this->max_truncation_p = p;
 }
 
 // computes 2^alpha/alpha!
@@ -154,8 +158,10 @@ void IFGT::compute_constant_series() {
 
     for (int i = 0; i < dim; i++) {
         heads[i] = 0;
+        cinds[i] = 0;
     } 
     heads[dim] = std::numeric_limits<int>::max();
+    
 
     Eigen::MatrixXd constant_series = Eigen::MatrixXd::Ones(p_max_total,1);
 
@@ -209,14 +215,12 @@ Eigen::MatrixXd IFGT::compute_ck(const Eigen::ArrayXd & weights){
     double h_square = bandwidth * bandwidth;
 
     Eigen::MatrixXd C_k = Eigen::MatrixXd::Zero(n_clusters, p_max_total);
+    
     for (int i = 0; i < N_source_pts; ++i) {
-
         // auto start = std::chrono::high_resolution_clock::now();
-
         double distance = 0.0;
         Eigen::MatrixXd dx = Eigen::MatrixXd::Zero(dim,1);
         int cluster_index = cluster->assignments(i);
-
 
         // auto time1 = std::chrono::high_resolution_clock::now();
  
@@ -236,7 +240,6 @@ Eigen::MatrixXd IFGT::compute_ck(const Eigen::ArrayXd & weights){
         // auto time3 = std::chrono::high_resolution_clock::now();
         // time_span = std::chrono::duration_cast<std::chrono::duration<double>>(time3 - time2);
         // std::cout << "computing monomials " << time_span.count() << " s, " << "iteration: " << i << std::endl;
-
 
         double f = weights(i) * std::exp(-distance / h_square); // multiply by vector of weights if needed
                                                                 
@@ -272,11 +275,11 @@ Eigen::MatrixXd IFGT::compute_gaussian(const Eigen::MatrixXd & target_pts,
 
     double radius = bandwidth * std::sqrt(std::log(1 / epsilon));
 
-    Eigen::VectorXd m_ry_square(n_clusters);
+    Eigen::VectorXd ry_square(n_clusters);
 
     for (int j = 0; j < n_clusters; ++j) {
         double ry = radius + cluster->radii(j); 
-        m_ry_square(j) = ry * ry;
+        ry_square(j) = ry * ry;
     }
 
     for (int i = 0; i < M_target_pts; ++i) {
@@ -285,14 +288,14 @@ Eigen::MatrixXd IFGT::compute_gaussian(const Eigen::MatrixXd & target_pts,
             Eigen::MatrixXd dy = Eigen::MatrixXd::Zero(dim,1);
 
             for (int k = 0; k < dim; ++k) {
-                double delta = target_pts(i, k) - cluster->k_centers(j, k); // struct names tbd 
+                double delta = target_pts(i, k) - cluster->k_centers(j, k); 
                 distance += delta * delta;
-                if (distance > m_ry_square(j)) { // need to decide whereto get ry_square
+                if (distance > ry_square(j)) { 
                     break;
                 }
                 dy(k) = delta / bandwidth;
             }
-            if (distance <= m_ry_square(j)) {
+            if (distance <= ry_square(j)) {
                 auto monomials = compute_monomials(dy);
                 double g = std::exp(-distance / h_square);
                 G_y(i) += g * C_k.row(j).dot(monomials); // row vector * column vector = number
@@ -306,11 +309,10 @@ Eigen::MatrixXd IFGT::compute_gaussian(const Eigen::MatrixXd & target_pts,
 Eigen::MatrixXd IFGT::compute_naive(const Eigen::MatrixXd & target_pts, const Eigen::ArrayXd & weights) {
     Eigen::MatrixXd G_naive = Eigen::MatrixXd::Zero(target_pts.rows(),1);
     double h2 = bandwidth * bandwidth;
-
     for (int m = 0; m < target_pts.rows(); ++m) {
         for (int n = 0; n < source_pts.rows(); ++n) {
             double expArg = - 1.0 / h2 * (target_pts.row(m) - source_pts.row(n)).squaredNorm();
-            G_naive(m) += weights(m) * std::exp(expArg);
+            G_naive(m) += weights(n) * std::exp(expArg);
         }
     }
     return G_naive;
@@ -318,17 +320,18 @@ Eigen::MatrixXd IFGT::compute_naive(const Eigen::MatrixXd & target_pts, const Ei
 
 // ttwo different computes for weights and no weights 
 Eigen::MatrixXd IFGT::compute_ifgt(const Eigen::MatrixXd & target_pts) {
-    Eigen::ArrayXd ones_array = Eigen::ArrayXd::Ones(target_pts.rows(),1);
+    Eigen::ArrayXd ones_array = Eigen::ArrayXd::Ones(source_pts.rows(),1);
 
     double ifgt_complexity = compute_complexity(target_pts.rows());
     double naive_complexity = dim * target_pts.rows() * source_pts.rows();
 
     std::cout << "ifgt complexity: " << ifgt_complexity << " // naive_complexity: " << naive_complexity << std::endl;
-    Eigen::MatrixXd G_y;
+    Eigen::MatrixXd G_y = Eigen::MatrixXd::Zero(target_pts.rows(),1);
 
     auto time1 = std::chrono::high_resolution_clock::now();
 
     if (ifgt_complexity < naive_complexity) {
+        std::cout << "Running IFGT" << std::endl;
         Eigen::MatrixXd C_k = compute_ck(ones_array);
         auto time2 = std::chrono::high_resolution_clock::now();
         auto time_span = std::chrono::duration_cast<std::chrono::duration<double>>(time2 - time1);
@@ -340,6 +343,7 @@ Eigen::MatrixXd IFGT::compute_ifgt(const Eigen::MatrixXd & target_pts) {
         std::cout << "compute_gaussian: " << time_span.count() << " s" << std::endl;
     } 
     else {
+        std::cout << "Running Naive" << std::endl;
         G_y = compute_naive(target_pts, ones_array);
         auto time4 = std::chrono::high_resolution_clock::now();
         auto time_span = std::chrono::duration_cast<std::chrono::duration<double>>(time4 - time1);
@@ -352,15 +356,19 @@ Eigen::MatrixXd IFGT::compute_ifgt(const Eigen::MatrixXd & target_pts, const Eig
     double ifgt_complexity = compute_complexity(target_pts.rows());
     double naive_complexity = dim * target_pts.rows() * source_pts.rows();
 
-    Eigen::MatrixXd G_y;
+    Eigen::MatrixXd G_y = Eigen::MatrixXd::Zero(target_pts.rows(),1);
+    std::cout << "ifgt complexity: " << ifgt_complexity << " // naive_complexity: " << naive_complexity << std::endl;
 
-    if (ifgt_complexity < naive_complexity) {
+
+    // if (ifgt_complexity < naive_complexity) {
+        std::cout << "Running IFGT (weighted)" << std::endl;
         Eigen::MatrixXd C_k = compute_ck(weights);
         G_y = compute_gaussian(target_pts, C_k);
-    } 
-    else {
-        G_y = compute_naive(target_pts, weights);
-    }
+    // } 
+    // else {
+    //     std::cout << "Running naive (weighted)" << std::endl;
+    //     G_y = compute_naive(target_pts, weights);
+    // }
     return G_y;
 }
 double IFGT::compute_complexity(int M_target_pts) {

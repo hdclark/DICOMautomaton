@@ -81,11 +81,11 @@ class IFGT {
         int dim;
         int max_truncation_p; // max truncation number (p)
         int p_max_total; // length of monomials after multi index expansion
-        double bandwidth; 
-        double epsilon;
+        const double bandwidth; 
+        const double epsilon;
         int n_clusters;
         double cutoff_radius;
-        Eigen::MatrixXd source_pts;
+        const Eigen::MatrixXd source_pts;
         Eigen::MatrixXd constant_series;
         std::unique_ptr<Cluster> cluster; 
 
