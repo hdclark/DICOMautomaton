@@ -641,19 +641,22 @@ TEST_CASE("LowRankGetW") {
 	LowRankGetW(xPoints, yPoints, gramValues, gramVectors, postProb, 2, 3);
 }
 
-/* 
+ /*
 TEST_CASE("IFGT Test") {
-	int N_points = 1000;
+	int N_source_points = 1000000;
+	int M_target_pts = 1000000;
 	int dim = 3;
-	double sigmaSquared = 20; // random
+	double sigmaSquared = 2000; // random
 	double bandwidth = std::sqrt(2.0 * sigmaSquared);
-	double epsilon = 0.000001;
+	double epsilon = 1E-3;
 
 	// xPoints = fixed points = source points 
 	// yPoints = moving points = target points
-	std::cout << "working here " << std::endl;
-	Eigen::MatrixXd yPoints = 3*Eigen::MatrixXd::Random(N_points, dim);
-	Eigen::MatrixXd xPoints = 7*(Eigen::MatrixXd::Random(N_points, dim).array() - 5.3).matrix();
+	std::cout << "epsilon: " << epsilon << std::endl;
+	Eigen::MatrixXd yPoints = 100*Eigen::MatrixXd::Random(M_target_pts, dim);
+	Eigen::MatrixXd xPoints = 76.4*(Eigen::MatrixXd::Random(N_source_points, dim).array()-0.85).matrix();
+
+	Eigen::ArrayXd weights = 0.8*(Eigen::ArrayXd::Random(N_source_points,1)+1.0);
 
 	auto start = std::chrono::high_resolution_clock::now();
 
@@ -669,38 +672,111 @@ TEST_CASE("IFGT Test") {
 	// START TRANSFORM
 	auto scaling_end = std::chrono::high_resolution_clock::now();
 	auto time_span = std::chrono::duration_cast<std::chrono::duration<double>>(scaling_end - start);
-    std::cout << "Scaling took time: " << time_span.count() << std::endl;
+    std::cout << "Scaling took time: " << time_span.count() << " s" << std::endl;
 
 
 	auto ifgt_transform = std::make_unique<IFGT>(xPoints_scaled, bandwidth_scaled, epsilon);
-	Eigen::MatrixXd G_y = ifgt_transform->compute_ifgt(yPoints_scaled);
+	Eigen::MatrixXd G_y = ifgt_transform->compute_ifgt(yPoints_scaled, weights);
 
 	auto stop = std::chrono::high_resolution_clock::now();
 	time_span = std::chrono::duration_cast<std::chrono::duration<double>>(stop - scaling_end);
-    std::cout << "IFGT Excecution took time: " << time_span.count() << std::endl;
+    std::cout << "IFGT Excecution took time: " << time_span.count() << " s" << std::endl;
 
-	Eigen::MatrixXd G_naive(N_points,1);
+	// Eigen::MatrixXd G_naive = Eigen::MatrixXd::Zero(yPoints.rows(),1);
 
-	start = std::chrono::high_resolution_clock::now();
-    for (int m = 0; m < N_points; ++m) {
-        for (int n = 0; n < N_points; ++n) {
+	// start = std::chrono::high_resolution_clock::now();
+    // for (int m = 0; m < M_target_pts; ++m) {
+    //     for (int n = 0; n < N_source_points; ++n) {
+    //         double expArg = - 1.0 / (2.0 * sigmaSquared) * (yPoints.row(m) - xPoints.row(n)).squaredNorm();
+    //         G_naive(m) += weights(n) * std::exp(expArg);
+    //     }
+
+    // }
+
+	// stop = std::chrono::high_resolution_clock::now();
+	// time_span = std::chrono::duration_cast<std::chrono::duration<double>>(stop - start);
+    // std::cout << "Naive Excecution took time: " << time_span.count() << " s" << std::endl;
+	// //double threshold = 0.1;
+	// for(int i = 0; i < M_target_pts; ++i) {
+	// 	//REQUIRE(G_y(i) == doctest::Approx(G_naive(i)).epsilon(threshold));
+	// 	if (i % 40 == 0)
+	// 		std::cout << "IFGT: " << G_y(i) << " // Naive: " << G_naive(i) << " // % error: " 
+	// 	 	<< std::abs(G_y(i) - G_naive(i))/G_naive(i)*100 << " %" << std::endl;
+	// }
+	
+}  */ /*
+TEST_CASE("IFGT Test 2") {
+	int N_source_points = 1000;
+	int M_target_pts = 1000;
+	int dim = 3;
+	double sigmaSquared = 1; // random
+	double bandwidth = std::sqrt(2.0 * sigmaSquared);
+	// double epsilon = 1E-4;
+
+	// xPoints = fixed points = source points 
+	// yPoints = moving points = target points
+	Eigen::MatrixXd yPoints = 5.4*(Eigen::MatrixXd::Random(M_target_pts, dim).array()+0.45).matrix();
+	Eigen::MatrixXd xPoints = 2.4*(Eigen::MatrixXd::Random(N_source_points, dim).array()-0.85).matrix();
+
+	Eigen::ArrayXd weights = 0.8*(Eigen::ArrayXd::Random(N_source_points,1)+1.0);
+
+	// run naive
+	auto naive_start = std::chrono::high_resolution_clock::now();
+
+	Eigen::MatrixXd G_naive = Eigen::MatrixXd::Zero(yPoints.rows(),1);
+    for (int m = 0; m < M_target_pts; ++m) {
+        for (int n = 0; n < N_source_points; ++n) {
             double expArg = - 1.0 / (2.0 * sigmaSquared) * (yPoints.row(m) - xPoints.row(n)).squaredNorm();
-            G_naive(m) += std::exp(expArg);
+            G_naive(m) += weights(n) * std::exp(expArg);
         }
     }
 
-	stop = std::chrono::high_resolution_clock::now();
-	time_span = std::chrono::duration_cast<std::chrono::duration<double>>(stop - start);
-    std::cout << "Naive Excecution took time: " << time_span.count() << std::endl;
-	//double threshold = 0.1;
-	for(int i = 0; i < N_points; ++i) {
-		//REQUIRE(G_y(i) == doctest::Approx(G_naive(i)).epsilon(threshold));
-		if (i % 100 == 0)
-			std::cout << "IFGT: " << G_y(i) << " // Naive: " << G_naive(i) << " // % error: " 
-		 	<< std::abs(G_y(i) - G_naive(i))/G_naive(i)*100 << " %" << std::endl;
+	auto naive_stop = std::chrono::high_resolution_clock::now();
+	auto time_span = std::chrono::duration_cast<std::chrono::duration<double>>(naive_stop - naive_start);
+    std::cout << "Naive Excecution took time: " << time_span.count() << " s" << std::endl;
+
+	Eigen::MatrixXd xPoints_scaled;
+   	Eigen::MatrixXd yPoints_scaled;
+    double bandwidth_scaled = rescale_points(xPoints, yPoints, xPoints_scaled, 
+                                       		yPoints_scaled, bandwidth);
+
+	std::cout << "bandwidth: " << bandwidth << std::endl;
+	std::cout << "bandwidth scaled: " << bandwidth_scaled << std::endl;
+
+	// START TRANSFORM
+	auto scaling_end = std::chrono::high_resolution_clock::now();
+	time_span = std::chrono::duration_cast<std::chrono::duration<double>>(scaling_end - naive_stop);
+    std::cout << "Scaling took time: " << time_span.count() << " s" << std::endl;
+
+	for (int i = -1; i > -10; i--) {
+		double epsilon = std::pow(10,i);
+		std::cout << "epsilon: " << epsilon << std::endl;
+		auto ifgt_start = std::chrono::high_resolution_clock::now();
+
+		auto ifgt_transform = std::make_unique<IFGT>(xPoints_scaled, bandwidth_scaled, epsilon);
+		Eigen::MatrixXd G_y = ifgt_transform->compute_ifgt(yPoints_scaled, weights);
+
+		auto ifgt_stop = std::chrono::high_resolution_clock::now();
+		time_span = std::chrono::duration_cast<std::chrono::duration<double>>(ifgt_stop - ifgt_start);
+		std::cout << "IFGT Excecution took time: " << time_span.count() << " s" << std::endl;
+
+		double percent_error = ((G_y.array() - G_naive.array()).cwiseAbs() / G_naive.array()).mean() * 100.0; 
+
+		double absolute_error = ((G_y.array() - G_naive.array()).cwiseAbs()).sum() / M_target_pts; 
+
+		std::cout <<  "epsilon: " << epsilon << " // Average percent error: " << percent_error << 
+						"% // Average absolute error: " << absolute_error << " \n" << std::endl;
+		// for(int j = 0; j < M_target_pts; ++j) {
+		// 	if (j % 50 == 0)
+		// 		std::cout << "IFGT: " << G_y(j) << " // Naive: " << G_naive(j) << " // % error: " 
+		// 		<< std::abs(G_y(j) - G_naive(j))/G_naive(j)*100 << " %" << std::endl;
+		// }
 	}
 
-} *//*
+	
+} 
+*/
+/*
 TEST_CASE("rescale points") {
 	Eigen::MatrixXd xPoints_scaled;
 	Eigen::MatrixXd yPoints_scaled;

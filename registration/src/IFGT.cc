@@ -25,8 +25,6 @@
 
 */
 
-// TODO: INTEGRATE WITH TESTING
-
 IFGT::IFGT(const Eigen::MatrixXd & source_pts,
             double bandwidth, 
             double epsilon) :
