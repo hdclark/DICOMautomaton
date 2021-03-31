@@ -158,8 +158,9 @@ void IFGT::compute_constant_series() {
 
     for (int i = 0; i < dim; i++) {
         heads[i] = 0;
-        cinds[i] = 0;
+        
     } 
+    cinds[0] = 0; 
     heads[dim] = std::numeric_limits<int>::max();
     
 
