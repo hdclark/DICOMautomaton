@@ -30,42 +30,40 @@
 IFGT::IFGT(const Eigen::MatrixXd & source_pts,
             double bandwidth, 
             double epsilon) :
-            source_pts  (source_pts) ,
+            source_pts  (source_pts),
             bandwidth   (bandwidth),
-            epsilon     (epsilon) {
+            epsilon     (epsilon), 
+            dim         (source_pts.cols()){
 
-    // this->bandwidth = bandwidth;
-    // this->epsilon = epsilon;
-    //this->source_pts = source_pts;
-    dim = source_pts.cols();
+    // dim = source_pts.cols();
 
-    auto time1 = std::chrono::high_resolution_clock::now();
+    // auto time1 = std::chrono::high_resolution_clock::now();
 
     ifgt_choose_parameters();
 
-    auto time2 = std::chrono::high_resolution_clock::now();
-    auto time_span = std::chrono::duration_cast<std::chrono::duration<double>>(time2 - time1);
-    std::cout << "ifgt_choose_parameters: " << time_span.count() << " s" << std::endl;
+    // auto time2 = std::chrono::high_resolution_clock::now();
+    // auto time_span = std::chrono::duration_cast<std::chrono::duration<double>>(time2 - time1);
+    // std::cout << "ifgt_choose_parameters: " << time_span.count() << " s" << std::endl;
 
-    std::cout << "Number of clusters: " << n_clusters << std::endl;
+    // std::cout << "Number of clusters: " << n_clusters << std::endl;
 
     this->cluster = std::make_unique<Cluster>(k_center_clustering(source_pts, n_clusters));
 
-    auto time3 = std::chrono::high_resolution_clock::now();
-    time_span = std::chrono::duration_cast<std::chrono::duration<double>>(time3 - time2);
-    std::cout << "clustering time: " << time_span.count() << " s" << std::endl;
+    // auto time3 = std::chrono::high_resolution_clock::now();
+    // time_span = std::chrono::duration_cast<std::chrono::duration<double>>(time3 - time2);
+    // std::cout << "clustering time: " << time_span.count() << " s" << std::endl;
 
     cutoff_radius = cluster->rx_max;
     ifgt_update_max_truncation(cutoff_radius); // update max truncation
     p_max_total = nchoosek(max_truncation_p-1+dim,dim); 
     compute_constant_series();
 
-    std::cout << "max_truncation_p: " << max_truncation_p << std::endl;
-    std::cout << "p_max_total: " << p_max_total << std::endl;
+    // std::cout << "max_truncation_p: " << max_truncation_p << std::endl;
+    // std::cout << "p_max_total: " << p_max_total << std::endl;
 
-    auto time4 = std::chrono::high_resolution_clock::now();
-    time_span = std::chrono::duration_cast<std::chrono::duration<double>>(time4 - time3);
-    std::cout << "compute_constant_series: " << time_span.count() << " s" << std::endl;
+    // auto time4 = std::chrono::high_resolution_clock::now();
+    // time_span = std::chrono::duration_cast<std::chrono::duration<double>>(time4 - time3);
+    // std::cout << "compute_constant_series: " << time_span.count() << " s" << std::endl;   
 }
 
 // autotuning of ifgt parameters
@@ -78,7 +76,7 @@ void IFGT::ifgt_choose_parameters() {
     if (max_clusters > source_pts.rows()) {
         max_clusters = source_pts.rows() / 2; //  just a guess
     }
-    std::cout << "MAX clusters: " << max_clusters << std::endl;
+    // std::cout << "MAX clusters: " << max_clusters << std::endl;
     int p_ul = 200; // estimate                           // from papers authors
     int max_truncation = 1;
 
@@ -116,7 +114,7 @@ void IFGT::ifgt_choose_parameters() {
 			max_truncation = p;		
 		}
 	}
-    std::cout << " max_truncation initial: " << max_truncation << std::endl;
+    // std::cout << " max_truncation initial: " << max_truncation << std::endl;
     this->n_clusters = n_clusters; // class variables
     this->max_truncation_p = max_truncation; 
     this->cutoff_radius = radius;
@@ -133,7 +131,7 @@ void IFGT::ifgt_update_max_truncation(double rx_max) {
     double radius = std::min(R, bandwidth * sqrt(log(1.0 / epsilon)));
     double error = std::numeric_limits<double>::max();
 
-    std::cout << "r: " << radius << " // h_square: " << h_square << std::endl;
+    // std::cout << "r: " << radius << " // h_square: " << h_square << std::endl;
     int p = 0;
     double temp = 1.0;
     while ((error > epsilon) && (p <= truncation_number_ul)) {
@@ -326,29 +324,29 @@ Eigen::MatrixXd IFGT::compute_ifgt(const Eigen::MatrixXd & target_pts) {
     double ifgt_complexity = compute_complexity(target_pts.rows());
     double naive_complexity = dim * target_pts.rows() * source_pts.rows();
 
-    std::cout << "ifgt complexity: " << ifgt_complexity << " // naive_complexity: " << naive_complexity << std::endl;
+    // std::cout << "ifgt complexity: " << ifgt_complexity << " // naive_complexity: " << naive_complexity << std::endl;
     Eigen::MatrixXd G_y = Eigen::MatrixXd::Zero(target_pts.rows(),1);
 
-    auto time1 = std::chrono::high_resolution_clock::now();
+    // auto time1 = std::chrono::high_resolution_clock::now();
 
     if (ifgt_complexity < naive_complexity) {
-        std::cout << "Running IFGT" << std::endl;
+        // std::cout << "Running IFGT" << std::endl;
         Eigen::MatrixXd C_k = compute_ck(ones_array);
-        auto time2 = std::chrono::high_resolution_clock::now();
-        auto time_span = std::chrono::duration_cast<std::chrono::duration<double>>(time2 - time1);
-        std::cout << "compute_ck: " << time_span.count() << " s" << std::endl;
+        // auto time2 = std::chrono::high_resolution_clock::now();
+        // auto time_span = std::chrono::duration_cast<std::chrono::duration<double>>(time2 - time1);
+        // std::cout << "compute_ck: " << time_span.count() << " s" << std::endl;
 
         G_y = compute_gaussian(target_pts, C_k);
-        auto time3 = std::chrono::high_resolution_clock::now();
-        time_span = std::chrono::duration_cast<std::chrono::duration<double>>(time3 - time2);
-        std::cout << "compute_gaussian: " << time_span.count() << " s" << std::endl;
+        // auto time3 = std::chrono::high_resolution_clock::now();
+        // time_span = std::chrono::duration_cast<std::chrono::duration<double>>(time3 - time2);
+        // std::cout << "compute_gaussian: " << time_span.count() << " s" << std::endl;
     } 
     else {
-        std::cout << "Running Naive" << std::endl;
+        // std::cout << "Running Naive" << std::endl;
         G_y = compute_naive(target_pts, ones_array);
-        auto time4 = std::chrono::high_resolution_clock::now();
-        auto time_span = std::chrono::duration_cast<std::chrono::duration<double>>(time4 - time1);
-        std::cout << "naive computation: " << time_span.count() << " s" << std::endl;
+        // auto time4 = std::chrono::high_resolution_clock::now();
+        // auto time_span = std::chrono::duration_cast<std::chrono::duration<double>>(time4 - time1);
+        // std::cout << "naive computation: " << time_span.count() << " s" << std::endl;
     }
 
     return G_y;
@@ -358,18 +356,19 @@ Eigen::MatrixXd IFGT::compute_ifgt(const Eigen::MatrixXd & target_pts, const Eig
     double naive_complexity = dim * target_pts.rows() * source_pts.rows();
 
     Eigen::MatrixXd G_y = Eigen::MatrixXd::Zero(target_pts.rows(),1);
-    std::cout << "ifgt complexity: " << ifgt_complexity << " // naive_complexity: " << naive_complexity << std::endl;
+    // std::cout << "ifgt complexity: " << ifgt_complexity << " // naive_complexity: " << naive_complexity << std::endl;
 
-
-    // if (ifgt_complexity < naive_complexity) {
-        std::cout << "Running IFGT (weighted)" << std::endl;
+    // estimates ifgt complexity very conservatively --> can change it to a 
+    // certain proportion of the complexity to run the ifgt more often
+    if (ifgt_complexity < naive_complexity) {
+        //std::cout << "Running IFGT (weighted)" << std::endl;
         Eigen::MatrixXd C_k = compute_ck(weights);
         G_y = compute_gaussian(target_pts, C_k);
-    // } 
-    // else {
-    //     std::cout << "Running naive (weighted)" << std::endl;
-    //     G_y = compute_naive(target_pts, weights);
-    // }
+    } 
+    else {
+        //std::cout << "Running naive (weighted)" << std::endl;
+        G_y = compute_naive(target_pts, weights);
+    }
     return G_y;
 }
 double IFGT::compute_complexity(int M_target_pts) {
@@ -427,8 +426,8 @@ CPD_MatrixVector_Products compute_cpd_products(const Eigen::MatrixXd & fixed_pts
                                         moving_pts_scaled, bandwidth);
 
     auto ifgt_transform = std::make_unique<IFGT>(moving_pts_scaled, bandwidth_scaled, epsilon); // in this case, moving_pts = source_pts
-                                                                                  // because we take the transpose of K(M x N)                                                 
-    Kt1 = ifgt_transform->compute_ifgt(fixed_pts_scaled);                // so we'll get an N x 1 vector for Kt1       
+                                                                                                // because we take the transpose of K(M x N)                                                 
+    Kt1 = ifgt_transform->compute_ifgt(fixed_pts_scaled);                                       // so we'll get an N x 1 vector for Kt1       
 
     double c = w / (1.0 - w) * (double) M_moving_pts / N_fixed_pts * 
                                 std::pow(2.0 * M_PI * sigmaSquared, 0.5 * dim);

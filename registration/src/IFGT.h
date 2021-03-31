@@ -78,14 +78,14 @@ class IFGT {
         int get_nclusters() const { return n_clusters; }
 
     private: 
-        int dim;
-        int max_truncation_p; // max truncation number (p)
-        int p_max_total; // length of monomials after multi index expansion
+        const Eigen::MatrixXd source_pts;
         const double bandwidth; 
         const double epsilon;
+        const int dim;
+        int max_truncation_p; // max truncation number (p)
+        int p_max_total; // length of monomials after multi index expansion
         int n_clusters;
         double cutoff_radius;
-        const Eigen::MatrixXd source_pts;
         Eigen::MatrixXd constant_series;
         std::unique_ptr<Cluster> cluster; 
 
