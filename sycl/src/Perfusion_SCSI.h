@@ -16,7 +16,7 @@
 
 #include "YgorMath.h" //Needed for samples_1D.
 
-void Launch_SCDI(samples_1D<double> &, samples_1D<double> &, std::vector<samples_1D<double>> &);
+void Launch_SCSI(samples_1D<double> &, std::vector<samples_1D<double>> &);
 
 /* For Benchmarking Purposes */
 typedef unsigned long long timestamp_t;
