@@ -188,7 +188,7 @@ int main(int argc, char* argv[]){
       "Use fast gauss tranform for Nonrigid CPD, will have no effect for other algorithms.(Optional, default False)",
       [&](const std::string &optarg) -> void {
         if (!optarg.empty()) {
-          params.use_fgt =  optarg.compare("True");
+          params.use_fgt =  !optarg.compare("True");
         }
         return;
       })
