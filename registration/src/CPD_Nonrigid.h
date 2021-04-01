@@ -20,6 +20,7 @@
 #include <eigen3/Eigen/Dense> //Needed for Eigen library dense matrices.
 
 #include "CPD_Shared.h"
+#include "IFGT.h"
 
 #include <math.h>
 

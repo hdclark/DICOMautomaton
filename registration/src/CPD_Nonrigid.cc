@@ -376,7 +376,7 @@ AlignViaNonRigidCPD(CPDParams & params,
         FUNCINFO("Excecution took time: " << time_span.count())
     }
 
-    Eigen::MatrixXd P, postProbOne, postProbTransOne, postProbX;
+    Eigen::MatrixXd postProbOne, postProbTransOne, postProbX;
     Eigen::MatrixXd T;
 
     Eigen::MatrixXd oneVecRow = Eigen::MatrixXd::Ones(Y.rows(), 1);
@@ -385,11 +385,19 @@ AlignViaNonRigidCPD(CPDParams & params,
     for (int i = 0; i < params.iterations; i++) {
         FUNCINFO("Iteration: " << i)
         high_resolution_clock::time_point start = high_resolution_clock::now();
-        P = E_Step_NR(X, Y, transform.G, transform.W, sigma_squared, params.distribution_weight);
         
         if(params.use_fgt) {
-            //ADD FGT STUFF HERE
+            // X = fixed points = source points 
+	        // Y = moving points = target points
+            double epsilon = 1E-3; // smaller epsilon = smaller error (epsilon > 0)
+            double bandwidth = std::sqrt(2.0 * sigma_squared);
+            auto ifgt_gauss_transform = compute_cpd_products(X, Y, bandwidth, epsilon, params.distribution_weight);
+            postProbX = ifgt_gauss_transform.PX;
+            postProbTransOne = ifgt_gauss_transform.Pt1;
+            postProbOne = ifgt_gauss_transform.P1;
+
         } else {
+            auto P = E_Step_NR(X, Y, transform.G, transform.W, sigma_squared, params.distribution_weight);
             postProbX = P * X;
 	        postProbTransOne = P.transpose() * oneVecRow;
 	        postProbOne = P * oneVecCol;
