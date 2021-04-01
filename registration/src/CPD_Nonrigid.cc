@@ -385,6 +385,8 @@ AlignViaNonRigidCPD(CPDParams & params,
     for (int i = 0; i < params.iterations; i++) {
         FUNCINFO("Iteration: " << i)
         high_resolution_clock::time_point start = high_resolution_clock::now();
+        // eventually put this inside the else statement after changing the objective function
+        auto P = E_Step_NR(X, Y, transform.G, transform.W, sigma_squared, params.distribution_weight);
         
         if(params.use_fgt) {
             // X = fixed points = source points 
@@ -397,7 +399,6 @@ AlignViaNonRigidCPD(CPDParams & params,
             postProbOne = ifgt_gauss_transform.P1;
 
         } else {
-            auto P = E_Step_NR(X, Y, transform.G, transform.W, sigma_squared, params.distribution_weight);
             postProbX = P * X;
 	        postProbTransOne = P.transpose() * oneVecRow;
 	        postProbOne = P * oneVecCol;
