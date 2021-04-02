@@ -113,4 +113,23 @@ double PowerIteration(const Eigen::MatrixXd & m,
             int num_iter,
             double tolerance);
 
+// matrix vector products P1, Pt1, PX
+struct CPD_MatrixVector_Products {
+    Eigen::MatrixXd P1; 
+    Eigen::MatrixXd Pt1; 
+    Eigen::MatrixXd PX; 
+    double L;
+};
+
+CPD_MatrixVector_Products compute_cpd_products_ifgt(const Eigen::MatrixXd & source_pts,
+                                                    const Eigen::MatrixXd & target_pts,
+                                                    double bandwidth, 
+                                                    double epsilon,
+                                                    double w);
+
+CPD_MatrixVector_Products compute_cpd_products_naive(const Eigen::MatrixXd & fixed_pts,
+                                                    const Eigen::MatrixXd & moving_pts,
+                                                    double sigmaSquared, 
+                                                    double w);
+
 #endif

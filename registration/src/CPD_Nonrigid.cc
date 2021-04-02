@@ -316,6 +316,80 @@ double PowerIteration(const Eigen::MatrixXd & m,
     return ev;
 }
 
+// Y = target_pts = fixed_pts
+// X = source_pts = moving_pts (in general)
+// epsilon is error, w is a parameter from cpd
+CPD_MatrixVector_Products ComputeCPDProductsIfgt(const Eigen::MatrixXd & fixed_pts,
+                                                    const Eigen::MatrixXd & moving_pts,
+                                                    double sigmaSquared, 
+                                                    double epsilon,
+                                                    double w) {
+    
+    int N_fixed_pts = fixed_pts.rows();
+    int M_moving_pts = moving_pts.rows();
+    int dim = fixed_pts.cols();
+    double bandwidth = std::sqrt(2.0 * sigmaSquared);
+
+    double c = w / (1.0 - w) * (double) M_moving_pts / N_fixed_pts * 
+                            std::pow(2.0 * M_PI * sigmaSquared, 0.5 * dim); // const in denom of P matrix
+    
+    Eigen::MatrixXd fixed_pts_scaled;
+    Eigen::MatrixXd moving_pts_scaled;
+
+    double bandwidth_scaled = rescale_points(fixed_pts, moving_pts, fixed_pts_scaled, 
+                                moving_pts_scaled, bandwidth);
+    
+    auto ifgt_transform = std::make_unique<IFGT>(moving_pts_scaled, bandwidth_scaled, epsilon); // in this case, moving_pts = source_pts
+                                                                                                // because we take the transpose of K(M x N)                                                 
+    auto Kt1 = ifgt_transform->compute_ifgt(fixed_pts_scaled);                                       // so we'll get an N x 1 vector for Kt1 
+
+    auto denom_a = Kt1.array() + c; 
+    auto Pt1 = (1 - c / denom_a).matrix(); // Pt1 = 1-c*a
+
+    ifgt_transform = std::make_unique<IFGT>(fixed_pts_scaled, bandwidth_scaled, epsilon); 
+    auto P1 = ifgt_transform->compute_ifgt(moving_pts_scaled, 1 / denom_a); // P1 = Ka 
+
+    Eigen::MatrixXd PX(M_moving_pts, dim);
+    for (int i = 0; i < dim; ++i) {
+        PX.col(i) = ifgt_transform->compute_ifgt(moving_pts_scaled, fixed_pts.col(i).array() / denom_a); // PX = K(a.*X)
+    }
+    // objective function estimate
+    double L = -log(denom_a).sum() + dim * N_fixed_pts * std::log(sigmaSquared) / 2.0;
+
+    return { P1, Pt1, PX, L};
+}
+
+CPD_MatrixVector_Products ComputeCPDProductsNaive(const Eigen::MatrixXd & fixed_pts,
+                                                    const Eigen::MatrixXd & moving_pts,
+                                                    double sigmaSquared, 
+                                                    double w) {
+    
+    int N_fixed_pts = fixed_pts.rows();
+    int M_moving_pts = moving_pts.rows();
+    int dim = fixed_pts.cols();
+    double bandwidth = std::sqrt(2.0 * sigmaSquared);
+
+    double c = w / (1.0 - w) * (double) M_moving_pts / N_fixed_pts * 
+                            std::pow(2.0 * M_PI * sigmaSquared, 0.5 * dim); // const in denom of P matrix
+
+    Eigen::MatrixXd N_ones = Eigen::ArrayXd::Ones(N_fixed_pts, 1);
+    auto Kt1 = compute_naive_gt(fixed_pts, moving_pts, N_ones, bandwidth);
+
+    auto denom_a = Kt1.array() + c; 
+    auto Pt1 = (1 - c / denom_a).matrix(); // Pt1 = 1-c*a
+
+    auto P1 = compute_naive_gt(moving_pts, fixed_pts, 1.0 / denom_a, bandwidth);
+
+    Eigen::MatrixXd PX(M_moving_pts, dim);
+    for (int i = 0; i < dim; ++i) {
+        PX.col(i) = compute_naive_gt(moving_pts, fixed_pts, fixed_pts.col(i).array() / denom_a); // PX = K(a.*X)
+    }
+
+    double L = -log(denom_a).sum() + dim * N_fixed_pts * std::log(sigmaSquared) / 2.0;
+
+    return { P1, Pt1, PX, L};
+}
+
 NonRigidCPDTransform
 AlignViaNonRigidCPD(CPDParams & params,
             const point_set<double> & moving,
@@ -382,25 +456,31 @@ AlignViaNonRigidCPD(CPDParams & params,
     Eigen::MatrixXd oneVecRow = Eigen::MatrixXd::Ones(Y.rows(), 1);
     Eigen::MatrixXd oneVecCol = Eigen::MatrixXd::Ones(X.rows(),1);
 
+    double L = 1.0; 
+
     for (int i = 0; i < params.iterations; i++) {
         FUNCINFO("Iteration: " << i)
         high_resolution_clock::time_point start = high_resolution_clock::now();
         
+        // eventually put this inside the else statement after changing the objective function
+        //auto P = E_Step_NR(X, Y, transform.G, transform.W, sigma_squared, params.distribution_weight);
+        double L_old = L;
+
         if(params.use_fgt) {
             // X = fixed points = source points 
 	        // Y = moving points = target points
             double epsilon = 1E-3; // smaller epsilon = smaller error (epsilon > 0)
-            double bandwidth = std::sqrt(2.0 * sigma_squared);
-            auto ifgt_gauss_transform = compute_cpd_products(X, Y, bandwidth, epsilon, params.distribution_weight);
-            postProbX = ifgt_gauss_transform.PX;
-            postProbTransOne = ifgt_gauss_transform.Pt1;
-            postProbOne = ifgt_gauss_transform.P1;
-
+            auto cpd_products = ComputeCPDProductsIfgt(X, Y, sigma_squared, epsilon, params.distribution_weight);
+            postProbX = cpd_products.PX;
+            postProbTransOne = cpd_products.Pt1;
+            postProbOne = cpd_products.P1;
+            L = L + cpd_products.L + params.lambda / 2.0 * (transform.W.transpose() * transform.G * transform.W).trace();
         } else {
-            auto P = E_Step_NR(X, Y, transform.G, transform.W, sigma_squared, params.distribution_weight);
-            postProbX = P * X;
-	        postProbTransOne = P.transpose() * oneVecRow;
-	        postProbOne = P * oneVecCol;
+            auto cpd_products = ComputeCPDProductsNaive(X, Y, sigma_squared, params.distribution_weight);
+            postProbX = cpd_products.PX;
+            postProbTransOne = cpd_products.Pt1;
+            postProbOne = cpd_products.P1;
+            L = L + cpd_products.L + params.lambda / 2.0 * (transform.W.transpose() * transform.G * transform.W).trace();
         }
 
         if(params.use_low_rank) {

@@ -303,17 +303,17 @@ Eigen::MatrixXd IFGT::compute_gaussian(const Eigen::MatrixXd & target_pts,
     return G_y;
 
 }
-Eigen::MatrixXd IFGT::compute_naive(const Eigen::MatrixXd & target_pts, const Eigen::ArrayXd & weights) {
-    Eigen::MatrixXd G_naive = Eigen::MatrixXd::Zero(target_pts.rows(),1);
-    double h2 = bandwidth * bandwidth;
-    for (int m = 0; m < target_pts.rows(); ++m) {
-        for (int n = 0; n < source_pts.rows(); ++n) {
-            double expArg = - 1.0 / h2 * (target_pts.row(m) - source_pts.row(n)).squaredNorm();
-            G_naive(m) += weights(n) * std::exp(expArg);
-        }
-    }
-    return G_naive;
-}
+// Eigen::MatrixXd IFGT::compute_naive(const Eigen::MatrixXd & target_pts, const Eigen::ArrayXd & weights) {
+//     Eigen::MatrixXd G_naive = Eigen::MatrixXd::Zero(target_pts.rows(),1);
+//     double h2 = bandwidth * bandwidth;
+//     for (int m = 0; m < target_pts.rows(); ++m) {
+//         for (int n = 0; n < source_pts.rows(); ++n) {
+//             double expArg = - 1.0 / h2 * (target_pts.row(m) - source_pts.row(n)).squaredNorm();
+//             G_naive(m) += weights(n) * std::exp(expArg);
+//         }
+//     }
+//     return G_naive;
+// }
 
 // ttwo different computes for weights and no weights 
 Eigen::MatrixXd IFGT::compute_ifgt(const Eigen::MatrixXd & target_pts) {
@@ -341,7 +341,7 @@ Eigen::MatrixXd IFGT::compute_ifgt(const Eigen::MatrixXd & target_pts) {
     } 
     else {
         // std::cout << "Running Naive" << std::endl;
-        G_y = compute_naive(target_pts, ones_array);
+        G_y = compute_naive_gt(target_pts, source_pts, ones_array, bandwidth);
         // auto time4 = std::chrono::high_resolution_clock::now();
         // auto time_span = std::chrono::duration_cast<std::chrono::duration<double>>(time4 - time1);
         // std::cout << "naive computation: " << time_span.count() << " s" << std::endl;
@@ -365,7 +365,7 @@ Eigen::MatrixXd IFGT::compute_ifgt(const Eigen::MatrixXd & target_pts, const Eig
     } 
     else {
         //std::cout << "Running naive (weighted)" << std::endl;
-        G_y = compute_naive(target_pts, weights);
+        G_y = compute_naive_gt(target_pts, source_pts, weights, bandwidth);
     }
     return G_y;
 }
@@ -398,50 +398,22 @@ double rescale_points(const Eigen::MatrixXd & fixed_pts,
     return bandwidth / max_range; // scale bandwidth
 
 }
-// Y = target_pts = fixed_pts
-// X = source_pts = moving_pts (in general)
-// epsilon is error, w is a parameter from cpd
-CPD_MatrixVector_Products compute_cpd_products(const Eigen::MatrixXd & fixed_pts,
-                                                const Eigen::MatrixXd & moving_pts,
-                                                double sigmaSquared, 
-                                                double epsilon,
-                                                double w) {
-    
-    int N_fixed_pts = fixed_pts.rows();
-    int M_moving_pts = moving_pts.rows();
-    int dim = fixed_pts.cols();
-    double bandwidth = std::sqrt(2.0 * sigmaSquared);
-    
-    Eigen::MatrixXd P1; 
-    Eigen::MatrixXd Pt1; 
-    Eigen::MatrixXd Kt1;
-    Eigen::MatrixXd PX(M_moving_pts, dim);
 
-    Eigen::MatrixXd fixed_pts_scaled;
-    Eigen::MatrixXd moving_pts_scaled;
+// computes gauss transform naively in O(NM) time
+Eigen::MatrixXd compute_naive_gt(const Eigen::MatrixXd & target_pts, 
+                                const Eigen::MatrixXd & source_pts,
+                                const Eigen::ArrayXd & weights,
+                                double bandwidth) {
 
-    double bandwidth_scaled = rescale_points(fixed_pts, moving_pts, fixed_pts_scaled, 
-                                        moving_pts_scaled, bandwidth);
-
-    auto ifgt_transform = std::make_unique<IFGT>(moving_pts_scaled, bandwidth_scaled, epsilon); // in this case, moving_pts = source_pts
-                                                                                                // because we take the transpose of K(M x N)                                                 
-    Kt1 = ifgt_transform->compute_ifgt(fixed_pts_scaled);                                       // so we'll get an N x 1 vector for Kt1       
-
-    double c = w / (1.0 - w) * (double) M_moving_pts / N_fixed_pts * 
-                                std::pow(2.0 * M_PI * sigmaSquared, 0.5 * dim);
-
-    Eigen::ArrayXd denom_a = Kt1.array() + c; 
-    Pt1 = (1 - c / denom_a).matrix(); // Pt1 = 1-c*a
-
-    ifgt_transform = std::make_unique<IFGT>(fixed_pts_scaled, bandwidth_scaled, epsilon); 
-    P1 = ifgt_transform->compute_ifgt(moving_pts_scaled, 1 / denom_a); // P1 = Ka 
-    
-    for (int i = 0; i < dim; ++i) {
-        PX.col(i) = ifgt_transform->compute_ifgt(moving_pts_scaled, fixed_pts.col(i).array() / denom_a); // PX = K(a.*X)
+    Eigen::MatrixXd G_naive = Eigen::MatrixXd::Zero(target_pts.rows(),1);
+    double h2 = bandwidth * bandwidth;
+    for (int m = 0; m < target_pts.rows(); ++m) {
+        for (int n = 0; n < source_pts.rows(); ++n) {
+            double expArg = - 1.0 / h2 * (target_pts.row(m) - source_pts.row(n)).squaredNorm();
+            G_naive(m) += weights(n) * std::exp(expArg);
+        }
     }
-    return { P1, Pt1, PX };
-    
-
+    return G_naive;
 }
 
 Cluster k_center_clustering(const Eigen::MatrixXd & points, int num_clusters) {
