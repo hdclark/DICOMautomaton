@@ -27,20 +27,10 @@
 
 #include <eigen3/Eigen/Dense> //Needed for Eigen library dense matrices.
 
-// matrix vector products P1, Pt1, PX
-struct CPD_MatrixVector_Products {
-    Eigen::MatrixXd P1; 
-    Eigen::MatrixXd Pt1; 
-    Eigen::MatrixXd PX; 
-};
-
-// Computes the matrix-vector products needed for CPD
-// outputs struct of P1 , Pt1 and PX
-CPD_MatrixVector_Products compute_cpd_products(const Eigen::MatrixXd & source_pts,
-                                            const Eigen::MatrixXd & target_pts,
-                                            double bandwidth, 
-                                            double epsilon,
-                                            double w);
+Eigen::MatrixXd compute_naive_gt(const Eigen::MatrixXd & target_pts, 
+                                const Eigen::MatrixXd & source_pts,
+                                const Eigen::ArrayXd & weights,
+                                double bandwidth);
 
 struct Cluster {
     Eigen::MatrixXd k_centers; 
@@ -125,10 +115,10 @@ class IFGT {
         // computes G(yj) - the actual gaussian
         Eigen::MatrixXd compute_gaussian(const Eigen::MatrixXd & target_pts,
                                             const Eigen::MatrixXd & C_k);
-        // computes gauss transform naively if the estimated computational complexity
-        // is lower than IFGT
-        Eigen::MatrixXd compute_naive(const Eigen::MatrixXd & target_pts, 
-                                            const Eigen::ArrayXd & weights);
+        // // computes gauss transform naively if the estimated computational complexity
+        // // is lower than IFGT
+        // Eigen::MatrixXd compute_naive(const Eigen::MatrixXd & target_pts, 
+        //                                     const Eigen::ArrayXd & weights);
         // estimates complexity of IFGT and naive implementations
         double compute_complexity(int M_target_pts);
 

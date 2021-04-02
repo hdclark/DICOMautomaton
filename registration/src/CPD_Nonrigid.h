@@ -20,6 +20,7 @@
 #include <eigen3/Eigen/Dense> //Needed for Eigen library dense matrices.
 
 #include "CPD_Shared.h"
+#include "IFGT.h"
 
 #include <math.h>
 
@@ -111,5 +112,36 @@ double PowerIteration(const Eigen::MatrixXd & m,
             Eigen::VectorXd & v, 
             int num_iter,
             double tolerance);
+
+// matrix vector products P1, Pt1, PX
+struct CPD_MatrixVector_Products {
+    Eigen::MatrixXd P1; 
+    Eigen::MatrixXd Pt1; 
+    Eigen::MatrixXd PX; 
+    double L;
+};
+
+CPD_MatrixVector_Products ComputeCPDProductsIfgt(const Eigen::MatrixXd & xPoints,
+                                                    const Eigen::MatrixXd & yPoints,
+                                                    double sigmaSquared, 
+                                                    double epsilon,
+                                                    double w);
+
+CPD_MatrixVector_Products ComputeCPDProductsNaive(const Eigen::MatrixXd & xPoints,
+                                                    const Eigen::MatrixXd & yPoints,
+                                                    double sigmaSquared, 
+                                                    double w);
+
+double UpdateNaiveConvergenceL(const Eigen::MatrixXd & postProbTransOne,
+                            double sigmaSquared,
+                            double w,
+                            int N_xPoints,
+                            int M_yPoints,
+                            int dim);
+
+double UpdateConvergenceL(const Eigen::MatrixXd & gramMatrix,
+                        const Eigen::MatrixXd & W,
+                        double L_computed,
+                        double lambda);        
 
 #endif
