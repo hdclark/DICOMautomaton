@@ -339,6 +339,7 @@ CPD_MatrixVector_Products ComputeCPDProductsIfgt(const Eigen::MatrixXd & fixed_p
     double bandwidth_scaled = rescale_points(fixed_pts, moving_pts, fixed_pts_scaled, 
                                 moving_pts_scaled, bandwidth);
     
+    std::cout << "bandwidth scaled: " << bandwidth_scaled << std::endl;
     auto ifgt_transform = std::make_unique<IFGT>(moving_pts_scaled, bandwidth_scaled, epsilon); // in this case, moving_pts = source_pts
                                                                                                 // because we take the transpose of K(M x N)                                                 
     auto Kt1 = ifgt_transform->compute_ifgt(fixed_pts_scaled);                                       // so we'll get an N x 1 vector for Kt1 
@@ -486,7 +487,7 @@ AlignViaNonRigidCPD(CPDParams & params,
         FUNCINFO("Iteration: " << i)
         high_resolution_clock::time_point start = high_resolution_clock::now();
         // eventually put this inside the else statement after changing the objective function
-        auto P = E_Step_NR(X, Y, transform.G, transform.W, sigma_squared, params.distribution_weight);
+        // auto P = E_Step_NR(X, Y, transform.G, transform.W, sigma_squared, params.distribution_weight);
         
         // eventually put this inside the else statement after changing the objective function
         //auto P = E_Step_NR(X, Y, transform.G, transform.W, sigma_squared, params.distribution_weight);
