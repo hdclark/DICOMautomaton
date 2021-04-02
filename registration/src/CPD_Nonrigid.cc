@@ -341,7 +341,7 @@ AlignViaNonRigidCPD(CPDParams & params,
     Eigen::MatrixXd X = Eigen::MatrixXd::Zero(N_stat_points, params.dimensionality); 
 
     // Fill the X vector with the corresponding points.
-    for(long int j = 0; j < N_move_points; ++j){ // column
+    for(long int j = 0; j < N_stat_points; ++j){ // column
         const auto P_stationary = stationary.points[j];
         X(j, 0) = P_stationary.x;
         X(j, 1) = P_stationary.y;
@@ -349,7 +349,7 @@ AlignViaNonRigidCPD(CPDParams & params,
     }
 
     // Fill the Y vector with the corresponding points.
-    for(long int j = 0; j < N_stat_points; ++j){ // column
+    for(long int j = 0; j < N_move_points; ++j){ // column
         const auto P_moving = moving.points[j];
         Y(j, 0) = P_moving.x;
         Y(j, 1) = P_moving.y;
