@@ -640,7 +640,68 @@ TEST_CASE("LowRankGetW") {
 
 	LowRankGetW(xPoints, yPoints, gramValues, gramVectors, postProb, 2, 3);
 }
+/*
+TEST_CASE("Compute CPD Products") {
+	int N_source_points = 8000;
+	int M_target_pts = 8000;
+	int dim = 3;
+	double sigmaSquared = 100; // random
+	double epsilon = 1E-6;
+	double w = 0.2;
 
+	// xPoints = fixed points = source points 
+	// yPoints = moving points = target points
+
+	Eigen::MatrixXd yPoints = 5*Eigen::MatrixXd::Random(M_target_pts, dim);
+	Eigen::MatrixXd xPoints = 4.1*(Eigen::MatrixXd::Random(N_source_points, dim).array()-0.012).matrix();
+
+	Eigen::MatrixXd gramMatrix = Eigen::MatrixXd::Zero(M_target_pts, M_target_pts);
+	Eigen::MatrixXd W = Eigen::MatrixXd::Zero(M_target_pts, dim);	
+	
+	
+	auto start = std::chrono::high_resolution_clock::now();
+	
+	// CPD_MatrixVector_Products cpd_products = ComputeCPDProductsNaive(xPoints, yPoints, sigmaSquared, w);
+	CPD_MatrixVector_Products cpd_products = ComputeCPDProductsIfgt(xPoints, yPoints, sigmaSquared, epsilon, w);
+
+	auto ifgt_end = std::chrono::high_resolution_clock::now();
+	auto time_span = std::chrono::duration_cast<std::chrono::duration<double>>(ifgt_end - start);
+    std::cout << "IFGT took time: " << time_span.count() << " s" << std::endl;
+
+	auto postProb = E_Step_NR(xPoints, yPoints, gramMatrix, W, sigmaSquared, w);
+
+	Eigen::MatrixXd ones_array_N = Eigen::MatrixXd::Ones(N_source_points, 1);
+	Eigen::MatrixXd ones_array_M = Eigen::MatrixXd::Ones(M_target_pts, 1);
+
+	auto P1 = postProb * ones_array_N;
+	auto Pt1 = postProb * ones_array_M;
+	auto PX = postProb * xPoints;
+
+	double L = UpdateNaiveConvergenceL(Pt1, sigmaSquared, w, xPoints.rows(), yPoints.rows(), xPoints.cols());
+
+	auto e_step = std::chrono::high_resolution_clock::now();
+	time_span = std::chrono::duration_cast<std::chrono::duration<double>>(e_step - ifgt_end);
+    std::cout << "E Step took time: " << time_span.count() << " s" << std::endl;
+
+	double L_new = UpdateConvergenceL(gramMatrix, W, -205.068, cpd_products.L, 2.0);
+
+	std::cout << "L_new: " << L_new << std::endl;
+
+	double threshold = 1E-3; 
+	for(int i = 0; i < N_source_points; ++i) {
+
+		REQUIRE(cpd_products.P1(i) == doctest::Approx(P1(i)).epsilon(threshold));
+		REQUIRE(cpd_products.Pt1(i) == doctest::Approx(Pt1(i)).epsilon(threshold));
+		
+		for(int j = 0; j < dim; j++) {
+			REQUIRE(cpd_products.PX(i,j) == doctest::Approx(PX(i,j)).epsilon(threshold));
+		}
+
+	}
+
+	REQUIRE(cpd_products.L == doctest::Approx(L).epsilon(threshold));
+	
+} */
  /*
 TEST_CASE("IFGT Test") {
 	int N_source_points = 1000000;

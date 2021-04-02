@@ -121,15 +121,27 @@ struct CPD_MatrixVector_Products {
     double L;
 };
 
-CPD_MatrixVector_Products compute_cpd_products_ifgt(const Eigen::MatrixXd & source_pts,
-                                                    const Eigen::MatrixXd & target_pts,
-                                                    double bandwidth, 
+CPD_MatrixVector_Products ComputeCPDProductsIfgt(const Eigen::MatrixXd & xPoints,
+                                                    const Eigen::MatrixXd & yPoints,
+                                                    double sigmaSquared, 
                                                     double epsilon,
                                                     double w);
 
-CPD_MatrixVector_Products compute_cpd_products_naive(const Eigen::MatrixXd & fixed_pts,
-                                                    const Eigen::MatrixXd & moving_pts,
+CPD_MatrixVector_Products ComputeCPDProductsNaive(const Eigen::MatrixXd & xPoints,
+                                                    const Eigen::MatrixXd & yPoints,
                                                     double sigmaSquared, 
                                                     double w);
+
+double UpdateNaiveConvergenceL(const Eigen::MatrixXd & postProbTransOne,
+                            double sigmaSquared,
+                            double w,
+                            int N_xPoints,
+                            int M_yPoints,
+                            int dim);
+
+double UpdateConvergenceL(const Eigen::MatrixXd & gramMatrix,
+                        const Eigen::MatrixXd & W,
+                        double L_computed,
+                        double lambda);        
 
 #endif

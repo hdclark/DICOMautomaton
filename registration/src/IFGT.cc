@@ -328,7 +328,7 @@ Eigen::MatrixXd IFGT::compute_ifgt(const Eigen::MatrixXd & target_pts) {
     // auto time1 = std::chrono::high_resolution_clock::now();
 
     if (ifgt_complexity < naive_complexity) {
-        // std::cout << "Running IFGT" << std::endl;
+        std::cout << "Running IFGT" << std::endl;
         Eigen::MatrixXd C_k = compute_ck(ones_array);
         // auto time2 = std::chrono::high_resolution_clock::now();
         // auto time_span = std::chrono::duration_cast<std::chrono::duration<double>>(time2 - time1);
@@ -340,7 +340,7 @@ Eigen::MatrixXd IFGT::compute_ifgt(const Eigen::MatrixXd & target_pts) {
         // std::cout << "compute_gaussian: " << time_span.count() << " s" << std::endl;
     } 
     else {
-        // std::cout << "Running Naive" << std::endl;
+        std::cout << "Running Naive" << std::endl;
         G_y = compute_naive_gt(target_pts, source_pts, ones_array, bandwidth);
         // auto time4 = std::chrono::high_resolution_clock::now();
         // auto time_span = std::chrono::duration_cast<std::chrono::duration<double>>(time4 - time1);
@@ -359,12 +359,12 @@ Eigen::MatrixXd IFGT::compute_ifgt(const Eigen::MatrixXd & target_pts, const Eig
     // estimates ifgt complexity very conservatively --> can change it to a 
     // certain proportion of the complexity to run the ifgt more often
     if (ifgt_complexity < naive_complexity) {
-        //std::cout << "Running IFGT (weighted)" << std::endl;
+        std::cout << "Running IFGT (weighted)" << std::endl;
         Eigen::MatrixXd C_k = compute_ck(weights);
         G_y = compute_gaussian(target_pts, C_k);
     } 
     else {
-        //std::cout << "Running naive (weighted)" << std::endl;
+        std::cout << "Running naive (weighted)" << std::endl;
         G_y = compute_naive_gt(target_pts, source_pts, weights, bandwidth);
     }
     return G_y;
@@ -394,7 +394,7 @@ double rescale_points(const Eigen::MatrixXd & fixed_pts,
     fixed_pts_scaled = ((fixed_pts.array() - min) / max_range).matrix();
     moving_pts_scaled = ((moving_pts.array() - min) / max_range).matrix();
 
-    std::cout << "max_range: " << max_range << " // min: " << min << " // max: " << max << std::endl;
+    // std::cout << "max_range: " << max_range << " // min: " << min << " // max: " << max << std::endl;
     return bandwidth / max_range; // scale bandwidth
 
 }

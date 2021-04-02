@@ -316,8 +316,8 @@ double PowerIteration(const Eigen::MatrixXd & m,
     return ev;
 }
 
-// Y = target_pts = fixed_pts
-// X = source_pts = moving_pts (in general)
+// Y = target_pts = moving_pts
+// X = source_pts = fixed_pts (in general)
 // epsilon is error, w is a parameter from cpd
 CPD_MatrixVector_Products ComputeCPDProductsIfgt(const Eigen::MatrixXd & fixed_pts,
                                                     const Eigen::MatrixXd & moving_pts,
@@ -382,12 +382,36 @@ CPD_MatrixVector_Products ComputeCPDProductsNaive(const Eigen::MatrixXd & fixed_
 
     Eigen::MatrixXd PX(M_moving_pts, dim);
     for (int i = 0; i < dim; ++i) {
-        PX.col(i) = compute_naive_gt(moving_pts, fixed_pts, fixed_pts.col(i).array() / denom_a); // PX = K(a.*X)
+        PX.col(i) = compute_naive_gt(moving_pts, fixed_pts, fixed_pts.col(i).array() / denom_a, bandwidth); // PX = K(a.*X)
     }
 
     double L = -log(denom_a).sum() + dim * N_fixed_pts * std::log(sigmaSquared) / 2.0;
 
     return { P1, Pt1, PX, L};
+}
+// run this to get L_temp when using E_step_NR
+double UpdateNaiveConvergenceL(const Eigen::MatrixXd & postProbTransOne,
+                            double sigmaSquared,
+                            double w,
+                            int N_xPoints,
+                            int M_yPoints,
+                            int dim) {
+
+    double c = w / (1.0 - w) * (double) M_yPoints / N_xPoints * 
+                            std::pow(2.0 * M_PI * sigmaSquared, 0.5 * dim);
+
+    auto denom_a = c / (1 - postProbTransOne.array());
+
+    return -log(denom_a).sum() + dim * N_xPoints * std::log(sigmaSquared) / 2.0;
+    
+}
+
+double UpdateConvergenceL(const Eigen::MatrixXd & gramMatrix,
+                        const Eigen::MatrixXd & W,
+                        double L_computed,
+                        double lambda) {
+
+    return L_computed + lambda / 2.0 * (W.transpose() * gramMatrix * W).trace();
 }
 
 NonRigidCPDTransform
@@ -433,8 +457,8 @@ AlignViaNonRigidCPD(CPDParams & params,
     NonRigidCPDTransform transform(N_move_points, params.dimensionality);
     double sigma_squared = NR_Init_Sigma_Squared(X, Y);
     double similarity;
-    double objective = 0;
-    double prev_objective = 0;
+    // double objective = 0;
+    // double prev_objective = 0;
     int num_eig = params.ev_ratio * N_stat_points;
 
     Eigen::MatrixXd vector_matrix = Eigen::MatrixXd::Zero(num_eig, num_eig);
@@ -466,22 +490,30 @@ AlignViaNonRigidCPD(CPDParams & params,
         //auto P = E_Step_NR(X, Y, transform.G, transform.W, sigma_squared, params.distribution_weight);
         double L_old = L;
 
+        auto Y_transformed = transform.G * transform.W; // Y_new = Y + GW
+        // E step 
+        double L_temp = 1.0;
         if(params.use_fgt) {
             // X = fixed points = source points 
 	        // Y = moving points = target points
             double epsilon = 1E-3; // smaller epsilon = smaller error (epsilon > 0)
-            auto cpd_products = ComputeCPDProductsIfgt(X, Y, sigma_squared, epsilon, params.distribution_weight);
+            auto cpd_products = ComputeCPDProductsIfgt(X, Y + Y_transformed, sigma_squared, epsilon, 
+                                                        params.distribution_weight);
             postProbX = cpd_products.PX;
             postProbTransOne = cpd_products.Pt1;
             postProbOne = cpd_products.P1;
-            L = L + cpd_products.L + params.lambda / 2.0 * (transform.W.transpose() * transform.G * transform.W).trace();
+            L_temp = cpd_products.L;
         } else {
-            auto cpd_products = ComputeCPDProductsNaive(X, Y, sigma_squared, params.distribution_weight);
-            postProbX = cpd_products.PX;
-            postProbTransOne = cpd_products.Pt1;
-            postProbOne = cpd_products.P1;
-            L = L + cpd_products.L + params.lambda / 2.0 * (transform.W.transpose() * transform.G * transform.W).trace();
+            // calculating postProb is faste than calculating naive matrix vector products
+            auto postProb = E_Step_NR(X, Y,transform.G, transform.W, sigma_squared, params.distribution_weight); 
+            postProbOne = postProb * oneVecCol;
+            postProbTransOne = postProb * oneVecRow;
+            postProbX = postProb * X;
+            L_temp = UpdateNaiveConvergenceL(postProbTransOne, sigma_squared, params.distribution_weight, 
+                                            X.rows(), Y.rows(), X.cols());
         }
+
+        L = UpdateConvergenceL(transform.G, transform.W, L_temp, params.lambda);
 
         if(params.use_low_rank) {
             transform.W = LowRankGetW(Y, value_matrix, vector_matrix, postProbOne, postProbX, sigma_squared, params.lambda);
@@ -503,9 +535,10 @@ AlignViaNonRigidCPD(CPDParams & params,
         similarity = GetSimilarity_NR(X, Y, transform.G, transform.W);
         FUNCINFO("Similarity: " << similarity);
 
-        prev_objective = objective;
-        objective = GetObjective_NR(X, Y, P, transform.G, transform.W, sigma_squared);
-        FUNCINFO("Objective: " << objective);
+        // prev_objective = objective;
+        double objective_tolerance = abs((L - L_old) / L);
+        //objective = GetObjective_NR(X, Y, P, transform.G, transform.W, sigma_squared);
+        FUNCINFO("Objective: " << objective_tolerance);
 
         if (video == "True") {
             if (iter_interval > 0 && i % iter_interval == 0) {
@@ -518,7 +551,7 @@ AlignViaNonRigidCPD(CPDParams & params,
             }
         }
 
-        if (abs(objective-prev_objective) < params.similarity_threshold || isnan(objective) || isnan(sigma_squared)) {
+        if (objective_tolerance < params.similarity_threshold || isnan(objective_tolerance) || isnan(sigma_squared)) {
             FUNCINFO("FINAL SIMILARITY: " << similarity);
             break;
         }
