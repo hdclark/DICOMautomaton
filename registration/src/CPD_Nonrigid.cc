@@ -49,7 +49,7 @@ Eigen::MatrixXd NonRigidCPDTransform::apply_to(const Eigen::MatrixXd & ps) {
     return ps + this->G * this->W;
 }
 
-double NR_Init_Sigma_Squared(const Eigen::MatrixXd & xPoints,
+double Init_Sigma_Squared_NR(const Eigen::MatrixXd & xPoints,
             const Eigen::MatrixXd & yPoints) {
 
     double normSum = 0;
@@ -455,7 +455,7 @@ AlignViaNonRigidCPD(CPDParams & params,
     }
 
     NonRigidCPDTransform transform(N_move_points, params.dimensionality);
-    double sigma_squared = NR_Init_Sigma_Squared(X, Y);
+    double sigma_squared = Init_Sigma_Squared_NR(X, Y);
     double similarity;
     // double objective = 0;
     // double prev_objective = 0;
