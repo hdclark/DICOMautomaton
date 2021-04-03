@@ -267,6 +267,7 @@ Eigen::MatrixXd IFGT::compute_gaussian(const Eigen::MatrixXd & target_pts,
 
     int M_target_pts = target_pts.rows();
     double h_square = bandwidth * bandwidth;
+    std::cout << "max truncation: " << max_truncation_p << " // nclusters: " << n_clusters << std::endl;
 
     Eigen::MatrixXd G_y = Eigen::MatrixXd::Zero(M_target_pts,1);
 
@@ -322,22 +323,22 @@ Eigen::MatrixXd IFGT::compute_ifgt(const Eigen::MatrixXd & target_pts) {
     double ifgt_complexity = compute_complexity(target_pts.rows());
     double naive_complexity = dim * target_pts.rows() * source_pts.rows();
 
-    // std::cout << "ifgt complexity: " << ifgt_complexity << " // naive_complexity: " << naive_complexity << std::endl;
+    std::cout << "ifgt complexity: " << ifgt_complexity << " // naive_complexity: " << naive_complexity << std::endl;
     Eigen::MatrixXd G_y = Eigen::MatrixXd::Zero(target_pts.rows(),1);
 
-    // auto time1 = std::chrono::high_resolution_clock::now();
+    auto time1 = std::chrono::high_resolution_clock::now();
 
     if (ifgt_complexity < naive_complexity) {
         std::cout << "Running IFGT" << std::endl;
         Eigen::MatrixXd C_k = compute_ck(ones_array);
-        // auto time2 = std::chrono::high_resolution_clock::now();
-        // auto time_span = std::chrono::duration_cast<std::chrono::duration<double>>(time2 - time1);
-        // std::cout << "compute_ck: " << time_span.count() << " s" << std::endl;
+        auto time2 = std::chrono::high_resolution_clock::now();
+        auto time_span = std::chrono::duration_cast<std::chrono::duration<double>>(time2 - time1);
+        std::cout << "compute_ck: " << time_span.count() << " s" << std::endl;
 
         G_y = compute_gaussian(target_pts, C_k);
-        // auto time3 = std::chrono::high_resolution_clock::now();
-        // time_span = std::chrono::duration_cast<std::chrono::duration<double>>(time3 - time2);
-        // std::cout << "compute_gaussian: " << time_span.count() << " s" << std::endl;
+        auto time3 = std::chrono::high_resolution_clock::now();
+        time_span = std::chrono::duration_cast<std::chrono::duration<double>>(time3 - time2);
+        std::cout << "compute_gaussian: " << time_span.count() << " s" << std::endl;
     } 
     else {
         std::cout << "Running Naive" << std::endl;
@@ -355,13 +356,22 @@ Eigen::MatrixXd IFGT::compute_ifgt(const Eigen::MatrixXd & target_pts, const Eig
 
     Eigen::MatrixXd G_y = Eigen::MatrixXd::Zero(target_pts.rows(),1);
     // std::cout << "ifgt complexity: " << ifgt_complexity << " // naive_complexity: " << naive_complexity << std::endl;
-
+    auto time1 = std::chrono::high_resolution_clock::now();
     // estimates ifgt complexity very conservatively --> can change it to a 
     // certain proportion of the complexity to run the ifgt more often
     if (ifgt_complexity < naive_complexity) {
         std::cout << "Running IFGT (weighted)" << std::endl;
         Eigen::MatrixXd C_k = compute_ck(weights);
+
+        auto time2 = std::chrono::high_resolution_clock::now();
+        auto time_span = std::chrono::duration_cast<std::chrono::duration<double>>(time2 - time1);
+        std::cout << "compute_ck: " << time_span.count() << " s" << std::endl;
+
         G_y = compute_gaussian(target_pts, C_k);
+
+        auto time3 = std::chrono::high_resolution_clock::now();
+        time_span = std::chrono::duration_cast<std::chrono::duration<double>>(time3 - time2);
+        std::cout << "compute_gaussian: " << time_span.count() << " s" << std::endl;
     } 
     else {
         std::cout << "Running naive (weighted)" << std::endl;
