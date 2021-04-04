@@ -488,15 +488,13 @@ AlignViaNonRigidCPD(CPDParams & params,
         high_resolution_clock::time_point start = high_resolution_clock::now();
         // eventually put this inside the else statement after changing the objective function
         // auto P = E_Step_NR(X, Y, transform.G, transform.W, sigma_squared, params.distribution_weight);
-        
-        // eventually put this inside the else statement after changing the objective function
-        //auto P = E_Step_NR(X, Y, transform.G, transform.W, sigma_squared, params.distribution_weight);
+
         double L_old = L;
 
-        auto Y_transformed = transform.G * transform.W; // Y_new = Y + GW
         // E step 
         double L_temp = 1.0;
         if(params.use_fgt) {
+            auto Y_transformed = transform.G * transform.W; // Y_new = Y + GW
             // X = fixed points = source points 
 	        // Y = moving points = target points
             double epsilon = 1E-3; // smaller epsilon = smaller error (epsilon > 0)
