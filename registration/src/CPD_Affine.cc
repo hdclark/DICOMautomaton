@@ -89,7 +89,6 @@ double SigmaSquared(const Eigen::MatrixXd & B,
     
 }
 
-// This function is where the deformable registration algorithm should be implemented.
 AffineCPDTransform
 AlignViaAffineCPD(CPDParams & params,
             const point_set<double> & moving,

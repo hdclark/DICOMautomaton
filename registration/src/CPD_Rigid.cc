@@ -113,10 +113,6 @@ double SigmaSquared(double s,
     double left = (double)(xHat.transpose() * (postProb.transpose() * oneVec).asDiagonal() * xHat).trace();
     double right = s * (A.transpose() * R).trace();
 
-    FUNCINFO("left\n")
-    FUNCINFO(left)
-    FUNCINFO("right\n")
-    FUNCINFO(right)
     return (left - right) / (Np * dimensionality);
 }
 

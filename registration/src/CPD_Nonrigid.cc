@@ -184,17 +184,7 @@ Eigen::MatrixXd GetW(const Eigen::MatrixXd & yPoints,
             double sigmaSquared,
             double lambda){
     
-    high_resolution_clock::time_point start = high_resolution_clock::now();
-    high_resolution_clock::time_point stop;
-    duration<double> time_span;
-
-    stop = high_resolution_clock::now();
-    time_span = duration_cast<duration<double>>(stop - start);
-    FUNCINFO("4 Excecution took time: " << time_span.count())
     Eigen::MatrixXd postProbInvDiag = ((postProbOne).asDiagonal()).inverse(); // d(P1)^-1
-    stop = high_resolution_clock::now();
-    time_span = duration_cast<duration<double>>(stop - start);
-    FUNCINFO("4 Excecution took time: " << time_span.count())
     Eigen::MatrixXd A = gramMatrix + lambda * sigmaSquared * postProbInvDiag;
     Eigen::MatrixXd b = postProbInvDiag * postProbX - yPoints;
 
@@ -208,34 +198,13 @@ Eigen::MatrixXd LowRankGetW(const Eigen::MatrixXd & yPoints,
             const Eigen::MatrixXd & postProbX,
             double sigmaSquared,
             double lambda) {
-    high_resolution_clock::time_point start = high_resolution_clock::now();
-    high_resolution_clock::time_point stop;
-    duration<double> time_span;
     double coef = 1/(lambda * sigmaSquared);
-    stop = high_resolution_clock::now();
-    time_span = duration_cast<duration<double>>(stop - start);
-    FUNCINFO("4 Excecution took time: " << time_span.count())
     Eigen::MatrixXd postProbInvDiag = ((postProbOne).asDiagonal()).inverse(); // d(P1)^-1
-    stop = high_resolution_clock::now();
-    time_span = duration_cast<duration<double>>(stop - start);
-    FUNCINFO("3 Excecution took time: " << time_span.count())
     Eigen::MatrixXd first = coef * (postProbOne).asDiagonal();
-    stop = high_resolution_clock::now();
-    time_span = duration_cast<duration<double>>(stop - start);
-    FUNCINFO("1 Excecution took time: " << time_span.count())
     Eigen::MatrixXd invertedValues = gramValues.asDiagonal().inverse();
-    stop = high_resolution_clock::now();
-    time_span = duration_cast<duration<double>>(stop - start);
-    FUNCINFO("2 Excecution took time: " << time_span.count())
     Eigen::MatrixXd toInvert = invertedValues + coef * gramVectors.transpose()*(postProbOne).asDiagonal()*gramVectors;
-    stop = high_resolution_clock::now();
-    time_span = duration_cast<duration<double>>(stop - start);
-    FUNCINFO("6 Excecution took time: " << time_span.count())
     Eigen::MatrixXd inverted = toInvert.llt().solve(Eigen::MatrixXd::Identity(gramValues.size(), gramValues.size()));
     Eigen::MatrixXd b = postProbInvDiag * postProbX - yPoints;
-    stop = high_resolution_clock::now();
-    time_span = duration_cast<duration<double>>(stop - start);
-    FUNCINFO("2 Excecution took time: " << time_span.count())
     return (first - pow(coef, 2) * (postProbOne).asDiagonal() * gramVectors * inverted * gramVectors.transpose() * (postProbOne).asDiagonal()) * b;
 }
 
@@ -469,7 +438,6 @@ AlignViaNonRigidCPD(CPDParams & params,
     if(params.use_low_rank) {
         high_resolution_clock::time_point start = high_resolution_clock::now();
         GetNLargestEigenvalues_V2(transform.G, vector_matrix, value_matrix, num_eig, N_stat_points);
-        // GetNLargestEigenvalues(transform.G, vector_matrix, value_matrix, num_eig, N_stat_points, params.power_iter, params.power_tol);
         high_resolution_clock::time_point stop = high_resolution_clock::now();
         duration<double>  time_span = duration_cast<duration<double>>(stop - start);
         FUNCINFO("Excecution took time: " << time_span.count())
