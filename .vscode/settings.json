@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "core": "cpp",
+        "regex": "cpp",
+        "condition_variable": "cpp",
+        "thread": "cpp"
+    }
+}

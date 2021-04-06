@@ -43,7 +43,6 @@ double Init_Sigma_Squared(const Eigen::MatrixXd & xPoints,
         for (int j = 0; j < mRowsY; j++) {
             const auto yRow = yPoints.row(j).transpose();
             auto rowDiff = xRow - yRow;
-            // FUNCINFO(normSum)
             normSum += rowDiff.squaredNorm();
         }
     }
@@ -75,8 +74,6 @@ double GetSimilarity(const Eigen::MatrixXd & xPoints,
     }
     sum = sum / (mRowsY * 1.00);
 
-    FUNCINFO(sum);
-    FUNCINFO(mRowsY);
     return sum;
 }
 

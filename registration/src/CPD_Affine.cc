@@ -5,6 +5,9 @@
 #include "CPD_Affine.h"
 #include "YgorMathIOXYZ.h"    //Needed for ReadPointSetFromXYZ.
 #include <cmath>
+#include <chrono>
+#include <math.h>
+using namespace std::chrono;
 
 AffineCPDTransform::AffineCPDTransform(int dimensionality) {
     this->B = Eigen::MatrixXd::Identity(dimensionality, dimensionality);
@@ -137,7 +140,7 @@ AlignViaAffineCPD(CPDParams & params,
     Eigen::MatrixXd Uy;
     Eigen::MatrixXd X_hat;
     Eigen::MatrixXd Y_hat;
-    // params.iterations = 50;
+    high_resolution_clock::time_point start = high_resolution_clock::now();
     for (int i = 0; i < params.iterations; i++) {
         FUNCINFO("Iteration: " << i)
         P = E_Step(X, Y, transform.B, \
@@ -155,7 +158,7 @@ AlignViaAffineCPD(CPDParams & params,
 
         similarity = GetSimilarity(X, Y, transform.B, transform.t, 1);
         objective = GetObjective(X, Y, P, transform.B, transform.t, 1, sigma_squared);
-        FUNCINFO(similarity);
+        FUNCINFO("Similarity" << similarity);
         FUNCINFO(objective);
         
         if (video == "True") {
@@ -169,6 +172,11 @@ AlignViaAffineCPD(CPDParams & params,
         
         if(abs(prev_objective-objective) < params.similarity_threshold)
             break;
+
+        high_resolution_clock::time_point stop = high_resolution_clock::now();
+        duration<double>  time_span = duration_cast<duration<double>>(stop - start);
+        FUNCINFO("Excecution took time: " << time_span.count())
+
     }
     return transform;
 }
