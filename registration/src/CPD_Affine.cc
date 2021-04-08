@@ -6,9 +6,6 @@
 #include "YgorMathIOXYZ.h"    //Needed for ReadPointSetFromXYZ.
 #include <iostream>
 #include <cmath>
-#include <chrono>
-#include <math.h>
-using namespace std::chrono;
 
 AffineCPDTransform::AffineCPDTransform(int dimensionality) {
     this->B = Eigen::MatrixXd::Identity(dimensionality, dimensionality);
@@ -93,6 +90,7 @@ double SigmaSquared(const Eigen::MatrixXd & B,
     
 }
 
+// This function is where the deformable registration algorithm should be implemented.
 AffineCPDTransform
 AlignViaAffineCPD(CPDParams & params,
             const point_set<double> & moving,
@@ -160,7 +158,7 @@ AlignViaAffineCPD(CPDParams & params,
 
         similarity = GetSimilarity(X, Y, transform.B, transform.t, 1);
         objective = GetObjective(X, Y, P, transform.B, transform.t, 1, sigma_squared);
-        FUNCINFO("Similarity" << similarity);
+        FUNCINFO(similarity);
         FUNCINFO(objective);
         
         if (video == "True") {
