@@ -12,12 +12,12 @@ using namespace std::chrono;
 
 NonRigidCPDTransform::NonRigidCPDTransform(int N_move_points, int dimensionality) {
     this->dim = dimensionality;
-    this->W = Eigen::MatrixXd::Zero(N_move_points, this->dim); 
+    this->W = Eigen::MatrixXf::Zero(N_move_points, this->dim); 
 }
 
 void NonRigidCPDTransform::apply_to(point_set<double> &ps) {
     auto N_points = static_cast<long int>(ps.points.size());
-    Eigen::MatrixXd Y = Eigen::MatrixXd::Zero(N_points, this->dim); 
+    Eigen::MatrixXf Y = Eigen::MatrixXf::Zero(N_points, this->dim); 
     // Fill the X vector with the corresponding points.
     
     for(long int j = 0; j < N_points; ++j) { // column
@@ -35,7 +35,7 @@ void NonRigidCPDTransform::apply_to(point_set<double> &ps) {
 }
 
 void NonRigidCPDTransform::write_to( std::ostream &os ) {
-    Eigen::MatrixXd m = this->G * this->W;
+    Eigen::MatrixXf m = this->G * this->W;
     int rows = m.rows();
     for(int i = 0; i < rows; i++) {
         for(int j = 0; j < this->dim; j++) {
@@ -46,12 +46,12 @@ void NonRigidCPDTransform::write_to( std::ostream &os ) {
     }
 }
 
-Eigen::MatrixXd NonRigidCPDTransform::apply_to(const Eigen::MatrixXd & ps) {
+Eigen::MatrixXf NonRigidCPDTransform::apply_to(const Eigen::MatrixXf & ps) {
     return ps + this->G * this->W;
 }
 
-double Init_Sigma_Squared_NR(const Eigen::MatrixXd & xPoints,
-            const Eigen::MatrixXd & yPoints) {
+double Init_Sigma_Squared_NR(const Eigen::MatrixXf & xPoints,
+            const Eigen::MatrixXf & yPoints) {
 
     double normSum = 0;
     int nRowsX = xPoints.rows();
@@ -70,11 +70,11 @@ double Init_Sigma_Squared_NR(const Eigen::MatrixXd & xPoints,
     return normSum / (nRowsX * mRowsY * dim);
 }
 
-Eigen::MatrixXd GetGramMatrix(const Eigen::MatrixXd & yPoints, double betaSquared) {
+Eigen::MatrixXf GetGramMatrix(const Eigen::MatrixXf & yPoints, double betaSquared) {
     int mRowsY = yPoints.rows();
     double expArg;
-    Eigen::MatrixXd gramMatrix = Eigen::MatrixXd::Zero(mRowsY,mRowsY);
-    Eigen::MatrixXd tempVector;
+    Eigen::MatrixXf gramMatrix = Eigen::MatrixXf::Zero(mRowsY,mRowsY);
+    Eigen::MatrixXf tempVector;
     
     for (int i = 0; i < mRowsY; ++i) {
         for (int j = 0; j < mRowsY; ++j) {
@@ -87,15 +87,15 @@ Eigen::MatrixXd GetGramMatrix(const Eigen::MatrixXd & yPoints, double betaSquare
     return gramMatrix;
 }
 
-double GetSimilarity_NR(const Eigen::MatrixXd & xPoints,
-            const Eigen::MatrixXd & yPoints,
-            const Eigen::MatrixXd & gramMatrix,
-            const Eigen::MatrixXd & W) {
+double GetSimilarity_NR(const Eigen::MatrixXf & xPoints,
+            const Eigen::MatrixXf & yPoints,
+            const Eigen::MatrixXf & gramMatrix,
+            const Eigen::MatrixXf & W) {
     
     int mRowsY = yPoints.rows();
     int nRowsX = xPoints.rows(); 
-    Eigen::MatrixXd alignedYPoints = AlignedPointSet_NR(yPoints, gramMatrix, W);
-    Eigen::MatrixXd tempVector;
+    Eigen::MatrixXf alignedYPoints = AlignedPointSet_NR(yPoints, gramMatrix, W);
+    Eigen::MatrixXf tempVector;
 
     double sum = 0;
     double min_distance = -1;
@@ -115,19 +115,19 @@ double GetSimilarity_NR(const Eigen::MatrixXd & xPoints,
     return sum;
 }
 
-double GetObjective_NR(const Eigen::MatrixXd & xPoints,
-            const Eigen::MatrixXd & yPoints,
-            const Eigen::MatrixXd & postProb,
-            const Eigen::MatrixXd & gramMatrix,
-            const Eigen::MatrixXd & W,
+double GetObjective_NR(const Eigen::MatrixXf & xPoints,
+            const Eigen::MatrixXf & yPoints,
+            const Eigen::MatrixXf & postProb,
+            const Eigen::MatrixXf & gramMatrix,
+            const Eigen::MatrixXf & W,
             double sigmaSquared) {
     
     int mRowsY = yPoints.rows();
     int nRowsX = xPoints.rows(); 
     double dimensionality = xPoints.cols();
     double Np = postProb.sum();
-    Eigen::MatrixXd alignedYPoints = AlignedPointSet_NR(yPoints, gramMatrix, W);
-    Eigen::MatrixXd tempVector;
+    Eigen::MatrixXf alignedYPoints = AlignedPointSet_NR(yPoints, gramMatrix, W);
+    Eigen::MatrixXf tempVector;
     double leftSum = 0;
     for (int m = 0; m < mRowsY; ++m) {
         for (int n = 0; n < nRowsX; ++n) {
@@ -140,16 +140,16 @@ double GetObjective_NR(const Eigen::MatrixXd & xPoints,
     return leftSum + rightSum;
 }
 
-Eigen::MatrixXd E_Step_NR(const Eigen::MatrixXd & xPoints,
-            const Eigen::MatrixXd & yPoints,
-            const Eigen::MatrixXd & gramMatrix,
-            const Eigen::MatrixXd & W,
+Eigen::MatrixXf E_Step_NR(const Eigen::MatrixXf & xPoints,
+            const Eigen::MatrixXf & yPoints,
+            const Eigen::MatrixXf & gramMatrix,
+            const Eigen::MatrixXf & W,
             double sigmaSquared,
             double w) {
-    Eigen::MatrixXd postProb = Eigen::MatrixXd::Zero(yPoints.rows(),xPoints.rows());
-    Eigen::MatrixXd expMat = Eigen::MatrixXd::Zero(yPoints.rows(),xPoints.rows());
+    Eigen::MatrixXf postProb = Eigen::MatrixXf::Zero(yPoints.rows(),xPoints.rows());
+    Eigen::MatrixXf expMat = Eigen::MatrixXf::Zero(yPoints.rows(),xPoints.rows());
 
-    Eigen::MatrixXd tempVector;
+    Eigen::MatrixXf tempVector;
     double expArg;
     double numerator;
     double denominator;
@@ -177,49 +177,49 @@ Eigen::MatrixXd E_Step_NR(const Eigen::MatrixXd & xPoints,
     return postProb;
 }
 
-Eigen::MatrixXd GetW(const Eigen::MatrixXd & yPoints,
-            const Eigen::MatrixXd & gramMatrix,
-            const Eigen::MatrixXd & postProbOne,
-            const Eigen::MatrixXd & postProbX,
+Eigen::MatrixXf GetW(const Eigen::MatrixXf & yPoints,
+            const Eigen::MatrixXf & gramMatrix,
+            const Eigen::MatrixXf & postProbOne,
+            const Eigen::MatrixXf & postProbX,
             double sigmaSquared,
             double lambda){
     
-    Eigen::MatrixXd postProbInvDiag = ((postProbOne).asDiagonal()).inverse(); // d(P1)^-1
-    Eigen::MatrixXd A = gramMatrix + lambda * sigmaSquared * postProbInvDiag;
-    Eigen::MatrixXd b = postProbInvDiag * postProbX - yPoints;
+    Eigen::MatrixXf postProbInvDiag = ((postProbOne).asDiagonal()).inverse(); // d(P1)^-1
+    Eigen::MatrixXf A = gramMatrix + lambda * sigmaSquared * postProbInvDiag;
+    Eigen::MatrixXf b = postProbInvDiag * postProbX - yPoints;
 
     return A.llt().solve(b); // assumes A is positive definite, uses llt decomposition
 }
 
-Eigen::MatrixXd LowRankGetW(const Eigen::MatrixXd & yPoints,
-            const Eigen::VectorXd & gramValues,
-            const Eigen::MatrixXd & gramVectors,
-            const Eigen::MatrixXd & postProbOne,
-            const Eigen::MatrixXd & postProbX,
+Eigen::MatrixXf LowRankGetW(const Eigen::MatrixXf & yPoints,
+            const Eigen::VectorXf & gramValues,
+            const Eigen::MatrixXf & gramVectors,
+            const Eigen::MatrixXf & postProbOne,
+            const Eigen::MatrixXf & postProbX,
             double sigmaSquared,
             double lambda) {
     double coef = 1/(lambda * sigmaSquared);
-    Eigen::MatrixXd postProbInvDiag = ((postProbOne).asDiagonal()).inverse(); // d(P1)^-1
-    Eigen::MatrixXd first = coef * (postProbOne).asDiagonal();
-    Eigen::MatrixXd invertedValues = gramValues.asDiagonal().inverse();
-    Eigen::MatrixXd toInvert = invertedValues + coef * gramVectors.transpose()*(postProbOne).asDiagonal()*gramVectors;
-    Eigen::MatrixXd inverted = toInvert.llt().solve(Eigen::MatrixXd::Identity(gramValues.size(), gramValues.size()));
-    Eigen::MatrixXd b = postProbInvDiag * postProbX - yPoints;
+    Eigen::MatrixXf postProbInvDiag = ((postProbOne).asDiagonal()).inverse(); // d(P1)^-1
+    Eigen::MatrixXf first = coef * (postProbOne).asDiagonal();
+    Eigen::MatrixXf invertedValues = gramValues.asDiagonal().inverse();
+    Eigen::MatrixXf toInvert = invertedValues + coef * gramVectors.transpose()*(postProbOne).asDiagonal()*gramVectors;
+    Eigen::MatrixXf inverted = toInvert.llt().solve(Eigen::MatrixXf::Identity(gramValues.size(), gramValues.size()));
+    Eigen::MatrixXf b = postProbInvDiag * postProbX - yPoints;
     return (first - pow(coef, 2) * (postProbOne).asDiagonal() * gramVectors * inverted * gramVectors.transpose() * (postProbOne).asDiagonal()) * b;
 }
 
-Eigen::MatrixXd AlignedPointSet_NR(const Eigen::MatrixXd & yPoints,
-            const Eigen::MatrixXd & gramMatrix,
-            const Eigen::MatrixXd & W){
+Eigen::MatrixXf AlignedPointSet_NR(const Eigen::MatrixXf & yPoints,
+            const Eigen::MatrixXf & gramMatrix,
+            const Eigen::MatrixXf & W){
 
     return yPoints + (gramMatrix * W);
 }
 
-double SigmaSquared(const Eigen::MatrixXd & xPoints,
-            const Eigen::MatrixXd & postProbOne,
-            const Eigen::MatrixXd & postProbTransOne,
-            const Eigen::MatrixXd & postProbX,
-            const Eigen::MatrixXd & transformedPoints){
+double SigmaSquared(const Eigen::MatrixXf & xPoints,
+            const Eigen::MatrixXf & postProbOne,
+            const Eigen::MatrixXf & postProbTransOne,
+            const Eigen::MatrixXf & postProbX,
+            const Eigen::MatrixXf & transformedPoints){
 
     int dim = xPoints.cols();
     double Np = postProbOne.sum();
@@ -229,48 +229,48 @@ double SigmaSquared(const Eigen::MatrixXd & xPoints,
     return (firstTerm - secondTerm + thirdTerm) / (Np * dim);
 }
 
-void GetNLargestEigenvalues_V2(const Eigen::MatrixXd & m,
-            Eigen::MatrixXd & vector_matrix,
-            Eigen::VectorXd & value_matrix,
+void GetNLargestEigenvalues_V2(const Eigen::MatrixXf & m,
+            Eigen::MatrixXf & vector_matrix,
+            Eigen::VectorXf & value_matrix,
             int num_eig,
             int size) {
-    Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> solver(m);
-    Eigen::VectorXd values = solver.eigenvalues();
-    Eigen::MatrixXd vectors = solver.eigenvectors();
+    Eigen::SelfAdjointEigenSolver<Eigen::MatrixXf> solver(m);
+    Eigen::VectorXf values = solver.eigenvalues();
+    Eigen::MatrixXf vectors = solver.eigenvectors();
     value_matrix = values.tail(num_eig);
     vector_matrix = vectors.block(0, size - num_eig, size, num_eig);
 }
 
-void GetNLargestEigenvalues(const Eigen::MatrixXd & m,
-            Eigen::MatrixXd & vector_matrix,
-            Eigen::VectorXd & value_matrix,
+void GetNLargestEigenvalues(const Eigen::MatrixXf & m,
+            Eigen::MatrixXf & vector_matrix,
+            Eigen::VectorXf & value_matrix,
             int num_eig,
             int size,
             int power_iter,
             double power_tol) {
     double ev;
-    Eigen::MatrixXd working_m = m.replicate(1, 1);
-    Eigen::VectorXd working_v = Eigen::VectorXd::Random(size);
+    Eigen::MatrixXf working_m = m.replicate(1, 1);
+    Eigen::VectorXf working_v = Eigen::VectorXf::Random(size);
     FUNCINFO(num_eig)
     for(int i = 0; i < num_eig; i++) {
-        working_v = Eigen::VectorXd::Random(size);
+        working_v = Eigen::VectorXf::Random(size);
         ev = PowerIteration(working_m, working_v, power_iter, power_tol);
         value_matrix(i) = ev; 
-        Eigen::VectorXd v = working_v;
+        Eigen::VectorXf v = working_v;
 
         vector_matrix.col(i) = v;
         working_m = working_m-ev * working_v * working_v.transpose();
     }
 }
 
-double PowerIteration(const Eigen::MatrixXd & m,
-            Eigen::VectorXd & v, 
+double PowerIteration(const Eigen::MatrixXf & m,
+            Eigen::VectorXf & v, 
             int num_iter,
             double tolerance) {
     double norm;
     double prev_ev = 0;
     double ev = 0;
-    Eigen::VectorXd new_v;
+    Eigen::VectorXf new_v;
     v.normalize();
     for (int i =0; i < num_iter; i++) {
         prev_ev = ev;
@@ -288,8 +288,8 @@ double PowerIteration(const Eigen::MatrixXd & m,
 // Y = target_pts = moving_pts
 // X = source_pts = fixed_pts (in general)
 // epsilon is error, w is a parameter from cpd
-CPD_MatrixVector_Products ComputeCPDProductsIfgt(const Eigen::MatrixXd & fixed_pts,
-                                                    const Eigen::MatrixXd & moving_pts,
+CPD_MatrixVector_Products ComputeCPDProductsIfgt(const Eigen::MatrixXf & fixed_pts,
+                                                    const Eigen::MatrixXf & moving_pts,
                                                     double sigmaSquared, 
                                                     double epsilon,
                                                     double w) {
@@ -302,8 +302,8 @@ CPD_MatrixVector_Products ComputeCPDProductsIfgt(const Eigen::MatrixXd & fixed_p
     double c = w / (1.0 - w) * (double) M_moving_pts / N_fixed_pts * 
                             std::pow(2.0 * M_PI * sigmaSquared, 0.5 * dim); // const in denom of P matrix
     
-    Eigen::MatrixXd fixed_pts_scaled;
-    Eigen::MatrixXd moving_pts_scaled;
+    Eigen::MatrixXf fixed_pts_scaled;
+    Eigen::MatrixXf moving_pts_scaled;
 
     double bandwidth_scaled = rescale_points(fixed_pts, moving_pts, fixed_pts_scaled, 
                                 moving_pts_scaled, bandwidth);
@@ -319,7 +319,7 @@ CPD_MatrixVector_Products ComputeCPDProductsIfgt(const Eigen::MatrixXd & fixed_p
     ifgt_transform = std::make_unique<IFGT>(fixed_pts_scaled, bandwidth_scaled, epsilon); 
     auto P1 = ifgt_transform->compute_ifgt(moving_pts_scaled, 1 / denom_a); // P1 = Ka 
 
-    Eigen::MatrixXd PX(M_moving_pts, dim);
+    Eigen::MatrixXf PX(M_moving_pts, dim);
     for (int i = 0; i < dim; ++i) {
         PX.col(i) = ifgt_transform->compute_ifgt(moving_pts_scaled, fixed_pts.col(i).array() / denom_a); // PX = K(a.*X)
     }
@@ -329,8 +329,8 @@ CPD_MatrixVector_Products ComputeCPDProductsIfgt(const Eigen::MatrixXd & fixed_p
     return { P1, Pt1, PX, L};
 }
 
-CPD_MatrixVector_Products ComputeCPDProductsNaive(const Eigen::MatrixXd & fixed_pts,
-                                                    const Eigen::MatrixXd & moving_pts,
+CPD_MatrixVector_Products ComputeCPDProductsNaive(const Eigen::MatrixXf & fixed_pts,
+                                                    const Eigen::MatrixXf & moving_pts,
                                                     double sigmaSquared, 
                                                     double w) {
     
@@ -342,7 +342,7 @@ CPD_MatrixVector_Products ComputeCPDProductsNaive(const Eigen::MatrixXd & fixed_
     double c = w / (1.0 - w) * (double) M_moving_pts / N_fixed_pts * 
                             std::pow(2.0 * M_PI * sigmaSquared, 0.5 * dim); // const in denom of P matrix
 
-    Eigen::MatrixXd N_ones = Eigen::ArrayXd::Ones(N_fixed_pts, 1);
+    Eigen::MatrixXf N_ones = Eigen::ArrayXf::Ones(N_fixed_pts, 1);
     auto Kt1 = compute_naive_gt(fixed_pts, moving_pts, N_ones, bandwidth);
 
     auto denom_a = Kt1.array() + c; 
@@ -350,7 +350,7 @@ CPD_MatrixVector_Products ComputeCPDProductsNaive(const Eigen::MatrixXd & fixed_
 
     auto P1 = compute_naive_gt(moving_pts, fixed_pts, 1.0 / denom_a, bandwidth);
 
-    Eigen::MatrixXd PX(M_moving_pts, dim);
+    Eigen::MatrixXf PX(M_moving_pts, dim);
     for (int i = 0; i < dim; ++i) {
         PX.col(i) = compute_naive_gt(moving_pts, fixed_pts, fixed_pts.col(i).array() / denom_a, bandwidth); // PX = K(a.*X)
     }
@@ -360,7 +360,7 @@ CPD_MatrixVector_Products ComputeCPDProductsNaive(const Eigen::MatrixXd & fixed_
     return { P1, Pt1, PX, L};
 }
 // run this to get L_temp when using E_step_NR
-double UpdateNaiveConvergenceL(const Eigen::MatrixXd & postProbTransOne,
+double UpdateNaiveConvergenceL(const Eigen::MatrixXf & postProbTransOne,
                             double sigmaSquared,
                             double w,
                             int N_xPoints,
@@ -376,8 +376,8 @@ double UpdateNaiveConvergenceL(const Eigen::MatrixXd & postProbTransOne,
     
 }
 
-double UpdateConvergenceL(const Eigen::MatrixXd & gramMatrix,
-                        const Eigen::MatrixXd & W,
+double UpdateConvergenceL(const Eigen::MatrixXf & gramMatrix,
+                        const Eigen::MatrixXf & W,
                         double L_computed,
                         double lambda) {
 
@@ -397,16 +397,16 @@ AlignViaNonRigidCPD(CPDParams & params,
     std::string temp_xyz_outfile;
     point_set<double> mutable_moving = moving;
     
-    Eigen::MatrixXd GetGramMatrix(const Eigen::MatrixXd & yPoints, double betaSquared);
+    Eigen::MatrixXf GetGramMatrix(const Eigen::MatrixXf & yPoints, double betaSquared);
     const auto N_move_points = static_cast<long int>(moving.points.size());
     const auto N_stat_points = static_cast<long int>(stationary.points.size());
 
     // Prepare working buffers.
     //
     // Stationary point matrix
-    Eigen::MatrixXd Y = Eigen::MatrixXd::Zero(N_move_points, params.dimensionality);
+    Eigen::MatrixXf Y = Eigen::MatrixXf::Zero(N_move_points, params.dimensionality);
     // Moving point matrix
-    Eigen::MatrixXd X = Eigen::MatrixXd::Zero(N_stat_points, params.dimensionality); 
+    Eigen::MatrixXf X = Eigen::MatrixXf::Zero(N_stat_points, params.dimensionality); 
 
     // Fill the X vector with the corresponding points.
     for(long int j = 0; j < N_stat_points; ++j){ // column
@@ -431,8 +431,8 @@ AlignViaNonRigidCPD(CPDParams & params,
     // double prev_objective = 0;
     int num_eig = params.ev_ratio * N_stat_points;
 
-    Eigen::MatrixXd vector_matrix = Eigen::MatrixXd::Zero(num_eig, num_eig);
-    Eigen::VectorXd value_matrix = Eigen::VectorXd::Zero(num_eig);
+    Eigen::MatrixXf vector_matrix = Eigen::MatrixXf::Zero(num_eig, num_eig);
+    Eigen::VectorXf value_matrix = Eigen::VectorXf::Zero(num_eig);
     transform.G = GetGramMatrix(Y, params.beta * params.beta);
 
     if(params.use_low_rank) {
@@ -442,12 +442,12 @@ AlignViaNonRigidCPD(CPDParams & params,
         duration<double>  time_span = duration_cast<duration<double>>(stop - start);
         FUNCINFO("Excecution took time: " << time_span.count())
     }
-    Eigen::MatrixXd postProbX;
-    Eigen::VectorXd postProbOne, postProbTransOne;
-    Eigen::MatrixXd T;
+    Eigen::MatrixXf postProbX;
+    Eigen::VectorXf postProbOne, postProbTransOne;
+    Eigen::MatrixXf T;
 
-    Eigen::MatrixXd oneVecRow = Eigen::MatrixXd::Ones(Y.rows(), 1);
-    Eigen::MatrixXd oneVecCol = Eigen::MatrixXd::Ones(X.rows(),1);
+    Eigen::MatrixXf oneVecRow = Eigen::MatrixXf::Ones(Y.rows(), 1);
+    Eigen::MatrixXf oneVecCol = Eigen::MatrixXf::Ones(X.rows(),1);
 
     double L = 1.0; 
     high_resolution_clock::time_point start = high_resolution_clock::now();

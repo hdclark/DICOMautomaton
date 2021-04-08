@@ -29,47 +29,47 @@ struct CPDParams {
     bool use_fgt = false;
 };
 
-double Init_Sigma_Squared(const Eigen::MatrixXd & xPoints,
-            const Eigen::MatrixXd & yPoints);
+double Init_Sigma_Squared(const Eigen::MatrixXf & xPoints,
+            const Eigen::MatrixXf & yPoints);
 
-Eigen::MatrixXd E_Step(const Eigen::MatrixXd & xPoints,
-            const Eigen::MatrixXd & yPoints,
-            const Eigen::MatrixXd & rotationMatrix,
-            const Eigen::MatrixXd & t,
+Eigen::MatrixXf E_Step(const Eigen::MatrixXf & xPoints,
+            const Eigen::MatrixXf & yPoints,
+            const Eigen::MatrixXf & rotationMatrix,
+            const Eigen::MatrixXf & t,
             double sigmaSquared,
             double w,
             double scale);
 
-Eigen::MatrixXd CenterMatrix(const Eigen::MatrixXd & points,
-            const Eigen::MatrixXd & meanVector);
+Eigen::MatrixXf CenterMatrix(const Eigen::MatrixXf & points,
+            const Eigen::MatrixXf & meanVector);
 
-Eigen::MatrixXd GetTranslationVector(const Eigen::MatrixXd & rotationMatrix,
-            const Eigen::MatrixXd & xMeanVector,
-            const Eigen::MatrixXd & yMeanVector,
+Eigen::MatrixXf GetTranslationVector(const Eigen::MatrixXf & rotationMatrix,
+            const Eigen::MatrixXf & xMeanVector,
+            const Eigen::MatrixXf & yMeanVector,
             double scale);
 
-Eigen::MatrixXd CalculateUx(const Eigen::MatrixXd & xPoints, 
-            const Eigen::MatrixXd & postProb);
+Eigen::MatrixXf CalculateUx(const Eigen::MatrixXf & xPoints, 
+            const Eigen::MatrixXf & postProb);
 
-Eigen::MatrixXd CalculateUy(const Eigen::MatrixXd & yPoints, 
-            const Eigen::MatrixXd & postProb);
+Eigen::MatrixXf CalculateUy(const Eigen::MatrixXf & yPoints, 
+            const Eigen::MatrixXf & postProb);
 
-Eigen::MatrixXd AlignedPointSet(const Eigen::MatrixXd & yPoints,
-            const Eigen::MatrixXd & rotationMatrix,
-            const Eigen::MatrixXd & translation,
+Eigen::MatrixXf AlignedPointSet(const Eigen::MatrixXf & yPoints,
+            const Eigen::MatrixXf & rotationMatrix,
+            const Eigen::MatrixXf & translation,
             double scale);
 
-double GetSimilarity(const Eigen::MatrixXd & xPoints,
-            const Eigen::MatrixXd & yPoints,
-            const Eigen::MatrixXd & rotationMatrix,
-            const Eigen::MatrixXd & translation,
+double GetSimilarity(const Eigen::MatrixXf & xPoints,
+            const Eigen::MatrixXf & yPoints,
+            const Eigen::MatrixXf & rotationMatrix,
+            const Eigen::MatrixXf & translation,
             double scale);
 
-double GetObjective(const Eigen::MatrixXd & xPoints,
-            const Eigen::MatrixXd & yPoints,
-            const Eigen::MatrixXd & postProb,
-            const Eigen::MatrixXd & rotationMatrix,
-            const Eigen::MatrixXd & translation,
+double GetObjective(const Eigen::MatrixXf & xPoints,
+            const Eigen::MatrixXf & yPoints,
+            const Eigen::MatrixXf & postProb,
+            const Eigen::MatrixXf & rotationMatrix,
+            const Eigen::MatrixXf & translation,
             double scale, 
             double sigmaSquared);
  

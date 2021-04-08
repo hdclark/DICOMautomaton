@@ -27,76 +27,76 @@ https://github.com/onqtam/doctest
 
 // rigid test
 TEST_CASE("GetA"){
-	Eigen::MatrixXd xHat(4, 3);
+	Eigen::MatrixXf xHat(4, 3);
 	xHat << 4, 5, 6,
 			7, 8, 9,
 			1, 1, 1,
 			2, 2, 2;
 
-	Eigen::MatrixXd yHat(4, 3);
+	Eigen::MatrixXf yHat(4, 3);
 	yHat << 4, 5, 1,
 			2, 4, 1,
 			8, 8, 8,
 			1, 4, 2;
 
-	Eigen::MatrixXd postProb(4, 4);
+	Eigen::MatrixXf postProb(4, 4);
 	postProb << 1, 4, 1, 6,
 				0, 1, 2, 1,
 				1, 0, 2, 3,
 				1, 8, 3, 0;
 
-	Eigen::MatrixXd answerA(3,3);
+	Eigen::MatrixXf answerA(3,3);
 	answerA << 	361, 617, 278,
 				400, 690, 310,
 				439, 763, 342;
 
-	Eigen::MatrixXd A(3,3);
+	Eigen::MatrixXf A(3,3);
 	A = GetA(xHat, yHat, postProb);
 
 	REQUIRE(A.isApprox(answerA));
 }
 // rigid test
 TEST_CASE("GetRotationMatrix"){
-	Eigen::MatrixXd U(3, 3);
+	Eigen::MatrixXf U(3, 3);
 	U <<	1, 0, 1,
 			1, 5, 1,
 			2, 1, 3;
 
-	Eigen::MatrixXd V(3, 3);
+	Eigen::MatrixXf V(3, 3);
 	V << 	2, 8, 1,
 			3, 2, 1,
 			1, 5, 6;
 
-	Eigen::MatrixXd answerR(3,3);
+	Eigen::MatrixXf answerR(3,3);
 	answerR << 	-543, -542, -3269,
 				-503, -532, -3244,
 				-1623, -1627, -9803;
 
-	Eigen::MatrixXd R(3,3);
+	Eigen::MatrixXf R(3,3);
 	R = GetRotationMatrix(U, V);
 
 	REQUIRE(R.isApprox(answerR));
 }
 // rigid test
 TEST_CASE("GetS"){
-	Eigen::MatrixXd yHat(4, 3);
+	Eigen::MatrixXf yHat(4, 3);
 	yHat << 4, 5, 1,
 			2, 4, 1,
 			8, 8, 8,
 			1, 4, 2;
 
-	Eigen::MatrixXd postProb(4, 4);
+	Eigen::MatrixXf postProb(4, 4);
 	postProb << 1, 4, 1, 6,
 				0, 1, 2, 1,
 				1, 0, 2, 3,
 				1, 8, 3, 0;
 
-	Eigen::MatrixXd A(3,3);
+	Eigen::MatrixXf A(3,3);
 	A << 	361, 617, 278,
 			400, 690, 310,
 			439, 763, 342;
 
-	Eigen::MatrixXd R(3,3);
+	Eigen::MatrixXf R(3,3);
 	R << 	-543, -542, -3269,
 			-503, -532, -3244,
 			-1623, -1627, -9803;
@@ -110,24 +110,24 @@ TEST_CASE("GetS"){
 
 // rigid test
 TEST_CASE("SigmaSquared"){
-	Eigen::MatrixXd xHat(4, 3);
+	Eigen::MatrixXf xHat(4, 3);
 	xHat << 4, 5, 6,
 			7, 8, 9,
 			1, 1, 1,
 			2, 2, 2;
 
-	Eigen::MatrixXd postProb(4, 4);
+	Eigen::MatrixXf postProb(4, 4);
 	postProb << 1, 4, 1, 6,
 				0, 1, 2, 1,
 				1, 0, 2, 3,
 				1, 8, 3, 0;
 
-	Eigen::MatrixXd A(3,3);
+	Eigen::MatrixXf A(3,3);
 	A << 	361, 617, 278,
 			400, 690, 310,
 			439, 763, 342;
 
-	Eigen::MatrixXd R(3,3);
+	Eigen::MatrixXf R(3,3);
 	R << 	-543, -542, -3269,
 			-503, -532, -3244,
 			-1623, -1627, -9803;
@@ -141,22 +141,22 @@ TEST_CASE("SigmaSquared"){
 }
 
 TEST_CASE("B") {
-	Eigen::MatrixXd xHat(3, 2);
+	Eigen::MatrixXf xHat(3, 2);
 	xHat << 3, 4,
 			1, 1,
 			1, 2;
-	Eigen::MatrixXd yHat(3, 2);
+	Eigen::MatrixXf yHat(3, 2);
 	yHat << 1, 2,
 			2, 4,
 			1, 1;
-	Eigen::MatrixXd postProb(3, 3);
+	Eigen::MatrixXf postProb(3, 3);
 	postProb << 1, 0, 1,
 				2, 1, 1,
 				1, 1, 1;
-	Eigen::MatrixXd answerB(2, 2);
+	Eigen::MatrixXf answerB(2, 2);
 	answerB << (20./9), (-5./9),
 				(28./9), (-7./9);
-	Eigen::MatrixXd B;
+	Eigen::MatrixXf B;
 	B = CalculateB(xHat, yHat, postProb);
 
 	double threshold = 0.01;
@@ -164,19 +164,19 @@ TEST_CASE("B") {
 }
 
 TEST_CASE("sigma squared") {
-	Eigen::MatrixXd xHat(3, 2);
+	Eigen::MatrixXf xHat(3, 2);
 	xHat << 3, 4,
 			1, 1,
 			1, 2;
-	Eigen::MatrixXd yHat(3, 2);
+	Eigen::MatrixXf yHat(3, 2);
 	yHat << 1, 2,
 			2, 4,
 			1, 1;
-	Eigen::MatrixXd postProb(3, 3);
+	Eigen::MatrixXf postProb(3, 3);
 	postProb << 1, 0, 1,
 				2, 1, 1,
 				1, 1, 1;
-	Eigen::MatrixXd B(2, 2);
+	Eigen::MatrixXf B(2, 2);
 	B << 	(20./9), (-5./9),
 			(28./9), (-7./9);
 	
@@ -189,11 +189,11 @@ TEST_CASE("sigma squared") {
 }
 
 TEST_CASE("init sigma squared") {
-	Eigen::MatrixXd xPoints(3, 2);
+	Eigen::MatrixXf xPoints(3, 2);
 	xPoints << 3, 4,
 			1, 1,
 			1, 2;
-	Eigen::MatrixXd yPoints(3, 2);
+	Eigen::MatrixXf yPoints(3, 2);
 	yPoints << 1, 2,
 			2, 4,
 			1, 1;
@@ -205,29 +205,29 @@ TEST_CASE("init sigma squared") {
 }
 
 TEST_CASE("E Step") {
-	Eigen::MatrixXd xPoints(3, 2);
+	Eigen::MatrixXf xPoints(3, 2);
 	xPoints  << 3, 4,
 				1, 1,
 				1, 2;
-	Eigen::MatrixXd yPoints(3, 2);
+	Eigen::MatrixXf yPoints(3, 2);
 	yPoints  << 1, 2,
 				2, 4,
 				1, 1;
-	Eigen::MatrixXd B(2, 2);
+	Eigen::MatrixXf B(2, 2);
 	B    << 5, 2,
 		 	1, 1;
-	Eigen::MatrixXd t(2, 1);
+	Eigen::MatrixXf t(2, 1);
 	t << 	2,
 			3;
 	double w = 2./3;
 	double sigmaSquared = 1.5;
 
-	Eigen::MatrixXd postProbAnswer(3,3);
+	Eigen::MatrixXf postProbAnswer(3,3);
 	postProbAnswer << 7.59784657e-12, 4.25691976e-20, 8.5502519e-19,
 					  1.85585056e-47, 1.58360649e-63, 2.35028043e-61,
 				      2.33560914e-07, 1.39159447e-13, 1.435048e-12;
 
-	Eigen::MatrixXd postProb;
+	Eigen::MatrixXf postProb;
 	postProb = E_Step(xPoints, yPoints, B, t, sigmaSquared, w, 1.0);
 	double threshold = 0.001;
 
@@ -240,15 +240,15 @@ TEST_CASE("E Step") {
 
 // nonrigid test
 TEST_CASE("Gram Matrix") {
-	Eigen::MatrixXd yPoints(4,3);
+	Eigen::MatrixXf yPoints(4,3);
 	yPoints << 4, 5, 1,
 			2, 4, 1,
 			8, 8, 8,
 			1, 4, 2;
 	double betaSquared = 2.0;
 
-	Eigen::MatrixXd gram = GetGramMatrix(yPoints, betaSquared);
-	Eigen::MatrixXd gramAnswer(4,4);
+	Eigen::MatrixXf gram = GetGramMatrix(yPoints, betaSquared);
+	Eigen::MatrixXf gramAnswer(4,4);
 	gramAnswer << 1, 0.2865048, 9.237450e-9, 0.06392786,
 				  0.2865058, 1, 1.08159416e-11, 0.6065307,
 				  9.237450e-9, 1.08159416e-11, 1, 1.08159416e-11,
@@ -263,31 +263,31 @@ TEST_CASE("Gram Matrix") {
 }
 
 TEST_CASE("E Step NONRIGID") {
-	Eigen::MatrixXd xPoints(3, 3);
+	Eigen::MatrixXf xPoints(3, 3);
 	xPoints  << 4, 5, 6,
 				7, 8, 9,
 				2, 2, 2;
-	Eigen::MatrixXd yPoints(3, 3);
+	Eigen::MatrixXf yPoints(3, 3);
 	yPoints  << 4, 5, 1,
 				2, 4, 1,
 				8, 8, 8;
-	Eigen::MatrixXd G(3, 3);
+	Eigen::MatrixXf G(3, 3);
 	G    << 1, 0.2865048, 9.237450e-9,
 			0.2865058, 1, 1.08159416e-11,
 			9.237450e-9, 1.08159416e-11, 1;
-	Eigen::MatrixXd W(3, 3);
+	Eigen::MatrixXf W(3, 3);
 	W << 	1, 4, 1,
 			0, 2, 4,
 			1, 3, 3;
 	double w = 2./3;
 	double sigmaSquared = 2;
 
-	Eigen::MatrixXd postProbAnswer(3,3);
+	Eigen::MatrixXf postProbAnswer(3,3);
 	postProbAnswer << 6.10999e-6, 4.23070e-7, 5.05435e-10,
 					  0.00149771, 1.15206e-6, 9.84797e-7,
 				      5.15431e-12, 0.000160079, 1.383951e-25;
 
-	Eigen::MatrixXd postProb;
+	Eigen::MatrixXf postProb;
 	postProb = E_Step_NR(xPoints, yPoints, G, W, sigmaSquared, w);
 	double threshold = 0.001;
 
@@ -308,26 +308,26 @@ TEST_CASE("E Step NONRIGID") {
 }
 
 // TEST_CASE("Similarity rigid/affine") {
-// 	Eigen::MatrixXd xPoints(4, 3);
+// 	Eigen::MatrixXf xPoints(4, 3);
 // 	xPoints  << 4, 5, 6,
 // 				7, 8, 9,
 // 				1, 1, 1,
 // 				2, 2, 2;
-// 	Eigen::MatrixXd yPoints(4, 3);
+// 	Eigen::MatrixXf yPoints(4, 3);
 // 	yPoints  << 4, 5, 1,
 // 				2, 4, 1,
 // 				8, 8, 8,
 // 				1, 4, 2;
-// 	Eigen::MatrixXd postProb(4, 4);
+// 	Eigen::MatrixXf postProb(4, 4);
 // 	postProb << 1, 4, 1, 6,
 // 				2, 1, 2, 1,
 // 				1, 0, 2, 3,
 // 				1, 8, 3, 2;
-// 	Eigen::MatrixXd rotationMat(3, 3);
+// 	Eigen::MatrixXf rotationMat(3, 3);
 // 	rotationMat <<  1, 4, 1,
 // 					0, 2, 4,
 // 					1, 3, 3;
-// 	Eigen::MatrixXd translationVec(3, 1);
+// 	Eigen::MatrixXf translationVec(3, 1);
 // 	translationVec << 	1, 
 // 						2, 
 // 						3;
@@ -343,27 +343,27 @@ TEST_CASE("E Step NONRIGID") {
 // }
 
 // TEST_CASE("Similarity NONRIGID") {
-// 	Eigen::MatrixXd xPoints(4, 3);
+// 	Eigen::MatrixXf xPoints(4, 3);
 // 	xPoints  << 4, 5, 6,
 // 				7, 8, 9,
 // 				1, 1, 1,
 // 				2, 2, 2;
-// 	Eigen::MatrixXd yPoints(4, 3);
+// 	Eigen::MatrixXf yPoints(4, 3);
 // 	yPoints  << 4, 5, 1,
 // 				2, 4, 1,
 // 				8, 8, 8,
 // 				1, 4, 2;
-// 	Eigen::MatrixXd postProb(4, 4);
+// 	Eigen::MatrixXf postProb(4, 4);
 // 	postProb << 1, 4, 1, 6,
 // 				2, 1, 2, 1,
 // 				1, 0, 2, 3,
 // 				1, 8, 3, 2;
-// 	Eigen::MatrixXd gramMat(4, 4);
+// 	Eigen::MatrixXf gramMat(4, 4);
 // 	gramMat <<  0, 4, 3, 1,
 // 				3, 3, 4, 1,
 // 				0, 5, 3, 5,
 // 				5, 3, 2, 4;
-// 	Eigen::MatrixXd W(4, 3);
+// 	Eigen::MatrixXf W(4, 3);
 // 	W << 	2, 2, 4,
 // 			4, 5, 4,
 // 			4, 3, 5,
@@ -381,28 +381,28 @@ TEST_CASE("E Step NONRIGID") {
 
 
 TEST_CASE("Update SS non-rigid") {
-	Eigen::MatrixXd xPoints(4, 3);
+	Eigen::MatrixXf xPoints(4, 3);
 	xPoints  << 4, 5, 6,
 				7, 8, 9,
 				1, 1, 1,
 				2, 2, 2;
-	Eigen::MatrixXd postProb(4, 4);
+	Eigen::MatrixXf postProb(4, 4);
 	postProb << 1, 2, 3, 4,
 				5, 4, 3, 2,
 				1, 1, 1, 1,
 				2, 2, 2, 2;
-	Eigen::MatrixXd transformedPoints(4, 3);
+	Eigen::MatrixXf transformedPoints(4, 3);
 	transformedPoints << 1, 1, 1,
 						 2, 2, 2,
 						 1, 2, 3,
 						 3, 2, 1;
 
-	Eigen::MatrixXd oneVecRow = Eigen::MatrixXd::Ones(postProb.rows(),1);
-    Eigen::MatrixXd oneVecCol = Eigen::MatrixXd::Ones(postProb.cols(),1);
+	Eigen::MatrixXf oneVecRow = Eigen::MatrixXf::Ones(postProb.rows(),1);
+    Eigen::MatrixXf oneVecCol = Eigen::MatrixXf::Ones(postProb.cols(),1);
 
-	Eigen::MatrixXd postProbX = postProb * xPoints;
-	Eigen::MatrixXd postProbTransOne = postProb.transpose() * oneVecRow;
-	Eigen::MatrixXd postProbOne = postProb * oneVecCol;
+	Eigen::MatrixXf postProbX = postProb * xPoints;
+	Eigen::MatrixXf postProbTransOne = postProb.transpose() * oneVecRow;
+	Eigen::MatrixXf postProbOne = postProb * oneVecCol;
 
 	double sigmaSquared = SigmaSquared(xPoints, postProbOne, postProbTransOne, postProbX, transformedPoints);
 
@@ -413,19 +413,19 @@ TEST_CASE("Update SS non-rigid") {
 }
 
 TEST_CASE("CalculateUx") {
-	Eigen::MatrixXd xPoints(3, 2);
+	Eigen::MatrixXf xPoints(3, 2);
 	xPoints <<  3, 4,
 				1, 1,
 				1, 2;
-	Eigen::MatrixXd postProb(3, 3);
+	Eigen::MatrixXf postProb(3, 3);
 	postProb << 1, 0, 1,
 				2, 1, 1,
 				1, 1, 1;
-	Eigen::MatrixXd answerUx(2, 1);
+	Eigen::MatrixXf answerUx(2, 1);
 	answerUx << (17./9),
 				(24./9);
 
-	Eigen::MatrixXd Ux;
+	Eigen::MatrixXf Ux;
 	Ux = CalculateUx(xPoints, postProb);
 
 	double threshold = 0.01;
@@ -437,19 +437,19 @@ TEST_CASE("CalculateUx") {
 }
 
 TEST_CASE("CalculateUy") {
-	Eigen::MatrixXd yPoints(3, 2);
+	Eigen::MatrixXf yPoints(3, 2);
 	yPoints <<  3, 4,
 				1, 1,
 				1, 2;
-	Eigen::MatrixXd postProb(3, 3);
+	Eigen::MatrixXf postProb(3, 3);
 	postProb << 1, 0, 1,
 				2, 1, 1,
 				1, 1, 1;
-	Eigen::MatrixXd answerUy(2, 1);
+	Eigen::MatrixXf answerUy(2, 1);
 	answerUy << (13./9),
 				(18./9);
 
-	Eigen::MatrixXd Uy;
+	Eigen::MatrixXf Uy;
 	Uy = CalculateUy(yPoints, postProb);
 
 	double threshold = 0.01;
@@ -461,29 +461,29 @@ TEST_CASE("CalculateUy") {
 }
 
 TEST_CASE("AlignedPointSet NONRIGID") {
-	Eigen::MatrixXd yPoints(4, 3);
+	Eigen::MatrixXf yPoints(4, 3);
 	yPoints  << 4, 5, 1,
 				2, 4, 1,
 				8, 8, 8,
 				1, 4, 2;
-	Eigen::MatrixXd gramMat(4, 4);
+	Eigen::MatrixXf gramMat(4, 4);
 	gramMat <<  0, 4, 3, 1,
 				3, 3, 4, 1,
 				0, 5, 3, 5,
 				5, 3, 2, 4;
-	Eigen::MatrixXd W(4, 3);
+	Eigen::MatrixXf W(4, 3);
 	W << 	2, 2, 4,
 			4, 5, 4,
 			4, 3, 5,
 			3, 1, 5;
 
-	Eigen::MatrixXd answerAligned(4, 3);
+	Eigen::MatrixXf answerAligned(4, 3);
 	answerAligned << 	35, 35, 37,
 						39, 38, 50,
 						55, 47, 68,
 						43, 39, 64;
 
-	Eigen::MatrixXd AlignedPS;
+	Eigen::MatrixXf AlignedPS;
 	AlignedPS = AlignedPointSet_NR(yPoints, gramMat, W);
 
 	double threshold = 0.001;
@@ -495,25 +495,25 @@ TEST_CASE("AlignedPointSet NONRIGID") {
 }
 // non rigid test
 TEST_CASE("GetW") {
-	Eigen::MatrixXd yPoints(4, 3);
+	Eigen::MatrixXf yPoints(4, 3);
 	yPoints <<   3, 32, 10,
     		    10,  6,  2,
     			10, 10, 43,
      			 1,  2, 21;
 
-	Eigen::MatrixXd xPoints(4, 3);
+	Eigen::MatrixXf xPoints(4, 3);
 	xPoints <<   4,  5,  7,
     			10, 23,  4,
      			 6,  7, 20,
     			34, 10,  2;
 
-	Eigen::MatrixXd postProb(4, 4);
+	Eigen::MatrixXf postProb(4, 4);
 	postProb << 0.1, 0.4, 0.4, 0.7, 
 				0.5, 0.7, 0.8, 0.8, 
 				0.2, 0.2, 0.5, 0.2, 
 				0.9, 0.2, 0.7, 0.7;
 
-	Eigen::MatrixXd gramMatrix(4, 4);
+	Eigen::MatrixXf gramMatrix(4, 4);
 	gramMatrix <<   1, 0.5, 0.8, 0.2, 
 				0.5,   1, 0.1, 0.6, 
 				0.8, 0.1,   1, 0.3, 
@@ -522,19 +522,19 @@ TEST_CASE("GetW") {
 	double sigmaSquared = 2;
 	double lambda = 0.5;
 
-	Eigen::MatrixXd answerW(4, 3);
+	Eigen::MatrixXf answerW(4, 3);
 	answerW << 13.4915220591003, -18.973075298976, 5.86045059959459, 
 				-5.87043357937814, 9.84038392458258, 7.94248048306686, 
 				-6.28462294910371, 7.2451892612769, -17.9879677078044,
 				10.8209590146699, 1.51201994761614, -8.9579914981555;
 
-	Eigen::MatrixXd oneVecRow = Eigen::MatrixXd::Ones(postProb.rows(),1);
-    Eigen::MatrixXd oneVecCol = Eigen::MatrixXd::Ones(postProb.cols(),1);
+	Eigen::MatrixXf oneVecRow = Eigen::MatrixXf::Ones(postProb.rows(),1);
+    Eigen::MatrixXf oneVecCol = Eigen::MatrixXf::Ones(postProb.cols(),1);
 
-	Eigen::MatrixXd postProbX = postProb * xPoints;
-	Eigen::MatrixXd postProbOne = postProb * oneVecCol;
+	Eigen::MatrixXf postProbX = postProb * xPoints;
+	Eigen::MatrixXf postProbOne = postProb * oneVecCol;
 	
-	Eigen::MatrixXd W = GetW(yPoints, gramMatrix, postProbOne, postProbX, sigmaSquared, lambda);
+	Eigen::MatrixXf W = GetW(yPoints, gramMatrix, postProbOne, postProbX, sigmaSquared, lambda);
 
 	double threshold = 0.01;
 	for (size_t i = 0; i < 4; ++i) {
@@ -546,12 +546,12 @@ TEST_CASE("GetW") {
 
 //power iteration test
 TEST_CASE("PowerIteration") {
-	Eigen::MatrixXd m(3, 3);
+	Eigen::MatrixXf m(3, 3);
 	m <<   2, 2, 3,
     		     4, 5, 6,
     			 7, 8, 9;
 
-	Eigen::VectorXd v = Eigen::VectorXd::Random(3);
+	Eigen::VectorXf v = Eigen::VectorXf::Random(3);
 
 	double ev = PowerIteration(m, v, 20, 0.01);
 	double threshold = 0.01;
@@ -564,15 +564,15 @@ TEST_CASE("PowerIteration") {
 
 // // eigen decomposition test
 TEST_CASE("NLargestEigenvalues") {
-	Eigen::MatrixXd m(4, 4);
+	Eigen::MatrixXf m(4, 4);
 	m <<   4, 1, 9, 7, 
 		   1, 3, 5, 3,
 		   9, 5, 2, 3,
 		   7, 3, 3, 9;
 
 	FUNCINFO("HELLO")
-	Eigen::MatrixXd vector_matrix = Eigen::MatrixXd::Zero(4, 3);
-	Eigen::VectorXd value_matrix = Eigen::VectorXd::Zero(3);
+	Eigen::MatrixXf vector_matrix = Eigen::MatrixXf::Zero(4, 3);
+	Eigen::VectorXf value_matrix = Eigen::VectorXf::Zero(3);
 
 	GetNLargestEigenvalues(m, vector_matrix, value_matrix, 3, 4, 50, 0.00001);
 
@@ -590,15 +590,15 @@ TEST_CASE("NLargestEigenvalues") {
 
 // eigen decomposition test
 TEST_CASE("NLargestEigenvalues_V2") {
-	Eigen::MatrixXd m(4, 4);
+	Eigen::MatrixXf m(4, 4);
 	m <<   34, 12, 0, 0, 
 		   12, 41, 0, 0,
 		    0,  0, 1, 0,
 		    0,  0, 0, 2;
 
 	FUNCINFO("HELLO")
-	Eigen::MatrixXd vector_matrix = Eigen::MatrixXd::Zero(4, 3);
-	Eigen::VectorXd value_matrix = Eigen::VectorXd::Zero(3);
+	Eigen::MatrixXf vector_matrix = Eigen::MatrixXf::Zero(4, 3);
+	Eigen::VectorXf value_matrix = Eigen::VectorXf::Zero(3);
 
 	GetNLargestEigenvalues_V2(m, vector_matrix, value_matrix, 3, 4);
 
@@ -616,25 +616,25 @@ TEST_CASE("NLargestEigenvalues_V2") {
 
 TEST_CASE("LowRankGetW") {
 
-	Eigen::MatrixXd yPoints(3, 3);
+	Eigen::MatrixXf yPoints(3, 3);
 	yPoints <<   3, 32, 10,
     		    10,  6,  2,
     			10, 10, 43;
 
-	Eigen::MatrixXd xPoints(3, 3);
+	Eigen::MatrixXf xPoints(3, 3);
 	xPoints <<   4,  5,  7,
     			10, 23,  4,
      			 6,  7, 20;
 
-	Eigen::MatrixXd postProb(3, 3);
+	Eigen::MatrixXf postProb(3, 3);
 	postProb << 0.1, 0.4, 0.4, 
 				0.5, 0.7, 0.8,
 				0.2, 0.2, 0.5; 
 
-	Eigen::VectorXd gramValues(2);
+	Eigen::VectorXf gramValues(2);
 	gramValues <<   1, 2;
 
-	Eigen::MatrixXd gramVectors(3, 2);
+	Eigen::MatrixXf gramVectors(3, 2);
 	gramVectors << 0.2, 0.5, 0.1, 
 				   0.3, 0.1, 0.8;
 
@@ -652,11 +652,11 @@ TEST_CASE("Compute CPD Products") {
 	// xPoints = fixed points = source points 
 	// yPoints = moving points = target points
 
-	Eigen::MatrixXd yPoints = 5*Eigen::MatrixXd::Random(M_target_pts, dim);
-	Eigen::MatrixXd xPoints = 4.1*(Eigen::MatrixXd::Random(N_source_points, dim).array()-0.012).matrix();
+	Eigen::MatrixXf yPoints = 5*Eigen::MatrixXf::Random(M_target_pts, dim);
+	Eigen::MatrixXf xPoints = 4.1*(Eigen::MatrixXf::Random(N_source_points, dim).array()-0.012).matrix();
 
-	Eigen::MatrixXd gramMatrix = Eigen::MatrixXd::Zero(M_target_pts, M_target_pts);
-	Eigen::MatrixXd W = Eigen::MatrixXd::Zero(M_target_pts, dim);	
+	Eigen::MatrixXf gramMatrix = Eigen::MatrixXf::Zero(M_target_pts, M_target_pts);
+	Eigen::MatrixXf W = Eigen::MatrixXf::Zero(M_target_pts, dim);	
 	
 	
 	auto start = std::chrono::high_resolution_clock::now();
@@ -670,8 +670,8 @@ TEST_CASE("Compute CPD Products") {
 
 	auto postProb = E_Step_NR(xPoints, yPoints, gramMatrix, W, sigmaSquared, w);
 
-	Eigen::MatrixXd ones_array_N = Eigen::MatrixXd::Ones(N_source_points, 1);
-	Eigen::MatrixXd ones_array_M = Eigen::MatrixXd::Ones(M_target_pts, 1);
+	Eigen::MatrixXf ones_array_N = Eigen::MatrixXf::Ones(N_source_points, 1);
+	Eigen::MatrixXf ones_array_M = Eigen::MatrixXf::Ones(M_target_pts, 1);
 
 	auto P1 = postProb * ones_array_N;
 	auto Pt1 = postProb * ones_array_M;
@@ -714,15 +714,15 @@ TEST_CASE("IFGT Test") {
 	// xPoints = fixed points = source points 
 	// yPoints = moving points = target points
 	std::cout << "epsilon: " << epsilon << std::endl;
-	Eigen::MatrixXd yPoints = 100*Eigen::MatrixXd::Random(M_target_pts, dim);
-	Eigen::MatrixXd xPoints = 76.4*(Eigen::MatrixXd::Random(N_source_points, dim).array()-0.85).matrix();
+	Eigen::MatrixXf yPoints = 100*Eigen::MatrixXf::Random(M_target_pts, dim);
+	Eigen::MatrixXf xPoints = 76.4*(Eigen::MatrixXf::Random(N_source_points, dim).array()-0.85).matrix();
 
-	Eigen::ArrayXd weights = 0.8*(Eigen::ArrayXd::Random(N_source_points,1)+1.0);
+	Eigen::ArrayXf weights = 0.8*(Eigen::ArrayXf::Random(N_source_points,1)+1.0);
 
 	auto start = std::chrono::high_resolution_clock::now();
 
-    Eigen::MatrixXd xPoints_scaled;
-   	Eigen::MatrixXd yPoints_scaled;
+    Eigen::MatrixXf xPoints_scaled;
+   	Eigen::MatrixXf yPoints_scaled;
 
     double bandwidth_scaled = rescale_points(xPoints, yPoints, xPoints_scaled, 
                                        		yPoints_scaled, bandwidth);
@@ -737,13 +737,13 @@ TEST_CASE("IFGT Test") {
 
 
 	auto ifgt_transform = std::make_unique<IFGT>(xPoints_scaled, bandwidth_scaled, epsilon);
-	Eigen::MatrixXd G_y = ifgt_transform->compute_ifgt(yPoints_scaled, weights);
+	Eigen::MatrixXf G_y = ifgt_transform->compute_ifgt(yPoints_scaled, weights);
 
 	auto stop = std::chrono::high_resolution_clock::now();
 	time_span = std::chrono::duration_cast<std::chrono::duration<double>>(stop - scaling_end);
     std::cout << "IFGT Excecution took time: " << time_span.count() << " s" << std::endl;
 
-	// Eigen::MatrixXd G_naive = Eigen::MatrixXd::Zero(yPoints.rows(),1);
+	// Eigen::MatrixXf G_naive = Eigen::MatrixXf::Zero(yPoints.rows(),1);
 
 	// start = std::chrono::high_resolution_clock::now();
     // for (int m = 0; m < M_target_pts; ++m) {
@@ -776,15 +776,15 @@ TEST_CASE("IFGT Test 2") {
 
 	// xPoints = fixed points = source points 
 	// yPoints = moving points = target points
-	Eigen::MatrixXd yPoints = 5.4*(Eigen::MatrixXd::Random(M_target_pts, dim).array()+0.45).matrix();
-	Eigen::MatrixXd xPoints = 2.4*(Eigen::MatrixXd::Random(N_source_points, dim).array()-0.85).matrix();
+	Eigen::MatrixXf yPoints = 5.4*(Eigen::MatrixXf::Random(M_target_pts, dim).array()+0.45).matrix();
+	Eigen::MatrixXf xPoints = 2.4*(Eigen::MatrixXf::Random(N_source_points, dim).array()-0.85).matrix();
 
-	Eigen::ArrayXd weights = 0.8*(Eigen::ArrayXd::Random(N_source_points,1)+1.0);
+	Eigen::ArrayXf weights = 0.8*(Eigen::ArrayXf::Random(N_source_points,1)+1.0);
 
 	// run naive
 	auto naive_start = std::chrono::high_resolution_clock::now();
 
-	Eigen::MatrixXd G_naive = Eigen::MatrixXd::Zero(yPoints.rows(),1);
+	Eigen::MatrixXf G_naive = Eigen::MatrixXf::Zero(yPoints.rows(),1);
     for (int m = 0; m < M_target_pts; ++m) {
         for (int n = 0; n < N_source_points; ++n) {
             double expArg = - 1.0 / (2.0 * sigmaSquared) * (yPoints.row(m) - xPoints.row(n)).squaredNorm();
@@ -796,8 +796,8 @@ TEST_CASE("IFGT Test 2") {
 	auto time_span = std::chrono::duration_cast<std::chrono::duration<double>>(naive_stop - naive_start);
     std::cout << "Naive Excecution took time: " << time_span.count() << " s" << std::endl;
 
-	Eigen::MatrixXd xPoints_scaled;
-   	Eigen::MatrixXd yPoints_scaled;
+	Eigen::MatrixXf xPoints_scaled;
+   	Eigen::MatrixXf yPoints_scaled;
     double bandwidth_scaled = rescale_points(xPoints, yPoints, xPoints_scaled, 
                                        		yPoints_scaled, bandwidth);
 
@@ -815,7 +815,7 @@ TEST_CASE("IFGT Test 2") {
 		auto ifgt_start = std::chrono::high_resolution_clock::now();
 
 		auto ifgt_transform = std::make_unique<IFGT>(xPoints_scaled, bandwidth_scaled, epsilon);
-		Eigen::MatrixXd G_y = ifgt_transform->compute_ifgt(yPoints_scaled, weights);
+		Eigen::MatrixXf G_y = ifgt_transform->compute_ifgt(yPoints_scaled, weights);
 
 		auto ifgt_stop = std::chrono::high_resolution_clock::now();
 		time_span = std::chrono::duration_cast<std::chrono::duration<double>>(ifgt_stop - ifgt_start);
@@ -839,12 +839,12 @@ TEST_CASE("IFGT Test 2") {
 */
 /*
 TEST_CASE("rescale points") {
-	Eigen::MatrixXd xPoints_scaled;
-	Eigen::MatrixXd yPoints_scaled;
+	Eigen::MatrixXf xPoints_scaled;
+	Eigen::MatrixXf yPoints_scaled;
 	Eigen::IOFormat CleanFmt(4, 0, " ", "\n", "", ";","[", "]\n");
 
 	std::cout << "before xpoints"  << std::endl;
-	Eigen::MatrixXd xPoints(15,2);
+	Eigen::MatrixXf xPoints(15,2);
 	xPoints << 	-10.0,	-10.0,
 				-10.0, 	-8.0,
 				-10.0, 	-6.0,
@@ -861,7 +861,7 @@ TEST_CASE("rescale points") {
 				10.0, 	8.0,
 				10.0, 	6.0;
 	double bandwidth = 10.0;
-	Eigen::MatrixXd yPoints = -1.5 * xPoints;
+	Eigen::MatrixXf yPoints = -1.5 * xPoints;
     // double bandwidth = std::sqrt(2.0 * sigmaSquared) / max_range; // scale bandwidth
 
     double bandwidth_scaled = rescale_points(xPoints, yPoints, xPoints_scaled, 
@@ -881,7 +881,7 @@ TEST_CASE("Clustering Test") {
 	int num_clusters = 10;
 	// xPoints = fixed points = source points 
 	// yPoints = moving points =5target points
-	Eigen::MatrixXd xPoints = 50*Eigen::MatrixXd::Random(N_points, dim);
+	Eigen::MatrixXf xPoints = 50*Eigen::MatrixXf::Random(N_points, dim);
 
 	Cluster cluster = k_center_clustering(xPoints, num_clusters);
 	Eigen::IOFormat CleanFmt(4, 0, " ", "\n", "", ";","[", "]\n");

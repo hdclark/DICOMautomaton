@@ -27,35 +27,35 @@
 
 #include <eigen3/Eigen/Dense> //Needed for Eigen library dense matrices.
 
-Eigen::MatrixXd compute_naive_gt(const Eigen::MatrixXd & target_pts, 
-                                const Eigen::MatrixXd & source_pts,
-                                const Eigen::ArrayXd & weights,
+Eigen::MatrixXf compute_naive_gt(const Eigen::MatrixXf & target_pts, 
+                                const Eigen::MatrixXf & source_pts,
+                                const Eigen::ArrayXf & weights,
                                 double bandwidth);
 
 struct Cluster {
-    Eigen::MatrixXd k_centers; 
-    Eigen::VectorXd radii;
-    Eigen::VectorXd assignments;
-    Eigen::VectorXd distances;
+    Eigen::MatrixXf k_centers; 
+    Eigen::VectorXf radii;
+    Eigen::VectorXf assignments;
+    Eigen::VectorXf distances;
     double rx_max;
 };
 // Gonzalez' k-centre clustering algorithm 
 // outputs struct Cluster
-Cluster k_center_clustering(const Eigen::MatrixXd & points, int num_clusters);
+Cluster k_center_clustering(const Eigen::MatrixXf & points, int num_clusters);
 
 // calculates the maximum and minimum values of the two pointsets
 // used to normalize the points - normalizes overly conservative but it should not 
 // affect the final result
-std::pair<double, double> calc_max_range(const Eigen::MatrixXd & target_pts,
-                                            const Eigen::MatrixXd & source_pts);
+std::pair<double, double> calc_max_range(const Eigen::MatrixXf & target_pts,
+                                            const Eigen::MatrixXf & source_pts);
 
 // rescales based on max/min points of point sets. Assumes both 
 // point sets are spatially linked, so it preserves the relative 
 // distance between the two point sets
-double rescale_points(const Eigen::MatrixXd & fixed_pts,
-                        const Eigen::MatrixXd & moving_pts,
-                        Eigen::MatrixXd & fixed_pts_scaled,
-                        Eigen::MatrixXd & moving_pts_scaled,
+double rescale_points(const Eigen::MatrixXf & fixed_pts,
+                        const Eigen::MatrixXf & moving_pts,
+                        Eigen::MatrixXf & fixed_pts_scaled,
+                        Eigen::MatrixXf & moving_pts_scaled,
                         double bandwidth);
 
 // Improved Fast Gauss Transform Class
@@ -67,7 +67,7 @@ class IFGT {
         // runs. Useful in particular for P1 and PX where the same IFGT object
         // is used multiple times, so we don't waste time reclustering, etc.
 
-        IFGT(const Eigen::MatrixXd & source_pts,
+        IFGT(const Eigen::MatrixXf & source_pts,
             double bandwidth, // larger bandwidth = more speedup compared to smallere bandwidth (in general)
             double epsilon); // in general, epsilon = 1E-3 - 1E-6 is good enough for the majority
                              // of applications. Anything less than 1E-8 is pretty overkill
@@ -75,16 +75,16 @@ class IFGT {
 
         // The only function you need to call for IFGT
         // computes IFGT with constant weight of 1
-        Eigen::MatrixXd compute_ifgt(const Eigen::MatrixXd & target_pts);
+        Eigen::MatrixXf compute_ifgt(const Eigen::MatrixXf & target_pts);
 
         // computes ifgt with given weights 
-        Eigen::MatrixXd compute_ifgt(const Eigen::MatrixXd & target_pts, 
-                                const Eigen::ArrayXd & weights);
+        Eigen::MatrixXf compute_ifgt(const Eigen::MatrixXf & target_pts, 
+                                const Eigen::ArrayXf & weights);
         
         int get_nclusters() const { return n_clusters; }
 
     private: 
-        const Eigen::MatrixXd source_pts;
+        const Eigen::MatrixXf source_pts;
         const double bandwidth; 
         const double epsilon;
         const int dim;
@@ -92,7 +92,7 @@ class IFGT {
         int p_max_total; // length of monomials after multi index expansion
         int n_clusters;
         double cutoff_radius;
-        Eigen::MatrixXd constant_series;
+        Eigen::MatrixXf constant_series;
         std::unique_ptr<Cluster> cluster; 
 
 
@@ -107,18 +107,18 @@ class IFGT {
 
         // computes [(y_j-c_k)/h]^{alpha} or [(x_i-c_k)/h]^{alpha}
         // where y_j is target point, x_i is point inside cluster
-        Eigen::VectorXd compute_monomials(const Eigen::MatrixXd & delta);
+        Eigen::VectorXf compute_monomials(const Eigen::MatrixXf & delta);
 
         // computes constant ck for each cluster with constant weights
-        Eigen::MatrixXd compute_ck(const Eigen::ArrayXd & weights);
+        Eigen::MatrixXf compute_ck(const Eigen::ArrayXf & weights);
 
         // computes G(yj) - the actual gaussian
-        Eigen::MatrixXd compute_gaussian(const Eigen::MatrixXd & target_pts,
-                                            const Eigen::MatrixXd & C_k);
+        Eigen::MatrixXf compute_gaussian(const Eigen::MatrixXf & target_pts,
+                                            const Eigen::MatrixXf & C_k);
         // // computes gauss transform naively if the estimated computational complexity
         // // is lower than IFGT
-        // Eigen::MatrixXd compute_naive(const Eigen::MatrixXd & target_pts, 
-        //                                     const Eigen::ArrayXd & weights);
+        // Eigen::MatrixXf compute_naive(const Eigen::MatrixXf & target_pts, 
+        //                                     const Eigen::ArrayXf & weights);
         // estimates complexity of IFGT and naive implementations
         double compute_complexity(int M_target_pts);
 

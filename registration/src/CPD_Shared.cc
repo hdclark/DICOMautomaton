@@ -10,30 +10,30 @@
 #include <chrono>
 using namespace std::chrono;
 
-Eigen::MatrixXd CenterMatrix(const Eigen::MatrixXd & points,
-            const Eigen::MatrixXd & meanVector) {
-    Eigen::MatrixXd oneVec = Eigen::MatrixXd::Ones(points.rows(),1);
+Eigen::MatrixXf CenterMatrix(const Eigen::MatrixXf & points,
+            const Eigen::MatrixXf & meanVector) {
+    Eigen::MatrixXf oneVec = Eigen::MatrixXf::Ones(points.rows(),1);
     return points - oneVec * meanVector.transpose();
 }
 
-Eigen::MatrixXd GetTranslationVector(const Eigen::MatrixXd & rotationMatrix,
-            const Eigen::MatrixXd & xMeanVector,
-            const Eigen::MatrixXd & yMeanVector,
+Eigen::MatrixXf GetTranslationVector(const Eigen::MatrixXf & rotationMatrix,
+            const Eigen::MatrixXf & xMeanVector,
+            const Eigen::MatrixXf & yMeanVector,
             double scale) {
     return xMeanVector - scale * rotationMatrix * yMeanVector;
 }
 
-Eigen::MatrixXd AlignedPointSet(const Eigen::MatrixXd & yPoints,
-            const Eigen::MatrixXd & rotationMatrix,
-            const Eigen::MatrixXd & translation,
+Eigen::MatrixXf AlignedPointSet(const Eigen::MatrixXf & yPoints,
+            const Eigen::MatrixXf & rotationMatrix,
+            const Eigen::MatrixXf & translation,
             double scale) {
     
-    Eigen::MatrixXd oneVec = Eigen::MatrixXd::Ones(yPoints.rows(),1);
+    Eigen::MatrixXf oneVec = Eigen::MatrixXf::Ones(yPoints.rows(),1);
     return scale * yPoints * rotationMatrix.transpose() + oneVec * translation.transpose();
 }
 
-double Init_Sigma_Squared(const Eigen::MatrixXd & xPoints,
-            const Eigen::MatrixXd & yPoints) {
+double Init_Sigma_Squared(const Eigen::MatrixXf & xPoints,
+            const Eigen::MatrixXf & yPoints) {
     double normSum = 0;
     int nRowsX = xPoints.rows();
     int mRowsY =  yPoints.rows();
@@ -49,16 +49,16 @@ double Init_Sigma_Squared(const Eigen::MatrixXd & xPoints,
     return 1.0 / (nRowsX * mRowsY * dim) * normSum;
 }
 
-double GetSimilarity(const Eigen::MatrixXd & xPoints,
-            const Eigen::MatrixXd & yPoints,
-            const Eigen::MatrixXd & rotationMatrix,
-            const Eigen::MatrixXd & translation,
+double GetSimilarity(const Eigen::MatrixXf & xPoints,
+            const Eigen::MatrixXf & yPoints,
+            const Eigen::MatrixXf & rotationMatrix,
+            const Eigen::MatrixXf & translation,
             double scale) {
     
     int mRowsY = yPoints.rows();
     int nRowsX = xPoints.rows(); 
-    Eigen::MatrixXd alignedYPoints = AlignedPointSet(yPoints, rotationMatrix, translation, scale);
-    Eigen::MatrixXd tempVector;
+    Eigen::MatrixXf alignedYPoints = AlignedPointSet(yPoints, rotationMatrix, translation, scale);
+    Eigen::MatrixXf tempVector;
 
     double sum = 0;
     double min_distance = -1;
@@ -77,11 +77,11 @@ double GetSimilarity(const Eigen::MatrixXd & xPoints,
     return sum;
 }
 
-double GetObjective(const Eigen::MatrixXd & xPoints,
-            const Eigen::MatrixXd & yPoints,
-            const Eigen::MatrixXd & postProb,
-            const Eigen::MatrixXd & rotationMatrix,
-            const Eigen::MatrixXd & translation,
+double GetObjective(const Eigen::MatrixXf & xPoints,
+            const Eigen::MatrixXf & yPoints,
+            const Eigen::MatrixXf & postProb,
+            const Eigen::MatrixXf & rotationMatrix,
+            const Eigen::MatrixXf & translation,
             double scale, 
             double sigmaSquared) {
     
@@ -89,8 +89,8 @@ double GetObjective(const Eigen::MatrixXd & xPoints,
     int nRowsX = xPoints.rows(); 
     double dimensionality = xPoints.cols();
     double Np = postProb.sum();
-    Eigen::MatrixXd alignedYPoints = AlignedPointSet(yPoints, rotationMatrix, translation, scale);
-    Eigen::MatrixXd tempVector;
+    Eigen::MatrixXf alignedYPoints = AlignedPointSet(yPoints, rotationMatrix, translation, scale);
+    Eigen::MatrixXf tempVector;
 
     double leftSum = 0;
     for (int m = 0; m < mRowsY; ++m) {
@@ -104,17 +104,17 @@ double GetObjective(const Eigen::MatrixXd & xPoints,
     return leftSum + rightSum;
 }
 
-Eigen::MatrixXd E_Step(const Eigen::MatrixXd & xPoints,
-            const Eigen::MatrixXd & yPoints,
-            const Eigen::MatrixXd & rotationMatrix,
-            const Eigen::MatrixXd & t,
+Eigen::MatrixXf E_Step(const Eigen::MatrixXf & xPoints,
+            const Eigen::MatrixXf & yPoints,
+            const Eigen::MatrixXf & rotationMatrix,
+            const Eigen::MatrixXf & t,
             double sigmaSquared,
             double w,
             double scale) {
-    Eigen::MatrixXd postProb = Eigen::MatrixXd::Zero(yPoints.rows(),xPoints.rows());
-    Eigen::MatrixXd expMat = Eigen::MatrixXd::Zero(yPoints.rows(),xPoints.rows());
+    Eigen::MatrixXf postProb = Eigen::MatrixXf::Zero(yPoints.rows(),xPoints.rows());
+    Eigen::MatrixXf expMat = Eigen::MatrixXf::Zero(yPoints.rows(),xPoints.rows());
 
-    Eigen::MatrixXd tempVector;
+    Eigen::MatrixXf tempVector;
     double expArg;
     double numerator;
     double denominator;
@@ -143,18 +143,18 @@ Eigen::MatrixXd E_Step(const Eigen::MatrixXd & xPoints,
     return postProb;
 }
 
-Eigen::MatrixXd CalculateUx(
-            const Eigen::MatrixXd & xPoints, 
-            const Eigen::MatrixXd & postProb){
-    Eigen::MatrixXd oneVec = Eigen::MatrixXd::Ones(postProb.rows(),1);
+Eigen::MatrixXf CalculateUx(
+            const Eigen::MatrixXf & xPoints, 
+            const Eigen::MatrixXf & postProb){
+    Eigen::MatrixXf oneVec = Eigen::MatrixXf::Ones(postProb.rows(),1);
     double oneOverNp = 1/(postProb.sum());
     return oneOverNp * (xPoints.transpose()) * postProb.transpose() * oneVec;
 }
 
-Eigen::MatrixXd CalculateUy( 
-            const Eigen::MatrixXd & yPoints, 
-            const Eigen::MatrixXd & postProb){
-    Eigen::MatrixXd oneVec = Eigen::MatrixXd::Ones(postProb.cols(),1);
+Eigen::MatrixXf CalculateUy( 
+            const Eigen::MatrixXf & yPoints, 
+            const Eigen::MatrixXf & postProb){
+    Eigen::MatrixXf oneVec = Eigen::MatrixXf::Ones(postProb.cols(),1);
     double oneOverNp = 1/(postProb.sum());
     return oneOverNp * (yPoints.transpose()) * postProb * oneVec;
 }
