@@ -473,8 +473,8 @@ AlignViaNonRigidCPD(CPDParams & params,
         } else {
             // calculating postProb is faste than calculating naive matrix vector products
             auto postProb = E_Step_NR(X, Y,transform.G, transform.W, sigma_squared, params.distribution_weight);
-            postProbOne = postProb * oneVecCol;
-            postProbTransOne = postProb.transpose() * oneVecCol;
+            postProbOne = postProb * oneVecRow;
+            postProbTransOne = postProb.transpose() * oneVecRow;
             postProbX = postProb * X;
             L_temp = UpdateNaiveConvergenceL(postProbTransOne, sigma_squared, params.distribution_weight, 
                                             X.rows(), Y.rows(), X.cols());
@@ -518,10 +518,10 @@ AlignViaNonRigidCPD(CPDParams & params,
             }
         }
 
-        // if (objective_tolerance < params.similarity_threshold || isnan(objective_tolerance) || isnan(sigma_squared)) {
-        //     FUNCINFO("FINAL SIMILARITY: " << similarity);
-        //     break;
-        // }
+        if (objective_tolerance < params.similarity_threshold || isnan(objective_tolerance) || isnan(sigma_squared)) {
+            FUNCINFO("FINAL SIMILARITY: " << similarity);
+            break;
+        }
 
         high_resolution_clock::time_point stop = high_resolution_clock::now();
         duration<double>  time_span = duration_cast<duration<double>>(stop - start);

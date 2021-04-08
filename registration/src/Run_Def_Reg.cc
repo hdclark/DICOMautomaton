@@ -241,7 +241,6 @@ int main(int argc, char* argv[]){
         if(video == "True") {
           temp_xyz_outfile = xyz_outfile + "_iter0.xyz";
           std::ofstream PFO(temp_xyz_outfile);
-          FUNCINFO(params.similarity_threshold)
           if(!WritePointSetToXYZ(mutable_moving, PFO))
             FUNCERR("Error writing point set to " << temp_xyz_outfile);
         }
