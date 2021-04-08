@@ -1,5 +1,7 @@
 import argparse
 import numpy as np
+import csv
+import os
 
 def read_file(file_name):
     with open(file_name, "r") as fp:
@@ -15,15 +17,25 @@ def read_file(file_name):
 def main():
     parser = argparse.ArgumentParser(
         description="File I/O specification for plotter")
-    parser.add_argument("file1", help="Path to first point cloud file")
-    parser.add_argument("file2", help="Path to second point cloud file")
+    parser.add_argument("stats_file", help="Path to stats file")
+    parser.add_argument("point_file", help="Path to stationary point cloud file")
 
     args = parser.parse_args()
-    point_set_1 = read_file(args.file1)
-    point_set_2 = read_file(args.file2)
+    stats = args.stats_file
+    stationary = args.point_file
 
-    error = np.square(point_set_1 - point_set_2).sum()/point_set_1.shape[0]
-    print("Error: " + str(error))
+    stats_tmp = stats + ".tmp"
+
+    with open(stats, 'r') as csvinput:
+        with open(stats_tmp, 'w') as csvoutput:
+            writer = csv.writer(csvoutput)
+            for row in csv.reader(csvinput):
+                moving = "../" + row[3]
+                point_set_1 = read_file(moving)
+                point_set_2 = read_file(stationary)
+                error = (np.square(point_set_1 - point_set_2).sum()/point_set_1.shape[0])
+                writer.writerow(row+[str(error)])
+    os.rename(stats_tmp, stats)
 
 if __name__ == '__main__':
     main()

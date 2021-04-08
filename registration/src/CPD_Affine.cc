@@ -4,6 +4,7 @@
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 #include "CPD_Affine.h"
 #include "YgorMathIOXYZ.h"    //Needed for ReadPointSetFromXYZ.
+#include <iostream>
 #include <cmath>
 #include <chrono>
 #include <math.h>
@@ -141,6 +142,7 @@ AlignViaAffineCPD(CPDParams & params,
     Eigen::MatrixXd X_hat;
     Eigen::MatrixXd Y_hat;
     high_resolution_clock::time_point start = high_resolution_clock::now();
+    std::ofstream os(xyz_outfile + "_stats.csv");
     for (int i = 0; i < params.iterations; i++) {
         FUNCINFO("Iteration: " << i)
         P = E_Step(X, Y, transform.B, \
@@ -176,7 +178,7 @@ AlignViaAffineCPD(CPDParams & params,
         high_resolution_clock::time_point stop = high_resolution_clock::now();
         duration<double>  time_span = duration_cast<duration<double>>(stop - start);
         FUNCINFO("Excecution took time: " << time_span.count())
-
+        os << i+1 << "," << time_span.count() << "," << similarity << "," << temp_xyz_outfile << "\n";
     }
     return transform;
 }

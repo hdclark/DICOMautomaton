@@ -215,11 +215,21 @@ int main(int argc, char* argv[]){
     }
 
     //========================================== Launch Perfusion Model =============================================
-    FUNCINFO(type)
+    std::ofstream params_file(xyz_outfile + "_params");
+
+    params_file << "w=" << params.distribution_weight <<"\n";
+    params_file << "lambda=" << params.lambda <<"\n";
+    params_file << "beta=" << params.beta <<"\n";
+    params_file << "similarity_threshold=" << params.similarity_threshold <<"\n";
+    params_file << "low_rank=" << params.use_low_rank <<"\n";
+    params_file << "ev_ratio=" << params.ev_ratio <<"\n";
+    params_file << "use_fgt=" << params.use_fgt <<"\n";
+
     point_set<double> mutable_moving = moving;
     high_resolution_clock::time_point start = high_resolution_clock::now();
     if(type == "rigid") {
         if(video == "True") {
+          params_file << "type=rigid";
           temp_xyz_outfile = xyz_outfile + "_iter0.xyz";
           std::ofstream PFO(temp_xyz_outfile);
           if(!WritePointSetToXYZ(mutable_moving, PFO))
@@ -238,6 +248,7 @@ int main(int argc, char* argv[]){
         FUNCINFO("Writing transform to " << tf_outfile)
         transform.write_to(TFO);
     } else if(type == "affine") {
+        params_file << "type=affine";
         if(video == "True") {
           temp_xyz_outfile = xyz_outfile + "_iter0.xyz";
           std::ofstream PFO(temp_xyz_outfile);
@@ -257,6 +268,7 @@ int main(int argc, char* argv[]){
         FUNCINFO("Writing transform to " << tf_outfile)
         transform.write_to(TFO);
     } else if(type == "nonrigid") {
+        params_file << "type=nonrigid";
         if(video == "True") {
           temp_xyz_outfile = xyz_outfile + "_iter0.xyz";
           std::ofstream PFO(temp_xyz_outfile);

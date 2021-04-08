@@ -177,9 +177,7 @@ AlignViaRigidCPD(CPDParams & params,
     Eigen::MatrixXd Y_hat;
     Eigen::MatrixXd A;
     
-    FUNCINFO(xyz_outfile + "_stats.csv")
     std::ofstream os(xyz_outfile + "_stats.csv");
-    FUNCINFO(params.distribution_weight)
     FUNCINFO("Starting loop. Max Iterations: " << params.iterations)
     for (int i = 0; i < params.iterations; i++) {
         FUNCINFO("Starting Iteration: " << i)
@@ -208,7 +206,6 @@ AlignViaRigidCPD(CPDParams & params,
         objective = GetObjective(X, Y, P, transform.R, transform.t, transform.s, sigma_squared);
         FUNCINFO("Similarity: " << similarity);
         FUNCINFO("Objective: " << objective);
-        FUNCINFO(sigma_squared);
         
         if (video == "True") {
             if (iter_interval > 0 && i % iter_interval == 0) {
@@ -218,7 +215,6 @@ AlignViaRigidCPD(CPDParams & params,
                     FUNCERR("Error writing point set to " << xyz_outfile);
             }
         }
-        FUNCINFO(params.similarity_threshold)
         if(abs(prev_objective-objective) < params.similarity_threshold)
             break;
         high_resolution_clock::time_point stop = high_resolution_clock::now();

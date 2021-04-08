@@ -3,6 +3,7 @@
 #include "YgorMath.h"         //Needed for samples_1D.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 #include "CPD_Nonrigid.h"
+#include <iostream>
 #include <chrono>
 #include <cmath>
 #include <eigen3/Eigen/Core>
@@ -450,6 +451,7 @@ AlignViaNonRigidCPD(CPDParams & params,
 
     double L = 1.0; 
     high_resolution_clock::time_point start = high_resolution_clock::now();
+    std::ofstream os(xyz_outfile + "_stats.csv");
     for (int i = 0; i < params.iterations; i++) {
         FUNCINFO("Iteration: " << i)
         // eventually put this inside the else statement after changing the objective function
@@ -526,6 +528,7 @@ AlignViaNonRigidCPD(CPDParams & params,
         high_resolution_clock::time_point stop = high_resolution_clock::now();
         duration<double>  time_span = duration_cast<duration<double>>(stop - start);
         FUNCINFO("Excecution took time: " << time_span.count())
+        os << i+1 << "," << time_span.count() << "," << similarity << "," << temp_xyz_outfile << "\n";
     }
     return transform;
 }
