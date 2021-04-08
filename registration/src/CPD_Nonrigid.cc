@@ -164,21 +164,12 @@ Eigen::MatrixXd E_Step_NR(const Eigen::MatrixXd & xPoints,
             expMat(m,n) = exp(expArg);
         }
     }
-    FUNCINFO("post prob")
     for (int n = 0; n < nRowsX; ++n) {
         denominator = expMat.col(n).sum() + 
                           pow((2 * M_PI * sigmaSquared),((double)(dimensionality/2.0))) * (w/(1-w)) * (double)(mRowsY / nRowsX);
-        FUNCINFO(expMat.col(n).sum())
-        FUNCINFO(pow((2 * M_PI * sigmaSquared),((double)(dimensionality/2.0))) * (w/(1-w)) * (double)(mRowsY / nRowsX))
         for (int m = 0; m < mRowsY; ++m) {
             numerator = expMat(m,n);
             postProb(m,n) = numerator / denominator;
-            
-            FUNCINFO(m)
-            FUNCINFO(n)
-            FUNCINFO(numerator)
-            FUNCINFO(denominator)
-            FUNCINFO(postProb(m,n))
         }
     }
 
@@ -231,20 +222,9 @@ double SigmaSquared(const Eigen::MatrixXd & xPoints,
 
     int dim = xPoints.cols();
     double Np = postProbOne.sum();
-    FUNCINFO(postProbTransOne(0,0))
-    FUNCINFO(postProbTransOne(0,1))
-    FUNCINFO(postProbTransOne(0,2))
-     FUNCINFO(postProbTransOne(1,0))
-    FUNCINFO(postProbTransOne(1,1))
-    FUNCINFO(postProbTransOne(1,2))
     double firstTerm = (double)(xPoints.transpose() * (postProbTransOne).asDiagonal() * xPoints).trace();
     double secondTerm = (double)(2 * ((postProbX).transpose() * transformedPoints).trace());
     double thirdTerm = (double)(transformedPoints.transpose() * (postProbOne).asDiagonal() * transformedPoints).trace();
-    FUNCINFO("Sigma swuared")
-    FUNCINFO(Np)
-    FUNCINFO(firstTerm)
-    FUNCINFO(secondTerm)
-    FUNCINFO(thirdTerm)
     return (firstTerm - secondTerm + thirdTerm) / (Np * dim);
 }
 
@@ -461,17 +441,13 @@ AlignViaNonRigidCPD(CPDParams & params,
         duration<double>  time_span = duration_cast<duration<double>>(stop - start);
         FUNCINFO("Excecution took time: " << time_span.count())
     }
-    FUNCINFO(sigma_squared)
     Eigen::MatrixXd postProbX;
     Eigen::VectorXd postProbOne, postProbTransOne;
     Eigen::MatrixXd T;
 
     Eigen::MatrixXd oneVecRow = Eigen::MatrixXd::Ones(Y.rows(), 1);
     Eigen::MatrixXd oneVecCol = Eigen::MatrixXd::Ones(X.rows(),1);
-    //X
-    FUNCINFO(Y(0,0))
-    //Y
-    FUNCINFO(X(1,1))
+
     double L = 1.0; 
     high_resolution_clock::time_point start = high_resolution_clock::now();
     for (int i = 0; i < params.iterations; i++) {
@@ -497,9 +473,6 @@ AlignViaNonRigidCPD(CPDParams & params,
         } else {
             // calculating postProb is faste than calculating naive matrix vector products
             auto postProb = E_Step_NR(X, Y,transform.G, transform.W, sigma_squared, params.distribution_weight);
-            FUNCINFO("postProb")
-            FUNCINFO(postProb(0,0))
-            FUNCINFO(postProb(1,1))
             postProbOne = postProb * oneVecCol;
             postProbTransOne = postProb.transpose() * oneVecCol;
             postProbX = postProb * X;
@@ -514,15 +487,9 @@ AlignViaNonRigidCPD(CPDParams & params,
 
         } else {
             transform.W = GetW(Y, transform.G, postProbOne, postProbX, sigma_squared, params.lambda);
-            FUNCINFO("W")
-            FUNCINFO(transform.W(0,0))
-            FUNCINFO(transform.W(1,1))
         }
 
         T = transform.apply_to(Y);
-        FUNCINFO("T")
-        FUNCINFO(T(0,0))
-        FUNCINFO(T(1,1))
         sigma_squared = SigmaSquared(X, postProbOne, postProbTransOne, postProbX, T);
 
         FUNCINFO("Sigma Squared: " << sigma_squared);
