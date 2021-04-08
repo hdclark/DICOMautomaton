@@ -9,6 +9,7 @@
 #include "YgorMath.h"         //Needed for samples_1D.
 #include <chrono>
 #include <cmath>
+#include <iostream>
 #include <math.h>
 using namespace std::chrono;
 RigidCPDTransform::RigidCPDTransform(int dimensionality) {
@@ -97,6 +98,7 @@ Eigen::MatrixXd GetRotationMatrix(const Eigen::MatrixXd & U,
 
 double GetS(const Eigen::MatrixXd & A,
             const Eigen::MatrixXd & R,
+    // params.iterations = 50;
             const Eigen::MatrixXd & yHat,
             const Eigen::MatrixXd & postProb ){
     Eigen::MatrixXd oneVec = Eigen::MatrixXd::Ones(postProb.cols(),1);
@@ -175,8 +177,9 @@ AlignViaRigidCPD(CPDParams & params,
     Eigen::MatrixXd Y_hat;
     Eigen::MatrixXd A;
     
-    params.iterations = 50;
-
+    FUNCINFO(xyz_outfile + "_stats.csv")
+    std::ofstream os(xyz_outfile + "_stats.csv");
+    FUNCINFO(params.distribution_weight)
     FUNCINFO("Starting loop. Max Iterations: " << params.iterations)
     for (int i = 0; i < params.iterations; i++) {
         FUNCINFO("Starting Iteration: " << i)
@@ -215,12 +218,14 @@ AlignViaRigidCPD(CPDParams & params,
                     FUNCERR("Error writing point set to " << xyz_outfile);
             }
         }
-
+        FUNCINFO(params.similarity_threshold)
         if(abs(prev_objective-objective) < params.similarity_threshold)
             break;
         high_resolution_clock::time_point stop = high_resolution_clock::now();
         duration<double>  time_span = duration_cast<duration<double>>(stop - start);
         FUNCINFO("Excecution took time: " << time_span.count())
+
+        os << i+1 << "," << time_span.count() << "," << similarity << "," << temp_xyz_outfile << "\n";
 
     }
     return transform;
