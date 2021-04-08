@@ -4,8 +4,13 @@
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 #include "CPD_Rigid.h"
 #include "YgorMathIOXYZ.h"    //Needed for ReadPointSetFromXYZ.
+#include "YgorFilesDirs.h"    //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
+#include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorMath.h"         //Needed for samples_1D.
+#include <chrono>
 #include <cmath>
-
+#include <math.h>
+using namespace std::chrono;
 RigidCPDTransform::RigidCPDTransform(int dimensionality) {
     this->dim = dimensionality;
     this->R = Eigen::MatrixXd::Identity(dimensionality, dimensionality);
@@ -113,10 +118,6 @@ double SigmaSquared(double s,
     double left = (double)(xHat.transpose() * (postProb.transpose() * oneVec).asDiagonal() * xHat).trace();
     double right = s * (A.transpose() * R).trace();
 
-    FUNCINFO("left\n")
-    FUNCINFO(left)
-    FUNCINFO("right\n")
-    FUNCINFO(right)
     return (left - right) / (Np * dimensionality);
 }
 
@@ -129,7 +130,7 @@ AlignViaRigidCPD(CPDParams & params,
             std::string video /*= "False"*/,
             std::string xyz_outfile /*= "output"*/ ){
     FUNCINFO("Performing rigid CPD")
-
+    high_resolution_clock::time_point start = high_resolution_clock::now();
     std::string temp_xyz_outfile;
     point_set<double> mutable_moving = moving;
 
@@ -192,6 +193,11 @@ AlignViaRigidCPD(CPDParams & params,
         transform.t = GetTranslationVector(transform.R, Ux, Uy, transform.s);
         sigma_squared = SigmaSquared(transform.s, A, transform.R, X_hat, P);
 
+        if (isnan(sigma_squared)) {
+            FUNCINFO("FINAL SIMILARITY: " << similarity);
+            break;
+        }
+
         mutable_moving = moving;
         transform.apply_to(mutable_moving);
 
@@ -212,6 +218,9 @@ AlignViaRigidCPD(CPDParams & params,
 
         if(abs(prev_objective-objective) < params.similarity_threshold)
             break;
+        high_resolution_clock::time_point stop = high_resolution_clock::now();
+        duration<double>  time_span = duration_cast<duration<double>>(stop - start);
+        FUNCINFO("Excecution took time: " << time_span.count())
 
     }
     return transform;
