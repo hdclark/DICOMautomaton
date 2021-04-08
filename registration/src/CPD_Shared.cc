@@ -43,6 +43,7 @@ double Init_Sigma_Squared(const Eigen::MatrixXf & xPoints,
         for (int j = 0; j < mRowsY; j++) {
             const auto yRow = yPoints.row(j).transpose();
             auto rowDiff = xRow - yRow;
+            // FUNCINFO(normSum)
             normSum += rowDiff.squaredNorm();
         }
     }
@@ -74,6 +75,8 @@ double GetSimilarity(const Eigen::MatrixXf & xPoints,
     }
     sum = sum / (mRowsY * 1.00);
 
+    FUNCINFO(sum);
+    FUNCINFO(mRowsY);
     return sum;
 }
 
@@ -124,18 +127,18 @@ Eigen::MatrixXf E_Step(const Eigen::MatrixXf & xPoints,
     int dimensionality = yPoints.cols();
 
     for (int m = 0; m < mRowsY; ++m) {
-        tempVector = scale * rotationMatrix * yPoints.row(m).transpose() + t;
         for (int n = 0; n < nRowsX; ++n) {
-            expArg = - 1.0 / (2 * sigmaSquared) * (xPoints.row(n).transpose() - tempVector).squaredNorm();
+            tempVector = xPoints.row(n).transpose() - (scale * rotationMatrix * yPoints.row(m).transpose() + t);
+            expArg = - 1.0 / (2 * sigmaSquared) * tempVector.squaredNorm();
             expMat(m,n) = exp(expArg);
         }
     }
 
-    for (int n = 0; n < nRowsX; ++n) {
-        denominator = expMat.col(n).sum() + 
-                          pow(2 * M_PI * sigmaSquared,((double)(dimensionality/2.0))) * (w/(1-w)) * ((double) mRowsY / nRowsX);
-        for (int m = 0; m < mRowsY; ++m) {
+    for (int m = 0; m < mRowsY; ++m) {
+        for (int n = 0; n < nRowsX; ++n) {
             numerator = expMat(m,n);
+            denominator = expMat.col(n).sum() + 
+                          pow(2 * M_PI * sigmaSquared,((double)(dimensionality/2.0))) * (w/(1-w)) * ((double) mRowsY / nRowsX);
             postProb(m,n) = numerator / denominator;
         }
     }

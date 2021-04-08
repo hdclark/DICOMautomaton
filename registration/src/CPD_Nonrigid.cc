@@ -165,6 +165,7 @@ Eigen::MatrixXf E_Step_NR(const Eigen::MatrixXf & xPoints,
             expMat(m,n) = exp(expArg);
         }
     }
+
     for (int n = 0; n < nRowsX; ++n) {
         denominator = expMat.col(n).sum() + 
                           pow((2 * M_PI * sigmaSquared),((double)(dimensionality/2.0))) * (w/(1-w)) * (double)(mRowsY / nRowsX);
@@ -304,6 +305,9 @@ CPD_MatrixVector_Products ComputeCPDProductsIfgt(const Eigen::MatrixXf & fixed_p
     
     Eigen::MatrixXf fixed_pts_scaled;
     Eigen::MatrixXf moving_pts_scaled;
+    
+    duration<double>  time_span;
+    auto bw_scale_start = std::chrono::high_resolution_clock::now();
 
     double bandwidth_scaled = rescale_points(fixed_pts, moving_pts, fixed_pts_scaled, 
                                 moving_pts_scaled, bandwidth);
@@ -313,18 +317,42 @@ CPD_MatrixVector_Products ComputeCPDProductsIfgt(const Eigen::MatrixXf & fixed_p
                                                                                                 // because we take the transpose of K(M x N)                                                 
     auto Kt1 = ifgt_transform->compute_ifgt(fixed_pts_scaled);                                       // so we'll get an N x 1 vector for Kt1 
 
+
+    auto ifgt1 = std::chrono::high_resolution_clock::now();
+	time_span = std::chrono::duration_cast<std::chrono::duration<double>>(ifgt1 - bw_scale_start);
+    std::cout << "First IFGT (Kt1) took time: " << time_span.count() << " s" << std::endl;
+
     auto denom_a = Kt1.array() + c; 
     auto Pt1 = (1 - c / denom_a).matrix(); // Pt1 = 1-c*a
+
+    auto Pt1_time = std::chrono::high_resolution_clock::now();
+	time_span = std::chrono::duration_cast<std::chrono::duration<double>>(Pt1_time - ifgt1);
+    std::cout << "Calculating Pt1 took time: " << time_span.count() << " s" << std::endl;
 
     ifgt_transform = std::make_unique<IFGT>(fixed_pts_scaled, bandwidth_scaled, epsilon); 
     auto P1 = ifgt_transform->compute_ifgt(moving_pts_scaled, 1 / denom_a); // P1 = Ka 
 
+    auto P1_time = std::chrono::high_resolution_clock::now();
+	time_span = std::chrono::duration_cast<std::chrono::duration<double>>(P1_time - Pt1_time);
+    std::cout << "IFGT (P1) took time: " << time_span.count() << " s" << std::endl;
+
     Eigen::MatrixXf PX(M_moving_pts, dim);
     for (int i = 0; i < dim; ++i) {
+        auto PX_start = std::chrono::high_resolution_clock::now();
+
         PX.col(i) = ifgt_transform->compute_ifgt(moving_pts_scaled, fixed_pts.col(i).array() / denom_a); // PX = K(a.*X)
+
+        auto PX_end = std::chrono::high_resolution_clock::now();
+        time_span = std::chrono::duration_cast<std::chrono::duration<double>>(PX_end - PX_start);
+        std::cout << "IFGT (PX) column " << i << " took time: " << time_span.count() << " s" << std::endl;
     }
+    auto L_start = std::chrono::high_resolution_clock::now();
     // objective function estimate
     double L = -log(denom_a).sum() + dim * N_fixed_pts * std::log(sigmaSquared) / 2.0;
+
+    auto L_end = std::chrono::high_resolution_clock::now();
+    time_span = std::chrono::duration_cast<std::chrono::duration<double>>(L_end - L_start);
+    std::cout << "Calculating L took time: " << time_span.count() << " s" << std::endl;
 
     return { P1, Pt1, PX, L};
 }
@@ -438,6 +466,7 @@ AlignViaNonRigidCPD(CPDParams & params,
     if(params.use_low_rank) {
         high_resolution_clock::time_point start = high_resolution_clock::now();
         GetNLargestEigenvalues_V2(transform.G, vector_matrix, value_matrix, num_eig, N_stat_points);
+        // GetNLargestEigenvalues(transform.G, vector_matrix, value_matrix, num_eig, N_stat_points, params.power_iter, params.power_tol);
         high_resolution_clock::time_point stop = high_resolution_clock::now();
         duration<double>  time_span = duration_cast<duration<double>>(stop - start);
         FUNCINFO("Excecution took time: " << time_span.count())
@@ -454,15 +483,19 @@ AlignViaNonRigidCPD(CPDParams & params,
     std::ofstream os(xyz_outfile + "_stats.csv");
     for (int i = 0; i < params.iterations; i++) {
         FUNCINFO("Iteration: " << i)
+        high_resolution_clock::time_point start = high_resolution_clock::now();
         // eventually put this inside the else statement after changing the objective function
         // auto P = E_Step_NR(X, Y, transform.G, transform.W, sigma_squared, params.distribution_weight);
+        
+        // eventually put this inside the else statement after changing the objective function
+        //auto P = E_Step_NR(X, Y, transform.G, transform.W, sigma_squared, params.distribution_weight);
 
         double L_old = L;
 
+        auto Y_transformed = transform.G * transform.W; // Y_new = Y + GW
         // E step 
         double L_temp = 1.0;
         if(params.use_fgt) {
-            auto Y_transformed = transform.G * transform.W; // Y_new = Y + GW
             // X = fixed points = source points 
 	        // Y = moving points = target points
             double epsilon = 1E-3; // smaller epsilon = smaller error (epsilon > 0)
