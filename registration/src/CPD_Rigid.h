@@ -23,12 +23,12 @@
 
 class RigidCPDTransform {
     public:
-        Eigen::MatrixXd R;
-        Eigen::VectorXd t;
+        Eigen::MatrixXf R;
+        Eigen::MatrixXf t;
         int dim;
         float s;
         RigidCPDTransform(int dimensionality = 3);
-        Eigen::MatrixXd get_sR();
+        Eigen::MatrixXf get_sR();
         void apply_to(point_set<double> &ps);
         // Serialize and deserialize to a human- and machine-readable format.
         void write_to( std::ostream &os );
@@ -43,23 +43,23 @@ AlignViaRigidCPD(CPDParams & params,
             std::string video = "False",
             std::string xyz_outfile = "output" );
 
-Eigen::MatrixXd GetA(const Eigen::MatrixXd & xHat,
-            const Eigen::MatrixXd & yHat,
-            const Eigen::MatrixXd & postProb);
+Eigen::MatrixXf GetA(const Eigen::MatrixXf & xHat,
+            const Eigen::MatrixXf & yHat,
+            const Eigen::MatrixXf & postProb);
 
 // Please calculate C inside this function
-Eigen::MatrixXd GetRotationMatrix(const Eigen::MatrixXd & U,
-            const Eigen::MatrixXd & V);
+Eigen::MatrixXf GetRotationMatrix(const Eigen::MatrixXf & U,
+            const Eigen::MatrixXf & V);
 
-double GetS(const Eigen::MatrixXd & A,
-            const Eigen::MatrixXd & R,
-            const Eigen::MatrixXd & yHat,
-            const Eigen::MatrixXd & postProb );
+double GetS(const Eigen::MatrixXf & A,
+            const Eigen::MatrixXf & R,
+            const Eigen::MatrixXf & yHat,
+            const Eigen::MatrixXf & postProb );
 
 double SigmaSquared(double s,
-            const Eigen::MatrixXd & A,
-            const Eigen::MatrixXd & R,
-            const Eigen::MatrixXd & xHat,
-            const Eigen::MatrixXd & postProb);
+            const Eigen::MatrixXf & A,
+            const Eigen::MatrixXf & R,
+            const Eigen::MatrixXf & xHat,
+            const Eigen::MatrixXf & postProb);
 
 #endif

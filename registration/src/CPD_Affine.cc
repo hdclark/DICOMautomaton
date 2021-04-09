@@ -2,19 +2,22 @@
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorMath.h"         //Needed for samples_1D.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
-
 #include "CPD_Affine.h"
 #include "YgorMathIOXYZ.h"    //Needed for ReadPointSetFromXYZ.
+#include <iostream>
+#include <cmath>
+#include <chrono>
+using namespace std::chrono;
 
 AffineCPDTransform::AffineCPDTransform(int dimensionality) {
-    this->B = Eigen::MatrixXd::Identity(dimensionality, dimensionality);
-    this->t = Eigen::VectorXd::Zero(dimensionality);
+    this->B = Eigen::MatrixXf::Identity(dimensionality, dimensionality);
+    this->t = Eigen::VectorXf::Zero(dimensionality);
     this->dim = dimensionality;
 }
 
 void AffineCPDTransform::apply_to(point_set<double> &ps) {
     auto N_points = static_cast<long int>(ps.points.size());
-    Eigen::MatrixXd Y = Eigen::MatrixXd::Zero(N_points, this->dim); 
+    Eigen::MatrixXf Y = Eigen::MatrixXf::Zero(N_points, this->dim); 
     // Fill the X vector with the corresponding points.
     for(long int j = 0; j < N_points; ++j) { // column
         auto P = ps.points[j];
@@ -23,7 +26,7 @@ void AffineCPDTransform::apply_to(point_set<double> &ps) {
         Y(j, 2) = P.z;
     }
     auto Y_hat = Y*this->B.transpose() + \
-        Eigen::MatrixXd::Constant(N_points, 1, 1)*this->t.transpose();
+        Eigen::MatrixXf::Constant(N_points, 1, 1)*this->t.transpose();
     for(long int j = 0; j < N_points; ++j) { // column
         ps.points[j].x = Y_hat(j, 0);
         ps.points[j].y = Y_hat(j, 1);
@@ -62,26 +65,26 @@ bool AffineCPDTransform::read_from( std::istream &is ) {
     return success;
 }
 
-Eigen::MatrixXd CalculateB(const Eigen::MatrixXd & xHat,
-            const Eigen::MatrixXd & yHat,
-            const Eigen::MatrixXd & postProb) {
+Eigen::MatrixXf CalculateB(const Eigen::MatrixXf & xHat,
+            const Eigen::MatrixXf & yHat,
+            const Eigen::MatrixXf & postProb) {
     
-    Eigen::MatrixXd oneVec = Eigen::MatrixXd::Ones(postProb.cols(),1);
-    Eigen::MatrixXd left = xHat.transpose() * postProb.transpose() * yHat;
-    Eigen::MatrixXd right = (yHat.transpose() * (postProb * oneVec).asDiagonal() * yHat).inverse();
+    Eigen::MatrixXf oneVec = Eigen::MatrixXf::Ones(postProb.cols(),1);
+    Eigen::MatrixXf left = xHat.transpose() * postProb.transpose() * yHat;
+    Eigen::MatrixXf right = (yHat.transpose() * (postProb * oneVec).asDiagonal() * yHat).inverse();
 
     return left * right;
 }
 
-double SigmaSquared(const Eigen::MatrixXd & B,
-            const Eigen::MatrixXd & xHat,
-            const Eigen::MatrixXd & yHat,
-            const Eigen::MatrixXd & postProb) {
+double SigmaSquared(const Eigen::MatrixXf & B,
+            const Eigen::MatrixXf & xHat,
+            const Eigen::MatrixXf & yHat,
+            const Eigen::MatrixXf & postProb) {
     
     double dimensionality = yHat.cols();
     double Np = postProb.sum();
     
-    Eigen::MatrixXd oneVec = Eigen::MatrixXd::Ones(postProb.rows(),1);
+    Eigen::MatrixXf oneVec = Eigen::MatrixXf::Ones(postProb.rows(),1);
     double left = (double)(xHat.transpose() * (postProb.transpose() * oneVec).asDiagonal() * xHat).trace();
     double right = (double)(xHat.transpose() * postProb.transpose() * yHat * B.transpose()).trace();
 
@@ -109,9 +112,9 @@ AlignViaAffineCPD(CPDParams & params,
     // Prepare working buffers.
     //
     // Stationary point matrix
-    Eigen::MatrixXd X = Eigen::MatrixXd::Zero(N_move_points, params.dimensionality);
+    Eigen::MatrixXf X = Eigen::MatrixXf::Zero(N_move_points, params.dimensionality);
     // Moving point matrix
-    Eigen::MatrixXd Y = Eigen::MatrixXd::Zero(N_stat_points, params.dimensionality); 
+    Eigen::MatrixXf Y = Eigen::MatrixXf::Zero(N_stat_points, params.dimensionality); 
 
     // Fill the X vector with the corresponding points.
     for(long int j = 0; j < N_stat_points; ++j){ // column
@@ -131,12 +134,15 @@ AlignViaAffineCPD(CPDParams & params,
     AffineCPDTransform transform(params.dimensionality);
     double sigma_squared = Init_Sigma_Squared(X, Y);
     double similarity;
-    Eigen::MatrixXd P;
-    Eigen::MatrixXd Ux;
-    Eigen::MatrixXd Uy;
-    Eigen::MatrixXd X_hat;
-    Eigen::MatrixXd Y_hat;
-    // params.iterations = 50;
+    double objective;
+    double prev_objective = 0;
+    Eigen::MatrixXf P;
+    Eigen::MatrixXf Ux;
+    Eigen::MatrixXf Uy;
+    Eigen::MatrixXf X_hat;
+    Eigen::MatrixXf Y_hat;
+    high_resolution_clock::time_point start = high_resolution_clock::now();
+    std::ofstream os(xyz_outfile + "_stats.csv");
     for (int i = 0; i < params.iterations; i++) {
         FUNCINFO("Iteration: " << i)
         P = E_Step(X, Y, transform.B, \
@@ -151,19 +157,28 @@ AlignViaAffineCPD(CPDParams & params,
 
         mutable_moving = moving;
         transform.apply_to(mutable_moving);
+
+        similarity = GetSimilarity(X, Y, transform.B, transform.t, 1);
+        objective = GetObjective(X, Y, P, transform.B, transform.t, 1, sigma_squared);
+        FUNCINFO(similarity);
+        FUNCINFO(objective);
         
         if (video == "True") {
             if (iter_interval > 0 && i % iter_interval == 0) {
-                temp_xyz_outfile = xyz_outfile + "_iter" + std::to_string(i+1) + ".xyz";
+                temp_xyz_outfile = xyz_outfile + "_iter" + std::to_string(i+1) + "_sim" + std::to_string(similarity) + ".xyz";
                 std::ofstream PFO(temp_xyz_outfile);
                 if(!WritePointSetToXYZ(mutable_moving, PFO))
                     FUNCERR("Error writing point set to " << xyz_outfile);
             }
         }
-
-        similarity = GetSimilarity(X, Y, P, transform.B, transform.t, 1, sigma_squared);
-        if(similarity < params.similarity_threshold)
+        
+        if(abs(prev_objective-objective) < params.similarity_threshold)
             break;
+
+        high_resolution_clock::time_point stop = high_resolution_clock::now();
+        duration<double>  time_span = duration_cast<duration<double>>(stop - start);
+        FUNCINFO("Excecution took time: " << time_span.count())
+        os << i+1 << "," << time_span.count() << "," << similarity << "," << temp_xyz_outfile << "\n";
     }
     return transform;
 }

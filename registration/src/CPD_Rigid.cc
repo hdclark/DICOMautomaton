@@ -2,22 +2,27 @@
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorMath.h"         //Needed for samples_1D.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
-
 #include "CPD_Rigid.h"
 #include "YgorMathIOXYZ.h"    //Needed for ReadPointSetFromXYZ.
-
+#include "YgorFilesDirs.h"    //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
+#include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorMath.h"         //Needed for samples_1D.
+#include <chrono>
+#include <cmath>
+#include <iostream>
+#include <math.h>
+using namespace std::chrono;
 RigidCPDTransform::RigidCPDTransform(int dimensionality) {
     this->dim = dimensionality;
-    this->R = Eigen::MatrixXd::Identity(dimensionality, dimensionality);
-    this->t = Eigen::MatrixXd::Zero(dimensionality, 1);
+    this->R = Eigen::MatrixXf::Identity(dimensionality, dimensionality);
+    this->t = Eigen::MatrixXf::Zero(dimensionality, 1);
     this->s = 1;
 }
 
 void RigidCPDTransform::apply_to(point_set<double> &ps) {
-    FUNCINFO("Applying transform to point set")
     const auto N_points = static_cast<long int>(ps.points.size());
 
-    Eigen::MatrixXd Y = Eigen::MatrixXd::Zero(N_points, this->dim); 
+    Eigen::MatrixXf Y = Eigen::MatrixXf::Zero(N_points, this->dim); 
 
     // Fill the X vector with the corresponding points.
     for(long int j = 0; j < N_points; ++j) { // column
@@ -28,7 +33,7 @@ void RigidCPDTransform::apply_to(point_set<double> &ps) {
     }
 
     auto Y_hat = this->s*Y*this->R.transpose() + \
-        Eigen::MatrixXd::Constant(N_points, 1, 1)*this->t.transpose();
+        Eigen::MatrixXf::Constant(N_points, 1, 1)*this->t.transpose();
     
     for(long int j = 0; j < N_points; ++j) { // column
         ps.points[j].x = Y_hat(j, 0);
@@ -37,13 +42,13 @@ void RigidCPDTransform::apply_to(point_set<double> &ps) {
     }
 }
 
-Eigen::MatrixXd RigidCPDTransform::get_sR() {
+Eigen::MatrixXf RigidCPDTransform::get_sR() {
     return this->s * this->R;
 }
 
 void RigidCPDTransform::write_to( std::ostream &os ) {
     affine_transform<double> tf;
-    Eigen::MatrixXd sR = get_sR();
+    Eigen::MatrixXf sR = get_sR();
     for(int i = 0; i < this->dim; i++) {
         for(int j = 0; j < this->dim; j++) {
             os << sR(i, j);
@@ -75,42 +80,43 @@ bool RigidCPDTransform::read_from( std::istream &is ) {
     return success;
 }
 
-Eigen::MatrixXd GetA(const Eigen::MatrixXd & xHat,
-            const Eigen::MatrixXd & yHat,
-            const Eigen::MatrixXd & postProb){
+Eigen::MatrixXf GetA(const Eigen::MatrixXf & xHat,
+            const Eigen::MatrixXf & yHat,
+            const Eigen::MatrixXf & postProb){
     
     return xHat.transpose() * postProb.transpose() * yHat; 
 }
 
 // R is a square D x D matrix, so U and V will both be square
-Eigen::MatrixXd GetRotationMatrix(const Eigen::MatrixXd & U,
-            const Eigen::MatrixXd & V){
+Eigen::MatrixXf GetRotationMatrix(const Eigen::MatrixXf & U,
+            const Eigen::MatrixXf & V){
      
-    Eigen::MatrixXd C = Eigen::MatrixXd::Identity(U.cols(), V.cols());
+    Eigen::MatrixXf C = Eigen::MatrixXf::Identity(U.cols(), V.cols());
     C(C.rows()-1, C.cols()-1) = (U * V.transpose()).determinant();
     return U * C * V.transpose();
 }
 
-double GetS(const Eigen::MatrixXd & A,
-            const Eigen::MatrixXd & R,
-            const Eigen::MatrixXd & yHat,
-            const Eigen::MatrixXd & postProb ){
-    Eigen::MatrixXd oneVec = Eigen::MatrixXd::Ones(postProb.cols(),1);
+double GetS(const Eigen::MatrixXf & A,
+            const Eigen::MatrixXf & R,
+    // params.iterations = 50;
+            const Eigen::MatrixXf & yHat,
+            const Eigen::MatrixXf & postProb ){
+    Eigen::MatrixXf oneVec = Eigen::MatrixXf::Ones(postProb.cols(),1);
     double numer = (A.transpose() * R).trace();
     double denom = (yHat.transpose() * (postProb * oneVec).asDiagonal() * yHat).trace();
     return numer / denom;
 }
 
 double SigmaSquared(double s,
-            const Eigen::MatrixXd & A,
-            const Eigen::MatrixXd & R,
-            const Eigen::MatrixXd & xHat,
-            const Eigen::MatrixXd & postProb){
+            const Eigen::MatrixXf & A,
+            const Eigen::MatrixXf & R,
+            const Eigen::MatrixXf & xHat,
+            const Eigen::MatrixXf & postProb){
 
     double dimensionality = xHat.cols();
     double Np = postProb.sum();
     
-    Eigen::MatrixXd oneVec = Eigen::MatrixXd::Ones(postProb.rows(),1);
+    Eigen::MatrixXf oneVec = Eigen::MatrixXf::Ones(postProb.rows(),1);
     double left = (double)(xHat.transpose() * (postProb.transpose() * oneVec).asDiagonal() * xHat).trace();
     double right = s * (A.transpose() * R).trace();
 
@@ -126,7 +132,7 @@ AlignViaRigidCPD(CPDParams & params,
             std::string video /*= "False"*/,
             std::string xyz_outfile /*= "output"*/ ){
     FUNCINFO("Performing rigid CPD")
-
+    high_resolution_clock::time_point start = high_resolution_clock::now();
     std::string temp_xyz_outfile;
     point_set<double> mutable_moving = moving;
 
@@ -136,9 +142,9 @@ AlignViaRigidCPD(CPDParams & params,
     // Prepare working buffers.
     //
     // Stationary point matrix
-    Eigen::MatrixXd X = Eigen::MatrixXd::Zero(N_move_points, params.dimensionality);
+    Eigen::MatrixXf X = Eigen::MatrixXf::Zero(N_move_points, params.dimensionality);
     // Moving point matrix
-    Eigen::MatrixXd Y = Eigen::MatrixXd::Zero(N_stat_points, params.dimensionality); 
+    Eigen::MatrixXf Y = Eigen::MatrixXf::Zero(N_stat_points, params.dimensionality); 
     FUNCINFO("Number of moving points: " << N_move_points);
     FUNCINFO("Number of stationary pointsL  " << N_stat_points);
     FUNCINFO("Initializing...")
@@ -161,16 +167,17 @@ AlignViaRigidCPD(CPDParams & params,
     RigidCPDTransform transform(params.dimensionality);
     double sigma_squared = Init_Sigma_Squared(X, Y);
     double similarity;
+    double objective;
+    double prev_objective = 0;
 
-    Eigen::MatrixXd P;
-    Eigen::MatrixXd Ux;
-    Eigen::MatrixXd Uy;
-    Eigen::MatrixXd X_hat;
-    Eigen::MatrixXd Y_hat;
-    Eigen::MatrixXd A;
+    Eigen::MatrixXf P;
+    Eigen::MatrixXf Ux;
+    Eigen::MatrixXf Uy;
+    Eigen::MatrixXf X_hat;
+    Eigen::MatrixXf Y_hat;
+    Eigen::MatrixXf A;
     
-    params.iterations = 50;
-
+    std::ofstream os(xyz_outfile + "_stats.csv");
     FUNCINFO("Starting loop. Max Iterations: " << params.iterations)
     for (int i = 0; i < params.iterations; i++) {
         FUNCINFO("Starting Iteration: " << i)
@@ -181,27 +188,40 @@ AlignViaRigidCPD(CPDParams & params,
         X_hat = CenterMatrix(X, Ux);
         Y_hat = CenterMatrix(Y, Uy);
         A = GetA(X_hat, Y_hat, P);
-        Eigen::JacobiSVD<Eigen::MatrixXd> svd( A, Eigen::ComputeFullV | Eigen::ComputeFullU );
+        Eigen::JacobiSVD<Eigen::MatrixXf> svd( A, Eigen::ComputeFullV | Eigen::ComputeFullU );
         transform.R = GetRotationMatrix(svd.matrixU(), svd.matrixV());
         transform.s = GetS(A, transform.R, Y_hat, P);
         transform.t = GetTranslationVector(transform.R, Ux, Uy, transform.s);
         sigma_squared = SigmaSquared(transform.s, A, transform.R, X_hat, P);
 
+        if (isnan(sigma_squared)) {
+            FUNCINFO("FINAL SIMILARITY: " << similarity);
+            break;
+        }
+
         mutable_moving = moving;
         transform.apply_to(mutable_moving);
+
+        similarity = GetSimilarity(X, Y, transform.R, transform.t, transform.s);
+        objective = GetObjective(X, Y, P, transform.R, transform.t, transform.s, sigma_squared);
+        FUNCINFO("Similarity: " << similarity);
+        FUNCINFO("Objective: " << objective);
         
         if (video == "True") {
             if (iter_interval > 0 && i % iter_interval == 0) {
-                temp_xyz_outfile = xyz_outfile + "_iter" + std::to_string(i+1) + ".xyz";
+                temp_xyz_outfile = xyz_outfile + "_iter" + std::to_string(i+1) + "_sim" + std::to_string(similarity) + ".xyz";
                 std::ofstream PFO(temp_xyz_outfile);
                 if(!WritePointSetToXYZ(mutable_moving, PFO))
                     FUNCERR("Error writing point set to " << xyz_outfile);
             }
         }
-
-        similarity = GetSimilarity(X, Y, P, transform.R, transform.t, transform.s, sigma_squared);
-        if(similarity < params.similarity_threshold)
+        if(abs(prev_objective-objective) < params.similarity_threshold)
             break;
+        high_resolution_clock::time_point stop = high_resolution_clock::now();
+        duration<double>  time_span = duration_cast<duration<double>>(stop - start);
+        FUNCINFO("Excecution took time: " << time_span.count())
+
+        os << i+1 << "," << time_span.count() << "," << similarity << "," << temp_xyz_outfile << "\n";
 
     }
     return transform;

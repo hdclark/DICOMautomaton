@@ -22,8 +22,8 @@
 
 class AffineCPDTransform {
     public:
-        Eigen::MatrixXd B;
-        Eigen::VectorXd t;
+        Eigen::MatrixXf B;
+        Eigen::VectorXf t;
         int dim;
         AffineCPDTransform(int dimensionality);
         void apply_to(point_set<double> & ps);
@@ -40,13 +40,14 @@ AlignViaAffineCPD(CPDParams & params,
             std::string video = "False",
             std::string xyz_outfile = "output" );
 
-Eigen::MatrixXd CalculateB(const Eigen::MatrixXd & xHat,
-            const Eigen::MatrixXd & yHat,
-            const Eigen::MatrixXd & postProb );
+Eigen::MatrixXf
+ CalculateB(const Eigen::MatrixXf & xHat,
+            const Eigen::MatrixXf & yHat,
+            const Eigen::MatrixXf & postProb );
 
-double SigmaSquared(const Eigen::MatrixXd & B,
-            const Eigen::MatrixXd & xHat,
-            const Eigen::MatrixXd & yHat,
-            const Eigen::MatrixXd & postProb);
+double SigmaSquared(const Eigen::MatrixXf & B,
+            const Eigen::MatrixXf & xHat,
+            const Eigen::MatrixXf & yHat,
+            const Eigen::MatrixXf & postProb);
 
 #endif
