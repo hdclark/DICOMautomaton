@@ -498,8 +498,8 @@ AlignViaNonRigidCPD(CPDParams & params,
         if(params.use_fgt) {
             // X = fixed points = source points 
 	        // Y = moving points = target points
-            double epsilon = 1E-3; // smaller epsilon = smaller error (epsilon > 0)
-            auto cpd_products = ComputeCPDProductsIfgt(X, Y + Y_transformed, sigma_squared, epsilon, 
+            // smaller epsilon = smaller error (epsilon > 0)
+            auto cpd_products = ComputeCPDProductsIfgt(X, Y + Y_transformed, sigma_squared, params.epsilon, 
                                                         params.distribution_weight);
             postProbX = cpd_products.PX;
             postProbTransOne = cpd_products.Pt1;
