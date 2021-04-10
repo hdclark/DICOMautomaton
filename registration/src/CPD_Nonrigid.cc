@@ -481,6 +481,7 @@ AlignViaNonRigidCPD(CPDParams & params,
     double L = 1.0; 
     high_resolution_clock::time_point start = high_resolution_clock::now();
     std::ofstream os(xyz_outfile + "_stats.csv");
+    os << "iteration" << "," << "time" << "," << "similarity" << "," << "outfile" << "\n";
     for (int i = 0; i < params.iterations; i++) {
         FUNCINFO("Iteration: " << i)
         high_resolution_clock::time_point start = high_resolution_clock::now();
