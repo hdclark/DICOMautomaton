@@ -71,7 +71,7 @@ double GetObjective_NR(const Eigen::MatrixXf & xPoints,
 
 Eigen::MatrixXf GetW(const Eigen::MatrixXf & yPoints,
             const Eigen::MatrixXf & gramMatrix,
-            const Eigen::MatrixXf & postProbOne,
+            const Eigen::MatrixXf & postProbInvDiag,
             const Eigen::MatrixXf & postProbX,
             double sigmaSquared,
             double lambda);

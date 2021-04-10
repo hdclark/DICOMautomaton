@@ -2,7 +2,7 @@
 #include <stdlib.h>
 
 // #include "YgorFilesDirs.h"    //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
-// #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 // #include "YgorMath.h"         //Needed for samples_1D.
 // #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
@@ -329,7 +329,7 @@ Eigen::MatrixXf IFGT::compute_ifgt(const Eigen::MatrixXf & target_pts) {
     // auto time1 = std::chrono::high_resolution_clock::now();
 
     if (ifgt_complexity < naive_complexity) {
-        // std::cout << "Running IFGT" << std::endl;
+        FUNCINFO("Running IFGT");
         Eigen::MatrixXf C_k = compute_ck(ones_array);
         // auto time2 = std::chrono::high_resolution_clock::now();
         // auto time_span = std::chrono::duration_cast<std::chrono::duration<double>>(time2 - time1);
@@ -341,7 +341,7 @@ Eigen::MatrixXf IFGT::compute_ifgt(const Eigen::MatrixXf & target_pts) {
         // std::cout << "compute_gaussian: " << time_span.count() << " s" << std::endl;
     } 
     else {
-        std::cout << "Running Naive" << std::endl;
+        FUNCINFO("Running Naive");
         G_y = compute_naive_gt(target_pts, source_pts, ones_array, bandwidth);
         // auto time4 = std::chrono::high_resolution_clock::now();
         // auto time_span = std::chrono::duration_cast<std::chrono::duration<double>>(time4 - time1);
@@ -360,7 +360,7 @@ Eigen::MatrixXf IFGT::compute_ifgt(const Eigen::MatrixXf & target_pts, const Eig
     // estimates ifgt complexity very conservatively --> can change it to a 
     // certain proportion of the complexity to run the ifgt more often
     if (ifgt_complexity < naive_complexity) {
-        // std::cout << "Running IFGT (weighted)" << std::endl;
+        FUNCINFO("Running IFGT (weighted)");
         Eigen::MatrixXf C_k = compute_ck(weights);
 
         // auto time2 = std::chrono::high_resolution_clock::now();
@@ -374,7 +374,7 @@ Eigen::MatrixXf IFGT::compute_ifgt(const Eigen::MatrixXf & target_pts, const Eig
         // std::cout << "compute_gaussian: " << time_span.count() << " s" << std::endl;
     } 
     else {
-        // std::cout << "Running naive (weighted)" << std::endl;
+        FUNCINFO("Running Naive (weighted)");
         G_y = compute_naive_gt(target_pts, source_pts, weights, bandwidth);
     }
     return G_y;
