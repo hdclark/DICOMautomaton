@@ -132,7 +132,6 @@ AlignViaRigidCPD(CPDParams & params,
             std::string video /*= "False"*/,
             std::string xyz_outfile /*= "output"*/ ){
     FUNCINFO("Performing rigid CPD")
-    high_resolution_clock::time_point start = high_resolution_clock::now();
     std::string temp_xyz_outfile;
     point_set<double> mutable_moving = moving;
 
@@ -178,6 +177,9 @@ AlignViaRigidCPD(CPDParams & params,
     Eigen::MatrixXf A;
     
     std::ofstream os(xyz_outfile + "_stats.csv");
+    os << "iteration" << "," << "time" << "," << "similarity" << "," << "outfile" << "\n";
+    os << 0 << "," << 0 << "," << similarity << "," << xyz_outfile + "_iter0.xyz" << "\n";
+    high_resolution_clock::time_point start = high_resolution_clock::now();
     FUNCINFO("Starting loop. Max Iterations: " << params.iterations)
     for (int i = 0; i < params.iterations; i++) {
         FUNCINFO("Starting Iteration: " << i)

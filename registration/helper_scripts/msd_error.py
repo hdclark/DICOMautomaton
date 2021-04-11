@@ -29,12 +29,17 @@ def main():
     with open(stats, 'r') as csvinput:
         with open(stats_tmp, 'w') as csvoutput:
             writer = csv.writer(csvoutput)
+            i = 0
             for row in csv.reader(csvinput):
-                moving = "../" + row[3]
-                point_set_1 = read_file(moving)
-                point_set_2 = read_file(stationary)
-                error = (np.square(point_set_1 - point_set_2).sum()/point_set_1.shape[0])
-                writer.writerow(row+[str(error)])
+                if i==0:
+                    writer.writerow(row+["error"])
+                else:
+                    moving = "../" + row[3]
+                    point_set_1 = read_file(moving)
+                    point_set_2 = read_file(stationary)
+                    error = (np.square(point_set_1 - point_set_2).sum()/point_set_1.shape[0])
+                    writer.writerow(row+[str(error)])
+                i = i+1
     os.rename(stats_tmp, stats)
 
 if __name__ == '__main__':
