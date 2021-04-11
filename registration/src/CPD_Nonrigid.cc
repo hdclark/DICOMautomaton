@@ -180,12 +180,11 @@ Eigen::MatrixXf E_Step_NR(const Eigen::MatrixXf & xPoints,
 
 Eigen::MatrixXf GetW(const Eigen::MatrixXf & yPoints,
             const Eigen::MatrixXf & gramMatrix,
-            const Eigen::MatrixXf & postProbOne,
+            const Eigen::MatrixXf & postProbInvDiag, // d(P1)^-1
             const Eigen::MatrixXf & postProbX,
             double sigmaSquared,
             double lambda){
     
-    Eigen::MatrixXf postProbInvDiag = ((postProbOne).asDiagonal()).inverse(); // d(P1)^-1
     Eigen::MatrixXf A = gramMatrix + lambda * sigmaSquared * postProbInvDiag;
     Eigen::MatrixXf b = postProbInvDiag * postProbX - yPoints;
 
@@ -227,6 +226,7 @@ double SigmaSquared(const Eigen::MatrixXf & xPoints,
     double firstTerm = (double)(xPoints.transpose() * (postProbTransOne).asDiagonal() * xPoints).trace();
     double secondTerm = (double)(2 * ((postProbX).transpose() * transformedPoints).trace());
     double thirdTerm = (double)(transformedPoints.transpose() * (postProbOne).asDiagonal() * transformedPoints).trace();
+
     return (firstTerm - secondTerm + thirdTerm) / (Np * dim);
 }
 
@@ -306,53 +306,53 @@ CPD_MatrixVector_Products ComputeCPDProductsIfgt(const Eigen::MatrixXf & fixed_p
     Eigen::MatrixXf fixed_pts_scaled;
     Eigen::MatrixXf moving_pts_scaled;
     
-    duration<double>  time_span;
-    auto bw_scale_start = std::chrono::high_resolution_clock::now();
+    // duration<double>  time_span;
+    // auto bw_scale_start = std::chrono::high_resolution_clock::now();
 
     double bandwidth_scaled = rescale_points(fixed_pts, moving_pts, fixed_pts_scaled, 
                                 moving_pts_scaled, bandwidth);
     
-    std::cout << "bandwidth scaled: " << bandwidth_scaled << std::endl;
+    FUNCINFO("bandwidth scaled: " << bandwidth_scaled);
     auto ifgt_transform = std::make_unique<IFGT>(moving_pts_scaled, bandwidth_scaled, epsilon); // in this case, moving_pts = source_pts
                                                                                                 // because we take the transpose of K(M x N)                                                 
     auto Kt1 = ifgt_transform->compute_ifgt(fixed_pts_scaled);                                       // so we'll get an N x 1 vector for Kt1 
 
 
-    auto ifgt1 = std::chrono::high_resolution_clock::now();
-	time_span = std::chrono::duration_cast<std::chrono::duration<double>>(ifgt1 - bw_scale_start);
-    std::cout << "First IFGT (Kt1) took time: " << time_span.count() << " s" << std::endl;
+    // auto ifgt1 = std::chrono::high_resolution_clock::now();
+	// time_span = std::chrono::duration_cast<std::chrono::duration<double>>(ifgt1 - bw_scale_start);
+    // std::cout << "First IFGT (Kt1) took time: " << time_span.count() << " s" << std::endl;
 
     auto denom_a = Kt1.array() + c; 
     auto Pt1 = (1 - c / denom_a).matrix(); // Pt1 = 1-c*a
 
-    auto Pt1_time = std::chrono::high_resolution_clock::now();
-	time_span = std::chrono::duration_cast<std::chrono::duration<double>>(Pt1_time - ifgt1);
-    std::cout << "Calculating Pt1 took time: " << time_span.count() << " s" << std::endl;
+    // auto Pt1_time = std::chrono::high_resolution_clock::now();
+	// time_span = std::chrono::duration_cast<std::chrono::duration<double>>(Pt1_time - ifgt1);
+    // std::cout << "Calculating Pt1 took time: " << time_span.count() << " s" << std::endl;
 
     ifgt_transform = std::make_unique<IFGT>(fixed_pts_scaled, bandwidth_scaled, epsilon); 
     auto P1 = ifgt_transform->compute_ifgt(moving_pts_scaled, 1 / denom_a); // P1 = Ka 
 
-    auto P1_time = std::chrono::high_resolution_clock::now();
-	time_span = std::chrono::duration_cast<std::chrono::duration<double>>(P1_time - Pt1_time);
-    std::cout << "IFGT (P1) took time: " << time_span.count() << " s" << std::endl;
+    // auto P1_time = std::chrono::high_resolution_clock::now();
+	// time_span = std::chrono::duration_cast<std::chrono::duration<double>>(P1_time - Pt1_time);
+    // std::cout << "IFGT (P1) took time: " << time_span.count() << " s" << std::endl;
 
     Eigen::MatrixXf PX(M_moving_pts, dim);
     for (int i = 0; i < dim; ++i) {
-        auto PX_start = std::chrono::high_resolution_clock::now();
+        // auto PX_start = std::chrono::high_resolution_clock::now();
 
         PX.col(i) = ifgt_transform->compute_ifgt(moving_pts_scaled, fixed_pts.col(i).array() / denom_a); // PX = K(a.*X)
 
-        auto PX_end = std::chrono::high_resolution_clock::now();
-        time_span = std::chrono::duration_cast<std::chrono::duration<double>>(PX_end - PX_start);
-        std::cout << "IFGT (PX) column " << i << " took time: " << time_span.count() << " s" << std::endl;
+        // auto PX_end = std::chrono::high_resolution_clock::now();
+        // time_span = std::chrono::duration_cast<std::chrono::duration<double>>(PX_end - PX_start);
+        // std::cout << "IFGT (PX) column " << i << " took time: " << time_span.count() << " s" << std::endl;
     }
-    auto L_start = std::chrono::high_resolution_clock::now();
+    // auto L_start = std::chrono::high_resolution_clock::now();
     // objective function estimate
     double L = -log(denom_a).sum() + dim * N_fixed_pts * std::log(sigmaSquared) / 2.0;
 
-    auto L_end = std::chrono::high_resolution_clock::now();
-    time_span = std::chrono::duration_cast<std::chrono::duration<double>>(L_end - L_start);
-    std::cout << "Calculating L took time: " << time_span.count() << " s" << std::endl;
+    // auto L_end = std::chrono::high_resolution_clock::now();
+    // time_span = std::chrono::duration_cast<std::chrono::duration<double>>(L_end - L_start);
+    // std::cout << "Calculating L took time: " << time_span.count() << " s" << std::endl;
 
     return { P1, Pt1, PX, L};
 }
@@ -496,12 +496,15 @@ AlignViaNonRigidCPD(CPDParams & params,
 
         auto Y_transformed = transform.G * transform.W; // Y_new = Y + GW
         // E step 
+
+        high_resolution_clock::time_point start_estep = high_resolution_clock::now();
+
         double L_temp = 1.0;
         if(params.use_fgt) {
             // X = fixed points = source points 
 	        // Y = moving points = target points
-            double epsilon = 1E-3; // smaller epsilon = smaller error (epsilon > 0)
-            auto cpd_products = ComputeCPDProductsIfgt(X, Y + Y_transformed, sigma_squared, epsilon, 
+            // smaller epsilon = smaller error (epsilon > 0)
+            auto cpd_products = ComputeCPDProductsIfgt(X, Y + Y_transformed, sigma_squared, params.epsilon, 
                                                         params.distribution_weight);
             postProbX = cpd_products.PX;
             postProbTransOne = cpd_products.Pt1;
@@ -516,15 +519,40 @@ AlignViaNonRigidCPD(CPDParams & params,
             L_temp = UpdateNaiveConvergenceL(postProbTransOne, sigma_squared, params.distribution_weight, 
                                             X.rows(), Y.rows(), X.cols());
         }
+        high_resolution_clock::time_point end_estep = high_resolution_clock::now();
+        duration<double>  time_span_estep = duration_cast<duration<double>>(end_estep - start_estep);
+        FUNCINFO("E Step took time: " << time_span_estep.count());
 
         L = UpdateConvergenceL(transform.G, transform.W, L_temp, params.lambda);
 
+        high_resolution_clock::time_point start_w = high_resolution_clock::now();
         if(params.use_low_rank) {
+            // check if W is invertible
+            double product_postprob = 1.0;
+            for (int k = 0; k < postProbOne.rows(); k++) {
+                product_postprob = product_postprob * postProbOne(k);
+            }
+            if (product_postprob == 0.0) {
+                FUNCINFO("ILL DEFINED P -- FINAL SIMILARITY: " << similarity);
+                break;
+            }
             transform.W = LowRankGetW(Y, value_matrix, vector_matrix, postProbOne, postProbX, sigma_squared, params.lambda);
 
         } else {
-            transform.W = GetW(Y, transform.G, postProbOne, postProbX, sigma_squared, params.lambda);
+            // Check if the matrix is invertible before finding w
+            Eigen::MatrixXf postProbInvDiag = ((postProbOne).asDiagonal()).inverse();
+
+            if(isnan(postProbInvDiag(0,0)) || isinf(postProbInvDiag(0,0))) {
+                FUNCINFO("ILL DEFINED P -- FINAL SIMILARITY: " << similarity);
+                break;
+            }
+
+            transform.W = GetW(Y, transform.G, postProbInvDiag, postProbX, sigma_squared, params.lambda);
         }
+        high_resolution_clock::time_point end_w = high_resolution_clock::now();
+        duration<double>  time_span_w = duration_cast<duration<double>>(end_w - start_w);
+        FUNCINFO("GetW took time: " << time_span_w.count());
+
 
         T = transform.apply_to(Y);
         sigma_squared = SigmaSquared(X, postProbOne, postProbTransOne, postProbX, T);

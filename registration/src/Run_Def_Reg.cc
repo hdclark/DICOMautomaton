@@ -184,7 +184,7 @@ int main(int argc, char* argv[]){
         return;
       })
     );
-    arger.push_back( ygor_arg_handlr_t(1, 'f', "fast gauss transform", true, "0.5",
+    arger.push_back( ygor_arg_handlr_t(1, 'f', "fast gauss transform", true, "1E-3",
       "Use fast gauss tranform for Nonrigid CPD, will have no effect for other algorithms.(Optional, default False)",
       [&](const std::string &optarg) -> void {
         if (!optarg.empty()) {
