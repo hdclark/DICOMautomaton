@@ -536,11 +536,13 @@ AlignViaNonRigidCPD(CPDParams & params,
         } else {
             // Check if the matrix is invertible before finding w
             Eigen::MatrixXf postProbInvDiag = ((postProbOne).asDiagonal()).inverse();
-            if(isnan(postProbInvDiag(0,0))) {
+
+            if(isnan(postProbInvDiag(0,0)) || isinf(postProbInvDiag(0,0))) {
                 FUNCINFO("ILL DEFINED P -- FINAL SIMILARITY: " << similarity);
                 break;
             }
-            transform.W = GetW(Y, transform.G, postProbOne, postProbX, sigma_squared, params.lambda);
+
+            transform.W = GetW(Y, transform.G, postProbInvDiag, postProbX, sigma_squared, params.lambda);
         }
         high_resolution_clock::time_point end_w = high_resolution_clock::now();
         duration<double>  time_span_w = duration_cast<duration<double>>(end_w - start_w);
