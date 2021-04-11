@@ -389,18 +389,24 @@ CPD_MatrixVector_Products ComputeCPDProductsNaive(const Eigen::MatrixXf & fixed_
 }
 // run this to get L_temp when using E_step_NR
 double UpdateNaiveConvergenceL(const Eigen::MatrixXf & postProbTransOne,
+                            const Eigen::MatrixXf & xPoints,
+                            const Eigen::MatrixXf & yPoints,
                             double sigmaSquared,
-                            double w,
-                            int N_xPoints,
-                            int M_yPoints,
+                            double w, 
                             int dim) {
 
-    double c = w / (1.0 - w) * (double) M_yPoints / N_xPoints * 
+    Eigen::ArrayXf denom_a;
+    if (w > 0.0) {
+        double c = w / (1.0 - w) * (double) yPoints.rows() / xPoints.rows() * 
                             std::pow(2.0 * M_PI * sigmaSquared, 0.5 * dim);
-
-    auto denom_a = c / (1 - postProbTransOne.array());
-
-    return -log(denom_a).sum() + dim * N_xPoints * std::log(sigmaSquared) / 2.0;
+        denom_a = c / (1 - postProbTransOne.array());
+    }
+    else {
+        Eigen::MatrixXf N_ones = Eigen::ArrayXf::Ones(xPoints.rows(), 1);
+        denom_a = compute_naive_gt(xPoints, yPoints, N_ones, std::sqrt(2.0 * sigmaSquared));
+    }
+     
+    return -log(denom_a).sum() + dim * xPoints.rows() * std::log(sigmaSquared) / 2.0;
     
 }
 
@@ -511,8 +517,7 @@ AlignViaNonRigidCPD(CPDParams & params,
             postProbOne = postProb * oneVecRow;
             postProbTransOne = postProb.transpose() * oneVecRow;
             postProbX = postProb * X;
-            L_temp = UpdateNaiveConvergenceL(postProbTransOne, sigma_squared, params.distribution_weight, 
-                                            X.rows(), Y.rows(), X.cols());
+            L_temp = UpdateNaiveConvergenceL(postProbTransOne, X, Y, sigma_squared, params.distribution_weight, X.cols());
         }
         high_resolution_clock::time_point end_estep = high_resolution_clock::now();
         duration<double>  time_span_estep = duration_cast<duration<double>>(end_estep - start_estep);

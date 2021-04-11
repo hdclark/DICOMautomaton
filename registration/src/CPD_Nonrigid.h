@@ -133,10 +133,10 @@ CPD_MatrixVector_Products ComputeCPDProductsNaive(const Eigen::MatrixXf & xPoint
                                                     double w);
 
 double UpdateNaiveConvergenceL(const Eigen::MatrixXf & postProbTransOne,
+                            const Eigen::MatrixXf & xPoints,
+                            const Eigen::MatrixXf & yPoints,
                             double sigmaSquared,
                             double w,
-                            int N_xPoints,
-                            int M_yPoints,
                             int dim);
 
 double UpdateConvergenceL(const Eigen::MatrixXf & gramMatrix,
