@@ -485,13 +485,13 @@ AlignViaNonRigidCPD(CPDParams & params,
     Eigen::MatrixXf oneVecCol = Eigen::MatrixXf::Ones(X.rows(),1);
 
     double L = 1.0; 
-    high_resolution_clock::time_point start = high_resolution_clock::now();
     std::ofstream os(xyz_outfile + "_stats.csv");
     os << "iteration" << "," << "time" << "," << "similarity" << "," << "outfile" << "\n";
+    similarity = GetSimilarity_NR(X, Y, transform.G, transform.W);
+    os << 0 << "," << 0 << "," << similarity << "," << xyz_outfile + "_iter0.xyz" << "\n";
+    high_resolution_clock::time_point start = high_resolution_clock::now();
     for (int i = 0; i < params.iterations; i++) {
         FUNCINFO("Iteration: " << i)
-        high_resolution_clock::time_point start = high_resolution_clock::now();
- 
 
         double L_old = L;
 

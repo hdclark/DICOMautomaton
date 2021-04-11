@@ -141,8 +141,10 @@ AlignViaAffineCPD(CPDParams & params,
     Eigen::MatrixXf Uy;
     Eigen::MatrixXf X_hat;
     Eigen::MatrixXf Y_hat;
-    high_resolution_clock::time_point start = high_resolution_clock::now();
     std::ofstream os(xyz_outfile + "_stats.csv");
+    os << "iteration" << "," << "time" << "," << "similarity" << "," << "outfile" << "\n";
+    os << 0 << "," << 0 << "," << similarity << "," << xyz_outfile + "_iter0.xyz" << "\n";
+    high_resolution_clock::time_point start = high_resolution_clock::now();
     for (int i = 0; i < params.iterations; i++) {
         FUNCINFO("Iteration: " << i)
         P = E_Step(X, Y, transform.B, \
