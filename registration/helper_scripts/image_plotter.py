@@ -25,7 +25,8 @@ def plot_points(x1,y1,z1,x2,y2,z2,filename):
     ax1 = fig.add_subplot(111, projection = '3d')
     ax1.scatter(x1, y1, z1, s=1, c='b', marker="s")#, label='Stationary Dataset')
     ax1.scatter(x2, y2, z2, s=1, c='r', marker="o")#, label='Moving Dataset')
-    ax1.view_init(135, -135)
+    # ax1.view_init(-45, 225)
+    ax1.view_init(135, -135) # monkey
     ax1.set_axis_off()
     # ax1.view_init(-80, 100) #anteater
     # plt.legend(loc='lower right')
@@ -45,6 +46,7 @@ def main():
     file_name_2 = args.moving
     end_index = file_name_2.index("_sim")
     filename = file_name_2[0:end_index] + ".png"
+    # filename = ""
     # filename = "../final_report_data/contours/original.png"
     x1,y1,z1 = read_file(file_name_1)
     x2,y2,z2 = read_file(file_name_2)

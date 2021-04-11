@@ -37,7 +37,7 @@ def main():
                     moving = "../" + row[3]
                     point_set_1 = read_file(moving)
                     point_set_2 = read_file(stationary)
-                    error = (np.square(point_set_1 - point_set_2).sum()/point_set_1.shape[0])
+                    error = (np.square(point_set_1[0:7958] - point_set_2[0:7958]).sum()/point_set_1.shape[0])
                     writer.writerow(row+[str(error)])
                 i = i+1
     os.rename(stats_tmp, stats)

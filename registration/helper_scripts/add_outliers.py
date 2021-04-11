@@ -20,7 +20,6 @@ def add_outliers(full_point_set, val_range, percentage):
     outliers = np.random.normal(scale=val_range,
                                 size=(num_points_to_add, 3))
     new_updated_point_set = np.concatenate((full_point_set, outliers), axis=0)
-    np.random.shuffle(new_updated_point_set)
     return new_updated_point_set
 
 
