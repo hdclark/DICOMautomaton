@@ -522,21 +522,21 @@ AlignViaNonRigidCPD(CPDParams & params,
 
         high_resolution_clock::time_point start_w = high_resolution_clock::now();
         if(params.use_low_rank) {
-            Eigen::MatrixXf postProbInvDiag = ((postProbOne).asDiagonal()).inverse();
             // check if W is invertible
-            if(isnan(postProbInvDiag(0,0))) {
-                FUNCINFO("ILL DEFINED P -- FINAL SIMILARITY: " << similarity);
-                break;
-            }
-            transform.W = LowRankGetW(Y, value_matrix, vector_matrix, postProbInvDiag, postProbX, sigma_squared, params.lambda);
-
-        } else {
-            // Check if the matrix is invertible before finding w
             double product_postprob = 1.0;
             for (int k = 0; k < postProbOne.rows(); k++) {
                 product_postprob = product_postprob * postProbOne(k);
             }
             if (product_postprob == 0.0) {
+                FUNCINFO("ILL DEFINED P -- FINAL SIMILARITY: " << similarity);
+                break;
+            }
+            transform.W = LowRankGetW(Y, value_matrix, vector_matrix, postProbOne, postProbX, sigma_squared, params.lambda);
+
+        } else {
+            // Check if the matrix is invertible before finding w
+            Eigen::MatrixXf postProbInvDiag = ((postProbOne).asDiagonal()).inverse();
+            if(isnan(postProbInvDiag(0,0))) {
                 FUNCINFO("ILL DEFINED P -- FINAL SIMILARITY: " << similarity);
                 break;
             }
