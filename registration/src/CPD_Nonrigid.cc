@@ -486,11 +486,6 @@ AlignViaNonRigidCPD(CPDParams & params,
     high_resolution_clock::time_point start = high_resolution_clock::now();
     for (int i = 0; i < params.iterations; i++) {
         FUNCINFO("Iteration: " << i)
-        // eventually put this inside the else statement after changing the objective function
-        // auto P = E_Step_NR(X, Y, transform.G, transform.W, sigma_squared, params.distribution_weight);
-        
-        // eventually put this inside the else statement after changing the objective function
-        //auto P = E_Step_NR(X, Y, transform.G, transform.W, sigma_squared, params.distribution_weight);
 
         double L_old = L;
 

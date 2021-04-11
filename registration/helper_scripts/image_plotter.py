@@ -45,7 +45,7 @@ def main():
     file_name_2 = args.moving
     end_index = file_name_2.index("_sim")
     filename = file_name_2[0:end_index] + ".png"
-    # filename = "../final_report_data/synthetic/original.png"
+    # filename = "../final_report_data/contours/original.png"
     x1,y1,z1 = read_file(file_name_1)
     x2,y2,z2 = read_file(file_name_2)
     plot_points(x1,y1,z1,x2,y2,z2,filename)
