@@ -66,8 +66,7 @@ double Init_Sigma_Squared_NR(const Eigen::MatrixXf & xPoints,
             normSum += rowDiff.squaredNorm();
         }
     }
-
-    return normSum / (nRowsX * mRowsY * dim);
+    return normSum / ((double)nRowsX * mRowsY * dim);
 }
 
 Eigen::MatrixXf GetGramMatrix(const Eigen::MatrixXf & yPoints, double betaSquared) {
@@ -427,6 +426,7 @@ AlignViaNonRigidCPD(CPDParams & params,
             std::string xyz_outfile /*= "output"*/ ) { 
     
     FUNCINFO("Performing nonrigid CPD");
+    high_resolution_clock::time_point start_all = high_resolution_clock::now();
 
     std::string temp_xyz_outfile;
     point_set<double> mutable_moving = moving;
@@ -489,9 +489,12 @@ AlignViaNonRigidCPD(CPDParams & params,
     os << "iteration" << "," << "time" << "," << "similarity" << "," << "outfile" << "\n";
     similarity = GetSimilarity_NR(X, Y, transform.G, transform.W);
     os << 0 << "," << 0 << "," << similarity << "," << xyz_outfile + "_iter0.xyz" << "\n";
-    high_resolution_clock::time_point start = high_resolution_clock::now();
+    
     for (int i = 0; i < params.iterations; i++) {
         FUNCINFO("Iteration: " << i)
+        high_resolution_clock::time_point time_sofar = high_resolution_clock::now();
+        duration<double>  time_span_sofar = duration_cast<duration<double>>(time_sofar - start_all);
+        FUNCINFO("Time elapsed so far: " << time_span_sofar.count());
 
         double L_old = L;
 
@@ -589,7 +592,7 @@ AlignViaNonRigidCPD(CPDParams & params,
         }
 
         high_resolution_clock::time_point stop = high_resolution_clock::now();
-        duration<double>  time_span = duration_cast<duration<double>>(stop - start);
+        duration<double>  time_span = duration_cast<duration<double>>(stop - time_sofar);
         FUNCINFO("Excecution took time: " << time_span.count())
         os << i+1 << "," << time_span.count() << "," << similarity << "," << temp_xyz_outfile << "\n";
     }
