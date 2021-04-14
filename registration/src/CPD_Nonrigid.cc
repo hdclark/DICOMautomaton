@@ -498,9 +498,7 @@ AlignViaNonRigidCPD(CPDParams & params,
 
         double L_old = L;
 
-        auto Y_transformed = transform.G * transform.W; // Y_new = Y + GW
         // E step 
-
         high_resolution_clock::time_point start_estep = high_resolution_clock::now();
 
         double L_temp = 1.0;
@@ -508,7 +506,7 @@ AlignViaNonRigidCPD(CPDParams & params,
             // X = fixed points = source points 
 	        // Y = moving points = target points
             // smaller epsilon = smaller error (epsilon > 0)
-            auto cpd_products = ComputeCPDProductsIfgt(X, Y + Y_transformed, sigma_squared, params.epsilon, 
+            auto cpd_products = ComputeCPDProductsIfgt(X, Y + transform.G * transform.W, sigma_squared, params.epsilon, 
                                                         params.distribution_weight);
             postProbX = cpd_products.PX;
             postProbTransOne = cpd_products.Pt1;
