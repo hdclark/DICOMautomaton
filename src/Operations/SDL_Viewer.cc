@@ -580,7 +580,7 @@ long int frame_count = 0;
                         if(ImGui::IsItemHovered()){
                             ImGui::SetNextWindowSizeConstraints(ImVec2(400.0, -1), ImVec2(500.0, -1));
                             ImGui::BeginTooltip();
-                            ImGui::TextWrapped(ss.str().c_str());
+                            ImGui::TextWrapped("%s", ss.str().c_str());
                             ImGui::EndTooltip();
                         }
                     }
@@ -773,7 +773,7 @@ long int frame_count = 0;
         }
         if(ImGui::BeginPopupModal("AboutPopup")){
             const std::string version = "DICOMautomaton SDL_Viewer version "_s + DCMA_VERSION_STR;
-            ImGui::Text(version.c_str());
+            ImGui::Text("%s", version.c_str());
 
             if(ImGui::Button("Close")){
                 ImGui::CloseCurrentPopup();
