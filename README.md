@@ -484,6 +484,12 @@ and may be more appropriate to cite.
     and stall/hang future operations. This can be resolved by manually removing
     the mutex.
 
+  - If you are limited by an `OpenGL` version earlier than 3.0, for example in a
+    `VirtualBox` virtual machine, the `SDL` viewer may fail to load. This can be
+    worked around by switching to `Mesa`-based software rendering by configuring
+    the entire system or defining the `LIBGL_ALWAYS_SOFTWARE=1` environment
+    variable.
+
 ## Project Home
 
 The `DICOMautomaton` homepage can be found at <http://www.halclark.ca/>. Source
