@@ -897,10 +897,15 @@ std::map<std::string,std::string> get_metadata_top_level_tags(const std::string 
     //General Equipment Module.
     insert_as_string_if_nonempty(0x0008, 0x0070, "Manufacturer");
     insert_as_string_if_nonempty(0x0008, 0x0080, "InstitutionName");
+    insert_as_string_if_nonempty(0x0018, 0x1000, "DeviceSerialNumber");
     insert_as_string_if_nonempty(0x0008, 0x1010, "StationName");
     insert_as_string_if_nonempty(0x0008, 0x1040, "InstitutionalDepartmentName");
     insert_as_string_if_nonempty(0x0008, 0x1090, "ManufacturersModelName");
     insert_as_string_if_nonempty(0x0018, 0x1020, "SoftwareVersions");
+
+    //VOI LUT Module.
+    insert_as_string_if_nonempty(0x0028, 0x1050, "WindowCenter");
+    insert_as_string_if_nonempty(0x0028, 0x1051, "WindowWidth");
 
     //General Image Module.
     insert_as_string_if_nonempty(0x0020, 0x0013, "InstanceNumber");
@@ -1044,18 +1049,73 @@ std::map<std::string,std::string> get_metadata_top_level_tags(const std::string 
     insert_as_string_if_nonempty(0x300a, 0x0007, "RTPlanTime");
     insert_as_string_if_nonempty(0x300a, 0x000c, "RTPlanGeometry");
 
-    //Unclassified others...
+    // MR Image Module
     insert_as_string_if_nonempty(0x0018, 0x0020, "ScanningSequence");
     insert_as_string_if_nonempty(0x0018, 0x0021, "SequenceVariant");
+    insert_as_string_if_nonempty(0x0018, 0x0024, "SequenceName");
     insert_as_string_if_nonempty(0x0018, 0x0022, "ScanOptions");
     insert_as_string_if_nonempty(0x0018, 0x0023, "MRAcquisitionType");
+    insert_as_string_if_nonempty(0x0018, 0x0080, "RepetitionTime");
+    insert_as_string_if_nonempty(0x0018, 0x0081, "EchoTime");
+    insert_as_string_if_nonempty(0x0018, 0x0091, "EchoTrainLength");
+    insert_as_string_if_nonempty(0x0018, 0x0082, "InversionTime");
+    insert_as_string_if_nonempty(0x0018, 0x1060, "TriggerTime");
 
+    insert_as_string_if_nonempty(0x0018, 0x0025, "AngioFlag");
+    insert_as_string_if_nonempty(0x0018, 0x1062, "NominalInterval");
+    insert_as_string_if_nonempty(0x0018, 0x1090, "CardiacNumberofImages");
+
+    insert_as_string_if_nonempty(0x0018, 0x0083, "NumberofAverages");
+    insert_as_string_if_nonempty(0x0018, 0x0084, "ImagingFrequency");
+    insert_as_string_if_nonempty(0x0018, 0x0085, "ImagedNucleus");
+    insert_as_string_if_nonempty(0x0018, 0x0086, "EchoNumbers");
+    insert_as_string_if_nonempty(0x0018, 0x0087, "MagneticFieldStrength");
+
+    insert_as_string_if_nonempty(0x0018, 0x0088, "SpacingBetweenSlices");
+    insert_as_string_if_nonempty(0x0018, 0x0089, "NumberofPhaseEncodingSteps");
+    insert_as_string_if_nonempty(0x0018, 0x0093, "PercentSampling");
+    insert_as_string_if_nonempty(0x0018, 0x0094, "PercentPhaseFieldofView");
+    insert_as_string_if_nonempty(0x0018, 0x0095, "PixelBandwidth");
+
+    insert_as_string_if_nonempty(0x0018, 0x1250, "ReceiveCoilName");
+    insert_as_string_if_nonempty(0x0018, 0x1251, "TransmitCoilName");
+    insert_as_string_if_nonempty(0x0018, 0x1310, "AcquisitionMatrix");
+    insert_as_string_if_nonempty(0x0018, 0x1312, "InplanePhaseEncodingDirection");
+    insert_as_string_if_nonempty(0x0018, 0x1314, "FlipAngle");
+    insert_as_string_if_nonempty(0x0018, 0x1315, "VariableFlipAngleFlag");
+    insert_as_string_if_nonempty(0x0018, 0x1316, "SAR");
+    insert_as_string_if_nonempty(0x0018, 0x1318, "dB_dt");
+
+    //MR Diffusion Macro Attributes.
+    insert_seq_vec_tag_as_string_if_nonempty( std::deque<path_node>(
+                                              { { 0x0018, 0x9117, "MRDiffusionSequence" },
+                                                { 0x0018, 0x9087, "DiffusionBValue" } }) );
+    insert_seq_vec_tag_as_string_if_nonempty( std::deque<path_node>(
+                                              { { 0x0018, 0x9117, "MRDiffusionSequence" },
+                                                { 0x0018, 0x9075, "DiffusionDirection" } }) );
+    insert_seq_vec_tag_as_string_if_nonempty( std::deque<path_node>(
+                                              { { 0x0018, 0x9117, "MRDiffusionSequence" },
+                                                { 0x0018, 0x9076, "DiffusionGradientDirectionSequence" },
+                                                { 0x0018, 0x9089, "DiffusionGradientOrientation" } }) );
+    insert_seq_vec_tag_as_string_if_nonempty( std::deque<path_node>(
+                                              { { 0x0018, 0x9117, "MRDiffusionSequence" },
+                                                { 0x0018, 0x9147, "DiffusionAnisotropyType" } }) );
+
+    //MR Image and Spectroscopy Instance Macro.
+    insert_as_string_if_nonempty(0x0018, 0x9073, "AcquisitionDuration");
+
+    //Siemens MR Private Diffusion Module, as detailed in syngo(R) MR E11 conformance statement.
+    insert_as_string_if_nonempty(0x0019, 0x0010, "SiemensMRHeader");
+    insert_as_string_if_nonempty(0x0019, 0x100c, "DiffusionBValue");
+    insert_as_string_if_nonempty(0x0019, 0x100d, "DiffusionDirection");
+    insert_as_string_if_nonempty(0x0019, 0x100e, "DiffusionGradientVector");
+    insert_as_string_if_nonempty(0x0019, 0x1027, "DiffusionBMatrix");  // multiplicity = 3.
+    insert_as_string_if_nonempty(0x0019, 0x0103, "PixelRepresentation"); // multiplicity = 6.
+
+    //Unclassified others...
     insert_as_string_if_nonempty(0x2001, 0x100a, "SliceNumber");
     insert_as_string_if_nonempty(0x0054, 0x1330, "ImageIndex");
-    insert_as_string_if_nonempty(0x0018, 0x0088, "SpacingBetweenSlices");
 
-    insert_as_string_if_nonempty(0x0028, 0x0010, "Rows");
-    insert_as_string_if_nonempty(0x0028, 0x0011, "Columns");
     insert_as_string_if_nonempty(0x3004, 0x000C, "GridFrameOffsetVector");
 
     insert_as_string_if_nonempty(0x0020, 0x0100, "TemporalPositionIdentifier");
@@ -1081,36 +1141,7 @@ std::map<std::string,std::string> get_metadata_top_level_tags(const std::string 
     insert_as_string_if_nonempty(0x0018, 0x1151, "XRayTubeCurrent");
 
 
-    insert_as_string_if_nonempty(0x0018, 0x0080, "RepetitionTime");
-    insert_as_string_if_nonempty(0x0018, 0x0081, "EchoTime");
-    insert_as_string_if_nonempty(0x0018, 0x0083, "NumberofAverages");
-    insert_as_string_if_nonempty(0x0018, 0x0084, "ImagingFrequency");
-    insert_as_string_if_nonempty(0x0018, 0x0085, "ImagedNucleus");
-    insert_as_string_if_nonempty(0x0018, 0x0086, "EchoNumbers");
-    insert_as_string_if_nonempty(0x0018, 0x0087, "MagneticFieldStrength");
-    insert_as_string_if_nonempty(0x0018, 0x0089, "NumberofPhaseEncodingSteps");
-    insert_as_string_if_nonempty(0x0018, 0x0091, "EchoTrainLength");
-    insert_as_string_if_nonempty(0x0018, 0x0093, "PercentSampling");
-    insert_as_string_if_nonempty(0x0018, 0x0094, "PercentPhaseFieldofView");
-    insert_as_string_if_nonempty(0x0018, 0x0095, "PixelBandwidth");
-    insert_as_string_if_nonempty(0x0018, 0x1000, "DeviceSerialNumber");
-
     insert_as_string_if_nonempty(0x0018, 0x1030, "ProtocolName");
-
-    insert_as_string_if_nonempty(0x0018, 0x1250, "ReceiveCoilName");
-    insert_as_string_if_nonempty(0x0018, 0x1251, "TransmitCoilName");
-    insert_as_string_if_nonempty(0x0018, 0x1312, "InplanePhaseEncodingDirection");
-    insert_as_string_if_nonempty(0x0018, 0x1314, "FlipAngle");
-    insert_as_string_if_nonempty(0x0018, 0x1316, "SAR");
-    insert_as_string_if_nonempty(0x0018, 0x1318, "dB_dt");
-    insert_as_string_if_nonempty(0x0018, 0x9073, "AcquisitionDuration");
-    insert_as_string_if_nonempty(0x0018, 0x9087, "Diffusion_bValue");
-    insert_as_string_if_nonempty(0x0018, 0x9089, "DiffusionGradientOrientation");
-
-    insert_as_string_if_nonempty(0x2001, 0x1004, "DiffusionDirection");
-
-    insert_as_string_if_nonempty(0x0028, 0x1050, "WindowCenter");
-    insert_as_string_if_nonempty(0x0028, 0x1051, "WindowWidth");
 
     insert_as_string_if_nonempty(0x0008, 0x0090, "ReferringPhysicianName");
 
