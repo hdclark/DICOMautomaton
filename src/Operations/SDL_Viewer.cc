@@ -13,6 +13,7 @@
 #include <optional>
 #include <fstream>
 #include <functional>
+#include <filesystem>
 #include <iostream>
 #include <iterator>
 #include <limits>
@@ -60,6 +61,7 @@
 
 #include "../Font_DCMA_Minimal.h"
 #include "../DCMA_Version.h"
+#include "../File_Loader.h"
 
 #include "SDL_Viewer.h"
 
@@ -84,7 +86,7 @@ OperationDoc OpArgDocSDL_Viewer(){
 
 Drover SDL_Viewer(Drover DICOM_data,
                   const OperationArgPkg& OptArgs,
-                  const std::map<std::string, std::string>& /*InvocationMetadata*/,
+                  const std::map<std::string, std::string>& InvocationMetadata,
                   const std::string& FilenameLex){
 
     // ----------------------------------------- User Parameters ------------------------------------------
@@ -506,9 +508,12 @@ Drover SDL_Viewer(Drover DICOM_data,
     }
 
     bool set_about_popup = false;
+    bool open_files_enabled = false;
     bool view_images_enabled = true;
     bool view_image_metadata_enabled = false;
     bool view_meshes_enabled = true;
+
+    std::filesystem::path open_file_root = std::filesystem::current_path();
 
 long int frame_count = 0;
     while(true){
@@ -544,6 +549,11 @@ long int frame_count = 0;
 
         if(ImGui::BeginMainMenuBar()){
             if(ImGui::BeginMenu("File")){
+                ImGui::MenuItem("Open", "CTLR+O", &open_files_enabled);
+                //if(ImGui::MenuItem("Open", "CTRL+O")){
+                //    ImGui::OpenPopup("OpenFileSelector");
+                //}
+                ImGui::Separator();
                 if(ImGui::MenuItem("Exit", "CTRL+Q")){
                     ImGui::EndMenu();
                     break;
@@ -659,6 +669,80 @@ long int frame_count = 0;
                 ImGui::End();
             }
         }
+
+        // Open files dialog.
+//        if (ImGui::BeginPopupModal("OpenFileSelector", NULL, ImGuiWindowFlags_AlwaysAutoResize)){
+        if( open_files_enabled ){
+            ImGui::Begin("Open File", &open_files_enabled);
+
+
+
+        // Always center this window when appearing
+//        ImVec2 center(ImGui::GetIO().DisplaySize.x * 0.5f, ImGui::GetIO().DisplaySize.y * 0.5f);
+//        ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+
+            ImGui::Text("%s", "Select one or more files to load.");
+            ImGui::Separator();
+            ImGui::Text("Current directory: %s", std::filesystem::absolute(open_file_root).c_str());
+            ImGui::Separator();
+
+            //static int unused_i = 0;
+            //ImGui::Combo("Combo", &unused_i, "Delete\0Delete harder\0");
+
+            if(ImGui::Button("Parent directory", ImVec2(120, 0))){ 
+                open_file_root = open_file_root.parent_path();
+            }
+            ImGui::Separator();
+            //
+            for(const auto &d : std::filesystem::directory_iterator( open_file_root )){
+                const auto p = d.path();
+                bool selected = false;
+                if(ImGui::Selectable(p.c_str(), &selected, ImGuiSelectableFlags_AllowDoubleClick)){
+                    if(ImGui::IsMouseDoubleClicked(0)){
+                        if(std::filesystem::is_directory( p )){
+                            open_file_root = p;
+                        }else if(std::filesystem::exists( p )){
+                            std::list<boost::filesystem::path> paths { p.string() };
+                            const auto res = Load_Files(DICOM_data, InvocationMetadata, FilenameLex, paths);
+                            if(res){
+                                open_files_enabled = false;
+//                                ImGui::CloseCurrentPopup();
+                            }
+                        }else{
+                            open_file_root = std::filesystem::current_path();
+                        }
+                    }
+                }
+            }
+/*
+            static bool selection[5] = { false, true, false, false, false };
+            ImGui::Selectable("1. I am selectable", &selection[0]);
+            ImGui::Selectable("2. I am selectable", &selection[1]);
+            ImGui::Text("3. I am not selectable");
+            ImGui::Selectable("4. I am selectable", &selection[3]);
+            if (ImGui::Selectable("5. I am double clickable", selection[4], ImGuiSelectableFlags_AllowDoubleClick))
+                if (ImGui::IsMouseDoubleClicked(0))
+                    selection[4] = !selection[4];
+
+
+            if (ImGui::Button("OK", ImVec2(120, 0))) { ImGui::CloseCurrentPopup(); }
+*/
+            ImGui::Separator();
+            ImGui::SetItemDefaultFocus();
+//            ImGui::SameLine();
+//            if(ImGui::Button("Cancel", ImVec2(120, 0))){ ImGui::CloseCurrentPopup(); }
+            if(ImGui::Button("Cancel", ImVec2(120, 0))){ 
+                open_files_enabled = false;
+            }
+//            ImGui::EndPopup();
+            ImGui::End();
+        }
+
+
+
+
+
+
 
         // Clear the current OpenGL frame.
         CHECK_FOR_GL_ERRORS();

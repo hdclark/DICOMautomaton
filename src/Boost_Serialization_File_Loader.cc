@@ -13,7 +13,7 @@
 
 
 bool Load_From_Boost_Serialization_Files( Drover &DICOM_data,
-                                          std::map<std::string,std::string> & /* InvocationMetadata */,
+                                          const std::map<std::string,std::string> & /* InvocationMetadata */,
                                           const std::string & /* FilenameLex */,
                                           std::list<boost::filesystem::path> &Filenames ){
 

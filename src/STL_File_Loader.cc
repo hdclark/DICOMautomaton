@@ -25,7 +25,7 @@
 #include "Imebra_Shim.h"
 
 bool Load_Mesh_From_ASCII_STL_Files( Drover &DICOM_data,
-                                     std::map<std::string,std::string> & /* InvocationMetadata */,
+                                     const std::map<std::string,std::string> & /* InvocationMetadata */,
                                      const std::string &,
                                      std::list<boost::filesystem::path> &Filenames ){
 
@@ -110,7 +110,7 @@ bool Load_Mesh_From_ASCII_STL_Files( Drover &DICOM_data,
 }
 
 bool Load_Mesh_From_Binary_STL_Files( Drover &DICOM_data,
-                                      std::map<std::string,std::string> & /* InvocationMetadata */,
+                                      const std::map<std::string,std::string> & /* InvocationMetadata */,
                                       const std::string &,
                                       std::list<boost::filesystem::path> &Filenames ){
 
