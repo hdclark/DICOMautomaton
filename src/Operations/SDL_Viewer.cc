@@ -507,6 +507,7 @@ Drover SDL_Viewer(Drover DICOM_data,
 
     bool set_about_popup = false;
     bool view_images_enabled = true;
+    bool view_image_metadata_enabled = false;
     bool view_meshes_enabled = true;
 
 long int frame_count = 0;
@@ -551,6 +552,7 @@ long int frame_count = 0;
             }
             if(ImGui::BeginMenu("View")){
                 ImGui::MenuItem("Images", nullptr, &view_images_enabled);
+                ImGui::MenuItem("Image Metadata", nullptr, &view_image_metadata_enabled);
                 ImGui::MenuItem("Meshes", nullptr, &view_meshes_enabled);
                 ImGui::EndMenu();
             }
@@ -634,6 +636,28 @@ long int frame_count = 0;
             ImGui::Image(gl_tex_ptr, window_size);
 
             ImGui::End();
+
+            // Metadata window.
+            if( view_image_metadata_enabled ){
+                ImGui::Begin("Image Metadata", &view_image_metadata_enabled);
+
+                ImGui::Text("Image Metadata");
+                ImGui::Columns(2);
+                ImGui::Separator();
+                ImGui::Text("Key"); ImGui::NextColumn();
+                ImGui::Text("Value"); ImGui::NextColumn();
+                ImGui::Separator();
+
+                for(const auto &apair : disp_img_it->metadata){
+                    ImGui::Text("%s",  apair.first.c_str());  ImGui::NextColumn();
+                    ImGui::Text("%s",  apair.second.c_str()); ImGui::NextColumn();
+                }
+
+                ImGui::Columns(1);
+                ImGui::Separator();
+
+                ImGui::End();
+            }
         }
 
         // Clear the current OpenGL frame.
