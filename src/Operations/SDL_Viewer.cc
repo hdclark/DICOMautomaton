@@ -683,7 +683,7 @@ long int frame_count = 0;
 
             ImGui::Text("%s", "Select one or more files to load.");
             ImGui::Separator();
-            ImGui::Text("Current directory: %s", std::filesystem::absolute(open_file_root).c_str());
+            ImGui::Text("Current directory: %s", std::filesystem::absolute(open_file_root).string().c_str());
             ImGui::Separator();
 
             //static int unused_i = 0;
@@ -697,7 +697,7 @@ long int frame_count = 0;
             for(const auto &d : std::filesystem::directory_iterator( open_file_root )){
                 const auto p = d.path();
                 bool selected = false;
-                if(ImGui::Selectable(p.c_str(), &selected, ImGuiSelectableFlags_AllowDoubleClick)){
+                if(ImGui::Selectable(p.string().c_str(), &selected, ImGuiSelectableFlags_AllowDoubleClick)){
                     if(ImGui::IsMouseDoubleClicked(0)){
                         if(std::filesystem::is_directory( p )){
                             open_file_root = p;
