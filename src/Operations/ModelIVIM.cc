@@ -178,33 +178,37 @@ Drover ModelIVIM(Drover DICOM_data,
     const auto bvalue_min_i = std::distance( std::begin(bvalues), std::min_element( std::begin(bvalues), std::end(bvalues) ) );
     const auto bvalue_max_i = std::distance( std::begin(bvalues), std::max_element( std::begin(bvalues), std::end(bvalues) ) );
 
+    FUNCINFO("Detected minimum bvalue is b(" << bvalue_min_i << ") = " << bvalues.at( bvalue_min_i ));
+    FUNCINFO("Detected maximum bvalue is b(" << bvalue_max_i << ") = " << bvalues.at( bvalue_max_i ));
+
     auto IAs_all = All_IAs( DICOM_data );
     auto IAs = Whitelist( IAs_all, ImageSelectionStr );
     for(auto & iap_it : IAs){
-
         ComputeJointPixelSamplerUserData ud;
         ud.sampling_method = ComputeJointPixelSamplerUserData::SamplingMethod::LinearInterpolation;
 
         ud.channel = Channel;
-        ud.description = "ADC (simple model)";
 
         ud.inc_lower_threshold = TestImgLowerThreshold;
         ud.inc_upper_threshold = TestImgUpperThreshold;
 
         if(std::regex_match(ModelStr, model_adc_simple)){
+            ud.description = "ADC (simple model)";
             ud.f_reduce = [bvalues, bvalue_min_i, bvalue_max_i]( std::vector<float> &vals, 
                                      vec3<double> p ) -> float {
+                vals.erase(vals.begin()); // Remove the base image's value.
                 if(vals.size() != bvalues.size()){
-                    throw std::runtime_error("Unmatched voxel and b-value vectors. Refusing to continue.");
+                    FUNCERR("Unmatched voxel and b-value vectors. Refusing to continue.");
                 }
                 // ASSUMING the minimum is b = 0. This may not be the case... TODO.
                 //const auto bvalue_min = bvalues.at( bvalue_min_i );
                 const auto bvalue_max = bvalues.at( bvalue_max_i );
 
-                const auto signal_at_bvalue_min = vals.at( bvalue_min_i );
-                const auto signal_at_bvalue_max = vals.at( bvalue_max_i );
+                const auto signal_at_bvalue_min = vals.at( bvalue_min_i);
+                const auto signal_at_bvalue_max = vals.at( bvalue_max_i);
 
                 const auto adc = std::log( signal_at_bvalue_min / signal_at_bvalue_max) / bvalue_max;
+                if(!std::isfinite( adc )) throw std::runtime_error("adc is not finite");
                 return adc;
             };
         }else{
