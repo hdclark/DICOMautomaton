@@ -108,6 +108,7 @@ add_library(Operations_objs OBJECT
     LogScale.cc
     MaxMinPixels.cc
     MeldDose.cc
+    ModelIVIM.cc
     ModifyContourMetadata.cc
     ModifyImageMetadata.cc
     NegatePixels.cc

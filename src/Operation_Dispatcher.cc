@@ -128,6 +128,7 @@
 #include "Operations/LogScale.h"
 #include "Operations/MaxMinPixels.h"
 #include "Operations/MeldDose.h"
+#include "Operations/ModelIVIM.h"
 #include "Operations/ModifyContourMetadata.h"
 #include "Operations/ModifyImageMetadata.h"
 #include "Operations/NegatePixels.h"
@@ -324,6 +325,7 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["LogScale"] = std::make_pair(OpArgDocLogScale, LogScale);
     out["MaxMinPixels"] = std::make_pair(OpArgDocMaxMinPixels, MaxMinPixels);
     out["MeldDose"] = std::make_pair(OpArgDocMeldDose, MeldDose);
+    out["ModelIVIM"] = std::make_pair(OpArgDocModelIVIM, ModelIVIM);
     out["ModifyContourMetadata"] = std::make_pair(OpArgDocModifyContourMetadata, ModifyContourMetadata);
     out["ModifyImageMetadata"] = std::make_pair(OpArgDocModifyImageMetadata, ModifyImageMetadata);
     out["NegatePixels"] = std::make_pair(OpArgDocNegatePixels, NegatePixels);
