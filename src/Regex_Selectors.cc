@@ -42,6 +42,27 @@ Whitelist_Core( L lops,
         return lops;
     }while(false);
 
+    // A keyword and a single key name.
+    // For example, "keymissing@key".
+    do{
+        const auto regex_split = Compile_Regex("^keymissing@.*$");
+        if(!std::regex_match(Specifier, regex_split)) break; // Not a keymissing@key statement.
+        
+        auto v_k_v = SplitStringToVector(Specifier, '@', 'd');
+        if(v_k_v.size() <= 1) throw std::logic_error("Unable to separate keymissing@key specifier");
+        if(v_k_v.size() != 2) break; // Not a keymissing@key statement (hint: maybe multiple @'s present?).
+
+        // Emulate this feature using a bogus regex that will never match when the key is present, but treat NAs as if
+        // they match. So the only thing that will match are objects lacking this key.
+        auto Opts_l = Opts;
+        Opts_l.nas = Regex_Selector_Opts::NAs::Include;
+        const std::string key = v_k_v.back();
+        const std::string val = "gKNcTv4s5WXEsweUKIUqsDb7M0GvDI0J3G4LinJSKVYcSLg6V3GEQW2wa";
+
+        lops = Whitelist(lops, key, val, Opts_l);
+        return lops;
+    }while(false);
+
     // A single key-value specifications stringified together.
     // For example, "key@value".
     do{
