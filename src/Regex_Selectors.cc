@@ -63,6 +63,24 @@ Whitelist_Core( L lops,
         return lops;
     }while(false);
 
+    // Inverted regex key-value specifications stringified together.
+    // For example, "!key@value".
+    do{
+        const auto regex_split = Compile_Regex("^[!].*@.*$");
+        if(!std::regex_match(Specifier, regex_split)) break; // Not a key@value statement.
+        
+        auto v_k_v = SplitStringToVector(Specifier, '@', 'd');
+        if(v_k_v.size() <= 1) throw std::logic_error("Unable to separate !key@value specifier");
+        if(v_k_v.size() != 2) break; // Not a key@value statement (hint: maybe multiple @'s present?).
+
+        auto lops_after = Whitelist(lops, v_k_v.front().substr(1), v_k_v.back(), Opts);
+        for(const auto &l : lops_after){
+            lops.remove( l );
+        }
+
+        return lops;
+    }while(false);
+
     // A single key-value specifications stringified together.
     // For example, "key@value".
     do{
