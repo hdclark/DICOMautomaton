@@ -549,7 +549,7 @@ long int frame_count = 0;
 
         if(ImGui::BeginMainMenuBar()){
             if(ImGui::BeginMenu("File")){
-                ImGui::MenuItem("Open", "CTLR+O", &open_files_enabled);
+                ImGui::MenuItem("Open", "CTRL+O", &open_files_enabled);
                 //if(ImGui::MenuItem("Open", "CTRL+O")){
                 //    ImGui::OpenPopup("OpenFileSelector");
                 //}
@@ -637,13 +637,33 @@ long int frame_count = 0;
 
             // Note: unhappy with this. Can cause feedback loop and flicker/jumpiness when resizing. Works OK for now
             // though. TODO.
+            const auto img_rows = disp_img_it->rows;
+            const auto img_cols = disp_img_it->columns;
+            const auto img_rows_f = static_cast<float>(disp_img_it->rows);
+            const auto img_cols_f = static_cast<float>(disp_img_it->columns);
             ImVec2 window_size = ImGui::GetContentRegionAvail();
-            window_size.x = std::max(512.0f, window_size.x);
+            window_size.x = std::max(512.0f, window_size.x - 5.0f);
             // Ensure images have the same aspect ratio as the true image.
-            window_size.y = window_size.x * static_cast<float>(disp_img_it->rows) / static_cast<float>(disp_img_it->columns);
-            window_size.y = std::isfinite(window_size.y) ? window_size.y : window_size.x;
+            window_size.y = (disp_img_it->pxl_dx / disp_img_it->pxl_dy) * window_size.x * img_rows_f / img_cols_f;
+            window_size.y = std::isfinite(window_size.y) ? window_size.y : (disp_img_it->pxl_dx / disp_img_it->pxl_dy) * window_size.x;
             auto gl_tex_ptr = reinterpret_cast<void*>(static_cast<intptr_t>(current_texture.texture_number));
+{
+            ImGuiIO &io = ImGui::GetIO();
+            ImVec2 pos = ImGui::GetCursorScreenPos();
             ImGui::Image(gl_tex_ptr, window_size);
+            if(ImGui::IsItemHovered()){
+                ImGui::BeginTooltip();
+                const auto region_x = std::clamp((io.MousePos.x - pos.x) / window_size.x, 0.0f, 1.0f);
+                const auto region_y = std::clamp((io.MousePos.y - pos.y) / window_size.y, 0.0f, 1.0f);
+                const auto r = std::clamp( static_cast<long int>( std::floor( region_y * img_rows_f ) ), 0L, (img_rows-1) );
+                const auto c = std::clamp( static_cast<long int>( std::floor( region_x * img_cols_f ) ), 0L, (img_cols-1) );
+                ImGui::Text("ImGui coordinates: %.4f, %.4f", region_x, region_y);
+                ImGui::Text("Pixel coordinates: (R, C) = %d, %d", r, c);
+                //ImGui::Text("DICOM coordinates: (R, C) = %d, %d", r, c);
+                //ImGui::Text("Voxel intensity: %.4f", r, c);
+                ImGui::EndTooltip();
+            }
+}
 
             ImGui::End();
 
