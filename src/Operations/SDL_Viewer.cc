@@ -660,7 +660,11 @@ long int frame_count = 0;
                 ImGui::Text("ImGui coordinates: %.4f, %.4f", region_x, region_y);
                 ImGui::Text("Pixel coordinates: (R, C) = %d, %d", r, c);
                 //ImGui::Text("DICOM coordinates: (R, C) = %d, %d", r, c);
-                //ImGui::Text("Voxel intensity: %.4f", r, c);
+                std::stringstream ss;
+                for(long int chan = 0; chan < disp_img_it->channels; ++chan){
+                    ss << disp_img_it->value(r, c, chan);
+                }
+                ImGui::Text("Voxel intensities: %s", ss.str().c_str());
                 ImGui::EndTooltip();
             }
 }
