@@ -512,6 +512,7 @@ Drover SDL_Viewer(Drover DICOM_data,
     bool view_images_enabled = true;
     bool view_image_metadata_enabled = false;
     bool view_meshes_enabled = true;
+    bool show_image_hover_tooltips = true;
 
     std::filesystem::path open_file_root = std::filesystem::current_path();
 
@@ -549,12 +550,12 @@ long int frame_count = 0;
 
         if(ImGui::BeginMainMenuBar()){
             if(ImGui::BeginMenu("File")){
-                ImGui::MenuItem("Open", "CTRL+O", &open_files_enabled);
-                //if(ImGui::MenuItem("Open", "CTRL+O")){
+                ImGui::MenuItem("Open", "ctrl+O", &open_files_enabled);
+                //if(ImGui::MenuItem("Open", "ctrl+O")){
                 //    ImGui::OpenPopup("OpenFileSelector");
                 //}
                 ImGui::Separator();
-                if(ImGui::MenuItem("Exit", "CTRL+Q")){
+                if(ImGui::MenuItem("Exit", "ctrl+Q")){
                     ImGui::EndMenu();
                     break;
                 }
@@ -563,17 +564,18 @@ long int frame_count = 0;
             if(ImGui::BeginMenu("View")){
                 ImGui::MenuItem("Images", nullptr, &view_images_enabled);
                 ImGui::MenuItem("Image Metadata", nullptr, &view_image_metadata_enabled);
+                ImGui::MenuItem("Image Hover Tooltips", nullptr, &show_image_hover_tooltips);
                 ImGui::MenuItem("Meshes", nullptr, &view_meshes_enabled);
                 ImGui::EndMenu();
             }
             ImGui::Separator();
-            if(ImGui::BeginMenu("Help", "CTRL+H")){
+            if(ImGui::BeginMenu("Help", "ctrl+H")){
                 if(ImGui::MenuItem("About")){
                     set_about_popup = true;
                 }
                 ImGui::Separator();
 
-                if(ImGui::BeginMenu("Operations", "CTRL+O")){
+                if(ImGui::BeginMenu("Operations", "ctrl+O")){
                     auto known_ops = Known_Operations();
                     for(auto &anop : known_ops){
                         const auto op_name = anop.first;
@@ -651,20 +653,32 @@ long int frame_count = 0;
             ImGuiIO &io = ImGui::GetIO();
             ImVec2 pos = ImGui::GetCursorScreenPos();
             ImGui::Image(gl_tex_ptr, window_size);
-            if(ImGui::IsItemHovered()){
+            if( ImGui::IsItemHovered() 
+            &&  show_image_hover_tooltips ){
                 ImGui::BeginTooltip();
                 const auto region_x = std::clamp((io.MousePos.x - pos.x) / window_size.x, 0.0f, 1.0f);
                 const auto region_y = std::clamp((io.MousePos.y - pos.y) / window_size.y, 0.0f, 1.0f);
                 const auto r = std::clamp( static_cast<long int>( std::floor( region_y * img_rows_f ) ), 0L, (img_rows-1) );
                 const auto c = std::clamp( static_cast<long int>( std::floor( region_x * img_cols_f ) ), 0L, (img_cols-1) );
-                ImGui::Text("ImGui coordinates: %.4f, %.4f", region_x, region_y);
-                ImGui::Text("Pixel coordinates: (R, C) = %d, %d", r, c);
-                //ImGui::Text("DICOM coordinates: (R, C) = %d, %d", r, c);
-                std::stringstream ss;
-                for(long int chan = 0; chan < disp_img_it->channels; ++chan){
-                    ss << disp_img_it->value(r, c, chan);
+                const auto zero_pos = disp_img_it->position(0L, 0L);
+                const auto dicom_pos = zero_pos + disp_img_it->row_unit * region_y * disp_img_it->pxl_dx * img_rows_f
+                                                + disp_img_it->col_unit * region_x * disp_img_it->pxl_dy * img_cols_f
+                                                - disp_img_it->row_unit * 0.5 * disp_img_it->pxl_dx
+                                                - disp_img_it->col_unit * 0.5 * disp_img_it->pxl_dy;
+                ImGui::Text("Image coordinates: %.4f, %.4f", region_y, region_x);
+                ImGui::Text("Pixel coordinates: (r, c) = %d, %d", r, c);
+                ImGui::Text("Mouse coordinates: (x, y, z) = %.4f, %.4f, %.4f", dicom_pos.x, dicom_pos.y, dicom_pos.z);
+                const auto voxel_pos = disp_img_it->position(r,c);
+                ImGui::Text("Voxel coordinates: (x, y, z) = %.4f, %.4f, %.4f", voxel_pos.x, voxel_pos.y, voxel_pos.z);
+                if(disp_img_it->channels == 1){
+                    ImGui::Text("Voxel intensity:   %.4f", disp_img_it->value(r, c, 0L));
+                }else{
+                    std::stringstream ss;
+                    for(long int chan = 0; chan < disp_img_it->channels; ++chan){
+                        ss << disp_img_it->value(r, c, chan);
+                    }
+                    ImGui::Text("Voxel intensities: %s", ss.str().c_str());
                 }
-                ImGui::Text("Voxel intensities: %s", ss.str().c_str());
                 ImGui::EndTooltip();
             }
 }
