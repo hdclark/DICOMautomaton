@@ -439,7 +439,7 @@ Drover SDL_Viewer(Drover DICOM_data,
             CHECK_FOR_GL_ERRORS();
 
 
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
             CHECK_FOR_GL_ERRORS();
 
