@@ -26,9 +26,9 @@ jobs:
       - name: test
         run: |
              ./integration_tests/Run.sh
-             ./scripts/extract_system_appimage.sh
-      - name: deploy_to_halclark_ca
+      - name: create_appimage
         run: |
+             ./scripts/extract_system_appimage.sh
              export DEBIAN_FRONTEND="noninteractive"
              apt-get update --yes
              apt-get install --yes --no-install-recommends coreutils findutils rsync openssh-client
@@ -37,6 +37,16 @@ jobs:
              cp DICOMautomaton*AppImage DICOMautomaton-latest-x86_64.AppImage
              mv DICOMautomaton*AppImage ci_artifacts/
              find ci_artifacts/ -iname '*AppImage' -print -execdir bash -c 'sha256sum "$@" > "$@".sha256sum' bash '{}' \;
+      - name: deploy_to_github
+        uses: actions/upload-artifact@v2
+        with:
+          name: "DICOMautomaton-AppImage"
+          if-no-files-found: error
+          path: |
+                ci_artifacts/DICOMautomaton-latest-x86_64.AppImage
+                ci_artifacts/DICOMautomaton-latest-x86_64.AppImage.sha256sum
+      - name: deploy_to_halclark_ca
+        run: |
              echo "${{secrets.HALCLARKCA_DEPLOY_KEY}}" > deploy_key
              chmod 600 deploy_key
              rsync -avP -e 'ssh -i deploy_key -o StrictHostKeyChecking=no' ci_artifacts/ root@halclark.ca:/var/www/html/ci/
