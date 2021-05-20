@@ -514,7 +514,27 @@ Drover SDL_Viewer(Drover DICOM_data,
     bool view_meshes_enabled = true;
     bool show_image_hover_tooltips = true;
 
+    // Open file dialog state.
     std::filesystem::path open_file_root = std::filesystem::current_path();
+    std::array<char,1024> root_entry_text;
+    struct file_selection {
+        std::filesystem::path path;
+        bool selected;
+    };
+    std::vector<file_selection> open_files_selection;
+    const auto query_files = [&]( std::filesystem::path root ){
+        open_files_selection.clear();
+
+        for(const auto &d : std::filesystem::directory_iterator( root )){
+            open_files_selection.push_back( { d.path(), false } );
+        }
+        std::sort( std::begin(open_files_selection), std::end(open_files_selection), 
+                   [](const file_selection &L, const file_selection &R){
+                        return L.path < R.path;
+                   } );
+        return;
+    };
+
 
 long int frame_count = 0;
     while(true){
@@ -550,7 +570,9 @@ long int frame_count = 0;
 
         if(ImGui::BeginMainMenuBar()){
             if(ImGui::BeginMenu("File")){
-                ImGui::MenuItem("Open", "ctrl+O", &open_files_enabled);
+                if(ImGui::MenuItem("Open", "ctrl+O", &open_files_enabled)){
+                    query_files(open_file_root);
+                }
                 //if(ImGui::MenuItem("Open", "ctrl+O")){
                 //    ImGui::OpenPopup("OpenFileSelector");
                 //}
@@ -666,7 +688,7 @@ long int frame_count = 0;
                                                 - disp_img_it->row_unit * 0.5 * disp_img_it->pxl_dx
                                                 - disp_img_it->col_unit * 0.5 * disp_img_it->pxl_dy;
                 ImGui::Text("Image coordinates: %.4f, %.4f", region_y, region_x);
-                ImGui::Text("Pixel coordinates: (r, c) = %d, %d", r, c);
+                ImGui::Text("Pixel coordinates: (r, c) = %ld, %ld", r, c);
                 ImGui::Text("Mouse coordinates: (x, y, z) = %.4f, %.4f, %.4f", dicom_pos.x, dicom_pos.y, dicom_pos.z);
                 const auto voxel_pos = disp_img_it->position(r,c);
                 ImGui::Text("Voxel coordinates: (x, y, z) = %.4f, %.4f, %.4f", voxel_pos.x, voxel_pos.y, voxel_pos.z);
@@ -709,11 +731,8 @@ long int frame_count = 0;
         }
 
         // Open files dialog.
-//        if (ImGui::BeginPopupModal("OpenFileSelector", NULL, ImGuiWindowFlags_AlwaysAutoResize)){
         if( open_files_enabled ){
             ImGui::Begin("Open File", &open_files_enabled);
-
-
 
         // Always center this window when appearing
 //        ImVec2 center(ImGui::GetIO().DisplaySize.x * 0.5f, ImGui::GetIO().DisplaySize.y * 0.5f);
@@ -721,66 +740,103 @@ long int frame_count = 0;
 
             ImGui::Text("%s", "Select one or more files to load.");
             ImGui::Separator();
-            ImGui::Text("Current directory: %s", std::filesystem::absolute(open_file_root).string().c_str());
+            std::string open_file_root_str = std::filesystem::absolute(open_file_root).string();
+            for(size_t i = 0; (i < open_file_root_str.size()) && ((i+1) < root_entry_text.size()); ++i){
+                root_entry_text[i] = open_file_root_str[i];
+                root_entry_text[i+1] = '\0';
+            }
+            ImGui::Text("Current directory:");
+            ImGui::SameLine();
+            ImGui::InputText("", root_entry_text.data(), root_entry_text.size());
+            std::string entered_text;
+            for(size_t i = 0; (i < open_file_root_str.size()) && (i < root_entry_text.size()); ++i){
+                if(root_entry_text[i] == '\0') break;
+                entered_text.push_back(root_entry_text[i]);
+            }
+            if(entered_text != open_file_root_str){
+                open_file_root = entered_text;
+                if(std::filesystem::is_directory( open_file_root )){
+                    query_files(open_file_root);
+                }
+            }
             ImGui::Separator();
-
-            //static int unused_i = 0;
-            //ImGui::Combo("Combo", &unused_i, "Delete\0Delete harder\0");
 
             if(ImGui::Button("Parent directory", ImVec2(120, 0))){ 
                 open_file_root = open_file_root.parent_path();
+                query_files(open_file_root);
+            }
+            ImGui::SameLine();
+            if(ImGui::Button("Select all", ImVec2(120, 0))){ 
+                for(auto &ofs : open_files_selection){
+                    if(!std::filesystem::is_directory( ofs.path )){
+                        ofs.selected = true;
+                    }
+                }
+            }
+            ImGui::SameLine();
+            if(ImGui::Button("Select none", ImVec2(120, 0))){ 
+                for(auto &ofs : open_files_selection){
+                    ofs.selected = false;
+                }
+            }
+            ImGui::SameLine();
+            if(ImGui::Button("Invert selection", ImVec2(120, 0))){ 
+                for(auto &ofs : open_files_selection){
+                    if(std::filesystem::is_directory( ofs.path )){
+                        ofs.selected = false;
+                    }else{
+                        ofs.selected = !ofs.selected;
+                    }
+                }
             }
             ImGui::Separator();
-            //
-            for(const auto &d : std::filesystem::directory_iterator( open_file_root )){
-                const auto p = d.path();
-                bool selected = false;
-                if(ImGui::Selectable(p.string().c_str(), &selected, ImGuiSelectableFlags_AllowDoubleClick)){
+
+            for(auto &ofs : open_files_selection){
+                if(ImGui::Selectable(ofs.path.string().c_str(), &(ofs.selected), ImGuiSelectableFlags_AllowDoubleClick)){
                     if(ImGui::IsMouseDoubleClicked(0)){
-                        if(std::filesystem::is_directory( p )){
-                            open_file_root = p;
-                        }else if(std::filesystem::exists( p )){
-                            std::list<boost::filesystem::path> paths { p.string() };
-                            const auto res = Load_Files(DICOM_data, InvocationMetadata, FilenameLex, paths);
-                            if(res){
-                                open_files_enabled = false;
-//                                ImGui::CloseCurrentPopup();
-                            }
-                        }else{
-                            open_file_root = std::filesystem::current_path();
+                        if(std::filesystem::is_directory( ofs.path )){
+                            open_file_root = ofs.path;
+                            query_files(open_file_root);
                         }
                     }
                 }
             }
-/*
-            static bool selection[5] = { false, true, false, false, false };
-            ImGui::Selectable("1. I am selectable", &selection[0]);
-            ImGui::Selectable("2. I am selectable", &selection[1]);
-            ImGui::Text("3. I am not selectable");
-            ImGui::Selectable("4. I am selectable", &selection[3]);
-            if (ImGui::Selectable("5. I am double clickable", selection[4], ImGuiSelectableFlags_AllowDoubleClick))
-                if (ImGui::IsMouseDoubleClicked(0))
-                    selection[4] = !selection[4];
 
-
-            if (ImGui::Button("OK", ImVec2(120, 0))) { ImGui::CloseCurrentPopup(); }
-*/
             ImGui::Separator();
             ImGui::SetItemDefaultFocus();
-//            ImGui::SameLine();
-//            if(ImGui::Button("Cancel", ImVec2(120, 0))){ ImGui::CloseCurrentPopup(); }
+            if(ImGui::Button("Load selection", ImVec2(120, 0))){ 
+                std::list<boost::filesystem::path> paths;
+                for(auto &ofs : open_files_selection){
+                    if(ofs.selected){
+                        // Resolve all files within a directory.
+                        if(std::filesystem::is_directory( ofs.path )){
+                            for(const auto &d : std::filesystem::directory_iterator( ofs.path )){
+                                paths.push_back( d.path().string() );
+                            }
+
+                        // Add a single file to the collection.
+                        }else if(std::filesystem::exists( ofs.path )){
+                            paths.push_back( ofs.path.string() );
+                        }
+                    }
+                }
+                const auto res = Load_Files(DICOM_data, InvocationMetadata, FilenameLex, paths);
+                if(res){
+                    open_files_enabled = false;
+                    open_files_selection.clear();
+                }else{
+                    open_file_root = std::filesystem::current_path();
+                }
+            }
+            ImGui::SameLine();
             if(ImGui::Button("Cancel", ImVec2(120, 0))){ 
                 open_files_enabled = false;
+                open_files_selection.clear();
+                // Reset the root directory.
+                open_file_root = std::filesystem::current_path();
             }
-//            ImGui::EndPopup();
             ImGui::End();
         }
-
-
-
-
-
-
 
         // Clear the current OpenGL frame.
         CHECK_FOR_GL_ERRORS();
