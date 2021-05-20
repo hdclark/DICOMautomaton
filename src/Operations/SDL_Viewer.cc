@@ -764,7 +764,10 @@ long int frame_count = 0;
 
             ImGui::Text("%s", "Select one or more files to load.");
             ImGui::Separator();
-            std::string open_file_root_str = std::filesystem::absolute(open_file_root).string();
+            std::string open_file_root_str;
+            try{
+                open_file_root_str = std::filesystem::absolute(open_file_root).string();
+            }catch(const std::exception &){ };
             for(size_t i = 0; (i < open_file_root_str.size()) && ((i+1) < root_entry_text.size()); ++i){
                 root_entry_text[i] = open_file_root_str[i];
                 root_entry_text[i+1] = '\0';
