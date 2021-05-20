@@ -98,18 +98,6 @@ Drover SDL_Viewer(Drover DICOM_data,
     // Image viewer state.
     long int img_array_num = -1; // The image array currently displayed.
     long int img_num = -1; // The image currently displayed.
-    //Trim any empty image arrays.
-    for(auto it = DICOM_data.image_data.begin(); it != DICOM_data.image_data.end();  ){
-        if((*it)->imagecoll.images.empty()){
-            it = DICOM_data.image_data.erase(it);
-        }else{
-            ++it;
-        }
-    }
-    if(DICOM_data.Has_Image_Data()){
-        img_array_num = 0;
-        img_num = 0;
-    }
 
     //Real-time modifiable sticky window and level.
     std::optional<double> custom_width;
@@ -280,6 +268,8 @@ Drover SDL_Viewer(Drover DICOM_data,
         int col_count = 0;
         int row_count = 0;
     };
+    opengl_texture_handle_t current_texture;
+
     const auto Load_OpenGL_Texture = [&custom_centre,
                                       &custom_width,
                                       &colour_maps,
@@ -450,6 +440,38 @@ Drover SDL_Viewer(Drover DICOM_data,
             return out;
     };
 
+    // Recompute the image viewer state, e.g., after the image data is altered by another operation.
+    const auto recompute_image_state = [&](){
+
+        //Trim any empty image arrays.
+        for(auto it = DICOM_data.image_data.begin(); it != DICOM_data.image_data.end();  ){
+            if((*it)->imagecoll.images.empty()){
+                it = DICOM_data.image_data.erase(it);
+            }else{
+                ++it;
+            }
+        }
+
+        // Assess whether there is image data.
+        if(DICOM_data.Has_Image_Data()){
+            img_array_num = 0;
+            img_num = 0;
+        }else{
+            img_array_num = -1;
+            img_num = -1;
+        }
+
+        // Set the current image array and image iters and load the texture.
+        if( DICOM_data.Has_Image_Data()
+        &&  (0 <= img_array_num)
+        &&  (0 <= img_num) ){
+            auto img_array_ptr_it = std::next(DICOM_data.image_data.begin(), img_array_num);
+            auto disp_img_it = std::next((*img_array_ptr_it)->imagecoll.images.begin(), img_num);
+            current_texture = Load_OpenGL_Texture(*disp_img_it);
+        }
+        return;
+    };
+
     // Advance to the specified Image_Array. Also resets necessary display image iterators.
     const auto advance_to_image_array = [&](const long int n){
             const long int N_arrays = DICOM_data.image_data.size();
@@ -497,22 +519,13 @@ Drover SDL_Viewer(Drover DICOM_data,
 
     // ------------------------------------------- Main loop ----------------------------------------------
 
-    // Pre-load the first image.
-    opengl_texture_handle_t current_texture;
-    if( DICOM_data.Has_Image_Data()
-    &&  (0 <= img_array_num)
-    &&  (0 <= img_num) ){
-        auto img_array_ptr_it = std::next(DICOM_data.image_data.begin(), img_array_num);
-        auto disp_img_it = std::next((*img_array_ptr_it)->imagecoll.images.begin(), img_num);
-        current_texture = Load_OpenGL_Texture(*disp_img_it);
-    }
-
     bool set_about_popup = false;
     bool open_files_enabled = false;
     bool view_images_enabled = true;
     bool view_image_metadata_enabled = false;
     bool view_meshes_enabled = true;
     bool show_image_hover_tooltips = true;
+
 
     // Open file dialog state.
     std::filesystem::path open_file_root = std::filesystem::current_path();
@@ -524,17 +537,26 @@ Drover SDL_Viewer(Drover DICOM_data,
     std::vector<file_selection> open_files_selection;
     const auto query_files = [&]( std::filesystem::path root ){
         open_files_selection.clear();
-
-        for(const auto &d : std::filesystem::directory_iterator( root )){
-            open_files_selection.push_back( { d.path(), false } );
+        try{
+            if( !root.empty()
+            &&  std::filesystem::exists(root)
+            &&  std::filesystem::is_directory(root) ){
+                for(const auto &d : std::filesystem::directory_iterator( root )){
+                    open_files_selection.push_back( { d.path(), false } );
+                }
+                std::sort( std::begin(open_files_selection), std::end(open_files_selection), 
+                           [](const file_selection &L, const file_selection &R){
+                                return L.path < R.path;
+                           } );
+            }
+        }catch(const std::exception &e){
+            FUNCINFO("Unable to query files: '" << e.what() << "'");
+            open_files_selection.clear();
         }
-        std::sort( std::begin(open_files_selection), std::end(open_files_selection), 
-                   [](const file_selection &L, const file_selection &R){
-                        return L.path < R.path;
-                   } );
         return;
     };
 
+    recompute_image_state();
 
 long int frame_count = 0;
     while(true){
@@ -709,6 +731,7 @@ long int frame_count = 0;
 
             // Metadata window.
             if( view_image_metadata_enabled ){
+                ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_FirstUseEver);
                 ImGui::Begin("Image Metadata", &view_image_metadata_enabled);
 
                 ImGui::Text("Image Metadata");
@@ -732,6 +755,7 @@ long int frame_count = 0;
 
         // Open files dialog.
         if( open_files_enabled ){
+            ImGui::SetNextWindowSize(ImVec2(600, 650), ImGuiCond_FirstUseEver);
             ImGui::Begin("Open File", &open_files_enabled);
 
         // Always center this window when appearing
@@ -745,25 +769,33 @@ long int frame_count = 0;
                 root_entry_text[i] = open_file_root_str[i];
                 root_entry_text[i+1] = '\0';
             }
+
             ImGui::Text("Current directory:");
             ImGui::SameLine();
             ImGui::InputText("", root_entry_text.data(), root_entry_text.size());
             std::string entered_text;
-            for(size_t i = 0; (i < open_file_root_str.size()) && (i < root_entry_text.size()); ++i){
+            for(size_t i = 0; i < root_entry_text.size(); ++i){
                 if(root_entry_text[i] == '\0') break;
+                if(!std::isprint( static_cast<unsigned char>(root_entry_text[i]) )) break;
                 entered_text.push_back(root_entry_text[i]);
             }
             if(entered_text != open_file_root_str){
+                open_files_selection.clear();
                 open_file_root = entered_text;
-                if(std::filesystem::is_directory( open_file_root )){
+                if( !entered_text.empty() 
+                &&  std::filesystem::exists(open_file_root)
+                &&  std::filesystem::is_directory(open_file_root) ){
                     query_files(open_file_root);
                 }
             }
             ImGui::Separator();
 
+
             if(ImGui::Button("Parent directory", ImVec2(120, 0))){ 
-                open_file_root = open_file_root.parent_path();
-                query_files(open_file_root);
+                if(!open_file_root.empty()){
+                    open_file_root = open_file_root.parent_path();
+                    query_files(open_file_root);
+                }
             }
             ImGui::SameLine();
             if(ImGui::Button("Select all", ImVec2(120, 0))){ 
@@ -792,12 +824,25 @@ long int frame_count = 0;
             ImGui::Separator();
 
             for(auto &ofs : open_files_selection){
-                if(ImGui::Selectable(ofs.path.string().c_str(), &(ofs.selected), ImGuiSelectableFlags_AllowDoubleClick)){
-                    if(ImGui::IsMouseDoubleClicked(0)){
-                        if(std::filesystem::is_directory( ofs.path )){
-                            open_file_root = ofs.path;
-                            query_files(open_file_root);
-                        }
+                const auto is_selected = ImGui::Selectable(ofs.path.lexically_relative(open_file_root).string().c_str(), &(ofs.selected), ImGuiSelectableFlags_AllowDoubleClick);
+                const auto is_doubleclicked = is_selected && ImGui::IsMouseDoubleClicked(0);
+                ImGui::SameLine(500);
+                if(std::filesystem::is_directory(ofs.path)){
+                    ImGui::Text("(dir)");
+                }else if(std::filesystem::exists(ofs.path)){
+                    const float file_size_kB = std::filesystem::file_size(ofs.path) / 1000.0;
+                    if(file_size_kB < 500.0){
+                        ImGui::Text("%.1f kB", file_size_kB );
+                    }else{
+                        ImGui::Text("%.2f MB", file_size_kB / 1000.0 );
+                    }
+                }
+
+                if(is_doubleclicked){
+                    if(std::filesystem::is_directory( ofs.path )){
+                        open_file_root = ofs.path;
+                        query_files(open_file_root);
+                        break;
                     }
                 }
             }
@@ -820,13 +865,16 @@ long int frame_count = 0;
                         }
                     }
                 }
+                // TODO: load to a separate Drover and only merge on success.
                 const auto res = Load_Files(DICOM_data, InvocationMetadata, FilenameLex, paths);
                 if(res){
                     open_files_enabled = false;
                     open_files_selection.clear();
                 }else{
-                    open_file_root = std::filesystem::current_path();
+                    FUNCWARN("Unable to load files");
+                    // TODO ... warn about the issue.
                 }
+                recompute_image_state();
             }
             ImGui::SameLine();
             if(ImGui::Button("Cancel", ImVec2(120, 0))){ 
