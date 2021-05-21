@@ -532,6 +532,8 @@ Drover SDL_Viewer(Drover DICOM_data,
     std::array<char,1024> root_entry_text;
     struct file_selection {
         std::filesystem::path path;
+        bool is_dir;
+        std::uintmax_t file_size;
         bool selected;
     };
     std::vector<file_selection> open_files_selection;
@@ -542,7 +544,13 @@ Drover SDL_Viewer(Drover DICOM_data,
             &&  std::filesystem::exists(root)
             &&  std::filesystem::is_directory(root) ){
                 for(const auto &d : std::filesystem::directory_iterator( root )){
-                    open_files_selection.push_back( { d.path(), false } );
+                    const auto p = d.path();
+                    const std::uintmax_t file_size = ( !std::filesystem::is_directory(p) && std::filesystem::exists(p) )
+                                                   ? std::filesystem::file_size(p) : 0;
+                    open_files_selection.push_back( { p,
+                                                      std::filesystem::is_directory(p),
+                                                      file_size,
+                                                      false } );
                 }
                 std::sort( std::begin(open_files_selection), std::end(open_files_selection), 
                            [](const file_selection &L, const file_selection &R){
@@ -803,7 +811,7 @@ long int frame_count = 0;
             ImGui::SameLine();
             if(ImGui::Button("Select all", ImVec2(120, 0))){ 
                 for(auto &ofs : open_files_selection){
-                    if(!std::filesystem::is_directory( ofs.path )){
+                    if(!ofs.is_dir){
                         ofs.selected = true;
                     }
                 }
@@ -817,7 +825,7 @@ long int frame_count = 0;
             ImGui::SameLine();
             if(ImGui::Button("Invert selection", ImVec2(120, 0))){ 
                 for(auto &ofs : open_files_selection){
-                    if(std::filesystem::is_directory( ofs.path )){
+                    if(ofs.is_dir){
                         ofs.selected = false;
                     }else{
                         ofs.selected = !ofs.selected;
@@ -830,10 +838,10 @@ long int frame_count = 0;
                 const auto is_selected = ImGui::Selectable(ofs.path.lexically_relative(open_file_root).string().c_str(), &(ofs.selected), ImGuiSelectableFlags_AllowDoubleClick);
                 const auto is_doubleclicked = is_selected && ImGui::IsMouseDoubleClicked(0);
                 ImGui::SameLine(500);
-                if(std::filesystem::is_directory(ofs.path)){
+                if(ofs.is_dir){
                     ImGui::Text("(dir)");
-                }else if(std::filesystem::exists(ofs.path)){
-                    const float file_size_kB = std::filesystem::file_size(ofs.path) / 1000.0;
+                }else if(ofs.file_size != 0){
+                    const float file_size_kB = ofs.file_size / 1000.0;
                     if(file_size_kB < 500.0){
                         ImGui::Text("%.1f kB", file_size_kB );
                     }else{
@@ -842,7 +850,7 @@ long int frame_count = 0;
                 }
 
                 if(is_doubleclicked){
-                    if(std::filesystem::is_directory( ofs.path )){
+                    if(ofs.is_dir){
                         open_file_root = ofs.path;
                         query_files(open_file_root);
                         break;
@@ -857,18 +865,20 @@ long int frame_count = 0;
                 for(auto &ofs : open_files_selection){
                     if(ofs.selected){
                         // Resolve all files within a directory.
-                        if(std::filesystem::is_directory( ofs.path )){
+                        if(ofs.is_dir){
                             for(const auto &d : std::filesystem::directory_iterator( ofs.path )){
                                 paths.push_back( d.path().string() );
                             }
 
                         // Add a single file to the collection.
-                        }else if(std::filesystem::exists( ofs.path )){
+                        }else{
                             paths.push_back( ofs.path.string() );
                         }
                     }
                 }
                 // TODO: load to a separate Drover and only merge on success.
+                // TODO: convert this to a future in another thread to avoid blocking.
+
                 const auto res = Load_Files(DICOM_data, InvocationMetadata, FilenameLex, paths);
                 if(res){
                     open_files_enabled = false;
