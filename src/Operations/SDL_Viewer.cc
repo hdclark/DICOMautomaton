@@ -28,12 +28,14 @@
 #include <utility>            //Needed for std::pair.
 #include <vector>
 #include <chrono>
+#include <future>
 
 #include <boost/filesystem.hpp>
 
 #include "../imgui20201021/imgui.h"
 #include "../imgui20201021/imgui_impl_sdl.h"
 #include "../imgui20201021/imgui_impl_opengl3.h"
+
 #include <SDL.h>
 #include <GL/glew.h>            // Initialize with glewInit()
 
@@ -566,6 +568,14 @@ Drover SDL_Viewer(Drover DICOM_data,
 
     recompute_image_state();
 
+
+    struct loaded_files_res {
+        bool res;
+        Drover DICOM_data;
+    };
+    std::future<loaded_files_res> loaded_files;
+
+
 long int frame_count = 0;
     while(true){
 ++frame_count;
@@ -762,7 +772,9 @@ long int frame_count = 0;
         }
 
         // Open files dialog.
-        if( open_files_enabled ){
+        if( open_files_enabled
+        &&  !loaded_files.valid()){
+
             ImGui::SetNextWindowSize(ImVec2(600, 650), ImGuiCond_FirstUseEver);
             ImGui::Begin("Open File", &open_files_enabled);
 
@@ -861,6 +873,7 @@ long int frame_count = 0;
             ImGui::Separator();
             ImGui::SetItemDefaultFocus();
             if(ImGui::Button("Load selection", ImVec2(120, 0))){ 
+                // Extract all files from the selection.
                 std::list<boost::filesystem::path> paths;
                 for(auto &ofs : open_files_selection){
                     if(ofs.selected){
@@ -876,18 +889,17 @@ long int frame_count = 0;
                         }
                     }
                 }
-                // TODO: load to a separate Drover and only merge on success.
-                // TODO: convert this to a future in another thread to avoid blocking.
 
-                const auto res = Load_Files(DICOM_data, InvocationMetadata, FilenameLex, paths);
-                if(res){
-                    open_files_enabled = false;
-                    open_files_selection.clear();
-                }else{
-                    FUNCWARN("Unable to load files");
-                    // TODO ... warn about the issue.
-                }
-                recompute_image_state();
+                // Load into to a separate Drover and only merge if all loads are successful.
+                loaded_files = std::async(std::launch::async, [InvocationMetadata,
+                                                               FilenameLex,
+                                                               paths]() -> loaded_files_res {
+                    loaded_files_res lfs;
+                    auto paths_l = paths;
+                    lfs.res = Load_Files(lfs.DICOM_data, InvocationMetadata, FilenameLex, paths_l);
+                    return lfs;
+                });
+
             }
             ImGui::SameLine();
             if(ImGui::Button("Cancel", ImVec2(120, 0))){ 
@@ -898,6 +910,39 @@ long int frame_count = 0;
             }
             ImGui::End();
         }
+
+        // Handle file loading future.
+        if(loaded_files.valid()){
+            ImGui::OpenPopup("Loading");
+            if(ImGui::BeginPopupModal("Loading", NULL, ImGuiWindowFlags_AlwaysAutoResize)){
+                const std::string str((frame_count / 15) % 4, '.'); // Simplistic animation.
+                ImGui::Text("Loading files%s", str.c_str());
+
+                if(ImGui::Button("Close")){
+                    ImGui::CloseCurrentPopup();
+                }
+
+                ImGui::EndPopup();
+            }
+
+            if(std::future_status::ready == loaded_files.wait_for(std::chrono::microseconds(1))){
+                auto f = loaded_files.get();
+
+                if(f.res){
+                    open_files_enabled = false;
+                    open_files_selection.clear();
+                    DICOM_data.Consume(f.DICOM_data);
+                }else{
+                    FUNCWARN("Unable to load files");
+                    // TODO ... warn about the issue.
+                }
+                recompute_image_state();
+
+                loaded_files = decltype(loaded_files)();
+            }
+        }
+
+
 
         // Clear the current OpenGL frame.
         CHECK_FOR_GL_ERRORS();
