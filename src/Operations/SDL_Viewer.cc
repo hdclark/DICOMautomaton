@@ -455,7 +455,13 @@ Drover SDL_Viewer(Drover DICOM_data,
         }
 
         // Assess whether there is image data.
-        if(DICOM_data.Has_Image_Data()){
+        const auto has_images = DICOM_data.Has_Image_Data();
+        if( has_images
+        &&  (0 <= img_array_num)
+        &&  (0 <= img_num) ){
+            // Do nothing, but validate (below) that the images are accessible.
+        }else if( has_images
+              &&  ((img_array_num < 0) || (img_num < 0)) ){
             img_array_num = 0;
             img_num = 0;
         }else{
@@ -464,11 +470,15 @@ Drover SDL_Viewer(Drover DICOM_data,
         }
 
         // Set the current image array and image iters and load the texture.
-        if( DICOM_data.Has_Image_Data()
+        if( has_images
         &&  (0 <= img_array_num)
         &&  (0 <= img_num) ){
+            if( !isininc(1, img_array_num+1, DICOM_data.image_data.size()) ) return;
             auto img_array_ptr_it = std::next(DICOM_data.image_data.begin(), img_array_num);
+
+            if( !isininc(1, img_num+1, (*img_array_ptr_it)->imagecoll.images.size()) ) return;
             auto disp_img_it = std::next((*img_array_ptr_it)->imagecoll.images.begin(), img_num);
+
             current_texture = Load_OpenGL_Texture(*disp_img_it);
         }
         return;
@@ -527,6 +537,8 @@ Drover SDL_Viewer(Drover DICOM_data,
     bool view_image_metadata_enabled = false;
     bool view_meshes_enabled = true;
     bool show_image_hover_tooltips = true;
+    bool adjust_window_level_enabled = false;
+    bool adjust_colour_map_enabled = false;
 
 
     // Open file dialog state.
@@ -610,19 +622,20 @@ long int frame_count = 0;
 
         if(ImGui::BeginMainMenuBar()){
             if(ImGui::BeginMenu("File")){
-                if(ImGui::MenuItem("Open", "ctrl+O", &open_files_enabled)){
+                if(ImGui::MenuItem("Open", "ctrl+o", &open_files_enabled)){
                     query_files(open_file_root);
                 }
-                //if(ImGui::MenuItem("Open", "ctrl+O")){
+                //if(ImGui::MenuItem("Open", "ctrl+o")){
                 //    ImGui::OpenPopup("OpenFileSelector");
                 //}
                 ImGui::Separator();
-                if(ImGui::MenuItem("Exit", "ctrl+Q")){
+                if(ImGui::MenuItem("Exit", "ctrl+q")){
                     ImGui::EndMenu();
                     break;
                 }
                 ImGui::EndMenu();
             }
+            ImGui::Separator();
             if(ImGui::BeginMenu("View")){
                 ImGui::MenuItem("Images", nullptr, &view_images_enabled);
                 ImGui::MenuItem("Image Metadata", nullptr, &view_image_metadata_enabled);
@@ -630,14 +643,20 @@ long int frame_count = 0;
                 ImGui::MenuItem("Meshes", nullptr, &view_meshes_enabled);
                 ImGui::EndMenu();
             }
+            if(ImGui::BeginMenu("Adjust")){
+                ImGui::MenuItem("Window and Level", nullptr, &adjust_window_level_enabled);
+                ImGui::MenuItem("Image Colour Map", nullptr, &adjust_colour_map_enabled);
+                ImGui::EndMenu();
+            }
+
             ImGui::Separator();
-            if(ImGui::BeginMenu("Help", "ctrl+H")){
+            if(ImGui::BeginMenu("Help", "ctrl+h")){
                 if(ImGui::MenuItem("About")){
                     set_about_popup = true;
                 }
                 ImGui::Separator();
 
-                if(ImGui::BeginMenu("Operations", "ctrl+O")){
+                if(ImGui::BeginMenu("Operations", "ctrl+d")){
                     auto known_ops = Known_Operations();
                     for(auto &anop : known_ops){
                         const auto op_name = anop.first;
@@ -943,6 +962,158 @@ long int frame_count = 0;
         }
 
 
+        // Adjust the window and level.
+        if(adjust_window_level_enabled){
+            ImGui::SetNextWindowSize(ImVec2(500, 500), ImGuiCond_FirstUseEver);
+            ImGui::Begin("Adjust Window and Level", &adjust_window_level_enabled);
+            bool reload_texture = false;
+
+            if(ImGui::Button("Auto", ImVec2(120, 0))){
+                // Invalidate any custom window and level.
+                custom_width   = std::optional<double>();
+                custom_centre  = std::optional<double>();
+                reload_texture = true;
+            }
+
+            ImGui::Text("CT Presets");
+            if(ImGui::Button("Abdomen", ImVec2(100, 0))){
+                custom_width   = 400.0;
+                custom_centre  = 40.0;
+                reload_texture = true;
+            }
+            ImGui::SameLine();
+            if(ImGui::Button("Bone", ImVec2(100, 0))){
+                custom_width   = 2000.0;
+                custom_centre  = 500.0;
+                reload_texture = true;
+            }
+            ImGui::SameLine();
+            if(ImGui::Button("Brain", ImVec2(100, 0))){
+                custom_width   = 70.0;
+                custom_centre  = 30.0;
+                reload_texture = true;
+            }
+
+            if(ImGui::Button("Liver", ImVec2(100, 0))){
+                custom_width   = 160.0;
+                custom_centre  = 60.0;
+                reload_texture = true;
+            }
+            ImGui::SameLine();
+            if(ImGui::Button("Lung", ImVec2(100, 0))){
+                custom_width   = 1600.0;
+                custom_centre  = -600.0;
+                reload_texture = true;
+            }
+            ImGui::SameLine();
+            if(ImGui::Button("Mediastinum", ImVec2(100, 0))){
+                custom_width   = 500.0;
+                custom_centre  = 50.0;
+                reload_texture = true;
+            }
+
+            ImGui::Text("QA Presets");
+            if(ImGui::Button("0 - 1", ImVec2(100, 0))){
+                custom_width   = 1.0;
+                custom_centre  = 0.5;
+                reload_texture = true;
+            }
+            ImGui::SameLine();
+            if(ImGui::Button("0 - 5", ImVec2(100, 0))){
+                custom_width   = 5.0;
+                custom_centre  = 2.5;
+                reload_texture = true;
+            }
+            ImGui::SameLine();
+            if(ImGui::Button("0 - 10", ImVec2(100, 0))){
+                custom_width   = 10.0;
+                custom_centre  = 5.0;
+                reload_texture = true;
+            }
+
+            if(ImGui::Button("0 - 100", ImVec2(100, 0))){
+                custom_width   = 100.0;
+                custom_centre  = 50.0;
+                reload_texture = true;
+            }
+            ImGui::SameLine();
+            if(ImGui::Button("0 - 1000", ImVec2(100, 0))){
+                custom_width   = 1000.0;
+                custom_centre  = 500.0;
+                reload_texture = true;
+            }
+
+            if(ImGui::Button("-1 - 1", ImVec2(100, 0))){
+                custom_width   = 2.0;
+                custom_centre  = 0.0;
+                reload_texture = true;
+            }
+            ImGui::SameLine();
+            if(ImGui::Button("-5 - 5", ImVec2(100, 0))){
+                custom_width   = 10.0;
+                custom_centre  = 0.0;
+                reload_texture = true;
+            }
+            ImGui::SameLine();
+            if(ImGui::Button("-10 - 10", ImVec2(100, 0))){
+                custom_width   = 20.0;
+                custom_centre  = 0.0;
+                reload_texture = true;
+            }
+
+            if(ImGui::Button("-100 - 100", ImVec2(100, 0))){
+                custom_width   = 200.0;
+                custom_centre  = 0.0;
+                reload_texture = true;
+            }
+            ImGui::SameLine();
+            if(ImGui::Button("-1000 - 1000", ImVec2(100, 0))){
+                custom_width   = 2000.0;
+                custom_centre  = 0.0;
+                reload_texture = true;
+            }
+
+            ImGui::Text("Custom");
+            const double clamp_l = -5000.0;
+            const double clamp_h  = 5000.0;
+            const float drag_speed = 1.0f;
+            double custom_width_l  = custom_width.value_or(0.0);
+            double custom_centre_l = custom_centre.value_or(0.0);
+            if(ImGui::DragScalar("window", ImGuiDataType_Double, &custom_width_l, drag_speed, &clamp_l, &clamp_h, "%f")){//, ImGuiSliderFlags_Logarithmic)){
+                custom_width = custom_width_l;
+                if(custom_centre) reload_texture = true;
+            }
+
+            if(ImGui::DragScalar("level",  ImGuiDataType_Double, &custom_centre_l, drag_speed, &clamp_l, &clamp_h, "%f")){//, ImGuiSliderFlags_Logarithmic)){
+                custom_centre = custom_centre_l;
+                if(custom_width) reload_texture = true;
+            }
+
+            ImGui::End();
+            if(reload_texture){
+                recompute_image_state();
+            }
+        }
+
+
+        // Adjust the colour map.
+        if(adjust_colour_map_enabled){
+            ImGui::SetNextWindowSize(ImVec2(260, 0), ImGuiCond_FirstUseEver);
+            ImGui::Begin("Adjust Colour Map", &adjust_colour_map_enabled);
+            bool reload_texture = false;
+
+            for(size_t i = 0; i < colour_maps.size(); ++i){
+                if( ImGui::Button(colour_maps[i].first.c_str(), ImVec2(250, 0)) ){
+                    colour_map = i;
+                    reload_texture = true;
+                }
+            }
+            ImGui::End();
+
+            if(reload_texture){
+                recompute_image_state();
+            }
+        }
 
         // Clear the current OpenGL frame.
         CHECK_FOR_GL_ERRORS();
