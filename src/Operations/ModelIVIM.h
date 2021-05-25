@@ -15,5 +15,5 @@ Drover ModelIVIM(Drover DICOM_data,
                  const std::map<std::string, std::string>& /*InvocationMetadata*/,
                  const std::string& /*FilenameLex*/);
 
-double GetADC(const std::vector<float> &bvalues, const std::vector<float> &vals);
+double GetADCls(const std::vector<float> &bvalues, const std::vector<float> &vals);
 

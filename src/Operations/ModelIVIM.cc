@@ -78,12 +78,16 @@ OperationDoc OpArgDocModelIVIM(){
     out.args.emplace_back();
     out.args.back().name = "Model";
     out.args.back().desc = "The model that will be fitted.."
-                           " Currently, only 'adc-simple' is available."
+                           " Currently, 'adc-simple' and 'adc-ls' are available."
                            " The 'adc-simple' model does not take into account perfusion, only free diffusion is"
-                           " modeled.";
+                           " modeled. It only uses the minimum and maximum b-value images and analytically estimates"
+                           " ADC."
+                           " The 'adc-ls' model, like 'adc-simple', only models free diffusion."
+                           " It fits a linear least-squares model that uses all available b-value images.";
     out.args.back().default_val = "adc-simple";
     out.args.back().expected = true;
-    out.args.back().examples = { "adc-simple" };
+    out.args.back().examples = { "adc-simple",
+                                 "adc-ls" };
     out.args.back().samples = OpArgSamples::Exhaustive;
 
     out.args.emplace_back();
@@ -141,7 +145,8 @@ Drover ModelIVIM(Drover DICOM_data,
     const auto TestImgUpperThreshold = std::stod( OptArgs.getValueStr("TestImgUpperThreshold").value() );
 
     //-----------------------------------------------------------------------------------------------------------------
-    const auto model_adc_simple = Compile_Regex("^ad?c?[-_]?s?i?m?p?l?e?$");
+    const auto model_adc_simple = Compile_Regex("^ad?c?[-_]?si?m?p?l?e?$");
+    const auto model_adc_ls = Compile_Regex("^ad?c?[-_]?ls?$");
 
     //-----------------------------------------------------------------------------------------------------------------
 
@@ -181,39 +186,55 @@ Drover ModelIVIM(Drover DICOM_data,
 
     FUNCINFO("Detected minimum bvalue is b(" << bvalue_min_i << ") = " << bvalues.at( bvalue_min_i ));
     FUNCINFO("Detected maximum bvalue is b(" << bvalue_max_i << ") = " << bvalues.at( bvalue_max_i ));
+    if( bvalues.at( bvalue_min_i ) == bvalues.at( bvalue_max_i ) ){
+        throw std::runtime_error("Insufficient number of distinct b-value images to perform modeling");
+    }
 
     auto IAs_all = All_IAs( DICOM_data );
     auto IAs = Whitelist( IAs_all, ImageSelectionStr );
     for(auto & iap_it : IAs){
         ComputeJointPixelSamplerUserData ud;
         ud.sampling_method = ComputeJointPixelSamplerUserData::SamplingMethod::LinearInterpolation;
-
         ud.channel = Channel;
-
         ud.inc_lower_threshold = TestImgLowerThreshold;
         ud.inc_upper_threshold = TestImgUpperThreshold;
 
         if(std::regex_match(ModelStr, model_adc_simple)){
             ud.description = "ADC (simple model)";
             ud.f_reduce = [bvalues, bvalue_min_i, bvalue_max_i]( std::vector<float> &vals, 
-                                     vec3<double> p ) -> float {
+                                                                 vec3<double> ) -> float {
                 vals.erase(vals.begin()); // Remove the base image's value.
                 if(vals.size() != bvalues.size()){
                     FUNCERR("Unmatched voxel and b-value vectors. Refusing to continue.");
                 }
-                // ASSUMING the minimum is b = 0. This may not be the case... TODO.
-                //const auto bvalue_min = bvalues.at( bvalue_min_i );
-                // const auto bvalue_max = bvalues.at( bvalue_max_i );
 
-                // const auto signal_at_bvalue_min = vals.at( bvalue_min_i);
-                // const auto signal_at_bvalue_max = vals.at( bvalue_max_i);
+                const auto bvalue_min = bvalues.at( bvalue_min_i );
+                const auto bvalue_max = bvalues.at( bvalue_max_i );
 
-                // const auto adc = std::log( signal_at_bvalue_min / signal_at_bvalue_max) / bvalue_max;
-                const auto adc = GetADC(bvalues, vals);
+                const auto signal_at_bvalue_min = vals.at( bvalue_min_i);
+                const auto signal_at_bvalue_max = vals.at( bvalue_max_i);
+
+                const auto adc = std::log( signal_at_bvalue_min / signal_at_bvalue_max) / (bvalue_max - bvalue_min);
                 if(!std::isfinite( adc )) throw std::runtime_error("adc is not finite");
                 return adc;
                 
             };
+
+        }else if(std::regex_match(ModelStr, model_adc_ls)){
+            ud.description = "ADC (linear least squares)";
+            ud.f_reduce = [bvalues, bvalue_min_i, bvalue_max_i]( std::vector<float> &vals, 
+                                                                 vec3<double> ) -> float {
+                vals.erase(vals.begin()); // Remove the base image's value.
+                if(vals.size() != bvalues.size()){
+                    FUNCERR("Unmatched voxel and b-value vectors. Refusing to continue.");
+                }
+
+                const auto adc = GetADCls(bvalues, vals);
+                if(!std::isfinite( adc )) throw std::runtime_error("adc is not finite");
+                return adc;
+                
+            };
+
         }else{
             throw std::invalid_argument("Model not understood. Cannot continue.");
         }
@@ -227,7 +248,7 @@ Drover ModelIVIM(Drover DICOM_data,
     return DICOM_data;
 }
 
-double GetADC(const std::vector<float> &bvalues, const std::vector<float> &vals){
+double GetADCls(const std::vector<float> &bvalues, const std::vector<float> &vals){
     //This function uses linear regression to obtain the ADC value using the image arrays for all the different b values.
     //This uses the formula S(b) = S(0)exp(-b * ADC)
     // --> ln(S(b)) = ln(S(0)) + (-ADC) * b 
@@ -237,7 +258,7 @@ double GetADC(const std::vector<float> &bvalues, const std::vector<float> &vals)
     //get b_avg and S_avg
     double b_avg = 0.0;
     double S_avg = 0.0;
-    const auto number_bVals = bvalues.size();
+    const auto number_bVals = static_cast<double>( bvalues.size() );
     for(size_t i = 0; i < number_bVals; ++i){
         b_avg += bvalues[i]; 
         S_avg += vals[i];
