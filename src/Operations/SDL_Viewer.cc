@@ -104,6 +104,8 @@ Drover SDL_Viewer(Drover DICOM_data,
     //Real-time modifiable sticky window and level.
     std::optional<double> custom_width;
     std::optional<double> custom_centre;
+    std::optional<double> custom_low;
+    std::optional<double> custom_high;
 
     //A tagged point for measuring distance.
     std::optional<vec3<double>> tagged_pos;
@@ -967,46 +969,66 @@ long int frame_count = 0;
             ImGui::SetNextWindowSize(ImVec2(500, 500), ImGuiCond_FirstUseEver);
             ImGui::Begin("Adjust Window and Level", &adjust_window_level_enabled);
             bool reload_texture = false;
+            const auto unset_custom_wllh = [&](){
+                custom_low    = std::optional<double>();
+                custom_high   = std::optional<double>();
+                custom_width  = std::optional<double>();
+                custom_centre = std::optional<double>();
+            };
+            const auto sync_custom_wllh = [&](){
+                if(custom_low && custom_high){
+                    custom_width = custom_high.value() - custom_low.value();
+                    custom_centre = (custom_high.value() + custom_low.value()) * 0.5;
+                }else if( custom_width && custom_centre ){
+                    custom_low  = custom_centre.value() - custom_width.value() * 0.5;
+                    custom_high = custom_centre.value() + custom_width.value() * 0.5;
+                }
+            };
 
             if(ImGui::Button("Auto", ImVec2(120, 0))){
                 // Invalidate any custom window and level.
-                custom_width   = std::optional<double>();
-                custom_centre  = std::optional<double>();
+                unset_custom_wllh();
                 reload_texture = true;
             }
 
             ImGui::Text("CT Presets");
             if(ImGui::Button("Abdomen", ImVec2(100, 0))){
+                unset_custom_wllh();
                 custom_width   = 400.0;
                 custom_centre  = 40.0;
                 reload_texture = true;
             }
             ImGui::SameLine();
             if(ImGui::Button("Bone", ImVec2(100, 0))){
+                unset_custom_wllh();
                 custom_width   = 2000.0;
                 custom_centre  = 500.0;
                 reload_texture = true;
             }
             ImGui::SameLine();
             if(ImGui::Button("Brain", ImVec2(100, 0))){
+                unset_custom_wllh();
                 custom_width   = 70.0;
                 custom_centre  = 30.0;
                 reload_texture = true;
             }
 
             if(ImGui::Button("Liver", ImVec2(100, 0))){
+                unset_custom_wllh();
                 custom_width   = 160.0;
                 custom_centre  = 60.0;
                 reload_texture = true;
             }
             ImGui::SameLine();
             if(ImGui::Button("Lung", ImVec2(100, 0))){
+                unset_custom_wllh();
                 custom_width   = 1600.0;
                 custom_centre  = -600.0;
                 reload_texture = true;
             }
             ImGui::SameLine();
             if(ImGui::Button("Mediastinum", ImVec2(100, 0))){
+                unset_custom_wllh();
                 custom_width   = 500.0;
                 custom_centre  = 50.0;
                 reload_texture = true;
@@ -1014,60 +1036,70 @@ long int frame_count = 0;
 
             ImGui::Text("QA Presets");
             if(ImGui::Button("0 - 1", ImVec2(100, 0))){
+                unset_custom_wllh();
                 custom_width   = 1.0;
                 custom_centre  = 0.5;
                 reload_texture = true;
             }
             ImGui::SameLine();
             if(ImGui::Button("0 - 5", ImVec2(100, 0))){
+                unset_custom_wllh();
                 custom_width   = 5.0;
                 custom_centre  = 2.5;
                 reload_texture = true;
             }
             ImGui::SameLine();
             if(ImGui::Button("0 - 10", ImVec2(100, 0))){
+                unset_custom_wllh();
                 custom_width   = 10.0;
                 custom_centre  = 5.0;
                 reload_texture = true;
             }
 
             if(ImGui::Button("0 - 100", ImVec2(100, 0))){
+                unset_custom_wllh();
                 custom_width   = 100.0;
                 custom_centre  = 50.0;
                 reload_texture = true;
             }
             ImGui::SameLine();
             if(ImGui::Button("0 - 1000", ImVec2(100, 0))){
+                unset_custom_wllh();
                 custom_width   = 1000.0;
                 custom_centre  = 500.0;
                 reload_texture = true;
             }
 
             if(ImGui::Button("-1 - 1", ImVec2(100, 0))){
+                unset_custom_wllh();
                 custom_width   = 2.0;
                 custom_centre  = 0.0;
                 reload_texture = true;
             }
             ImGui::SameLine();
             if(ImGui::Button("-5 - 5", ImVec2(100, 0))){
+                unset_custom_wllh();
                 custom_width   = 10.0;
                 custom_centre  = 0.0;
                 reload_texture = true;
             }
             ImGui::SameLine();
             if(ImGui::Button("-10 - 10", ImVec2(100, 0))){
+                unset_custom_wllh();
                 custom_width   = 20.0;
                 custom_centre  = 0.0;
                 reload_texture = true;
             }
 
             if(ImGui::Button("-100 - 100", ImVec2(100, 0))){
+                unset_custom_wllh();
                 custom_width   = 200.0;
                 custom_centre  = 0.0;
                 reload_texture = true;
             }
             ImGui::SameLine();
             if(ImGui::Button("-1000 - 1000", ImVec2(100, 0))){
+                unset_custom_wllh();
                 custom_width   = 2000.0;
                 custom_centre  = 0.0;
                 reload_texture = true;
@@ -1079,18 +1111,46 @@ long int frame_count = 0;
             const float drag_speed = 1.0f;
             double custom_width_l  = custom_width.value_or(0.0);
             double custom_centre_l = custom_centre.value_or(0.0);
+            double custom_low_l    = custom_low.value_or(0.0);
+            double custom_high_l   = custom_high.value_or(0.0);
+
             if(ImGui::DragScalar("window", ImGuiDataType_Double, &custom_width_l, drag_speed, &clamp_l, &clamp_h, "%f")){//, ImGuiSliderFlags_Logarithmic)){
                 custom_width = custom_width_l;
-                if(custom_centre) reload_texture = true;
+                custom_low  = std::optional<double>();
+                custom_high = std::optional<double>();
+                if(custom_centre){
+                    reload_texture = true;
+                }
             }
-
             if(ImGui::DragScalar("level",  ImGuiDataType_Double, &custom_centre_l, drag_speed, &clamp_l, &clamp_h, "%f")){//, ImGuiSliderFlags_Logarithmic)){
                 custom_centre = custom_centre_l;
-                if(custom_width) reload_texture = true;
+                custom_low  = std::optional<double>();
+                custom_high = std::optional<double>();
+                if(custom_width){
+                    reload_texture = true;
+                }
+            }
+
+            if(ImGui::DragScalar("low", ImGuiDataType_Double, &custom_low_l, drag_speed, &clamp_l, &clamp_h, "%f")){//, ImGuiSliderFlags_Logarithmic)){
+                custom_low    = custom_low_l;
+                custom_width  = std::optional<double>();
+                custom_centre = std::optional<double>();
+                if(custom_high){
+                    reload_texture = true;
+                }
+            }
+            if(ImGui::DragScalar("high", ImGuiDataType_Double, &custom_high_l, drag_speed, &clamp_l, &clamp_h, "%f")){//, ImGuiSliderFlags_Logarithmic)){
+                custom_high   = custom_high_l;
+                custom_width  = std::optional<double>();
+                custom_centre = std::optional<double>();
+                if(custom_low){
+                    reload_texture = true;
+                }
             }
 
             ImGui::End();
             if(reload_texture){
+                sync_custom_wllh();
                 recompute_image_state();
             }
         }
