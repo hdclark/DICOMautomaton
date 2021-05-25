@@ -438,6 +438,7 @@ Drover SDL_Viewer(Drover DICOM_data,
             CHECK_FOR_GL_ERRORS();
 
             glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+            glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
             glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, out.col_count, out.row_count, 0, GL_RGB, GL_UNSIGNED_BYTE, static_cast<void*>(animage.data()));
             CHECK_FOR_GL_ERRORS();
 
