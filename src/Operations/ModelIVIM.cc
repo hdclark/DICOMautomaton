@@ -10,6 +10,7 @@
 #include <string>    
 #include <utility>            //Needed for std::pair.
 #include <vector>
+#include <math.h>
 
 #include "YgorImages.h"
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
@@ -202,14 +203,16 @@ Drover ModelIVIM(Drover DICOM_data,
                 }
                 // ASSUMING the minimum is b = 0. This may not be the case... TODO.
                 //const auto bvalue_min = bvalues.at( bvalue_min_i );
-                const auto bvalue_max = bvalues.at( bvalue_max_i );
+                // const auto bvalue_max = bvalues.at( bvalue_max_i );
 
-                const auto signal_at_bvalue_min = vals.at( bvalue_min_i);
-                const auto signal_at_bvalue_max = vals.at( bvalue_max_i);
+                // const auto signal_at_bvalue_min = vals.at( bvalue_min_i);
+                // const auto signal_at_bvalue_max = vals.at( bvalue_max_i);
 
-                const auto adc = std::log( signal_at_bvalue_min / signal_at_bvalue_max) / bvalue_max;
+                // const auto adc = std::log( signal_at_bvalue_min / signal_at_bvalue_max) / bvalue_max;
+                const auto adc = GetADC(bvalues, vals);
                 if(!std::isfinite( adc )) throw std::runtime_error("adc is not finite");
                 return adc;
+                
             };
         }else{
             throw std::invalid_argument("Model not understood. Cannot continue.");
@@ -223,3 +226,37 @@ Drover ModelIVIM(Drover DICOM_data,
 
     return DICOM_data;
 }
+
+double GetADC(const std::vector<float> &bvalues, const std::vector<float> &vals){
+    //This function uses linear regression to obtain the ADC value using the image arrays for all the different b values.
+    //This uses the formula S(b) = S(0)exp(-b * ADC)
+    // --> ln(S(b)) = ln(S(0)) + (-ADC) * b 
+
+    //First get ADC from the formula -ADC = sum [ (b_i - b_avg) * (S_i - S_avg) ] / sum( b_i - b_avg )^2
+
+    //get b_avg and S_avg
+    double b_avg = 0.0;
+    double S_avg = 0.0;
+    const auto number_bVals = bvalues.size();
+    for(size_t i = 0; i < number_bVals; ++i){
+        b_avg += bvalues[i]; 
+        S_avg += vals[i];
+    }
+    b_avg /= number_bVals;
+    S_avg /= number_bVals;
+
+    //Now do the sums
+    double sum_numerator = 0.0;
+    double sum_denominator = 0.0;
+    for(size_t i = 0; i < number_bVals; ++i){
+        const double b = bvalues[i];
+        const double S = vals[i];
+        sum_numerator += (b - b_avg) * (S - S_avg); 
+        sum_denominator += std::pow((b-b_avg), 2.0);
+    }
+
+    const double ADC = - sum_numerator / sum_denominator;
+    return ADC;
+}
+
+

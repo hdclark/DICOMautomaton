@@ -14,3 +14,6 @@ Drover ModelIVIM(Drover DICOM_data,
                  const OperationArgPkg& /*OptArgs*/,
                  const std::map<std::string, std::string>& /*InvocationMetadata*/,
                  const std::string& /*FilenameLex*/);
+
+double GetADC(const std::vector<float> &bvalues, const std::vector<float> &vals);
+
