@@ -191,12 +191,12 @@ test_ci_debian_stable_on_fedora_latest:
     #- "wget --no-check-certificate 'http://halclark.ca/ci/DICOMautomaton-latest-x86_64.AppImage'"
     - "chmod 777 DICOMautomaton*AppImage"
     - "./DICOMautomaton*AppImage --appimage-extract"
-    - "mkdir -p /root/.local/"
-    - "printf '%s\n' '#!/usr/bin/env bash' >> /root/.local/dicomautomaton_dispatcher"
-    - "printf '%s\n' LD_LIBRARY_PATH=$(pwd)/squashfs-root/usr/lib >> /root/.local/dicomautomaton_dispatcher"
-    - "printf '%s $@\n' $(pwd)/squashfs-root/usr/bin/dicomautomaton_dispatcher >> /root/.local/dicomautomaton_dispatcher"
-    - "chmod 777 /root/.local/dicomautomaton_dispatcher"
-    - "export PATH=/root/.local/:$PATH"
+    # Explicitly preload libraries using a wrapper.
+    - |
+      printf '%s\n' '#!/usr/bin/env bash' >> /usr/bin/dicomautomaton_dispatcher
+      #printf '%s $@\n' "LD_LIBRARY_PATH=$(pwd)/squashfs-root/usr/lib $(pwd)/squashfs-root/usr/bin/dicomautomaton_dispatcher" >> /usr/bin/dicomautomaton_dispatcher
+      printf '%s $@\n' "/usr/lib64/ld-linux-x86-64.so.2 --library-path $(pwd)/squashfs-root/usr/lib $(pwd)/squashfs-root/usr/bin/dicomautomaton_dispatcher" >> /usr/bin/dicomautomaton_dispatcher
+      chmod 777 /usr/bin/dicomautomaton_dispatcher
     # Ensure it can be run and then run tests.
     - "dicomautomaton_dispatcher -h"
     #- "git clone 'https://github.com/hdclark/DICOMautomaton'"
