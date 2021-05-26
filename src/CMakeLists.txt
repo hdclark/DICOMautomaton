@@ -132,7 +132,10 @@ if(WITH_SDL)
                                    imgui20201021/imgui.cpp
                                    imgui20201021/imgui_demo.cpp
                                    imgui20201021/imgui_draw.cpp
-                                   imgui20201021/imgui_widgets.cpp )
+                                   imgui20201021/imgui_widgets.cpp 
+                                   implot20210525/implot.cpp 
+                                   implot20210525/implot_demo.cpp
+                                   implot20210525/implot_items.cpp )
     set_target_properties( IMGui_objs PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 endif()
 

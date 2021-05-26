@@ -35,6 +35,7 @@
 #include "../imgui20201021/imgui.h"
 #include "../imgui20201021/imgui_impl_sdl.h"
 #include "../imgui20201021/imgui_impl_opengl3.h"
+#include "../implot20210525/implot.h"
 
 #include <SDL.h>
 #include <GL/glew.h>            // Initialize with glewInit()
@@ -96,6 +97,9 @@ Drover SDL_Viewer(Drover DICOM_data,
 
     // --------------------------------------- Operational State ------------------------------------------
     Explicator X(FilenameLex);
+
+    // Plot viewer state.
+    long int lsamp_num = -1; // The plot currently displayed.
 
     // Image viewer state.
     long int img_array_num = -1; // The image array currently displayed.
@@ -237,6 +241,7 @@ Drover SDL_Viewer(Drover DICOM_data,
     // Create an ImGui context we can use and associate it with the OpenGL context.
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
+    ImPlot::CreateContext();
     [[maybe_unused]] ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
     io.IniFilename = nullptr;
@@ -539,6 +544,7 @@ Drover SDL_Viewer(Drover DICOM_data,
     bool view_images_enabled = true;
     bool view_image_metadata_enabled = false;
     bool view_meshes_enabled = true;
+    bool view_plots_enabled = true;
     bool show_image_hover_tooltips = true;
     bool adjust_window_level_enabled = false;
     bool adjust_colour_map_enabled = false;
@@ -644,6 +650,7 @@ long int frame_count = 0;
                 ImGui::MenuItem("Image Metadata", nullptr, &view_image_metadata_enabled);
                 ImGui::MenuItem("Image Hover Tooltips", nullptr, &show_image_hover_tooltips);
                 ImGui::MenuItem("Meshes", nullptr, &view_meshes_enabled);
+                ImGui::MenuItem("Plots", nullptr, &view_plots_enabled);
                 ImGui::EndMenu();
             }
             if(ImGui::BeginMenu("Adjust")){
@@ -689,6 +696,7 @@ long int frame_count = 0;
             ImGui::EndMainMenuBar();
         }
 
+        // Display the image dialog.
         if( view_images_enabled
         &&  DICOM_data.Has_Image_Data()
         &&  (0 <= img_array_num)
@@ -1176,6 +1184,51 @@ long int frame_count = 0;
             }
         }
 
+
+        // Display plots.
+        if( view_plots_enabled 
+        && DICOM_data.Has_LSamp_Data() ){
+            ImGui::SetNextWindowSize(ImVec2(550, 0), ImGuiCond_FirstUseEver);
+            ImGui::Begin("Plots", &view_plots_enabled);
+
+            if( !isininc(1, lsamp_num + 1, DICOM_data.lsamp_data.size()) ){
+                lsamp_num = 0;
+            }
+            int scroll_lsamp = lsamp_num;
+            {
+                const int N_lsamps = DICOM_data.lsamp_data.size();
+                ImGui::SliderInt("Plot", &scroll_lsamp, 0, N_lsamps - 1);
+            }
+            long int new_lsamp_num = scroll_lsamp;
+
+            auto lsamp_ptr_it = std::next(DICOM_data.lsamp_data.begin(), lsamp_num);
+            if( new_lsamp_num != lsamp_num ){
+                lsamp_num = new_lsamp_num;
+                lsamp_ptr_it = std::next(DICOM_data.lsamp_data.begin(), lsamp_num);
+            }
+
+            const int offset = 0;
+            const int stride = sizeof( decltype( (*lsamp_ptr_it)->line.samples[0] ) );
+
+            if(ImPlot::BeginPlot("Plot",
+                                 nullptr,
+                                 nullptr,
+                                 ImVec2(-1, 0),
+                                 ImPlotFlags_AntiAliased,
+                                 ImPlotAxisFlags_AutoFit,
+                                 ImPlotAxisFlags_AutoFit )) {
+                ImPlot::PlotLine<double>("Plot",
+                                         &(*lsamp_ptr_it)->line.samples[0][0], 
+                                         &(*lsamp_ptr_it)->line.samples[0][2],
+                                         (*lsamp_ptr_it)->line.samples.size(),
+                                         offset, stride );
+                ImPlot::EndPlot();
+            }
+
+            ImGui::End();
+        }
+
+
         // Clear the current OpenGL frame.
         CHECK_FOR_GL_ERRORS();
         glViewport(0, 0, static_cast<int>(io.DisplaySize.x), static_cast<int>(io.DisplaySize.y));
@@ -1333,6 +1386,7 @@ long int frame_count = 0;
     // OpenGL and SDL cleanup.
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplSDL2_Shutdown();
+    ImPlot::DestroyContext();
     ImGui::DestroyContext();
     SDL_GL_DeleteContext(gl_context);
     SDL_DestroyWindow(window);
