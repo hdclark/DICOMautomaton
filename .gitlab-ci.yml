@@ -166,7 +166,7 @@ test_ci_debian_stable_on_ubuntu_latest:
     # Provide minimal system libraries.
     - "./scripts/install_AppImage_runtime_dependencies.sh"
     # Unpack the AppImage and overlay it in the containers root filesystem.
-    #- "wget --no-check-certificate 'https://hdclark.github.io/DICOMautomaton-x86_64.AppImage'"
+    #- "wget --no-check-certificate 'http://halclark.ca/ci/DICOMautomaton-latest-x86_64.AppImage'"
     - "chmod 777 DICOMautomaton*AppImage"
     - "./DICOMautomaton*AppImage --appimage-extract"
     - "rsync -a ./squashfs-root/usr/ /usr/"
@@ -188,7 +188,7 @@ test_ci_debian_stable_on_fedora_latest:
     # Provide minimal system libraries.
     - "./scripts/install_AppImage_runtime_dependencies.sh"
     # Unpack the AppImage and overlay it in the containers root filesystem.
-    #- "wget --no-check-certificate 'https://hdclark.github.io/DICOMautomaton-x86_64.AppImage'"
+    #- "wget --no-check-certificate 'http://halclark.ca/ci/DICOMautomaton-latest-x86_64.AppImage'"
     - "chmod 777 DICOMautomaton*AppImage"
     - "./DICOMautomaton*AppImage --appimage-extract"
     - "rsync -a ./squashfs-root/usr/ /usr/"

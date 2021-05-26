@@ -111,7 +111,7 @@ elif [[ "${DISTRIBUTION}" =~ .*[fF]edora.* ]] ; then
     $SUDO dnf -y install \
       bash git rsync \
       wget ca-certificates \
-      findutils mesa-libGL freetype SDL2 alsa-lib libICE libSM libgcc libglvnd-opengl libstdc++ 
+      findutils mesa-libGL freetype SDL2 alsa-lib libICE libSM libgcc libglvnd-opengl libstdc++ gmp-c++ 
 
 else
     printf 'Linux distribution not recognized. Cannot continue.\n'
