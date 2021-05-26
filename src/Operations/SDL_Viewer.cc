@@ -162,6 +162,22 @@ Drover SDL_Viewer(Drover DICOM_data,
     bool show_another_window = false;
     auto background_colour = ImVec4(0.025f, 0.087f, 0.118f, 1.00f);
 
+    struct image_mouse_pos_s {
+        bool mouse_hovering_image;
+
+        float region_x;   // [0,1] clamped position of mouse on image.
+        float region_y;
+
+        long int r; // Row and column number of current mouse position.
+        long int c;
+
+        vec3<double> zero_pos;  // Position of (0,0) voxel in DICOM coordinate system.
+        vec3<double> dicom_pos; // Position of mouse in DICOM coordinate system.
+        vec3<double> voxel_pos; // Position of voxel being hovered in DICOM coordinate system.
+    } image_mouse_pos;
+
+    samples_1D<double> row_profile;
+    samples_1D<double> col_profile;
 
     // --------------------------------------------- Setup ------------------------------------------------
 #ifndef CHECK_FOR_GL_ERRORS
@@ -541,6 +557,7 @@ Drover SDL_Viewer(Drover DICOM_data,
     bool view_image_metadata_enabled = false;
     bool view_meshes_enabled = true;
     bool view_plots_enabled = true;
+    bool view_row_column_profiles = false;
     bool show_image_hover_tooltips = true;
     bool adjust_window_level_enabled = false;
     bool adjust_colour_map_enabled = false;
@@ -647,6 +664,10 @@ long int frame_count = 0;
                 ImGui::MenuItem("Image Hover Tooltips", nullptr, &show_image_hover_tooltips);
                 ImGui::MenuItem("Meshes", nullptr, &view_meshes_enabled);
                 ImGui::MenuItem("Plots", nullptr, &view_plots_enabled);
+                if(ImGui::MenuItem("Row and Column Profiles", nullptr, &view_row_column_profiles)){
+                    row_profile.samples.clear();
+                    col_profile.samples.clear();
+                };
                 ImGui::EndMenu();
             }
             if(ImGui::BeginMenu("Adjust")){
@@ -737,41 +758,64 @@ long int frame_count = 0;
             window_size.y = (disp_img_it->pxl_dx / disp_img_it->pxl_dy) * window_size.x * img_rows_f / img_cols_f;
             window_size.y = std::isfinite(window_size.y) ? window_size.y : (disp_img_it->pxl_dx / disp_img_it->pxl_dy) * window_size.x;
             auto gl_tex_ptr = reinterpret_cast<void*>(static_cast<intptr_t>(current_texture.texture_number));
-{
+
             ImGuiIO &io = ImGui::GetIO();
             ImVec2 pos = ImGui::GetCursorScreenPos();
             ImGui::Image(gl_tex_ptr, window_size);
-            if( ImGui::IsItemHovered() 
+            image_mouse_pos.mouse_hovering_image = ImGui::IsItemHovered();
+
+            // Calculate mouse positions if the mouse is hovering the image.
+            if( image_mouse_pos.mouse_hovering_image ){
+                image_mouse_pos.region_x = std::clamp((io.MousePos.x - pos.x) / window_size.x, 0.0f, 1.0f);
+                image_mouse_pos.region_y = std::clamp((io.MousePos.y - pos.y) / window_size.y, 0.0f, 1.0f);
+                image_mouse_pos.r = std::clamp( static_cast<long int>( std::floor( image_mouse_pos.region_y * img_rows_f ) ), 0L, (img_rows-1) );
+                image_mouse_pos.c = std::clamp( static_cast<long int>( std::floor( image_mouse_pos.region_x * img_cols_f ) ), 0L, (img_cols-1) );
+                image_mouse_pos.zero_pos = disp_img_it->position(0L, 0L);
+                image_mouse_pos.dicom_pos = image_mouse_pos.zero_pos 
+                                            + disp_img_it->row_unit * image_mouse_pos.region_y * disp_img_it->pxl_dx * img_rows_f
+                                            + disp_img_it->col_unit * image_mouse_pos.region_x * disp_img_it->pxl_dy * img_cols_f
+                                            - disp_img_it->row_unit * 0.5 * disp_img_it->pxl_dx
+                                            - disp_img_it->col_unit * 0.5 * disp_img_it->pxl_dy;
+                image_mouse_pos.voxel_pos = disp_img_it->position(image_mouse_pos.r, image_mouse_pos.c);
+            }
+
+            // Draw a tooltip with position and voxel intensity information.
+            if( image_mouse_pos.mouse_hovering_image
             &&  show_image_hover_tooltips ){
                 ImGui::BeginTooltip();
-                const auto region_x = std::clamp((io.MousePos.x - pos.x) / window_size.x, 0.0f, 1.0f);
-                const auto region_y = std::clamp((io.MousePos.y - pos.y) / window_size.y, 0.0f, 1.0f);
-                const auto r = std::clamp( static_cast<long int>( std::floor( region_y * img_rows_f ) ), 0L, (img_rows-1) );
-                const auto c = std::clamp( static_cast<long int>( std::floor( region_x * img_cols_f ) ), 0L, (img_cols-1) );
-                const auto zero_pos = disp_img_it->position(0L, 0L);
-                const auto dicom_pos = zero_pos + disp_img_it->row_unit * region_y * disp_img_it->pxl_dx * img_rows_f
-                                                + disp_img_it->col_unit * region_x * disp_img_it->pxl_dy * img_cols_f
-                                                - disp_img_it->row_unit * 0.5 * disp_img_it->pxl_dx
-                                                - disp_img_it->col_unit * 0.5 * disp_img_it->pxl_dy;
-                ImGui::Text("Image coordinates: %.4f, %.4f", region_y, region_x);
-                ImGui::Text("Pixel coordinates: (r, c) = %ld, %ld", r, c);
-                ImGui::Text("Mouse coordinates: (x, y, z) = %.4f, %.4f, %.4f", dicom_pos.x, dicom_pos.y, dicom_pos.z);
-                const auto voxel_pos = disp_img_it->position(r,c);
-                ImGui::Text("Voxel coordinates: (x, y, z) = %.4f, %.4f, %.4f", voxel_pos.x, voxel_pos.y, voxel_pos.z);
+                ImGui::Text("Image coordinates: %.4f, %.4f", image_mouse_pos.region_y, image_mouse_pos.region_x);
+                ImGui::Text("Pixel coordinates: (r, c) = %ld, %ld", image_mouse_pos.r, image_mouse_pos.c);
+                ImGui::Text("Mouse coordinates: (x, y, z) = %.4f, %.4f, %.4f", image_mouse_pos.dicom_pos.x, image_mouse_pos.dicom_pos.y, image_mouse_pos.dicom_pos.z);
+                ImGui::Text("Voxel coordinates: (x, y, z) = %.4f, %.4f, %.4f", image_mouse_pos.voxel_pos.x, image_mouse_pos.voxel_pos.y, image_mouse_pos.voxel_pos.z);
                 if(disp_img_it->channels == 1){
-                    ImGui::Text("Voxel intensity:   %.4f", disp_img_it->value(r, c, 0L));
+                    ImGui::Text("Voxel intensity:   %.4f", disp_img_it->value(image_mouse_pos.r, image_mouse_pos.c, 0L));
                 }else{
                     std::stringstream ss;
                     for(long int chan = 0; chan < disp_img_it->channels; ++chan){
-                        ss << disp_img_it->value(r, c, chan);
+                        ss << disp_img_it->value(image_mouse_pos.r, image_mouse_pos.c, chan);
                     }
                     ImGui::Text("Voxel intensities: %s", ss.str().c_str());
                 }
                 ImGui::EndTooltip();
             }
-}
-
             ImGui::End();
+
+            // Extract data for row and column profiles.
+            if( image_mouse_pos.mouse_hovering_image
+            && view_row_column_profiles ){
+                row_profile.samples.clear();
+                col_profile.samples.clear();
+                for(auto i = 0; i < disp_img_it->columns; ++i){
+                    const auto val_raw = disp_img_it->value(image_mouse_pos.r,i,0);
+                    const auto col_num = static_cast<double>(i);
+                    if(std::isfinite(val_raw)) row_profile.push_back({ col_num, 0.0, val_raw, 0.0 });
+                }
+                for(auto i = 0; i < disp_img_it->rows; ++i){
+                    const auto val_raw = disp_img_it->value(i,image_mouse_pos.c,0);
+                    const auto row_num = static_cast<double>(i);
+                    if(std::isfinite(val_raw)) col_profile.push_back({ row_num, 0.0, val_raw, 0.0 });
+                }
+            }
 
             // Metadata window.
             if( view_image_metadata_enabled ){
@@ -796,6 +840,8 @@ long int frame_count = 0;
                 ImGui::End();
             }
         }
+
+
 
         // Open files dialog.
         if( open_files_enabled
@@ -1184,7 +1230,7 @@ long int frame_count = 0;
         // Display plots.
         if( view_plots_enabled 
         && DICOM_data.Has_LSamp_Data() ){
-            ImGui::SetNextWindowSize(ImVec2(550, 0), ImGuiCond_FirstUseEver);
+            ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_FirstUseEver);
             ImGui::Begin("Plots", &view_plots_enabled);
 
             if( !isininc(1, lsamp_num + 1, DICOM_data.lsamp_data.size()) ){
@@ -1209,7 +1255,7 @@ long int frame_count = 0;
             if(ImPlot::BeginPlot("Plot",
                                  nullptr,
                                  nullptr,
-                                 ImVec2(-1, 0),
+                                 ImVec2(600, 600),
                                  ImPlotFlags_AntiAliased,
                                  ImPlotAxisFlags_AutoFit,
                                  ImPlotAxisFlags_AutoFit )) {
@@ -1217,6 +1263,39 @@ long int frame_count = 0;
                                          &(*lsamp_ptr_it)->line.samples[0][0], 
                                          &(*lsamp_ptr_it)->line.samples[0][2],
                                          (*lsamp_ptr_it)->line.samples.size(),
+                                         offset, stride );
+                ImPlot::EndPlot();
+            }
+
+            ImGui::End();
+        }
+
+        // Display row and column profiles.
+        if( view_row_column_profiles 
+        &&  !row_profile.empty()
+        &&  !col_profile.empty() ){
+            ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_FirstUseEver);
+            ImGui::Begin("Row and Column Profiles", &view_row_column_profiles);
+
+            const int offset = 0;
+            const int stride = sizeof( decltype( row_profile.samples[0] ) );
+
+            if(ImPlot::BeginPlot("Row and Column Profiles",
+                                 nullptr,
+                                 nullptr,
+                                 ImVec2(600, 600),
+                                 ImPlotFlags_AntiAliased,
+                                 ImPlotAxisFlags_AutoFit,
+                                 ImPlotAxisFlags_AutoFit )) {
+                ImPlot::PlotLine<double>("Row Profile",
+                                         &row_profile.samples[0][0], 
+                                         &row_profile.samples[0][2],
+                                         row_profile.size(),
+                                         offset, stride );
+                ImPlot::PlotLine<double>("Column Profile",
+                                         &col_profile.samples[0][0], 
+                                         &col_profile.samples[0][2],
+                                         col_profile.size(),
                                          offset, stride );
                 ImPlot::EndPlot();
             }
