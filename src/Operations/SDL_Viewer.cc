@@ -514,10 +514,6 @@ Drover SDL_Viewer(Drover DICOM_data,
             img_num = (img_num < 0) ? 0 : img_num; // Clamp below.
             img_num = (N_images <= img_num) ? N_images - 1 : img_num; // Clamp above.
 
-            // Invalidate any custom window and level.
-            custom_width  = std::optional<double>();
-            custom_centre = std::optional<double>();
-
             return;
     };
 
