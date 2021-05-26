@@ -191,7 +191,12 @@ test_ci_debian_stable_on_fedora_latest:
     #- "wget --no-check-certificate 'http://halclark.ca/ci/DICOMautomaton-latest-x86_64.AppImage'"
     - "chmod 777 DICOMautomaton*AppImage"
     - "./DICOMautomaton*AppImage --appimage-extract"
-    - "rsync -a ./squashfs-root/usr/ /usr/"
+    - "mkdir -p /root/.local/"
+    - "printf '%s\n' '#!/usr/bin/env bash' >> /root/.local/dicomautomaton_dispatcher"
+    - "printf '%s\n' LD_LIBRARY_PATH=$(pwd)/squashfs-root/usr/lib >> /root/.local/dicomautomaton_dispatcher"
+    - "printf '%s $@\n' $(pwd)/squashfs-root/usr/bin/dicomautomaton_dispatcher >> /root/.local/dicomautomaton_dispatcher"
+    - "chmod 777 /root/.local/dicomautomaton_dispatcher"
+    - "export PATH=/root/.local/:$PATH"
     # Ensure it can be run and then run tests.
     - "dicomautomaton_dispatcher -h"
     #- "git clone 'https://github.com/hdclark/DICOMautomaton'"
