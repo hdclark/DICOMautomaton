@@ -130,11 +130,9 @@ if(WITH_SDL)
     add_library( IMGui_objs OBJECT imgui20201021/imgui_impl_opengl3.cpp
                                    imgui20201021/imgui_impl_sdl.cpp
                                    imgui20201021/imgui.cpp
-                                   imgui20201021/imgui_demo.cpp
                                    imgui20201021/imgui_draw.cpp
                                    imgui20201021/imgui_widgets.cpp 
                                    implot20210525/implot.cpp 
-                                   implot20210525/implot_demo.cpp
                                    implot20210525/implot_items.cpp )
     set_target_properties( IMGui_objs PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 endif()

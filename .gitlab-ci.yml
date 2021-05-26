@@ -180,32 +180,32 @@ test_ci_debian_stable_on_ubuntu_latest:
       - "dcma_integration_testing"
     expire_in: 1 week
 
-#test_ci_debian_stable_on_fedora_latest:
-#  stage: test
-#  needs: ["build_ci_debian_stable"]
-#  image: "fedora:latest"
-#  script:
-#    # Provide minimal system libraries.
-#    - "./scripts/install_AppImage_runtime_dependencies.sh"
-#    # Unpack the AppImage and overlay it in the containers root filesystem.
-#    #- "wget --no-check-certificate 'http://halclark.ca/ci/DICOMautomaton-latest-x86_64.AppImage'"
-#    - "chmod 777 DICOMautomaton*AppImage"
-#    - "./DICOMautomaton*AppImage --appimage-extract"
-#    # Explicitly preload libraries using a wrapper.
-#    - |
-#      printf '%s\n' '#!/usr/bin/env bash' >> /usr/bin/dicomautomaton_dispatcher
-#      #printf '%s $@\n' "LD_LIBRARY_PATH=$(pwd)/squashfs-root/usr/lib $(pwd)/squashfs-root/usr/bin/dicomautomaton_dispatcher" >> /usr/bin/dicomautomaton_dispatcher
-#      printf '%s $@\n' "/usr/lib64/ld-linux-x86-64.so.2 --library-path $(pwd)/squashfs-root/usr/lib $(pwd)/squashfs-root/usr/bin/dicomautomaton_dispatcher" >> /usr/bin/dicomautomaton_dispatcher
-#      chmod 777 /usr/bin/dicomautomaton_dispatcher
-#    # Ensure it can be run and then run tests.
-#    - "dicomautomaton_dispatcher -h"
-#    #- "git clone 'https://github.com/hdclark/DICOMautomaton'"
-#    #- "cd DICOMautomaton"
-#    - "./integration_tests/Run.sh"
-#  artifacts:
-#    paths:
-#      - "dcma_integration_testing"
-#    expire_in: 1 week
+test_ci_debian_stable_on_fedora_latest:
+  stage: test
+  needs: ["build_ci_debian_stable"]
+  image: "fedora:latest"
+  script:
+    # Provide minimal system libraries.
+    - "./scripts/install_AppImage_runtime_dependencies.sh"
+    # Unpack the AppImage and overlay it in the containers root filesystem.
+    #- "wget --no-check-certificate 'http://halclark.ca/ci/DICOMautomaton-latest-x86_64.AppImage'"
+    - "chmod 777 DICOMautomaton*AppImage"
+    - "./DICOMautomaton*AppImage --appimage-extract"
+    # Explicitly preload libraries using a wrapper.
+    - |
+      printf '%s\n' '#!/usr/bin/env bash' >> /usr/bin/dicomautomaton_dispatcher
+      #printf '%s $@\n' "LD_LIBRARY_PATH=$(pwd)/squashfs-root/usr/lib $(pwd)/squashfs-root/usr/bin/dicomautomaton_dispatcher" >> /usr/bin/dicomautomaton_dispatcher
+      printf '%s "$@"\n' "/usr/lib64/ld-linux-x86-64.so.2 --library-path $(pwd)/squashfs-root/usr/lib $(pwd)/squashfs-root/usr/bin/dicomautomaton_dispatcher" >> /usr/bin/dicomautomaton_dispatcher
+      chmod 777 /usr/bin/dicomautomaton_dispatcher
+    # Ensure it can be run and then run tests.
+    - "dicomautomaton_dispatcher -h"
+    #- "git clone 'https://github.com/hdclark/DICOMautomaton'"
+    #- "cd DICOMautomaton"
+    - "./integration_tests/Run.sh"
+  artifacts:
+    paths:
+      - "dcma_integration_testing"
+    expire_in: 1 week
 
 # Cross-compilation testing.
 test_cross_compile_mxe_on_debian_stable:
