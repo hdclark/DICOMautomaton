@@ -253,26 +253,30 @@ double GetADCls(const std::vector<float> &bvalues, const std::vector<float> &val
     //This uses the formula S(b) = S(0)exp(-b * ADC)
     // --> ln(S(b)) = ln(S(0)) + (-ADC) * b 
 
-    //First get ADC from the formula -ADC = sum [ (b_i - b_avg) * (S_i - S_avg) ] / sum( b_i - b_avg )^2
+    //First get ADC from the formula -ADC = sum [ (b_i - b_avg) * (ln(S_i) - ln(S_avg)) ] / sum( b_i - b_avg )^2
+    const auto nan = std::numeric_limits<double>::quiet_NaN();
 
     //get b_avg and S_avg
     double b_avg = 0.0;
-    double S_avg = 0.0;
+    double log_S_avg = 0.0;
     const auto number_bVals = static_cast<double>( bvalues.size() );
     for(size_t i = 0; i < number_bVals; ++i){
         b_avg += bvalues[i]; 
-        S_avg += vals[i];
+        log_S_avg += std::log( vals[i] );
+        if(!std::isfinite(log_S_avg)){
+            return nan;
+        }
     }
     b_avg /= number_bVals;
-    S_avg /= number_bVals;
+    log_S_avg /= number_bVals;
 
     //Now do the sums
     double sum_numerator = 0.0;
     double sum_denominator = 0.0;
     for(size_t i = 0; i < number_bVals; ++i){
         const double b = bvalues[i];
-        const double S = vals[i];
-        sum_numerator += (b - b_avg) * (S - S_avg); 
+        const double log_S = std::log( vals[i] );
+        sum_numerator += (b - b_avg) * (log_S - log_S_avg); 
         sum_denominator += std::pow((b-b_avg), 2.0);
     }
 
