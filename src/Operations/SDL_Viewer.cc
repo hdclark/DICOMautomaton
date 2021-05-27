@@ -170,6 +170,32 @@ Drover SDL_Viewer(Drover DICOM_data,
     auto pos_contour_colour = ImVec4(0.0f, 0.0f, 1.0f, 1.0f);
     auto neg_contour_colour = ImVec4(1.0f, 0.0f, 0.0f, 1.0f);
     auto editing_contour_colour = ImVec4(1.0f, 0.45f, 0.0f, 1.0f);
+    
+    const auto get_unique_colour = [](long int i){
+        const std::vector<vec3<double>> colours = {
+            vec3<double>(1.000,0.702,0.000),   // "vivid_yellow".
+            vec3<double>(0.502,0.243,0.459),   // "strong_purple".
+            vec3<double>(1.000,0.408,0.000),   // "vivid_orange".
+            vec3<double>(0.651,0.741,0.843),   // "very_light_blue".
+            vec3<double>(0.757,0.000,0.125),   // "vivid_red".
+            vec3<double>(0.808,0.635,0.384),   // "grayish_yellow".
+            vec3<double>(0.506,0.439,0.400),   // "medium_gray".
+            vec3<double>(0.000,0.490,0.204),   // "vivid_green".
+            vec3<double>(0.965,0.463,0.557),   // "strong_purplish_pink".
+            vec3<double>(0.000,0.325,0.541),   // "strong_blue".
+            vec3<double>(1.000,0.478,0.361),   // "strong_yellowish_pink".
+            vec3<double>(0.325,0.216,0.478),   // "strong_violet".
+            vec3<double>(1.000,0.557,0.000),   // "vivid_orange_yellow".
+            vec3<double>(0.702,0.157,0.318),   // "strong_purplish_red".
+            vec3<double>(0.957,0.784,0.000),   // "vivid_greenish_yellow".
+            vec3<double>(0.498,0.094,0.051),   // "strong_reddish_brown".
+            vec3<double>(0.576,0.667,0.000),   // "vivid_yellowish_green".
+            vec3<double>(0.349,0.200,0.082),   // "deep_yellowish_brown".
+            vec3<double>(0.945,0.227,0.075),   // "vivid_reddish_orange".
+            vec3<double>(0.137,0.173,0.086) }; // "dark_olive_green".
+        const auto colour = colours[ i % colours.size() ];
+        return ImVec4(colour.x, colour.y, colour.z, 1.0f);
+    };
 
     //Toggle whether existing contours should be displayed.
     const auto toggle_showing_existing_contours = [&](){
@@ -565,6 +591,7 @@ Drover SDL_Viewer(Drover DICOM_data,
     };
     using preprocessed_contours_t = std::list<preprocessed_contour>;
     preprocessed_contours_t preprocessed_contours;
+    std::map<std::string, ImVec4> contour_colours;
     std::atomic<long int> preprocessed_contour_epoch = 0L;
     std::mutex preprocessed_contour_mutex;
 
@@ -574,9 +601,18 @@ Drover SDL_Viewer(Drover DICOM_data,
                                        &preprocessed_contour_epoch,
                                        &preprocessed_contour_mutex,
                                        &preprocessed_contours,
+                                       &contour_colours,
                                        &neg_contour_colour,
-                                       &pos_contour_colour ](long int epoch) -> void {
+                                       &pos_contour_colour,
+                                       &get_unique_colour ](long int epoch) -> void {
         preprocessed_contours_t out;
+
+        long int n = 0;
+        decltype(contour_colours) contour_colours_l;
+        {
+            std::lock_guard<std::mutex> lock(preprocessed_contour_mutex);
+            contour_colours_l = contour_colours;
+        }
 
         //Draw any contours that lie in the plane of the current image. Also draw contour names if the cursor is 'within' them.
         auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_image_iters();
@@ -597,29 +633,41 @@ Drover SDL_Viewer(Drover DICOM_data,
                         const auto current_epoch = preprocessed_contour_epoch.load();
                         if( epoch != current_epoch ) return;
 
-                        //Change colour depending on the orientation.
-                        const auto arb_pos_unit = disp_img_it->row_unit.Cross(disp_img_it->col_unit).unit();
-                        vec3<double> c_orient;
-                        try{ // Protect against degenerate contours. (Should we instead ignore them altogether?)
-                            c_orient = c.Estimate_Planar_Normal();
-                        }catch(const std::exception &){
-                            c_orient = arb_pos_unit;
-                        }
-                        const auto c_orient_pos = (c_orient.Dot(arb_pos_unit) > 0);
-
                         // Access name.
                         const auto ROIName = c.GetMetadataValueAs<std::string>("ROIName").value_or("unknown");
                         const auto NormalizedROIName = c.GetMetadataValueAs<std::string>("NormalizedROIName").value_or("unknown");
 
+                        auto c_colour = pos_contour_colour;
+
                         // Override the colour if metadata requests it and we know the colour.
-                        auto c_colour = ( c_orient_pos ? neg_contour_colour : pos_contour_colour );
                         if(auto m_color = c.GetMetadataValueAs<std::string>("OutlineColour")){
                             if(auto rgb_c = Colour_from_name(m_color.value())){
                                 c_colour = ImVec4( static_cast<float>(rgb_c.value().R),
                                                    static_cast<float>(rgb_c.value().G),
                                                    static_cast<float>(rgb_c.value().B),
                                                    1.0f );
+                                contour_colours_l[ROIName] = c_colour;
                             }
+
+                        // Change colour depending on the orientation.
+                        }else if(false){
+                            const auto arb_pos_unit = disp_img_it->row_unit.Cross(disp_img_it->col_unit).unit();
+                            vec3<double> c_orient;
+                            try{ // Protect against degenerate contours. (Should we instead ignore them altogether?)
+                                c_orient = c.Estimate_Planar_Normal();
+                            }catch(const std::exception &){
+                                c_orient = arb_pos_unit;
+                            }
+                            const auto c_orient_pos = (c_orient.Dot(arb_pos_unit) > 0);
+                            c_colour = ( c_orient_pos ? neg_contour_colour : pos_contour_colour );
+                            contour_colours_l[ROIName] = c_colour;
+
+                        // Change colour depending on the ROI name.
+                        }else{
+                            if(contour_colours_l.count(ROIName) == 0){
+                                contour_colours_l[ROIName] = get_unique_colour( n++ );
+                            }
+                            c_colour = contour_colours_l[ROIName];
                         }
 
                         out.push_back( preprocessed_contour{ epoch,
@@ -636,6 +684,7 @@ Drover SDL_Viewer(Drover DICOM_data,
         const auto current_epoch = preprocessed_contour_epoch.load();
         if( epoch == current_epoch ){
             preprocessed_contours = out;
+            contour_colours = contour_colours_l;
         }
         return;
     };
@@ -927,6 +976,33 @@ long int frame_count = 0;
                 image_mouse_pos.voxel_pos = disp_img_it->position(image_mouse_pos.r, image_mouse_pos.c);
             }
 
+            // Display a contour legend.
+            if( view_contours_enabled
+            &&  (DICOM_data.contour_data != nullptr) ){
+                ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_FirstUseEver);
+                ImGui::Begin("Contours", &view_contours_enabled);
+                bool altered = false;
+
+                {
+                    std::lock_guard<std::mutex> lock(preprocessed_contour_mutex);
+                    //const auto current_epoch = preprocessed_contour_epoch.load();
+                    //for(const auto &pc : preprocessed_contours){
+                    //    if( pc.epoch != current_epoch ) continue;
+                    for(auto &cc_p : contour_colours){
+                        auto ROIName = cc_p.first;
+                        //ImGui::Text("%s", ROIName.c_str());
+                        //ImGui::SameLine();
+                        if(ImGui::ColorEdit4(ROIName.c_str(), &(cc_p.second.x))){
+                            altered = true;
+                        }
+                    }
+                }
+
+                if(altered){
+                    if(view_contours_enabled) launch_contour_preprocessor();
+                }
+                ImGui::End();
+            }
 
             //Draw any contours that lie in the plane of the current image.
             if( view_contours_enabled
