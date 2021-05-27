@@ -552,6 +552,7 @@ Drover SDL_Viewer(Drover DICOM_data,
     // ------------------------------------------- Main loop ----------------------------------------------
 
     bool set_about_popup = false;
+    bool view_metrics_window = false;
     bool open_files_enabled = false;
     bool view_images_enabled = true;
     bool view_image_metadata_enabled = false;
@@ -681,6 +682,7 @@ long int frame_count = 0;
                 if(ImGui::MenuItem("About")){
                     set_about_popup = true;
                 }
+                ImGui::MenuItem("Metrics", nullptr, &view_metrics_window);
                 ImGui::Separator();
 
                 if(ImGui::BeginMenu("Operations", "ctrl+d")){
@@ -711,6 +713,11 @@ long int frame_count = 0;
                 ImGui::EndMenu();
             }
             ImGui::EndMainMenuBar();
+        }
+
+        if( view_metrics_window ){
+            ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_FirstUseEver);
+            ImGui::ShowMetricsWindow(&view_metrics_window);
         }
 
         // Display the image dialog.
@@ -752,22 +759,22 @@ long int frame_count = 0;
             const auto img_cols = disp_img_it->columns;
             const auto img_rows_f = static_cast<float>(disp_img_it->rows);
             const auto img_cols_f = static_cast<float>(disp_img_it->columns);
-            ImVec2 window_size = ImGui::GetContentRegionAvail();
-            window_size.x = std::max(512.0f, window_size.x - 5.0f);
+            ImVec2 image_extent = ImGui::GetContentRegionAvail();
+            image_extent.x = std::max(512.0f, image_extent.x - 5.0f);
             // Ensure images have the same aspect ratio as the true image.
-            window_size.y = (disp_img_it->pxl_dx / disp_img_it->pxl_dy) * window_size.x * img_rows_f / img_cols_f;
-            window_size.y = std::isfinite(window_size.y) ? window_size.y : (disp_img_it->pxl_dx / disp_img_it->pxl_dy) * window_size.x;
+            image_extent.y = (disp_img_it->pxl_dx / disp_img_it->pxl_dy) * image_extent.x * img_rows_f / img_cols_f;
+            image_extent.y = std::isfinite(image_extent.y) ? image_extent.y : (disp_img_it->pxl_dx / disp_img_it->pxl_dy) * image_extent.x;
             auto gl_tex_ptr = reinterpret_cast<void*>(static_cast<intptr_t>(current_texture.texture_number));
 
             ImGuiIO &io = ImGui::GetIO();
             ImVec2 pos = ImGui::GetCursorScreenPos();
-            ImGui::Image(gl_tex_ptr, window_size);
+            ImGui::Image(gl_tex_ptr, image_extent);
             image_mouse_pos.mouse_hovering_image = ImGui::IsItemHovered();
 
             // Calculate mouse positions if the mouse is hovering the image.
             if( image_mouse_pos.mouse_hovering_image ){
-                image_mouse_pos.region_x = std::clamp((io.MousePos.x - pos.x) / window_size.x, 0.0f, 1.0f);
-                image_mouse_pos.region_y = std::clamp((io.MousePos.y - pos.y) / window_size.y, 0.0f, 1.0f);
+                image_mouse_pos.region_x = std::clamp((io.MousePos.x - pos.x) / image_extent.x, 0.0f, 1.0f);
+                image_mouse_pos.region_y = std::clamp((io.MousePos.y - pos.y) / image_extent.y, 0.0f, 1.0f);
                 image_mouse_pos.r = std::clamp( static_cast<long int>( std::floor( image_mouse_pos.region_y * img_rows_f ) ), 0L, (img_rows-1) );
                 image_mouse_pos.c = std::clamp( static_cast<long int>( std::floor( image_mouse_pos.region_x * img_cols_f ) ), 0L, (img_cols-1) );
                 image_mouse_pos.zero_pos = disp_img_it->position(0L, 0L);
@@ -778,6 +785,128 @@ long int frame_count = 0;
                                             - disp_img_it->col_unit * 0.5 * disp_img_it->pxl_dy;
                 image_mouse_pos.voxel_pos = disp_img_it->position(image_mouse_pos.r, image_mouse_pos.c);
             }
+
+// Draw contours.
+{
+/*
+    ImDrawList *drawList = ImGui::GetWindowDrawList();
+    ImVec2 end;
+    end.x = pos.x + image_extent.x * 0.25;
+    end.y = pos.y + image_extent.y * 0.75;
+    drawList->AddLine(pos, end, 0xFF0000FF, 10.0f);
+
+//ImGui::GetForegroundDrawList()->AddLine(io.MouseClickedPos[0], io.MousePos, ImGui::GetColorU32(ImGuiCol_Button), 4.0f);
+*/
+
+        //Draw any contours that lie in the plane of the current image. Also draw contour names if the cursor is 'within' them.
+        if(DICOM_data.contour_data != nullptr){
+            std::stringstream contourtextss;
+            ImDrawList *drawList = ImGui::GetWindowDrawList();
+
+            for(auto & cc : DICOM_data.contour_data->ccs){
+                //auto base_ptr = reinterpret_cast<contour_collection<double> *>(&cc);
+                for(auto & c : cc.contours){
+                    if(!c.points.empty() 
+                    && ( 
+                          // Permit contours with any included vertices or at least the 'centre' within the image.
+                          ( disp_img_it->sandwiches_point_within_top_bottom_planes(c.Average_Point())
+                            || disp_img_it->encompasses_any_of_contour_of_points(c) )
+                          || 
+                          ( disp_img_it->pxl_dz <= std::numeric_limits<double>::min() ) // //Permit contours on purely 2D images.
+                       ) ){
+
+                        //Change colour depending on the orientation.
+                        const auto arb_pos_unit = disp_img_it->row_unit.Cross(disp_img_it->col_unit).unit();
+                        vec3<double> c_orient;
+                        try{ // Protect against degenerate contours. (Should we instead ignore them altogether?)
+                            c_orient = c.Estimate_Planar_Normal();
+                        }catch(const std::exception &){
+                            c_orient = arb_pos_unit;
+                        }
+                        const auto c_orient_pos = (c_orient.Dot(arb_pos_unit) > 0);
+/*
+                        auto c_color = ( c_orient_pos ? Neg_Contour_Color : Pos_Contour_Color );
+
+                        //Override the colour if metadata requests it and we know the colour.
+                        if(auto m_color = c.GetMetadataValueAs<std::string>("OutlineColour")){
+                            if(auto rgb_c = Colour_from_name(m_color.value())){
+                                c_color = sf::Color( static_cast<uint8_t>(rgb_c.value().R * 255.0),
+                                                     static_cast<uint8_t>(rgb_c.value().G * 255.0),
+                                                     static_cast<uint8_t>(rgb_c.value().B * 255.0) );
+                            }
+                        }
+*/
+    
+
+                        drawList->PathClear();
+                        for(auto & p : c.points){
+                            //We have three distinct coordinate systems: DICOM, pixel coordinates and screen pixel coordinates,
+                            // and SFML 'world' coordinates. We need to map from the DICOM coordinates to screen pixel coords.
+
+                            //Get a DICOM-coordinate bounding box for the image.
+                            const auto img_dicom_width = disp_img_it->pxl_dx * disp_img_it->rows;
+                            const auto img_dicom_height = disp_img_it->pxl_dy * disp_img_it->columns; 
+                            const auto img_top_left = disp_img_it->anchor + disp_img_it->offset
+                                                    - disp_img_it->row_unit * disp_img_it->pxl_dx * 0.5f
+                                                    - disp_img_it->col_unit * disp_img_it->pxl_dy * 0.5f;
+                            const auto img_top_right = img_top_left + disp_img_it->row_unit * img_dicom_width;
+                            const auto img_bottom_left = img_top_left + disp_img_it->col_unit * img_dicom_height;
+                            
+                            //Clamp the point to the bounding box, using the top left as zero.
+                            const auto dR = p - img_top_left;
+                            const auto clamped_col = dR.Dot( disp_img_it->col_unit ) / img_dicom_height;
+                            const auto clamped_row = dR.Dot( disp_img_it->row_unit ) / img_dicom_width;
+
+                            //Convert to SFML coordinates using the SFML bounding box for the display image.
+                            //sf::FloatRect DispImgBBox = disp_img_texture_sprite.second.getGlobalBounds(); //Uses top left corner as (0,0).
+                            //const auto world_x = DispImgBBox.left + DispImgBBox.width  * clamped_col;
+                            //const auto world_y = DispImgBBox.top  + DispImgBBox.height * clamped_row;
+                            const auto world_x = pos.x + image_extent.x * clamped_col;
+                            const auto world_y = pos.y + image_extent.y * clamped_row;
+
+                            ImVec2 v;
+                            v.x = world_x;
+                            v.y = world_y;
+                            drawList->PathLineTo( v );
+                        }
+                        const bool closed = true;
+                        drawList->PathStroke(0xFF0000FF, closed, 1.0f);
+
+/*
+                        //Check if the mouse is within the contour. If so, display the name.
+                        const sf::Vector2i mouse_coords = sf::Mouse::getPosition(window);
+                        //--------------------
+                        sf::Vector2f mouse_world_pos = window.mapPixelToCoords(mouse_coords);
+                        sf::FloatRect DispImgBBox = disp_img_texture_sprite.second.getGlobalBounds();
+                        if(DispImgBBox.contains(mouse_world_pos)){
+                            //Assuming the image is not rotated or skewed (though possibly scaled), determine which image pixel
+                            // we are hovering over.
+
+                            //Get a DICOM-coordinate bounding box for the image.
+                            const auto img_dicom_width = disp_img_it->pxl_dx * disp_img_it->rows;
+                            const auto img_dicom_height = disp_img_it->pxl_dy * disp_img_it->columns; 
+                            const auto img_top_left = disp_img_it->anchor + disp_img_it->offset
+                                                    - disp_img_it->row_unit * disp_img_it->pxl_dx * 0.5f
+                                                    - disp_img_it->col_unit * disp_img_it->pxl_dy * 0.5f;
+                            const auto img_top_right = img_top_left + disp_img_it->row_unit * img_dicom_width;
+                            const auto img_bottom_left = img_top_left + disp_img_it->col_unit * img_dicom_height;
+
+                            const auto clamped_col_as_f = std::fabs(mouse_world_pos.x - DispImgBBox.left)/(DispImgBBox.width);
+                            const auto clamped_row_as_f = std::fabs(DispImgBBox.top - mouse_world_pos.y)/(DispImgBBox.height);
+
+                            const auto dicom_pos = img_top_left 
+                                                 + disp_img_it->row_unit * img_dicom_width  * clamped_row_as_f
+                                                 + disp_img_it->col_unit * img_dicom_height * clamped_col_as_f;
+
+                            const auto img_plane = disp_img_it->image_plane();
+                            if(c.Is_Point_In_Polygon_Projected_Orthogonally(img_plane,dicom_pos)){
+                                auto ROINameOpt = c.GetMetadataValueAs<std::string>("ROIName");
+*/
+                    }
+                }
+            }
+        }
+}
 
             // Draw a tooltip with position and voxel intensity information.
             if( image_mouse_pos.mouse_hovering_image
