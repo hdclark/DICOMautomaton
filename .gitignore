@@ -26,3 +26,6 @@ build/
 compile_commands.json
 dcma_integration_testing/
 
+# vim temporary files.
+*.swp
+
