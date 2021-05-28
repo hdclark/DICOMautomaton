@@ -29,6 +29,7 @@
 #include <vector>
 #include <chrono>
 #include <future>
+#include <shared_mutex>
 
 #include <boost/filesystem.hpp>
 
@@ -593,7 +594,8 @@ Drover SDL_Viewer(Drover DICOM_data,
     preprocessed_contours_t preprocessed_contours;
     std::map<std::string, ImVec4> contour_colours;
     std::atomic<long int> preprocessed_contour_epoch = 0L;
-    std::mutex preprocessed_contour_mutex;
+    std::shared_mutex preprocessed_contour_mutex;
+    bool contour_colour_from_orientation = false;
 
     // Determine which contours should be displayed on the current image.
     const auto preprocess_contours = [ &DICOM_data,
@@ -604,15 +606,19 @@ Drover SDL_Viewer(Drover DICOM_data,
                                        &contour_colours,
                                        &neg_contour_colour,
                                        &pos_contour_colour,
-                                       &get_unique_colour ](long int epoch) -> void {
+                                       &get_unique_colour,
+                                       &contour_colour_from_orientation ](long int epoch) -> void {
         preprocessed_contours_t out;
 
-        long int n = 0;
         decltype(contour_colours) contour_colours_l;
+        bool contour_colour_from_orientation_l;
         {
-            std::lock_guard<std::mutex> lock(preprocessed_contour_mutex);
+            std::shared_lock<std::shared_mutex> lock(preprocessed_contour_mutex);
             contour_colours_l = contour_colours;
+            contour_colour_from_orientation_l = contour_colour_from_orientation;
         }
+
+        long int n = contour_colours_l.size();
 
         //Draw any contours that lie in the plane of the current image. Also draw contour names if the cursor is 'within' them.
         auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_image_iters();
@@ -650,7 +656,7 @@ Drover SDL_Viewer(Drover DICOM_data,
                             }
 
                         // Change colour depending on the orientation.
-                        }else if(false){
+                        }else if(contour_colour_from_orientation_l){
                             const auto arb_pos_unit = disp_img_it->row_unit.Cross(disp_img_it->col_unit).unit();
                             vec3<double> c_orient;
                             try{ // Protect against degenerate contours. (Should we instead ignore them altogether?)
@@ -680,7 +686,7 @@ Drover SDL_Viewer(Drover DICOM_data,
             }
         }
 
-        std::lock_guard<std::mutex> lock(preprocessed_contour_mutex);
+        std::unique_lock<std::shared_mutex> lock(preprocessed_contour_mutex);
         const auto current_epoch = preprocessed_contour_epoch.load();
         if( epoch == current_epoch ){
             preprocessed_contours = out;
@@ -916,6 +922,7 @@ long int frame_count = 0;
         // Display the image dialog.
         if( view_images_enabled
         &&  img_valid ){
+            ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_FirstUseEver);
             ImGui::Begin("Images", &view_images_enabled);
 
             int scroll_arrays = img_array_num;
@@ -979,26 +986,40 @@ long int frame_count = 0;
             // Display a contour legend.
             if( view_contours_enabled
             &&  (DICOM_data.contour_data != nullptr) ){
-                ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_FirstUseEver);
+                ImGui::SetNextWindowSize(ImVec2(650, 350), ImGuiCond_FirstUseEver);
                 ImGui::Begin("Contours", &view_contours_enabled);
-                bool altered = false;
 
+                bool altered = false;
+                if(ImGui::Button("Colour from orientation", ImVec2(250, 0))){ 
+                    std::unique_lock<std::shared_mutex> lock(preprocessed_contour_mutex);
+                    contour_colour_from_orientation = true;
+                    contour_colours.clear();
+                    altered = true;
+                }
+                if(ImGui::Button("Colour uniquely", ImVec2(250, 0))){ 
+                    std::unique_lock<std::shared_mutex> lock(preprocessed_contour_mutex);
+                    contour_colour_from_orientation = false;
+                    contour_colours.clear();
+                    altered = true;
+                }
+
+                decltype(contour_colours) contour_colours_l;
                 {
-                    std::lock_guard<std::mutex> lock(preprocessed_contour_mutex);
-                    //const auto current_epoch = preprocessed_contour_epoch.load();
-                    //for(const auto &pc : preprocessed_contours){
-                    //    if( pc.epoch != current_epoch ) continue;
-                    for(auto &cc_p : contour_colours){
-                        auto ROIName = cc_p.first;
-                        //ImGui::Text("%s", ROIName.c_str());
-                        //ImGui::SameLine();
-                        if(ImGui::ColorEdit4(ROIName.c_str(), &(cc_p.second.x))){
-                            altered = true;
-                        }
+                    std::shared_lock<std::shared_mutex> lock(preprocessed_contour_mutex);
+                    contour_colours_l = contour_colours;
+                }
+                for(auto &cc_p : contour_colours_l){
+                    auto ROIName = cc_p.first;
+                    //ImGui::Text("%s", ROIName.c_str());
+                    //ImGui::SameLine();
+                    if(ImGui::ColorEdit4(ROIName.c_str(), &(cc_p.second.x))){
+                        altered = true;
                     }
                 }
 
                 if(altered){
+                    std::unique_lock<std::shared_mutex> lock(preprocessed_contour_mutex);
+                    contour_colours = contour_colours_l;
                     if(view_contours_enabled) launch_contour_preprocessor();
                 }
                 ImGui::End();
@@ -1020,8 +1041,9 @@ long int frame_count = 0;
                                         - disp_img_it->col_unit * disp_img_it->pxl_dy * 0.5f;
                 const auto img_top_right = img_top_left + disp_img_it->row_unit * img_dicom_width;
                 const auto img_bottom_left = img_top_left + disp_img_it->col_unit * img_dicom_height;
+                const auto img_plane = disp_img_it->image_plane();
                         
-                std::lock_guard<std::mutex> lock(preprocessed_contour_mutex);
+                std::shared_lock<std::shared_mutex> lock(preprocessed_contour_mutex);
                 const auto current_epoch = preprocessed_contour_epoch.load();
                 for(const auto &pc : preprocessed_contours){
                     if( pc.epoch != current_epoch ) continue;
@@ -1033,10 +1055,7 @@ long int frame_count = 0;
                         const auto clamped_col = dR.Dot( disp_img_it->col_unit ) / img_dicom_height;
                         const auto clamped_row = dR.Dot( disp_img_it->row_unit ) / img_dicom_width;
 
-                        //Convert to SFML coordinates using the SFML bounding box for the display image.
-                        //sf::FloatRect DispImgBBox = disp_img_texture_sprite.second.getGlobalBounds(); //Uses top left corner as (0,0).
-                        //const auto world_x = DispImgBBox.left + DispImgBBox.width  * clamped_col;
-                        //const auto world_y = DispImgBBox.top  + DispImgBBox.height * clamped_row;
+                        //Convert to ImGui coordinates using the top-left position of the display image.
                         const auto world_x = pos.x + image_extent.x * clamped_col;
                         const auto world_y = pos.y + image_extent.y * clamped_row;
 
@@ -1045,40 +1064,13 @@ long int frame_count = 0;
                         v.y = world_y;
                         drawList->PathLineTo( v );
                     }
+
+                    // Check if the mouse if within the contour.
+                    const auto within_poly = pc.contour_refw.get().Is_Point_In_Polygon_Projected_Orthogonally(img_plane,image_mouse_pos.dicom_pos);
+                    const float thickness = ( within_poly ) ? 3.0f : 1.0f;
                     const bool closed = true;
-                    drawList->PathStroke(pc.colour, closed, 1.0f);
+                    drawList->PathStroke(pc.colour, closed, thickness);
                     //AddPolyline(const ImVec2* points, int num_points, ImU32 col, bool closed, float thickness);
-
-    /*
-                            //Check if the mouse is within the contour. If so, display the name.
-                            const sf::Vector2i mouse_coords = sf::Mouse::getPosition(window);
-                            //--------------------
-                            sf::Vector2f mouse_world_pos = window.mapPixelToCoords(mouse_coords);
-                            sf::FloatRect DispImgBBox = disp_img_texture_sprite.second.getGlobalBounds();
-                            if(DispImgBBox.contains(mouse_world_pos)){
-                                //Assuming the image is not rotated or skewed (though possibly scaled), determine which image pixel
-                                // we are hovering over.
-
-                                //Get a DICOM-coordinate bounding box for the image.
-                                const auto img_dicom_width = disp_img_it->pxl_dx * disp_img_it->rows;
-                                const auto img_dicom_height = disp_img_it->pxl_dy * disp_img_it->columns; 
-                                const auto img_top_left = disp_img_it->anchor + disp_img_it->offset
-                                                        - disp_img_it->row_unit * disp_img_it->pxl_dx * 0.5f
-                                                        - disp_img_it->col_unit * disp_img_it->pxl_dy * 0.5f;
-                                const auto img_top_right = img_top_left + disp_img_it->row_unit * img_dicom_width;
-                                const auto img_bottom_left = img_top_left + disp_img_it->col_unit * img_dicom_height;
-
-                                const auto clamped_col_as_f = std::fabs(mouse_world_pos.x - DispImgBBox.left)/(DispImgBBox.width);
-                                const auto clamped_row_as_f = std::fabs(DispImgBBox.top - mouse_world_pos.y)/(DispImgBBox.height);
-
-                                const auto dicom_pos = img_top_left 
-                                                     + disp_img_it->row_unit * img_dicom_width  * clamped_row_as_f
-                                                     + disp_img_it->col_unit * img_dicom_height * clamped_col_as_f;
-
-                                const auto img_plane = disp_img_it->image_plane();
-                                if(c.Is_Point_In_Polygon_Projected_Orthogonally(img_plane,dicom_pos)){
-                                    auto ROINameOpt = c.GetMetadataValueAs<std::string>("ROIName");
-    */
                 }
             }
 
@@ -1319,7 +1311,7 @@ long int frame_count = 0;
 
         // Adjust the window and level.
         if(adjust_window_level_enabled){
-            ImGui::SetNextWindowSize(ImVec2(500, 500), ImGuiCond_FirstUseEver);
+            ImGui::SetNextWindowSize(ImVec2(350, 350), ImGuiCond_FirstUseEver);
             ImGui::Begin("Adjust Window and Level", &adjust_window_level_enabled);
             bool reload_texture = false;
             const auto unset_custom_wllh = [&](){
@@ -1511,7 +1503,7 @@ long int frame_count = 0;
 
         // Adjust the colour map.
         if(adjust_colour_map_enabled){
-            ImGui::SetNextWindowSize(ImVec2(260, 0), ImGuiCond_FirstUseEver);
+            ImGui::SetNextWindowSize(ImVec2(265, 450), ImGuiCond_FirstUseEver);
             ImGui::Begin("Adjust Colour Map", &adjust_colour_map_enabled);
             bool reload_texture = false;
 
@@ -1532,8 +1524,9 @@ long int frame_count = 0;
         // Display plots.
         if( view_plots_enabled 
         && DICOM_data.Has_LSamp_Data() ){
-            ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_FirstUseEver);
+            ImGui::SetNextWindowSize(ImVec2(620, 640), ImGuiCond_FirstUseEver);
             ImGui::Begin("Plots", &view_plots_enabled);
+            ImVec2 window_extent = ImGui::GetContentRegionAvail();
 
             if( !isininc(1, lsamp_num + 1, DICOM_data.lsamp_data.size()) ){
                 lsamp_num = 0;
@@ -1557,7 +1550,7 @@ long int frame_count = 0;
             if(ImPlot::BeginPlot("Plot",
                                  nullptr,
                                  nullptr,
-                                 ImVec2(600, 600),
+                                 window_extent,
                                  ImPlotFlags_AntiAliased,
                                  ImPlotAxisFlags_AutoFit,
                                  ImPlotAxisFlags_AutoFit )) {
@@ -1576,8 +1569,9 @@ long int frame_count = 0;
         if( view_row_column_profiles 
         &&  !row_profile.empty()
         &&  !col_profile.empty() ){
-            ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_FirstUseEver);
+            ImGui::SetNextWindowSize(ImVec2(600, 350), ImGuiCond_FirstUseEver);
             ImGui::Begin("Row and Column Profiles", &view_row_column_profiles);
+            ImVec2 window_extent = ImGui::GetContentRegionAvail();
 
             const int offset = 0;
             const int stride = sizeof( decltype( row_profile.samples[0] ) );
@@ -1585,7 +1579,7 @@ long int frame_count = 0;
             if(ImPlot::BeginPlot("Row and Column Profiles",
                                  nullptr,
                                  nullptr,
-                                 ImVec2(600, 600),
+                                 window_extent,
                                  ImPlotFlags_AntiAliased,
                                  ImPlotAxisFlags_AutoFit,
                                  ImPlotAxisFlags_AutoFit )) {
