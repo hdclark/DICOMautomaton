@@ -624,15 +624,28 @@ Drover SDL_Viewer(Drover DICOM_data,
         auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_image_iters();
         if( img_valid
         &&  (DICOM_data.contour_data != nullptr) ){
+
+            // Scan all contours to assign a unique colour to each ROIName.
+            for(auto & cc : DICOM_data.contour_data->ccs){
+                for(auto & c : cc.contours){
+                    const auto ROIName = c.GetMetadataValueAs<std::string>("ROIName").value_or("unknown");
+
+                    if(contour_colours_l.count(ROIName) == 0){
+                        contour_colours_l[ROIName] = get_unique_colour( n++ );
+                    }
+                }
+            }
+
+            // Identify contours appropriate to the current image.
             for(auto & cc : DICOM_data.contour_data->ccs){
                 for(auto & c : cc.contours){
                     if(!c.points.empty() 
                     && ( 
                           // Permit contours with any included vertices or at least the 'centre' within the image.
-                          ( disp_img_it->sandwiches_point_within_top_bottom_planes(c.Average_Point())
-                            || disp_img_it->encompasses_any_of_contour_of_points(c) )
-                          || 
-                          ( disp_img_it->pxl_dz <= std::numeric_limits<double>::min() ) // Permit contours on purely 2D images.
+                          //( disp_img_it->sandwiches_point_within_top_bottom_planes(c.Average_Point())
+                          disp_img_it->sandwiches_point_within_top_bottom_planes(c.points.front())
+                          || disp_img_it->encompasses_any_of_contour_of_points(c)
+                          || ( disp_img_it->pxl_dz <= std::numeric_limits<double>::min() ) // Permit contours on purely 2D images.
                        ) ){
 
                         // If the contour epoch has moved on, this thread is futile. Terminate ASAP.
@@ -642,8 +655,7 @@ Drover SDL_Viewer(Drover DICOM_data,
                         // Access name.
                         const auto ROIName = c.GetMetadataValueAs<std::string>("ROIName").value_or("unknown");
                         const auto NormalizedROIName = c.GetMetadataValueAs<std::string>("NormalizedROIName").value_or("unknown");
-
-                        auto c_colour = pos_contour_colour;
+                        ImVec4 c_colour = pos_contour_colour;
 
                         // Override the colour if metadata requests it and we know the colour.
                         if(auto m_color = c.GetMetadataValueAs<std::string>("OutlineColour")){
@@ -652,10 +664,11 @@ Drover SDL_Viewer(Drover DICOM_data,
                                                    static_cast<float>(rgb_c.value().G),
                                                    static_cast<float>(rgb_c.value().B),
                                                    1.0f );
+                                // Note: what to do here if metadata is not present for all contours? TODO.
                                 contour_colours_l[ROIName] = c_colour;
                             }
 
-                        // Change colour depending on the orientation.
+                        // Override the colour depending on the orientation.
                         }else if(contour_colour_from_orientation_l){
                             const auto arb_pos_unit = disp_img_it->row_unit.Cross(disp_img_it->col_unit).unit();
                             vec3<double> c_orient;
@@ -666,13 +679,9 @@ Drover SDL_Viewer(Drover DICOM_data,
                             }
                             const auto c_orient_pos = (c_orient.Dot(arb_pos_unit) > 0);
                             c_colour = ( c_orient_pos ? neg_contour_colour : pos_contour_colour );
-                            contour_colours_l[ROIName] = c_colour;
 
-                        // Change colour depending on the ROI name.
+                        // Otherwise use the uniquely-generated colour.
                         }else{
-                            if(contour_colours_l.count(ROIName) == 0){
-                                contour_colours_l[ROIName] = get_unique_colour( n++ );
-                            }
                             c_colour = contour_colours_l[ROIName];
                         }
 
@@ -806,6 +815,9 @@ Drover SDL_Viewer(Drover DICOM_data,
     std::future<loaded_files_res> loaded_files;
 
 
+    std::map<std::string, bool> contour_enabled;
+    std::map<std::string, bool> contour_hovered;
+
 long int frame_count = 0;
     while(true){
 ++frame_count;
@@ -857,6 +869,8 @@ long int frame_count = 0;
             if(ImGui::BeginMenu("View")){
                 ImGui::MenuItem("Images", nullptr, &view_images_enabled);
                 if(ImGui::MenuItem("Contours", nullptr, &view_contours_enabled)){
+                    contour_enabled.clear();
+                    contour_hovered.clear();
                     if(view_contours_enabled) launch_contour_preprocessor();
                 }
                 ImGui::MenuItem("Image Metadata", nullptr, &view_image_metadata_enabled);
@@ -1002,19 +1016,52 @@ long int frame_count = 0;
                     contour_colours.clear();
                     altered = true;
                 }
+                ImGui::Separator();
 
                 decltype(contour_colours) contour_colours_l;
+                bool contour_colour_from_orientation_l;
                 {
                     std::shared_lock<std::shared_mutex> lock(preprocessed_contour_mutex);
                     contour_colours_l = contour_colours;
+                    contour_colour_from_orientation_l = contour_colour_from_orientation;
                 }
+                for(auto &p : contour_colours_l){
+                    if(contour_enabled.count(p.first) == 0) contour_enabled[p.first] = true;
+                    if(contour_hovered.count(p.first) == 0) contour_hovered[p.first] = false;
+                }
+
+                if(ImGui::Button("Display all", ImVec2(250, 0))){ 
+                    for(auto &p : contour_enabled) p.second = true;
+                }
+                if(ImGui::Button("Display none", ImVec2(250, 0))){ 
+                    for(auto &p : contour_enabled) p.second = false;
+                }
+                if(ImGui::Button("Invert display", ImVec2(250, 0))){ 
+                    for(auto &p : contour_enabled) p.second = !p.second;
+                }
+                ImGui::Separator();
+
                 for(auto &cc_p : contour_colours_l){
                     auto ROIName = cc_p.first;
+                    auto checkbox_id = ("##contour_checkbox_"_s + ROIName);
+                    auto colour_id = ("##contour_colour_"_s + ROIName);
+
+                    ImGui::Checkbox(checkbox_id.c_str(), &(contour_enabled[ROIName]));
+                    if(!contour_colour_from_orientation_l){
+                        ImGui::SameLine();
+                        if(ImGui::ColorEdit4(colour_id.c_str(), &(cc_p.second.x))){
+                            altered = true;
+                        }
+                    }
+                    ImGui::SameLine();
+                    if(contour_hovered[ROIName]){
+                        ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "%s*", ROIName.c_str());
+                    }else{
+                        ImGui::Text("%s", ROIName.c_str());
+                    }
+
                     //ImGui::Text("%s", ROIName.c_str());
                     //ImGui::SameLine();
-                    if(ImGui::ColorEdit4(ROIName.c_str(), &(cc_p.second.x))){
-                        altered = true;
-                    }
                 }
 
                 if(altered){
@@ -1042,11 +1089,14 @@ long int frame_count = 0;
                 const auto img_top_right = img_top_left + disp_img_it->row_unit * img_dicom_width;
                 const auto img_bottom_left = img_top_left + disp_img_it->col_unit * img_dicom_height;
                 const auto img_plane = disp_img_it->image_plane();
-                        
+
+                for(auto &p : contour_hovered) p.second = false;
+
                 std::shared_lock<std::shared_mutex> lock(preprocessed_contour_mutex);
                 const auto current_epoch = preprocessed_contour_epoch.load();
                 for(const auto &pc : preprocessed_contours){
                     if( pc.epoch != current_epoch ) continue;
+                    if( !contour_enabled[pc.ROIName] ) continue;
 
                     drawList->PathClear();
                     for(auto & p : pc.contour_refw.get().points){
@@ -1066,8 +1116,12 @@ long int frame_count = 0;
                     }
 
                     // Check if the mouse if within the contour.
-                    const auto within_poly = pc.contour_refw.get().Is_Point_In_Polygon_Projected_Orthogonally(img_plane,image_mouse_pos.dicom_pos);
-                    const float thickness = ( within_poly ) ? 3.0f : 1.0f;
+                    float thickness = 1.0f;
+                    if(image_mouse_pos.mouse_hovering_image){
+                        const auto within_poly = pc.contour_refw.get().Is_Point_In_Polygon_Projected_Orthogonally(img_plane,image_mouse_pos.dicom_pos);
+                        thickness = ( within_poly ) ? 3.0f : 1.0f;
+                        if(within_poly) contour_hovered[pc.ROIName] = true;
+                    }
                     const bool closed = true;
                     drawList->PathStroke(pc.colour, closed, thickness);
                     //AddPolyline(const ImVec2* points, int num_points, ImU32 col, bool closed, float thickness);
