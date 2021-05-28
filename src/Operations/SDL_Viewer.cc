@@ -210,6 +210,7 @@ Drover SDL_Viewer(Drover DICOM_data,
 
     struct image_mouse_pos_s {
         bool mouse_hovering_image;
+        bool image_window_focused;
 
         float region_x;   // [0,1] clamped position of mouse on image.
         float region_y;
@@ -934,36 +935,14 @@ long int frame_count = 0;
         }
 
         auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_image_iters();
+
         // Display the image dialog.
         if( view_images_enabled
         &&  img_valid ){
-            ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_FirstUseEver);
-            ImGui::Begin("Images", &view_images_enabled);
-
-            int scroll_arrays = img_array_num;
-            int scroll_images = img_num;
-            {
-                const int N_arrays = DICOM_data.image_data.size();
-                const int N_images = (*img_array_ptr_it)->imagecoll.images.size();
-                ImGui::SliderInt("Array", &scroll_arrays, 0, N_arrays - 1);
-                ImGui::SliderInt("Image", &scroll_images, 0, N_images - 1);
-            }
-            long int new_img_array_num = scroll_arrays;
-            long int new_img_num = scroll_images;
-
-            if( new_img_array_num != img_array_num ){
-                advance_to_image_array(new_img_array_num);
-                if(view_contours_enabled) launch_contour_preprocessor();
-                img_array_ptr_it = std::next(DICOM_data.image_data.begin(), img_array_num);
-                disp_img_it = std::next((*img_array_ptr_it)->imagecoll.images.begin(), img_num);
-                current_texture = Load_OpenGL_Texture(*disp_img_it);
-
-            }else if( new_img_num != img_num ){
-                advance_to_image(new_img_num);
-                if(view_contours_enabled) launch_contour_preprocessor();
-                disp_img_it = std::next((*img_array_ptr_it)->imagecoll.images.begin(), img_num);
-                current_texture = Load_OpenGL_Texture(*disp_img_it);
-            }
+            ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_Appearing);
+            ImGui::SetNextWindowPos(ImVec2(10, 40), ImGuiCond_Appearing);
+            ImGui::Begin("Images", &view_images_enabled, ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoNavInputs | ImGuiWindowFlags_NoScrollbar ); //| ImGuiWindowFlags_AlwaysAutoResize);
+            ImGuiIO &io = ImGui::GetIO();
 
             // Note: unhappy with this. Can cause feedback loop and flicker/jumpiness when resizing. Works OK for now
             // though. TODO.
@@ -978,10 +957,10 @@ long int frame_count = 0;
             image_extent.y = std::isfinite(image_extent.y) ? image_extent.y : (disp_img_it->pxl_dx / disp_img_it->pxl_dy) * image_extent.x;
             auto gl_tex_ptr = reinterpret_cast<void*>(static_cast<intptr_t>(current_texture.texture_number));
 
-            ImGuiIO &io = ImGui::GetIO();
             ImVec2 pos = ImGui::GetCursorScreenPos();
             ImGui::Image(gl_tex_ptr, image_extent);
             image_mouse_pos.mouse_hovering_image = ImGui::IsItemHovered();
+            image_mouse_pos.image_window_focused = ImGui::IsWindowFocused();
 
             // Calculate mouse positions if the mouse is hovering the image.
             if( image_mouse_pos.mouse_hovering_image ){
@@ -998,10 +977,88 @@ long int frame_count = 0;
                 image_mouse_pos.voxel_pos = disp_img_it->position(image_mouse_pos.r, image_mouse_pos.c);
             }
 
+            // Display the image navigation dialog.
+            if( view_images_enabled
+            &&  img_valid ){
+                ImGui::SetNextWindowSize(ImVec2(350, 250), ImGuiCond_Appearing);
+                ImGui::SetNextWindowPos(ImVec2(680, 100), ImGuiCond_Appearing);
+                ImGui::Begin("Image Navigation", &view_images_enabled, ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoNavInputs | ImGuiWindowFlags_AlwaysAutoResize);
+
+                int scroll_arrays = img_array_num;
+                int scroll_images = img_num;
+                {
+                    ImVec2 window_extent = ImGui::GetContentRegionAvail();
+
+                    const int N_arrays = DICOM_data.image_data.size();
+                    const int N_images = (*img_array_ptr_it)->imagecoll.images.size();
+                    //ImGui::SetNextItemWidth(window_extent.x);
+                    ImGui::SliderInt("Array", &scroll_arrays, 0, N_arrays - 1);
+                    if( ImGui::IsItemHovered() ){
+                        ImGui::BeginTooltip();
+                        ImGui::Text("Shortcut: ctrl + mouse wheel");
+                        ImGui::EndTooltip();
+                    }
+                    //ImGui::SetNextItemWidth(window_extent.x);
+                    ImGui::SliderInt("Image", &scroll_images, 0, N_images - 1);
+                    if( ImGui::IsItemHovered() ){
+                        ImGui::BeginTooltip();
+                        ImGui::Text("Shortcut: mouse wheel or page-up/page-down");
+                        ImGui::EndTooltip();
+                    }
+
+                    if(ImGui::IsWindowFocused() || image_mouse_pos.image_window_focused){
+                        const int d_l = static_cast<int>( std::floor(io.MouseWheel) );
+                        const int d_h = static_cast<int>( std::ceil(io.MouseWheel) );
+                        if(false){
+                        }else if(io.KeyCtrl && (0 < io.MouseWheel)){
+                            scroll_arrays = std::clamp((scroll_arrays + N_arrays + d_h) % N_arrays, 0, N_arrays - 1);
+                        }else if(io.KeyCtrl && (io.MouseWheel < 0)){
+                            scroll_arrays = std::clamp((scroll_arrays + N_arrays + d_l) % N_arrays, 0, N_arrays - 1);
+
+                        }else if(0 < io.MouseWheel){
+                            scroll_images = std::clamp((scroll_images + N_images + d_h) % N_images, 0, N_images - 1);
+                        }else if(io.MouseWheel < 0){
+                            scroll_images = std::clamp((scroll_images + N_images + d_l) % N_images, 0, N_images - 1);
+
+                        }else if( ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_PageUp) ) ){
+                            scroll_images = std::clamp((scroll_images + 50 * N_images + 10) % N_images, 0, N_images - 1);
+                        }else if( ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_PageDown) ) ){
+                            scroll_images = std::clamp((scroll_images + 50 * N_images - 10) % N_images, 0, N_images - 1);
+
+                        }else if( ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_Home) ) ){
+                            scroll_images = N_images - 1;
+                        }else if( ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_End) ) ){
+                            scroll_images = 0;
+                        }
+                        //ImGui::Text("%.2f secs", io.KeysDownDuration[ (int)(ImGui::GetKeyIndex(ImGuiKey_PageUp)) ]);
+                    }
+                }
+                long int new_img_array_num = scroll_arrays;
+                long int new_img_num = scroll_images;
+
+                // Scroll through images.
+                if( new_img_array_num != img_array_num ){
+                    advance_to_image_array(new_img_array_num);
+                    if(view_contours_enabled) launch_contour_preprocessor();
+                    img_array_ptr_it = std::next(DICOM_data.image_data.begin(), img_array_num);
+                    disp_img_it = std::next((*img_array_ptr_it)->imagecoll.images.begin(), img_num);
+                    current_texture = Load_OpenGL_Texture(*disp_img_it);
+
+                }else if( new_img_num != img_num ){
+                    advance_to_image(new_img_num);
+                    if(view_contours_enabled) launch_contour_preprocessor();
+                    disp_img_it = std::next((*img_array_ptr_it)->imagecoll.images.begin(), img_num);
+                    current_texture = Load_OpenGL_Texture(*disp_img_it);
+                }
+                ImGui::End();
+            }
+
             // Display a contour legend.
             if( view_contours_enabled
             &&  (DICOM_data.contour_data != nullptr) ){
-                ImGui::SetNextWindowSize(ImVec2(510, 650), ImGuiCond_FirstUseEver);
+                ImGui::SetNextWindowSize(ImVec2(510, 650), ImGuiCond_Appearing);
+                ImGui::SetNextWindowPos(ImVec2(680, 40), ImGuiCond_Appearing);
+                ImGui::SetNextWindowCollapsed(true, ImGuiCond_FirstUseEver);
                 ImGui::Begin("Contours", &view_contours_enabled);
                 ImVec2 window_extent = ImGui::GetContentRegionAvail();
                 bool altered = false;
