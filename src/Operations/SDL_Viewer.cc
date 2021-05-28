@@ -817,6 +817,7 @@ Drover SDL_Viewer(Drover DICOM_data,
 
     std::map<std::string, bool> contour_enabled;
     std::map<std::string, bool> contour_hovered;
+    float contour_line_thickness = 1.0f;
 
 long int frame_count = 0;
     while(true){
@@ -1000,23 +1001,25 @@ long int frame_count = 0;
             // Display a contour legend.
             if( view_contours_enabled
             &&  (DICOM_data.contour_data != nullptr) ){
-                ImGui::SetNextWindowSize(ImVec2(650, 350), ImGuiCond_FirstUseEver);
+                ImGui::SetNextWindowSize(ImVec2(510, 650), ImGuiCond_FirstUseEver);
                 ImGui::Begin("Contours", &view_contours_enabled);
-
+                ImVec2 window_extent = ImGui::GetContentRegionAvail();
                 bool altered = false;
-                if(ImGui::Button("Colour from orientation", ImVec2(250, 0))){ 
-                    std::unique_lock<std::shared_mutex> lock(preprocessed_contour_mutex);
-                    contour_colour_from_orientation = true;
-                    contour_colours.clear();
-                    altered = true;
-                }
-                if(ImGui::Button("Colour uniquely", ImVec2(250, 0))){ 
+
+                ImGui::Text("Contour colour");
+                if(ImGui::Button("Unique", ImVec2(window_extent.x/2, 0))){ 
                     std::unique_lock<std::shared_mutex> lock(preprocessed_contour_mutex);
                     contour_colour_from_orientation = false;
                     contour_colours.clear();
                     altered = true;
                 }
-                ImGui::Separator();
+                ImGui::SameLine();
+                if(ImGui::Button("Orientation", ImVec2(window_extent.x/2, 0))){ 
+                    std::unique_lock<std::shared_mutex> lock(preprocessed_contour_mutex);
+                    contour_colour_from_orientation = true;
+                    contour_colours.clear();
+                    altered = true;
+                }
 
                 decltype(contour_colours) contour_colours_l;
                 bool contour_colour_from_orientation_l;
@@ -1030,17 +1033,32 @@ long int frame_count = 0;
                     if(contour_hovered.count(p.first) == 0) contour_hovered[p.first] = false;
                 }
 
-                if(ImGui::Button("Display all", ImVec2(250, 0))){ 
+                ImGui::Text("Contour display");
+                if(ImGui::Button("All", ImVec2(window_extent.x/3, 0))){ 
                     for(auto &p : contour_enabled) p.second = true;
                 }
-                if(ImGui::Button("Display none", ImVec2(250, 0))){ 
+                ImGui::SameLine();
+                if(ImGui::Button("None", ImVec2(window_extent.x/3, 0))){ 
                     for(auto &p : contour_enabled) p.second = false;
                 }
-                if(ImGui::Button("Invert display", ImVec2(250, 0))){ 
+                ImGui::SameLine();
+                if(ImGui::Button("Invert", ImVec2(window_extent.x/3, 0))){ 
                     for(auto &p : contour_enabled) p.second = !p.second;
                 }
-                ImGui::Separator();
 
+                float contour_line_thickness_l = 0.1f;
+                float contour_line_thickness_h = 5.0f;
+                const float drag_speed = 0.01f;
+
+                ImGui::DragScalar("Line thickness",
+                                  ImGuiDataType_Float,
+                                  &contour_line_thickness,
+                                  drag_speed,
+                                  &contour_line_thickness_l,
+                                  &contour_line_thickness_h,
+                                  "%.1f");
+
+                ImGui::Text("Contours");
                 for(auto &cc_p : contour_colours_l){
                     auto ROIName = cc_p.first;
                     auto checkbox_id = ("##contour_checkbox_"_s + ROIName);
@@ -1059,9 +1077,6 @@ long int frame_count = 0;
                     }else{
                         ImGui::Text("%s", ROIName.c_str());
                     }
-
-                    //ImGui::Text("%s", ROIName.c_str());
-                    //ImGui::SameLine();
                 }
 
                 if(altered){
@@ -1116,10 +1131,10 @@ long int frame_count = 0;
                     }
 
                     // Check if the mouse if within the contour.
-                    float thickness = 1.0f;
+                    float thickness = contour_line_thickness;
                     if(image_mouse_pos.mouse_hovering_image){
                         const auto within_poly = pc.contour_refw.get().Is_Point_In_Polygon_Projected_Orthogonally(img_plane,image_mouse_pos.dicom_pos);
-                        thickness = ( within_poly ) ? 3.0f : 1.0f;
+                        thickness *= ( within_poly ) ? 1.5f : 1.0f;
                         if(within_poly) contour_hovered[pc.ROIName] = true;
                     }
                     const bool closed = true;
