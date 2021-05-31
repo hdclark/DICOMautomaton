@@ -990,100 +990,6 @@ long int frame_count = 0;
                 image_mouse_pos.voxel_pos = disp_img_it->position(image_mouse_pos.r, image_mouse_pos.c);
             }
 
-            // Display the image navigation dialog.
-            if( view_images_enabled
-            &&  img_valid ){
-                ImGui::SetNextWindowSize(ImVec2(350, 400), ImGuiCond_Appearing);
-                ImGui::SetNextWindowPos(ImVec2(680, 100), ImGuiCond_Appearing);
-                ImGui::Begin("Image Navigation", &view_images_enabled, ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoNavInputs | ImGuiWindowFlags_AlwaysAutoResize);
-
-                int scroll_arrays = img_array_num;
-                int scroll_images = img_num;
-                {
-                    ImVec2 window_extent = ImGui::GetContentRegionAvail();
-
-                    const int N_arrays = DICOM_data.image_data.size();
-                    const int N_images = (*img_array_ptr_it)->imagecoll.images.size();
-                    //ImGui::SetNextItemWidth(window_extent.x);
-                    ImGui::SliderInt("Array", &scroll_arrays, 0, N_arrays - 1);
-                    if( ImGui::IsItemHovered() ){
-                        ImGui::BeginTooltip();
-                        ImGui::Text("Shortcut: ctrl + mouse wheel");
-                        ImGui::EndTooltip();
-                    }
-                    //ImGui::SetNextItemWidth(window_extent.x);
-                    ImGui::SliderInt("Image", &scroll_images, 0, N_images - 1);
-                    if( ImGui::IsItemHovered() ){
-                        ImGui::BeginTooltip();
-                        ImGui::Text("Shortcut: mouse wheel or page-up/page-down");
-                        ImGui::EndTooltip();
-                    }
-
-                    ImGui::Separator();
-                    ImGui::DragFloat("Zoom", &zoom, 0.01f, 1.0f, 10.0f, "%.03f");
-                    const float uv_width = 1.0f / zoom;
-                    ImGui::DragFloat("Pan horizontal", &pan.x, 0.01f, 0.0f + uv_width * 0.5f, 1.0f - uv_width * 0.5f, "%.03f");
-                    ImGui::DragFloat("Pan vertical",   &pan.y, 0.01f, 0.0f + uv_width * 0.5f, 1.0f - uv_width * 0.5f, "%.03f");
-                    pan.x = std::clamp(pan.x, 0.0f + uv_width * 0.5f, 1.0f - uv_width * 0.5f);
-                    pan.y = std::clamp(pan.y, 0.0f + uv_width * 0.5f, 1.0f - uv_width * 0.5f);
-                    uv_min.x = pan.x - uv_width * 0.5f;
-                    uv_min.y = pan.y - uv_width * 0.5f;
-                    uv_max.x = pan.x + uv_width * 0.5f;
-                    uv_max.y = pan.y + uv_width * 0.5f;
-
-                    if(ImGui::Button("Reset zoom", ImVec2(150, 0))){
-                        zoom = 1.0f;
-                        pan.x = 0.5f;
-                        pan.y = 0.5f;
-                    }
-
-                    if(ImGui::IsWindowFocused() || image_mouse_pos.image_window_focused){
-                        const int d_l = static_cast<int>( std::floor(io.MouseWheel) );
-                        const int d_h = static_cast<int>( std::ceil(io.MouseWheel) );
-                        if(false){
-                        }else if(io.KeyCtrl && (0 < io.MouseWheel)){
-                            scroll_arrays = std::clamp((scroll_arrays + N_arrays + d_h) % N_arrays, 0, N_arrays - 1);
-                        }else if(io.KeyCtrl && (io.MouseWheel < 0)){
-                            scroll_arrays = std::clamp((scroll_arrays + N_arrays + d_l) % N_arrays, 0, N_arrays - 1);
-
-                        }else if(0 < io.MouseWheel){
-                            scroll_images = std::clamp((scroll_images + N_images + d_h) % N_images, 0, N_images - 1);
-                        }else if(io.MouseWheel < 0){
-                            scroll_images = std::clamp((scroll_images + N_images + d_l) % N_images, 0, N_images - 1);
-
-                        }else if( ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_PageUp) ) ){
-                            scroll_images = std::clamp((scroll_images + 50 * N_images + 10) % N_images, 0, N_images - 1);
-                        }else if( ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_PageDown) ) ){
-                            scroll_images = std::clamp((scroll_images + 50 * N_images - 10) % N_images, 0, N_images - 1);
-
-                        }else if( ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_Home) ) ){
-                            scroll_images = N_images - 1;
-                        }else if( ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_End) ) ){
-                            scroll_images = 0;
-                        }
-                        //ImGui::Text("%.2f secs", io.KeysDownDuration[ (int)(ImGui::GetKeyIndex(ImGuiKey_PageUp)) ]);
-                    }
-                }
-                long int new_img_array_num = scroll_arrays;
-                long int new_img_num = scroll_images;
-
-                // Scroll through images.
-                if( new_img_array_num != img_array_num ){
-                    advance_to_image_array(new_img_array_num);
-                    if(view_contours_enabled) launch_contour_preprocessor();
-                    img_array_ptr_it = std::next(DICOM_data.image_data.begin(), img_array_num);
-                    disp_img_it = std::next((*img_array_ptr_it)->imagecoll.images.begin(), img_num);
-                    current_texture = Load_OpenGL_Texture(*disp_img_it);
-
-                }else if( new_img_num != img_num ){
-                    advance_to_image(new_img_num);
-                    if(view_contours_enabled) launch_contour_preprocessor();
-                    disp_img_it = std::next((*img_array_ptr_it)->imagecoll.images.begin(), img_num);
-                    current_texture = Load_OpenGL_Texture(*disp_img_it);
-                }
-                ImGui::End();
-            }
-
             // Display a contour legend.
             if( view_contours_enabled
             &&  (DICOM_data.contour_data != nullptr) ){
@@ -1756,6 +1662,111 @@ long int frame_count = 0;
             ImGui::End();
         }
 
+        // Display the image navigation dialog.
+        if( view_images_enabled
+        &&  img_valid ){
+            ImGui::SetNextWindowSize(ImVec2(350, 400), ImGuiCond_Appearing);
+            ImGui::SetNextWindowPos(ImVec2(680, 100), ImGuiCond_Appearing);
+            ImGui::Begin("Image Navigation", &view_images_enabled, ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoNavInputs | ImGuiWindowFlags_AlwaysAutoResize);
+
+            int scroll_arrays = img_array_num;
+            int scroll_images = img_num;
+            {
+                ImVec2 window_extent = ImGui::GetContentRegionAvail();
+
+                const int N_arrays = DICOM_data.image_data.size();
+                const int N_images = (*img_array_ptr_it)->imagecoll.images.size();
+                //ImGui::SetNextItemWidth(window_extent.x);
+                ImGui::SliderInt("Array", &scroll_arrays, 0, N_arrays - 1);
+                if( ImGui::IsItemHovered() ){
+                    ImGui::BeginTooltip();
+                    ImGui::Text("Shortcut: shift + mouse wheel");
+                    ImGui::EndTooltip();
+                }
+                //ImGui::SetNextItemWidth(window_extent.x);
+                ImGui::SliderInt("Image", &scroll_images, 0, N_images - 1);
+                if( ImGui::IsItemHovered() ){
+                    ImGui::BeginTooltip();
+                    ImGui::Text("Shortcut: mouse wheel or page-up/page-down");
+                    ImGui::EndTooltip();
+                }
+
+                ImGui::Separator();
+                ImGui::DragFloat("Zoom", &zoom, 0.01f, 1.0f, 10.0f, "%.03f");
+                const float uv_width = 1.0f / zoom;
+                ImGui::DragFloat("Pan horizontal", &pan.x, 0.01f, 0.0f + uv_width * 0.5f, 1.0f - uv_width * 0.5f, "%.03f");
+                ImGui::DragFloat("Pan vertical",   &pan.y, 0.01f, 0.0f + uv_width * 0.5f, 1.0f - uv_width * 0.5f, "%.03f");
+                pan.x = std::clamp(pan.x, 0.0f + uv_width * 0.5f, 1.0f - uv_width * 0.5f);
+                pan.y = std::clamp(pan.y, 0.0f + uv_width * 0.5f, 1.0f - uv_width * 0.5f);
+                uv_min.x = pan.x - uv_width * 0.5f;
+                uv_min.y = pan.y - uv_width * 0.5f;
+                uv_max.x = pan.x + uv_width * 0.5f;
+                uv_max.y = pan.y + uv_width * 0.5f;
+
+                if(ImGui::Button("Reset zoom", ImVec2(150, 0))){
+                    zoom = 1.0f;
+                    pan.x = 0.5f;
+                    pan.y = 0.5f;
+                }
+
+                if(ImGui::IsWindowFocused() || image_mouse_pos.image_window_focused){
+                    const int d_l = static_cast<int>( std::floor(io.MouseWheel) );
+                    const int d_h = static_cast<int>( std::ceil(io.MouseWheel) );
+                    if(false){
+                    }else if(io.KeyCtrl && (0 < io.MouseWheel)){
+                        zoom += std::log(zoom + 0.25f);
+                        zoom = std::clamp( zoom, 1.0f, 10.0f );
+                    }else if(io.KeyCtrl && (io.MouseWheel < 0)){
+                        zoom -= std::log(zoom + 0.25f);
+                        zoom = std::clamp( zoom, 1.0f, 10.0f );
+
+                    }else if( (2 < IM_ARRAYSIZE(io.MouseDown))
+                          &&  (0.0f <= io.MouseDownDuration[2]) ){
+                        pan.x -= static_cast<float>( io.MouseDelta.x ) / 600.0f;
+                        pan.y -= static_cast<float>( io.MouseDelta.y ) / 600.0f;
+                          
+                    }else if(io.KeyShift && (0 < io.MouseWheel)){
+                        scroll_arrays = std::clamp((scroll_arrays + N_arrays + d_h) % N_arrays, 0, N_arrays - 1);
+                    }else if(io.KeyShift && (io.MouseWheel < 0)){
+                        scroll_arrays = std::clamp((scroll_arrays + N_arrays + d_l) % N_arrays, 0, N_arrays - 1);
+
+                    }else if(0 < io.MouseWheel){
+                        scroll_images = std::clamp((scroll_images + N_images + d_h) % N_images, 0, N_images - 1);
+                    }else if(io.MouseWheel < 0){
+                        scroll_images = std::clamp((scroll_images + N_images + d_l) % N_images, 0, N_images - 1);
+
+                    }else if( ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_PageUp) ) ){
+                        scroll_images = std::clamp((scroll_images + 50 * N_images + 10) % N_images, 0, N_images - 1);
+                    }else if( ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_PageDown) ) ){
+                        scroll_images = std::clamp((scroll_images + 50 * N_images - 10) % N_images, 0, N_images - 1);
+
+                    }else if( ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_Home) ) ){
+                        scroll_images = N_images - 1;
+                    }else if( ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_End) ) ){
+                        scroll_images = 0;
+                    }
+                    //ImGui::Text("%.2f secs", io.KeysDownDuration[ (int)(ImGui::GetKeyIndex(ImGuiKey_PageUp)) ]);
+                }
+            }
+            long int new_img_array_num = scroll_arrays;
+            long int new_img_num = scroll_images;
+
+            // Scroll through images.
+            if( new_img_array_num != img_array_num ){
+                advance_to_image_array(new_img_array_num);
+                if(view_contours_enabled) launch_contour_preprocessor();
+                img_array_ptr_it = std::next(DICOM_data.image_data.begin(), img_array_num);
+                disp_img_it = std::next((*img_array_ptr_it)->imagecoll.images.begin(), img_num);
+                current_texture = Load_OpenGL_Texture(*disp_img_it);
+
+            }else if( new_img_num != img_num ){
+                advance_to_image(new_img_num);
+                if(view_contours_enabled) launch_contour_preprocessor();
+                disp_img_it = std::next((*img_array_ptr_it)->imagecoll.images.begin(), img_num);
+                current_texture = Load_OpenGL_Texture(*disp_img_it);
+            }
+            ImGui::End();
+        }
 
         // Clear the current OpenGL frame.
         CHECK_FOR_GL_ERRORS();
