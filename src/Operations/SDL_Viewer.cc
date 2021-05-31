@@ -274,7 +274,7 @@ Drover SDL_Viewer(Drover DICOM_data,
                                            SDL_WINDOWPOS_CENTERED,
                                            SDL_WINDOWPOS_CENTERED,
                                            1024, 768,
-                                           SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+                                           SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_MAXIMIZED);
     if(window == nullptr){
         throw std::runtime_error("Unable to create an SDL window: "_s + SDL_GetError());
     }
@@ -820,6 +820,11 @@ Drover SDL_Viewer(Drover DICOM_data,
     std::map<std::string, bool> contour_hovered;
     float contour_line_thickness = 1.0f;
 
+    ImVec2 uv_min = ImVec2(0.0f, 0.0f);                 // Top-left
+    ImVec2 uv_max = ImVec2(1.0f, 1.0f);                 // Lower-right
+    float zoom = 1.0f;
+    ImVec2 pan(0.5f, 0.5f);
+
 long int frame_count = 0;
     while(true){
 ++frame_count;
@@ -950,6 +955,7 @@ long int frame_count = 0;
             const auto img_cols = disp_img_it->columns;
             const auto img_rows_f = static_cast<float>(disp_img_it->rows);
             const auto img_cols_f = static_cast<float>(disp_img_it->columns);
+
             ImVec2 image_extent = ImGui::GetContentRegionAvail();
             image_extent.x = std::max(512.0f, image_extent.x - 5.0f);
             // Ensure images have the same aspect ratio as the true image.
@@ -958,14 +964,21 @@ long int frame_count = 0;
             auto gl_tex_ptr = reinterpret_cast<void*>(static_cast<intptr_t>(current_texture.texture_number));
 
             ImVec2 pos = ImGui::GetCursorScreenPos();
-            ImGui::Image(gl_tex_ptr, image_extent);
+            ImGui::Image(gl_tex_ptr, image_extent, uv_min, uv_max);
             image_mouse_pos.mouse_hovering_image = ImGui::IsItemHovered();
             image_mouse_pos.image_window_focused = ImGui::IsWindowFocused();
 
+            ImVec2 real_extent; // The true dimensions of the unclipped image, accounting for zoom and panning.
+            real_extent.x = image_extent.x / (uv_max.x - uv_min.x);
+            real_extent.y = image_extent.y / (uv_max.y - uv_min.y);
+            ImVec2 real_pos; // The true position of the top-left corner, accounting for zoom and panning.
+            real_pos.x = pos.x - (real_extent.x * uv_min.x);
+            real_pos.y = pos.y - (real_extent.y * uv_min.y);
+
             // Calculate mouse positions if the mouse is hovering the image.
             if( image_mouse_pos.mouse_hovering_image ){
-                image_mouse_pos.region_x = std::clamp((io.MousePos.x - pos.x) / image_extent.x, 0.0f, 1.0f);
-                image_mouse_pos.region_y = std::clamp((io.MousePos.y - pos.y) / image_extent.y, 0.0f, 1.0f);
+                image_mouse_pos.region_x = std::clamp((io.MousePos.x - real_pos.x) / real_extent.x, 0.0f, 1.0f);
+                image_mouse_pos.region_y = std::clamp((io.MousePos.y - real_pos.y) / real_extent.y, 0.0f, 1.0f);
                 image_mouse_pos.r = std::clamp( static_cast<long int>( std::floor( image_mouse_pos.region_y * img_rows_f ) ), 0L, (img_rows-1) );
                 image_mouse_pos.c = std::clamp( static_cast<long int>( std::floor( image_mouse_pos.region_x * img_cols_f ) ), 0L, (img_cols-1) );
                 image_mouse_pos.zero_pos = disp_img_it->position(0L, 0L);
@@ -980,7 +993,7 @@ long int frame_count = 0;
             // Display the image navigation dialog.
             if( view_images_enabled
             &&  img_valid ){
-                ImGui::SetNextWindowSize(ImVec2(350, 250), ImGuiCond_Appearing);
+                ImGui::SetNextWindowSize(ImVec2(350, 400), ImGuiCond_Appearing);
                 ImGui::SetNextWindowPos(ImVec2(680, 100), ImGuiCond_Appearing);
                 ImGui::Begin("Image Navigation", &view_images_enabled, ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoNavInputs | ImGuiWindowFlags_AlwaysAutoResize);
 
@@ -1004,6 +1017,24 @@ long int frame_count = 0;
                         ImGui::BeginTooltip();
                         ImGui::Text("Shortcut: mouse wheel or page-up/page-down");
                         ImGui::EndTooltip();
+                    }
+
+                    ImGui::Separator();
+                    ImGui::DragFloat("Zoom", &zoom, 0.01f, 1.0f, 10.0f, "%.03f");
+                    const float uv_width = 1.0f / zoom;
+                    ImGui::DragFloat("Pan horizontal", &pan.x, 0.01f, 0.0f + uv_width * 0.5f, 1.0f - uv_width * 0.5f, "%.03f");
+                    ImGui::DragFloat("Pan vertical",   &pan.y, 0.01f, 0.0f + uv_width * 0.5f, 1.0f - uv_width * 0.5f, "%.03f");
+                    pan.x = std::clamp(pan.x, 0.0f + uv_width * 0.5f, 1.0f - uv_width * 0.5f);
+                    pan.y = std::clamp(pan.y, 0.0f + uv_width * 0.5f, 1.0f - uv_width * 0.5f);
+                    uv_min.x = pan.x - uv_width * 0.5f;
+                    uv_min.y = pan.y - uv_width * 0.5f;
+                    uv_max.x = pan.x + uv_width * 0.5f;
+                    uv_max.y = pan.y + uv_width * 0.5f;
+
+                    if(ImGui::Button("Reset zoom", ImVec2(150, 0))){
+                        zoom = 1.0f;
+                        pan.x = 0.5f;
+                        pan.y = 0.5f;
                     }
 
                     if(ImGui::IsWindowFocused() || image_mouse_pos.image_window_focused){
@@ -1178,8 +1209,8 @@ long int frame_count = 0;
                         const auto clamped_row = dR.Dot( disp_img_it->row_unit ) / img_dicom_width;
 
                         //Convert to ImGui coordinates using the top-left position of the display image.
-                        const auto world_x = pos.x + image_extent.x * clamped_col;
-                        const auto world_y = pos.y + image_extent.y * clamped_row;
+                        const auto world_x = real_pos.x + real_extent.x * clamped_col;
+                        const auto world_y = real_pos.y + real_extent.y * clamped_row;
 
                         ImVec2 v;
                         v.x = world_x;
