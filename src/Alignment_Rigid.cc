@@ -106,7 +106,7 @@ AlignViaPCA(const point_set<double> & moving,
         Eigen::MatrixXd cov = centered.adjoint() * centered;
         Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> eig(cov);
         
-        const Eigen::VectorXd& evals = eig.eigenvalues();
+        //const Eigen::VectorXd& evals = eig.eigenvalues();
         Eigen::MatrixXd evecs = eig.eigenvectors().real();
 
         pcomps out;

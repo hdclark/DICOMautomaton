@@ -93,7 +93,6 @@ Estimate_Contour_Correspondence(
     }
 
     const auto plane_A = contour_A.Least_Squares_Best_Fit_Plane( ortho_unit_A );
-    const auto plane_B = contour_B.Least_Squares_Best_Fit_Plane( ortho_unit_B );
 
     vec3<double> centroid_A = contour_A.Average_Point();
     vec3<double> centroid_B = contour_B.Average_Point();
@@ -193,7 +192,6 @@ Estimate_Contour_Correspondence(
         const auto curvature = std::abs( angle / pi );
         return curvature;
     };
-*/
     // Computes the curvature-weighted perimeter of a contour.
     const auto weighted_perimeter = [&]( const contour_of_points<double> &c ) -> double {
         double wp_tot = 0.0;
@@ -214,8 +212,9 @@ Estimate_Contour_Correspondence(
     };
     const auto total_wperimeter_A = weighted_perimeter(contour_A);
     const auto total_wperimeter_B = weighted_perimeter(contour_B);
-    //FUNCINFO("total_wperimeter_A = " << total_wperimeter_A);
-    //FUNCINFO("total_wperimeter_B = " << total_wperimeter_B);
+    FUNCINFO("total_wperimeter_A = " << total_wperimeter_A);
+    FUNCINFO("total_wperimeter_B = " << total_wperimeter_B);
+*/
 
     // Walk the contours, creating a sort of triangle strip.
     //std::set<size_t> used_verts_A;

@@ -134,7 +134,6 @@ Drover SFML_Viewer(Drover DICOM_data,
     //
     // NOTE: The reasoning for having several image arrays is not clear cut. If the timestamps are known exactly, it
     //       might make sense to split in this way. In general, it is up to the user to make this call. 
-    using img_data_ptr_it_t = decltype(DICOM_data.image_data.begin());
     auto img_array_ptr_beg  = DICOM_data.image_data.begin();
     auto img_array_ptr_end  = DICOM_data.image_data.end();
     auto img_array_ptr_last = std::prev(DICOM_data.image_data.end());
@@ -2258,8 +2257,8 @@ Drover SFML_Viewer(Drover DICOM_data,
                             const auto img_top_left = disp_img_it->anchor + disp_img_it->offset
                                                     - disp_img_it->row_unit * disp_img_it->pxl_dx * 0.5f
                                                     - disp_img_it->col_unit * disp_img_it->pxl_dy * 0.5f;
-                            const auto img_top_right = img_top_left + disp_img_it->row_unit * img_dicom_width;
-                            const auto img_bottom_left = img_top_left + disp_img_it->col_unit * img_dicom_height;
+                            //const auto img_top_right = img_top_left + disp_img_it->row_unit * img_dicom_width;
+                            //const auto img_bottom_left = img_top_left + disp_img_it->col_unit * img_dicom_height;
                             
                             //Clamp the point to the bounding box, using the top left as zero.
                             const auto dR = p - img_top_left;
@@ -2291,8 +2290,8 @@ Drover SFML_Viewer(Drover DICOM_data,
                             const auto img_top_left = disp_img_it->anchor + disp_img_it->offset
                                                     - disp_img_it->row_unit * disp_img_it->pxl_dx * 0.5f
                                                     - disp_img_it->col_unit * disp_img_it->pxl_dy * 0.5f;
-                            const auto img_top_right = img_top_left + disp_img_it->row_unit * img_dicom_width;
-                            const auto img_bottom_left = img_top_left + disp_img_it->col_unit * img_dicom_height;
+                            //const auto img_top_right = img_top_left + disp_img_it->row_unit * img_dicom_width;
+                            //const auto img_bottom_left = img_top_left + disp_img_it->col_unit * img_dicom_height;
 
                             const auto clamped_col_as_f = std::fabs(mouse_world_pos.x - DispImgBBox.left)/(DispImgBBox.width);
                             const auto clamped_row_as_f = std::fabs(DispImgBBox.top - mouse_world_pos.y)/(DispImgBBox.height);
@@ -2357,8 +2356,8 @@ Drover SFML_Viewer(Drover DICOM_data,
                         const auto img_top_left = disp_img_it->anchor + disp_img_it->offset
                                                 - disp_img_it->row_unit * disp_img_it->pxl_dx * 0.5f
                                                 - disp_img_it->col_unit * disp_img_it->pxl_dy * 0.5f;
-                        const auto img_top_right = img_top_left + disp_img_it->row_unit * img_dicom_width;
-                        const auto img_bottom_left = img_top_left + disp_img_it->col_unit * img_dicom_height;
+                        //const auto img_top_right = img_top_left + disp_img_it->row_unit * img_dicom_width;
+                        //const auto img_bottom_left = img_top_left + disp_img_it->col_unit * img_dicom_height;
                         
                         //Clamp the point to the bounding box, using the top left as zero.
                         const auto dR = p - img_top_left;
@@ -2614,20 +2613,6 @@ Drover SFML_Viewer(Drover DICOM_data,
                 ss << aux_dialog_msg << "\n\nPress [escape] to close this window.";
             }
             aux_msg_text.setString(ss.str());
-            {
-                const auto item_bbox = aux_msg_text.getGlobalBounds();
-                const auto item_blc  = sf::Vector2f( item_bbox.left, item_bbox.top + item_bbox.height );
-
-                const auto wndw_view = window.getView();
-                const auto view_cntr = wndw_view.getCenter();
-                const auto view_size = wndw_view.getSize();
-                const auto view_blc  = sf::Vector2f( view_cntr.x - 0.48f*view_size.x, view_cntr.y + 0.48f*view_size.y );
-
-                //We should have that the item's bottom right corner coincides with the window's bottom right corner.
-                const sf::Vector2f offset = view_blc - item_blc;
-    //            aux_msg_text.move(offset);
-            }
-
             auxwindow.draw(aux_msg_text);
             auxwindow.display();
         }while(false);

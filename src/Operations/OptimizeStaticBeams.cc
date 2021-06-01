@@ -340,7 +340,7 @@ Drover OptimizeStaticBeams(Drover DICOM_data,
             auto re = re_orig;
             std::shuffle(vec.begin(), vec.end(), re);
         }
-        if(voxels.front().size() > N_voxels_max){
+        if(static_cast<long int>(voxels.front().size()) > N_voxels_max){
             for(auto &vec : voxels){
                 vec.resize( N_voxels_max );
             }

@@ -545,7 +545,7 @@ std::array<SpatialType, SpatialDimensionCount> Coordinates;
         Eigen::MatrixXd cov = centered.adjoint() * centered;
         Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> eig(cov);
         
-        const Eigen::VectorXd& evals = eig.eigenvalues();
+        //const Eigen::VectorXd& evals = eig.eigenvalues();
         Eigen::MatrixXd evecs = eig.eigenvectors().real();
 
         const vec3<double> grid_u_a( evecs(0,0), evecs(1,0), evecs(2,0) );

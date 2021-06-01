@@ -224,7 +224,7 @@ Drover AnalyzePicketFence(Drover DICOM_data,
         if((*iap_it)->imagecoll.images.empty()) throw std::invalid_argument("Unable to find an image to analyze.");
 
         planar_image<float, double> *animg = &( (*iap_it)->imagecoll.images.front() );
-        const auto row_unit = animg->row_unit;
+        //const auto row_unit = animg->row_unit;
         const auto col_unit = animg->col_unit;
         //const auto ort_unit = row_unit.Cross(col_unit);
 
@@ -967,7 +967,7 @@ Drover AnalyzePicketFence(Drover DICOM_data,
         {
             for(auto &leaf_line_p : PFC.leaf_lines){
                 const auto leaf_num = leaf_line_p.first;
-                const auto leaf_line = leaf_line_p.second;
+                //const auto leaf_line = leaf_line_p.second;
 
                 if(PFC.nominal_jl_int[leaf_num].empty()) continue;
 

@@ -136,26 +136,28 @@ Optimize_LevenbergMarquardt_5Param(KineticModel_1Compartment2Input_5Param_Linear
         int info = -1;
         int status = gsl_multifit_fdfsolver_driver(solver, max_iters, paramtol_rel, gtol_rel, ftol_rel, &info);
 
-        gsl_vector *res_f = gsl_multifit_fdfsolver_residual(solver);
-        const double chi = gsl_blas_dnrm2(res_f);
-        const double chisq = chi * chi;
-        const auto dof = static_cast<double>(datum - dimen);
-        const double red_chisq = chisq/dof;
+        if(status == GSL_SUCCESS){
+            gsl_vector *res_f = gsl_multifit_fdfsolver_residual(solver);
+            const double chi = gsl_blas_dnrm2(res_f);
+            const double chisq = chi * chi;
+            const auto dof = static_cast<double>(datum - dimen);
+            const double red_chisq = chisq/dof;
 
-        state.RSS  = chisq;
-        state.k1A  = gsl_vector_get(solver->x,0);
-        state.tauA = gsl_vector_get(solver->x,1);
-        state.k1V  = gsl_vector_get(solver->x,2);
-        state.tauV = gsl_vector_get(solver->x,3);
-        state.k2   = gsl_vector_get(solver->x,4);
-        
-        gsl_multifit_fdfsolver_free(solver);
+            state.RSS  = chisq;
+            state.k1A  = gsl_vector_get(solver->x,0);
+            state.tauA = gsl_vector_get(solver->x,1);
+            state.k1V  = gsl_vector_get(solver->x,2);
+            state.tauV = gsl_vector_get(solver->x,3);
+            state.k2   = gsl_vector_get(solver->x,4);
+            
+            gsl_multifit_fdfsolver_free(solver);
 
-        //If the fit was extremely good already, do not bother with another pass.
-        // We assume a certain scale here, so it won't work in generality!
-        if(red_chisq < 1E-10){
-            skip_second_pass = true;
-            state.FittingSuccess = true;
+            //If the fit was extremely good already, do not bother with another pass.
+            // We assume a certain scale here, so it won't work in generality!
+            if(red_chisq < 1E-10){
+                skip_second_pass = true;
+                state.FittingSuccess = true;
+            }
         }
     }
 
@@ -254,7 +256,6 @@ MinimizationFunction_f_3Param( const gsl_vector *params,  //Parameters being fit
                                 void *voided_state,        //Other information (e.g., constant function parameters).
                                 gsl_vector *f){            //Vector containtin function evaluats at {t_i}.
 
-*/
 
 static
 double 
@@ -271,4 +272,5 @@ Optimize_LevenbergMarquardt_3Param(KineticModel_1Compartment2Input_5Param_Linear
     FUNCERR("Not yet implemented");
     return state;
 }
+*/
 

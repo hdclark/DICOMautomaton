@@ -81,7 +81,6 @@ Drover ExportLineSamples(Drover DICOM_data,
 
     auto LSs_all = All_LSs( DICOM_data );
     const auto LSs = Whitelist( LSs_all, LineSelectionStr );
-    const auto N_LSs = LSs.size();
     for(auto & lsp_it : LSs){
 
         // Determine which filename to use.

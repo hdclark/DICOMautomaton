@@ -81,24 +81,13 @@ OperationDoc OpArgDocSDL_Viewer(){
     out.desc = 
         "Launch an interactive viewer based on SDL.";
 
-    out.args.emplace_back();
-    out.args.back().name = "FPSLimit";
-    out.args.back().desc = "The upper limit on the frame rate, in seconds as an unsigned integer."
-                           " Note that this value may be treated as a suggestion.";
-    out.args.back().default_val = "60";
-    out.args.back().expected = true;
-    out.args.back().examples = { "60", "30", "10", "1" };
-
     return out;
 }
 
 Drover SDL_Viewer(Drover DICOM_data,
-                  const OperationArgPkg& OptArgs,
+                  const OperationArgPkg& /*OptArgs*/,
                   const std::map<std::string, std::string>& InvocationMetadata,
                   const std::string& FilenameLex){
-
-    // ----------------------------------------- User Parameters ------------------------------------------
-    const auto FPSLimit = std::stoul( OptArgs.getValueStr("FPSLimit").value() );
 
     // --------------------------------------- Operational State ------------------------------------------
     Explicator X(FilenameLex);
@@ -134,10 +123,6 @@ Drover SDL_Viewer(Drover DICOM_data,
 
     //A tagged point for measuring distance.
     std::optional<vec3<double>> tagged_pos;
-
-    //Flags for various things.
-    bool OnlyShowTagsDifferentToNeighbours = true;
-    bool ShowExistingContours = true; //Can be disabled/toggled for, e.g., blind re-contouring.
 
     //Load available colour maps.
     std::vector< std::pair<std::string, std::function<struct ClampedColourRGB(double)>>> colour_maps = {
@@ -202,13 +187,6 @@ Drover SDL_Viewer(Drover DICOM_data,
         const auto colour = colours[ i % colours.size() ];
         return ImVec4(colour.x, colour.y, colour.z, 1.0f);
     };
-
-    //Toggle whether existing contours should be displayed.
-    const auto toggle_showing_existing_contours = [&](){
-            ShowExistingContours = !ShowExistingContours;
-            return;
-    };
-
 
     // ------------------------------------------ Viewer State --------------------------------------------
     auto background_colour = ImVec4(0.025f, 0.087f, 0.118f, 1.00f);
@@ -1117,8 +1095,8 @@ io.ConfigWindowsMoveFromTitleBarOnly = true;
                 const auto img_top_left = disp_img_it->anchor + disp_img_it->offset
                                         - disp_img_it->row_unit * disp_img_it->pxl_dx * 0.5f
                                         - disp_img_it->col_unit * disp_img_it->pxl_dy * 0.5f;
-                const auto img_top_right = img_top_left + disp_img_it->row_unit * img_dicom_width;
-                const auto img_bottom_left = img_top_left + disp_img_it->col_unit * img_dicom_height;
+                //const auto img_top_right = img_top_left + disp_img_it->row_unit * img_dicom_width;
+                //const auto img_bottom_left = img_top_left + disp_img_it->col_unit * img_dicom_height;
                 const auto img_plane = disp_img_it->image_plane();
 
                 for(auto &p : contour_hovered) p.second = false;
@@ -1182,7 +1160,7 @@ io.ConfigWindowsMoveFromTitleBarOnly = true;
                         // work with.
                         const bool below_is_interior = false;
                         const bool inclusion_threshold = 0.5f;
-                        const float interior_value = 1.0;
+                        //const float interior_value = 1.0;
                         const float exterior_value = 0.0;
                         auto above = contouring_img;
                         auto below = contouring_img;
@@ -1237,7 +1215,7 @@ io.ConfigWindowsMoveFromTitleBarOnly = true;
 
                         float thickness = contour_line_thickness;
                         const bool closed = true;
-                        drawList->PathStroke(0xFF00AAFF, closed, thickness);
+                        drawList->PathStroke( ImGui::GetColorU32(editing_contour_colour), closed, thickness);
                         //AddPolyline(const ImVec2* points, int num_points, ImU32 col, bool closed, float thickness);
                     }
                     ImGui::End();
@@ -1780,7 +1758,7 @@ io.ConfigWindowsMoveFromTitleBarOnly = true;
             int scroll_arrays = img_array_num;
             int scroll_images = img_num;
             {
-                ImVec2 window_extent = ImGui::GetContentRegionAvail();
+                //ImVec2 window_extent = ImGui::GetContentRegionAvail();
 
                 const int N_arrays = DICOM_data.image_data.size();
                 const int N_images = (*img_array_ptr_it)->imagecoll.images.size();

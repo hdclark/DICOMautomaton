@@ -77,8 +77,8 @@ Drover GrowContours(const Drover& DICOM_data,
 //            if(!( std::regex_match(ROIName,theregex) || std::regex_match(NROIName,thenormalizedregex))) continue;
             if(!std::regex_match(ROIName,theregex)) continue;
 
-            const auto N = cop.Estimate_Planar_Normal();
-            const auto aplane = cop.Least_Squares_Best_Fit_Plane(N);
+            //const auto N = cop.Estimate_Planar_Normal();
+            //const auto aplane = cop.Least_Squares_Best_Fit_Plane(N);
 
             auto cop_orig = cop;
             auto cop_ref = cop;
