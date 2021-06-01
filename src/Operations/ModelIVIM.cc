@@ -78,16 +78,19 @@ OperationDoc OpArgDocModelIVIM(){
     out.args.emplace_back();
     out.args.back().name = "Model";
     out.args.back().desc = "The model that will be fitted.."
-                           " Currently, 'adc-simple' and 'adc-ls' are available."
+                           " Currently, 'adc-simple' , 'adc-ls' and 'f_biexp' are available."
                            " The 'adc-simple' model does not take into account perfusion, only free diffusion is"
                            " modeled. It only uses the minimum and maximum b-value images and analytically estimates"
                            " ADC."
                            " The 'adc-ls' model, like 'adc-simple', only models free diffusion."
-                           " It fits a linear least-squares model that uses all available b-value images.";
+                           " It fits a linear least-squares model that uses all available b-value images."
+                           "The 'f_biexp' model uses a segmented fitting approach along with Marquardts method to obtain the pseudodiffusion fraction"
+                           "It uses a biexponential model";
     out.args.back().default_val = "adc-simple";
     out.args.back().expected = true;
     out.args.back().examples = { "adc-simple",
-                                 "adc-ls" };
+                                 "adc-ls" ,
+                                 "f_biexp"};
     out.args.back().samples = OpArgSamples::Exhaustive;
 
     out.args.emplace_back();
@@ -147,6 +150,7 @@ Drover ModelIVIM(Drover DICOM_data,
     //-----------------------------------------------------------------------------------------------------------------
     const auto model_adc_simple = Compile_Regex("^ad?c?[-_]?si?m?p?l?e?$");
     const auto model_adc_ls = Compile_Regex("^ad?c?[-_]?ls?$");
+    const auto model_f_biexp = Compile_Regex("^fr?a?c?t?i?o?n?[-_]?bie?x?p?");
 
     //-----------------------------------------------------------------------------------------------------------------
 
@@ -235,6 +239,21 @@ Drover ModelIVIM(Drover DICOM_data,
                 
             };
 
+        }else if(std::regex_match(ModelStr, model_f_biexp)){
+            ud.description = "f (Bi-exponential segmented fit)";
+            ud.f_reduce = [bvalues, bvalue_min_i, bvalue_max_i]( std::vector<float> &vals, 
+                                                                 vec3<double> ) -> float {
+                vals.erase(vals.begin()); // Remove the base image's value.
+                if(vals.size() != bvalues.size()){
+                    FUNCERR("Unmatched voxel and b-value vectors. Refusing to continue.");
+                }
+                int numIterations = 1000;
+                const auto f = GetBiExpf(bvalues, vals, numIterations);
+                if(!std::isfinite( f )) throw std::runtime_error("f is not finite");
+                return f;
+                
+            };
+
         }else{
             throw std::invalid_argument("Model not understood. Cannot continue.");
         }
@@ -253,7 +272,7 @@ double GetADCls(const std::vector<float> &bvalues, const std::vector<float> &val
     //This uses the formula S(b) = S(0)exp(-b * ADC)
     // --> ln(S(b)) = ln(S(0)) + (-ADC) * b 
 
-    //First get ADC from the formula -ADC = sum [ (b_i - b_avg) * (ln(S_i) - ln(S_avg)) ] / sum( b_i - b_avg )^2
+    //First get ADC from the formula -ADC = sum [ (b_i - b_avg) * (ln(S_i) - ln(S)_avg ] / sum( b_i - b_avg )^2
     const auto nan = std::numeric_limits<double>::quiet_NaN();
 
     //get b_avg and S_avg
@@ -283,5 +302,158 @@ double GetADCls(const std::vector<float> &bvalues, const std::vector<float> &val
     const double ADC = - sum_numerator / sum_denominator;
     return ADC;
 }
+
+double GetBiExpf(const std::vector<float> &bvalues, const std::vector<float> &vals, int numIterations){
+    //This function will use the a segmented approach with Marquardts method of squared residuals minimization to fit the signal to a biexponential 
+
+    //The biexponential model
+    //S(b) = S(0)[f * exp(-b D*) + (1-f) * exp(-b D)]
+
+    //First we use a cutoff of b values greater than 200 to have signals of the form S(b) = S(0) * exp(-b D) to obtain the diffusion coefficient
+
+    //make a vector for the high b values and their signals
+    const auto nan = std::numeric_limits<double>::quiet_NaN();
+
+    std::vector<float> bvaluesH;
+    std::vector<float> signalsH;
+    float bTemp;
+    float signalTemp; //In loops have to take values from vector and make a variable first or get an error
+
+    const auto number_bVals = static_cast<double>( bvalues.size() );
+    for(size_t i = 0; i < number_bVals; ++i){
+        if (bvalues[i] > 200){
+            bTemp = bvalues.at(i);      
+            signalTemp = vals.at(i);           
+            bvaluesH.push_back(bTemp);
+            signalsH.push_back(signalTemp); 
+            
+            
+        }
+    }
+    
+    
+
+    //Now use least squares regression to obtain D from the high b value signals: 
+    const double D = GetADCls(bvaluesH, signalsH);
+    //Now we can use this D value and fit f and D* with Marquardts method
+    //Cost function is sum (Signal_i - (fexp(-bD*) + (1-f)exp(-bD)) )^2
+    float lambda = 50;
+    double pseudoD = 10.0 * D;
+    float f = 0.5;
+    double new_pseudoD;
+    float newf;
+    double cost;
+    double newCost;
+    std::vector<double> H;
+    std::vector<double> inverse;
+    std::vector<double> gradient;
+    
+
+//Get the current cost
+    cost = 0;
+    for(size_t i = 0; i < number_bVals; ++i){
+        bTemp = bvalues[i];         
+        signalTemp = vals.at(i);
+        cost += std::pow( ( (signalTemp) - f*exp(-bTemp * pseudoD) - (1-f)*exp(-bTemp * D)   ), 2.0);
+    }  
+    
+    
+    for (int i = 0; i < numIterations; i++){
+         
+        //Now calculate the Hessian matrix which is in the form of a vector (columns then rows), which also contains the gradient at the end
+        H = GetHessianAndGradient(bvalues, vals, f, pseudoD, D);
+        //Now I need to calculate the inverse of (H + lamda I)
+        H[0] += lambda;
+        H[3] += lambda;
+        inverse = GetInverse(H);
+        
+        //Now update parameters 
+        newf = f + -inverse[0]*H[4] - inverse[1]*H[5];
+        new_pseudoD = pseudoD - inverse[2]*H[4] - inverse[3] * H[5];  
+
+        //if f is less than 0 or greater than 1, rescale back to boundary, and don't let pseudoDD get smaller than D
+        if (newf < 0){
+            f = 0;
+        }else if (f > 1){
+            f = 1;
+        }
+        if (pseudoD < D){
+            pseudoD = D;
+        }
+
+        //Now check if we have lowered the cost
+        newCost = 0;
+        for(size_t i = 0; i < number_bVals; ++i){
+            newCost += std::pow( ( vals.at(i) - newf*exp(-bvalues[i] * new_pseudoD) - (1-newf)*exp(-bvalues[i] * D)  ), 2.0);
+        }  
+        //accept changes if we have have reduced cost, and lower lambda
+        if (newCost < cost){
+            cost = newCost;
+            lambda *= 0.8;
+            f = newf;
+            pseudoD = new_pseudoD;
+            
+            
+        }else{
+            lambda *= 2;
+        }
+
+
+    }
+    return f; //can also return D, pseudoD 
+}
+
+std::vector<double> GetHessianAndGradient(const std::vector<float> &bvalues, const std::vector<float> &vals, float f, double pseudoD, const double D){
+    //This function returns the hessian as the first 4 elements in the vector (4 matrix elements, goes across columns and then rows) and the last two elements are the gradient (derivative_f, derivative_pseudoD)
+
+    double derivative_f;
+    double derivative_ff;
+    double derivative_pseudoD;
+    double derivative_pseudoD_pseudoD;
+    double derivative_fpseudoD;
+    double derivative_pseudoDf;
+    const auto number_bVals = static_cast<double>( bvalues.size() );
+
+    for(size_t i = 0; i < number_bVals; ++i){
+        const double c = exp(-bvalues[i] * D);
+        float b = bvalues[i];
+        double expon = exp(-b * pseudoD);
+        float signal = vals.at(i);
+        
+
+        derivative_f += 2 * (signal - f*expon - (1-f)*c) * (-expon + c);
+        derivative_pseudoD += 2 * ( signal - f*expon - (1-f)*c ) * (b*f*expon);
+
+        derivative_ff += 2 * std::pow((c - expon), 2.0);
+        derivative_pseudoD_pseudoD += 2 * (b*f*expon) - 2 * (signal - f*expon-(1-f)*c)*(b*b*f*expon);
+
+        derivative_fpseudoD += ( 2 * (c - expon)*b*f*expon) + ( 2 * (signal - f*expon - (1-f)*c) * b*expon );
+        derivative_pseudoDf += (2 * (b*f*expon)*(-expon + c)) + (2*(signal - f*expon - (1-f)*c)*(b*expon));
+
+    }   
+    std::vector<double> H;
+    H.push_back(derivative_ff); 
+    H.push_back(derivative_fpseudoD);
+    H.push_back(derivative_pseudoDf);
+    H.push_back(derivative_pseudoD_pseudoD);
+    H.push_back(derivative_f);
+    H.push_back(derivative_pseudoD);
+
+    return H;
+}
+
+std::vector<double> GetInverse(const std::vector<double> matrix){
+    std::vector<double> inverse;
+    double determinant = 1 / (matrix[0]*matrix[3] - matrix[1]*matrix[2]);
+
+    inverse.push_back(determinant * matrix[3]);
+    inverse.push_back(- determinant * matrix[1]);
+    inverse.push_back(- determinant * matrix[2]);
+    inverse.push_back(determinant * matrix[0]);
+    return inverse;
+
+
+}
+
 
 
