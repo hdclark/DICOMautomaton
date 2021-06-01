@@ -67,6 +67,10 @@
 #include "../DCMA_Version.h"
 #include "../File_Loader.h"
 
+#ifdef DCMA_USE_CGAL
+    #include "../Surface_Meshes.h"
+#endif // DCMA_USE_CGAL
+
 #include "SDL_Viewer.h"
 
 //extern const std::string DCMA_VERSION_STR;
@@ -107,6 +111,7 @@ Drover SDL_Viewer(Drover DICOM_data,
     bool view_meshes_enabled = true;
     bool view_plots_enabled = true;
     bool view_contours_enabled = true;
+    bool view_contouring_enabled = false;
     bool view_row_column_profiles = false;
     bool show_image_hover_tooltips = true;
     bool adjust_window_level_enabled = false;
@@ -341,12 +346,23 @@ Drover SDL_Viewer(Drover DICOM_data,
         int row_count = 0;
     };
     opengl_texture_handle_t current_texture;
+    planar_image<float,double> contouring_img;
+    bool contouring_img_altered = false;
+    contour_collection<double> contouring_cc;
+    int contouring_reach = 30;
 
     const auto Load_OpenGL_Texture = [&custom_centre,
                                       &custom_width,
                                       &colour_maps,
                                       &colour_map,
-                                      &nan_colour]( const planar_image<float,double>& img ) -> opengl_texture_handle_t {
+                                      &nan_colour,
+                                      &contouring_img,
+                                      &contouring_cc]( const planar_image<float,double>& img ) -> opengl_texture_handle_t {
+contouring_img = img;
+contouring_img.remove_all_channels_except(0);
+contouring_img.fill_pixels(-1.0f);
+contouring_cc.contours.clear();
+
             const auto img_cols = img.columns;
             const auto img_rows = img.rows;
 
@@ -880,6 +896,10 @@ long int frame_count = 0;
                     contour_hovered.clear();
                     if(view_contours_enabled) launch_contour_preprocessor();
                 }
+                if(ImGui::MenuItem("Contouring", nullptr, &view_contouring_enabled)){
+                    contouring_img_altered = true;
+                    contouring_cc.contours.clear();
+                }
                 ImGui::MenuItem("Image Metadata", nullptr, &view_image_metadata_enabled);
                 ImGui::MenuItem("Image Hover Tooltips", nullptr, &show_image_hover_tooltips);
                 ImGui::MenuItem("Meshes", nullptr, &view_meshes_enabled);
@@ -948,6 +968,8 @@ long int frame_count = 0;
             ImGui::SetNextWindowPos(ImVec2(10, 40), ImGuiCond_Appearing);
             ImGui::Begin("Images", &view_images_enabled, ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoNavInputs | ImGuiWindowFlags_NoScrollbar ); //| ImGuiWindowFlags_AlwaysAutoResize);
             ImGuiIO &io = ImGui::GetIO();
+
+io.ConfigWindowsMoveFromTitleBarOnly = true;
 
             // Note: unhappy with this. Can cause feedback loop and flicker/jumpiness when resizing. Works OK for now
             // though. TODO.
@@ -1135,6 +1157,92 @@ long int frame_count = 0;
                     drawList->PathStroke(pc.colour, closed, thickness);
                     //AddPolyline(const ImVec2* points, int num_points, ImU32 col, bool closed, float thickness);
                 }
+
+///////////////////////////////////
+                if( view_contouring_enabled ){
+
+                    ImGui::SetNextWindowSize(ImVec2(510, 650), ImGuiCond_Appearing);
+                    ImGui::SetNextWindowPos(ImVec2(680, 200), ImGuiCond_Appearing);
+                    ImGui::SetNextWindowCollapsed(true, ImGuiCond_FirstUseEver);
+                    ImGui::Begin("Contouring", &view_contouring_enabled);
+
+                    ImGui::Text("Note: this functionality is still under active development.");
+                    if(ImGui::Button("Clear", ImVec2(120, 0))){ 
+                        contouring_img.fill_pixels(-1.0f);
+                        contouring_cc.contours.clear();
+                        contouring_img_altered = true;
+                    }
+                    ImGui::DragInt("Reach", &contouring_reach, 1.0f, 1, 30);
+                    drawList->AddCircle(io.MousePos, static_cast<float>(contouring_reach), 0x00FF11, 16);
+
+#ifdef DCMA_USE_CGAL
+                    // Regenerate contours from the mask.
+                    if(contouring_img_altered){
+                        // Sandwich the mask with images that have no voxels included to give the mesh a valid pxl_dz to
+                        // work with.
+                        const bool below_is_interior = false;
+                        const bool inclusion_threshold = 0.5f;
+                        const float interior_value = 1.0;
+                        const float exterior_value = 0.0;
+                        auto above = contouring_img;
+                        auto below = contouring_img;
+                        above.fill_pixels(exterior_value);
+                        below.fill_pixels(exterior_value);
+                        const auto N_0 = contouring_img.image_plane().N_0;
+                        above.offset += N_0 * contouring_img.pxl_dz;
+                        below.offset -= N_0 * contouring_img.pxl_dz;
+
+                        std::list<std::reference_wrapper<planar_image<float,double>>> grid_imgs;
+                        grid_imgs = {{
+                            std::ref(above),
+                            std::ref(contouring_img),
+                            std::ref(below) }};
+
+                        // Generate the surface mesh.
+                        auto meshing_params = dcma_surface_meshes::Parameters();
+                        meshing_params.MutateOpts.inclusivity = Mutate_Voxels_Opts::Inclusivity::Centre;
+                        meshing_params.MutateOpts.contouroverlap = Mutate_Voxels_Opts::ContourOverlap::Ignore;
+                        FUNCWARN("Ignoring contour orientations; assuming ROI polyhderon is simple");
+                        auto surface_mesh = dcma_surface_meshes::Estimate_Surface_Mesh_Marching_Cubes(
+                                                                        grid_imgs,
+                                                                        inclusion_threshold,
+                                                                        below_is_interior,
+                                                                        meshing_params );
+
+                        // Slice the mesh along the image plane.
+                        contouring_cc = polyhedron_processing::Slice_Polyhedron( surface_mesh,
+                                                                            {{ contouring_img.image_plane() }} );
+                        contouring_img_altered = false;
+                    }
+#endif // DCMA_USE_CGAL
+
+                    // Draw the WIP contours.
+                    for(auto &cop : contouring_cc.contours){
+                        drawList->PathClear();
+                        for(auto & p : cop.points){
+                            //Clamp the point to the bounding box, using the top left as zero.
+                            const auto dR = p - img_top_left;
+                            const auto clamped_col = dR.Dot( disp_img_it->col_unit ) / img_dicom_height;
+                            const auto clamped_row = dR.Dot( disp_img_it->row_unit ) / img_dicom_width;
+
+                            //Convert to ImGui coordinates using the top-left position of the display image.
+                            const auto world_x = real_pos.x + real_extent.x * clamped_col;
+                            const auto world_y = real_pos.y + real_extent.y * clamped_row;
+
+                            ImVec2 v;
+                            v.x = world_x;
+                            v.y = world_y;
+                            drawList->PathLineTo( v );
+                        }
+
+                        float thickness = contour_line_thickness;
+                        const bool closed = true;
+                        drawList->PathStroke(0xFF00AAFF, closed, thickness);
+                        //AddPolyline(const ImVec2* points, int num_points, ImU32 col, bool closed, float thickness);
+                    }
+                    ImGui::End();
+                }
+///////////////////////////////////
             }
 
             // Draw a tooltip with position and voxel intensity information.
@@ -1729,6 +1837,46 @@ long int frame_count = 0;
                         scroll_arrays = std::clamp((scroll_arrays + N_arrays + d_h) % N_arrays, 0, N_arrays - 1);
                     }else if(io.KeyShift && (io.MouseWheel < 0)){
                         scroll_arrays = std::clamp((scroll_arrays + N_arrays + d_l) % N_arrays, 0, N_arrays - 1);
+
+
+                    }else if( (0 < IM_ARRAYSIZE(io.MouseDown))
+                          &&  (0.0f <= io.MouseDownDuration[0])
+                          &&  image_mouse_pos.mouse_hovering_image ){
+                        contouring_img_altered = true;
+                        long int channel = 0;
+                        const float extent = contouring_reach * 1.0f / 3.0f;
+                        for(long int i = -contouring_reach; i <= contouring_reach; ++i){
+                            for(long int j = -contouring_reach; j <= contouring_reach; ++j){
+                                if( isininc(0, image_mouse_pos.r + i, contouring_img.rows - 1)
+                                &&  isininc(0, image_mouse_pos.c + j, contouring_img.columns - 1) ){
+                                    const float R = std::sqrt( i*i*1.0f + j*j*1.0f );
+                                    const float d_val = 2.0 * std::exp( -std::pow(R/extent, 2.0f) );
+                                    float val = contouring_img.value(image_mouse_pos.r + i, image_mouse_pos.c + j, channel);
+                                    val = std::clamp(val + d_val, -1.0f, 2.0f);
+                                    contouring_img.reference( image_mouse_pos.r + i, image_mouse_pos.c + j, channel ) = val;
+                                }
+                            }
+                        }
+
+                    }else if( (1 < IM_ARRAYSIZE(io.MouseDown))
+                          &&  (0.0f <= io.MouseDownDuration[1])
+                          &&  image_mouse_pos.mouse_hovering_image ){
+                        contouring_img_altered = true;
+                        long int channel = 0;
+                        const float extent = contouring_reach * 1.0f / 3.0f;
+                        for(long int i = -contouring_reach; i <= contouring_reach; ++i){
+                            for(long int j = -contouring_reach; j <= contouring_reach; ++j){
+                                if( isininc(0, image_mouse_pos.r + i, contouring_img.rows - 1)
+                                &&  isininc(0, image_mouse_pos.c + j, contouring_img.columns - 1) ){
+                                    const float R = std::sqrt( i*i*1.0f + j*j*1.0f );
+                                    const float d_val = - 2.0 * std::exp( -std::pow(R/extent, 2.0f) );
+                                    float val = contouring_img.value(image_mouse_pos.r + i, image_mouse_pos.c + j, channel);
+                                    val = std::clamp(val + d_val, -1.0f, 2.0f);
+                                    contouring_img.reference( image_mouse_pos.r + i, image_mouse_pos.c + j, channel ) = val;
+                                }
+                            }
+                        }
+
 
                     }else if(0 < io.MouseWheel){
                         scroll_images = std::clamp((scroll_images + N_images + d_h) % N_images, 0, N_images - 1);
