@@ -256,7 +256,7 @@ Drover SDL_Viewer(Drover DICOM_data,
     SDL_Window* window = SDL_CreateWindow("DICOMautomaton Interactive Workspace",
                                            SDL_WINDOWPOS_CENTERED,
                                            SDL_WINDOWPOS_CENTERED,
-                                           1024, 768,
+                                           1280, 768,
                                            SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_MAXIMIZED);
     if(window == nullptr){
         throw std::runtime_error("Unable to create an SDL window: "_s + SDL_GetError());
@@ -1156,6 +1156,8 @@ long int frame_count = 0;
 
 ///////////////////////////////////
                 if( view_contouring_enabled ){
+                    drawList->AddCircle(io.MousePos, static_cast<float>(contouring_reach), 0x00FF11FF);
+
                     ImGui::SetNextWindowSize(ImVec2(510, 650), ImGuiCond_Appearing);
                     ImGui::SetNextWindowPos(ImVec2(680, 200), ImGuiCond_Appearing);
                     ImGui::SetNextWindowCollapsed(true, ImGuiCond_FirstUseEver);
@@ -1167,16 +1169,15 @@ long int frame_count = 0;
                         contouring_cc.contours.clear();
                         contouring_img_altered = true;
                     }
-                    ImGui::DragInt("Reach", &contouring_reach, 0.01f, 1, 30);
-                    drawList->AddCircle(io.MousePos, static_cast<float>(contouring_reach), 0x00FF11FF);
+                    ImGui::DragInt("Reach", &contouring_reach, 0.1f, 1, 30);
 
-                    if(ImGui::DragInt("Resolution", &contouring_img_row_col_count, 0.01f, 5, 512)){
+                    if(ImGui::DragInt("Resolution", &contouring_img_row_col_count, 0.1f, 5, 512)){
                         reset_contouring_state(*disp_img_it);
                     }
 
-#ifdef DCMA_USE_CGAL
                     // Regenerate contours from the mask.
                     if(contouring_img_altered){
+#ifdef DCMA_USE_CGAL
                         // Sandwich the mask with images that have no voxels included to give the mesh a valid pxl_dz to
                         // work with.
                         const bool below_is_interior = false;
@@ -1211,9 +1212,112 @@ long int frame_count = 0;
                         // Slice the mesh along the image plane.
                         contouring_cc = polyhedron_processing::Slice_Polyhedron( surface_mesh,
                                                                             {{ contouring_img.image_plane() }} );
+#else
+                        const auto R = contouring_img.rows;
+                        const auto C = contouring_img.columns;
+
+                        //Construct a pixel 'oracle' closure using the user-specified threshold criteria. This function identifies whether
+                        //the pixel is within (true) or outside of (false) the final ROI.
+                        auto pixel_oracle = [](float p) -> bool {
+                            return (0.5f <= p);
+                        };
+
+                        //Construct the vertex grid. Vertices are in the corners of pixels, but we also need a mapping from
+                        // pixel coordinate space to the vertex grid storage indices.
+                        const auto vert_count = (R+1)*(C+1);
+                        std::vector<vec3<double>> verts( vert_count );
+                        enum row_modif { r_neg = 0, r_pos = 1 }; // Modifiers which translate (in the img plane) +-1/2 of pxl_dx.
+                        enum col_modif { c_neg = 0, c_pos = 1 }; // Modifiers which translate (in the img plane) +-1/2 of pxl_dy.
+
+                        const auto vert_index = [C](long int vert_row, long int vert_col) -> long int {
+                            return (C+1)*vert_row + vert_col;
+                        };
+                        const auto vert_mapping = [vert_index](long int r, long int c, row_modif rm, col_modif cm ) -> long int {
+                            const auto vert_row = r + rm;
+                            const auto vert_col = c + cm;
+                            return vert_index(vert_row,vert_col);
+                        };
+
+                        //Pin each vertex grid element to the appropriate pixel corner.
+                        const auto corner = contouring_img.position(0,0) - contouring_img.row_unit*contouring_img.pxl_dx*0.5 - contouring_img.col_unit*contouring_img.pxl_dy*0.5;
+                        for(auto r = 0; r < (R+1); ++r){
+                            for(auto c = 0; c < (C+1); ++c){
+                                verts.at(vert_index(r,c)) = corner + contouring_img.row_unit*contouring_img.pxl_dx*r
+                                                                   + contouring_img.col_unit*contouring_img.pxl_dy*c;
+                            }
+                        }
+
+                        //Construct a container for storing half-edges.
+                        std::map<long int, std::set<long int>> half_edges;
+
+                        //Iterate over each pixel. If the oracle tells us the pixel is within the ROI, add four half-edges
+                        // around the pixel's perimeter.
+                        const long int Channel = 0;
+                        for(auto r = 0; r < R; ++r){
+                            for(auto c = 0; c < C; ++c){
+                                if(pixel_oracle(contouring_img.value(r, c, Channel))){
+                                    const auto bot_l = vert_mapping(r,c,r_pos,c_neg);
+                                    const auto bot_r = vert_mapping(r,c,r_pos,c_pos);
+                                    const auto top_r = vert_mapping(r,c,r_neg,c_pos);
+                                    const auto top_l = vert_mapping(r,c,r_neg,c_neg);
+
+                                    half_edges[bot_l].insert(bot_r);
+                                    half_edges[bot_r].insert(top_r);
+                                    half_edges[top_r].insert(top_l);
+                                    half_edges[top_l].insert(bot_l);
+                                }
+                            }
+                        }
+
+                        //Find and remove all cancelling half-edges, which are equivalent to circular two-vertex loops.
+                        const bool SimplifyMergeAdjacent = true;
+                        if(SimplifyMergeAdjacent){
+                            //'Retire' half-edges by merely removing their endpoint, invalidating them.
+                            for(auto &he_group : half_edges){
+                                const auto A = he_group.first;
+                                auto B_it = he_group.second.begin();
+                                while(B_it != he_group.second.end()){
+                                    const auto he_group2_it = half_edges.find(*B_it);
+                                    if( (he_group2_it != half_edges.end()) 
+                                    &&  (he_group2_it->second.count(A) != 0) ){
+                                        //Cycle detected -- remove both half-edges.
+                                        he_group2_it->second.erase(A);
+                                        B_it = he_group.second.erase(B_it);
+                                    }else{
+                                        ++B_it;
+                                    }
+                                }
+                            }
+                        }
+
+                        //Walk all available half-edges forming contour perimeters.
+                        contouring_cc.contours.clear();
+                        if(!half_edges.empty()){
+                            auto he_it = half_edges.begin();
+                            while(he_it != half_edges.end()){
+                                if(he_it->second.empty()){
+                                    ++he_it;
+                                    continue;
+                                }
+
+                                contouring_cc.contours.emplace_back();
+                                contouring_cc.contours.back().closed = true;
+                                const auto A = he_it->first; //The starting node.
+                                auto B = A;
+                                do{
+                                    const auto B_he_it = half_edges.find(B);
+                                    auto B_it = B_he_it->second.begin(); // TODO: pick left-most (relative to current direction) node.
+                                                                         //       This is how you can will get consistent orientation handling!
+
+                                    B = *B_it;
+                                    contouring_cc.contours.back().points.emplace_back(verts[B]); //Add the vertex to the current contour.
+                                    B_he_it->second.erase(B_it); //Retire the node.
+                                }while(B != A);
+                            }
+                        }
+#endif // DCMA_USE_CGAL
                         contouring_img_altered = false;
                     }
-#endif // DCMA_USE_CGAL
 
                     // Draw the WIP contours.
                     for(auto &cop : contouring_cc.contours){
@@ -1256,7 +1360,8 @@ long int frame_count = 0;
 
             // Draw a tooltip with position and voxel intensity information.
             if( image_mouse_pos.mouse_hovering_image
-            &&  show_image_hover_tooltips ){
+            &&  show_image_hover_tooltips
+            &&  !view_contouring_enabled ){
                 ImGui::BeginTooltip();
                 ImGui::Text("Image coordinates: %.4f, %.4f", image_mouse_pos.region_y, image_mouse_pos.region_x);
                 ImGui::Text("Pixel coordinates: (r, c) = %ld, %ld", image_mouse_pos.r, image_mouse_pos.c);
