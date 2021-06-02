@@ -325,21 +325,33 @@ Drover SDL_Viewer(Drover DICOM_data,
     };
     opengl_texture_handle_t current_texture;
     planar_image<float,double> contouring_img;
+    int contouring_img_row_col_count = 64;
     bool contouring_img_altered = false;
     contour_collection<double> contouring_cc;
-    int contouring_reach = 30;
+    int contouring_reach = 5;
+
+    const auto reset_contouring_state = [&contouring_img,
+                                         &contouring_img_row_col_count,
+                                         &contouring_cc]( const planar_image<float,double>& img ) -> void {
+            contouring_img_row_col_count = std::clamp(contouring_img_row_col_count, 5, 512);
+
+            // Reset the contouring image.
+            contouring_img.init_buffer(contouring_img_row_col_count, contouring_img_row_col_count, 1L);
+            contouring_img.init_spatial(1.0, 1.0, 1.0, img.anchor, img.offset);
+            contouring_img.init_orientation(img.row_unit, img.col_unit);
+            contouring_img.fill_pixels(-1.0f);
+
+            // Reset any existing contours.
+            contouring_cc.contours.clear();
+            return;
+    };
 
     const auto Load_OpenGL_Texture = [&custom_centre,
                                       &custom_width,
                                       &colour_maps,
                                       &colour_map,
                                       &nan_colour,
-                                      &contouring_img,
-                                      &contouring_cc]( const planar_image<float,double>& img ) -> opengl_texture_handle_t {
-contouring_img = img;
-contouring_img.remove_all_channels_except(0);
-contouring_img.fill_pixels(-1.0f);
-contouring_cc.contours.clear();
+                                      &reset_contouring_state]( const planar_image<float,double>& img ) -> opengl_texture_handle_t {
 
             const auto img_cols = img.columns;
             const auto img_rows = img.rows;
@@ -350,6 +362,9 @@ contouring_cc.contours.clear();
 
             std::vector<std::byte> animage;
             animage.reserve(img_cols * img_rows * 3);
+
+            // Reset the contouring image to match the display image characteristics.
+            reset_contouring_state(img);
 
             //------------------------------------------------------------------------------------------------
             //Apply a window to the data if it seems like the WindowCenter or WindowWidth specified in the image metadata
@@ -819,6 +834,11 @@ contouring_cc.contours.clear();
     float zoom = 1.0f;
     ImVec2 pan(0.5f, 0.5f);
 
+    {
+        ImGuiIO &io = ImGui::GetIO();
+        io.ConfigWindowsMoveFromTitleBarOnly = true;
+    }
+
 long int frame_count = 0;
     while(true){
 ++frame_count;
@@ -946,8 +966,6 @@ long int frame_count = 0;
             ImGui::SetNextWindowPos(ImVec2(10, 40), ImGuiCond_Appearing);
             ImGui::Begin("Images", &view_images_enabled, ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoNavInputs | ImGuiWindowFlags_NoScrollbar ); //| ImGuiWindowFlags_AlwaysAutoResize);
             ImGuiIO &io = ImGui::GetIO();
-
-io.ConfigWindowsMoveFromTitleBarOnly = true;
 
             // Note: unhappy with this. Can cause feedback loop and flicker/jumpiness when resizing. Works OK for now
             // though. TODO.
@@ -1138,7 +1156,6 @@ io.ConfigWindowsMoveFromTitleBarOnly = true;
 
 ///////////////////////////////////
                 if( view_contouring_enabled ){
-
                     ImGui::SetNextWindowSize(ImVec2(510, 650), ImGuiCond_Appearing);
                     ImGui::SetNextWindowPos(ImVec2(680, 200), ImGuiCond_Appearing);
                     ImGui::SetNextWindowCollapsed(true, ImGuiCond_FirstUseEver);
@@ -1150,8 +1167,12 @@ io.ConfigWindowsMoveFromTitleBarOnly = true;
                         contouring_cc.contours.clear();
                         contouring_img_altered = true;
                     }
-                    ImGui::DragInt("Reach", &contouring_reach, 1.0f, 1, 30);
-                    drawList->AddCircle(io.MousePos, static_cast<float>(contouring_reach), 0x00FF11, 16);
+                    ImGui::DragInt("Reach", &contouring_reach, 0.01f, 1, 30);
+                    drawList->AddCircle(io.MousePos, static_cast<float>(contouring_reach), 0x00FF11FF);
+
+                    if(ImGui::DragInt("Resolution", &contouring_img_row_col_count, 0.01f, 5, 512)){
+                        reset_contouring_state(*disp_img_it);
+                    }
 
 #ifdef DCMA_USE_CGAL
                     // Regenerate contours from the mask.
@@ -1198,10 +1219,20 @@ io.ConfigWindowsMoveFromTitleBarOnly = true;
                     for(auto &cop : contouring_cc.contours){
                         drawList->PathClear();
                         for(auto & p : cop.points){
+
+                            const auto img_dicom_width = contouring_img.pxl_dx * contouring_img.rows;
+                            const auto img_dicom_height = contouring_img.pxl_dy * contouring_img.columns; 
+                            const auto img_top_left = contouring_img.anchor + contouring_img.offset
+                                                    - contouring_img.row_unit * contouring_img.pxl_dx * 0.5f
+                                                    - contouring_img.col_unit * contouring_img.pxl_dy * 0.5f;
+                            //const auto img_top_right = img_top_left + contouring_img.row_unit * img_dicom_width;
+                            //const auto img_bottom_left = img_top_left + contouring_img.col_unit * img_dicom_height;
+                            const auto img_plane = contouring_img.image_plane();
+
                             //Clamp the point to the bounding box, using the top left as zero.
                             const auto dR = p - img_top_left;
-                            const auto clamped_col = dR.Dot( disp_img_it->col_unit ) / img_dicom_height;
-                            const auto clamped_row = dR.Dot( disp_img_it->row_unit ) / img_dicom_width;
+                            const auto clamped_col = dR.Dot( contouring_img.col_unit ) / img_dicom_height;
+                            const auto clamped_row = dR.Dot( contouring_img.row_unit ) / img_dicom_width;
 
                             //Convert to ImGui coordinates using the top-left position of the display image.
                             const auto world_x = real_pos.x + real_extent.x * clamped_col;
@@ -1817,40 +1848,54 @@ io.ConfigWindowsMoveFromTitleBarOnly = true;
                         scroll_arrays = std::clamp((scroll_arrays + N_arrays + d_l) % N_arrays, 0, N_arrays - 1);
 
 
-                    }else if( (0 < IM_ARRAYSIZE(io.MouseDown))
+                    }else if( view_contouring_enabled
+                          &&  (0 < IM_ARRAYSIZE(io.MouseDown))
                           &&  (0.0f <= io.MouseDownDuration[0])
                           &&  image_mouse_pos.mouse_hovering_image ){
                         contouring_img_altered = true;
                         long int channel = 0;
                         const float extent = contouring_reach * 1.0f / 3.0f;
+                        const auto img_rows = contouring_img.rows;
+                        const auto img_cols = contouring_img.columns;
+                        const auto img_rows_f = static_cast<float>(contouring_img.rows);
+                        const auto img_cols_f = static_cast<float>(contouring_img.columns);
+                        const long int r = std::clamp( static_cast<long int>( std::floor( image_mouse_pos.region_y * img_rows_f ) ), 0L, (img_rows-1) );
+                        const long int c = std::clamp( static_cast<long int>( std::floor( image_mouse_pos.region_x * img_cols_f ) ), 0L, (img_cols-1) );
                         for(long int i = -contouring_reach; i <= contouring_reach; ++i){
                             for(long int j = -contouring_reach; j <= contouring_reach; ++j){
-                                if( isininc(0, image_mouse_pos.r + i, contouring_img.rows - 1)
-                                &&  isininc(0, image_mouse_pos.c + j, contouring_img.columns - 1) ){
+                                if( isininc(0, r + i, contouring_img.rows - 1)
+                                &&  isininc(0, c + j, contouring_img.columns - 1) ){
                                     const float R = std::sqrt( i*i*1.0f + j*j*1.0f );
                                     const float d_val = 2.0 * std::exp( -std::pow(R/extent, 2.0f) );
-                                    float val = contouring_img.value(image_mouse_pos.r + i, image_mouse_pos.c + j, channel);
+                                    float val = contouring_img.value(r + i, c + j, channel);
                                     val = std::clamp(val + d_val, -1.0f, 2.0f);
-                                    contouring_img.reference( image_mouse_pos.r + i, image_mouse_pos.c + j, channel ) = val;
+                                    contouring_img.reference( r + i, c + j, channel ) = val;
                                 }
                             }
                         }
 
-                    }else if( (1 < IM_ARRAYSIZE(io.MouseDown))
+                    }else if( view_contouring_enabled
+                          &&  (1 < IM_ARRAYSIZE(io.MouseDown))
                           &&  (0.0f <= io.MouseDownDuration[1])
                           &&  image_mouse_pos.mouse_hovering_image ){
                         contouring_img_altered = true;
                         long int channel = 0;
                         const float extent = contouring_reach * 1.0f / 3.0f;
+                        const auto img_rows = contouring_img.rows;
+                        const auto img_cols = contouring_img.columns;
+                        const auto img_rows_f = static_cast<float>(contouring_img.rows);
+                        const auto img_cols_f = static_cast<float>(contouring_img.columns);
+                        const long int r = std::clamp( static_cast<long int>( std::floor( image_mouse_pos.region_y * img_rows_f ) ), 0L, (img_rows-1) );
+                        const long int c = std::clamp( static_cast<long int>( std::floor( image_mouse_pos.region_x * img_cols_f ) ), 0L, (img_cols-1) );
                         for(long int i = -contouring_reach; i <= contouring_reach; ++i){
                             for(long int j = -contouring_reach; j <= contouring_reach; ++j){
-                                if( isininc(0, image_mouse_pos.r + i, contouring_img.rows - 1)
-                                &&  isininc(0, image_mouse_pos.c + j, contouring_img.columns - 1) ){
+                                if( isininc(0, r + i, contouring_img.rows - 1)
+                                &&  isininc(0, c + j, contouring_img.columns - 1) ){
                                     const float R = std::sqrt( i*i*1.0f + j*j*1.0f );
                                     const float d_val = - 2.0 * std::exp( -std::pow(R/extent, 2.0f) );
-                                    float val = contouring_img.value(image_mouse_pos.r + i, image_mouse_pos.c + j, channel);
+                                    float val = contouring_img.value(r + i, c + j, channel);
                                     val = std::clamp(val + d_val, -1.0f, 2.0f);
-                                    contouring_img.reference( image_mouse_pos.r + i, image_mouse_pos.c + j, channel ) = val;
+                                    contouring_img.reference( r + i, c + j, channel ) = val;
                                 }
                             }
                         }
