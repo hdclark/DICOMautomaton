@@ -19,6 +19,7 @@
 #include <limits>
 #include <list>
 #include <map>
+#include <set>
 #include <memory>
 #include <regex>
 #include <stdexcept>
@@ -1177,7 +1178,8 @@ long int frame_count = 0;
 
                     // Regenerate contours from the mask.
                     if(contouring_img_altered){
-#ifdef DCMA_USE_CGAL
+//#ifdef DCMA_USE_CGAL
+#if 0
                         // Sandwich the mask with images that have no voxels included to give the mesh a valid pxl_dz to
                         // work with.
                         const bool below_is_interior = false;
@@ -1212,7 +1214,8 @@ long int frame_count = 0;
                         // Slice the mesh along the image plane.
                         contouring_cc = polyhedron_processing::Slice_Polyhedron( surface_mesh,
                                                                             {{ contouring_img.image_plane() }} );
-#else
+//#else
+#elif 0
                         const auto R = contouring_img.rows;
                         const auto C = contouring_img.columns;
 
@@ -1315,6 +1318,261 @@ long int frame_count = 0;
                                 }while(B != A);
                             }
                         }
+#elif 1
+                        const long int Channel = 0;
+                        const auto R = contouring_img.rows;
+                        const auto C = contouring_img.columns;
+                        const auto thresh_val = 0.5f;
+
+                        //Construct a pixel 'oracle' closure using the user-specified threshold criteria. This function identifies whether
+                        //the pixel is within (true) or outside of (false) the final ROI.
+                        auto pixel_oracle = [thresh_val](float p) -> bool {
+                            return (thresh_val <= p);
+                        };
+
+                        // Scan the image to determine which cases each overlay image cell corresponds to.
+                        planar_image<uint32_t,double> overlay_img; // Offset from original image by (+0.5*pxl_dx, +0.5*pxl_dy).
+                        overlay_img.init_buffer( contouring_img.rows - 1, contouring_img.columns - 1, 1 );
+                        overlay_img.init_spatial(1.0, 1.0, 1.0, vec3<double>(0.0,0.0,0.0), vec3<double>(0.0,0.0,0.0));
+                        overlay_img.init_orientation( vec3<double>(0.0,1.0,0.0), vec3<double>(1.0,0.0,0.0) );
+                        overlay_img.fill_pixels(0, static_cast<uint32_t>(0));
+
+                        const auto interpolate_pos = [thresh_val](float f1, const vec3<double> &pos1,
+                                                                  float f2, const vec3<double> &pos2) -> vec3<double> {
+                            const auto num = f2 - thresh_val;
+                            const auto den = f2 - f1;
+                            const auto m = num / den;
+                            return pos2 + (pos1 - pos2) * m;
+                        };
+
+                        const uint8_t o_t = 1; // Edges of the unit cell pixel (top, bottom, left, right).
+                        const uint8_t o_b = 2;
+                        const uint8_t o_l = 3;
+                        const uint8_t o_r = 4;
+
+                        struct node {
+                            long int cell_r; // The cell that houses this contour edge.
+                            long int cell_c;
+
+                            uint8_t tail_vert_pos; // Which cell edge the tail vertex lies along.
+                            uint8_t head_vert_pos; // Which cell edge the head vertex lies along.
+
+                            vec3<double> tail;
+                            vec3<double> head;
+
+                            node(long int c_r, long int c_c, uint8_t t_v_p, uint8_t h_v_p, const vec3<double> &t, const vec3<double> &h) : cell_r(c_r), cell_c(c_c), tail_vert_pos(t_v_p), head_vert_pos(h_v_p), tail(t), head(h) {};
+
+                            bool operator<(const node &rhs) const {
+                                // Lexicographical comparison that permits unspecified vert positions to match
+                                // everything.
+                                if(false){
+                                }else if( rhs.cell_r < this->cell_r ){
+                                    return false;
+                                }else if( this->cell_r < rhs.cell_r ){
+                                    return true;
+
+                                }else if( rhs.cell_c < this->cell_c ){
+                                    return false;
+                                }else if( this->cell_c < rhs.cell_c ){
+                                    return true;
+
+                                }else if( (rhs.tail_vert_pos == 0)
+                                      ||  (this->tail_vert_pos == 0)
+                                      ||  (rhs.tail_vert_pos < this->tail_vert_pos) ){
+                                    return false;
+                                }else if( this->tail_vert_pos < rhs.tail_vert_pos ){
+                                    return true;
+
+                                }else if( (rhs.head_vert_pos == 0)
+                                      ||  (this->head_vert_pos == 0)
+                                      ||  (rhs.head_vert_pos < this->head_vert_pos) ){
+                                    return false;
+                                }else if( this->head_vert_pos < rhs.head_vert_pos ){
+                                    return true;
+
+                                }
+                                return false;
+                            }
+                        };
+                        std::set<node> nodes;
+
+                        for(long int r = 0; (r+1) < R; ++r){
+                            for(long int c = 0; (c+1) < C; ++c){
+                                const auto tl = contouring_img.value(r  , c  , Channel);
+                                const auto tr = contouring_img.value(r  , c+1, Channel);
+                                const auto br = contouring_img.value(r+1, c+1, Channel);
+                                const auto bl = contouring_img.value(r+1, c  , Channel);
+
+                                const auto pos_tl = contouring_img.position(r  , c  );
+                                const auto pos_tr = contouring_img.position(r  , c+1);
+                                const auto pos_br = contouring_img.position(r+1, c+1);
+                                const auto pos_bl = contouring_img.position(r+1, c  );
+
+                                const auto TL = pixel_oracle(tl);
+                                const auto TR = pixel_oracle(tr);
+                                const auto BR = pixel_oracle(br);
+                                const auto BL = pixel_oracle(bl);
+
+                                // See enumerated cases visualized at https://en.wikipedia.org/wiki/File:Marching_squares_algorithm.svg
+                                if( false ){
+                                }else if(  TL &&  TR &&  BL &&  BR ){// case 0
+                                    // No crossing. Do nothing.
+                                }else if(  TL &&  TR && !BL &&  BR ){// case 1
+                                    const auto tail = interpolate_pos(tl, pos_tl,  bl, pos_bl);
+                                    const auto head = interpolate_pos(bl, pos_bl,  br, pos_br);
+                                    nodes.emplace( r, c, o_l, o_b, tail, head);
+                                }else if(  TL &&  TR &&  BL && !BR ){// case 2
+                                    const auto tail = interpolate_pos(bl, pos_bl,  br, pos_br);
+                                    const auto head = interpolate_pos(br, pos_br,  tr, pos_tr);
+                                    nodes.emplace( r, c, o_b, o_r, tail, head);
+                                }else if(  TL &&  TR && !BL && !BR ){// case 3
+                                    const auto tail = interpolate_pos(tl, pos_tl,  bl, pos_bl);
+                                    const auto head = interpolate_pos(tr, pos_tr,  br, pos_br);
+                                    nodes.emplace( r, c, o_l, o_r, tail, head);
+                                }else if(  TL && !TR &&  BL &&  BR ){// case 4
+                                    const auto tail = interpolate_pos(tr, pos_tr,  br, pos_br);
+                                    const auto head = interpolate_pos(tl, pos_tl,  tr, pos_tr);
+                                    nodes.emplace( r, c, o_r, o_t, tail, head);
+                                }else if(  TL && !TR && !BL &&  BR ){// case 5
+                                    const auto tail1 = interpolate_pos(tl, pos_tl,  bl, pos_bl);
+                                    const auto head1 = interpolate_pos(tl, pos_tl,  tr, pos_tr);
+                                    nodes.emplace( r, c, o_l, o_t, tail1, head1);
+
+                                    const auto tail2 = interpolate_pos(br, pos_br,  tr, pos_tr);
+                                    const auto head2 = interpolate_pos(bl, pos_bl,  br, pos_br);
+                                    nodes.emplace( r, c, o_r, o_b, tail2, head2);
+                                }else if(  TL && !TR &&  BL && !BR ){// case 6
+                                    const auto tail = interpolate_pos(bl, pos_bl,  br, pos_br);
+                                    const auto head = interpolate_pos(tl, pos_tl,  tr, pos_tr);
+                                    nodes.emplace( r, c, o_b, o_t, tail, head);
+                                }else if(  TL && !TR && !BL && !BR ){// case 7
+                                    const auto tail = interpolate_pos(tl, pos_tl,  bl, pos_bl);
+                                    const auto head = interpolate_pos(tl, pos_tl,  tr, pos_tr);
+                                    nodes.emplace( r, c, o_l, o_t, tail, head);
+                                }else if( !TL &&  TR &&  BL &&  BR ){// case 8
+                                    const auto tail = interpolate_pos(tl, pos_tl,  tr, pos_tr);
+                                    const auto head = interpolate_pos(tl, pos_tl,  bl, pos_bl);
+                                    nodes.emplace( r, c, o_t, o_l, tail, head);
+                                }else if( !TL &&  TR && !BL &&  BR ){// case 9
+                                    const auto tail = interpolate_pos(tl, pos_tl,  tr, pos_tr);
+                                    const auto head = interpolate_pos(bl, pos_bl,  br, pos_br);
+                                    nodes.emplace( r, c, o_t, o_b, tail, head);
+                                }else if( !TL &&  TR &&  BL && !BR ){// case 10
+                                    const auto tail1 = interpolate_pos(tr, pos_tr,  tl, pos_tl);
+                                    const auto head1 = interpolate_pos(br, pos_br,  tr, pos_tr);
+                                    nodes.emplace( r, c, o_t, o_r, tail1, head1);
+
+                                    const auto tail2 = interpolate_pos(bl, pos_bl,  br, pos_br);
+                                    const auto head2 = interpolate_pos(tl, pos_tl,  bl, pos_bl);
+                                    nodes.emplace( r, c, o_b, o_l, tail2, head2);
+                                }else if( !TL &&  TR && !BL && !BR ){// case 11
+                                    const auto tail = interpolate_pos(tr, pos_tr,  tl, pos_tl);
+                                    const auto head = interpolate_pos(tr, pos_tr,  br, pos_br);
+                                    nodes.emplace( r, c, o_t, o_r, tail, head);
+                                }else if( !TL && !TR &&  BL &&  BR ){// case 12
+                                    const auto tail = interpolate_pos(br, pos_br,  tr, pos_tr);
+                                    const auto head = interpolate_pos(bl, pos_bl,  tl, pos_tl);
+                                    nodes.emplace( r, c, o_r, o_l, tail, head);
+                                }else if( !TL && !TR && !BL &&  BR ){// case 13
+                                    const auto tail = interpolate_pos(br, pos_br,  tr, pos_tr);
+                                    const auto head = interpolate_pos(bl, pos_bl,  br, pos_br);
+                                    nodes.emplace( r, c, o_r, o_b, tail, head);
+                                }else if( !TL && !TR &&  BL && !BR ){// case 14
+                                    const auto tail = interpolate_pos(bl, pos_bl,  br, pos_br);
+                                    const auto head = interpolate_pos(tl, pos_tl,  bl, pos_bl);
+                                    nodes.emplace( r, c, o_b, o_l, tail, head);
+                                }else if( !TL && !TR && !BL && !BR ){// case 15 
+                                    // No crossing. Do nothing.
+                                }
+                            }
+                        }
+
+                        //Walk all available half-edges forming contour perimeters.
+                        const vec3<double> zero3(0.0, 0.0, 0.0);
+                        contouring_cc.contours.clear();
+                        while(!nodes.empty()){
+                            auto n_it = std::begin(nodes);
+                            auto n1 = nodes.extract(n_it).value();
+                            contouring_cc.contours.emplace_back();
+                            contouring_cc.contours.back().closed = true;
+                            contouring_cc.contours.back().points.push_back( n1.tail );
+
+                            // Determine which node to look for next.
+                            const auto find_next_node = [&](const node& n_curr){
+                                const auto n_curr_head_vert_pos = n_curr.head_vert_pos;
+                                uint8_t n_next_tail_vert_pos = 0;
+                                auto n_next_r = n_curr.cell_r;
+                                auto n_next_c = n_curr.cell_c;
+
+                                if(false){
+                                }else if(n_curr_head_vert_pos == o_t){
+                                    n_next_r -= 1;
+                                    n_next_tail_vert_pos = o_b;
+                                }else if(n_curr_head_vert_pos == o_b){
+                                    n_next_r += 1;
+                                    n_next_tail_vert_pos = o_t;
+                                }else if(n_curr_head_vert_pos == o_l){
+                                    n_next_c -= 1;
+                                    n_next_tail_vert_pos = o_r;
+                                }else if(n_curr_head_vert_pos == o_r){
+                                    n_next_c += 1;
+                                    n_next_tail_vert_pos = o_l;
+                                }else{
+                                    throw std::runtime_error("Invalid tail vert position encountered");
+                                }
+                                auto n_next_it = nodes.find( node(n_next_r, n_next_c, n_next_tail_vert_pos, 0, zero3, zero3) ); 
+                                return n_next_it;
+                            };
+                            const auto find_prev_node = [&](const node& n_curr){
+                                const auto n_curr_tail_vert_pos = n_curr.tail_vert_pos;
+                                uint8_t n_prev_head_vert_pos = 0;
+                                auto n_prev_r = n_curr.cell_r;
+                                auto n_prev_c = n_curr.cell_c;
+
+                                if(false){
+                                }else if(n_curr_tail_vert_pos == o_t){
+                                    n_prev_r -= 1;
+                                    n_prev_head_vert_pos = o_b;
+                                }else if(n_curr_tail_vert_pos == o_b){
+                                    n_prev_r += 1;
+                                    n_prev_head_vert_pos = o_t;
+                                }else if(n_curr_tail_vert_pos == o_l){
+                                    n_prev_c -= 1;
+                                    n_prev_head_vert_pos = o_r;
+                                }else if(n_curr_tail_vert_pos == o_r){
+                                    n_prev_c += 1;
+                                    n_prev_head_vert_pos = o_l;
+                                }else{
+                                    throw std::runtime_error("Invalid head vert position encountered");
+                                }
+                                auto n_prev_it = nodes.find( node(n_prev_r, n_prev_c, 0, n_prev_head_vert_pos, zero3, zero3) ); 
+                                return n_prev_it;
+                            };
+
+                            auto n_curr = n1;
+                            const auto n_end_it = std::end(nodes);
+                            do{
+                                auto n_next_it = find_next_node(n_curr);
+                                if(n_next_it == n_end_it) break;
+
+                                auto n_next = nodes.extract(n_next_it).value();
+                                contouring_cc.contours.back().points.push_back( n_next.tail );
+
+                                n_curr = n_next;
+                            }while(true);
+
+                            n_curr = n1;
+                            do{
+                                auto n_prev_it = find_prev_node(n_curr);
+                                if(n_prev_it == n_end_it) break;
+
+                                auto n_prev = nodes.extract(n_prev_it).value();
+                                contouring_cc.contours.back().points.push_front( n_prev.tail );
+
+                                n_curr = n_prev;
+                            }while(true);
+                        }
+
 #endif // DCMA_USE_CGAL
                         contouring_img_altered = false;
                     }
