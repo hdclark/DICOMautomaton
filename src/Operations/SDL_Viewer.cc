@@ -110,6 +110,7 @@ Drover SDL_Viewer(Drover DICOM_data,
 
     // Plot viewer state.
     long int lsamp_num = -1; // The plot currently displayed.
+    std::map<long int, bool> lsamps_visible;
 
     // Image viewer state.
     long int img_array_num = -1; // The image array currently displayed.
@@ -903,7 +904,9 @@ long int frame_count = 0;
                 ImGui::MenuItem("Image Metadata", nullptr, &view_image_metadata_enabled);
                 ImGui::MenuItem("Image Hover Tooltips", nullptr, &show_image_hover_tooltips);
                 ImGui::MenuItem("Meshes", nullptr, &view_meshes_enabled);
-                ImGui::MenuItem("Plots", nullptr, &view_plots_enabled);
+                if(ImGui::MenuItem("Plots", nullptr, &view_plots_enabled)){
+                    lsamps_visible.clear();
+                }
                 if(ImGui::MenuItem("Row and Column Profiles", nullptr, &view_row_column_profiles)){
                     row_profile.samples.clear();
                     col_profile.samples.clear();
@@ -2119,45 +2122,82 @@ long int frame_count = 0;
         // Display plots.
         if( view_plots_enabled 
         && DICOM_data.Has_LSamp_Data() ){
-            ImGui::SetNextWindowSize(ImVec2(620, 640), ImGuiCond_FirstUseEver);
-            ImGui::Begin("Plots", &view_plots_enabled);
-            ImVec2 window_extent = ImGui::GetContentRegionAvail();
 
-            if( !isininc(1, lsamp_num + 1, DICOM_data.lsamp_data.size()) ){
-                lsamp_num = 0;
-            }
-            int scroll_lsamp = lsamp_num;
+            // Display a selection and navigation window.
+            ImGui::SetNextWindowSize(ImVec2(350, 400), ImGuiCond_Appearing);
+            ImGui::SetNextWindowPos(ImVec2(680, 40), ImGuiCond_Appearing);
+            ImGui::Begin("Plot Selection", &view_plots_enabled, ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoNavInputs);
+
+            const int N_lsamps = static_cast<int>(DICOM_data.lsamp_data.size());
+
             {
-                const int N_lsamps = DICOM_data.lsamp_data.size();
-                ImGui::SliderInt("Plot", &scroll_lsamp, 0, N_lsamps - 1);
-            }
-            long int new_lsamp_num = scroll_lsamp;
-
-            auto lsamp_ptr_it = std::next(DICOM_data.lsamp_data.begin(), lsamp_num);
-            if( new_lsamp_num != lsamp_num ){
-                lsamp_num = new_lsamp_num;
-                lsamp_ptr_it = std::next(DICOM_data.lsamp_data.begin(), lsamp_num);
-            }
-
-            const int offset = 0;
-            const int stride = sizeof( decltype( (*lsamp_ptr_it)->line.samples[0] ) );
-
-            if(ImPlot::BeginPlot("Plot",
-                                 nullptr,
-                                 nullptr,
-                                 window_extent,
-                                 ImPlotFlags_AntiAliased,
-                                 ImPlotAxisFlags_AutoFit,
-                                 ImPlotAxisFlags_AutoFit )) {
-                ImPlot::PlotLine<double>("Plot",
-                                         &(*lsamp_ptr_it)->line.samples[0][0], 
-                                         &(*lsamp_ptr_it)->line.samples[0][2],
-                                         (*lsamp_ptr_it)->line.samples.size(),
-                                         offset, stride );
-                ImPlot::EndPlot();
+                ImVec2 window_extent = ImGui::GetContentRegionAvail();
+                ImGui::Text("Display");
+                if(ImGui::Button("All", ImVec2(window_extent.x/3, 0))){ 
+                    for(int i = 0; i < N_lsamps; ++i) lsamps_visible[i] = true;
+                }
+                ImGui::SameLine();
+                if(ImGui::Button("None", ImVec2(window_extent.x/3, 0))){ 
+                    for(int i = 0; i < N_lsamps; ++i) lsamps_visible[i] = false;
+                }
+                ImGui::SameLine();
+                if(ImGui::Button("Invert", ImVec2(window_extent.x/3, 0))){ 
+                    for(int i = 0; i < N_lsamps; ++i) lsamps_visible[i] = !(lsamps_visible[i]);
+                }
             }
 
+            bool any_selected = false;
+            for(int i = 0; i < N_lsamps; ++i){
+                auto lsamp_ptr_it = std::next(DICOM_data.lsamp_data.begin(), i);
+                const auto name = (*lsamp_ptr_it)->line.GetMetadataValueAs<std::string>("LineName").value_or("unknown"_s);
+                const auto modality = (*lsamp_ptr_it)->line.GetMetadataValueAs<std::string>("Modality").value_or("unknown"_s);
+                const auto histtype = (*lsamp_ptr_it)->line.GetMetadataValueAs<std::string>("HistogramType").value_or("unknown"_s);
+                const auto title = std::to_string(i) + " " + name;
+
+                const auto is_selected = ImGui::Selectable( title.c_str(), &(lsamps_visible[i]), ImGuiSelectableFlags_AllowDoubleClick );
+                const auto is_doubleclicked = is_selected && ImGui::IsMouseDoubleClicked(0);
+                const auto is_visible = lsamps_visible[i];
+                ImGui::SameLine(150);
+                ImGui::Text("%s", modality.c_str());
+                ImGui::SameLine(300);
+                ImGui::Text("%s", histtype.c_str());
+
+                if(is_visible) any_selected = true;
+            }
             ImGui::End();
+
+            if(any_selected){
+                ImGui::SetNextWindowSize(ImVec2(620, 640), ImGuiCond_FirstUseEver);
+                ImGui::Begin("Plots", &view_plots_enabled);
+                ImVec2 window_extent = ImGui::GetContentRegionAvail();
+
+                if(ImPlot::BeginPlot("Plots",
+                                     nullptr,
+                                     nullptr,
+                                     window_extent,
+                                     ImPlotFlags_AntiAliased,
+                                     ImPlotAxisFlags_AutoFit,
+                                     ImPlotAxisFlags_AutoFit )) {
+                    for(int i = 0; i < N_lsamps; ++i){
+                        if(!lsamps_visible[i]) continue;
+
+                        auto lsamp_ptr_it = std::next(DICOM_data.lsamp_data.begin(), i);
+                        const int offset = 0;
+                        const int stride = sizeof( decltype( (*lsamp_ptr_it)->line.samples[0] ) );
+                        const auto name = (*lsamp_ptr_it)->line.GetMetadataValueAs<std::string>("LineName").value_or("unknown"_s);
+                        const auto title = std::to_string(i) + " " + name;
+
+                        ImPlot::PlotLine<double>(title.c_str(),
+                                                 &(*lsamp_ptr_it)->line.samples[0][0], 
+                                                 &(*lsamp_ptr_it)->line.samples[0][2],
+                                                 (*lsamp_ptr_it)->line.samples.size(),
+                                                 offset, stride );
+                    }
+                    ImPlot::EndPlot();
+                }
+
+                ImGui::End();
+            }
         }
 
         // Display row and column profiles.
