@@ -31,6 +31,7 @@
 #include <chrono>
 #include <future>
 #include <shared_mutex>
+#include <initializer_list>
 
 #include <boost/filesystem.hpp>
 
@@ -326,15 +327,15 @@ Drover SDL_Viewer(Drover DICOM_data,
     };
     opengl_texture_handle_t current_texture;
     planar_image<float,double> contouring_img;
-    int contouring_img_row_col_count = 64;
+    int contouring_img_row_col_count = 256;
     bool contouring_img_altered = false;
     contour_collection<double> contouring_cc;
-    int contouring_reach = 5;
+    int contouring_reach = 10;
 
     const auto reset_contouring_state = [&contouring_img,
                                          &contouring_img_row_col_count,
                                          &contouring_cc]( const planar_image<float,double>& img ) -> void {
-            contouring_img_row_col_count = std::clamp(contouring_img_row_col_count, 5, 512);
+            contouring_img_row_col_count = std::clamp(contouring_img_row_col_count, 5, 1024);
 
             // Reset the contouring image.
             contouring_img.init_buffer(contouring_img_row_col_count, contouring_img_row_col_count, 1L);
@@ -1172,12 +1173,13 @@ long int frame_count = 0;
                     }
                     ImGui::DragInt("Reach", &contouring_reach, 0.1f, 1, 30);
 
-                    if(ImGui::DragInt("Resolution", &contouring_img_row_col_count, 0.1f, 5, 512)){
+                    if(ImGui::DragInt("Resolution", &contouring_img_row_col_count, 0.1f, 5, 1024)){
                         reset_contouring_state(*disp_img_it);
                     }
 
                     // Regenerate contours from the mask.
-                    if(contouring_img_altered){
+                    if( contouring_img_altered
+                    &&  (frame_count % 5 == 0) ){
 //#ifdef DCMA_USE_CGAL
 #if 0
                         // Sandwich the mask with images that have no voxels included to give the mesh a valid pxl_dz to
@@ -1326,13 +1328,13 @@ long int frame_count = 0;
 
                         //Construct a pixel 'oracle' closure using the user-specified threshold criteria. This function identifies whether
                         //the pixel is within (true) or outside of (false) the final ROI.
-                        auto pixel_oracle = [thresh_val](float p) -> bool {
+                        const auto pixel_oracle = [thresh_val](float p) -> bool {
                             return (thresh_val <= p);
                         };
 
                         // Scan the image to determine which cases each overlay image cell corresponds to.
                         planar_image<uint32_t,double> overlay_img; // Offset from original image by (+0.5*pxl_dx, +0.5*pxl_dy).
-                        overlay_img.init_buffer( contouring_img.rows - 1, contouring_img.columns - 1, 1 );
+                        overlay_img.init_buffer( R - 1, C - 1, 1 );
                         overlay_img.init_spatial(1.0, 1.0, 1.0, vec3<double>(0.0,0.0,0.0), vec3<double>(0.0,0.0,0.0));
                         overlay_img.init_orientation( vec3<double>(0.0,1.0,0.0), vec3<double>(1.0,0.0,0.0) );
                         overlay_img.fill_pixels(0, static_cast<uint32_t>(0));
@@ -1350,54 +1352,35 @@ long int frame_count = 0;
                         const uint8_t o_l = 3;
                         const uint8_t o_r = 4;
 
+                        const vec3<double> zero3(0.0, 0.0, 0.0);
                         struct node {
-                            long int cell_r; // The cell that houses this contour edge.
-                            long int cell_c;
-
-                            uint8_t tail_vert_pos; // Which cell edge the tail vertex lies along.
-                            uint8_t head_vert_pos; // Which cell edge the head vertex lies along.
+                            uint8_t tail_vert_pos; // = 0; // Which cell edge the tail vertex lies along.
+                            uint8_t head_vert_pos; // = 0; // Which cell edge the head vertex lies along.
 
                             vec3<double> tail;
                             vec3<double> head;
 
-                            node(long int c_r, long int c_c, uint8_t t_v_p, uint8_t h_v_p, const vec3<double> &t, const vec3<double> &h) : cell_r(c_r), cell_c(c_c), tail_vert_pos(t_v_p), head_vert_pos(h_v_p), tail(t), head(h) {};
-
-                            bool operator<(const node &rhs) const {
-                                // Lexicographical comparison that permits unspecified vert positions to match
-                                // everything.
-                                if(false){
-                                }else if( rhs.cell_r < this->cell_r ){
-                                    return false;
-                                }else if( this->cell_r < rhs.cell_r ){
-                                    return true;
-
-                                }else if( rhs.cell_c < this->cell_c ){
-                                    return false;
-                                }else if( this->cell_c < rhs.cell_c ){
-                                    return true;
-
-                                }else if( (rhs.tail_vert_pos == 0)
-                                      ||  (this->tail_vert_pos == 0)
-                                      ||  (rhs.tail_vert_pos < this->tail_vert_pos) ){
-                                    return false;
-                                }else if( this->tail_vert_pos < rhs.tail_vert_pos ){
-                                    return true;
-
-                                }else if( (rhs.head_vert_pos == 0)
-                                      ||  (this->head_vert_pos == 0)
-                                      ||  (rhs.head_vert_pos < this->head_vert_pos) ){
-                                    return false;
-                                }else if( this->head_vert_pos < rhs.head_vert_pos ){
-                                    return true;
-
-                                }
-                                return false;
+                            node() : tail_vert_pos(0), head_vert_pos(0), tail(vec3<double>(0.0, 0.0, 0.0)), head(vec3<double>(0.0, 0.0, 0.0)) {};
+                            node(uint8_t t_v_p, uint8_t h_v_p, const vec3<double> &t, const vec3<double> &h) : tail_vert_pos(t_v_p), head_vert_pos(h_v_p), tail(t), head(h) {};
+                            node& operator=(const node& rhs){
+                                this->tail_vert_pos = rhs.tail_vert_pos;
+                                this->head_vert_pos = rhs.head_vert_pos;
+                                this->tail = rhs.tail;
+                                this->head = rhs.head;
+                                return *this;
                             }
                         };
-                        std::set<node> nodes;
+
+                        const node empty_node(0,0,zero3,zero3);
+
+                        std::vector< std::pair<node,node> > nodes((R-1)*(C-1), std::make_pair(empty_node,empty_node));
+                        const auto index = [C](long int r, long int c) -> long int {
+                            return ( (C-1) * r + c);
+                        };
 
                         for(long int r = 0; (r+1) < R; ++r){
                             for(long int c = 0; (c+1) < C; ++c){
+
                                 const auto tl = contouring_img.value(r  , c  , Channel);
                                 const auto tr = contouring_img.value(r  , c+1, Channel);
                                 const auto br = contouring_img.value(r+1, c+1, Channel);
@@ -1414,73 +1397,73 @@ long int frame_count = 0;
                                 const auto BL = pixel_oracle(bl);
 
                                 // See enumerated cases visualized at https://en.wikipedia.org/wiki/File:Marching_squares_algorithm.svg
+                                const auto i = index(r, c);
+                                auto n_ptr = &(nodes.at(i));
                                 if( false ){
                                 }else if(  TL &&  TR &&  BL &&  BR ){// case 0
                                     // No crossing. Do nothing.
                                 }else if(  TL &&  TR && !BL &&  BR ){// case 1
                                     const auto tail = interpolate_pos(tl, pos_tl,  bl, pos_bl);
                                     const auto head = interpolate_pos(bl, pos_bl,  br, pos_br);
-                                    nodes.emplace( r, c, o_l, o_b, tail, head);
+                                    *n_ptr = std::make_pair(node(o_l, o_b, tail, head), empty_node);
                                 }else if(  TL &&  TR &&  BL && !BR ){// case 2
                                     const auto tail = interpolate_pos(bl, pos_bl,  br, pos_br);
                                     const auto head = interpolate_pos(br, pos_br,  tr, pos_tr);
-                                    nodes.emplace( r, c, o_b, o_r, tail, head);
+                                    *n_ptr = std::make_pair( node(o_b, o_r, tail, head), empty_node);
                                 }else if(  TL &&  TR && !BL && !BR ){// case 3
                                     const auto tail = interpolate_pos(tl, pos_tl,  bl, pos_bl);
                                     const auto head = interpolate_pos(tr, pos_tr,  br, pos_br);
-                                    nodes.emplace( r, c, o_l, o_r, tail, head);
+                                    *n_ptr = std::make_pair( node(o_l, o_r, tail, head), empty_node);
                                 }else if(  TL && !TR &&  BL &&  BR ){// case 4
                                     const auto tail = interpolate_pos(tr, pos_tr,  br, pos_br);
                                     const auto head = interpolate_pos(tl, pos_tl,  tr, pos_tr);
-                                    nodes.emplace( r, c, o_r, o_t, tail, head);
+                                    *n_ptr = std::make_pair( node(o_r, o_t, tail, head), empty_node);
                                 }else if(  TL && !TR && !BL &&  BR ){// case 5
                                     const auto tail1 = interpolate_pos(tl, pos_tl,  bl, pos_bl);
                                     const auto head1 = interpolate_pos(tl, pos_tl,  tr, pos_tr);
-                                    nodes.emplace( r, c, o_l, o_t, tail1, head1);
 
                                     const auto tail2 = interpolate_pos(br, pos_br,  tr, pos_tr);
                                     const auto head2 = interpolate_pos(bl, pos_bl,  br, pos_br);
-                                    nodes.emplace( r, c, o_r, o_b, tail2, head2);
+                                    *n_ptr = std::make_pair( node(o_l, o_t, tail1, head1), node(o_r, o_b, tail2, head2));
                                 }else if(  TL && !TR &&  BL && !BR ){// case 6
                                     const auto tail = interpolate_pos(bl, pos_bl,  br, pos_br);
                                     const auto head = interpolate_pos(tl, pos_tl,  tr, pos_tr);
-                                    nodes.emplace( r, c, o_b, o_t, tail, head);
+                                    *n_ptr = std::make_pair( node(o_b, o_t, tail, head), empty_node);
                                 }else if(  TL && !TR && !BL && !BR ){// case 7
                                     const auto tail = interpolate_pos(tl, pos_tl,  bl, pos_bl);
                                     const auto head = interpolate_pos(tl, pos_tl,  tr, pos_tr);
-                                    nodes.emplace( r, c, o_l, o_t, tail, head);
+                                    *n_ptr = std::make_pair( node(o_l, o_t, tail, head), empty_node);
                                 }else if( !TL &&  TR &&  BL &&  BR ){// case 8
                                     const auto tail = interpolate_pos(tl, pos_tl,  tr, pos_tr);
                                     const auto head = interpolate_pos(tl, pos_tl,  bl, pos_bl);
-                                    nodes.emplace( r, c, o_t, o_l, tail, head);
+                                    *n_ptr = std::make_pair( node(o_t, o_l, tail, head), empty_node);
                                 }else if( !TL &&  TR && !BL &&  BR ){// case 9
                                     const auto tail = interpolate_pos(tl, pos_tl,  tr, pos_tr);
                                     const auto head = interpolate_pos(bl, pos_bl,  br, pos_br);
-                                    nodes.emplace( r, c, o_t, o_b, tail, head);
+                                    *n_ptr = std::make_pair( node(o_t, o_b, tail, head), empty_node);
                                 }else if( !TL &&  TR &&  BL && !BR ){// case 10
                                     const auto tail1 = interpolate_pos(tr, pos_tr,  tl, pos_tl);
                                     const auto head1 = interpolate_pos(br, pos_br,  tr, pos_tr);
-                                    nodes.emplace( r, c, o_t, o_r, tail1, head1);
 
                                     const auto tail2 = interpolate_pos(bl, pos_bl,  br, pos_br);
                                     const auto head2 = interpolate_pos(tl, pos_tl,  bl, pos_bl);
-                                    nodes.emplace( r, c, o_b, o_l, tail2, head2);
+                                    *n_ptr = std::make_pair( node(o_t, o_r, tail1, head1), node(o_b, o_l, tail2, head2));
                                 }else if( !TL &&  TR && !BL && !BR ){// case 11
                                     const auto tail = interpolate_pos(tr, pos_tr,  tl, pos_tl);
                                     const auto head = interpolate_pos(tr, pos_tr,  br, pos_br);
-                                    nodes.emplace( r, c, o_t, o_r, tail, head);
+                                    *n_ptr = std::make_pair( node(o_t, o_r, tail, head), empty_node);
                                 }else if( !TL && !TR &&  BL &&  BR ){// case 12
                                     const auto tail = interpolate_pos(br, pos_br,  tr, pos_tr);
                                     const auto head = interpolate_pos(bl, pos_bl,  tl, pos_tl);
-                                    nodes.emplace( r, c, o_r, o_l, tail, head);
+                                    *n_ptr = std::make_pair( node(o_r, o_l, tail, head), empty_node);
                                 }else if( !TL && !TR && !BL &&  BR ){// case 13
                                     const auto tail = interpolate_pos(br, pos_br,  tr, pos_tr);
                                     const auto head = interpolate_pos(bl, pos_bl,  br, pos_br);
-                                    nodes.emplace( r, c, o_r, o_b, tail, head);
+                                    *n_ptr = std::make_pair( node(o_r, o_b, tail, head), empty_node);
                                 }else if( !TL && !TR &&  BL && !BR ){// case 14
                                     const auto tail = interpolate_pos(bl, pos_bl,  br, pos_br);
                                     const auto head = interpolate_pos(tl, pos_tl,  bl, pos_bl);
-                                    nodes.emplace( r, c, o_b, o_l, tail, head);
+                                    *n_ptr = std::make_pair( node(o_b, o_l, tail, head), empty_node);
                                 }else if( !TL && !TR && !BL && !BR ){// case 15 
                                     // No crossing. Do nothing.
                                 }
@@ -1488,89 +1471,153 @@ long int frame_count = 0;
                         }
 
                         //Walk all available half-edges forming contour perimeters.
-                        const vec3<double> zero3(0.0, 0.0, 0.0);
                         contouring_cc.contours.clear();
-                        while(!nodes.empty()){
-                            auto n_it = std::begin(nodes);
-                            auto n1 = nodes.extract(n_it).value();
-                            contouring_cc.contours.emplace_back();
-                            contouring_cc.contours.back().closed = true;
-                            contouring_cc.contours.back().points.push_back( n1.tail );
 
-                            // Determine which node to look for next.
-                            const auto find_next_node = [&](const node& n_curr){
-                                const auto n_curr_head_vert_pos = n_curr.head_vert_pos;
-                                uint8_t n_next_tail_vert_pos = 0;
-                                auto n_next_r = n_curr.cell_r;
-                                auto n_next_c = n_curr.cell_c;
+                        for(long int r = 0; (r+1) < R; ++r){
+                            for(long int c = 0; (c+1) < C; ++c){
+                                const auto i = index(r, c);
+                                for(auto n1_ptr : { &(nodes.at(i).first), &(nodes.at(i).second) }){
+                                
+                                    // Search for a valid contour edge.
+                                    if( (n1_ptr->head_vert_pos == 0)
+                                    ||  (n1_ptr->tail_vert_pos == 0) ){
+                                        continue;
+                                    }
 
-                                if(false){
-                                }else if(n_curr_head_vert_pos == o_t){
-                                    n_next_r -= 1;
-                                    n_next_tail_vert_pos = o_b;
-                                }else if(n_curr_head_vert_pos == o_b){
-                                    n_next_r += 1;
-                                    n_next_tail_vert_pos = o_t;
-                                }else if(n_curr_head_vert_pos == o_l){
-                                    n_next_c -= 1;
-                                    n_next_tail_vert_pos = o_r;
-                                }else if(n_curr_head_vert_pos == o_r){
-                                    n_next_c += 1;
-                                    n_next_tail_vert_pos = o_l;
-                                }else{
-                                    throw std::runtime_error("Invalid tail vert position encountered");
+                                    long int curr_r = r;
+                                    long int curr_c = c;
+
+                                    // Determine which node to look for next.
+                                    const auto find_next_node = [&](const node& n_curr){
+                                        node* n_next_ptr = nullptr;
+                                        
+                                        const auto n_curr_head_vert_pos = n_curr.head_vert_pos;
+                                        if(n_curr_head_vert_pos != 0){
+
+                                            uint8_t n_next_tail_vert_pos = 0;
+                                            auto n_next_r = curr_r;
+                                            auto n_next_c = curr_c;
+                                            if(false){
+                                            }else if(n_curr_head_vert_pos == o_t){
+                                                n_next_r -= 1;
+                                                n_next_tail_vert_pos = o_b;
+                                            }else if(n_curr_head_vert_pos == o_b){
+                                                n_next_r += 1;
+                                                n_next_tail_vert_pos = o_t;
+                                            }else if(n_curr_head_vert_pos == o_l){
+                                                n_next_c -= 1;
+                                                n_next_tail_vert_pos = o_r;
+                                            }else if(n_curr_head_vert_pos == o_r){
+                                                n_next_c += 1;
+                                                n_next_tail_vert_pos = o_l;
+                                            }else{
+                                                throw std::runtime_error("Invalid tail vert position encountered");
+                                            }
+
+                                            const auto n_next_i = index(n_next_r, n_next_c);
+                                            const bool i_valid = isininc(0,n_next_r,R-2) && isininc(0,n_next_c,C-2);
+                                            if( i_valid 
+                                            &&  (nodes.at(n_next_i).first.tail_vert_pos == n_next_tail_vert_pos) ){
+                                                curr_r = n_next_r;
+                                                curr_c = n_next_c;
+                                                n_next_ptr = &(nodes.at(n_next_i).first);
+                                            }
+                                            if( i_valid
+                                            &&  (nodes.at(n_next_i).second.tail_vert_pos == n_next_tail_vert_pos) ){
+                                                curr_r = n_next_r;
+                                                curr_c = n_next_c;
+                                                n_next_ptr = &(nodes.at(n_next_i).second);
+                                            }
+                                        }
+                                        return n_next_ptr;
+                                    };
+
+                                    const auto find_prev_node = [&](const node& n_curr){
+                                        node* n_prev_ptr = nullptr;
+                                        
+                                        const auto n_curr_tail_vert_pos = n_curr.tail_vert_pos;
+                                        if(n_curr_tail_vert_pos != 0){
+
+                                            uint8_t n_prev_head_vert_pos = 0;
+                                            auto n_prev_r = curr_r;
+                                            auto n_prev_c = curr_c;
+                                            if(false){
+                                            }else if(n_curr_tail_vert_pos == o_t){
+                                                n_prev_r -= 1;
+                                                n_prev_head_vert_pos = o_b;
+                                            }else if(n_curr_tail_vert_pos == o_b){
+                                                n_prev_r += 1;
+                                                n_prev_head_vert_pos = o_t;
+                                            }else if(n_curr_tail_vert_pos == o_l){
+                                                n_prev_c -= 1;
+                                                n_prev_head_vert_pos = o_r;
+                                            }else if(n_curr_tail_vert_pos == o_r){
+                                                n_prev_c += 1;
+                                                n_prev_head_vert_pos = o_l;
+                                            }else{
+                                                throw std::runtime_error("Invalid head vert position encountered");
+                                            }
+
+                                            const auto n_prev_i = index(n_prev_r, n_prev_c);
+                                            const bool i_valid = isininc(0,n_prev_r,R-2) && isininc(0,n_prev_c,C-2);
+                                            if( i_valid
+                                            && (nodes.at(n_prev_i).first.head_vert_pos == n_prev_head_vert_pos) ){
+                                                curr_r = n_prev_r;
+                                                curr_c = n_prev_c;
+                                                n_prev_ptr = &(nodes.at(n_prev_i).first);
+                                            }
+                                            if( i_valid
+                                            &&  (nodes.at(n_prev_i).second.head_vert_pos == n_prev_head_vert_pos) ){
+                                                curr_r = n_prev_r;
+                                                curr_c = n_prev_c;
+                                                n_prev_ptr = &(nodes.at(n_prev_i).second);
+                                            }
+                                        }
+                                        return n_prev_ptr;
+                                    };
+
+
+                                    // If a valid contour edge was found, start following along the contour.
+                                    contouring_cc.contours.emplace_back();
+                                    contouring_cc.contours.back().closed = true;
+                                    contouring_cc.contours.back().points.push_back( n1_ptr->tail );
+
+                                    const auto n1_tail_vert_pos = n1_ptr->tail_vert_pos;
+                                    const auto n1_head_vert_pos = n1_ptr->head_vert_pos;
+                                    node* n_curr_ptr = n1_ptr;
+                                    do{
+                                        auto n_next_ptr = find_next_node(*n_curr_ptr);
+                                        //*n_curr_ptr = empty_node;
+                                        n_curr_ptr->tail_vert_pos = 0;
+                                        n_curr_ptr->head_vert_pos = 0;
+
+                                        if(n_next_ptr == nullptr) break; // End of the contour, or image boundary.
+                                        contouring_cc.contours.back().points.push_back( n_next_ptr->tail );
+                                        n_curr_ptr = n_next_ptr;
+                                    }while(true);
+
+                                    // Jump back to the original contour edge, reset it, and walk backwards.
+                                    n1_ptr->tail_vert_pos = n1_tail_vert_pos;
+                                    n1_ptr->head_vert_pos = n1_head_vert_pos;
+                                    curr_r = r;
+                                    curr_c = c;
+                                    n_curr_ptr = n1_ptr;
+                                    do{
+                                        auto n_prev_ptr = find_prev_node(*n_curr_ptr);
+                                        //*n_curr_ptr = empty_node;
+                                        n_curr_ptr->tail_vert_pos = 0;
+                                        n_curr_ptr->head_vert_pos = 0;
+
+                                        if(n_prev_ptr == nullptr) break; // End of the contour, or image boundary.
+                                        contouring_cc.contours.back().points.push_front( n_prev_ptr->head );
+                                        n_curr_ptr = n_prev_ptr;
+                                    }while(true);
+
+                                    // Nullify the original contour edge so it cannot be used again.
+                                    n1_ptr->tail_vert_pos = 0;
+                                    n1_ptr->head_vert_pos = 0;
                                 }
-                                auto n_next_it = nodes.find( node(n_next_r, n_next_c, n_next_tail_vert_pos, 0, zero3, zero3) ); 
-                                return n_next_it;
-                            };
-                            const auto find_prev_node = [&](const node& n_curr){
-                                const auto n_curr_tail_vert_pos = n_curr.tail_vert_pos;
-                                uint8_t n_prev_head_vert_pos = 0;
-                                auto n_prev_r = n_curr.cell_r;
-                                auto n_prev_c = n_curr.cell_c;
-
-                                if(false){
-                                }else if(n_curr_tail_vert_pos == o_t){
-                                    n_prev_r -= 1;
-                                    n_prev_head_vert_pos = o_b;
-                                }else if(n_curr_tail_vert_pos == o_b){
-                                    n_prev_r += 1;
-                                    n_prev_head_vert_pos = o_t;
-                                }else if(n_curr_tail_vert_pos == o_l){
-                                    n_prev_c -= 1;
-                                    n_prev_head_vert_pos = o_r;
-                                }else if(n_curr_tail_vert_pos == o_r){
-                                    n_prev_c += 1;
-                                    n_prev_head_vert_pos = o_l;
-                                }else{
-                                    throw std::runtime_error("Invalid head vert position encountered");
-                                }
-                                auto n_prev_it = nodes.find( node(n_prev_r, n_prev_c, 0, n_prev_head_vert_pos, zero3, zero3) ); 
-                                return n_prev_it;
-                            };
-
-                            auto n_curr = n1;
-                            const auto n_end_it = std::end(nodes);
-                            do{
-                                auto n_next_it = find_next_node(n_curr);
-                                if(n_next_it == n_end_it) break;
-
-                                auto n_next = nodes.extract(n_next_it).value();
-                                contouring_cc.contours.back().points.push_back( n_next.tail );
-
-                                n_curr = n_next;
-                            }while(true);
-
-                            n_curr = n1;
-                            do{
-                                auto n_prev_it = find_prev_node(n_curr);
-                                if(n_prev_it == n_end_it) break;
-
-                                auto n_prev = nodes.extract(n_prev_it).value();
-                                contouring_cc.contours.back().points.push_front( n_prev.tail );
-
-                                n_curr = n_prev;
-                            }while(true);
+                            }
                         }
 
 #endif // DCMA_USE_CGAL
