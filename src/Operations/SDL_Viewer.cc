@@ -1176,10 +1176,15 @@ long int frame_count = 0;
                     if(ImGui::DragInt("Resolution", &contouring_img_row_col_count, 0.1f, 5, 1024)){
                         reset_contouring_state(*disp_img_it);
                     }
+                    if( ImGui::IsItemHovered() ){
+                        ImGui::BeginTooltip();
+                        ImGui::Text("Note: any existing contours will be reset.");
+                        ImGui::EndTooltip();
+                    }
 
                     // Regenerate contours from the mask.
                     if( contouring_img_altered
-                    &&  (frame_count % 5 == 0) ){
+                    &&  (frame_count % 5 == 0) ){ // Terrible stop-gap until I can parallelize contour extraction. TODO
 //#ifdef DCMA_USE_CGAL
 #if 0
                         // Sandwich the mask with images that have no voxels included to give the mesh a valid pxl_dz to
