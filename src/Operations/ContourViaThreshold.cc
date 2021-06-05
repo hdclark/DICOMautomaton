@@ -64,7 +64,9 @@ OperationDoc OpArgDocContourViaThreshold(){
         " the computational penalty. The marching cubes approach will properly handle 'pinches' and contours should"
         " all be topologically valid."
     );
-        
+    out.notes.emplace_back(
+        "Note that the marching-squares method currently only honours the lower threshold."
+    );
 
     out.args.emplace_back();
     out.args.back().name = "ROILabel";
@@ -125,8 +127,12 @@ OperationDoc OpArgDocContourViaThreshold(){
                            " It may also have problems with 'pinches' and topological consistency."
                            " Marching-squares is reasonably fast and general-purpose, and should produce good quality"
                            " contours that approximate the threshold value isocurves to first-order."
+                           " It also handles boundaries well by inserting an extra virtual row and column around"
+                           " the image to ensure contours are all closed."
                            " The marching-cubes method is more robust and should reliably produce contours for even"
-                           " the most complicated topologies, but is considerably slower than the binary method.";
+                           " the most complicated topologies, but is considerably slower than the binary method."
+                           " It may produce worse on boundaries, though otherwise it should produce the same"
+                           " contours as marching-squares.";
 #ifdef DCMA_USE_CGAL
     out.args.back().examples = { "binary",
                                  "marching-squares",
@@ -416,6 +422,7 @@ Drover ContourViaThreshold(Drover DICOM_data,
                     const auto R = animg_ptr->rows;
                     const auto C = animg_ptr->columns;
                     const double inclusion_threshold = cl;
+                    const double exterior_value = inclusion_threshold - 1.0;
 
                     //Construct a pixel 'oracle' closure using the user-specified threshold criteria. This function identifies whether
                     //the pixel is within (true) or outside of (false) the final ROI.
@@ -458,22 +465,41 @@ Drover ContourViaThreshold(Drover DICOM_data,
                     };
                     const node empty_node(0,0,zero3,zero3);
 
-                    std::vector< std::pair<node,node> > nodes((R-1)*(C-1), std::make_pair(empty_node,empty_node));
+                    //std::vector< std::pair<node,node> > nodes((R-1)*(C-1), std::make_pair(empty_node,empty_node));
+                    std::vector< std::pair<node,node> > nodes((R+1)*(C+1), std::make_pair(empty_node,empty_node));
                     const auto index = [C](long int r, long int c) -> long int {
-                        return ( (C-1) * r + c);
+                        return ( (C+1) * r + c);
                     };
 
-                    for(long int r = 0; (r+1) < R; ++r){
-                        for(long int c = 0; (c+1) < C; ++c){
-                            const auto tl = animg_ptr->value(r  , c  , Channel);
-                            const auto tr = animg_ptr->value(r  , c+1, Channel);
-                            const auto br = animg_ptr->value(r+1, c+1, Channel);
-                            const auto bl = animg_ptr->value(r+1, c  , Channel);
+                    // Override the normal voxel intensity and position getters to handle the 2 additional rows and columns.
+                    const auto get_value = [animg_ptr,R,C,exterior_value,Channel](long int r, long int c) -> float {
+                        float out;
+                        if( (r == 0) || (r == (R+1))
+                        ||  (c == 0) || (c == (C+1)) ){
+                            out = exterior_value;
+                        }else{
+                            out = animg_ptr->value(r-1, c-1, Channel);
+                        }
+                        return out;
+                    };
+                    const auto get_position = [animg_ptr,R,C,exterior_value,Channel](long int r, long int c){
+                        return (  animg_ptr->anchor
+                                + animg_ptr->offset
+                                + animg_ptr->row_unit*(animg_ptr->pxl_dx*static_cast<double>(r-1))
+                                + animg_ptr->col_unit*(animg_ptr->pxl_dy*static_cast<double>(c-1)) );
+                    };
 
-                            const auto pos_tl = animg_ptr->position(r  , c  );
-                            const auto pos_tr = animg_ptr->position(r  , c+1);
-                            const auto pos_br = animg_ptr->position(r+1, c+1);
-                            const auto pos_bl = animg_ptr->position(r+1, c  );
+                    for(long int r = 0; r < (R+1); ++r){
+                        for(long int c = 0; c < (C+1); ++c){
+                            const auto tl = get_value(r  , c  );
+                            const auto tr = get_value(r  , c+1);
+                            const auto br = get_value(r+1, c+1);
+                            const auto bl = get_value(r+1, c  );
+
+                            const auto pos_tl = get_position(r  , c  );
+                            const auto pos_tr = get_position(r  , c+1);
+                            const auto pos_br = get_position(r+1, c+1);
+                            const auto pos_bl = get_position(r+1, c  );
 
                             const auto TL = pixel_oracle(tl);
                             const auto TR = pixel_oracle(tr);
@@ -556,8 +582,8 @@ Drover ContourViaThreshold(Drover DICOM_data,
 
                     //Walk all available half-edges forming contour perimeters.
                     std::list<contour_of_points<double>> copl;
-                    for(long int r = 0; (r+1) < R; ++r){
-                        for(long int c = 0; (c+1) < C; ++c){
+                    for(long int r = 0; r < (R+1); ++r){
+                        for(long int c = 0; c < (C+1); ++c){
                             const auto i = index(r, c);
                             for(auto n1_ptr : { &(nodes.at(i).first), &(nodes.at(i).second) }){
                             
@@ -597,7 +623,7 @@ Drover ContourViaThreshold(Drover DICOM_data,
                                         }
 
                                         const auto n_next_i = index(n_next_r, n_next_c);
-                                        const bool i_valid = isininc(0,n_next_r,R-2) && isininc(0,n_next_c,C-2);
+                                        const bool i_valid = isininc(0,n_next_r,R) && isininc(0,n_next_c,C);
                                         if( i_valid 
                                         &&  (nodes.at(n_next_i).first.tail_vert_pos == n_next_tail_vert_pos) ){
                                             curr_r = n_next_r;
@@ -641,7 +667,7 @@ Drover ContourViaThreshold(Drover DICOM_data,
                                         }
 
                                         const auto n_prev_i = index(n_prev_r, n_prev_c);
-                                        const bool i_valid = isininc(0,n_prev_r,R-2) && isininc(0,n_prev_c,C-2);
+                                        const bool i_valid = isininc(0,n_prev_r,R) && isininc(0,n_prev_c,C);
                                         if( i_valid
                                         && (nodes.at(n_prev_i).first.head_vert_pos == n_prev_head_vert_pos) ){
                                             curr_r = n_prev_r;
