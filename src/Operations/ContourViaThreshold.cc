@@ -82,6 +82,7 @@ OperationDoc OpArgDocContourViaThreshold(){
                            " If the number is followed by a '%', the bound will be scaled between the min and max"
                            " pixel values [0-100%]. If the number is followed by 'tile', the bound will be replaced"
                            " with the corresponding percentile [0-100tile]."
+                           " Both percentages and percentiles are assessed per image array."
                            " Note that upper and lower bounds can be specified separately (e.g., lower bound is a"
                            " percentage, but upper bound is a percentile).";
     out.args.back().default_val = "-inf";
@@ -95,6 +96,7 @@ OperationDoc OpArgDocContourViaThreshold(){
                            " If the number is followed by a '%', the bound will be scaled between the min and max"
                            " pixel values [0-100%]. If the number is followed by 'tile', the bound will be replaced"
                            " with the corresponding percentile [0-100tile]."
+                           " Both percentages and percentiles are assessed per image array."
                            " Note that upper and lower bounds can be specified separately (e.g., lower bound is a"
                            " percentage, but upper bound is a percentile).";
     out.args.back().default_val = "inf";
@@ -251,22 +253,21 @@ Drover ContourViaThreshold(Drover DICOM_data,
                 if(Upper_is_Ptile) cu = Stats::Percentile(pixel_vals, Upper / 100.0);
             }
         }
+        FUNCINFO("Using thresholds " << cl << " and " << cu);
+        if( !std::isfinite(cl) 
+        &&  !std::isfinite(cu)){
+            throw std::invalid_argument("Both thresholds are not finite. Refusing to continue.");
+        }
         if(cl > cu){
             throw std::invalid_argument("Thresholds conflict. Mesh will contain zero faces. Refusing to continue.");
         }
-
-        //Construct a pixel 'oracle' closure using the user-specified threshold criteria. This function identifies whether
-        //the pixel is within (true) or outside of (false) the final ROI.
-        auto pixel_oracle = [cu,cl](float p) -> bool {
-            return (cl <= p) && (p <= cu);
-        };
 
         for(const auto &animg : (*iap_it)->imagecoll.images){
             if( (animg.rows < 1) || (animg.columns < 1) || (Channel >= animg.channels) ){
                 throw std::runtime_error("Image or channel is empty -- cannot contour via thresholds.");
             }
             const auto animg_ptr = &(animg);
-            tp.submit_task([&,animg_ptr]() -> void {
+            tp.submit_task([&,cl,cu,animg_ptr]() -> void {
 
                 // ---------------------------------------------------
                 // The binary inclusivity method.
@@ -274,6 +275,12 @@ Drover ContourViaThreshold(Drover DICOM_data,
 
                     const auto R = animg_ptr->rows;
                     const auto C = animg_ptr->columns;
+
+                    //Construct a pixel 'oracle' closure using the user-specified threshold criteria. This function identifies whether
+                    //the pixel is within (true) or outside of (false) the final ROI.
+                    auto pixel_oracle = [cu,cl](float p) -> bool {
+                        return (cl <= p) && (p <= cu);
+                    };
 
                     //Construct the vertex grid. Vertices are in the corners of pixels, but we also need a mapping from
                     // pixel coordinate space to the vertex grid storage indices.
@@ -419,16 +426,52 @@ Drover ContourViaThreshold(Drover DICOM_data,
                 // ---------------------------------------------------
                 // The marching squares method.
                 }else if(std::regex_match(MethodStr, marching_squares_regex)){
+                    //Prepare a mask image for contouring.
+                    auto mask = *animg_ptr;
+                    double inclusion_threshold = std::numeric_limits<double>::quiet_NaN();
+                    double exterior_value = std::numeric_limits<double>::quiet_NaN();
+                    bool below_is_interior = false;
+
+                    if(std::isfinite(cl) && std::isfinite(cu)){
+                        // Transform voxels by their |distance| from the midpoint. Only interior voxels will be within
+                        // [0,width*0.5], and all others will be (width*0.5,inf).
+                        const double midpoint = (cl + cu) * 0.5;
+                        const double width = (cu - cl);
+
+                        inclusion_threshold = width * 0.5;
+                        exterior_value = inclusion_threshold + 1.0;
+                        below_is_interior = true;
+                        mask.apply_to_pixels([Channel,midpoint](long int, long int, long int chnl, float &val) -> void {
+                                if(Channel == chnl){
+                                    val = std::abs(val - midpoint);
+                                }
+                                return;
+                            });
+
+                    }else if(std::isfinite(cl)){
+                        inclusion_threshold = cl;
+                        exterior_value = inclusion_threshold - 1.0;
+                        below_is_interior = false;
+
+                    }else if(std::isfinite(cu)){
+                        inclusion_threshold = cu;
+                        exterior_value = inclusion_threshold + 1.0;
+                        below_is_interior = true;
+
+                    }else{ // Neither threshold is finite.
+                        throw std::invalid_argument("Unable to discern finite threshold for meshing. Refusing to continue.");
+                        // Note: it is possible to deal with these cases and generate meshings for each, i.e., either all
+                        // voxels are included or no voxels are included (both are valid meshings). However, it seems
+                        // most likely this is a user error. Add this functionality if necessary.
+
+                    }
+
                     const auto R = animg_ptr->rows;
                     const auto C = animg_ptr->columns;
-                    const double inclusion_threshold = cl;
-                    const double exterior_value = inclusion_threshold - 1.0;
 
                     //Construct a pixel 'oracle' closure using the user-specified threshold criteria. This function identifies whether
                     //the pixel is within (true) or outside of (false) the final ROI.
-                    //
-                    // TODO: honour both lower and upper thresholds.
-                    const auto pixel_oracle = [inclusion_threshold](float p) -> bool {
+                    const auto pixel_oracle = [inclusion_threshold,below_is_interior](float p) -> bool {
                         return (inclusion_threshold <= p);
                     };
 
@@ -472,21 +515,21 @@ Drover ContourViaThreshold(Drover DICOM_data,
                     };
 
                     // Override the normal voxel intensity and position getters to handle the 2 additional rows and columns.
-                    const auto get_value = [animg_ptr,R,C,exterior_value,Channel](long int r, long int c) -> float {
+                    const auto get_value = [mask,R,C,exterior_value,Channel](long int r, long int c) -> float {
                         float out;
                         if( (r == 0) || (r == (R+1))
                         ||  (c == 0) || (c == (C+1)) ){
                             out = exterior_value;
                         }else{
-                            out = animg_ptr->value(r-1, c-1, Channel);
+                            out = mask.value(r-1, c-1, Channel);
                         }
                         return out;
                     };
-                    const auto get_position = [animg_ptr,R,C,exterior_value,Channel](long int r, long int c){
-                        return (  animg_ptr->anchor
-                                + animg_ptr->offset
-                                + animg_ptr->row_unit*(animg_ptr->pxl_dx*static_cast<double>(r-1))
-                                + animg_ptr->col_unit*(animg_ptr->pxl_dy*static_cast<double>(c-1)) );
+                    const auto get_position = [&mask,R,C,exterior_value,Channel](long int r, long int c){
+                        return (  mask.anchor
+                                + mask.offset
+                                + mask.row_unit*(mask.pxl_dx*static_cast<double>(r-1))
+                                + mask.col_unit*(mask.pxl_dy*static_cast<double>(c-1)) );
                     };
 
                     for(long int r = 0; r < (R+1); ++r){
