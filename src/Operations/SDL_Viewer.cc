@@ -327,25 +327,35 @@ Drover SDL_Viewer(Drover DICOM_data,
         int row_count = 0;
     };
     opengl_texture_handle_t current_texture;
-    planar_image<float,double> contouring_img;
+
+
     int contouring_img_row_col_count = 256;
     bool contouring_img_altered = false;
-    contour_collection<double> contouring_cc;
     int contouring_reach = 10;
+    std::string contouring_method = "marching-squares";
 
-    const auto reset_contouring_state = [&contouring_img,
-                                         &contouring_img_row_col_count,
-                                         &contouring_cc]( const planar_image<float,double>& img ) -> void {
+    Drover contouring_imgs;
+    contouring_imgs.Ensure_Contour_Data_Allocated();
+    contouring_imgs.image_data.push_back(std::make_unique<Image_Array>());
+    contouring_imgs.image_data.back()->imagecoll.images.emplace_back();
+
+    const auto reset_contouring_state = [&contouring_imgs,
+                                         &contouring_img_row_col_count]( const planar_image<float,double>& img ) -> void {
             contouring_img_row_col_count = std::clamp(contouring_img_row_col_count, 5, 1024);
 
             // Reset the contouring image.
-            contouring_img.init_buffer(contouring_img_row_col_count, contouring_img_row_col_count, 1L);
-            contouring_img.init_spatial(1.0, 1.0, 1.0, img.anchor, img.offset);
-            contouring_img.init_orientation(img.row_unit, img.col_unit);
-            contouring_img.fill_pixels(-1.0f);
+            contouring_imgs.image_data.back()->imagecoll.images.clear();
+            contouring_imgs.image_data.back()->imagecoll.images.emplace_back();
+            const auto cimg_ptr = &(contouring_imgs.image_data.back()->imagecoll.images.back());
+            cimg_ptr->init_buffer(contouring_img_row_col_count, contouring_img_row_col_count, 1L);
+            cimg_ptr->init_spatial(1.0, 1.0, 1.0, img.anchor, img.offset);
+            cimg_ptr->init_orientation(img.row_unit, img.col_unit);
+            cimg_ptr->fill_pixels(-1.0f);
 
             // Reset any existing contours.
-            contouring_cc.contours.clear();
+            contouring_imgs.Ensure_Contour_Data_Allocated();
+            contouring_imgs.contour_data->ccs.clear();
+
             return;
     };
 
@@ -899,7 +909,6 @@ long int frame_count = 0;
                 }
                 if(ImGui::MenuItem("Contouring", nullptr, &view_contouring_enabled)){
                     contouring_img_altered = true;
-                    contouring_cc.contours.clear();
                 }
                 ImGui::MenuItem("Image Metadata", nullptr, &view_image_metadata_enabled);
                 ImGui::MenuItem("Image Hover Tooltips", nullptr, &show_image_hover_tooltips);
@@ -1170,8 +1179,10 @@ long int frame_count = 0;
 
                     ImGui::Text("Note: this functionality is still under active development.");
                     if(ImGui::Button("Clear", ImVec2(120, 0))){ 
-                        contouring_img.fill_pixels(-1.0f);
-                        contouring_cc.contours.clear();
+                        const auto cimg_ptr = &(contouring_imgs.image_data.back()->imagecoll.images.back());
+                        cimg_ptr->fill_pixels(-1.0f);
+                        contouring_imgs.Ensure_Contour_Data_Allocated();
+                        contouring_imgs.contour_data->ccs.clear();
                         contouring_img_altered = true;
                     }
                     ImGui::DragInt("Reach", &contouring_reach, 0.1f, 1, 30);
@@ -1184,487 +1195,81 @@ long int frame_count = 0;
                         ImGui::Text("Note: any existing contours will be reset.");
                         ImGui::EndTooltip();
                     }
+                    
+                    ImGui::Separator();
+                    ImGui::Text("Method");
+                    if(ImGui::Button("Marching squares")){
+                        contouring_method = "marching-squares";
+                        contouring_img_altered = true;
+                    }
+                    if(ImGui::Button("Binary")){
+                        contouring_method = "binary";
+                        contouring_img_altered = true;
+                    }
+                    contouring_imgs.Ensure_Contour_Data_Allocated();
 
                     // Regenerate contours from the mask.
                     if( contouring_img_altered
                     &&  (frame_count % 5 == 0) ){ // Terrible stop-gap until I can parallelize contour extraction. TODO
-//#ifdef DCMA_USE_CGAL
-#if 0
-                        // Sandwich the mask with images that have no voxels included to give the mesh a valid pxl_dz to
-                        // work with.
-                        const bool below_is_interior = false;
-                        const bool inclusion_threshold = 0.5f;
-                        //const float interior_value = 1.0;
-                        const float exterior_value = 0.0;
-                        auto above = contouring_img;
-                        auto below = contouring_img;
-                        above.fill_pixels(exterior_value);
-                        below.fill_pixels(exterior_value);
-                        const auto N_0 = contouring_img.image_plane().N_0;
-                        above.offset += N_0 * contouring_img.pxl_dz;
-                        below.offset -= N_0 * contouring_img.pxl_dz;
 
-                        std::list<std::reference_wrapper<planar_image<float,double>>> grid_imgs;
-                        grid_imgs = {{
-                            std::ref(above),
-                            std::ref(contouring_img),
-                            std::ref(below) }};
+                        contouring_imgs.contour_data->ccs.clear();
 
-                        // Generate the surface mesh.
-                        auto meshing_params = dcma_surface_meshes::Parameters();
-                        meshing_params.MutateOpts.inclusivity = Mutate_Voxels_Opts::Inclusivity::Centre;
-                        meshing_params.MutateOpts.contouroverlap = Mutate_Voxels_Opts::ContourOverlap::Ignore;
-                        FUNCWARN("Ignoring contour orientations; assuming ROI polyhderon is simple");
-                        auto surface_mesh = dcma_surface_meshes::Estimate_Surface_Mesh_Marching_Cubes(
-                                                                        grid_imgs,
-                                                                        inclusion_threshold,
-                                                                        below_is_interior,
-                                                                        meshing_params );
-
-                        // Slice the mesh along the image plane.
-                        contouring_cc = polyhedron_processing::Slice_Polyhedron( surface_mesh,
-                                                                            {{ contouring_img.image_plane() }} );
-//#else
-#elif 0
-                        const auto R = contouring_img.rows;
-                        const auto C = contouring_img.columns;
-
-                        //Construct a pixel 'oracle' closure using the user-specified threshold criteria. This function identifies whether
-                        //the pixel is within (true) or outside of (false) the final ROI.
-                        auto pixel_oracle = [](float p) -> bool {
-                            return (0.5f <= p);
-                        };
-
-                        //Construct the vertex grid. Vertices are in the corners of pixels, but we also need a mapping from
-                        // pixel coordinate space to the vertex grid storage indices.
-                        const auto vert_count = (R+1)*(C+1);
-                        std::vector<vec3<double>> verts( vert_count );
-                        enum row_modif { r_neg = 0, r_pos = 1 }; // Modifiers which translate (in the img plane) +-1/2 of pxl_dx.
-                        enum col_modif { c_neg = 0, c_pos = 1 }; // Modifiers which translate (in the img plane) +-1/2 of pxl_dy.
-
-                        const auto vert_index = [C](long int vert_row, long int vert_col) -> long int {
-                            return (C+1)*vert_row + vert_col;
-                        };
-                        const auto vert_mapping = [vert_index](long int r, long int c, row_modif rm, col_modif cm ) -> long int {
-                            const auto vert_row = r + rm;
-                            const auto vert_col = c + cm;
-                            return vert_index(vert_row,vert_col);
-                        };
-
-                        //Pin each vertex grid element to the appropriate pixel corner.
-                        const auto corner = contouring_img.position(0,0) - contouring_img.row_unit*contouring_img.pxl_dx*0.5 - contouring_img.col_unit*contouring_img.pxl_dy*0.5;
-                        for(auto r = 0; r < (R+1); ++r){
-                            for(auto c = 0; c < (C+1); ++c){
-                                verts.at(vert_index(r,c)) = corner + contouring_img.row_unit*contouring_img.pxl_dx*r
-                                                                   + contouring_img.col_unit*contouring_img.pxl_dy*c;
-                            }
+                        std::list<OperationArgPkg> Operations;
+                        Operations.emplace_back("ContourViaThreshold");
+                        Operations.back().insert("Method="_s + contouring_method);
+                        Operations.back().insert("Lower=0.5");
+                        Operations.back().insert("SimplifyMergeAdjacent=true");
+                        if(!Operation_Dispatcher(contouring_imgs, InvocationMetadata, FilenameLex, Operations)){
+                            FUNCERR("Analysis failed. Cannot continue");
                         }
 
-                        //Construct a container for storing half-edges.
-                        std::map<long int, std::set<long int>> half_edges;
-
-                        //Iterate over each pixel. If the oracle tells us the pixel is within the ROI, add four half-edges
-                        // around the pixel's perimeter.
-                        const long int Channel = 0;
-                        for(auto r = 0; r < R; ++r){
-                            for(auto c = 0; c < C; ++c){
-                                if(pixel_oracle(contouring_img.value(r, c, Channel))){
-                                    const auto bot_l = vert_mapping(r,c,r_pos,c_neg);
-                                    const auto bot_r = vert_mapping(r,c,r_pos,c_pos);
-                                    const auto top_r = vert_mapping(r,c,r_neg,c_pos);
-                                    const auto top_l = vert_mapping(r,c,r_neg,c_neg);
-
-                                    half_edges[bot_l].insert(bot_r);
-                                    half_edges[bot_r].insert(top_r);
-                                    half_edges[top_r].insert(top_l);
-                                    half_edges[top_l].insert(bot_l);
-                                }
-                            }
-                        }
-
-                        //Find and remove all cancelling half-edges, which are equivalent to circular two-vertex loops.
-                        const bool SimplifyMergeAdjacent = true;
-                        if(SimplifyMergeAdjacent){
-                            //'Retire' half-edges by merely removing their endpoint, invalidating them.
-                            for(auto &he_group : half_edges){
-                                const auto A = he_group.first;
-                                auto B_it = he_group.second.begin();
-                                while(B_it != he_group.second.end()){
-                                    const auto he_group2_it = half_edges.find(*B_it);
-                                    if( (he_group2_it != half_edges.end()) 
-                                    &&  (he_group2_it->second.count(A) != 0) ){
-                                        //Cycle detected -- remove both half-edges.
-                                        he_group2_it->second.erase(A);
-                                        B_it = he_group.second.erase(B_it);
-                                    }else{
-                                        ++B_it;
-                                    }
-                                }
-                            }
-                        }
-
-                        //Walk all available half-edges forming contour perimeters.
-                        contouring_cc.contours.clear();
-                        if(!half_edges.empty()){
-                            auto he_it = half_edges.begin();
-                            while(he_it != half_edges.end()){
-                                if(he_it->second.empty()){
-                                    ++he_it;
-                                    continue;
-                                }
-
-                                contouring_cc.contours.emplace_back();
-                                contouring_cc.contours.back().closed = true;
-                                const auto A = he_it->first; //The starting node.
-                                auto B = A;
-                                do{
-                                    const auto B_he_it = half_edges.find(B);
-                                    auto B_it = B_he_it->second.begin(); // TODO: pick left-most (relative to current direction) node.
-                                                                         //       This is how you can will get consistent orientation handling!
-
-                                    B = *B_it;
-                                    contouring_cc.contours.back().points.emplace_back(verts[B]); //Add the vertex to the current contour.
-                                    B_he_it->second.erase(B_it); //Retire the node.
-                                }while(B != A);
-                            }
-                        }
-#elif 1
-                        const long int Channel = 0;
-                        const auto R = contouring_img.rows;
-                        const auto C = contouring_img.columns;
-                        const auto thresh_val = 0.5f;
-
-                        //Construct a pixel 'oracle' closure using the user-specified threshold criteria. This function identifies whether
-                        //the pixel is within (true) or outside of (false) the final ROI.
-                        const auto pixel_oracle = [thresh_val](float p) -> bool {
-                            return (thresh_val <= p);
-                        };
-
-                        // Scan the image to determine which cases each overlay image cell corresponds to.
-                        planar_image<uint32_t,double> overlay_img; // Offset from original image by (+0.5*pxl_dx, +0.5*pxl_dy).
-                        overlay_img.init_buffer( R - 1, C - 1, 1 );
-                        overlay_img.init_spatial(1.0, 1.0, 1.0, vec3<double>(0.0,0.0,0.0), vec3<double>(0.0,0.0,0.0));
-                        overlay_img.init_orientation( vec3<double>(0.0,1.0,0.0), vec3<double>(1.0,0.0,0.0) );
-                        overlay_img.fill_pixels(0, static_cast<uint32_t>(0));
-
-                        const auto interpolate_pos = [thresh_val](float f1, const vec3<double> &pos1,
-                                                                  float f2, const vec3<double> &pos2) -> vec3<double> {
-                            const auto num = f2 - thresh_val;
-                            const auto den = f2 - f1;
-                            const auto m = num / den;
-                            return pos2 + (pos1 - pos2) * m;
-                        };
-
-                        const uint8_t o_t = 1; // Edges of the unit cell pixel (top, bottom, left, right).
-                        const uint8_t o_b = 2;
-                        const uint8_t o_l = 3;
-                        const uint8_t o_r = 4;
-
-                        const vec3<double> zero3(0.0, 0.0, 0.0);
-                        struct node {
-                            uint8_t tail_vert_pos; // = 0; // Which cell edge the tail vertex lies along.
-                            uint8_t head_vert_pos; // = 0; // Which cell edge the head vertex lies along.
-
-                            vec3<double> tail;
-                            vec3<double> head;
-
-                            node() : tail_vert_pos(0), head_vert_pos(0), tail(vec3<double>(0.0, 0.0, 0.0)), head(vec3<double>(0.0, 0.0, 0.0)) {};
-                            node(uint8_t t_v_p, uint8_t h_v_p, const vec3<double> &t, const vec3<double> &h) : tail_vert_pos(t_v_p), head_vert_pos(h_v_p), tail(t), head(h) {};
-                            node& operator=(const node& rhs){
-                                this->tail_vert_pos = rhs.tail_vert_pos;
-                                this->head_vert_pos = rhs.head_vert_pos;
-                                this->tail = rhs.tail;
-                                this->head = rhs.head;
-                                return *this;
-                            }
-                        };
-
-                        const node empty_node(0,0,zero3,zero3);
-
-                        std::vector< std::pair<node,node> > nodes((R-1)*(C-1), std::make_pair(empty_node,empty_node));
-                        const auto index = [C](long int r, long int c) -> long int {
-                            return ( (C-1) * r + c);
-                        };
-
-                        for(long int r = 0; (r+1) < R; ++r){
-                            for(long int c = 0; (c+1) < C; ++c){
-
-                                const auto tl = contouring_img.value(r  , c  , Channel);
-                                const auto tr = contouring_img.value(r  , c+1, Channel);
-                                const auto br = contouring_img.value(r+1, c+1, Channel);
-                                const auto bl = contouring_img.value(r+1, c  , Channel);
-
-                                const auto pos_tl = contouring_img.position(r  , c  );
-                                const auto pos_tr = contouring_img.position(r  , c+1);
-                                const auto pos_br = contouring_img.position(r+1, c+1);
-                                const auto pos_bl = contouring_img.position(r+1, c  );
-
-                                const auto TL = pixel_oracle(tl);
-                                const auto TR = pixel_oracle(tr);
-                                const auto BR = pixel_oracle(br);
-                                const auto BL = pixel_oracle(bl);
-
-                                // See enumerated cases visualized at https://en.wikipedia.org/wiki/File:Marching_squares_algorithm.svg
-                                const auto i = index(r, c);
-                                auto n_ptr = &(nodes.at(i));
-                                if( false ){
-                                }else if(  TL &&  TR &&  BL &&  BR ){// case 0
-                                    // No crossing. Do nothing.
-                                }else if(  TL &&  TR && !BL &&  BR ){// case 1
-                                    const auto tail = interpolate_pos(tl, pos_tl,  bl, pos_bl);
-                                    const auto head = interpolate_pos(bl, pos_bl,  br, pos_br);
-                                    *n_ptr = std::make_pair(node(o_l, o_b, tail, head), empty_node);
-                                }else if(  TL &&  TR &&  BL && !BR ){// case 2
-                                    const auto tail = interpolate_pos(bl, pos_bl,  br, pos_br);
-                                    const auto head = interpolate_pos(br, pos_br,  tr, pos_tr);
-                                    *n_ptr = std::make_pair( node(o_b, o_r, tail, head), empty_node);
-                                }else if(  TL &&  TR && !BL && !BR ){// case 3
-                                    const auto tail = interpolate_pos(tl, pos_tl,  bl, pos_bl);
-                                    const auto head = interpolate_pos(tr, pos_tr,  br, pos_br);
-                                    *n_ptr = std::make_pair( node(o_l, o_r, tail, head), empty_node);
-                                }else if(  TL && !TR &&  BL &&  BR ){// case 4
-                                    const auto tail = interpolate_pos(tr, pos_tr,  br, pos_br);
-                                    const auto head = interpolate_pos(tl, pos_tl,  tr, pos_tr);
-                                    *n_ptr = std::make_pair( node(o_r, o_t, tail, head), empty_node);
-                                }else if(  TL && !TR && !BL &&  BR ){// case 5
-                                    const auto tail1 = interpolate_pos(tl, pos_tl,  bl, pos_bl);
-                                    const auto head1 = interpolate_pos(tl, pos_tl,  tr, pos_tr);
-
-                                    const auto tail2 = interpolate_pos(br, pos_br,  tr, pos_tr);
-                                    const auto head2 = interpolate_pos(bl, pos_bl,  br, pos_br);
-                                    *n_ptr = std::make_pair( node(o_l, o_t, tail1, head1), node(o_r, o_b, tail2, head2));
-                                }else if(  TL && !TR &&  BL && !BR ){// case 6
-                                    const auto tail = interpolate_pos(bl, pos_bl,  br, pos_br);
-                                    const auto head = interpolate_pos(tl, pos_tl,  tr, pos_tr);
-                                    *n_ptr = std::make_pair( node(o_b, o_t, tail, head), empty_node);
-                                }else if(  TL && !TR && !BL && !BR ){// case 7
-                                    const auto tail = interpolate_pos(tl, pos_tl,  bl, pos_bl);
-                                    const auto head = interpolate_pos(tl, pos_tl,  tr, pos_tr);
-                                    *n_ptr = std::make_pair( node(o_l, o_t, tail, head), empty_node);
-                                }else if( !TL &&  TR &&  BL &&  BR ){// case 8
-                                    const auto tail = interpolate_pos(tl, pos_tl,  tr, pos_tr);
-                                    const auto head = interpolate_pos(tl, pos_tl,  bl, pos_bl);
-                                    *n_ptr = std::make_pair( node(o_t, o_l, tail, head), empty_node);
-                                }else if( !TL &&  TR && !BL &&  BR ){// case 9
-                                    const auto tail = interpolate_pos(tl, pos_tl,  tr, pos_tr);
-                                    const auto head = interpolate_pos(bl, pos_bl,  br, pos_br);
-                                    *n_ptr = std::make_pair( node(o_t, o_b, tail, head), empty_node);
-                                }else if( !TL &&  TR &&  BL && !BR ){// case 10
-                                    const auto tail1 = interpolate_pos(tr, pos_tr,  tl, pos_tl);
-                                    const auto head1 = interpolate_pos(br, pos_br,  tr, pos_tr);
-
-                                    const auto tail2 = interpolate_pos(bl, pos_bl,  br, pos_br);
-                                    const auto head2 = interpolate_pos(tl, pos_tl,  bl, pos_bl);
-                                    *n_ptr = std::make_pair( node(o_t, o_r, tail1, head1), node(o_b, o_l, tail2, head2));
-                                }else if( !TL &&  TR && !BL && !BR ){// case 11
-                                    const auto tail = interpolate_pos(tr, pos_tr,  tl, pos_tl);
-                                    const auto head = interpolate_pos(tr, pos_tr,  br, pos_br);
-                                    *n_ptr = std::make_pair( node(o_t, o_r, tail, head), empty_node);
-                                }else if( !TL && !TR &&  BL &&  BR ){// case 12
-                                    const auto tail = interpolate_pos(br, pos_br,  tr, pos_tr);
-                                    const auto head = interpolate_pos(bl, pos_bl,  tl, pos_tl);
-                                    *n_ptr = std::make_pair( node(o_r, o_l, tail, head), empty_node);
-                                }else if( !TL && !TR && !BL &&  BR ){// case 13
-                                    const auto tail = interpolate_pos(br, pos_br,  tr, pos_tr);
-                                    const auto head = interpolate_pos(bl, pos_bl,  br, pos_br);
-                                    *n_ptr = std::make_pair( node(o_r, o_b, tail, head), empty_node);
-                                }else if( !TL && !TR &&  BL && !BR ){// case 14
-                                    const auto tail = interpolate_pos(bl, pos_bl,  br, pos_br);
-                                    const auto head = interpolate_pos(tl, pos_tl,  bl, pos_bl);
-                                    *n_ptr = std::make_pair( node(o_b, o_l, tail, head), empty_node);
-                                }else if( !TL && !TR && !BL && !BR ){// case 15 
-                                    // No crossing. Do nothing.
-                                }
-                            }
-                        }
-
-                        //Walk all available half-edges forming contour perimeters.
-                        contouring_cc.contours.clear();
-
-                        for(long int r = 0; (r+1) < R; ++r){
-                            for(long int c = 0; (c+1) < C; ++c){
-                                const auto i = index(r, c);
-                                for(auto n1_ptr : { &(nodes.at(i).first), &(nodes.at(i).second) }){
-                                
-                                    // Search for a valid contour edge.
-                                    if( (n1_ptr->head_vert_pos == 0)
-                                    ||  (n1_ptr->tail_vert_pos == 0) ){
-                                        continue;
-                                    }
-
-                                    long int curr_r = r;
-                                    long int curr_c = c;
-
-                                    // Determine which node to look for next.
-                                    const auto find_next_node = [&](const node& n_curr){
-                                        node* n_next_ptr = nullptr;
-                                        
-                                        const auto n_curr_head_vert_pos = n_curr.head_vert_pos;
-                                        if(n_curr_head_vert_pos != 0){
-
-                                            uint8_t n_next_tail_vert_pos = 0;
-                                            auto n_next_r = curr_r;
-                                            auto n_next_c = curr_c;
-                                            if(false){
-                                            }else if(n_curr_head_vert_pos == o_t){
-                                                n_next_r -= 1;
-                                                n_next_tail_vert_pos = o_b;
-                                            }else if(n_curr_head_vert_pos == o_b){
-                                                n_next_r += 1;
-                                                n_next_tail_vert_pos = o_t;
-                                            }else if(n_curr_head_vert_pos == o_l){
-                                                n_next_c -= 1;
-                                                n_next_tail_vert_pos = o_r;
-                                            }else if(n_curr_head_vert_pos == o_r){
-                                                n_next_c += 1;
-                                                n_next_tail_vert_pos = o_l;
-                                            }else{
-                                                throw std::runtime_error("Invalid tail vert position encountered");
-                                            }
-
-                                            const auto n_next_i = index(n_next_r, n_next_c);
-                                            const bool i_valid = isininc(0,n_next_r,R-2) && isininc(0,n_next_c,C-2);
-                                            if( i_valid 
-                                            &&  (nodes.at(n_next_i).first.tail_vert_pos == n_next_tail_vert_pos) ){
-                                                curr_r = n_next_r;
-                                                curr_c = n_next_c;
-                                                n_next_ptr = &(nodes.at(n_next_i).first);
-                                            }
-                                            if( i_valid
-                                            &&  (nodes.at(n_next_i).second.tail_vert_pos == n_next_tail_vert_pos) ){
-                                                curr_r = n_next_r;
-                                                curr_c = n_next_c;
-                                                n_next_ptr = &(nodes.at(n_next_i).second);
-                                            }
-                                        }
-                                        return n_next_ptr;
-                                    };
-
-                                    const auto find_prev_node = [&](const node& n_curr){
-                                        node* n_prev_ptr = nullptr;
-                                        
-                                        const auto n_curr_tail_vert_pos = n_curr.tail_vert_pos;
-                                        if(n_curr_tail_vert_pos != 0){
-
-                                            uint8_t n_prev_head_vert_pos = 0;
-                                            auto n_prev_r = curr_r;
-                                            auto n_prev_c = curr_c;
-                                            if(false){
-                                            }else if(n_curr_tail_vert_pos == o_t){
-                                                n_prev_r -= 1;
-                                                n_prev_head_vert_pos = o_b;
-                                            }else if(n_curr_tail_vert_pos == o_b){
-                                                n_prev_r += 1;
-                                                n_prev_head_vert_pos = o_t;
-                                            }else if(n_curr_tail_vert_pos == o_l){
-                                                n_prev_c -= 1;
-                                                n_prev_head_vert_pos = o_r;
-                                            }else if(n_curr_tail_vert_pos == o_r){
-                                                n_prev_c += 1;
-                                                n_prev_head_vert_pos = o_l;
-                                            }else{
-                                                throw std::runtime_error("Invalid head vert position encountered");
-                                            }
-
-                                            const auto n_prev_i = index(n_prev_r, n_prev_c);
-                                            const bool i_valid = isininc(0,n_prev_r,R-2) && isininc(0,n_prev_c,C-2);
-                                            if( i_valid
-                                            && (nodes.at(n_prev_i).first.head_vert_pos == n_prev_head_vert_pos) ){
-                                                curr_r = n_prev_r;
-                                                curr_c = n_prev_c;
-                                                n_prev_ptr = &(nodes.at(n_prev_i).first);
-                                            }
-                                            if( i_valid
-                                            &&  (nodes.at(n_prev_i).second.head_vert_pos == n_prev_head_vert_pos) ){
-                                                curr_r = n_prev_r;
-                                                curr_c = n_prev_c;
-                                                n_prev_ptr = &(nodes.at(n_prev_i).second);
-                                            }
-                                        }
-                                        return n_prev_ptr;
-                                    };
-
-
-                                    // If a valid contour edge was found, start following along the contour.
-                                    contouring_cc.contours.emplace_back();
-                                    contouring_cc.contours.back().closed = true;
-                                    contouring_cc.contours.back().points.push_back( n1_ptr->tail );
-
-                                    const auto n1_tail_vert_pos = n1_ptr->tail_vert_pos;
-                                    const auto n1_head_vert_pos = n1_ptr->head_vert_pos;
-                                    node* n_curr_ptr = n1_ptr;
-                                    do{
-                                        auto n_next_ptr = find_next_node(*n_curr_ptr);
-                                        //*n_curr_ptr = empty_node;
-                                        n_curr_ptr->tail_vert_pos = 0;
-                                        n_curr_ptr->head_vert_pos = 0;
-
-                                        if(n_next_ptr == nullptr) break; // End of the contour, or image boundary.
-                                        contouring_cc.contours.back().points.push_back( n_next_ptr->tail );
-                                        n_curr_ptr = n_next_ptr;
-                                    }while(true);
-
-                                    // Jump back to the original contour edge, reset it, and walk backwards.
-                                    n1_ptr->tail_vert_pos = n1_tail_vert_pos;
-                                    n1_ptr->head_vert_pos = n1_head_vert_pos;
-                                    curr_r = r;
-                                    curr_c = c;
-                                    n_curr_ptr = n1_ptr;
-                                    do{
-                                        auto n_prev_ptr = find_prev_node(*n_curr_ptr);
-                                        //*n_curr_ptr = empty_node;
-                                        n_curr_ptr->tail_vert_pos = 0;
-                                        n_curr_ptr->head_vert_pos = 0;
-
-                                        if(n_prev_ptr == nullptr) break; // End of the contour, or image boundary.
-                                        contouring_cc.contours.back().points.push_front( n_prev_ptr->head );
-                                        n_curr_ptr = n_prev_ptr;
-                                    }while(true);
-
-                                    // Nullify the original contour edge so it cannot be used again.
-                                    n1_ptr->tail_vert_pos = 0;
-                                    n1_ptr->head_vert_pos = 0;
-                                }
-                            }
-                        }
-
-#endif // DCMA_USE_CGAL
                         contouring_img_altered = false;
                     }
 
                     // Draw the WIP contours.
-                    for(auto &cop : contouring_cc.contours){
-                        drawList->PathClear();
-                        for(auto & p : cop.points){
+                    if( (contouring_imgs.Has_Contour_Data())
+                    //&&  (contouring_imgs.contour_data != nullptr)
+                    //&&  !contouring_imgs.contour_data->ccs.empty()
+                    //&&  !contouring_imgs.contour_data->ccs.back().contours.empty()
+                    &&  !contouring_imgs.image_data.empty()
+                    &&  (contouring_imgs.image_data.back() != nullptr)
+                    &&  !contouring_imgs.image_data.back()->imagecoll.images.empty() ){
+                        const auto cimg_ptr = &(contouring_imgs.image_data.back()->imagecoll.images.back());
+                        for(auto &cc : contouring_imgs.contour_data->ccs){
+                            for(auto &cop : cc.contours){
+                                drawList->PathClear();
+                                for(auto & p : cop.points){
 
-                            const auto img_dicom_width = contouring_img.pxl_dx * contouring_img.rows;
-                            const auto img_dicom_height = contouring_img.pxl_dy * contouring_img.columns; 
-                            const auto img_top_left = contouring_img.anchor + contouring_img.offset
-                                                    - contouring_img.row_unit * contouring_img.pxl_dx * 0.5f
-                                                    - contouring_img.col_unit * contouring_img.pxl_dy * 0.5f;
-                            //const auto img_top_right = img_top_left + contouring_img.row_unit * img_dicom_width;
-                            //const auto img_bottom_left = img_top_left + contouring_img.col_unit * img_dicom_height;
-                            const auto img_plane = contouring_img.image_plane();
+                                    const auto img_dicom_width = cimg_ptr->pxl_dx * cimg_ptr->rows;
+                                    const auto img_dicom_height = cimg_ptr->pxl_dy * cimg_ptr->columns; 
+                                    const auto img_top_left = cimg_ptr->anchor + cimg_ptr->offset
+                                                            - cimg_ptr->row_unit * cimg_ptr->pxl_dx * 0.5f
+                                                            - cimg_ptr->col_unit * cimg_ptr->pxl_dy * 0.5f;
+                                    //const auto img_top_right = img_top_left + cimg_ptr->row_unit * img_dicom_width;
+                                    //const auto img_bottom_left = img_top_left + cimg_ptr->col_unit * img_dicom_height;
+                                    const auto img_plane = cimg_ptr->image_plane();
 
-                            //Clamp the point to the bounding box, using the top left as zero.
-                            const auto dR = p - img_top_left;
-                            const auto clamped_col = dR.Dot( contouring_img.col_unit ) / img_dicom_height;
-                            const auto clamped_row = dR.Dot( contouring_img.row_unit ) / img_dicom_width;
+                                    //Clamp the point to the bounding box, using the top left as zero.
+                                    const auto dR = p - img_top_left;
+                                    const auto clamped_col = dR.Dot( cimg_ptr->col_unit ) / img_dicom_height;
+                                    const auto clamped_row = dR.Dot( cimg_ptr->row_unit ) / img_dicom_width;
 
-                            //Convert to ImGui coordinates using the top-left position of the display image.
-                            const auto world_x = real_pos.x + real_extent.x * clamped_col;
-                            const auto world_y = real_pos.y + real_extent.y * clamped_row;
+                                    //Convert to ImGui coordinates using the top-left position of the display image.
+                                    const auto world_x = real_pos.x + real_extent.x * clamped_col;
+                                    const auto world_y = real_pos.y + real_extent.y * clamped_row;
 
-                            ImVec2 v;
-                            v.x = world_x;
-                            v.y = world_y;
-                            drawList->PathLineTo( v );
+                                    ImVec2 v;
+                                    v.x = world_x;
+                                    v.y = world_y;
+                                    drawList->PathLineTo( v );
+                                }
+
+                                float thickness = contour_line_thickness;
+                                const bool closed = true;
+                                drawList->PathStroke( ImGui::GetColorU32(editing_contour_colour), closed, thickness);
+                                //AddPolyline(const ImVec2* points, int num_points, ImU32 col, bool closed, float thickness);
+                            }
                         }
-
-                        float thickness = contour_line_thickness;
-                        const bool closed = true;
-                        drawList->PathStroke( ImGui::GetColorU32(editing_contour_colour), closed, thickness);
-                        //AddPolyline(const ImVec2* points, int num_points, ImU32 col, bool closed, float thickness);
                     }
                     ImGui::End();
                 }
@@ -2310,21 +1915,22 @@ long int frame_count = 0;
                         contouring_img_altered = true;
                         long int channel = 0;
                         const float extent = contouring_reach * 1.0f / 3.0f;
-                        const auto img_rows = contouring_img.rows;
-                        const auto img_cols = contouring_img.columns;
-                        const auto img_rows_f = static_cast<float>(contouring_img.rows);
-                        const auto img_cols_f = static_cast<float>(contouring_img.columns);
+                        const auto cimg_ptr = &(contouring_imgs.image_data.back()->imagecoll.images.back());
+                        const auto img_rows = cimg_ptr->rows;
+                        const auto img_cols = cimg_ptr->columns;
+                        const auto img_rows_f = static_cast<float>(cimg_ptr->rows);
+                        const auto img_cols_f = static_cast<float>(cimg_ptr->columns);
                         const long int r = std::clamp( static_cast<long int>( std::floor( image_mouse_pos.region_y * img_rows_f ) ), 0L, (img_rows-1) );
                         const long int c = std::clamp( static_cast<long int>( std::floor( image_mouse_pos.region_x * img_cols_f ) ), 0L, (img_cols-1) );
                         for(long int i = -contouring_reach; i <= contouring_reach; ++i){
                             for(long int j = -contouring_reach; j <= contouring_reach; ++j){
-                                if( isininc(0, r + i, contouring_img.rows - 1)
-                                &&  isininc(0, c + j, contouring_img.columns - 1) ){
+                                if( isininc(0, r + i, cimg_ptr->rows - 1)
+                                &&  isininc(0, c + j, cimg_ptr->columns - 1) ){
                                     const float R = std::sqrt( i*i*1.0f + j*j*1.0f );
                                     const float d_val = 2.0 * std::exp( -std::pow(R/extent, 2.0f) );
-                                    float val = contouring_img.value(r + i, c + j, channel);
+                                    float val = cimg_ptr->value(r + i, c + j, channel);
                                     val = std::clamp(val + d_val, -1.0f, 2.0f);
-                                    contouring_img.reference( r + i, c + j, channel ) = val;
+                                    cimg_ptr->reference( r + i, c + j, channel ) = val;
                                 }
                             }
                         }
@@ -2336,21 +1942,22 @@ long int frame_count = 0;
                         contouring_img_altered = true;
                         long int channel = 0;
                         const float extent = contouring_reach * 1.0f / 3.0f;
-                        const auto img_rows = contouring_img.rows;
-                        const auto img_cols = contouring_img.columns;
-                        const auto img_rows_f = static_cast<float>(contouring_img.rows);
-                        const auto img_cols_f = static_cast<float>(contouring_img.columns);
+                        const auto cimg_ptr = &(contouring_imgs.image_data.back()->imagecoll.images.back());
+                        const auto img_rows = cimg_ptr->rows;
+                        const auto img_cols = cimg_ptr->columns;
+                        const auto img_rows_f = static_cast<float>(cimg_ptr->rows);
+                        const auto img_cols_f = static_cast<float>(cimg_ptr->columns);
                         const long int r = std::clamp( static_cast<long int>( std::floor( image_mouse_pos.region_y * img_rows_f ) ), 0L, (img_rows-1) );
                         const long int c = std::clamp( static_cast<long int>( std::floor( image_mouse_pos.region_x * img_cols_f ) ), 0L, (img_cols-1) );
                         for(long int i = -contouring_reach; i <= contouring_reach; ++i){
                             for(long int j = -contouring_reach; j <= contouring_reach; ++j){
-                                if( isininc(0, r + i, contouring_img.rows - 1)
-                                &&  isininc(0, c + j, contouring_img.columns - 1) ){
+                                if( isininc(0, r + i, cimg_ptr->rows - 1)
+                                &&  isininc(0, c + j, cimg_ptr->columns - 1) ){
                                     const float R = std::sqrt( i*i*1.0f + j*j*1.0f );
                                     const float d_val = - 2.0 * std::exp( -std::pow(R/extent, 2.0f) );
-                                    float val = contouring_img.value(r + i, c + j, channel);
+                                    float val = cimg_ptr->value(r + i, c + j, channel);
                                     val = std::clamp(val + d_val, -1.0f, 2.0f);
-                                    contouring_img.reference( r + i, c + j, channel ) = val;
+                                    cimg_ptr->reference( r + i, c + j, channel ) = val;
                                 }
                             }
                         }
