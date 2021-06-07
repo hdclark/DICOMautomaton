@@ -701,7 +701,7 @@ Drover SDL_Viewer(Drover DICOM_data,
                                 c_orient = arb_pos_unit;
                             }
                             const auto c_orient_pos = (c_orient.Dot(arb_pos_unit) > 0);
-                            c_colour = ( c_orient_pos ? neg_contour_colour : pos_contour_colour );
+                            c_colour = ( c_orient_pos ? pos_contour_colour : neg_contour_colour );
 
                         // Otherwise use the uniquely-generated colour.
                         }else{
@@ -1235,19 +1235,20 @@ long int frame_count = 0;
                     &&  (contouring_imgs.image_data.back() != nullptr)
                     &&  !contouring_imgs.image_data.back()->imagecoll.images.empty() ){
                         const auto cimg_ptr = &(contouring_imgs.image_data.back()->imagecoll.images.back());
+
+                        const auto img_dicom_width = cimg_ptr->pxl_dx * cimg_ptr->rows;
+                        const auto img_dicom_height = cimg_ptr->pxl_dy * cimg_ptr->columns; 
+                        const auto img_top_left = cimg_ptr->anchor + cimg_ptr->offset
+                                                - cimg_ptr->row_unit * cimg_ptr->pxl_dx * 0.5f
+                                                - cimg_ptr->col_unit * cimg_ptr->pxl_dy * 0.5f;
+                        //const auto img_top_right = img_top_left + cimg_ptr->row_unit * img_dicom_width;
+                        //const auto img_bottom_left = img_top_left + cimg_ptr->col_unit * img_dicom_height;
+                        const auto img_plane = cimg_ptr->image_plane();
+
                         for(auto &cc : contouring_imgs.contour_data->ccs){
                             for(auto &cop : cc.contours){
                                 drawList->PathClear();
                                 for(auto & p : cop.points){
-
-                                    const auto img_dicom_width = cimg_ptr->pxl_dx * cimg_ptr->rows;
-                                    const auto img_dicom_height = cimg_ptr->pxl_dy * cimg_ptr->columns; 
-                                    const auto img_top_left = cimg_ptr->anchor + cimg_ptr->offset
-                                                            - cimg_ptr->row_unit * cimg_ptr->pxl_dx * 0.5f
-                                                            - cimg_ptr->col_unit * cimg_ptr->pxl_dy * 0.5f;
-                                    //const auto img_top_right = img_top_left + cimg_ptr->row_unit * img_dicom_width;
-                                    //const auto img_bottom_left = img_top_left + cimg_ptr->col_unit * img_dicom_height;
-                                    const auto img_plane = cimg_ptr->image_plane();
 
                                     //Clamp the point to the bounding box, using the top left as zero.
                                     const auto dR = p - img_top_left;
@@ -1265,8 +1266,23 @@ long int frame_count = 0;
                                 }
 
                                 float thickness = contour_line_thickness;
+
+                                ImU32 colour = ImGui::GetColorU32(editing_contour_colour);
+                                if(contour_colour_from_orientation){
+                                    const auto arb_pos_unit = disp_img_it->row_unit.Cross(disp_img_it->col_unit).unit();
+                                    vec3<double> c_orient;
+                                    try{ // Protect against degenerate contours. (Should we instead ignore them altogether?)
+                                        c_orient = cop.Estimate_Planar_Normal();
+                                    }catch(const std::exception &){
+                                        c_orient = arb_pos_unit;
+                                    }
+                                    const auto c_orient_pos = (c_orient.Dot(arb_pos_unit) > 0);
+                                    colour = ( c_orient_pos ? ImGui::GetColorU32(pos_contour_colour)
+                                                            : ImGui::GetColorU32(neg_contour_colour) );
+                                }
+
                                 const bool closed = true;
-                                drawList->PathStroke( ImGui::GetColorU32(editing_contour_colour), closed, thickness);
+                                drawList->PathStroke( colour, closed, thickness);
                                 //AddPolyline(const ImVec2* points, int num_points, ImU32 col, bool closed, float thickness);
                             }
                         }
@@ -1870,6 +1886,7 @@ long int frame_count = 0;
 
                 ImGui::Separator();
                 ImGui::DragFloat("Zoom", &zoom, 0.01f, 1.0f, 10.0f, "%.03f");
+                zoom = std::clamp(zoom, 0.1f, 1000.0f);
                 const float uv_width = 1.0f / zoom;
                 ImGui::DragFloat("Pan horizontal", &pan.x, 0.01f, 0.0f + uv_width * 0.5f, 1.0f - uv_width * 0.5f, "%.03f");
                 ImGui::DragFloat("Pan vertical",   &pan.y, 0.01f, 0.0f + uv_width * 0.5f, 1.0f - uv_width * 0.5f, "%.03f");

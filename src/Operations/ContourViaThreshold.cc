@@ -472,7 +472,7 @@ Drover ContourViaThreshold(Drover DICOM_data,
                     //Construct a pixel 'oracle' closure using the user-specified threshold criteria. This function identifies whether
                     //the pixel is within (true) or outside of (false) the final ROI.
                     const auto pixel_oracle = [inclusion_threshold,below_is_interior](float p) -> bool {
-                        return (inclusion_threshold <= p);
+                        return below_is_interior ? (inclusion_threshold <= p) : (p <= inclusion_threshold);
                     };
 
                     const auto interpolate_pos = [inclusion_threshold](float f1, const vec3<double> &pos1,
@@ -572,12 +572,26 @@ Drover ContourViaThreshold(Drover DICOM_data,
                                 const auto head = interpolate_pos(tl, pos_tl,  tr, pos_tr);
                                 *n_ptr = std::make_pair( node(o_r, o_t, tail, head), empty_node);
                             }else if(  TL && !TR && !BL &&  BR ){// case 5
-                                const auto tail1 = interpolate_pos(tl, pos_tl,  bl, pos_bl);
-                                const auto head1 = interpolate_pos(tl, pos_tl,  tr, pos_tr);
+                                // Ambiguous saddle-point case. Sample the centre of the voxel to disambiguate.
+                                const auto centre = (tl * 0.25 + tr * 0.25 + br * 0.25 + bl * 0.25);
+                                const auto C = pixel_oracle(centre);
+                                if(C == TL){
+                                    const auto tail1 = interpolate_pos(tl, pos_tl,  bl, pos_bl);
+                                    const auto head1 = interpolate_pos(bl, pos_bl,  br, pos_br);
 
-                                const auto tail2 = interpolate_pos(br, pos_br,  tr, pos_tr);
-                                const auto head2 = interpolate_pos(bl, pos_bl,  br, pos_br);
-                                *n_ptr = std::make_pair( node(o_l, o_t, tail1, head1), node(o_r, o_b, tail2, head2));
+                                    const auto tail2 = interpolate_pos(br, pos_br,  tr, pos_tr);
+                                    const auto head2 = interpolate_pos(tl, pos_tl,  tr, pos_tr);
+                                    *n_ptr = std::make_pair( node(o_l, o_b, tail1, head1),
+                                                             node(o_r, o_t, tail2, head2));
+                                }else{
+                                    const auto tail1 = interpolate_pos(bl, pos_bl,  tl, pos_tl);
+                                    const auto head1 = interpolate_pos(tl, pos_tl,  tr, pos_tr);
+
+                                    const auto tail2 = interpolate_pos(tr, pos_tr,  br, pos_br);
+                                    const auto head2 = interpolate_pos(bl, pos_bl,  br, pos_br);
+                                    *n_ptr = std::make_pair( node(o_l, o_t, tail1, head1),
+                                                             node(o_r, o_b, tail2, head2));
+                                }
                             }else if(  TL && !TR &&  BL && !BR ){// case 6
                                 const auto tail = interpolate_pos(bl, pos_bl,  br, pos_br);
                                 const auto head = interpolate_pos(tl, pos_tl,  tr, pos_tr);
@@ -595,12 +609,26 @@ Drover ContourViaThreshold(Drover DICOM_data,
                                 const auto head = interpolate_pos(bl, pos_bl,  br, pos_br);
                                 *n_ptr = std::make_pair( node(o_t, o_b, tail, head), empty_node);
                             }else if( !TL &&  TR &&  BL && !BR ){// case 10
-                                const auto tail1 = interpolate_pos(tr, pos_tr,  tl, pos_tl);
-                                const auto head1 = interpolate_pos(br, pos_br,  tr, pos_tr);
+                                // Ambiguous saddle-point case. Sample the centre of the voxel to disambiguate.
+                                const auto centre = (tl * 0.25 + tr * 0.25 + br * 0.25 + bl * 0.25);
+                                const auto C = pixel_oracle(centre);
+                                if(C == TL){
+                                    const auto tail1 = interpolate_pos(bl, pos_bl,  br, pos_br);
+                                    const auto head1 = interpolate_pos(bl, pos_bl,  tl, pos_tl);
 
-                                const auto tail2 = interpolate_pos(bl, pos_bl,  br, pos_br);
-                                const auto head2 = interpolate_pos(tl, pos_tl,  bl, pos_bl);
-                                *n_ptr = std::make_pair( node(o_t, o_r, tail1, head1), node(o_b, o_l, tail2, head2));
+                                    const auto tail2 = interpolate_pos(tr, pos_tr,  tl, pos_tl);
+                                    const auto head2 = interpolate_pos(tr, pos_tr,  br, pos_br);
+                                    *n_ptr = std::make_pair( node(o_b, o_l, tail1, head1),
+                                                             node(o_t, o_r, tail2, head2));
+                                }else{
+                                    const auto tail1 = interpolate_pos(bl, pos_bl,  br, pos_br);
+                                    const auto head1 = interpolate_pos(br, pos_br,  tr, pos_tr);
+
+                                    const auto tail2 = interpolate_pos(tr, pos_tr,  tl, pos_tl);
+                                    const auto head2 = interpolate_pos(tl, pos_tl,  bl, pos_bl);
+                                    *n_ptr = std::make_pair( node(o_b, o_r, tail1, head1),
+                                                             node(o_t, o_l, tail2, head2));
+                                }
                             }else if( !TL &&  TR && !BL && !BR ){// case 11
                                 const auto tail = interpolate_pos(tr, pos_tr,  tl, pos_tl);
                                 const auto head = interpolate_pos(tr, pos_tr,  br, pos_br);
@@ -753,7 +781,7 @@ Drover ContourViaThreshold(Drover DICOM_data,
                                     n_curr_ptr->head_vert_pos = 0;
 
                                     if(n_next_ptr == nullptr) break; // End of the contour, or image boundary.
-                                    copl.back().points.push_back( n_next_ptr->tail );
+                                    copl.back().points.push_front( n_next_ptr->tail );
                                     n_curr_ptr = n_next_ptr;
                                 }while(true);
 
@@ -770,7 +798,7 @@ Drover ContourViaThreshold(Drover DICOM_data,
                                     n_curr_ptr->head_vert_pos = 0;
 
                                     if(n_prev_ptr == nullptr) break; // End of the contour, or image boundary.
-                                    copl.back().points.push_front( n_prev_ptr->head );
+                                    copl.back().points.push_back( n_prev_ptr->head );
                                     n_curr_ptr = n_prev_ptr;
                                 }while(true);
 
