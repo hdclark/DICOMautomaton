@@ -331,7 +331,8 @@ Drover SDL_Viewer(Drover DICOM_data,
 
     int contouring_img_row_col_count = 256;
     bool contouring_img_altered = false;
-    float contouring_reach = 10;
+    float contouring_reach = 10.0;
+    float contouring_margin = 1.0;
     std::string contouring_method = "marching-squares";
     enum class brushes {
         rigid,
@@ -344,6 +345,8 @@ Drover SDL_Viewer(Drover DICOM_data,
     contouring_imgs.image_data.push_back(std::make_unique<Image_Array>());
     contouring_imgs.image_data.back()->imagecoll.images.emplace_back();
 
+
+    // Resets the contouring image to match the display image characteristics.
     const auto reset_contouring_state = [&contouring_imgs,
                                          &contouring_img_row_col_count]( const planar_image<float,double>& img ) -> void {
             contouring_img_row_col_count = std::clamp(contouring_img_row_col_count, 5, 1024);
@@ -380,9 +383,6 @@ Drover SDL_Viewer(Drover DICOM_data,
 
             std::vector<std::byte> animage;
             animage.reserve(img_cols * img_rows * 3);
-
-            // Reset the contouring image to match the display image characteristics.
-            reset_contouring_state(img);
 
             //------------------------------------------------------------------------------------------------
             //Apply a window to the data if it seems like the WindowCenter or WindowWidth specified in the image metadata
@@ -574,7 +574,8 @@ Drover SDL_Viewer(Drover DICOM_data,
                                          &img_num,
                                          &recompute_image_iters,
                                          &current_texture,
-                                         &Load_OpenGL_Texture ](){
+                                         &Load_OpenGL_Texture,
+                                         &reset_contouring_state ](){
         //Trim any empty image arrays.
         for(auto it = DICOM_data.image_data.begin(); it != DICOM_data.image_data.end();  ){
             if((*it)->imagecoll.images.empty()){
@@ -603,6 +604,7 @@ Drover SDL_Viewer(Drover DICOM_data,
         auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_image_iters();
         if( img_valid ){
             current_texture = Load_OpenGL_Texture(*disp_img_it);
+            reset_contouring_state(*disp_img_it);
         }
         return;
     };
@@ -889,6 +891,19 @@ long int frame_count = 0;
         ImGui_ImplSDL2_NewFrame(window);
         ImGui::NewFrame();
 
+
+// Contouring -- mask debugging / visualization.
+if(false){
+            ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_Appearing);
+            ImGui::SetNextWindowPos(ImVec2(700, 40), ImGuiCond_Appearing);
+            ImGui::Begin("Images2", &view_images_enabled, ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoNavInputs | ImGuiWindowFlags_NoScrollbar ); //| ImGuiWindowFlags_AlwaysAutoResize);
+
+            auto contouring_texture = Load_OpenGL_Texture( contouring_imgs.image_data.back()->imagecoll.images.back() );
+            auto gl_tex_ptr = reinterpret_cast<void*>(static_cast<intptr_t>(contouring_texture.texture_number));
+            ImGui::Image(gl_tex_ptr, ImVec2(600,600), uv_min, uv_max);
+            ImGui::End();
+}
+
         if(ImGui::BeginMainMenuBar()){
             if(ImGui::BeginMenu("File")){
                 if(ImGui::MenuItem("Open", "ctrl+o", &open_files_enabled)){
@@ -1004,6 +1019,7 @@ long int frame_count = 0;
             ImGui::Image(gl_tex_ptr, image_extent, uv_min, uv_max);
             image_mouse_pos.mouse_hovering_image = ImGui::IsItemHovered();
             image_mouse_pos.image_window_focused = ImGui::IsWindowFocused();
+//contouring_imgs.image_data.back()->imagecoll.images.back()
 
             ImVec2 real_extent; // The true dimensions of the unclipped image, accounting for zoom and panning.
             real_extent.x = image_extent.x / (uv_max.x - uv_min.x);
@@ -1225,7 +1241,33 @@ long int frame_count = 0;
                         contouring_brush = brushes::gaussian;
                     }
 
-                    ImGui::Text("Method");
+                    ImGui::Text("Dilation and Erosion");
+                    ImGui::DragFloat("Margin (mm)", &contouring_margin, 0.1f, -10.0f, 10.0f);
+                    if(ImGui::Button("Apply Margin")){
+                        std::list<OperationArgPkg> Operations;
+                        Operations.emplace_back("ContourWholeImages");
+                        Operations.back().insert("ROILabel=___whole_image");
+
+                        Operations.emplace_back("ReduceNeighbourhood");
+                        Operations.back().insert("ImageSelection=last");
+                        Operations.back().insert("ROILabelRegex=___whole_image");
+                        Operations.back().insert("Neighbourhood=spherical");
+                        
+                        const std::string reduction = (0.0 <= contouring_margin) ? "dilate" : "erode";
+                        const std::string distance = std::to_string( std::abs( contouring_margin ) );
+                        Operations.back().insert("Reduction="_s + reduction);
+                        Operations.back().insert("MaxDistance="_s + distance);
+
+                        Operations.emplace_back("DeleteContours");
+                        Operations.back().insert("ROILabelRegex=___whole_image");
+                        if(!Operation_Dispatcher(contouring_imgs, InvocationMetadata, FilenameLex, Operations)){
+                            FUNCWARN("Dilation/Erosion failed");
+                        }
+
+                        contouring_img_altered = true;
+                    }
+
+                    ImGui::Text("Contour Extraction");
                     if(ImGui::DragInt("Resolution", &contouring_img_row_col_count, 0.1f, 5, 1024)){
                         reset_contouring_state(*disp_img_it);
                     }
@@ -1258,7 +1300,7 @@ long int frame_count = 0;
                         Operations.back().insert("Lower=0.5");
                         Operations.back().insert("SimplifyMergeAdjacent=true");
                         if(!Operation_Dispatcher(contouring_imgs, InvocationMetadata, FilenameLex, Operations)){
-                            FUNCERR("Analysis failed. Cannot continue");
+                            FUNCWARN("ContourViaThreshold failed");
                         }
 
                         contouring_img_altered = false;
@@ -2062,12 +2104,14 @@ long int frame_count = 0;
                 img_array_ptr_it = std::next(DICOM_data.image_data.begin(), img_array_num);
                 disp_img_it = std::next((*img_array_ptr_it)->imagecoll.images.begin(), img_num);
                 current_texture = Load_OpenGL_Texture(*disp_img_it);
+                reset_contouring_state(*disp_img_it);
 
             }else if( new_img_num != img_num ){
                 advance_to_image(new_img_num);
                 if(view_contours_enabled) launch_contour_preprocessor();
                 disp_img_it = std::next((*img_array_ptr_it)->imagecoll.images.begin(), img_num);
                 current_texture = Load_OpenGL_Texture(*disp_img_it);
+                reset_contouring_state(*disp_img_it);
             }
             ImGui::End();
         }
