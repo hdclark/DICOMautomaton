@@ -115,6 +115,7 @@ Drover SDL_Viewer(Drover DICOM_data,
     // Image viewer state.
     long int img_array_num = -1; // The image array currently displayed.
     long int img_num = -1; // The image currently displayed.
+    long int img_channel = -1; // Which channel to display.
     using img_array_ptr_it_t = decltype(DICOM_data.image_data.begin());
     using disp_img_it_t = decltype(DICOM_data.image_data.front()->imagecoll.images.begin());
 
@@ -372,13 +373,18 @@ Drover SDL_Viewer(Drover DICOM_data,
                                       &colour_maps,
                                       &colour_map,
                                       &nan_colour,
+                                      &img_channel,
                                       &reset_contouring_state]( const planar_image<float,double>& img ) -> opengl_texture_handle_t {
 
             const auto img_cols = img.columns;
             const auto img_rows = img.rows;
+            const auto img_chns = img.channels;
 
             if(!isininc(1,img_rows,10000) || !isininc(1,img_cols,10000)){
-                FUNCERR("Image dimensions are not reasonable. Is this a mistake? Refusing to continue");
+                throw std::invalid_argument("Image dimensions are not reasonable. Refusing to continue");
+            }
+            if(!isininc(1,img_channel+1,img_chns)){
+                throw std::invalid_argument("Image does not have selected channel. Refusing to continue");
             }
 
             std::vector<std::byte> animage;
@@ -419,7 +425,7 @@ Drover SDL_Viewer(Drover DICOM_data,
 
                 for(auto j = 0; j < img_rows; ++j){
                     for(auto i = 0; i < img_cols; ++i){
-                        const auto val = static_cast<double>( img.value(j,i,0) ); //The first (R or gray) channel.
+                        const auto val = static_cast<double>( img.value(j,i,img_channel) ); //The first (R or gray) channel.
                         if(!std::isfinite(val)){
                             animage.push_back( nan_colour[0] );
                             animage.push_back( nan_colour[1] );
@@ -482,7 +488,7 @@ Drover SDL_Viewer(Drover DICOM_data,
 
                 for(auto j = 0; j < img_rows; ++j){ 
                     for(auto i = 0; i < img_cols; ++i){ 
-                        const auto val = img.value(j,i,0);
+                        const auto val = img.value(j,i,img_channel);
                         if(!std::isfinite(val)){
                             animage.push_back( nan_colour[0] );
                             animage.push_back( nan_colour[1] );
@@ -560,7 +566,6 @@ Drover SDL_Viewer(Drover DICOM_data,
             auto disp_img_it = std::next((*img_array_ptr_it)->imagecoll.images.begin(), img_num);
             if( disp_img_it == std::end((*img_array_ptr_it)->imagecoll.images) ) break;
 
-
             std::get<bool>( out ) = true;
             std::get<img_array_ptr_it_t>( out ) = img_array_ptr_it;
             std::get<disp_img_it_t>( out ) = disp_img_it;
@@ -572,6 +577,7 @@ Drover SDL_Viewer(Drover DICOM_data,
     const auto recompute_image_state = [ &DICOM_data,
                                          &img_array_num,
                                          &img_num,
+                                         &img_channel,
                                          &recompute_image_iters,
                                          &current_texture,
                                          &Load_OpenGL_Texture,
@@ -603,6 +609,7 @@ Drover SDL_Viewer(Drover DICOM_data,
         // Reload the texture.
         auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_image_iters();
         if( img_valid ){
+            img_channel = std::clamp<long int>(img_channel, 0, disp_img_it->channels-1);
             current_texture = Load_OpenGL_Texture(*disp_img_it);
             reset_contouring_state(*disp_img_it);
         }
@@ -1942,9 +1949,11 @@ if(false){
 
             int scroll_arrays = img_array_num;
             int scroll_images = img_num;
+            int scroll_channel = img_channel;
             {
                 //ImVec2 window_extent = ImGui::GetContentRegionAvail();
 
+                ImGui::Text("Image selection");
                 const int N_arrays = DICOM_data.image_data.size();
                 const int N_images = (*img_array_ptr_it)->imagecoll.images.size();
                 //ImGui::SetNextItemWidth(window_extent.x);
@@ -1963,7 +1972,8 @@ if(false){
                 }
 
                 ImGui::Separator();
-                ImGui::DragFloat("Zoom", &zoom, 0.01f, 1.0f, 10.0f, "%.03f");
+                ImGui::Text("Magnification");
+                ImGui::DragFloat("Zoom level", &zoom, 0.01f, 1.0f, 10.0f, "%.03f");
                 zoom = std::clamp(zoom, 0.1f, 1000.0f);
                 const float uv_width = 1.0f / zoom;
                 ImGui::DragFloat("Pan horizontal", &pan.x, 0.01f, 0.0f + uv_width * 0.5f, 1.0f - uv_width * 0.5f, "%.03f");
@@ -1975,11 +1985,15 @@ if(false){
                 uv_max.x = pan.x + uv_width * 0.5f;
                 uv_max.y = pan.y + uv_width * 0.5f;
 
-                if(ImGui::Button("Reset zoom", ImVec2(150, 0))){
+                if(ImGui::Button("Reset zoom")){
                     zoom = 1.0f;
                     pan.x = 0.5f;
                     pan.y = 0.5f;
                 }
+
+                ImGui::Separator();
+                ImGui::Text("Display");
+                ImGui::SliderInt("Channel", &scroll_channel, 0, static_cast<int>(disp_img_it->channels - 1));
 
                 if(ImGui::IsWindowFocused() || image_mouse_pos.image_window_focused){
                     const int d_l = static_cast<int>( std::floor(io.MouseWheel) );
@@ -2096,6 +2110,7 @@ if(false){
             }
             long int new_img_array_num = scroll_arrays;
             long int new_img_num = scroll_images;
+            long int new_img_chnl = scroll_channel;
 
             // Scroll through images.
             if( new_img_array_num != img_array_num ){
@@ -2112,6 +2127,10 @@ if(false){
                 disp_img_it = std::next((*img_array_ptr_it)->imagecoll.images.begin(), img_num);
                 current_texture = Load_OpenGL_Texture(*disp_img_it);
                 reset_contouring_state(*disp_img_it);
+
+            }else if( new_img_chnl != img_channel ){
+                img_channel = std::clamp<long int>(new_img_chnl, 0L, disp_img_it->channels - 1L);
+                current_texture = Load_OpenGL_Texture(*disp_img_it);
             }
             ImGui::End();
         }
