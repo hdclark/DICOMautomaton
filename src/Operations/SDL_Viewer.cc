@@ -336,10 +336,11 @@ Drover SDL_Viewer(Drover DICOM_data,
     float contouring_margin = 1.0;
     std::string contouring_method = "marching-squares";
     enum class brushes {
-        rigid,
+        rigid_circle,
+        rigid_square,
         gaussian,
     };
-    brushes contouring_brush = brushes::rigid;
+    brushes contouring_brush = brushes::rigid_circle;
 
     Drover contouring_imgs;
     contouring_imgs.Ensure_Contour_Data_Allocated();
@@ -1209,6 +1210,7 @@ if(false){
                     if(ImGui::Button("Save")){ 
                         ImGui::OpenPopup("Contour Save");
                     }
+                    ImGui::SameLine();
                     if(ImGui::BeginPopupModal("Contour Save", NULL, ImGuiWindowFlags_AlwaysAutoResize)){
                         const std::string str((frame_count / 15) % 4, '.'); // Simplistic animation.
                         ImGui::Text("Saving contours%s", str.c_str());
@@ -1238,16 +1240,22 @@ if(false){
                         ImGui::EndPopup();
                     }
 
+                    ImGui::Separator();
                     ImGui::Text("Brush");
                     ImGui::DragFloat("Radius (mm)", &contouring_reach, 0.1f, 0.5f, 50.0f);
-                    if(ImGui::Button("Rigid")){
-                        contouring_brush = brushes::rigid;
+                    if(ImGui::Button("Rigid Circle")){
+                        contouring_brush = brushes::rigid_circle;
+                    }
+                    ImGui::SameLine();
+                    if(ImGui::Button("Rigid Square")){
+                        contouring_brush = brushes::rigid_square;
                     }
                     ImGui::SameLine();
                     if(ImGui::Button("Soft")){
                         contouring_brush = brushes::gaussian;
                     }
 
+                    ImGui::Separator();
                     ImGui::Text("Dilation and Erosion");
                     ImGui::DragFloat("Margin (mm)", &contouring_margin, 0.1f, -10.0f, 10.0f);
                     if(ImGui::Button("Apply Margin")){
@@ -1274,6 +1282,7 @@ if(false){
                         contouring_img_altered = true;
                     }
 
+                    ImGui::Separator();
                     ImGui::Text("Contour Extraction");
                     if(ImGui::DragInt("Resolution", &contouring_img_row_col_count, 0.1f, 5, 1024)){
                         reset_contouring_state(*disp_img_it);
@@ -2046,10 +2055,13 @@ if(false){
                         const auto c_scale = dimg_cols_f / cimg_cols_f;
                         long int extent_r = cimg_rows;
                         long int extent_c = cimg_cols;
-                        if(contouring_brush == brushes::rigid){ 
+                        if(contouring_brush == brushes::rigid_circle){ 
                             // Limit the search to the near-vicinity.
                             extent_r = 2 * static_cast<long int>(std::ceil( radius / (r_scale * cimg_pxl_dy) ));
                             extent_c = 2 * static_cast<long int>(std::ceil( radius / (c_scale * cimg_pxl_dx) ));
+                        }else if(contouring_brush == brushes::rigid_square){ 
+                            extent_r = static_cast<long int>(std::round( radius / (r_scale * cimg_pxl_dy) ));
+                            extent_c = static_cast<long int>(std::round( radius / (c_scale * cimg_pxl_dx) ));
                         }else if(contouring_brush == brushes::gaussian){
                             // Extent outward several standard deviations to account for exponential drop-off.
                             extent_r = 7 * static_cast<long int>(std::ceil( radius / (r_scale * cimg_pxl_dy) ));
@@ -2069,8 +2081,10 @@ if(false){
                                     const float real_dR = std::hypot(real_dr, real_dc);
 
                                     float dval = 0.0;
-                                    if(contouring_brush == brushes::rigid){
+                                    if(contouring_brush == brushes::rigid_circle){
                                         dval = (real_dR <= radius) ? 1.0 : 0.0;
+                                    }else if(contouring_brush == brushes::rigid_square){
+                                        dval = 1.0;
                                     }else if(contouring_brush == brushes::gaussian){
                                         // Note: arbitrary scaling constant used here. Should give ~ same as rigid when
                                         // dragged across the image at a typical pace.
