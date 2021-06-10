@@ -1,4 +1,4 @@
-//HighlightROIs.cc - A part of DICOMautomaton 2017. Written by hal clark.
+//HighlightROIs.cc - A part of DICOMautomaton 2017, 2021. Written by hal clark.
 
 #include <any>
 #include <optional>
@@ -31,9 +31,33 @@ OperationDoc OpArgDocHighlightROIs(){
     out.aliases.emplace_back("ConvertContoursToImages");
 
     out.desc = 
-        "This operation overwrites voxel data inside and/or outside of ROI(s) to 'highlight' them."
+        "This operation overwrites voxel data inside and/or outside of ROI(s) to create an image"
+        " representation of a set of contours."
         " It can handle overlapping or duplicate contours.";
 
+    out.notes.emplace_back(
+        "The 'receding_squares' implementation was developed with the expectations that:"
+        " (1) the entire image will be overwritten, (2) contours are accurate and selective, so that"
+        " ContourOverlap should be either 'honour_opposite_orientations' or 'overlapping_contours_cancel',"
+        " and that (3) the contour detail and image grid resolution are sufficiently matched that it is"
+        " uncommon for multiple contours to pass between adjacent voxels."
+        " Expectation (3) could significantly impact round-trip contour accuracy, so consider using"
+        " high-resolution images and, if possible, avoid pathological contours (e.g., multiple colinear"
+        " contours separated by small distances)."
+    );
+    out.notes.emplace_back(
+        "The 'receding_squares' method works best when all values (interior and exterior) can be"
+        " overwritten. This affords the most control and gives the most accurate results."
+        " If some values cannot be overwritten, the algorithm will try to account for the loss of"
+        " freedom, but may be too constrained. If this is necessary, consider providing a large"
+        " voxel value range."
+    );
+    out.notes.emplace_back(
+        "Inclusivity option does not apply to the 'receding_squares' method."
+    );
+    out.notes.emplace_back(
+        "Neither 'receding_squares' nor 'binary' methods require InteriorVal and ExteriorVal to be ordered."
+    );
 
     out.args.emplace_back();
     out.args.back().name = "Channel";
@@ -76,17 +100,33 @@ OperationDoc OpArgDocHighlightROIs(){
     out.args.back().samples = OpArgSamples::Exhaustive;
 
     out.args.emplace_back();
+    out.args.back().name = "Method";
+    out.args.back().desc = "Controls the type of image mask that is generated. The default, 'binary', exclusively overwrites"
+                           " voxels with the InteriorValue or ExteriorValue. Another method is 'receding_squares'"
+                           " which creates a mask which, if processed with the marching-squares algorithm, will (mostly) recreate"
+                           " the original contours. The 'receding_squares' can be considered the inverse of the"
+                           " marching-squares algorithm. Note that the 'receding_squares' implementation is not optimized for speed.";
+    out.args.back().default_val = "binary";
+    out.args.back().expected = true;
+    out.args.back().examples = { "binary", "receding_squares" };
+    out.args.back().samples = OpArgSamples::Exhaustive;
+
+    out.args.emplace_back();
     out.args.back().name = "ExteriorVal";
-    out.args.back().desc = "The value to give to voxels outside the specified ROI(s). Note that this value"
-                           " will be ignored if exterior overwrites are disabled.";
+    out.args.back().desc = "The value to give to voxels outside the specified ROI(s). For the 'binary'"
+                           " method, note that this value will be ignored if exterior overwrites are disabled."
+                           " For the 'receding_squares' method this value is used to define the threshold"
+                           " needed to recover the original contours (mean of InteriorVal and ExteriorVal).";
     out.args.back().default_val = "0.0";
     out.args.back().expected = true;
     out.args.back().examples = { "0.0", "-1.0", "1.23", "2.34E26" };
 
     out.args.emplace_back();
     out.args.back().name = "InteriorVal";
-    out.args.back().desc = "The value to give to voxels within the volume of the specified ROI(s). Note that this value"
-                           " will be ignored if interior overwrites are disabled.";
+    out.args.back().desc = "The value to give to voxels within the specified ROI(s). For the 'binary'"
+                           " method, note that this value will be ignored if interior overwrites are disabled."
+                           " For the 'receding_squares' method this value is used to define the threshold"
+                           " needed to recover the original contours (mean of InteriorVal and ExteriorVal).";
     out.args.back().default_val = "1.0";
     out.args.back().expected = true;
     out.args.back().examples = { "0.0", "-1.0", "1.23", "2.34E26" };
@@ -130,26 +170,34 @@ Drover HighlightROIs(Drover DICOM_data,
     const auto ImageSelectionStr = OptArgs.getValueStr("ImageSelection").value();
     const auto InclusivityStr = OptArgs.getValueStr("Inclusivity").value();
     const auto ContourOverlapStr = OptArgs.getValueStr("ContourOverlap").value();
+    const auto MethodStr = OptArgs.getValueStr("Method").value();
 
-    const auto ExteriorVal    = std::stod(OptArgs.getValueStr("ExteriorVal").value());
-    const auto InteriorVal    = std::stod(OptArgs.getValueStr("InteriorVal").value());
+    const auto ExteriorVal = std::stod(OptArgs.getValueStr("ExteriorVal").value());
+    const auto InteriorVal = std::stod(OptArgs.getValueStr("InteriorVal").value());
     const auto ExteriorOverwriteStr = OptArgs.getValueStr("ExteriorOverwrite").value();
     const auto InteriorOverwriteStr = OptArgs.getValueStr("InteriorOverwrite").value();
 
     const auto NormalizedROILabelRegex = OptArgs.getValueStr("NormalizedROILabelRegex").value();
     const auto ROILabelRegex = OptArgs.getValueStr("ROILabelRegex").value();
 
+    const bool ClampResult = true; // Only for receding_squares. Confines voxels within InteriorValue and ExteriorValue (inclusive).
+    const auto RecedingThreshold = ExteriorVal * 0.5 + InteriorVal * 0.5;
+
+
     //-----------------------------------------------------------------------------------------------------------------
 
     const auto TrueRegex = Compile_Regex("^tr?u?e?$");
 
-    const auto regex_centre = Compile_Regex("^cent.*");
-    const auto regex_pci = Compile_Regex("^planar_?c?o?r?n?e?r?s?_?inc?l?u?s?i?v?e?$");
-    const auto regex_pce = Compile_Regex("^planar_?c?o?r?n?e?r?s?_?exc?l?u?s?i?v?e?$");
+    const auto regex_centre = Compile_Regex("^ce?n?t?[re]?[er]?");
+    const auto regex_pci = Compile_Regex("^pl?a?n?a?r?[_-]?c?o?r?n?e?r?s?[_-]?inc?l?u?s?i?v?e?$");
+    const auto regex_pce = Compile_Regex("^pl?a?n?a?r?[_-]?c?o?r?n?e?r?s?[_-]?exc?l?u?s?i?v?e?$");
 
     const auto regex_ignore = Compile_Regex("^ig?n?o?r?e?$");
-    const auto regex_honopps = Compile_Regex("^ho?n?o?u?r?_?o?p?p?o?s?i?t?e?_?o?r?i?e?n?t?a?t?i?o?n?s?$");
-    const auto regex_cancel = Compile_Regex("^ov?e?r?l?a?p?p?i?n?g?_?c?o?n?t?o?u?r?s?_?c?a?n?c?e?l?s?$");
+    const auto regex_honopps = Compile_Regex("^ho?n?o?u?r?_?o?p?p?o?s?i?t?e?[_-]?o?r?i?e?n?t?a?t?i?o?n?s?$");
+    const auto regex_cancel = Compile_Regex("^ov?e?r?l?a?p?p?i?n?g?[_-]?c?o?n?t?o?u?r?s?[_-]?c?a?n?c?e?l?s?$");
+
+    const auto regex_binary = Compile_Regex("^bi?n?a?r?y?$");
+    const auto regex_recede = Compile_Regex("^re?c?e?d?i?n?g?[_-]?s?q?u?a?r?e?s?$");
 
     const auto ShouldOverwriteExterior = std::regex_match(ExteriorOverwriteStr, TrueRegex);
     const auto ShouldOverwriteInterior = std::regex_match(InteriorOverwriteStr, TrueRegex);
@@ -163,177 +211,173 @@ Drover HighlightROIs(Drover DICOM_data,
         throw std::invalid_argument("No contours selected. Cannot continue.");
     }
 
-#if 0
-const double exterior = 0.0;
-const double threshold = 0.5;
-const double interior = 1.0;
-const long int channel = 0;
-const auto nan = std::numeric_limits<double>::quiet_NaN();
-const auto eps = 10.0 * std::sqrt( std::numeric_limits<double>::min() );
-const auto clamp_result = true;
+//const double exterior = 0.0;
+//const double threshold = 0.5;
+//const double interior = 1.0;
+//const long int channel = 0;
 
 const bool contour_overlap_ignore  = std::regex_match(ContourOverlapStr, regex_ignore);
 const bool contour_overlap_honopps = std::regex_match(ContourOverlapStr, regex_honopps);
 const bool contour_overlap_cancel  = std::regex_match(ContourOverlapStr, regex_cancel);
+    const auto f_receding_squares = [&](long int r,
+                                        long int c,
+                                        long int channel,
+                                        std::reference_wrapper<planar_image<float,double>> img_refw,
+                                        float &val ) -> void {
 
-    auto IAs_all = All_IAs( DICOM_data );
-    auto IAs = Whitelist( IAs_all, ImageSelectionStr );
-    for(auto & iap_it : IAs){
-        for(auto &img : (*iap_it)->imagecoll.images){
-            const auto img_plane = img.image_plane();
+        const auto nan = std::numeric_limits<double>::quiet_NaN();
+        const auto eps = 10.0 * std::sqrt( std::numeric_limits<double>::min() );
 
-            for(long int r = 0; r < img.rows; ++r){
-                for(long int c = 0; c < img.columns; ++c){
+        // This algorithm uses the left (c-1) and top (r-1) neighbours and any contours that pass between them and this
+        // voxel (r,c) to determine an appropriate value for this voxel.
+        const auto pos_r0c0 = img_refw.get().position(r, c);
+        const auto pos_rmc0 = pos_r0c0 - img_refw.get().row_unit * img_refw.get().pxl_dx;
+        const auto pos_r0cm = pos_r0c0 - img_refw.get().col_unit * img_refw.get().pxl_dy;
 
-                    const auto pos_r0c0 = img.position(r, c);
-                    const auto pos_rmc0 = pos_r0c0 - img.row_unit * img.pxl_dx;
-                    const auto pos_r0cm = pos_r0c0 - img.col_unit * img.pxl_dy;
+        const auto I_r0c0 = val;
+        const auto I_rmc0 = (isininc(0,r-1,img_refw.get().rows-1)) ? img_refw.get().value(r-1, c, channel) : ExteriorVal;
+        const auto I_r0cm = (isininc(0,c-1,img_refw.get().columns-1)) ? img_refw.get().value(r, c-1, channel) : ExteriorVal;
 
-                    const auto I_r0c0 = img.value(r, c, channel);
-                    const auto I_rmc0 = (isininc(0,r-1,img.rows-1)) ? img.value(r-1, c, channel) : exterior;
-                    const auto I_r0cm = (isininc(0,c-1,img.columns-1)) ? img.value(r, c-1, channel) : exterior;
+        const line<double> l_l(pos_rmc0, pos_r0c0);
+        const line<double> l_t(pos_r0cm, pos_r0c0);
+        const auto dist_l = img_refw.get().pxl_dx;
+        const auto dist_t = img_refw.get().pxl_dy;
+        const auto img_plane = img_refw.get().image_plane();
 
-                    const line<double> l_l(pos_rmc0, pos_r0c0);
-                    const line<double> l_t(pos_r0cm, pos_r0c0);
-                    const auto dist_l = img.pxl_dx;
-                    const auto dist_t = img.pxl_dy;
+        double newval = I_r0c0;
+        std::vector<double> newvals; // Estimates of what the modified intensity should be.
+        long int within_pos_count = 0;
+        long int within_neg_count = 0;
 
+        const auto do_loop = [&](){
+            for(auto &cc_refw : cc_ROIs){
+                for(auto &c : cc_refw.get().contours){
 
-                    double newval = I_r0c0;
-                    std::vector<double> newvals; // Estimates of what the modified intensity should be.
-                    long int within_pos_count = 0;
-                    long int within_neg_count = 0;
-                    for(auto &cc_refw : cc_ROIs){
-                        for(auto &c : cc_refw.get().contours){
-                            const bool already_proj = true;
-                            const bool is_within = c.Is_Point_In_Polygon_Projected_Orthogonally(img_plane, pos_r0c0, already_proj);
-                            if(is_within){
-                                const auto c_N = c.Estimate_Planar_Normal();
-                                if(0.0 <= c_N.Dot(img_plane.N_0)){
-                                    ++within_pos_count;
-                                }else{
-                                    ++within_neg_count;
+                    const bool already_proj = true;
+                    const bool is_within = c.Is_Point_In_Polygon_Projected_Orthogonally(img_plane, pos_r0c0, already_proj);
+                    if(is_within){
+                        const auto c_N = c.Estimate_Planar_Normal();
+                        if(0.0 <= c_N.Dot(img_plane.N_0)){
+                            ++within_pos_count;
+                        }else{
+                            ++within_neg_count;
+                        }
+                    }
+
+                    auto itB = std::prev( std::end(c.points) );
+                    for(auto itA = std::begin(c.points); itA != std::end(c.points); ++itA){
+                        const double dist_v = itA->distance(*itB);
+                        if(eps < dist_v){
+                            const line<double> l_v(*itA, *itB);
+
+                            // Determine if the line segments intersect. (Is there a categorically faster way?)
+                            vec3<double> p_t;
+                                                        // Pre-filtering starts here.
+                            const bool intersect_t =    (pos_r0c0.distance(*itA) <= (dist_v + dist_t))
+                                                     && (pos_r0c0.distance(*itB) <= (dist_v + dist_t))
+                                                        // Line segment intersection tests start here.
+                                                     && l_t.Intersects_With_Line_Once(l_v, p_t)
+                                                     && (p_t.distance(*itA) <= dist_v)
+                                                     && (p_t.distance(*itB) <= dist_v)
+                                                     && (p_t.distance(pos_r0cm) <= dist_t)
+                                                     && (p_t.distance(pos_r0c0) <= dist_t);
+                            if(intersect_t){
+                                // Assume linear interpolation, which marching-squares would typically use.
+                                // Invert the 'slope' of a linear interpolation based on threshold extraction.
+                                const auto inv_m_t = dist_t / (dist_t - p_t.distance(pos_r0c0));
+                                if(std::isfinite(inv_m_t)){
+                                    newvals.push_back( I_r0cm - (I_r0cm - RecedingThreshold) * inv_m_t);
                                 }
                             }
 
-                            auto itB = std::prev( std::end(c.points) );
-                            for(auto itA = std::begin(c.points); itA != std::end(c.points); ++itA){
-                                const double dist_v = itA->distance(*itB);
-                                if(eps < dist_v){
-                                    const line<double> l_v(*itA, *itB);
-
-                                    // Determine if the line segments intersect. (Is there a categorically faster way?)
-                                    vec3<double> p_t;
-                                                                // Pre-filtering starts here.
-                                    const bool intersect_t =    (pos_r0c0.distance(*itA) <= (dist_v + dist_t))
-                                                             && (pos_r0c0.distance(*itB) <= (dist_v + dist_t))
-                                                                // Line segment intersection tests start here.
-                                                             && l_t.Intersects_With_Line_Once(l_v, p_t)
-                                                             && (p_t.distance(*itA) <= dist_v)
-                                                             && (p_t.distance(*itB) <= dist_v)
-                                                             && (p_t.distance(pos_r0cm) <= dist_t)
-                                                             && (p_t.distance(pos_r0c0) <= dist_t);
-                                    if(intersect_t){
-                                        // Assume linear interpolation, which marching-squares would typically use.
-                                        // Invert the 'slope' of a linear interpolation based on threshold extraction.
-                                        const auto inv_m_t = dist_t / (dist_t - p_t.distance(pos_r0c0));
-                                        if(std::isfinite(inv_m_t)){
-                                            newvals.push_back( I_r0cm - (I_r0cm - threshold) * inv_m_t);
-                                        }
-                                    }
-
-                                    vec3<double> p_l;
-                                                                // Pre-filtering starts here.
-                                    const bool intersect_l =    (pos_r0c0.distance(*itA) <= (dist_v + dist_l))
-                                                             && (pos_r0c0.distance(*itB) <= (dist_v + dist_l))
-                                                                // Line segment intersection tests start here.
-                                                             && l_l.Intersects_With_Line_Once(l_v, p_l)
-                                                             && (p_l.distance(*itA) <= dist_v)
-                                                             && (p_l.distance(*itB) <= dist_v)
-                                                             && (p_l.distance(pos_rmc0) <= dist_l)
-                                                             && (p_l.distance(pos_r0c0) <= dist_l);
-                                    if(intersect_l){
-                                        // Assume linear interpolation, which marching-squares would typically use.
-                                        // Invert the 'slope' of a linear interpolation based on threshold extraction.
-                                        const auto inv_m_l = dist_l / (dist_l - p_l.distance(pos_r0c0));
-                                        if(std::isfinite(inv_m_l)){
-                                            newvals.push_back( I_rmc0 - (I_rmc0 - threshold) * inv_m_l);
-                                        }
-                                    }
+                            vec3<double> p_l;
+                                                        // Pre-filtering starts here.
+                            const bool intersect_l =    (pos_r0c0.distance(*itA) <= (dist_v + dist_l))
+                                                     && (pos_r0c0.distance(*itB) <= (dist_v + dist_l))
+                                                        // Line segment intersection tests start here.
+                                                     && l_l.Intersects_With_Line_Once(l_v, p_l)
+                                                     && (p_l.distance(*itA) <= dist_v)
+                                                     && (p_l.distance(*itB) <= dist_v)
+                                                     && (p_l.distance(pos_rmc0) <= dist_l)
+                                                     && (p_l.distance(pos_r0c0) <= dist_l);
+                            if(intersect_l){
+                                // Assume linear interpolation, which marching-squares would typically use.
+                                // Invert the 'slope' of a linear interpolation based on threshold extraction.
+                                const auto inv_m_l = dist_l / (dist_l - p_l.distance(pos_r0c0));
+                                if(std::isfinite(inv_m_l)){
+                                    newvals.push_back( I_rmc0 - (I_rmc0 - RecedingThreshold) * inv_m_l);
                                 }
-                                itB = itA;
                             }
                         }
+                        itB = itA;
                     }
-
-                    {
-                        // Try to use the minimum range possible. This maximizes the available space needed for large
-                        // jumps while also potentially keeping them within the interior and exterior values.
-                        const double just_exterior = (threshold * 0.999 + exterior * 0.001);
-                        const double just_interior = (threshold * 0.999 + interior * 0.001);
-
-                        const auto within_count = (within_pos_count + within_neg_count);
-                        bool is_interior = true; // Considered either interior or exterior at this point.
-
-                        if(false){
-                        }else if( contour_overlap_ignore ){
-                            is_interior = (within_count != 0);
-                            // Ignore contours after the first.
-                            if( is_interior ){
-                                newvals.clear();
-                            }
-
-                        }else if( contour_overlap_honopps ){
-                            is_interior = (within_neg_count < within_pos_count);
-                            
-                        }else if( contour_overlap_cancel ){
-                            is_interior = (within_count % 2 == 1);
-                            // Ignore contours that are mismatched.
-                            //if( std::abs(within_pos_count - within_neg_count) != 1 ){
-                            //    newvals.clear();
-                            //}
-
-                        }else{
-                            throw std::invalid_argument("ContourOverlap argument '"_s + ContourOverlapStr + "' is not valid");
-                        }
-
-                        // If there are no adjacent contour crossings, rely on the results of is_point_in_poly(), the
-                        // contour orientation, and the user preferences for handling multiple contour overlaps.
-                        // If there are multiple candidates for the new intensity, take the average to maximize overall agreement.
-                        if(false){
-                        }else if( ShouldOverwriteInterior && is_interior ){
-                            if(newvals.empty()){
-                                newval = just_interior;
-                            }else{
-                                newval = Stats::Mean(newvals);
-                            }
-
-                        }else if( ShouldOverwriteExterior && !is_interior ){
-                            if(newvals.empty()){
-                                newval = just_exterior;
-                            }else{
-                                newval = Stats::Mean(newvals);
-                            }
-
-                        }else{
-                            // Otherwise, do NOT overwrite the voxel's value.
-                            continue;
-                        }
-                    }
-
-                    // Confine the voxel value to the interior and exterior values, to bound the output.
-                    // Note: this step is NOT needed, and can result in lower accuracy.
-                    if(clamp_result){
-                        newval = std::clamp(newval, std::min(exterior,interior), std::max(exterior,interior));
-                    }
-
-                    img.reference(r, c, channel) = newval;
                 }
             }
-        }
-    }
+        };
+        do_loop();
 
-#endif
+
+        // Determine the new value to assign the contour.
+        //
+        // Try to use the minimum range possible. This maximizes the available space needed for large
+        // jumps while also potentially keeping them within the interior and exterior values.
+        {
+            // Try to use the minimum range possible. This maximizes the available space needed for large
+            // jumps while also potentially keeping them within the interior and exterior values.
+            const double just_exterior = (RecedingThreshold * 0.999 + ExteriorVal * 0.001);
+            const double just_interior = (RecedingThreshold * 0.999 + InteriorVal * 0.001);
+
+            const auto within_count = (within_pos_count + within_neg_count);
+            bool is_interior = true; // Considered either interior or exterior at this point.
+
+            if(false){
+            }else if( contour_overlap_ignore ){
+                // Do nothing.
+                is_interior = (within_count != 0);
+                // Ignore contours after the first.
+                if( is_interior ){
+                    newvals.clear();
+                }
+
+            }else if( contour_overlap_honopps ){
+                is_interior = (within_neg_count < within_pos_count);
+                
+            }else if( contour_overlap_cancel ){
+                is_interior = (within_count % 2 == 1);
+                // Ignore contours that are mismatched.
+                //if( std::abs(within_pos_count - within_neg_count) != 1 ){
+                //    newvals.clear();
+                //}
+
+            }else{
+                throw std::invalid_argument("ContourOverlap argument '"_s + ContourOverlapStr + "' is not valid");
+            }
+
+            // If there are no adjacent contour crossings, rely on the results of is_point_in_poly(), the
+            // contour orientation, and the user preferences for handling multiple contour overlaps.
+            // If there are multiple candidates for the new intensity, take the average to maximize overall agreement.
+            if(false){
+            }else if( ShouldOverwriteInterior && is_interior ){
+                newval = (newvals.empty()) ? just_interior : Stats::Mean(newvals);
+
+            }else if( ShouldOverwriteExterior && !is_interior ){
+                newval = (newvals.empty()) ? just_exterior : Stats::Mean(newvals);
+
+            }else{
+                // Otherwise, do NOT overwrite the voxel's value.
+                return;
+            }
+        }
+
+        // Confine the voxel value to the interior and exterior values, to bound the output.
+        // Note: this step is NOT needed, and can result in lower accuracy.
+        if(ClampResult){
+            newval = std::clamp(newval, std::min(ExteriorVal,InteriorVal), std::max(ExteriorVal,InteriorVal));
+        }
+        val = newval;
+        return;
+    };
+ 
 
     auto IAs_all = All_IAs( DICOM_data );
     auto IAs = Whitelist( IAs_all, ImageSelectionStr );
@@ -366,26 +410,32 @@ const bool contour_overlap_cancel  = std::regex_match(ContourOverlapStr, regex_c
         }
 
         std::function<void(long int, long int, long int, std::reference_wrapper<planar_image<float,double>>, float &)> f_noop;
-        if(ShouldOverwriteInterior){
-            ud.f_bounded = [&](long int /*row*/, long int /*col*/, long int chan, std::reference_wrapper<planar_image<float,double>> /*img_refw*/, float &voxel_val) {
-                if( (Channel < 0) || (Channel == chan) ){
-                    voxel_val = InteriorVal;
-                }
-            };
-        }else{
-            ud.f_bounded = f_noop;
-        }
-        if(ShouldOverwriteExterior){
-            ud.f_unbounded = [&](long int /*row*/, long int /*col*/, long int chan, std::reference_wrapper<planar_image<float,double>> /*img_refw*/, float &voxel_val) {
-                if( (Channel < 0) || (Channel == chan) ){
-                    voxel_val = ExteriorVal;
-                }
-            };
-        }else{
-            ud.f_unbounded = f_noop;
-        }
+        ud.f_bounded = f_noop;
+        ud.f_unbounded = f_noop;
         ud.f_visitor = f_noop;
 
+        if(std::regex_match(MethodStr, regex_binary)){
+            if(ShouldOverwriteInterior){
+                ud.f_bounded = [&](long int /*row*/, long int /*col*/, long int chan, std::reference_wrapper<planar_image<float,double>> /*img_refw*/, float &voxel_val) {
+                    if( (Channel < 0) || (Channel == chan) ){
+                        voxel_val = InteriorVal;
+                    }
+                };
+            }
+            if(ShouldOverwriteExterior){
+                ud.f_unbounded = [&](long int /*row*/, long int /*col*/, long int chan, std::reference_wrapper<planar_image<float,double>> /*img_refw*/, float &voxel_val) {
+                    if( (Channel < 0) || (Channel == chan) ){
+                        voxel_val = ExteriorVal;
+                    }
+                };
+            }
+
+        }else if(std::regex_match(MethodStr, regex_recede)){
+                ud.f_visitor = f_receding_squares;
+
+        }else{
+            throw std::invalid_argument("Method argument '"_s + MethodStr + "' is not valid");
+        }
 
         if(!(*iap_it)->imagecoll.Process_Images_Parallel( GroupIndividualImages,
                                                           PartitionedImageVoxelVisitorMutator,
