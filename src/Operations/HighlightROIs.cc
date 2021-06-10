@@ -15,10 +15,13 @@
 #include "../Regex_Selectors.h"
 #include "../YgorImages_Functors/Grouping/Misc_Functors.h"
 #include "../YgorImages_Functors/Processing/Partitioned_Image_Voxel_Visitor_Mutator.h"
+
 #include "HighlightROIs.h"
+
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
+#include "YgorStats.h"
 
 
 
@@ -160,6 +163,177 @@ Drover HighlightROIs(Drover DICOM_data,
         throw std::invalid_argument("No contours selected. Cannot continue.");
     }
 
+#if 0
+const double exterior = 0.0;
+const double threshold = 0.5;
+const double interior = 1.0;
+const long int channel = 0;
+const auto nan = std::numeric_limits<double>::quiet_NaN();
+const auto eps = 10.0 * std::sqrt( std::numeric_limits<double>::min() );
+const auto clamp_result = true;
+
+const bool contour_overlap_ignore  = std::regex_match(ContourOverlapStr, regex_ignore);
+const bool contour_overlap_honopps = std::regex_match(ContourOverlapStr, regex_honopps);
+const bool contour_overlap_cancel  = std::regex_match(ContourOverlapStr, regex_cancel);
+
+    auto IAs_all = All_IAs( DICOM_data );
+    auto IAs = Whitelist( IAs_all, ImageSelectionStr );
+    for(auto & iap_it : IAs){
+        for(auto &img : (*iap_it)->imagecoll.images){
+            const auto img_plane = img.image_plane();
+
+            for(long int r = 0; r < img.rows; ++r){
+                for(long int c = 0; c < img.columns; ++c){
+
+                    const auto pos_r0c0 = img.position(r, c);
+                    const auto pos_rmc0 = pos_r0c0 - img.row_unit * img.pxl_dx;
+                    const auto pos_r0cm = pos_r0c0 - img.col_unit * img.pxl_dy;
+
+                    const auto I_r0c0 = img.value(r, c, channel);
+                    const auto I_rmc0 = (isininc(0,r-1,img.rows-1)) ? img.value(r-1, c, channel) : exterior;
+                    const auto I_r0cm = (isininc(0,c-1,img.columns-1)) ? img.value(r, c-1, channel) : exterior;
+
+                    const line<double> l_l(pos_rmc0, pos_r0c0);
+                    const line<double> l_t(pos_r0cm, pos_r0c0);
+                    const auto dist_l = img.pxl_dx;
+                    const auto dist_t = img.pxl_dy;
+
+
+                    double newval = I_r0c0;
+                    std::vector<double> newvals; // Estimates of what the modified intensity should be.
+                    long int within_pos_count = 0;
+                    long int within_neg_count = 0;
+                    for(auto &cc_refw : cc_ROIs){
+                        for(auto &c : cc_refw.get().contours){
+                            const bool already_proj = true;
+                            const bool is_within = c.Is_Point_In_Polygon_Projected_Orthogonally(img_plane, pos_r0c0, already_proj);
+                            if(is_within){
+                                const auto c_N = c.Estimate_Planar_Normal();
+                                if(0.0 <= c_N.Dot(img_plane.N_0)){
+                                    ++within_pos_count;
+                                }else{
+                                    ++within_neg_count;
+                                }
+                            }
+
+                            auto itB = std::prev( std::end(c.points) );
+                            for(auto itA = std::begin(c.points); itA != std::end(c.points); ++itA){
+                                const double dist_v = itA->distance(*itB);
+                                if(eps < dist_v){
+                                    const line<double> l_v(*itA, *itB);
+
+                                    // Determine if the line segments intersect. (Is there a categorically faster way?)
+                                    vec3<double> p_t;
+                                                                // Pre-filtering starts here.
+                                    const bool intersect_t =    (pos_r0c0.distance(*itA) <= (dist_v + dist_t))
+                                                             && (pos_r0c0.distance(*itB) <= (dist_v + dist_t))
+                                                                // Line segment intersection tests start here.
+                                                             && l_t.Intersects_With_Line_Once(l_v, p_t)
+                                                             && (p_t.distance(*itA) <= dist_v)
+                                                             && (p_t.distance(*itB) <= dist_v)
+                                                             && (p_t.distance(pos_r0cm) <= dist_t)
+                                                             && (p_t.distance(pos_r0c0) <= dist_t);
+                                    if(intersect_t){
+                                        // Assume linear interpolation, which marching-squares would typically use.
+                                        // Invert the 'slope' of a linear interpolation based on threshold extraction.
+                                        const auto inv_m_t = dist_t / (dist_t - p_t.distance(pos_r0c0));
+                                        if(std::isfinite(inv_m_t)){
+                                            newvals.push_back( I_r0cm - (I_r0cm - threshold) * inv_m_t);
+                                        }
+                                    }
+
+                                    vec3<double> p_l;
+                                                                // Pre-filtering starts here.
+                                    const bool intersect_l =    (pos_r0c0.distance(*itA) <= (dist_v + dist_l))
+                                                             && (pos_r0c0.distance(*itB) <= (dist_v + dist_l))
+                                                                // Line segment intersection tests start here.
+                                                             && l_l.Intersects_With_Line_Once(l_v, p_l)
+                                                             && (p_l.distance(*itA) <= dist_v)
+                                                             && (p_l.distance(*itB) <= dist_v)
+                                                             && (p_l.distance(pos_rmc0) <= dist_l)
+                                                             && (p_l.distance(pos_r0c0) <= dist_l);
+                                    if(intersect_l){
+                                        // Assume linear interpolation, which marching-squares would typically use.
+                                        // Invert the 'slope' of a linear interpolation based on threshold extraction.
+                                        const auto inv_m_l = dist_l / (dist_l - p_l.distance(pos_r0c0));
+                                        if(std::isfinite(inv_m_l)){
+                                            newvals.push_back( I_rmc0 - (I_rmc0 - threshold) * inv_m_l);
+                                        }
+                                    }
+                                }
+                                itB = itA;
+                            }
+                        }
+                    }
+
+                    {
+                        // Try to use the minimum range possible. This maximizes the available space needed for large
+                        // jumps while also potentially keeping them within the interior and exterior values.
+                        const double just_exterior = (threshold * 0.999 + exterior * 0.001);
+                        const double just_interior = (threshold * 0.999 + interior * 0.001);
+
+                        const auto within_count = (within_pos_count + within_neg_count);
+                        bool is_interior = true; // Considered either interior or exterior at this point.
+
+                        if(false){
+                        }else if( contour_overlap_ignore ){
+                            is_interior = (within_count != 0);
+                            // Ignore contours after the first.
+                            if( is_interior ){
+                                newvals.clear();
+                            }
+
+                        }else if( contour_overlap_honopps ){
+                            is_interior = (within_neg_count < within_pos_count);
+                            
+                        }else if( contour_overlap_cancel ){
+                            is_interior = (within_count % 2 == 1);
+                            // Ignore contours that are mismatched.
+                            //if( std::abs(within_pos_count - within_neg_count) != 1 ){
+                            //    newvals.clear();
+                            //}
+
+                        }else{
+                            throw std::invalid_argument("ContourOverlap argument '"_s + ContourOverlapStr + "' is not valid");
+                        }
+
+                        // If there are no adjacent contour crossings, rely on the results of is_point_in_poly(), the
+                        // contour orientation, and the user preferences for handling multiple contour overlaps.
+                        // If there are multiple candidates for the new intensity, take the average to maximize overall agreement.
+                        if(false){
+                        }else if( ShouldOverwriteInterior && is_interior ){
+                            if(newvals.empty()){
+                                newval = just_interior;
+                            }else{
+                                newval = Stats::Mean(newvals);
+                            }
+
+                        }else if( ShouldOverwriteExterior && !is_interior ){
+                            if(newvals.empty()){
+                                newval = just_exterior;
+                            }else{
+                                newval = Stats::Mean(newvals);
+                            }
+
+                        }else{
+                            // Otherwise, do NOT overwrite the voxel's value.
+                            continue;
+                        }
+                    }
+
+                    // Confine the voxel value to the interior and exterior values, to bound the output.
+                    // Note: this step is NOT needed, and can result in lower accuracy.
+                    if(clamp_result){
+                        newval = std::clamp(newval, std::min(exterior,interior), std::max(exterior,interior));
+                    }
+
+                    img.reference(r, c, channel) = newval;
+                }
+            }
+        }
+    }
+
+#endif
 
     auto IAs_all = All_IAs( DICOM_data );
     auto IAs = Whitelist( IAs_all, ImageSelectionStr );
