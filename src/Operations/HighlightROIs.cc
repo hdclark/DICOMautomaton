@@ -180,7 +180,7 @@ Drover HighlightROIs(Drover DICOM_data,
     const auto NormalizedROILabelRegex = OptArgs.getValueStr("NormalizedROILabelRegex").value();
     const auto ROILabelRegex = OptArgs.getValueStr("ROILabelRegex").value();
 
-    const bool ClampResult = true; // Only for receding_squares. Confines voxels within InteriorValue and ExteriorValue (inclusive).
+    const bool ClampResult = false; // Only for receding_squares. Confines voxels within InteriorValue and ExteriorValue (inclusive).
     const auto RecedingThreshold = ExteriorVal * 0.5 + InteriorVal * 0.5;
 
 
@@ -211,22 +211,33 @@ Drover HighlightROIs(Drover DICOM_data,
         throw std::invalid_argument("No contours selected. Cannot continue.");
     }
 
-//const double exterior = 0.0;
-//const double threshold = 0.5;
-//const double interior = 1.0;
-//const long int channel = 0;
-
 const bool contour_overlap_ignore  = std::regex_match(ContourOverlapStr, regex_ignore);
 const bool contour_overlap_honopps = std::regex_match(ContourOverlapStr, regex_honopps);
 const bool contour_overlap_cancel  = std::regex_match(ContourOverlapStr, regex_cancel);
-    const auto f_receding_squares = [&](long int r,
+    const auto f_receding_squares = [&](bool is_interior,
+                                        long int r,
                                         long int c,
                                         long int channel,
                                         std::reference_wrapper<planar_image<float,double>> img_refw,
+                                        std::reference_wrapper<planar_image<float,double>> mask_img_refw,
                                         float &val ) -> void {
 
         const auto nan = std::numeric_limits<double>::quiet_NaN();
         const auto eps = 10.0 * std::sqrt( std::numeric_limits<double>::min() );
+        const double just_exterior = (RecedingThreshold * 0.999 + ExteriorVal * 0.001);
+        const double just_interior = (RecedingThreshold * 0.999 + InteriorVal * 0.001);
+
+        const auto mask_chnl = mask_img_refw.get().channels - 1;
+        const auto M_r0c0 = mask_img_refw.get().value(r,c,mask_chnl);
+        const auto M_rmc0 = (isininc(0,r-1,img_refw.get().rows-1)) ? mask_img_refw.get().value(r-1,c,mask_chnl) : 0;
+        const auto M_r0cm = (isininc(0,c-1,img_refw.get().columns-1)) ? mask_img_refw.get().value(r,c-1,mask_chnl) : 0;
+
+        // Short-circuit the calculation if there are no large contours that delineate this voxel from its neighbours.
+        if( (M_r0c0 == M_rmc0) 
+        &&  (M_r0c0 == M_r0cm) ){
+            val = (is_interior) ? just_interior : just_exterior;
+            return;
+        }
 
         // This algorithm uses the left (c-1) and top (r-1) neighbours and any contours that pass between them and this
         // voxel (r,c) to determine an appropriate value for this voxel.
@@ -235,8 +246,9 @@ const bool contour_overlap_cancel  = std::regex_match(ContourOverlapStr, regex_c
         const auto pos_r0cm = pos_r0c0 - img_refw.get().col_unit * img_refw.get().pxl_dy;
 
         const auto I_r0c0 = val;
-        const auto I_rmc0 = (isininc(0,r-1,img_refw.get().rows-1)) ? img_refw.get().value(r-1, c, channel) : ExteriorVal;
-        const auto I_r0cm = (isininc(0,c-1,img_refw.get().columns-1)) ? img_refw.get().value(r, c-1, channel) : ExteriorVal;
+        const auto I_rmc0 = (isininc(0,r-1,img_refw.get().rows-1)) ? img_refw.get().value(r-1, c, channel) : just_exterior;
+        const auto I_r0cm = (isininc(0,c-1,img_refw.get().columns-1)) ? img_refw.get().value(r, c-1, channel) : just_exterior;
+
 
         const line<double> l_l(pos_rmc0, pos_r0c0);
         const line<double> l_t(pos_r0cm, pos_r0c0);
@@ -253,14 +265,19 @@ const bool contour_overlap_cancel  = std::regex_match(ContourOverlapStr, regex_c
             for(auto &cc_refw : cc_ROIs){
                 for(auto &c : cc_refw.get().contours){
 
-                    const bool already_proj = true;
-                    const bool is_within = c.Is_Point_In_Polygon_Projected_Orthogonally(img_plane, pos_r0c0, already_proj);
-                    if(is_within){
-                        const auto c_N = c.Estimate_Planar_Normal();
-                        if(0.0 <= c_N.Dot(img_plane.N_0)){
-                            ++within_pos_count;
-                        }else{
-                            ++within_neg_count;
+                    // NOTE: The current implementation of Mutate_Voxels() differs from the following explicit
+                    // is_point_in_poly() check. Using this version seems to be necessary for accurate contours in this
+                    // case. Need to investigate further. TODO.
+                    if( contour_overlap_ignore ){
+                        const bool already_proj = true;
+                        const bool is_within = c.Is_Point_In_Polygon_Projected_Orthogonally(img_plane, pos_r0c0, already_proj);
+                        if(is_within){
+                            const auto c_N = c.Estimate_Planar_Normal();
+                            if(0.0 <= c_N.Dot(img_plane.N_0)){
+                                ++within_pos_count;
+                            }else{
+                                ++within_neg_count;
+                            }
                         }
                     }
 
@@ -316,23 +333,10 @@ const bool contour_overlap_cancel  = std::regex_match(ContourOverlapStr, regex_c
         };
         do_loop();
 
-
-        // Determine the new value to assign the contour.
-        //
-        // Try to use the minimum range possible. This maximizes the available space needed for large
-        // jumps while also potentially keeping them within the interior and exterior values.
         {
-            // Try to use the minimum range possible. This maximizes the available space needed for large
-            // jumps while also potentially keeping them within the interior and exterior values.
-            const double just_exterior = (RecedingThreshold * 0.999 + ExteriorVal * 0.001);
-            const double just_interior = (RecedingThreshold * 0.999 + InteriorVal * 0.001);
-
-            const auto within_count = (within_pos_count + within_neg_count);
-            bool is_interior = true; // Considered either interior or exterior at this point.
-
             if(false){
             }else if( contour_overlap_ignore ){
-                // Do nothing.
+                const auto within_count = (within_pos_count + within_neg_count);
                 is_interior = (within_count != 0);
                 // Ignore contours after the first.
                 if( is_interior ){
@@ -340,32 +344,25 @@ const bool contour_overlap_cancel  = std::regex_match(ContourOverlapStr, regex_c
                 }
 
             }else if( contour_overlap_honopps ){
-                is_interior = (within_neg_count < within_pos_count);
+                if( (std::abs(M_r0c0 + M_rmc0) == 1) 
+                ||  (std::abs(M_r0c0 + M_r0cm) == 1) ){
+                    // Do nothing.
+                }else{
+                    newvals.clear();
+                }
                 
             }else if( contour_overlap_cancel ){
-                is_interior = (within_count % 2 == 1);
-                // Ignore contours that are mismatched.
-                //if( std::abs(within_pos_count - within_neg_count) != 1 ){
-                //    newvals.clear();
-                //}
+                // Do nothing.
 
             }else{
                 throw std::invalid_argument("ContourOverlap argument '"_s + ContourOverlapStr + "' is not valid");
             }
 
-            // If there are no adjacent contour crossings, rely on the results of is_point_in_poly(), the
-            // contour orientation, and the user preferences for handling multiple contour overlaps.
-            // If there are multiple candidates for the new intensity, take the average to maximize overall agreement.
             if(false){
-            }else if( ShouldOverwriteInterior && is_interior ){
+            }else if( is_interior ){
                 newval = (newvals.empty()) ? just_interior : Stats::Mean(newvals);
-
-            }else if( ShouldOverwriteExterior && !is_interior ){
-                newval = (newvals.empty()) ? just_exterior : Stats::Mean(newvals);
-
             }else{
-                // Otherwise, do NOT overwrite the voxel's value.
-                return;
+                newval = (newvals.empty()) ? just_exterior : Stats::Mean(newvals);
             }
         }
 
@@ -377,6 +374,20 @@ const bool contour_overlap_cancel  = std::regex_match(ContourOverlapStr, regex_c
         val = newval;
         return;
     };
+    const auto f_receding_squares_interior = std::bind(f_receding_squares, true,
+                                                       std::placeholders::_1,
+                                                       std::placeholders::_2,
+                                                       std::placeholders::_3,
+                                                       std::placeholders::_4,
+                                                       std::placeholders::_5,
+                                                       std::placeholders::_6);
+    const auto f_receding_squares_exterior = std::bind(f_receding_squares, false,
+                                                       std::placeholders::_1,
+                                                       std::placeholders::_2,
+                                                       std::placeholders::_3,
+                                                       std::placeholders::_4,
+                                                       std::placeholders::_5,
+                                                       std::placeholders::_6);
  
 
     auto IAs_all = All_IAs( DICOM_data );
@@ -409,21 +420,27 @@ const bool contour_overlap_cancel  = std::regex_match(ContourOverlapStr, regex_c
             throw std::invalid_argument("Inclusivity argument '"_s + InclusivityStr + "' is not valid");
         }
 
-        std::function<void(long int, long int, long int, std::reference_wrapper<planar_image<float,double>>, float &)> f_noop;
+        Mutate_Voxels_Functor<float,double> f_noop;
         ud.f_bounded = f_noop;
         ud.f_unbounded = f_noop;
         ud.f_visitor = f_noop;
 
         if(std::regex_match(MethodStr, regex_binary)){
             if(ShouldOverwriteInterior){
-                ud.f_bounded = [&](long int /*row*/, long int /*col*/, long int chan, std::reference_wrapper<planar_image<float,double>> /*img_refw*/, float &voxel_val) {
+                ud.f_bounded = [&](long int /*row*/, long int /*col*/, long int chan,
+                                   std::reference_wrapper<planar_image<float,double>> /*img_refw*/,
+                                   std::reference_wrapper<planar_image<float,double>> /*mask_img_refw*/,
+                                   float &voxel_val) {
                     if( (Channel < 0) || (Channel == chan) ){
                         voxel_val = InteriorVal;
                     }
                 };
             }
             if(ShouldOverwriteExterior){
-                ud.f_unbounded = [&](long int /*row*/, long int /*col*/, long int chan, std::reference_wrapper<planar_image<float,double>> /*img_refw*/, float &voxel_val) {
+                ud.f_unbounded = [&](long int /*row*/, long int /*col*/, long int chan,
+                                     std::reference_wrapper<planar_image<float,double>> /*img_refw*/,
+                                     std::reference_wrapper<planar_image<float,double>> /*mask_img_refw*/,
+                                     float &voxel_val) {
                     if( (Channel < 0) || (Channel == chan) ){
                         voxel_val = ExteriorVal;
                     }
@@ -431,7 +448,14 @@ const bool contour_overlap_cancel  = std::regex_match(ContourOverlapStr, regex_c
             }
 
         }else if(std::regex_match(MethodStr, regex_recede)){
-                ud.f_visitor = f_receding_squares;
+            //ud.f_visitor = f_receding_squares;
+
+            if(ShouldOverwriteInterior){
+                ud.f_bounded = f_receding_squares_interior;
+            }
+            if(ShouldOverwriteExterior){
+                ud.f_unbounded = f_receding_squares_exterior;
+            }
 
         }else{
             throw std::invalid_argument("Method argument '"_s + MethodStr + "' is not valid");

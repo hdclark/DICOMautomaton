@@ -260,10 +260,16 @@ Polyhedron Estimate_Surface_Mesh(
         */
         ud.mutation_opts.contouroverlap = Mutate_Voxels_Opts::ContourOverlap::Ignore;
 
-        ud.f_bounded = [&](long int /*row*/, long int /*col*/, long int /*chan*/, std::reference_wrapper<planar_image<float,double>> /*img_refw*/, float &voxel_val) {
+        ud.f_bounded = [&](long int /*row*/, long int /*col*/, long int /*chan*/,
+                           std::reference_wrapper<planar_image<float,double>> /*img_refw*/,
+                           std::reference_wrapper<planar_image<float,double>> /*mask_img_refw*/,
+                           float &voxel_val) {
             voxel_val = InteriorVal;
         };
-        ud.f_unbounded = [&](long int /*row*/, long int /*col*/, long int /*chan*/, std::reference_wrapper<planar_image<float,double>> /*img_refw*/, float &voxel_val) {
+        ud.f_unbounded = [&](long int /*row*/, long int /*col*/, long int /*chan*/,
+                             std::reference_wrapper<planar_image<float,double>> /*img_refw*/,
+                             std::reference_wrapper<planar_image<float,double>> /*mask_img_refw*/,
+                             float &voxel_val) {
             voxel_val = ExteriorVal;
         };
 
@@ -1282,11 +1288,13 @@ Polyhedron Estimate_Surface_Mesh_Marching_Cubes(
 
         ud.f_bounded = [&](long int /*row*/, long int /*col*/, long int /*chan*/,
                                           std::reference_wrapper<planar_image<float,double>> /*img_refw*/,
+                                          std::reference_wrapper<planar_image<float,double>> /*mask_img_refw*/,
                                           float &voxel_val) {
             voxel_val = InteriorVal;
         };
         //ud.f_unbounded = [&](long int /*row*/, long int /*col*/, long int /*chan*/,
         //                                    std::reference_wrapper<planar_image<float,double>> /*img_refw*/,
+        //                                    std::reference_wrapper<planar_image<float,double>> /*mask_img_refw*/,
         //                                    float &voxel_val) {
         //    voxel_val = ExteriorVal;
         //};

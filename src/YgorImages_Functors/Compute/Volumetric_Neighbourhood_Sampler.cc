@@ -116,7 +116,10 @@ bool ComputeVolumetricNeighbourhoodSampler(planar_image_collection<float,double>
             std::vector<float> shtl;
             shtl.reserve(100); // An arbitrary guess.
 
-            auto f_bounded = [&,ref_img_refw](long int E_row, long int E_col, long int channel, std::reference_wrapper<planar_image<float,double>> /*img_refw*/, float &voxel_val) {
+            auto f_bounded = [&,ref_img_refw](long int E_row, long int E_col, long int channel,
+                                              std::reference_wrapper<planar_image<float,double>> /*img_refw*/,
+                                              std::reference_wrapper<planar_image<float,double>> /*mask_img_refw*/,
+                                              float &voxel_val) {
                 // No-op if this is the wrong channel.
                 if( (user_data_s->channel >= 0) && (channel != user_data_s->channel) ){
                     return;

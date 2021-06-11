@@ -125,6 +125,7 @@ bool ComputeExtractHistograms(planar_image_collection<float,double> &imagecoll,
                                          long int /*E_col*/,
                                          long int channel,
                                          std::reference_wrapper<planar_image<float,double>> /*l_img_refw*/,
+                                         std::reference_wrapper<planar_image<float,double>> /*mask_img_refw*/,
                                          float &voxel_val) {
                         if( ( (user_data_s->channel < 0) || (user_data_s->channel == channel))
                         &&  std::isfinite(voxel_val)  // Ignore infinite and NaN voxels.
@@ -255,6 +256,7 @@ bool ComputeExtractHistograms(planar_image_collection<float,double> &imagecoll,
                                          long int /*E_col*/,
                                          long int channel,
                                          std::reference_wrapper<planar_image<float,double>> /*l_img_refw*/,
+                                         std::reference_wrapper<planar_image<float,double>> /*mask_img_refw*/,
                                          float &voxel_val){
 
                         if( ( (user_data_s->channel < 0) || (user_data_s->channel == channel))

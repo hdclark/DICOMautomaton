@@ -288,7 +288,10 @@ Drover CountVoxels(Drover DICOM_data,
             throw std::invalid_argument("Inclusivity argument '"_s + InclusivityStr + "' is not valid");
         }
 
-        ud.f_bounded = [&](long int, long int, long int chan, std::reference_wrapper<planar_image<float,double>>, float &val) {
+        ud.f_bounded = [&](long int, long int, long int chan,
+                           std::reference_wrapper<planar_image<float,double>>,
+                           std::reference_wrapper<planar_image<float,double>>,
+                           float &val) {
             if( (Channel < 0) || (Channel == chan) ){
                 std::lock_guard<std::mutex> lock(locker);
                 if(!std::isfinite(val)){

@@ -1397,6 +1397,11 @@ if(false){
                 ImGui::Text("Voxel coordinates: (x, y, z) = %.4f, %.4f, %.4f", image_mouse_pos.voxel_pos.x, image_mouse_pos.voxel_pos.y, image_mouse_pos.voxel_pos.z);
                 if(disp_img_it->channels == 1){
                     ImGui::Text("Voxel intensity:   %.4f", disp_img_it->value(image_mouse_pos.r, image_mouse_pos.c, 0L));
+                    try{
+                        const auto frc = disp_img_it->fractional_row_column(image_mouse_pos.dicom_pos);
+                        const auto bilin_interp = disp_img_it->bilinearly_interpolate_in_pixel_number_space(frc.first, frc.second, 0L);
+                        ImGui::Text("Mouse intensity:   %.4f (lin. interp. at %.4f, %.4f)", bilin_interp, frc.first, frc.second);
+                    }catch(const std::exception &){}
                 }else{
                     std::stringstream ss;
                     for(long int chan = 0; chan < disp_img_it->channels; ++chan){

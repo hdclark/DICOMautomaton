@@ -294,10 +294,13 @@ Drover OptimizeStaticBeams(Drover DICOM_data,
         //ud.mutation_opts.inclusivity = Mutate_Voxels_Opts::Inclusivity::Inclusive;
         ud.mutation_opts.inclusivity = Mutate_Voxels_Opts::Inclusivity::Centre;
 
-        std::function<void(long int, long int, long int, std::reference_wrapper<planar_image<float,double>>, float &)> f_noop;
+        Mutate_Voxels_Functor<float,double> f_noop;
         ud.f_unbounded = f_noop;
         ud.f_visitor = f_noop;
-        ud.f_bounded = [&](long int /*row*/, long int /*col*/, long int /*chan*/, std::reference_wrapper<planar_image<float,double>> /*img_refw*/, float &voxel_val) {
+        ud.f_bounded = [&](long int /*row*/, long int /*col*/, long int /*chan*/,
+                           std::reference_wrapper<planar_image<float,double>> /*img_refw*/,
+                           std::reference_wrapper<planar_image<float,double>> /*mask_img_refw*/,
+                           float &voxel_val) {
             // For small ROIs this routine will infrequently be called because most time will be spent checking whether
             // voxels are inside the ROI. It is faster to parallelize with a spinlock than using a single core.
             voxels.back().emplace_back(voxel_val);
