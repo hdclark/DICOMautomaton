@@ -180,7 +180,7 @@ Drover HighlightROIs(Drover DICOM_data,
     const auto NormalizedROILabelRegex = OptArgs.getValueStr("NormalizedROILabelRegex").value();
     const auto ROILabelRegex = OptArgs.getValueStr("ROILabelRegex").value();
 
-    const bool ClampResult = false; // Only for receding_squares. Confines voxels within InteriorValue and ExteriorValue (inclusive).
+    const bool ClampResult = true; // Only for receding_squares. Confines voxels within InteriorValue and ExteriorValue (inclusive).
     const auto RecedingThreshold = ExteriorVal * 0.5 + InteriorVal * 0.5;
 
 
@@ -202,6 +202,10 @@ Drover HighlightROIs(Drover DICOM_data,
     const auto ShouldOverwriteExterior = std::regex_match(ExteriorOverwriteStr, TrueRegex);
     const auto ShouldOverwriteInterior = std::regex_match(InteriorOverwriteStr, TrueRegex);
 
+    const bool contour_overlap_ignore  = std::regex_match(ContourOverlapStr, regex_ignore);
+    const bool contour_overlap_honopps = std::regex_match(ContourOverlapStr, regex_honopps);
+    const bool contour_overlap_cancel  = std::regex_match(ContourOverlapStr, regex_cancel);
+
     //Stuff references to all contours into a list. Remember that you can still address specific contours through
     // the original holding containers (which are not modified here).
     auto cc_all = All_CCs( DICOM_data );
@@ -211,9 +215,7 @@ Drover HighlightROIs(Drover DICOM_data,
         throw std::invalid_argument("No contours selected. Cannot continue.");
     }
 
-const bool contour_overlap_ignore  = std::regex_match(ContourOverlapStr, regex_ignore);
-const bool contour_overlap_honopps = std::regex_match(ContourOverlapStr, regex_honopps);
-const bool contour_overlap_cancel  = std::regex_match(ContourOverlapStr, regex_cancel);
+
     const auto f_receding_squares = [&](bool is_interior,
                                         long int r,
                                         long int c,
@@ -229,8 +231,8 @@ const bool contour_overlap_cancel  = std::regex_match(ContourOverlapStr, regex_c
 
         const auto mask_chnl = mask_img_refw.get().channels - 1;
         const auto M_r0c0 = mask_img_refw.get().value(r,c,mask_chnl);
-        const auto M_rmc0 = (isininc(0,r-1,img_refw.get().rows-1)) ? mask_img_refw.get().value(r-1,c,mask_chnl) : 0;
-        const auto M_r0cm = (isininc(0,c-1,img_refw.get().columns-1)) ? mask_img_refw.get().value(r,c-1,mask_chnl) : 0;
+        const auto M_rmc0 = (isininc(0,r-1,img_refw.get().rows-1)) ? mask_img_refw.get().value(r-1,c,mask_chnl) : M_r0c0;
+        const auto M_r0cm = (isininc(0,c-1,img_refw.get().columns-1)) ? mask_img_refw.get().value(r,c-1,mask_chnl) : M_r0c0;
 
         // Short-circuit the calculation if there are no large contours that delineate this voxel from its neighbours.
         if( (M_r0c0 == M_rmc0) 
@@ -388,7 +390,6 @@ const bool contour_overlap_cancel  = std::regex_match(ContourOverlapStr, regex_c
                                                        std::placeholders::_4,
                                                        std::placeholders::_5,
                                                        std::placeholders::_6);
- 
 
     auto IAs_all = All_IAs( DICOM_data );
     auto IAs = Whitelist( IAs_all, ImageSelectionStr );
@@ -401,11 +402,11 @@ const bool contour_overlap_cancel  = std::regex_match(ContourOverlapStr, regex_c
         ud.mutation_opts.maskmod   = Mutate_Voxels_Opts::MaskMod::Noop;
         ud.description = "Highlighted ROIs";
 
-        if( std::regex_match(ContourOverlapStr, regex_ignore) ){
+        if( contour_overlap_ignore ){
             ud.mutation_opts.contouroverlap = Mutate_Voxels_Opts::ContourOverlap::Ignore;
-        }else if( std::regex_match(ContourOverlapStr, regex_honopps) ){
+        }else if( contour_overlap_honopps ){
             ud.mutation_opts.contouroverlap = Mutate_Voxels_Opts::ContourOverlap::HonourOppositeOrientations;
-        }else if( std::regex_match(ContourOverlapStr, regex_cancel) ){
+        }else if( contour_overlap_cancel ){
             ud.mutation_opts.contouroverlap = Mutate_Voxels_Opts::ContourOverlap::ImplicitOrientations;
         }else{
             throw std::invalid_argument("ContourOverlap argument '"_s + ContourOverlapStr + "' is not valid");
