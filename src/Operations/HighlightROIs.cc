@@ -36,11 +36,19 @@ OperationDoc OpArgDocHighlightROIs(){
         " It can handle overlapping or duplicate contours.";
 
     out.notes.emplace_back(
-        "The 'receding_squares' implementation was developed with the expectations that:"
+        "The 'receding_squares' implementation uses a simplistic one-pass approach that only considers only the"
+        " immediate left and immediate up neighbours to determine the necessary intensity of the (*this) voxel."
+        " The intensity is over-specified, so in general will result in the exact intensity needed to exactly"
+        " reproduce the original contours. Slight differences can arise do to averaging and numerical imprecision,"
+        " especially if the input comes from a marching algorithm (common!) which can result in geometrical alignment"
+        " and degenerate voxel inclusions."
+        " The 'receding_squares' implementation was developed with the expectations that:"
         " (1) the entire image will be overwritten, (2) contours are accurate and selective, so that"
         " ContourOverlap should be either 'honour_opposite_orientations' or 'overlapping_contours_cancel',"
         " and that (3) the contour detail and image grid resolution are sufficiently matched that it is"
         " uncommon for multiple contours to pass between adjacent voxels."
+        " For expectation (2), using 'overlapping_contours_cancel' produces the best results, since"
+        " all contours will be recreated as much as possible."
         " Expectation (3) could significantly impact round-trip contour accuracy, so consider using"
         " high-resolution images and, if possible, avoid pathological contours (e.g., multiple colinear"
         " contours separated by small distances)."
@@ -75,10 +83,17 @@ OperationDoc OpArgDocHighlightROIs(){
     out.args.back().name = "ContourOverlap";
     out.args.back().desc = "Controls overlapping contours are treated."
                            " The default 'ignore' treats overlapping contours as a single contour, regardless of"
-                           " contour orientation. The option 'honour_opposite_orientations' makes overlapping contours"
-                           " with opposite orientation cancel. Otherwise, orientation is ignored. The latter is useful"
+                           " contour orientation. This will effectively honour only the outermost contour regardless of"
+                           " orientation, but provides the most predictable and consistent results."
+                           " The option 'honour_opposite_orientations' makes overlapping contours"
+                           " with opposite orientation cancel. Otherwise, orientation is ignored. This is useful"
                            " for Boolean structures where contour orientation is significant for interior contours (holes)."
-                           " The option 'overlapping_contours_cancel' ignores orientation and cancels all contour overlap.";
+                           " If contours do not have consistent overlap (e.g., if contours intersect) the results"
+                           " can be unpredictable and hard to interpret."
+                           " The option 'overlapping_contours_cancel' ignores orientation and alternately cancerls"
+                           " all overlapping contours."
+                           " Again, if the contours do not have consistent overlap (e.g., if contours intersect) the results"
+                           " can be unpredictable and hard to interpret.";
     out.args.back().default_val = "ignore";
     out.args.back().expected = true;
     out.args.back().examples = { "ignore", "honour_opposite_orientations", 
@@ -259,76 +274,64 @@ Drover HighlightROIs(Drover DICOM_data,
         const auto img_plane = img_refw.get().image_plane();
 
         double newval = I_r0c0;
-        std::vector<double> newvals; // Estimates of what the modified intensity should be.
-        long int within_pos_count = 0;
-        long int within_neg_count = 0;
+        std::vector<double> newvals_tb; // Estimates of what the modified intensity should be.
+        std::vector<double> newvals_lr; // Estimates of what the modified intensity should be.
 
         const auto do_loop = [&](){
             for(auto &cc_refw : cc_ROIs){
                 for(auto &c : cc_refw.get().contours){
-
-                    // NOTE: The current implementation of Mutate_Voxels() differs from the following explicit
-                    // is_point_in_poly() check. Using this version seems to be necessary for accurate contours in this
-                    // case. Need to investigate further. TODO.
-                    if( contour_overlap_ignore ){
-                        const bool already_proj = true;
-                        const bool is_within = c.Is_Point_In_Polygon_Projected_Orthogonally(img_plane, pos_r0c0, already_proj);
-                        if(is_within){
-                            const auto c_N = c.Estimate_Planar_Normal();
-                            if(0.0 <= c_N.Dot(img_plane.N_0)){
-                                ++within_pos_count;
-                            }else{
-                                ++within_neg_count;
-                            }
-                        }
+                    
+                    if(c.points.size() < 2) continue;
+                    {
+                        //Run if the contour appears to be coplanar with the image, regardless of overlap.
+                        const auto roi_vert = c.points.front();
+                        if(! img_refw.get().sandwiches_point_within_top_bottom_planes(roi_vert)) continue;
                     }
 
                     auto itB = std::prev( std::end(c.points) );
-                    for(auto itA = std::begin(c.points); itA != std::end(c.points); ++itA){
+                    for(auto itA = std::begin(c.points); itA != std::end(c.points); itB = itA, itA++){
                         const double dist_v = itA->distance(*itB);
-                        if(eps < dist_v){
-                            const line<double> l_v(*itA, *itB);
+                        if(dist_v < eps) continue;
+                        const line<double> l_v(*itA, *itB);
 
-                            // Determine if the line segments intersect. (Is there a categorically faster way?)
-                            vec3<double> p_t;
-                                                        // Pre-filtering starts here.
-                            const bool intersect_t =    (pos_r0c0.distance(*itA) <= (dist_v + dist_t))
-                                                     && (pos_r0c0.distance(*itB) <= (dist_v + dist_t))
-                                                        // Line segment intersection tests start here.
-                                                     && l_t.Intersects_With_Line_Once(l_v, p_t)
-                                                     && (p_t.distance(*itA) <= dist_v)
-                                                     && (p_t.distance(*itB) <= dist_v)
-                                                     && (p_t.distance(pos_r0cm) <= dist_t)
-                                                     && (p_t.distance(pos_r0c0) <= dist_t);
-                            if(intersect_t){
-                                // Assume linear interpolation, which marching-squares would typically use.
-                                // Invert the 'slope' of a linear interpolation based on threshold extraction.
-                                const auto inv_m_t = dist_t / (dist_t - p_t.distance(pos_r0c0));
-                                if(std::isfinite(inv_m_t)){
-                                    newvals.push_back( I_r0cm - (I_r0cm - RecedingThreshold) * inv_m_t);
-                                }
-                            }
-
-                            vec3<double> p_l;
-                                                        // Pre-filtering starts here.
-                            const bool intersect_l =    (pos_r0c0.distance(*itA) <= (dist_v + dist_l))
-                                                     && (pos_r0c0.distance(*itB) <= (dist_v + dist_l))
-                                                        // Line segment intersection tests start here.
-                                                     && l_l.Intersects_With_Line_Once(l_v, p_l)
-                                                     && (p_l.distance(*itA) <= dist_v)
-                                                     && (p_l.distance(*itB) <= dist_v)
-                                                     && (p_l.distance(pos_rmc0) <= dist_l)
-                                                     && (p_l.distance(pos_r0c0) <= dist_l);
-                            if(intersect_l){
-                                // Assume linear interpolation, which marching-squares would typically use.
-                                // Invert the 'slope' of a linear interpolation based on threshold extraction.
-                                const auto inv_m_l = dist_l / (dist_l - p_l.distance(pos_r0c0));
-                                if(std::isfinite(inv_m_l)){
-                                    newvals.push_back( I_rmc0 - (I_rmc0 - RecedingThreshold) * inv_m_l);
-                                }
+                        // Determine if the line segments intersect. (Is there a categorically faster way?)
+                        vec3<double> p_t;
+                                                    // Pre-filtering starts here.
+                        const bool intersect_t =    (pos_r0c0.distance(*itA) <= (dist_v + dist_t))
+                                                 && (pos_r0c0.distance(*itB) <= (dist_v + dist_t))
+                                                    // Line segment intersection tests start here.
+                                                 && l_t.Intersects_With_Line_Once(l_v, p_t)
+                                                 && (p_t.distance(*itA) <= dist_v)
+                                                 && (p_t.distance(*itB) <= dist_v)
+                                                 && (p_t.distance(pos_r0cm) <= dist_t)
+                                                 && (p_t.distance(pos_r0c0) <= dist_t);
+                        if(intersect_t){
+                            // Assume linear interpolation, which marching-squares would typically use.
+                            // Invert the 'slope' of a linear interpolation based on threshold extraction.
+                            const auto inv_m_t = dist_t / (dist_t - p_t.distance(pos_r0c0));
+                            if(std::isfinite(inv_m_t)){
+                                newvals_tb.push_back( I_r0cm - (I_r0cm - RecedingThreshold) * inv_m_t);
                             }
                         }
-                        itB = itA;
+
+                        vec3<double> p_l;
+                                                    // Pre-filtering starts here.
+                        const bool intersect_l =    (pos_r0c0.distance(*itA) <= (dist_v + dist_l))
+                                                 && (pos_r0c0.distance(*itB) <= (dist_v + dist_l))
+                                                    // Line segment intersection tests start here.
+                                                 && l_l.Intersects_With_Line_Once(l_v, p_l)
+                                                 && (p_l.distance(*itA) <= dist_v)
+                                                 && (p_l.distance(*itB) <= dist_v)
+                                                 && (p_l.distance(pos_rmc0) <= dist_l)
+                                                 && (p_l.distance(pos_r0c0) <= dist_l);
+                        if(intersect_l){
+                            // Assume linear interpolation, which marching-squares would typically use.
+                            // Invert the 'slope' of a linear interpolation based on threshold extraction.
+                            const auto inv_m_l = dist_l / (dist_l - p_l.distance(pos_r0c0));
+                            if(std::isfinite(inv_m_l)){
+                                newvals_lr.push_back( I_rmc0 - (I_rmc0 - RecedingThreshold) * inv_m_l);
+                            }
+                        }
                     }
                 }
             }
@@ -338,27 +341,41 @@ Drover HighlightROIs(Drover DICOM_data,
         {
             if(false){
             }else if( contour_overlap_ignore ){
-                const auto within_count = (within_pos_count + within_neg_count);
-                is_interior = (within_count != 0);
-                // Ignore contours after the first.
-                if( is_interior ){
-                    newvals.clear();
+
+                // Only honour the change in mask if it is a transition from outside all contours to within the
+                // outermost contour.
+                if(std::abs(M_r0c0 + M_rmc0) <= 1){
+                    // Do nothing.
+                }else{
+                    newvals_lr.clear();
+                }
+                if(std::abs(M_r0c0 + M_r0cm) <= 1){
+                    // Do nothing.
+                }else{
+                    newvals_tb.clear();
                 }
 
             }else if( contour_overlap_honopps ){
+                // Only accept transitions if the mask change is +-1 and orientations are opposite.
                 if( (std::abs(M_r0c0 + M_rmc0) == 1) 
                 ||  (std::abs(M_r0c0 + M_r0cm) == 1) ){
                     // Do nothing.
                 }else{
-                    newvals.clear();
+                    newvals_lr.clear();
+                    newvals_tb.clear();
                 }
                 
             }else if( contour_overlap_cancel ){
-                // Do nothing.
+                // Do nothing -- accept all contours.
 
             }else{
                 throw std::invalid_argument("ContourOverlap argument '"_s + ContourOverlapStr + "' is not valid");
             }
+
+            std::vector<double> newvals;
+            newvals.reserve( newvals_lr.size() + newvals_tb.size() );
+            newvals.insert( std::end(newvals), std::begin(newvals_lr), std::end(newvals_lr) );
+            newvals.insert( std::end(newvals), std::begin(newvals_tb), std::end(newvals_tb) );
 
             if(false){
             }else if( is_interior ){
