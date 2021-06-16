@@ -1405,7 +1405,7 @@ if(false){
                 }else{
                     std::stringstream ss;
                     for(long int chan = 0; chan < disp_img_it->channels; ++chan){
-                        ss << disp_img_it->value(image_mouse_pos.r, image_mouse_pos.c, chan);
+                        ss << disp_img_it->value(image_mouse_pos.r, image_mouse_pos.c, chan) << " ";
                     }
                     ImGui::Text("Voxel intensities: %s", ss.str().c_str());
                 }

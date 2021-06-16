@@ -187,6 +187,7 @@ Drover ModelIVIM(Drover DICOM_data,
     // ...
     const auto bvalue_min_i = std::distance( std::begin(bvalues), std::min_element( std::begin(bvalues), std::end(bvalues) ) );
     const auto bvalue_max_i = std::distance( std::begin(bvalues), std::max_element( std::begin(bvalues), std::end(bvalues) ) );
+    const auto nan = std::numeric_limits<double>::quiet_NaN();
 
     FUNCINFO("Detected minimum bvalue is b(" << bvalue_min_i << ") = " << bvalues.at( bvalue_min_i ));
     FUNCINFO("Detected maximum bvalue is b(" << bvalue_max_i << ") = " << bvalues.at( bvalue_max_i ));
@@ -240,16 +241,47 @@ Drover ModelIVIM(Drover DICOM_data,
             };
 
         }else if(std::regex_match(ModelStr, model_f_biexp)){
-            ud.description = "f (Bi-exponential segmented fit)";
-            ud.f_reduce = [bvalues, bvalue_min_i, bvalue_max_i]( std::vector<float> &vals, 
-                                                                 vec3<double> ) -> float {
+            // Add channels to each image for each model parameter.
+            auto imgarr_ptr = &((*iap_it)->imagecoll);
+            for(auto &img : imgarr_ptr->images){
+                img.add_channel( nan ); // for D.
+                img.add_channel( nan ); // for pseduoD.
+            }
+            const long int chan_f = Channel;
+            const long int chan_D = chan_f + 1;
+            const long int chan_pD = chan_f + 2;
+
+            ud.description = "f, D, pseudoD (Bi-exponential segmented fit)";
+            ud.f_reduce = [bvalues,
+                           bvalue_min_i,
+                           bvalue_max_i,
+                           imgarr_ptr,
+                           chan_D,
+                           chan_pD ]( std::vector<float> &vals, 
+                                      vec3<double> pos ) -> float {
                 vals.erase(vals.begin()); // Remove the base image's value.
                 if(vals.size() != bvalues.size()){
                     FUNCERR("Unmatched voxel and b-value vectors. Refusing to continue.");
                 }
                 int numIterations = 1000;
-                const auto f = GetBiExpf(bvalues, vals, numIterations);
+                const auto [f, D, pseudoD] = GetBiExpf(bvalues, vals, numIterations);
                 if(!std::isfinite( f )) throw std::runtime_error("f is not finite");
+
+                // The image/voxel iterator interface isn't capable of handling multiple-channel values,
+                // so we have to explicitly lookup the position and insert it directly.
+                const auto img_it_l = imgarr_ptr->get_images_which_encompass_point(pos);
+                if(img_it_l.size() != 1){
+                    throw std::logic_error("Unable to find singular overlapping image.");
+                }
+                const auto index_D  = img_it_l.front()->index(pos, chan_D);
+                const auto index_pD = img_it_l.front()->index(pos, chan_pD);
+                if( (index_D < 0)
+                ||  (index_pD < 0) ){
+                    throw std::logic_error("Unable to locate voxel via position");
+                }
+                img_it_l.front()->reference(index_D) = D;
+                img_it_l.front()->reference(index_pD) = pseudoD;
+
                 return f;
                 
             };
@@ -303,7 +335,7 @@ double GetADCls(const std::vector<float> &bvalues, const std::vector<float> &val
     return ADC;
 }
 
-double GetBiExpf(const std::vector<float> &bvalues, const std::vector<float> &vals, int numIterations){
+std::array<double, 3> GetBiExpf(const std::vector<float> &bvalues, const std::vector<float> &vals, int numIterations){
     //This function will use the a segmented approach with Marquardts method of squared residuals minimization to fit the signal to a biexponential 
 
     //The biexponential model
@@ -400,7 +432,7 @@ double GetBiExpf(const std::vector<float> &bvalues, const std::vector<float> &va
 
 
     }
-    return f; //can also return D, pseudoD 
+    return { f, D, pseudoD };
 }
 
 std::vector<double> GetHessianAndGradient(const std::vector<float> &bvalues, const std::vector<float> &vals, float f, double pseudoD, const double D){
