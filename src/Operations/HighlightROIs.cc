@@ -11,6 +11,9 @@
 #include <stdexcept>
 #include <string>    
 
+#include <boost/geometry.hpp>
+#include <boost/geometry/index/rtree.hpp>
+
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
 #include "../YgorImages_Functors/Grouping/Misc_Functors.h"
@@ -230,6 +233,40 @@ Drover HighlightROIs(Drover DICOM_data,
         throw std::invalid_argument("No contours selected. Cannot continue.");
     }
 
+    // Populate an R*-tree with individual edges of all contours. This speeds up spatial lookups.
+    namespace bg = boost::geometry;
+    namespace bgi = boost::geometry::index;
+
+    typedef bg::model::point<double, 3, bg::cs::cartesian> point3;
+    typedef bg::model::box<point3> box3;
+    typedef std::pair< vec3<double>, vec3<double> > edge3;
+    typedef std::pair<box3, edge3> value;
+
+    const double bb_margin = 1E-3; // Avoids zero-volume bounding volumes for degenerate edges.
+    const auto machine_eps = 10.0 * std::sqrt( std::numeric_limits<double>::epsilon() );
+
+    bgi::rtree< value, bgi::rstar<16> > rtree;
+    for(auto &cc_refw : cc_ROIs){
+        for(auto &c : cc_refw.get().contours){
+            if(c.points.size() < 2) continue;
+
+            auto itB = std::prev( std::end(c.points) );
+            for(auto itA = std::begin(c.points); itA != std::end(c.points); itB = itA, itA++){
+                const double dist_v = itA->distance(*itB);
+                if(dist_v < machine_eps) continue;
+
+                const box3 bb( point3( std::min(itA->x - bb_margin, itB->x - bb_margin),
+                                       std::min(itA->y - bb_margin, itB->y - bb_margin),
+                                       std::min(itA->z - bb_margin, itB->z - bb_margin) ),
+                               point3( std::max(itA->x + bb_margin, itB->x + bb_margin),
+                                       std::max(itA->y + bb_margin, itB->y + bb_margin),
+                                       std::max(itA->z + bb_margin, itB->z + bb_margin) ) );
+
+                // Compute axis-aligned bounding box.
+                rtree.insert(std::make_pair(bb, std::make_pair( *itA, *itB )));
+            }
+        }
+    }
 
     const auto f_receding_squares = [&](bool is_interior,
                                         long int r,
@@ -239,8 +276,6 @@ Drover HighlightROIs(Drover DICOM_data,
                                         std::reference_wrapper<planar_image<float,double>> mask_img_refw,
                                         float &val ) -> void {
 
-        const auto nan = std::numeric_limits<double>::quiet_NaN();
-        const auto eps = 10.0 * std::sqrt( std::numeric_limits<double>::min() );
         const double just_exterior = (RecedingThreshold * 0.999 + ExteriorVal * 0.001);
         const double just_interior = (RecedingThreshold * 0.999 + InteriorVal * 0.001);
 
@@ -266,77 +301,71 @@ Drover HighlightROIs(Drover DICOM_data,
         const auto I_rmc0 = (isininc(0,r-1,img_refw.get().rows-1)) ? img_refw.get().value(r-1, c, channel) : just_exterior;
         const auto I_r0cm = (isininc(0,c-1,img_refw.get().columns-1)) ? img_refw.get().value(r, c-1, channel) : just_exterior;
 
-
         const line<double> l_l(pos_rmc0, pos_r0c0);
         const line<double> l_t(pos_r0cm, pos_r0c0);
         const auto dist_l = img_refw.get().pxl_dx;
         const auto dist_t = img_refw.get().pxl_dy;
+        const auto sq_dist_l = std::pow(dist_l, 2.0);
+        const auto sq_dist_t = std::pow(dist_t, 2.0);
         const auto img_plane = img_refw.get().image_plane();
 
         double newval = I_r0c0;
         std::vector<double> newvals_tb; // Estimates of what the modified intensity should be.
         std::vector<double> newvals_lr; // Estimates of what the modified intensity should be.
 
-        const auto do_loop = [&](){
-            for(auto &cc_refw : cc_ROIs){
-                for(auto &c : cc_refw.get().contours){
-                    
-                    if(c.points.size() < 2) continue;
-                    {
-                        //Run if the contour appears to be coplanar with the image, regardless of overlap.
-                        const auto roi_vert = c.points.front();
-                        if(! img_refw.get().sandwiches_point_within_top_bottom_planes(roi_vert)) continue;
+        const auto find_intersections = [&](){
+
+            const box3 bb( point3( std::min({ pos_r0c0.x, pos_rmc0.x, pos_r0cm.x }),
+                                   std::min({ pos_r0c0.y, pos_rmc0.y, pos_r0cm.y }),
+                                   std::min({ pos_r0c0.z, pos_rmc0.z, pos_r0cm.z }) - 0.1 * img_refw.get().pxl_dz),
+                           point3( std::max({ pos_r0c0.x, pos_rmc0.x, pos_r0cm.x }),
+                                   std::max({ pos_r0c0.y, pos_rmc0.y, pos_r0cm.y }),
+                                   std::max({ pos_r0c0.z, pos_rmc0.z, pos_r0cm.z }) + 0.1 * img_refw.get().pxl_dz) );
+            std::vector<value> nearby;
+            rtree.query(bgi::intersects(bb), std::back_inserter(nearby));
+
+            //auto itB = std::prev( std::end(c.points) );
+            //for(auto itA = std::begin(c.points); itA != std::end(c.points); itB = itA, itA++){
+            for(const auto &n : nearby){
+                const auto vA = n.second.first;
+                const auto vB = n.second.second;
+
+                const double sq_dist_v = vA.sq_dist(vB);
+                const line<double> l_v(vA, vB);
+
+                // Determine if the line segments intersect. (Is there a categorically faster way?)
+                vec3<double> p_t;
+                const bool intersect_t =    l_t.Intersects_With_Line_Once(l_v, p_t)
+                                         && (p_t.sq_dist(vA) <= sq_dist_v)
+                                         && (p_t.sq_dist(vB) <= sq_dist_v)
+                                         && (p_t.sq_dist(pos_r0cm) <= sq_dist_t)
+                                         && (p_t.sq_dist(pos_r0c0) <= sq_dist_t);
+                if(intersect_t){
+                    // Assume linear interpolation, which marching-squares would typically use.
+                    // Invert the 'slope' of a linear interpolation based on threshold extraction.
+                    const auto inv_m_t = dist_t / (dist_t - p_t.distance(pos_r0c0));
+                    if(std::isfinite(inv_m_t)){
+                        newvals_tb.push_back( I_r0cm - (I_r0cm - RecedingThreshold) * inv_m_t);
                     }
+                }
 
-                    auto itB = std::prev( std::end(c.points) );
-                    for(auto itA = std::begin(c.points); itA != std::end(c.points); itB = itA, itA++){
-                        const double dist_v = itA->distance(*itB);
-                        if(dist_v < eps) continue;
-                        const line<double> l_v(*itA, *itB);
-
-                        // Determine if the line segments intersect. (Is there a categorically faster way?)
-                        vec3<double> p_t;
-                                                    // Pre-filtering starts here.
-                        const bool intersect_t =    (pos_r0c0.distance(*itA) <= (dist_v + dist_t))
-                                                 && (pos_r0c0.distance(*itB) <= (dist_v + dist_t))
-                                                    // Line segment intersection tests start here.
-                                                 && l_t.Intersects_With_Line_Once(l_v, p_t)
-                                                 && (p_t.distance(*itA) <= dist_v)
-                                                 && (p_t.distance(*itB) <= dist_v)
-                                                 && (p_t.distance(pos_r0cm) <= dist_t)
-                                                 && (p_t.distance(pos_r0c0) <= dist_t);
-                        if(intersect_t){
-                            // Assume linear interpolation, which marching-squares would typically use.
-                            // Invert the 'slope' of a linear interpolation based on threshold extraction.
-                            const auto inv_m_t = dist_t / (dist_t - p_t.distance(pos_r0c0));
-                            if(std::isfinite(inv_m_t)){
-                                newvals_tb.push_back( I_r0cm - (I_r0cm - RecedingThreshold) * inv_m_t);
-                            }
-                        }
-
-                        vec3<double> p_l;
-                                                    // Pre-filtering starts here.
-                        const bool intersect_l =    (pos_r0c0.distance(*itA) <= (dist_v + dist_l))
-                                                 && (pos_r0c0.distance(*itB) <= (dist_v + dist_l))
-                                                    // Line segment intersection tests start here.
-                                                 && l_l.Intersects_With_Line_Once(l_v, p_l)
-                                                 && (p_l.distance(*itA) <= dist_v)
-                                                 && (p_l.distance(*itB) <= dist_v)
-                                                 && (p_l.distance(pos_rmc0) <= dist_l)
-                                                 && (p_l.distance(pos_r0c0) <= dist_l);
-                        if(intersect_l){
-                            // Assume linear interpolation, which marching-squares would typically use.
-                            // Invert the 'slope' of a linear interpolation based on threshold extraction.
-                            const auto inv_m_l = dist_l / (dist_l - p_l.distance(pos_r0c0));
-                            if(std::isfinite(inv_m_l)){
-                                newvals_lr.push_back( I_rmc0 - (I_rmc0 - RecedingThreshold) * inv_m_l);
-                            }
-                        }
+                vec3<double> p_l;
+                const bool intersect_l =    l_l.Intersects_With_Line_Once(l_v, p_l)
+                                         && (p_l.sq_dist(vA) <= sq_dist_v)
+                                         && (p_l.sq_dist(vB) <= sq_dist_v)
+                                         && (p_l.sq_dist(pos_rmc0) <= sq_dist_l)
+                                         && (p_l.sq_dist(pos_r0c0) <= sq_dist_l);
+                if(intersect_l){
+                    // Assume linear interpolation, which marching-squares would typically use.
+                    // Invert the 'slope' of a linear interpolation based on threshold extraction.
+                    const auto inv_m_l = dist_l / (dist_l - p_l.distance(pos_r0c0));
+                    if(std::isfinite(inv_m_l)){
+                        newvals_lr.push_back( I_rmc0 - (I_rmc0 - RecedingThreshold) * inv_m_l);
                     }
                 }
             }
         };
-        do_loop();
+        find_intersections();
 
         {
             if(false){
