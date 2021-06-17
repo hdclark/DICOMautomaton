@@ -2052,24 +2052,10 @@ if(false){
                           &&  image_mouse_pos.mouse_hovering_image ){
                         contouring_img_altered = true;
                         long int channel = 0;
-                        //const auto dimg_pxl_dx = disp_img_it->pxl_dx;
-                        //const auto dimg_pxl_dy = disp_img_it->pxl_dy;
-                        //const auto dimg_rows = disp_img_it->rows;
-                        //const auto dimg_cols = disp_img_it->columns;
-                        //const auto dimg_rows_f = static_cast<float>(disp_img_it->rows);
-                        //const auto dimg_cols_f = static_cast<float>(disp_img_it->columns);
-
-                        const auto cimg_ptr = &(contouring_imgs.image_data.back()->imagecoll.images.back());
-                        //const auto cimg_pxl_dx = cimg_ptr->pxl_dx;
-                        //const auto cimg_pxl_dy = cimg_ptr->pxl_dy;
-                        //const auto cimg_pxl_dz = cimg_ptr->pxl_dz;
-                        const auto cimg_rows = cimg_ptr->rows;
-                        const auto cimg_cols = cimg_ptr->columns;
-                        //const auto cimg_rows_f = static_cast<float>(cimg_ptr->rows);
-                        //const auto cimg_cols_f = static_cast<float>(cimg_ptr->columns);
 
                         // The mapping between contouring image and display image (which uses physical dimensions) is
                         // based on the relative position along row and column axes.
+                        const auto cimg_ptr = &(contouring_imgs.image_data.back()->imagecoll.images.back());
                         const float radius = contouring_reach; // in DICOM units (mm).
                         const auto mouse_button_0 = (0.0f <= io.MouseDownDuration[0]);
                         const auto mouse_button_1 = (0.0f <= io.MouseDownDuration[1]);
@@ -2109,39 +2095,49 @@ if(false){
                             lss.emplace_back(pA,pB);
                         }
 
-                        for(long int r = 0; r < cimg_rows; ++r){
-                            for(long int c = 0; c < cimg_cols; ++c){
-                                for(const auto &l : lss){
-                                    const auto pos = cimg_ptr->position(r,c);
-                                    const auto closest = l.Closest_Point_To(pos);
-                                    const auto dR = closest.distance(pos);
-                                    if( radius * 5.0 < dR ) continue;
-
-                                    float dval = 0.0;
-                                    if(contouring_brush == brushes::rigid_circle){
-                                        dval = (dR <= radius) ? 2.0 : 0.0;
-
-                                    }else if(contouring_brush == brushes::rigid_square){
-                                        if( (std::abs((closest - pos).Dot(cimg_ptr->row_unit)) < radius)
-                                        &&  (std::abs((closest - pos).Dot(cimg_ptr->col_unit)) < radius) ){
-                                            dval = 2.0;
+                        for(long int r = 0; r < cimg_ptr->rows; ++r){
+                            for(long int c = 0; c < cimg_ptr->columns; ++c){
+                                const auto pos = cimg_ptr->position(r,c);
+                                vec3<double> closest;
+                                {
+                                    double closest_dist = 1E99;
+                                    for(const auto &l : lss){
+                                        const auto closest_l = l.Closest_Point_To(pos);
+                                        const auto dist = closest_l.distance(pos);
+                                        if(dist < closest_dist){
+                                            closest = closest_l;
+                                            closest_dist = dist;
                                         }
-                                    }else if(contouring_brush == brushes::gaussian){
-                                        // Note: arbitrary scaling constant used here. Should give ~ same as rigid when
-                                        // dragged across the image at a typical pace.
-                                        dval = 0.35 * std::exp( -std::pow(dR / radius, 2.0f) );
                                     }
-
-                                    if(mouse_button_0){
-                                        // Do nothing.
-                                    }else if(mouse_button_1){
-                                        dval *= -1.0;
-                                    }
-
-                                    float val = cimg_ptr->value(r, c, channel);
-                                    val = std::clamp(val + dval, -1.0f, 2.0f);
-                                    cimg_ptr->reference( r, c, channel ) = val;
                                 }
+
+                                const auto dR = closest.distance(pos);
+                                if( radius * 5.0 < dR ) continue;
+
+                                float dval = 0.0;
+                                if(contouring_brush == brushes::rigid_circle){
+                                    dval = (dR <= radius) ? 2.0 : 0.0;
+
+                                }else if(contouring_brush == brushes::rigid_square){
+                                    if( (std::abs((closest - pos).Dot(cimg_ptr->row_unit)) < radius)
+                                    &&  (std::abs((closest - pos).Dot(cimg_ptr->col_unit)) < radius) ){
+                                        dval = 2.0;
+                                    }
+                                }else if(contouring_brush == brushes::gaussian){
+                                    // Note: arbitrary scaling constant used here. Should give ~ same as rigid when
+                                    // dragged across the image at a typical pace.
+                                    dval = 2.0 * std::exp( -std::pow(dR / (0.5 * radius), 2.0f) );
+                                }
+
+                                if(mouse_button_0){
+                                    // Do nothing.
+                                }else if(mouse_button_1){
+                                    dval *= -1.0;
+                                }
+
+                                float val = cimg_ptr->value(r, c, channel);
+                                val = std::clamp(val + dval, -1.0f, 2.0f);
+                                cimg_ptr->reference( r, c, channel ) = val;
                             }
                         }
 
