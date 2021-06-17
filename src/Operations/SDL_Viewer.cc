@@ -329,7 +329,18 @@ Drover SDL_Viewer(Drover DICOM_data,
     };
     opengl_texture_handle_t current_texture;
 
+    // Scale bar for showing current colour map.
+    vec3<double> zero3(0.0, 0.0, 0.0);
+    planar_image<float,double> scale_bar_img;
+    scale_bar_img.init_buffer(1L, 100L, 1L);
+    scale_bar_img.init_spatial(1.0, 1.0, 1.0, zero3, zero3);
+    scale_bar_img.init_orientation(vec3<double>(0.0, 1.0, 0.0), vec3<double>(1.0, 0.0, 0.0));
+    for(long int c = 0; c < scale_bar_img.columns; ++c){
+        scale_bar_img.reference(0,c,0) = static_cast<float>(c) / static_cast<float>(scale_bar_img.columns-1);
+    }
+    opengl_texture_handle_t scale_bar_texture;
 
+    // Contouring mode state.
     int contouring_img_row_col_count = 256;
     bool contouring_img_altered = false;
     float contouring_reach = 10.0;
@@ -381,13 +392,13 @@ Drover SDL_Viewer(Drover DICOM_data,
             return;
     };
 
-    const auto Load_OpenGL_Texture = [&custom_centre,
-                                      &custom_width,
-                                      &colour_maps,
+    const auto Load_OpenGL_Texture = [&colour_maps,
                                       &colour_map,
                                       &nan_colour,
                                       &img_channel,
-                                      &reset_contouring_state]( const planar_image<float,double>& img ) -> opengl_texture_handle_t {
+                                      &reset_contouring_state]( const planar_image<float,double>& img,
+                                                                const std::optional<double>& custom_centre,
+                                                                const std::optional<double>& custom_width ) -> opengl_texture_handle_t {
 
             const auto img_cols = img.columns;
             const auto img_rows = img.rows;
@@ -593,6 +604,8 @@ Drover SDL_Viewer(Drover DICOM_data,
                                          &img_channel,
                                          &recompute_image_iters,
                                          &current_texture,
+                                         &custom_centre,
+                                         &custom_width,
                                          &Load_OpenGL_Texture,
                                          &reset_contouring_state ](){
         //Trim any empty image arrays.
@@ -623,12 +636,18 @@ Drover SDL_Viewer(Drover DICOM_data,
         auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_image_iters();
         if( img_valid ){
             img_channel = std::clamp<long int>(img_channel, 0, disp_img_it->channels-1);
-            current_texture = Load_OpenGL_Texture(*disp_img_it);
+            current_texture = Load_OpenGL_Texture(*disp_img_it, custom_centre, custom_width);
             reset_contouring_state(*disp_img_it);
         }
         return;
     };
 
+    const auto recompute_scale_bar_image_state = [ &scale_bar_img,
+                                                   &scale_bar_texture,
+                                                   &Load_OpenGL_Texture ](){
+        scale_bar_texture = Load_OpenGL_Texture( scale_bar_img, {}, {} );
+        return;
+    };
 
     // Contour preprocessing. Expensive pre-processing steps are performed asynchronously in another thread.
     struct preprocessed_contour {
@@ -855,6 +874,7 @@ Drover SDL_Viewer(Drover DICOM_data,
     };
 
     recompute_image_state();
+    recompute_scale_bar_image_state();
     launch_contour_preprocessor();
 
 
@@ -918,7 +938,7 @@ if(false){
             ImGui::SetNextWindowPos(ImVec2(700, 40), ImGuiCond_Appearing);
             ImGui::Begin("Images2", &view_images_enabled, ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoNavInputs | ImGuiWindowFlags_NoScrollbar ); //| ImGuiWindowFlags_AlwaysAutoResize);
 
-            auto contouring_texture = Load_OpenGL_Texture( contouring_imgs.image_data.back()->imagecoll.images.back() );
+            auto contouring_texture = Load_OpenGL_Texture( contouring_imgs.image_data.back()->imagecoll.images.back(), custom_centre, custom_width );
             auto gl_tex_ptr = reinterpret_cast<void*>(static_cast<intptr_t>(contouring_texture.texture_number));
             ImGui::Image(gl_tex_ptr, ImVec2(600,600), uv_min, uv_max);
             ImGui::End();
@@ -1854,20 +1874,27 @@ if(false){
 
         // Adjust the colour map.
         if(adjust_colour_map_enabled){
-            ImGui::SetNextWindowSize(ImVec2(265, 450), ImGuiCond_FirstUseEver);
-            ImGui::Begin("Adjust Colour Map", &adjust_colour_map_enabled);
+            ImGui::SetNextWindowPos(ImVec2(680, 120), ImGuiCond_FirstUseEver);
+            ImGui::Begin("Adjust Colour Map", &adjust_colour_map_enabled, ImGuiWindowFlags_AlwaysAutoResize);
             bool reload_texture = false;
 
+            // Draw the scale bar.
+            auto gl_tex_ptr = reinterpret_cast<void*>(static_cast<intptr_t>(scale_bar_texture.texture_number));
+            ImGui::Image(gl_tex_ptr, ImVec2(250,25), ImVec2(0.0, 0.0), ImVec2(1.0, 1.0));
+
+            // Draw buttons for each available colour map.
             for(size_t i = 0; i < colour_maps.size(); ++i){
                 if( ImGui::Button(colour_maps[i].first.c_str(), ImVec2(250, 0)) ){
                     colour_map = i;
                     reload_texture = true;
                 }
             }
+
             ImGui::End();
 
             if(reload_texture){
                 recompute_image_state();
+                recompute_scale_bar_image_state();
             }
         }
 
@@ -2197,19 +2224,19 @@ if(false){
                 if(view_contours_enabled) launch_contour_preprocessor();
                 img_array_ptr_it = std::next(DICOM_data.image_data.begin(), img_array_num);
                 disp_img_it = std::next((*img_array_ptr_it)->imagecoll.images.begin(), img_num);
-                current_texture = Load_OpenGL_Texture(*disp_img_it);
+                current_texture = Load_OpenGL_Texture(*disp_img_it, custom_centre, custom_width);
                 reset_contouring_state(*disp_img_it);
 
             }else if( new_img_num != img_num ){
                 advance_to_image(new_img_num);
                 if(view_contours_enabled) launch_contour_preprocessor();
                 disp_img_it = std::next((*img_array_ptr_it)->imagecoll.images.begin(), img_num);
-                current_texture = Load_OpenGL_Texture(*disp_img_it);
+                current_texture = Load_OpenGL_Texture(*disp_img_it, custom_centre, custom_width);
                 reset_contouring_state(*disp_img_it);
 
             }else if( new_img_chnl != img_channel ){
                 img_channel = std::clamp<long int>(new_img_chnl, 0L, disp_img_it->channels - 1L);
-                current_texture = Load_OpenGL_Texture(*disp_img_it);
+                current_texture = Load_OpenGL_Texture(*disp_img_it, custom_centre, custom_width);
             }
             ImGui::End();
         }
