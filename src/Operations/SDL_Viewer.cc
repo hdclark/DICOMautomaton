@@ -341,6 +341,9 @@ Drover SDL_Viewer(Drover DICOM_data,
         gaussian,
     };
     brushes contouring_brush = brushes::rigid_circle;
+    float last_mouse_button_0_down = 1E30;
+    float last_mouse_button_1_down = 1E30;
+    std::optional<vec3<double>> last_mouse_button_pos;
 
     Drover contouring_imgs;
     contouring_imgs.Ensure_Contour_Data_Allocated();
@@ -357,8 +360,17 @@ Drover SDL_Viewer(Drover DICOM_data,
             contouring_imgs.image_data.back()->imagecoll.images.clear();
             contouring_imgs.image_data.back()->imagecoll.images.emplace_back();
             const auto cimg_ptr = &(contouring_imgs.image_data.back()->imagecoll.images.back());
+
+            // Make the contouring image spatial extent match the display image, except with a different number of
+            // rows and columns. This will make it easy to translate contours back and forth.
+            const auto cimg_pxl_dx = img.pxl_dx * static_cast<float>(img.rows)/static_cast<float>(contouring_img_row_col_count);
+            const auto cimg_pxl_dy = img.pxl_dy * static_cast<float>(img.columns)/static_cast<float>(contouring_img_row_col_count);
+            const auto cimg_offset = img.offset - img.row_unit * img.pxl_dx * 0.5
+                                                - img.col_unit * img.pxl_dy * 0.5
+                                                + img.row_unit * cimg_pxl_dx * 0.5
+                                                + img.col_unit * cimg_pxl_dy * 0.5;
             cimg_ptr->init_buffer(contouring_img_row_col_count, contouring_img_row_col_count, 1L);
-            cimg_ptr->init_spatial(1.0, 1.0, 1.0, img.anchor, img.offset);
+            cimg_ptr->init_spatial(cimg_pxl_dx, cimg_pxl_dy, img.pxl_dz, img.anchor, cimg_offset);
             cimg_ptr->init_orientation(img.row_unit, img.col_unit);
             cimg_ptr->fill_pixels(-1.0f);
 
@@ -1232,6 +1244,9 @@ if(false){
                             contouring_imgs.Ensure_Contour_Data_Allocated();
                             contouring_imgs.contour_data->ccs.clear();
                             contouring_img_altered = true;
+                            last_mouse_button_0_down = 1E30;
+                            last_mouse_button_1_down = 1E30;
+                            last_mouse_button_pos = {};
                         }
                         ImGui::SameLine();
                         if(ImGui::Button("Cancel")){
@@ -1333,12 +1348,12 @@ if(false){
                         const auto cimg_ptr = &(contouring_imgs.image_data.back()->imagecoll.images.back());
                         const auto cimg_dicom_width = cimg_ptr->pxl_dx * cimg_ptr->rows;
                         const auto cimg_dicom_height = cimg_ptr->pxl_dy * cimg_ptr->columns; 
-                        const auto cimg_top_left = cimg_ptr->anchor + cimg_ptr->offset
-                                                 - cimg_ptr->row_unit * cimg_ptr->pxl_dx * 0.5f
-                                                 - cimg_ptr->col_unit * cimg_ptr->pxl_dy * 0.5f;
-                        //const auto img_top_right = cimg_top_left + cimg_ptr->row_unit * cimg_dicom_width;
-                        //const auto img_bottom_left = cimg_top_left + cimg_ptr->col_unit * cimg_dicom_height;
-                        const auto cimg_plane = cimg_ptr->image_plane();
+                        //const auto cimg_top_left = cimg_ptr->anchor + cimg_ptr->offset
+                        //                         - cimg_ptr->row_unit * cimg_ptr->pxl_dx * 0.5f
+                        //                         - cimg_ptr->col_unit * cimg_ptr->pxl_dy * 0.5f;
+                        //const auto cimg_top_right = cimg_top_left + cimg_ptr->row_unit * cimg_dicom_width;
+                        //const auto cimg_bottom_left = cimg_top_left + cimg_ptr->col_unit * cimg_dicom_height;
+                        //const auto cimg_plane = cimg_ptr->image_plane();
 
                         for(auto &cc : contouring_imgs.contour_data->ccs){
                             for(auto &cop : cc.contours){
@@ -2030,7 +2045,6 @@ if(false){
                     }else if(io.KeyShift && (io.MouseWheel < 0)){
                         scroll_arrays = std::clamp((scroll_arrays + N_arrays + d_l) % N_arrays, 0, N_arrays - 1);
 
-
                     }else if( view_contouring_enabled
                           &&  (0 < IM_ARRAYSIZE(io.MouseDown))
                           &&  (1 < IM_ARRAYSIZE(io.MouseDown))
@@ -2038,62 +2052,84 @@ if(false){
                           &&  image_mouse_pos.mouse_hovering_image ){
                         contouring_img_altered = true;
                         long int channel = 0;
-                        const auto dimg_pxl_dx = disp_img_it->pxl_dx;
-                        const auto dimg_pxl_dy = disp_img_it->pxl_dy;
-                        const auto dimg_rows = disp_img_it->rows;
-                        const auto dimg_cols = disp_img_it->columns;
-                        const auto dimg_rows_f = static_cast<float>(disp_img_it->rows);
-                        const auto dimg_cols_f = static_cast<float>(disp_img_it->columns);
+                        //const auto dimg_pxl_dx = disp_img_it->pxl_dx;
+                        //const auto dimg_pxl_dy = disp_img_it->pxl_dy;
+                        //const auto dimg_rows = disp_img_it->rows;
+                        //const auto dimg_cols = disp_img_it->columns;
+                        //const auto dimg_rows_f = static_cast<float>(disp_img_it->rows);
+                        //const auto dimg_cols_f = static_cast<float>(disp_img_it->columns);
 
                         const auto cimg_ptr = &(contouring_imgs.image_data.back()->imagecoll.images.back());
-                        const auto cimg_pxl_dx = cimg_ptr->pxl_dx;
-                        const auto cimg_pxl_dy = cimg_ptr->pxl_dy;
+                        //const auto cimg_pxl_dx = cimg_ptr->pxl_dx;
+                        //const auto cimg_pxl_dy = cimg_ptr->pxl_dy;
+                        //const auto cimg_pxl_dz = cimg_ptr->pxl_dz;
                         const auto cimg_rows = cimg_ptr->rows;
                         const auto cimg_cols = cimg_ptr->columns;
-                        const auto cimg_rows_f = static_cast<float>(cimg_ptr->rows);
-                        const auto cimg_cols_f = static_cast<float>(cimg_ptr->columns);
+                        //const auto cimg_rows_f = static_cast<float>(cimg_ptr->rows);
+                        //const auto cimg_cols_f = static_cast<float>(cimg_ptr->columns);
 
                         // The mapping between contouring image and display image (which uses physical dimensions) is
                         // based on the relative position along row and column axes.
                         const float radius = contouring_reach; // in DICOM units (mm).
-                        const auto r_scale = dimg_rows_f / cimg_rows_f;
-                        const auto c_scale = dimg_cols_f / cimg_cols_f;
-                        long int extent_r = cimg_rows;
-                        long int extent_c = cimg_cols;
-                        if(contouring_brush == brushes::rigid_circle){ 
-                            // Limit the search to the near-vicinity.
-                            extent_r = 2 * static_cast<long int>(std::ceil( radius / (r_scale * cimg_pxl_dy) ));
-                            extent_c = 2 * static_cast<long int>(std::ceil( radius / (c_scale * cimg_pxl_dx) ));
-                        }else if(contouring_brush == brushes::rigid_square){ 
-                            extent_r = static_cast<long int>(std::round( radius / (r_scale * cimg_pxl_dy) ));
-                            extent_c = static_cast<long int>(std::round( radius / (c_scale * cimg_pxl_dx) ));
-                        }else if(contouring_brush == brushes::gaussian){
-                            // Extent outward several standard deviations to account for exponential drop-off.
-                            extent_r = 7 * static_cast<long int>(std::ceil( radius / (r_scale * cimg_pxl_dy) ));
-                            extent_c = 7 * static_cast<long int>(std::ceil( radius / (c_scale * cimg_pxl_dx) ));
-                        }
                         const auto mouse_button_0 = (0.0f <= io.MouseDownDuration[0]);
                         const auto mouse_button_1 = (0.0f <= io.MouseDownDuration[1]);
 
-                        const long int r = std::clamp( static_cast<long int>( std::floor( image_mouse_pos.region_y * cimg_rows_f ) ), 0L, (cimg_rows-1) );
-                        const long int c = std::clamp( static_cast<long int>( std::floor( image_mouse_pos.region_x * cimg_cols_f ) ), 0L, (cimg_cols-1) );
-                        for(long int i = -extent_r; i <= extent_r; ++i){
-                            for(long int j = -extent_c; j <= extent_c; ++j){
-                                if( isininc(0, r + i, cimg_rows - 1)
-                                &&  isininc(0, c + j, cimg_cols - 1) ){
-                                    const float real_dr = static_cast<float>(i) * dimg_pxl_dx * r_scale;
-                                    const float real_dc = static_cast<float>(j) * dimg_pxl_dy * c_scale;
-                                    const float real_dR = std::hypot(real_dr, real_dc);
+                        const auto mouse_button_0_sticky = mouse_button_0
+                            && ( io.KeyShift || (last_mouse_button_0_down < io.MouseDownDuration[0]) );
+                        const auto mouse_button_1_sticky = mouse_button_1
+                            && ( io.KeyShift || (last_mouse_button_1_down < io.MouseDownDuration[1]) );
+                        const auto any_mouse_button_sticky = mouse_button_0_sticky || mouse_button_1_sticky;
+
+                        std::vector<line_segment<double>> lss;
+                        if( false ){
+                        }else if( any_mouse_button_sticky
+                              && last_mouse_button_pos
+                              && io.KeyCtrl){
+                            const auto pA = image_mouse_pos.dicom_pos; // Current position.
+                            const auto pB = last_mouse_button_pos.value(); // Previous position.
+
+                            // Project along image axes to create a taxi-cab metric corner vertex.
+                            const auto proj_r = (pB - pA).Dot(cimg_ptr->row_unit);
+                            const auto proj_c = (pB - pA).Dot(cimg_ptr->col_unit);
+                            const auto corner = (std::abs(proj_r) < std::abs(proj_c)) ? pA + cimg_ptr->row_unit * proj_r
+                                                                                      : pA + cimg_ptr->col_unit * proj_c;
+                            lss.emplace_back(pA,corner);
+                            lss.emplace_back(corner,pB);
+
+                        }else if( any_mouse_button_sticky
+                              &&  last_mouse_button_pos ){
+                            const auto pA = image_mouse_pos.dicom_pos; // Current position.
+                            const auto pB = last_mouse_button_pos.value(); // Previous position.
+                            lss.emplace_back(pA,pB);
+
+                        }else{
+                            auto pA = image_mouse_pos.dicom_pos; // Current position.
+                            auto pB = pA;
+                            pB.z += cimg_ptr->pxl_dz * 0.01; // Default offset to avoid degenerate line segment.
+                            lss.emplace_back(pA,pB);
+                        }
+
+                        for(long int r = 0; r < cimg_rows; ++r){
+                            for(long int c = 0; c < cimg_cols; ++c){
+                                for(const auto &l : lss){
+                                    const auto pos = cimg_ptr->position(r,c);
+                                    const auto closest = l.Closest_Point_To(pos);
+                                    const auto dR = closest.distance(pos);
+                                    if( radius * 5.0 < dR ) continue;
 
                                     float dval = 0.0;
                                     if(contouring_brush == brushes::rigid_circle){
-                                        dval = (real_dR <= radius) ? 1.0 : 0.0;
+                                        dval = (dR <= radius) ? 2.0 : 0.0;
+
                                     }else if(contouring_brush == brushes::rigid_square){
-                                        dval = 1.0;
+                                        if( (std::abs((closest - pos).Dot(cimg_ptr->row_unit)) < radius)
+                                        &&  (std::abs((closest - pos).Dot(cimg_ptr->col_unit)) < radius) ){
+                                            dval = 2.0;
+                                        }
                                     }else if(contouring_brush == brushes::gaussian){
                                         // Note: arbitrary scaling constant used here. Should give ~ same as rigid when
                                         // dragged across the image at a typical pace.
-                                        dval = 0.35 * std::exp( -std::pow(real_dR / radius, 2.0f) );
+                                        dval = 0.35 * std::exp( -std::pow(dR / radius, 2.0f) );
                                     }
 
                                     if(mouse_button_0){
@@ -2102,11 +2138,21 @@ if(false){
                                         dval *= -1.0;
                                     }
 
-                                    float val = cimg_ptr->value(r + i, c + j, channel);
+                                    float val = cimg_ptr->value(r, c, channel);
                                     val = std::clamp(val + dval, -1.0f, 2.0f);
-                                    cimg_ptr->reference( r + i, c + j, channel ) = val;
+                                    cimg_ptr->reference( r, c, channel ) = val;
                                 }
                             }
+                        }
+
+                        // Update mouse position for next time, if applicable.
+                        if( mouse_button_0 ){
+                            last_mouse_button_0_down = io.MouseDownDuration[0];
+                            last_mouse_button_pos = image_mouse_pos.dicom_pos;
+                        }
+                        if( mouse_button_1 ){
+                            last_mouse_button_1_down = io.MouseDownDuration[1];
+                            last_mouse_button_pos = image_mouse_pos.dicom_pos;
                         }
 
                     }else if(0 < io.MouseWheel){
