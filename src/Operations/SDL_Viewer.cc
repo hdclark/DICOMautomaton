@@ -1211,7 +1211,25 @@ if(false){
 
                 // Contouring interface.
                 if( view_contouring_enabled ){
-                    drawList->AddCircle(io.MousePos, static_cast<float>(contouring_reach), 0x00FF11FF);
+                    // Provide a visual cue for the contouring brush.
+                    {
+                        // The ratio of an ImGui pixel to DICOM distance.
+                        const auto pixel_scale = static_cast<float>(real_extent.x) / img_dicom_width;
+                        const auto pixel_radius = static_cast<float>(contouring_reach) * pixel_scale;
+                        const auto c = ImColor(0.0f, 1.0f, 0.8f, 1.0f);
+
+                        if( (contouring_brush == brushes::rigid_circle)
+                        ||  (contouring_brush == brushes::gaussian) ){
+                            drawList->AddCircle(io.MousePos, pixel_radius, c);
+
+                        }else if(contouring_brush == brushes::rigid_square){
+                            ImVec2 ul( io.MousePos.x - pixel_radius,
+                                       io.MousePos.y - pixel_radius );
+                            ImVec2 lr( io.MousePos.x + pixel_radius,
+                                       io.MousePos.y + pixel_radius );
+                            drawList->AddRect(ul, lr, c);
+                        }
+                    }
 
                     ImGui::SetNextWindowSize(ImVec2(510, 650), ImGuiCond_Appearing);
                     ImGui::SetNextWindowPos(ImVec2(680, 200), ImGuiCond_Appearing);
