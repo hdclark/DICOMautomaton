@@ -351,9 +351,13 @@ Drover SDL_Viewer(Drover DICOM_data,
     float contouring_margin = 1.0;
     std::string contouring_method = "marching-squares";
     enum class brushes {
+        // 2D brushes.
         rigid_circle,
         rigid_square,
         gaussian,
+
+        // 3D brushes.
+        rigid_sphere,
     };
     brushes contouring_brush = brushes::rigid_circle;
     float last_mouse_button_0_down = 1E30;
@@ -368,26 +372,28 @@ Drover SDL_Viewer(Drover DICOM_data,
 
     // Resets the contouring image to match the display image characteristics.
     const auto reset_contouring_state = [&contouring_imgs,
-                                         &contouring_img_row_col_count]( const planar_image<float,double>& img ) -> void {
+                                         &contouring_img_row_col_count]( img_array_ptr_it_t  dimg_array_ptr_it ) -> void {
             contouring_img_row_col_count = std::clamp(contouring_img_row_col_count, 5, 1024);
 
-            // Reset the contouring image.
+            // Reset the contouring images.
             contouring_imgs.image_data.back()->imagecoll.images.clear();
-            contouring_imgs.image_data.back()->imagecoll.images.emplace_back();
-            const auto cimg_ptr = &(contouring_imgs.image_data.back()->imagecoll.images.back());
+            for(const auto& dimg : (*dimg_array_ptr_it)->imagecoll.images){
+                contouring_imgs.image_data.back()->imagecoll.images.emplace_back();
+                const auto cimg_ptr = &(contouring_imgs.image_data.back()->imagecoll.images.back());
 
-            // Make the contouring image spatial extent match the display image, except with a different number of
-            // rows and columns. This will make it easy to translate contours back and forth.
-            const auto cimg_pxl_dx = img.pxl_dx * static_cast<float>(img.rows)/static_cast<float>(contouring_img_row_col_count);
-            const auto cimg_pxl_dy = img.pxl_dy * static_cast<float>(img.columns)/static_cast<float>(contouring_img_row_col_count);
-            const auto cimg_offset = img.offset - img.row_unit * img.pxl_dx * 0.5
-                                                - img.col_unit * img.pxl_dy * 0.5
-                                                + img.row_unit * cimg_pxl_dx * 0.5
-                                                + img.col_unit * cimg_pxl_dy * 0.5;
-            cimg_ptr->init_buffer(contouring_img_row_col_count, contouring_img_row_col_count, 1L);
-            cimg_ptr->init_spatial(cimg_pxl_dx, cimg_pxl_dy, img.pxl_dz, img.anchor, cimg_offset);
-            cimg_ptr->init_orientation(img.row_unit, img.col_unit);
-            cimg_ptr->fill_pixels(-1.0f);
+                // Make the contouring image spatial extent match the display image, except with a different number of
+                // rows and columns. This will make it easy to translate contours back and forth.
+                const auto cimg_pxl_dx = dimg.pxl_dx * static_cast<float>(dimg.rows)/static_cast<float>(contouring_img_row_col_count);
+                const auto cimg_pxl_dy = dimg.pxl_dy * static_cast<float>(dimg.columns)/static_cast<float>(contouring_img_row_col_count);
+                const auto cimg_offset = dimg.offset - dimg.row_unit * dimg.pxl_dx * 0.5
+                                                     - dimg.col_unit * dimg.pxl_dy * 0.5
+                                                     + dimg.row_unit * cimg_pxl_dx * 0.5
+                                                     + dimg.col_unit * cimg_pxl_dy * 0.5;
+                cimg_ptr->init_buffer(contouring_img_row_col_count, contouring_img_row_col_count, 1L);
+                cimg_ptr->init_spatial(cimg_pxl_dx, cimg_pxl_dy, dimg.pxl_dz, dimg.anchor, cimg_offset);
+                cimg_ptr->init_orientation(dimg.row_unit, dimg.col_unit);
+                cimg_ptr->fill_pixels(-1.0f);
+            }
 
             // Reset any existing contours.
             contouring_imgs.Ensure_Contour_Data_Allocated();
@@ -399,10 +405,9 @@ Drover SDL_Viewer(Drover DICOM_data,
     const auto Load_OpenGL_Texture = [&colour_maps,
                                       &colour_map,
                                       &nan_colour,
-                                      &img_channel,
-                                      &reset_contouring_state]( const planar_image<float,double>& img,
-                                                                const std::optional<double>& custom_centre,
-                                                                const std::optional<double>& custom_width ) -> opengl_texture_handle_t {
+                                      &img_channel ]( const planar_image<float,double>& img,
+                                                      const std::optional<double>& custom_centre,
+                                                      const std::optional<double>& custom_width ) -> opengl_texture_handle_t {
 
             const auto img_cols = img.columns;
             const auto img_rows = img.rows;
@@ -601,6 +606,32 @@ Drover SDL_Viewer(Drover DICOM_data,
         return out;
     };
 
+    // Recompute image array and image iterators for the current contouring image.
+    const auto recompute_cimage_iters = [ &contouring_imgs,
+                                          &img_num ](){
+        std::tuple<bool, img_array_ptr_it_t, disp_img_it_t > out;
+        std::get<bool>( out ) = false;
+        const long int img_array_num = 0;
+
+        // Set the current image array and image iters and load the texture.
+        const auto has_images = contouring_imgs.Has_Image_Data();
+        do{ 
+            if( !has_images ) break;
+            if( !isininc(1, img_array_num+1, contouring_imgs.image_data.size()) ) break;
+            auto img_array_ptr_it = std::next(contouring_imgs.image_data.begin(), img_array_num);
+            if( img_array_ptr_it == std::end(contouring_imgs.image_data) ) break;
+
+            if( !isininc(1, img_num+1, (*img_array_ptr_it)->imagecoll.images.size()) ) break;
+            auto disp_img_it = std::next((*img_array_ptr_it)->imagecoll.images.begin(), img_num);
+            if( disp_img_it == std::end((*img_array_ptr_it)->imagecoll.images) ) break;
+
+            std::get<bool>( out ) = true;
+            std::get<img_array_ptr_it_t>( out ) = img_array_ptr_it;
+            std::get<disp_img_it_t>( out ) = disp_img_it;
+        }while(false);
+        return out;
+    };
+
     // Recompute the image viewer state, e.g., after the image data is altered by another operation.
     const auto recompute_image_state = [ &DICOM_data,
                                          &img_array_num,
@@ -641,7 +672,6 @@ Drover SDL_Viewer(Drover DICOM_data,
         if( img_valid ){
             img_channel = std::clamp<long int>(img_channel, 0, disp_img_it->channels-1);
             current_texture = Load_OpenGL_Texture(*disp_img_it, custom_centre, custom_width);
-            reset_contouring_state(*disp_img_it);
         }
         return;
     };
@@ -896,6 +926,10 @@ Drover SDL_Viewer(Drover DICOM_data,
 
     recompute_image_state();
     recompute_scale_bar_image_state();
+    {
+        auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_image_iters();
+        if(img_valid) reset_contouring_state(img_array_ptr_it);
+    }
     launch_contour_preprocessor();
 
 
@@ -955,14 +989,16 @@ long int frame_count = 0;
 
 // Contouring -- mask debugging / visualization.
 if(false){
-            ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_Appearing);
-            ImGui::SetNextWindowPos(ImVec2(700, 40), ImGuiCond_Appearing);
-            ImGui::Begin("Images2", &view_images_enabled, ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoNavInputs | ImGuiWindowFlags_NoScrollbar ); //| ImGuiWindowFlags_AlwaysAutoResize);
-
-            auto contouring_texture = Load_OpenGL_Texture( contouring_imgs.image_data.back()->imagecoll.images.back(), custom_centre, custom_width );
-            auto gl_tex_ptr = reinterpret_cast<void*>(static_cast<intptr_t>(contouring_texture.texture_number));
-            ImGui::Image(gl_tex_ptr, ImVec2(600,600), uv_min, uv_max);
-            ImGui::End();
+            auto [cimg_valid, cimg_array_ptr_it, cimg_it] = recompute_cimage_iters();
+            if(cimg_valid){
+                ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_Appearing);
+                ImGui::SetNextWindowPos(ImVec2(700, 40), ImGuiCond_Appearing);
+                ImGui::Begin("Images2", &view_images_enabled, ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoNavInputs | ImGuiWindowFlags_NoScrollbar ); //| ImGuiWindowFlags_AlwaysAutoResize);
+                auto contouring_texture = Load_OpenGL_Texture( *cimg_it, {}, {} );
+                auto gl_tex_ptr = reinterpret_cast<void*>(static_cast<intptr_t>(contouring_texture.texture_number));
+                ImGui::Image(gl_tex_ptr, ImVec2(600,600), uv_min, uv_max);
+                ImGui::End();
+            }
 }
 
         if(ImGui::BeginMainMenuBar()){
@@ -990,6 +1026,7 @@ if(false){
                 }
                 if(ImGui::MenuItem("Contouring", nullptr, &view_contouring_enabled)){
                     contouring_img_altered = true;
+                    tagged_pos = {};
                 }
                 ImGui::MenuItem("Image Metadata", nullptr, &view_image_metadata_enabled);
                 ImGui::MenuItem("Image Hover Tooltips", nullptr, &show_image_hover_tooltips);
@@ -1309,6 +1346,7 @@ if(false){
                         const auto c = ImColor(0.0f, 1.0f, 0.8f, 1.0f);
 
                         if( (contouring_brush == brushes::rigid_circle)
+                        ||  (contouring_brush == brushes::rigid_sphere)
                         ||  (contouring_brush == brushes::gaussian) ){
                             drawList->AddCircle(io.MousePos, pixel_radius, c);
 
@@ -1347,8 +1385,12 @@ if(false){
                         ImGui::Text("Clear contour?");
                         if(ImGui::Button("Clear")){
                             ImGui::CloseCurrentPopup();
-                            const auto cimg_ptr = &(contouring_imgs.image_data.back()->imagecoll.images.back());
-                            cimg_ptr->fill_pixels(-1.0f);
+                            auto [cimg_valid, cimg_array_ptr_it, cimg_it] = recompute_cimage_iters();
+                            if(cimg_valid){
+                                for(auto& cimg : (*cimg_array_ptr_it)->imagecoll.images){
+                                    cimg.fill_pixels(-1.0f);
+                                }
+                            }
                             contouring_imgs.Ensure_Contour_Data_Allocated();
                             contouring_imgs.contour_data->ccs.clear();
                             contouring_img_altered = true;
@@ -1376,6 +1418,10 @@ if(false){
                     ImGui::SameLine();
                     if(ImGui::Button("Soft")){
                         contouring_brush = brushes::gaussian;
+                    }
+
+                    if(ImGui::Button("Rigid Sphere")){
+                        contouring_brush = brushes::rigid_sphere;
                     }
 
                     ImGui::Separator();
@@ -1408,7 +1454,7 @@ if(false){
                     ImGui::Separator();
                     ImGui::Text("Contour Extraction");
                     if(ImGui::DragInt("Resolution", &contouring_img_row_col_count, 0.1f, 5, 1024)){
-                        reset_contouring_state(*disp_img_it);
+                        reset_contouring_state(img_array_ptr_it);
                     }
                     if( ImGui::IsItemHovered() ){
                         ImGui::BeginTooltip();
@@ -1428,50 +1474,57 @@ if(false){
 
                     // Regenerate contours from the mask.
                     contouring_imgs.Ensure_Contour_Data_Allocated();
-                    if( contouring_img_altered
+                    auto [cimg_valid, cimg_array_ptr_it, cimg_it] = recompute_cimage_iters();
+                    if( cimg_valid
+                    &&  contouring_img_altered
                     &&  (frame_count % 5 == 0) ){ // Terrible stop-gap until I can parallelize contour extraction. TODO
 
-                        contouring_imgs.contour_data->ccs.clear();
+                        // Only bother extracting contours for the current image.
+                        Drover shtl;
+                        shtl.Ensure_Contour_Data_Allocated();
+                        shtl.image_data.push_back(std::make_unique<Image_Array>());
+                        shtl.image_data.back()->imagecoll.images.emplace_back();
+                        shtl.image_data.back()->imagecoll.images.back() = *cimg_it;
 
                         std::list<OperationArgPkg> Operations;
                         Operations.emplace_back("ContourViaThreshold");
                         Operations.back().insert("Method="_s + contouring_method);
                         Operations.back().insert("Lower=0.5");
                         Operations.back().insert("SimplifyMergeAdjacent=true");
-                        if(!Operation_Dispatcher(contouring_imgs, InvocationMetadata, FilenameLex, Operations)){
+                        if(!Operation_Dispatcher(shtl, InvocationMetadata, FilenameLex, Operations)){
                             FUNCWARN("ContourViaThreshold failed");
                         }
+
+                        contouring_imgs.contour_data->ccs.clear();
+                        contouring_imgs.Consume( shtl.contour_data );
 
                         contouring_img_altered = false;
                     }
 
                     // Draw the WIP contours.
-                    if( (contouring_imgs.Has_Contour_Data())
-                    //&&  (contouring_imgs.contour_data != nullptr)
-                    //&&  !contouring_imgs.contour_data->ccs.empty()
-                    //&&  !contouring_imgs.contour_data->ccs.back().contours.empty()
-                    &&  !contouring_imgs.image_data.empty()
-                    &&  (contouring_imgs.image_data.back() != nullptr)
-                    &&  !contouring_imgs.image_data.back()->imagecoll.images.empty() ){
-                        const auto cimg_ptr = &(contouring_imgs.image_data.back()->imagecoll.images.back());
-                        const auto cimg_dicom_width = cimg_ptr->pxl_dx * cimg_ptr->rows;
-                        const auto cimg_dicom_height = cimg_ptr->pxl_dy * cimg_ptr->columns; 
-                        //const auto cimg_top_left = cimg_ptr->anchor + cimg_ptr->offset
-                        //                         - cimg_ptr->row_unit * cimg_ptr->pxl_dx * 0.5f
-                        //                         - cimg_ptr->col_unit * cimg_ptr->pxl_dy * 0.5f;
-                        //const auto cimg_top_right = cimg_top_left + cimg_ptr->row_unit * cimg_dicom_width;
-                        //const auto cimg_bottom_left = cimg_top_left + cimg_ptr->col_unit * cimg_dicom_height;
-                        //const auto cimg_plane = cimg_ptr->image_plane();
+                    if( cimg_valid
+                    &&  (contouring_imgs.Has_Contour_Data()) ){
+                        const auto cimg_dicom_width = cimg_it->pxl_dx * cimg_it->rows;
+                        const auto cimg_dicom_height = cimg_it->pxl_dy * cimg_it->columns; 
+                        //const auto cimg_top_left = cimg_it->anchor + cimg_it->offset
+                        //                         - cimg_it->row_unit * cimg_it->pxl_dx * 0.5f
+                        //                         - cimg_it->col_unit * cimg_it->pxl_dy * 0.5f;
+                        //const auto cimg_top_right = cimg_top_left + cimg_it->row_unit * cimg_dicom_width;
+                        //const auto cimg_bottom_left = cimg_top_left + cimg_it->col_unit * cimg_dicom_height;
+                        //const auto cimg_plane = cimg_it->image_plane();
 
                         for(auto &cc : contouring_imgs.contour_data->ccs){
                             for(auto &cop : cc.contours){
+                                if( cop.points.empty() ) continue;
+                                if( !cimg_it->sandwiches_point_within_top_bottom_planes( cop.points.front() ) ) continue;
+
                                 drawList->PathClear();
                                 for(auto & p : cop.points){
 
                                     //Clamp the point to the bounding box, using the top left as zero.
                                     const auto dR = p - img_top_left;
-                                    const auto clamped_col = dR.Dot( cimg_ptr->col_unit ) / cimg_dicom_height;
-                                    const auto clamped_row = dR.Dot( cimg_ptr->row_unit ) / cimg_dicom_width;
+                                    const auto clamped_col = dR.Dot( cimg_it->col_unit ) / cimg_dicom_height;
+                                    const auto clamped_row = dR.Dot( cimg_it->row_unit ) / cimg_dicom_width;
 
                                     //Convert to ImGui coordinates using the top-left position of the display image.
                                     const auto world_x = real_pos.x + real_extent.x * clamped_col;
@@ -2143,6 +2196,8 @@ if(false){
                 ImGui::SliderInt("Channel", &scroll_channel, 0, static_cast<int>(disp_img_it->channels - 1));
 
                 if(ImGui::IsWindowFocused() || image_mouse_pos.image_window_focused){
+                    auto [cimg_valid, cimg_array_ptr_it, cimg_it] = recompute_cimage_iters();
+
                     const int d_l = static_cast<int>( std::floor(io.MouseWheel) );
                     const int d_h = static_cast<int>( std::ceil(io.MouseWheel) );
                     if(false){
@@ -2164,6 +2219,7 @@ if(false){
                         scroll_arrays = std::clamp((scroll_arrays + N_arrays + d_l) % N_arrays, 0, N_arrays - 1);
 
                     }else if( view_contouring_enabled
+                          &&  cimg_valid
                           &&  (0 < IM_ARRAYSIZE(io.MouseDown))
                           &&  (1 < IM_ARRAYSIZE(io.MouseDown))
                           &&  ((0.0f <= io.MouseDownDuration[0]) || (0.0f <= io.MouseDownDuration[1]))
@@ -2173,7 +2229,6 @@ if(false){
 
                         // The mapping between contouring image and display image (which uses physical dimensions) is
                         // based on the relative position along row and column axes.
-                        const auto cimg_ptr = &(contouring_imgs.image_data.back()->imagecoll.images.back());
                         const float radius = contouring_reach; // in DICOM units (mm).
                         const auto mouse_button_0 = (0.0f <= io.MouseDownDuration[0]);
                         const auto mouse_button_1 = (0.0f <= io.MouseDownDuration[1]);
@@ -2191,12 +2246,8 @@ if(false){
                               && io.KeyCtrl){
                             const auto pA = image_mouse_pos.dicom_pos; // Current position.
                             const auto pB = last_mouse_button_pos.value(); // Previous position.
-
                             // Project along image axes to create a taxi-cab metric corner vertex.
-                            const auto proj_r = (pB - pA).Dot(cimg_ptr->row_unit);
-                            const auto proj_c = (pB - pA).Dot(cimg_ptr->col_unit);
-                            const auto corner = (std::abs(proj_r) < std::abs(proj_c)) ? pA + cimg_ptr->row_unit * proj_r
-                                                                                      : pA + cimg_ptr->col_unit * proj_c;
+                            const auto corner = largest_projection(pA, pB, {cimg_it->row_unit, cimg_it->col_unit});
                             lss.emplace_back(pA,corner);
                             lss.emplace_back(corner,pB);
 
@@ -2209,53 +2260,80 @@ if(false){
                         }else{
                             auto pA = image_mouse_pos.dicom_pos; // Current position.
                             auto pB = pA;
-                            pB.z += cimg_ptr->pxl_dz * 0.01; // Default offset to avoid degenerate line segment.
+                            pB.z += cimg_it->pxl_dz * 0.01; // Default offset to avoid degenerate line segment.
                             lss.emplace_back(pA,pB);
                         }
 
-                        for(long int r = 0; r < cimg_ptr->rows; ++r){
-                            for(long int c = 0; c < cimg_ptr->columns; ++c){
-                                const auto pos = cimg_ptr->position(r,c);
-                                vec3<double> closest;
-                                {
-                                    double closest_dist = 1E99;
-                                    for(const auto &l : lss){
-                                        const auto closest_l = l.Closest_Point_To(pos);
-                                        const auto dist = closest_l.distance(pos);
-                                        if(dist < closest_dist){
-                                            closest = closest_l;
-                                            closest_dist = dist;
+                        std::vector<disp_img_it_t> cimg_its;
+                        if( (contouring_brush == brushes::rigid_circle)
+                        ||  (contouring_brush == brushes::rigid_square)
+                        ||  (contouring_brush == brushes::gaussian) ){
+                            // Filter out irrelevant images.
+                            cimg_its.emplace_back( cimg_it );
+                        }else if(contouring_brush == brushes::rigid_sphere){
+                            for(auto cit = std::begin((*cimg_array_ptr_it)->imagecoll.images);
+                                     cit != std::end((*cimg_array_ptr_it)->imagecoll.images); ++cit){
+                                // Pre-filter images that are not within range.
+                                for(const auto& l : lss){
+                                    // This is a dilated line_segment-plane intersection test.
+                                    const auto plane_dist_R0 = cit->image_plane().Get_Signed_Distance_To_Point(l.Get_R0());
+                                    const auto plane_dist_R1 = cit->image_plane().Get_Signed_Distance_To_Point(l.Get_R1());
+                                    if( (std::signbit(plane_dist_R0) != std::signbit(plane_dist_R1))
+                                    ||  (std::abs(plane_dist_R0) <= radius)
+                                    ||  (std::abs(plane_dist_R1) <= radius) ){
+                                        cimg_its.emplace_back( cit );
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+
+                        for(auto &cit : cimg_its){
+                            for(long int r = 0; r < cit->rows; ++r){
+                                for(long int c = 0; c < cit->columns; ++c){
+                                    const auto pos = cit->position(r,c);
+                                    vec3<double> closest;
+                                    {
+                                        double closest_dist = 1E99;
+                                        for(const auto &l : lss){
+                                            const auto closest_l = l.Closest_Point_To(pos);
+                                            const auto dist = closest_l.distance(pos);
+                                            if(dist < closest_dist){
+                                                closest = closest_l;
+                                                closest_dist = dist;
+                                            }
                                         }
                                     }
-                                }
 
-                                const auto dR = closest.distance(pos);
-                                if( radius * 5.0 < dR ) continue;
+                                    const auto dR = closest.distance(pos);
+                                    if( radius * 5.0 < dR ) continue;
 
-                                float dval = 0.0;
-                                if(contouring_brush == brushes::rigid_circle){
-                                    dval = (dR <= radius) ? 2.0 : 0.0;
+                                    float dval = 0.0;
+                                    if( (contouring_brush == brushes::rigid_circle)
+                                    ||  (contouring_brush == brushes::rigid_sphere) ){
+                                        dval = (dR <= radius) ? 2.0 : 0.0;
 
-                                }else if(contouring_brush == brushes::rigid_square){
-                                    if( (std::abs((closest - pos).Dot(cimg_ptr->row_unit)) < radius)
-                                    &&  (std::abs((closest - pos).Dot(cimg_ptr->col_unit)) < radius) ){
-                                        dval = 2.0;
+                                    }else if(contouring_brush == brushes::rigid_square){
+                                        if( (std::abs((closest - pos).Dot(cit->row_unit)) < radius)
+                                        &&  (std::abs((closest - pos).Dot(cit->col_unit)) < radius) ){
+                                            dval = 2.0;
+                                        }
+                                    }else if(contouring_brush == brushes::gaussian){
+                                        // Note: arbitrary scaling constant used here. Should give ~ same as rigid when
+                                        // dragged across the image at a typical pace.
+                                        dval = 2.0 * std::exp( -std::pow(dR / (0.5 * radius), 2.0f) );
                                     }
-                                }else if(contouring_brush == brushes::gaussian){
-                                    // Note: arbitrary scaling constant used here. Should give ~ same as rigid when
-                                    // dragged across the image at a typical pace.
-                                    dval = 2.0 * std::exp( -std::pow(dR / (0.5 * radius), 2.0f) );
-                                }
 
-                                if(mouse_button_0){
-                                    // Do nothing.
-                                }else if(mouse_button_1){
-                                    dval *= -1.0;
-                                }
+                                    if(mouse_button_0){
+                                        // Do nothing.
+                                    }else if(mouse_button_1){
+                                        dval *= -1.0;
+                                    }
 
-                                float val = cimg_ptr->value(r, c, channel);
-                                val = std::clamp(val + dval, -1.0f, 2.0f);
-                                cimg_ptr->reference( r, c, channel ) = val;
+                                    float val = cit->value(r, c, channel);
+                                    val = std::clamp(val + dval, -1.0f, 2.0f);
+                                    cit->reference( r, c, channel ) = val;
+                                }
                             }
                         }
 
@@ -2307,14 +2385,15 @@ if(false){
                 img_array_ptr_it = std::next(DICOM_data.image_data.begin(), img_array_num);
                 disp_img_it = std::next((*img_array_ptr_it)->imagecoll.images.begin(), img_num);
                 current_texture = Load_OpenGL_Texture(*disp_img_it, custom_centre, custom_width);
-                reset_contouring_state(*disp_img_it);
+                reset_contouring_state(img_array_ptr_it);
+                tagged_pos = {};
 
             }else if( new_img_num != img_num ){
                 advance_to_image(new_img_num);
                 if(view_contours_enabled) launch_contour_preprocessor();
                 disp_img_it = std::next((*img_array_ptr_it)->imagecoll.images.begin(), img_num);
                 current_texture = Load_OpenGL_Texture(*disp_img_it, custom_centre, custom_width);
-                reset_contouring_state(*disp_img_it);
+                contouring_img_altered = true;
 
             }else if( new_img_chnl != img_channel ){
                 img_channel = std::clamp<long int>(new_img_chnl, 0L, disp_img_it->channels - 1L);
