@@ -208,6 +208,10 @@ Drover SDL_Viewer(Drover DICOM_data,
         vec3<double> zero_pos;  // Position of (0,0) voxel in DICOM coordinate system.
         vec3<double> dicom_pos; // Position of mouse in DICOM coordinate system.
         vec3<double> voxel_pos; // Position of voxel being hovered in DICOM coordinate system.
+
+        float pixel_scale; // Conversion factor from DICOM distance to screen pixels.
+
+        std::function<ImVec2(const vec3<double>&)> DICOM_to_pixels; 
     } image_mouse_pos;
 
     samples_1D<double> row_profile;
@@ -833,6 +837,23 @@ Drover SDL_Viewer(Drover DICOM_data,
             return;
     };
 
+    // Given two points and multiple candidate unit vectors, project the vector from A->B along the most aligned unit.
+    const auto largest_projection = []( const vec3<double> &A,
+                                        const vec3<double> &B,
+                                        const std::vector< vec3<double> > &units ) -> vec3<double> {
+            const auto C = B - A;
+            vec3<double> best;
+            double best_proj = std::numeric_limits<double>::infinity() * -1.0;
+            for(const auto& u : units){
+                const auto proj = C.Dot(u.unit());
+                if(best_proj < std::abs(proj)){
+                    best_proj = std::abs(proj);
+                    best = A + u.unit() * proj;
+                }
+            }
+            return best;
+    };
+
     // ------------------------------------------- Main loop ----------------------------------------------
 
 
@@ -1081,6 +1102,57 @@ if(false){
                                             - disp_img_it->row_unit * 0.5 * disp_img_it->pxl_dx
                                             - disp_img_it->col_unit * 0.5 * disp_img_it->pxl_dy;
                 image_mouse_pos.voxel_pos = disp_img_it->position(image_mouse_pos.r, image_mouse_pos.c);
+                image_mouse_pos.pixel_scale = static_cast<float>(real_extent.x) / (disp_img_it->pxl_dx * disp_img_it->rows);
+
+                const auto Z = image_mouse_pos.zero_pos;
+                image_mouse_pos.DICOM_to_pixels = [=](const vec3<double> &P) -> ImVec2 {
+                    // Convert from absolute DICOM coordinates to ImGui screen pixel coordinates for the image.
+                    // This routine basically just inverts the above transformation.
+                    const auto region_y = (disp_img_it->row_unit.Dot(P - Z) + 0.5 * disp_img_it->pxl_dx)/(disp_img_it->pxl_dx * img_rows_f);
+                    const auto region_x = (disp_img_it->col_unit.Dot(P - Z) + 0.5 * disp_img_it->pxl_dy)/(disp_img_it->pxl_dy * img_cols_f);
+
+                    const auto pixel_x = pos.x + (region_x - uv_min.x) * image_extent.x/(uv_max.x - uv_min.x);
+                    const auto pixel_y = pos.y + (region_y - uv_min.y) * image_extent.y/(uv_max.y - uv_min.y);
+
+                    return ImVec2(pixel_x, pixel_y);
+                };
+            }
+
+            // Display a visual cue of the tagged position.
+            if( tagged_pos ){
+                ImDrawList *drawList = ImGui::GetWindowDrawList();
+
+                const auto box_radius = 3.0f;
+                const auto c = ImColor(1.0f, 0.2f, 0.2f, 1.0f);
+
+                ImVec2 p1 = image_mouse_pos.DICOM_to_pixels(tagged_pos.value());
+                ImVec2 ul1( p1.x - box_radius, p1.y - box_radius );
+                ImVec2 lr1( p1.x + box_radius, p1.y + box_radius );
+                drawList->AddRect(ul1, lr1, c);
+
+                if( image_mouse_pos.mouse_hovering_image ){
+                    ImVec2 p2 = io.MousePos;
+                    
+                    // Project along the image axes to provide a guide line.
+                    if(io.KeyCtrl){
+                        p2 = image_mouse_pos.DICOM_to_pixels(
+                                 largest_projection( tagged_pos.value(),
+                                                     image_mouse_pos.dicom_pos,
+                                                     { disp_img_it->row_unit,
+                                                       disp_img_it->col_unit,
+                                                       (disp_img_it->row_unit + disp_img_it->col_unit) * 0.5,
+                                                       (disp_img_it->row_unit - disp_img_it->col_unit) * 0.5 } ) );
+                    }
+                    ImVec2 ul2( p2.x - box_radius, p2.y - box_radius );
+                    ImVec2 lr2( p2.x + box_radius, p2.y + box_radius );
+                    drawList->AddRect(ul2, lr2, c);
+
+                    // Connect the boxes with a line if both are contained within the same image volume.
+                    if( disp_img_it->sandwiches_point_within_top_bottom_planes(tagged_pos.value())
+                    &&  disp_img_it->sandwiches_point_within_top_bottom_planes(image_mouse_pos.dicom_pos) ){
+                        drawList->AddLine(p1, p2, c);
+                    }
+                }
             }
 
             // Display a contour legend.
@@ -1233,9 +1305,7 @@ if(false){
                 if( view_contouring_enabled ){
                     // Provide a visual cue for the contouring brush.
                     {
-                        // The ratio of an ImGui pixel to DICOM distance.
-                        const auto pixel_scale = static_cast<float>(real_extent.x) / img_dicom_width;
-                        const auto pixel_radius = static_cast<float>(contouring_reach) * pixel_scale;
+                        const auto pixel_radius = static_cast<float>(contouring_reach) * image_mouse_pos.pixel_scale;
                         const auto c = ImColor(0.0f, 1.0f, 0.8f, 1.0f);
 
                         if( (contouring_brush == brushes::rigid_circle)
@@ -1444,6 +1514,9 @@ if(false){
             &&  show_image_hover_tooltips
             &&  !view_contouring_enabled ){
                 ImGui::BeginTooltip();
+                if(tagged_pos){
+                    ImGui::Text("Distance: %.4f", tagged_pos.value().distance(image_mouse_pos.dicom_pos));
+                }
                 ImGui::Text("Image coordinates: %.4f, %.4f", image_mouse_pos.region_y, image_mouse_pos.region_x);
                 ImGui::Text("Pixel coordinates: (r, c) = %ld, %ld", image_mouse_pos.r, image_mouse_pos.c);
                 ImGui::Text("Mouse coordinates: (x, y, z) = %.4f, %.4f, %.4f", image_mouse_pos.dicom_pos.x, image_mouse_pos.dicom_pos.y, image_mouse_pos.dicom_pos.z);
@@ -2195,6 +2268,15 @@ if(false){
                             last_mouse_button_1_down = io.MouseDownDuration[1];
                             last_mouse_button_pos = image_mouse_pos.dicom_pos;
                         }
+
+                    }else if( image_mouse_pos.mouse_hovering_image
+                          &&  (0 < IM_ARRAYSIZE(io.MouseDown))
+                          &&  (0.0f == io.MouseDownDuration[0]) ){ // Debounced!
+                          if(!tagged_pos){
+                              tagged_pos = image_mouse_pos.dicom_pos;
+                          }else{
+                              tagged_pos = {};
+                          }
 
                     }else if(0 < io.MouseWheel){
                         scroll_images = std::clamp((scroll_images + N_images + d_h) % N_images, 0, N_images - 1);
