@@ -10,16 +10,18 @@
 #include "YgorMathIOXYZ.h"    //Needed for ReadPointSetFromXYZ.
 using namespace std::chrono;
 
+// Initialize non rigid transform
 NonRigidCPDTransform::NonRigidCPDTransform(int N_move_points, int dimensionality) {
     this->dim = dimensionality;
     this->W = Eigen::MatrixXf::Zero(N_move_points, this->dim); 
 }
 
+// Apply non-rigid transform to point set
 void NonRigidCPDTransform::apply_to(point_set<double> &ps) {
     auto N_points = static_cast<long int>(ps.points.size());
     Eigen::MatrixXf Y = Eigen::MatrixXf::Zero(N_points, this->dim); 
-    // Fill the X vector with the corresponding points.
     
+    // Fill the X vector with the corresponding points.
     for(long int j = 0; j < N_points; ++j) { // column
         auto P = ps.points[j];
         Y(j, 0) = P.x;
@@ -34,6 +36,7 @@ void NonRigidCPDTransform::apply_to(point_set<double> &ps) {
     }
 }
 
+// Write non-rigid transformation to file
 void NonRigidCPDTransform::write_to( std::ostream &os ) {
     Eigen::MatrixXf m = this->G * this->W;
     int rows = m.rows();
@@ -46,10 +49,12 @@ void NonRigidCPDTransform::write_to( std::ostream &os ) {
     }
 }
 
+// Apply transform to y points in matrix form
 Eigen::MatrixXf NonRigidCPDTransform::apply_to(const Eigen::MatrixXf & ps) {
     return ps + this->G * this->W;
 }
 
+// Compute initial sigma squared for non-rigid algorithm
 double Init_Sigma_Squared_NR(const Eigen::MatrixXf & xPoints,
             const Eigen::MatrixXf & yPoints) {
 
@@ -69,6 +74,7 @@ double Init_Sigma_Squared_NR(const Eigen::MatrixXf & xPoints,
     return normSum / ((double)nRowsX * mRowsY * dim);
 }
 
+// Calculate gram matrix for non-rigid algorithm
 Eigen::MatrixXf GetGramMatrix(const Eigen::MatrixXf & yPoints, double betaSquared) {
     int mRowsY = yPoints.rows();
     double expArg;
@@ -86,6 +92,7 @@ Eigen::MatrixXf GetGramMatrix(const Eigen::MatrixXf & yPoints, double betaSquare
     return gramMatrix;
 }
 
+// Calculate similarity score for non-rigid algorithm
 double GetSimilarity_NR(const Eigen::MatrixXf & xPoints,
             const Eigen::MatrixXf & yPoints,
             const Eigen::MatrixXf & gramMatrix,
@@ -114,6 +121,7 @@ double GetSimilarity_NR(const Eigen::MatrixXf & xPoints,
     return sum;
 }
 
+// Calculate objective function for non-rigid algorithm
 double GetObjective_NR(const Eigen::MatrixXf & xPoints,
             const Eigen::MatrixXf & yPoints,
             const Eigen::MatrixXf & postProb,
@@ -139,6 +147,7 @@ double GetObjective_NR(const Eigen::MatrixXf & xPoints,
     return leftSum + rightSum;
 }
 
+// Calculate posterior probability matrix for E step in non-rigid algorithm
 Eigen::MatrixXf E_Step_NR(const Eigen::MatrixXf & xPoints,
             const Eigen::MatrixXf & yPoints,
             const Eigen::MatrixXf & gramMatrix,
@@ -177,6 +186,7 @@ Eigen::MatrixXf E_Step_NR(const Eigen::MatrixXf & xPoints,
     return postProb;
 }
 
+// Calculate W matrix of coefficients for non-rigid algorithm
 Eigen::MatrixXf GetW(const Eigen::MatrixXf & yPoints,
             const Eigen::MatrixXf & gramMatrix,
             const Eigen::MatrixXf & postProbInvDiag, // d(P1)^-1
@@ -190,6 +200,7 @@ Eigen::MatrixXf GetW(const Eigen::MatrixXf & yPoints,
     return A.llt().solve(b); // assumes A is positive definite, uses llt decomposition
 }
 
+// Calculate W matrix of coefficients in the low rank approximation of the non-rigid algorithm
 Eigen::MatrixXf LowRankGetW(const Eigen::MatrixXf & yPoints,
             const Eigen::VectorXf & gramValues,
             const Eigen::MatrixXf & gramVectors,
@@ -207,6 +218,7 @@ Eigen::MatrixXf LowRankGetW(const Eigen::MatrixXf & yPoints,
     return (first - pow(coef, 2) * (postProbOne).asDiagonal() * gramVectors * inverted * gramVectors.transpose() * (postProbOne).asDiagonal()) * b;
 }
 
+// Compute aligned point set from y points and transformation matrices for non-rigid algorithm
 Eigen::MatrixXf AlignedPointSet_NR(const Eigen::MatrixXf & yPoints,
             const Eigen::MatrixXf & gramMatrix,
             const Eigen::MatrixXf & W){
@@ -214,6 +226,7 @@ Eigen::MatrixXf AlignedPointSet_NR(const Eigen::MatrixXf & yPoints,
     return yPoints + (gramMatrix * W);
 }
 
+// Calculate sigma squared for non-rigid algorithm
 double SigmaSquared(const Eigen::MatrixXf & xPoints,
             const Eigen::MatrixXf & postProbOne,
             const Eigen::MatrixXf & postProbTransOne,
@@ -229,6 +242,7 @@ double SigmaSquared(const Eigen::MatrixXf & xPoints,
     return (firstTerm - secondTerm + thirdTerm) / (Np * dim);
 }
 
+// Updated function to calculate N largest eigenvalues for low rank approximation. This function is currently being used
 void GetNLargestEigenvalues_V2(const Eigen::MatrixXf & m,
             Eigen::MatrixXf & vector_matrix,
             Eigen::VectorXf & value_matrix,
@@ -241,6 +255,7 @@ void GetNLargestEigenvalues_V2(const Eigen::MatrixXf & m,
     vector_matrix = vectors.block(0, size - num_eig, size, num_eig);
 }
 
+// Function to calculate N largest eigenvalues for low rank approximation
 void GetNLargestEigenvalues(const Eigen::MatrixXf & m,
             Eigen::MatrixXf & vector_matrix,
             Eigen::VectorXf & value_matrix,
@@ -263,6 +278,7 @@ void GetNLargestEigenvalues(const Eigen::MatrixXf & m,
     }
 }
 
+// Function for power iteration function for low rank approximation
 double PowerIteration(const Eigen::MatrixXf & m,
             Eigen::VectorXf & v, 
             int num_iter,
@@ -285,8 +301,9 @@ double PowerIteration(const Eigen::MatrixXf & m,
     return ev;
 }
 
+// Function to compute CPD products in IFGT algorithm
 // Y = target_pts = moving_pts
-// X = source_pts = fixed_pts (in general)
+// X = source_pts = fixed_pts 
 // epsilon is error, w is a parameter from cpd
 CPD_MatrixVector_Products ComputeCPDProductsIfgt(const Eigen::MatrixXf & fixed_pts,
                                                     const Eigen::MatrixXf & moving_pts,
@@ -305,6 +322,7 @@ CPD_MatrixVector_Products ComputeCPDProductsIfgt(const Eigen::MatrixXf & fixed_p
     Eigen::MatrixXf fixed_pts_scaled;
     Eigen::MatrixXf moving_pts_scaled;
     
+    // Optional: check time taken during IFGT function, several lines involving timing throughout the function
     // duration<double>  time_span;
     // auto bw_scale_start = std::chrono::high_resolution_clock::now();
 
@@ -345,8 +363,10 @@ CPD_MatrixVector_Products ComputeCPDProductsIfgt(const Eigen::MatrixXf & fixed_p
         // time_span = std::chrono::duration_cast<std::chrono::duration<double>>(PX_end - PX_start);
         // std::cout << "IFGT (PX) column " << i << " took time: " << time_span.count() << " s" << std::endl;
     }
+    
     // auto L_start = std::chrono::high_resolution_clock::now();
     // objective function estimate
+    
     double L = -log(denom_a).sum() + dim * N_fixed_pts * std::log(sigmaSquared) / 2.0;
 
     // auto L_end = std::chrono::high_resolution_clock::now();
@@ -356,6 +376,7 @@ CPD_MatrixVector_Products ComputeCPDProductsIfgt(const Eigen::MatrixXf & fixed_p
     return { P1, Pt1, PX, L};
 }
 
+// Naive implementation to compute several CPD Products used in non-rigid algorithm
 CPD_MatrixVector_Products ComputeCPDProductsNaive(const Eigen::MatrixXf & fixed_pts,
                                                     const Eigen::MatrixXf & moving_pts,
                                                     double sigmaSquared, 
@@ -386,6 +407,8 @@ CPD_MatrixVector_Products ComputeCPDProductsNaive(const Eigen::MatrixXf & fixed_
 
     return { P1, Pt1, PX, L};
 }
+
+// Function to get L in the naive implementation in order to determine convergence
 // run this to get L_temp when using E_step_NR
 double UpdateNaiveConvergenceL(const Eigen::MatrixXf & postProbTransOne,
                             const Eigen::MatrixXf & xPoints,
@@ -409,6 +432,7 @@ double UpdateNaiveConvergenceL(const Eigen::MatrixXf & postProbTransOne,
     
 }
 
+// Function to update L in order to determine convergence
 double UpdateConvergenceL(const Eigen::MatrixXf & gramMatrix,
                         const Eigen::MatrixXf & W,
                         double L_computed,
@@ -417,15 +441,18 @@ double UpdateConvergenceL(const Eigen::MatrixXf & gramMatrix,
     return L_computed + lambda / 2.0 * (W.transpose() * gramMatrix * W).trace();
 }
 
+// Main loop for non-rigid registration algorithm
 NonRigidCPDTransform
 AlignViaNonRigidCPD(CPDParams & params,
             const point_set<double> & moving,
             const point_set<double> & stationary,
-            int iter_interval /*= 0*/,
-            std::string video /*= "False"*/,
-            std::string xyz_outfile /*= "output"*/ ) { 
+            int iter_interval,
+            std::string video,
+            std::string xyz_outfile) { 
     
     FUNCINFO("Performing nonrigid CPD");
+
+    // Calculate time performance of the algorithm
     high_resolution_clock::time_point start_all = high_resolution_clock::now();
 
     std::string temp_xyz_outfile;
@@ -436,7 +463,7 @@ AlignViaNonRigidCPD(CPDParams & params,
     const auto N_stat_points = static_cast<long int>(stationary.points.size());
 
     // Prepare working buffers.
-    //
+    
     // Stationary point matrix
     Eigen::MatrixXf Y = Eigen::MatrixXf::Zero(N_move_points, params.dimensionality);
     // Moving point matrix
@@ -485,6 +512,8 @@ AlignViaNonRigidCPD(CPDParams & params,
     Eigen::MatrixXf oneVecCol = Eigen::MatrixXf::Ones(X.rows(),1);
 
     double L = 1.0; 
+
+    // Print stats to outfile_stats.csv
     std::ofstream os(xyz_outfile + "_stats.csv");
     os << "iteration" << "," << "time" << "," << "similarity" << "," << "outfile" << "\n";
     similarity = GetSimilarity_NR(X, Y, transform.G, transform.W);
@@ -502,6 +531,8 @@ AlignViaNonRigidCPD(CPDParams & params,
         high_resolution_clock::time_point start_estep = high_resolution_clock::now();
 
         double L_temp = 1.0;
+
+        // Calculate CPD parameters in naive and IFGT implementaitons, depending on option
         if(params.use_fgt) {
             // X = fixed points = source points 
 	        // Y = moving points = target points
@@ -520,6 +551,7 @@ AlignViaNonRigidCPD(CPDParams & params,
             postProbX = postProb * X;
             L_temp = UpdateNaiveConvergenceL(postProbTransOne, X, Y, sigma_squared, params.distribution_weight, X.cols());
         }
+
         high_resolution_clock::time_point end_estep = high_resolution_clock::now();
         duration<double>  time_span_estep = duration_cast<duration<double>>(end_estep - start_estep);
         FUNCINFO("E Step took time: " << time_span_estep.count());
@@ -527,6 +559,8 @@ AlignViaNonRigidCPD(CPDParams & params,
         L = UpdateConvergenceL(transform.G, transform.W, L_temp, params.lambda);
 
         high_resolution_clock::time_point start_w = high_resolution_clock::now();
+
+        // Calculate W in naive and low rank implementations
         if(params.use_low_rank) {
             // check if W is invertible
             double product_postprob = 1.0;
@@ -550,11 +584,13 @@ AlignViaNonRigidCPD(CPDParams & params,
 
             transform.W = GetW(Y, transform.G, postProbInvDiag, postProbX, sigma_squared, params.lambda);
         }
+
         high_resolution_clock::time_point end_w = high_resolution_clock::now();
         duration<double>  time_span_w = duration_cast<duration<double>>(end_w - start_w);
         FUNCINFO("GetW took time: " << time_span_w.count());
 
-
+        // Calculate sigma squared, similarity, and objective
+        
         T = transform.apply_to(Y);
         sigma_squared = SigmaSquared(X, postProbOne, postProbTransOne, postProbX, T);
 
@@ -568,11 +604,15 @@ AlignViaNonRigidCPD(CPDParams & params,
         similarity = GetSimilarity_NR(X, Y, transform.G, transform.W);
         FUNCINFO("Similarity: " << similarity);
 
+        // Calculate objective. Old version involves the change in tolerance, the new version involves calculating the change in L
         // prev_objective = objective;
+        // objective = GetObjective_NR(X, Y, P, transform.G, transform.W, sigma_squared);
+
         double objective_tolerance = abs((L - L_old) / L);
-        //objective = GetObjective_NR(X, Y, P, transform.G, transform.W, sigma_squared);
         FUNCINFO("Objective: " << objective_tolerance);
 
+      
+        // Write point sets for video tool
         if (video == "True") {
             if (iter_interval > 0 && i % iter_interval == 0) {
                 temp_xyz_outfile = xyz_outfile + "_iter" + std::to_string(i+1) + "_sim" + std::to_string(similarity) + ".xyz";
@@ -584,11 +624,13 @@ AlignViaNonRigidCPD(CPDParams & params,
             }
         }
 
+        // Break loop if difference in objective function is below the threshold
         if (objective_tolerance < params.similarity_threshold || isnan(objective_tolerance) || isnan(sigma_squared)) {
             FUNCINFO("FINAL SIMILARITY: " << similarity);
             break;
         }
 
+        // Write stats for this iteration to outfile_stats.csv
         high_resolution_clock::time_point stop = high_resolution_clock::now();
         duration<double>  time_span = duration_cast<duration<double>>(stop - time_sofar);
         FUNCINFO("Excecution took time: " << time_span.count())

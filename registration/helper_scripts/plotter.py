@@ -56,8 +56,8 @@ def write_vid_frame(stationary_file, moving_file, ax, writer):
     if len(similarity) > 0:
         title += ", Error: " + similarity[len(similarity)-1]
 
-    # ax.set_title(title, y=-0.01)
-    ax.set_title(title)
+    ax.set_title(title, y=-0.01)
+    # ax.set_title(title)
     plt.tight_layout()
     # plt.show()
     writer.grab_frame()
@@ -82,7 +82,7 @@ def main():
     fig = plt.figure()
     # ax = fig.add_subplot(111)
     ax = p3.Axes3D(fig)
-    # ax.view_init(90, 270)
+    # ax.view_init(-45, 225)
 
     with writer.saving(fig, args.output, 100):
         for i in range(5):

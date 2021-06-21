@@ -9,15 +9,18 @@
 #include <chrono>
 using namespace std::chrono;
 
+// Initialize affine transform
 AffineCPDTransform::AffineCPDTransform(int dimensionality) {
     this->B = Eigen::MatrixXf::Identity(dimensionality, dimensionality);
     this->t = Eigen::VectorXf::Zero(dimensionality);
     this->dim = dimensionality;
 }
 
+// Apply affine transform to point set
 void AffineCPDTransform::apply_to(point_set<double> &ps) {
     auto N_points = static_cast<long int>(ps.points.size());
     Eigen::MatrixXf Y = Eigen::MatrixXf::Zero(N_points, this->dim); 
+    
     // Fill the X vector with the corresponding points.
     for(long int j = 0; j < N_points; ++j) { // column
         auto P = ps.points[j];
@@ -34,6 +37,7 @@ void AffineCPDTransform::apply_to(point_set<double> &ps) {
     }
 }
 
+// Write affine transformation to file
 void AffineCPDTransform::write_to( std::ostream &os ) {
     for(int i = 0; i < this->dim; i++) {
         for(int j = 0; j < this->dim; j++) {
@@ -49,6 +53,7 @@ void AffineCPDTransform::write_to( std::ostream &os ) {
     os << "0\n";
 }
 
+// Read affine transformation from file
 bool AffineCPDTransform::read_from( std::istream &is ) {
     affine_transform<double> tf;
     bool success = tf.read_from(is);
@@ -65,6 +70,7 @@ bool AffineCPDTransform::read_from( std::istream &is ) {
     return success;
 }
 
+// Function to calculate affine transformation matrix
 Eigen::MatrixXf CalculateB(const Eigen::MatrixXf & xHat,
             const Eigen::MatrixXf & yHat,
             const Eigen::MatrixXf & postProb) {
@@ -76,6 +82,7 @@ Eigen::MatrixXf CalculateB(const Eigen::MatrixXf & xHat,
     return left * right;
 }
 
+// Function to calculate sigma squared
 double SigmaSquared(const Eigen::MatrixXf & B,
             const Eigen::MatrixXf & xHat,
             const Eigen::MatrixXf & yHat,
@@ -92,14 +99,14 @@ double SigmaSquared(const Eigen::MatrixXf & B,
     
 }
 
-// This function is where the deformable registration algorithm should be implemented.
+// Main loop for affine registration algorithm
 AffineCPDTransform
 AlignViaAffineCPD(CPDParams & params,
             const point_set<double> & moving,
             const point_set<double> & stationary, 
-            int iter_interval /*= 0*/,
-            std::string video /*= "False"*/,
-            std::string xyz_outfile /*= "output"*/){
+            int iter_interval,
+            std::string video,
+            std::string xyz_outfile) {
 
     FUNCINFO("Performing Affine CPD");
     
@@ -109,12 +116,17 @@ AlignViaAffineCPD(CPDParams & params,
     const auto N_move_points = static_cast<long int>(moving.points.size());
     const auto N_stat_points = static_cast<long int>(stationary.points.size());
 
-    // Prepare working buffers.
-    //
+    // Prepare working buffers:
+    
     // Stationary point matrix
     Eigen::MatrixXf X = Eigen::MatrixXf::Zero(N_move_points, params.dimensionality);
     // Moving point matrix
     Eigen::MatrixXf Y = Eigen::MatrixXf::Zero(N_stat_points, params.dimensionality); 
+
+    // Optional: print out the number of points in each point set
+    // FUNCINFO("Number of moving points: " << N_move_points);
+    // FUNCINFO("Number of stationary pointsL  " << N_stat_points);
+    // FUNCINFO("Initializing...")
 
     // Fill the X vector with the corresponding points.
     for(long int j = 0; j < N_stat_points; ++j){ // column
@@ -131,6 +143,7 @@ AlignViaAffineCPD(CPDParams & params,
         Y(j, 1) = P_moving.y;
         Y(j, 2) = P_moving.z;
     }
+
     AffineCPDTransform transform(params.dimensionality);
     double sigma_squared = Init_Sigma_Squared(X, Y);
     double similarity;
@@ -141,14 +154,21 @@ AlignViaAffineCPD(CPDParams & params,
     Eigen::MatrixXf Uy;
     Eigen::MatrixXf X_hat;
     Eigen::MatrixXf Y_hat;
+
+    // Print stats to outfile_stats.csv
     std::ofstream os(xyz_outfile + "_stats.csv");
     os << "iteration" << "," << "time" << "," << "similarity" << "," << "outfile" << "\n";
     os << 0 << "," << 0 << "," << similarity << "," << xyz_outfile + "_iter0.xyz" << "\n";
     high_resolution_clock::time_point start = high_resolution_clock::now();
+
+    // Optional: verbose
+    // FUNCINFO("Starting loop. Max Iterations: " << params.iterations)
+
     for (int i = 0; i < params.iterations; i++) {
+        // Optional: print out current iteration
         FUNCINFO("Iteration: " << i)
-        P = E_Step(X, Y, transform.B, \
-            transform.t, sigma_squared, params.distribution_weight, 1);
+
+        P = E_Step(X, Y, transform.B, transform.t, sigma_squared, params.distribution_weight, 1);
         Ux = CalculateUx(X, P);
         Uy = CalculateUy(Y, P);
         X_hat = CenterMatrix(X, Ux);
@@ -160,11 +180,15 @@ AlignViaAffineCPD(CPDParams & params,
         mutable_moving = moving;
         transform.apply_to(mutable_moving);
 
+        // Calculate similarity and objective functions
         similarity = GetSimilarity(X, Y, transform.B, transform.t, 1);
         objective = GetObjective(X, Y, P, transform.B, transform.t, 1, sigma_squared);
+        
+        // Optional: print out similarity and objective values
         FUNCINFO(similarity);
         FUNCINFO(objective);
         
+        // Write point sets for video tool
         if (video == "True") {
             if (iter_interval > 0 && i % iter_interval == 0) {
                 temp_xyz_outfile = xyz_outfile + "_iter" + std::to_string(i+1) + "_sim" + std::to_string(similarity) + ".xyz";
@@ -174,12 +198,15 @@ AlignViaAffineCPD(CPDParams & params,
             }
         }
         
+        // Break loop if difference in objective function is below the threshold
         if(abs(prev_objective-objective) < params.similarity_threshold)
             break;
 
+        // Write stats for this iteration to outfile_stats.csv
         high_resolution_clock::time_point stop = high_resolution_clock::now();
         duration<double>  time_span = duration_cast<duration<double>>(stop - start);
         FUNCINFO("Excecution took time: " << time_span.count())
+
         os << i+1 << "," << time_span.count() << "," << similarity << "," << temp_xyz_outfile << "\n";
     }
     return transform;
