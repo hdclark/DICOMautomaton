@@ -1,0 +1,8 @@
+iteration,time,similarity,outfile,error
+0,0,0.33923,final_report_data/fiducials/w0-3_lambda10_beta2/nonrigid_iter0.xyz,0.13805075959912488
+1,0.0061248,0.336835,final_report_data/fiducials/w0-3_lambda10_beta2/nonrigid_iter1_sim0.336835.xyz,0.13554819046454597
+2,0.0114778,0.308042,final_report_data/fiducials/w0-3_lambda10_beta2/nonrigid_iter2_sim0.308042.xyz,0.11084274877713354
+3,0.0178276,0.150507,final_report_data/fiducials/w0-3_lambda10_beta2/nonrigid_iter3_sim0.150507.xyz,0.02292528751054185
+4,0.0245282,0.0335186,final_report_data/fiducials/w0-3_lambda10_beta2/nonrigid_iter4_sim0.033519.xyz,0.001550443431709305
+5,0.0328451,0.00524819,final_report_data/fiducials/w0-3_lambda10_beta2/nonrigid_iter5_sim0.005248.xyz,3.896648767579869e-05
+6,0.0419375,6.55364e-05,final_report_data/fiducials/w0-3_lambda10_beta2/nonrigid_iter6_sim0.000066.xyz,7.30414251569242e-09

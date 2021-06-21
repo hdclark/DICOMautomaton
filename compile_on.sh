@@ -128,6 +128,8 @@ elif [[ "${BUILDER}" =~ .*debian.*_stable.* ]] ; then
 #!/usr/bin/env bash
 set -eu
 ./compile_and_install.sh  # Will auto-detect the Debian build process.
+./scripts/extract_system_appimage.sh
+cp DICOMautomaton*AppImage /pbin/
 ./scripts/dump_portable_dcma_bundle.sh /pbin/
 EOF
         chmod 777 docker_run.sh
@@ -155,6 +157,8 @@ elif [[ "${BUILDER}" =~ .*arch.* ]] ; then
 #!/usr/bin/env bash
 set -eu
 ./compile_and_install.sh  # Will auto-detect the Arch Linux build process.
+./scripts/extract_system_appimage.sh
+cp DICOMautomaton*AppImage /pbin/
 ./scripts/dump_portable_dcma_bundle.sh /pbin/
 EOF
         chmod 777 docker_run.sh

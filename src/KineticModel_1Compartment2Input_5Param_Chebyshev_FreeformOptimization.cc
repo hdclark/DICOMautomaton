@@ -86,8 +86,8 @@ Optimize_FreeformOptimization_5Param(KineticModel_1Compartment2Input_5Param_Cheb
     params[4] = std::isfinite(state.k2)   ? state.k2   : 0.0518;
 
     // U/L bounds:             k1A,  tauA,  k1V,  tauV,  k2.
-    double l_bnds[dimen] = {   0.0, -20.0,  0.0, -20.0,  0.0 };
-    double u_bnds[dimen] = {  10.0,  20.0, 10.0,  20.0, 10.0 };
+    //double l_bnds[dimen] = {   0.0, -20.0,  0.0, -20.0,  0.0 };
+    //double u_bnds[dimen] = {  10.0,  20.0, 10.0,  20.0, 10.0 };
                     
     //Initial step sizes:          k1A,   tauA,    k1V,   tauV,    k2.
     double initstpsz[dimen] = { 0.0040, 3.2000, 0.0040, 3.2000, 0.0050 };

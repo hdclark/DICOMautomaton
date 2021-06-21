@@ -391,10 +391,10 @@ KineticModel_Liver_1C2I_5Param_LinearInterp(planar_image_collection<float,double
                             if(true) FUNCINFO("k1A,tauA,k1V,tauV,k2,RSS = " << k1A << ", " << tauA << ", " 
                                               << k1V << ", " << tauV << ", " << k2 << ", " << RSS);
 
-                            const auto LiverPerfusion = (k1A + k1V);
-                            const auto MeanTransitTime = 1.0 / k2;
-                            const auto ArterialFraction = 100.0 * k1A / LiverPerfusion;
-                            const auto DistributionVolume = 100.0 * LiverPerfusion * MeanTransitTime;
+                            //const auto LiverPerfusion = (k1A + k1V);
+                            //const auto MeanTransitTime = 1.0 / k2;
+                            //const auto ArterialFraction = 100.0 * k1A / LiverPerfusion;
+                            //const auto DistributionVolume = 100.0 * LiverPerfusion * MeanTransitTime;
 
                             //==============================================================================
                             // Plot the fitted model with the ROI time course.

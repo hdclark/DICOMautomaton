@@ -1,7 +1,6 @@
-//Operation_Dispatcher.cc - A part of DICOMautomaton 2015, 2016, 2017, 2018, 2019. Written by hal clark.
+//Operation_Dispatcher.cc - A part of DICOMautomaton 2015-2021. Written by hal clark.
 //
 // This routine routes loaded data to/through specified operations.
-// Operations can be anything, e.g., analyses, serialization, and visualization.
 //
 
 #include <boost/algorithm/string/predicate.hpp>
@@ -14,6 +13,8 @@
 #include <string>    
 #include <type_traits>
 #include <utility>
+
+#include <Explicator.h>
 
 #include <YgorMisc.h>
 
@@ -127,9 +128,11 @@
 #include "Operations/LogScale.h"
 #include "Operations/MaxMinPixels.h"
 #include "Operations/MeldDose.h"
+#include "Operations/ModelIVIM.h"
 #include "Operations/ModifyContourMetadata.h"
 #include "Operations/ModifyImageMetadata.h"
 #include "Operations/NegatePixels.h"
+#include "Operations/NoOp.h"
 #include "Operations/NormalizeLineSamples.h"
 #include "Operations/NormalizePixels.h"
 #include "Operations/OptimizeStaticBeams.h"
@@ -322,9 +325,11 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["LogScale"] = std::make_pair(OpArgDocLogScale, LogScale);
     out["MaxMinPixels"] = std::make_pair(OpArgDocMaxMinPixels, MaxMinPixels);
     out["MeldDose"] = std::make_pair(OpArgDocMeldDose, MeldDose);
+    out["ModelIVIM"] = std::make_pair(OpArgDocModelIVIM, ModelIVIM);
     out["ModifyContourMetadata"] = std::make_pair(OpArgDocModifyContourMetadata, ModifyContourMetadata);
     out["ModifyImageMetadata"] = std::make_pair(OpArgDocModifyImageMetadata, ModifyImageMetadata);
     out["NegatePixels"] = std::make_pair(OpArgDocNegatePixels, NegatePixels);
+    out["NoOp"] = std::make_pair(OpArgDocNoOp, NoOp);
     out["NormalizeLineSamples"] = std::make_pair(OpArgDocNormalizeLineSamples, NormalizeLineSamples);
     out["NormalizePixels"] = std::make_pair(OpArgDocNormalizePixels, NormalizePixels);
     out["OptimizeStaticBeams"] = std::make_pair(OpArgDocOptimizeStaticBeams, OptimizeStaticBeams);
@@ -338,7 +343,7 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["PurgeContours"] = std::make_pair(OpArgDocPurgeContours, PurgeContours);
     out["RankPixels"] = std::make_pair(OpArgDocRankPixels, RankPixels);
     out["ReduceNeighbourhood"] = std::make_pair(OpArgDocReduceNeighbourhood, ReduceNeighbourhood);
-    out["Repeat"] = std::make_pair(OpArgDocReduceNeighbourhood, Repeat);
+    out["Repeat"] = std::make_pair(OpArgDocRepeat, Repeat);
     out["ScalePixels"] = std::make_pair(OpArgDocScalePixels, ScalePixels);
     out["SelectSlicesIntersectingROI"] = std::make_pair(OpArgDocSelectSlicesIntersectingROI, SelectSlicesIntersectingROI);
     out["SimplifyContours"] = std::make_pair(OpArgDocSimplifyContours, SimplifyContours);
@@ -407,6 +412,27 @@ std::map<std::string, op_packet_t> Known_Operations(){
     return out;
 }
 
+std::map<std::string, std::string> Operation_Lexicon(){
+    // Prepare a lexicon (suitable for an Explicator instance) for performing fuzzy operation name matching.
+    auto op_name_mapping = Known_Operations();
+
+    std::map<std::string, std::string> op_name_lex;
+    for(const auto &op_func : op_name_mapping){
+        const auto op_name = op_func.first;
+        op_name_lex[op_name] = op_name;
+
+        auto OpDocs = op_func.second.first();
+        for(const auto &alias : OpDocs.aliases){
+            op_name_lex[alias] = op_name;
+        }
+    }
+
+    // Explicit mappings go here.
+
+    // ... TODO ...
+
+    return op_name_lex;
+}
 
 bool Operation_Dispatcher( Drover &DICOM_data,
                            const std::map<std::string,std::string> &InvocationMetadata,
@@ -414,13 +440,22 @@ bool Operation_Dispatcher( Drover &DICOM_data,
                            const std::list<OperationArgPkg> &Operations ){
 
     auto op_name_mapping = Known_Operations();
+    Explicator op_name_X( Operation_Lexicon() );
 
     try{
         for(const auto &OptArgs : Operations){
             auto optargs = OptArgs;
+
+            // Find or estimate the canonical name. If not an exact match, issue a warning.
+            const auto user_op_name = optargs.getName();
+            const auto canonical_op_name = op_name_X(user_op_name);
+            if( op_name_X.last_best_score < 1.0 ){
+                FUNCWARN("Selecting operation '" << canonical_op_name << "' because '" << user_op_name << "' not understood");
+            }
+
             bool WasFound = false;
             for(const auto &op_func : op_name_mapping){
-                if(boost::iequals(op_func.first,optargs.getName())){
+                if(boost::iequals(op_func.first, canonical_op_name)){
                     WasFound = true;
 
                     //Attempt to insert all expected, documented parameters with the default value.
@@ -434,6 +469,7 @@ bool Operation_Dispatcher( Drover &DICOM_data,
                                                        optargs,
                                                        InvocationMetadata,
                                                        FilenameLex);
+                    break;
                 }
             }
             if(!WasFound) throw std::invalid_argument("No operation matched '" + optargs.getName() + "'");

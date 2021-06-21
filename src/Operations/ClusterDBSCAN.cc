@@ -286,7 +286,10 @@ Drover ClusterDBSCAN(Drover DICOM_data,
         }
 
         long int BeforeCount = 0;
-        ud.f_bounded = [&](long int row, long int col, long int chan, std::reference_wrapper<planar_image<float,double>> img_refw, float &voxel_val) {
+        ud.f_bounded = [&](long int row, long int col, long int chan,
+                           std::reference_wrapper<planar_image<float,double>> img_refw,
+                           std::reference_wrapper<planar_image<float,double>> /*mask_img_refw*/,
+                           float &voxel_val) {
             if( (Channel < 0) || (Channel == chan) ){
                 if(isininc(Lower, voxel_val, Upper)){
                 //|| !std::isfinite(voxel_val) ){

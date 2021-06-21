@@ -106,9 +106,7 @@ test_ci_debian_stable_on_debian_stable:
   image: "debian:stable"
   script:
     # Provide minimal system libraries.
-    - "export DEBIAN_FRONTEND='noninteractive'"
-    - "apt-get update --yes"
-    - "apt-get install --yes --no-install-recommends git rsync mesa-utils libfreetype6 libsdl2-dev libice-dev libsm-dev libopengl0 g++"
+    - "./scripts/install_AppImage_runtime_dependencies.sh"
     # Unpack the AppImage and overlay it in the containers root filesystem.
     - "chmod 777 DICOMautomaton*AppImage"
     - "./DICOMautomaton*AppImage --appimage-extract"
@@ -127,11 +125,7 @@ test_ci_arch_on_arch:
   image: "archlinux:latest"
   script:
     # Provide minimal system libraries.
-    # NOTE: may be required for older Arch Linux images.
-    #- "curl -o /etc/pacman.d/mirrorlist 'https://archlinux.org/mirrorlist/?country=all&protocol=http&ip_version=4&use_mirror_status=on'"
-    #- "sed -i 's/^#Server/Server/' /etc/pacman.d/mirrorlist"
-    #- "sed -i -e 's/SigLevel[ ]*=.*/SigLevel = Never/g' -e 's/.*IgnorePkg[ ]*=.*/IgnorePkg = archlinux-keyring/g' /etc/pacman.conf"
-    - "pacman -Syu --noconfirm --needed git rsync mesa freetype2 sdl2 alsa-lib libice libsm libglvnd gcc-libs"
+    - "./scripts/install_AppImage_runtime_dependencies.sh"
     # Unpack the AppImage and overlay it in the containers root filesystem.
     - "chmod 777 DICOMautomaton*AppImage"
     - "./DICOMautomaton*AppImage --appimage-extract"
@@ -151,11 +145,7 @@ test_ci_debian_stable_on_arch:
   image: "archlinux:latest"
   script:
     # Provide minimal system libraries.
-    # NOTE: may be required for older Arch Linux images.
-    #- "curl -o /etc/pacman.d/mirrorlist 'https://archlinux.org/mirrorlist/?country=all&protocol=http&ip_version=4&use_mirror_status=on'"
-    #- "sed -i 's/^#Server/Server/' /etc/pacman.d/mirrorlist"
-    #- "sed -i -e 's/SigLevel[ ]*=.*/SigLevel = Never/g' -e 's/.*IgnorePkg[ ]*=.*/IgnorePkg = archlinux-keyring/g' /etc/pacman.conf"
-    - "pacman -Syu --noconfirm --needed git rsync mesa freetype2 sdl2 alsa-lib libice libsm libglvnd gcc-libs"
+    - "./scripts/install_AppImage_runtime_dependencies.sh"
     # Unpack the AppImage and overlay it in the containers root filesystem.
     - "chmod 777 DICOMautomaton*AppImage"
     - "./DICOMautomaton*AppImage --appimage-extract"
@@ -174,12 +164,9 @@ test_ci_debian_stable_on_ubuntu_latest:
   image: "ubuntu:latest"
   script:
     # Provide minimal system libraries.
-    - "export DEBIAN_FRONTEND='noninteractive'"
-    - "apt-get update --yes"
-    - "apt-get install --yes --no-install-recommends git rsync mesa-utils libfreetype6 libsdl2-dev libice-dev libsm-dev libopengl0 g++"
+    - "./scripts/install_AppImage_runtime_dependencies.sh"
     # Unpack the AppImage and overlay it in the containers root filesystem.
-    #- "apt-get install --yes --no-install-recommends wget ca-certificates"
-    #- "wget --no-check-certificate 'https://hdclark.github.io/DICOMautomaton-x86_64.AppImage'"
+    #- "wget --no-check-certificate 'http://halclark.ca/ci/DICOMautomaton-latest-x86_64.AppImage'"
     - "chmod 777 DICOMautomaton*AppImage"
     - "./DICOMautomaton*AppImage --appimage-extract"
     - "rsync -a ./squashfs-root/usr/ /usr/"
@@ -199,14 +186,17 @@ test_ci_debian_stable_on_fedora_latest:
   image: "fedora:latest"
   script:
     # Provide minimal system libraries.
-    - "dnf -y upgrade"
-    - "dnf -y install bash findutils git rsync mesa-libGL freetype SDL2 alsa-lib libICE libSM libgcc libglvnd-opengl libstdc++"
+    - "./scripts/install_AppImage_runtime_dependencies.sh"
     # Unpack the AppImage and overlay it in the containers root filesystem.
-    #- "dnf -y install wget ca-certificates"
-    #- "wget --no-check-certificate 'https://hdclark.github.io/DICOMautomaton-x86_64.AppImage'"
+    #- "wget --no-check-certificate 'http://halclark.ca/ci/DICOMautomaton-latest-x86_64.AppImage'"
     - "chmod 777 DICOMautomaton*AppImage"
     - "./DICOMautomaton*AppImage --appimage-extract"
-    - "rsync -a ./squashfs-root/usr/ /usr/"
+    # Explicitly preload libraries using a wrapper.
+    - |
+      printf '%s\n' '#!/usr/bin/env bash' >> /usr/bin/dicomautomaton_dispatcher
+      #printf '%s $@\n' "LD_LIBRARY_PATH=$(pwd)/squashfs-root/usr/lib $(pwd)/squashfs-root/usr/bin/dicomautomaton_dispatcher" >> /usr/bin/dicomautomaton_dispatcher
+      printf '%s "$@"\n' "/usr/lib64/ld-linux-x86-64.so.2 --library-path $(pwd)/squashfs-root/usr/lib $(pwd)/squashfs-root/usr/bin/dicomautomaton_dispatcher" >> /usr/bin/dicomautomaton_dispatcher
+      chmod 777 /usr/bin/dicomautomaton_dispatcher
     # Ensure it can be run and then run tests.
     - "dicomautomaton_dispatcher -h"
     #- "git clone 'https://github.com/hdclark/DICOMautomaton'"

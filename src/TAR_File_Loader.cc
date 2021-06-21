@@ -35,7 +35,7 @@
 
 
 bool Load_From_TAR_Files( Drover &DICOM_data,
-                          std::map<std::string,std::string> &InvocationMetadata,
+                          const std::map<std::string,std::string> &InvocationMetadata,
                           const std::string &FilenameLex,
                           std::list<boost::filesystem::path> &Filenames ){
 
@@ -60,15 +60,15 @@ bool Load_From_TAR_Files( Drover &DICOM_data,
         long int N_successfully_loaded = 0;
 
         const auto file_handler = [&]( std::istream &is,
-                                       std::string fname,
-                                       long int fsize,
-                                       std::string fmode,
-                                       std::string fuser,
-                                       std::string fgroup,
-                                       long int ftime,
-                                       std::string o_name,
-                                       std::string g_name,
-                                       std::string fprefix) -> void {
+                                       std::string /*fname*/,
+                                       long int /*fsize*/,
+                                       std::string /*fmode*/,
+                                       std::string /*fuser*/,
+                                       std::string /*fgroup*/,
+                                       long int /*ftime*/,
+                                       std::string /*o_name*/,
+                                       std::string /*g_name*/,
+                                       std::string /*fprefix*/) -> void {
 
             // Indicate that a file was detected.
             ++N_encapsulated_files;

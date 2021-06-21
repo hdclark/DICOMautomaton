@@ -623,10 +623,15 @@ void Emit_Documentation(std::ostream &os){
     // Print an index of links to each operation.
     auto known_ops = Known_Operations();
     {
-        for(auto &anop : known_ops){
-            const auto name = anop.first;
-            //os << bulleta << "[" << name << "](#" << name << ")" << std::endl;
-            os << bulleta << name << std::endl;
+        const auto op_name_lex = Operation_Lexicon();
+        for(const auto& n_p : op_name_lex){
+            const auto name = n_p.first;
+            const auto canonical_name = n_p.second;
+            if(name == canonical_name){
+                os << bulleta << name << std::endl;
+            }else{
+                os << bulleta << name << " (alias for " << canonical_name << ")" << std::endl;
+            }
         }
         os << std::endl;
     }

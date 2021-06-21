@@ -116,8 +116,6 @@ Drover AnalyzeTPlan(Drover DICOM_data,
     const auto DescriptionOpt = OptArgs.getValueStr("Description");
     const auto UserCommentOpt = OptArgs.getValueStr("UserComment");
     //-----------------------------------------------------------------------------------------------------------------
-    const auto nan = std::numeric_limits<double>::quiet_NaN();
-
     std::stringstream header;
     std::stringstream report;
 

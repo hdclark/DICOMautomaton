@@ -82,7 +82,6 @@ Drover ExportPointClouds(Drover DICOM_data,
 
     auto PCs_all = All_PCs( DICOM_data );
     const auto PCs = Whitelist( PCs_all, PointSelectionStr );
-    const auto N_PCs = PCs.size();
     for(auto & pcp_it : PCs){
 
         // Determine which filename to use.

@@ -187,7 +187,7 @@ Drover DrawGeometry(Drover DICOM_data,
     const bool shape_is_wcube = std::regex_match(ShapesStr, regex_wcube);
     const bool shape_is_ssph = std::regex_match(ShapesStr, regex_ssph);
 
-    std::function<void(long int, long int, long int, std::reference_wrapper<planar_image<float,double>>, float &)> f_noop;
+    Mutate_Voxels_Functor<float,double> f_noop;
 
     const vec3<double> vec3_nan( std::numeric_limits<double>::quiet_NaN(),
                                  std::numeric_limits<double>::quiet_NaN(),
@@ -437,8 +437,7 @@ Drover DrawGeometry(Drover DICOM_data,
         }
 
         // Create a functor for the specific geometry / shape.
-        std::function<void(long int, long int, long int, std::reference_wrapper<planar_image<float,double>>, float &)> f_overwrite;
-
+        Mutate_Voxels_Functor<float,double> f_overwrite;
 
         // Grid pattern.
         if(shape_is_grid){
@@ -446,6 +445,7 @@ Drover DrawGeometry(Drover DICOM_data,
                                long int col,
                                long int chan,
                                std::reference_wrapper<planar_image<float,double>> img_refw,
+                               std::reference_wrapper<planar_image<float,double>>,
                                float &voxel_val ) -> void {
                 if( (Channel < 0) || (Channel == chan) ){
                     const auto pos = img_refw.get().position(row,col);
@@ -469,6 +469,7 @@ Drover DrawGeometry(Drover DICOM_data,
                                long int col,
                                long int chan,
                                std::reference_wrapper<planar_image<float,double>> img_refw,
+                               std::reference_wrapper<planar_image<float,double>>,
                                float &voxel_val ) -> void {
                 if( (Channel < 0) || (Channel == chan) ){
                     const auto pos = img_refw.get().position(row,col);
@@ -491,6 +492,7 @@ Drover DrawGeometry(Drover DICOM_data,
                                long int col,
                                long int chan,
                                std::reference_wrapper<planar_image<float,double>> img_refw,
+                               std::reference_wrapper<planar_image<float,double>>,
                                float &voxel_val ) -> void {
                 if( (Channel < 0) || (Channel == chan) ){
                     const auto pos = img_refw.get().position(row,col);

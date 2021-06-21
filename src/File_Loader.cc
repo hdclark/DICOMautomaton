@@ -39,7 +39,7 @@
 // If a file cannot be read, all others are tried before returning false.
 bool
 Load_Files( Drover &DICOM_data,
-            std::map<std::string,std::string> &InvocationMetadata,
+            const std::map<std::string,std::string> &InvocationMetadata,
             const std::string &FilenameLex,
             std::list<boost::filesystem::path> &Paths ){
 

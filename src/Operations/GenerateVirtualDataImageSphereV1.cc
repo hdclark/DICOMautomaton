@@ -59,15 +59,15 @@ Drover GenerateVirtualDataImageSphereV1(Drover DICOM_data,
     const double SphereRadius = 25.0;
 
     long int InstanceNumber = 1; //Gets bumped for each image.
-    const long int AcquisitionNumber = 1;
+    //const long int AcquisitionNumber = 1;
 
     // Temporal metadata.
     const std::string ContentDate = "20190226";
     const std::string ContentTime = "195741";
 
     // Other metadata.
-    const double RescaleSlope = 1.0;
-    const double RescaleIntercept = 0.0;
+    //const double RescaleSlope = 1.0;
+    //const double RescaleIntercept = 0.0;
     const std::string OriginFilename = "/dev/null";
     const std::string PatientID = "VirtualDataImageSphereVersion1";
     const std::string StudyInstanceUID = Generate_Random_UID(60);

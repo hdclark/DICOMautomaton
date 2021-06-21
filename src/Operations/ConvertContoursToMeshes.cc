@@ -180,8 +180,6 @@ Drover ConvertContoursToMeshes(Drover DICOM_data,
     };
 
     using cop_refw_t = std::reference_wrapper<contour_of_points<double>>;
-    using cop_refw_list_t = std::list<cop_refw_t>;
-    using cop_refw_list_it_t = cop_refw_list_t::iterator;
 
     const auto projected_contours_overlap = [&](const plane<double> &pln_A, cop_refw_t A,
                                                 const plane<double> &pln_B, cop_refw_t B) -> bool {
@@ -281,7 +279,6 @@ Drover ConvertContoursToMeshes(Drover DICOM_data,
         }
 
         // Identify how contours are paired together via computing the projected overlap.
-        using cop_refw_t = std::reference_wrapper<contour_of_points<double>>;
         struct mapping_t {
             std::list<cop_refw_t> upper;
             std::list<cop_refw_t> lower;

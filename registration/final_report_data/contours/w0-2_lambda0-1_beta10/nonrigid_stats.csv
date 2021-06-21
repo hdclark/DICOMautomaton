@@ -1,0 +1,6 @@
+iteration,time,similarity,outfile
+0,0,9.4243,final_report_data/contours/w0-2_lambda0-1_beta10/nonrigid_iter0.xyz
+1,0.203374,9.0351,
+2,0.379483,8.71011,
+3,0.544845,8.46152,
+4,0.711284,8.25387,

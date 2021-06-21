@@ -5,10 +5,13 @@
 # Compiled Dynamic libraries
 *.so
 
+# Data files
+sycl/data
 
 # Compiled Static libraries
 *.la
 *.a
+settings.json
 
 # Executables
 automaton
@@ -22,4 +25,7 @@ petct_perfusion_analysis*
 build/
 compile_commands.json
 dcma_integration_testing/
+
+# vim temporary files.
+*.swp
 

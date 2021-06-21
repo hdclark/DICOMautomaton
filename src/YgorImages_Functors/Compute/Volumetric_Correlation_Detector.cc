@@ -113,7 +113,7 @@ bool ComputeVolumetricCorrelationDetector(planar_image_collection<float,double> 
     //sample_at_radius( 15.0,  samples_needed_for_areal_density(  15.0, 1.0 ) );
     sample_at_radius( 5.0,  samples_needed_for_areal_density(  5.0, 1.0 ) );
 
-    ud.f_reduce = [&](float v, std::vector<float> &shtl, vec3<double> pos) -> float {
+    ud.f_reduce = [&](float v, std::vector<float> &shtl, vec3<double> /*pos*/) -> float {
         std::vector<float> shtl2;
         shtl2.reserve(shtl.size());
 

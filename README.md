@@ -6,8 +6,6 @@
 
 [![Language Grade: C/C++](https://img.shields.io/lgtm/grade/cpp/g/hdclark/DICOMautomaton.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/hdclark/DICOMautomaton/context:cpp)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/1ac93861be524c7f9f18324b64960f28)](https://www.codacy.com/app/hdclark/DICOMautomaton?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=hdclark/DICOMautomaton&amp;utm_campaign=Badge_Grade)
-
-[![Travis CI Build Status](https://travis-ci.com/hdclark/DICOMautomaton.svg?branch=master)](https://travis-ci.com/hdclark/DICOMautomaton)
 [![GitLab CI Pipeline Status](https://gitlab.com/hdeanclark/DICOMautomaton/badges/master/pipeline.svg)](https://gitlab.com/hdeanclark/DICOMautomaton/-/commits/master)
 
 [![Latest Release DOI](https://zenodo.org/badge/89630691.svg)](https://zenodo.org/badge/latestdoi/89630691)
@@ -15,7 +13,7 @@
 ## About
 
 `DICOMautomaton` is a multipurpose tool for analyzing *medical physics* data
-with a focus on automation. It runs on Linux. It has first-class support for:
+with a focus on automation. It has first-class support for:
 
   - images (2D and 3D; CT, MRI, PET, RT dose),
   - surface meshes (2D surfaces embedded in 3D),
@@ -40,8 +38,8 @@ There are four ways of operating `DICOMautomaton`:
     - supports modal workflow interactions
     - not all operations are supported (e.g., contouring is not currently
       supported)
-    - server-client model for off-site installation, can provide access to
-      non-Linux systems and low-powered client computers
+    - server-client model for off-site/remote installation, can provide
+      cross-platform and low-powered client access
 
 `DICOMautomaton` provides a diverse array of functionality, including
 implementations of the following well-known algorithms and analytical
@@ -227,7 +225,7 @@ testing for specific workflows.
 
 All materials herein which may be copywrited, where applicable, are. Copyright
 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021 Hal
-Clark.
+Clark and other contributing authors.
 
 See [LICENSE.txt](LICENSE.txt) for details about the license. Informally,
 `DICOMautomaton` is available under a GPLv3+ license. The Imebra library is
@@ -243,7 +241,7 @@ from unforeseen or unanticipated implementation defects.
 
 ## Dependencies
 
-Dependencies are listed in [PKGBUILD](PKGBUILD), using Arch Linux package naming
+Dependencies are listed in [PKGBUILD](PKGBUILD) using Arch Linux package naming
 conventions, and in [CMakeLists.txt](CMakeLists.txt) using Debian package naming
 conventions.
 
@@ -262,19 +260,20 @@ Notably, `DICOMautomaton` depends on the author's `Ygor`, `Explicator`, and
 
 ## Installation
 
-### Quick start
+### Quick start (Linux)
 
 **[Download the latest AppImage artifact from the continuous integration server
-here](https://hdclark.github.io/DICOMautomaton-x86_64.AppImage)** or via:
+here](http://halclark.ca/ci/DICOMautomaton-latest-x86_64.AppImage)** or via:
 
-     $>  curl https://hdclark.github.io/DICOMautomaton-x86_64.AppImage > dicomautomaton_dispatcher
+     $>  curl http://halclark.ca/ci/DICOMautomaton-latest-x86_64.AppImage > dicomautomaton_dispatcher
      $>  chmod 777 dicomautomaton_dispatcher
      $>  ./dicomautomaton_dispatcher -h
 
 This artifact corresponds to the latest successful build on
-<https://travis-ci.com/github/hdclark/DICOMautomaton/builds>. Installation is
-not necessary, but the file can be renamed and installed in a standard location
-for convenience (e.g., `/usr/bin/`).
+<http://halclark.ca/ci/>. Please confirm the
+[checksum](http://halclark.ca/ci/DICOMautomaton-latest-x86_64.AppImage.sha256sum).
+Installation is not necessary, but the file can be renamed and installed in a
+standard location for convenience (e.g., `/usr/bin/`).
 
 #### Notes and caveats:
 
@@ -378,10 +377,9 @@ successfully-built base images are available from `Docker Hub`:
 
 Continuous integration is used to build `Docker` images, `AppImage`s,
 cross-compile and perform tests for all commits. `Docker` build
-artifacts from `Travis-CI` may be available
-[here](https://travis-ci.com/hdclark/DICOMautomaton).
+artifacts may be available [here](http://halclark.ca/ci/).
 Additional build environments and `AppImage` portability are tested with
-`GitLab` CI pipelines; build artifacts are available
+`GitHub` and `GitLab` CI pipelines; build artifacts are available
 [here](https://gitlab.com/hdeanclark/DICOMautomaton/-/pipelines).
 Direct links for the latest build artifacts:
 
@@ -440,10 +438,9 @@ incompatibility issues described above. However, it works well if your system
 `glibc` is newer than (or equivalent to) that provided by `Debian` stable.
 External, runtime support programs (e.g., `Zenity`, `Gnuplot`) may be
 incompatible or missing altogether. At the moment no canonical `AppImage`s are
-provided, though [continuous integration artifacts *are* available
-here](https://hdclark.github.io/DICOMautomaton-x86_64.AppImage). See
-`docker/scripts/debian_stable/` for instructions showing how to generate your
-own `AppImage`.
+provided, though continuous integration artifacts *are* available (see above).
+Refer to `docker/scripts/debian_stable/` for instructions showing how to
+generate your own `AppImage`.
 
 A dedicated `Linux` system can be bootstrapped using an up-to-date `Arch Linux`
 system that will package the system-installed `DICOMautomaton` in a truly
@@ -486,6 +483,12 @@ and may be more appropriate to cite.
     race conditions. If execution is unexpectedly terminated a mutex may remain
     and stall/hang future operations. This can be resolved by manually removing
     the mutex.
+
+  - If you are limited by an `OpenGL` version earlier than 3.0, for example in a
+    `VirtualBox` virtual machine, the `SDL` viewer may fail to load. This can be
+    worked around by switching to `Mesa`-based software rendering by configuring
+    the entire system or defining the `LIBGL_ALWAYS_SOFTWARE=1` environment
+    variable.
 
 ## Project Home
 

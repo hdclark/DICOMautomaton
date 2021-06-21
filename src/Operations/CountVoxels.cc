@@ -212,6 +212,47 @@ Drover CountVoxels(Drover DICOM_data,
     for(auto & iap_it : IAs){
         if((*iap_it)->imagecoll.images.empty()) continue;
 
+        //Determine the bounds in terms of pixel-value thresholds.
+        auto cl = Lower; // Will be replaced if percentages/percentiles requested.
+        auto cu = Upper; // Will be replaced if percentages/percentiles requested.
+        {
+            //Percentage-based.
+            if(Lower_is_Percent || Upper_is_Percent){
+                Stats::Running_MinMax<float> rmm;
+                for(const auto &animg : (*iap_it)->imagecoll.images){
+                    animg.apply_to_pixels([&rmm,Channel](long int, long int, long int chnl, float val) -> void {
+                         if((Channel < 0) || (Channel == chnl)) rmm.Digest(val);
+                         return;
+                    });
+                }
+                if(Lower_is_Percent) cl = (rmm.Current_Min() + (rmm.Current_Max() - rmm.Current_Min()) * Lower / 100.0);
+                if(Upper_is_Percent) cu = (rmm.Current_Min() + (rmm.Current_Max() - rmm.Current_Min()) * Upper / 100.0);
+            }
+
+            //Percentile-based.
+            if(Lower_is_Ptile || Upper_is_Ptile){
+                std::vector<float> pixel_vals;
+                //pixel_vals.reserve(animg.rows * animg.columns * animg.channels * img_count);
+                for(const auto &animg : (*iap_it)->imagecoll.images){
+                    animg.apply_to_pixels([&pixel_vals,Channel](long int, long int, long int chnl, float val) -> void {
+                         if((Channel < 0) || (Channel == chnl)) pixel_vals.push_back(val);
+                         return;
+                    });
+                }
+                if(Lower_is_Ptile) cl = Stats::Percentile(pixel_vals, Lower / 100.0);
+                if(Upper_is_Ptile) cu = Stats::Percentile(pixel_vals, Upper / 100.0);
+            }
+        }
+        if(cl > cu){
+            throw std::invalid_argument("Thresholds conflict. Mesh will contain zero faces. Refusing to continue.");
+        }
+
+        //Construct a pixel 'oracle' closure using the user-specified threshold criteria. This function identifies whether
+        //the pixel is within (true) or outside of (false) the final ROI.
+        auto pixel_oracle = [cu,cl](float p) -> bool {
+            return (cl <= p) && (p <= cu);
+        };
+
         // Look for a patient ID if none has been identified yet.
         if(!PatientID){
             planar_image<float, double> *animg = &( (*iap_it)->imagecoll.images.front() );
@@ -247,12 +288,15 @@ Drover CountVoxels(Drover DICOM_data,
             throw std::invalid_argument("Inclusivity argument '"_s + InclusivityStr + "' is not valid");
         }
 
-        ud.f_bounded = [&](long int, long int, long int chan, std::reference_wrapper<planar_image<float,double>>, float &val) {
+        ud.f_bounded = [&](long int, long int, long int chan,
+                           std::reference_wrapper<planar_image<float,double>>,
+                           std::reference_wrapper<planar_image<float,double>>,
+                           float &val) {
             if( (Channel < 0) || (Channel == chan) ){
                 std::lock_guard<std::mutex> lock(locker);
                 if(!std::isfinite(val)){
                     ++count_nan;
-                }else if(isininc(Lower, val, Upper)){
+                }else if(pixel_oracle(val)){
                     ++count_inside;
                 }else{
                     ++count_outside;

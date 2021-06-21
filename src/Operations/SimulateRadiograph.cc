@@ -398,7 +398,6 @@ Drover SimulateRadiograph(Drover DICOM_data,
     OrthoSrcImg->metadata["Description"] = "(unused)";
 
     const auto detector_plane = DetectImg->image_plane();
-    const auto orthosrc_plane = OrthoSrcImg->image_plane();
 
     //------------------------
     // March rays through the image data.
@@ -500,8 +499,6 @@ Drover SimulateRadiograph(Drover DICOM_data,
                     vec3<double> blocky_ray_pos = grid_zero + row_unit * (static_cast<double>(ray_i) * pxl_dx)
                                                             + col_unit * (static_cast<double>(ray_j) * pxl_dy)
                                                             + img_unit * (static_cast<double>(ray_k) * pxl_dz);
-
-                    const auto ray_start_side_of_terminus_plane = detector_plane.Is_Point_Above_Plane(ray_start);
 
                     // Each time the ray samples the CT number, the ray is simulated to have interacted with the medium
                     // for the length of the ray advancement.

@@ -51,8 +51,8 @@ bool BEDConversion(planar_image_collection<float,double>::images_list_it_t first
     ebv_opts.adjacency      = Mutate_Voxels_Opts::Adjacency::SingleVoxel;
     ebv_opts.maskmod        = Mutate_Voxels_Opts::MaskMod::Noop;
 
-    std::function< void(long int, long int, long int, std::reference_wrapper<planar_image<float,double>>, float &) > f_bounded;
-    std::function< void(long int, long int, long int, std::reference_wrapper<planar_image<float,double>>, float &) > f_unbounded;
+    Mutate_Voxels_Functor<float,double> f_bounded;
+    Mutate_Voxels_Functor<float,double> f_unbounded;
 
     if(user_data_s->model == BEDConversionUserData::Model::BEDSimpleLinearQuadratic){
         if(user_data_s->NumberOfFractions <= 0){
@@ -63,7 +63,10 @@ bool BEDConversion(planar_image_collection<float,double>::images_list_it_t first
             throw std::invalid_argument("AlphaBetaRatioLate not specified or invalid.");
         }
 
-        f_bounded = [=](long int /*row*/, long int /*col*/, long int /*channel*/, std::reference_wrapper<planar_image<float,double>> /*img_refw*/, float &voxel_val) {
+        f_bounded = [=](long int /*row*/, long int /*col*/, long int /*channel*/,
+                        std::reference_wrapper<planar_image<float,double>> /*img_refw*/,
+                        std::reference_wrapper<planar_image<float,double>> /*mask_img_refw*/,
+                        float &voxel_val) {
             if(voxel_val <= 0.0) return; // No-op if there is no dose.
 
             const auto D_voxel = voxel_val;
@@ -72,7 +75,10 @@ bool BEDConversion(planar_image_collection<float,double>::images_list_it_t first
             return;
         };
 
-        f_unbounded = [=](long int /*row*/, long int /*col*/, long int /*channel*/, std::reference_wrapper<planar_image<float,double>> /*img_refw*/, float &voxel_val) {
+        f_unbounded = [=](long int /*row*/, long int /*col*/, long int /*channel*/,
+                          std::reference_wrapper<planar_image<float,double>> /*img_refw*/,
+                          std::reference_wrapper<planar_image<float,double>> /*mask_img_refw*/,
+                          float &voxel_val) {
             if(voxel_val <= 0.0) return; // No-op if there is no dose.
 
             const auto D_voxel = voxel_val;
@@ -98,7 +104,10 @@ bool BEDConversion(planar_image_collection<float,double>::images_list_it_t first
             throw std::invalid_argument("AlphaBetaRatioLate not specified or invalid.");
         }
 
-        f_bounded = [=](long int /*row*/, long int /*col*/, long int /*channel*/, std::reference_wrapper<planar_image<float,double>> /*img_refw*/, float &voxel_val) {
+        f_bounded = [=](long int /*row*/, long int /*col*/, long int /*channel*/,
+                        std::reference_wrapper<planar_image<float,double>> /*img_refw*/,
+                        std::reference_wrapper<planar_image<float,double>> /*mask_img_refw*/,
+                        float &voxel_val) {
             if(voxel_val <= 0.0) return; // No-op if there is no dose.
 
             const auto D_voxel = voxel_val;
@@ -109,7 +118,10 @@ bool BEDConversion(planar_image_collection<float,double>::images_list_it_t first
             return;
         };
 
-        f_unbounded = [=](long int /*row*/, long int /*col*/, long int /*channel*/, std::reference_wrapper<planar_image<float,double>> /*img_refw*/, float &voxel_val) {
+        f_unbounded = [=](long int /*row*/, long int /*col*/, long int /*channel*/,
+                          std::reference_wrapper<planar_image<float,double>> /*img_refw*/,
+                          std::reference_wrapper<planar_image<float,double>> /*mask_img_refw*/,
+                          float &voxel_val) {
             if(voxel_val <= 0.0) return; // No-op if there is no dose.
 
             const auto D_voxel = voxel_val;
@@ -157,7 +169,10 @@ bool BEDConversion(planar_image_collection<float,double>::images_list_it_t first
             EQD_n = EQD_D / user_data_s->TargetDosePerFraction;
         }
 
-        f_bounded = [=](long int /*row*/, long int /*col*/, long int /*channel*/, std::reference_wrapper<planar_image<float,double>> /*img_refw*/, float &voxel_val) {
+        f_bounded = [=](long int /*row*/, long int /*col*/, long int /*channel*/,
+                        std::reference_wrapper<planar_image<float,double>> /*img_refw*/,
+                        std::reference_wrapper<planar_image<float,double>> /*mask_img_refw*/,
+                        float &voxel_val) {
             if(voxel_val <= 0.0) return; // No-op if there is no dose.
 
             BEDabr BED_voxel;
@@ -168,7 +183,10 @@ bool BEDConversion(planar_image_collection<float,double>::images_list_it_t first
             return;
         };
 
-        f_unbounded = [=](long int /*row*/, long int /*col*/, long int /*channel*/, std::reference_wrapper<planar_image<float,double>> /*img_refw*/, float &voxel_val) {
+        f_unbounded = [=](long int /*row*/, long int /*col*/, long int /*channel*/,
+                          std::reference_wrapper<planar_image<float,double>> /*img_refw*/,
+                          std::reference_wrapper<planar_image<float,double>> /*mask_img_refw*/,
+                          float &voxel_val) {
             if(voxel_val <= 0.0) return; // No-op if there is no dose.
 
             BEDabr BED_voxel;

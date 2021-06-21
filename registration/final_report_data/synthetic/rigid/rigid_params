@@ -1,8 +1,0 @@
-w=0.2
-lambda=2
-beta=2
-similarity_threshold=10
-low_rank=0
-ev_ratio=0
-use_fgt=0
-type=rigid

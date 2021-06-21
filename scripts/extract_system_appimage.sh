@@ -5,10 +5,13 @@
 #
 # Note that the end-user's glibc version must be equivalent or newer than the Docker image glibc.
 
+reporoot=$(git rev-parse --show-toplevel)
+
 set -eu
 
-reporoot=$(git rev-parse --show-toplevel)
-cd "${reporoot}"
+if [ -d "${reporoot}" ] ; then
+    cd "${reporoot}"
+fi
 
 # Continuous artifacts.
 wget "https://artifacts.assassinate-you.net/artifactory/list/linuxdeploy/travis-456/linuxdeploy-x86_64.AppImage" ||

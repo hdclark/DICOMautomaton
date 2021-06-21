@@ -1,8 +1,15 @@
 
 add_subdirectory(Operations)
 
+add_library(            DCMA_Version_obj OBJECT DCMA_Version.cc)
+set_target_properties(  DCMA_Version_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+target_compile_definitions( DCMA_Version_obj PUBLIC -DDCMA_VERSION=${DCMA_VERSION} )
+
 add_library(            Structs_obj OBJECT Structs.cc)
 set_target_properties(  Structs_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+
+add_library(            Partition_Drover_obj OBJECT Partition_Drover.cc)
+set_target_properties(  Partition_Drover_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
 add_library(            DCMA_DICOM_obj OBJECT DCMA_DICOM.cc)
 set_target_properties(  DCMA_DICOM_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
@@ -123,9 +130,10 @@ if(WITH_SDL)
     add_library( IMGui_objs OBJECT imgui20201021/imgui_impl_opengl3.cpp
                                    imgui20201021/imgui_impl_sdl.cpp
                                    imgui20201021/imgui.cpp
-                                   imgui20201021/imgui_demo.cpp
                                    imgui20201021/imgui_draw.cpp
-                                   imgui20201021/imgui_widgets.cpp )
+                                   imgui20201021/imgui_widgets.cpp 
+                                   implot20210525/implot.cpp 
+                                   implot20210525/implot_items.cpp )
     set_target_properties( IMGui_objs PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 endif()
 
@@ -246,6 +254,7 @@ add_executable (dicomautomaton_dispatcher
     DICOMautomaton_Dispatcher.cc
 
     $<TARGET_OBJECTS:Structs_obj>
+    $<TARGET_OBJECTS:Partition_Drover_obj>
     $<TARGET_OBJECTS:Dose_Meld_obj>
     $<TARGET_OBJECTS:BED_Conversion_obj>
     $<TARGET_OBJECTS:Alignment_Rigid_obj>
@@ -284,6 +293,7 @@ add_executable (dicomautomaton_dispatcher
     $<TARGET_OBJECTS:YgorImaging_Helper_objs>
 
     $<TARGET_OBJECTS:Operations_objs>
+    $<TARGET_OBJECTS:DCMA_Version_obj>
 )
 target_link_libraries (dicomautomaton_dispatcher
     imebrashim
@@ -320,6 +330,7 @@ if(WITH_WT)
         DICOMautomaton_WebServer.cc
 
         $<TARGET_OBJECTS:Structs_obj>
+        $<TARGET_OBJECTS:Partition_Drover_obj>
         $<TARGET_OBJECTS:Dose_Meld_obj>
         $<TARGET_OBJECTS:BED_Conversion_obj>
         $<TARGET_OBJECTS:Alignment_Rigid_obj>
@@ -358,6 +369,7 @@ if(WITH_WT)
         $<TARGET_OBJECTS:YgorImaging_Helper_objs>
 
         $<TARGET_OBJECTS:Operations_objs>
+        $<TARGET_OBJECTS:DCMA_Version_obj>
     )
     target_link_libraries(dicomautomaton_webserver
         imebrashim

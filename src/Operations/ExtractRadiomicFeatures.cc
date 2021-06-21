@@ -269,13 +269,14 @@ Drover ExtractRadiomicFeatures(Drover DICOM_data,
         //ud.mutation_opts.inclusivity = Mutate_Voxels_Opts::Inclusivity::Inclusive;
         ud.mutation_opts.inclusivity = Mutate_Voxels_Opts::Inclusivity::Centre;
 
-        std::function<void(long int, long int, long int, std::reference_wrapper<planar_image<float,double>>, float &)> f_noop;
+        Mutate_Voxels_Functor<float,double> f_noop;
         ud.f_unbounded = f_noop;
         ud.f_visitor = f_noop;
         ud.f_bounded = [&](long int /*row*/, 
                            long int /*col*/, 
                            long int /*chan*/, 
                            std::reference_wrapper<planar_image<float,double>> /*img_refw*/, 
+                           std::reference_wrapper<planar_image<float,double>> /*mask_img_refw*/, 
                            float &voxel_val) {
             // Append the value to the voxel store.
             voxel_vals.emplace_back(voxel_val);

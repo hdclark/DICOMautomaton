@@ -103,9 +103,7 @@ Drover AutoCropImages(Drover DICOM_data,
             }
 
             const auto Urow = img_it->row_unit;
-            const auto Drow = img_it->pxl_dx;
             const auto Ucol = img_it->col_unit;
-            const auto Dcol = img_it->pxl_dy;
 
             //Override crop specifications using metadata from the image.
             if(RTIMAGE){
