@@ -113,13 +113,18 @@ bool ComputeVolumetricNeighbourhoodSampler(planar_image_collection<float,double>
             const auto pxl_dy = ref_img_refw.get().pxl_dy;
             const auto pxl_dz = ref_img_refw.get().pxl_dz;
 
+            const auto img_rows = ref_img_refw.get().rows;
+            const auto img_cols = ref_img_refw.get().columns;
+            const auto img_imgs = static_cast<long int>(img_adj.int_to_img.size());
+
             std::vector<float> shtl;
             shtl.reserve(100); // An arbitrary guess.
 
-            auto f_bounded = [&,ref_img_refw](long int E_row, long int E_col, long int channel,
-                                              std::reference_wrapper<planar_image<float,double>> /*img_refw*/,
-                                              std::reference_wrapper<planar_image<float,double>> /*mask_img_refw*/,
-                                              float &voxel_val) {
+            auto f_bounded = [&, img_rows, img_cols, img_imgs, ref_img_refw](
+                                 long int E_row, long int E_col, long int channel,
+                                 std::reference_wrapper<planar_image<float,double>> /*img_refw*/,
+                                 std::reference_wrapper<planar_image<float,double>> /*mask_img_refw*/,
+                                 float &voxel_val) {
                 // No-op if this is the wrong channel.
                 if( (user_data_s->channel >= 0) && (channel != user_data_s->channel) ){
                     return;
@@ -262,6 +267,20 @@ bool ComputeVolumetricNeighbourhoodSampler(planar_image_collection<float,double>
                             auto adj_img_refw = img_adj.index_to_image(l_img);
                             res = adj_img_refw.get().value(l_row, l_col, channel);
                         }
+                        shtl.emplace_back( res );
+                    }
+
+                // Sample specific voxels with periodic boundary conditions.
+                }else if( user_data_s->neighbourhood == ComputeVolumetricNeighbourhoodSamplerUserData::Neighbourhood::SelectionPeriodic ){
+
+                    for(const auto &triplets : user_data_s->voxel_triplets){
+                        const auto l_row = (R_row + triplets[0] + img_rows) % img_rows;
+                        const auto l_col = (R_col + triplets[1] + img_cols) % img_cols;
+                        const auto l_img = (R_num + triplets[2] + img_imgs) % img_imgs;
+
+                        float res = std::numeric_limits<float>::quiet_NaN();
+                        auto adj_img_refw = img_adj.index_to_image(l_img);
+                        res = adj_img_refw.get().value(l_row, l_col, channel);
                         shtl.emplace_back( res );
                     }
 

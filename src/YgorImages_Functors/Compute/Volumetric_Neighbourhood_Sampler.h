@@ -22,9 +22,10 @@ struct ComputeVolumetricNeighbourhoodSamplerUserData {
     // The type of neighbourhood to use.
     enum class
     Neighbourhood {
-        Spherical,    // Spherically-bound neighbourhood.
-        Cubic,        // Cubically-bound neighbourhood.
-        Selection     // Specific-voxel sampling via list of integer triplets.
+        Spherical,         // Spherically-bound neighbourhood.
+        Cubic,             // Cubically-bound neighbourhood.
+        Selection,         // Specific-voxel sampling via list of integer triplets.
+        SelectionPeriodic, // Periodic boundary conditions for integer triplets.
     } neighbourhood = Neighbourhood::Spherical;
 
     // -----------------------------
