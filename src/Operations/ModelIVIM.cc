@@ -309,6 +309,24 @@ double GetBiExpf(const std::vector<float> &bvalues, const std::vector<float> &va
     //The biexponential model
     //S(b) = S(0)[f * exp(-b D*) + (1-f) * exp(-b D)]
 
+    //Divide all signals by S(0)
+    float signalTemp; 
+    const auto number_bVals = static_cast<double>( bvalues.size() );
+    int b0_index;
+    for(size_t i = 0; i < number_bVals; ++i){
+         
+        if (bvalues[i] == 0){ //first get the index of b = 0 (I'm unsure if b values are in order already)
+            b0_index = i;
+            break;
+        }         
+        
+    }
+    for(size_t i = 0; i < number_bVals; ++i){
+         
+        vals.at(i) /= vals.at(b0_index);           
+        
+    }
+
     //First we use a cutoff of b values greater than 200 to have signals of the form S(b) = S(0) * exp(-b D) to obtain the diffusion coefficient
 
     //make a vector for the high b values and their signals
@@ -317,9 +335,7 @@ double GetBiExpf(const std::vector<float> &bvalues, const std::vector<float> &va
     std::vector<float> bvaluesH;
     std::vector<float> signalsH;
     float bTemp;
-    float signalTemp; //In loops have to take values from vector and make a variable first or get an error
-
-    const auto number_bVals = static_cast<double>( bvalues.size() );
+    
     for(size_t i = 0; i < number_bVals; ++i){
         if (bvalues[i] > 200){
             bTemp = bvalues.at(i);      
@@ -452,6 +468,12 @@ std::vector<double> GetInverse(const std::vector<double> matrix){
     inverse.push_back(determinant * matrix[0]);
     return inverse;
 
+
+}
+
+double GetBayesianParams(const std::vector<float> &bvalues, const std::vector<float> &vals){
+//This function will use a Bayesian regression approach to fit IVIM kurtosis model with noise floor parameters to the data.
+//Kurtosis model: S(b)/S(0) = f exp(-bD*) + (1-f)exp(-bD + (bD)^2K/6)
 
 }
 
