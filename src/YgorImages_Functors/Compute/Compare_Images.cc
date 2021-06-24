@@ -168,7 +168,10 @@ bool ComputeCompareImages(planar_image_collection<float,double> &imagecoll,
             if(overlapping_img_refws.empty()) FUNCWARN("No wholly overlapping reference images found, using slower per-voxel sampling");
 
 
-            auto f_bounded = [&,img_refw](long int E_row, long int E_col, long int channel, std::reference_wrapper<planar_image<float,double>> /*img_refw*/, float &voxel_val) {
+            auto f_bounded = [&,img_refw](long int E_row, long int E_col, long int channel,
+                                          std::reference_wrapper<planar_image<float,double>> /*img_refw*/,
+                                          std::reference_wrapper<planar_image<float,double>> /*mask_img_refw*/,
+                                          float &voxel_val) {
                 if( !isininc( user_data_s->inc_lower_threshold, voxel_val, user_data_s->inc_upper_threshold) ){
                     return; // No-op if outside of the thresholds.
                 }

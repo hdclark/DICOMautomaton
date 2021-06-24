@@ -235,7 +235,10 @@ Drover VoxelRANSAC(Drover DICOM_data,
             throw std::invalid_argument("Inclusivity argument '"_s + InclusivityStr + "' is not valid");
         }
 
-        ud.f_bounded = [&](long int row, long int col, long int chan, std::reference_wrapper<planar_image<float,double>> img_refw, float &voxel_val) {
+        ud.f_bounded = [&](long int row, long int col, long int chan,
+                           std::reference_wrapper<planar_image<float,double>> img_refw,
+                           std::reference_wrapper<planar_image<float,double>>,
+                           float &voxel_val) {
             if( (Channel < 0) || (Channel == chan) ){
                 if(isininc(Lower, voxel_val, Upper)){
                     const auto pos = img_refw.get().position(row,col);
@@ -545,7 +548,7 @@ std::array<SpatialType, SpatialDimensionCount> Coordinates;
         Eigen::MatrixXd cov = centered.adjoint() * centered;
         Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> eig(cov);
         
-        const Eigen::VectorXd& evals = eig.eigenvalues();
+        //const Eigen::VectorXd& evals = eig.eigenvalues();
         Eigen::MatrixXd evecs = eig.eigenvectors().real();
 
         const vec3<double> grid_u_a( evecs(0,0), evecs(1,0), evecs(2,0) );

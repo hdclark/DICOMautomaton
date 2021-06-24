@@ -191,6 +191,14 @@ Drover ConvertPixelsToPoints(Drover DICOM_data,
                      return;
                 });
 
+                //Save the contours and print some information to screen.
+                {
+                    std::lock_guard<std::mutex> lock(saver_printer);
+
+                    ++completed;
+                    FUNCINFO("Completed " << completed << " of " << img_count
+                          << " --> " << static_cast<int>(1000.0*(completed)/img_count)/10.0 << "% done");
+                }
             }); // Thread pool task.
         } // Loop over images.
     } // Loop over image arrays.

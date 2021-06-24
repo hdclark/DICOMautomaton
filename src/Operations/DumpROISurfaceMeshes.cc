@@ -231,8 +231,8 @@ Drover DumpROISurfaceMeshes(const Drover& DICOM_data,
     const auto GridRows = std::stol( OptArgs.getValueStr("GridRows").value() );
     const auto GridColumns = std::stol( OptArgs.getValueStr("GridColumns").value() );
 
-    const auto MarchingCubes = true;
-    const auto ReastrictedDelauney = false;
+    //const auto MarchingCubes = true;
+    //const auto RestrictedDelauney = false;
 
     bool Subdivide = false;
     bool Simplify = false;

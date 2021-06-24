@@ -19,6 +19,7 @@
 #include <limits>
 #include <list>
 #include <map>
+#include <set>
 #include <memory>
 #include <regex>
 #include <stdexcept>
@@ -30,6 +31,7 @@
 #include <chrono>
 #include <future>
 #include <shared_mutex>
+#include <initializer_list>
 
 #include <boost/filesystem.hpp>
 
@@ -67,6 +69,10 @@
 #include "../DCMA_Version.h"
 #include "../File_Loader.h"
 
+#ifdef DCMA_USE_CGAL
+    #include "../Surface_Meshes.h"
+#endif // DCMA_USE_CGAL
+
 #include "SDL_Viewer.h"
 
 //extern const std::string DCMA_VERSION_STR;
@@ -77,24 +83,13 @@ OperationDoc OpArgDocSDL_Viewer(){
     out.desc = 
         "Launch an interactive viewer based on SDL.";
 
-    out.args.emplace_back();
-    out.args.back().name = "FPSLimit";
-    out.args.back().desc = "The upper limit on the frame rate, in seconds as an unsigned integer."
-                           " Note that this value may be treated as a suggestion.";
-    out.args.back().default_val = "60";
-    out.args.back().expected = true;
-    out.args.back().examples = { "60", "30", "10", "1" };
-
     return out;
 }
 
 Drover SDL_Viewer(Drover DICOM_data,
-                  const OperationArgPkg& OptArgs,
+                  const OperationArgPkg& /*OptArgs*/,
                   const std::map<std::string, std::string>& InvocationMetadata,
                   const std::string& FilenameLex){
-
-    // ----------------------------------------- User Parameters ------------------------------------------
-    const auto FPSLimit = std::stoul( OptArgs.getValueStr("FPSLimit").value() );
 
     // --------------------------------------- Operational State ------------------------------------------
     Explicator X(FilenameLex);
@@ -107,6 +102,7 @@ Drover SDL_Viewer(Drover DICOM_data,
     bool view_meshes_enabled = true;
     bool view_plots_enabled = true;
     bool view_contours_enabled = true;
+    bool view_contouring_enabled = false;
     bool view_row_column_profiles = false;
     bool show_image_hover_tooltips = true;
     bool adjust_window_level_enabled = false;
@@ -114,10 +110,12 @@ Drover SDL_Viewer(Drover DICOM_data,
 
     // Plot viewer state.
     long int lsamp_num = -1; // The plot currently displayed.
+    std::map<long int, bool> lsamps_visible;
 
     // Image viewer state.
     long int img_array_num = -1; // The image array currently displayed.
     long int img_num = -1; // The image currently displayed.
+    long int img_channel = -1; // Which channel to display.
     using img_array_ptr_it_t = decltype(DICOM_data.image_data.begin());
     using disp_img_it_t = decltype(DICOM_data.image_data.front()->imagecoll.images.begin());
 
@@ -129,10 +127,6 @@ Drover SDL_Viewer(Drover DICOM_data,
 
     //A tagged point for measuring distance.
     std::optional<vec3<double>> tagged_pos;
-
-    //Flags for various things.
-    bool OnlyShowTagsDifferentToNeighbours = true;
-    bool ShowExistingContours = true; //Can be disabled/toggled for, e.g., blind re-contouring.
 
     //Load available colour maps.
     std::vector< std::pair<std::string, std::function<struct ClampedColourRGB(double)>>> colour_maps = {
@@ -198,13 +192,6 @@ Drover SDL_Viewer(Drover DICOM_data,
         return ImVec4(colour.x, colour.y, colour.z, 1.0f);
     };
 
-    //Toggle whether existing contours should be displayed.
-    const auto toggle_showing_existing_contours = [&](){
-            ShowExistingContours = !ShowExistingContours;
-            return;
-    };
-
-
     // ------------------------------------------ Viewer State --------------------------------------------
     auto background_colour = ImVec4(0.025f, 0.087f, 0.118f, 1.00f);
 
@@ -221,6 +208,10 @@ Drover SDL_Viewer(Drover DICOM_data,
         vec3<double> zero_pos;  // Position of (0,0) voxel in DICOM coordinate system.
         vec3<double> dicom_pos; // Position of mouse in DICOM coordinate system.
         vec3<double> voxel_pos; // Position of voxel being hovered in DICOM coordinate system.
+
+        float pixel_scale; // Conversion factor from DICOM distance to screen pixels.
+
+        std::function<ImVec2(const vec3<double>&)> DICOM_to_pixels; 
     } image_mouse_pos;
 
     samples_1D<double> row_profile;
@@ -273,7 +264,7 @@ Drover SDL_Viewer(Drover DICOM_data,
     SDL_Window* window = SDL_CreateWindow("DICOMautomaton Interactive Workspace",
                                            SDL_WINDOWPOS_CENTERED,
                                            SDL_WINDOWPOS_CENTERED,
-                                           1024, 768,
+                                           1280, 768,
                                            SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_MAXIMIZED);
     if(window == nullptr){
         throw std::runtime_error("Unable to create an SDL window: "_s + SDL_GetError());
@@ -342,16 +333,91 @@ Drover SDL_Viewer(Drover DICOM_data,
     };
     opengl_texture_handle_t current_texture;
 
-    const auto Load_OpenGL_Texture = [&custom_centre,
-                                      &custom_width,
-                                      &colour_maps,
+    // Scale bar for showing current colour map.
+    vec3<double> zero3(0.0, 0.0, 0.0);
+    planar_image<float,double> scale_bar_img;
+    scale_bar_img.init_buffer(1L, 100L, 1L);
+    scale_bar_img.init_spatial(1.0, 1.0, 1.0, zero3, zero3);
+    scale_bar_img.init_orientation(vec3<double>(0.0, 1.0, 0.0), vec3<double>(1.0, 0.0, 0.0));
+    for(long int c = 0; c < scale_bar_img.columns; ++c){
+        scale_bar_img.reference(0,c,0) = static_cast<float>(c) / static_cast<float>(scale_bar_img.columns-1);
+    }
+    opengl_texture_handle_t scale_bar_texture;
+
+    // Contouring mode state.
+    int contouring_img_row_col_count = 256;
+    bool contouring_img_altered = false;
+    float contouring_reach = 10.0;
+    float contouring_margin = 1.0;
+    std::string contouring_method = "marching-squares";
+    enum class brushes {
+        // 2D brushes.
+        rigid_circle,
+        rigid_square,
+        gaussian,
+
+        // 3D brushes.
+        rigid_sphere,
+    };
+    brushes contouring_brush = brushes::rigid_circle;
+    float last_mouse_button_0_down = 1E30;
+    float last_mouse_button_1_down = 1E30;
+    std::optional<vec3<double>> last_mouse_button_pos;
+
+    Drover contouring_imgs;
+    contouring_imgs.Ensure_Contour_Data_Allocated();
+    contouring_imgs.image_data.push_back(std::make_unique<Image_Array>());
+    contouring_imgs.image_data.back()->imagecoll.images.emplace_back();
+
+
+    // Resets the contouring image to match the display image characteristics.
+    const auto reset_contouring_state = [&contouring_imgs,
+                                         &contouring_img_row_col_count]( img_array_ptr_it_t  dimg_array_ptr_it ) -> void {
+            contouring_img_row_col_count = std::clamp(contouring_img_row_col_count, 5, 1024);
+
+            // Reset the contouring images.
+            contouring_imgs.image_data.back()->imagecoll.images.clear();
+            for(const auto& dimg : (*dimg_array_ptr_it)->imagecoll.images){
+                contouring_imgs.image_data.back()->imagecoll.images.emplace_back();
+                const auto cimg_ptr = &(contouring_imgs.image_data.back()->imagecoll.images.back());
+
+                // Make the contouring image spatial extent match the display image, except with a different number of
+                // rows and columns. This will make it easy to translate contours back and forth.
+                const auto cimg_pxl_dx = dimg.pxl_dx * static_cast<float>(dimg.rows)/static_cast<float>(contouring_img_row_col_count);
+                const auto cimg_pxl_dy = dimg.pxl_dy * static_cast<float>(dimg.columns)/static_cast<float>(contouring_img_row_col_count);
+                const auto cimg_offset = dimg.offset - dimg.row_unit * dimg.pxl_dx * 0.5
+                                                     - dimg.col_unit * dimg.pxl_dy * 0.5
+                                                     + dimg.row_unit * cimg_pxl_dx * 0.5
+                                                     + dimg.col_unit * cimg_pxl_dy * 0.5;
+                cimg_ptr->init_buffer(contouring_img_row_col_count, contouring_img_row_col_count, 1L);
+                cimg_ptr->init_spatial(cimg_pxl_dx, cimg_pxl_dy, dimg.pxl_dz, dimg.anchor, cimg_offset);
+                cimg_ptr->init_orientation(dimg.row_unit, dimg.col_unit);
+                cimg_ptr->fill_pixels(-1.0f);
+            }
+
+            // Reset any existing contours.
+            contouring_imgs.Ensure_Contour_Data_Allocated();
+            contouring_imgs.contour_data->ccs.clear();
+
+            return;
+    };
+
+    const auto Load_OpenGL_Texture = [&colour_maps,
                                       &colour_map,
-                                      &nan_colour]( const planar_image<float,double>& img ) -> opengl_texture_handle_t {
+                                      &nan_colour,
+                                      &img_channel ]( const planar_image<float,double>& img,
+                                                      const std::optional<double>& custom_centre,
+                                                      const std::optional<double>& custom_width ) -> opengl_texture_handle_t {
+
             const auto img_cols = img.columns;
             const auto img_rows = img.rows;
+            const auto img_chns = img.channels;
 
             if(!isininc(1,img_rows,10000) || !isininc(1,img_cols,10000)){
-                FUNCERR("Image dimensions are not reasonable. Is this a mistake? Refusing to continue");
+                throw std::invalid_argument("Image dimensions are not reasonable. Refusing to continue");
+            }
+            if(!isininc(1,img_channel+1,img_chns)){
+                throw std::invalid_argument("Image does not have selected channel. Refusing to continue");
             }
 
             std::vector<std::byte> animage;
@@ -392,7 +458,7 @@ Drover SDL_Viewer(Drover DICOM_data,
 
                 for(auto j = 0; j < img_rows; ++j){
                     for(auto i = 0; i < img_cols; ++i){
-                        const auto val = static_cast<double>( img.value(j,i,0) ); //The first (R or gray) channel.
+                        const auto val = static_cast<double>( img.value(j,i,img_channel) ); //The first (R or gray) channel.
                         if(!std::isfinite(val)){
                             animage.push_back( nan_colour[0] );
                             animage.push_back( nan_colour[1] );
@@ -455,7 +521,7 @@ Drover SDL_Viewer(Drover DICOM_data,
 
                 for(auto j = 0; j < img_rows; ++j){ 
                     for(auto i = 0; i < img_cols; ++i){ 
-                        const auto val = img.value(j,i,0);
+                        const auto val = img.value(j,i,img_channel);
                         if(!std::isfinite(val)){
                             animage.push_back( nan_colour[0] );
                             animage.push_back( nan_colour[1] );
@@ -533,6 +599,31 @@ Drover SDL_Viewer(Drover DICOM_data,
             auto disp_img_it = std::next((*img_array_ptr_it)->imagecoll.images.begin(), img_num);
             if( disp_img_it == std::end((*img_array_ptr_it)->imagecoll.images) ) break;
 
+            std::get<bool>( out ) = true;
+            std::get<img_array_ptr_it_t>( out ) = img_array_ptr_it;
+            std::get<disp_img_it_t>( out ) = disp_img_it;
+        }while(false);
+        return out;
+    };
+
+    // Recompute image array and image iterators for the current contouring image.
+    const auto recompute_cimage_iters = [ &contouring_imgs,
+                                          &img_num ](){
+        std::tuple<bool, img_array_ptr_it_t, disp_img_it_t > out;
+        std::get<bool>( out ) = false;
+        const long int img_array_num = 0;
+
+        // Set the current image array and image iters and load the texture.
+        const auto has_images = contouring_imgs.Has_Image_Data();
+        do{ 
+            if( !has_images ) break;
+            if( !isininc(1, img_array_num+1, contouring_imgs.image_data.size()) ) break;
+            auto img_array_ptr_it = std::next(contouring_imgs.image_data.begin(), img_array_num);
+            if( img_array_ptr_it == std::end(contouring_imgs.image_data) ) break;
+
+            if( !isininc(1, img_num+1, (*img_array_ptr_it)->imagecoll.images.size()) ) break;
+            auto disp_img_it = std::next((*img_array_ptr_it)->imagecoll.images.begin(), img_num);
+            if( disp_img_it == std::end((*img_array_ptr_it)->imagecoll.images) ) break;
 
             std::get<bool>( out ) = true;
             std::get<img_array_ptr_it_t>( out ) = img_array_ptr_it;
@@ -545,9 +636,13 @@ Drover SDL_Viewer(Drover DICOM_data,
     const auto recompute_image_state = [ &DICOM_data,
                                          &img_array_num,
                                          &img_num,
+                                         &img_channel,
                                          &recompute_image_iters,
                                          &current_texture,
-                                         &Load_OpenGL_Texture ](){
+                                         &custom_centre,
+                                         &custom_width,
+                                         &Load_OpenGL_Texture,
+                                         &reset_contouring_state ](){
         //Trim any empty image arrays.
         for(auto it = DICOM_data.image_data.begin(); it != DICOM_data.image_data.end();  ){
             if((*it)->imagecoll.images.empty()){
@@ -575,11 +670,18 @@ Drover SDL_Viewer(Drover DICOM_data,
         // Reload the texture.
         auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_image_iters();
         if( img_valid ){
-            current_texture = Load_OpenGL_Texture(*disp_img_it);
+            img_channel = std::clamp<long int>(img_channel, 0, disp_img_it->channels-1);
+            current_texture = Load_OpenGL_Texture(*disp_img_it, custom_centre, custom_width);
         }
         return;
     };
 
+    const auto recompute_scale_bar_image_state = [ &scale_bar_img,
+                                                   &scale_bar_texture,
+                                                   &Load_OpenGL_Texture ](){
+        scale_bar_texture = Load_OpenGL_Texture( scale_bar_img, {}, {} );
+        return;
+    };
 
     // Contour preprocessing. Expensive pre-processing steps are performed asynchronously in another thread.
     struct preprocessed_contour {
@@ -679,7 +781,7 @@ Drover SDL_Viewer(Drover DICOM_data,
                                 c_orient = arb_pos_unit;
                             }
                             const auto c_orient_pos = (c_orient.Dot(arb_pos_unit) > 0);
-                            c_colour = ( c_orient_pos ? neg_contour_colour : pos_contour_colour );
+                            c_colour = ( c_orient_pos ? pos_contour_colour : neg_contour_colour );
 
                         // Otherwise use the uniquely-generated colour.
                         }else{
@@ -765,6 +867,23 @@ Drover SDL_Viewer(Drover DICOM_data,
             return;
     };
 
+    // Given two points and multiple candidate unit vectors, project the vector from A->B along the most aligned unit.
+    const auto largest_projection = []( const vec3<double> &A,
+                                        const vec3<double> &B,
+                                        const std::vector< vec3<double> > &units ) -> vec3<double> {
+            const auto C = B - A;
+            vec3<double> best;
+            double best_proj = std::numeric_limits<double>::infinity() * -1.0;
+            for(const auto& u : units){
+                const auto proj = C.Dot(u.unit());
+                if(best_proj < std::abs(proj)){
+                    best_proj = std::abs(proj);
+                    best = A + u.unit() * proj;
+                }
+            }
+            return best;
+    };
+
     // ------------------------------------------- Main loop ----------------------------------------------
 
 
@@ -806,6 +925,11 @@ Drover SDL_Viewer(Drover DICOM_data,
     };
 
     recompute_image_state();
+    recompute_scale_bar_image_state();
+    {
+        auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_image_iters();
+        if(img_valid) reset_contouring_state(img_array_ptr_it);
+    }
     launch_contour_preprocessor();
 
 
@@ -824,6 +948,11 @@ Drover SDL_Viewer(Drover DICOM_data,
     ImVec2 uv_max = ImVec2(1.0f, 1.0f);                 // Lower-right
     float zoom = 1.0f;
     ImVec2 pan(0.5f, 0.5f);
+
+    {
+        ImGuiIO &io = ImGui::GetIO();
+        io.ConfigWindowsMoveFromTitleBarOnly = true;
+    }
 
 long int frame_count = 0;
     while(true){
@@ -857,6 +986,21 @@ long int frame_count = 0;
         ImGui_ImplSDL2_NewFrame(window);
         ImGui::NewFrame();
 
+
+// Contouring -- mask debugging / visualization.
+if(false){
+            auto [cimg_valid, cimg_array_ptr_it, cimg_it] = recompute_cimage_iters();
+            if(cimg_valid){
+                ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_Appearing);
+                ImGui::SetNextWindowPos(ImVec2(700, 40), ImGuiCond_Appearing);
+                ImGui::Begin("Images2", &view_images_enabled, ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoNavInputs | ImGuiWindowFlags_NoScrollbar ); //| ImGuiWindowFlags_AlwaysAutoResize);
+                auto contouring_texture = Load_OpenGL_Texture( *cimg_it, {}, {} );
+                auto gl_tex_ptr = reinterpret_cast<void*>(static_cast<intptr_t>(contouring_texture.texture_number));
+                ImGui::Image(gl_tex_ptr, ImVec2(600,600), uv_min, uv_max);
+                ImGui::End();
+            }
+}
+
         if(ImGui::BeginMainMenuBar()){
             if(ImGui::BeginMenu("File")){
                 if(ImGui::MenuItem("Open", "ctrl+o", &open_files_enabled)){
@@ -880,10 +1024,16 @@ long int frame_count = 0;
                     contour_hovered.clear();
                     if(view_contours_enabled) launch_contour_preprocessor();
                 }
+                if(ImGui::MenuItem("Contouring", nullptr, &view_contouring_enabled)){
+                    contouring_img_altered = true;
+                    tagged_pos = {};
+                }
                 ImGui::MenuItem("Image Metadata", nullptr, &view_image_metadata_enabled);
                 ImGui::MenuItem("Image Hover Tooltips", nullptr, &show_image_hover_tooltips);
                 ImGui::MenuItem("Meshes", nullptr, &view_meshes_enabled);
-                ImGui::MenuItem("Plots", nullptr, &view_plots_enabled);
+                if(ImGui::MenuItem("Plots", nullptr, &view_plots_enabled)){
+                    lsamps_visible.clear();
+                }
                 if(ImGui::MenuItem("Row and Column Profiles", nullptr, &view_row_column_profiles)){
                     row_profile.samples.clear();
                     col_profile.samples.clear();
@@ -967,6 +1117,7 @@ long int frame_count = 0;
             ImGui::Image(gl_tex_ptr, image_extent, uv_min, uv_max);
             image_mouse_pos.mouse_hovering_image = ImGui::IsItemHovered();
             image_mouse_pos.image_window_focused = ImGui::IsWindowFocused();
+//contouring_imgs.image_data.back()->imagecoll.images.back()
 
             ImVec2 real_extent; // The true dimensions of the unclipped image, accounting for zoom and panning.
             real_extent.x = image_extent.x / (uv_max.x - uv_min.x);
@@ -988,6 +1139,57 @@ long int frame_count = 0;
                                             - disp_img_it->row_unit * 0.5 * disp_img_it->pxl_dx
                                             - disp_img_it->col_unit * 0.5 * disp_img_it->pxl_dy;
                 image_mouse_pos.voxel_pos = disp_img_it->position(image_mouse_pos.r, image_mouse_pos.c);
+                image_mouse_pos.pixel_scale = static_cast<float>(real_extent.x) / (disp_img_it->pxl_dx * disp_img_it->rows);
+
+                const auto Z = image_mouse_pos.zero_pos;
+                image_mouse_pos.DICOM_to_pixels = [=](const vec3<double> &P) -> ImVec2 {
+                    // Convert from absolute DICOM coordinates to ImGui screen pixel coordinates for the image.
+                    // This routine basically just inverts the above transformation.
+                    const auto region_y = (disp_img_it->row_unit.Dot(P - Z) + 0.5 * disp_img_it->pxl_dx)/(disp_img_it->pxl_dx * img_rows_f);
+                    const auto region_x = (disp_img_it->col_unit.Dot(P - Z) + 0.5 * disp_img_it->pxl_dy)/(disp_img_it->pxl_dy * img_cols_f);
+
+                    const auto pixel_x = pos.x + (region_x - uv_min.x) * image_extent.x/(uv_max.x - uv_min.x);
+                    const auto pixel_y = pos.y + (region_y - uv_min.y) * image_extent.y/(uv_max.y - uv_min.y);
+
+                    return ImVec2(pixel_x, pixel_y);
+                };
+            }
+
+            // Display a visual cue of the tagged position.
+            if( tagged_pos ){
+                ImDrawList *drawList = ImGui::GetWindowDrawList();
+
+                const auto box_radius = 3.0f;
+                const auto c = ImColor(1.0f, 0.2f, 0.2f, 1.0f);
+
+                ImVec2 p1 = image_mouse_pos.DICOM_to_pixels(tagged_pos.value());
+                ImVec2 ul1( p1.x - box_radius, p1.y - box_radius );
+                ImVec2 lr1( p1.x + box_radius, p1.y + box_radius );
+                drawList->AddRect(ul1, lr1, c);
+
+                if( image_mouse_pos.mouse_hovering_image ){
+                    ImVec2 p2 = io.MousePos;
+                    
+                    // Project along the image axes to provide a guide line.
+                    if(io.KeyCtrl){
+                        p2 = image_mouse_pos.DICOM_to_pixels(
+                                 largest_projection( tagged_pos.value(),
+                                                     image_mouse_pos.dicom_pos,
+                                                     { disp_img_it->row_unit,
+                                                       disp_img_it->col_unit,
+                                                       (disp_img_it->row_unit + disp_img_it->col_unit) * 0.5,
+                                                       (disp_img_it->row_unit - disp_img_it->col_unit) * 0.5 } ) );
+                    }
+                    ImVec2 ul2( p2.x - box_radius, p2.y - box_radius );
+                    ImVec2 lr2( p2.x + box_radius, p2.y + box_radius );
+                    drawList->AddRect(ul2, lr2, c);
+
+                    // Connect the boxes with a line if both are contained within the same image volume.
+                    if( disp_img_it->sandwiches_point_within_top_bottom_planes(tagged_pos.value())
+                    &&  disp_img_it->sandwiches_point_within_top_bottom_planes(image_mouse_pos.dicom_pos) ){
+                        drawList->AddLine(p1, p2, c);
+                    }
+                }
             }
 
             // Display a contour legend.
@@ -1095,8 +1297,8 @@ long int frame_count = 0;
                 const auto img_top_left = disp_img_it->anchor + disp_img_it->offset
                                         - disp_img_it->row_unit * disp_img_it->pxl_dx * 0.5f
                                         - disp_img_it->col_unit * disp_img_it->pxl_dy * 0.5f;
-                const auto img_top_right = img_top_left + disp_img_it->row_unit * img_dicom_width;
-                const auto img_bottom_left = img_top_left + disp_img_it->col_unit * img_dicom_height;
+                //const auto img_top_right = img_top_left + disp_img_it->row_unit * img_dicom_width;
+                //const auto img_bottom_left = img_top_left + disp_img_it->col_unit * img_dicom_height;
                 const auto img_plane = disp_img_it->image_plane();
 
                 for(auto &p : contour_hovered) p.second = false;
@@ -1135,22 +1337,254 @@ long int frame_count = 0;
                     drawList->PathStroke(pc.colour, closed, thickness);
                     //AddPolyline(const ImVec2* points, int num_points, ImU32 col, bool closed, float thickness);
                 }
+
+                // Contouring interface.
+                if( view_contouring_enabled ){
+                    // Provide a visual cue for the contouring brush.
+                    {
+                        const auto pixel_radius = static_cast<float>(contouring_reach) * image_mouse_pos.pixel_scale;
+                        const auto c = ImColor(0.0f, 1.0f, 0.8f, 1.0f);
+
+                        if( (contouring_brush == brushes::rigid_circle)
+                        ||  (contouring_brush == brushes::rigid_sphere)
+                        ||  (contouring_brush == brushes::gaussian) ){
+                            drawList->AddCircle(io.MousePos, pixel_radius, c);
+
+                        }else if(contouring_brush == brushes::rigid_square){
+                            ImVec2 ul( io.MousePos.x - pixel_radius,
+                                       io.MousePos.y - pixel_radius );
+                            ImVec2 lr( io.MousePos.x + pixel_radius,
+                                       io.MousePos.y + pixel_radius );
+                            drawList->AddRect(ul, lr, c);
+                        }
+                    }
+
+                    ImGui::SetNextWindowSize(ImVec2(510, 650), ImGuiCond_Appearing);
+                    ImGui::SetNextWindowPos(ImVec2(680, 200), ImGuiCond_Appearing);
+                    ImGui::SetNextWindowCollapsed(true, ImGuiCond_FirstUseEver);
+                    ImGui::Begin("Contouring", &view_contouring_enabled);
+
+                    ImGui::Text("Note: this functionality is still under active development.");
+                    if(ImGui::Button("Save")){ 
+                        ImGui::OpenPopup("Contour Save");
+                    }
+                    ImGui::SameLine();
+                    if(ImGui::BeginPopupModal("Contour Save", NULL, ImGuiWindowFlags_AlwaysAutoResize)){
+                        const std::string str((frame_count / 15) % 4, '.'); // Simplistic animation.
+                        ImGui::Text("Saving contours%s", str.c_str());
+
+                        if(ImGui::Button("Close")){
+                            ImGui::CloseCurrentPopup();
+                        }
+                        ImGui::EndPopup();
+                    }
+                    if(ImGui::Button("Clear")){ 
+                        ImGui::OpenPopup("Contour Clear");
+                    }
+                    if(ImGui::BeginPopupModal("Contour Clear", NULL, ImGuiWindowFlags_AlwaysAutoResize)){
+                        ImGui::Text("Clear contour?");
+                        if(ImGui::Button("Clear")){
+                            ImGui::CloseCurrentPopup();
+                            auto [cimg_valid, cimg_array_ptr_it, cimg_it] = recompute_cimage_iters();
+                            if(cimg_valid){
+                                for(auto& cimg : (*cimg_array_ptr_it)->imagecoll.images){
+                                    cimg.fill_pixels(-1.0f);
+                                }
+                            }
+                            contouring_imgs.Ensure_Contour_Data_Allocated();
+                            contouring_imgs.contour_data->ccs.clear();
+                            contouring_img_altered = true;
+                            last_mouse_button_0_down = 1E30;
+                            last_mouse_button_1_down = 1E30;
+                            last_mouse_button_pos = {};
+                        }
+                        ImGui::SameLine();
+                        if(ImGui::Button("Cancel")){
+                            ImGui::CloseCurrentPopup();
+                        }
+                        ImGui::EndPopup();
+                    }
+
+                    ImGui::Separator();
+                    ImGui::Text("Brush");
+                    ImGui::DragFloat("Radius (mm)", &contouring_reach, 0.1f, 0.5f, 50.0f);
+                    if(ImGui::Button("Rigid Circle")){
+                        contouring_brush = brushes::rigid_circle;
+                    }
+                    ImGui::SameLine();
+                    if(ImGui::Button("Rigid Square")){
+                        contouring_brush = brushes::rigid_square;
+                    }
+                    ImGui::SameLine();
+                    if(ImGui::Button("Soft")){
+                        contouring_brush = brushes::gaussian;
+                    }
+
+                    if(ImGui::Button("Rigid Sphere")){
+                        contouring_brush = brushes::rigid_sphere;
+                    }
+
+                    ImGui::Separator();
+                    ImGui::Text("Dilation and Erosion");
+                    ImGui::DragFloat("Margin (mm)", &contouring_margin, 0.1f, -10.0f, 10.0f);
+                    if(ImGui::Button("Apply Margin")){
+                        std::list<OperationArgPkg> Operations;
+                        Operations.emplace_back("ContourWholeImages");
+                        Operations.back().insert("ROILabel=___whole_image");
+
+                        Operations.emplace_back("ReduceNeighbourhood");
+                        Operations.back().insert("ImageSelection=last");
+                        Operations.back().insert("ROILabelRegex=___whole_image");
+                        Operations.back().insert("Neighbourhood=spherical");
+                        
+                        const std::string reduction = (0.0 <= contouring_margin) ? "dilate" : "erode";
+                        const std::string distance = std::to_string( std::abs( contouring_margin ) );
+                        Operations.back().insert("Reduction="_s + reduction);
+                        Operations.back().insert("MaxDistance="_s + distance);
+
+                        Operations.emplace_back("DeleteContours");
+                        Operations.back().insert("ROILabelRegex=___whole_image");
+                        if(!Operation_Dispatcher(contouring_imgs, InvocationMetadata, FilenameLex, Operations)){
+                            FUNCWARN("Dilation/Erosion failed");
+                        }
+
+                        contouring_img_altered = true;
+                    }
+
+                    ImGui::Separator();
+                    ImGui::Text("Contour Extraction");
+                    if(ImGui::DragInt("Resolution", &contouring_img_row_col_count, 0.1f, 5, 1024)){
+                        reset_contouring_state(img_array_ptr_it);
+                    }
+                    if( ImGui::IsItemHovered() ){
+                        ImGui::BeginTooltip();
+                        ImGui::Text("Note: any existing contours will be reset.");
+                        ImGui::EndTooltip();
+                    }
+                    if(ImGui::Button("Marching squares")){
+                        contouring_method = "marching-squares";
+                        contouring_img_altered = true;
+                    }
+                    ImGui::SameLine();
+                    if(ImGui::Button("Binary")){
+                        contouring_method = "binary";
+                        contouring_img_altered = true;
+                    }
+
+
+                    // Regenerate contours from the mask.
+                    contouring_imgs.Ensure_Contour_Data_Allocated();
+                    auto [cimg_valid, cimg_array_ptr_it, cimg_it] = recompute_cimage_iters();
+                    if( cimg_valid
+                    &&  contouring_img_altered
+                    &&  (frame_count % 5 == 0) ){ // Terrible stop-gap until I can parallelize contour extraction. TODO
+
+                        // Only bother extracting contours for the current image.
+                        Drover shtl;
+                        shtl.Ensure_Contour_Data_Allocated();
+                        shtl.image_data.push_back(std::make_unique<Image_Array>());
+                        shtl.image_data.back()->imagecoll.images.emplace_back();
+                        shtl.image_data.back()->imagecoll.images.back() = *cimg_it;
+
+                        std::list<OperationArgPkg> Operations;
+                        Operations.emplace_back("ContourViaThreshold");
+                        Operations.back().insert("Method="_s + contouring_method);
+                        Operations.back().insert("Lower=0.5");
+                        Operations.back().insert("SimplifyMergeAdjacent=true");
+                        if(!Operation_Dispatcher(shtl, InvocationMetadata, FilenameLex, Operations)){
+                            FUNCWARN("ContourViaThreshold failed");
+                        }
+
+                        contouring_imgs.contour_data->ccs.clear();
+                        contouring_imgs.Consume( shtl.contour_data );
+
+                        contouring_img_altered = false;
+                    }
+
+                    // Draw the WIP contours.
+                    if( cimg_valid
+                    &&  (contouring_imgs.Has_Contour_Data()) ){
+                        const auto cimg_dicom_width = cimg_it->pxl_dx * cimg_it->rows;
+                        const auto cimg_dicom_height = cimg_it->pxl_dy * cimg_it->columns; 
+                        //const auto cimg_top_left = cimg_it->anchor + cimg_it->offset
+                        //                         - cimg_it->row_unit * cimg_it->pxl_dx * 0.5f
+                        //                         - cimg_it->col_unit * cimg_it->pxl_dy * 0.5f;
+                        //const auto cimg_top_right = cimg_top_left + cimg_it->row_unit * cimg_dicom_width;
+                        //const auto cimg_bottom_left = cimg_top_left + cimg_it->col_unit * cimg_dicom_height;
+                        //const auto cimg_plane = cimg_it->image_plane();
+
+                        for(auto &cc : contouring_imgs.contour_data->ccs){
+                            for(auto &cop : cc.contours){
+                                if( cop.points.empty() ) continue;
+                                if( !cimg_it->sandwiches_point_within_top_bottom_planes( cop.points.front() ) ) continue;
+
+                                drawList->PathClear();
+                                for(auto & p : cop.points){
+
+                                    //Clamp the point to the bounding box, using the top left as zero.
+                                    const auto dR = p - img_top_left;
+                                    const auto clamped_col = dR.Dot( cimg_it->col_unit ) / cimg_dicom_height;
+                                    const auto clamped_row = dR.Dot( cimg_it->row_unit ) / cimg_dicom_width;
+
+                                    //Convert to ImGui coordinates using the top-left position of the display image.
+                                    const auto world_x = real_pos.x + real_extent.x * clamped_col;
+                                    const auto world_y = real_pos.y + real_extent.y * clamped_row;
+
+                                    ImVec2 v;
+                                    v.x = world_x;
+                                    v.y = world_y;
+                                    drawList->PathLineTo( v );
+                                }
+
+                                float thickness = contour_line_thickness;
+
+                                ImU32 colour = ImGui::GetColorU32(editing_contour_colour);
+                                if(contour_colour_from_orientation){
+                                    const auto arb_pos_unit = disp_img_it->row_unit.Cross(disp_img_it->col_unit).unit();
+                                    vec3<double> c_orient;
+                                    try{ // Protect against degenerate contours. (Should we instead ignore them altogether?)
+                                        c_orient = cop.Estimate_Planar_Normal();
+                                    }catch(const std::exception &){
+                                        c_orient = arb_pos_unit;
+                                    }
+                                    const auto c_orient_pos = (c_orient.Dot(arb_pos_unit) > 0);
+                                    colour = ( c_orient_pos ? ImGui::GetColorU32(pos_contour_colour)
+                                                            : ImGui::GetColorU32(neg_contour_colour) );
+                                }
+
+                                const bool closed = true;
+                                drawList->PathStroke( colour, closed, thickness);
+                                //AddPolyline(const ImVec2* points, int num_points, ImU32 col, bool closed, float thickness);
+                            }
+                        }
+                    }
+                    ImGui::End();
+                }
             }
 
             // Draw a tooltip with position and voxel intensity information.
             if( image_mouse_pos.mouse_hovering_image
-            &&  show_image_hover_tooltips ){
+            &&  show_image_hover_tooltips
+            &&  !view_contouring_enabled ){
                 ImGui::BeginTooltip();
+                if(tagged_pos){
+                    ImGui::Text("Distance: %.4f", tagged_pos.value().distance(image_mouse_pos.dicom_pos));
+                }
                 ImGui::Text("Image coordinates: %.4f, %.4f", image_mouse_pos.region_y, image_mouse_pos.region_x);
                 ImGui::Text("Pixel coordinates: (r, c) = %ld, %ld", image_mouse_pos.r, image_mouse_pos.c);
                 ImGui::Text("Mouse coordinates: (x, y, z) = %.4f, %.4f, %.4f", image_mouse_pos.dicom_pos.x, image_mouse_pos.dicom_pos.y, image_mouse_pos.dicom_pos.z);
                 ImGui::Text("Voxel coordinates: (x, y, z) = %.4f, %.4f, %.4f", image_mouse_pos.voxel_pos.x, image_mouse_pos.voxel_pos.y, image_mouse_pos.voxel_pos.z);
                 if(disp_img_it->channels == 1){
                     ImGui::Text("Voxel intensity:   %.4f", disp_img_it->value(image_mouse_pos.r, image_mouse_pos.c, 0L));
+                    try{
+                        const auto frc = disp_img_it->fractional_row_column(image_mouse_pos.dicom_pos);
+                        const auto bilin_interp = disp_img_it->bilinearly_interpolate_in_pixel_number_space(frc.first, frc.second, 0L);
+                        ImGui::Text("Mouse intensity:   %.4f (lin. interp. at %.4f, %.4f)", bilin_interp, frc.first, frc.second);
+                    }catch(const std::exception &){}
                 }else{
                     std::stringstream ss;
                     for(long int chan = 0; chan < disp_img_it->channels; ++chan){
-                        ss << disp_img_it->value(image_mouse_pos.r, image_mouse_pos.c, chan);
+                        ss << disp_img_it->value(image_mouse_pos.r, image_mouse_pos.c, chan) << " ";
                     }
                     ImGui::Text("Voxel intensities: %s", ss.str().c_str());
                 }
@@ -1566,20 +2000,27 @@ long int frame_count = 0;
 
         // Adjust the colour map.
         if(adjust_colour_map_enabled){
-            ImGui::SetNextWindowSize(ImVec2(265, 450), ImGuiCond_FirstUseEver);
-            ImGui::Begin("Adjust Colour Map", &adjust_colour_map_enabled);
+            ImGui::SetNextWindowPos(ImVec2(680, 120), ImGuiCond_FirstUseEver);
+            ImGui::Begin("Adjust Colour Map", &adjust_colour_map_enabled, ImGuiWindowFlags_AlwaysAutoResize);
             bool reload_texture = false;
 
+            // Draw the scale bar.
+            auto gl_tex_ptr = reinterpret_cast<void*>(static_cast<intptr_t>(scale_bar_texture.texture_number));
+            ImGui::Image(gl_tex_ptr, ImVec2(250,25), ImVec2(0.0, 0.0), ImVec2(1.0, 1.0));
+
+            // Draw buttons for each available colour map.
             for(size_t i = 0; i < colour_maps.size(); ++i){
                 if( ImGui::Button(colour_maps[i].first.c_str(), ImVec2(250, 0)) ){
                     colour_map = i;
                     reload_texture = true;
                 }
             }
+
             ImGui::End();
 
             if(reload_texture){
                 recompute_image_state();
+                recompute_scale_bar_image_state();
             }
         }
 
@@ -1587,45 +2028,82 @@ long int frame_count = 0;
         // Display plots.
         if( view_plots_enabled 
         && DICOM_data.Has_LSamp_Data() ){
-            ImGui::SetNextWindowSize(ImVec2(620, 640), ImGuiCond_FirstUseEver);
-            ImGui::Begin("Plots", &view_plots_enabled);
-            ImVec2 window_extent = ImGui::GetContentRegionAvail();
 
-            if( !isininc(1, lsamp_num + 1, DICOM_data.lsamp_data.size()) ){
-                lsamp_num = 0;
-            }
-            int scroll_lsamp = lsamp_num;
+            // Display a selection and navigation window.
+            ImGui::SetNextWindowSize(ImVec2(350, 400), ImGuiCond_Appearing);
+            ImGui::SetNextWindowPos(ImVec2(680, 40), ImGuiCond_Appearing);
+            ImGui::Begin("Plot Selection", &view_plots_enabled, ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoNavInputs);
+
+            const int N_lsamps = static_cast<int>(DICOM_data.lsamp_data.size());
+
             {
-                const int N_lsamps = DICOM_data.lsamp_data.size();
-                ImGui::SliderInt("Plot", &scroll_lsamp, 0, N_lsamps - 1);
-            }
-            long int new_lsamp_num = scroll_lsamp;
-
-            auto lsamp_ptr_it = std::next(DICOM_data.lsamp_data.begin(), lsamp_num);
-            if( new_lsamp_num != lsamp_num ){
-                lsamp_num = new_lsamp_num;
-                lsamp_ptr_it = std::next(DICOM_data.lsamp_data.begin(), lsamp_num);
-            }
-
-            const int offset = 0;
-            const int stride = sizeof( decltype( (*lsamp_ptr_it)->line.samples[0] ) );
-
-            if(ImPlot::BeginPlot("Plot",
-                                 nullptr,
-                                 nullptr,
-                                 window_extent,
-                                 ImPlotFlags_AntiAliased,
-                                 ImPlotAxisFlags_AutoFit,
-                                 ImPlotAxisFlags_AutoFit )) {
-                ImPlot::PlotLine<double>("Plot",
-                                         &(*lsamp_ptr_it)->line.samples[0][0], 
-                                         &(*lsamp_ptr_it)->line.samples[0][2],
-                                         (*lsamp_ptr_it)->line.samples.size(),
-                                         offset, stride );
-                ImPlot::EndPlot();
+                ImVec2 window_extent = ImGui::GetContentRegionAvail();
+                ImGui::Text("Display");
+                if(ImGui::Button("All", ImVec2(window_extent.x/3, 0))){ 
+                    for(int i = 0; i < N_lsamps; ++i) lsamps_visible[i] = true;
+                }
+                ImGui::SameLine();
+                if(ImGui::Button("None", ImVec2(window_extent.x/3, 0))){ 
+                    for(int i = 0; i < N_lsamps; ++i) lsamps_visible[i] = false;
+                }
+                ImGui::SameLine();
+                if(ImGui::Button("Invert", ImVec2(window_extent.x/3, 0))){ 
+                    for(int i = 0; i < N_lsamps; ++i) lsamps_visible[i] = !(lsamps_visible[i]);
+                }
             }
 
+            bool any_selected = false;
+            for(int i = 0; i < N_lsamps; ++i){
+                auto lsamp_ptr_it = std::next(DICOM_data.lsamp_data.begin(), i);
+                const auto name = (*lsamp_ptr_it)->line.GetMetadataValueAs<std::string>("LineName").value_or("unknown"_s);
+                const auto modality = (*lsamp_ptr_it)->line.GetMetadataValueAs<std::string>("Modality").value_or("unknown"_s);
+                const auto histtype = (*lsamp_ptr_it)->line.GetMetadataValueAs<std::string>("HistogramType").value_or("unknown"_s);
+                const auto title = std::to_string(i) + " " + name;
+
+                const auto is_selected = ImGui::Selectable( title.c_str(), &(lsamps_visible[i]), ImGuiSelectableFlags_AllowDoubleClick );
+                const auto is_doubleclicked = is_selected && ImGui::IsMouseDoubleClicked(0);
+                const auto is_visible = lsamps_visible[i];
+                ImGui::SameLine(150);
+                ImGui::Text("%s", modality.c_str());
+                ImGui::SameLine(300);
+                ImGui::Text("%s", histtype.c_str());
+
+                if(is_visible) any_selected = true;
+            }
             ImGui::End();
+
+            if(any_selected){
+                ImGui::SetNextWindowSize(ImVec2(620, 640), ImGuiCond_FirstUseEver);
+                ImGui::Begin("Plots", &view_plots_enabled);
+                ImVec2 window_extent = ImGui::GetContentRegionAvail();
+
+                if(ImPlot::BeginPlot("Plots",
+                                     nullptr,
+                                     nullptr,
+                                     window_extent,
+                                     ImPlotFlags_AntiAliased,
+                                     ImPlotAxisFlags_AutoFit,
+                                     ImPlotAxisFlags_AutoFit )) {
+                    for(int i = 0; i < N_lsamps; ++i){
+                        if(!lsamps_visible[i]) continue;
+
+                        auto lsamp_ptr_it = std::next(DICOM_data.lsamp_data.begin(), i);
+                        const int offset = 0;
+                        const int stride = sizeof( decltype( (*lsamp_ptr_it)->line.samples[0] ) );
+                        const auto name = (*lsamp_ptr_it)->line.GetMetadataValueAs<std::string>("LineName").value_or("unknown"_s);
+                        const auto title = std::to_string(i) + " " + name;
+
+                        ImPlot::PlotLine<double>(title.c_str(),
+                                                 &(*lsamp_ptr_it)->line.samples[0][0], 
+                                                 &(*lsamp_ptr_it)->line.samples[0][2],
+                                                 (*lsamp_ptr_it)->line.samples.size(),
+                                                 offset, stride );
+                    }
+                    ImPlot::EndPlot();
+                }
+
+                ImGui::End();
+            }
         }
 
         // Display row and column profiles.
@@ -1671,9 +2149,11 @@ long int frame_count = 0;
 
             int scroll_arrays = img_array_num;
             int scroll_images = img_num;
+            int scroll_channel = img_channel;
             {
-                ImVec2 window_extent = ImGui::GetContentRegionAvail();
+                //ImVec2 window_extent = ImGui::GetContentRegionAvail();
 
+                ImGui::Text("Image selection");
                 const int N_arrays = DICOM_data.image_data.size();
                 const int N_images = (*img_array_ptr_it)->imagecoll.images.size();
                 //ImGui::SetNextItemWidth(window_extent.x);
@@ -1692,7 +2172,9 @@ long int frame_count = 0;
                 }
 
                 ImGui::Separator();
-                ImGui::DragFloat("Zoom", &zoom, 0.01f, 1.0f, 10.0f, "%.03f");
+                ImGui::Text("Magnification");
+                ImGui::DragFloat("Zoom level", &zoom, 0.01f, 1.0f, 10.0f, "%.03f");
+                zoom = std::clamp(zoom, 0.1f, 1000.0f);
                 const float uv_width = 1.0f / zoom;
                 ImGui::DragFloat("Pan horizontal", &pan.x, 0.01f, 0.0f + uv_width * 0.5f, 1.0f - uv_width * 0.5f, "%.03f");
                 ImGui::DragFloat("Pan vertical",   &pan.y, 0.01f, 0.0f + uv_width * 0.5f, 1.0f - uv_width * 0.5f, "%.03f");
@@ -1703,13 +2185,19 @@ long int frame_count = 0;
                 uv_max.x = pan.x + uv_width * 0.5f;
                 uv_max.y = pan.y + uv_width * 0.5f;
 
-                if(ImGui::Button("Reset zoom", ImVec2(150, 0))){
+                if(ImGui::Button("Reset zoom")){
                     zoom = 1.0f;
                     pan.x = 0.5f;
                     pan.y = 0.5f;
                 }
 
+                ImGui::Separator();
+                ImGui::Text("Display");
+                ImGui::SliderInt("Channel", &scroll_channel, 0, static_cast<int>(disp_img_it->channels - 1));
+
                 if(ImGui::IsWindowFocused() || image_mouse_pos.image_window_focused){
+                    auto [cimg_valid, cimg_array_ptr_it, cimg_it] = recompute_cimage_iters();
+
                     const int d_l = static_cast<int>( std::floor(io.MouseWheel) );
                     const int d_h = static_cast<int>( std::ceil(io.MouseWheel) );
                     if(false){
@@ -1729,6 +2217,144 @@ long int frame_count = 0;
                         scroll_arrays = std::clamp((scroll_arrays + N_arrays + d_h) % N_arrays, 0, N_arrays - 1);
                     }else if(io.KeyShift && (io.MouseWheel < 0)){
                         scroll_arrays = std::clamp((scroll_arrays + N_arrays + d_l) % N_arrays, 0, N_arrays - 1);
+
+                    }else if( view_contouring_enabled
+                          &&  cimg_valid
+                          &&  (0 < IM_ARRAYSIZE(io.MouseDown))
+                          &&  (1 < IM_ARRAYSIZE(io.MouseDown))
+                          &&  ((0.0f <= io.MouseDownDuration[0]) || (0.0f <= io.MouseDownDuration[1]))
+                          &&  image_mouse_pos.mouse_hovering_image ){
+                        contouring_img_altered = true;
+                        long int channel = 0;
+
+                        // The mapping between contouring image and display image (which uses physical dimensions) is
+                        // based on the relative position along row and column axes.
+                        const float radius = contouring_reach; // in DICOM units (mm).
+                        const auto mouse_button_0 = (0.0f <= io.MouseDownDuration[0]);
+                        const auto mouse_button_1 = (0.0f <= io.MouseDownDuration[1]);
+
+                        const auto mouse_button_0_sticky = mouse_button_0
+                            && ( io.KeyShift || (last_mouse_button_0_down < io.MouseDownDuration[0]) );
+                        const auto mouse_button_1_sticky = mouse_button_1
+                            && ( io.KeyShift || (last_mouse_button_1_down < io.MouseDownDuration[1]) );
+                        const auto any_mouse_button_sticky = mouse_button_0_sticky || mouse_button_1_sticky;
+
+                        std::vector<line_segment<double>> lss;
+                        if( false ){
+                        }else if( any_mouse_button_sticky
+                              && last_mouse_button_pos
+                              && io.KeyCtrl){
+                            const auto pA = image_mouse_pos.dicom_pos; // Current position.
+                            const auto pB = last_mouse_button_pos.value(); // Previous position.
+                            // Project along image axes to create a taxi-cab metric corner vertex.
+                            const auto corner = largest_projection(pA, pB, {cimg_it->row_unit, cimg_it->col_unit});
+                            lss.emplace_back(pA,corner);
+                            lss.emplace_back(corner,pB);
+
+                        }else if( any_mouse_button_sticky
+                              &&  last_mouse_button_pos ){
+                            const auto pA = image_mouse_pos.dicom_pos; // Current position.
+                            const auto pB = last_mouse_button_pos.value(); // Previous position.
+                            lss.emplace_back(pA,pB);
+
+                        }else{
+                            auto pA = image_mouse_pos.dicom_pos; // Current position.
+                            auto pB = pA;
+                            pB.z += cimg_it->pxl_dz * 0.01; // Default offset to avoid degenerate line segment.
+                            lss.emplace_back(pA,pB);
+                        }
+
+                        std::vector<disp_img_it_t> cimg_its;
+                        if( (contouring_brush == brushes::rigid_circle)
+                        ||  (contouring_brush == brushes::rigid_square)
+                        ||  (contouring_brush == brushes::gaussian) ){
+                            // Filter out irrelevant images.
+                            cimg_its.emplace_back( cimg_it );
+                        }else if(contouring_brush == brushes::rigid_sphere){
+                            for(auto cit = std::begin((*cimg_array_ptr_it)->imagecoll.images);
+                                     cit != std::end((*cimg_array_ptr_it)->imagecoll.images); ++cit){
+                                // Pre-filter images that are not within range.
+                                for(const auto& l : lss){
+                                    // This is a dilated line_segment-plane intersection test.
+                                    const auto plane_dist_R0 = cit->image_plane().Get_Signed_Distance_To_Point(l.Get_R0());
+                                    const auto plane_dist_R1 = cit->image_plane().Get_Signed_Distance_To_Point(l.Get_R1());
+                                    if( (std::signbit(plane_dist_R0) != std::signbit(plane_dist_R1))
+                                    ||  (std::abs(plane_dist_R0) <= radius)
+                                    ||  (std::abs(plane_dist_R1) <= radius) ){
+                                        cimg_its.emplace_back( cit );
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+
+                        for(auto &cit : cimg_its){
+                            for(long int r = 0; r < cit->rows; ++r){
+                                for(long int c = 0; c < cit->columns; ++c){
+                                    const auto pos = cit->position(r,c);
+                                    vec3<double> closest;
+                                    {
+                                        double closest_dist = 1E99;
+                                        for(const auto &l : lss){
+                                            const auto closest_l = l.Closest_Point_To(pos);
+                                            const auto dist = closest_l.distance(pos);
+                                            if(dist < closest_dist){
+                                                closest = closest_l;
+                                                closest_dist = dist;
+                                            }
+                                        }
+                                    }
+
+                                    const auto dR = closest.distance(pos);
+                                    if( radius * 5.0 < dR ) continue;
+
+                                    float dval = 0.0;
+                                    if( (contouring_brush == brushes::rigid_circle)
+                                    ||  (contouring_brush == brushes::rigid_sphere) ){
+                                        dval = (dR <= radius) ? 2.0 : 0.0;
+
+                                    }else if(contouring_brush == brushes::rigid_square){
+                                        if( (std::abs((closest - pos).Dot(cit->row_unit)) < radius)
+                                        &&  (std::abs((closest - pos).Dot(cit->col_unit)) < radius) ){
+                                            dval = 2.0;
+                                        }
+                                    }else if(contouring_brush == brushes::gaussian){
+                                        // Note: arbitrary scaling constant used here. Should give ~ same as rigid when
+                                        // dragged across the image at a typical pace.
+                                        dval = 2.0 * std::exp( -std::pow(dR / (0.5 * radius), 2.0f) );
+                                    }
+
+                                    if(mouse_button_0){
+                                        // Do nothing.
+                                    }else if(mouse_button_1){
+                                        dval *= -1.0;
+                                    }
+
+                                    float val = cit->value(r, c, channel);
+                                    val = std::clamp(val + dval, -1.0f, 2.0f);
+                                    cit->reference( r, c, channel ) = val;
+                                }
+                            }
+                        }
+
+                        // Update mouse position for next time, if applicable.
+                        if( mouse_button_0 ){
+                            last_mouse_button_0_down = io.MouseDownDuration[0];
+                            last_mouse_button_pos = image_mouse_pos.dicom_pos;
+                        }
+                        if( mouse_button_1 ){
+                            last_mouse_button_1_down = io.MouseDownDuration[1];
+                            last_mouse_button_pos = image_mouse_pos.dicom_pos;
+                        }
+
+                    }else if( image_mouse_pos.mouse_hovering_image
+                          &&  (0 < IM_ARRAYSIZE(io.MouseDown))
+                          &&  (0.0f == io.MouseDownDuration[0]) ){ // Debounced!
+                          if(!tagged_pos){
+                              tagged_pos = image_mouse_pos.dicom_pos;
+                          }else{
+                              tagged_pos = {};
+                          }
 
                     }else if(0 < io.MouseWheel){
                         scroll_images = std::clamp((scroll_images + N_images + d_h) % N_images, 0, N_images - 1);
@@ -1750,6 +2376,7 @@ long int frame_count = 0;
             }
             long int new_img_array_num = scroll_arrays;
             long int new_img_num = scroll_images;
+            long int new_img_chnl = scroll_channel;
 
             // Scroll through images.
             if( new_img_array_num != img_array_num ){
@@ -1757,13 +2384,20 @@ long int frame_count = 0;
                 if(view_contours_enabled) launch_contour_preprocessor();
                 img_array_ptr_it = std::next(DICOM_data.image_data.begin(), img_array_num);
                 disp_img_it = std::next((*img_array_ptr_it)->imagecoll.images.begin(), img_num);
-                current_texture = Load_OpenGL_Texture(*disp_img_it);
+                current_texture = Load_OpenGL_Texture(*disp_img_it, custom_centre, custom_width);
+                reset_contouring_state(img_array_ptr_it);
+                tagged_pos = {};
 
             }else if( new_img_num != img_num ){
                 advance_to_image(new_img_num);
                 if(view_contours_enabled) launch_contour_preprocessor();
                 disp_img_it = std::next((*img_array_ptr_it)->imagecoll.images.begin(), img_num);
-                current_texture = Load_OpenGL_Texture(*disp_img_it);
+                current_texture = Load_OpenGL_Texture(*disp_img_it, custom_centre, custom_width);
+                contouring_img_altered = true;
+
+            }else if( new_img_chnl != img_channel ){
+                img_channel = std::clamp<long int>(new_img_chnl, 0L, disp_img_it->channels - 1L);
+                current_texture = Load_OpenGL_Texture(*disp_img_it, custom_centre, custom_width);
             }
             ImGui::End();
         }

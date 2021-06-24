@@ -195,7 +195,7 @@ Drover ThresholdOtsu(Drover DICOM_data,
         // The upper limit can be grown as needed.
     }
 
-    std::function<void(long int, long int, long int, std::reference_wrapper<planar_image<float,double>>, float &)> f_noop;
+    Mutate_Voxels_Functor<float,double> f_noop;
 
     //-----------------------------------------------------------------------------------------------------------------
 
@@ -250,6 +250,7 @@ Drover ThresholdOtsu(Drover DICOM_data,
                                 long int /*col*/,
                                 long int chan,
                                 std::reference_wrapper<planar_image<float,double>> /*img_refw*/,
+                                std::reference_wrapper<planar_image<float,double>> /*mask_img_refw*/,
                                 float &voxel_val ) -> void {
                 if( (Channel < 0) || (Channel == chan) ){
                     std::lock_guard<std::mutex> lock(voxel_vals_access);
@@ -327,6 +328,7 @@ Drover ThresholdOtsu(Drover DICOM_data,
                                 long int /*col*/,
                                 long int chan,
                                 std::reference_wrapper<planar_image<float,double>> /*img_refw*/,
+                                std::reference_wrapper<planar_image<float,double>> /*mask_img_refw*/,
                                 float &voxel_val ) -> void {
                 if( (Channel < 0) || (Channel == chan) ){
                     voxel_val = (voxel_val < f_threshold) ? ReplacementLow

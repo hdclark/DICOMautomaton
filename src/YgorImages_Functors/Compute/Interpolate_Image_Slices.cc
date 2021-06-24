@@ -25,7 +25,7 @@
 
 bool ComputeInterpolateImageSlices(planar_image_collection<float,double> &imagecoll,
                           std::list<std::reference_wrapper<planar_image_collection<float,double>>> external_imgs,
-                          std::list<std::reference_wrapper<contour_collection<double>>> ccsl,
+                          std::list<std::reference_wrapper<contour_collection<double>>> /*ccsl*/,
                           std::any user_data ){
 
     // This routine interpolates image slices to match the geometry of a collection of reference images.

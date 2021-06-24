@@ -152,6 +152,7 @@ bool ComputeJointPixelSampler(planar_image_collection<float,double> &imagecoll,
                                  long int E_col,  // "edit-image" column.
                                  long int channel, 
                                  std::reference_wrapper<planar_image<float,double>> img_refw, 
+                                 std::reference_wrapper<planar_image<float,double>>, 
                                  float &voxel_val) {
                 if( !isininc( user_data_s->inc_lower_threshold, voxel_val, user_data_s->inc_upper_threshold) ){
                     return; // No-op if outside of the thresholds.

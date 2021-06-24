@@ -15,12 +15,12 @@ add_library(Operations_objs OBJECT
     ClusterDBSCAN.cc
     ComparePixels.cc
     ContourBasedRayCastDoseAccumulate.cc
+    ContouringAides.cc
     ContourSimilarity.cc
     ContourViaGeometry.cc
     ContourViaThreshold.cc
     ContourVote.cc
     ContourWholeImages.cc
-    ContouringAides.cc
     ConvertContoursToMeshes.cc
     ConvertContoursToPoints.cc
     ConvertDoseToImage.cc
@@ -30,6 +30,7 @@ add_library(Operations_objs OBJECT
     ConvertNaNsToZeros.cc
     ConvertPixelsToPoints.cc
     ConvolveImages.cc
+    CellularAutomata.cc
     CopyContours.cc
     CopyImages.cc
     CopyMeshes.cc

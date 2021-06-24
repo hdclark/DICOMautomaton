@@ -63,10 +63,7 @@ Drover DumpROIData(const Drover& DICOM_data,
                 MinimumSeparation[key] = min_sep;
                 SlabVolume[key] += std::abs( c.Get_Signed_Area(PlanarContourAssumption) * min_sep );
                 TotalPerimeter[key] += std::abs( c.Perimeter() );
-
-                for(auto & p : c.points){
-                    VertexCounts[key] += 1;
-                }
+                VertexCounts[key] += c.points.size();
 
                 //Find the axes-aligned extrema. 
                 {

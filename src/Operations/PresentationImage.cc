@@ -154,9 +154,8 @@ Drover PresentationImage(Drover DICOM_data,
     //
     // NOTE: The reasoning for having several image arrays is not clear cut. If the timestamps are known exactly, it
     //       might make sense to split in this way. In general, it is up to the user to make this call. 
-    using img_data_ptr_it_t = decltype(DICOM_data.image_data.begin());
-    auto img_array_ptr_beg  = DICOM_data.image_data.begin();
-    auto img_array_ptr_end  = DICOM_data.image_data.end();
+    //auto img_array_ptr_beg  = DICOM_data.image_data.begin();
+    //auto img_array_ptr_end  = DICOM_data.image_data.end();
     auto img_array_ptr_last = std::prev(DICOM_data.image_data.end());
     auto img_array_ptr_it   = img_array_ptr_last;
 
@@ -165,7 +164,7 @@ Drover PresentationImage(Drover DICOM_data,
     using disp_img_it_t = decltype(DICOM_data.image_data.front()->imagecoll.images.begin());
     auto disp_img_beg  = (*img_array_ptr_it)->imagecoll.images.begin();
     auto disp_img_end  = (*img_array_ptr_it)->imagecoll.images.end();
-    auto disp_img_last = std::prev((*img_array_ptr_it)->imagecoll.images.end());
+    //auto disp_img_last = std::prev((*img_array_ptr_it)->imagecoll.images.end());
 
     //Find the image closest to (0,0,0), which is frequently the portion of interest.
     using disp_img_t = decltype(*disp_img_beg);
@@ -482,8 +481,8 @@ Drover PresentationImage(Drover DICOM_data,
                         const auto img_top_left = disp_img_it->anchor + disp_img_it->offset
                                                 - disp_img_it->row_unit * disp_img_it->pxl_dx * 0.5f
                                                 - disp_img_it->col_unit * disp_img_it->pxl_dy * 0.5f;
-                        const auto img_top_right = img_top_left + disp_img_it->row_unit * img_dicom_width;
-                        const auto img_bottom_left = img_top_left + disp_img_it->col_unit * img_dicom_height;
+                        //const auto img_top_right = img_top_left + disp_img_it->row_unit * img_dicom_width;
+                        //const auto img_bottom_left = img_top_left + disp_img_it->col_unit * img_dicom_height;
                         
                         //Clamp the point to the bounding box, using the top left as zero.
                         const auto dR = p - img_top_left;

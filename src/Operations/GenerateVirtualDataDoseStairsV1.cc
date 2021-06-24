@@ -56,18 +56,18 @@ Drover GenerateVirtualDataDoseStairsV1(Drover DICOM_data,
     const double ImagePixeldx = 1.0; //Spacing between adjacent columns.
     const double ImageThickness = 1.0;
 
-    long int InstanceNumber = 1; //Gets bumped for each image.
+    //long int InstanceNumber = 1; //Gets bumped for each image.
     long int SliceNumber    = 1; //Gets bumped at each temporal bump.
     long int ImageIndex     = 1; //For PET series. Not sure when to bump...
-    const long int AcquisitionNumber = 1;
+    //const long int AcquisitionNumber = 1;
 
     // Temporal metadata.
     const std::string ContentDate = "20160706";
     const std::string ContentTime = "123056";
 
     // Other metadata.
-    const double RescaleSlope = 1.0;
-    const double RescaleIntercept = 0.0;
+    //const double RescaleSlope = 1.0;
+    //const double RescaleIntercept = 0.0;
     const std::string OriginFilename = "/dev/null";
     const std::string PatientID = "VirtualDataPatientVersion1";
     const std::string StudyInstanceUID = Generate_Random_UID(60);

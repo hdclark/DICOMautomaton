@@ -241,7 +241,7 @@ Drover ConvolveImages(Drover DICOM_data,
 
             if( op_is_conv
                   ||  op_is_corr ){
-                ud.f_reduce = [=](float v, std::vector<float> &shtl, vec3<double>) -> float {
+                ud.f_reduce = [=](float /*v*/, std::vector<float> &shtl, vec3<double>) -> float {
                                   // Multiply the kernel and image samples together and sum them up.
                                   const auto val = std::inner_product( std::begin(k_values), std::end(k_values),
                                                                        std::begin(shtl), static_cast<double>(0.0) );
@@ -249,7 +249,7 @@ Drover ConvolveImages(Drover DICOM_data,
                               };
 
             }else if(op_is_mtch){
-                ud.f_reduce = [=](float v, std::vector<float> &shtl, vec3<double>) -> float {
+                ud.f_reduce = [=](float /*v*/, std::vector<float> &shtl, vec3<double>) -> float {
                                   // Compute the Euclidean distance between the kernel and image voxel intensities.
                                   float val = 0.0;
                                   for(size_t i = 0; i < shtl.size(); ++i){

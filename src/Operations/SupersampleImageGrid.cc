@@ -161,8 +161,6 @@ Drover SupersampleImageGrid(Drover DICOM_data,
             auto upper_extent = std::numeric_limits<double>::quiet_NaN();
             auto lower_extent = std::numeric_limits<double>::quiet_NaN();
             for(const auto &img : (*iap_it)->imagecoll.images){
-                const auto img_plane = img.image_plane();
-                //const auto dR = (R_0 - img_plane.R_0).Dot(N_0);
                 const auto dR = (img.position(0,0) - R_0).Dot(N_0);
                 const auto up = dR + 0.5 * img.pxl_dz;
                 const auto lo = dR - 0.5 * img.pxl_dz;
@@ -176,7 +174,7 @@ Drover SupersampleImageGrid(Drover DICOM_data,
 
             const auto common_metadata = (*iap_it)->imagecoll.get_common_metadata({});
 
-            for(long int i = 0; i < N_new; ++i){
+            for(size_t i = 0; i < N_new; ++i){
                 edit_imagecoll.images.push_back( (*iap_it)->imagecoll.images.front() );
                 const auto offset = R_0
                                   - N_0 * std::abs(lower_extent)

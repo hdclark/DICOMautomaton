@@ -212,7 +212,7 @@ Drover DumpROIContours(const Drover& DICOM_data,
                 //       duplicate vertex.
                 // 
                 FO << "f";
-                for(long int i = 1; i <= N; ++i) FO << " " << (gvc+i);
+                for(unsigned long int i = 1; i <= N; ++i) FO << " " << (gvc+i);
                 //if(c.closed) FO << " " << (gvc+1);
                 FO << std::endl; 
                 FO << std::endl; 

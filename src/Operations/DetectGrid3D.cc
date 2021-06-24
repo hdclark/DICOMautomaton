@@ -413,7 +413,8 @@ Translate_Grid_Optimally( Grid_Context &GC,
     dist_z.reserve(ICPC.p_cell.size());
     {
         auto p_cell_it = std::begin(ICPC.p_cell);
-        for(const auto &pp : ICPC.cohort){
+        const auto N_cohort = ICPC.cohort.size();
+        for(size_t i = 0; i < N_cohort; ++i){
             const auto C = (*p_cell_it) - GC.current_grid_anchor;
 
             const auto proj_x = GC.current_grid_x.Dot(C);
@@ -580,7 +581,7 @@ Rotate_Grid_Optimally( Grid_Context &GC,
     //
     // This routine rotates the grid axes unit vectors by estimating the optimal rotation of corresponding points.
     // A SVD decomposition provides the rotation matrix that minimizes the difference between corresponding points.
-    const auto Anchor_to_Rtn_cntr = (ICPC.rot_centre - GC.current_grid_anchor);
+    //const auto Anchor_to_Rtn_cntr = (ICPC.rot_centre - GC.current_grid_anchor);
     const auto Rtn_cntr_to_Anchor = (GC.current_grid_anchor - ICPC.rot_centre);
 
     const auto N_rows = 3;
@@ -1229,7 +1230,7 @@ if(false){
                std::end((*pcp_it)->pset.points),
                re);
 
-  auto N_retain = static_cast<long int>(std::round(fraction * (*pcp_it)->pset.points.size()));
+  auto N_retain = std::round(fraction * (*pcp_it)->pset.points.size());
   if(N_retain > (*pcp_it)->pset.points.size()) N_retain = (*pcp_it)->pset.points.size();
   (*pcp_it)->pset.points.resize(N_retain);
 }
@@ -1400,7 +1401,6 @@ if(false){
                 dists_x.reserve(whole_ICPC.p_corr.size());
                 dists_y.reserve(whole_ICPC.p_corr.size());
                 dists_z.reserve(whole_ICPC.p_corr.size());
-                const double proj_eps = 1.0E-4; // The amount of numerical uncertainty in the planar projection.
                 const bool inhibit_sort = true;
 
                 auto o_it = std::begin(whole_ICPC.cohort);
@@ -1490,7 +1490,7 @@ if(false){
                 auto o_it = std::begin(whole_ICPC.cohort);
                 auto c_it = std::begin(whole_ICPC.p_corr);
                 for(const auto &P : whole_ICPC.p_cell){
-                    const auto C = (*c_it);  // Corresponding point (in the proto cell).
+                    //const auto C = (*c_it);  // Corresponding point (in the proto cell).
                     //const auto R = (C - P);      // Shift from proto cell point to corresponding point.
                     const auto O = (*o_it);  // Original point.
 
