@@ -343,6 +343,7 @@ std::array<double, 3> GetBiExpf(const std::vector<float> &bvalues, const std::ve
 
     //Divide all signals by S(0)
     float signalTemp; 
+    std::vector<float> signals;
     const auto number_bVals = static_cast<double>( bvalues.size() );
     int b0_index;
     for(size_t i = 0; i < number_bVals; ++i){
@@ -355,7 +356,7 @@ std::array<double, 3> GetBiExpf(const std::vector<float> &bvalues, const std::ve
     }
     for(size_t i = 0; i < number_bVals; ++i){
          
-        vals.at(i) /= vals.at(b0_index);           
+        signals.push_back(vals.at(b0_index));           
         
     }
 
@@ -379,8 +380,6 @@ std::array<double, 3> GetBiExpf(const std::vector<float> &bvalues, const std::ve
         }
     }
     
-    
-
     //Now use least squares regression to obtain D from the high b value signals: 
     const double D = GetADCls(bvaluesH, signalsH);
     //Now we can use this D value and fit f and D* with Marquardts method
@@ -401,7 +400,7 @@ std::array<double, 3> GetBiExpf(const std::vector<float> &bvalues, const std::ve
     cost = 0;
     for(size_t i = 0; i < number_bVals; ++i){
         bTemp = bvalues[i];         
-        signalTemp = vals.at(i);
+        signalTemp = signals.at(i);
         cost += std::pow( ( (signalTemp) - f*exp(-bTemp * pseudoD) - (1-f)*exp(-bTemp * D)   ), 2.0);
     }  
     
@@ -409,7 +408,7 @@ std::array<double, 3> GetBiExpf(const std::vector<float> &bvalues, const std::ve
     for (int i = 0; i < numIterations; i++){
          
         //Now calculate the Hessian matrix which is in the form of a vector (columns then rows), which also contains the gradient at the end
-        H = GetHessianAndGradient(bvalues, vals, f, pseudoD, D);
+        H = GetHessianAndGradient(bvalues, signals, f, pseudoD, D);
         //Now I need to calculate the inverse of (H + lamda I)
         H[0] += lambda;
         H[3] += lambda;
@@ -432,7 +431,7 @@ std::array<double, 3> GetBiExpf(const std::vector<float> &bvalues, const std::ve
         //Now check if we have lowered the cost
         newCost = 0;
         for(size_t i = 0; i < number_bVals; ++i){
-            newCost += std::pow( ( vals.at(i) - newf*exp(-bvalues[i] * new_pseudoD) - (1-newf)*exp(-bvalues[i] * D)  ), 2.0);
+            newCost += std::pow( ( signals.at(i) - newf*exp(-bvalues[i] * new_pseudoD) - (1-newf)*exp(-bvalues[i] * D)  ), 2.0);
         }  
         //accept changes if we have have reduced cost, and lower lambda
         if (newCost < cost){
