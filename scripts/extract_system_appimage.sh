@@ -13,19 +13,19 @@ if [ -d "${reporoot}" ] ; then
     cd "${reporoot}"
 fi
 
+#########################
 # Gather core files.
 mkdir -pv AppDir
 
 # Debian:
 #dpkg-query -L ygor ygorclustering explicator dicomautomaton | while read a ; do [ -f "$a" ] && echo "${a#/}" ; done
+
 rsync -avp --files-from=<(dpkg-query -L ygor ygorclustering explicator dicomautomaton | while read a ; do [ -f "$a" ] && echo "${a#/}" ; done) / ./AppDir/
 
 # Arch:
 #pacman -Ql ygor ygorclustering explicator dicomautomaton | cut -d" " -f 2- | while read a ; do [ -f "$a" ] && echo "${a#/}" ; done
 rsync -avp --files-from=<(pacman -Ql ygor ygorclustering explicator dicomautomaton | cut -d" " -f 2- | while read a ; do [ -f "$a" ] && echo "${a#/}" ; done) / ./AppDir/
 
-
-# Desktop file, including default exec statement.
 printf \
 "[Desktop Entry]
 Type=Application
@@ -35,19 +35,44 @@ Name=DICOMautomaton
 Comment=Tools for working with medical physics data
 Path=/usr/bin
 Exec=dicomautomaton_dispatcher
-Icon=dicomautomaton_dispatcher
+Icon=DCMA_cycle_opti
 Terminal=true
 Categories=Science;
 " > dcma.desktop
 
-#mkdir -pv ./AppDir/usr/share/applications/
-cp ./dcma.desktop ./AppDir/dicomautomaton_dispatcher.desktop
-#mkdir -pv ./AppDir/usr/share/icons/default/scalable/apps/
-cp ./artifacts/logos/DCMA_cycle_opti.svg ./AppDir/dicomautomaton_dispatcher.svg
 
-# Default AppRun program. Note that a more sophisticated approach could be taken here, but I can't find cross-platform
-# tooling that will build an AppRun for x86_64 and aarch64.
-cat <<'EOF' > ./AppDir/AppRun
+#########################
+# Identify which method will be used to create the AppImage.
+ARCH="$(uname -m)" # x86_64, aarch64, ...
+
+
+# If a helper is available, use it.
+if [ "$ARCH" == "x86_64" ] || [ "$ARCH" == "i686" ] ; then
+
+    # Use continuous artifacts.
+    wget "https://artifacts.assassinate-you.net/artifactory/list/linuxdeploy/travis-456/linuxdeploy-${ARCH}.AppImage" ||
+      wget "https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-${ARCH}.AppImage"
+    chmod 777 ./linuxdeploy-${ARCH}.AppImage
+    ./linuxdeploy-${ARCH}.AppImage --appimage-extract # Unpack because FUSE cannot be used in Docker.
+    ./squashfs-root/AppRun \
+      --appdir ./AppDir \
+      --output appimage \
+      --executable ./AppDir/usr/bin/dicomautomaton_dispatcher \
+      --icon-file ./artifacts/logos/DCMA_cycle_opti.svg \
+      --desktop-file ./dcma.desktop
+
+
+# Otherwise, try making the AppImage directly.
+# Note that this method is less robust!
+elif [ "$ARCH" == "aarch64" ] ; then
+
+    # appimagetool appears to require these files be at the top-level.
+    cp ./dcma.desktop ./AppDir/dcma.desktop
+    cp ./artifacts/logos/DCMA_cycle_opti.svg ./AppDir/DCMA_cycle_opti
+
+    # Default AppRun program. Note that a more sophisticated approach could be taken here, but I can't find cross-platform
+    # tooling that will build an AppRun for x86_64 and aarch64.
+    cat <<'EOF' > ./AppDir/AppRun
 #!/bin/sh
 SELF=$(readlink -f "$0")
 HERE=${SELF%/*}
@@ -57,17 +82,15 @@ export XDG_DATA_DIRS="${HERE}/usr/share/${XDG_DATA_DIRS:+:$XDG_DATA_DIRS}"
 EXEC=$(grep -e '^Exec=.*' "${HERE}"/*.desktop | head -n 1 | cut -d "=" -f 2 | cut -d " " -f 1)
 exec "${EXEC}" "$@"
 EOF
-chmod 777 ./AppDir/AppRun
+    chmod 777 ./AppDir/AppRun
+    ./AppDir/AppRun -h # Test the script is functional.
 
-# Test the script is functional.
-./AppDir/AppRun -h
+    wget "https://github.com/AppImage/AppImageKit/releases/download/13/appimagetool-${ARCH}.AppImage"
+    chmod 777 ./appimagetool-${ARCH}.AppImage
+    ./appimagetool-${ARCH}.AppImage --appimage-extract # Unpack because FUSE cannot be used in Docker.
+    ./squashfs-root/AppRun -v ./AppDir
 
-# Build the AppImage using appimagetool directly.
-ARCH="$(uname -m)" # x86_64, aarch64, ...
-wget "https://github.com/AppImage/AppImageKit/releases/download/13/appimagetool-${ARCH}.AppImage"
-chmod 777 ./appimagetool-${ARCH}.AppImage
-./appimagetool-${ARCH}.AppImage --appimage-extract
-./squashfs-root/AppRun -v ./AppDir
+fi
 
 ls DICOMautomaton*AppImage
 
