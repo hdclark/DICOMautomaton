@@ -382,7 +382,7 @@ string(TIMESTAMP INVOCATION_TIMESTAMP "%Y%m%d.%H%M%S") # For a time-based versio
 set(CPACK_PACKAGE_VERSION "${INVOCATION_TIMESTAMP}")
 set(CPACK_STRIP_FILES TRUE)
 
-set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "amd64") # i386, amd64, armel, armhf, ...
+#set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "amd64") # i386, amd64, armel, armhf, ...
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Various tools for medical physics applications.")
 set(CPACK_PACKAGE_CONTACT "hdeanclark@gmail.com")
 set(CPACK_PACKAGE_MAINTAINER "Haley Clark <hdeanclark@gmail.com>")
