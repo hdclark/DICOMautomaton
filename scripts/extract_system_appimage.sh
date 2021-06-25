@@ -19,7 +19,6 @@ mkdir -pv AppDir
 
 # Debian:
 #dpkg-query -L ygor ygorclustering explicator dicomautomaton | while read a ; do [ -f "$a" ] && echo "${a#/}" ; done
-
 rsync -avp --files-from=<(dpkg-query -L ygor ygorclustering explicator dicomautomaton | while read a ; do [ -f "$a" ] && echo "${a#/}" ; done) / ./AppDir/
 
 # Arch:
@@ -68,7 +67,7 @@ elif [ "$ARCH" == "aarch64" ] ; then
 
     # appimagetool appears to require these files be at the top-level.
     cp ./dcma.desktop ./AppDir/dcma.desktop
-    cp ./artifacts/logos/DCMA_cycle_opti.svg ./AppDir/DCMA_cycle_opti
+    cp ./artifacts/logos/DCMA_cycle_opti.svg ./AppDir/
 
     # Default AppRun program. Note that a more sophisticated approach could be taken here, but I can't find cross-platform
     # tooling that will build an AppRun for x86_64 and aarch64.
@@ -84,6 +83,23 @@ exec "${EXEC}" "$@"
 EOF
     chmod 777 ./AppDir/AppRun
     ./AppDir/AppRun -h # Test the script is functional.
+
+    # Bundle required libraries, but exclude libraries known to be problematic.
+    wget 'https://raw.githubusercontent.com/AppImage/pkg2appimage/master/excludelist' -O - |
+      sed -e 's/[ ]*[#].*//' |
+      sed -e 's/[.]/[.]/g' |
+      grep -v '^$' |
+      sed -e 's/^/.*/' -e 's/$/.*/' > excludelist
+
+    rsync -L -v -r \
+      $( ldd ./AppDir/usr/bin/dicomautomaton_dispatcher | 
+         grep '=>' | 
+         sed -e 's@.*=> @@' -e 's@ (.*@@' |
+         grep -v -f excludelist
+      ) \
+      ./AppDir/usr/lib/${ARCH}-linux-gnu/
+
+    strip AppDir/usr/lib/* AppDir/usr/bin/* || true
 
     wget "https://github.com/AppImage/AppImageKit/releases/download/13/appimagetool-${ARCH}.AppImage"
     chmod 777 ./appimagetool-${ARCH}.AppImage
