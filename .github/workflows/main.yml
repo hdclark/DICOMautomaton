@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build_debian_stable:
+  build_debian_stable_x86_64:
     runs-on: ubuntu-latest
     container:
       image: debian:stable
@@ -45,6 +45,52 @@ jobs:
           path: |
                 ci_artifacts/DICOMautomaton-latest-x86_64.AppImage
                 ci_artifacts/DICOMautomaton-latest-x86_64.AppImage.sha256sum
+      - name: deploy_to_halclark_ca
+        run: |
+             echo "${{secrets.HALCLARKCA_DEPLOY_KEY}}" > deploy_key
+             chmod 600 deploy_key
+             rsync -avP -e 'ssh -i deploy_key -o StrictHostKeyChecking=no' ci_artifacts/ root@halclark.ca:/var/www/html/ci/
+
+  build_debian_stable_aarch64:
+    runs-on: ubuntu-latest
+    container:
+      image: debian:stable
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v1
+      - name: prep
+        run: |
+             cp -R ./docker/builders/ci /scratch
+             cp -R . /dcma
+      - name: build
+        run: |
+             ( ( while true ; do sleep 225 ; printf '\n\n' ; df -h ; printf '\n\n' ; free -h ; printf '\n\n' ; done ) &)
+             ./docker/build_bases/debian_stable/create_aarch64_chroot.sh
+             cp -R /scratch /debian_stable_aarch64/scratch
+             cp -R /dcma /debian_stable_aarch64/dcma
+             /run_within_aarch64_chroot.sh 'cd /dcma && ./docker/builders/ci/implementation_ci_debian_stable.sh'
+      - name: test
+        run: |
+             /run_within_aarch64_chroot.sh 'cd /dcma && ./integration_tests/Run.sh'
+      - name: create_appimage
+        run: |
+             /run_within_aarch64_chroot.sh 'cd /dcma && ./scripts/extract_system_appimage.sh'
+             export DEBIAN_FRONTEND="noninteractive"
+             apt-get update --yes
+             apt-get install --yes --no-install-recommends coreutils findutils rsync openssh-client
+             rm -rf ci_artifacts
+             mkdir -pv ci_artifacts
+             cp /debian_stable_aarch64/DICOMautomaton*AppImage DICOMautomaton-latest-aarch64.AppImage
+             mv /debian_stable_aarch64/DICOMautomaton*AppImage ci_artifacts/
+             find ci_artifacts/ -iname '*AppImage' -print -execdir bash -c 'sha256sum "$@" > "$@".sha256sum' bash '{}' \;
+      - name: deploy_to_github
+        uses: actions/upload-artifact@v2
+        with:
+          name: "DICOMautomaton-AppImage"
+          if-no-files-found: error
+          path: |
+                ci_artifacts/DICOMautomaton-latest-aarch64.AppImage
+                ci_artifacts/DICOMautomaton-latest-aarch64.AppImage.sha256sum
       - name: deploy_to_halclark_ca
         run: |
              echo "${{secrets.HALCLARKCA_DEPLOY_KEY}}" > deploy_key
