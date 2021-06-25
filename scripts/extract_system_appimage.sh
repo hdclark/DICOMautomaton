@@ -65,7 +65,7 @@ chmod 777 ./AppDir/AppRun
 # Build the AppImage using appimagetool directly.
 ARCH="$(uname -m)" # x86_64, aarch64, ...
 wget "https://github.com/AppImage/AppImageKit/releases/download/13/appimagetool-${ARCH}.AppImage"
-chmod 777 ./appimagetool-aarch64.AppImage
+chmod 777 ./appimagetool-${ARCH}.AppImage
 ./appimagetool-${ARCH}.AppImage --appimage-extract
 ./squashfs-root/AppRun -v ./AppDir
 
