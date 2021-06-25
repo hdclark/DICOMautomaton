@@ -13,14 +13,6 @@ if [ -d "${reporoot}" ] ; then
     cd "${reporoot}"
 fi
 
-# Continuous artifacts.
-wget "https://artifacts.assassinate-you.net/artifactory/list/linuxdeploy/travis-456/linuxdeploy-x86_64.AppImage" ||
-  wget "https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage"
-
-chmod 777 ./linuxdeploy-x86_64.AppImage
-# Unpack because FUSE cannot be used in Docker.
-./linuxdeploy-x86_64.AppImage --appimage-extract
-
 # Gather core files.
 mkdir -pv AppDir
 
@@ -32,6 +24,8 @@ rsync -avp --files-from=<(dpkg-query -L ygor ygorclustering explicator dicomauto
 #pacman -Ql ygor ygorclustering explicator dicomautomaton | cut -d" " -f 2- | while read a ; do [ -f "$a" ] && echo "${a#/}" ; done
 rsync -avp --files-from=<(pacman -Ql ygor ygorclustering explicator dicomautomaton | cut -d" " -f 2- | while read a ; do [ -f "$a" ] && echo "${a#/}" ; done) / ./AppDir/
 
+
+# Desktop file, including default exec statement.
 printf \
 "[Desktop Entry]
 Type=Application
@@ -41,17 +35,39 @@ Name=DICOMautomaton
 Comment=Tools for working with medical physics data
 Path=/usr/bin
 Exec=dicomautomaton_dispatcher
-Icon=DCMA_cycle_opti
+Icon=dicomautomaton_dispatcher
 Terminal=true
 Categories=Science;
 " > dcma.desktop
 
-./squashfs-root/AppRun \
-  --appdir ./AppDir \
-  --output appimage \
-  --executable ./AppDir/usr/bin/dicomautomaton_dispatcher \
-  --icon-file ./artifacts/logos/DCMA_cycle_opti.svg \
-  --desktop-file ./dcma.desktop
+#mkdir -pv ./AppDir/usr/share/applications/
+cp ./dcma.desktop ./AppDir/dicomautomaton_dispatcher.desktop
+#mkdir -pv ./AppDir/usr/share/icons/default/scalable/apps/
+cp ./artifacts/logos/DCMA_cycle_opti.svg ./AppDir/dicomautomaton_dispatcher.svg
 
-ls -lash DICOMautomaton*AppImage
+# Default AppRun program. Note that a more sophisticated approach could be taken here, but I can't find cross-platform
+# tooling that will build an AppRun for x86_64 and aarch64.
+cat <<'EOF' > ./AppDir/AppRun
+#!/bin/sh
+SELF=$(readlink -f "$0")
+HERE=${SELF%/*}
+export PATH="${HERE}/usr/bin/:${HERE}/usr/sbin/:${HERE}/bin/:${HERE}/sbin/${PATH:+:$PATH}"
+export LD_LIBRARY_PATH="${HERE}/usr/lib/:${HERE}/usr/lib/aarch64-linux-gnu/:${HERE}/usr/lib/i386-linux-gnu/:${HERE}/usr/lib/x86_64-linux-gnu/:${HERE}/usr/lib32/:${HERE}/usr/lib64/:${HERE}/lib/:${HERE}/lib/i386-linux-gnu/:${HERE}/lib/x86_64-linux-gnu/:${HERE}/lib32/:${HERE}/lib64/${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+export XDG_DATA_DIRS="${HERE}/usr/share/${XDG_DATA_DIRS:+:$XDG_DATA_DIRS}"
+EXEC=$(grep -e '^Exec=.*' "${HERE}"/*.desktop | head -n 1 | cut -d "=" -f 2 | cut -d " " -f 1)
+exec "${EXEC}" "$@"
+EOF
+chmod 777 ./AppDir/AppRun
+
+# Test the script is functional.
+./AppDir/AppRun -h
+
+# Build the AppImage using appimagetool directly.
+ARCH="$(uname -m)" # x86_64, aarch64, ...
+wget "https://github.com/AppImage/AppImageKit/releases/download/13/appimagetool-${ARCH}.AppImage"
+chmod 777 ./appimagetool-aarch64.AppImage
+./appimagetool-${ARCH}.AppImage --appimage-extract
+./squashfs-root/AppRun -v ./AppDir
+
+ls DICOMautomaton*AppImage
 
