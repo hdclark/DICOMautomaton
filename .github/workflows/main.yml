@@ -55,7 +55,7 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: debian:stable
-    timeout-minutes: 180
+    timeout-minutes: 240
     steps:
       - uses: actions/checkout@v1
       - name: prep
