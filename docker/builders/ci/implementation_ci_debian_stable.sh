@@ -69,17 +69,27 @@ cp /scratch/xpra-xorg.conf /etc/X11/xorg.conf
 mkdir -pv /wt
 cd /wt
 git clone https://github.com/emweb/wt.git .
-mkdir -p build
-cd build
 cmake \
+  -B build \
   -DCMAKE_INSTALL_PREFIX=/usr \
-  -DCMAKE_BUILD_TYPE=DEBUG \
-  -DCMAKE_C_FLAGS_DEBUG="-O0" \
-  -DCMAKE_CXX_FLAGS_DEBUG="-O0" \
+  -DCMAKE_BUILD_TYPE=QUICK \
+  -DCMAKE_C_FLAGS_QUICK="-O0" \
+  -DCMAKE_CXX_FLAGS_QUICK="-O0" \
+  -DBUILD_EXAMPLES=OFF \
+  -DBUILD_TESTS=OFF \
+  -DENABLE_HARU=OFF \
+  -DENABLE_PANGO=OFF \
+  -DENABLE_POSTGRES=OFF \
+  -DENABLE_FIREBIRD=OFF \
+  -DENABLE_MYSQL=OFF \
+  -DENABLE_MSSQLSERVER=OFF \
+  -DENABLE_QT4=OFF \
+  -DENABLE_QT5=OFF \
+  -DENABLE_LIBWTTEST=OFF \
   ../
 JOBS=$(nproc)
-JOBS=$(( $JOBS < 8 ? $JOBS : 8 ))
-JOBS=$(( $JOBS < 3 ? $JOBS : 3 ))
+JOBS=$(( JOBS < 8 ? JOBS : 8 ))
+JOBS=$(( JOBS < 3 ? 3 : JOBS ))
 make -j "$JOBS" VERBOSE=1
 make install
 make clean
