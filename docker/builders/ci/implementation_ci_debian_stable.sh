@@ -73,8 +73,9 @@ mkdir -p build
 cd build
 cmake \
   -DCMAKE_INSTALL_PREFIX=/usr \
-  -DCMAKE_CXX_FLAGS=CFLAGS="-O0 " \
-  -DCMAKE_C_FLAGS="-O0 " \
+  -DCMAKE_BUILD_TYPE=DEBUG \
+  -DCMAKE_C_FLAGS_DEBUG="-O0" \
+  -DCMAKE_CXX_FLAGS_DEBUG="-O0" \
   ../
 JOBS=$(nproc)
 JOBS=$(( $JOBS < 8 ? $JOBS : 8 ))
