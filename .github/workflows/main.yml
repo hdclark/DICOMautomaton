@@ -80,8 +80,8 @@ jobs:
              apt-get install --yes --no-install-recommends coreutils findutils rsync openssh-client
              rm -rf ci_artifacts
              mkdir -pv ci_artifacts
-             cp /debian_stable_aarch64/DICOMautomaton*AppImage DICOMautomaton-latest-aarch64.AppImage
-             mv /debian_stable_aarch64/DICOMautomaton*AppImage ci_artifacts/
+             cp /debian_stable_aarch64/dcma/DICOMautomaton*AppImage DICOMautomaton-latest-aarch64.AppImage
+             mv /debian_stable_aarch64/dcma/DICOMautomaton*AppImage ci_artifacts/
              find ci_artifacts/ -iname '*AppImage' -print -execdir bash -c 'sha256sum "$@" > "$@".sha256sum' bash '{}' \;
       - name: deploy_to_github
         uses: actions/upload-artifact@v2
