@@ -71,9 +71,14 @@ cd /wt
 git clone https://github.com/emweb/wt.git .
 mkdir -p build
 cd build
-cmake -DCMAKE_INSTALL_PREFIX=/usr ../
+cmake \
+  -DCMAKE_INSTALL_PREFIX=/usr \
+  -DCMAKE_CXX_FLAGS=CFLAGS="-O0 " \
+  -DCMAKE_C_FLAGS="-O0 " \
+  ../
 JOBS=$(nproc)
 JOBS=$(( $JOBS < 8 ? $JOBS : 8 ))
+JOBS=$(( $JOBS < 3 ? $JOBS : 3 ))
 make -j "$JOBS" VERBOSE=1
 make install
 make clean
