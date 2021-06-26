@@ -59,6 +59,7 @@ if [ "$ARCH" == "x86_64" ] || [ "$ARCH" == "i686" ] ; then
       --executable ./AppDir/usr/bin/dicomautomaton_dispatcher \
       --icon-file ./artifacts/logos/DCMA_cycle_opti.svg \
       --desktop-file ./dcma.desktop
+    rm -rf ./squashfs-root/ ./linuxdeploy-${ARCH}.AppImage 
 
 
 # Otherwise, try making the AppImage directly.
@@ -105,6 +106,9 @@ EOF
     chmod 777 ./appimagetool-${ARCH}.AppImage
     ./appimagetool-${ARCH}.AppImage --appimage-extract # Unpack because FUSE cannot be used in Docker.
     ./squashfs-root/AppRun -v ./AppDir
+    rm -rf ./squashfs-root/ ./appimagetool-${ARCH}.AppImage 
+
+    mv DICOMautomaton*AppImage "DICOMautomaton-$(git rev-parse --short HEAD)-${ARCH}.AppImage"
 
 fi
 
