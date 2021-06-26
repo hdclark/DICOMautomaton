@@ -86,7 +86,7 @@ cmake \
   -DENABLE_QT4=OFF \
   -DENABLE_QT5=OFF \
   -DENABLE_LIBWTTEST=OFF \
-  ../
+  ./
 JOBS=$(nproc)
 JOBS=$(( JOBS < 8 ? JOBS : 8 ))
 JOBS=$(( JOBS < 3 ? 3 : JOBS ))
