@@ -31,7 +31,7 @@ jobs:
              ./scripts/extract_system_appimage.sh
              export DEBIAN_FRONTEND="noninteractive"
              apt-get update --yes
-             apt-get install --yes --no-install-recommends coreutils findutils rsync openssh-client patchelf
+             apt-get install --yes --no-install-recommends coreutils binutils findutils rsync openssh-client patchelf
              rm -rf ci_artifacts
              mkdir -pv ci_artifacts
              cp DICOMautomaton*AppImage DICOMautomaton-latest-x86_64.AppImage
@@ -77,7 +77,7 @@ jobs:
              /run_within_aarch64_chroot.sh 'cd /dcma && ./scripts/extract_system_appimage.sh'
              export DEBIAN_FRONTEND="noninteractive"
              apt-get update --yes
-             apt-get install --yes --no-install-recommends coreutils findutils rsync openssh-client patchelf
+             apt-get install --yes --no-install-recommends coreutils binutils findutils rsync openssh-client patchelf
              rm -rf ci_artifacts
              mkdir -pv ci_artifacts
              cp /debian_stable_aarch64/dcma/DICOMautomaton*AppImage ci_artifacts/DICOMautomaton-latest-aarch64.AppImage
