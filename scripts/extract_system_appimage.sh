@@ -100,7 +100,10 @@ EOF
       ) \
       ./AppDir/usr/lib/${ARCH}-linux-gnu/
 
-    strip AppDir/usr/lib/* AppDir/usr/bin/* || true
+    find AppDir/usr/bin/ -type f -exec strip '{}' \; \
+                                 -exec patchelf --set-rpath '$ORIGIN/../lib/'"${ARCH}-linux-gnu/" '{}' \; || true
+    find AppDir/usr/lib/ -type f -exec strip '{}' \; \
+                                 -exec patchelf --set-rpath '$ORIGIN/../lib/' '{}' \; || true
 
     wget "https://github.com/AppImage/AppImageKit/releases/download/13/appimagetool-${ARCH}.AppImage"
     chmod 777 ./appimagetool-${ARCH}.AppImage
