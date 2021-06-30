@@ -42,10 +42,18 @@ fi
 #           --exclude='libc.*' \
 #           --exclude='libm.*' \
 #       Otherwise, bundle the host's glibc distribution and hope that patching the binary will suffice!
+#
+# Note: added an exclusion list from another project which seems to help.
+wget 'https://raw.githubusercontent.com/AppImage/pkg2appimage/master/excludelist' -O - |
+  sed -e 's/[ ]*[#].*//' |
+  sed -e 's/[.]/[.]/g' |
+  grep -v '^$' |
+  sed -e 's/^/.*/' -e 's/$/.*/' > excludelist
 rsync -L -r --delete \
   $( ldd "${which_dcma}" | 
      grep '=>' | 
-     sed -e 's@.*=> @@' -e 's@ (.*@@' 
+     sed -e 's@.*=> @@' -e 's@ (.*@@' |
+     grep -v -f excludelist
   ) \
   "${out_dir}/"
 

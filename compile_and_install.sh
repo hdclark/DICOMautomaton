@@ -233,7 +233,7 @@ else  # Generic build and install.
       -DWITH_MSAN=OFF \
       ../
     JOBS=$(nproc)
-    JOBS=$(( $JOBS < 8 ? $JOBS : 8 )) # Limit to reduce memory use.
+    JOBS=$(( JOBS < 8 ? JOBS : 8 )) # Limit to reduce memory use.
     make -j "$JOBS" VERBOSE=1
 
     if [[ "${ALSOINSTALL}" =~ ^y.* ]] ; then

@@ -64,6 +64,20 @@ OperationDoc OpArgDocCellularAutomata(){
                                  "1" };
 
     out.args.emplace_back();
+    out.args.back().name = "Method";
+    out.args.back().desc = "Controls the type of automata to simulate.";
+    out.args.back().default_val = "conway's-game-of-life";
+    out.args.back().expected = true;
+    out.args.back().examples = { "conway's-game-of-life",
+                                 "gravity-down",
+                                 "gravity-up",
+                                 "gravity-left",
+                                 "gravity-right",
+                                 "gravity-in",
+                                 "gravity-out" };
+    out.args.back().samples = OpArgSamples::Exhaustive;
+
+    out.args.emplace_back();
     out.args.back().name = "Iterations";
     out.args.back().desc = "The number of iterations to simulate."
                            " Note that intermediary iterations are not retained.";
@@ -107,6 +121,7 @@ Drover CellularAutomata(Drover DICOM_data,
     const auto NormalizedROILabelRegex = OptArgs.getValueStr("NormalizedROILabelRegex").value();
     const auto ROILabelRegex = OptArgs.getValueStr("ROILabelRegex").value();
 
+    const auto MethodStr = OptArgs.getValueStr("Method").value();
     const auto Channel = std::stol( OptArgs.getValueStr("Channel").value() );
 
     const auto Iterations = std::stol( OptArgs.getValueStr("Iterations").value() );
@@ -120,6 +135,14 @@ Drover CellularAutomata(Drover DICOM_data,
     }
 
     const auto Threshold = (High * 0.5) + (Low * 0.5);
+
+    const auto regex_conway  = Compile_Regex("^co?n?w?a?y?'?s?[-_]?g?a?m?e?[-_]?o?f?[-_]?l?i?f?e?$");
+    const auto regex_gravity_d = Compile_Regex("^gr?a?v?i?t?y?[-_]?do?w?n?$");
+    const auto regex_gravity_u = Compile_Regex("^gr?a?v?i?t?y?[-_]?up?$");
+    const auto regex_gravity_l = Compile_Regex("^gr?a?v?i?t?y?[-_]?le?f?t?$");
+    const auto regex_gravity_r = Compile_Regex("^gr?a?v?i?t?y?[-_]?ri?g?h?t?$");
+    const auto regex_gravity_i = Compile_Regex("^gr?a?v?i?t?y?[-_]?in?$");
+    const auto regex_gravity_o = Compile_Regex("^gr?a?v?i?t?y?[-_]?ou?t?$");
 
     //-----------------------------------------------------------------------------------------------------------------
 
@@ -140,57 +163,119 @@ Drover CellularAutomata(Drover DICOM_data,
 
         ComputeVolumetricNeighbourhoodSamplerUserData ud;
         ud.channel = Channel;
-        ud.neighbourhood = ComputeVolumetricNeighbourhoodSamplerUserData::Neighbourhood::SelectionPeriodic;
         ud.maximum_distance = std::numeric_limits<double>::quiet_NaN();
-        ud.description = "2D Conway's Game of Life";
-        ud.voxel_triplets = { { 
-            // The 2D "Moore" neighbourhood, i.e., includes both nearest and next-nearest neighbours (diagonals).
-            std::array<long int, 3>{ -1, -1,  0 },
-            std::array<long int, 3>{ -1,  0,  0 },
-            std::array<long int, 3>{ -1,  1,  0 },
 
-            std::array<long int, 3>{  0, -1,  0 },
-            std::array<long int, 3>{  0,  1,  0 },
+        if( std::regex_match(MethodStr, regex_conway) ){
+            ud.description = "2D Conway's Game of Life";
+            ud.neighbourhood = ComputeVolumetricNeighbourhoodSamplerUserData::Neighbourhood::SelectionPeriodic;
+            ud.voxel_triplets = { { 
+                // The 2D "Moore" neighbourhood, i.e., includes both nearest and next-nearest neighbours (diagonals).
+                std::array<long int, 3>{ -1, -1,  0 },
+                std::array<long int, 3>{ -1,  0,  0 },
+                std::array<long int, 3>{ -1,  1,  0 },
 
-            std::array<long int, 3>{  1, -1,  0 },
-            std::array<long int, 3>{  1,  0,  0 },
-            std::array<long int, 3>{  1,  1,  0 },
-        } };
+                std::array<long int, 3>{  0, -1,  0 },
+                std::array<long int, 3>{  0,  1,  0 },
 
-        ud.f_reduce = [Low, High, Threshold](float v, std::vector<float> &shtl, vec3<double>) -> float {
-            long int alive = 0;
-            long int dead = 0;
-            for(const auto& nv : shtl){
-                if(!std::isfinite(nv)){
-                    throw std::runtime_error("Encountered non-finite cell. Refusing to continue");
+                std::array<long int, 3>{  1, -1,  0 },
+                std::array<long int, 3>{  1,  0,  0 },
+                std::array<long int, 3>{  1,  1,  0 },
+            } };
+            ud.f_reduce = [Low, High, Threshold](float v, std::vector<float> &shtl, vec3<double>) -> float {
+                long int alive = 0;
+                long int dead = 0;
+                for(const auto& nv : shtl){
+                    if(!std::isfinite(nv)){
+                        throw std::runtime_error("Encountered non-finite cell. Refusing to continue");
+                    }
+                    if(nv < Threshold){
+                        ++dead;
+                    }else{
+                        ++alive;
+                    }
                 }
-                if(nv < Threshold){
-                    ++dead;
-                }else{
-                    ++alive;
-                }
-            }
 
-            const bool v_alive = !(v < Threshold);
-            if(v_alive){
-                if(isininc(2,alive,3)){
-                    v = High;
+                const bool v_alive = !(v < Threshold);
+                if(v_alive){
+                    if(isininc(2,alive,3)){
+                        v = High;
+                    }else{
+                        v = Low;
+                    }
+
                 }else{
                     v = Low;
+                    if(alive == 3) v = High;
                 }
 
-            }else{
-                v = Low;
-                if(alive == 3) v = High;
-            }
+                return v;
+            };
 
-            return v;
-        };
+        }else if( std::regex_match(MethodStr, regex_gravity_d) 
+              ||  std::regex_match(MethodStr, regex_gravity_u) 
+              ||  std::regex_match(MethodStr, regex_gravity_l) 
+              ||  std::regex_match(MethodStr, regex_gravity_r) 
+              ||  std::regex_match(MethodStr, regex_gravity_i) 
+              ||  std::regex_match(MethodStr, regex_gravity_o) ){
+            ud.neighbourhood = ComputeVolumetricNeighbourhoodSamplerUserData::Neighbourhood::Selection;
+            if(false){
+            }else if( std::regex_match(MethodStr, regex_gravity_d) ){
+                ud.description = "Gravity (down)";
+                ud.voxel_triplets = { { 
+                    std::array<long int, 3>{ -1,  0,  0 },
+                    std::array<long int, 3>{  1,  0,  0 },
+                } };
+            }else if( std::regex_match(MethodStr, regex_gravity_u) ){
+                ud.description = "Gravity (up)";
+                ud.voxel_triplets = { { 
+                    std::array<long int, 3>{  1,  0,  0 },
+                    std::array<long int, 3>{ -1,  0,  0 },
+                } };
+            }else if( std::regex_match(MethodStr, regex_gravity_l) ){
+                ud.description = "Gravity (left)";
+                ud.voxel_triplets = { { 
+                    std::array<long int, 3>{  0,  1,  0 },
+                    std::array<long int, 3>{  0, -1,  0 },
+                } };
+            }else if( std::regex_match(MethodStr, regex_gravity_r) ){
+                ud.description = "Gravity (right)";
+                ud.voxel_triplets = { { 
+                    std::array<long int, 3>{  0, -1,  0 },
+                    std::array<long int, 3>{  0,  1,  0 },
+                } };
+            }else if( std::regex_match(MethodStr, regex_gravity_i) ){
+                ud.description = "Gravity (into plane)";
+                ud.voxel_triplets = { { 
+                    std::array<long int, 3>{  0,  0, -1 },
+                    std::array<long int, 3>{  0,  0,  1 },
+                } };
+            }else if( std::regex_match(MethodStr, regex_gravity_o) ){
+                ud.description = "Gravity (out of plane)";
+                ud.voxel_triplets = { { 
+                    std::array<long int, 3>{  0,  0,  1 },
+                    std::array<long int, 3>{  0,  0, -1 },
+                } };
+            }
+            ud.f_reduce = [](float m, std::vector<float> &shtl, vec3<double>) -> float {
+                const auto t = shtl.at(0);
+                const auto b = shtl.at(1);
+                const auto m_orig = m;
+                
+                // We basically implement a voxel swap here, but separate it into symmetric parts using deltas instead.
+                // This avoids having to actually use swap.
+                m += (std::isfinite(t) && (m_orig < t)) ? (t - m_orig) : 0.0;
+                m += (std::isfinite(b) && (b < m_orig)) ? (b - m_orig) : 0.0;
+                return m;
+            };
+
+        }else{
+            throw std::invalid_argument("Method not understood");
+        }
 
         for(long int i = 0; i < Iterations; ++i){
             if(!(*iap_it)->imagecoll.Compute_Images( ComputeVolumetricNeighbourhoodSampler, 
                                                      {}, cc_ROIs, &ud )){
-                throw std::runtime_error("Unable to perform Game of Life iteration.");
+                throw std::runtime_error("Unable to iterate cellular automata.");
             }
         }
     }

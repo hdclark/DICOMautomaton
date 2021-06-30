@@ -13,6 +13,7 @@ printf 'Test 1\n' |
   "${TEST_FILES_ROOT}"/MR_continents.dcm \
   -o ContourWholeImages \
   -o CellularAutomata \
+    -p Method=conway \
     -p Low=0 \
     -p High=255 \
     -p Iterations=50 \
@@ -36,6 +37,7 @@ printf 'Test 1\n' |
   -o Repeat:N=5 \
   -\( \
       -o CellularAutomata \
+        -p Method=conway \
         -p Low=0 \
         -p High=255 \
         -p Iterations=10 \
