@@ -287,7 +287,7 @@ Drover ModelIVIM(Drover DICOM_data,
                 if(vals.size() != bvalues.size()){
                     FUNCERR("Unmatched voxel and b-value vectors. Refusing to continue.");
                 }
-                int numIterations = 1000;
+                int numIterations = 600;
                 
                 const auto [f, D, pseudoD] = GetKurtosisParams(bvalues, vals, numIterations);
                 if(!std::isfinite( f )) throw std::runtime_error("f is not finite");
@@ -443,10 +443,10 @@ double GetKurtosisModel(float b, const std::vector<double> &params){
 }
 double GetKurtosisTheta(const std::vector<float> &bvalues, const std::vector<float> &signals, const std::vector<double> &params, const std::vector<double> &priors){
     double theta = 0.0;
-    //for now priors are uniform so not included in theta. The goal is to maximize theta (not minimize)
+    //for now priors are uniform so not included in theta. The goal is to minimize. Reduces to a regression problem
     for (size_t i = 0; i < bvalues.size(); ++i){
 
-        theta -= std::pow((signals.at(i) - GetKurtosisModel(bvalues.at(i), params)), 2.0);  
+        theta += std::pow((signals.at(i) - GetKurtosisModel(bvalues.at(i), params)), 2.0);  
 
     } 
     return theta;    
@@ -512,17 +512,19 @@ void GetKurtosisGradient(MatrixXd &grad, const std::vector<float> &bvalues, cons
 
     paramsTemp.at(4) += delta; //get D derivative
     deriv = GetKurtosisTheta(bvalues, signals, paramsTemp, priors);
-    paramsTemp.at(2) -= 2.0 * delta;
+    paramsTemp.at(4) -= 2.0 * delta;
     deriv -= GetKurtosisTheta(bvalues, signals, paramsTemp, priors);
     deriv /= 2.0 * delta;
     grad(4,0) = deriv;
-    paramsTemp.at(4) = params.at(4);
+
 }
 
 
 void GetHessian(MatrixXd &hessian, const std::vector<float> &bvalues, const std::vector<float> &signals, const std::vector<double> &params, const std::vector<double> &priors){
     //for 5 parameters we will have a 5x5 Hessian matrix
     MatrixXd gradDiff(5,1);
+    MatrixXd temp(5,1);
+
     std::vector<double> paramsTemp = params;
     //Numerically determine the derivatives
     double delta = 0.00001;
@@ -533,10 +535,10 @@ void GetHessian(MatrixXd &hessian, const std::vector<float> &bvalues, const std:
     GetKurtosisGradient(gradDiff, bvalues, signals, paramsTemp, priors); 
     
     paramsTemp.at(0) -= 2.0 * delta;
-    GetKurtosisGradient(gradDiff, bvalues, signals, paramsTemp, priors); 
+    GetKurtosisGradient(temp, bvalues, signals, paramsTemp, priors); 
 
+    gradDiff -= temp;
     gradDiff /= 2.0 * delta;
-    paramsTemp.at(0) = params.at(0); 
     hessian(0,0) = gradDiff(0,0);
     hessian(0,1) = gradDiff(1,0);
     hessian(0,2) = gradDiff(2,0);
@@ -550,10 +552,11 @@ void GetHessian(MatrixXd &hessian, const std::vector<float> &bvalues, const std:
     GetKurtosisGradient(gradDiff, bvalues, signals, paramsTemp, priors); 
     
     paramsTemp.at(1) -= 2.0 * delta;
-    GetKurtosisGradient(gradDiff, bvalues, signals, paramsTemp, priors); 
+    GetKurtosisGradient(temp, bvalues, signals, paramsTemp, priors); 
 
+    gradDiff -= temp;
     gradDiff /= 2.0 * delta;
-    paramsTemp.at(1) = params.at(1); 
+
     hessian(1,0) = gradDiff(0,0);
     hessian(1,1) = gradDiff(1,0);
     hessian(1,2) = gradDiff(2,0);
@@ -567,9 +570,11 @@ void GetHessian(MatrixXd &hessian, const std::vector<float> &bvalues, const std:
     GetKurtosisGradient(gradDiff, bvalues, signals, paramsTemp, priors); 
     
     paramsTemp.at(2) -= 2.0 * delta;
-    GetKurtosisGradient(gradDiff, bvalues, signals, paramsTemp, priors); 
+    GetKurtosisGradient(temp, bvalues, signals, paramsTemp, priors); 
 
+    gradDiff -= temp;
     gradDiff /= 2.0 * delta;
+    
     paramsTemp.at(2) = params.at(2); 
     hessian(2,0) = gradDiff(0,0);
     hessian(2,1) = gradDiff(1,0);
@@ -577,15 +582,17 @@ void GetHessian(MatrixXd &hessian, const std::vector<float> &bvalues, const std:
     hessian(2,3) = gradDiff(3,0);
     hessian(2,4) = gradDiff(4,0);
 
-    paramsTemp.at(2) = params.at(2);
 
     //Fourth row: 
     paramsTemp.at(3) += delta;
     GetKurtosisGradient(gradDiff, bvalues, signals, paramsTemp, priors); 
     
     paramsTemp.at(3) -= 2.0 * delta;
-    GetKurtosisGradient(gradDiff, bvalues, signals, paramsTemp, priors); 
+    GetKurtosisGradient(temp, bvalues, signals, paramsTemp, priors); 
+
+    gradDiff -= temp;
     gradDiff /= 2.0 * delta;
+    
     hessian(3,1) = gradDiff(1,0);
     hessian(3,2) = gradDiff(2,0);
     hessian(3,3) = gradDiff(3,0);
@@ -597,11 +604,13 @@ void GetHessian(MatrixXd &hessian, const std::vector<float> &bvalues, const std:
     paramsTemp.at(4) += delta;
     GetKurtosisGradient(gradDiff, bvalues, signals, paramsTemp, priors); 
     
-    paramsTemp.at(4) -= 2 * delta;
-    GetKurtosisGradient(gradDiff, bvalues, signals, paramsTemp, priors); 
+    paramsTemp.at(4) -= 2.0 * delta;
+    GetKurtosisGradient(temp, bvalues, signals, paramsTemp, priors); 
 
-    gradDiff /= 2 * delta;
-    paramsTemp.at(4) = params.at(1); 
+    gradDiff -= temp;
+    gradDiff /= 2.0 * delta;
+    
+    paramsTemp.at(4) = params.at(4); 
     hessian(4,0) = gradDiff(0,0);
     hessian(4,1) = gradDiff(1,0);
     hessian(4,2) = gradDiff(2,0);
@@ -637,10 +646,10 @@ int b0_index = 0;
         
     }
 
-    double f = 0.5;
+    double f = 0.1;
     double pseudoD = 0.02;
     double D = 0.002;
-    double K = 1.0;
+    double K = 0.0;
     double NCF = 0.0;
 
     std::vector<double> params;
@@ -654,11 +663,6 @@ int b0_index = 0;
 
     float lambda = 50.0;
 
-    double new_pseudoD;
-    double new_f;
-    double new_D;
-    double new_K;
-    double new_NCF;
 
     double theta;
     double newTheta;
@@ -668,10 +672,12 @@ int b0_index = 0;
     
 
 //Get the current function to maximize log[(likelihood)*(priors)]
-    theta = 0.0;
 
     theta = GetKurtosisTheta(bvalues, signals, params, priors);
-    
+    std::vector<double> newParams;
+    for (int i = 0; i < 5; i++){
+        newParams.push_back(0.0);
+    }
     
     for (int i = 0; i < numIterations; i++){
          
@@ -693,46 +699,48 @@ int b0_index = 0;
         inverse = H.inverse();
         
         //Now update parameters 
-        MatrixXd newParams = inverse * gradient;
-        new_f = newParams(0,0);
-        new_pseudoD = newParams(1,0);
-        new_D = newParams(2,0);
-        new_K = newParams(3,0);
-        new_NCF = newParams(4,0);
+        MatrixXd newParamMatrix = -inverse * gradient;
+
+        newParams[0] = (newParamMatrix(0,0) + params[0]); //f
+        newParams[1] = (newParamMatrix(1,0) + params[1]); //pseudoD
+        newParams[2] = (newParamMatrix(2,0) + params[2]); //D
+        newParams[3] = (newParamMatrix(3,0) + params[3]); //K
+        newParams[4] = (newParamMatrix(4,0) + params[4]); //NCF
         //if f is less than 0 or greater than 1, rescale back to boundary, and don't let pseudoDD get smaller than D
-        if (new_f < 0){
-            newParams(0,0) = 0.0;
-        }else if (f > 1){
-            f = 1.0;
+        if (newParams[0] < 0){
+            newParams[0] = 0.0;
+        }else if (newParams[0] > 1){
+            newParams[0] = 1.0;
         }
-        if (pseudoD < 0){
-            pseudoD = 0.0;
+        if (newParams[1] < 0){
+            newParams[1] = 0.0;
         }
-        if (D < 0){
-            D = 0.0;
+        if (newParams[2] < 0){
+            newParams[2] = 0.0;
         }
         
 
         //Now check if we have lowered the cost
-        newTheta = GetKurtosisTheta(bvalues, signals, params, priors);
-
+        newTheta = GetKurtosisTheta(bvalues, signals, newParams, priors);
+        //std::cout << params[0] << std::endl << newParams[0] << std::endl << std::endl;
         //accept changes if we have have reduced cost, and lower lambda
         if (newTheta < theta){
             theta = newTheta;
             lambda *= 0.8;
-            params.at(0) = new_f;
-            params.at(1) = new_pseudoD;
-            params.at(2) = new_D;
-            params.at(3) = new_K;
-            params.at(4) = new_NCF;
+            params[0] = newParams[0];
+            params[1] = newParams[1];
+            params[2] = newParams[2];
+            params[3] = newParams[3];
+            params[4] = newParams[4];
                       
         }else{
             lambda *= 2.0;
         }
+        
 
 
     }
-    return {params.at(0), params.at(1), params.at(2)};
+    return {params[0], params[1], params[2]};
 }
 #endif //DCMA_USE_EIGEN
 
