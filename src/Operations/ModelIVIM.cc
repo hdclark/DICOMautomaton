@@ -676,7 +676,11 @@ int b0_index = 0;
     theta = GetKurtosisTheta(bvalues, signals, params, priors);
     std::vector<double> newParams;
     for (int i = 0; i < 5; i++){
+<<<<<<< HEAD
         newParams.push_back(0);
+=======
+        newParams.push_back(0.0);
+>>>>>>> 65f331bc53d78c1e6c686537fac19a9ba2e7d9cd
     }
     
     for (int i = 0; i < numIterations; i++){
