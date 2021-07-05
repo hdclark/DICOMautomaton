@@ -19,7 +19,19 @@ BUILDER="debian_stable"  # 'arch', 'debian_stable', 'mxe', or 'native'.
 OPTIND=1 # Reset in case getopts has been used previously in the shell.
 while getopts "d:p:l:b:h" opt; do
     case "$opt" in
-    h)
+    d)  BUILD_DIR="$OPTARG"
+        printf 'Proceeding with remote build root directory "%s".\n' "${BUILD_DIR}"
+        ;;
+    p)  PORTABLE_BIN_DIR="$OPTARG"
+        printf 'Proceeding with remote portable binary root directory "%s".\n' "${PORTABLE_BIN_DIR}"
+        ;;
+    l)  L_PORTABLE_BIN_DIR="$OPTARG"
+        printf 'Proceeding with local portable binary root directory "%s".\n' "${L_PORTABLE_BIN_DIR}"
+        ;;
+    b)  BUILDER="$OPTARG"
+        printf 'Proceeding with Docker build image "%s".\n' "${BUILDER}"
+        ;;
+    h,*)
         printf 'This script will clone the current repository and then remotely build using ssh.\n'
         printf 'Docker build images can be used on remotes.\n'
         printf 'The build artifacts are retained and portable binaries are returned to the local machine.\n'
@@ -51,18 +63,6 @@ while getopts "d:p:l:b:h" opt; do
         printf "\n"
         exit 0
         ;;
-    d)  BUILD_DIR="$OPTARG"
-        printf 'Proceeding with remote build root directory "%s".\n' "${BUILD_DIR}"
-        ;;
-    p)  PORTABLE_BIN_DIR="$OPTARG"
-        printf 'Proceeding with remote portable binary root directory "%s".\n' "${PORTABLE_BIN_DIR}"
-        ;;
-    l)  L_PORTABLE_BIN_DIR="$OPTARG"
-        printf 'Proceeding with local portable binary root directory "%s".\n' "${L_PORTABLE_BIN_DIR}"
-        ;;
-    b)  BUILDER="$OPTARG"
-        printf 'Proceeding with Docker build image "%s".\n' "${BUILDER}"
-        ;;
     esac
 done
 
@@ -70,7 +70,7 @@ done
 # Determine the user@machine to use from the remaining arguments.
 shift $((OPTIND-1))
 [ "$1" = "--" ] && shift
-USER_AT_REMOTE="$@"  # e.g., user@machine
+USER_AT_REMOTE="$*"  # e.g., user@machine
 if [ -z "${USER_AT_REMOTE}" ] ; then
     printf 'No user or remote machine specified. Cannot continue.\n' 1>&2
     exit 1
@@ -118,7 +118,44 @@ if [[ "${BUILDER}" =~ .*native.* ]] ; then
       ./scripts/dump_portable_dcma_bundle.sh '${PORTABLE_BIN_DIR}'
       '
 
+elif [[ "${BUILDER}" =~ .*debian.*_stable.* ]] && [[ "$(uname -m)" =~ .*aarch64.* ]] ; then
+    printf 'Building debian stable for aarch64 architecture.\n'
+
+    ssh -t "${USER_AT_REMOTE}" -- "
+        set -eux
+        cd '${BUILD_DIR}'
+
+        #sudo mount -o remount,exec,dev '${BUILD_DIR}'
+        sudo \
+        ./docker/build_bases/debian_stable/create_foreign_chroot.sh \
+            -d '${BUILD_DIR}'/chroot_aarch64/ \
+            -s '${BUILD_DIR}'/run_in_chroot.sh \
+            -a arm64
+
+        # Minimal build.
+        #/d/run_in_chroot.sh 'cd /dcma && ./docker/builders/ci/implementation_ci_debian_stable.sh'
+
+        # Full build. Might be faster on powerful hardware.
+        mkdir -p '${PORTABLE_BIN_DIR}'
+        cp -R ./docker/build_bases/debian_stable/ '${BUILD_DIR}'/scratch_base/
+        sudo rsync -a --exclude chroot_aarch64 \
+                      --exclude scratch_base \
+                      --exclude run_in_chroot.sh \
+                      --exclude dcma \
+                      --exclude '${BUILD_DIR}' \
+                      ./ '${BUILD_DIR}'/chroot_aarch64/dcma/
+        '${BUILD_DIR}'/run_in_chroot.sh 'cd /dcma && ./docker/build_bases/debian_stable/implementation_debian_stable.sh'
+        '${BUILD_DIR}'/run_in_chroot.sh 'cd /dcma && ./compile_and_install.sh -b build' # Will auto-detect the Debian build process.
+
+        '${BUILD_DIR}'/run_in_chroot.sh 'cd /dcma && ./scripts/extract_system_appimage.sh'
+        '${BUILD_DIR}'/run_in_chroot.sh 'mkdir -p /pbin/'
+        '${BUILD_DIR}'/run_in_chroot.sh 'cd /dcma && mv ./DICOMautomaton*AppImage /pbin/'
+        '${BUILD_DIR}'/run_in_chroot.sh 'cd /dcma && ./scripts/dump_portable_dcma_bundle.sh /pbin/'
+        rsync -rv '${BUILD_DIR}'/chroot_aarch64/pbin/ '${PORTABLE_BIN_DIR}'/
+      "
+
 elif [[ "${BUILDER}" =~ .*debian.*_stable.* ]] ; then
+    printf 'Building debian stable for the remote machine architecture.\n'
 
     ssh -t "${USER_AT_REMOTE}" -- "
         set -eu

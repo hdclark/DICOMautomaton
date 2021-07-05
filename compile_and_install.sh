@@ -32,7 +32,25 @@ INSTALLVIASUDO="yes" # whether to use sudo during installation.
 OPTIND=1 # Reset in case getopts has been used previously in the shell.
 while getopts "b:d:i:unch" opt; do
     case "$opt" in
-    h)
+    b)  BUILDROOT=$(realpath "$OPTARG")
+        printf 'Proceeding with user-specified build root "%s".\n' "${BUILDROOT}"
+        ;;
+    d)  DISTRIBUTION="$OPTARG"
+        printf 'Proceeding with user-specified distribution "%s".\n' "${DISTRIBUTION}"
+        ;;
+    i)  INSTALLPREFIX="$OPTARG"
+        printf 'Proceeding with user-specified installation prefix directory "%s".\n' "${INSTALLPREFIX}"
+        ;;
+    u)  INSTALLVIASUDO="no"
+        printf 'Disabling use of sudo.\n'
+        ;;
+    n)  ALSOINSTALL="no"
+        printf 'Disabling installation; building only.\n'
+        ;;
+    c)  CLEANBUILD="yes"
+        printf 'Purging cached build artifacts for clean build.\n'
+        ;;
+    h,*)
         printf 'This script attempts to build and optionally install DICOMautomaton'
         printf ' in a distribution-aware way using the system package manager.\n'
         printf "\n"
@@ -63,24 +81,6 @@ while getopts "b:d:i:unch" opt; do
         printf "          : Default: '%s'\n" "${CLEANBUILD}"
         printf "\n"
         exit 0
-        ;;
-    b)  BUILDROOT=$(realpath "$OPTARG")
-        printf 'Proceeding with user-specified build root "%s".\n' "${BUILDROOT}"
-        ;;
-    d)  DISTRIBUTION="$OPTARG"
-        printf 'Proceeding with user-specified distribution "%s".\n' "${DISTRIBUTION}"
-        ;;
-    i)  INSTALLPREFIX="$OPTARG"
-        printf 'Proceeding with user-specified installation prefix directory "%s".\n' "${INSTALLPREFIX}"
-        ;;
-    u)  INSTALLVIASUDO="no"
-        printf 'Disabling use of sudo.\n' "${INSTALLVIASUDO}"
-        ;;
-    n)  ALSOINSTALL="no"
-        printf 'Disabling installation; building only.\n'
-        ;;
-    c)  CLEANBUILD="yes"
-        printf 'Purging cached build artifacts for clean build.\n'
         ;;
     esac
 done
@@ -136,7 +136,7 @@ fi
 # Copy the repository to the build location to eliminate possibility of destroying the repo.
 mkdir -p "${BUILDROOT}"
 if [ -d "${BUILDROOT}"/.git ] ; then
-    printf 'Build root directory "%s" contains a .git subdirectory. Refusing to overwrite it.\n' 1>&2
+    printf 'Build root directory contains a .git subdirectory. Refusing to overwrite it.\n' 1>&2
     exit 1
 fi
 if [[ "${CLEANBUILD}" =~ ^y.* ]] ; then
@@ -205,7 +205,7 @@ elif [[ "${DISTRIBUTION}" =~ .*arch.* ]] ; then
         chown -R dummy_build_user .
         runuser dummy_build_user -c "INSTALL_PREFIX='$INSTALLPREFIX' makepkg --syncdeps --needed --noconfirm"
         if [[ "${ALSOINSTALL}" =~ ^y.* ]] ; then
-            pacman --noconfirm -U $( ls -t ./*pkg.tar* | head -n 1 )
+            pacman --noconfirm -U "$( ls -t ./*pkg.tar* | head -n 1 )"
         fi
         userdel dummy_build_user
 
