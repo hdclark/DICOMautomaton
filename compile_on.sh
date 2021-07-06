@@ -137,12 +137,6 @@ elif [[ "${BUILDER}" =~ .*debian.*_stable.* ]] && [[ "$(uname -m)" =~ .*aarch64.
 
         mkdir -p '${PORTABLE_BIN_DIR}'
         cp -R /chroot/dcma/docker/build_bases/debian_stable /chroot/scratch_base
-        #rsync -a --exclude chroot_aarch64 \
-        #         --exclude scratch_base \
-        #         --exclude run_in_chroot.sh \
-        #         --exclude dcma \
-        #         --exclude '${BUILD_DIR}' \
-        #         ./ '${BUILD_DIR}'/chroot_aarch64/dcma/
         /chroot/run_in_chroot.sh 'cd /dcma && ./docker/build_bases/debian_stable/implementation_debian_stable.sh'
         /chroot/run_in_chroot.sh 'cd /dcma && ./compile_and_install.sh -b build' # Will auto-detect the Debian build process.
 
