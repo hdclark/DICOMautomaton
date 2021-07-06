@@ -91,11 +91,14 @@ function command_exists () {
 }
 if [[ "${DISTRIBUTION}" =~ .*debian.* ]] ; then
     export DEBIAN_FRONTEND="noninteractive"
+    apt-get update -y
+    apt-get upgrade -y
     command_exists debootstrap                    || apt-get install --yes debootstrap 
     command_exists "qemu-${ARCHITECTURE}-static"  || apt-get install --yes qemu qemu-user-static
     command_exists proot                          || apt-get install --yes proot
 
 elif [[ "${DISTRIBUTION}" =~ .*arch.* ]] ; then
+    pacman -Syu --noconfirm
     command_exists debootstrap                    || pacman -S --needed --noconfirm debootstrap 
     command_exists "qemu-${ARCHITECTURE}-static"  || yay    -S --needed --noconfirm qemu qemu-arch-extra qemu-user-static-bin
     command_exists proot                          || yay    -S --needed --noconfirm proot
