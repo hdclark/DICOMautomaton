@@ -50,7 +50,7 @@ while getopts "b:d:i:unch" opt; do
     c)  CLEANBUILD="yes"
         printf 'Purging cached build artifacts for clean build.\n'
         ;;
-    h,*)
+    h|*)
         printf 'This script attempts to build and optionally install DICOMautomaton'
         printf ' in a distribution-aware way using the system package manager.\n'
         printf "\n"

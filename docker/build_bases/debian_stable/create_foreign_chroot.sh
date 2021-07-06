@@ -17,7 +17,16 @@ OUT_SCRIPT="/run_within_debian_chroot.sh"
 OPTIND=1 # Reset in case getopts has been used previously in the shell.
 while getopts "ha:d:s:" opt; do
     case "$opt" in
-    h)
+    s)  OUT_SCRIPT="$OPTARG"
+        printf 'Proceeding with user-specified script "%s".\n' "${OUT_SCRIPT}"
+        ;;
+    d)  OUT_DIRECTORY="$OPTARG"
+        printf 'Proceeding with user-specified directory "%s".\n' "${OUT_DIRECTORY}"
+        ;;
+    a)  DEBIAN_ARCHITECTURE="$OPTARG"
+        printf 'Proceeding with user-specified architecture "%s".\n' "${DEBIAN_ARCHITECTURE}"
+        ;;
+    h|*)
         printf 'This script creates a Debian chroot with the given architecture.'
         printf ' It can be used to cross-compile for foreign architectures.\n'
         printf "\n"
@@ -38,15 +47,6 @@ while getopts "ha:d:s:" opt; do
         printf "          : Default: '%s'\n" "${DEBIAN_ARCHITECTURE}"
         printf "\n"
         exit 0
-        ;;
-    s)  OUT_SCRIPT="$OPTARG"
-        printf 'Proceeding with user-specified script "%s".\n' "${OUT_SCRIPT}"
-        ;;
-    d)  OUT_DIRECTORY="$OPTARG"
-        printf 'Proceeding with user-specified directory "%s".\n' "${OUT_DIRECTORY}"
-        ;;
-    a)  DEBIAN_ARCHITECTURE="$OPTARG"
-        printf 'Proceeding with user-specified architecture "%s".\n' "${DEBIAN_ARCHITECTURE}"
         ;;
     esac
 done
@@ -105,8 +105,9 @@ else
     exit 1
 fi
 
+
 cat << EOF > "${OUT_SCRIPT}"
-#!/usr/bin/env sh
+#!/bin/sh
 export PROOT_NO_SECCOMP=1 
 exec \\
 proot \\
@@ -126,10 +127,14 @@ proot \\
 EOF
 chmod 777 "${OUT_SCRIPT}"
 
-# Only create the chroot if it does not already exist. This allows for better re-use of the chroot.
-if [ ! -d "${OUT_DIRECTORY}" ] ; then
-    debootstrap --arch="${DEBIAN_ARCHITECTURE}" --foreign stable "${OUT_DIRECTORY}" 'http://deb.debian.org/debian/'
-    "${OUT_SCRIPT}" '/debootstrap/debootstrap --second-stage'
+# Only create the chroot if the run script fails to work. This allows for better re-use of the chroot.
+if ! "${OUT_SCRIPT}" 'true' ; then
+    debootstrap --arch="${DEBIAN_ARCHITECTURE}" --foreign --variant=minbase stable "${OUT_DIRECTORY}" 'http://deb.debian.org/debian/'
+    #mkdir -pv "${OUT_DIRECTORY}"{/usr/bin,/sbin}
+    #cp "$(which qemu-${ARCHITECTURE}-static)" "${OUT_DIRECTORY}/usr/bin"
+    #touch "${OUT_DIRECTORY}/sbin/start-stop-daemon"
+    #chroot "/debootstrap" /debootstrap/debootstrap --second-stage
+    "${OUT_SCRIPT}" "set -eux ; cd debootstrap && ./debootstrap --arch=${ARCHITECTURE} --second-stage || dpkg --configure -a"
 fi
 "${OUT_SCRIPT}" 'DEBIAN_FRONTEND="noninteractive" apt-get update --yes'
 "${OUT_SCRIPT}" 'DEBIAN_FRONTEND="noninteractive" apt-get install --yes --no-install-recommends coreutils binutils findutils rsync openssh-client patchelf'

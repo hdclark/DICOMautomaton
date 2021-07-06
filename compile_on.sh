@@ -29,11 +29,11 @@ while getopts "d:p:l:b:h" opt; do
         printf 'Proceeding with local portable binary root directory "%s".\n' "${L_PORTABLE_BIN_DIR}"
         ;;
     b)  BUILDER="$OPTARG"
-        printf 'Proceeding with Docker build image "%s".\n' "${BUILDER}"
+        printf 'Proceeding with builder"%s".\n' "${BUILDER}"
         ;;
-    h,*)
+    h|*)
         printf 'This script will clone the current repository and then remotely build using ssh.\n'
-        printf 'Docker build images can be used on remotes.\n'
+        printf 'Docker build images or chroots can be used on remotes.\n'
         printf 'The build artifacts are retained and portable binaries are returned to the local machine.\n'
         printf 'They may or may not be installed remotely.\n'
         printf 'This script is most useful for testing builds.\n'
@@ -56,7 +56,7 @@ while getopts "d:p:l:b:h" opt; do
         printf "          : It is created if necesary.\n"
         printf "          : Default: '%s'\n" "${L_PORTABLE_BIN_DIR}"
         printf "\n"
-        printf " -b <arg> : Specify which Docker build image to use, if any.\n"
+        printf " -b <arg> : Specify which Docker build image or chroot to use, if any.\n"
         printf "          : This option controls how the build is performed, packaged, and installed.\n"
         printf "          : Options are 'arch', 'debian_stable', 'mxe', and 'native'.\n"
         printf "          : Default: '%s'\n" "${BUILDER}"
@@ -120,38 +120,52 @@ if [[ "${BUILDER}" =~ .*native.* ]] ; then
 
 elif [[ "${BUILDER}" =~ .*debian.*_stable.* ]] && [[ "$(uname -m)" =~ .*aarch64.* ]] ; then
     printf 'Building debian stable for aarch64 architecture.\n'
+    HOST_CHROOT_DIR='/var/tmp/dcma_aarch64_chroot'
 
     ssh -t "${USER_AT_REMOTE}" -- "
         set -eux
         cd '${BUILD_DIR}'
 
+        cat > docker_run.sh << 'EOF'
+#!/usr/bin/env bash
+        set -eux
         #sudo mount -o remount,exec,dev '${BUILD_DIR}'
-        sudo \
-        ./docker/build_bases/debian_stable/create_foreign_chroot.sh \
-            -d '${BUILD_DIR}'/chroot_aarch64/ \
-            -s '${BUILD_DIR}'/run_in_chroot.sh \
+        /chroot/dcma/docker/build_bases/debian_stable/create_foreign_chroot.sh \
+            -d /chroot/ \
+            -s /chroot/run_in_chroot.sh \
             -a arm64
 
-        # Minimal build.
-        #/d/run_in_chroot.sh 'cd /dcma && ./docker/builders/ci/implementation_ci_debian_stable.sh'
-
-        # Full build. Might be faster on powerful hardware.
         mkdir -p '${PORTABLE_BIN_DIR}'
-        cp -R ./docker/build_bases/debian_stable/ '${BUILD_DIR}'/scratch_base/
-        sudo rsync -a --exclude chroot_aarch64 \
-                      --exclude scratch_base \
-                      --exclude run_in_chroot.sh \
-                      --exclude dcma \
-                      --exclude '${BUILD_DIR}' \
-                      ./ '${BUILD_DIR}'/chroot_aarch64/dcma/
-        '${BUILD_DIR}'/run_in_chroot.sh 'cd /dcma && ./docker/build_bases/debian_stable/implementation_debian_stable.sh'
-        '${BUILD_DIR}'/run_in_chroot.sh 'cd /dcma && ./compile_and_install.sh -b build' # Will auto-detect the Debian build process.
+        cp -R /chroot/dcma/docker/build_bases/debian_stable /chroot/scratch_base
+        #rsync -a --exclude chroot_aarch64 \
+        #         --exclude scratch_base \
+        #         --exclude run_in_chroot.sh \
+        #         --exclude dcma \
+        #         --exclude '${BUILD_DIR}' \
+        #         ./ '${BUILD_DIR}'/chroot_aarch64/dcma/
+        /chroot/run_in_chroot.sh 'cd /dcma && ./docker/build_bases/debian_stable/implementation_debian_stable.sh'
+        /chroot/run_in_chroot.sh 'cd /dcma && ./compile_and_install.sh -b build' # Will auto-detect the Debian build process.
 
-        '${BUILD_DIR}'/run_in_chroot.sh 'cd /dcma && ./scripts/extract_system_appimage.sh'
-        '${BUILD_DIR}'/run_in_chroot.sh 'mkdir -p /pbin/'
-        '${BUILD_DIR}'/run_in_chroot.sh 'cd /dcma && mv ./DICOMautomaton*AppImage /pbin/'
-        '${BUILD_DIR}'/run_in_chroot.sh 'cd /dcma && ./scripts/dump_portable_dcma_bundle.sh /pbin/'
-        rsync -rv '${BUILD_DIR}'/chroot_aarch64/pbin/ '${PORTABLE_BIN_DIR}'/
+        /chroot/run_in_chroot.sh 'cd /dcma && ./scripts/extract_system_appimage.sh'
+        /chroot/run_in_chroot.sh 'mkdir -p /pbin/'
+        /chroot/run_in_chroot.sh 'cd /dcma && mv ./DICOMautomaton*AppImage /pbin/'
+        /chroot/run_in_chroot.sh 'cd /dcma && ./scripts/dump_portable_dcma_bundle.sh /pbin/'
+        rsync -rv /chroot/pbin/ /pbin/
+EOF
+        chmod 777 docker_run.sh
+
+        mkdir -p '${PORTABLE_BIN_DIR}'
+        mkdir -p '${HOST_CHROOT_DIR}'
+        
+        sudo docker run \
+          -it --rm \
+          --network=host \
+          -v '${HOST_CHROOT_DIR}':/chroot/:rw \
+          -v '${BUILD_DIR}':/chroot/dcma/:rw \
+          -v '${PORTABLE_BIN_DIR}':/pbin/:rw \
+          -w / \
+          dicomautomaton_webserver_debian_stable:latest \
+          /chroot/dcma/docker_run.sh
       "
 
 elif [[ "${BUILDER}" =~ .*debian.*_stable.* ]] ; then
