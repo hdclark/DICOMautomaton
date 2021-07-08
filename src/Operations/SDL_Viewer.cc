@@ -104,6 +104,7 @@ Drover SDL_Viewer(Drover DICOM_data,
     bool view_contours_enabled = true;
     bool view_contouring_enabled = false;
     bool view_row_column_profiles = false;
+    bool view_script_editor_enabled = false;
     bool show_image_hover_tooltips = true;
     bool adjust_window_level_enabled = false;
     bool adjust_colour_map_enabled = false;
@@ -599,6 +600,10 @@ Drover SDL_Viewer(Drover DICOM_data,
             auto disp_img_it = std::next((*img_array_ptr_it)->imagecoll.images.begin(), img_num);
             if( disp_img_it == std::end((*img_array_ptr_it)->imagecoll.images) ) break;
 
+            if( (disp_img_it->channels <= 0)
+            ||  (disp_img_it->rows <= 0)
+            ||  (disp_img_it->columns <= 0) ) break;
+
             std::get<bool>( out ) = true;
             std::get<img_array_ptr_it_t>( out ) = img_array_ptr_it;
             std::get<disp_img_it_t>( out ) = disp_img_it;
@@ -624,6 +629,10 @@ Drover SDL_Viewer(Drover DICOM_data,
             if( !isininc(1, img_num+1, (*img_array_ptr_it)->imagecoll.images.size()) ) break;
             auto disp_img_it = std::next((*img_array_ptr_it)->imagecoll.images.begin(), img_num);
             if( disp_img_it == std::end((*img_array_ptr_it)->imagecoll.images) ) break;
+
+            if( (disp_img_it->channels <= 0)
+            ||  (disp_img_it->rows <= 0)
+            ||  (disp_img_it->columns <= 0) ) break;
 
             std::get<bool>( out ) = true;
             std::get<img_array_ptr_it_t>( out ) = img_array_ptr_it;
@@ -678,8 +687,12 @@ Drover SDL_Viewer(Drover DICOM_data,
 
     const auto recompute_scale_bar_image_state = [ &scale_bar_img,
                                                    &scale_bar_texture,
+                                                   &recompute_cimage_iters,
                                                    &Load_OpenGL_Texture ](){
-        scale_bar_texture = Load_OpenGL_Texture( scale_bar_img, {}, {} );
+        auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_cimage_iters();
+        if( img_valid ){ 
+            scale_bar_texture = Load_OpenGL_Texture( scale_bar_img, {}, {} );
+        }
         return;
     };
 
@@ -932,14 +945,23 @@ Drover SDL_Viewer(Drover DICOM_data,
     }
     launch_contour_preprocessor();
 
-
     struct loaded_files_res {
         bool res;
         Drover DICOM_data;
     };
     std::future<loaded_files_res> loaded_files;
 
+    // Script files.
+    struct script_file {
+        std::filesystem::path path;
+        bool altered = false;
+        std::vector<char> content;
+    };
+    std::vector<script_file> script_files;
+    long int active_script_file = -1;
 
+
+    // Contour and image display state.
     std::map<std::string, bool> contour_enabled;
     std::map<std::string, bool> contour_hovered;
     float contour_line_thickness = 1.0f;
@@ -1038,6 +1060,7 @@ if(false){
                     row_profile.samples.clear();
                     col_profile.samples.clear();
                 };
+                ImGui::MenuItem("Script Editor", nullptr, &view_script_editor_enabled);
                 ImGui::EndMenu();
             }
             if(ImGui::BeginMenu("Adjust")){
@@ -1087,6 +1110,158 @@ if(false){
         if( view_metrics_window ){
             ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_FirstUseEver);
             ImGui::ShowMetricsWindow(&view_metrics_window);
+        }
+
+        // Display the script editor dialog.
+        if( view_script_editor_enabled ){
+            ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_Appearing);
+            ImGui::SetNextWindowPos(ImVec2(50, 50), ImGuiCond_Appearing);
+            ImGui::Begin("Script Editor", &view_script_editor_enabled );
+            ImVec2 window_extent = ImGui::GetContentRegionAvail();
+
+            auto N_sfs = static_cast<long int>(script_files.size());
+            if(ImGui::Button("New", ImVec2(window_extent.x/4, 0))){ 
+                script_files.emplace_back();
+                script_files.back().altered = true;
+                script_files.back().content.emplace_back('\0'); // Ensure there is at least a null character.
+                active_script_file = N_sfs;
+                ++N_sfs;
+            }
+            ImGui::SameLine();
+            if(ImGui::Button("Open", ImVec2(window_extent.x/4, 0))){ 
+                // TODO
+
+                // Note: ensure there is at least a null character. TODO.
+
+                // Mimic the 'new' button for testing.
+                script_files.emplace_back();
+                script_files.back().altered = true;
+                script_files.back().content.emplace_back('\0'); // Ensure there is at least a null character.
+                active_script_file = (script_files.size() - 1);
+                ++N_sfs;
+            }
+            ImGui::SameLine();
+            if(ImGui::Button("Save", ImVec2(window_extent.x/4, 0))){ 
+                if(isininc(0, active_script_file, N_sfs-1)){
+
+                    if( script_files.at(active_script_file).path.empty() ){
+                        try{
+                            const auto open_file_root_str = std::filesystem::absolute(open_file_root / "script.txt").string();
+                            for(size_t i = 0; (i < open_file_root_str.size()) && ((i+1) < root_entry_text.size()); ++i){
+                                root_entry_text[i] = open_file_root_str[i];
+                                root_entry_text[i+1] = '\0';
+                            }
+
+                            ImGui::OpenPopup("Save Script Filename Picker");
+                        }catch(const std::exception &e){ };
+                    }
+                }
+            }
+            ImGui::SameLine();
+            if(ImGui::Button("Close", ImVec2(window_extent.x/4, 0))){ 
+                if(isininc(0, active_script_file, N_sfs-1)){
+                    script_files.erase( std::next( std::begin( script_files ), active_script_file ) );
+                    --active_script_file; // Default to script on left.
+                    --N_sfs;
+                }
+            }
+
+            // Pop-up to query the user for a filename.
+            if(ImGui::BeginPopupModal("Save Script Filename Picker", NULL, ImGuiWindowFlags_AlwaysAutoResize)){
+                // TODO: add a proper 'Save As' file selector here.
+
+                ImGui::Text("Save file as...");
+                ImGui::SetNextItemWidth(650.0f);
+                ImGui::InputText("##save_script_as_text_entry", root_entry_text.data(), root_entry_text.size() - 1);
+
+                if(ImGui::Button("Save")){
+                    script_files.at(active_script_file).path.assign(
+                        std::begin(root_entry_text),
+                        std::find( std::begin(root_entry_text), std::end(root_entry_text), '\0') );
+                    script_files.at(active_script_file).path.replace_extension(".txt");
+
+                    // Write the file contents to the given path.
+                    std::ofstream FO(script_files.at(active_script_file).path.string());
+                    FO.write( script_files.at(active_script_file).content.data(),
+                              (script_files.at(active_script_file).content.size() - 1) ); // Disregard trailing null.
+                    FO << std::endl;
+                    FO.flush();
+                    if(FO){
+                        script_files.at(active_script_file).altered = false;
+                    }else{
+                        script_files.at(active_script_file).path.clear();
+                    }
+                    ImGui::CloseCurrentPopup();
+                }
+                ImGui::SameLine();
+                if(ImGui::Button("Cancel")){
+                    ImGui::CloseCurrentPopup();
+                }
+                ImGui::EndPopup();
+            }
+
+            // 'Tabs' for file selection.
+            for(long int i = 0; i < N_sfs; ++i){
+                auto fname = script_files.at(i).path.filename().string();
+                if(fname.empty()) fname = "(unnamed)";
+                if(script_files.at(i).altered) fname += "**";
+
+                fname += "##script_file_"_s + std::to_string(i); // Unique identifier for ImGui internals.
+                if(ImGui::Button(fname.c_str())){
+                    active_script_file = i;
+                }
+                if( (i+1) <  N_sfs ){
+                    ImGui::SameLine();
+                }
+            }
+
+            if(isininc(0, active_script_file, N_sfs-1)){
+
+                // Implement a callback to handle resize events.
+                const auto text_entry_callback = [](ImGuiInputTextCallbackData *data) -> int {
+                    auto sf_ptr = reinterpret_cast<script_file*>(data->UserData);
+                    if(sf_ptr == nullptr) throw std::logic_error("Invalid script file ptr found in callback");
+                    
+                    // Resize the underlying storage.
+                    if(data->EventFlag == ImGuiInputTextFlags_CallbackResize){
+                        sf_ptr->content.resize(data->BufTextLen, '\0'); // Ensure the file character is a null.
+                        data->Buf = sf_ptr->content.data();
+                    }
+
+                    // Mark the file as altered.
+                    if(data->EventFlag == ImGuiInputTextFlags_CallbackEdit){
+                        sf_ptr->altered = true;
+                    }
+
+                    return 0;
+                };
+
+                auto sf_ptr = &(script_files.at(active_script_file));
+                if(sf_ptr == nullptr) throw std::logic_error("Invalid script file ptr");
+
+                // Ensure there is a trailing null character to avoid issues with c-style string interpretation.
+                if( sf_ptr->content.empty()
+                ||  (sf_ptr->content.back() != '\0') ){
+                    sf_ptr->content.emplace_back('\0');
+                    sf_ptr->altered = true;
+                }
+
+                ImGuiInputTextFlags flags = ImGuiInputTextFlags_AllowTabInput
+                                          | ImGuiInputTextFlags_CallbackResize
+                                          | ImGuiInputTextFlags_CallbackEdit;
+                ImVec2 edit_box_extent = ImGui::GetContentRegionAvail();
+                const auto altered = ImGui::InputTextMultiline("##script_editor_active_content",
+                                                               sf_ptr->content.data(),
+                                                               sf_ptr->content.capacity(),
+                                                               edit_box_extent,
+                                                               flags,
+                                                               text_entry_callback,
+                                                               reinterpret_cast<void*>(sf_ptr));
+                
+                if(altered == true) script_files.at(active_script_file).altered = true;
+            }
+
+            ImGui::End();
         }
 
         auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_image_iters();
@@ -2381,23 +2556,27 @@ if(false){
             // Scroll through images.
             if( new_img_array_num != img_array_num ){
                 advance_to_image_array(new_img_array_num);
+                recompute_image_state();
+                auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_image_iters();
+                if( !img_valid ) throw std::runtime_error("Advanced to inaccessible image array");
                 if(view_contours_enabled) launch_contour_preprocessor();
-                img_array_ptr_it = std::next(DICOM_data.image_data.begin(), img_array_num);
-                disp_img_it = std::next((*img_array_ptr_it)->imagecoll.images.begin(), img_num);
-                current_texture = Load_OpenGL_Texture(*disp_img_it, custom_centre, custom_width);
                 reset_contouring_state(img_array_ptr_it);
                 tagged_pos = {};
 
             }else if( new_img_num != img_num ){
                 advance_to_image(new_img_num);
+                recompute_image_state();
+                auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_image_iters();
+                if( !img_valid ) throw std::runtime_error("Advanced to inaccessible image");
                 if(view_contours_enabled) launch_contour_preprocessor();
-                disp_img_it = std::next((*img_array_ptr_it)->imagecoll.images.begin(), img_num);
-                current_texture = Load_OpenGL_Texture(*disp_img_it, custom_centre, custom_width);
                 contouring_img_altered = true;
 
-            }else if( new_img_chnl != img_channel ){
+            }else if( (new_img_chnl != img_channel)
+                  &&  (0 < disp_img_it->channels) ){
                 img_channel = std::clamp<long int>(new_img_chnl, 0L, disp_img_it->channels - 1L);
-                current_texture = Load_OpenGL_Texture(*disp_img_it, custom_centre, custom_width);
+                recompute_image_state();
+                auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_image_iters();
+                if( !img_valid ) throw std::runtime_error("Advanced to inaccessible image channel");
             }
             ImGui::End();
         }
