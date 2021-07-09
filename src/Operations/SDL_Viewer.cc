@@ -438,8 +438,12 @@ Drover SDL_Viewer(Drover DICOM_data,
 
             const auto UseCustomWL = (custom_win_c && custom_win_fw);
             const auto UseImgWL = (UseCustomWL) ? false 
-                                                : (  img_win_valid && img_desc && img_win_c 
-                                                  && img_win_fw && (img_win_valid.value() == img_desc.value()));
+                                                : (   (img_chns == 1) // Only honour for single-channel images.
+                                                   && img_win_valid 
+                                                   && img_desc
+                                                   && img_win_c 
+                                                   && img_win_fw 
+                                                   && (img_win_valid.value() == img_desc.value()));
 
             if( UseCustomWL || UseImgWL ){
                 //Window/linear scaling transformation parameters.
@@ -506,9 +510,17 @@ Drover SDL_Viewer(Drover DICOM_data,
                 //       arithmetical types (i.e., handling negatives, ensuring there is no overflow or wrap-
                 //       around, ensuring there is minimal precision loss).
                 using pixel_value_t = decltype(img.value(0, 0, 0));
-                const auto pixel_minmax_allchnls = img.minmax();
-                const auto lowest = std::get<0>(pixel_minmax_allchnls);
-                const auto highest = std::get<1>(pixel_minmax_allchnls);
+                Stats::Running_MinMax<pixel_value_t> rmm;
+                img.apply_to_pixels([&rmm,&img_channel](long int /*row*/,
+                                                        long int /*col*/,
+                                                        long int chnl,
+                                                        pixel_value_t val) -> void {
+                    if( (img_channel < 0)
+                    ||  (chnl == img_channel) ) rmm.Digest(val);
+                    return;
+                });
+                const auto lowest = rmm.Current_Min();
+                const auto highest = rmm.Current_Max();
 
                 //const auto lowest = Stats::Percentile(img.data, 0.01);
                 //const auto highest = Stats::Percentile(img.data, 0.99);
@@ -671,9 +683,11 @@ Drover SDL_Viewer(Drover DICOM_data,
               &&  ((img_array_num < 0) || (img_num < 0)) ){
             img_array_num = 0;
             img_num = 0;
+            img_channel = 0;
         }else{
             img_array_num = -1;
             img_num = -1;
+            img_channel = -1;
         }
 
         // Reload the texture.
