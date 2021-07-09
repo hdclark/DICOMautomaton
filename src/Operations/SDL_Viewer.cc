@@ -1201,15 +1201,22 @@ if(false){
             }
 
             // 'Tabs' for file selection.
+            auto &style = ImGui::GetStyle();
             for(long int i = 0; i < N_sfs; ++i){
                 auto fname = script_files.at(i).path.filename().string();
                 if(fname.empty()) fname = "(unnamed)";
                 if(script_files.at(i).altered) fname += "**";
 
                 fname += "##script_file_"_s + std::to_string(i); // Unique identifier for ImGui internals.
+                if(i == active_script_file){
+                    ImGui::PushStyleColor(ImGuiCol_Button, style.Colors[ImGuiCol_ButtonActive]);
+                }else{
+                    ImGui::PushStyleColor(ImGuiCol_Button, style.Colors[ImGuiCol_Button]);
+                }
                 if(ImGui::Button(fname.c_str())){
                     active_script_file = i;
                 }
+                ImGui::PopStyleColor(1);
                 if( (i+1) <  N_sfs ){
                     ImGui::SameLine();
                 }
