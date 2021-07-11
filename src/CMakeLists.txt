@@ -97,6 +97,9 @@ add_library(            Boost_Serialization_File_Loader_obj OBJECT Boost_Seriali
                                                                    StructsIOBoostSerialization.h )
 set_target_properties(  Boost_Serialization_File_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
+add_library(            Script_Loader_obj OBJECT Script_Loader.cc )
+set_target_properties(  Script_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+
 if(WITH_CGAL)
     add_library(            Surface_Meshes_obj OBJECT Surface_Meshes.cc )
     set_target_properties(  Surface_Meshes_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
@@ -284,6 +287,7 @@ add_executable (dicomautomaton_dispatcher
     $<TARGET_OBJECTS:OBJ_File_Loader_obj>
     $<TARGET_OBJECTS:PLY_File_Loader_obj>
     $<TARGET_OBJECTS:Line_Sample_File_Loader_obj>
+    $<TARGET_OBJECTS:Script_Loader_obj>
     $<TARGET_OBJECTS:Write_File_obj>
     $<TARGET_OBJECTS:Operation_Dispatcher_obj>
     $<TARGET_OBJECTS:Documentation_obj>
@@ -360,6 +364,7 @@ if(WITH_WT)
         $<TARGET_OBJECTS:OBJ_File_Loader_obj>
         $<TARGET_OBJECTS:PLY_File_Loader_obj>
         $<TARGET_OBJECTS:Line_Sample_File_Loader_obj>
+        $<TARGET_OBJECTS:Script_Loader_obj>
         $<TARGET_OBJECTS:Write_File_obj>
         $<TARGET_OBJECTS:Operation_Dispatcher_obj>
         $<TARGET_OBJECTS:Documentation_obj>

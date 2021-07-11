@@ -68,6 +68,7 @@
 #include "../Font_DCMA_Minimal.h"
 #include "../DCMA_Version.h"
 #include "../File_Loader.h"
+#include "../Script_Loader.h"
 
 #ifdef DCMA_USE_CGAL
     #include "../Surface_Meshes.h"
@@ -1138,6 +1139,29 @@ if(false){
                 script_files.emplace_back();
                 script_files.back().altered = true;
                 script_files.back().content.emplace_back('\0'); // Ensure there is at least a null character.
+////////////////
+////////////////
+////////////////
+const std::string testing_content = R"***(
+
+line3function(a = 123,
+              b = 234 );
+
+line6function(a = "this is a quotation; the parser should ignore the semicolon",
+              b = {This is another grouping\; the semicolon should be escaped});
+
+line9statement = { a = "This should work for now too",
+                   b = "Though I'm not sure if it will be useful?",
+                   c = "Gives me a strong Nix-lang feel..." };
+# This is a comment. It should be ignored, including syntax errors like ;'"(]'\"".
+# This is another comment.
+)***";
+script_files.back().content.clear();
+for(const auto &c : testing_content) script_files.back().content.emplace_back(c);
+script_files.back().content.emplace_back('\0');
+////////////////
+////////////////
+
                 active_script_file = N_sfs;
                 ++N_sfs;
             }
@@ -1177,6 +1201,20 @@ if(false){
                     script_files.erase( std::next( std::begin( script_files ), active_script_file ) );
                     --active_script_file; // Default to script on left.
                     --N_sfs;
+                }
+            }
+
+            if(ImGui::Button("Check", ImVec2(window_extent.x/4, 0))){ 
+                if(isininc(0, active_script_file, N_sfs-1)){
+                    std::stringstream ss( std::string( std::begin(script_files.at(active_script_file).content),
+                                                       std::end(script_files.at(active_script_file).content) ) );
+                    std::list<OperationArgPkg> op_list;
+                    try{
+                        const auto res = Load_DCMA_Script( ss, op_list );
+                        FUNCINFO("Script parsed OK");
+                    }catch(const std::exception &e){
+                        FUNCWARN("Script parsing failed: " << e.what());
+                    }
                 }
             }
 
