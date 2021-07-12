@@ -21,16 +21,26 @@ export LC_IDENTIFICATION="$locale"
 export LC_ALL=""
 
 
-check_syntax () {
-    local f="$@"
+check_cpp_syntax () {
+    local f="$*"
     [ -f "$f" ] && {
       g++ --std=c++17 -fsyntax-only \
         -I'src/imebra20121219/library/imebra/include/' \
-        `pkg-config --cflags --libs sdl2 glew sfml-window sfml-graphics sfml-system libpqxx libpq nlopt gsl` \
+        $(pkg-config --cflags --libs sdl2 glew sfml-window sfml-graphics sfml-system libpqxx libpq nlopt gsl) \
         "$f"
     }
 }
-export -f check_syntax
+export -f check_cpp_syntax
+
+check_sh_syntax () {
+    local f="$*"
+    [ -f "$f" ] && {
+      shellcheck \
+        -e SC1117,SC2059 \
+        "$f"
+    }
+}
+export -f check_sh_syntax
 
 # Check all files in the project.
 #find ./src/ -type f -print0 |
@@ -47,7 +57,11 @@ git ls-files -z -o -m "$@" |
   grep -z -E '*[.]h|*[.]cc|*[.]cpp' |
     `# Ignore imebra headers. Useful for spelunking and testing... ` \
     `# grep -z -i -v '.*imebra.*' |   ` \
-  xargs -0 -I '{}' -P $(nproc || echo 2) -n 1 -r \
-    bash -c "check_syntax '{}'"
+  xargs -0 -I '{}' -P "$(nproc || echo 2)" -n 1 -r \
+    bash -c "check_cpp_syntax '{}'"
 
+git ls-files -z -o -m "$@" |
+  grep -z -E '*[.]sh' |
+  xargs -0 -I '{}' -P 1 -n 1 -r \
+    bash -c "check_sh_syntax '{}'"
 

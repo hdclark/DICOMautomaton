@@ -178,15 +178,6 @@ Drover ModelIVIM(Drover DICOM_data,
 
     //-----------------------------------------------------------------------------------------------------------------
 
-    //Stuff references to all contours into a list. Remember that you can still address specific contours through
-    // the original holding containers (which are not modified here).
-    auto cc_all = All_CCs( DICOM_data );
-    auto cc_ROIs = Whitelist( cc_all, { { "ROIName", ROILabelRegex },
-                                        { "NormalizedROIName", NormalizedROILabelRegex } } );
-    if(cc_ROIs.empty()){
-        throw std::invalid_argument("No contours selected. Cannot continue.");
-    }
-
     auto RIAs_all = All_IAs( DICOM_data );
     auto RIAs = Whitelist( RIAs_all, ReferenceImageSelectionStr );
     if(RIAs.size() < 2){
@@ -200,11 +191,38 @@ Drover ModelIVIM(Drover DICOM_data,
     // Identify the b-value of each reference image, which is needed for later analysis.
     std::vector<float> bvalues;
     for(const auto &RIA_refw : RIARL){
-        const auto vals = RIA_refw.get().get_distinct_values_for_key("DiffusionBValue");
+        // Exact key lookup.
+        //const auto vals = RIA_refw.get().get_distinct_values_for_key("DiffusionBValue");
+
+        // Fuzzy (regex) lookup.
+        // Search for any metadata keys that match, and gather all the distinct values for all matching keys.
+        const auto key_regex = Compile_Regex(".*DiffusionBValue$");
+        std::list<std::string> vals;
+        for(const auto &animg : RIA_refw.get().images){
+            for(const auto &kv : animg.metadata){
+                if(std::regex_match(kv.first, key_regex)){ // Check if key matches regex.
+                    vals.emplace_back(kv.second);
+                }
+            }
+        }
+
+        // Only keep distinct values.
+        vals.sort();
+        vals.unique();
+
         if(vals.size() != 1){
             throw std::invalid_argument("Reference image does not contain a single distinct b-value.");
         }
         bvalues.emplace_back( std::stod(vals.front()) );
+    }
+
+    //Stuff references to all contours into a list. Remember that you can still address specific contours through
+    // the original holding containers (which are not modified here).
+    auto cc_all = All_CCs( DICOM_data );
+    auto cc_ROIs = Whitelist( cc_all, { { "ROIName", ROILabelRegex },
+                                        { "NormalizedROIName", NormalizedROILabelRegex } } );
+    if(cc_ROIs.empty()){
+        throw std::invalid_argument("No contours selected. Cannot continue.");
     }
 
     // Sort the RIARL using bvalues, to simplify access later.

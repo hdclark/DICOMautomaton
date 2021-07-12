@@ -71,22 +71,41 @@ cp /scratch_base/xpra-xorg.conf /etc/X11/xorg.conf
 #
 # Note: Could also install build-deps for the distribution packages, but the dependencies are not
 #       guaranteed to be stable (e.g., major version bumps).
-mkdir -pv /wt
-cd /wt
-git clone https://github.com/emweb/wt.git .
-mkdir -p build && cd build
-cmake -DCMAKE_INSTALL_PREFIX=/usr ../
-JOBS=$(nproc)
-JOBS=$(( $JOBS < 8 ? $JOBS : 8 ))
-make -j "$JOBS" VERBOSE=1
-make install
-make clean
+if [ ! -d /wt ] ; then
+    mkdir -pv /wt
+    cd /wt
+    git clone https://github.com/emweb/wt.git .
+    mkdir -p build && cd build
+    cmake -DCMAKE_INSTALL_PREFIX=/usr ../
+    JOBS=$(nproc)
+    JOBS=$(( JOBS < 8 ? JOBS : 8 ))
+    make -j "$JOBS" VERBOSE=1
+    make install
+    make clean
 
-mkdir -pv /scratch_base
-cd /scratch_base
-apt-get install --yes \
-  -f ./libwt-dev_10.0_all.deb ./libwthttp-dev_10.0_all.deb
+    mkdir -pv /scratch_base
+    cd /scratch_base
+    apt-get install --yes \
+      -f ./libwt-dev_10.0_all.deb ./libwthttp-dev_10.0_all.deb
+fi
 
+# This function either freshly clones a git repository, or pulls from upstream remotes.
+# The return value can be used to determine whether recompilation is required.
+function clone_or_pull {
+    if git clone "$@" . ; then
+        return 0 # Requires compilation.
+    fi
+
+    if ! git fetch ; then
+        return 2 # Failure.
+    fi
+
+    if [ "$(git rev-parse HEAD)" == "$(git rev-parse '@{u}')" ] ; then
+        return 1 # Compilation not required.
+    fi
+    git merge
+}
+export -f clone_or_pull
 
 # Install Ygor.
 #
@@ -98,11 +117,13 @@ apt-get install --yes \
 # Option 2: clone the latest upstream commit.
 mkdir -pv /ygor
 cd /ygor
-git clone https://github.com/hdclark/Ygor .
-./compile_and_install.sh -b build
-git reset --hard
-git clean -fxd :/ 
-
+if clone_or_pull "https://github.com/hdclark/Ygor" ; then
+    ./compile_and_install.sh -b build
+    git reset --hard
+    git clean -fxd :/ 
+else
+    printf 'Ygor already up-to-date.\n'
+fi
 
 # Install Explicator.
 #
@@ -114,17 +135,22 @@ git clean -fxd :/
 # Option 2: clone the latest upstream commit.
 mkdir -pv /explicator
 cd /explicator
-git clone https://github.com/hdclark/explicator .
-./compile_and_install.sh -b build
-git reset --hard
-git clean -fxd :/ 
-
+if clone_or_pull "https://github.com/hdclark/explicator" ; then
+    ./compile_and_install.sh -b build
+    git reset --hard
+    git clean -fxd :/ 
+else
+    printf 'Explicator already up-to-date.\n'
+fi
 
 # Install YgorClustering.
 mkdir -pv /ygorcluster
 cd /ygorcluster
-git clone https://github.com/hdclark/YgorClustering .
-./compile_and_install.sh -b build
-git reset --hard
-git clean -fxd :/ 
+if clone_or_pull "https://github.com/hdclark/YgorClustering" ; then
+    ./compile_and_install.sh -b build
+    git reset --hard
+    git clean -fxd :/ 
+else
+    printf 'Ygor Clustering already up-to-date.\n'
+fi
 
