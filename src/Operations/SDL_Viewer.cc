@@ -1305,19 +1305,56 @@ script_files.back().content.emplace_back('\0');
                     sf_ptr->altered = true;
                 }
 
+                // Leave room for line numbers.
+                const auto orig_cursor_pos = ImGui::GetCursorPosX();
+                const auto orig_screen_pos = ImGui::GetCursorScreenPos();
+                //const auto text_vert_spacing = ImGui::GetTextLineHeightWithSpacing();
+                const auto text_vert_spacing = ImGui::GetTextLineHeight();
+                const auto vert_spacing = ImGui::GetStyle().ItemSpacing.y * 0.5; // Is this correct??? Seems OK, but is arbitrary.
+                const auto horiz_spacing = ImGui::GetStyle().ItemSpacing.x;
+                const float line_no_width = ImGui::GetFont()->CalcTextSizeA(ImGui::GetFontSize(), FLT_MAX, -1.0f, "12345", nullptr, nullptr).x;
+                ImGui::SetCursorPosX( orig_cursor_pos + line_no_width + horiz_spacing );
+
+                // Draw text entry box.
                 ImGuiInputTextFlags flags = ImGuiInputTextFlags_AllowTabInput
                                           | ImGuiInputTextFlags_CallbackResize
                                           | ImGuiInputTextFlags_CallbackEdit;
                 ImVec2 edit_box_extent = ImGui::GetContentRegionAvail();
-                const auto altered = ImGui::InputTextMultiline("##script_editor_active_content",
+                const auto altered = ImGui::InputTextMultiline("#script_editor_active_content",
                                                                sf_ptr->content.data(),
                                                                sf_ptr->content.capacity(),
                                                                edit_box_extent,
                                                                flags,
                                                                text_entry_callback,
                                                                reinterpret_cast<void*>(sf_ptr));
-                
                 if(altered == true) script_files.at(active_script_file).altered = true;
+
+                //const auto text_entry_ID = ImGui::GetCurrentContext()->LastActiveId; // ActiveIdPreviousFrame;
+                //const auto text_entry_ID = ImGui::GetID("#script_editor_active_content");
+                ImGui::Begin("Script Editor/#script_editor_active_content_9CF9E0D1"); // Terrible hacky workaround. FIXME. TODO.
+                const auto vert_scroll = ImGui::GetScrollY();
+                ImGui::End();
+
+                // Draw line numbers.
+                {
+                    auto drawList = ImGui::GetWindowDrawList();
+
+                    const auto text_ln = static_cast<int>(std::floor(vert_scroll / text_vert_spacing));
+                    const auto text_ln_max = std::max(0, text_ln + static_cast<int>(std::floor((vert_scroll + edit_box_extent.y) / text_vert_spacing)));
+                    const auto line_vert_shift = (vert_scroll / text_vert_spacing) - static_cast<float>(text_ln);
+
+                    for(int l = text_ln; l < text_ln_max; ++l){ 
+                        std::stringstream ss;
+                        ss << std::setw(5) << l;
+                        ImU32 colour = ImGui::GetColorU32(editing_contour_colour);
+                        drawList->AddText(
+                            ImVec2(orig_screen_pos.x,
+                                   orig_screen_pos.y + vert_spacing
+                                                     + text_vert_spacing * static_cast<float>(l - text_ln)
+                                                     - text_vert_spacing * line_vert_shift),
+                            colour, const_cast<char *>(ss.str().c_str()) );
+                    }
+                }
             }
 
             ImGui::End();
