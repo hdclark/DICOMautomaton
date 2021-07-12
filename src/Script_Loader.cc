@@ -53,7 +53,7 @@ bool Load_DCMA_Script(std::istream &is,
                                       + ": "_s + msg);
         };
 
-// TODO: convert to a custom character type with char count attributes?
+// TODO: convert to a custom character type with char count attributes? (Much easier diagnostics...)
 
         std::string shtl;
         std::string quote_stack; // Accounts for quotation.
@@ -144,8 +144,14 @@ bool Load_DCMA_Script(std::istream &is,
         if( !shtl.empty()
         &&  !std::all_of(std::begin(shtl), std::end(shtl),
                          [](unsigned char c){ return std::isspace(c); }) ){
-            report_input_error("Trailing input ("_s + Quote_Static_for_Bash(shtl) + "). Note: are you missing a semi-colon?");
+            --lcc;
+            report_input_error("Trailing input. (Are you missing a semicolon?)");
         }
+
+        // Check that there are no open quotes / parentheses.
+        if( !quote_stack.empty() ) report_input_error("Unmatched quotation ("_s + quote_stack.front() + ")");
+        if( !level_stack.empty() ) report_input_error("Unmatched parenthesis ("_s + level_stack.front() + ")");
+
     }
 
     
