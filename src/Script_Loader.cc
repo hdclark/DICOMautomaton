@@ -24,10 +24,11 @@
 #include "YgorMathIOSTL.h"
 #include "YgorString.h"       //Needed for SplitStringToVector, Canonicalize_String2, SplitVector functions.
 
-#include "Regex_Selectors.h"
+#include "Script_Loader.h"
 #include "Structs.h"
 
 bool Load_DCMA_Script(std::istream &is,
+                      std::list<script_feedback_t> &feedback,
                       std::list<OperationArgPkg> &op_list){
     std::list<OperationArgPkg> out;
 
@@ -43,14 +44,28 @@ bool Load_DCMA_Script(std::istream &is,
 
     std::vector<std::string> statements;
     {
+        long int cc = 0;  // Character count.
         long int lcc = 0; // Line character count.
         long int lc = 0;  // Line count.
 
         // Reports a message with accompanying character coordinates for the user.
-        const auto report_input_error = [&](const std::string &msg){
-            throw std::invalid_argument("Line "_s + std::to_string(lc)
-                                      + ", char "_s + std::to_string(lcc)
-                                      + ": "_s + msg);
+        const auto report_info = [&](const std::string &msg){
+            feedback.emplace_back();
+            feedback.back().severity = script_feedback_severity_t::info;
+            feedback.back().offset = cc;
+            feedback.back().line = lc;
+            feedback.back().line_offset = lcc;
+            feedback.back().message = msg;
+            return;
+        };
+        const auto report_error = [&](const std::string &msg){
+            feedback.emplace_back();
+            feedback.back().severity = script_feedback_severity_t::err;
+            feedback.back().offset = cc;
+            feedback.back().line = lc;
+            feedback.back().line_offset = lcc;
+            feedback.back().message = msg;
+            return;
         };
 
 // TODO: convert to a custom character type with char count attributes? (Much easier diagnostics...)
@@ -87,21 +102,24 @@ bool Load_DCMA_Script(std::istream &is,
                 if( !level_stack.empty() && (level_stack.back() == '(') ){
                     level_stack.pop_back();
                 }else{
-                    report_input_error("Unmatched ')'");
+                    report_error("Unmatched ')'");
+                    return false;
                 }
 
             }else if( !prev_escape && !inside_comment && (c == '}') ){
                 if( !level_stack.empty() && (level_stack.back() == '{') ){
                     level_stack.pop_back();
                 }else{
-                    report_input_error("Unmatched '}'");
+                    report_error("Unmatched '}'");
+                    return false;
                 }
 
             }else if( !prev_escape && !inside_comment && (c == ']') ){
                 if( !level_stack.empty() && (level_stack.back() == '[') ){
                     level_stack.pop_back();
                 }else{
-                    report_input_error("Unmatched ']'");
+                    report_error("Unmatched ']'");
+                    return false;
                 }
 
             // Line endings.
@@ -118,6 +136,11 @@ bool Load_DCMA_Script(std::istream &is,
                   &&  !inside_comment
                   &&  (c == ';')
                   &&  quote_stack.empty() ){
+
+                if( !level_stack.empty() ){
+                    report_error("Unmatched parenthesis ("_s + level_stack.front() + ")");
+                    return false;
+                }
                 statements.emplace_back(shtl);
                 shtl.clear();
                 skip_character = true;
@@ -136,6 +159,7 @@ bool Load_DCMA_Script(std::istream &is,
             if( !skip_character 
             &&  !inside_comment ) shtl.push_back(c);
             ++lcc;
+            ++cc;
 
             // Disable escape, if needed.
             if(!this_caused_escape) prev_escape = false;
@@ -145,13 +169,20 @@ bool Load_DCMA_Script(std::istream &is,
         &&  !std::all_of(std::begin(shtl), std::end(shtl),
                          [](unsigned char c){ return std::isspace(c); }) ){
             --lcc;
-            report_input_error("Trailing input. (Are you missing a semicolon?)");
+            report_error("Trailing input. (Are you missing a semicolon?)");
+            return false;
         }
 
         // Check that there are no open quotes / parentheses.
-        if( !quote_stack.empty() ) report_input_error("Unmatched quotation ("_s + quote_stack.front() + ")");
-        if( !level_stack.empty() ) report_input_error("Unmatched parenthesis ("_s + level_stack.front() + ")");
-
+        if( !quote_stack.empty() ){
+            report_error("Unmatched quotation ("_s + quote_stack.front() + ")");
+            return false;
+        }
+        if( !level_stack.empty() ){
+            report_error("Unmatched parenthesis ("_s + level_stack.front() + ")");
+            return false;
+        }
+        report_info("OK");
     }
 
     

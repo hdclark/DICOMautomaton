@@ -106,6 +106,7 @@ Drover SDL_Viewer(Drover DICOM_data,
     bool view_contouring_enabled = false;
     bool view_row_column_profiles = false;
     bool view_script_editor_enabled = false;
+    bool view_script_feedback = true;
     bool show_image_hover_tooltips = true;
     bool adjust_window_level_enabled = false;
     bool adjust_colour_map_enabled = false;
@@ -167,6 +168,11 @@ Drover SDL_Viewer(Drover DICOM_data,
     auto pos_contour_colour = ImVec4(0.0f, 0.0f, 1.0f, 1.0f);
     auto neg_contour_colour = ImVec4(1.0f, 0.0f, 0.0f, 1.0f);
     auto editing_contour_colour = ImVec4(1.0f, 0.45f, 0.0f, 1.0f);
+
+    auto line_numbers_normal_colour = ImVec4(1.0f, 1.0f, 1.0f, 0.3f);
+    auto line_numbers_info_colour   = ImVec4(0.4f, 0.4f, 1.0f, 0.7f);
+    auto line_numbers_warn_colour   = ImVec4(1.0f, 0.4f, 0.1f, 0.7f);
+    auto line_numbers_error_colour  = ImVec4(1.0f, 0.1f, 0.1f, 0.8f);
     
     const auto get_unique_colour = [](long int i){
         const std::vector<vec3<double>> colours = {
@@ -971,6 +977,7 @@ Drover SDL_Viewer(Drover DICOM_data,
         std::filesystem::path path;
         bool altered = false;
         std::vector<char> content;
+        std::list<script_feedback_t> feedback; // Compilation/validation messages.
     };
     std::vector<script_file> script_files;
     long int active_script_file = -1;
@@ -1076,6 +1083,7 @@ if(false){
                     col_profile.samples.clear();
                 };
                 ImGui::MenuItem("Script Editor", nullptr, &view_script_editor_enabled);
+                ImGui::MenuItem("Script Feedback", nullptr, &view_script_feedback);
                 ImGui::EndMenu();
             }
             if(ImGui::BeginMenu("Adjust")){
@@ -1204,18 +1212,58 @@ script_files.back().content.emplace_back('\0');
                 }
             }
 
-            if(ImGui::Button("Check", ImVec2(window_extent.x/4, 0))){ 
+            if(ImGui::Button("Validate", ImVec2(window_extent.x/4, 0))){ 
                 if(isininc(0, active_script_file, N_sfs-1)){
                     std::stringstream ss( std::string( std::begin(script_files.at(active_script_file).content),
                                                        std::end(script_files.at(active_script_file).content) ) );
+                    script_files.at(active_script_file).feedback.clear();
                     std::list<OperationArgPkg> op_list;
                     try{
-                        const auto res = Load_DCMA_Script( ss, op_list );
+                        const auto res = Load_DCMA_Script( ss, script_files.at(active_script_file).feedback, op_list );
+                        view_script_feedback = true;
                         FUNCINFO("Script parsed OK");
                     }catch(const std::exception &e){
                         FUNCWARN("Script parsing failed: " << e.what());
                     }
                 }
+            }
+
+            if( isininc(0, active_script_file, N_sfs-1)
+            &&  !(script_files.at(active_script_file).feedback.empty())
+            &&  view_script_feedback ){
+                ImGui::SetNextWindowSize(ImVec2(650, 250), ImGuiCond_Appearing);
+                ImGui::SetNextWindowPos(ImVec2(650, 500), ImGuiCond_Appearing);
+                ImGui::Begin("Script Feedback", &view_script_feedback );
+
+                for(const auto &f : script_files.at(active_script_file).feedback){
+                    if(false){
+                    }else if(f.severity == script_feedback_severity_t::info){
+                        std::stringstream ss;
+                        ss << "Info:    ";
+                        ImGui::TextColored(line_numbers_info_colour, "%s", const_cast<char *>(ss.str().c_str()));
+                    }else if(f.severity == script_feedback_severity_t::warn){
+                        std::stringstream ss;
+                        ss << "Warning: ";
+                        ImGui::TextColored(line_numbers_warn_colour, "%s", const_cast<char *>(ss.str().c_str()));
+                    }else if(f.severity == script_feedback_severity_t::err){
+                        std::stringstream ss;
+                        ss << "Error:   ";
+                        ImGui::TextColored(line_numbers_error_colour, "%s", const_cast<char *>(ss.str().c_str()));
+                    }else{
+                        throw std::logic_error("Unrecognized severity level");
+                    }
+                    ImGui::SameLine();
+
+                    std::stringstream ss;
+                    ss << "line " << f.line 
+                       << ", char " << f.line_offset
+                       << ": " << f.message
+                       << std::endl
+                       << std::endl;
+                    ImGui::Text("%s", const_cast<char *>(ss.str().c_str()));
+                }
+
+                ImGui::End();
             }
 
             // Pop-up to query the user for a filename.
@@ -1335,7 +1383,7 @@ script_files.back().content.emplace_back('\0');
                 const auto vert_scroll = ImGui::GetScrollY();
                 ImGui::End();
 
-                // Draw line numbers.
+                // Draw line numbers, including compilation feedback if applicable.
                 {
                     auto drawList = ImGui::GetWindowDrawList();
 
@@ -1344,9 +1392,25 @@ script_files.back().content.emplace_back('\0');
                     const auto line_vert_shift = (vert_scroll / text_vert_spacing) - static_cast<float>(text_ln);
 
                     for(int l = text_ln; l < text_ln_max; ++l){ 
+                        ImU32 colour = ImGui::GetColorU32(line_numbers_normal_colour);
+                        if(view_script_feedback){
+                            for(const auto &f : script_files.at(active_script_file).feedback){
+                                if(l != f.line) continue;
+                                if(false){
+                                }else if(f.severity == script_feedback_severity_t::info){
+                                    colour = ImGui::GetColorU32(line_numbers_info_colour);
+                                }else if(f.severity == script_feedback_severity_t::warn){
+                                    colour = ImGui::GetColorU32(line_numbers_warn_colour);
+                                }else if(f.severity == script_feedback_severity_t::err){
+                                    colour = ImGui::GetColorU32(line_numbers_error_colour);
+                                }else{
+                                    throw std::logic_error("Unrecognized severity level");
+                                }
+                            }
+                        }
+
                         std::stringstream ss;
                         ss << std::setw(5) << l;
-                        ImU32 colour = ImGui::GetColorU32(editing_contour_colour);
                         drawList->AddText(
                             ImVec2(orig_screen_pos.x,
                                    orig_screen_pos.y + vert_spacing
