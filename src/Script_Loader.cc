@@ -27,57 +27,67 @@
 #include "Script_Loader.h"
 #include "Structs.h"
 
-bool Load_DCMA_Script(std::istream &is,
-                      std::list<script_feedback_t> &feedback,
-                      std::list<OperationArgPkg> &op_list){
-    std::list<OperationArgPkg> out;
+// A parsed character from a stream that is imbued with additional metadata from the stream.
+struct char_with_context_t {
+    char c = '\0';
+    long int cc  = -1; // Total character count (offset from beginning of stream/file).
+    long int lc  = -1; // Line count (which line the character is on).
+    long int lcc = -1; // Line character count (offset from beginning of line).
+
+    char_with_context_t() = default;
+    char_with_context_t(const char_with_context_t &) = default;
+    char_with_context_t & operator=(const char_with_context_t &) = default;
+    bool operator==(const char x){
+        return (this->c == x);
+    };
+    bool operator==(const char_with_context_t &rhs){
+        return (this->c == rhs.c);
+    };
+    void set_missing_lc_lcc(long int l_c, long int l_cc){
+        if(this->lc < 0) this->lc = l_c;
+        if(this->lcc < 0) this->lcc = l_cc;
+        return;
+    }
+};
+
+// Reports a message with accompanying character coordinates for the user.
+
+void report( std::list<script_feedback_t> &feedback,
+             script_feedback_severity_t severity,
+             const char_with_context_t &c,
+             const std::string &msg ){
+    feedback.emplace_back();
+    feedback.back().severity = severity;
+    feedback.back().offset = c.cc;
+    feedback.back().line = c.lc;
+    feedback.back().line_offset = c.lcc;
+    feedback.back().message = msg;
+    return;
+};
 
 
-    // Treat the file like a linear string of characters, ignoring whitespace.
-    std::string contents;
-    std::copy(std::istreambuf_iterator<char>(is),
-              std::istreambuf_iterator<char>(),
-              std::back_inserter(contents));
-//FUNCINFO("The script file contents are: '" << contents << "'");
+// Split into statements, respecting quotations, parentheses, and escaping.
+bool
+Split_into_Statements( std::vector<char_with_context_t> &contents,
+                       std::vector<std::vector<char_with_context_t>> &statements,
+                       std::list<script_feedback_t> &feedback ){
 
     // Split into statements, respecting quotations and escaping.
-
-    std::vector<std::string> statements;
-    {
-        long int cc = 0;  // Character count.
+    if(!contents.empty()){
         long int lcc = 0; // Line character count.
         long int lc = 0;  // Line count.
 
-        // Reports a message with accompanying character coordinates for the user.
-        const auto report_info = [&](const std::string &msg){
-            feedback.emplace_back();
-            feedback.back().severity = script_feedback_severity_t::info;
-            feedback.back().offset = cc;
-            feedback.back().line = lc;
-            feedback.back().line_offset = lcc;
-            feedback.back().message = msg;
-            return;
-        };
-        const auto report_error = [&](const std::string &msg){
-            feedback.emplace_back();
-            feedback.back().severity = script_feedback_severity_t::err;
-            feedback.back().offset = cc;
-            feedback.back().line = lc;
-            feedback.back().line_offset = lcc;
-            feedback.back().message = msg;
-            return;
-        };
-
-// TODO: convert to a custom character type with char count attributes? (Much easier diagnostics...)
-
-        std::string shtl;
-        std::string quote_stack; // Accounts for quotation.
-        std::string level_stack; // Accounts for parentheses nesting.
+        std::vector<char_with_context_t> shtl;
+        std::vector<char_with_context_t> quote_stack; // Accounts for quotation.
+        std::vector<char_with_context_t> level_stack; // Accounts for parentheses nesting.
         bool prev_escape = false;
         bool inside_comment = false;
-        for(const auto &c : contents){
+        for(auto &c : contents){
             bool this_caused_escape = false;
             bool skip_character = false;
+
+            // Fill-in missing character metadata.
+            c.set_missing_lc_lcc(lc, lcc);
 
             // Comments.
             if(false){
@@ -102,7 +112,10 @@ bool Load_DCMA_Script(std::istream &is,
                 if( !level_stack.empty() && (level_stack.back() == '(') ){
                     level_stack.pop_back();
                 }else{
-                    report_error("Unmatched ')'");
+                    report(feedback, script_feedback_severity_t::err, c,
+                                    "Unmatched ')'"_s
+                                    + " (conflicting '"_s + level_stack.back().c 
+                                    + "' on line "_s + std::to_string(level_stack.back().lc) + "?)");
                     return false;
                 }
 
@@ -110,7 +123,10 @@ bool Load_DCMA_Script(std::istream &is,
                 if( !level_stack.empty() && (level_stack.back() == '{') ){
                     level_stack.pop_back();
                 }else{
-                    report_error("Unmatched '}'");
+                    report(feedback, script_feedback_severity_t::err, c,
+                                    "Unmatched '}'"_s
+                                    + " (conflicting '"_s + level_stack.back().c 
+                                    + "' on line "_s + std::to_string(level_stack.back().lc) + "?)");
                     return false;
                 }
 
@@ -118,7 +134,10 @@ bool Load_DCMA_Script(std::istream &is,
                 if( !level_stack.empty() && (level_stack.back() == '[') ){
                     level_stack.pop_back();
                 }else{
-                    report_error("Unmatched ']'");
+                    report(feedback, script_feedback_severity_t::err, c,
+                                    "Unmatched ']'"_s
+                                    + " (conflicting '"_s + level_stack.back().c 
+                                    + "' on line "_s + std::to_string(level_stack.back().lc) + "?)");
                     return false;
                 }
 
@@ -135,12 +154,9 @@ bool Load_DCMA_Script(std::istream &is,
             }else if( !prev_escape 
                   &&  !inside_comment
                   &&  (c == ';')
-                  &&  quote_stack.empty() ){
+                  &&  quote_stack.empty()
+                  &&  level_stack.empty() ){
 
-                if( !level_stack.empty() ){
-                    report_error("Unmatched parenthesis ("_s + level_stack.front() + ")");
-                    return false;
-                }
                 statements.emplace_back(shtl);
                 shtl.clear();
                 skip_character = true;
@@ -159,7 +175,6 @@ bool Load_DCMA_Script(std::istream &is,
             if( !skip_character 
             &&  !inside_comment ) shtl.push_back(c);
             ++lcc;
-            ++cc;
 
             // Disable escape, if needed.
             if(!this_caused_escape) prev_escape = false;
@@ -167,24 +182,50 @@ bool Load_DCMA_Script(std::istream &is,
 
         if( !shtl.empty()
         &&  !std::all_of(std::begin(shtl), std::end(shtl),
-                         [](unsigned char c){ return std::isspace(c); }) ){
-            --lcc;
-            report_error("Trailing input. (Are you missing a semicolon?)");
+                         [](const char_with_context_t &c){ return std::isspace(static_cast<char>(c.c)); }) ){
+            report(feedback, script_feedback_severity_t::err, contents.back(),
+                   "Trailing input. (Are you missing a semicolon?)");
             return false;
         }
 
         // Check that there are no open quotes / parentheses.
         if( !quote_stack.empty() ){
-            report_error("Unmatched quotation ("_s + quote_stack.front() + ")");
+            report(feedback, script_feedback_severity_t::err, contents.back(),
+                   "Unmatched quotation ("_s + quote_stack.back().c + " from line "_s + std::to_string(quote_stack.back().lc) + ")");
             return false;
         }
         if( !level_stack.empty() ){
-            report_error("Unmatched parenthesis ("_s + level_stack.front() + ")");
+            report(feedback, script_feedback_severity_t::err, contents.back(),
+                   "Unmatched parenthesis ("_s + level_stack.back().c + " from line "_s + std::to_string(quote_stack.back().lc) + ")");
             return false;
         }
-        report_info("OK");
+    }
+    return true;
+}
+
+bool Load_DCMA_Script(std::istream &is,
+                      std::list<script_feedback_t> &feedback,
+                      std::list<OperationArgPkg> &op_list){
+
+    // Treat the file like a linear string of characters, including whitespace.
+    std::vector<char_with_context_t> contents;
+    {
+        const auto end_it = std::istreambuf_iterator<char>();
+        long int i = 0;
+        for(auto c_it = std::istreambuf_iterator<char>(is); c_it != end_it; ++c_it, ++i){
+            contents.emplace_back();
+            contents.back().c  = *c_it;
+            contents.back().cc = i;
+        }
     }
 
+    std::list<OperationArgPkg> out;
+    std::vector<std::vector<char_with_context_t>> statements;
+    if(!Split_into_Statements(contents, statements, feedback)){
+        return false;
+    }
+
+    report(feedback, script_feedback_severity_t::info, contents.back(), "OK");
     
 // for(size_t i = 0; i < statements.size(); ++i){
 // FUNCINFO("Statement " << i << " = '" << Quote_Static_for_Bash( statements[i] ));
