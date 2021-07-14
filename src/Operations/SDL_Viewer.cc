@@ -1152,17 +1152,27 @@ if(false){
 ////////////////
 const std::string testing_content = R"***(
 
-line3function(a = 123,
-              b = 234 );
+variable = "something";
+operation1(a = 123,
+          b = "234",
+          c = 3\45,
+          d = "45\6",
+          e = '56\7',
+          f = variable );
 
-line6function(a = "this is a quotation; the parser should ignore the semicolon",
-              b = {This is another grouping\; the semicolon should be escaped});
-
-line9statement = { a = "This should work for now too",
-                   b = "Though I'm not sure if it will be useful?",
-                   c = "Gives me a strong Nix-lang feel..." };
 # This is a comment. It should be ignored, including syntax errors like ;'"(]'\"".
 # This is another comment.
+operation2(x = "123",
+          # This is another comment.
+          y = 456){
+
+    # This is a nested statement. Recursive statements are supported.
+    operation3(z = 789){
+        operation4(w = "abc");
+    };
+
+};
+
 )***";
 script_files.back().content.clear();
 for(const auto &c : testing_content) script_files.back().content.emplace_back(c);
@@ -1218,13 +1228,8 @@ script_files.back().content.emplace_back('\0');
                                                        std::end(script_files.at(active_script_file).content) ) );
                     script_files.at(active_script_file).feedback.clear();
                     std::list<OperationArgPkg> op_list;
-                    try{
-                        const auto res = Load_DCMA_Script( ss, script_files.at(active_script_file).feedback, op_list );
-                        view_script_feedback = true;
-                        FUNCINFO("Script parsed OK");
-                    }catch(const std::exception &e){
-                        FUNCWARN("Script parsing failed: " << e.what());
-                    }
+                    const auto res = Load_DCMA_Script( ss, script_files.at(active_script_file).feedback, op_list );
+                    view_script_feedback = true;
                 }
             }
 
