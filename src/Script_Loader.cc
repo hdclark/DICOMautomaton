@@ -145,6 +145,7 @@ void report( std::list<script_feedback_t> &feedback,
 bool
 Split_into_Statements( std::vector<char_with_context_t> &contents,
                        std::vector<script_statement_t> &statements,
+                       const std::vector<script_statement_t> &variables,
                        std::list<script_feedback_t> &feedback ){
 
     std::vector<script_statement_t> l_statements;
@@ -507,7 +508,12 @@ Split_into_Statements( std::vector<char_with_context_t> &contents,
     for(auto &s : l_statements){
         const auto end_it = std::end(s.arguments);
         for(auto a_it = std::begin(s.arguments); a_it != end_it; ++a_it){
-            if(!a_it->first.empty()){
+            if(a_it->first.empty()){
+                report(feedback, script_feedback_severity_t::err, s.get_valid_cwct(),
+                       "Argument is unnamed.");
+                compilation_successful = false;
+
+            }else{
                 for(auto b_it = std::next(a_it); b_it != end_it; ++b_it){
                     if(a_it->first == b_it->first){
                         report(feedback, script_feedback_severity_t::warn, b_it->first.front(),
@@ -519,23 +525,97 @@ Split_into_Statements( std::vector<char_with_context_t> &contents,
         }
     }
 
-    // Ensure variables do not clash with provided variable definitions.
+    // All variables (defined in the current scope) are unique and non-empty.
+    for(auto s1_it = std::begin(l_statements); s1_it != std::end(l_statements); ++s1_it){
+        for(auto s2_it = std::next(s1_it); s2_it != std::end(l_statements); ++s2_it){
+            if( s1_it->is_var()
+            &&  s2_it->is_var()
+            &&  (to_str(s1_it->var_name) == to_str(s2_it->var_name)) ){
+                report(feedback, script_feedback_severity_t::warn, s2_it->get_valid_cwct(),
+                       "Duplicate variable assignment (previously assigned on line "_s
+                       + std::to_string(s1_it->get_valid_cwct().lc) + ").");
+            }
+        }
+    }
 
-    // ... TODO ...
-    // ... (Note: also have to pass variable definitions to nested scopes!) ...
+    // Warn when variables supercede prior variable definitions.
+    std::vector<script_statement_t> l_variables;
+    for(const auto &v : variables){
+        if( !v.is_var() ){
+            report(feedback, script_feedback_severity_t::err, v.get_valid_cwct(),
+                   "Unable to handle as a variable.");
+            compilation_successful = false;
+        }
 
+        bool is_superceded = false;
+        for(const auto &s : l_statements){
+            if( s.is_var()
+            &&  v.is_var()
+            &&  (to_str(s.var_name) == to_str(v.var_name)) ){
+                report(feedback, script_feedback_severity_t::warn, s.get_valid_cwct(),
+                       "Variable declaration supercedes earlier definition (on line "_s
+                       + std::to_string(v.get_valid_cwct().lc) + ").");
+                is_superceded = true;
+            }
+        }
+
+        if(!is_superceded) l_variables.emplace_back(v);
+    }
+    // Add local variables in reverse order to later variable assignments supercede earlier assignments.
+    for(auto s_it = std::rbegin(l_statements); s_it != std::rend(l_statements); ++s_it){
+        if(s_it->is_var()) l_variables.emplace_back(*s_it);
+    }
 
     // Perform variable replacements.
-
-    // ... TODO ...
-    // ... (Note: also have to pass variable definitions to nested scopes!) ...
-    // ... (Note: can repeatedly do so to get macro-like expansions) ...
-
+    //
+    // Note: at the moment, only exact matches are supported. Arithmetic expressions, for example, are not currently
+    // supported.
+    for(auto &s : l_statements){
+        long int iter = 0;
+        while(true){
+            bool replacement_made = false;
+            for(const auto &v : l_variables){
+                const auto var_name = to_str(v.var_name);
+                if(s.is_var()){
+                    if(var_name == to_str(s.payload)){
+                        s.payload = v.payload;
+                        replacement_made = true;
+                    }
+                }
+                if(s.is_func()){
+                    if(var_name == to_str(s.func_name)){
+                        s.func_name = v.payload;
+                        replacement_made = true;
+                    }
+                    for(auto &a : s.arguments){
+                        if(var_name == to_str(a.second)){
+                            a.second = v.payload;
+                            replacement_made = true;
+                        }
+                    }
+                }
+            }
+            if( 100L < ++iter ){
+                report(feedback, script_feedback_severity_t::warn, s.get_valid_cwct(),
+                       "Variable replacement exceeded 100 iterations.");
+                compilation_successful = false;
+                break;
+            }
+            if(!replacement_made) break;
+        }
+    }
+    // Remove variables from the statements.
+    l_statements.erase( std::remove_if( std::begin(l_statements), std::end(l_statements),
+                                        [](const script_statement_t &s){ return s.is_var(); } ),
+                        std::end(l_statements) );
 
     // Recurse for operations that have payloads, extracting nested statements.
     for(auto &s : l_statements){
         if(s.is_func() && !s.payload.empty()){
-            const bool res = Split_into_Statements(s.payload, s.child_statements, feedback);
+            const bool res = Split_into_Statements(s.payload,
+                                                   s.child_statements,
+                                                   l_variables,
+                                                   feedback);
             if(res){
                 s.payload.clear();
             }else{
@@ -568,9 +648,11 @@ bool Load_DCMA_Script(std::istream &is,
     }
 
     std::vector<script_statement_t> statements;
-    if(!Split_into_Statements(contents, statements, feedback)){
+    std::vector<script_statement_t> variables;
+    if(!Split_into_Statements(contents, statements, variables, feedback)){
         return false;
     }
+
 
     std::function<void(const std::vector<script_statement_t> &, std::string)> recursively_print_statements;
     recursively_print_statements = [&](const std::vector<script_statement_t> &statements,
@@ -608,30 +690,8 @@ bool Load_DCMA_Script(std::istream &is,
     };
     recursively_print_statements(statements, "    ");
 
-    report(feedback, script_feedback_severity_t::info, contents.back(), "Initial statement extraction OK");
+    report(feedback, script_feedback_severity_t::info, contents.back(), "OK");
     
-
-/* 
-    const auto regex_comment = Compile_Regex(R"***(^[ \t]*#.*|^[ \t]*\/\/.*)***");
-
-    size_t i = 0; // Current character.
-
-    std::string contents;
-    std::string line;
-    while(std::getline(is, line)){
-        if(std::regex_match(line, regex_comment)) continue;
-        contents += line + " ";
-    }
-
-    // Split on semicolons.
-
-    // ... TODO ...
-
-    // Separate operation names, parameters, and nested children.
-
-    // ... TODO ...
-*/
-
     op_list.splice( std::end(op_list), out);
     return true;
 }

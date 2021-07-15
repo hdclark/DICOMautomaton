@@ -171,7 +171,7 @@ Drover SDL_Viewer(Drover DICOM_data,
 
     auto line_numbers_normal_colour = ImVec4(1.0f, 1.0f, 1.0f, 0.3f);
     auto line_numbers_info_colour   = ImVec4(0.4f, 0.4f, 1.0f, 0.7f);
-    auto line_numbers_warn_colour   = ImVec4(1.0f, 0.4f, 0.1f, 0.7f);
+    auto line_numbers_warn_colour   = ImVec4(0.7f, 0.5f, 0.1f, 0.8f);
     auto line_numbers_error_colour  = ImVec4(1.0f, 0.1f, 0.1f, 0.8f);
     
     const auto get_unique_colour = [](long int i){
@@ -1153,6 +1153,10 @@ if(false){
 const std::string testing_content = R"***(
 
 variable = "something";
+variable = "something else";
+
+variable_op = "operation2";
+
 operation1(a = 123,
           b = "234",
           c = 3\45,
@@ -1162,13 +1166,14 @@ operation1(a = 123,
 
 # This is a comment. It should be ignored, including syntax errors like ;'"(]'\"".
 # This is another comment.
-operation2(x = "123",
+variable_op(x = "123",
           # This is another comment.
           y = 456){
 
     # This is a nested statement. Recursive statements are supported.
     operation3(z = 789){
-        operation4(w = "abc");
+        variable = "something new";
+        operation4(w = variable);
     };
 
 };
