@@ -326,12 +326,6 @@ Split_into_Statements( std::vector<char_with_context_t> &contents,
                   &&  bumpy_stack.empty()
                   &&  (c == ')') ){
 
-                //report(feedback, script_feedback_severity_t::err, c,
-                //                "Unmatched ')'"_s
-                //                + " (conflicting '"_s + curve_stack.back().c 
-                //                + "' on line "_s + std::to_string(curve_stack.back().lc) + "?)");
-                //compilation_successful = false;
-
                 if( (curve_stack.size() == 1)
                 &&  (curve_stack.back() == '(')
                 &&  !l_statements.back().arguments.empty() ){
@@ -387,12 +381,6 @@ Split_into_Statements( std::vector<char_with_context_t> &contents,
 //FUNCINFO("Pushing back variable equals '" << to_str(shtl) << "'");
                     l_statements.back().payload = shtl;
                 }
-/*
-                if(!l_statements.back().var_name.empty()){
-                    report(feedback, script_feedback_severity_t::err, c, "Missing variable name for assignment");
-                    compilation_successful = false;
-                }
-*/
 
                 l_statements.emplace_back();
                 shtl.clear();
@@ -596,8 +584,8 @@ Split_into_Statements( std::vector<char_with_context_t> &contents,
                 }
             }
             if( 100L < ++iter ){
-                report(feedback, script_feedback_severity_t::warn, s.get_valid_cwct(),
-                       "Variable replacement exceeded 100 iterations.");
+                report(feedback, script_feedback_severity_t::err, s.get_valid_cwct(),
+                       "Variable replacement exceeded 100 replacement iterations.");
                 compilation_successful = false;
                 break;
             }
