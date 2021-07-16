@@ -10,12 +10,14 @@
 #include <chrono>
 using namespace std::chrono;
 
+// Calculate centre matrix X hat and Y hat for rigid and affine algorithms
 Eigen::MatrixXf CenterMatrix(const Eigen::MatrixXf & points,
             const Eigen::MatrixXf & meanVector) {
     Eigen::MatrixXf oneVec = Eigen::MatrixXf::Ones(points.rows(),1);
     return points - oneVec * meanVector.transpose();
 }
 
+// Calculate translation vector for rigid and affine algorithms
 Eigen::MatrixXf GetTranslationVector(const Eigen::MatrixXf & rotationMatrix,
             const Eigen::MatrixXf & xMeanVector,
             const Eigen::MatrixXf & yMeanVector,
@@ -23,6 +25,7 @@ Eigen::MatrixXf GetTranslationVector(const Eigen::MatrixXf & rotationMatrix,
     return xMeanVector - scale * rotationMatrix * yMeanVector;
 }
 
+// Calculate the aligned point set for rigid and affine algorithms
 Eigen::MatrixXf AlignedPointSet(const Eigen::MatrixXf & yPoints,
             const Eigen::MatrixXf & rotationMatrix,
             const Eigen::MatrixXf & translation,
@@ -32,6 +35,7 @@ Eigen::MatrixXf AlignedPointSet(const Eigen::MatrixXf & yPoints,
     return scale * yPoints * rotationMatrix.transpose() + oneVec * translation.transpose();
 }
 
+// Calculate initial value for sigma squared for rigid and affine algorithms
 double Init_Sigma_Squared(const Eigen::MatrixXf & xPoints,
             const Eigen::MatrixXf & yPoints) {
     double normSum = 0;
@@ -50,6 +54,7 @@ double Init_Sigma_Squared(const Eigen::MatrixXf & xPoints,
     return 1.0 / (nRowsX * mRowsY * dim) * normSum;
 }
 
+// Calculate similarity between x points and aligned y points for rigid and affine algorithms
 double GetSimilarity(const Eigen::MatrixXf & xPoints,
             const Eigen::MatrixXf & yPoints,
             const Eigen::MatrixXf & rotationMatrix,
@@ -80,6 +85,7 @@ double GetSimilarity(const Eigen::MatrixXf & xPoints,
     return sum;
 }
 
+// Calculate objective function for rigid and affine algorithms
 double GetObjective(const Eigen::MatrixXf & xPoints,
             const Eigen::MatrixXf & yPoints,
             const Eigen::MatrixXf & postProb,
@@ -107,6 +113,7 @@ double GetObjective(const Eigen::MatrixXf & xPoints,
     return leftSum + rightSum;
 }
 
+// Calculate posterior probability matrix in the E step for rigid and affine algorithms
 Eigen::MatrixXf E_Step(const Eigen::MatrixXf & xPoints,
             const Eigen::MatrixXf & yPoints,
             const Eigen::MatrixXf & rotationMatrix,
@@ -127,18 +134,18 @@ Eigen::MatrixXf E_Step(const Eigen::MatrixXf & xPoints,
     int dimensionality = yPoints.cols();
 
     for (int m = 0; m < mRowsY; ++m) {
+        tempVector = scale * rotationMatrix * yPoints.row(m).transpose() + t;
         for (int n = 0; n < nRowsX; ++n) {
-            tempVector = xPoints.row(n).transpose() - (scale * rotationMatrix * yPoints.row(m).transpose() + t);
-            expArg = - 1.0 / (2 * sigmaSquared) * tempVector.squaredNorm();
+            expArg = - 1.0 / (2 * sigmaSquared) * (xPoints.row(n).transpose() - tempVector).squaredNorm();
             expMat(m,n) = exp(expArg);
         }
     }
 
-    for (int m = 0; m < mRowsY; ++m) {
-        for (int n = 0; n < nRowsX; ++n) {
-            numerator = expMat(m,n);
-            denominator = expMat.col(n).sum() + 
+    for (int n = 0; n < nRowsX; ++n) {
+        denominator = expMat.col(n).sum() + 
                           pow(2 * M_PI * sigmaSquared,((double)(dimensionality/2.0))) * (w/(1-w)) * ((double) mRowsY / nRowsX);
+        for (int m = 0; m < mRowsY; ++m) {
+            numerator = expMat(m,n);
             postProb(m,n) = numerator / denominator;
         }
     }
@@ -146,6 +153,7 @@ Eigen::MatrixXf E_Step(const Eigen::MatrixXf & xPoints,
     return postProb;
 }
 
+// Calculate mean vector Ux for rigid and affine algorithms
 Eigen::MatrixXf CalculateUx(
             const Eigen::MatrixXf & xPoints, 
             const Eigen::MatrixXf & postProb){
@@ -154,6 +162,7 @@ Eigen::MatrixXf CalculateUx(
     return oneOverNp * (xPoints.transpose()) * postProb.transpose() * oneVec;
 }
 
+// Calculate mean vector Uy for rigid and affine algorithms
 Eigen::MatrixXf CalculateUy( 
             const Eigen::MatrixXf & yPoints, 
             const Eigen::MatrixXf & postProb){

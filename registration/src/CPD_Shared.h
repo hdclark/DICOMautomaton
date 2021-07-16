@@ -27,6 +27,7 @@ struct CPDParams {
     double power_tol = 0.000001;
     //FGT
     bool use_fgt = false;
+    double epsilon = 0;
 };
 
 double Init_Sigma_Squared(const Eigen::MatrixXf & xPoints,

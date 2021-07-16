@@ -2,7 +2,7 @@
 #include <stdlib.h>
 
 // #include "YgorFilesDirs.h"    //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
-// #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 // #include "YgorMath.h"         //Needed for samples_1D.
 // #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
@@ -10,20 +10,6 @@
 #include <limits>
 #include <algorithm> // dunno if its in docker
 #include <cmath>
-
-/*
-    int dim;
-    int max_truncation; // max truncation number (p)
-    int p_max_total; // length of monomials after multi index expansion
-    double bandwidth; 
-    double epsilon;
-    int n_clusters;
-    double cutoff_radius;
-    Eigen::MatrixXf source_pts;
-    Eigen::MatrixXf constant_series;
-    std::unique_ptr<Cluster> cluster; 
-
-*/
 
 IFGT::IFGT(const Eigen::MatrixXf & source_pts,
             double bandwidth, 
@@ -33,8 +19,7 @@ IFGT::IFGT(const Eigen::MatrixXf & source_pts,
             epsilon     (epsilon), 
             dim         (source_pts.cols()){
 
-    // dim = source_pts.cols();
-
+    // Optional: check time taken for different ifgt functions
     // auto time1 = std::chrono::high_resolution_clock::now();
 
     ifgt_choose_parameters();
@@ -64,6 +49,7 @@ IFGT::IFGT(const Eigen::MatrixXf & source_pts,
     // std::cout << "compute_constant_series: " << time_span.count() << " s" << std::endl;   
 }
 
+
 // autotuning of ifgt parameters
 void IFGT::ifgt_choose_parameters() {
 
@@ -74,6 +60,7 @@ void IFGT::ifgt_choose_parameters() {
     if (max_clusters > source_pts.rows()) {
         max_clusters = source_pts.rows() / 2; //  just a guess
     }
+    
     // std::cout << "MAX clusters: " << max_clusters << std::endl;
     int p_ul = 200; // estimate                           // from papers authors
     int max_truncation = 1;
@@ -146,7 +133,7 @@ void IFGT::ifgt_update_max_truncation(double rx_max) {
     this->max_truncation_p = p;
 }
 
-// computes 2^alpha/alpha!
+// computes 2 ^ alpha / alpha!
 // use in constructor
 void IFGT::compute_constant_series() {
     int *heads = new int[dim+1];
@@ -231,7 +218,6 @@ Eigen::MatrixXf IFGT::compute_ck(const Eigen::ArrayXf & weights){
         // auto time_span = std::chrono::duration_cast<std::chrono::duration<double>>(time2 - time1);
         // std::cout << "computing norm_squared " << time_span.count() << " s, " << "iteration: " << i << std::endl;
 
-
         auto monomials = compute_monomials(dx);
 
         // auto time3 = std::chrono::high_resolution_clock::now();
@@ -304,19 +290,8 @@ Eigen::MatrixXf IFGT::compute_gaussian(const Eigen::MatrixXf & target_pts,
     return G_y;
 
 }
-// Eigen::MatrixXf IFGT::compute_naive(const Eigen::MatrixXf & target_pts, const Eigen::ArrayXf & weights) {
-//     Eigen::MatrixXf G_naive = Eigen::MatrixXf::Zero(target_pts.rows(),1);
-//     double h2 = bandwidth * bandwidth;
-//     for (int m = 0; m < target_pts.rows(); ++m) {
-//         for (int n = 0; n < source_pts.rows(); ++n) {
-//             double expArg = - 1.0 / h2 * (target_pts.row(m) - source_pts.row(n)).squaredNorm();
-//             G_naive(m) += weights(n) * std::exp(expArg);
-//         }
-//     }
-//     return G_naive;
-// }
 
-// ttwo different computes for weights and no weights 
+// two different computes for weights and no weights 
 Eigen::MatrixXf IFGT::compute_ifgt(const Eigen::MatrixXf & target_pts) {
     Eigen::ArrayXf ones_array = Eigen::ArrayXf::Ones(source_pts.rows(),1);
 
@@ -329,7 +304,7 @@ Eigen::MatrixXf IFGT::compute_ifgt(const Eigen::MatrixXf & target_pts) {
     // auto time1 = std::chrono::high_resolution_clock::now();
 
     if (ifgt_complexity < naive_complexity) {
-        // std::cout << "Running IFGT" << std::endl;
+        FUNCINFO("Running IFGT");
         Eigen::MatrixXf C_k = compute_ck(ones_array);
         // auto time2 = std::chrono::high_resolution_clock::now();
         // auto time_span = std::chrono::duration_cast<std::chrono::duration<double>>(time2 - time1);
@@ -341,7 +316,7 @@ Eigen::MatrixXf IFGT::compute_ifgt(const Eigen::MatrixXf & target_pts) {
         // std::cout << "compute_gaussian: " << time_span.count() << " s" << std::endl;
     } 
     else {
-        std::cout << "Running Naive" << std::endl;
+        FUNCINFO("Running Naive");
         G_y = compute_naive_gt(target_pts, source_pts, ones_array, bandwidth);
         // auto time4 = std::chrono::high_resolution_clock::now();
         // auto time_span = std::chrono::duration_cast<std::chrono::duration<double>>(time4 - time1);
@@ -350,6 +325,8 @@ Eigen::MatrixXf IFGT::compute_ifgt(const Eigen::MatrixXf & target_pts) {
 
     return G_y;
 }
+
+
 Eigen::MatrixXf IFGT::compute_ifgt(const Eigen::MatrixXf & target_pts, const Eigen::ArrayXf & weights) {
     double ifgt_complexity = compute_complexity(target_pts.rows());
     double naive_complexity = dim * target_pts.rows() * source_pts.rows();
@@ -360,7 +337,7 @@ Eigen::MatrixXf IFGT::compute_ifgt(const Eigen::MatrixXf & target_pts, const Eig
     // estimates ifgt complexity very conservatively --> can change it to a 
     // certain proportion of the complexity to run the ifgt more often
     if (ifgt_complexity < naive_complexity) {
-        // std::cout << "Running IFGT (weighted)" << std::endl;
+        FUNCINFO("Running IFGT (weighted)");
         Eigen::MatrixXf C_k = compute_ck(weights);
 
         // auto time2 = std::chrono::high_resolution_clock::now();
@@ -374,16 +351,19 @@ Eigen::MatrixXf IFGT::compute_ifgt(const Eigen::MatrixXf & target_pts, const Eig
         // std::cout << "compute_gaussian: " << time_span.count() << " s" << std::endl;
     } 
     else {
-        // std::cout << "Running naive (weighted)" << std::endl;
+        FUNCINFO("Running Naive (weighted)");
         G_y = compute_naive_gt(target_pts, source_pts, weights, bandwidth);
     }
     return G_y;
 }
+
+
 double IFGT::compute_complexity(int M_target_pts) {
     int N_source_pts = source_pts.rows();
     return (double(N_source_pts) + M_target_pts * double(n_clusters)) * p_max_total
                 + double(dim) * N_source_pts * n_clusters;
 }
+
 
 double rescale_points(const Eigen::MatrixXf & fixed_pts,
                         const Eigen::MatrixXf & moving_pts,
@@ -409,6 +389,7 @@ double rescale_points(const Eigen::MatrixXf & fixed_pts,
 
 }
 
+
 // computes gauss transform naively in O(NM) time
 Eigen::MatrixXf compute_naive_gt(const Eigen::MatrixXf & target_pts, 
                                 const Eigen::MatrixXf & source_pts,
@@ -425,6 +406,7 @@ Eigen::MatrixXf compute_naive_gt(const Eigen::MatrixXf & target_pts,
     }
     return G_naive;
 }
+
 
 Cluster k_center_clustering(const Eigen::MatrixXf & points, int num_clusters) {
 
@@ -464,19 +446,6 @@ Cluster k_center_clustering(const Eigen::MatrixXf & points, int num_clusters) {
         }
     }
  
-    /*
-    Eigen::MatrixXf k_centers;
-    Eigen::VectorXf radii;
-    Eigen::VectorXf assignments;
-    Eigen::VectorXf distances;
-    double rx_max;
-    
-    cluster.k_centers = k_centers;
-    cluster.assignments = assignments;
-    cluster.distances = distances;
-    cluster.radii = radii;
-    cluster.rx_max = largest_distance;
-    */
    return {k_centers, radii, assignments, distances, largest_distance};
 }
 

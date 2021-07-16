@@ -1,0 +1,8 @@
+w=0.2
+lambda=5
+beta=20
+similarity_threshold=1e-05
+low_rank=0
+ev_ratio=0
+use_fgt=0
+type=nonrigid

@@ -1,0 +1,15 @@
+iteration,time,similarity,outfile,error
+0,0,0.189413,final_report_data/synthetic/w0-2_lambda0-5_beta200/nonrigid_iter0.xyz,0.5233933555982522
+1,12.1276,0.171891,final_report_data/synthetic/w0-2_lambda0-5_beta200/nonrigid_iter1_sim0.171891.xyz,0.4452723630500762
+2,24.0145,0.174342,final_report_data/synthetic/w0-2_lambda0-5_beta200/nonrigid_iter2_sim0.174342.xyz,0.41269404577899854
+3,35.8454,0.173986,final_report_data/synthetic/w0-2_lambda0-5_beta200/nonrigid_iter3_sim0.173986.xyz,0.38715909354784056
+4,47.4558,0.171527,final_report_data/synthetic/w0-2_lambda0-5_beta200/nonrigid_iter4_sim0.171527.xyz,0.36464315785572304
+5,60.1029,0.168212,final_report_data/synthetic/w0-2_lambda0-5_beta200/nonrigid_iter5_sim0.168212.xyz,0.3451958829860808
+6,74.5667,0.165161,final_report_data/synthetic/w0-2_lambda0-5_beta200/nonrigid_iter6_sim0.165161.xyz,0.3279814512293479
+7,89.7221,0.161807,final_report_data/synthetic/w0-2_lambda0-5_beta200/nonrigid_iter7_sim0.161807.xyz,0.3123584392791473
+8,102.044,0.159003,final_report_data/synthetic/w0-2_lambda0-5_beta200/nonrigid_iter8_sim0.159003.xyz,0.2972632409708241
+9,115.862,0.156053,final_report_data/synthetic/w0-2_lambda0-5_beta200/nonrigid_iter9_sim0.156053.xyz,0.2851729541404144
+10,127.834,0.154067,final_report_data/synthetic/w0-2_lambda0-5_beta200/nonrigid_iter10_sim0.154067.xyz,0.27409929417035034
+11,139.657,0.151908,final_report_data/synthetic/w0-2_lambda0-5_beta200/nonrigid_iter11_sim0.151908.xyz,0.2639155738789183
+12,152.643,0.149787,final_report_data/synthetic/w0-2_lambda0-5_beta200/nonrigid_iter12_sim0.149787.xyz,0.2536687642475394
+13,166.486,0.14778,final_report_data/synthetic/w0-2_lambda0-5_beta200/nonrigid_iter13_sim0.147780.xyz,0.2449693119993854

@@ -12,6 +12,8 @@
 #include <iostream>
 #include <math.h>
 using namespace std::chrono;
+
+// initialize rigid transform
 RigidCPDTransform::RigidCPDTransform(int dimensionality) {
     this->dim = dimensionality;
     this->R = Eigen::MatrixXf::Identity(dimensionality, dimensionality);
@@ -19,6 +21,7 @@ RigidCPDTransform::RigidCPDTransform(int dimensionality) {
     this->s = 1;
 }
 
+// Apply rigid transform to point set
 void RigidCPDTransform::apply_to(point_set<double> &ps) {
     const auto N_points = static_cast<long int>(ps.points.size());
 
@@ -42,10 +45,12 @@ void RigidCPDTransform::apply_to(point_set<double> &ps) {
     }
 }
 
+// Calculate scaled transformation matrix s * R
 Eigen::MatrixXf RigidCPDTransform::get_sR() {
     return this->s * this->R;
 }
 
+// Write rigid transformation matrix to file
 void RigidCPDTransform::write_to( std::ostream &os ) {
     affine_transform<double> tf;
     Eigen::MatrixXf sR = get_sR();
@@ -63,6 +68,7 @@ void RigidCPDTransform::write_to( std::ostream &os ) {
     os << "0\n";
 }
 
+// Read rigid transformation matrix from file
 bool RigidCPDTransform::read_from( std::istream &is ) {
     affine_transform<double> tf;
     bool success = tf.read_from(is);
@@ -128,26 +134,28 @@ RigidCPDTransform
 AlignViaRigidCPD(CPDParams & params,
             const point_set<double> & moving,
             const point_set<double> & stationary,
-            int iter_interval /*= 0*/,
-            std::string video /*= "False"*/,
-            std::string xyz_outfile /*= "output"*/ ){
+            int iter_interval,
+            std::string video,
+            std::string xyz_outfile) {
     FUNCINFO("Performing rigid CPD")
-    high_resolution_clock::time_point start = high_resolution_clock::now();
     std::string temp_xyz_outfile;
     point_set<double> mutable_moving = moving;
 
     const auto N_move_points = static_cast<long int>(moving.points.size());
     const auto N_stat_points = static_cast<long int>(stationary.points.size());
 
-    // Prepare working buffers.
-    //
+    // Prepare working buffers:
+    
     // Stationary point matrix
     Eigen::MatrixXf X = Eigen::MatrixXf::Zero(N_move_points, params.dimensionality);
     // Moving point matrix
     Eigen::MatrixXf Y = Eigen::MatrixXf::Zero(N_stat_points, params.dimensionality); 
-    FUNCINFO("Number of moving points: " << N_move_points);
-    FUNCINFO("Number of stationary pointsL  " << N_stat_points);
-    FUNCINFO("Initializing...")
+    
+    // Optional: print out the number of points in each point set
+    // FUNCINFO("Number of moving points: " << N_move_points);
+    // FUNCINFO("Number of stationary pointsL  " << N_stat_points);
+    // FUNCINFO("Initializing...")
+    
     // Fill the X vector with the corresponding points.
     for(long int j = 0; j < N_stat_points; ++j){ // column
         const auto P_stationary = stationary.points[j];
@@ -177,10 +185,19 @@ AlignViaRigidCPD(CPDParams & params,
     Eigen::MatrixXf Y_hat;
     Eigen::MatrixXf A;
     
+    // Print stats to outfile_stats.csv
     std::ofstream os(xyz_outfile + "_stats.csv");
-    FUNCINFO("Starting loop. Max Iterations: " << params.iterations)
+    os << "iteration" << "," << "time" << "," << "similarity" << "," << "outfile" << "\n";
+    os << 0 << "," << 0 << "," << similarity << "," << xyz_outfile + "_iter0.xyz" << "\n";
+    high_resolution_clock::time_point start = high_resolution_clock::now();
+    
+    // Optional: verbose
+    // FUNCINFO("Starting loop. Max Iterations: " << params.iterations)
+
     for (int i = 0; i < params.iterations; i++) {
+        // Optional: print current iteration
         FUNCINFO("Starting Iteration: " << i)
+        
         P = E_Step(X, Y, transform.R, \
             transform.t, sigma_squared, params.distribution_weight, transform.s);
         Ux = CalculateUx(X, P);
@@ -194,6 +211,7 @@ AlignViaRigidCPD(CPDParams & params,
         transform.t = GetTranslationVector(transform.R, Ux, Uy, transform.s);
         sigma_squared = SigmaSquared(transform.s, A, transform.R, X_hat, P);
 
+        // End iterations if sigma_squared is NaN due to division by 0
         if (isnan(sigma_squared)) {
             FUNCINFO("FINAL SIMILARITY: " << similarity);
             break;
@@ -202,12 +220,16 @@ AlignViaRigidCPD(CPDParams & params,
         mutable_moving = moving;
         transform.apply_to(mutable_moving);
 
+        // Calculate similarity and objective functions
         similarity = GetSimilarity(X, Y, transform.R, transform.t, transform.s);
         objective = GetObjective(X, Y, P, transform.R, transform.t, transform.s, sigma_squared);
+        
+        // Optional: print out similarity and objective values
         FUNCINFO("Similarity: " << similarity);
         FUNCINFO("Objective: " << objective);
         
-        if (video == "True") {
+        // Write point sets for video tool
+        f (video == "True") {
             if (iter_interval > 0 && i % iter_interval == 0) {
                 temp_xyz_outfile = xyz_outfile + "_iter" + std::to_string(i+1) + "_sim" + std::to_string(similarity) + ".xyz";
                 std::ofstream PFO(temp_xyz_outfile);
@@ -215,8 +237,12 @@ AlignViaRigidCPD(CPDParams & params,
                     FUNCERR("Error writing point set to " << xyz_outfile);
             }
         }
+        
+        // Break loop if difference in objective function is below the threshold
         if(abs(prev_objective-objective) < params.similarity_threshold)
             break;
+
+        // Write stats for this iteration to outfile_stats.csv
         high_resolution_clock::time_point stop = high_resolution_clock::now();
         duration<double>  time_span = duration_cast<duration<double>>(stop - start);
         FUNCINFO("Excecution took time: " << time_span.count())
