@@ -170,6 +170,7 @@ Drover SDL_Viewer(Drover DICOM_data,
     auto editing_contour_colour = ImVec4(1.0f, 0.45f, 0.0f, 1.0f);
 
     auto line_numbers_normal_colour = ImVec4(1.0f, 1.0f, 1.0f, 0.3f);
+    auto line_numbers_debug_colour  = ImVec4(0.4f, 1.0f, 0.4f, 0.8f);
     auto line_numbers_info_colour   = ImVec4(0.4f, 0.4f, 1.0f, 0.7f);
     auto line_numbers_warn_colour   = ImVec4(0.7f, 0.5f, 0.1f, 0.8f);
     auto line_numbers_error_colour  = ImVec4(1.0f, 0.1f, 0.1f, 0.8f);
@@ -1178,6 +1179,29 @@ variable_op(x = "123",
 
 };
 
+DeleteImages(
+    ImageSelection = 'all'
+);
+DeleteContours(
+    ROILabelRegex = '.*'
+);
+
+roiall = "everything";
+roisphere = 'sphere';
+
+GenerateVirtualDataImageSphereV1();
+
+ContourWholeImages(
+    ROILabel = roiname
+);
+
+ContourViaThreshold(
+    ROILabel = roisphere,
+    Method = "marching-squares",
+    Upper = 120.0,
+    SimplifyMergeAdjacent = true
+);
+
 )***";
 script_files.back().content.clear();
 for(const auto &c : testing_content) script_files.back().content.emplace_back(c);
@@ -1233,8 +1257,38 @@ script_files.back().content.emplace_back('\0');
                                                        std::end(script_files.at(active_script_file).content) ) );
                     script_files.at(active_script_file).feedback.clear();
                     std::list<OperationArgPkg> op_list;
-                    const auto res = Load_DCMA_Script( ss, script_files.at(active_script_file).feedback, op_list );
+                    Load_DCMA_Script( ss, script_files.at(active_script_file).feedback, op_list );
                     view_script_feedback = true;
+                }
+            }
+            ImGui::SameLine();
+            if(ImGui::Button("Run", ImVec2(window_extent.x/4, 0))){ 
+                if(isininc(0, active_script_file, N_sfs-1)){
+                    std::stringstream ss( std::string( std::begin(script_files.at(active_script_file).content),
+                                                       std::end(script_files.at(active_script_file).content) ) );
+                    script_files.at(active_script_file).feedback.clear();
+                    std::list<OperationArgPkg> op_list;
+                    const auto res = Load_DCMA_Script( ss, script_files.at(active_script_file).feedback, op_list );
+                    if(!res){
+                        view_script_feedback = true;
+                    }else if(!Operation_Dispatcher(DICOM_data,
+                                                   InvocationMetadata,
+                                                   FilenameLex,
+                                                   op_list)){
+
+                        script_files.at(active_script_file).feedback.emplace_back();
+                        script_files.at(active_script_file).feedback.back().message = "Execution failed";
+                        view_script_feedback = true;
+                    }else{
+                        recompute_image_state();
+                        auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_image_iters();
+                        if( view_contours_enabled
+                        &&  img_valid ){
+                            launch_contour_preprocessor();
+                            reset_contouring_state(img_array_ptr_it);
+                        }
+                        tagged_pos = {};
+                    }
                 }
             }
 
@@ -1247,6 +1301,10 @@ script_files.back().content.emplace_back('\0');
 
                 for(const auto &f : script_files.at(active_script_file).feedback){
                     if(false){
+                    }else if(f.severity == script_feedback_severity_t::debug){
+                        std::stringstream ss;
+                        ss << "Debug:   ";
+                        ImGui::TextColored(line_numbers_debug_colour, "%s", const_cast<char *>(ss.str().c_str()));
                     }else if(f.severity == script_feedback_severity_t::info){
                         std::stringstream ss;
                         ss << "Info:    ";
@@ -1265,9 +1323,13 @@ script_files.back().content.emplace_back('\0');
                     ImGui::SameLine();
 
                     std::stringstream ss;
-                    ss << "line " << f.line 
-                       << ", char " << f.line_offset
-                       << ": " << f.message
+                    if( (0 <= f.line)
+                    &&  (0 <= f.line_offset) ){
+                        ss << "line " << f.line 
+                           << ", char " << f.line_offset
+                           << ": ";
+                    }
+                    ss << f.message
                        << std::endl
                        << std::endl;
                     ImGui::Text("%s", const_cast<char *>(ss.str().c_str()));
@@ -1407,6 +1469,8 @@ script_files.back().content.emplace_back('\0');
                             for(const auto &f : script_files.at(active_script_file).feedback){
                                 if(l != f.line) continue;
                                 if(false){
+                                }else if(f.severity == script_feedback_severity_t::debug){
+                                    colour = ImGui::GetColorU32(line_numbers_debug_colour);
                                 }else if(f.severity == script_feedback_severity_t::info){
                                     colour = ImGui::GetColorU32(line_numbers_info_colour);
                                 }else if(f.severity == script_feedback_severity_t::warn){

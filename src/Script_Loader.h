@@ -8,6 +8,7 @@
 #include "Structs.h"
 
 enum class script_feedback_severity_t {
+    debug,
     info,
     warn,
     err,

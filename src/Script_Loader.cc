@@ -19,6 +19,10 @@
 
 #include <cstdlib>            //Needed for exit() calls.
 
+#include <boost/algorithm/string/predicate.hpp>
+
+#include <Explicator.h>
+
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMathIOSTL.h"
@@ -26,6 +30,9 @@
 
 #include "Script_Loader.h"
 #include "Structs.h"
+
+#include "Operation_Dispatcher.h"
+
 
 // A parsed character from a stream that is imbued with additional metadata from the stream.
 struct char_with_context_t {
@@ -326,13 +333,22 @@ Split_into_Statements( std::vector<char_with_context_t> &contents,
                   &&  bumpy_stack.empty()
                   &&  (c == ')') ){
 
-                if( (curve_stack.size() == 1)
-                &&  (curve_stack.back() == '(')
-                &&  !l_statements.back().arguments.empty() ){
+                if(false){
+                }else if( (curve_stack.size() == 1)
+                      &&  (curve_stack.back() == '(')
+                      &&  l_statements.back().arguments.empty()
+                      &&  std::all_of(std::begin(shtl), std::end(shtl), is_whitespace) ){
+                    curve_stack.pop_back();
+                    skip_character = true;
+
+                }else if( (curve_stack.size() == 1)
+                      &&  (curve_stack.back() == '(')
+                      &&  !l_statements.back().arguments.empty() ){
 //FUNCINFO("Pushing back argument value '" << to_str(shtl) << "'");
                     curve_stack.pop_back();
                     l_statements.back().arguments.back().second = shtl;
                     skip_character = true;
+
                 }else{
                     report(feedback, script_feedback_severity_t::err, c, "Unmatched ')'"_s);
                     compilation_successful = false;
@@ -618,10 +634,106 @@ Split_into_Statements( std::vector<char_with_context_t> &contents,
     return compilation_successful;
 }
 
+bool
+Generate_Operation_List( const std::vector<script_statement_t> &statements,
+                         std::list<OperationArgPkg> &op_list,
+                         std::list<script_feedback_t> &feedback ){
+
+    auto op_name_mapping = Known_Operations();
+    Explicator op_name_X( Operation_Lexicon() );
+
+    bool compilation_successful = true;
+    std::list<OperationArgPkg> out;
+    for(const auto &s : statements){
+
+        // Find or estimate the canonical name. If not an exact match, issue an error or fuzzy-match with a warning.
+        const auto user_op_name = to_str(s.func_name);
+        const auto canonical_op_name = op_name_X(user_op_name);
+        if( op_name_X.last_best_score < 0.6 ){
+            report(feedback, script_feedback_severity_t::err, s.get_valid_cwct(),
+                   "Operation '"_s + user_op_name + "' not understood.");
+            compilation_successful = false;
+
+        }else if( op_name_X.last_best_score < 1.0 ){
+            report(feedback, script_feedback_severity_t::warn, s.get_valid_cwct(),
+                   "Selecting operation '"_s + canonical_op_name + "' because '"_s + user_op_name + "' not understood.");
+        }
+        out.emplace_back(canonical_op_name);
+
+        // Find or estimate the canonical name for arguments.
+        std::map<std::string, std::string> Argument_Lexicon;
+        for(const auto &op_func : op_name_mapping){
+            if(boost::iequals(op_func.first, canonical_op_name)){
+
+                //Attempt to insert all expected, documented parameters with the default value.
+                auto OpDocs = op_func.second.first();
+                for(const auto &r : OpDocs.args){
+                    Argument_Lexicon[r.name] = r.name;
+                }
+            }
+        }
+
+        const bool op_expects_no_arguments = Argument_Lexicon.empty();
+        if( op_expects_no_arguments ){
+            if( !s.arguments.empty() ){
+                report(feedback, script_feedback_severity_t::warn, s.get_valid_cwct(),
+                       "This operation does not accept arguments. Arguments will be ignored.");
+            }
+
+        }else{
+            {
+                std::stringstream ss;
+                ss << "Available arguments: ";
+                for(const auto &p : Argument_Lexicon) ss << p.first << " ";
+                report(feedback, script_feedback_severity_t::debug, s.get_valid_cwct(), ss.str());
+            }
+
+            Explicator arg_name_X( Argument_Lexicon );
+
+            for(const auto &a : s.arguments){
+                const auto user_arg_name =  to_str(a.first);
+                const auto canonical_arg_name = arg_name_X(user_arg_name);
+
+                if( arg_name_X.last_best_score < 0.6 ){
+                    report(feedback, script_feedback_severity_t::err, a.first.front(),
+                           "Argument '"_s + user_arg_name + "' not understood.");
+                    compilation_successful = false;
+
+                }else if( arg_name_X.last_best_score < 1.0 ){
+                    report(feedback, script_feedback_severity_t::warn, a.first.front(),
+                           "Selecting argument '"_s + canonical_arg_name + "' because '"_s + user_arg_name + "' not understood.");
+                }
+
+                // Insert the argument.
+                if(!out.back().insert(canonical_arg_name, to_str(a.second))){
+                    report(feedback, script_feedback_severity_t::err, a.first.front(),
+                           "Argument not accepted.");
+                    compilation_successful = false;
+                }
+            }
+        }
+
+        // Recurse.
+        for(const auto &c : s.child_statements){
+            std::list<OperationArgPkg> child_op_list;
+            if( !Generate_Operation_List({c}, child_op_list, feedback)
+            ||  (child_op_list.size() != 1) ){
+                report(feedback, script_feedback_severity_t::err, c.get_valid_cwct(),
+                       "Nested statement could not be compiled.");
+                compilation_successful = false;
+            }
+            out.back().makeChild( child_op_list.back() );
+        }
+    }
+
+    op_list.splice( std::end(op_list), out);
+    return compilation_successful;
+}
+
+
 bool Load_DCMA_Script(std::istream &is,
                       std::list<script_feedback_t> &feedback,
                       std::list<OperationArgPkg> &op_list){
-    std::list<OperationArgPkg> out;
 
     // Treat the file like a linear string of characters, including whitespace.
     std::vector<char_with_context_t> contents;
@@ -635,50 +747,48 @@ bool Load_DCMA_Script(std::istream &is,
         }
     }
 
+    // Decompose the input into statements.
     std::vector<script_statement_t> statements;
     std::vector<script_statement_t> variables;
     if(!Split_into_Statements(contents, statements, variables, feedback)){
         return false;
     }
 
-
-    std::function<void(const std::vector<script_statement_t> &, std::string)> recursively_print_statements;
+    // Recursively print the parsed AST as feedback.
+    std::function<void(const std::vector<script_statement_t> &, std::ostream &, std::string)> recursively_print_statements;
     recursively_print_statements = [&](const std::vector<script_statement_t> &statements,
+                                       std::ostream &os,
                                        std::string spacing) -> void {
-        std::cout << spacing << "==============================================================================================" << std::endl;
         for(const auto &s : statements){
-            std::cout << spacing << "Var name   : '";
-            for(const auto &c : s.var_name) std::cout << c.c;
-            std::cout << "'" << std::endl;
-
-            std::cout << spacing << "Func name  : '";
-            for(const auto &c : s.func_name) std::cout << c.c;
-            std::cout << "'" << std::endl;
-
-            std::cout << spacing << "Arguments  : " << std::endl;
+            os << "---" << std::endl;
+            if(!s.var_name.empty()) os << spacing << "Var name   : '" << to_str(s.var_name) << "'" << std::endl;
+            if(!s.func_name.empty()) os << spacing << "Func name  : '" << to_str(s.func_name) << "'" << std::endl;
             for(const auto &a : s.arguments){
-                std::cout << spacing << "  Name       : '";
-                for(const auto &c : a.first) std::cout << c.c;
-                std::cout << "'" << std::endl;
-
-                std::cout << spacing << "  Value      : '";
-                for(const auto &c : a.second) std::cout << c.c;
-                std::cout << "'" << std::endl;
+                os << spacing << "Argument   : '" << to_str(a.first) << "' = '" << to_str(a.second) << "'" << std::endl;
             }
-
-            std::cout << spacing << "Payload    : '";
-            for(const auto &c : s.payload) std::cout << c.c;
-            std::cout << "'" << std::endl;
-
-            std::cout << spacing << "Children   : " << std::endl;;
-            if(!s.child_statements.empty()) recursively_print_statements(s.child_statements, spacing + "    ");
-            std::cout << spacing << "==============================================================================================" << std::endl;
+            if(!s.payload.empty()) os << spacing << "Payload    : '" << to_str(s.payload) << "'" << std::endl;
+            if(!s.child_statements.empty()){
+                os << spacing << "Children   : " << std::endl;;
+                recursively_print_statements(s.child_statements, os, spacing + "    ");
+            }
         }
         return;
     };
-    recursively_print_statements(statements, "    ");
+    std::stringstream ss;
+    ss << "AST:" << std::endl;
+    recursively_print_statements(statements, ss, "    ");
+    report(feedback, script_feedback_severity_t::debug, char_with_context_t(), ss.str());
+    report(feedback, script_feedback_severity_t::info, char_with_context_t(), "Parsing: OK");
 
-    report(feedback, script_feedback_severity_t::info, contents.back(), "OK");
+
+    // Convert each statement into an operation.
+    std::list<OperationArgPkg> out;
+    if(!Generate_Operation_List(statements, out, feedback)){
+        return false;
+    }
+    report(feedback, script_feedback_severity_t::debug, char_with_context_t(),
+           "Compiled "_s + std::to_string(out.size()) + " top-level operations.");
+    report(feedback, script_feedback_severity_t::info, char_with_context_t(), "Compilation: OK");
     
     op_list.splice( std::end(op_list), out);
     return true;
