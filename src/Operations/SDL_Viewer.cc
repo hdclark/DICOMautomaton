@@ -30,8 +30,10 @@
 #include <vector>
 #include <chrono>
 #include <future>
+#include <mutex>
 #include <shared_mutex>
 #include <initializer_list>
+#include <thread>
 
 #include <boost/filesystem.hpp>
 
@@ -69,6 +71,7 @@
 #include "../DCMA_Version.h"
 #include "../File_Loader.h"
 #include "../Script_Loader.h"
+#include "../Thread_Pool.h"
 
 #ifdef DCMA_USE_CGAL
     #include "../Surface_Meshes.h"
@@ -93,6 +96,15 @@ Drover SDL_Viewer(Drover DICOM_data,
                   const std::string& FilenameLex){
 
     // --------------------------------------- Operational State ------------------------------------------
+    std::shared_mutex drover_mutex;
+
+    // General-purpose Drover processing offloading worker thread.
+    work_queue<std::function<void(void)>> wq;
+    wq.submit_task([](){
+        FUNCINFO("Worker thread ready");
+        return;
+    });
+
     Explicator X(FilenameLex);
 
     bool set_about_popup = false;
@@ -411,6 +423,7 @@ Drover SDL_Viewer(Drover DICOM_data,
             return;
     };
 
+    std::atomic<bool> need_to_reload_opengl_texture = true;
     const auto Load_OpenGL_Texture = [&colour_maps,
                                       &colour_map,
                                       &nan_colour,
@@ -609,8 +622,8 @@ Drover SDL_Viewer(Drover DICOM_data,
         std::get<bool>( out ) = false;
 
         // Set the current image array and image iters and load the texture.
-        const auto has_images = DICOM_data.Has_Image_Data();
         do{ 
+            const auto has_images = DICOM_data.Has_Image_Data();
             if( !has_images ) break;
             if( !isininc(1, img_array_num+1, DICOM_data.image_data.size()) ) break;
             auto img_array_ptr_it = std::next(DICOM_data.image_data.begin(), img_array_num);
@@ -670,8 +683,9 @@ Drover SDL_Viewer(Drover DICOM_data,
                                          &current_texture,
                                          &custom_centre,
                                          &custom_width,
-                                         &Load_OpenGL_Texture,
+                                         &need_to_reload_opengl_texture,
                                          &reset_contouring_state ](){
+
         //Trim any empty image arrays.
         for(auto it = DICOM_data.image_data.begin(); it != DICOM_data.image_data.end();  ){
             if((*it)->imagecoll.images.empty()){
@@ -682,27 +696,33 @@ Drover SDL_Viewer(Drover DICOM_data,
         }
 
         // Assess whether there is image data.
-        const auto has_images = DICOM_data.Has_Image_Data();
-        if( has_images
-        &&  (0 <= img_array_num)
-        &&  (0 <= img_num) ){
-            // Do nothing, but validate (below) that the images are accessible.
-        }else if( has_images
-              &&  ((img_array_num < 0) || (img_num < 0)) ){
+        bool image_is_valid = false;
+        do{
+            // See if the current image numbers are valid.
+            if( auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_image_iters(); img_valid ){
+                image_is_valid = true;
+                break;
+            }
+
+            // Try reset to the first image.
             img_array_num = 0;
             img_num = 0;
             img_channel = 0;
-        }else{
+            if( auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_image_iters(); img_valid ){
+                image_is_valid = true;
+                break;
+            }
+
+            // At this point, for whatever reason(s), the image data does not appear to be valid.
+            // Set negative images numbers to disable showing anything.
             img_array_num = -1;
             img_num = -1;
             img_channel = -1;
-        }
+        }while(false);
 
-        // Reload the texture.
-        auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_image_iters();
-        if( img_valid ){
-            img_channel = std::clamp<long int>(img_channel, 0, disp_img_it->channels-1);
-            current_texture = Load_OpenGL_Texture(*disp_img_it, custom_centre, custom_width);
+        // Signal the need to reload the texture.
+        if( image_is_valid ){
+            need_to_reload_opengl_texture.store(true);
         }
         return;
     };
@@ -724,7 +744,7 @@ Drover SDL_Viewer(Drover DICOM_data,
         ImU32 colour;
         std::string ROIName;
         std::string NormalizedROIName;
-        std::reference_wrapper< contour_of_points<double> > contour_refw;
+        std::reference_wrapper< const contour_of_points<double> > contour_refw;
 
         preprocessed_contour() = default;
     };
@@ -737,6 +757,7 @@ Drover SDL_Viewer(Drover DICOM_data,
 
     // Determine which contours should be displayed on the current image.
     const auto preprocess_contours = [ &DICOM_data,
+                                       &drover_mutex,
                                        &recompute_image_iters,
                                        &preprocessed_contour_epoch,
                                        &preprocessed_contour_mutex,
@@ -759,13 +780,14 @@ Drover SDL_Viewer(Drover DICOM_data,
         long int n = contour_colours_l.size();
 
         //Draw any contours that lie in the plane of the current image. Also draw contour names if the cursor is 'within' them.
-        auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_image_iters();
-        if( img_valid
+        if( auto [drover_lock, img_valid, img_array_ptr_it, disp_img_it] = std::tuple_cat(
+                 std::make_tuple(std::unique_lock<std::shared_mutex>(drover_mutex)), recompute_image_iters() );
+            img_valid
         &&  (DICOM_data.contour_data != nullptr) ){
 
             // Scan all contours to assign a unique colour to each ROIName.
-            for(auto & cc : DICOM_data.contour_data->ccs){
-                for(auto & c : cc.contours){
+            for(const auto & cc : DICOM_data.contour_data->ccs){
+                for(const auto & c : cc.contours){
                     const auto ROIName = c.GetMetadataValueAs<std::string>("ROIName").value_or("unknown");
 
                     if(contour_colours_l.count(ROIName) == 0){
@@ -775,8 +797,8 @@ Drover SDL_Viewer(Drover DICOM_data,
             }
 
             // Identify contours appropriate to the current image.
-            for(auto & cc : DICOM_data.contour_data->ccs){
-                for(auto & c : cc.contours){
+            for(const auto & cc : DICOM_data.contour_data->ccs){
+                for(const auto & c : cc.contours){
                     if(!c.points.empty() 
                     && ( 
                           // Permit contours with any included vertices or at least the 'centre' within the image.
@@ -827,15 +849,14 @@ Drover SDL_Viewer(Drover DICOM_data,
                                                              ImGui::GetColorU32(c_colour),
                                                              ROIName,
                                                              NormalizedROIName,
-                                                             std::ref(c) } );
+                                                             std::cref(c) } );
                     }
                 }
             }
         }
 
-        std::unique_lock<std::shared_mutex> lock(preprocessed_contour_mutex);
-        const auto current_epoch = preprocessed_contour_epoch.load();
-        if( epoch == current_epoch ){
+        if( std::unique_lock<std::shared_mutex> lock(preprocessed_contour_mutex);
+            (epoch == preprocessed_contour_epoch.load()) ){
             preprocessed_contours = out;
             contour_colours = contour_colours_l;
         }
@@ -849,13 +870,21 @@ Drover SDL_Viewer(Drover DICOM_data,
         const auto current_epoch = preprocessed_contour_epoch.fetch_add(1) + 1;
         std::thread t(preprocess_contours, current_epoch);
         t.detach();
+        return;
     };
 
     // Terminate contour preprocessing threads.
     const auto terminate_contour_preprocessors = [ &preprocessed_contour_epoch ]() -> void {
         // We currently cannot terminate detached threads, so this helps ensure they exit early.
         preprocessed_contour_epoch.fetch_add(100);
-        std::this_thread::sleep_for(std::chrono::milliseconds(500)); // Hope that this is enough time!
+        return;
+    };
+
+    const auto clear_preprocessed_contours = [&preprocessed_contours,
+                                              &contour_colours]() -> void {
+        preprocessed_contours.clear();
+        contour_colours.clear();
+        return;
     };
     
 
@@ -982,7 +1011,8 @@ Drover SDL_Viewer(Drover DICOM_data,
     };
     std::vector<script_file> script_files;
     long int active_script_file = -1;
-
+    std::shared_mutex script_mutex;
+    std::atomic<long int> script_epoch = 0L;
 
     // Contour and image display state.
     std::map<std::string, bool> contour_enabled;
@@ -998,6 +1028,7 @@ Drover SDL_Viewer(Drover DICOM_data,
         ImGuiIO &io = ImGui::GetIO();
         io.ConfigWindowsMoveFromTitleBarOnly = true;
     }
+
 
 long int frame_count = 0;
     while(true){
@@ -1031,6 +1062,17 @@ long int frame_count = 0;
         ImGui_ImplSDL2_NewFrame(window);
         ImGui::NewFrame();
 
+        // Reload the image texture. Needs to be done by the main thread.
+        if(need_to_reload_opengl_texture.exchange(false)){
+            if( auto [lock, img_valid, img_array_ptr_it, disp_img_it] = std::tuple_cat(
+                     std::make_tuple(std::unique_lock<std::shared_mutex>(drover_mutex)), recompute_image_iters() );
+                view_images_enabled
+            &&  img_valid ){
+                
+                img_channel = std::clamp<long int>(img_channel, 0, disp_img_it->channels-1);
+                current_texture = Load_OpenGL_Texture(*disp_img_it, custom_centre, custom_width);
+            }
+        }
 
 // Contouring -- mask debugging / visualization.
 if(false){
@@ -1137,7 +1179,8 @@ if(false){
         }
 
         // Display the script editor dialog.
-        if( view_script_editor_enabled ){
+        if( std::unique_lock<std::shared_mutex> script_lock(script_mutex);
+            view_script_editor_enabled ){
             ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_Appearing);
             ImGui::SetNextWindowPos(ImVec2(50, 50), ImGuiCond_Appearing);
             ImGui::Begin("Script Editor", &view_script_editor_enabled );
@@ -1198,7 +1241,7 @@ ContourWholeImages(
 ContourViaThreshold(
     ROILabel = roisphere,
     Method = "marching-squares",
-    Upper = 120.0,
+    Lower = 0.5,
     SimplifyMergeAdjacent = true
 );
 
@@ -1228,7 +1271,6 @@ script_files.back().content.emplace_back('\0');
             ImGui::SameLine();
             if(ImGui::Button("Save", ImVec2(window_extent.x/4, 0))){ 
                 if(isininc(0, active_script_file, N_sfs-1)){
-
                     if( script_files.at(active_script_file).path.empty() ){
                         try{
                             const auto open_file_root_str = std::filesystem::absolute(open_file_root / "script.txt").string();
@@ -1270,24 +1312,59 @@ script_files.back().content.emplace_back('\0');
                     std::list<OperationArgPkg> op_list;
                     const auto res = Load_DCMA_Script( ss, script_files.at(active_script_file).feedback, op_list );
                     if(!res){
+                        //script_files.at(active_script_file).feedback.emplace_back();
+                        script_files.at(active_script_file).feedback.back().message = "Compilation failed";
                         view_script_feedback = true;
-                    }else if(!Operation_Dispatcher(DICOM_data,
-                                                   InvocationMetadata,
-                                                   FilenameLex,
-                                                   op_list)){
 
-                        script_files.at(active_script_file).feedback.emplace_back();
-                        script_files.at(active_script_file).feedback.back().message = "Execution failed";
-                        view_script_feedback = true;
                     }else{
-                        recompute_image_state();
-                        auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_image_iters();
-                        if( view_contours_enabled
-                        &&  img_valid ){
-                            launch_contour_preprocessor();
-                            reset_contouring_state(img_array_ptr_it);
-                        }
-                        tagged_pos = {};
+                        // Submit the work to the worker thread.
+                        const auto l_script_epoch = script_epoch.fetch_add(1) + 1;
+                        const auto worker = [&,l_script_epoch,op_list](){
+                            // Check if this task should be abandoned.
+                            if(script_epoch.load() != l_script_epoch){
+                                FUNCINFO("Abandoning run due to user activity");
+                                return;
+                            }
+
+                            std::unique_lock<std::shared_mutex> drover_lock(drover_mutex);
+
+                            // Preemptively destroy any preprocessed contours to avoid dangling references.
+                            std::unique_lock<std::shared_mutex> lock(preprocessed_contour_mutex);
+                            terminate_contour_preprocessors();
+                            clear_preprocessed_contours();
+
+                            // Only perform a single operation at a time, which results in slightly less mutex contention.
+                            bool success = true;
+                            for(const auto &op : op_list){
+                                if(!Operation_Dispatcher(DICOM_data,
+                                                         InvocationMetadata,
+                                                         FilenameLex,
+                                                         {op})){
+                                    success = false;
+                                    break;
+                                }
+                            }
+                            if(!success){
+                                // Report the failure to the user.
+                                //
+                                // TODO: provide graphical feedback!
+                                FUNCWARN("Script execution failed");
+                            }
+
+                            // Regenerate all Drover state that may have changed.
+                            {
+                                recompute_image_state();
+                                auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_image_iters();
+                                if( img_valid ){
+                                    launch_contour_preprocessor();
+                                    reset_contouring_state(img_array_ptr_it);
+                                }
+                                tagged_pos = {};
+                            }
+                            return;
+                        };
+                        //wq.submit_task([&,l_script_epoch,op_list](){ // TODO -- somehow interferes with line 807? (Unprotected state somewhere...)
+                        worker(); // Invoke in main thread for now.
                     }
                 }
             }
@@ -1453,7 +1530,7 @@ script_files.back().content.emplace_back('\0');
                 //const auto text_entry_ID = ImGui::GetID("#script_editor_active_content");
                 ImGui::Begin("Script Editor/#script_editor_active_content_9CF9E0D1"); // Terrible hacky workaround. FIXME. TODO.
                 const auto vert_scroll = ImGui::GetScrollY();
-                ImGui::End();
+                ImGui::EndChild();
 
                 // Draw line numbers, including compilation feedback if applicable.
                 {
@@ -1498,10 +1575,10 @@ script_files.back().content.emplace_back('\0');
             ImGui::End();
         }
 
-        auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_image_iters();
-
         // Display the image dialog.
-        if( view_images_enabled
+        if( auto [lock, img_valid, img_array_ptr_it, disp_img_it] = std::tuple_cat(
+                 std::make_tuple(std::unique_lock<std::shared_mutex>(drover_mutex)), recompute_image_iters() );
+            view_images_enabled
         &&  img_valid ){
             ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_Appearing);
             ImGui::SetNextWindowPos(ImVec2(10, 40), ImGuiCond_Appearing);
@@ -2044,7 +2121,8 @@ script_files.back().content.emplace_back('\0');
 
 
         // Open files dialog.
-        if( open_files_enabled
+        if( std::unique_lock<std::shared_mutex> lock(drover_mutex);
+            open_files_enabled
         &&  !loaded_files.valid()){
 
             ImGui::SetNextWindowSize(ImVec2(600, 650), ImGuiCond_FirstUseEver);
@@ -2184,7 +2262,8 @@ script_files.back().content.emplace_back('\0');
         }
 
         // Handle file loading future.
-        if(loaded_files.valid()){
+        if( std::unique_lock<std::shared_mutex> lock(drover_mutex);
+            loaded_files.valid() ){
             ImGui::OpenPopup("Loading");
             if(ImGui::BeginPopupModal("Loading", NULL, ImGuiWindowFlags_AlwaysAutoResize)){
                 const std::string str((frame_count / 15) % 4, '.'); // Simplistic animation.
@@ -2203,6 +2282,7 @@ script_files.back().content.emplace_back('\0');
                 if(f.res){
                     open_files_enabled = false;
                     open_files_selection.clear();
+                    std::unique_lock<std::shared_mutex> lock(drover_mutex);
                     DICOM_data.Consume(f.DICOM_data);
                 }else{
                     FUNCWARN("Unable to load files");
@@ -2216,7 +2296,8 @@ script_files.back().content.emplace_back('\0');
 
 
         // Adjust the window and level.
-        if(adjust_window_level_enabled){
+        if( std::unique_lock<std::shared_mutex> lock(drover_mutex);
+            adjust_window_level_enabled ){
             ImGui::SetNextWindowSize(ImVec2(350, 350), ImGuiCond_FirstUseEver);
             ImGui::Begin("Adjust Window and Level", &adjust_window_level_enabled);
             bool reload_texture = false;
@@ -2408,7 +2489,8 @@ script_files.back().content.emplace_back('\0');
 
 
         // Adjust the colour map.
-        if(adjust_colour_map_enabled){
+        if( std::unique_lock<std::shared_mutex> lock(drover_mutex);
+            adjust_colour_map_enabled ){
             ImGui::SetNextWindowPos(ImVec2(680, 120), ImGuiCond_FirstUseEver);
             ImGui::Begin("Adjust Colour Map", &adjust_colour_map_enabled, ImGuiWindowFlags_AlwaysAutoResize);
             bool reload_texture = false;
@@ -2433,9 +2515,9 @@ script_files.back().content.emplace_back('\0');
             }
         }
 
-
         // Display plots.
-        if( view_plots_enabled 
+        if( std::unique_lock<std::shared_mutex> lock(drover_mutex);
+            view_plots_enabled 
         && DICOM_data.Has_LSamp_Data() ){
 
             // Display a selection and navigation window.
@@ -2516,7 +2598,8 @@ script_files.back().content.emplace_back('\0');
         }
 
         // Display row and column profiles.
-        if( view_row_column_profiles 
+        if( std::unique_lock<std::shared_mutex> lock(drover_mutex);
+            view_row_column_profiles 
         &&  !row_profile.empty()
         &&  !col_profile.empty() ){
             ImGui::SetNextWindowSize(ImVec2(600, 350), ImGuiCond_FirstUseEver);
@@ -2550,7 +2633,9 @@ script_files.back().content.emplace_back('\0');
         }
 
         // Display the image navigation dialog.
-        if( view_images_enabled
+        if( auto [lock, img_valid, img_array_ptr_it, disp_img_it] = std::tuple_cat(
+                 std::make_tuple(std::unique_lock<std::shared_mutex>(drover_mutex)), recompute_image_iters() );
+            view_images_enabled
         &&  img_valid ){
             ImGui::SetNextWindowSize(ImVec2(350, 400), ImGuiCond_Appearing);
             ImGui::SetNextWindowPos(ImVec2(680, 100), ImGuiCond_Appearing);
@@ -2826,7 +2911,8 @@ script_files.back().content.emplace_back('\0');
         CHECK_FOR_GL_ERRORS();
 
 // Tinkering with rendering surface meshes.
-        if( view_meshes_enabled
+        if( std::unique_lock<std::shared_mutex> lock(drover_mutex);
+            view_meshes_enabled
         && DICOM_data.Has_Mesh_Data() ){
     auto smesh_ptr = DICOM_data.smesh_data.front();
 
@@ -2968,6 +3054,9 @@ script_files.back().content.emplace_back('\0');
         SDL_GL_SwapWindow(window);
     }
     terminate_contour_preprocessors();
+    std::this_thread::sleep_for(std::chrono::milliseconds(500)); // Hope that this is enough time for preprocessing threads to terminate.
+                                                                 // TODO: use a work queue with condition variable to
+                                                                 // signal termination!
 
     // OpenGL and SDL cleanup.
     ImGui_ImplOpenGL3_Shutdown();
