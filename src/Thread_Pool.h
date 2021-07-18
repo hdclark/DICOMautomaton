@@ -2,7 +2,11 @@
 
 #pragma once
 
+#include <mutex>
+#include <shared_mutex>
+#include <condition_variable>
 #include <thread>
+#include <atomic>
 
 #include <asio.hpp>
 #include <boost/thread.hpp> // For class thread_group.
@@ -46,5 +50,80 @@ class asio_thread_pool {
         this->_io_service.post(atask);
     }
 }; 
+
+
+
+// Single-threaded work queue for sequential FIFO offloading processing.
+template<class T>
+class work_queue {
+
+  private:
+    std::list<T> queue;
+    std::mutex queue_mutex;
+
+    std::condition_variable notifier;
+    std::atomic<bool> should_quit = false;
+    std::thread worker_thread;
+
+  public:
+
+    work_queue() : worker_thread(
+        [this](){
+            // Continually check the queue and wait on the condition variable.
+            bool l_should_quit = false;
+            while(!l_should_quit){
+
+                std::unique_lock<std::mutex> lock(this->queue_mutex);
+                while( !(l_should_quit = this->should_quit.load())
+                       && this->queue.empty() ){
+
+                    // Release the lock while waiting, which allows for work to be submitted.
+                    //
+                    // Note: spurious notifications are OK, since the queue will be empty and the worker will return to
+                    // waiting on the condition variable.
+                    this->notifier.wait(lock);
+                }
+
+                // Assume ownership of only the first item in the queue (FIFO).
+                std::list<T> l_queue;
+                if(!this->queue.empty()) l_queue.splice( std::end(l_queue), this->queue, std::begin(this->queue) );
+                
+                //// Assume ownership of all available items in the queue.
+                //std::list<T> l_queue;
+                //l_queue.swap( this->queue );
+
+                // Perform the work in FIFO order.
+                lock.unlock();
+                for(const auto &user_f : l_queue){
+                    try{
+                        user_f();
+                    }catch(const std::exception &){};
+                }
+            }
+        }
+    ){}
+
+    void submit_task(T f){
+        {
+            std::lock_guard<std::mutex> lock(this->queue_mutex);
+            this->queue.push_back(std::move(f));
+        }
+        this->notifier.notify_one();
+        return;
+    }
+
+    std::list<T> clear_tasks(){
+        std::list<T> out;
+        std::lock_guard<std::mutex> lock(this->queue_mutex);
+        out.swap( this->queue );
+        return std::move(out);
+    }
+
+    ~work_queue(){
+        this->should_quit.store(true);
+        this->notifier.notify_one();
+        this->worker_thread.join();
+    }
+};
 
 
