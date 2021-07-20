@@ -351,8 +351,10 @@ Drover SDL_Viewer(Drover DICOM_data,
     // Create an OpenGL texture from an image.
     struct opengl_texture_handle_t {
         GLuint texture_number = 0;
-        int col_count = 0;
-        int row_count = 0;
+        long int col_count = 0L;
+        long int row_count = 0L;
+        float aspect_ratio = 1.0; // In image pixel space.
+        bool texture_exists = false;
     };
     opengl_texture_handle_t current_texture;
 
@@ -592,6 +594,9 @@ Drover SDL_Viewer(Drover DICOM_data,
             opengl_texture_handle_t out;
             out.col_count = img_cols;
             out.row_count = img_rows;
+            out.aspect_ratio = (img.pxl_dx / img.pxl_dy) * (static_cast<float>(img_rows) / static_cast<float>(img_cols));
+            out.aspect_ratio = (img.pxl_dx / img.pxl_dy) * (static_cast<float>(img_rows) / static_cast<float>(img_cols));
+            out.aspect_ratio = std::isfinite(out.aspect_ratio) ? out.aspect_ratio : (img.pxl_dx / img.pxl_dy);
 
             CHECK_FOR_GL_ERRORS();
 
@@ -609,9 +614,12 @@ Drover SDL_Viewer(Drover DICOM_data,
 
             glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
             glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, out.col_count, out.row_count, 0, GL_RGB, GL_UNSIGNED_BYTE, static_cast<void*>(animage.data()));
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB,
+                         static_cast<int>(out.col_count), static_cast<int>(out.row_count),
+                         0, GL_RGB, GL_UNSIGNED_BYTE, static_cast<void*>(animage.data()));
             CHECK_FOR_GL_ERRORS();
 
+            out.texture_exists = true;
             return out;
     };
 
@@ -690,7 +698,8 @@ Drover SDL_Viewer(Drover DICOM_data,
 
         //Trim any empty image arrays.
         for(auto it = DICOM_data.image_data.begin(); it != DICOM_data.image_data.end();  ){
-            if((*it)->imagecoll.images.empty()){
+            if( ((*it) == nullptr)
+            ||  (*it)->imagecoll.images.empty()){
                 it = DICOM_data.image_data.erase(it);
             }else{
                 ++it;
@@ -723,9 +732,9 @@ Drover SDL_Viewer(Drover DICOM_data,
         }while(false);
 
         // Signal the need to reload the texture.
-        if( image_is_valid ){
-            need_to_reload_opengl_texture.store(true);
-        }
+        //if( image_is_valid ){
+        need_to_reload_opengl_texture.store(true);
+        //}
         return;
     };
 
@@ -887,7 +896,7 @@ Drover SDL_Viewer(Drover DICOM_data,
     const auto clear_preprocessed_contours = [&preprocessed_contours,
                                               &contour_colours]() -> void {
         preprocessed_contours.clear();
-        contour_colours.clear();
+        //contour_colours.clear(); // Persist these unless user specifically specifies.
         return;
     };
     
@@ -1017,6 +1026,10 @@ Drover SDL_Viewer(Drover DICOM_data,
     long int active_script_file = -1;
     std::shared_mutex script_mutex;
     std::atomic<long int> script_epoch = 0L;
+    const auto append_to_script = [](std::vector<char> &content, const std::string &s) -> void {
+        for(const auto &c : s) content.emplace_back(c);
+        return;
+    };
 
     // Contour and image display state.
     std::map<std::string, bool> contour_enabled;
@@ -1070,10 +1083,12 @@ Drover SDL_Viewer(Drover DICOM_data,
         const auto reload_image_texture = [&drover_mutex,
                                            &recompute_image_iters,
                                            &view_toggles,
-                                           &img_channel,
                                            &custom_centre,
                                            &custom_width,
                                            &current_texture,
+                                           &img_num,
+                                           &img_array_num,
+                                           &img_channel,
                                            &Load_OpenGL_Texture ]() -> void {
             std::unique_lock<std::shared_timed_mutex> drover_lock(drover_mutex);
             auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_image_iters();
@@ -1081,6 +1096,11 @@ Drover SDL_Viewer(Drover DICOM_data,
             &&  img_valid ){
                 img_channel = std::clamp<long int>(img_channel, 0, disp_img_it->channels-1);
                 current_texture = Load_OpenGL_Texture(*disp_img_it, custom_centre, custom_width);
+            }else{
+                img_channel = -1;
+                img_array_num = -1;
+                img_num = -1;
+                current_texture = opengl_texture_handle_t();
             }
             return;
         };
@@ -1092,8 +1112,8 @@ Drover SDL_Viewer(Drover DICOM_data,
 if(false){
             auto [cimg_valid, cimg_array_ptr_it, cimg_it] = recompute_cimage_iters();
             if(cimg_valid){
-                ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_Appearing);
-                ImGui::SetNextWindowPos(ImVec2(700, 40), ImGuiCond_Appearing);
+                ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_FirstUseEver);
+                ImGui::SetNextWindowPos(ImVec2(700, 40), ImGuiCond_FirstUseEver);
                 ImGui::Begin("Images2", &view_toggles.view_images_enabled, ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoNavInputs | ImGuiWindowFlags_NoScrollbar ); //| ImGuiWindowFlags_AlwaysAutoResize);
                 auto contouring_texture = Load_OpenGL_Texture( *cimg_it, {}, {} );
                 auto gl_tex_ptr = reinterpret_cast<void*>(static_cast<intptr_t>(contouring_texture.texture_number));
@@ -1111,6 +1131,13 @@ if(false){
                                             &launch_contour_preprocessor,
                                             &contouring_img_altered,
                                             &tagged_pos,
+
+                                            &script_mutex,
+                                            &script_files,
+                                            &active_script_file,
+                                            &script_epoch,
+                                            &append_to_script,
+
                                             &lsamps_visible,
                                             &row_profile,
                                             &col_profile ](void) -> bool {
@@ -1158,6 +1185,88 @@ if(false){
                 if(ImGui::BeginMenu("Adjust")){
                     ImGui::MenuItem("Window and Level", nullptr, &view_toggles.adjust_window_level_enabled);
                     ImGui::MenuItem("Image Colour Map", nullptr, &view_toggles.adjust_colour_map_enabled);
+                    ImGui::EndMenu();
+                }
+
+                ImGui::Separator();
+                if(ImGui::BeginMenu("Script")){
+                    if(ImGui::BeginMenu("Append Operation")){
+                        auto known_ops = Known_Operations();
+                        for(auto &anop : known_ops){
+                            const auto op_name = anop.first;
+                            std::stringstream ss;
+
+                            auto op_docs = (anop.second.first)();
+                            ss << op_docs.desc << "\n\n";
+                            if(!op_docs.notes.empty()){
+                                ss << "Notes:" << std::endl;
+                                for(auto &note : op_docs.notes){
+                                    ss << "\n" << "- " << note << std::endl;
+                                }
+                            }
+
+                            if(ImGui::MenuItem(op_name.c_str())){
+                                std::unique_lock<std::shared_mutex> script_lock(script_mutex);
+
+                                auto N_sfs = static_cast<long int>(script_files.size());
+                                if( N_sfs == 0 ){
+                                    FUNCINFO("No script to append to. Creating new script.");
+                                    script_files.emplace_back();
+                                    script_files.back().altered = true;
+                                    script_files.back().content.emplace_back('\0');
+                                    active_script_file = N_sfs;
+                                    N_sfs = static_cast<long int>(script_files.size());
+                                }
+                                if( !script_files.empty()
+                                &&  isininc(0, active_script_file, N_sfs-1)){
+                                    // Remove terminating '\0' from script.
+                                    script_files.at(active_script_file).content.erase(
+                                        std::remove_if( std::begin(script_files.at(active_script_file).content),
+                                                        std::end(script_files.at(active_script_file).content),
+                                                        [](char c) -> bool { return (c == '\0'); }), 
+                                        std::end(script_files.at(active_script_file).content) );
+
+                                    // Count whitespace on preceeding line to indent new line accordingly.
+                                    // ... TODO ...
+
+                                    // Add operation to script.
+                                    std::stringstream sc;
+                                    sc << std::endl << op_name << "(";
+                                    bool first = true;
+                                    std::set<std::string> args;
+                                    for(const auto & a : op_docs.args){
+                                        // Avoid duplicate arguments (from composite operations).
+                                        const auto name = a.name;
+                                        if(args.count(name) != 0) continue;
+                                        args.insert(name);
+
+                                        // Escape any quotes in the default value, which will generally be parsed
+                                        // fuzzily via regex and should be OK.
+                                        std::string val = a.default_val;
+                                        val.erase( std::remove_if( std::begin(val),
+                                                                   std::end(val),
+                                                                   [](char c) -> bool { return (c == '\''); }),
+                                                   std::end(val) );
+                                        if(!first) sc << ", ";
+                                        sc << std::endl << "    " <<  name << " = '" << val << "'";
+                                        first = false;
+                                    }
+                                    sc << " ){};" << std::endl;
+
+                                    append_to_script(script_files.at(active_script_file).content, sc.str());
+                                    script_files.back().content.emplace_back('\0');
+                                    view_toggles.view_script_editor_enabled = true;
+                                }
+                            }
+                            if(ImGui::IsItemHovered()){
+                                ImGui::SetNextWindowSizeConstraints(ImVec2(400.0, -1), ImVec2(500.0, -1));
+                                ImGui::BeginTooltip();
+                                ImGui::TextWrapped("%s", ss.str().c_str());
+                                ImGui::EndTooltip();
+                            }
+                        }
+                        ImGui::EndMenu();
+                    }
                     ImGui::EndMenu();
                 }
 
@@ -1218,6 +1327,7 @@ if(false){
                                             &script_files,
                                             &active_script_file,
                                             &script_epoch,
+                                            &append_to_script,
 
                                             &drover_mutex,
                                             &DICOM_data,
@@ -1241,8 +1351,8 @@ if(false){
                                             &line_numbers_debug_colour ]() -> void {
             if( std::unique_lock<std::shared_mutex> script_lock(script_mutex);
                 view_toggles.view_script_editor_enabled ){
-                ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_Appearing);
-                ImGui::SetNextWindowPos(ImVec2(50, 50), ImGuiCond_Appearing);
+                ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_FirstUseEver);
+                ImGui::SetNextWindowPos(ImVec2(50, 50), ImGuiCond_FirstUseEver);
                 ImGui::Begin("Script Editor", &view_toggles.view_script_editor_enabled );
                 ImVec2 window_extent = ImGui::GetContentRegionAvail();
 
@@ -1312,7 +1422,7 @@ ContourViaThreshold(
 
 )***";
 script_files.back().content.clear();
-for(const auto &c : testing_content) script_files.back().content.emplace_back(c);
+append_to_script(script_files.back().content, testing_content);
 script_files.back().content.emplace_back('\0');
 ////////////////
 ////////////////
@@ -1335,7 +1445,8 @@ script_files.back().content.emplace_back('\0');
                 }
                 ImGui::SameLine();
                 if(ImGui::Button("Save", ImVec2(window_extent.x/4, 0))){ 
-                    if(isininc(0, active_script_file, N_sfs-1)){
+                    if( (N_sfs != 0) 
+                    &&  isininc(0, active_script_file, N_sfs-1)){
                         if( script_files.at(active_script_file).path.empty() ){
                             try{
                                 const auto open_file_root_str = std::filesystem::absolute(open_file_root / "script.txt").string();
@@ -1351,7 +1462,8 @@ script_files.back().content.emplace_back('\0');
                 }
                 ImGui::SameLine();
                 if(ImGui::Button("Close", ImVec2(window_extent.x/4, 0))){ 
-                    if(isininc(0, active_script_file, N_sfs-1)){
+                    if( (N_sfs != 0) 
+                    &&  isininc(0, active_script_file, N_sfs-1)){
                         script_files.erase( std::next( std::begin( script_files ), active_script_file ) );
                         --active_script_file; // Default to script on left.
                         --N_sfs;
@@ -1359,7 +1471,8 @@ script_files.back().content.emplace_back('\0');
                 }
 
                 if(ImGui::Button("Validate", ImVec2(window_extent.x/4, 0))){ 
-                    if(isininc(0, active_script_file, N_sfs-1)){
+                    if( (N_sfs != 0) 
+                    &&  isininc(0, active_script_file, N_sfs-1)){
                         std::stringstream ss( std::string( std::begin(script_files.at(active_script_file).content),
                                                            std::end(script_files.at(active_script_file).content) ) );
                         script_files.at(active_script_file).feedback.clear();
@@ -1370,7 +1483,8 @@ script_files.back().content.emplace_back('\0');
                 }
                 ImGui::SameLine();
                 if(ImGui::Button("Run", ImVec2(window_extent.x/4, 0))){ 
-                    if(isininc(0, active_script_file, N_sfs-1)){
+                    if( (N_sfs != 0) 
+                    &&  isininc(0, active_script_file, N_sfs-1)){
                         std::stringstream ss( std::string( std::begin(script_files.at(active_script_file).content),
                                                            std::end(script_files.at(active_script_file).content) ) );
                         script_files.at(active_script_file).feedback.clear();
@@ -1433,11 +1547,12 @@ script_files.back().content.emplace_back('\0');
                     }
                 }
 
-                if( isininc(0, active_script_file, N_sfs-1)
+                if( (N_sfs != 0) 
+                &&  isininc(0, active_script_file, N_sfs-1)
                 &&  !(script_files.at(active_script_file).feedback.empty())
                 &&  view_toggles.view_script_feedback ){
-                    ImGui::SetNextWindowSize(ImVec2(650, 250), ImGuiCond_Appearing);
-                    ImGui::SetNextWindowPos(ImVec2(650, 500), ImGuiCond_Appearing);
+                    ImGui::SetNextWindowSize(ImVec2(650, 250), ImGuiCond_FirstUseEver);
+                    ImGui::SetNextWindowPos(ImVec2(650, 500), ImGuiCond_FirstUseEver);
                     ImGui::Begin("Script Feedback", &view_toggles.view_script_feedback );
 
                     for(const auto &f : script_files.at(active_script_file).feedback){
@@ -1535,7 +1650,8 @@ script_files.back().content.emplace_back('\0');
                     }
                 }
 
-                if(isininc(0, active_script_file, N_sfs-1)){
+                if( (N_sfs != 0) 
+                &&  isininc(0, active_script_file, N_sfs-1) ){
 
                     // Implement a callback to handle resize events.
                     const auto text_entry_callback = [](ImGuiInputTextCallbackData *data) -> int {
@@ -1704,37 +1820,30 @@ script_files.back().content.emplace_back('\0');
                                            &col_profile,
 
                                            &frame_count ]() -> void {
-            std::unique_lock<std::shared_timed_mutex> drover_lock(drover_mutex, mutex_dt);
-            if(!drover_lock) return;
 
-            auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_image_iters();
-            if( !view_toggles.view_images_enabled
-            ||  !img_valid ) return;
+// Lock the image details mutex in shared mode.
+// 
+// ... TODO ...
+//
+            if(!current_texture.texture_exists) return;
 
-            ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_Appearing);
-            ImGui::SetNextWindowPos(ImVec2(10, 40), ImGuiCond_Appearing);
-            ImGui::Begin("Images", &view_toggles.view_images_enabled, ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoNavInputs | ImGuiWindowFlags_NoScrollbar ); //| ImGuiWindowFlags_AlwaysAutoResize);
+            ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_FirstUseEver);
+            ImGui::SetNextWindowPos(ImVec2(10, 40), ImGuiCond_FirstUseEver);
+            ImGui::Begin("Images", &view_toggles.view_images_enabled, ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoNavInputs | ImGuiWindowFlags_NoScrollbar );
             ImGuiIO &io = ImGui::GetIO();
 
             // Note: unhappy with this. Can cause feedback loop and flicker/jumpiness when resizing. Works OK for now
             // though. TODO.
-            const auto img_rows = disp_img_it->rows;
-            const auto img_cols = disp_img_it->columns;
-            const auto img_rows_f = static_cast<float>(disp_img_it->rows);
-            const auto img_cols_f = static_cast<float>(disp_img_it->columns);
-
             ImVec2 image_extent = ImGui::GetContentRegionAvail();
             image_extent.x = std::max(512.0f, image_extent.x - 5.0f);
             // Ensure images have the same aspect ratio as the true image.
-            image_extent.y = (disp_img_it->pxl_dx / disp_img_it->pxl_dy) * image_extent.x * img_rows_f / img_cols_f;
-            image_extent.y = std::isfinite(image_extent.y) ? image_extent.y : (disp_img_it->pxl_dx / disp_img_it->pxl_dy) * image_extent.x;
+            image_extent.y = current_texture.aspect_ratio * image_extent.x;
             auto gl_tex_ptr = reinterpret_cast<void*>(static_cast<intptr_t>(current_texture.texture_number));
 
             ImVec2 pos = ImGui::GetCursorScreenPos();
             ImGui::Image(gl_tex_ptr, image_extent, uv_min, uv_max);
             image_mouse_pos.mouse_hovering_image = ImGui::IsItemHovered();
             image_mouse_pos.image_window_focused = ImGui::IsWindowFocused();
-//contouring_imgs.image_data.back()->imagecoll.images.back()
 
             ImVec2 real_extent; // The true dimensions of the unclipped image, accounting for zoom and panning.
             real_extent.x = image_extent.x / (uv_max.x - uv_min.x);
@@ -1742,9 +1851,25 @@ script_files.back().content.emplace_back('\0');
             ImVec2 real_pos; // The true position of the top-left corner, accounting for zoom and panning.
             real_pos.x = pos.x - (real_extent.x * uv_min.x);
             real_pos.y = pos.y - (real_extent.y * uv_min.y);
+            ImGui::End(); // "Images".
+
+            // Attempt to acquire an exclusive lock.
+            std::unique_lock<std::shared_timed_mutex> drover_lock(drover_mutex, mutex_dt);
+            if(!drover_lock) return;
+
+            auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_image_iters();
+            if( !view_toggles.view_images_enabled
+            ||  !img_valid ) return;
+
+            // Continue now that we have an exclusive lock.
+            ImGui::Begin("Images", &view_toggles.view_images_enabled);
 
             // Calculate mouse positions if the mouse is hovering the image.
             if( image_mouse_pos.mouse_hovering_image ){
+                const auto img_rows = current_texture.row_count;
+                const auto img_cols = current_texture.col_count;
+                const auto img_rows_f = static_cast<float>(img_rows);
+                const auto img_cols_f = static_cast<float>(img_cols);
                 image_mouse_pos.region_x = std::clamp((io.MousePos.x - real_pos.x) / real_extent.x, 0.0f, 1.0f);
                 image_mouse_pos.region_y = std::clamp((io.MousePos.y - real_pos.y) / real_extent.y, 0.0f, 1.0f);
                 image_mouse_pos.r = std::clamp( static_cast<long int>( std::floor( image_mouse_pos.region_y * img_rows_f ) ), 0L, (img_rows-1) );
@@ -1812,8 +1937,8 @@ script_files.back().content.emplace_back('\0');
             // Display a contour legend.
             if( view_toggles.view_contours_enabled
             &&  (DICOM_data.contour_data != nullptr) ){
-                ImGui::SetNextWindowSize(ImVec2(510, 650), ImGuiCond_Appearing);
-                ImGui::SetNextWindowPos(ImVec2(680, 40), ImGuiCond_Appearing);
+                ImGui::SetNextWindowSize(ImVec2(510, 650), ImGuiCond_FirstUseEver);
+                ImGui::SetNextWindowPos(ImVec2(680, 40), ImGuiCond_FirstUseEver);
                 ImGui::SetNextWindowCollapsed(true, ImGuiCond_FirstUseEver);
                 ImGui::Begin("Contours", &view_toggles.view_contours_enabled);
                 ImVec2 window_extent = ImGui::GetContentRegionAvail();
@@ -1976,8 +2101,8 @@ script_files.back().content.emplace_back('\0');
                         }
                     }
 
-                    ImGui::SetNextWindowSize(ImVec2(510, 650), ImGuiCond_Appearing);
-                    ImGui::SetNextWindowPos(ImVec2(680, 200), ImGuiCond_Appearing);
+                    ImGui::SetNextWindowSize(ImVec2(510, 650), ImGuiCond_FirstUseEver);
+                    ImGui::SetNextWindowPos(ImVec2(680, 200), ImGuiCond_FirstUseEver);
                     ImGui::SetNextWindowCollapsed(true, ImGuiCond_FirstUseEver);
                     ImGui::Begin("Contouring", &view_toggles.view_contouring_enabled);
 
@@ -2712,8 +2837,8 @@ script_files.back().content.emplace_back('\0');
             ||  !DICOM_data.Has_LSamp_Data() ) return;
 
             // Display a selection and navigation window.
-            ImGui::SetNextWindowSize(ImVec2(350, 400), ImGuiCond_Appearing);
-            ImGui::SetNextWindowPos(ImVec2(680, 40), ImGuiCond_Appearing);
+            ImGui::SetNextWindowSize(ImVec2(350, 400), ImGuiCond_FirstUseEver);
+            ImGui::SetNextWindowPos(ImVec2(680, 40), ImGuiCond_FirstUseEver);
             ImGui::Begin("Plot Selection", &view_toggles.view_plots_enabled, ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoNavInputs);
 
             const int N_lsamps = static_cast<int>(DICOM_data.lsamp_data.size());
@@ -2875,8 +3000,8 @@ script_files.back().content.emplace_back('\0');
             if( !view_toggles.view_images_enabled
             ||  !img_valid ) return;
 
-            ImGui::SetNextWindowSize(ImVec2(350, 400), ImGuiCond_Appearing);
-            ImGui::SetNextWindowPos(ImVec2(680, 100), ImGuiCond_Appearing);
+            ImGui::SetNextWindowSize(ImVec2(350, 400), ImGuiCond_FirstUseEver);
+            ImGui::SetNextWindowPos(ImVec2(680, 100), ImGuiCond_FirstUseEver);
             ImGui::Begin("Image Navigation", &view_toggles.view_images_enabled, ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoNavInputs | ImGuiWindowFlags_AlwaysAutoResize);
 
             int scroll_arrays = img_array_num;
