@@ -135,7 +135,7 @@ void report( std::list<script_feedback_t> &feedback,
              script_feedback_severity_t severity,
              const char_with_context_t &c,
              const std::string &msg ){
-    if(feedback.size() < 100){
+    if(feedback.size() < 500){
         feedback.emplace_back();
         feedback.back().severity = severity;
         feedback.back().offset = c.cc;
