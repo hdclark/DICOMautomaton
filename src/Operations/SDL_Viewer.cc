@@ -1825,7 +1825,8 @@ script_files.back().content.emplace_back('\0');
 // 
 // ... TODO ...
 //
-            if(!current_texture.texture_exists) return;
+            if( !view_toggles.view_images_enabled
+            ||  !current_texture.texture_exists ) return;
 
             ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_FirstUseEver);
             ImGui::SetNextWindowPos(ImVec2(10, 40), ImGuiCond_FirstUseEver);
