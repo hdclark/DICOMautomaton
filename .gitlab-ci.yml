@@ -52,8 +52,10 @@ build_ci_arch:
       ( ( while true ; do sleep 30 ; printf '\n\n' ; df -h ; printf '\n\n' ; free -h ; printf '\n\n' ; done ) &)
       dd if=/dev/zero of=/swapfile bs=1M count=4096
       chmod 600 /swapfile
+      chattr +c /swapfile
       mkswap /swapfile
-      swapon /swapfile || true
+      echo '/swapfile   swap    swap    sw  0   0' >> /etc/fstab
+      swapon --all || true
       dmesg -e
       mount
       "./docker/builders/ci/implementation_ci_arch.sh"
