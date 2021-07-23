@@ -53,7 +53,9 @@ build_ci_arch:
       dd if=/dev/zero of=/swapfile bs=1M count=4096
       chmod 600 /swapfile
       mkswap /swapfile
-      swapon /swapfile
+      swapon /swapfile || true
+      dmesg -e
+      mount
       "./docker/builders/ci/implementation_ci_arch.sh"
       "./integration_tests/Run.sh"
       "./scripts/extract_system_appimage.sh"
@@ -73,7 +75,10 @@ cross_compile_mxe:
   script:
     - |
       ( ( while true ; do sleep 30 ; printf '\n\n' ; df -h ; printf '\n\n' ; free -h ; printf '\n\n' ; done ) &)
-      "dd if=/dev/zero of=/swapfile bs=1M count=4096 ; chmod 600 /swapfile ; mkswap /swapfile ; swapon /swapfile"
+      dd if=/dev/zero of=/swapfile bs=1M count=4096
+      chmod 600 /swapfile
+      mkswap /swapfile
+      swapon /swapfile
       "./docker/builders/mxe/implementation_mxe.sh"
       rsync -avP /out/ ./Windows/
   artifacts:
