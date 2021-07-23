@@ -47,17 +47,16 @@ build_ci_arch:
   before_script:
     - "cp -R ./docker/builders/ci /scratch"
     - "cp -R . /dcma"
+    - "dd if=/dev/zero of=/var/vm/swapfile_custom bs=1M count=4096"
+    - "chmod 600 /var/vm/swapfile_custom"
+    - "chattr +c /var/vm/swapfile_custom"
+    - "mkswap /var/vm/swapfile_custom"
+    - "swapon --fixpgsz --output-all $(losetup --find /var/vm/swapfile_custom --show)"
+    - "mount"
+    - "free -h"
   script:
     - |
       ( ( while true ; do sleep 30 ; printf '\n\n' ; df -h ; printf '\n\n' ; free -h ; printf '\n\n' ; done ) &)
-      dd if=/dev/zero of=/swapfile bs=1M count=4096
-      chmod 600 /swapfile
-      chattr +c /swapfile
-      mkswap /swapfile
-      echo '/swapfile   swap    swap    sw  0   0' >> /etc/fstab
-      swapon --all || true
-      dmesg -e
-      mount
       "./docker/builders/ci/implementation_ci_arch.sh"
       "./integration_tests/Run.sh"
       "./scripts/extract_system_appimage.sh"
