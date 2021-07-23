@@ -85,7 +85,7 @@ if [ ! -d "${reporoot}" ] ; then
     exit 1
 fi
 cd "${reporoot}"
-rsync -rptPzz --no-links --cvs-exclude "${reporoot}"/ "${USER_AT_REMOTE}:${BUILD_DIR}"
+rsync -rptPzz --no-links --cvs-exclude --exclude "${BUILD_DIR}" "${reporoot}"/ "${USER_AT_REMOTE}:${BUILD_DIR}"
 
 
 # Initiate the remote build.
