@@ -25,7 +25,8 @@ build_ci_debian_stable:
     - "cp -R . /dcma"
   script:
     - |
-      ( ( while true ; do sleep 225 ; printf '\n\n' ; df -h ; printf '\n\n' ; free -h ; printf '\n\n' ; done ) &)
+      ( ( while true ; do sleep 30 ; printf '\n\n' ; df -h ; printf '\n\n' ; free -h ; printf '\n\n' ; done ) &)
+      "dd if=/dev/zero of=/swapfile bs=1M count=4096 ; chmod 600 /swapfile ; mkswap /swapfile ; swapon /swapfile"
       "./docker/builders/ci/implementation_ci_debian_stable.sh"
       "./integration_tests/Run.sh"
       "./scripts/extract_system_appimage.sh"
@@ -45,7 +46,8 @@ build_ci_arch:
     - "cp -R . /dcma"
   script:
     - |
-      ( ( while true ; do sleep 225 ; printf '\n\n' ; df -h ; printf '\n\n' ; free -h ; printf '\n\n' ; done ) &)
+      ( ( while true ; do sleep 30 ; printf '\n\n' ; df -h ; printf '\n\n' ; free -h ; printf '\n\n' ; done ) &)
+      "dd if=/dev/zero of=/swapfile bs=1M count=4096 ; chmod 600 /swapfile ; mkswap /swapfile ; swapon /swapfile"
       "./docker/builders/ci/implementation_ci_arch.sh"
       "./integration_tests/Run.sh"
       "./scripts/extract_system_appimage.sh"
@@ -64,7 +66,8 @@ cross_compile_mxe:
     - "cp -R . /dcma"
   script:
     - |
-      ( ( while true ; do sleep 225 ; printf '\n\n' ; df -h ; printf '\n\n' ; free -h ; printf '\n\n' ; done ) &)
+      ( ( while true ; do sleep 30 ; printf '\n\n' ; df -h ; printf '\n\n' ; free -h ; printf '\n\n' ; done ) &)
+      "dd if=/dev/zero of=/swapfile bs=1M count=4096 ; chmod 600 /swapfile ; mkswap /swapfile ; swapon /swapfile"
       "./docker/builders/mxe/implementation_mxe.sh"
       rsync -avP /out/ ./Windows/
   artifacts:
@@ -82,7 +85,7 @@ cross_compile_mxe:
 #    - "cp -R . /dcma"
 #  script:
 #    - |
-#      ( ( while true ; do sleep 225 ; printf '\n\n' ; df -h ; printf '\n\n' ; free -h ; printf '\n\n' ; done ) &)
+#      ( ( while true ; do sleep 30 ; printf '\n\n' ; df -h ; printf '\n\n' ; free -h ; printf '\n\n' ; done ) &)
 #      "/scratch_base/implementation_arch.sh"
 #      "/scratch/implementation_arch.sh"
 ##  artifacts:
