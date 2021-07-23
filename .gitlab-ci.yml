@@ -47,11 +47,11 @@ build_ci_arch:
   before_script:
     - "cp -R ./docker/builders/ci /scratch"
     - "cp -R . /dcma"
-    - "dd if=/dev/zero of=/var/vm/swapfile_custom bs=1M count=4096"
-    - "chmod 600 /var/vm/swapfile_custom"
-    - "chattr +c /var/vm/swapfile_custom"
-    - "mkswap /var/vm/swapfile_custom"
-    - "swapon --fixpgsz --output-all $(losetup --find /var/vm/swapfile_custom --show)"
+    - "dd if=/dev/zero of=/swapfile_custom bs=1M count=4096"
+    - "chmod 600 /swapfile_custom"
+    - "chattr +c /swapfile_custom"
+    - "mkswap /swapfile_custom"
+    - "swapon --fixpgsz --output-all $(losetup --find /swapfile_custom --show)"
     - "mount"
     - "free -h"
   script:
