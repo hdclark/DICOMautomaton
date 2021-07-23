@@ -23,13 +23,13 @@ build_ci_debian_stable:
   before_script:
     - "cp -R ./docker/builders/ci /scratch"
     - "cp -R . /dcma"
-    - "dd if=/dev/zero of=/swapfile_custom bs=1M count=4096"
-    - "chmod 600 /swapfile_custom"
-    - "chattr +c /swapfile_custom"
-    - "mkswap /swapfile_custom"
-    - "swapon --fixpgsz --output-all $(losetup --find /swapfile_custom --show)"
-    - "mount"
-    - "free -h"
+    - "dd if=/dev/zero of=/swapfile_custom bs=1M count=4096 || true"
+    - "chmod 600 /swapfile_custom || true"
+    - "chattr +c /swapfile_custom || true"
+    - "mkswap /swapfile_custom || true"
+    - "swapon --fixpgsz --output-all $(losetup --find /swapfile_custom --show) || true"
+    - "mount || true"
+    - "free -h || true"
   script:
     - |
       ( ( while true ; do sleep 30 ; printf '\n\n' ; df -h ; printf '\n\n' ; free -h ; printf '\n\n' ; done ) &)
@@ -50,13 +50,13 @@ build_ci_arch:
   before_script:
     - "cp -R ./docker/builders/ci /scratch"
     - "cp -R . /dcma"
-    - "dd if=/dev/zero of=/swapfile_custom bs=1M count=4096"
-    - "chmod 600 /swapfile_custom"
-    - "chattr +c /swapfile_custom"
-    - "mkswap /swapfile_custom"
-    - "swapon --fixpgsz --output-all $(losetup --find /swapfile_custom --show)"
-    - "mount"
-    - "free -h"
+    - "dd if=/dev/zero of=/swapfile_custom bs=1M count=4096 || true"
+    - "chmod 600 /swapfile_custom || true"
+    - "chattr +c /swapfile_custom || true"
+    - "mkswap /swapfile_custom || true"
+    - "swapon --fixpgsz --output-all $(losetup --find /swapfile_custom --show) || true"
+    - "mount || true"
+    - "free -h || true"
   script:
     - |
       ( ( while true ; do sleep 30 ; printf '\n\n' ; df -h ; printf '\n\n' ; free -h ; printf '\n\n' ; done ) &)
@@ -76,13 +76,13 @@ cross_compile_mxe:
   image: "hdclark/dcma_build_base_mxe:latest"
   before_script:
     - "cp -R . /dcma"
-    - "dd if=/dev/zero of=/swapfile_custom bs=1M count=4096"
-    - "chmod 600 /swapfile_custom"
-    - "chattr +c /swapfile_custom"
-    - "mkswap /swapfile_custom"
-    - "swapon --fixpgsz --output-all $(losetup --find /swapfile_custom --show)"
-    - "mount"
-    - "free -h"
+    - "dd if=/dev/zero of=/swapfile_custom bs=1M count=4096 || true"
+    - "chmod 600 /swapfile_custom || true"
+    - "chattr +c /swapfile_custom || true"
+    - "mkswap /swapfile_custom || true"
+    - "swapon --fixpgsz --output-all $(losetup --find /swapfile_custom --show) || true"
+    - "mount || true"
+    - "free -h || true"
   script:
     - |
       ( ( while true ; do sleep 30 ; printf '\n\n' ; df -h ; printf '\n\n' ; free -h ; printf '\n\n' ; done ) &)
