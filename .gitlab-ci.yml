@@ -26,7 +26,10 @@ build_ci_debian_stable:
   script:
     - |
       ( ( while true ; do sleep 30 ; printf '\n\n' ; df -h ; printf '\n\n' ; free -h ; printf '\n\n' ; done ) &)
-      "dd if=/dev/zero of=/swapfile bs=1M count=4096 ; chmod 600 /swapfile ; mkswap /swapfile ; swapon /swapfile"
+      dd if=/dev/zero of=/swapfile bs=1M count=4096
+      chmod 600 /swapfile
+      mkswap /swapfile
+      swapon /swapfile
       "./docker/builders/ci/implementation_ci_debian_stable.sh"
       "./integration_tests/Run.sh"
       "./scripts/extract_system_appimage.sh"
@@ -47,7 +50,10 @@ build_ci_arch:
   script:
     - |
       ( ( while true ; do sleep 30 ; printf '\n\n' ; df -h ; printf '\n\n' ; free -h ; printf '\n\n' ; done ) &)
-      "dd if=/dev/zero of=/swapfile bs=1M count=4096 ; chmod 600 /swapfile ; mkswap /swapfile ; swapon /swapfile"
+      dd if=/dev/zero of=/swapfile bs=1M count=4096
+      chmod 600 /swapfile
+      mkswap /swapfile
+      swapon /swapfile
       "./docker/builders/ci/implementation_ci_arch.sh"
       "./integration_tests/Run.sh"
       "./scripts/extract_system_appimage.sh"
