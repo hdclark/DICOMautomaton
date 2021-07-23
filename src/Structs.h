@@ -480,27 +480,12 @@ class Drover {
 };
 
 
-
 using icase_str_lt_func_t = std::function<bool (const std::string &, const std::string)>;
+
 template< class T >
 using icase_map_t = std::map<std::string, T, icase_str_lt_func_t>;
-auto icase_str_lt_lambda = [](const std::string &A, const std::string &B) -> bool {
-    std::string AA(A);
-    std::string BB(B);
-    std::transform(AA.begin(), AA.end(), AA.begin(), [](unsigned char c){ return std::tolower(c); });
-    std::transform(BB.begin(), BB.end(), BB.begin(), [](unsigned char c){ return std::tolower(c); });
-    return std::lexicographical_compare(std::begin(AA), std::end(AA), std::begin(BB), std::end(BB));
-//    return std::lexicographical_compare(std::begin(A), std::end(A), std::begin(B), std::end(B));
-};
-auto icase_str_eq_lambda = [](const std::string &A, const std::string &B) -> bool {
-    std::string AA(A);
-    std::string BB(B);
-    std::transform(AA.begin(), AA.end(), AA.begin(), [](unsigned char c){ return std::tolower(c); });
-    std::transform(BB.begin(), BB.end(), BB.begin(), [](unsigned char c){ return std::tolower(c); });
-    return (AA == BB);
-//    return (A == B);
-};
-
+bool icase_str_lt(const std::string &A, const std::string &B);
+bool icase_str_eq(const std::string &A, const std::string &B);
 
 // Class for dealing with commandline argument operation options.
 //

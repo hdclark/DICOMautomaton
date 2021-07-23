@@ -1787,8 +1787,24 @@ void Drover::Plot_Image_Outlines() const {
 //---------------------------------------------------------------------------------------------------------------------------
 //------------------------------------------------------ OperationArgPkg ----------------------------------------------------
 //---------------------------------------------------------------------------------------------------------------------------
+bool icase_str_lt(const std::string &A, const std::string &B){
+    std::string AA(A);
+    std::string BB(B);
+    std::transform(AA.begin(), AA.end(), AA.begin(), [](unsigned char c){ return std::tolower(c); });
+    std::transform(BB.begin(), BB.end(), BB.begin(), [](unsigned char c){ return std::tolower(c); });
+    return std::lexicographical_compare(std::begin(AA), std::end(AA), std::begin(BB), std::end(BB));
+//    return std::lexicographical_compare(std::begin(A), std::end(A), std::begin(B), std::end(B));
+}
+bool icase_str_eq(const std::string &A, const std::string &B){
+    std::string AA(A);
+    std::string BB(B);
+    std::transform(AA.begin(), AA.end(), AA.begin(), [](unsigned char c){ return std::tolower(c); });
+    std::transform(BB.begin(), BB.end(), BB.begin(), [](unsigned char c){ return std::tolower(c); });
+    return (AA == BB);
+//    return (A == B);
+}
 
-OperationArgPkg::OperationArgPkg(std::string unparsed, const std::string& sepr, const std::string& eqls) : opts(icase_str_lt_lambda) {
+OperationArgPkg::OperationArgPkg(std::string unparsed, const std::string& sepr, const std::string& eqls) : opts(icase_str_lt) {
     //Parse the string. Throws if an error is detected.
     //
     // Note: for the following examples 'sepr' is ":" and 'eqls' is "=".

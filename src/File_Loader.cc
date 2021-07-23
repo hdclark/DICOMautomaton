@@ -243,7 +243,7 @@ Load_Files( Drover &DICOM_data,
     }
 
     // Partition the paths by file extension.
-    icase_map_t<std::list<boost::filesystem::path>> extensions(icase_str_lt_lambda);
+    icase_map_t<std::list<boost::filesystem::path>> extensions(icase_str_lt);
     for(auto &p : Paths){
         const auto ext = p.extension().string();
         extensions[ext].push_back(p);
@@ -260,26 +260,26 @@ Load_Files( Drover &DICOM_data,
         for(auto &l : loaders){
             if(std::any_of( std::begin(l.exts),
                             std::end(l.exts),
-                            [ext](const std::string &l_ext){ return icase_str_eq_lambda(ext, l_ext); })){
+                            [ext](const std::string &l_ext){ return icase_str_eq(ext, l_ext); })){
             
                 l.priority -= 100.0;
             }
         }
 
         // For select extensions, exclude all other loaders that are extremely likely to be irrelevant.
-        if( icase_str_eq_lambda(ext, ".dcm")
-        ||  icase_str_eq_lambda(ext, "")
-        ||  icase_str_eq_lambda(ext, ".tar")
-        ||  icase_str_eq_lambda(ext, ".3ddose")
-        ||  icase_str_eq_lambda(ext, ".stl")
-        ||  icase_str_eq_lambda(ext, ".obj")
-        ||  icase_str_eq_lambda(ext, ".off")
-        ||  icase_str_eq_lambda(ext, ".lsamps") ){
+        if( icase_str_eq(ext, ".dcm")
+        ||  icase_str_eq(ext, "")
+        ||  icase_str_eq(ext, ".tar")
+        ||  icase_str_eq(ext, ".3ddose")
+        ||  icase_str_eq(ext, ".stl")
+        ||  icase_str_eq(ext, ".obj")
+        ||  icase_str_eq(ext, ".off")
+        ||  icase_str_eq(ext, ".lsamps") ){
             std::remove_if( std::begin(loaders), std::end(loaders),
                             [&](const file_loader_t &l){
                                 return std::none_of( std::begin(l.exts),
                                                      std::end(l.exts),
-                                                     [&](const std::string &l_ext){ return icase_str_eq_lambda(ext, l_ext); });
+                                                     [&](const std::string &l_ext){ return icase_str_eq(ext, l_ext); });
                             });
         }
 
