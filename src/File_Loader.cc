@@ -253,7 +253,6 @@ Load_Files( Drover &DICOM_data,
     for(auto & ep : extensions){
         const auto ext = ep.first;
         auto &&l_Paths = ep.second;
-//FUNCINFO("ext = " << ext);
         
         // Boost the priority of any loaders whose extensions match this bunch of files.
         auto loaders = get_default_loaders();
@@ -275,12 +274,11 @@ Load_Files( Drover &DICOM_data,
         ||  icase_str_eq(ext, ".obj")
         ||  icase_str_eq(ext, ".off")
         ||  icase_str_eq(ext, ".lsamps") ){
-            std::remove_if( std::begin(loaders), std::end(loaders),
-                            [&](const file_loader_t &l){
-                                return std::none_of( std::begin(l.exts),
-                                                     std::end(l.exts),
-                                                     [&](const std::string &l_ext){ return icase_str_eq(ext, l_ext); });
-                            });
+            loaders.remove_if( [ext](const file_loader_t &l){
+                                    return std::none_of( std::begin(l.exts),
+                                                         std::end(l.exts),
+                                                         [&](const std::string &l_ext){ return icase_str_eq(ext, l_ext); });
+                                } );
         }
 
         // Re-sort using the altered priorities.
@@ -290,7 +288,9 @@ Load_Files( Drover &DICOM_data,
 
         // Attempt to load the files.
         for(const auto &l : loaders){
-//FUNCINFO("Trying loader ext[0] = " << l.exts.front() << " with priority = " << l.priority);
+            std::stringstream ss;
+            for(const auto &e : l.exts) ss << (ss.str().empty() ? "" : ", ") << "'" << e << "'";
+            FUNCINFO("Trying loader for extensions: " << ss.str());
             if(!l_Paths.empty() && !l.f(l_Paths)){
                 return false;
             }
