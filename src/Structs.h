@@ -482,9 +482,23 @@ class Drover {
 
 
 using icase_str_lt_func_t = std::function<bool (const std::string &, const std::string)>;
-typedef std::map<std::string, std::string, icase_str_lt_func_t> icase_map_t;
-constexpr auto icase_str_lt_lambda = [](const std::string &A, const std::string &B) -> bool {
-    return std::lexicographical_compare(std::begin(A), std::end(A), std::begin(B), std::end(B));
+template< class T >
+using icase_map_t = std::map<std::string, T, icase_str_lt_func_t>;
+auto icase_str_lt_lambda = [](const std::string &A, const std::string &B) -> bool {
+    std::string AA(A);
+    std::string BB(B);
+    std::transform(AA.begin(), AA.end(), AA.begin(), [](unsigned char c){ return std::tolower(c); });
+    std::transform(BB.begin(), BB.end(), BB.begin(), [](unsigned char c){ return std::tolower(c); });
+    return std::lexicographical_compare(std::begin(AA), std::end(AA), std::begin(BB), std::end(BB));
+//    return std::lexicographical_compare(std::begin(A), std::end(A), std::begin(B), std::end(B));
+};
+auto icase_str_eq_lambda = [](const std::string &A, const std::string &B) -> bool {
+    std::string AA(A);
+    std::string BB(B);
+    std::transform(AA.begin(), AA.end(), AA.begin(), [](unsigned char c){ return std::tolower(c); });
+    std::transform(BB.begin(), BB.end(), BB.begin(), [](unsigned char c){ return std::tolower(c); });
+    return (AA == BB);
+//    return (A == B);
 };
 
 
@@ -497,7 +511,7 @@ class OperationArgPkg {
 
     private:
         std::string name; // The operation name.
-        icase_map_t opts; // Arguments to pass to the operation.
+        icase_map_t<std::string> opts; // Arguments to pass to the operation.
 
         std::list<OperationArgPkg> children; // Child nodes that can be interpretted in different ways.
 
