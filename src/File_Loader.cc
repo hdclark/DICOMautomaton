@@ -56,7 +56,7 @@ Load_Files( Drover &DICOM_data,
         std::list<file_loader_t> loaders;
 
         //Standalone file loading: TAR files.
-        loaders.emplace_back(file_loader_t{{".tar"}, 1.0, [&](std::list<boost::filesystem::path> &p) -> bool {
+        loaders.emplace_back(file_loader_t{{".tar", ".gz", ".tar.gz", ".tgz"}, 1.0, [&](std::list<boost::filesystem::path> &p) -> bool {
             if(!p.empty()
             && !Load_From_TAR_Files( DICOM_data, InvocationMetadata, FilenameLex, p )){
                 FUNCWARN("Failed to load TAR file");
@@ -76,7 +76,7 @@ Load_Files( Drover &DICOM_data,
         }});
 
         //Standalone file loading: DICOM files.
-        loaders.emplace_back(file_loader_t{{".dcm", ""}, 3.0, [&](std::list<boost::filesystem::path> &p) -> bool {
+        loaders.emplace_back(file_loader_t{{".dcm"}, 3.0, [&](std::list<boost::filesystem::path> &p) -> bool {
             if(!p.empty()
             && !Load_From_DICOM_Files( DICOM_data, InvocationMetadata, FilenameLex, p )){
                 FUNCWARN("Failed to load DICOM file");
@@ -266,14 +266,14 @@ Load_Files( Drover &DICOM_data,
         }
 
         // For select extensions, exclude all other loaders that are extremely likely to be irrelevant.
-        if( icase_str_eq(ext, ".dcm")
-        ||  icase_str_eq(ext, "")
-        ||  icase_str_eq(ext, ".tar")
-        ||  icase_str_eq(ext, ".3ddose")
-        ||  icase_str_eq(ext, ".stl")
-        ||  icase_str_eq(ext, ".obj")
-        ||  icase_str_eq(ext, ".off")
-        ||  icase_str_eq(ext, ".lsamps") ){
+        if( !ext.empty()
+        &&  (   icase_str_eq(ext, ".dcm")
+             || icase_str_eq(ext, ".tar")
+             || icase_str_eq(ext, ".3ddose")
+             || icase_str_eq(ext, ".stl")
+             || icase_str_eq(ext, ".obj")
+             || icase_str_eq(ext, ".off")
+             || icase_str_eq(ext, ".lsamps") ) ){
             loaders.remove_if( [ext](const file_loader_t &l){
                                     return std::none_of( std::begin(l.exts),
                                                          std::end(l.exts),
@@ -290,7 +290,7 @@ Load_Files( Drover &DICOM_data,
         for(const auto &l : loaders){
             std::stringstream ss;
             for(const auto &e : l.exts) ss << (ss.str().empty() ? "" : ", ") << "'" << e << "'";
-            FUNCINFO("Trying loader for extensions: " << ss.str());
+            FUNCINFO("Trying loader for extensions: " << ss.str() << " for file(s) with extension '" << ext << "'");
             if(!l_Paths.empty() && !l.f(l_Paths)){
                 return false;
             }
