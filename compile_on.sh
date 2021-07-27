@@ -29,7 +29,7 @@ while getopts "d:p:l:b:h" opt; do
         printf 'Proceeding with local portable binary root directory "%s".\n' "${L_PORTABLE_BIN_DIR}"
         ;;
     b)  BUILDER="$OPTARG"
-        printf 'Proceeding with builder"%s".\n' "${BUILDER}"
+        printf 'Proceeding with builder "%s".\n' "${BUILDER}"
         ;;
     h|*)
         printf 'This script will clone the current repository and then remotely build using ssh.\n'
@@ -85,7 +85,7 @@ if [ ! -d "${reporoot}" ] ; then
     exit 1
 fi
 cd "${reporoot}"
-rsync -rptPzz --no-links --cvs-exclude "${reporoot}"/ "${USER_AT_REMOTE}:${BUILD_DIR}"
+rsync -rptPzzv --no-links --cvs-exclude --exclude="$(realpath --relative-to="${reporoot}/" "${BUILD_DIR}")" "${reporoot}"/ "${USER_AT_REMOTE}:${BUILD_DIR}"
 
 
 # Initiate the remote build.

@@ -23,9 +23,16 @@ build_ci_debian_stable:
   before_script:
     - "cp -R ./docker/builders/ci /scratch"
     - "cp -R . /dcma"
+    - "dd if=/dev/zero of=/swapfile_custom bs=1M count=4096 || true"
+    - "chmod 600 /swapfile_custom || true"
+    - "chattr +c /swapfile_custom || true"
+    - "mkswap /swapfile_custom || true"
+    - "swapon --fixpgsz --output-all $(losetup --find /swapfile_custom --show) || true"
+    - "mount || true"
+    - "free -h || true"
   script:
     - |
-      ( ( while true ; do sleep 225 ; printf '\n\n' ; df -h ; printf '\n\n' ; free -h ; printf '\n\n' ; done ) &)
+      ( ( while true ; do sleep 30 ; printf '\n\n' ; df -h ; printf '\n\n' ; free -h ; printf '\n\n' ; done ) &)
       "./docker/builders/ci/implementation_ci_debian_stable.sh"
       "./integration_tests/Run.sh"
       "./scripts/extract_system_appimage.sh"
@@ -43,9 +50,16 @@ build_ci_arch:
   before_script:
     - "cp -R ./docker/builders/ci /scratch"
     - "cp -R . /dcma"
+    - "dd if=/dev/zero of=/swapfile_custom bs=1M count=4096 || true"
+    - "chmod 600 /swapfile_custom || true"
+    - "chattr +c /swapfile_custom || true"
+    - "mkswap /swapfile_custom || true"
+    - "swapon --fixpgsz --output-all $(losetup --find /swapfile_custom --show) || true"
+    - "mount || true"
+    - "free -h || true"
   script:
     - |
-      ( ( while true ; do sleep 225 ; printf '\n\n' ; df -h ; printf '\n\n' ; free -h ; printf '\n\n' ; done ) &)
+      ( ( while true ; do sleep 30 ; printf '\n\n' ; df -h ; printf '\n\n' ; free -h ; printf '\n\n' ; done ) &)
       "./docker/builders/ci/implementation_ci_arch.sh"
       "./integration_tests/Run.sh"
       "./scripts/extract_system_appimage.sh"
@@ -62,9 +76,16 @@ cross_compile_mxe:
   image: "hdclark/dcma_build_base_mxe:latest"
   before_script:
     - "cp -R . /dcma"
+    - "dd if=/dev/zero of=/swapfile_custom bs=1M count=4096 || true"
+    - "chmod 600 /swapfile_custom || true"
+    - "chattr +c /swapfile_custom || true"
+    - "mkswap /swapfile_custom || true"
+    - "swapon --fixpgsz --output-all $(losetup --find /swapfile_custom --show) || true"
+    - "mount || true"
+    - "free -h || true"
   script:
     - |
-      ( ( while true ; do sleep 225 ; printf '\n\n' ; df -h ; printf '\n\n' ; free -h ; printf '\n\n' ; done ) &)
+      ( ( while true ; do sleep 30 ; printf '\n\n' ; df -h ; printf '\n\n' ; free -h ; printf '\n\n' ; done ) &)
       "./docker/builders/mxe/implementation_mxe.sh"
       rsync -avP /out/ ./Windows/
   artifacts:
@@ -82,7 +103,7 @@ cross_compile_mxe:
 #    - "cp -R . /dcma"
 #  script:
 #    - |
-#      ( ( while true ; do sleep 225 ; printf '\n\n' ; df -h ; printf '\n\n' ; free -h ; printf '\n\n' ; done ) &)
+#      ( ( while true ; do sleep 30 ; printf '\n\n' ; df -h ; printf '\n\n' ; free -h ; printf '\n\n' ; done ) &)
 #      "/scratch_base/implementation_arch.sh"
 #      "/scratch/implementation_arch.sh"
 ##  artifacts:

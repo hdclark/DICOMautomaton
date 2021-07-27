@@ -77,10 +77,7 @@ Drover ContourWholeImages(Drover DICOM_data,
     Explicator X(FilenameLex);
     const auto NormalizedROILabel = X(ROILabel);
     const long int ROINumber = 10001; // TODO: find highest existing and ++ it.
-
-    //Construct a destination for the ROI contours.
     DICOM_data.Ensure_Contour_Data_Allocated();
-    DICOM_data.contour_data->ccs.emplace_back();
 
     //Iterate over each requested image_array. Each image is processed independently, so a thread pool is used.
     auto IAs_all = All_IAs( DICOM_data );
@@ -107,6 +104,9 @@ Drover ContourWholeImages(Drover DICOM_data,
         metadata["Description"] = "Whole-Image Contour";
 
         auto cc = Encircle_Images_with_Contours(imgs, opts, metadata);
+
+        //Construct a destination for the ROI contours.
+        DICOM_data.contour_data->ccs.emplace_back();
 
         DICOM_data.contour_data->ccs.back().contours.splice(
              DICOM_data.contour_data->ccs.back().contours.end(),

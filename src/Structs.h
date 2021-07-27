@@ -480,13 +480,12 @@ class Drover {
 };
 
 
-
 using icase_str_lt_func_t = std::function<bool (const std::string &, const std::string)>;
-typedef std::map<std::string, std::string, icase_str_lt_func_t> icase_map_t;
-constexpr auto icase_str_lt_lambda = [](const std::string &A, const std::string &B) -> bool {
-    return std::lexicographical_compare(std::begin(A), std::end(A), std::begin(B), std::end(B));
-};
 
+template< class T >
+using icase_map_t = std::map<std::string, T, icase_str_lt_func_t>;
+bool icase_str_lt(const std::string &A, const std::string &B);
+bool icase_str_eq(const std::string &A, const std::string &B);
 
 // Class for dealing with commandline argument operation options.
 //
@@ -497,7 +496,7 @@ class OperationArgPkg {
 
     private:
         std::string name; // The operation name.
-        icase_map_t opts; // Arguments to pass to the operation.
+        icase_map_t<std::string> opts; // Arguments to pass to the operation.
 
         std::list<OperationArgPkg> children; // Child nodes that can be interpretted in different ways.
 

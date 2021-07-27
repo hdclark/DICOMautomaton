@@ -1,4 +1,4 @@
-//SDL_Viewer.cc - A part of DICOMautomaton 2020. Written by hal clark.
+//SDL_Viewer.cc - A part of DICOMautomaton 2020, 2021. Written by hal clark.
 
 #include <algorithm>
 #include <array>
@@ -30,8 +30,10 @@
 #include <vector>
 #include <chrono>
 #include <future>
+#include <mutex>
 #include <shared_mutex>
 #include <initializer_list>
+#include <thread>
 
 #include <boost/filesystem.hpp>
 
@@ -68,6 +70,8 @@
 #include "../Font_DCMA_Minimal.h"
 #include "../DCMA_Version.h"
 #include "../File_Loader.h"
+#include "../Script_Loader.h"
+#include "../Thread_Pool.h"
 
 #ifdef DCMA_USE_CGAL
     #include "../Surface_Meshes.h"
@@ -92,25 +96,37 @@ Drover SDL_Viewer(Drover DICOM_data,
                   const std::string& FilenameLex){
 
     // --------------------------------------- Operational State ------------------------------------------
+    std::shared_timed_mutex drover_mutex;
+    const auto mutex_dt = std::chrono::microseconds(5);
+
+    // General-purpose Drover processing offloading worker thread.
+    work_queue<std::function<void(void)>> wq;
+    wq.submit_task([](){
+        FUNCINFO("Worker thread ready");
+        return;
+    });
+
     Explicator X(FilenameLex);
 
-    bool set_about_popup = false;
-    bool view_metrics_window = false;
-    bool open_files_enabled = false;
-    bool view_images_enabled = true;
-    bool view_image_metadata_enabled = false;
-    bool view_meshes_enabled = true;
-    bool view_plots_enabled = true;
-    bool view_contours_enabled = true;
-    bool view_contouring_enabled = false;
-    bool view_row_column_profiles = false;
-    bool view_script_editor_enabled = false;
-    bool show_image_hover_tooltips = true;
-    bool adjust_window_level_enabled = false;
-    bool adjust_colour_map_enabled = false;
+    struct View_Toggles {
+        bool set_about_popup = false;
+        bool view_metrics_window = false;
+        bool open_files_enabled = false;
+        bool view_images_enabled = true;
+        bool view_image_metadata_enabled = false;
+        bool view_meshes_enabled = true;
+        bool view_plots_enabled = true;
+        bool view_contours_enabled = true;
+        bool view_contouring_enabled = false;
+        bool view_row_column_profiles = false;
+        bool view_script_editor_enabled = false;
+        bool view_script_feedback = true;
+        bool show_image_hover_tooltips = true;
+        bool adjust_window_level_enabled = false;
+        bool adjust_colour_map_enabled = false;
+    } view_toggles;
 
     // Plot viewer state.
-    long int lsamp_num = -1; // The plot currently displayed.
     std::map<long int, bool> lsamps_visible;
 
     // Image viewer state.
@@ -166,6 +182,12 @@ Drover SDL_Viewer(Drover DICOM_data,
     auto pos_contour_colour = ImVec4(0.0f, 0.0f, 1.0f, 1.0f);
     auto neg_contour_colour = ImVec4(1.0f, 0.0f, 0.0f, 1.0f);
     auto editing_contour_colour = ImVec4(1.0f, 0.45f, 0.0f, 1.0f);
+
+    auto line_numbers_normal_colour = ImVec4(1.0f, 1.0f, 1.0f, 0.3f);
+    auto line_numbers_debug_colour  = ImVec4(0.4f, 1.0f, 0.4f, 0.8f);
+    auto line_numbers_info_colour   = ImVec4(0.4f, 0.4f, 1.0f, 0.7f);
+    auto line_numbers_warn_colour   = ImVec4(0.7f, 0.5f, 0.1f, 0.8f);
+    auto line_numbers_error_colour  = ImVec4(1.0f, 0.1f, 0.1f, 0.8f);
     
     const auto get_unique_colour = [](long int i){
         const std::vector<vec3<double>> colours = {
@@ -329,8 +351,10 @@ Drover SDL_Viewer(Drover DICOM_data,
     // Create an OpenGL texture from an image.
     struct opengl_texture_handle_t {
         GLuint texture_number = 0;
-        int col_count = 0;
-        int row_count = 0;
+        long int col_count = 0L;
+        long int row_count = 0L;
+        float aspect_ratio = 1.0; // In image pixel space.
+        bool texture_exists = false;
     };
     opengl_texture_handle_t current_texture;
 
@@ -403,6 +427,7 @@ Drover SDL_Viewer(Drover DICOM_data,
             return;
     };
 
+    std::atomic<bool> need_to_reload_opengl_texture = true;
     const auto Load_OpenGL_Texture = [&colour_maps,
                                       &colour_map,
                                       &nan_colour,
@@ -569,6 +594,9 @@ Drover SDL_Viewer(Drover DICOM_data,
             opengl_texture_handle_t out;
             out.col_count = img_cols;
             out.row_count = img_rows;
+            out.aspect_ratio = (img.pxl_dx / img.pxl_dy) * (static_cast<float>(img_rows) / static_cast<float>(img_cols));
+            out.aspect_ratio = (img.pxl_dx / img.pxl_dy) * (static_cast<float>(img_rows) / static_cast<float>(img_cols));
+            out.aspect_ratio = std::isfinite(out.aspect_ratio) ? out.aspect_ratio : (img.pxl_dx / img.pxl_dy);
 
             CHECK_FOR_GL_ERRORS();
 
@@ -586,9 +614,12 @@ Drover SDL_Viewer(Drover DICOM_data,
 
             glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
             glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, out.col_count, out.row_count, 0, GL_RGB, GL_UNSIGNED_BYTE, static_cast<void*>(animage.data()));
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB,
+                         static_cast<int>(out.col_count), static_cast<int>(out.row_count),
+                         0, GL_RGB, GL_UNSIGNED_BYTE, static_cast<void*>(animage.data()));
             CHECK_FOR_GL_ERRORS();
 
+            out.texture_exists = true;
             return out;
     };
 
@@ -601,8 +632,8 @@ Drover SDL_Viewer(Drover DICOM_data,
         std::get<bool>( out ) = false;
 
         // Set the current image array and image iters and load the texture.
-        const auto has_images = DICOM_data.Has_Image_Data();
         do{ 
+            const auto has_images = DICOM_data.Has_Image_Data();
             if( !has_images ) break;
             if( !isininc(1, img_array_num+1, DICOM_data.image_data.size()) ) break;
             auto img_array_ptr_it = std::next(DICOM_data.image_data.begin(), img_array_num);
@@ -662,11 +693,13 @@ Drover SDL_Viewer(Drover DICOM_data,
                                          &current_texture,
                                          &custom_centre,
                                          &custom_width,
-                                         &Load_OpenGL_Texture,
+                                         &need_to_reload_opengl_texture,
                                          &reset_contouring_state ](){
+
         //Trim any empty image arrays.
         for(auto it = DICOM_data.image_data.begin(); it != DICOM_data.image_data.end();  ){
-            if((*it)->imagecoll.images.empty()){
+            if( ((*it) == nullptr)
+            ||  (*it)->imagecoll.images.empty()){
                 it = DICOM_data.image_data.erase(it);
             }else{
                 ++it;
@@ -674,28 +707,34 @@ Drover SDL_Viewer(Drover DICOM_data,
         }
 
         // Assess whether there is image data.
-        const auto has_images = DICOM_data.Has_Image_Data();
-        if( has_images
-        &&  (0 <= img_array_num)
-        &&  (0 <= img_num) ){
-            // Do nothing, but validate (below) that the images are accessible.
-        }else if( has_images
-              &&  ((img_array_num < 0) || (img_num < 0)) ){
+        bool image_is_valid = false;
+        do{
+            // See if the current image numbers are valid.
+            if( auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_image_iters(); img_valid ){
+                image_is_valid = true;
+                break;
+            }
+
+            // Try reset to the first image.
             img_array_num = 0;
             img_num = 0;
             img_channel = 0;
-        }else{
+            if( auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_image_iters(); img_valid ){
+                image_is_valid = true;
+                break;
+            }
+
+            // At this point, for whatever reason(s), the image data does not appear to be valid.
+            // Set negative images numbers to disable showing anything.
             img_array_num = -1;
             img_num = -1;
             img_channel = -1;
-        }
+        }while(false);
 
-        // Reload the texture.
-        auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_image_iters();
-        if( img_valid ){
-            img_channel = std::clamp<long int>(img_channel, 0, disp_img_it->channels-1);
-            current_texture = Load_OpenGL_Texture(*disp_img_it, custom_centre, custom_width);
-        }
+        // Signal the need to reload the texture.
+        //if( image_is_valid ){
+        need_to_reload_opengl_texture.store(true);
+        //}
         return;
     };
 
@@ -716,7 +755,7 @@ Drover SDL_Viewer(Drover DICOM_data,
         ImU32 colour;
         std::string ROIName;
         std::string NormalizedROIName;
-        std::reference_wrapper< contour_of_points<double> > contour_refw;
+        contour_of_points<double> contour;
 
         preprocessed_contour() = default;
     };
@@ -729,6 +768,7 @@ Drover SDL_Viewer(Drover DICOM_data,
 
     // Determine which contours should be displayed on the current image.
     const auto preprocess_contours = [ &DICOM_data,
+                                       &drover_mutex,
                                        &recompute_image_iters,
                                        &preprocessed_contour_epoch,
                                        &preprocessed_contour_mutex,
@@ -751,83 +791,85 @@ Drover SDL_Viewer(Drover DICOM_data,
         long int n = contour_colours_l.size();
 
         //Draw any contours that lie in the plane of the current image. Also draw contour names if the cursor is 'within' them.
-        auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_image_iters();
-        if( img_valid
-        &&  (DICOM_data.contour_data != nullptr) ){
+        {
+            std::shared_lock<std::shared_timed_mutex> drover_lock(drover_mutex);
+            if( auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_image_iters();
+                img_valid
+            &&  (DICOM_data.contour_data != nullptr) ){
 
-            // Scan all contours to assign a unique colour to each ROIName.
-            for(auto & cc : DICOM_data.contour_data->ccs){
-                for(auto & c : cc.contours){
-                    const auto ROIName = c.GetMetadataValueAs<std::string>("ROIName").value_or("unknown");
+                // Scan all contours to assign a unique colour to each ROIName.
+                for(const auto & cc : DICOM_data.contour_data->ccs){
+                    for(const auto & c : cc.contours){
+                        const auto ROIName = c.GetMetadataValueAs<std::string>("ROIName").value_or("unknown");
 
-                    if(contour_colours_l.count(ROIName) == 0){
-                        contour_colours_l[ROIName] = get_unique_colour( n++ );
+                        if(contour_colours_l.count(ROIName) == 0){
+                            contour_colours_l[ROIName] = get_unique_colour( n++ );
+                        }
                     }
                 }
-            }
 
-            // Identify contours appropriate to the current image.
-            for(auto & cc : DICOM_data.contour_data->ccs){
-                for(auto & c : cc.contours){
-                    if(!c.points.empty() 
-                    && ( 
-                          // Permit contours with any included vertices or at least the 'centre' within the image.
-                          //( disp_img_it->sandwiches_point_within_top_bottom_planes(c.Average_Point())
-                          disp_img_it->sandwiches_point_within_top_bottom_planes(c.points.front())
-                          || disp_img_it->encompasses_any_of_contour_of_points(c)
-                          || ( disp_img_it->pxl_dz <= std::numeric_limits<double>::min() ) // Permit contours on purely 2D images.
-                       ) ){
+                // Identify contours appropriate to the current image.
+                for(const auto & cc : DICOM_data.contour_data->ccs){
+                    for(const auto & c : cc.contours){
+                        if(!c.points.empty() 
+                        && ( 
+                              // Permit contours with any included vertices or at least the 'centre' within the image.
+                              //( disp_img_it->sandwiches_point_within_top_bottom_planes(c.Average_Point())
+                              disp_img_it->sandwiches_point_within_top_bottom_planes(c.points.front())
+                              || disp_img_it->encompasses_any_of_contour_of_points(c)
+                              || ( disp_img_it->pxl_dz <= std::numeric_limits<double>::min() ) // Permit contours on purely 2D images.
+                           ) ){
 
-                        // If the contour epoch has moved on, this thread is futile. Terminate ASAP.
-                        const auto current_epoch = preprocessed_contour_epoch.load();
-                        if( epoch != current_epoch ) return;
+                            // If the contour epoch has moved on, this thread is futile. Terminate ASAP.
+                            const auto current_epoch = preprocessed_contour_epoch.load();
+                            if( epoch != current_epoch ) return;
 
-                        // Access name.
-                        const auto ROIName = c.GetMetadataValueAs<std::string>("ROIName").value_or("unknown");
-                        const auto NormalizedROIName = c.GetMetadataValueAs<std::string>("NormalizedROIName").value_or("unknown");
-                        ImVec4 c_colour = pos_contour_colour;
+                            // Access name.
+                            const auto ROIName = c.GetMetadataValueAs<std::string>("ROIName").value_or("unknown");
+                            const auto NormalizedROIName = c.GetMetadataValueAs<std::string>("NormalizedROIName").value_or("unknown");
+                            ImVec4 c_colour = pos_contour_colour;
 
-                        // Override the colour if metadata requests it and we know the colour.
-                        if(auto m_color = c.GetMetadataValueAs<std::string>("OutlineColour")){
-                            if(auto rgb_c = Colour_from_name(m_color.value())){
-                                c_colour = ImVec4( static_cast<float>(rgb_c.value().R),
-                                                   static_cast<float>(rgb_c.value().G),
-                                                   static_cast<float>(rgb_c.value().B),
-                                                   1.0f );
-                                // Note: what to do here if metadata is not present for all contours? TODO.
-                                contour_colours_l[ROIName] = c_colour;
+                            // Override the colour if metadata requests it and we know the colour.
+                            if(auto m_color = c.GetMetadataValueAs<std::string>("OutlineColour")){
+                                if(auto rgb_c = Colour_from_name(m_color.value())){
+                                    c_colour = ImVec4( static_cast<float>(rgb_c.value().R),
+                                                       static_cast<float>(rgb_c.value().G),
+                                                       static_cast<float>(rgb_c.value().B),
+                                                       1.0f );
+                                    // Note: what to do here if metadata is not present for all contours? TODO.
+                                    contour_colours_l[ROIName] = c_colour;
+                                }
+
+                            // Override the colour depending on the orientation.
+                            }else if(contour_colour_from_orientation_l){
+                                const auto arb_pos_unit = disp_img_it->row_unit.Cross(disp_img_it->col_unit).unit();
+                                vec3<double> c_orient;
+                                try{ // Protect against degenerate contours. (Should we instead ignore them altogether?)
+                                    c_orient = c.Estimate_Planar_Normal();
+                                }catch(const std::exception &){
+                                    c_orient = arb_pos_unit;
+                                }
+                                const auto c_orient_pos = (c_orient.Dot(arb_pos_unit) > 0);
+                                c_colour = ( c_orient_pos ? pos_contour_colour : neg_contour_colour );
+
+                            // Otherwise use the uniquely-generated colour.
+                            }else{
+                                c_colour = contour_colours_l[ROIName];
                             }
 
-                        // Override the colour depending on the orientation.
-                        }else if(contour_colour_from_orientation_l){
-                            const auto arb_pos_unit = disp_img_it->row_unit.Cross(disp_img_it->col_unit).unit();
-                            vec3<double> c_orient;
-                            try{ // Protect against degenerate contours. (Should we instead ignore them altogether?)
-                                c_orient = c.Estimate_Planar_Normal();
-                            }catch(const std::exception &){
-                                c_orient = arb_pos_unit;
-                            }
-                            const auto c_orient_pos = (c_orient.Dot(arb_pos_unit) > 0);
-                            c_colour = ( c_orient_pos ? pos_contour_colour : neg_contour_colour );
-
-                        // Otherwise use the uniquely-generated colour.
-                        }else{
-                            c_colour = contour_colours_l[ROIName];
+                            out.push_back( preprocessed_contour{ epoch,
+                                                                 ImGui::GetColorU32(c_colour),
+                                                                 ROIName,
+                                                                 NormalizedROIName,
+                                                                 c } );
                         }
-
-                        out.push_back( preprocessed_contour{ epoch,
-                                                             ImGui::GetColorU32(c_colour),
-                                                             ROIName,
-                                                             NormalizedROIName,
-                                                             std::ref(c) } );
                     }
                 }
             }
         }
 
-        std::unique_lock<std::shared_mutex> lock(preprocessed_contour_mutex);
-        const auto current_epoch = preprocessed_contour_epoch.load();
-        if( epoch == current_epoch ){
+        if( std::unique_lock<std::shared_mutex> lock(preprocessed_contour_mutex);
+            (epoch == preprocessed_contour_epoch.load()) ){
             preprocessed_contours = out;
             contour_colours = contour_colours_l;
         }
@@ -841,13 +883,21 @@ Drover SDL_Viewer(Drover DICOM_data,
         const auto current_epoch = preprocessed_contour_epoch.fetch_add(1) + 1;
         std::thread t(preprocess_contours, current_epoch);
         t.detach();
+        return;
     };
 
     // Terminate contour preprocessing threads.
     const auto terminate_contour_preprocessors = [ &preprocessed_contour_epoch ]() -> void {
         // We currently cannot terminate detached threads, so this helps ensure they exit early.
         preprocessed_contour_epoch.fetch_add(100);
-        std::this_thread::sleep_for(std::chrono::milliseconds(500)); // Hope that this is enough time!
+        return;
+    };
+
+    const auto clear_preprocessed_contours = [&preprocessed_contours,
+                                              &contour_colours]() -> void {
+        preprocessed_contours.clear();
+        //contour_colours.clear(); // Persist these unless user specifically specifies.
+        return;
     };
     
 
@@ -970,10 +1020,16 @@ Drover SDL_Viewer(Drover DICOM_data,
         std::filesystem::path path;
         bool altered = false;
         std::vector<char> content;
+        std::list<script_feedback_t> feedback; // Compilation/validation messages.
     };
     std::vector<script_file> script_files;
     long int active_script_file = -1;
-
+    std::shared_mutex script_mutex;
+    std::atomic<long int> script_epoch = 0L;
+    const auto append_to_script = [](std::vector<char> &content, const std::string &s) -> void {
+        for(const auto &c : s) content.emplace_back(c);
+        return;
+    };
 
     // Contour and image display state.
     std::map<std::string, bool> contour_enabled;
@@ -990,9 +1046,10 @@ Drover SDL_Viewer(Drover DICOM_data,
         io.ConfigWindowsMoveFromTitleBarOnly = true;
     }
 
-long int frame_count = 0;
+
+    long int frame_count = 0;
     while(true){
-++frame_count;
+        ++frame_count;
 
         // Poll and handle events (inputs, window resize, etc.)
         // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
@@ -1022,14 +1079,42 @@ long int frame_count = 0;
         ImGui_ImplSDL2_NewFrame(window);
         ImGui::NewFrame();
 
+        // Reload the image texture. Needs to be done by the main thread.
+        const auto reload_image_texture = [&drover_mutex,
+                                           &recompute_image_iters,
+                                           &view_toggles,
+                                           &custom_centre,
+                                           &custom_width,
+                                           &current_texture,
+                                           &img_num,
+                                           &img_array_num,
+                                           &img_channel,
+                                           &Load_OpenGL_Texture ]() -> void {
+            std::unique_lock<std::shared_timed_mutex> drover_lock(drover_mutex);
+            auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_image_iters();
+            if( view_toggles.view_images_enabled
+            &&  img_valid ){
+                img_channel = std::clamp<long int>(img_channel, 0, disp_img_it->channels-1);
+                current_texture = Load_OpenGL_Texture(*disp_img_it, custom_centre, custom_width);
+            }else{
+                img_channel = -1;
+                img_array_num = -1;
+                img_num = -1;
+                current_texture = opengl_texture_handle_t();
+            }
+            return;
+        };
+        if(need_to_reload_opengl_texture.exchange(false)){
+            reload_image_texture();
+        }
 
 // Contouring -- mask debugging / visualization.
 if(false){
             auto [cimg_valid, cimg_array_ptr_it, cimg_it] = recompute_cimage_iters();
             if(cimg_valid){
-                ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_Appearing);
-                ImGui::SetNextWindowPos(ImVec2(700, 40), ImGuiCond_Appearing);
-                ImGui::Begin("Images2", &view_images_enabled, ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoNavInputs | ImGuiWindowFlags_NoScrollbar ); //| ImGuiWindowFlags_AlwaysAutoResize);
+                ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_FirstUseEver);
+                ImGui::SetNextWindowPos(ImVec2(700, 40), ImGuiCond_FirstUseEver);
+                ImGui::Begin("Images2", &view_toggles.view_images_enabled, ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoNavInputs | ImGuiWindowFlags_NoScrollbar ); //| ImGuiWindowFlags_AlwaysAutoResize);
                 auto contouring_texture = Load_OpenGL_Texture( *cimg_it, {}, {} );
                 auto gl_tex_ptr = reinterpret_cast<void*>(static_cast<intptr_t>(contouring_texture.texture_number));
                 ImGui::Image(gl_tex_ptr, ImVec2(600,600), uv_min, uv_max);
@@ -1037,283 +1122,729 @@ if(false){
             }
 }
 
-        if(ImGui::BeginMainMenuBar()){
-            if(ImGui::BeginMenu("File")){
-                if(ImGui::MenuItem("Open", "ctrl+o", &open_files_enabled)){
-                    query_files(open_file_root);
-                }
-                //if(ImGui::MenuItem("Open", "ctrl+o")){
-                //    ImGui::OpenPopup("OpenFileSelector");
-                //}
-                ImGui::Separator();
-                if(ImGui::MenuItem("Exit", "ctrl+q")){
-                    ImGui::EndMenu();
-                    break;
-                }
-                ImGui::EndMenu();
-            }
-            ImGui::Separator();
-            if(ImGui::BeginMenu("View")){
-                ImGui::MenuItem("Images", nullptr, &view_images_enabled);
-                if(ImGui::MenuItem("Contours", nullptr, &view_contours_enabled)){
-                    contour_enabled.clear();
-                    contour_hovered.clear();
-                    if(view_contours_enabled) launch_contour_preprocessor();
-                }
-                if(ImGui::MenuItem("Contouring", nullptr, &view_contouring_enabled)){
-                    contouring_img_altered = true;
-                    tagged_pos = {};
-                }
-                ImGui::MenuItem("Image Metadata", nullptr, &view_image_metadata_enabled);
-                ImGui::MenuItem("Image Hover Tooltips", nullptr, &show_image_hover_tooltips);
-                ImGui::MenuItem("Meshes", nullptr, &view_meshes_enabled);
-                if(ImGui::MenuItem("Plots", nullptr, &view_plots_enabled)){
-                    lsamps_visible.clear();
-                }
-                if(ImGui::MenuItem("Row and Column Profiles", nullptr, &view_row_column_profiles)){
-                    row_profile.samples.clear();
-                    col_profile.samples.clear();
-                };
-                ImGui::MenuItem("Script Editor", nullptr, &view_script_editor_enabled);
-                ImGui::EndMenu();
-            }
-            if(ImGui::BeginMenu("Adjust")){
-                ImGui::MenuItem("Window and Level", nullptr, &adjust_window_level_enabled);
-                ImGui::MenuItem("Image Colour Map", nullptr, &adjust_colour_map_enabled);
-                ImGui::EndMenu();
-            }
+        // Display the main menu bar, which should always be visible.
+        const auto display_main_menu_bar = [&view_toggles,
+                                            &query_files,
+                                            &open_file_root,
+                                            &contour_enabled,
+                                            &contour_hovered,
+                                            &launch_contour_preprocessor,
+                                            &contouring_img_altered,
+                                            &tagged_pos,
 
-            ImGui::Separator();
-            if(ImGui::BeginMenu("Help", "ctrl+h")){
-                if(ImGui::MenuItem("About")){
-                    set_about_popup = true;
-                }
-                ImGui::MenuItem("Metrics", nullptr, &view_metrics_window);
-                ImGui::Separator();
+                                            &script_mutex,
+                                            &script_files,
+                                            &active_script_file,
+                                            &script_epoch,
+                                            &append_to_script,
 
-                if(ImGui::BeginMenu("Operations", "ctrl+d")){
-                    auto known_ops = Known_Operations();
-                    for(auto &anop : known_ops){
-                        const auto op_name = anop.first;
-                        std::stringstream ss;
-
-                        auto op_docs = (anop.second.first)();
-                        ss << op_docs.desc << "\n\n";
-                        if(!op_docs.notes.empty()){
-                            ss << "Notes:" << std::endl;
-                            for(auto &note : op_docs.notes){
-                                ss << "\n" << "- " << note << std::endl;
-                            }
-                        }
-
-                        if(ImGui::MenuItem(op_name.c_str())){}
-                        if(ImGui::IsItemHovered()){
-                            ImGui::SetNextWindowSizeConstraints(ImVec2(400.0, -1), ImVec2(500.0, -1));
-                            ImGui::BeginTooltip();
-                            ImGui::TextWrapped("%s", ss.str().c_str());
-                            ImGui::EndTooltip();
-                        }
+                                            &lsamps_visible,
+                                            &row_profile,
+                                            &col_profile ](void) -> bool {
+            if(ImGui::BeginMainMenuBar()){
+                if(ImGui::BeginMenu("File")){
+                    if(ImGui::MenuItem("Open", "ctrl+o", &view_toggles.open_files_enabled)){
+                        query_files(open_file_root);
+                    }
+                    //if(ImGui::MenuItem("Open", "ctrl+o")){
+                    //    ImGui::OpenPopup("OpenFileSelector");
+                    //}
+                    ImGui::Separator();
+                    if(ImGui::MenuItem("Exit", "ctrl+q")){
+                        ImGui::EndMenu();
+                        return false;
                     }
                     ImGui::EndMenu();
                 }
-                ImGui::EndMenu();
-            }
-            ImGui::EndMainMenuBar();
-        }
+                ImGui::Separator();
+                if(ImGui::BeginMenu("View")){
+                    ImGui::MenuItem("Images", nullptr, &view_toggles.view_images_enabled);
+                    if(ImGui::MenuItem("Contours", nullptr, &view_toggles.view_contours_enabled)){
+                        contour_enabled.clear();
+                        contour_hovered.clear();
+                        if(view_toggles.view_contours_enabled) launch_contour_preprocessor();
+                    }
+                    if(ImGui::MenuItem("Contouring", nullptr, &view_toggles.view_contouring_enabled)){
+                        contouring_img_altered = true;
+                        tagged_pos = {};
+                    }
+                    ImGui::MenuItem("Image Metadata", nullptr, &view_toggles.view_image_metadata_enabled);
+                    ImGui::MenuItem("Image Hover Tooltips", nullptr, &view_toggles.show_image_hover_tooltips);
+                    ImGui::MenuItem("Meshes", nullptr, &view_toggles.view_meshes_enabled);
+                    if(ImGui::MenuItem("Plots", nullptr, &view_toggles.view_plots_enabled)){
+                        lsamps_visible.clear();
+                    }
+                    if(ImGui::MenuItem("Row and Column Profiles", nullptr, &view_toggles.view_row_column_profiles)){
+                        row_profile.samples.clear();
+                        col_profile.samples.clear();
+                    };
+                    ImGui::MenuItem("Script Editor", nullptr, &view_toggles.view_script_editor_enabled);
+                    ImGui::MenuItem("Script Feedback", nullptr, &view_toggles.view_script_feedback);
+                    ImGui::EndMenu();
+                }
+                if(ImGui::BeginMenu("Adjust")){
+                    ImGui::MenuItem("Window and Level", nullptr, &view_toggles.adjust_window_level_enabled);
+                    ImGui::MenuItem("Image Colour Map", nullptr, &view_toggles.adjust_colour_map_enabled);
+                    ImGui::EndMenu();
+                }
 
-        if( view_metrics_window ){
+                ImGui::Separator();
+                if(ImGui::BeginMenu("Script")){
+                    if(ImGui::BeginMenu("Append Operation")){
+                        auto known_ops = Known_Operations();
+                        for(auto &anop : known_ops){
+                            const auto op_name = anop.first;
+                            std::stringstream ss;
+
+                            auto op_docs = (anop.second.first)();
+                            ss << op_docs.desc << "\n\n";
+                            if(!op_docs.notes.empty()){
+                                ss << "Notes:" << std::endl;
+                                for(auto &note : op_docs.notes){
+                                    ss << "\n" << "- " << note << std::endl;
+                                }
+                            }
+
+                            if(ImGui::MenuItem(op_name.c_str())){
+                                std::unique_lock<std::shared_mutex> script_lock(script_mutex);
+
+                                auto N_sfs = static_cast<long int>(script_files.size());
+                                if( N_sfs == 0 ){
+                                    FUNCINFO("No script to append to. Creating new script.");
+                                    script_files.emplace_back();
+                                    script_files.back().altered = true;
+                                    script_files.back().content.emplace_back('\0');
+                                    active_script_file = N_sfs;
+                                    N_sfs = static_cast<long int>(script_files.size());
+                                }
+                                if( !script_files.empty()
+                                &&  isininc(0, active_script_file, N_sfs-1)){
+                                    // Remove terminating '\0' from script.
+                                    script_files.at(active_script_file).content.erase(
+                                        std::remove_if( std::begin(script_files.at(active_script_file).content),
+                                                        std::end(script_files.at(active_script_file).content),
+                                                        [](char c) -> bool { return (c == '\0'); }), 
+                                        std::end(script_files.at(active_script_file).content) );
+
+                                    // Count whitespace on preceeding line to indent new line accordingly.
+                                    // ... TODO ...
+
+                                    // Add operation to script.
+                                    std::stringstream sc;
+                                    sc << std::endl << op_name << "(";
+                                    bool first = true;
+                                    std::set<std::string> args;
+                                    for(const auto & a : op_docs.args){
+                                        // Avoid duplicate arguments (from composite operations).
+                                        const auto name = a.name;
+                                        if(args.count(name) != 0) continue;
+                                        args.insert(name);
+
+                                        // Escape any quotes in the default value, which will generally be parsed
+                                        // fuzzily via regex and should be OK.
+                                        std::string val = a.default_val;
+                                        val.erase( std::remove_if( std::begin(val),
+                                                                   std::end(val),
+                                                                   [](char c) -> bool { return (c == '\''); }),
+                                                   std::end(val) );
+                                        if(!first) sc << ", ";
+                                        sc << std::endl << "    " <<  name << " = '" << val << "'";
+                                        first = false;
+                                    }
+                                    sc << " ){};" << std::endl;
+
+                                    append_to_script(script_files.at(active_script_file).content, sc.str());
+                                    script_files.back().content.emplace_back('\0');
+                                    view_toggles.view_script_editor_enabled = true;
+                                }
+                            }
+                            if(ImGui::IsItemHovered()){
+                                ImGui::SetNextWindowSizeConstraints(ImVec2(400.0, -1), ImVec2(500.0, -1));
+                                ImGui::BeginTooltip();
+                                ImGui::TextWrapped("%s", ss.str().c_str());
+                                ImGui::EndTooltip();
+                            }
+                        }
+                        ImGui::EndMenu();
+                    }
+                    ImGui::EndMenu();
+                }
+
+                ImGui::Separator();
+                if(ImGui::BeginMenu("Help", "ctrl+h")){
+                    if(ImGui::MenuItem("About")){
+                        view_toggles.set_about_popup = true;
+                    }
+                    ImGui::MenuItem("Metrics", nullptr, &view_toggles.view_metrics_window);
+                    ImGui::Separator();
+
+                    if(ImGui::BeginMenu("Operations", "ctrl+d")){
+                        auto known_ops = Known_Operations();
+                        for(auto &anop : known_ops){
+                            const auto op_name = anop.first;
+                            std::stringstream ss;
+
+                            auto op_docs = (anop.second.first)();
+                            ss << op_docs.desc << "\n\n";
+                            if(!op_docs.notes.empty()){
+                                ss << "Notes:" << std::endl;
+                                for(auto &note : op_docs.notes){
+                                    ss << "\n" << "- " << note << std::endl;
+                                }
+                            }
+
+                            if(ImGui::MenuItem(op_name.c_str())){}
+                            if(ImGui::IsItemHovered()){
+                                ImGui::SetNextWindowSizeConstraints(ImVec2(400.0, -1), ImVec2(500.0, -1));
+                                ImGui::BeginTooltip();
+                                ImGui::TextWrapped("%s", ss.str().c_str());
+                                ImGui::EndTooltip();
+                            }
+                        }
+                        ImGui::EndMenu();
+                    }
+                    ImGui::EndMenu();
+                }
+                ImGui::EndMainMenuBar();
+            }
+            return true;
+        };
+        if(!display_main_menu_bar()) break;
+
+        if( view_toggles.view_metrics_window ){
             ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_FirstUseEver);
-            ImGui::ShowMetricsWindow(&view_metrics_window);
+            ImGui::ShowMetricsWindow(&view_toggles.view_metrics_window);
         }
 
         // Display the script editor dialog.
-        if( view_script_editor_enabled ){
-            ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_Appearing);
-            ImGui::SetNextWindowPos(ImVec2(50, 50), ImGuiCond_Appearing);
-            ImGui::Begin("Script Editor", &view_script_editor_enabled );
-            ImVec2 window_extent = ImGui::GetContentRegionAvail();
+        const auto display_script_editor = [&view_toggles,
+                                            &custom_centre,
+                                            &custom_width,
+                                            &open_file_root,
+                                            &root_entry_text,
 
-            auto N_sfs = static_cast<long int>(script_files.size());
-            if(ImGui::Button("New", ImVec2(window_extent.x/4, 0))){ 
-                script_files.emplace_back();
-                script_files.back().altered = true;
-                script_files.back().content.emplace_back('\0'); // Ensure there is at least a null character.
-                active_script_file = N_sfs;
-                ++N_sfs;
-            }
-            ImGui::SameLine();
-            if(ImGui::Button("Open", ImVec2(window_extent.x/4, 0))){ 
-                // TODO
+                                            &script_mutex,
+                                            &script_files,
+                                            &active_script_file,
+                                            &script_epoch,
+                                            &append_to_script,
 
-                // Note: ensure there is at least a null character. TODO.
+                                            &drover_mutex,
+                                            &DICOM_data,
+                                            &recompute_image_state,
+                                            &recompute_image_iters,
+                                            &tagged_pos,
 
-                // Mimic the 'new' button for testing.
-                script_files.emplace_back();
-                script_files.back().altered = true;
-                script_files.back().content.emplace_back('\0'); // Ensure there is at least a null character.
-                active_script_file = (script_files.size() - 1);
-                ++N_sfs;
-            }
-            ImGui::SameLine();
-            if(ImGui::Button("Save", ImVec2(window_extent.x/4, 0))){ 
-                if(isininc(0, active_script_file, N_sfs-1)){
+                                            &preprocessed_contour_mutex,
+                                            &terminate_contour_preprocessors,
+                                            &launch_contour_preprocessor,
+                                            &clear_preprocessed_contours,
+                                            &reset_contouring_state,
 
-                    if( script_files.at(active_script_file).path.empty() ){
-                        try{
-                            const auto open_file_root_str = std::filesystem::absolute(open_file_root / "script.txt").string();
-                            for(size_t i = 0; (i < open_file_root_str.size()) && ((i+1) < root_entry_text.size()); ++i){
-                                root_entry_text[i] = open_file_root_str[i];
-                                root_entry_text[i+1] = '\0';
-                            }
+                                            &InvocationMetadata,
+                                            &FilenameLex,
+                                            &wq,
+                                            &line_numbers_normal_colour,
+                                            &line_numbers_info_colour,
+                                            &line_numbers_warn_colour,
+                                            &line_numbers_error_colour,
+                                            &line_numbers_debug_colour ]() -> void {
+            if( std::unique_lock<std::shared_mutex> script_lock(script_mutex);
+                view_toggles.view_script_editor_enabled ){
+                ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_FirstUseEver);
+                ImGui::SetNextWindowPos(ImVec2(50, 50), ImGuiCond_FirstUseEver);
+                ImGui::Begin("Script Editor", &view_toggles.view_script_editor_enabled );
+                ImVec2 window_extent = ImGui::GetContentRegionAvail();
 
-                            ImGui::OpenPopup("Save Script Filename Picker");
-                        }catch(const std::exception &e){ };
-                    }
-                }
-            }
-            ImGui::SameLine();
-            if(ImGui::Button("Close", ImVec2(window_extent.x/4, 0))){ 
-                if(isininc(0, active_script_file, N_sfs-1)){
-                    script_files.erase( std::next( std::begin( script_files ), active_script_file ) );
-                    --active_script_file; // Default to script on left.
-                    --N_sfs;
-                }
-            }
+                auto N_sfs = static_cast<long int>(script_files.size());
+                if(ImGui::Button("New", ImVec2(window_extent.x/4, 0))){ 
+                    script_files.emplace_back();
+                    script_files.back().altered = true;
+                    script_files.back().content.emplace_back('\0'); // Ensure there is at least a null character.
+////////////////
+////////////////
+////////////////
+const std::string testing_content = R"***(
 
-            // Pop-up to query the user for a filename.
-            if(ImGui::BeginPopupModal("Save Script Filename Picker", NULL, ImGuiWindowFlags_AlwaysAutoResize)){
-                // TODO: add a proper 'Save As' file selector here.
+variable = "something";
+variable = "something else";
 
-                ImGui::Text("Save file as...");
-                ImGui::SetNextItemWidth(650.0f);
-                ImGui::InputText("##save_script_as_text_entry", root_entry_text.data(), root_entry_text.size() - 1);
+variable_op = "operation2";
 
-                if(ImGui::Button("Save")){
-                    script_files.at(active_script_file).path.assign(
-                        std::begin(root_entry_text),
-                        std::find( std::begin(root_entry_text), std::end(root_entry_text), '\0') );
-                    script_files.at(active_script_file).path.replace_extension(".txt");
+operation1(a = 123,
+          b = "234",
+          c = 3\45,
+          d = "45\6",
+          e = '56\7',
+          f = variable );
 
-                    // Write the file contents to the given path.
-                    std::ofstream FO(script_files.at(active_script_file).path.string());
-                    FO.write( script_files.at(active_script_file).content.data(),
-                              (script_files.at(active_script_file).content.size() - 1) ); // Disregard trailing null.
-                    FO << std::endl;
-                    FO.flush();
-                    if(FO){
-                        script_files.at(active_script_file).altered = false;
-                    }else{
-                        script_files.at(active_script_file).path.clear();
-                    }
-                    ImGui::CloseCurrentPopup();
+# This is a comment. It should be ignored, including syntax errors like ;'"(]'\"".
+# This is another comment.
+variable_op(x = "123",
+          # This is another comment.
+          y = 456){
+
+    # This is a nested statement. Recursive statements are supported.
+    operation3(z = 789){
+        variable = "something new";
+        operation4(w = variable);
+    };
+
+};
+
+DeleteImages(
+    ImageSelection = 'all'
+);
+DeleteContours(
+    ROILabelRegex = '.*'
+);
+
+roiall = "everything";
+roisphere = 'sphere';
+
+Repeat( N = 2 ){
+    Repeat( N = 1 ){
+        GenerateVirtualDataImageSphereV1();
+    };
+};
+DeleteImages( ImageSelection = 'last' );
+
+ContourWholeImages(
+    ROILabel = roiname
+);
+
+ContourViaThreshold(
+    ROILabel = roisphere,
+    Method = "marching-squares",
+    Lower = 0.5,
+    SimplifyMergeAdjacent = true
+);
+
+)***";
+script_files.back().content.clear();
+append_to_script(script_files.back().content, testing_content);
+script_files.back().content.emplace_back('\0');
+////////////////
+////////////////
+
+                    active_script_file = N_sfs;
+                    ++N_sfs;
                 }
                 ImGui::SameLine();
-                if(ImGui::Button("Cancel")){
-                    ImGui::CloseCurrentPopup();
-                }
-                ImGui::EndPopup();
-            }
+                if(ImGui::Button("Open", ImVec2(window_extent.x/4, 0))){ 
+                    // TODO
 
-            // 'Tabs' for file selection.
-            auto &style = ImGui::GetStyle();
-            for(long int i = 0; i < N_sfs; ++i){
-                auto fname = script_files.at(i).path.filename().string();
-                if(fname.empty()) fname = "(unnamed)";
-                if(script_files.at(i).altered) fname += "**";
+                    // Note: ensure there is at least a null character. TODO.
 
-                fname += "##script_file_"_s + std::to_string(i); // Unique identifier for ImGui internals.
-                if(i == active_script_file){
-                    ImGui::PushStyleColor(ImGuiCol_Button, style.Colors[ImGuiCol_ButtonActive]);
-                }else{
-                    ImGui::PushStyleColor(ImGuiCol_Button, style.Colors[ImGuiCol_Button]);
+                    // Mimic the 'new' button for testing.
+                    script_files.emplace_back();
+                    script_files.back().altered = true;
+                    script_files.back().content.emplace_back('\0'); // Ensure there is at least a null character.
+                    active_script_file = (script_files.size() - 1);
+                    ++N_sfs;
                 }
-                if(ImGui::Button(fname.c_str())){
-                    active_script_file = i;
-                }
-                ImGui::PopStyleColor(1);
-                if( (i+1) <  N_sfs ){
-                    ImGui::SameLine();
-                }
-            }
+                ImGui::SameLine();
+                if(ImGui::Button("Save", ImVec2(window_extent.x/4, 0))){ 
+                    if( (N_sfs != 0) 
+                    &&  isininc(0, active_script_file, N_sfs-1)){
+                        if( script_files.at(active_script_file).path.empty() ){
+                            try{
+                                const auto open_file_root_str = std::filesystem::absolute(open_file_root / "script.txt").string();
+                                for(size_t i = 0; (i < open_file_root_str.size()) && ((i+1) < root_entry_text.size()); ++i){
+                                    root_entry_text[i] = open_file_root_str[i];
+                                    root_entry_text[i+1] = '\0';
+                                }
 
-            if(isininc(0, active_script_file, N_sfs-1)){
+                                ImGui::OpenPopup("Save Script Filename Picker");
+                            }catch(const std::exception &e){ };
+                        }
+                    }
+                }
+                ImGui::SameLine();
+                if(ImGui::Button("Close", ImVec2(window_extent.x/4, 0))){ 
+                    if( (N_sfs != 0) 
+                    &&  isininc(0, active_script_file, N_sfs-1)){
+                        script_files.erase( std::next( std::begin( script_files ), active_script_file ) );
+                        --active_script_file; // Default to script on left.
+                        --N_sfs;
+                    }
+                }
 
-                // Implement a callback to handle resize events.
-                const auto text_entry_callback = [](ImGuiInputTextCallbackData *data) -> int {
-                    auto sf_ptr = reinterpret_cast<script_file*>(data->UserData);
-                    if(sf_ptr == nullptr) throw std::logic_error("Invalid script file ptr found in callback");
-                    
-                    // Resize the underlying storage.
-                    if(data->EventFlag == ImGuiInputTextFlags_CallbackResize){
-                        sf_ptr->content.resize(data->BufTextLen, '\0'); // Ensure the file character is a null.
-                        data->Buf = sf_ptr->content.data();
+                if(ImGui::Button("Validate", ImVec2(window_extent.x/4, 0))){ 
+                    if( (N_sfs != 0) 
+                    &&  isininc(0, active_script_file, N_sfs-1)){
+                        std::stringstream ss( std::string( std::begin(script_files.at(active_script_file).content),
+                                                           std::end(script_files.at(active_script_file).content) ) );
+                        script_files.at(active_script_file).feedback.clear();
+                        std::list<OperationArgPkg> op_list;
+                        Load_DCMA_Script( ss, script_files.at(active_script_file).feedback, op_list );
+                        view_toggles.view_script_feedback = true;
+                    }
+                }
+                ImGui::SameLine();
+                if(ImGui::Button("Run", ImVec2(window_extent.x/4, 0))){ 
+                    if( (N_sfs != 0) 
+                    &&  isininc(0, active_script_file, N_sfs-1)){
+                        std::stringstream ss( std::string( std::begin(script_files.at(active_script_file).content),
+                                                           std::end(script_files.at(active_script_file).content) ) );
+                        script_files.at(active_script_file).feedback.clear();
+                        std::list<OperationArgPkg> op_list;
+                        const auto res = Load_DCMA_Script( ss, script_files.at(active_script_file).feedback, op_list );
+                        if(!res){
+                            //script_files.at(active_script_file).feedback.emplace_back();
+                            script_files.at(active_script_file).feedback.back().message = "Compilation failed";
+                            view_toggles.view_script_feedback = true;
+
+                        }else{
+                            // Submit the work to the worker thread.
+                            const auto l_script_epoch = script_epoch.fetch_add(1) + 1;
+                            const auto worker = [&,l_script_epoch,op_list](){
+                                // Check if this task should be abandoned.
+                                if(script_epoch.load() != l_script_epoch){
+                                    FUNCINFO("Abandoning run due to user activity");
+                                    return;
+                                }
+
+                                std::unique_lock<std::shared_timed_mutex> drover_lock(drover_mutex);
+
+                                // Preemptively destroy any preprocessed contours to avoid dangling references.
+                                std::unique_lock<std::shared_mutex> ppc_lock(preprocessed_contour_mutex);
+                                terminate_contour_preprocessors();
+                                clear_preprocessed_contours();
+
+                                // Only perform a single operation at a time, which results in slightly less mutex contention.
+                                bool success = true;
+                                for(const auto &op : op_list){
+                                    if(!Operation_Dispatcher(DICOM_data,
+                                                             InvocationMetadata,
+                                                             FilenameLex,
+                                                             {op})){
+                                        success = false;
+                                        break;
+                                    }
+                                }
+                                if(!success){
+                                    // Report the failure to the user.
+                                    //
+                                    // TODO: provide graphical feedback!
+                                    FUNCWARN("Script execution failed");
+                                }
+
+                                // Regenerate all Drover state that may have changed.
+                                {
+                                    recompute_image_state();
+                                    auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_image_iters();
+                                    if( img_valid ){
+                                        launch_contour_preprocessor();
+                                        reset_contouring_state(img_array_ptr_it);
+                                    }
+                                    tagged_pos = {};
+                                }
+                                return;
+                            };
+                            wq.submit_task( worker ); // Offload to waiting worker thread.
+                        }
+                    }
+                }
+
+                if( (N_sfs != 0) 
+                &&  isininc(0, active_script_file, N_sfs-1)
+                &&  !(script_files.at(active_script_file).feedback.empty())
+                &&  view_toggles.view_script_feedback ){
+                    ImGui::SetNextWindowSize(ImVec2(650, 250), ImGuiCond_FirstUseEver);
+                    ImGui::SetNextWindowPos(ImVec2(650, 500), ImGuiCond_FirstUseEver);
+                    ImGui::Begin("Script Feedback", &view_toggles.view_script_feedback );
+
+                    for(const auto &f : script_files.at(active_script_file).feedback){
+                        if(false){
+                        }else if(f.severity == script_feedback_severity_t::debug){
+                            std::stringstream ss;
+                            ss << "Debug:   ";
+                            ImGui::TextColored(line_numbers_debug_colour, "%s", const_cast<char *>(ss.str().c_str()));
+                        }else if(f.severity == script_feedback_severity_t::info){
+                            std::stringstream ss;
+                            ss << "Info:    ";
+                            ImGui::TextColored(line_numbers_info_colour, "%s", const_cast<char *>(ss.str().c_str()));
+                        }else if(f.severity == script_feedback_severity_t::warn){
+                            std::stringstream ss;
+                            ss << "Warning: ";
+                            ImGui::TextColored(line_numbers_warn_colour, "%s", const_cast<char *>(ss.str().c_str()));
+                        }else if(f.severity == script_feedback_severity_t::err){
+                            std::stringstream ss;
+                            ss << "Error:   ";
+                            ImGui::TextColored(line_numbers_error_colour, "%s", const_cast<char *>(ss.str().c_str()));
+                        }else{
+                            throw std::logic_error("Unrecognized severity level");
+                        }
+                        ImGui::SameLine();
+
+                        std::stringstream ss;
+                        if( (0 <= f.line)
+                        &&  (0 <= f.line_offset) ){
+                            ss << "line " << f.line 
+                               << ", char " << f.line_offset
+                               << ": ";
+                        }
+                        ss << f.message
+                           << std::endl
+                           << std::endl;
+                        ImGui::Text("%s", const_cast<char *>(ss.str().c_str()));
                     }
 
-                    // Mark the file as altered.
-                    if(data->EventFlag == ImGuiInputTextFlags_CallbackEdit){
+                    ImGui::End();
+                }
+
+                // Pop-up to query the user for a filename.
+                if(ImGui::BeginPopupModal("Save Script Filename Picker", NULL, ImGuiWindowFlags_AlwaysAutoResize)){
+                    // TODO: add a proper 'Save As' file selector here.
+
+                    ImGui::Text("Save file as...");
+                    ImGui::SetNextItemWidth(650.0f);
+                    ImGui::InputText("##save_script_as_text_entry", root_entry_text.data(), root_entry_text.size() - 1);
+
+                    if(ImGui::Button("Save")){
+                        script_files.at(active_script_file).path.assign(
+                            std::begin(root_entry_text),
+                            std::find( std::begin(root_entry_text), std::end(root_entry_text), '\0') );
+                        script_files.at(active_script_file).path.replace_extension(".txt");
+
+                        // Write the file contents to the given path.
+                        std::ofstream FO(script_files.at(active_script_file).path.string());
+                        FO.write( script_files.at(active_script_file).content.data(),
+                                  (script_files.at(active_script_file).content.size() - 1) ); // Disregard trailing null.
+                        FO << std::endl;
+                        FO.flush();
+                        if(FO){
+                            script_files.at(active_script_file).altered = false;
+                        }else{
+                            script_files.at(active_script_file).path.clear();
+                        }
+                        ImGui::CloseCurrentPopup();
+                    }
+                    ImGui::SameLine();
+                    if(ImGui::Button("Cancel")){
+                        ImGui::CloseCurrentPopup();
+                    }
+                    ImGui::EndPopup();
+                }
+
+                // 'Tabs' for file selection.
+                auto &style = ImGui::GetStyle();
+                for(long int i = 0; i < N_sfs; ++i){
+                    auto fname = script_files.at(i).path.filename().string();
+                    if(fname.empty()) fname = "(unnamed)";
+                    if(script_files.at(i).altered) fname += "**";
+
+                    fname += "##script_file_"_s + std::to_string(i); // Unique identifier for ImGui internals.
+                    if(i == active_script_file){
+                        ImGui::PushStyleColor(ImGuiCol_Button, style.Colors[ImGuiCol_ButtonActive]);
+                    }else{
+                        ImGui::PushStyleColor(ImGuiCol_Button, style.Colors[ImGuiCol_Button]);
+                    }
+                    if(ImGui::Button(fname.c_str())){
+                        active_script_file = i;
+                    }
+                    ImGui::PopStyleColor(1);
+                    if( (i+1) <  N_sfs ){
+                        ImGui::SameLine();
+                    }
+                }
+
+                if( (N_sfs != 0) 
+                &&  isininc(0, active_script_file, N_sfs-1) ){
+
+                    // Implement a callback to handle resize events.
+                    const auto text_entry_callback = [](ImGuiInputTextCallbackData *data) -> int {
+                        auto sf_ptr = reinterpret_cast<script_file*>(data->UserData);
+                        if(sf_ptr == nullptr) throw std::logic_error("Invalid script file ptr found in callback");
+                        
+                        // Resize the underlying storage.
+                        if(data->EventFlag == ImGuiInputTextFlags_CallbackResize){
+                            sf_ptr->content.resize(data->BufTextLen, '\0'); // Ensure the file character is a null.
+                            data->Buf = sf_ptr->content.data();
+                        }
+
+                        // Mark the file as altered.
+                        if(data->EventFlag == ImGuiInputTextFlags_CallbackEdit){
+                            sf_ptr->altered = true;
+                        }
+
+                        return 0;
+                    };
+
+                    auto sf_ptr = &(script_files.at(active_script_file));
+                    if(sf_ptr == nullptr) throw std::logic_error("Invalid script file ptr");
+
+                    // Ensure there is a trailing null character to avoid issues with c-style string interpretation.
+                    if( sf_ptr->content.empty()
+                    ||  (sf_ptr->content.back() != '\0') ){
+                        sf_ptr->content.emplace_back('\0');
                         sf_ptr->altered = true;
                     }
 
-                    return 0;
-                };
+                    // Leave room for line numbers.
+                    const auto orig_cursor_pos = ImGui::GetCursorPosX();
+                    const auto orig_screen_pos = ImGui::GetCursorScreenPos();
+                    //const auto text_vert_spacing = ImGui::GetTextLineHeightWithSpacing();
+                    const auto text_vert_spacing = ImGui::GetTextLineHeight();
+                    const auto vert_spacing = ImGui::GetStyle().ItemSpacing.y * 0.5; // Is this correct??? Seems OK, but is arbitrary.
+                    const auto horiz_spacing = ImGui::GetStyle().ItemSpacing.x;
+                    const float line_no_width = ImGui::GetFont()->CalcTextSizeA(ImGui::GetFontSize(), FLT_MAX, -1.0f, "12345", nullptr, nullptr).x;
+                    ImGui::SetCursorPosX( orig_cursor_pos + line_no_width + horiz_spacing );
 
-                auto sf_ptr = &(script_files.at(active_script_file));
-                if(sf_ptr == nullptr) throw std::logic_error("Invalid script file ptr");
+                    // Draw text entry box.
+                    ImGuiInputTextFlags flags = ImGuiInputTextFlags_AllowTabInput
+                                              | ImGuiInputTextFlags_CallbackResize
+                                              | ImGuiInputTextFlags_CallbackEdit;
+                    ImVec2 edit_box_extent = ImGui::GetContentRegionAvail();
+                    const auto altered = ImGui::InputTextMultiline("#script_editor_active_content",
+                                                                   sf_ptr->content.data(),
+                                                                   sf_ptr->content.capacity(),
+                                                                   edit_box_extent,
+                                                                   flags,
+                                                                   text_entry_callback,
+                                                                   reinterpret_cast<void*>(sf_ptr));
+                    if(altered == true) script_files.at(active_script_file).altered = true;
 
-                // Ensure there is a trailing null character to avoid issues with c-style string interpretation.
-                if( sf_ptr->content.empty()
-                ||  (sf_ptr->content.back() != '\0') ){
-                    sf_ptr->content.emplace_back('\0');
-                    sf_ptr->altered = true;
+                    //const auto text_entry_ID = ImGui::GetCurrentContext()->LastActiveId; // ActiveIdPreviousFrame;
+                    //const auto text_entry_ID = ImGui::GetID("#script_editor_active_content");
+                    ImGui::Begin("Script Editor/#script_editor_active_content_9CF9E0D1"); // Terrible hacky workaround. FIXME. TODO.
+                    const auto vert_scroll = ImGui::GetScrollY();
+                    ImGui::EndChild();
+
+                    // Draw line numbers, including compilation feedback if applicable.
+                    {
+                        auto drawList = ImGui::GetWindowDrawList();
+
+                        const auto text_ln = static_cast<int>(std::floor(vert_scroll / text_vert_spacing));
+                        const auto text_ln_max = std::max(0, text_ln + static_cast<int>(std::floor((vert_scroll + edit_box_extent.y) / text_vert_spacing)));
+                        const auto line_vert_shift = (vert_scroll / text_vert_spacing) - static_cast<float>(text_ln);
+
+                        for(int l = text_ln; l < text_ln_max; ++l){ 
+                            ImU32 colour = ImGui::GetColorU32(line_numbers_normal_colour);
+                            if(view_toggles.view_script_feedback){
+                                for(const auto &f : script_files.at(active_script_file).feedback){
+                                    if(l != f.line) continue;
+                                    if(false){
+                                    }else if(f.severity == script_feedback_severity_t::debug){
+                                        colour = ImGui::GetColorU32(line_numbers_debug_colour);
+                                    }else if(f.severity == script_feedback_severity_t::info){
+                                        colour = ImGui::GetColorU32(line_numbers_info_colour);
+                                    }else if(f.severity == script_feedback_severity_t::warn){
+                                        colour = ImGui::GetColorU32(line_numbers_warn_colour);
+                                    }else if(f.severity == script_feedback_severity_t::err){
+                                        colour = ImGui::GetColorU32(line_numbers_error_colour);
+                                    }else{
+                                        throw std::logic_error("Unrecognized severity level");
+                                    }
+                                }
+                            }
+
+                            std::stringstream ss;
+                            ss << std::setw(5) << l;
+                            drawList->AddText(
+                                ImVec2(orig_screen_pos.x,
+                                       orig_screen_pos.y + vert_spacing
+                                                         + text_vert_spacing * static_cast<float>(l - text_ln)
+                                                         - text_vert_spacing * line_vert_shift),
+                                colour, const_cast<char *>(ss.str().c_str()) );
+                        }
+                    }
                 }
 
-                ImGuiInputTextFlags flags = ImGuiInputTextFlags_AllowTabInput
-                                          | ImGuiInputTextFlags_CallbackResize
-                                          | ImGuiInputTextFlags_CallbackEdit;
-                ImVec2 edit_box_extent = ImGui::GetContentRegionAvail();
-                const auto altered = ImGui::InputTextMultiline("##script_editor_active_content",
-                                                               sf_ptr->content.data(),
-                                                               sf_ptr->content.capacity(),
-                                                               edit_box_extent,
-                                                               flags,
-                                                               text_entry_callback,
-                                                               reinterpret_cast<void*>(sf_ptr));
-                
-                if(altered == true) script_files.at(active_script_file).altered = true;
+                ImGui::End();
             }
+            return;
+        };
+        display_script_editor();
 
-            ImGui::End();
-        }
-
-        auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_image_iters();
 
         // Display the image dialog.
-        if( view_images_enabled
-        &&  img_valid ){
-            ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_Appearing);
-            ImGui::SetNextWindowPos(ImVec2(10, 40), ImGuiCond_Appearing);
-            ImGui::Begin("Images", &view_images_enabled, ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoNavInputs | ImGuiWindowFlags_NoScrollbar ); //| ImGuiWindowFlags_AlwaysAutoResize);
+        const auto display_image_viewer = [&view_toggles,
+                                           //&custom_centre,
+                                           //&custom_width,
+                                           &current_texture,
+                                           &uv_min,
+                                           &uv_max,
+                                           &image_mouse_pos,
+                                           &tagged_pos,
+                                           &largest_projection,
+
+                                           //&open_file_root,
+                                           //&root_entry_text,
+
+                                           //&script_mutex,
+                                           //&script_files,
+                                           //&active_script_file,
+                                           //&script_epoch,
+
+                                           &drover_mutex,
+                                           &mutex_dt,
+                                           &DICOM_data,
+                                           &InvocationMetadata,
+                                           &FilenameLex,
+                                           &recompute_image_state,
+                                           &recompute_image_iters,
+
+                                           &preprocessed_contour_mutex,
+                                           &preprocessed_contour_epoch,
+                                           &preprocessed_contours,
+                                           //&terminate_contour_preprocessors,
+                                           &launch_contour_preprocessor,
+                                           //&clear_preprocessed_contours,
+                                           //&reset_contouring_state,
+                                           &contour_colour_from_orientation,
+                                           &contour_colours,
+                                           &contour_enabled,
+                                           &contour_hovered,
+                                           &contour_line_thickness,
+
+                                           &contouring_method,
+                                           &contouring_reach,
+                                           &contouring_brush,
+                                           &contouring_margin,
+                                           &contouring_img_row_col_count,
+
+                                           &recompute_cimage_iters,
+                                           &contouring_imgs,
+                                           &contouring_img_altered,
+                                           &last_mouse_button_0_down,
+                                           &last_mouse_button_1_down,
+                                           &last_mouse_button_pos,
+                                           &reset_contouring_state,
+                                           &editing_contour_colour,
+                                           &pos_contour_colour,
+                                           &neg_contour_colour,
+
+                                           &row_profile,
+                                           &col_profile,
+
+                                           &frame_count ]() -> void {
+
+// Lock the image details mutex in shared mode.
+// 
+// ... TODO ...
+//
+            if( !view_toggles.view_images_enabled
+            ||  !current_texture.texture_exists ) return;
+
+            ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_FirstUseEver);
+            ImGui::SetNextWindowPos(ImVec2(10, 40), ImGuiCond_FirstUseEver);
+            ImGui::Begin("Images", &view_toggles.view_images_enabled, ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoNavInputs | ImGuiWindowFlags_NoScrollbar );
             ImGuiIO &io = ImGui::GetIO();
 
             // Note: unhappy with this. Can cause feedback loop and flicker/jumpiness when resizing. Works OK for now
             // though. TODO.
-            const auto img_rows = disp_img_it->rows;
-            const auto img_cols = disp_img_it->columns;
-            const auto img_rows_f = static_cast<float>(disp_img_it->rows);
-            const auto img_cols_f = static_cast<float>(disp_img_it->columns);
-
             ImVec2 image_extent = ImGui::GetContentRegionAvail();
             image_extent.x = std::max(512.0f, image_extent.x - 5.0f);
             // Ensure images have the same aspect ratio as the true image.
-            image_extent.y = (disp_img_it->pxl_dx / disp_img_it->pxl_dy) * image_extent.x * img_rows_f / img_cols_f;
-            image_extent.y = std::isfinite(image_extent.y) ? image_extent.y : (disp_img_it->pxl_dx / disp_img_it->pxl_dy) * image_extent.x;
+            image_extent.y = current_texture.aspect_ratio * image_extent.x;
             auto gl_tex_ptr = reinterpret_cast<void*>(static_cast<intptr_t>(current_texture.texture_number));
 
             ImVec2 pos = ImGui::GetCursorScreenPos();
             ImGui::Image(gl_tex_ptr, image_extent, uv_min, uv_max);
             image_mouse_pos.mouse_hovering_image = ImGui::IsItemHovered();
             image_mouse_pos.image_window_focused = ImGui::IsWindowFocused();
-//contouring_imgs.image_data.back()->imagecoll.images.back()
 
             ImVec2 real_extent; // The true dimensions of the unclipped image, accounting for zoom and panning.
             real_extent.x = image_extent.x / (uv_max.x - uv_min.x);
@@ -1321,9 +1852,25 @@ if(false){
             ImVec2 real_pos; // The true position of the top-left corner, accounting for zoom and panning.
             real_pos.x = pos.x - (real_extent.x * uv_min.x);
             real_pos.y = pos.y - (real_extent.y * uv_min.y);
+            ImGui::End(); // "Images".
+
+            // Attempt to acquire an exclusive lock.
+            std::unique_lock<std::shared_timed_mutex> drover_lock(drover_mutex, mutex_dt);
+            if(!drover_lock) return;
+
+            auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_image_iters();
+            if( !view_toggles.view_images_enabled
+            ||  !img_valid ) return;
+
+            // Continue now that we have an exclusive lock.
+            ImGui::Begin("Images", &view_toggles.view_images_enabled);
 
             // Calculate mouse positions if the mouse is hovering the image.
             if( image_mouse_pos.mouse_hovering_image ){
+                const auto img_rows = current_texture.row_count;
+                const auto img_cols = current_texture.col_count;
+                const auto img_rows_f = static_cast<float>(img_rows);
+                const auto img_cols_f = static_cast<float>(img_cols);
                 image_mouse_pos.region_x = std::clamp((io.MousePos.x - real_pos.x) / real_extent.x, 0.0f, 1.0f);
                 image_mouse_pos.region_y = std::clamp((io.MousePos.y - real_pos.y) / real_extent.y, 0.0f, 1.0f);
                 image_mouse_pos.r = std::clamp( static_cast<long int>( std::floor( image_mouse_pos.region_y * img_rows_f ) ), 0L, (img_rows-1) );
@@ -1389,12 +1936,12 @@ if(false){
             }
 
             // Display a contour legend.
-            if( view_contours_enabled
+            if( view_toggles.view_contours_enabled
             &&  (DICOM_data.contour_data != nullptr) ){
-                ImGui::SetNextWindowSize(ImVec2(510, 650), ImGuiCond_Appearing);
-                ImGui::SetNextWindowPos(ImVec2(680, 40), ImGuiCond_Appearing);
+                ImGui::SetNextWindowSize(ImVec2(510, 650), ImGuiCond_FirstUseEver);
+                ImGui::SetNextWindowPos(ImVec2(680, 40), ImGuiCond_FirstUseEver);
                 ImGui::SetNextWindowCollapsed(true, ImGuiCond_FirstUseEver);
-                ImGui::Begin("Contours", &view_contours_enabled);
+                ImGui::Begin("Contours", &view_toggles.view_contours_enabled);
                 ImVec2 window_extent = ImGui::GetContentRegionAvail();
                 bool altered = false;
 
@@ -1474,13 +2021,13 @@ if(false){
                 if(altered){
                     std::unique_lock<std::shared_mutex> lock(preprocessed_contour_mutex);
                     contour_colours = contour_colours_l;
-                    if(view_contours_enabled) launch_contour_preprocessor();
+                    if(view_toggles.view_contours_enabled) launch_contour_preprocessor();
                 }
                 ImGui::End();
             }
 
             //Draw any contours that lie in the plane of the current image.
-            if( view_contours_enabled
+            if( view_toggles.view_contours_enabled
             &&  (DICOM_data.contour_data != nullptr) ){
                 ImDrawList *drawList = ImGui::GetWindowDrawList();
 
@@ -1506,7 +2053,7 @@ if(false){
                     if( !contour_enabled[pc.ROIName] ) continue;
 
                     drawList->PathClear();
-                    for(auto & p : pc.contour_refw.get().points){
+                    for(auto & p : pc.contour.points){
                         //Clamp the point to the bounding box, using the top left as zero.
                         const auto dR = p - img_top_left;
                         const auto clamped_col = dR.Dot( disp_img_it->col_unit ) / img_dicom_height;
@@ -1525,7 +2072,7 @@ if(false){
                     // Check if the mouse if within the contour.
                     float thickness = contour_line_thickness;
                     if(image_mouse_pos.mouse_hovering_image){
-                        const auto within_poly = pc.contour_refw.get().Is_Point_In_Polygon_Projected_Orthogonally(img_plane,image_mouse_pos.dicom_pos);
+                        const auto within_poly = pc.contour.Is_Point_In_Polygon_Projected_Orthogonally(img_plane,image_mouse_pos.dicom_pos);
                         thickness *= ( within_poly ) ? 1.5f : 1.0f;
                         if(within_poly) contour_hovered[pc.ROIName] = true;
                     }
@@ -1535,7 +2082,7 @@ if(false){
                 }
 
                 // Contouring interface.
-                if( view_contouring_enabled ){
+                if( view_toggles.view_contouring_enabled ){
                     // Provide a visual cue for the contouring brush.
                     {
                         const auto pixel_radius = static_cast<float>(contouring_reach) * image_mouse_pos.pixel_scale;
@@ -1555,10 +2102,10 @@ if(false){
                         }
                     }
 
-                    ImGui::SetNextWindowSize(ImVec2(510, 650), ImGuiCond_Appearing);
-                    ImGui::SetNextWindowPos(ImVec2(680, 200), ImGuiCond_Appearing);
+                    ImGui::SetNextWindowSize(ImVec2(510, 650), ImGuiCond_FirstUseEver);
+                    ImGui::SetNextWindowPos(ImVec2(680, 200), ImGuiCond_FirstUseEver);
                     ImGui::SetNextWindowCollapsed(true, ImGuiCond_FirstUseEver);
-                    ImGui::Begin("Contouring", &view_contouring_enabled);
+                    ImGui::Begin("Contouring", &view_toggles.view_contouring_enabled);
 
                     ImGui::Text("Note: this functionality is still under active development.");
                     if(ImGui::Button("Save")){ 
@@ -1760,8 +2307,8 @@ if(false){
 
             // Draw a tooltip with position and voxel intensity information.
             if( image_mouse_pos.mouse_hovering_image
-            &&  show_image_hover_tooltips
-            &&  !view_contouring_enabled ){
+            &&  view_toggles.show_image_hover_tooltips
+            &&  !view_toggles.view_contouring_enabled ){
                 ImGui::BeginTooltip();
                 if(tagged_pos){
                     ImGui::Text("Distance: %.4f", tagged_pos.value().distance(image_mouse_pos.dicom_pos));
@@ -1790,7 +2337,7 @@ if(false){
 
             // Extract data for row and column profiles.
             if( image_mouse_pos.mouse_hovering_image
-            && view_row_column_profiles ){
+            && view_toggles.view_row_column_profiles ){
                 row_profile.samples.clear();
                 col_profile.samples.clear();
                 for(auto i = 0; i < disp_img_it->columns; ++i){
@@ -1806,9 +2353,9 @@ if(false){
             }
 
             // Metadata window.
-            if( view_image_metadata_enabled ){
+            if( view_toggles.view_image_metadata_enabled ){
                 ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_FirstUseEver);
-                ImGui::Begin("Image Metadata", &view_image_metadata_enabled);
+                ImGui::Begin("Image Metadata", &view_toggles.view_image_metadata_enabled);
 
                 ImGui::Text("Image Metadata");
                 ImGui::Columns(2);
@@ -1827,15 +2374,32 @@ if(false){
 
                 ImGui::End();
             }
-        }
+            return;
+        };
+        display_image_viewer();
 
 
         // Open files dialog.
-        if( open_files_enabled
-        &&  !loaded_files.valid()){
+        const auto open_files_viewer = [&view_toggles,
+                                        
+                                        &drover_mutex,
+                                        &mutex_dt,
+                                        &InvocationMetadata,
+                                        &FilenameLex,
+
+                                        &open_file_root,
+                                        &root_entry_text,
+                                        &open_files_selection,
+                                        &loaded_files,
+                                        &query_files ]() -> void {
+            std::shared_lock<std::shared_timed_mutex> drover_lock(drover_mutex, mutex_dt);
+            if(!drover_lock) return;
+
+            if( !view_toggles.open_files_enabled
+            ||  loaded_files.valid()) return;
 
             ImGui::SetNextWindowSize(ImVec2(600, 650), ImGuiCond_FirstUseEver);
-            ImGui::Begin("Open File", &open_files_enabled);
+            ImGui::Begin("Open File", &view_toggles.open_files_enabled);
 
         // Always center this window when appearing
 //        ImVec2 center(ImGui::GetIO().DisplaySize.x * 0.5f, ImGui::GetIO().DisplaySize.y * 0.5f);
@@ -1962,273 +2526,321 @@ if(false){
             }
             ImGui::SameLine();
             if(ImGui::Button("Cancel", ImVec2(120, 0))){ 
-                open_files_enabled = false;
+                view_toggles.open_files_enabled = false;
                 open_files_selection.clear();
                 // Reset the root directory.
                 open_file_root = std::filesystem::current_path();
             }
             ImGui::End();
-        }
+            return;
+        };
+        open_files_viewer();
+
 
         // Handle file loading future.
-        if(loaded_files.valid()){
-            ImGui::OpenPopup("Loading");
-            if(ImGui::BeginPopupModal("Loading", NULL, ImGuiWindowFlags_AlwaysAutoResize)){
-                const std::string str((frame_count / 15) % 4, '.'); // Simplistic animation.
-                ImGui::Text("Loading files%s", str.c_str());
+        const auto handle_file_loading = [&view_toggles,
 
-                if(ImGui::Button("Close")){
-                    ImGui::CloseCurrentPopup();
+                                          &drover_mutex,
+                                          &DICOM_data,
+                                          &recompute_image_state,
+
+                                          &loaded_files,
+                                          &open_files_selection,
+
+                                          &frame_count]() -> void {
+            if( loaded_files.valid() ){
+                ImGui::OpenPopup("Loading");
+                if(ImGui::BeginPopupModal("Loading", NULL, ImGuiWindowFlags_AlwaysAutoResize)){
+                    const std::string str((frame_count / 15) % 4, '.'); // Simplistic animation.
+                    ImGui::Text("Loading files%s", str.c_str());
+
+                    if(ImGui::Button("Close")){
+                        ImGui::CloseCurrentPopup();
+                    }
+                    ImGui::EndPopup();
                 }
 
-                ImGui::EndPopup();
-            }
+                if(std::future_status::ready == loaded_files.wait_for(std::chrono::microseconds(1))){
+                    std::unique_lock<std::shared_timed_mutex> drover_lock(drover_mutex);
+                    auto f = loaded_files.get();
 
-            if(std::future_status::ready == loaded_files.wait_for(std::chrono::microseconds(1))){
-                auto f = loaded_files.get();
-
-                if(f.res){
-                    open_files_enabled = false;
-                    open_files_selection.clear();
-                    DICOM_data.Consume(f.DICOM_data);
-                }else{
-                    FUNCWARN("Unable to load files");
-                    // TODO ... warn about the issue.
+                    if(f.res){
+                        view_toggles.open_files_enabled = false;
+                        open_files_selection.clear();
+                        DICOM_data.Consume(f.DICOM_data);
+                    }else{
+                        FUNCWARN("Unable to load files");
+                        // TODO ... warn about the issue.
+                    }
+                    recompute_image_state();
+                    loaded_files = decltype(loaded_files)();
                 }
-                recompute_image_state();
-
-                loaded_files = decltype(loaded_files)();
             }
-        }
+        };
+        handle_file_loading();
 
 
         // Adjust the window and level.
-        if(adjust_window_level_enabled){
-            ImGui::SetNextWindowSize(ImVec2(350, 350), ImGuiCond_FirstUseEver);
-            ImGui::Begin("Adjust Window and Level", &adjust_window_level_enabled);
-            bool reload_texture = false;
-            const auto unset_custom_wllh = [&](){
-                custom_low    = std::optional<double>();
-                custom_high   = std::optional<double>();
-                custom_width  = std::optional<double>();
-                custom_centre = std::optional<double>();
-            };
-            const auto sync_custom_wllh = [&](){
-                if(custom_low && custom_high){
-                    custom_width = custom_high.value() - custom_low.value();
-                    custom_centre = (custom_high.value() + custom_low.value()) * 0.5;
-                }else if( custom_width && custom_centre ){
-                    custom_low  = custom_centre.value() - custom_width.value() * 0.5;
-                    custom_high = custom_centre.value() + custom_width.value() * 0.5;
-                }
-            };
+        const auto adjust_window_level = [&view_toggles,
+                                          &drover_mutex,
+                                          &recompute_image_state,
 
-            if(ImGui::Button("Auto", ImVec2(120, 0))){
-                // Invalidate any custom window and level.
-                unset_custom_wllh();
-                reload_texture = true;
-            }
+                                          &custom_low,
+                                          &custom_high,
+                                          &custom_width,
+                                          &custom_centre ]() -> void {
+            if( view_toggles.adjust_window_level_enabled ){
+                ImGui::SetNextWindowSize(ImVec2(350, 350), ImGuiCond_FirstUseEver);
+                ImGui::Begin("Adjust Window and Level", &view_toggles.adjust_window_level_enabled);
+                bool reload_texture = false;
+                const auto unset_custom_wllh = [&](){
+                    custom_low    = std::optional<double>();
+                    custom_high   = std::optional<double>();
+                    custom_width  = std::optional<double>();
+                    custom_centre = std::optional<double>();
+                };
+                const auto sync_custom_wllh = [&](){
+                    if(custom_low && custom_high){
+                        custom_width = custom_high.value() - custom_low.value();
+                        custom_centre = (custom_high.value() + custom_low.value()) * 0.5;
+                    }else if( custom_width && custom_centre ){
+                        custom_low  = custom_centre.value() - custom_width.value() * 0.5;
+                        custom_high = custom_centre.value() + custom_width.value() * 0.5;
+                    }
+                };
 
-            ImGui::Text("CT Presets");
-            if(ImGui::Button("Abdomen", ImVec2(100, 0))){
-                unset_custom_wllh();
-                custom_width   = 400.0;
-                custom_centre  = 40.0;
-                reload_texture = true;
-            }
-            ImGui::SameLine();
-            if(ImGui::Button("Bone", ImVec2(100, 0))){
-                unset_custom_wllh();
-                custom_width   = 2000.0;
-                custom_centre  = 500.0;
-                reload_texture = true;
-            }
-            ImGui::SameLine();
-            if(ImGui::Button("Brain", ImVec2(100, 0))){
-                unset_custom_wllh();
-                custom_width   = 70.0;
-                custom_centre  = 30.0;
-                reload_texture = true;
-            }
-
-            if(ImGui::Button("Liver", ImVec2(100, 0))){
-                unset_custom_wllh();
-                custom_width   = 160.0;
-                custom_centre  = 60.0;
-                reload_texture = true;
-            }
-            ImGui::SameLine();
-            if(ImGui::Button("Lung", ImVec2(100, 0))){
-                unset_custom_wllh();
-                custom_width   = 1600.0;
-                custom_centre  = -600.0;
-                reload_texture = true;
-            }
-            ImGui::SameLine();
-            if(ImGui::Button("Mediastinum", ImVec2(100, 0))){
-                unset_custom_wllh();
-                custom_width   = 500.0;
-                custom_centre  = 50.0;
-                reload_texture = true;
-            }
-
-            ImGui::Text("QA Presets");
-            if(ImGui::Button("0 - 1", ImVec2(100, 0))){
-                unset_custom_wllh();
-                custom_width   = 1.0;
-                custom_centre  = 0.5;
-                reload_texture = true;
-            }
-            ImGui::SameLine();
-            if(ImGui::Button("0 - 5", ImVec2(100, 0))){
-                unset_custom_wllh();
-                custom_width   = 5.0;
-                custom_centre  = 2.5;
-                reload_texture = true;
-            }
-            ImGui::SameLine();
-            if(ImGui::Button("0 - 10", ImVec2(100, 0))){
-                unset_custom_wllh();
-                custom_width   = 10.0;
-                custom_centre  = 5.0;
-                reload_texture = true;
-            }
-
-            if(ImGui::Button("0 - 100", ImVec2(100, 0))){
-                unset_custom_wllh();
-                custom_width   = 100.0;
-                custom_centre  = 50.0;
-                reload_texture = true;
-            }
-            ImGui::SameLine();
-            if(ImGui::Button("0 - 1000", ImVec2(100, 0))){
-                unset_custom_wllh();
-                custom_width   = 1000.0;
-                custom_centre  = 500.0;
-                reload_texture = true;
-            }
-
-            if(ImGui::Button("-1 - 1", ImVec2(100, 0))){
-                unset_custom_wllh();
-                custom_width   = 2.0;
-                custom_centre  = 0.0;
-                reload_texture = true;
-            }
-            ImGui::SameLine();
-            if(ImGui::Button("-5 - 5", ImVec2(100, 0))){
-                unset_custom_wllh();
-                custom_width   = 10.0;
-                custom_centre  = 0.0;
-                reload_texture = true;
-            }
-            ImGui::SameLine();
-            if(ImGui::Button("-10 - 10", ImVec2(100, 0))){
-                unset_custom_wllh();
-                custom_width   = 20.0;
-                custom_centre  = 0.0;
-                reload_texture = true;
-            }
-
-            if(ImGui::Button("-100 - 100", ImVec2(100, 0))){
-                unset_custom_wllh();
-                custom_width   = 200.0;
-                custom_centre  = 0.0;
-                reload_texture = true;
-            }
-            ImGui::SameLine();
-            if(ImGui::Button("-1000 - 1000", ImVec2(100, 0))){
-                unset_custom_wllh();
-                custom_width   = 2000.0;
-                custom_centre  = 0.0;
-                reload_texture = true;
-            }
-
-            ImGui::Text("Custom");
-            const double clamp_l = -5000.0;
-            const double clamp_h  = 5000.0;
-            const float drag_speed = 1.0f;
-            double custom_width_l  = custom_width.value_or(0.0);
-            double custom_centre_l = custom_centre.value_or(0.0);
-            double custom_low_l    = custom_low.value_or(0.0);
-            double custom_high_l   = custom_high.value_or(0.0);
-
-            if(ImGui::DragScalar("window", ImGuiDataType_Double, &custom_width_l, drag_speed, &clamp_l, &clamp_h, "%f")){//, ImGuiSliderFlags_Logarithmic)){
-                custom_width = custom_width_l;
-                custom_low  = std::optional<double>();
-                custom_high = std::optional<double>();
-                if(custom_centre){
+                if(ImGui::Button("Auto", ImVec2(120, 0))){
+                    // Invalidate any custom window and level.
+                    unset_custom_wllh();
                     reload_texture = true;
                 }
-            }
-            if(ImGui::DragScalar("level",  ImGuiDataType_Double, &custom_centre_l, drag_speed, &clamp_l, &clamp_h, "%f")){//, ImGuiSliderFlags_Logarithmic)){
-                custom_centre = custom_centre_l;
-                custom_low  = std::optional<double>();
-                custom_high = std::optional<double>();
-                if(custom_width){
-                    reload_texture = true;
-                }
-            }
 
-            if(ImGui::DragScalar("low", ImGuiDataType_Double, &custom_low_l, drag_speed, &clamp_l, &clamp_h, "%f")){//, ImGuiSliderFlags_Logarithmic)){
-                custom_low    = custom_low_l;
-                custom_width  = std::optional<double>();
-                custom_centre = std::optional<double>();
-                if(custom_high){
+                ImGui::Text("CT Presets");
+                if(ImGui::Button("Abdomen", ImVec2(100, 0))){
+                    unset_custom_wllh();
+                    custom_width   = 400.0;
+                    custom_centre  = 40.0;
                     reload_texture = true;
                 }
-            }
-            if(ImGui::DragScalar("high", ImGuiDataType_Double, &custom_high_l, drag_speed, &clamp_l, &clamp_h, "%f")){//, ImGuiSliderFlags_Logarithmic)){
-                custom_high   = custom_high_l;
-                custom_width  = std::optional<double>();
-                custom_centre = std::optional<double>();
-                if(custom_low){
+                ImGui::SameLine();
+                if(ImGui::Button("Bone", ImVec2(100, 0))){
+                    unset_custom_wllh();
+                    custom_width   = 2000.0;
+                    custom_centre  = 500.0;
                     reload_texture = true;
                 }
-            }
+                ImGui::SameLine();
+                if(ImGui::Button("Brain", ImVec2(100, 0))){
+                    unset_custom_wllh();
+                    custom_width   = 70.0;
+                    custom_centre  = 30.0;
+                    reload_texture = true;
+                }
 
-            ImGui::End();
-            if(reload_texture){
-                sync_custom_wllh();
-                recompute_image_state();
+                if(ImGui::Button("Liver", ImVec2(100, 0))){
+                    unset_custom_wllh();
+                    custom_width   = 160.0;
+                    custom_centre  = 60.0;
+                    reload_texture = true;
+                }
+                ImGui::SameLine();
+                if(ImGui::Button("Lung", ImVec2(100, 0))){
+                    unset_custom_wllh();
+                    custom_width   = 1600.0;
+                    custom_centre  = -600.0;
+                    reload_texture = true;
+                }
+                ImGui::SameLine();
+                if(ImGui::Button("Mediastinum", ImVec2(100, 0))){
+                    unset_custom_wllh();
+                    custom_width   = 500.0;
+                    custom_centre  = 50.0;
+                    reload_texture = true;
+                }
+
+                ImGui::Text("QA Presets");
+                if(ImGui::Button("0 - 1", ImVec2(100, 0))){
+                    unset_custom_wllh();
+                    custom_width   = 1.0;
+                    custom_centre  = 0.5;
+                    reload_texture = true;
+                }
+                ImGui::SameLine();
+                if(ImGui::Button("0 - 5", ImVec2(100, 0))){
+                    unset_custom_wllh();
+                    custom_width   = 5.0;
+                    custom_centre  = 2.5;
+                    reload_texture = true;
+                }
+                ImGui::SameLine();
+                if(ImGui::Button("0 - 10", ImVec2(100, 0))){
+                    unset_custom_wllh();
+                    custom_width   = 10.0;
+                    custom_centre  = 5.0;
+                    reload_texture = true;
+                }
+
+                if(ImGui::Button("0 - 100", ImVec2(100, 0))){
+                    unset_custom_wllh();
+                    custom_width   = 100.0;
+                    custom_centre  = 50.0;
+                    reload_texture = true;
+                }
+                ImGui::SameLine();
+                if(ImGui::Button("0 - 1000", ImVec2(100, 0))){
+                    unset_custom_wllh();
+                    custom_width   = 1000.0;
+                    custom_centre  = 500.0;
+                    reload_texture = true;
+                }
+
+                if(ImGui::Button("-1 - 1", ImVec2(100, 0))){
+                    unset_custom_wllh();
+                    custom_width   = 2.0;
+                    custom_centre  = 0.0;
+                    reload_texture = true;
+                }
+                ImGui::SameLine();
+                if(ImGui::Button("-5 - 5", ImVec2(100, 0))){
+                    unset_custom_wllh();
+                    custom_width   = 10.0;
+                    custom_centre  = 0.0;
+                    reload_texture = true;
+                }
+                ImGui::SameLine();
+                if(ImGui::Button("-10 - 10", ImVec2(100, 0))){
+                    unset_custom_wllh();
+                    custom_width   = 20.0;
+                    custom_centre  = 0.0;
+                    reload_texture = true;
+                }
+
+                if(ImGui::Button("-100 - 100", ImVec2(100, 0))){
+                    unset_custom_wllh();
+                    custom_width   = 200.0;
+                    custom_centre  = 0.0;
+                    reload_texture = true;
+                }
+                ImGui::SameLine();
+                if(ImGui::Button("-1000 - 1000", ImVec2(100, 0))){
+                    unset_custom_wllh();
+                    custom_width   = 2000.0;
+                    custom_centre  = 0.0;
+                    reload_texture = true;
+                }
+
+                ImGui::Text("Custom");
+                const double clamp_l = -5000.0;
+                const double clamp_h  = 5000.0;
+                const float drag_speed = 1.0f;
+                double custom_width_l  = custom_width.value_or(0.0);
+                double custom_centre_l = custom_centre.value_or(0.0);
+                double custom_low_l    = custom_low.value_or(0.0);
+                double custom_high_l   = custom_high.value_or(0.0);
+
+                if(ImGui::DragScalar("window", ImGuiDataType_Double, &custom_width_l, drag_speed, &clamp_l, &clamp_h, "%f")){//, ImGuiSliderFlags_Logarithmic)){
+                    custom_width = custom_width_l;
+                    custom_low  = std::optional<double>();
+                    custom_high = std::optional<double>();
+                    if(custom_centre){
+                        reload_texture = true;
+                    }
+                }
+                if(ImGui::DragScalar("level",  ImGuiDataType_Double, &custom_centre_l, drag_speed, &clamp_l, &clamp_h, "%f")){//, ImGuiSliderFlags_Logarithmic)){
+                    custom_centre = custom_centre_l;
+                    custom_low  = std::optional<double>();
+                    custom_high = std::optional<double>();
+                    if(custom_width){
+                        reload_texture = true;
+                    }
+                }
+
+                if(ImGui::DragScalar("low", ImGuiDataType_Double, &custom_low_l, drag_speed, &clamp_l, &clamp_h, "%f")){//, ImGuiSliderFlags_Logarithmic)){
+                    custom_low    = custom_low_l;
+                    custom_width  = std::optional<double>();
+                    custom_centre = std::optional<double>();
+                    if(custom_high){
+                        reload_texture = true;
+                    }
+                }
+                if(ImGui::DragScalar("high", ImGuiDataType_Double, &custom_high_l, drag_speed, &clamp_l, &clamp_h, "%f")){//, ImGuiSliderFlags_Logarithmic)){
+                    custom_high   = custom_high_l;
+                    custom_width  = std::optional<double>();
+                    custom_centre = std::optional<double>();
+                    if(custom_low){
+                        reload_texture = true;
+                    }
+                }
+
+                ImGui::End();
+                if(reload_texture){
+                    std::unique_lock<std::shared_timed_mutex> drover_lock(drover_mutex);
+                    sync_custom_wllh();
+                    recompute_image_state();
+                }
             }
-        }
+            return;
+        };
+        adjust_window_level();
 
 
         // Adjust the colour map.
-        if(adjust_colour_map_enabled){
-            ImGui::SetNextWindowPos(ImVec2(680, 120), ImGuiCond_FirstUseEver);
-            ImGui::Begin("Adjust Colour Map", &adjust_colour_map_enabled, ImGuiWindowFlags_AlwaysAutoResize);
-            bool reload_texture = false;
+        const auto adjust_colour_map = [&view_toggles,
+                                        &drover_mutex,
+                                        &recompute_image_state,
 
-            // Draw the scale bar.
-            auto gl_tex_ptr = reinterpret_cast<void*>(static_cast<intptr_t>(scale_bar_texture.texture_number));
-            ImGui::Image(gl_tex_ptr, ImVec2(250,25), ImVec2(0.0, 0.0), ImVec2(1.0, 1.0));
+                                        &scale_bar_texture,
+                                        &recompute_scale_bar_image_state,
+                                        &colour_maps,
+                                        &colour_map ]() -> void {
+            if( view_toggles.adjust_colour_map_enabled ){
+                ImGui::SetNextWindowPos(ImVec2(680, 120), ImGuiCond_FirstUseEver);
+                ImGui::Begin("Adjust Colour Map", &view_toggles.adjust_colour_map_enabled, ImGuiWindowFlags_AlwaysAutoResize);
+                bool reload_texture = false;
 
-            // Draw buttons for each available colour map.
-            for(size_t i = 0; i < colour_maps.size(); ++i){
-                if( ImGui::Button(colour_maps[i].first.c_str(), ImVec2(250, 0)) ){
-                    colour_map = i;
-                    reload_texture = true;
+                // Draw the scale bar.
+                auto gl_tex_ptr = reinterpret_cast<void*>(static_cast<intptr_t>(scale_bar_texture.texture_number));
+                ImGui::Image(gl_tex_ptr, ImVec2(250,25), ImVec2(0.0, 0.0), ImVec2(1.0, 1.0));
+
+                // Draw buttons for each available colour map.
+                for(size_t i = 0; i < colour_maps.size(); ++i){
+                    if( ImGui::Button(colour_maps[i].first.c_str(), ImVec2(250, 0)) ){
+                        colour_map = i;
+                        reload_texture = true;
+                    }
+                }
+
+                ImGui::End();
+
+                if(reload_texture){
+                    std::unique_lock<std::shared_timed_mutex> drover_lock(drover_mutex);
+                    recompute_image_state();
+                    recompute_scale_bar_image_state();
                 }
             }
-
-            ImGui::End();
-
-            if(reload_texture){
-                recompute_image_state();
-                recompute_scale_bar_image_state();
-            }
-        }
+            return;
+        };
+        adjust_colour_map();
 
 
         // Display plots.
-        if( view_plots_enabled 
-        && DICOM_data.Has_LSamp_Data() ){
+        const auto display_plots = [&view_toggles,
+                                    &drover_mutex,
+                                    &mutex_dt,
+                                    &DICOM_data,
+
+                                    &lsamps_visible ]() -> void {
+
+            std::shared_lock<std::shared_timed_mutex> drover_lock(drover_mutex, mutex_dt);
+            if(!drover_lock) return;
+
+            if( !view_toggles.view_plots_enabled 
+            ||  !DICOM_data.Has_LSamp_Data() ) return;
 
             // Display a selection and navigation window.
-            ImGui::SetNextWindowSize(ImVec2(350, 400), ImGuiCond_Appearing);
-            ImGui::SetNextWindowPos(ImVec2(680, 40), ImGuiCond_Appearing);
-            ImGui::Begin("Plot Selection", &view_plots_enabled, ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoNavInputs);
+            ImGui::SetNextWindowSize(ImVec2(350, 400), ImGuiCond_FirstUseEver);
+            ImGui::SetNextWindowPos(ImVec2(680, 40), ImGuiCond_FirstUseEver);
+            ImGui::Begin("Plot Selection", &view_toggles.view_plots_enabled, ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoNavInputs);
 
             const int N_lsamps = static_cast<int>(DICOM_data.lsamp_data.size());
 
@@ -2256,8 +2868,6 @@ if(false){
                 const auto histtype = (*lsamp_ptr_it)->line.GetMetadataValueAs<std::string>("HistogramType").value_or("unknown"_s);
                 const auto title = std::to_string(i) + " " + name;
 
-                const auto is_selected = ImGui::Selectable( title.c_str(), &(lsamps_visible[i]), ImGuiSelectableFlags_AllowDoubleClick );
-                const auto is_doubleclicked = is_selected && ImGui::IsMouseDoubleClicked(0);
                 const auto is_visible = lsamps_visible[i];
                 ImGui::SameLine(150);
                 ImGui::Text("%s", modality.c_str());
@@ -2270,7 +2880,7 @@ if(false){
 
             if(any_selected){
                 ImGui::SetNextWindowSize(ImVec2(620, 640), ImGuiCond_FirstUseEver);
-                ImGui::Begin("Plots", &view_plots_enabled);
+                ImGui::Begin("Plots", &view_toggles.view_plots_enabled);
                 ImVec2 window_extent = ImGui::GetContentRegionAvail();
 
                 if(ImPlot::BeginPlot("Plots",
@@ -2300,48 +2910,100 @@ if(false){
 
                 ImGui::End();
             }
-        }
+            return;
+        };
+        display_plots();
+
 
         // Display row and column profiles.
-        if( view_row_column_profiles 
-        &&  !row_profile.empty()
-        &&  !col_profile.empty() ){
-            ImGui::SetNextWindowSize(ImVec2(600, 350), ImGuiCond_FirstUseEver);
-            ImGui::Begin("Row and Column Profiles", &view_row_column_profiles);
-            ImVec2 window_extent = ImGui::GetContentRegionAvail();
+        const auto display_row_column_profiles = [&view_toggles,
 
-            const int offset = 0;
-            const int stride = sizeof( decltype( row_profile.samples[0] ) );
+                                                  &row_profile,
+                                                  &col_profile ]() -> void {
+            if( view_toggles.view_row_column_profiles 
+            &&  !row_profile.empty()
+            &&  !col_profile.empty() ){
+                ImGui::SetNextWindowSize(ImVec2(600, 350), ImGuiCond_FirstUseEver);
+                ImGui::Begin("Row and Column Profiles", &view_toggles.view_row_column_profiles);
+                ImVec2 window_extent = ImGui::GetContentRegionAvail();
 
-            if(ImPlot::BeginPlot("Row and Column Profiles",
-                                 nullptr,
-                                 nullptr,
-                                 window_extent,
-                                 ImPlotFlags_AntiAliased,
-                                 ImPlotAxisFlags_AutoFit,
-                                 ImPlotAxisFlags_AutoFit )) {
-                ImPlot::PlotLine<double>("Row Profile",
-                                         &row_profile.samples[0][0], 
-                                         &row_profile.samples[0][2],
-                                         row_profile.size(),
-                                         offset, stride );
-                ImPlot::PlotLine<double>("Column Profile",
-                                         &col_profile.samples[0][0], 
-                                         &col_profile.samples[0][2],
-                                         col_profile.size(),
-                                         offset, stride );
-                ImPlot::EndPlot();
+                const int offset = 0;
+                const int stride = sizeof( decltype( row_profile.samples[0] ) );
+
+                if(ImPlot::BeginPlot("Row and Column Profiles",
+                                     nullptr,
+                                     nullptr,
+                                     window_extent,
+                                     ImPlotFlags_AntiAliased,
+                                     ImPlotAxisFlags_AutoFit,
+                                     ImPlotAxisFlags_AutoFit )) {
+                    ImPlot::PlotLine<double>("Row Profile",
+                                             &row_profile.samples[0][0], 
+                                             &row_profile.samples[0][2],
+                                             row_profile.size(),
+                                             offset, stride );
+                    ImPlot::PlotLine<double>("Column Profile",
+                                             &col_profile.samples[0][0], 
+                                             &col_profile.samples[0][2],
+                                             col_profile.size(),
+                                             offset, stride );
+                    ImPlot::EndPlot();
+                }
+
+                ImGui::End();
             }
+            return;
+        };
+        display_row_column_profiles();
 
-            ImGui::End();
-        }
 
         // Display the image navigation dialog.
-        if( view_images_enabled
-        &&  img_valid ){
-            ImGui::SetNextWindowSize(ImVec2(350, 400), ImGuiCond_Appearing);
-            ImGui::SetNextWindowPos(ImVec2(680, 100), ImGuiCond_Appearing);
-            ImGui::Begin("Image Navigation", &view_images_enabled, ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoNavInputs | ImGuiWindowFlags_AlwaysAutoResize);
+        const auto display_image_navigation = [&view_toggles,
+                                               &drover_mutex,
+                                               &mutex_dt,
+                                               &DICOM_data,
+                                               &recompute_image_iters,
+
+                                               &img_array_num,
+                                               &img_num,
+                                               &img_channel,
+
+                                               &zoom,
+                                               &pan,
+                                               &uv_min,
+                                               &uv_max,
+                                               &image_mouse_pos,
+                                               &io,
+
+                                               &recompute_cimage_iters,
+                                               &contouring_img_altered,
+                                               &contouring_reach,
+                                               &last_mouse_button_0_down,
+                                               &last_mouse_button_1_down,
+                                               &last_mouse_button_pos,
+                                               &largest_projection,
+                                               &contouring_brush,
+
+                                               &tagged_pos,
+
+                                               &advance_to_image_array,
+                                               &recompute_image_state,
+                                               &launch_contour_preprocessor,
+                                               &reset_contouring_state,
+                                               &advance_to_image,
+
+                                               &frame_count ]() -> void {
+
+            std::unique_lock<std::shared_timed_mutex> drover_lock(drover_mutex, mutex_dt);
+            if(!drover_lock) return;
+
+            auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_image_iters();
+            if( !view_toggles.view_images_enabled
+            ||  !img_valid ) return;
+
+            ImGui::SetNextWindowSize(ImVec2(350, 400), ImGuiCond_FirstUseEver);
+            ImGui::SetNextWindowPos(ImVec2(680, 100), ImGuiCond_FirstUseEver);
+            ImGui::Begin("Image Navigation", &view_toggles.view_images_enabled, ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoNavInputs | ImGuiWindowFlags_AlwaysAutoResize);
 
             int scroll_arrays = img_array_num;
             int scroll_images = img_num;
@@ -2414,7 +3076,7 @@ if(false){
                     }else if(io.KeyShift && (io.MouseWheel < 0)){
                         scroll_arrays = std::clamp((scroll_arrays + N_arrays + d_l) % N_arrays, 0, N_arrays - 1);
 
-                    }else if( view_contouring_enabled
+                    }else if( view_toggles.view_contouring_enabled
                           &&  cimg_valid
                           &&  (0 < IM_ARRAYSIZE(io.MouseDown))
                           &&  (1 < IM_ARRAYSIZE(io.MouseDown))
@@ -2580,7 +3242,7 @@ if(false){
                 recompute_image_state();
                 auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_image_iters();
                 if( !img_valid ) throw std::runtime_error("Advanced to inaccessible image array");
-                if(view_contours_enabled) launch_contour_preprocessor();
+                if(view_toggles.view_contours_enabled) launch_contour_preprocessor();
                 reset_contouring_state(img_array_ptr_it);
                 tagged_pos = {};
 
@@ -2589,7 +3251,7 @@ if(false){
                 recompute_image_state();
                 auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_image_iters();
                 if( !img_valid ) throw std::runtime_error("Advanced to inaccessible image");
-                if(view_contours_enabled) launch_contour_preprocessor();
+                if(view_toggles.view_contours_enabled) launch_contour_preprocessor();
                 contouring_img_altered = true;
 
             }else if( (new_img_chnl != img_channel)
@@ -2600,7 +3262,10 @@ if(false){
                 if( !img_valid ) throw std::runtime_error("Advanced to inaccessible image channel");
             }
             ImGui::End();
-        }
+            return;
+        };
+        display_image_navigation();
+
 
         // Clear the current OpenGL frame.
         CHECK_FOR_GL_ERRORS();
@@ -2612,129 +3277,142 @@ if(false){
         glClear(GL_COLOR_BUFFER_BIT);
         CHECK_FOR_GL_ERRORS();
 
-// Tinkering with rendering surface meshes.
-        if( view_meshes_enabled
-        && DICOM_data.Has_Mesh_Data() ){
-    auto smesh_ptr = DICOM_data.smesh_data.front();
 
-    const auto N_verts = smesh_ptr->meshes.vertices.size();
+        // Tinkering with rendering surface meshes.
+        const auto draw_surface_meshes = [&view_toggles,
+                                          &drover_mutex,
+                                          &mutex_dt,
+                                          &DICOM_data,
+                                          &frame_count ]() -> void {
 
-    long int N_triangles = 0;
-    for(const auto& f : smesh_ptr->meshes.faces){
-        long int l_N_indices = f.size();
-        if(l_N_indices < 3) continue; // Ignore faces that cannot be broken into triangles.
-        N_triangles += (l_N_indices - 2);
-    }
+            std::shared_lock<std::shared_timed_mutex> drover_lock(drover_mutex, mutex_dt);
+            if(!drover_lock) return;
+            if( !view_toggles.view_meshes_enabled
+            ||  !DICOM_data.Has_Mesh_Data() ) return;
 
-    const auto inf = std::numeric_limits<double>::infinity();
-    auto x_min = inf;
-    auto y_min = inf;
-    auto z_min = inf;
-    auto x_max = -inf;
-    auto y_max = -inf;
-    auto z_max = -inf;
-    for(const auto& v : smesh_ptr->meshes.vertices){
-        if(v.x < x_min) x_min = v.x;
-        if(v.y < y_min) y_min = v.y;
-        if(v.z < z_min) z_min = v.z;
-        if(x_max < v.x) x_max = v.x;
-        if(y_max < v.y) y_max = v.y;
-        if(z_max < v.z) z_max = v.z;
-    }
+            auto smesh_ptr = DICOM_data.smesh_data.front();
 
-    {
-        ImGui::Begin("Meshes");
-        std::string msg = "Drawing "_s + std::to_string(N_verts) + " verts and "_s + std::to_string(N_triangles) + " triangles.";
-        ImGui::Text("%s", msg.c_str());
-        ImGui::End();
-    }
+            const auto N_verts = smesh_ptr->meshes.vertices.size();
 
-    std::vector<float> vertices;
-    vertices.reserve(3 * N_verts);
-    for(const auto& v : smesh_ptr->meshes.vertices){
-        // Scale each of x, y, and z to [-1,+1], but shrink to [-1/sqrt(3),+1/sqrt(3)] to account for rotation.
-        // Scaling down will ensure the corners are not clipped when the cube is rotated.
-        vec3<double> w( 0.577 * (2.0 * (v.x - x_min) / (x_max - x_min) - 1.0),
-                        0.577 * (2.0 * (v.y - y_min) / (y_max - y_min) - 1.0),
-                        0.577 * (2.0 * (v.z - z_min) / (z_max - z_min) - 1.0) );
+            long int N_triangles = 0;
+            for(const auto& f : smesh_ptr->meshes.faces){
+                long int l_N_indices = f.size();
+                if(l_N_indices < 3) continue; // Ignore faces that cannot be broken into triangles.
+                N_triangles += (l_N_indices - 2);
+            }
 
-        w = w.rotate_around_z(3.14159265 * static_cast<double>(frame_count / 59900.0));
-        w = w.rotate_around_y(3.14159265 * static_cast<double>(frame_count / 11000.0));
-        w = w.rotate_around_x(3.14159265 * static_cast<double>(frame_count / 26000.0));
-        vertices.push_back(static_cast<float>(w.x));
-        vertices.push_back(static_cast<float>(w.y));
-        vertices.push_back(static_cast<float>(w.z));
-    }
-    
-    std::vector<unsigned int> indices;
-    indices.reserve(3 * N_triangles);
-    for(const auto& f : smesh_ptr->meshes.faces){
-        long int l_N_indices = f.size();
-        if(l_N_indices < 3) continue; // Ignore faces that cannot be broken into triangles.
+            const auto inf = std::numeric_limits<double>::infinity();
+            auto x_min = inf;
+            auto y_min = inf;
+            auto z_min = inf;
+            auto x_max = -inf;
+            auto y_max = -inf;
+            auto z_max = -inf;
+            for(const auto& v : smesh_ptr->meshes.vertices){
+                if(v.x < x_min) x_min = v.x;
+                if(v.y < y_min) y_min = v.y;
+                if(v.z < z_min) z_min = v.z;
+                if(x_max < v.x) x_max = v.x;
+                if(y_max < v.y) y_max = v.y;
+                if(z_max < v.z) z_max = v.z;
+            }
 
-        const auto it_1 = std::cbegin(f);
-        const auto it_2 = std::next(it_1);
-        const auto end = std::end(f);
-        for(auto it_3 = std::next(it_2); it_3 != end; ++it_3){
-            indices.push_back(static_cast<unsigned int>(*it_1));
-            indices.push_back(static_cast<unsigned int>(*it_2));
-            indices.push_back(static_cast<unsigned int>(*it_3));
-        }
-    }
+            {
+                ImGui::Begin("Meshes");
+                std::string msg = "Drawing "_s + std::to_string(N_verts) + " verts and "_s + std::to_string(N_triangles) + " triangles.";
+                ImGui::Text("%s", msg.c_str());
+                ImGui::End();
+            }
 
-    GLuint vao = 0;
-    GLuint vbo = 0;
-    GLuint ebo = 0;
+            std::vector<float> vertices;
+            vertices.reserve(3 * N_verts);
+            for(const auto& v : smesh_ptr->meshes.vertices){
+                // Scale each of x, y, and z to [-1,+1], but shrink to [-1/sqrt(3),+1/sqrt(3)] to account for rotation.
+                // Scaling down will ensure the corners are not clipped when the cube is rotated.
+                vec3<double> w( 0.577 * (2.0 * (v.x - x_min) / (x_max - x_min) - 1.0),
+                                0.577 * (2.0 * (v.y - y_min) / (y_max - y_min) - 1.0),
+                                0.577 * (2.0 * (v.z - z_min) / (z_max - z_min) - 1.0) );
 
-    CHECK_FOR_GL_ERRORS();
+                w = w.rotate_around_z(3.14159265 * static_cast<double>(frame_count / 59900.0));
+                w = w.rotate_around_y(3.14159265 * static_cast<double>(frame_count / 11000.0));
+                w = w.rotate_around_x(3.14159265 * static_cast<double>(frame_count / 26000.0));
+                vertices.push_back(static_cast<float>(w.x));
+                vertices.push_back(static_cast<float>(w.y));
+                vertices.push_back(static_cast<float>(w.z));
+            }
+            
+            std::vector<unsigned int> indices;
+            indices.reserve(3 * N_triangles);
+            for(const auto& f : smesh_ptr->meshes.faces){
+                long int l_N_indices = f.size();
+                if(l_N_indices < 3) continue; // Ignore faces that cannot be broken into triangles.
 
-    glGenVertexArrays(1, &vao); // Create a VAO inside the OpenGL context.
-    glGenBuffers(1, &vbo); // Create a VBO inside the OpenGL context.
-    glGenBuffers(1, &ebo); // Create a EBO inside the OpenGL context.
+                const auto it_1 = std::cbegin(f);
+                const auto it_2 = std::next(it_1);
+                const auto end = std::end(f);
+                for(auto it_3 = std::next(it_2); it_3 != end; ++it_3){
+                    indices.push_back(static_cast<unsigned int>(*it_1));
+                    indices.push_back(static_cast<unsigned int>(*it_2));
+                    indices.push_back(static_cast<unsigned int>(*it_3));
+                }
+            }
 
-    glBindVertexArray(vao); // Bind = make it the currently-used object.
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+            GLuint vao = 0;
+            GLuint vbo = 0;
+            GLuint ebo = 0;
 
-    CHECK_FOR_GL_ERRORS();
+            CHECK_FOR_GL_ERRORS();
 
-    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(GLfloat), static_cast<void*>(vertices.data()), GL_STATIC_DRAW); // Copy vertex data.
+            glGenVertexArrays(1, &vao); // Create a VAO inside the OpenGL context.
+            glGenBuffers(1, &vbo); // Create a VBO inside the OpenGL context.
+            glGenBuffers(1, &ebo); // Create a EBO inside the OpenGL context.
 
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), static_cast<void*>(indices.data()), GL_STATIC_DRAW); // Copy index data.
+            glBindVertexArray(vao); // Bind = make it the currently-used object.
+            glBindBuffer(GL_ARRAY_BUFFER, vbo);
 
-    CHECK_FOR_GL_ERRORS();
+            CHECK_FOR_GL_ERRORS();
 
-    glEnableVertexAttribArray(0); // enable attribute with index 0.
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0); // Vertex positions, 3 floats per vertex, attrib index 0.
+            glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(GLfloat), static_cast<void*>(vertices.data()), GL_STATIC_DRAW); // Copy vertex data.
 
-    glBindVertexArray(0);
-    CHECK_FOR_GL_ERRORS();
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+            glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), static_cast<void*>(indices.data()), GL_STATIC_DRAW); // Copy index data.
+
+            CHECK_FOR_GL_ERRORS();
+
+            glEnableVertexAttribArray(0); // enable attribute with index 0.
+            glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0); // Vertex positions, 3 floats per vertex, attrib index 0.
+
+            glBindVertexArray(0);
+            CHECK_FOR_GL_ERRORS();
 
 
-    // Draw the mesh.
-    CHECK_FOR_GL_ERRORS();
-    glBindVertexArray(vao); // Bind = make it the currently-used object.
+            // Draw the mesh.
+            CHECK_FOR_GL_ERRORS();
+            glBindVertexArray(vao); // Bind = make it the currently-used object.
 
-    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); // Enable wireframe mode.
-    CHECK_FOR_GL_ERRORS();
-    glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(indices.size()), GL_UNSIGNED_INT, 0); // Draw using the current shader setup.
-    CHECK_FOR_GL_ERRORS();
-    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); // Disable wireframe mode.
+            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); // Enable wireframe mode.
+            CHECK_FOR_GL_ERRORS();
+            glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(indices.size()), GL_UNSIGNED_INT, 0); // Draw using the current shader setup.
+            CHECK_FOR_GL_ERRORS();
+            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); // Disable wireframe mode.
 
-    glBindVertexArray(0);
-    CHECK_FOR_GL_ERRORS();
+            glBindVertexArray(0);
+            CHECK_FOR_GL_ERRORS();
 
-    glDisableVertexAttribArray(0); // Free OpenGL resources.
-    glDisableVertexAttribArray(1);
-    glDeleteBuffers(1, &ebo);
-    glDeleteBuffers(1, &vbo);
-    glDeleteVertexArrays(1, &vao);
-    CHECK_FOR_GL_ERRORS();
-}
+            glDisableVertexAttribArray(0); // Free OpenGL resources.
+            glDisableVertexAttribArray(1);
+            glDeleteBuffers(1, &ebo);
+            glDeleteBuffers(1, &vbo);
+            glDeleteVertexArrays(1, &vao);
+            CHECK_FOR_GL_ERRORS();
+            return;
+        };
+        draw_surface_meshes();
+
 
         // Show a pop-up with information about DICOMautomaton.
-        if(set_about_popup){
-            set_about_popup = false;
+        if(view_toggles.set_about_popup){
+            view_toggles.set_about_popup = false;
             ImGui::OpenPopup("AboutPopup");
         }
         if(ImGui::BeginPopupModal("AboutPopup")){
@@ -2755,6 +3433,9 @@ if(false){
         SDL_GL_SwapWindow(window);
     }
     terminate_contour_preprocessors();
+    std::this_thread::sleep_for(std::chrono::milliseconds(500)); // Hope that this is enough time for preprocessing threads to terminate.
+                                                                 // TODO: use a work queue with condition variable to
+                                                                 // signal termination!
 
     // OpenGL and SDL cleanup.
     ImGui_ImplOpenGL3_Shutdown();
