@@ -23,13 +23,7 @@ build_ci_debian_stable:
   before_script:
     - "cp -R ./docker/builders/ci /scratch"
     - "cp -R . /dcma"
-    - "dd if=/dev/zero of=/swapfile_custom bs=1M count=4096 || true"
-    - "chmod 600 /swapfile_custom || true"
-    - "chattr +c /swapfile_custom || true"
-    - "mkswap /swapfile_custom || true"
-    - "swapon --fixpgsz --output-all $(losetup --find /swapfile_custom --show) || true"
-    - "mount || true"
-    - "free -h || true"
+    - "./scripts/enable_swapfile.sh"
   script:
     - |
       ( ( while true ; do sleep 30 ; printf '\n\n' ; df -h ; printf '\n\n' ; free -h ; printf '\n\n' ; done ) &)
@@ -50,13 +44,7 @@ build_ci_arch:
   before_script:
     - "cp -R ./docker/builders/ci /scratch"
     - "cp -R . /dcma"
-    - "dd if=/dev/zero of=/swapfile_custom bs=1M count=4096 || true"
-    - "chmod 600 /swapfile_custom || true"
-    - "chattr +c /swapfile_custom || true"
-    - "mkswap /swapfile_custom || true"
-    - "swapon --fixpgsz --output-all $(losetup --find /swapfile_custom --show) || true"
-    - "mount || true"
-    - "free -h || true"
+    - "./scripts/enable_swapfile.sh"
   script:
     - |
       ( ( while true ; do sleep 30 ; printf '\n\n' ; df -h ; printf '\n\n' ; free -h ; printf '\n\n' ; done ) &)
@@ -76,13 +64,7 @@ cross_compile_mxe:
   image: "hdclark/dcma_build_base_mxe:latest"
   before_script:
     - "cp -R . /dcma"
-    - "dd if=/dev/zero of=/swapfile_custom bs=1M count=4096 || true"
-    - "chmod 600 /swapfile_custom || true"
-    - "chattr +c /swapfile_custom || true"
-    - "mkswap /swapfile_custom || true"
-    - "swapon --fixpgsz --output-all $(losetup --find /swapfile_custom --show) || true"
-    - "mount || true"
-    - "free -h || true"
+    - "./scripts/enable_swapfile.sh"
   script:
     - |
       ( ( while true ; do sleep 30 ; printf '\n\n' ; df -h ; printf '\n\n' ; free -h ; printf '\n\n' ; done ) &)
@@ -269,4 +251,3 @@ deploy_ci_debian_stable:
   needs: ["test_ci_debian_stable_on_debian_stable"]
   script:
     - "echo 'Deployment placeholder successful'"
-

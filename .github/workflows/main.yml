@@ -19,6 +19,7 @@ jobs:
         run: |
              cp -R ./docker/builders/ci /scratch
              cp -R . /dcma
+             ./scripts/enable_swapfile.sh
       - name: build
         run: |
              ( ( while true ; do sleep 225 ; printf '\n\n' ; df -h ; printf '\n\n' ; free || true ; printf '\n\n' ; done ) &)
@@ -62,6 +63,7 @@ jobs:
         run: |
              cp -R ./docker/builders/ci /scratch
              cp -R . /dcma
+             ./scripts/enable_swapfile.sh
       - name: build
         run: |
              ( ( while true ; do sleep 225 ; printf '\n\n' ; df -h ; printf '\n\n' ; free || true ; printf '\n\n' ; done ) &)
@@ -109,6 +111,7 @@ jobs:
         run: |
              cp -R ./docker/builders/ci /scratch
              cp -R . /dcma
+             ./scripts/enable_swapfile.sh
       - name: build
         run: |
              ( ( while true ; do sleep 225 ; printf '\n\n' ; df -h ; printf '\n\n' ; free || true ; printf '\n\n' ; done ) &)
@@ -143,4 +146,3 @@ jobs:
              echo "${{secrets.HALCLARKCA_DEPLOY_KEY}}" > deploy_key
              chmod 600 deploy_key
              rsync -avP -e 'ssh -i deploy_key -o StrictHostKeyChecking=no' ci_artifacts/ root@halclark.ca:/var/www/html/ci/
-
