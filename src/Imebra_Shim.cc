@@ -1113,6 +1113,17 @@ std::map<std::string,std::string> get_metadata_top_level_tags(const std::string 
     insert_as_string_if_nonempty(0x0019, 0x0103, "PixelRepresentation"); // multiplicity = 6.
 
     //Unclassified others...
+    insert_as_string_if_nonempty(0x0029, 0x0010, "SiemensCSAHeaderVersion");
+    insert_as_string_if_nonempty(0x0029, 0x0011, "SiemensMEDCOMHeaderVersion");
+
+    insert_as_string_if_nonempty(0x0029, 0x1008, "CSAImageHeaderType"); // CS type
+    insert_as_string_if_nonempty(0x0029, 0x1009, "CSAImageHeaderVersion"); // LO type
+    insert_as_string_if_nonempty(0x0029, 0x1010, "CSAImageHeaderInfo"); // OB type
+
+    insert_as_string_if_nonempty(0x0029, 0x1018, "CSASeriesHeaderType"); // CS type
+    insert_as_string_if_nonempty(0x0029, 0x1019, "CSASeriesHeaderVersion"); // LO type
+    insert_as_string_if_nonempty(0x0029, 0x1020, "CSASeriesHeaderInfo"); // OB type
+
     insert_as_string_if_nonempty(0x2001, 0x100a, "SliceNumber");
     insert_as_string_if_nonempty(0x0054, 0x1330, "ImageIndex");
 
