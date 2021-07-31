@@ -218,28 +218,52 @@ Load_Files( Drover &DICOM_data,
         return loaders;
     };
 
+    const auto has_recognized_extension = [=](const boost::filesystem::path &p) -> bool {
+        const auto loaders = get_default_loaders();
+        const auto ext = p.extension().string();
+        const auto recognized = std::any_of( std::begin(loaders), std::end(loaders),
+                                             [ext](const file_loader_t &l){
+            return std::any_of( std::begin(l.exts),
+                                std::end(l.exts),
+                                [ext](const std::string &l_ext){ return icase_str_eq(ext, l_ext); });
+        });
+        return recognized;
+    };
 
-    //Convert directories to filenames.
-    // TODO.
-
-    //Remove non-existent filenames and directories.
+    // Convert directories to filenames and remove non-existent filenames and directories.
     bool contained_unresolvable = false;
     {
-        std::list<boost::filesystem::path> CPaths;
-        for(const auto &apath : Paths){
+        auto loaders = get_default_loaders();
+        std::list<boost::filesystem::path> l_Paths;
+        while(!Paths.empty()){
+            const auto p = Paths.front();
+            Paths.pop_front();
+
             bool wasOK = false;
             try{
-                wasOK = boost::filesystem::exists(apath);
+                wasOK = boost::filesystem::exists(p);
+                if( wasOK ){
+                    if( boost::filesystem::is_directory(p) ){
+                        for(const auto &rp : boost::filesystem::directory_iterator(p)){
+                            Paths.push_back(rp);
+                        }
+                    }else{
+                        // Only include files with recognized file extensions.
+                        if(has_recognized_extension(p)){
+                            l_Paths.push_back(p);
+                        }else{
+                            FUNCWARN("Ignoring file '" << p.string() << "' because extension is not recognized. Specify explicitly to attempt loading");
+                        }
+                    }
+                }
             }catch(const boost::filesystem::filesystem_error &){ }
 
-            if(wasOK){
-                CPaths.emplace_back(apath);
-            }else{
-                FUNCWARN("Unable to resolve file or directory '" << apath << "'");
+            if(!wasOK){
+                FUNCWARN("Unable to resolve file or directory '" << p << "'");
                 contained_unresolvable = true;
             }
         }
-        Paths = CPaths;
+        Paths = l_Paths;
     }
 
     // Partition the paths by file extension.
@@ -250,10 +274,17 @@ Load_Files( Drover &DICOM_data,
     }
     Paths.clear();
 
-    for(auto & ep : extensions){
+    for(auto &ep : extensions){
         const auto ext = ep.first;
         auto &&l_Paths = ep.second;
         
+        // Warn if the file extension is not recognized.
+        for(const auto &p : l_Paths){
+            if(has_recognized_extension(p)){
+                FUNCWARN("Unrecognized file extension '" << ext << "'. Attempting to load because it was explicitly specified");
+            }
+        }
+                                                  
         // Boost the priority of any loaders whose extensions match this bunch of files.
         auto loaders = get_default_loaders();
         for(auto &l : loaders){

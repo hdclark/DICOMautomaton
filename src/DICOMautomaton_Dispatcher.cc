@@ -321,11 +321,6 @@ int main(int argc, char* argv[]){
     }
 #endif // DCMA_USE_POSTGRES
 
-
-    //Convert directories to filenames.
-// TODO.
-
-
     //Remove non-existent filenames and directories.
     {
         boost::filesystem::path PathShuttle;
