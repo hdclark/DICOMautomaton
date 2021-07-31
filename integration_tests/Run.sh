@@ -129,15 +129,8 @@ find "${SCRIPT_DIR}"/tests/ -type f -exec bash -c 'perform_test {}' \;
 N_successes="$(wc -l < "${TEST_SUCCESSES}")"
 N_failures="$(wc -l < "${TEST_FAILURES}")"
 
-printf '\n'
-printf -- '---------------------------------------------------------------------------------------\n'
-printf 'Number of tests performed: \t%s\n' "$((N_successes + N_failures))" 
-printf '       ... that succeeded: \t%s\n' "$N_successes"
-printf '          ... that failed: \t%s\n' "$N_failures" 
-printf 'All outputs are in: %s\n' "${TESTING_ROOT}"
-printf -- '---------------------------------------------------------------------------------------\n'
-
 if [ -s "${TEST_FAILURES}" ] ; then
+    printf '\n'
     printf 'The following tests failed:\n'
     cat "${TEST_FAILURES}"
 
@@ -147,6 +140,14 @@ if [ -s "${TEST_FAILURES}" ] ; then
 else
     printf 'All tests passed.\n'
 fi
+
+printf '\n'
+printf -- '---------------------------------------------------------------------------------------\n'
+printf 'Number of tests performed: \t%s\n' "$((N_successes + N_failures))" 
+printf '       ... that succeeded: \t%s\n' "$N_successes"
+printf '          ... that failed: \t%s\n' "$N_failures" 
+printf 'All outputs are in: %s\n' "${TESTING_ROOT}"
+printf -- '---------------------------------------------------------------------------------------\n'
 
 if [ "${KEEP_ALL_OUTPUTS}" != "1" ] ; then
     rm "${TEST_FAILURES}" 
