@@ -27,9 +27,9 @@ build_ci_debian_stable:
   script:
     - |
       ( ( while true ; do sleep 30 ; printf '\n\n' ; df -h ; printf '\n\n' ; free -h ; printf '\n\n' ; done ) &)
-      "./docker/builders/ci/implementation_ci_debian_stable.sh"
-      "./integration_tests/Run.sh"
-      "./scripts/extract_system_appimage.sh"
+      ./docker/builders/ci/implementation_ci_debian_stable.sh
+      ./integration_tests/Run.sh -v
+      ./scripts/extract_system_appimage.sh
   artifacts:
     paths:
       - "AppDir"
@@ -48,9 +48,9 @@ build_ci_arch:
   script:
     - |
       ( ( while true ; do sleep 30 ; printf '\n\n' ; df -h ; printf '\n\n' ; free -h ; printf '\n\n' ; done ) &)
-      "./docker/builders/ci/implementation_ci_arch.sh"
-      "./integration_tests/Run.sh"
-      "./scripts/extract_system_appimage.sh"
+      ./docker/builders/ci/implementation_ci_arch.sh
+      ./integration_tests/Run.sh -v
+      ./scripts/extract_system_appimage.sh
   artifacts:
     paths:
       - "AppDir"
@@ -68,7 +68,7 @@ cross_compile_mxe:
   script:
     - |
       ( ( while true ; do sleep 30 ; printf '\n\n' ; df -h ; printf '\n\n' ; free -h ; printf '\n\n' ; done ) &)
-      "./docker/builders/mxe/implementation_mxe.sh"
+      ./docker/builders/mxe/implementation_mxe.sh
       rsync -avP /out/ ./Windows/
   artifacts:
     paths:
@@ -116,7 +116,7 @@ test_ci_debian_stable_on_debian_stable:
     - "rsync -a ./squashfs-root/usr/ /usr/"
     # Ensure it can be run and then run tests.
     - "dicomautomaton_dispatcher -h"
-    - "./integration_tests/Run.sh"
+    - "./integration_tests/Run.sh -v"
   artifacts:
     paths:
       - "dcma_integration_testing"
@@ -135,7 +135,7 @@ test_ci_arch_on_arch:
     - "rsync -a ./squashfs-root/usr/ /usr/"
     # Ensure it can be run and then run tests.
     - "dicomautomaton_dispatcher -h"
-    - "./integration_tests/Run.sh"
+    - "./integration_tests/Run.sh -v"
   artifacts:
     paths:
       - "dcma_integration_testing"
@@ -155,7 +155,7 @@ test_ci_debian_stable_on_arch:
     - "rsync -a ./squashfs-root/usr/ /usr/"
     # Ensure it can be run and then run tests.
     - "dicomautomaton_dispatcher -h"
-    - "./integration_tests/Run.sh"
+    - "./integration_tests/Run.sh -v"
   artifacts:
     paths:
       - "dcma_integration_testing"
@@ -177,7 +177,7 @@ test_ci_debian_stable_on_ubuntu_latest:
     - "dicomautomaton_dispatcher -h"
     #- git clone 'https://github.com/hdclark/DICOMautomaton'
     #- cd DICOMautomaton
-    - "./integration_tests/Run.sh"
+    - "./integration_tests/Run.sh -v"
   artifacts:
     paths:
       - "dcma_integration_testing"
@@ -204,7 +204,7 @@ test_ci_debian_stable_on_fedora_latest:
     - "dicomautomaton_dispatcher -h"
     #- "git clone 'https://github.com/hdclark/DICOMautomaton'"
     #- "cd DICOMautomaton"
-    - "./integration_tests/Run.sh"
+    - "./integration_tests/Run.sh -v"
   artifacts:
     paths:
       - "dcma_integration_testing"
@@ -236,7 +236,7 @@ test_cross_compile_mxe_on_debian_stable:
     - "chmod 777 /usr/bin/dicomautomaton_dispatcher"
     # Ensure it can be run and then run tests.
     - "dicomautomaton_dispatcher -h"
-    - "./integration_tests/Run.sh"
+    - "./integration_tests/Run.sh -v"
   artifacts:
     paths:
       - "dcma_integration_testing"

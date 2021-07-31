@@ -26,7 +26,7 @@ jobs:
              ./docker/builders/ci/implementation_ci_debian_stable.sh
       - name: test
         run: |
-             ./integration_tests/Run.sh
+             ./integration_tests/Run.sh -v
       - name: create_appimage
         run: |
              ./scripts/extract_system_appimage.sh
@@ -73,7 +73,7 @@ jobs:
              /run_in_chroot.sh 'cd /dcma && ./docker/builders/ci/implementation_ci_debian_stable.sh'
       - name: test
         run: |
-             /run_in_chroot.sh 'cd /dcma && ./integration_tests/Run.sh'
+             /run_in_chroot.sh 'cd /dcma && ./integration_tests/Run.sh -v'
       - name: create_appimage
         run: |
              /run_in_chroot.sh 'cd /dcma && ./scripts/extract_system_appimage.sh'
@@ -121,7 +121,7 @@ jobs:
              /run_in_chroot.sh 'cd /dcma && ./docker/builders/ci/implementation_ci_debian_stable.sh'
       - name: test
         run: |
-             /run_in_chroot.sh 'cd /dcma && ./integration_tests/Run.sh'
+             /run_in_chroot.sh 'cd /dcma && ./integration_tests/Run.sh -v'
       - name: create_appimage
         run: |
              /run_in_chroot.sh 'cd /dcma && ./scripts/extract_system_appimage.sh'
