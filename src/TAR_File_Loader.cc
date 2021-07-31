@@ -60,7 +60,7 @@ bool Load_From_TAR_Files( Drover &DICOM_data,
         long int N_successfully_loaded = 0;
 
         const auto file_handler = [&]( std::istream &is,
-                                       std::string /*fname*/,
+                                       std::string fname,
                                        long int /*fsize*/,
                                        std::string /*fmode*/,
                                        std::string /*fuser*/,
@@ -73,9 +73,14 @@ bool Load_From_TAR_Files( Drover &DICOM_data,
             // Indicate that a file was detected.
             ++N_encapsulated_files;
 
-            // Write the stream to a temporary file.
+            // Write the stream to a temporary file, attempting to honour the extension.
             const auto dir = (std::filesystem::temp_directory_path() / "dcma_TAR_temp_file").string();
-            const auto fname_tmp = Get_Unique_Filename(dir, 6, "");
+            const auto ext = std::filesystem::path(fname).extension().string();
+            const auto fname_tmp = Get_Unique_Filename(dir, 6, ext);
+            if( 0 <= std::filesystem::temp_directory_path().compare( std::filesystem::path(fname_tmp)) ){
+                // Note: If you get here, it's possible that there was an attempt to access the filesystem maliciously!
+                FUNCERR("Temporary name is not contained within temporary directory. Refusing to continue");
+            }
             {
                 std::ofstream ofs_tmp(fname_tmp, std::ios::out | std::ios::binary);
                 ofs_tmp << is.rdbuf();
