@@ -304,6 +304,8 @@ Load_Files( Drover &DICOM_data,
              || icase_str_eq(ext, ".stl")
              || icase_str_eq(ext, ".obj")
              || icase_str_eq(ext, ".off")
+             || icase_str_eq(ext, ".ply")
+             || icase_str_eq(ext, ".xyz")
              || icase_str_eq(ext, ".lsamps") ) ){
             loaders.remove_if( [ext](const file_loader_t &l){
                                     return std::none_of( std::begin(l.exts),
