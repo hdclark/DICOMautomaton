@@ -16,8 +16,11 @@ mkswap "${swapfilename}"
 
 # Make the swapfile a device before enabling, rather than enabling it directly.
 # This improves support on exotic filesystems.
-swapon --fixpgsz --output-all "$(losetup --find "${swapfilename}" --show)" || true
+swapon --fixpgsz --output-all "${swapfilename}" ||
+  swapon --fixpgsz --output-all "$(losetup --find "${swapfilename}" --show)" ||
+  true
 
 swapon -s || true
 free -m -h || true
+df -h . || true
 
