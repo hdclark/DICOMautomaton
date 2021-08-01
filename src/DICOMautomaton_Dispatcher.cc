@@ -327,7 +327,7 @@ int main(int argc, char* argv[]){
         for(const auto &auri : StandaloneFilesDirs){
             bool wasOK = false;
             try{
-                PathShuttle = boost::filesystem::canonical(auri);
+                PathShuttle = boost::filesystem::weakly_canonical(auri);
                 wasOK = boost::filesystem::exists(PathShuttle);
             }catch(const boost::filesystem::filesystem_error &){ }
 
