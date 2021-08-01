@@ -321,22 +321,8 @@ int main(int argc, char* argv[]){
     }
 #endif // DCMA_USE_POSTGRES
 
-    //Remove non-existent filenames and directories.
-    {
-        boost::filesystem::path PathShuttle;
-        for(const auto &auri : StandaloneFilesDirs){
-            bool wasOK = false;
-            try{
-                PathShuttle = boost::filesystem::weakly_canonical(auri);
-                wasOK = boost::filesystem::exists(PathShuttle);
-            }catch(const boost::filesystem::filesystem_error &){ }
-
-            if(wasOK){
-                StandaloneFilesDirsReachable.emplace_back(auri);
-            }else{
-                FUNCWARN("Unable to resolve file or directory '" << auri << "'. Ignoring it");
-            }
-        }
+    for(const auto &auri : StandaloneFilesDirs){
+        StandaloneFilesDirsReachable.emplace_back(auri);
     }
 
     //Try find a lexicon file if none were provided.

@@ -280,7 +280,7 @@ Load_Files( Drover &DICOM_data,
         
         // Warn if the file extension is not recognized.
         for(const auto &p : l_Paths){
-            if(has_recognized_extension(p)){
+            if(!has_recognized_extension(p)){
                 FUNCWARN("Unrecognized file extension '" << ext << "'. Attempting to load because it was explicitly specified");
             }
         }
