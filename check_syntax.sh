@@ -27,7 +27,7 @@ check_cpp_syntax () {
       g++ --std=c++17 -fsyntax-only \
         -I'src/imebra20121219/library/imebra/include/' \
         $(pkg-config --cflags --libs sdl2 glew sfml-window sfml-graphics sfml-system libpqxx libpq nlopt gsl) \
-        -lygor -lboost_filesystem -lboost_system \
+        -lygor -lboost_serialization -lboost_iostreams -lboost_thread -lboost_system \
         "$f"
     }
 }

@@ -35,7 +35,7 @@
 #include <initializer_list>
 #include <thread>
 
-#include <boost/filesystem.hpp>
+#include <filesystem>
 
 #include "../imgui20201021/imgui.h"
 #include "../imgui20201021/imgui_impl_sdl.h"
@@ -2497,7 +2497,7 @@ script_files.back().content.emplace_back('\0');
             ImGui::SetItemDefaultFocus();
             if(ImGui::Button("Load selection", ImVec2(120, 0))){ 
                 // Extract all files from the selection.
-                std::list<boost::filesystem::path> paths;
+                std::list<std::filesystem::path> paths;
                 for(auto &ofs : open_files_selection){
                     if(ofs.selected){
                         // Resolve all files within a directory.

@@ -15,7 +15,7 @@
 #include <filesystem>
 
 
-#include <boost/filesystem.hpp>
+#include <filesystem>
 #include <boost/iostreams/filter/gzip.hpp>
 //#include <boost/iostreams/filter/zlib.hpp>
 #include <boost/iostreams/filtering_stream.hpp>
@@ -37,7 +37,7 @@
 bool Load_From_TAR_Files( Drover &DICOM_data,
                           const std::map<std::string,std::string> &InvocationMetadata,
                           const std::string &FilenameLex,
-                          std::list<boost::filesystem::path> &Filenames ){
+                          std::list<std::filesystem::path> &Filenames ){
 
     // This routine will attempt to load TAR-format files. Files that are not successfully loaded
     // are not consumed so that they can be passed on to the next loading stage as needed. 
@@ -88,7 +88,7 @@ bool Load_From_TAR_Files( Drover &DICOM_data,
             }
 
             // Attempt to load the file.
-            std::list<boost::filesystem::path> path_tmp;
+            std::list<std::filesystem::path> path_tmp;
             path_tmp.emplace_back(fname_tmp);
             if(Load_Files(DICOM_data, InvocationMetadata, FilenameLex, path_tmp )){
                 // Iff successful, indicate the success.

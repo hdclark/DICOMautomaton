@@ -13,7 +13,7 @@
 #include <vector>
 //#include <cfenv>              //Needed for std::feclearexcept(FE_ALL_EXCEPT).
 
-#include <boost/filesystem.hpp>
+#include <filesystem>
 #include <cstdlib>            //Needed for exit() calls.
 #include <utility>            //Needed for std::pair.
 
@@ -91,7 +91,7 @@ int main(int argc, char* argv[]){
 
     //List of filenames or directories to parse and load.
     std::list<std::string> StandaloneFilesDirs;  // Used to defer filesystem checking.
-    std::list<boost::filesystem::path> StandaloneFilesDirsReachable;
+    std::list<std::filesystem::path> StandaloneFilesDirsReachable;
 
 
     //================================================ Argument Parsing ==============================================

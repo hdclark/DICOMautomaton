@@ -6,16 +6,16 @@
 #include <map>
 #include <list>
 
-#include <boost/filesystem.hpp>
+#include <filesystem>
 
 #include "Structs.h"
 
 bool Load_Mesh_From_ASCII_STL_Files( Drover &DICOM_data,
                                      const std::map<std::string,std::string> &InvocationMetadata,
                                      const std::string &FilenameLex,
-                                     std::list<boost::filesystem::path> &Filenames );
+                                     std::list<std::filesystem::path> &Filenames );
 
 bool Load_Mesh_From_Binary_STL_Files( Drover &DICOM_data,
                                       const std::map<std::string,std::string> &InvocationMetadata,
                                       const std::string &FilenameLex,
-                                      std::list<boost::filesystem::path> &Filenames );
+                                      std::list<std::filesystem::path> &Filenames );
