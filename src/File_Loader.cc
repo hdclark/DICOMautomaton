@@ -1,4 +1,4 @@
-//File_Loader.cc - A part of DICOMautomaton 2019. Written by hal clark.
+//File_Loader.cc - A part of DICOMautomaton 2019, 2021. Written by hal clark.
 
 #include <exception>
 //#include <functional>
@@ -236,13 +236,12 @@ Load_Files( Drover &DICOM_data,
         auto loaders = get_default_loaders();
         std::list<boost::filesystem::path> l_Paths;
         while(!Paths.empty()){
-            const auto p = Paths.front();
+            auto p = Paths.front();
             Paths.pop_front();
 
-            bool wasOK = false;
             try{
-                wasOK = boost::filesystem::exists(p);
-                if( wasOK ){
+                p = boost::filesystem::absolute(p);
+                if( boost::filesystem::exists(p) ){
                     if( boost::filesystem::is_directory(p) ){
                         for(const auto &rp : boost::filesystem::directory_iterator(p)){
                             Paths.push_back(rp);
@@ -255,13 +254,12 @@ Load_Files( Drover &DICOM_data,
                             FUNCWARN("Ignoring file '" << p.string() << "' because extension is not recognized. Specify explicitly to attempt loading");
                         }
                     }
+
+                }else{
+                    FUNCWARN("Unable to resolve file or directory '" << p.string() << "'");
+                    contained_unresolvable = true;
                 }
             }catch(const boost::filesystem::filesystem_error &){ }
-
-            if(!wasOK){
-                FUNCWARN("Unable to resolve file or directory '" << p << "'");
-                contained_unresolvable = true;
-            }
         }
         Paths = l_Paths;
     }
@@ -300,6 +298,9 @@ Load_Files( Drover &DICOM_data,
         if( !ext.empty()
         &&  (   icase_str_eq(ext, ".dcm")
              || icase_str_eq(ext, ".tar")
+             || icase_str_eq(ext, ".tgz")
+             || icase_str_eq(ext, ".gz")
+             || icase_str_eq(ext, ".tar.gz")
              || icase_str_eq(ext, ".3ddose")
              || icase_str_eq(ext, ".stl")
              || icase_str_eq(ext, ".obj")
