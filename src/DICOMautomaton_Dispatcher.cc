@@ -321,6 +321,16 @@ int main(int argc, char* argv[]){
     }
 #endif // DCMA_USE_POSTGRES
 
+    // Workaround old AppImageKit's AppRun chdir() approach by resetting the cwd.
+    // See https://docs.appimage.org/packaging-guide/environment-variables.html#type-2-appimage-runtime (20210801).
+    if(nullptr != std::getenv("APPIMAGE")){
+        if(const char *owd = std::getenv("OWD"); nullptr != owd){
+            FUNCWARN("Detected AppImageKit packaging. Resetting current working directory via OWD environment variable");
+            std::filesystem::current_path( std::filesystem::path( std::string(owd) ) );
+        }
+    }
+
+    // Transform filenme arguments to paths.
     for(const auto &auri : StandaloneFilesDirs){
         StandaloneFilesDirsReachable.emplace_back(auri);
     }
