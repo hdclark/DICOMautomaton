@@ -193,7 +193,7 @@ int main(int argc, char* argv[]){
       "Inform the loaders that virtual data will be generated. Use with care, because this"
       " option causes checks to be skipped that could break assumptions in some operations.",
       [&](const std::string &) -> void {
-        GeneratingVirtualData = true;
+        GeneratingVirtualData = !GeneratingVirtualData;
         return;
       })
     );
@@ -209,7 +209,7 @@ int main(int argc, char* argv[]){
       })
     );
 
-    arger.push_back( ygor_arg_handlr_t(400, 'o', "operation", true, "SFML_Viewer",
+    arger.push_back( ygor_arg_handlr_t(400, 'o', "operation", true, "SDL_Viewer",
       "An operation to perform on the fully loaded data. Some operations can be chained, some"
       " may necessarily terminate computation. See '-u' for detailed operation information.",
       [&](const std::string &optarg) -> void {
@@ -233,7 +233,7 @@ int main(int argc, char* argv[]){
       })
     );
 
-    arger.push_back( ygor_arg_handlr_t(400, 'x', "disregard", true, "SFML_Viewer",
+    arger.push_back( ygor_arg_handlr_t(400, 'x', "disregard", true, "SDL_Viewer",
       "Ignore the following operation and all following parameters; essentially a 'no-op.'"
       " This option simplifies tweaking a workflow.",
       [&](const std::string &) -> void {
@@ -348,20 +348,20 @@ int main(int argc, char* argv[]){
         FUNCINFO("Using file '" << FilenameLex << "' as lexicon");
     }
 
-    //We require at least one SQL file for PACS db loading, one file/directory name for standalone file loading..
-    if( GroupedFilterQueryFiles.empty()    
-    &&  StandaloneFilesDirsReachable.empty()
-    &&  !GeneratingVirtualData ){
+    // Default to an interactive viewer that is known to handle missing data.
+    if(Operations.empty()){
+        FUNCWARN("No operations specified: defaulting to operation 'SDL_Viewer'");
+        Operations.emplace_back("SDL_Viewer");
 
-        FUNCERR("No query files provided. Cannot proceed");
+    // Otherwise, if there are operations but no files, then require the user to specify they are generating virtual
+    // data. We likewise require at least one SQL file for PACS db loading and at least one file/directory name for
+    // standalone file loading.
+    }else if( GroupedFilterQueryFiles.empty()    
+          &&  StandaloneFilesDirsReachable.empty()
+          &&  !GeneratingVirtualData ){
 
 // TODO: Special case: Launch RPC server to wait for data if no files or SQL files provided?
-
-
-    //If DB or standalone loading, we require at least one action.
-    }else if(Operations.empty()){
-        FUNCWARN("No operations specified: defaulting to operation 'SFML_Viewer'");
-        Operations.emplace_back("SFML_Viewer");
+        FUNCERR("No query files provided. Cannot proceed");
     }
 
 
