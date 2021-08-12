@@ -234,21 +234,28 @@ Load_Files( Drover &DICOM_data,
     bool contained_unresolvable = false;
     {
         auto loaders = get_default_loaders();
+        std::list<std::filesystem::path> recursed_Paths;
         std::list<std::filesystem::path> l_Paths;
-        while(!Paths.empty()){
-            auto p = Paths.front();
-            Paths.pop_front();
+        while(!recursed_Paths.empty() || !Paths.empty()){
+            const auto is_orig = !Paths.empty();
+            auto p = (is_orig) ? Paths.front() : recursed_Paths.front();
+            if(is_orig){
+                Paths.pop_front();
+            }else{
+                recursed_Paths.pop_front();
+            }
 
             try{
                 p = std::filesystem::absolute(p);
                 if( std::filesystem::exists(p) ){
                     if( std::filesystem::is_directory(p) ){
                         for(const auto &rp : std::filesystem::directory_iterator(p)){
-                            Paths.push_back(rp);
+                            recursed_Paths.push_back(rp);
                         }
                     }else{
                         // Only include files with recognized file extensions.
-                        if(has_recognized_extension(p)){
+                        if( is_orig 
+                        ||  has_recognized_extension(p)){
                             l_Paths.push_back(p);
                         }else{
                             FUNCWARN("Ignoring file '" << p.string() << "' because extension is not recognized. Specify explicitly to attempt loading");
@@ -263,6 +270,8 @@ Load_Files( Drover &DICOM_data,
         }
         Paths = l_Paths;
     }
+
+FUNCINFO("Paths.size() = " << Paths.size());
 
     // Partition the paths by file extension.
     icase_map_t<std::list<std::filesystem::path>> extensions(icase_str_lt);
