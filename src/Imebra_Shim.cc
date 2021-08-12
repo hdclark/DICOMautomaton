@@ -733,6 +733,33 @@ std::map<std::string,std::string> get_metadata_top_level_tags(const std::string 
 
         return;
     };
+    
+    auto extract_as_binary = [&out,&tds](uint16_t group, uint16_t tag) -> std::vector<uint8_t> {
+        std::vector<uint8_t> out;
+
+        const uint32_t first_order = 0; // Always zero for modern DICOM files.
+        const uint32_t first_element = 0; // Usually zero, but several tags can store multiple elements.
+
+        //Check if the tag is present in the file.
+        const bool create_if_not_found = false;
+        const auto ptr = tds->getTag(group, first_order, tag, create_if_not_found);
+        if(ptr == nullptr) return out;
+
+        // Copy the data.
+        try{
+            auto rdh_ptr = ptr->getDataHandlerRaw( 0, create_if_not_found, "OB" );
+            const auto N_bytes = rdh_ptr->getSize(); // Gives # of elements, but each element is one byte (int8_t).
+            if(!isininc(0, N_bytes, 1'000'000'000)){
+                FUNCWARN("Excessively large memory requested. Refusing to extract as binary element");
+                return out;
+            }
+            out.resize(N_bytes, static_cast<uint8_t>(0x0));
+            rdh_ptr->copyToMemory(reinterpret_cast<uint8_t *>(out.data()),
+                                  static_cast<uint32_t>(out.size()));
+        }catch(const std::exception &){ }
+
+        return out;
+    };
 
     // seq_group,seq_tag,seq_name or tag_group,tag_tag,tag_name.
     struct path_node {
@@ -1118,7 +1145,119 @@ std::map<std::string,std::string> get_metadata_top_level_tags(const std::string 
 
     insert_as_string_if_nonempty(0x0029, 0x1008, "CSAImageHeaderType"); // CS type
     insert_as_string_if_nonempty(0x0029, 0x1009, "CSAImageHeaderVersion"); // LO type
-    insert_as_string_if_nonempty(0x0029, 0x1010, "CSAImageHeaderInfo"); // OB type
+    if(const auto header = extract_as_binary(0x0029, 0x1010); header.size() != 0 ){ // "CSAImageHeaderInfo"
+        FUNCWARN("File '" << filename << "' CSA Image Header Info tag has size " << header.size());
+
+        const auto parse_CSA2_header = [&]() -> std::optional<std::string> {
+            std::stringstream ss( std::string( std::begin(header), std::end(header) ) );
+
+            // Check if this is a Siemens CSAv2-formatted header.
+            if( std::string shtl(4, '\0');
+                !ss.read(const_cast<char*>(shtl.data()), 4)
+            ||  (shtl != "SV10")
+            ||  !ss.read(const_cast<char*>(shtl.data()), 4)
+            ||  (shtl != "\4\3\2\1") ){
+                FUNCWARN("Tag does not contain a CSA2 header. Verify tag is valid");
+                return std::nullopt;
+            }
+
+            // Read the number of tags.
+            uint32_t N_tags = 0;
+            if( std::string shtl(4, '\0');
+                !ss.read(reinterpret_cast<char*>(&N_tags), sizeof(N_tags))
+            ||  !isininc(1,N_tags,128)
+            ||  !ss.read(const_cast<char*>(shtl.data()), 4) ){
+                FUNCWARN("Cannot read CSA2 tag count");
+                return std::nullopt;
+            }
+
+            //FUNCINFO("There are " << N_tags << " tags");
+            for(uint32_t i = 0; i < N_tags; ++i){
+
+                // Parse the next tag.
+                std::string name(64, '\0');
+                uint32_t vm = 0;
+                std::string vr(4, '\0');
+                uint32_t syngo_dt = 0;
+                uint32_t N_items = 0;
+                uint32_t unused = 0;
+                if( !ss.read(const_cast<char*>(name.data()), 64)
+                ||  !ss.read(reinterpret_cast<char*>(&vm), sizeof(vm))
+                ||  !ss.read(const_cast<char*>(vr.data()), 3)
+                ||  !ss.read(reinterpret_cast<char*>(&unused), 1)
+                ||  !ss.read(reinterpret_cast<char*>(&syngo_dt), sizeof(syngo_dt))
+                ||  !ss.read(reinterpret_cast<char*>(&N_items), sizeof(N_items))
+                ||  !ss.read(reinterpret_cast<char*>(&unused), sizeof(unused))
+                ||  name.empty()
+                ||  !isininc(1,vm,1000)
+                ||  !isininc(0,syngo_dt,1'000'000)
+                ||  !isininc(0,N_items,1000)
+                ||  ((unused != 77) && (unused != 205))  ){
+                    FUNCWARN("Failed to parse tag:");
+FUNCINFO("    Tag name = '" << name << "'");
+FUNCINFO("    Tag vm = '" << vm << "'");
+FUNCINFO("    Tag vr = '" << vr << "'");
+FUNCINFO("    Tag syngo_dt = '" << syngo_dt << "'");
+FUNCINFO("    Tag N_items = '" << N_items << "'");
+FUNCINFO("    Tag unused = '" << unused << "'");
+                    return std::nullopt;
+                }
+FUNCINFO("Parsed tag " << i << " OK");
+FUNCINFO("    Tag name = '" << name << "'");
+FUNCINFO("    Tag vm = '" << vm << "'");
+FUNCINFO("    Tag vr = '" << vr << "'");
+FUNCINFO("    Tag syngo_dt = '" << syngo_dt << "'");
+FUNCINFO("    Tag N_items = '" << N_items << "'");
+FUNCINFO("    Tag unused = '" << unused << "'");
+
+                // Parse the items.
+                uint32_t total_read = 0;
+                for(uint32_t j = 0; j < N_items; ++j){
+                    int32_t l_item_length = 0;
+                    if( !ss.read(reinterpret_cast<char*>(&l_item_length), sizeof(l_item_length))
+                    ||  !ss.read(reinterpret_cast<char*>(&unused), sizeof(unused))
+                    ||  (l_item_length != unused)
+                    ||  !ss.read(reinterpret_cast<char*>(&unused), sizeof(unused))
+                    ||  ((unused != 77) && (unused != 205))
+                    ||  !ss.read(reinterpret_cast<char*>(&unused), sizeof(unused))
+                    ||  (l_item_length != unused)
+                    ||  !isininc(0,l_item_length,1'000'000) ){
+                        FUNCWARN("Encountered extremely long CSA2 item ('" << l_item_length << "'). Refusing to continue");
+                        return std::nullopt;
+                    }
+
+
+FUNCINFO("item length = " << l_item_length);
+                    total_read += 4u + l_item_length;
+
+                    std::string val(l_item_length, '\0');
+                    if( !ss.read(const_cast<char*>(val.data()), l_item_length) ){
+                        FUNCWARN("Unable to read CSA2 item. Refusing to continue");
+                        return std::nullopt;
+                    }
+FUNCINFO("Parsed item " << j << " of " << N_items << " OK");
+FUNCINFO("    Value = '" << val << "'");
+                    if(!ss.read(reinterpret_cast<char*>(&unused), (4 - (l_item_length) % 4) % 4 )){
+                        FUNCWARN("Unable to reset stream to word boundary. Refusing to continue");
+                        return std::nullopt;
+                    }
+                }
+
+/*
+                for(uint32_t k = 0; k < (4 - (total_read) % 4) % 4; ++k){
+                    if(!ss.read(reinterpret_cast<char*>(&unused), sizeof(unused))){
+                        FUNCWARN("Unable to reset stream to word boundary. Refusing to continue");
+                        return std::nullopt;
+                    }
+                }
+*/
+            }
+
+            return std::nullopt;
+
+        };
+        parse_CSA2_header();
+    }
 
     insert_as_string_if_nonempty(0x0029, 0x1018, "CSASeriesHeaderType"); // CS type
     insert_as_string_if_nonempty(0x0029, 0x1019, "CSASeriesHeaderVersion"); // LO type
