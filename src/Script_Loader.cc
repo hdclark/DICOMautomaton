@@ -287,7 +287,8 @@ Split_into_Statements( std::vector<char_with_context_t> &contents,
                   &&  bumpy_stack.empty()
                   &&  (c == ',') ){
                 if( !l_statements.back().arguments.empty()
-                &&  !shtl.empty() ){
+                &&  !shtl.empty() 
+                &&  l_statements.back().arguments.back().second.empty() ){
                     l_statements.back().arguments.back().second = shtl;
                     skip_character = true;
 //FUNCINFO("Pushing back argument value '" << to_str(shtl) << "'");
@@ -336,7 +337,7 @@ Split_into_Statements( std::vector<char_with_context_t> &contents,
                 if(false){
                 }else if( (curve_stack.size() == 1)
                       &&  (curve_stack.back() == '(')
-                      &&  l_statements.back().arguments.empty()
+                      //&&  l_statements.back().arguments.empty()
                       &&  std::all_of(std::begin(shtl), std::end(shtl), is_whitespace) ){
                     curve_stack.pop_back();
                     skip_character = true;
@@ -346,8 +347,8 @@ Split_into_Statements( std::vector<char_with_context_t> &contents,
                       &&  !l_statements.back().arguments.empty() ){
 //FUNCINFO("Pushing back argument value '" << to_str(shtl) << "'");
                     curve_stack.pop_back();
-                    l_statements.back().arguments.back().second = shtl;
                     skip_character = true;
+                    l_statements.back().arguments.back().second = shtl;
 
                 }else{
                     report(feedback, script_feedback_severity_t::err, c, "Unmatched ')'"_s);

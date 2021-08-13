@@ -13,7 +13,7 @@
 #include <stdexcept>
 #include <string>    
 
-#include <boost/filesystem.hpp>
+#include <filesystem>
 #include <cstdlib>            //Needed for exit() calls.
 
 #include "YgorMath.h"         //Needed for vec3 class.
@@ -27,7 +27,7 @@
 bool Load_Mesh_From_ASCII_STL_Files( Drover &DICOM_data,
                                      const std::map<std::string,std::string> & /* InvocationMetadata */,
                                      const std::string &,
-                                     std::list<boost::filesystem::path> &Filenames ){
+                                     std::list<std::filesystem::path> &Filenames ){
 
     // This routine will attempt to load STL-format files as surface meshes. Note that support for STL files is limited
     // to a simplified (but typical) subset. Note that a non-STL file that is passed to this routine will be fully parsed
@@ -112,7 +112,7 @@ bool Load_Mesh_From_ASCII_STL_Files( Drover &DICOM_data,
 bool Load_Mesh_From_Binary_STL_Files( Drover &DICOM_data,
                                       const std::map<std::string,std::string> & /* InvocationMetadata */,
                                       const std::string &,
-                                      std::list<boost::filesystem::path> &Filenames ){
+                                      std::list<std::filesystem::path> &Filenames ){
 
     // This routine will attempt to load STL-format files as surface meshes. Note that support for STL files is limited
     // to a simplified (but typical) subset. Note that a non-STL file that is passed to this routine will be fully parsed

@@ -16,7 +16,7 @@
 #include <utility>            //Needed for std::pair.
 #include <vector>
 
-#include <boost/filesystem.hpp>
+#include <filesystem>
 
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
@@ -89,16 +89,16 @@ Drover LoadFiles(Drover DICOM_data,
     }
 */
     std::list<std::string> FileNames = { { FileNameStr } };
-    std::list<boost::filesystem::path> Paths;
+    std::list<std::filesystem::path> Paths;
 
     // Prepare file paths.
-    boost::filesystem::path PathShuttle;
+    std::filesystem::path PathShuttle;
     for(const auto &auri : FileNames){
         bool wasOK = false;
         try{
-            PathShuttle = boost::filesystem::canonical(auri);
-            wasOK = boost::filesystem::exists(PathShuttle);
-        }catch(const boost::filesystem::filesystem_error &){ }
+            PathShuttle = std::filesystem::canonical(auri);
+            wasOK = std::filesystem::exists(PathShuttle);
+        }catch(const std::filesystem::filesystem_error &){ }
 
         if(wasOK){
             Paths.emplace_back(auri);

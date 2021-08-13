@@ -1,6 +1,6 @@
 //BoostSerializeDrover.cc - A part of DICOMautomaton 2016. Written by hal clark.
 
-#include <boost/filesystem.hpp>
+#include <filesystem>
 #include <optional>
 #include <list>
 #include <map>
@@ -76,7 +76,7 @@ Drover Boost_Serialize_Drover(const Drover& DICOM_data,
     const bool include_smeshes  = std::regex_match(ComponentsStr, regex_smeshes);
     const bool include_tplans   = std::regex_match(ComponentsStr, regex_tplans);
 
-    const boost::filesystem::path apath(FilenameStr);
+    const std::filesystem::path apath(FilenameStr);
 
     // Figure out what needs to be serialized.
     //

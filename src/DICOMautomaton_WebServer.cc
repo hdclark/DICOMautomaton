@@ -31,7 +31,7 @@
 #include <Wt/WAnimation.h>
 #include <Wt/WComboBox.h>
 
-#include <boost/filesystem.hpp>
+#include <filesystem>
 
 #include <algorithm>
 //#include <cfenv>              //Needed for std::feclearexcept(FE_ALL_EXCEPT).
@@ -362,7 +362,7 @@ void BaseWebServerApplication::filesUploaded(){
     auto fileup = reinterpret_cast<Wt::WFileUpload *>( root()->find("file_upload_gb_file_picker") );
     if(fileup == nullptr) throw std::logic_error("Cannot find file uploader widget in DOM tree. Cannot continue.");
 
-    std::list<boost::filesystem::path> UploadedFilesDirsReachable;
+    std::list<std::filesystem::path> UploadedFilesDirsReachable;
     const auto files_vec = fileup->uploadedFiles(); //const std::vector< Http::UploadedFile > &
     for(const auto &afile : files_vec){
         // Assume ownership of the files so they do not disappear when the connection terminates.

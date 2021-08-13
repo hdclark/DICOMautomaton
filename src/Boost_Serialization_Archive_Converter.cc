@@ -4,7 +4,7 @@
 //
 
 #include <boost/algorithm/string/predicate.hpp>
-#include <boost/filesystem.hpp>
+#include <filesystem>
 #include <fstream>
 #include <functional>
 #include <list>
@@ -34,14 +34,14 @@ int main(int argc, char* argv[]){
     std::string ConvertTo("gzip-txt");
 
     //We cannot assume this is any specific object. It could be a Drover, a Contour_Data, etc..
-    boost::filesystem::path FilenameIn;
+    std::filesystem::path FilenameIn;
 
     //The file extension is completely ignored at the moment.
-    boost::filesystem::path FilenameOut;
+    std::filesystem::path FilenameOut;
 
 
     //Drover conversion routines.
-    using drover_serial_func_t = std::function<bool (const Drover &, boost::filesystem::path)>;
+    using drover_serial_func_t = std::function<bool (const Drover &, std::filesystem::path)>;
     std::map<std::string, drover_serial_func_t> drover_serial_func_name_mapping;
 
     drover_serial_func_name_mapping["gzip-binary"] = Common_Boost_Serialize_Drover_to_Gzip_Binary;
@@ -121,23 +121,23 @@ int main(int argc, char* argv[]){
 
     try{
         bool wasOK;
-        FilenameIn = boost::filesystem::canonical(FilenameIn);
-        wasOK = boost::filesystem::exists(FilenameIn);
+        FilenameIn = std::filesystem::canonical(FilenameIn);
+        wasOK = std::filesystem::exists(FilenameIn);
         if(!wasOK) throw std::runtime_error("File does not exist or is not reachable.");
-    }catch(const boost::filesystem::filesystem_error &e){ 
+    }catch(const std::filesystem::filesystem_error &e){ 
         FUNCERR("Unable to open input file: " << e.what());
         return 1;
     }
 
     try{
         bool wasOK;
-        FilenameOut = boost::filesystem::canonical(FilenameOut);
-        wasOK = boost::filesystem::exists(FilenameOut);
+        FilenameOut = std::filesystem::canonical(FilenameOut);
+        wasOK = std::filesystem::exists(FilenameOut);
         if(wasOK){
             FUNCERR("Specified output file " << FilenameOut << " exists. Refusing to overwrite");
             return 1;
         }
-    }catch(const boost::filesystem::filesystem_error &){ }
+    }catch(const std::filesystem::filesystem_error &){ }
 
 
     //Parse into a Drover.

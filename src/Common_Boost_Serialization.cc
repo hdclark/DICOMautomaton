@@ -17,7 +17,7 @@
 //For XML archives.
 #include <boost/archive/xml_iarchive.hpp>
 #include <boost/archive/xml_oarchive.hpp>
-#include <boost/filesystem.hpp>
+#include <filesystem>
 #include <boost/iostreams/filter/gzip.hpp>
 //#include <boost/iostreams/filter/zlib.hpp>
 #include <boost/iostreams/filtering_stream.hpp>
@@ -50,7 +50,7 @@ struct output;
 
 bool
 Common_Boost_Serialize_Drover(const Drover &in,
-                              boost::filesystem::path Filename){
+                              std::filesystem::path Filename){
 
     //This routine serializes the entire Drover class to a single file.
     //
@@ -66,7 +66,7 @@ Common_Boost_Serialize_Drover(const Drover &in,
 
 bool
 Common_Boost_Deserialize_Drover(Drover &out,
-                                const boost::filesystem::path& Filename){
+                                const std::filesystem::path& Filename){
 
     //This routine attempts to deserialize an entire Drover class from a single file.
     //
@@ -189,7 +189,7 @@ Common_Boost_Deserialize_Drover(Drover &out,
 
 bool
 Common_Boost_Serialize_Drover_to_Gzip_Binary(const Drover &in,
-                                             const boost::filesystem::path& Filename){
+                                             const std::filesystem::path& Filename){
 
     try{
         std::ofstream ofs(Filename.string(), std::ios::trunc | std::ios::binary);
@@ -213,7 +213,7 @@ Common_Boost_Serialize_Drover_to_Gzip_Binary(const Drover &in,
 
 bool
 Common_Boost_Serialize_Drover_to_Gzip_Simple_Text(const Drover &in,
-                                                  const boost::filesystem::path& Filename){
+                                                  const std::filesystem::path& Filename){
 
     try{
         std::ofstream ofs(Filename.string(), std::ios::trunc | std::ios::binary);
@@ -238,7 +238,7 @@ Common_Boost_Serialize_Drover_to_Gzip_Simple_Text(const Drover &in,
 
 bool
 Common_Boost_Serialize_Drover_to_Gzip_XML(const Drover &in,
-                                          const boost::filesystem::path& Filename){
+                                          const std::filesystem::path& Filename){
 
     try{
         std::ofstream ofs(Filename.string(), std::ios::trunc | std::ios::binary);
@@ -263,7 +263,7 @@ Common_Boost_Serialize_Drover_to_Gzip_XML(const Drover &in,
 
 bool
 Common_Boost_Serialize_Drover_to_Binary(const Drover &in,
-                                        const boost::filesystem::path& Filename){
+                                        const std::filesystem::path& Filename){
 
     try{
         std::ofstream ofs(Filename.string(), std::ios::trunc | std::ios::binary);
@@ -282,7 +282,7 @@ Common_Boost_Serialize_Drover_to_Binary(const Drover &in,
 
 bool
 Common_Boost_Serialize_Drover_to_Simple_Text(const Drover &in,
-                                             const boost::filesystem::path& Filename){
+                                             const std::filesystem::path& Filename){
 
     try{
         std::ofstream ofs(Filename.string(), std::ios::trunc);
@@ -302,7 +302,7 @@ Common_Boost_Serialize_Drover_to_Simple_Text(const Drover &in,
 
 bool
 Common_Boost_Serialize_Drover_to_XML(const Drover &in,
-                                     const boost::filesystem::path& Filename){
+                                     const std::filesystem::path& Filename){
 
     try{
         std::ofstream ofs(Filename.string(), std::ios::trunc);

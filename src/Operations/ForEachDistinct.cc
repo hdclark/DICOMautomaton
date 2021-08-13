@@ -18,7 +18,7 @@
 #include <memory>
 #include <type_traits>
 
-#include <boost/filesystem.hpp>
+#include <filesystem>
 
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.

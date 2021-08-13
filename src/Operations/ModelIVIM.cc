@@ -196,7 +196,7 @@ Drover ModelIVIM(Drover DICOM_data,
 
         // Fuzzy (regex) lookup.
         // Search for any metadata keys that match, and gather all the distinct values for all matching keys.
-        const auto key_regex = Compile_Regex(".*DiffusionBValue$");
+        const auto key_regex = Compile_Regex(".*DiffusionBValue$|.*CSAImage.*[bB].[vV]alue$");
         std::list<std::string> vals;
         for(const auto &animg : RIA_refw.get().images){
             for(const auto &kv : animg.metadata){

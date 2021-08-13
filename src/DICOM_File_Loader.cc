@@ -12,7 +12,7 @@
 //#include <cfenv>              //Needed for std::feclearexcept(FE_ALL_EXCEPT).
 
 #include <boost/algorithm/string/predicate.hpp>
-#include <boost/filesystem.hpp>
+#include <filesystem>
 #include <algorithm>
 #include <cstdlib>            //Needed for exit() calls.
 
@@ -38,7 +38,7 @@ Concatenate_Contour_Data(std::unique_ptr<Contour_Data> A,
 bool Load_From_DICOM_Files( Drover &DICOM_data,
                             const std::map<std::string,std::string> & /* InvocationMetadata */,
                             const std::string &FilenameLex,
-                            std::list<boost::filesystem::path> &Filenames ){
+                            std::list<std::filesystem::path> &Filenames ){
 
     //This routine will attempt to load DICOM files on an individual file basis. Files that are not successfully loaded
     // are not consumed so that they can be passed on to the next loading stage as needed. 

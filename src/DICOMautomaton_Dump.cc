@@ -10,20 +10,23 @@
 
 int main(int argc, char **argv){
     if(argc != 4){
-        FUNCERR("Usage: " << argv[0] << " <filename>  <tag_l>  <tag_u> \n"
-                " For example, " << argv[0] << " /tmp/test.dcm 0x0008 0x0060\n"
-                " Warning: this is a simplistic, one-off program!");
+        FUNCERR(argv[0] << " -- a simple DICOM tag value extractor.\n"
+                " Usage: " << argv[0] << " <filename> <tag_u> <tag_l>\n"
+                " For example, " << argv[0] << " /tmp/file.dcm 0x0008 0x0060\n");
     }
 
     try{
-
         const std::string Filename(argv[1]);
 
         //Convert tag inputs to numbers.
         unsigned int U = std::stoul(argv[2], nullptr, 16);    
         unsigned int L = std::stoul(argv[3], nullptr, 16);    
 
-        std::cout << get_tag_as_string(Filename, U, L) << std::endl;
+        const auto val = get_tag_as_string(Filename, U, L);
+
+        // Write the full contents to stdout, including any null bytes.
+        std::cout.write(val.data(), val.size());
+        std::cout << std::endl;
 
         return 0;
     }catch(const std::exception &e){

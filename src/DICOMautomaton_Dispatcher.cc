@@ -13,7 +13,7 @@
 #include <vector>
 //#include <cfenv>              //Needed for std::feclearexcept(FE_ALL_EXCEPT).
 
-#include <boost/filesystem.hpp>
+#include <filesystem>
 #include <cstdlib>            //Needed for exit() calls.
 #include <utility>            //Needed for std::pair.
 
@@ -91,7 +91,7 @@ int main(int argc, char* argv[]){
 
     //List of filenames or directories to parse and load.
     std::list<std::string> StandaloneFilesDirs;  // Used to defer filesystem checking.
-    std::list<boost::filesystem::path> StandaloneFilesDirsReachable;
+    std::list<std::filesystem::path> StandaloneFilesDirsReachable;
 
 
     //================================================ Argument Parsing ==============================================
@@ -193,7 +193,7 @@ int main(int argc, char* argv[]){
       "Inform the loaders that virtual data will be generated. Use with care, because this"
       " option causes checks to be skipped that could break assumptions in some operations.",
       [&](const std::string &) -> void {
-        GeneratingVirtualData = true;
+        GeneratingVirtualData = !GeneratingVirtualData;
         return;
       })
     );
@@ -209,7 +209,7 @@ int main(int argc, char* argv[]){
       })
     );
 
-    arger.push_back( ygor_arg_handlr_t(400, 'o', "operation", true, "SFML_Viewer",
+    arger.push_back( ygor_arg_handlr_t(400, 'o', "operation", true, "SDL_Viewer",
       "An operation to perform on the fully loaded data. Some operations can be chained, some"
       " may necessarily terminate computation. See '-u' for detailed operation information.",
       [&](const std::string &optarg) -> void {
@@ -233,7 +233,7 @@ int main(int argc, char* argv[]){
       })
     );
 
-    arger.push_back( ygor_arg_handlr_t(400, 'x', "disregard", true, "SFML_Viewer",
+    arger.push_back( ygor_arg_handlr_t(400, 'x', "disregard", true, "SDL_Viewer",
       "Ignore the following operation and all following parameters; essentially a 'no-op.'"
       " This option simplifies tweaking a workflow.",
       [&](const std::string &) -> void {
@@ -321,27 +321,18 @@ int main(int argc, char* argv[]){
     }
 #endif // DCMA_USE_POSTGRES
 
-
-    //Convert directories to filenames.
-// TODO.
-
-
-    //Remove non-existent filenames and directories.
-    {
-        boost::filesystem::path PathShuttle;
-        for(const auto &auri : StandaloneFilesDirs){
-            bool wasOK = false;
-            try{
-                PathShuttle = boost::filesystem::canonical(auri);
-                wasOK = boost::filesystem::exists(PathShuttle);
-            }catch(const boost::filesystem::filesystem_error &){ }
-
-            if(wasOK){
-                StandaloneFilesDirsReachable.emplace_back(auri);
-            }else{
-                FUNCWARN("Unable to resolve file or directory '" << auri << "'. Ignoring it");
-            }
+    // Workaround old AppImageKit's AppRun chdir() approach by resetting the cwd.
+    // See https://docs.appimage.org/packaging-guide/environment-variables.html#type-2-appimage-runtime (20210801).
+    if(nullptr != std::getenv("APPIMAGE")){
+        if(const char *owd = std::getenv("OWD"); nullptr != owd){
+            FUNCWARN("Detected AppImageKit packaging. Resetting current working directory via OWD environment variable");
+            std::filesystem::current_path( std::filesystem::path( std::string(owd) ) );
         }
+    }
+
+    // Transform filenme arguments to paths.
+    for(const auto &auri : StandaloneFilesDirs){
+        StandaloneFilesDirsReachable.emplace_back(auri);
     }
 
     //Try find a lexicon file if none were provided.
@@ -357,20 +348,20 @@ int main(int argc, char* argv[]){
         FUNCINFO("Using file '" << FilenameLex << "' as lexicon");
     }
 
-    //We require at least one SQL file for PACS db loading, one file/directory name for standalone file loading..
-    if( GroupedFilterQueryFiles.empty()    
-    &&  StandaloneFilesDirsReachable.empty()
-    &&  !GeneratingVirtualData ){
+    // Default to an interactive viewer that is known to handle missing data.
+    if(Operations.empty()){
+        FUNCWARN("No operations specified: defaulting to operation 'SDL_Viewer'");
+        Operations.emplace_back("SDL_Viewer");
 
-        FUNCERR("No query files provided. Cannot proceed");
+    // Otherwise, if there are operations but no files, then require the user to specify they are generating virtual
+    // data. We likewise require at least one SQL file for PACS db loading and at least one file/directory name for
+    // standalone file loading.
+    }else if( GroupedFilterQueryFiles.empty()    
+          &&  StandaloneFilesDirsReachable.empty()
+          &&  !GeneratingVirtualData ){
 
 // TODO: Special case: Launch RPC server to wait for data if no files or SQL files provided?
-
-
-    //If DB or standalone loading, we require at least one action.
-    }else if(Operations.empty()){
-        FUNCWARN("No operations specified: defaulting to operation 'SFML_Viewer'");
-        Operations.emplace_back("SFML_Viewer");
+        FUNCERR("No query files provided. Cannot proceed");
     }
 
 
