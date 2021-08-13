@@ -1327,6 +1327,7 @@ std::map<std::string,std::string> get_metadata_top_level_tags(const std::string 
 
     insert_as_string_if_nonempty(0x0029, 0x1008, "CSAImageHeaderType"); // CS type
     insert_as_string_if_nonempty(0x0029, 0x1009, "CSAImageHeaderVersion"); // LO type
+
     if(const auto header = extract_as_binary(0x0029, 0x1010); header.size() != 0 ){ // "CSAImageHeaderInfo", OB type
         const auto parsed = parse_CSA2_binary(header);
         for(const auto &p : parsed) out["CSAImage/" + p.first] = p.second;
@@ -1590,7 +1591,7 @@ std::unique_ptr<Image_Array> Load_Image_Array(const std::string &FilenameIn){
             out = std::stol(o.value());
         }catch(const std::exception &){}
         return out;
-    };                                            
+    };
     auto retrieve_coalesce_as_double = [&TopDataSet,&retrieve_coalesce_as_string](std::list<std::array<uint32_t,3>> qs)
                                                      -> std::optional<double> {
         auto o = retrieve_coalesce_as_string(qs);
@@ -1601,13 +1602,33 @@ std::unique_ptr<Image_Array> Load_Image_Array(const std::string &FilenameIn){
             out = std::stod(o.value());
         }catch(const std::exception &){}
         return out;
+    };
+
+    auto metadata_coalesce_as_double = [](const decltype(get_metadata_top_level_tags("")) &tlm,
+                                          std::list<std::tuple<std::string, uint32_t>> qs ) -> std::optional<double> {
+        // Note: the DICOM multiplicity is accepted with the key name.
+        std::optional<double> out = std::nullopt;
+        for(const auto &t : qs){
+            const auto res = tlm.find(std::get<std::string>(t));
+            if(res != std::end(tlm)){
+                try{
+                    auto tokens = SplitStringToVector(res->second, '\\', 'd');
+                    tokens = SplitVector(tokens, ',', 'd');
+                    out = std::stod( tokens.at( std::get<uint32_t>(t) ) );
+                    break;
+                }catch(const std::exception &){}
+            }
+        }
+        return out;
     };                                            
+        
 
     // ------------------------------------------- General --------------------------------------------------
     const auto modality = retrieve_as_string(0x0008, 0x0060).value();
 
 
     // ---------------------------------------- Image Metadata ----------------------------------------------
+    const auto tlm = get_metadata_top_level_tags(FilenameIn);
 
     //These should exist in all files. They appear to be the same for CT and DS files of the same set. Not sure
     // if this is *always* the case.
@@ -1664,12 +1685,13 @@ std::unique_ptr<Image_Array> Load_Image_Array(const std::string &FilenameIn){
     const auto image_rows  = retrieve_coalesce_as_long_int({ {0x0028, 0x0010, 0} }).value();
     const auto image_cols  = retrieve_coalesce_as_long_int({ {0x0028, 0x0011, 0} }).value();
 
-    const auto image_pxldy = retrieve_coalesce_as_double({ {0x0028, 0x0030, 0}, //"PixelSpacing" -- spacing between adjacent rows.
-                                                           {0x3002, 0x0011, 0}  //"ImagePlanePixelSpacing".
-                                                         }).value();
-    const auto image_pxldx = retrieve_coalesce_as_double({ {0x0028, 0x0030, 1}, //"PixelSpacing" -- spacing between adjacent columns.
-                                                           {0x3002, 0x0011, 1}  //"ImagePlanePixelSpacing".
-                                                         }).value();
+    const auto image_pxldy = metadata_coalesce_as_double(tlm, { { "PixelSpacing", 0 }, // Spacing between adjacent rows.
+                                                                { "ImagePlanePixelSpacing", 0 },
+                                                                { "CSAImage/PixelSpacing", 0 } }).value_or(1.0);
+
+    const auto image_pxldx = metadata_coalesce_as_double(tlm, { { "PixelSpacing", 1 }, // Spacing between adjacent columns.
+                                                                { "ImagePlanePixelSpacing", 1 },
+                                                                { "CSAImage/PixelSpacing", 1 } }).value_or(image_pxldy);
 
     //For 2D images, there is often no thickness given. For CT we might have to compare to other files to figure this out.
     // For MR images, the thickness should be specified.
@@ -1832,7 +1854,7 @@ std::unique_ptr<Image_Array> Load_Image_Array(const std::string &FilenameIn){
             // a 'row'. Perhaps I've got many things backward...
         }
 
-        out->imagecoll.images.back().metadata = get_metadata_top_level_tags(FilenameIn);
+        out->imagecoll.images.back().metadata = tlm;
         out->imagecoll.images.back().init_orientation(image_orien_r,image_orien_c);
 
         const auto img_chnls = static_cast<long int>(channelsNumber);
