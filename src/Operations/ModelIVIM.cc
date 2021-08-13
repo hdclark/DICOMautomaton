@@ -694,7 +694,11 @@ int b0_index = 0;
     theta = GetKurtosisTheta(bvalues, signals, params, priors);
     std::vector<double> newParams;
     for (int i = 0; i < 5; i++){
+<<<<<<< HEAD
         newParams.push_back(0.0);
+=======
+        newParams.push_back(0);
+>>>>>>> 820db06975b5b9572dc2986f9219ab398305e6a2
     }
     
     for (int i = 0; i < numIterations; i++){
@@ -724,7 +728,10 @@ int b0_index = 0;
         newParams[2] = (newParamMatrix(2,0) + params[2]); //D
         newParams[3] = (newParamMatrix(3,0) + params[3]); //K
         newParams[4] = (newParamMatrix(4,0) + params[4]); //NCF
+<<<<<<< HEAD
         
+=======
+>>>>>>> 820db06975b5b9572dc2986f9219ab398305e6a2
         //if f is less than 0 or greater than 1, rescale back to boundary, and don't let pseudoDD get smaller than D
         if (newParams[0] < 0){
             newParams[0] = 0.0;
