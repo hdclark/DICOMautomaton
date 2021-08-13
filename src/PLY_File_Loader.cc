@@ -15,7 +15,7 @@
 
 #include <cstdlib>            //Needed for exit() calls.
 
-#include <boost/filesystem.hpp>
+#include <filesystem>
 
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMathIOPLY.h"
@@ -29,7 +29,7 @@
 bool Load_From_PLY_Files( Drover &DICOM_data,
                           const std::map<std::string,std::string> & /* InvocationMetadata */,
                           const std::string &,
-                          std::list<boost::filesystem::path> &Filenames ){
+                          std::list<std::filesystem::path> &Filenames ){
 
     //This routine will attempt to load PLY-format files as surface meshes or point clouds. The difference between a
     // mesh and a point cloud, for the purposes of this routine, is the presence of one or more faces; if there are

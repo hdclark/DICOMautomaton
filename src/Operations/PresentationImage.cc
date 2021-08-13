@@ -1,7 +1,7 @@
 //PresentationImage.cc - A part of DICOMautomaton 2015 - 2018. Written by hal clark.
 
 #include <SFML/Graphics.hpp>
-#include <boost/filesystem.hpp>
+#include <filesystem>
 #include <algorithm>
 #include <array>
 #include <cmath>

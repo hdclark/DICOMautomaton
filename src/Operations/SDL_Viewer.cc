@@ -35,7 +35,7 @@
 #include <initializer_list>
 #include <thread>
 
-#include <boost/filesystem.hpp>
+#include <filesystem>
 
 #include "../imgui20201021/imgui.h"
 #include "../imgui20201021/imgui_impl_sdl.h"
@@ -1230,7 +1230,8 @@ if(false){
                                     // ... TODO ...
 
                                     // Add operation to script.
-                                    std::stringstream sc;
+                                    std::stringstream sc; // required arguments.
+                                    std::stringstream oc; // optional arguments.
                                     sc << std::endl << op_name << "(";
                                     bool first = true;
                                     std::set<std::string> args;
@@ -1247,9 +1248,16 @@ if(false){
                                                                    std::end(val),
                                                                    [](char c) -> bool { return (c == '\''); }),
                                                    std::end(val) );
-                                        if(!first) sc << ", ";
-                                        sc << std::endl << "    " <<  name << " = '" << val << "'";
-                                        first = false;
+                                        if(a.expected){
+                                            if(!first) sc << ", ";
+                                            sc << std::endl << "    " << name << " = '" << val << "'";
+                                            first = false;
+                                        }else{
+                                            oc << "    # " <<  name << " = '" << val << "',";
+                                        }
+                                    }
+                                    if(!oc.str().empty()){
+                                        sc << std::endl << oc.str() << std::endl;
                                     }
                                     sc << " ){};" << std::endl;
 
@@ -2497,7 +2505,7 @@ script_files.back().content.emplace_back('\0');
             ImGui::SetItemDefaultFocus();
             if(ImGui::Button("Load selection", ImVec2(120, 0))){ 
                 // Extract all files from the selection.
-                std::list<boost::filesystem::path> paths;
+                std::list<std::filesystem::path> paths;
                 for(auto &ofs : open_files_selection){
                     if(ofs.selected){
                         // Resolve all files within a directory.

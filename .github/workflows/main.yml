@@ -19,13 +19,14 @@ jobs:
         run: |
              cp -R ./docker/builders/ci /scratch
              cp -R . /dcma
+             ./scripts/enable_swapfile.sh
       - name: build
         run: |
              ( ( while true ; do sleep 225 ; printf '\n\n' ; df -h ; printf '\n\n' ; free || true ; printf '\n\n' ; done ) &)
              ./docker/builders/ci/implementation_ci_debian_stable.sh
       - name: test
         run: |
-             ./integration_tests/Run.sh
+             ./integration_tests/Run.sh -v
       - name: create_appimage
         run: |
              ./scripts/extract_system_appimage.sh
@@ -62,6 +63,7 @@ jobs:
         run: |
              cp -R ./docker/builders/ci /scratch
              cp -R . /dcma
+             ./scripts/enable_swapfile.sh
       - name: build
         run: |
              ( ( while true ; do sleep 225 ; printf '\n\n' ; df -h ; printf '\n\n' ; free || true ; printf '\n\n' ; done ) &)
@@ -71,7 +73,7 @@ jobs:
              /run_in_chroot.sh 'cd /dcma && ./docker/builders/ci/implementation_ci_debian_stable.sh'
       - name: test
         run: |
-             /run_in_chroot.sh 'cd /dcma && ./integration_tests/Run.sh'
+             /run_in_chroot.sh 'cd /dcma && ./integration_tests/Run.sh -v'
       - name: create_appimage
         run: |
              /run_in_chroot.sh 'cd /dcma && ./scripts/extract_system_appimage.sh'
@@ -109,6 +111,7 @@ jobs:
         run: |
              cp -R ./docker/builders/ci /scratch
              cp -R . /dcma
+             ./scripts/enable_swapfile.sh
       - name: build
         run: |
              ( ( while true ; do sleep 225 ; printf '\n\n' ; df -h ; printf '\n\n' ; free || true ; printf '\n\n' ; done ) &)
@@ -118,7 +121,7 @@ jobs:
              /run_in_chroot.sh 'cd /dcma && ./docker/builders/ci/implementation_ci_debian_stable.sh'
       - name: test
         run: |
-             /run_in_chroot.sh 'cd /dcma && ./integration_tests/Run.sh'
+             /run_in_chroot.sh 'cd /dcma && ./integration_tests/Run.sh -v'
       - name: create_appimage
         run: |
              /run_in_chroot.sh 'cd /dcma && ./scripts/extract_system_appimage.sh'
@@ -143,4 +146,3 @@ jobs:
              echo "${{secrets.HALCLARKCA_DEPLOY_KEY}}" > deploy_key
              chmod 600 deploy_key
              rsync -avP -e 'ssh -i deploy_key -o StrictHostKeyChecking=no' ci_artifacts/ root@halclark.ca:/var/www/html/ci/
-

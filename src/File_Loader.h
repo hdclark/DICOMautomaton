@@ -6,7 +6,7 @@
 #include <map>
 #include <list>
 
-#include <boost/filesystem.hpp>
+#include <filesystem>
 
 #include "Structs.h"
 
@@ -14,5 +14,5 @@ bool
 Load_Files( Drover &DICOM_data,
             const std::map<std::string,std::string> &InvocationMetadata,
             const std::string &FilenameLex,
-            std::list<boost::filesystem::path> &Paths );
+            std::list<std::filesystem::path> &Paths );
 

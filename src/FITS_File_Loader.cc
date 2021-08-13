@@ -15,7 +15,7 @@
 #include <string>    
 //#include <cfenv>              //Needed for std::feclearexcept(FE_ALL_EXCEPT).
 
-#include <boost/filesystem.hpp>
+#include <filesystem>
 #include <cstdlib>            //Needed for exit() calls.
 
 #include "Structs.h"
@@ -28,7 +28,7 @@
 bool Load_From_FITS_Files( Drover &DICOM_data,
                            const std::map<std::string,std::string> & /* InvocationMetadata */,
                            const std::string &,
-                           std::list<boost::filesystem::path> &Filenames ){
+                           std::list<std::filesystem::path> &Filenames ){
 
     //This routine will attempt to load FITS images on an individual file basis. Files that are not successfully loaded
     // are not consumed so that they can be passed on to the next loading stage as needed. 

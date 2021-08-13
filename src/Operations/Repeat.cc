@@ -16,7 +16,7 @@
 #include <utility>            //Needed for std::pair.
 #include <vector>
 
-#include <boost/filesystem.hpp>
+#include <filesystem>
 
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.

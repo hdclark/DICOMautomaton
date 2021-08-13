@@ -13,7 +13,7 @@
 #include <stdexcept>
 #include <string>    
 
-#include <boost/filesystem.hpp>
+#include <filesystem>
 #include <cstdlib>            //Needed for exit() calls.
 
 #include "Structs.h"
@@ -26,7 +26,7 @@
 bool Load_From_Line_Sample_Files( Drover &DICOM_data,
                                   const std::map<std::string,std::string> & /* InvocationMetadata */,
                                   const std::string &,
-                                  std::list<boost::filesystem::path> &Filenames ){
+                                  std::list<std::filesystem::path> &Filenames ){
 
     //This routine will attempt to load an exported samples_1D. Both serialized and stringified formats are tested.
     //

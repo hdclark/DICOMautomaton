@@ -3,7 +3,7 @@
 // This program loads data from files which have been serialized in Protobuf format.
 //
 
-#include <boost/filesystem.hpp>
+#include <filesystem>
 #include <list>
 #include <map>
 #include <string>    
@@ -15,7 +15,7 @@
 bool Load_From_Boost_Serialization_Files( Drover &DICOM_data,
                                           const std::map<std::string,std::string> & /* InvocationMetadata */,
                                           const std::string & /* FilenameLex */,
-                                          std::list<boost::filesystem::path> &Filenames ){
+                                          std::list<std::filesystem::path> &Filenames ){
 
     //This routine will attempt to load boost.serialized files. Files that are not successfully loaded are not consumed
     // so that they can be passed on to the next loading stage as needed. 
@@ -25,7 +25,7 @@ bool Load_From_Boost_Serialization_Files( Drover &DICOM_data,
     //
     if(Filenames.empty()) return true;
 
-    std::list<boost::filesystem::path> Filenames_Copy(Filenames);
+    std::list<std::filesystem::path> Filenames_Copy(Filenames);
     Filenames.clear();
     for(const auto &fn : Filenames_Copy){
 

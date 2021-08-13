@@ -13,7 +13,7 @@
 #include <stdexcept>
 #include <string>    
 
-#include <boost/filesystem.hpp>
+#include <filesystem>
 #include <cstdlib>            //Needed for exit() calls.
 
 #include "Explicator.h"       //Needed for Explicator class.
@@ -321,7 +321,7 @@ samples_1D<double> Read_Histogram(std::istream &is,
 bool Load_From_DVH_Files( Drover &DICOM_data,
                           const std::map<std::string,std::string> & /* InvocationMetadata */,
                           const std::string &FilenameLex,
-                          std::list<boost::filesystem::path> &Filenames ){
+                          std::list<std::filesystem::path> &Filenames ){
 
     //This routine will attempt to load DVH-format files. Files that are not successfully loaded
     // are not consumed so that they can be passed on to the next loading stage as needed. 

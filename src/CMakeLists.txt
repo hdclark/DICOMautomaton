@@ -316,7 +316,6 @@ target_link_libraries (dicomautomaton_dispatcher
     "$<$<BOOL:${WITH_SDL}>:${GLEW_LIBRARIES}>"
     "$<$<BOOL:${WITH_SDL}>:${OPENGL_LIBRARIES}>"
     "$<$<BOOL:${WITH_POSTGRES}>:${POSTGRES_LIBRARIES}>"
-    Boost::filesystem
     Boost::serialization
     Boost::iostreams
     Boost::thread
@@ -395,7 +394,6 @@ if(WITH_WT)
         "$<$<BOOL:${WITH_POSTGRES}>:${POSTGRES_LIBRARIES}>"
         wt
         wthttp
-        Boost::filesystem
         Boost::serialization
         Boost::iostreams
         Boost::thread
@@ -422,7 +420,6 @@ target_link_libraries(dicomautomaton_bsarchive_convert
     ygor 
     "$<$<BOOL:${WITH_GNU_GSL}>:${GNU_GSL_LIBRARIES}>"
     "$<$<BOOL:${WITH_NLOPT}>:${NLOPT_LIBRARIES}>"
-    Boost::filesystem
     Boost::serialization
     Boost::iostreams
     Boost::thread

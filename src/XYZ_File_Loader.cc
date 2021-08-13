@@ -13,7 +13,7 @@
 #include <stdexcept>
 #include <string>    
 
-#include <boost/filesystem.hpp>
+#include <filesystem>
 #include <cstdlib>            //Needed for exit() calls.
 
 #include "YgorMath.h"         //Needed for vec3 class.
@@ -27,7 +27,7 @@
 bool Load_From_XYZ_Files( Drover &DICOM_data,
                           const std::map<std::string,std::string> & /* InvocationMetadata */,
                           const std::string &,
-                          std::list<boost::filesystem::path> &Filenames ){
+                          std::list<std::filesystem::path> &Filenames ){
 
     //This routine will attempt to load XYZ-format files. Files that are not successfully loaded
     // are not consumed so that they can be passed on to the next loading stage as needed. 

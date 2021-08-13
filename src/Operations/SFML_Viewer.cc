@@ -26,7 +26,7 @@
 #include <vector>
 #include <chrono>
 
-#include <boost/filesystem.hpp>
+#include <filesystem>
 
 #include <SFML/Graphics.hpp>
 
@@ -695,7 +695,7 @@ Drover SFML_Viewer(Drover DICOM_data,
 
     //Dump a serialization of the current (*entire*) Drover class.
     const auto dump_serialized_drover = [&](){
-            const boost::filesystem::path out_fname("/tmp/boost_serialized_drover.xml.gz");
+            const std::filesystem::path out_fname("/tmp/boost_serialized_drover.xml.gz");
             const bool res = Common_Boost_Serialize_Drover(DICOM_data, out_fname);
             if(res){
                 FUNCINFO("Dumped serialization to file " << out_fname.string());
