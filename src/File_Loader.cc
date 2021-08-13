@@ -331,6 +331,7 @@ FUNCINFO("Paths.size() = " << Paths.size());
 
         // Attempt to load the files.
         for(const auto &l : loaders){
+            if(l_Paths.empty()) break;
             std::stringstream ss;
             for(const auto &e : l.exts) ss << (ss.str().empty() ? "" : ", ") << "'" << e << "'";
             FUNCINFO("Trying loader for extensions: " << ss.str() << " for file(s) with extension '" << ext << "'");
