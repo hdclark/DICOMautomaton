@@ -4,6 +4,7 @@
 #include <iterator>
 #include <list>
 #include <map>
+#include <set>
 #include <memory>
 #include <regex>
 #include <stdexcept>
@@ -11,6 +12,7 @@
 #include <utility>            //Needed for std::pair.
 #include <vector>
 
+#include "YgorStats.h"
 #include "YgorImages.h"
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
@@ -71,6 +73,20 @@ OperationDoc OpArgDocGroupImages(){
 
 
     out.args.emplace_back();
+    out.args.back().name = "AutoSelectKeysCommon";
+    out.args.back().desc = "Attempt to automatically select the single image metadata key that partitions images"
+                           " into approximately evenly-sized partitions."
+                           " Currently, some basic and broad assumptions are used to filter candidate keys."
+                           " The criteria will not work in all cases, but might help identify candidates."
+                           " This option cannot be enabled when providing the KeysCommon parameter.";
+    out.args.back().default_val = "false";
+    out.args.back().expected = true;
+    out.args.back().examples = { "true",
+                                 "false" };
+    out.args.back().samples = OpArgSamples::Exhaustive;
+   
+
+    out.args.emplace_back();
     out.args.back().name = "Enforce";
     out.args.back().desc = "Other specialized grouping operations that involve custom logic."
                            " Currently, only 'no-overlap' is available, but it has two variants."
@@ -113,14 +129,13 @@ Drover GroupImages(Drover DICOM_data,
     const auto ImageSelectionStr = OptArgs.getValueStr("ImageSelection").value();
 
     const auto KeysCommonStr = OptArgs.getValueStr("KeysCommon").value();
+    const auto AutoSelectKeysCommonStr = OptArgs.getValueStr("AutoSelectKeysCommon").value();
     const auto EnforceStr = OptArgs.getValueStr("Enforce").value();
 
     //-----------------------------------------------------------------------------------------------------------------
+    const auto regex_true = Compile_Regex("^tr?u?e?$");
     const auto nooverlap_asis = Compile_Regex("^no?-?ov?e?r?l?a?p?-a?s-?i?s?$");
     const auto nooverlap_adjust = Compile_Regex("^no?-?ov?e?r?l?a?p?-a?dj?u?s?t?$");
-
-    //-----------------------------------------------------------------------------------------------------------------
-    // --- Metadata-based grouping ---
 
     // Parse the chain of metadata keys.
     std::vector<std::string> KeysCommon;
@@ -128,6 +143,93 @@ Drover GroupImages(Drover DICOM_data,
         KeysCommon.emplace_back(a);
     }
 
+    //-----------------------------------------------------------------------------------------------------------------
+    // --- Automated grouping ---
+    // Attempt to identify suitable keys automatically. Obviously there is no solution that will always work. However,
+    // some keys can be ruled out for most purposes.
+    if(std::regex_match(AutoSelectKeysCommonStr, regex_true)){
+        if(!KeysCommon.empty()){
+            throw std::invalid_argument("Automatic key selection cannot be performed when keys are explicitly provided.");
+        }
+
+        struct value_meta_t {
+            std::map<std::string, double> occurrences;
+        };
+        std::map<std::string, value_meta_t> key_distinct_vals;
+
+        // Gather all keys and distinct values.
+        auto IAs_all = All_IAs( DICOM_data );
+        auto IAs = Whitelist( IAs_all, ImageSelectionStr );
+        for(const auto &iap_it : IAs){
+            for(const auto &img : (*iap_it)->imagecoll.images){
+                for(const auto &p : img.metadata){
+                    key_distinct_vals[p.first].occurrences[p.second] += 1.0;
+                }
+            }
+        }
+
+        double best_score = std::numeric_limits<double>::infinity();
+        std::string best_key;
+        for(const auto &p1 : key_distinct_vals){
+            Stats::Running_MinMax<uint64_t> rmm;
+            for(const auto &p2 : p1.second.occurrences) rmm.Digest(p2.second);
+
+            // Make assumptions about an ideal partitioning.
+            if( (1 < p1.second.occurrences.size())
+                // ^ Should make more than one partition. This should be a trivially safe assumption.
+            &&  (1 < rmm.Current_Max())
+                // ^ The largest partition should contain more than one image. Should be a safe assumption.
+            &&  (0.65 * rmm.Current_Max() < rmm.Current_Min())
+                // ^ The number of images in each partition should be relatively consistent. What consititutes
+                // consistent strongly depends on the domain, but in many situations the difference between the smallest
+                // and largest partitions (in terms of the number of images in each partition) will probably be 50-75%.
+            &&  (1 < rmm.Current_Min()) ){
+                // ^ The partition with the fewest number of elements should generally be more than one image. I suspect
+                // this is an OK assumption, since in many cases there will be ~50-100 in each partition in order to get
+                // reasonable spatial resolution. However, this can obviously fail in some cases.
+
+                FUNCINFO("AutoSelectKeysCommon: key '" << p1.first << "' with "
+                    << p1.second.occurrences.size() << " distinct values (min image count: "
+                    << rmm.Current_Min() << ", max image count: " << rmm.Current_Max()
+                    << ") is an auto-partition candidate");
+
+                // Select the key with the smallest entropy (i.e., the most concise and focused), as approximated by the
+                // average length of distinct values.
+                double score = 0.0;
+                for(const auto &p3 : p1.second.occurrences) score += p3.first.size();
+                score /= static_cast<double>(p1.second.occurrences.size());
+                if(score < best_score){
+                    best_score = score;
+                    best_key = p1.first;
+                }
+
+                // Or, select the key that will partition images closest to sqrt(N_images) bins, which is a guess that
+                // seems reasonable-ish for most medical imaging protocols I could think of. :S
+
+                // ... TODO ...
+
+                // Or, select the key that (fully) converts to a double, if that is expected/required.
+
+                // ... TODO ...
+
+                // Or, select the key that provides the fewest number of spatially-overlapping images within each
+                // partition. (Note that this could boost metrics with few images per distinct value!)
+
+                // ... TODO ...
+
+            }
+        }
+        if(std::isfinite(best_score)){
+            FUNCWARN("AutoSelectKeysCommon: selecting key '" << best_key << "' based on entropic criteria");
+            KeysCommon.emplace_back(best_key);
+        }else{
+            FUNCWARN("AutoSelectKeysCommon: no remaining candidate keys. Automatic selection failed");
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    // --- Metadata-based grouping ---
     if(!KeysCommon.empty()){
         // Grouping data structures.
         std::map<std::vector<std::string>, 
@@ -235,10 +337,9 @@ Drover GroupImages(Drover DICOM_data,
         DICOM_data.image_data.remove_if([](std::shared_ptr<Image_Array> &ia) -> bool {
             return ( (ia == nullptr) || (ia->imagecoll.images.empty()) );
         });
-    }
 
 
-    if(std::regex_match(EnforceStr, nooverlap_adjust)){
+    }else if(std::regex_match(EnforceStr, nooverlap_adjust)){
 
         // Grouping data structures.
         std::list<std::shared_ptr<Image_Array>> new_groups;
