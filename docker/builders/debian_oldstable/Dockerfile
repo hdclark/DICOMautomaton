@@ -6,7 +6,7 @@ ARG BASE_CONTAINER_NAME="dcma_build_base_debian_oldstable"
 FROM "$BASE_CONTAINER_NAME"
 
 LABEL maintainer="http://www.halclark.ca" \
-      description="DICOMautomaton Web Server built from Debian Stable."
+      description="DICOMautomaton Web Server built from Debian OldStable."
 
 EXPOSE 80
 EXPOSE 443
