@@ -4,14 +4,14 @@ set -eu
 
 # The (base) name of the container being built. The base name will be augmented with additional tags (see below).
 if [ ! -v image_name ] ; then # Allows environment variable override.
-    image_name="dicomautomaton_webserver_debian_stable"
+    image_name="dicomautomaton_webserver_debian_oldstable"
 fi
 
 # The image to use as the base system. It should have up-to-date dependencies installed.
 #
 # Note that this name can be prefixed with registry details and postfixed with tags, e.g., 'hdclark/some_name:latest'.
 if [ ! -v base_image_name ] ; then # Allows environment variable override.
-    base_image_name="dcma_build_base_debian_stable"
+    base_image_name="dcma_build_base_debian_oldstable"
 fi
 
 commit_id="$(git rev-parse HEAD)"
@@ -34,6 +34,6 @@ docker build \
     --tag "${image_name}":"built_${build_datetime}" \
     --tag "${image_name}":"commit_${commit_id}_${clean_dirty}" \
     --tag "${image_name}":latest \
-    --file docker/builders/debian_stable/Dockerfile \
+    --file docker/builders/debian_oldstable/Dockerfile \
     .
 

@@ -125,11 +125,11 @@ sudo \
     -v /media/sf_U_DRIVE/Profile/Desktop:/home/${uname}/Desktop/:ro \
     -v /mnt/scratch_A/Research_Archives:/home/${uname}/Research_Archives/:rw \
     \
-    dcma_build_base_debian_stable:latest \
+    dcma_build_base_debian_oldstable:latest \
     \
     /x11_launch_script.sh
 
-#    debian:stable \
+#    debian:oldstable \
 #    -v /etc/passwd:/etc/passwd_host:ro \
 #    -v /etc/group:/etc/group_host:ro \
 #    -v /etc/shadow:/etc/shadow_host:ro \

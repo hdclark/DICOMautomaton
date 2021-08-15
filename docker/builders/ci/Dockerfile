@@ -1,6 +1,6 @@
 
 #FROM archlinux:latest
-FROM debian:stable
+FROM debian:oldstable
 
 LABEL maintainer="http://www.halclark.ca" \
       description="DICOMautomaton minimal CI build."
@@ -10,7 +10,7 @@ COPY docker/builders/ci /scratch
 COPY . /dcma
 
 #RUN /scratch/implementation_ci_arch.sh
-RUN /scratch/implementation_ci_debian_stable.sh
+RUN /scratch/implementation_ci_debian_oldstable.sh
 
 # Default to a no-op.
 WORKDIR /scratch

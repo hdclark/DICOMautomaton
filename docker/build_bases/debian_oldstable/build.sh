@@ -2,8 +2,6 @@
 
 set -e 
 
-exit 1
-
 base_name="dcma_build_base_debian_oldstable"
 
 commit_id=$(git rev-parse HEAD)
