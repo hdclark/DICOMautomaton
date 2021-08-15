@@ -98,7 +98,7 @@ Whitelist_Core( L lops,
     // Single-word positional specifiers, i.e. "all", "none", "first", "last", or zero-based 
     // numerical specifiers, e.g., "#0" (front), "#1" (second), "#-0" (last), and "#-1" (second-from-last).
     do{
-        const auto regex_none  = Compile_Regex("^no?n?e?$");
+        const auto regex_none  = Compile_Regex("^non?e?$");
         const auto regex_all   = Compile_Regex("^al?l?$");
         const auto regex_1st   = Compile_Regex("^fi?r?s?t?$");
         const auto regex_2nd   = Compile_Regex("^se?c?o?n?d?$");
@@ -106,8 +106,9 @@ Whitelist_Core( L lops,
         const auto regex_last  = Compile_Regex("^la?s?t?$");
         const auto regex_pnum  = Compile_Regex("^[#][0-9].*$");
         const auto regex_nnum  = Compile_Regex("^[#]-[0-9].*$");
+        const auto regex_numer = Compile_Regex("^num?e?r?o?u?s?.*$");
 
-        const auto regex_i_none  = Compile_Regex("^[!]no?n?e?$"); // Inverted variants of the above.
+        const auto regex_i_none  = Compile_Regex("^[!]non?e?$"); // Inverted variants of the above.
         const auto regex_i_all   = Compile_Regex("^[!]al?l?$");
         const auto regex_i_1st   = Compile_Regex("^[!]fi?r?s?t?$");
         const auto regex_i_2nd   = Compile_Regex("^[!]se?c?o?n?d?$");
@@ -115,6 +116,7 @@ Whitelist_Core( L lops,
         const auto regex_i_last  = Compile_Regex("^[!]la?s?t?$");
         const auto regex_i_pnum  = Compile_Regex("^[!][#][0-9].*$");
         const auto regex_i_nnum  = Compile_Regex("^[!][#]-[0-9].*$");
+        const auto regex_i_numer = Compile_Regex("^[!]num?e?r?o?u?s?.*$");
         
         if(std::regex_match(Specifier, regex_i_none)){
             return lops;
@@ -231,6 +233,39 @@ Whitelist_Core( L lops,
                 out.emplace_back(*l_it);
             }
             return out;
+        }
+
+        if( const bool pos = std::regex_match(Specifier, regex_numer); 
+            pos || std::regex_match(Specifier, regex_i_numer) ){
+
+            if(lops.empty()) return lops;
+
+            auto m = std::max_element( std::begin(lops), std::end(lops),
+                                       []( const typename decltype(lops)::value_type &l,
+                                           const typename decltype(lops)::value_type &r ) -> bool {
+                // Images.
+                if constexpr (std::is_same< decltype(lops),
+                                            std::list<std::list<std::shared_ptr<Image_Array>>::iterator> >::value){
+                    if( ( (*l) == nullptr )
+                    ||  ( (*r) == nullptr ) ){
+                        throw std::runtime_error("Encountered invalid image array pointers");
+                    }
+                    return (*l)->imagecoll.images.size() < (*r)->imagecoll.images.size();
+
+                // TODO: add other types, and then document this selector!
+
+                // ...
+
+                }else{
+                    throw std::invalid_argument("The 'numerous' selector is not yet implemented for this data type");
+                }
+                return true;
+            } );
+
+            decltype(lops) largest;
+            largest.splice( std::end(largest), lops, m );
+
+            return (pos) ? largest : lops;
         }
 
     }while(false);
