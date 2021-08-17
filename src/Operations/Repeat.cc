@@ -82,7 +82,7 @@ Drover Repeat(Drover DICOM_data,
 
     for(long int i = 0; i < N; ++i){
         if(!Operation_Dispatcher(DICOM_data, InvocationMetadata, FilenameLex, OptArgs.getChildren())){
-            FUNCERR("Analysis failed. Cannot continue");
+            throw std::runtime_error("Child operation failed");
         }
     }
 

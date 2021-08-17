@@ -101,6 +101,7 @@ add_library(Operations_objs OBJECT
     GroupImages.cc
     GrowContours.cc
     HighlightROIs.cc
+    IfElse.cc
     ImageRoutineTests.cc
     ImprintImages.cc
     InterpolateSlices.cc

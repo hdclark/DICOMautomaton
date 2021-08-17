@@ -121,6 +121,7 @@
 #include "Operations/GroupImages.h"
 #include "Operations/GrowContours.h"
 #include "Operations/HighlightROIs.h"
+#include "Operations/IfElse.h"
 #include "Operations/ImageRoutineTests.h"
 #include "Operations/ImprintImages.h"
 #include "Operations/InterpolateSlices.h"
@@ -319,6 +320,7 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["GroupImages"] = std::make_pair(OpArgDocGroupImages, GroupImages);
     out["GrowContours"] = std::make_pair(OpArgDocGrowContours, GrowContours);
     out["HighlightROIs"] = std::make_pair(OpArgDocHighlightROIs, HighlightROIs);
+    out["IfElse"] = std::make_pair(OpArgDocIfElse, IfElse);
     out["ImageRoutineTests"] = std::make_pair(OpArgDocImageRoutineTests, ImageRoutineTests);
     out["ImprintImages"] = std::make_pair(OpArgDocImprintImages, ImprintImages);
     out["InterpolateSlices"] = std::make_pair(OpArgDocInterpolateSlices, InterpolateSlices);
