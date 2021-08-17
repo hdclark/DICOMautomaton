@@ -1448,7 +1448,7 @@ script_files.back().content.emplace_back('\0');
                     script_files.emplace_back();
                     script_files.back().altered = true;
                     script_files.back().content.emplace_back('\0'); // Ensure there is at least a null character.
-                    active_script_file = (script_files.size() - 1);
+                    active_script_file = N_sfs;
                     ++N_sfs;
                 }
                 ImGui::SameLine();

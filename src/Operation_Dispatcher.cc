@@ -25,6 +25,7 @@
 #include "Operations/AnalyzeLightRadFieldCoincidence.h"
 #include "Operations/AnalyzePicketFence.h"
 #include "Operations/AnalyzeTPlan.h"
+#include "Operations/And.h"
 #include "Operations/ApplyCalibrationCurve.h"
 #include "Operations/AutoCropImages.h"
 #include "Operations/Average.h"
@@ -101,6 +102,7 @@
 #include "Operations/ExtractAlphaBeta.h"
 #include "Operations/ExtractImageHistograms.h"
 #include "Operations/ExtractPointsWarp.h"
+#include "Operations/False.h"
 #include "Operations/ForEachDistinct.h"
 #include "Operations/FVPicketFence.h"
 #include "Operations/GenerateCalibrationCurve.h"
@@ -137,7 +139,9 @@
 #include "Operations/NoOp.h"
 #include "Operations/NormalizeLineSamples.h"
 #include "Operations/NormalizePixels.h"
+#include "Operations/Not.h"
 #include "Operations/OptimizeStaticBeams.h"
+#include "Operations/Or.h"
 #include "Operations/OrderImages.h"
 #include "Operations/PartitionContours.h"
 #include "Operations/PlotPerROITimeCourses.h"
@@ -163,6 +167,7 @@
 #include "Operations/ThresholdImages.h"
 #include "Operations/ThresholdOtsu.h"
 #include "Operations/TrimROIDose.h"
+#include "Operations/True.h"
 #include "Operations/UBC3TMRI_DCE.h"
 #include "Operations/UBC3TMRI_DCE_Differences.h"
 #include "Operations/UBC3TMRI_DCE_Experimental.h"
@@ -174,6 +179,7 @@
 #include "Operations/WarpMeshes.h"
 #include "Operations/WarpImages.h"
 #include "Operations/WarpPoints.h"
+#include "Operations/While.h"
 
 #ifdef DCMA_USE_SDL
     #include "Operations/SDL_Viewer.h"
@@ -225,21 +231,23 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["AnalyzeLightRadFieldCoincidence"] = std::make_pair(OpArgDocAnalyzeLightRadFieldCoincidence, AnalyzeLightRadFieldCoincidence);
     out["AnalyzePicketFence"] = std::make_pair(OpArgDocAnalyzePicketFence, AnalyzePicketFence);
     out["AnalyzeTPlan"] = std::make_pair(OpArgDocAnalyzeTPlan, AnalyzeTPlan);
+    out["And"] = std::make_pair(OpArgDocAnd, And);
     out["ApplyCalibrationCurve"] = std::make_pair(OpArgDocApplyCalibrationCurve, ApplyCalibrationCurve);
     out["AutoCropImages"] = std::make_pair(OpArgDocAutoCropImages, AutoCropImages);
     out["Average"] = std::make_pair(OpArgDocAverage, Average);
     out["BEDConvert"] = std::make_pair(OpArgDocBEDConvert, BEDConvert);
     out["BoostSerializeDrover"] = std::make_pair(OpArgDocBoost_Serialize_Drover, Boost_Serialize_Drover);
     out["BuildLexiconInteractively"] = std::make_pair(OpArgDocBuildLexiconInteractively, BuildLexiconInteractively);
+    out["CellularAutomata"] = std::make_pair(OpArgDocCellularAutomata, CellularAutomata);
     out["ClusterDBSCAN"] = std::make_pair(OpArgDocClusterDBSCAN, ClusterDBSCAN);
     out["ComparePixels"] = std::make_pair(OpArgDocComparePixels, ComparePixels);
     out["ContourBasedRayCastDoseAccumulate"] = std::make_pair(OpArgDocContourBasedRayCastDoseAccumulate, ContourBasedRayCastDoseAccumulate);
+    out["ContouringAides"] = std::make_pair(OpArgDocContouringAides, ContouringAides);
     out["ContourSimilarity"] = std::make_pair(OpArgDocContourSimilarity, ContourSimilarity);
     out["ContourViaGeometry"] = std::make_pair(OpArgDocContourViaGeometry, ContourViaGeometry);
     out["ContourViaThreshold"] = std::make_pair(OpArgDocContourViaThreshold, ContourViaThreshold);
     out["ContourVote"] = std::make_pair(OpArgDocContourVote, ContourVote);
     out["ContourWholeImages"] = std::make_pair(OpArgDocContourWholeImages, ContourWholeImages);
-    out["ContouringAides"] = std::make_pair(OpArgDocContouringAides, ContouringAides);
     out["ConvertContoursToMeshes"] = std::make_pair(OpArgDocConvertContoursToMeshes, ConvertContoursToMeshes);
     out["ConvertContoursToPoints"] = std::make_pair(OpArgDocConvertContoursToPoints, ConvertContoursToPoints);
     out["ConvertDoseToImage"] = std::make_pair(OpArgDocConvertDoseToImage, ConvertDoseToImage);
@@ -249,7 +257,6 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["ConvertNaNsToZeros"] = std::make_pair(OpArgDocConvertNaNsToZeros, ConvertNaNsToZeros);
     out["ConvertPixelsToPoints"] = std::make_pair(OpArgDocConvertPixelsToPoints, ConvertPixelsToPoints);
     out["ConvolveImages"] = std::make_pair(OpArgDocConvolveImages, ConvolveImages);
-    out["CellularAutomata"] = std::make_pair(OpArgDocCellularAutomata, CellularAutomata);
     out["CopyContours"] = std::make_pair(OpArgDocCopyContours, CopyContours);
     out["CopyImages"] = std::make_pair(OpArgDocCopyImages, CopyImages);
     out["CopyMeshes"] = std::make_pair(OpArgDocCopyMeshes, CopyMeshes);
@@ -260,9 +267,6 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["CropROIDose"] = std::make_pair(OpArgDocCropROIDose, CropROIDose);
     out["DCEMRI_IAUC"] = std::make_pair(OpArgDocDCEMRI_IAUC, DCEMRI_IAUC);
     out["DCEMRI_Nonparametric_CE"] = std::make_pair(OpArgDocDCEMRI_Nonparametric_CE, DCEMRI_Nonparametric_CE);
-    out["DICOMExportImagesAsCT"] = std::make_pair(OpArgDocDICOMExportImagesAsCT, DICOMExportImagesAsCT);
-    out["DICOMExportImagesAsDose"] = std::make_pair(OpArgDocDICOMExportImagesAsDose, DICOMExportImagesAsDose);
-    out["DICOMExportContours"] = std::make_pair(OpArgDocDICOMExportContours, DICOMExportContours);
     out["DecayDoseOverTimeHalve"] = std::make_pair(OpArgDocDecayDoseOverTimeHalve, DecayDoseOverTimeHalve);
     out["DecayDoseOverTimeJones2014"] = std::make_pair(OpArgDocDecayDoseOverTimeJones2014, DecayDoseOverTimeJones2014);
     out["DecimatePixels"] = std::make_pair(OpArgDocDecimatePixels, DecimatePixels);
@@ -272,6 +276,9 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["DeleteMeshes"] = std::make_pair(OpArgDocDeleteMeshes, DeleteMeshes);
     out["DeletePoints"] = std::make_pair(OpArgDocDeletePoints, DeletePoints);
     out["DetectShapes3D"] = std::make_pair(OpArgDocDetectShapes3D, DetectShapes3D);
+    out["DICOMExportContours"] = std::make_pair(OpArgDocDICOMExportContours, DICOMExportContours);
+    out["DICOMExportImagesAsCT"] = std::make_pair(OpArgDocDICOMExportImagesAsCT, DICOMExportImagesAsCT);
+    out["DICOMExportImagesAsDose"] = std::make_pair(OpArgDocDICOMExportImagesAsDose, DICOMExportImagesAsDose);
     out["DrawGeometry"] = std::make_pair(OpArgDocDrawGeometry, DrawGeometry);
     out["DroverDebug"] = std::make_pair(OpArgDocDroverDebug, DroverDebug);
     out["DumpAllOrderedImageMetadataToFile"] = std::make_pair(OpArgDocDumpAllOrderedImageMetadataToFile, DumpAllOrderedImageMetadataToFile);
@@ -292,15 +299,16 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["ExportFITSImages"] = std::make_pair(OpArgDocExportFITSImages, ExportFITSImages);
     out["ExportLineSamples"] = std::make_pair(OpArgDocExportLineSamples, ExportLineSamples);
     out["ExportPointClouds"] = std::make_pair(OpArgDocExportPointClouds, ExportPointClouds);
-    out["ExportSurfaceMeshes"] = std::make_pair(OpArgDocExportSurfaceMeshes, ExportSurfaceMeshes);
     out["ExportSurfaceMeshesOBJ"] = std::make_pair(OpArgDocExportSurfaceMeshesOBJ, ExportSurfaceMeshesOBJ);
-    out["ExportSurfaceMeshesPLY"] = std::make_pair(OpArgDocExportSurfaceMeshesPLY, ExportSurfaceMeshesPLY);
-    out["ExportSurfaceMeshesSTL"] = std::make_pair(OpArgDocExportSurfaceMeshesSTL, ExportSurfaceMeshesSTL);
     out["ExportSurfaceMeshesOFF"] = std::make_pair(OpArgDocExportSurfaceMeshesOFF, ExportSurfaceMeshesOFF);
+    out["ExportSurfaceMeshesPLY"] = std::make_pair(OpArgDocExportSurfaceMeshesPLY, ExportSurfaceMeshesPLY);
+    out["ExportSurfaceMeshes"] = std::make_pair(OpArgDocExportSurfaceMeshes, ExportSurfaceMeshes);
+    out["ExportSurfaceMeshesSTL"] = std::make_pair(OpArgDocExportSurfaceMeshesSTL, ExportSurfaceMeshesSTL);
     out["ExportWarps"] = std::make_pair(OpArgDocExportWarps, ExportWarps);
     out["ExtractAlphaBeta"] = std::make_pair(OpArgDocExtractAlphaBeta, ExtractAlphaBeta);
     out["ExtractImageHistograms"] = std::make_pair(OpArgDocExtractImageHistograms, ExtractImageHistograms);
     out["ExtractPointsWarp"] = std::make_pair(OpArgDocExtractPointsWarp, ExtractPointsWarp);
+    out["False"] = std::make_pair(OpArgDocFalse, False);
     out["ForEachDistinct"] = std::make_pair(OpArgDocForEachDistinct, ForEachDistinct);
     out["FVPicketFence"] = std::make_pair(OpArgDocFVPicketFence, FVPicketFence);
     out["GenerateCalibrationCurve"] = std::make_pair(OpArgDocGenerateCalibrationCurve, GenerateCalibrationCurve);
@@ -313,9 +321,9 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["GenerateWarp"] = std::make_pair(OpArgDocGenerateWarp, GenerateWarp);
     out["GiveWholeImageArrayABoneWindowLevel"] = std::make_pair(OpArgDocGiveWholeImageArrayABoneWindowLevel, GiveWholeImageArrayABoneWindowLevel);
     out["GiveWholeImageArrayAHeadAndNeckWindowLevel"] = std::make_pair(OpArgDocGiveWholeImageArrayAHeadAndNeckWindowLevel, GiveWholeImageArrayAHeadAndNeckWindowLevel);
-    out["GiveWholeImageArrayAThoraxWindowLevel"] = std::make_pair(OpArgDocGiveWholeImageArrayAThoraxWindowLevel, GiveWholeImageArrayAThoraxWindowLevel);
     out["GiveWholeImageArrayAnAbdominalWindowLevel"] = std::make_pair(OpArgDocGiveWholeImageArrayAnAbdominalWindowLevel, GiveWholeImageArrayAnAbdominalWindowLevel);
     out["GiveWholeImageArrayAnAlphaBetaWindowLevel"] = std::make_pair(OpArgDocGiveWholeImageArrayAnAlphaBetaWindowLevel, GiveWholeImageArrayAnAlphaBetaWindowLevel);
+    out["GiveWholeImageArrayAThoraxWindowLevel"] = std::make_pair(OpArgDocGiveWholeImageArrayAThoraxWindowLevel, GiveWholeImageArrayAThoraxWindowLevel);
     out["GridBasedRayCastDoseAccumulate"] = std::make_pair(OpArgDocGridBasedRayCastDoseAccumulate, GridBasedRayCastDoseAccumulate);
     out["GroupImages"] = std::make_pair(OpArgDocGroupImages, GroupImages);
     out["GrowContours"] = std::make_pair(OpArgDocGrowContours, GrowContours);
@@ -336,10 +344,12 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["NoOp"] = std::make_pair(OpArgDocNoOp, NoOp);
     out["NormalizeLineSamples"] = std::make_pair(OpArgDocNormalizeLineSamples, NormalizeLineSamples);
     out["NormalizePixels"] = std::make_pair(OpArgDocNormalizePixels, NormalizePixels);
+    out["Not"] = std::make_pair(OpArgDocNot, Not);
     out["OptimizeStaticBeams"] = std::make_pair(OpArgDocOptimizeStaticBeams, OptimizeStaticBeams);
     out["OrderImages"] = std::make_pair(OpArgDocOrderImages, OrderImages);
-    out["PlotLineSamples"] = std::make_pair(OpArgDocPlotLineSamples, PlotLineSamples);
+    out["Or"] = std::make_pair(OpArgDocOr, Or);
     out["PartitionContours"] = std::make_pair(OpArgDocPartitionContours, PartitionContours);
+    out["PlotLineSamples"] = std::make_pair(OpArgDocPlotLineSamples, PlotLineSamples);
     out["PlotPerROITimeCourses"] = std::make_pair(OpArgDocPlotPerROITimeCourses, PlotPerROITimeCourses);
     out["PointSeparation"] = std::make_pair(OpArgDocPointSeparation, PointSeparation);
     out["PreFilterEnormousCTValues"] = std::make_pair(OpArgDocPreFilterEnormousCTValues, PreFilterEnormousCTValues);
@@ -355,24 +365,26 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["SpatialBlur"] = std::make_pair(OpArgDocSpatialBlur, SpatialBlur);
     out["SpatialDerivative"] = std::make_pair(OpArgDocSpatialDerivative, SpatialDerivative);
     out["SpatialSharpen"] = std::make_pair(OpArgDocSpatialSharpen, SpatialSharpen);
-    out["SubsegmentContours"] = std::make_pair(OpArgDocSubsegmentContours, SubsegmentContours);
     out["Subsegment_ComputeDose_VanLuijk"] = std::make_pair(OpArgDocSubsegment_ComputeDose_VanLuijk, Subsegment_ComputeDose_VanLuijk);
+    out["SubsegmentContours"] = std::make_pair(OpArgDocSubsegmentContours, SubsegmentContours);
     out["SubtractImages"] = std::make_pair(OpArgDocSubtractImages, SubtractImages);
     out["SupersampleImageGrid"] = std::make_pair(OpArgDocSupersampleImageGrid, SupersampleImageGrid);
     out["ThresholdImages"] = std::make_pair(OpArgDocThresholdImages, ThresholdImages);
     out["ThresholdOtsu"] = std::make_pair(OpArgDocThresholdOtsu, ThresholdOtsu);
     out["TrimROIDose"] = std::make_pair(OpArgDocTrimROIDose, TrimROIDose);
-    out["UBC3TMRI_DCE"] = std::make_pair(OpArgDocUBC3TMRI_DCE, UBC3TMRI_DCE);
+    out["True"] = std::make_pair(OpArgDocTrue, True);
     out["UBC3TMRI_DCE_Differences"] = std::make_pair(OpArgDocUBC3TMRI_DCE_Differences, UBC3TMRI_DCE_Differences);
     out["UBC3TMRI_DCE_Experimental"] = std::make_pair(OpArgDocUBC3TMRI_DCE_Experimental, UBC3TMRI_DCE_Experimental);
+    out["UBC3TMRI_DCE"] = std::make_pair(OpArgDocUBC3TMRI_DCE, UBC3TMRI_DCE);
     out["UBC3TMRI_IVIM_ADC"] = std::make_pair(OpArgDocUBC3TMRI_IVIM_ADC, UBC3TMRI_IVIM_ADC);
     out["VolumetricCorrelationDetector"] = std::make_pair(OpArgDocVolumetricCorrelationDetector, VolumetricCorrelationDetector);
     out["VolumetricSpatialBlur"] = std::make_pair(OpArgDocVolumetricSpatialBlur, VolumetricSpatialBlur);
     out["VolumetricSpatialDerivative"] = std::make_pair(OpArgDocVolumetricSpatialDerivative, VolumetricSpatialDerivative);
     out["WarpContours"] = std::make_pair(OpArgDocWarpContours, WarpContours);
-    out["WarpMeshes"] = std::make_pair(OpArgDocWarpMeshes, WarpMeshes);
     out["WarpImages"] = std::make_pair(OpArgDocWarpImages, WarpImages);
+    out["WarpMeshes"] = std::make_pair(OpArgDocWarpMeshes, WarpMeshes);
     out["WarpPoints"] = std::make_pair(OpArgDocWarpPoints, WarpPoints);
+    out["While"] = std::make_pair(OpArgDocWhile, While);
 
 #ifdef DCMA_USE_SDL
     out["SDL_Viewer"] = std::make_pair(OpArgDocSDL_Viewer, SDL_Viewer);

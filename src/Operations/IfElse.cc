@@ -40,8 +40,10 @@ OperationDoc OpArgDocIfElse() {
     OperationDoc out;
     out.name = "IfElse";
     out.aliases.emplace_back("If");
+    out.aliases.emplace_back("IfThenElse");
+    out.aliases.emplace_back("ElseIf");
 
-    out.desc = "This operation is a control flow meta-operation that performs and 'if' or 'if-else' by evaluating"
+    out.desc = "This operation is a control flow meta-operation that performs an 'if-then' or 'if-then-else' by evaluating"
                " child operations. If the first child operation (the conditional) completes without throwing an"
                " exception, then the second operation is performed. Otherwise the third operation ('else statement'),"
                " if present, is performed. Side effects from all evaluated operations are possible.";
@@ -71,8 +73,8 @@ Drover IfElse(Drover DICOM_data,
     //-----------------------------------------------------------------------------------------------------------------
 
     auto children = OptArgs.getChildren();
-    if(!isininc(1U,children.size(),3U)){
-        throw std::runtime_error("'If' statement accepts 1-3 statements/child operations");
+    if(!isininc(2U,children.size(),3U)){
+        throw std::runtime_error("'If' statement accepts 2-3 statements/child operations");
     }
 
     // Break into condition, success, and failure statements.
