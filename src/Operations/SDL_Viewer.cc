@@ -2910,16 +2910,20 @@ script_files.back().content.emplace_back('\0');
                     ImGui::BeginTooltip();
 
                     ImGui::Columns(2);
-                    ImGui::SetColumnWidth(0, 150.0);
-                    ImGui::SetColumnWidth(1, 150.0);
-
-                    ImGui::Text("Linesample"); ImGui::NextColumn(); ImGui::Text("Metadata");
+                    ImGui::PushItemWidth(150.0f);
+                    ImGui::Text("Linesample"); ImGui::NextColumn();
+                    ImGui::Text("Metadata"); ImGui::NextColumn();
                     ImGui::Separator();
-                    ImGui::Text("Key"); ImGui::NextColumn(); ImGui::Text("Value");
+                    ImGui::Text("Key"); ImGui::NextColumn();
+                    ImGui::Text("Value"); ImGui::NextColumn();
                     ImGui::Separator();
                     for(const auto &apair : (*lsamp_ptr_it)->line.metadata){
-                        ImGui::Text("%s",  apair.first.c_str());  ImGui::NextColumn(); ImGui::Text("%s",  apair.second.c_str());
+                        ImGui::Text("%s",  apair.first.c_str()); ImGui::NextColumn();
+                        ImGui::Text("%s",  apair.second.c_str()); ImGui::NextColumn();
                     }
+                    ImGui::PopItemWidth();
+                    ImGui::Columns(1);
+                    ImGui::Separator();
 
                     ImGui::EndTooltip();
                 }
