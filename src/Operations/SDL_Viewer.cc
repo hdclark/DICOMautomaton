@@ -1378,7 +1378,7 @@ if(false){
 ////////////////
 ////////////////
 ////////////////
-const std::string testing_content = R"***(#!/usr/bin/env dicomautomaton_dispatcher -v
+const std::string testing_content = R"***(#!/usr/bin/env -S dicomautomaton_dispatcher -v
 
 variable = "something";
 variable = "something else";

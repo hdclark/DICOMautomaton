@@ -3,6 +3,7 @@
 #pragma once
 
 #include <istream>
+#include <ostream>
 #include <list>
 #include <filesystem>
 
@@ -32,4 +33,7 @@ bool Load_DCMA_Script(std::istream &is,
 bool Load_From_Script_Files( std::list<OperationArgPkg> &Operations,
                              std::list<std::filesystem::path> &Filenames );
 
+
+void Print_Feedback(std::ostream &os,
+                    const std::list<script_feedback_t> &feedback);
 

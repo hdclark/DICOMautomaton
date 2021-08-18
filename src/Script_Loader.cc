@@ -4,6 +4,7 @@
 //
 
 #include <istream>
+#include <ostream>
 #include <sstream>
 #include <list>
 
@@ -817,20 +818,32 @@ bool Load_From_Script_Files( std::list<OperationArgPkg> &Operations,
             FUNCINFO("Parsing file #" << i+1 << "/" << N << " = " << 100*(i+1)/N << "%");
             ++i;
             const auto Filename = bfit->string();
+            bool found_shebang = false;
+            std::list<script_feedback_t> feedback;
+            std::list<OperationArgPkg> ops;
+
+
+
 
             try{
                 //////////////////////////////////////////////////////////////
                 // Attempt to load the file.
                 std::ifstream is(Filename, std::ios::in);
-                std::list<script_feedback_t> feedback;
-                std::list<OperationArgPkg> ops;
                 if(is){
 
-                    // Check if there is a shebang.
-                    // If(!Looks_like_script(...) TODO
-                    //read first line.
-                    //check for shebang
-                    //reset stream regardless of shebang or not.
+                    // Check if there is a shebang-like statement at the top. If so, we can be sure this is a DCMA script.
+                    {
+                        const auto pos = is.tellg();
+                        std::string shtl;
+                        std::getline(is, shtl);
+                        is.seekg(pos, std::ios_base::beg);
+
+                        const auto pos_hash = shtl.find("#");
+                        const auto pos_dcma = shtl.find("dicomautomaton");
+                        found_shebang =  (pos_hash != std::string::npos)
+                                      && (pos_dcma != std::string::npos)
+                                      && (pos_hash == 0);
+                    }
 
                     // Load the full script.
                     if(!Load_DCMA_Script( is, feedback, ops )){
@@ -840,27 +853,21 @@ bool Load_From_Script_Files( std::list<OperationArgPkg> &Operations,
                 is.close();
                 //////////////////////////////////////////////////////////////
 
-                // Reject the file if the script does not appear to be valid.
-                
-                // TODO
-                // Idea: limit failed scripts to be less than N characters?
-                // Idea: use a header to designate scripts? (A shebang?)
-
-                // ...
-                // if(is_script_but_not_valid){
-                //     emit_feedback;
-                //     return false;
-                // }
-                // ...
-                // TODO
-
                 FUNCINFO("Loaded script with " << ops.size() << " operations");
+                Print_Feedback(std::cout, feedback); // Emit feedback.
                 Operations.splice(std::end(Operations), ops);
 
                 bfit = Filenames.erase( bfit ); 
                 continue;
             }catch(const std::exception &e){
-                FUNCINFO("Unable to load as script file");
+                if(found_shebang){
+                    FUNCWARN("Script loading failed");
+                    Print_Feedback(std::cout, feedback); // Emit feedback.
+                    return false;
+
+                }else{
+                    FUNCINFO("Unable to load as script file");
+                }
             };
 
             //Skip the file. It might be destined for some other loader.
@@ -869,5 +876,35 @@ bool Load_From_Script_Files( std::list<OperationArgPkg> &Operations,
     }
 
     return true;
+}
+
+
+void Print_Feedback(std::ostream &os,
+                    const std::list<script_feedback_t> &feedback){
+    for(const auto &f : feedback){
+        if(false){
+        }else if(f.severity == script_feedback_severity_t::debug){
+            os << "Debug:   ";
+        }else if(f.severity == script_feedback_severity_t::info){
+            os << "Info:    ";
+        }else if(f.severity == script_feedback_severity_t::warn){
+            os << "Warning: ";
+        }else if(f.severity == script_feedback_severity_t::err){
+            os << "Error:   ";
+        }else{
+            throw std::logic_error("Unrecognized severity level");
+        }
+
+        if( (0 <= f.line)
+        &&  (0 <= f.line_offset) ){
+            os << "line " << f.line 
+               << ", char " << f.line_offset
+               << ": ";
+        }
+        os << f.message
+           << std::endl
+           << std::endl;
+    }
+    return;
 }
 
