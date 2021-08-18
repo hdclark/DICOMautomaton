@@ -1179,7 +1179,7 @@ if(false){
                     if(ImGui::MenuItem("Plots", nullptr, &view_toggles.view_plots_enabled)){
                         lsamps_visible.clear();
                     }
-                    ImGui::MenuItem("Plot Metadata", nullptr, &view_toggles.view_plots_metadata);
+                    ImGui::MenuItem("Plot Hover Metadata", nullptr, &view_toggles.view_plots_metadata);
                     if(ImGui::MenuItem("Row and Column Profiles", nullptr, &view_toggles.view_row_column_profiles)){
                         row_profile.samples.clear();
                         col_profile.samples.clear();
@@ -2860,7 +2860,7 @@ script_files.back().content.emplace_back('\0');
             // Display a selection and navigation window.
             ImGui::SetNextWindowSize(ImVec2(450, 400), ImGuiCond_FirstUseEver);
             ImGui::SetNextWindowPos(ImVec2(680, 40), ImGuiCond_FirstUseEver);
-            ImGui::Begin("Plot Selection", &view_toggles.view_plots_enabled, ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoNavInputs);
+            ImGui::Begin("Plot Selection", &view_toggles.view_plots_enabled);
 
             {
                 ImVec2 window_extent = ImGui::GetContentRegionAvail();
@@ -2907,13 +2907,14 @@ script_files.back().content.emplace_back('\0');
                 // Display metadata when hovering.
                 if( ImGui::IsItemHovered() 
                 &&  view_toggles.view_plots_metadata ){
+                    ImGui::SetNextWindowSize(ImVec2(450, 400), ImGuiWindowFlags_AlwaysAutoResize);
                     ImGui::BeginTooltip();
 
                     ImGui::Text("Linesample Metadata");
                     ImGui::Columns(2);
                     ImGui::Separator();
-                    ImGui::Text("Key"); ImGui::NextColumn();
-                    ImGui::Text("Value"); ImGui::NextColumn();
+                    ImGui::Text("Key"); ImGui::SameLine(150); ImGui::NextColumn();
+                    ImGui::Text("Value"); ImGui::SameLine(150); ImGui::NextColumn();
                     ImGui::Separator();
 
                     for(const auto &apair : (*lsamp_ptr_it)->line.metadata){
