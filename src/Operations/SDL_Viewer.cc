@@ -2886,16 +2886,16 @@ script_files.back().content.emplace_back('\0');
             {
                 ImVec2 window_extent = ImGui::GetContentRegionAvail();
                 ImGui::Text("Display");
-                if(ImGui::Button("All", ImVec2(window_extent.x/3, 0))){ 
-                    for(int i = 0; i < N_lsamps; ++i) lsamps_visible[i] = true;
+                if(ImGui::Button("All##plots_display", ImVec2(window_extent.x/3, 0))){ 
+                    for(auto &p : lsamps_visible) p.second = true;
                 }
                 ImGui::SameLine();
-                if(ImGui::Button("None", ImVec2(window_extent.x/3, 0))){ 
-                    for(int i = 0; i < N_lsamps; ++i) lsamps_visible[i] = false;
+                if(ImGui::Button("None##plots_display", ImVec2(window_extent.x/3, 0))){ 
+                    for(auto &p : lsamps_visible) p.second = false;
                 }
                 ImGui::SameLine();
-                if(ImGui::Button("Invert", ImVec2(window_extent.x/3, 0))){ 
-                    for(int i = 0; i < N_lsamps; ++i) lsamps_visible[i] = !(lsamps_visible[i]);
+                if(ImGui::Button("Invert##plots_display", ImVec2(window_extent.x/3, 0))){ 
+                    for(auto &p : lsamps_visible) p.second = !p.second;
                 }
             }
 
