@@ -283,8 +283,6 @@ Load_Files( Drover &DICOM_data,
         Paths = l_Paths;
     }
 
-FUNCINFO("Paths.size() = " << Paths.size());
-
     // Partition the paths by file extension.
     icase_map_t<std::list<std::filesystem::path>> extensions(icase_str_lt);
     for(auto &p : Paths){
@@ -356,6 +354,10 @@ FUNCINFO("Paths.size() = " << Paths.size());
 
         // Return any remaining files to the user's container.
         Paths.splice( std::end(Paths), l_Paths );
+    }
+
+    if(!Paths.empty()){
+        for(const auto &p : Paths) FUNCWARN("Unloaded file: '" << p.c_str() << "'");
     }
 
     return (Paths.empty() && !contained_unresolvable);
