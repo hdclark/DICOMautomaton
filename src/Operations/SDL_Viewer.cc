@@ -2907,23 +2907,19 @@ script_files.back().content.emplace_back('\0');
                 // Display metadata when hovering.
                 if( ImGui::IsItemHovered() 
                 &&  view_toggles.view_plots_metadata ){
-                    ImGui::SetNextWindowSize(ImVec2(450, 400), ImGuiWindowFlags_AlwaysAutoResize);
                     ImGui::BeginTooltip();
 
-                    ImGui::Text("Linesample Metadata");
                     ImGui::Columns(2);
-                    ImGui::Separator();
-                    ImGui::Text("Key"); ImGui::SameLine(150); ImGui::NextColumn();
-                    ImGui::Text("Value"); ImGui::SameLine(150); ImGui::NextColumn();
-                    ImGui::Separator();
+                    ImGui::SetColumnWidth(0, 150.0);
+                    ImGui::SetColumnWidth(1, 150.0);
 
+                    ImGui::Text("Linesample"); ImGui::NextColumn(); ImGui::Text("Metadata");
+                    ImGui::Separator();
+                    ImGui::Text("Key"); ImGui::NextColumn(); ImGui::Text("Value");
+                    ImGui::Separator();
                     for(const auto &apair : (*lsamp_ptr_it)->line.metadata){
-                        ImGui::Text("%s",  apair.first.c_str());  ImGui::NextColumn();
-                        ImGui::Text("%s",  apair.second.c_str()); ImGui::NextColumn();
+                        ImGui::Text("%s",  apair.first.c_str());  ImGui::NextColumn(); ImGui::Text("%s",  apair.second.c_str());
                     }
-
-                    ImGui::Columns(1);
-                    ImGui::Separator();
 
                     ImGui::EndTooltip();
                 }
