@@ -40,6 +40,7 @@ OperationDoc OpArgDocFalse() {
     OperationDoc out;
     out.name = "False";
     out.aliases.emplace_back("Throw");
+    out.aliases.emplace_back("Break");
 
     out.desc = "This operation is a control flow meta-operation that does not complete successfully."
                " It has no side effects.";

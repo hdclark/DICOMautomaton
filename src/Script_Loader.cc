@@ -15,7 +15,8 @@
 #include <map>
 #include <memory>
 #include <stdexcept>
-#include <string>    
+#include <string>
+#include <filesystem>
 
 #include <cstdlib>            //Needed for exit() calls.
 
@@ -792,6 +793,81 @@ bool Load_DCMA_Script(std::istream &is,
     report(feedback, script_feedback_severity_t::info, char_with_context_t(), "Compilation: OK");
     
     op_list.splice( std::end(op_list), out);
+    return true;
+}
+
+// Attempt to identify and load scripts from a collection of files.
+bool Load_From_Script_Files( std::list<OperationArgPkg> &Operations,
+                             std::list<std::filesystem::path> &Filenames ){
+
+    // This routine will attempt to identify and load DCMA script files, parsing them directly into an operation list.
+    //
+    // Note: This routine returns false only iff a file is suspected of being suited for this loader, but could not be
+    //       loaded (e.g., the file seems appropriate, but a parsing failure was encountered).
+    //
+    if(Filenames.empty()) return true;
+
+    // Attempt to read as a binary file.
+    {
+        size_t i = 0;
+        const size_t N = Filenames.size();
+
+        auto bfit = Filenames.begin();
+        while(bfit != Filenames.end()){
+            FUNCINFO("Parsing file #" << i+1 << "/" << N << " = " << 100*(i+1)/N << "%");
+            ++i;
+            const auto Filename = bfit->string();
+
+            try{
+                //////////////////////////////////////////////////////////////
+                // Attempt to load the file.
+                std::ifstream is(Filename, std::ios::in);
+                std::list<script_feedback_t> feedback;
+                std::list<OperationArgPkg> ops;
+                if(is){
+
+                    // Check if there is a shebang.
+                    // If(!Looks_like_script(...) TODO
+                    //read first line.
+                    //check for shebang
+                    //reset stream regardless of shebang or not.
+
+                    // Load the full script.
+                    if(!Load_DCMA_Script( is, feedback, ops )){
+                        throw std::runtime_error("Unable to read script from file.");
+                    }
+                }
+                is.close();
+                //////////////////////////////////////////////////////////////
+
+                // Reject the file if the script does not appear to be valid.
+                
+                // TODO
+                // Idea: limit failed scripts to be less than N characters?
+                // Idea: use a header to designate scripts? (A shebang?)
+
+                // ...
+                // if(is_script_but_not_valid){
+                //     emit_feedback;
+                //     return false;
+                // }
+                // ...
+                // TODO
+
+                FUNCINFO("Loaded script with " << ops.size() << " operations");
+                Operations.splice(std::end(Operations), ops);
+
+                bfit = Filenames.erase( bfit ); 
+                continue;
+            }catch(const std::exception &e){
+                FUNCINFO("Unable to load as script file");
+            };
+
+            //Skip the file. It might be destined for some other loader.
+            ++bfit;
+        }
+    }
+
     return true;
 }
 

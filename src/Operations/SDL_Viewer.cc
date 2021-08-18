@@ -1372,7 +1372,7 @@ if(false){
 ////////////////
 ////////////////
 ////////////////
-const std::string testing_content = R"***(
+const std::string testing_content = R"***(#!/usr/bin/env dicomautomaton_dispatcher -v
 
 variable = "something";
 variable = "something else";
@@ -2527,7 +2527,12 @@ script_files.back().content.emplace_back('\0');
                                                                paths]() -> loaded_files_res {
                     loaded_files_res lfs;
                     auto paths_l = paths;
-                    lfs.res = Load_Files(lfs.DICOM_data, InvocationMetadata, FilenameLex, paths_l);
+                    std::list<OperationArgPkg> Operations;
+                    lfs.res = Load_Files(lfs.DICOM_data, InvocationMetadata, FilenameLex, Operations, paths_l);
+                    if(!Operations.empty()){
+                         lfs.res = false;
+                         FUNCWARN("Loaded file contains a script. Currently unable to handle script files here");
+                    }
                     return lfs;
                 });
 

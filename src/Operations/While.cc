@@ -50,24 +50,19 @@ OperationDoc OpArgDocWhile() {
     out.notes.emplace_back(
         "Each repeat is performed sequentially, and all side-effects are carried forward for each iteration."
         " In particular, all selectors in child operations are evaluated lazily, at the moment when the child"
-        " operation is invoked. If any non-conditional child operation does not complete successfully, this"
-        " operation terminates with false truthiness."
-    );
-    out.notes.emplace_back(
-        " This operation will most often be used to repeat operations that compose naturally, such as"
-        " repeatedly applying a small Gaussian filter to simulate a single Gaussian filter with a large"
-        " kernel, iteratively refining a calculation, loading multiple copies of the same file, or"
-        " attempting a given analysis while waiting for data from a remote server."
+        " operation is invoked. If any non-conditional child operation does not complete successfully, it is"
+        " treated as a 'break' statement."
     );
 
     out.args.emplace_back();
     out.args.back().name        = "N";
     out.args.back().desc        = "The maximum number of times to loop. If the loop reaches this number of iterations,"
-                                  " then this operation returns false truthiness. If 'N' is negative or not provided,"
+                                  " then this operation returns true truthiness. If 'N' is negative or not provided,"
                                   " then looping will continue indefinitely.";
     out.args.back().default_val = "100";
     out.args.back().expected    = false;
     out.args.back().examples    = {"-1", "0", "5", "10", "1000"};
+
 
     return out;
 }
@@ -88,9 +83,9 @@ Drover While(Drover DICOM_data,
     }
 
     decltype(children) child_condition;
-    decltype(children) child_other;
+    decltype(children) child_body;
     if(!children.empty()) child_condition.splice( std::end(child_condition), children, std::begin(children) );
-    if(!children.empty()) child_other.splice( std::end(child_other), children );
+    child_body.splice( std::end(child_body), children );
 
     bool condition = false;
     long int i = 0;
@@ -102,12 +97,11 @@ Drover While(Drover DICOM_data,
         }catch(const std::exception &){ }
         if(!condition) break;
 
-        if(!Operation_Dispatcher(DICOM_data, InvocationMetadata, FilenameLex, child_other)){
-            throw std::runtime_error("'While' body operations did not successfully complete.");
+        if(!Operation_Dispatcher(DICOM_data, InvocationMetadata, FilenameLex, child_body)){
+            // Treat false truthiness in the body operations as a break statement.
+            return DICOM_data;
         }
     }
-
-    if(condition) throw std::runtime_error("'While' loop terminated");
 
     return DICOM_data;
 }
