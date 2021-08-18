@@ -116,6 +116,7 @@ bool SDL_Viewer(Drover &DICOM_data,
         bool view_image_metadata_enabled = false;
         bool view_meshes_enabled = true;
         bool view_plots_enabled = true;
+        bool view_plots_metadata = true;
         bool view_contours_enabled = true;
         bool view_contouring_enabled = false;
         bool view_row_column_profiles = false;
@@ -128,6 +129,10 @@ bool SDL_Viewer(Drover &DICOM_data,
 
     // Plot viewer state.
     std::map<long int, bool> lsamps_visible;
+    enum class plot_norm_t {
+        none,
+        max,
+    } plot_norm = plot_norm_t::none;
 
     // Image viewer state.
     long int img_array_num = -1; // The image array currently displayed.
@@ -1174,6 +1179,7 @@ if(false){
                     if(ImGui::MenuItem("Plots", nullptr, &view_toggles.view_plots_enabled)){
                         lsamps_visible.clear();
                     }
+                    ImGui::MenuItem("Plot Metadata", nullptr, &view_toggles.view_plots_metadata);
                     if(ImGui::MenuItem("Row and Column Profiles", nullptr, &view_toggles.view_row_column_profiles)){
                         row_profile.samples.clear();
                         col_profile.samples.clear();
@@ -2842,7 +2848,8 @@ script_files.back().content.emplace_back('\0');
                                     &mutex_dt,
                                     &DICOM_data,
 
-                                    &lsamps_visible ]() -> void {
+                                    &lsamps_visible,
+                                    &plot_norm ]() -> void {
 
             std::shared_lock<std::shared_timed_mutex> drover_lock(drover_mutex, mutex_dt);
             if(!drover_lock) return;
@@ -2851,10 +2858,25 @@ script_files.back().content.emplace_back('\0');
             ||  !DICOM_data.Has_LSamp_Data() ) return;
 
             // Display a selection and navigation window.
-            ImGui::SetNextWindowSize(ImVec2(350, 400), ImGuiCond_FirstUseEver);
+            ImGui::SetNextWindowSize(ImVec2(450, 400), ImGuiCond_FirstUseEver);
             ImGui::SetNextWindowPos(ImVec2(680, 40), ImGuiCond_FirstUseEver);
             ImGui::Begin("Plot Selection", &view_toggles.view_plots_enabled, ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoNavInputs);
 
+            {
+                ImVec2 window_extent = ImGui::GetContentRegionAvail();
+                ImGui::Text("Settings");
+                ImGui::Checkbox("Show metadata on hover", &view_toggles.view_plots_metadata);
+                ImGui::Text("Normalization: ");
+                ImGui::SameLine();
+                if(ImGui::Button("None", ImVec2(window_extent.x/3, 0))){ 
+                    plot_norm = plot_norm_t::none;
+                }
+                ImGui::SameLine();
+                if(ImGui::Button("Max", ImVec2(window_extent.x/3, 0))){ 
+                    plot_norm = plot_norm_t::max;
+                }
+            }
+            
             const int N_lsamps = static_cast<int>(DICOM_data.lsamp_data.size());
 
             {
@@ -2882,7 +2904,30 @@ script_files.back().content.emplace_back('\0');
                 const auto title = std::to_string(i) + " " + name;
 
                 ImGui::Checkbox(title.c_str(), &lsamps_visible[i]); 
-                ImGui::SameLine(150);
+                // Display metadata when hovering.
+                if( ImGui::IsItemHovered() 
+                &&  view_toggles.view_plots_metadata ){
+                    ImGui::BeginTooltip();
+
+                    ImGui::Text("Linesample Metadata");
+                    ImGui::Columns(2);
+                    ImGui::Separator();
+                    ImGui::Text("Key"); ImGui::NextColumn();
+                    ImGui::Text("Value"); ImGui::NextColumn();
+                    ImGui::Separator();
+
+                    for(const auto &apair : (*lsamp_ptr_it)->line.metadata){
+                        ImGui::Text("%s",  apair.first.c_str());  ImGui::NextColumn();
+                        ImGui::Text("%s",  apair.second.c_str()); ImGui::NextColumn();
+                    }
+
+                    ImGui::Columns(1);
+                    ImGui::Separator();
+
+                    ImGui::EndTooltip();
+                }
+
+                ImGui::SameLine(200);
                 ImGui::Text("%s", modality.c_str());
                 ImGui::SameLine(300);
                 ImGui::Text("%s", histtype.c_str());
@@ -2906,17 +2951,29 @@ script_files.back().content.emplace_back('\0');
                                      ImPlotAxisFlags_AutoFit )) {
                     for(int i = 0; i < N_lsamps; ++i){
                         if(!lsamps_visible[i]) continue;
-
                         auto lsamp_ptr_it = std::next(DICOM_data.lsamp_data.begin(), i);
+                        if((*lsamp_ptr_it)->line.empty()) continue;
+
+                        decltype((*lsamp_ptr_it)->line) shtl;
+                        decltype((*lsamp_ptr_it)->line) *s_ptr;
+                        if(plot_norm == plot_norm_t::none){
+                            s_ptr = &((*lsamp_ptr_it)->line);
+                        }else if(plot_norm == plot_norm_t::max){
+                            const auto max_f = (*lsamp_ptr_it)->line.Get_Extreme_Datum_y().second[2];
+                            shtl = (*lsamp_ptr_it)->line.Multiply_With( 1.0 / max_f );
+                            s_ptr = &shtl;
+                        }else{
+                            throw std::logic_error("Unanticipated plot normalization encountered.");
+                        }
                         const int offset = 0;
-                        const int stride = sizeof( decltype( (*lsamp_ptr_it)->line.samples[0] ) );
-                        const auto name = (*lsamp_ptr_it)->line.GetMetadataValueAs<std::string>("LineName").value_or("unknown"_s);
+                        const int stride = sizeof( decltype( s_ptr->samples[0] ) );
+                        const auto name = s_ptr->GetMetadataValueAs<std::string>("LineName").value_or("unknown"_s);
                         const auto title = std::to_string(i) + " " + name;
 
                         ImPlot::PlotLine<double>(title.c_str(),
-                                                 &(*lsamp_ptr_it)->line.samples[0][0], 
-                                                 &(*lsamp_ptr_it)->line.samples[0][2],
-                                                 (*lsamp_ptr_it)->line.samples.size(),
+                                                 &s_ptr->samples[0][0], 
+                                                 &s_ptr->samples[0][2],
+                                                 s_ptr->samples.size(),
                                                  offset, stride );
                     }
                     ImPlot::EndPlot();
